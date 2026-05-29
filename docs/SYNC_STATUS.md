@@ -1164,6 +1164,25 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: mathtools `\adjustlimits` DefMacro re-emitted `_` → double-subscript on single-operator misuse (2026-05-29)
+
+**Witness 2010.00165** (`\adjustlimits\sup_{x \in R} |\mbox{F}_{…}`). GENUINE
+Rust-only: Perl 0 err (warns at parser), Rust 3 `Error:unexpected:double-subscript`.
+mathtools `\adjustlimits` takes 6 args (two operator+limit pairs). The paper
+misuses it with ONE operator, so the macro greedily grabs `| \mbox {F}` as the
+"second pair", leaving the real trailing `_{…}` to collide. Rust used an
+intentional-divergence DefMacro `#1_{#3}#4_{#6}` that RE-EMITS `_` tokens, so
+the collision surfaced as a digestion-time double-subscript Error. Perl uses a
+DefConstructor that builds the `<ltx:XMApp>` SUBSCRIPTOP scripts DIRECTLY (no
+re-tokenized `_`), so the stray `_` is just an unparsed-grammar Warning. Fix:
+port Perl's DefConstructor form (`{} DefToken InScriptStyle {} DefToken
+InScriptStyle` → two SUBSCRIPTOP XMApps), omitting only the cosmetic
+depth/height afterDigest. 3 err → 0; output sound (operators+limits captured,
+parser reads `limit _ (…) * maximum _ (…)`). Updated the one regression baseline
+`tests/ams/mathtools.xml` to the new (correct) structure. cargo test 1344/0.
+(commit pending). NOTE: reverses the earlier DefMacro choice — correctness
+(no spurious double-subscript) outweighs the avoided test-baseline churn.
+
 ### Fresh 2009-range low-error scan triage (2026-05-29)
 
 Scanned ~2500 of the 2009 range filtered to ≤6 Rust errors; ~10 candidates,

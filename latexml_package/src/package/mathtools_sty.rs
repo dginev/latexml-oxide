@@ -118,16 +118,20 @@ LoadDefinitions!({
   // passthrough. The visual width "smashing" is cosmetic.
   DefMacro!("\\smashoperator[]{}", "#2");
 
-  // \adjustlimits — Perl mathtools.sty.ltxml L180-199 is a
-  // DefConstructor emitting `<ltx:XMApp>` with `scriptpos='mid'` +
-  // aligned-depth/height attributes computed in afterDigest. Rust uses
-  // a simpler DefMacro expanding to `#1_{#3}#4_{#6}` because the
-  // DefConstructor form caused cascading `scriptpos='mid'` diffs that
-  // propagate through every descendant XMApp's baseline calculation,
-  // and the depth/height alignment is cosmetic-only (both math-
-  // rendering backends ignore it). Intentional DefConstructor →
-  // DefMacro kind divergence (WISDOM #44).
-  DefMacro!("\\adjustlimits{}{}{}{}{}{}", "#1_{#3}#4_{#6}");
+  // \adjustlimits — Perl mathtools.sty.ltxml L180-199: a DefConstructor
+  // building two `<ltx:XMApp>` SUBSCRIPTOP nodes directly. We MUST use the
+  // constructor form (not a `#1_{#3}#4_{#6}` DefMacro): the DefMacro
+  // re-emits `_` tokens, so when `\adjustlimits` is MISUSED with a single
+  // operator (e.g. `\adjustlimits\sup_{x\in R} |\mbox{F}_{…}` — the macro
+  // greedily grabs `| \mbox {F}` as the second op/sub) the trailing `_{…}`
+  // collides with the re-emitted subscript → a digestion-time
+  // `Error:unexpected:double-subscript`, where Perl (building the script
+  // structure directly) only warns at the parser. Witness 2010.00165
+  // (`\adjustlimits\sup_…`: Perl 0 err, Rust 3). The cosmetic
+  // `depth='#limdepth'`/`height='#subheight'` alignment from Perl's
+  // afterDigest is omitted (both math backends ignore it — WISDOM #44).
+  DefConstructor!("\\adjustlimits {} DefToken InScriptStyle {} DefToken InScriptStyle",
+    "<ltx:XMApp><ltx:XMTok role='SUBSCRIPTOP' scriptpos='mid'/><ltx:XMArg>#1</ltx:XMArg><ltx:XMArg>#3</ltx:XMArg></ltx:XMApp><ltx:XMApp><ltx:XMTok role='SUBSCRIPTOP' scriptpos='mid'/><ltx:XMArg>#4</ltx:XMArg><ltx:XMArg>#6</ltx:XMArg></ltx:XMApp>");
 
   DefConstructor!("\\SwapAboveDisplaySkip", "");
 

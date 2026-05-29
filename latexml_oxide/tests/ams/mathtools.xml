@@ -625,88 +625,122 @@
       </para>
       <para xml:id="S1.SS0.SSS0.Px4.p2">
         <equation xml:id="S1.Ex9">
-          <Math class="ltx_math_unparsed" mode="display" tex="\text{a)}\lim_{n\to\infty}\max_{p\geq n}\quad\text{b)}\lim_{n\to\infty}\max_{p^{2}\geq n}\quad\text{c)}\lim_{n\to\infty}\sup_{p^{2}\geq nK}\quad\text{d)}\limsup_{n\to\infty}\max_{p\geq n}" xml:id="S1.Ex9.m1">
+          <Math mode="display" tex="\text{a)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p\geq n}\quad\text{b)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p^{2}\geq n}\quad\text{c)}\adjustlimits{\lim}_{n\to\infty}{\sup}_{p^{2}\geq nK}\quad\text{d)}\adjustlimits{\limsup}_{n\to\infty}{\max}_{p\geq n}" text="list@([a)] * limit _ (n to infinity) * maximum _ (p &gt;= n), [b)] * limit _ (n to infinity) * maximum _ (p ^ 2 &gt;= n), [c)] * limit _ (n to infinity) * supremum _ (p ^ 2 &gt;= n * K), [d)] * limit-supremum _ (n to infinity) * maximum _ (p &gt;= n))" xml:id="S1.Ex9.m1">
             <XMath>
-              <XMText>a)</XMText>
-              <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
+              <XMDual>
                 <XMApp>
-                  <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                  <XMTok meaning="list"/>
+                  <XMRef idref="S1.Ex9.m1.1"/>
+                  <XMRef idref="S1.Ex9.m1.2"/>
+                  <XMRef idref="S1.Ex9.m1.3"/>
+                  <XMRef idref="S1.Ex9.m1.4"/>
                 </XMApp>
-              </XMApp>
-              <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                </XMApp>
-              </XMApp>
-              <XMText>b)</XMText>
-              <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
-                </XMApp>
-              </XMApp>
-              <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
-                  <XMApp>
-                    <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
-                    <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                </XMApp>
-              </XMApp>
-              <XMText>c)</XMText>
-              <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
-                </XMApp>
-              </XMApp>
-              <XMTok meaning="supremum" role="LIMITOP" scriptpos="mid">sup</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
-                  <XMApp>
-                    <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
-                    <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
-                  </XMApp>
-                  <XMApp>
+                <XMWrap>
+                  <XMApp xml:id="S1.Ex9.m1.1">
                     <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">K</XMTok>
+                    <XMText>a)</XMText>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                        <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
-                </XMApp>
-              </XMApp>
-              <XMText>d)</XMText>
-              <XMTok meaning="limit-supremum" name="limsup" role="LIMITOP" scriptpos="mid">lim sup</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                  <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
-                </XMApp>
-              </XMApp>
-              <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok>
-              <XMApp role="POSTSUBSCRIPT" scriptpos="mid1">
-                <XMApp>
-                  <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
-                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                </XMApp>
-              </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex9.m1.2">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMText>b)</XMText>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                        <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                          <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex9.m1.3">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMText>c)</XMText>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="limit" role="LIMITOP" scriptpos="mid">lim</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                        <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="supremum" role="LIMITOP" scriptpos="mid">sup</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+                        <XMApp>
+                          <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                          <XMTok fontsize="50%" meaning="2" role="NUMBER">2</XMTok>
+                        </XMApp>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">K</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex9.m1.4">
+                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                    <XMText>d)</XMText>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="limit-supremum" name="limsup" role="LIMITOP" scriptpos="mid">lim sup</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" name="to" role="ARROW">→</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                        <XMTok fontsize="70%" meaning="infinity" name="infty" role="ID">∞</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok role="SUBSCRIPTOP" scriptpos="mid"/>
+                      <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid">max</XMTok>
+                      <XMApp>
+                        <XMTok fontsize="70%" meaning="greater-than-or-equals" name="geq" role="RELOP">≥</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">p</XMTok>
+                        <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMWrap>
+              </XMDual>
             </XMath>
           </Math>
         </equation>
