@@ -80,6 +80,23 @@ stage_74 + new stages 75-100, ~260k papers). Lesson: at this scale the
 systematic staged sweep — not per-paper manual gating — is the right tool to
 cover the remaining corpus and surface real Rust-only clusters in bulk.
 
+**2026-05-29 — triage of stale CONVERR + stage_74 recovery confirmed.**
+Re-tested a 30-paper sample of the OLD `CONVERR_1` set (stages 51-73, old
+binary): **16/30 (53%) are already fixed** by this session's 13 fixes — the
+sweep's recorded ~99% is stale, real rate is higher. Remaining still-failing
+are math-mode `_`/`^` (SHARED math structure), mode-leak `}`/`\endIEEEproof`
+(deep endgroup cluster), and main-detection ARTIFACTS (my ad-hoc largest-`.tex`
+picker grabs `\input` subfiles for multi-file papers — e.g. 1503.02002's
+GeneralCase2.tex (no `\documentclass`) → spurious `\section` cascade; with the
+real main Masterfile.tex it is 0 errors. Use the sweep's own failure logs
+(`stage_*/failures/<id>.CONVERR_N.log`, correct main + current binary) for
+candidate triage). stage_74 re-run (current binary) confirms the FATAL_127 was
+a pure artifact: ~99.1% OK, 0 FATAL. Its CONVERR signatures are SHARED:
+math-mode, the mdwmath.sty raw-load `#`-reaches-Stomach edge (5 papers all
+CONVERR_43; 1808.02456 RUST 43 / PERL 44 — Rust marginally BETTER, both fail),
+and mode-leak. No clean Rust-only win surfaced this round — parity is high;
+remaining failures are SHARED/deep. Sweep continues (offsets 24-50).
+
 **Goal.** Reach **1,000,000 successful conversions** with the Rust
 translation (`cortex_worker --standalone`) on the 1,000,001-paper
 subset of arxmliv where the original Perl LaTeXML emitted at least
