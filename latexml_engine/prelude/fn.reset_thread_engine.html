@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Free this thread’s accumulated engine state — the three `State` singletons (`STATE`, `STD_STATE`, `STY_STATE`) and the string-interner arena — returning them to a fresh baseline."><title>reset_thread_engine in latexml_engine::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc fn"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">reset_thread_engine</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_engine/index.html">latexml_<wbr>engine</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"><h2><a href="index.html">In latexml_<wbr>engine::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_engine</a>::<wbr><a href="index.html">prelude</a></div><h1>Function <span class="fn">reset_<wbr>thread_<wbr>engine</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"></span></div><pre class="rust item-decl"><code>pub fn reset_thread_engine()</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Free this thread’s accumulated engine state — the three <code>State</code>
+singletons (<code>STATE</code>, <code>STD_STATE</code>, <code>STY_STATE</code>) <strong>and</strong> the
+string-interner arena — returning them to a fresh baseline.</p>
+<p><strong>Why this exists.</strong> The engine’s roots (<code>STATE</code>, <code>arena::ARENA</code>, …)
+are <code>#[thread_local]</code> <em>attribute</em> statics. Unlike the <code>thread_local!</code>
+macro, the attribute does <strong>not</strong> run destructors on thread exit, so a
+thread that builds a full engine and then exits <em>leaks</em> it (~110 MB
+for a typical document). The single-conversion <code>latexml_oxide</code> binary
+never notices — it runs one conversion and the process exits. But any
+process that runs <strong>many</strong> conversions across <strong>many</strong> threads
+(notably the test harness, where libtest spawns a fresh thread per
+test) accumulates one leaked engine per conversion (measured: ~4.9 GB
+across <code>50_structure</code>, which then trips the per-process RSS fuse in
+<code>stomach::check_timeout</code>). Resetting between conversions frees that
+memory before the thread exits (peak fell ~4.9 GB → ~2.9 GB at -j20).</p>
+<p><strong>Why reset the interner here.</strong> The interner <em>could</em> be kept across
+conversions — that is the faithful daemon design (Perl keeps its
+symbol table and resets only the binding stack via
+<code>pushDaemonFrame</code>/<code>popDaemonFrame</code> in <code>LaTeXML.pm</code>), and re-interning
+the same ~110k base symbols next conversion is deduped. But that only
+pays off when the <strong>same thread</strong> handles multiple conversions. The
+test harness gets a <strong>fresh thread per test</strong>, so its interner can
+never be reused — keeping it would just leak it on thread exit. So we
+reset it too. A future <em>thread-reusing</em> daemon should instead keep the
+interner by calling <a href="fn.reset_thread_state.html" title="fn latexml_engine::prelude::reset_thread_state"><code>state::reset_thread_state</code></a> alone (State only).</p>
+<p><strong>Soundness.</strong> Resetting the interner invalidates <em>every</em> live
+<code>SymStr</code> on the thread, so this is sound only between fully
+independent conversions — when the prior conversion’s output has
+already been serialized to owned data and nothing will read a
+pre-reset symbol again. The test harness satisfies this (each test
+serializes to owned <code>String</code>s, then resets before its thread exits).
+It does <strong>not</strong> reclaim libxml2’s process-global C state (parser
+dictionaries) — that residual (~24 MB/test) is left as-is rather than
+risk the global <code>xmlCleanupParser</code>.</p>
+</div></details></section></div></main></body></html>

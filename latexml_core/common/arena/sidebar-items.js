@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["join","len","pin","pin_char","pin_static","to_string","with","with2","with3","with_many"],"mod":["data"]};
+window.SIDEBAR_ITEMS = {"fn":["join","len","pin","pin_char","pin_static","reset","to_string","with","with2","with3","with_many"],"mod":["data"]};
