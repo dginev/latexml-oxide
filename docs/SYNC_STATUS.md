@@ -1164,6 +1164,45 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: ifacconf stub eager-loaded xcolor → `\usepackage[table]{xcolor}` no-op → `m{}` column "Extra alignment tab" (2026-05-29)
+
+**Witness 2004.03970** (`\documentclass{ifacconf}` + `\usepackage[table]{xcolor}`
++ a `{p{..}p{..}p{..}m{0.10\textwidth}l}` table). GENUINE Rust-only: Perl 2
+warn / 0 errors / 850 KB; Rust 8 errors `Extra alignment tab '&'` / 716 KB.
+Long root-cause chain (fully bisected):
+1. Errors are "Extra alignment tab" in a 5-col table whose 4th col is
+   `m{0.10\textwidth}` (array's vertically-centred para column).
+2. The `m`/`b` column types live ONLY in `array.sty` (true in Perl too —
+   `array.sty.ltxml` L29/L35, not core `TeX_Tables.pool`). Without `array`
+   loaded, `m` is `Unrecognized tabular template` and the parser mis-recovers
+   over `0.10\textwidth` char-by-char → spurious alignment tab PER such column.
+3. `array` is normally pulled by `\usepackage[table]{xcolor}` → colortbl →
+   `\RequirePackage{array}`. Under `article` this chain fires; under
+   `ifacconf` it did NOT — colortbl never loaded.
+4. Why: the Rust-only contrib stub `ifacconf_cls.rs` (Perl has NO ifacconf
+   binding — it uses OmniBus) eagerly `\RequirePackage{xcolor}` at load time.
+   So by the time the document's `\usepackage[table]{xcolor}` runs, xcolor is
+   already loaded → the `table` option is silently dropped (LaTeX "options on
+   already-loaded package" semantics — SHARED with Perl, verified) → colortbl
+   never loads. Perl never preloads xcolor for ifacconf, so its document-level
+   `\usepackage[table]{xcolor}` loads fresh WITH `table` → colortbl → array →
+   `m` recognised → clean.
+
+Fix: remove the eager `\RequirePackage{xcolor}` from `ifacconf_cls.rs` (the
+document loads xcolor itself, with its own options — matching Perl). Eager
+`color` (from the stub's `hyperref` → hyperref.rs L44) is harmless: color and
+xcolor coexist and a later `xcolor[table]` still processes. 8 errors → 0
+("No obvious problems", 718 KB). cargo test 1344/0. (commit pending).
+
+**BROADER CLUSTER (follow-up):** ~40 contrib class stubs eager-`RequirePackage`
+xcolor (cas_dc, ceurart, sagej, mdpi, sn_jnl, jmlr, lipics, …). Each is the
+same latent bug for documents that later do `\usepackage[<opts>]{xcolor}`
+(`table`, `dvipsnames`, …). The minimal `\usepackage{xcolor}` +
+`\usepackage[table]{xcolor}` double-load is SHARED (Perl drops options too),
+so the only Perl-faithful fix is per-binding: drop the eager xcolor preload
+wherever Perl's binding (or OmniBus fallback) doesn't do it. Needs per-class
+gating against Perl before landing — NOT a blanket edit.
+
 ### FIXED: extsizes `extbook`/`extreport` mis-bound to `article` → `\thechapter` undefined (2026-05-29)
 
 **Witness 1904.08040** (`\documentclass[14pt,oneside,english]{extbook}` +

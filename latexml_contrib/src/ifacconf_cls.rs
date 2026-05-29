@@ -12,7 +12,17 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
-  RequirePackage!("xcolor");
+  // NOTE: do NOT eagerly `RequirePackage("xcolor")` here. Perl ships no
+  // ifacconf binding (it falls to OmniBus) and never preloads xcolor for
+  // this class. Preloading xcolor means a later document-level
+  // `\usepackage[table]{xcolor}` (or any `\usepackage[<opts>]{xcolor}`)
+  // sees xcolor as already-loaded and silently drops its options — so the
+  // `table` option never fires `\RequirePackage{colortbl}`, `array` is
+  // never pulled, and `m{<frac>\textwidth}` / `b{}` column types are
+  // "Unrecognized tabular template" → cascading "Extra alignment tab"
+  // errors. The document loads xcolor itself when it needs it (with the
+  // right options). Witness arXiv:2004.03970 (`\usepackage[table]{xcolor}`
+  // + `m{0.10\textwidth}` table → 8 errors in Rust, 0 in Perl).
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
   RequirePackage!("natbib");
