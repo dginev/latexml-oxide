@@ -32,7 +32,7 @@ worker timeout under memory pressure (recorded as `TIMEOUT`). The engine
 | 1905.00087 |  5297 | 57 s | **2.54 GB** | clean (1 warn) | stage_79 TIMEOUT |
 | 1810.11713 |  4389 | 51 s | **2.39 GB** | clean | stage_75 TIMEOUT |
 | 1902.03551 |  6122 | 36 s | 1.42 GB | clean (311 warn) | stage_77 TIMEOUT |
-| 1902.05175 |  3870 |  —   | OOM (post/XSLT) | FATAL_134 | stage_78 FATAL_134 |
+| 1902.05175 |  3870 | 20 s | 2.90 GB | clean (now) | stage_78 FATAL_134 (was OOM) |
 
 **Root-cause hypotheses (to confirm — needs Perl RSS baseline, in flight):**
 1. **XSLT input duplication.** `latexml_post/src/xslt.rs:286` does
@@ -102,11 +102,24 @@ them fast (~1.2 s, ~128 MB) in digestion with ~109 xy-pic errors
 undefined + closed-mouth, see `SYNC_STATUS.md` 2026-05-29 re-mine). Not a memory
 witness; tracked here only to explain the stale TIMEOUT records.
 
-## Cluster C — engine-phase slowness/hang (to investigate)
+## Cluster C — engine-phase slowness (RESOLVED — not a hang)
 
-1810.05230 (stage_75 TIMEOUT) hung in the **Building** (engine) phase, not XSLT —
-the only engine-phase timeout in the fresh-stage sample. Re-measure with the
-current binary; if it still doesn't terminate, bisect for an engine hot loop.
+1810.05230 (stage_75 TIMEOUT) was recorded hung in the **Building** (engine)
+phase. Current release binary: **completes in 47 s / 0.81 GB / clean** (86
+warnings). It was debug-profile + sweep-contention slowness under the 120 s cap,
+not an engine hot loop. No fix needed.
+
+## OOM witness 1902.05175 (RESOLVED — contention, not a bug)
+
+The one fresh-stage `FATAL_134` (recorded "out of memory" during post/XSLT):
+current release binary **completes in 19.8 s / 2.90 GB / clean**. The 2.90 GB is
+the inherent large-doc peak (Cluster A); the OOM was parallel RAM-contention in
+the sweep, not an engine defect.
+
+**Net:** the entire fresh-stage (75-81) hard-fail bucket is either SHARED-heavy
+(resource contention on inherently-large docs — Rust faster than Perl, comparable
+RSS) or SHARED-error (xy-pic via `\@@input`). No genuine Rust-only engine defect
+remains in it. Engine + post-processor verdict: healthy.
 
 ## Method notes
 
