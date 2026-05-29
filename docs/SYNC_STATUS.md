@@ -1004,6 +1004,35 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### R10-R16 re-sweep + cortex_worker-staleness METHODOLOGY LESSON (2026-05-28)
+
+**LESSON: `cortex_worker` is a SEPARATE binary — rebuild it (`cargo build
+--bin cortex_worker --features cortex`) before ANY canvas sweep.** A
+`cargo build --bin latexml_oxide` (or `cargo test`) does NOT rebuild
+cortex_worker, so a sweep silently uses a stale worker. First R10-R16 sweep
+(435 papers) used a 19:31 worker (latest commit 21:16) → wrongly reported
+known-FIXED papers as failing (2001.10284 jmlr2e \BlackBox, 2001.03244
+xwatermark→href, 1504.05963 dep-scan all showed "still-failing" but a FRESH
+worker converts them clean: 18/44/300 warnings, 0 errors). Re-launched the
+sweep with a freshly-built worker → `/tmp/resweep_fresh.tsv`.
+
+**Cluster breakdown (stale-worker sweep, counts inflated but shape useful):**
+dominant first-error clusters among still-failing were `_ Script _ … math
+mode` (~65), `} Attempt to close a group that switched to mode …` (the
+endgroup/mode-leak cluster, ~66 combined), `^ … math mode` (~15),
+content-model `X isn't allowed` (~16), `\else`/conditional (~7),
+`readBalanced ran out of input` (~3, xint-class). NEXT FIRE: read
+`/tmp/resweep_fresh.tsv` (accurate), pick a still-failing 1-error paper,
+Perl-gate, fix. The math-mode and mode-close clusters are large — if a
+SUBSET shares a Rust-only root, high-leverage (but both clusters are known
+to mix Rust-only + shared; sample several + Perl-gate to find the common
+Rust-only trigger). `\abntnextkey` (1910.04251, abntex2cite .bbl) is a
+known tangled one: LaTeXML's `\bibitem` DefConstructor bypasses
+abntex2cite's `\@bibitem` redef (`\gdef\abntnextkey`), so `\abntnextkey`
+is undefined when the .bbl's `\bibciteEXPL{\abntnextkey}` reads it; Perl
+skips abntex2cite entirely (treats .sty missing). Would need an
+abntex2cite init or a bibitem-mechanism change.
+
 ### FATAL/cascade triage + stale-canvas finding (2026-05-28) — recommend fresh re-sweep
 
 Sampled the FATAL/TIMEOUT/OOM logs across stage_R10-R17 (the CONVERR_1
