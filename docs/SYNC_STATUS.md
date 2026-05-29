@@ -1215,10 +1215,12 @@ xcolor preload (the document loads xcolor with its own options).
   loads + plain `\textcolor`/`\definecolor` doc clean (no color regression —
   color stays via each stub's hyperref→color). cargo test 1344/0.
   * **pnas_new** — eager xcolor removed (Perl-faithful, no regression) but
-    STILL preloads xcolor via a separate transitive path (one of its many
-    deps: authblk/fancyhdr/titlesec/caption/booktabs raw-load chain pulls
-    xcolor after hyperref→color). Residual `m{}`+`xcolor[table]` bug remains
-    for pnas-new pending that second path — tracked as a sub-follow-up.
+    STILL preloads xcolor transitively: it `\RequirePackage{mdframed}`, and
+    `mdframed_sty.rs` legitimately loads xcolor (colored frame boxes). That's
+    a REAL dependency, not a gratuitous stub preload, so the residual
+    `m{}`+`xcolor[table]` bug for pnas-new is the harder "legit xcolor dep
+    preempts document xcolor options" case (closer to SHARED LaTeX
+    already-loaded-option-drop) — deferred, separate from the stub cluster.
 * **Intentionally KEPT eager xcolor:** scipost, bytedance_seed (use the
   xcolor-only `HTML` color model — `\definecolor{...}{HTML}{...}` /
   `\color[HTML]{...}` — which color.sty can't provide; xcolor is a genuine
