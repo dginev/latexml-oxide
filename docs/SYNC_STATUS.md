@@ -1164,6 +1164,28 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: neurips binding missing `\@toptitlebar`/`\@bottomtitlebar` (2026-05-29)
+
+**Witness 2007.04825** (`\usepackage{arxiv}` → bundled arxiv.sty, which pulls
+neurips_2020.sty). GENUINE Rust-only: Perl 0 err (raw-loads neurips_2020.sty),
+Rust 2 (`\@toptitlebar`/`\@bottomtitlebar` undefined). Rust's `neurips_sty.rs`
+binding INTERCEPTS neurips_*.sty but omitted the title-box rule commands
+(neurips L301/307 — `\hrule`+`\vskip`, purely visual). arxiv.sty's `\@maketitle`
+calls `\@toptitlebar{\Large\bf #1}\@bottomtitlebar`. Fix: add 0-arg no-ops (the
+decorative rules are moot in XML — WISDOM #50; title text preserved, verified
+identical to Perl). 2 err → 0. cargo test 1344/0. (commit pending).
+
+### Fresh 2007-range low-error scan triage (2026-05-29): 2 clean Rust-only wins
+
+Scanned ~2500 of the 2007 range (≤6 Rust errors); 13 candidates, gated vs Perl.
+TWO clean fixable Rust-only wins, both FIXED:
+* **2007.00572** — aa `\tablenote` spurious-def mode-leak (below).
+* **2007.04825** — neurips `\@toptitlebar`/`\@bottomtitlebar` (above).
+Rest SHARED: `\publyear`/`\pagerange` (missing fundam/biom.cls, both),
+`ltx:XMApp`-in-`emph` (2007.01660/.04833, both), `\endgroup` mode-frames
+(2007.01562/.03827), `double-subscript`/`_`-math paper-bugs, `\the\documentclass`,
+`\noalign` (colortbl, both).
+
 ### FIXED: aa `\tablenote` spurious 2-arg def → `\endgroup`/`\lx@note` mode-leak (2026-05-29)
 
 **Witness 2007.00572** (`\documentclass{aa}` + `\tablenote{\\ …}` inside

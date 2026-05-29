@@ -28,6 +28,16 @@ LoadDefinitions!({
   def_macro_noop("\\AND")?;
   def_macro_noop("\\And")?;
   def_macro_noop("\\bottomfraction")?;
+  // neurips_*.sty L301/307: \@toptitlebar / \@bottomtitlebar draw the
+  // decorative \hrule + \vskip box around the title — purely visual, moot in
+  // our XML paradigm (WISDOM #50). Our binding intercepts neurips_*.sty (so the
+  // real raw defs never run), and downstream styles build their own title using
+  // them — e.g. the bundled `arxiv.sty` `\@maketitle`:
+  // `\@toptitlebar{\Large\bf #1}\@bottomtitlebar`. Provide 0-arg no-ops so the
+  // title text survives and `\maketitle` doesn't hit undefined-CS errors.
+  // Witness arXiv:2007.04825 (`\usepackage{arxiv}` → neurips_2020 title bars).
+  def_macro_noop("\\@toptitlebar")?;
+  def_macro_noop("\\@bottomtitlebar")?;
   def_macro_noop("\\patchAmsMathEnvironmentForLineno")?;
   def_macro_noop("\\patchBothAmsMathEnvironmentsForLineno")?;
   // Perl L37: DefMacroI('\subsubsubsection', …, locked => 1). The lock
