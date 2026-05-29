@@ -8,7 +8,19 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
-  RequirePackage!("amsthm");
+  // Do NOT eager-load amsthm here. Perl ships no autart binding (→ OmniBus,
+  // no amsthm preload), and OmniBus already installs LAZY theorem-env
+  // autoload stubs (`\begin{theorem}`/`\begin{proof}`/… each `require`
+  // amsthm on first use). Preloading amsthm eagerly breaks the common
+  // pattern of a document that clears a class-defined `\proof` and then
+  // (re)loads amsthm to get amsthm's version:
+  //     \let\proof\relax        % drop autart/class \proof
+  //     \usepackage{amsthm}     % expect amsthm to (re)define \proof
+  // With amsthm pre-loaded, the `\usepackage{amsthm}` is a no-op (already
+  // loaded), so amsthm's `\let\proof\@proof` never re-runs and `\proof`
+  // stays `\relax` → `\begin{proof}` → "{proof} environment not defined".
+  // Witness arXiv:2009.00150 (autart + `\let\proof\relax` + amsthm). The
+  // lazy OmniBus stub still covers papers that DON'T load amsthm themselves.
 
   // autart.cls L317-323: \def\ack{\section*{Acknowledgements}}
   // with \let\endack\par. Bind {ack}/{ack*} as structural

@@ -1164,6 +1164,22 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: autart stub eager-loaded amsthm → `\let\proof\relax`+`\usepackage{amsthm}` no-op → `{proof}` undefined (2026-05-29)
+
+**Witness 2009.00150** (`\documentclass{autart}` + `\let\proof\relax` then
+`\usepackage{amsthm}` + `\begin{proof}`). GENUINE Rust-only: Perl 0 err / 865 KB
+(Perl ships no autart binding → OmniBus, does NOT preload amsthm); Rust 1 err
+(`{proof}` undefined). Root: the Rust-only `autart_cls.rs` stub eagerly
+`\RequirePackage{amsthm}`. The paper clears the class `\proof`
+(`\let\proof\relax`) and re-loads amsthm to get amsthm's `\proof` — but with
+amsthm pre-loaded, `\usepackage{amsthm}` is a no-op, so amsthm's
+`\let\proof\@proof` never re-runs and `\proof` stays `\relax` →
+`\begin{proof}` → "{proof} environment not defined". Same eager-preload
+anti-pattern as the xcolor cluster. Fix: drop the eager amsthm from
+`autart_cls.rs` (OmniBus's LAZY `\begin{theorem}`/`\begin{proof}` autoload
+stubs still cover papers that don't load amsthm themselves). 1 err → 0; the
+no-amsthm case stays clean. cargo test 1344/0. (commit pending).
+
 ### FIXED: interact `\amscodename` label macro (2026-05-29)
 
 **Witness 2008.01335** (`\documentclass{interact}` + `\amscodename{: Primary
