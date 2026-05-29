@@ -1164,6 +1164,35 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: apacite `\PrintOrdinal` + missing `\B*` bib abbreviation macros (2026-05-29)
+
+**Witness 2106.02003** (apacite `main.bbl` with `\PrintOrdinal{3}\ \BEd`). GENUINE
+Rust-only: Perl 0 err / 303 KB (Perl has NO apacite binding → raw-loads
+apacite.sty → gets everything); Rust 2 err (`\PrintOrdinal`, `\BEd` undefined).
+Our hand-built `apacite_sty.rs` binding (content-preserving APA-cite port) was
+an incrementally-extended stub missing ~30 of apacite's `\B*` text-abbreviation
+macros and the whole `\PrintOrdinal` machinery — each prior witness added a few
+(`\BPG`, `\BOthersPeriod`, …). Stopped the whack-a-mole: ported the full
+abbreviation set (`\BEd` "ed." — distinct from the existing `\BED` "Ed."! —
+`\BVOLS`, `\BCHAP(S)`, `\BCHAIR(S)`, `\BIP`, `\Bby`, `\BMTh`, `\BUMTh`, `\BPhD`,
+`\BUPhD`, `\BAuthor`, `\BOWP`, `\BREPR`, `\BAvailFrom`, `\BRetrievedFrom`,
+`\BMsgPostedTo`, `\BRetrieved`, `\BBOP`/`\BBCP`) + `\PrintOrdinal` /
+`\print@ordinal` / `\CardinalNumeric` / `\keep@last@digit` verbatim from
+apacite.sty L2098-2138. Output now matches Perl exactly (`1st 2nd 3rd 4th 11th
+23rd`). 2 err → 0. cargo test 1344/0. (commit pending).
+
+### Fresh 2106-range low-error scan triage (2026-05-29)
+
+Scanned ~2500 of the 2106 range filtered to ≤6 Rust errors; gated 9 vs Perl.
+Only **2106.02003** (apacite, above) was a clean fixable Rust-only win. Others:
+SHARED (2106.00420 `\noalign`/colortbl — Rust 1 vs Perl 9, Rust already better;
+2106.01165 `accents` `\macc@*` identical both; 2106.02206 listing-in-listingline
+both 1; 2106.02797 `changes` `\chreplaced` both 3; 2106.01330 `\0` both),
+Rust-already-better (2106.02251 `\0` Rust 0 / Perl 1), or Perl-worse
+(2106.02160 `\cbezier` → Perl `Fatal:terminate`; NB Rust defines `\bezier`/
+`\qbezier` but not the kernel `\cbezier` — minor gap, Perl crashes harder).
+Reconfirms HIGH PARITY: clean Rust-only low-error wins are now rare.
+
 ### Fresh 2006-range scan triage (2026-05-29)
 
 Scanned ~part of the 2006 range (release binary, cortex main-detection). 12
