@@ -4,7 +4,10 @@
 //! These are the implementations behind the `--whatsout fragment` and
 //! `--whatsout math` CLI modes. They run AFTER all post-processing on
 //! the final XML/HTML document and return the subtree the user actually
-//! wanted (an embeddable inline snippet, or just the math).
+//! wanted (an embeddable inline snippet, or just the math). The
+//! `--whatsout archive` mode keeps the full document (no extraction) but
+//! flags the caller to wrap it into a zip — see [`Whatsout::is_archive`]
+//! and [`crate::pack::pack_archive`].
 //!
 //! Companion modules:
 //! * [`crate::pack`] bundles the chosen output into a zip archive.
@@ -30,35 +33,53 @@ use libxml::tree::Node;
 use crate::document::PostDocument;
 
 /// Output extraction mode — port of Perl `LaTeXML::Util::Pack`'s
-/// `whatsout` option (Pack.pm L323-345). Selects which subtree of the
+/// `whatsout` option (Pack.pm L320-345). Selects which subtree of the
 /// post-processed document to serialize and ship to the user.
 ///
 /// * [`Whatsout::Document`] — full document, no extraction (default).
 /// * [`Whatsout::Fragment`] — embeddable HTML snippet via
 ///   [`get_embeddable`].
 /// * [`Whatsout::Math`] — math subtree (or fallback) via [`get_math`].
+/// * [`Whatsout::Archive`] — full document, but bundled into a zip by
+///   [`crate::pack::pack_archive`] (Pack.pm L326-331 +
+///   `Pack/Zip.pm::get_archive`). Extraction is a no-op; the archiving
+///   happens in the binary's output stage.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Whatsout {
   #[default]
   Document,
   Fragment,
   Math,
+  Archive,
 }
 
 impl Whatsout {
   /// Parse a CLI string into the matching variant. Returns `None` for
   /// unrecognized values; callers typically fall back to `Document`.
-  /// Mirrors Perl `pack_collection`'s string-tag dispatch — accepts
-  /// `archive` for backward-compat but maps it to `Document` (archive
-  /// bundling is the `pack::pack_archive` concern, not extraction).
+  /// Mirrors Perl `pack_collection`'s string-tag dispatch. Perl matches
+  /// archive with `/^archive/`, so the `archive::zip` /
+  /// `archive::zip::perl` long forms (Pack/Zip.pm L118-122) also map to
+  /// [`Whatsout::Archive`].
   pub fn from_cli(s: &str) -> Option<Self> {
     match s {
-      "document" | "archive" => Some(Whatsout::Document),
+      "document" => Some(Whatsout::Document),
       "fragment" => Some(Whatsout::Fragment),
       "math" => Some(Whatsout::Math),
+      _ if s.starts_with("archive") => Some(Whatsout::Archive),
       _ => None,
     }
   }
+
+  /// Whether this mode bundles the output into a zip archive (Perl
+  /// `pack_collection` `whatsout =~ /^archive/`). The binary's output
+  /// stage branches on this to call [`crate::pack::pack_archive`].
+  pub fn is_archive(self) -> bool { matches!(self, Whatsout::Archive) }
+
+  /// Whether selecting this mode forces post-processing. Perl
+  /// `Config.pm` L454: any `whatsout` other than `document` implies
+  /// `post = 1` (fragment/math need the extraction stage; archive needs
+  /// the full post-processed document to bundle).
+  pub fn requires_post(self) -> bool { !matches!(self, Whatsout::Document) }
 }
 
 /// Apply the requested [`Whatsout`] extraction to `doc` and return the
@@ -70,7 +91,9 @@ impl Whatsout {
 /// don't have to thread the inner [`libxml::tree::Document`] through.
 pub fn serialize_whatsout(doc: &PostDocument, mode: Whatsout) -> String {
   match mode {
-    Whatsout::Document => doc.to_xml_string(),
+    // Archive ships the FULL document; the zip wrapping is a separate
+    // output-stage concern (`pack::pack_archive`), not extraction.
+    Whatsout::Document | Whatsout::Archive => doc.to_xml_string(),
     Whatsout::Fragment => get_embeddable(doc)
       .map(|n| doc.get_document().node_to_string(&n))
       .unwrap_or_else(|| doc.to_xml_string()),
@@ -346,17 +369,49 @@ mod tests {
     assert_eq!(Whatsout::from_cli("document"), Some(Whatsout::Document));
     assert_eq!(Whatsout::from_cli("fragment"), Some(Whatsout::Fragment));
     assert_eq!(Whatsout::from_cli("math"), Some(Whatsout::Math));
-    // Backward-compat: `--whatsout archive` was historically how the
-    // zip output mode was selected; now archive bundling is
-    // controlled separately (by `--dest *.zip`) so the extraction
-    // step is a no-op.
-    assert_eq!(Whatsout::from_cli("archive"), Some(Whatsout::Document));
+    // `--whatsout=archive` (Perl Pack.pm `pack_collection` `whatsout`
+    // tag): bundle the full document into a zip. The `archive::zip`
+    // / `archive::zip::perl` long forms (Zip.pm L118-122) also count
+    // as archive — Perl matches `/^archive/`.
+    assert_eq!(Whatsout::from_cli("archive"), Some(Whatsout::Archive));
+    assert_eq!(Whatsout::from_cli("archive::zip"), Some(Whatsout::Archive));
     assert_eq!(Whatsout::from_cli("nonsense"), None);
   }
 
   #[test]
   fn whatsout_default_is_document() {
     assert_eq!(Whatsout::default(), Whatsout::Document);
+  }
+
+  #[test]
+  fn whatsout_is_archive_predicate() {
+    assert!(Whatsout::Archive.is_archive());
+    assert!(!Whatsout::Document.is_archive());
+    assert!(!Whatsout::Fragment.is_archive());
+    assert!(!Whatsout::Math.is_archive());
+  }
+
+  #[test]
+  fn whatsout_requires_post_for_non_document() {
+    // Perl Config.pm L454: any non-`document` whatsout forces post=1.
+    assert!(!Whatsout::Document.requires_post());
+    assert!(Whatsout::Fragment.requires_post());
+    assert!(Whatsout::Math.requires_post());
+    assert!(Whatsout::Archive.requires_post());
+  }
+
+  #[test]
+  fn serialize_whatsout_archive_returns_full_document() {
+    // Archive bundles the FULL post-processed document into the zip;
+    // the serialized HTML payload is the whole document, identical to
+    // `Whatsout::Document`. The zip wrapping is `pack::pack_archive`'s
+    // job, not extraction's.
+    let xml = r#"<html><body><div class="ltx_document"><p>hi</p></div></body></html>"#;
+    let d = doc(xml);
+    let archive = serialize_whatsout(&d, Whatsout::Archive);
+    let full = serialize_whatsout(&d, Whatsout::Document);
+    assert_eq!(archive, full);
+    assert!(archive.contains("<html>") && archive.contains("</html>"));
   }
 
   #[test]
