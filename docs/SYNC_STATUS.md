@@ -1046,10 +1046,17 @@ isolated 15 Perl-clean+Rust-fail. Fixed this session: **1911.07001** (babel
 global french, see above), **2006.02269** (halign template, see above),
 **2007.04819** (babel-french `\?`, see below). Remaining 13 triaged:
 * **Vendor `\GenericError` (Perl skips MISSING pkg)** — 2001.04856 (pb-lams),
-  2001.09580 (embedfile "Missing pdfTeX/luaTeX"), 2006.10240 (babel
-  "haven't defined the language"). Perl reports the pkg missing and never
-  raw-loads it; Rust finds it on TL and hits its vendor guard. Candidate for
-  vendor-error downgrade (moot-in-XML class) OR raw-load robustness.
+  2001.09580 (embedfile "Missing pdfTeX/luaTeX"). Perl reports the pkg missing
+  and never raw-loads it; Rust finds it on TL and hits its vendor guard.
+  Candidate for vendor-error downgrade (moot-in-XML class) OR raw-load
+  robustness. **2006.10240 FIXED** (commit `d0a59bf42d`): was NOT a vendor
+  error — `\usepackage[english,strings]{babel}`; Rust's
+  `\lx@babel@activate@mainlang` treated the bare babel KEYWORD option `strings`
+  as the main language → `\selectlanguage{strings}` → "haven't defined the
+  language 'strings'". Excluded babel's bare keyword options (`strings`, `base`,
+  `showlanguages`, `KeepShorthandsActive`, `activeacute`, `activegrave`,
+  `debug`, `noconfigs`, `silent`, `nocase`, `leqno`, `fleqn`) from the
+  language-candidate filter. 1 error → 0, xml:lang="en".
 * **Content-model malformed** — 1911.01815 (`ltx:listingline`, 333 warns,
   statsoc.cls), 2004.07710 (`ltx:itemize`), 2006.06087 (`ltx:theorem` in
   `ltx:note`, 926 warns). Deeper structural.
