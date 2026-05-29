@@ -349,8 +349,22 @@ LoadDefinitions!({
   def_macro_noop("\\MARK{}")?;
   def_macro_noop("\\mpfootnotemark")?;
 
-  // Perl L189: \note{} — emit <ltx:note> wrapper. Previously unported.
-  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
+  // Perl elsart_support_core.sty.ltxml L189:
+  //   DefMacro('\note{}', "<ltx:note>#1</ltx:note>");    # ?
+  // This is a *DefMacro* (token expansion), NOT a DefConstructor — so the
+  // body tokenises to LITERAL TEXT (`<`, `>` are catcode-OTHER): `\note{X}`
+  // expands to the characters `<ltx:note>` + X + `</ltx:note>`, NOT a real
+  // <ltx:note> element. Perl's own `# ?` flags it as questionable, but it is
+  // the ground truth and crucially is ERROR-FREE: a block argument such as
+  // `\note{\begin{remark}…\end{remark}}` (a `\newtheorem`-based environment)
+  // renders the remark as a normal <ltx:theorem> bracketed by stray literal
+  // text, with no content-model violation. Porting it as a DefConstructor
+  // (real <ltx:note>) instead made `ltx:theorem isn't allowed in <ltx:note>`
+  // — papers that wrap a theorem-like env in `\note{…}` (common with a
+  // user `\newcommand\note[1]{…}` that LaTeX/Perl *ignore* because elsart
+  // already defined `\note`) then failed. Match Perl: use DefMacro.
+  // Witness 2006.06087 (elsarticle, `\note{\begin{remark}…}`): 1 error → 0.
+  DefMacro!("\\note{}", "<ltx:note>#1</ltx:note>");
 
   // Float environment
   DefEnvironment!("{esmark}",  "#body");
