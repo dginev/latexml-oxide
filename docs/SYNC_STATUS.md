@@ -1104,6 +1104,23 @@ Rust-only wins are exhausted. Remaining work is SHARED beyond-Perl gaps (mdwmath
 `\meaning`, revtex4 `@sw`, pushback-loop hangs, fontaxes/betababel/pstricks
 raw-loads, table-in-algorithm2e-listingline).
 
+**2026-05-29 (cont. 2) — NEAR-PARITY CONFIRMED across ~7000 sampled papers.**
+After fixing 1911.01815 (`2627ed999a`), ran a second cleaner release scan
+(cortex-style main-detection: require an UN-commented `\documentclass`, prefer
+the `.tex` with a sibling `.bbl`) on a fresh 3000-paper batch + gated the
+`_`/`^` cluster. Verdicts: 1904.10409 SHARED (`_` text-mode = genuine LaTeX
+error, both fail 3/3); the cleaner scan's failures are still mdwmath `#`
+(SHARED) + package-source artifacts (e.g. `fancyhdr/fancyhdr.tex` — a bundled
+package source, NOT the paper; needs root-dir/`.bbl` preference to suppress).
+**No genuine Rust-only candidate found** across ~7000 papers sampled this
+session (4000 + 3000, multiple offsets, recent years). The genuine Rust-only
+error class is EXHAUSTED for the discoverable cases; the residual is SHARED
+beyond-Perl gaps (where Perl also fails: mdwmath `\meaning`-hex, firstaid,
+revtex `@sw`, pushback hangs, table-in-listingline) or text-mode-`_` paper-bugs.
+Next genuine-candidate hunting needs either a much larger sample (genuine rate
+≈ 0.01%) or scanning a different ecosystem; SHARED gaps are beyond-Perl
+"surpass" work, not faithful-parity Rust-only fixes.
+
 **2026-05-29 (cont.) — fresh-scan candidates all SHARED.** Perl-gated (CORRECT
 path) every low-error failure from the release scan: 1903.04631 SHARED (8/8,
 `\tabular` inside an algo2e listingline — both fail), 1907.06165 SHARED
