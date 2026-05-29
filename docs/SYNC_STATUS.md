@@ -1290,7 +1290,26 @@ close the hbox text BEFORE the `\lx@algo@endline` fires (digestion/whatsit
 order), which Rust does not. Pure root-cause is the `\For`/`\algocf@@@block`
 digestion-vs-tree-mutation ordering inside an `\hbox` body. NON-FATAL (output
 still produced). Worth a focused session: it generalizes to any listing/verbatim
-inside `\hbox`/`\colorbox`/`\fbox`.
+inside `\hbox`/`\colorbox`/`\fbox` (2nd instance found 2026-05-29: 1903.04631
+`supplement.tex`).
+
+**Instrumented trace (2026-05-29).** Added temporary `LX_TRACE_LL` prints to
+`open_element`/`close_element` and ran the minimal repro. Rust open/close order:
+`OPEN listing → OPEN listingline-1 → OPEN text(hbox, _noautoclose) → OPEN
+text/emph (for…do) → CLOSE listingline-1 (cursor inside text(hbox),
+cant_close=["text"]) ⇒ ERROR → OPEN listingline-2 → CLOSE listingline-1 clean …`.
+So `\lx@algo@@endline` (the For header→body split) closes listingline-1 while
+the cursor is still inside the hbox's `_noautoclose` text; the hbox's own
+`maybe_close_node(text)` only runs AFTER the whole For body (i.e. after the
+split close). Perl's output has the SAME nesting (hbox `<text>` inside
+listingline-1, closed there) yet does NOT error — and Perl's `closeElement`/
+`canAutoClose`/`\hbox`(`_noautoclose=1`) are byte-identical to Rust, so Perl
+must reach the split-close with the hbox text ALREADY closed. The remaining
+unknown is purely Perl's digestion/absorb ORDER (why the hbox text closes before
+the For's split-close in Perl but after in Rust) — needs PERL-SIDE
+instrumentation; a Rust-only force-close of `_noautoclose` inline descendants at
+listingline boundaries would match Perl's *output* but not its *mechanism* (a
+stopgap), so deferred rather than patched speculatively.
 
 #### FIXED: 1910.09629 — hyperref `\url` + active-`"` conditional leak (2026-05-28)
 
