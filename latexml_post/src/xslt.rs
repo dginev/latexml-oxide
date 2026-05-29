@@ -13,6 +13,25 @@ use std::path::Path;
 use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
 
+/// Set libxslt's global template-recursion cap to Perl's value (1000) exactly
+/// once per process. Mirrors `XML::LibXSLT->max_depth(1000)` in
+/// `LaTeXML::Post::XSLT`. Prevents deeply-recursive stylesheet templates from
+/// exhausting the C call stack (SIGSEGV) or RAM on pathological documents,
+/// aborting the transform gracefully like Perl instead.
+fn set_xslt_max_depth() {
+  static SET_MAX_DEPTH: std::sync::Once = std::sync::Once::new();
+  SET_MAX_DEPTH.call_once(|| {
+    // SAFETY: `xsltMaxDepth` is libxslt's process-global recursion cap
+    // (a plain C `int`). The libxslt crate exposes no safe setter, so a
+    // direct write to the `static mut` is the only path. `Once` guarantees a
+    // single writer; libxslt only ever READS this value (when creating each
+    // transform context), so there is no data race with concurrent transforms.
+    unsafe {
+      libxslt::bindings::xsltMaxDepth = 1000;
+    }
+  });
+}
+
 /// Resource type information.
 struct ResourceInfo {
   extension: &'static str,
@@ -278,14 +297,36 @@ impl Processor for XSLT {
     // rust-libxslt — `register_exslt()` is Once-guarded.
     libxslt::register_exslt();
 
-    // Duplicate the libxml Document directly (xmlCopyDoc, C-level memcpy
-    // of the tree) instead of serialize-then-reparse. Saves ~5-15 ms on
-    // a typical mid-size paper vs the string roundtrip the earlier
-    // code used. Required because `stylesheet.transform(...)` consumes
-    // its source Document by value.
-    let transform_doc = doc.get_document().dup().map_err(|_| {
-      PostError::Processing("Failed to duplicate document for XSLT transform".to_string())
-    })?;
+    // Faithful port of Perl `XML::LibXSLT->max_depth(1000)`
+    // (LaTeXML::Post::XSLT.pm L48): cap libxslt's template-recursion depth.
+    // libxslt's compiled-in default is 3000; lowering to Perl's 1000 makes a
+    // runaway / deeply-recursive stylesheet apply ABORT gracefully (matching
+    // Perl) instead of growing the C call stack until SIGSEGV/OOM on
+    // pathological input. `xsltMaxDepth` is a process-global libxslt static
+    // read when each transform context is created, so setting it once is
+    // sufficient. See docs/STABILITY_WITNESSES.md (Cluster A, hypothesis 3).
+    set_xslt_max_depth();
+
+    // Hand the source tree to libxslt WITHOUT a deep copy. `transform()`
+    // takes its `Document` by value (the moved handle's Drop would free the
+    // tree), so earlier code `dup()`'d (xmlCopyDoc — a full deep copy) to keep
+    // this PostDocument's own tree alive. On a large-math document the DOM is
+    // multi-GB, and that deep copy TRANSIENTLY DOUBLES peak RSS during the
+    // transform — the dominant driver of post-processing OOM on the canvas
+    // sweep (docs/STABILITY_WITNESSES.md, Cluster A / hypothesis 1).
+    //
+    // `libxml::Document` is `Rc<RefCell<_Document>>` and the underlying
+    // `xmlDoc` is freed only when the LAST handle drops, so an Rc `clone()`
+    // (a refcount bump, no copy) is the right tool: libxslt reads the shared
+    // tree to build a SEPARATE result tree (`xsltApplyStylesheetUser` does not
+    // free its source), the moved clone's Drop just decrements the count, and
+    // `doc`'s own handle (dropped at function end) performs the single real
+    // free. We never read `doc`'s tree again after this point — only its
+    // string metadata below — so libxslt mutating the shared source while
+    // applying is harmless. This mirrors Perl, which passes
+    // `$doc->getDocument` straight to `transform` with no pre-copy
+    // (LaTeXML::Post::XSLT.pm L79).
+    let transform_doc = doc.get_document().clone();
 
     // Build parameters, relativizing path-valued ones (CSS, JAVASCRIPT,
     // ICON) for the current doc's destination. The crate-level params

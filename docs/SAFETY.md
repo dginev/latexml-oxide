@@ -31,8 +31,8 @@ shell-escape) at all.
 
 ## `unsafe` budget
 
-As of 2026-05-12 the project contains **22 `unsafe` sites across 8 files**
-— five `unsafe impl Send/Sync` markers, sixteen `unsafe {}` blocks, and
+As of 2026-05-29 the project contains **23 `unsafe` sites across 9 files**
+— five `unsafe impl Send/Sync` markers, seventeen `unsafe {}` blocks, and
 no `unsafe fn`. Every site carries a `// SAFETY:` comment at the call
 site that names the invariant it depends on.
 
@@ -120,6 +120,16 @@ These mirror what `timeout(1) --kill-after` does for the bench script's
 outer guard. They cannot be expressed via safe stdlib APIs:
 `Command::process_group` was stabilised but does not give us
 `setsid + killpg`.
+
+### F. libxslt global recursion cap (1 site)
+
+`latexml_post/src/xslt.rs` (`set_xslt_max_depth`) — `xsltMaxDepth = 1000`, a
+`Once`-guarded write to libxslt's process-global `static mut` recursion cap.
+Faithful port of Perl `XML::LibXSLT->max_depth(1000)`. The `libxslt-0.1.3`
+crate exposes no safe setter; libxslt only READS the value (when building each
+transform context), so the single guarded write cannot race a transform. This
+hardens the post-processor against stack-overflow/OOM on pathologically-deep
+stylesheet recursion (it aborts gracefully, like Perl).
 
 ---
 
