@@ -1021,6 +1021,24 @@ binding-gap candidates are largely exhausted/stale). Findings:
 * **2001.10605** `not_tex_source` / `not_tex_source` PDF-magic: correct
   rejection (SHARED).
 
+**Fresh re-sweep of stage_R17 (66 failures, current binary) — confirms massive
+staleness:** **64/66 are now FATAL-free** (~97% recovered). Only 2 still FATAL:
+* **2008.00562** — `\the$` cascade (`You can't use $ after \the`) → 101 errors
+  → `TooManyErrors`. Source-level / cascade-class.
+* **2008.07966** — `Fatal:Timeout:MemoryBudget` (RSS 4521 MB > 4500 cap), ZERO
+  regular errors. Cause: `\input{dalpha-plot.tex}` = 809 KB of pgfplots
+  `\addplot` data. **SHARED** — Perl also fails (times out at 180 s, 2 fatal
+  "terminated"), BUT Perl peaks at only 1.28 GB RSS vs Rust's 4.5 GB. So a
+  3.5× Rust memory-bloat EFFICIENCY gap on huge pgfplots data (a PERFORMANCE
+  item, not a correctness parity gap — both engines fail). Not a Rust-only
+  correctness win.
+
+**⇒ stage_R17 has ZERO clean Rust-only failures** (64 recovered, 2 shared).
+The Rust-only work in this stage is exhausted; the next fire should re-sweep
+OTHER stages (corrected error-count: strip ANSI / parse the "Conversion
+complete: N errors" line, my `^Error:` grep missed ANSI-prefixed lines) or
+take a documented deep Rust-only candidate (xint/pgfplots).
+
 **Stale-canvas reality:** across this campaign the MAJORITY of re-tested
 CONVERR_1 candidates were already-fixed on the current binary (\lx ×10,
 \c@tikztimingtrans ×9, \c@subalgorithm@save ×4, {mdfigure}, \specialrule,
