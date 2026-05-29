@@ -1164,6 +1164,35 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: ctable stub left `\ctable` undefined (non-tikz papers) (2026-05-29)
+
+**Witness 2011.04706** (`\usepackage{ctable}` + `\ctable[caption=…]{lcccccr}{…}
+{…}`, no tikz). GENUINE Rust-only: Perl 0 err (raw-loads ctable.sty → `\ctable`
+defined); Rust 3 err (`\ctable` undefined). `ctable_sty.rs` was a deliberate
+deps-only NO-OP stub — its premise ("no paper invokes `\ctable`; Perl skips
+ctable as missing-file") was outdated: this paper DOES use `\ctable`, and Perl
+(with texlive TEXINPUTS) raw-loads ctable.sty. Fix: raw-load the real ctable.sty
+(`InputDefinitions!("ctable", noltxml=>true)`), GUARDED on `!tikz.sty_loaded` —
+the documented "load ctable after tikz" AtBeginDocument clash only fires with
+tikz, so tikz papers keep deps-only (1912.08312 etc. still clean, verified).
+Non-tikz: 3 err → 0, `\ctable` defined as Perl does. cargo test 1344/0.
+(commit pending).
+
+### XY-PIC CURVE CLUSTER root pinpointed (2026-05-29, DEFERRED)
+
+The recurring xy-pic curved-arrow cascade (`\ar@/_10pt/`, `\crvi` undefined;
+witnesses 2006.00192/01613/01470, 2011.01105) has a precise root: Rust DOES
+raw-load `xycurve.tex`, but the load aborts with `<closed> Mouth is
+unexpectedly already closed. Reading from /tmp/xycurve.tex, but it has already
+been closed.` — a premature **mouth-close during the nested xy raw-load chain**
+(xy.tex → xyrecat → xyidioms → xycurve.tex). The abort happens BEFORE
+xycurve.tex L69 `\xydef@\crvi…` (the invisible-curve command `\ar@/.../` uses),
+so `\crvi` (and later curve defs) stay undefined → cascade. The fix is a
+mouth-lifecycle fix in nested raw-loading, NOT curve rendering — a dedicated
+deep session. Also: 2010.02903 (`ltx:inline-logical-block` nested via emnlp
+`\twocolumn[\@maketitle]`; Perl produces 0 such blocks) is a separate deferred
+document-builder content-model case.
+
 ### FIXED: babel-French must load scalefnt → `\scalefont` undefined (2026-05-29)
 
 **Witness 2010.03230** (`\usepackage{babel}`[french] + bare `\scalefont{0.78}`,
