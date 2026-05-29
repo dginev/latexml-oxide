@@ -848,3 +848,36 @@ genuine adjacent divergence was fixed: Rust's `\cf@encoding`/`\f@encoding`
 fell back to *empty* when the live font's encoding slot is `None`; Perl's
 Font always carries OT1 — `Common/Font.pm:331`/`$DEFENCODING`. Now falls
 back to OT1 when a font exists. That does not fix this shared loop.)
+
+## `aas_support.sty.ltxml` omits `\floattable` (aastex62/631 macro)
+
+The AASTeX class macro `\floattable` — `aastex62.cls` L4574
+`\def\floattable{\global\deluxestartrue\global\floattrue}`, a no-arg
+declaration that makes the FOLLOWING deluxetable a full-width (spanning)
+float in two-column PDF layout — is **not** provided by Perl's
+`aas_support.sty.ltxml` (which has `\deluxetable`/`\planotable`/
+`\splitdeluxetable` but not `\floattable`). So a paper that bundles
+`aastex62.cls` and writes `\floattable` before a table raises
+`Error:undefined:\floattable` in Perl too:
+
+```
+Conversion complete: … 1 error; 1 undefined macro[\floattable]
+```
+
+Witness: 1909.08916 (`\documentclass{aastex62}`, `\floattable` before
+deluxetables). Both LaTeXML bindings route `aastex62` through the
+`aastex.cls.ltxml`/`aas_support` path rather than raw-loading the bundled
+`.cls`, so the gap is shared. Since `\floattable` is pure page-layout
+(full-width float placement), it is moot in our HTML paradigm; the Rust
+port adds it as a no-op in `aas_support_sty.rs` (alongside `\placetable`/
+`\platewidth`), which makes Rust convert the witness cleanly where Perl
+still errors. Minimal trigger:
+
+```latex
+\documentclass{aastex62}    % bundled aastex62.cls
+\begin{document}
+\floattable
+\begin{deluxetable}{cc}\tablehead{\colhead{a} & \colhead{b}}
+\startdata 1 & 2 \enddata\end{deluxetable}
+\end{document}
+```

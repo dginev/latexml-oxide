@@ -1006,6 +1006,22 @@ Found via a fresh sample of the offset-18 remaining slice.
 
 ### R12/R16/R17 fixes (2026-05-28)
 
+* **aas_support: add `\floattable` no-op (aastex62 layout macro)**
+  (`<this commit>`) — `aastex62.cls` L4574
+  `\def\floattable{\global\deluxestartrue\global\floattrue}` makes the next
+  deluxetable a full-width float (two-column PDF layout). Neither our
+  `aas_support_sty.rs` nor Perl's `aas_support.sty.ltxml` provided it (both
+  route `aastex62` through the aas_support path, not a raw `.cls` load). Pure
+  page-layout → moot for HTML (WISDOM #50), added as a no-op alongside
+  `\placetable`/`\platewidth`. **Witness 1909.08916** (`\documentclass{aastex62}`,
+  `\floattable` before deluxetables): 1 error → **0**. NOTE: Perl ALSO errors
+  here (same aas_support gap — documented in KNOWN_PERL_ERRORS); this is a
+  both-bindings-incomplete real-package macro, so Rust now converts where Perl
+  still errors. cargo test --tests 1344/0.
+* **More stale-log recoveries confirmed this triage (already 0-err):** the
+  entire `\lx`-undefined cluster (1501.07631, 1505.07819, 1601.07412/07836,
+  1602.03564, 1603.00071, 1703.08918, 1705.01609, … 10+ papers — all recovered),
+  plus 2002.06879 (`{mdfigure}`). The stage logs were stale for these.
 * **jmlr2e stub: add `\BlackBox` (end-of-proof QED box)** (`<this commit>`) —
   `jmlr2e.sty` (JMLR template, not in TeX Live — shipped with submissions)
   defines `\newcommand{\BlackBox}{\rule{1.5ex}{1.5ex}}`. Our
