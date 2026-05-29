@@ -1058,7 +1058,7 @@ global french, see above), **2006.02269** (halign template, see above),
   `debug`, `noconfigs`, `silent`, `nocase`, `leqno`, `fleqn`) from the
   language-candidate filter. 1 error → 0, xml:lang="en".
 * **Content-model malformed** — 1911.01815 (`ltx:listingline`, 333 warns,
-  statsoc.cls). **2004.07710 FIXED** (commit `8bd255a982`): `Attempt to close
+  statsoc.cls) DEFERRED-DEEP (see below). **2004.07710 FIXED** (commit `8bd255a982`): `Attempt to close
   </ltx:itemize>, which isn't open` — Rust's `\preitem@par` closed `ltx:p`/
   `ltx:para` unconditionally, missing Perl L1505's guard (`!inPreamble &&
   current element != ltx:itemize`). A `\trivlist`-based `{proofof}` env inside
@@ -1082,6 +1082,35 @@ global french, see above), **2006.02269** (halign template, see above),
   ignored as option-clash → UKenglish.ldf never processed), 2006.11831
   (`\varleftarrow`/`\varlongleftarrow` from old-arrows.sty, missing in BOTH).
   **1910.09629 FIXED** (see below).
+
+#### DEFERRED-DEEP: 1911.01815 — algorithm2e listinglines inside `\hbox`/`\colorbox`
+
+Root-caused to a minimal repro:
+```tex
+\documentclass{article}
+\usepackage[ruled]{algorithm2e}
+\begin{document}
+\begin{algorithm}
+\hbox{\For{$t=1$ \KwTo $T$}{ \# Init \\ $x=0$; \\ }}
+\caption{Test}
+\end{algorithm}
+\end{document}
+```
+→ `Error:malformed:ltx:listingline Closing tag "ltx:listingline" whose open
+descendents do not auto-close. Descendants are "text"` (NON-fatal — it still
+closes, but counts as 1 error). The real paper wraps an algorithm2e body in
+`\colorbox{gray!25}{\parbox{…}{ … }}`; `\colorbox` → `\hbox{…#3}` (color.sty
+L105, matched faithfully in color_sty.rs), so the listinglines render in the
+`\hbox`'s restricted-horizontal (`ltx:text`) mode. `\parbox` alone is clean;
+the `\hbox` (from colorbox) is the trigger. In that mode Rust emits an
+`<emph font="italic">` wrapper and stray `<break/>`s inside the listinglines
+that Perl does NOT (Perl's listinglines hold plain `<text>` runs and close
+cleanly). The leftover `ltx:text`/`emph` is not auto-closeable, so closing the
+listingline reports the malformed-descendant error. begin/close logic matches
+Perl; the divergence is the restricted-horizontal listingline/break/emph
+rendering. Affects "verbatim/listing inside a colored box" broadly. Next step:
+align Rust's hbox-mode listingline emission (suppress the spurious emph/break,
+or make the inline text auto-close at listingline boundaries) with Perl.
 
 #### FIXED: 1910.09629 — hyperref `\url` + active-`"` conditional leak (2026-05-28)
 
