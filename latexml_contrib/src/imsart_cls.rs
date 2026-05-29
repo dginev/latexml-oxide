@@ -101,4 +101,11 @@ LoadDefinitions!({
   def_macro_identity("\\bparticle{}")?;
   def_macro_identity("\\bnote{}")?;
   def_macro_identity("\\btype{}")?;
+  // imsart.sty `\common@pub@types` also `\let`s these to `\@firstofone`
+  // (identity), but they were missing from the list above — so an imsart
+  // `.bbl` using `\begin{barticle}…\betal{…}` (bold-"et al." separator) or
+  // `\banumber{…}` saw them undefined. Witness 1912.11583 (`\betal`, 1 error
+  // → 0). Mirror `\common@pub@types`.
+  def_macro_identity("\\betal{}")?;
+  def_macro_identity("\\banumber{}")?;
 });

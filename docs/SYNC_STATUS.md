@@ -1004,6 +1004,34 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### R10-R16 candidate triage + bib-setup-macro pattern (2026-05-28)
+
+Re-tested promising 1-error candidates (fresh worker). Classifications:
+* **SHARED / missing-class** (skip): 2006.15136 (`\orcid`, compositionalityarticle.cls
+  missing), 2007.04509 (`\pagerange`, biom.cls missing), 2006.16481
+  (`\papertitle` — Perl ALSO errors; multi-line `\def\papertitle{…}` is
+  paper-buggy), 1910.04679 `\lpb` (used as Polish ł, likely a typo for `\l`).
+* **HIGH-LEVERAGE Rust-only pattern — bibliography setup macros not run.**
+  Journal bib styles define per-entry commands (`\betal`/`\byear`/`\bpages`/
+  `\bmisc`/`\bnote`/… as `\@firstofone`) INSIDE a setup macro that the
+  entry-type env/command calls. LaTeXML's bib handling doesn't run that setup,
+  so they're undefined in the .bbl:
+  - **imsart** (1912.11583): FIXED (`<this commit>`). imsart_cls.rs already
+    hoists `\common@pub@types`'s identity `\let`s as a `def_macro_identity`
+    list (`\bauthor`/`\byear`/`\bpages`/`\btitle`/`\bnote`/… = `\@firstofone`)
+    but had OMITTED `\betal` (+ `\banumber`) — so a `.bbl` using
+    `\begin{barticle}…\betal{…}` (bold-"et al." separator) saw only `\betal`
+    undefined (siblings present). Added them. 1 error → 0 (Perl 5 errors here —
+    imsart.cls "missing" in Perl — so Rust now far ahead). Binding-completeness
+    pattern (chemformula/aas_support).
+  - **abntex2cite** (1910.04251): same class — `\@bibitem`/`\@lbibitem` redef
+    `\gdef\abntnextkey{#1}`, but LaTeXML's `\bibitem` DefConstructor bypasses
+    `\@bibitem` → `\abntnextkey` undefined in `\bibciteEXPL{\abntnextkey}`.
+  This bib-setup-macro-not-run pattern likely spans many journal-class papers
+  → high-leverage dedicated-session target (investigate LaTeXML bib-env /
+  `\bibitem` dispatch vs the class's `\@b*`/setup macros).
+* `\pgfpl@@` (2005.10228): pgfplots internal — deep pgf gap.
+
 ### R10-R16 re-sweep + cortex_worker-staleness METHODOLOGY LESSON (2026-05-28)
 
 **LESSON: `cortex_worker` is a SEPARATE binary — rebuild it (`cargo build
