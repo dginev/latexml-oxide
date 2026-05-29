@@ -64,6 +64,22 @@ One confirmed-genuine DEEP residual: 1911.01815 (listing/verbatim inside
 `\hbox`/`\colorbox` — `\lx@algo@endline` closes a listingline over the hbox's
 open `_noautoclose` text; whatsit-construction-order divergence; non-fatal).
 
+**2026-05-29 — full-corpus error-rate snapshot + sweep resumed.** The canvas
+(`large_scale_canvas_3`) is the full **1,000,000-paper** corpus (262 months,
+2000-01→2021-10). **~406k swept (~41%)**: 396,863 OK (97.65%), 4,131 completed
+with ≥1 error (1.02%), 228 real hard-fail (FATAL/TIMEOUT/OOM, 0.06%), plus
+5,181 `FATAL_127` that were a **harness artifact confined to stage_74** (exit
+127 = worker-binary-not-found; re-run yields ~98% OK). **Error-free among
+genuinely-completed docs ≈ 99.0%; completion ≈ 99.94%.** First 500K done
+(R01-17 + stages 16-50, 99.997%); second 500K was 24/50 stages (offsets 1-24 =
+stages 51-74). **Resumed the sweep** (`/tmp/sweep_driver.sh` → background, log
+`canvas/master_second_resume.log`): rebuilt `cortex_worker --release --features
+cortex` with this session's 5 fixes (xypic `\crvi`, SciPost physics, algorithm2e
+`\nl`, svproc `\apj`, asme2ej `{proof}`), then runs offsets 24-50 (re-run broken
+stage_74 + new stages 75-100, ~260k papers). Lesson: at this scale the
+systematic staged sweep — not per-paper manual gating — is the right tool to
+cover the remaining corpus and surface real Rust-only clusters in bulk.
+
 **Goal.** Reach **1,000,000 successful conversions** with the Rust
 translation (`cortex_worker --standalone`) on the 1,000,001-paper
 subset of arxmliv where the original Perl LaTeXML emitted at least
