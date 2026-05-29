@@ -1058,7 +1058,14 @@ global french, see above), **2006.02269** (halign template, see above),
   `debug`, `noconfigs`, `silent`, `nocase`, `leqno`, `fleqn`) from the
   language-candidate filter. 1 error → 0, xml:lang="en".
 * **Content-model malformed** — 1911.01815 (`ltx:listingline`, 333 warns,
-  statsoc.cls), 2004.07710 (`ltx:itemize`). **2006.06087 FIXED** (commit
+  statsoc.cls). **2004.07710 FIXED** (commit `8bd255a982`): `Attempt to close
+  </ltx:itemize>, which isn't open` — Rust's `\preitem@par` closed `ltx:p`/
+  `ltx:para` unconditionally, missing Perl L1505's guard (`!inPreamble &&
+  current element != ltx:itemize`). A `\trivlist`-based `{proofof}` env inside
+  an itemize had its (para-wrapped) trivlist itemize closed by the para-close,
+  so its `\item` escaped to the outer list → later `\end{itemize}` found
+  nothing open. Added the guard; trivlist now nests correctly (matches Perl
+  tree). 1 error → 0. **2006.06087 FIXED** (commit
   `66c623aeea`): `ltx:theorem isn't allowed in <ltx:note>` — elsart_support_core
   mistranslated Perl L189's `DefMacro('\note{}', "<ltx:note>#1</ltx:note>")`
   (token expansion → LITERAL TEXT, error-free but buggy, flagged `# ?` in Perl)
