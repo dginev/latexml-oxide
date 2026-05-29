@@ -1164,6 +1164,20 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### Fresh 2009-range low-error scan triage (2026-05-29)
+
+Scanned ~2500 of the 2009 range filtered to ≤6 Rust errors; ~10 candidates,
+gated vs Perl. **TWO** clean fixable Rust-only wins, both fixed:
+* **2009.00150** — autart `\let\proof\relax`+amsthm (eager-amsthm preload). FIXED.
+* **2009.00379** — siamltex `{AMS}` classification inside abstract. FIXED.
+All others SHARED: `\endIEEEproof`/`}` mode-frame leaks (2009.01572/.02510/.02350,
+the [[project_endgroup_modeswitch_frame_leak]] family), `\GenericError` embedfile
+PDF-mode (2009.03779, moot vendor error), text-mode-`_` paper-bugs
+(2009.01676/.02105/.04773). FOUR ranges now (2006/2106/2008/2009): each yields
+1–2 clean Rust-only low-error wins, all fixed — very high parity confirmed; the
+bulk of remaining Rust-only failures are the deferred xy-pic + mode-frame
+clusters.
+
 ### FIXED: siamltex `{AMS}`/`{AM}`/`{PII}` classification envs emitted inline → "ltx:classification isn't allowed in ltx:abstract" (2026-05-29)
 
 **Witness 2009.00379** (`\documentclass{siamltex}`; `\begin{abstract}…
