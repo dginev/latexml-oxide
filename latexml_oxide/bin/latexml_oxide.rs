@@ -122,7 +122,7 @@ struct Cli {
   )]
   graphics_svg_threshold_kb: u32,
 
-  /// Output extraction mode (Perl Pack.pm `whatsout`):
+  /// Output chunk to pack (Perl Pack.pm `whatsout`):
   ///   `document` (default) → full post-processed HTML;
   ///   `fragment`           → embeddable inline snippet
   ///                          (`<div class="ltx_document">` unwrapped,
@@ -131,10 +131,11 @@ struct Cli {
   ///                          the document root);
   ///   `math`               → math subtree (least common ancestor of all
   ///                          `<math>` nodes, or math-image fallback,
-  ///                          or `fragment` if no math present).
-  ///
-  /// `archive` is accepted for backward-compat and treated as `document` —
-  /// the zip output mode is decided independently by `--dest *.zip`.
+  ///                          or `fragment` if no math present);
+  ///   `archive`            → bundle the full document + resources into a
+  ///                          zip. With no `--dest`, writes
+  ///                          `<source-name>.zip`. A `--dest *.zip`
+  ///                          implies `archive` even without this flag.
   #[arg(long, value_name = "TYPE")]
   whatsout: Option<String>,
 
@@ -187,7 +188,18 @@ struct Cli {
   #[arg(long, value_name = "PATH")]
   log: Option<String>,
 
-  /// Input type: "document" or "directory"
+  /// Input chunk (Perl Pack.pm `whatsin`):
+  ///   `document` (default) → a standalone TeX document;
+  ///   `fragment`           → a snippet wrapped in `standard_preamble.tex`
+  ///                          / `standard_postamble.tex` (or `--preamble`
+  ///                          / `--postamble`); implied when either is
+  ///                          given;
+  ///   `math`               → a bare formula (math-mode wrapped);
+  ///   `archive`            → a zip bundle; unpacked to a sandbox and the
+  ///                          main TeX auto-detected (also implied by a
+  ///                          `.zip` source);
+  ///   `directory`          → a source directory; main TeX auto-detected
+  ///                          (also implied by a trailing `/`).
   #[arg(long, value_name = "TYPE")]
   whatsin: Option<String>,
 
@@ -375,6 +387,22 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   };
   let target = cli.dest.clone();
 
+  // Resolve `--whatsout <mode>` (Perl Pack.pm `whatsout` option +
+  // Config.pm L421-439). Explicit `--whatsout` wins; otherwise a `.zip`
+  // destination extension implies `archive` (Config.pm L421-426).
+  // Unknown explicit values fall back to `document`, like Perl
+  // `pack_collection`. Hoisted here (rather than inside the post block)
+  // so both the post stage and the post-run `--log` guard can see it.
+  let dest_ext_is_zip = target
+    .as_deref()
+    .is_some_and(|t| t.to_ascii_lowercase().ends_with(".zip"));
+  let whatsout_mode = match cli.whatsout.as_deref() {
+    Some(s) => latexml_post::extract::Whatsout::from_cli(s).unwrap_or_default(),
+    None if dest_ext_is_zip => latexml_post::extract::Whatsout::Archive,
+    None => latexml_post::extract::Whatsout::Document,
+  };
+  let is_archive_out = whatsout_mode.is_archive();
+
   // --whatsin=archive: extract archive to temp directory, find main .tex file
   let mut path_flags = cli.search_paths.clone();
   let _archive_tempdir; // hold tempdir alive for the duration of processing
@@ -459,10 +487,24 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     None
   };
 
+  // Map `--whatsin` to the core input-chunk size (Perl Config.pm
+  // L399-404 + LaTeXML.pm:165-194). `archive`/`directory` have already
+  // been resolved to a concrete main `.tex` above, so the core digests
+  // them as a plain document; only `math`/`fragment` change the core's
+  // preamble/postamble wrapping. When `--whatsin` is unset, a supplied
+  // `--preamble`/`--postamble` implies a `fragment` input.
+  let whatsin_size = match cli.whatsin.as_deref() {
+    Some("math") => DataSize::Math,
+    Some("fragment") => DataSize::Fragment,
+    Some("document") | Some("archive") | Some("directory") => DataSize::Document,
+    None if cli.preamble.is_some() || cli.postamble.is_some() => DataSize::Fragment,
+    _ => DataSize::Document,
+  };
+
   let opts = Config {
     verbosity,
     format: OutputFormat::HTML5,
-    whatsin: DataSize::Document,
+    whatsin: whatsin_size,
     whatsout: DataSize::Document,
     preamble: cli.preamble.clone(),
     postamble: cli.postamble.clone(),
@@ -600,7 +642,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
               }
             })
         })
-      });
+      })
+      // `--whatsout=archive` with no `--dest`/`--format` still wants a
+      // web bundle — default it to html5, matching the `--dest *.zip`
+      // inference above (a `.zip` dest already maps to html5).
+      .or_else(|| if is_archive_out { Some("html5".to_string()) } else { None });
 
       // Auto-select stylesheet from format (Perl Config.pm L543-551)
       let effective_stylesheet =
@@ -634,7 +680,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         || is_html_format
         || cli.split
         || cli.splitat.is_some()
-        || xml_input_mode;
+        || xml_input_mode
+        // Perl Config.pm L454: any non-`document` whatsout forces post.
+        || whatsout_mode.requires_post();
 
       // Build split XPath from --splitat
       let split_enabled =
@@ -653,8 +701,29 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           .parent()
           .map(|p| p.to_string_lossy().to_string())
           .unwrap_or_else(|| ".".to_string());
-        let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
-          || cli.whatsin.as_deref() == Some("archive");
+
+        // `--whatsout=archive` (or a `.zip` destination) bundles into a
+        // zip. When `--dest` is omitted, Perl LaTeXML.pm:185-187 invents
+        // a placeholder `<source-name>.zip`; mirror that so an archive
+        // job always lands a file rather than dumping HTML to stdout.
+        let zip_dest: Option<String> = if is_archive_out {
+          Some(match &target {
+            Some(t) if t.to_ascii_lowercase().ends_with(".zip") => t.clone(),
+            Some(t) => format!(
+              "{}.zip",
+              t.trim_end_matches(".html").trim_end_matches(".xml")
+            ),
+            None => {
+              let stem = Path::new(&source_for_post)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("document");
+              format!("{stem}.zip")
+            },
+          })
+        } else {
+          None
+        };
 
         // For zip output, route graphics conversions through a TempDir so
         // the converted PNG/SVG files can be collected and bundled into
@@ -662,34 +731,23 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // Without this, the Graphics post-processor wrote PNGs next to
         // `target` on the filesystem but the zip only carried HTML+log+status —
         // confirmed-bug 2026-05-18 on 1910.01256.
-        let resource_tempdir: Option<tempfile::TempDir> = if is_zip_output {
+        let resource_tempdir: Option<tempfile::TempDir> = if is_archive_out {
           Some(tempfile::tempdir()?)
         } else {
           None
         };
         let dest_for_post: Option<String> = if let Some(tmp) = resource_tempdir.as_ref() {
-          // Use a stable HTML filename derived from the target stem so
-          // the Graphics processor's relative paths resolve naturally.
-          let stem = target
-            .as_ref()
-            .and_then(|t| Path::new(t).file_stem())
+          // Use a stable HTML filename derived from the zip stem so the
+          // Graphics processor's relative paths resolve naturally.
+          let stem = zip_dest
+            .as_deref()
+            .and_then(|z| Path::new(z).file_stem())
             .and_then(|s| s.to_str())
             .unwrap_or("document");
           Some(tmp.path().join(format!("{stem}.html")).to_string_lossy().to_string())
         } else {
           target.clone()
         };
-
-        // Resolve `--whatsout <mode>` (Perl Pack.pm whatsout option).
-        // Unknown values silently fall back to Document — same as Perl
-        // `pack_collection`. `archive` is accepted for backward compat
-        // but maps to Document (the zip wrap is decided by --dest *.zip,
-        // not by whatsout extraction).
-        let whatsout_mode = cli
-          .whatsout
-          .as_deref()
-          .and_then(latexml_post::extract::Whatsout::from_cli)
-          .unwrap_or_default();
 
         // latexmlpost_oxide's default was "if no --pmml AND no
         // --stylesheet, default pmml = true". Apply the same rule for
@@ -718,41 +776,33 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
           whatsout: whatsout_mode,
         });
-        if is_zip_output {
-          // whatsout=archive: pack output into ZIP
-          if let Some(ref target_path) = target {
-            let zip_dest = if target_path.ends_with(".zip") {
-              target_path.clone()
-            } else {
-              format!(
-                "{}.zip",
-                target_path
-                  .trim_end_matches(".html")
-                  .trim_end_matches(".xml")
-              )
-            };
-            latexml_post::writer::ensure_parent_dir(&zip_dest)?;
-            let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
-            let stem = Path::new(&zip_dest)
-              .file_stem()
-              .and_then(|s| s.to_str())
-              .unwrap_or("document");
-            let html_name = format!("{stem}.html");
-            let log_name = format!("{stem}.log");
-            latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
-              zip_path:       &zip_dest,
-              html_filename:  &html_name,
-              html:           &output,
-              log_filename:   Some(&log_name),
-              log:            &response.log,
-              status:         &response.status,
-              resource_dir,
-              telemetry_json: None,
-            })?;
-            eprintln!("Output written to {}", zip_dest);
-          } else {
-            latexml_post::writer::write_output(&output, None)?;
-          }
+        if let Some(zip_dest) = zip_dest {
+          // whatsout=archive: pack the full document + resources into a ZIP.
+          latexml_post::writer::ensure_parent_dir(&zip_dest)?;
+          let resource_dir = resource_tempdir.as_ref().map(|t| t.path());
+          let stem = Path::new(&zip_dest)
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("document");
+          let html_name = format!("{stem}.html");
+          let log_name = format!("{stem}.log");
+          // Reproducible-build support: honour SOURCE_DATE_EPOCH for the
+          // zip member timestamps (Perl Pack/Zip.pm L113-115).
+          let source_date_epoch = std::env::var("SOURCE_DATE_EPOCH")
+            .ok()
+            .and_then(|s| s.trim().parse::<u64>().ok());
+          latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
+            zip_path:          &zip_dest,
+            html_filename:     &html_name,
+            html:              &output,
+            log_filename:      Some(&log_name),
+            log:               &response.log,
+            status:            &response.status,
+            resource_dir,
+            telemetry_json:    None,
+            source_date_epoch,
+          })?;
+          eprintln!("Output written to {}", zip_dest);
         } else {
           latexml_post::writer::write_output(&output, target.as_deref())?;
         }
@@ -763,11 +813,10 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       }
     }
 
-    // --log: write conversion log to file (skip if already packed into ZIP)
-    let is_zip_output = target.as_ref().is_some_and(|t| t.ends_with(".zip"))
-      || cli.whatsin.as_deref() == Some("archive");
+    // --log: write conversion log to file (skip if already packed into
+    // the ZIP by the archive output stage).
     if let Some(ref log_path) = cli.log {
-      if !is_zip_output {
+      if !is_archive_out {
         latexml_post::writer::write_output(&response.log, Some(log_path))?;
         eprintln!("Log written to {}", log_path);
       }

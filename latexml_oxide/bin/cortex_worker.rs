@@ -325,14 +325,17 @@ impl LatexmlWorker {
     let output_path =
       std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
     latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
-      zip_path:       &output_path.to_string_lossy(),
-      html_filename:  &html_filename,
-      html:           &html,
-      log_filename:   Some("cortex.log"),
-      log:            &log,
-      status:         &status_str,
-      resource_dir:   Some(dest_dir.path()),
-      telemetry_json: Some(&telemetry_json),
+      zip_path:          &output_path.to_string_lossy(),
+      html_filename:     &html_filename,
+      html:              &html,
+      log_filename:      Some("cortex.log"),
+      log:               &log,
+      status:            &status_str,
+      resource_dir:      Some(dest_dir.path()),
+      telemetry_json:    Some(&telemetry_json),
+      // Canvas bundles are ephemeral (extracted then discarded); leave
+      // member timestamps at the crate default.
+      source_date_epoch: None,
     })?;
 
     Ok(output_path)

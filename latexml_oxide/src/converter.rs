@@ -129,22 +129,12 @@ impl Converter {
     // - We use a new temporary variable to avoid confusion with daemon caching
     // - Math needs to magically trigger math mode if needed
     // - Fragments need to have a default pre- and postamble, if none provided
-    let current_preamble = match self.opts.whatsin {
-      DataSize::Math => Some(s!("literal:\\begin{{document}}\\ensuremathfollows")),
-      DataSize::Fragment => match self.opts.preamble.clone() {
-        Some(p) => Some(p),
-        None => Some(s!("standard_preamble.tex")),
-      },
-      _ => None,
-    };
-    let current_postamble = match self.opts.whatsout {
-      DataSize::Math => Some(s!("literal:\\ensuremathpreceeds\\end{{document}}")),
-      DataSize::Fragment => match self.opts.postamble.clone() {
-        Some(p) => Some(p),
-        None => Some(s!("standard_postamble.tex")),
-      },
-      _ => None,
-    };
+    // Perl LaTeXML.pm:165-172 keys BOTH ambles on `whatsin`; see
+    // `resolve_amble`. (The previous inline code keyed the postamble on
+    // `whatsout`, dropping `\end{document}` / `\ensuremathpreceeds` for
+    // fragment/math inputs.)
+    let (current_preamble, current_postamble) =
+      resolve_amble(&self.opts.whatsin, &self.opts.preamble, &self.opts.postamble);
     // TODO:
     // 1.3.3 Archives need to get unpacked in a sandbox (with sufficient bookkeeping)
     //   elsif ($$opts{whatsin} =~ /^archive/) {
@@ -388,5 +378,75 @@ impl Converter {
       self.initialize_session()?
     }
     Ok(())
+  }
+}
+
+/// Resolve the `(preamble, postamble)` to wrap the source in, based on
+/// the requested input chunk size. Faithful port of Perl `LaTeXML.pm`
+/// L165-172 — note both ambles key on **`whatsin`** (not `whatsout`):
+///
+/// * `math` → `\begin{document}\ensuremathfollows` …
+///   `\ensuremathpreceeds\end{document}` (magic math-mode trigger).
+/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting
+///   to `standard_preamble.tex` / `standard_postamble.tex`.
+/// * everything else (`document`, `archive`, …) → no wrapping.
+pub(crate) fn resolve_amble(
+  whatsin: &DataSize,
+  preamble: &Option<String>,
+  postamble: &Option<String>,
+) -> (Option<String>, Option<String>) {
+  match whatsin {
+    DataSize::Math => (
+      Some(s!("literal:\\begin{{document}}\\ensuremathfollows")),
+      Some(s!("literal:\\ensuremathpreceeds\\end{{document}}")),
+    ),
+    DataSize::Fragment => (
+      Some(preamble.clone().unwrap_or_else(|| s!("standard_preamble.tex"))),
+      Some(postamble.clone().unwrap_or_else(|| s!("standard_postamble.tex"))),
+    ),
+    _ => (None, None),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn amble_math_wraps_both_ends() {
+    // Perl LaTeXML.pm:166-168 — math sets BOTH preamble and postamble.
+    let (pre, post) = resolve_amble(&DataSize::Math, &None, &None);
+    assert_eq!(
+      pre.as_deref(),
+      Some("literal:\\begin{document}\\ensuremathfollows")
+    );
+    assert_eq!(
+      post.as_deref(),
+      Some("literal:\\ensuremathpreceeds\\end{document}")
+    );
+  }
+
+  #[test]
+  fn amble_fragment_defaults_to_standard_files() {
+    let (pre, post) = resolve_amble(&DataSize::Fragment, &None, &None);
+    assert_eq!(pre.as_deref(), Some("standard_preamble.tex"));
+    assert_eq!(post.as_deref(), Some("standard_postamble.tex"));
+  }
+
+  #[test]
+  fn amble_fragment_honors_explicit_files() {
+    let (pre, post) = resolve_amble(
+      &DataSize::Fragment,
+      &Some("my_pre.tex".into()),
+      &Some("my_post.tex".into()),
+    );
+    assert_eq!(pre.as_deref(), Some("my_pre.tex"));
+    assert_eq!(post.as_deref(), Some("my_post.tex"));
+  }
+
+  #[test]
+  fn amble_document_and_archive_have_no_wrapping() {
+    assert_eq!(resolve_amble(&DataSize::Document, &None, &None), (None, None));
+    assert_eq!(resolve_amble(&DataSize::Archive, &None, &None), (None, None));
   }
 }

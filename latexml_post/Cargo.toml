@@ -39,3 +39,8 @@ latexml_core = {path = "../latexml_core"}
 # grandchild on timeout instead of orphaning it for 10+ minutes.
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
+
+[dev-dependencies]
+# `pack` module tests stage resource directories in a TempDir and read
+# the produced zip back to assert membership + reproducible timestamps.
+tempfile = "3"

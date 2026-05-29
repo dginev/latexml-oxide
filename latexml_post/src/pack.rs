@@ -59,6 +59,12 @@ pub struct PackOptions<'a> {
   /// runs; `benchmark_canvas.sh` extracts this member and appends to
   /// `<output_dir>/telemetry.jsonl`. See `docs/TELEMETRY.md`.
   pub telemetry_json: Option<&'a str>,
+  /// `SOURCE_DATE_EPOCH` (Unix seconds, UTC). When `Some`, every zip
+  /// member's last-modified time is pinned to it for reproducible
+  /// archives — Perl `Pack/Zip.pm` L113-115
+  /// (`setLastModFileDateTimeFromUnix`). `None` lets the zip crate use
+  /// its default write timestamp.
+  pub source_date_epoch: Option<u64>,
 }
 
 /// Pack the post-processing outputs into a zip archive.
@@ -75,7 +81,18 @@ pub fn pack_archive(opts: &PackOptions) -> io::Result<()> {
   let file = File::create(opts.zip_path)?;
   let buf_file = BufWriter::with_capacity(ZIP_WRITE_BUF, file);
   let mut zip = ZipWriter::new(buf_file);
-  let zip_options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+  let mut zip_options =
+    SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
+  // Reproducible archives: pin every member's mod-time to SOURCE_DATE_EPOCH
+  // when provided (Perl Pack/Zip.pm L113-115). DOS/zip timestamps only
+  // span 1980-2107, so out-of-range epochs are silently left at the
+  // crate default — matching the spirit of `setLastModFileDateTimeFromUnix`
+  // (which would clamp) without failing the whole archive.
+  if let Some(epoch) = opts.source_date_epoch {
+    if let Some(dt) = epoch_to_zip_datetime(epoch) {
+      zip_options = zip_options.last_modified_time(dt);
+    }
+  }
 
   // HTML first, so `unzip -l` shows the main artifact at the top.
   zip
@@ -115,8 +132,16 @@ pub fn pack_archive(opts: &PackOptions) -> io::Result<()> {
 }
 
 /// Recursively add files from `dir` to a ZIP archive, preserving the
-/// directory structure relative to `base`. Skips `.html` files because
-/// the post-processed HTML is added separately by [`pack_archive`].
+/// directory structure relative to `base`.
+///
+/// Two skip rules apply:
+///  * `.html` files — the post-processed HTML is added separately by
+///    [`pack_archive`] (and the staging dir may hold a stray copy
+///    written there for the Graphics processor's relative paths).
+///  * [`is_excluded_archive_entry`] — Perl `Pack/Zip.pm`'s
+///    `ARCHIVE_EXT_EXCLUDE` (source `.tex`/`.bib`, nested archives,
+///    dotfiles, editor backups). Applied per-basename, matching Perl's
+///    `addTree` filter `sub { !/$ext_exclude/ }`.
 ///
 /// Each source file is wrapped in a 64 KiB `BufReader` to amortise
 /// `read()` syscalls on the input side (the `io::copy` 8 KiB default
@@ -132,10 +157,16 @@ fn add_dir_to_zip<W: Write + io::Seek>(
     let path = entry.path();
     let rel = path.strip_prefix(base).unwrap_or(&path);
     let name = rel.to_string_lossy().to_string();
+    let basename = entry.file_name().to_string_lossy().to_string();
 
     if path.is_dir() {
-      add_dir_to_zip(zip, &path, base, options)?;
-    } else if !name.ends_with(".html") {
+      // Perl's `addTree` filter excludes whole subtrees whose *directory*
+      // name matches (e.g. a nested `.git`); honour the same per-basename
+      // rule before recursing.
+      if !is_excluded_archive_entry(&basename) {
+        add_dir_to_zip(zip, &path, base, options)?;
+      }
+    } else if !name.ends_with(".html") && !is_excluded_archive_entry(&basename) {
       zip.start_file(&name, *options).map_err(io_err)?;
       let f = File::open(&path)?;
       let mut buf_reader = io::BufReader::with_capacity(ZIP_WRITE_BUF, f);
@@ -145,6 +176,60 @@ fn add_dir_to_zip<W: Write + io::Seek>(
   Ok(())
 }
 
+/// Whether a bundle entry should be excluded from the archive — port of
+/// Perl `Pack/Zip.pm` `$ARCHIVE_EXT_EXCLUDE`
+/// (`qr/(?:^\.)|(?:\.(?:zip|gz|epub|tex|bib|mobi|cache)$)|(?:~$)/`),
+/// applied to the file's basename:
+///  * hidden dotfiles (`^\.`),
+///  * editor backups (`~$`),
+///  * nested archives / source / cache files
+///    (`.zip`, `.gz`, `.epub`, `.tex`, `.bib`, `.mobi`, `.cache`).
+fn is_excluded_archive_entry(basename: &str) -> bool {
+  if basename.starts_with('.') || basename.ends_with('~') {
+    return true;
+  }
+  // Suffix test on the lowercase extension (Perl anchors `$`, i.e. the
+  // final extension). `rsplit('.')` yields the extension before any dot.
+  match basename.rsplit_once('.') {
+    Some((_, ext)) => matches!(
+      ext.to_ascii_lowercase().as_str(),
+      "zip" | "gz" | "epub" | "tex" | "bib" | "mobi" | "cache"
+    ),
+    None => false,
+  }
+}
+
+/// Convert a Unix epoch (seconds, UTC) into a zip [`zip::DateTime`].
+///
+/// DOS/zip timestamps only represent 1980-01-01..=2107; epochs outside
+/// that window return `None` (caller falls back to the crate default).
+/// Pure civil-date arithmetic (Howard Hinnant's `civil_from_days`) so we
+/// don't pull in a date-time crate just for `SOURCE_DATE_EPOCH`.
+fn epoch_to_zip_datetime(epoch: u64) -> Option<zip::DateTime> {
+  let days = (epoch / 86_400) as i64;
+  let secs_of_day = (epoch % 86_400) as u32;
+  let (hour, minute, second) = (
+    (secs_of_day / 3600) as u8,
+    ((secs_of_day % 3600) / 60) as u8,
+    (secs_of_day % 60) as u8,
+  );
+  // civil_from_days: days since 1970-01-01 → (year, month, day).
+  let z = days + 719_468;
+  let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
+  let doe = z - era * 146_097; // [0, 146096]
+  let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146_096) / 365; // [0, 399]
+  let year = yoe + era * 400;
+  let doy = doe - (365 * yoe + yoe / 4 - yoe / 100); // [0, 365]
+  let mp = (5 * doy + 2) / 153; // [0, 11]
+  let day = (doy - (153 * mp + 2) / 5 + 1) as u8; // [1, 31]
+  let month = (if mp < 10 { mp + 3 } else { mp - 9 }) as u8; // [1, 12]
+  let year = year + i64::from(month <= 2);
+  if !(1980..=2107).contains(&year) {
+    return None;
+  }
+  zip::DateTime::from_date_and_time(year as u16, month, day, hour, minute, second).ok()
+}
+
 /// Convert a `zip::result::ZipError` into an `io::Error` so the caller
 /// signature can stay `io::Result`. The zip crate wraps `io::Error`
 /// already; we just re-wrap unrecognized kinds as `Other`.
@@ -152,5 +237,142 @@ fn io_err(e: zip::result::ZipError) -> io::Error {
   match e {
     zip::result::ZipError::Io(inner) => inner,
     other => io::Error::other(other.to_string()),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::io::Read;
+
+  /// Read back the set of entry names from a zip on disk.
+  fn zip_entry_names(zip_path: &Path) -> Vec<String> {
+    let f = File::open(zip_path).expect("open zip");
+    let mut archive = zip::ZipArchive::new(f).expect("parse zip");
+    (0..archive.len())
+      .map(|i| archive.by_index(i).expect("entry").name().to_string())
+      .collect()
+  }
+
+  #[test]
+  fn excludes_perl_archive_ext_set() {
+    // Perl Zip.pm ARCHIVE_EXT_EXCLUDE = qr/(?:^\.)|(?:\.(?:zip|gz|epub|
+    // tex|bib|mobi|cache)$)|(?:~$)/ — applied to the basename.
+    assert!(is_excluded_archive_entry("paper.tex"));
+    assert!(is_excluded_archive_entry("refs.bib"));
+    assert!(is_excluded_archive_entry("bundle.zip"));
+    assert!(is_excluded_archive_entry("page.gz"));
+    assert!(is_excluded_archive_entry("book.epub"));
+    assert!(is_excluded_archive_entry("book.mobi"));
+    assert!(is_excluded_archive_entry("LaTeXML.cache"));
+    assert!(is_excluded_archive_entry(".hidden"));
+    assert!(is_excluded_archive_entry("backup~"));
+    // Kept: real bundle resources.
+    assert!(!is_excluded_archive_entry("fig1.png"));
+    assert!(!is_excluded_archive_entry("diagram.svg"));
+    assert!(!is_excluded_archive_entry("LaTeXML.css"));
+    assert!(!is_excluded_archive_entry("logo.jpg"));
+  }
+
+  #[test]
+  fn pack_archive_bundles_resources_minus_excluded() {
+    let staging = tempfile::tempdir().expect("tempdir");
+    let p = staging.path();
+    // Resources that SHOULD be bundled.
+    std::fs::write(p.join("fig1.png"), b"PNGDATA").unwrap();
+    std::fs::write(p.join("LaTeXML.css"), b"body{}").unwrap();
+    std::fs::create_dir(p.join("sub")).unwrap();
+    std::fs::write(p.join("sub").join("img.svg"), b"<svg/>").unwrap();
+    // Resources that must be EXCLUDED.
+    std::fs::write(p.join("paper.tex"), b"\\documentclass{article}").unwrap();
+    std::fs::write(p.join("refs.bib"), b"@book{x}").unwrap();
+    std::fs::write(p.join("LaTeXML.cache"), b"cache").unwrap();
+    std::fs::write(p.join(".hidden"), b"secret").unwrap();
+    std::fs::write(p.join("backup~"), b"old").unwrap();
+    // The HTML is added separately by pack_archive; a stray copy in
+    // the staging dir must not be double-added.
+    std::fs::write(p.join("doc.html"), b"<html>staging copy</html>").unwrap();
+
+    let out = tempfile::tempdir().expect("out dir");
+    let zip_path = out.path().join("bundle.zip");
+    let zip_path_str = zip_path.to_string_lossy().to_string();
+
+    pack_archive(&PackOptions {
+      zip_path:         &zip_path_str,
+      html_filename:    "doc.html",
+      html:             "<html>real document</html>",
+      log_filename:     Some("doc.log"),
+      log:              "log line",
+      status:           "Status:conversion:0",
+      resource_dir:     Some(p),
+      telemetry_json:   None,
+      source_date_epoch: None,
+    })
+    .expect("pack archive");
+
+    let names = zip_entry_names(&zip_path);
+    // Bundled resources present.
+    assert!(names.iter().any(|n| n == "fig1.png"), "names: {names:?}");
+    assert!(names.iter().any(|n| n == "LaTeXML.css"), "names: {names:?}");
+    assert!(
+      names.iter().any(|n| n == "sub/img.svg"),
+      "subdir resource missing; names: {names:?}"
+    );
+    // Core entries present.
+    assert!(names.iter().any(|n| n == "doc.html"));
+    assert!(names.iter().any(|n| n == "doc.log"));
+    assert!(names.iter().any(|n| n == "status"));
+    // Excluded resources absent.
+    for forbidden in ["paper.tex", "refs.bib", "LaTeXML.cache", ".hidden", "backup~"] {
+      assert!(
+        !names.iter().any(|n| n == forbidden),
+        "{forbidden} must be excluded; names: {names:?}"
+      );
+    }
+    // Exactly one doc.html (the real one), not the staging copy too.
+    assert_eq!(
+      names.iter().filter(|n| n.as_str() == "doc.html").count(),
+      1,
+      "doc.html must not be double-added; names: {names:?}"
+    );
+    // And the real HTML, not the staging copy, is what got stored.
+    let f = File::open(&zip_path).unwrap();
+    let mut archive = zip::ZipArchive::new(f).unwrap();
+    let mut html_entry = archive.by_name("doc.html").unwrap();
+    let mut body = String::new();
+    html_entry.read_to_string(&mut body).unwrap();
+    assert_eq!(body, "<html>real document</html>");
+  }
+
+  #[test]
+  fn source_date_epoch_sets_member_timestamp() {
+    // Perl Zip.pm L113-115: when SOURCE_DATE_EPOCH is set, every member
+    // gets that fixed mod-time for reproducible archives. 2021-01-01
+    // 00:00:00 UTC = 1609459200.
+    let staging = tempfile::tempdir().expect("tempdir");
+    std::fs::write(staging.path().join("fig.png"), b"x").unwrap();
+    let out = tempfile::tempdir().expect("out");
+    let zip_path = out.path().join("ts.zip");
+    let zip_path_str = zip_path.to_string_lossy().to_string();
+    pack_archive(&PackOptions {
+      zip_path:          &zip_path_str,
+      html_filename:     "d.html",
+      html:              "<html/>",
+      log_filename:      None,
+      log:               "",
+      status:            "ok",
+      resource_dir:      Some(staging.path()),
+      telemetry_json:    None,
+      source_date_epoch: Some(1_609_459_200),
+    })
+    .expect("pack");
+
+    let f = File::open(&zip_path).unwrap();
+    let mut archive = zip::ZipArchive::new(f).unwrap();
+    let entry = archive.by_name("fig.png").unwrap();
+    let dt = entry.last_modified().expect("has mod time");
+    assert_eq!(dt.year(), 2021, "year");
+    assert_eq!(dt.month(), 1, "month");
+    assert_eq!(dt.day(), 1, "day");
   }
 }
