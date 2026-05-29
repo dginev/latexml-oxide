@@ -4350,21 +4350,36 @@ impl Document {
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {
-    for node in self.findnodes("//*[@labels]", None) {
+    for mut node in self.findnodes("//*[@labels]", None) {
       if let Some(labels) = node.get_attribute("labels") {
-        if let Some(id) = node.get_attribute("id") {
+        // A labelled node MUST carry an xml:id so `\ref` can resolve to it.
+        // Normally the `Tag('ltx:*', afterClose:late)` GenerateID hook
+        // (latex_constructs.rs) stamps one, but it does not reach every node
+        // — notably the <ltx:document> root, which receives a label when a
+        // bare `\label{…}` appears with no enclosing id'd sectioning (e.g.
+        // `\input{abs}` then `\label{sec:intro}` before any \section; witness
+        // 1703.09326). Perl handles this by giving the root an xml:id — its
+        // output is `<document … labels="LABEL:sec:intro" xml:id="id1">` —
+        // NOT by erroring. Match Perl: generate an id here when one is
+        // missing, exactly as Perl's GenerateID does (an id-less root yields
+        // "id1" from `generate_id`'s empty-prefix→"id", no-ancestor path).
+        let id = match node.get_attribute("id") {
+          Some(id) => Some(id),
+          None => {
+            self.generate_id(&mut node, "")?;
+            node.get_attribute_ns("id", XML_NS)
+          },
+        };
+        if let Some(id) = id {
           for label in labels.split_whitespace() {
             self
               .rewrite_labels
               .insert(label.to_string(), id.clone());
           }
-        } else {
-          Error!(
-            "malformed",
-            "label",
-            format!("Node {} has labels but no xml:id", node.get_name())
-          );
         }
+        // If generate_id still couldn't assign one (a node the model forbids
+        // an xml:id on), the label is simply unresolvable — drop it silently
+        // (Perl does not error here either).
       }
     }
     Ok(())
