@@ -1004,6 +1004,64 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### FIXED: `\@classoptionslist` clobbered on nested `\LoadClass` → global babel langs (2026-05-28)
+
+**Witness 1911.07001** (`\documentclass[oneside,french,titlepage]{amsart}` +
+bare `\usepackage{babel}`, `\og`/`\fg` via `\addto\extrasfrench`). HIGH-VALUE,
+GENERAL. Every BOUND class (amsart, amsbook, elsarticle, revtex, …) does a
+nested `load_class_with_options(base, Tokens!())` with EMPTY options; the cls
+path in `content.rs` unconditionally redefined `\@classoptionslist` to the
+joined options on every load, so the nested empty-options load clobbered the
+document class's option list to `""`. (Standard unbound `article`/`report`/
+`book` were unaffected — no nested load.) babel iterates `\@classoptionslist`
+(`\bbl@foreach`, babel.sty L4270) to find a GLOBAL language option like
+`[french]`, then `\DeclareOption{french}{\bbl@load@language{french}}` +
+`\ProcessOptions*` loads french.ldf. With the list clobbered empty, the global
+language was silently dropped → french never activated → `\extrasfrench` never
+ran → `\og`/`\fg` undefined. Fix: match Perl Package.pm L2561 (`if ($astype eq
+'cls' and $options{options})` — set only when options non-empty); retain the
+Rust empty-define divergence for an option-less document class (2504.00009
+csname guard) but gate on "no class options recorded yet" so it never clobbers
+a populated list on nested loads. 2 errors → 0, 3.26 MB (Perl 2.89 MB). Fixes
+global babel language for ALL bound classes. cargo test 1344/0. (commit
+`ac55fdfeb5`)
+
+### FIXED: `pack_parameters` error+drop on halign-template `#` (2026-05-28)
+
+**Witness 2006.02269** (`\documentclass{amsart}` + easyeqn.sty `{MATRIX}` env,
+`$\mathstrut##$` `\halign` template). `pack_parameters` (tokens.rs) packs
+`#<digit>`→ARG and `##`→`#`, but `#` followed by anything else (CS, `{`, `$`)
+hit a *counted* `Error!` that ALSO dropped both tokens — corrupting the valid
+`\halign`/`\valign` alignment-cell marker (or `#{` delimiter). Perl's
+packParameters (Tokens.pm L139) does the same error+drop but rarely reaches it
+(can't find the package, skips raw load); we DO raw-load. Now preserve both
+tokens + log at Info (non-counted) — strictly more faithful to TeX than
+erroring+dropping. KNOWN_PERL_ERRORS item 1 (beneficial divergence). 2 errors
+→ 0, 6.5 MB. cargo test 1344/0. (commit `0d7e142da0`)
+
+### Round-37 Perl-clean gate sweep (2026-05-28): 15 candidates, 3 fixed, 13 triaged
+
+Perl-gated 65 low-error (err=1/2) candidates from the stale resweep TSV;
+isolated 15 Perl-clean+Rust-fail. Fixed this session: **1911.07001** (babel
+global french, see above), **2006.02269** (halign template, see above),
+**2007.04819** (babel-french `\?`, see below). Remaining 13 triaged:
+* **Vendor `\GenericError` (Perl skips MISSING pkg)** — 2001.04856 (pb-lams),
+  2001.09580 (embedfile "Missing pdfTeX/luaTeX"), 2006.10240 (babel
+  "haven't defined the language"). Perl reports the pkg missing and never
+  raw-loads it; Rust finds it on TL and hits its vendor guard. Candidate for
+  vendor-error downgrade (moot-in-XML class) OR raw-load robustness.
+* **Content-model malformed** — 1911.01815 (`ltx:listingline`, 333 warns,
+  statsoc.cls), 2004.07710 (`ltx:itemize`), 2006.06087 (`ltx:theorem` in
+  `ltx:note`, 926 warns). Deeper structural.
+* **Engine** — 1910.09629 (`\iffalse` expected:i), 2005.09884 (pgf 'sequence'
+  arg).
+* **Perl-FATAL (NOT real wins)** — 2001.04466, 2005.08257 (ebproofs `\else`,
+  Rust-AHEAD).
+* **Deferred** — 2005.06787 (xint, beyond-parity), 1911.03214 (babel
+  double-load: bibgerm→german loads babel first, second `[UKenglish]{babel}`
+  ignored as option-clash → UKenglish.ldf never processed), 2006.11831
+  (`\varleftarrow`/`\varlongleftarrow` from old-arrows.sty, missing in BOTH).
+
 ### FIXED: babel-french bare `\?` undefined (initiate@active@char side-effect) (2026-05-28)
 
 **Witness 2007.04819** (`\usepackage[frenchb,english]{babel}`). The paper has a
