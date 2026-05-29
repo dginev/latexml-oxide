@@ -84,9 +84,23 @@ LoadDefinitions!({
     // Driver: 2102.11084 `\usepackage[spanish, es-tabla]{babel}` selected
     // "es-tabla" as the language → "haven't defined the language 'es-tabla'"
     // GenericError.
+    // ALSO drop babel's own bare KEYWORD options — `\DeclareOption{<kw>}` in
+    // babel.sty that are package switches, NOT languages (so babel consumes
+    // them via their `\ds@` handler and never treats them as a language to
+    // load/select). Without this, `\usepackage[english,strings]{babel}`
+    // selected the LAST bare option "strings" as the main language →
+    // `\selectlanguage{strings}` → "You haven't defined the language
+    // 'strings'". babel.sty L296/L336-379 (the no-`=` ones). Driver
+    // 2006.10240 (`[english,strings]`).
+    const BABEL_KEYWORD_OPTS: &[&str] = &[
+      "base", "showlanguages", "KeepShorthandsActive", "activeacute",
+      "activegrave", "debug", "noconfigs", "silent", "strings", "nocase",
+      "leqno", "fleqn",
+    ];
     let is_lang_candidate = |s: &str| -> bool {
       !s.is_empty() && s != "nil" && !s.contains('=')
         && !s.starts_with("es-")
+        && !BABEL_KEYWORD_OPTS.contains(&s)
     };
     let pkg_last = main_kv.clone().unwrap_or_else(|| {
       opt_babel.split(',').map(str::trim).rfind(|s| is_lang_candidate(s)).unwrap_or_default().to_string()
