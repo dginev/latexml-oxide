@@ -4,6 +4,23 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // IEEEtran.cls L232-260 declares each class-option flag with
+  // `\newif\ifCLASSOPTION<name>`, which creates BOTH the `\ifCLASSOPTION<name>`
+  // conditional AND the `\CLASSOPTION<name>true`/`false` setters. IEEEtran
+  // template papers toggle these directly (e.g. bare_adv.tex L1014
+  // `\CLASSOPTIONcaptionsofftrue`). The DeclareOption `\let\ifCLASSOPTION<name>
+  // \iftrue` logic below only sets the conditional VALUE — it never creates the
+  // setters, and `captionsoff` (etc.) weren't handled at all → undefined.
+  // `\newif` them all up front (faithful to IEEEtran.cls; defaults false, as
+  // the class does) so the setters exist; the option logic below then refines
+  // values. Witness 1810.05731 (`\CLASSOPTIONcaptionsofftrue`).
+  RawTeX!(r"\newif\ifCLASSOPTIONcaptionsoff
+\newif\ifCLASSOPTIONcompsoc \newif\ifCLASSOPTIONcomsoc \newif\ifCLASSOPTIONconference
+\newif\ifCLASSOPTIONdraft \newif\ifCLASSOPTIONdraftcls \newif\ifCLASSOPTIONdraftclsnofoot
+\newif\ifCLASSOPTIONfinal \newif\ifCLASSOPTIONjournal \newif\ifCLASSOPTIONnofonttune
+\newif\ifCLASSOPTIONonecolumn \newif\ifCLASSOPTIONoneside \newif\ifCLASSOPTIONpeerreview
+\newif\ifCLASSOPTIONpeerreviewca \newif\ifCLASSOPTIONromanappendices \newif\ifCLASSOPTIONtechnote
+\newif\ifCLASSOPTIONtransmag \newif\ifCLASSOPTIONtwocolumn \newif\ifCLASSOPTIONtwoside");
   // DeclareOption stubs — Perl L18-108
   DeclareOption!("9pt", {});
   DeclareOption!("10pt", {});
