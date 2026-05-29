@@ -93,6 +93,21 @@ unless the heavy-doc OOM tail justifies it. The operational mitigation for the
 sweep is per-worker RSS budgeting / fewer concurrent workers on the heavy tail
 (see [[feedback_worker_sweep_parallelism]]).
 
+**Concrete next-step (needs a focused session + real heap profiling).** Don't
+guess at the 2.4 GB — measure it. Recommended: run one witness (e.g.
+1902.05175, 3870 maths, 2.9 GB) under `heaptrack` (or valgrind massif) on the
+release binary, and read the peak-RSS allocation tree. Likely suspects to
+confirm/refute, in order: (a) the pre-XSLT document still carrying all source
+`ltx:XMath` trees alongside both MathML branches (3× math node count fed to
+XSLT) — check whether our XMath unlink (`latexml_post/src/mathml/mod.rs:1213`)
+fires for every math and matches Perl's keep/drop policy (Perl associates the
+generated node with the source XMath but the default non-parallel path does not
+retain XMath in the serialized HTML); (b) the core `arena` string interner
+retaining every interned string for the whole run; (c) libxml DOM overhead per
+node. Only after the profile identifies the dominant allocator should a fix be
+attempted — and it must stay faithful (match Perl's XMath retention semantics,
+not merely prune to save bytes).
+
 ## Cluster B — xy-pic via raw `\@@input xypic` (SHARED, not memory)
 
 1810.09054, 1903.02279 were recorded as TIMEOUT but the **current** binary fails
