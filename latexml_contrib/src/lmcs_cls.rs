@@ -15,6 +15,17 @@ LoadDefinitions!({
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
   RequirePackage!("hyperref");
+  // lmcs.cls L24 `\usepackage{helvet,cclicenses}` pulls graphicx in
+  // transitively: cclicenses → `\RequirePackage{rotating}` (cclicenses.sty
+  // L25) → `\RequirePackage{graphicx}` (rotating.sty L62). Perl ships no lmcs
+  // binding, so it raw-loads lmcs.cls and gets graphicx that way; LMCS papers
+  // therefore use `\includegraphics` WITHOUT their own `\usepackage{graphicx}`.
+  // Our stub intercepts the raw cls (which fails mid-load on its tikz/
+  // XeTeXLinkBox ORCID machinery), so the transitive graphicx never loaded
+  // and `\includegraphics` was undefined where Perl is clean. Supply it
+  // directly. Witness 1607.04128 (`\documentclass{lmcs}`, `\includegraphics`
+  // with no explicit graphicx load): RUST 1 → 0.
+  RequirePackage!("graphicx");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
   // columns break (Unrecognized tabular template -> Extra alignment tab). The
