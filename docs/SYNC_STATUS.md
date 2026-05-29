@@ -1164,6 +1164,21 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### FIXED: siamltex `{AMS}`/`{AM}`/`{PII}` classification envs emitted inline → "ltx:classification isn't allowed in ltx:abstract" (2026-05-29)
+
+**Witness 2009.00379** (`\documentclass{siamltex}`; `\begin{abstract}…
+\begin{keywords}…\end{keywords}\begin{AMS}…\end{AMS}\end{abstract}`). GENUINE
+Rust-only: Perl 0 err, Rust 1 err. siamltex_cls.rs defined `{AMS}`/`{AM}`/`{PII}`
+as direct-inline `<ltx:classification scheme=…>` DefEnvironments. SIAM house
+style places these INSIDE `\begin{abstract}`, where an inline
+`<ltx:classification>` is a content-model violation. Perl's siamltex.cls.ltxml
+FLOATS them to the document frontmatter via `\@add@frontmatter` (its
+`classification_tokens_for_env`). Fix: route the three envs through a
+scheme-parameterized `push_classification_to_frontmatter` helper (mirrors
+OmniBus's `push_keyword_body_to_frontmatter`, which already floats `{keywords}`
+correctly). AMS codes + keywords content preserved (now in frontmatter, not
+inside the abstract). 1 err → 0. cargo test 1344/0. (commit pending).
+
 ### FIXED: autart stub eager-loaded amsthm → `\let\proof\relax`+`\usepackage{amsthm}` no-op → `{proof}` undefined (2026-05-29)
 
 **Witness 2009.00150** (`\documentclass{autart}` + `\let\proof\relax` then

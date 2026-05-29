@@ -1,5 +1,36 @@
 use latexml_package::prelude::*;
 
+/// Push an `{AMS}`/`{AM}`/`{PII}` classification environment's digested body
+/// into the document `frontmatter` as `<ltx:classification scheme=…>`, instead
+/// of constructing it inline where the env was invoked. Mirrors Perl
+/// siamltex.cls.ltxml (`classification_tokens_for_env` → `\@add@frontmatter`)
+/// and OmniBus's `push_keyword_body_to_frontmatter`, just scheme-parameterized.
+/// Floating is REQUIRED because these envs are routinely used INSIDE
+/// `\begin{abstract}…\end{abstract}` (SIAM house style), where an inline
+/// `<ltx:classification>` is a content-model violation
+/// ("ltx:classification isn't allowed in ltx:abstract"). Witness 2009.00379.
+fn push_classification_to_frontmatter(
+  whatsit: &mut latexml_core::whatsit::Whatsit,
+  scheme: &str,
+) -> latexml_core::Result<Vec<latexml_core::digested::Digested>> {
+  use latexml_core::BoxOps;
+  use latexml_core::common::store::Stored;
+  if let Some(body) = whatsit.get_body()? {
+    let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
+    attrs.insert("scheme".to_string(), scheme.to_string());
+    let entry = ("ltx:classification".to_string(), Some(attrs), body);
+    latexml_core::state::with_value_mut("frontmatter", |val_opt| {
+      if let Some(Stored::HashTagData(ref mut frnt)) = val_opt {
+        frnt
+          .entry("ltx:classification".to_string())
+          .or_insert_with(Vec::new)
+          .push(entry);
+      }
+    });
+  }
+  Ok(Vec::new())
+}
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsthm");
@@ -12,24 +43,19 @@ LoadDefinitions!({
   );
   Let!("\\Appendix", "\\appendix");
   // Perl siamltex.cls.ltxml L27-40: `classification_tokens_for_env` unreads
-  // `\@add@frontmatter{ltx:classification}[scheme=<TYPE>]{body}` on the
-  // gullet via `afterDigestBody`. The direct-XML form below follows the
-  // mn2e_support {keywords} precedent (latexml_package::mn2e_support_sty
-  // L47-48) and produces the same `<ltx:classification>` output where the
-  // document builder picks it up. Simpler than the Whatsit round-trip but
-  // preserves the scheme attribute and body content.
-  DefEnvironment!(
-    "{AMS}",
-    "<ltx:classification scheme='AMS'>#body</ltx:classification>"
-  );
-  DefEnvironment!(
-    "{AM}",
-    "<ltx:classification scheme='AM'>#body</ltx:classification>"
-  );
-  DefEnvironment!(
-    "{PII}",
-    "<ltx:classification scheme='PII'>#body</ltx:classification>"
-  );
+  // `\@add@frontmatter{ltx:classification}[scheme=<TYPE>]{body}` via
+  // `afterDigestBody` — i.e. it FLOATS the classification into the document
+  // frontmatter rather than emitting it inline. We must do the same (not the
+  // earlier direct-inline-XML form): SIAM papers put `\begin{AMS}…\end{AMS}`
+  // INSIDE `\begin{abstract}`, and an inline `<ltx:classification>` there is a
+  // content-model violation. Witness 2009.00379 (`{keywords}`+`{AMS}` inside
+  // `{abstract}`; `{keywords}` already floats via OmniBus, `{AMS}` did not).
+  DefEnvironment!("{AMS}", "",
+    after_digest_body => sub[whatsit] { push_classification_to_frontmatter(whatsit, "AMS") });
+  DefEnvironment!("{AM}", "",
+    after_digest_body => sub[whatsit] { push_classification_to_frontmatter(whatsit, "AM") });
+  DefEnvironment!("{PII}", "",
+    after_digest_body => sub[whatsit] { push_classification_to_frontmatter(whatsit, "PII") });
   DefMacro!(T_CS!("\\begin{romannum}"), None, "\\begin{enumerate}");
   DefMacro!(T_CS!("\\end{romannum}"), None, "\\end{enumerate}");
   DefMacro!(T_CS!("\\begin{remunerate}"), None, "\\begin{enumerate}");
