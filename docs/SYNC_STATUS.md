@@ -655,6 +655,32 @@ byte-identical to Perl `auto_keywords`).
   2104.02680: 2→0 errors (957 KB, Perl 1.16 MB). 6 control algorithm2e
   papers regression-clean (tags-err=0, RUST≤PERL). `cargo test --tests`:
   1344 passed, 0 failed.
+* **DEFERRED 2026-05-29 — xy-pic `\xymatrix @!` mode-leak (2006.01470;
+  confirmed Rust-only, deep).** Rust 27 err / 2.5 MB vs Perl 0 err / 5.0 MB
+  (Perl genuinely clean — earlier "Perl timeout" gates were CPU-contention
+  artifacts from concurrent scans; re-gated clean in isolation). Trigger
+  PRECISELY isolated: the `@!` "uniform-entry-size" xymatrix modifier
+  (`\xymatrix @!0 {...}`) in **display math** — NOT the equations, ex
+  theorem-env, or other modifiers (`@R=`/`@C=` are clean). Needs the full
+  paper preamble for the matrix feature to actually load (bare
+  `\usepackage[all]{xy}`+`\xymatrix` is matrix-UNDEFINED in BOTH Perl and
+  Rust — that isolated `[all]`-matrix-load failure is SHARED, a separate
+  issue). Definitive mode-frame trace (`LX_DBG_MODE`): the matrix-cell
+  `\hbox` opens (4, restricted_horizontal) have their END tokens DEFERRED
+  via xy's `\queue@`/`\xy@@` mechanism (activated by the `@!`→
+  `\xymatrix@measureit@@`/`\the\queue@` path) and replayed only at
+  `\end{document}` — AFTER the display-math `internal_vertical` closed — so
+  each `\hbox` end_mode finds internal_vertical → "Attempt to end mode
+  `restricted_horizontal` in `internal_vertical`" ×4. Our alignment-based
+  `\xymatrix@measureit` override (xylatexml_tex.rs L1339, Perl-faithful
+  port of xylatexml.tex.ltxml L1068) EXISTS and is locked, but `measureit@@`
+  (the `\let`-bound CS actually invoked at xymatrix.tex L85) resolves to the
+  raw queue-replay, not our override — likely a `\let`-of-Rust-primitive
+  aliasing gap or the xy queue-deferral itself. FIX requires understanding
+  xy's `\xy@@`/`\queue@` box-deferral vs mode-frame ordering (deep, high
+  regression risk across all `\xymatrix` papers) — deferred to a dedicated
+  session. Repro: full preamble (head -55) + `$$\xymatrix @!0 { A & B \\ C
+  & D }$$`.
 * **DEFERRED — `\dq` cluster (2 papers: 1602.07073, 1804.06196;
   babel-german double-quote).** `\usepackage[german,english]{babel}` +
   `\dq` → undefined. germanb.ldf L173 `\def\dq{"}`. german_sty.rs ports
