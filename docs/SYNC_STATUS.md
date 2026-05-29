@@ -1164,6 +1164,37 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### Fresh 2103-range low-error scan triage (2026-05-29): 1 Rust-only (deep, deferred)
+
+Scanned ~2500 of the 2103 range (≤6 Rust errors); 9 candidates. All SHARED or
+Rust-already-better EXCEPT one deep Rust-only:
+* SHARED: `{video}`, `\endkeywords` (siamltex keywords mode), `\usetikzlibrary`
+  (paper-bug: used before `\usepackage{tikz}`), pgfplots `\GenericError`,
+  `double-subscript`, `Expected {`, `ltx:XMArray`-in-`text`, `\keywords` (R0/P0).
+* **2103.04488 (`\seq`/`\g` undefined) — RUST-ONLY (Perl 0, Rust 2) but DEEP.**
+  expl3 paper: `\seq_new:N`/`\seq_set_split:Nnn` etc. The errors are NOT at the
+  preamble `\seq_new` lines (truncating the paper to L1-410 is CLEAN) — they fire
+  at DOCUMENT-BODY use of `\enum`/`\cf*` (xparse `\NewDocumentCommand`s whose
+  expl3 bodies expand at use-time). The paper also has an `\ExplSyntaxOn`×2 /
+  `\ExplSyntaxOff`×3 IMBALANCE (extra Off — a paper-bug Perl tolerates via the
+  `\bool_if:NF \l__kernel_expl_bool` status-guard). Rust's `\ExplSyntaxOn/Off`
+  are dump-defined (status-guarded) so the imbalance alone is idempotent; the
+  use-time expl3-body re-tokenization is the suspect. DEFERRED (deep expl3/xparse
+  machinery; not reproduced minimally).
+
+### XY-PIC mouth-close: MAJOR diagnostic (2026-05-29, DEFERRED — known-hard)
+
+Instrumented the raw-load reader: **xycurve.tex's mouth yields only ~3 tokens
+then the reader LEAKS into the main document** (last token invoked =
+`\begin{document}`). So xycurve's file content (incl. `\crvi` L69) is never read
+— the mouth is truncated at ~L23 and the `reading_from_mouth` reader continues
+into the OUTER doc, producing the `<closed> Mouth … already closed` cascade.
+xy_sty.rs (L82-89) ALREADY documents the xy `\xyinputorelse@` sub-extension
+`\input` chain as "evaluat[ing] strangely in our [Rust]" with partial
+workarounds — so this is a known-hard area. The `\crvi`/curved-arrow cascade
+(2006.00192/01613/01470, 2011.01105, 2012.03982) all stem from this. Fix =
+repair the xy sub-extension input-chain + mouth discipline — a dedicated session.
+
 ### FIXED: neurips binding missing `\@toptitlebar`/`\@bottomtitlebar` (2026-05-29)
 
 **Witness 2007.04825** (`\usepackage{arxiv}` → bundled arxiv.sty, which pulls
