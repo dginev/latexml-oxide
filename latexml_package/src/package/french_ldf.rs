@@ -91,6 +91,20 @@ LoadDefinitions!({
   DefMacro!("\\og", "\\guillemotleft\\nobreakspace");
   DefMacro!("\\fg", "\\nobreakspace\\guillemotright\\xspace");
 
+  // \frquote — french.ldf L601-610 (\ifLaTeXe branch): the modern
+  // babel-french quotation command, `\frquote[*]{text}` → guillemets
+  // around the text. The real macro routes both the starred and unstarred
+  // forms through `\fr@quote` (a multi-level `\FBguill@level` guillemet
+  // engine, L611+); the multi-level nesting is a visual nuance with no
+  // semantic effect, so we render single-level guillemets via the `\og`/
+  // `\fg` pair defined just above (Perl, which raw-loads french.ldf, emits
+  // `«⁠text⁠»` with French spacing — same content). Our curated french.ldf
+  // skips the raw-load (babel-3.x `\SetString` failure), so `\frquote` was
+  // undefined where Perl is clean. Witness 1808.04243 (`[french]{babel}` +
+  // `\frquote`). `\@ifstar` handles the `\frquote*` multi-paragraph form.
+  RawTeX!(r"\DeclareRobustCommand\frquote{\@ifstar\lx@fr@quote\lx@fr@quote}");
+  RawTeX!(r"\newcommand\lx@fr@quote[1]{\og #1\fg}");
+
   // Perl french.ldf.ltxml L31-37: AtBeginDocument(sub { ... }) — defer
   // so any later package's redefinition of \textdegree/\textasciitilde/
   // \textasciicircum is captured (e.g. textcomp loaded after french.ldf).
