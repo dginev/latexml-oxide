@@ -1164,6 +1164,35 @@ canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
 + general engine improvements, so it under-counts what now converts) rather than
 further mining this stale list.
 
+### Fresh 2006-range scan triage (2026-05-29)
+
+Scanned ~part of the 2006 range (release binary, cortex main-detection). 12
+failures captured in `/tmp/freshscan_2006.txt`; gated vs Perl:
+* **2006.02044** (imsart `\bbooktitle`) — GENUINE Rust-only (Rust 1 vs Perl 28).
+  **FIXED** (commit `8f1b8428a0`, see below).
+* **2006.02097** (`svg:g isn't allowed in ltx:block`) — SHARED (Perl also 1 err).
+* **2006.03022** (`zhwinfonts` missing font) — SHARED (both 1 err; font not in texmf).
+* **2006.01820 / .02103 / .02535 / .03902** (`misdefined:#`, 43 err each) — SHARED
+  (Perl `Fatal:too` many / also errors). The text-mode-`#`/halign-leak cluster,
+  not a clean Rust-only win.
+* **2006.01966** (`\bibnodate`/`\section` undefined, 15 err) — SHARED (Perl 13 err;
+  both leave basic macros undefined — paper/class setup issue).
+* **2006.00192 / 2006.01613** — Rust `\@index Attempt to end mode …` + a large
+  `^`/`_` "Script can only appear in math mode" cascade (31 / 95 err). **Perl
+  TIMES OUT** (>200s; huge 13 MB / many-MB papers) so no clean baseline — can't
+  confirm Rust-only vs text-mode-`^`/`_` paper-bug. Minimal `\index`-in-text/
+  math/box repros do NOT reproduce, so it's a context-specific interaction, not
+  a simple `\index` mode bug. DEFERRED pending a reproducing minimal case.
+* **2006.01470** — CONFIRMED genuine Rust-only (Perl 3 warn / 0 err / 5 MB; Rust
+  27 err / 2.5 MB). Root: `\xymatrix` (xy-pic) inside `$$…$$` inside a `{ex}`
+  amsthm env corrupts the mode stack (8× `\hbox … restricted_horizontal in
+  internal_vertical`, then `\end{ex}`/`\end{itemize}`/`_` cascade). xy-pic is
+  the explicitly-DEFERRED cluster (`\crvi` undefined; CLAUDE.md). The real fix
+  is containing the xy failure so it doesn't corrupt the global mode stack
+  (graceful-degrade like Perl) — deep document-builder/xy work, deferred.
+* **2006.03833** (`recursion $ expands into itself`, 101 err) — likely paper-bug;
+  not triaged further.
+
 ### FIXED: imsart `\bbooktitle` + sibling bib field macros undefined (2026-05-29)
 
 **Witness 2006.02044** (`\documentclass{imsart}` + imsart-nameyear `.bbl`).
