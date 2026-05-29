@@ -655,6 +655,20 @@ byte-identical to Perl `auto_keywords`).
   2104.02680: 2→0 errors (957 KB, Perl 1.16 MB). 6 control algorithm2e
   papers regression-clean (tags-err=0, RUST≤PERL). `cargo test --tests`:
   1344 passed, 0 failed.
+* **FIXED 2026-05-29 — svproc AAS journal abbreviations (2110.04152;
+  incomplete-binding).** The bundled svproc.cls (Springer proceedings;
+  NOT in TeX Live, so each paper ships its own) inlines the full standard
+  AAS journal-abbreviation set at L1387-1466 (`\newcommand*\apj{ApJ}`,
+  `\aj`, `\mnras`, `\sovast{Soviet~Ast.}`, … — 79 macros, same set as
+  aas_macros.sty). AAS/natbib bst styles emit these directly in
+  `\bibitem` text. Perl has no svproc binding → raw-loads the bundled
+  .cls → defined (0 err). Rust's `svproc_cls.rs` intercepts svproc.cls
+  (article + sv_support base), so the inline journal defs never ran →
+  `\apj`/`\sovast` undefined. FIX: `RequirePackage!("aas_macros")` in
+  `svproc_cls.rs` (additive; aas_macros_sty.rs already ports the full set
+  Perl-faithfully via `\ref@jnl{…}`). 2110.04152: 2→0 errors (27.9 KB,
+  Perl 32.5 KB, "ApJ"/"Soviet Ast." render). `cargo test --tests`: 1344
+  passed, 0 failed.
 * **DEFERRED 2026-05-29 — xy-pic `\xymatrix @!` mode-leak (2006.01470;
   confirmed Rust-only, deep).** Rust 27 err / 2.5 MB vs Perl 0 err / 5.0 MB
   (Perl genuinely clean — earlier "Perl timeout" gates were CPU-contention
