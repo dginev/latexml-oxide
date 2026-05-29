@@ -1058,8 +1058,14 @@ global french, see above), **2006.02269** (halign template, see above),
   `debug`, `noconfigs`, `silent`, `nocase`, `leqno`, `fleqn`) from the
   language-candidate filter. 1 error → 0, xml:lang="en".
 * **Content-model malformed** — 1911.01815 (`ltx:listingline`, 333 warns,
-  statsoc.cls), 2004.07710 (`ltx:itemize`), 2006.06087 (`ltx:theorem` in
-  `ltx:note`, 926 warns). Deeper structural.
+  statsoc.cls), 2004.07710 (`ltx:itemize`). **2006.06087 FIXED** (commit
+  `66c623aeea`): `ltx:theorem isn't allowed in <ltx:note>` — elsart_support_core
+  mistranslated Perl L189's `DefMacro('\note{}', "<ltx:note>#1</ltx:note>")`
+  (token expansion → LITERAL TEXT, error-free but buggy, flagged `# ?` in Perl)
+  as a `DefConstructor` (real `<ltx:note>` element). A paper's
+  `\note{\begin{remark}…}` (with its own ignored `\newcommand\note`) then put a
+  `\newtheorem` env inside a real ltx:note → error. Reverted to DefMacro;
+  Rust `\note` output now byte-identical to Perl. 1 error → 0.
 * **Engine** — 1910.09629 (`\iffalse` expected:i), 2005.09884 (pgf 'sequence'
   arg).
 * **Perl-FATAL (NOT real wins)** — 2001.04466, 2005.08257 (ebproofs `\else`,
