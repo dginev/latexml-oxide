@@ -1027,8 +1027,11 @@ parity on these; the clean Rust-only wins are largely exhausted in these stages.
   bib-mechanism change (Rust `\bibitem` honoring a redefined `\@lbibitem`) or an
   abntex2cite shim — deferred (deep / new-binding).
 * Content-model `isn't allowed` (svg:g-in-block, XMApp-in-emph) = mostly SHARED
-  (verified earlier). `_`/`^` math-mode (~80) + `}` mode-close (~66) = mixed
-  shared/Rust-only, elusive triggers.
+  (verified earlier). **`_` math-mode cluster (~80) = SHARED** — Perl-gated 4
+  low-error samples (1910.00659/08936, 1912.03473/13019), ALL hit the SAME
+  `_ Script _ can only appear in math mode` in Perl too (source-level: math
+  content outside `$…$`, or `$$`-in-environment like linenomath). `}` mode-close
+  (~66) = endgroup/mode-leak, mostly SHARED (docs).
 **⇒ To find genuine Rust-only regressions, gate on Perl being CLEAN. The
 fresh-worker re-sweep + Perl-gate is the way (slow). Most R10-R16 stage
 failures are Rust-ahead/both-fail.**
