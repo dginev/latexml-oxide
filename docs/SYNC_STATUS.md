@@ -1027,6 +1027,32 @@ not Perl-parity gaps.)
 * **1910.10243** — pstricks/pst-plot → `\ifpst@useCalc`/`\ifpst@psfonts`/
   `\colorlet`/`\ifluatex` undefined. pstricks cascade.
 
+### Round-37 err=6-10 gate sweep (2026-05-29): stale-TSV clean wins EXHAUSTED
+
+Gated the remaining 12 err=6-10 candidates (excluding shared clusters). 3
+Perl-clean+Rust-fail, ALL deep and ALL the same META-PATTERN as the err=3-5
+batch (Perl's kpathsea misses the package → skips it; Rust raw-loads it → deep
+cascade) or known mode-frame-leak territory:
+* **2004.03193** — `\lx@hidden@egroup Attempt to close boxing group` (CJK.sty
+  raw-load). The boxing-group variant of [[project_endgroup_modeswitch_frame_leak]]
+  — a known-hard remaining root cause.
+* **2004.03970** — `Extra alignment tab '&'` ×8 (ifacconf.cls missing → fallback
+  class table-column cascade).
+* **1910.14035** — `Error:unexpected:` ×10 (arydshln.sty raw-load, dashed-rule
+  arrays).
+
+**Conclusion:** the clean, low-error, single-root Rust-only wins in
+`resweep_fresh.tsv` (err=1..10) are now EXHAUSTED — 8 fixed this session
+(2007.04819, 1911.07001, 2006.02269, 1910.09629, 2006.10240, 2006.06087,
+2004.07710, 2002.09766). The residual splits into: (a) the META-pattern
+"Perl-can't-find-pkg → Rust-raw-loads → deep cascade" (fontaxes, betababel/Greek,
+pstricks, CJK, arydshln, ifacconf) — beyond-Perl raw-load-robustness work, NOT
+parity gaps; (b) deep document-builder cases (1911.01815 hbox+algo2e, boxing-
+group mode-leak); (c) Perl-FATAL non-wins. Next productive step is a FRESH
+canvas re-sweep with the current binary (the TSV predates the session's 8 fixes
++ general engine improvements, so it under-counts what now converts) rather than
+further mining this stale list.
+
 ### FIXED: algorithm2e `algorithm*`/`algorithm2e` via `\let` broke `algorithm`+algo2e combo (2026-05-29)
 
 **Witness 2002.09766** (`\usepackage{algorithm,algorithmic}` +
