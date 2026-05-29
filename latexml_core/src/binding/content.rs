@@ -177,24 +177,40 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   };
 
   // If loading a class, store class options (Perl Package.pm lines 2561-2564).
-  // Also set `\@classoptionslist` even when options is empty: the kernel
-  // default (`\let \@classoptionslist \relax`) breaks csname-reads like
-  // babel's `\csname \ds@\@classoptionslist\endcsname` (babel.sty L4287).
-  // Real LaTeX defines `\@classoptionslist` to the comma-list (possibly
-  // empty) at every `\@fileswith@pti@ns` call; Perl only does so when
-  // non-empty. Witness 2504.00009 (`\documentclass{...}` with no options
-  // → babel csname runaway "should not appear between csname and endcsname").
+  // Perl L2561: `if ($astype eq 'cls' and $options{options})` — only
+  // (re)define `\@classoptionslist` when THIS cls load actually carries
+  // options. A nested `\LoadClass` with empty options (e.g. amsart →
+  // ams_core; our `*_cls.rs` bindings pass `Tokens!()` rather than forwarding
+  // the outer options as Perl's `withoptions=>1` does) must NOT clobber the
+  // document class's option list — babel iterates `\@classoptionslist`
+  // (`\bbl@foreach`, babel.sty L4270) to pick up a GLOBAL language option such
+  // as `\documentclass[french]{amsart}` and only then declares/loads that
+  // language. Clobbering it to empty silently dropped global babel languages
+  // for every bound class. Witness 1911.07001 (`[oneside,french,titlepage]
+  // {amsart}` + bare `\usepackage{babel}` → french.ldf must load).
+  //
+  // DIVERGENCE retained from Perl: still define `\@classoptionslist` as EMPTY
+  // for an option-less *document* class so babel's
+  // `\csname\ds@\@classoptionslist\endcsname` doesn't run away (the kernel
+  // default `\let\@classoptionslist\relax`; witness 2504.00009). We gate that
+  // on "no class options recorded yet", so it fires for the first/outermost
+  // class load but never clobbers an already-populated list on a nested load.
   if as_type == "cls" {
     for opt in &options.options {
       push_value("class_options", arena::pin(opt))?;
     }
     let class_opts_str = options.options.join(",");
-    def_macro(
-      T_CS!("\\@classoptionslist"),
-      None,
-      Tokens!(Explode!(class_opts_str)),
-      None,
-    )?;
+    let have_recorded_opts = lookup_vecdeque("class_options")
+      .map(|v| !v.is_empty())
+      .unwrap_or(false);
+    if !class_opts_str.is_empty() || !have_recorded_opts {
+      def_macro(
+        T_CS!("\\@classoptionslist"),
+        None,
+        Tokens!(Explode!(class_opts_str)),
+        None,
+      )?;
+    }
   }
 
   // Compute the exact name based on the type
