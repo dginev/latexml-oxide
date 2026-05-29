@@ -203,8 +203,33 @@ LoadDefinitions!({
     document.float_to_element("ltx:tags", false)?;
   });
 
-  // Line numbering — Perl L195, L210-221
-  DefConstructor!("\\algocf@printnl{}", "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
+  // Line numbering — Perl L210-221 (the ACTIVE \algocf@printnl; Perl L195's
+  // plain template is immediately overridden).
+  //
+  // The earlier Rust port used the plain L195 template
+  // (`<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>`), which emits the line-number
+  // tags at the CURRENT cursor. That errors "ltx:tags isn't allowed in
+  // <ltx:text>" whenever `\nl` fires while an inline `<ltx:text>` is open — e.g.
+  // a `\SetKwInput{KwInit}{\nl initialize}` line, where the KwInput label
+  // wrapper opens an `<ltx:text>` before `\nl`. Perl's active definition first
+  // `floatToElement('ltx:tags')` to climb OUT of that `<ltx:text>` up to the
+  // enclosing `<ltx:listingline>` (which can contain tags), emits the tags
+  // there, then leaves the cursor restored so following content flows on. This
+  // is the same float used by `\lx@prepend@indentation@` above. We restore the
+  // saved node (rather than Perl's manual childNode remove/re-append prepend)
+  // so the KwInput label's content keeps its wrapper. Witness 2104.02680
+  // (`\SetKwInput{KwInit}{\nl initialize}`).
+  DefConstructor!("\\algocf@printnl{}", sub[document, args] {
+    let num = args.first().and_then(|a| a.as_ref());
+    let savenode = document.float_to_element("ltx:tags", false)?;
+    document.open_element("ltx:tags", None, None)?;
+    match num {
+      Some(n) => { document.insert_element("ltx:tag", vec![n], None)?; },
+      None => { document.insert_element("ltx:tag", Vec::new(), None)?; },
+    }
+    document.close_element("ltx:tags")?;
+    if let Some(sn) = savenode { document.set_node(&sn); }
+  });
 
   // Strip trailing pars — Perl L141-145
   DefMacro!("\\lx@strippar{}", "#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx");

@@ -636,6 +636,25 @@ byte-identical to Perl `auto_keywords`).
   amssymb/lineno/caption witnesses, and matches Perl which always loads
   physics for SciPost). 2104.02751: 2→0 errors (1.0 MB). `cargo test
   --tests`: 1344 passed, 0 failed.
+* **FIXED 2026-05-29 — algorithm2e `\nl` line-number tags in `<ltx:text>`
+  (2104.02680).** `\algocf@printnl` emitted the line-number
+  `<ltx:tags><ltx:tag>N</ltx:tag></ltx:tags>` at the CURRENT cursor via a
+  plain template (Perl algorithm2e.sty.ltxml L195's *overridden* form). When `\nl`
+  fires while an inline `<ltx:text>` is open — e.g.
+  `\SetKwInput{KwInit}{\nl initialize}`, where the KwInput label wrapper
+  opens an `<ltx:text>` before `\nl` — the tags violated the content model
+  ("ltx:tags isn't allowed in <ltx:text>"). Perl's *active* definition
+  (algorithm2e.sty.ltxml L210-221) first `floatToElement('ltx:tags')` to
+  climb out of the `<ltx:text>` up to the enclosing `<ltx:listingline>`,
+  emits the tags there, then continues. FIX: port that — convert the Rust
+  `\algocf@printnl` to a sub doing `float_to_element("ltx:tags")` →
+  open/insert/close tags → restore the saved node (we restore rather than
+  Perl's manual childNode remove/re-append prepend, so the KwInput label
+  keeps its wrapper; ltx:tags position within the listingline is
+  cosmetic — the post-processor renders it as the line-number gutter).
+  2104.02680: 2→0 errors (957 KB, Perl 1.16 MB). 6 control algorithm2e
+  papers regression-clean (tags-err=0, RUST≤PERL). `cargo test --tests`:
+  1344 passed, 0 failed.
 * **DEFERRED — `\dq` cluster (2 papers: 1602.07073, 1804.06196;
   babel-german double-quote).** `\usepackage[german,english]{babel}` +
   `\dq` → undefined. germanb.ldf L173 `\def\dq{"}`. german_sty.rs ports
