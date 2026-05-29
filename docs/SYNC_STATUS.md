@@ -45,6 +45,24 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — case-change-in-math frontmatter fix (genuine Rust-only win).**
+1907.10053 (amsart): RUST 2 errors → **0** (Perl never had these — Perl's only
+errors on this paper are unrelated latex2e-first-aid/math noise; Rust now
+surpasses). Root cause: `lx_read_and_change_case` (the engine behind
+`\MakeUppercase`/`\MakeLowercase`, and `\MakeText*` via textcase) read every
+token with `read_x_token` (expanding) even inside `$…$`. A robust case-change
+command nested in the math (`\title{… $\MakeUppercase{C}$ …}`) thus had its OWN
+definition expanded mid-scan, splicing the literal `$` from its
+`\def\({$}\let\)\(` body into the stream and miscounting the `CC_MATH` toggle →
+math mode leaked into the deferred-frontmatter flush
+(`\@add@frontmatter@now Attempt to end mode text in math` +
+`XMApp not allowed in ltx:contact`). Fix (faithful to Perl, which preserves
+robust commands across the outer `\edef` via `\protect`→`\noexpand`): inside
+math, on a `\protect` token grab the next token WITHOUT expansion and shield it
+with `\dont_expand`; plain math symbols (no `\protect`) are untouched, so normal
+math (`$\alpha\neq a$`) is unchanged. `cargo test` 1344/0 (incl. textcase_test).
+Minimal trigger: `\MakeLowercase{ a $\MakeUppercase{C}$ b} \\ c` in a title.
+
 **Status.** Round-36 closed via PR #238 (merged as `9723f4f242`) —
 500K first-batch at 99.9968% projected. Round-37 continues on
 `large-scale-testing-round-4` branch: drive stages 51-100 (second

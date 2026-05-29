@@ -469,7 +469,32 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       in_math = !in_math;
       result.push(tok);
     } else if in_math {
-      result.push(tok);
+      // Math content is preserved verbatim (no case change). One hazard: a
+      // robust command nested in the math — e.g. `$\MakeUppercase{C}$` — is
+      // expanded by read_x_token above to `\protect\MakeUppercase ` (the
+      // robust real macro). If we let the following `\MakeUppercase ` body
+      // expand here, its OWN definition's literal `$` tokens (from
+      // `\def\({$}\let\)\(`) get read into this loop and miscount the CC_MATH
+      // toggle, desynchronising `in_math` and leaking math mode into the
+      // surrounding digestion (witnessed in amsart frontmatter:
+      // `\@add@frontmatter@now Attempt to end mode text in math`). On
+      // `\protect` inside math, grab the following token WITHOUT expansion and
+      // shield it with `\dont_expand` so the caller's `\edef\reserved@a{...}`
+      // keeps it literal; it is then digested as ordinary math later. This
+      // mirrors Perl, whose robust-command `\protect` survives the outer
+      // `\edef` via `\noexpand`. Plain math symbols (`\alpha`, …) are not
+      // `\protect`-prefixed, so normal math is unaffected.
+      if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
+        if let Some(next) = gullet::read_token()? {
+          result.push(tok);
+          result.push(T_CS!("\\dont_expand"));
+          result.push(next);
+        } else {
+          result.push(tok);
+        }
+      } else {
+        result.push(tok);
+      }
     } else if cc == Catcode::LETTER || cc == Catcode::OTHER {
       let new_str: String = tok.with_str(|s| {
         if is_upper {
