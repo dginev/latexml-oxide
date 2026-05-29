@@ -17,55 +17,73 @@ LoadDefinitions!({
   DefMacro!("\\fnum@font@algorithm", "\\bf");
   DefMacro!("\\ext@algorithm", "loa");
 
-  // {algorithm} environment
-  DefEnvironment!("{algorithm}[]",
-    "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
-    mode => "internal_vertical",
-    before_digest => {
-      use crate::engine::latex_constructs::before_float;
-      // Perl L73-86: mirror full beforeDigest sequence.
-      DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
-      DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
-      Let!("\\par", "\\lx@algo@par");
-      Let!("\\parbox", "\\lx@algo@parbox");
-      Let!("\\\\", "\\lx@algo@par");
-      Let!("\\strut", "\\lx@algo@strut");
-      // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
-      // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
-      DefMacro!("\\BlankLine", "\\lx@algo@par");
-      DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
-      before_float("algorithm", None);
-    },
-    after_digest => sub[whatsit] {
-      use crate::engine::latex_constructs::after_float;
-      // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
-      // whatsit so afterConstruct's addFloatFrames draws the rectangle.
-      // Without this, algorithm2e's [boxed] / [boxruled] options silently
-      // dropped their frame instructions in Rust.
-      if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
-        if style_tokens.to_string().contains("box") {
-          whatsit.set_property("frame", Stored::from("boxed"));
+  // {algorithm}, {algorithm*}, {algorithm2e}, {algorithm2e*} environments.
+  // Perl algorithm2e.sty.ltxml L62-64 loops a FULL `DefEnvironment` over each
+  // of `algorithm2e`, `algorithm`, `algorithm*` (same body). The previous Rust
+  // port only `DefEnvironment`'d `{algorithm}` and `\let`-aliased the others to
+  // `\algorithm`. That breaks when the `algorithm` (floats) package is ALSO
+  // loaded: it raw-defines a `{algorithm*}` (two-column float) environment, and
+  // a bare `\let\algorithm*\algorithm` leaves the env's name registration as
+  // `algorithm`, so `\begin{algorithm*}` opens the float-package's paragraph
+  // wrapper while algorithm2e's listing machinery runs inside it — the
+  // listinglines then mis-nest in an `<ltx:p><ltx:text>` and the close fails
+  // ("ltx:listingline isn't allowed in <ltx:text>"). A proper DefEnvironment
+  // for each name (matching Perl) registers `algorithm*` as its own listing
+  // environment, overriding the float-package definition cleanly. Witness
+  // 2002.09766 (`\usepackage{algorithm,algorithmic}` + `[algo2e]{algorithm2e}`,
+  // `\begin{algorithm*}`). Same 40-line body for every name → local macro.
+  macro_rules! def_algo2e_env {
+    ($name:literal) => {
+      DefEnvironment!($name,
+        "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
+        mode => "internal_vertical",
+        before_digest => {
+          use crate::engine::latex_constructs::before_float;
+          // Perl L73-86: mirror full beforeDigest sequence.
+          DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
+          DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
+          Let!("\\par", "\\lx@algo@par");
+          Let!("\\parbox", "\\lx@algo@parbox");
+          Let!("\\\\", "\\lx@algo@par");
+          Let!("\\strut", "\\lx@algo@strut");
+          // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
+          // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
+          DefMacro!("\\BlankLine", "\\lx@algo@par");
+          DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
+          // All variants share the SAME float counter ("algorithm"), matching
+          // Perl (its loop body always calls beginItemize/RefStepCounter on
+          // "algorithm").
+          before_float("algorithm", None);
+        },
+        after_digest => sub[whatsit] {
+          use crate::engine::latex_constructs::after_float;
+          // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
+          // whatsit so afterConstruct's addFloatFrames draws the rectangle.
+          // Without this, algorithm2e's [boxed] / [boxruled] options silently
+          // dropped their frame instructions in Rust.
+          if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
+            if style_tokens.to_string().contains("box") {
+              whatsit.set_property("frame", Stored::from("boxed"));
+            }
+          }
+          after_float(whatsit);
+        },
+        // Perl L92: afterConstruct => addFloatFrames($_[0], $_[1]->getProperty('frame'))
+        // Pulls the frame from properties (set above for boxed/boxruled options)
+        // and dispatches to float_sty's add_float_frames helper.
+        after_construct => sub[document, whatsit] {
+          let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
+          if !style.is_empty() {
+            crate::package::float_sty::add_float_frames(document, &style)?;
+          }
         }
-      }
-      after_float(whatsit);
-    },
-    // Perl L92: afterConstruct => addFloatFrames($_[0], $_[1]->getProperty('frame'))
-    // Pulls the frame from properties (set above for boxed/boxruled options)
-    // and dispatches to float_sty's add_float_frames helper.
-    after_construct => sub[document, whatsit] {
-      let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
-      if !style.is_empty() {
-        crate::package::float_sty::add_float_frames(document, &style)?;
-      }
-    }
-  );
-  // {algorithm*}, {algorithm2e}, {algorithm2e*} — same as {algorithm} — Perl L63
-  Let!("\\algorithm*", "\\algorithm");
-  Let!("\\endalgorithm*", "\\endalgorithm");
-  Let!("\\algorithm2e", "\\algorithm");
-  Let!("\\endalgorithm2e", "\\endalgorithm");
-  state::let_i(&T_CS!("\\algorithm2e*"), &T_CS!("\\algorithm"), None);
-  state::let_i(&T_CS!("\\endalgorithm2e*"), &T_CS!("\\endalgorithm"), None);
+      );
+    };
+  }
+  def_algo2e_env!("{algorithm}[]");
+  def_algo2e_env!("{algorithm*}[]");
+  def_algo2e_env!("{algorithm2e}[]");
+  def_algo2e_env!("{algorithm2e*}[]");
 
   DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
   def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;
