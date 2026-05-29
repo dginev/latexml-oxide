@@ -97,6 +97,47 @@ CONVERR_43; 1808.02456 RUST 43 / PERL 44 — Rust marginally BETTER, both fail),
 and mode-leak. No clean Rust-only win surfaced this round — parity is high;
 remaining failures are SHARED/deep. Sweep continues (offsets 24-50).
 
+**2026-05-29 — 1703.10179 reclassified SHARED (was a stale-binary phantom).**
+The previously-deferred "RUST-only `malformed:ltx:p` builder bug" (scrbook thesis,
+`<ltx:theorem><ltx:para><ltx:equationgroup><ltx:equation><ltx:_Capture_>`) is
+**SHARED**: Perl ALSO emits exactly 1 `malformed:ltx:p` at the same construct
+(line 4819 — an `align*` with a right-side `\begin{cases}` followed by `\intertext`
+carrying `\tag`/`\label`/`\eqref`). Both engines otherwise complete with a large
+doc (Perl 12.7 MB / Rust 9.0 MB). The "deep builder bug" label came from a STALE
+debug binary that hit the 60s default `--timeout` mid-build and emitted an empty
+39-byte doc; the fresh binary with `--timeout 0` completes in **96.5s debug
+(~30s release) vs Perl's 6m44s** — a >13× speedup with parity on the single shared
+error. NOT a target. Lesson (reinforced): ALWAYS rebuild before reproducing a
+deferred item, and a debug timeout is a false alarm — re-check with `--timeout 0`
+or `--release` before calling it a hang.
+
+**2026-05-29 — exhaustive CONVERR_1 re-mine: parity confirmed, zero genuine
+Rust-only single-error wins remain.** Re-ran the current binary over the
+closest-to-clean (1-error) failure logs and Perl-gated every promising candidate:
+* **Stale stages 51-73** — all **27** CONVERR_1 papers triaged. 2 already fixed
+  (`\thechapter` 1501.04981, `\bysame` 1503.01760); the rest SHARED or
+  main-detection artifacts: `\etb@undefined` (etoolbox sentinel, executes-when-used
+  in both engines), `\endIEEEproof` (1502.05433 — Perl ALSO 4× "end mode
+  restricted_horizontal"; **corrects the memory note that called the IEEEproof
+  mode-leak Rust-only — it is SHARED**), `\xymatrix`/`\lx@xy@xyoption@orig`
+  (papers loading xy via `\@@input xypic` — Perl also fails: `\xyoption`/`\ar`
+  undefined + closed-mouth), `\permission` (sig-alternate-2013.cls absent from TL
+  → both fall back; Rust fewer errors), `\ifisabridged` (1503.01673 — artifact:
+  real main `v2mockus.tex` declares `\newboolean{isabridged}` and is CLEAN in both;
+  sweep picked incomplete `v1mockus.tex`). The 7× `expected:id` `.pic1.` cluster
+  (XMRef-dangling) is **already fixed** — 1502.00120/06855/07268 now 0 errors
+  (Perl-confirmed clean); the remaining 4 of that bucket regressed only to the
+  SHARED xy-load failures above.
+* **Fresh stages 79-81** (current-binary, second-500K) — 7 undefined-CS CONVERR_1
+  candidates, ALL SHARED: `\gtrless` 1/1, `\pagerange` 1/1, `\rangle` 1/1, `\varv`
+  1/2, `\ucite` 1/1, `\textRL` 1/2, `\abntnextkey` 1/1 (RUST/PERL error counts; in
+  `\varv` + `\textRL` Rust is strictly BETTER). All niche/missing packages or
+  malformed source both engines reject.
+No code fix landed this round — there was no genuine Rust-only error to fix, and
+fabricating one would violate the no-shortcut/no-downgrade guardrails. The
+remaining single-error long tail is genuinely SHARED; further single-root wins
+must come from CONVERR_2+ cascades or the deep deferred items, not the 1-error pool.
+
 **Goal.** Reach **1,000,000 successful conversions** with the Rust
 translation (`cortex_worker --standalone`) on the 1,000,001-paper
 subset of arxmliv where the original Perl LaTeXML emitted at least
