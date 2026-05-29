@@ -9194,21 +9194,48 @@ LoadDefinitions!({
     }
   );
 
-  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates.
-  // Insert `SkipSpaces` between successive `Match:(` patterns so a single
-  // (or double) space between paren-tuples doesn't break the read; e.g.
-  //   \qbezier(6.4,0.5)(7.35,2)  (8.3,0.5)
-  // (witness: 0904.1097 line 422 has multi-space gaps between coord
-  // tuples, which previously failed `Missing argument Match:(`).
-  // A `SkipSpaces` is ALSO needed before the FIRST `Match:(` — a space can
-  // follow the optional `[N]` (the optional-number reader, unlike
-  // OptionalMatch, does not skip its trailing space), e.g. `\qbezier[10]
-  // (247,22)(245,20)(245,10)`. Perl uses `Pair Pair Pair` (LaTeX.pool.ltxml
-  // L5182), whose `Pair` type skips leading spaces; this matches that.
-  // `SkipSpaces` is a non-numbered directive, so the body's #N mapping is
-  // unchanged. Witness 1701.03735 (amsart, `\qbezier[10] (…)`): RUST 1→0.
-  DefMacro!("\\qbezier [Number] SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:)",
-    "\\lx@pic@qbezier{#1}{#3}{#4}{#6}{#7}{#9}{#10}");
+  // \qbezier[N](p1)(p2)(p3) — quadratic Bezier. Perl LaTeX.pool.ltxml L5182:
+  //   DefConstructor('\qbezier [Number] Pair Pair Pair', …).
+  // Read each coordinate via the `Pair` parameter type (`(x,y)`, skipping
+  // leading spaces), mirroring Perl, rather than a manual
+  // `Match:( Until:, Until:)` decomposition. The manual form had two faults:
+  // (1) the THIRD pair's y-coordinate was always dropped — the terminal
+  // `Until:)` slot returned empty, so `\qbezier(1,2)(3,4)(5,6)` rendered
+  // `points="…,0"` instead of `…,6` (with an optional `[N]` it grabbed
+  // unrelated garbage); (2) a space after the optional `[N]`
+  // (`\qbezier[10] (…)`) failed the first match. `Pair` reads each `(x,y)`
+  // cleanly (and skips leading spaces), fixing both. Witness 1701.03735
+  // (`\qbezier[10] (…)`) + the long-standing y3 drop (picture.xml baseline).
+  // The DefMacro extracts the three Pair structs and forwards the six
+  // coordinates as text to `\lx@pic@qbezier`, whose constructor scales them
+  // by \unitlength (px) exactly as before — the px-scaling is a separate,
+  // pre-existing divergence from Perl's raw storage, kept unchanged.
+  DefMacro!("\\qbezier [Number] Pair Pair Pair", sub[args] {
+    let get_pair = |i: usize| -> (f64, f64) {
+      args.get(i).and_then(|a| match a {
+        ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+        _ => None,
+      }).unwrap_or((0.0_f64, 0.0_f64))
+    };
+    let n = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let (x1, y1) = get_pair(1);
+    let (x2, y2) = get_pair(2);
+    let (x3, y3) = get_pair(3);
+    let mut result = Vec::with_capacity(40);
+    result.push(T_CS!("\\lx@pic@qbezier"));
+    result.push(T_BEGIN!());
+    result.extend(n.unlist_ref().iter().copied());
+    result.push(T_END!());
+    for (x, y) in [(x1, y1), (x2, y2), (x3, y3)] {
+      result.push(T_BEGIN!());
+      result.extend(Explode!(s!("{}", x)));
+      result.push(T_END!());
+      result.push(T_BEGIN!());
+      result.extend(Explode!(s!("{}", y)));
+      result.push(T_END!());
+    }
+    Ok(Tokens::new(result))
+  });
   DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\qbezier",

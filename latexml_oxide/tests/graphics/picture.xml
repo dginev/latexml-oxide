@@ -536,8 +536,8 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       <title><tag close=" ">2.6</tag>Curves:</title>
       <para xml:id="S2.SS6.p1">
         <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS6.p1.pic1">
-          <bezier points="55.35,110.7 110.7,166.04 138.37,0" stroke="#000000" stroke-width="0.4"/>
-          <bezier points="55.35,123.15 110.7,178.5 138.37,691.85" stroke="#000000" stroke-width="0.4"/>
+          <bezier points="55.35,110.7 110.7,166.04 138.37,110.7" stroke="#000000" stroke-width="0.4"/>
+          <bezier points="55.35,123.15 110.7,178.5 138.37,123.15" stroke="#000000" stroke-width="0.4"/>
         </picture>
       </para>
     </subsection>
