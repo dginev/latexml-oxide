@@ -45,6 +45,27 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — genuine Rust-only single-error pool EXHAUSTED (stages 51-82).**
+Across several iterations I have now gated dozens of candidates spanning CONVERR_1,
+distinctive CONVERR_2/3, and FATAL_3 over stages 51-82; **every one is SHARED
+(Perl errors too) or already-fixed.** This round's additional confirmations:
+CONVERR_1 across 55-82 has NO undefined-CS cluster (all singletons), and the
+distinctive ones are SHARED — `\tex_shipout:D` (1511.01361), `\end{example}`/
+`\endproof` (1510.06460, 1511.00347, theorem-env mode-leak), `\degre` (1510.06868
+ALREADY FIXED by this session's french work). FATAL_3 (stages 75-82) is dominated
+by SHARED math-mode `_`/`^`/`}` cascades; the distinctive ones — `expected:$`
+(1907.01493), `expected:<box>` (1907.04219, a low-level `\halign`+`\Hline`/`\vrule`
+table) — are SHARED too. **The one consistent Rust-WORSE-than-Perl signal is
+error-CASCADE amplification:** on a SHARED root error Rust often hits the 101-error
+FATAL_3 cap (e.g. 1907.04219 RUST 102 / PERL 7; the `\xymatrix`-undefined xy-via-
+`\input` cluster RUST ~110 / PERL ~6) where Perl gracefully completes with a
+handful of errors. This is the highest-value *remaining genuine* work — a
+reliability parity gap (faithful = match Perl's contained degradation), distinct
+from correctness — but it is deep (gullet/stomach error-recovery, high blast
+radius) and not a tail-of-iteration fix. Recommended next focus alongside the
+deferred xtab caption + memory-profiling (#274) items. Cf.
+[[feedback_clear_aborts_priority]], [[feedback_ambiguity_explosion_is_a_flaw]].
+
 **2026-05-29 — fresh-stage (80-82) CONVERR triage: SHARED-dominated.** Gated ~15
 non-math CONVERR_1/2/3 candidates from the freshest sweep stages vs Perl; ALL are
 SHARED (Perl errors too) or already-fixed. SHARED-confirmed this round:
