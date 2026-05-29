@@ -26,9 +26,22 @@ When a body contains an alignment template like `\halign{#\hfil&...}`, the
 \def\foo{\halign{#\hfil\cr test\cr}}
 ```
 
-**Impact:** Non-fatal. Warning is noisy but harmless — tokens are preserved.
+**Impact:** Non-fatal in principle — but Perl's branch emits a *counted* `Error`
+**and drops both tokens**, corrupting the template. Perl rarely reaches it
+because it often can't find the offending package and skips the raw load; we
+*do* raw-load such packages, so it broke the error-free target for the common
+halign-in-macro idiom (e.g. easyeqn.sty's `{MATRIX}` env → `$\mathstrut##$`).
 
-**Perl status:** Still present (Tokens.pm line 139). Unfixed.
+**Perl status:** Still present (Tokens.pm line 139). Unfixed upstream.
+
+**Rust status (FIXED 2026-05-28, beneficial divergence):** `pack_parameters`
+(`latexml_core/src/tokens.rs`) now **preserves** the `#` and the following
+token losslessly (so the alignment template / `#{` delimiter survives) and logs
+at `Info` (non-counted) instead of `Error`. Real TeX resolves the
+PARAM-vs-alignment-cell ambiguity during alignment processing, below the level
+LaTeXML operates at, so a genuine typo can't be reliably told apart — preserving
++ Info is strictly more faithful to TeX than erroring + dropping. Witness
+2006.02269 (easyeqn `{MATRIX}`): 2 errors → 0. cargo test 1344/0/0.
 
 ---
 
