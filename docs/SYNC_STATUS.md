@@ -1099,10 +1099,27 @@ and genuine Rust-only candidates are now *rare*:
   one place Perl and Rust diverge despite byte-identical `\hbox`/`closeElement`/
   `canAutoClose`).
 
-**Net:** the session's 8 fixes brought the binary to near-parity; the easy/
-medium genuine Rust-only wins are exhausted. Remaining work is (a) the
-listing-in-box deep cluster, (b) SHARED beyond-Perl gaps (mdwmath `\meaning`,
-revtex4 `@sw`, pushback-loop hangs, fontaxes/betababel/pstricks raw-loads).
+**Net:** the session's 9 fixes brought the binary to near-parity; the genuine
+Rust-only wins are exhausted. Remaining work is SHARED beyond-Perl gaps (mdwmath
+`\meaning`, revtex4 `@sw`, pushback-loop hangs, fontaxes/betababel/pstricks
+raw-loads, table-in-algorithm2e-listingline).
+
+**2026-05-29 (cont.) — fresh-scan candidates all SHARED.** Perl-gated (CORRECT
+path) every low-error failure from the release scan: 1903.04631 SHARED (8/8,
+`\tabular` inside an algo2e listingline — both fail), 1907.06165 SHARED
+(achemso, Rust 1 < Perl 5 — Rust ahead), 1907.10053 SHARED (firstaid
+`latex2e-first-aid-for-external-files.ltx`, Rust 2 < Perl 12+fatal — Rust
+ahead), 2001.01248 SHARED + artifact (commented `\documentclass` in an
+ieeeconf template fragment), 1901.08873 SHARED (pushback infinite-loop, Perl
+also at 599999). The dominant failure types in the scan are `Error:unexpected:_`
+/`^` (text-mode `_`/`^` — genuine LaTeX errors, both engines correctly fail) and
+`Error:misdefined:#` (mdwmath `\meaning`, SHARED). **No genuine Rust-only
+candidate found in the 4000-paper release scan** (the 1911.01815 listing-in-box
+was the last genuine one, fixed `2627ed999a`). SCANNING-TOOLING note: the
+largest-`\begin{document}` main-detection still picks fragments/templates in
+multi-file submissions (commented `\documentclass`, `appendix-*.tex`, ACM/IEEE
+sample files), producing false candidates — a future scan should prefer the
+`.tex` with a sibling `.bbl` (cortex_worker's heuristic) to cut artifact noise.
 
 ### Round-37 err=6-10 gate sweep (2026-05-29): stale-TSV clean wins EXHAUSTED
 
