@@ -1004,6 +1004,24 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### FIXED: algorithm2e `algorithm*`/`algorithm2e` via `\let` broke `algorithm`+algo2e combo (2026-05-29)
+
+**Witness 2002.09766** (`\usepackage{algorithm,algorithmic}` +
+`\usepackage[algo2e]{algorithm2e}`, `\begin{algorithm*}`). Found via err=3-5
+gate sweep (genuine Rust-only: Perl clean, only ar5iv missing — NOT a
+package-availability case). Perl algorithm2e.sty.ltxml L62-64 loops a FULL
+`DefEnvironment` over `algorithm2e`/`algorithm`/`algorithm*`; Rust only
+DefEnvironment'd `{algorithm}` and `\let`-aliased the rest. When the `algorithm`
+floats package is also loaded it raw-defines a `{algorithm*}` two-column float;
+`\let\algorithm*\algorithm` leaves the env NAME registered as `algorithm`, so
+`\begin{algorithm*}` opened the float package's `<ltx:p>` paragraph wrapper with
+algorithm2e's listing machinery inside → listinglines mis-nested in
+`<ltx:float><ltx:p><ltx:text>` → "ltx:listingline isn't allowed in <ltx:text>"
+(4 errors). Fix: a local `macro_rules!` applies the shared listing-env body as a
+full `DefEnvironment` to all four names (matching Perl's loop). 4 errors → 0,
+1.67 MB. cargo test 1344/0. (commit `7d0b8c88cf`). NOTE: the deferred 1911.01815
+(`\colorbox`/`\hbox` + algorithm2e) is a DIFFERENT listingline-in-text root.
+
 ### FIXED: `\@classoptionslist` clobbered on nested `\LoadClass` → global babel langs (2026-05-28)
 
 **Witness 1911.07001** (`\documentclass[oneside,french,titlepage]{amsart}` +
