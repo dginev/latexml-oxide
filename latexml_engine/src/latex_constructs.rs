@@ -4922,8 +4922,27 @@ LoadDefinitions!({
 
   // Perl: latex_constructs.pool.ltxml L1505-1510 — paragraph before list items
   DefConstructor!("\\preitem@par", sub[document] {
-    let _ = document.maybe_close_element("ltx:p");
-    let _ = document.maybe_close_element("ltx:para");
+    // Perl latex_constructs.pool.ltxml L1505-1510: only close \ltx:p/\ltx:para
+    // when NOT in the preamble AND the current element is NOT an \ltx:itemize.
+    //   if (!$props{inPreamble} && !getNodeQName(getElement, 'ltx:itemize')) {
+    //     maybeCloseElement('ltx:p'); maybeCloseElement('ltx:para'); }
+    // A \trivlist (e.g. an amsthm-style {proofof} / proof env) opens an
+    // <ltx:itemize> that may be wrapped in an enclosing <ltx:para> when it sits
+    // inside an outer list item. Unconditionally closing that <ltx:para> here
+    // ALSO closes the freshly-opened trivlist itemize, so the trivlist's own
+    // \item escapes to the OUTER list and the later \end{itemize} finds nothing
+    // open ("ltx:itemize ... isn't open"). The guard keeps the itemize open so
+    // the item nests correctly. Witness 2004.07710 ({proofof} trivlist inside
+    // an itemize).
+    let in_preamble = state::lookup_bool_sym(pin!("inPreamble"));
+    let cur_is_itemize = document
+      .get_element()
+      .map(|e| document::get_node_qname(&e) == arena::pin_static("ltx:itemize"))
+      .unwrap_or(false);
+    if !in_preamble && !cur_is_itemize {
+      let _ = document.maybe_close_element("ltx:p");
+      let _ = document.maybe_close_element("ltx:para");
+    }
   }, alias => "\\par");
 
   // Perl: latex_constructs.pool.ltxml L1560
