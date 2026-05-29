@@ -1609,6 +1609,18 @@ fn six_format_unitproduct(bracketed: bool, units: &[SixUnit]) -> Tokens {
 /// Format units handling per-mode
 fn six_format_units(units: &[SixUnit]) -> Tokens {
   let permode = six_get_choice_sym(six_pin!("per-mode"));
+  // Perl siunitx.sty.ltxml L1062-1063: `symbol-or-fraction` is resolved up
+  // front to `fraction` in display math, `symbol` otherwise. Without this
+  // remap it falls through to the "Unknown siunitx per-mode" catchall.
+  // Witness 1811.06895 (`\sisetup{per-mode=symbol-or-fraction}`).
+  let permode = if permode == "symbol-or-fraction" {
+    let is_display = lookup_font()
+      .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.as_ref() == "display"))
+      .unwrap_or(false);
+    if is_display { "fraction".to_string() } else { "symbol".to_string() }
+  } else {
+    permode
+  };
   if permode == "reciprocal" || units.iter().all(|u| !u.per) {
     return six_format_unitproduct(false, units);
   }
