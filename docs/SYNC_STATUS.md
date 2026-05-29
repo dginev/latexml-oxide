@@ -1177,19 +1177,24 @@ failures captured in `/tmp/freshscan_2006.txt`; gated vs Perl:
   not a clean Rust-only win.
 * **2006.01966** (`\bibnodate`/`\section` undefined, 15 err) — SHARED (Perl 13 err;
   both leave basic macros undefined — paper/class setup issue).
-* **2006.00192 / 2006.01613** — Rust `\@index Attempt to end mode …` + a large
-  `^`/`_` "Script can only appear in math mode" cascade (31 / 95 err). **Perl
-  TIMES OUT** (>200s; huge 13 MB / many-MB papers) so no clean baseline — can't
-  confirm Rust-only vs text-mode-`^`/`_` paper-bug. Minimal `\index`-in-text/
-  math/box repros do NOT reproduce, so it's a context-specific interaction, not
-  a simple `\index` mode bug. DEFERRED pending a reproducing minimal case.
-* **2006.01470** — CONFIRMED genuine Rust-only (Perl 3 warn / 0 err / 5 MB; Rust
-  27 err / 2.5 MB). Root: `\xymatrix` (xy-pic) inside `$$…$$` inside a `{ex}`
-  amsthm env corrupts the mode stack (8× `\hbox … restricted_horizontal in
-  internal_vertical`, then `\end{ex}`/`\end{itemize}`/`_` cascade). xy-pic is
-  the explicitly-DEFERRED cluster (`\crvi` undefined; CLAUDE.md). The real fix
-  is containing the xy failure so it doesn't corrupt the global mode stack
-  (graceful-degrade like Perl) — deep document-builder/xy work, deferred.
+* **2006.00192 / 2006.01613 / 2006.01470 — ALL THREE are the SAME xy-pic
+  curve-modifier cluster.** Each has a `\xymatrix{… \ar@/_10pt/[rr] …}` (xy-pic
+  curved arrows: `@/_/`, `@/^/`) inside `$$…$$`. Rust's xy `\ar`/`\connect`
+  path parser does not consume the `@/<dir><len>/` curve modifier, so the
+  `_10pt`/`^10pt` leak out as math sub/superscript AND the half-parsed xymatrix
+  boxes leave the mode stack unbalanced → cascade: `\hbox … restricted_horizontal
+  in internal_vertical`, `\end{ex}`/`\end{itemize}`/`\end{theorem}` mode errors,
+  and 16–95 `^`/`_` "Script can only appear in math mode". 2006.01470 is the
+  one with a clean Perl baseline (Perl 3 warn / 0 err / 5 MB; Rust 27 err); the
+  other two have Perl TIMEOUTs (huge papers) so no baseline, but same root.
+  This is the explicitly-DEFERRED xy-pic cluster (`\crvi` undefined; CLAUDE.md).
+  **Two fix angles, both nontrivial:** (a) teach the xy `\ar` parser to consume
+  `@/<curve>/` modifiers (faithful xy-pic curve support — deep, ported-mini-
+  language work); (b) contain xy failures so an unbalanced xymatrix can't
+  corrupt the global mode stack (mode-frame recovery at env/`$$` boundaries —
+  the [[project_endgroup_modeswitch_frame_leak]] family). Recurs in ≥3/12
+  scan candidates (~25%; xy-pic-heavy math/category-theory papers), so worth
+  prioritizing the deferred cluster — but NOT a quick win.
 * **2006.03833** (`recursion $ expands into itself`, 101 err) — likely paper-bug;
   not triaged further.
 
