@@ -880,6 +880,16 @@ LoadDefinitions!({
   DefRegister!("\\bibinitsep" => Glue!("0pt"));
   DefRegister!("\\bibparsep" => Glue!("0pt"));
   DefRegister!("\\bibhang" => Glue!("0pt"));
+  // \lositemsep — itemsep length for biblatex's "list of shorthands" (los).
+  // Declared `\newlength{\lositemsep}` in the biblatex-chicago bibliography
+  // styles (chicago-notes.bbx L22, chicago-authordate.bbx, …) and `\setlength`
+  // by biblatex-chicago.sty L154. Our biblatex binding doesn't implement the
+  // `style=`-option `.bbx`/`.cbx` style-file load (Perl raw-loads the whole
+  // chain), so `\lositemsep` was undefined when biblatex-chicago.sty sets it →
+  // `\setlength` error + `<variable> expected` cascade. Provide the length
+  // defensively (biblatex-chicago always loads biblatex). Witness 1802.09944
+  // (`\usepackage[notes,backend=biber]{biblatex-chicago}`).
+  DefRegister!("\\lositemsep" => Glue!("0pt"));
 
   // Perl L553-604: 50 conditionals
   DefConditional!("\\ifandothers");
