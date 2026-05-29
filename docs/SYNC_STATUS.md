@@ -538,6 +538,8 @@ byte-identical to Perl `auto_keywords`).
 * **FIX LANDED — floatrow centering/raggedright "Undefined object".** `caption_sty` stubbed `\DeclareCaptionJustification` as no-op → `\caption@hj@*` missing. Fix: make it `\@namedef{caption@hj@<name>}` + seed the 6 standard justifications. Flips 1504.02564, 1608.07117, 1704.01862, 1708.07230, 1712.06479.
 * **FIX LANDED — morefloats "Too many floats requested".** Moot float-register capacity (XML pipeline has no float-register pool). Fix: contrib stub `morefloats_sty.rs` (kvoptions option-handling only, omit capacity body). Flips 1504.06174, 1605.06159, 1607.05324.
 * **Round-37 stale-stage + sweep fixes (2026-05-29)** — each verified Perl-clean, tests 1344/0; "Flips" = witnesses that went error→0:
+  * **document labelled-node id (root-cause)**: `load_labels_for_rewrite` erred `malformed:label` when a `labels`-bearing node lacked an `xml:id` (the afterClose GenerateID hook misses the `<document>` root, which gets a label from a bare `\label` before any id'd sectioning). Now calls `generate_id` (matching Perl, which stamps the root `xml:id="id1"`). Flips 1703.09326 (IEEEtran). General fix for the malformed:label class.
+  * wlscirep `\widthof`: stub omitted wlscirep.cls L17 `\RequirePackage{calc}`. Added. Flips 1710.08155.
   * xy-pic `\crvi`: new `xypic_tex.rs` mirrors Perl `InputDefinitions(xy,tex)` (no RequirePackage) + `\xyoption` idempotency. Flips 1603.04650, 1704.02401, 1804.00017, 2011.01105, 2012.03982.
   * SciPost `\bra`/`\ket`: `scipost_cls` += `RequirePackage physics` (cls L53). Flips 2104.02751.
   * algorithm2e `\nl`: `\algocf@printnl` `float_to_element(ltx:tags)` instead of inline (Perl L210). Flips 2104.02680.

@@ -14,6 +14,11 @@ LoadDefinitions!({
   // RequirePackages but omitted wasysym, so `\hexagon` was undefined where
   // Perl is clean. Witness 1610.05398 (`V^\delta_{\hexagon}`). RUST 1 → 0.
   RequirePackage!("wasysym");
+  // wlscirep.cls L17: `\RequirePackage{calc}` (provides `\widthof`,
+  // `\settototalheight`, infix `\setlength` arithmetic). Perl raw-loads
+  // wlscirep.cls → calc loaded; our stub omitted it, so `\widthof` was
+  // undefined where Perl is clean. Witness 1710.08155 (`\widthof`).
+  RequirePackage!("calc");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
   // columns break (Unrecognized tabular template -> Extra alignment tab). The
