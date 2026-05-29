@@ -106,6 +106,16 @@ LoadDefinitions!({
   // survives error-free. Witness 1902.02603 (icml2019.sty L502).
   DefMacro!("\\icmlInternship",
     "\\textsuperscript{*}Work done during an internship");
+  // `\airesident` — paper-bundled AI-residency marker, same family as
+  // `\icmlInternship`. icml2019.sty L503 `\newcommand{\airesident}{
+  // \textsuperscript{$\dagger$}This work was completed as part of the
+  // <program> AI Residency}`. Passed into
+  // `\printAffiliationsAndNotice{\icmlEqualContribution\airesident}`; our
+  // binding intercepts icml20xx so the bundled def never runs, and the
+  // preserved notice arg expands the undefined CS. Generic fallback
+  // (program unknowable from the binding). Witness 1902.09574.
+  DefMacro!("\\airesident",
+    "\\textsuperscript{\\char`\u{2020}}Work completed as part of an AI Residency");
   // \icmlOutsideContribution — paper-bundled marker noting that the
   // contribution was made outside the author's primary affiliation.
   // Witness 2310.14751.
