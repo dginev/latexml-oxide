@@ -180,10 +180,28 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline\\the\\lx@algo@indentation");
   DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
 
-  // Indentation prepending — Perl L197-198
-  // Perl absorbs + prepends via DOM manipulation; Rust emits at startline, so this is a no-op consumer.
+  // Indentation prepending — Perl L197-208.
+  // Perl's `\lx@prepend@indentation@{}` does `$doc->floatToElement('ltx:tags')`
+  // FIRST, then prepends the indentation. That `floatToElement('ltx:tags')` is
+  // critical structurally: it repositions the cursor UP to the listingline,
+  // OUT of any open inline box — notably the `_noautoclose` `<ltx:text>` an
+  // `\hbox` opens when an algorithm2e listing is wrapped in `\colorbox{…}{…}`
+  // (→ `\hbox{…}`). With the cursor back at the listingline, the immediately
+  // following `\lx@algo@@endline` (`</ltx:listingline>`) closes cleanly.
+  //
+  // The previous Rust port emitted indentation at `\lx@algo@startline` instead
+  // and stubbed this as an EMPTY constructor "to avoid DOM manipulation" — but
+  // that dropped the reposition, so a listing inside an `\hbox`/`\colorbox`
+  // left the cursor inside the box's `_noautoclose` `<ltx:text>` and closing
+  // the listingline errored: "ltx:listingline … whose open descendents do not
+  // auto-close. Descendants are text". We keep Rust's startline-indentation
+  // approach (so we deliberately do NOT re-absorb `#1` here — that would double
+  // the indent), but restore Perl's cursor-repositioning float. Witnesses
+  // 1911.01815, 1903.04631 (algorithm2e inside `\colorbox`/`\hbox`).
   DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
-  DefConstructor!("\\lx@prepend@indentation@{}", "");
+  DefConstructor!("\\lx@prepend@indentation@{}", sub[document] {
+    document.float_to_element("ltx:tags", false)?;
+  });
 
   // Line numbering — Perl L195, L210-221
   DefConstructor!("\\algocf@printnl{}", "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
