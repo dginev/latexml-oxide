@@ -1006,6 +1006,21 @@ Found via a fresh sample of the offset-18 remaining slice.
 
 ### R12/R16/R17 fixes (2026-05-28)
 
+* **xwatermark stub: pull in hyperref (+ catoptions) like the real .sty**
+  (`<this commit>`) — `xwatermark.sty` L31/L52 does `\RequirePackage{catoptions}`
+  + `\usepackage{hyperref}`, so loading xwatermark makes hyperref's `\href`/
+  `\url`/etc. available document-wide. Perl has no xwatermark binding → raw-
+  loads it → gets hyperref. Our `xwatermark_sty.rs` stub (created to dodge the
+  catoptions raw-load OOM cascade) no-opped the watermark API but OMITTED the
+  hyperref dependency, so a paper loading xwatermark but not hyperref directly
+  saw `\href` undefined — and since the only `\href` was in a `plainurl` .bbl
+  (`\href{doi}{\path{…}}` DOI links), the WHOLE `<ltx:bibliography>` failed.
+  Added `RequirePackage!("hyperref")` + `catoptions` (the safe Rust stub, not
+  the cascade-prone raw load). **Witness 2001.03244** (`\usepackage[printwatermark]
+  {xwatermark}`, `\bibliographystyle{plainurl}`, no direct hyperref): 1 error +
+  empty bib → **0 errors**, full bibliography with 30 DOI links. Diagnosis hinge:
+  Perl log showed `Loading dependencies … xwatermark.sty: catoptions,hyperref`.
+  cargo test --tests 1344/0.
 * **aas_support: add `\floattable` no-op (aastex62 layout macro)**
   (`<this commit>`) — `aastex62.cls` L4574
   `\def\floattable{\global\deluxestartrue\global\floattrue}` makes the next
