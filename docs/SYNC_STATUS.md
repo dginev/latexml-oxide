@@ -128,6 +128,29 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-30 — FIXED Rust-only + un-regressed dep-scan: skip only deferred
+macro-def bodies, keep load-time conditionals (witness 1703.03673).** `\bigstar`
+in `\documentclass{iau}` (only graphicx loaded) → **Rust 1 err**
+(`undefined:\bigstar`) → **0 err** (Perl 0). Root cause: iau.cls loads amssymb
+via `\IfFileExists{amssymb.sty}{…\usepackage{amssymb}…}` (a LOAD-TIME conditional
+that executes during raw-load). The brace-DEPTH dep-scan filter added for
+1506.06200 (commit 198310ed84) was **too broad** — it skipped EVERY `\usepackage`
+at depth>0, including ones inside `\IfFileExists`/`\@ifundefined` conditionals,
+so amssymb was no longer dep-loaded and `\bigstar` went undefined (a regression
+my own filter introduced, affecting the very common
+`\IfFileExists{pkg.sty}{\usepackage{pkg}}` class idiom). Fix: replaced the
+depth filter with a precise **macro-def-body** check — a `\usepackage` is
+deferred (skipped) iff ANY enclosing `{…}` group is opened directly by a
+`\newcommand`/`\renewcommand`/`\providecommand`/`\DeclareRobustCommand`/`\def`-
+family DEFINITION HEADER (`DEF_BODY_HEADER_RE`). Conditionals are kept.
+Re-verified: 1506.06200 still 0 err (diagrams stays skipped — it's a
+`\newcommand` body), 1703.03673 now 0 err (amssymb kept). `cargo test --tests`
+**1344/0**. Deferred same-sweep Rust-only: 1703.03101 (`\qed` in
+`\documentclass{autart}` — autart.cls defines `\def\qed` at top level but the
+class is OmniBus-fallback'd, not raw-loaded, so its own defs never run; the
+class-raw-load gap, Task #273) and 1703.05010 (Rust FATAL `Endgroup pop last
+locked` where Perl completes).
+
 **2026-05-29 (cont.) — FIXED Rust-only: siunitx `\ang` empty components +
 add-arc-zero + sign-pull (witness 2007.08215).** `\ang[angle-symbol-over-decimal]
 {;;1.0}` (empty degrees, empty minutes, 1.0 arcseconds) → **Rust 2 err**

@@ -1753,6 +1753,16 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     Lazy::new(|| Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
   static CLS_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  // Matches a `\newcommand`/`\def`-family DEFINITION HEADER ending exactly at a
+  // `{` — i.e. the brace that follows opens the macro BODY. Used to detect a
+  // `\usepackage` that lives in a deferred macro body (loads only when the
+  // macro is later expanded) vs one inside a load-time conditional.
+  static DEF_BODY_HEADER_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      r"(?s)(?:\\(?:re|provide)?newcommand|\\DeclareRobustCommand)\*?\s*(?:\{\s*\\[A-Za-z@]+\s*\}|\\[A-Za-z@]+)\s*(?:\[[^\]]*\]\s*)*$|\\[egx]?def\s*\\[A-Za-z@]+[^{}]*$",
+    )
+    .unwrap()
+  });
 
   // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
   // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
@@ -1797,39 +1807,49 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // Perl L2776: strip comments (replacement empty).
   let code = COMMENT_RE.replace_all(&code, "");
 
-  // DIVERGENCE FROM PERL (deliberate, more-robust): only dep-load a
-  // `\usepackage` / `\RequirePackage` that sits at TeX brace-depth 0 — i.e. an
-  // UNCONDITIONAL top-level load. A require nested inside a `{…}` group is the
-  // body of a `\newcommand` / `\def` / `\DeclareOption` / `\@ifundefined` etc.
-  // and only loads if that macro/branch actually fires — exactly the deferred
-  // pattern the dep-scan must NOT eagerly force. (Perl never force-loads these:
-  // for a normally raw-loaded `.sty` it doesn't dep-scan at all, and for the
-  // binding-bypass case the bundled deps it DOES want are top-level `\usepackage`
-  // at depth 0.) Witness: 1506.06200 — categorytheory.sty has
-  // `\newcommand{\usediagrams}{\usepackage[…]{diagrams}}` (never invoked); the
-  // naive scan force-loaded the `diagrams` stub, whose `locked` `\begin{diagram}`
-  // shadowed the paper's own tikz-based `{diagram}` (from diags.sty) → spurious
-  // `Error:undefined:{diagram}`. The depth filter also subsumes the
-  // multi-option-set heuristic below for the common single-option case.
-  let depth_at = |start: usize| -> i32 {
-    let mut depth = 0i32;
-    let mut esc = false;
-    for ch in code[..start].chars() {
-      if esc {
-        esc = false;
-        continue;
-      }
-      match ch {
-        '\\' => esc = true,
-        '{' => depth += 1,
-        '}' => depth -= 1,
+  // DIVERGENCE FROM PERL (deliberate, more-robust): do NOT dep-load a
+  // `\usepackage` / `\RequirePackage` that sits in a DEFERRED macro-definition
+  // body (a `\newcommand` / `\def`-family body) — it loads only if that macro
+  // is later expanded, which the dep-scan must not eagerly force. Requires
+  // inside LOAD-TIME conditionals (`\IfFileExists{X.sty}{\usepackage{X}}`,
+  // `\@ifundefined{..}{..}`, `\if…\usepackage…\fi`) DO execute during raw-load
+  // and MUST still be picked up. (Perl never force-loads the deferred ones: for
+  // a normally raw-loaded file it doesn't dep-scan at all, and the bundled deps
+  // it wants in the binding-bypass case run at load.) Witnesses:
+  //   - 1506.06200 — categorytheory.sty `\newcommand{\usediagrams}{\usepackage
+  //     {diagrams}}` (never invoked) must be SKIPPED (else the `diagrams` stub's
+  //     `locked` `\begin{diagram}` shadows the paper's tikz `{diagram}`).
+  //   - 1703.03673 — iau.cls `\IfFileExists{amssymb.sty}{…\usepackage{amssymb}…}`
+  //     must be KEPT (else `\bigstar` is undefined). An earlier brace-DEPTH
+  //     filter wrongly skipped this conditional; the def-body check is precise.
+  // A `\usepackage` is deferred iff ANY enclosing `{…}` group is opened directly
+  // by a `\newcommand`/`\def` definition header.
+  let in_macro_def_body = |start: usize| -> bool {
+    let bytes = code.as_bytes();
+    let mut stack: Vec<usize> = Vec::new();
+    let mut i = 0usize;
+    while i < start {
+      match bytes[i] {
+        b'\\' => {
+          i += 2;
+          continue;
+        },
+        b'{' => stack.push(i),
+        b'}' => {
+          stack.pop();
+        },
         _ => {},
       }
+      i += 1;
     }
-    depth
+    stack.iter().any(|&ob| {
+      let lo = ob.saturating_sub(400);
+      let window = code.get(lo..ob).unwrap_or(&code[..ob]);
+      DEF_BODY_HEADER_RE.is_match(window)
+    })
   };
   let top_level = |cap: &regex::Captures| -> bool {
-    cap.get(0).map(|m| depth_at(m.start()) <= 0).unwrap_or(true)
+    cap.get(0).map(|m| !in_macro_def_body(m.start())).unwrap_or(true)
   };
 
   // DIVERGENCE FROM PERL (deliberate, more-robust): skip a package that is
