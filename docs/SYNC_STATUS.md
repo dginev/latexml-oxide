@@ -1132,6 +1132,22 @@ byte-identical to Perl `auto_keywords`).
   sandbox is fully resolved — 9 convert, 2 Cluster-B fixed earlier, 7 Cluster-A are
   SHARED runaways now reported honestly (exit 1) rather than as 0-byte successes.
 
+* **FIXED: braced-theorem content-loss (`{\lem … }` over-capture → dropped
+  trailer) (2026-06-01).** The 2026-05-30 "DEFERRED" item below is now RESOLVED.
+  Root cause nailed via per-capture-ID `digest_next_body` tracing: a bare
+  `{\thm … }` (no `\end{thm}`) over-captures (its body capture doesn't stop at the
+  `}` — egroup mode-switch error → no-pop → boxing never drops), slurping the
+  following `{\cor …}` group as the LAST box of the captured body. `set_body`
+  (whatsit.rs, identical to Perl Whatsit.pm) pops that last box as the `trailer`,
+  and the theorem replacement absorbed only `#body` → trailer (cor + all following
+  sections) silently dropped. **Fix:** `define_new_theorem`'s compiled_replacement
+  now also `absorb`s `#trailer` — no-op for well-formed `\begin{thm}…\end{thm}`
+  (trailer = content-less `\end{thm}` whatsit), recovers content for the bare-brace
+  misuse. Witness **1905.00186: 199 KB → 3.45 MB**, Math **119 → 1142** (Perl 4.3 MB
+  / 1168); produces Perl-identical nesting (theorem2 in theorem1, section sibling).
+  6 mode-switch ERRORS remain (SHARED with Perl). Well-formed theorems unaffected;
+  tests 1344/0. Full mechanism in the `endgroup-modeswitch-frame-leak` memory.
+
 * **FIXED: mathpartir `\inferrule` bare math in text mode → `XMApp`-in-`<td>`
   (2026-05-31).** Witness **1404.0085** (`eptcs`, DCM 2013; π-calculus reduction
   rules as `\inferrule[…]{…}{…}` bare inside `\begin{tabular}{c}`). Rust emitted

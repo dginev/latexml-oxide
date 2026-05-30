@@ -1568,6 +1568,23 @@ pub fn define_new_theorem(
           document.absorb(digested, None)?;
         }
       }
+      // #trailer — `set_body` (whatsit.rs) pops the LAST captured box off the
+      // body and stashes it as the `trailer`. For a well-formed
+      // `\begin{thm}…\end{thm}` that trailer is the content-less `\end{thm}`
+      // whatsit (empty replacement → no-op absorb). But when a `\newtheorem`
+      // command is used BARE in a brace group — `{\lem … }` with no `\end{lem}`
+      // (common for inference/lemma figures) — the body capture over-captures
+      // the *following* document content (the next `{\cor …}`, sections, …) and
+      // it all lands in that last box, so the trailer holds real content. The
+      // replacement absorbed only `#body`, silently dropping it (witness
+      // 1905.00186: ~90 % of the document lost). Absorbing the trailer recovers
+      // it (Perl keeps the content; both engines over-capture identically).
+      if let Some(stored_digested) = props.get("trailer") {
+        let digested_opt: Option<Digested> = stored_digested.into();
+        if let Some(ref digested) = digested_opt {
+          document.absorb(digested, None)?;
+        }
+      }
       Ok(())
     },
   ));
