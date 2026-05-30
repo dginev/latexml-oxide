@@ -144,6 +144,24 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: `\mathstrut`/`\vphantom` empty-script drop →
+spurious double-subscript (witnesses 1803.08859, 1812.06766).**
+`\vort_e{}^{\mathstrut}_{t}` (`\vort`=`\vec{\omega}`) → **Rust "Double subscript"**
+(Perl 0). The script handler drops an empty floating script
+(`script.is_empty()? && !script_has_space_content`, mirroring Perl
+`unless IsEmpty($script)`), but our `Whatsit::is_empty` counts an `isSpace`
+whatsit as empty while Perl `IsEmpty` (Package.pm:1029) does NOT (a Whatsit with
+no `content_box` → `return 0`, ignoring isSpace). `\mathstrut`/`\vphantom` are
+`DefConstructor` whatsits with `isSpace=true`, so `^{\mathstrut}` was judged empty
+and dropped — discarding the floating superscript AND consuming the `{}`
+separator, so `_{t}` re-attacked `_e` → false conflict. `script_has_space_content`
+only recognized space-like *TBox*es (`\,`); fix adds a `Whatsit` arm
+(`tex_math.rs`). Genuinely-empty `^{}` still double-subscripts in BOTH (SHARED,
+unchanged). **1803.08859 1→0, 1812.06766 2→0** (latter now beats Perl's 1),
+tests 1344/0. Commit `7d544d34ee`. NB: distinct double-subscript root causes
+remain Rust-only (1904.07182 physics `\braket`+`\mprescript`, 1901.03862,
+1801.08339) — separate investigations.
+
 **2026-05-30 — FIXED Rust-only: pgfmath globally clobbered `\real` (witness
 1608.06741).** `\int_\real p_m` → **2 Rust "Double subscript" errors** (Perl 0).
 Root cause (NOT script_handler — `a_\relax b_m` errors identically in BOTH; the
