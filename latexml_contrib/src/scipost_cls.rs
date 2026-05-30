@@ -25,6 +25,13 @@ LoadDefinitions!({
   // at L13 of the bundled .cls). Authors use \captionsetup{...} without
   // explicit \usepackage{caption}. Witness 2308.16304.
   RequirePackage!("caption");
+  // SciPost.cls L20: `\RequirePackage{subcaption}` — provides the
+  // `{subfigure}`/`{subtable}` environments + `\subcaption`. This binding
+  // mirrors SciPost.cls's `\RequirePackage` list but had omitted subcaption,
+  // so `\begin{subfigure}{…}` errored `{subfigure} is not defined` where Perl
+  // (raw-loading the .cls) is clean. Load it after caption (subcaption builds
+  // on caption). Witness 1606.01173.
+  RequirePackage!("subcaption");
   RequirePackage!("cite");
 
   // SciPost.cls L52-53: deepblue / blue colours.
