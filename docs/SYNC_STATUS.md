@@ -1160,6 +1160,25 @@ byte-identical to Perl `auto_keywords`).
   mdwmath `#`-PARAM, `_`/`^`-in-text) or a case where Rust emits *fewer* errors
   than Perl (`\pc` 2-vs-5, `\psk@nrot` 2-vs-7).
 
+* **Convergence validation — two targeted scans (2026-06-03).** To find any
+  remaining Rust-only failures, ran two error-class-targeted scans over fresh,
+  mostly-unsampled months (current release binary, `\documentclass`-preferring
+  main-picker):
+  1. **Structural `malformed:` scan** (2,400 papers, 12 months) — surfaced 4
+     `ltx:XMApp`-in-`<text>`/`<emph>` and `ltx:chapter`-in-`<item>` candidates
+     (1104.0230, 1104.0312, 1704.00085, 1402.0144). All **SHARED**: Perl emits the
+     identical `malformed` counts (e.g. 1104.0312 both 8; 1704.00085 both 2), and
+     1402.0144 has Rust *fewer* (2 vs 4). The witnessed construct (`\text{as } D_1
+     \rightarrow 0` — text-in-math followed by more math) is mishandled identically
+     by both engines, so it's not a Rust-only target.
+  2. **Rust fatal / timeout / near-empty scan** (3,000 papers, 12 months) —
+     **ZERO** Rust complete-failures (no fatal, no timeout, no <2 KB output). The
+     binary reliably converts the sampled corpus.
+  Net: no fresh Rust-only error found; the two genuine Rust-only classes of this
+  arc (mathpartir `\inferrule` text-mode `cb7775f4d0`; braced-theorem content-loss
+  `f68e48b566`) are fixed and validated. Rust-only errors remain EXHAUSTED across
+  the sampled regions; remaining flags are SHARED or Rust-already-better-than-Perl.
+
 * **FIXED: mathpartir `\inferrule` bare math in text mode → `XMApp`-in-`<td>`
   (2026-05-31).** Witness **1404.0085** (`eptcs`, DCM 2013; π-calculus reduction
   rules as `\inferrule[…]{…}{…}` bare inside `\begin{tabular}{c}`). Rust emitted
