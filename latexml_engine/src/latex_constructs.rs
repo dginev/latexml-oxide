@@ -7157,8 +7157,16 @@ LoadDefinitions!({
   DefRegister!("\\@dblfptop"        => Glue::new(0));
   DefRegister!("\\@dblfpsep"        => Glue::new(0));
   DefRegister!("\\@dblfpbot"        => Glue::new(0));
-  // \abovecaptionskip, \belowcaptionskip — not in Perl engine
-  // (Perl: article.cls.ltxml; Rust: article_cls.rs already defines them)
+  // Perl LaTeX.pool.ltxml L3648-3649 defines these in the BASE (not only in
+  // article.cls.ltxml), so they are available under ANY document class. The
+  // prior Rust comment ("not in Perl engine") was mistaken — it saw only the
+  // article.cls copy. A paper on a custom class that does NOT load article
+  // (e.g. `\documentclass{style/vldb}`, witness 1703.00080) then hit
+  // `undefined:\abovecaptionskip` on `\setlength{\abovecaptionskip}{…}`.
+  // Define them here too (Glue 0, exactly Perl), as a base fallback that
+  // article/book/ams_support still override with their own values.
+  DefRegister!("\\abovecaptionskip" => Glue::new(0));
+  DefRegister!("\\belowcaptionskip" => Glue::new(0));
   Let!("\\topfigrule", "\\relax");
   Let!("\\botfigrule", "\\relax");
   Let!("\\dblfigrule", "\\relax");
