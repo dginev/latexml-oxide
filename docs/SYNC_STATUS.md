@@ -1192,6 +1192,30 @@ byte-identical to Perl `auto_keywords`).
   2007.00292. Cumulative this arc: ~13,500 papers scanned across ~40 months, zero
   fresh clean Rust-only errors beyond the two already fixed.
 
+* **Canvas-failure re-validation against ACTUAL recorded failures (2026-06-05).**
+  Instead of fresh random samples, re-ran the canvas's **own recorded failure logs**
+  (`large_scale_canvas_3/canvas/stage_*/failures/`, from an older binary) with the
+  current binary. **stage_51: 134 of 186 (72%) recorded failures are now STALE**
+  (convert clean, err=0); only 52 still fail. **Largest cluster — `Error:expected:id`
+  (192 across stages 51–55, the `project_xmref_dangling_split` ~1527-paper cascade)
+  — is RESOLVED:** all the worst witnesses now convert err=0 (1502.04191
+  278-err→0/3.7 MB; 1503.05888 141→0; 1501.07487 115→0; 1501.04100 4→0). The
+  residual is *spurious WARNINGS* (`Warn:expected:id`) emitted by the math parser
+  (`latexml_math_parser/src/parser.rs:2576`, collaborator's lane) for its
+  `rule="Anything"` parse-failure fallback — the referenced targets DO exist in the
+  output; Perl emits none, but the conversion succeeds. The deferred-XMath-unlink
+  fix (math_processor.rs:258, "dominant CONVERR cluster on the second-500K canvas")
+  drove the error→success. **The 52 still-failing are all SHARED or Rust-better,
+  verified by Perl gate:** `_`/`^`-in-text (27, SHARED), `}`-mode-switch (10, the
+  braced-theorem cluster — content recovered by `f68e48b566`, the `}` error SHARED),
+  `\GenericError`/pb-lams (2, vendor-moot WISDOM #50), `Fatal:ParamSpec` from
+  `keyval2e` (1501.07012/1502.01082 — Perl ALSO fatals, no output), `\etb@undefined`
+  (1502.00942 — Perl ALSO errors; etoolbox's intentional undefined-sentinel), and
+  per-paper custom undefined macros / `\input`-fragment false-positives. Net: the
+  canvas's own recorded failures are ~72% resolved by the arc's work, and the
+  residual is SHARED — no fresh Rust-only target. The canvas data should be
+  re-swept with the current binary to refresh the (stale) failure set.
+
 * **FIXED: mathpartir `\inferrule` bare math in text mode → `XMApp`-in-`<td>`
   (2026-05-31).** Witness **1404.0085** (`eptcs`, DCM 2013; π-calculus reduction
   rules as `\inferrule[…]{…}{…}` bare inside `\begin{tabular}{c}`). Rust emitted
