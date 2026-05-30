@@ -1192,6 +1192,20 @@ byte-identical to Perl `auto_keywords`).
   2007.00292. Cumulative this arc: ~13,500 papers scanned across ~40 months, zero
   fresh clean Rust-only errors beyond the two already fixed.
 
+* **FIXED: revtex4/4-1 load AMS packages before the `.rty` file (Perl order)
+  (2026-06-07, `7610519a1b`).** Witness 1508.02642
+  (`\documentclass[…,amsmath,…]{revtex4-1}` + a paper-local `HSWS.rty` that uses
+  `\DeclareMathOperator`): Rust errored `\DeclareMathOperator` undefined ×6; Perl
+  rc=0. Root cause: Rust's `revtex4_1_cls.rs`/`revtex4_cls.rs` loaded the
+  auto-detected `\jobname.rty` BEFORE the option-requested AMS packages
+  (amsfonts/amssymb/amsmath), so a `.rty` using an AMS macro hit it undefined.
+  Perl's revtex4-1.cls.ltxml runs `map { RequirePackage } @revtex_toload` (L58)
+  *before* the `\jobname.rty` load (L60-63). Reordered both classes to match.
+  1508.02642: 6 → 0 errors (351 KB HTML); the other 2 `\DeclareMathOperator` canvas
+  papers were already stale. Tests 1344/0. Found by mining the canvas failure
+  histogram for still-live non-cluster `undefined:` types (the productive method
+  from the `\dateUSenglish` fix).
+
 * **FIXED: babel `\dateUSenglish`/`\captionsenglish` for direct multi-variant
   use (2026-06-06, `e912df8295`).** Mined the canvas failure histogram (stages
   51–73 + R-stages): of the non-cluster recorded-error types, 4 of 5 were already
