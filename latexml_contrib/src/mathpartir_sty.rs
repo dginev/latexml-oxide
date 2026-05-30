@@ -35,19 +35,31 @@ LoadDefinitions!({
   );
 
   // \inferrule[label]{premises}{conclusion}
-  //   → \frac{premises}{conclusion} with the label appended
-  //     parenthetically when present.
+  //   → \ensuremath{\frac{premises}{conclusion}} with the label
+  //     appended parenthetically when present.
+  // The `\frac` is math-mode-only, but mathpartir's `\inferrule` is
+  // routinely used in *text* mode (e.g. bare inside `\begin{tabular}{c}`
+  // — witness arXiv:1404.0085 §3 Fig.3, the π-calculus reduction rules).
+  // Emitting a bare `\frac` there drops the math `XMApp` straight into
+  // the `<ltx:td>` with no `<ltx:Math>` wrapper → "ltx:XMApp isn't
+  // allowed in <ltx:td>" (Perl, which raw-loads the real mathpartir,
+  // wraps it). `\ensuremath` enters math mode only when not already in
+  // it, so this is correct in BOTH text-mode (tabular) and math-mode
+  // (`mathpar` = display equation) use sites.
   // Use OptionalMatch:* to consume the starred form `\inferrule*`
   // (mathpartir's \mpr@inferstar branch). Optional `[label]`,
   // then two required {} args.
   DefMacro!("\\inferrule OptionalMatch:* [] {} {}", sub[(_star, label, prem, conc)] {
     let mut out: Vec<Token> = Vec::new();
+    out.push(T_CS!("\\ensuremath"));
+    out.push(T_BEGIN!());
     out.push(T_CS!("\\frac"));
     out.push(T_BEGIN!());
     out.extend(prem.unlist());
     out.push(T_END!());
     out.push(T_BEGIN!());
     out.extend(conc.unlist());
+    out.push(T_END!());
     out.push(T_END!());
     if let Some(lab) = label {
       if !lab.is_empty() {

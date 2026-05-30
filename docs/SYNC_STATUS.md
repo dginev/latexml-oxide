@@ -1132,6 +1132,22 @@ byte-identical to Perl `auto_keywords`).
   sandbox is fully resolved — 9 convert, 2 Cluster-B fixed earlier, 7 Cluster-A are
   SHARED runaways now reported honestly (exit 1) rather than as 0-byte successes.
 
+* **FIXED: mathpartir `\inferrule` bare math in text mode → `XMApp`-in-`<td>`
+  (2026-05-31).** Witness **1404.0085** (`eptcs`, DCM 2013; π-calculus reduction
+  rules as `\inferrule[…]{…}{…}` bare inside `\begin{tabular}{c}`). Rust emitted
+  4× `Error:malformed:ltx:XMApp isn't allowed in <ltx:td>`; Perl (no mathpartir
+  binding → raw-loads the real .sty) converts clean. Root cause: the
+  `mathpartir_sty.rs` stub expanded `\inferrule` to a **bare `\frac`** (math-only),
+  so in text/tabular context the math `XMApp` landed in the `<td>` with no
+  `<ltx:Math>` wrapper. Fix: wrap the `\frac` in `\ensuremath` (enters math mode
+  only when needed → correct in text-mode tabular AND math-mode `mathpar`/`$…$`).
+  1404.0085 now 4 errors → **0** (1.18 MB; Perl 1.40 MB — stub loses precise
+  label/`\and` layout but is error-free + content-preserving). Verified across all
+  3 contexts; tests 1344/0. (Found via a broadened fresh-month scan after improving
+  the scan picker to prefer `\documentclass`-bearing mains — earlier
+  `undefined:\usepackage` flags on 2009.00025/00026 were false positives where the
+  picker grabbed a larger style sub-file; real mains convert clean.)
+
 * **Braced-theorem content-orphaning — DIAGNOSED, deterministic repro found,
   fix DEFERRED (2026-05-30).** Fresh scans (250 papers of month 2108: 1 flagged,
   SHARED; 200 of 1905: 4 flagged) surfaced **1905.00186** as a genuine *Rust-only
