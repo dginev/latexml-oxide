@@ -144,6 +144,22 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: tikz-timing no-op stub left tikz undefined
+(witness 1601.02183).** The `tikz-timing` binding was a no-op stub premised on
+"Perl reports tikz-timing.sty missing and skips it". FALSE under the gate config:
+Perl's kpathsea finds and raw-loads it (`\c@tikztimingtrans` error at
+`tikz-timing.sty; line 2019`), so its `\RequirePackage{tikz}` (L45) runs and
+`\draw`/`\node`/`{tikzpicture}` work. The stub loaded nothing → Rust got
+`undefined:{tikzpicture}`/`\draw`/`\node` (3 err) where Perl had 1. The stub's
+secondary worry (a `readBalanced` error-stub during `\xdef…\value
+{tikztimingtrans}…` before `\newcounter`) is STALE — raw-loading now survives it
+like Perl. Fix: drop the dispatch entry + stub module → raw-load. **3→0** (even
+beats Perl's 1; `\begin{tikztimingtable}` usage also converts rc=0). Commit
+`ec209d1438`, tests 1344/0. Advances task #273 (shrink stub set via raw-load).
+**Lesson:** "Perl skips because file-not-found" stub premises are often false
+under the ar5iv `--path` (kpathsea walks the TL tree) — verify with an actual
+Perl run before stubbing.
+
 **2026-05-30 — FIXED Rust-only: graphicx `trim`/`viewport` keyvals untyped →
 `undefined:\clip` (witness 1512.05119).** Perl `graphicx.sty.ltxml` L37-38
 types `trim`/`viewport` as `GraphixDimensions` (≤4-dim parser); Rust left them
