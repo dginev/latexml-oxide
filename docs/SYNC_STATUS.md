@@ -1108,6 +1108,30 @@ byte-identical to Perl `auto_keywords`).
   (base_parameter_types.rs) but the blowup is gradual accumulation below
   that depth. Left as SHARED.
 
+* **CLI fatal exit-code parity — RESOLVED (2026-05-30).** Re-validating the
+  16-paper `canvas_3_failures_sandbox` against the current binary surfaced a
+  standalone-CLI parity gap (not a canvas-metrics gap — cortex_worker was already
+  correct). The 9-paper OOM set no longer hard-OOMs; 2 produce real HTML
+  (Cluster B) and the 7 Cluster-A `\displaylines` papers hit the memory-budget
+  Fatal gracefully — but `latexml_oxide` then printed "Conversion **complete**: 1
+  fatal error", wrote a 0-byte file, and **exited 0**, masquerading as success.
+  Perl `bin/latexml` does the opposite: `:127` prints `"Conversion " . ($code == 3
+  ? 'failed' : 'complete')` and `:151` `if ($exit_message) { exit(1); }` — fatal ⇒
+  "failed" + exit 1 + no output. cortex_worker already mirrored this
+  (`if final_status >= 3 { process::exit(...) }`, L1106-1108); the CLI was the only
+  binary missing it. Fix: (a) `converter.rs` library note now reads "Conversion
+  failed: …" when `status_code == 3` (Perl's `LaTeXML.pm:315` "complete" note is
+  reached only on success — a Fatal `die`s first; Rust recovers, so it folds in
+  bin/latexml's verdict); (b) `bin/latexml_oxide.rs` exits 1 on
+  `get_status_code() >= 3`, matching bin/latexml exactly. Success runs
+  (status_code < 3) are byte-identical. Verified: math0102089 now `EXIT=1` +
+  "Conversion failed: 1 fatal error"; hello.tex `EXIT=0` + "complete" / 1966 B.
+  Tests 1344/0. **Cluster A re-confirmed SHARED with a 2nd Perl witness:**
+  math0507219 (plain-TeX) — Perl killed at 201 s, `xml=NONE`, "Conversion failed: 1
+  fatal error" (joins math0102089's line-712 5-min Perl timeout). Net: the round-3
+  sandbox is fully resolved — 9 convert, 2 Cluster-B fixed earlier, 7 Cluster-A are
+  SHARED runaways now reported honestly (exit 1) rather than as 0-byte successes.
+
 * **Round-37 Rust-only conversion failures: EXHAUSTED.** After the four
   R19 fixes below, three fresh `cortex_worker` sweeps of distinct slices
   of `canvas3_round37_remaining` (1500 + 3005 + 2081 ≈ **6.6k papers**)

@@ -774,6 +774,26 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     }
   }
 
+  // Perl bin/latexml:151 — `if ($exit_message) { exit(1); }`: a Fatal
+  // (status_code 3) conversion exits non-zero. cortex_worker already carries the
+  // identical guard (`if final_status >= 3 { process::exit(...) }`); the standalone
+  // CLI was missing it, so a 0-byte "complete" run (e.g. the plain-TeX
+  // `$\displaylines{...}$` runaway that trips the memory-budget Fatal — shared with
+  // Perl, which terminates at the same line) exited 0 and masqueraded as success.
+  // Read the global status (thread-local REPORT, as cortex_worker does) — `response`
+  // is scoped to the conversion branch. Match bin/latexml's exit(1) exactly;
+  // status_code 2 ("errors but recoverable") stays a 0 exit, as in Perl.
+  let final_status_code = latexml_core::common::error::get_status_code();
+  if final_status_code >= 3 {
+    write_telemetry_record(
+      cli.telemetry_out.as_deref(),
+      &telemetry_source,
+      wall_start,
+      "fatal",
+      final_status_code as i32,
+    );
+    process::exit(1);
+  }
   write_telemetry_record(
     cli.telemetry_out.as_deref(),
     &telemetry_source,
