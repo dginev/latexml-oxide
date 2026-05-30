@@ -198,12 +198,18 @@ LoadDefinitions!({
   DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
 
   // Title/metadata — Perl L60-106
-  // \runauthor / \runtitle carry author-typed short forms for the
-  // running header. Preserve as ltx:note (content-preserving).
-  DefMacro!("\\runauthor{}",
-    "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}");
-  DefMacro!("\\runtitle{}",
-    "\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}");
+  // \runauthor / \runtitle are running-header SHORT forms (real elsart.cls
+  // L1235 `\def\runauthor#1{\gdef\@runauthor{#1}}` just stores them for
+  // `\@oddhead`; never typeset in the body). Perl elsart_support_core.sty.ltxml
+  // L60-61 GOBBLES both (`DefMacro('\runauthor{}', Tokens())`) — they are
+  // layout-only and redundant with `\author`/`\title` (which preserve the full
+  // author/title). The prior Rust over-preservation digested the running-head
+  // content, so an author typo like `\runauthor{… T.\Pasurek/Journal…}`
+  // (a stray `\` before a name) hit `undefined:\Pasurek`. Gobble to match Perl;
+  // no author material is lost (`\author` keeps it). Same class as the
+  // `\shortauthors` gobble fix. Witness 1503.06349.
+  def_macro_noop("\\runauthor{}")?;
+  def_macro_noop("\\runtitle{}")?;
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
   DefMacro!("\\ead Optional:email Semiverbatim",
     "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");

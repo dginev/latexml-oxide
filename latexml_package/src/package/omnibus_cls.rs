@@ -201,8 +201,13 @@ LoadDefinitions!({
   // Page numbers — author metadata; preserve as ltx:note.
   DefMacro!("\\firstpage{}",       "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
   DefMacro!("\\lastpage{}",        "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
-  DefMacro!("\\runauthor{}",       "\\@add@frontmatter{ltx:note}[role=runauthor]{#1}");
-  DefMacro!("\\runtitle{}",        "\\@add@frontmatter{ltx:toctitle}{#1}");
+  // \runauthor / \runtitle are running-header SHORT forms, layout-only and
+  // redundant with \author/\title. Perl OmniBus.cls.ltxml L114-115 GOBBLES both
+  // (`DefMacro('\runauthor{}', Tokens())`); preserving them digests the
+  // running-head content and errors on author typos (stray `\` before a name →
+  // undefined CS). Gobble to match Perl; \author/\title keep the real content.
+  def_macro_noop("\\runauthor{}")?;
+  def_macro_noop("\\runtitle{}")?;
   // \corref{label} — marker for corresponding author. Preserve as note.
   DefMacro!("\\corref{}",          "\\@add@frontmatter{ltx:note}[role=corref]{#1}");
   DefMacro!("\\listofauthors{}",   "\\@add@frontmatter{ltx:note}[role=listofauthors]{#1}");

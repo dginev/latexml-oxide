@@ -45,6 +45,20 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — FIXED Rust-only: elsart/OmniBus `\runauthor`/`\runtitle` should
+GOBBLE (Perl), not preserve.** Witness 1503.06349 (`\documentclass{elsart}`):
+RUST 1 → 0 (Perl clean). Error was `undefined:\Pasurek` from
+`\runauthor{ … T.\Pasurek/Journal of Functional …}` — an author typo (stray `\`
+welding `T.` to the surname). `\runauthor`/`\runtitle` are running-header SHORT
+forms (real elsart.cls L1235 just `\gdef`s them for `\@oddhead`; never typeset in
+the body). Perl `elsart_support_core.sty.ltxml` L60-61 and `OmniBus.cls.ltxml`
+L114-115 both **gobble** them (`DefMacro('\runauthor{}', Tokens())`); the Rust
+bindings over-preserved them as `ltx:note`, so the running-head content was
+digested and the typo errored. Fix: gobble in both `elsart_support_core_sty.rs`
+and `omnibus_cls.rs`, matching Perl — no author material lost (`\author`/`\title`
+keep the real content; verified creators 4=4, "Tanja Pasurek" still present).
+Same class as the 2026-05-29 `\shortauthors` gobble fix. `cargo test` 1344/0.
+
 **2026-05-30 — FIXED Rust-only: listings `literate=` count field
 (brace-wrapped `{N}`) mis-parsed → triple-shift → bare `_` injected.** Witness
 1501.06715 (`listings` with a 40-entry `\lstset{literate={_p}{{$_p$}}{1} …}`):
