@@ -128,28 +128,25 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
-**2026-05-30 (cont.) — ROOT-CAUSE PINNED (deferred fix): unbound-class dep-scan
-skipped when the .cls also "binding-loads" (witness 2101.02753, Springer Nature
-`sn-jnl`).** Rust-only `undefined:{sidewaystable}` + `\caption outside float`
-(RUST 3, PERL 2). `sn-jnl` has NO `.cls.ltxml` binding; Perl falls to OmniBus AND
-**dep-scans the raw sn-jnl.cls**, loading its `\usepackage` deps —
-`Info:dependencies: …,multirow,…,rotating,…` (rotating ⇒ `sidewaystable`). Rust
-loads OmniBus but `maybe_require_dependencies` (content.rs:1727) **NEVER fires**
-for sn-jnl (instrumented: 0 calls), so rotating/multirow/mathrsfs don't load.
-**Proximate cause:** in `load_class` (content.rs:2059) the trace shows
-`sn-jnl.cls.ltxml_loaded=TRUE` and `cls_loaded=TRUE` (wrongly — no real binding;
-`_load_binding` returns Ok(true), likely OmniBus attributed as sn-jnl's binding)
-⇒ `will_fallback=false`. That gates OFF **both** dep-scan sites: L2145
-(`!cls.ltxml_loaded && !will_fallback`) and L2194 (only inside the `will_fallback`
-block). **Fix direction (needs focused session, HIGH blast radius — ~15 witnesses
-cited around L2103-2145):** either (a) stop `_load_binding`/the OmniBus-fallback
-from setting `<class>.cls.ltxml_loaded` for a class with no real binding, or (b)
-change the L2145 gate from the `ltxml_loaded` FLAG to `binding_exists(name,"cls")`
-so an unbound-but-loaded class still dep-scans like Perl. Affects Springer-Nature
-sn-jnl papers (common in recent arXiv). **Repro caveat:** FindFile locates stray
-`sn-jnl.cls` copies across `/tmp` — minimal repros MUST use a fresh class name
-(`freshcls`) AND a clean dir, else the confound masks the content/flag mechanism.
-Code reverted to clean (instrumentation only); tests 1344/0, no change landed.
+**2026-05-30 — FIXED Rust-only: sn-jnl (Springer Nature) `undefined:{sidewaystable}`
+(witness 2101.02753).** RUST 3 → 0 (now beats Perl's 2). **Root cause (CORRECTED
+from the prior iteration's mis-diagnosis):** sn-jnl DOES have a binding —
+`sn_jnl_cls` in the **CONTRIB** crate (`latexml_contrib/src/lib.rs:474`, which the
+prior grep missed by only scanning `latexml_package/src`). That hand-rolled binding
+does `LoadClass!("OmniBus")` + a curated `\RequirePackage` list but OMITTED
+`multirow`/`mathrsfs`/`rotating` (real sn-jnl.cls L298/301/302). Because a real
+`.cls` binding correctly short-circuits the unbound-class dep-scan (binding owns its
+deps), rotating stayed unloaded → `sidewaystable` undefined. Fix: add the three
+benign deps to `sn_jnl_cls.rs` (NOT xcolor — binding deliberately omits it). Perl
+ships no sn-jnl binding so it OmniBus-dep-scans and loads them; the Rust binding now
+mirrors that. Commit `af07192175`, tests 1344/0. **Two lessons:** (1) grep
+`latexml_contrib/src` too — `dispatch` flattens package + contrib + extra binding
+registries; (2) Rust's FindFile locates stray `<class>.cls` copies across `/tmp`, so
+minimal class repros MUST use a fresh unique name in a CLEAN dir (the confound made
+the prior iteration mis-conclude "content/flag" when it was simply a missing
+RequirePackage in an existing contrib binding). The earlier "deps-scan ltxml_loaded"
+core-machinery theory was a RED HERRING — `ltxml_loaded=true` was CORRECT (a real
+contrib binding loaded); the binding was just incomplete.
 
 **2026-05-30 (cont.) — convergence reconfirmed on FRESH 2020/2001 corpus (490
 papers).** Beyond the canvas test set, sampled `all_warnings.txt` (1.5M-paper
