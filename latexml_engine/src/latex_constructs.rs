@@ -2654,7 +2654,22 @@ LoadDefinitions!({
         Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
-      load_class(&(whatsit.get_arg(2).unwrap().to_string()),
+      // Perl LaTeX.pool.ltxml:57 — `$class =~ s/\s+//g;`. Strip ALL
+      // whitespace from the class name before LoadClass. A multi-line
+      // `\documentclass[...]{<newline>revtex4}` makes the Semiverbatim arg
+      // ` revtex4` (the newline right after `{` becomes a leading space
+      // token); unstripped, the name fails to match the `revtex4` binding
+      // registration and falls through to OmniBus — which lacks revtex4's
+      // `\email [] Semiverbatim`, so an `\email{a_b@…}` with `_` then errors
+      // "Script _ can only appear in math mode". Witness 1601.06734.
+      let class_name: String = whatsit
+        .get_arg(2)
+        .unwrap()
+        .to_string()
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace())
+        .collect();
+      load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))
   });

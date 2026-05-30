@@ -97,6 +97,27 @@ binding + fallbacks — extend the raw-load pattern to each as its bundled .sty 
 witnessed and verified clean. `cargo test` 1344/0, clippy clean (no new
 warnings).
 
+**2026-05-30 — FIXED Rust-only: `\documentclass` did not strip whitespace from
+the class name (Perl `$class =~ s/\s+//g`).** Witness 1601.06734
+(`\documentclass[…,showpacs,\n preprintnumbers ] {\n revtex4}`): RUST 1 → 0
+(`unexpected:_ Script _ can only appear in math mode`). The class name spans
+lines — the newline right after `{` becomes a leading space token, so the
+`Semiverbatim` arg is ` revtex4`. Rust passed that verbatim to `load_class`,
+whose binding lookup + `{name}.cls_loaded` flag-check keyed on the literal
+` revtex4`, missed the registered `revtex4` binding, and fell through to
+**OmniBus** — which lacks revtex4's `\email [] Semiverbatim`, so
+`\email{Emmanuel_Saridakis@baylor.edu}` digested the `_` in text mode and
+errored. Perl's `\documentclass` afterDigest does `$class =~ s/\s+//g;`
+(LaTeX.pool.ltxml:57) before `LoadClass`, so Perl matches the binding and is
+clean. Fix: mirror it — strip all ASCII whitespace from the name in the
+`\documentclass` after_digest (latex_constructs.rs) before `load_class`, and
+make the sibling `\documentstyle` impl (tex_job.rs) faithful to Perl line 79
+(`s/\s+//g`, was a leading/trailing-only `.trim()`). Normalizing must happen
+*before* `load_class` because its fallback flag-checks key on the name. Verified
+1601.06734 RUST 1 → 0 = PERL 0; `revtex4.cls`/`revtex4_support.sty` load (not
+OmniBus); multi-line `\documentstyle{…}` clean. `cargo test --tests` 1344/0,
+clippy clean (no new warnings).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an

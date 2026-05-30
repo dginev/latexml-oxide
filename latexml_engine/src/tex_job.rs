@@ -134,8 +134,18 @@ LoadDefinitions!({
   // every LaTeX pool load.
   DefMacro!("\\lx@documentstyle@impl[]{}", sub[(options_opt, class_tks)] {
     use latexml_core::binding::content::{find_file, find_file_fallback_exists, FindFileOptions, load_class};
-    let class = class_tks.to_string();
-    let class = class.trim().to_string();
+    // Perl latex_constructs.pool.ltxml:79 — `$class =~ s/\s+//g;`. Strip ALL
+    // whitespace (not just leading/trailing as a bare `.trim()` would), so a
+    // multi-line `\documentstyle[...]{<newline>article}` — whose post-`{`
+    // newline becomes an embedded space token in the Semiverbatim arg — still
+    // matches its binding registration. Mirrors the sibling `\documentclass`
+    // fix (latex_constructs.rs); a whitespace-bearing name otherwise misses
+    // the binding and falls through to OmniBus.
+    let class: String = class_tks
+      .to_string()
+      .chars()
+      .filter(|c| !c.is_ascii_whitespace())
+      .collect();
 
     let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
     input_definitions(pool, InputDefinitionOptions {
