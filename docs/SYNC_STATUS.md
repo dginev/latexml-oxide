@@ -143,8 +143,19 @@ mode-imbalance in the paper), but Rust re-triggers it **613×** vs Perl's **94×
 stopgap); the AMPLIFICATION is Rust-specific — likely Rust's stomach doesn't pop
 the leaked math frame after the error, so every later `$` re-fires it, where Perl
 recovers. A future surpass-Perl reliability target (faithful mode-stack recovery,
-NOT an error cap); related to [[endgroup-modeswitch-frame-leak]]. No fix landed
-(no clean parity gap available); tests 1344/0.
+NOT an error cap); related to [[endgroup-modeswitch-frame-leak]]. **Refinement
+2026-05-30b (rules OUT the quick recovery fix):** Rust `end_mode_opt`
+(stomach.rs:647) is BYTE-FAITHFUL to Perl `endMode` (Stomach.pm:524) — both
+Error-and-DON'T-pop on a BOUND_MODE mismatch ("maybe we'll recover"). So the
+613-vs-94 amplification is NOT in recovery; it's UPSTREAM — the begin_mode /
+`\lx@begin@inline@math` push side leaves Rust's stack imbalanced differently, so
+it re-fires per subsequent `$`. Not minimally reproducible (isolated `$…$` /
+`\mbox{$…$}` / `\def\m{$x}\m $y$$z$` all convert clean or Rust-BETTER: PERL 3 /
+RUST 0). Needs the dedicated mode-frame session (instrument begin_mode push vs
+end_mode pop on the full 2002.05958). No fix landed (no clean parity gap
+available); tests 1344/0. A fresh 500-paper undefined-CS sweep (1207-1607 buckets)
+found 1 hit (1207.0382 informs1 `\NatBibNumeric`), rust-better — corpus remains
+converged of clean Rust-only error→success gaps.
 
 **2026-05-30 — FIXED Rust-only: sn-jnl (Springer Nature) `undefined:{sidewaystable}`
 (witness 2101.02753).** RUST 3 → 0 (now beats Perl's 2). **Root cause (CORRECTED
