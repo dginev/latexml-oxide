@@ -294,6 +294,29 @@ class-load interaction. Deferred this round; needs a focused look at how the
 begin-document hook list is captured during `loadTeXDefinitions` vs document
 scope.
 
+**2026-05-31 — RE-ROOT-CAUSED 1504.01965 (was mis-attributed to
+`\AtBeginDocument`): Rust RAW-LOADS a path-prefixed unbound class where Perl
+OmniBus-fallbacks.** Decisive minimal test (`\documentclass{sub/zzbc}` where
+`sub/zzbc.cls` does `\LoadClass{article}\AtBeginDocument{…}`): Perl prints
+`Warning: Can't find binding for class sub/zzbc (using OmniBus)` and never runs
+the .cls body (its `\AtBeginDocument` hook never registers → never fires); Rust
+prints `(Loading "sub/zzbc.cls" … Processing definitions …)` and runs the full
+body, so the hook fires. So the `\AtBeginDocument` "Perl doesn't fire raw-cls
+hooks" theory from the prior entry was WRONG — preamble *and* binding-loaded
+`\AtBeginDocument` fire in both; the difference is purely that Rust raw-loads
+the path-prefixed local `.cls` while Perl OmniBus-fallbacks it. For JINST
+(`\documentclass{JINST-Sample-files/JINST}`), Rust raw-loads JINST.cls →
+jinst's `\AtBeginDocument` author/abstract `\ClassError` checks run (false
+positives — the content IS present, jinst's flags just aren't set because
+`\author`/`\abstract` are locked) → RUST 3. Perl OmniBus-fallbacks → no jinst
+code → PERL 0. The Rust path-prefix raw-load is `content.rs` `has_path_prefix`
+(load_class L2065-2072), added as a surpass-Perl to recover a user's edited
+local class (`misc/ieeetran`, 2105.02087). Matching Perl (OmniBus-fallback
+path-prefixed unbound classes) would fix JINST but conflicts with that
+intentional 2105.02087 behavior — a genuine trade-off needing both witnesses
+re-evaluated against Perl. Deferred pending that analysis (do NOT naively
+remove `has_path_prefix`).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
