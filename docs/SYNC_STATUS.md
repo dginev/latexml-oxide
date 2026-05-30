@@ -1192,6 +1192,30 @@ byte-identical to Perl `auto_keywords`).
   2007.00292. Cumulative this arc: ~13,500 papers scanned across ~40 months, zero
   fresh clean Rust-only errors beyond the two already fixed.
 
+* **Canvas non-cluster `undefined:`/`unexpected:` triage cont. (2026-06-08).**
+  Continued mining the canvas failure histogram. **Stale (now err=0):**
+  `\@inpenc@test`, `\lst@RequireAspects`, `\hbox_unpack_clear:N`,
+  `\epstopdfDeclareGraphicsRule`, `\gfd@width@tmp`, `\cellcolor`,
+  `\caption@ifundefined`, `\lositemsep`, `\c@subalgorithm@save`, `\the<greek>`
+  (mangled `\thesection`), `\h`, `\lx`, plus the `timeout:wallclock` samples and
+  `\c@tikztimingtrans`→`{tikzpicture}`. **SHARED (Perl also errors/fatals):**
+  keyval2e `\#1@#2@` `Fatal:ParamSpec` (1501.07012/1507.04637 — Perl also fatals),
+  `\else`/`\fi`-not-in-conditional (Perl same count), `\boxed@text`/`\end{abstract}`
+  mode (same counts), `\noalign` (Perl also errors), `\urladdr`/`\vdotdot`,
+  `\ifpst@useCalc`/`\Cnode` (pstricks). **Genuine Rust-only but DEEP (deferred,
+  no clean fix this pass):** (1) **double-subscript** (1603.02507 Perl 0/Rust 23,
+  1608.06741 Rust 2) — `tex_math.rs:131` fires `Double subscript` from a
+  macro-origin construct I could NOT isolate; all space-variant min-repros
+  (`\,`/`~`/`{}`/`\quad`/`\ `/`\hspace`) match Perl, so it's a subtle non-space
+  grouping divergence. Noted a real faithful gap regardless: `script_handler`
+  (tex_math.rs:113) omits Perl `Engine/TeX_Math.pool.ltxml:374`'s `Comment`-box
+  prevspace case — but Rust rarely has comment-boxes in math (the `%\n` divergence),
+  so it's likely dead code, not this witness. (2) **ACM `\@personname`/`\@end@tabular`
+  mode-leak** (1506.07424, raw `acm_proc_article-sp.cls` author block: `\@personname`
+  switches to `restricted_horizontal` and leaks to `\@end@tabular`/`\hbox`/`\vtop`/
+  `\endgroup`) — the known-hard mode-leak cluster, high-impact (ACM classes common)
+  but needs the dedicated mode-frame session. No code change this iteration.
+
 * **FIXED: revtex4/4-1 load AMS packages before the `.rty` file (Perl order)
   (2026-06-07, `7610519a1b`).** Witness 1508.02642
   (`\documentclass[…,amsmath,…]{revtex4-1}` + a paper-local `HSWS.rty` that uses
