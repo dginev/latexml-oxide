@@ -167,6 +167,25 @@ clobbered helper. Part of the recurring `_ Script _` cluster, but a DISTINCT
 root cause from 1601.06734 (class-name whitespace) and 1509.01434 (hyperref
 backref). Deferred this round.
 
+**2026-05-30 — FIXED Rust-only: `filecontents` cached the file under the
+*unexpanded* filename, so `\jobname`-named generated files were never found.**
+Witness 1905.05350 (ieeeconf; `\begin{filecontents}{\jobname-acro.tex}` writes
+48 `\newacronym{…}` lines, then `\usepackage{glossaries}` +
+`\loadglsentries[\acronymtype]{\jobname-acro}` loads them): RUST 13 → 0 (12×
+`glossaries Error: Glossary entry \`X' has not been defined` + 1×
+`missing_file:root-acro`). `cache_filecontents` read the filename arg with
+`ExpansionLevel::Off`, so it cached the content under the literal key
+`\jobname-acro.tex_contents`. Real LaTeX `\filecontents` `\edef`s the filename,
+and glossaries' `\loadglsentries` expands `\jobname` → `root` and `\input`s
+`root-acro`, whose `find_file_aux` cache probe (`{file}_contents`) then looked
+up `root-acro.tex_contents` — a miss → "can't find" → the acronym file never
+loaded → every `\gls{…}` undefined. Perl expands the filename and is clean.
+Fix: read the filecontents filename with `ExpansionLevel::Full` (faithful to
+LaTeX's `\edef`), so `\jobname-acro.tex` caches as `root-acro.tex` and the
+lookup matches. Literal filenames are unaffected (no expandables → identical).
+Verified 1905.05350 RUST 13 → 0 = PERL 0 (cache now `root-acro.tex`, file
+processed). `cargo test --tests` 1344/0, clippy clean (no new warnings).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
