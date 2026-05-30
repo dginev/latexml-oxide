@@ -45,6 +45,34 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — FIXED Rust-only: babel english-variant `\l@<v>` register not
+backfilled → `\selectlanguage{british}` "haven't defined the language".**
+Witness 1508.06150 (`\usepackage[british, USenglish]{babel}` +
+`\selectlanguage{british}`): RUST 1 → 0 (Perl clean). babel's modern `.ini`
+path defines the hyphenation register `\l@<variant>` only for the variant whose
+`.ini` actually ran, and bypasses the `.ldf` `load_british` stub (which would
+`\newlanguage\l@british`). A paper loading several english variants then
+`\selectlanguage{british}` → `\bbl@iflanguage{british}` tests
+`\ifx\csname l@british\endcsname\relax`, finds it relax, and errors. The
+existing `babel_sty.rs` english backfill loop already aliased
+`\captions/\extras/\date<v>`; extend it to also `\let\l@<v>=\l@english` when
+undefined (british uses English hyphenation, as english.ldf does). `cargo test`
+1344/0.
+
+**2026-05-30 — DEFERRED Rust-only (deep mouth×group): legacy `{\url <url>}` form
+→ `\endgroup non-boxing group`.** Witness 1503.07894 (`{\url www.maths…pdf}` in a
+bibitem — the author misused the OLD `\url` syntax, URL not braced, delimited by
+the enclosing group). RUST 2 → (Perl 0, renders gracefully as empty `<ref/>` +
+leftover text). `\url`=`\begingroup\lx@url@url\url`; the delimiter-read demotes
+`{`/`}` to catcode OTHER so `read_until_token` won't balanced-read a literal `{`
+inside `|…|` URLs (needed for 1906.08946 `\path|{…|`). But the ENCLOSING boxing
+`}` then bakes as OTHER (eager mouth tokenization within the semiverbatim frame),
+so the boxing group never closes and the appended `\endgroup` errors. Perl
+tokenizes lazily so its enclosing `}` stays catcode-END and closes the group.
+Removing the `}` demotion regressed broadly (2→40). A faithful fix needs the
+mouth to not bake the post-read enclosing `}` as OTHER (or read_until to leave it
+END) — a deep mouth/group-frame change; deferred from this round.
+
 **2026-05-30 — FIXED Rust-only: elsart/OmniBus `\runauthor`/`\runtitle` should
 GOBBLE (Perl), not preserve.** Witness 1503.06349 (`\documentclass{elsart}`):
 RUST 1 → 0 (Perl clean). Error was `undefined:\Pasurek` from

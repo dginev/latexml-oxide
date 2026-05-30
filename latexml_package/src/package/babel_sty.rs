@@ -183,7 +183,16 @@ LoadDefinitions!({
       \@ifundefined{captions\lx@bbl@engtmp}{\expandafter\let\csname captions\lx@bbl@engtmp\endcsname\@empty}{}%
       \@ifundefined{extras\lx@bbl@engtmp}{\expandafter\let\csname extras\lx@bbl@engtmp\endcsname\@empty}{}%
       \@ifundefined{noextras\lx@bbl@engtmp}{\expandafter\let\csname noextras\lx@bbl@engtmp\endcsname\@empty}{}%
-      \@ifundefined{date\lx@bbl@engtmp}{\expandafter\let\csname date\lx@bbl@engtmp\endcsname\dateenglish}{}}");
+      \@ifundefined{date\lx@bbl@engtmp}{\expandafter\let\csname date\lx@bbl@engtmp\endcsname\dateenglish}{}%
+      \@ifundefined{l@\lx@bbl@engtmp}{\expandafter\let\csname l@\lx@bbl@engtmp\endcsname\l@english}{}}");
+  // ^ Also alias the hyphenation language register `\l@<variant>` to
+  // `\l@english` when undefined. The `.ini` path defines `\l@british` only for
+  // the variant whose `.ini` actually ran; a paper that loads several english
+  // variants then does `\selectlanguage{british}` → `\bbl@iflanguage{british}`
+  // tests `\ifx\csname l@british\endcsname\relax` and, finding it relax, errors
+  // "You haven't defined the language 'british' yet". english.ldf normally
+  // `\let`s every variant's `\l@` to `\l@english` (british uses English
+  // hyphenation); backfill the same. Witness 1508.06150.
 
   // Override `\shorthandoff` / `\shorthandon` to no-op. Babel's raw
   // implementation (babel.sty L1492-1496) iterates the argument and
