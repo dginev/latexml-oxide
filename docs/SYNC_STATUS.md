@@ -128,6 +128,39 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-29 (cont.) — DEEP deferred Rust-only: babel `germanb` dangling
+`\ProvidesLanguage` group (witness 1010.4065).** Dense sweep (2321 papers,
+buckets 1010/1410/1710/2010) → exactly ONE genuine Rust-only flip: 1010.4065
+(`\usepackage[english,germanb]{babel}` → **Rust 1 err** "Package babel Error: You
+haven't defined the language 'germanb' yet", **Perl 0 / completes**). Minimal
+repro: `\usepackage[english,germanb]{babel}` (no ar5iv needed). **Root cause
+(precisely characterized, ~12 controlled repros):** babel has **no** LaTeXML
+binding (Perl confirms — only `\ProvidesFile/Package/Class` are bound, via clean
+`{}[]` signatures in `latex_constructs.rs`), so `\ProvidesLanguage{germanb}` runs
+babel's RAW `babel.sty` def (L912): `\begingroup \catcode`\ 10 \@makeother\/
+\@ifnextchar[ {\@provideslanguage{#1}}{\@provideslanguage{#1}[]}` where the
+matching `\endgroup` lives in `\@provideslanguage` (L921). When germanb.ldf is
+loaded in babel's full context (babel.sty's own definitions mouth on-stack,
+nested `\ProcessOptions*` → `\bbl@load@language` → `\InputIfFileExists`), Rust's
+`\@ifnextchar[` look-ahead across the `\ProvidesLanguage{germanb}\n   [version]`
+line boundary fires **neither** branch (`\ver@germanb.ldf` ends UNDEFINED, not
+empty), so `\endgroup` is never reached → the `\begingroup` **dangles** → the
+WHOLE germanb.ldf runs inside it → every local `\def`/`\let` rolls back at file
+end (incl. `\let\l@germanb\l@german`), while `\global` ones (`\adddialect
+\l@german`, `\xdef`-strings) survive. Selecting `germanb` then needs the
+rolled-back `\l@germanb` → the error. Perl reaches `\@provideslanguage`/`\endgroup`
+and is clean. **Not fixed:** could NOT minimally reproduce the Perl-OK/Rust-fail
+split — all 12 simplified repros (top-level, nested-via-`\InputIfFileExists`,
+option-code, `\ProcessOptions*`, `.ldf` ext, comment header, `\bbl@load@language`
+wrapper) either work-in-both or fail-in-both; the trigger lives in babel's exact
+multi-level state. **Two-grep rule forbids a Rust-only `\ProvidesLanguage`
+binding** (Perl has none; TL babel defines it) — the faithful fix is an engine fix
+to the cross-line `\@ifnextchar` look-ahead in deep nested-definitions loads, for
+a focused mouth/gullet-internals session. Niche (germanb = pre-1996 German
+orthography). The rest of the 2321-paper sweep was all SHARED (`_`/`^`
+script-in-text, `}`/mode-switch, `#`-leak `misdefined:#`, alignment cascade,
+`\endproof`, `\mathaccentV` undefined in both, `malformed:ltx:p` 1=1).
+
 **2026-05-29 — stale autoload flag broke `\@ifundefined{<env>}` (FATAL_3 → clean).**
 1611.02736 (extract.sty): RUST **92 errors / FATAL_3 (no output)** → **0 errors,
 146 KB doc** (surpasses Perl's 11-error completion). Root (general, Rust-only):
