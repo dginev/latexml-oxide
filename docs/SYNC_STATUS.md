@@ -113,6 +113,21 @@ NOT minimally reproducible (`\tensordot{a}{b}` inline or in align+bib is clean) 
 depends on the specific custom-macro nesting; a deep XMArg mode-leak for a
 focused session, cf. the cascade-amplification class.
 
+**2026-05-29 (cont.) — convergence reconfirmed, buckets 0605/1605/1808.** Fresh
+strict-gated mini-sweep over 452 papers (3 buckets) surfaced 5 failures; ALL
+strict-gate SHARED (Perl errors too, Rust matches-or-beats its count):
+1605.00306 (RUST 13 = PERL 13, both complete, `_` script-in-text),
+1808.05042 (RUST 1 < PERL 5, pb-lams missing-dependency GenericError),
+1808.09471 (RUST 21 < PERL 28, both complete; malformed `\startlongtable` /
+`{splittabular}` alignment — Rust cascades on `&`, Perl on section-malformed,
+**different recovery but both broken**), 1808.09698 (RUST 8 = PERL 8, error
+classes **byte-identical**: 3 XMHint, 3 XMArray, 2 `^`). No Rust-only flip.
+**Gate-helper lesson: strip ANSI (`sed 's/\x1b\[[0-9;]*m//g'`) BEFORE
+`grep -acE '^Error:'`** — redirecting the binary's colorized stderr to a file
+leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
+are really there (unanchored `Error:` = true count). scan_one.sh already strips;
+inline gates must too, or they false-report RUST=0 "wins".
+
 **2026-05-29 — stale autoload flag broke `\@ifundefined{<env>}` (FATAL_3 → clean).**
 1611.02736 (extract.sty): RUST **92 errors / FATAL_3 (no output)** → **0 errors,
 146 KB doc** (surpasses Perl's 11-error completion). Root (general, Rust-only):
