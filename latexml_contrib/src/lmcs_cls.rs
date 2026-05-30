@@ -1,16 +1,24 @@
 //! Stub for lmcs.cls (Logical Methods in Computer Science journal class).
 //!
-//! lmcs.cls extends amsart for the LMCS journal. The raw cls relies on
-//! pgfmath + tikz + XeTeXLinkBox for ORCID-logo rendering, which fails
-//! mid-load in our system; consequently `\lmcsdoi`, `\lmcsheading`,
-//! `\lmcsorcid` (the publication-metadata macros every LMCS paper uses
-//! in the preamble) end up undefined. Provide content-preserving stubs.
-//! Witness 2305.14448, 2305.19985.
+//! lmcs.cls is NOT distributed in TeX Live (papers bundle it, but the corpus
+//! copies don't reach our search path), so Perl LaTeXML — which ships no lmcs
+//! binding — emits `Can't find binding for class lmcs (using OmniBus)` and
+//! falls back to **OmniBus**. We mirror Perl by loading OmniBus as the base
+//! (NOT amsart, which the prior version used): OmniBus supplies the lazy
+//! theorem-env autoloads (`\begin{thm}`/`\begin{lem}`/… → `\newtheorem{thm}`
+//! /`{lem}`/…), so a paper whose preamble does `\newtheorem{remark}[thm]{…}`
+//! and body uses `\begin{thm}`/`\begin{lem}` resolves the shared `thm` counter
+//! exactly as Perl does. amsart pre-defines none of those, so Rust hit
+//! `undefined:{thm}`/`{lem}`/`\thethm`. Witness 1607.01886 (RUST 3 → 0; 12
+//! theorems matching Perl). The raw cls relies on pgfmath/tikz/XeTeXLinkBox for
+//! ORCID-logo rendering (fails mid-load), so `\lmcsdoi`/`\lmcsheading`/
+//! `\lmcsorcid` get content-preserving stubs below. Witness 2305.14448,
+//! 2305.19985, 1607.04128 (graphicx).
 use latexml_package::prelude::*;
 
 
 LoadDefinitions!({
-  LoadClass!("amsart");
+  LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");

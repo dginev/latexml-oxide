@@ -58,6 +58,26 @@ all FAIL to reproduce — the trigger needs the full paper's specific
 cite/label/title structure. Needs a full-paper bisection of the
 cite×bibliography×pdf-string interaction; deferred from this round.
 
+**2026-05-30 — FIXED Rust-only: lmcs.cls binding loaded `amsart` (no `thm`/`lem`)
+instead of Perl's OmniBus fallback.** Witness 1607.01886
+(`\documentclass{lmcs}`): RUST 3 → 0 (`undefined:{thm}`, `undefined:{lem}`,
+`undefined:\thethm`). lmcs.cls is not in TeX Live and the corpus copy doesn't
+reach our search path, so Perl (no lmcs binding) emits `Can't find binding for
+class lmcs (using OmniBus)` and falls back to OmniBus — whose lazy theorem-env
+autoloads (`\begin{thm}`→`\newtheorem{thm}{Theorem}` + `\newtheorem{lem}[thm]…`)
+define the shared `thm` counter the paper's `\newtheorem{remark}[thm]` and
+`\begin{thm}`/`\begin{lem}` need. Rust's `lmcs_cls.rs` contrib binding instead
+did `LoadClass!("amsart")` (pre-defines none of those). Fix: `LoadClass!
+("OmniBus")` to mirror Perl's fallback exactly. (Confirmed not eager-vs-lazy: a
+minimal amsart + `\newtheorem{remark}[thm]` errors `\thethm` in BOTH engines, so
+it's purely the base class; OmniBus's lazy preload runs at first `\begin{thm}`,
+after the paper's redefinitions, which `\newtheorem` tolerates.) Verified:
+witness 12 theorems = Perl, Math 181=181, bibitems 23=23, titles 17=17, 0 errors;
+the binding's own witness 1607.04128 (graphicx) stays clean. `cargo test`
+1344/0, clippy clean. Lesson (extends [[project_sn_jnl_unbound_class_depscan]]):
+when a contrib class binding fronts a class Perl OmniBus-fallbacks, base it on
+OmniBus, not a guessed parent class.
+
 **2026-05-30 — FIXED Rust-only: escaped specials `\#`/`\&`/`\%`/`\$`/`\_` were
 `protected` dispatch MACROS (not single primitives) → broke `\ifx`-based macro-
 stack sentinels.** Witness 1811.00200 (`llncs` + paper-local `algochl.sty`, the
