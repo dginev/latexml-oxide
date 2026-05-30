@@ -1202,15 +1202,19 @@ byte-identical to Perl `auto_keywords`).
   keyval2e `\#1@#2@` `Fatal:ParamSpec` (1501.07012/1507.04637 — Perl also fatals),
   `\else`/`\fi`-not-in-conditional (Perl same count), `\boxed@text`/`\end{abstract}`
   mode (same counts), `\noalign` (Perl also errors), `\urladdr`/`\vdotdot`,
-  `\ifpst@useCalc`/`\Cnode` (pstricks). **Genuine Rust-only but DEEP (deferred,
-  no clean fix this pass):** (1) **double-subscript** (1603.02507 Perl 0/Rust 23,
-  1608.06741 Rust 2) — `tex_math.rs:131` fires `Double subscript` from a
-  macro-origin construct I could NOT isolate; all space-variant min-repros
-  (`\,`/`~`/`{}`/`\quad`/`\ `/`\hspace`) match Perl, so it's a subtle non-space
-  grouping divergence. Noted a real faithful gap regardless: `script_handler`
-  (tex_math.rs:113) omits Perl `Engine/TeX_Math.pool.ltxml:374`'s `Comment`-box
-  prevspace case — but Rust rarely has comment-boxes in math (the `%\n` divergence),
-  so it's likely dead code, not this witness. (2) **ACM `\@personname`/`\@end@tabular`
+  `\ifpst@useCalc`/`\Cnode` (pstricks). **(1) double-subscript 1603.02507 — now
+  FIXED (2026-06-09, `700dfb426b`).** Cracked by bisecting the document: it's NOT a
+  math-grouping divergence — `\documentclass{jpconf}` → OmniBus, which eagerly
+  defines `\dgr` as a 1-arg Springer "degree" macro, blocking the paper's
+  `\newcommand{\dgr}{\dagger}` (already-defined). So `c_i^\dgr c_j` made `\dgr`
+  consume the following `c` → `c_i^{c}` + dangling `_j` → 23× "Double subscript".
+  Perl's OmniBus never defines `\dgr`. Fix: defer it to
+  `\AtBeginDocument{\providecommand{\dgr}[1]{##1}}` so a user redef wins, Springer
+  `\author{…\dgr{…}…}` (expanded at `\maketitle`) still gets the fallback. 23→0;
+  tests 1344/0. (1608.06741 is a SEPARATE `article`-class double-subscript, not the
+  `\dgr` cause — still open.) The `script_handler` Comment-box prevspace gap
+  (tex_math.rs:113 vs Perl TeX_Math.pool:374) was a red herring (dead code in Rust).
+  **(2) Still DEEP/deferred: ACM `\@personname`/`\@end@tabular`
   mode-leak** (1506.07424, raw `acm_proc_article-sp.cls` author block: `\@personname`
   switches to `restricted_horizontal` and leaks to `\@end@tabular`/`\hbox`/`\vtop`/
   `\endgroup`) — the known-hard mode-leak cluster, high-impact (ACM classes common)
