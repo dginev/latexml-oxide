@@ -186,6 +186,30 @@ lookup matches. Literal filenames are unaffected (no expandables → identical).
 Verified 1905.05350 RUST 13 → 0 = PERL 0 (cache now `root-acro.tex`, file
 processed). `cargo test --tests` 1344/0, clippy clean (no new warnings).
 
+**2026-05-30 — FIXED Rust-only: French babel activated its `:;!?` shorthands in
+the PREAMBLE, corrupting packages loaded afterward.** Witness 1712.07003
+(article + spconf; `\usepackage[french]{babel}` `\selectlanguage{french}` then
+`\usepackage{adjustbox}`, and a `\begin{adjustbox}{max width=…}` table): RUST 1
+→ 0 (`expected:) Missing close parenthesis in Glue expr. Got T_ACTIVE[!]`).
+Rust's `\ltx@bbl@select@language` (babel_support_sty.rs) flipped `:;!?` to
+catcode-ACTIVE immediately on entering French — including when
+`\selectlanguage{french}` runs in the preamble. adjustbox, raw-loaded *after*
+that, then tokenized graphicx's `!` natural-size sentinel as an active char, so
+adjustbox's `max width` glue/dimen computation hit `T_ACTIVE[!]` and the e-TeX
+glue parser (etex.rs:71) errored. Real babel turns shorthands on only at
+`\begin{document}` (and Perl's frenchb/french `.ldf.ltxml` never activate
+`:;!?` at all — `AtBeginDocument`-only `\degre`/`\degres`), so the preamble `!`
+stays catcode-12 and adjustbox is clean. Fix: skip the catcode activation while
+`inPreamble`, and re-run it at `\begin{document}` via a new
+`\lx@bbl@begindoc@french@punct` primitive (registered through
+`\AtBeginDocument`) keyed on `DOCUMENT_LANGUAGE == "fr"`. Body-level
+`\selectlanguage` switches (inPreamble already cleared) still activate
+immediately, so the surpass-Perl French typography is preserved. Verified
+1712.07003 RUST 1 → 0 = PERL 0; the `tests/babel/french.tex` golden (thin
+spaces before `: ; ! ?`) still passes. `cargo test --tests` 1344/0, clippy clean
+(no new warnings). NOTE: the German `"` shorthand block has the same latent
+preamble-activation issue but no witness; left as-is.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
