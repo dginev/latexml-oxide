@@ -128,6 +128,24 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-30 (cont.) — sweep convergence + ONE characterized surpass-Perl target.**
+Fresh sweeps this iteration (~1600 papers across 2002-2103 buckets, 98-99% Rust
+success) found NO clean Rust-only error→success: failures are SHARED, rust-better,
+wrong-main-file (e.g. 2103.07017 `supp.tex` = a supplementary file with commented
+`\documentclass`), or already-known clusters. The LARGEST cluster (`misdefined:#`)
+is **parity-correct** — re-confirmed it's the mdwmath `\sq@readrad` `\meaning
+\sqrtsign`-lacks-`"` issue, already documented SHARED at `KNOWN_PERL_ERRORS.md:850`
+(both engines emit identical 43). The one genuinely-NEW finding: **inline-math
+error-recovery amplification** (witness 2002.05958) — both engines hit the same
+root (`\lx@end@inline@math Attempt to end mode math in math`, a SHARED `$…$`
+mode-imbalance in the paper), but Rust re-triggers it **613×** vs Perl's **94×**
+(total RUST 654 / PERL 101). The root imbalance is SHARED (a cap would be a
+stopgap); the AMPLIFICATION is Rust-specific — likely Rust's stomach doesn't pop
+the leaked math frame after the error, so every later `$` re-fires it, where Perl
+recovers. A future surpass-Perl reliability target (faithful mode-stack recovery,
+NOT an error cap); related to [[endgroup-modeswitch-frame-leak]]. No fix landed
+(no clean parity gap available); tests 1344/0.
+
 **2026-05-30 — FIXED Rust-only: sn-jnl (Springer Nature) `undefined:{sidewaystable}`
 (witness 2101.02753).** RUST 3 → 0 (now beats Perl's 2). **Root cause (CORRECTED
 from the prior iteration's mis-diagnosis):** sn-jnl DOES have a binding —
