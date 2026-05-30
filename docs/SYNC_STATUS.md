@@ -229,6 +229,27 @@ apacite's citation engines conflict. The natbib-delegation is the binding's
 established, lower-risk approach. Verified 1606.03620 RUST 1 → 0 = PERL 0.
 `cargo test --tests` 1344/0, clippy clean (no new warnings).
 
+**2026-05-30 — FIXED Rust-only (CORE): a math-active char `\let` to an
+undefined CS errored instead of self-inserting.** Witness 1602.01342
+(`\usepackage{braket}` + paper-defined `\Pr{A|B}`/`\Ex`/`\Var` conditional
+notation, adapted from braket's `\Set`): RUST 26 → 0 (`unexpected:| The token
+T_OTHER[|] is not defined`). The macros make `|` math-active
+(`\mathcode`\|=32768`) and `\let|\SetVert` — but neither our nor Perl's braket
+*binding* defines `\SetVert`/`\midvert` (both reimplement `\Set`), so `|`'s
+meaning becomes an explicit `Stored::None`. In `lookup_digestable_definition`
+(state.rs) the None-valued entry was non-empty, so it returned
+`Some(Stored::None)`, which the stomach routed to `generateErrorStub`. Perl's
+`lookupDigestableDefinition` (State.pm:474) guards on `($defn = $$entry[0])`,
+which is FALSE for an undef value, so it falls through to `return $token`
+(self-inserting) for a LETTER/OTHER (math-active) char — the `|` renders as a
+literal bar, no error. Fix: mirror Perl — when the resolved entry's front is
+`Stored::None` and the token is NOT active/CS, self-insert (`Some(token)`)
+instead of returning `Some(None)`; active/CS tokens still fall to the `None`
+return (→ error stub) as Perl does. Root-cause core fix benefiting any
+math-active-char notation whose helper is undefined. Verified minimal repro +
+1602.01342 RUST 26 → 0 = PERL 0; `cargo test --tests` 1344/0 (digest hot-path
+change, full suite green), clippy clean (no new warnings).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an

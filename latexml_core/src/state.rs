@@ -2130,6 +2130,23 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
             }
           }
         }
+        // Perl State.pm:474 lookupDigestableDefinition: the guard
+        // `($defn = $$entry[0])` is FALSE when the entry's value is undef, so
+        // execution falls through to `return $token` (self-inserting) for a
+        // LETTER/OTHER token and to `return undef` for an active/CS one. A
+        // math-active LETTER/OTHER character whose active meaning was `\let`
+        // to an undefined CS hits exactly this case — e.g. braket-style
+        // `\Pr{A|B}`: the macro body does `\mathcode`\|=32768 \let|\SetVert`
+        // with `\SetVert` itself undefined (neither our nor Perl's braket
+        // binding defines it), leaving `|`'s meaning an explicit
+        // `Stored::None`. Returning `Some(Stored::None)` here routed the `|`
+        // to generateErrorStub ("The token T_OTHER[|] is not defined"); Perl
+        // instead self-inserts the literal char. Mirror Perl: a None-valued
+        // entry for a non-active/CS (math-active) char self-inserts; active/CS
+        // tokens still fall to the `None` return below. Witness 1602.01342.
+        if matches!(front, Stored::None) && !is_active_or_cs {
+          return Some(token.into());
+        }
         // if a regular definition, just return.
         return Some(front.clone());
       }
