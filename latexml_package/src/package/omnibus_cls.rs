@@ -230,7 +230,16 @@ LoadDefinitions!({
   def_macro_identity("\\pfx{}")?;      // name prefix (e.g. "Dr.")
   def_macro_identity("\\sfx{}")?;      // name suffix
   def_macro_identity("\\tanm{}")?;      // title-as-name
-  def_macro_identity("\\dgr{}")?;      // degree
+  // `\dgr` (Springer sn-jnl "degree", 1-arg) CONFLICTS with the common
+  // physics-paper convention `\newcommand{\dgr}{\dagger}` (0-arg). Defining
+  // it eagerly here blocks the user's `\newcommand` (already-defined) so a
+  // later `c_i^\dgr c_j` consumed the following `c` as `\dgr`'s argument →
+  // `c_i^{c}_j` → spurious `Double subscript` (witness 1603.02507, ×23; Perl
+  // rc=0 — Perl's OmniBus never defines `\dgr`). Defer to \AtBeginDocument
+  // with \providecommand so a user preamble definition wins, while the
+  // Springer `\author{… \dgr{…} …}` (expanded at \maketitle, after
+  // begin-document) still gets the 1-arg fallback. `##1` doubles for the hook.
+  RawTeX!(r"\AtBeginDocument{\providecommand{\dgr}[1]{##1}}");
   def_macro_identity("\\orgdiv{}")?;
   def_macro_identity("\\orgname{}")?;
   def_macro_identity("\\orgaddress{}")?;
