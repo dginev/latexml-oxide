@@ -317,30 +317,26 @@ intentional 2105.02087 behavior — a genuine trade-off needing both witnesses
 re-evaluated against Perl. Deferred pending that analysis (do NOT naively
 remove `has_path_prefix`).
 
-**2026-05-31 — CHARACTERIZED (deferred) Rust-only: unbound bundled class's
-`\RequirePackage` dependencies not loaded (dependency-scan suppressed).**
-Witness 1603.09243 (`\documentclass{wlscirep}` — a bundled, unbound Scientific
-Reports class that does `\RequirePackage[english]{babel}`; the paper then
-`\addto\captionsenglish{…}`): RUST 2 (`undefined:\captionsenglish`,
-`undefined:\addto`), PERL 0. Decisively traced: Perl OmniBus-fallbacks wlscirep
-AND runs `maybeRequireDependencies` over the raw wlscirep.cls (`Loading
-dependencies for wlscirep.cls: article,inputenc,babel,…`), pulling in babel
-that way → `\addto`/`\captionsenglish` defined. Rust's `maybe_require_
-dependencies` NEVER fires for wlscirep (instrumented: no DEPSCAN call). Root
-chain (content.rs): by the time `load_class("wlscirep")` checks the line-2135
-deps-scan gate (`!{name}.cls.ltxml_loaded && !will_fallback`), `wlscirep.cls.
-ltxml_loaded` is already `true` and `will_fallback` is `false`, so BOTH the
-line-2135 and line-2197 deps-scans are skipped. The false `ltxml_loaded` comes
-from `input_definitions` taking its "binding loaded successfully" path
-(L417-439) because `_load_binding("wlscirep.cls")` returned `Ok(true)` — and it
-returns true purely because `{request}_loaded` was already set (L761-763),
-despite NO real wlscirep binding existing. Net: an unbound class that is
-OmniBus-fallbacked never gets its `\RequirePackage` deps scanned, so any package
-the class loads (babel here) is missing. SAME root-cause FAMILY as 1504.01965
-(JINST): Rust doesn't run an unbound bundled class's body/deps that Perl does.
-A focused fix must make the deps-scan fire for OmniBus-fallbacked classes
-(without re-introducing the natbib-ordering loop the current gate guards against,
-content.rs L2122-2134) — high-risk shared code, deferred for a dedicated pass.
+**2026-05-31 — FIXED Rust-only: `wlscirep_cls` contrib binding omitted
+`babel`.** Witness 1603.09243 (`\documentclass{wlscirep}`, then
+`\addto\captionsenglish{\renewcommand\figurename{…}}`): RUST 2 → 0
+(`undefined:\addto`, `undefined:\captionsenglish`). CORRECTION of an earlier
+mis-diagnosis: wlscirep is NOT unbound — `latexml_contrib/src/lib.rs:485`
+registers a `wlscirep_cls` binding (the prior characterization wrongly concluded
+"unbound class deps-scan suppressed" because the initial grep checked only
+`latexml_package`, not `latexml_contrib`; the deps-scan trace was real but the
+suppression is CORRECT for a bound class — the binding owns its deps). The
+binding mirrors wlscirep.cls's `\RequirePackage` list (amsmath, wasysym, calc,
+hyperref, cite, natbib, …) but had OMITTED `\RequirePackage[english]{babel}`
+(wlscirep.cls L11), so `\addto`/`\captionsenglish` (babel core / english caption
+hook) were undefined where Perl — which raw-loads the .cls and pulls babel via
+its dependency-scan — is clean. Fix: add `RequirePackage!("babel", options =>
+["english"])` to `wlscirep_cls.rs`. Same incomplete-binding class as
+scrartcl/lmcs/icml. LESSON (reaffirms `feedback_*`): grep `latexml_contrib/src`
+too before concluding a class is unbound. Verified 1603.09243 RUST 2 → 0 =
+PERL 0; `cargo test --tests` 1344/0, clippy clean (no new warnings). (The
+genuinely-unbound deps-scan question remains live only for path-prefixed
+raw-loaded classes like JINST 1504.01965, which is a separate trade-off.)
 
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548

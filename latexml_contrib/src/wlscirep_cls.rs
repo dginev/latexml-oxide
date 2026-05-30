@@ -3,6 +3,14 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // wlscirep.cls L11: `\RequirePackage[english]{babel}`. This binding mirrors
+  // the class's `\RequirePackage` list but had omitted babel, so author
+  // preamble that customizes captions via `\addto\captionsenglish{…}` (a babel
+  // core macro / english caption hook) hit `undefined:\addto` /
+  // `undefined:\captionsenglish` where Perl — which raw-loads the .cls and
+  // gets babel that way (its dependency-scan loads babel) — is clean. Load it.
+  // Witness 1603.09243 (`\addto\captionsenglish{\renewcommand\figurename{…}}`).
+  RequirePackage!("babel", options => vec!["english".to_string()]);
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
