@@ -1133,6 +1133,53 @@ fn format_parse_result(result: f64, input: &str) -> String {
   s
 }
 
+/// Expand the argument to a pgfmath parse with the seven calc-package
+/// compatibility CSes (`\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`,
+/// `\heightof`, `\depthof`) transiently `\let` to the `\pgfmath@calc@*`
+/// internals, then restored to their prior meanings.
+///
+/// Perl `pgfmath.code.tex.ltxml` L320-327 performs these `Let`s at the *start
+/// of `sub pgfmathparse`* — i.e. only while the pgfmath argument is being
+/// expanded; being local (non-`global`) `Let`s they revert with the enclosing
+/// tikz/pgf group. The earlier Rust port hoisted them to package-load time
+/// (because the native parser "can't re-bind per call"), which globally
+/// clobbered `\real` (and the six siblings) for the *whole document*. That
+/// broke the very common use of `\real` as the blackboard-ℝ symbol: e.g.
+/// `\int_\real p_m`, where the 1-argument `\pgfmath@calc@real` ate the
+/// following `p` as its argument and yielded a spurious "Double subscript".
+/// Witness: 1608.06741 (`\newcommand\real{\mathbb{R}}`, ignored because
+/// mathtools→calc already defined `\real`, then pgfmath via todonotes→tikz
+/// clobbered it). We restore Perl's exact scope with a tight
+/// save → let → expand → restore around just this one expansion, so `\real`
+/// used as an ordinary math macro elsewhere is never touched.
+fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
+  const PAIRS: [(&str, &str); 7] = [
+    ("\\real", "\\pgfmath@calc@real"),
+    ("\\minof", "\\pgfmath@calc@minof"),
+    ("\\maxof", "\\pgfmath@calc@maxof"),
+    ("\\ratio", "\\pgfmath@calc@ratio"),
+    ("\\widthof", "\\pgfmath@calc@widthof"),
+    ("\\heightof", "\\pgfmath@calc@heightof"),
+    ("\\depthof", "\\pgfmath@calc@depthof"),
+  ];
+  let saved: Vec<(Token, Stored)> = PAIRS
+    .iter()
+    .map(|(cs, _)| {
+      let t = T_CS!(*cs);
+      let m = state::lookup_meaning(&t).unwrap_or(Stored::None);
+      (t, m)
+    })
+    .collect();
+  for (cs, helper) in PAIRS.iter() {
+    state::let_i(&T_CS!(*cs), &T_CS!(*helper), None);
+  }
+  let expanded = gullet::do_expand(tokens).unwrap_or_default();
+  for (t, m) in saved {
+    state::assign_meaning(&t, m, None);
+  }
+  expanded
+}
+
 /// Main pgfmathparse evaluation function
 /// Perl: sub pgfmathparse (L316-394)
 /// Returns (result_string, units_declared)
@@ -1426,28 +1473,21 @@ LoadDefinitions!({
   DefMacro!("\\pgfmath@calc@heightof{}", "height(\"#1\")");
   DefMacro!("\\pgfmath@calc@depthof{}", "depth(\"#1\")");
 
-  // Perl pgfmath.code.tex.ltxml L321-327: inside pgfmathparse, seven calc
-  // package CSes are Let'd to the pgfmath@calc@* internals each time the
-  // parser runs. Rust's pgfmathparse is a native function, so we can't
-  // re-bind them per-call. Register the aliases at package-load time so
-  // users who call `\real{3.14}` or `\widthof{\hbox{foo}}` outside a
-  // pgfmathparse context still resolve the CS. If calc.sty is loaded
-  // first, pgfmath intentionally shadows its copies — matching Perl's
-  // "last definition wins" runtime semantics (calc's `\real` would be
-  // replaced on the first pgfmathparse call anyway).
-  Let!("\\real",     "\\pgfmath@calc@real");
-  Let!("\\minof",    "\\pgfmath@calc@minof");
-  Let!("\\maxof",    "\\pgfmath@calc@maxof");
-  Let!("\\ratio",    "\\pgfmath@calc@ratio");
-  Let!("\\widthof",  "\\pgfmath@calc@widthof");
-  Let!("\\heightof", "\\pgfmath@calc@heightof");
-  Let!("\\depthof",  "\\pgfmath@calc@depthof");
+  // Perl pgfmath.code.tex.ltxml L320-327: the seven calc-package CSes
+  // (`\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`, `\heightof`,
+  // `\depthof`) are `Let` to the `\pgfmath@calc@*` internals *inside*
+  // `sub pgfmathparse` — transiently, per parse, with local scope. They are
+  // deliberately NOT bound at package-load time: doing so globally clobbers
+  // `\real` (commonly `\mathbb{R}`) and friends for the whole document. See
+  // `expand_pgfmath_arg`, which replicates the exact transient scope around
+  // the pgfmath argument expansion.
 
   // ==================== pgfmathparse override ====================
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
-    // Expand tokens and convert to string
-    let expanded = gullet::do_expand(tokens).unwrap_or_default();
+    // Expand tokens and convert to string. The seven calc-compat CSes are
+    // transiently bound only for this expansion (Perl `sub pgfmathparse`).
+    let expanded = expand_pgfmath_arg(tokens);
     let input = expanded.to_string();
     let (result, units) = pgfmathparse_eval_with_units(&input);
     let mut toks = pgfmath_result_tokens_str(&result);
@@ -1465,7 +1505,7 @@ LoadDefinitions!({
 
   // Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
   DefMacro!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
-    let expanded = gullet::do_expand(tokens).unwrap_or_default();
+    let expanded = expand_pgfmath_arg(tokens);
     let input = expanded.to_string();
     let result = pgfmathparse_eval(&input);
     let mut toks = vec![T_CS!("\\def"), T_CS!("\\lx@pgfmathresult"), T_BEGIN!()];
