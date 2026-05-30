@@ -128,6 +128,30 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-30 (cont.) — convergence reconfirmed on FRESH 2020/2001 corpus (490
+papers).** Beyond the canvas test set, sampled `all_warnings.txt` (1.5M-paper
+corpus) fresh: 100 papers from bucket 2009 (Sept-2020) + 300 from 2001/2003/2005/
+2007/2011/2012 (2020-2021) + a 90-paper stage-76/80 sweep. Rust success **~98-99%**
+(2/100 and 4/300 erroring). Every erroring paper strict-gated **SHARED**,
+rust-better, or **deep-cluster**:
+- **`misdefined:#` (mdwmath `\sq@readrad`)** — exactly **43 in BOTH** engines
+  (parity-correct; mdwmath's `|`-as-escape `\meaning`-parsing delimited-param
+  `\def` is unportable in both). ~33 of 90 stage-76/80 papers. NOT a Rust gap.
+- **tikz "Cannot parse this coordinate"** (2009.05276, `sn-jnl`+tikz-cd): SHARED
+  root but Rust **amplifies** (Rust 501 vs Perl 77 for the same failure) — a
+  potential Rust cascade-reduction target (reduce re-emit-per-coordinate to match
+  Perl), but paper stays >0 either way. Deferred.
+- **mode-frame `\hbox`/`\case`/`\@personname` leak** (2001.03998 xy-pic `[all]{xy}`
+  `\hbox` ×8 Rust-only; 2009.05630 `\case` 1=1 SHARED): xy diagrams are CLEAN in
+  isolation — the leak is STATE-DEPENDENT (accumulated doc context), matching
+  [[endgroup-modeswitch-frame-leak]]. Dedicated-session item; do NOT poke
+  incrementally.
+Conclusion: first-500K canvas AND fresh-2020/2001 corpora are converged of
+tractable Rust-only gaps; what remains is the deep mode-frame cluster + the
+collaborator's math-parser `XMApp`/`XMTok`-in-text lane. `cargo test --tests`
+**1344/0** (mining-only this iteration; the chapterbib fix `9b3d74fe74` was the
+prior iteration's landed win).
+
 **2026-05-30 (cont.) — convergence reconfirmed, ~3600 papers (7 buckets).**
 Fresh strict-gated sweeps over 0411/1108/1502/2003 and 0610/1310/1806 (~3600
 papers) surfaced ~25 failures; ALL strict-gate SHARED (Perl errors/FATALs too,
