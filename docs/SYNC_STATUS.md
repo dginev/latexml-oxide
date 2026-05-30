@@ -45,6 +45,23 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — clean single-root FATAL_3 pool exhausted; gate-reliability lesson.**
+Surveyed all 151 FATAL_3 logs; re-tested/gated the distinctive non-`_`/`^` ones.
+The clean single-root cases this session all landed (void-box 1907.04219, autoload
+1611.02736, aipproc `\reference` 1701.08966, `\DeclareMathOperator` 1710.04325/
+1802.01751 — last two verified clean now). The REMAINDER are SHARED or
+heavily-broken-doc cascade-amplification: 1501.03690 (xy `[2cell]` → ~86
+`malformed:svg:path` in BOTH), 1508.04518 `\bm` (102/102), 1511.06183 +
+1512.04337 (unbalanced `\right` doc bug — both abort), 1506.06446 (76 misplaced
+`\noalign` — Perl completes at 76, Rust amplifies to 102/FATAL_3). **Gate lesson
+(important): the quick `grep -acE '^Error:'` count is UNRELIABLE — Perl can (a)
+time out mid-run (false-low: 1501.03690 first gated PERL=8, truly ~86) or (b)
+FATAL at a LOW error count (1511.06183: Perl 8 errors + fatal, NOT a 100-cap). A
+trustworthy gate must use a generous timeout AND require `Conversion complete`
+with `fatal=0`, not just a low error count.** Remaining genuine work is the
+cascade-amplification class (Rust pushes past the 101-error FATAL_3 cap where Perl
+tolerates ~76) — deep math-parser/error-recovery, the documented next focus.
+
 **2026-05-29 — aipproc global `\reference` alias caused a math/bib cascade (FATAL_3
 → matches Perl).** 1701.08966 (aipproc + vit-prusa macros): RUST **102 / FATAL_3
 (no output)** → **1 error, 1.4 MB doc** (matches Perl exactly — the lone shared
