@@ -58,6 +58,24 @@ all FAIL to reproduce — the trigger needs the full paper's specific
 cite/label/title structure. Needs a full-paper bisection of the
 cite×bibliography×pdf-string interaction; deferred from this round.
 
+**2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
+sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
+(`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
+unbound class (no binding, no `.cls` found) `content.rs` mirrors Perl's
+`grep { $class =~ /^\Q$_\E/ } @sorted_bindings` to pick an alternate, else
+OmniBus. The case-SENSITIVE prefix is Perl-faithful, but a case-INSENSITIVE
+PREFIX fallback (added for `WileyNJDv5`→`wileyNJDv5`, 2406.08163) fired
+`"aaai-std".starts_with("aa")` → loaded the 2-char A&A astronomy class `aa`
+(which lacks `\address`), where Perl's `/^aa/` against `AAAI-Std` finds nothing
+→ OmniBus (which DOES define `\address`, L98-99). Fix: change the ci fallback
+from `starts_with` to FULL `eq_ignore_ascii_case` — it still matches a
+capitalization-only binding entry (the Wiley intent) but no longer prefix-false-
+positives a short binding name. (Wiley is also registered under BOTH cases, so it
+matches the case-sensitive primary directly anyway.) Verified: `AAAI-Std` now →
+OmniBus, witness 0 errors + structure matches Perl exactly (sections 7=7, paras
+92=92, Math 36=36, bibitems 103=103, `\address` 1=1); `cargo test` 1344/0. BROAD
+fix: corrects any unbound class that ci-prefix-collided with a short binding.
+
 **2026-05-30 — FIXED Rust-only: lmcs.cls binding loaded `amsart` (no `thm`/`lem`)
 instead of Perl's OmniBus fallback.** Witness 1607.01886
 (`\documentclass{lmcs}`): RUST 3 → 0 (`undefined:{thm}`, `undefined:{lem}`,
