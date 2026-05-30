@@ -45,6 +45,22 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — `\shortauthors` should gobble (Perl), not preserve (Rust-only `&`
+error).** 0709.4236 (aastex): RUST 1 error → 0 (Perl clean). Found via a fresh
+strict-gated mini-sweep of bucket 0709 (173 papers, 1 genuine Rust-only). Root:
+our aas_support/ams_support/OmniBus all defined `\shortauthors{}` →
+`\@add@frontmatter{ltx:note}[role=shortauthors]{#1}` (a Rust-over-Perl
+content-preservation), but **Perl GOBBLES `\shortauthors`** (`aas_support` L83
+`''`, `ams_support` L82 / `OmniBus` L75 `Tokens()`) — "not useful?, redundant
+with `\author`". Preserving it digests the running-head content, and when an
+author writes a literal `&` ("and" typo for `\&`, e.g.
+`\shortauthors{Riaz, Gizis & Sammaddar}`) the catcode-4 `&` hits the stray-`&`
+error constructor (no alignment open; Perl's `&` constructor is identical, but
+Perl never digests the gobbled content). Fix: gobble `\shortauthors` in all three
+bindings, matching Perl (full authors preserved via `\author`; running head is
+layout-only). Bisected the cascade-free single error to `\shortauthors`.
+`aas_support_sty.rs`, `ams_support_sty.rs`, `omnibus_cls.rs`. `cargo test` 1344/0.
+
 **2026-05-29 — clean single-root FATAL_3 pool exhausted; gate-reliability lesson.**
 Surveyed all 151 FATAL_3 logs; re-tested/gated the distinctive non-`_`/`^` ones.
 The clean single-root cases this session all landed (void-box 1907.04219, autoload

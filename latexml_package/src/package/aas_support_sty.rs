@@ -67,8 +67,15 @@ LoadDefinitions!({
 
   // 2.1.5 Running Heads
   DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\shortauthors{}",
-    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // Perl `aas_support.sty.ltxml` L83: `DefMacro('\shortauthors{}', '')` — GOBBLE
+  // (comment: "not useful?", "redundantly with an \author macro"). We previously
+  // preserved it as `ltx:note[role=shortauthors]` (Rust-over-Perl), but (a) it
+  // duplicates `\author`, and (b) digesting its content errors when an author
+  // writes a literal `&` (an "and" typo for `\&`) in the running head — the
+  // catcode-4 `&` hits the stray-`&` constructor (no alignment open). Witness
+  // 0709.4236 (`\shortauthors{Riaz, Gizis & Sammaddar}`): RUST 1 error → 0
+  // (Perl clean). Match Perl: gobble.
+  def_macro_noop("\\shortauthors{}")?;
   DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
   // \lefthead{author} / \righthead{title} — running-header text;
   // preserve as ltx:note (was gobbled).

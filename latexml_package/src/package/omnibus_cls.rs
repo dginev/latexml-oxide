@@ -133,8 +133,10 @@ LoadDefinitions!({
   DefMacro!("\\runningtitle{}",
     "\\@add@frontmatter{ltx:toctitle}{#1}");
   Let!("\\runninghead", "\\runningtitle");
-  DefMacro!("\\shortauthors{}",
-    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // Perl `OmniBus.cls.ltxml` L75: `DefMacro('\shortauthors{}', Tokens())` —
+  // gobble (redundant running head). Match Perl; preserving it errored on a
+  // literal `&` in the running head. See 0709.4236 and aas_support_sty.rs.
+  def_macro_noop("\\shortauthors{}")?;
   // \authors{author list} — alternative to \author; preserve as
   // author list note.
   DefMacro!("\\authors{}",
