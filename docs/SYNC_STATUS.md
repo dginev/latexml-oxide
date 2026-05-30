@@ -1179,6 +1179,19 @@ byte-identical to Perl `auto_keywords`).
   `f68e48b566`) are fixed and validated. Rust-only errors remain EXHAUSTED across
   the sampled regions; remaining flags are SHARED or Rust-already-better-than-Perl.
 
+* **Convergence validation cont. — deeper-ID histogram (2026-06-04).** A 3rd-angle
+  scan sampling **deeper ID ranges** (papers 300–450 of 10 fresh months, ~1,500
+  papers) with a full `Error:CATEGORY:` histogram: only **7 papers had any error**
+  (~0.5%), all in known categories (`unexpected`/`misdefined`/`malformed`/
+  `missing_file`). Per-paper Perl gate: all **SHARED or Rust-better** — 2103.00851
+  (`\lx@begin@alignment`, Perl ALSO fails complete=0), 0904.0768 (`_`-text, Rust 91
+  vs Perl 99), astro-ph0703603 (XMApp-in-`<p>`, both 2), 0904.0643/1902.00625
+  (mdwmath `#`, Rust ≤ Perl), 2103.00774 (braced `\lemma`/`\theorem`). **Braced-
+  theorem fix validated on a 3rd witness:** 2103.00774 at exact content-parity
+  (Rust 1160 `<Math>` == Perl 1160; 14 `}` errors SHARED) — joins 1905.00186 and
+  2007.00292. Cumulative this arc: ~13,500 papers scanned across ~40 months, zero
+  fresh clean Rust-only errors beyond the two already fixed.
+
 * **FIXED: mathpartir `\inferrule` bare math in text mode → `XMApp`-in-`<td>`
   (2026-05-31).** Witness **1404.0085** (`eptcs`, DCM 2013; π-calculus reduction
   rules as `\inferrule[…]{…}{…}` bare inside `\begin{tabular}{c}`). Rust emitted
