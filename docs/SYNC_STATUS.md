@@ -338,6 +338,17 @@ PERL 0; `cargo test --tests` 1344/0, clippy clean (no new warnings). (The
 genuinely-unbound deps-scan question remains live only for path-prefixed
 raw-loaded classes like JINST 1504.01965, which is a separate trade-off.)
 
+**2026-05-31 — FIXED Rust-only: `scipost_cls` contrib binding omitted
+`subcaption`.** Witness 1606.01173 (`\documentclass{SciPost}`,
+`\begin{subfigure}{.5\textwidth}`): RUST 1 → 0 (`{subfigure} is not defined`).
+SciPost.cls L20 does `\RequirePackage{subcaption}` (provides the
+`{subfigure}`/`{subtable}` environments); our `scipost_cls` binding mirrors the
+class's `\RequirePackage` list but had omitted subcaption. Fix: add
+`RequirePackage!("subcaption")` after caption. `subcaption_sty` already defines
+`{subfigure}` (L72) and works standalone. Same incomplete-binding class as
+wlscirep (babel) / scrartcl (iftex). Verified RUST 1 → 0 = PERL 0; `cargo test
+--tests` 1344/0, clippy clean.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
