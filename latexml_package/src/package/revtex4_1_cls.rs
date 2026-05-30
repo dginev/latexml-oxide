@@ -66,10 +66,12 @@ LoadDefinitions!({
   LoadClass!("article");
   RequirePackage!("revtex4_support");
 
-  // Perl revtex4-1.cls.ltxml L60-63: auto-load `<jobname>.rty` if present.
-  // Same convention as revtex4 — paper-local macros stashed in .rty file.
-  Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
-  // Load AMS packages that were requested via options
+  // Load the AMS packages requested via options BEFORE the `.rty` input.
+  // Perl revtex4-1.cls.ltxml runs `map { RequirePackage($_) } @revtex_toload`
+  // (L58) *before* the `\jobname.rty` load (L60-63). A paper-local `.rty`
+  // that uses an AMS macro — e.g. `\DeclareMathOperator` in HSWS.rty
+  // (witness 1508.02642, `\documentclass[…,amsmath,…]{revtex4-1}`) — would
+  // otherwise hit it undefined. Rust previously loaded the `.rty` first.
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
     if state::lookup_bool(&s!("revtex_load_{}", pkg)) {
       RequirePackage!(*pkg);
@@ -78,6 +80,10 @@ LoadDefinitions!({
   if state::lookup_bool("revtex_load_graphics") {
     RequirePackage!("graphics");
   }
+
+  // Perl revtex4-1.cls.ltxml L60-63: auto-load `<jobname>.rty` if present.
+  // Same convention as revtex4 — paper-local macros stashed in .rty file.
+  Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
 
   // revtex4-1.cls L1965: `\providecommand\doi[0]{\begingroup\@sanitize@url\@doi}`
   // — `\@sanitize@url` makes URL special chars (incl. `%`) catcode-other

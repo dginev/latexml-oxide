@@ -66,11 +66,12 @@ LoadDefinitions!({
   load_class("article", Vec::new(), Tokens!())?;
   RequirePackage!("revtex4_support");
 
-  // Perl revtex4.cls.ltxml L60-62: auto-load `<jobname>.rty` if present.
-  // Papers like cond-mat0201306 stash paper-local macros (`\TR`, `\GC`,
-  // `\bracketOpen` etc.) in this file via revtex's runtime convention.
-  Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.
+  // Load AMS packages BEFORE the `.rty` input — Perl revtex4.cls.ltxml runs
+  // `map { RequirePackage($_) } @revtex_toload` (L58) before the L61-62
+  // `\jobname.rty` load, so a paper-local `.rty` using an AMS macro (e.g.
+  // `\DeclareMathOperator`) finds it defined. Faithful order (sister fix to
+  // revtex4_1_cls.rs, witness 1508.02642).
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
     if state::lookup_bool(&s!("revtex_load_{}", pkg)) {
       RequirePackage!(*pkg);
@@ -79,4 +80,9 @@ LoadDefinitions!({
   if state::lookup_bool("revtex_load_graphics") {
     RequirePackage!("graphics");
   }
+
+  // Perl revtex4.cls.ltxml L60-62: auto-load `<jobname>.rty` if present.
+  // Papers like cond-mat0201306 stash paper-local macros (`\TR`, `\GC`,
+  // `\bracketOpen` etc.) in this file via revtex's runtime convention.
+  Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
 });
