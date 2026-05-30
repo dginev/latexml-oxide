@@ -1192,6 +1192,28 @@ byte-identical to Perl `auto_keywords`).
   2007.00292. Cumulative this arc: ~13,500 papers scanned across ~40 months, zero
   fresh clean Rust-only errors beyond the two already fixed.
 
+* **FIXED: babel `\dateUSenglish`/`\captionsenglish` for direct multi-variant
+  use (2026-06-06, `e912df8295`).** Mined the canvas failure histogram (stages
+  51–73 + R-stages): of the non-cluster recorded-error types, 4 of 5 were already
+  STALE (`\@inpenc@test`, `\lst@RequireAspects`, `\hbox_unpack_clear:N`,
+  `\epstopdfDeclareGraphicsRule` all convert err=0 now), but **`\dateUSenglish`
+  (30 papers) was still live.** Witness 1508.06150/1510.03643
+  (`\usepackage[british,USenglish]{babel}` / `[british,american]`): Rust errored on
+  `\dateUSenglish`+`\captionsenglish` undefined, Perl clean. Modern babel's `.ini`
+  path only defines the per-variant `\captions<v>`/`\date<v>` hooks for the variant
+  whose `.ini` actually loaded; a multi-variant english list then invokes an
+  un-loaded variant's hook. The `.ldf` loaders (`babel_lang_stubs::load_*`) are
+  bypassed by the `.ini` path, and `english.sty`'s aliasing loop only fires for
+  `\usepackage{english}`. Fix: backfill the english-family hooks at the end of
+  babel.sty's load via `\@ifundefined` guards (no override; captions stay English;
+  `\date<v>`→`\dateenglish`). Subtlety: NO `\makeatletter/\makeatother` — RawTeX
+  already has `@` as a letter, and `\makeatother` would leave `@` catcode-12 and
+  break babel's later `\l@<lang>` parsing. **5/6 sampled `\dateUSenglish` papers now
+  err=0** (1510.03643, 1605.06691, 1608.02901, 1701.08491, 1702.04963). Tests
+  1344/0. **Residual:** 1508.06150 has a separate, deeper `\selectlanguage{british}`
+  language-REGISTRATION issue (`\l@british` not registered for the sub-variant) that
+  the hook fix merely un-masked — deferred.
+
 * **Canvas-failure re-validation against ACTUAL recorded failures (2026-06-05).**
   Instead of fresh random samples, re-ran the canvas's **own recorded failure logs**
   (`large_scale_canvas_3/canvas/stage_*/failures/`, from an older binary) with the
