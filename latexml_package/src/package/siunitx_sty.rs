@@ -249,17 +249,29 @@ fn six_begin_processing(kv: Option<&KeyVals>) {
   if let Some(kv) = kv {
     six_setup(kv);
   }
-  // Redefine input-protect-tokens: make each CS token into T_OTHER of its name
+  // Perl L98-100: `Let($token, T_OTHER($name))` — make each input-protect
+  // CS *let-equal to a non-expandable character token* of its own name, so a
+  // later `Expand($expr)` in `\num` leaves the CS in place (instead of
+  // expanding it to its `\def` body) and it then matches the `input-symbols`
+  // list, which holds the same CS. This MUST be a let-to-char (`Stored::Token`),
+  // NOT an expandable macro: an expandable redefinition still expands (e.g.
+  // `\def\odd{\xi}` → `\odd` → `\xi`) and the now-bare `\xi` fails to match
+  // `input-symbols={\odd}`, yielding `Not matched in \num: \xi`. Witness:
+  // si.tex L98-100 `\num[input-symbols=\odd, input-protect-tokens=\odd]{3\odd}`.
   if let Some(Stored::Tokens(protect)) = six_get_sym(six_pin!("input-protect-tokens")) {
+    // A control sequence token has catcode CS (or ACTIVE) AFTER tokenization —
+    // NOT ESCAPE (catcode 0, the pre-tokenization backslash *character*). The
+    // prior `== Catcode::ESCAPE` guard was therefore always false, so the
+    // protect-token redefinition never fired and `input-protect-tokens` was a
+    // silent no-op (the root cause of the `\xi` long tail). Perl
+    // (`six_begin_processing` L98-100) applies `Let` to every token in the
+    // list unconditionally; restrict to CS/active so `getCSName`/name-trim is
+    // well-defined.
     for token in protect.unlist() {
-      if token.get_catcode() == Catcode::ESCAPE {
+      if token.get_catcode().is_active_or_cs() {
         let name = token.to_string();
         let other_name = name.trim_start_matches('\\');
-        let expansion = Tokens::new(vec![T_OTHER!(other_name)]);
-        if let Ok(def) = Expandable::new(token, None, Some(ExpansionBody::Tokens(expansion)), None)
-        {
-          state::install_definition(def, None);
-        }
+        state::assign_meaning(&token, Stored::Token(T_OTHER!(other_name)), None);
       }
     }
   }
@@ -374,6 +386,22 @@ fn six_match_keys(tokens: &mut Vec<Token>, keys: &[SymStr]) -> Option<Tokens> {
   } else {
     Some(Tokens::new(matched))
   }
+}
+
+/// Perl `six_match1($token, @keys)`: non-consuming test of whether a *single*
+/// leading token belongs to any of the named option lists (used by the column
+/// pre-peel loop to decide whether a leading control sequence is an
+/// input-symbol/comparator/protect-token — which stays for number matching —
+/// or surrounding formatting material — which is peeled into `pre`).
+fn six_token_matches_keys(tok: &Token, keys: &[SymStr]) -> bool {
+  for key in keys {
+    if let Some(Stored::Tokens(toks)) = six_get_sym(*key) {
+      if toks.unlist().iter().any(|m| tok == m) {
+        return true;
+      }
+    }
+  }
+  false
 }
 
 fn six_match_sign(tokens: &mut Vec<Token>) -> Option<Tokens> {
@@ -1365,6 +1393,38 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   );
 
   i_dual(&[], content, Tokens::new(list_pres), items).unwrap_or_default()
+}
+
+/// Perl siunitx.sty.ltxml L1379-1399 `DefColumnType('S'|'s' Optional, …)`: add
+/// an alignment column whose `before`/`after` wrap each cell as
+/// `{ \lx@si@column@prep[kv] <parse> <cell> \lx@si@column@end }`, routing the
+/// cell through the SI parser so table numbers/units render in MATH mode (like
+/// `\num`/`\si`). `parse_cs` is `\lx@SI@column@parse` (number parse, the `S`
+/// column) or `\lx@si@column@parse` (unit parse, the lowercase `s` column).
+/// The Rust S/s columns used to be stubs (default Cell, no before/after) →
+/// cells rendered as bare text, never `<ltx:Math>`. Witness 1909.01486
+/// (siunitx `S[table-format=…]` tables: RUST 303 Math vs PERL 578; table@671
+/// RUST 6 vs PERL 174).
+fn add_si_column(kv: Option<Tokens>, parse_cs: &str) {
+  let mut before: Vec<Token> = vec![T_BEGIN!(), T_CS!("\\lx@si@column@prep")];
+  if let Some(kv) = kv {
+    if !kv.is_empty() {
+      before.push(T_OTHER!("["));
+      before.extend(kv.unlist());
+      before.push(T_OTHER!("]"));
+    }
+  }
+  before.push(T_CS!(parse_cs));
+  let after = Tokens!(T_CS!("\\lx@si@column@end"), T_END!());
+  with_current_build_template(|template_opt| {
+    if let Some(t) = template_opt {
+      t.add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens::new(before.clone())),
+        after: Some(after.clone()),
+        ..latexml_core::alignment::cell::Cell::default()
+      });
+    }
+  });
 }
 
 /// Perl siunitx.sty.ltxml L751-759: `sub six_wrap`. Reads color ONCE
@@ -2795,19 +2855,145 @@ LoadDefinitions!({
   // be consumed by the column-type reader; otherwise each character of the
   // option string leaks back into the tabular template parser as a separate
   // column letter (driver: 1904.04279 with `S[round-precision=1]`).
-  DefColumnType!("S Optional", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
-        ..latexml_core::alignment::cell::Cell::default()
-      })
-    });
+  // Perl L1401-1407: cell-prep (begin SI processing for this column's [kv])
+  // and the empty end-delimiter.
+  DefMacro!("\\lx@si@column@prep OptionalKeyVals:SIX", sub[(kv)] {
+    six_begin_processing(kv.as_ref());
+    six_enable_unit_macros(true);
+    Ok(Tokens!())
   });
-  DefColumnType!("s Optional", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
-        ..latexml_core::alignment::cell::Cell::default()
-      })
-    });
+  DefPrimitive!("\\lx@si@column@end", {});
+  // Perl L1414-1451 `\lx@SI@column@parse` (the `S`, number column): read the
+  // cell up to `\lx@si@column@end`, peel leading "surrounding material" —
+  // spaces, leading non-symbol control sequences (formatting like `\bfseries`,
+  // `\color`), and whole braced groups — into `pre`, parse the rest as a
+  // number (NO error on leftover, UNLIKE `\num`), then emit
+  // `pre + {\color{…}}?six_wrap(result) + post`. A leading `\color` cancels
+  // the column's auto-color (Perl L1429).
+  DefMacro!("\\lx@SI@column@parse XUntil:\\lx@si@column@end", sub[args] {
+    use latexml_core::token::Catcode;
+    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let doparse = six_get_bool_sym(six_pin!("parse-numbers"));
+    let mut color = six_get_tokens_sym(six_pin!("color"));
+    let mut pre: Vec<Token> = Vec::new();
+    let color_cs = T_CS!("\\color");
+    loop {
+      match tokens.first().map(|t| t.get_catcode()) {
+        // SPACE, or (parsing AND a leading CS that is NOT an
+        // input-comparator/protect-token/symbol) → peel into `pre`.
+        Some(Catcode::SPACE) => { pre.push(tokens.remove(0)); },
+        Some(Catcode::ESCAPE) if doparse
+          && !six_token_matches_keys(&tokens[0], &[
+            six_pin!("input-comparators"),
+            six_pin!("input-protect-tokens"),
+            six_pin!("input-symbols")]) => {
+          if tokens[0] == color_cs { color = Tokens::new(vec![]); }
+          pre.push(tokens.remove(0));
+        },
+        Some(Catcode::BEGIN) => {
+          let mut depth = 0i32;
+          let mut i = 0usize;
+          while i < tokens.len() {
+            match tokens[i].get_catcode() {
+              Catcode::BEGIN => depth += 1,
+              Catcode::END => { depth -= 1; if depth == 0 { i += 1; break; } },
+              _ => {},
+            }
+            i += 1;
+          }
+          pre.extend(tokens.drain(0..i));
+        },
+        _ => break,
+      }
+    }
+    let (result, mut post): (Tokens, Vec<Token>) = if doparse {
+      let mut toks = six_apply_mathligatures(tokens);
+      let parsed = six_postprocess(six_match_number(&mut toks));
+      let res = match parsed {
+        Some(num) => six_format_number(&SixParseResult::Parsed(num), 0),
+        None => Tokens!(),
+      };
+      (res, toks)
+    } else {
+      (Tokens::new(tokens), Vec::new())
+    };
+    // Perl L1445-1447: color wraps the result (pre … {\color{c} result } … post).
+    if !color.is_empty() {
+      pre.push(T_BEGIN!());
+      pre.push(color_cs);
+      pre.push(T_BEGIN!());
+      pre.extend(color.unlist());
+      pre.push(T_END!());
+      post.insert(0, T_END!());
+    }
+    six_end_processing();
+    let mut out: Vec<Token> = pre;
+    if !result.is_empty() {
+      out.extend(six_wrap(result).unlist());
+    }
+    out.extend(post);
+    Ok(Tokens::new(out))
+  });
+  // Perl L1454-1485 `\lx@si@column@parse` (the lowercase `s`, UNIT column):
+  // peel leading spaces / braced groups into `pre`, then parse the remainder
+  // as UNITS (`six_convertUnits`/`six_parse_units`/`six_format_units`, via the
+  // shared `six_process_units` used by `\si`) rather than as a number. Color
+  // wraps the whole cell (Perl L1479-1481: `{\color{c} pre result post }`).
+  DefMacro!("\\lx@si@column@parse XUntil:\\lx@si@column@end", sub[args] {
+    use latexml_core::token::Catcode;
+    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let color = six_get_tokens_sym(six_pin!("color"));
+    let mut pre: Vec<Token> = Vec::new();
+    loop {
+      match tokens.first().map(|t| t.get_catcode()) {
+        Some(Catcode::SPACE) => { pre.push(tokens.remove(0)); },
+        Some(Catcode::BEGIN) => {
+          let mut depth = 0i32;
+          let mut i = 0usize;
+          while i < tokens.len() {
+            match tokens[i].get_catcode() {
+              Catcode::BEGIN => depth += 1,
+              Catcode::END => { depth -= 1; if depth == 0 { i += 1; break; } },
+              _ => {},
+            }
+            i += 1;
+          }
+          pre.extend(tokens.drain(0..i));
+        },
+        _ => break,
+      }
+    }
+    // Perl L1472: drop a trailing `\lx@column@trimright` sentinel if present.
+    if tokens.last().map(|t| *t == T_CS!("\\lx@column@trimright")).unwrap_or(false) {
+      tokens.pop();
+    }
+    let result = six_process_units(&Tokens::new(tokens));
+    let mut post: Vec<Token> = Vec::new();
+    let mut pre_out: Vec<Token> = Vec::new();
+    // Perl L1479-1481: color wraps EVERYTHING (`{\color{c}` at the FRONT).
+    if !color.is_empty() {
+      pre_out.push(T_BEGIN!());
+      pre_out.push(T_CS!("\\color"));
+      pre_out.push(T_BEGIN!());
+      pre_out.extend(color.unlist());
+      pre_out.push(T_END!());
+      post.push(T_END!());
+    }
+    pre_out.extend(pre);
+    six_end_processing();
+    let mut out: Vec<Token> = pre_out;
+    if !result.is_empty() {
+      out.extend(six_wrap(result).unlist());
+    }
+    out.extend(post);
+    Ok(Tokens::new(out))
+  });
+  // Perl L1379-1399: `S` → number parse, lowercase `s` → unit parse.
+  DefColumnType!("S Optional", sub[args] {
+    add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@SI@column@parse");
+  });
+  DefColumnType!("s Optional", sub[args] {
+    add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
   });
 
   //======================================================================

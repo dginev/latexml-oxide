@@ -45,6 +45,40 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — FIXED Rust-only: siunitx S/s table columns were STUBS + the
+`input-protect-tokens` catcode no-op.** Driver witness 1909.01486
+(`elsarticle-template-1-num.tex`, both engines 0 errors but RUST 426KB vs PERL
+734KB — silent content/fidelity loss caught by the **output-size sweep**, not
+error-gating): siunitx `S[table-format=…]` column cells rendered numbers as
+plain TEXT instead of `<ltx:Math>` (RUST 303 Math → PERL 578). Root: Rust's
+`DefColumnType!('S'|'s' Optional)` were bare stubs (default `Cell`, no
+`before`/`after`), so cell content never went through the SI number/unit parser.
+Ported Perl siunitx.sty.ltxml **L1379-1485** faithfully: `\lx@si@column@prep`
+(begin SI processing for the column `[kv]`), `\lx@SI@column@parse`
+(the `S`/number column — peel leading spaces / non-symbol control sequences /
+braced groups into `pre`, `six_match_number` the rest, per-cell color, wrap the
+parsed part in inline math), and the distinct `\lx@si@column@parse` (the
+lowercase `s`/UNIT column — `six_process_units` like `\si`, not the number
+parser — **this fixed the `^ Script ^ can only appear in math mode` error** on
+`\si{m.s^{2}}`/`\kilogram` cells that my first cut wrongly routed through the
+number parser). Cell `before`/`after` wrap each cell during alignment digestion
+(numprint `n`/`N` columns are the proven analog). **Second, deeper root cause**
+(the `\xi` long tail, `Not matched in \num: \xi` ×3): `six_begin_processing`'s
+`input-protect-tokens` redefinition was a **silent no-op** — it guarded on
+`token.get_catcode() == Catcode::ESCAPE`, but a control sequence has catcode
+**`CS`** after tokenization (`ESCAPE` is the pre-tokenization backslash *char*),
+so the loop body never ran. AND it (would have) installed an **expandable** macro
+`\odd → odd`, whereas Perl (`six_begin_processing` L98-100) does
+`Let($token, T_OTHER($name))` — a **let-to-non-expandable-char**
+(`Stored::Token`), so a later `Expand($expr)` in `\num` leaves the protected CS
+in place to match the `input-symbols` list (an expandable redefinition still
+expands `\def\odd{\xi}` → `\xi`, which then fails to match `input-symbols={\odd}`).
+Fixed both: guard `is_active_or_cs()`, assign `Stored::Token(T_OTHER(name))`.
+**Results**: si.tex 8 errors → **0** (Perl parity), Math 514→**675** (Perl 682);
+fixture `td`/`tr`/`table`/`caption` now **exact-match** Perl (811/253/28/28);
+witness 1909.01486 Math 303→**578** (= Perl 578 exactly), 426KB→529KB.
+`siunitx_sty.rs`, regenerated `tests/complex/si.xml`. `cargo test` **1344/0**.
+
 **2026-05-29 — `\shortauthors` should gobble (Perl), not preserve (Rust-only `&`
 error).** 0709.4236 (aastex): RUST 1 error → 0 (Perl clean). Found via a fresh
 strict-gated mini-sweep of bucket 0709 (173 papers, 1 genuine Rust-only). Root:
