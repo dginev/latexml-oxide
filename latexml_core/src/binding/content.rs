@@ -1797,6 +1797,41 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // Perl L2776: strip comments (replacement empty).
   let code = COMMENT_RE.replace_all(&code, "");
 
+  // DIVERGENCE FROM PERL (deliberate, more-robust): only dep-load a
+  // `\usepackage` / `\RequirePackage` that sits at TeX brace-depth 0 — i.e. an
+  // UNCONDITIONAL top-level load. A require nested inside a `{…}` group is the
+  // body of a `\newcommand` / `\def` / `\DeclareOption` / `\@ifundefined` etc.
+  // and only loads if that macro/branch actually fires — exactly the deferred
+  // pattern the dep-scan must NOT eagerly force. (Perl never force-loads these:
+  // for a normally raw-loaded `.sty` it doesn't dep-scan at all, and for the
+  // binding-bypass case the bundled deps it DOES want are top-level `\usepackage`
+  // at depth 0.) Witness: 1506.06200 — categorytheory.sty has
+  // `\newcommand{\usediagrams}{\usepackage[…]{diagrams}}` (never invoked); the
+  // naive scan force-loaded the `diagrams` stub, whose `locked` `\begin{diagram}`
+  // shadowed the paper's own tikz-based `{diagram}` (from diags.sty) → spurious
+  // `Error:undefined:{diagram}`. The depth filter also subsumes the
+  // multi-option-set heuristic below for the common single-option case.
+  let depth_at = |start: usize| -> i32 {
+    let mut depth = 0i32;
+    let mut esc = false;
+    for ch in code[..start].chars() {
+      if esc {
+        esc = false;
+        continue;
+      }
+      match ch {
+        '\\' => esc = true,
+        '{' => depth += 1,
+        '}' => depth -= 1,
+        _ => {},
+      }
+    }
+    depth
+  };
+  let top_level = |cap: &regex::Captures| -> bool {
+    cap.get(0).map(|m| depth_at(m.start()) <= 0).unwrap_or(true)
+  };
+
   // DIVERGENCE FROM PERL (deliberate, more-robust): skip a package that is
   // `\RequirePackage`'d / `\usepackage`'d with MULTIPLE CONFLICTING option
   // sets. This is the unmistakable signature of a require sitting inside a
@@ -1827,9 +1862,15 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     }
   };
   for cap in REQ_RE.captures_iter(&code) {
+    if !top_level(&cap) {
+      continue;
+    }
     note_optset(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
   for cap in USE_RE.captures_iter(&code) {
+    if !top_level(&cap) {
+      continue;
+    }
     note_optset(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
   let conflicting: rustc_hash::FxHashSet<String> = pkg_optsets
@@ -1858,10 +1899,16 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
 
   // Perl L2777: `\RequirePackage` first.
   for cap in REQ_RE.captures_iter(&code) {
+    if !top_level(&cap) {
+      continue;
+    }
     collect(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
   // Perl L2778-2779: `\usepackage` second.
   for cap in USE_RE.captures_iter(&code) {
+    if !top_level(&cap) {
+      continue;
+    }
     collect(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
 
@@ -1869,6 +1916,9 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let mut classes: Vec<(String, Option<String>)> = Vec::new();
   if ext_type == "cls" {
     for cap in CLS_RE.captures_iter(&code) {
+      if !top_level(&cap) {
+        continue;
+      }
       let class = cap[2].to_string();
       if !class.is_empty() {
         classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));

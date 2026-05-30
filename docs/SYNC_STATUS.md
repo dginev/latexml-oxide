@@ -128,6 +128,25 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-29 (cont.) — FIXED Rust-only: dep-scan force-loaded a package from a
+`\newcommand` body (witness 1506.06200).** `\usepackage[english,germanb]`-style
+sweep flipped 1506.06200 from **Rust 1 err** (`Error:undefined:{diagram} diagram
+has no support in diagrams.tex.ltxml`) to **0 err / 1.04 MB HTML** (Perl 0). Root
+cause: the paper's `categorytheory.sty` has `\newcommand{\usediagrams}{\usepackage
+[…]{diagrams}}` (a convenience macro that is **never invoked**; the real
+`{diagram}` env comes from the bundled tikz-based `diags.sty`). Rust's
+`maybe_require_dependencies` dep-scan (`content.rs`) regex-matched the
+`\usepackage{diagrams}` **inside the `\newcommand` body** and force-loaded the
+`diagrams` stub, whose `locked` `\begin{diagram}` shadowed diags.sty's real env →
+spurious error. Perl doesn't dep-scan a normally raw-loaded `.sty` at all, so it
+never loads the stub. Fix: the dep-scan now only enrolls `\usepackage` /
+`\RequirePackage` / `\LoadClass` at TeX **brace-depth 0** (unconditional
+top-level loads); a require nested in a `{…}` group is a deferred
+`\newcommand`/`\def`/`\DeclareOption`/`\@if…` body and is skipped (subsumes the
+prior multi-option-set heuristic for the single-option case). `cargo test --tests`
+**1344/0**; renamed-class bundled-dep witnesses (myaa/1504.05963,
+myclass/2202.11535) unaffected (their deps are top-level).
+
 **2026-05-29 (cont.) — FIXED Rust-only: pstricks shape commands swallowed
 the document after `\put` (witness 1112.2096).** Fresh sweep (buckets
 0902/1112/1506/1911) flipped 1112.2096 from **Rust 9 err / FATAL-ish cascade**
