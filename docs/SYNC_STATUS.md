@@ -2419,6 +2419,36 @@ duplicated-id XMDual — math parser), 1509.06785 (accent-in-csname env —
 robust-CS cluster), 1604.06057 (`\nipsfinalcopy` — bundled NIPS style),
 1608.02559 (`\bond`), 1511.09190 (`\pFqskip`), 1701.02312 (para-in-table).
 
+### Round-37 (2026-05-30): CONVERR_3 gate sweep — 3 fixes (incl. core load_class)
+
+Re-confirmed the stale failure logs are unreliable (the 181-paper `ctable after
+tikz` cluster is ALREADY resolved by the `\ifpdf`=false change — all sampled
+witnesses now `ctable_err=0`, 9/12 fully convert). Gated CONVERR_3 fresh:
+
+* **1504.01965 FIXED (core load_class)** — `\documentclass{JINST-Sample-files/
+  JINST}` (path-prefixed). Perl resolves a path-prefixed class to its basename
+  BINDING if one exists, else OmniBus (it loads IEEEtran.cls.ltxml for
+  `misc/ieeetran`, OmniBus for JINST). Our load_class had a `&& !has_path_prefix`
+  exception that FORCE-raw-loaded any directory-prefixed class; JINST.cls's
+  raw load is semantically incomplete (begin-document `\author`/`\abstract`
+  checks fire + `\abstract@cs` undefined). Dropped the exception (notex =
+  !INCLUDE_CLASSES) and extended the fallback `alternate` search to strip the
+  path and match the basename binding (ci equality). JINST → OmniBus (Perl
+  parity); misc/ieeetran (2105.02087) still → IEEEtran. RUST 3 → 0.
+* **1803.00942 FIXED** — `\comment{\ref{…}}` undefined. icml2018.sty L709
+  `\long\def\comment#1{}` (gobble-arg review macro); our icml_support binding
+  (intercepts icml2016/17/18) omitted it. Reached via arxiv.sty →
+  `\RequirePackage{icml2018}`. Added `\comment{}`→empty. RUST 1 → 0.
+* **1904.12329 FIXED** — dmtcs-episciences `\received`/`\revised`/
+  `\acknowledgements` undefined. The contrib binding based itself on `article`;
+  Perl (no binding) uses OmniBus, which defines those generic frontmatter
+  macros. Switched the binding's base from article → OmniBus. RUST 3 → 0.
+
+Triaged/deferred (current Rust-only but deep): 1704.00705 / 1901.07312 /
+1901.08716 (pgfplots `symbolic x coords` coordinate-resolution `\GenericError`,
+recurring), 1610.06392 (`^`/`_`-in-text), 1607.05728 (ltx:p malformed in
+tabular inline-block).
+
 ### Round-37 (2026-05-30): CONVERR_2 gate sweep — scrartcl fix + url diagnosis
 
 * **1702.04336 FIXED** — `\sectfont` / `\size@chapter` undefined under scrartcl.
