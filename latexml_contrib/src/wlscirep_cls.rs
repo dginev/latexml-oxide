@@ -11,6 +11,13 @@ LoadDefinitions!({
   // gets babel that way (its dependency-scan loads babel) — is clean. Load it.
   // Witness 1603.09243 (`\addto\captionsenglish{\renewcommand\figurename{…}}`).
   RequirePackage!("babel", options => vec!["english".to_string()]);
+  // wlscirep.cls L5: `\RequirePackage{multicol}` — the class loads multicol so
+  // papers can wrap the body in `\begin{multicols}{2}…\end{multicols}` for the
+  // two-column Scientific-Reports layout without an explicit `\usepackage`.
+  // Perl raw-loads the .cls and gets multicol that way; our binding mirrors the
+  // RequirePackage list but had omitted it, so `\begin{multicols}` errored
+  // `{multicols} is not defined`. Witness 1601.07750 (`\begin{multicols}{2}`).
+  RequirePackage!("multicol");
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
