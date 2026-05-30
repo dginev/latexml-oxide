@@ -158,6 +158,33 @@ LoadDefinitions!({
   // \begin{document} opens (and base_schema's after_open reads it).
   RawTeX!(r"\lx@babel@activate@mainlang");
 
+  // English-family caption/date/extras hook backfill. Modern babel's .ini
+  // path defines the per-variant `\captions<v>`/`\date<v>`/`\extras<v>`
+  // hooks only for the variant(s) whose .ini actually loaded (e.g.
+  // babel-british for `[british]`). A paper listing SEVERAL english
+  // variants — `\usepackage[british,USenglish]{babel}` — then invokes a
+  // variant whose .ini never ran (`\dateUSenglish`) or the `\captionsenglish`
+  // base, erroring at `\selectlanguage`/option dispatch. The classic .ldf
+  // loaders (`babel_lang_stubs::load_*`) also miss this because the .ini
+  // path bypasses them, and `english.sty`'s aliasing loop only runs for
+  // `\usepackage{english}`, not a direct `\usepackage[...]{babel}`. Backfill
+  // with `\@ifundefined` guards: never overrides a real definition; captions
+  // stay English (our HTML default); `\date<v>` aliases to `\dateenglish`
+  // (keeps `\today` faithful). Runs after babel's own option processing
+  // (InputDefinitions above), before the invocation in later preamble.
+  // Witness arXiv:1508.06150 (`\usepackage[british,USenglish]{babel}`); Perl rc=0.
+  // NB: no \makeatletter/\makeatother — RawTeX already digests with `@` as a
+  // letter; emitting \makeatother here would leave `@` catcode-12 globally and
+  // break babel's later `\l@<lang>`/`\bbl@…` parsing (manifested as a spurious
+  // "haven't defined the language" error).
+  RawTeX!(r"%
+    \@ifundefined{dateenglish}{\@namedef{dateenglish}{}}{}%
+    \@for\lx@bbl@engtmp:={english,USenglish,UKenglish,american,british,canadian,australian,newzealand}\do{%
+      \@ifundefined{captions\lx@bbl@engtmp}{\expandafter\let\csname captions\lx@bbl@engtmp\endcsname\@empty}{}%
+      \@ifundefined{extras\lx@bbl@engtmp}{\expandafter\let\csname extras\lx@bbl@engtmp\endcsname\@empty}{}%
+      \@ifundefined{noextras\lx@bbl@engtmp}{\expandafter\let\csname noextras\lx@bbl@engtmp\endcsname\@empty}{}%
+      \@ifundefined{date\lx@bbl@engtmp}{\expandafter\let\csname date\lx@bbl@engtmp\endcsname\dateenglish}{}}");
+
   // Override `\shorthandoff` / `\shorthandon` to no-op. Babel's raw
   // implementation (babel.sty L1492-1496) iterates the argument and
   // calls `\bbl@switch@sh` for each character, which fires
