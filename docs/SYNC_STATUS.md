@@ -144,6 +144,27 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: LaTeX 2.09 size aliases `\vpt`…`\xxvpt`
+blocked user `\newcommand` (witness 1801.08339).** A dump-path stub in
+`latex_constructs.rs` no-op-defined `\vpt`,`\vipt`,…,`\xxvpt` ("to help 1990s
+hep-th papers that USE `\xpt` as a font command"). But Perl's runtime leaves
+these UNDEFINED (only the `\@vpt`…`\@xxvpt` *dimensions* survive into the dump;
+the `\vpt` size-switches do not) — a paper that USES `\xpt` gets
+`undefined:\xpt` in Perl (verified SHARED). The stub (a) masked that SHARED Perl
+error and (b) made the CS already-defined, so a paper's own
+`\newcommand{\vpt}{\tilde{\varphi}}` (valid — `\vpt`/`\xpt` are NOT reserved in
+LaTeX 2e) was silently dropped; the now-empty `\vpt` then left its `^`/`_` to
+re-attack the previous atom → spurious double/triple sub/superscript. Witness
+1801.08339 (`c^3\vpt^\circ` → 8 Rust err, Perl 0): remove the stub → `\vpt`
+undefined like Perl → user macro wins (`tex="c^{3}\tilde{\varphi}^{\circ}"`) →
+**8→0**. `\xpt`-using papers now report `undefined:\xpt` identically to Perl (no
+`\edef\f@size` leak). Commit `06f517fb5d`, tests 1344/0. **Lesson:** a Rust-only
+*definition* of a non-reserved CS-name is just as much a paper-over as a
+Rust-only binding — if Perl leaves it undefined, so must we (the inverse of
+feedback_no_papering). Diagnosed via the macro-name being the trigger
+(`\m`=`\tilde{\varphi}` clean vs `\vpt`=`\tilde{\varphi}` broken) → `\meaning`
+probe.
+
 **2026-05-30 — FIXED Rust-only: `\mathstrut`/`\vphantom` empty-script drop →
 spurious double-subscript (witnesses 1803.08859, 1812.06766).**
 `\vort_e{}^{\mathstrut}_{t}` (`\vort`=`\vec{\omega}`) → **Rust "Double subscript"**
