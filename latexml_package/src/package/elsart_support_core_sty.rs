@@ -304,12 +304,32 @@ LoadDefinitions!({
   // `\keyword{Higgs; Boson}\end{abstract}` form the token after the strict
   // read is `\end` (a CS, not `}`), so nothing is gobbled. The peek is
   // bounded to one token, never crossing `\end`.
+  // Skip leading spaces and blank-line `\par`s, then gobble a single trailing
+  // `}` (catcode END) if one is there — Perl's `readBalanced` reads straight
+  // through the `\par` from a blank line before the stray brace (witness
+  // 1705.01354 separates `\keyword{…}` and the orphaned `}` by a blank line).
+  // The skipped whitespace/`\par` tokens are buffered and FULLY RESTORED when
+  // no trailing `}` follows, so the common `\keyword{…}\end{abstract}` form
+  // (and `\keyword{…}<blank>\end{abstract}`) is left byte-for-byte untouched.
+  // Bounded: stops at the first non-space, non-`\par` token; never crosses
+  // `\end`.
   DefPrimitive!("\\lx@elsart@gobble@optbrace", {
-    gullet::skip_spaces()?;
-    if let Some(tok) = gullet::read_token()? {
-      // Gobble a single trailing `}` (the elsart unbalanced-keyword idiom);
-      // otherwise leave the stream untouched.
-      if tok.get_catcode() != Catcode::END {
+    let mut skipped: Vec<Token> = Vec::new();
+    let mut found_brace = false;
+    while let Some(tok) = gullet::read_token()? {
+      let cc = tok.get_catcode();
+      if cc == Catcode::END {
+        found_brace = true; // gobble it (absorbed, like Perl's readBalanced)
+        break;
+      } else if cc == Catcode::SPACE || tok == T_CS!("\\par") {
+        skipped.push(tok); // tentatively skip; may be restored below
+      } else {
+        skipped.push(tok); // not a brace: restore everything consumed
+        break;
+      }
+    }
+    if !found_brace {
+      for tok in skipped.into_iter().rev() {
         gullet::unread_one(tok);
       }
     }
