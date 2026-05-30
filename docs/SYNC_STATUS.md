@@ -2388,6 +2388,37 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): CONVERR_1 gate sweep — 5 fixes
+
+Strict-gated 826 CONVERR_1 candidates from the R-stage failures against the
+current binary + Perl. Landed fixes:
+
+* **1702.01165 FIXED** — bib-section `#1`-leak (see detailed entry below).
+* **1505.03770 FIXED** — `\textQoppa` undefined. The `textgreek_sty` binding
+  (intercepts textalpha/textgreek/alphabeta, maps `\text<greek>` → Unicode)
+  mirrored the modern letters but omitted greek-fontenc's archaic set
+  (tuenc-greek.def L232-241). Added Qoppa/Stigma/Digamma/Koppa/Sampi (upper+
+  lower, U+03D8..U+03E1). RUST 1 → 0.
+* **1601.07750 FIXED** — `{multicols}` undefined under wlscirep. wlscirep.cls
+  L5 `\RequirePackage{multicol}`; the contrib binding mirrored the
+  RequirePackage list but omitted multicol. Added it. RUST 1 → 0.
+* **1601.01227 + 1705.01354 FIXED** — elsart `\begin{abstract}` mode-switch
+  leak. RESOLVES the documented deferred gap in `elsart_support_core_sty.rs`
+  (the trailing-`}` idiom that OOM'd the lenient-readBalanced port). elsart's
+  1-arg `\keyword` permits an abstract that ends `\keyword{…} <ws/par> } \end{
+  abstract}` (stray `}` = orphaned close of a commented-out group); Perl's
+  `readBalanced` absorbs the `}`, our strict read left it to close the abstract
+  box-group → "Attempt to close a group that switched to mode …". Fix: new
+  bounded `\lx@elsart@gobble@optbrace` primitive peeks past spaces/`\par` and
+  gobbles an optional trailing `}` (buffered+restored when absent, so the
+  common balanced form and the OOM-prone fixture are untouched). RUST 1 → 0 on
+  both, keywords captured identically to Perl.
+
+Triaged (not Rust-only-binding-shaped, deferred): 1505.01267 (XMApp-in-text +
+duplicated-id XMDual — math parser), 1509.06785 (accent-in-csname env —
+robust-CS cluster), 1604.06057 (`\nipsfinalcopy` — bundled NIPS style),
+1608.02559 (`\bond`), 1511.09190 (`\pFqskip`), 1701.02312 (para-in-table).
+
 ### Round-37 (2026-05-30): bib-section `#1`-leak FIXED (1702.01165)
 
 **1702.01165 FIXED** (llncs + IEEEtranN `.bbl`). Root cause: the paper does
