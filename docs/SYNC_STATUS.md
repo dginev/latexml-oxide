@@ -144,6 +144,27 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: pgfmath globally clobbered `\real` (witness
+1608.06741).** `\int_\real p_m` → **2 Rust "Double subscript" errors** (Perl 0).
+Root cause (NOT script_handler — `a_\relax b_m` errors identically in BOTH; the
+reduced `\int_\real p_m` is SHARED-clean): pgfmath defines seven calc-compat
+CSes (`\real`,`\minof`,`\maxof`,`\ratio`,`\widthof`,`\heightof`,`\depthof`) by
+`\let`-ing them to 1-arg `\pgfmath@calc@*` internals. Perl
+(`pgfmath.code.tex.ltxml` L320-327) does these `Let`s *inside* `sub pgfmathparse`
+— transient, per-parse, local scope, reverting with the tikz/pgf group. Rust had
+hoisted them to **package-load time** ("native parser can't re-bind per call"),
+globally clobbering `\real`=ℝ for the whole doc; the 1-arg `\pgfmath@calc@real`
+then ate the following `p`, filling `\int`'s subscript so the trailing `_m`
+double-scripted. (`\newcommand\real{\mathbb{R}}` was ignored in BOTH engines
+because mathtools→calc defines `\real` first — then pgfmath via todonotes→tikz
+overwrote it in Rust only.) Fix (`pgfmath_code_tex.rs`): drop the load-time
+`Let!`s; add `expand_pgfmath_arg` (save→let→expand→restore) around just the
+argument expansion in `\lx@pgfmath@parse`/`\lx@pgfmath@parseX`, replicating
+Perl's exact scope. `\pgfmathparse{\real{3.14}}` still resolves; `\real` as a
+math macro is untouched. **2 err → 0**, tests 1344/0. Commit `d2ab0a0bf9`.
+**Lesson:** package-load-time global `\let` of a common user CS-name is a
+divergence trap — if Perl binds it inside a parse/exec sub, bind it transiently.
+
 **2026-05-30 — FIXED Rust-only FATAL: stray `\endproof` over-popped the locked
 bottom frame (witness 1703.05010).** `\documentclass{svjour3}` + bare
 `$Proof.$ … \quad \endproof` (no `\begin{proof}`) → **Rust Fatal**
