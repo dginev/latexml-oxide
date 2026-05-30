@@ -70,6 +70,33 @@ decorative title-block rules). The Rust binding omitted them. Fix: add the two
 no-arg macros to `icml_support_sty.rs`, faithful to the raw defs. Same
 incomplete-binding class as lmcs/sn-jnl. `cargo test` 1344/0, clippy clean.
 
+**2026-05-30 — ROOT-CAUSE FIX (supersedes the per-marker accretion above for
+icml2019): raw-load the paper-bundled `icml2019.sty` like Perl instead of
+intercepting it.** Witness 1906.04409 (`\documentclass{article}` + bundled
+`arxiv.sty` → `\RequirePackage[accepted]{icml2019}`): RUST 1 → 0
+(`undefined:\icmlNiantic`). `\icmlNiantic` is a **paper-specific** author marker
+(`\newcommand{\icmlNiantic}{$\dagger$Currently working at Niantic Inc.}`,
+icml2019.sty L497) passed into `\printAffiliationsAndNotice{…}`. The shared
+`icml_support` binding intercepts the bundled .sty, so it never ran — and the
+binding had been accreting a *generic per-marker fallback* (`\icmlInternship`,
+`\airesident`, `\icmlIntern`, `\icmlOutsideContribution`, …) for every marker
+the corpus hit, a stopgap that loses each paper's real text and re-breaks on the
+next unseen marker (`\icmlNiantic` here). Root cause = the interception itself;
+its own comments admit "Perl ships no icml2019 binding and raw-loads the .sty."
+Verified the raw icml2019.sty loads **cleanly** under our engine (0 errors,
+`\icmlNiantic` renders). Fix: new `icml2019_sty.rs` that mirrors Perl —
+`InputDefinitions!("icml2019", noltxml)` raw-loads the bundled .sty (every
+per-paper marker survives with its genuine text), then `RequirePackage!(
+"icml_support")` re-applies the surpass-Perl frontmatter overrides on top.
+icml2019 registration in lib.rs repointed to it. Same `InputDefinitions(noltxml)
++ override` pattern as `algorithm_sty.rs`. Verified no regression: 1906.04409,
+1902.02603 (`\icmlInternship`), 1902.09574 (`\airesident`) all RUST 0 = PERL 0;
+"Niantic Inc." preserved (Perl's exact text). The remaining year registrations
+(icml2016-2018, 2020-2025) and the generic `icml` package still use the shared
+binding + fallbacks — extend the raw-load pattern to each as its bundled .sty is
+witnessed and verified clean. `cargo test` 1344/0, clippy clean (no new
+warnings).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an

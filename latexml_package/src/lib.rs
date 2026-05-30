@@ -383,7 +383,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   (
     "icml2019",
     "sty",
-    package::icml_support_sty::load_definitions,
+    package::icml2019_sty::load_definitions,
   ),
   (
     "icml2020",

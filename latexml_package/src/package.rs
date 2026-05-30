@@ -210,6 +210,7 @@ pub mod html_sty;
 pub mod hypcap_sty;
 pub mod hyperref_sty;
 pub mod hyperxmp_sty;
+pub mod icml2019_sty;
 pub mod icml_sty;
 pub mod icml_support_sty;
 pub mod ieeeconf_cls;
