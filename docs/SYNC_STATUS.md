@@ -45,6 +45,19 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — CHARACTERIZED (deferred, structure-dependent): hyperref
+`backref=page` → spurious bare `_` (`Script _ can only appear in math mode`).**
+Witnesses 1508.03915, 1509.01434 (both `amsart` + `\usepackage[…,backref=page,…]
+{hyperref}`). RUST 1-2 → (Perl 0). Confirmed `backref=page` is necessary
+(stripping it → 0 errors). Neither engine activates the actual backref machinery
+(`backref`/`pagebackref` are just stored as `Hyp` keyvals; no `\@bibitem`
+redefinition, no `\Hy@backout`), so the `_` is a SIDE-EFFECT, not backref text.
+Both papers have math in the article title (`$\overline{M}_{0,n}$`), but multiple
+minimal repros (title-math + backref, ±pdfusetitle, with cite + thebibliography)
+all FAIL to reproduce — the trigger needs the full paper's specific
+cite/label/title structure. Needs a full-paper bisection of the
+cite×bibliography×pdf-string interaction; deferred from this round.
+
 **2026-05-30 — FIXED Rust-only: IEEEtran `onecolumn`/`twocolumn` options were
 no-ops → `\ifCLASSOPTIONtwocolumn` stuck true → `Not in outer par mode`.**
 Witness 1508.02556 (`\documentclass[…,onecolumn,peerreview]{IEEEtran}` + `cuted`):
