@@ -2419,6 +2419,33 @@ duplicated-id XMDual — math parser), 1509.06785 (accent-in-csname env —
 robust-CS cluster), 1604.06057 (`\nipsfinalcopy` — bundled NIPS style),
 1608.02559 (`\bond`), 1511.09190 (`\pFqskip`), 1701.02312 (para-in-table).
 
+### Round-37 (2026-05-30): CONVERR_2 gate sweep — scrartcl fix + url diagnosis
+
+* **1702.04336 FIXED** — `\sectfont` / `\size@chapter` undefined under scrartcl.
+  Root cause: the OmniBus-based `scrartcl_cls` stub omits koma's `\sectfont` +
+  empty `\size@<unit>` font-hook family; `tocloft`, on detecting a KOMA class,
+  sets `\cfttoctitlefont` to `\size@chapter\sectfont` (chapter branch, fired
+  because OmniBus defines `\chapter`) so `\tableofcontents` expands them. Added
+  the koma font-hooks to `scrartcl_cls` (and proactively `scrbook_cls`). RUST
+  2 → 0. (Minimal scrbook+tocloft also fails in Perl — Perl's koma raw-load is
+  incomplete — so the scrbook half is a faithful surpass-Perl completion.)
+
+* **1503.07894 + 1904.12141 DEFERRED (url space-form, root cause found)** —
+  `{\url www.…/file.pdf}` (deprecated space-form) → `\endgroup Attempt to close
+  … boxing group`. Diagnosis: the control word `\url` gobbles its trailing
+  space at *tokenization*, and `\lx@url@url`'s `read_token` then returns the
+  pre-tokenized first URL char (`w`, catcode LETTER) as `open` — NOT the space
+  Perl's char-based mouth re-reads under `StartSemiverbatim`. Rust's
+  `begin_semiverbatim` flips catcodes for *future* tokenization but the URL
+  chars are already buffered as LETTERs, so the delimiter logic
+  (`close = open`) treats `w` as the delimiter and the read walks past the
+  enclosing `}` (which the `{`/`}`→OTHER demotion for the `\path|…|` case,
+  1906.08946, makes a literal char), leaving the boxing `{` unclosed. A correct
+  fix needs semiverbatim to re-tokenize buffered chars at the mouth (or a
+  url-specific re-read), not a delimiter tweak — same family as
+  [[project_robust_cs_semiverbatim_loop]]. Attempted a space-branch patch;
+  reverted (premise wrong — `open` is LETTER, not SPACE).
+
 ### Round-37 (2026-05-30): bib-section `#1`-leak FIXED (1702.01165)
 
 **1702.01165 FIXED** (llncs + IEEEtranN `.bbl`). Root cause: the paper does
