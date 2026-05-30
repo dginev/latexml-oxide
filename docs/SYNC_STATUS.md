@@ -144,6 +144,21 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: chapterbib `\lx@cb@unitname` Tokenize'd the unit
+name → `_`-in-text (witness 1611.05798).** Perl `chapterbib.sty.ltxml` L47:
+`\lx@cb@unitname = sub { Explode(LookupValue('CHAPTERBIB_UNIT')) }` — `Explode`
+makes every char catcode-OTHER. Rust emitted it via `Tokenize!` (catcode-
+respecting), so an `_` in the unit name became catcode-8 SUBSCRIPT. The unit name
+is the `\include`d chapter file's basename; for files named
+`Inductive_detection_..._MT` (underscores), `\bibliography{…}` takes the
+`\lx@bibliography[\lx@cb@unitname]{…}` branch (no `<mainjob>.bbl`), placing the
+subscript-`_` unit name into the text-mode bib list tag → each `_` fired
+`Script _ can only appear in math mode`. Fix (`chapterbib_sty.rs`): `Explode!`
+not `Tokenize!`. **12→0**, 1.27 MB output, matches Perl. Commit `9b3d74fe74`,
+tests 1344/0. **Lesson:** Perl `Explode` (all-OTHER) ≠ Rust `Tokenize!`
+(catcode-respecting) — when a Perl binding uses `Explode` on a string that may
+contain `_`/`^`/`$`/`#`, use Rust `Explode!`, not `Tokenize!`.
+
 **2026-05-30 — FIXED Rust-only: `\abovecaptionskip`/`\belowcaptionskip` missing
 from base under custom classes (witness 1703.00080).** Perl `LaTeX.pool.ltxml`
 L3648-3649 defines both in the BASE; Rust defined them only in article/book/
