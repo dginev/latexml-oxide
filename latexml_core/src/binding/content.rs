@@ -2359,7 +2359,19 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
   };
   let dir_stripped = base != name;
   let mut suffix_stripped = false;
-  // Iteratively strip suffixes, then glued, then prefixes
+  // Iteratively strip suffixes, then glued, then prefixes.
+  //
+  // Perl's FindFile_fallback (Package.pm:2174) version-strips the FULL `$file`
+  // *with its directory prefix intact*, so the prefix regex `^(rw|my|preprint)`
+  // — anchored at the very START of the string — never matches a name that
+  // begins with a directory (e.g. `sty/myunits` starts with `sty/`, not `my`).
+  // We strip the directory FIRST (to allow a basename-exact binding match like
+  // `misc/ieeetran` → IEEEtran), so we must NOT then apply the `^`-anchored
+  // prefix strip to the basename, or `sty/myunits` wrongly becomes `units` and
+  // loads the stock units.sty instead of the paper-local myunits.sty (which
+  // defines `\T`/`\fC`/`\Cm` via its `\defUnit` mechanism). Witness 1702.05093.
+  // The suffix/glued strips ARE `$`-anchored, so they still match the tail of a
+  // dir-prefixed name in Perl (`./aaspp4` → `./aaspp`); keep applying them.
   loop {
     if let Some(m) = suffix_rx.find(&base) {
       base = base[..m.start()].to_string();
@@ -2371,10 +2383,12 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
       suffix_stripped = true;
       continue;
     }
-    if let Some(m) = prefix_rx.find(&base) {
-      base = base[m.end()..].to_string();
-      suffix_stripped = true;
-      continue;
+    if !dir_stripped {
+      if let Some(m) = prefix_rx.find(&base) {
+        base = base[m.end()..].to_string();
+        suffix_stripped = true;
+        continue;
+      }
     }
     break;
   }

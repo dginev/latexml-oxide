@@ -250,6 +250,27 @@ math-active-char notation whose helper is undefined. Verified minimal repro +
 1602.01342 RUST 26 → 0 = PERL 0; `cargo test --tests` 1344/0 (digest hot-path
 change, full suite green), clippy clean (no new warnings).
 
+**2026-05-30 — FIXED Rust-only (CORE): `find_file_fallback` applied the `^my`
+prefix-strip to a path-prefixed package's basename, mis-routing
+`sty/myunits` → `units`.** Witness 1702.05093 (elsarticle;
+`\usepackage{sty/myunits}` — a paper-local package that defines `\T`/`\fC`/
+`\Cm` via its own `\defUnit` mechanism): RUST 3 → 0 (`undefined:\T`,
+`undefined:\fC`, `undefined:\Cm`). Rust's `find_file_fallback` strips the
+directory FIRST (`pathname::file_name` → `myunits`) to allow a basename-exact
+binding match (`misc/ieeetran` → IEEEtran), then ran the version-strip loop on
+the basename — the `^(rw|my|preprint)` prefix regex matched `my` and produced
+`units`, so the stock `units.sty` binding loaded instead of the paper-local
+`sty/myunits.sty` (`Info:fallback … falling back to units.sty`), leaving
+`\T`/`\fC`/`\Cm` undefined. Perl's `FindFile_fallback` (Package.pm:2174)
+version-strips the FULL `$file` *with its directory intact*, so the
+`^`-anchored prefix never matches a name beginning with a directory
+(`sty/myunits` starts with `sty/`, not `my`) — Perl falls through to raw-load
+the local file. Fix: skip ONLY the `^`-anchored prefix strip when the name had
+a directory prefix; keep the `$`-anchored suffix/glued strips (Perl still
+matches those on a dir-prefixed tail, e.g. `./aaspp4` → `./aaspp`). Verified
+1702.05093 RUST 3 → 0 = PERL 0 (now raw-loads `sty/myunits.sty`); full suite
+1344/0 (misc/ieeetran, ./aaspp4, mysvjour3 cases intact), clippy clean.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
