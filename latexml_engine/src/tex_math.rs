@@ -82,14 +82,23 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
   }
 }
 
-/// True if the script body is a space-like TBox (or a list containing
-/// such a TBox at the top level). Mirrors Perl's behavior where a math
-/// space such as `\,` / `\ ` inside `^{...}` / `_{...}` is treated as
-/// a valid script body (not an empty argument).
+/// True if the script body is a space-like box/whatsit (or a list
+/// containing one). Mirrors Perl's `IsEmpty` (Package.pm:1029), which —
+/// unlike our `Digested::is_empty`/`Whatsit::is_empty` — does NOT count an
+/// `isSpace` whatsit as empty: a `Whatsit` with no `content_box` property
+/// returns `0` (not empty) there regardless of `isSpace`. So a math space
+/// (`\,` / `\ `, a TBox) AND a strut/hint (`\mathstrut` / `\vphantom`, a
+/// `DefConstructor` whatsit carrying `isSpace=true`) inside `^{...}` /
+/// `_{...}` are both valid, non-empty script bodies. Without the whatsit
+/// arm, `x_e{}^{\mathstrut}_{t}` dropped the empty `^{\mathstrut}` floating
+/// superscript, consumed the `{}` separator, and then `_{t}` re-attacked
+/// the earlier `_e` for a spurious "Double subscript" (witness 1803.08859,
+/// `\vort_e{}^{\mathstrut}_{t}`; cluster across 1904.07182 etc.).
 fn script_has_space_content(d: &Digested) -> bool {
   use latexml_core::digested::DigestedData;
   match d.data() {
     DigestedData::TBox(b) => b.borrow().get_property_bool("isSpace"),
+    DigestedData::Whatsit(w) => w.borrow().get_property_bool("isSpace"),
     DigestedData::List(l) => l.borrow().boxes.iter().any(script_has_space_content),
     _ => false,
   }
