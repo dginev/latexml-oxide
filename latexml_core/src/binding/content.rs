@@ -2062,15 +2062,19 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // if the binding is missing, fall through to OmniBus (below). Allowing raw
   // .cls to "succeed" the load prevents the OmniBus fallback that provides
   // generic frontmatter / counter / theorem bindings.
-  // EXCEPTION: a name with a directory prefix (`misc/ieeetran`,
-  // `./sty/foo`) is a strong signal of a user-local class file. The
-  // INCLUDE_CLASSES gate is meant to avoid arbitrary system .cls
-  // pollution; it shouldn't suppress files the user explicitly
-  // bundled. Driver: 2105.02087 (`\documentclass{misc/ieeetran}` —
-  // local copy of IEEEtran with author edits — fell through to
-  // OmniBus, missing \IEEEoverridecommandlockouts and friends).
-  let has_path_prefix = name.contains('/') || name.contains('\\');
-  let notex_default = !lookup_bool("INCLUDE_CLASSES") && !has_path_prefix;
+  //
+  // PERL-FAITHFUL (2026-05-30): a directory prefix does NOT force a raw .cls
+  // load. Perl resolves a path-prefixed class to its basename BINDING when one
+  // exists, else OmniBus — it loads `IEEEtran.cls.ltxml` for
+  // `\documentclass{misc/ieeetran}` and falls to OmniBus for
+  // `\documentclass{JINST-Sample-files/JINST}`. The basename→binding match is
+  // handled in the `alternate` search below (it strips the path). Forcing a raw
+  // load for any path-prefixed name (the old `&& !has_path_prefix` exception)
+  // broke bundled classes whose raw load is semantically incomplete — JINST's
+  // begin-document `\author`/`\abstract` checks fire and `\abstract@cs` is left
+  // undefined, where Perl (OmniBus) is clean. Witness 1504.01965; the
+  // misc/ieeetran case (2105.02087) now matches Perl via the basename binding.
+  let notex_default = !lookup_bool("INCLUDE_CLASSES");
   // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
@@ -2169,6 +2173,25 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
             .iter()
             .copied()
             .find(|candidate| name.eq_ignore_ascii_case(candidate))
+        })
+        .or_else(|| {
+          // Path-prefixed class (`misc/ieeetran`, `JINST-Sample-files/JINST`):
+          // strip the directory and match the basename against a binding, so
+          // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it)
+          // while `JINST-Sample-files/JINST` → no basename binding → OmniBus.
+          // Case-insensitive FULL equality only (not prefix) — mirrors the
+          // capitalization-only ci fallback above and avoids a basename like
+          // `AAAI-Std` wrongly prefix-matching the 2-char `aa` binding.
+          // Witnesses 1504.01965 (JINST→OmniBus), 2105.02087 (misc/ieeetran).
+          let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
+          if basename != name {
+            sorted
+              .iter()
+              .copied()
+              .find(|candidate| basename.eq_ignore_ascii_case(candidate))
+          } else {
+            None
+          }
         })
     };
 
