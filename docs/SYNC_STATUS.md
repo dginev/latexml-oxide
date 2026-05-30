@@ -128,6 +128,30 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-29 (cont.) — FIXED Rust-only: pstricks shape commands swallowed
+the document after `\put` (witness 1112.2096).** Fresh sweep (buckets
+0902/1112/1506/1911) flipped 1112.2096 from **Rust 9 err / FATAL-ish cascade**
+(`malformed:ltx:_CaptureBlock_ Closing … descendants are "text"` → every later
+proof/theorem/section/bibliography "isn't allowed in <ltx:text>") to **0 err /
+310 KB HTML** (Perl 0). Root cause (bisected to a 1-construct minimal repro):
+the pstricks drawing commands in `pstricks_sty.rs` declared the OPTIONAL
+`{<arrows>}` argument as a MANDATORY `{}` in their signature
+(`\pscurve OptionalMatch:* []{}` etc.). When arrows were absent — the common
+case, `\pscurve[opts](x,y)…` — the `{}` swallowed the first `(`, so
+`\lx@psgobble@parens` then saw a digit, stopped, and dumped the remaining
+coordinates as **stray picture text**. Directly after an open `\put{…}`
+`<ltx:text>` that stray text trapped all subsequent block content in an
+un-closeable `<ltx:text>`. Fix: a new `\lx@psgobble@shape` helper peeks for an
+optional leading `{<arrows>}` brace (`\@ifnextchar\bgroup`) before gobbling the
+`(x,y)…` tuples, so the arrow spec is optional without over-gobbling trailing
+document braces; applied to psline/psframe/psbezier/pscurve/psecurve/psccurve/
+parabola/pspolygon/psdots/psdot. Coord+radius shapes use explicit `Pair {}`
+(`\qdisk`, `\pscircle`) and `\qline` → `Pair Pair` (matching real pstricks
+`\def\qdisk(#1)#2` / `\def\qline(#1)(#2)`). `\psarc` left as-is (rare, complex
+multi-brace signature — known residual). `cargo test --tests` **1344/0**.
+Deferred Rust-only from same sweep: 0902.1635 (`malformed:ltx:XMApp` in
+`<ltx:text>` + XMDual duplicate-`xml:id` — math-parser/ASF lane, collaborator's).
+
 **2026-05-29 (cont.) — FIXED Rust-only: babel `germanb` undefined language
 (witness 1010.4065).** Dense sweep (2321 papers, buckets 1010/1410/1710/2010) →
 exactly ONE genuine Rust-only flip: 1010.4065 (`\usepackage[english,germanb]
