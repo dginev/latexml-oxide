@@ -45,6 +45,24 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — FIXED Rust-only: listings `literate=` count field
+(brace-wrapped `{N}`) mis-parsed → triple-shift → bare `_` injected.** Witness
+1501.06715 (`listings` with a 40-entry `\lstset{literate={_p}{{$_p$}}{1} …}`):
+RUST 1 → 0 (Perl clean). Error was `Error:unexpected:_ Script _ can only appear
+in math mode`. Bisected to the digit `1` in a `lstlisting` line being replaced
+by the literal text `_argmax` (`<text class="ltx_lst_literate">_argmax</text>`),
+injecting a catcode-8 `_` into the listing text. Root cause: `\lst@@literate`'s
+triple parser (`{key}{replacement}{length}`) read the length with a
+"tokens-until-space-or-`{`" loop, but listings writes the count **brace-wrapped**
+(`{1}`), and Perl reads it via a third `readArg` (a balanced group). So the loop
+stopped at the count's opening `{` and never consumed `{1}`; `{1}` was then
+re-read as the NEXT pattern, shifting EVERY subsequent triple by one (count `1`
+→ key `1` mapping to the next entry's text `_argmax`). Benign until a shifted
+replacement carried a bare `_`. Fix: read the length as a balanced group (or a
+single bare token), mirroring Perl `readArg`. Verified: witness 0 errors,
+listingline count now matches Perl exactly (108=108), literate spans match
+(2=2). `listings_sty.rs`. `cargo test` 1344/0.
+
 **2026-05-30 — FIXED Rust-only: algorithm2e `_CaptureBlock_ … isn't open` on a
 `{center}`+`\vspace` inside an algorithm.** Witness 1510.02728: RUST 1 →
 0 (Perl clean). A `{center}`/`{flushleft}` env holding content + `\vspace`/`\vskip`

@@ -3040,9 +3040,22 @@ LoadDefinitions!({
       let replacement = Tokens::new(read_balanced_group(&tokens, &mut i));
       // Skip whitespace
       while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
-      // Read length: number token(s)
-      while i < tokens.len() && tokens[i].get_catcode() != Catcode::SPACE
-        && tokens[i].get_catcode() != Catcode::BEGIN { i += 1; }
+      // Read length (Perl `\lst@@literate` reads it via a third `readArg`, so it
+      // is a BALANCED GROUP — listings writes `{key}{replacement}{N}` with the
+      // count brace-wrapped). The prior loop stopped at the count's opening `{`
+      // and never consumed `{N}`, so `{N}` was re-read as the NEXT pattern,
+      // shifting every subsequent triple by one (a count `1` became a key
+      // mapping to the next entry's text, e.g. `1 → _argmax`, injecting a bare
+      // catcode-8 `_` into the listing → "Script _ can only appear in math
+      // mode"). Mirror `readArg`: consume one balanced `{N}` group, or a single
+      // bare token if not brace-wrapped. Witness 1501.06715.
+      if i < tokens.len() {
+        if tokens[i].get_catcode() == Catcode::BEGIN {
+          let _ = read_balanced_group(&tokens, &mut i);
+        } else {
+          i += 1;
+        }
+      }
       let pattern_str: String = pattern.iter().map(|t| t.to_string()).collect();
       if !pattern_str.is_empty() {
         // Store as individual entries keyed by pattern
