@@ -128,6 +128,25 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-30 — FIXED Rust-only: autart `\qed` undefined (witness 1703.03101).**
+`\documentclass{autart}` + `\def\epf{\hfill\mbox{\qed}}` → **Rust 1 err**
+(`undefined:\qed`) → **0 err / 491 KB HTML** (Perl 0, `\qed`=∎). Root cause: Rust
+HAS a contrib `autart_cls` binding (Perl does not — Perl OmniBus-fallbacks autart
+and dep-scans autart.cls's `\if@amsthm \RequirePackage{amsthm}` — the regex scan
+ignores the `\if` guard — loading amsthm, which defines `\qed`=∎). The Rust
+binding deliberately does NOT eager-load amsthm (preserving witness 2009.00150:
+autart + `\let\proof\relax` + later `\usepackage{amsthm}`), and `\qed` (a COMMAND,
+used here outside any proof env via `\epf`) isn't covered by OmniBus's lazy
+theorem-ENV autoload → undefined. Fix: mirror amsthm's `\qed`/`\ltx@qed` (∎)
+directly in `autart_cls.rs` — matches Perl's ground-truth output AND autart.cls's
+own class-level `\def\qed` (L516), without eager-loading amsthm; a later
+`\usepackage{amsthm}` re-installs identical defs. 2009.00150 re-verified 0 err;
+`cargo test --tests` **1344/0**. **Process note:** an initial theory (that the
+class dep-scan was wrongly suppressed by a polluted `cls.ltxml_loaded` flag) was
+WRONG — `get_class_binding_names()` correctly reports autart as bound (the contrib
+binding exists). Reverted that mis-fix; the real gap was the binding's missing
+`\qed`. Deferred: 1703.05010 (Rust FATAL `Endgroup pop last locked`).
+
 **2026-05-30 — FIXED Rust-only + un-regressed dep-scan: skip only deferred
 macro-def bodies, keep load-time conditionals (witness 1703.03673).** `\bigstar`
 in `\documentclass{iau}` (only graphicx loaded) → **Rust 1 err**

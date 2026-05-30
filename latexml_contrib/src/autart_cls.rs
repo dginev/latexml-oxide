@@ -41,4 +41,25 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
   DefMacro!("\\thanks{}",
     "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+
+  // autart.cls L516 defines `\qed` directly at class level (a `\Box` at the
+  // end of a proof). Perl — which OmniBus-fallbacks autart and dep-scans
+  // autart.cls's `\if@amsthm \RequirePackage{amsthm}` (the regex dep-scan
+  // ignores the `\if@amsthm` guard) — ends up loading amsthm and so produces
+  // amsthm's `\qed` (∎). We do NOT eager-load amsthm here (see the amsthm note
+  // above re: 2009.00150), so mirror amsthm's `\qed`/`\ltx@qed` (∎) directly to
+  // match Perl's ground-truth output. A paper that later `\usepackage{amsthm}`
+  // simply re-installs the identical definitions. Used via the common
+  // `\def\epf{\hfill\mbox{\qed}}` idiom OUTSIDE any proof env, so OmniBus's
+  // lazy theorem-env autoload never fires. Witness 1703.03101.
+  DefMacro!("\\qed", "\\ltx@qed");
+  DefConstructor!("\\ltx@qed",
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    enter_horizontal => true,
+    reversion => "\\qed"
+  );
+  Let!("\\mathqed",    "\\qed");
+  Let!("\\textsquare", "\\qed");
+  Let!("\\qedsymbol",  "\\qed");
+  Let!("\\openbox",    "\\qed");
 });
