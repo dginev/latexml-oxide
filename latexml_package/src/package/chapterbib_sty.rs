@@ -66,8 +66,16 @@ LoadDefinitions!({
       .map(|s| s.to_string())
       .unwrap_or_default();
     if !unit.is_empty() {
-      let tokens = Tokenize!(&unit);
-      gullet::unread_vec(tokens.unlist().into_iter().collect());
+      // Perl L47: `DefMacro('\lx@cb@unitname', sub { Explode(LookupValue(
+      // 'CHAPTERBIB_UNIT')); })` — `Explode` makes every char catcode OTHER
+      // (except space), NOT catcode-respecting tokenization. The unit name is
+      // the included file's basename; when it contains `_` (e.g.
+      // `Inductive_detection_..._MT`), `Tokenize!` would make `_` catcode-8
+      // SUBSCRIPT, which then errors "Script _ can only appear in math mode"
+      // once the unit name is placed (via `\lx@bibliography`'s `[unit]` list
+      // tag) into the text-mode bibliography. `Explode!` keeps `_` as
+      // catcode-12 OTHER, exactly like Perl. Witness 1611.05798.
+      gullet::unread_vec(Explode!(unit));
     }
   });
   DefMacro!("\\lx@cb@unitname", "\\lx@cb@do@unitname");
