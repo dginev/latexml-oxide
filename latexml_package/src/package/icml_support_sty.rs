@@ -147,6 +147,19 @@ LoadDefinitions!({
   DefConditional!("\\ificlrfinal");
   def_macro_noop("\\iclrfinalcopy")?;
 
+  // `\toptitlebar`/`\bottomtitlebar` — the decorative rules drawn above and
+  // below the title block. Real icml20XX.sty (e.g. icml2019.sty L410-411):
+  //   \def\toptitlebar{\hrule height1pt \vskip .25in}
+  //   \def\bottomtitlebar{\vskip .22in \hrule height1pt \vskip .3in}
+  // No-arg macros (the `\toptitlebar{\Large\bf #1}` in some bundled `arxiv.sty`
+  // is `\toptitlebar` followed by a separate title group). Our binding
+  // intercepts the paper-bundled icml20XX.sty so those defs never run; Perl
+  // ships no icml2019 binding and raw-loads the .sty, reaching L410. Supply
+  // them directly. Witness 1905.03711 (article + arxiv.sty →
+  // `\RequirePackage[accepted]{icml2019}`).
+  DefMacro!("\\toptitlebar", "\\hrule height1pt \\vskip .25in");
+  DefMacro!("\\bottomtitlebar", "\\vskip .22in \\hrule height1pt \\vskip .3in");
+
   // Random extra bits
   def_macro_noop("\\abovestrut{}")?;
   def_macro_noop("\\belowstrut{}")?;

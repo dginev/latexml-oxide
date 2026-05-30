@@ -58,6 +58,18 @@ all FAIL to reproduce — the trigger needs the full paper's specific
 cite/label/title structure. Needs a full-paper bisection of the
 cite×bibliography×pdf-string interaction; deferred from this round.
 
+**2026-05-30 — FIXED Rust-only: icml_support binding missing `\toptitlebar`/
+`\bottomtitlebar` (defined in the raw icml20XX.sty).** Witness 1905.03711
+(`\documentclass{article}` + bundled `arxiv.sty` → `\RequirePackage[accepted]
+{icml2019}`): RUST 2 → 0 (`undefined:\toptitlebar`, `undefined:\bottomtitlebar`).
+Rust maps `icml2016..2025` → the shared `icml_support_sty` binding (lib.rs),
+which intercepts the paper-bundled `icml20XX.sty`. Perl ships no `icml2019`
+binding and raw-loads the .sty, reaching `\def\toptitlebar{\hrule height1pt
+\vskip .25in}` / `\def\bottomtitlebar{…}` (icml2019.sty L410-411 — the
+decorative title-block rules). The Rust binding omitted them. Fix: add the two
+no-arg macros to `icml_support_sty.rs`, faithful to the raw defs. Same
+incomplete-binding class as lmcs/sn-jnl. `cargo test` 1344/0, clippy clean.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
