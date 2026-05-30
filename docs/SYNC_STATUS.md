@@ -45,6 +45,35 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — FIXED Rust-only: algorithm2e `_CaptureBlock_ … isn't open` on a
+`{center}`+`\vspace` inside an algorithm.** Witness 1510.02728: RUST 1 →
+0 (Perl clean). A `{center}`/`{flushleft}` env holding content + `\vspace`/`\vskip`
+inside `\begin{algorithm}` (algorithm2e) emitted
+`Error:malformed:ltx:_CaptureBlock_ Attempt to close …, which isn't open`. Root
+cause (traced via the document-builder open/close/set_node path): `\vspace`'s
+`\vskip` fires `leaveHorizontal`, which (because Rust's `{center}` carries the
+`mode => internal_vertical` divergence — Perl's doesn't — so BOUND_MODE ends in
+"vertical") invokes an INTERNAL `\par`. Inside an algorithm `\par` is
+`\let`→`\lx@algo@par`, whose **full line machinery** (`\lx@algo@endline` →
+`\lx@prepend@indentation@`) calls `floatToElement('ltx:tags')` — repositioning
+the cursor UP to the `listingline`, OUT of the in-progress `_CaptureBlock_` that
+`insertBlock` (the aligning-env capture) is mid-absorb. The capture is then
+off-path and `insertBlock`'s `closeNode` fails. Perl never hits this because its
+`leaveHorizontal` doesn't fire in that context (no spurious internal `\par`).
+**Two faithful fixes:** (1) ported Perl's prefix-based par dedup
+(`\if@lx@algo@par`/`\lx@algo@setpar`/`\lx@algo@newpar`, algorithm2e.sty.ltxml
+L109-116) — Rust DOES have `state::set_prefix`/`get_prefix` + `is_prefix =>`
+(same as `\global`), so the old "no setPrefix infra" stub claim was outdated;
+(2) route an **INTERNAL** par (the invisible `leaveHorizontal` par — not an
+algorithm line) through the gentle `\lx@normal@par` instead of the line
+machinery, mirroring the engine's existing `INTERNAL_PAR` special-casing in
+`\lx@normal@par`. Explicit `\\`/`\par`/`\;` (INTERNAL_PAR unset) still take the
+full machinery. Verified RUST==PERL listingline counts on representative cases
+(`a\\b\\c` 2=2, `a\;b\;c\;` 8=8, `\If{}{…}` 9=9, `a\\center+vspace\\b` 2=2); no
+text lost (witness text-chars unchanged 58451→58424); the witness's residual
+29-vs-42 listingline / 58k-vs-73k-char gap is a PRE-EXISTING, unrelated fidelity
+issue. `algorithm2e_sty.rs`. `cargo test` 1344/0.
+
 **2026-05-30 — CHARACTERIZED (deferred, deep expl3): flexisym active-`|`/`\vert`
 delimiter DROPS in Rust math → spurious `double-subscript`.** Witness 1901.03862
 (`flexisym`+`breqn`): RUST 13 `double-subscript` errors, all Rust-only (Perl's 3

@@ -89,27 +89,44 @@ LoadDefinitions!({
   def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;
   def_macro_noop("\\@marker{}")?;
 
-  // Par dedup — Perl L109-116
-  // Conditional that prevents double-\par from producing blank lines.
-  // Perl's dedup relies on `$STATE->setPrefix/getPrefix('didpar')` via a
-  // DefPrimitiveI+isPrefix pair; Rust has no setPrefix/getPrefix
-  // infrastructure, so the dedup is disabled (conditional never fires,
-  // setpar is a no-op, newpar always takes the else branch). Downstream
-  // callers only use the PAR-marker path, which still emits correctly.
+  // Par dedup — Perl L109-116. Prevents a double/empty `\par` from running
+  // the endline+startline line machinery twice (which would emit blank lines
+  // AND, critically, re-fire `\lx@prepend@indentation@`'s
+  // `floatToElement('ltx:tags')` — repositioning the cursor OUT of an
+  // in-progress `_CaptureBlock_` capture, e.g. a `{center}`/`{flushleft}` env
+  // whose body holds content + `\vspace` inside an algorithm: the stray
+  // `\par` from `\vspace`'s `leaveHorizontal` then abandons the capture and
+  // `insertBlock`'s closeNode fails with "ltx:_CaptureBlock_ ... isn't open".
+  // Witness 1510.02728.
   //
-  // Intentional divergence (WISDOM #44 class: blocked-on-missing-state
-  // primitive): the \lx@algo@setpar DefPrimitiveI → DefMacro flip is
-  // the only observable footprint of the disabled dedup — when the
-  // setPrefix/getPrefix pair is implemented in Rust, this reverts
-  // cleanly to a DefPrimitive that sets the `didpar` prefix. DP-audit
-  // flags the single L82 entry.
-  DefConditional!("\\if@lx@algo@par SkipSpaces");
-  def_macro_noop("\\lx@algo@setpar")?;
-  DefMacro!("\\lx@algo@newpar{}{}", "#2");
+  // Faithful port of Perl's prefix-based guard (`$STATE->setPrefix/getPrefix
+  // ('didpar')` via a `DefPrimitiveI isPrefix => 1` pair) — Rust DOES have the
+  // prefix infrastructure (`state::set_prefix`/`get_prefix`, `is_prefix =>`),
+  // same as `\global`/`\long` (tex_macro.rs). The earlier stub's claim that it
+  // didn't was outdated. The `didpar` prefix is set by `\lx@algo@setpar` and
+  // auto-clears when the next non-prefix token is digested, so it suppresses
+  // only CONSECUTIVE pars.
+  DefConditional!("\\if@lx@algo@par SkipSpaces", { state::get_prefix("didpar") });
+  DefPrimitive!("\\lx@algo@setpar", { state::set_prefix("didpar"); }, is_prefix => true);
+  DefMacro!("\\lx@algo@newpar{}{}",
+    "\\if@lx@algo@par\\@marker{SKIP#1}\\else\\@marker{pre#1 }#2\\@marker{post#1}\\fi\\lx@algo@setpar");
 
+  // An INTERNAL par (fired by the stomach's `leaveHorizontal` to end horizontal
+  // mode — e.g. a `\vspace`/`\vskip` inside a `{center}`/`{flushleft}` body that
+  // sits inside an algorithm) must NOT run the endline+startline line machinery:
+  // that re-fires `\lx@prepend@indentation@`'s `floatToElement('ltx:tags')`,
+  // which repositions the cursor OUT of an in-progress `_CaptureBlock_` (the
+  // aligning-env capture), abandoning it so `insertBlock`'s closeNode fails
+  // ("ltx:_CaptureBlock_ … isn't open"). An invisible internal par is not an
+  // algorithm line, so route it to the gentle `\lx@normal@par` (which already
+  // special-cases `INTERNAL_PAR`) instead — matching Perl's observed result (no
+  // spurious line; the `\vspace` produces nothing). Explicit `\\`/`\par`
+  // (INTERNAL_PAR unset) still take the full line machinery. Witness 1510.02728.
+  DefConditional!("\\if@lx@algo@internalpar SkipSpaces",
+    { matches!(state::lookup_value("INTERNAL_PAR"), Some(Stored::Bool(true))) });
   // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
-    "\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}");
+    "\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi");
   DefMacro!("\\lx@algo@parx",
     "\\lx@algo@newpar{PARx}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parb",
