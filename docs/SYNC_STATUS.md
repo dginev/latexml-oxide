@@ -45,6 +45,23 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — fresh-sweep convergence reconfirmed + FATAL_3 re-mine.** Fresh
+mini-sweeps (current binary, correct main) over buckets 1203/1709/2001 (~340
+papers): ~98% OK; ALL failures are SHARED (`#`-leak `misdefined:#`; `_`/`^`
+"Script can only appear in math mode" — both engines abort/error identically) or
+heavy-paper FALSE timeouts. **Scan lesson: use `--timeout ≥110` (not 55s) — debug
++ parallel load makes ordinary heavy papers take 57-87s, so a 55s cap
+false-flags them as failures** (1709.04924/08148/10444 all CLEAN at timeout 0).
+The autoload fix flipped several stale FATAL_3 (1903.12422, 1901.10171 now
+clean). **Deferred Rust-only cascade: 1701.08966** (aipproc + vit-prusa custom
+macros) — RUST 102 / FATAL_3, **PERL 1 / completes**. First error is a shared
+undefined `\vdotdot`, but the 101 EXTRA errors are Rust-only: a math arg
+(`<ltx:XMArg>`) opened in the body never closes and swallows the bibliography &
+caption tags (`malformed:ltx:bibitem`/`XMTok` "isn't allowed in ltx:XMArg/tag").
+NOT minimally reproducible (`\tensordot{a}{b}` inline or in align+bib is clean) —
+depends on the specific custom-macro nesting; a deep XMArg mode-leak for a
+focused session, cf. the cascade-amplification class.
+
 **2026-05-29 — stale autoload flag broke `\@ifundefined{<env>}` (FATAL_3 → clean).**
 1611.02736 (extract.sty): RUST **92 errors / FATAL_3 (no output)** → **0 errors,
 146 KB doc** (surpasses Perl's 11-error completion). Root (general, Rust-only):
