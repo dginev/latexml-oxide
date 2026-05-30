@@ -271,6 +271,29 @@ matches those on a dir-prefixed tail, e.g. `./aaspp4` → `./aaspp`). Verified
 1702.05093 RUST 3 → 0 = PERL 0 (now raw-loads `sty/myunits.sty`); full suite
 1344/0 (misc/ieeetran, ./aaspp4, mysvjour3 cases intact), clippy clean.
 
+**2026-05-30 — CHARACTERIZED (deferred) Rust-only: JINST class
+`\AtBeginDocument` check-hook fires in Rust but not Perl.** Witness 1504.01965
+(`\documentclass{JINST-Sample-files/JINST}`, paper-bundled JINST.cls): RUST 3,
+PERL 0 — `latex:\GenericError Class JINST Error: Some \author{...} should
+appear`, `… \abstract{...} should appear`, `undefined:\abstract@cs`. JINST.cls
+registers (L1599) `\AtBeginDocument{… \if@author\else\@APPerr{\author}\fi
+\if@abstract\else\@APPerr{\abstract}\fi … \auto@maketitle}`; `\@APPerr` →
+`\ClassError` → `\GenericError` (an Error in both engines). PRECISELY narrowed:
+a `FLAG:[\if@author …][\if@abstract …]` probe in a minimal JINST doc reads
+`AUTH-F/ABS-F` in BOTH engines — i.e. jinst's `\renewcommand\author` /
+`\newcommand{\abstract}` correctly do NOT take effect in either (both lock
+`\author`/`\abstract`, both raw-load the .cls with UNLOCKED=0). So the flags
+being false is NOT the divergence. The divergence is that Perl never EXECUTES
+jinst's `\AtBeginDocument` hook (no `should appear`/`\auto@maketitle`/
+`\abstract@cs` output at all in `--verbose`), whereas Rust runs it at
+`\begin{document}` and errors. Both `\GenericError` defs emit `Error(...)`, so
+it is not a severity issue. Root cause is in `\AtBeginDocument`-hook
+registration/firing for a raw-loaded `.cls` (the hook is registered during the
+class load yet Perl does not run it at begin-document) — a subtle, narrow
+class-load interaction. Deferred this round; needs a focused look at how the
+begin-document hook list is captured during `loadTeXDefinitions` vs document
+scope.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
