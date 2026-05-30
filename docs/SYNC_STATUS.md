@@ -45,6 +45,24 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-29 — aipproc global `\reference` alias caused a math/bib cascade (FATAL_3
+→ matches Perl).** 1701.08966 (aipproc + vit-prusa macros): RUST **102 / FATAL_3
+(no output)** → **1 error, 1.4 MB doc** (matches Perl exactly — the lone shared
+`\vdotdot`). Root: our aipproc binding did `Let!("\\reference","\\bibitem")`
+GLOBALLY (a Rust-over-Perl "improvement" for `\begin{references}\reference{…}`
+papers). Perl leaves `\reference` undefined, so this paper's
+`\newcommand{\reference}{\mathrm{ref}}` (a math shorthand, used 25× in `$…$`)
+succeeds in Perl but in Rust silently FAILED (already-defined) — leaving
+`\reference`=`\bibitem`, which fired a `\bibitem` INSIDE inline math
+(`$\temp_{\reference}$`) → `<ltx:bibitem>` in `<ltx:XMArg>` → a math-mode leak
+that swallowed the real bibliography + caption tags (53 `malformed:ltx:XMTok` +
+21 mode-`}` + 11 `bibitem` + 11 `tags`). Fix: scope the alias to the `references`
+environment (`\let\reference\bibitem` inside `\references`'s body, local to the
+env group) instead of globally — matching Perl outside it. The aipproc-bibitem
+cluster (cond-mat0109365, nucl-th0010030, …) uses `\begin{references}\bibitem`
+(not `\reference{}`) and is unchanged (bibitems still render). `aipproc_cls.rs`,
+`aipproc_sty.rs`. `cargo test` 1344/0. Bisected: line 311 `$\temp_{\reference}$`.
+
 **2026-05-29 — fresh-sweep convergence reconfirmed + FATAL_3 re-mine.** Fresh
 mini-sweeps (current binary, correct main) over buckets 1203/1709/2001 (~340
 papers): ~98% OK; ALL failures are SHARED (`#`-leak `misdefined:#`; `_`/`^`

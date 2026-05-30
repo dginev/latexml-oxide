@@ -127,7 +127,19 @@ LoadDefinitions!({
   // preserved. Fixes 4 papers in SANDBOX_TRIAGE_2026-05-21 Class D bibitem-aipproc
   // cluster (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
   // nucl-th0010030). See also the mirror alias in aipproc_sty.rs.
-  DefMacro!("\\references", "\\thebibliography{}");
+  //
+  // CRITICAL: `\reference` is `\let` to `\bibitem` ONLY WITHIN the `references`
+  // environment (inside `\references`'s body), NOT globally. Perl leaves
+  // `\reference` undefined, so a paper that defines its own
+  // `\newcommand{\reference}{...}` (a common math shorthand, e.g.
+  // `\newcommand{\reference}{\mathrm{ref}}`) succeeds. A GLOBAL alias here made
+  // `\reference` already-defined, so the user `\newcommand` silently failed and
+  // `\reference` stayed `\bibitem` — firing a `\bibitem` inside `$…$` math
+  // (`$\temp_{\reference}$`) → a `<ltx:bibitem>` in `<ltx:XMArg>` → math-mode
+  // leak that swallowed the real bibliography & caption tags. Witness
+  // 1701.08966: RUST 102 errors / FATAL_3 → 0 (Perl: 1; surpasses). Scoping to
+  // the env keeps the aipproc-bibitem cluster working (those use
+  // `\begin{references}\reference{…}`). The `\let` is local to the env group.
+  DefMacro!("\\references", "\\let\\reference\\bibitem\\thebibliography{}");
   Let!("\\endreferences", "\\endthebibliography");
-  Let!("\\reference", "\\bibitem");
 });
