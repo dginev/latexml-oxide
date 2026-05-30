@@ -2117,7 +2117,43 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
               tokens.remove(0);
             }
             if !tokens.is_empty() {
-              bibtitle = Some(Tokens::new(tokens));
+              // Perl L4052 flags a TODO right here: "Check for balanced? or
+              // just take balanced begining?" — i.e. the bib-section title is
+              // the sectional unit's *argument* (the leading brace group), not
+              // every trailing token. Perl nonetheless takes all of @t, which
+              // is fine until \bibsection is a parameterized renewal such as
+              //   \renewcommand\bibsection[1]{\section*{\refname}\small #1}
+              // (witness 1702.01165). After the unit+star strip that leaves
+              // `{\refname}\small #1`; digesting all of it pushes the page/font
+              // directive `\small` AND the bare parameter token `#1` — an
+              // ARG-catcode token that errors "should never reach Stomach!".
+              // Take only the leading balanced {...} group as the title (the
+              // unit argument); fall back to all tokens when there is no
+              // leading group (Perl's behavior for un-braced titles). This
+              // realizes the Perl author's own "take balanced beginning" note
+              // and drops trailing page/font junk LaTeXML never renders. See
+              // docs/OXIDIZED_DESIGN.md (bib-section title = leading group).
+              let title_toks = if tokens[0].get_catcode() == Catcode::BEGIN {
+                let mut depth = 0i32;
+                let mut end = tokens.len();
+                for (i, t) in tokens.iter().enumerate() {
+                  match t.get_catcode() {
+                    Catcode::BEGIN => depth += 1,
+                    Catcode::END => {
+                      depth -= 1;
+                      if depth == 0 {
+                        end = i + 1;
+                        break;
+                      }
+                    },
+                    _ => {},
+                  }
+                }
+                tokens[..end].to_vec()
+              } else {
+                tokens
+              };
+              bibtitle = Some(Tokens::new(title_toks));
             }
           }
         }

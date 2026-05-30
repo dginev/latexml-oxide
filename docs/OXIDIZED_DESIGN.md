@@ -1175,6 +1175,44 @@ the `xml_safe_char` helper around line 6243.
 
 ---
 
+### 28. Bib-section title = leading balanced group, not all trailing tokens
+
+**Decision:** In `begin_bibliography_clean`
+(`latexml_engine/src/latex_constructs.rs`), when deciphering
+`\bibsection`'s body for the bibliography title, after stripping the
+sectional-unit CS and an optional `*` we take **only the leading
+balanced `{...}` group** as the title, rather than all remaining
+expansion tokens. When there is no leading group (an un-braced title)
+we fall back to all tokens — Perl's behavior.
+
+**Perl ground truth:** `beginBibliography_clean`
+(`LaTeX.pool.ltxml` L4035-4053) sets `$bibtitle = Tokens(@t)` — *all*
+remaining tokens after the unit + `*`. Right at that line the Perl
+author left the TODO: `# Check for balanced? or just take balanced
+begining?` — i.e. they knew the title should be the unit's argument
+(the brace group), not whatever trails it. We realize that intent.
+
+**Why diverge:** Papers that prevent the bibliography from breaking to
+a new page do
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}`
+(a *parameterized* `\bibsection`). After the unit+`*` strip Perl's
+"all tokens" leaves `{\refname}\small #1`, and digesting that pushes
+the page/font directive `\small` **and** the bare parameter token
+`#1` — an ARG-catcode token that errors `The token "#1" (catcode ARG)
+should never reach Stomach!`. Perl only escapes this in the witness by
+a fragile, comment-line-dependent mouth artifact (the *same*
+`\bibsection` macro leaks in a minimal Perl repro, perl-rc=1); the
+leading-group rule fixes it deterministically and is strictly more
+robust. Output is identical to Perl on the witness:
+`<bibliography xml:id="bib"><title>References</title>…`. Trailing
+page/font directives (`\small`, `\markboth`, `\thispagestyle`) that
+LaTeXML never renders in a title are correctly dropped.
+
+**Witness:** arXiv:1702.01165 (llncs + IEEEtranN `.bbl`,
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}`).
+
+---
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

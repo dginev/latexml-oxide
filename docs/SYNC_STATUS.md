@@ -2388,6 +2388,35 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): bib-section `#1`-leak FIXED (1702.01165)
+
+**1702.01165 FIXED** (llncs + IEEEtranN `.bbl`). Root cause: the paper does
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}` ("prevent
+bibliography from starting on a new page"), making `\bibsection` a
+*parameterized* macro. `begin_bibliography_clean` (latex_constructs.rs ~L2089,
+the port of Perl `beginBibliography_clean`, LaTeX.pool L4035) deciphers the
+`\bibsection` body to recover the bibliography title: it strips the sectional
+unit + optional `*` and — faithfully to Perl `$bibtitle = Tokens(@t)` — took
+*all* remaining tokens. For the parameterized body that leaves
+`{\refname}\small #1`; digesting it pushes the bare parameter token `#1` (ARG
+catcode) to the Stomach → `The token "#1" (catcode ARG) should never reach
+Stomach!`. **Fix:** take only the leading balanced `{...}` group as the title
+(the unit's argument), falling back to all-tokens when there is no leading
+group — this realizes the Perl author's own TODO at L4052 (`# Check for
+balanced? or just take balanced begining?`) and drops trailing page/font junk
+(`\small`, `\markboth`, …) LaTeXML never renders. Output now matches Perl
+exactly: `<bibliography xml:id="bib"><title>References</title>…`. RUST 1 → 0.
+Documented as intentional divergence #28 in OXIDIZED_DESIGN.md.
+
+*Investigation note (process):* Perl's witness rc=0 turned out to depend on a
+**fragile, comment-line-dependent mouth artifact** — the *same* `\bibsection`
+macro (byte-identical under `\show`) leaks `#1` in a minimal Perl repro
+(perl-rc=1); only the witness's exact preamble (an ignored
+`\newcommand{\keywords}` followed by a `%`-comment before the renew) suppresses
+it in Perl. So Rust's behavior *was* faithful to Perl's `beginBibliography_clean`
+logic; the leading-group rule is the deterministic, strictly-more-robust fix
+the Perl author intended, not a Perl-parity divergence in spirit.
+
 ### Round-37 err=3-5 gate sweep (2026-05-29): 4 fresh PCLEAN, 1 fixed, 3 deferred-deep
 
 Gated 17 err=3-5 candidates (excluding shared clusters) from the resweep TSV →
