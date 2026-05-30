@@ -10,7 +10,13 @@ use latexml_package::prelude::*;
 
 
 LoadDefinitions!({
-  LoadClass!("article");
+  // Base on OmniBus, NOT article: Perl ships no dmtcs binding and falls back to
+  // OmniBus, which provides the generic journal frontmatter (`\received`,
+  // `\revised`, `\acknowledgements`/`\acknowledgments`, …). Basing on plain
+  // `article` left those undefined where Perl (OmniBus) is clean. The
+  // dmtcs-specific setters below are defined AFTER and override OmniBus.
+  // Witness 1904.12329 (`\received{}`/`\revised{}`/`\acknowledgements`).
+  LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
