@@ -7,6 +7,22 @@ LoadDefinitions!({
   // (considering we don't do hyphenation, etc)
   RequirePackage!("babel", options => vec!["german".to_string()]);
 
+  // Alias the `germanb` dialect's language number to `german` (kernel/dump
+  // `\l@german`), exactly as the real germanb.ldf does via
+  // `\let\l@germanb\l@german`. Without this, `\usepackage[…,germanb]{babel}`
+  // selects `germanb` as the main language and babel's
+  // `\selectlanguage{germanb}` → `\bbl@iflanguage{germanb}` errors "You haven't
+  // defined the language 'germanb' yet" — because this binding REPLACES the raw
+  // germanb.ldf load (which is where `\l@germanb` would otherwise come from).
+  // Witness: arXiv:1010.4065 (`\usepackage[english,germanb]{babel}`).
+  RawTeX!(r"\expandafter\ifx\csname l@germanb\endcsname\relax
+    \expandafter\ifx\csname l@german\endcsname\relax
+      \expandafter\newlanguage\csname l@germanb\endcsname
+    \else
+      \expandafter\let\csname l@germanb\expandafter\endcsname\csname l@german\endcsname
+    \fi
+  \fi");
+
   // German caption strings (from germanb.ldf). \providecommand so raw
   // babel/germanb.ldf processing (if any) doesn't overwrite.
   RawTeX!(r"\providecommand\captionsgerman{%

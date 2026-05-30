@@ -342,6 +342,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("gensymb", "sty", package::gensymb_sty::load_definitions),
   ("geometry", "sty", package::geometry_sty::load_definitions),
   ("german", "sty", package::german_sty::load_definitions),
+  // babel's german-family `.ldf` files are intercepted by german_sty/ngerman_sty
+  // bindings (deterministic `"`-shorthand handling via `\lx@german@dq@dispatch`).
+  // The bindings now also alias `\l@<lang>b` → `\l@<lang>` (the dialect babel's
+  // `\selectlanguage{germanb}` / `{ngermanb}` needs) — see german_sty.rs /
+  // ngerman_sty.rs. NOTE: raw-loading these `.ldf` files (Perl-faithful — Perl
+  // has only `german.sty.ltxml`) DOES define `\l@germanb` correctly, but routes
+  // `\mdqoff` through babel's `\initiate@active@char` machinery, which is
+  // non-deterministic under concurrent test load in our engine (`german_test`
+  // `\mdqoff "o` → `ö` vs `”o`). Until that engine determinism is fixed, the
+  // binding's explicit catcode-based `\mdqon`/`\mdqoff` is the stable path.
   ("germanb", "ldf", package::german_sty::load_definitions),
   ("german", "ldf", package::german_sty::load_definitions),
   ("ngerman", "ldf", package::ngerman_sty::load_definitions),
