@@ -1132,6 +1132,32 @@ byte-identical to Perl `auto_keywords`).
   sandbox is fully resolved — 9 convert, 2 Cluster-B fixed earlier, 7 Cluster-A are
   SHARED runaways now reported honestly (exit 1) rather than as 0-byte successes.
 
+* **Braced-theorem content-orphaning — DIAGNOSED, deterministic repro found,
+  fix DEFERRED (2026-05-30).** Fresh scans (250 papers of month 2108: 1 flagged,
+  SHARED; 200 of 1905: 4 flagged) surfaced **1905.00186** as a genuine *Rust-only
+  content-loss* case (distinct from a Rust-only *error*): both engines emit the
+  same 6× `} Attempt to close a group that switched to mode horizontal`, but Rust
+  loses ~90% of the document — **Rust XML 199 KB vs Perl 4.3 MB** (119 vs 1168
+  `<Math>`). Root cause traced to the `endgroup mode-switch frame leak` cluster:
+  the paper uses theorems as **`{\lem[…] … }`** (the bare `\newtheorem` command in
+  a brace group, no `\begin/\end`). **Two consecutive bare braced theorems** orphan
+  everything after the second — the content is digested (errors fire, digestion
+  reaches `\end{document}`) but never absorbed: the enclosing
+  `\begin{document}`/env body-capture (`digest_next_body`, terminates on
+  `init_depth > boxing.len()`) ends right after the first braced theorem because
+  the `}` egroup mode-switch error (stomach.rs:388 "don't pop, maybe recover")
+  perturbs `boxing`. `\lem`'s own `#body` is *correct* ("A body a."). Perl keeps
+  all content (cor nested in lem, section a sibling via absorb-time auto-close).
+  Deterministic 9-line repro saved at
+  `docs/reproducers/braced_theorem_orphan_1905.00186.tex`; full mechanism + traces
+  in the `endgroup-modeswitch-frame-leak` memory. Deferred (NOT a shortcut): the
+  fix touches core egroup/`boxing`/body-capture semantics (repeatedly flagged
+  high-blast-radius) and needs a per-token `boxing.len()` trace of both captures
+  cross-checked vs Perl `digestNextBody` (Perl passes `\end<name>` as the capture
+  terminal — Package.pm:1919/1964 — where Rust passes `None`, constructor.rs:371).
+  Note: SHARED-error, so it doesn't move the Rust-only-error count, but it IS a
+  real fidelity gap (content loss) worth a dedicated fix session.
+
 * **Round-37 Rust-only conversion failures: EXHAUSTED.** After the four
   R19 fixes below, three fresh `cortex_worker` sweeps of distinct slices
   of `canvas3_round37_remaining` (1500 + 3005 + 2081 ≈ **6.6k papers**)
