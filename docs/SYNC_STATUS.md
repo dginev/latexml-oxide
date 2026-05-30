@@ -210,6 +210,25 @@ spaces before `: ; ! ?`) still passes. `cargo test --tests` 1344/0, clippy clean
 (no new warnings). NOTE: the German `"` shorthand block has the same latent
 preamble-activation issue but no witness; left as-is.
 
+**2026-05-30 — FIXED Rust-only: apacite binding missing the `\shortcite*` cite
+family.** Witness 1606.03620 (`\documentclass{book}` + `\usepackage{apacite}`,
+`\bibliographystyle{apacite}`, `\shortciteNP` via apacdoc's `\DSMshortciteNP`):
+RUST 1 → 0 (`undefined:\shortciteNP`). The `apacite_sty.rs` contrib binding
+delegates apacite's in-text cites to natbib (`\citeA → \citet`, `\citeNP →
+\citealp`, …) but omitted the abbreviated-author "short" family
+(`\shortcite`/`\shortciteA`/`\shortciteNP`/`\shortciteauthor`, apacite.sty
+L277-401, classic block). Added them as the matching natbib delegations
+(`\citep`/`\citet`/`\citealp`/`\citeauthor`), same approximation as the existing
+`\citeNP`. INVESTIGATED the raw-load-then-override path (icml2019 pattern) first
+and REJECTED it: the paper-bundled apacite.sty defines `\citet`/`\citep` only
+under the `natbibemu` option (`\if@APAC@natbib@emu`, L587+) while default
+`apaciteclassic` leaves them undefined, yet apacite's `\unmaskcitations` (L1086)
+references them — so raw-load alone left `\citet` undefined (RUST 1), and
+raw-load + the binding's `natbib` cascaded (RUST 46) because natbib and
+apacite's citation engines conflict. The natbib-delegation is the binding's
+established, lower-risk approach. Verified 1606.03620 RUST 1 → 0 = PERL 0.
+`cargo test --tests` 1344/0, clippy clean (no new warnings).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an

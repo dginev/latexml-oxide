@@ -75,6 +75,21 @@ LoadDefinitions!({
   DefMacro!("\\citeA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
   DefMacro!("\\citeNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
   DefMacro!("\\citeyearNP[][] Semiverbatim", "\\citeyear[#1][#2]{#3}");
+  // apacite "short" cite family (apacite.sty L277-401, the CLASSIC block —
+  // distinct from the `\citet`/`\citep` defined only under the `natbibemu`
+  // option at L587+). These are abbreviated-author variants of
+  // \cite/\citeA/\citeNP/\citeauthor: apacite shortens long author lists to
+  // "et al." sooner, but the reference resolves identically, so we delegate
+  // to the matching natbib command (same approximation as `\citeNP` above).
+  //   \shortcite       — parenthetical          → \citep
+  //   \shortciteA      — textual                → \citet
+  //   \shortciteNP     — no parentheses         → \citealp
+  //   \shortciteauthor — author-only            → \citeauthor
+  // Witness 1606.03620 (`\shortciteNP`, via apacdoc's `\DSMshortciteNP`).
+  DefMacro!("\\shortcite[][] Semiverbatim", "\\citep[#1][#2]{#3}");
+  DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
+  DefMacro!("\\shortciteNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
+  DefMacro!("\\shortciteauthor[][] Semiverbatim", "\\citeauthor{#3}");
   def_macro_noop("\\APACrestorebibitem")?;
   def_macro_noop("\\APACemindex{}")?;
   def_macro_noop("\\APACltxemindex{}")?;
