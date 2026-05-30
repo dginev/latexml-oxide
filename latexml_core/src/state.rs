@@ -2267,6 +2267,12 @@ pub fn pop_frame() -> Result<()> {
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 pub fn get_frame_depth() -> usize { state!().undo.iter().filter(|frame| !frame.locked).count() }
+
+/// `true` when the CURRENT (front) stack frame is the locked bottom frame —
+/// i.e. there is no openable group/mode frame to pop. Popping it would FATAL.
+pub fn current_frame_locked() -> bool {
+  state!().undo.front().map(|f| f.locked).unwrap_or(true)
+}
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?

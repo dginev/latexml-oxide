@@ -128,6 +128,25 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-30 — FIXED Rust-only FATAL: stray `\endproof` over-popped the locked
+bottom frame (witness 1703.05010).** `\documentclass{svjour3}` + bare
+`$Proof.$ … \quad \endproof` (no `\begin{proof}`) → **Rust Fatal**
+(`TargetUnexpected:Endgroup attempt to pop last locked stack frame`, no output) →
+**3 err / complete / 1.05 MB HTML** — exactly matching Perl's 3 errors. Root cause
+(backtrace: `end_mode` → `pop_stack_frame` → `pop_frame`): the stray `\endproof`
+→ `\end@proof` → `end_mode("internal_vertical")` with BOUND_MODE bound on the
+LOCKED bottom frame, so `end_mode_opt`'s value-guard passed and it popped — but
+`pop_frame` FATALs on the locked bottom. (ifsym/`\Letter` near the error was a red
+herring — the FATAL persists with both removed.) Fix: in `end_mode_opt`, after
+`leave_horizontal_internal()` (which can repack a horizontal frame that LEGITIMATELY
+becomes the pop target, e.g. a normal `\end{document}` — so the check must be HERE,
+not at the value-guard, else `000_hello` regresses), if `current_frame_locked()`
+the only frame left is the locked bottom: emit the same recoverable Error and DON'T
+pop, instead of crashing (Perl's "maybe we'll recover" intent — Perl completes such
+papers). Added `state::current_frame_locked()`. `cargo test --tests` **1344/0**.
+This closes the `\endproof` variant of the [[project_endgroup_modeswitch_frame_leak]]
+class (theorem/proof mode-frame leaks).
+
 **2026-05-30 — FIXED Rust-only: autart `\qed` undefined (witness 1703.03101).**
 `\documentclass{autart}` + `\def\epf{\hfill\mbox{\qed}}` → **Rust 1 err**
 (`undefined:\qed`) → **0 err / 491 KB HTML** (Perl 0, `\qed`=∎). Root cause: Rust
