@@ -248,13 +248,15 @@ LoadDefinitions!({
     if dims.is_empty() {
       Ok(Tokens!())
     } else {
-      // Space-separated token sequence of raw sp values — matches the
-      // shape expected by `image_graphicx_parse` which splits on
-      // whitespace and passes each value through `to_bp` (Util::Image
-      // L155-159).
+      // Perl returns `LaTeXML::Core::Array->new(values => \@dims, ...)` where
+      // each `@dims` entry is a `Dimension` object; its ToString (and so the
+      // recorded `options="…trim=10.0pt 20.0pt…"` attribute) is the standard
+      // pt form. Emit the same `Dimension` formatting (`10.0pt`), NOT the raw
+      // sp integer — the post-processor's image-trim parser, like Perl's
+      // `Util::Image` to_bp, reads the pt-suffixed value.
       let joined = dims
         .iter()
-        .map(|d| d.to_string())
+        .map(|d| latexml_core::common::dimension::Dimension(*d).to_string())
         .collect::<Vec<_>>()
         .join(" ");
       Ok(Tokenize!(&joined))
