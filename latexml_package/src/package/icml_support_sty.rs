@@ -20,6 +20,14 @@ LoadDefinitions!({
   DefMacro!("\\yrcite Semiverbatim", "\\citeyearpar{#1}");
   DefMacro!("\\cite Semiverbatim", "\\citep{#1}");
 
+  // icml2018.sty L709: `\long\def\comment#1{}` — a review-annotation macro that
+  // gobbles its argument (authors write `\comment{\ref{…}}` to hide draft
+  // notes). Our binding intercepts icml2016/2017/2018 but had omitted it, so a
+  // paper using `\comment{…}` (via arxiv.sty → `\RequirePackage{icml2018}`) hit
+  // `undefined:\comment` where Perl (which loads icml2018) is clean. Gobbling
+  // is the intended, source-faithful behavior. Witness 1803.00942.
+  DefMacro!("\\comment{}", "");
+
   // Frontmatter
   Let!("\\icmltitle", "\\title");
   // Perl gobbles \icmltitlerunning; surpass: it's the running-head
