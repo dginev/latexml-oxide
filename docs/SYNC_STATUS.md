@@ -144,6 +144,18 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: `\abovecaptionskip`/`\belowcaptionskip` missing
+from base under custom classes (witness 1703.00080).** Perl `LaTeX.pool.ltxml`
+L3648-3649 defines both in the BASE; Rust defined them only in article/book/
+ams_support class bindings (a stale latex_constructs.rs comment even claimed
+they were "not in Perl engine"). A custom class that doesn't load article
+(`\documentclass{style/vldb}`) doing `\setlength{\abovecaptionskip}{2pt}` → 4
+errors (2 undefined + 2 `expected:<variable>`) Perl never raises. Fix: add the
+two `DefRegister!(… => Glue::new(0))` to the base (latex_constructs.rs), exactly
+Perl; classes still override. 1703.00080 13→9 (remaining 9 = `\@personname`
+mode-leak cluster, deferred). General fix for any custom-class caption paper.
+Commit `fd8bd2ad80`, tests 1344/0.
+
 **2026-05-30 — FIXED Rust-only: tikz-timing no-op stub left tikz undefined
 (witness 1601.02183).** The `tikz-timing` binding was a no-op stub premised on
 "Perl reports tikz-timing.sty missing and skips it". FALSE under the gate config:
