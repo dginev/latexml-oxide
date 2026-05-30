@@ -45,6 +45,31 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — CHARACTERIZED (deferred, deep expl3): flexisym active-`|`/`\vert`
+delimiter DROPS in Rust math → spurious `double-subscript`.** Witness 1901.03862
+(`flexisym`+`breqn`): RUST 13 `double-subscript` errors, all Rust-only (Perl's 3
+errors are unrelated rotfloat.sty). Traced precisely: `A \vert B` → `A * B` in
+Rust (the `|` VANISHES; tex shows only the two mathchars) vs Perl tex `A|B`. Both
+engines agree `\meaning\vert` = "the character —" (flexisym makes `|` active,
+mathcode "8000; `\vert` = active `|`), declared via
+`\DeclareFlexDelimiter{\vert}{DeB}{del}{0C}{OMS}{6A}`. Because the `|` vanishes, a
+trailing `\vert_{…}` after a subscripted atom makes `script_handler`
+(tex_math.rs) walk back PAST the vanished delimiter to the previous atom's
+subscript → spurious double-subscript. **Exact rule:** errors iff the previous
+atom has a SUBSCRIPT and the new script is a SUBSCRIPT (superscripts never error;
+literal `|` doesn't trigger — only the CS `\vert`). **RULED OUT:** (a) the core
+`\delimiter` constructor + expl3 `\tex_delimiter:D \__int_eval:w "26A30C
+\__int_eval_end:` form WORK in Rust directly; (b) `\sd@del0C` is identical in
+both engines. The drop is narrowed to flexisym's expl3 active-char WRAPPER chain
+(`\@sym`/`\@symtype` → `\math_bsym_DeB:Nn` → `\math_sd_del_aux:Nnn` →
+`\exp_args:Nf \math_sd_del_auxi:nN {\use:c{sd@…}}` → `\math_delimiter:NNnNn`),
+which yields an empty `\delimiter` number in Rust. **Not a `script_handler` flaw
+and NOT a symptom to suppress** — the real fix is making flexisym delimiters
+render; needs a per-step expl3 expansion trace (Rust vs Perl). Messy baseline:
+flexisym→mathstyle emits 12 SHARED `\over`-no-longer-primitive errors in BOTH
+engines, so this paper can't reach zero regardless. Deferred to a dedicated
+expl3-fidelity session.
+
 **2026-05-30 — FIXED Rust-only: siunitx S/s table columns were STUBS + the
 `input-protect-tokens` catcode no-op.** Driver witness 1909.01486
 (`elsarticle-template-1-num.tex`, both engines 0 errors but RUST 426KB vs PERL
