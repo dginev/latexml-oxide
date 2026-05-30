@@ -128,6 +128,22 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-30 (cont.) — convergence reconfirmed, ~3600 papers (7 buckets).**
+Fresh strict-gated sweeps over 0411/1108/1502/2003 and 0610/1310/1806 (~3600
+papers) surfaced ~25 failures; ALL strict-gate SHARED (Perl errors/FATALs too,
+Rust matches-or-beats): `\Large` undefined in revtex/elsart (1=1, both),
+`\labellist` (3=3), `\author`/`\title` undefined under aps/prd (5=5, class
+context), `suppl.tex` missing local file (1=1), `\normalsize` self-recursion
+(2=2), `\DeclareMathOperator` (Rust 73 < Perl FATAL@101), token-limit runaway
+(both FATAL; Perl FATALs in 1.95s), `#`-leak, `_`/`^`/`}` script/mode classes.
+The ONLY recurring genuine Rust-only left in this corpus region is the
+`malformed:ltx:XMApp`/`XMTok` "isn't allowed in `<ltx:text>`" + duplicated
+`xml:id` class (witnesses 0902.1635, 2007.01660; 2003.02121/1806.02426 are
+SHARED) — that is the **math-parser / Marpa-ASF lane (collaborator's)**, deferred
+to avoid conflicting with their work. This corpus region is converged; the
+session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
+this iteration).
+
 **2026-05-30 — FIXED Rust-only FATAL: stray `\endproof` over-popped the locked
 bottom frame (witness 1703.05010).** `\documentclass{svjour3}` + bare
 `$Proof.$ … \quad \endproof` (no `\begin{proof}`) → **Rust Fatal**
