@@ -118,6 +118,27 @@ make the sibling `\documentstyle` impl (tex_job.rs) faithful to Perl line 79
 OmniBus); multi-line `\documentstyle{…}` clean. `cargo test --tests` 1344/0,
 clippy clean (no new warnings).
 
+**2026-05-30 — FIXED Rust-only: KOMA `scrartcl`/`scrbook` OmniBus stub omitted
+the `iftex` dependency, leaving `\ifpdf` undefined.** Witness 1802.07175
+(`\documentclass{scrartcl}` … `\ifpdf \DeclareGraphicsExtensions{…} \else …`):
+RUST 1 → 0 (`undefined:\ifpdf`). Perl ships no scrartcl binding and raw-loads
+the real KOMA `scrartcl.cls`, whose dependency-scan pulls
+`scrkbase,tocbasic,scrlayer-scrpage,bookmark,typearea,xpatch,scrlogo,auxhook`
+— transitively loading `iftex.sty.ltxml`, which defines `\ifpdf`/`\ifpdftex`/
+`\ifluatex`/… So Perl's `\ifpdf` is defined and engine-detection preamble is
+clean. Our `scrartcl_cls.rs`/`scrbook_cls.rs` are deliberate OmniBus stubs
+(KOMA's typographic engine isn't replayed) that replayed none of the dep
+chain, so `\ifpdf` reached the gullet undefined → `generateErrorStub` Error
+(Perl errors there too, but never reaches it because iftex defined the CS).
+Fix: add `RequirePackage!("iftex")` to both KOMA stubs, mirroring the real
+class's transitive iftex load (Rust's `iftex_sty.rs` defines the same engine
+conditionals as Perl's iftex.sty.ltxml). Same incomplete-binding class as
+icml/lmcs. NOTE on gating method: a bare `\ifpdf` errors in BOTH engines —
+this was Rust-only only because scrartcl supplies iftex in Perl; the gate
+correctly flagged it (perl=0 on the real paper). Verified 1802.07175 RUST 1 →
+0 = PERL 0; `scrbook`+`\ifpdf` also 0. `cargo test --tests` 1344/0, clippy
+clean (no new warnings).
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an

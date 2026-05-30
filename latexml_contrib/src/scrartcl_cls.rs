@@ -14,6 +14,16 @@ LoadDefinitions!({
     "scrartcl.cls is only minimally stubbed and will not be interpreted raw."
   );
   LoadClass!("OmniBus");
+  // Real scrartcl.cls pulls in the KOMA dependency chain (scrkbase, tocbasic,
+  // scrlayer-scrpage, bookmark, typearea, xpatch, scrlogo, auxhook), which
+  // transitively loads `iftex` — so `\ifpdf`/`\ifpdftex`/`\ifluatex`/… are
+  // defined for author preamble doing engine/driver detection
+  // (`\ifpdf \DeclareGraphicsExtensions{.eps,.pdf,…} \else …`). Perl ships no
+  // scrartcl binding and raw-loads the .cls, picking up iftex that way (its
+  // dependency-scan loads iftex.sty.ltxml). Our OmniBus stub intercepts the
+  // class, so without this `\ifpdf` is undefined where Perl is clean. Mirror
+  // the real class's dependency. Witness 1802.07175.
+  RequirePackage!("iftex");
   // KOMA configuration knobs — layout/typography only, no body content.
   def_macro_noop("\\setkomafont{}{}")?;
   def_macro_noop("\\addtokomafont{}{}")?;
