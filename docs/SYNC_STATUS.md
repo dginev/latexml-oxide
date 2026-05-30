@@ -58,25 +58,30 @@ all FAIL to reproduce — the trigger needs the full paper's specific
 cite/label/title structure. Needs a full-paper bisection of the
 cite×bibliography×pdf-string interaction; deferred from this round.
 
-**2026-05-30 — CHARACTERIZED (root cause nailed; deferred, broad/risky): escaped
-specials `\#`/`\&`/`\%`/`\$`/`\_` are `protected` MACROS (not Perl's `\char`
-chardefs) → break `\ifx`-based stack sentinels.** Witness 1811.00200 (`llncs` +
-paper-local `algochl.sty`, the Mohri "mlbook" algorithm style): `Package algo
-Error: Unexpected endalgo` (RUST 1 → 0). algochl's `algo`/`ALGO` env uses a
-macro-stack whose sentinel is `\#`: `\algo` does `\xdef\alg@Sc{\#}\alg@push`,
-`\endalgo` does `\alg@pop{\#}` which `\ifx`-compares the popped top against `\#`.
-EVERY `\begin{ALGO}…\end{ALGO}` (even a bare `\RETURN{x}`) errors. Bisected to
-`\#`'s definition: Rust `\meaning\#` = `protected macro:->\ifmmode\lx@math@hash
-\else\lx@text@hash\fi` (plain_constructs.rs:38) vs Perl `\char"23` (a chardef).
-**Empirically proven**: prefixing the doc with `\chardef\#=35` OR
-`\def\#{\origsharp}` (any NON-protected form) → 0 errors. The `protected => true`
-flag is load-bearing — added for harvmac `\&`/`\#` round-trip through
-`\write`/`\input` (witnesses hep-th9306154 / hep-ph9803499). Perl's `\char`
-chardef satisfies BOTH: non-expandable (harvmac round-trip) AND `\ifx`-stable
-(algochl). The faithful fix is migrating all five specials from protected
-dispatch-macros to Perl-style chardefs — but that touches every escaped-special
-render path (math + text + dual-revert) and the harvmac round-trip, so it needs
-a dedicated session with full regression testing, not a hasty edit. Deferred.
+**2026-05-30 — FIXED Rust-only: escaped specials `\#`/`\&`/`\%`/`\$`/`\_` were
+`protected` dispatch MACROS (not single primitives) → broke `\ifx`-based macro-
+stack sentinels.** Witness 1811.00200 (`llncs` + paper-local `algochl.sty`, the
+Mohri "mlbook" algorithm style): `Package algo Error: Unexpected endalgo` (RUST 1
+→ 0). **FIX (plain_constructs.rs):** replaced the five `\ifmmode\lx@math@*
+\else\lx@text@*\fi` protected dispatch MACROS with single mode-aware
+**DefPrimitives** that route to the same `\lx@(math|text)@*` helpers by `IN_MATH`
+at digest time — exactly Perl's "Box-dispatching DefPrimitive" design (the
+WISDOM #44 Rust divergence is now undone). A primitive is BOTH non-expandable
+(survives the `\write`/`\input` round-trip — the harvmac concern that needed the
+protected flag, hep-th9306154) AND `\ifx`-stable (so algochl's `\xdef\alg@Sc{\#}`
+/ `\alg@pop{\#}` sentinel compares cleanly). The earlier-considered chardef
+(matching Perl's dump `CD(C('\#'),…,N(35))`) was REJECTED: Rust's raw CharDef
+drops the `#` in math (`\char 35` reversion, empty text) and injects a catcode-4
+`&` for `\&` — which is exactly why the override existed. **Verified:** algochl
+1→0 (= Perl), all five render identically to baseline in BOTH text and math
+(incl. `$\&\&$` → `\&\&`, the catcode-4 case the override guarded), `\&`/`\#`
+`\write`/`\input` round-trip intact ("A & B # C"), `$g\$h$`→`g\$h` unchanged from
+baseline. `cargo test` 1344/0, clippy clean. (Mechanism: algochl's `algo`/`ALGO`
+env uses a macro-stack whose sentinel is `\#` — `\algo` does
+`\xdef\alg@Sc{\#}\alg@push`, `\endalgo` does `\alg@pop{\#}` which `\ifx`-compares
+the popped top against `\#`; EVERY `\begin{ALGO}…\end{ALGO}`, even a bare
+`\RETURN{x}`, errored. Empirically proven by `\chardef\#=35` / `\def\#{…}`
+clearing it before the proper primitive fix landed.)
 
 **2026-05-30 — FIXED Rust-only: IEEEtran `onecolumn`/`twocolumn` options were
 no-ops → `\ifCLASSOPTIONtwocolumn` stuck true → `Not in outer par mode`.**
