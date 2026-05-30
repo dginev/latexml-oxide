@@ -38,6 +38,16 @@ LoadDefinitions!({
   // dropping silently.
   DefMacro!("\\jmlrheading{}{}{}{}{}{}",
     "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4 #5 #6}");
+  // jmlr2e.sty L256: `\def\ewrlheading#1#2#3#4{…\def\ps@jmlrtps{…}…}` — the
+  // EWRL-proceedings variant of `\jmlrheading`, setting the running-head page
+  // style from {volume}{year}{date/location}{authors}. Our binding intercepts
+  // jmlr2e.sty (so the raw def never runs); Perl raw-loads it and is clean.
+  // Preserve the proceedings metadata as an ltx:note, same as `\jmlrheading`
+  // (HTML drops the running head, so the raw def would lose this content).
+  // Witness 1802.03976 (`\ewrlheading{14}{2018}{October 2018, Lille, France}
+  // {…authors…}`).
+  DefMacro!("\\ewrlheading{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4}");
   DefMacro!("\\ShortHeadings{}{}",
     "\\@add@frontmatter{ltx:note}[role=shortheadings]{#1 / #2}");
   DefMacro!("\\firstpageno{}",

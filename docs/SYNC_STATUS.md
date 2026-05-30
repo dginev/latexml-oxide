@@ -349,6 +349,21 @@ class's `\RequirePackage` list but had omitted subcaption. Fix: add
 wlscirep (babel) / scrartcl (iftex). Verified RUST 1 → 0 = PERL 0; `cargo test
 --tests` 1344/0, clippy clean.
 
+**2026-05-31 — FIXED Rust-only: `jmlr2e_sty` contrib binding missing
+`\ewrlheading`.** Witness 1802.03976 (article + paper-bundled jmlr2e.sty;
+`\ewrlheading{14}{2018}{October 2018, Lille, France}{…authors…}`): RUST 1 → 0
+(`undefined:\ewrlheading`). jmlr2e.sty L256 defines `\ewrlheading#1#2#3#4` (the
+EWRL-proceedings variant of `\jmlrheading`, sets the running-head page style);
+our `jmlr2e_sty` binding intercepts the .sty (raw def never runs) and covers
+`\jmlrheading`/`\editor`/`\address`/… but had omitted `\ewrlheading`. Perl ships
+no jmlr2e binding and raw-loads the .sty (loads cleanly, 0 errors). Fix: add
+`\ewrlheading{}{}{}{}` → `\@add@frontmatter{ltx:note}[role=heading]{…}`, mirroring
+`\jmlrheading` and the binding's content-preserving note pattern (HTML drops the
+running head, so the raw def would lose the proceedings metadata — the binding
+surpasses Perl by preserving it). Same incomplete-binding/accretion class as the
+binding's own `\address` (witness 1711.01660), wlscirep, scipost. Verified RUST
+1 → 0 = PERL 0; `cargo test --tests` 1344/0, clippy clean.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
