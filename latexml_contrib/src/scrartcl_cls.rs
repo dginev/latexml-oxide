@@ -24,6 +24,29 @@ LoadDefinitions!({
   // class, so without this `\ifpdf` is undefined where Perl is clean. Mirror
   // the real class's dependency. Witness 1802.07175.
   RequirePackage!("iftex");
+  // KOMA section-font hooks. scrartcl.cls L170-201 defines `\sectfont` (the
+  // heading font = `\normalcolor\maybesffamily\bfseries`) plus an empty
+  // `\size@<unit>` selector family. tocloft keys on these whenever it detects a
+  // KOMA class: `\cfttoctitlefont` becomes `\size@chapter\sectfont` (chapter
+  // classes) or `\size@section\sectfont` (article), tocloft.sty L169/L172 — so
+  // `\tableofcontents` under scrartcl+tocloft expands them. Our OmniBus stub
+  // intercepts scrartcl and omitted them, so they were undefined where Perl
+  // (raw-loads scrartcl) is clean. Mirror koma's definitions. `\maybesffamily`
+  // is empty (scrartcl's `\if@sfdefaults` is false by default → serif). We also
+  // provide the empty `\size@chapter`: OmniBus defines `\chapter`, so tocloft's
+  // `\if@cfthaschapter` branch fires and references the chapter form — the
+  // spacing it selects is layout-only and invisible in our output.
+  // Witness 1702.04336 (scrartcl + tocloft + \tableofcontents).
+  def_macro_noop("\\maybesffamily")?;
+  DefMacro!("\\sectfont", "\\normalcolor\\maybesffamily\\bfseries");
+  def_macro_noop("\\size@part")?;
+  def_macro_noop("\\size@partnumber")?;
+  def_macro_noop("\\size@chapter")?;
+  def_macro_noop("\\size@section")?;
+  def_macro_noop("\\size@subsection")?;
+  def_macro_noop("\\size@subsubsection")?;
+  def_macro_noop("\\size@paragraph")?;
+  def_macro_noop("\\size@subparagraph")?;
   // KOMA configuration knobs — layout/typography only, no body content.
   def_macro_noop("\\setkomafont{}{}")?;
   def_macro_noop("\\addtokomafont{}{}")?;
