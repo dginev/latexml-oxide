@@ -292,12 +292,29 @@ LoadDefinitions!({
   // 1-error reduction is the entire test suite OOM-aborting at
   // `81_babel::elsart_keyword_brace_form_test`.
   //
-  // The trailing-`}` arxiv 1710.03688 / hep-ph0702114 case is now a
-  // deferred parity gap. Any future fix must distinguish balanced vs
-  // unbalanced input WITHOUT speculatively reading to EOF — e.g. peek
-  // for the trailing `}` after a strict balanced read, or scope the
-  // lenient reader by an explicit token budget.
-  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut");
+  // RESOLVED 2026-05-30 via the design note's first suggestion: keep the
+  // strict balanced read of the keyword argument, then peek past spaces and
+  // gobble an OPTIONAL trailing `}` (catcode END). This reproduces Perl's
+  // lenient `readBalanced` *result* (it absorbs the legacy unbalanced `}`)
+  // for the trailing-`}` idiom — abstract bodies that end
+  //     \keyword{Kw1; Kw2; …}   <comments/spaces>   }   \end{abstract}
+  // (the stray `}` is the orphaned close of a commented-out brace group;
+  // witness 1601.01227, also 1710.03688 / hep-ph0702114) — WITHOUT the
+  // speculative read-to-EOF that OOM'd the balanced fixture: for the common
+  // `\keyword{Higgs; Boson}\end{abstract}` form the token after the strict
+  // read is `\end` (a CS, not `}`), so nothing is gobbled. The peek is
+  // bounded to one token, never crossing `\end`.
+  DefPrimitive!("\\lx@elsart@gobble@optbrace", {
+    gullet::skip_spaces()?;
+    if let Some(tok) = gullet::read_token()? {
+      // Gobble a single trailing `}` (the elsart unbalanced-keyword idiom);
+      // otherwise leave the stream untouched.
+      if tok.get_catcode() != Catcode::END {
+        gullet::unread_one(tok);
+      }
+    }
+  });
+  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut\\lx@elsart@gobble@optbrace");
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
   DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
