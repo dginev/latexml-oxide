@@ -66,6 +66,24 @@ LoadDefinitions!({
   DefPrimitive!("\\textPsi",     "\u{03A8}");
   DefPrimitive!("\\textOmega",   "\u{03A9}");
 
+  // Archaic / extra Greek letters. greek-fontenc (loaded by textalpha) declares
+  // these over LGR/TU (greek-fontenc/tuenc-greek.def L232-241,
+  // lgrenc.def `\DeclareTextSymbol{\textQoppa}{LGR}{21}`); since we map the
+  // `\text<greek>` family to Unicode rather than rely on the LGR font, mirror
+  // the full archaic set so a paper using e.g. `\textQoppa` (witness
+  // arXiv:1505.03770, `\def\Qop{\text{\rm\textQoppa}}`) doesn't hit an
+  // undefined CS where Perl — which raw-loads textalpha — is clean.
+  DefPrimitive!("\\textQoppa",   "\u{03D8}"); // Ϙ archaic Koppa
+  DefPrimitive!("\\textqoppa",   "\u{03D9}"); // ϙ
+  DefPrimitive!("\\textStigma",  "\u{03DA}"); // Ϛ
+  DefPrimitive!("\\textstigma",  "\u{03DB}"); // ϛ
+  DefPrimitive!("\\textDigamma", "\u{03DC}"); // Ϝ
+  DefPrimitive!("\\textdigamma", "\u{03DD}"); // ϝ
+  DefPrimitive!("\\textKoppa",   "\u{03DE}"); // Ϟ
+  DefPrimitive!("\\textkoppa",   "\u{03DF}"); // ϟ
+  DefPrimitive!("\\textSampi",   "\u{03E0}"); // Ϡ
+  DefPrimitive!("\\textsampi",   "\u{03E1}"); // ϡ
+
   // textgreek.sty L235-260 also exposes `\straight<letter>` variants
   // (the "upright" forms used in physics typography where the default
   // italic theta is unwanted). Map to Unicode glyphs that match the
