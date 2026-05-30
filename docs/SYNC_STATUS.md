@@ -144,6 +144,20 @@ to avoid conflicting with their work. This corpus region is converged; the
 session's 7 landed fixes stand. `cargo test --tests` **1344/0** (no code change
 this iteration).
 
+**2026-05-30 — FIXED Rust-only: graphicx `trim`/`viewport` keyvals untyped →
+`undefined:\clip` (witness 1512.05119).** Perl `graphicx.sty.ltxml` L37-38
+types `trim`/`viewport` as `GraphixDimensions` (≤4-dim parser); Rust left them
+empty-typed, keeping value tokens verbatim. A malformed trailing token then
+leaked to digestion: `\includegraphics[trim=2.5cm 0.5cm 3cm 1cm \clip]{…}`
+(author meant `,clip`) → `undefined:\clip` (Rust 1, Perl 0 — Perl's parser reads
+4 dims and STOPS at `\clip`, discarding it). Fix (`graphicx_sty.rs`): type both
+as `GraphixDimensions`. The parser existed in `graphics_sty.rs` but had NO
+consumer (its "raw sp for image_graphicx_parse" return comment was aspirational);
+aligned its return to Perl too — emit `Dimension::Display` (`10.0pt`) so the
+`options="…trim=10.0pt 20.0pt…"` attribute matches Perl byte-for-byte (was raw
+sp `655360 …`). **1→0**, 138 KB output, options identical to Perl. Commit
+`b011cf6626`, tests 1344/0.
+
 **2026-05-30 — FIXED Rust-only: LaTeX 2.09 size aliases `\vpt`…`\xxvpt`
 blocked user `\newcommand` (witness 1801.08339).** A dump-path stub in
 `latex_constructs.rs` no-op-defined `\vpt`,`\vipt`,…,`\xxvpt` ("to help 1990s
