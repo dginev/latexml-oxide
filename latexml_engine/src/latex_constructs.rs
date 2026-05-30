@@ -6445,23 +6445,21 @@ LoadDefinitions!({
   // SHARED-FAILURE with Perl (both fatal on this macro without a stub).
   def_macro_noop("\\new@internalmathalphabet{}{}{}{}{}")?;
 
-  // LaTeX 2.09 size aliases. Defined in latex_base.rs but that pool is
-  // SKIPPED when the latex.ltx dump is loaded (latex.rs:83-89). Old
-  // hep-th/hep-ph papers from the 1990s still use `\xpt` / `\xipt` /
-  // `\xiipt` directly to set the math/text font size; without these
-  // defines they error as undefined and we leak `\edef\f@size{…}\rm`
-  // expansion tokens. Stub them as no-ops since font-size selection in
-  // 2.09 mode is a typesetting concern that doesn't affect our XML
-  // output. Witnesses: arXiv:hep-ph9306327, hep-ph9307211,
-  // hep-th9409059 (~6 papers in stage-4 of the 100k warning corpus).
-  for cs_name in [
-    "\\vpt", "\\vipt", "\\viipt", "\\viiipt", "\\ixpt", "\\xpt",
-    "\\xipt", "\\xiipt", "\\xivpt", "\\xviipt", "\\xxpt", "\\xxvpt",
-  ].iter() {
-    if !state::has_meaning(&T_CS!(*cs_name)) {
-      def_macro(T_CS!(*cs_name), None, None, None)?;
-    }
-  }
+  // LaTeX 2.09 size aliases (`\vpt`…`\xxvpt`) are intentionally NOT defined
+  // here. Perl `latex_base.pool.ltxml:142-153` defines them, but they do NOT
+  // survive into the dumped `latex.ltx` snapshot (only the `\@vpt`…`\@xxvpt`
+  // dimensions do), so at runtime Perl leaves `\vpt`…`\xxvpt` *undefined*:
+  // a 1990s hep-th paper that USES `\xpt` gets `Error:undefined:\xpt` in
+  // Perl (verified), i.e. a SHARED error — not a Rust-only gap. A previous
+  // port stubbed them as no-ops "to help those papers", but that (a) masked
+  // the SHARED Perl error and, worse, (b) made the CS already-defined so a
+  // paper's own `\newcommand{\vpt}{\tilde\varphi}` (a perfectly valid user
+  // macro — `\vpt`/`\xpt` are NOT reserved in LaTeX 2e) was silently
+  // dropped, then the now-empty `\vpt` left its `^`/`_` to re-attack the
+  // previous atom for a spurious "Double/­triple sub/superscript". Witness
+  // 1801.08339 (`\newcommand{\vpt}{\tilde{\varphi}}`, then `c^3\vpt^\circ` →
+  // Rust double-superscript, Perl clean). Faithful parity: leave them
+  // undefined, exactly like the Perl runtime.
   // DeclareMathAlphabet: define math font command if not already defined
   DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
     let cs_tok = T_CS!(cs.to_string());
