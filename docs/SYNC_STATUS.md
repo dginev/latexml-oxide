@@ -139,6 +139,34 @@ correctly flagged it (perl=0 on the real paper). Verified 1802.07175 RUST 1 →
 0 = PERL 0; `scrbook`+`\ifpdf` also 0. `cargo test --tests` 1344/0, clippy
 clean (no new warnings).
 
+**2026-05-30 — CHARACTERIZED (deferred) Rust-only: `SIunits` →
+`six_enable_unit_macros(true)` breaks catcode-8 `_` from a macro argument used
+in `\label{#2}` / `\includegraphics{#1}` / text.** Witness 1809.04060
+(revtex4-1 + `\usepackage{SIunits}` + user `\newcommand{\fg}[3]{…\[
+\includegraphics{#1}\]…\caption{\label{#2}…}}` called as
+`\fg{atomic_levels.png}{atomic_levels}{…}`): RUST 7, PERL 0. The 7 errors are
+all `unexpected:_ Script _ can only appear in math mode` on the `_` of the
+filename (`atomic_levels.png`) and label (`atomic_levels`) args. Narrowed
+precisely: NOT the multi-line-class bug (1601.06734); `_`'s catcode is 8 in
+both engines with/without SIunits; `siunitx` alone is clean (0/0); `siunitx`
++ the SIunits `\sisetup{parse-numbers=false,input-product=\times}` is clean;
+the trigger is specifically `six_enable_unit_macros(true)` (the SIunits
+binding's unit-macro enabler, siunitx_sty.rs:2099). It `\let`s ~251 unit
+names — INCLUDING single-letter abbreviations that collide with LaTeX
+text/accent CSes (`\l`,`\L`,`\g`,`\m`,`\s`,`\H`,…) — to their `\lx@six@…`
+implementations with `overwrite=true`. Without six_enable, Rust digests a
+catcode-8 `_` from a macro arg in `\label`/`\includegraphics`/text gracefully;
+with it, the same `_` errors. Perl's `six_enableUnitMacros(1)` ALSO overwrites
+(siunitx.sty.ltxml:894) yet stays clean, so the fix is NOT to disable
+`overwrite` (that would diverge from Perl + break SIunits bare-unit rendering);
+the divergence is either an over-broad Rust unit-name set vs Perl's
+`siunitx_macros`, or a downstream fragility in how a clobbered single-letter
+CS interacts with catcode-8 `_` digestion (apply_accent path,
+tex_character.rs:69). Needs deeper interactive tracing to pinpoint the
+clobbered helper. Part of the recurring `_ Script _` cluster, but a DISTINCT
+root cause from 1601.06734 (class-name whitespace) and 1509.01434 (hyperref
+backref). Deferred this round.
+
 **2026-05-30 — FIXED Rust-only: unbound-class fallback ci-PREFIX match wrongly
 sent `AAAI-Std` → `aa` instead of OmniBus.** Witness 2008.08548
 (`\documentclass[final,OA]{AAAI-Std}`): RUST 1 → 0 (`undefined:\address`). For an
