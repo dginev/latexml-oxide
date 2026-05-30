@@ -157,6 +157,26 @@ available); tests 1344/0. A fresh 500-paper undefined-CS sweep (1207-1607 bucket
 found 1 hit (1207.0382 informs1 `\NatBibNumeric`), rust-better — corpus remains
 converged of clean Rust-only error→success gaps.
 
+**2026-05-30 (cont.) — 1601.01227 elsart-abstract stray-`}` mechanism narrowed
+(deferred deep-cluster, two hypotheses RULED OUT).** Re-gated the Rust-only
+mode-frame witnesses: 1601.01227 (RUST 1 / PERL 0, elsart3-1 abstract stray `}`),
+2001.03998 (RUST 8 / PERL 0, xy-pic `\hbox`), 1703.00080 (now RUST 9 / PERL 0 —
+fully Rust-only after the abovecaptionskip fix; `\@personname`+tabular). For
+1601.01227, narrowed via clean repros: `\begin{abstract}\ntext\n}\n\end{abstract}`
+→ article PERL 1/RUST 1 (SHARED), elsart3-1 PERL 0/RUST 1 (DIVERGE). **RULED OUT:**
+(a) the `elsart_support_core_sty.rs:260` comment's framing that it's a `\keyword`
+trailing-`}` reader issue — it reproduces with NO `\keyword`, just a bare stray `}`;
+(b) "elsart redefines/unlocks the abstract env" — BOTH engines define `{abstract}`
+IDENTICALLY (`locked=1, mode=internal_vertical`, latex_constructs L1180 / 4675), and
+elsart's `\def\abstract{\@abstract…\vbox\bgroup}` (elsart.cls:1206-1219) is blocked
+by the lock in BOTH. So the abstract env is the SAME; the divergence is that **Perl
+TOLERATES the stray `}` under elsart3-1 but errors under article** — a class-context
+egroup/mode-frame recovery difference (Rust errors in both). Likely elsart3-1's raw
+load leaves an extra harmless group open that the stray `}` consumes in Perl. Needs
+the dedicated mode-frame session (frame-stack trace at the stray `}` for elsart3-1
+vs article). No fix landed (deep core-stomach, single malformed-source paper, OOM
+risk per the existing comment); tests 1344/0.
+
 **2026-05-30 — FIXED Rust-only: sn-jnl (Springer Nature) `undefined:{sidewaystable}`
 (witness 2101.02753).** RUST 3 → 0 (now beats Perl's 2). **Root cause (CORRECTED
 from the prior iteration's mis-diagnosis):** sn-jnl DOES have a binding —
