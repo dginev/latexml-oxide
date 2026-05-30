@@ -64,10 +64,39 @@ LoadDefinitions!({
     Let!("\\ifCLASSOPTIONtransmag","\\iftrue");
   });
   DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
-  DeclareOption!("onecolumn", {});
-  DeclareOption!("twocolumn", {});
-  DeclareOption!("peerreview", {});
-  DeclareOption!("peerreviewca", {});
+  // Perl IEEEtran.cls.ltxml L72-73: the column-mode options flip BOTH flags.
+  // Default is twocolumn (set in the Let block below, matching Perl L19-20's
+  // `\CLASSOPTIONtwocolumntrue`); the `onecolumn` option must flip it OFF.
+  // These previously were empty no-ops, so `\ifCLASSOPTIONtwocolumn` stayed
+  // hardcoded-true even for `\documentclass[onecolumn]{IEEEtran}` — a paper's
+  // `\ifCLASSOPTIONtwocolumn \begin{strip}…\end{strip} \else …\fi` then took
+  // the twocolumn branch and the `cuted` `strip` env errored "Not in outer par
+  // mode". Witness 1508.02556. The handlers run during ProcessOptions (after
+  // the default Lets), so the flip survives.
+  DeclareOption!("onecolumn", {
+    Let!("\\ifCLASSOPTIONonecolumn", "\\iftrue");
+    Let!("\\ifCLASSOPTIONtwocolumn", "\\iffalse");
+  });
+  DeclareOption!("twocolumn", {
+    Let!("\\ifCLASSOPTIONtwocolumn", "\\iftrue");
+    Let!("\\ifCLASSOPTIONonecolumn", "\\iffalse");
+  });
+  // Perl L95-99: peerreview/peerreviewca set their flag and clear the
+  // mutually-exclusive journal/conference/technote modes.
+  DeclareOption!("peerreview", {
+    Let!("\\ifCLASSOPTIONpeerreview",   "\\iftrue");
+    Let!("\\ifCLASSOPTIONpeerreviewca", "\\iffalse");
+    Let!("\\ifCLASSOPTIONjournal",      "\\iffalse");
+    Let!("\\ifCLASSOPTIONconference",   "\\iffalse");
+    Let!("\\ifCLASSOPTIONtechnote",     "\\iffalse");
+  });
+  DeclareOption!("peerreviewca", {
+    Let!("\\ifCLASSOPTIONpeerreview",   "\\iftrue");
+    Let!("\\ifCLASSOPTIONpeerreviewca", "\\iftrue");
+    Let!("\\ifCLASSOPTIONjournal",      "\\iffalse");
+    Let!("\\ifCLASSOPTIONconference",   "\\iffalse");
+    Let!("\\ifCLASSOPTIONtechnote",     "\\iffalse");
+  });
   // Option conditionals — Perl L18-108. These are the FALSE defaults
   // (mirroring `\newif\if@CLASSOPTIONcompsoc \@CLASSOPTIONcompsocfalse`).
   // MUST come BEFORE ProcessOptions so the option-handler `\let` flips to

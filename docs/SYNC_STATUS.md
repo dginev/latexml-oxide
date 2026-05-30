@@ -45,6 +45,23 @@
 >   correct path (Perl fails identically) — NOT Rust-only. They are real
 >   parity-gap / beyond-Perl raw-load-robustness work, but not "wins to claim".
 
+**2026-05-30 — FIXED Rust-only: IEEEtran `onecolumn`/`twocolumn` options were
+no-ops → `\ifCLASSOPTIONtwocolumn` stuck true → `Not in outer par mode`.**
+Witness 1508.02556 (`\documentclass[…,onecolumn,peerreview]{IEEEtran}` + `cuted`):
+RUST 1 → 0 (Perl clean). The paper guards a `cuted` `\begin{strip}` (full-width
+float) behind `\ifCLASSOPTIONtwocolumn … \else …\fi`; being `onecolumn` it should
+take the `\else` (resized equation) branch. But Rust's `ieeetran_cls.rs` had
+`DeclareOption!("onecolumn", {})` / `("twocolumn", {})` as EMPTY no-ops and
+hardcoded `\ifCLASSOPTIONtwocolumn`→`\iftrue`, so the conditional was wrongly
+true → the `strip` branch ran → cuted's `strip` env hit `\@parmoderr` ("Not in
+outer par mode"). Perl (IEEEtran.cls.ltxml L72-73) flips BOTH column flags in the
+option handlers. Fix: port the real handlers (`onecolumn` → twocolumn false /
+onecolumn true; `twocolumn` → inverse) plus `peerreview`/`peerreviewca` (Perl
+L95-99: set their flag, clear journal/conference/technote). Default stays
+twocolumn (Perl L19-20); handlers run during ProcessOptions so the flip
+survives. Verified `\ifCLASSOPTIONtwocolumn` = ONECOL for `[onecolumn]`, still
+TWOCOL for `[journal]`. `cargo test` 1344/0.
+
 **2026-05-30 — FIXED Rust-only: babel english-variant `\l@<v>` register not
 backfilled → `\selectlanguage{british}` "haven't defined the language".**
 Witness 1508.06150 (`\usepackage[british, USenglish]{babel}` +
