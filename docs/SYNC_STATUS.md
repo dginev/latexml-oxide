@@ -128,6 +128,27 @@ leaves color escapes prefixing `Error:`, so `^Error:` counts 0 while the errors
 are really there (unanchored `Error:` = true count). scan_one.sh already strips;
 inline gates must too, or they false-report RUST=0 "wins".
 
+**2026-05-29 (cont.) — FIXED Rust-only: siunitx `\ang` empty components +
+add-arc-zero + sign-pull (witness 2007.08215).** `\ang[angle-symbol-over-decimal]
+{;;1.0}` (empty degrees, empty minutes, 1.0 arcseconds) → **Rust 2 err**
+(`Error:unexpected:; Not matched in \num: ;;1.0`) → **0 err / 175 KB HTML** (Perl
+0). Root cause: `six_parse_numbers` (used by `\ang`/`\numlist`/`\SIlist`) BROKE
+the parse loop when `six_match_number` returned `None` on an empty component,
+leaving the `;;1.0` unconsumed → spurious "Not matched". Perl's loop instead
+**always pushes** the result (`undef` = empty) and keeps consuming `;`. Fixes,
+all faithful to Perl siunitx.sty.ltxml: (1) added `SixParseResult::Empty`; the
+loop pushes it for empty components instead of breaking; (2) `\ang` skips empty
+components at format time (`if ($fdegrees && $fdegrees->unlist)`); (3) implemented
+`add-arc-degree/minute/second-zero` (substitute "0" for an empty component when
+the option is set, gated on earlier components having no fraction — L802-813);
+(4) implemented the overall-sign pull (`\ang{;-2;}` + add-arc-degree-zero now
+formats `-0°2′` like Perl, not `0°-2′` — L815-821). Verified: all angle
+`meaning=` attributes byte-match Perl across `tests/complex/si.tex`. `si.xml`
+regenerated (changes localized to the `\ang` subsubsection; the old expected was
+old-Rust garbage from the error path). `cargo test --tests` **1344/0**. Deferred
+Rust-only from same sweep: 2007.01660 / 0902.1635 (`malformed:ltx:XMApp` in
+`<ltx:text>` — math-parser/ASF lane).
+
 **2026-05-29 (cont.) — FIXED Rust-only: dep-scan force-loaded a package from a
 `\newcommand` body (witness 1506.06200).** `\usepackage[english,germanb]`-style
 sweep flipped 1506.06200 from **Rust 1 err** (`Error:undefined:{diagram} diagram

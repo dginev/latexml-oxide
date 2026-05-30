@@ -2544,219 +2544,227 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tags>
         <title><tag close=" ">1.8.3</tag>add-arc-degree-zero,add-arc-minute-zero,add-arc-second-zero</title>
         <para xml:id="S1.SS8.SSS3.p1">
-          <p><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m1">
+          <p><Math mode="inline" text="-1°" xml:id="S1.SS8.SSS3.p1.m1">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-1°" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m1.2">
-                      <XMWrap xml:id="S1.SS8.SSS3.p1.m1.3">
-                        <XMApp xml:id="S1.SS8.SSS3.p1.m1.4">
-                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok meaning="1" role="NUMBER">1</XMTok>
-                        </XMApp>
-                        <XMTok role="PUNCT">;</XMTok>
-                      </XMWrap>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m2">
+            </Math> <break/><Math mode="inline" text="-2′" xml:id="S1.SS8.SSS3.p1.m2">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-2′" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m2.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m3">
+            </Math> <break/><Math mode="inline" text="-3″" xml:id="S1.SS8.SSS3.p1.m3">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-3″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m3.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="3" role="NUMBER">3</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
             </Math> <break/>
 
-<Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m4">
+<Math mode="inline" text="-1°" xml:id="S1.SS8.SSS3.p1.m4">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-1°" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m4.2">
-                      <XMWrap xml:id="S1.SS8.SSS3.p1.m4.3">
-                        <XMApp xml:id="S1.SS8.SSS3.p1.m4.4">
-                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok meaning="1" role="NUMBER">1</XMTok>
-                        </XMApp>
-                        <XMTok role="PUNCT">;</XMTok>
-                      </XMWrap>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m5">
+            </Math> <break/><Math mode="inline" text="-0°2′" xml:id="S1.SS8.SSS3.p1.m5">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-0°2′" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m5.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m5.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m5.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="2" role="NUMBER">2</XMTok>
+                        <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m6">
+            </Math> <break/><Math mode="inline" text="-0°3″" xml:id="S1.SS8.SSS3.p1.m6">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-0°3″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m6.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok meaning="3" role="NUMBER">3</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m6.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m6.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="3" role="NUMBER">3</XMTok>
+                        <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
             </Math> <break/>
 
 
-<Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m7">
+<Math mode="inline" text="-1°0′" xml:id="S1.SS8.SSS3.p1.m7">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-1°0′" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m7.2">
-                      <XMWrap xml:id="S1.SS8.SSS3.p1.m7.3">
-                        <XMApp xml:id="S1.SS8.SSS3.p1.m7.4">
-                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok meaning="1" role="NUMBER">1</XMTok>
-                        </XMApp>
-                        <XMTok role="PUNCT">;</XMTok>
-                      </XMWrap>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m7.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="1" role="NUMBER">1</XMTok>
+                        <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m7.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m8">
+            </Math> <break/><Math mode="inline" text="-2′" xml:id="S1.SS8.SSS3.p1.m8">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-2′" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m8.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m9">
+            </Math> <break/><Math mode="inline" text="-0′3″" xml:id="S1.SS8.SSS3.p1.m9">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-0′3″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m9.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok meaning="3" role="NUMBER">3</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m9.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m9.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="3" role="NUMBER">3</XMTok>
+                        <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
             </Math> <break/>
 
 
-<Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m10">
+<Math mode="inline" text="-1°0″" xml:id="S1.SS8.SSS3.p1.m10">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-1°0″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m10.2">
-                      <XMWrap xml:id="S1.SS8.SSS3.p1.m10.3">
-                        <XMApp xml:id="S1.SS8.SSS3.p1.m10.4">
-                          <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                          <XMTok meaning="1" role="NUMBER">1</XMTok>
-                        </XMApp>
-                        <XMTok role="PUNCT">;</XMTok>
-                      </XMWrap>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m10.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="1" role="NUMBER">1</XMTok>
+                        <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m10.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m11">
+            </Math> <break/><Math mode="inline" text="-2′0″" xml:id="S1.SS8.SSS3.p1.m11">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-2′0″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m11.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                      <XMTok meaning="2" role="NUMBER">2</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="plus" role="ADDOP">⁤</XMTok>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m11.2">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="2" role="NUMBER">2</XMTok>
+                        <XMTok meaning="arcminute" role="UNKNOWN">′</XMTok>
+                      </XMApp>
+                      <XMApp xml:id="S1.SS8.SSS3.p1.m11.6">
+                        <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                        <XMTok meaning="0" role="NUMBER">0</XMTok>
+                        <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                      </XMApp>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>
-            </Math> <break/><Math mode="inline" text="NUMBER" xml:id="S1.SS8.SSS3.p1.m12">
+            </Math> <break/><Math mode="inline" text="-3″" xml:id="S1.SS8.SSS3.p1.m12">
               <XMath>
                 <XMDual>
-                  <XMTok role="NUMBER"/>
+                  <XMTok meaning="-3″" role="NUMBER"/>
                   <XMApp>
-                    <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                    <XMWrap xml:id="S1.SS8.SSS3.p1.m12.2">
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok role="PUNCT">;</XMTok>
-                      <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
                       <XMTok meaning="3" role="NUMBER">3</XMTok>
-                    </XMWrap>
-                    <XMTok meaning="arcdegree" role="UNKNOWN">°</XMTok>
+                      <XMTok meaning="arcsecond" role="UNKNOWN">″</XMTok>
+                    </XMApp>
                   </XMApp>
                 </XMDual>
               </XMath>

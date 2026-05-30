@@ -706,6 +706,11 @@ fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
 enum SixParseResult {
   Parsed(SixNumber),
   Raw(Tokens),
+  /// An EMPTY component between `;` separators in `\ang` / `\numlist` etc.
+  /// Perl represents these as `undef` in `six_parse_numbers`'s result list —
+  /// e.g. `\ang{;;1.0}` (empty degrees, empty minutes, 1.0 seconds) yields
+  /// `(undef, undef, <1.0>)`. The component is skipped at format time.
+  Empty,
 }
 
 fn six_parse_number(expr: &Tokens) -> SixParseResult {
@@ -739,11 +744,18 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let mut results = Vec::new();
     loop {
+      // Perl siunitx.sty.ltxml:six_parse_numbers ALWAYS pushes the result —
+      // `undef` (our `Empty`) for an empty component between `;` separators —
+      // then consumes the `;` and continues. Breaking on `None` (the previous
+      // Rust behavior) made `\ang{;;1.0}` (empty;empty;1.0) leave `;;1.0`
+      // unconsumed → spurious "Not matched in \num: ;;1.0". The trailing `;`
+      // check still guarantees progress (each iteration either matches a
+      // number or consumes one `;`). Witness: 2007.08215.
       let result = six_postprocess(six_match_number(&mut tokens));
-      match result {
-        Some(n) => results.push(SixParseResult::Parsed(n)),
-        None => break,
-      }
+      results.push(match result {
+        Some(n) => SixParseResult::Parsed(n),
+        None => SixParseResult::Empty,
+      });
       if tokens.first().is_some_and(|t| t.text == pin!(";")) {
         tokens.remove(0);
       } else {
@@ -1068,6 +1080,7 @@ fn six_format_number(number: &SixParseResult, bracket: i32) -> Tokens {
   match number {
     SixParseResult::Raw(toks) => i_wrap(None, toks.clone()),
     SixParseResult::Parsed(num) => six_format_number_inner(num, bracket),
+    SixParseResult::Empty => Tokens::default(),
   }
 }
 
@@ -2569,31 +2582,78 @@ LoadDefinitions!({
     let expr = expr_arg;
     six_begin_processing(kv.as_ref());
 
-    let items = six_parse_numbers(&expr);
+    let mut items = six_parse_numbers(&expr);
+    // Pad to 3 components so degree/minute/second indices are addressable.
+    while items.len() < 3 {
+      items.push(SixParseResult::Empty);
+    }
+    // Perl `\ang`: substitute "0" for an EMPTY component when the matching
+    // `add-arc-<unit>-zero` option is set — minute/second gated on the earlier
+    // components carrying no fractional part (siunitx.sty.ltxml L802-813).
+    {
+      let is_empty = |it: &SixParseResult| matches!(it, SixParseResult::Empty);
+      let has_frac = |it: &SixParseResult| {
+        matches!(it, SixParseResult::Parsed(SixNumber::Simple { fraction: Some(_), .. }))
+      };
+      let addd0 = is_empty(&items[0]) && six_get_bool_sym(six_pin!("add-arc-degree-zero"));
+      let addm0 = is_empty(&items[1])
+        && six_get_bool_sym(six_pin!("add-arc-minute-zero"))
+        && (is_empty(&items[0]) || !has_frac(&items[0]));
+      let adds0 = is_empty(&items[2])
+        && six_get_bool_sym(six_pin!("add-arc-second-zero"))
+        && (is_empty(&items[0]) || !has_frac(&items[0]))
+        && (is_empty(&items[1]) || !has_frac(&items[1]));
+      if addd0 {
+        items[0] = SixParseResult::Parsed(SixNumber::simple(None, Some(Tokenize!("0")), None, None));
+      }
+      if addm0 {
+        items[1] = SixParseResult::Parsed(SixNumber::simple(None, Some(Tokenize!("0")), None, None));
+      }
+      if adds0 {
+        items[2] = SixParseResult::Parsed(SixNumber::simple(None, Some(Tokenize!("0")), None, None));
+      }
+    }
+    // Perl `\ang`: pull the (overall) sign out of the first signed component —
+    // it applies to the whole angle — and clear the per-component signs so it
+    // renders once, in front (siunitx.sty.ltxml L815-821). Without this,
+    // `\ang{;-2;}` with add-arc-degree-zero formats as `0°-2′` instead of
+    // Perl's `-0°2′`.
+    let overall_sign: Option<Tokens> = items.iter().find_map(|it| match it {
+      SixParseResult::Parsed(n) => n.get_sign().cloned(),
+      _ => None,
+    });
+    for it in items.iter_mut() {
+      if let SixParseResult::Parsed(n) = it {
+        n.set_sign(None);
+      }
+    }
+    let sign_prefix: &str = match overall_sign.as_ref().map(|s| s.to_string()) {
+      Some(st) if st.contains('-') => "-",
+      Some(st) if st.contains('+') => "+",
+      _ => "",
+    };
     let mulop = Tokens::new(vec![T_CS!("\\lx@InvisibleTimes")]);
     let mut parts = Vec::new();
 
-    if let Some(d) = items.first() {
-      let fd = six_format_number(d, 0);
-      parts.push(six_format_infix(
-        mulop.clone(), None, None,
-        vec![fd, Tokens::new(vec![T_CS!("\\SIUnitSymbolDegree")])],
-      ));
-    }
-    if let Some(m) = items.get(1) {
-      let fm = six_format_number(m, 0);
-      parts.push(six_format_infix(
-        mulop.clone(), None, None,
-        vec![fm, Tokens::new(vec![T_CS!("\\SIUnitSymbolArcminute")])],
-      ));
-    }
-    if let Some(s) = items.get(2) {
-      let fs = six_format_number(s, 0);
-      parts.push(six_format_infix(
-        mulop, None, None,
-        vec![fs, Tokens::new(vec![T_CS!("\\SIUnitSymbolArcsecond")])],
-      ));
-    }
+    // Perl `\ang` pushes a D/M/S component only if it is defined AND formats
+    // to non-empty (`if ($fdegrees && $fdegrees->unlist)`). An `Empty`
+    // component (e.g. the `;;` of `\ang{;;1.0}`) contributes no symbol.
+    let push_part = |parts: &mut Vec<Tokens>, item: Option<&SixParseResult>, symbol: &str, mulop: &Tokens| {
+      if let Some(c) = item {
+        if !matches!(c, SixParseResult::Empty) {
+          let f = six_format_number(c, 0);
+          if !f.is_empty() {
+            parts.push(six_format_infix(
+              mulop.clone(), None, None,
+              vec![f, Tokens::new(vec![T_CS!(symbol)])],
+            ));
+          }
+        }
+      }
+    };
+    push_part(&mut parts, items.first(), "\\SIUnitSymbolDegree", &mulop);
+    push_part(&mut parts, items.get(1), "\\SIUnitSymbolArcminute", &mulop);
+    push_part(&mut parts, items.get(2), "\\SIUnitSymbolArcsecond", &mulop);
 
     let combined = if parts.len() > 1 {
       let addop = Tokens::new(vec![T_CS!("\\lx@InvisiblePlus")]);
@@ -2601,8 +2661,14 @@ LoadDefinitions!({
     } else {
       parts.into_iter().next().unwrap_or_default()
     };
+    // Perl: `if ($sign) { @punctuated = I_apply({}, $sign, @punctuated); }`
+    let combined = if let Some(sign) = &overall_sign {
+      i_apply(&[], sign.clone(), vec![combined])
+    } else {
+      combined
+    };
 
-    let mut meaning = String::new();
+    let mut meaning = String::from(sign_prefix);
     if let Some(SixParseResult::Parsed(d)) = items.first() {
       meaning.push_str(&six_number_string(d)); meaning.push('\u{00B0}');
     }
