@@ -1147,6 +1147,18 @@ byte-identical to Perl `auto_keywords`).
   / 1168); produces Perl-identical nesting (theorem2 in theorem1, section sibling).
   6 mode-switch ERRORS remain (SHARED with Perl). Well-formed theorems unaffected;
   tests 1344/0. Full mechanism in the `endgroup-modeswitch-frame-leak` memory.
+  **Broad-impact validation (2026-06-02):** a fresh 1,500-paper wide scan
+  re-surfaced the cluster — e.g. **2007.00292** (bare `{\theorem…}{\lemma…}{\assumption…}`,
+  19 mode-switch errors). After the fix it is at **exact Perl content-parity**:
+  Rust 1242 `<Math>` / 19 errors vs Perl 1242 `<Math>` / 19 errors (Perl 7.2 MB,
+  Rust 4.9 MB — size differs only by XML verbosity, Math count identical). The 19
+  `}` errors are SHARED (correct for the malformed bare-brace input — Perl emits
+  them too), so the cluster is now Perl-parity (content + errors match), not a
+  Rust-only failure. No-duplication re-checked: a well-formed 2-theorem doc emits
+  each theorem's content exactly once. The same 1,500-paper scan found **no fresh
+  clean Rust-only errors** — every other flag is SHARED (missing-`.cls` cascades,
+  mdwmath `#`-PARAM, `_`/`^`-in-text) or a case where Rust emits *fewer* errors
+  than Perl (`\pc` 2-vs-5, `\psk@nrot` 2-vs-7).
 
 * **FIXED: mathpartir `\inferrule` bare math in text mode → `XMApp`-in-`<td>`
   (2026-05-31).** Witness **1404.0085** (`eptcs`, DCM 2013; π-calculus reduction
