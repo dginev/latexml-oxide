@@ -118,4 +118,33 @@ LoadDefinitions!({
   // \arrow / \chemarrow — used inside \ce arguments. Stub as small text
   // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.
   DefMacro!("\\chemarrow", "\\rightarrow");
+
+  // \bond{<type>} — mhchem bond operator, used inside \ce, e.g.
+  // `\ce{H2O\bond{...}H2O}` (hydrogen bond) or bare `\ce{HC#CH\bond}`
+  // (trailing single bond). Real mhchem (mhchem.sty L3217-3243)
+  // `\mhchem@bond{#1}` str_case-maps the type to a `\resizebox`-rendered
+  // bond line; the layout is moot in our XML paradigm, so map each type to
+  // the corresponding math glyph. `\ce` already runs us inside `\ensuremath`.
+  // `\bond` may appear bare (no following `{...}`) for a single bond — peek
+  // with `\@ifnextchar\bgroup` so the bare form doesn't swallow the closing
+  // brace. Witness 1608.02559 (`\ce{H2O\bond{...}H2O}`, `\ce{HC#CH\bond}`).
+  RawTeX!(r"\def\bond{\@ifnextchar\bgroup\lx@mhchem@bond@typed\lx@mhchem@bond@single}");
+  DefMacro!("\\lx@mhchem@bond@single", "{-}");
+  DefMacro!("\\lx@mhchem@bond@typed{}", sub[(typ)] {
+    // mhchem.sty L3223-3237 type table. Unknown → single bond (mhchem
+    // raises an error; we render a single bond, staying error-free).
+    let glyph = match typ.to_string().trim() {
+      "-" | "1"            => r"{-}",
+      "=" | "2"            => r"{=}",
+      "#" | "##" | "3"     => r"{\equiv}",
+      "~"                  => r"{\sim}",
+      "~-"                 => r"{\sim\!\!-}",
+      "~--" | "~=" | "-~-" => r"{\sim\!\!=}",
+      "..." | "...."       => r"{\cdots}",
+      "->"                 => r"{\rightarrow}",
+      "<-"                 => r"{\leftarrow}",
+      _                    => r"{-}",
+    };
+    Ok(Tokenize!(glyph))
+  });
 });

@@ -2388,6 +2388,21 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1608.02559 FIXED — mhchem stub missing `\bond`
+
+**1608.02559 FIXED (mhchem stub `\bond`).** `\ce{H2O\bond{...}H2O}` (hydrogen
+bond) / `\ce{HC#CH\bond}` (bare single bond) errored `\bond` undefined. The
+`mhchem_sty.rs` stub (a tolerated shortcut — Perl raw-loads real mhchem.sty;
+ours intercepts because the expl3 cluster blocks raw-load, see
+[[project_mhchem_csname_protocol_deepdive]]) covers `\ce`/`\cee`/`\cf`/`\arrow`
+but omitted `\bond`. Added it mirroring mhchem.sty L3217-3243's `\mhchem@bond`
+str_case type table (`-`/`1`→single, `=`/`2`→double, `#`/`3`→`\equiv`,
+`...`→`\cdots` hydrogen bond, `->`/`<-`→arrows, …); the real bond's
+`\resizebox` layout is moot in XML so each type maps to a math glyph. Bare
+`\bond` (single bond) handled via `\@ifnextchar\bgroup` lookahead so it doesn't
+swallow the `\ce` closing brace. `\bond{...}` → `⋯` (H₂O⋯H₂O). Rust 1→0,
+Perl=0, suite 53/0/0.
+
 ### Round-37 (2026-05-30): 1604.06057 FIXED — jmlr2e stub missing `\nipsfinalcopy`
 
 **1604.06057 FIXED (jmlr2e contrib-stub completeness).** `\nipsfinalcopy`
