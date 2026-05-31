@@ -2424,8 +2424,14 @@ robust-CS cluster), 1604.06057 (`\nipsfinalcopy` — bundled NIPS style),
 No clean incomplete-binding/missing-macro wins in this tier; remaining current
 Rust-only cases are structural/mode/boxing:
 * 1601.07962 — `ltx:section` not allowed in `ltx:subsection` (section nesting).
-* 1602.06935 — `}` closes a boxing group opened by `\begingroup` (begingroup/`}`
-  boxing-group mismatch; same family as the hyperref `\lx@hyper@url@` defer).
+* **1602.06935 FIXED** — was filed as a begingroup/`}` boxing-group mismatch but
+  the real cause was a CASCADE: `\titleformat` undefined (wlscirep binding omitted
+  `\RequirePackage[explicit]{titlesec}`, wlscirep.cls L72) → its `{#1}` arg leaked
+  a bare `#` to the Stomach and the unbalanced braces closed the
+  `\begin{appendices}` group early. Added titlesec[explicit]. RUST 7 → 0.
+  **Lesson: "Attempt to close boxing group" / begingroup-mismatch errors are
+  often a downstream cascade from an UNDEFINED macro leaking its arguments — grep
+  the error list for `undefined:` first, don't assume a stomach bug.**
 * 1608.01416 — iopart: `ltx:equation` leaks into `ltx:date` frontmatter.
 * 1608.02030 / 1702.01358 — `\halign Attempt to end mode restricted_horizontal
   in horizontal` (9 errors each), both `ytableau` inside a tikz `\node{…}`.
