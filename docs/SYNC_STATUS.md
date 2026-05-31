@@ -2410,25 +2410,22 @@ core mode-frame work — defer to a dedicated session (cf.
 TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
 divergence, but NOT the witness path (which is the SVG halign).
 
-### Round-37 (2026-05-31): 1901.05713 DEFERRED — cleveref `must be loaded after hyperref` via dep-scan
+### Round-37 (2026-05-31): 1901.05713 FIXED — dep-scan now skips `\begin{comment}` blocks
 
-**1901.05713 DEFERRED (dep-scan + cleveref load-order check).** `Package cleveref
-Error: cleveref must be loaded after hyperref!` (Perl=0). The paper's `thesis.sty`
-has `\usepackage[…]{hyperref}` (L178) *inside* a `\begin{comment}…\end{comment}`
-block (commented out), and a real `\usepackage{cleveref}` (L202) after it. Rust's
-dependency scanner (`maybe_require_dependencies`, content.rs) strips `%`-comments
-but NOT `\begin{comment}` envs, so it picks up the commented `hyperref` — *and*
-for the full `thesis.sty` it loads ONLY `hyperref` (cleveref is treated as
-deferred, unlike a minimal where it loads `comment,hyperref,cleveref`). cleveref
-(raw-loaded by the binding) then body-loads with hyperref's dep-scan marking not
-visible to its load-time `\@ifpackageloaded{hyperref}`, so its `\AtBeginDocument`
-order-check (cleveref.sty L2374: flag false BUT hyperref loaded ⇒ error) fires.
-Perl's dep-scan ALSO loads the commented hyperref (both engines), yet Perl is
-clean — so the real divergence is cleveref's load-time hyperref *detection*, not
-the comment. NOT minimally reproducible: every minimal dep-scans
-`comment,hyperref,cleveref` (cleveref pre-loaded with hyperref ⇒ check passes).
-Needs tracing why the full `thesis.sty` dep-scan excludes cleveref + whether
-dep-scan-loaded hyperref sets `\ver@hyperref.sty`. Deferred.
+**1901.05713 FIXED (dep-scan `\begin{comment}` skip).** `Package cleveref Error:
+cleveref must be loaded after hyperref!` (Perl=0). `thesis.sty` has
+`\usepackage[…]{hyperref}` (L178) *inside* a `\begin{comment}…\end{comment}`
+block (commented out), and a real `\usepackage{cleveref}` (L202). Rust's
+dependency scanner (`maybe_require_dependencies`, content.rs) stripped
+`%`-comments but NOT `\begin{comment}` envs, so it anticipated the commented
+`hyperref` and loaded it — tripping cleveref's `\AtBeginDocument` "must be loaded
+after hyperref" order-check (hyperref appears loaded, though the author commented
+it out). Fix: strip `\begin{comment}…\end{comment}` from the scanned source
+before matching `\usepackage`/`\RequirePackage` — `comment` is a verbatim-SKIP
+env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
+anticipate it. Same "more-robust than Perl" rationale as the existing
+macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0 (also resolves 1910.05586's
+identical cleveref error).
 
 ### Round-37 (2026-05-31): 1808.07096 FIXED — `\input` in an alignment cell ended the column early
 

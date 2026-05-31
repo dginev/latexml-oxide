@@ -1744,6 +1744,17 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // Perl L2776: `s/%[^\n]*\n//gs` — drop comment AND its trailing newline,
   // replacement is the empty string.
   static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
+  // `comment`-package block: `\begin{comment}…\end{comment}` is a verbatim-SKIP
+  // environment, so a `\usepackage`/`\RequirePackage` inside it is NEVER loaded
+  // by LaTeX. The dep-scan must not anticipate it. Same "more-robust than Perl"
+  // rationale as the macro-def-body skip below. Witness 1901.05713: thesis.sty
+  // has a commented-out `\usepackage{hyperref}` inside `\begin{comment}`, which
+  // the scan otherwise loaded — tripping cleveref's "must be loaded after
+  // hyperref" `\AtBeginDocument` order-check (hyperref appears loaded though the
+  // author commented it out). `comment` doesn't nest, so a non-greedy match to
+  // the first `\end{comment}` is correct.
+  static COMMENT_ENV_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\begin\s*\{comment\}.*?\\end\s*\{comment\}").unwrap());
   // Perl L2777-2779 runs two separate substitutions, in this order:
   // first `\RequirePackage`, then `\usepackage`. Use two regexes so that
   // collected order matches Perl's call order to `$collect`.
@@ -1806,6 +1817,8 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
 
   // Perl L2776: strip comments (replacement empty).
   let code = COMMENT_RE.replace_all(&code, "");
+  // Strip `\begin{comment}…\end{comment}` blocks (see COMMENT_ENV_RE above).
+  let code = COMMENT_ENV_RE.replace_all(&code, "");
 
   // DIVERGENCE FROM PERL (deliberate, more-robust): do NOT dep-load a
   // `\usepackage` / `\RequirePackage` that sits in a DEFERRED macro-definition
