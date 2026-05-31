@@ -2429,26 +2429,28 @@ equation 170/170, XMArray 240/240, bibitem 30/30, figure 4/4; the Math 1231/1292
 the pre-existing stub `\inferrule`→`\frac` fidelity loss). No regression: 1404.0085 (tabular
 inferrule), 1801.08114 (proof+mathpartir) stay 0. Tests 1344/0.
 
-### Round-37 (2026-05-31): 1907.04260 DEFERRED — multi-row `align` then `equation{\cases}` leaks alignment state (hard cluster)
+### Round-37 (2026-05-31): 1907.04260 FIXED — `\newenvironment` must honor the `:autoload` flag (autoload `\align` blocked the author's `\newenvironment{align}`)
 
-**1907.04260 (iopart + braket) rust=71 perl=0 — DEFERRED with a clean reproducer.** All
-71 errors cascade from one `\end{equation} Attempt to end mode display_math in display_math`,
-followed by `\lx@begin@alignment … mode-switch to internal_vertical` and 54×`Script _/^ can
-only appear in math mode` (the document body after the broken equation is stuck in
-display_math → every `_`/`^` errors). **Isolated by body bisection** to lines 586-605: a
-**multi-row `\begin{align}…\end{align}`** (the doc has no amsmath; `\newenvironment{align}`
-is ignored because `align` is already defined — shared with Perl) immediately followed by a
-`\begin{equation} … \cases{…} \end{equation}`. The `\cases` expands to `\ialign` (an inner
-alignment); after a *multi-row* align the inner `\ialign` finds stale alignment/mode state →
-`display_math in display_math`. **Clean Rust-only reproducers (R=5, P=0):** preamble +
-align(586-594) + cases-eqn(596-605); also EXACT-align + simple `\cases{a & p \\ b & q}`, and
-simple 2-row align + EXACT cases. Finicky boundary: a *1-row* align or an `eqnarray` before
-the cases-eqn gives errors in BOTH engines (shared), and a plain `equation` before it is
-clean in both — so the Rust-only bug is specifically *multi-row align* not restoring
-alignment state for a following `\cases`/`\ialign`. **Fix lane:** `latexml_core/src/alignment.rs`
-end-of-alignment cleanup (a reading-alignment / mode flag not cleared after a 2+row align).
-Belongs to the delicate mode-switch cluster (memory `project_endgroup_modeswitch_frame_leak`);
-deferred for a focused instrumented pass rather than a delicate ad-hoc patch.
+**1907.04260 (iopart + amssymb + braket) 71→0 errors.** All 71 cascade from one
+`\end{equation} Attempt to end mode display_math in display_math` + `\lx@begin@alignment …
+mode-switch to internal_vertical` + 54×`Script _/^ can only appear in math mode`. The earlier
+"multi-row align leaks alignment state" diagnosis was WRONG — the real root cause is an
+**autoload-clobbers-author-redefinition** bug (same family as the mathpartir/hyperref/lmcs
+fixes this session). The document does `\newenvironment{align}{\begin{eqnarray}}{\end{eqnarray}}`
+(it has no amsmath; `align` should be the author's eqnarray wrapper). But Rust registers an
+autoload TRIGGER `\align`→amsmath (`tex.rs:253` `def_autoload`), so `\ifdefined\align` is true
+and the author's `\newenvironment{align}` was silently ignored (`\newenvironment` used a bare
+`IsDefined!` check, unlike `\newcommand` which already uses `is_definable_latex`). The doc then
+ran amsmath's `align`, and a following `\cases`-equation (which expands to `\ialign`) desynced
+math mode. Perl has no such autoload (its `DefAutoload` entries live in OmniBus.cls.ltxml, not
+loaded for typical papers), so its `\align` is undefined, the `\newenvironment` succeeds, and
+`align`=eqnarray → clean (0). **Fix:** `\newenvironment` (latex_constructs.rs) now uses
+`is_definable_latex(&name_cs)` (which treats an `:autoload` trigger as redefinable), matching
+`\newcommand`. 1907.04260 now 0 err; structure identical to Perl (section 8/8, Math 323/323,
+equation 66/66, tr 18/18, td 56/56, bibitem 20/20). Tests 1344/0. (Diagnostic note: bare
+`\usepackage{amssymb}` makes `\ifdefined\align` true in Rust but UNDEF in Perl — that DEF/UNDEF
+split is the tell; the amsmath-`align`+`\cases` interaction is a SHARED error, a red herring.)
+**General fix** — unblocks any author `\newenvironment` over an autoloaded env name.
 
 ### Round-37 (2026-05-31): 1606.06730 FIXED — hyperref must not eager-load `color` (Perl loads it only on `colorlinks`)
 

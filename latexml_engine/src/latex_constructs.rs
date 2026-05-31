@@ -6730,7 +6730,19 @@ LoadDefinitions!({
   sub[(_star_opt, name, nargs, opt, begin, end)] {
     let name = { Expand!(name).to_string() };
     let name_cs = T_CS!(format!("\\{name}"));
-    if IsDefined!(&name_cs) {
+    // Use `is_definable_latex` (not a bare `IsDefined!`) so an autoload TRIGGER
+    // for `\<name>` (installed by `def_autoload`, e.g. `\align`→amsmath) does NOT
+    // block the user's `\newenvironment`. Perl's analogous `DefAutoload` entries
+    // live in OmniBus.cls.ltxml (not loaded for typical papers), so there `\align`
+    // is genuinely undefined and `\newenvironment{align}{…}` SUCCEEDS. `\newcommand`
+    // already uses this check; `\newenvironment` must match. Witness 1907.04260
+    // (iopart + amssymb): `\newenvironment{align}{\begin{eqnarray}}{\end{eqnarray}}`
+    // was silently ignored because amssymb→amsfonts left the `\align` autoload
+    // trigger in place; the doc then ran amsmath's `align`, and a following
+    // `\cases`-equation desynced math mode → 71-error cascade. Perl: 0 (its `align`
+    // is the author's eqnarray wrapper).
+    let (definable, _plain_origin) = is_definable_latex(&name_cs)?;
+    if !definable {
       let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
