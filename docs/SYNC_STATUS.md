@@ -2388,6 +2388,23 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): bmatrix*[r]+`\dots` residual FIXED (amsmath dots)
+
+The 1910.00678 residual (`bmatrix*[r]` + `\dots` still "Stray alignment") is now
+FIXED at the source. `\lx@math@dots` peeks at the following box to choose ⋯ vs …
+by read+digesting tokens until a non-empty box; when the matrix column template
+has no trailing `\hfil` (right-/no-aligned starred matrices) the next token is the
+alignment tab `&`, which it digested — consuming the column separator. Perl's
+`Digested` parameter stops at `&`; the fix stops the peek at an ALIGN-catcode
+token and unreads it (`\dots` then renders `\ldots`, identically to Perl). All
+`bmatrix*` alignments (`empty`/`[c]`/`[r]`/`[l]`) + `\dots` now parity-clean.
+
+*Deferred:* 1810.05151 (SciPostMod, "Missing sub/superscript argument" ×2 in a
+math-heavy chapter) — context-dependent like the ytableau case: the failing
+math line is clean in isolation and even with its surrounding `\small`/mymacros
+block; the trigger is buried in ~200 lines of accumulated chapter state. Not
+reproduced minimally; deferred.
+
 ### Round-37 (2026-05-30): 1910.00678 FIXED — keyval `key=` empty value was "None"
 
 **1910.00678 FIXED (core keyvals bug).** `\begin{bmatrix*}` (mathtools starred
