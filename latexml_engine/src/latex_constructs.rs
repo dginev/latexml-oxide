@@ -8328,10 +8328,20 @@ LoadDefinitions!({
   DefMacro!("\\seename",       "see");
   DefMacro!("\\alsoname",      "see also");
   DefMacro!("\\glossaryname",  "Glossary");
-  DefMacro!("\\enclname",      "encl");
-  DefMacro!("\\ccname",        "cc");
-  DefMacro!("\\headtoname",    "To");
   DefMacro!("\\pagename",      "Page");
+  // NOTE: the letter-class captions `\ccname`/`\enclname`/`\headtoname` are NOT
+  // defaulted here. Perl LaTeXML defines them NOWHERE (not in the base, babel,
+  // or letter.cls.ltxml — its babel shim merely absorbs undefined references),
+  // so they are undefined for a plain article unless the author defines them.
+  // Pre-defining `\ccname` (= "cc", the carbon-copy label) unconditionally
+  // silently blocked an author's `\newcommand{\ccname}` (`\@ifdefinable` sees it
+  // as already-defined → the redefinition no-ops, keeping "cc"). Witness
+  // 1706.00283 repurposes `\ccname` as a `c_i` constant-generator
+  // (`\newcommand{\ccname}[1]{\cc\ccdef{#1}}`); with the default present its
+  // `\ccname\ccT` minted nothing and every `\cc*` constant was undefined (10
+  // errors). Real letters get these captions from letter.cls; defaulting them
+  // for every article is non-faithful and clobbers author macros (cf. the
+  // iopart `\revised` and pgfmath `\real` clobber traps).
   // Additional babel-english.ldf captions (\captionsenglish hook).
   DefMacro!("\\prefacename",   "Preface");
   DefMacro!("\\proofname",     "Proof");
