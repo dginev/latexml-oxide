@@ -1072,6 +1072,18 @@ impl<'a> PgfMathParser<'a> {
       return None;
     }
     let cs = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
+    // Perl `sub pgfmath_register` (pgfmath.code.tex.ltxml L487-493) sets
+    // `\ifpgfmathunitsdeclared` = 1 (global) UNCONDITIONALLY whenever a CS
+    // register is read — it is a register, hence "we saw a unit". Without
+    // this, `\pgfmathparse{\pgflinewidth}` (or any `\dimen`/`\skip`/`\count`
+    // register) reported `pgfmathunitsdeclared` FALSE while a literal `2pt`
+    // reported TRUE. pgfplots' `\pgfplots@bar@mathparse@` keys off this flag:
+    // for `ybar=\pgflinewidth` (a dimension-register value, common in bar
+    // charts) the false flag sent it into the x-axis unit-conversion branch,
+    // which corrupts coordinate resolution under `symbolic x coords` →
+    // `Package pgfplots Error: ... \pgfplots@loc@TMPa has not been defined`.
+    // Witnesses 1908.10041, 1901.08716 (and pgfplots bar charts generally).
+    self.units_declared = true;
     Some(pgfmath_register_lookup(cs))
   }
 

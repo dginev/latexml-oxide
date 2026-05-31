@@ -2402,7 +2402,29 @@ load-cascade), **xy-pic** (1508.03915), and **mode-frame leaks** (1902.11165).
 Always re-test a canvas failure with the current binary + Perl gate (sweep7.sh)
 before investigating. cf. [[project_canvas_stage_v6_recovery]].
 
-### Round-37 (2026-05-31): pgfplots symbolic-coords DEFERRED — prior numeric axis leaks state into a following symbolic axis
+### Round-37 (2026-05-31): pgfplots symbolic-coords FIXED — pgfmath register reads now declare units
+
+**1908.10041 + 1901.08716 FIXED (pgfmath `units_declared` for register reads).**
+Root-caused from a context-dependent full paper down to a 1-line repro:
+`\pgfmathparse{<dimen register>}` (`\pgflinewidth`, a user `\newlength`) set
+`\ifpgfmathunitsdeclared` FALSE in Rust but TRUE in Perl (literal `2pt` TRUE in
+both; pure number FALSE in both). pgfplots' bar key `ybar=\pgflinewidth` (a
+dimension-register value) → `\pgfplots@bar@mathparse@` checks
+`\ifpgfmathunitsdeclared`; the false flag drove the x-axis unit-conversion branch,
+which corrupts coordinate resolution under `symbolic x coords` →
+`\pgfplots@loc@TMPa has not been defined`. Cause: Rust's NATIVE pgfmath parser
+(`pgfmath_code_tex.rs::PgfMathParser`) set `units_declared` only for a literal
+`NUMBER UNIT` (`2pt`), never for a register read — while Perl's `sub pgfmath_register`
+(pgfmath.code.tex.ltxml L487-490) sets `\ifpgfmathunitsdeclared`=1 (global)
+UNCONDITIONALLY per register lookup. Fix: `self.units_declared = true` in
+`try_cs_register`. Both witnesses 1→0 errors, well-formed (363 KB / 1.3 MB),
+Perl=0. Suite 53/0/0; `tests/tikz/ac-drive-components.xml` regenerated (the fix
+made the bar-chart bounding box match Perl EXACTLY — old baseline had the bug).
+**A/B-verified NOT a broad regression:** 1501.03690 (a pre-existing Rust-only
+SVG/mode-frame failure, Perl=0) is 102 errors WITH and WITHOUT the fix — unchanged.
+(An earlier false "0→102 regression" was a test artifact: a relative `./target`
+binary path after `cd` into a temp dir = binary-not-found = false zero.)
+ORIGINAL deferral analysis (historical) below.
 
 **1908.10041 + 1901.08716 DEFERRED (pgfplots per-axis state leak).** `Package
 pgfplots Error: Sorry, the input coordinate \pgfplots@loc@TMPa has not been
