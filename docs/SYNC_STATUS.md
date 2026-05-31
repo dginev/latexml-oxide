@@ -2388,6 +2388,28 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1808.07096 FIXED — `\input` in an alignment cell ended the column early
+
+**1808.07096 FIXED (core alignment digestion — `\input` mouth-switch).** `Stray
+alignment "&"`. An xfig figure `$\begin{array}{cc}\scalebox{0.8}{\input{…pstex_t}}
+& \\ \mbox{(a)}\end{array}$` (pstricks loaded) errored on the `&` (Perl=0).
+Narrowed to a super-minimal Rust-only repro: pstricks + `\scalebox{…}{\input{f}}`
+in a math array cell where `f` contains anything — even `X%`. Root cause:
+`digest_alignment_column` (tex_tables.rs) reads cell tokens via
+`read_x_token(Some(false), …)` — `toplevel=false` ⇒ `autoclose=false`, so when
+the `\input`'d file's mouth hits EOF, `read_x_token` returns `None` instead of
+popping back to the parent mouth. The `None` is treated as the column's end
+(L819/L838), so the cell stops at the `\input` content and the following `&`
+(read later from the parent mouth, after the alignment has closed) is stray.
+Perl's `readXToken` autocloses child mouths, returning undef only at the FINAL
+EOF; the alignment ends at `\lx@close@alignment` (a token), never at a child
+`\input` EOF. Fix: both cell-scan reads now pass `toplevel=true` (autoclose) with
+`fully_expand=Some(false)` (unchanged expansion). `\scalebox`→`#2` under pstricks
+is faithful (Perl does the same) — it just stripped the group so `\input` landed
+directly in the cell, exposing the bug. Affects ANY `\input` inside an alignment
+cell (common for `\input`'d figures in arrays/tables). Rust 1→0, Perl=0, suite
+53/0/0.
+
 ### Round-37 (2026-05-31): 1503.07894 DEFERRED — url brace-enclosed space-form `{\url www…}`
 
 **1503.07894 DEFERRED (url space-form).** `{\url www.maths.adelaide.edu.au/…/QMonoDraft.pdf}`

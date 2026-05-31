@@ -769,7 +769,7 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     // (column_before, marker, last_token) bundle into an empty gullet,
     // looping infinitely. Reset to None per Perl's per-iteration semantics.
     last_token = None;
-    while let Some(xtoken) = gullet::read_x_token(Some(false), false, None)? {
+    while let Some(xtoken) = gullet::read_x_token(Some(true), false, Some(false))? {
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
       // Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
@@ -835,7 +835,7 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
     );
     // eprintln!("Halign: COLUMN preload at {}", to_unread.stringify());
     gullet::unread(to_unread);
-    while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
+    while let Some(token) = gullet::read_x_token(Some(true), false, Some(false))? {
       if let Some((_atoken, vtype, hidden)) = gullet::is_column_end(&token) {
         if vtype == "span" {
           // next column, but continue accumulating
