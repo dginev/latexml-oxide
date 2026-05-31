@@ -2388,6 +2388,22 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1709.05523 FIXED — mhchem stub `\ce` ungrouped under sub/superscript
+
+**1709.05523 FIXED (mhchem stub `\ce` grouping).** `$E_\ce{M_{bcc}}$` → `Double
+subscript` (full paper Perl=0, Rust=1 — genuinely Rust-only; the isolated
+construct errors in both because Perl's real mhchem first-`\ce` init differs, but
+the full-paper gate is Perl=0). The `mhchem_sty.rs` stub expanded `\ce{body}` →
+`\ensuremath{body}`; `\ensuremath` strips its OWN braces in math mode
+(`\def\ensuremath#1{\ifmmode#1\else$#1$\fi}`), so `E_\ce{M_{bcc}}` →
+`E_\ensuremath{M_{bcc}}` → `E_M_{bcc}` → the inner `_` became a SECOND subscript
+on `E`. Fix: wrap the stub output in an explicit `{ }` group
+(`{\ensuremath{body}}`) so `\ce` binds as one atom as a sub/superscript operand
+(real mhchem produces a single boxed unit). Transparent for rendering;
+`E_\ce{M_{bcc}}` now renders `E_{M_{bcc…}`. `\bond` witness 1608.02559 still 0;
+new mhchem-cluster root cause (cf. [[project_double_subscript_root_causes]]).
+Rust 1→0, Perl=0, suite 53/0/0.
+
 ### Round-37 (2026-05-31): 1704.05859 DEFERRED — Semiverbatim doesn't read `\`-macros verbatim (cleveref)
 
 **1704.05859 DEFERRED (Semiverbatim tokenization timing).** `\SWmoduli` is

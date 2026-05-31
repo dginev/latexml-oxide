@@ -93,27 +93,25 @@ LoadDefinitions!({
     }
     Tokens::new(out)
   }
-  DefMacro!("\\ce{}", sub[(body)] {
-    let stripped = strip_math_toggles(&body);
-    let mut result = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
+  // Wrap the `\ensuremath{…}` in an explicit `{ }` group so that `\ce` used
+  // as a sub/superscript operand — `E_\ce{M_{bcc}}` (witness 1709.05523) —
+  // binds as ONE math atom. `\ensuremath{X}` strips its OWN braces in math
+  // mode (it is `\def\ensuremath#1{\ifmmode#1\else$#1$\fi}`), so a bare
+  // `E_\ensuremath{M_{bcc}}` expands to `E_M_{bcc}` → the inner `_` becomes a
+  // SECOND subscript on `E` ("Double subscript"). The extra group is
+  // transparent for rendering. Real mhchem (Perl) produces a single boxed
+  // unit, so `E_\ce{…}` is one atom there.
+  fn ce_expand(body: &Tokens) -> Tokens {
+    let stripped = strip_math_toggles(body);
+    let mut result = vec![T_BEGIN!(), T_CS!("\\ensuremath"), T_BEGIN!()];
     result.extend(stripped.unlist());
     result.push(T_END!());
-    Ok(Tokens::new(result))
-  });
-  DefMacro!("\\cee{}", sub[(body)] {
-    let stripped = strip_math_toggles(&body);
-    let mut result = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
-    result.extend(stripped.unlist());
     result.push(T_END!());
-    Ok(Tokens::new(result))
-  });
-  DefMacro!("\\cf{}", sub[(body)] {
-    let stripped = strip_math_toggles(&body);
-    let mut result = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
-    result.extend(stripped.unlist());
-    result.push(T_END!());
-    Ok(Tokens::new(result))
-  });
+    Tokens::new(result)
+  }
+  DefMacro!("\\ce{}",  sub[(body)] { Ok(ce_expand(&body)) });
+  DefMacro!("\\cee{}", sub[(body)] { Ok(ce_expand(&body)) });
+  DefMacro!("\\cf{}",  sub[(body)] { Ok(ce_expand(&body)) });
 
   // \arrow / \chemarrow — used inside \ce arguments. Stub as small text
   // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.
