@@ -6140,7 +6140,13 @@ LoadDefinitions!({
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star, cs, nargs, opt, body)] {
-    if IsDefinable!(&cs) {
+    // Use `is_definable_latex` (honors the `:autoload` flag) rather than the bare
+    // `IsDefinable!`, for the same reason as `\newcommand`/`\newenvironment`: an
+    // autoload TRIGGER (e.g. `\align`→amsmath from `def_autoload`) appears defined
+    // but is genuinely undefined in Perl (its `DefAutoload` lives in OmniBus, not
+    // loaded for typical papers), so `\providecommand{\align}{…}` must DEFINE it
+    // there. See [[project_newenvironment_autoload_clobber]].
+    if is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       let cs_args = convert_latex_args(nargs, opt)?;
       DefMacro!(cs, cs_args, body);
