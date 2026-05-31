@@ -2410,6 +2410,24 @@ core mode-frame work — defer to a dedicated session (cf.
 TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
 divergence, but NOT the witness path (which is the SVG halign).
 
+### Round-37 (2026-05-31): 1802.07225 FIXED — sagej.cls binding missing amssymb cluster
+
+**1802.07225 FIXED (sagej_cls.rs AMS cluster completion).** `\leqslant ... not
+defined` → cascade `ltx:XMApp isn't allowed in <ltx:text>` (Perl=0). The paper
+loads `\documentclass[Royal]{sagej}` and uses `\leqslant` (an **amssymb** symbol)
+but does NOT `\usepackage{amssymb}`. Real `sagej.cls:109` does
+`\RequirePackage{amsfonts,amssymb,amsbsy,amsmath,amsthm}`, so under Perl (which
+ships NO sagej binding → raw-loads the bundled cls) amssymb loads and `\leqslant`
+is defined. Rust's `latexml_contrib/src/sagej_cls.rs` is an OmniBus contrib
+binding that INTERCEPTS the class and only loaded amsmath/amsthm — missing
+amsfonts/amssymb/amsbsy/latexsym. Same incomplete-contrib-binding class as
+[[project_sn_jnl_unbound_class_depscan]] (sn-jnl missed rotating/multirow/
+mathrsfs). Fix: replicate sagej.cls:109's AMS cluster (+ latexsym from L108) in
+binding order. Pure math-symbol/font packages, no layout side effects. Rust 1→0,
+Perl=0, output 85 KB well-formed, `\leqslant` renders. Suite 53/0/0. **Lesson
+(again): for an unbound-class error, grep latexml_contrib too — a thin OmniBus
+class stub that omits the real cls's \RequirePackage list is a recurring trap.**
+
 ### Round-37 (2026-05-31): 1909.03262 FIXED — `\*` invisible-times clobbered by latex.ltx raw-load
 
 **1909.03262 FIXED (`\*` = LaTeXML invisible-times, re-established post-dump).**

@@ -3,6 +3,20 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // sagej.cls L108-L109 load these math-symbol/font packages:
+  //   L108: \RequirePackage{latexsym,ifthen,rotating,calc,textcase,...}
+  //   L109: \RequirePackage{amsfonts,amssymb,amsbsy,amsmath,amsthm}
+  // Perl ships NO sagej binding → raw-loads the bundled sagej.cls → all of
+  // these load, so e.g. `\leqslant` (amssymb), `\mathbb` (amsfonts) and the
+  // latexsym glyphs are defined. Our OmniBus binding intercepts the class,
+  // so the `\RequirePackage` line never runs — replicate the AMS cluster
+  // here (in cls order: amsfonts before amssymb, which depends on it).
+  // Pure math-symbol/font packages — no layout side effects. Witness
+  // 1802.07225 (`\leqslant` in a paper that loads sagej but not amssymb).
+  RequirePackage!("latexsym");
+  RequirePackage!("amsfonts");
+  RequirePackage!("amssymb");
+  RequirePackage!("amsbsy");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   // Do NOT eager-load xcolor (Perl ships no sagej binding → OmniBus, no
