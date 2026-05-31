@@ -2388,6 +2388,28 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1902.11165 DEFERRED — `\halign` (Young tableau) in a TikZ node leaks horizontal mode
+
+**1902.11165 DEFERRED (mode-frame cluster — SVG `\halign` in pgf node).** `\halign
+Attempt to end mode restricted_horizontal in horizontal` (Perl=0). Cleanly
+reproducible: a `young.sty` Young tableau (`\halign\bgroup …`) inside a TikZ
+`\node{…}`. (Standalone and `\mbox{…}`-wrapped tableaux are clean — only the pgf
+node trips it.) Inside the node `\halign` is `\let` to `\lxSVG@halign`
+(pgfsys_latexml_def.rs:335), which — IDENTICALLY to Perl (pgfsys-latexml.def.ltxml
+L892) — sets `whatsit mode=internal_vertical` (a `bounded` box) and brackets the
+body with `begin_mode/end_mode("restricted_horizontal")`. A `MODETRACE` of
+`begin_mode_opt`/`end_mode_opt` shows the leak: the `internal_vertical` box ends
+with `MODE=horizontal` (`END_MODE internal_vertical cur=horizontal`) — during
+alignment-body digestion the box's `MODE` drifts to `horizontal` and isn't
+restored, so a later mode-end mismatches. Root suspect: `enter_horizontal`
+(stomach.rs:714) mutates `MODE` via `assign_value_inplace_sym` (non-scoped), which
+can leak across the alignment's group boundaries; Perl's equivalent doesn't. Deep
+core mode-frame work — defer to a dedicated session (cf.
+[[project_endgroup_modeswitch_frame_leak]]). Related observation: the REGULAR
+`\halign` (tex_tables.rs) uses `begin_mode("restricted_horizontal")` where Perl
+TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
+divergence, but NOT the witness path (which is the SVG halign).
+
 ### Round-37 (2026-05-31): 1901.05713 DEFERRED — cleveref `must be loaded after hyperref` via dep-scan
 
 **1901.05713 DEFERRED (dep-scan + cleveref load-order check).** `Package cleveref
