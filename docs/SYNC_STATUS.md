@@ -2388,6 +2388,23 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1610.06392 FIXED — siunitx must not clobber the `units` package's `\unit`
+
+**1610.06392 (revtex4-1, units + siunitx) 3→0 errors.** The paper loads `units`
+then `siunitx`, and uses the `units` syntax `\unit[1.8$\times$10$^{17}$]{s$^{-1}$}`.
+Rust's `siunitx_sty.rs` did `Let!("\\unit", "\\si")` unconditionally (added for
+siunitx-v3 `\unit{…}`, witnesses 2406.02765/2406.18417), clobbering units'
+`\unit[value]{unit}`. With `\unit`=`\si`, the optional `[…]` was mis-scanned →
+the inner `$…$` never entered math → 3×`^` "can only appear in math mode". Perl's
+siunitx.sty.ltxml **never redefines `\unit`**, so units' `\unit` (loaded first)
+survives. **Fix:** guard the let — `\@ifundefined{unit}{\let\unit\si}{}` — so
+siunitx only defines `\unit` when undefined (siunitx-only papers) and defers to
+units' `\unit` when present (matching Perl; order-independent since units' later
+DefMacro wins anyway). 1610.06392 now 0 err / 514 KB, structurally matched to Perl
+(Math 411=411, bibitem 80=80, section 4=4); siunitx-only `\unit{\kilogram}` stays
+R=0=P. Tests 1344/0. (2004.03193, also flagged, is the deferred `\parbox`-in-
+elsarticle-keyword cluster — see 2004.07608.)
+
 ### Round-37 (2026-05-31): 1804.10128 FIXED — babel `\shorthandoff` must change catcodes, not no-op
 
 **1804.10128 (French babel + xy-pic) 131→0 errors.** `babel_sty.rs` defined

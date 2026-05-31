@@ -2777,9 +2777,19 @@ LoadDefinitions!({
     Ok(funits)
   });
 
-  // siunitx v3 \unit[options]{units} — equivalent to v2 \si.
-  // Witnesses 2406.02765, 2406.18417.
-  Let!("\\unit", "\\si");
+  // siunitx v3 \unit[options]{units} — equivalent to v2 \si — but ONLY when
+  // `\unit` isn't already defined. The older `units` package also defines
+  // `\unit` (the `\unit[value]{unit}` syntax), and when both packages are
+  // loaded Perl keeps units' `\unit` (siunitx.sty.ltxml never redefines it).
+  // Unconditionally `\let`-ing `\unit` to `\si` clobbered units' command, so
+  // `\unit[1.8$\times$10$^{17}$]{s$^{-1}$}` (units syntax) had its optional
+  // `[…]` mis-scanned by `\si` → the inner `$…$` never entered math → `^`
+  // "can only appear in math mode" (witness 1610.06392, units+siunitx). The
+  // `\@ifundefined` guard preserves siunitx-only `\unit` (witnesses 2406.02765,
+  // 2406.18417: `\unit` is undefined there, so it is defined here) while
+  // deferring to units' `\unit` when that package is present — matching Perl,
+  // and order-independent (if siunitx loads first, units' later DefMacro wins).
+  RawTeX!(r"\@ifundefined{unit}{\let\unit\si}{}");
 
   // siunitx v3 \qty[options]{number}{units} — equivalent to v2 \SI.
   // Witness 2406.20067, 2407.03167. Defined below by Let to \SI after
