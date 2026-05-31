@@ -2463,6 +2463,30 @@ Perl=0, output 85 KB well-formed, `\leqslant` renders. Suite 53/0/0. **Lesson
 (again): for an unbound-class error, grep latexml_contrib too — a thin OmniBus
 class stub that omits the real cls's \RequirePackage list is a recurring trap.**
 
+### Round-37 (2026-05-31): 1712.00062 FIXED — nested mdframed (`logical-block` vs `inline-logical-block`)
+
+**1712.00062 FIXED (mdframed wrapper → `logical-block`).** `Error:malformed:
+ltx:inline-logical-block "ltx:inline-logical-block" isn't allowed in
+<ltx:inline-logical-block>` (Perl=0). The paper nests `\begin{mdframed}` (an
+outer algorithm frame around an inner titled frame). Rust's `mdframed_sty.rs`
+wrapped the body in `inline-logical-block` — a prior surpass-Perl divergence
+(Perl/ar5iv uses `inline-block`, which can't hold a `theorem`; we swapped to
+admit theorems, witnesses 2506.03074/2402.07712). But `inline-logical-block` is
+in **Misc.class**, and its `Para.model` body (`(Para.class | Meta.class)*`) does
+NOT readmit a Misc.class element → a nested `inline-logical-block` is schema-
+illegal, where Perl's `inline-block` (Block.model ⊇ Misc.class) nests fine.
+**Fix:** switch the wrapper to `logical-block` — the block-level sibling of
+inline-logical-block (schema: "like block, can appear in inline or block mode,
+but typesets its contents as para"), with the SAME Backgroundable.attributes
+(`framed`/`framecolor`) and SAME `Para.model` body (admits theorem/proof/para),
+but itself in **Para.class** so it nests inside another logical-block's
+Para.model. mdframed already digests `internal_vertical` (block) so block-level
+positioning is faithful: a mid-paragraph `\begin{mdframed}` now correctly emits
+`</para><logical-block>…</logical-block><para>` (frame breaks out as a block
+sibling) instead of nesting the frame inside `<p>`. Keeps the theorem-in-mdframed
+surpass AND fixes nesting. Witness 1712.00062: Rust 1→0, 2.1 MB well-formed,
+nested logical-block depth 2; 2002.06879 (newmdenv) still clean. Suite 53/0/0.
+
 ### Round-37 (2026-05-31): 1909.03262 FIXED — `\*` invisible-times clobbered by latex.ltx raw-load
 
 **1909.03262 FIXED (`\*` = LaTeXML invisible-times, re-established post-dump).**
