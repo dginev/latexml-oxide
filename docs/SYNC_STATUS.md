@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1705.06183 FIXED — lazy-load dvips colors for plain `\color{Blue}`, defined GLOBALLY
+
+**1705.06183 (revtex4-1 + hyperref + listings) 65→0 errors.** `\usepackage[usenames,
+dvipsnames]{color}` then `\lstset{keywordstyle=\color{Blue}, stringstyle=\color{Purple}}`
+→ 34×`Can't find color named 'Blue'` + 31×`'Purple'`. Two-part root cause: (1) Rust's
+hyperref eagerly `RequirePackage("color")` (a deliberate divergence closing the
+`\definecolor`-undefined cluster) loads `color` BEFORE the user's option-bearing
+load, so `[usenames,dvipsnames]` is dropped (no-op re-load) and dvipsnam.def's 68
+named colors never load. The existing lazy-load (parse_color) only covered the
+`[named]`-model path; the plain `\color{Blue}` (no model) path went straight to the
+"Can't find color" error. (2) After extending the lazy-load to the plain path, only
+the FIRST color resolved: the lazy `input_definitions("dvipsnam")` fires from inside
+a grouped digestion (`\textcolor`/listings keywordstyle), and `def_color` is local
+by default (`\ifglobalcolors` undefined for plain `color`), so the 68 colors
+reverted before the next lookup. **Fix:** (a) extend the lazy-load to `lookup_color_obj`'s
+miss branch (activate `usenames`, load dvipsnam.def once, re-look-up); (b) a
+`color_force_global` flag, set around that load, makes `def_color` force GLOBAL
+scope — reproducing Perl's preamble-level (top-level → persistent) dvipsnam load.
+1705.06183 now 0 err / 465 KB; Perl 0; structure matched (listing 60=60, section
+5=5, bibitem 102=102). Tests 1344/0. (Rust now colors the listing keywords —
+`color=` attrs Perl omits; benign, both error-free.) Same eager-load-drops-options
+family as the eager-xcolor cluster.
+
 ### Round-37 (2026-05-31): 1909.02323 FIXED — arydshln `\arrayrulecolor` must consume its color arg (order-fragile 0-arg)
 
 **1909.02323 (mnras, arydshln + colortbl) 17→0 errors.** Tables use

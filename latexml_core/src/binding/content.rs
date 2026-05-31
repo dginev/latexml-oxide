@@ -2685,9 +2685,19 @@ pub fn def_color(
   use crate::common::color;
   // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) &&
   // IfCondition(\ifglobalcolors) Guard with lookup first: xcolor may not be loaded (e.g.
-  // colordvi-only documents)
-  let effective_scope = if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
-    && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
+  // colordvi-only documents).
+  //
+  // ALSO force global when `color_force_global` is set: color_sty.rs's lazy
+  // dvipsnam.def loader (recovering a dropped `\usepackage[dvipsnames]{color}`
+  // option, e.g. when hyperref preloaded `color` first) fires from WITHIN a
+  // grouped digestion (`\textcolor{Blue}{…}` / a listings keywordstyle), so the
+  // 68 dvips colors would otherwise be defined in that local group and revert
+  // before the next `\color{…}` — making only the FIRST color resolve. Perl
+  // loads dvipsnam at the preamble (top level), so its colors persist; the flag
+  // reproduces that global effect. Witness 1705.06183.
+  let effective_scope = if (lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
+    && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true))
+    || lookup_bool("color_force_global")
   {
     Some(Scope::Global)
   } else {

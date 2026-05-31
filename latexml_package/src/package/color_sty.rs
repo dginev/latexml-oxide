@@ -119,6 +119,38 @@ pub fn lookup_color_obj(name: &str) -> Color {
       })
     },
     _ => {
+      // Lazy-load the dvips named colors (Blue, Purple, Red, RubineRed, …) on
+      // first miss. The user's `\usepackage[usenames,dvipsnames]{color}` can be
+      // a no-op when `color` was already pulled in WITHOUT those options
+      // (hyperref's eager `RequirePackage("color")` for the colorlinks cluster
+      // loads it first), so the options never fire and the dvips names stay
+      // undefined → `\color{Blue}` inside e.g. `\lstset{keywordstyle=…}` errors.
+      // Activate `usenames` (so `\DefineNamedColor` ALSO exposes the plain name)
+      // + load dvipsnam.def ONCE, then re-look-up. Same end-state Perl reaches:
+      // its hyperref does NOT preload color, so the user's option-bearing load
+      // wins. Witness 1705.06183 (revtex4-1 + hyperref + `\lstset{…\color{Blue}}`).
+      // The `named`-model path (parse_color above) already does the analogous
+      // lazy-load; this covers the plain `\color{Blue}` (no model) path.
+      if !state::lookup_bool("color_dvipsnam_lazy_loaded") {
+        state::assign_value("color_dvipsnam_lazy_loaded", true, Some(Scope::Global));
+        state::assign_value("color_usenames_active", true, Some(Scope::Global));
+        // Force the 68 dvips colors GLOBAL: we are inside a grouped digestion
+        // (e.g. `\textcolor{Blue}{…}`), so without this they'd be local and
+        // revert before the next color is looked up (see `def_color`).
+        state::assign_value("color_force_global", true, Some(Scope::Global));
+        let _ = input_definitions("dvipsnam", InputDefinitionOptions {
+          extension: Some(Cow::Borrowed("def")),
+          noerror: true,
+          ..InputDefinitionOptions::default()
+        });
+        state::assign_value("color_force_global", false, Some(Scope::Global));
+        if let Some(Stored::String(sym)) = state::lookup_value(&key) {
+          let stored_str = arena::with(sym, |s| s.to_string());
+          if let Some(c) = Color::from_stored(&stored_str) {
+            return c;
+          }
+        }
+      }
       // Perl color.sty.ltxml L50-53:
       //   AssignValue('color_'.$spec => Black);
       //   Error('unexpected', $spec, $STATE->getStomach,
