@@ -1247,6 +1247,28 @@ dismissing them all by pattern is unsafe. When in doubt, err toward
 keeping Perl's kind and porting the sub body as a DefMacro with
 gullet-token return.
 
+**A FOURTH gullet context the triage above missed: ALIGNMENT column-scan
+(added 2026-05-31).** If the `sub{}` reads a **non-brace DELIMITED argument**
+(`(…)`/`[…]`/`<…>` via `phys_read_arg`/`readBalanced`-style) whose content can
+contain `&` or `\\`, and the CS may appear **inside an alignment** (`eqnarray`,
+`align`, `\halign`, matrix), then DefPrimitive is NOT safe: the alignment's
+column reader (`digest_alignment_column`) scans the row for `&`/`\\` at
+STOMACH time, and a digestion-time primitive hasn't yet consumed its
+delimited body — so the alignment grabs the body's `&`/`\\` as its own column/
+row separators, splitting the construct and orphaning its fences. A DefMacro
+grabs the delimited body at EXPANSION time (before the column scan), like Perl.
+Witness: `\mqty(a&b\\c&d)` inside an `eqnarray` (2007.06211) — Perl 0, Rust 11
+(`\lx@begin@alignment … mode-switch … due to \lx@begin@inmath@text` + Unbalanced
+`\right`). Fix: `physics_sty.rs` `\lx@physics@mat` reverted to `DefMacro`
+(commit 6721f53232). The OTHER physics quantity constructs (`\quantity`/`\qty`,
+`\lx@physics@fenced`→`\pqty`/`\abs`/`\norm`/`\order`, `\evaluated`,
+`\lx@physics@operator/operatorP`, `\lx@physics@diff`) keep their deliberate
+DefPrimitive (this entry's ~16-flip rationale) because their delimited body is a
+single EXPRESSION with no `&`/`\\` — only the MATRIX family carries alignment
+separators, so only it needs the macro kind. **Triage step 1 must therefore add:
+"…and if the sub reads a delimited (non-brace) arg that can hold `&`/`\\`, can
+the CS occur inside an alignment?"** See [[project_physics_mat_defmacro_not_primitive]].
+
 ## #45 Rust `mode => "text"` auto-implies `enter_horizontal => true`
 
 When porting a Perl `DefConstructor` that carries
