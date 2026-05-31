@@ -2537,6 +2537,34 @@ demotion is a deliberate surpass, now preserved for explicit delimiters). Full
 paper Rust 2→0, 1.5 MB well-formed, Perl=0. Suite 53/0/0. See
 [[project_robust_cs_semiverbatim_loop]].
 
+### Round-37 (2026-05-31): 1704.05859 FIXED — cleveref `\cref` re-tokenized label → bogus `\SWmoduli`
+
+**1704.05859 FIXED (cleveref `cref_multi` passes label TOKENS, not a string).**
+`Error:undefined:\SWmoduli` (Perl=0). The paper has
+`\label{Vanishing property of the \SW moduli space on a family}` (`\SW` is a
+user `\newcommand`) and `\cref{…}` to it. Root cause: Rust's `cref_multi` took
+the label as a **string** (`args[1].to_string()`), built
+`\lx@cref{…}{the \SWmoduli space}` and `tokenize_internal`'d it. The control
+word `\SW` ate its following space at the FIRST tokenization, so `to_string`
+emitted `\SWmoduli` (no boundary); re-tokenizing rejoined it into a single
+**undefined** control sequence `\SWmoduli` that then got DIGESTED. Perl's
+`crefMulti` instead splits the Semiverbatim **Tokens** object (`splitLabels`) and
+passes each label's tokens straight into `Invocation(T_CS('\lx@cref'), …,
+$label_tokens)` — no stringify→re-tokenize round-trip. **Fix:** refactor
+`cref_multi` to take `Tokens`, split on top-level OTHER commas at the token level
+(`split_label_tokens`, trimming spaces), and splice the original label tokens
+directly into each `\lx@cref [*] {<show>} {<label>}` (only the fixed `<show>`
+string is tokenized — no user macros). Updated all 6 callers
+(`\cref`/`\Cref`/`\cpageref`/`\Cpageref`/`\labelcref`/`\labelcpageref`) to
+pass `owned_tokens()`. `show` attrs now match Perl exactly
+(`creftype~refnum`/`creftypeplural~refnum`/`refnum`); multi-label pair/triple
+conjunctions intact. Note the ref now RESOLVES (labelref == labels, both with
+`\SW` expanded to "Seiberg--Witten") — Perl's actually DANGLES here (its `\cref`
+keeps unexpanded `\SWmoduli` while its `\label` expands), a Perl `\label`/`\cref`
+inconsistency our faithful token-passing port sidesteps. Witness 1704.05859: Rust
+1→0, 6.8 MB well-formed, Perl=0. Suite 53/0/0. Same class as
+[[project_macro_clobber_author_redefine]] (label-name-with-macro handling).
+
 ### Round-37 (2026-05-31): 1909.03262 FIXED — `\*` invisible-times clobbered by latex.ltx raw-load
 
 **1909.03262 FIXED (`\*` = LaTeXML invisible-times, re-established post-dump).**
