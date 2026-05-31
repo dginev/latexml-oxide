@@ -2466,7 +2466,17 @@ primitive → `stomach->endgroup` in both. Trace at the error: depth=2,
 BOUND_MODE=internal_vertical bound on top, MODE drifted to horizontal (from
 "text"). So Perl, with identical code, must NOT have BOUND_MODE bound on the top
 frame at `\endgroup` — a deeper frame/undo-list/`isValueBound` state divergence
-NOT visible by static comparison. **Needs Perl-side frame-stack instrumentation
+NOT visible by static comparison. **DEEPENED 2026-05-31 (frame-dump):** a Rust-side dump of EVERY frame's
+BOUND_MODE binding at the error confirms the frame STRUCTURE is also identical to
+what Perl must have: at `\endgroup`, the top frame `f0` is the env's `bgroup`
+frame carrying BOTH `BOUND_MODE=internal_vertical` AND `current_environment`
+(bound via `begin_mode(noframe)`); `f1` is the manual `\begingroup` (neither
+bound). The empty-center case (`\begingroup\begin{center}\endgroup`, no
+content) errors identically, so the divergence is created by `\begin{center}`
+ITSELF, not by content/`\par`. Since `\begin`'s frame creation, `is_value_bound`
+(undo[0] check), and `endgroup` are all byte-faithful yet Perl's `f0` must NOT
+carry BOUND_MODE at `\endgroup`, the remaining unknown is a runtime
+digestion/grouping detail invisible to static comparison. **Needs Perl-side frame-stack instrumentation
 (MODE debug) to find where Perl's stack differs** — the one remaining unknown.
 A band-aid already suppresses this exact error class during raw .sty load
 (stomach.rs:442-465, INTERPRETING_DEFINITIONS guard). This repro likely unblocks
