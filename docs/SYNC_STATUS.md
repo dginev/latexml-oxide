@@ -2542,6 +2542,24 @@ cannot write `--dest=/dev/null` — it mkdirs `/dev` and fails silently as "0 er
 give Perl a real dest file. An earlier read of "Perl tolerates undefined `\color`" was this
 artifact — Perl errors on undefined color commands exactly like Rust.)
 
+### Round-37 (2026-05-31): 2003.02721 DEFERRED — borderline `\tr\big[…\\…\big]` eqnarray, deferred mode-resolution divergence (mode-frame-leak cluster)
+
+**2003.02721 (revtex4-1 + physics) rust=29 perl=0 — DEFERRED.** NOT the `\mqty` cluster
+(mis-grouped in an earlier note — this doc has no `\mqty`). All 10 located errors are at
+line 616, an `eqnarray` whose 3rd column is `\tr\big[ \overrightarrow{\mathcal T}\sb
+\left(\prod_{d_i="<"}…\right) \\ \nonumber && … \overleftarrow{\mathcal T}\sb
+\left(\prod_{d_i=">"}…\right)\rho_B(t_0) \big]` — i.e. a `\big[ … \big]` delimiter pair
+that STRADDLES the `\\` row break (open on row 1, close on row 2). The errors are
+`equationgroup`-in-`XMath` + `\lx@begin@alignment … mode-switch to math due to
+\lx@begin@inline@math` + `\lx@end@inline@math` "end mode math in math". Not minimally
+isolable: the eqnarray errors in BOTH engines when the doc is truncated right after it
+(`trunc@618`: R12 P4), but the FULL doc (with the following eqnarrays 625/634/643/… and
+text) is Perl 0 / Rust 29 — so Perl's borderline-eqnarray mode imbalance is RESOLVED by the
+following content's closures while Rust's leaks (the classic deferred/Building-phase
+mode-frame-leak — [[project_endgroup_modeswitch_frame_leak]]). Belongs to that cluster's
+needs-instrumentation residual; deferred. (Distinct from the `\mqty` member, which was a
+clean DefPrimitive→DefMacro fix.)
+
 ### Round-37 (2026-05-31): 2007.06211 FIXED — physics `\lx@physics@mat` must be a DefMacro (expansion-time), not a DefPrimitive (digestion-time)
 
 **2007.06211 (revtex4-1 + physics) 11→0 errors — the deferred physics-`\mqty` cluster
