@@ -2763,6 +2763,28 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1908.01908 FIXED 2026-05-31 (`\meaning` optional-param serialization).**
+`tex_debugging.rs` rendered an *optional* macro parameter as literal `[#N]` in
+`\meaning` (a Rust-only divergence once added for 2110.11931). Perl renders ALL
+params as plain `#N` (`\newcommand{\foo}[2][d]{…}` → `macro:#1#2->…`, not
+`macro:[#1]#2->…`). etoolbox `\robustify` round-trips a CS through
+`\meaning`+`\scantokens`+`\def`, so `[#1]` became a *delimited* parameter: the
+rebuilt `\cite{x}` then forward-scanned for a literal `[` and swallowed the next
+environment's optional arg (`\begin{figure}[th]`), collapsing the float with
+"`\caption` outside any known float" / "Can't close environment figure" /
+"end mode internal_vertical in internal_vertical" (×2 figures = 6 errors). Fix:
+always serialize `#N` (one line, drop the `if param.optional { "[#N]" }` branch).
+Now Perl-faithful — robustify still yields opaque `CODE(...)` garbage text for a
+closure-backed `\cite` in BOTH engines (an inherent robustify limitation Perl
+shares), but argument scanning stays undelimited so following optional args are
+untouched. 1908.01908 Rust 6→0, Perl=0; `\meaning\foo` now byte-matches Perl;
+suite 53/0/0 (480/91/88/205/… all green); other candidates (1505.01267,
+1508.03915, 1810.05151, 1902.11165, 1906.11496, 2004.10048) unchanged (distinct
+root causes). NOTE: the old comment claimed `#N` broke 2110.11931's
+`\cite{x}\begin{equation}` — but that scenario eats `\begin` as arg 2 in PERL too
+(same `#1#2` rendering), so it is a *shared* failure, not Rust-only; the `[#N]`
+divergence should never have existed.
+
 **1910.05586 + 1804.09301 FIXED 2026-05-31 (dep-scan "executed-set" gate).**
 Landed: `\usepackage`/`\RequirePackage` constructors (latex_constructs.rs) now set
 `<pkg>.usepackage_executed`; `maybe_require_dependencies` (content.rs), for a

@@ -180,22 +180,30 @@ LoadDefinitions!({
                   continue_flag = true;
                 } else {
                   arg_index+=1;
-                  // Optional parameters (Optional, OptionalSemiverbatim,
-                  // OptionalKeyVals, etc.) round-trip through `\meaning`
-                  // as `[#N]` so etoolbox's `\robustify` re-`def`s the CS
-                  // with the correct `[]`-flagged parameter pattern,
-                  // preserving optional-arg semantics. Without the
-                  // brackets, `\robustify{\cite}` rebuilt `\cite` as
-                  // `#1#2` (two mandatory args) and subsequent
-                  // `\cite{x}\begin{equation}` mis-parsed `\begin` as
-                  // arg 2 — corrupting mode tracking and producing
-                  // "Script _ can only appear in math mode" cascades on
-                  // the next equation. Driver: 2110.11931.
-                  if param.optional {
-                    p_spec = arena::pin(s!("[#{arg_index}]"));
-                  } else {
-                    p_spec = arena::pin(s!("#{arg_index}"));
-                  }
+                  // ALL parameters — including optional ones — render as a
+                  // plain `#N`, matching Perl `\meaning`. Perl's `\meaning`
+                  // reflects LaTeXML's internal *parameter count*, not TeX
+                  // bracket syntax: an optional-arg command like
+                  // `\newcommand{\foo}[2][d]{...}` (or `\cite`) shows
+                  // `macro:#1#2->…`, NOT `macro:[#1]#2->…`.
+                  //
+                  // A prior divergence rendered optional params as `[#N]`
+                  // to placate etoolbox `\robustify` (2110.11931). That was
+                  // wrong: `\robustify` round-trips a CS through
+                  // `\meaning`+`\scantokens`+`\def`, so a literal `[#1]`
+                  // becomes a *delimited* parameter — the rebuilt `\cite{x}`
+                  // then forward-scans for `[`, swallowing the next
+                  // environment's optional arg (e.g. `\begin{figure}[th]`),
+                  // and the float collapses with "\caption outside any
+                  // known float" / "Can't close environment figure".
+                  // Driver: 1908.01908. With plain `#N` (Perl-faithful) the
+                  // rebuilt body is still opaque `CODE(...)` garbage in BOTH
+                  // engines — `\robustify` cannot reconstruct a closure-
+                  // backed primitive — but argument scanning stays
+                  // undelimited, exactly as in Perl, so following optional
+                  // args are untouched. Perl emits the same `CODE(...)`
+                  // text and zero errors.
+                  p_spec = arena::pin(s!("#{arg_index}"));
                 }
               }
             }
