@@ -91,6 +91,23 @@ LoadDefinitions!({
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   Let!("\\ltx@ifclassloaded",   r"\@ifclassloaded");
 
+  // `\*` — invisible-times (U+2062, MULOP). Perl `TeX.pool.ltxml:7124`:
+  //   DefMathI('\*', undef, "\x{2062}", role=>'MULOP', name=>'', meaning=>'times');
+  // and our plain layer mirrors it at plain_base.rs:119. Perl's LaTeX
+  // emulation NEVER raw-loads latex.ltx's `\DeclareRobustCommand\*`
+  // (the discretionary-multiplication `\discretionary{\thinspace\the
+  // \textfont2\char2}{}{}`), so `\*` stays the invisible-times DefMath
+  // in the latex context. Rust DOES raw-load latex.ltx in
+  // `latex_bootstrap`, whose `\*` discretionary clobbers the TeX.pool
+  // DefMath and gets baked into the latex dump (as an Expandable macro
+  // that simply vanishes in math mode). Re-establish the Perl-faithful
+  // invisible-times definition here, post-dump, so `$a\*b$` yields
+  // `⁢(a,b)` and — crucially — `$a_\beta\*_\alpha$` makes `\*` the BASE
+  // of the second subscript (matching Perl's `<XMTok meaning="times">⁢`
+  // base), instead of vanishing and letting `_\alpha` re-attack the
+  // prior `_\beta` → spurious "Double subscript". Witness 1909.03262.
+  DefMath!("\\*", None, "\u{2062}", role => "MULOP", name => "", meaning => "times");
+
   //======================================================================
   // 3. List internals — defensive NODUMP-path overrides
   //

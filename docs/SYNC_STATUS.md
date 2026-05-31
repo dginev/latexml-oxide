@@ -2410,20 +2410,34 @@ core mode-frame work — defer to a dedicated session (cf.
 TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
 divergence, but NOT the witness path (which is the SVG halign).
 
-### Round-37 (2026-05-31): 1909.03262 DEFERRED — `\*` invisible-times dropped between scripts
+### Round-37 (2026-05-31): 1909.03262 FIXED — `\*` invisible-times clobbered by latex.ltx raw-load
 
-**1909.03262 DEFERRED (double-subscript cluster — `\*` box vanishes).** `$M\underline{\nu}{_\beta\*_\alpha}M$`
-→ `Double subscript` (Perl=0). Reduces to `$a_\beta\*_\alpha$`. `\*` is
-`DefMath("\*", U+2062, MULOP, name="")` in BOTH engines (Rust plain_base.rs:119
-== Perl TeX.pool L7124). Isolated: `$a\*_\alpha$` and `$a_\beta\*y_\alpha$` are
-clean — only the `<scripted-atom> \* <subscript>` form fails. A box-list dump at
-`script_handler` start shows the `\*` box is PRESENT when a visible atom follows
-it but VANISHES when a subscript immediately follows a POST-subscript box: before
-`_\alpha` the list is `[a, _{\beta}]` (no `\*`), so `_\alpha` pops the same-cc
-`_{\beta}` → spurious double-subscript. The empty-name invisible-times MULOP gets
-dropped from the box list when wedged between a `\lx@post@subscript` and a
-trailing `_`/`^`. Root not pinned (deep math digestion); deferred. See
-[[project_double_subscript_root_causes]].
+**1909.03262 FIXED (`\*` = LaTeXML invisible-times, re-established post-dump).**
+`$M\underline{\nu}{_\beta\*_\alpha}M$` → `Double subscript` (Perl=0), reduces to
+`$a_\beta\*_\alpha$`. **Root cause was NOT a script_handler/box-list bug** —
+`\*` simply never produced a box. Tracing `extend_box_list`/`invoke_token`
+showed `\*` is consumed in the *gullet* (it expands to nothing in math), so it
+never reaches the stomach. The latex **dump** (`resources/dumps/latex.*.dump.txt`
+line ~2319) stores `\*` as an **Expandable** macro =
+`\discretionary{\thinspace\the\textfont2\char2}{}{}` — i.e. latex.ltx's
+`\DeclareRobustCommand\*` discretionary-multiplication — which vanishes in math
+mode. Perl's `TeX.pool.ltxml:7124` `DefMathI('\*', …, "\x{2062}", role=>'MULOP',
+…)` is the ground truth, and Perl's LaTeX emulation **never raw-loads**
+latex.ltx's `\*`, so it stays invisible-times. Rust DOES raw-load latex.ltx (in
+`latex_bootstrap`), clobbering the TeX.pool DefMath and baking the discretionary
+into the dump. With `\*` gone from the box list, `_\alpha` walked back past it to
+the prior `_{\beta}` → spurious double-subscript. **Fix:** re-establish the
+Perl-faithful `DefMath!("\\*", None, "\u{2062}", role=>"MULOP", name=>"",
+meaning=>"times")` in `latex_constructs_rust_only.rs` (the "Rust-only overrides
+loaded LAST" layer — runs at runtime *after* the dump, so it isn't subject to the
+MathPrimitive-closure non-serializability that drops it from the dump itself).
+Now `$a\*b$` → `⁢(a,b)` (XMTok meaning="times", identical to Perl), `$a\*b$`
+text-mode → `word⁢break` (identical to Perl), and `$a_\beta\*_\alpha$` makes `\*`
+the base of the 2nd subscript (no error; both engines leave it
+`ltx_math_unparsed`). Full paper: Rust 1→0 errors, 6.4 MB / 3941 Math elements,
+well-formed; Perl=0/0 Fatal. Suite 53/0/0. See
+[[project_double_subscript_root_causes]] and
+[[feedback_dump_pollution]] (same class: a raw-load clobbering a LaTeXML def).
 
 ### Round-37 (2026-05-31): 1901.05713 FIXED — dep-scan now skips `\begin{comment}` blocks
 
