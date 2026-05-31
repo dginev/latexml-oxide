@@ -2610,7 +2610,18 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
-**1910.05586 STILL OPEN — ROOT-CAUSED 2026-05-31: same dep-scan-conditional class
+**1910.05586 + 1804.09301 FIXED 2026-05-31 (dep-scan "executed-set" gate).**
+Landed: `\usepackage`/`\RequirePackage` constructors (latex_constructs.rs) now set
+`<pkg>.usepackage_executed`; `maybe_require_dependencies` (content.rs), for a
+raw-loaded file only (`<file>.<ext>_raw_loaded`), drops any candidate not in that
+set — i.e. one whose `\usepackage` sits in a false `\if…\fi` the raw-load
+skipped. 1910.05586: Rust 1→0 (1.9 MB); 1804.09301: Rust 1→0 (73 KB); both Perl=0,
+well-formed. Regression guards clean: 1703.03673 (IfFileExists→amssymb),
+1506.06200, 1504.05963, 1901.05713, + synthetic bundled-`\RequirePackage{caption}`
+(caption still loads, `\captionsetup` defined) + 678-paper conv1 re-sweep + suite
+53/0/0. The original root-cause analysis follows.
+
+**1910.05586 (root cause) — same dep-scan-conditional class
 as 1804.09301.** `cleveref must be loaded after hyperref!` (Perl=0). packages.sty
 wraps hyperref in `\ifpdf … \usepackage[…\ifoptionfinal{…}{}…]{hyperref} … \else
 \fi` (L96-110) then `\usepackage{cleveref}` (L111). **`\ifpdf` is FALSE in BOTH

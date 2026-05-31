@@ -4029,6 +4029,13 @@ LoadDefinitions!({
         None => Vec::new(),
       };
       for package in package_list {
+        // Record that THIS source-level \usepackage actually executed (the
+        // dep-scan's executed-set gate, content.rs maybe_require_dependencies,
+        // reads `<pkg>.usepackage_executed` to distinguish a top-level require
+        // from one inside a false `\if…\fi` the raw-load skipped). Set only
+        // here in the constructor — NOT in require_package — so the dep-scan's
+        // own programmatic require_package loads don't self-populate the set.
+        state::assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
         require_package(&package, RequireOptions {
           options: options_list.clone(),
           ..RequireOptions::default()
@@ -4057,6 +4064,9 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     for package in package_list {
+      // See \usepackage above — record the executed source-level require for
+      // the dep-scan's executed-set gate.
+      state::assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
       require_package(&package, RequireOptions {
         options: options_list.clone(),
         ..RequireOptions::default()

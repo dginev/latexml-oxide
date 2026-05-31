@@ -1741,6 +1741,23 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   }
   let _guard = ResetGuard;
 
+  // EXECUTED-SET GATE (Rust-only, more-robust-than-Perl). When this file was
+  // actually RAW-LOADED, its `\usepackage`/`\RequirePackage` constructors ran
+  // for every require the load REACHED — recording `<pkg>.usepackage_executed`.
+  // A candidate the regex finds in the text but that is NOT in that set is one
+  // whose `\usepackage` never executed — i.e. it sits inside a FALSE `\if…\fi`
+  // the raw-load already skipped (e.g. `\ifpdf … \usepackage{hyperref} … \fi`
+  // with `\ifpdf` false). Perl never dep-scans a raw-loaded file, so it never
+  // anticipates such a package; mirror that by skipping it. The gate applies
+  // ONLY when the file raw-loaded (key `<file>.<ext>_raw_loaded`): in the
+  // miss-handler / `INCLUDE_STYLES=false` path no constructor ran, so the set
+  // is empty and we must NOT filter (keep the anticipation). The flag is
+  // cumulative+global, so a candidate that DID execute anywhere is kept — only
+  // never-executed ones are dropped, which can never be a false skip.
+  // Witnesses 1910.05586 (hyperref in false `\ifpdf` → cleveref "must be loaded
+  // after hyperref"), 1804.09301 (xcolor in false `\ifacl@hyperref`).
+  let raw_loaded = lookup_bool(&s!("{file}.{ext_type}_raw_loaded"));
+
   // Perl L2776: `s/%[^\n]*\n//gs` — drop comment AND its trailing newline,
   // replacement is the empty string.
   static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
@@ -1920,6 +1937,12 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
       if p.is_empty() || conflicting.contains(p) {
+        continue;
+      }
+      // Executed-set gate (see top of fn): when this file raw-loaded, drop a
+      // candidate whose `\usepackage` never executed anywhere — it was inside a
+      // false conditional the raw-load skipped.
+      if raw_loaded && !lookup_bool(&s!("{p}.usepackage_executed")) {
         continue;
       }
       // Perl L2773: `!$dups{$p} && !LookupValue($p . '.sty.ltxml_loaded')`
