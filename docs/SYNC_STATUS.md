@@ -2388,6 +2388,26 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): pgfplots symbolic-coords DEFERRED — prior numeric axis leaks state into a following symbolic axis
+
+**1908.10041 + 1901.08716 DEFERRED (pgfplots per-axis state leak).** `Package
+pgfplots Error: Sorry, the input coordinate \pgfplots@loc@TMPa has not been
+defined with 'symbolic x coords={…}'` (Perl=0 on both full papers). Two witnesses:
+1908.10041 (`symbolic x coords={List Employees, …}`), 1901.08716 (`{70\%,80\%,…}`,
+found by the dep-scan-gate regression sweep — confirmed PRE-EXISTING via a
+pre-gate binary, NOT a gate regression). **Characterized but deferred:** an
+`\begin{axis}[symbolic x coords={…}]` bar chart fails ONLY when a *fully
+configured numeric* `\begin{axis}` precedes it in the same document — a minimal
+symbolic axis alone is CLEAN, and a minimal `numeric-axis → symbolic-axis`
+sequence is also CLEAN; the leak needs the real first axis's accumulated options
+(no single option — `scale only axis`/`at=`/`axis background`/`xmin`/legend —
+reproduces it in isolation). So a numeric axis leaves pgfplots coordinate-parsing
+state (math-parser / x-coord-type) that the next `\begin{axis}` group fails to
+reset in Rust, where Perl resets it. Root cause is a diffuse pgfplots/pgfkeys
+per-axis state-reset divergence (likely a `\global`/`\gdef` inside the axis that
+escapes the `{tikzpicture}`/`{axis}` group, or a pgfkeys value not re-initialized)
+— deep raw-loaded-pgfplots work for a focused session, not a loop iteration.
+
 ### Round-37 (2026-05-31): 1902.11165 DEFERRED — `\halign` (Young tableau) in a TikZ node leaks horizontal mode
 
 **1902.11165 DEFERRED (mode-frame cluster — SVG `\halign` in pgf node).** `\halign
