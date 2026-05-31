@@ -2388,6 +2388,25 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1509.06785 FIXED — accented `\newtheorem` env-name lookup
+
+**1509.06785 FIXED (`\newtheorem` env-name normalization).** A Latin-1 French
+source (`\newtheorem{déf}` / `\begin{déf}`, `é`=byte 0xe9) under `[T1]{fontenc}`
+errored `The environment {d\lx@applyaccent\'́´{e}f} is not defined`. Root cause:
+`\begin{}`/`\end{}` look up the env under `Expand!(name).to_string()` (Perl
+LaTeX.pool L164), and `t1enc.dfu`'s `\DeclareUnicodeCharacter{00E9}` makes `é`
+active → `\'e` → `\lx@applyaccent…`, so the `\begin` key is `d\lx@applyaccent\'{e}f`.
+But `define_new_theorem` registered the env trigger under the *raw*
+`thmset.to_string()` = `déf`. Mismatch → env not found. (`\newenvironment`
+already registers under `Expand!`, so it was unaffected.) Perl matches only
+because Perl *drops* the undeclared 0xe9 byte at input (café→"caf", déf→"df"),
+so raw==expanded=="df"; we *preserve* the byte (café→café — better output), so
+the two forms diverge. Fix: register the theorem env trigger under the
+expanded name (only the lookup key; classname/listname/ids stay raw & clean),
+matching `\begin`/`\newenvironment`. No-op for ASCII names. Rust 1→0, Perl=0,
+suite 53/0/0. Minor cosmetic residual: classname is `ltx_theorem_déf` (Rust,
+accent kept) vs `ltx_theorem_df` (Perl, accent dropped) — not an error.
+
 ### Round-37 (2026-05-30): 1712.07952 FIXED — babel `canadien`/`acadian` dialects
 
 **1712.07952 FIXED (french_ldf babel-dialect gap).** `\usepackage[canadien]{babel}`

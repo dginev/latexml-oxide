@@ -1505,8 +1505,26 @@ pub fn define_new_theorem(
     );
   }
 
-  // Define the environment
-  let thmset_for_env = thmset_str.clone();
+  // Define the environment.
+  //
+  // The env-trigger key MUST match what `\begin{<name>}`/`\end{<name>}`
+  // look up, which is `ToString(Expand(<name>))` (see `\begin{}` above and
+  // Perl LaTeX.pool L164). `\newenvironment` likewise registers under
+  // `Expand!(name).to_string()`. But `thmset_str` (used for classname /
+  // listname / counter / ids) is the *raw* `thmset.to_string()` — matching
+  // Perl `defineNewTheorem` L3054 `ToString($thmset)`. These two agree for
+  // Perl because Perl drops invalid input bytes (an undeclared Latin-1 `é`
+  // never becomes a char, so raw == expanded == "df"). We preserve the
+  // `é` (better output: café stays café), so for a theorem env whose name
+  // carries an *active* accented char — e.g. `\newtheorem{déf}` in a
+  // Latin-1 source under `[T1]{fontenc}`, where t1enc.dfu's
+  // `\DeclareUnicodeCharacter{00E9}` makes `é` active → `\'e` →
+  // `\lx@applyaccent…` — the raw name ("déf") and the `\begin`-expanded
+  // name ("d\lx@applyaccent\'{e}f") diverge, and `\begin{déf}` fails to
+  // find the env ("environment is not defined"). Expanding the trigger key
+  // (only the key — classname/ids stay raw & clean) restores the match.
+  // No-op for ASCII names. Witness: arXiv:1509.06785.
+  let thmset_for_env = Expand!(thmset).to_string();
 
   // Hand-written replacement closure (compile_replacement! only works with literals)
   let inlist_val = s!("thm {listname}");
