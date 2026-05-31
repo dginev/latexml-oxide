@@ -194,7 +194,6 @@ pub mod sn_jnl_cls;
 pub mod spie_cls;
 pub mod svproc_cls;
 pub mod uai2025_cls;
-pub mod wlscirep_cls;
 pub mod wileymsp_template_cls;
 pub mod wileynjd_cls;
 pub mod wlpeerj_cls;
@@ -492,7 +491,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("WileyNJDv5", "cls", wileynjd_cls::load_definitions),
   ("wileyNJDv5", "cls", wileynjd_cls::load_definitions),
   ("wlpeerj", "cls", wlpeerj_cls::load_definitions),
-  ("wlscirep", "cls", wlscirep_cls::load_definitions),
   ("svn-multi", "sty", svn_multi_sty::load_definitions),
   ("svninfo", "sty", svninfo_sty::load_definitions),
   ("tabu", "sty", tabu_sty::load_definitions),

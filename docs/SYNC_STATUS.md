@@ -2648,6 +2648,27 @@ fully exhausted (the earlier "exhausted" note covered `\endgroup`/`&`/XMApp but 
 bisection artifact in the workdir was picked by `grep -rl documentclass | head -1` — ALWAYS
 re-run with the explicit main file after bisecting in-place.
 
+### Round-37 (2026-05-31): 1610.01345 FIXED — DELETE the wlscirep OmniBus stub (14-addition anti-pattern) → dep-scan like Perl
+
+**1610.01345 (wlscirep, Scientific Reports) 1→0 errors.** `\color{blue}` undefined — the
+doc uses `\color` but loads no color package; the shipped `wlscirep.cls` L24 does
+`\RequirePackage{graphicx,xcolor}`. Perl ships no wlscirep binding → "using OmniBus" +
+**dependency-scans the shipped .cls** (verbose: "Loading dependencies … xcolor …") → loads
+xcolor → `\color` defined → Perl 0. Rust's `wlscirep_cls.rs` was an OmniBus stub that
+MANUALLY mirrored the class's `\RequirePackage` list — and had been extended **14 times**,
+one package per witness paper (babel/multicol/wasysym/calc/hyperref/cite/natbib/booktabs/
+caption/fancyhdr/titlesec/amsmath/amssymb/amsthm) — but still missed `xcolor`. This is the
+"extend the stub indefinitely" anti-pattern ([[feedback_prefer_raw_load]]). **Fix (Task
+#273):** DELETE the stub entirely (module decl + registration + `wlscirep_cls.rs`). Rust now
+falls to OmniBus + its dep-scan, which reads each paper's ACTUAL shipped `wlscirep.cls` and
+loads ITS RequirePackages (including xcolor, and authblk which supplies `\affiliation`/
+`\corres`) — matching Perl and handling per-paper `.cls` variations. Verified: 1610.01345
+0 err, structure identical to Perl (section 8/8, Math 287/287, figure 6/6, bibitem 27/27);
+**no regression** — all testable stub witnesses (1603.09243 babel, 1601.07750 multicol,
+1610.05398 wasysym, 1710.08155 calc, 1602.06935 titlesec) stay Rust 0 / Perl 0. Tests 1344/0.
+Found by a fresh untested-corpus sweep (1610.01345 was NOT in the converr pool). General win:
+removes a whole class of "next wlscirep paper needs package N+1" failures.
+
 ### Round-37 (2026-05-31): 1709.06170 FIXED — lmcs OmniBus stub must load `ams_support` (amsart frontmatter → `\urladdr`)
 
 **1709.06170 (`\documentclass{lmcs}`) 1→0 errors.** `\urladdr{\url{…}}` undefined.
