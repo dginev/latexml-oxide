@@ -2610,17 +2610,39 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
-**1910.05586 STILL OPEN (deeper cleveref-detection, NOT the comment case).** Same
-`cleveref must be loaded after hyperref!` error, but here the hyperref load is
-REAL (packages.sty L100-108, a multi-line `\usepackage[…]{hyperref}`, not
-commented) and precedes cleveref (L111). The dep-scan loads `hyperref` but NOT
-`cleveref` (cleveref is treated as deferred — not in the dep list
-`suffix,hyperref,claim,…`), so cleveref body-loads and its load-time
-`\@ifpackageloaded{hyperref}` doesn't see the dep-scan-loaded hyperref. Root
-question (still): does the dep-scan's hyperref load set `\ver@hyperref.sty`
-(what `\@ifpackageloaded` checks), and why is cleveref excluded from
-packages.sty's dep list? Deferred — the genuine cleveref/dep-scan-timing
-divergence, distinct from the now-fixed comment case.
+**1910.05586 STILL OPEN — ROOT-CAUSED 2026-05-31: same dep-scan-conditional class
+as 1804.09301.** `cleveref must be loaded after hyperref!` (Perl=0). packages.sty
+wraps hyperref in `\ifpdf … \usepackage[…\ifoptionfinal{…}{}…]{hyperref} … \else
+\fi` (L96-110) then `\usepackage{cleveref}` (L111). **`\ifpdf` is FALSE in BOTH
+engines** (verified) — so the raw-load correctly SKIPS hyperref and loads only
+cleveref (L111). In Perl that's the end of it (no dep-scan) → cleveref loads with
+no hyperref → no error. In Rust, `maybe_require_dependencies` runs AFTER the
+raw-load, regex-finds `\usepackage{hyperref}` in the TEXT (it can't evaluate the
+false `\ifpdf`), and loads hyperref — now AFTER cleveref (already body-loaded in
+the raw-load). cleveref's raw-`.sty` `\AtBeginDocument` check then sees hyperref
+loaded-after-it → error. (cleveref is absent from the dep list only because it
+was already `_loaded` by the raw-load — the existing dup filter; that's a
+red herring.) **Identical mechanism to 1804.09301** (there: `\usepackage{xcolor}`
+inside `\ifacl@hyperref`, false under `[nohyperref]`). Both are the dep-scan
+over-anticipating a `\if`-guarded `\usepackage` that the raw-load correctly
+skipped.
+
+**Designed fix (deferred — needs sandbox regression, not a loop iteration):**
+an "executed-set" gate. Record each package whose `\usepackage`/`\RequirePackage`
+**constructor actually ran** (latex_constructs.rs:4031/4049 — the source-level
+commands; NOT the dep-scan's programmatic `require_package`, so dep-scan loads
+don't self-pollute) via a `<pkg>.usepackage_executed` flag. Then in
+`maybe_require_dependencies`' `collect`, **for the post-raw-load call only**
+(content.rs:1675; NOT the miss-handler at 641), skip a candidate that is NOT in
+the executed-set — i.e. its `\usepackage` never ran (false conditional). This is
+strictly additive (only drops not-already-loaded AND not-executed candidates =
+exactly the false-conditional case) and faithful (Perl never dep-scans a
+raw-loaded file). **Risk to validate:** `\IfFileExists{X}{\usepackage{X}}`
+(1703.03673 iau.cls → amssymb) MUST keep working — verify iau.cls is raw-loaded
+so its `\usepackage{amssymb}` constructor runs (sets the flag) when `\IfFileExists`
+is true; if iau.cls is instead BOUND, the gate must not apply. Regression set:
+1703.03673, 1506.06200, 1504.05963, 2208.07400, 2202.11535, 1901.05713 + a conv
+sweep. See [[project_depscan_conditional_xcolor]] (now covers BOTH witnesses).
 
 ### Round-37 (2026-05-31): 1808.07096 FIXED — `\input` in an alignment cell ended the column early
 
