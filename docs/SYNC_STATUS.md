@@ -2388,6 +2388,28 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1910.00678 FIXED — keyval `key=` empty value was "None"
+
+**1910.00678 FIXED (core keyvals bug).** `\begin{bmatrix*}` (mathtools starred
+matrix, no alignment bracket) with `\dots` cells → 8× "Stray alignment &".
+Root cause: the keyval parser (`keyvals.rs`) initialised `value = ArgWrap::None`
+and, for an explicit `key=` with empty value tokens, never reassigned it — so an
+explicit-empty value (`alignment=`) was stored as `None`, indistinguishable from
+a missing key. `ArgWrap::None`'s Display is the literal "None", so the matrix
+binding's `kv.get_value("alignment")` saw "None" (a non-empty string), skipped
+its default-to-"c" path, and built a malformed column template (no centering
+`\hfil`); a `\dots` cell then swallowed the next `&`. Fix: an explicit `=`
+always assigns a value — empty Tokens when no value tokens — distinct from a
+missing key. The existing `is_empty()`→"c" default then fires, matching Perl.
+RUST 8 → 0; full suite green. **Diagnostic chain worth remembering: empty-keyval
+value rendering as the literal "None" → trace `Expandable::invoke`/`as_tokens`
+(showed the macro substituted empty correctly) then the keyval reader.**
+
+*Residual (separate, no corpus witness):* `bmatrix*[r]` + `\dots` still errors —
+a cell whose column template legitimately has NO trailing `\hfil` (right-/no-
+align) lets amsmath's context-sensitive `\dots` lookahead swallow the following
+`&`. Deep amsmath-`\dots`/alignment interaction, unaffected by the keyval fix.
+
 ### Round-37 (2026-05-30): 1706.00283 FIXED — `\ccname` clobber (NOT a gullet bug)
 
 **1706.00283 FIXED.** Earlier deferred as a "deep two-level macro-arg-as-def-target
