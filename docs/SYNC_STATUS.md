@@ -44,6 +44,18 @@
 > physics-`\mqty` / mode-frame-leak cluster (witnesses 2007.06211 + the deferred 1910.10674/
 > 2003.02721) — a dedicated instrumented push/pop pass, not a corpus sweep. **This session
 > total: 12 error→success fixes + 1 consistency fix, suite 1344/0 throughout.**
+>
+> **SCRIPT-IN-TEXT VEIN ALSO DRAINED (2026-05-31, final+1).** Built `/tmp/sfilter.sh` (flag
+> papers DOMINATED by `Script _/^ can only appear in math mode`) over the full converr pool
+> and Perl-checked 15 candidates spanning the count range (sc 6→91): **ALL shared** (Rust=Perl)
+> or Rust-better (1502.07458 R28/P89). These are genuinely malformed source (`_`/`^` typed in
+> text mode, rejected by BOTH engines). The Rust-only `_`/`^` cases were the *clobber* family
+> (a Rust binding redefining a user/units macro → content lands in text) — SIunits `\m`,
+> siunitx `\unit`, psfrag `\tex`, etc. — and those are already FIXED. **Net: across ALL major
+> error signatures (undefined-`\cs`, stray-`&`, XMApp/XMTok-malformed, mode-close/switch,
+> script-in-text), the converr/canvas clean Rust-only pool is drained except the single
+> physics-`\mqty` mode-frame-leak cluster.** The next lever is that cluster's dedicated
+> instrumented session, not further corpus sweeping.
 
 > **SESSION MILESTONE (2026-05-31, late): converr/canvas Rust-only pool exhausted of
 > single-root-cause wins.** This session landed **9 commits** (8 error→success + 1
