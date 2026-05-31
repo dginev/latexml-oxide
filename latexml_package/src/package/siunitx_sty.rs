@@ -495,20 +495,38 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 }
 
 fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
-  let mut number = six_match_uncertainnumber(tokens)?;
+  // Perl siunitx.sty.ltxml:253 `my $number = six_match_uncertainnumber($tokens)`
+  // — `$number` MAY be undef. Do NOT early-return here: a pure-imaginary input
+  // like `\num{i}` (the imaginary unit alone, no preceding number) has no
+  // uncertain-number but must still match the `input-complex-roots` key below.
+  let number_opt = six_match_uncertainnumber(tokens);
 
   if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
-    let sign = number.get_sign().cloned();
-    number.set_sign(None);
+    // pure imaginary! Perl L255-256: $sign = $$number{sign}; $$number{sign}=undef
+    // (make the sign "infix"); $number = {complex, symbol=>i, sign, arg2=>$number}.
+    // $number may be undef (`\num{i}`) → no sign, no arg2.
+    let (sign, arg2) = match number_opt {
+      Some(mut n) => {
+        let s = n.get_sign().cloned();
+        n.set_sign(None);
+        (s, Some(Box::new(n)))
+      },
+      None => (None, None),
+    };
     return Some(SixNumber::Operator {
       operator: "complex".to_string(),
       arg1: None,
-      arg2: Some(Box::new(number)),
+      arg2,
       sign,
       symbol: Some(i),
       comparator: None,
     });
   }
+
+  // Past the pure-imaginary case the remaining forms (`a ± b i`) all operate on
+  // a real preceding number; if there wasn't one, Perl returns the undef
+  // `$number` and the caller reports the "Not matched" error.
+  let mut number = number_opt?;
 
   if let Some(sign) = six_match_sign(tokens) {
     if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
