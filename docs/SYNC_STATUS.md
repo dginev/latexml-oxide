@@ -2500,6 +2500,29 @@ cannot write `--dest=/dev/null` — it mkdirs `/dev` and fails silently as "0 er
 give Perl a real dest file. An earlier read of "Perl tolerates undefined `\color`" was this
 artifact — Perl errors on undefined color commands exactly like Rust.)
 
+### Round-37 (2026-05-31): 1910.05543 FIXED — threeparttable `\tablenotes` must expand to `\begin{itemize}`, not the raw `\itemize`
+
+**1910.05543 (aastex + spr-astr-addons + threeparttable + lscape) 12→0 errors.** Cascade
+of `\itemize` "switched to mode horizontal" → `\endlx@list`/`\endgroup`/`}`/`\end{table}`/
+`\end{landscape}` "can't close" / "Attempt to close a group that switched to mode horizontal
+due to \itemize". Trigger: `\begin{tablenotes}\item …\end{tablenotes}` (threeparttable) used
+inside a `\begin{table}` after `\end{tabular}`, under the journal style `spr-astr-addons`
+(which leaves the table body in HORIZONTAL mode). Root cause: `threeparttable_sty.rs`
+mistranslated Perl's `DefMacroI('\begin{tablenotes}','[]','\begin{itemize}')` — it expanded
+`\tablenotes`→ the **raw `\itemize`** list macro instead of the full **`\begin{itemize}`**
+environment. The bare `\itemize` skips the env's vertical-mode setup (`\par`/leavevmode), so
+when reached in horizontal mode it started the list in mode `horizontal`; its close then
+cascaded. Perl's `\begin{itemize}` forces vmode first → 0. **Fix:** `\tablenotes[]`→
+`\begin{itemize}`, `\endtablenotes`→`\end{itemize}` (faithful to Perl). 1910.05543 now 0 err;
+structure identical to Perl (section 5/5, Math 741/741, td 1469/1469, itemize 3/3, item
+12/12, bibitem 62/62, table 2/2). Tests 1344/0. **General fix** — any threeparttable
+`tablenotes` reached in horizontal mode (common: notes after a tabular in a float/journal
+style). Found by Perl-checking the rfilter's mode-error signatures — the converr pool was NOT
+fully exhausted (the earlier "exhausted" note covered `\endgroup`/`&`/XMApp but not
+`\end{landscape}`/`\end{table}` mode-close errors). Diagnostic trap re-hit: a leftover `bis.tex`
+bisection artifact in the workdir was picked by `grep -rl documentclass | head -1` — ALWAYS
+re-run with the explicit main file after bisecting in-place.
+
 ### Round-37 (2026-05-31): 1709.06170 FIXED — lmcs OmniBus stub must load `ams_support` (amsart frontmatter → `\urladdr`)
 
 **1709.06170 (`\documentclass{lmcs}`) 1→0 errors.** `\urladdr{\url{…}}` undefined.
