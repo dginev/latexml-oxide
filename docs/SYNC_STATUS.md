@@ -2444,6 +2444,38 @@ per-axis state-reset divergence (likely a `\global`/`\gdef` inside the axis that
 escapes the `{tikzpicture}`/`{axis}` group, or a pgfkeys value not re-initialized)
 — deep raw-loaded-pgfplots work for a focused session, not a loop iteration.
 
+### Round-37 (2026-05-31): mode-frame auto-close cluster — CLEAN 4-LINE REPRO isolated
+
+**Mode-frame Rust-only cluster now has a clean minimal repro** (the cluster was
+previously only reproducible cumulatively in full papers — 1606.03691, 1902.11165
+young-`\halign`, 1501.03690 xy-pic svg cascade):
+
+```
+\documentclass{amsart}
+\newtheorem{thm}{T}\newtheorem{rem}[thm]{R}
+\begin{document}
+\begin{sloppypar}\begin{rem}text\end{sloppypar}
+\end{document}
+```
+→ RUST 1 error `\endgroup Attempt to close a group that switched to mode
+internal_vertical … due to \begin{rem}`; PERL=0. (Also fires with plain `article`,
+and with `\begin{rem}…\section{S}`.)
+
+**Mechanism (traced):** an UNCLOSED theorem env (`\begin{rem}` with no `\end{rem}`)
+binds its mode via `begin_mode(internal_vertical, noframe=true)` — i.e. on the
+env's OWN bgroup frame, NOT a new frame. That frame survives to the enclosing
+`\end{sloppypar}`'s `\endgroup` → `egroup` finds a mode-switch top frame and errors.
+Rust's `egroup`/`endgroup` are BYTE-FAITHFUL to Perl's Stomach.pm (both error on a
+mode-switch top frame), so the divergence is EARLIER: **Perl pops the open `rem`
+frame before the enclosing `\endgroup`; Rust does not.** Perl's `\@badend` is also
+an error and `\@checkend` did NOT fire in Rust (so `\@currenvir`="sloppypar" at the
+end, not "rem" — a `\@currenvir`-vs-mode-frame DESYNC: the rem's `\@currenvir`
+reverted but its mode frame leaked). The fix is the env-unwinding / document
+auto-close → stomach-mode-frame-pop linkage (per [[project_endgroup_modeswitch_frame_leak]]),
+which must pop the stomach frame when an open env is auto-closed by a sibling/
+enclosing `\end`. Delicate (touches all env handling) → focused session with the
+repro above. This repro likely unblocks 1902.11165 + 1501.03690 + 1606.03691.
+
 ### Round-37 (2026-05-31): xy-pic svg:path cluster DEFERRED — 1501.03690 (2nd witness), mode-frame cascade root
 
 **1501.03690 DEFERRED (xy-pic shifted-arrows → `svg:path` in `ltx:text`).** Perl=0,
