@@ -2871,12 +2871,22 @@ impl Document {
     let final_id = if let Some(prev) = prev_opt {
       let badid = id;
       let new_id = self.modify_id(id.to_owned());
+      // Concise node descriptions, mirroring Perl `Stringify($node)`
+      // (Common/Object.pm L40-49: `<tag attrs…>` with no child
+      // serialization). Rust previously dumped the FULL node via
+      // `node_to_string`, which (a) diverged from Perl's concise form and
+      // (b) spilled child TEXT into the log — e.g. a figure caption
+      // beginning "Error bars are the standard deviations…" then appears as
+      // a line starting "Error" and is mis-counted as an error by
+      // text-grep error sweeps (false positive on 2009.01426, which has
+      // ZERO real errors). Use just the qname (+ the relevant id), which is
+      // what an id-dedup diagnostic actually needs.
       let message = s!(
-        "Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
+        "Duplicated attribute xml:id. Using id='{}' on <{}> id='{}' already set on <{}>",
         new_id,
-        self.document.node_to_string(node),
+        arena::to_string(get_node_qname(node)),
         badid,
-        self.document.node_to_string(&prev)
+        arena::to_string(get_node_qname(&prev))
       );
       // Perl-faithful (Document.pm L1454): Info-level. The id-counter
       // collision is the dedup-recovery path (`modify_id` appends
