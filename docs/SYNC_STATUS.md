@@ -2432,7 +2432,18 @@ Rust-only cases are structural/mode/boxing:
   **Lesson: "Attempt to close boxing group" / begingroup-mismatch errors are
   often a downstream cascade from an UNDEFINED macro leaking its arguments — grep
   the error list for `undefined:` first, don't assume a stomach bug.**
-* 1608.01416 — iopart: `ltx:equation` leaks into `ltx:date` frontmatter.
+* **1608.01416 + 1705.08023 FIXED** — iopart `ltx:equation` not allowed in
+  `ltx:date`. Root cause: the Rust iopart binding defined `\received`/`\revised`/
+  `\accepted`/`\published`/`\online` as `\@add@frontmatter{ltx:date}` — but Perl's
+  iopart_support.sty.ltxml defines NONE of these (the port mis-cited "Perl
+  L82-86", which is the journal-NAME list; the real iopart.cls also defines none,
+  so `\received{…}` errors "undefined" in Perl). A paper that does
+  `\newcommand{\revised}[1]{\textcolor{black}{#1}}` (draft markup) and uses
+  `\revised{…body…}` throughout had its `\newcommand` silently fail against our
+  pre-defined `\revised`, routing whole paragraphs + display math into `ltx:date`.
+  Removed the 5 macros (Perl-faithful). RUST 6→0 / 9→0. **Another instance of the
+  "binding pre-defines a macro the author redefines" hazard** (cf.
+  [[project_pgfmath_calc_compat_loadtime_clobber]]).
 * 1608.02030 / 1702.01358 — `\halign Attempt to end mode restricted_horizontal
   in horizontal` (9 errors each), both `ytableau` inside a tikz `\node{…}`.
   **Resisted 7 minimal-reproduction attempts** (tabular/ytableau/`*(gray)` in
