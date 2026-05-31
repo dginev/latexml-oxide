@@ -29,6 +29,21 @@
 > Perl-check EVERY distinct mode-error signature, not just `\endgroup`.** So the corpus is NOT
 > exhausted — the remaining residual is the accumulated mode-frame-leak cluster (now with fresh
 > witness 2007.06211), which is the next focused-session target.
+>
+> **COMPREHENSIVE MODE-CLUSTER SWEEP (2026-05-31, final): the mode-error vein is now drained
+> too.** Built a mode-error filter (`/tmp/mfilter.sh`: flag papers whose Rust errors contain
+> "Attempt to close/end mode" or "Can't close environment") and ran it over the FULL converr
+> pool (3022 ids, all years 1501-2008). Perl-checked every distinct env-close (`\end{<env>}`,
+> "Can't close environment") and mode-switch (`\hbox`, `\lx@end@gen@matrix`, `\lx@begin@alignment`,
+> `\lx@end@inline@math`, `\lx@parbox`) candidate. **Result: exactly TWO were clean Perl=0
+> Rust-only** — 1910.05543 (FIXED) and 2007.06211 (DEFERRED, physics-`\mqty` accumulated
+> cascade). Every other mode-error paper is SHARED (custom conf classes cmmse20xx `\end{abstract}`;
+> IEEEtran `\end{IEEEproof}`; iopart `\end{indented}`; `}`-stray from malformed source) or
+> **Rust-BETTER** (1712.00521 R2/P37, 1901.08248 R15/P102, 2002.00620 R20/P102, 1905.00250
+> R100/P102). So after the threeparttable fix, the genuine Rust-only residual is the single
+> physics-`\mqty` / mode-frame-leak cluster (witnesses 2007.06211 + the deferred 1910.10674/
+> 2003.02721) — a dedicated instrumented push/pop pass, not a corpus sweep. **This session
+> total: 12 error→success fixes + 1 consistency fix, suite 1344/0 throughout.**
 
 > **SESSION MILESTONE (2026-05-31, late): converr/canvas Rust-only pool exhausted of
 > single-root-cause wins.** This session landed **9 commits** (8 error→success + 1
