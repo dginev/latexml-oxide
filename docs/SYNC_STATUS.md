@@ -2424,8 +2424,19 @@ it out). Fix: strip `\begin{comment}…\end{comment}` from the scanned source
 before matching `\usepackage`/`\RequirePackage` — `comment` is a verbatim-SKIP
 env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
-macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0 (also resolves 1910.05586's
-identical cleveref error).
+macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
+
+**1910.05586 STILL OPEN (deeper cleveref-detection, NOT the comment case).** Same
+`cleveref must be loaded after hyperref!` error, but here the hyperref load is
+REAL (packages.sty L100-108, a multi-line `\usepackage[…]{hyperref}`, not
+commented) and precedes cleveref (L111). The dep-scan loads `hyperref` but NOT
+`cleveref` (cleveref is treated as deferred — not in the dep list
+`suffix,hyperref,claim,…`), so cleveref body-loads and its load-time
+`\@ifpackageloaded{hyperref}` doesn't see the dep-scan-loaded hyperref. Root
+question (still): does the dep-scan's hyperref load set `\ver@hyperref.sty`
+(what `\@ifpackageloaded` checks), and why is cleveref excluded from
+packages.sty's dep list? Deferred — the genuine cleveref/dep-scan-timing
+divergence, distinct from the now-fixed comment case.
 
 ### Round-37 (2026-05-31): 1808.07096 FIXED — `\input` in an alignment cell ended the column early
 
