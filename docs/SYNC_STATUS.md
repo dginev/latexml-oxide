@@ -2445,9 +2445,27 @@ witnesses now `ctable_err=0`, 9/12 fully convert). Gated CONVERR_3 fresh:
   macros. Switched the binding's base from article → OmniBus. RUST 3 → 0.
 
 Triaged/deferred (current Rust-only but deep): 1704.00705 / 1901.07312 /
-1901.08716 (pgfplots `symbolic x coords` coordinate-resolution `\GenericError`,
-recurring), 1610.06392 (`^`/`_`-in-text), 1607.05728 (ltx:p malformed in
-tabular inline-block).
+1901.08716 (pgfplots `symbolic x coords` — see precise characterization below),
+1610.06392 (`^`/`_`-in-text), 1607.05728 (ltx:p malformed in tabular
+inline-block).
+
+**pgfplots `symbolic x coords` + `ybar={<dimen>}` (DEFERRED, root cause
+isolated 2026-05-30).** Minimal trigger: a bar axis with `ybar={2*\pgflinewidth}`
+(the value form — bare `ybar` is fine) over `symbolic x coords={…}`, even with a
+single `\addplot`. pgfplots raises `\GenericError` "Sorry, the input coordinate
+`\pgfplots@loc@TMPa ' has not been defined with 'symbolic x coords={…}". The
+symbolic x-coord *trafo* (`/pgfplots/x coord trafo`, pgfplots.code.tex L3893) is
+invoked with `##1` = the **unexpanded macro `\pgfplots@loc@TMPa`** instead of the
+coordinate value (`15`): it does `\def\pgfplots@loc@TMPa{##1}` →
+`\pgfplots@command@to@string` → `\pgfutil@ifundefined{pgfp@symb@coords@x@\pgfplots@loc@TMPa}`
+→ undefined → error. So the bug is an EXPANSION-TIMING divergence — the bar
+coordinate path (activated by the `ybar=<value>` wrapper,
+pgfplotscoordprocessing.code.tex L7283 → `\pgfplotskeys@orig@ybar`) applies the
+coord trafo to `\pgfplots@loc@TMPa` without first expanding it to its value,
+where Perl does. The fix requires tracing the pgfplots bar-shift / survey
+coordinate flow to the single spot that must `\edef`/expand the coordinate
+before the trafo; it is NOT a binding gap. Same expansion-protocol family as
+[[project_mhchem_csname_protocol_deepdive]].
 
 ### Round-37 (2026-05-30): CONVERR_2 gate sweep — scrartcl fix + url diagnosis
 
