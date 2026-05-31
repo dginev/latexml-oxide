@@ -15,6 +15,21 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **MILESTONE UPDATE (2026-05-31, latest): the "exhausted" claim was PREMATURE — 2 more
+> Rust-only found by Perl-checking mode-CLOSE signatures.** The exhaustion sweep below only
+> Perl-checked `\endgroup`/`&`/XMApp signatures; Perl-checking `\end{landscape}`/`\end{table}`/
+> `\lx@begin@alignment` mode-close errors surfaced TWO genuine Perl=0 Rust-only papers:
+> **1910.05543 FIXED** (threeparttable `\tablenotes`→ raw `\itemize` instead of `\begin{itemize}`,
+> commit 3c7309397b, 12→0) and **2007.06211 DEFERRED** (revtex4-1 + physics `\mqty`: an
+> accumulated mode/group imbalance across multiple `\mqty`-in-eqnarray constructs — each clean
+> in isolation — surfaces as `\lx@begin@alignment … mode-switch to restricted_horizontal due to
+> \lx@begin@inmath@text` + `\right` unbalanced; reduced reproducer = the paper's preamble +
+> lines 300-347 → R11 P0; belongs to the physics-`\mqty` / [[project_endgroup_modeswitch_frame_leak]]
+> cluster needing a dedicated instrumented push/pop pass). **Lesson: when sweeping for Rust-only,
+> Perl-check EVERY distinct mode-error signature, not just `\endgroup`.** So the corpus is NOT
+> exhausted — the remaining residual is the accumulated mode-frame-leak cluster (now with fresh
+> witness 2007.06211), which is the next focused-session target.
+
 > **SESSION MILESTONE (2026-05-31, late): converr/canvas Rust-only pool exhausted of
 > single-root-cause wins.** This session landed **9 commits** (8 error→success + 1
 > consistency): 1801.08114, 1911.04650+1708.03079, 1709.06170, 1606.06730, 1702.02972,
