@@ -2640,9 +2640,27 @@ sibling) instead of nesting the frame inside `<p>`. Keeps the theorem-in-mdframe
 surpass AND fixes nesting. Witness 1712.00062: Rust 1→0, 2.1 MB well-formed,
 nested logical-block depth 2; 2002.06879 (newmdenv) still clean. Suite 53/0/0.
 
-### Round-37 (2026-05-31): 1505.01267 DEFERRED — `ltx:XMApp` in `ltx:text` (context-dependent, build-phase)
+### Round-37 (2026-05-31): 1505.01267 **FIXED** — `ltx:XMApp` in `ltx:text` was a psfrag `\tex` clobber
 
-**1505.01267 DEFERRED (`ltx:XMApp isn't allowed in <ltx:text>`).** Perl=0,
+**1505.01267 FIXED 2026-05-31 (psfrag spurious `\tex` clobber).** Root cause finally
+found: Rust's psfrag binding (psfrag_sty.rs) defined a global
+`DefMacro!("\\tex Semiverbatim", "#1")` that NEITHER real psfrag.sty (its only `\tex`
+is `\string\\tex…` written verbatim to the .ps file, L201) NOR Perl LaTeXML's psfrag
+binding defines. The paper loads psfrag AND does `\newcommand{\tex}{\textstyle}`,
+then writes `\tex{…c_0…\mbox{as $\hat s\to\infty$}…}` in display math. Rust's `\tex`
+WON (the `\newcommand` was ignored — `Info:ignore:\tex`) and read its arg
+Semiverbatim, neutralizing `_` to OTHER (literal `\_`); the inline-math `\to` then
+built an `ltx:XMApp` that leaked into the surrounding `ltx:text` → the error. The
+"cumulative/non-isolable" appearance was because the trigger was a PREAMBLE package
+(`\usepackage{psfrag}`) interacting with a BODY `\newcommand` far from the failing
+equation. Fix: delete the Rust-only `\tex` DefMacro (Perl-faithful → author's
+`\newcommand{\tex}{\textstyle}` wins → `\tex{…}`=`\textstyle{…}` digests as math).
+1505.01267 Rust 1→0, Perl=0 (output 1.06→1.11 MB, math now rendered); legit
+`\psfrag{x}{$\alpha_1$}` still clean; suite 53/0/0. See
+[[project_psfrag_tex_clobber_textstyle]]. The original deferred analysis (now
+superseded) follows.
+
+**1505.01267 (original deferred analysis — superseded).** Perl=0,
 Rust 1 error at document.rs:2545 during the Building phase (no source locator —
 "Anonymous String"). Bisected to the `\be…\ee` block at L1652-1658
 (`\tex{…\left[…\cos\left(…\right)…\right]…\mbox{as $\hat{s}\to\infty$},}`,
