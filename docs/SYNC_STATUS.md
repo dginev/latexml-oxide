@@ -2411,29 +2411,30 @@ scope — reproducing Perl's preamble-level (top-level → persistent) dvipsnam 
 `color=` attrs Perl omits; benign, both error-free.) Same eager-load-drops-options
 family as the eager-xcolor cluster.
 
-### Round-37 (2026-05-31): 1710.07800 DEFERRED — mathenv.sty raw-load silently stops at ~line 44 (filename-match dependent)
+### Round-37 (2026-05-31): 1710.07800 FIXED — two different `mathenv.sty` packages; raw-load the self-contained one
 
-**1710.07800 (revtex4-1 + paper-shipped mathenv.sty) 92 errors** —
-`{EqSystem}`/`{Equation} not defined` + a `^`/`_`/XMApp/XMArray cascade. mathenv.sty
-(Francesco Bosisio, docstrip-generated, CRLF) raw-loads but its `\newenvironment
-{Equation}` (L75) / `\newenvironment{EqSystem}` (L304) never register. **Bisected to
-a content-dependent SILENT abort of the raw-load**: the load defines `\fileversion`
-(L42) and `\filedate` (L43) but NOTHING from L44 onward (`\docdate`, `\StartMath@Err`,
-`\MakeAmper@Active`, both `\newenvironment`s all undefined) — with NO error/fatal
-emitted. Key clues: (1) lines 1-50 in ISOLATION load fully (all defs Y); the FULL
-340-line file processes only ~43 lines, so content past L50 corrupts the processing
-of earlier lines (a whole-file tokenisation/read effect, not forward line-by-line).
-(2) **Filename-match dependent**: when the file is `mathenv.sty` and does
-`\ProvidesPackage{\FileName}` (`\FileName`=mathenv, matching `\usepackage{mathenv}`)
-→ abort; when the SAME content is in `hpkg.sty` providing `mathenv` (name mismatch)
-→ loads fully. Also non-monotonic (`\FileName` L41=N but L42/L43=Y), and CRLF→LF
-stripping does NOT fix it. This points at the `\usepackage`/`\ProvidesPackage`/
-`maybe_require_dependencies` (dep-scan) flow — likely a double-process or
-`\ProvidesPackage`-marks-loaded / already-loaded-guard interaction that truncates
-the real load when the provided name equals the requested name. Needs a deep
-raw-load/package-protocol trace (instrument the dep-scan + the `\ProvidesPackage`
-handler + the file-input read). Minimal repro: any `\usepackage{X}` where `X.sty`
-is >~50 lines and contains `\def\FileName{X}\ProvidesPackage{\FileName}…\newenvironment{…}`.
+**1710.07800 (revtex4-1 + paper-shipped mathenv.sty) 92→0 errors.** Last firing's
+"filename-match dependent silent abort" diagnosis was a RED HERRING (the byte-1667
+truncation and `\FileName`=N anomalies were artefacts of comparing different
+filenames). **Real root cause: a Rust-only `mathenv` no-op stub** (`mathenv_sty.rs`,
+`LoadDefinitions!({})`) intercepts ALL `\usepackage{mathenv}` — but TWO DIFFERENT
+packages ship as `mathenv.sty`: (a) **Bosisio's "Extended math environments"**
+(1997, paper-shipped, NOT in TeX Live) — self-contained, defines
+`\newenvironment{EqSystem}`/`{Equation}`; the stub suppressed it → both envs
+undefined → 92-error cascade. Perl has no binding and raw-loads it cleanly. (b)
+**Mark Wooding's mdwtools `mathenv`** (TeX Live) — `\RequirePackage{mdwtab}`; our
+`mdwtab` stub can't supply its `\tab@*` internals, so raw-loading it cascades (~42
+errors); the no-op stub was added for THIS one (witness 0910.3293). **Fix:** the
+binding now `find_file`s mathenv.sty, reads it, and raw-loads it (`InputDefinitions
+noltxml`) ONLY when it does NOT contain `mdwtab` (Bosisio's self-contained variant);
+otherwise no-ops (Wooding's). 1710.07800 now 0 err / 928 KB, structurally identical
+to Perl (section 6=6, Math 348=348, bibitem 84=84, tabular 6=6); 0910.3293 stays 0;
+tests 1344/0. Same family as ifacconf/SciPost (task #273 — a Rust stub Perl lacks),
+but here the stub is RETAINED for the variant whose dependency (mdwtab) we can't yet
+raw-load. **Lesson:** a no-op `*_sty.rs` stub for a NON-TeX-Live package name can
+silently shadow a DIFFERENT paper-shipped package of the same name — distinguish by
+content/dependency before stubbing. (Follow-up: a working `mdwtab` port would let
+the Wooding variant raw-load too, removing the last reason for this stub.)
 
 ### Round-37 (2026-05-31): 1909.02323 FIXED — arydshln `\arrayrulecolor` must consume its color arg (order-fragile 0-arg)
 
