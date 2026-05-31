@@ -2388,6 +2388,24 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1702.02972 FIXED — mathpartir `\inferrule` must convert `\\` premise-separators to `\quad` (not leak into `\frac`)
+
+**1702.02972 (llncs + mathpartir) 13→0 errors.** `\lx@end@inline@math Attempt to end mode
+math in math` (×5) + `\lx@begin@alignment … mode-switch to math due to \lx@begin@inline@math`
+(×3) + figure/group close failures. Trigger: `\begin{gather*}\inferrule[T]{\Gamma\vdash M
+\\ \Gamma\vdash N}{…}\end{gather*}` — mathpartir separates premises with `\\`. Our stub
+rendered `\inferrule`→`\ensuremath{\frac{premises}{conclusion}}` and passed the premises
+(including `\\`) RAW into `\frac{…}`. `\\` inside `\frac` is a hard error in BOTH engines
+(verified: bare `\frac{A \\ B}{C}` → R=7 P=7); inside a `gather*`/`align` alignment the
+leaked `\\` starts a spurious row, desyncing math mode → the cascade. Perl raw-loads the
+real mathpartir, which lays `\\`-separated premises out side-by-side without leaking `\\`
+(Perl 0). **Fix:** in `mathpartir_sty.rs` `\inferrule`, walk the premise tokens and replace
+each `\\` with `\quad` (mathpartir's side-by-side premise layout), skipping a `\\[dim]`
+optional spacing arg. 1702.02972 now 0 err; Perl 0; skeleton identical (section 7/7,
+equation 170/170, XMArray 240/240, bibitem 30/30, figure 4/4; the Math 1231/1292 delta is
+the pre-existing stub `\inferrule`→`\frac` fidelity loss). No regression: 1404.0085 (tabular
+inferrule), 1801.08114 (proof+mathpartir) stay 0. Tests 1344/0.
+
 ### Round-37 (2026-05-31): 1907.04260 DEFERRED — multi-row `align` then `equation{\cases}` leaks alignment state (hard cluster)
 
 **1907.04260 (iopart + braket) rust=71 perl=0 — DEFERRED with a clean reproducer.** All

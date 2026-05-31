@@ -55,7 +55,39 @@ LoadDefinitions!({
     out.push(T_BEGIN!());
     out.push(T_CS!("\\frac"));
     out.push(T_BEGIN!());
-    out.extend(prem.unlist());
+    // mathpartir separates premises with `\\`, laying them out SIDE BY SIDE
+    // above the rule line. We render via `\frac`, so the `\\` must become a
+    // horizontal separator (`\quad`) — emitting it raw inside `\frac{…}` is a
+    // hard error in BOTH Perl and Rust ("\\ in \frac"), and inside a display
+    // alignment (`gather*`/`align`) the leaked `\\` starts a spurious row,
+    // desyncing math mode → `\lx@end@inline@math … end mode math in math`
+    // cascade (witness 1702.02972: llncs + `\begin{gather*}\inferrule{A \\ B}{C}`,
+    // Perl 0, raw-mathpartir lays the premises out without leaking `\\`).
+    // Skip a `\\[dim]` optional spacing arg so it doesn't render literally.
+    let prem_toks = prem.unlist();
+    let mut i = 0;
+    while i < prem_toks.len() {
+      if prem_toks[i] == T_CS!("\\\\") {
+        out.push(T_CS!("\\quad"));
+        i += 1;
+        // Skip an optional `[dim]` spacing argument following `\\`.
+        if i < prem_toks.len() && prem_toks[i].get_catcode() == Catcode::OTHER
+          && prem_toks[i].to_string() == "["
+        {
+          while i < prem_toks.len()
+            && !(prem_toks[i].get_catcode() == Catcode::OTHER && prem_toks[i].to_string() == "]")
+          {
+            i += 1;
+          }
+          if i < prem_toks.len() {
+            i += 1; // consume the `]`
+          }
+        }
+      } else {
+        out.push(prem_toks[i]);
+        i += 1;
+      }
+    }
     out.push(T_END!());
     out.push(T_BEGIN!());
     out.extend(conc.unlist());
