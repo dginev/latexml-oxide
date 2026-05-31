@@ -72,6 +72,19 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\mdqon", { state::assign_catcode('"', Catcode::ACTIVE, None); });
   DefPrimitive!("\\mdqoff", { state::assign_catcode('"', Catcode::OTHER, None); });
+  // Faithful to babel germanb.ldf's `\initiate@active@char{"}`, which binds
+  // the active-`"` MEANING when german is LOADED — independent of catcode and
+  // of which language is the document main. Bind it here too, so that if ANY
+  // package later flips `"` to catcode-13 ACTIVE (witness 1006.0641:
+  // `\usepackage[german,english]{babel}` + a package + `fabfeynmp`, whose
+  // `{\catcode`\"=11 …}` group + babel's deferred activation leave `"` active),
+  // the active `"` always has the dispatch meaning rather than erroring
+  // "T_ACTIVE["] is not defined" on the first bare `"` in the body. The
+  // `\selectlanguage{german}` hook (babel_support_sty.rs) still (re)binds
+  // catcode+meaning together when german is actually selected.
+  if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+    state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+  }
   // germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
   RawTeX!(r"\providecommand\bbl@allowhyphens{}");
   RawTeX!(r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}");
