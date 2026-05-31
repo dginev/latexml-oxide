@@ -2388,28 +2388,23 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
-### Round-37 (2026-05-30): two-level macro-arg-as-def-target (DEFERRED, isolated)
+### Round-37 (2026-05-30): 1706.00283 FIXED — `\ccname` clobber (NOT a gullet bug)
 
-**1706.00283** (the `\cc*` constant-generator). DEFERRED with a precise minimal
-repro for a future gullet session. Root cause is a fundamental Rust-only
-macro-expansion bug:
-
-```latex
-\newcommand{\inner}[1]{\xdef#1{\body}}   % uses its parameter as a DEF TARGET
-\newcommand{\outer}[1]{\inner{#1}}        % passes a CS through a 2nd level
-\outer{\foo}                              % Rust: \foo stays UNDEFINED; Perl: defined
-```
-
-One-level (`\inner{\foo}` directly) WORKS in both; a simple two-level nesting
-without a def-target (`\outer{Y}`→`A\inr{Y}B`→`A<Y>B`) WORKS. The bug is narrowly
-the combination: inner macro uses `#1` as a `\def`/`\edef`/`\xdef` *target*, and
-`#1` is a control sequence that arrived via a SECOND macro-arg substitution. Rust
-not only fails to define the target but appears to swallow the inner macro's
-surrounding literal tokens. Witness uses `\newcommand{\ccname}[1]{\cc\ccdef{#1}}`
-with `\ccdef[1]{\xdef#1{\ccx}}` to mint `c_1,c_2,…` constants. Fix needs tracing
-how `\def`/`\xdef` reads its target token when that token came through
-double-substitution (gullet internals); not a binding gap. (Note: 1705.08023,
-which also hit `\ccy`, was already resolved via the iopart date-macro fix.)
+**1706.00283 FIXED.** Earlier deferred as a "deep two-level macro-arg-as-def-target
+gullet bug" — that diagnosis was WRONG. Root cause: `latex_constructs.rs` defaulted
+the letter caption `\ccname` (= "cc") unconditionally; the witness (a plain article)
+does `\newcommand{\ccname}[1]{\cc\ccdef{#1}}` to mint `c_i` constants, and LaTeX's
+`\@ifdefinable` saw `\ccname` already-defined → the `\newcommand` no-opped, so
+`\ccname` kept expanding to "cc" (paramlist=false) and every `\cc*` constant was
+undefined. The "two-level / def-target" theory came from chasing a confounded
+minimal repro; instrumenting `Expandable::invoke` showed `\ccname` invoked with
+`expansion=Tokens("cc")`, and renaming the macros to non-`cc` names made it vanish.
+Perl defines `\ccname`/`\enclname`/`\headtoname` NOWHERE, so removing those three
+letter-specific base defaults is faithful. RUST 10 → 0. **Method note: when a
+macro "doesn't expand", trace `Expandable::invoke` to see its stored expansion +
+paramlist — a clobbered/pre-defined CS looks like a mangled expansion, not an
+expansion bug.** (1705.08023, which also hit `\ccy`, was already resolved via the
+iopart date-macro fix.)
 
 ### Round-37 (2026-05-30): CONVERR_1 gate sweep — 5 fixes
 
