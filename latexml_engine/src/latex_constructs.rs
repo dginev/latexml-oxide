@@ -4499,10 +4499,12 @@ LoadDefinitions!({
   Let!("\\@title", "\\@empty");
   DefMacro!("\\title{}", "\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}", locked => true);
   DefMacro!("\\@date", "\\@empty");
+  // Single logical line: a `\` + newline in a raw string is a literal
+  // backslash + end-of-line = a spurious CONTROL-SPACE `\ ` in the body
+  // (see the \maketitle note above; driver 1708.07027).
   DefMacro!(
     "\\date{}",
-    r"\def\@date{#1}\
-\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
+    r"\def\@date{#1}\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
   // Conference-template "equal contribution" markers used inside \author{...}
   // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
@@ -4698,12 +4700,20 @@ LoadDefinitions!({
   // Locked: raw TeX packages (e.g., nips_2017.sty) may \renewcommand{\maketitle}, but
   // LaTeXML's frontmatter handling must take precedence. Perl achieves this by having
   // the compiled binding override raw TeX; we use `locked` to prevent raw overwrite.
+  // NOTE: this body MUST be on one logical line with NO `\` line-continuations.
+  // In a Rust raw string `\` + newline is a literal backslash followed by an
+  // end-of-line, which the LaTeXML tokenizer reads as a CONTROL-SPACE `\ ` in
+  // the macro body. That is normally harmless (it digests as a space), but a
+  // document that (mis)redefines control-space — e.g. 1708.07027's
+  // `\def\<eol>case#1#2{…}`, where the line break after `\def\` makes it
+  // `\def\ case#1#2{…}` and `\ ` becomes a 2-arg macro — then has `\maketitle`'s
+  // body invoke the corrupted `\ `, derailing the whole frontmatter into a
+  // `\@maketitle`-undefined / XMApp-in-empty cascade. Perl builds this body by
+  // string concatenation (no `\`+eol), so its `\maketitle` has no control-space
+  // and is robust. Keep it single-line here to match.
   DefMacro!(
     "\\maketitle",
-    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
-\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
-\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
-\global\let\author\relax\global\let\date\relax\global\let\and\relax",
+    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\global\let\author\relax\global\let\date\relax\global\let\and\relax",
     locked => true
   );
   // In case \maketitle isn't used in the document, let's check for it.
