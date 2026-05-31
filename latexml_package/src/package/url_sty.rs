@@ -49,22 +49,39 @@ LoadDefinitions!({
       close = T_OTHER!("}");
       gullet::read_balanced(ExpansionLevel::Off,false,false)?.unwrap_or_default()
     } else {
+      // The ORIGINAL catcode of the delimiter token distinguishes two
+      // very different `\url`/`\path` invocation shapes:
+      let delim_is_explicit = open.get_catcode() == Catcode::OTHER;
       open = open.as_other();
       close = open;
-      // Once we've determined the delimiter is non-brace (e.g. `|`),
-      // demote `{` and `}` to OTHER so read_until_token doesn't engage
-      // its balanced-read branch on `{`. Real users write
-      // `\\path|{partial,| ... |partial}|` across multiple
-      // \\urldef calls, where the `{` and `}` are LITERAL chars in
-      // separate `|...|` paths, not balanced TeX groups. Driver:
-      // 1906.08946 — without this demotion our read_until('|') on
-      // line 25's `\\path|{...,|` reads PAST the closing `|`,
-      // through line 26 and into line 27 looking for the matching
-      // `}` — which it finds in `lncs}@springer.com|`, swallowing
-      // the intervening `\\urldef{\\mailsb}` and `\\urldef{\\mailsc}`
-      // declarations entirely.
-      latexml_core::state::assign_catcode('{', Catcode::OTHER, Some(Scope::Local));
-      latexml_core::state::assign_catcode('}', Catcode::OTHER, Some(Scope::Local));
+      // EXPLICIT punctuation delimiter (`\url|...|`, `\path!...!`): the
+      // chars between the two delimiter tokens — INCLUDING any `{`/`}` —
+      // are LITERAL url content. Demote `{`/`}` to OTHER so
+      // read_until_token doesn't engage its balanced-read branch on `{`
+      // and overshoot the closing delimiter. Real users write
+      // `\\path|{partial,| ... |partial}|` across multiple `\\urldef`
+      // calls, where `{`/`}` are literal chars in separate `|...|`
+      // paths. Driver 1906.08946 — without this demotion read_until('|')
+      // on `\\path|{...,|` reads PAST the closing `|` looking for a
+      // matching `}`, swallowing intervening `\\urldef` declarations.
+      // (Perl OVERSHOOTS here too — this is a deliberate surpass.)
+      //
+      // SPACE-FORM (`\url www...`, delimiter is the first content char =
+      // a LETTER): a degenerate/misused invocation. The verbatim scan
+      // can never match (OTHER-delimiter vs LETTER content), so — exactly
+      // as in Perl — it runs to the end and unreads, yielding an empty
+      // url + the rest as leftover text. Here we must NOT demote `{`/`}`:
+      // the surrounding `{\url www...pdf}` group's closing `}` must keep
+      // its END catcode so it still closes the group after the unread.
+      // Demoting it froze `}` as OTHER → the `{` group stayed open → the
+      // trailing `\endgroup` from `\url` hit the boxing group and errored
+      // (`Attempt to close non-boxing group`). Perl never demotes `{`/`}`
+      // (semiverbatim SPECIALS = ^_~&$#'). Witness 1503.07894 (bibitem
+      // `{\url www.maths...pdf}`).
+      if delim_is_explicit {
+        latexml_core::state::assign_catcode('{', Catcode::OTHER, Some(Scope::Local));
+        latexml_core::state::assign_catcode('}', Catcode::OTHER, Some(Scope::Local));
+      }
       gullet::read_until_token(close)?
     };
     end_semiverbatim()?;

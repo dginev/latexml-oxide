@@ -2511,6 +2511,32 @@ Resolving it needs a Rust-vs-Perl intermediate-structure diff on the FULL
 document — a focused document-builder/math-parser session, not a loop iteration.
 Previously flagged "XMApp context-dependent" in the canvas notes.
 
+### Round-37 (2026-05-31): 1503.07894 FIXED — url space-form `{\url www...}` swallowed group-close `}`
+
+**1503.07894 FIXED (url `\url`/`\path` brace-demotion gated on delimiter kind).**
+`\endgroup Attempt to close non-boxing group; current frame is boxing group due
+to T_BEGIN[{]` ×2 (Perl=0). Bibitem L871: `{\url www.maths…pdf}` — the url
+package's degenerate SPACE-FORM (`\url <text>`, no `{}`/`|` delimiter). url_sty.rs
+`\lx@url@url` unconditionally demoted `{`/`}` → OTHER (added for 1906.08946,
+where `{`/`}` are LITERAL chars inside `\path|…{…}…|` paths). For the space-form
+the delimiter is the first content char (a LETTER), so the verbatim scan never
+matches (OTHER-delim vs LETTER content) and — exactly as in Perl — runs to the
+end then unreads, yielding an empty url + leftover text. BUT with `}` demoted, the
+surrounding `{…}` group's closing `}` was frozen OTHER, so it no longer closed the
+group → the box group stayed open → `\url`'s trailing `\endgroup` hit the boxing
+group and errored. **Fix:** gate the `{`/`}`→OTHER demotion on the ORIGINAL
+delimiter catcode — demote ONLY for an EXPLICIT punctuation delimiter
+(`\url|…|`/`\path!…!`, `open` catcode OTHER), where inner braces are literal url
+content; do NOT demote for the space-form (delimiter is a LETTER), so the
+group-closing `}` keeps its END catcode (matching Perl, which never demotes
+`{`/`}` — semiverbatim SPECIALS = `^_~&\$#'`). Rust output now byte-identical to
+Perl (`<ref class="ltx_nolink ltx_url"/>ww.x.com/f.pdf`). Verified the 1906.08946
+SURPASS survives: synthetic `\path|{alice,bob,|`/`\path|carol}@springer.com|` →
+href `{alice,bob,` / `carol}@springer.com` (Perl OVERSHOOTS this — 1 error — so our
+demotion is a deliberate surpass, now preserved for explicit delimiters). Full
+paper Rust 2→0, 1.5 MB well-formed, Perl=0. Suite 53/0/0. See
+[[project_robust_cs_semiverbatim_loop]].
+
 ### Round-37 (2026-05-31): 1909.03262 FIXED — `\*` invisible-times clobbered by latex.ltx raw-load
 
 **1909.03262 FIXED (`\*` = LaTeXML invisible-times, re-established post-dump).**
