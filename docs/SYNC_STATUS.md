@@ -2542,6 +2542,31 @@ cannot write `--dest=/dev/null` — it mkdirs `/dev` and fails silently as "0 er
 give Perl a real dest file. An earlier read of "Perl tolerates undefined `\color`" was this
 artifact — Perl errors on undefined color commands exactly like Rust.)
 
+### Round-37 (2026-05-31): 2007.06211 FIXED — physics `\lx@physics@mat` must be a DefMacro (expansion-time), not a DefPrimitive (digestion-time)
+
+**2007.06211 (revtex4-1 + physics) 11→0 errors — the deferred physics-`\mqty` cluster
+CRACKED.** Cascade of `\lx@begin@alignment … mode-switch to restricted_horizontal due to
+\lx@begin@inmath@text` + "Unbalanced \right". Isolated to: a `\mqty(a&b\\c&d)` (2×2 matrix,
+PAREN-delimited, with internal `&`) inside an `eqnarray`. Works in an `equation`; works as
+the brace form `\mqty{a&b\\c&d}`; column-vectors `\mqty(a\\b)` (no `&`) work — only the
+paren-2×2-in-alignment leaks. Root cause: Rust implemented `\lx@physics@mat` (the engine of
+`\mqty`/`\pmqty`/`\smqty`/…) as a **DefPrimitive** (digestion-time, `gullet::unread`s the
+dual), but Perl's is a **DefMacro** (physics.sty.ltxml L677 — expansion-time, RETURNS the
+`I_dual`). The matrix body is read by `phys_read_arg` as a delimited `(…)` read (NOT a brace
+group), so as a digestion-time primitive the surrounding eqnarray's column scan saw the
+matrix's own `&`/`\\` BEFORE this code consumed them → the row split, orphaning the
+`\left(`/`\right)` fences. As an expansion-time macro it grabs `(…)` first (like Perl), so
+the alignment never sees the inner `&`/`\\`. **Fix:** convert `\lx@physics@mat` from
+`DefPrimitive!` to `DefMacro!`, returning the dual (`Ok(result)`) instead of
+`gullet::unread`. 2007.06211 now 0 err; structure identical to Perl (Math 408/408, equation
+91/91, XMArray 31/31, XMRow 71/71, bibitem 33/33). **Bonus: 1910.10674** (the other deferred
+`\mqty` witness) **also → 0.** Tests 1344/0. (2003.02721, also mis-filed under this cluster,
+is a SEPARATE inline-`$…$`-in-eqnarray → `equationgroup`-in-`XMath` issue, no `\mqty` — still
+29 Rust-only, re-deferred.) **General fix** — `\mqty(…)` with `&` columns inside any
+alignment (eqnarray/align). The other physics primitives (`\quantity`,
+`\lx@physics@fenced`) share the same DefPrimitive-vs-DefMacro divergence and may have the
+same latent bug — convert when witnessed.
+
 ### Round-37 (2026-05-31): 1910.05543 FIXED — threeparttable `\tablenotes` must expand to `\begin{itemize}`, not the raw `\itemize`
 
 **1910.05543 (aastex + spr-astr-addons + threeparttable + lscape) 12→0 errors.** Cascade

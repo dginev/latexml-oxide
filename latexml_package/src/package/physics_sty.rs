@@ -1386,7 +1386,19 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
   // Reads optional * then required arg (TeX {} or delimiter-fenced)
-  DefPrimitive!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
+  //
+  // This MUST be a DefMacro (expandable), NOT a DefPrimitive — matching Perl
+  // `DefMacro('\lx@physics@mat{}{}{}{}{}', sub {…})` (physics.sty.ltxml L677). The
+  // matrix body is read here via `phys_read_arg` (a delimited `(…)`/`[…]` read, not
+  // a brace group). As a digestion-time PRIMITIVE, an alignment's column scan would
+  // see the matrix's own `&`/`\\` BEFORE this code consumes them — so `\mqty(a&b\\c&d)`
+  // inside an `eqnarray` leaked its `&`/`\\` into the eqnarray, splitting the row and
+  // orphaning the `\left(`/`\right)` fences → `\lx@begin@alignment … mode-switch to
+  // restricted_horizontal due to \lx@begin@inmath@text` + "Unbalanced \right" cascade
+  // (witness 2007.06211: revtex4-1 + physics, 11 errors, Perl 0). As an EXPANSION-time
+  // macro it grabs `(…)` first (like Perl), so the alignment never sees the inner
+  // `&`/`\\`. Return the dual instead of `gullet::unread`.
+  DefMacro!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
@@ -1433,7 +1445,7 @@ LoadDefinitions!({
     let presentation = Tokens::new(pres);
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![matrix])?;
-    gullet::unread(result);
+    Ok(result)
   });
 
   // Perl: \lx@physics@matrix / \lx@physics@smallmatrix environments
