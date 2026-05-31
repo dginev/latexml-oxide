@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1911.04650 FIXED — alignment column-scan must detect `\noalign`/`\omit` by MEANING (`defined_as`), not name
+
+**1911.04650 (acmart + `pseudo` expl3 package) 11→0 errors.** 6×`Extra alignment
+tab '&'` + 3×`\noalign cannot be used here` + `\pseudosetup`/`\g__pseudo_cur_prefix_tl`
+undefined. The paper-shipped `pseudo.sty` (a modern expl3 pseudocode package) builds
+each algorithm as a `tabular` whose per-line init runs inside a `\noalign{...}` written
+as expl3's `\tex_noalign:D` (the expl3 `\let`-copy of the `\noalign` primitive). That
+`\noalign` block sets `\pseudosetup` and `\g__pseudo_cur_prefix_tl` globally. Root
+cause: Rust's `digest_alignment_column` (`tex_tables.rs`) detected `\noalign`/`\omit`/
+`\lx@hidden@noalign` by token **identity** (`*token == T_CS!("\\noalign")`), so the
+`\let`-copy `\tex_noalign:D` was NOT recognized → fell through to the primitive's
+"cannot be used here" error → the init block never ran → `\pseudosetup` undefined →
+the column template `>{\pseudosetup}` collapsed → stray `&`. Perl's `Alignment.pm`
+`ReadAlignmentTemplate`/column-scan (L375-389) uses `$token->defined_as(T_noalign)`
+(match by **meaning**), so its `\let`-copies match. **Fix:** mirror Perl — use
+`token.defined_as(&T_CS!("\\noalign"))` (and `\omit`, `\lx@hidden@noalign`,
+`\crcr`/`\lx@hidden@crcr`), keeping `==` only for SPACE/`\par` (Perl's `equals`).
+`defined_as` already resolves a CS's let-meaning via `with_meaning`. 1911.04650 now
+0 err / 344 KB; Perl 0; structure identical (section 7/7, para 65/65, Math 180/180,
+tabular 4/4, tr 68/68, td 155/155, bibitem 25/25, figure 95/95). Tests 1344/0.
+(The "Extra alignment tab" I first chased was a synthetic `\def\mypre{ll}` colspec
+red herring — Perl errors on that too; the real paper's `\pseudopreamble` is fine.)
+
 ### Round-37 (2026-05-31): 1801.08114 FIXED — mathpartir must not unconditionally `\let\infer\inferrule` (clobbered proof's `\infer`)
 
 **1801.08114 (llncs + proof + mathpartir) 15→0 errors.** 15×`Stray alignment "&"`,

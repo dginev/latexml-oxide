@@ -773,11 +773,14 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
       last_token = Some(xtoken);
       let token = last_token.as_ref().unwrap();
       // Skip leading space. Skip \par or blank line(?). Or \crcr following a \cr
+      // Perl L372-375: `equals` for SPACE/`\par` (literal tokens), but
+      // `defined_as` for `\crcr`/`\lx@hidden@crcr` (CS that may be `\let`-aliased).
       if *token == T_SPACE!()
         || *token == T_CS!("\\par")
-        || (lastwascr && (*token == T_CS!("\\crcr") || *token == T_CS!("\\lx@hidden@crcr")))
+        || (lastwascr
+          && (token.defined_as(&T_CS!("\\crcr")) || token.defined_as(&T_CS!("\\lx@hidden@crcr"))))
       {
-      } else if *token == T_CS!("\\omit") {
+      } else if token.defined_as(&T_CS!("\\omit")) {
         // \omit removes template for this column.
         //         Debug("Halign $alignment: OMIT at " . Stringify($token)) if
         // $LaTeXML::DEBUG{halign};
@@ -785,8 +788,11 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
           alignment.borrow_mut().start_row(false)?;
         }
         alignment.borrow_mut().omit_next_column();
-      } else if *token == T_CS!("\\noalign") {
-        // \puts something in vertical list
+      } else if token.defined_as(&T_CS!("\\noalign")) {
+        // \puts something in vertical list. Perl L381 uses `defined_as`, so a
+        // `\let`-copy of `\noalign` (e.g. expl3's `\tex_noalign:D`, used by the
+        // `pseudo` package's per-line init `\noalign`) is recognized here rather
+        // than falling through to the primitive's "cannot be used here" error.
         // Debug("Halign $alignment: noalign at " . Stringify($token)) if $LaTeXML::DEBUG{halign};
         if alignment.borrow().is_in_row() {
           alignment.borrow_mut().end_row()?;
@@ -799,8 +805,8 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         expire_local_box_list();
         return Ok((Some(r), Some(T_CS!("\\cr")), some!("cr"), false)); // Pretend this is a whole
       // row???
-      } else if *token == T_CS!("\\lx@hidden@noalign") {
-        // \puts something in vertical list
+      } else if token.defined_as(&T_CS!("\\lx@hidden@noalign")) {
+        // \puts something in vertical list. Perl L389 uses `defined_as`.
         //         Debug("Halign $alignment: COLUMN invisible noalign") if $LaTeXML::DEBUG{halign};
         let invoked = stomach::invoke_token(token)?;
         extend_box_list(invoked);
