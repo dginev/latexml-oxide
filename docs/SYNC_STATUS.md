@@ -30,6 +30,20 @@
 > exhausted — the remaining residual is the accumulated mode-frame-leak cluster (now with fresh
 > witness 2007.06211), which is the next focused-session target.
 >
+> **FRESH UNTESTED-CORPUS SWEEP (2026-05-31, final+2): 0 Rust-only in 600 untested papers.**
+> The converr pool (3022) is the failure set from an earlier canvas sample; the full corpus
+> has 830,865 papers, 827,843 of them NOT in converr (untested for Rust-only). Sampled 600
+> spread evenly across that untested set and ran the strict gate (Rust>0 AND Perl=0): **zero
+> Rust-only candidates** — every erroring paper is SHARED with Perl or Rust-better. Combined
+> with the drained converr pool, this confirms the Rust translation is at **near-complete
+> Perl parity for error-free conversion** across the broad corpus after this session's 13
+> fixes. The remaining genuine Rust-only residual is the accumulated mode-frame-leak cluster
+> (2003.02721 + the 1505.07999-family), which needs the dedicated instrumented session its
+> memory has long called for — not another corpus sweep. (Physics-sibling `DefPrimitive`
+> divergence: a DELIBERATE WISDOM #44 decision, safe because their content is single
+> expressions with no `&`/`\\`; only the matrix `\mqty` needed `DefMacro` — see WISDOM #44's
+> new alignment-exception paragraph. Not converting them is correct, not a shortcut.)
+
 > **COMPREHENSIVE MODE-CLUSTER SWEEP (2026-05-31, final): the mode-error vein is now drained
 > too.** Built a mode-error filter (`/tmp/mfilter.sh`: flag papers whose Rust errors contain
 > "Attempt to close/end mode" or "Can't close environment") and ran it over the FULL converr
