@@ -2411,6 +2411,30 @@ scope — reproducing Perl's preamble-level (top-level → persistent) dvipsnam 
 `color=` attrs Perl omits; benign, both error-free.) Same eager-load-drops-options
 family as the eager-xcolor cluster.
 
+### Round-37 (2026-05-31): 1710.07800 DEFERRED — mathenv.sty raw-load silently stops at ~line 44 (filename-match dependent)
+
+**1710.07800 (revtex4-1 + paper-shipped mathenv.sty) 92 errors** —
+`{EqSystem}`/`{Equation} not defined` + a `^`/`_`/XMApp/XMArray cascade. mathenv.sty
+(Francesco Bosisio, docstrip-generated, CRLF) raw-loads but its `\newenvironment
+{Equation}` (L75) / `\newenvironment{EqSystem}` (L304) never register. **Bisected to
+a content-dependent SILENT abort of the raw-load**: the load defines `\fileversion`
+(L42) and `\filedate` (L43) but NOTHING from L44 onward (`\docdate`, `\StartMath@Err`,
+`\MakeAmper@Active`, both `\newenvironment`s all undefined) — with NO error/fatal
+emitted. Key clues: (1) lines 1-50 in ISOLATION load fully (all defs Y); the FULL
+340-line file processes only ~43 lines, so content past L50 corrupts the processing
+of earlier lines (a whole-file tokenisation/read effect, not forward line-by-line).
+(2) **Filename-match dependent**: when the file is `mathenv.sty` and does
+`\ProvidesPackage{\FileName}` (`\FileName`=mathenv, matching `\usepackage{mathenv}`)
+→ abort; when the SAME content is in `hpkg.sty` providing `mathenv` (name mismatch)
+→ loads fully. Also non-monotonic (`\FileName` L41=N but L42/L43=Y), and CRLF→LF
+stripping does NOT fix it. This points at the `\usepackage`/`\ProvidesPackage`/
+`maybe_require_dependencies` (dep-scan) flow — likely a double-process or
+`\ProvidesPackage`-marks-loaded / already-loaded-guard interaction that truncates
+the real load when the provided name equals the requested name. Needs a deep
+raw-load/package-protocol trace (instrument the dep-scan + the `\ProvidesPackage`
+handler + the file-input read). Minimal repro: any `\usepackage{X}` where `X.sty`
+is >~50 lines and contains `\def\FileName{X}\ProvidesPackage{\FileName}…\newenvironment{…}`.
+
 ### Round-37 (2026-05-31): 1909.02323 FIXED — arydshln `\arrayrulecolor` must consume its color arg (order-fragile 0-arg)
 
 **1909.02323 (mnras, arydshln + colortbl) 17→0 errors.** Tables use
