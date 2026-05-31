@@ -19,6 +19,14 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   // wlpeerj.cls L23: `\RequirePackage{lineno}` unconditional.
   RequirePackage!("lineno");
+  // wlpeerj.cls L55: `\RequirePackage{fancyhdr}` (custom headers/footers).
+  // PeerJ-template papers set `\pagestyle{fancy}` and use the legacy fancyhdr
+  // interface (`\lhead`/`\chead`/`\rhead`/`\cfoot`/`\fancyplain`) directly in
+  // the preamble. Our binding intercepts wlpeerj (OmniBus) and mirrored most of
+  // its RequirePackage list but omitted fancyhdr, so those macros were
+  // undefined where Perl — which raw-dep-scans the .cls and loads fancyhdr — is
+  // clean. Witness 1507.06496.
+  RequirePackage!("fancyhdr");
 
   // Many PeerJ-template papers (witness 2305.10817) use
   // `\printbibliography[…]` without loading biblatex, expecting the
