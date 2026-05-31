@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1611.06249 FIXED — ifacconf binding deleted, raw-load the real .cls like Perl (task #273 win)
+
+**1611.06249 (`ifacconf`/IFAC paper) 38→0 errors.** Root cause was a Rust-only
+`ifacconf_cls.rs` OmniBus **stub** that eagerly `RequirePackage!("hyperref")` —
+a divergence Perl never makes. Perl ships no `ifacconf.cls.ltxml`; it raw-loads
+the paper-supplied `ifacconf.cls` (not in TeX Live) under the OmniBus skeleton
+and scans its real deps (`theorem, newlfont, natbib` — **no hyperref**). The
+stub's eager hyperref bound `\url` = `\begingroup\lx@hyper@url\url` (verbatim
+reader), so the `.bbl`'s `\providecommand{\url}[1]{\texttt{#1}}` was suppressed
+and a nested `\url{\url{http://…}}` (bbl line 133) was read verbatim →
+`\lx@hyper@url@ Attempt to close boxing group` + unbalanced `\begingroup`/
+`\endgroup` → a 38-error cascade (`malformed:ltx:XMDual`, `\@@tabular`/`\omit`
+mode-frame fallout in the appendix tabular). Probe: Perl `\meaning\url`=
+*undefined* at `\bibliography`; Rust=hyperref reader. **Fix:** delete the
+`ifacconf` binding registration; `ifacconf_cls.rs` is now a doc-only module
+(preserves the eager-xcolor NOTE referenced by ~10 sister journal `*_cls.rs`).
+A real `ifacconf.cls` now falls through to raw-load, exactly like Perl — 0
+errors, output structurally identical to Perl (bibitem 48=48, section 30=30,
+tabular 2=2, cite 44=44; Math 285 vs 281 within `%\n`/`tex=` formatting noise).
+Tests 1344/0. This is the [[feedback_prefer_raw_load]] / [[feedback_no_papering]]
+pattern: a stub that papered over a Perl-clean class while *introducing* a
+divergence. cf. task #273 (shrink the OmniBus-stub set via raw interpretation).
+
 ### Round-37 (2026-05-31): canvas FATAL/CONVERR results are STALE — re-test before triage
 
 **Observation (2026-05-31).** The `large_scale_canvas_3` failure logs (9878 FATAL,

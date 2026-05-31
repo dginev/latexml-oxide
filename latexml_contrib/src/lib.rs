@@ -426,7 +426,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("IEEEoj", "cls", ieeeaerospace_cls::load_definitions),
   ("IEEEtai", "cls", ieeeaerospace_cls::load_definitions),
   ("IEEEojcsys", "cls", ieeeojcsys_cls::load_definitions),
-  ("ifacconf", "cls", ifacconf_cls::load_definitions),
+  // ifacconf: intentionally unregistered — raw-load the paper-supplied
+  // ifacconf.cls like Perl (no binding). See ifacconf_cls.rs. Task #273.
   ("IEEEtaes", "cls", ieeetaes_cls::load_definitions),
   ("iccv", "sty", iccv_sty::load_definitions),
   ("iccvw", "sty", iccv_sty::load_definitions),
