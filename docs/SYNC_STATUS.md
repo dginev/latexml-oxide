@@ -2446,7 +2446,34 @@ escapes the `{tikzpicture}`/`{axis}` group, or a pgfkeys value not re-initialize
 
 ### Round-37 (2026-05-31): mode-frame auto-close cluster — CLEAN 4-LINE REPRO isolated
 
-**Mode-frame Rust-only cluster now has a clean minimal repro** (the cluster was
+**Mode-frame Rust-only cluster — GENERALIZED to a 3-line repro affecting ALL block
+envs (Round-37 deep dive, 2026-05-31):**
+
+```
+\documentclass{article}\begin{document}\begingroup\begin{center}text\endgroup\end{document}
+```
+→ RUST 1 error `\endgroup Attempt to close a group that switched to mode
+internal_vertical`; PERL=0 (clean `<ltx:p align="center">text</ltx:p>`). Fires
+IDENTICALLY for `center`, `quote`, `itemize`, theorem — ANY `internal_vertical`
+env left unclosed when an `\endgroup` (or enclosing `\end{…}`) closes its group.
+
+**Exhaustively ruled out (all byte-faithful to Perl):** `\begin{env}` does
+`bgroup` then `begin_mode(mode, noframe=true)` binding BOUND_MODE on the env frame
+— Rust dialect.rs:1135+1160 == Perl Package.pm:1902+1908. `egroup`/`endgroup`
+(stomach.rs) == Perl Stomach.pm:334/354 (both Error on a BOUND_MODE top frame).
+`enter_horizontal` == Perl (both `MODE='inplace'`). `\endgroup` is the kernel
+primitive → `stomach->endgroup` in both. Trace at the error: depth=2,
+BOUND_MODE=internal_vertical bound on top, MODE drifted to horizontal (from
+"text"). So Perl, with identical code, must NOT have BOUND_MODE bound on the top
+frame at `\endgroup` — a deeper frame/undo-list/`isValueBound` state divergence
+NOT visible by static comparison. **Needs Perl-side frame-stack instrumentation
+(MODE debug) to find where Perl's stack differs** — the one remaining unknown.
+A band-aid already suppresses this exact error class during raw .sty load
+(stomach.rs:442-465, INTERPRETING_DEFINITIONS guard). This repro likely unblocks
+1606.03691, 1902.11165 (young-`\halign`), 1501.03690 (xy-pic svg cascade).
+See [[project_endgroup_modeswitch_frame_leak]].
+
+(Earlier, narrower repro:) **A clean minimal repro** (the cluster was
 previously only reproducible cumulatively in full papers — 1606.03691, 1902.11165
 young-`\halign`, 1501.03690 xy-pic svg cascade):
 
