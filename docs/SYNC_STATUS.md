@@ -2410,6 +2410,41 @@ core mode-frame work — defer to a dedicated session (cf.
 TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
 divergence, but NOT the witness path (which is the SVG halign).
 
+### Round-37 (2026-05-31): 1804.09301 DEFERRED — dep-scan over-anticipates `\if`-guarded `\usepackage{xcolor}`
+
+**1804.09301 DEFERRED (`\cellcolor` undefined — dep-scan/conditional limit).**
+`Error:undefined:\cellcolor` (Perl=0). Main loads `\usepackage[nohyperref]
+{naaclhlt2018}` then `\usepackage[table,xcdraw]{xcolor}`. The `table` option
+makes xcolor `\RequirePackage{colortbl}` (which defines `\cellcolor`). **Root
+cause:** the Rust dependency scanner (`maybe_require_dependencies`, content.rs;
+runs for raw-loaded paper-bundled .sty to fire bound transitive deps, content.rs
+L1675) scans `naaclhlt2018.sty` and finds `\usepackage{xcolor}` at L101 — which
+sits **inside `\ifacl@hyperref…\fi`**, a `\newif` boolean set FALSE by the
+`[nohyperref]` option. The dep-scan can't evaluate the conditional, so it
+pre-loads xcolor *without options*; the main's later `\usepackage[table,xcdraw]
+{xcolor}` then hits the already-loaded early-return (content.rs L763) → the
+`table` `DeclareOption` never fires → colortbl never loads → `\cellcolor`
+undefined. Perl raw-loads naaclhlt2018.sty, the conditional is false → xcolor is
+NOT loaded there → the main's `[table]` xcolor is the first (and only) load →
+colortbl → `\cellcolor` defined. Confirmed in isolation: `[table,xcdraw]{xcolor}`
++ `\cellcolor` is CLEAN; only the naaclhlt2018-pre-load path fails.
+
+**Why not a quick fix.** (a) Skipping dep-scan `\usepackage` inside `\if…\fi`
+would fix it, but robustly tracking `\if/\fi` depth in a regex scan is
+unreliable — `\newif\ifFLAG` (ubiquitous in class files; naaclhlt2018 itself
+has it) would corrupt the depth count and OVER-skip legitimate top-level deps
+elsewhere in the same file. The existing `\IfFileExists{X}{\usepackage{X}}`
+anticipation (witness 1703.03673) must be preserved (it's a brace-arg macro, not
+`\if…\fi`, so it'd survive — but the fragility is in the counting, not the
+discrimination). (b) Reprocessing options on package reload is NOT Perl-faithful
+— Perl's `loadLTXML` also skips an already-loaded package's options; Perl
+succeeds only by never pre-loading xcolor. (c) A per-package xcolor+table
+reload shim is a stopgap that doesn't fix the root (dep-scan over-anticipation).
+Best handled in a focused dep-scan session: track `\if/\fi` with `\newif`
+exclusion (and `\let`/`\csname` edge cases), validated against the full
+dep-scan witness set (1703.03673, 1506.06200, 1504.05963, 2208.07400,
+2202.11535, 1901.05713) + a sweep sample. See [[project_depscan_conditional_xcolor]].
+
 ### Round-37 (2026-05-31): 1802.07225 FIXED — sagej.cls binding missing amssymb cluster
 
 **1802.07225 FIXED (sagej_cls.rs AMS cluster completion).** `\leqslant ... not
