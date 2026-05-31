@@ -2763,6 +2763,29 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1906.11496 FIXED 2026-05-31 (gather `\lefteqn` / ams `\label` redirect).**
+Rust's `ams_rearrangeable_bindings` (amsmath_sty.rs) redirected `\label` ->
+`\lx@eqnarray@label` (a `\lx@hidden@noalign` wrapper) for ALL ams rearrangeable
+envs. Perl's `amsRearrangeableBindings` (amsmath.sty.ltxml L120-147) does NOT —
+only `\@eqnarray@bindings` redirects `\label`. The over-broad redirect broke
+single-column `{gather}`: a `\label` preceding `\lefteqn` was consumed by the
+column-scan loop (tex_tables.rs) as `\lx@hidden@noalign` WITHOUT starting the
+column, so `\lefteqn` was expanded with `\if@in@firstcolumn` still TRUE and
+emitted `\multicolumn{3}` into a 1-column gather -> "Extra alignment tab '&'" (×2).
+Fix: made the redirect a parameter (`redirect_label`), passing `false` for gather
+(Perl-faithful: plain `\label` starts the column, `\lefteqn` -> `\rlap`) and
+`true` for multi-column `{align}`. 1906.11496 Rust 2->0, Perl=0; suite 53/0/0
+(split_test green). **Known residual (deeper root cause, deferred):** the redirect
+is RETAINED for multi-column align as a Rust-only workaround — a cell whose ONLY
+content is `\label` is "skippable" in Rust (our `\hfil` contributes no width,
+unlike Perl's), so a plain `\lx@label` in such a cell never floats `labels=` onto
+the parent equation (witness `\begin{align}\label{x}&y`: Rust drops the label,
+Perl keeps it; `float_to_label` from inside the open `_Capture_` fails where the
+row-level hidden@noalign path succeeds). The faithful fix is to make label-bearing
+skippable cells preserve their label at row level (or make `\hfil` contribute cell
+width like Perl), letting the redirect be dropped everywhere; left as future work
+to avoid destabilizing the alignment construction path.
+
 **1908.01908 FIXED 2026-05-31 (`\meaning` optional-param serialization).**
 `tex_debugging.rs` rendered an *optional* macro parameter as literal `[#N]` in
 `\meaning` (a Rust-only divergence once added for 2110.11931). Perl renders ALL

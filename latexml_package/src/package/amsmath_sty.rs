@@ -44,6 +44,7 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
 fn ams_rearrangeable_bindings(
   template: Template,
   xml_attributes: HashMap<String, String>,
+  redirect_label: bool,
 ) -> Result<()> {
   let properties = SymHashMap::default();
   // Create alignment with equationgroup/equation/_Capture_ hooks
@@ -118,23 +119,31 @@ fn ams_rearrangeable_bindings(
   );
   // Perl: Let('\intertext', '\@ams@intertext');
   state::let_i(&T_CS!("\\intertext"), &T_CS!("\\@ams@intertext"), None);
-  // Redirect \label to the noalign version (matching Perl eqnarray behavior).
-  // In Perl, \hfil makes cells with only \label non-skippable, so the \label
-  // constructor runs during beAbsorbed. In Rust, \hfil doesn't contribute width,
-  // so such cells are skippable and the constructor is never invoked.
-  // By routing \label through \lx@hidden@noalign, the label is processed at the
-  // row level (equation element), ensuring labels= is always set.
-  // Save the canonical \lx@label (NOT the mutable \label) globally so the
-  // noalign-deferred `\lx@eqnarray@save@label{#1}` expansion still resolves
-  // cleanly if it fires AFTER the alignment's group has popped (witness
-  // 2404.19499: align body's deferred noalign-label fires post-group →
-  // undefined). The \label override itself stays local — the user-visible
-  // \label semantics revert when align ends. Saving \lx@label (immutable)
-  // rather than \label is what Perl's amsRearrangeableBindings does, and it
-  // avoids the self-recursion when this binding re-runs while \label is
-  // already \lx@eqnarray@label (nested align/gather, 2008.13358).
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\lx@label"), Some(Scope::Global));
-  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
+  // `\label` redirect — applied ONLY to multi-column rearrangeable envs
+  // ({align}/{alignat}/{flalign}), NOT single-column {gather}.
+  //
+  // Perl's `amsRearrangeableBindings` (amsmath.sty.ltxml L120-147) does NOT
+  // redirect `\label` at all; only `\@eqnarray@bindings` does. The redirect
+  // here is a Rust-only workaround: a multi-column cell whose ONLY content
+  // is a `\label` is "skippable" (Rust's `\hfil` contributes no width, unlike
+  // Perl's), so the plain `\lx@label` constructor never floats `labels=` onto
+  // the parent equation. Routing it through `\lx@hidden@noalign` processes
+  // the label at row level so `labels=` survives (witness split.tex's
+  // `\label{eq:before}\n&x`).
+  //
+  // But that same redirect BREAKS single-column {gather}: a `\label` before
+  // `\lefteqn` gets swallowed by the column-scan loop as `\lx@hidden@noalign`
+  // (never starting the column), so `\lefteqn` is expanded with
+  // `\if@in@firstcolumn` still TRUE and emits `\multicolumn{3}` into a 1-column
+  // gather -> "Extra alignment tab '&'" (driver 1906.11496). For gather we
+  // therefore match Perl exactly (no redirect): the plain `\label` starts the
+  // column, so `\lefteqn` takes the `\rlap` branch. gather has no `&`, so the
+  // skippable-label-only-cell case the redirect guards against does not arise
+  // (a bare `\label\\` row is dropped by both engines anyway).
+  if redirect_label {
+    state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+    state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
+  }
   Ok(())
 }
 
@@ -159,7 +168,9 @@ fn ams_gather_bindings() -> Result<()> {
   });
   let mut attrs = HashMap::default();
   attrs.insert(String::from("class"), String::from("ltx_eqn_gather"));
-  ams_rearrangeable_bindings(template, attrs)
+  // gather is single-column: NO `\label` redirect (Perl-faithful; keeps
+  // `\lefteqn` -> `\rlap`). See ams_rearrangeable_bindings.
+  ams_rearrangeable_bindings(template, attrs, false)
 }
 
 /// Perl: \@ams@align@bindings — repeated pairs of columns
@@ -190,7 +201,10 @@ fn ams_align_bindings() -> Result<()> {
   let mut attrs = HashMap::default();
   attrs.insert(String::from("class"), String::from("ltx_eqn_align"));
   attrs.insert(String::from("colsep"), String::from("0pt"));
-  ams_rearrangeable_bindings(template, attrs)
+  // align is multi-column: redirect `\label` to preserve labels= on
+  // label-only cells (Rust workaround for skippable cells). See
+  // ams_rearrangeable_bindings.
+  ams_rearrangeable_bindings(template, attrs, true)
 }
 
 /// Perl: \@ams@aligned@bindings — for aligned/alignedat/split within math
