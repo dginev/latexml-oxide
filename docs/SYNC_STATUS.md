@@ -2804,24 +2804,28 @@ ratio test is timing-flaky under load; passes in isolation). Closes the
 separate, pre-existing `x_a_b` double-subscript severity gap (Rust Error vs Perl)
 is untouched by this fix — noted for follow-up.
 
-### Round-37 (2026-05-31): 1802.00756 DEFERRED — math-ambiguity explosion on comma-separated sequents (deep, math-parser lane)
+### Round-37 (2026-05-31): 1802.00756 FIXED — document builder must recover a dropped namespace (svg-in-nested-math), not error
 
-**1802.00756 (LNCS proof-theory) ~18 `document:open_element_internal` + a
-`Fatal:timeout`.** NOT a quick fix — a genuine math-grammar ambiguity explosion.
-The paper has sequents like `\sequent{\Gamma, t' < t, \pred{N}{t'}, \pred{N}{t},
-…}{\Delta}` (= `… \Rightarrow \Delta`) where `\pred{N}{t'}` →
-`\operatorname{\mathsf{N}}{t'}` = an OPFUNCTION juxtaposed with its arg (no
-parens). A long comma-separated list of such juxtaposed terms + relations (`<`,
-`=`) + the `\Rightarrow` enumerates **5000 parses** (the cap), `0 semantic /
-0 unique`, ~0.8–1.3 s each — 63 of them → ~60 s → `Fatal:timeout`. The `0 unique`
-hard-failures then fall back and emit elements whose namespace can't be created
-(`open_element_internal failed to create namespace`). Standalone repro: a single
-such sequent enumerates 649 parses / 1 unique in 459 ms (Perl 0) — the explosion
-scales with list length. Root cause is in the Marpa grammar/semantics
-(comma-lists + OPFUNCTION juxtaposition), the math-parser collaborator's lane;
-fix per [[feedback_ambiguity_explosion_is_a_flaw]] is grammar tightening + early
-action pruning, not a cap bump. Deferred. Companion to the open VERTBAR-modulus
-pattern in `MATH_AMBIGUITY_AUDIT_2026-05-21.md`.
+**1802.00756 (LNCS proof-theory) 20→0 errors.** The earlier "math-ambiguity
+explosion" diagnosis was WRONG: with the current binary the paper converts with
+**0 errors and Math 1291/1291 (exact Perl parity)** — no ambiguity degradation.
+The real issue was 14× `document:open_element_internal failed to create namespace`
+(improved error msg now prints `prefix 'svg' uri 'http://www.w3.org/2000/svg' for
+<svg>/<g>`). The paper draws derivation arrows with `\begin{tikzpicture}[overlay]`
+*inside* a deeply-nested `gather*`/`minipage`/`figure*` (and an inline `\tikz
+\coordinate (bud)` inside the math). Those `<svg:svg>`/`<svg:g>` elements have the
+svg namespace, already declared on root by an earlier picture but NOT visible at the
+deeply-nested insertion point via `lookup_namespace_prefix`. The `None` branch of
+`open_element_internal` (document.rs) then called `Namespace::new('svg', …, root)`,
+which fails on the duplicate and the branch DROPPED the namespace and errored — while
+the sibling already-declared branch RECOVERS (search root's declarations, reuse, or
+create on the insertion point). **Fix:** give the `None` branch the same recovery
+(reuse the existing root namespace). 1802.00756 now 0 err; svg correctly namespaced
+(`xmlns:svg` + 6 `<svg:svg>` + 114 `<svg:g>`); structure matches Perl (section 5/5,
+Math 1291/1291, theorem 53/53, figure 8/8, svg:svg 6/6). Tests 1344/0. (The debug
+binary needs `--timeout>60` for this 1137-formula paper — pure debug slowness; the
+`--release`/canvas binary converts within the default. NOT a hang.) General fix —
+helps any tikz/SVG picture inside nested math/figure structures.
 
 ### Round-37 (2026-05-31): 1702.02181 FIXED — listings `mathescape` must restore normal catcodes inside `$…$`
 

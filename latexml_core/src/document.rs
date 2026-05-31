@@ -3745,9 +3745,27 @@ impl Document {
                 }) {
                   Ok(ns) => Some(ns),
                   Err(_) => {
-                    let message = s!("failed to create namespace: {:?}", prefix);
-                    Error!("document", "open_element_internal", message);
-                    None
+                    // The namespace already exists on root (declared by an
+                    // earlier element of the same namespace — e.g. a prior
+                    // tikz/SVG picture) but `lookup_namespace_prefix` did not
+                    // find it from this deeply-nested insertion point. Recover
+                    // by reusing the root declaration (or creating it on the
+                    // insertion point), exactly as the already-declared branch
+                    // below — do NOT drop the namespace. Witness 1802.00756:
+                    // a `tikzpicture` inside a nested `gather*`/`minipage`/
+                    // `figure*` emitted 14× "failed to create namespace: svg"
+                    // and the `<svg:svg>`/`<svg:g>` lost their namespace.
+                    arena::with(prefix, |prefix_str| {
+                      let found = root
+                        .get_namespace_declarations()
+                        .into_iter()
+                        .find(|ns| ns.get_prefix() == prefix_str);
+                      if found.is_none() {
+                        Namespace::new(prefix_str, &ns_uri, point).ok()
+                      } else {
+                        found
+                      }
+                    })
                   },
                 }
               } else {
