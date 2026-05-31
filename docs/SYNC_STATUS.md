@@ -2444,6 +2444,27 @@ per-axis state-reset divergence (likely a `\global`/`\gdef` inside the axis that
 escapes the `{tikzpicture}`/`{axis}` group, or a pgfkeys value not re-initialized)
 — deep raw-loaded-pgfplots work for a focused session, not a loop iteration.
 
+### Round-37 (2026-05-31): xy-pic svg:path cluster DEFERRED — 1501.03690 (2nd witness), mode-frame cascade root
+
+**1501.03690 DEFERRED (xy-pic shifted-arrows → `svg:path` in `ltx:text`).** Perl=0,
+Rust 102 errors. Uncovered while A/B-validating the pgfmath fix (it is UNRELATED
+to pgfmath — 102 errors with and without that change). Uses `\usepackage[all,cmtip,
+2cell]{xy}` with 42 `\xymatrix`. 90× `svg:path "svg:path" isn't allowed in
+<ltx:text>` + 8× `\hbox Attempt to end mode restricted_horizontal in
+internal_vertical`. Bisected the FIRST occurrence to the L547 diagram
+`\xymatrix{\cat{DIG} \ar@<0.5pc>[r]^-{F} & \cat{DIS} \ar@<0.5pc>[l]^-{F'}}` —
+SHIFTED arrows (`\ar@<0.5pc>`) drawn as SVG. Rust's `xy_sty.rs::\lx@xy@svg` opens
+`ltx:picture`/`svg:svg`/`svg:g` and the `^<svg:path …/>` constructors
+(xylatexml_tex.rs) insert into the open element — so the paths leak to `ltx:text`
+only because a **mode-frame error closed the SVG wrapper early**. The `\hbox …
+mode` errors are the cascade ROOT and are the SAME class as 1902.11165 (young
+`\halign`) and [[project_endgroup_modeswitch_frame_leak]] — the core
+`enter_horizontal`/`end_mode` non-scoped `MODE` mutation around a picture box.
+**xy-pic cluster now 2 witnesses** (1508.03915 `Script _ in math mode`, 1501.03690
+svg:path cascade); both are deep xy-pic + core-mode-frame work for a focused
+session. (Isolated single diagrams error in BOTH engines — missing paper context —
+so this must be debugged in-paper.)
+
 ### Round-37 (2026-05-31): 1902.11165 DEFERRED — `\halign` (Young tableau) in a TikZ node leaks horizontal mode
 
 **1902.11165 DEFERRED (mode-frame cluster — SVG `\halign` in pgf node).** `\halign
