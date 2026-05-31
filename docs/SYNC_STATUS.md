@@ -2794,6 +2794,20 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1708.07027 FIXED 2026-05-31 (spurious control-space in \maketitle/\date raw-string bodies).**
+15 errors (Perl=0): `\@maketitle` undefined + ltx:XMApp/ltx:section malformed cascade.
+Root cause: `\maketitle` and `\date` were `DefMacro!`'d with Rust RAW strings (`r"…"`)
+that used `\` at end of lines as line-continuation. In a raw string `\`+newline is a
+LITERAL backslash + end-of-line, which the LaTeXML tokenizer reads as a CONTROL-SPACE
+`\ ` in the macro body. Harmless until 1708.07027's `\def\<eol>case#1#2{…}` (a line
+break after `\def\` makes it `\def\ case…`, redefining control-space `\ ` as a
+2-arg `case` macro); `\maketitle`/`\date` then invoke the corrupted `\ ` → frontmatter
+derails into `\@maketitle`-undefined and the document structure collapses. Perl builds
+these bodies by string concatenation (no `\`+eol). Fix: single-line bodies; a repo-wide
+scan confirms no other raw-string macro body has the pattern. Rust 15→0, Perl=0; suite
+53/0/0. (Found via a stale-CONVERR re-sweep with precise `^Error:cat:` grep.) See
+[[project_rawstring_control_space_macro_body]].
+
 **1006.0641 FIXED 2026-05-31 (babel german active-`"` bound only on selectlanguage).**
 `Error:undefined:" The token T_ACTIVE["] is not defined`, Perl=0. Driver: arthist.tex
 `\usepackage[german,english]{babel}` + amsmath + fabfeynmp, then `"anomalie"` in body
