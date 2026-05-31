@@ -182,7 +182,8 @@ pub mod optica_article_cls;
 pub mod oup_authoring_template_cls;
 pub mod ptephy_cls;
 pub mod sagej_cls;
-pub mod scipost_cls;
+// scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
+// Perl (no binding). See the registration site below. Task #273.
 pub mod scis2024_cls;
 pub mod pnas_new_cls;
 pub mod siamart_cls;
@@ -466,7 +467,15 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("siamart", "cls", siamart_cls::load_definitions),
   ("siamonline", "cls", siamart_cls::load_definitions),
   ("sagej", "cls", sagej_cls::load_definitions),
-  ("SciPost", "cls", scipost_cls::load_definitions),
+  // SciPost: intentionally unregistered. Perl ships no SciPost.cls.ltxml; it
+  // raw-loads the paper-supplied SciPost.cls (not in TeX Live), whose own
+  // \RequirePackage{physics,amsmath,amssymb,caption,subcaption,...} are picked
+  // up by the deps-scan — so Dirac notation etc. still bind. The old stub
+  // force-loaded `physics` for EVERY SciPost-prefixed class, including
+  // author-modified SciPostMod.cls (which loads no physics): physics' \op then
+  // clobbered the author's \newcommand{\op}{\mathcal{O}} → "Missing
+  // sub/superscript argument" (1810.05151, Perl 0). Raw-load matches Perl for
+  // both the stock class (physics loaded) and Mod variants (not). Task #273.
   ("SCIS2024", "cls", scis2024_cls::load_definitions),
   ("siamltex", "cls", siamltex_cls::load_definitions),
   ("semantic", "sty", semantic_sty::load_definitions),

@@ -2388,6 +2388,26 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1810.05151 FIXED — SciPost binding deleted, raw-load like Perl (sibling of the ifacconf fix)
+
+**1810.05151 (`SciPostMod.cls`) 2→0 errors.** Same OmniBus-stub-divergence
+family as ifacconf. The paper ships `SciPostMod.cls` (an author-modified SciPost
+class that loads **no** physics) and uses `\documentclass[]{SciPostMod}`. Rust's
+class prefix-match (`$class =~ /^\Q$_\E/`, Perl-faithful) matched `SciPostMod` →
+`SciPost`, but **Rust had a `SciPost` stub Perl lacks**; the stub force-loaded
+`physics` for every SciPost-prefixed class. physics' `\op` (operator expecting
+scripts) then clobbered the author's `\newcommand{\op}{\mathcal{O}}` (mymacros.sty)
+→ 2× `Error:expected:{ Missing sub/superscript argument`. Perl ships no SciPost
+binding, so its prefix-match finds nothing → raw-loads `SciPostMod.cls` (no
+physics), `\op` stays `\mathcal{O}`. **Fix:** delete the `SciPost` binding +
+`scipost_cls.rs`. Verified no regression on the stock-class witnesses: 2104.02751
+(`\documentclass{SciPost}`, real SciPost.cls) still loads physics via the raw
+class's own `\RequirePackage{physics}` (deps-scan) → Dirac notation binds, 0
+errors; 1606.01173 (subcaption) 0 errors. 1810.05151 now 0 errors / 7.76 MB,
+structurally matched to Perl (Math 3334=3334, section 267=267, **mathcal 247=247**
+— direct proof `\op`→`\mathcal{O}` is restored; bibitem 258 vs 260 minor). Tests
+1344/0. cf. [[project_scipost_stub_prefix_physics_clobber]], task #273.
+
 ### Round-37 (2026-05-31): 1611.06249 FIXED — ifacconf binding deleted, raw-load the real .cls like Perl (task #273 win)
 
 **1611.06249 (`ifacconf`/IFAC paper) 38→0 errors.** Root cause was a Rust-only
