@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1503.07894 DEFERRED — url brace-enclosed space-form `{\url www…}`
+
+**1503.07894 DEFERRED (url space-form).** `{\url www.maths.adelaide.edu.au/…/QMonoDraft.pdf}`
+(no braces on `\url`, space-delimited, inside an enclosing `{}`) errors
+`\endgroup Attempt to close non-boxing group … boxing group due to T_BEGIN[{]`
+×2 (Perl=0). Cleanly minimally reproducible (`\usepackage{url}` +
+`{\url www.x/y.pdf}`). Mechanism: `\url` → `\begingroup\lx@url@url\url`;
+`\lx@url@url` reads its verbatim arg via `begin_semiverbatim` + `read_token` for
+the delimiter, else `read_until_token(delim)`. For the space-form the delimiter
+is the space after `\url`; since the URL has no internal space, Rust's
+`read_until_token` reads straight THROUGH the enclosing group's `}` (consuming
+it), so the `{` group leaks and the trailing `\endgroup` closes the wrong frame.
+Perl's `readUntil` stops at the unmatched `}` (END), leaving it to close the
+group. Attempted a url-specific space-form handler (read to the enclosing `}`,
+unread it) — didn't land: under `begin_semiverbatim` the leading space is
+catcode-OTHER (so detecting the space-form by catcode failed) AND the
+demote-`{`/`}`-to-OTHER step (added for the `|`-delimited `\path|…|` form,
+1906.08946) interferes. The clean fix is to make `read_until_token` stop at an
+unmatched `}` like Perl's `readUntil` (broad) OR a carefully-scoped space-form
+branch that keeps `}` catcode-END; reverted the WIP. Deferred — same
+url-verbatim/semiverbatim cluster as [[project_env_name_expand_consistency]]'s
+sibling 1704.05859 (Semiverbatim tokenization).
+
 ### Round-37 (2026-05-31): 1509.01434 FIXED — `is_url` matched a protocol mid-filename
 
 **1509.01434 FIXED (core `pathname::is_url` anchoring).** `Script _ can only appear
