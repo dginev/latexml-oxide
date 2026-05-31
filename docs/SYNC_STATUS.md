@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1702.02181 FIXED — listings `mathescape` must restore normal catcodes inside `$…$`
+
+**1702.02181 (ICLR, listings) 59→0 errors.** `\lstset{…mathescape=true…}` makes
+`$…$` inside a listing escape to math. The paper writes
+`\lstinline{Record($\{l_1: b_1\}$)}` — escaped braces `\{`/`\}` *inside* the
+mathescape'd `$…$`. Perl's `listingsReadRawString` reads the body under the empty
+(verbatim) cattable but, on each mathescape `$`, swaps to the saved normal
+cattable (`$STATE = $SAVESTATE`) and back out on the closing `$`
+(`listings.sty.ltxml:282-293` — "does NOT balance `{`, but DOES within
+mathescape'd `$`"). So within the escape `{`/`}` balance (a `{` triggers
+`readBalanced`, consuming its `}`) and `\{`/`\}` are CS tokens. Rust's
+`listings_read_raw_string` tracked `inmath` but never switched the cattable, so
+inside the escape `\}` was still `\`+`}` (OTHER) and the `}` prematurely matched
+the `}` close delimiter → truncated body with an unclosed `$` → cascade of
+"close a group that switched to mode display_math" + "Missing $ closing display
+math" + malformed XMApp (29×+17×). **Fix:** capture the saved catcodes of the
+verbatim-tweaked chars in `\lx@lstinline` before going verbatim, pass them to
+`listings_read_raw_string`, and on each mathescape `$` restore them (entering) /
+re-apply OTHER (exiting) — mirroring Perl's cattable swap. 1702.02181 now 0 err /
+455 KB, structurally identical to Perl (listing 227=227, section 4=4, Math
+203=203, bibitem 42=42). Tests 1344/0. (Both engines still error on the same
+construct WITHOUT `mathescape` — that's shared, not a Rust-only gap.)
+
 ### Round-37 (2026-05-31): 2005.03740 FIXED — kernel `\geometry` stub broke an `\ifcsname geometry` guard
 
 **2005.03740 (amsart) 16→0 errors.** The engine (`latex_constructs.rs`)

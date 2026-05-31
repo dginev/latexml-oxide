@@ -150,7 +150,7 @@ fn tokenize_balanced(text: &str) -> Vec<Token> {
 /// Handles mathescape: within $...$, content is read with normal catcodes
 /// and preserved as TeX (backslashes intact). Outside math, CS tokens have \ stripped.
 /// Returns UnTeX'd string representation.
-fn listings_read_raw_string(until: Option<&Token>) -> String {
+fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catcode)]) -> String {
   let mathescape = lst_get_boolean("mathescape");
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
@@ -168,9 +168,16 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
         break;
       }
     }
-    // Check for mathescape $ toggle
+    // Check for mathescape $ toggle. Perl `listings.sty.ltxml:292-293`:
+    // entering math restores the saved (normal) catcode table, exiting
+    // returns to the verbatim (empty) one. This is what makes `{`/`}` balance
+    // and `\{`/`\}` read as CS tokens *only within* the mathescape'd `$…$`.
     if mathescape && token.text == pin!("$") {
       inmath = !inmath;
+      for &(c, cc) in saved_catcodes {
+        let target = if inmath { cc } else { Catcode::OTHER };
+        state::assign_catcode(c, target, Some(Scope::Local));
+      }
       tokens.push(T_OTHER!("$"));
       continue;
     }
@@ -1983,11 +1990,21 @@ LoadDefinitions!({
     // MODE/IN_MATH which is unwanted here (the `\lstinline` body lives
     // inside the surrounding paragraph mode and the post-frame `\(`
     // math switches must keep working).
+    // Capture the normal catcodes of the verbatim-tweaked chars BEFORE going
+    // verbatim, so a mathescape'd `$…$` can restore them mid-read (Perl
+    // `$STATE = $SAVESTATE`): within the math escape, `{`/`}` must balance and
+    // `\{`/`\}` must be CS tokens, not OTHER chars. Without this a `\}` inside
+    // `\lstinline{…$\{x\}$…}` prematurely matches the `}` close delimiter.
+    let verbatim_chars = ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'];
+    let saved_catcodes: Vec<(char, Catcode)> = verbatim_chars
+      .iter()
+      .map(|&c| (c, state::lookup_catcode(c).unwrap_or(Catcode::OTHER)))
+      .collect();
     state::push_frame();
-    for c in ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'] {
+    for c in verbatim_chars {
       state::assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
     }
-    let body = listings_read_raw_string(until.as_ref());
+    let body = listings_read_raw_string(until.as_ref(), &saved_catcodes);
     state::pop_frame()?;
     let mut result = Vec::new();
     if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
