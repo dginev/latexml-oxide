@@ -2410,6 +2410,21 @@ core mode-frame work — defer to a dedicated session (cf.
 TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
 divergence, but NOT the witness path (which is the SVG halign).
 
+### Round-37 (2026-05-31): 1909.03262 DEFERRED — `\*` invisible-times dropped between scripts
+
+**1909.03262 DEFERRED (double-subscript cluster — `\*` box vanishes).** `$M\underline{\nu}{_\beta\*_\alpha}M$`
+→ `Double subscript` (Perl=0). Reduces to `$a_\beta\*_\alpha$`. `\*` is
+`DefMath("\*", U+2062, MULOP, name="")` in BOTH engines (Rust plain_base.rs:119
+== Perl TeX.pool L7124). Isolated: `$a\*_\alpha$` and `$a_\beta\*y_\alpha$` are
+clean — only the `<scripted-atom> \* <subscript>` form fails. A box-list dump at
+`script_handler` start shows the `\*` box is PRESENT when a visible atom follows
+it but VANISHES when a subscript immediately follows a POST-subscript box: before
+`_\alpha` the list is `[a, _{\beta}]` (no `\*`), so `_\alpha` pops the same-cc
+`_{\beta}` → spurious double-subscript. The empty-name invisible-times MULOP gets
+dropped from the box list when wedged between a `\lx@post@subscript` and a
+trailing `_`/`^`. Root not pinned (deep math digestion); deferred. See
+[[project_double_subscript_root_causes]].
+
 ### Round-37 (2026-05-31): 1901.05713 FIXED — dep-scan now skips `\begin{comment}` blocks
 
 **1901.05713 FIXED (dep-scan `\begin{comment}` skip).** `Package cleveref Error:
