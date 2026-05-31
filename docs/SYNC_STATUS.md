@@ -2388,6 +2388,21 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1701.02312 FIXED — aa.cls `\tablefoot` para-in-table
+
+**1701.02312 FIXED (aa.cls `\tablefoot` multi-para note).** `ltx:para isn't
+allowed in ltx:table`. `aa_cls.rs` defined `\tablefoot{#1}` →
+`\par\textbf{Notes.} #1`; a blank line inside the A&A `\tablefoot{...}` note
+becomes a `\par` → an `ltx:para`, which `table_model` forbids (it allows
+`Block.model`/`Caption.class`/Meta but not the para-group). Worked for
+single-paragraph notes (the witnesses 2406.05044/14661), broke on this paper's
+multi-paragraph note. Perl (aa_support.sty.ltxml L229) renders `\tablefoot` as
+a plain `\footnote` → `ltx:note` (Meta.class, valid in a float, holds multiple
+paras). Fix: route `\tablefoot`/`\tablebib` through `\footnote` like Perl,
+keeping the visible "Notes."/"References." label *inside* the note (where block
+content is legal — surpass-Perl, matches real aa.cls L1651-1664). Rust 1→0,
+Perl=0, suite 53/0/0.
+
 ### Round-37 (2026-05-30): 1608.02559 FIXED — mhchem stub missing `\bond`
 
 **1608.02559 FIXED (mhchem stub `\bond`).** `\ce{H2O\bond{...}H2O}` (hydrogen
