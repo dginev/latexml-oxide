@@ -305,9 +305,20 @@ LoadDefinitions!({
   // `\@add@frontmatter` matches Perl's net effect — its after_digest_keywords
   // pushes the body into `frontmatter`{ltx:classification} — without the
   // inline detour that confuses the schema.
+  // NOTE: unlike Perl L154 we do NOT append `\let\endkeyword\relax
+  // \let\endkeywords\relax` here. Those `\let`s exist in Perl to neutralise the
+  // ENV ending after its `\begin{keywords}#1\end{keywords}` one-shot. We route
+  // through `\@add@frontmatter` (no env opened, see comment above), so the
+  // `\let`s are vestigial — and harmful: a later BARE `\keywords text` opens a
+  // classification whose auto-close hook is `\maybe@end@keywords`→`\endkeywords`,
+  // and a persisted `\endkeywords=\relax` made that close a no-op, so the
+  // classification stayed open and the following `\section` nested inside it
+  // ("ltx:section isn't allowed in ltx:classification"). This bites whenever a
+  // braced `\keywords{}` precedes a bare one — e.g. `\category{a}{b}{c}` expands
+  // to `…\keywords{#4}` (empty #4) THEN the document's own `\keywords …`.
+  // Witness 1601.07962 (sig-alternate, \category + bare \terms/\keywords).
   DefMacro!("\\keywords@onearg{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}\
-     \\let\\endkeyword\\relax\\let\\endkeywords\\relax");
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
   DefMacro!("\\maybe@end@keywords",
     "\\endkeywords\\let\\maybe@end@keywords\\relax");
   // Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run
