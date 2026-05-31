@@ -199,7 +199,24 @@ LoadDefinitions!({
     // Perl only declares `baseurl` Semiverbatim and errors on every
     // other `_`-containing value. Witness: 2602.11111 `linkcolor=
     // tab_blue` (4 errors → 0).
-    DefKeyVal!("Hyp", option, "Semiverbatim");
+    //
+    // EXCEPTION — the PDF *metadata-string* keys (pdftitle/pdfauthor/
+    // pdfsubject/pdfkeywords/pdflang) are DIGESTED later (hypersetup's
+    // `\@add@PDF@RDFa@triples`) and routinely carry inline math, e.g.
+    // `pdftitle={Contractions of $\Mznb$}` where `\Mznb` expands to
+    // `\overline{\mathrm M}_{0,n}`. Semiverbatim neutralizes `$` to OTHER,
+    // so that digest runs `\Mznb`'s `_{0,n}` in TEXT mode →
+    // "Script _ can only appear in math mode" (driver 1508.03915; Perl=0,
+    // since Perl reads the raw value with `$` live). Register these with the
+    // default value type (`""`) so `$…$` stays math; the key is still
+    // registered, so the Warn-suppression still holds.
+    if matches!(option,
+      "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdflang")
+    {
+      DefKeyVal!("Hyp", option, "");
+    } else {
+      DefKeyVal!("Hyp", option, "Semiverbatim");
+    }
   }
 
   // \hypersetup{keyvals} configures various parameters,

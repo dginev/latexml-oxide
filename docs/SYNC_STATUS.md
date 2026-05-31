@@ -2763,6 +2763,23 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1508.03915 FIXED 2026-05-31 (hyperref pdftitle Semiverbatim neutralizes `$`).**
+`Error:unexpected:_ Script _ can only appear in math mode` at "Anonymous String"
+(tex_math.rs), Perl=0. Driver: `\hypersetup{pdftitle={…of $\Mznb$ and…}}` where
+`\Mznb`=`\overline{\mathrm M}_{0,n}`. Rust registers every hyperref option as a
+`Hyp` keyval with value type **`Semiverbatim`** (a Rust-only divergence to
+neutralize `_` in identifier values like `linkcolor=tab_blue`, witness 2602.11111).
+But Semiverbatim ALSO neutralizes `$` to OTHER — so when `\hypersetup`'s metadata
+digest (`\@add@PDF@RDFa@triples`) later digests the pdftitle value, the `$…$` is no
+longer math, and `\Mznb`'s `_{0,n}` expands in TEXT mode → the error. Direct
+`pdftitle={$M_{0,n}$}` worked (no macro), only the macro-expanded `\overline…_…`
+tripped it. Perl reads the value with `$` live (math) so it's fine. Fix: register
+the PDF metadata-string keys (pdftitle/pdfauthor/pdfsubject/pdfkeywords/pdflang)
+with the DEFAULT value type (`""`) so `$…$` stays math; keep Semiverbatim for the
+color/option keys (so `linkcolor=tab_blue` still works). 1508.03915 Rust 1→0,
+Perl=0 (3.35 MB out, title matches Perl); `linkcolor=tab_blue` still 0 errors;
+suite 53/0/0. See [[project_hyperref_pdftitle_semiverbatim_math]].
+
 **1902.11165 FIXED 2026-05-31 (`\lxSVG@halign` early-`end_mode` double-pop).**
 `Error:unexpected:\halign Attempt to end mode restricted_horizontal in horizontal`,
 Perl=0. Driver: `\node {\begin{young}…\end{young}}` (a `\halign`-based Young tableau
