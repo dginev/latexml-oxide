@@ -2487,6 +2487,30 @@ sibling) instead of nesting the frame inside `<p>`. Keeps the theorem-in-mdframe
 surpass AND fixes nesting. Witness 1712.00062: Rust 1→0, 2.1 MB well-formed,
 nested logical-block depth 2; 2002.06879 (newmdenv) still clean. Suite 53/0/0.
 
+### Round-37 (2026-05-31): 1505.01267 DEFERRED — `ltx:XMApp` in `ltx:text` (context-dependent, build-phase)
+
+**1505.01267 DEFERRED (`ltx:XMApp isn't allowed in <ltx:text>`).** Perl=0,
+Rust 1 error at document.rs:2545 during the Building phase (no source locator —
+"Anonymous String"). Bisected to the `\be…\ee` block at L1652-1658
+(`\tex{…\left[…\cos\left(…\right)…\right]…\mbox{as $\hat{s}\to\infty$},}`,
+where the paper's `\newcommand{\tex}{\textstyle}` — NOT a clobber; `\tex` is
+undefined in both engines and the `\newcommand` succeeds). The block IN ISOLATION
+(preamble macros + just that block) is CLEAN — the error is **cumulative and
+non-monotonic**: body lines 1200-1658 error (2×), but 800-1658 (a superset)
+is clean. So it's an accumulated document-structure-state interaction (open
+element / mode balance), where an inline-math `ltx:XMApp` (from `$\hat{s}\to
+\infty$` inside the `\mbox`) lands in an `ltx:text` WITHOUT its enclosing
+`ltx:Math` wrapper. document.rs:2520-2534 already silently skips this "cascade
+rejection" for math LEAVES (`ltx:XMTok`/`ltx:XMArg`) in text containers
+(`ltx:p`/`ltx:text`/`ltx:emph`) — a documented Perl-parity move (`ltx:emph`
+added for math0010241). `ltx:XMApp` (a math *application*, not a leaf) is NOT in
+that list. **Open question for the fix:** is the XMApp-in-text a Perl-suppressed
+cascade (→ extend the skip set, Perl-faithful) or a genuine Rust math-parser
+structural divergence (→ the missing `ltx:Math` wrapper is the real bug)?
+Resolving it needs a Rust-vs-Perl intermediate-structure diff on the FULL
+document — a focused document-builder/math-parser session, not a loop iteration.
+Previously flagged "XMApp context-dependent" in the canvas notes.
+
 ### Round-37 (2026-05-31): 1909.03262 FIXED — `\*` invisible-times clobbered by latex.ltx raw-load
 
 **1909.03262 FIXED (`\*` = LaTeXML invisible-times, re-established post-dump).**
