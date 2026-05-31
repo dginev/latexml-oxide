@@ -15,6 +15,28 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **SESSION MILESTONE (2026-05-31, late): converr/canvas Rust-only pool exhausted of
+> single-root-cause wins.** This session landed **9 commits** (8 error→success + 1
+> consistency): 1801.08114, 1911.04650+1708.03079, 1709.06170, 1606.06730, 1702.02972,
+> 1904.00943, 1802.00756, 1907.04260, + `\providecommand` autoload-awareness (all suite
+> 1344/0, structural Perl-parity; individual FIXED entries below). The dominant pattern
+> was **a Rust-only definition/stub/autoload Perl lacks clobbering author/document logic**
+> (mathpartir `\infer`/`\inferrule`, hyperref `\color`, lmcs/ams_support, the `\align`
+> autoload vs `\newenvironment`) — fixed by guarding/removing to match Perl. Three were
+> general engine fixes (alignment `defined_as`, parbox `\@normalcr`, doc-builder svg
+> namespace recovery, `\newenvironment`/`\providecommand` autoload-awareness). **After
+> these, an exhaustive re-sweep** (high/medium/low-error converr buckets + a fast Rust-only
+> pre-filter over 324 papers classified by dominant error signature, then Perl-checked the
+> promising `undefined:\<cs>` / `&` / `\endgroup` ones) found **zero remaining clean
+> Rust-only wins**: every flagged paper is now SHARED (Perl also errors — missing
+> `.cls`/`.sty`, `\toprule` without booktabs, `$`/`}`-misdefined missing-package cascades,
+> malformed `_`/`^`-in-text) or **Rust-BETTER** (e.g. 1709.01485 R17/P18, 2006.16202 R2/P41,
+> 1911.02137 R2/P7). The genuine Rust-only residual is the small **mode-switch cluster**
+> ([[project_endgroup_modeswitch_frame_leak]]) whose remaining members are SHARED in this
+> sample — a focused instrumented pass, not a corpus sweep, is the next lever. Methodology
+> note: Perl can't write `--dest=/dev/null` (mkdirs `/dev`, fails silently as "0 errors") —
+> always give Perl a real dest file.
+
 > **⚠ METHODOLOGY CORRECTION (2026-05-29) — Perl-gating path.** For most of the
 > 2026-05-28/29 sessions, Perl parity runs used the WRONG `--path`
 > (`~/git/ar5iv-bindings`, the PARENT) instead of `~/git/ar5iv-bindings/bindings`.
