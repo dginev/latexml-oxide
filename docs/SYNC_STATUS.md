@@ -2419,6 +2419,23 @@ it suppressed the figure-panel float-promotion (minipage panels became
 `\usepackage[framemethod=TikZ]{mdframed}` + `\begin{figure}\begin{mdframed}…
 \end{mdframed}\caption{}\end{figure}`.
 
+**UPDATE (2026-05-31, attempt #2):** the `inline-logical-block` +
+`Para.class += inline-logical-block` fix was IMPLEMENTED end-to-end and makes
+**all three** mdframed witnesses pass purely at the validation layer — 1907.01596
+0, 1712.00062 (nested) 0, theorem-in-mdframed 0, full mdframed-in-figure 0 — by
+editing `LaTeXML.model` (the runtime model is the flattened `.model`, read by the
+`LoadModel` codegen; the `.rng`/`.rnc` are source-only, regenerated via
+`tools/compileschema.sh` but the codegen reads `.model`). **But it was REVERTED:**
+adding `inline-logical-block` to `Para.class` has a deeper coupling to the document
+builder's **figure-panel auto-promotion** — `aftergroup_test` regressed (a panel
+that was a `<logical-block>` became a `<figure>` with `ltx_figure_panel`). So the
+Para.class membership isn't purely a validation concern; the auto-wrap/promotion
+path keys on it. The real fix must DECOUPLE the figure-panel promotion heuristic
+from the Para.class change (likely in `document.rs` `maybe_promote`/auto-open),
+which is the genuinely careful work. Witnesses to gate any future attempt:
+1907.01596 (figure), 1712.00062 (nested), `aftergroup_test` + `figure_mixed_content_test`
+(panel promotion must NOT shift), full suite 1344/0.
+
 ### Round-37 (2026-05-31): 1509.04521 FIXED — SIunits must not define `\m` (clobbered user `\newcommand{\m}`)
 
 **1509.04521 (amsart, SIunits) 753→0 errors.** Rust's `siunits_sty.rs` called
