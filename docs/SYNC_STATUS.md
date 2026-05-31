@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1909.02323 FIXED — arydshln `\arrayrulecolor` must consume its color arg (order-fragile 0-arg)
+
+**1909.02323 (mnras, arydshln + colortbl) 17→0 errors.** Tables use
+`\arrayrulecolor{gray}\hline` between rows. The ar5iv arydshln binding declares
+`\arrayrulecolor` as **0-arg** (`DefMacro('\arrayrulecolor', Tokens())`), and
+`arydshln_sty.rs` mirrored it (`def_macro_noop("\\arrayrulecolor")`). That is
+order-fragile: it only behaves when colortbl (which declares the correct
+`\arrayrulecolor[]{}`, 1-arg) loads AFTER arydshln so its definition wins. In this
+paper the package dep graph pulls colortbl in BEFORE arydshln (mnras → … →
+colortbl at load-line 88, arydshln at 90), so arydshln's 0-arg form is the final
+meaning → `\arrayrulecolor{gray}` leaves `{gray}` behind as a cell → the following
+`\hline` (= `\noalign{…}`) fires "`\noalign cannot be used here`" + cascading
+`Extra alignment tab '&'` (17 total). Perl is clean because in Perl's load order
+colortbl wins (its `[]{}` consumes `{gray}`). **Fix:** declare arydshln's
+`\arrayrulecolor`/`\doublerulesepcolor` with colortbl's `[]{}` arity so the color
+arg is consumed regardless of load order — matching Perl's *effective* result.
+1909.02323 now 0 err / 360 KB, structurally matched to Perl (tabular 25=25, td
+218=218, tr 67=67, bibitem 174=174). Tests 1344/0. Same family as the siunitx/
+SIunits `\unit`/`\m` clobbers: a binding's arity/order assumption breaks under a
+real load order. (NB: the deeper question of why Rust loads colortbl before
+arydshln when source order is the reverse is a dep-graph ordering nuance, but the
+arity fix is correct on its own — the 0-arg form is a latent bug in both engines.)
+
 ### Round-37 (2026-05-31): 1907.01596 DEFERRED — mdframed `logical-block` not allowed in `figure` (schema trichotomy)
 
 **1907.01596 (book, mdframed) 8×`ltx:logical-block isn't allowed in <ltx:figure>`.**
