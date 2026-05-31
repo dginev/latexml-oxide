@@ -516,7 +516,18 @@ LoadDefinitions!({
   // Operators with power
   // Perl: \lx@physics@operatorP — operator with optional power and paren-delimited arg
 
-  DefPrimitive!("\\lx@physics@operatorP{}{}{}", sub[(cs, semantic, function)] {
+  // MUST be a DefMacro (expansion-time), not a DefPrimitive — see WISDOM #44's
+  // alignment-exception. This operator reads a delimited/optional argument
+  // (`[power]` via `read_optional`, `(arg)` via `phys_read_arg`); as a
+  // digestion-time primitive an enclosing eqnarray's column scan saw the `\\`
+  // inside that argument BEFORE this code consumed it — so `\tr\big[ A \\ B \big]`
+  // (the trace arg straddling an eqnarray row break) leaked its `\\` into the
+  // eqnarray → `\lx@begin@alignment … mode-switch to math due to
+  // \lx@begin@inline@math` + `equationgroup`-in-`XMath` cascade (witness
+  // 2003.02721, 13 errors, Perl 0). Perl's `\lx@physics@operatorP` is a DefMacro
+  // (expansion-time), so it grabs the argument first. Return the dual(s) instead
+  // of `gullet::unread`.
+  DefMacro!("\\lx@physics@operatorP{}{}{}", sub[(cs, semantic, function)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let function_tks = function;
@@ -529,20 +540,18 @@ LoadDefinitions!({
     })?;
 
     if arg.is_none() {
-      // No argument — put back the power and return bare operator
-      if let Some(ref pwr) = power {
-        let pwr_toks = pwr.unlist_ref();
-        let mut bracketed = Vec::with_capacity(pwr_toks.len() + 2);
-        bracketed.push(T_OTHER!("["));
-        bracketed.extend_from_slice(pwr_toks);
-        bracketed.push(T_OTHER!("]"));
-        gullet::unread(Tokens::new(bracketed));
-      }
+      // No argument — return bare operator followed by the (re-bracketed) power.
       let result = i_dual(
         &[("reversion", cs_tks)],
         cfunc, pfunc, vec![],
       )?;
-      gullet::unread(result);
+      let mut out: Vec<Token> = result.unlist();
+      if let Some(ref pwr) = power {
+        out.push(T_OTHER!("["));
+        out.extend_from_slice(pwr.unlist_ref());
+        out.push(T_OTHER!("]"));
+      }
+      Ok(Tokens::new(out))
     } else {
       let arg_tks = arg.unwrap();
       let a1 = Tokens::new(vec![i_arg("1")]);
@@ -585,7 +594,7 @@ LoadDefinitions!({
         &[("reversion", reversion)],
         content, presentation, all_args,
       )?;
-      gullet::unread(result);
+      Ok(result)
     }
   });
 

@@ -2556,23 +2556,31 @@ cannot write `--dest=/dev/null` — it mkdirs `/dev` and fails silently as "0 er
 give Perl a real dest file. An earlier read of "Perl tolerates undefined `\color`" was this
 artifact — Perl errors on undefined color commands exactly like Rust.)
 
-### Round-37 (2026-05-31): 2003.02721 DEFERRED — borderline `\tr\big[…\\…\big]` eqnarray, deferred mode-resolution divergence (mode-frame-leak cluster)
+### Round-37 (2026-05-31): 2003.02721 FIXED — `\lx@physics@operatorP` must be a DefMacro too (same alignment bug as `\mqty`)
 
-**2003.02721 (revtex4-1 + physics) rust=29 perl=0 — DEFERRED.** NOT the `\mqty` cluster
-(mis-grouped in an earlier note — this doc has no `\mqty`). All 10 located errors are at
-line 616, an `eqnarray` whose 3rd column is `\tr\big[ \overrightarrow{\mathcal T}\sb
-\left(\prod_{d_i="<"}…\right) \\ \nonumber && … \overleftarrow{\mathcal T}\sb
-\left(\prod_{d_i=">"}…\right)\rho_B(t_0) \big]` — i.e. a `\big[ … \big]` delimiter pair
-that STRADDLES the `\\` row break (open on row 1, close on row 2). The errors are
-`equationgroup`-in-`XMath` + `\lx@begin@alignment … mode-switch to math due to
-\lx@begin@inline@math` + `\lx@end@inline@math` "end mode math in math". Not minimally
-isolable: the eqnarray errors in BOTH engines when the doc is truncated right after it
-(`trunc@618`: R12 P4), but the FULL doc (with the following eqnarrays 625/634/643/… and
-text) is Perl 0 / Rust 29 — so Perl's borderline-eqnarray mode imbalance is RESOLVED by the
-following content's closures while Rust's leaks (the classic deferred/Building-phase
-mode-frame-leak — [[project_endgroup_modeswitch_frame_leak]]). Belongs to that cluster's
-needs-instrumentation residual; deferred. (Distinct from the `\mqty` member, which was a
-clean DefPrimitive→DefMacro fix.)
+**2003.02721 (revtex4-1 + physics) 29→0 errors — and it WAS the physics DefPrimitive
+cluster after all (an earlier note wrongly deferred it as a generic mode-frame-leak).** All
+located errors at line 616, an `eqnarray` whose 3rd column is `\tr\big[ … \\ … \big]` — the
+trace argument straddling the `\\` row break. **Minimal Rust-only reproducer:**
+`\begin{eqnarray} C &=& \tr\big[ A \\ \nonumber && B \big] \end{eqnarray}` → R13 P0
+(discriminators: `\big[…\\…\big]` without `\tr` is clean; `\operatorname{tr}\big[…]` is
+clean; `\tr A \\ B` without `\big` is clean — only the COMBINATION leaks). Root cause:
+`\tr`=`\trace`=`\lx@physics@operatorP{…}` — and `\lx@physics@operatorP` was a **DefPrimitive**
+(Perl's is a DefMacro). It does `phys_read_size` (consumes `\big`), then `read_optional`
+(reads `[ A \\ B \big ]` as the `[power]` optional — it only accepts `(` as its delimited
+arg), so the `[…]` argument with the `\\` inside is read at DIGESTION time, after the
+eqnarray's column scan already grabbed the `\\`. As a DefMacro it reads the optional at
+EXPANSION time. **This DISPROVES the earlier "the operator/quantity siblings have no `&`/`\\`,
+so they're safe as DefPrimitive" reasoning** — a delimited/optional arg CAN hold `\\` when it
+straddles an eqnarray row break (common in physics). **Fix:** convert `\lx@physics@operatorP`
+from `DefPrimitive!` to `DefMacro!` (return the dual(s) instead of `gullet::unread`), exactly
+as `\lx@physics@mat`. 2003.02721 now 0; section 7/7, equation 109/109, bibitem 18/18 (XMApp/
+XMTok ~4% lower from the genuinely-ambiguous `\tr\big[…]` misparse, error-free in both).
+Common operators (`\tr(A)`, `\sin(x)`, `\exp(y)`, `\det(M)`, `\tr\rho^2`) unaffected. Tests
+1344/0. **Follow-up:** the rest of the delimited-arg physics family (`\quantity`/`\qty`,
+`\lx@physics@fenced`, `\lx@physics@fencedII`, `\evaluated`, `\lx@physics@operator`,
+`\lx@physics@diff`) shares the SAME root and should also become DefMacro (now justified by
+TWO witnesses — converting next).
 
 ### Round-37 (2026-05-31): 2007.06211 FIXED — physics `\lx@physics@mat` must be a DefMacro (expansion-time), not a DefPrimitive (digestion-time)
 
