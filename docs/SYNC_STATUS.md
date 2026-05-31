@@ -2388,6 +2388,35 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 2004.07608 DEFERRED — `\parbox` inside elsarticle `keyword` (macro-wrapper vs Perl single DefConstructor)
+
+**2004.07608 (elsarticle) 30 errors, root-caused but deferred.** The `keyword`
+environment body contains `\parbox{\textwidth}{…}` (used to lay out the keyword
+block). elsart_support binds `\begin{keyword}`=`\begingroup\@keyword`,
+`\@keyword XUntil:\@keyword@cut` captures the body (XUntil **expands** while
+reading) and hands it to `\@add@frontmatter{ltx:classification}{…}`, which defers
+to `\@add@frontmatter@now` (`bounded => true`) → `DigestText!`. The cascade:
+`\lx@hidden@egroup Attempt to close boxing group; current frame is non-boxing
+(\begingroup)` → `\lx@parbox Attempt to end mode internal_vertical in
+internal_vertical` → `\@add@frontmatter@now Attempt to end mode text in
+restricted_horizontal` → 11×`^`/7×`_` "can only appear in math mode" (the
+frontmatter mode is left wrong, so later `$…$` never enters math) + 9×XMApp.
+Perl 0. **Root cause:** Rust's `\parbox` is a **DefMacro** that expands to
+`\lx@hidden@bgroup\hsize=#4\textwidth…\lx@parbox[…]{…}{…}\lx@hidden@egroup`
+(latex_constructs.rs:8809), whereas Perl's `\parbox` is a **single
+DefConstructor** (`[] [Dimension] OptionalUndigested {Dimension} VBoxContents`,
+LaTeX.pool.ltxml:4923) with no bgroup/hsize macro wrapper. In the normal document
+flow the wrapper balances fine (bare `\parbox`, `\title{\parbox…}`,
+`\begin{abstract}\parbox…` all R=0=P), but when the keyword XUntil captures the
+*macro-expanded* `\lx@hidden@bgroup…\lx@hidden@egroup` token sequence and
+`\@add@frontmatter@now` re-digests it via `DigestText!`, the hidden-group/hsize
+wrapper's mode+group frames desync. **Fix direction (not landed):** collapse
+`\parbox` into a single DefConstructor like Perl, moving the `\hsize` setup into
+its `before_digest`/`VBoxContents` — a broad change to a core, widely-used
+construct that needs full regression testing; deferred to avoid a rushed
+`\parbox` regression. Minimal repro: `\begin{keyword}\parbox{\textwidth}{foo}\end{keyword}`
+inside an elsarticle `frontmatter`.
+
 ### Round-37 (2026-05-31): 1904.07182 FIXED — phantom-in-group must float-as-space, not be discarded, in the script handler
 
 **1904.07182 (svjour3, physics `\ibraket`/`\mprescript`) 48→0 errors.** The
