@@ -2590,7 +2590,14 @@ once):** `\lx@physics@deriv` (`\dv`/`\pdv`), `\ket`/`\bra`/`\expectationvalue`/
 `\lx@physics@qm@product` (braket), `\paulimatrix`, `\diagonalmatrix`/`\antidiagonalmatrix`
 (`\dmat`/`\admat`), `\lx@physics@ReIm`, `\qqtext`, `\qcc` — all read delimited args and would
 manifest the same alignment bug if used inside an eqnarray with `\\`/`&` in the arg; convert
-when witnessed or in a dedicated verified pass.
+when witnessed or in a dedicated verified pass. **Tested 2026-05-31: the long tail does NOT
+manifest in practice** — `\dv{f}(a\\b)`/`\ket{a\\b}`/`\expval{a\\b}` are SHARED-malformed
+(both engines error: a `\\` in a derivative variable / braket is invalid), and `\pdv`/`\dmat`/
+`\Re` are clean. Only the operator family (`\tr\big[…\\…\big]` straddling an eqnarray row) and
+matrices (`\mqty(a&b\\c&d)`, legit matrix `&`/`\\`) carry LEGITIMATE separators in a delimited
+arg, which is why only they were Rust-only. So leaving the long tail as DefPrimitive is
+correct (no manifesting divergence); the converted family (`\qty`/`\eval` straddling now R0,
+Perl-better) was the justified scope.
 
 ### Round-37 (2026-05-31): 2007.06211 FIXED — physics `\lx@physics@mat` must be a DefMacro (expansion-time), not a DefPrimitive (digestion-time)
 
