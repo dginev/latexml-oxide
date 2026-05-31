@@ -2529,7 +2529,7 @@ delimiter catcode — demote ONLY for an EXPLICIT punctuation delimiter
 (`\url|…|`/`\path!…!`, `open` catcode OTHER), where inner braces are literal url
 content; do NOT demote for the space-form (delimiter is a LETTER), so the
 group-closing `}` keeps its END catcode (matching Perl, which never demotes
-`{`/`}` — semiverbatim SPECIALS = `^_~&\$#'`). Rust output now byte-identical to
+`{`/`}` — semiverbatim SPECIALS = `^_~&$#'`). Rust output now byte-identical to
 Perl (`<ref class="ltx_nolink ltx_url"/>ww.x.com/f.pdf`). Verified the 1906.08946
 SURPASS survives: synthetic `\path|{alice,bob,|`/`\path|carol}@springer.com|` →
 href `{alice,bob,` / `carol}@springer.com` (Perl OVERSHOOTS this — 1 error — so our
