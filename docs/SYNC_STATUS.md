@@ -2388,6 +2388,24 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1605.04883 DEFERRED + strict-gate sweep lesson (Perl Fatal ≠ Error)
+
+**1605.04883 NOT a Rust-only win — REVERTED.** Symptom was `\@accshift` undefined
+(tipa, t3enc.def). Investigation found: (1) **Perl FATALS** on this paper —
+`Fatal:timeout:pushback_limit … infinite loop?` at line 694 (the `\textpolhook`
+bibitem), producing NO output. The triage sweep counted only `^Error:` lines, so
+a Perl `^Fatal:` read as "perl=0" — a FALSE Rust-only flag. (2) Rust's tipa **T3
+`\lower@accent` box machinery corrupts content** anyway: `Rz\textpolhook{a}{\.{z}}ewski`
+("Rzążewski") renders as "RzΔ a <inline-block…>" (U+0394 + stray boxes). A
+top-level `\@accshift` default (faithful-equivalent to t3enc.def's upright
+branch) removes the *error* but leaves the *corrupted* output — masking, not
+fixing. Reverted; the real issue is the tipa T3 accent rendering (deep) and Perl
+can't convert this anyway. **Lesson (applied):** the strict-gate sweep must treat
+a Perl `^Fatal:` / non-zero exit / empty dest as "perl FAILED", not "perl=0".
+`tools`-side `sweep7.sh` updated to require `0 Error + 0 Fatal + non-empty p.xml`.
+Earlier sweep "Rust-only" hits gated only on `^Error:` may include Perl-fatal
+false positives — re-verify with the Fatal-aware gate before investing.
+
 ### Round-37 (2026-05-31): 1709.05523 FIXED — mhchem stub `\ce` ungrouped under sub/superscript
 
 **1709.05523 FIXED (mhchem stub `\ce` grouping).** `$E_\ce{M_{bcc}}$` → `Double
