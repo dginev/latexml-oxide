@@ -19,6 +19,12 @@ LoadDefinitions!({
   RequirePackage!("framed");
   RequirePackage!("authblk");
   RequirePackage!("caption");
+  // WileyMSP-template page-sets with geometry; papers use `\geometry{…}` in the
+  // preamble without an explicit `\usepackage{geometry}` (witness 2306.02129).
+  // Load it here (defining the no-op `\geometry`) instead of an engine-wide
+  // kernel stub, which would make `\ifcsname geometry\endcsname` falsely true
+  // for every document (broke 2005.03740). See latex_constructs.rs geometry note.
+  RequirePackage!("geometry");
 
   DefMacro!(T_CS!("\\begin{affiliations}"), None, "");
   DefMacro!(T_CS!("\\end{affiliations}"), None, "");

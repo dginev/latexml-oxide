@@ -3425,15 +3425,19 @@ LoadDefinitions!({
 
   def_primitive_noop("\\linespread{}")?;
 
-  // Some papers (e.g. WileyMSP-template) use `\geometry{…}` in the
-  // preamble without explicitly `\usepackage{geometry}`. Real LaTeX
-  // would complain but the convention is widely tolerated. Provide
-  // no-op stubs at the kernel level so we don't fire
-  // `Error:undefined:\geometry`. Our geometry_sty.rs binding redefines
-  // these as no-ops too — both paths reach the same outcome.
-  // Witness: 2306.02129 (Wiley template).
-  def_macro_noop("\\geometry{}")?;
-  def_macro_noop("\\newgeometry{}")?;
+  // NOTE: do NOT define `\geometry`/`\newgeometry` at the kernel level.
+  // Perl only defines them when geometry.sty loads (geometry.sty.ltxml), so
+  // `\ifcsname geometry\endcsname` is FALSE until then — a guard documents
+  // legitimately use to detect whether the geometry package is loaded.
+  // Defining `\geometry` unconditionally here made that guard always true:
+  // witness 2005.03740, whose definitions.tex does
+  // `\ifcsname geometry\endcsname \ingfxfiletrue \else \ingfxfilefalse
+  // \usepackage{geometry}\fi` and then defines all its theorem environments
+  // only in the \else branch — the false-positive guard skipped every
+  // `\newtheorem` → cascade of "environment {theorem} is not defined" (Perl 0).
+  // Classes/packages that genuinely page-set with geometry pull it in via
+  // `\RequirePackage{geometry}` (geometry_sty.rs provides the no-op `\geometry`),
+  // including the WileyMSP-template binding (the prior witness 2306.02129).
 
   // ?
   def_macro_noop("\\@noligs")?;

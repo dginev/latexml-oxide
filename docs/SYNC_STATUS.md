@@ -2388,6 +2388,27 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 2005.03740 FIXED — kernel `\geometry` stub broke an `\ifcsname geometry` guard
+
+**2005.03740 (amsart) 16→0 errors.** The engine (`latex_constructs.rs`)
+unconditionally defined `\geometry`/`\newgeometry` as no-op stubs (added for a
+Wiley template, 2306.02129, that uses `\geometry` without `\usepackage{geometry}`).
+Perl only defines `\geometry` when geometry.sty loads, so `\ifcsname geometry
+\endcsname` is FALSE until then. The paper's definitions.tex keys on exactly that:
+`\ifcsname geometry\endcsname \ingfxfiletrue \else \ingfxfilefalse
+\usepackage{geometry}\fi`, then defines ALL its theorem/figure environments only
+in the `\else` (not-in-graphics-file) branch. The kernel stub made the guard a
+false positive → `\ingfxfiletrue` → every `\newtheorem`/`\newenvironment` skipped
+→ cascade of "environment {theorem}/{lemma}/{remark}/… is not defined" + undefined
+`\beginefigure` (Perl 0). **Fix:** remove the kernel `\geometry`/`\newgeometry`
+stubs (Perl-faithful — they live in `geometry_sty.rs`, loaded only with the
+package); move the Wiley template's geometry need to its binding
+(`wileymsp_template_cls.rs` now `RequirePackage!("geometry")`, mirroring the real
+class). 2005.03740 now 0 errors / 1.18 MB; theorem elements match Perl exactly
+(19 total: lemma 6, theorem 5, remark 4, proposition 3, definition 1). Tests
+1344/0. Same family as [[project_macro_clobber_author_redefine]] — a Rust-only
+unconditional definition that flips a document's `\ifcsname`/`\ifdefined` guard.
+
 ### Round-37 (2026-05-31): 1810.05151 FIXED — SciPost binding deleted, raw-load like Perl (sibling of the ifacconf fix)
 
 **1810.05151 (`SciPostMod.cls`) 2→0 errors.** Same OmniBus-stub-divergence
