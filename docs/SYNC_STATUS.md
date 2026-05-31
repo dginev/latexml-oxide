@@ -2388,6 +2388,25 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1802.00756 DEFERRED — math-ambiguity explosion on comma-separated sequents (deep, math-parser lane)
+
+**1802.00756 (LNCS proof-theory) ~18 `document:open_element_internal` + a
+`Fatal:timeout`.** NOT a quick fix — a genuine math-grammar ambiguity explosion.
+The paper has sequents like `\sequent{\Gamma, t' < t, \pred{N}{t'}, \pred{N}{t},
+…}{\Delta}` (= `… \Rightarrow \Delta`) where `\pred{N}{t'}` →
+`\operatorname{\mathsf{N}}{t'}` = an OPFUNCTION juxtaposed with its arg (no
+parens). A long comma-separated list of such juxtaposed terms + relations (`<`,
+`=`) + the `\Rightarrow` enumerates **5000 parses** (the cap), `0 semantic /
+0 unique`, ~0.8–1.3 s each — 63 of them → ~60 s → `Fatal:timeout`. The `0 unique`
+hard-failures then fall back and emit elements whose namespace can't be created
+(`open_element_internal failed to create namespace`). Standalone repro: a single
+such sequent enumerates 649 parses / 1 unique in 459 ms (Perl 0) — the explosion
+scales with list length. Root cause is in the Marpa grammar/semantics
+(comma-lists + OPFUNCTION juxtaposition), the math-parser collaborator's lane;
+fix per [[feedback_ambiguity_explosion_is_a_flaw]] is grammar tightening + early
+action pruning, not a cap bump. Deferred. Companion to the open VERTBAR-modulus
+pattern in `MATH_AMBIGUITY_AUDIT_2026-05-21.md`.
+
 ### Round-37 (2026-05-31): 1702.02181 FIXED — listings `mathescape` must restore normal catcodes inside `$…$`
 
 **1702.02181 (ICLR, listings) 59→0 errors.** `\lstset{…mathescape=true…}` makes
