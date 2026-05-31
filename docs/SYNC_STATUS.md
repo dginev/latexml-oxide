@@ -2388,6 +2388,17 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1604.06057 FIXED — jmlr2e stub missing `\nipsfinalcopy`
+
+**1604.06057 FIXED (jmlr2e contrib-stub completeness).** `\nipsfinalcopy`
+(main.tex L52, camera-ready toggle) was undefined. The `jmlr2e_sty.rs` contrib
+stub (a deliberate content-preserving interception of the paper's jmlr2e.sty —
+preserves heading/editor/address metadata as `ltx:note`) omitted jmlr2e.sty
+L33-36's `\newif\ifnipsfinal\nipsfinalfalse\def\nipsfinalcopy{\nipsfinaltrue}`.
+Added it verbatim (the gated formatting is layout-only, moot in XML). Perl
+raw-loads jmlr2e.sty and is clean; the stub now mirrors that def. Rust 1→0,
+Perl=0, suite 53/0/0.
+
 ### Round-37 (2026-05-30): 1508.03915 DEFERRED — xy-pic `\ar[dir]_{}/^{}` decoration
 
 **1508.03915 DEFERRED (xy-pic cluster).** `\xymatrix{A \ar[rr]^{f} \ar[rd]_{g}…}`

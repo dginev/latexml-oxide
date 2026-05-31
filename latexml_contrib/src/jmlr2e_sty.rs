@@ -75,6 +75,17 @@ LoadDefinitions!({
   DefConstructor!("\\acks{}",
     "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>");
 
+  // jmlr2e.sty L33-36: the camera-ready toggle.
+  //   \newif\ifnipsfinal \nipsfinalfalse
+  //   \def\nipsfinalcopy{\nipsfinaltrue}
+  // Papers uncomment `\nipsfinalcopy` for the camera-ready build (it gates
+  // submission-notice / page-number formatting in the raw .sty). Our binding
+  // intercepts jmlr2e.sty so the raw def never runs; Perl raw-loads it and is
+  // clean. Mirror the real definitions — the gated formatting is layout-only
+  // (moot in our XML paradigm), so the conditional just needs to exist.
+  // Witness 1604.06057 (`\nipsfinalcopy` in main.tex).
+  RawTeX!(r"\newif\ifnipsfinal\nipsfinalfalse\def\nipsfinalcopy{\nipsfinaltrue}");
+
   // {keywords} env — frontmatter list, render as classification block.
   DefEnvironment!(
     "{keywords}",
