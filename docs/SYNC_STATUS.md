@@ -2763,6 +2763,31 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1810.05151 DIAGNOSED + DEFERRED 2026-05-31 (SciPost stub prefix-match force-loads physics).**
+Rust 2× `Error:expected:{ Missing sub/superscript argument` (tex_math.rs:185),
+Perl=0. **Root cause (fully traced):** the doc uses `\documentclass[]{SciPostMod}`
+(an author-modified SciPost class that does NOT `\RequirePackage{physics}`) plus
+`\usepackage{mymacros}` which `\newcommand{\op}{\mathcal{O}}`. Rust's class
+resolver prefix-matches `"SciPostMod".starts_with("SciPost")` → applies the
+`latexml_contrib/src/scipost_cls.rs` binding (which Perl LACKS), and that stub
+does `RequirePackage!("physics")`. physics `Let('\op','\outerproduct')`, so
+mymacros' `\newcommand{\op}` is ignored (`Info:ignore:\op`). `\op_+(t)` then
+invokes physics' brace-arg `\op` without a brace → the `_` reaches the script
+reader with an empty argument → the error. Perl has NO SciPost binding → raw-loads
+SciPostMod.cls (no physics) → `\op`=`\mathcal{O}` → clean. **The clobber itself is
+FAITHFUL when physics loads** (verified: `\usepackage{physics}`+user `\op`+`$\op_+$`
+errors 2 in BOTH engines; Perl physics.sty.ltxml:580 `Let('\op','\outerproduct')`).
+So the ONLY divergence is physics being force-loaded for a class that doesn't ask
+for it. **Why deferred:** the fix is in delicate class-resolution code
+(content.rs prefix-match / `will_fallback` / INCLUDE_CLASSES) — Perl's prefix-match
+pool is Perl's bindings, but Rust's pool includes Rust-only CONTRIB stubs that Perl
+can't prefix-match, so the principled fix is to exclude contrib-only stubs from
+PREFIX-matching (keep them for EXACT match) OR prefer raw-loading the author's
+shipped `.cls`. Both risk many SciPost witnesses (2104.02751, 2212.07113,
+2308.16304, 1606.01173, 2407.00516) and prefix-match witnesses (IEEEtranTCOM,
+mn2ebis, SciPostMod) and need a sandbox sweep to validate — **task #273 territory**.
+See [[project_scipost_stub_prefix_physics_clobber]].
+
 **1906.11496 FIXED 2026-05-31 (gather `\lefteqn` / ams `\label` redirect).**
 Rust's `ams_rearrangeable_bindings` (amsmath_sty.rs) redirected `\label` ->
 `\lx@eqnarray@label` (a `\lx@hidden@noalign` wrapper) for ALL ams rearrangeable
