@@ -22,6 +22,15 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("amsthm");
+  // lmcs.cls L33 `\LoadClass[11pt,reqno]{amsart}`. Perl ships no lmcs binding,
+  // so it loads OmniBus AND dependency-scans the raw lmcs.cls, which loads
+  // amsart.cls.ltxml → ams_support.sty.ltxml. That is where the amsart-family
+  // frontmatter macros (`\urladdr`, `\address`, `\email`, `\curraddr`) come
+  // from. Without it, `\urladdr{\url{…}}` was undefined (witness 1709.06170,
+  // RUST 1 → 0; Perl loads it via the amsart dep). ams_support is frontmatter
+  // only — it does not pre-declare theorem envs, so the OmniBus lazy
+  // `\begin{thm}` autoloads that 1607.01886 relies on are untouched.
+  RequirePackage!("ams_support");
   RequirePackage!("hyperref");
   // lmcs.cls L24 `\usepackage{helvet,cclicenses}` pulls graphicx in
   // transitively: cclicenses → `\RequirePackage{rotating}` (cclicenses.sty

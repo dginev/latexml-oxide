@@ -2388,6 +2388,26 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1709.06170 FIXED — lmcs OmniBus stub must load `ams_support` (amsart frontmatter → `\urladdr`)
+
+**1709.06170 (`\documentclass{lmcs}`) 1→0 errors.** `\urladdr{\url{…}}` undefined.
+`lmcs.cls` (paper-shipped) does `\LoadClass[11pt,reqno]{amsart}`. Perl ships no lmcs
+binding, so it loads **OmniBus** as the base AND dependency-scans the raw lmcs.cls
+(verbose: "Loading dependencies for lmcs.cls: amsart,helvet,cclicenses,enumitem,
+microtype,tikz,color,hyperref,etoolbox"), which loads `amsart.cls.ltxml` →
+`ams_support.sty.ltxml` — the source of the amsart-family frontmatter macros
+(`\urladdr`, `\address`, `\email`, `\curraddr`). Our `lmcs_cls.rs` OmniBus stub
+manually approximated the dep list but OMITTED amsart/ams_support, so `\urladdr` was
+undefined. **Fix:** add `RequirePackage!("ams_support")` to the stub (it is exactly
+what amsart pulls in for frontmatter; theorem-safe — no theorem-env pre-declaration,
+so the OmniBus lazy `\begin{thm}` autoloads that 1607.01886 relies on are untouched).
+1709.06170 now 0 err; Perl 0; structure identical (section 9/9, para 394/394, Math
+3075/3075, theorem 106/106, bibitem 9/9, contact 3/3; `\urladdr`→`<ltx:contact
+role="url">` matches Perl). No regression: 1607.01886 (theorems) and 1607.04128
+(graphicx) stay 0. Tests 1344/0. Also re-verified 1708.03079 (19×`\noalign cannot be
+used here` → 0) is fixed by the `defined_as` change above (Perl 0; tr 124/124, td
+870/870, Math 477/477).
+
 ### Round-37 (2026-05-31): 1911.04650 FIXED — alignment column-scan must detect `\noalign`/`\omit` by MEANING (`defined_as`), not name
 
 **1911.04650 (acmart + `pseudo` expl3 package) 11→0 errors.** 6×`Extra alignment
