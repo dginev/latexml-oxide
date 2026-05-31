@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1904.00943 FIXED — `\parbox` must restore `\\` to stable `\@normalcr`, not shortstack-pollutable `\lx@newline`
+
+**1904.00943 (article, `\shortstack`+`\parbox`+`itemize`) 7→0 errors.** `\\ Attempt to
+close a group that switched to mode internal_vertical … due to \begin{itemize}` + figure/
+group close cascade. Trigger: `\fcolorbox{…}{…}{\shortstack[l]{… \parbox{40em}{…
+\begin{itemize}\item … \\ … \end{itemize}}}}` — a `\\` *inside* an itemize item, where the
+itemize is in a `\parbox` in a `\shortstack`. Root cause: Rust's `\shortstack` rebinds BOTH
+`\\` AND `\lx@newline` to `\@shortstack@cr` (Perl rebinds only `\\`). The `\parbox`
+`before_digest` reset `\\`→`\lx@newline` to get the parbox newline — but shortstack had
+rebound the `\lx@newline` CS to `\@shortstack@cr`, so inside the parbox `\\` resolved to the
+shortstack row-break, which then tried to close the surrounding alignment from inside the
+nested itemize. Perl's `\@parboxrestore` does `\let\\\@normalcr` (latex_dump L2310): it
+restores `\\` to the **stable** newline alias `\@normalcr`, which holds the original newline
+constructor directly and is immune to shortstack's CS rebinding. **Fix:** change the
+`\lx@parbox` `before_digest` from `Let!("\\\\","\\lx@newline")` to
+`Let!("\\\\","\\@normalcr")` (`latex_constructs.rs`). In the non-shortstack case `\@normalcr`
+equals `\lx@newline`'s original meaning, so behavior is unchanged. Isolated the layered
+requirement first (shortstack>parbox>itemize-with-`\\` → R5 P0; parbox>itemize alone → clean;
+shortstack>itemize directly → shared error). 1904.00943 now 0; Perl 0; structure identical
+(section 6/6, para 200/200, Math 1564/1564, itemize 22/22, item 56/56, inline-block 3/3,
+bibitem 28/28). Tests 1344/0. Resolves one member of the `project_endgroup_modeswitch_frame_leak`
+cluster (the boxing/parbox variant).
+
 ### Round-37 (2026-05-31): 1702.02972 FIXED — mathpartir `\inferrule` must convert `\\` premise-separators to `\quad` (not leak into `\frac`)
 
 **1702.02972 (llncs + mathpartir) 13→0 errors.** `\lx@end@inline@math Attempt to end mode

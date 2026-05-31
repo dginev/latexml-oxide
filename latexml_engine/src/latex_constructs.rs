@@ -8883,7 +8883,18 @@ LoadDefinitions!({
     },
     mode => "internal_vertical",
     before_digest => {
-      Let!("\\\\", "\\lx@newline");
+      // Perl `\@parboxrestore` does `\let\\\@normalcr` (latex_dump L2310): a parbox
+      // restores `\\` to the STABLE newline alias, not to the `\lx@newline` CS.
+      // `\@normalcr` holds the original newline constructor directly, so it is
+      // immune to `\shortstack`'s `\let\lx@newline\@shortstack@cr` rebinding. Using
+      // `\lx@newline` here meant that inside `\shortstack{…\parbox{…}{… \\ …}…}`
+      // the parbox's `\\` resolved to the shortstack row-break `\@shortstack@cr`,
+      // which then tried to close the surrounding alignment from inside a nested
+      // `itemize` → "Attempt to close a group that switched to mode … due to
+      // \begin{itemize}" (witness 1904.00943). In the non-shortstack case
+      // `\@normalcr` equals `\lx@newline`'s original meaning, so behavior is
+      // unchanged.
+      Let!("\\\\", "\\@normalcr");
     }
   );
   def_macro_noop("\\@parboxrestore")?;
