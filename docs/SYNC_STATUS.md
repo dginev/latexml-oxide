@@ -2388,6 +2388,32 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1910.10674 DEFERRED — physics `\mqty(…)` (paren) inside an amsmath alignment env
+
+**1910.10674 (JHEP, physics) 32 errors, root-caused but deferred.** The paper has
+`\begin{align}\mqty(x & y & … \\ …)\qc & \mqty{…}\end{align}` — physics' `\mqty(…)`
+(paren-delimited matrix quantity) inside an `align`. Cascade:
+`\lx@begin@alignment Attempt to close a group that switched to mode
+restricted_horizontal due to \lx@begin@inmath@text` → `\lx@end@inmath@text`/
+`\lx@end@inline@math`/`\end@amsalign`/`\lx@end@gen@matrix`/`\right` unwinding +
+8×`_`. Perl 0. **Precise trigger (minimal):** `\begin{align}\mqty(x & y \\ v &
+u)\end{align}` → R=11, but ALL of these are R=0=P: the same matrix in `equation`
+/`$…$`/`$$…$$`/`\[ \]` (non-alignment displays); the **brace** form `\mqty{…}` in
+`align`; and plain `\left(\begin{matrix}…\end{matrix}\right)` in `align`. So it is
+specifically: `\mqty(…)` → an **XMDual** whose presentation is `\left( <matrix>
+\right)` (the paren form adds the fences; brace form has none), digested inside an
+amsmath **alignment** env (`align`/`gather`, which process cells by "sneaking `$`
+in" — `\lx@dollar@in@mathmode` toggling `\lx@begin@inmath@text` keyed by
+`MATH_ALIGN_$_BEGUN` per boxing level, tex_math.rs:529-562). The nested
+matrix-XMDual's `\left(…\right)` shifts the boxing level so the outer alignment's
+`$`-sneak toggle opens an `\lx@begin@inmath@text` frame that the inner
+`\lx@begin@alignment` then can't match → mode-frame desync. **Fix direction (not
+landed):** the `MATH_ALIGN_$_BEGUN`/inmath@text level bookkeeping must be robust to
+a nested alignment-bearing XMDual (physics `\mqty(…)`); a risky change to core
+amsmath `$`-sneaking + XMDual digestion, deferred for careful work. Related to the
+mode-frame cluster ([[project_lxsvg_halign_double_endmode]],
+[[project_endgroup_modeswitch_frame_leak]]).
+
 ### Round-37 (2026-05-31): 1610.06392 FIXED — siunitx must not clobber the `units` package's `\unit`
 
 **1610.06392 (revtex4-1, units + siunitx) 3→0 errors.** The paper loads `units`
