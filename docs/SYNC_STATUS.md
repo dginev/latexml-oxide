@@ -2388,6 +2388,25 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1604.00855 FIXED — elsart `\keyword` trailing-`}` past `\vskip`
+
+**1604.00855 FIXED (elsart `\keyword` readBalanced parity).** An abstract ending
+`\keyword{…} \vskip 0.5\baselineskip}` (a stray, orphaned `}` separated from the
+keyword arg by a `\vskip`) errored `} Attempt to close a group that switched to
+mode internal_vertical … due to \begin{abstract}` — the stray brace reached the
+abstract's mode-switch frame. (The bare standard-`abstract`+stray-`}` case errors
+in BOTH engines, so this is NOT a generic mode-frame leniency gap — it is
+elsart-specific.) Perl's `\keyword` (elsart_support_core L138-140) reads its arg
+via `$gullet->readBalanced`, which consumes everything up to the next *unmatched*
+`}`, absorbing the orphan as its terminator — regardless of intervening `\vskip`
+etc. Rust used a strict `{}` read + a gobble that only skipped spaces/`\par`s, so
+it stopped at `\vskip` and leaked the `}`. Fix: extend `\lx@elsart@gobble@optbrace`
+to walk forward tracking brace depth, dropping the unmatched stray `}` (re-injecting
+all other tokens — content-preserving), bounded at `\end`/a token cap so the common
+`\keyword{Higgs; Boson}\end{abstract}` form is untouched (and no read-to-EOF OOM).
+`elsart_keyword_brace_form_test` still passes. Resolves the elsart-`\keyword`
+variant of [[project_endgroup_modeswitch_frame_leak]]. Rust 1→0, Perl=0, suite 53/0/0.
+
 ### Round-37 (2026-05-30): 1701.02312 FIXED — aa.cls `\tablefoot` para-in-table
 
 **1701.02312 FIXED (aa.cls `\tablefoot` multi-para note).** `ltx:para isn't

@@ -313,25 +313,55 @@ LoadDefinitions!({
   // (and `\keyword{…}<blank>\end{abstract}`) is left byte-for-byte untouched.
   // Bounded: stops at the first non-space, non-`\par` token; never crosses
   // `\end`.
+  // Perl's `readBalanced` (L140) reads tokens up to the next UNMATCHED `}`
+  // (tracking brace depth), absorbing that stray `}` as its terminator —
+  // regardless of what non-brace material (spaces, `\par`, `\vskip <dimen>`,
+  // `\noindent`, …) sits between `\keyword{…}` and the orphaned brace. The
+  // earlier version only skipped spaces/`\par`s, so it stopped at the first
+  // real token (e.g. `\vskip`) and left the stray `}` to hit the abstract's
+  // mode-switch frame (`ltx:para`-free `}` → "close a group that switched to
+  // mode internal_vertical"; witness 1604.00855:
+  // `\keyword{…} \vskip 0.5\baselineskip}`).
+  //
+  // Walk forward tracking brace depth: an unmatched `}` (depth 0) is the
+  // stray terminator — DROP it, re-inject everything else (so the `\vskip`
+  // etc. still render, content-preserving). Bound the scan at `\end` (depth
+  // 0) — the env terminator — and a hard token cap, so the common
+  // `\keyword{Higgs; Boson}\end{abstract}` form (no stray `}`) reads one
+  // token (`\end`), restores it, and is left untouched (this is also what
+  // averts the read-to-EOF OOM a naive `readBalanced` hit). Witnesses:
+  // 1604.00855, 1601.01227, 1705.01354, 1710.03688, hep-ph0702114.
   DefPrimitive!("\\lx@elsart@gobble@optbrace", {
     let mut skipped: Vec<Token> = Vec::new();
-    let mut found_brace = false;
+    let mut depth: i32 = 0;
+    let mut count: usize = 0;
     while let Some(tok) = gullet::read_token()? {
+      count += 1;
+      if count > 4096 {
+        skipped.push(tok); // safety cap: restore everything, gobble nothing
+        break;
+      }
       let cc = tok.get_catcode();
-      if cc == Catcode::END {
-        found_brace = true; // gobble it (absorbed, like Perl's readBalanced)
+      if cc == Catcode::BEGIN {
+        depth += 1;
+        skipped.push(tok);
+      } else if cc == Catcode::END {
+        if depth == 0 {
+          break; // unmatched stray `}` — drop it (absorbed, like readBalanced)
+        }
+        depth -= 1;
+        skipped.push(tok);
+      } else if depth == 0 && tok == T_CS!("\\end") {
+        skipped.push(tok); // env end reached before any stray `}` — restore all
         break;
-      } else if cc == Catcode::SPACE || tok == T_CS!("\\par") {
-        skipped.push(tok); // tentatively skip; may be restored below
       } else {
-        skipped.push(tok); // not a brace: restore everything consumed
-        break;
+        skipped.push(tok);
       }
     }
-    if !found_brace {
-      for tok in skipped.into_iter().rev() {
-        gullet::unread_one(tok);
-      }
+    // Re-inject everything we buffered, in order. The only token ever removed
+    // is the stray `}` (which is never pushed onto `skipped`).
+    for tok in skipped.into_iter().rev() {
+      gullet::unread_one(tok);
     }
   });
   DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut\\lx@elsart@gobble@optbrace");
