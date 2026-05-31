@@ -50,12 +50,18 @@ LoadDefinitions!({
   DefMacro!("\\ead Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
   DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
 
-  // Dates — Perl L82-86
-  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
-  DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised]{#1}");
-  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
-  DefMacro!("\\published{}", "\\@add@frontmatter{ltx:date}[role=published]{#1}");
-  DefMacro!("\\online{}", "\\@add@frontmatter{ltx:date}[role=online]{#1}");
+  // NOTE: NO `\received`/`\revised`/`\accepted`/`\published`/`\online` date
+  // macros here. The prior port added them citing "Perl L82-86", but those Perl
+  // lines are the journal-NAME list, not date macros — Perl's
+  // iopart_support.sty.ltxml defines none of these (and the real iopart.cls does
+  // not either; `\received{…}` errors "undefined" in Perl). Defining them was a
+  // non-faithful Rust-only addition that HIJACKED author redefinitions: a paper
+  // that does `\newcommand{\revised}[1]{\textcolor{black}{#1}}` (a common
+  // draft-markup macro) and then `\revised{…long body…}` had its `\newcommand`
+  // silently fail against our pre-defined `\revised`, routing whole paragraphs
+  // (and their display math) into `ltx:date` → "ltx:equation isn't allowed in
+  // <ltx:date>". Leaving them undefined matches Perl: the `\newcommand` succeeds
+  // and the body stays in the body. Witnesses 1608.01416, 1705.08023.
 
   // Contact — Perl L57-59
   Let!("\\mailto", "\\ead");
