@@ -2662,6 +2662,19 @@ cascade (→ extend the skip set, Perl-faithful) or a genuine Rust math-parser
 structural divergence (→ the missing `ltx:Math` wrapper is the real bug)?
 Resolving it needs a Rust-vs-Perl intermediate-structure diff on the FULL
 document — a focused document-builder/math-parser session, not a loop iteration.
+
+**Re-confirmed 2026-05-31 (deepened):** non-isolability is bidirectional — pulling
+the trigger block out into a fresh doc with the macro defs makes PERL error (4×,
+from the truncated/incomplete math) while Rust stays clean, i.e. the gate itself
+flips out of context. Deleting the document middle (keep L1-A + L1640-1655) gives
+3/0/3/… as A varies — pure truncation artifacts (the body has environments spanning
+the middle). So NO minimal repro exists; the error is a true whole-document
+construction-state interaction. Ruled out: `\textstyle` (= the paper's `\tex`) is
+byte-parallel between engines (math_common/TeX_Math); the insertion backtrace is the
+GENERIC `latex_constructs` constructor→`document.rs:934`→`open` path, not a specific
+math op. The fix must NOT be "extend the document.rs:2525 skip-set to XMApp" — that
+hides the symptom (Perl emits ZERO errors here, so it never even reaches the
+cascade; the real divergence is the missing `ltx:Math` wrapper during the build).
 Previously flagged "XMApp context-dependent" in the canvas notes.
 
 ### Round-37 (2026-05-31): 1503.07894 FIXED — url space-form `{\url www...}` swallowed group-close `}`
