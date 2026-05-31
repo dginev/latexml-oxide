@@ -2409,6 +2409,13 @@ core mode-frame work — defer to a dedicated session (cf.
 `\halign` (tex_tables.rs) uses `begin_mode("restricted_horizontal")` where Perl
 TeX.pool L3188 uses a plain `$stomach->bgroup`/`egroup` — a faithfulness
 divergence, but NOT the witness path (which is the SVG halign).
+**Update 2026-05-31:** the 1902.11165 paper itself uses plain `\begin{young}…
+\end{young}` (25 of them, NOT in tikz nodes) — each block is CLEAN in isolation,
+and a `head -n N` bisection stays clean through line 2070 (all young blocks) but
+the FULL document errors at finalization. So here the mode-frame leak is SILENT
+during digestion and only surfaces when `\end{document}` unwinds the mode stack —
+a harder-to-localize variant of the same `enter_horizontal` non-scoped-`MODE`
+root cause (cf. the cumulative finalization-time class of 1505.01267).
 
 ### Round-37 (2026-05-31): 1804.09301 DEFERRED — dep-scan over-anticipates `\if`-guarded `\usepackage{xcolor}`
 
