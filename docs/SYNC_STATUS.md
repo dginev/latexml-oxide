@@ -2532,7 +2532,8 @@ cascaded. Perl's `\begin{itemize}` forces vmode first → 0. **Fix:** `\tablenot
 structure identical to Perl (section 5/5, Math 741/741, td 1469/1469, itemize 3/3, item
 12/12, bibitem 62/62, table 2/2). Tests 1344/0. **General fix** — any threeparttable
 `tablenotes` reached in horizontal mode (common: notes after a tabular in a float/journal
-style). Found by Perl-checking the rfilter's mode-error signatures — the converr pool was NOT
+style). **Bonus beneficiary: 1810.00023** (`\end{threeparttable}` cascade) **19→0** with the
+same fix (now Rust 0 / Perl 3 — Rust-better). Found by Perl-checking the rfilter's mode-error signatures — the converr pool was NOT
 fully exhausted (the earlier "exhausted" note covered `\endgroup`/`&`/XMApp but not
 `\end{landscape}`/`\end{table}` mode-close errors). Diagnostic trap re-hit: a leftover `bis.tex`
 bisection artifact in the workdir was picked by `grep -rl documentclass | head -1` — ALWAYS
