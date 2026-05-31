@@ -2577,10 +2577,20 @@ from `DefPrimitive!` to `DefMacro!` (return the dual(s) instead of `gullet::unre
 as `\lx@physics@mat`. 2003.02721 now 0; section 7/7, equation 109/109, bibitem 18/18 (XMApp/
 XMTok ~4% lower from the genuinely-ambiguous `\tr\big[…]` misparse, error-free in both).
 Common operators (`\tr(A)`, `\sin(x)`, `\exp(y)`, `\det(M)`, `\tr\rho^2`) unaffected. Tests
-1344/0. **Follow-up:** the rest of the delimited-arg physics family (`\quantity`/`\qty`,
-`\lx@physics@fenced`, `\lx@physics@fencedII`, `\evaluated`, `\lx@physics@operator`,
-`\lx@physics@diff`) shares the SAME root and should also become DefMacro (now justified by
-TWO witnesses — converting next).
+1344/0. **Follow-up LANDED (same commit family):** `\quantity`/`\qty`, `\lx@physics@operator`
+(`\grad`/`\curl`/`\div`/`\laplacian`), `\evaluated`/`\eval`, and `\lx@physics@diff`
+(`\dd`/`\var`) — all delimited-arg readers — were ALSO converted `DefPrimitive→DefMacro`
+(verified: valid `\qty(a+b)`/`\quantity(…)`/`\grad f`/`\eval{x^2}_0^1`/`\dd[2]{y}`/`\dv{f}{x}`/
+`\pdv{g}{x}{y}`/`\abs`/`\norm`/`\order` all R0; 5 physics papers clean; 1811.02010 stays SHARED
+`#`-PARAM; suite 1344/0). The BRACE-reading members (`\lx@physics@fenced`→`\pqty`/`\abs`/
+`\norm`/`\order`, `\lx@physics@fencedII`) are genuinely safe as DefPrimitive (braces protect
+`\\`/`&`) and left per the deliberate WISDOM #44 decision. **Remaining same-root long tail
+(NOT yet converted — a focused per-construct pass with testing, too risky to flip ~10 at
+once):** `\lx@physics@deriv` (`\dv`/`\pdv`), `\ket`/`\bra`/`\expectationvalue`/
+`\lx@physics@qm@product` (braket), `\paulimatrix`, `\diagonalmatrix`/`\antidiagonalmatrix`
+(`\dmat`/`\admat`), `\lx@physics@ReIm`, `\qqtext`, `\qcc` — all read delimited args and would
+manifest the same alignment bug if used inside an eqnarray with `\\`/`&` in the arg; convert
+when witnessed or in a dedicated verified pass.
 
 ### Round-37 (2026-05-31): 2007.06211 FIXED — physics `\lx@physics@mat` must be a DefMacro (expansion-time), not a DefPrimitive (digestion-time)
 

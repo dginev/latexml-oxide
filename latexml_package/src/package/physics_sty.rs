@@ -208,7 +208,11 @@ LoadDefinitions!({
   // file, all under the same rationale. Individual entries don't
   // re-carry the WISDOM #44 tag to avoid comment noise.
 
-  DefPrimitive!("\\quantity", {
+  // DefMacro (expansion-time), not DefPrimitive — it reads a delimited `(…)`/`[…]`
+  // body via `phys_read_arg`, so inside an alignment a digestion-time primitive would
+  // let the column scan grab the body's `&`/`\\` first (same WISDOM #44 alignment bug
+  // fixed for `\mqty` and `\lx@physics@operatorP`). Return the dual.
+  DefMacro!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let (arg, open, close) = phys_read_arg(true, physics_delimiters)?;
     let arg = arg.unwrap_or_default();
@@ -238,7 +242,7 @@ LoadDefinitions!({
       &[("reversion", reversion)],
       content, presentation, vec![arg],
     )?;
-    gullet::unread(result);
+    Ok(result)
   });
   Let!("\\qty", "\\quantity");
 
@@ -303,7 +307,10 @@ LoadDefinitions!({
   // only; no call site is known to wrap `\evaluated` in `\edef`.
   // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
   // uses of `\evaluated` across LaTeXML/lib + ar5iv-bindings.
-  DefPrimitive!("\\evaluated", {
+  // DefMacro (expansion-time) — reads a delimited `(…|`/`[…|` arg via `phys_read_arg`
+  // (then optional `_`/`^` limits); same WISDOM #44 alignment reason as `\mqty`/
+  // `\lx@physics@operatorP`. Return the dual.
+  DefMacro!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
     let (arg, open, close) = phys_read_arg(true, |s| {
@@ -375,7 +382,7 @@ LoadDefinitions!({
     pres.extend(pres_suffix);
     let presentation = Tokens::new(pres);
     let result = i_dual(&[("reversion", reversion)], content, presentation, all_args)?;
-    gullet::unread(result);
+    Ok(result)
   });
   Let!("\\eval", "\\evaluated");
 
@@ -461,7 +468,9 @@ LoadDefinitions!({
   Let!("\\cp", "\\crossproduct");
 
   // Perl: \lx@physics@operator — operator with optional delimited arg
-  DefPrimitive!("\\lx@physics@operator{}{}{}", sub[(cs, semantic, function)] {
+  // DefMacro (expansion-time) — reads a delimited arg via `phys_read_arg`; same
+  // WISDOM #44 alignment reason as `\mqty`/`\lx@physics@operatorP`. Return the dual.
+  DefMacro!("\\lx@physics@operator{}{}{}", sub[(cs, semantic, function)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let function_tks = function;
@@ -492,14 +501,14 @@ LoadDefinitions!({
         &[("reversion", reversion)],
         content, presentation, vec![arg_tks],
       )?;
-      gullet::unread(result);
+      Ok(result)
     } else {
       // No argument: just the operator symbol
       let result = i_dual(
         &[("role", Tokenize!("OPERATOR")), ("reversion", cs_tks)],
         cfunc, function_tks, vec![],
       )?;
-      gullet::unread(result);
+      Ok(result)
     }
   });
 
@@ -777,8 +786,10 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\flatfrac", "\\ifrac");
 
-  // Perl: \lx@physics@diff — differential operator
-  DefPrimitive!("\\lx@physics@diff{}{}{}", sub[(cs, semantic, diff)] {
+  // Perl: \lx@physics@diff — differential operator.
+  // DefMacro (expansion-time) — reads a delimited `(…)` arg via `phys_read_arg`; same
+  // WISDOM #44 alignment reason as `\mqty`/`\lx@physics@operatorP`. Return the dual.
+  DefMacro!("\\lx@physics@diff{}{}{}", sub[(cs, semantic, diff)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let diff_tks = diff;
@@ -831,7 +842,7 @@ LoadDefinitions!({
       }
 
       let result = i_dual(&[("reversion", reversion)], content, presentation, all_args)?;
-      gullet::unread(result);
+      Ok(result)
     } else if let Some(deg) = degree {
       let a2 = Tokens::new(vec![i_arg("2")]);
       all_args.push(deg);
@@ -842,13 +853,13 @@ LoadDefinitions!({
       let result = i_dual(
         &[("role", Tokenize!("DIFFOP")), ("reversion", reversion)],
         content, presentation, all_args)?;
-      gullet::unread(result);
+      Ok(result)
     } else {
       // Bare differential: just the symbol
       let result = i_dual(
         &[("role", Tokenize!("DIFFOP")), ("reversion", reversion)],
         cfunc, pfunc, vec![])?;
-      gullet::unread(result);
+      Ok(result)
     }
   });
 
