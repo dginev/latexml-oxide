@@ -2388,6 +2388,24 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1509.01434 FIXED — `is_url` matched a protocol mid-filename
+
+**1509.01434 FIXED (core `pathname::is_url` anchoring).** `Script _ can only appear
+in math mode` ×2 from a JabRef `\bibAnnoteFile{myers_http://www.mscs.dal.ca/myers/
+welcome.html_2014}` (the key has literal `_`). `\bibAnnoteFile{#1}` →
+`\IfFileExists{#1}{…#1…\input{#1}…}{}` — `#1` (with `_`) is typeset only in the
+file-EXISTS branch. Rust's `\IfFileExists` wrongly returned TRUE because
+`find_file` short-circuits on `pathname::is_url`, and `is_url` used
+`URL_RE = ^\w+://(.+)/([^/]+)$` whose leading `\w+` (which includes `_`) matches
+the filename PREFIX `myers_http`, so the key read as a URL → "exists" → true
+branch → the `_` typeset in text mode. Perl's `pathname_is_url` is
+`=~ /^($PROTOCOL_RE)/` — the protocol is ANCHORED at the start, so
+`myers_http://…` (starting with `myers_`) is NOT a URL. Fix: `is_url` now uses
+`^(?:https|http|ftp):` (anchored), matching Perl; `URL_RE` stays for `parse_url`'s
+host/path split. Real `http(s)`/`ftp` URLs (incl. bare-host `https://example.com`)
+still detected. Updated `is_url_schemes` test + added the witness as a regression
+guard. Rust 2→0, Perl=0, suite 53/0/0 + pathname 16/0.
+
 ### Round-37 (2026-05-31): 1605.04883 DEFERRED + strict-gate sweep lesson (Perl Fatal ≠ Error)
 
 **1605.04883 NOT a Rust-only win — REVERTED.** Symptom was `\@accshift` undefined
