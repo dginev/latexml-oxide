@@ -2419,6 +2419,35 @@ duplicated-id XMDual — math parser), 1509.06785 (accent-in-csname env —
 robust-CS cluster), 1604.06057 (`\nipsfinalcopy` — bundled NIPS style),
 1608.02559 (`\bond`), 1511.09190 (`\pFqskip`), 1701.02312 (para-in-table).
 
+### Round-37 (2026-05-30): CONVERR_4/5 gate sweep — 3 fixes
+
+(Confirmed stale-log noise again: `\@inpenc@test`, `\dateUSenglish`, `{keywords}`
+signatures all already resolved on the current binary.)
+
+* **1507.06496 FIXED** — wlpeerj `\lhead`/`\chead`/`\rhead`/`\cfoot`/`\fancyplain`
+  undefined. wlpeerj.cls L55 `\RequirePackage{fancyhdr}`; the contrib binding
+  (OmniBus base) mirrored most deps but omitted fancyhdr, so the legacy fancyhdr
+  interface used under `\pagestyle{fancy}` was undefined. Added fancyhdr. RUST
+  5 → 0.
+* **1608.08464 FIXED** — siunitx `\num{i}` (pure imaginary unit, no preceding
+  number) → "Not matched in \num: i". `six_match_complexnumber` early-returned
+  on `six_match_uncertainnumber(tokens)?`; Perl (siunitx.sty.ltxml:253) lets
+  `$number` be undef and still matches the `input-complex-roots` key. Removed the
+  early return; handle a None preceding number in the pure-imaginary branch.
+  RUST 5 → 0, output element-profile identical to Perl.
+* **1909.01528 FIXED** — soul `\sethlcolor`/`\setulcolor`/`\setstcolor` stored
+  the colour `Scope::Global`; Perl's `AssignValue(soul_*_color => …)` (no scope)
+  is LOCAL. The `\hlc` wrapper idiom `{\colorlet{foo}{C}\sethlcolor{foo}\hl{…}}`
+  defines `foo` locally; a global `soul_hl_color=foo` leaked past the group so a
+  later plain `\hl{…}` looked up the reverted `foo` → "Can't find color named
+  'foo'". Made all three setters local. RUST 5 → 0.
+
+Triaged/deferred (current Rust-only but deep): 1510.01135 (hyperref
+`\lx@hyper@url@` begingroup/endgroup boxing-group mismatch during `\title{…%cmt}`
+— same family as the url space-form defer), 1712.04982 / `\vbox` mode-switch,
+1803.02471 (pgfplots symbolic-coords, see above), `^`/`_`-in-text (1610.06392,
+2004.06980 — mostly shared failures).
+
 ### Round-37 (2026-05-30): CONVERR_3 gate sweep — 3 fixes (incl. core load_class)
 
 Re-confirmed the stale failure logs are unreliable (the 181-paper `ctable after
