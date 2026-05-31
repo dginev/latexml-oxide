@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1704.05859 DEFERRED — Semiverbatim doesn't read `\`-macros verbatim (cleveref)
+
+**1704.05859 DEFERRED (Semiverbatim tokenization timing).** `\SWmoduli` is
+reported undefined though it appears NOWHERE in the source — it is *constructed*
+by Rust. Trigger: `\cref{Vanishing property of the \SW moduli space on a family}`
+(cleveref; `\newcommand{\SW}{Seiberg--Witten }`). Minimal repro:
+`\usepackage{cleveref}` + `\newcommand{\SW}{…}` + `\label{prop the \SW moduli
+space}` + `\cref{prop the \SW moduli space}` → Rust 1 (`\SWmoduli` undefined),
+Perl 0. (Plain `\ref` to the same label is clean — it reads the arg as `{}`, so
+`\SW` *expands*.) Root cause: Perl reads the `\cref` arg under `Semiverbatim`
+catcodes where `\` is catcode-OTHER, so `\SW` is the literal chars `\ S W` and
+the space is preserved → label key is the literal string `…\SW moduli…`. Rust's
+`Semiverbatim` parameter does NOT re-tokenize its arg under verbatim catcodes —
+the arg is tokenized first under normal catcodes (control-word `\SW` consumes its
+trailing space), leaving the token list `[\SW, moduli]` adjacent; `\cref`'s
+`args[1].to_string()` → `…\SWmoduli…`, and `cref_multi`'s
+`mouth::tokenize_internal` round-trip re-parses that as the single live CS
+`\SWmoduli`, which then digests → undefined. Fix needs the core
+`begin_semiverbatim`/parameter read to govern the arg's *tokenization* (so `\` is
+OTHER during the read), not just `neutralize` already-tokenized tokens — high
+blast radius (every Semiverbatim/verbatim param: `\verb`, `\url`, listings,
+cleveref). Deferred to a dedicated Semiverbatim session; not a safe loop fix.
+
 ### Round-37 (2026-05-30): 1604.00855 FIXED — elsart `\keyword` trailing-`}` past `\vskip`
 
 **1604.00855 FIXED (elsart `\keyword` readBalanced parity).** An abstract ending
