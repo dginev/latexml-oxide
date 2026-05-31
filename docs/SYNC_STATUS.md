@@ -2388,6 +2388,30 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1904.07182 FIXED — phantom-in-group must float-as-space, not be discarded, in the script handler
+
+**1904.07182 (svjour3, physics `\ibraket`/`\mprescript`) 48→0 errors.** The
+double-subscript cluster's last open witness. `\ibraket` →
+`\mprescript{}{i}{\braket{…}_{}^{}}` → `{{\vphantom{x}}}^{}_{i}\! …` — a group
+whose only content is an `\vphantom` (an isSpace `<ltx:XMHint>`), carrying an empty
+`^{}` then `_{i}`. In the math script handler (`tex_math.rs::script_handler`),
+processing the empty `^{}` popped the `{\vphantom{x}}` group, found
+`prev.is_empty()` true (its content is just a phantom) and took the Perl
+`IsEmpty → script floats (last)` branch — which **discards** the popped box. The
+vphantom group was lost, so the following `_{i}` re-attacked the real base `a_i`
+(already subscripted) → spurious `Error:unexpected:double-subscript` (×48, Perl 0).
+Perl doesn't hit this because its group reports `getProperty('isSpace')` (the
+prevspace/putback branch); our List wrapper carries isSpace only on the inner
+whatsit. **Fix:** in the `is_empty()` branch, if `script_has_space_content(&prev)`
+(the existing recursive isSpace probe, already referenced for this very cluster),
+treat the box as a space — `prevspace=true`, put it back — instead of discarding.
+Mirrors Perl's isSpace handling. 1904.07182 now 0 err / 3.69 MB, structurally
+matched to Perl (Math 1291=1291, bibitem 82=82). Tests 1344/0 (telemetry
+ratio test is timing-flaky under load; passes in isolation). Closes the
+`\vphantom`/`\mathstrut` strand of [[project_double_subscript_root_causes]]. NB: a
+separate, pre-existing `x_a_b` double-subscript severity gap (Rust Error vs Perl)
+is untouched by this fix — noted for follow-up.
+
 ### Round-37 (2026-05-31): 1802.00756 DEFERRED — math-ambiguity explosion on comma-separated sequents (deep, math-parser lane)
 
 **1802.00756 (LNCS proof-theory) ~18 `document:open_element_internal` + a

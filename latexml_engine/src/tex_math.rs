@@ -127,6 +127,22 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         // Perl `TeX_Math.pool.ltxml:378-379`: "If empty, the script floats,
         // can't conflict, but don't put back". `cs` stays at `\lx@floating@*`
         // (initial value); the empty `{}` is consumed.
+        //
+        // BUT a box that is `is_empty()` only because its sole content is a
+        // phantom/strut (an isSpace XMHint wrapped in a group, e.g.
+        // `{\vphantom{x}}`) must be treated like a space — put back, set
+        // `prevspace` — NOT discarded. In Perl that group reports
+        // `getProperty('isSpace')` (caught above); our List wrapper carries
+        // the isSpace on the inner whatsit only, so detect it recursively.
+        // Discarding it lets a following `_x` re-attack the real base and
+        // fire a spurious "Double subscript": witness 1904.07182
+        // (`\ibraket`/`\mprescript` → `… {\vphantom{x}}^{}_{i}`), the cluster
+        // already noted on `script_has_space_content` above.
+        if script_has_space_content(&prev) {
+          prevspace = true;
+          putback.push_front(prev);
+          continue;
+        }
         break;
       } else if let Some(prevop) = is_script(&prev) {
         if prevop.1 == cc {
