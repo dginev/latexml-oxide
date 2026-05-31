@@ -339,11 +339,20 @@ LoadDefinitions!({
       whatsit.set_property("mode", Stored::from("internal_vertical"));
       begin_mode("restricted_horizontal")?;
       let template = parse_halign_template(whatsit)?;
-      // If template parsing failed (e.g., \bgroup not recognized as BEGIN),
-      // bail out instead of trying to digest a body that will loop.
-      if template.get_columns().is_empty() {
-        end_mode("restricted_horizontal")?;
-      }
+      // NOTE: a 0-column template (parse couldn't catcode-1-`{`-delimit it,
+      // e.g. young.sty's `\halign\bgroup &\setbox…`) is NOT special-cased
+      // here — exactly like the standard `\halign` (tex_tables.rs). The body
+      // is still digested under the restricted_horizontal frame begun above
+      // and the SINGLE `end_mode` at the bottom balances it. A prior
+      // half-implemented "bail" ran an early `end_mode` here WITHOUT a
+      // `return`, so the body was digested anyway and `end_mode` ran a SECOND
+      // time at the bottom — popping past the already-closed
+      // restricted_horizontal frame into the enclosing `\vbox`'s
+      // `internal_vertical` → "Attempt to end mode restricted_horizontal in
+      // horizontal" (driver 1902.11165: `\node {\begin{young}…\end{young}}`,
+      // Perl=0). Conversely, `return`ing early left the body's `&`/`\cr`
+      // unconsumed → "Stray alignment &". Matching the standard `\halign`
+      // (digest body, end once) fixes both.
       // Get width from BoxSpecification 'to' key
       let width_attr: Option<String> = {
         let spec = whatsit.get_arg(1);

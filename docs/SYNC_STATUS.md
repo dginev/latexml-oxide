@@ -2763,6 +2763,25 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1902.11165 FIXED 2026-05-31 (`\lxSVG@halign` early-`end_mode` double-pop).**
+`Error:unexpected:\halign Attempt to end mode restricted_horizontal in horizontal`,
+Perl=0. Driver: `\node {\begin{young}…\end{young}}` (a `\halign`-based Young tableau
+from the paper's local `young.sty`, inside a tikz node). Inside pgf/tikz, `\halign`
+is replaced by `\lxSVG@halign` (pgfsys_latexml_def.rs). Its `after_digest` parses
+the template; young's `\halign\bgroup &\setbox…` is not catcode-1-`{`-delimited so
+`parse_halign_template` returns 0 columns. A half-implemented "bail" then ran an
+early `end_mode("restricted_horizontal")` WITHOUT a `return`, so the body was
+digested anyway and the SINGLE `end_mode` at the bottom ran a SECOND time — popping
+past the already-closed frame into the enclosing `\vbox`'s `internal_vertical`.
+(`return`ing early instead left the body's `&`/`\cr` unconsumed → "Stray alignment
+&".) Fix: remove the early-`end_mode` block entirely — digest the body under the
+frame and `end_mode` ONCE, exactly like the standard `\halign` (tex_tables.rs,
+which handles the same young template via `\mbox` cleanly). Verified no loop
+reintroduced (tikz-cd matrix renders 34 svg:g, young content renders). 1902.11165
+Rust 1→0, Perl=0 (1.97 MB out); suite 53/0/0. (Distinct from 1508.03915, which is a
+separate `Script _ can only appear in math mode` xy-pic case.) See
+[[project_lxsvg_halign_double_endmode]].
+
 **2004.10048 FIXED 2026-05-31 (`\hphantom` mode-wrap vs `\endminipage`).**
 2× `Error:unexpected:\endminipage Attempt to end mode internal_vertical in
 restricted_horizontal`, Perl=0. **Root cause:** Rust's `\hphantom{}`
