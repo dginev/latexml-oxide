@@ -2388,6 +2388,32 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1606.06730 FIXED — hyperref must not eager-load `color` (Perl loads it only on `colorlinks`)
+
+**1606.06730 (article + hyperref, author redefines `\color`) 5→0 errors.** 3×`Can't
+find color named ';'` + `\lx@column@trimright`/`\` as color names. The document does
+`\usepackage[citecolor=blue]{hyperref}` then `\newcommand{\color}{\mbox{$\mathsf{Col}$}}`
+(a user macro shadowing the LaTeX color command). Root cause: `hyperref_sty.rs` had an
+**unconditional** `RequirePackage!("color")` at load, so `\color` was already defined
+when `\newcommand{\color}` ran → "Ignoring redefinition (\newcommand) of \color" → the
+user macro never took effect → every body `\color` ran the color *primitive*, reading
+`;`/`]` as a color name. Perl hyperref loads color ONLY on `colorlinks` (hyperref.sty.ltxml
+L114-115 in `\hypersetup`, L476-477 in the package-options handler); after
+`[citecolor=blue]` (no colorlinks) Perl leaves `\color` UNDEFINED, so `\newcommand{\color}`
+succeeds (verified: `\ifdefined\color`→UNDEFINED, result→user macro). **Fix:** delete the
+unconditional eager load. Rust already loads color on `colorlinks` in options
+(`hyperref_sty.rs` L831/846) and in `\hypersetup` (L249), so colorlinks papers are
+unaffected (verified pcol7: `[colorlinks]` + `\definecolor` → 0). The eager load had been
+added to mask a `\definecolor`-before-`\hypersetup{colorlinks}` pattern — but **Perl errors
+on that exact pattern too** (`\definecolor` undefined; verified pcol2), so the mask made
+Rust *surpass* Perl rather than match it (against the ground-truth/no-stopgap directive).
+1606.06730 now 0 err; Perl 0; structure identical (section 7/7, Math 826/826, tabular
+13/13, tr 209/209, td 1217/1217, figure 21/21). No regression: 1705.06183, 1909.02323,
+1910.05586, 1804.09301 (hyperref+color) stay 0. Tests 1344/0. (Methodology note: Perl
+cannot write `--dest=/dev/null` — it mkdirs `/dev` and fails silently as "0 errors"; ALWAYS
+give Perl a real dest file. An earlier read of "Perl tolerates undefined `\color`" was this
+artifact — Perl errors on undefined color commands exactly like Rust.)
+
 ### Round-37 (2026-05-31): 1709.06170 FIXED — lmcs OmniBus stub must load `ams_support` (amsart frontmatter → `\urladdr`)
 
 **1709.06170 (`\documentclass{lmcs}`) 1→0 errors.** `\urladdr{\url{…}}` undefined.

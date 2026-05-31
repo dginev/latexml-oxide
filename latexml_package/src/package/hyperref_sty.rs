@@ -26,22 +26,25 @@ LoadDefinitions!({
   RequirePackage!("nameref");
   RequirePackage!("url");
   RequirePackage!("bitset");
-  // Eager `color` load. Many papers do
-  //   \usepackage{hyperref}
-  //   \definecolor{darkblue}{rgb}{0,0,0.5}
-  //   \hypersetup{colorlinks=true, linkcolor=darkblue, ...}
-  // i.e. they reference \definecolor BEFORE \hypersetup triggers our
-  // colorlinks-driven RequirePackage('color'). pdflatex tolerates this
-  // because the user is expected to load color/xcolor themselves —
-  // but the same author script also passes through Perl LaTeXML
-  // without erroring (the hyperref binding's package-options handler
-  // calls RequirePackage('color') unconditionally on `colorlinks`,
-  // and many papers pass colorlinks via the load-options not the
-  // \hypersetup body, so color is in scope before \definecolor).
-  // Loading color eagerly here matches that expected end-state and
-  // closes the 15+ paper "\definecolor undefined" cluster from
-  // stage 10 (witnesses 2503.15484, .21332, .21480, .22115, .22884).
-  RequirePackage!("color");
+  // NOTE: do NOT eager-load `color` here. Perl hyperref.sty.ltxml loads color
+  // ONLY on `colorlinks` — in the package-options handler (L476-477, our colorlinks
+  // option arm below) and in `\hypersetup{colorlinks=true}` (L114-115, our
+  // `\hypersetup` primitive). After `\usepackage[citecolor=blue]{hyperref}` (no
+  // colorlinks) Perl leaves `\color`/`\definecolor`/`\textcolor` UNDEFINED.
+  //
+  // A prior unconditional `RequirePackage!("color")` here diverged from Perl: it
+  // pre-defined `\color`, so a document that redefines it — e.g. arXiv:1606.06730
+  // `\newcommand{\color}{\mbox{$\mathsf{Col}$}}` after loading hyperref — had its
+  // `\newcommand` ignored ("Ignoring redefinition of \color"), then every body
+  // `\color` ran the color primitive and read `;`/`]` as a color name ("Can't find
+  // color named …"). Perl leaves `\color` undefined there, so `\newcommand{\color}`
+  // succeeds (verified: `\ifdefined\color`→UNDEFINED, result→user macro).
+  //
+  // The eager load was added to mask a `\definecolor`-before-`\hypersetup{colorlinks}`
+  // pattern — but Perl ERRORS on that exact pattern too (`\definecolor` undefined,
+  // verified), so masking it made Rust *surpass* Perl rather than match it. Papers
+  // that pass `colorlinks` in the load-OPTIONS still get color via the option arm
+  // below (color is in scope before any later `\definecolor`), matching Perl.
   //RequirePackage("atbegshi");    // not ported
 
   // Can we load hyperref, to get all it's random sundry definitions?
