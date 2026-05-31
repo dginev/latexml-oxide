@@ -2388,6 +2388,22 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1508.03915 DEFERRED — xy-pic `\ar[dir]_{}/^{}` decoration
+
+**1508.03915 DEFERRED (xy-pic cluster).** `\xymatrix{A \ar[rr]^{f} \ar[rd]_{g}…}`
+(loaded via `\usepackage[frame,cmtip,arrow,matrix,line,graph,curve]{xy}`) emits a
+single `Error:unexpected:_ Script _ can only appear in math mode` (Perl=0). The
+`_`/`^` after `\ar[dir]` are xy-pic label-placement operators (place label
+below/above the arrow), not math scripts; Rust's xy-pic `\ar`-decoration parser
+doesn't consume them, so the `_` token leaks to the Stomach as a subscript in
+text mode. Not minimally reproducible — a bare `\usepackage[...]{xy}` +
+`\xymatrix` fails to even load xy (104 errors: `\xymatrix`/`\ar`/`\xyprovide`
+undefined), so the paper's lone error sits inside an otherwise-working but
+fragile xy-pic load. Fixing requires the xy-pic `\ar` PATH/decoration parser
+(`_`/`^` operator handling) — deep xy-pic-internal work, consistent with the
+documented xy-pic deferred cluster (`\crvi`, xymatrix-deep OOM, `\@@input xypic`).
+Deferred; not a quick catcode flip.
+
 ### Round-37 (2026-05-30): 1509.06785 FIXED — accented `\newtheorem` env-name lookup
 
 **1509.06785 FIXED (`\newtheorem` env-name normalization).** A Latin-1 French
