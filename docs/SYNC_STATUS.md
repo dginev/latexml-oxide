@@ -2794,6 +2794,19 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**1006.0641 FIXED 2026-05-31 (babel german active-`"` bound only on selectlanguage).**
+`Error:undefined:" The token T_ACTIVE["] is not defined`, Perl=0. Driver: arthist.tex
+`\usepackage[german,english]{babel}` + amsmath + fabfeynmp, then `"anomalie"` in body
+text. fabfeynmp.sty L137 (`{\catcode`\"=11 \gdef\dqu@te{"}}`) interacting with babel
+german leaves `"` catcode-13 ACTIVE, but the active `"` had NO meaning: Rust only bound
+it in the `\selectlanguage{german}` hook (code=de), which does NOT fire when english is
+the main language (`[german,english]`). Real babel germanb.ldf binds the active-`"`
+MEANING via `\initiate@active@char{"}` when german is LOADED (independent of catcode /
+main language). Fix: german_sty.rs binds `T_ACTIVE["]` to `\lx@german@dq@dispatch` at
+german-load time, so any later `"` activation always has a meaning. 1006.0641 Rust 1→ 0,
+Perl=0 (606 KB out); german umlauts (`"a`→ ä) still render; suite 53/0/0. (Found via a
+fresh 400-paper sweep.) See [[project_babel_german_active_dquote_load]].
+
 **1508.03915 FIXED 2026-05-31 (hyperref pdftitle Semiverbatim neutralizes `$`).**
 `Error:unexpected:_ Script _ can only appear in math mode` at "Anonymous String"
 (tex_math.rs), Perl=0. Driver: `\hypersetup{pdftitle={…of $\Mznb$ and…}}` where
