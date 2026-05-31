@@ -311,5 +311,40 @@ LoadDefinitions!({
     \expandafter\let\csname noextrasfrenchb\expandafter\endcsname
                     \csname noextrasfrench\endcsname
     \expandafter\let\csname datefrenchb\expandafter\endcsname
+                    \csname datefrench\endcsname
+    %
+    % french.ldf L88-92: `acadian` and `canadien` are dialects of
+    % `french` (`\adddialect\l@acadian\l@french` / `\l@canadien`), and its
+    % `\StartBabelCommands*{\BabelLanguages}{captions|date}` defines the
+    % `acadian`-suffixed hooks (BabelLanguages = {french,acadian}). The
+    % thin wrappers `acadian.ldf` / `canadien.ldf` just `\input french.ldf`.
+    % This binding doesn't replicate `\StartBabelCommands`, so alias the
+    % `\l@` slots + babel hooks to their `french` counterparts (parallels
+    % the `frenchb` shim above). Without this `\usepackage[canadien]{babel}`
+    % / `[acadian]{babel}` error haven-not-defined-the-language at the final
+    % `\selectlanguage{\bbl@main@language}` (e.g. 1712.07952). canadien.ldf
+    % already `\def`s the `canadien`-suffixed hooks → `acadian`; we fill in
+    % the `acadian` ones + the language slots.
+    \expandafter\ifx\csname l@acadian\endcsname\relax
+      \chardef\l@acadian=\l@french
+    \fi
+    \expandafter\ifx\csname l@canadien\endcsname\relax
+      \chardef\l@canadien=\l@french
+    \fi
+    \expandafter\let\csname captionsacadian\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrasacadian\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrasacadian\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname dateacadian\expandafter\endcsname
+                    \csname datefrench\endcsname
+    \expandafter\let\csname captionscanadien\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrascanadien\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrascanadien\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname datecanadien\expandafter\endcsname
                     \csname datefrench\endcsname");
 });

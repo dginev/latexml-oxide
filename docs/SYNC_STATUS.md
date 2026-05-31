@@ -2388,6 +2388,22 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-30): 1712.07952 FIXED — babel `canadien`/`acadian` dialects
+
+**1712.07952 FIXED (french_ldf babel-dialect gap).** `\usepackage[canadien]{babel}`
+errored `babel Error: You haven't defined the language 'canadien' yet` at the final
+`\selectlanguage{\bbl@main@language}`. Root cause: `canadien.ldf`/`acadian.ldf` are
+thin TL wrappers that `\input french.ldf`, and real `french.ldf` (L88-92) makes both
+dialects of french via `\adddialect\l@acadian\l@french` / `\l@canadien`, while its
+`\StartBabelCommands*{\BabelLanguages}{captions|date}` (BabelLanguages = {french,acadian})
+defines the `acadian`-suffixed caption/date hooks. The Rust `french_ldf` binding
+doesn't replicate `\StartBabelCommands`, so `\l@canadien`/`\l@acadian` + their hooks
+were never created → babel's name check failed. Fix: extended the existing `frenchb`
+compensation block in `french_ldf.rs` to also `\chardef\l@acadian=\l@french` /
+`\l@canadien` (guarded) and `\let` the `acadian`/`canadien`-suffixed babel hooks to
+their `french` counterparts — exactly parallel to the frenchb shim. `[canadien]`,
+`[acadian]`, and the full paper now 0-error; Perl=0. Suite 53/0/0.
+
 ### Round-37 (2026-05-30): bmatrix*[r]+`\dots` residual FIXED (amsmath dots)
 
 The 1910.00678 residual (`bmatrix*[r]` + `\dots` still "Stray alignment") is now
