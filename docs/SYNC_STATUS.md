@@ -2763,6 +2763,25 @@ env, so a package inside it is NEVER loaded by LaTeX; the dep-scan must not
 anticipate it. Same "more-robust than Perl" rationale as the existing
 macro-def-body skip. Rust 1→0, Perl=0, suite 53/0/0.
 
+**2004.10048 FIXED 2026-05-31 (`\hphantom` mode-wrap vs `\endminipage`).**
+2× `Error:unexpected:\endminipage Attempt to end mode internal_vertical in
+restricted_horizontal`, Perl=0. **Root cause:** Rust's `\hphantom{}`
+(math_common.rs) had a Rust-only `before_digest` doing
+`begin_mode("restricted_horizontal")` in text mode (ported from a NEWER upstream
+Perl commit 09fb2e6f that our installed ground-truth Perl predates; sibling
+`\phantom`/`\vphantom` never got it). The doc uses the malformed idiom
+`\minipage{…}\hphantom\endminipage` — `\hphantom` has NO braces, so its single-token
+argument is the next control word `\endminipage`, which then runs inside the
+phantom's `restricted_horizontal` mode-frame and tries to end the minipage's
+`internal_vertical` → the strict mode-end check (stomach.rs end_mode_opt, mirroring
+Perl Stomach.pm L527-528) errors. Installed Perl (no wrapping) digests the argument
+in the ambient mode → `\endminipage` closes the minipage cleanly. Fix: drop the
+mode wrapping, making `\hphantom` a plain Perl-faithful DefConstructor. The `$$`-leak
+case the wrapping guarded (`\hphantom{$$x$$}`) errors in installed Perl too (R=1
+P=1 after the fix), so no Rust-only regression is introduced — the change aligns
+Rust with installed Perl on ALL hphantom cases. 2004.10048 Rust 2→0, Perl=0
+(537 KB out); suite 53/0/0. See [[project_hphantom_mode_wrap_endminipage]].
+
 **1810.05151 DIAGNOSED + DEFERRED 2026-05-31 (SciPost stub prefix-match force-loads physics).**
 Rust 2× `Error:expected:{ Missing sub/superscript argument` (tex_math.rs:185),
 Perl=0. **Root cause (fully traced):** the doc uses `\documentclass[]{SciPostMod}`
