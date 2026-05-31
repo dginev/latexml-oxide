@@ -15,9 +15,16 @@ LoadDefinitions!({
 
   DefMacro!("\\squaren{}", "{#1}^{2}");
 
-  // Perl SIunits.sty.ltxml: unlike siunitx (which auto-enables per-\sisetup
-  // or per-\DeclareSIUnit), SIunits makes every unit macro unconditionally
-  // available. Port calls six_enable_unit_macros(1) at load — matching
-  // Perl's "all unit macros are available, all the time".
-  crate::package::siunitx_sty::six_enable_unit_macros(true);
+  // NOTE: do NOT `six_enable_unit_macros(true)` here. The real SIunits package
+  // defines short single-letter unit macros (`\m`=metre, `\s`=second, `\g`,
+  // `\A`, …), but Perl's `SIunits.sty.ltxml` is a thin shim — it only
+  // `RequirePackage('siunitx')` + `\squaren`, defining NONE of those macros
+  // (siunitx uses `\si{\metre}` syntax instead). Enabling them here was a
+  // Rust-only divergence: defining `\m` clobbers the extremely common user
+  // macro `\newcommand{\m}[1]{\(#1\)}` (a LaTeX `\newcommand` of an
+  // already-defined CS is silently ignored), so every `\m{…}` rendered as the
+  // metre symbol in TEXT mode → 753× `^`/`_` "can only appear in math mode"
+  // (witness 1509.04521, `\usepackage[squaren]{SIunits}` + `\newcommand{\m}`).
+  // Matching Perl (which leaves `\m` for the document) fixes it; SIunits docs
+  // that genuinely use `\m`/`\metre` standalone already fail in Perl too.
 });

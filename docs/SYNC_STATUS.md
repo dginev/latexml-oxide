@@ -2388,6 +2388,28 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1509.04521 FIXED — SIunits must not define `\m` (clobbered user `\newcommand{\m}`)
+
+**1509.04521 (amsart, SIunits) 753→0 errors.** Rust's `siunits_sty.rs` called
+`six_enable_unit_macros(true)`, which makes every SIunits unit macro available —
+including the short single-letter `\m` (metre), `\s`, `\g`, … A comment claimed it
+"matched Perl", but Perl's `SIunits.sty.ltxml` is a 39-line shim:
+`RequirePackage('siunitx')` + `\squaren`, defining **none** of those (siunitx uses
+`\si{\metre}` syntax). The paper does `\usepackage[squaren]{SIunits}` then later
+`\newcommand{\m}[1]{\(#1\)}` (inline-math wrapper). In Rust `\m` was already
+defined (SIunits) so the `\newcommand` was silently ignored (correct LaTeX
+behavior), and every `\m{…}` rendered the metre symbol in TEXT mode → 441×`_` +
+177×`^` "can only appear in math mode" + XMApp/XMTok/XMHint/XMDual malformed. Perl
+0 (its SIunits defines no `\m`, so the document's `\newcommand{\m}` wins). **Fix:**
+remove the `six_enable_unit_macros(true)` call from `siunits_sty.rs` (keep the
+`RequirePackage(siunitx)` + `\squaren` shim, matching Perl). 1509.04521 now 0 err /
+3.08 MB, structurally identical to Perl (Math 921=921, bibitem 76=76, section 7=7,
+theorem 4=4). Tests 1344/0. SIunits docs that genuinely use `\m`/`\metre`
+standalone already fail in Perl too, so this is strictly Perl-aligned. Same family
+as the siunitx-`\unit`-clobbers-units fix (1610.06392) and
+[[project_macro_clobber_author_redefine]]: a Rust-only definition of a CS the
+document means to own.
+
 ### Round-37 (2026-05-31): 1910.10674 DEFERRED — physics `\mqty(…)` (paren) inside an amsmath alignment env
 
 **1910.10674 (JHEP, physics) 32 errors, root-caused but deferred.** The paper has
