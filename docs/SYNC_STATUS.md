@@ -2419,6 +2419,25 @@ duplicated-id XMDual — math parser), 1509.06785 (accent-in-csname env —
 robust-CS cluster), 1604.06057 (`\nipsfinalcopy` — bundled NIPS style),
 1608.02559 (`\bond`), 1511.09190 (`\pFqskip`), 1701.02312 (para-in-table).
 
+### Round-37 (2026-05-30): CONVERR_6-10 gate sweep — all deferred (deep)
+
+No clean incomplete-binding/missing-macro wins in this tier; remaining current
+Rust-only cases are structural/mode/boxing:
+* 1601.07962 — `ltx:section` not allowed in `ltx:subsection` (section nesting).
+* 1602.06935 — `}` closes a boxing group opened by `\begingroup` (begingroup/`}`
+  boxing-group mismatch; same family as the hyperref `\lx@hyper@url@` defer).
+* 1608.01416 — iopart: `ltx:equation` leaks into `ltx:date` frontmatter.
+* 1608.02030 / 1702.01358 — `\halign Attempt to end mode restricted_horizontal
+  in horizontal` (9 errors each), both `ytableau` inside a tikz `\node{…}`.
+  **Resisted 7 minimal-reproduction attempts** (tabular/ytableau/`*(gray)` in
+  tikz node / mbox / amsart all parity-clean) — the trigger is buried in the
+  witness's broader preamble/global state, not the local construct. Deferred.
+* 1702.01841 — pgfplots symbolic-coords (the `ybar={<dimen>}` defer above).
+
+*Tooling note:* ad-hoc `grep -c 'halign'` over conversion output false-positives
+on the extraction PATH (`/tmp/.../halign/…`); always anchor (`^Error`) or grep a
+specific message. sweep7.sh uses `^Error` and is unaffected.
+
 ### Round-37 (2026-05-30): CONVERR_4/5 gate sweep — 3 fixes
 
 (Confirmed stale-log noise again: `\@inpenc@test`, `\dateUSenglish`, `{keywords}`
