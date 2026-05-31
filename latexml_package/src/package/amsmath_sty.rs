@@ -451,6 +451,19 @@ LoadDefinitions!({
       // Read and digest the next box (like Perl's Digested parameter)
       let mut after_boxes = Vec::new();
       while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
+        // An alignment tab `&` ends the cell — it is NOT the dots' following
+        // box. Perl's `Digested` parameter stops at `&`; we must too. Digesting
+        // it here would consume the column separator (firing "Stray alignment"
+        // and leaving the next `&` unmatched). This bites only when the column
+        // template has no trailing `\hfil` after the cell (right-/no-aligned
+        // starred matrices): with a trailing `\hfil` the loop breaks on that
+        // box first. Unread the `&` so the alignment still sees it; the dots
+        // then has no following box → renders as `\ldots` (…). See the
+        // 1910.00678 residual note in SYNC_STATUS.
+        if tok.get_catcode() == latexml_core::token::Catcode::ALIGN {
+          gullet::unread_one(tok);
+          break;
+        }
         after_boxes = stomach::invoke_token(&tok)?;
         if !after_boxes.is_empty() {
           break;
