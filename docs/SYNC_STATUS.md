@@ -2388,6 +2388,37 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1907.01596 DEFERRED — mdframed `logical-block` not allowed in `figure` (schema trichotomy)
+
+**1907.01596 (book, mdframed) 8×`ltx:logical-block isn't allowed in <ltx:figure>`.**
+The figures wrap their content in `\begin{mdframed}…\end{mdframed}` (a framed box).
+Rust's `mdframed_sty.rs` emits `ltx:logical-block`; Perl's
+`ar5iv-bindings/mdframed.sty.ltxml` emits `ltx:inline-block`. `logical-block` is in
+`Para.class`; `figure_model` allows `Block.model` (= Block.class | Misc.class |
+Meta.class), which admits `inline-block` (Misc.class) but NOT `logical-block`
+(Para.class). **Root tension — an exact trichotomy** (each candidate fails exactly
+one requirement): in `figure` (Misc.class) / nest-in-self / hold a `theorem`
+(Para.class child):
+| element | in figure | nests | holds theorem |
+|---|---|---|---|
+| `inline-block` (Perl) | ✓ Misc | ✓ Block.model⊇Misc | ✗ Block.model⊉Para |
+| `inline-logical-block` | ✓ Misc | ✗ Para.model⊉Misc | ✓ Para.model⊇Para |
+| `logical-block` (Rust now) | ✗ Para∉Block.model | ✓ | ✓ |
+Rust chose `logical-block` for theorem+nesting (witness 1712.00062, nested mdframed
+with a titled inner box) — which broke the figure case. **The clean fix** is to make
+mdframed emit `inline-logical-block` AND add `inline-logical-block` to `Para.class`
+(so it nests): then it satisfies all three (figure via Misc.class, theorem via
+Para.model body, nest via the new Para.class membership). **Why deferred:** the
+runtime content model is the *flattened* `resources/RelaxNG/LaTeXML.model` (not the
+`.rng` at runtime), so a `Para.class` change must be regenerated across every
+Para.model element line — needs the `.rng → .model` regeneration path wired up. A
+shortcut (adding `logical-block` directly to `figure_model`) was tried and REVERTED:
+it suppressed the figure-panel float-promotion (minipage panels became
+`logical-block` instead of `float`), failing `figure_mixed_content_test`. cf.
+[[project_lxsvg_halign_double_endmode]] (mode/schema). Minimal repro:
+`\usepackage[framemethod=TikZ]{mdframed}` + `\begin{figure}\begin{mdframed}…
+\end{mdframed}\caption{}\end{figure}`.
+
 ### Round-37 (2026-05-31): 1509.04521 FIXED — SIunits must not define `\m` (clobbered user `\newcommand{\m}`)
 
 **1509.04521 (amsart, SIunits) 753→0 errors.** Rust's `siunits_sty.rs` called
