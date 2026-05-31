@@ -63,6 +63,17 @@ LoadDefinitions!({
   // documents that override the page style) stay undefined. Witness
   // 2310.16477.
   RequirePackage!("fancyhdr");
+  // wlscirep.cls L72: `\RequirePackage[explicit]{titlesec}` — the class styles
+  // its section headings via titlesec. Papers also call `\titleformat{…}` /
+  // `\titlespacing{…}` directly (e.g. to format appendix headings). Our binding
+  // mirrors the class's RequirePackage list but had omitted titlesec, so
+  // `\titleformat` was undefined: its `{#1}` argument then leaked a bare `#`
+  // PARAM token to the Stomach and the unbalanced braces closed the enclosing
+  // `\begin{appendices}` group early ("Attempt to close boxing group …
+  // \begingroup"). Perl raw-dep-scans the .cls and loads titlesec, so it is
+  // clean. Pass the `explicit` option (titlesec's `#1`-takes-the-title syntax).
+  // Witness 1602.06935 (`\begin{appendices}` + `\titleformat{\section}…{#1}{}`).
+  RequirePackage!("titlesec", options => vec!["explicit".to_string()]);
 
   // wlscirep frontmatter / bibliography helpers — preserve author content.
   DefMacro!("\\JournalTitle{}", "\\emph{#1}");
