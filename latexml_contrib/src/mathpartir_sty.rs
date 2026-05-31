@@ -72,9 +72,17 @@ LoadDefinitions!({
     }
     Ok(Tokens::new(out))
   });
-  // \infer is a deprecated alias mathpartir installs only when
-  // `\infer` was not pre-defined elsewhere.
-  Let!("\\infer", "\\inferrule");
+  // `\infer` is a deprecated alias — install it ONLY when `\infer` is not
+  // already defined. The real mathpartir.sty does not define `\infer` at all
+  // (it is the `proof` package's command, whose premise syntax splits on `&`:
+  // `\infer{concl}{prem1 & prem2}`). An UNCONDITIONAL `\let\infer\inferrule`
+  // clobbered proof's `\infer` whenever `proof` was loaded BEFORE `mathpartir`
+  // — then `\infer{C}{A & B}` ran `\inferrule` (premises split on `\\`, not `&`)
+  // and every premise `&` errored "Stray alignment &" during Building (witness
+  // 1801.08114: `\usepackage{proof}` then `\usepackage{mathpartir}` → 15 errors,
+  // Perl 0). Guarding with `\@ifundefined` preserves proof's `\infer` and still
+  // offers the alias to mathpartir-only documents.
+  RawTeX!(r"\@ifundefined{infer}{\let\infer\inferrule}{}");
 
   // `mathpar` environment: wrap body in a display equation.
   // Optional `[keys]` consumed and discarded — we don't honour

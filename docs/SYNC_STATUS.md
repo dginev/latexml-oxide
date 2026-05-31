@@ -2388,6 +2388,31 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1801.08114 FIXED — mathpartir must not unconditionally `\let\infer\inferrule` (clobbered proof's `\infer`)
+
+**1801.08114 (llncs + proof + mathpartir) 15→0 errors.** 15×`Stray alignment "&"`,
+ALL during the "(Building...)" phase, from the appendix's 17 `\infer{concl}{prem1
+& prem2}` inference rules. Root cause: the document loads `\usepackage{proof}`
+(line 4) BEFORE `\usepackage{mathpartir}` (line 7). The `proof` package's `\infer`
+splits its premise argument on `&`; `mathpartir`'s `\inferrule` splits on `\\`.
+Our `mathpartir_sty.rs` stub did an **unconditional** `Let!("\\infer", "\\inferrule")`,
+so loading mathpartir-after-proof clobbered proof's `\infer` — then every
+`\infer{C}{A & B}` ran `\inferrule`, the `&` was no longer a premise separator,
+and each leaked to the alignment machinery as a stray `&` (deferred to Building
+because the inference rules sit inside `\begin{figure}[t]` floats). The real
+mathpartir.sty does NOT define `\infer` at all (verified: `kpsewhich` + grep — it
+is the `proof` package's command); Perl, raw-loading mathpartir, leaves proof's
+`\infer` intact → 0 errors. **Fix:** guard the alias —
+`RawTeX!(r"\@ifundefined{infer}{\let\infer\inferrule}{}")` — matching the comment's
+stated intent ("install only when `\infer` was not pre-defined elsewhere") and
+Perl. Now proof's `\infer` survives both load orders, and mathpartir-only
+documents still get the deprecated alias. 1801.08114 now 0 err / 1.46 MB
+(Perl 0; tr/td 594/594, XMCell 410/410, para 593/593 identical; the residual
+Math/XMApp delta is the pre-existing documented mathpartir-stub fidelity loss —
+`\inferrule`→`\frac` — orthogonal to this bug). Tests 1344/0. Same
+"a Rust-only definition Perl lacks clobbers author/document logic" family as
+[[project_macro_clobber_author_redefine]].
+
 ### Round-37 (2026-05-31): 1705.06183 FIXED — lazy-load dvips colors for plain `\color{Blue}`, defined GLOBALLY
 
 **1705.06183 (revtex4-1 + hyperref + listings) 65→0 errors.** `\usepackage[usenames,
