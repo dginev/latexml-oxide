@@ -2388,6 +2388,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1804.10128 FIXED — babel `\shorthandoff` must change catcodes, not no-op
+
+**1804.10128 (French babel + xy-pic) 131→0 errors.** `babel_sty.rs` defined
+`\shorthandoff{}`/`\shorthandon{}` as **no-ops** (added to suppress real babel's
+`\PackageError{babel}{I can't switch '<c>' …--not a shorthand}` when our language
+stubs don't register the shorthand machinery; witness 1912.08056). But a no-op
+threw away the **catcode change**, which is the *observable* effect:
+`\shorthandoff{!}` must set `!` from active(13) to other(12). French babel makes
+`;:!?` active; the paper does `$$\shorthandoff{;:!?}\xymatrix @!=8mm{…}$$` so
+xy-pic can read the `@!=8mm` spacing modifier with `!` as a literal char. With the
+no-op, `!` stayed active → xy-pic's `@!=` parse derailed → the xymatrix's `^`/`_`
+arrow decorations reached the math script handler in **text mode** → 69×`^` +
+58×`_` "can only appear in math mode" + 4×`\hbox`. Probe: `\the\catcode\!` after
+`\shorthandoff` was 13 in Rust vs 12 in Perl. **Fix:** replace the no-op with a
+primitive that applies the catcode change (OTHER on `\shorthandoff`, ACTIVE on
+`\shorthandon`, local to the group) per single-char token of the argument, and
+skip the error (the part the stub gap can't satisfy). 1804.10128 now 0 err /
+2.4 MB, structurally identical to Perl (Math 2169=2169, bibitem 58=58, section
+6=6). The original no-op witness 1912.08056 stays R=0=P (catcode 12 is exactly
+its `\def\diag{\shorthandoff{;:!?}…}` intent, no error). Tests 1344/0. Lesson:
+shorthand toggles are NOT "typesetting-only" — they change catcodes, which drive
+tokenization downstream.
+
 ### Round-37 (2026-05-31): 2004.07608 DEFERRED — `\parbox` inside elsarticle `keyword` (macro-wrapper vs Perl single DefConstructor)
 
 **2004.07608 (elsarticle) 30 errors, root-caused but deferred.** The `keyword`

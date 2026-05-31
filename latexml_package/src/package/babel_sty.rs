@@ -194,28 +194,51 @@ LoadDefinitions!({
   // `\let`s every variant's `\l@` to `\l@english` (british uses English
   // hyphenation); backfill the same. Witness 1508.06150.
 
-  // Override `\shorthandoff` / `\shorthandon` to no-op. Babel's raw
-  // implementation (babel.sty L1492-1496) iterates the argument and
-  // calls `\bbl@switch@sh` for each character, which fires
-  // `\PackageError{babel}{I can't switch '<c>' on or off--not a
-  // shorthand}` when the character isn't a registered shorthand.
+  // `\shorthandoff{<chars>}` / `\shorthandon{<chars>}`: babel shorthand
+  // toggles. Babel's raw implementation (babel.sty L1492-1496) iterates the
+  // argument switching each active-char shorthand, but ALSO fires
+  // `\PackageError{babel}{I can't switch '<c>' on or off--not a shorthand}`
+  // for any char that isn't a registered shorthand. Our language stubs
+  // (`install_lang_stub`) don't install the full shorthand machinery, so the
+  // raw impl errored on every call — which is why this was a no-op.
   //
-  // Authors call `\shorthandoff{;:!?}` in macros like
-  // `\def\diag{\shorthandoff{;:!?}...}` defensively, expecting the
-  // French babel shorthand-spacing rules (added by french.ldf when
-  // those chars are made active) to be temporarily disabled. Our
-  // language stubs (`install_lang_stub` in babel_lang_stubs.rs) don't
-  // actually install the shorthand machinery — we mimic Perl's "file
-  // missing → skip" behavior for language packages — so the toggle
-  // has no shorthand state to switch, and the error fires whenever a
-  // multilingual paper invokes the toggle.
+  // But a pure no-op is WRONG: the *observable* effect of `\shorthandoff` is
+  // the CATCODE change (active → other), which genuinely affects tokenization,
+  // not just typesetting. French babel makes `;:!?` active; leaving them
+  // active when an author explicitly turned them off breaks downstream parsers
+  // that expect the literal chars — e.g. xy-pic `\xymatrix @!=8mm{…}` reads
+  // `@!=` expecting `!` at catcode 12; an active `!` derails the xymatrix so
+  // its `^`/`_` reach the math handler in text mode → 100+ `^`/`_` "can only
+  // appear in math mode" errors (witness arXiv:1804.10128, French + xy-pic).
   //
-  // Shorthand on/off is a typesetting-only concern (controls active-
-  // character spacing behavior in TeX); our XML output never observes
-  // those decisions, so a no-op is semantically correct for our
-  // pipeline. 6 R-stage papers in the babel cluster cleaned by this.
-  // Witness arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}...}`).
-  DefMacro!("\\shorthandoff{}", None);
-  DefMacro!("\\shorthandon{}", None);
+  // So apply the catcode change (the part our pipeline observes) and skip the
+  // error (the part the stub gap can't satisfy): `\shorthandoff` → OTHER(12),
+  // `\shorthandon` → ACTIVE(13). Local to the current group, mirroring TeX's
+  // local `\catcode`. Still correct for the defensive-call witness
+  // arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}…}`) — catcode 12 is the
+  // intended effect, no error.
+  fn shorthand_set_catcode(chars: Tokens, cc: Catcode) {
+    for tok in chars.unlist() {
+      if tok.get_catcode() == Catcode::SPACE {
+        continue;
+      }
+      let single = tok.with_str(|s| {
+        let mut it = s.chars();
+        match (it.next(), it.next()) {
+          (Some(c), None) => Some(c),
+          _ => None,
+        }
+      });
+      if let Some(c) = single {
+        state::assign_catcode(c, cc, Some(Scope::Local));
+      }
+    }
+  }
+  DefPrimitive!("\\shorthandoff{}", sub[(chars)] {
+    shorthand_set_catcode(chars, Catcode::OTHER);
+  });
+  DefPrimitive!("\\shorthandon{}", sub[(chars)] {
+    shorthand_set_catcode(chars, Catcode::ACTIVE);
+  });
 
 });
