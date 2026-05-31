@@ -2388,6 +2388,20 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): canvas FATAL/CONVERR results are STALE — re-test before triage
+
+**Observation (2026-05-31).** The `large_scale_canvas_3` failure logs (9878 FATAL,
+4857 CONVERR) are from older binaries and are largely RESOLVED by the current
+build. Spot-check: all 4 sampled `Fatal:TooManyErrors` papers (1501.03690,
+1502.06361, 1609.00560, 1907.07375) now convert with **0 errors**. The dominant
+live FATAL subcategory is timeouts (~472, need `--release` + Perl-baseline gating
+per [[feedback_timeout_release_only]]); `not_tex_source` (18) are PDF-only,
+out-of-scope. The genuine remaining Rust-only errors are sparse and cluster in
+deep subsystems: **pgf/tikz/pgfplots** (symbolic coords, pgfkeys, 1804.01117 tikz
+load-cascade), **xy-pic** (1508.03915), and **mode-frame leaks** (1902.11165).
+Always re-test a canvas failure with the current binary + Perl gate (sweep7.sh)
+before investigating. cf. [[project_canvas_stage_v6_recovery]].
+
 ### Round-37 (2026-05-31): pgfplots symbolic-coords DEFERRED — prior numeric axis leaks state into a following symbolic axis
 
 **1908.10041 + 1901.08716 DEFERRED (pgfplots per-axis state leak).** `Package
