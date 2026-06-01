@@ -2493,6 +2493,42 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-05-31): 2000-paper fresh sweep across 2008–2021 → only 1 Rust-only error (corpus drained)
+
+Extended the fresh untested-corpus verification to **four 500-paper sweeps spanning
+2008–2021** (sampled evenly from `/tmp/untested_ids.txt`, none in the converr pool; debug
+`cortex_worker`, 6 GB ulimit / 120 s). Each non-clean paper gated against Perl
+(`--path=ar5iv-bindings --preload=ar5iv.sty`, real dest):
+
+| slice | papers | clean | non-clean | Rust-only |
+|-------|-------:|------:|----------:|----------:|
+| 2013–2017 (sweep1) | 500 | 496 | 4 | **0** |
+| 2018–2020 (sweep2) | 500 | 491 | 9 | **1** → 1907.05772 (mdframed, FIXED) |
+| 2008–2012 (sweep3) | 500 | 495 | 5 | **0** |
+| 2021 (sweep4)      | 500 | 491 | 9 | **0** |
+
+**Across 2000 fresh papers, exactly ONE genuine Rust-only error** (1907.05772, fixed this
+round). Every other non-clean paper is **SHARED** — Perl errors equal or worse. The SHARED
+classes, all verified by side-by-side error categories:
+- **Broken math** (`^`/`_`/XMApp in text mode): the dominant class — `\nonumber` in a plain
+  `array`, malformed `$…$`, etc. Identical counts/categories in both engines (e.g. 1306.1163
+  92=92, 2101.03599 62=62, 2102.12192 16=16, 1202.3514 102=102).
+- **mdwtools `mdwmath` `#`-leak** (43× `misdefined:#`): documented upstream limitation
+  (`\meaning\sqrtsign` lacks the `"` — KNOWN_PERL_ERRORS); Perl strictly worse (1405.7843
+  51>43, 1711.06771 44>43, 2104.04492/2104.10006 both 43).
+- **Document bugs** breaking both engines identically: `\keywords…\endkeywords` without
+  `\begin`/`\end` (2103.00247 `\endkeywords` mode mismatch, Perl 1=1); a `\newenvironment`
+  whose END code is the theorem *begin* macro `\zpropositionof` instead of
+  `\endzpropositionof` → theorem opened twice → `\endgroup` leak (2108.07429 Perl 4=4); the
+  `{\Thm …}`-as-command misuse (1011.6274 Perl 1=1); stray `}`/`\endgroup` (2107.03534 1=1).
+- **Custom plain-TeX `\line`/picture width-loops** (STABILITY_WITNESSES Cluster D) and
+  **`\GenericError` layout** (1405.2563 2=2).
+
+**Verdict:** the sampled corpus space (2008–2021) is **drained of Rust-only defects**. The
+Rust translation matches or beats Perl on ~99% of fresh papers; the residual ~1% are SHARED
+LaTeXML limitations or document bugs that break both engines identically. Continue with
+deeper/wider sampling if a new Rust-only class is suspected, but the broad signal is parity.
+
 ### Round-37 (2026-05-31): fresh 500-paper untested sweep → 0 Rust-only errors (corpus drained)
 
 After draining the converr pool and fixing 1610.01345 (wlscirep stub deletion),
