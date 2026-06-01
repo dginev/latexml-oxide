@@ -15,6 +15,30 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **🎯 GOVERNING POST-CANVAS WORKFLOW (user directive, 2026-06-01).** Once the FULL canvas
+> (all 100 stages) completes, extract a SUBSET of the known hard cases — every paper classified
+> error (CONVERR), fatal, abort, timeout, OOM — into a NEW dedicated target directory, then
+> develop+validate the Rust translation REPEATEDLY against that small fixed sample until every
+> one converts without errors. This turns the 1M-scale sweep into a tight, reproducible
+> regression loop over the genuinely-hard tail.
+> - **Canvas completion status (2026-06-01):** the sweep has reached **stage 86** (of 100);
+>   stages 87-100 (~140 k papers) are NOT yet run — `master_stages_83_100.log` stops mid-86.
+>   Completing 87-100 is the stated PREREQUISITE for the final hard-case extraction.
+> - **Head start (allowed, strict subset):** the hard-case directory can already be seeded from
+>   the COMPLETED stages (51-86 have retained per-paper `results.txt`; stages 1-50 only have
+>   master-log per-stage summaries, not per-paper rows). Excludes the stage_82 `FATAL_127`
+>   binary-not-found infra glitch (4,514 papers — environmental, re-run, not real failures).
+>   This seed doubles as the next-error search substrate for the running fix loop.
+> - **SEEDED 2026-06-01:** `~/data/canvas_hard_cases/` — manifest.tsv = **2,766 hard cases**
+>   (2,620 CONVERR + 98 FATAL + 40 TIMEOUT + 8 OOM, all source zips present) + `sweep.sh` +
+>   `resweep.txt`. A current-binary resweep is RUNNING (re-classify all 2,766 to find which still
+>   fail). **Caveat — the OLD-binary signatures are heavily STALE:** the top recurring
+>   undefined-CS (`\dateUSenglish` 15, `\gfd@width@tmp` 4, `\Cnode` 3, `\crvi` 3) are ALREADY
+>   fixed in recent commits, and spot-gates confirm it — 1504.05963 (aa.cls/`\@inpenc@test`) now
+>   RUST=0/PERL=0 (also confirms today's dep-scan fix did NOT regress the aa.cls witness),
+>   1604.00381 (listings/`\lst@RequireAspects`) now RUST=0/PERL=11. So the live remaining-failure
+>   set is much smaller than 2,766; await the resweep, then Perl-gate only the current failures.
+
 > **📊 MEASURED CURRENT SUCCESS RATE (2026-06-01, robust ANSI-aware analysis).** Computed from
 > the canvas `results.txt` (classified by `run_one.sh`'s ANSI-aware grep — correct, unlike my
 > personal retest scripts), **cross-verified** against the `Status:conversion:N` integer in the
