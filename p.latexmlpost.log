@@ -1,0 +1,16 @@
+latexmlpost (LaTeXML version 0.8.8; revision e0f73ca2) paginating /tmp/pt/p.xml
+(post-processing...
+(Scan p.html processing...
+Scan: DBStatus: 61060/0 objects
+ 3.01 sec)
+(MakeBibliography p.html processing... 0.00 sec)
+(CrossRef p.html processing... 0.72 sec)
+(Graphics p.html 2 to process... 0.37 sec)
+(SVG p.html processing...
+(Loading compiled schema /home/deyan/perl5/lib/perl5/LaTeXML/resources/RelaxNG/LaTeXML.model... 0.00 sec) 0.01 sec)
+(MathML::Presentation p.html 1469 to process...
+converted 1469 Maths
+ 2.80 sec)
+(XSLT[using LaTeXML-html5.xsl] p.html processing... 0.89 sec)
+(Writer p.html processing... 0.01 sec) 7.88 sec)
+Postprocessing complete No obvious problems (reqd. 8.60s)
