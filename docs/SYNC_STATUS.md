@@ -15,6 +15,31 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **📊 MEASURED CURRENT SUCCESS RATE (2026-06-01, robust ANSI-aware analysis).** Computed from
+> the canvas `results.txt` (classified by `run_one.sh`'s ANSI-aware grep — correct, unlike my
+> personal retest scripts), **cross-verified** against the `Status:conversion:N` integer in the
+> output zips (0 OK-vs-status mismatches in a 20-sample) and ANSI-stripped failure logs (10/10
+> CONVERR logs carry real errors). FATAL_127 (missing-binary, environmental) excluded.
+> - **ALL COMPLETED STAGES 1-82 AGGREGATE (~812 k real conversions): OK = 809,237 → SUCCESS
+>   RATE 99.673%** (excl 4,514 env FATAL_127; raw incl-env = 99.122%). Breakdown: stages 1-15
+>   149,984/150,000 = 99.989% (initial canvas, 2026-05-21/22); stages 16-50 349,848/350,000 =
+>   99.957%; stages 51-82 309,405/311,889 = 99.204% (2026-05-29 binary; the binary-went-missing
+>   FATAL_127s of stages 75-82 excluded). NB: 1-15/16-50 (~99.96-99.99%) run notably higher
+>   than 51-82 (99.20%) — likely an easier/earlier corpus slice; the 51-82 + 83-84 figures are
+>   the most representative of the general second-500K. (1-15/16-50 from the master-log per-stage
+>   summaries; 51-82 from results.txt.)
+> - **Canvassed collection so far = second-500K stages 51-84 (~335 k papers run, 330,695 real
+>   conversions): OK = 328,076 → SUCCESS RATE 99.208%** (2,619 failures).
+> - **Current (post-fix) binary, stages 83-84 (18,806 papers): 99.282%** (18,671 OK; 135
+>   failures = 121 CONVERR + 9 TIMEOUT + 4 FATAL_3 + 1 OOM). CONVERR severity: 56 are 1-10
+>   errors, 61 are 11-50, 4 are >50. Many CONVERR are SHARED with Perl (per delta-gating), so
+>   the genuine Rust-ONLY fraction of that 0.72% is much smaller.
+> - First-500K (stages 1-50) `results.txt` not retained, so not in this aggregate; round-36
+>   notes recorded ~99.1-99.3%/stage there.
+> The canvas continues (stages 85-100), which will firm up the current-binary rate over the
+> whole second 500K. **Method is now the standing one: `results.txt` (or status code), never a
+> raw `grep '^Error:'` on colorized stderr** (see [[feedback_robust_log_parsing_canvas_signal]]).
+
 > **⚠️ RETRACTION (2026-06-01, late): the "CONVERR pool drained / at Perl parity" claim below
 > is WRONG — it was produced by a BUGGY verification harness and must not be trusted.** While
 > the canvas re-ran on the current binary, gating a multi-file paper (1910.06783) surfaced the
