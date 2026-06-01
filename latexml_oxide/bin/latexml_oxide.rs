@@ -379,7 +379,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Persistent LSP Server mode — handle early before source file checks
   if cli.server {
     log::info!("Starting persistent LSP server...");
-    latexml::lsp_server::run_lsp_server()?;
+    latexml::lsp_server::run_lsp_server(cli.timeout)?;
     process::exit(0);
   }
 

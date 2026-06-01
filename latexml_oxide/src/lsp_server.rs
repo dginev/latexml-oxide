@@ -200,11 +200,26 @@ struct ConvertOutput {
   log:     String,
   diags:   Vec<Diag>,
   sources: Vec<String>,
-  status:  &'static str,
+  /// Human-facing status label (the engine's status message, or `"timeout"`).
+  status:  String,
+  /// Engine status code: 0 = no problem, 1 = warning, 2 = error, 3 = fatal.
+  status_code: i64,
+}
+
+/// Default label for a status code, when the engine message isn't carried.
+fn status_label(code: i64) -> &'static str {
+  match code {
+    0 => "ok",
+    1 => "warning",
+    2 => "error",
+    _ => "fatal",
+  }
 }
 
 impl ConvertOutput {
-  fn error(message: String) -> Self {
+  /// A failed conversion carrying a `status` label, a `status_code`
+  /// (0/1/2/3), and a single Fatal diagnostic with `message`.
+  fn failed(status: &str, status_code: i64, message: String) -> Self {
     ConvertOutput {
       html: String::new(),
       log: message.clone(),
@@ -215,9 +230,13 @@ impl ConvertOutput {
         message,
       }],
       sources: Vec::new(),
-      status: "error",
+      status: status.to_string(),
+      status_code,
     }
   }
+
+  /// A hard/fatal failure (status code 3).
+  fn error(message: String) -> Self { Self::failed("fatal", 3, message) }
 
   /// The `latexml/convert` result object the ar5iv-editor client consumes.
   fn to_result_object(&self) -> Value {
@@ -232,8 +251,8 @@ impl ConvertOutput {
         "sources",
         Value::Array(self.sources.iter().map(|s| jstr(s.clone())).collect()),
       ),
-      ("status", jstr(self.status)),
-      ("statusCode", jnum(0.0)),
+      ("status", jstr(self.status.clone())),
+      ("statusCode", Value::from(self.status_code)),
     ])
   }
 }
@@ -475,6 +494,8 @@ fn get_directory_dependencies(uri: &str) -> BTreeMap<String, std::time::SystemTi
 
 struct Server {
   begin_doc_regex:           regex::Regex,
+  /// Per-conversion wall-clock budget in seconds (`--timeout`; 0 disables).
+  timeout_secs:              u64,
   warmed_uri:                Option<String>,
   warmed_preamble:           Option<String>,
   warmed_preamble_digested:  Option<latexml_core::digested::Digested>,
@@ -486,9 +507,10 @@ struct Server {
 }
 
 impl Server {
-  fn new() -> Self {
+  fn new(timeout_secs: u64) -> Self {
     Server {
       begin_doc_regex: regex::Regex::new(r"\\begin\s*\{\s*document\s*\}").unwrap(),
+      timeout_secs,
       warmed_uri: None,
       warmed_preamble: None,
       warmed_preamble_digested: None,
@@ -518,6 +540,11 @@ impl Server {
   fn convert_in_process(&mut self, uri: &str, text: &str) -> ConvertOutput {
     self.invalidate_cache();
     latexml_core::state::reset_thread_state();
+    // Cooperative wall-clock guard for the in-process path. (There is no child
+    // to reap here — this path runs on the server's own thread — so the hard
+    // RAM/time backstops don't apply; the cooperative deadline + the engine's
+    // RSS fuse are what bound a runaway fallback conversion.)
+    latexml_core::stomach::set_timeout(self.timeout_secs);
 
     let opts = make_config(uri);
     let mut converter = Converter::from_config(opts.clone());
@@ -530,6 +557,12 @@ impl Server {
     // locators here too, matching the warm-fork path.
     let resp = converter.convert_content_with_provenance(&get_file_path(uri), text.to_string());
     let sources = collect_sources(uri);
+    let status_code = resp.status_code as i64;
+    let status = if resp.status.is_empty() {
+      status_label(status_code).to_string()
+    } else {
+      resp.status
+    };
     let log = resp.log;
     let diags = parse_log_diagnostics(&log);
     let html = post_process_html(&resp.result.unwrap_or_default(), uri);
@@ -538,7 +571,8 @@ impl Server {
       log,
       diags,
       sources,
-      status: "ok",
+      status,
+      status_code,
     }
   }
 }
@@ -700,17 +734,71 @@ mod unix_server {
 
   /// Block until the body child finishes or is preempted, multiplexing
   /// `{stdin, child-pipe}` on a single thread.
+  /// How long the parent's hard wall-clock backstop waits beyond the child's
+  /// own cooperative `set_timeout`, so the child times out gracefully first.
+  const TIMEOUT_GRACE_SECS: u64 = 5;
+  /// Parent poll cadence — wake this often to re-check the child's resource use.
+  const RESOURCE_TICK_MS: libc::c_int = 200;
+
+  /// Read a child's resident set size (KiB) from `/proc/<pid>/status`.
+  fn child_rss_kb(pid: i32) -> Option<u64> {
+    let s = std::fs::read_to_string(format!("/proc/{pid}/status")).ok()?;
+    for line in s.lines() {
+      if let Some(rest) = line.strip_prefix("VmRSS:") {
+        return rest.split_whitespace().next()?.parse::<u64>().ok();
+      }
+    }
+    None
+  }
+
   fn wait_for_child(
     pid: i32,
     read_fd: i32,
     current_uri: &str,
     reader: &mut FdReader,
     pending: &mut VecDeque<String>,
+    timeout_secs: u64,
+    ram_cap_kb: u64,
   ) -> WarmResult {
+    use std::time::{Duration, Instant};
     // Owns `read_fd`; closes it on every return path.
     let mut pipe = unsafe { std::fs::File::from_raw_fd(read_fd) };
 
+    let start = Instant::now();
+    // Hard wall-clock limit (the child's cooperative deadline fires first).
+    let time_limit = (timeout_secs > 0).then(|| Duration::from_secs(timeout_secs + TIMEOUT_GRACE_SECS));
+
+    let kill_reap = |what: &str, msg: String| -> WarmResult {
+      log::warn!("Reaping body child {pid}: {what}");
+      unsafe {
+        libc::kill(pid, libc::SIGKILL);
+      }
+      reap(pid);
+      // Reaped for a resource breach → fatal (status code 3).
+      let label = if what == "timeout" { "timeout" } else { "fatal" };
+      WarmResult::Done(ConvertOutput::failed(label, 3, msg))
+    };
+
     loop {
+      // Parent-enforced hard backstops — the child is reaped here if it blows
+      // through the cooperative guards (e.g. a runaway in libxslt that never
+      // reaches a `check_timeout`, or a sudden allocation spike).
+      if let Some(lim) = time_limit {
+        if start.elapsed() > lim {
+          return kill_reap("timeout", format!("conversion exceeded {timeout_secs}s wall-clock budget"));
+        }
+      }
+      if ram_cap_kb > 0 {
+        if let Some(rss) = child_rss_kb(pid) {
+          if rss > ram_cap_kb {
+            return kill_reap(
+              "oom",
+              format!("conversion exceeded {} MB RAM budget", ram_cap_kb / 1024),
+            );
+          }
+        }
+      }
+
       // Already-buffered stdin frame takes priority (poll wouldn't re-report
       // bytes we've pulled into user space).
       let stdin_ready = if reader.has_complete_frame() {
@@ -720,7 +808,9 @@ mod unix_server {
           libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 },
           libc::pollfd { fd: read_fd, events: libc::POLLIN, revents: 0 },
         ];
-        let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
+        // Finite tick so the resource backstops above run even while neither fd
+        // is ready (a CPU/RAM-bound child produces nothing until it finishes).
+        let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, RESOURCE_TICK_MS) };
         if rc < 0 {
           let err = std::io::Error::last_os_error();
           if err.raw_os_error() == Some(libc::EINTR) {
@@ -731,6 +821,10 @@ mod unix_server {
           let _ = pipe.read_to_end(&mut bytes);
           reap(pid);
           return finish(current_uri, &bytes);
+        }
+        if rc == 0 {
+          // Tick elapsed, nothing ready — loop back to the resource checks.
+          continue;
         }
         let pipe_ready = (fds[1].revents & (libc::POLLIN | libc::POLLHUP)) != 0;
         if pipe_ready {
@@ -811,12 +905,20 @@ mod unix_server {
           let combined_log = format!("{}{}", PREAMBLE_LOG.with(|c| c.borrow().clone()), body_log);
           let diags = parse_log_diagnostics(&combined_log);
           let _ = current_uri;
+          // Engine status/code reported by the child (0/1/2/3).
+          let status_code = payload.get("statusCode").and_then(|c| c.as_i64()).unwrap_or(0);
+          let status = payload
+            .get("status")
+            .and_then(|s| s.as_str())
+            .map(String::from)
+            .unwrap_or_else(|| status_label(status_code).to_string());
           WarmResult::Done(ConvertOutput {
             html,
             log: combined_log,
             diags,
             sources,
-            status: "ok",
+            status,
+            status_code,
           })
         }
       },
@@ -840,6 +942,7 @@ mod unix_server {
     offset_lines: usize,
     body: &str,
     warmed: &latexml_core::digested::Digested,
+    timeout_secs: u64,
   ) -> Result<(i32, i32), String> {
     let mut fds = [0i32; 2];
     unsafe {
@@ -863,7 +966,7 @@ mod unix_server {
       unsafe {
         libc::close(read_fd);
       }
-      let payload = run_body_child(uri, offset_lines, body, warmed);
+      let payload = run_body_child(uri, offset_lines, body, warmed, timeout_secs);
       let bytes = payload.to_string().into_bytes();
       let mut file = unsafe { std::fs::File::from_raw_fd(write_fd) };
       let _ = file.write_all(&bytes);
@@ -892,8 +995,15 @@ mod unix_server {
     offset_lines: usize,
     body: &str,
     warmed: &latexml_core::digested::Digested,
+    timeout_secs: u64,
   ) -> Value {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+      // Re-arm the conversion deadline FRESH from this child's clock. The child
+      // inherits the parent's thread-local CONVERSION_DEADLINE via COW (set
+      // during warm-up); without this the body would run against a stale (often
+      // already-expired) deadline. This is the cooperative guard — digest loops
+      // raise Fatal:Timeout, caught below; the parent enforces the hard backstop.
+      latexml_core::stomach::set_timeout(timeout_secs);
       // Bare Core over the inherited state — does NOT reset thread-local state.
       let mut core = latexml_core::Core {
         preload: make_config(uri).preload.unwrap_or_default(),
@@ -927,18 +1037,31 @@ mod unix_server {
       // Post-process to HTML5 in the child (the heavy XSLT stays inside the
       // cancellable/throwaway process).
       let html = post_process_html(&core_xml, uri);
+      // Engine status (0 ok / 1 warning / 2 error / 3 fatal) — cumulative over
+      // the inherited preamble report plus this body.
+      let status = latexml_core::common::error::get_status_message();
+      let status_code = latexml_core::common::error::get_status_code() as i64;
       let log = latexml_core::util::logger::flush_log();
-      Ok::<(String, String, Vec<String>), String>((html, log, sources))
+      Ok::<(String, String, Vec<String>, String, i64), String>((
+        html,
+        log,
+        sources,
+        status,
+        status_code,
+      ))
     }));
 
     match result {
-      Ok(Ok((html, log, sources))) => jobj(vec![
+      Ok(Ok((html, log, sources, status, status_code))) => jobj(vec![
         ("html", jstr(html)),
         ("log", jstr(log)),
         (
           "sources",
           Value::Array(sources.into_iter().map(jstr).collect()),
         ),
+        ("status", jstr(status)),
+        // Integer (not jnum's float) so the parent's `as_i64()` round-trips.
+        ("statusCode", Value::from(status_code)),
       ]),
       Ok(Err(msg)) => jobj(vec![("error", jstr(msg))]),
       Err(_) => jobj(vec![("error", jstr("child panicked"))]),
@@ -963,6 +1086,10 @@ mod unix_server {
       let body = &text[mat.end()..];
       let offset_lines = preamble.matches('\n').count();
       let deps = get_directory_dependencies(uri);
+      let timeout = self.timeout_secs;
+      // Cooperative deadline for the (parent-side) warm-up digest. The forked
+      // body child re-arms its own fresh deadline; see `run_body_child`.
+      latexml_core::stomach::set_timeout(timeout);
 
       let cache_hit = self.warmed_uri.as_deref() == Some(uri)
         && self.warmed_preamble.as_deref() == Some(preamble)
@@ -997,7 +1124,7 @@ mod unix_server {
       }
 
       let warmed = self.warmed_preamble_digested.as_ref().unwrap();
-      let (pid, read_fd) = match spawn_body_child(uri, offset_lines, body, warmed) {
+      let (pid, read_fd) = match spawn_body_child(uri, offset_lines, body, warmed, timeout) {
         Ok(v) => v,
         Err(e) => {
           log::error!("{e}; falling back to in-process");
@@ -1009,7 +1136,7 @@ mod unix_server {
       // loop) without threading it through every signature.
       PREAMBLE_LOG.with(|c| *c.borrow_mut() = self.warmed_preamble_log.clone());
 
-      match wait_for_child(pid, read_fd, uri, reader, pending) {
+      match wait_for_child(pid, read_fd, uri, reader, pending, timeout, max_rss_kb()) {
         WarmResult::Cancelled => WarmResult::Cancelled,
         // A child that reported an internal error is reported as-is rather than
         // silently re-run in-process: re-running would reset the warm cache and
@@ -1020,9 +1147,9 @@ mod unix_server {
     }
   }
 
-  pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+  pub fn run(timeout_secs: u64) -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = std::io::stdout();
-    let mut server = Server::new();
+    let mut server = Server::new(timeout_secs);
     let mut reader = FdReader::new();
     let mut pending: VecDeque<String> = VecDeque::new();
 
@@ -1190,9 +1317,9 @@ mod generic_server {
     Some(String::from_utf8_lossy(&body).into_owned())
   }
 
-  pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+  pub fn run(timeout_secs: u64) -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = std::io::stdout();
-    let mut server = Server::new();
+    let mut server = Server::new(timeout_secs);
     let stdin = std::io::stdin();
     let mut reader = std::io::BufReader::new(stdin.lock());
 
@@ -1292,15 +1419,31 @@ fn did_change_params(request: &Value) -> Option<(String, String)> {
   Some((uri, text))
 }
 
-pub fn run_lsp_server() -> Result<(), Box<dyn std::error::Error>> {
+/// `timeout_secs` is the per-conversion wall-clock budget (the `--timeout`
+/// flag; 0 disables). It is applied **fresh per conversion** — in particular,
+/// re-armed inside each forked child so a child never runs against the parent's
+/// stale warm-up deadline — and backstopped by the parent (which also reaps a
+/// child that exceeds the RAM cap; see [`max_rss_kb`]).
+pub fn run_lsp_server(timeout_secs: u64) -> Result<(), Box<dyn std::error::Error>> {
   #[cfg(unix)]
   {
-    unix_server::run()
+    unix_server::run(timeout_secs)
   }
   #[cfg(not(unix))]
   {
-    generic_server::run()
+    generic_server::run(timeout_secs)
   }
+}
+
+/// Hard RSS ceiling for a forked body child (parent reaps it past this).
+/// Default 6 GiB; override with `LATEXML_LSP_MAX_RSS_MB`. Returns KiB (to
+/// compare directly against `/proc/<pid>/status` `VmRSS`). 0 disables.
+fn max_rss_kb() -> u64 {
+  std::env::var("LATEXML_LSP_MAX_RSS_MB")
+    .ok()
+    .and_then(|v| v.parse::<u64>().ok())
+    .map(|mb| mb * 1024)
+    .unwrap_or(6 * 1024 * 1024)
 }
 
 #[cfg(test)]
