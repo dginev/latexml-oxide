@@ -109,6 +109,22 @@
 > the CURRENT binary to measure the true current success rate, since all the failure data
 > above predates ~20 landed fixes.
 >
+> **Deferred-Rust-only list re-verified + last one FIXED (2026-06-01).** Re-tested the
+> documented DEFERRED Rust-only papers on the current binary: 1608.00275 (revtex4 `_`),
+> 1810.11979 (lstlisting `^/_`), 2006.01470 (xy-pic `@!`, was 27 err) are ALL now 0-error
+> (fixed since deferral). The one still-broken — **1809.04023** (revtex4-1 +
+> `\PassOptionsToPackage{table}{xcolor}` + chemformula + `\rowcolors`) — is **FIXED** (commit
+> `b61e0a2ed7`): traced `\rowcolors`-undefined → xcolor-never-loaded → the chemformula stub
+> omitted tikz, but real `chemformula.sty` L29 `\RequirePackage{tikz,…}` and tikz→pgf→
+> pgfsys-latexml loads xcolor (which the paper's pending `table` option needs for
+> `\rowcolors`). Added `RequirePackage!("tikz")`; 1 err → 0 (149 KB), suite 1344/0, 2006.07679
+> chemformula `\sfrac` witness still clean. Same stub-omits-real-dependency pattern as #273.
+> **CAVEAT (per user 2026-06-01): this is NOT a proof that all ~820 k stage-51-82 articles are
+> error-free.** It is parity on the *tested* failure set: ~57 of 114 CONVERR papers gated
+> (sample), all FATAL classes swept (exhaustive), deferred list cleared. The data is stale
+> (2026-05-29 binary); only a current-binary re-run measures the true error set. The fresh
+> stage-83 run (current binary) shows ~99.1 % OK with ungated failures still to check.
+>
 > **Net: across canvas_3 + the high- and low-error CONVERR bands, ZERO remaining
 > Rust-only conversion errors.** The corpus is genuinely at Perl parity for error-free
 > conversion. The only non-shared residuals are reliability/perf (tasks #266/#274:
