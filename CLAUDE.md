@@ -256,12 +256,14 @@ truth for macro-expanded diagnostics.
   `grep '^Error:'` works on `cortex ... > log.txt 2>&1`. Still, defensively `sed
   's/\x1b\[[0-9;]*m//g'` before `grep -acE '^(Error|Fatal):'` (logs from older binaries carry
   ANSI), and gate on **cortex's own `Processing content` file** (multi-file papers ship decoy
-  `\begin{document}` stubs). **LANDMINE:** `canvas/run_one.sh` greps `$'^\x1b[31mError:'`
-  (ANSI-aware) — it is CORRECT for the current ANSI-emitting release binary, but if you rebuild
-  the release binary with the TTY-gate fix, run_one.sh's ANSI-grep will match **zero** and mark
-  every paper OK (false success). **Before rebuilding the release `cortex_worker`, update
-  run_one.sh to strip ANSI (or read the `Status:conversion:N` integer).** When in doubt, count
-  it as a failure to investigate, not a pass.
+  `\begin{document}` stubs). `canvas/run_one.sh` was HARDENED 2026-06-01 to **strip ANSI before
+  the `^Error:`/`^Fatal:` count** — behaviour-preserving on the current ANSI-emitting release
+  binary AND future-proof for an ANSI-free one (so the old landmine, where rebuilding release
+  with the TTY-gate fix would zero-out run_one.sh's `$'^\x1b[31mError:'` grep and mark every
+  paper a false "OK", is DEFUSED; release may now be rebuilt safely). Validated against ground
+  truth on a 100-undefined-macro + recursion article: 101 errors / 1 fatal, identical counts on
+  both the ANSI and ANSI-free binaries, matching `Status:conversion:3`. When in doubt, count it
+  as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - **Active work**: the strict-Perl dump-parity mission is complete (see above). Remaining sub-tasks — including the ~72-CS Perl-only long tail — are tracked in `docs/SYNC_STATUS.md`; the completed audit is at `docs/archive/PERL_LOADFORMAT_AUDIT.md`.
