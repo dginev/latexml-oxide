@@ -218,6 +218,20 @@
 > 13, `expected:id` only **1** (confirms that cluster is fixed). **After the canvas + idle:** Perl-gate
 > the undefined-singletons (each a distinct package-internal binding gap candidate) and 2-3
 > `misdefined:#` papers; fix any genuine Rust-only.
+>
+> **Worklist disposition (2026-06-01): `\@envbody` (1912.13386) = SHARED, NOT a target.** The
+> undefined `\@envbody`/`\process@envbody`/`\begin@stack` come from the `autobreak` package, which
+> `\RequirePackage{amsmath}` then reuses amsmath's `\newtoks\@envbody` register — but NEITHER
+> engine's amsmath *binding* defines it (real amsmath.sty does; the bindings replace amsmath
+> semantically). A 9-line minimal autobreak doc errors IDENTICALLY in both: **Perl 12 == Rust 12**
+> (`autobreak not allowed here` + the `\@envbody` cascade). The full paper looked Rust-only only
+> because Perl TIMED OUT (line 1440, tabu/tikz) before its processing reached the autobreak envs.
+> So: shared package gap + shared timeout wall → can't reach clean success → skip. Methodology
+> recorded in [[feedback_minimal_package_test_shared_vs_rustonly]] (minimal-package test in both
+> engines is the fast shared-vs-Rust-only discriminator). Remaining undefined-singletons
+> (`\@captype`, `\UL@setULdepth`, `\JournalTitle`, `\jvol`, `\Hy@driver`, …) to be minimal-tested
+> the same way post-canvas; most are expected SHARED (journal-class macros, caption-outside-float)
+> on the same evidence.
 
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
