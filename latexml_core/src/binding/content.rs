@@ -1882,52 +1882,23 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     cap.get(0).map(|m| !in_macro_def_body(m.start())).unwrap_or(true)
   };
 
-  // DIVERGENCE FROM PERL (deliberate, more-robust): skip a package that is
-  // `\RequirePackage`'d / `\usepackage`'d with MULTIPLE CONFLICTING option
-  // sets. This is the unmistakable signature of a require sitting inside a
-  // CONDITIONAL `\def`/`\newcommand` body rather than an actual load — e.g.
-  // `aa.cls`'s `\DeclareOption{ascii}{\def\aa@inputenc{\RequirePackage[ascii]
-  // {inputenc}}}` … `{utf8}{…[utf8]…}` declares inputenc six times with
-  // different encodings; only ONE is ever executed (via `\aa@inputenc`). Perl
-  // never hits this because its version-fallback path (myaa→aa.cls.ltxml)
-  // does NOT dep-scan the raw .cls at all; Rust DOES (content.rs:2010, to pick
-  // up a renamed class's genuinely-bundled deps), so the naive first-match
-  // dedup would force-load `inputenc[ascii]` and make a UTF-8 `ç` (codepoint
-  // 231, in inputenc[ascii]'s 128-255 "undefined" range) error where Perl is
-  // clean. Witness: 1504.05963 (`\documentclass{myaa}`, "François"). A genuine
-  // single-option require (one option set) is unaffected, so real bundled deps
-  // (e.g. `myclass`→caption, 2202.11535) still load.
-  let mut pkg_optsets: rustc_hash::FxHashMap<String, rustc_hash::FxHashSet<String>> =
-    rustc_hash::FxHashMap::default();
+  // NOTE — a former Rust-only "conflicting option sets" heuristic was REMOVED
+  // here (was: drop a package `\RequirePackage`'d / `\usepackage`'d with two or
+  // more DIFFERENT option sets, as the signature of a deferred require inside a
+  // `\def`/`\DeclareOption` body, e.g. aa.cls's
+  // `\DeclareOption{ascii}{\def\aa@inputenc{\RequirePackage[ascii]{inputenc}}}`
+  // …`{utf8}{…[utf8]…}`). It over-fired on a package required in BOTH arms of a
+  // load-time `\if…\else…\fi` with different options — mutually exclusive, so
+  // exactly one branch loads and the package MUST be kept. Witness: rist.cls's
+  // `\ifpdf \RequirePackage[pdftex,…]{hyperref} \else \RequirePackage[dvipdfm,…]
+  // {hyperref} \fi` (1912.00781: hyperref dropped → `\url` undefined). The
+  // heuristic was also provably REDUNDANT: it only ever saw TOP-LEVEL requires
+  // (the captures feeding it were `top_level`-filtered), but aa.cls's inputenc
+  // lives in a `\def`/`\DeclareOption` BODY — already dropped by the def-body
+  // `top_level` skip below, so it never entered the conflicting set at all. Perl
+  // has no such gate (L2767-2774 is a plain dedup); the def-body `top_level` skip
+  // plus the executed-set gate cover the legitimate cases faithfully.
   static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
-  let mut note_optset = |pkg_csv: &str, raw_options: Option<&str>| {
-    for p in OPT_SPLIT.split(pkg_csv) {
-      if p.is_empty() {
-        continue;
-      }
-      pkg_optsets
-        .entry(p.to_string())
-        .or_default()
-        .insert(raw_options.unwrap_or("").trim().to_string());
-    }
-  };
-  for cap in REQ_RE.captures_iter(&code) {
-    if !top_level(&cap) {
-      continue;
-    }
-    note_optset(&cap[2], cap.get(1).map(|m| m.as_str()));
-  }
-  for cap in USE_RE.captures_iter(&code) {
-    if !top_level(&cap) {
-      continue;
-    }
-    note_optset(&cap[2], cap.get(1).map(|m| m.as_str()));
-  }
-  let conflicting: rustc_hash::FxHashSet<String> = pkg_optsets
-    .into_iter()
-    .filter(|(_, opts)| opts.len() > 1)
-    .map(|(p, _)| p)
-    .collect();
 
   // Perl L2767-2774: shared `%dups` map, $collect closure splits on
   // `\s*,\s*` and only enrolls a package once, AND only if its
@@ -1936,7 +1907,7 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
-      if p.is_empty() || conflicting.contains(p) {
+      if p.is_empty() {
         continue;
       }
       // Executed-set gate (see top of fn): when this file raw-loaded, drop a

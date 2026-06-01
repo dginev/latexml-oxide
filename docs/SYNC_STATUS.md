@@ -81,24 +81,26 @@
 >   (math leaking into `<ltx:glossaryref>`); Rust 293 vs Perl 100-capped is just the different
 >   error cap (Rust 1000 / Perl 100), same root issue. Drop from the Rust-only worklist.
 >
-> **NEW clean genuine Rust-only found via the CORRECT gate (Perl=0): 1910.12622.** elegantpaper
-> class (no binding → OmniBus) + a harvard-style `.bbl` using `\harvarditem`. Perl 0 / Rust 2
-> (`\harvarditem` undefined + a downstream `_`). Root cause deeply narrowed: elegantpaper.cls
-> loads natbib via CHAINED etoolbox conditionals —
-> `\ifdefstring{\ELEGANT@cite}{authoryear}{\RequirePackage[authoryear,sort&compress]{natbib}}{\relax}`
-> then `…{numbers}{\RequirePackage[numbers,sort&compress]{natbib}}{\relax}`. Rust's dep-scan
-> executed-set gate (content.rs `maybe_require_dependencies`) DROPS natbib because its
-> `\RequirePackage` never executed during the OmniBus raw-load → `natbib.usepackage_executed`
-> false → not in the dep list (Perl's list HAS natbib). Bisected the non-execution to a precise
-> interaction: **a SKIPPED first `\ifdefstring` branch whose `\RequirePackage` carries an `&` in
-> its `[...]` optional arg (`sort&compress`) corrupts the SUBSEQUENT `\ifdefstring` block — but
-> ONLY inside the class raw-load; the identical chained construct in a clean preamble works.**
-> Minimal repro: `head -67 elegantpaper.cls` (renamed) + two chained
-> `\ifdefstring{\ELEGANT@cite}{…}{\RequirePackage[x,sort&compress]{natbib}}{\relax}`. Single
-> block, or no-`&`, or clean-preamble all load natbib; chained + `&` + class-raw-load does not.
-> Likely an `&`-catcode (ALIGN) mishandle in macro-argument reading during the raw-load (cf.
-> [[project_alignment_noalign_defined_as]]). Deferred for a focused core fix; see
-> [[project_elegantpaper_natbib_depscan_amp]].
+> **FIXED 2026-06-01 — dep-scan "conflicting option sets" heuristic REMOVED (one change fixes
+> two Rust-only papers: 1912.00781 + 1910.12622).** Both were no-binding classes (OmniBus +
+> dep-scan) that load a package in BOTH arms of a load-time conditional with DIFFERENT options:
+> - **1912.00781** (rist.cls): `\ifpdf \RequirePackage[pdftex,…]{hyperref} \else
+>   \RequirePackage[dvipdfm,…]{hyperref} \fi` → `\url` undefined (Rust 1 / Perl 0).
+> - **1910.12622** (elegantpaper.cls): chained `\ifdefstring` arms with
+>   `\RequirePackage[authoryear,sort&compress]{natbib}` vs `[numbers,sort&compress]{natbib}` →
+>   `\harvarditem` undefined (Rust 2 / Perl 0).
+>
+> Root cause (NOT the `&`, which was a red herring — the discriminating feature was always the
+> two DIFFERENT option sets): a Rust-only heuristic in `content.rs::maybe_require_dependencies`
+> dropped any package appearing with ≥2 distinct option sets, treating it as a deferred
+> `\def`-body require (the aa.cls/1504.05963 multi-encoding-inputenc pattern). It over-fired on
+> mutually-exclusive `\if…\else…\fi` branches (exactly one executes → the package MUST load).
+> The heuristic was also provably **redundant**: its option-set tally was fed only `top_level`
+> captures, but aa.cls's inputenc lives in a `\def`/`\DeclareOption` body → already dropped by
+> the def-body `top_level` skip, so it never entered the conflicting set (verified: synthetic
+> aa-pattern still drops inputenc, IE:NOT, 0 errors). Removed the gate; Perl has no equivalent
+> (its dep-scan L2767-2774 is a plain dedup). Both papers now total_errors=0, substantive HTML;
+> suite 1344/0. See [[project_elegantpaper_natbib_depscan_amp]].
 >
 > **NEXT:** rebuild the CONVERR verification on a correct harness (cortex for Rust + matched
 > ANSI-stripped Perl on cortex's main) and systematically re-gate stages 51-100. The canvas
