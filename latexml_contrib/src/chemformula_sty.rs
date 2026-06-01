@@ -14,16 +14,20 @@ LoadDefinitions!({
   // Driver cluster: stage11_v3 2504.13749 (chemformula raw-load).
   RequirePackage!("l3keys2e");
   RequirePackage!("xparse");
-  // Mirror chemformula.sty L29 `\RequirePackage{tikz,amsmath,xfrac,nicefrac}`:
-  // loading chemformula makes `\sfrac` (from xfrac) available to the document.
-  // Perl has no chemformula binding — it raw-loads chemformula.sty and pulls
-  // in xfrac → `\sfrac` the same way. The stub previously omitted these, so a
-  // paper that loads chemformula and then uses `\sfrac` in plain math (NOT
-  // inside `\ch`) saw `\sfrac` undefined where Perl had it. Witness 2006.07679
-  // (loads chemformula, no `\ch`; uses `\sfrac{\theta}{2}`): 1 error → 0.
-  // tikz is intentionally NOT required: the stub renders `\ch` via mhchem
-  // `\ce`, not chemformula's tikz-drawn arrows, so tikz is unused — keep the
-  // stub light. xfrac transitively brings nicefrac.
+  // Mirror chemformula.sty L29 `\RequirePackage{tikz,amsmath,xfrac,nicefrac}`
+  // faithfully — Perl has no chemformula binding, so it raw-loads the real
+  // chemformula.sty and pulls in ALL of these transitively. `\sfrac` (xfrac)
+  // becomes available to the document (witness 2006.07679: `\sfrac{\theta}{2}`
+  // in plain math, 1 error → 0). `tikz` was previously omitted "to keep the
+  // stub light" (the stub renders `\ch` via mhchem `\ce`, not chemformula's
+  // tikz-drawn arrows), but that omission is a DIVERGENCE: the real chemformula
+  // requires tikz, and tikz → pgf → pgfsys-latexml loads `xcolor`. A paper that
+  // does `\PassOptionsToPackage{table}{xcolor}` then relies on chemformula to
+  // pull in xcolor (with the table option → `\rowcolors`/colortbl) saw
+  // `\rowcolors` undefined where Perl had it. Witness 1809.04023 (revtex4-1 +
+  // `\PassOptionsToPackage{table}{xcolor}` + chemformula + `\rowcolors`):
+  // 1 error → 0. So require tikz too, matching chemformula.sty L29 exactly.
+  RequirePackage!("tikz");
   RequirePackage!("xfrac");
   RequirePackage!("nicefrac");
   Let!("\\ch", "\\ce");
