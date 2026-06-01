@@ -2466,6 +2466,33 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): fresh 500-paper untested sweep → 0 Rust-only errors (corpus drained)
+
+After draining the converr pool and fixing 1610.01345 (wlscirep stub deletion),
+ran a **fresh untested-corpus sweep**: 500 papers sampled evenly across the
+2013–2017 slice (`/tmp/untested_ids.txt`, none in the converr pool), current
+debug `cortex_worker`, 6 GB ulimit / 120 s. **Result: 496/500 (99.2%) complete
+fully clean (rc=0, errs=0).** The 4 non-clean are **all SHARED** (gated against
+Perl `--path=ar5iv-bindings --preload=ar5iv.sty`, real dest):
+  - `1306.1163` — Perl 92 = Rust 92 (broken math: `\nonumber` in plain `array`).
+  - `1405.2563` — Perl 2 = Rust 2 (`\GenericError` "Not in outer par mode").
+  - `1405.7843` — Perl 51 > Rust 43 (mdwmath `\sq@readrad` `#`-leak; see
+    KNOWN_PERL_ERRORS "mdwmath.sty"). Perl strictly worse.
+  - `1711.06771` — Perl 44 > Rust 43 (same mdwmath cluster). Perl strictly worse.
+
+Separately re-ran the 16-paper `canvas_3_failures_sandbox/all_failures.txt`
+reliability batch on the current binary: **0 Rust-only defects** — 3 `FATAL_139`
+segfaults now clean (stale transients), 5 OOM/TIMEOUT now clean (stale), 1
+inherent-large-math graceful OOM-abort (hep-ph0012156, Cluster A), and 7
+SHARED memory/time runaways (custom plain-TeX `\line`/picture width-loops where
+LaTeXML can't measure font-box widths — Perl hangs unbounded, Rust aborts
+gracefully at the 4500 MB MemoryBudget; see STABILITY_WITNESSES Cluster D).
+
+**Net:** zero genuine Rust-only errors surfaced across 500 fresh + 16 reliability
+papers this round — every residual failure is SHARED with Perl (Perl equal or
+worse). Strong signal that the sampled corpus space is drained of Rust-only
+defects. Continue sampling fresh slices (other year ranges) to widen coverage.
+
 ### Round-37 (2026-05-31): 1904.00943 FIXED — `\parbox` must restore `\\` to stable `\@normalcr`, not shortstack-pollutable `\lx@newline`
 
 **1904.00943 (article, `\shortstack`+`\parbox`+`itemize`) 7→0 errors.** `\\ Attempt to

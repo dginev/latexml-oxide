@@ -881,7 +881,11 @@ time). Confirmed SHARED 2026-05-29 against Perl `~/perl5/bin/latexml
 --path=~/git/ar5iv-bindings/bindings --preload=ar5iv.sty`: witness
 **1811.09652** gives RUST 43 / PERL 44 errors, and Perl's own log shows
 the identical `Error:misdefined:# The token T_PARAM[#] should never reach
-Stomach! at mdwmath.s…`. The `misdefined:#` cluster is one of the
+Stomach! at mdwmath.s…`. Re-confirmed 2026-05-31 by a fresh untested-corpus
+sweep: **1405.7843** (RUST 43 / PERL 51) and **1711.06771** (RUST 43 / PERL 44)
+— in both, Perl emits the identical 43 `misdefined:#` *plus* extra
+alignment/`\omit`/`\tab@*` errors, so Perl is strictly worse. The `misdefined:#`
+cluster is one of the largest in the corpus (~1300 papers via the mdwtools
 largest in the corpus (~1300 papers via the mdwtools family), but it is
 an **upstream LaTeXML limitation** — `\meaning` of LaTeXML's `\sqrtsign`
 does not reproduce TeX's `\mathchar"…` form — not a Rust-only defect.
