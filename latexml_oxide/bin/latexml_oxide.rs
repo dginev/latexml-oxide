@@ -278,6 +278,11 @@ struct Cli {
   /// See `docs/TELEMETRY.md`.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
+
+  /// Run as a persistent JSON-RPC-over-stdio server for editor/preview
+  /// integration (LSP framing; see `latexml::lsp_server`).
+  #[arg(long)]
+  server: bool,
 }
 
 /// Allocation-failure hook — emits a `Fatal:` line in the project's
@@ -369,6 +374,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         process::exit(1);
       },
     }
+  }
+
+  // Persistent LSP Server mode — handle early before source file checks
+  if cli.server {
+    log::info!("Starting persistent LSP server...");
+    latexml::lsp_server::run_lsp_server()?;
+    process::exit(0);
   }
 
   // Determine source: --source > --init > positional

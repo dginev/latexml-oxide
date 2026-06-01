@@ -2356,41 +2356,42 @@ pub fn end_semiverbatim() -> Result<()> { pop_frame() }
 
 //   #======================================================================
 
-// sub pushDaemonFrame {
-// ...  TODO
-// }
+// Faithful port of Perl `LaTeXML::Core::State::push/popDaemonFrame`
+// (used by the Perl `latexmls` daemon to reset bindings between runs while
+// keeping the loaded Pool). The Rust persistent server (`latexml_oxide
+// --server`) instead isolates each conversion in a `fork()`ed child, so these
+// are not currently wired into a caller — kept (with the round-trip test in
+// `tests/00_unit_state.rs`) as the in-process reset primitive for a future
+// thread-reusing, non-forking daemon mode. See `lsp_server` for the chosen
+// fork-isolation design.
+pub fn push_daemon_frame() {
+  let daemon_frame = UndoFrame {
+    locked: true,
+    ..UndoFrame::default()
+  };
+  state_mut!().undo.push_front(daemon_frame);
+}
 
-// sub daemon_copy {
-//   my ($ob) = @_;
-//   if (ref $ob eq 'HASH') {
-//     my %hash = map { ($_ => daemon_copy($$ob{$_})) } keys %$ob;
-//     return \%hash; }
-//   elsif (ref $ob eq 'ARRAY') {
-//     return [map { daemon_copy($_) } @$ob]; }
-//   else {
-//     return $ob; } }
-
-// sub popDaemonFrame {
-//   my ($self) = @_;
-//   while (!$$self{undo}[0]{_FRAME_LOCK_}) {
-//     $self->popFrame; }
-//   if (scalar(@{ $$self{undo} } > 1)) {
-//     delete $$self{undo}[0]{_FRAME_LOCK_};
-//     # Any non-preloaded Pool routines should be wiped away, as we
-//     # might want to reuse the Pool namespaces for the next run.
-//     my $pool_preloaded_hash = $self->lookupValue('_PRELOADED_POOL_');
-//     $self->assignValue('_PRELOADED_POOL_', undef, 'global');
-//     foreach my $subname (keys %LaTeXML::Package::Pool::) {
-//       unless (exists $$pool_preloaded_hash{$subname}) {
-//         undef $LaTeXML::Package::Pool::{$subname};
-//         delete $LaTeXML::Package::Pool::{$subname};
-//       } }
-//     # Finally, pop the frame
-//     $self->popFrame; }
-//   else {
-//     Fatal('unexpected', '<endgroup>', $self->getStomach,
-//       "Daemon Attempt to pop last stack frame"); }
-//   return; }
+pub fn pop_daemon_frame() -> Result<()> {
+  let mut state = state_mut!();
+  while !state.undo.front().as_ref().unwrap().locked {
+    drop(state);
+    pop_frame()?;
+    state = state_mut!();
+  }
+  if state.undo.len() > 1 {
+    state.undo.front_mut().unwrap().locked = false;
+    drop(state);
+    pop_frame()?;
+  } else {
+    fatal!(
+      TargetUnexpected,
+      Endgroup,
+      "Daemon Attempt to pop last stack frame"
+    );
+  }
+  Ok(())
+}
 
 // ======================================================================
 /// Set one of the definition prefixes global, etc (only global matters!)

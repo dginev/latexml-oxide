@@ -11,6 +11,7 @@ pub mod ini_tex;
 pub mod main_tex;
 pub mod post;
 pub mod util;
+pub mod lsp_server;
 
 /// Load the embedded LaTeXML schema (compile-time) into the runtime
 /// `MODEL`. Single home for the `load_model!("LaTeXML")` macro

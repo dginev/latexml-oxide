@@ -7517,3 +7517,62 @@ out so it doesn't crowd the parity worklist:
 These replace the inline 2026-05-24 codex "public-quality gaps" pass; its
 errors are corrected in `RELEASE_CRITERIA.md` §10. The parity mission is
 unchanged: ~99.4% on the 100k warning subset, no error-downgrading.
+
+---
+
+## Persistent server (`latexml_oxide --server`) — design & status (2026-06-01)
+
+A JSON-RPC-over-stdio server (LSP framing) in `latexml_oxide/src/lsp_server.rs`
+for editor/preview integration. Speaks a subset of LSP (`initialize`,
+`didOpen`/`didChange` → `publishDiagnostics`, `shutdown`, `exit`) plus a custom
+`latexml/convert` request returning `{html, log, diagnostics, sources, status,
+statusCode}` — the shape the `ar5iv-editor` client consumes.
+
+### Architecture
+* **Warm-preamble + fork-body.** The preamble (through `\begin{document}`) is
+  digested once in the parent and cached; each body conversion `fork()`s a
+  child that inherits the warm post-preamble state via copy-on-write, digests
+  only the body, builds + post-processes the DOM, and writes the result over a
+  pipe before exiting. The child is throwaway, so a body conversion never
+  pollutes the cache and a panicking/looping body cannot kill the server. The
+  child uses a bare `latexml_core::Core` over the inherited state — **never**
+  `Converter::from_config`/`Core::new`, which would `set_state` and wipe the
+  inherited definitions.
+* **Single-threaded `poll(2)` loop.** While a child runs the parent multiplexes
+  `{stdin, child-pipe}`; a newer same-document `latexml/convert` `SIGKILL`s the
+  in-flight child (a pid still owned/un-reaped here → no PID-recycle race) and
+  supersedes it. Single-threaded is also what makes the `fork()` safe (no other
+  thread can hold the allocator lock at fork time).
+* **Unified pipeline + cache coherence.** `latexml/convert` and
+  `didOpen`/`didChange` both go through one warm-fork path, so the cache stays
+  coherent (an in-process fallback always invalidates it). Preamble (warmup)
+  log is captured and merged with the body log so preamble diagnostics survive
+  across cache hits.
+* **Source-map.** Preamble and body are opened as *named* in-memory mouths
+  (the document's `.tex` path), not anonymous `literal:` — required so
+  `--source-map` stamps locators (it only stamps `.tex/.ltx/.bbl/.bib`). Body
+  line numbers are made file-relative by prepending the preamble's newline
+  count. Output is post-processed to HTML5 (`run_post_processing`,
+  `nodefaultresources=true` so no files are written), yielding the
+  `data-sourcepos` (dash) attributes + `sources` decoder ring the client uses.
+
+### Verified (2026-06-01)
+* End-to-end: warm convert, cache-hit convert, `didChange`→diagnostics, and
+  same-document preemption all work; output is full HTML5 with MathML,
+  `data-sourcepos`, and `sources:['<file>.tex']`; fork-path locators match the
+  full-document baseline; no cwd pollution.
+* Unit tests in `lsp_server::tests` (JSON round-trip + control-char escaping,
+  diagnostic parsing/0-basing, basename, cancelled-shape); daemon-frame
+  round-trip in `tests/00_unit_state.rs`.
+
+### Known gaps / follow-ups
+* In-process **fallback** path (no `\begin{document}`, fork failure, non-Unix)
+  emits HTML but **no** source-map locators (anonymous source). Acceptable for
+  the fallback; primary warm-fork path is fully covered.
+* Interner growth: long-lived sessions keep interning new symbols (the daemon
+  uses `reset_thread_state`, not `reset_thread_engine`); a periodic full reset
+  is a future hardening.
+* Earlier prototype benchmark figures (cold-vs-warm speedups) are **not**
+  re-verified post-rewrite and were measured before post-processing was wired
+  in; treat as stale until re-measured.
+

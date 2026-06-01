@@ -386,6 +386,38 @@ impl Converter {
     }
     Ok(())
   }
+
+  /// Digest in-memory `content` under the source name `name`, leaving the
+  /// thread-local engine state **live** — used by the persistent server to
+  /// warm a preamble once and then resume body digestion (in a fork child)
+  /// over the inherited state. The source is opened as a *named* mouth (not
+  /// the anonymous `literal:` protocol) so its locators carry `name` —
+  /// required for `--source-map` (`stamp_source_locator` only stamps
+  /// `.tex`/`.ltx`/`.bbl`/`.bib` user sources). Initializes the session if
+  /// needed; does not finalize a document.
+  pub fn digest_named(&mut self, name: &str, content: String) -> Result<Digested> {
+    if !self.ready {
+      self.initialize_session()?;
+    }
+    self.bind_log();
+    open_named_in_memory_mouth(name, content)?;
+    self.core.digest_internal()
+  }
+}
+
+/// Open a gullet mouth over in-memory `content` whose source is named `name`
+/// (a real path/filename). Uses the Mouth's cached-content branch so locators
+/// carry `name` rather than "Anonymous String".
+pub fn open_named_in_memory_mouth(name: &str, content: String) -> Result<()> {
+  use latexml_core::gullet;
+  use latexml_core::mouth::{Mouth, MouthOptions};
+  let mouth = Mouth::create(name, MouthOptions {
+    notes: true,
+    content: Some(content),
+    ..MouthOptions::default()
+  })?;
+  gullet::open_mouth(mouth, true);
+  Ok(())
 }
 
 /// Resolve the `(preamble, postamble)` to wrap the source in, based on

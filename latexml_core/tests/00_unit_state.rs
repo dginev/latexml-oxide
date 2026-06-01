@@ -337,22 +337,22 @@ fn assign_lookup_mapping() {
 
 #[test]
 fn push_pop_daemon_frames() {
-  // TODO
-  // state::assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
-  // state_mut!().push_daemon_frame();
-  // state::assign_value("daemon_mode", Stored::Bool(true),Some(Scope::Global));
-  // match state!().lookup_value("daemon_mode") {
-  //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
-  //   Some( Stored::Bool(b)) => assert_eq!(b, true, "in daemon mode"),
-  //   Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
-  // };
+  set_state(State::new(StateOptions::default()));
+  assign_value("daemon_mode", Stored::Bool(false), Some(Scope::Global));
+  push_daemon_frame();
+  assign_value("daemon_mode", Stored::Bool(true), Some(Scope::Global));
+  match lookup_value("daemon_mode") {
+    None => panic!("Couldn't lookup daemon_mode value after assignment"),
+    Some(Stored::Bool(b)) => assert_eq!(b, true, "in daemon mode"),
+    Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
+  };
 
-  // state_mut!().pop_daemon_frame();
-  // match state!().lookup_value("daemon_mode") {
-  //   None => panic!("Couldn't lookup daemon_mode value after assignment"),
-  //   Some( Stored::Bool(b)) => assert_eq!(b, false, "out of daemon mode"),
-  //   Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
-  // };
+  pop_daemon_frame().unwrap();
+  match lookup_value("daemon_mode") {
+    None => panic!("Couldn't lookup daemon_mode value after assignment"),
+    Some(Stored::Bool(b)) => assert_eq!(b, false, "out of daemon mode"),
+    Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
+  };
 }
 
 #[test]
