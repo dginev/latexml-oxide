@@ -40,6 +40,12 @@
 > **The one genuine parity-track Rust-only found+fixed this session:** the dep-scan
 > "conflicting option-sets" removal (commit `aa45e4c25d`: 1912.00781 `\url` + 1910.12622
 > `\harvarditem`, both no-binding classes loading a package in both arms of a load-time `\if…\else`).
+> **Broader corpus impact confirmed (2026-06-01):** the fix recovers MORE than the 2 papers
+> directly debugged — re-testing the stages-83-86 failure logs for the same class found
+> **1910.03113** (`\href`, CONVERR_1) and **1910.09020** (`\href`, CONVERR_7) ALSO now convert
+> CLEAN on the current binary (hyperref now in deps). So ≥4 corpus papers recovered by the one
+> root-cause fix; the canvas stages 83-85 (run pre-fix) record these as stale failures — the
+> post-canvas gate (fresh Rust re-run) will correctly show them recovered.
 >
 > **STRATEGIC PIVOT.** Singleton-by-singleton gating has hit clear diminishing returns (all shared).
 > The high-value path is NOT more one-off gating but: (1) let the auto-running canvas COMPLETE
