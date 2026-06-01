@@ -30,6 +30,13 @@
 >   summaries; 51-82 from results.txt.)
 > - **Canvassed collection so far = second-500K stages 51-84 (~335 k papers run, 330,695 real
 >   conversions): OK = 328,076 → SUCCESS RATE 99.208%** (2,619 failures).
+> - **ZIP-LOG-DIRECT confirmation (2026-06-01): 99.296%.** Re-derived by unzipping `cortex.log`
+>   from EVERY result zip in the current-binary stages (83-85), ANSI-stripping, and counting
+>   `^(Error|Fatal):` (the validated method) — independent of `results.txt`. 22,274 clean /
+>   22,432 processed = **99.296%** (83: 99.140%, 84: 99.440%, 85-partial: 99.342%). A paper is
+>   a success iff its in-zip log has 0 Error+Fatal lines; "with-errors" zips (CONVERR — produced
+>   output but logged errors) and no-zip papers (FATAL/TIMEOUT/OOM) are failures. Matches the
+>   results.txt figure (99.28%) → both methods are robust.
 > - **Current (post-fix) binary, stages 83-84 (18,806 papers): 99.282%** (18,671 OK; 135
 >   failures = 121 CONVERR + 9 TIMEOUT + 4 FATAL_3 + 1 OOM). CONVERR severity: 56 are 1-10
 >   errors, 61 are 11-50, 4 are >50. Many CONVERR are SHARED with Perl (per delta-gating), so
