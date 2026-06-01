@@ -46,9 +46,17 @@ LoadDefinitions!({
           Let!("\\parbox", "\\lx@algo@parbox");
           Let!("\\\\", "\\lx@algo@par");
           Let!("\\strut", "\\lx@algo@strut");
-          // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
-          // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
-          DefMacro!("\\BlankLine", "\\lx@algo@par");
+          // \BlankLine stays the raw algorithm2e.sty `\vskip 1ex` (NOT overridden).
+          // Perl's algorithm2e.sty.ltxml does NOT redefine \BlankLine either, and
+          // Perl's body output leaks "1ex" as a listingline's text — so the earlier
+          // Rust override to `\lx@algo@par` (to suppress that leak) was an unfaithful
+          // divergence that ALSO fired the listingline endline/startline machinery
+          // inside `\caption{… \BlankLine …}` (where no listingline is open) →
+          // `</ltx:listingline> isn't open` + `listingline isn't allowed in <float>`
+          // + malformed caption/toccaption. Leaving it raw, `\vskip 1ex` in the
+          // caption goes through leaveHorizontal's INTERNAL_PAR → the gentle
+          // `\lx@normal@par` path (no line machinery), matching Perl (0 errors).
+          // Witness 1901.07768 (algorithm2e `\caption{Co-Bandit \BlankLine …}`).
           DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
           // All variants share the SAME float counter ("algorithm"), matching
           // Perl (its loop body always calls beginItemize/RefStepCounter on
