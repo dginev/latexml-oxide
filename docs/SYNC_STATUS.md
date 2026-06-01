@@ -2466,6 +2466,33 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-05-31): 1907.05772 FIXED — mdframed must be `inline-logical-block` (Misc.class), not `logical-block` (Para.class), to sit in a `float`
+
+**1907.05772 (article, `mdframed` inside `\begin{algorithm}`) 3→0 errors.** Found by the
+fresh 2018–2020 sweep. `Error:malformed:ltx:logical-block "ltx:logical-block" isn't allowed
+in <ltx:float>` ×3 — the paper frames an `\begin{algorithm}` body with `mdframed`, and
+Rust's `mdframed_sty.rs` emitted `<ltx:logical-block framed=…>` directly under the algorithm
+`float`. Perl is clean (0): ar5iv `mdframed.sty.ltxml` uses `<ltx:inline-block>` (Misc.class),
+which `float_model` admits. **Schema root cause** (resources/RelaxNG): `float_model ⊇
+Block.model = (Block.class | Misc.class | Meta.class)`; `logical-block` is **Para.class**,
+not in Block.model → rejected in a float. The three framed-box elements each satisfy only
+TWO of {in-float, holds-theorem, nests}: `inline-block` (float✓ nest✓ theorem✗ — Perl's
+choice), `inline-logical-block` (float✓ theorem✓ nest✗), `logical-block` (theorem✓ nest✓
+float✗). No element does all three, and the auto-open bridge
+`inline-logical-block→para→inline-logical-block` is suppressed by the `($tag ne $kid)`
+self-nesting guard that exists **identically** in Perl `Document::computeIndirectModel` L207
+and Rust `state::compute_indirect_model` — so it can't be added without diverging from Perl.
+**Fix:** switch mdframed from `logical-block` to `inline-logical-block`. This FIXES the
+common mdframed-in-float case (1907.05772, matches Perl) and KEEPS the theorem-in-mdframed
+surpass (2506.03074, 2402.07712 — beyond Perl, which errors `malformed:ltx:theorem` there).
+Residual cost: the **rare** bare-first-child nested-frame case (1712.00062) now errors once
+(`inline-logical-block isn't allowed in inline-logical-block`; any leading text auto-opens a
+para that admits the inner frame, so only the bare variant is hit). By "minimize total
+errored papers" (N_theorem > N_float > N_nest), inline-logical-block strictly dominates the
+prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3/3, section
+7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
+undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
+
 ### Round-37 (2026-05-31): fresh 500-paper untested sweep → 0 Rust-only errors (corpus drained)
 
 After draining the converr pool and fixing 1610.01345 (wlscirep stub deletion),

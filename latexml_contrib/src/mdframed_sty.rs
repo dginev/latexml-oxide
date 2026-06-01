@@ -31,37 +31,52 @@ LoadDefinitions!({
   def_macro_noop("\\mdfsetup{}")?;
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Wrap body in `logical-block` (Para.class container with Para.model body).
+  // Wrap body in `inline-logical-block` (Misc.class container with Para.model body).
   //
-  // Rust-only surpass-Perl divergence (history): Perl ar5iv-bindings/
-  // mdframed.sty.ltxml L31-34 uses `inline-block` (Block.model only), which the
-  // schema rejects when an `mdframed` body contains a `\begin{theorem}`
-  // (theorem is Para.class, not Block.class). We first swapped to
-  // `inline-logical-block` (Misc.class, Para.model) to admit theorems — but
-  // `inline-logical-block` is in Misc.class, NOT Para.class, so its `Para.model`
-  // body does NOT readmit a nested `inline-logical-block` → two NESTED
-  // `\begin{mdframed}` (outer frame around an inner frame) tripped
-  // `"inline-logical-block" isn't allowed in <inline-logical-block>` where
-  // Perl's `inline-block` (Block.model ⊇ Misc.class) nests fine. Witness
-  // 1712.00062 (algorithm box: outer mdframed wrapping an inner titled
-  // mdframed).
+  // The schema offers three framed-box elements, each satisfying only TWO of
+  // the three placements an `mdframed` must support (verified against
+  // resources/RelaxNG: float_model ⊇ Block.model = Block.class|Misc.class|
+  // Meta.class; Para.model = Para.class|Meta.class):
+  //   * `inline-block`        (Misc.class, body=Block.model): in-float ✓, nests ✓
+  //       (Block.model ⊇ Misc.class), theorem ✗ (Block.model ⊉ Para.class).
+  //       This is what Perl ar5iv-bindings/mdframed.sty.ltxml L31-34 uses, so
+  //       Perl ITSELF errors `malformed:ltx:theorem` on a theorem-in-mdframed.
+  //   * `inline-logical-block`(Misc.class, body=Para.model): in-float ✓
+  //       (Misc.class ⊂ Block.model ⊂ float_model), theorem ✓ (Para.model ⊇
+  //       Para.class), nests ✗ — a directly-nested inner `inline-logical-block`
+  //       (Misc.class) isn't in the outer's Para.model.
+  //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓
+  //       (Para.class ∈ Para.model), in-float ✗ — Para.class ⊄ float_model.
   //
-  // `logical-block` resolves BOTH: it is the block-level sibling of
-  // inline-logical-block (schema: "like block can appear in inline or block
-  // mode, but typesets its contents as para"), with the SAME
-  // Backgroundable.attributes (`framed`/`framecolor`) and the SAME `Para.model`
-  // body (admits theorem/proof/para) — AND, being itself in `Para.class`, it
-  // nests inside another `logical-block`'s `Para.model`. mdframed already
-  // digests in `internal_vertical` (block) mode, so the block-level positioning
-  // is consistent with its semantics. Keeps the theorem-in-mdframed surpass
-  // (arXiv:2506.03074, 2402.07712) while fixing the nested-frame regression.
+  // No single element does all three, and the missing auto-open bridge
+  // (inline-logical-block → para → inline-logical-block, which para_model =
+  // Block.model WOULD admit) is intentionally suppressed by the `($tag ne $kid)`
+  // self-nesting guard in BOTH Perl `Document::computeIndirectModel` (L207) and
+  // our `state::compute_indirect_model` — so adding it would diverge from Perl's
+  // document model. We therefore pick the element that fails the RAREST case:
+  //
+  // History: this was `logical-block` (theorem ✓ + nests ✓) until a fresh sweep
+  // surfaced arXiv:1907.05772 — an `mdframed` inside a `\begin{algorithm}`
+  // float, where Perl is clean (0 err, its `inline-block` is Misc.class) but
+  // `logical-block` (Para.class) tripped `"logical-block" isn't allowed in
+  // <float>` ×3 (Rust-only, Perl=0). mdframed-in-float (framed algorithm/figure
+  // boxes) is far more common than nested frames, so `inline-logical-block`
+  // strictly dominates `logical-block`: it FIXES the float regression and keeps
+  // the theorem-in-mdframed surpass (arXiv:2506.03074, 2402.07712 — beyond Perl,
+  // which errors there). The residual cost is the rare directly-nested-frame
+  // case (1712.00062): inner frame as the FIRST child of an outer frame errors
+  // `"inline-logical-block" isn't allowed in <inline-logical-block>` (any leading
+  // text auto-opens a `para` that then admits the inner frame, so only the
+  // bare-first-child variant is affected). Net: trades a moderate Rust-only
+  // regression (float) for a rare one (bare-nested-frame), maximizing error-free
+  // conversions.
   //
   // The template emits `framecolor=` only when the #framecolor property is
   // set (via the `?#framecolor(...)` guard), so an unset color correctly
   // omits the attribute rather than emitting `framecolor=''`.
   DefEnvironment!(
     "{mdframed}[]",
-    "<ltx:logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:logical-block>",
+    "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",
     properties => sub[_args] {
       let mut props = arena::SymHashMap::default();
       if let Some(font) = latexml_core::state::lookup_font() {
