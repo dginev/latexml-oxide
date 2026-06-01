@@ -54,6 +54,15 @@
 > **~32 papers gated this session across every signature class — all SHARED/stale/transient bar
 > the one fix (aa45e4c25d, ≥4 papers recovered).**
 >
+> **UNBIASED random delta-gate (2026-06-01) — confirms drained without signature bias.** All prior
+> gating sampled by first-error SIGNATURE (biased toward common/cascade types). To remove that
+> bias, took a RANDOM spread of 12 of stage-90's 89 CONVERR papers (every 5th, fresh current-binary,
+> second-500K 2007-2008.x) and Perl-gated each: **10/10 completed are SHARED, Rust ≤ Perl** (43/44,
+> 11/12, 1/1, 1/1, 43/54, 1/1, 8/8, 15/15, 43/53, 4/4 — Rust often BETTER). Zero Rust-only, zero
+> Rust-worse. The recurring "Rust 43" is IEEE-template papers all hitting the same SHARED
+> `misdefined:#` 43-`#`-leak. So the drained conclusion holds on an unbiased sample, not just the
+> signature-picked ones. (stage-90 error rate itself: 89/10000 = 0.89%.)
+>
 > **PARITY ASSESSMENT.** On the sampled corpus, Rust is AT PARITY with Perl: same ~99.3% success,
 > same residual failures. The remaining ~0.7% are SHARED edge-cases (malformed source both engines
 > reject, vendor driver/layout errors moot-but-Perl-also-errors, packages the author didn't load)
