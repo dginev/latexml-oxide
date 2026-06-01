@@ -2493,6 +2493,47 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-05-31): canvas CONVERR_1 pool mined → 0 Rust-only errors (65% stale-recovered, rest SHARED/transient)
+
+Switched from random fresh-sampling (yielding ~1/2000 Rust-only) to mining the **actual
+canvas stage failure logs** (`canvas/stage_*/failures/*.CONVERR_*.log`, 4857 total, 1404
+single-error). Re-tested 300 of the 843 unique **CONVERR_1** (single-error) papers with the
+current binary: **195/300 (65%) are STALE-recovered** (now convert clean — fixed since the
+canvas run), **105 still error**. Gated the 105 by category against Perl on **cortex_worker's
+exact main file** (critical — see methodology note): **every one is SHARED, transient, or
+Rust-better — 0 genuine Rust-only errors.**
+- **Undefined kernel/common macros** (`\qed`, `\sep`, `\scriptsize`, `\thefootnote`,
+  `\urladdr`): all SHARED. The macro is defined *in the class body* (e.g. `\newcommand*{\qed}`
+  at `ectj.cls:596`, `\def\sep` at `IOS-Book-Article.cls:1082`), but **neither engine
+  raw-interprets an unbound `.cls` body** (both mark "1 missing file" + only dep-scan for
+  `\RequirePackage`); with no `\begin{proof}`/`\theoremstyle` trigger, OmniBus never
+  lazy-loads amsthm either → both error. `\scriptsize` was an **AMS-TeX** doc (`\input amstex`)
+  genuinely using a LaTeX-only command (Perl 2 > Rust 1).
+- **Malformed schema** (`ltx:p`/`ltx:XMHint`/`ltx:XMApp`/`ltx:subsubsection`/`ltx:listing`):
+  all SHARED (Rust = Perl, same `</ltx:p>`-close-in-equationgroup etc.); `subsubsection`-in-
+  itemize was Perl 39 ≫ Rust 1.
+- **Mode-leaks** (`}`/`\endgroup`): documented SHARED document-misuse (bare/misused
+  theorem/keyword envs).
+- **imageprocessing** (`*.eps`, 9 papers): **transient** — clean on fresh single-file re-run
+  (Rust 0 / Perl 3 on 1509.03187); the canvas error was a parallel temp-file/`.tmpXXXX` race,
+  not an engine defect.
+
+**Methodology note (cost me two false positives this round):** papers with **multiple
+`\begin{document}` files** (a `supplement.tex`/`abstract.tex` alongside the main) defeat a
+naive `grep -l '\begin{document}' | head -1` main-picker — it selects the wrong file, so the
+Perl baseline runs on a file that doesn't use the offending macro and falsely reads Perl=0.
+`\qed` (1809.00236) and `\sep` (1810.06908) both looked Rust-only this way; gating on
+**cortex_worker's actual `Processing content …` file** showed Perl errors identically. Always
+extract cortex's main from the sweep log before gating. Also: a few math/`_Capture_`
+`malformed:ltx:p` errors are sensitive to aux/`.bbl` presence — gate on a FRESH extraction.
+
+**Verdict:** the canvas CONVERR_1 pool corroborates the fresh-sweep finding — **no genuine
+Rust-only error remains** in the readily-reachable failure set. 65% of old single-error
+failures already convert clean; the rest are SHARED LaTeXML limitations, document bugs, or
+sweep-harness transients. (Tangential observation worth a follow-up: the canvas harness's
+zip-mode main-file selection and parallel temp-file handling inflate the raw CONVERR counts
+vs single-file `latexml_oxide` — a harness-accuracy issue, not a translation bug.)
+
 ### Round-37 (2026-05-31): 2000-paper fresh sweep across 2008–2021 → only 1 Rust-only error (corpus drained)
 
 Extended the fresh untested-corpus verification to **four 500-paper sweeps spanning
