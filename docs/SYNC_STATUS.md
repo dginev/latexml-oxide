@@ -58,6 +58,15 @@
 > herring: same root (a math XMApp leaking into a forbidden text/para context), differing only in
 > the immediate wrapper element. SHARED.
 >
+> **Content-loss angle also clean (2026-06-01, final angle).** Beyond error-count parity, checked
+> full-XML OUTPUT for a shared-error paper (1910.02343, `XMApp-in-text` 2/2): Rust 928 KB vs Perl
+> 1.17 MB, but the content-element counts MATCH — Math 415=415, p 132=132, para 86=86 exactly;
+> XMTok/XMApp differ only ~2-3% (the local XMApp-in-text wrapping). The 21% byte gap is the
+> intentional `%\n` formatting divergence, NOT content loss. So shared-error papers genuinely
+> convert the same content (the one real content-loss class, braced-theorem, was already fixed
+> 2026-06-01). Every detection angle — error-count delta, error-type divergence, content-size,
+> mode-switch cluster, reliability tail — now converges on the same conclusion: DRAINED.
+>
 > **Infrastructure ready for the pivot:** `~/data/canvas_hard_cases/post_canvas_gate.sh` — a
 > comprehensive Rust(release)-vs-Perl(ar5iv, cortex's own main) gate over ALL stages-83-100 CONVERR
 > ids, ANSI-stripped, classifying RUST-ONLY (Rust>0 & Perl=0) / RUST-WORSE / SHARED / RUST-BETTER.
