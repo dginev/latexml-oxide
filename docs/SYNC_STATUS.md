@@ -2493,6 +2493,26 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-05-31): 1901.07768 FIXED — algorithm2e must not override `\BlankLine` (caption `\BlankLine` fired the listingline machinery)
+
+First of the delta-gate's tractable non-cluster targets. `\BlankLine` inside an algorithm2e
+`\caption{… \BlankLine …}` produced **6 Rust-only errors**: `malformed:ltx:listingline` ×4
+(`</listingline> isn't open` / `listingline isn't allowed in <float>`) + malformed
+`caption`/`toccaption`. Root cause: `algorithm2e_sty.rs`'s env `before_digest` did
+`DefMacro!("\\BlankLine", "\\lx@algo@par")`, overriding the raw `\vskip 1ex` to run the
+listingline endline/startline machinery — fine in the body, but in the caption (no listingline
+open) it tried to close/open listinglines inside the caption/float. **Perl
+algorithm2e.sty.ltxml does NOT redefine `\BlankLine`**, and Perl's own body output even leaks
+"1ex" as a listingline's text — so the Rust override (added to suppress that leak) was an
+unfaithful divergence that also broke captions. **Fix:** drop the override (match Perl); raw
+`\vskip 1ex` in the caption routes through `leaveHorizontal`'s INTERNAL_PAR → the gentle
+`\lx@normal@par` path (no line machinery) → 0 errors. Body `\BlankLine` becomes a gentle par
+(Rust drops the empty spacer rows — cleaner than Perl's "1ex"-junk rows; **no content lost**,
+all 12 content listinglines preserved vs Perl's 22 = 12 content + 10 blanks). 1901.07768
+**9→3** (remaining 3 = `XMApp` + 2× `^` are SHARED, Perl=3). No regression: cited algorithm2e
+witnesses 1911.01815/2104.02680/2002.09766/1510.02728/1903.04631 stay errs=0; `cargo test`
+1344/0. Commit 0c9ddb9f36. Remaining delta-gate target: 1907.12308 (`.pdf_tex` graphics).
+
 ### Round-37 (2026-05-31): delta-gate (Rust − Perl > 0) mining → the `expected:id` cmml cluster is the #1 live Rust-only class
 
 The Perl=0 gate misses papers that error in BOTH engines but where Rust errors MORE — yet that
