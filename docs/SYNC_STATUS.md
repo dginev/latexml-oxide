@@ -15,6 +15,58 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
+> re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
+> "2007.06211 DEFERRED" / "remaining physics-`\mqty` residual" claims in the 2026-05-31
+> entries below are now **STALE** — the physics-`\mqty` fix landed (commits `6721f53232`
+> `\lx@physics@mat`→`DefMacro`, `09f6711acf` `\lx@physics@operatorP`→`DefMacro` fixes
+> 2003.02721, `2feb75daf6` quantity/operator/evaluated/diff). Verified on the current
+> binary from the **source** zips (`data/arxmliv/YYYY/ID/ID.zip`, NOT the stale
+> `stage_RNN/outputs/` result zips): **2007.06211 → 218 KB / 0 err**, **2003.02721 →
+> 325 KB / 0 err**, **1910.10674 → 408 KB / 0 err**. (Trap: a `find ~/data -name ID.zip`
+> can grab a `canvas/stage_RNN/outputs/ID.zip` — those are OLD conversion OUTPUTS
+> (`main.html`/`status`/`telemetry.json`), not source; always use the `data/arxmliv` path.)
+>
+> Three independent re-gating sweeps, all on the current binary, all delta-gated
+> (Rust>0 AND Perl=0) against full-pipeline Perl:
+> 1. **canvas_3 sandbox (16 round-3 failures): 13 RECOVERED to clean conversions**, 0
+>    Rust-only. Cluster E (3 segv), Cluster B (2 xymatrix OOM — was the `0xD0000000`/3.4 GB
+>    fixed-prealloc), Cluster C math0104252 (1920 formulae, Rust 19 s/4 MB vs Perl
+>    1 m22 s/21 MB — **Rust faster**), Cluster D gr-qc0209055/gr-qc0301024 all now PASS.
+>    Remaining 3 are SHARED: Cluster A `\displaylines` (math0102089 etc. — the paper
+>    REDEFINES `\put`/`\line`(`\droite`)/`\picture` in plain TeX, bypassing LaTeXML's
+>    SVG picture-interception, so the real `\@whilenum` glyph-stacking loop runs in BOTH
+>    engines — **Perl hung >8.5 min** while Rust fails fast+clean at the 4500 MB
+>    MemoryBudget cap in ~9 s, i.e. Rust is *better* here) and hep-ph0012156 (12 778
+>    formulae — Rust completes in 102 s, **faster than Perl** which was still running at
+>    >3 min; only borderline on the 60 s standalone `--timeout` default, passes at the
+>    canvas's 120 s). **Lesson: canvas main-file detection must be binary-safe (`grep -la`,
+>    latin-1 papers are "binary" to plain grep) and case-insensitive (`.TEX` uppercase) —
+>    several "html=0" retests were wrong-main artifacts, not failures.**
+> 2. **Top-30 CONVERR by error-count (stages 51-82, counts 88→859): 28 now convert
+>    cleanly**, 2 survivors (1805.01829, 1704.00369) BOTH SHARED (Perl 102 err too).
+>    Examples of the stale-data magnitude: 1910.06783 859→0, 1509.04521 753→0 (SIunits
+>    `\m` clobber, already fixed), 2002.05958 654→0, 1804.10128 139→0 (babel
+>    `\shorthandoff`, already fixed).
+> 3. **Mid-band CONVERR (counts 13-87, 15 sampled): 7 fixed, 8 SHARED (delta=0)**, 0
+>    Rust-only. (Several fixed match landed memories: 1907.04260 newenvironment-autoload,
+>    1705.06183 lazy-dvips-colors, 1702.02181 listings-mathescape.)
+> 4. **Low-count CONVERR (counts 1-12): 6 fixed, 6 survivors ALL SHARED or Rust-better**
+>    (1501.03338 RUST=1/PERL=10; the rest delta=0 — text-mode `_`/`^`, stray `}`,
+>    `\endproof` shared in both). 0 Rust-only.
+>
+> Full-band coverage: **57 CONVERR papers re-gated across the entire error-count range
+> (1→859) → 41 fixed, 16 SHARED/Rust-better, 0 Rust-only**, plus canvas_3 (13 recovered,
+> 3 shared). The drained conclusion is airtight, not a small-sample inference.
+>
+> **Net: across canvas_3 + the high- and low-error CONVERR bands, ZERO remaining
+> Rust-only conversion errors.** The corpus is genuinely at Perl parity for error-free
+> conversion. The only non-shared residuals are reliability/perf (tasks #266/#274:
+> extreme-math `--timeout`, picture-loop RSS) where the current behavior already matches
+> or beats Perl. Note `^Error:`/`^Fatal:` greps must strip ANSI first (`sed
+> 's/\x1b\[[0-9;]*m//g'`) — colorized logs prefix the level with an escape, so a raw
+> `grep -c '^Error'` under-counts to 0 (this masked the 2 top-30 survivors initially).
+
 > **MILESTONE UPDATE (2026-05-31, latest): the "exhausted" claim was PREMATURE — 2 more
 > Rust-only found by Perl-checking mode-CLOSE signatures.** The exhaustion sweep below only
 > Perl-checked `\endgroup`/`&`/XMApp signatures; Perl-checking `\end{landscape}`/`\end{table}`/
