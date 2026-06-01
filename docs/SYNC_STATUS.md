@@ -2493,6 +2493,24 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01): 3rd delta-gate batch (CONVERR_13+) → corpus drained except 2 deep clusters
+
+120 CONVERR_13+ papers (full Perl pipeline): 16 stale-clean, 18 SHARED, **84 where Rust BEATS
+Perl** (DELTA<0), only **2 DELTA>0** — 1612.06222 (R99/P48) and 1609.02120 (R49/P47), BOTH the
+bare-braced-theorem mode-leak cluster (`{\rem …}`/`{\thm …}`/`{\thmx …}` misused without
+`\end`). Across all 3 delta-gate batches (470 CONVERR papers) the ONLY Rust-only error classes
+are the two documented deep clusters: (1) `expected:id` parallel-MathML (delimited-XMDual
+content-arm dup) and (2) `endgroup`/`}` mode-switch frame-leak + its bare-braced-theorem
+`Fatal:Stomach:Recursion` variant. 1612.06222's DELTA is a RED HERRING: minimal repro
+(250 SEQUENTIAL `{\thm …}` bare theorems) reproduces it (Rust 99 / Perl 49) and BOTH engines
+hit `Fatal:Stomach:Recursion` (identical `MAXSTACK=200`, stomach.rs:132 / Perl Stomach.pm:150)
+and BOTH produce empty/no output (Rust 39-byte empty doc rc=0; Perl no file rc=1) — so it is
+**SHARED** (both fail on the deeply-accumulating un-popped bare-theorem groups), with Rust merely
+emitting ~2× the mode-leak errors before the shared fatal. NOT a Rust-only win. **Net across all
+3 delta-gate batches: the `expected:id` parallel-MathML cluster is the SOLE genuine remaining
+Rust-only error class** (Perl produces output, Rust dangles); every other CONVERR residual is
+SHARED or Rust-better. See [[project_endgroup_modeswitch_frame_leak]], [[feedback_perl_baseline_output_size]].
+
 ### Round-37 (2026-06-01, round 3): `expected:id` cluster — collision pinned to delimited-XMDual content-arm dup
 
 Backtrace at `record_id_with_node`'s dup branch (LXDBG_DUP, reverted) on 1801.04233: the dup

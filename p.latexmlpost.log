@@ -1,33 +1,82 @@
-latexmlpost (LaTeXML version 0.8.8; revision e0f73ca2) paginating /tmp/delta2/x_1910.10688/p.xml
-Error:malformed:document Document fails RelaxNG validation (LaTeXML)
-	Validation reports: file:///tmp/delta2/x_1910.10688/p.html:0: Relax-NG validity error : Element document has extra content: title
-	(Jing may provide a more precise report; https://relaxng.org/jclark/jing.html)
-	In Post::Document[p.html] /tmp/delta2/x_1910.10688/p.xml
+latexmlpost (LaTeXML version 0.8.8; revision e0f73ca2) paginating /tmp/delta3/x_2007.00292/p.xml
 (post-processing...
 (Scan p.html processing...
-Scan: DBStatus: 65995/0 objects
- 4.58 sec)
-(MakeBibliography p.html processing... 0.00 sec)
-(CrossRef p.html processing... 1.21 sec)
-(Graphics p.html 44 to process... 0.60 sec)
-(MathML::Presentation p.html 2651 to process...
-Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
-	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
-	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
-Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
-	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
-	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
-Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
-	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
-	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
-Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
-	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
-	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
-Info:ignored:spacing No place to set spacing to 0.56 (default 0) between
-	[m:mi,{_role=>UNKNOWN,_rpadding=>0.56,_sourced=>1},with] and 
-	[m:mi,{_sourced=>1},]
-converted 2651 Maths
- 3.16 sec)
-(XSLT[using LaTeXML-html5.xsl] p.html processing... 1.62 sec)
-(Writer p.html processing... 0.02 sec) 11.26 sec)
-Postprocessing complete 1 error (See /home/deyan/git/latexml-oxide/p.latexmlpost.log) (reqd. 13.33s)
+Scan: DBStatus: 59340/0 objects
+ 4.34 sec)
+(MakeBibliography p.html 2 to process... 0.00 sec)
+(CrossRef p.html processing...
+Info:unexpected:duplicate_id Duplicated id=bib.bib17.2.2.1 using bib.bib17.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib3.2.2.1 using bib.bib3.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib41.2.2.1 using bib.bib41.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib17.2.2.1 using bib.bib17.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib4.2.2.1 using bib.bib4.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib40.2.2.1 using bib.bib40.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib38.2.2.1 using bib.bib38.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib16.2.2.1 using bib.bib16.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib14.2.2.1 using bib.bib14.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib37.2.2.1 using bib.bib37.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib22.2.2.1 using bib.bib22.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib23.2.2.1 using bib.bib23.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib18.2.2.1 using bib.bib18.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib45.2.2.1 using bib.bib45.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib1.2.2.1 using biba.bib1.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib45.2.2.1 using bib.bib45.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib13.2.2.1 using bib.bib13.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib11.2.2.1 using bib.bib11.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib12.2.2.1 using bib.bib12.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib11.2.2.1 using bib.bib11.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib12.2.2.1 using bib.bib12.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib27.2.2.1 using bib.bib27.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib10.2.2.1 using bib.bib10.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib29.2.2.1 using bib.bib29.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib30.2.2.1 using bib.bib30.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib33.2.2.1 using bib.bib33.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib8.2.2.1 using bib.bib8.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib44.2.2.1 using bib.bib44.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib21.2.2.1 using bib.bib21.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib24.2.2.1 using bib.bib24.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib20.3.2.1 using bib.bib20.3.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib34.2.2.1 using bib.bib34.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib5.2.2.1 using bib.bib5.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib26.2.2.1 using bib.bib26.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib25.2.2.1 using bib.bib25.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib17.2.2.1 using bib.bib17.2.2.1c /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib32.2.2.1 using bib.bib32.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib19.2.2.1 using bib.bib19.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib2.2.2.1 using bib.bib2.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib19.2.2.1 using bib.bib19.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib19.2.2.1 using bib.bib19.2.2.1c /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib4.2.2.1 using bib.bib4.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib11.2.2.1 using bib.bib11.2.2.1c /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib12.2.2.1 using bib.bib12.2.2.1c /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib1.2.2.1 using bib.bib1.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib3.2.2.1 using biba.bib3.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib9.2.2.1 using bib.bib9.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib6.2.2.1 using bib.bib6.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib31.2.2.1 using bib.bib31.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib1.2.2.1 using biba.bib1.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib5.2.2.1 using biba.bib5.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib8.2.2.1 using biba.bib8.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib42.4.2.1 using bib.bib42.4.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=S6.p1.1.2.1.1.1 using S6.p1.1.2.1.1.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib43.2.2.1 using bib.bib43.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=S6.p1.1.3.2.2.1 using S6.p1.1.3.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=bib.bib36.2.2.1 using bib.bib36.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib5.2.2.1 using biba.bib5.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib8.2.2.1 using biba.bib8.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib6.2.2.1 using biba.bib6.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib7.2.2.1 using biba.bib7.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib2.2.2.1 using biba.bib2.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib4.2.2.1 using biba.bib4.2.2.1a /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib3.2.2.1 using biba.bib3.2.2.1b /tmp/delta3/x_2007.00292/p.html
+Info:unexpected:duplicate_id Duplicated id=biba.bib3.2.2.1 using biba.bib3.2.2.1c /tmp/delta3/x_2007.00292/p.html
+Warning:expected:ids Missing Target for Label: LABEL:le81
+	In Post::CrossRef[@0x5763b5a50588] ->process
+ 0.63 sec)
+(Graphics p.html 42 to process... 9.29 sec)
+(MathML::Presentation p.html 1242 to process...
+converted 1242 Maths
+ 2.63 sec)
+(XSLT[using LaTeXML-html5.xsl] p.html processing... 0.76 sec)
+(Writer p.html processing... 0.01 sec) 17.74 sec)
+Postprocessing complete 1 warning (See /home/deyan/git/latexml-oxide/p.latexmlpost.log) (reqd. 18.32s)
