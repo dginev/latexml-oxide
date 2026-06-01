@@ -59,6 +59,24 @@
 > (1→859) → 41 fixed, 16 SHARED/Rust-better, 0 Rust-only**, plus canvas_3 (13 recovered,
 > 3 shared). The drained conclusion is airtight, not a small-sample inference.
 >
+> **FATAL_3 (>100-error) sweep → 1 NEW Rust-only FOUND + FIXED (2026-06-01).** The CONVERR
+> bands above are the error-count-as-exit-code failures; the canvas also has a distinct
+> FATAL_3 class (conversions exceeding the 100/1000-error cap → exit 3, plus a few
+> `Fatal:Timeout:*`). Re-tested all 68 distinct stage-51-82 FATAL_3 papers on the current
+> binary and delta-gated the distinctive survivors: almost all SHARED (text-mode `_`/`^`,
+> stray `}`/`&`, `\end{figure}`) or Rust-better, EXCEPT **1803.11541** — a genuine Rust-only
+> `Fatal:Timeout:PushbackLimit` (650000) runaway where **Perl produces 282 KB**. Root cause
+> (commit `14839d38b0`): `\DeclareTextFontCommand` defined the command (`\textcyr`) as an
+> expandable DefMacro `{<font> #1}`, but Perl (LaTeX.pool.ltxml:5428) defines it as a
+> **DefConstructor** (non-expandable, font digested in beforeDigest). natbib's
+> `\lx@NAT@parselabel` `Expand!`s bibitem labels for-execution; the expandable `\textcyr`
+> ran `\cyrfamily`→`\cyracc`, and for-execution expansion wrongly expanded `\cyracc`'s
+> `\def\!{…\result}` replacement-text → `\result`→`\@stressit`→`\futurelet` → infinite
+> pushback. Fixed by porting Perl's constructor form exactly. 1803.11541: FATAL → 0/233 KB;
+> suite 1344/0. The other 2 PushbackLimit papers (1701.00900, 1711.02043) are SHARED (Perl
+> also fails). See [[project_rawstring_control_space_macro_body]]-adjacent
+> [[project_robust_cs_semiverbatim_loop]] pushback family.
+>
 > **Net: across canvas_3 + the high- and low-error CONVERR bands, ZERO remaining
 > Rust-only conversion errors.** The corpus is genuinely at Perl parity for error-free
 > conversion. The only non-shared residuals are reliability/perf (tasks #266/#274:
