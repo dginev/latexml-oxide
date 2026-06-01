@@ -29,344 +29,36 @@ use crate::converter::Converter;
 use latexml_core::common::{Config, DataSize, OutputFormat};
 
 // ======================================================================
-// Minimal JSON (no serde_json: it is not in this binary's dependency
-// closure, and pulling serde into the distributed binary conflicts with
-// the project's binary-size posture — see CLAUDE.md distribution build).
+// JSON — backed by serde_json. The server uses only `Value` parse/
+// serialize (no derive), which costs ~16 KiB in the LTO'd binary — well
+// within the distribution size budget. `Value::get`/`as_str` map 1:1 onto
+// the call sites the previous hand-rolled `Value` exposed.
 // ======================================================================
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum JsonValue {
-  Null,
-  Bool(bool),
-  Number(f64),
-  String(String),
-  Array(Vec<JsonValue>),
-  /// `BTreeMap` (not `HashMap`) so serialized object key order is
-  /// deterministic — reproducible output, testable golden strings.
-  Object(BTreeMap<String, JsonValue>),
+use serde_json::Value;
+
+/// Parse a JSON document. Keeps the `Result<_, String>` signature so call
+/// sites are unchanged from the previous hand-rolled parser.
+pub fn parse_json(s: &str) -> Result<Value, String> {
+  serde_json::from_str(s).map_err(|e| e.to_string())
 }
 
-impl JsonValue {
-  pub fn get(&self, key: &str) -> Option<&JsonValue> {
-    match self {
-      JsonValue::Object(map) => map.get(key),
-      _ => None,
-    }
-  }
+/// Build a `Value::String`.
+fn jstr(s: impl Into<String>) -> Value { Value::String(s.into()) }
 
-  pub fn as_str(&self) -> Option<&str> {
-    match self {
-      JsonValue::String(s) => Some(s),
-      _ => None,
-    }
-  }
-
-  #[allow(clippy::inherent_to_string)]
-  pub fn to_string(&self) -> String {
-    let mut out = String::new();
-    self.write_to(&mut out);
-    out
-  }
-
-  fn write_to(&self, out: &mut String) {
-    match self {
-      JsonValue::Null => out.push_str("null"),
-      JsonValue::Bool(true) => out.push_str("true"),
-      JsonValue::Bool(false) => out.push_str("false"),
-      JsonValue::Number(n) => out.push_str(&n.to_string()),
-      JsonValue::String(s) => push_json_string(out, s),
-      JsonValue::Array(arr) => {
-        out.push('[');
-        for (i, item) in arr.iter().enumerate() {
-          if i > 0 {
-            out.push(',');
-          }
-          item.write_to(out);
-        }
-        out.push(']');
-      },
-      JsonValue::Object(map) => {
-        out.push('{');
-        for (i, (k, v)) in map.iter().enumerate() {
-          if i > 0 {
-            out.push(',');
-          }
-          push_json_string(out, k);
-          out.push(':');
-          v.write_to(out);
-        }
-        out.push('}');
-      },
-    }
-  }
+/// Build a JSON number from an `f64` (non-finite → `null`).
+fn jnum(n: f64) -> Value {
+  serde_json::Number::from_f64(n).map(Value::Number).unwrap_or(Value::Null)
 }
 
-/// Append a JSON string literal, escaping per RFC 8259. Crucially, *every*
-/// control character below 0x20 is `\u00xx`-escaped — the previous
-/// hand-rolled serializer only escaped `\n\r\t`, so any other control char
-/// in LaTeXML's HTML/log output (form-feed, NUL, vertical tab, …) produced
-/// invalid JSON that the client could not parse.
-fn push_json_string(out: &mut String, s: &str) {
-  out.push('"');
-  for c in s.chars() {
-    match c {
-      '"' => out.push_str("\\\""),
-      '\\' => out.push_str("\\\\"),
-      '\n' => out.push_str("\\n"),
-      '\r' => out.push_str("\\r"),
-      '\t' => out.push_str("\\t"),
-      '\u{0008}' => out.push_str("\\b"),
-      '\u{000c}' => out.push_str("\\f"),
-      c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-      c => out.push(c),
-    }
-  }
-  out.push('"');
-}
-
-/// Build a `JsonValue::String`.
-fn jstr(s: impl Into<String>) -> JsonValue { JsonValue::String(s.into()) }
-
-/// Build a `JsonValue::Object` from `(key, value)` pairs.
-fn jobj(pairs: Vec<(&str, JsonValue)>) -> JsonValue {
-  let mut map = BTreeMap::new();
+/// Build a JSON object from `(key, value)` pairs. `serde_json::Map` is a
+/// `BTreeMap` by default, so serialized key order is deterministic.
+fn jobj(pairs: Vec<(&str, Value)>) -> Value {
+  let mut map = serde_json::Map::new();
   for (k, v) in pairs {
     map.insert(k.to_string(), v);
   }
-  JsonValue::Object(map)
-}
-
-#[derive(Debug, Clone, PartialEq)]
-enum Token {
-  BraceOpen,
-  BraceClose,
-  BracketOpen,
-  BracketClose,
-  Colon,
-  Comma,
-  String(String),
-  Number(f64),
-  Bool(bool),
-  Null,
-}
-
-fn tokenize(s: &str) -> Result<Vec<Token>, String> {
-  let mut tokens = Vec::new();
-  let chars: Vec<char> = s.chars().collect();
-  let mut i = 0;
-  while i < chars.len() {
-    let c = chars[i];
-    match c {
-      ' ' | '\t' | '\r' | '\n' => {
-        i += 1;
-      },
-      '{' => {
-        tokens.push(Token::BraceOpen);
-        i += 1;
-      },
-      '}' => {
-        tokens.push(Token::BraceClose);
-        i += 1;
-      },
-      '[' => {
-        tokens.push(Token::BracketOpen);
-        i += 1;
-      },
-      ']' => {
-        tokens.push(Token::BracketClose);
-        i += 1;
-      },
-      ':' => {
-        tokens.push(Token::Colon);
-        i += 1;
-      },
-      ',' => {
-        tokens.push(Token::Comma);
-        i += 1;
-      },
-      '"' => {
-        i += 1;
-        let mut s_val = String::new();
-        while i < chars.len() && chars[i] != '"' {
-          if chars[i] == '\\' {
-            i += 1;
-            if i >= chars.len() {
-              return Err("Unterminated string escape".to_string());
-            }
-            match chars[i] {
-              '"' => s_val.push('"'),
-              '\\' => s_val.push('\\'),
-              '/' => s_val.push('/'),
-              'b' => s_val.push('\u{0008}'),
-              'f' => s_val.push('\u{000c}'),
-              'n' => s_val.push('\n'),
-              'r' => s_val.push('\r'),
-              't' => s_val.push('\t'),
-              'u' => {
-                if i + 4 >= chars.len() {
-                  return Err("Invalid unicode escape".to_string());
-                }
-                let hex: String = chars[i + 1..i + 5].iter().collect();
-                if let Ok(code) = u32::from_str_radix(&hex, 16) {
-                  if let Some(c_char) = std::char::from_u32(code) {
-                    s_val.push(c_char);
-                  }
-                }
-                i += 4;
-              },
-              other => s_val.push(other),
-            }
-          } else {
-            s_val.push(chars[i]);
-          }
-          i += 1;
-        }
-        if i >= chars.len() {
-          return Err("Unterminated string".to_string());
-        }
-        i += 1;
-        tokens.push(Token::String(s_val));
-      },
-      _ => {
-        if c.is_ascii_digit() || c == '-' {
-          let mut num_str = String::new();
-          while i < chars.len()
-            && (chars[i].is_ascii_digit()
-              || chars[i] == '.'
-              || chars[i] == 'e'
-              || chars[i] == 'E'
-              || chars[i] == '-'
-              || chars[i] == '+')
-          {
-            num_str.push(chars[i]);
-            i += 1;
-          }
-          if let Ok(n) = num_str.parse::<f64>() {
-            tokens.push(Token::Number(n));
-          } else {
-            return Err(format!("Invalid number: {}", num_str));
-          }
-        } else if c.is_alphabetic() {
-          let mut ident = String::new();
-          while i < chars.len() && chars[i].is_alphabetic() {
-            ident.push(chars[i]);
-            i += 1;
-          }
-          match ident.as_str() {
-            "true" => tokens.push(Token::Bool(true)),
-            "false" => tokens.push(Token::Bool(false)),
-            "null" => tokens.push(Token::Null),
-            _ => return Err(format!("Invalid identifier: {}", ident)),
-          }
-        } else {
-          return Err(format!("Unexpected character: {}", c));
-        }
-      },
-    }
-  }
-  Ok(tokens)
-}
-
-fn parse_value(tokens: &[Token], index: &mut usize) -> Result<JsonValue, String> {
-  if *index >= tokens.len() {
-    return Err("Unexpected EOF".to_string());
-  }
-  match &tokens[*index] {
-    Token::Null => {
-      *index += 1;
-      Ok(JsonValue::Null)
-    },
-    Token::Bool(b) => {
-      let val = *b;
-      *index += 1;
-      Ok(JsonValue::Bool(val))
-    },
-    Token::Number(n) => {
-      let val = *n;
-      *index += 1;
-      Ok(JsonValue::Number(val))
-    },
-    Token::String(s) => {
-      let val = s.clone();
-      *index += 1;
-      Ok(JsonValue::String(val))
-    },
-    Token::BracketOpen => {
-      *index += 1;
-      let mut arr = Vec::new();
-      if *index < tokens.len() && tokens[*index] == Token::BracketClose {
-        *index += 1;
-        return Ok(JsonValue::Array(arr));
-      }
-      loop {
-        let val = parse_value(tokens, index)?;
-        arr.push(val);
-        if *index >= tokens.len() {
-          return Err("Unterminated array".to_string());
-        }
-        match &tokens[*index] {
-          Token::Comma => {
-            *index += 1;
-          },
-          Token::BracketClose => {
-            *index += 1;
-            break;
-          },
-          other => return Err(format!("Expected comma or bracket, found {:?}", other)),
-        }
-      }
-      Ok(JsonValue::Array(arr))
-    },
-    Token::BraceOpen => {
-      *index += 1;
-      let mut obj = BTreeMap::new();
-      if *index < tokens.len() && tokens[*index] == Token::BraceClose {
-        *index += 1;
-        return Ok(JsonValue::Object(obj));
-      }
-      loop {
-        if *index >= tokens.len() {
-          return Err("Expected key in object".to_string());
-        }
-        let key = match &tokens[*index] {
-          Token::String(s) => s.clone(),
-          other => return Err(format!("Expected string key in object, found {:?}", other)),
-        };
-        *index += 1;
-        if *index >= tokens.len() || tokens[*index] != Token::Colon {
-          return Err("Expected colon after key in object".to_string());
-        }
-        *index += 1;
-        let val = parse_value(tokens, index)?;
-        obj.insert(key, val);
-        if *index >= tokens.len() {
-          return Err("Unterminated object".to_string());
-        }
-        match &tokens[*index] {
-          Token::Comma => {
-            *index += 1;
-          },
-          Token::BraceClose => {
-            *index += 1;
-            break;
-          },
-          other => return Err(format!("Expected comma or brace, found {:?}", other)),
-        }
-      }
-      Ok(JsonValue::Object(obj))
-    },
-    other => Err(format!("Unexpected token: {:?}", other)),
-  }
-}
-
-pub fn parse_json(s: &str) -> Result<JsonValue, String> {
-  let tokens = tokenize(s)?;
-  let mut index = 0;
-  let val = parse_value(&tokens, &mut index)?;
-  if index < tokens.len() {
-    return Err("Extra tokens after valid JSON".to_string());
-  }
-  Ok(val)
+  Value::Object(map)
 }
 
 // ======================================================================
@@ -414,37 +106,37 @@ struct Diag {
 
 impl Diag {
   /// LSP `Diagnostic` (0-based positions).
-  fn to_lsp(&self) -> JsonValue {
+  fn to_lsp(&self) -> Value {
     let line0 = self.line.map(|l| l.saturating_sub(1)).unwrap_or(0);
     let col0 = self.col.map(|c| c.saturating_sub(1)).unwrap_or(0);
     let start = jobj(vec![
-      ("line", JsonValue::Number(line0 as f64)),
-      ("character", JsonValue::Number(col0 as f64)),
+      ("line", jnum(line0 as f64)),
+      ("character", jnum(col0 as f64)),
     ]);
     // One-character caret anchor; the message carries the detail.
     let end = jobj(vec![
-      ("line", JsonValue::Number(line0 as f64)),
-      ("character", JsonValue::Number((col0 + 1) as f64)),
+      ("line", jnum(line0 as f64)),
+      ("character", jnum((col0 + 1) as f64)),
     ]);
     jobj(vec![
       ("range", jobj(vec![("start", start), ("end", end)])),
-      ("severity", JsonValue::Number(self.severity.lsp_code())),
+      ("severity", jnum(self.severity.lsp_code())),
       ("source", jstr("latexml")),
       ("message", jstr(self.message.clone())),
     ])
   }
 
   /// ar5iv-editor normalized diagnostic (1-based `from.{line,column}`).
-  fn to_normalized(&self) -> JsonValue {
+  fn to_normalized(&self) -> Value {
     let mut pairs = vec![
       ("severity", jstr(self.severity.normalized())),
       ("category", jstr("latexml")),
       ("message", jstr(self.message.clone())),
     ];
     if let Some(line) = self.line {
-      let mut from = vec![("line", JsonValue::Number(line as f64))];
+      let mut from = vec![("line", jnum(line as f64))];
       if let Some(col) = self.col {
-        from.push(("column", JsonValue::Number(col as f64)));
+        from.push(("column", jnum(col as f64)));
       }
       pairs.push(("from", jobj(from)));
     }
@@ -528,25 +220,25 @@ impl ConvertOutput {
   }
 
   /// The `latexml/convert` result object the ar5iv-editor client consumes.
-  fn to_result_object(&self) -> JsonValue {
+  fn to_result_object(&self) -> Value {
     jobj(vec![
       ("html", jstr(self.html.clone())),
       ("log", jstr(self.log.clone())),
       (
         "diagnostics",
-        JsonValue::Array(self.diags.iter().map(Diag::to_normalized).collect()),
+        Value::Array(self.diags.iter().map(Diag::to_normalized).collect()),
       ),
       (
         "sources",
-        JsonValue::Array(self.sources.iter().map(|s| jstr(s.clone())).collect()),
+        Value::Array(self.sources.iter().map(|s| jstr(s.clone())).collect()),
       ),
       ("status", jstr(self.status)),
-      ("statusCode", JsonValue::Number(0.0)),
+      ("statusCode", jnum(0.0)),
     ])
   }
 }
 
-fn response(id: JsonValue, result: JsonValue) -> JsonValue {
+fn response(id: Value, result: Value) -> Value {
   jobj(vec![
     ("jsonrpc", jstr("2.0")),
     ("id", id),
@@ -554,29 +246,29 @@ fn response(id: JsonValue, result: JsonValue) -> JsonValue {
   ])
 }
 
-fn error_response(id: JsonValue, code: f64, message: String) -> JsonValue {
+fn error_response(id: Value, code: f64, message: String) -> Value {
   jobj(vec![
     ("jsonrpc", jstr("2.0")),
     ("id", id),
     (
       "error",
-      jobj(vec![("code", JsonValue::Number(code)), ("message", jstr(message))]),
+      jobj(vec![("code", jnum(code)), ("message", jstr(message))]),
     ),
   ])
 }
 
-fn cancelled_result_object() -> JsonValue {
+fn cancelled_result_object() -> Value {
   jobj(vec![
     ("html", jstr("")),
     ("log", jstr("Request cancelled")),
-    ("diagnostics", JsonValue::Array(Vec::new())),
-    ("sources", JsonValue::Array(Vec::new())),
+    ("diagnostics", Value::Array(Vec::new())),
+    ("sources", Value::Array(Vec::new())),
     ("status", jstr("cancelled")),
-    ("statusCode", JsonValue::Number(0.0)),
+    ("statusCode", jnum(0.0)),
   ])
 }
 
-fn publish_diagnostics_notification(uri: &str, diags: &[Diag]) -> JsonValue {
+fn publish_diagnostics_notification(uri: &str, diags: &[Diag]) -> Value {
   jobj(vec![
     ("jsonrpc", jstr("2.0")),
     ("method", jstr("textDocument/publishDiagnostics")),
@@ -586,14 +278,14 @@ fn publish_diagnostics_notification(uri: &str, diags: &[Diag]) -> JsonValue {
         ("uri", jstr(uri)),
         (
           "diagnostics",
-          JsonValue::Array(diags.iter().map(Diag::to_lsp).collect()),
+          Value::Array(diags.iter().map(Diag::to_lsp).collect()),
         ),
       ]),
     ),
   ])
 }
 
-fn send_message(writer: &mut impl std::io::Write, val: &JsonValue) -> std::io::Result<()> {
+fn send_message(writer: &mut impl std::io::Write, val: &Value) -> std::io::Result<()> {
   let body = val.to_string();
   let msg = format!("Content-Length: {}\r\n\r\n{}", body.len(), body);
   writer.write_all(msg.as_bytes())?;
@@ -1106,7 +798,7 @@ mod unix_server {
             .unwrap_or("")
             .to_string();
           let sources = match payload.get("sources") {
-            Some(JsonValue::Array(arr)) => arr
+            Some(Value::Array(arr)) => arr
               .iter()
               .filter_map(|v| v.as_str().map(String::from))
               .collect(),
@@ -1196,7 +888,7 @@ mod unix_server {
     offset_lines: usize,
     body: &str,
     warmed: &latexml_core::digested::Digested,
-  ) -> JsonValue {
+  ) -> Value {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
       // Bare Core over the inherited state — does NOT reset thread-local state.
       let mut core = latexml_core::Core {
@@ -1241,7 +933,7 @@ mod unix_server {
         ("log", jstr(log)),
         (
           "sources",
-          JsonValue::Array(sources.into_iter().map(jstr).collect()),
+          Value::Array(sources.into_iter().map(jstr).collect()),
         ),
       ]),
       Ok(Err(msg)) => jobj(vec![("error", jstr(msg))]),
@@ -1360,7 +1052,7 @@ mod unix_server {
         return Ok(true);
       },
     };
-    let id = request.get("id").cloned().unwrap_or(JsonValue::Null);
+    let id = request.get("id").cloned().unwrap_or(Value::Null);
     let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
     log::debug!("LSP request: method='{method}', id={id:?}");
 
@@ -1368,7 +1060,7 @@ mod unix_server {
       "initialize" => {
         let caps = jobj(vec![(
           "capabilities",
-          jobj(vec![("textDocumentSync", JsonValue::Number(1.0))]),
+          jobj(vec![("textDocumentSync", jnum(1.0))]),
         )]);
         send_message(stdout, &response(id, caps))?;
       },
@@ -1395,7 +1087,7 @@ mod unix_server {
         }
       },
       "shutdown" => {
-        send_message(stdout, &response(id, JsonValue::Null))?;
+        send_message(stdout, &response(id, Value::Null))?;
       },
       "latexml/convert" => {
         if let (Some(uri), Some(text)) = (
@@ -1421,7 +1113,7 @@ mod unix_server {
       },
       "exit" => return Ok(false),
       other => {
-        if id != JsonValue::Null {
+        if id != Value::Null {
           send_message(
             stdout,
             &error_response(id, -32601.0, format!("Method '{other}' not found")),
@@ -1511,14 +1203,14 @@ mod generic_server {
           continue;
         },
       };
-      let id = request.get("id").cloned().unwrap_or(JsonValue::Null);
+      let id = request.get("id").cloned().unwrap_or(Value::Null);
       let method = request.get("method").and_then(|m| m.as_str()).unwrap_or("");
 
       match method {
         "initialize" => {
           let caps = jobj(vec![(
             "capabilities",
-            jobj(vec![("textDocumentSync", JsonValue::Number(1.0))]),
+            jobj(vec![("textDocumentSync", jnum(1.0))]),
           )]);
           send_message(&mut stdout, &response(id, caps))?;
         },
@@ -1546,7 +1238,7 @@ mod generic_server {
           }
         },
         "shutdown" => {
-          send_message(&mut stdout, &response(id, JsonValue::Null))?;
+          send_message(&mut stdout, &response(id, Value::Null))?;
         },
         "latexml/convert" => {
           if let (Some(uri), Some(text)) = (
@@ -1559,7 +1251,7 @@ mod generic_server {
         },
         "exit" => return Ok(()),
         other => {
-          if id != JsonValue::Null {
+          if id != Value::Null {
             send_message(
               &mut stdout,
               &error_response(id, -32601.0, format!("Method '{other}' not found")),
@@ -1574,14 +1266,14 @@ mod generic_server {
 
 // Shared param extraction (used by both server flavors).
 
-fn did_open_params(request: &JsonValue) -> Option<(String, String)> {
+fn did_open_params(request: &Value) -> Option<(String, String)> {
   let td = request.get("params")?.get("textDocument")?;
   let uri = td.get("uri")?.as_str()?.to_string();
   let text = td.get("text")?.as_str()?.to_string();
   Some((uri, text))
 }
 
-fn did_change_params(request: &JsonValue) -> Option<(String, String)> {
+fn did_change_params(request: &Value) -> Option<(String, String)> {
   let params = request.get("params")?;
   let uri = params
     .get("textDocument")?
@@ -1589,7 +1281,7 @@ fn did_change_params(request: &JsonValue) -> Option<(String, String)> {
     .as_str()?
     .to_string();
   let changes = match params.get("contentChanges")? {
-    JsonValue::Array(c) => c,
+    Value::Array(c) => c,
     _ => return None,
   };
   let text = changes.first()?.get("text")?.as_str()?.to_string();
@@ -1614,13 +1306,15 @@ mod tests {
   #[test]
   fn json_roundtrip_object() {
     let v = parse_json(r#"{"a":1,"b":[true,null,"x"],"c":{"d":-2.5}}"#).unwrap();
-    assert_eq!(v.get("a"), Some(&JsonValue::Number(1.0)));
+    // serde_json parses `1` as an integer Number (distinct repr from a float),
+    // so compare via the accessor rather than against `jnum`.
+    assert_eq!(v.get("a").and_then(Value::as_i64), Some(1));
     assert_eq!(
       v.get("b"),
-      Some(&JsonValue::Array(vec![
-        JsonValue::Bool(true),
-        JsonValue::Null,
-        JsonValue::String("x".to_string())
+      Some(&Value::Array(vec![
+        Value::Bool(true),
+        Value::Null,
+        Value::String("x".to_string())
       ]))
     );
     // BTreeMap → deterministic, sorted key order on serialization.
@@ -1643,7 +1337,7 @@ mod tests {
     assert!(serialized.contains("\\t") && serialized.contains("\\n") && serialized.contains("\\r"));
     assert!(serialized.contains("\\\"") && serialized.contains("\\\\"));
     let reparsed = parse_json(&serialized).unwrap();
-    assert_eq!(reparsed, JsonValue::String(s.to_string()));
+    assert_eq!(reparsed, Value::String(s.to_string()));
   }
 
   #[test]
@@ -1663,15 +1357,15 @@ mod tests {
     let lsp = diags[0].to_lsp();
     let range = lsp.get("range").unwrap();
     let start = range.get("start").unwrap();
-    assert_eq!(start.get("line"), Some(&JsonValue::Number(4.0)));
-    assert_eq!(start.get("character"), Some(&JsonValue::Number(1.0)));
-    assert_eq!(lsp.get("severity"), Some(&JsonValue::Number(1.0)));
+    assert_eq!(start.get("line"), Some(&jnum(4.0)));
+    assert_eq!(start.get("character"), Some(&jnum(1.0)));
+    assert_eq!(lsp.get("severity"), Some(&jnum(1.0)));
     // Normalized keeps 1-based.
     let norm = diags[0].to_normalized();
     let from = norm.get("from").unwrap();
-    assert_eq!(from.get("line"), Some(&JsonValue::Number(5.0)));
-    assert_eq!(from.get("column"), Some(&JsonValue::Number(2.0)));
-    assert_eq!(norm.get("severity"), Some(&JsonValue::String("error".to_string())));
+    assert_eq!(from.get("line"), Some(&jnum(5.0)));
+    assert_eq!(from.get("column"), Some(&jnum(2.0)));
+    assert_eq!(norm.get("severity"), Some(&Value::String("error".to_string())));
   }
 
   #[test]
@@ -1683,7 +1377,7 @@ mod tests {
   #[test]
   fn cancelled_object_shape() {
     let v = cancelled_result_object();
-    assert_eq!(v.get("status"), Some(&JsonValue::String("cancelled".to_string())));
-    assert_eq!(v.get("html"), Some(&JsonValue::String(String::new())));
+    assert_eq!(v.get("status"), Some(&Value::String("cancelled".to_string())));
+    assert_eq!(v.get("html"), Some(&Value::String(String::new())));
   }
 }
