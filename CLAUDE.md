@@ -245,10 +245,23 @@ truth for macro-expanded diagnostics.
   (`\x1b[31mError:`), so a naive `grep -c '^Error:'` matches **zero** and silently reports
   "0 errors / fixed" on a paper that actually has hundreds (this exact bug masked
   2002.05958=654, 1808.04050=441, 1705.10306=293, 1910.06783=859 as "fixed" — see
-  `docs/SYNC_STATUS.md`). ALWAYS strip ANSI first (`sed 's/\x1b\[[0-9;]*m//g'`) and count with
-  `grep -acE '^(Error|Fatal):'`; gate on **cortex's own `Processing content` file** (multi-file
-  papers have decoy `\begin{document}` stubs); and when in doubt, count it as a failure to
-  investigate, not a pass.
+  `docs/SYNC_STATUS.md`).
+  **Two reliable, ANSI-free signals exist — prefer them over grepping colored stderr:**
+  (1) **cortex's status code** — `Status:conversion:N` (written to the `status` member of the
+  output zip and to stdout), where **3 = fatal, 2 = error**, lower = OK/warnings; this integer
+  is the canonical pass/fail. (2) **the on-disk `.latexml.log`** — captured via the
+  ANSI-stripped `LOG_BUFFER`, so it is color-free by construction.
+  **As of 2026-06-01 the logger also TTY-gates stderr colors** (`logger.rs::stderr_use_color`,
+  `is_terminal() && NO_COLOR unset`), so **redirected stderr is now ANSI-free too** — a naive
+  `grep '^Error:'` works on `cortex ... > log.txt 2>&1`. Still, defensively `sed
+  's/\x1b\[[0-9;]*m//g'` before `grep -acE '^(Error|Fatal):'` (logs from older binaries carry
+  ANSI), and gate on **cortex's own `Processing content` file** (multi-file papers ship decoy
+  `\begin{document}` stubs). **LANDMINE:** `canvas/run_one.sh` greps `$'^\x1b[31mError:'`
+  (ANSI-aware) — it is CORRECT for the current ANSI-emitting release binary, but if you rebuild
+  the release binary with the TTY-gate fix, run_one.sh's ANSI-grep will match **zero** and mark
+  every paper OK (false success). **Before rebuilding the release `cortex_worker`, update
+  run_one.sh to strip ANSI (or read the `Status:conversion:N` integer).** When in doubt, count
+  it as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - **Active work**: the strict-Perl dump-parity mission is complete (see above). Remaining sub-tasks — including the ~72-CS Perl-only long tail — are tracked in `docs/SYNC_STATUS.md`; the completed audit is at `docs/archive/PERL_LOADFORMAT_AUDIT.md`.
