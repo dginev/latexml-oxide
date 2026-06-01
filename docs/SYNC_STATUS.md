@@ -205,6 +205,19 @@
 > after the orchestration reaches stage 100, re-run `run_stage_second.sh` offsets 37/38/39 to
 > complete 87/88/89. **Until the canvas finishes: run NO competing cortex_worker conversions and
 > NO broad pkill** (gate `pgrep -af run_stages` first).
+>
+> **POST-CANVAS GATE WORKLIST (read-only recon of CURRENT-binary stages 83-86, second-500K — these
+> CONVERR logs are FRESH, not stale).** Category distribution: `misdefined:#` 98 (ALL are
+> `misdefined:#` — but prior data shows this class is SHARED/Rust-better: 1501.07012 Rust 24/Perl
+> 102, 1502.01082 similar — author macros with `#`-param errors both engines flag; verify a couple
+> but expect shared), `unexpected:_` 61 (cascade), `undefined:` 19 (all SINGLETONS — the best
+> Rust-only candidates: `\epstopdfDeclareGraphicsRule`, `\Hy@driver`, `\UL@setULdepth`,
+> `\JournalTitle`, `\jvol`, `\ifpst@useCalc`, `\@captype`, `\@envbody`, `\EXD@break`, `\except`,
+> `\lpb`, `\CLASSINFOpdffalse`, `\url`, `\href`, `\harvarditem` — last three likely the
+> already-fixed conditional-`\RequirePackage` class on OLD-binary stages; re-gate), `malformed:ltx`
+> 13, `expected:id` only **1** (confirms that cluster is fixed). **After the canvas + idle:** Perl-gate
+> the undefined-singletons (each a distinct package-internal binding gap candidate) and 2-3
+> `misdefined:#` papers; fix any genuine Rust-only.
 
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
