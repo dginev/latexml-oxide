@@ -185,6 +185,26 @@
 > `/tmp/reliab_gate.txt`; expectation per the two data points is SHARED-dominant. If any paper
 > shows Perl-completes-fast / Rust-hangs, THAT is the Rust-only target (math-parser perf). These
 > are STABILITY_WITNESSES-track items (reliability), not parity-track conversion errors.
+>
+> **⚠️ CONTAMINATION RETRACTION + CANVAS DISCOVERY (2026-06-01).** The "44/48 still timeout"
+> reliability result above is **NOT TRUSTWORTHY** — it was measured while the canvas orchestration
+> `run_stages_83_100.sh` was running CONCURRENTLY at `-P 16`. cortex_worker is multi-threaded, so
+> canvas-16 + my-sweep oversubscribed 20 cores → the timeouts are largely OVERSUBSCRIPTION
+> ARTIFACTS. (The two clean extended points still hold: 1502.00494 Rust 124s / Perl 293s-timeout,
+> 1503.05447 Rust 157s clean — Rust completes, Perl worse.) **Timeout/perf work must be redone on
+> an IDLE machine after the canvas finishes.** See [[feedback_dont_interfere_with_canvas]].
+>
+> **The full 100-stage canvas is AUTO-COMPLETING.** `run_stages_83_100.sh` (PID-tracked, sequential
+> offsets 33-50 = stages 83-100, `-P 16`, release binary) has been running autonomously in the
+> background ALL session — this is the user's stated prerequisite for the hard-case workflow.
+> Status 2026-06-01 ~22:40Z: stages 83-86 COMPLETE (10000 each), stage 90 RUNNING (~450/10000).
+> **DAMAGE I caused:** my broad `pkill cortex_worker` / `pkill -f 'xargs -P'` (issued while
+> debugging the oversubscription, before realizing the canvas owned those processes) killed the
+> stage-87/88/89 xargs drivers mid-run; the orchestration is sequential-no-retry so it advanced
+> past them — **stages 87 (3990/10000), 88 (1714), 89 (333) are now INCOMPLETE.** REPAIR OWED:
+> after the orchestration reaches stage 100, re-run `run_stage_second.sh` offsets 37/38/39 to
+> complete 87/88/89. **Until the canvas finishes: run NO competing cortex_worker conversions and
+> NO broad pkill** (gate `pgrep -af run_stages` first).
 
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
