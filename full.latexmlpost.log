@@ -1,0 +1,18 @@
+latexmlpost (LaTeXML version 0.8.8; revision e0f73ca2) paginating /tmp/xr_1801/full.xml
+Error:malformed:document Document fails RelaxNG validation (LaTeXML)
+	Validation reports: file:///tmp/xr_1801/full.html:0: Relax-NG validity error : Element document has extra content: logical-block
+	(Jing may provide a more precise report; https://relaxng.org/jclark/jing.html)
+	In Post::Document[full.html] /tmp/xr_1801/full.xml
+(post-processing...
+(Scan full.html processing...
+Scan: DBStatus: 20875/0 objects
+ 1.23 sec)
+(MakeBibliography full.html processing... 0.00 sec)
+(CrossRef full.html processing... 0.28 sec)
+(Graphics full.html processing... 0.21 sec)
+(MathML::Presentation full.html 948 to process...
+converted 948 Maths
+ 1.52 sec)
+(XSLT[using LaTeXML-html5.xsl] full.html processing... 0.21 sec)
+(Writer full.html processing... 0.00 sec) 3.48 sec)
+Postprocessing complete 1 error (See /home/deyan/git/latexml-oxide/full.latexmlpost.log) (reqd. 3.76s)

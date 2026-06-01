@@ -2493,6 +2493,41 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-05-31): delta-gate (Rust − Perl > 0) mining → the `expected:id` cmml cluster is the #1 live Rust-only class
+
+The Perl=0 gate misses papers that error in BOTH engines but where Rust errors MORE — yet that
+**excess IS genuine Rust-only**. So I added a **delta-gate**: run Rust (cortex) AND Perl on the
+same cortex main file, keep `DELTA = Rust − Perl > 0`. Critically, the Perl baseline must be
+the **FULL pipeline** (`latexml` → XML THEN `latexmlpost --format=html5`) — cortex runs full
+HTML+MathML post, so gating Perl with `latexml` alone (XML, no MathML) is unfair and hides the
+cluster. Sampled 200 CONVERR_2–8 papers → **8 with DELTA>0**:
+
+| paper | Rust | Perl | class |
+|-------|-----:|-----:|-------|
+| 1801.04233 | 8 | 0 | **expected:id** (cmml) |
+| 1905.07787 | 4 | 0 | **expected:id** |
+| 1911.03593 | 4 | 0 | **expected:id** |
+| 2004.00489 | 4 | 0 | **expected:id** |
+| 1510.00113 | 2 | 0 | **expected:id** |
+| 1901.07768 | 9 | 3 | listings (`malformed:ltx:listingline`×4 + caption/toccaption) |
+| 1907.12308 | 2 | 0 | imageprocessing (`*.pdf_tex`) |
+| 1802.10071 | 8 | 1 | `_`/`^` cascade + `Fatal:timeout:wallclock` |
+
+**#1 live Rust-only class = the `expected:id` parallel-MathML cluster (5/8).** It fires ONLY in
+the **pmml+cmml chain** (`latexml_oxide --cmml`; single-file XML gating misses it — Perl's
+FULL pipeline = 0). Root cause pinned on 1801.04233 (a doc with NO `\begin{split}`, so the
+`_split_ref` prune doesn't catch it): a deeply NESTED XMDual from superscript-application math
+`P^{\{…\}}P^{\{…\}}(…)=…` has content-arm `XMRef idref=…m1.m2.m1.1` whose presentation token
+was **absorbed into a wrapping XMApp** during parse and the survivor renamed by
+`record_id_with_node`→`modify_id` to `…m1.m2.m1.3a` → the XMRef dangles. SAME root as the
+documented split cluster (parser drops absorbed-operand ids) but via nested-dual superscripts.
+**Deferred — deep parser-side ASF id-preservation, needs a dedicated session** (a
+post-processing prune would be an unfaithful stopgap: Perl RESOLVES the refs). Best reproducer
++ full mechanism in `[[project_xmref_dangling_split]]` (updated 2026-05-31 with the non-split
+witness + `--cmml` recipe). **Concrete next-iteration targets** (tractable, non-cluster):
+**1901.07768** (listings `listingline`-in-`float` schema) and **1907.12308** (`.pdf_tex`
+graphics).
+
 ### Round-37 (2026-05-31): canvas CONVERR_1 pool mined → 0 Rust-only errors (65% stale-recovered, rest SHARED/transient)
 
 Switched from random fresh-sampling (yielding ~1/2000 Rust-only) to mining the **actual
