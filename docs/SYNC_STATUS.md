@@ -130,6 +130,33 @@
 > ANSI-stripped Perl on cortex's main) and systematically re-gate stages 51-100. The canvas
 > stages 83-100 are running on the current binary and will give a true current failure set.
 
+> **EXHAUSTIVE HARD-CASE RE-GATE (2026-06-01) — front-slice + cross-stage Rust-only pool is
+> DRAINED.** Using the `~/data/canvas_hard_cases/` resweep (current binary, frozen) as the
+> substrate, ~20 papers were Perl-gated across EVERY major live signature class. **Every one is
+> stale-fixed, SHARED (Perl also errors), or transient — ZERO new single-root Rust-only.**
+> - Resweep partial (356/2766 old hard cases re-run on current binary): **199 OK (56% recovered
+>   outright), 100 CONVERR, 36 TIMEOUT/OOM, 21 FATAL.** So ~44% still "fail," but gating shows
+>   the failures are not Rust translation gaps.
+> - **CONVERR tail (1501-1502.x, 12 gated):** all SHARED or Rust-better — `\endproof` 2/2,
+>   `\WM` 25/25, `malformed:ltx:XMApp` 10/10, `\etb@undefined` 1/1 (author bug, both engines),
+>   `misdefined:#` 24/102 (Rust better), `\GenericError` 1/5 (Rust better).
+> - **Cross-stage distinctive undefined-internals (stages 53-71):** all stale-fixed — caption
+>   `\caption@ifundefined` (1608.01812 now 0/21), expl3 `\hbox_unpack_clear:N` (1610.09331 0/1),
+>   listings `\lst@RequireAspects` (1604.00381 0/11), inputenc `\@inpenc@test` (1504.05963 0/0),
+>   cellcolor (1706.04315 0/0), epstopdf (1506.04609 3/3 shared).
+> - **`expected:id` cluster (the prior #1 Rust-only):** FIXED — 1501.07487 (was 115 expid) now
+>   0/0; 1502.04191 (was 278 expid) now has 0 expid, only a `Fatal:Timeout` and Perl ALSO hangs
+>   on it (shared performance, not a Rust error).
+> - **Segfaults (FATAL_139):** TRANSIENT — 1502.07458 + 1503.04492 both run clean standalone
+>   (RUST 0; Perl 89 / 2); the canvas SIGSEGVs were parallel-memory-pressure, not real crashes.
+>
+> **Conclusion:** today's dep-scan fix (1912.00781 + 1910.12622) was the last genuine single-root
+> Rust-only in the sampled regions. The residual live tail is dominated by **SHARED** failures
+> (hard/malformed docs both engines fail — a surpass-Perl track, out of the parity mandate) and a
+> **reliability tail** (timeout/OOM — track via `STABILITY_WITNESSES.md`, e.g. the shared
+> 1502.04191 timeout). NEXT iterations: let the resweep cover the later/diverse stages (53-86)
+> and gate only those live failures; the front slice (51-52) is converged.
+
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
 > "2007.06211 DEFERRED" / "remaining physics-`\mqty` residual" claims in the 2026-05-31
