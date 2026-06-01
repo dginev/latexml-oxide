@@ -94,6 +94,21 @@
 > ≈ 8.7 k lexemes, well under the cap). The deeper marpa-OOM root cause is the math-parser
 > collaborator's lane; the cap is the in-repo reliability stopgap until then.
 >
+> **FATAL_1 + FATAL_139 classes swept → 0 Rust-only (2026-06-01).** FATAL_1 (9 papers,
+> stages 51-82) are ALL `Fatal:invalid:not_tex_source` — PDF-only arXiv submissions with no
+> TeX-format file in the archive; NEITHER engine can convert them (there is no LaTeX to
+> process). Not Rust bugs — legitimately unconvertible source. FATAL_139 (1 paper,
+> 1503.03906, a large `thesis.tex`) is the transient parallel-load SIGSEGV class (canvas_3
+> Cluster E) that re-passes standalone; debug-profile timeout now, not a reproducible crash.
+> **With this, every non-environmental FATAL/CONVERR class from stages 51-82 has been swept:
+> the genuine Rust-only finds were 1803.11541 (FATAL_3) and 1706.06621 (FATAL_134), both
+> FIXED; everything else is SHARED-with-Perl, fixed-since-the-2026-05-29-run, environmental
+> (FATAL_127 = missing release binary, ~9.7 k), or unconvertible source (not_tex_source).**
+> The remaining open item is operational, NOT a correctness gap: RE-RUN the second-500K
+> canvas (stages 51-100; 83-100 never ran when the release `cortex_worker` went missing) on
+> the CURRENT binary to measure the true current success rate, since all the failure data
+> above predates ~20 landed fixes.
+>
 > **Net: across canvas_3 + the high- and low-error CONVERR bands, ZERO remaining
 > Rust-only conversion errors.** The corpus is genuinely at Perl parity for error-free
 > conversion. The only non-shared residuals are reliability/perf (tasks #266/#274:
