@@ -2493,6 +2493,23 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01, round 4): `expected:id` DUPLICATOR found — `append_tree` deep-copy keeps source xml:id
+
+Ancestor-chain dump at the dup (reverted): both `…m1.m2.m1.1` XMApps share the IDENTICAL 5-deep
+chain `XMApp<XMWrap<XMDual×5<XMApp` — a nested-XMDual subtree DUPLICATED. Traced to
+`Document::append_tree` (document.rs:4525): it DEEP-COPIES every node via `open_element_at`
+(re-creating with the same `xml:id`), and — UNLIKE Perl `appendTree`
+(`$child->removeAttribute('xml:id')`+`unRecordID`) — Rust only `unrecord_id`s, NEVER strips the
+source's xml:id ATTRIBUTE. `replace_tree`→`append_tree` (parse_rec parser.rs:1067) thus leaves
+the source subtree in the DOM bearing the same ids as the copy → `record_node_ids`/`renumber`
+find 2 nodes/id → dup → stranded XMDual XMRefs → cmml `expected:id`. (`--nomathparse`→0 dups
+confirms parse-time; `create_xmrefs` is correct; Node::clone is a handle clone.) FIX ATTEMPT
+(reverted): adding the Perl `removeAttribute` killed the dup (→0) but EXPLODED expected:id
+8→2722 — Rust's idref-resolution/registration relies on the source id far more than Perl, so a
+blanket strip is wrong. **Real root: Rust `append_tree` DEEP-COPIES where Perl MOVES the node.**
+Next: make `replace_tree`/parse_rec MOVE an already-in-DOM `new` (unlink+re-parent) instead of
+deep-copying. Full trace in [[project_xmref_dangling_split]].
+
 ### Round-37 (2026-06-01): 3rd delta-gate batch (CONVERR_13+) → corpus drained except 2 deep clusters
 
 120 CONVERR_13+ papers (full Perl pipeline): 16 stale-clean, 18 SHARED, **84 where Rust BEATS
