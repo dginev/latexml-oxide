@@ -829,11 +829,10 @@ impl Server {
       return ConvertOutput::error(format!("Fatal: prepare_session failed: {e}"));
     }
     converter.bind_log();
-    // Fallback path (no `\begin{document}`, fork failure, or non-Unix): a
-    // plain `literal:` conversion. The source is anonymous here, so source-map
-    // locators are not emitted on this path — acceptable for the fallback; the
-    // primary warm-fork path names the source and gets full source-map.
-    let resp = converter.convert(format!("literal:{}", text));
+    // Fallback path (no `\begin{document}`, fork failure, or non-Unix). Use a
+    // *named* in-memory source (the document path) so `--source-map` stamps
+    // locators here too, matching the warm-fork path.
+    let resp = converter.convert_named(&get_file_path(uri), text.to_string());
     let sources = collect_sources(uri);
     let log = resp.log;
     let diags = parse_log_diagnostics(&log);

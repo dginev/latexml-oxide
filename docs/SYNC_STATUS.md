@@ -7566,9 +7566,6 @@ statusCode}` — the shape the `ar5iv-editor` client consumes.
   round-trip in `tests/00_unit_state.rs`.
 
 ### Known gaps / follow-ups
-* In-process **fallback** path (no `\begin{document}`, fork failure, non-Unix)
-  emits HTML but **no** source-map locators (anonymous source). Acceptable for
-  the fallback; primary warm-fork path is fully covered.
 * Interner growth: long-lived sessions keep interning new symbols (the daemon
   uses `reset_thread_state`, not `reset_thread_engine`); a periodic full reset
   is a future hardening.

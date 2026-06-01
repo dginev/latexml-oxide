@@ -377,6 +377,80 @@ impl Converter {
     }
   }
 
+  /// Convert in-memory `content` under the source name `name`, producing the
+  /// HTML5-format core XML (the persistent server then post-processes it).
+  /// Unlike [`Converter::convert`] (`literal:` → anonymous source), the source
+  /// is *named*, so `--source-map` stamps its locators. Focused on the
+  /// `Document`/HTML5 path the server uses — no amble wrapping, no TeX/Box
+  /// output formats.
+  pub fn convert_named(mut self, name: &str, content: String) -> ConversionResponse {
+    if !self.ready {
+      let _g_bootstrap = telemetry::phase(Phase::Bootstrap);
+      if let Err(e) = self.initialize_session() {
+        e.log_fatal();
+      }
+      drop(_g_bootstrap);
+      if !self.ready {
+        return ConversionResponse {
+          result:      None,
+          log:         self.flush_log(),
+          status:      s!("Initialization failed."),
+          status_code: 3,
+        };
+      }
+    }
+    self.bind_log();
+
+    let digest_result = {
+      let _g = telemetry::phase(Phase::Digest);
+      open_named_in_memory_mouth(name, content).and_then(|()| self.core.digest_internal())
+    };
+    let digested = match digest_result {
+      Ok(d) => d,
+      Err(e) => {
+        report_mut!().status_code = 3;
+        e.log_fatal();
+        // Salvage whatever digested before the error (mirrors `convert`).
+        match self.core.digest_internal() {
+          Ok(salvaged) if !salvaged.is_empty().unwrap_or(true) => salvaged,
+          _ => Digested::from(List::new(Vec::new())),
+        }
+      },
+    };
+
+    self.runtime.status = latexml_core::common::error::get_status_message();
+    self.runtime.status_code = latexml_core::common::error::get_status_code();
+
+    let serialized = {
+      let _g = telemetry::phase(Phase::Build);
+      match self.core.convert_document(digested) {
+        Ok(dom) => {
+          let _g = telemetry::phase(Phase::Serialize);
+          dom.serialize_to_string()
+        },
+        Err(e) => {
+          // `Error!` expands into a `Result`-returning context; wrap it the
+          // same way `convert` does so it composes in this `-> ConversionResponse` fn.
+          let message = s!("{:?}", e);
+          let err = || {
+            Error!("document", "convert", message);
+            Ok(())
+          };
+          err().ok();
+          String::new()
+        },
+      }
+    };
+
+    let log = self.flush_log();
+    ConversionResponse {
+      result: Some(serialized),
+      log,
+      status: self.runtime.status.clone(),
+      status_code: self.runtime.status_code,
+    }
+  }
+
   pub fn prepare_session<'preplifetime>(
     &'preplifetime mut self,
     _opts: &'preplifetime Config,
