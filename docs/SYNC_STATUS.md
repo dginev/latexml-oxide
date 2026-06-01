@@ -43,6 +43,20 @@
 > systematically. Remaining live failures are otherwise SHARED (surpass-Perl track, out of the
 > parity mandate) or perf (STABILITY_WITNESSES track). While the canvas runs: read-only analysis +
 > minimal-tests only, **no competing conversions / no broad pkill** ([[feedback_dont_interfere_with_canvas]]).
+>
+> **Also checked + SHARED (2026-06-01, completing the sweep): `malformed:ltx` structural class.**
+> The "Rust builds invalid XML where Perl builds valid" hypothesis does not hold on the fresh
+> stages 83-86: 1912.03483 `malformed:ltx:p "close </ltx:p> which isn't open"` = Rust 1 / Perl 1;
+> 1910.02343 + 1912.05149 `XMApp isn't allowed in <ltx:text>` = Rust 2/Perl 2 and 3/3 — the
+> apparent error-TYPE divergence (Rust says `…in <ltx:text>`, Perl says `…in <ltx:p>`) is a red
+> herring: same root (a math XMApp leaking into a forbidden text/para context), differing only in
+> the immediate wrapper element. SHARED.
+>
+> **Infrastructure ready for the pivot:** `~/data/canvas_hard_cases/post_canvas_gate.sh` — a
+> comprehensive Rust(release)-vs-Perl(ar5iv, cortex's own main) gate over ALL stages-83-100 CONVERR
+> ids, ANSI-stripped, classifying RUST-ONLY (Rust>0 & Perl=0) / RUST-WORSE / SHARED / RUST-BETTER.
+> It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
+> machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
 > **🎯 GOVERNING POST-CANVAS WORKFLOW (user directive, 2026-06-01).** Once the FULL canvas
 > (all 100 stages) completes, extract a SUBSET of the known hard cases — every paper classified
