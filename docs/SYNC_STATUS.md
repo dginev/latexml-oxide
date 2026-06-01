@@ -2493,6 +2493,19 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01, round 3): `expected:id` cluster — collision pinned to delimited-XMDual content-arm dup
+
+Backtrace at `record_id_with_node`'s dup branch (LXDBG_DUP, reverted) on 1801.04233: the dup
+`S2.Ex15.m1.m2.m1.1` is created in `parse_kludge` (parser.rs:1246) as **XMApp vs XMApp, both
+with `parent=ltx:XMWrap`** — i.e. the content AND presentation arms of the delimited XMDual
+(`\left\{…array…\right.` cases fence) each hold an XMApp with the SAME id; the content arm
+should hold an XMRef, not a copy. `renumber_math_ids` (core_interface.rs:1073) then propagates
+it (XMTok vs XMApp). Ruled out: `Node::clone()` is a handle (Rc) clone not a deep DOM copy (so
+kludge_scripts `base.clone()` is NOT the duplicator — converting to moves was a no-op,
+reverted); no `dup`/`copy_node` API exists. NEXT: find where the delimited XMDual's content arm
+gets a duplicate id'd XMApp instead of an XMRef (parse_kludge FENCED/XMWrap handling +
+`apply_delimited`/`_pxmkey`). Fix upstream of renumber. Full trace in [[project_xmref_dangling_split]].
+
 ### Round-37 (2026-06-01, round 2): `expected:id` cluster — ruled out parse_single + Lexeme-clone
 
 Attempted a `parse_single` fix (skip `unrecord` for nested-`ltx:Math` descendant ids so reused
