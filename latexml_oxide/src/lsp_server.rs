@@ -445,11 +445,10 @@ fn make_config(uri: &str) -> Config {
       Some(search_paths)
     },
     include_comments: None,
-    nomathparse: if std::env::var("LATEXML_NOMATHPARSE").is_ok() {
-      Some(true)
-    } else {
-      None
-    },
+    // Math parsing is always ON in the server: the parsed MathML (and its
+    // source-mapped tokens) is one of the features this preview showcases, so
+    // we deliberately do not expose a disable knob here.
+    nomathparse: None,
     source_map: Some(true),
   }
 }
@@ -702,10 +701,18 @@ mod unix_server {
     None
   }
 
-  fn reap(pid: i32) {
+  /// Reap `pid`, returning its exit code (or `-1` if it died from a signal).
+  /// The shared `Watchdog` in the child exits `124` on timeout / `137` on the
+  /// memory ceiling, which `finish` maps back to a result.
+  fn reap(pid: i32) -> i32 {
     let mut status = 0i32;
     unsafe {
       libc::waitpid(pid, &mut status, 0);
+      if libc::WIFEXITED(status) {
+        libc::WEXITSTATUS(status)
+      } else {
+        -1
+      }
     }
   }
 
@@ -734,71 +741,24 @@ mod unix_server {
 
   /// Block until the body child finishes or is preempted, multiplexing
   /// `{stdin, child-pipe}` on a single thread.
-  /// How long the parent's hard wall-clock backstop waits beyond the child's
-  /// own cooperative `set_timeout`, so the child times out gracefully first.
-  const TIMEOUT_GRACE_SECS: u64 = 5;
-  /// Parent poll cadence — wake this often to re-check the child's resource use.
-  const RESOURCE_TICK_MS: libc::c_int = 200;
-
-  /// Read a child's resident set size (KiB) from `/proc/<pid>/status`.
-  fn child_rss_kb(pid: i32) -> Option<u64> {
-    let s = std::fs::read_to_string(format!("/proc/{pid}/status")).ok()?;
-    for line in s.lines() {
-      if let Some(rest) = line.strip_prefix("VmRSS:") {
-        return rest.split_whitespace().next()?.parse::<u64>().ok();
-      }
-    }
-    None
-  }
-
+  ///
+  /// The child self-guards its wall-clock and RAM budgets via the shared
+  /// [`latexml_core::watchdog::Watchdog`] (see `run_body_child`), exiting with a
+  /// distinct code on breach. So the parent doesn't poll resources — it waits
+  /// for the pipe to close and lets `finish` interpret the exit code. The only
+  /// active concern here is stdin: a newer same-document `latexml/convert`
+  /// preempts (SIGKILL) the in-flight child.
   fn wait_for_child(
     pid: i32,
     read_fd: i32,
     current_uri: &str,
     reader: &mut FdReader,
     pending: &mut VecDeque<String>,
-    timeout_secs: u64,
-    ram_cap_kb: u64,
   ) -> WarmResult {
-    use std::time::{Duration, Instant};
     // Owns `read_fd`; closes it on every return path.
     let mut pipe = unsafe { std::fs::File::from_raw_fd(read_fd) };
 
-    let start = Instant::now();
-    // Hard wall-clock limit (the child's cooperative deadline fires first).
-    let time_limit = (timeout_secs > 0).then(|| Duration::from_secs(timeout_secs + TIMEOUT_GRACE_SECS));
-
-    let kill_reap = |what: &str, msg: String| -> WarmResult {
-      log::warn!("Reaping body child {pid}: {what}");
-      unsafe {
-        libc::kill(pid, libc::SIGKILL);
-      }
-      reap(pid);
-      // Reaped for a resource breach → fatal (status code 3).
-      let label = if what == "timeout" { "timeout" } else { "fatal" };
-      WarmResult::Done(ConvertOutput::failed(label, 3, msg))
-    };
-
     loop {
-      // Parent-enforced hard backstops — the child is reaped here if it blows
-      // through the cooperative guards (e.g. a runaway in libxslt that never
-      // reaches a `check_timeout`, or a sudden allocation spike).
-      if let Some(lim) = time_limit {
-        if start.elapsed() > lim {
-          return kill_reap("timeout", format!("conversion exceeded {timeout_secs}s wall-clock budget"));
-        }
-      }
-      if ram_cap_kb > 0 {
-        if let Some(rss) = child_rss_kb(pid) {
-          if rss > ram_cap_kb {
-            return kill_reap(
-              "oom",
-              format!("conversion exceeded {} MB RAM budget", ram_cap_kb / 1024),
-            );
-          }
-        }
-      }
-
       // Already-buffered stdin frame takes priority (poll wouldn't re-report
       // bytes we've pulled into user space).
       let stdin_ready = if reader.has_complete_frame() {
@@ -808,9 +768,7 @@ mod unix_server {
           libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 },
           libc::pollfd { fd: read_fd, events: libc::POLLIN, revents: 0 },
         ];
-        // Finite tick so the resource backstops above run even while neither fd
-        // is ready (a CPU/RAM-bound child produces nothing until it finishes).
-        let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, RESOURCE_TICK_MS) };
+        let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
         if rc < 0 {
           let err = std::io::Error::last_os_error();
           if err.raw_os_error() == Some(libc::EINTR) {
@@ -819,12 +777,8 @@ mod unix_server {
           // poll failed: fall back to a blocking drain of the child.
           let mut bytes = Vec::new();
           let _ = pipe.read_to_end(&mut bytes);
-          reap(pid);
-          return finish(current_uri, &bytes);
-        }
-        if rc == 0 {
-          // Tick elapsed, nothing ready — loop back to the resource checks.
-          continue;
+          let code = reap(pid);
+          return finish(current_uri, &bytes, code);
         }
         let pipe_ready = (fds[1].revents & (libc::POLLIN | libc::POLLHUP)) != 0;
         if pipe_ready {
@@ -832,8 +786,8 @@ mod unix_server {
           // pipe-readable means the compile is essentially done — drain & reap.
           let mut bytes = Vec::new();
           let _ = pipe.read_to_end(&mut bytes);
-          reap(pid);
-          return finish(current_uri, &bytes);
+          let code = reap(pid);
+          return finish(current_uri, &bytes, code);
         }
         (fds[0].revents & libc::POLLIN) != 0
       };
@@ -875,7 +829,11 @@ mod unix_server {
 
   /// Parse the child's pipe payload into a `ConvertOutput`. The parent owns the
   /// preamble (warmup) log and the source-map context, so it merges them here.
-  fn finish(current_uri: &str, bytes: &[u8]) -> WarmResult {
+  /// `exit_code` is the child's exit status: a child hard-terminated by its
+  /// `Watchdog` writes no payload and exits [`watchdog::EXIT_TIMEOUT`] /
+  /// [`watchdog::EXIT_OOM`], which we map to a fatal result.
+  fn finish(current_uri: &str, bytes: &[u8], exit_code: i32) -> WarmResult {
+    use latexml_core::watchdog::{EXIT_OOM, EXIT_TIMEOUT};
     // Threaded back through a thread-local set just before the fork; see
     // `run_warm`. We stash the preamble log in a cell to avoid widening this
     // function's signature through the poll machinery.
@@ -922,9 +880,24 @@ mod unix_server {
           })
         }
       },
-      Err(e) => WarmResult::Done(ConvertOutput::error(format!(
-        "child payload parse error: {e}"
-      ))),
+      // No usable payload — the child was hard-terminated (its Watchdog exited
+      // it for a resource breach the cooperative guards didn't catch) or
+      // crashed. Map the exit code to a fatal result.
+      Err(e) => {
+        let out = match exit_code {
+          EXIT_TIMEOUT => {
+            ConvertOutput::failed("timeout", 3, "conversion timed out (hard wall-clock limit)".to_string())
+          },
+          EXIT_OOM => ConvertOutput::failed(
+            "fatal",
+            3,
+            "conversion exceeded the memory ceiling".to_string(),
+          ),
+          0 => ConvertOutput::error(format!("child payload parse error: {e}")),
+          c => ConvertOutput::error(format!("child exited unexpectedly (code {c})")),
+        };
+        WarmResult::Done(out)
+      },
     }
   }
 
@@ -943,6 +916,7 @@ mod unix_server {
     body: &str,
     warmed: &latexml_core::digested::Digested,
     timeout_secs: u64,
+    max_rss_kb: u64,
   ) -> Result<(i32, i32), String> {
     let mut fds = [0i32; 2];
     unsafe {
@@ -966,7 +940,7 @@ mod unix_server {
       unsafe {
         libc::close(read_fd);
       }
-      let payload = run_body_child(uri, offset_lines, body, warmed, timeout_secs);
+      let payload = run_body_child(uri, offset_lines, body, warmed, timeout_secs, max_rss_kb);
       let bytes = payload.to_string().into_bytes();
       let mut file = unsafe { std::fs::File::from_raw_fd(write_fd) };
       let _ = file.write_all(&bytes);
@@ -996,13 +970,20 @@ mod unix_server {
     body: &str,
     warmed: &latexml_core::digested::Digested,
     timeout_secs: u64,
+    max_rss_kb: u64,
   ) -> Value {
+    // Hard guard for this child, identical to cortex_worker's: a background
+    // thread that exits the child (124 timeout / 137 OOM) if it blows through
+    // its wall-clock or RAM budget — including native hangs (libxslt, Marpa)
+    // the cooperative deadline can't see. The child self-terminates; the parent
+    // reaps it (`finish` maps the exit code). Held for the whole conversion.
+    let _watchdog = latexml_core::watchdog::Watchdog::with_limits(timeout_secs, max_rss_kb);
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-      // Re-arm the conversion deadline FRESH from this child's clock. The child
+      // Re-arm the cooperative deadline FRESH from this child's clock. The child
       // inherits the parent's thread-local CONVERSION_DEADLINE via COW (set
       // during warm-up); without this the body would run against a stale (often
-      // already-expired) deadline. This is the cooperative guard — digest loops
-      // raise Fatal:Timeout, caught below; the parent enforces the hard backstop.
+      // already-expired) deadline. Digest loops raise Fatal:Timeout (caught
+      // below) for the graceful common case; the Watchdog above is the backstop.
       latexml_core::stomach::set_timeout(timeout_secs);
       // Bare Core over the inherited state — does NOT reset thread-local state.
       let mut core = latexml_core::Core {
@@ -1124,19 +1105,21 @@ mod unix_server {
       }
 
       let warmed = self.warmed_preamble_digested.as_ref().unwrap();
-      let (pid, read_fd) = match spawn_body_child(uri, offset_lines, body, warmed, timeout) {
-        Ok(v) => v,
-        Err(e) => {
-          log::error!("{e}; falling back to in-process");
-          return WarmResult::Done(self.convert_in_process(uri, text));
-        },
-      };
+      // The child self-guards its time + RAM budget via the shared Watchdog.
+      let (pid, read_fd) =
+        match spawn_body_child(uri, offset_lines, body, warmed, timeout, max_rss_kb()) {
+          Ok(v) => v,
+          Err(e) => {
+            log::error!("{e}; falling back to in-process");
+            return WarmResult::Done(self.convert_in_process(uri, text));
+          },
+        };
 
       // Hand the preamble log to `finish` (which runs deep inside the poll
       // loop) without threading it through every signature.
       PREAMBLE_LOG.with(|c| *c.borrow_mut() = self.warmed_preamble_log.clone());
 
-      match wait_for_child(pid, read_fd, uri, reader, pending, timeout, max_rss_kb()) {
+      match wait_for_child(pid, read_fd, uri, reader, pending) {
         WarmResult::Cancelled => WarmResult::Cancelled,
         // A child that reported an internal error is reported as-is rather than
         // silently re-run in-process: re-running would reset the warm cache and
