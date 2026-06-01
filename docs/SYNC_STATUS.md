@@ -15,6 +15,35 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **✅ PARITY-TRACK Rust-only pool DRAINED across the sampled corpus (capstone, 2026-06-01).**
+> Over ~8 loop iterations this session I gated/minimal-tested **~28 papers spanning every live
+> signature class** — and outside the one genuine fix below, **every single one is SHARED (Perl
+> also fails), already-fixed-stale, or transient.** Evidence by class:
+> - **CONVERR `undefined:`** — autobreak `\@envbody` (Perl 12 == Rust 12 minimal), soul/ulem
+>   `\UL@setULdepth` (1911.02711 Rust 12 / **Perl 16**), `\etb@undefined` (1/1), caption/expl3/
+>   listings/inputenc all stale-fixed (Rust now 0).
+> - **CONVERR `misdefined:#`** (THE largest fresh-data category, 98) — SHARED: 2003.09315 Rust 43
+>   == Perl 43 (`#`-leak is a document issue both flag identically); old 1501.07012 Rust 24 / Perl
+>   102.
+> - **`expected:id`** (prior #1 Rust-only cluster) — FIXED: down to 1 in fresh data; 1501.07487
+>   0/0, 1502.04191 0 expid.
+> - **FATAL/segfault** — transient parallel-memory-pressure (clean standalone).
+> - **TIMEOUT/OOM** — SHARED perf (1502.00494 Rust 124s clean / Perl 293s-timeout); my "44/48"
+>   sweep was contaminated by the concurrent canvas load (retracted).
+>
+> **The one genuine parity-track Rust-only found+fixed this session:** the dep-scan
+> "conflicting option-sets" removal (commit `aa45e4c25d`: 1912.00781 `\url` + 1910.12622
+> `\harvarditem`, both no-binding classes loading a package in both arms of a load-time `\if…\else`).
+>
+> **STRATEGIC PIVOT.** Singleton-by-singleton gating has hit clear diminishing returns (all shared).
+> The high-value path is NOT more one-off gating but: (1) let the auto-running canvas COMPLETE
+> stages 90→100, (2) repair the interference-damaged stages 87/88/89 (#276), (3) run ONE
+> comprehensive post-canvas batch gate over the COMPLETE fresh current-binary failure set (stages
+> 83-100) — Perl-matched, ANSI-stripped, minimal-tested — to catch any residual Rust-only
+> systematically. Remaining live failures are otherwise SHARED (surpass-Perl track, out of the
+> parity mandate) or perf (STABILITY_WITNESSES track). While the canvas runs: read-only analysis +
+> minimal-tests only, **no competing conversions / no broad pkill** ([[feedback_dont_interfere_with_canvas]]).
+
 > **🎯 GOVERNING POST-CANVAS WORKFLOW (user directive, 2026-06-01).** Once the FULL canvas
 > (all 100 stages) completes, extract a SUBSET of the known hard cases — every paper classified
 > error (CONVERR), fatal, abort, timeout, OOM — into a NEW dedicated target directory, then
