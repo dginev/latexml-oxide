@@ -136,6 +136,46 @@ the sweep, not an engine defect.
 RSS) or SHARED-error (xy-pic via `\@@input`). No genuine Rust-only engine defect
 remains in it. Engine + post-processor verdict: healthy.
 
+## Cluster D — custom plain-TeX `\line`/picture width-loop (SHARED hang; Rust aborts gracefully)
+
+**Witnesses:** `math0102053`, `math0102089`, `math0212126` (all `canvas_3_failures_
+sandbox/all_failures.txt`, originally classified OOM). All are plain-TeX papers
+(`\magnification`, no documentclass) that **inline their own copy of the LaTeX
+`picture`/`\line` code** under private names — `\droite`/`\@sline`/`\@whiledim`
+(math0102053 L123-158). The diagonal-line routine `\@sline` draws a sloped line by
+repeating a line-font glyph box:
+
+```
+\setbox\@linechar\hbox{\@linefnt\@getlinechar(\@xarg,\@yyarg)}%   % \@linefnt = linew10
+\@whiledim \@clnwd <\@linelen \do {... \advance\@clnwd \wd\@linechar}%
+```
+
+The loop advances `\@clnwd` by `\wd\@linechar` each turn. **LaTeXML is not a
+typesetter**: it does not compute real TFM box metrics for an `\hbox{\font <char>}`,
+so `\wd\@linechar` is **0** → `\@clnwd` never grows → the `\@whiledim` loop never
+terminates, appending boxes until memory is exhausted. (`linew10.tfm`/`line10.tfm`
+DO exist in texmf, but neither engine reads glyph widths from them — this is a
+shared architectural limit, not a missing-font issue. The
+`Info:fontmap:line Couldn't find fontmap for 'line'` line is a downstream symptom.)
+
+**SHARED, confirmed:** Perl `latexml` on math0102053 runs **unbounded** — measured
+71 s → 107 s with RSS climbing 1.1 GB → 1.57 GB, still at the same `line 1405 col 7`,
+no termination. **Rust is strictly better:** its `Fatal:Timeout:MemoryBudget` guard
+aborts gracefully at RSS 4500 MB (rc=3, one fatal) instead of growing without bound.
+This is the correct behavior for an unsatisfiable typesetting loop — neither engine
+can render these custom pictures without real box metrics, and the standard LaTeXML
+`\line` binding (which sidesteps the loop) is bypassed by the document's private
+`\droite`. **Not a Rust-only defect; no parity fix.** A faithful "make it terminate"
+fix would require giving `\font`-declared glyph boxes real TFM widths — a beyond-Perl
+typesetter feature (Perl hangs identically), high-risk, deferred. The graceful abort
+is the right floor.
+
+(The other `all_failures.txt` records re-tested 2026-05-31 on the current binary:
+3 `FATAL_139` segfaults → all clean rc=0 (stale transients); `math0104252`/
+`math0203082`/`gr-qc0209055`/`gr-qc0301024` OOM/TIMEOUT → all clean rc=0 (stale);
+`hep-ph0012156` (12,778 maths) → graceful OOM-abort under 6 GB ulimit, Cluster A
+inherent-large-math. No genuine Rust-only defect in the batch.)
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
