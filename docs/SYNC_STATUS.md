@@ -157,6 +157,20 @@
 > 1502.04191 timeout). NEXT iterations: let the resweep cover the later/diverse stages (53-86)
 > and gate only those live failures; the front slice (51-52) is converged.
 
+> **RELIABILITY-TAIL INVESTIGATION (2026-06-01, methodology corrected).** The CONVERR Rust-only
+> pool being drained, the remaining lever is the timeout/OOM tail. **Critical methodology note
+> (per [[feedback_timeout_release_only]]):** timeout work MUST use a `--release` binary — debug is
+> ~5× slower, so the debug-`cortex_worker` resweep's 42 "TIMEOUTs" are INFLATED and cannot
+> establish a Rust-only hang (debug-Rust-280s vs normal-Perl-30s is an unfair comparison; release
+> Rust might finish in ~50s). Correct substrate: the **40 TIMEOUT + 8 OOM papers from the manifest
+> are release-binary-classified** (the original canvas) — these are the real reliability
+> candidates, spread across all eras (stages 52-86). Built a fresh `--release cortex_worker` (with
+> today's fixes) and launched a 48-paper sweep (`/tmp/reliab_results.txt`, canonical 120s). NEXT:
+> the papers that STILL timeout/OOM on release → gate vs Perl with a generous (~280s) budget; a
+> Rust-times-out / Perl-completes pair is a genuine Rust-only hang to root-cause (likely
+> math-parser ambiguity blow-up per [[feedback_ambiguity_explosion_is_a_flaw]] /
+> [[project_marpa_lexeme_cap_oom]]); a both-hang pair is SHARED (e.g. 1502.04191).
+
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
 > "2007.06211 DEFERRED" / "remaining physics-`\mqty` residual" claims in the 2026-05-31
