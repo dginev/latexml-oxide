@@ -77,6 +77,23 @@
 > also fails). See [[project_rawstring_control_space_macro_body]]-adjacent
 > [[project_robust_cs_semiverbatim_loop]] pushback family.
 >
+> **FATAL_134 (SIGABRT) sweep → 1 NEW Rust-only FOUND + FIXED (2026-06-01).** exit-134 =
+> SIGABRT. Of the 6 stage-51-82 FATAL_134 papers, 5 were debug-profile timeouts (convert
+> cleanly given 180 s) and **1706.06621** was a genuine Rust-only abort: a single explicitly-
+> expanded E6 fluxbrane polynomial (`H3 = B_1^4 B_2^8 …`, **~43 k grammar lexemes / 1 MB**)
+> drove Marpa's Earley recognizer to O(n²)+ obstack growth → libmarpa `default_out_of_memory`
+> → `abort()` (UNCATCHABLE — the parse is on the worker thread, no Rust panic). gdb backtrace
+> pinned it to `marpa_r_earleme_complete` under `parse_marpa` (NOT a stack overflow despite
+> the canvas log wording; the 256 MB thread stack is fine). Perl (Parse::RecDescent) converts
+> it (9.98 MB, 43 s). Fix (commit `808ad5d8a1`): `MAX_GRAMMAR_LEXEMES` cap (default 12000,
+> env `LATEXML_MAX_GRAMMAR_LEXEMES`, 0=disable) — above it, skip the grammar parse and use the
+> kludge parser (the genuine-parse-failure path), degrading only the one giant formula. Emits
+> a `Warn:toobig:math` carrying the full root-cause + how-to-improve-the-grammar explanation
+> (ambiguity, chiefly implicit-multiplication associativity; or bounded-memory recognition in
+> the marpa fork). 1706.06621: SIGABRT → 0 err / 932 KB. Suite 1344/0 (largest real formula
+> ≈ 8.7 k lexemes, well under the cap). The deeper marpa-OOM root cause is the math-parser
+> collaborator's lane; the cap is the in-repo reliability stopgap until then.
+>
 > **Net: across canvas_3 + the high- and low-error CONVERR bands, ZERO remaining
 > Rust-only conversion errors.** The corpus is genuinely at Perl parity for error-free
 > conversion. The only non-shared residuals are reliability/perf (tasks #266/#274:
