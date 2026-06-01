@@ -43,10 +43,30 @@
 >   `\lx@end@inline@math`/`XMApp` cascade; siamart+proof in isolation is clean, so it's a
 >   package-interaction (deferred per the "minimal subsets pass, full fails = defer" rule).
 >   RUST 859 / PERL 5 (Perl's only errors are cosmetic `font cmiib3` not-found).
-> - **2002.05958** (`\lx@end@inline@math` ×613), **1808.04050** (`\@@citephrase`/`\lambda`),
->   **1705.10306** (`malformed:ltx:XMTok` ×293) — each Rust ≫ Perl with distinct cascade
->   signatures; need per-paper root-cause (the real Round-37 worklist, replacing the bogus
->   "drained" status).
+> - **2002.05958** (`\lx@end@inline@math` ×613), **1808.04050** (`\@@citephrase`/`\lambda`) —
+>   Rust ≫ Perl with distinct cascade signatures; need per-paper root-cause.
+> - **1705.10306** — RE-CHECKED: SHARED, not Rust-only. Both engines emit `malformed:ltx:XMTok`
+>   (math leaking into `<ltx:glossaryref>`); Rust 293 vs Perl 100-capped is just the different
+>   error cap (Rust 1000 / Perl 100), same root issue. Drop from the Rust-only worklist.
+>
+> **NEW clean genuine Rust-only found via the CORRECT gate (Perl=0): 1910.12622.** elegantpaper
+> class (no binding → OmniBus) + a harvard-style `.bbl` using `\harvarditem`. Perl 0 / Rust 2
+> (`\harvarditem` undefined + a downstream `_`). Root cause deeply narrowed: elegantpaper.cls
+> loads natbib via CHAINED etoolbox conditionals —
+> `\ifdefstring{\ELEGANT@cite}{authoryear}{\RequirePackage[authoryear,sort&compress]{natbib}}{\relax}`
+> then `…{numbers}{\RequirePackage[numbers,sort&compress]{natbib}}{\relax}`. Rust's dep-scan
+> executed-set gate (content.rs `maybe_require_dependencies`) DROPS natbib because its
+> `\RequirePackage` never executed during the OmniBus raw-load → `natbib.usepackage_executed`
+> false → not in the dep list (Perl's list HAS natbib). Bisected the non-execution to a precise
+> interaction: **a SKIPPED first `\ifdefstring` branch whose `\RequirePackage` carries an `&` in
+> its `[...]` optional arg (`sort&compress`) corrupts the SUBSEQUENT `\ifdefstring` block — but
+> ONLY inside the class raw-load; the identical chained construct in a clean preamble works.**
+> Minimal repro: `head -67 elegantpaper.cls` (renamed) + two chained
+> `\ifdefstring{\ELEGANT@cite}{…}{\RequirePackage[x,sort&compress]{natbib}}{\relax}`. Single
+> block, or no-`&`, or clean-preamble all load natbib; chained + `&` + class-raw-load does not.
+> Likely an `&`-catcode (ALIGN) mishandle in macro-argument reading during the raw-load (cf.
+> [[project_alignment_noalign_defined_as]]). Deferred for a focused core fix; see
+> [[project_elegantpaper_natbib_depscan_amp]].
 >
 > **NEXT:** rebuild the CONVERR verification on a correct harness (cortex for Rust + matched
 > ANSI-stripped Perl on cortex's main) and systematically re-gate stages 51-100. The canvas
