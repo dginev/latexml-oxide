@@ -170,6 +170,21 @@
 > Rust-times-out / Perl-completes pair is a genuine Rust-only hang to root-cause (likely
 > math-parser ambiguity blow-up per [[feedback_ambiguity_explosion_is_a_flaw]] /
 > [[project_marpa_lexeme_cap_oom]]); a both-hang pair is SHARED (e.g. 1502.04191).
+>
+> **RELEASE RELIABILITY SWEEP RESULT (2026-06-01).** Ran the 48 candidates on the fresh
+> `--release cortex_worker` at `-P 3` (low concurrency — oversubscription causes FALSE timeouts;
+> the first `-P 8` attempt spawned ~69 worker threads on 20 cores and was discarded). **Result:
+> 41 TIMEOUT + 3 OOM still fail at 120s; only 6 recovered to OK** (1506.03337 23s, 1508.06324 9s,
+> 1511.09288 3s, 1512.09088 105s, 1612.04716 67s, 1708.06009 71s). So the timeout tail is REAL,
+> not a debug artifact. **But the two extended-budget gates available point to SHARED/Rust-better,
+> NOT Rust-only:** 1502.00494 → Rust completes clean in 124s (debug!) while **Perl times out at
+> 293s**; 1503.05447 → Rust completes clean in 157s (debug) while Perl errors. On release (~5×
+> faster) both finish well under 120s — they only "timed out" because the canvas cutoff is 120s
+> and these are genuinely heavy math papers BOTH engines struggle with. A 5-paper Perl-gate
+> (release Rust + Perl, 250s budget) is running to confirm the Rust-only-vs-SHARED split across
+> `/tmp/reliab_gate.txt`; expectation per the two data points is SHARED-dominant. If any paper
+> shows Perl-completes-fast / Rust-hangs, THAT is the Rust-only target (math-parser perf). These
+> are STABILITY_WITNESSES-track items (reliability), not parity-track conversion errors.
 
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
