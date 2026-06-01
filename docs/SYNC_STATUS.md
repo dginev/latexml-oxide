@@ -2493,6 +2493,20 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01): `expected:id` cluster ROOT-CAUSE nailed — nested `\hbox{$…$}` math in display math
+
+Instrumented `generate_id` (LXDBG_GENID, reverted) on 1801.04233: the dangling refs come from a
+DISPLAY math `\left\{…array…&\hbox{if $m(s,t)\equiv 0\modue$;}…\right.` whose cells hold
+**`\hbox{$…$}` nested inline math** → nested `<ltx:Math>` elements. Digestion assigns their
+children CLEAN ids; the outer XMDual XMRefs them; then `parse_single` (parser.rs:1320-1327)
+unrecords+rebuilds ALL the outer math's descendants (incl. the nested-math children) → re-generated
+ids COLLIDE (`Duplicated attribute xml:id …1a/2a/3a`) and the originals are absorbed → the outer
+XMRefs dangle → cmml `expected:id`. Trigger = nested `$…$` math inside display math; state-dependent
+(minimal repros don't fire — needs accumulated id-counter state). Candidate fix: parse_single treat
+a nested `<ltx:Math>` as OPAQUE (don't clobber its descendants' ids during the outer rebuild) or
+re-point the XMRefs after rebuild. Deferred (dedicated session; high blast radius — all nested-math
+docs; gate vs tests/math/declare.xml). Full trace in [[project_xmref_dangling_split]].
+
 ### Round-37 (2026-06-01): tractable Rust-only pool EXHAUSTED — `expected:id` cmml cluster is the SOLE remaining class
 
 Second delta-gate batch (150 fresh CONVERR_3–12 papers, full Perl pipeline `latexml`+`latexmlpost`):
