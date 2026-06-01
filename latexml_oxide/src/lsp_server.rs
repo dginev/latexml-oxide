@@ -415,7 +415,11 @@ fn make_config(uri: &str) -> Config {
     mode: None,
     bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
-    preload: None,
+    // Preload ar5iv.sty: this server backs the ar5iv-editor, and ar5iv.sty
+    // enables raw `.sty` handling so a paper's *local, binding-less* packages
+    // (e.g. a bundled `mystyle.sty`) load instead of being skipped with a
+    // missing-file warning. Mirrors the sandbox/ar5iv conversion workflow.
+    preload: Some(vec!["ar5iv.sty".to_string()]),
     search_paths: if search_paths.is_empty() {
       None
     } else {
@@ -524,7 +528,7 @@ impl Server {
     // Fallback path (no `\begin{document}`, fork failure, or non-Unix). Use a
     // *named* in-memory source (the document path) so `--source-map` stamps
     // locators here too, matching the warm-fork path.
-    let resp = converter.convert_named(&get_file_path(uri), text.to_string());
+    let resp = converter.convert_content_with_provenance(&get_file_path(uri), text.to_string());
     let sources = collect_sources(uri);
     let log = resp.log;
     let diags = parse_log_diagnostics(&log);
@@ -977,7 +981,7 @@ mod unix_server {
         }
         // Name the preamble source after the document path so its locators are
         // stampable user sources (and share tag 0 with the body).
-        match converter.digest_named(&get_file_path(uri), preamble.to_string()) {
+        match converter.digest_content_with_provenance(&get_file_path(uri), preamble.to_string()) {
           Ok(pre) => {
             self.warmed_preamble_log = converter.flush_log();
             self.warmed_uri = Some(uri.to_string());

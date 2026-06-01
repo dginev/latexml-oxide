@@ -383,31 +383,20 @@ impl Converter {
   /// is *named*, so `--source-map` stamps its locators. Focused on the
   /// `Document`/HTML5 path the server uses — no amble wrapping, no TeX/Box
   /// output formats.
-  pub fn convert_named(mut self, name: &str, content: String) -> ConversionResponse {
-    if !self.ready {
-      let _g_bootstrap = telemetry::phase(Phase::Bootstrap);
-      if let Err(e) = self.initialize_session() {
-        e.log_fatal();
-      }
-      drop(_g_bootstrap);
-      if !self.ready {
-        return ConversionResponse {
-          result:      None,
-          log:         self.flush_log(),
-          status:      s!("Initialization failed."),
-          status_code: 3,
-        };
-      }
-    }
-    self.bind_log();
-
-    let digest_result = {
-      let _g = telemetry::phase(Phase::Digest);
-      open_named_in_memory_mouth(name, content).and_then(|()| self.core.digest_internal())
-    };
-    let digested = match digest_result {
+  pub fn convert_content_with_provenance(mut self, name: &str, content: String) -> ConversionResponse {
+    // Load + digest through the shared top-level loader, so the source-context
+    // setup is not duplicated here.
+    let digested = match self.digest_content_with_provenance(name, content) {
       Ok(d) => d,
       Err(e) => {
+        if !self.ready {
+          return ConversionResponse {
+            result:      None,
+            log:         self.flush_log(),
+            status:      s!("Initialization failed."),
+            status_code: 3,
+          };
+        }
         report_mut!().status_code = 3;
         e.log_fatal();
         // Salvage whatever digested before the error (mirrors `convert`).
@@ -461,19 +450,39 @@ impl Converter {
     Ok(())
   }
 
-  /// Digest in-memory `content` under the source name `name`, leaving the
-  /// thread-local engine state **live** — used by the persistent server to
-  /// warm a preamble once and then resume body digestion (in a fork child)
-  /// over the inherited state. The source is opened as a *named* mouth (not
-  /// the anonymous `literal:` protocol) so its locators carry `name` —
-  /// required for `--source-map` (`stamp_source_locator` only stamps
+  /// Digest in-memory `content` as the **main document** named `name`, leaving
+  /// the thread-local engine state **live**. Used by the persistent server to
+  /// warm a preamble once (then resume body digestion in a fork child over the
+  /// inherited state) and by [`Converter::convert_content_with_provenance`] for
+  /// the in-process path.
+  ///
+  /// This is the in-memory twin of [`crate::core_interface::DigestionAPI::digest_file`]:
+  /// same top-level spine — establish the source context, open the source,
+  /// `digest_internal` — but the content is *supplied* rather than read from
+  /// disk. It shares [`crate::core_interface::establish_source_context`] with
+  /// `digest_file` (so `SOURCEFILE`/`SOURCEDIRECTORY`/`SEARCHPATHS`/
+  /// `GRAPHICSPATHS`/`\jobname` can't drift), making sibling
+  /// `\usepackage`/`\input`/`\includegraphics` of local files resolve. The
+  /// source is opened as a *named* mouth (not the anonymous `literal:`
+  /// protocol) so locators carry `name` — the **provenance** that
+  /// `--source-map` needs (`stamp_source_locator` only stamps
   /// `.tex`/`.ltx`/`.bbl`/`.bib` user sources). Initializes the session if
   /// needed; does not finalize a document.
-  pub fn digest_named(&mut self, name: &str, content: String) -> Result<Digested> {
+  pub fn digest_content_with_provenance(&mut self, name: &str, content: String) -> Result<Digested> {
     if !self.ready {
       self.initialize_session()?;
     }
     self.bind_log();
+    // Top-level document load: establish the source context (SOURCEFILE,
+    // SOURCEDIRECTORY, SEARCHPATHS, GRAPHICSPATHS, \jobname) so sibling
+    // \usepackage/\input/\includegraphics of local files resolve. Shared with
+    // `digest_file` via `establish_source_context` so the two can't drift.
+    // (A continuation/nested mouth must NOT do this — see
+    // `open_named_in_memory_mouth`.)
+    let path = std::path::Path::new(name);
+    let dir = path.parent().and_then(|p| p.to_str()).unwrap_or("");
+    let jobname = path.file_stem().and_then(|s| s.to_str()).unwrap_or(name);
+    crate::core_interface::establish_source_context(Some(name), jobname, dir);
     open_named_in_memory_mouth(name, content)?;
     self.core.digest_internal()
   }
@@ -482,6 +491,12 @@ impl Converter {
 /// Open a gullet mouth over in-memory `content` whose source is named `name`
 /// (a real path/filename). Uses the Mouth's cached-content branch so locators
 /// carry `name` rather than "Anonymous String".
+///
+/// Low-level and *position-agnostic*: it does NOT touch the document-global
+/// `SOURCEDIRECTORY`/`SEARCHPATHS`, so it is safe for a continuation (the
+/// forked child's body over already-inherited state) or a nested include. For
+/// the *main* document load, go through [`Converter::digest_named`], which
+/// installs the document directory first.
 pub fn open_named_in_memory_mouth(name: &str, content: String) -> Result<()> {
   use latexml_core::gullet;
   use latexml_core::mouth::{Mouth, MouthOptions};
