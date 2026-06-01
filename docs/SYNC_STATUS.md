@@ -2493,6 +2493,25 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01): 1907.12308 FIXED — graphics must skip non-graphics-type candidates (inkscape `.pdf_tex`)
+
+Second delta-gate tractable target. `\input{grid.pdf_tex}` (an inkscape "PDF+LaTeX" wrapper
+that itself does `\includegraphics{grid}`) sits next to `grid.pdf`/`grid.eps`. `image_candidates`
+(faithfully unfiltered, like Perl `types=>['*']`) lists all three as the `candidates` attribute
+with `grid.pdf_tex` first. The post-processor's candidate loop gave **every** extension
+desirability 0 (`pdf`/`eps` use `..Default::default()` desirability 0 and `destination png ≠
+ext`; `pdf_tex` unknown → 0), so the FIRST candidate (`grid.pdf_tex`) won the strict `>`
+compare and then **failed to convert** (`pdf_tex` has no `destination_type`) → 2 Rust-only
+`imageprocessing` errors. Perl is clean: `findGraphicFile` re-searches with
+`types=>getGraphicsSourceTypes` (Post/Graphics.pm L150-151), which **excludes** non-graphics
+types like `.pdf_tex`, so it picks `grid.pdf`. **Fix:** in `graphics.rs`'s candidate loop, skip
+candidates whose extension is non-empty and not a known graphics type — mirroring
+`getGraphicsSourceTypes` and making the candidates path consistent with the search-paths
+fallback (which already filters by `graphics_types`). 1907.12308 **2→0** (cortex_worker;
+`grid.pdf` now renders to `x1.svg`/`x2.svg`). `cargo test` 1344/0; 25-paper graphics regression
+sample = 0 imageprocessing errors. Commit 5d8b1cd7fd. **Both delta-gate tractable targets now
+fixed** (1901.07768 + 1907.12308); the remaining 5/8 are the deep `expected:id` cmml cluster.
+
 ### Round-37 (2026-05-31): 1901.07768 FIXED — algorithm2e must not override `\BlankLine` (caption `\BlankLine` fired the listingline machinery)
 
 First of the delta-gate's tractable non-cluster targets. `\BlankLine` inside an algorithm2e
