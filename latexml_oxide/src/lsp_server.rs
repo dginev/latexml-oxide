@@ -495,6 +495,8 @@ struct Server {
   begin_doc_regex:           regex::Regex,
   /// Per-conversion wall-clock budget in seconds (`--timeout`; 0 disables).
   timeout_secs:              u64,
+  /// Per-conversion resident-memory ceiling in KiB (`--max-memory`; 0 disables).
+  max_rss_kb:                u64,
   warmed_uri:                Option<String>,
   warmed_preamble:           Option<String>,
   warmed_preamble_digested:  Option<latexml_core::digested::Digested>,
@@ -506,10 +508,11 @@ struct Server {
 }
 
 impl Server {
-  fn new(timeout_secs: u64) -> Self {
+  fn new(timeout_secs: u64, max_rss_kb: u64) -> Self {
     Server {
       begin_doc_regex: regex::Regex::new(r"\\begin\s*\{\s*document\s*\}").unwrap(),
       timeout_secs,
+      max_rss_kb,
       warmed_uri: None,
       warmed_preamble: None,
       warmed_preamble_digested: None,
@@ -1107,7 +1110,7 @@ mod unix_server {
       let warmed = self.warmed_preamble_digested.as_ref().unwrap();
       // The child self-guards its time + RAM budget via the shared Watchdog.
       let (pid, read_fd) =
-        match spawn_body_child(uri, offset_lines, body, warmed, timeout, max_rss_kb()) {
+        match spawn_body_child(uri, offset_lines, body, warmed, timeout, self.max_rss_kb) {
           Ok(v) => v,
           Err(e) => {
             log::error!("{e}; falling back to in-process");
@@ -1130,9 +1133,9 @@ mod unix_server {
     }
   }
 
-  pub fn run(timeout_secs: u64) -> Result<(), Box<dyn std::error::Error>> {
+  pub fn run(timeout_secs: u64, max_rss_kb: u64) -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = std::io::stdout();
-    let mut server = Server::new(timeout_secs);
+    let mut server = Server::new(timeout_secs, max_rss_kb);
     let mut reader = FdReader::new();
     let mut pending: VecDeque<String> = VecDeque::new();
 
@@ -1300,9 +1303,9 @@ mod generic_server {
     Some(String::from_utf8_lossy(&body).into_owned())
   }
 
-  pub fn run(timeout_secs: u64) -> Result<(), Box<dyn std::error::Error>> {
+  pub fn run(timeout_secs: u64, max_rss_kb: u64) -> Result<(), Box<dyn std::error::Error>> {
     let mut stdout = std::io::stdout();
-    let mut server = Server::new(timeout_secs);
+    let mut server = Server::new(timeout_secs, max_rss_kb);
     let stdin = std::io::stdin();
     let mut reader = std::io::BufReader::new(stdin.lock());
 
@@ -1402,31 +1405,26 @@ fn did_change_params(request: &Value) -> Option<(String, String)> {
   Some((uri, text))
 }
 
-/// `timeout_secs` is the per-conversion wall-clock budget (the `--timeout`
-/// flag; 0 disables). It is applied **fresh per conversion** — in particular,
-/// re-armed inside each forked child so a child never runs against the parent's
-/// stale warm-up deadline — and backstopped by the parent (which also reaps a
-/// child that exceeds the RAM cap; see [`max_rss_kb`]).
-pub fn run_lsp_server(timeout_secs: u64) -> Result<(), Box<dyn std::error::Error>> {
+/// Run the server. `timeout_secs` is the per-conversion wall-clock budget
+/// (`--timeout`; 0 disables) and `max_memory_mb` the resident-memory ceiling
+/// (`--max-memory`; 0 disables). Both are applied **fresh per conversion** by
+/// the forked body child's shared [`latexml_core::watchdog::Watchdog`] — so a
+/// child never runs against the parent's stale warm-up deadline, and is reaped
+/// if it exceeds the RAM ceiling. The extension surfaces both as VSCode
+/// settings and passes them on the spawn.
+pub fn run_lsp_server(
+  timeout_secs: u64,
+  max_memory_mb: u64,
+) -> Result<(), Box<dyn std::error::Error>> {
+  let max_rss_kb = max_memory_mb.saturating_mul(1024);
   #[cfg(unix)]
   {
-    unix_server::run(timeout_secs)
+    unix_server::run(timeout_secs, max_rss_kb)
   }
   #[cfg(not(unix))]
   {
-    generic_server::run(timeout_secs)
+    generic_server::run(timeout_secs, max_rss_kb)
   }
-}
-
-/// Hard RSS ceiling for a forked body child (parent reaps it past this).
-/// Default 6 GiB; override with `LATEXML_LSP_MAX_RSS_MB`. Returns KiB (to
-/// compare directly against `/proc/<pid>/status` `VmRSS`). 0 disables.
-fn max_rss_kb() -> u64 {
-  std::env::var("LATEXML_LSP_MAX_RSS_MB")
-    .ok()
-    .and_then(|v| v.parse::<u64>().ok())
-    .map(|mb| mb * 1024)
-    .unwrap_or(6 * 1024 * 1024)
 }
 
 #[cfg(test)]

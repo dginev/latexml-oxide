@@ -161,6 +161,12 @@ struct Cli {
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 
+  /// Per-conversion resident-memory ceiling in MiB (default: 6144 = 6 GiB).
+  /// Use 0 to disable. In `--server` mode each forked body child is reaped if
+  /// it exceeds this (shared `Watchdog`); see `docs/`.
+  #[arg(long, value_name = "MIB", default_value = "6144")]
+  max_memory: u64,
+
   /// Maximum number of tokens to process before aborting (default: 100M).
   /// Protects against infinite loops in macro expansion.
   #[arg(long, value_name = "N")]
@@ -379,7 +385,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Persistent LSP Server mode — handle early before source file checks
   if cli.server {
     log::info!("Starting persistent LSP server...");
-    latexml::lsp_server::run_lsp_server(cli.timeout)?;
+    latexml::lsp_server::run_lsp_server(cli.timeout, cli.max_memory)?;
     process::exit(0);
   }
 
