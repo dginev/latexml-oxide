@@ -27,6 +27,12 @@
 >   102.
 > - **`expected:id`** (prior #1 Rust-only cluster) — FIXED: down to 1 in fresh data; 1501.07487
 >   0/0, 1502.04191 0 expid.
+> - **mode-switch / `\endgroup` frame-leak cluster** (the last documented Rust-only lead,
+>   [[project_endgroup_modeswitch_frame_leak]]) — RE-CONFIRMED drained: `\endIEEEproof` (1910.05976
+>   Rust 2 == Perl 2) and `\conjecture`/theorem-env (1910.04366 Rust 1 == Perl 1) are SHARED; all
+>   genuine Rust-only variants (pspicture/`\rput`, elsart `\keyword`, shortstack/parbox `\\`,
+>   braced-theorem content-loss) were already FIXED. Corrected the stale memory header that still
+>   listed theorem-env leaks as "remaining."
 > - **FATAL/segfault** — transient parallel-memory-pressure (clean standalone).
 > - **TIMEOUT/OOM** — SHARED perf (1502.00494 Rust 124s clean / Perl 293s-timeout); my "44/48"
 >   sweep was contaminated by the concurrent canvas load (retracted).
