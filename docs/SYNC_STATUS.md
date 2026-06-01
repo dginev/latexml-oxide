@@ -47,6 +47,20 @@
 > root-cause fix; the canvas stages 83-85 (run pre-fix) record these as stale failures — the
 > post-canvas gate (fresh Rust re-run) will correctly show them recovered.
 >
+> **Fresh-candidate gates (2026-06-01, all SHARED):** 2002.05469 `\JournalTitle` (Rust 1 == Perl 1,
+> author's `.bbl` uses jabbrv's `\JournalTitle` without loading jabbrv); 2003.05152 `\Hy@driver`
+> (Rust 2 == Perl 2 — `hypdvips.sty` "Wrong hyperref driver" in both; hypdvips is DVIPS-only,
+> moot for HTML but Perl errors too so NOT downgradable per the parity mandate). Running tally:
+> **~32 papers gated this session across every signature class — all SHARED/stale/transient bar
+> the one fix (aa45e4c25d, ≥4 papers recovered).**
+>
+> **PARITY ASSESSMENT.** On the sampled corpus, Rust is AT PARITY with Perl: same ~99.3% success,
+> same residual failures. The remaining ~0.7% are SHARED edge-cases (malformed source both engines
+> reject, vendor driver/layout errors moot-but-Perl-also-errors, packages the author didn't load)
+> — eliminating them requires SURPASSING Perl (error recovery / suppression), which the mandate
+> ("treat Perl as ground truth") explicitly excludes and the no-downgrade-cheating rule forbids.
+> So the parity-track fix work is essentially COMPLETE pending the comprehensive post-canvas gate.
+>
 > **STRATEGIC PIVOT.** Singleton-by-singleton gating has hit clear diminishing returns (all shared).
 > The high-value path is NOT more one-off gating but: (1) let the auto-running canvas COMPLETE
 > stages 90→100, (2) repair the interference-damaged stages 87/88/89 (#276), (3) run ONE
