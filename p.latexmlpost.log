@@ -1,16 +1,33 @@
-latexmlpost (LaTeXML version 0.8.8; revision e0f73ca2) paginating /tmp/pt/p.xml
+latexmlpost (LaTeXML version 0.8.8; revision e0f73ca2) paginating /tmp/delta2/x_1910.10688/p.xml
+Error:malformed:document Document fails RelaxNG validation (LaTeXML)
+	Validation reports: file:///tmp/delta2/x_1910.10688/p.html:0: Relax-NG validity error : Element document has extra content: title
+	(Jing may provide a more precise report; https://relaxng.org/jclark/jing.html)
+	In Post::Document[p.html] /tmp/delta2/x_1910.10688/p.xml
 (post-processing...
 (Scan p.html processing...
-Scan: DBStatus: 61060/0 objects
- 3.01 sec)
+Scan: DBStatus: 65995/0 objects
+ 4.58 sec)
 (MakeBibliography p.html processing... 0.00 sec)
-(CrossRef p.html processing... 0.72 sec)
-(Graphics p.html 2 to process... 0.37 sec)
-(SVG p.html processing...
-(Loading compiled schema /home/deyan/perl5/lib/perl5/LaTeXML/resources/RelaxNG/LaTeXML.model... 0.00 sec) 0.01 sec)
-(MathML::Presentation p.html 1469 to process...
-converted 1469 Maths
- 2.80 sec)
-(XSLT[using LaTeXML-html5.xsl] p.html processing... 0.89 sec)
-(Writer p.html processing... 0.01 sec) 7.88 sec)
-Postprocessing complete No obvious problems (reqd. 8.60s)
+(CrossRef p.html processing... 1.21 sec)
+(Graphics p.html 44 to process... 0.60 sec)
+(MathML::Presentation p.html 2651 to process...
+Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
+	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
+	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
+Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
+	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
+	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
+Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
+	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
+	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
+Info:ignored:spacing No place to set spacing to 0.337 (default 0) between
+	[m:mi,{_role=>UNKNOWN,_rpadding=>0.17,_sourced=>1},i] and 
+	[m:mi,{_role=>TRIGFUNCTION,_rpadding=>-0.17,_sourced=>1},sin]
+Info:ignored:spacing No place to set spacing to 0.56 (default 0) between
+	[m:mi,{_role=>UNKNOWN,_rpadding=>0.56,_sourced=>1},with] and 
+	[m:mi,{_sourced=>1},]
+converted 2651 Maths
+ 3.16 sec)
+(XSLT[using LaTeXML-html5.xsl] p.html processing... 1.62 sec)
+(Writer p.html processing... 0.02 sec) 11.26 sec)
+Postprocessing complete 1 error (See /home/deyan/git/latexml-oxide/p.latexmlpost.log) (reqd. 13.33s)

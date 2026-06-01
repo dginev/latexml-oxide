@@ -2493,6 +2493,31 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01): tractable Rust-only pool EXHAUSTED — `expected:id` cmml cluster is the SOLE remaining class
+
+Second delta-gate batch (150 fresh CONVERR_3–12 papers, full Perl pipeline `latexml`+`latexmlpost`):
+**33 now-clean, 52 exact-parity SHARED (DELTA=0), 64 where Rust BEATS Perl (DELTA<0, e.g.
+1504.07978 R9/P47, 1510.04922 R4/P12), and exactly 1 DELTA>0** — `1801.04233` (R8/P1), the
+already-known `expected:id` cluster paper. Combined with batch 1 (200 CONVERR_2–8 → 8 DELTA>0,
+of which 5 were `expected:id` and the 3 tractable ones are now FIXED), the **tractable Rust-only
+pool is drained**: across 350 CONVERR papers the only Rust-only *excess* is the deep `expected:id`
+parallel-MathML cluster. Most CONVERR papers are SHARED or Rust-better.
+
+**Precise fix-point pinned for the cluster (advance for the dedicated session).** On 1801.04233
+the dangling `XMRef idref="…m1.m2.m1.1"` traces to: nested-XMDual math (`P^{…}P^{…}(…)=…`) where
+`generate_id`'s per-ancestor counter double-numbers the dual arms (the rename log shows
+`m1.m2.m1.1` claimed by an `XMApp` then collided by `XMTok`s → `…1a/2a/3a` via
+`record_id_with_node`→`modify_id`), AND the `XMApp` operand the XMRef targets is **absorbed** into
+a wrapping XMApp and removed from the tree. The post-parse **LOSTNODES cleanup**
+(`latexml_math_parser/src/parser.rs:712-728`) rewrites/unlinks XMRefs ONLY for nodes in the
+`record_replacement` map — it does **not** see `record_id_with_node` collision-renames, and the
+absorbed operand isn't recorded there either → the XMRef is never fixed up → dangles → the cmml
+`mark_xm_node_visibility` pass errors `expected:id`. **Faithful fix (deferred, high-risk — touches
+all math):** make absorbed-operand removal / collision-renames feed the XMRef-fixup map (or stop
+the double-numbering at the source) so refs resolve like Perl. NOT a post-processing prune (Perl
+RESOLVES the refs). Best reproducer `latexml_oxide --cmml`; details in
+[[project_xmref_dangling_split]].
+
 ### Round-37 (2026-06-01): 1907.12308 FIXED — graphics must skip non-graphics-type candidates (inkscape `.pdf_tex`)
 
 Second delta-gate tractable target. `\input{grid.pdf_tex}` (an inkscape "PDF+LaTeX" wrapper
