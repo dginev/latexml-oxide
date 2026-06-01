@@ -2493,6 +2493,21 @@ prior logical-block. Verified: 1907.05772 0 err (structure matches Perl: float 3
 7/7, bibitem 35/35); suite 1344/0. (2002.06879's 119 errors are unrelated ytableau/`\Var`
 undefined-macro cascade, not mdframed — Perl 1, pre-existing.)
 
+### Round-37 (2026-06-01, round 2): `expected:id` cluster — ruled out parse_single + Lexeme-clone
+
+Attempted a `parse_single` fix (skip `unrecord` for nested-`ltx:Math` descendant ids so reused
+sub-math ids survive) — **reverted, stayed 8 errors**. Instrumentation (LXDBG_NM/LXDBG_CLONE,
+reverted) showed WHY: `parse_single` never touches the `Ex15` maths (their parents lack the
+`S2.Ex15.*` ids at math-parse time — those final ids are assigned during document CONSTRUCTION,
+and the math parser restructures the already-id'd tree); and `into_xmath`'s `XM::Lexeme`
+`atom_node.clone()` carries no `Ex15` id at clone time. So the duplicate `…m1.m2.m1.1` (XMApp
+vs XMTok) arises when the math parser restructures a construction tree whose nested `\hbox{$…$}`
+sub-maths already carry `…m<N>.<k>` ids: a new dual arm gets numbered `…m1` under the same
+`…m1.m2` ancestor whose `_ID_counter_m_` was reset/lost vs the construction-time nested Maths →
+collision → absorbed original → dangling ref. Next session: trace the `_ID_counter_` lifecycle
+on the `…m1.m2` ancestor across construction→math-parse. All probes reverted; `cargo test` 1344/0.
+Full ruled-out list in [[project_xmref_dangling_split]].
+
 ### Round-37 (2026-06-01): `expected:id` cluster ROOT-CAUSE nailed — nested `\hbox{$…$}` math in display math
 
 Instrumented `generate_id` (LXDBG_GENID, reverted) on 1801.04233: the dangling refs come from a
