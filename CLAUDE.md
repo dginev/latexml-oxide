@@ -235,6 +235,20 @@ truth for macro-expanded diagnostics.
 
 ## Practical guidance
 
+- **Canvas signal integrity — robust log parsing is the #1 method (fail toward flagging errors).**
+  In the large-canvas auto-upgrade path, the single most important thing for a trustworthy
+  signal is **robust parsing of the conversion log so that EVERY `Error:` and `Fatal:` message
+  is captured.** The bias must be **fail-safe toward detecting failure**: it is acceptable to
+  produce **false positives** (flag a clean conversion as an error), but a **failure to parse
+  the log must NEVER be silently treated as a success** — that is a false negative, and it
+  hides real regressions. Concretely: latexml_oxide/cortex emit **ANSI-colored** logs
+  (`\x1b[31mError:`), so a naive `grep -c '^Error:'` matches **zero** and silently reports
+  "0 errors / fixed" on a paper that actually has hundreds (this exact bug masked
+  2002.05958=654, 1808.04050=441, 1705.10306=293, 1910.06783=859 as "fixed" — see
+  `docs/SYNC_STATUS.md`). ALWAYS strip ANSI first (`sed 's/\x1b\[[0-9;]*m//g'`) and count with
+  `grep -acE '^(Error|Fatal):'`; gate on **cortex's own `Processing content` file** (multi-file
+  papers have decoy `\begin{document}` stubs); and when in doubt, count it as a failure to
+  investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - **Active work**: the strict-Perl dump-parity mission is complete (see above). Remaining sub-tasks — including the ~72-CS Perl-only long tail — are tracked in `docs/SYNC_STATUS.md`; the completed audit is at `docs/archive/PERL_LOADFORMAT_AUDIT.md`.

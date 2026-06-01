@@ -15,6 +15,43 @@
 
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
+> **⚠️ RETRACTION (2026-06-01, late): the "CONVERR pool drained / at Perl parity" claim below
+> is WRONG — it was produced by a BUGGY verification harness and must not be trusted.** While
+> the canvas re-ran on the current binary, gating a multi-file paper (1910.06783) surfaced the
+> bug: the CONVERR *retest* counted errors with `grep -c '^Error:'` WITHOUT stripping ANSI, but
+> latexml_oxide/cortex emit `\x1b[31mError:` (ANSI-colored) — so the regex matched ZERO and
+> marked erroring papers as "0 errors / fixed." Re-checked 5 of the top-30 "fixed" papers with
+> cortex (the actual canvas binary) + ANSI-stripped counting: **3 of 5 still error heavily** —
+> **2002.05958 = 654, 1808.04050 = 441, 1705.10306 = 293** (only 1509.04521, 1502.04191 truly
+> 0). And **1910.06783 = 859** (RUST=859 vs PERL=5 capped... see below). So the corpus is NOT
+> drained; an unknown number of genuine Rust-only errors were masked by this false-negative
+> bug. The delta-GATE scripts (gate_low/gate_mid) DID strip ANSI and remain reliable for the
+> low-error band; it is the high-error CONVERR *retest* "28/30 fixed" that is invalid.
+>
+> **Correct methodology going forward (now in CLAUDE.md + [[feedback_robust_log_parsing_canvas_signal]]):**
+> (1) ALWAYS `sed 's/\x1b\[[0-9;]*m//g'` before `grep -acE '^(Error|Fatal):'`. (2) Gate on
+> cortex's own `Processing content` file (multi-file papers ship decoy `\begin{document}`
+> stubs, e.g. 1910.06783 `test.tex` 926 B vs real `Hk_Paper.tex` 2.9 KB). (3) Fail-safe toward
+> flagging: a parse-miss is a FAILURE to investigate, never a silent success. (4) Both engines
+> cap errors (Perl MaxLimit 100 → reports 102; Rust 1000), so raw count deltas on >100-error
+> papers are confounded — compare error *signatures*, not just counts.
+>
+> **Confirmed genuine Rust-only targets re-surfaced (caps-confounded but Rust-worse, distinct
+> cascades), for proper re-gating + fix:**
+> - **1910.06783** (siamart171218 + `Auxiliary_Includes` multi-package): a 3-package combination
+>   in the preamble breaks the amsthm `proof` env → `Error:unexpected:\the$` + 850-error
+>   `\lx@end@inline@math`/`XMApp` cascade; siamart+proof in isolation is clean, so it's a
+>   package-interaction (deferred per the "minimal subsets pass, full fails = defer" rule).
+>   RUST 859 / PERL 5 (Perl's only errors are cosmetic `font cmiib3` not-found).
+> - **2002.05958** (`\lx@end@inline@math` ×613), **1808.04050** (`\@@citephrase`/`\lambda`),
+>   **1705.10306** (`malformed:ltx:XMTok` ×293) — each Rust ≫ Perl with distinct cascade
+>   signatures; need per-paper root-cause (the real Round-37 worklist, replacing the bogus
+>   "drained" status).
+>
+> **NEXT:** rebuild the CONVERR verification on a correct harness (cortex for Rust + matched
+> ANSI-stripped Perl on cortex's main) and systematically re-gate stages 51-100. The canvas
+> stages 83-100 are running on the current binary and will give a true current failure set.
+
 > **RE-VERIFICATION (2026-06-01): physics-`\mqty` cluster FIXED; canvas_3 + CONVERR
 > re-gated with the current binary → ZERO Rust-only conversion errors remain.** The
 > "2007.06211 DEFERRED" / "remaining physics-`\mqty` residual" claims in the 2026-05-31
