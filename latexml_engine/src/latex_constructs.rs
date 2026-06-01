@@ -9870,24 +9870,34 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // Perl L5333-5339: \DeclareTextFontCommand — creates a text font command.
-  // Simplified: \cmd{} → {\font #1} (group with font change).
+  // Perl L5428-5434: \DeclareTextFontCommand defines the command as a
+  // CONSTRUCTOR (non-expandable), digesting the font argument at
+  // digestion time in beforeDigest:
+  //   DefConstructorI($cmd, "{}",
+  //     "?#isMath(<ltx:text _noautoclose='1'>#1</ltx:text>)(#1)",
+  //     mode => 'text', bounded => 1, beforeDigest => sub { Digest($font); () });
+  // It is CRITICAL that this be a constructor, not an expandable macro
+  // expanding to `{<font> #1}`. natbib's `\lx@NAT@parselabel` `Expand!`s
+  // bibitem labels for-execution (full expansion). An expandable
+  // `\textcyr{…}` → `{\cyrfamily …}` would, during that expansion, run
+  // `\cyrfamily`→`\cyracc`, whose body ends with
+  // `\def\!{…\def\result{\@stressit}\fi\result}`; for-execution expansion
+  // of a `\def`'s replacement-text wrongly expands that body, invoking
+  // `\result`→`\@stressit`→`\futurelet\chartest\@stresschar`, which loops
+  // until the 650000 PushbackLimit fires (FATAL). As a constructor (the
+  // Perl form) `Expand!` leaves `\textcyr{…}` intact — the font is digested
+  // only when the constructor is actually digested. Witness 1803.11541
+  // (Cyrillic bibliography: amsfonts `cyracc.def` + `\DeclareTextFontCommand`
+  // `\textcyr` + natbib `\bibitem[{\textcyr{…\u\i…}}(1906)]{key}`); Perl
+  // converts it (282 KB), Rust looped to FATAL before this fix.
   DefPrimitive!("\\DeclareTextFontCommand DefToken {}", sub[(cmd, font)] {
     let cs = cmd;
-    let font_rev: Tokens = font;
-    // Build expansion: {<font> #1}
-    let mut expansion = vec![T_BEGIN!()];
-    expansion.extend(font_rev.unlist());
-    expansion.push(T_PARAM!());
-    expansion.push(T_OTHER!("1"));
-    expansion.push(T_END!());
-    // init_flag=true: engine is up at \DeclareTextFontCommand expansion
-    // time, so Parameter::init() can resolve readers via PARAMETER_TYPES.
-    // With init=false the declared command's Plain arg uses the mock
-    // reader and fails to consume input at invocation.
+    let font_toks: Tokens = font;
     let params = parse_parameters("{}", &cs, true)?;
-    def_macro(cs, params,
-      Some(ExpansionBody::Tokens(Tokens::new(expansion))), None)?;
+    DefConstructor!(cs, params,
+      "?#isMath(<ltx:text _noautoclose='1'>#1</ltx:text>)(#1)",
+      mode => "text", bounded => true,
+      before_digest => { Digest!(font_toks.clone())?; });
   });
 
   // Perl L5341-5348: \mathversion — switches between bold/normal math fonts
