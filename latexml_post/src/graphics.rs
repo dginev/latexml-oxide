@@ -1017,63 +1017,6 @@ impl Graphics {
     }
   }
 
-  /// Pin a generated/copied SVG's root `<svg>` `width`/`height` to the final
-  /// display size `(w, h)` in CSS px (the same values written to the graphics
-  /// node's `imagewidth`/`imageheight`, and hence the `<object width=… height=…>`
-  /// attributes).
-  ///
-  /// WHY: dvisvgm / mutool / pdftocairo emit the SVG at the source PDF's *natural*
-  /// size, with the root carrying `width="264.6655pt" height="139.79187pt"` — its
-  /// *intrinsic* size. When `\includegraphics[width=…]` scales the figure down,
-  /// LaTeXML records only the scaled size on the `<object>` attributes, NOT on the
-  /// SVG file. That is fine until a stylesheet overrides the object's width/height:
-  /// ar5iv.css sets `.ltx_img_landscape { width:auto; height:auto }`, and CSS
-  /// presentational-attribute precedence makes `width:auto` fall back to the SVG's
-  /// *intrinsic* size — so a figure meant to render at 191×101 blows up to its
-  /// natural ~353×186 ("runaway height"). Real ar5iv avoids this because its SVGs
-  /// are sized to the display dimensions. Mirror that: rewrite the root size so the
-  /// intrinsic size equals the LaTeXML-computed display size.
-  ///
-  /// Only acts when the root carries a `viewBox` (which defines the internal user
-  /// coordinate system, so the content rescales cleanly); without one, rewriting
-  /// width/height would distort the drawing, so we leave it untouched.
-  fn set_svg_root_size(abs_path: &str, w: u32, h: u32) {
-    static SVG_WH_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-      // Match a `width=` / `height=` attribute (single- or double-quoted) with
-      // its leading whitespace, so we can strip it from the root tag.
-      regex::Regex::new(r#"(?i)\s+(?:width|height)\s*=\s*(?:"[^"]*"|'[^']*')"#).unwrap()
-    });
-    let Ok(content) = std::fs::read_to_string(abs_path) else {
-      return;
-    };
-    let Some(svg_start) = content.find("<svg") else {
-      return;
-    };
-    // End of the root opening tag. SVG root attributes never contain a literal
-    // '>', so the first '>' after `<svg` closes the tag.
-    let Some(rel_gt) = content[svg_start..].find('>') else {
-      return;
-    };
-    let tag_end = svg_start + rel_gt; // index of '>'
-    let root_tag = &content[svg_start..tag_end]; // "<svg …" (no '>')
-    // Need a viewBox to rescale safely; otherwise leave the file alone.
-    if !root_tag.contains("viewBox") && !root_tag.contains("viewbox") {
-      return;
-    }
-    // Strip any existing width/height, then inject the display dimensions right
-    // after "<svg".
-    let stripped = SVG_WH_RE.replace_all(&root_tag["<svg".len()..], "");
-    let new_root_tag = format!(r#"<svg width="{w}" height="{h}"{stripped}"#);
-    if new_root_tag == root_tag {
-      return;
-    }
-    let mut new_content = String::with_capacity(content.len() + 16);
-    new_content.push_str(&content[..svg_start]);
-    new_content.push_str(&new_root_tag);
-    new_content.push_str(&content[tag_end..]);
-    std::fs::write(abs_path, new_content).ok();
-  }
-
   /// Decide whether the vector-SVG path should be attempted for this PDF
   /// source.
   ///
@@ -2296,13 +2239,6 @@ impl Processor for Graphics {
           };
           let (w, h) = apply_transforms(options, Self::read_image_dimensions(source));
           Self::set_graphic_src(&mut node_mut, &rel, w, h);
-          // Pin a copied SVG's intrinsic size to the display size so a
-          // `width:auto` stylesheet (ar5iv.css) can't blow it up to natural size.
-          if let (Some(w), Some(h)) = (w, h) {
-            if rel.ends_with(".svg") {
-              Self::set_svg_root_size(&PathBuf::from(&dest_dir).join(&rel).to_string_lossy(), w, h);
-            }
-          }
         },
         Plan::Convert { idx, options, job_id } => {
           if let Some(out) = outcomes_by_job.get(job_id) {
@@ -2326,15 +2262,6 @@ impl Processor for Graphics {
               }
               let (w, h) = apply_transforms(options, out.raw_dims);
               Self::set_graphic_src(&mut node_mut, imagesrc, w, h);
-              // Pin a generated SVG's intrinsic size to the display size so a
-              // `width:auto` stylesheet (ar5iv.css) can't blow it up to natural
-              // size (the "runaway height" on \includegraphics-scaled figures).
-              if let (Some(w), Some(h)) = (w, h) {
-                if imagesrc.ends_with(".svg") {
-                  Self::set_svg_root_size(
-                    &PathBuf::from(&dest_dir).join(imagesrc).to_string_lossy(), w, h);
-                }
-              }
             }
           }
         },
@@ -2582,48 +2509,6 @@ endobj
     .unwrap();
     let dims = Graphics::read_svg_dimensions(tmp.to_str().unwrap()).expect("dims");
     assert_eq!(dims, (124, 99));
-    std::fs::remove_file(&tmp).ok();
-  }
-
-  /// set_svg_root_size pins root width/height to the display size (px) while
-  /// keeping the viewBox, so a `width:auto` stylesheet renders at the scaled
-  /// size instead of the SVG's natural intrinsic size (the "runaway height").
-  #[test]
-  fn set_svg_root_size_rewrites_root_to_display_px() {
-    let tmp = std::env::temp_dir().join("latexml_svg_setsize.svg");
-    std::fs::write(
-      &tmp,
-      r#"<?xml version="1.0"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="264.6655pt" height="139.79187pt" viewBox="0 0 264.6655 139.79187">
-  <rect width="264" height="139"/>
-</svg>"#,
-    )
-    .unwrap();
-    Graphics::set_svg_root_size(tmp.to_str().unwrap(), 191, 101);
-    let out = std::fs::read_to_string(&tmp).unwrap();
-    let svg_start = out.find("<svg").unwrap();
-    let gt = svg_start + out[svg_start..].find('>').unwrap();
-    let root = &out[svg_start..=gt];
-    assert!(root.contains(r#"width="191""#), "root: {root}");
-    assert!(root.contains(r#"height="101""#), "root: {root}");
-    // viewBox preserved (so the drawing rescales cleanly), pt size gone.
-    assert!(root.contains(r#"viewBox="0 0 264.6655 139.79187""#), "root: {root}");
-    assert!(!root.contains("pt\""), "pt dimensions should be stripped: {root}");
-    // exactly one width/height (no duplicate from the original)
-    assert_eq!(root.matches("width=").count(), 1, "root: {root}");
-    assert_eq!(root.matches("height=").count(), 1, "root: {root}");
-    std::fs::remove_file(&tmp).ok();
-  }
-
-  /// Without a viewBox, rescaling would distort the drawing, so leave it alone.
-  #[test]
-  fn set_svg_root_size_skips_when_no_viewbox() {
-    let tmp = std::env::temp_dir().join("latexml_svg_setsize_novb.svg");
-    let original = r#"<svg xmlns="http://www.w3.org/2000/svg" width="100pt" height="50pt"><rect/></svg>"#;
-    std::fs::write(&tmp, original).unwrap();
-    Graphics::set_svg_root_size(tmp.to_str().unwrap(), 191, 101);
-    let out = std::fs::read_to_string(&tmp).unwrap();
-    assert_eq!(out, original, "no-viewBox SVG must be left untouched");
     std::fs::remove_file(&tmp).ok();
   }
 
