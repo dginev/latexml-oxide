@@ -156,6 +156,23 @@
 >   `run-*.scope` with `memory.max`=46 GiB / `memory.swap.max`=2 GiB. See
 >   [[feedback_batch_runs_need_cgroup_memcap]].
 
+> **✅ FULL-CANVAS COMPLETENESS AUDIT (2026-06-02).** Audited every stage 1-100 for "actually
+> complete" (not just present). Result — stages **1-50 complete** (master-log totals: 1-15 =
+> 150000, 16-50 = 350000; their non-OK are real conversion failures, not environmental), stages
+> **51, 53-81, 83-86, 90-100 complete** (10000 rows each, 0 FATAL_127). **Exactly THREE gaps**, all
+> now being closed under the memory guard:
+> - **stage_87/88/89** — interference-damaged; re-running now (`run_stages_repair.sh`; stage_87
+>   already redone clean = 9917/10000 OK).
+> - **stage_52** — was INTERRUPTED at **6403/10000** (no end.stamp). Redo = offset 2.
+> - **stage_82** — **4514 FATAL_127** (the release binary went missing mid-run; environmental, the
+>   papers were never really attempted). Redo = offset 32.
+> - stage_52 + stage_82 are chained via `run_stages_redo_52_82.sh`, which WAITS for the 87/89
+>   repair to finish (no oversubscription) then redoes both full slices under the cgroup guard.
+> Once these land, all 100 stages are genuinely complete and the per-paper failure set is final
+> for the hard-case extraction + `post_canvas_gate.sh`. (Natural experiment: stage_89's 16 OOM +
+> stage_90's 17 OOM, suspected oversubscription contamination, should drop to ~0 in the guarded
+> clean re-runs — confirming they were artifacts, not #274 heap regressions.)
+
 > **🎯 GOVERNING POST-CANVAS WORKFLOW (user directive, 2026-06-01).** Once the FULL canvas
 > (all 100 stages) completes, extract a SUBSET of the known hard cases — every paper classified
 > error (CONVERR), fatal, abort, timeout, OOM — into a NEW dedicated target directory, then
