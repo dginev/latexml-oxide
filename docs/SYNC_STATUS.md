@@ -173,6 +173,30 @@
 > stage_90's 17 OOM, suspected oversubscription contamination, should drop to ~0 in the guarded
 > clean re-runs — confirming they were artifacts, not #274 heap regressions.)
 
+> **🎯 POST-CANVAS GATE WORKLIST + fix progress (2026-06-02).** `post_canvas_gate.sh` is running
+> (release binary, ar5iv, ANSI-safe) over the 1486 stage-83-100 CONVERR ids. At ~570/1486 gated:
+> **~50% RUST-BETTER, ~46% SHARED, 15 RUST-ONLY, 8 RUST-WORSE** — i.e. the genuine Rust-only tail is
+> small (~1-3%). Confirmed RUST-ONLY (current-binary re-verified), grouped by ROOT CAUSE:
+> - **FIXED — `{aligned} undefined` (1911.03415, ijnam.cls, 19→0, commit `cbab6475d9`).** Root
+>   cause: the dep-scan skipped the *invoked* deferred-RequirePackage idiom `\def\@tempa{
+>   \RequirePackage{amsmath}}…\@tempa` used by AMS-derived journal classes. Now honored (witnesses
+>   1506.06200/1703.03673 preserved). GENERALIZES to other amsmath-deferring classes.
+> - **DIAGNOSED, deferred — parbox-in-frontmatter mode cluster** (2004.07608=30, 2003.13899=11,
+>   2004.03193=6; ~47 err). A `\parbox` inside elsarticle `{keyword}` (→ `\@add@frontmatter@now`
+>   `DigestText`) hits a `\lx@parbox` text-mode / boxing-group-vs-`\begingroup` mismatch; Perl
+>   renders it inline-block. Fix is in `\lx@parbox`/`VBoxContents` (pervasive, high-risk —
+>   needs careful regression). Minimal repro + full diagnosis in [[project_parbox_in_keyword_frontmatter]].
+> - **CLUSTER — `expected:id Cannot find a node with xml:id='…m…'`** (5 here: 2004.08272, 2005.13006,
+>   2006.06709, 1911.03593, 2004.00489; ~14 err). Dangling MATH id refs — the known
+>   [[project_xmref_dangling_split]] (rearrange_ams_split / XMDual idref). Largest-by-paper-count
+>   class; needs the selective ref-marking approach, not a naive sweep.
+> - **Singletons:** 2004.14842=34 (pstricks `\psk@*`/`\pstheader` gaps — hardest), 2001.03998=8
+>   (`\hbox` mode), 2007.12736 (double-superscript [[project_double_subscript_root_causes]]),
+>   2004.13152 (`^` text mode), 2007.03827 (setspace `\end{spacing}` mode), 2004.07524
+>   (`\includegraphics` undefined). Plus ~remaining gate rows TBD.
+> RUST-WORSE (Rust>Perl>0) is a second tier. The full RUST-ONLY list lands when the gate finishes;
+> work it by cluster (biggest leverage: parbox-frontmatter + expected:id).
+
 > **🎯 GOVERNING POST-CANVAS WORKFLOW (user directive, 2026-06-01).** Once the FULL canvas
 > (all 100 stages) completes, extract a SUBSET of the known hard cases — every paper classified
 > error (CONVERR), fatal, abort, timeout, OOM — into a NEW dedicated target directory, then
