@@ -22,9 +22,18 @@
 > - **CONVERR `undefined:`** — autobreak `\@envbody` (Perl 12 == Rust 12 minimal), soul/ulem
 >   `\UL@setULdepth` (1911.02711 Rust 12 / **Perl 16**), `\etb@undefined` (1/1), caption/expl3/
 >   listings/inputenc all stale-fixed (Rust now 0).
-> - **CONVERR `misdefined:#`** (THE largest fresh-data category, 98) — SHARED: 2003.09315 Rust 43
->   == Perl 43 (`#`-leak is a document issue both flag identically); old 1501.07012 Rust 24 / Perl
->   102.
+> - **CONVERR `misdefined:#`** (THE largest fresh-data category, 98 — and the single biggest error
+>   class in the corpus by volume) — SHARED, and now ROOT-CHARACTERIZED: it is **mdwmath.sty**
+>   (mdwtools, loaded by IEEE-template papers) raw-load, specifically `\sq@readrad` at line 50-51:
+>   `\def\sq@readrad#1"#2\#3\relax{…}` (under a `|`-escape `\catcode` regime) parses
+>   `\meaning\sqrtsign` to extract the sqrt-delimiter mathchar. LaTeXML's `\sqrtsign` has a
+>   different `\meaning` than real TeX, so the catcode-remapped delimited-`\def`+`\meaning`
+>   mis-scans and 43 `#` PARAM tokens reach the Stomach. **Minimal `\usepackage{mdwmath}` test =
+>   RUST 43 == PERL 43** (neither has a mdwmath.sty.ltxml binding; both raw-load + both mis-handle
+>   identically). So this is a shared LaTeXML-design limitation, NOT a document bug (corrects an
+>   earlier note) and NOT Rust-only. It's the **#1 surpass-Perl candidate** (a mdwmath.sty.ltxml
+>   binding or a faithful `\meaning`-parse fix would clear ~43 errors × every mdwtools paper) —
+>   but OUT of the parity mandate since Perl errors too. old 1501.07012 Rust 24 / Perl 102.
 > - **`expected:id`** (prior #1 Rust-only cluster) — FIXED: down to 1 in fresh data; 1501.07487
 >   0/0, 1502.04191 0 expid.
 > - **mode-switch / `\endgroup` frame-leak cluster** (the last documented Rust-only lead,
