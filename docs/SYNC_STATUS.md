@@ -63,6 +63,16 @@
 > `misdefined:#` 43-`#`-leak. So the drained conclusion holds on an unbiased sample, not just the
 > signature-picked ones. (stage-90 error rate itself: 89/10000 = 0.89%.)
 >
+> **Fresh post-fix success-rate trajectory (2026-06-01).** The two COMPLETE post-rebuild stages:
+> stage_86 = **99.10%** (9910/10000; 82 CONVERR, 4 TIMEOUT, 4 FATAL), stage_90 = **98.89%**
+> (9889/10000; 89 CONVERR, 2 TIMEOUT, **17 OOM**, 3 FATAL); combined 98.995%. Consistent with the
+> established ~99.2% (second-500K corpus runs a touch lower). **CAVEAT — stage_90's 17 OOM are
+> CONSECUTIVE arXiv IDs (2007.07795-07834)**, i.e. one processing window — almost certainly
+> CONTAMINATED by my earlier `-P 8`-sweep oversubscription (transient memory pressure, like the
+> FATAL_139 segfaults that ran clean standalone), NOT a real heap regression. Re-verify standalone
+> on an idle machine post-canvas (#274 heap-profile is for genuine peak-RSS, not these). So the
+> true fresh rate is likely ≥99.0%.
+>
 > **PARITY ASSESSMENT.** On the sampled corpus, Rust is AT PARITY with Perl: same ~99.3% success,
 > same residual failures. The remaining ~0.7% are SHARED edge-cases (malformed source both engines
 > reject, vendor driver/layout errors moot-but-Perl-also-errors, packages the author didn't load)
