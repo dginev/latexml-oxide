@@ -63,6 +63,16 @@
 > `misdefined:#` 43-`#`-leak. So the drained conclusion holds on an unbiased sample, not just the
 > signature-picked ones. (stage-90 error rate itself: 89/10000 = 0.89%.)
 >
+> **Stage-83 failures are CURRENT-binary (not stale) — clarification 2026-06-01.** Re-tested a
+> 10-paper sample of stage_83's 79 CONVERR with the current binary: **0/10 recovered** — every one
+> has identical old==current error counts (43=43, 4=4, 15=15, …). So stage_83 ran with a binary
+> equivalent to current; its failures are genuine current-binary failures, NOT stale. (The earlier
+> `\href` recoveries 1910.03113/1910.09020 were therefore from stages 84-86, which used an older
+> pre-`aa45e4c25d` binary — binary version varied across the 83-86 block as the release binary was
+> rebuilt mid-run.) Implication: `post_canvas_gate.sh`'s fresh Rust re-run will MATCH the canvas
+> classification for stage-83+ papers, so its RUST-ONLY verdicts are trustworthy. The recurring
+> "43" across these samples is the shared IEEE-template `misdefined:#` 43-`#`-leak.
+>
 > **Fresh post-fix success-rate trajectory (2026-06-01).** The two COMPLETE post-rebuild stages:
 > stage_86 = **99.10%** (9910/10000; 82 CONVERR, 4 TIMEOUT, 4 FATAL), stage_90 = **98.89%**
 > (9889/10000; 89 CONVERR, 2 TIMEOUT, **17 OOM**, 3 FATAL); combined 98.995%. Consistent with the
