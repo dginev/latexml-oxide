@@ -1211,6 +1211,35 @@ LaTeXML never renders in a title are correctly dropped.
 **Witness:** arXiv:1702.01165 (llncs + IEEEtranN `.bbl`,
 `\renewcommand\bibsection[1]{\section*{\refname}\small #1}`).
 
+### 29. `wrapfigure`/`wraptable` emit the declared wrap width
+
+**Decision:** `wrapfig.sty`'s `{wrapfigure}`/`{wraptable}` set the figure/table
+element's `@width` to the mandatory `{Dimension}` wrap-width argument (→ CSS
+`width:`), capping the float — image *and* caption — to that width.
+
+**Perl behavior:** Perl `wrapfig.sty.ltxml` captures the wrap width as the last
+`{Dimension}` argument of the environment but then **discards it** — the emitted
+`ltx:figure` carries only `float='right'|'left'`, no width.
+
+**Why diverge:** A wrapfig float with no width constraint shrinks/expands to its
+content. Under ar5iv.css (`.ltx_align_floatright { float:right }`, no width cap)
+a small figure whose caption fits on one long line balloons into an enormous
+box — the caption sets the float width, not the image. Real LaTeX confines the
+float to the declared wrap width (`\begin{wrapfigure}{r}{0.4\textwidth}`); we
+honor that intent. The width renders via the existing `@width` → `base-styling`
+`width:` path (the same mechanism `{minipage}` uses), so the image (CSS
+`width:auto; max-width:100%`) and the caption both wrap within the declared
+width. This keeps `width:auto` working as CSS intends (the SVG/image keeps its
+natural intrinsic size; the *figure* is what's bounded) rather than pinning the
+image's own dimensions.
+
+**Impact:** `<ltx:figure>`/`<ltx:table>` from wrap environments gain a
+`width="<dim>"` attribute (e.g. `width="138.0pt"` for `0.35\textwidth`). Witness
+arXiv:2012.00499 Figure 3 (`\begin{wrapfigure}{r}{0.4\textwidth}` around a
+`width=0.4\textwidth` histogram): previously the float filled the column width to
+fit the single-line caption; now both image and caption are capped to the wrap
+width.
+
 ---
 
 ## Future Work (Beyond Perl Parity)
