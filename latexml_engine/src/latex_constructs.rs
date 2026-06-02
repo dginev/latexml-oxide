@@ -7799,38 +7799,42 @@ LoadDefinitions!({
       Info!("missing", "bib_config", "BIB_CONFIG was empty, ignoring bibliography phase.");
       return Ok(Tokens!());
     }
-    // Iterate through config phases as a fallback chain
-    for phase in bib_config.iter() {
-      let is_bbl = arena::with(*phase, |s| s == "bbl");
-      if is_bbl {
-        if bbl_path.is_some() {
-          return Ok(bbl_clause);
-        }
-        // bbl not found — fall through to next phase
-        Info!("expected", "bbl", "Couldn't find bbl file, trying next bibliography phase.");
-      } else {
-        // 'bib' phase — check if .bib files exist
-        let mut missing_bibs = String::new();
-        for bf in bib_files.split(',') {
-          let bib_path = FindFile!(bf, type => "bib");
-          if bib_path.is_none() {
-            if !missing_bibs.is_empty() {
-              missing_bibs.push(',');
-            }
-            missing_bibs.push_str(bf);
+    // Perl `\lx@ifusebbl` (latex_constructs.pool.ltxml L3967-3983) acts on the
+    // FIRST configured phase ONLY (`$$bib_config[0]`); it does NOT fall through
+    // to later phases. The earlier Rust port iterated all phases as a fallback
+    // chain, which — with a `bbl,bib` config and no `\jobname.bbl` on disk —
+    // fell through to the `bib` phase and emitted a spurious empty
+    // `\lx@bibliography` placeholder, i.e. a SECOND, content-less "References"
+    // section, whenever the real entries arrived via a differently-named
+    // `.bbl` processed as content. Witness 2107.03065 (refs.bbl, not
+    // <jobname>.bbl): Perl emits 1 bibliography, the old Rust 2. Mirror Perl:
+    // branch on the first phase only.
+    let first_is_bbl = arena::with(bib_config[0], |s| s == "bbl");
+    if first_is_bbl {
+      if bbl_path.is_none() {
+        Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
+        return Ok(Tokens!());
+      }
+      Ok(bbl_clause)
+    } else {
+      // 'bib' phase — check if .bib files exist
+      let mut missing_bibs = String::new();
+      for bf in bib_files.split(',') {
+        let bib_path = FindFile!(bf, type => "bib");
+        if bib_path.is_none() {
+          if !missing_bibs.is_empty() {
+            missing_bibs.push(',');
           }
-        }
-        if missing_bibs.is_empty() || bbl_path.is_none() {
-          return Ok(bib_clause);
-        } else {
-          Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
-          return Ok(bbl_clause);
+          missing_bibs.push_str(bf);
         }
       }
+      if missing_bibs.is_empty() || bbl_path.is_none() {
+        Ok(bib_clause)
+      } else {
+        Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
+        Ok(bbl_clause)
+      }
     }
-    // All phases exhausted — no bibliography found
-    Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
-    Ok(Tokens!())
   });
 
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
