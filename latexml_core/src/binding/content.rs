@@ -1791,6 +1791,13 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     )
     .unwrap()
   });
+  // The `\def`-family sub-case of DEF_BODY_HEADER_RE, capturing the defined
+  // macro NAME (without backslash). A `\def\<m>{… \RequirePackage{P} …}` body
+  // is only truly deferred if `\<m>` is never invoked; the AMS-class idiom
+  // `\def\@tempa{\RequirePackage{amsmath}}…\@tempa` invokes it immediately and
+  // so DOES load P (witness ijnam.cls → amsmath → `{aligned}`, 1911.03415).
+  static DEF_NAME_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\[egx]?def\s*\\([A-Za-z@]+)[^{}]*$").unwrap());
 
   // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
   // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
@@ -1854,6 +1861,33 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   //     filter wrongly skipped this conditional; the def-body check is precise.
   // A `\usepackage` is deferred iff ANY enclosing `{…}` group is opened directly
   // by a `\newcommand`/`\def` definition header.
+  // Is `\<name>` INVOKED (not merely defined) somewhere in the file? A bare
+  // control-sequence occurrence not directly preceded by a `\…def`/`\let`
+  // introducer counts as an invocation. Used to tell an executed deferred-load
+  // idiom (`\def\@tempa{…\RequirePackage{P}…}\@tempa`) from a never-called one.
+  let is_invoked = |name: &str| -> bool {
+    let pat = s!("\\{name}");
+    let mut from = 0usize;
+    while let Some(rel) = code[from..].find(&pat) {
+      let at = from + rel;
+      from = at + pat.len();
+      // Full control sequence: next char must not extend the name.
+      let after_ok = code[at + pat.len()..]
+        .chars()
+        .next()
+        .is_none_or(|c| !c.is_ascii_alphabetic() && c != '@');
+      if !after_ok {
+        continue;
+      }
+      // Not a (re)definition: the chars just before `\name` aren't `…def`/`…let`.
+      let before = code[at.saturating_sub(8)..at].trim_end();
+      if before.ends_with("def") || before.ends_with("let") {
+        continue;
+      }
+      return true;
+    }
+    false
+  };
   let in_macro_def_body = |start: usize| -> bool {
     let bytes = code.as_bytes();
     let mut stack: Vec<usize> = Vec::new();
@@ -1875,6 +1909,13 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     stack.iter().any(|&ob| {
       let lo = ob.saturating_sub(400);
       let window = code.get(lo..ob).unwrap_or(&code[..ob]);
+      // A `\def\<m>{…}` body only defers if `\<m>` is never invoked; an invoked
+      // scratch macro (`\@tempa`) runs its body at load, so its require loads.
+      if let Some(caps) = DEF_NAME_RE.captures(window) {
+        return !is_invoked(&caps[1]);
+      }
+      // `\newcommand`/`\DeclareRobustCommand` user-command bodies stay deferred
+      // (witness 1506.06200 `\newcommand{\usediagrams}{\usepackage{diagrams}}`).
       DEF_BODY_HEADER_RE.is_match(window)
     })
   };
