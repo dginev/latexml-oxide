@@ -131,15 +131,43 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **🛡️ MACHINE-STABILITY FORENSICS + MEMORY GUARD (2026-06-02).** User reported the machine
+> became unstable and was rebooted. **Forensic finding (honest): our canvas did NOT cause the
+> reboot.** The full 100-stage canvas finished CLEANLY at 04:07:59 local (EDT); the reboot was
+> ~09:06 local — **~5 hours later** — and was an **orderly systemd shutdown** (snaps unmounted,
+> swap deactivated, FS synced), not a hard lockup. **No OOM was logged on Jun 1 OR Jun 2** (kernel
+> or `systemd-oomd`; last kernel OOM was May 29, and oomd consumed only 5 min CPU / 7.4 MB peak
+> across the whole 12-day boot). Nothing wrote canvas/data/git files between 04:08 and 09:06; the
+> hard-case sweeps last ran Jun 1 19:10. So there is **no log evidence** any of our jobs froze the
+> machine at reboot time.
+> - **BUT a real latent machine-killer existed and is now fixed.** `run_one.sh` capped each worker
+>   at 6 GB virtual (`ulimit -v`, catches a single runaway paper) — but there was **NO aggregate
+>   cap** and the kernel OOM-killer roams **system-wide**. The May 26 journal proves the failure
+>   mode: a `cortex_worker` reached **62 GB anon-rss** and the global OOM-killer cascaded into
+>   `gnome-shell` + `claude` + `containerd` — exactly the path to a swap-thrash desktop freeze.
+>   With `WORKERS=16` a heavy-math cluster can collectively exceed 62 GiB with no containment.
+> - **GUARD LANDED:** `canvas/mem_scope.sh` wraps the entire `xargs -P N` worker fan-out in ONE
+>   transient **systemd --user cgroup scope** with a hard aggregate cap (`MemoryMax=46G`,
+>   `MemoryHigh=40G`, `MemorySwapMax=2G`; ~16 GiB reserved for OS+GUI+claude). Now the batch can
+>   NEVER exhaust system RAM: when the cgroup hits the cap the kernel OOM-kills a worker **inside
+>   the cgroup** (→ `run_one.sh` classifies it OOM, the correct fail-safe bias), and the
+>   desktop/claude/system are structurally untouchable. Wired into `run_stage_second.sh` (so every
+>   future stage is guarded) + `run_stages_repair.sh`. Verified live: workers run inside a
+>   `run-*.scope` with `memory.max`=46 GiB / `memory.swap.max`=2 GiB. See
+>   [[feedback_batch_runs_need_cgroup_memcap]].
+
 > **🎯 GOVERNING POST-CANVAS WORKFLOW (user directive, 2026-06-01).** Once the FULL canvas
 > (all 100 stages) completes, extract a SUBSET of the known hard cases — every paper classified
 > error (CONVERR), fatal, abort, timeout, OOM — into a NEW dedicated target directory, then
 > develop+validate the Rust translation REPEATEDLY against that small fixed sample until every
 > one converts without errors. This turns the 1M-scale sweep into a tight, reproducible
 > regression loop over the genuinely-hard tail.
-> - **Canvas completion status (2026-06-01):** the sweep has reached **stage 86** (of 100);
->   stages 87-100 (~140 k papers) are NOT yet run — `master_stages_83_100.log` stops mid-86.
->   Completing 87-100 is the stated PREREQUISITE for the final hard-case extraction.
+> - **Canvas completion status (UPDATED 2026-06-02): the full 100-stage canvas COMPLETED**
+>   at 2026-06-02T08:07:59Z (`master_stages_83_100.log` → "stages 83-100 run DONE"). Stages
+>   90-100 all finished (each 10000, ~98.9-99.2% OK). The ONLY remaining gap is the
+>   interference-damaged stages **87/88/89** (partial 3990/1714/333 — task #276), now being
+>   re-run in full under the new memory guard (`run_stages_repair.sh`). Once that finishes the
+>   per-paper failure set is complete for the final hard-case extraction + `post_canvas_gate.sh`.
 > - **Head start (allowed, strict subset):** the hard-case directory can already be seeded from
 >   the COMPLETED stages (51-86 have retained per-paper `results.txt`; stages 1-50 only have
 >   master-log per-stage summaries, not per-paper rows). Excludes the stage_82 `FATAL_127`
