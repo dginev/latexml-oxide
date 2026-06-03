@@ -49,7 +49,6 @@ LoadDefinitions!({
   // 4.3 Title/Author (Perl PR #2767)
   DefMacro!("\\title[]{}",
     "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
-  DefMacro!("\\doauthor{}{}{}", "#1 #2 #3");
 
   // \author[labels]{name}   One \author per author
   // If labels given, the corresponding affiliation from \affil is attached
@@ -70,10 +69,6 @@ LoadDefinitions!({
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
   DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
-  // Rust-only: revtex3-era \altaddress, kept aligned with \altaffiliation
-  // (witness physics0210041).
-  DefMacro!("\\altaddress[]{}",     "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
-  DefMacro!("\\andname", "and");
 
   def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);

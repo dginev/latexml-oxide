@@ -897,6 +897,35 @@ Two follow-ups worth separate consideration:
 2. an actual tikz-cd/quantikz coordinate fix would be upstream-grade work
    benefiting both engines (or a Rust-first divergence to be documented).
 
+## 29. OmniBus `\ead{}[]` emits the optional arg as the email (PR #2767 typo)
+
+Upstream PR #2767 rewrote OmniBus.cls.ltxml's email macros:
+
+```perl
+DefMacro('\email{}',     '\lx@add@email{#1}');
+DefMacro('\emailaddr{}', '\lx@add@email{#1}');
+DefMacro('\ead{}[]',     '\lx@add@email{#2}');   # <-- #2 is the OPTIONAL
+```
+
+With prototype `{}[]`, `#1` is the address and `#2` the trailing
+optional (the elsart-style type, e.g. `[url]`). The body passes `#2`,
+so the common call `\ead{user@example.org}` produces an **empty**
+`<ltx:contact role="email"/>` and drops the address. The pre-PR body
+correctly used `#1` (`\@@@email{#1}{#2}`).
+
+**Minimal trigger** (with an OmniBus-fallback class):
+
+```latex
+\documentclass{unknownclass}
+\author{A. Author}\ead{user@example.org}
+\begin{document}\maketitle x\end{document}
+```
+
+Perl: `<contact role="email"></contact>` (empty). Expected: the address.
+
+**Rust:** `omnibus_cls.rs` deliberately uses `{#1}` (documented
+divergence; this entry). Revisit if upstream fixes the typo.
+
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
 `catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded

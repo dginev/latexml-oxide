@@ -161,7 +161,10 @@ LoadDefinitions!({
   // Perl (PR #2767): email / speaker
   DefMacro!("\\email{}",     "\\lx@add@email{#1}");
   DefMacro!("\\emailaddr{}", "\\lx@add@email{#1}");
-  DefMacro!("\\ead{}[]",     "\\lx@add@email{#2}");
+  // Perl PR #2767 has `\lx@add@email{#2}` here — `#2` is the trailing
+  // OPTIONAL, so `\ead{user@example.org}` would emit an empty email and
+  // drop the address. Upstream typo for `#1`; see KNOWN_PERL_ERRORS #29.
+  DefMacro!("\\ead{}[]",     "\\lx@add@email{#1}");
 
   DefMacro!("\\emailname", "E-mail");
   DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");

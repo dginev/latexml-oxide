@@ -6546,6 +6546,23 @@ Follow-up candidates surfaced: port upstream #2777 (pstricks
 raw-TeX, 5 errors on 2302.09519); tkz-graph binding gap (2312.12159,
 shared with Perl).
 
+**Critical review + completeness audit (2026-06-03):** definition-level
+audit of all 35 PR-touched `.ltxml` files vs Rust — every PR-added
+definition present; 33 forward-flags all confirmed *pre-existing* sync
+gaps (none in the PR's added lines). Reverse audit (PR-deleted defs
+lingering in Rust) caught 3 in revtex4_support (`\doauthor`,
+`\altaddress`, `\andname`) — removed. Review fixes: aas ORCID check
+tightened to Perl's digits-only regex; OmniBus `\ead{}[]` upstream
+typo (`#2` = the optional, drops the address) recorded as
+KNOWN_PERL_ERRORS **#27** and fixed to `#1` in Rust. Functional smoke
+battery (8 synthetic docs, all 0-error): superscript-marker author
+splitting, revtex `annotate=new` shared-affiliation fan-out, authblk
+label marks, jheppub `label=` + `labelseq=author` email sequencing,
+aas ORCID-from-optional (`Until:,` runtime-verified), acmart
+comma-joined classed address parts, amsppt full frontmatter under
+plain TeX (base pool availability verified), ijcai within-author
+`\affiliations`/`\emails` protocol.
+
 **Intentional Rust-only refinements kept (refine-not-revert):**
 `\shortauthor`/`\shorttitle` non-@ gdefs (witness 2406.14142),
 KeyVals unknown-key Warn except the Frontmatter keyset (Perl Infos

@@ -94,12 +94,13 @@ LoadDefinitions!({
   DefMacro!("\\lx@aas@checkorcid{}", "\\lx@aas@checkorcid@#1,\\done");
   // In later aas, $junk may be keywords? (gname,sname,suffix,...?)
   DefMacro!("\\lx@aas@checkorcid@ Until:, Until:\\done", sub[(possibleid, _junk)] {
+    // Perl: /^\s*\d\d\d\d-\d\d\d\d-\d\d\d\d-\d\d\d\d\s*$/ — digits only
     let id = possibleid.to_string();
     let trimmed = id.trim();
     let is_orcid = trimmed.len() == 19
       && trimmed.split('-').count() == 4
       && trimmed.split('-').all(|seg| seg.len() == 4
-          && seg.chars().all(|c| c.is_ascii_digit() || c == 'X'));
+          && seg.chars().all(|c| c.is_ascii_digit()));
     if is_orcid {
       Ok(Invocation!("\\lx@add@orcid{#1}", vec![Some(possibleid)]))
     } else {
