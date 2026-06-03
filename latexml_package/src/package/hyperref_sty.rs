@@ -252,11 +252,11 @@ LoadDefinitions!({
       if key == "colorlinks" && value_str == "true" {
         RequirePackage!("color");
       }
-      // Perl digests the value tokens to apply font conversions
-      // (e.g. ' → curly quote in pdfauthor).
-      let digested = stomach::digest(value.revert()?)?;
-      let digested_str = digested.to_string();
-      state::assign_mapping("Hyperref_options", key, Some(digested_str));
+      // Perl (PR #2767): don't digest \hypersetup keyvals, since they are
+      // restricted to plain text(?) — `hyperref_setoption($key, ToString($value))`.
+      // (This actually needs some sort of "safe" digestion, recognizing
+      // unicode, but no macros.)
+      state::assign_mapping("Hyperref_options", key, Some(value_str.clone()));
       if key == "baseurl" {
         AssignValue!("BASE_URL" => value_str);
       }

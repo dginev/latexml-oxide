@@ -10,50 +10,30 @@ LoadDefinitions!({
   RequirePackage!("amssymb");
   RequirePackage!("epsfig");
   RequirePackage!("graphicx");
-  RequirePackage!("inst_support");
 
-  // Author — Perl L32-34 carries `locked => 1`. The JHEP style overloads
-  // \author to always record institute marks and feed through
-  // \lx@author. Without the lock, latex.ltx \author (from article.cls)
-  // or a user-side \newcommand\author can replace our institute-tagging
-  // path and lose the [mark]-parsing branch.
-  DefMacro!("\\author[]{}",
-    "\\ifx.#1.\\else\\@institutemark{#1}\\fi\\def\\@author{#2}\\lx@author{#2}",
-    locked => true);
+  // \author[]{} (Perl PR #2767)
+  // One \author per author followed by \affiliation
+  // OR both are supplied an optional label by which the affiliation is attached to author
+  // optional arg is a label identifying which affiliation belongs
+  DefMacro!("\\author[]{}", "\\lx@add@creator[role=author,annotations={#1}]{#2}");
+  DefMacro!("\\affiliation OptionalSemiverbatim {}",
+    "\\lx@add@contact[role=affiliation,label={#1}]{#2}");
+  // \note{} appears inside author?
+  DefMacro!("\\note{}", "\\lx@add@contact[role=note]{#1}");
+  // The n-th \emailAdd is attached to the n-th author!
+  DefMacro!("\\emailAdd Semiverbatim", "\\lx@add@contact[role=email,labelseq=author]{#1}");
 
-  // Affiliation — Perl L36-38 has `beforeDigest => sub { AssignValue(inPreamble => 0); }`
-  // so the body digests as if we're past \begin{document} — important since
-  // \affiliation is typically used inside the preamble-style frontmatter block.
-  // Without it, Rust left the inPreamble state on, which suppressed emitting the
-  // note in some code paths.
-  DefConstructor!("\\affiliation[]{}",
-    "<ltx:note role='institutetext' mark='#1'>#2</ltx:note>", bounded => true,
-    before_digest => {
-      state::assign_value("inPreamble", false, None);
-    });
-
-  // Footnote alias — Perl L41
-  Let!("\\note", "\\footnote");
-
-  // Email — Perl L43-44
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\emailAdd Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
-
-  // Keywords — Perl L46-47
+  // Keywords
   DefMacro!("\\keywordname", "\\textbf{Keywords}");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordname}]{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordname}]{#1}");
 
-  // Frontmatter metadata — Perl L49-54
-  DefMacro!("\\arxivnumber{}", "\\@add@frontmatter{ltx:note}[role=arxiv]{#1}");
-  DefMacro!("\\preprint{}", "\\@add@frontmatter{ltx:note}[role=preprint]{#1}");
-  DefMacro!("\\proceeding{}", "\\@add@frontmatter{ltx:note}[role=proceeding]{#1}");
-  DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
-  DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
+  // Frontmatter metadata
+  DefMacro!("\\arxivnumber{}", "\\lx@add@pubnote[role=arxiv]{#1}");
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  DefMacro!("\\proceeding{}", "\\lx@add@pubnote[role=conference]{#1}");
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  DefMacro!("\\collaboration{}", "\\lx@add@pubnote[role=collaboration]{#1}");
   def_macro_noop("\\collaborationImg[]{}")?;
-  // \@@@collaborator internal — mirror aas_support's definition so the
-  // expansion above resolves to actual XML markup instead of being
-  // reported as undefined. Witness 2305.10497.
-  DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
 
   // Acknowledgements — Perl L56-60 emits `name='#name'` on
   // <ltx:acknowledgements> with the name digested from

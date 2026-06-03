@@ -8,7 +8,8 @@ LoadDefinitions!({
   // Class options — Perl L26-45
   for option in ["10pt", "11pt", "12pt", "twoside", "onecolumn", "twocolumn",
     "draft", "final", "referee", "leqno", "fleqn", "longauth", "rnote",
-    "oldversion", "runningheads", "envcountreset", "envcountsect",
+    "oldversion", "utf8", "hideoverfull",
+    "runningheads", "envcountreset", "envcountsect",
     "structabstract", "traditabstract", "letter"].iter()
   {
     DeclareOption!(*option, None);
@@ -58,14 +59,14 @@ LoadDefinitions!({
   // The Manuscript Header — Perl L66-128
   //======================================================================
 
-  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
 
   // Structured abstract (5-arg or 1-arg) — Perl aa_support.sty.ltxml L73-93.
   // aa.cls's `\abstract` is either a single-arg traditional abstract OR a
   // 5-arg structured one (context / aims / methods / results / conclusions).
-  DefMacro!("\\abstract@old{}", "\\@add@frontmatter{ltx:abstract}{#1}");
+  DefMacro!("\\abstract@old{}", "\\lx@add@abstract{#1}");
   DefMacro!("\\abstract@new{}{}{}{}{}",
-    "\\@add@frontmatter{ltx:abstract}[name={\\abstractname}]{\
+    "\\lx@add@abstract[name={\\abstractname}]{\
      \\ifx.#1.\\else\\textit{Context. }#1\\par\\fi\
      \\textit{Aims. }#2\\par\
      \\textit{Methods. }#3\\par\
@@ -88,7 +89,7 @@ LoadDefinitions!({
 
   // Keywords — Perl L95-96
   DefMacro!("\\keywordname", "\\sffamily\\bfseries Key Words.");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordname}]{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordname}]{#1}");
 
   // Running title — Perl L99-104
   DefRegister!("\\titlerunning" => Tokens!());
@@ -96,31 +97,29 @@ LoadDefinitions!({
   def_macro_noop("\\authrun")?;
   def_macro_noop("\\titrun")?;
 
-  // Correspondence — Perl L107-121
-  DefMacro!("\\offprints{}", "\\@add@frontmatter{ltx:note}[role=offprints]{#1}");
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
-  DefConstructor!("\\@@@mail{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\mail Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}");
+  // Correspondence (Perl PR #2767)
+  DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
+  DefMacro!("\\email Semiverbatim", "\\lx@add@contact[role=email]{#1}");
 
   // aa_support: Perl L? gobbles \journalname; surpass with content
   // preservation — A&A papers set \journalname{Astronomy & Astrophysics}
   // and the value is genuine author metadata for the JATS pipeline.
-  DefMacro!("\\journalname{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\journalname{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\rnotename", "(Research Note)");
   DefMacro!("\\rnotname", "(RN)");
-  DefMacro!("\\headnote{}", "\\@add@frontmatter{ltx:note}{#1}");
-  DefMacro!("\\dedication{}", "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
+  DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note}]{#1}");
+  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
   DefMacro!("\\mailname", "\\it Correspondence to \\/");
-  DefMacro!("\\doi{}", "\\@add@frontmatter{ltx:classification}[scheme=doi]{#1}");
-  DefMacro!("\\DOI{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
-  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
-  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
+  DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname}]{#1}");
+  DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
+  DefMacro!("\\DOI{}", "\\lx@add@pubnote[role=doi]{#1}");
+  DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
+  DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted]{#1}");
 
   // \idline{vol}{page} — issue identification line; preserve as note.
-  DefMacro!("\\idline{}{}", "\\@add@frontmatter{ltx:note}[role=idline]{#1, #2}");
+  DefMacro!("\\idline{}{}", "\\lx@add@frontmatter{ltx:note}[role=idline]{#1, #2}");
   // \msnr{number} — manuscript number; preserve as note (author metadata).
-  DefMacro!("\\msnr{}", "\\@add@frontmatter{ltx:note}[role=msnr]{#1}");
+  DefMacro!("\\msnr{}", "\\lx@add@frontmatter{ltx:note}[role=msnr]{#1}");
   def_macro_noop("\\institutename")?;
   def_macro_noop("\\hugehead")?;
   DefMacro!("\\AALogo", "Astronomy and Astrophysics");
@@ -262,6 +261,8 @@ LoadDefinitions!({
   // Typography — Perl L238-323
   //======================================================================
 
+  // Perl (PR #2767): add missing \mdash definition
+  DefConstructor!("\\mdash", "\u{2014}");
   DefMacro!("\\vec{}", "\\ensuremath{\\mathbf{#1}}");
   DefMacro!("\\tens{}", "\\ensuremath{\\mathsf{#1}}");
 

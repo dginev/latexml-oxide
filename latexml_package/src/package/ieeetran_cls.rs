@@ -192,23 +192,16 @@ LoadDefinitions!({
   // (e.g. "Member, IEEE"). Render inline in italic; do NOT drop.
   DefMacro!("\\IEEEmembership{}", ",\\space\\textit{#1}");
   DefMacro!("\\IEEEauthorblockN{}", "#1");
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\IEEEauthorblockA{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
+  DefMacro!("\\IEEEauthorblockA{}", "\\lx@add@affiliation{#1}");
 
-  // IEEEkeywords environment (Perl L152-155)
-  Let!("\\@endIEEEkeywords", "\\relax");
-  DefMacro!("\\@IEEEkeywords XUntil:\\@endIEEEkeywords",
-    "\\@add@frontmatter{ltx:keywords}[name={Index Terms}]{#1}");
-  DefMacro!("\\IEEEkeywords", "\\@IEEEkeywords");
-  DefMacro!("\\endIEEEkeywords", "\\@endIEEEkeywords");
-  // Perl IEEEtran.cls.ltxml L152-153: explicit env-token aliases. Without
-  // these, our standard `\begin{X} → \begingroup\X` expansion routes
-  // through user-redefinable namespace and the `XUntil:\@endIEEEkeywords`
-  // terminator can be broken by user `\def\endIEEEkeywords`. Drivers:
-  // 2007.13436, 1812.09324 (`\@iffalse` cascade past EOF when the
-  // XUntil reader runs off the end).
-  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\@IEEEkeywords");
-  DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\@endIEEEkeywords");
+  // IEEEkeywords environment (Perl PR #2767: digestion-based capture)
+  DefMacro!("\\IEEEkeywords", "\\lx@begin@keywords[name={\\IEEEkeywordsname:~}]");
+  DefMacro!("\\endIEEEkeywords", "\\lx@end@keywords");
+  // Perl IEEEtran.cls.ltxml L152-153 (pre-PR): explicit env-token aliases.
+  // Kept so user `\def\endIEEEkeywords` can't break env routing. Drivers:
+  // 2007.13436, 1812.09324.
+  DefMacro!(T_CS!("\\begin{IEEEkeywords}"), None, "\\IEEEkeywords");
+  DefMacro!(T_CS!("\\end{IEEEkeywords}"),   None, "\\endIEEEkeywords");
 
   // IEEEtai (IEEE Trans. AI) IEEEImpStatement environment — author
   // content is the journal-mandated "Impact Statement" preceding the
@@ -224,7 +217,7 @@ LoadDefinitions!({
   def_macro_noop("\\IEEEcompsocthanksitem[]")?;
   def_macro_noop("\\IEEEauthorrefmark")?;
   def_macro_noop("\\IEEEtriggeratref{}")?;
-  DefMacro!("\\IEEEpubid{}", "\\@add@frontmatter{ltx:note}[role=publicationid]{pubid: #1}");
+  DefMacro!("\\IEEEpubid{}", "\\lx@add@pubnote[role=pubid]{pubid: #1}");
   def_macro_noop("\\IEEEpubidadjcol")?;
   // \corresp{name} — IEEE Open Journal class IEEEoj.cls L4875 marks
   // a corresponding-author note (later rendered in titlepage). Preserve

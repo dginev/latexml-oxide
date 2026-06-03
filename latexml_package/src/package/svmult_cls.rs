@@ -31,7 +31,7 @@ LoadDefinitions!({
   // \title with optional * to affect numbering (* => numart, none => book)
   DefMacro!("\\title OptionalMatch:* {}",
     "\\if.#1.\\else\\def\\thesection{\\arabic{section}}\\fi\
-     \\@add@frontmatter{ltx:title}{#2}");
+     \\lx@add@title{#2}");
 
   //======================================================================
   // Upright greek letters

@@ -45,27 +45,16 @@ LoadDefinitions!({
 
   DefEnvironment!("{icmlauthorlist}", "#body");
 
-  DefMacro!("\\icmlauthor{}{}", "\\author{#1}");
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
-  // ICML: \icmlaffiliation{shortname}{full text} maps a short id to
-  // an affiliation string used in author list. Preserve only the
-  // full-text — the shortname (#1) is an internal identifier that
-  // commonly contains `_` characters (e.g. `mit_idss`, `osu_ece`),
-  // which our frontmatter pipeline tokenizes as math-mode subscript
-  // and errors with "Script _ can only appear in math mode" when
-  // rendered into ltx:note text. Witness 2404.08592.
-  DefMacro!("\\icmlaffiliation{}{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
-  // \icmlcorrespondingauthor{name}{email} — preserve as ltx:note.
-  // The email arg often contains `_` (e.g. `m_smith@apple.com`) which would
-  // otherwise be tokenized as subscript-mode at digest time, triggering
-  // "Script _ can only appear in math mode" cascades. Semiverbatim
-  // neutralizes `_`/`#`/`&`/`%`/`^`/`~`/`$`/`{`/`}` in the email arg.
-  // Perl's icml_support binding gobbles both args (empty body); we surpass
-  // by preserving the contact text as a frontmatter note. Witness 2312.09299.
-  DefMacro!("\\icmlcorrespondingauthor{} Semiverbatim",
-    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 <#1>}");
+  // \icmlauthor{author}{labels}   One per author; labels used to connect to affiliation
+  DefMacro!("\\icmlauthor{} Semiverbatim", "\\lx@add@creator[role=author,annotations={#2}]{#1}");
+  // \icmlaffiliation{label}{address}  provides affiliation for author with same label
+  DefMacro!("\\icmlaffiliation Semiverbatim {}", "\\lx@add@contact[role=affiliation,label={#1}]{#2}");
+  DefMacro!("\\icmladdress OptionalSemiverbatim {}", "\\lx@add@contact[role=address,label={#1}]{#2}"); // deprecated
+  // \icmlcorrespondingauthor{author}{email}
+  // Attempt to use author name as a matching label to connect to author
+  // (should be a fuzzy match?)
+  DefMacro!("\\icmlcorrespondingauthor{}{}",
+    "\\lx@add@contact[label={\\ifx.#1.\\else fuzzy:#1\\fi},role=email,name={Correspondence to: }]{#2}");
 
   // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
   // a re-iteration of the affiliation list + a free-form notice. Since
@@ -148,7 +137,7 @@ LoadDefinitions!({
   // Witness 2402.04924 (icml2024.sty L535).
   DefMacro!("\\icmlProjectLead",
     "\\textsuperscript{\\char`\u{2020}}Project lead");
-  DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\icmlkeywords{}", "\\lx@add@keywords{#1}");
   // \iclrfinalcopy — some icml*-bundled papers also use ICLR's
   // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
   // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.
