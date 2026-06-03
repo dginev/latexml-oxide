@@ -25,21 +25,17 @@ LoadDefinitions!({
     RequirePackage!("graphicx");
   }
 
-  // Frontmatter — Perl L28-46
-  DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
-  // Perl L31:
-  //   DefMacro('\author[]{}', sub { andSplit(T_CS('\lx@author'), $_[2]); });
-  // $_[2] is the mandatory body (author list); the optional `[short]` is
-  // consumed and discarded.
-  DefMacro!("\\author[]{}", sub[(_short, authors)] {
-    and_split(T_CS!("\\lx@author"), authors)
-  });
+  // Frontmatter — Perl mn2e_support.sty.ltxml (PR #2767)
+  DefMacro!("\\title[]{}",
+    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\
+\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}");
+  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@add@authors{#2}", locked => true);
   def_macro_noop("\\newauthor")?;
-  DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
-  DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:note}[role=pubyear]{#1}");
-  DefMacro!("\\microfiche{}", "\\@add@frontmatter{ltx:note}[role=microfiche]{#1}");
-  DefMacro!("\\pagerange{}", "\\@add@frontmatter{ltx:note}[role=pagerange]{#1}");
+  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\pubyear{}", "\\lx@add@pubnote[role=pubyear]{#1}");
+  DefMacro!("\\microfiche{}", "\\lx@add@pubnote[role=microfiche]{#1}");
+  DefMacro!("\\pagerange{}", "\\lx@add@pubnote[role=pages]{#1}");
 
   // Editorial queries — Perl L42-46
   DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>");
@@ -49,51 +45,10 @@ LoadDefinitions!({
     mode => "internal_vertical");
   DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
 
-  // Keywords — Perl mn2e_support.sty.ltxml L48-54:
-  //   DefEnvironment('{keywords}', '',
-  //     afterDigest => sub { push 'ltx:classification'→frontmatter });
-  //
-  // As an environment, `\endkeywords` is auto-defined, so raw
-  // `mn2e-breakabs.sty` redefinitions of `\endkeywords` (which reference
-  // undefined `\SFB@keywordstrue`) never fire.
-  //
-  // Was: emitted `<ltx:classification>` directly via constructor template,
-  // which inserted the element at the current insertion point. Driver:
-  // 2003.11440 `\begin{abstract}...\begin{keywords}{...}\end{keywords}\end{abstract}`
-  // — the `\begin{keywords}` was nested INSIDE the open abstract, where
-  // ltx:classification isn't a valid child, producing
-  // "ltx:classification isn't allowed in <ltx:abstract>".
-  //
-  // Mirror Perl directly:
-  //   DefEnvironment('{keywords}', '',
-  //     afterDigest => sub {
-  //       my $frontmatter = LookupValue('frontmatter');
-  //       push(@{ $$frontmatter{'ltx:classification'} },
-  //         ['ltx:classification', { scheme => 'keywords' }, @LaTeXML::LIST]);
-  //       return; });
-  // — empty constructor template, after-digest hook captures the digested
-  // body list and pushes a (tag, attrs, body) entry under the
-  // `ltx:classification` key of the global frontmatter hash. No mode
-  // bracket, no locked flag — matches Perl.
-  DefEnvironment!("{keywords}", "",
-    after_digest => {
-      let body = List::new(clone_box_list());
-      with_value_mut("frontmatter", |fm_opt| {
-        let frontmatter = match fm_opt {
-          Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-          _ => return Ok::<(), latexml_core::Error>(()),
-        };
-        let entry = (
-          "ltx:classification".to_string(),
-          Some(string_map!("scheme" => "keywords")),
-          body.into(),
-        );
-        frontmatter.entry("ltx:classification".to_string())
-          .or_insert_with(Vec::new)
-          .push(entry);
-        Ok(())
-      })?;
-    });
+  // Perl (PR #2767): Keywords is an environment!
+  // (\nokeywords no-op is defined further below in this file.)
+  DefMacro!("\\keywords", "\\lx@begin@keywords");
+  DefMacro!("\\endkeywords", "\\lx@end@keywords");
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
   def_macro_noop("\\bsp")?;

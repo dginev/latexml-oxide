@@ -246,7 +246,11 @@ LoadDefinitions!({
         };
         let tag = s!("ltx:rdf");
         let empty_content = Digested::from(List::new(Vec::new()));
-        let entry = (tag.clone(), Some(attrs), empty_content);
+        let entry = latexml_core::document::tag::TagData {
+          tag: tag.clone(),
+          attr: attrs,
+          content: vec![latexml_core::document::tag::TagContent::Box(empty_content)],
+        };
         let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
         f_entry.push(entry);
         Ok(())

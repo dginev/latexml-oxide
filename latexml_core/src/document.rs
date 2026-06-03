@@ -3556,8 +3556,14 @@ impl Document {
       if let Some(lang) = node_ref.get_attribute("xml:lang") {
         return lang;
       }
-      if let Some(fontid) = node.get_attribute("_font") {
-        if let Some(font) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
+      // More robust against a missing/foreign _font property (Perl PR #2767):
+      // walk the *current* ancestor, and never panic on a non-numeric font id.
+      if let Some(fontid) = node_ref.get_attribute("_font") {
+        if let Some(font) = fontid
+          .parse::<u64>()
+          .ok()
+          .and_then(|id| self.node_fonts.get(&id))
+        {
           if let Some(lang) = font.get_language() {
             return lang.to_string();
           }

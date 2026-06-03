@@ -2853,6 +2853,40 @@ pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
 /// benefit.
 pub fn build_invocation<T: Into<Token>>(token: T, args: Vec<Option<Tokens>>) -> Result<Tokens> {
   let token: Token = token.into();
+  build_invocation_token(token, args)
+}
+
+/// String entry point for `Invocation` (Perl: `Invocation($token,@args)` with a string
+/// first argument). The string is tokenized via `TokenizeInternal`; if it yields a single
+/// token, this reduces to `build_invocation` on that token. Otherwise the tokens are
+/// treated as an "anonymous macro" containing parameter markers like `#1`, and the
+/// arguments are substituted in.
+pub fn build_invocation_str(spec: &str, args: Vec<Option<Tokens>>) -> Result<Tokens> {
+  let tokens = crate::mouth::tokenize_internal(spec);
+  let mut list = tokens.unlist();
+  if list.len() > 1 {
+    // Treat as anonymous macro
+    let cow_args: Vec<Option<Cow<Tokens>>> = args.into_iter().map(|a| a.map(Cow::Owned)).collect();
+    return Ok(
+      Tokens::new(list)
+        .pack_parameters()?
+        .substitute_parameters(&cow_args),
+    );
+  }
+  match list.pop() {
+    Some(cs) => build_invocation_token(cs, args), // reduce to single token.
+    None => {
+      Error!(
+        "unexpected",
+        "invocation",
+        s!("Can't invoke empty token spec '{}'", spec)
+      );
+      Ok(Tokens::default())
+    },
+  }
+}
+
+fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tokens> {
   // Note: token may have been \let to another defn!
   if let Some(defn) = lookup_definition(&token)? {
     let mut invoked_tokens = vec![token];

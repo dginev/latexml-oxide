@@ -20,7 +20,11 @@ fn push_keyword_body_to_frontmatter(
     let mut attrs: rustc_hash::FxHashMap<String, String> =
       rustc_hash::FxHashMap::default();
     attrs.insert("scheme".to_string(), "keywords".to_string());
-    let entry = ("ltx:classification".to_string(), Some(attrs), body);
+    let entry = latexml_core::document::tag::TagData {
+      tag: "ltx:classification".to_string(),
+      attr: attrs,
+      content: vec![latexml_core::document::tag::TagContent::Box(body)],
+    };
     latexml_core::state::with_value_mut("frontmatter", |val_opt| {
       if let Some(Stored::HashTagData(ref mut frnt)) = val_opt {
         frnt
@@ -120,8 +124,8 @@ LoadDefinitions!({
   Let!("\\backmatter",  "\\@empty");
 
   // Perl L62-63
-  DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\subtitle{}",   "\\@add@frontmatter{ltx:subtitle}{#1}");
+  DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
+  DefMacro!("\\subtitle{}",   "\\lx@add@subtitle{#1}");
 
   // Perl L65-76: ignored/running title/author variants
   def_macro_noop("\\shortauthor{}")?;
@@ -131,7 +135,7 @@ LoadDefinitions!({
   Let!("\\runauthor",     "\\authorrunning");
   // Running title / short authors — author metadata; preserve.
   DefMacro!("\\runningtitle{}",
-    "\\@add@frontmatter{ltx:toctitle}{#1}");
+    "\\lx@add@toctitle{#1}");
   Let!("\\runninghead", "\\runningtitle");
   // Perl `OmniBus.cls.ltxml` L75: `DefMacro('\shortauthors{}', Tokens())` —
   // gobble (redundant running head). Match Perl; preserving it errored on a
@@ -140,7 +144,7 @@ LoadDefinitions!({
   // \authors{author list} — alternative to \author; preserve as
   // author list note.
   DefMacro!("\\authors{}",
-    "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=authors]{#1}");
   def_macro_noop("\\alignauthor")?;
   // \correspondingauthor{name/email} — common journal-class CS used
   // inside author lists (AAS / AGU / AMS / many journals). aas_support
@@ -148,44 +152,30 @@ LoadDefinitions!({
   // OmniBus so unbound classes (e.g. ametsocV5) which use the CS
   // directly inside `\authors{...}` don't trip Error:undefined.
   // Witness 2110.11200 (ametsocV5 fallback to OmniBus).
-  DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
+  DefMacro!("\\correspondingauthor{}", "\\lx@add@contact[role=correspondent]{#1}");
   // \datastatement — ametsocV5.cls L992:
   // `\def\datastatement{\paragraph*{Data availability statement.}}`.
   // Used as a no-arg standalone heading marker. Witness 2203.02657.
   DefMacro!("\\datastatement", "\\paragraph*{Data availability statement.}");
 
-  // Perl L78-83: email / speaker
-  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
-  DefMacro!("\\email{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{email}}");
-  Let!("\\emailaddr", "\\email");
-  DefMacro!("\\ead{}[]",   "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
+  // Perl (PR #2767): email / speaker
+  DefMacro!("\\email{}",     "\\lx@add@email{#1}");
+  DefMacro!("\\emailaddr{}", "\\lx@add@email{#1}");
+  DefMacro!("\\ead{}[]",     "\\lx@add@email{#2}");
+
   DefMacro!("\\emailname", "E-mail");
-  DefMacro!("\\speaker{}", "\\@add@frontmatter{ltx:creator}[role=speaker]{\\@personname{#1}}");
+  DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
 
-  // Perl L86-102: affiliations
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affil{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-  DefMacro!("\\altaffilmark{}", sub[(marks)] {
-    let parts = split_tokens(marks, vec![T_OTHER!(",")]);
-    let mut out = Vec::new();
-    for part in parts {
-      out.push(T_CS!("\\@altaffilmark"));
-      out.push(T_BEGIN!());
-      out.extend(part.unlist());
-      out.push(T_END!());
-    }
-    out
-  });
-  DefConstructor!("\\@altaffilmark{}",
-    "?#1(<ltx:note role='affiliationmark' mark='#1'/> )()");
-  Let!("\\affilnum", "\\@altaffilmark");
-  DefConstructor!("\\altaffiltext{}{}",
-    "?#2(<ltx:note role='affiliationtext' mark='#1'>#2</ltx:note>)()");
+  // Perl (PR #2767): affiliations, like from aas
+  DefMacro!("\\altaffilmark Semiverbatim",
+    "\\lx@request@frontmatter@annotation[altaffil]{#1}");
+  DefMacro!("\\altaffiltext Semiverbatim {}",
+    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
 
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\address[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#2}}");
+  DefMacro!("\\address[]{}", "\\lx@add@address{#2}");
   Let!("\\affaddr", "\\address");
-  DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
+  DefMacro!("\\affil{}",       "\\lx@add@affiliation{#1}");
+  DefMacro!("\\affiliation{}", "\\lx@add@affiliation{#1}");
   DefRegister!("\\affilskip" => Dimension::new(0));
 
   // Perl L104-123: misc name macros, mostly no-ops
@@ -197,10 +187,10 @@ LoadDefinitions!({
   def_macro_identity("\\printaddresses{}")?;
   // \printead{email} — printed email address; preserve as contact.
   DefMacro!("\\printead{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=email]{#1}");
   // Page numbers — author metadata; preserve as ltx:note.
-  DefMacro!("\\firstpage{}",       "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
-  DefMacro!("\\lastpage{}",        "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
+  DefMacro!("\\firstpage{}",       "\\lx@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!("\\lastpage{}",        "\\lx@add@frontmatter{ltx:note}[role=lastpage]{#1}");
   // \runauthor / \runtitle are running-header SHORT forms, layout-only and
   // redundant with \author/\title. Perl OmniBus.cls.ltxml L114-115 GOBBLES both
   // (`DefMacro('\runauthor{}', Tokens())`); preserving them digests the
@@ -209,13 +199,12 @@ LoadDefinitions!({
   def_macro_noop("\\runauthor{}")?;
   def_macro_noop("\\runtitle{}")?;
   // \corref{label} — marker for corresponding author. Preserve as note.
-  DefMacro!("\\corref{}",          "\\@add@frontmatter{ltx:note}[role=corref]{#1}");
-  DefMacro!("\\listofauthors{}",   "\\@add@frontmatter{ltx:note}[role=listofauthors]{#1}");
-  DefMacro!("\\indexauthor{}",     "\\@add@frontmatter{ltx:note}[role=indexauthor]{#1}");
+  DefMacro!("\\corref{}",          "\\lx@add@frontmatter{ltx:note}[role=corref]{#1}");
+  DefMacro!("\\listofauthors{}",   "\\lx@add@frontmatter{ltx:note}[role=listofauthors]{#1}");
+  DefMacro!("\\indexauthor{}",     "\\lx@add@frontmatter{ltx:note}[role=indexauthor]{#1}");
   def_macro_noop("\\preface")?;
   def_macro_noop("\\thankstext")?;
-  DefMacro!("\\numberofauthors{}",
-    "\\@add@frontmatter{ltx:note}[role=numberofauthors]{#1}");
+  def_macro_noop("\\numberofauthors{}")?;
   // \equalcontrib / \equalcont are defined kernel-level in
   // latex_constructs.rs — needed for ALL classes (not only OmniBus
   // fallback) because aaai22.sty etc. ride on \documentclass{article}.
@@ -261,16 +250,16 @@ LoadDefinitions!({
   // by amsart and other classes; leaving it to specific class bindings.
   def_macro_noop("\\bibcommenthead")?;
   def_macro_noop("\\jyear[]")?;
-  DefMacro!("\\resumen{}",         "\\@add@frontmatter{ltx:abstract}{#1}");
+  DefMacro!("\\resumen{}",         "\\lx@add@abstract{#1}");
   DefMacro!("\\ion{}{}",           "{#1 \\textsc{#2}}");
   Let!("\\fulladdresses", "\\address");
-  Let!("\\smonth",        "\\month");
-  Let!("\\syear",         "\\year");
+  DefMacro!("\\smonth{}", "\\month=#1\\relax");
+  DefMacro!("\\syear{}",  "\\year=#1\\relax");
 
-  // Perl L128-131: keyword macros
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
-  DefMacro!("\\kword{}",    "\\@add@frontmatter{ltx:keywords}{#1}");
-  DefMacro!("\\kwd[]{}",    "\\@add@frontmatter{ltx:keywords}{#2, }");
+  // Perl (PR #2767): keyword macros
+  DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
+  DefMacro!("\\kword{}",    "\\lx@add@keywords{#1}");
+  DefMacro!("\\kwd[]{}",    "\\lx@add@keywords{#2, }");
 
   // Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
   // via `\keywords` that can be used as a section-like bare macro.
@@ -317,8 +306,13 @@ LoadDefinitions!({
   // braced `\keywords{}` precedes a bare one — e.g. `\category{a}{b}{c}` expands
   // to `…\keywords{#4}` (empty #4) THEN the document's own `\keywords …`.
   // Witness 1601.07962 (sig-alternate, \category + bare \terms/\keywords).
+  // Deliberate divergence from post-PR-2767 Perl (which uses
+  // `\begin{keywords}#1\end{keywords}\let\endkeywords\relax`): the trailing
+  // \lets persist and break a later bare `\keywords` (witness 1601.07962,
+  // see the comment above). Keep the no-env direct call, expressed in the
+  // new frontmatter API.
   DefMacro!("\\keywords@onearg{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
+    "\\lx@add@classification[scheme=keywords]{#1}");
   DefMacro!("\\maybe@end@keywords",
     "\\endkeywords\\let\\maybe@end@keywords\\relax");
   // Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run
@@ -356,13 +350,13 @@ LoadDefinitions!({
   });
   Let!("\\addto@keywords@list", "\\keyword");
 
-  // Perl L158-164: classifications
-  DefMacro!("\\classification{}", "\\@add@frontmatter{ltx:classification}{#1}");
+  // Perl (PR #2767): classifications
+  DefMacro!("\\classification{}", "\\lx@add@classification{#1}");
   DefMacro!("\\pacs{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}", locked => true);
-  // \doi — frontmatter in preamble, url-like in body. Perl L161-163.
+    "\\lx@add@classification[scheme=pacs]{#1}", locked => true);
+  // \doi — frontmatter in preamble, url-like in body.
   DefMacro!("\\doi{}",
-    "\\if@in@preamble{\\@add@frontmatter{ltx:classification}[scheme=doi]{#1}\
+    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\
      \\else\\lx@doi{#1}\\fi");
   DefConstructor!("\\lx@doi{}",
     "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
@@ -370,7 +364,7 @@ LoadDefinitions!({
 
   // Perl L167: \category (acm)
   DefMacro!("\\category{}{}{}[]",
-    "\\@add@frontmatter{ltx:classification}[scheme=category]{#1 #2 #3}\\keywords{#4}");
+    "\\lx@add@classification[scheme=category]{#1 #2 #3}\\keywords{#4}");
 
   // Perl L169-219: theorem env autoloads — if a common theorem env name is
   // used without being declared, load amsthm and define a standard set.
@@ -501,25 +495,25 @@ LoadDefinitions!({
   Let!("\\theacknowledgments",    "\\acknowledgments");
   Let!("\\endtheacknowledgments", "\\endacknowledgments");
 
-  // Perl L237-254: editorial metadata
-  DefMacro!("\\editors{}",          "\\@add@frontmatter{ltx:note}[role=editors]{#1}");
-  DefMacro!("\\received{}",         "\\@add@frontmatter{ltx:date}[role=received]{#1}");
-  DefMacro!("\\revised{}",          "\\@add@frontmatter{ltx:date}[role=revised]{#1}");
-  DefMacro!("\\accepted{}",         "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
-  DefMacro!("\\pubyear{}",          "\\@add@frontmatter{ltx:date}[role=publication]{#1}");
-  DefMacro!("\\copyrightyear{}",    "\\@add@frontmatter{ltx:date}[role=copyright]{#1}");
-  DefMacro!("\\preprint{}",         "\\@add@frontmatter{ltx:note}[role=preprint]{#1}");
-  DefMacro!("\\communicated{}",     "\\@add@frontmatter{ltx:date}[role=communicated]{#1}");
-  DefMacro!("\\dedicated{}",        "\\@add@frontmatter{ltx:note}[role=dedicated]{#1}");
-  DefMacro!("\\presented{}",        "\\@add@frontmatter{ltx:date}[role=presented]{#1}");
-  DefMacro!("\\articletype{}",      "\\@add@frontmatter{ltx:note}[role=articletype]{#1}");
-  DefMacro!("\\issue{}",            "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
-  DefMacro!("\\journal{}",          "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\jname{}",            "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\volume{}",           "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
-  DefMacro!("\\titlenote{}",        "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}");
-  DefMacro!("\\terms{}",            "\\@add@frontmatter{ltx:note}[role=terms]{#1}");
-  DefMacro!("\\conferenceinfo{}{}", "\\@add@frontmatter{ltx:note}[role=conference]{#1 #2}");
+  // Perl (PR #2767): editorial metadata
+  DefMacro!("\\editors{}",          "\\lx@add@editor{#1}");
+  DefMacro!("\\received{}",         "\\lx@add@date[role=received]{#1}");
+  DefMacro!("\\revised{}",          "\\lx@add@date[role=revised]{#1}");
+  DefMacro!("\\accepted{}",         "\\lx@add@date[role=accepted]{#1}");
+  DefMacro!("\\pubyear{}",          "\\lx@add@date[role=publication]{#1}");
+  DefMacro!("\\copyrightyear{}",    "\\lx@add@copyrightyear{#1}");
+  DefMacro!("\\communicated{}",     "\\lx@add@date[role=communicated]{#1}");
+  DefMacro!("\\preprint{}",         "\\lx@add@pubnote[role=preprint]{#1}");
+  DefMacro!("\\dedicated{}",        "\\lx@add@pubnote[role=dedication]{#1}");
+  DefMacro!("\\presented{}",        "\\lx@add@date[role=presented]{#1}");
+  DefMacro!("\\articletype{}",      "\\lx@add@pubnote[role=type]{#1}");
+  DefMacro!("\\issue{}",            "\\lx@add@pubnote[role=issue]{#1}");
+  DefMacro!("\\journal{}",          "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\jname{}",            "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\volume{}",           "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\titlenote{}",        "\\lx@add@pubnote[role=note]{#1}");
+  DefMacro!("\\terms{}",            "\\lx@add@keywords{#1}");
+  DefMacro!("\\conferenceinfo{}{}", "\\lx@add@pubnote[role=conference]{#1 #2}");
 
   // Perl L257 gobbles to Tokens(); we surpass by rendering as
   // superscript (matches latex_constructs kernel-level treatment

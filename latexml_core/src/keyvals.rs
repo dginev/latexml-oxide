@@ -659,19 +659,55 @@ impl KeyVals {
     if !use_default {
       if let Some(value) = value_opt {
         tokens.push(T_OTHER!("="));
+        let mut reverted_tokens = Vec::new();
         if let Some(Stored::Parameter(keytype)) = keytype_stored {
           // TODO: The types here are a little curious. The stored value must be cast back into
           // Tokens if Parameter's revert works on Tokens. Or should that revert call work on
           // ArgWrap?
           if let Some(reverted) = keytype.revert(Some(value.revert()?))? {
-            tokens.extend(reverted.unlist());
+            reverted_tokens.extend(reverted.unlist());
           }
         } else {
-          tokens.extend(value.revert()?.unlist());
+          reverted_tokens.extend(value.revert()?.unlist());
         }
+        tokens.extend(self.rebrace(Tokens::new(reverted_tokens)).unlist());
       }
     }
     Ok(tokens)
+  }
+
+  /// When reverting a KeyVals value, we may need to wrap in {}
+  /// eg. if a "," appears outside of any bracing
+  /// Other cases?
+  fn rebrace(&self, tokens: Tokens) -> Tokens {
+    let mut level: i32 = 0;
+    let mut needs_brace = tokens.is_empty();
+    for t in tokens.unlist_ref() {
+      let cc = t.get_catcode();
+      if cc == Catcode::BEGIN {
+        level += 1;
+      }
+      if cc == Catcode::END {
+        level -= 1;
+        // Note that '{ }} {' is still unbalanced
+        // even though the left and right braces match in count.
+        if level < 0 {
+          break;
+        }
+      } else if level <= 0 && cc == Catcode::OTHER && t.with_str(|s| s == ",") {
+        // Outer comma?
+        needs_brace = true;
+        break;
+      }
+    }
+    if needs_brace {
+      let mut wrapped = vec![T_BEGIN!()];
+      wrapped.extend(tokens.unlist());
+      wrapped.push(T_END!());
+      Tokens::new(wrapped)
+    } else {
+      tokens
+    }
   }
 
   //======================================================================

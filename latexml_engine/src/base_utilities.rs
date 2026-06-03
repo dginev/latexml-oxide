@@ -4,7 +4,10 @@
 //! Also contains shared Rust helper functions (Perl: LaTeXML::Package.pm utilities).
 
 use latexml_core::common::arena::SymHashMap;
-use latexml_core::common::xml::content_nodes;
+use latexml_core::common::cleaners::clean_label;
+use latexml_core::common::xml::{content_nodes, element_nodes};
+use latexml_core::document::tag::{RawFrontmatter, TagAttrs, TagContent, TagData};
+use libxml::tree::NodeType;
 use rustc_hash::FxHashSet as HashSet;
 use std::char::{REPLACEMENT_CHARACTER, decode_utf16};
 const FRONTMATTER_ELEMENTS: &[&str] = &[
@@ -145,14 +148,45 @@ LoadDefinitions!({
     Ok(boxes)
   });
 
-  // Perl Base_Utility.pool.ltxml L85-87
-  DefConstructor!("\\@ADDCLASS Semiverbatim", sub[document,args] {
+  // Perl Base_Utility.pool.ltxml L42 (PR #2767)
+  DefMacro!("\\lx@strip@braces{}", sub[(arg)] {
+    Ok(arg.strip_braces())
+  });
+
+  // Perl Base_Utility.pool.ltxml L85-87 (renamed from \@ADDCLASS in PR #2767)
+  DefConstructor!("\\lx@add@cssclass Semiverbatim", sub[document,args] {
       document.add_class(&mut document.get_element().unwrap(),
         &args[0].as_ref().unwrap().to_string())?;
     }, sizer => 0);
 
-  //======================================================================
-  // General support for Front Matter.
+  // Perl Base_Utility.pool.ltxml L101-103 (PR #2767)
+  DefConstructor!("\\lx@set@attribute Semiverbatim {}", sub[document,args] {
+      let key = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+      let value = args[1].as_ref().map(ToString::to_string).unwrap_or_default();
+      if let Some(mut element) = document.get_element() {
+        document.set_attribute(&mut element, &key, &value)?;
+      }
+    }, sizer => 0);
+
+  // Perl Base_Utility.pool.ltxml (PR #2767): split #3 on the delimiter
+  // tokens in #2, invoking #1 on each piece.
+  // DefMacro('\lx@splitting{}{}{}', ...)
+  DefMacro!("\\lx@splitting{}{}{}", sub[(op, delimiters, tokens)] {
+    // Note: Perl tests `$delimiters ?` — a Tokens object is always truthy,
+    // so the split always applies (an empty delimiter list yields one piece).
+    let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
+    let mut result: Vec<Token> = Vec::new();
+    for piece in split_tokens(tokens, delims) {
+      result.extend(op.unlist_ref().iter().copied());
+      result.push(T_BEGIN!());
+      result.extend(piece.unlist());
+      result.push(T_END!());
+    }
+    Ok(Tokens::new(result))
+  });
+
+  //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+  // General support for Front Matter. (PR #2767 rework)
   // Not (yet) used by TeX (finish plain?)
   // But provides support for LaTeX (and other formats?) for handling frontmatter.
   //
@@ -162,6 +196,62 @@ LoadDefinitions!({
   // See LaTeX.ltxml for usage.
   // Note: could be circumstances where you'd want modular frontmatter?
   // (ie. frontmatter for each sectional unit)
+
+  // Perl: DebuggableFeature('frontmatter') — Rust uses `log` target "frontmatter".
+
+  // Perl Base_Utility.pool.ltxml (PR #2767): moved here from latex_constructs
+  // (was \@personname); `mode => "text"` + `bounded` carried over from the
+  // earlier Rust port of \@personname.
+  DefConstructor!("\\lx@personname{}", "<ltx:personname>#1</ltx:personname>",
+    before_digest => { Let!("\\thanks", "\\person@thanks"); },
+    bounded => true,
+    mode => "text",
+    enter_horizontal => true
+  );
+  DefMacro!("\\lx@ignore@tabular[]{}", "");
+  DefMacro!("\\lx@ignore@endtabular", "");
+
+  // Sanitize person names for (obvious) punctuation abuse at start+end
+  // (moved here from latex_constructs per PR #2767; the existing Rust
+  // punctuation-strip port is carried over).
+  Tag!("ltx:personname", after_close => sub[_document, node] {
+    if let Some(mut first) = node.get_first_child() {
+      if first.get_type() == Some(NodeType::TextNode) {
+        let first_text = first.get_content();
+        let mut first_text_iter = first_text.chars().peekable();
+        while let Some(peeked) = first_text_iter.peek() {
+          if peeked.is_whitespace() || matches!(peeked, ',' | '!' | ';' | '.' | ':' | '?') {
+            first_text_iter.next();
+          } else {
+            break;
+          }
+        }
+        let new_text = first_text_iter.collect::<String>();
+        if first_text != new_text {
+          first.set_content(&new_text)?;
+        }
+      }
+      if let Some(mut last) = node.get_last_child() {
+        if last.get_type() == Some(NodeType::TextNode) {
+          let last_text = last.get_content();
+          let mut last_text_iter  = last_text.chars().rev().peekable();
+          while let Some(peeked) = last_text_iter.peek() {
+            if peeked.is_whitespace() || matches!(peeked, ',' | '!' | ';' | '.' | ':' | '?') {
+              last_text_iter.next();
+            } else {
+              break;
+            }
+          }
+          let new_text = last_text_iter.rev().collect::<String>();
+          if last_text != new_text {
+            last.set_content(&new_text)?;
+          }
+        }
+      }
+    }
+  });
+
+  //======================================================================
   // Perl Base_Utility.pool.ltxml L161
   AssignValue!(
     "frontmatter",
@@ -174,27 +264,69 @@ LoadDefinitions!({
     state::lookup_bool_sym(pin!("inPreamble"))
   });
 
+  DefKeyVal!("Frontmatter", "role", "Semiverbatim");
+  DefKeyVal!("Frontmatter", "class", "Semiverbatim");
+  DefKeyVal!("Frontmatter", "graphic", "Semiverbatim");
+  DefKeyVal!("Frontmatter", "annotations", "");
+  DefKeyVal!("Frontmatter", "label", "");
+  DefKeyVal!("Frontmatter", "labelref", "Semiverbatim");
+  DefKeyVal!("Frontmatter", "labelseq", "");
+  DefKeyVal!("Frontmatter", "annotate", "");
+
+  // \lx@clear@frontmatter{tag}[kv]
+  // Remove all pending frontmatter element matching $tag, and role (if given) in keyvals
+  DefPrimitive!("\\lx@clear@frontmatter {} OptionalKeyVals:Frontmatter", sub[(tag, kv)] {
+    let role = kv.as_ref()
+      .and_then(|kv| kv.get_value("role"))
+      .map(|v| v.to_string())
+      .filter(|r| !r.is_empty());
+    match role {
+      Some(ref role) => dequeue_front_matter(&tag.to_string(), &[("role", role)]),
+      None => dequeue_front_matter(&tag.to_string(), &[]),
+    }
+  });
+
+  // Remove all creators with given role (default author)
+  DefMacro!("\\lx@clear@creators []", "\\lx@clear@frontmatter{ltx:creator}[#1]");
+
+  // The various \lx@add@<frontmatter> commands
+  //  (1) queue the command (appending @now) in the frontmatter_raw state variable
+  //    to defer digestion (& possible replacement)
+  //  (2) when the @now form is digested (see digest_front_matter)
+  //    will add an entry to the frontmatter hash state variable.
+  //    That hash is keyed by the tag, with values contains a list of
+  //      [tag, {attr}, @content]
+  //    to create an element <tag> with the given attributes and content.
+  //    Each content item is either a Box (List,Whatsit)
+  //    or recursively an array [tag,{attr},@content].
+
+  // See clean_trailing_break for cleanup of misused \\.
+  Tag!("ltx:personname", after_close => sub[document, node] {
+    clean_trailing_break(document, node)?;
+  });
+  Tag!("ltx:contact", after_close => sub[document, node] {
+    clean_trailing_break(document, node)?;
+  });
+
   // Add a new frontmatter item that will be enclosed in <$tag %attr>...</$tag>
   // The content is the result of digesting $tokens.
-  // \\@add@frontmatter[keys]{tag}[attributes]{content}
-  // Perl: DEFERS processing by pushing \@add@frontmatter@now invocation
-  // into @at@begin@maketitle, which is digested at \maketitle time.
-  // This is critical for correct ordering: \author creates entry BEFORE
-  // \address/\email append to it.
-  DefPrimitive!("\\@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
+  // \lx@add@frontmatter[keys]{tag}[attributes]{content}
+  // keys can have
+  //   replace (to replace the current entry, if any)
+  //   ifnew   (only add if no previous entry)
+  DefPrimitive!("\\lx@add@frontmatter OptionalKeyVals {} OptionalKeyVals {}",
     sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
-    // Build invocation: \@add@frontmatter@now[keys]{tag}[attrs]{tokens}
-    let mut inv_tokens: Vec<Token> = vec![T_CS!("\\@add@frontmatter@now")];
-    // Pass keys if present
+    // Perl: queueFrontMatter($stomach, $tag, $attr,
+    //   Invocation(T_CS('\lx@add@frontmatter@now'), $keys, $tag, $attr, $tokens))
+    let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
     if let Some(ref keys) = keys_opt {
       inv_tokens.push(T_OTHER!("["));
       inv_tokens.extend(keys.revert()?.unlist());
       inv_tokens.push(T_OTHER!("]"));
     }
     inv_tokens.push(T_BEGIN!());
-    inv_tokens.extend(tag_tks.unlist());
+    inv_tokens.extend(tag_tks.unlist_ref().iter().copied());
     inv_tokens.push(T_END!());
-    // Pass attrs if present
     if let Some(ref attrs) = attrs_opt {
       inv_tokens.push(T_OTHER!("["));
       inv_tokens.extend(attrs.revert()?.unlist());
@@ -203,171 +335,578 @@ LoadDefinitions!({
     inv_tokens.push(T_BEGIN!());
     inv_tokens.extend(tokens.unlist());
     inv_tokens.push(T_END!());
-    let _ = state::push_value("@at@begin@maketitle", Stored::Tokens(Tokens::new(inv_tokens)));
+    queue_front_matter(&tag_tks.to_string(), attrs_opt.as_ref(), Tokens::new(inv_tokens));
   });
 
-  // \@add@frontmatter@now — actually processes the frontmatter entry
-  // keys can have: replace (to replace the current entry, if any),
-  //                ifnew (only add if no previous entry)
-  DefPrimitive!("\\@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals {}",
-    sub[(keys_opt,tag_tks,attrs_opt,tokens)] {
-    // Digest this as if we're already in the document body!
-    let inpreamble = state::lookup_bool_sym(pin!("inPreamble"));
-    assign_value("inPreamble", false, None);
-    // Be careful since the contents may also want to add frontmatter
-    // (which should be inside or after this one!)
-    // So, we append this entry before digesting (Perl comment from Base_Utility.pool.ltxml)
+  DefPrimitive!("\\lx@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals:Frontmatter {}",
+    sub[(_obsoletekeys, tag_tks, kv, content)] {
     let tag = tag_tks.to_string();
-    if let Some(keys) = keys_opt {
-      let known_key = state::with_value("frontmatter", |v| {
-        matches!(v, Some(Stored::HashTagData(frnt)) if frnt.contains_key(&tag))
-      });
-      if known_key && keys.has_key("replace") {
-        state::with_value_mut("frontmatter", |val_opt| {
-          if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
-            frnt.insert(tag.clone(), Vec::new());
+    // %options = digested keyvals hash; role read from the UNdigested keyvals
+    // (Careful! Multiple values — Perl getValue returns the last one.)
+    let mut options = TagAttrs::default();
+    let mut role = String::new();
+    if let Some(kv) = kv {
+      role = kv.get_value("role").map(|v| v.to_string()).unwrap_or_default();
+      if let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
+        for key in dkv.get_keyvals().keys() {
+          if let Some(v) = dkv.get_value_digested(key) {
+            options.insert(key.clone(), v.to_string());
           }
-        });
-      }
-      if known_key && keys.has_key("ifnew") {
-        return Ok(Vec::new());
-      }
-    }
-
-    let attrs_digested = if let Some(attr_kvs) = attrs_opt {
-      if let DigestedData::KeyVals(digested) = attr_kvs.be_digested()?.data() {
-        Some(digested.get_hash_digested())
-      } else {
-        None
-      }
-    } else {
-      None
-    };
-    // Perl: Create entry FIRST, then digest content (so nested @add@to@ appends to this entry)
-    let placeholder = Digested::from(List::new(Vec::new()));
-    let entry = (tag.clone(), attrs_digested, placeholder);
-    state::with_value_mut("frontmatter", |val_opt| {
-      let frontmatter = match val_opt {
-        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-        _ => fatal!(TexPool, Expected, "Global TeX Frontmatter hash was not available, should never happen"),
-      };
-      let f_entry = frontmatter.entry(tag.clone()).or_insert_with(Vec::new);
-      f_entry.push(entry);
-      Ok(())
-    })?;
-    // NOW digest the content — nested @add@to@frontmatter calls will see this entry as "last"
-    // Perl Base_Utility.pool.ltxml L204: `DigestText(Tokens($tokens))` — text-mode
-    // digest forces math content (e.g. `$$Id…$$` CVS markers in `\date{}`) to
-    // flatten into plain text instead of producing `<ltx:equation>` whatsits
-    // that wouldn't fit the schema slot (e.g. `<ltx:date>` rejects equations).
-    //
-    // Was: wrapped tokens in T_BEGIN/T_END, opening an extra group inside
-    // DigestText. The extra group can interact with mode-changing tokens
-    // in the body (e.g. \itshape via DefPrimitive setting font, or
-    // \@@@affiliation in IEEEtran multi-author setups) such that the
-    // DigestText's end_mode("text") sees BOUND_MODE shifted by the inner
-    // group's font/mode side effects. Mirror Perl's `DigestText(Tokens($tokens))`
-    // — no wrap. Driver: 2403.14274 IEEEconf abstract+keywords+IEEEpeerreviewmaketitle.
-    let digested_tokens = DigestText!(tokens)?;
-    // Fill in the placeholder
-    state::with_value_mut("frontmatter", |val_opt| {
-      let frontmatter = match val_opt {
-        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-        _ => return Ok::<(), latexml_core::Error>(()),
-      };
-      if let Some(list) = frontmatter.get_mut(&tag) {
-        if let Some(last) = list.last_mut() {
-          last.2 = digested_tokens;
         }
       }
-      Ok(())
-    })?;
-    AssignValue!("inPreamble", inpreamble);
+    }
+    // extract (possibly multiple!) labels
+    let mut labels = clean_frontmatter_labels(
+      options.get("annotations").map(String::as_str).unwrap_or(""), "");
+    if !role.is_empty() {
+      let n = lookup_mapping_int(&s!("num_{tag}"), &role) + 1;
+      assign_mapping(&s!("num_{tag}"), &role, Some(Stored::Int(n)));
+      options.insert("role".to_string(), role.clone());
+      options.insert("_num".to_string(), n.to_string());
+      // record sequence position as potential attachment label
+      labels.push(clean_label(&n.to_string(), Some(&role)).into_owned());
+    }
+    match get_frontmatter_name(options.get("name"), &tag, &role)? {
+      Some(name) => { options.insert("name".to_string(), name); },
+      None => { options.remove("name"); },
+    }
+    options.insert("_annotations".to_string(), labels.join(","));
+    let entry = TagData {
+      tag: tag.clone(),
+      attr: options,
+      content: vec![TagContent::PlaceKeeper], // (in case embedded)
+    };
+    log::debug!(target: "frontmatter", "FRONT Add {}\n   for: {}",
+      show_frontmatter(&entry), content);
+    let index = frontmatter_push(&tag, entry);
+    // REPLACE only 'place_keeper'!!
+    let digested = digest_frontmatter_item(&tag, content)?;
+    frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
   }, bounded => true);
 
-  // Append a piece of data to an existing frontmatter item that is contained in <$tag>
-  // If $label is given, look for an item which has label=>$label,
-  // otherwise, just append to the last item in $tag.
+  // This is a variant of \lx@add@frontmatter which digests immediately
+  // until a terminator token;
+  // It is useful for frontmatter environments, like {abstract}
+  // (expanding until \end{abstract} generally gets tangled by contents which expect
+  // digestion and side effects).
+  DefPrimitive!("\\lx@add@frontmatter@until {} OptionalKeyVals:Frontmatter DefToken",
+    sub[(tag_tks, kv, end)] {
+    let tag = tag_tks.to_string();
+    let mut options = TagAttrs::default();
+    let mut role = String::new();
+    if let Some(kv) = kv {
+      role = kv.get_value("role").map(|v| v.to_string()).unwrap_or_default();
+      if let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
+        for key in dkv.get_keyvals().keys() {
+          if let Some(v) = dkv.get_value_digested(key) {
+            options.insert(key.clone(), v.to_string());
+          }
+        }
+      }
+    }
+    // extract (possibly multiple!) labels
+    let mut labels = clean_frontmatter_labels(
+      options.get("annotations").map(String::as_str).unwrap_or(""), "");
+    if !role.is_empty() {
+      let n = lookup_mapping_int(&s!("num_{tag}"), &role) + 1;
+      assign_mapping(&s!("num_{tag}"), &role, Some(Stored::Int(n)));
+      options.insert("role".to_string(), role.clone());
+      options.insert("_num".to_string(), n.to_string());
+      // record sequence position as potential attachment label
+      labels.push(clean_label(&n.to_string(), Some(&role)).into_owned());
+    }
+    match get_frontmatter_name(options.get("name"), &tag, &role)? {
+      Some(name) => { options.insert("name".to_string(), name); },
+      None => { options.remove("name"); },
+    }
+    options.insert("_annotations".to_string(), labels.join(","));
+    let entry = TagData {
+      tag: tag.clone(),
+      attr: options,
+      content: vec![TagContent::PlaceKeeper], // (in case embedded)
+    };
+    let index = frontmatter_push(&tag, entry);
+    let body = stomach::digest_next_body(Some(end))?;
+    let digested = Digested::from(List::new(body));
+    log::debug!(target: "frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
+    frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
+  }, bounded => true);
 
-  // \@add@to@frontmatter{tag}[label]{content}
-  // Perl: defers processing by pushing \@add@to@frontmatter@now invocation
-  // into @at@begin@maketitle, which is digested at \maketitle time.
-  DefPrimitive!("\\@add@to@frontmatter {} [] {}", sub[(tag, label, tokens)] {
-    // Build invocation: \@add@to@frontmatter@now{tag}[label]{tokens}
-    let mut inv_tokens = vec![T_CS!("\\@add@to@frontmatter@now"), T_BEGIN!()];
-    inv_tokens.extend(tag.unwrap_or_default().unlist());
+  // Some frontmatter elements are "structured" in the sense of having a main bit of data
+  // and several optional extra bits.  For example, LaTeX classes typically have markup
+  // to define "creators" (authors, editors,etc) and a variety of markup strategies to
+  // annotate them with "contacts" (affiliation, email, etc)
+  // In the easy case, that markup is embedded within \author. Otherwise, it appears
+  // separately and will be "attached" to the most recent creator,
+  //
+  // The \lx@annotate@frontmatter command is used to annotate some frontmatter elements,
+  // with additional data. Several keywords support different attachment methods:
+  //   label : $label; find the $parenttag with annotations containing $label.
+  //   labelseq=$prefix : n-th $tag+$role attaches to $parenttag using label = prefix+n
+  //   annotate=(all | new | <number> )
+  //     all : attaches to all preceding $parenttag
+  //     new : like all, but only those not yet having this type of annotation
+  //     <number> : attaches to the <number>-th previous $parenttag
+  //   <default> : attach to preceding $parenttag.
+
+  // \lx@annotate@frontmatter{parenttag}{tag}[options]{content}
+  // adds a tag element, containing content, to an appropriate parenttag,
+  // according to the attachment criterion in options keyvals.
+  DefPrimitive!("\\lx@annotate@frontmatter {} {} OptionalKeyVals:Frontmatter {}",
+    sub[(parenttag, tag, kv, content)] {
+    // Perl: queueFrontMatter($stomach, ToString($tag), $kv,
+    //   Invocation(T_CS('\lx@annotate@frontmatter@now'), $parenttag, $tag, $kv, $content))
+    let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@annotate@frontmatter@now")];
+    inv_tokens.push(T_BEGIN!());
+    inv_tokens.extend(parenttag.unlist_ref().iter().copied());
     inv_tokens.push(T_END!());
-    if let Some(ref lbl) = label {
+    inv_tokens.push(T_BEGIN!());
+    inv_tokens.extend(tag.unlist_ref().iter().copied());
+    inv_tokens.push(T_END!());
+    if let Some(ref kv) = kv {
       inv_tokens.push(T_OTHER!("["));
-      inv_tokens.extend_from_slice(lbl.unlist_ref());
+      inv_tokens.extend(kv.revert()?.unlist());
       inv_tokens.push(T_OTHER!("]"));
     }
     inv_tokens.push(T_BEGIN!());
-    inv_tokens.extend(tokens.unwrap_or_default().unlist());
+    inv_tokens.extend(content.unlist());
     inv_tokens.push(T_END!());
-    let _ = state::push_value("@at@begin@maketitle", Stored::Tokens(Tokens::new(inv_tokens)));
+    queue_front_matter(&tag.to_string(), kv.as_ref(), Tokens::new(inv_tokens));
   });
 
-  // \@add@to@frontmatter@now{tag}[label]{content}
-  // Actually processes content into the frontmatter hash.
-  DefPrimitive!("\\@add@to@frontmatter@now {} [] {}",
-    sub[(tag_tks, label_opt, tokens)] {
-    let tag = tag_tks.unwrap().to_string();
-    let label = label_opt.as_ref().map(|l| l.to_string());
-    let inpreamble = state::lookup_bool_sym(pin!("inPreamble"));
-    assign_value("inPreamble", false, None);
+  DefPrimitive!("\\lx@annotate@frontmatter@now {}{} OptionalKeyVals:Frontmatter {}",
+    sub[(parenttag_tks, tag_tks, kv, content)] {
+    let parenttag = parenttag_tks.to_string();
+    let tag = tag_tks.to_string();
+    let preformatted = tag == "preformatted"; // Obsolete API? $content is constructor!
+    let mut options = TagAttrs::default();
+    if let Some(kv) = kv {
+      if let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
+        for key in dkv.get_keyvals().keys() {
+          if let Some(v) = dkv.get_value_digested(key) {
+            options.insert(key.clone(), v.to_string());
+          }
+        }
+      }
+    }
+    // Perl: $role = $options{role} = ToString($options{role}) — digested value here
+    let role = options.get("role").cloned().unwrap_or_default();
+    options.insert("role".to_string(), role.clone());
+    let mut labels = clean_frontmatter_labels(
+      options.get("label").map(String::as_str).unwrap_or(""), "");
+    if !role.is_empty() {
+      let n = lookup_mapping_int(&s!("num_{tag}"), &role) + 1;
+      assign_mapping(&s!("num_{tag}"), &role, Some(Stored::Int(n)));
+      if let Some(labelseq) = options.get("labelseq") {
+        if !labelseq.is_empty() {
+          labels.push(clean_label(&n.to_string(), Some(labelseq)).into_owned());
+        }
+      }
+    }
+    match get_frontmatter_name(options.get("name"), &tag, &role)? {
+      Some(name) => { options.insert("name".to_string(), name); },
+      None => { options.remove("name"); },
+    }
+    options.insert("_label".to_string(), labels.join(","));
 
-    // Digest the content tokens
-    let mut wrapped = vec![T_BEGIN!()];
-    wrapped.extend(tokens.unwrap_or_default().unlist());
-    wrapped.push(T_END!());
-    let datum = stomach::digest(Tokens::new(wrapped))?;
-
-    assign_value("inPreamble", inpreamble, None);
-
-    state::with_value_mut("frontmatter", |val_opt| {
-      let frontmatter = match val_opt {
-        Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-        _ => fatal!(TexPool, Expected, "Frontmatter hash missing"),
+    // Snapshot the parent entries (those not role=pending), inherit labels
+    // from an enclosing pending entry, and push a tentative stub entry —
+    // in case digestion changes labels!
+    let (parent_indices, stub_idx) = state::with_value_mut("frontmatter", |val_opt| {
+      if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+        let list = frnt.entry(parenttag.clone()).or_insert_with(Vec::new);
+        let parent_indices: Vec<usize> = list.iter().enumerate()
+          .filter(|(_, e)| e.attr.get("role").map(String::as_str).unwrap_or("") != "pending")
+          .map(|(i, _)| i)
+          .collect();
+        // IF this item encountered WITHIN another frontmatter
+        // we inherit that frontmatter's labels (even override!)
+        if let Some(last) = list.last() {
+          if last.attr.get("role").map(String::as_str) == Some("pending")
+            && matches!(last.content.first(), Some(TagContent::PlaceKeeper))
+          {
+            let inherited = last.attr.get("_annotations").cloned().unwrap_or_default();
+            options.insert("_label".to_string(), inherited);
+          }
+        }
+        let mut stub_attr = TagAttrs::default();
+        stub_attr.insert("role".to_string(), "pending".to_string());
+        stub_attr.insert("_annotations".to_string(),
+          options.get("_label").cloned().unwrap_or_default());
+        let stub = TagData {
+          tag: parenttag.clone(),
+          attr: stub_attr,
+          content: vec![TagContent::PlaceKeeper],
+        };
+        log::debug!(target: "frontmatter", "FRONT Add stub {}\n  for annotation {} [{}]",
+          show_frontmatter(&stub), tag, options.get("_label").map(String::as_str).unwrap_or(""));
+        list.push(stub);
+        (parent_indices, list.len() - 1)
+      } else {
+        (Vec::new(), 0)
+      }
+    });
+    let nparents = parent_indices.len();
+    let xcontent = digest_frontmatter_item(&tag, content)?;
+    // Reset if changed (eg. by \lx@set@frontmatter@label during digestion)!
+    let stub_label = state::with_value("frontmatter", |v| {
+      if let Some(Stored::HashTagData(frnt)) = v {
+        frnt.get(&parenttag)
+          .and_then(|l| l.get(stub_idx))
+          .and_then(|e| e.attr.get("_annotations"))
+          .cloned()
+      } else {
+        None
+      }
+    }).unwrap_or_default();
+    options.insert("_label".to_string(), stub_label.clone());
+    let datum = if preformatted {
+      TagContent::Box(xcontent)
+    } else {
+      TagContent::Entry(TagData {
+        tag: tag.clone(),
+        attr: options.clone(),
+        content: vec![TagContent::Box(xcontent)],
+      })
+    };
+    if !preformatted && (!stub_label.is_empty() || nparents == 0) {
+      // deferred until we can compare labels
+      log::debug!(target: "frontmatter", "... deferring to label={stub_label}");
+      frontmatter_set_first_content(&parenttag, stub_idx, datum);
+    } else {
+      let annotate = options.get("annotate").cloned().unwrap_or_default();
+      let (mut nprev, newonly): (i64, bool) = if annotate.is_empty() {
+        (1, false)
+      } else if annotate.chars().all(|c| c.is_ascii_digit()) {
+        (annotate.parse().unwrap_or(1), false)
+      } else if annotate == "all" {
+        (nparents as i64, false)
+      } else if annotate == "new" {
+        (nparents as i64, true)
+      } else {
+        Info!("unexpected", &tag, s!("Frontmatter annotate '{annotate}' unrecognized"));
+        (1, false)
       };
-      if let Some(ref lbl) = label {
-        // Look for existing item with matching label
-        if let Some(list) = frontmatter.get_mut(&tag) {
-          for item in list.iter_mut() {
-            let (_, ref iattr, _) = item;
-            if let Some(ref attrs) = iattr {
-              if attrs.get("label").map(|s| s.as_str()) == Some(lbl.as_str()) {
-                // Append datum to existing item
-                let (_, _, ref mut existing_content) = item;
-                let items = vec![existing_content.clone(), datum.clone()];
-                *existing_content = Digested::from(List::new(items));
-                return Ok(());
+      log::debug!(target: "frontmatter", "...adding to {nprev} previous{}",
+        if newonly { " new" } else { "" });
+      state::with_value_mut("frontmatter", |val_opt| {
+        if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+          if let Some(list) = frnt.get_mut(&parenttag) {
+            // Remove unneeded (stub) entry.
+            if list.get(stub_idx)
+              .map(|e| e.attr.get("role").map(String::as_str) == Some("pending"))
+              .unwrap_or(false)
+            {
+              list.remove(stub_idx);
+            }
+            let has_role_key = s!("_has{role}");
+            let mut indices = parent_indices.clone();
+            while let Some(pi) = indices.pop() {
+              if nprev <= 0 {
+                break;
+              }
+              nprev -= 1;
+              if let Some(parent) = list.get_mut(pi) {
+                parent.content.push(datum.clone());
+                if !role.is_empty() {
+                  parent.attr.insert(has_role_key.clone(), "1".to_string());
+                  if newonly {
+                    if let Some(&next_pi) = indices.last() {
+                      if list.get(next_pi)
+                        .map(|p| p.attr.contains_key(&has_role_key))
+                        .unwrap_or(false)
+                      {
+                        break;
+                      }
+                    }
+                  }
+                }
               }
             }
           }
         }
-      } else if let Some(list) = frontmatter.get_mut(&tag) {
-        // No label: append datum to last item in tag
-        if let Some(last) = list.last_mut() {
-          let (_, _, ref mut existing_content) = last;
-          let items = vec![existing_content.clone(), datum.clone()];
-          *existing_content = Digested::from(List::new(items));
-          return Ok(());
+      });
+    }
+  });
+
+  // These next two are primitives executing during digestion (BEFORE XML);
+  // they add to or replace labels to be used when building the frontmatter plan.
+
+  // \lx@request@frontmatter@annotation adds additional (comma separated) labels to the
+  // currently being digesting frontmatter;
+  // Typically would \let\inst to this, and used within creator's content
+  // to identify contacts to include.
+  // Can provide the prefix to distinguish different sets of labels
+  DefPrimitive!("\\lx@request@frontmatter@annotation[]{}", sub[(prefix, label)] {
+    let prefix = prefix.as_ref().map(ToString::to_string).unwrap_or_default();
+    let label = clean_frontmatter_labels(
+      &label.to_string(),
+      if prefix.is_empty() { "LABEL" } else { &prefix }).join(",");
+    with_pending_entry_attr(move |attr| {
+      let labels = attr.get("_annotations").cloned().unwrap_or_default();
+      let newval = if labels.is_empty() { label.clone() } else { s!("{labels},{label}") };
+      log::debug!(target: "frontmatter", "FRONT add annotation label {label}");
+      attr.insert("_annotations".to_string(), newval);
+    });
+  });
+
+  // \lx@set@frontmatter@label Internal to digesting annotation contents.
+  // it sets (replaces) the _annotation labels on the currently being digesting
+  // frontmatter so that the annotation inherits it as label (!!)
+  // Typically would \let\label to this so that a \ref within a parent frontmatter
+  // will get an annotation with corresponding \label will be attached.
+  DefPrimitive!("\\lx@set@frontmatter@label Semiverbatim", sub[(label)] {
+    let label = clean_frontmatter_labels(&label.to_string(), "LABEL").into_iter().next();
+    with_pending_entry_attr(move |attr| {
+      match label {
+        Some(label) => {
+          log::debug!(target: "frontmatter", "FRONT set label {label}");
+          attr.insert("_annotations".to_string(), label);
+        },
+        None => {
+          attr.remove("_annotations");
+        },
+      }
+    });
+  });
+
+  //======================================================================
+  // Some shorthands?
+
+  DefMacro!("\\lx@add@title[]{}",
+    "\\lx@clear@frontmatter{ltx:title}\\lx@add@frontmatter{ltx:title}[#1]{#2}");
+  DefMacro!("\\lx@add@toctitle[]{}",
+    "\\lx@clear@frontmatter{ltx:toctitle}\\lx@add@frontmatter{ltx:toctitle}[#1]{#2}");
+  DefMacro!("\\lx@add@subtitle[]{}",
+    "\\lx@clear@frontmatter{ltx:subtitle}\\lx@add@frontmatter{ltx:subtitle}[#1]{#2}");
+
+  // careful: the "name", #2, can contain much more than just the name!
+  DefMacro!("\\lx@add@creator [] {}",
+    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}");
+  DefMacro!("\\lx@add@author[]{}",
+    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}");
+  DefMacro!("\\lx@add@editor[]{}",
+    "\\lx@add@frontmatter{ltx:creator}[role=editor,#1]{\\lx@personname{#2}}");
+  DefMacro!("\\lx@add@translator[]{}",
+    "\\lx@add@frontmatter{ltx:creator}[role=translator,#1]{\\lx@personname{#2}}");
+
+  DefMacro!("\\lx@add@date[]{}",
+    "\\lx@clear@frontmatter{ltx:date}[role=created,#1]\\lx@add@frontmatter{ltx:date}[role=created,#1]{#2}"); // no duplicates w/same role
+  DefMacro!("\\lx@copyright@holder", "");
+  DefMacro!("\\lx@copyright@date", "");
+  DefMacro!("\\lx@add@copyright{}",
+    "\\lx@add@date[role=copyright]{#1}");
+  // Next two are for when copyright holder & year are given by 2 separate macros
+  DefMacro!("\\lx@add@copyrightholder{}",
+    "\\gdef\\lx@copyright@holder{#1}\\lx@add@copyright{\\lx@copyright@holder\\ \\lx@copyright@date}");
+  DefMacro!("\\lx@add@copyrightyear{}",
+    "\\gdef\\lx@copyright@date{#1}\\lx@add@copyright{\\ifx.\\lx@copyright@holder.\\else\\lx@copyright@holder, \\fi\\lx@copyright@date}");
+
+  DefMacro!("\\lx@add@abstract[]{}",
+    "\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter{ltx:abstract}[#1]{#2}");
+  DefMacro!("\\lx@add@keywords[]{}",
+    "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter{ltx:keywords}[#1]{#2}");
+  DefMacro!("\\lx@add@classification[]{}",
+    "\\lx@add@frontmatter{ltx:classification}[#1]{#2}");
+  // To handle the above as environments
+  DefMacro!("\\lx@begin@abstract[]",
+    "\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter@until{ltx:abstract}[#1]{\\lx@end@abstract}");
+
+  // Like \let \relax, but \relax not def yet!
+  DefPrimitive!("\\lx@end@abstract", None);
+
+  DefMacro!("\\lx@begin@keywords[]",
+    "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter@until{ltx:keywords}[#1]{\\lx@end@keywords}");
+
+  DefPrimitive!("\\lx@end@keywords", None);
+
+  // Add random notes about the document itself
+  DefMacro!("\\lx@add@pubnote[]{}",
+    "\\lx@add@frontmatter{ltx:pubnote}[#1]{#2}");
+  DefMacro!("\\lx@add@pubnote@thanks[]{}",
+    "\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}");
+
+  // Other kinds of notes?
+
+  // The following add various forms of contact information to a creator
+  DefMacro!("\\lx@add@contact []{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[#1]{#2}");
+
+  DefMacro!("\\lx@add@affiliation[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{#2}");
+  DefMacro!("\\lx@add@altaffiliation[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaffiliation,#1]{#2}");
+  DefMacro!("\\lx@add@address[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=address,#1]{#2}");
+  DefMacro!("\\lx@add@altaddress[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaddress,#1]{#2}");
+  DefMacro!("\\lx@add@currentaddress[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=currentaddress,#1]{#2}");
+  DefMacro!("\\lx@add@email [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}");
+  DefMacro!("\\lx@add@url [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}");
+  DefMacro!("\\lx@add@orcid [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{#2}");
+  DefMacro!("\\lx@add@thanks [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}");
+  DefMacro!("\\lx@add@note [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=note,#1]{#2}");
+
+  // This corresponds to standard LaTeX,
+  // The command replaces any previous authors/creators;
+  // It defining several creators separated by \and;
+  // and can use \\ to separate affiliation from each author.
+  // BUT ALSO, this markup is commonly abused by putting authors & affiliations in
+  // seemingly random orders, but adding superscript markers to connect them.
+  // Assumption: superscript near END is used for authors; near FRONT for affiliation.
+  // NOTE: This is a mess! really should use role, so could apply to editors also
+  // AND, matching \\ this way fails to catch \\[1em], so really should Let it
+
+  DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
+    let mut calls: Vec<Token> = Vec::new();
+    dequeue_front_matter("ltx:creator", &[("role", "author")]);
+    // If too much formatting, fall back to unstructured author content
+    let stuff_string = stuff.to_string();
+    if stuff_string.contains("{tabular}")
+      || stuff_string.contains("{minipage}")
+      || stuff_string.contains("\\halign")
+    {
+      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(stuff)]).unlist());
+    } else if position_of(&stuff, &authorsup_markers()).is_some() {
+      let lines = split_tokens(stuff, author_affil_splits());
+      // entries of (is_author, line)
+      let mut entries: Vec<(bool, Tokens)> = Vec::new();
+      for line in lines {
+        if line.is_empty() {
+          continue;
+        }
+        match position_of(&line, &authorsup_markers()) {
+          None => {
+            // No marker?
+            if let Some(last) = entries.last_mut() {
+              // continues previous entry; Append
+              let mut appended = last.1.clone().unlist();
+              appended.extend(line.unlist());
+              last.1 = Tokens::new(appended);
+            } else {
+              entries.push((true, line)); // safest to assume author?
+            }
+          },
+          Some(p) if p < 8 => {
+            // Close to front? assume affiliation
+            entries.push((false, line));
+          },
+          Some(_) => {
+            // Presumably author; but split again on "," JIK
+            for author in split_tokens(line, vec![SplitDelim::Token(T_OTHER!(","))]) {
+              entries.push((true, author));
+            }
+          },
         }
       }
-      // New entry
-      let attrs = label.map(|l| {
-        let mut m = HashMap::default();
-        m.insert("label".to_string(), l);
-        m
-      });
-      let entry = (tag.clone(), attrs, datum);
-      frontmatter.entry(tag).or_insert_with(Vec::new).push(entry);
-      Ok(())
-    })?;
-  },
-  before_digest => { stomach::bgroup(); },
-  after_digest => { let _ = stomach::egroup(); });
+      for (is_author, line) in entries {
+        if is_author {
+          let withsup = Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]);
+          calls.extend(
+            Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(withsup)]).unlist());
+        } else {
+          let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
+          calls.extend(
+            Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
+        }
+      }
+    } else {
+      for block in split_tokens(stuff, author_splits()) {
+        if block.is_empty() {
+          continue;
+        }
+        let mut pieces = split_tokens(block, vec![SplitDelim::Token(T_CS!("\\\\"))]).into_iter();
+        let author = pieces.next().unwrap_or_default();
+        let mut body: Vec<Token> = author.unlist();
+        for line in pieces {
+          if !line.is_empty() {
+            body.extend(
+              Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(line)]).unlist());
+          }
+        }
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(Tokens::new(body))]).unlist());
+      }
+    }
+    Ok(Tokens::new(calls))
+  });
+
+  DefMacro!("\\lx@author@withsup{}",
+    "\\bgroup\\let^\\lx@request@frontmatter@annotation\\let\\textsuperscript\\lx@request@frontmatter@annotation#1\\egroup");
+  DefMacro!("\\lx@affiliation@withsup{}",
+    "\\bgroup\\let^\\lx@set@frontmatter@label\\let\\textsuperscript\\lx@set@frontmatter@label#1\\egroup");
+
+  DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
+    let mut calls: Vec<Token> = Vec::new();
+    dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
+    let with_sup = position_of(&stuff, &authorsup_markers()).is_some();
+    for line in split_tokens(stuff, affil_splits()) {
+      if with_sup {
+        let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(withsup)]).unlist());
+      } else {
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(line)]).unlist());
+      }
+    }
+    Ok(Tokens::new(calls))
+  });
+
+  DefMacro!("\\lx@date@received@name", "Received~");
+  DefMacro!("\\lx@date@revised@name", "Revised~");
+  DefMacro!("\\lx@date@accepted@name", "Accepted~");
+  DefMacro!("\\lx@date@draft@name", "Drafted~");
+  DefMacro!("\\lx@date@posted@name", "Posted~");
+  DefMacro!("\\lx@date@copyright@name", "\u{A9} ");
+
+  DefMacro!("\\lx@pubnote@type@name", "Publication type:~");
+  DefMacro!("\\lx@pubnote@note@name", "Note:~");
+  DefMacro!("\\lx@pubnote@pubid@name", "PubID:~");
+  DefMacro!("\\lx@pubnote@doi@name", "DOI:~");
+  DefMacro!("\\lx@pubnote@isbn@name", "ISBN:~");
+  DefMacro!("\\lx@pubnote@arxiv@name", "arXiv:~");
+  DefMacro!("\\lx@pubnote@preprint@name", "Preprint:~");
+  DefMacro!("\\lx@pubnote@journal@name", "Journal:~");
+  DefMacro!("\\lx@pubnote@conference@name", "Conference:~");
+  DefMacro!("\\lx@pubnote@issue@name", "Issue:~");
+  DefMacro!("\\lx@pubnote@volume@name", "Volume:~");
+  DefMacro!("\\lx@pubnote@dedication@name", "Dedication:~");
+  DefMacro!("\\lx@pubnote@thanks@name", "Thanks:~");
+
+  DefMacro!("\\lx@abstract@name", "Abstract");
+  DefMacro!("\\lx@keywords@name", "Keywords:~");
+  DefMacro!("\\lx@classification@name", "Classification:~");
+
+  DefMacro!("\\lx@contact@affiliation@name", "Affiliation:~");
+  DefMacro!("\\lx@contact@altaffiliation@name", "Alternate Affiliation:~");
+  DefMacro!("\\lx@contact@address@name", "Address:~");
+  DefMacro!("\\lx@contact@email@name", "Email:~");
+  DefMacro!("\\lx@contact@url@name", "URL:~");
+  DefMacro!("\\lx@contact@orcid@name", "OrcID:~");
+  DefMacro!("\\lx@contact@note@name", "Note:~");
+  DefMacro!("\\lx@contact@thanks@name", "Thanks:~");
+  DefMacro!("\\lx@contact@correspondent@name", "Corresponding author:~");
+
+  //======================================================================
+  // This is called by afterOpen (by default on <ltx:document>) to
+  // output any frontmatter that was accumulated.
+
+  // Add a annotation target based on the name for fuzzy matching of annotations.
+  Tag!("ltx:creator", after_close => sub[document, creator] {
+    if let Some(person) = document.findnode("ltx:personname", Some(&*creator)) {
+      let label = clean_label(&person.get_content(), Some("fuzzy")).into_owned();
+      let labels = creator.get_attribute("_annotations").unwrap_or_default();
+      let value = if labels.is_empty() { label } else { s!("{labels},{label}") };
+      document.set_attribute(creator, "_annotations", &value)?;
+    }
+  });
 
   // Add FrontMatter at document begin, unless deferred to a better position.
   Tag!("ltx:document", after_open_late => sub[document,_root] {
@@ -378,83 +917,37 @@ LoadDefinitions!({
 
   // Request Frontmatter to appear HERE (if not already done),
   // deferring it from document begin.
+  // This should be where ALL the digestion of frontmatter happens
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
   after_digest => {
-    // Perl: digest @at@begin@maketitle tokens (which runs \@add@to@frontmatter@now
-    // for each deferred frontmatter entry, populating the frontmatter hash)
-    // with_value walks the VecDeque in-place so we don't pay for a
-    // full Stored::clone (each inner Tokens would Rc-bump again).
-    let all_tokens = state::with_value("@at@begin@maketitle", |v| {
-      if let Some(Stored::VecDequeStored(tks_list)) = v {
-        let mut acc = Vec::new();
-        for stored_item in tks_list.iter() {
-          if let Stored::Tokens(ref tks) = stored_item {
-            acc.extend(tks.unlist_ref().iter().copied());
-          }
-        }
-        acc
-      } else {
-        Vec::new()
-      }
-    });
-    // Clear queue BEFORE digesting (revtex/aa.cls 0907.0384): if frontmatter
-    // body contains tokens that re-invoke \lx@frontmatterhere/fallback (e.g.
-    // through cls-supplied macros that themselves emit \@add@frontmatter
-    // calls), nested invocations would otherwise see the SAME queue and
-    // recursively re-digest it. Clear first → nested invocations see empty,
-    // safely skip — and any newly-pushed entries during this digest will be
-    // processed by the next invocation (or end-of-document fallback).
-    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
-    if !all_tokens.is_empty() {
-      // The deferred-frontmatter digest is best-effort: errors here
-      // (e.g. a malformed `\title{...}` body or a paper-local hook
-      // that raises Fatal!) shouldn't bubble up as a hard fatal,
-      // since the rest of the document body has already converted
-      // successfully. But the Fatal! macro sets `report.fatal=true`
-      // BEFORE returning Err, so `let _ = digest(...)` silently
-      // swallows the Err while leaving the fatal-flag set —
-      // producing "1 fatal error" with NO Fatal: log line in the
-      // output (witness arXiv:1903.01633). Snapshot the fatal flag
-      // around the digest call and restore it if it flipped — we
-      // surface the underlying issue via a Warn instead.
-      let fatal_before = latexml_core::common::error::get_status(
-        latexml_core::common::error::LogStatus::Fatal) > 0;
-      if let Err(e) = stomach::digest(Tokens::new(all_tokens)) {
-        if !fatal_before {
-          latexml_core::common::error::clear_fatal_flag();
-        }
-        log::warn!(
-          "maketitle frontmatter digest swallowed Err: {:?}:{:?} {}",
-          e.target, e.category, e.message
-        );
-      }
-    }
+    digest_front_matter()?;
     state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
-  // Fallback: if \maketitle wasn't used, this still triggers frontmatter placement.
-  // Perl: processes @at@begin@maketitle tokens.
-  DefPrimitive!("\\lx@frontmatter@fallback", None,
-  after_digest => {
-    let all_tokens = state::with_value("@at@begin@maketitle", |v| {
-      if let Some(Stored::VecDequeStored(tks_list)) = v {
-        let mut acc = Vec::new();
-        for stored_item in tks_list.iter() {
-          if let Stored::Tokens(ref tks) = stored_item {
-            acc.extend(tks.unlist_ref().iter().copied());
-          }
-        }
-        acc
-      } else {
-        Vec::new()
-      }
-    });
-    // Mirror the queue-clear-before-digest pattern from \lx@frontmatterhere:
-    // prevents nested invocation re-digesting the same entries.
-    state::assign_value("@at@begin@maketitle", Stored::None, Some(Scope::Global));
-    if !all_tokens.is_empty() {
-      let _ = stomach::digest(Tokens::new(all_tokens));
+  // Same, but put it at the beginning of document, but after any ltx:resources
+  DefConstructor!("\\lx@frontmatter@fallback", sub[document,_args] {
+    let savenode = document.get_node().clone();
+    let mut point = document.findnode("ltx:document/ltx:resource[last()]", None);
+    if let Some(p) = point.take() {
+      point = p.get_next_sibling();
     }
+    let wrapper = if let Some(point) = point {
+      Some(document.insert_element_before(&point, "ltx:_Capture_", None)?)
+    } else if let Some(mut document_element) = document.get_document().get_root_element() {
+      Some(document.open_element_at(&mut document_element, "ltx:_Capture_", None, None)?)
+    } else {
+      None
+    };
+    if let Some(wrapper) = wrapper {
+      document.set_node(&wrapper);
+      insert_frontmatter(document)?;
+      document.unwrap_nodes(wrapper)?;
+      document.set_node(&savenode);
+    }
+  },
+  after_digest => {
+    digest_front_matter()?;
+    state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
   // Maintain a list of classes that apply to the document root.
@@ -751,11 +1244,378 @@ pub fn join_tokens(conjunction: &Tokens, things: Vec<Tokens>) -> Tokens {
   Tokens::new(result)
 }
 
+//======================================================================
+// Front Matter machinery (Perl Base_Utility.pool.ltxml, PR #2767)
+//======================================================================
+
+/// Perl: showFrontmatter($entry) — debug formatter for a frontmatter entry.
+fn show_frontmatter(entry: &TagData) -> String {
+  let mut attrs: Vec<String> = entry
+    .attr
+    .iter()
+    .map(|(k, v)| s!("{k}={v}"))
+    .collect();
+  attrs.sort();
+  let content: String = entry
+    .content
+    .iter()
+    .map(|c| match c {
+      TagContent::PlaceKeeper => "place_keeper".to_string(),
+      TagContent::Box(d) => d.to_string(),
+      TagContent::Entry(e) => show_frontmatter(e),
+    })
+    .collect();
+  s!("{}  [{}] {}", entry.tag, attrs.join(","), content)
+}
+
+/// Perl: LookupMapping returning a number (0 when absent).
+fn lookup_mapping_int(map: &str, key: &str) -> i64 {
+  match state::lookup_mapping(map, key) {
+    Some(Stored::Int(n)) => n,
+    Some(Stored::Number(n)) => n.0,
+    _ => 0,
+  }
+}
+
+/// Walk a `Digested` and concatenate its text content (for attribute use,
+/// matching Perl's `setAttribute(..., DigestText(...))` semantics). Tbox
+/// children contribute their text; nested Lists recurse; `\hskip`-style
+/// Whatsits (which are side-effect-only constructors with no text content)
+/// fall back to `dimension_to_spaces(width)` instead of reverting to the
+/// macro name. All other Whatsits use their normal `get_string` path.
+/// (Rust-only helper, previously in latex_constructs; moved here since
+/// digest_front_matter needs it for the creator `before` separators.)
+pub fn digested_to_text(d: &Digested) -> Result<String> {
+  let mut out = String::new();
+  match d.data() {
+    DigestedData::TBox(b) => out.push_str(&b.borrow().get_string()?),
+    DigestedData::List(l) => {
+      for child in l.borrow().boxes.iter() {
+        out.push_str(&digested_to_text(child)?);
+      }
+    },
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      if let Some(Stored::Dimension(width)) = w.get_property("width").as_deref() {
+        out.push_str(&super::tex_glue::dimension_to_spaces(*width));
+      } else {
+        out.push_str(&w.get_string()?);
+      }
+    },
+    _ => out.push_str(&d.to_string()),
+  }
+  Ok(out)
+}
+
+/// frontmatter_raw contains the undigested commands to create frontmatter,
+/// along with the tag & attributes that would be created.
+/// Digestion is deferred until \maketitle, or something similar,
+/// to avoid extra side-effects, particularly when entries
+/// (eg. \title, \author) get redefined & replaced.
+/// Use dequeue_front_matter or \lx@clear@frontmatter if there should be only 1 entry of $tag
+/// Perl: queueFrontMatter($stomach, $tag, $attr, $command).
+pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
+  // Convert KeyVals to a hash, but be concerned about multiple values!?!?
+  // (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
+  let mut attr_hash = TagAttrs::default();
+  if let Some(kv) = attr {
+    for key in kv.get_keyvals().keys() {
+      if let Some(value) = kv.get_value(key) {
+        attr_hash.insert(key.clone(), value.to_string());
+      }
+    }
+  }
+  log::debug!(target: "frontmatter", "FRONT Queuing {tag} [{:?}] {command}", attr_hash);
+  let missing = state::with_value("frontmatter_raw", |v| {
+    !matches!(v, Some(Stored::FrontmatterRaw(_)))
+  });
+  if missing {
+    state::assign_value(
+      "frontmatter_raw",
+      Stored::FrontmatterRaw(Vec::new()),
+      Some(Scope::Global),
+    );
+  }
+  state::with_value_mut("frontmatter_raw", |val_opt| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+      queue.push((tag.to_string(), attr_hash, command));
+    }
+  });
+}
+
+/// This removes previously stored (but deferred) frontmatter that is being overridden.
+/// It matches the tag and any stored attributes in `attr`.
+/// Perl: dequeueFrontMatter($tag, %attr).
+pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
+  state::with_value_mut("frontmatter_raw", |val_opt| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+      queue.retain(|entry| {
+        let keep = entry.0 != tag
+          || attr
+            .iter()
+            .any(|(k, v)| entry.1.get(*k).map(String::as_str).unwrap_or("") != *v);
+        if !keep {
+          log::debug!(target: "frontmatter", "FRONT DEQueuing {} [{:?}]", entry.0, entry.1);
+        }
+        keep
+      });
+    }
+  });
+}
+
+/// Digest the content for a frontmatter item, disabling or masking certain commands.
+/// Note that we shouldn't be digesting any frontmatter until within document, so inPreamble unnec.
+/// See clean_trailing_break for cleanup of misused \\.
+/// Perl: digestFrontmatterItem($stomach, $tag, $item).
+fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
+  stomach::bgroup();
+  state::let_i(
+    &T_CS!("\\label"),
+    &T_CS!("\\lx@set@frontmatter@label"),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\footnote"),
+    &(if tag == "ltx:creator" {
+      T_CS!("\\lx@add@note")
+    } else {
+      T_CS!("\\lx@add@pubnote")
+    }),
+    None,
+  );
+  state::let_i(
+    &T_CS!("\\thanks"),
+    &(if tag == "ltx:creator" {
+      T_CS!("\\lx@add@thanks")
+    } else {
+      T_CS!("\\lx@add@pubnote@thanks")
+    }),
+    None,
+  );
+  let digested = digest_text(item);
+  stomach::egroup()?;
+  digested
+}
+
+/// Perl: cleanTrailingBreak($document, $node) — remove trailing whitespace
+/// text nodes and ltx:break elements.
+fn clean_trailing_break(document: &mut Document, node: &mut Node) -> Result<()> {
+  while let Some(last) = node.get_last_child() {
+    let is_ws_text = last.get_type() == Some(NodeType::TextNode)
+      && last.get_content().chars().all(char::is_whitespace);
+    let is_break = arena::with(document::get_node_qname(&last), |qname| qname == "ltx:break");
+    if !(is_ws_text || is_break) {
+      break;
+    }
+    document.remove_node(last);
+  }
+  Ok(())
+}
+
+/// Perl: cleanFrontmatterLabels($labels, $prefix).
+fn clean_frontmatter_labels(labels: &str, prefix: &str) -> Vec<String> {
+  let labels = labels.replace("\\rm", "");
+  let mut cleaned = Vec::new();
+  let mut pieces: Vec<&str> = labels.split(',').collect();
+  // Perl split drops trailing empty fields
+  while pieces.last().is_some_and(|p| p.is_empty()) {
+    pieces.pop();
+  }
+  for label in pieces {
+    let label = label.trim();
+    let mut label = if let Some(inner) = label
+      .strip_prefix("\\ref{")
+      .and_then(|rest| rest.strip_suffix('}'))
+      .filter(|inner| !inner.contains('}'))
+    {
+      s!("LABEL:{}", inner.trim())
+    } else if !prefix.is_empty() {
+      s!("{prefix}:{label}")
+    } else {
+      label.to_string()
+    };
+    label = SPACES_RE.replace_all(&label, "_").into_owned();
+    label.retain(|c| !matches!(c, '{' | '}' | '(' | ')'));
+    cleaned.push(label);
+  }
+  cleaned
+}
+
+/// Look for \lx@<tag>@<role>@name or \lx@<tag>@name
+/// Perl: getFrontmatterName($name, $tag, $role).
+fn get_frontmatter_name(name: Option<&String>, tag: &str, role: &str) -> Result<Option<String>> {
+  let stag = tag.strip_prefix("ltx:").unwrap_or(tag);
+  if let Some(name) = name {
+    if !name.is_empty() {
+      return Ok(Some(name.clone()));
+    }
+  }
+  if !role.is_empty() {
+    let cs = T_CS!(s!("\\lx@{stag}@{role}@name"));
+    if state::lookup_definition(&cs)?.is_some() {
+      return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
+    }
+  }
+  let cs = T_CS!(s!("\\lx@{stag}@name"));
+  if state::lookup_definition(&cs)?.is_some() {
+    return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
+  }
+  Ok(None)
+}
+
+/// Push an entry to frontmatter{tag}, returning its index
+/// (Perl holds a direct entry ref instead).
+fn frontmatter_push(tag: &str, entry: TagData) -> usize {
+  state::with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+      let list = frnt.entry(tag.to_string()).or_insert_with(Vec::new);
+      list.push(entry);
+      list.len() - 1
+    } else {
+      0
+    }
+  })
+}
+
+/// Replace the first content item (the 'place_keeper') of the entry at
+/// (tag, index). Perl: `$$entry[2] = ...` on the held entry ref.
+fn frontmatter_set_first_content(tag: &str, index: usize, content: TagContent) {
+  state::with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+      if let Some(entry) = frnt.get_mut(tag).and_then(|l| l.get_mut(index)) {
+        if let Some(first) = entry.content.first_mut() {
+          *first = content;
+        } else {
+          entry.content.push(content);
+        }
+      }
+    }
+  });
+}
+
+/// Find the frontmatter entry currently being digested and apply `f` to its attrs.
+/// HOPEFULLY, there's only one pending entry ?????????
+/// Perl: fetchPendingEntry().
+fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
+  state::with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+      let mut tags: Vec<String> = frnt.keys().cloned().collect();
+      tags.sort();
+      for tag in tags {
+        if let Some(last) = frnt.get_mut(&tag).and_then(|entries| entries.last_mut()) {
+          if matches!(last.content.first(), Some(TagContent::PlaceKeeper)) {
+            f(&mut last.attr);
+            return;
+          }
+        }
+      }
+    }
+  });
+}
+
+/// Digest FrontMatter (if not already?)
+/// Perl: digestFrontMatter().
+pub fn digest_front_matter() -> Result<()> {
+  stomach::bgroup();
+  // Clear queue BEFORE digesting (revtex/aa.cls 0907.0384): if frontmatter
+  // body contains tokens that re-invoke \lx@frontmatterhere/fallback (e.g.
+  // through cls-supplied macros that themselves emit \lx@add@frontmatter
+  // calls), nested invocations would otherwise see the SAME queue and
+  // recursively re-digest it. Clear first → nested invocations see empty,
+  // safely skip — and any newly-pushed entries during this digest will be
+  // processed by the next invocation (or end-of-document fallback).
+  let commands: Vec<RawFrontmatter> = match state::remove_value("frontmatter_raw") {
+    Some(Stored::FrontmatterRaw(commands)) => commands,
+    _ => Vec::new(),
+  };
+  if !commands.is_empty() {
+    state::let_i(
+      &T_CS!("\\lx@add@frontmatter"),
+      &T_CS!("\\lx@add@frontmatter@now"),
+      None,
+    );
+    state::let_i(
+      &T_CS!("\\lx@annotate@frontmatter"),
+      &T_CS!("\\lx@annotate@frontmatter@now"),
+      None,
+    );
+    for (tag, attr, command) in commands {
+      log::debug!(target: "frontmatter", "FRONT Digesting {tag} [{:?}] {command}", attr);
+      // The deferred-frontmatter digest is best-effort: errors here
+      // (e.g. a malformed `\title{...}` body or a paper-local hook
+      // that raises Fatal!) shouldn't bubble up as a hard fatal,
+      // since the rest of the document body has already converted
+      // successfully. But the Fatal! macro sets `report.fatal=true`
+      // BEFORE returning Err, so `let _ = digest(...)` silently
+      // swallows the Err while leaving the fatal-flag set —
+      // producing "1 fatal error" with NO Fatal: log line in the
+      // output (witness arXiv:1903.01633). Snapshot the fatal flag
+      // around the digest call and restore it if it flipped — we
+      // surface the underlying issue via a Warn instead.
+      let fatal_before = latexml_core::common::error::get_status(
+        latexml_core::common::error::LogStatus::Fatal,
+      ) > 0;
+      if let Err(e) = stomach::digest(command) {
+        if !fatal_before {
+          latexml_core::common::error::clear_fatal_flag();
+        }
+        log::warn!(
+          "frontmatter digest swallowed Err: {}:{} {}",
+          format!("{:?}", e.target),
+          format!("{:?}", e.category),
+          e.message
+        );
+      }
+    }
+  }
+  // Add punctuation to all ltx:creators, now that we know how many of each role.
+  let mut updates: Vec<(usize, bool)> = Vec::new(); // (index, use_conjunction)
+  state::with_value("frontmatter", |v| {
+    if let Some(Stored::HashTagData(frnt)) = v {
+      if let Some(list) = frnt.get("ltx:creator") {
+        for (i, item) in list.iter().enumerate() {
+          let role = item.attr.get("role").map(String::as_str).unwrap_or("");
+          let num: i64 = item
+            .attr
+            .get("_num")
+            .and_then(|n| n.parse().ok())
+            .unwrap_or(0);
+          if !role.is_empty() && num > 1 {
+            let n = lookup_mapping_int("num_ltx:creator", role);
+            updates.push((i, num >= n));
+          }
+        }
+      }
+    }
+  });
+  for (index, use_conjunction) in updates {
+    let separator = DigestText!(Tokens!(if use_conjunction {
+      T_CS!("\\lx@author@conj")
+    } else {
+      T_CS!("\\lx@author@sep")
+    }))?;
+    // `\lx@author@conj` may digest to \hskip Whatsits (\qquad) — extract
+    // text-or-spaces (see \lx@author@prefix note in the previous port).
+    let text = digested_to_text(&separator)?;
+    state::with_value_mut("frontmatter", |val_opt| {
+      if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
+        if let Some(entry) = frnt.get_mut("ltx:creator").and_then(|l| l.get_mut(index)) {
+          entry.attr.insert("before".to_string(), text.clone());
+        }
+      }
+    });
+  }
+  stomach::egroup()?;
+  Ok(())
+}
+
 /// Insert FrontMatter into document, if not already added
+/// Perl: insertFrontMatter($document).
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
   }
+  digest_front_matter()?; // If needed
   let frontmatter_elements_set: HashSet<String> = FRONTMATTER_ELEMENTS
     .iter()
     .map(ToString::to_string)
@@ -780,6 +1640,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     return Ok(());
   }
 
+  // OK, we're placing FrontMatter here, now.
   state::assign_value("frontmatter_done", true, Some(Scope::Global));
 
   // Remove frontmatter and replace with empty
@@ -818,43 +1679,147 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
         )
         .into(),
       );
-      for (tag, attr, stuff) in list {
-        // Add a dedicated class for frontmatter notes
-        let attr = if tag == "ltx:note" {
-          let mut a = attr.unwrap_or_default();
-          let existing = a.get("class").cloned().unwrap_or_default();
-          let new_class = if existing.is_empty() {
-            "ltx_note_frontmatter".to_string()
-          } else {
-            s!("{existing} ltx_note_frontmatter")
-          };
-          a.insert("class".to_string(), new_class);
-          Some(a)
-        } else {
-          attr
-        };
-        // token-locators: frontmatter elements (e.g. <ltx:title> from `\title{…}`)
-        // are opened here, far from their source, around content that was digested
-        // and stored back at `\@add@frontmatter` time. open_element would otherwise
-        // stamp them with no/last locator (→ the whole-document fallback in clients).
-        // Recover the deferred content's span and stamp the element with it.
-        #[cfg(feature = "token-locators")]
-        document
-          .set_current_box_locator(latexml_core::definition::constructor::child_span(&stuff));
-        document.open_element(&tag, attr, None)?;
-        document.absorb(&stuff, None)?;
-        let completed_node = document.close_element(&tag)?;
-        // Prune empty frontmatter elements (except ltx:rdf)
-        if tag != "ltx:rdf" {
-          if let Some(ref node) = completed_node {
-            if node.get_child_nodes().is_empty() {
-              document.remove_node(node.clone());
-            }
-          }
-        }
+      for item in list {
+        insert_frontmatter_entry(document, &item)?;
       }
       document.expire_box_to_absorb();
     }
+  }
+  relocate_annotations(document)?;
+  Ok(())
+}
+
+/// Insert one frontmatter entry `[tag, {attr}, @content]`.
+/// Perl: insertFrontMatter_rec($document, $item) for the ARRAY case.
+fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<()> {
+  let TagData { tag, attr, content } = entry;
+  log::debug!(target: "frontmatter", "FRONT Inserting {}", show_frontmatter(entry));
+  // token-locators: frontmatter elements (e.g. <ltx:title> from `\title{…}`)
+  // are opened here, far from their source, around content that was digested
+  // and stored back at `\lx@add@frontmatter` time. open_element would otherwise
+  // stamp them with no/last locator (→ the whole-document fallback in clients).
+  // Recover the deferred content's span and stamp the element with it.
+  #[cfg(feature = "token-locators")]
+  if let Some(TagContent::Box(stuff)) = content
+    .iter()
+    .find(|c| matches!(c, TagContent::Box(_)))
+  {
+    document.set_current_box_locator(latexml_core::definition::constructor::child_span(stuff));
+  }
+  // Perl: font => $stuff[0]->getFont, _force_font => 'true' when the tag
+  // can have a font attribute and there is content.
+  let mut attributes: HashMap<String, String> = attr.clone();
+  let mut font: Option<Font> = None;
+  if !content.is_empty() && document::can_have_attribute(tag, "font") {
+    if let Some(TagContent::Box(first)) = content.first() {
+      if let Ok(Some(f)) = first.get_font() {
+        font = Some(f.into_owned());
+        attributes.insert("_force_font".to_string(), "true".to_string());
+      }
+    }
+  }
+  document.open_element(tag, Some(attributes), font.as_ref())?;
+  for item in content {
+    insert_frontmatter_rec(document, item)?;
+  }
+  document.close_element(tag)?;
+  // At this time, the frontmatter element should really carry the actual literal values intended.
+  // (Perl PR #2767 disables the former empty-element pruning here.)
+  Ok(())
+}
+
+/// Perl: insertFrontMatter_rec($document, $item).
+fn insert_frontmatter_rec(document: &mut Document, item: &TagContent) -> Result<()> {
+  match item {
+    TagContent::Entry(entry) => insert_frontmatter_entry(document, entry)?,
+    // Otherwise, assume some sort of Box
+    TagContent::Box(digested) => document.absorb(digested, None)?,
+    // Perl absorbs the literal 'place_keeper' string for unfilled entries
+    TagContent::PlaceKeeper => {
+      document.absorb(&Digested::from(String::from("place_keeper")), None)?
+    },
+  }
+  Ok(())
+}
+
+/// Find all dummy frontmatter entries (role "pending") containing unattached annotations
+/// and attempt to attach to the appropriate frontmatter, based on the identifying labels.
+/// Perl: relocateAnnotations($document).
+fn relocate_annotations(document: &mut Document) -> Result<()> {
+  // Find dummy frontmatter elements containing not-yet-attached annotations
+  let pending_nodes = document.findnodes(".//*[@role='pending']", None);
+  if pending_nodes.is_empty() {
+    return Ok(());
+  }
+  // Collect the frontmatter that have attachment labels
+  let mut labeltable: HashMap<String, Vec<Node>> = HashMap::default();
+  // fallback: Same, but without prefix
+  let mut unlabeltable: HashMap<String, Vec<Node>> = HashMap::default();
+  for target in document.findnodes(".//*[@_annotations]", None) {
+    if target.get_attribute("role").unwrap_or_default() == "pending" {
+      continue;
+    }
+    for label in target
+      .get_attribute("_annotations")
+      .unwrap_or_default()
+      .split(',')
+    {
+      if label.is_empty() {
+        continue;
+      }
+      labeltable
+        .entry(label.to_string())
+        .or_default()
+        .push(target.clone());
+      // Misuse of labelling macros can lead to prefix mismatch
+      if let Some(pos) = label.find(':') {
+        unlabeltable
+          .entry(label[pos + 1..].to_string())
+          .or_default()
+          .push(target.clone());
+      }
+    }
+  }
+  for pending in pending_nodes {
+    for note in element_nodes(&pending) {
+      let label = note.get_attribute("_label").unwrap_or_default();
+      if label.is_empty() {
+        continue;
+      }
+      let noprefix = label
+        .find(':')
+        .map(|pos| &label[pos + 1..])
+        .unwrap_or(label.as_str());
+      let targets = labeltable
+        .get(&label)
+        .or_else(|| unlabeltable.get(&label))
+        .or_else(|| labeltable.get(noprefix))
+        .or_else(|| unlabeltable.get(noprefix));
+      if let Some(targets) = targets {
+        for target in targets.clone() {
+          log::debug!(target: "frontmatter", "FRONT Moving annotation for {label}");
+          let mut target = target;
+          document.append_clone(&mut target, vec![note.clone()])?;
+        }
+      } else {
+        let mut known: Vec<&String> = labeltable.keys().collect();
+        known.sort();
+        Warn!(
+          "unexpected",
+          "annotation",
+          s!("Orphaned frontmatter annotation couldn't find target for label={label}"),
+          s!(
+            "known labels={}",
+            known
+              .iter()
+              .map(|k| k.as_str())
+              .collect::<Vec<_>>()
+              .join(",")
+          )
+        );
+      }
+    }
+    document.remove_node(pending);
   }
   Ok(())
 }
@@ -1875,28 +2840,96 @@ fn cleanup_xmtext(document: &mut Document, mut text_node: Node) -> Result<()> {
 // [maybe need to do some reorganization?]
 // Since this is used for textual tokens, typically to split author lists,
 // we don't split within braces or math
-pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
-  let mut items = Vec::new();
-  let mut toks = Vec::new();
+
+/// A `SplitTokens` delimiter: Perl PR #2767 allows each delimiter to be a
+/// single `Token`, OR a `Tokens` sequence to match in order.
+#[derive(Debug, Clone)]
+pub enum SplitDelim {
+  /// A single Token delimiter (matched with the meaning-aware Equals below)
+  Token(Token),
+  /// A token sequence delimiter (matched literally, with the
+  /// `T_SPACE` ~ `\ ` "HACK space" equivalence)
+  Tokens(Tokens),
+}
+impl From<Token> for SplitDelim {
+  fn from(t: Token) -> Self { SplitDelim::Token(t) }
+}
+impl From<Tokens> for SplitDelim {
+  fn from(t: Tokens) -> Self { SplitDelim::Tokens(t) }
+}
+
+/// Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
+/// Each of `delims` is a Token, OR Tokens to match a sequence.
+/// Returns a list of Tokens for the sub-sequences, with leading/trailing
+/// spaces trimmed from each piece, and any empty trailing piece dropped.
+pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
+  let mut items: Vec<Tokens> = Vec::new();
+  let mut toks: Vec<Token> = Vec::new();
+  let trim_spaces = |toks: &mut Vec<Token>| {
+    while toks.first().is_some_and(|x| *x == T_SPACE!()) {
+      toks.remove(0);
+    }
+    while toks.last().is_some_and(|x| *x == T_SPACE!()) {
+      toks.pop();
+    }
+  };
   if !tokens.is_empty() {
-    let tokens = tokens.unlist();
-    let mut tokens_iter = tokens.into_iter();
-    while let Some(t) = tokens_iter.next() {
-      // Perl: Equals($t, $delim) checks meaning via lookupMeaning.
-      // So \And (let to \and) matches \and as delimiter.
-      if delims.iter().any(|d| {
-        d == &t
-          || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
-            let meaning_t = state::lookup_definition(&t).ok().flatten();
-            let meaning_d = state::lookup_definition(d).ok().flatten();
-            meaning_t.is_some() && meaning_t == meaning_d
-          })
-      }) {
+    let mut stream: VecDeque<Token> = VecDeque::from(tokens.unlist());
+    while let Some(t) = stream.pop_front() {
+      let mut matched = false;
+      for delim in &delims {
+        match delim {
+          SplitDelim::Token(d) => {
+            // Perl: Equals($t, $delim); the Rust port additionally matches by
+            // meaning, so \AND (let to \and) matches \and as delimiter.
+            if *d == t
+              || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
+                let meaning_t = state::lookup_definition(&t).ok().flatten();
+                let meaning_d = state::lookup_definition(d).ok().flatten();
+                meaning_t.is_some() && meaning_t == meaning_d
+              })
+            {
+              matched = true;
+              break;
+            }
+          },
+          SplitDelim::Tokens(seq) => {
+            let mut tomatch: &[Token] = seq.unlist_ref();
+            let mut peeked: Vec<Token> = Vec::new(); // tokens consumed beyond `t`
+            let mut cur: Option<Token> = Some(t);
+            while let (Some(c), Some(m)) = (cur, tomatch.first()) {
+              if c == *m || (*m == T_SPACE!() && c == T_CS!("\\ ")) {
+                // HACK space!
+                tomatch = &tomatch[1..];
+                if !tomatch.is_empty() {
+                  cur = stream.pop_front();
+                  if let Some(p) = cur {
+                    peeked.push(p);
+                  }
+                }
+              } else {
+                break;
+              }
+            }
+            if tomatch.is_empty() {
+              matched = true;
+              break;
+            } else {
+              // failed to match all: put back the peeked tokens
+              for p in peeked.into_iter().rev() {
+                stream.push_front(p);
+              }
+            }
+          },
+        }
+      }
+      if matched {
+        trim_spaces(&mut toks);
         items.push(Tokens::new(std::mem::take(&mut toks)));
-      } else if t == T_BEGIN!() {
+      } else if t.defined_as(&T_BEGIN!()) {
         toks.push(t);
         let mut level = 1;
-        for t in tokens_iter.by_ref() {
+        while let Some(t) = stream.pop_front() {
           match t.get_catcode() {
             Catcode::BEGIN => level += 1,
             Catcode::END => level -= 1,
@@ -1908,9 +2941,9 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
             break;
           }
         }
-      } else if t == T_MATH!() {
+      } else if t.defined_as(&T_MATH!()) {
         toks.push(t);
-        for t in tokens_iter.by_ref() {
+        while let Some(t) = stream.pop_front() {
           let is_math = t.get_catcode() == Catcode::MATH;
           toks.push(t);
           if is_math {
@@ -1921,7 +2954,9 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<Token>) -> Vec<Tokens> {
         toks.push(t);
       }
     }
-    // last author is in toks, add to items
+  }
+  trim_spaces(&mut toks);
+  if !toks.is_empty() {
     items.push(Tokens::new(toks));
   }
   items
@@ -1933,7 +2968,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
   // \AND (which is Let to \and). \And is NOT split here — amsmath overrides
   // its definition with DefMath, so it stays as a text "&" separator inside
   // <personname>, matching Perl's behavior.
-  split_tokens(tokens, vec![T_CS!("\\and")])
+  split_tokens(tokens, vec![SplitDelim::Token(T_CS!("\\and"))])
     .into_iter()
     .flat_map(|t| {
       let mut with_cs = vec![cs, T_BEGIN!()];
@@ -1943,6 +2978,58 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
     })
     .collect()
 }
+
+/// Perl: positionOf($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
+/// Find the position of a Token from `delims` within `tokens`.
+/// 1 based, so None == token not present.
+pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
+  for (i, t) in tokens.unlist_ref().iter().enumerate() {
+    if delims.iter().any(|d| *d == *t) {
+      return Some(i + 1);
+    }
+  }
+  None
+}
+
+// Things to split authors (Perl PR #2767, Base_Utility.pool.ltxml)
+// This is " and " without the spaces stripped.
+fn literal_and() -> SplitDelim {
+  let mut tks = vec![T_SPACE!()];
+  tks.extend(latexml_core::mouth::tokenize_internal("and").unlist());
+  tks.push(T_SPACE!());
+  SplitDelim::Tokens(Tokens::new(tks))
+}
+fn author_splits() -> Vec<SplitDelim> {
+  vec![
+    T_CS!("\\and").into(),
+    T_CS!("\\And").into(),
+    T_CS!("\\AND").into(),
+    T_OTHER!(",").into(),
+    literal_and(),
+    T_CS!("\\quad").into(),
+    T_CS!("\\qquad").into(),
+  ]
+}
+// Things to split author & affiliation mix; NO comma in affiliations!!!
+fn author_affil_splits() -> Vec<SplitDelim> {
+  vec![
+    T_CS!("\\and").into(),
+    T_CS!("\\And").into(),
+    T_CS!("\\AND").into(),
+    literal_and(),
+    T_CS!("\\quad").into(),
+    T_CS!("\\qquad").into(),
+    T_CS!("\\\\").into(),
+  ]
+}
+fn affil_splits() -> Vec<SplitDelim> {
+  vec![
+    T_CS!("\\quad").into(),
+    T_CS!("\\qquad").into(),
+    T_CS!("\\\\").into(),
+  ]
+}
+fn authorsup_markers() -> Vec<Token> { vec![T_SUPER!(), T_CS!("\\textsuperscript")] }
 
 /// Converts tokens to a string in the fashion of \message and others
 ///
