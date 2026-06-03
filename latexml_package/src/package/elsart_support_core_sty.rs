@@ -5,157 +5,61 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Frontmatter environment
-  DefEnvironment!("{frontmatter}", "#body");
+  // Frontmatter environment (Perl PR #2767)
+  DefPrimitive!(T_CS!("\\begin{frontmatter}"), None, None);
+  DefPrimitive!(T_CS!("\\end{frontmatter}"), None, None);
 
-  // Author/affiliation — Perl L32-48
-  DefMacro!("\\author[]{}", "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#2}}");
-  DefMacro!("\\address[]{}", "\\lx@contact{address}{#2}");
-  // \affiliation[label]{key=val,...} — elsarticle uses this for institutions
-  // Not in Perl elsart_support_core, but needed for modern elsarticle papers.
-  // The TeX elsarticle.cls uses LaTeX3 \keys_set:nn to parse key-value pairs
-  // (organization, addressline, city, postcode, state, country) and concatenate
-  // the values with comma separators. We parse the key-value body in Rust
-  // and produce clean affiliation text.
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affiliation[]{}", sub[(_opt_label, body)] {
-    // Parse key-value pairs from the body, respecting brace nesting.
-    // Keys: organization, addressline, city, postcode, state, country
-    // Values are typically brace-delimited: key={value with, commas}
-    let body_str = body.to_string();
-    let mut parts: Vec<String> = Vec::new();
+  // \author[mark]{name}
+  // One \author per author! possibly with a mark to connect to affiliation
+  // It either should be followed by \affiliation,
+  // or both should get matching marks
+  DefMacro!("\\author OptionalSemiverbatim {}",
+    "\\lx@add@creator[role=author,annotations={#1}]{#2}");
 
-    // State machine to parse key=value pairs with brace nesting
-    let chars: Vec<char> = body_str.chars().collect();
-    let len = chars.len();
-    let mut i = 0;
+  DefMacro!("\\address OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={#1},role=address]{#2}");
+  // \affiliation[label]{text-OR-keyvals} !!  (Perl PR #2767)
+  DefMacro!("\\affiliation OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={#1},role=affiliation]{\\lx@els@parse@affiliation{#2}{#2}}");
 
-    while i < len {
-      // Skip whitespace and commas between key-value pairs
-      while i < len && (chars[i].is_whitespace() || chars[i] == ',') {
-        i += 1;
-      }
-      if i >= len { break; }
-
-      // Read key (until '=' or end)
-      let key_start = i;
-      while i < len && chars[i] != '=' {
-        i += 1;
-      }
-      if i >= len { break; }
-      // Use char-vec slicing (NOT byte slicing on body_str) — affiliation
-      // text often contains UTF-8 multi-byte chars (accented names,
-      // diacritics) where the char-count `i` is not a byte boundary.
-      // Driver: 2407.00104 panic at `body_str[val_start..i]`.
-      let _key: String = chars[key_start..i].iter().collect::<String>().trim().to_lowercase();
-      i += 1; // skip '='
-
-      // Skip whitespace after '='
-      while i < len && chars[i].is_whitespace() {
-        i += 1;
-      }
-      if i >= len { break; }
-
-      // Read value — may be brace-delimited or plain
-      let value;
-      if i < len && chars[i] == '{' {
-        // Brace-delimited value: read until matching '}'
-        i += 1; // skip opening '{'
-        let val_start = i;
-        let mut depth = 1;
-        while i < len && depth > 0 {
-          if chars[i] == '{' { depth += 1; }
-          else if chars[i] == '}' { depth -= 1; }
-          if depth > 0 { i += 1; }
-        }
-        value = chars[val_start..i].iter().collect::<String>().trim().to_string();
-        if i < len { i += 1; } // skip closing '}'
-      } else {
-        // Plain value: read until next comma or end
-        let val_start = i;
-        while i < len && chars[i] != ',' {
-          i += 1;
-        }
-        value = chars[val_start..i].iter().collect::<String>().trim().to_string();
-      }
-
-      // Only include known affiliation keys with non-empty values
-      let trimmed = value.trim();
-      if !trimmed.is_empty() {
-        match _key.as_str() {
-          "organization" | "organisation" | "o" | "or"
-          | "addressline" | "a" | "ad"
-          | "city" | "c" | "ci"
-          | "postcode" | "p" | "pc"
-          | "state" | "s" | "st"
-          | "country" | "cy" => {
-            parts.push(trimmed.to_string());
+  // Detect if affiliation is just text, or keyvals; if latter, format into text.
+  DefMacro!("\\lx@els@parse@affiliation {} RequiredKeyVals", sub[(raw, data)] {
+    let pairs: Vec<(String, ArgWrap)> = data.get_pairs().cloned().collect();
+    // 1 key, novalue: No Keyvals at all!
+    if pairs.len() <= 1
+      && pairs.first().map_or(true, |(_, v)| matches!(v, ArgWrap::None))
+    {
+      Ok(raw)
+    } else {
+      let mut affil: Vec<Token> = Vec::new();
+      for (key, value) in pairs {
+        if matches!(key.as_str(),
+          "o" | "or" | "organization"
+          | "a" | "ad" | "addressline"
+          | "c" | "ci" | "city"
+          | "p" | "pc" | "postcode"
+          | "s" | "st" | "state"
+          | "country")
+        {
+          if !affil.is_empty() {
+            affil.push(T_OTHER!(","));
+            affil.push(T_SPACE!());
           }
-          _ => {
-            // Unknown keys: include value as-is (matching elsarticle unknown handler)
-            if !trimmed.is_empty() {
-              parts.push(trimmed.to_string());
-            }
+          match value {
+            ArgWrap::Tokens(tks) => affil.extend(tks.unlist()),
+            ArgWrap::None => {},
+            other => affil.extend(other.revert()?.unlist()),
           }
         }
       }
+      Ok(Tokens::new(affil))
     }
-
-    let affil_text = parts.join(", ");
-    let mut result = Vec::new();
-    result.push(T_CS!("\\@add@to@frontmatter"));
-    result.push(T_BEGIN!());
-    for ch in "ltx:creator".chars() {
-      result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
-    }
-    result.push(T_END!());
-    result.push(T_BEGIN!());
-    result.push(T_CS!("\\@@@affiliation"));
-    result.push(T_BEGIN!());
-    for ch in affil_text.chars() {
-      if ch == ' ' {
-        result.push(T_SPACE!());
-      } else if ch.is_ascii_alphabetic() {
-        result.push(Token { text: arena::pin_char(ch), code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
-      } else {
-        result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
-      }
-    }
-    result.push(T_END!());
-    result.push(T_END!());
-    result
   });
+  // Redefine to account for the label, which we ignore for now!
   DefConstructor!("\\thanks[]{}", "<ltx:note role='thanks'>#2</ltx:note>");
-  // Perl L38-39: \person@thanks — inline (restricted_horizontal) variant used for
-  // author-embedded thanks marks. Aliased to \thanks in reversion.
-  DefConstructor!("\\person@thanks[]{}",
-    "^ <ltx:contact role='thanks'>#2</ltx:contact>",
-    alias => "\\thanks", mode => "restricted_horizontal");
-  // \thanksref / \corref / \corauthref carry footnote labels. Round-34
-  // surpass-Perl: emit as superscript so the labels reach the author
-  // block (matches IEEE \IEEEauthorrefmark behavior).
-  // \thanksref / \corref / \corauthref take label-style args that may contain
-  // `_` (and other key-style chars). Read as Semiverbatim so `_` doesn't
-  // trigger "Script _ can only appear in math mode" when the label flows
-  // into \textsuperscript's body. Witness 2304.14608 (elsarticle):
-  // `\author[..]{Xu\corref{corresponding_author}}` triggered the cascade.
-  DefMacro!("\\thanksref Semiverbatim", "\\textsuperscript{#1}");
-  DefMacro!("\\corauth[] Semiverbatim", "\\lx@contact{correspondent}{#2}");
-  DefMacro!("\\corref Semiverbatim", "\\textsuperscript{#1}");
-  DefMacro!("\\corauthref Semiverbatim", "\\textsuperscript{#1}");
-  // \cortext[id]{text} carries author-typed corresponding-author text.
-  // Preserve as ltx:note frontmatter so the prose ("Corresponding
-  // author. Email: …") reaches the XML rather than being silently
-  // dropped. Content-preserving.
-  DefMacro!("\\cortext[]{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
-  // Perl elsart_support_core.sty.ltxml L47: body is `\author{#1}` but in
+
+  // Is this significantly different?
+  // Perl elsart_support_core.sty.ltxml: body is `\author{#1}` but in
   // the `OptionalMatch:* {}` signature `#1` is the star flag and `#2` is
   // the content — the author name is silently dropped. Documented as a
   // Perl bug in docs/KNOWN_PERL_ERRORS.md #16 (same root cause as
@@ -163,90 +67,71 @@ LoadDefinitions!({
   // author content reaches \author correctly.
   DefMacro!("\\collab OptionalMatch:* {}", "\\author{#2}");
   Let!("\\collaboration", "\\collab");
-  // Perl L50-51: route through lx@notetext for proper footnote handling
-  DefMacro!("\\tnotetext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
-  DefMacro!("\\fntext[]{}", "\\lx@notetext[#1]{footnote}{#2}");
-  // Perl L52-58: \lx@elsart@noteref splits comma-separated labels
-  // into individual \lx@notemark[label]{footnote} calls
-  DefMacro!("\\lx@elsart@noteref{}", sub[(labels)] {
-    let label_str = labels.to_string();
-    let mut result = Vec::new();
-    for label in label_str.split(',') {
-      let label = label.trim();
-      if !label.is_empty() {
-        result.push(T_CS!("\\lx@notemark"));
-        result.push(T_OTHER!("["));
-        for ch in label.chars() {
-          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
-        }
-        result.push(T_OTHER!("]"));
-        result.push(T_BEGIN!());
-        // "footnote" as OTHER tokens
-        for ch in "footnote".chars() {
-          result.push(Token { text: arena::pin_char(ch), code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
-        }
-        result.push(T_END!());
-      }
-    }
-    result
-  });
-  DefMacro!("\\tnoteref{}", "\\lx@elsart@noteref{#1}");
-  DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
 
-  // Title/metadata — Perl L60-106
+  // These pairs add various contact information to authors.  (Perl PR #2767)
+  // The \<XXX>ref forms are used within the \author text to anchor the connection
+  // the \<XXX>text forms supply the text (& and role) for the contact that will be attached.
+  DefMacro!("\\thanksref{}",  "\\lx@request@frontmatter@annotation[thanks]{#1}");
+  DefMacro!("\\corref{}",     "\\lx@request@frontmatter@annotation[cor]{#1}");
+  DefMacro!("\\corauthref{}", "\\lx@request@frontmatter@annotation[corauth]{#1}");
+  DefMacro!("\\fnref{}",      "\\lx@request@frontmatter@annotation[fn]{#1}");
+  DefMacro!("\\tnoteref{}",   "\\lx@request@frontmatter@annotation[tnote]{#1}"); // Possibly for title, not author?
+  DefMacro!("\\thanks OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={thanks:#1},role=thanks]{#2}");
+  DefMacro!("\\cortext OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={cor:#1},role=correspondent]{#2}");
+  DefMacro!("\\corauth OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={corauth:#1},role=correspondent]{#2}");
+  DefMacro!("\\fntext OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={fn:#1},role=note]{#2}");
+  DefMacro!("\\tnotetext OptionalSemiverbatim {}",
+    "\\lx@add@contact[label={tnote:#1},role=note]{#2}"); // title note?
+
+  // Title/metadata (Perl PR #2767)
   // \runauthor / \runtitle are running-header SHORT forms (real elsart.cls
-  // L1235 `\def\runauthor#1{\gdef\@runauthor{#1}}` just stores them for
-  // `\@oddhead`; never typeset in the body). Perl elsart_support_core.sty.ltxml
-  // L60-61 GOBBLES both (`DefMacro('\runauthor{}', Tokens())`) — they are
-  // layout-only and redundant with `\author`/`\title` (which preserve the full
-  // author/title). The prior Rust over-preservation digested the running-head
-  // content, so an author typo like `\runauthor{… T.\Pasurek/Journal…}`
-  // (a stray `\` before a name) hit `undefined:\Pasurek`. Gobble to match Perl;
-  // no author material is lost (`\author` keeps it). Same class as the
-  // `\shortauthors` gobble fix. Witness 1503.06349.
+  // L1235 just stores them for `\@oddhead`; never typeset in the body). Perl
+  // gobbles both — layout-only and redundant with `\author`/`\title`. Prior
+  // over-preservation digested the running-head content, so an author typo
+  // (stray `\` before a name) hit undefined-CS. Witness 1503.06349.
   def_macro_noop("\\runauthor{}")?;
   def_macro_noop("\\runtitle{}")?;
-  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
+  // \ead[label]{email} provides email address for the preceding \author (no marks used)
   DefMacro!("\\ead Optional:email Semiverbatim",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
-  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
+    "\\lx@add@contact[role=#1]{#2}");
   DefMacro!("\\sep", "\\unskip,\\space");
-  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received]{#1}");
-  DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised]{#1}");
-  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
-  DefMacro!("\\communicated{}", "\\@add@frontmatter{ltx:date}[role=communicated]{#1}");
-  DefMacro!("\\dedicated{}", "\\@add@frontmatter{ltx:note}[role=dedicated]{#1}");
-  DefMacro!("\\presented{}", "\\@add@frontmatter{ltx:date}[role=presented]{#1}");
-  DefMacro!("\\articletype{}", "\\@add@frontmatter{ltx:note}[role=articletype]{#1}");
-  DefMacro!("\\issue{}", "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
-  DefMacro!("\\journal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
-  DefMacro!("\\pubyear{}", "\\@add@frontmatter{ltx:date}[role=publication]{#1}");
+  DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
+  DefMacro!("\\revised{}", "\\lx@add@date[role=revised]{#1}");
+  DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted]{#1}");
+  DefMacro!("\\communicated{}", "\\lx@add@date[role=communicated]{#1}");
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  DefMacro!("\\presented{}", "\\lx@add@date[role=presented]{#1}");
+  DefMacro!("\\articletype{}", "\\lx@add@pubnote[role=type]{#1}");
+  DefMacro!("\\issue{}", "\\lx@add@pubnote[role=issue]{#1}");
+  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\pubyear{}", "\\lx@add@date[role=publication]{#1}");
   def_macro_noop("\\FullCopyrightText")?;
-  DefMacro!("\\copyear{}", "\\@add@frontmatter{ltx:date}[role=copyright]{#1}");
-  DefMacro!("\\copyrightholder{}", "\\@add@frontmatter{ltx:note}[role=copyrightholder]{#1}");
+  DefMacro!("\\copyear{}", "\\lx@add@copyrightyear{#1}");
+  DefMacro!("\\copyrightholder{}", "\\lx@add@copyrightholder{#1}");
   Let!("\\copyrightyear", "\\copyear");
   def_macro_noop("\\RUNART")?;
   def_macro_noop("\\RUNDATE")?;
   def_macro_noop("\\RUNJNL")?;
   // Round-34 surpass-Perl: company/article-id are author metadata.
   DefMacro!("\\company{}",
-    "\\@add@frontmatter{ltx:note}[role=company]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=company]{#1}");
   DefMacro!("\\aid{}",
-    "\\@add@frontmatter{ltx:note}[role=article-id]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=article-id]{#1}");
   def_macro_noop("\\ssdi{}{}")?;
   def_macro_noop("\\readRCS Until:$ Until:$")?;
   def_macro_noop("\\RCSdate")?;
   def_macro_noop("\\RCSfile")?;
   def_macro_noop("\\RCSversion")?;
   DefMacro!("\\firstpage{}",
-    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=firstpage]{#1}");
   DefMacro!("\\lastpage{}",
-    "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=lastpage]{#1}");
   def_macro_noop("\\preface")?;
   def_macro_noop("\\theHaddress")?;
   def_macro_noop("\\theaddress")?;
@@ -374,11 +259,11 @@ LoadDefinitions!({
   // Perl L148-152: @keyword reads until @keyword@cut delimiter using XUntil.
   // XUntil expands tokens while reading, so \end{keyword} → \@keyword@cut is found.
   DefConstructor!("\\@keyword@cut", "");
-  DefMacro!("\\@keyword XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
-  DefMacro!("\\@PACS XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
-  DefMacro!("\\@MSC{} XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme={#1 MSC}]{#2}");
-  DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=JEL]{#1}");
-  DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\@add@frontmatter{ltx:classification}[scheme=UK]{#1}");
+  DefMacro!("\\@keyword XUntil:\\@keyword@cut", "\\lx@add@keywords{#1}");
+  DefMacro!("\\@PACS XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=PACS,name={PACS:~}]{#1}");
+  DefMacro!("\\@MSC{} XUntil:\\@keyword@cut", "\\lx@add@classification[scheme={#1 MSC},name={MSC:~}]{#2}");
+  DefMacro!("\\@JEL XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=JEL,name={JEL:~}]{#1}");
+  DefMacro!("\\@UK XUntil:\\@keyword@cut", "\\lx@add@classification[scheme=UK,name={UK:~}]{#1}");
 
   // Document structure — Perl L158-163
   DefMacro!("\\theparagraph", "\\thesubsubsection.\\arabic{paragraph}");

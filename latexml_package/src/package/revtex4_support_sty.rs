@@ -46,37 +46,34 @@ LoadDefinitions!({
 \@boole@def\@ifnum#1{\ifnum#1}%
 \@boole@def\@ifodd#1{\ifodd#1}%");
 
-  // 4.3 Title/Author
-  DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
+  // 4.3 Title/Author (Perl PR #2767)
+  DefMacro!("\\title[]{}",
+    "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
   DefMacro!("\\doauthor{}{}{}", "#1 #2 #3");
-  DefMacro!("\\address", "\\affiliation");
 
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-  // `\altaffiliation[note]{address}` — REVTeX4 alternative-affiliation
-  // construct with an OPTIONAL leading note (e.g. `[Also at ]`).
-  // Without the `[]` arg in the signature the `[Also at ]` text was
-  // mis-parsed: `\affiliation{}` greedily read `[` as `#1`, emitting
-  // a bare literal `[` into `<ltx:contact role='affiliation'>` and
-  // dumping the rest of the note into the author name slot.
-  // Witness: physics0210041 (revtex4 `\altaffiliation[Also at ]{Dept of
-  // Physics, University of Oslo, ...}`). Real LaTeX's revtex4
-  // `\altaffiliation` takes `[note]{address}` and prepends note to
-  // address. Concatenating `#1#2` matches that semantics; when there
-  // is no optional `[]`, #1 is empty and behaviour matches the legacy
-  // single-arg path. SURPASS-PERL: Perl LaTeXML
-  // `revtex4_support.sty.ltxml` also lacks the optional arg and has
-  // the same misformatting on this witness.
-  DefMacro!("\\altaddress[]{}",     "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1#2}}");
-  DefMacro!("\\altaffiliation[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1#2}}");
+  // \author[labels]{name}   One \author per author
+  // If labels given, the corresponding affiliation from \affil is attached
+  // otherwise, \author should be followed by \affiliation
+  DefMacro!("\\author[]{}",    "\\lx@add@author[annotations={#1}]{#2}");
+  DefMacro!("\\affiliation{}", "\\lx@add@affiliation[annotate=new]{#1}");
+  DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=new]{}");
+  DefMacro!("\\affil OptionalSemiverbatim {}",
+    "\\lx@add@affiliation[annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
+  // \address provides an address to the previous \author
+  DefMacro!("\\address{}", "\\lx@add@address[annotate=new]{#1}");
+  // These add contacts to most recent author
+  // The optional arguments here are a sort of prefix to the footnote. (NOT label)
+  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@email[name={#1}]{#2}");
+  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@url[name={#1}]{#2}");
+  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
+
+  DefMacro!("\\collaboration{}",    "\\author{#1}");
+  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
+  // Rust-only: revtex3-era \altaddress, kept aligned with \altaffiliation
+  // (witness physics0210041).
+  DefMacro!("\\altaddress[]{}",     "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
   DefMacro!("\\andname", "and");
-  def_macro_noop("\\collaboration")?;
-  def_macro_noop("\\noaffiliation")?;
-
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email [] Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#2}}");
-  DefConstructor!("\\@@@homepage{}", "^ <ltx:contact role='url'>#1</ltx:contact>");
-  DefMacro!("\\homepage Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@homepage{#1}}");
 
   def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);
@@ -84,23 +81,18 @@ LoadDefinitions!({
   // 4.4 Abstract
   DefMacro!("\\abstractname", "Abstract");
 
-  // 4.5 PACS
-  DefMacro!("\\pacs{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}");
-
-  // 4.6 Keywords
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
-
-  // 4.7 Preprint
-  DefMacro!("\\preprint{}", "\\@add@frontmatter{ltx:note}[role=preprint]{#1}");
+  DefMacro!("\\pacs{}",     "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
 
   // Extra
   def_macro_noop("\\blankaffiliation")?;
   DefMacro!("\\checkindate", "\\today");
 
-  DefMacro!("\\received[]{}", "\\@add@frontmatter{ltx:date}[role=received]{#2}");
-  DefMacro!("\\revised[]{}", "\\@add@frontmatter{ltx:date}[role=revised]{#2}");
-  DefMacro!("\\accepted[]{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#2}");
-  DefMacro!("\\published[]{}", "\\@add@frontmatter{ltx:date}[role=published]{#2}");
+  DefMacro!("\\received[]{}", "\\lx@add@date[role=received]{#2}");
+  DefMacro!("\\revised[]{}", "\\lx@add@date[role=revised]{#2}");
+  DefMacro!("\\accepted[]{}", "\\lx@add@date[role=accepted]{#2}");
+  DefMacro!("\\published[]{}", "\\lx@add@date[role=published]{#2}");
 
   // 5.3 Widetext
   def_macro_noop("\\widetext")?;

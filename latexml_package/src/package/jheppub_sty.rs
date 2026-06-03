@@ -98,7 +98,7 @@ LoadDefinitions!({
   // \subheader{text} — author-typed subheader prose; preserve as
   // ltx:note. Perl L? gobbles.
   DefMacro!("\\subheader{}",
-    "\\@add@frontmatter{ltx:note}[role=subheader]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=subheader]{#1}");
   DefMacro!("\\xtumfont{}", "\\textsc{#1}");
   Let!("\\oldthebibliography", "\\thebibliography");
   Let!("\\endoldthebibliography", "\\endthebibliography");

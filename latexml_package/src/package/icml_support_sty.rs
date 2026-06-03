@@ -33,7 +33,7 @@ LoadDefinitions!({
   // Perl gobbles \icmltitlerunning; surpass: it's the running-head
   // variant of the title, genuine author metadata.
   DefMacro!("\\icmltitlerunning{}",
-    "\\@add@frontmatter{ltx:toctitle}{#1}");
+    "\\lx@add@frontmatter{ltx:toctitle}{#1}");
   // \icmlsetsymbol{name}{symbol} — creates `\<name>` macro expanding
   // to <symbol> for use in author lists. Real icml2024.sty L100-ish:
   //   `\def\icmlsetsymbol#1#2{\expandafter\def\csname #1\endcsname{#2}}`
@@ -63,9 +63,9 @@ LoadDefinitions!({
   // author-supplied "Work done while at X" string survives.
   // Witness: 2502.18679 (icml2025.sty L564).
   DefMacro!("\\printAffiliationsAndNotice{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   DefMacro!("\\printAffiliationsAndWorkNotice{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   // ICML 2024: simpler `\printAffiliations` no-arg form (newer template
   // emits the affiliation list inline without trailing notice). Witness
   // 2310.18127.

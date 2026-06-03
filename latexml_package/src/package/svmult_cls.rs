@@ -134,5 +134,5 @@ LoadDefinitions!({
   // Springer Multi-author authors use \orcid for ORCID identifier.
   // Witness 2408.17087, 2411.17645 (2 svmult papers).
   DefMacro!("\\orcid{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=orcid]{#1}");
 });

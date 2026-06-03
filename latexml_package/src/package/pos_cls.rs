@@ -17,7 +17,7 @@ LoadDefinitions!({
   // \FullConference{name} — conference identification text. Round-34
   // surpass-Perl: preserve as ltx:note frontmatter.
   DefMacro!("\\FullConference{}",
-    "\\@add@frontmatter{ltx:note}[role=conference]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=conference]{#1}");
 
   DefMacro!("\\Jmath", "J");
 });

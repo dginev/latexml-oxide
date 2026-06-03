@@ -16,7 +16,6 @@ LoadDefinitions!({
   LoadClass!("article");
 
   RequirePackage!("multicol");
-  RequirePackage!("inst_support");
   // LLNCS authors routinely use \boldsymbol (amsbsy) and \mathbb / \mathfrak
   // (amssymb) in math without explicit \usepackage. The real Springer
   // llncs.cls quietly tolerates these because most authors run pdflatex
@@ -29,26 +28,29 @@ LoadDefinitions!({
   // Frontmatter
   def_macro_noop("\\frontmatter")?;
 
-  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
+  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
 
   DefMacro!("\\emailname", "E-mail");
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email' name='#name'>#1</ltx:contact>",
-    properties => sub[_args] {
-      let name = Stored::from(digest(T_CS!("\\emailname"))?);
-      Ok(stored_map!("name" => name))
-    });
-  DefMacro!("\\email Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+  DefMacro!("\\mailname",  "\\textit{Correspondence to}:");
 
-  DefMacro!("\\mailname", "\\textit{Correspondence to}:");
-  DefConstructor!("\\@@@mail{}", "^ <ltx:contact role='address' name='#name'>#1</ltx:contact>",
-    properties => sub[_args] {
-      let name = Stored::from(digest(T_CS!("\\mailname"))?);
-      Ok(stored_map!("name" => name))
-    });
-  DefMacro!("\\mail{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@mail{#1}}");
-
-  DefMacro!("\\keywordname", "\\textbf{Keywords}");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordname}]{#1}");
+  // Single \author, with multiple authors separated by \and  (Perl PR #2767)
+  // \inst{labels} can be used within each author to identify which affiliations apply
+  DefMacro!("\\author{}",
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}");
+  // Single \institute, with multiple institutions separated by \and
+  // The n-th institution is attached to the author which has that n in its \inst labels.
+  DefMacro!("\\institute{}",
+    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
+  DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
+  DefMacro!("\\inst{}",                 "\\lx@request@frontmatter@annotation[affiliation]{#1}");
+  // \orcidID should be used within each author in \author
+  DefMacro!("\\orcidID{}", "\\lx@add@orcid{#1}");
+  // \email, \url, \mail should be within an institute in \institute!!
+  DefMacro!("\\email Semiverbatim", "\\lx@add@email[name={\\emailname~}]{#1}");
+  DefMacro!("\\url Semiverbatim",   "\\lx@add@url{#1}");
+  DefMacro!("\\mail {}",            "\\lx@add@address[name={\\mailname~}]{#1}");
+  DefMacro!("\\keywordname",        "\\textbf{Keywords}");
+  DefMacro!("\\keywords{}",         "\\lx@add@keywords[name={\\keywordname:~}]{#1}");
 
   DefMacro!("\\ackname", "Acknowledgements");
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
@@ -231,12 +233,8 @@ LoadDefinitions!({
   DefMacro!("\\homedir", "\\~{ }");
   DefMacro!("\\idxquad", "\\hskip 10pt\\relax");
 
-  //======================================================================
-  // ORCID support
-  DefMacro!("\\orcidID Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@orcid{\\@@orcid{#1}}}");
-  DefConstructor!("\\@@orcid{}", "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
-    enter_horizontal => true);
-  DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
+  // (Perl PR #2767 removed the old \orcidID + \@@orcid + \@@@orcid trio;
+  // \orcidID is now defined above via \lx@add@orcid.)
 
   // LLNCS v2.22+ introduced the {credits} environment for author
   // credits / disclosure-of-interests at the end of the paper. It just

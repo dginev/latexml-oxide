@@ -183,11 +183,11 @@ LoadDefinitions!({
   // paper credit, conference name). Author content; preserve as
   // ltx:note frontmatter rather than gobble.
   DefMacro!("\\IEEEaftertitletext{}",
-    "\\@add@frontmatter{ltx:note}[role=aftertitle]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=aftertitle]{#1}");
   // \IEEEspecialpapernotice{text} — e.g. "Invited Paper". Author
   // content; preserve.
   DefMacro!("\\IEEEspecialpapernotice{}",
-    "\\@add@frontmatter{ltx:note}[role=papernotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=papernotice]{#1}");
   // \IEEEmembership{text} — membership label after author name
   // (e.g. "Member, IEEE"). Render inline in italic; do NOT drop.
   DefMacro!("\\IEEEmembership{}", ",\\space\\textit{#1}");
@@ -223,7 +223,7 @@ LoadDefinitions!({
   // a corresponding-author note (later rendered in titlepage). Preserve
   // as frontmatter note. Witness 2307.02076 (IEEEoj).
   DefMacro!("\\corresp{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=corresponding]{#1}");
 
   // Section numbering — default journal mode uses Roman numerals
   DefMacro!("\\thesection", "\\Roman{section}");

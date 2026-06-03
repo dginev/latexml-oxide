@@ -122,7 +122,7 @@ LoadDefinitions!({
 
   // Abstract/Keywords — Perl L95-120
   def_macro_noop("\\nosections")?;
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@frontmatter{ltx:keywords}{#1}");
 
   // Acknowledgements — Perl L249-251 (DefConstructor, defined below)
 

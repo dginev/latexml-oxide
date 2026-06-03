@@ -71,7 +71,7 @@ LoadDefinitions!({
   //======================================================================
   // Sec. 4. Top Matter
   // FrontMatter:
-  DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
+  DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
   // Author / address fields — preserve as ltx:note so the strings
   // reach the XML output instead of being gobbled (content-
   // preserving). These are typically the short-form variants
@@ -79,65 +79,59 @@ LoadDefinitions!({
   // when authors set them explicitly the values are still real
   // metadata.
   DefMacro!("\\shortauthor{}",
-    "\\@add@frontmatter{ltx:note}[role=shortauthor]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=shortauthor]{#1}");
   DefMacro!("\\authors{}",
-    "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=authors]{#1}");
   // Perl `ams_support.sty.ltxml` L82: `DefMacro('\shortauthors{}', Tokens())`
   // — gobble (redundant running head). Match Perl; preserving it errored on a
   // literal `&` in the running head (catcode-4 `&` → stray-`&`). See 0709.4236
   // and aas_support_sty.rs.
   def_macro_noop("\\shortauthors{}")?;
   DefMacro!("\\addresses{}",
-    "\\@add@frontmatter{ltx:note}[role=addresses]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=addresses]{#1}");
   DefMacro!("\\publname{}",
-    "\\@add@frontmatter{ltx:note}[role=publication]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=publication]{#1}");
 
   DefMacro!("\\title[]{}",
-    "\\if.#1.\\else\\def\\shorttitle{#1}\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\@add@frontmatter{ltx:title}{#2}");
+    "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
 
   DefMacro!("\\lx@author@sep", ",\\ ");
   DefMacro!("\\lx@author@conj", "\\ and\\ ");   // \@@and
 
+  // \author[shortname]{name} Use one \author per author
+  // followed by whatever contact information applies to that author.
+  // What to do with shortauthor ?  (Perl PR #2767)
   DefMacro!("\\author[]{}",
-    "\\if.#1.\\else\\def\\shortauthor{#1}\\fi\\def\\@author{#2}\\lx@author{#2}");
+    "\\def\\@shortauthor{#1}\\def\\@author{#2}\\lx@add@author{#2}");
 
   DefMacro!("\\datename", None, "\\textit{Date}:");
 
-  DefMacro!("\\contrib[]{}",
-    "\\@add@frontmatter{ltx:creator}[role=contributor]{\\@personname{#2}}");
+  DefMacro!("\\@commby", "Communicated by");
+  DefMacro!("\\curraddrname", "{\\itshape Current address}");
+  DefMacro!("\\emailaddrname", "{\\itshape Email address}");
+  DefMacro!("\\urladdrname", "{\\itshape URL}");
+  DefMacro!("\\translname", "Translated by");
+  DefMacro!("\\keywordsname", None, "Key words and phrases");
 
-  DefMacro!("\\commby{}",
-    "\\@add@frontmatter{ltx:creator}[role=communicator]{\\@personname{#1}}");
-
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\address[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#2}}");
-
-  DefConstructor!("\\@@@curraddr{}", "^ <ltx:contact role='current_address'>#1</ltx:contact>");
-  DefMacro!("\\curraddr{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@curraddr{#1}}");
-
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#2}}");
-
-  DefConstructor!("\\@@@urladdr{}", "^ <ltx:contact role='url'>#1</ltx:contact>");
-  DefMacro!("\\urladdr{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@urladdr{#1}}");
-
-  DefConstructor!("\\@@@dedicatory{}", "^ <ltx:contact role='dedicatory'>#1</ltx:contact>");
-  DefMacro!("\\dedicatory{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@dedicatory{#1}}");
-
-  // \date{}
-  DefMacro!("\\dateposted{}", "\\@add@frontmatter{ltx:date}[role=posted]{#1}");
+  // Various frontmatter creator contact information; attaches to previous \author
+  DefMacro!("\\contrib[]{}", "\\lx@add@creator[role=contributor, name={#1}]{#2}");
+  DefMacro!("\\commby{}",    "\\lx@add@creator[role=communicator,name={\\@commby~}]{#1}");
+  DefMacro!("\\address[]{}", "\\lx@add@address[name={#1}]{#2}");
+  DefMacro!("\\curraddr[]{}",
+    "\\lx@add@contact[role=current_address,name={\\curraddrname\\ifx.#1.\\else{, #1}\\fi:\\ }]{#2}");
+  DefMacro!("\\email[]{}",
+    "\\lx@add@email[name={\\emailaddrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{#2}");
+  DefMacro!("\\urladdr[]{}",
+    "\\lx@add@url[name={\\urladdrname\\ifx.#1.\\else{, #1}~\\fi:\\ }]{#2}");
+  DefMacro!("\\dedicatory{}",   "\\lx@add@contact[role=dedicatory]{#1}");
+  DefMacro!("\\dateposted{}",   "\\lx@add@date[role=posted]{#1}");
+  DefMacro!("\\translator[]{}", "\\lx@add@translator[name={\\translname~}]{#2}");
+  DefMacro!("\\keywords{}",     "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");
 
   // \thanks{} ( == ack, not latex's \thanks, not in author)
   // make a throwaway optional argument available for OmniBus use
   DefMacro!("\\thanks[]{}",
-    "\\@add@frontmatter{ltx:acknowledgements}[name={\\@ifundefined{thanksname}{}{\\thanksname}}]{#2}");
-
-  DefMacro!("\\translator[]{}",
-    "\\@add@frontmatter{ltx:creator}[role=translator]{\\@personname{#2}}");
-
-  DefMacro!("\\keywordsname", None, "Key words and phrases");
-  DefMacro!("\\keywords{}",
-    "\\@add@frontmatter{ltx:keywords}[name={\\keywordsname}]{#1}");
+    "\\lx@add@pubnote[role=thanks,name={\\@ifundefined{thanksname}{}{\\thanksname}}]{#2}");
 
   // Non-standard but makes it easier to create bindings for variations on AMS classes;
   // just redefine this macro
@@ -165,16 +159,13 @@ LoadDefinitions!({
   // (`\subjclass{{\sc AMS Subject Classification:} 06B05}`).
   DefMacro!("\\subjclass[Default:\\@subjclassyear]{}",
     "\\ifx.#1.\\else\\xdef\\@subjclassyear{#1}\\fi\
-     \\@add@frontmatter{ltx:classification}[scheme={#1 Mathematics Subject Classification},name={\\subjclassname}]{#2}");
+     \\lx@add@classification[scheme={#1 Mathematics Subject Classification},name={\\subjclassname:~}]{#2}");
 
-  DefMacro!("\\copyrightinfo{}{}",
-    "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #1: #2}");
+  DefMacro!("\\copyrightinfo{}{}", "\\lx@add@copyright{#1, #2}");
 
   def_macro_noop("\\pagespan{}{}")?; // ?
-  DefMacro!("\\PII{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=PII]{#1}");
-  DefMacro!("\\ISSN{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=ISSN]{#1}");
+  DefMacro!("\\PII{}",  "\\lx@add@classification[scheme=PII]{#1}");
+  DefMacro!("\\ISSN{}", "\\lx@add@classification[scheme=ISSN]{#1}");
 
   DefMacro!("\\currentvolume", None, "");
   DefMacro!("\\currentissue", None, "");
@@ -182,7 +173,7 @@ LoadDefinitions!({
   DefMacro!("\\currentyear", None, "");
   DefMacro!("\\volinfo", None, "");
   DefMacro!("\\issueinfo{}{}{}{}",
-    "\\def\\currentvolume{#1}\\def\\currentissue{#2}\\def\\currentmonth{#3}\\def\\currentyear{#4}\\def\\volinfo{Volume \\currentvolume, Number \\number0\\currentissue, \\currentmonth\\ \\currentyear}\\@add@frontmatter{ltx:note}[role=volume-info]{\\volinfo}");
+    "\\def\\currentvolume{#1}\\def\\currentissue{#2}\\def\\currentmonth{#3}\\def\\currentyear{#4}\\def\\volinfo{Volume \\currentvolume, Number \\number0\\currentissue, \\currentmonth\\ \\currentyear}\\lx@add@pubnote[role=volume]{\\volinfo}");
 
   // abstract otherwise defined in LaTeX.pool
   DefMacro!("\\abstractname", None, "\\textsc{Abstract}");
@@ -329,5 +320,5 @@ LoadDefinitions!({
   DefMacro!("\\MR{}", "MR #1");
   // \MRhref{label} — Math Reviews link; preserve as note (the link
   // target encodes the MR id which is genuine reference metadata).
-  DefMacro!("\\MRhref{}", "\\@add@frontmatter{ltx:note}[role=mr-ref]{#1}");
+  DefMacro!("\\MRhref{}", "\\lx@add@frontmatter{ltx:note}[role=mr-ref]{#1}");
 });

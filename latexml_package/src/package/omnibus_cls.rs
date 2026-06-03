@@ -269,7 +269,7 @@ LoadDefinitions!({
   // which does `push(@{ $$frontmatter{'ltx:classification'} }, [tag, attrs, @LaTeXML::LIST])`.
   //
   // History: the previous Rust binding called
-  //   stomach::raw_tex("\\@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")
+  //   stomach::raw_tex("\\lx@add@frontmatter{ltx:classification}[scheme=keywords]{#body}")
   // which silently misused `#body` (a Constructor template placeholder
   // only valid inside a DefConstructor template string) inside a
   // raw_tex literal. The `#` was tokenized as PARAM and reached the

@@ -20,19 +20,19 @@ LoadDefinitions!({
   RequirePackage!("ulem");
 
   // 2.1.3 Editorial Information
-  DefMacro!("\\received{}", "\\@add@frontmatter{ltx:date}[role=received,name=Received]{#1}");
-  DefMacro!("\\revised{}", "\\@add@frontmatter{ltx:date}[role=revised,name=Revised]{#1}");
-  DefMacro!("\\accepted{}", "\\@add@frontmatter{ltx:date}[role=accepted,name=Accepted]{#1}");
+  DefMacro!("\\received{}", "\\lx@add@date[role=received,name=Received]{#1}");
+  DefMacro!("\\revised{}", "\\lx@add@date[role=revised,name=Revised]{#1}");
+  DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted,name=Accepted]{#1}");
   // Journal metadata — preserve as ltx:note frontmatter (the values
   // are real article identifiers that downstream tools may want).
   DefMacro!("\\journalid{}{}",
-    "\\@add@frontmatter{ltx:note}[role=journalid]{#1: #2}");
+    "\\lx@add@frontmatter{ltx:note}[role=journalid]{#1: #2}");
   DefMacro!("\\articleid{}{}",
-    "\\@add@frontmatter{ltx:note}[role=articleid]{#1: #2}");
+    "\\lx@add@frontmatter{ltx:note}[role=articleid]{#1: #2}");
   DefMacro!("\\paperid{}",
-    "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=paperid]{#1}");
   DefMacro!("\\msid{}",
-    "\\@add@frontmatter{ltx:note}[role=msid]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=msid]{#1}");
   // Review markup — pass-through (#1) for now, since no LaTeXML container
   // element accepts ltx:section. ltx:text is inline-only, ltx:inline-block
   // takes Block.model (paragraphs/equations but no sections), ltx:note
@@ -49,13 +49,13 @@ LoadDefinitions!({
   DefMacro!("\\explain{}",  "#1");
   DefMacro!("\\edit{}{}",   "#2");
   def_macro_noop("\\ccc{}")?;
-  DefMacro!("\\cpright{}{}", "\\@add@frontmatter{ltx:note}[role=copyright]{\\copyright #2: #1}");
+  DefMacro!("\\cpright{}{}", "\\lx@add@copyright{#2: #1}");
   DefMacro!("\\journal{}",
-    "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+    "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\volume{}",
-    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+    "\\lx@add@pubnote[role=volume]{#1}");
   DefMacro!("\\issue{}",
-    "\\@add@frontmatter{ltx:note}[role=issue]{#1}");
+    "\\lx@add@pubnote[role=issue]{#1}");
   DefMacro!("\\SGMLbi{}", "#1");
   DefMacro!("\\SGMLbsc{}", "#1");
   DefMacro!("\\SGMLclc{}", "#1");
@@ -63,10 +63,10 @@ LoadDefinitions!({
   def_macro_noop("\\SGML{}")?;
 
   // 2.1.4 Short Comment
-  DefMacro!("\\slugcomment{}", "\\@add@frontmatter{ltx:note}[role=slugcomment]{#1}");
+  DefMacro!("\\slugcomment{}", "\\lx@add@pubnote[role=note]{#1}");
 
   // 2.1.5 Running Heads
-  DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
+  DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
   // Perl `aas_support.sty.ltxml` L83: `DefMacro('\shortauthors{}', '')` — GOBBLE
   // (comment: "not useful?", "redundantly with an \author macro"). We previously
   // preserved it as `ltx:note[role=shortauthors]` (Rust-over-Perl), but (a) it
@@ -76,66 +76,80 @@ LoadDefinitions!({
   // 0709.4236 (`\shortauthors{Riaz, Gizis & Sammaddar}`): RUST 1 error → 0
   // (Perl clean). Match Perl: gobble.
   def_macro_noop("\\shortauthors{}")?;
-  DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
   // \lefthead{author} / \righthead{title} — running-header text;
   // preserve as ltx:note (was gobbled).
   DefMacro!("\\lefthead{}",
-    "\\@add@frontmatter{ltx:note}[role=lefthead]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=lefthead]{#1}");
   DefMacro!("\\righthead{}",
-    "\\@add@frontmatter{ltx:note}[role=righthead]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=righthead]{#1}");
 
-  // 2.3 Title and Author Information
-  AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
+  // 2.3 Title and Author Information (Perl PR #2767)
 
-  DefConstructor!("\\@@personname[]{}", "<ltx:personname>#2</ltx:personname>",
-    mode => "restricted_horizontal", enter_horizontal => true);
+  def_macro_noop("\\allauthors")?; // Presumably should collect all authors?
 
-  DefMacro!("\\author[]{}", "\\@add@frontmatter{ltx:creator}[role=author]{\\@@personname[#1]{#2}}");
+  // \author[orcid,KV]{name}  Use once per author
+  // Note optional arg starts with orcid ID,
+  // followed by keyval (gname,sname,suffix for parts of author's name)
+  DefMacro!("\\author[]{}", "\\lx@add@author{#2\\lx@aas@checkorcid{#1}}");
+  DefMacro!("\\lx@aas@checkorcid{}", "\\lx@aas@checkorcid@#1,\\done");
+  // In later aas, $junk may be keywords? (gname,sname,suffix,...?)
+  DefMacro!("\\lx@aas@checkorcid@ Until:, Until:\\done", sub[(possibleid, _junk)] {
+    let id = possibleid.to_string();
+    let trimmed = id.trim();
+    let is_orcid = trimmed.len() == 19
+      && trimmed.split('-').count() == 4
+      && trimmed.split('-').all(|seg| seg.len() == 4
+          && seg.chars().all(|c| c.is_ascii_digit() || c == 'X'));
+    if is_orcid {
+      Ok(Invocation!("\\lx@add@orcid{#1}", vec![Some(possibleid)]))
+    } else {
+      Ok(Tokens!())
+    }
+  });
 
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-  DefMacro!("\\affil", "\\affiliation");
-  DefConstructor!("\\@@@altaffil{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\altaffiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@altaffil{#1}}");
-  DefConstructor!("\\@@@authoraddr{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\authoraddr{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@authoraddr{#1}}");
+  // \email[]{addr} applies to previous author
+  // \correspondingauthor{name}
+  DefMacro!("\\correspondingauthor{}",
+    "\\lx@add@contact[role=correspondent,label={fuzzy:#1}]{#1}");
 
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+  // Various contact information attaches to previous \author
+  DefMacro!("\\affiliation{}",    "\\lx@add@affiliation{#1}");
+  DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");
+  DefMacro!("\\affil",            "\\affiliation");
+  DefMacro!("\\authoraddr{}",     "\\lx@add@address{#1}");
+  DefMacro!("\\email{}",          "\\lx@add@email{#1}");
+
+  // \collaboration{n}{name} applies to previous authors w/o collab; n is how many to SHOW
+  // \nocollaboration{n} ditto, but says they are not in a collaboration group.
+  DefMacro!("\\collaboration{}{}", "\\lx@add@contact[role=collaboration,annotate=new]{#2}");
+  DefMacro!("\\nocollaboration{}", "\\lx@add@contact[role=collaboration,annotate=new]{}");
+
+  // Older aas versions: put mark within \author, text will be attached
+  DefMacro!("\\altaffilmark Semiverbatim",
+    "\\lx@request@frontmatter@annotation[altaffil]{#1}");
+  DefMacro!("\\altaffiltext Semiverbatim {}",
+    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
+  DefMacro!("\\authoremail", "\\email"); // Obsolete form
+
+  // Redefine to straight email address after document begin.
+  // (Perl PR #2767 disables the former \@startsection@hook \let\email\@@email.)
 
   DefPrimitive!("\\and", None);
-  DefMacro!("\\authoremail", "\\email");
 
-  // Perl aas_support.sty.ltxml L119:
-  //   AddToMacro(T_CS('\@startsection@hook'),
-  //              TokenizeInternal('\let\email\@@email'));
-  // When a section starts, locally Let \email = \@@email so that
-  // \email{user@example} inside a section body renders as an inline
-  // mailto link (via \@@email) rather than being pushed to the
-  // frontmatter creator list. Pure additive parity port — no test
-  // exercises \email inside a section so no golden risk.
-  AddToMacro!("\\@startsection@hook", "\\let\\email\\@@email");
+  DefMacro!("\\software{}", "\\lx@add@pubnote[role=software]{#1}");
+  DefMacro!("\\submitjournal{}", "\\lx@add@pubnote[role=journal]{#1}");
 
-  // Affiliation marks — Perl L126-132
-  DefMacro!("\\altaffilmark{}", "\\@altaffilmark{#1}");
-  DefConstructor!("\\@altaffilmark{}", "<ltx:note role='affiliationmark' mark='#1'/>",
-    enter_horizontal => true);
-  DefConstructor!("\\altaffiltext{}{}", "<ltx:note role='affiliationtext' mark='#1'>#2</ltx:note>");
-
-  DefMacro!("\\software{}", "\\@add@frontmatter{ltx:note}[role=software]{#1}");
-  DefMacro!("\\submitjournal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-
-  // DOI — Perl L137-138
+  // Alas \doi is not frontmatter.
   DefConstructor!("\\doi{}", "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
     enter_horizontal => true);
 
-  // Collaboration — Perl L139-141
-  DefConstructor!("\\@@@collaborator{}", "<ltx:note role='collaborator'>#1</ltx:note>");
-  DefMacro!("\\collaboration{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@collaborator{#2}}");
-  def_macro_noop("\\nocollaboration{}")?;
+  // 2.4 Abstract
+  DefMacro!("\\abstract",    "\\lx@begin@abstract");
+  DefMacro!("\\endabstract", "\\lx@end@abstract");
 
   // 2.5 Keywords
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\keywords{}",
+    "\\lx@add@keywords[name={\\@ifundefined{keywordsname}{}{\\keywordsname}}]{#1}");
   Let!("\\subjectheadings", "\\keywords");
 
   // 2.6 Comments to Editors — preserve the note text as ltx:note
@@ -238,7 +252,7 @@ LoadDefinitions!({
   // 2.10 Facilities
   DefConstructor!("\\facility{}", "<ltx:text class='ltx_ast_facility'>#1</ltx:text>",
     enter_horizontal => true);
-  DefMacro!("\\facilities{}", "\\@add@frontmatter{ltx:note}[role=facilities]{#1}");
+  DefMacro!("\\facilities{}", "\\lx@add@pubnote[role=thanks,name={Facilities:~}]{#1}");
 
   // 2.11 Appendices — Perl aas_support.sty.ltxml L247-249
   DefMacro!("\\appendix", "\\@appendix");
