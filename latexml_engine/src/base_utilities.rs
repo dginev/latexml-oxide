@@ -927,7 +927,11 @@ LoadDefinitions!({
   // Same, but put it at the beginning of document, but after any ltx:resources
   DefConstructor!("\\lx@frontmatter@fallback", sub[document,_args] {
     let savenode = document.get_node().clone();
-    let mut point = document.findnode("ltx:document/ltx:resource[last()]", None);
+    // Perl: findnode('ltx:document/ltx:resource[last()]') — relative to the
+    // DOCUMENT node (Perl's default xpath context). The Rust cached XPath
+    // context evaluates relative to the root ELEMENT, so use the equivalent
+    // absolute path.
+    let mut point = document.findnode("/ltx:document/ltx:resource[last()]", None);
     if let Some(p) = point.take() {
       point = p.get_next_sibling();
     }

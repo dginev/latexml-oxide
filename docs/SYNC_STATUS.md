@@ -6419,6 +6419,108 @@ provenance (§7 A.3), Tier B expansion provenance.
 
 ---
 
+## html_feedback regression triage + xy orphaned-ops fix — 2026-06-03
+
+Campaign over the 19 newest user-reported `regression` articles from
+arXiv/html_feedback (sources + per-paper A/B harness under
+`~/data/html_regressions/`, narrative in `RUST_TRIAGE.md` there).
+Outcome: under matched profiles (same texmf, same `--preload ar5iv.sty`)
+the Rust port was at-or-above Perl parity on **18 of 19** papers; most
+apparent "Rust-worse" deltas in production cortex logs were TL-vintage /
+profile / main-file-pick artifacts, not engine gaps. Two new
+KNOWN_PERL_ERRORS entries came out of it (#25 `\expandafter{\alignat}`
+orphaned `\else\fi`; #26 tikz-cd/quantikz coordinate cascade → fatal in
+both engines).
+
+The one genuine engine defect (witness arXiv:2501.02222, qcircuit +
+`rawstyles`): real-xy rejects `\Qcircuit`'s matrix setup
+(`\xymatrix<setup>{<rows>} expected` — also in Perl) and the orphaned
+drawing ops surfaced at the `\end{document}` unwind inside a stale
+`<ltx:text>`, cascading 83× `svg:path`/`svg:g` malformed-insert errors
+→ `Fatal:TooManyErrors` → **zero output** where Perl ships a degraded
+document (circuits dropped, 22 errors). Fix (branch
+`fix/xy-orphaned-svg-ops`, worktree): `svg_empty_element` and the
+`svg:g`/`svg:text` wrapper constructors (incl. `\lx@xy@svgnested`,
+`\lx@xy@move@to`) skip emission when `float_to_element` fails AND
+`can_contain_node_somehow` is `None` — the hopeless-orphan state Perl
+never reaches (its emulated xy discards aborted diagram bodies).
+Witness: 102 errors + fatal → **28 errors, 588KB XML ships** (Perl 22).
+Healthy xy unaffected (plain `\xymatrix` output byte-stable). Also added
+env-gated `LXML_TRACE_BOUND_MODE` diagnostic to `end_mode_opt`
+(symmetric with the existing `egroup` trace).
+
+Worker follow-ups (not landed): skip post-processing on fatal (Perl
+does; currently parses empty XML → "Null pointer" noise); pushback /
+iflimit accounting gap vs Perl tracked in `ar5iv_sty.rs` comment.
+
+---
+
+## Frontmatter refactor (upstream PR #2767) — LANDED 2026-06-03
+
+Full translation of brucemiller/LaTeXML#2767 ("Frontmatter refactor",
+merged upstream 2026-05-20, merge commit `23f3acfa`). The local
+`LaTeXML/` reference checkout was fast-forwarded `e0f73ca2 → 23f3acfa`
+(the two interleaved upstream commits — `\mit` cleanup #2796 and
+graphics-caching #2805 — are visible in the tree but NOT translated;
+they are out of PR scope).
+
+**Core (latexml_core):**
+* `KeyVals::rebrace` — reverted values wrap in `{}` on outer-level
+  comma or empty value (Perl `KeyVals.pm revertKeyVal`).
+* `Invocation` anonymous-macro: a string first-arg containing `#1`
+  markers is `TokenizeInternal`'d → `pack_parameters` →
+  `substitute_parameters` (`build_invocation_str`; the `Invocation!`
+  literal arm routes through it).
+* `Alignment isSkippable`: `alignmentPreserve` content never skippable.
+* `Document getNodeLanguage`: walks the *current* ancestor (fixed a
+  Rust-side translation bug) and tolerates non-numeric `_font`.
+* New recursive frontmatter model: `TagData{tag, attr, content:
+  Vec<TagContent>}` with `TagContent::{PlaceKeeper, Box, Entry}`
+  (Perl `[tag,{attr},@content]` + `'place_keeper'`), plus
+  `Stored::FrontmatterRaw` for the deferred-command queue.
+
+**Engine (latexml_engine/base_utilities.rs):** the new
+creator/contact system — `queue/dequeue_front_matter`
+(`frontmatter_raw`), `\lx@add@frontmatter[@now|@until]`,
+`\lx@annotate@frontmatter[@now]` with label/labelseq/annotate
+(all|new|n) attachment, `\lx@request@frontmatter@annotation`,
+`\lx@set@frontmatter@label`, `digest_front_matter` (deferred until
+`\maketitle`; keeps the Rust-only clear-before-digest +
+fatal-swallow protections), `insert_frontmatter_rec`,
+`relocate_annotations` (label/unprefixed/fuzzy tables),
+`\lx@personname` (moved from latex_constructs), SplitTokens on
+Token-OR-Tokens delimiters with space-trim semantics,
+`\lx@splitting`, `position_of`, `\lx@add@authors` superscript
+heuristics, ~35 shorthands + `\lx@<tag>[@role]@name` macros, and the
+`ltx:_Capture_`-based `\lx@frontmatter@fallback`.
+`XUntil` now only expands (Perl removed the digesting clause; the
+Rust witnessed-workaround family for that clause was removed with it
+— its call sites moved to digestion-based capture).
+Base_Deprecated grew the `\@personname` / `\@add@frontmatter` /
+`\@add@to@frontmatter` / `\@ADDCLASS` shims; non-PR bindings still
+work through them, exactly like out-of-tree Perl bindings.
+
+**Bindings (30):** IEEEtran, JHEP, jheppub, OmniBus, PoS, aa/aas/ams/
+amsppt/elsart/icml/inst/iopart/mn2e/revtex4/sv support, acmart,
+aipproc, authblk, emulateapj, espcrc, hyperref (`\hypersetup`
+no-digest), ijcai (full within-author `\affiliations`/`\emails`
+protocol), latexml.sty (`authorsoneline`/`authorsmultiline`), llncs,
+longtable (label property — Rust already had it; Perl caught up),
+moderncv, quantumarticle, svmult, titlesec.
+
+**Resources:** `LaTeXML-structure.rnc/.rng` + regenerated
+`LaTeXML.model` (ltx:pubnote in FrontMatter + 5 parent elements),
+XSLT structure-xhtml/jats/tei (pubnote→title-footnote,
+contact-name prefixing, orcid links, `ltx_authors_multiline`),
+LaTeXML.css.
+
+**Intentional Rust-only refinements kept (refine-not-revert):**
+`\shortauthor`/`\shorttitle` non-@ gdefs (witness 2406.14142),
+KeyVals unknown-key Warn except the Frontmatter keyset (Perl Infos
+there; witness 1410.8171 keeps the Warn elsewhere), elsart `\collab`
+`#2` fix (KNOWN_PERL_ERRORS #16), Rust-only content-preserve macros
+routed through `\lx@add@frontmatter`.
+
 ## `--whatsin` / `--whatsout` full port — LANDED 2026-05-29
 
 Faithful port of Perl `LaTeXML::Util::Pack` + the `LaTeXML.pm` driver
@@ -7094,6 +7196,22 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   2204.01753. Surpass-Perl path (not yet designed): when xcolor is
   re-loaded with new options, process them instead of suppressing
   the second `\usepackage`.
+* **tikz-cd / quantikz matrix coordinates** — "Cannot parse this
+  coordinate" cascade to fatal in BOTH engines on TL2024+ (quantikz2
+  present); TL-vintage-dependent. KNOWN_PERL_ERRORS #26. Witness:
+  2403.19758.
+* **adjustbox→trimclip raw load under `rawstyles`** — pushback-limit
+  fatal in both (Perl 599999 / Rust 650000) from trimclip.sty raw
+  execution. Witness: 2405.11804 (ar5iv profile only; plain CLI fine).
+* **raw-xy `\Qcircuit` matrix-setup abort** — "\xymatrix<setup>{<rows>}
+  expected" in both engines under `rawstyles`; circuits dropped from
+  output (matches the html_feedback user report). Rust additionally
+  needed the orphaned-ops guard (see 2026-06-03 section above) to avoid
+  a fatal cascade at the \end{document} unwind. Witness: 2501.02222.
+* **`\expandafter{\alignat}` orphaned `\else`/`\fi`** — both engines,
+  2 errors per occurrence; etoolbox `\cspreto{alignat}` is the
+  real-world trigger (ECCV class lineno patching). KNOWN_PERL_ERRORS
+  #25. Witness: 2409.02543.
 * **Canvas-3 stage 16–23 SHARED-FAILUREs (R36 verified 2026-05-22):**
   math0611010 (xy-pic OOM), hep-ph0612355 (feynmp SEGV),
   math0703454 (R35.A MoveableBox depth-cap), 0708.3218, 0708.3398
