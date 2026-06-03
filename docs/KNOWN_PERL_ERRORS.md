@@ -815,6 +815,88 @@ eliminates the per-cell cascade. Witness 1907.04219: 102 errors / FATAL_3 → **
 errors, 4.9 MB doc** (6 tables, 787 tabulars). Surpasses Perl on this shared
 Perl/LaTeXML bug.
 
+## 27. `\expandafter{\alignat}` orphans `\else`/`\fi` (amsmath env-begin macros modeled with a `{}` arg)
+
+**Perl source:** `LaTeXML/Package/amsmath.sty.ltxml` L515-518 (`\alignat`),
+plus siblings `alignat*`, `xalignat`, `xxalignat`.
+
+**Symptom:** two errors per occurrence:
+```
+Error:unexpected:\else Didn't expect a T_CS[\else] since we seem not to be in a conditional
+Error:unexpected:\fi   Didn't expect a T_CS[\fi] since we seem not to be in a conditional
+```
+
+**Minimal example** (verified identical on Perl 0.8.8 and Rust, 2026-06-03):
+```tex
+\usepackage{amsmath}
+\edef\foo{\unexpanded\expandafter{\alignat}}
+```
+
+**Real-world trigger:** etoolbox `\cspreto{alignat}{...}` — used by the
+ECCV class (`eccv.sty` "linenomathpatchAMS" block, arXiv:2409.02543) to
+patch AMS environments for line numbering. `\preto`'s false branch runs
+`\edef#1{\unexpanded{#2}\unexpanded\expandafter{#1}}`.
+
+**Root cause:** real amsmath defines the `alignat` *begin-code* as a
+parameterless macro (the pair-count is read downstream by
+`\start@align`), so `\expandafter{\alignat}` is harmless in real TeX.
+LaTeXML models it as `DefMacro('\alignat{}', '\ifmmode...\else...\fi')`
+— a macro with one parameter. Forcing one expansion step via
+`\expandafter` makes it read its argument from a stream whose next token
+is `}`; the argument read derails the brace balance, and the
+`\ifmmode...\else...\fi` body tokens subsequently surface with no active
+conditional frame, yielding the orphaned `\else`/`\fi` pair.
+
+**Impact:** 2 non-fatal errors per `\cspreto`/`\csappto`-style single-step
+expansion of an affected env-begin CS; the patch the author intended is
+also silently lost (same as Perl).
+
+**Rust resolution:** none needed — behavior is verified bit-identical to
+Perl (warn + 2 errors). Reproducers under
+`~/data/reproducers/` (`alignat-cspreto-eccv.tex`,
+`alignat-expandafter-orphaned-elsefi.tex` — see its README.md).
+A genuine fix belongs upstream (model `alignat`-family begin-code as
+parameterless, reading the pair count in the alignment setup), and would
+be a documented divergence if taken before Perl does.
+
+## 28. tikz-cd / quantikz matrix coordinates unparseable by the LaTeXML tikz interpretation — error cascade to fatal
+
+**Perl source:** the raw-TikZ interpretation pathway (`tikz.sty.ltxml` +
+pgfsys driver). Both engines interpret the *real* tikz/pgf from texmf;
+`tikz-cd`'s arrow/matrix machinery produces coordinates the
+LaTeXML-driven pgf parsing cannot handle.
+
+**Symptom:** with a TeX Live that provides `quantikz`/`tikz-cd`
+(library `quantikz2`, TL2024+), every cell of every `tikzcd` diagram
+yields
+```
+Error:latex:(tikz) Package tikz Error: Cannot parse this coordinate
+```
+cascading until the error cap kills the conversion:
+- Perl 0.8.8 (TL2025): 90×, then `Fatal:too_many_errors:100 Too many errors (> 100)!`
+- Rust HEAD f5637c92ba: same cascade, `Fatal:TooManyErrors:MaxLimit(500)`
+  ("same error fired 501 times in a row"; 514 errors total).
+
+Also identical in both: `Error:undefined:\tikzcdmatrixname`, "Giving up
+on this path. Did you forget a semicolon?".
+
+**Witness:** arXiv:2403.19758 (`\usepackage{tikz}` +
+`\usetikzlibrary{quantikz2}`, inline `\begin{tikzcd} \qw & \gate{X} ...`).
+On *older* TL (production cortex container) quantikz2 is absent, so
+`{tikzcd}` is simply undefined → 95 recoverable errors and a surviving
+(degraded) document — the failure mode is TL-vintage-dependent.
+
+**Impact:** papers using quantikz/tikz-cd convert to nothing (fatal) on
+modern TL, in both engines.
+
+**Rust resolution:** parity confirmed (2026-06-03) — no Rust-side defect.
+Two follow-ups worth separate consideration:
+1. cap-semantics alignment: Perl fatals at >100 *total* errors; Rust's
+   consecutive-same-error cap (500) let this run reach 514 total before
+   dying. Same outcome here, but counts/log shape diverge.
+2. an actual tikz-cd/quantikz coordinate fix would be upstream-grade work
+   benefiting both engines (or a Rust-first divergence to be documented).
+
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
 `catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded
