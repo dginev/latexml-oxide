@@ -282,13 +282,27 @@ impl KeyVals {
           // so each unique missing key surfaces as a status_code=1
           // (`[warn]` in the canvas), and a binding gap can't ship
           // green.
-          Warn!(
-            "undefined",
-            "Encountered unknown KeyVals key",
-            s!(
-              "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
-            )
-          );
+          //
+          // EXCEPT for the 'Frontmatter' keyset (PR #2767): its design
+          // passes undeclared keys by construction (the engine's own
+          // \lx@add@date uses `name={...}`; class bindings pass through
+          // arbitrary attributes). Perl Infos there; mirror that level
+          // so frontmatter-bearing papers don't all turn status_code=1.
+          if all_joined == "Frontmatter" {
+            Info!(
+              "undefined",
+              "Encountered unknown KeyVals key",
+              s!("'{key}' with prefix '{prefix}' not defined in '{all_joined}'")
+            );
+          } else {
+            Warn!(
+              "undefined",
+              "Encountered unknown KeyVals key",
+              s!(
+                "'{key}' with prefix '{prefix}' not defined in '{all_joined}', were you perhaps using \\setkeys instead of \\setkeys*?"
+              )
+            );
+          }
         }
       }
       return Vec::new();
