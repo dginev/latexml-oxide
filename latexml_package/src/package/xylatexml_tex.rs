@@ -118,12 +118,39 @@ fn svg_empty_element(
   attrs: HashMap<String, String>,
 ) -> Result<()> {
   let savenode = document.float_to_element(tag, false)?;
+  if savenode.is_none()
+    && latexml_core::document::can_contain_node_somehow(document.get_node(), tag).is_none()
+  {
+    // Hopeless insertion point: float_to_element found no ancestor that
+    // can host `tag` — not even via auto-open — and already issued the
+    // "No open node can contain element" Warn. This state is reached by
+    // orphaned xy drawing ops whose enclosing \xy wrapper was aborted
+    // (witness 2501.02222: real xy rejects \Qcircuit's matrix setup with
+    // "\xymatrix<setup>{<rows>} expected"; the leftover ops surface at
+    // the \end{document} unwind inside a stale <ltx:text>). Perl never
+    // reaches this state — its emulated xy discards the aborted diagram
+    // body — so degrade the same way: drop the orphaned drawing op and
+    // keep the document. Without this guard each op cascades one
+    // malformed-insert Error (83x on the witness) into
+    // Fatal:TooManyErrors and the paper ships nothing.
+    return Ok(());
+  }
   document.open_element(tag, Some(attrs), None)?;
   document.close_element(tag)?;
   if let Some(saved) = savenode {
     document.set_node(&saved);
   }
   Ok(())
+}
+
+/// Companion guard to [`svg_empty_element`] for the non-empty SVG wrappers
+/// (`svg:g`, `svg:text`) that follow the float->open->absorb->close pattern.
+/// Call after a `float_to_element` that returned `None`: when the current
+/// insertion point cannot host `tag` even via auto-open, the wrapper and its
+/// SVG-internal content are orphaned drawing ops (same witness/rationale as
+/// `svg_empty_element`) and the caller should skip emission entirely.
+pub(crate) fn svg_insertion_hopeless(document: &Document, tag: &str) -> bool {
+  latexml_core::document::can_contain_node_somehow(document.get_node(), tag).is_none()
 }
 
 /// Helper: capture common xy SVG element properties at digest time.
@@ -446,11 +473,16 @@ LoadDefinitions!({
       let ypx = dim_to_px(y);
       let transform = s!("translate({},{})", fmt2(xpx), fmt2(ypx));
       let g_attrs = string_map!("transform" => transform);
-      document.open_element("svg:g", Some(g_attrs), None)?;
-      if let Some(Some(content)) = args.get(2) {
-        document.absorb(content, None)?;
+      if svg_insertion_hopeless(document, "svg:g") {
+        // Orphaned xy positioning op — skip wrapper AND content
+        // (see svg_empty_element for witness/rationale).
+      } else {
+        document.open_element("svg:g", Some(g_attrs), None)?;
+        if let Some(Some(content)) = args.get(2) {
+          document.absorb(content, None)?;
+        }
+        document.close_element("svg:g")?;
       }
-      document.close_element("svg:g")?;
     }
   );
 
@@ -1108,12 +1140,16 @@ LoadDefinitions!({
       let transform = s!("translate({},{}) rotate({}) scale({},{})", x, y, angle, xscale, yscale);
       let attrs = string_map!("transform" => transform, "stroke" => stroke);
       let savenode = document.float_to_element("svg:text", false)?;
-      document.open_element("svg:text", Some(attrs), None)?;
-      if let Some(Some(content)) = args.first() {
-        document.absorb(content, None)?;
+      if savenode.is_none() && svg_insertion_hopeless(document, "svg:text") {
+        // Orphaned xy wrapper — skip (see svg_empty_element).
+      } else {
+        document.open_element("svg:text", Some(attrs), None)?;
+        if let Some(Some(content)) = args.first() {
+          document.absorb(content, None)?;
+        }
+        document.close_element("svg:text")?;
+        if let Some(saved) = savenode { document.set_node(&saved); }
       }
-      document.close_element("svg:text")?;
-      if let Some(saved) = savenode { document.set_node(&saved); }
     },
     properties => sub[args] {
       let (stroke, _fill) = xy_fill_stroke();
@@ -1180,12 +1216,16 @@ LoadDefinitions!({
       };
       let attrs = string_map!("transform" => transform);
       let savenode = document.float_to_element("svg:g", false)?;
-      document.open_element("svg:g", Some(attrs), None)?;
-      if let Some(Stored::Digested(box_d)) = props.get("xy_box") {
-        document.absorb(box_d, None)?;
+      if savenode.is_none() && svg_insertion_hopeless(document, "svg:g") {
+        // Orphaned xy wrapper — skip (see svg_empty_element).
+      } else {
+        document.open_element("svg:g", Some(attrs), None)?;
+        if let Some(Stored::Digested(box_d)) = props.get("xy_box") {
+          document.absorb(box_d, None)?;
+        }
+        document.close_element("svg:g")?;
+        if let Some(saved) = savenode { document.set_node(&saved); }
       }
-      document.close_element("svg:g")?;
-      if let Some(saved) = savenode { document.set_node(&saved); }
     },
     properties => sub[args] {
       let xscale = args.first().and_then(|a| a.as_ref())
@@ -1212,12 +1252,16 @@ LoadDefinitions!({
       };
       let attrs = string_map!("transform" => transform);
       let savenode = document.float_to_element("svg:g", false)?;
-      document.open_element("svg:g", Some(attrs), None)?;
-      if let Some(Stored::Digested(box_d)) = props.get("xy_box") {
-        document.absorb(box_d, None)?;
+      if savenode.is_none() && svg_insertion_hopeless(document, "svg:g") {
+        // Orphaned xy wrapper — skip (see svg_empty_element).
+      } else {
+        document.open_element("svg:g", Some(attrs), None)?;
+        if let Some(Stored::Digested(box_d)) = props.get("xy_box") {
+          document.absorb(box_d, None)?;
+        }
+        document.close_element("svg:g")?;
+        if let Some(saved) = savenode { document.set_node(&saved); }
       }
-      document.close_element("svg:g")?;
-      if let Some(saved) = savenode { document.set_node(&saved); }
     },
     properties => sub[args] {
       let kangle: i64 = args.first().and_then(|a| a.as_ref())
@@ -1253,12 +1297,16 @@ LoadDefinitions!({
       };
       let attrs = string_map!("transform" => transform);
       let savenode = document.float_to_element("svg:g", false)?;
-      document.open_element("svg:g", Some(attrs), None)?;
-      if let Some(Stored::Digested(box_d)) = props.get("xy_box") {
-        document.absorb(box_d, None)?;
+      if savenode.is_none() && svg_insertion_hopeless(document, "svg:g") {
+        // Orphaned xy wrapper — skip (see svg_empty_element).
+      } else {
+        document.open_element("svg:g", Some(attrs), None)?;
+        if let Some(Stored::Digested(box_d)) = props.get("xy_box") {
+          document.absorb(box_d, None)?;
+        }
+        document.close_element("svg:g")?;
+        if let Some(saved) = savenode { document.set_node(&saved); }
       }
-      document.close_element("svg:g")?;
-      if let Some(saved) = savenode { document.set_node(&saved); }
     },
     properties => sub[_args] {
       let lc = xy_reg_dim("\\L@c"); let up = xy_reg_dim("\\U@p"); let rp = xy_reg_dim("\\R@p");

@@ -298,11 +298,16 @@ LoadDefinitions!({
         _ => String::from("matrix(1 0 0 1 0 0)"),
       };
       let g_attrs = string_map!("transform" => transform);
-      document.open_element("svg:g", Some(g_attrs), None)?;
-      if let Some(Some(content)) = args.first() {
-        document.absorb(content, None)?;
+      if crate::package::xylatexml_tex::svg_insertion_hopeless(document, "svg:g") {
+        // Orphaned nested xy picture (outer \xy wrapper aborted) — skip,
+        // see xylatexml_tex::svg_empty_element for witness/rationale.
+      } else {
+        document.open_element("svg:g", Some(g_attrs), None)?;
+        if let Some(Some(content)) = args.first() {
+          document.absorb(content, None)?;
+        }
+        document.close_element("svg:g")?;
       }
-      document.close_element("svg:g")?;
     },
     after_digest => sub[whatsit] {
       let range_str = state::lookup_string("saved_xy_range");
