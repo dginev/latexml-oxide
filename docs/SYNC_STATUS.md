@@ -6525,6 +6525,27 @@ TL-tree drift on this machine — `\__benchmark_*`/tagging macros +
 ec/tc font shapes gone from latex-dev — and should land as its own
 master-side regen when intended.)
 
+**Sandbox spot-check (2026-06-03, 12 frontmatter-heavy papers from
+`~/data/html_regressions/sandbox`, `TIMEOUT_SECS=180
+tools/parity_check.sh`, Perl baseline 0.8.8 @ fdc8bf91 = pre-#2767):**
+3× BOTH CLEAN (IEEEtran ×2, svjour3), 4× PERL_REGRESSION — Rust wins
+(revtex4-2 R=1 vs P≥101; llncs R=8 vs P≥101; AASTeX62 R=0 vs P=1;
+jmlr R=5 vs P=46), 2× OUT-OF-SCOPE shared (llncs R=1=P; acmart
+R=1=P), 1× Perl-capped (revtex4-1: tkz-graph cascade in both,
+R=1001 = master's 1001). The 2 REAL-REGRESSION verdicts both
+attribute to **pre-existing gaps with identical error counts on
+master**: 2302.09519 (5× pstricks — Perl's edge is upstream #2777
+"pstricks raw TeX for --includestyles", a separate unported PR) and
+2408.16005 (63× math/alignment cascade in an acmart appendix).
+**Zero regressions introduced by the port.** Structural check
+(2304.10050 llncs): `\inst{1}`→labelseq affiliation attachment,
+`\orcidID`→named orcid contact, institute `\and`-split + `\url`
+inside contact all correct.
+
+Follow-up candidates surfaced: port upstream #2777 (pstricks
+raw-TeX, 5 errors on 2302.09519); tkz-graph binding gap (2312.12159,
+shared with Perl).
+
 **Intentional Rust-only refinements kept (refine-not-revert):**
 `\shortauthor`/`\shorttitle` non-@ gdefs (witness 2406.14142),
 KeyVals unknown-key Warn except the Frontmatter keyset (Perl Infos
@@ -7223,6 +7244,27 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   2 errors per occurrence; etoolbox `\cspreto{alignat}` is the
   real-world trigger (ECCV class lineno patching). KNOWN_PERL_ERRORS
   #25. Witness: 2409.02543.
+* **fvextra raw load under `rawstyles`** — pushback-limit fatal in both
+  engines (Perl 599999 / Rust 650000) when a `\DefineVerbatimEnvironment`
+  env with `breaklines`+`breakanywhere` digests real-world content; the
+  real fvextra break-machinery loops. Witness: 2506.05939 (ACL paper,
+  `DocChunk` env); minimal repro
+  `~/data/reproducers/fvextra-breaklines-pushback-spin.tex` (verified
+  identical in both, 2026-06-03). Without `rawstyles` both engines
+  degrade identically to keyval "breaklines undefined" errors.
+* **degenerate author-block macro cascade** — 2411.15124
+  (`\authorOne[1,*]{...\varheartsuit...}`): Perl+ar5iv fatals at
+  too_many_errors:100, Rust at pushback cap — different runaway guard,
+  same no-document outcome.
+* **tkz-graph/tkz-berge raw load under `rawstyles`** — `\csname`-built
+  names (`\cmdGR@edge@labeltext` etc.) cascade to the error cap in both
+  engines (Perl too_many_errors:100, Rust MaxLimit:1000). Witness:
+  2312.12159 (verified identical 2026-06-03).
+* **`ltx:item` in `ltx:_CaptureBlock_`** — itemize wrapper lost during
+  box capture; identical malformed-insert errors in both engines
+  (verified on 2407.05010, errors at 4_experiment.tex:265/385 in both;
+  production-clean was TL-vintage). Both models correctly exclude bare
+  ltx:item from the capture union.
 * **Canvas-3 stage 16–23 SHARED-FAILUREs (R36 verified 2026-05-22):**
   math0611010 (xy-pic OOM), hep-ph0612355 (feynmp SEGV),
   math0703454 (R35.A MoveableBox depth-cap), 0708.3218, 0708.3398
