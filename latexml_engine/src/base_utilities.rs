@@ -1564,9 +1564,9 @@ pub fn digest_front_matter() -> Result<()> {
           latexml_core::common::error::clear_fatal_flag();
         }
         log::warn!(
-          "frontmatter digest swallowed Err: {}:{} {}",
-          format!("{:?}", e.target),
-          format!("{:?}", e.category),
+          "frontmatter digest swallowed Err: {:?}:{:?} {}",
+          e.target,
+          e.category,
           e.message
         );
       }
@@ -2988,7 +2988,7 @@ pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
 /// 1 based, so None == token not present.
 pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
   for (i, t) in tokens.unlist_ref().iter().enumerate() {
-    if delims.iter().any(|d| *d == *t) {
+    if delims.contains(t) {
       return Some(i + 1);
     }
   }

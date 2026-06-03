@@ -27,7 +27,7 @@ LoadDefinitions!({
     let pairs: Vec<(String, ArgWrap)> = data.get_pairs().cloned().collect();
     // 1 key, novalue: No Keyvals at all!
     if pairs.len() <= 1
-      && pairs.first().map_or(true, |(_, v)| matches!(v, ArgWrap::None))
+      && pairs.first().is_none_or(|(_, v)| matches!(v, ArgWrap::None))
     {
       Ok(raw)
     } else {

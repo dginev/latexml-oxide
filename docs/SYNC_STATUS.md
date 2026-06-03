@@ -6514,6 +6514,17 @@ XSLT structure-xhtml/jats/tei (pubnote→title-footnote,
 contact-name prefixing, orcid links, `ltx_authors_multiline`),
 LaTeXML.css.
 
+**Dump gate (verified 2026-06-03):** `--init=plain.tex` and
+`--init=latex.ltx` both complete with **zero errors** on the branch.
+A regenerated `latex.2025.dump.txt` is *semantically identical* to a
+master-regenerated one (sorted diff = 1 record: the embedded
+`texsys.aux_contents` timestamp) — the port does not change dump
+content, so the committed dumps were left untouched. (The ~470KB
+shrink a fresh regen shows vs the 2026-05-23 committed dump is
+TL-tree drift on this machine — `\__benchmark_*`/tagging macros +
+ec/tc font shapes gone from latex-dev — and should land as its own
+master-side regen when intended.)
+
 **Intentional Rust-only refinements kept (refine-not-revert):**
 `\shortauthor`/`\shorttitle` non-@ gdefs (witness 2406.14142),
 KeyVals unknown-key Warn except the Frontmatter keyset (Perl Infos
