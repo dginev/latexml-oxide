@@ -27,8 +27,7 @@ LoadDefinitions!({
 
   // Frontmatter — Perl mn2e_support.sty.ltxml (PR #2767)
   DefMacro!("\\title[]{}",
-    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\
-\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}");
+    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}");
   DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@add@authors{#2}", locked => true);
   def_macro_noop("\\newauthor")?;
   DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
