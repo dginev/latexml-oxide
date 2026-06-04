@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/url_sty.rs`."><title>url_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>url_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/url_sty.rs`."><title>url_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>url_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">pub static </span>LEADING_BACKSLASH_RE: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\\"</span>).unwrap());
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -49,82 +49,99 @@
 <a href=#49 id=49 data-nosnippet>49</a>      close = <span class="macro">T_OTHER!</span>(<span class="string">"}"</span>);
 <a href=#50 id=50 data-nosnippet>50</a>      gullet::read_balanced(ExpansionLevel::Off,<span class="bool-val">false</span>,<span class="bool-val">false</span>)<span class="question-mark">?</span>.unwrap_or_default()
 <a href=#51 id=51 data-nosnippet>51</a>    } <span class="kw">else </span>{
-<a href=#52 id=52 data-nosnippet>52</a>      open = open.as_other();
-<a href=#53 id=53 data-nosnippet>53</a>      close = open;
-<a href=#54 id=54 data-nosnippet>54</a>      <span class="comment">// Once we've determined the delimiter is non-brace (e.g. `|`),
-<a href=#55 id=55 data-nosnippet>55</a>      // demote `{` and `}` to OTHER so read_until_token doesn't engage
-<a href=#56 id=56 data-nosnippet>56</a>      // its balanced-read branch on `{`. Real users write
-<a href=#57 id=57 data-nosnippet>57</a>      // `\\path|{partial,| ... |partial}|` across multiple
-<a href=#58 id=58 data-nosnippet>58</a>      // \\urldef calls, where the `{` and `}` are LITERAL chars in
-<a href=#59 id=59 data-nosnippet>59</a>      // separate `|...|` paths, not balanced TeX groups. Driver:
-<a href=#60 id=60 data-nosnippet>60</a>      // 1906.08946 — without this demotion our read_until('|') on
-<a href=#61 id=61 data-nosnippet>61</a>      // line 25's `\\path|{...,|` reads PAST the closing `|`,
-<a href=#62 id=62 data-nosnippet>62</a>      // through line 26 and into line 27 looking for the matching
-<a href=#63 id=63 data-nosnippet>63</a>      // `}` — which it finds in `lncs}@springer.com|`, swallowing
-<a href=#64 id=64 data-nosnippet>64</a>      // the intervening `\\urldef{\\mailsb}` and `\\urldef{\\mailsc}`
-<a href=#65 id=65 data-nosnippet>65</a>      // declarations entirely.
-<a href=#66 id=66 data-nosnippet>66</a>      </span>latexml_core::state::assign_catcode(<span class="string">'{'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#67 id=67 data-nosnippet>67</a>      latexml_core::state::assign_catcode(<span class="string">'}'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#68 id=68 data-nosnippet>68</a>      gullet::read_until_token(close)<span class="question-mark">?
-<a href=#69 id=69 data-nosnippet>69</a>    </span>};
-<a href=#70 id=70 data-nosnippet>70</a>    end_semiverbatim()<span class="question-mark">?</span>;
-<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">let </span>toks : Vec&lt;Token&gt; = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
-<a href=#72 id=72 data-nosnippet>72</a>      .map(|t| t.as_other()).collect();
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">let </span><span class="kw-2">mut </span>url_wrapped = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\UrlFont"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\UrlLeft"</span>)];
-<a href=#75 id=75 data-nosnippet>75</a>    url_wrapped.extend(toks.clone());
-<a href=#76 id=76 data-nosnippet>76</a>    url_wrapped.push(<span class="macro">T_CS!</span>(<span class="string">"\\UrlRight"</span>));
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span><span class="kw-2">mut </span>invocation_tokens = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@url@url@nolink"</span>),<span class="macro">vec!</span>[
-<a href=#78 id=78 data-nosnippet>78</a>        <span class="macro">Tokens!</span>(cmd.as_other()),
-<a href=#79 id=79 data-nosnippet>79</a>        <span class="macro">Tokens!</span>(open),
-<a href=#80 id=80 data-nosnippet>80</a>        <span class="macro">Tokens!</span>(close),
-<a href=#81 id=81 data-nosnippet>81</a>        Tokens::new(toks),
-<a href=#82 id=82 data-nosnippet>82</a>        Tokens::new(url_wrapped)]).unlist();
-<a href=#83 id=83 data-nosnippet>83</a>    invocation_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="prelude-val">Ok</span>(Tokens::new(invocation_tokens))
-<a href=#85 id=85 data-nosnippet>85</a>  });
-<a href=#86 id=86 data-nosnippet>86</a>
-<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// Define \Url, in case its used; won't be represented as nicely
-<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Url"</span>, {
-<a href=#89 id=89 data-nosnippet>89</a>    unread_one(<span class="macro">T_OTHER!</span>(<span class="string">"\\Url"</span>));
-<a href=#90 id=90 data-nosnippet>90</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@url@url"</span>)))
-<a href=#91 id=91 data-nosnippet>91</a>  });
-<a href=#92 id=92 data-nosnippet>92</a>
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@url@url@nolink Undigested {}{} Semiverbatim {}"</span>,<span class="comment">// Allow this to work in Math!
-<a href=#94 id=94 data-nosnippet>94</a>    </span><span class="string">"?#isMath(&lt;ltx:XMWrap class='ltx_nolink #class' href='#href'&gt;#5&lt;/ltx:XMWrap&gt;)(&lt;ltx:ref href='#href' class='ltx_nolink #class'&gt;#5&lt;/ltx:ref&gt;)"</span>,
-<a href=#95 id=95 data-nosnippet>95</a>    properties =&gt; sub[args] {
-<a href=#96 id=96 data-nosnippet>96</a>      <span class="macro">unref!</span>(args =&gt; cmd, _open, _close, url, _formattedurl);
-<a href=#97 id=97 data-nosnippet>97</a>      <span class="kw">let </span>ltx_cmd = <span class="macro">s!</span>(<span class="string">"ltx_{}"</span>, LEADING_BACKSLASH_RE.replace(<span class="kw-2">&amp;</span>cmd.to_string(),<span class="string">""</span>));
-<a href=#98 id=98 data-nosnippet>98</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
-<a href=#99 id=99 data-nosnippet>99</a>        <span class="string">"href" </span>=&gt; compose_url(<span class="kw-2">&amp;</span>state::lookup_string(<span class="string">"BASE_URL"</span>), <span class="kw-2">&amp;</span>url.to_string(), <span class="prelude-val">None</span>),
-<a href=#100 id=100 data-nosnippet>100</a>        <span class="comment">// TODO: why was class realized in Perl as "sub" closure here?
-<a href=#101 id=101 data-nosnippet>101</a>        </span><span class="string">"class"</span>=&gt; ltx_cmd
-<a href=#102 id=102 data-nosnippet>102</a>      ))
-<a href=#103 id=103 data-nosnippet>103</a>    },
-<a href=#104 id=104 data-nosnippet>104</a>    sizer     =&gt; <span class="string">"#5"</span>,
-<a href=#105 id=105 data-nosnippet>105</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#106 id=106 data-nosnippet>106</a>    reversion =&gt; <span class="string">"#1#2#4#3"</span>);
-<a href=#107 id=107 data-nosnippet>107</a>
-<a href=#108 id=108 data-nosnippet>108</a>  <span class="comment">// These are the expansions of \DeclareUrlCommand
-<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\path"</span>, <span class="string">r"\begingroup\urlstyle{tt}\lx@url@url\path"</span>);
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\url"</span>, <span class="string">r"\begingroup\lx@url@url\url"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#111 id=111 data-nosnippet>111</a>
-<a href=#112 id=112 data-nosnippet>112</a>  <span class="comment">// \urldef{newcmd}\cmd{arg}
-<a href=#113 id=113 data-nosnippet>113</a>  // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
-<a href=#114 id=114 data-nosnippet>114</a>  // Along with the annoying \endgroup that must balance the one always preceding \Url!
-<a href=#115 id=115 data-nosnippet>115</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\Urlmuskip"</span>, MuGlue::default());
-<a href=#116 id=116 data-nosnippet>116</a>
-<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// Perl L91-99: \urldef{newcmd}{arg} — takes TWO brace args. The second
-<a href=#118 id=118 data-nosnippet>118</a>  // `{}` lets TeX parse a balanced brace group without expansion, then
-<a href=#119 id=119 data-nosnippet>119</a>  // unreads it back so digest_next_body can digest up through \endgroup.
-<a href=#120 id=120 data-nosnippet>120</a>  // Prior Rust had only one arg `{}` and no unread, so `\urldef\foo{...}`
-<a href=#121 id=121 data-nosnippet>121</a>  // digested whatever followed in the input stream instead of the braced arg.
-<a href=#122 id=122 data-nosnippet>122</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\urldef{}{}"</span>, sub[(cmd, start)] {
-<a href=#123 id=123 data-nosnippet>123</a>    <span class="kw">let </span>cmd = cmd.to_string();
-<a href=#124 id=124 data-nosnippet>124</a>    gullet::unread(start);
-<a href=#125 id=125 data-nosnippet>125</a>    <span class="kw">let </span>expansion : Vec&lt;Digested&gt; = stomach::digest_next_body(<span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>)))<span class="question-mark">?</span>;
-<a href=#126 id=126 data-nosnippet>126</a>    <span class="macro">DefPrimitive!</span>(<span class="kw-2">&amp;</span>cmd, { <span class="prelude-val">Ok</span>(expansion.clone()) });
-<a href=#127 id=127 data-nosnippet>127</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
-<a href=#128 id=128 data-nosnippet>128</a>  });
-<a href=#129 id=129 data-nosnippet>129</a>});
+<a href=#52 id=52 data-nosnippet>52</a>      <span class="comment">// The ORIGINAL catcode of the delimiter token distinguishes two
+<a href=#53 id=53 data-nosnippet>53</a>      // very different `\url`/`\path` invocation shapes:
+<a href=#54 id=54 data-nosnippet>54</a>      </span><span class="kw">let </span>delim_is_explicit = open.get_catcode() == Catcode::OTHER;
+<a href=#55 id=55 data-nosnippet>55</a>      open = open.as_other();
+<a href=#56 id=56 data-nosnippet>56</a>      close = open;
+<a href=#57 id=57 data-nosnippet>57</a>      <span class="comment">// EXPLICIT punctuation delimiter (`\url|...|`, `\path!...!`): the
+<a href=#58 id=58 data-nosnippet>58</a>      // chars between the two delimiter tokens — INCLUDING any `{`/`}` —
+<a href=#59 id=59 data-nosnippet>59</a>      // are LITERAL url content. Demote `{`/`}` to OTHER so
+<a href=#60 id=60 data-nosnippet>60</a>      // read_until_token doesn't engage its balanced-read branch on `{`
+<a href=#61 id=61 data-nosnippet>61</a>      // and overshoot the closing delimiter. Real users write
+<a href=#62 id=62 data-nosnippet>62</a>      // `\\path|{partial,| ... |partial}|` across multiple `\\urldef`
+<a href=#63 id=63 data-nosnippet>63</a>      // calls, where `{`/`}` are literal chars in separate `|...|`
+<a href=#64 id=64 data-nosnippet>64</a>      // paths. Driver 1906.08946 — without this demotion read_until('|')
+<a href=#65 id=65 data-nosnippet>65</a>      // on `\\path|{...,|` reads PAST the closing `|` looking for a
+<a href=#66 id=66 data-nosnippet>66</a>      // matching `}`, swallowing intervening `\\urldef` declarations.
+<a href=#67 id=67 data-nosnippet>67</a>      // (Perl OVERSHOOTS here too — this is a deliberate surpass.)
+<a href=#68 id=68 data-nosnippet>68</a>      //
+<a href=#69 id=69 data-nosnippet>69</a>      // SPACE-FORM (`\url www...`, delimiter is the first content char =
+<a href=#70 id=70 data-nosnippet>70</a>      // a LETTER): a degenerate/misused invocation. The verbatim scan
+<a href=#71 id=71 data-nosnippet>71</a>      // can never match (OTHER-delimiter vs LETTER content), so — exactly
+<a href=#72 id=72 data-nosnippet>72</a>      // as in Perl — it runs to the end and unreads, yielding an empty
+<a href=#73 id=73 data-nosnippet>73</a>      // url + the rest as leftover text. Here we must NOT demote `{`/`}`:
+<a href=#74 id=74 data-nosnippet>74</a>      // the surrounding `{\url www...pdf}` group's closing `}` must keep
+<a href=#75 id=75 data-nosnippet>75</a>      // its END catcode so it still closes the group after the unread.
+<a href=#76 id=76 data-nosnippet>76</a>      // Demoting it froze `}` as OTHER → the `{` group stayed open → the
+<a href=#77 id=77 data-nosnippet>77</a>      // trailing `\endgroup` from `\url` hit the boxing group and errored
+<a href=#78 id=78 data-nosnippet>78</a>      // (`Attempt to close non-boxing group`). Perl never demotes `{`/`}`
+<a href=#79 id=79 data-nosnippet>79</a>      // (semiverbatim SPECIALS = ^_~&amp;$#'). Witness 1503.07894 (bibitem
+<a href=#80 id=80 data-nosnippet>80</a>      // `{\url www.maths...pdf}`).
+<a href=#81 id=81 data-nosnippet>81</a>      </span><span class="kw">if </span>delim_is_explicit {
+<a href=#82 id=82 data-nosnippet>82</a>        latexml_core::state::assign_catcode(<span class="string">'{'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#83 id=83 data-nosnippet>83</a>        latexml_core::state::assign_catcode(<span class="string">'}'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#84 id=84 data-nosnippet>84</a>      }
+<a href=#85 id=85 data-nosnippet>85</a>      gullet::read_until_token(close)<span class="question-mark">?
+<a href=#86 id=86 data-nosnippet>86</a>    </span>};
+<a href=#87 id=87 data-nosnippet>87</a>    end_semiverbatim()<span class="question-mark">?</span>;
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">let </span>toks : Vec&lt;Token&gt; = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
+<a href=#89 id=89 data-nosnippet>89</a>      .map(|t| t.as_other()).collect();
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">let </span><span class="kw-2">mut </span>url_wrapped = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\UrlFont"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\UrlLeft"</span>)];
+<a href=#92 id=92 data-nosnippet>92</a>    url_wrapped.extend(toks.clone());
+<a href=#93 id=93 data-nosnippet>93</a>    url_wrapped.push(<span class="macro">T_CS!</span>(<span class="string">"\\UrlRight"</span>));
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">let </span><span class="kw-2">mut </span>invocation_tokens = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@url@url@nolink"</span>),<span class="macro">vec!</span>[
+<a href=#95 id=95 data-nosnippet>95</a>        <span class="macro">Tokens!</span>(cmd.as_other()),
+<a href=#96 id=96 data-nosnippet>96</a>        <span class="macro">Tokens!</span>(open),
+<a href=#97 id=97 data-nosnippet>97</a>        <span class="macro">Tokens!</span>(close),
+<a href=#98 id=98 data-nosnippet>98</a>        Tokens::new(toks),
+<a href=#99 id=99 data-nosnippet>99</a>        Tokens::new(url_wrapped)]).unlist();
+<a href=#100 id=100 data-nosnippet>100</a>    invocation_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>));
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="prelude-val">Ok</span>(Tokens::new(invocation_tokens))
+<a href=#102 id=102 data-nosnippet>102</a>  });
+<a href=#103 id=103 data-nosnippet>103</a>
+<a href=#104 id=104 data-nosnippet>104</a>  <span class="comment">// Define \Url, in case its used; won't be represented as nicely
+<a href=#105 id=105 data-nosnippet>105</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Url"</span>, {
+<a href=#106 id=106 data-nosnippet>106</a>    unread_one(<span class="macro">T_OTHER!</span>(<span class="string">"\\Url"</span>));
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@url@url"</span>)))
+<a href=#108 id=108 data-nosnippet>108</a>  });
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@url@url@nolink Undigested {}{} Semiverbatim {}"</span>,<span class="comment">// Allow this to work in Math!
+<a href=#111 id=111 data-nosnippet>111</a>    </span><span class="string">"?#isMath(&lt;ltx:XMWrap class='ltx_nolink #class' href='#href'&gt;#5&lt;/ltx:XMWrap&gt;)(&lt;ltx:ref href='#href' class='ltx_nolink #class'&gt;#5&lt;/ltx:ref&gt;)"</span>,
+<a href=#112 id=112 data-nosnippet>112</a>    properties =&gt; sub[args] {
+<a href=#113 id=113 data-nosnippet>113</a>      <span class="macro">unref!</span>(args =&gt; cmd, _open, _close, url, _formattedurl);
+<a href=#114 id=114 data-nosnippet>114</a>      <span class="kw">let </span>ltx_cmd = <span class="macro">s!</span>(<span class="string">"ltx_{}"</span>, LEADING_BACKSLASH_RE.replace(<span class="kw-2">&amp;</span>cmd.to_string(),<span class="string">""</span>));
+<a href=#115 id=115 data-nosnippet>115</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
+<a href=#116 id=116 data-nosnippet>116</a>        <span class="string">"href" </span>=&gt; compose_url(<span class="kw-2">&amp;</span>state::lookup_string(<span class="string">"BASE_URL"</span>), <span class="kw-2">&amp;</span>url.to_string(), <span class="prelude-val">None</span>),
+<a href=#117 id=117 data-nosnippet>117</a>        <span class="comment">// TODO: why was class realized in Perl as "sub" closure here?
+<a href=#118 id=118 data-nosnippet>118</a>        </span><span class="string">"class"</span>=&gt; ltx_cmd
+<a href=#119 id=119 data-nosnippet>119</a>      ))
+<a href=#120 id=120 data-nosnippet>120</a>    },
+<a href=#121 id=121 data-nosnippet>121</a>    sizer     =&gt; <span class="string">"#5"</span>,
+<a href=#122 id=122 data-nosnippet>122</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#123 id=123 data-nosnippet>123</a>    reversion =&gt; <span class="string">"#1#2#4#3"</span>);
+<a href=#124 id=124 data-nosnippet>124</a>
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="comment">// These are the expansions of \DeclareUrlCommand
+<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\path"</span>, <span class="string">r"\begingroup\urlstyle{tt}\lx@url@url\path"</span>);
+<a href=#127 id=127 data-nosnippet>127</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\url"</span>, <span class="string">r"\begingroup\lx@url@url\url"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#128 id=128 data-nosnippet>128</a>
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="comment">// \urldef{newcmd}\cmd{arg}
+<a href=#130 id=130 data-nosnippet>130</a>  // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
+<a href=#131 id=131 data-nosnippet>131</a>  // Along with the annoying \endgroup that must balance the one always preceding \Url!
+<a href=#132 id=132 data-nosnippet>132</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\Urlmuskip"</span>, MuGlue::default());
+<a href=#133 id=133 data-nosnippet>133</a>
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// Perl L91-99: \urldef{newcmd}{arg} — takes TWO brace args. The second
+<a href=#135 id=135 data-nosnippet>135</a>  // `{}` lets TeX parse a balanced brace group without expansion, then
+<a href=#136 id=136 data-nosnippet>136</a>  // unreads it back so digest_next_body can digest up through \endgroup.
+<a href=#137 id=137 data-nosnippet>137</a>  // Prior Rust had only one arg `{}` and no unread, so `\urldef\foo{...}`
+<a href=#138 id=138 data-nosnippet>138</a>  // digested whatever followed in the input stream instead of the braced arg.
+<a href=#139 id=139 data-nosnippet>139</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\urldef{}{}"</span>, sub[(cmd, start)] {
+<a href=#140 id=140 data-nosnippet>140</a>    <span class="kw">let </span>cmd = cmd.to_string();
+<a href=#141 id=141 data-nosnippet>141</a>    gullet::unread(start);
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="kw">let </span>expansion : Vec&lt;Digested&gt; = stomach::digest_next_body(<span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>)))<span class="question-mark">?</span>;
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="macro">DefPrimitive!</span>(<span class="kw-2">&amp;</span>cmd, { <span class="prelude-val">Ok</span>(expansion.clone()) });
+<a href=#144 id=144 data-nosnippet>144</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
+<a href=#145 id=145 data-nosnippet>145</a>  });
+<a href=#146 id=146 data-nosnippet>146</a>});
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pgfmath_code_tex.rs`."><title>pgfmath_code_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pgfmath_code_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pgfmath.code.tex — PGF math operations accelerator
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pgfmath_code_tex.rs`."><title>pgfmath_code_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pgfmath_code_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pgfmath.code.tex — PGF math operations accelerator
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: pgfmath.code.tex.ltxml (737 lines)
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! Replaces TeX-level pgfmath operations with native Rust implementations
@@ -1072,507 +1072,559 @@
 <a href=#1072 id=1072 data-nosnippet>1072</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
 <a href=#1073 id=1073 data-nosnippet>1073</a>    }
 <a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="kw">let </span>cs = std::str::from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.input[start..<span class="self">self</span>.pos]).unwrap();
-<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="prelude-val">Some</span>(pgfmath_register_lookup(cs))
-<a href=#1076 id=1076 data-nosnippet>1076</a>  }
-<a href=#1077 id=1077 data-nosnippet>1077</a>
-<a href=#1078 id=1078 data-nosnippet>1078</a>  <span class="doccomment">/// Read an identifier: [a-zA-Z][a-zA-Z0-9_]*
-<a href=#1079 id=1079 data-nosnippet>1079</a>  </span><span class="kw">fn </span>read_identifier(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; String {
-<a href=#1080 id=1080 data-nosnippet>1080</a>    <span class="kw">let </span>start = <span class="self">self</span>.pos;
-<a href=#1081 id=1081 data-nosnippet>1081</a>    <span class="kw">while </span><span class="self">self</span>.pos &lt; <span class="self">self</span>.input.len()
-<a href=#1082 id=1082 data-nosnippet>1082</a>      &amp;&amp; (<span class="self">self</span>.input[<span class="self">self</span>.pos].is_ascii_alphanumeric() || <span class="self">self</span>.input[<span class="self">self</span>.pos] == <span class="string">b'_'</span>)
-<a href=#1083 id=1083 data-nosnippet>1083</a>    {
-<a href=#1084 id=1084 data-nosnippet>1084</a>      <span class="self">self</span>.pos += <span class="number">1</span>;
-<a href=#1085 id=1085 data-nosnippet>1085</a>    }
-<a href=#1086 id=1086 data-nosnippet>1086</a>    std::str::from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.input[start..<span class="self">self</span>.pos])
-<a href=#1087 id=1087 data-nosnippet>1087</a>      .unwrap()
-<a href=#1088 id=1088 data-nosnippet>1088</a>      .to_string()
-<a href=#1089 id=1089 data-nosnippet>1089</a>  }
-<a href=#1090 id=1090 data-nosnippet>1090</a>}
-<a href=#1091 id=1091 data-nosnippet>1091</a>
-<a href=#1092 id=1092 data-nosnippet>1092</a><span class="doccomment">/// Apply a comparison operator
-<a href=#1093 id=1093 data-nosnippet>1093</a></span><span class="kw">fn </span>pgfmath_cmp_op(op: <span class="kw-2">&amp;</span>str, left: f64, right: f64) -&gt; f64 {
-<a href=#1094 id=1094 data-nosnippet>1094</a>  <span class="kw">let </span>result = <span class="kw">match </span>op {
-<a href=#1095 id=1095 data-nosnippet>1095</a>    <span class="string">"==" </span>=&gt; left == right,
-<a href=#1096 id=1096 data-nosnippet>1096</a>    <span class="string">"!=" </span>=&gt; left != right,
-<a href=#1097 id=1097 data-nosnippet>1097</a>    <span class="string">"&gt;" </span>=&gt; left &gt; right,
-<a href=#1098 id=1098 data-nosnippet>1098</a>    <span class="string">"&lt;" </span>=&gt; left &lt; right,
-<a href=#1099 id=1099 data-nosnippet>1099</a>    <span class="string">"&gt;=" </span>=&gt; left &gt;= right,
-<a href=#1100 id=1100 data-nosnippet>1100</a>    <span class="string">"&lt;=" </span>=&gt; left &lt;= right,
-<a href=#1101 id=1101 data-nosnippet>1101</a>    <span class="string">"&amp;&amp;" </span>=&gt; left != <span class="number">0.0 </span>&amp;&amp; right != <span class="number">0.0</span>,
-<a href=#1102 id=1102 data-nosnippet>1102</a>    <span class="string">"||" </span>=&gt; left != <span class="number">0.0 </span>|| right != <span class="number">0.0</span>,
-<a href=#1103 id=1103 data-nosnippet>1103</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#1104 id=1104 data-nosnippet>1104</a>  };
-<a href=#1105 id=1105 data-nosnippet>1105</a>  <span class="kw">if </span>result { <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>}
-<a href=#1106 id=1106 data-nosnippet>1106</a>}
-<a href=#1107 id=1107 data-nosnippet>1107</a>
-<a href=#1108 id=1108 data-nosnippet>1108</a><span class="comment">// ==================== Main pgfmathparse ====================
-<a href=#1109 id=1109 data-nosnippet>1109</a>
-<a href=#1110 id=1110 data-nosnippet>1110</a></span><span class="doccomment">/// Format the result of pgfmathparse for output
-<a href=#1111 id=1111 data-nosnippet>1111</a>/// Perl: L383-393 of pgfmath.code.tex.ltxml
-<a href=#1112 id=1112 data-nosnippet>1112</a></span><span class="kw">fn </span>format_parse_result(result: f64, input: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#1113 id=1113 data-nosnippet>1113</a>  <span class="comment">// Overflow check
-<a href=#1114 id=1114 data-nosnippet>1114</a>  </span><span class="kw">let </span>result = result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
-<a href=#1115 id=1115 data-nosnippet>1115</a>
-<a href=#1116 id=1116 data-nosnippet>1116</a>  <span class="comment">// Integer result
-<a href=#1117 id=1117 data-nosnippet>1117</a>  </span><span class="kw">if </span>result == (result <span class="kw">as </span>i64) <span class="kw">as </span>f64 {
-<a href=#1118 id=1118 data-nosnippet>1118</a>    <span class="kw">let </span>i = result <span class="kw">as </span>i64;
-<a href=#1119 id=1119 data-nosnippet>1119</a>    <span class="comment">// Perl: $result .= '.0' unless $input =~ /^int\(/;
-<a href=#1120 id=1120 data-nosnippet>1120</a>    </span><span class="kw">if </span>input.starts_with(<span class="string">"int("</span>) {
-<a href=#1121 id=1121 data-nosnippet>1121</a>      <span class="kw">return </span><span class="macro">format!</span>(<span class="string">"{}"</span>, i);
-<a href=#1122 id=1122 data-nosnippet>1122</a>    }
-<a href=#1123 id=1123 data-nosnippet>1123</a>    <span class="kw">return </span><span class="macro">format!</span>(<span class="string">"{}.0"</span>, i);
-<a href=#1124 id=1124 data-nosnippet>1124</a>  }
-<a href=#1125 id=1125 data-nosnippet>1125</a>
-<a href=#1126 id=1126 data-nosnippet>1126</a>  <span class="comment">// Decimal result: sprintf("%.5f"), strip trailing zeros
-<a href=#1127 id=1127 data-nosnippet>1127</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>s = <span class="macro">format!</span>(<span class="string">"{:.5}"</span>, result);
-<a href=#1128 id=1128 data-nosnippet>1128</a>  <span class="kw">if </span>s.contains(<span class="string">'.'</span>) {
-<a href=#1129 id=1129 data-nosnippet>1129</a>    <span class="kw">while </span>s.ends_with(<span class="string">'0'</span>) &amp;&amp; !s.ends_with(<span class="string">".0"</span>) {
-<a href=#1130 id=1130 data-nosnippet>1130</a>      s.pop();
-<a href=#1131 id=1131 data-nosnippet>1131</a>    }
-<a href=#1132 id=1132 data-nosnippet>1132</a>  }
-<a href=#1133 id=1133 data-nosnippet>1133</a>  s
-<a href=#1134 id=1134 data-nosnippet>1134</a>}
-<a href=#1135 id=1135 data-nosnippet>1135</a>
-<a href=#1136 id=1136 data-nosnippet>1136</a><span class="doccomment">/// Main pgfmathparse evaluation function
-<a href=#1137 id=1137 data-nosnippet>1137</a>/// Perl: sub pgfmathparse (L316-394)
-<a href=#1138 id=1138 data-nosnippet>1138</a>/// Returns (result_string, units_declared)
-<a href=#1139 id=1139 data-nosnippet>1139</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pgfmathparse_eval_with_units(raw_input: <span class="kw-2">&amp;</span>str) -&gt; (String, bool) {
-<a href=#1140 id=1140 data-nosnippet>1140</a>  <span class="comment">// Normalize whitespace
-<a href=#1141 id=1141 data-nosnippet>1141</a>  </span><span class="kw">let </span>input: String = raw_input.split_whitespace().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>);
-<a href=#1142 id=1142 data-nosnippet>1142</a>  <span class="kw">let </span>input = input.trim();
-<a href=#1143 id=1143 data-nosnippet>1143</a>
-<a href=#1144 id=1144 data-nosnippet>1144</a>  <span class="comment">// 0. String-valued ternary / ifthenelse — Perl pgfmath uses untyped
-<a href=#1145 id=1145 data-nosnippet>1145</a>  //    scalars so the `?:` operator and `ifthenelse(...)` can return
-<a href=#1146 id=1146 data-nosnippet>1146</a>  //    string values like `"black"` or `"pgreen!50"` for color names.
-<a href=#1147 id=1147 data-nosnippet>1147</a>  //    Our parser is f64-only, so detect the pattern
-<a href=#1148 id=1148 data-nosnippet>1148</a>  //      &lt;test&gt; ? "a" : "b"     OR     ifthenelse(&lt;test&gt;, "a", "b")
-<a href=#1149 id=1149 data-nosnippet>1149</a>  //    early, evaluate the test as a number, and return the chosen
-<a href=#1150 id=1150 data-nosnippet>1150</a>  //    string literal. Drivers: 2601.14798 (color jitter heatmap),
-<a href=#1151 id=1151 data-nosnippet>1151</a>  //    Stage-20 v6 ~1579 errors from \pgfmathsetmacro{\clr}{...}.
-<a href=#1152 id=1152 data-nosnippet>1152</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(result) = try_string_ternary(input) {
-<a href=#1153 id=1153 data-nosnippet>1153</a>    <span class="kw">return </span>(result, <span class="bool-val">false</span>);
-<a href=#1154 id=1154 data-nosnippet>1154</a>  }
-<a href=#1155 id=1155 data-nosnippet>1155</a>
-<a href=#1156 id=1156 data-nosnippet>1156</a>  <span class="comment">// 1. Simple number check (Perl L332-345)
-<a href=#1157 id=1157 data-nosnippet>1157</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(result) = try_simple_number(input) {
-<a href=#1158 id=1158 data-nosnippet>1158</a>    <span class="kw">return </span>(result, <span class="bool-val">false</span>);
-<a href=#1159 id=1159 data-nosnippet>1159</a>  }
-<a href=#1160 id=1160 data-nosnippet>1160</a>
-<a href=#1161 id=1161 data-nosnippet>1161</a>  <span class="comment">// 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/ Handled by the parser below,
-<a href=#1162 id=1162 data-nosnippet>1162</a>  //    since it's a subset of the grammar.
-<a href=#1163 id=1163 data-nosnippet>1163</a>
-<a href=#1164 id=1164 data-nosnippet>1164</a>  // 3. Parse with recursive descent (replaces both Perl eval and RecDescent)
-<a href=#1165 id=1165 data-nosnippet>1165</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>parser = PgfMathParser::new(input);
-<a href=#1166 id=1166 data-nosnippet>1166</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(result) = parser.formula() {
-<a href=#1167 id=1167 data-nosnippet>1167</a>    <span class="comment">// Perl L378: forgive trailing ) or ]
-<a href=#1168 id=1168 data-nosnippet>1168</a>    </span><span class="kw">let </span>remaining = parser.remaining_trimmed().trim_start_matches([<span class="string">')'</span>, <span class="string">']'</span>]);
-<a href=#1169 id=1169 data-nosnippet>1169</a>    <span class="kw">if </span>!remaining.is_empty() {
-<a href=#1170 id=1170 data-nosnippet>1170</a>      <span class="comment">// Partial parse — still return what we got
-<a href=#1171 id=1171 data-nosnippet>1171</a>    </span>}
-<a href=#1172 id=1172 data-nosnippet>1172</a>    <span class="kw">return </span>(format_parse_result(result, input), parser.units_declared);
-<a href=#1173 id=1173 data-nosnippet>1173</a>  }
-<a href=#1174 id=1174 data-nosnippet>1174</a>
-<a href=#1175 id=1175 data-nosnippet>1175</a>  <span class="comment">// 4. Fallback
-<a href=#1176 id=1176 data-nosnippet>1176</a>  </span>(<span class="string">"0.0"</span>.to_string(), <span class="bool-val">false</span>)
-<a href=#1177 id=1177 data-nosnippet>1177</a>}
-<a href=#1178 id=1178 data-nosnippet>1178</a>
-<a href=#1179 id=1179 data-nosnippet>1179</a><span class="doccomment">/// Convenience wrapper that returns only the result string
-<a href=#1180 id=1180 data-nosnippet>1180</a></span><span class="kw">pub fn </span>pgfmathparse_eval(raw_input: <span class="kw-2">&amp;</span>str) -&gt; String { pgfmathparse_eval_with_units(raw_input).<span class="number">0 </span>}
-<a href=#1181 id=1181 data-nosnippet>1181</a>
-<a href=#1182 id=1182 data-nosnippet>1182</a><span class="doccomment">/// Detect string-valued pgfmath ternaries `&lt;test&gt; ? "a" : "b"` or
-<a href=#1183 id=1183 data-nosnippet>1183</a>/// `ifthenelse(&lt;test&gt;, "a", "b")` and return the chosen literal.
-<a href=#1184 id=1184 data-nosnippet>1184</a>/// Returns None if the pattern doesn't match or contains no string args.
-<a href=#1185 id=1185 data-nosnippet>1185</a></span><span class="kw">fn </span>try_string_ternary(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#1186 id=1186 data-nosnippet>1186</a>  <span class="comment">// Strip ifthenelse(...) wrapper if present
-<a href=#1187 id=1187 data-nosnippet>1187</a>  </span><span class="kw">let </span>inner = <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = input.strip_prefix(<span class="string">"ifthenelse("</span>) {
-<a href=#1188 id=1188 data-nosnippet>1188</a>    <span class="kw">let </span>body = rest.strip_suffix(<span class="string">')'</span>)<span class="question-mark">?</span>;
-<a href=#1189 id=1189 data-nosnippet>1189</a>    <span class="comment">// Re-shape as ternary: split on top-level commas (depth 0 of nested parens/quotes)
-<a href=#1190 id=1190 data-nosnippet>1190</a>    </span><span class="kw">let </span>parts = split_top_commas(body)<span class="question-mark">?</span>;
-<a href=#1191 id=1191 data-nosnippet>1191</a>    <span class="kw">if </span>parts.len() != <span class="number">3 </span>{ <span class="kw">return </span><span class="prelude-val">None</span>; }
-<a href=#1192 id=1192 data-nosnippet>1192</a>    <span class="macro">format!</span>(<span class="string">"{} ? {} : {}"</span>, parts[<span class="number">0</span>].trim(), parts[<span class="number">1</span>].trim(), parts[<span class="number">2</span>].trim())
-<a href=#1193 id=1193 data-nosnippet>1193</a>  } <span class="kw">else </span>{
-<a href=#1194 id=1194 data-nosnippet>1194</a>    input.to_string()
-<a href=#1195 id=1195 data-nosnippet>1195</a>  };
-<a href=#1196 id=1196 data-nosnippet>1196</a>  <span class="comment">// Find top-level `?` and `:` (skipping inside quotes and parens)
-<a href=#1197 id=1197 data-nosnippet>1197</a>  </span><span class="kw">let </span>(cond, then_part, else_part) = split_ternary(<span class="kw-2">&amp;</span>inner)<span class="question-mark">?</span>;
-<a href=#1198 id=1198 data-nosnippet>1198</a>  <span class="comment">// Branches must include at least one quoted string for this path to make sense
-<a href=#1199 id=1199 data-nosnippet>1199</a>  </span><span class="kw">let </span>then_is_str = then_part.trim().starts_with(<span class="string">'"'</span>);
-<a href=#1200 id=1200 data-nosnippet>1200</a>  <span class="kw">let </span>else_is_str = else_part.trim().starts_with(<span class="string">'"'</span>);
-<a href=#1201 id=1201 data-nosnippet>1201</a>  <span class="kw">if </span>!then_is_str &amp;&amp; !else_is_str {
-<a href=#1202 id=1202 data-nosnippet>1202</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#1203 id=1203 data-nosnippet>1203</a>  }
-<a href=#1204 id=1204 data-nosnippet>1204</a>  <span class="comment">// Evaluate the test as a number via the regular f64 parser
-<a href=#1205 id=1205 data-nosnippet>1205</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>p = PgfMathParser::new(cond.trim());
-<a href=#1206 id=1206 data-nosnippet>1206</a>  <span class="kw">let </span>test_val = p.formula()<span class="question-mark">?</span>;
-<a href=#1207 id=1207 data-nosnippet>1207</a>  <span class="kw">let </span>chosen = <span class="kw">if </span>test_val != <span class="number">0.0 </span>{ then_part } <span class="kw">else </span>{ else_part };
-<a href=#1208 id=1208 data-nosnippet>1208</a>  <span class="comment">// Strip outer quotes if present; otherwise return as-is
-<a href=#1209 id=1209 data-nosnippet>1209</a>  </span><span class="kw">let </span>trimmed = chosen.trim();
-<a href=#1210 id=1210 data-nosnippet>1210</a>  <span class="kw">let </span>unq = <span class="kw">if </span>trimmed.starts_with(<span class="string">'"'</span>) &amp;&amp; trimmed.ends_with(<span class="string">'"'</span>) &amp;&amp; trimmed.len() &gt;= <span class="number">2 </span>{
-<a href=#1211 id=1211 data-nosnippet>1211</a>    <span class="kw-2">&amp;</span>trimmed[<span class="number">1</span>..trimmed.len()-<span class="number">1</span>]
-<a href=#1212 id=1212 data-nosnippet>1212</a>  } <span class="kw">else </span>{
-<a href=#1213 id=1213 data-nosnippet>1213</a>    trimmed
-<a href=#1214 id=1214 data-nosnippet>1214</a>  };
-<a href=#1215 id=1215 data-nosnippet>1215</a>  <span class="prelude-val">Some</span>(unq.to_string())
-<a href=#1216 id=1216 data-nosnippet>1216</a>}
-<a href=#1217 id=1217 data-nosnippet>1217</a>
-<a href=#1218 id=1218 data-nosnippet>1218</a><span class="doccomment">/// Split a string on commas at the top level (depth 0), skipping
-<a href=#1219 id=1219 data-nosnippet>1219</a>/// nested parens/brackets and quoted substrings.
-<a href=#1220 id=1220 data-nosnippet>1220</a></span><span class="kw">fn </span>split_top_commas(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt; {
-<a href=#1221 id=1221 data-nosnippet>1221</a>  <span class="kw">let </span>bytes = s.as_bytes();
-<a href=#1222 id=1222 data-nosnippet>1222</a>  <span class="kw">let </span><span class="kw-2">mut </span>parts = Vec::new();
-<a href=#1223 id=1223 data-nosnippet>1223</a>  <span class="kw">let </span><span class="kw-2">mut </span>start = <span class="number">0usize</span>;
-<a href=#1224 id=1224 data-nosnippet>1224</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
-<a href=#1225 id=1225 data-nosnippet>1225</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_quote = <span class="bool-val">false</span>;
-<a href=#1226 id=1226 data-nosnippet>1226</a>  <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>bytes.iter().enumerate() {
-<a href=#1227 id=1227 data-nosnippet>1227</a>    <span class="kw">match </span>b {
-<a href=#1228 id=1228 data-nosnippet>1228</a>      <span class="string">b'"' </span>=&gt; in_quote = !in_quote,
-<a href=#1229 id=1229 data-nosnippet>1229</a>      <span class="string">b'(' </span>| <span class="string">b'[' </span>| <span class="string">b'{' </span><span class="kw">if </span>!in_quote =&gt; depth += <span class="number">1</span>,
-<a href=#1230 id=1230 data-nosnippet>1230</a>      <span class="string">b')' </span>| <span class="string">b']' </span>| <span class="string">b'}' </span><span class="kw">if </span>!in_quote =&gt; depth -= <span class="number">1</span>,
-<a href=#1231 id=1231 data-nosnippet>1231</a>      <span class="string">b',' </span><span class="kw">if </span>!in_quote &amp;&amp; depth == <span class="number">0 </span>=&gt; {
-<a href=#1232 id=1232 data-nosnippet>1232</a>        parts.push(<span class="kw-2">&amp;</span>s[start..i]);
-<a href=#1233 id=1233 data-nosnippet>1233</a>        start = i + <span class="number">1</span>;
-<a href=#1234 id=1234 data-nosnippet>1234</a>      },
-<a href=#1235 id=1235 data-nosnippet>1235</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#1236 id=1236 data-nosnippet>1236</a>    }
-<a href=#1237 id=1237 data-nosnippet>1237</a>  }
-<a href=#1238 id=1238 data-nosnippet>1238</a>  parts.push(<span class="kw-2">&amp;</span>s[start..]);
-<a href=#1239 id=1239 data-nosnippet>1239</a>  <span class="prelude-val">Some</span>(parts)
-<a href=#1240 id=1240 data-nosnippet>1240</a>}
-<a href=#1241 id=1241 data-nosnippet>1241</a>
-<a href=#1242 id=1242 data-nosnippet>1242</a><span class="doccomment">/// Split `cond ? then : else` at the top-level `?` and `:`.
-<a href=#1243 id=1243 data-nosnippet>1243</a>/// Skips inside quotes and parens. Returns (cond, then, else).
-<a href=#1244 id=1244 data-nosnippet>1244</a></span><span class="kw">fn </span>split_ternary(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)&gt; {
-<a href=#1245 id=1245 data-nosnippet>1245</a>  <span class="kw">let </span>bytes = s.as_bytes();
-<a href=#1246 id=1246 data-nosnippet>1246</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
-<a href=#1247 id=1247 data-nosnippet>1247</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_quote = <span class="bool-val">false</span>;
-<a href=#1248 id=1248 data-nosnippet>1248</a>  <span class="kw">let </span><span class="kw-2">mut </span>q_pos: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
-<a href=#1249 id=1249 data-nosnippet>1249</a>  <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>bytes.iter().enumerate() {
-<a href=#1250 id=1250 data-nosnippet>1250</a>    <span class="kw">match </span>b {
-<a href=#1251 id=1251 data-nosnippet>1251</a>      <span class="string">b'"' </span>=&gt; in_quote = !in_quote,
-<a href=#1252 id=1252 data-nosnippet>1252</a>      <span class="string">b'(' </span>| <span class="string">b'[' </span>| <span class="string">b'{' </span><span class="kw">if </span>!in_quote =&gt; depth += <span class="number">1</span>,
-<a href=#1253 id=1253 data-nosnippet>1253</a>      <span class="string">b')' </span>| <span class="string">b']' </span>| <span class="string">b'}' </span><span class="kw">if </span>!in_quote =&gt; depth -= <span class="number">1</span>,
-<a href=#1254 id=1254 data-nosnippet>1254</a>      <span class="string">b'?' </span><span class="kw">if </span>!in_quote &amp;&amp; depth == <span class="number">0 </span>=&gt; { q_pos = <span class="prelude-val">Some</span>(i); <span class="kw">break</span>; },
-<a href=#1255 id=1255 data-nosnippet>1255</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#1256 id=1256 data-nosnippet>1256</a>    }
-<a href=#1257 id=1257 data-nosnippet>1257</a>  }
-<a href=#1258 id=1258 data-nosnippet>1258</a>  <span class="kw">let </span>qp = q_pos<span class="question-mark">?</span>;
-<a href=#1259 id=1259 data-nosnippet>1259</a>  <span class="comment">// Now find the matching `:` after qp at depth 0
-<a href=#1260 id=1260 data-nosnippet>1260</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
-<a href=#1261 id=1261 data-nosnippet>1261</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_quote = <span class="bool-val">false</span>;
-<a href=#1262 id=1262 data-nosnippet>1262</a>  <span class="kw">for </span>(j, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>bytes.iter().enumerate().skip(qp + <span class="number">1</span>) {
-<a href=#1263 id=1263 data-nosnippet>1263</a>    <span class="kw">match </span>b {
-<a href=#1264 id=1264 data-nosnippet>1264</a>      <span class="string">b'"' </span>=&gt; in_quote = !in_quote,
-<a href=#1265 id=1265 data-nosnippet>1265</a>      <span class="string">b'(' </span>| <span class="string">b'[' </span>| <span class="string">b'{' </span><span class="kw">if </span>!in_quote =&gt; depth += <span class="number">1</span>,
-<a href=#1266 id=1266 data-nosnippet>1266</a>      <span class="string">b')' </span>| <span class="string">b']' </span>| <span class="string">b'}' </span><span class="kw">if </span>!in_quote =&gt; depth -= <span class="number">1</span>,
-<a href=#1267 id=1267 data-nosnippet>1267</a>      <span class="string">b':' </span><span class="kw">if </span>!in_quote &amp;&amp; depth == <span class="number">0 </span>=&gt; {
-<a href=#1268 id=1268 data-nosnippet>1268</a>        <span class="kw">return </span><span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>s[..qp], <span class="kw-2">&amp;</span>s[qp+<span class="number">1</span>..j], <span class="kw-2">&amp;</span>s[j+<span class="number">1</span>..]));
-<a href=#1269 id=1269 data-nosnippet>1269</a>      },
-<a href=#1270 id=1270 data-nosnippet>1270</a>      <span class="kw">_ </span>=&gt; {},
-<a href=#1271 id=1271 data-nosnippet>1271</a>    }
-<a href=#1272 id=1272 data-nosnippet>1272</a>  }
-<a href=#1273 id=1273 data-nosnippet>1273</a>  <span class="prelude-val">None
-<a href=#1274 id=1274 data-nosnippet>1274</a></span>}
-<a href=#1275 id=1275 data-nosnippet>1275</a>
-<a href=#1276 id=1276 data-nosnippet>1276</a><span class="comment">// ==================== Macro Definitions ====================
-<a href=#1277 id=1277 data-nosnippet>1277</a>
-<a href=#1278 id=1278 data-nosnippet>1278</a></span><span class="attr">#[rustfmt::skip]
-<a href=#1279 id=1279 data-nosnippet>1279</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#1280 id=1280 data-nosnippet>1280</a>  <span class="comment">// Load pgf's raw TeX math code first (reloadable to bypass the loaded guard,
-<a href=#1281 id=1281 data-nosnippet>1281</a>  // since our binding was already marked as loaded by the dispatch system)
-<a href=#1282 id=1282 data-nosnippet>1282</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"pgfmath.code"</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"tex"</span>)), noltxml =&gt; <span class="bool-val">true</span>, reloadable =&gt; <span class="bool-val">true</span>);
-<a href=#1283 id=1283 data-nosnippet>1283</a>
-<a href=#1284 id=1284 data-nosnippet>1284</a>  <span class="comment">// Then override math operations with native Rust implementations.
-<a href=#1285 id=1285 data-nosnippet>1285</a>  // Perl: "using pgflibraryluamath.code.tex as a guide for what needs doing"
-<a href=#1286 id=1286 data-nosnippet>1286</a>
-<a href=#1287 id=1287 data-nosnippet>1287</a>  // Conditionals needed by pgfmath
-<a href=#1288 id=1288 data-nosnippet>1288</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\lx@ifundefined{pgfmathunitsdeclaredtrue}{\newif\ifpgfmathunitsdeclared}{}"</span>);
-<a href=#1289 id=1289 data-nosnippet>1289</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\lx@ifundefined{pgfmathmathunitsdeclaredtrue}{\newif\ifpgfmathmathunitsdeclared}{}"</span>);
-<a href=#1290 id=1290 data-nosnippet>1290</a>
-<a href=#1291 id=1291 data-nosnippet>1291</a>  <span class="comment">// Constants
-<a href=#1292 id=1292 data-nosnippet>1292</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathpi@"</span>, sub[_args] {
-<a href=#1293 id=1293 data-nosnippet>1293</a>    pgfmath_result_tokens(PI)
-<a href=#1294 id=1294 data-nosnippet>1294</a>  });
-<a href=#1295 id=1295 data-nosnippet>1295</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathe@"</span>, sub[_args] {
-<a href=#1296 id=1296 data-nosnippet>1296</a>    pgfmath_result_tokens(std::f64::consts::E)
-<a href=#1297 id=1297 data-nosnippet>1297</a>  });
-<a href=#1298 id=1298 data-nosnippet>1298</a>
-<a href=#1299 id=1299 data-nosnippet>1299</a>  <span class="comment">// Basic arithmetic
-<a href=#1300 id=1300 data-nosnippet>1300</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathadd@ {} {}"</span>, sub[(a, b)] {
-<a href=#1301 id=1301 data-nosnippet>1301</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) + parse_pgf_number(<span class="kw-2">&amp;</span>b))
-<a href=#1302 id=1302 data-nosnippet>1302</a>  });
-<a href=#1303 id=1303 data-nosnippet>1303</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsubtract@ {} {}"</span>, sub[(a, b)] {
-<a href=#1304 id=1304 data-nosnippet>1304</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) - parse_pgf_number(<span class="kw-2">&amp;</span>b))
-<a href=#1305 id=1305 data-nosnippet>1305</a>  });
-<a href=#1306 id=1306 data-nosnippet>1306</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathneg@ {}"</span>, sub[(a)] {
-<a href=#1307 id=1307 data-nosnippet>1307</a>    pgfmath_result_tokens(-parse_pgf_number(<span class="kw-2">&amp;</span>a))
-<a href=#1308 id=1308 data-nosnippet>1308</a>  });
-<a href=#1309 id=1309 data-nosnippet>1309</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathmultiply@ {} {}"</span>, sub[(a, b)] {
-<a href=#1310 id=1310 data-nosnippet>1310</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) * parse_pgf_number(<span class="kw-2">&amp;</span>b))
-<a href=#1311 id=1311 data-nosnippet>1311</a>  });
-<a href=#1312 id=1312 data-nosnippet>1312</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathdivide@ {} {}"</span>, sub[(a, b)] {
-<a href=#1313 id=1313 data-nosnippet>1313</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) / pgfmath_divisor(parse_pgf_number(<span class="kw-2">&amp;</span>b)))
-<a href=#1314 id=1314 data-nosnippet>1314</a>  });
-<a href=#1315 id=1315 data-nosnippet>1315</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathpow@ {} {}"</span>, sub[(a, b)] {
-<a href=#1316 id=1316 data-nosnippet>1316</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).powf(parse_pgf_number(<span class="kw-2">&amp;</span>b)))
-<a href=#1317 id=1317 data-nosnippet>1317</a>  });
-<a href=#1318 id=1318 data-nosnippet>1318</a>
-<a href=#1319 id=1319 data-nosnippet>1319</a>  <span class="comment">// Rounding and comparison
-<a href=#1320 id=1320 data-nosnippet>1320</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathabs@ {}"</span>, sub[(a)] {
-<a href=#1321 id=1321 data-nosnippet>1321</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).abs())
-<a href=#1322 id=1322 data-nosnippet>1322</a>  });
-<a href=#1323 id=1323 data-nosnippet>1323</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathround@ {}"</span>, sub[(a)] {
-<a href=#1324 id=1324 data-nosnippet>1324</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).round())
-<a href=#1325 id=1325 data-nosnippet>1325</a>  });
-<a href=#1326 id=1326 data-nosnippet>1326</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathfloor@ {}"</span>, sub[(a)] {
-<a href=#1327 id=1327 data-nosnippet>1327</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).floor())
-<a href=#1328 id=1328 data-nosnippet>1328</a>  });
-<a href=#1329 id=1329 data-nosnippet>1329</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathceil@ {}"</span>, sub[(a)] {
-<a href=#1330 id=1330 data-nosnippet>1330</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).ceil())
-<a href=#1331 id=1331 data-nosnippet>1331</a>  });
-<a href=#1332 id=1332 data-nosnippet>1332</a>
-<a href=#1333 id=1333 data-nosnippet>1333</a>  <span class="comment">// Trigonometric (input in degrees, output as float)
-<a href=#1334 id=1334 data-nosnippet>1334</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsin@ {}"</span>, sub[(a)] {
-<a href=#1335 id=1335 data-nosnippet>1335</a>    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).sin())
-<a href=#1336 id=1336 data-nosnippet>1336</a>  });
-<a href=#1337 id=1337 data-nosnippet>1337</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathcos@ {}"</span>, sub[(a)] {
-<a href=#1338 id=1338 data-nosnippet>1338</a>    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).cos())
-<a href=#1339 id=1339 data-nosnippet>1339</a>  });
-<a href=#1340 id=1340 data-nosnippet>1340</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathtan@ {}"</span>, sub[(a)] {
-<a href=#1341 id=1341 data-nosnippet>1341</a>    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).tan())
-<a href=#1342 id=1342 data-nosnippet>1342</a>  });
-<a href=#1343 id=1343 data-nosnippet>1343</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathatan@ {}"</span>, sub[(a)] {
-<a href=#1344 id=1344 data-nosnippet>1344</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).atan().to_degrees())
-<a href=#1345 id=1345 data-nosnippet>1345</a>  });
-<a href=#1346 id=1346 data-nosnippet>1346</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathatantwo@ {} {}"</span>, sub[(a, b)] {
-<a href=#1347 id=1347 data-nosnippet>1347</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).atan2(parse_pgf_number(<span class="kw-2">&amp;</span>b)).to_degrees())
-<a href=#1348 id=1348 data-nosnippet>1348</a>  });
-<a href=#1349 id=1349 data-nosnippet>1349</a>  <span class="macro">Let!</span>(<span class="string">"\\pgfmathatan2@"</span>, <span class="string">"\\pgfmathatantwo@"</span>);
-<a href=#1350 id=1350 data-nosnippet>1350</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathasin@ {}"</span>, sub[(a)] {
-<a href=#1351 id=1351 data-nosnippet>1351</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).asin().to_degrees())
-<a href=#1352 id=1352 data-nosnippet>1352</a>  });
-<a href=#1353 id=1353 data-nosnippet>1353</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathacos@ {}"</span>, sub[(a)] {
-<a href=#1354 id=1354 data-nosnippet>1354</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).acos().to_degrees())
-<a href=#1355 id=1355 data-nosnippet>1355</a>  });
-<a href=#1356 id=1356 data-nosnippet>1356</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathcot@ {}"</span>, sub[(a)] {
-<a href=#1357 id=1357 data-nosnippet>1357</a>    <span class="kw">let </span>r = pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a));
-<a href=#1358 id=1358 data-nosnippet>1358</a>    pgfmath_result_tokens(r.cos() / pgfmath_divisor(r.sin()))
-<a href=#1359 id=1359 data-nosnippet>1359</a>  });
-<a href=#1360 id=1360 data-nosnippet>1360</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsec@ {}"</span>, sub[(a)] {
-<a href=#1361 id=1361 data-nosnippet>1361</a>    pgfmath_result_tokens(<span class="number">1.0 </span>/ pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).cos()))
-<a href=#1362 id=1362 data-nosnippet>1362</a>  });
-<a href=#1363 id=1363 data-nosnippet>1363</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathcosec@ {}"</span>, sub[(a)] {
-<a href=#1364 id=1364 data-nosnippet>1364</a>    pgfmath_result_tokens(<span class="number">1.0 </span>/ pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).sin()))
-<a href=#1365 id=1365 data-nosnippet>1365</a>  });
-<a href=#1366 id=1366 data-nosnippet>1366</a>
-<a href=#1367 id=1367 data-nosnippet>1367</a>  <span class="comment">// Exponential and logarithmic
-<a href=#1368 id=1368 data-nosnippet>1368</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathexp@ {}"</span>, sub[(a)] {
-<a href=#1369 id=1369 data-nosnippet>1369</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).exp())
+<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="comment">// Perl `sub pgfmath_register` (pgfmath.code.tex.ltxml L487-493) sets
+<a href=#1076 id=1076 data-nosnippet>1076</a>    // `\ifpgfmathunitsdeclared` = 1 (global) UNCONDITIONALLY whenever a CS
+<a href=#1077 id=1077 data-nosnippet>1077</a>    // register is read — it is a register, hence "we saw a unit". Without
+<a href=#1078 id=1078 data-nosnippet>1078</a>    // this, `\pgfmathparse{\pgflinewidth}` (or any `\dimen`/`\skip`/`\count`
+<a href=#1079 id=1079 data-nosnippet>1079</a>    // register) reported `pgfmathunitsdeclared` FALSE while a literal `2pt`
+<a href=#1080 id=1080 data-nosnippet>1080</a>    // reported TRUE. pgfplots' `\pgfplots@bar@mathparse@` keys off this flag:
+<a href=#1081 id=1081 data-nosnippet>1081</a>    // for `ybar=\pgflinewidth` (a dimension-register value, common in bar
+<a href=#1082 id=1082 data-nosnippet>1082</a>    // charts) the false flag sent it into the x-axis unit-conversion branch,
+<a href=#1083 id=1083 data-nosnippet>1083</a>    // which corrupts coordinate resolution under `symbolic x coords` →
+<a href=#1084 id=1084 data-nosnippet>1084</a>    // `Package pgfplots Error: ... \pgfplots@loc@TMPa has not been defined`.
+<a href=#1085 id=1085 data-nosnippet>1085</a>    // Witnesses 1908.10041, 1901.08716 (and pgfplots bar charts generally).
+<a href=#1086 id=1086 data-nosnippet>1086</a>    </span><span class="self">self</span>.units_declared = <span class="bool-val">true</span>;
+<a href=#1087 id=1087 data-nosnippet>1087</a>    <span class="prelude-val">Some</span>(pgfmath_register_lookup(cs))
+<a href=#1088 id=1088 data-nosnippet>1088</a>  }
+<a href=#1089 id=1089 data-nosnippet>1089</a>
+<a href=#1090 id=1090 data-nosnippet>1090</a>  <span class="doccomment">/// Read an identifier: [a-zA-Z][a-zA-Z0-9_]*
+<a href=#1091 id=1091 data-nosnippet>1091</a>  </span><span class="kw">fn </span>read_identifier(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; String {
+<a href=#1092 id=1092 data-nosnippet>1092</a>    <span class="kw">let </span>start = <span class="self">self</span>.pos;
+<a href=#1093 id=1093 data-nosnippet>1093</a>    <span class="kw">while </span><span class="self">self</span>.pos &lt; <span class="self">self</span>.input.len()
+<a href=#1094 id=1094 data-nosnippet>1094</a>      &amp;&amp; (<span class="self">self</span>.input[<span class="self">self</span>.pos].is_ascii_alphanumeric() || <span class="self">self</span>.input[<span class="self">self</span>.pos] == <span class="string">b'_'</span>)
+<a href=#1095 id=1095 data-nosnippet>1095</a>    {
+<a href=#1096 id=1096 data-nosnippet>1096</a>      <span class="self">self</span>.pos += <span class="number">1</span>;
+<a href=#1097 id=1097 data-nosnippet>1097</a>    }
+<a href=#1098 id=1098 data-nosnippet>1098</a>    std::str::from_utf8(<span class="kw-2">&amp;</span><span class="self">self</span>.input[start..<span class="self">self</span>.pos])
+<a href=#1099 id=1099 data-nosnippet>1099</a>      .unwrap()
+<a href=#1100 id=1100 data-nosnippet>1100</a>      .to_string()
+<a href=#1101 id=1101 data-nosnippet>1101</a>  }
+<a href=#1102 id=1102 data-nosnippet>1102</a>}
+<a href=#1103 id=1103 data-nosnippet>1103</a>
+<a href=#1104 id=1104 data-nosnippet>1104</a><span class="doccomment">/// Apply a comparison operator
+<a href=#1105 id=1105 data-nosnippet>1105</a></span><span class="kw">fn </span>pgfmath_cmp_op(op: <span class="kw-2">&amp;</span>str, left: f64, right: f64) -&gt; f64 {
+<a href=#1106 id=1106 data-nosnippet>1106</a>  <span class="kw">let </span>result = <span class="kw">match </span>op {
+<a href=#1107 id=1107 data-nosnippet>1107</a>    <span class="string">"==" </span>=&gt; left == right,
+<a href=#1108 id=1108 data-nosnippet>1108</a>    <span class="string">"!=" </span>=&gt; left != right,
+<a href=#1109 id=1109 data-nosnippet>1109</a>    <span class="string">"&gt;" </span>=&gt; left &gt; right,
+<a href=#1110 id=1110 data-nosnippet>1110</a>    <span class="string">"&lt;" </span>=&gt; left &lt; right,
+<a href=#1111 id=1111 data-nosnippet>1111</a>    <span class="string">"&gt;=" </span>=&gt; left &gt;= right,
+<a href=#1112 id=1112 data-nosnippet>1112</a>    <span class="string">"&lt;=" </span>=&gt; left &lt;= right,
+<a href=#1113 id=1113 data-nosnippet>1113</a>    <span class="string">"&amp;&amp;" </span>=&gt; left != <span class="number">0.0 </span>&amp;&amp; right != <span class="number">0.0</span>,
+<a href=#1114 id=1114 data-nosnippet>1114</a>    <span class="string">"||" </span>=&gt; left != <span class="number">0.0 </span>|| right != <span class="number">0.0</span>,
+<a href=#1115 id=1115 data-nosnippet>1115</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#1116 id=1116 data-nosnippet>1116</a>  };
+<a href=#1117 id=1117 data-nosnippet>1117</a>  <span class="kw">if </span>result { <span class="number">1.0 </span>} <span class="kw">else </span>{ <span class="number">0.0 </span>}
+<a href=#1118 id=1118 data-nosnippet>1118</a>}
+<a href=#1119 id=1119 data-nosnippet>1119</a>
+<a href=#1120 id=1120 data-nosnippet>1120</a><span class="comment">// ==================== Main pgfmathparse ====================
+<a href=#1121 id=1121 data-nosnippet>1121</a>
+<a href=#1122 id=1122 data-nosnippet>1122</a></span><span class="doccomment">/// Format the result of pgfmathparse for output
+<a href=#1123 id=1123 data-nosnippet>1123</a>/// Perl: L383-393 of pgfmath.code.tex.ltxml
+<a href=#1124 id=1124 data-nosnippet>1124</a></span><span class="kw">fn </span>format_parse_result(result: f64, input: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#1125 id=1125 data-nosnippet>1125</a>  <span class="comment">// Overflow check
+<a href=#1126 id=1126 data-nosnippet>1126</a>  </span><span class="kw">let </span>result = result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
+<a href=#1127 id=1127 data-nosnippet>1127</a>
+<a href=#1128 id=1128 data-nosnippet>1128</a>  <span class="comment">// Integer result
+<a href=#1129 id=1129 data-nosnippet>1129</a>  </span><span class="kw">if </span>result == (result <span class="kw">as </span>i64) <span class="kw">as </span>f64 {
+<a href=#1130 id=1130 data-nosnippet>1130</a>    <span class="kw">let </span>i = result <span class="kw">as </span>i64;
+<a href=#1131 id=1131 data-nosnippet>1131</a>    <span class="comment">// Perl: $result .= '.0' unless $input =~ /^int\(/;
+<a href=#1132 id=1132 data-nosnippet>1132</a>    </span><span class="kw">if </span>input.starts_with(<span class="string">"int("</span>) {
+<a href=#1133 id=1133 data-nosnippet>1133</a>      <span class="kw">return </span><span class="macro">format!</span>(<span class="string">"{}"</span>, i);
+<a href=#1134 id=1134 data-nosnippet>1134</a>    }
+<a href=#1135 id=1135 data-nosnippet>1135</a>    <span class="kw">return </span><span class="macro">format!</span>(<span class="string">"{}.0"</span>, i);
+<a href=#1136 id=1136 data-nosnippet>1136</a>  }
+<a href=#1137 id=1137 data-nosnippet>1137</a>
+<a href=#1138 id=1138 data-nosnippet>1138</a>  <span class="comment">// Decimal result: sprintf("%.5f"), strip trailing zeros
+<a href=#1139 id=1139 data-nosnippet>1139</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>s = <span class="macro">format!</span>(<span class="string">"{:.5}"</span>, result);
+<a href=#1140 id=1140 data-nosnippet>1140</a>  <span class="kw">if </span>s.contains(<span class="string">'.'</span>) {
+<a href=#1141 id=1141 data-nosnippet>1141</a>    <span class="kw">while </span>s.ends_with(<span class="string">'0'</span>) &amp;&amp; !s.ends_with(<span class="string">".0"</span>) {
+<a href=#1142 id=1142 data-nosnippet>1142</a>      s.pop();
+<a href=#1143 id=1143 data-nosnippet>1143</a>    }
+<a href=#1144 id=1144 data-nosnippet>1144</a>  }
+<a href=#1145 id=1145 data-nosnippet>1145</a>  s
+<a href=#1146 id=1146 data-nosnippet>1146</a>}
+<a href=#1147 id=1147 data-nosnippet>1147</a>
+<a href=#1148 id=1148 data-nosnippet>1148</a><span class="doccomment">/// Expand the argument to a pgfmath parse with the seven calc-package
+<a href=#1149 id=1149 data-nosnippet>1149</a>/// compatibility CSes (`\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`,
+<a href=#1150 id=1150 data-nosnippet>1150</a>/// `\heightof`, `\depthof`) transiently `\let` to the `\pgfmath@calc@*`
+<a href=#1151 id=1151 data-nosnippet>1151</a>/// internals, then restored to their prior meanings.
+<a href=#1152 id=1152 data-nosnippet>1152</a>///
+<a href=#1153 id=1153 data-nosnippet>1153</a>/// Perl `pgfmath.code.tex.ltxml` L320-327 performs these `Let`s at the *start
+<a href=#1154 id=1154 data-nosnippet>1154</a>/// of `sub pgfmathparse`* — i.e. only while the pgfmath argument is being
+<a href=#1155 id=1155 data-nosnippet>1155</a>/// expanded; being local (non-`global`) `Let`s they revert with the enclosing
+<a href=#1156 id=1156 data-nosnippet>1156</a>/// tikz/pgf group. The earlier Rust port hoisted them to package-load time
+<a href=#1157 id=1157 data-nosnippet>1157</a>/// (because the native parser "can't re-bind per call"), which globally
+<a href=#1158 id=1158 data-nosnippet>1158</a>/// clobbered `\real` (and the six siblings) for the *whole document*. That
+<a href=#1159 id=1159 data-nosnippet>1159</a>/// broke the very common use of `\real` as the blackboard-ℝ symbol: e.g.
+<a href=#1160 id=1160 data-nosnippet>1160</a>/// `\int_\real p_m`, where the 1-argument `\pgfmath@calc@real` ate the
+<a href=#1161 id=1161 data-nosnippet>1161</a>/// following `p` as its argument and yielded a spurious "Double subscript".
+<a href=#1162 id=1162 data-nosnippet>1162</a>/// Witness: 1608.06741 (`\newcommand\real{\mathbb{R}}`, ignored because
+<a href=#1163 id=1163 data-nosnippet>1163</a>/// mathtools→calc already defined `\real`, then pgfmath via todonotes→tikz
+<a href=#1164 id=1164 data-nosnippet>1164</a>/// clobbered it). We restore Perl's exact scope with a tight
+<a href=#1165 id=1165 data-nosnippet>1165</a>/// save → let → expand → restore around just this one expansion, so `\real`
+<a href=#1166 id=1166 data-nosnippet>1166</a>/// used as an ordinary math macro elsewhere is never touched.
+<a href=#1167 id=1167 data-nosnippet>1167</a></span><span class="kw">fn </span>expand_pgfmath_arg&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; Tokens {
+<a href=#1168 id=1168 data-nosnippet>1168</a>  <span class="kw">const </span>PAIRS: [(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str); <span class="number">7</span>] = [
+<a href=#1169 id=1169 data-nosnippet>1169</a>    (<span class="string">"\\real"</span>, <span class="string">"\\pgfmath@calc@real"</span>),
+<a href=#1170 id=1170 data-nosnippet>1170</a>    (<span class="string">"\\minof"</span>, <span class="string">"\\pgfmath@calc@minof"</span>),
+<a href=#1171 id=1171 data-nosnippet>1171</a>    (<span class="string">"\\maxof"</span>, <span class="string">"\\pgfmath@calc@maxof"</span>),
+<a href=#1172 id=1172 data-nosnippet>1172</a>    (<span class="string">"\\ratio"</span>, <span class="string">"\\pgfmath@calc@ratio"</span>),
+<a href=#1173 id=1173 data-nosnippet>1173</a>    (<span class="string">"\\widthof"</span>, <span class="string">"\\pgfmath@calc@widthof"</span>),
+<a href=#1174 id=1174 data-nosnippet>1174</a>    (<span class="string">"\\heightof"</span>, <span class="string">"\\pgfmath@calc@heightof"</span>),
+<a href=#1175 id=1175 data-nosnippet>1175</a>    (<span class="string">"\\depthof"</span>, <span class="string">"\\pgfmath@calc@depthof"</span>),
+<a href=#1176 id=1176 data-nosnippet>1176</a>  ];
+<a href=#1177 id=1177 data-nosnippet>1177</a>  <span class="kw">let </span>saved: Vec&lt;(Token, Stored)&gt; = PAIRS
+<a href=#1178 id=1178 data-nosnippet>1178</a>    .iter()
+<a href=#1179 id=1179 data-nosnippet>1179</a>    .map(|(cs, <span class="kw">_</span>)| {
+<a href=#1180 id=1180 data-nosnippet>1180</a>      <span class="kw">let </span>t = <span class="macro">T_CS!</span>(<span class="kw-2">*</span>cs);
+<a href=#1181 id=1181 data-nosnippet>1181</a>      <span class="kw">let </span>m = state::lookup_meaning(<span class="kw-2">&amp;</span>t).unwrap_or(Stored::None);
+<a href=#1182 id=1182 data-nosnippet>1182</a>      (t, m)
+<a href=#1183 id=1183 data-nosnippet>1183</a>    })
+<a href=#1184 id=1184 data-nosnippet>1184</a>    .collect();
+<a href=#1185 id=1185 data-nosnippet>1185</a>  <span class="kw">for </span>(cs, helper) <span class="kw">in </span>PAIRS.iter() {
+<a href=#1186 id=1186 data-nosnippet>1186</a>    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">*</span>cs), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">*</span>helper), <span class="prelude-val">None</span>);
+<a href=#1187 id=1187 data-nosnippet>1187</a>  }
+<a href=#1188 id=1188 data-nosnippet>1188</a>  <span class="kw">let </span>expanded = gullet::do_expand(tokens).unwrap_or_default();
+<a href=#1189 id=1189 data-nosnippet>1189</a>  <span class="kw">for </span>(t, m) <span class="kw">in </span>saved {
+<a href=#1190 id=1190 data-nosnippet>1190</a>    state::assign_meaning(<span class="kw-2">&amp;</span>t, m, <span class="prelude-val">None</span>);
+<a href=#1191 id=1191 data-nosnippet>1191</a>  }
+<a href=#1192 id=1192 data-nosnippet>1192</a>  expanded
+<a href=#1193 id=1193 data-nosnippet>1193</a>}
+<a href=#1194 id=1194 data-nosnippet>1194</a>
+<a href=#1195 id=1195 data-nosnippet>1195</a><span class="doccomment">/// Main pgfmathparse evaluation function
+<a href=#1196 id=1196 data-nosnippet>1196</a>/// Perl: sub pgfmathparse (L316-394)
+<a href=#1197 id=1197 data-nosnippet>1197</a>/// Returns (result_string, units_declared)
+<a href=#1198 id=1198 data-nosnippet>1198</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>pgfmathparse_eval_with_units(raw_input: <span class="kw-2">&amp;</span>str) -&gt; (String, bool) {
+<a href=#1199 id=1199 data-nosnippet>1199</a>  <span class="comment">// Normalize whitespace
+<a href=#1200 id=1200 data-nosnippet>1200</a>  </span><span class="kw">let </span>input: String = raw_input.split_whitespace().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>);
+<a href=#1201 id=1201 data-nosnippet>1201</a>  <span class="kw">let </span>input = input.trim();
+<a href=#1202 id=1202 data-nosnippet>1202</a>
+<a href=#1203 id=1203 data-nosnippet>1203</a>  <span class="comment">// 0. String-valued ternary / ifthenelse — Perl pgfmath uses untyped
+<a href=#1204 id=1204 data-nosnippet>1204</a>  //    scalars so the `?:` operator and `ifthenelse(...)` can return
+<a href=#1205 id=1205 data-nosnippet>1205</a>  //    string values like `"black"` or `"pgreen!50"` for color names.
+<a href=#1206 id=1206 data-nosnippet>1206</a>  //    Our parser is f64-only, so detect the pattern
+<a href=#1207 id=1207 data-nosnippet>1207</a>  //      &lt;test&gt; ? "a" : "b"     OR     ifthenelse(&lt;test&gt;, "a", "b")
+<a href=#1208 id=1208 data-nosnippet>1208</a>  //    early, evaluate the test as a number, and return the chosen
+<a href=#1209 id=1209 data-nosnippet>1209</a>  //    string literal. Drivers: 2601.14798 (color jitter heatmap),
+<a href=#1210 id=1210 data-nosnippet>1210</a>  //    Stage-20 v6 ~1579 errors from \pgfmathsetmacro{\clr}{...}.
+<a href=#1211 id=1211 data-nosnippet>1211</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(result) = try_string_ternary(input) {
+<a href=#1212 id=1212 data-nosnippet>1212</a>    <span class="kw">return </span>(result, <span class="bool-val">false</span>);
+<a href=#1213 id=1213 data-nosnippet>1213</a>  }
+<a href=#1214 id=1214 data-nosnippet>1214</a>
+<a href=#1215 id=1215 data-nosnippet>1215</a>  <span class="comment">// 1. Simple number check (Perl L332-345)
+<a href=#1216 id=1216 data-nosnippet>1216</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(result) = try_simple_number(input) {
+<a href=#1217 id=1217 data-nosnippet>1217</a>    <span class="kw">return </span>(result, <span class="bool-val">false</span>);
+<a href=#1218 id=1218 data-nosnippet>1218</a>  }
+<a href=#1219 id=1219 data-nosnippet>1219</a>
+<a href=#1220 id=1220 data-nosnippet>1220</a>  <span class="comment">// 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/ Handled by the parser below,
+<a href=#1221 id=1221 data-nosnippet>1221</a>  //    since it's a subset of the grammar.
+<a href=#1222 id=1222 data-nosnippet>1222</a>
+<a href=#1223 id=1223 data-nosnippet>1223</a>  // 3. Parse with recursive descent (replaces both Perl eval and RecDescent)
+<a href=#1224 id=1224 data-nosnippet>1224</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>parser = PgfMathParser::new(input);
+<a href=#1225 id=1225 data-nosnippet>1225</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(result) = parser.formula() {
+<a href=#1226 id=1226 data-nosnippet>1226</a>    <span class="comment">// Perl L378: forgive trailing ) or ]
+<a href=#1227 id=1227 data-nosnippet>1227</a>    </span><span class="kw">let </span>remaining = parser.remaining_trimmed().trim_start_matches([<span class="string">')'</span>, <span class="string">']'</span>]);
+<a href=#1228 id=1228 data-nosnippet>1228</a>    <span class="kw">if </span>!remaining.is_empty() {
+<a href=#1229 id=1229 data-nosnippet>1229</a>      <span class="comment">// Partial parse — still return what we got
+<a href=#1230 id=1230 data-nosnippet>1230</a>    </span>}
+<a href=#1231 id=1231 data-nosnippet>1231</a>    <span class="kw">return </span>(format_parse_result(result, input), parser.units_declared);
+<a href=#1232 id=1232 data-nosnippet>1232</a>  }
+<a href=#1233 id=1233 data-nosnippet>1233</a>
+<a href=#1234 id=1234 data-nosnippet>1234</a>  <span class="comment">// 4. Fallback
+<a href=#1235 id=1235 data-nosnippet>1235</a>  </span>(<span class="string">"0.0"</span>.to_string(), <span class="bool-val">false</span>)
+<a href=#1236 id=1236 data-nosnippet>1236</a>}
+<a href=#1237 id=1237 data-nosnippet>1237</a>
+<a href=#1238 id=1238 data-nosnippet>1238</a><span class="doccomment">/// Convenience wrapper that returns only the result string
+<a href=#1239 id=1239 data-nosnippet>1239</a></span><span class="kw">pub fn </span>pgfmathparse_eval(raw_input: <span class="kw-2">&amp;</span>str) -&gt; String { pgfmathparse_eval_with_units(raw_input).<span class="number">0 </span>}
+<a href=#1240 id=1240 data-nosnippet>1240</a>
+<a href=#1241 id=1241 data-nosnippet>1241</a><span class="doccomment">/// Detect string-valued pgfmath ternaries `&lt;test&gt; ? "a" : "b"` or
+<a href=#1242 id=1242 data-nosnippet>1242</a>/// `ifthenelse(&lt;test&gt;, "a", "b")` and return the chosen literal.
+<a href=#1243 id=1243 data-nosnippet>1243</a>/// Returns None if the pattern doesn't match or contains no string args.
+<a href=#1244 id=1244 data-nosnippet>1244</a></span><span class="kw">fn </span>try_string_ternary(input: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#1245 id=1245 data-nosnippet>1245</a>  <span class="comment">// Strip ifthenelse(...) wrapper if present
+<a href=#1246 id=1246 data-nosnippet>1246</a>  </span><span class="kw">let </span>inner = <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = input.strip_prefix(<span class="string">"ifthenelse("</span>) {
+<a href=#1247 id=1247 data-nosnippet>1247</a>    <span class="kw">let </span>body = rest.strip_suffix(<span class="string">')'</span>)<span class="question-mark">?</span>;
+<a href=#1248 id=1248 data-nosnippet>1248</a>    <span class="comment">// Re-shape as ternary: split on top-level commas (depth 0 of nested parens/quotes)
+<a href=#1249 id=1249 data-nosnippet>1249</a>    </span><span class="kw">let </span>parts = split_top_commas(body)<span class="question-mark">?</span>;
+<a href=#1250 id=1250 data-nosnippet>1250</a>    <span class="kw">if </span>parts.len() != <span class="number">3 </span>{ <span class="kw">return </span><span class="prelude-val">None</span>; }
+<a href=#1251 id=1251 data-nosnippet>1251</a>    <span class="macro">format!</span>(<span class="string">"{} ? {} : {}"</span>, parts[<span class="number">0</span>].trim(), parts[<span class="number">1</span>].trim(), parts[<span class="number">2</span>].trim())
+<a href=#1252 id=1252 data-nosnippet>1252</a>  } <span class="kw">else </span>{
+<a href=#1253 id=1253 data-nosnippet>1253</a>    input.to_string()
+<a href=#1254 id=1254 data-nosnippet>1254</a>  };
+<a href=#1255 id=1255 data-nosnippet>1255</a>  <span class="comment">// Find top-level `?` and `:` (skipping inside quotes and parens)
+<a href=#1256 id=1256 data-nosnippet>1256</a>  </span><span class="kw">let </span>(cond, then_part, else_part) = split_ternary(<span class="kw-2">&amp;</span>inner)<span class="question-mark">?</span>;
+<a href=#1257 id=1257 data-nosnippet>1257</a>  <span class="comment">// Branches must include at least one quoted string for this path to make sense
+<a href=#1258 id=1258 data-nosnippet>1258</a>  </span><span class="kw">let </span>then_is_str = then_part.trim().starts_with(<span class="string">'"'</span>);
+<a href=#1259 id=1259 data-nosnippet>1259</a>  <span class="kw">let </span>else_is_str = else_part.trim().starts_with(<span class="string">'"'</span>);
+<a href=#1260 id=1260 data-nosnippet>1260</a>  <span class="kw">if </span>!then_is_str &amp;&amp; !else_is_str {
+<a href=#1261 id=1261 data-nosnippet>1261</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1262 id=1262 data-nosnippet>1262</a>  }
+<a href=#1263 id=1263 data-nosnippet>1263</a>  <span class="comment">// Evaluate the test as a number via the regular f64 parser
+<a href=#1264 id=1264 data-nosnippet>1264</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>p = PgfMathParser::new(cond.trim());
+<a href=#1265 id=1265 data-nosnippet>1265</a>  <span class="kw">let </span>test_val = p.formula()<span class="question-mark">?</span>;
+<a href=#1266 id=1266 data-nosnippet>1266</a>  <span class="kw">let </span>chosen = <span class="kw">if </span>test_val != <span class="number">0.0 </span>{ then_part } <span class="kw">else </span>{ else_part };
+<a href=#1267 id=1267 data-nosnippet>1267</a>  <span class="comment">// Strip outer quotes if present; otherwise return as-is
+<a href=#1268 id=1268 data-nosnippet>1268</a>  </span><span class="kw">let </span>trimmed = chosen.trim();
+<a href=#1269 id=1269 data-nosnippet>1269</a>  <span class="kw">let </span>unq = <span class="kw">if </span>trimmed.starts_with(<span class="string">'"'</span>) &amp;&amp; trimmed.ends_with(<span class="string">'"'</span>) &amp;&amp; trimmed.len() &gt;= <span class="number">2 </span>{
+<a href=#1270 id=1270 data-nosnippet>1270</a>    <span class="kw-2">&amp;</span>trimmed[<span class="number">1</span>..trimmed.len()-<span class="number">1</span>]
+<a href=#1271 id=1271 data-nosnippet>1271</a>  } <span class="kw">else </span>{
+<a href=#1272 id=1272 data-nosnippet>1272</a>    trimmed
+<a href=#1273 id=1273 data-nosnippet>1273</a>  };
+<a href=#1274 id=1274 data-nosnippet>1274</a>  <span class="prelude-val">Some</span>(unq.to_string())
+<a href=#1275 id=1275 data-nosnippet>1275</a>}
+<a href=#1276 id=1276 data-nosnippet>1276</a>
+<a href=#1277 id=1277 data-nosnippet>1277</a><span class="doccomment">/// Split a string on commas at the top level (depth 0), skipping
+<a href=#1278 id=1278 data-nosnippet>1278</a>/// nested parens/brackets and quoted substrings.
+<a href=#1279 id=1279 data-nosnippet>1279</a></span><span class="kw">fn </span>split_top_commas(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;<span class="kw-2">&amp;</span>str&gt;&gt; {
+<a href=#1280 id=1280 data-nosnippet>1280</a>  <span class="kw">let </span>bytes = s.as_bytes();
+<a href=#1281 id=1281 data-nosnippet>1281</a>  <span class="kw">let </span><span class="kw-2">mut </span>parts = Vec::new();
+<a href=#1282 id=1282 data-nosnippet>1282</a>  <span class="kw">let </span><span class="kw-2">mut </span>start = <span class="number">0usize</span>;
+<a href=#1283 id=1283 data-nosnippet>1283</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
+<a href=#1284 id=1284 data-nosnippet>1284</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_quote = <span class="bool-val">false</span>;
+<a href=#1285 id=1285 data-nosnippet>1285</a>  <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>bytes.iter().enumerate() {
+<a href=#1286 id=1286 data-nosnippet>1286</a>    <span class="kw">match </span>b {
+<a href=#1287 id=1287 data-nosnippet>1287</a>      <span class="string">b'"' </span>=&gt; in_quote = !in_quote,
+<a href=#1288 id=1288 data-nosnippet>1288</a>      <span class="string">b'(' </span>| <span class="string">b'[' </span>| <span class="string">b'{' </span><span class="kw">if </span>!in_quote =&gt; depth += <span class="number">1</span>,
+<a href=#1289 id=1289 data-nosnippet>1289</a>      <span class="string">b')' </span>| <span class="string">b']' </span>| <span class="string">b'}' </span><span class="kw">if </span>!in_quote =&gt; depth -= <span class="number">1</span>,
+<a href=#1290 id=1290 data-nosnippet>1290</a>      <span class="string">b',' </span><span class="kw">if </span>!in_quote &amp;&amp; depth == <span class="number">0 </span>=&gt; {
+<a href=#1291 id=1291 data-nosnippet>1291</a>        parts.push(<span class="kw-2">&amp;</span>s[start..i]);
+<a href=#1292 id=1292 data-nosnippet>1292</a>        start = i + <span class="number">1</span>;
+<a href=#1293 id=1293 data-nosnippet>1293</a>      },
+<a href=#1294 id=1294 data-nosnippet>1294</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1295 id=1295 data-nosnippet>1295</a>    }
+<a href=#1296 id=1296 data-nosnippet>1296</a>  }
+<a href=#1297 id=1297 data-nosnippet>1297</a>  parts.push(<span class="kw-2">&amp;</span>s[start..]);
+<a href=#1298 id=1298 data-nosnippet>1298</a>  <span class="prelude-val">Some</span>(parts)
+<a href=#1299 id=1299 data-nosnippet>1299</a>}
+<a href=#1300 id=1300 data-nosnippet>1300</a>
+<a href=#1301 id=1301 data-nosnippet>1301</a><span class="doccomment">/// Split `cond ? then : else` at the top-level `?` and `:`.
+<a href=#1302 id=1302 data-nosnippet>1302</a>/// Skips inside quotes and parens. Returns (cond, then, else).
+<a href=#1303 id=1303 data-nosnippet>1303</a></span><span class="kw">fn </span>split_ternary(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)&gt; {
+<a href=#1304 id=1304 data-nosnippet>1304</a>  <span class="kw">let </span>bytes = s.as_bytes();
+<a href=#1305 id=1305 data-nosnippet>1305</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
+<a href=#1306 id=1306 data-nosnippet>1306</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_quote = <span class="bool-val">false</span>;
+<a href=#1307 id=1307 data-nosnippet>1307</a>  <span class="kw">let </span><span class="kw-2">mut </span>q_pos: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
+<a href=#1308 id=1308 data-nosnippet>1308</a>  <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>bytes.iter().enumerate() {
+<a href=#1309 id=1309 data-nosnippet>1309</a>    <span class="kw">match </span>b {
+<a href=#1310 id=1310 data-nosnippet>1310</a>      <span class="string">b'"' </span>=&gt; in_quote = !in_quote,
+<a href=#1311 id=1311 data-nosnippet>1311</a>      <span class="string">b'(' </span>| <span class="string">b'[' </span>| <span class="string">b'{' </span><span class="kw">if </span>!in_quote =&gt; depth += <span class="number">1</span>,
+<a href=#1312 id=1312 data-nosnippet>1312</a>      <span class="string">b')' </span>| <span class="string">b']' </span>| <span class="string">b'}' </span><span class="kw">if </span>!in_quote =&gt; depth -= <span class="number">1</span>,
+<a href=#1313 id=1313 data-nosnippet>1313</a>      <span class="string">b'?' </span><span class="kw">if </span>!in_quote &amp;&amp; depth == <span class="number">0 </span>=&gt; { q_pos = <span class="prelude-val">Some</span>(i); <span class="kw">break</span>; },
+<a href=#1314 id=1314 data-nosnippet>1314</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1315 id=1315 data-nosnippet>1315</a>    }
+<a href=#1316 id=1316 data-nosnippet>1316</a>  }
+<a href=#1317 id=1317 data-nosnippet>1317</a>  <span class="kw">let </span>qp = q_pos<span class="question-mark">?</span>;
+<a href=#1318 id=1318 data-nosnippet>1318</a>  <span class="comment">// Now find the matching `:` after qp at depth 0
+<a href=#1319 id=1319 data-nosnippet>1319</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>depth: i32 = <span class="number">0</span>;
+<a href=#1320 id=1320 data-nosnippet>1320</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_quote = <span class="bool-val">false</span>;
+<a href=#1321 id=1321 data-nosnippet>1321</a>  <span class="kw">for </span>(j, <span class="kw-2">&amp;</span>b) <span class="kw">in </span>bytes.iter().enumerate().skip(qp + <span class="number">1</span>) {
+<a href=#1322 id=1322 data-nosnippet>1322</a>    <span class="kw">match </span>b {
+<a href=#1323 id=1323 data-nosnippet>1323</a>      <span class="string">b'"' </span>=&gt; in_quote = !in_quote,
+<a href=#1324 id=1324 data-nosnippet>1324</a>      <span class="string">b'(' </span>| <span class="string">b'[' </span>| <span class="string">b'{' </span><span class="kw">if </span>!in_quote =&gt; depth += <span class="number">1</span>,
+<a href=#1325 id=1325 data-nosnippet>1325</a>      <span class="string">b')' </span>| <span class="string">b']' </span>| <span class="string">b'}' </span><span class="kw">if </span>!in_quote =&gt; depth -= <span class="number">1</span>,
+<a href=#1326 id=1326 data-nosnippet>1326</a>      <span class="string">b':' </span><span class="kw">if </span>!in_quote &amp;&amp; depth == <span class="number">0 </span>=&gt; {
+<a href=#1327 id=1327 data-nosnippet>1327</a>        <span class="kw">return </span><span class="prelude-val">Some</span>((<span class="kw-2">&amp;</span>s[..qp], <span class="kw-2">&amp;</span>s[qp+<span class="number">1</span>..j], <span class="kw-2">&amp;</span>s[j+<span class="number">1</span>..]));
+<a href=#1328 id=1328 data-nosnippet>1328</a>      },
+<a href=#1329 id=1329 data-nosnippet>1329</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1330 id=1330 data-nosnippet>1330</a>    }
+<a href=#1331 id=1331 data-nosnippet>1331</a>  }
+<a href=#1332 id=1332 data-nosnippet>1332</a>  <span class="prelude-val">None
+<a href=#1333 id=1333 data-nosnippet>1333</a></span>}
+<a href=#1334 id=1334 data-nosnippet>1334</a>
+<a href=#1335 id=1335 data-nosnippet>1335</a><span class="comment">// ==================== Macro Definitions ====================
+<a href=#1336 id=1336 data-nosnippet>1336</a>
+<a href=#1337 id=1337 data-nosnippet>1337</a></span><span class="attr">#[rustfmt::skip]
+<a href=#1338 id=1338 data-nosnippet>1338</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#1339 id=1339 data-nosnippet>1339</a>  <span class="comment">// Load pgf's raw TeX math code first (reloadable to bypass the loaded guard,
+<a href=#1340 id=1340 data-nosnippet>1340</a>  // since our binding was already marked as loaded by the dispatch system)
+<a href=#1341 id=1341 data-nosnippet>1341</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"pgfmath.code"</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"tex"</span>)), noltxml =&gt; <span class="bool-val">true</span>, reloadable =&gt; <span class="bool-val">true</span>);
+<a href=#1342 id=1342 data-nosnippet>1342</a>
+<a href=#1343 id=1343 data-nosnippet>1343</a>  <span class="comment">// Then override math operations with native Rust implementations.
+<a href=#1344 id=1344 data-nosnippet>1344</a>  // Perl: "using pgflibraryluamath.code.tex as a guide for what needs doing"
+<a href=#1345 id=1345 data-nosnippet>1345</a>
+<a href=#1346 id=1346 data-nosnippet>1346</a>  // Conditionals needed by pgfmath
+<a href=#1347 id=1347 data-nosnippet>1347</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\lx@ifundefined{pgfmathunitsdeclaredtrue}{\newif\ifpgfmathunitsdeclared}{}"</span>);
+<a href=#1348 id=1348 data-nosnippet>1348</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\lx@ifundefined{pgfmathmathunitsdeclaredtrue}{\newif\ifpgfmathmathunitsdeclared}{}"</span>);
+<a href=#1349 id=1349 data-nosnippet>1349</a>
+<a href=#1350 id=1350 data-nosnippet>1350</a>  <span class="comment">// Constants
+<a href=#1351 id=1351 data-nosnippet>1351</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathpi@"</span>, sub[_args] {
+<a href=#1352 id=1352 data-nosnippet>1352</a>    pgfmath_result_tokens(PI)
+<a href=#1353 id=1353 data-nosnippet>1353</a>  });
+<a href=#1354 id=1354 data-nosnippet>1354</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathe@"</span>, sub[_args] {
+<a href=#1355 id=1355 data-nosnippet>1355</a>    pgfmath_result_tokens(std::f64::consts::E)
+<a href=#1356 id=1356 data-nosnippet>1356</a>  });
+<a href=#1357 id=1357 data-nosnippet>1357</a>
+<a href=#1358 id=1358 data-nosnippet>1358</a>  <span class="comment">// Basic arithmetic
+<a href=#1359 id=1359 data-nosnippet>1359</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathadd@ {} {}"</span>, sub[(a, b)] {
+<a href=#1360 id=1360 data-nosnippet>1360</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) + parse_pgf_number(<span class="kw-2">&amp;</span>b))
+<a href=#1361 id=1361 data-nosnippet>1361</a>  });
+<a href=#1362 id=1362 data-nosnippet>1362</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsubtract@ {} {}"</span>, sub[(a, b)] {
+<a href=#1363 id=1363 data-nosnippet>1363</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) - parse_pgf_number(<span class="kw-2">&amp;</span>b))
+<a href=#1364 id=1364 data-nosnippet>1364</a>  });
+<a href=#1365 id=1365 data-nosnippet>1365</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathneg@ {}"</span>, sub[(a)] {
+<a href=#1366 id=1366 data-nosnippet>1366</a>    pgfmath_result_tokens(-parse_pgf_number(<span class="kw-2">&amp;</span>a))
+<a href=#1367 id=1367 data-nosnippet>1367</a>  });
+<a href=#1368 id=1368 data-nosnippet>1368</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathmultiply@ {} {}"</span>, sub[(a, b)] {
+<a href=#1369 id=1369 data-nosnippet>1369</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) * parse_pgf_number(<span class="kw-2">&amp;</span>b))
 <a href=#1370 id=1370 data-nosnippet>1370</a>  });
-<a href=#1371 id=1371 data-nosnippet>1371</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathln@ {}"</span>, sub[(a)] {
-<a href=#1372 id=1372 data-nosnippet>1372</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).ln())
+<a href=#1371 id=1371 data-nosnippet>1371</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathdivide@ {} {}"</span>, sub[(a, b)] {
+<a href=#1372 id=1372 data-nosnippet>1372</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a) / pgfmath_divisor(parse_pgf_number(<span class="kw-2">&amp;</span>b)))
 <a href=#1373 id=1373 data-nosnippet>1373</a>  });
-<a href=#1374 id=1374 data-nosnippet>1374</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathlogten@ {}"</span>, sub[(a)] {
-<a href=#1375 id=1375 data-nosnippet>1375</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).ln() / LOG10)
+<a href=#1374 id=1374 data-nosnippet>1374</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathpow@ {} {}"</span>, sub[(a, b)] {
+<a href=#1375 id=1375 data-nosnippet>1375</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).powf(parse_pgf_number(<span class="kw-2">&amp;</span>b)))
 <a href=#1376 id=1376 data-nosnippet>1376</a>  });
-<a href=#1377 id=1377 data-nosnippet>1377</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsqrt@ {}"</span>, sub[(a)] {
-<a href=#1378 id=1378 data-nosnippet>1378</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).sqrt())
-<a href=#1379 id=1379 data-nosnippet>1379</a>  });
-<a href=#1380 id=1380 data-nosnippet>1380</a>
-<a href=#1381 id=1381 data-nosnippet>1381</a>  <span class="comment">// Random
-<a href=#1382 id=1382 data-nosnippet>1382</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathrnd@"</span>, sub[_args] {
-<a href=#1383 id=1383 data-nosnippet>1383</a>    pgfmath_result_tokens(<span class="number">0.5</span>) <span class="comment">// deterministic for reproducibility
-<a href=#1384 id=1384 data-nosnippet>1384</a>  </span>});
-<a href=#1385 id=1385 data-nosnippet>1385</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathrand@"</span>, sub[_args] {
-<a href=#1386 id=1386 data-nosnippet>1386</a>    pgfmath_result_tokens(<span class="number">0.0</span>) <span class="comment">// deterministic
-<a href=#1387 id=1387 data-nosnippet>1387</a>  </span>});
-<a href=#1388 id=1388 data-nosnippet>1388</a>
-<a href=#1389 id=1389 data-nosnippet>1389</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathreciprocal@ {}"</span>, sub[(a)] {
-<a href=#1390 id=1390 data-nosnippet>1390</a>    pgfmath_result_tokens(<span class="number">1.0 </span>/ pgfmath_divisor(parse_pgf_number(<span class="kw-2">&amp;</span>a)))
-<a href=#1391 id=1391 data-nosnippet>1391</a>  });
-<a href=#1392 id=1392 data-nosnippet>1392</a>
-<a href=#1393 id=1393 data-nosnippet>1393</a>  <span class="comment">// Modular arithmetic
-<a href=#1394 id=1394 data-nosnippet>1394</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathmod@ {} {}"</span>, sub[(a, b)] {
-<a href=#1395 id=1395 data-nosnippet>1395</a>    <span class="kw">let </span>a = parse_pgf_number(<span class="kw-2">&amp;</span>a);
-<a href=#1396 id=1396 data-nosnippet>1396</a>    <span class="kw">let </span>b = parse_pgf_number(<span class="kw-2">&amp;</span>b);
-<a href=#1397 id=1397 data-nosnippet>1397</a>    <span class="comment">// Perl: pgfmath_mod_floor — mod towards -infinity
-<a href=#1398 id=1398 data-nosnippet>1398</a>    </span><span class="kw">let </span>result = <span class="kw">if </span>a / b &lt; <span class="number">0.0 </span>{
-<a href=#1399 id=1399 data-nosnippet>1399</a>      -(a.abs() % b.abs()) + b.abs()
-<a href=#1400 id=1400 data-nosnippet>1400</a>    } <span class="kw">else </span>{
-<a href=#1401 id=1401 data-nosnippet>1401</a>      a.abs() % b.abs()
-<a href=#1402 id=1402 data-nosnippet>1402</a>    };
-<a href=#1403 id=1403 data-nosnippet>1403</a>    pgfmath_result_tokens(result)
+<a href=#1377 id=1377 data-nosnippet>1377</a>
+<a href=#1378 id=1378 data-nosnippet>1378</a>  <span class="comment">// Rounding and comparison
+<a href=#1379 id=1379 data-nosnippet>1379</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathabs@ {}"</span>, sub[(a)] {
+<a href=#1380 id=1380 data-nosnippet>1380</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).abs())
+<a href=#1381 id=1381 data-nosnippet>1381</a>  });
+<a href=#1382 id=1382 data-nosnippet>1382</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathround@ {}"</span>, sub[(a)] {
+<a href=#1383 id=1383 data-nosnippet>1383</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).round())
+<a href=#1384 id=1384 data-nosnippet>1384</a>  });
+<a href=#1385 id=1385 data-nosnippet>1385</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathfloor@ {}"</span>, sub[(a)] {
+<a href=#1386 id=1386 data-nosnippet>1386</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).floor())
+<a href=#1387 id=1387 data-nosnippet>1387</a>  });
+<a href=#1388 id=1388 data-nosnippet>1388</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathceil@ {}"</span>, sub[(a)] {
+<a href=#1389 id=1389 data-nosnippet>1389</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).ceil())
+<a href=#1390 id=1390 data-nosnippet>1390</a>  });
+<a href=#1391 id=1391 data-nosnippet>1391</a>
+<a href=#1392 id=1392 data-nosnippet>1392</a>  <span class="comment">// Trigonometric (input in degrees, output as float)
+<a href=#1393 id=1393 data-nosnippet>1393</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsin@ {}"</span>, sub[(a)] {
+<a href=#1394 id=1394 data-nosnippet>1394</a>    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).sin())
+<a href=#1395 id=1395 data-nosnippet>1395</a>  });
+<a href=#1396 id=1396 data-nosnippet>1396</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathcos@ {}"</span>, sub[(a)] {
+<a href=#1397 id=1397 data-nosnippet>1397</a>    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).cos())
+<a href=#1398 id=1398 data-nosnippet>1398</a>  });
+<a href=#1399 id=1399 data-nosnippet>1399</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathtan@ {}"</span>, sub[(a)] {
+<a href=#1400 id=1400 data-nosnippet>1400</a>    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).tan())
+<a href=#1401 id=1401 data-nosnippet>1401</a>  });
+<a href=#1402 id=1402 data-nosnippet>1402</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathatan@ {}"</span>, sub[(a)] {
+<a href=#1403 id=1403 data-nosnippet>1403</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).atan().to_degrees())
 <a href=#1404 id=1404 data-nosnippet>1404</a>  });
-<a href=#1405 id=1405 data-nosnippet>1405</a>
-<a href=#1406 id=1406 data-nosnippet>1406</a>  <span class="comment">// Degree/radian conversion
-<a href=#1407 id=1407 data-nosnippet>1407</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathrad@ {}"</span>, sub[(a)] {
-<a href=#1408 id=1408 data-nosnippet>1408</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).to_radians())
-<a href=#1409 id=1409 data-nosnippet>1409</a>  });
-<a href=#1410 id=1410 data-nosnippet>1410</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathdeg@ {}"</span>, sub[(a)] {
-<a href=#1411 id=1411 data-nosnippet>1411</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).to_degrees())
-<a href=#1412 id=1412 data-nosnippet>1412</a>  });
-<a href=#1413 id=1413 data-nosnippet>1413</a>
-<a href=#1414 id=1414 data-nosnippet>1414</a>  <span class="comment">// Integer operations
-<a href=#1415 id=1415 data-nosnippet>1415</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathint@ {}"</span>, sub[(a)] {
-<a href=#1416 id=1416 data-nosnippet>1416</a>    <span class="kw">let </span>v = parse_pgf_number(<span class="kw-2">&amp;</span>a) <span class="kw">as </span>i64;
-<a href=#1417 id=1417 data-nosnippet>1417</a>    pgfmath_result_tokens(v <span class="kw">as </span>f64)
+<a href=#1405 id=1405 data-nosnippet>1405</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathatantwo@ {} {}"</span>, sub[(a, b)] {
+<a href=#1406 id=1406 data-nosnippet>1406</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).atan2(parse_pgf_number(<span class="kw-2">&amp;</span>b)).to_degrees())
+<a href=#1407 id=1407 data-nosnippet>1407</a>  });
+<a href=#1408 id=1408 data-nosnippet>1408</a>  <span class="macro">Let!</span>(<span class="string">"\\pgfmathatan2@"</span>, <span class="string">"\\pgfmathatantwo@"</span>);
+<a href=#1409 id=1409 data-nosnippet>1409</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathasin@ {}"</span>, sub[(a)] {
+<a href=#1410 id=1410 data-nosnippet>1410</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).asin().to_degrees())
+<a href=#1411 id=1411 data-nosnippet>1411</a>  });
+<a href=#1412 id=1412 data-nosnippet>1412</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathacos@ {}"</span>, sub[(a)] {
+<a href=#1413 id=1413 data-nosnippet>1413</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).acos().to_degrees())
+<a href=#1414 id=1414 data-nosnippet>1414</a>  });
+<a href=#1415 id=1415 data-nosnippet>1415</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathcot@ {}"</span>, sub[(a)] {
+<a href=#1416 id=1416 data-nosnippet>1416</a>    <span class="kw">let </span>r = pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a));
+<a href=#1417 id=1417 data-nosnippet>1417</a>    pgfmath_result_tokens(r.cos() / pgfmath_divisor(r.sin()))
 <a href=#1418 id=1418 data-nosnippet>1418</a>  });
-<a href=#1419 id=1419 data-nosnippet>1419</a>
-<a href=#1420 id=1420 data-nosnippet>1420</a>  <span class="comment">// Calc package compatibility
-<a href=#1421 id=1421 data-nosnippet>1421</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@real{}"</span>, <span class="string">"#1"</span>);
-<a href=#1422 id=1422 data-nosnippet>1422</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@minof{}{}"</span>, <span class="string">"min(#1,#2)"</span>);
-<a href=#1423 id=1423 data-nosnippet>1423</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@maxof{}{}"</span>, <span class="string">"max(#1,#2)"</span>);
-<a href=#1424 id=1424 data-nosnippet>1424</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@ratio{}{}"</span>, <span class="string">"#1/#2"</span>);
-<a href=#1425 id=1425 data-nosnippet>1425</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@widthof{}"</span>, <span class="string">"width(\"#1\")"</span>);
-<a href=#1426 id=1426 data-nosnippet>1426</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@heightof{}"</span>, <span class="string">"height(\"#1\")"</span>);
-<a href=#1427 id=1427 data-nosnippet>1427</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@depthof{}"</span>, <span class="string">"depth(\"#1\")"</span>);
-<a href=#1428 id=1428 data-nosnippet>1428</a>
-<a href=#1429 id=1429 data-nosnippet>1429</a>  <span class="comment">// Perl pgfmath.code.tex.ltxml L321-327: inside pgfmathparse, seven calc
-<a href=#1430 id=1430 data-nosnippet>1430</a>  // package CSes are Let'd to the pgfmath@calc@* internals each time the
-<a href=#1431 id=1431 data-nosnippet>1431</a>  // parser runs. Rust's pgfmathparse is a native function, so we can't
-<a href=#1432 id=1432 data-nosnippet>1432</a>  // re-bind them per-call. Register the aliases at package-load time so
-<a href=#1433 id=1433 data-nosnippet>1433</a>  // users who call `\real{3.14}` or `\widthof{\hbox{foo}}` outside a
-<a href=#1434 id=1434 data-nosnippet>1434</a>  // pgfmathparse context still resolve the CS. If calc.sty is loaded
-<a href=#1435 id=1435 data-nosnippet>1435</a>  // first, pgfmath intentionally shadows its copies — matching Perl's
-<a href=#1436 id=1436 data-nosnippet>1436</a>  // "last definition wins" runtime semantics (calc's `\real` would be
-<a href=#1437 id=1437 data-nosnippet>1437</a>  // replaced on the first pgfmathparse call anyway).
-<a href=#1438 id=1438 data-nosnippet>1438</a>  </span><span class="macro">Let!</span>(<span class="string">"\\real"</span>,     <span class="string">"\\pgfmath@calc@real"</span>);
-<a href=#1439 id=1439 data-nosnippet>1439</a>  <span class="macro">Let!</span>(<span class="string">"\\minof"</span>,    <span class="string">"\\pgfmath@calc@minof"</span>);
-<a href=#1440 id=1440 data-nosnippet>1440</a>  <span class="macro">Let!</span>(<span class="string">"\\maxof"</span>,    <span class="string">"\\pgfmath@calc@maxof"</span>);
-<a href=#1441 id=1441 data-nosnippet>1441</a>  <span class="macro">Let!</span>(<span class="string">"\\ratio"</span>,    <span class="string">"\\pgfmath@calc@ratio"</span>);
-<a href=#1442 id=1442 data-nosnippet>1442</a>  <span class="macro">Let!</span>(<span class="string">"\\widthof"</span>,  <span class="string">"\\pgfmath@calc@widthof"</span>);
-<a href=#1443 id=1443 data-nosnippet>1443</a>  <span class="macro">Let!</span>(<span class="string">"\\heightof"</span>, <span class="string">"\\pgfmath@calc@heightof"</span>);
-<a href=#1444 id=1444 data-nosnippet>1444</a>  <span class="macro">Let!</span>(<span class="string">"\\depthof"</span>,  <span class="string">"\\pgfmath@calc@depthof"</span>);
-<a href=#1445 id=1445 data-nosnippet>1445</a>
-<a href=#1446 id=1446 data-nosnippet>1446</a>  <span class="comment">// ==================== pgfmathparse override ====================
-<a href=#1447 id=1447 data-nosnippet>1447</a>  // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
-<a href=#1448 id=1448 data-nosnippet>1448</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@pgfmath@parse {}"</span>, sub[(tokens)] {
-<a href=#1449 id=1449 data-nosnippet>1449</a>    <span class="comment">// Expand tokens and convert to string
-<a href=#1450 id=1450 data-nosnippet>1450</a>    </span><span class="kw">let </span>expanded = gullet::do_expand(tokens).unwrap_or_default();
-<a href=#1451 id=1451 data-nosnippet>1451</a>    <span class="kw">let </span>input = expanded.to_string();
-<a href=#1452 id=1452 data-nosnippet>1452</a>    <span class="kw">let </span>(result, units) = pgfmathparse_eval_with_units(<span class="kw-2">&amp;</span>input);
-<a href=#1453 id=1453 data-nosnippet>1453</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = pgfmath_result_tokens_str(<span class="kw-2">&amp;</span>result);
-<a href=#1454 id=1454 data-nosnippet>1454</a>    <span class="comment">// Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
-<a href=#1455 id=1455 data-nosnippet>1455</a>    </span><span class="kw">if </span>units {
-<a href=#1456 id=1456 data-nosnippet>1456</a>      toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\pgfmathunitsdeclaredtrue"</span>));
-<a href=#1457 id=1457 data-nosnippet>1457</a>    } <span class="kw">else </span>{
-<a href=#1458 id=1458 data-nosnippet>1458</a>      toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\pgfmathunitsdeclaredfalse"</span>));
-<a href=#1459 id=1459 data-nosnippet>1459</a>    }
-<a href=#1460 id=1460 data-nosnippet>1460</a>    toks
-<a href=#1461 id=1461 data-nosnippet>1461</a>  });
-<a href=#1462 id=1462 data-nosnippet>1462</a>
-<a href=#1463 id=1463 data-nosnippet>1463</a>  <span class="comment">// Perl L442: Let('\pgfmathparse', '\lx@pgfmath@parse');
-<a href=#1464 id=1464 data-nosnippet>1464</a>  </span><span class="macro">Let!</span>(<span class="string">"\\pgfmathparse"</span>, <span class="string">"\\lx@pgfmath@parse"</span>);
-<a href=#1465 id=1465 data-nosnippet>1465</a>
-<a href=#1466 id=1466 data-nosnippet>1466</a>  <span class="comment">// Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
-<a href=#1467 id=1467 data-nosnippet>1467</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@pgfmath@parseX {}"</span>, sub[(tokens)] {
-<a href=#1468 id=1468 data-nosnippet>1468</a>    <span class="kw">let </span>expanded = gullet::do_expand(tokens).unwrap_or_default();
-<a href=#1469 id=1469 data-nosnippet>1469</a>    <span class="kw">let </span>input = expanded.to_string();
-<a href=#1470 id=1470 data-nosnippet>1470</a>    <span class="kw">let </span>result = pgfmathparse_eval(<span class="kw-2">&amp;</span>input);
-<a href=#1471 id=1471 data-nosnippet>1471</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\lx@pgfmathresult"</span>), <span class="macro">T_BEGIN!</span>()];
-<a href=#1472 id=1472 data-nosnippet>1472</a>    toks.extend(<span class="macro">Explode!</span>(result));
-<a href=#1473 id=1473 data-nosnippet>1473</a>    toks.push(<span class="macro">T_END!</span>());
-<a href=#1474 id=1474 data-nosnippet>1474</a>    toks
-<a href=#1475 id=1475 data-nosnippet>1475</a>  });
-<a href=#1476 id=1476 data-nosnippet>1476</a>
-<a href=#1477 id=1477 data-nosnippet>1477</a>  <span class="comment">// Perl L425: save original \pgfmathparse
-<a href=#1478 id=1478 data-nosnippet>1478</a>  </span><span class="macro">Let!</span>(<span class="string">"\\@orig@pgfmathparse"</span>, <span class="string">"\\pgfmathparse"</span>);
-<a href=#1479 id=1479 data-nosnippet>1479</a>
-<a href=#1480 id=1480 data-nosnippet>1480</a>  <span class="comment">// Override \pgfmathsincos to use our native sin/cos (for direct calls)
-<a href=#1481 id=1481 data-nosnippet>1481</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsincos{}"</span>,
-<a href=#1482 id=1482 data-nosnippet>1482</a>    <span class="string">"\\pgfmathparse{sin(#1)}\\let\\pgfmathresulty\\pgfmathresult\\pgfmathparse{cos(#1)}\\let\\pgfmathresultx\\pgfmathresult"</span>);
-<a href=#1483 id=1483 data-nosnippet>1483</a>
-<a href=#1484 id=1484 data-nosnippet>1484</a>  <span class="comment">// ==================== \pgfmathsetlength ====================
-<a href=#1485 id=1485 data-nosnippet>1485</a>  // Perl L405-423: DefPrimitive('\pgfmathsetlength DefToken {}', sub { ... })
-<a href=#1486 id=1486 data-nosnippet>1486</a>  //
-<a href=#1487 id=1487 data-nosnippet>1487</a>  // The raw TeX \pgfmathsetlength uses \pgfmath@onquick with \pgfmath@ as a
-<a href=#1488 id=1488 data-nosnippet>1488</a>  // delimiter token. Our engine can choke on this delimiter pattern, causing
-<a href=#1489 id=1489 data-nosnippet>1489</a>  // "undefined:\pgfmath@" errors that cascade into group mismatches. The Perl
-<a href=#1490 id=1490 data-nosnippet>1490</a>  // binding overrides this with a native implementation that:
-<a href=#1491 id=1491 data-nosnippet>1491</a>  //   1. Strips leading spaces from #2
-<a href=#1492 id=1492 data-nosnippet>1492</a>  //   2. If #2 starts with '+', treats it as plain glue (readGlue)
-<a href=#1493 id=1493 data-nosnippet>1493</a>  //   3. Otherwise, evaluates via pgfmathparse and converts to Dimension
-<a href=#1494 id=1494 data-nosnippet>1494</a>  //   4. Assigns the result to register #1
-<a href=#1495 id=1495 data-nosnippet>1495</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pgfmathsetlength DefToken {}"</span>, sub[(register, tokens)] {
-<a href=#1496 id=1496 data-nosnippet>1496</a>    <span class="kw">let </span>toks: Vec&lt;Token&gt; = tokens.unlist_ref().iter()
-<a href=#1497 id=1497 data-nosnippet>1497</a>      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
-<a href=#1498 id=1498 data-nosnippet>1498</a>      .cloned()
-<a href=#1499 id=1499 data-nosnippet>1499</a>      .collect();
-<a href=#1500 id=1500 data-nosnippet>1500</a>
-<a href=#1501 id=1501 data-nosnippet>1501</a>    <span class="kw">if </span>toks.first().is_some_and(|t| t.text == <span class="macro">pin!</span>(<span class="string">"+"</span>)) {
-<a href=#1502 id=1502 data-nosnippet>1502</a>      <span class="comment">// Starts with '+' → treat as plain glue
-<a href=#1503 id=1503 data-nosnippet>1503</a>      // Unread the tokens and read as glue
-<a href=#1504 id=1504 data-nosnippet>1504</a>      </span>gullet::unread(Tokens::new(toks));
-<a href=#1505 id=1505 data-nosnippet>1505</a>      <span class="kw">let </span>glue = gullet::read_glue()<span class="question-mark">?</span>;
-<a href=#1506 id=1506 data-nosnippet>1506</a>      <span class="kw">let </span>cs = register.to_string();
-<a href=#1507 id=1507 data-nosnippet>1507</a>      state::assign_register(<span class="kw-2">&amp;</span>cs, glue.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-<a href=#1508 id=1508 data-nosnippet>1508</a>    } <span class="kw">else </span>{
-<a href=#1509 id=1509 data-nosnippet>1509</a>      <span class="comment">// Evaluate via pgfmathparse
-<a href=#1510 id=1510 data-nosnippet>1510</a>      </span><span class="kw">let </span>tok_str = Tokens::new(toks);
-<a href=#1511 id=1511 data-nosnippet>1511</a>      <span class="kw">let </span>expanded = gullet::do_expand(tok_str).unwrap_or_default();
-<a href=#1512 id=1512 data-nosnippet>1512</a>      <span class="kw">let </span>input = expanded.to_string();
-<a href=#1513 id=1513 data-nosnippet>1513</a>      <span class="kw">let </span>(result_str, _units) = pgfmathparse_eval_with_units(<span class="kw-2">&amp;</span>input);
-<a href=#1514 id=1514 data-nosnippet>1514</a>      <span class="kw">let </span>value: f64 = result_str.parse().unwrap_or(<span class="number">0.0</span>);
-<a href=#1515 id=1515 data-nosnippet>1515</a>
-<a href=#1516 id=1516 data-nosnippet>1516</a>      <span class="comment">// Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
-<a href=#1517 id=1517 data-nosnippet>1517</a>      </span><span class="kw">let </span>cs = register.to_string();
-<a href=#1518 id=1518 data-nosnippet>1518</a>      <span class="kw">let </span>is_mu = if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\ifpgfmathmathunitsdeclared"</span>))
-<a href=#1519 id=1519 data-nosnippet>1519</a>        .unwrap_or(<span class="prelude-val">None</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
-<a href=#1520 id=1520 data-nosnippet>1520</a>      <span class="kw">if </span>is_mu {
-<a href=#1521 id=1521 data-nosnippet>1521</a>        <span class="kw">let </span>mu_sp = state::convert_unit(<span class="string">"mu"</span>);
-<a href=#1522 id=1522 data-nosnippet>1522</a>        <span class="kw">let </span>mu_dim = Dimension((value * mu_sp <span class="kw">as </span>f64).round() <span class="kw">as </span>i64);
-<a href=#1523 id=1523 data-nosnippet>1523</a>        state::assign_register(<span class="kw-2">&amp;</span>cs, mu_dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-<a href=#1524 id=1524 data-nosnippet>1524</a>      } <span class="kw">else </span>{
-<a href=#1525 id=1525 data-nosnippet>1525</a>        <span class="comment">// Convert pgfmath result (in pt) to sp (× 65536), round to nearest
-<a href=#1526 id=1526 data-nosnippet>1526</a>        </span><span class="kw">let </span>dim = Dimension((value * <span class="number">65536.0</span>).round() <span class="kw">as </span>i64);
-<a href=#1527 id=1527 data-nosnippet>1527</a>        state::assign_register(<span class="kw-2">&amp;</span>cs, dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-<a href=#1528 id=1528 data-nosnippet>1528</a>      }
-<a href=#1529 id=1529 data-nosnippet>1529</a>    }
-<a href=#1530 id=1530 data-nosnippet>1530</a>  });
+<a href=#1419 id=1419 data-nosnippet>1419</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsec@ {}"</span>, sub[(a)] {
+<a href=#1420 id=1420 data-nosnippet>1420</a>    pgfmath_result_tokens(<span class="number">1.0 </span>/ pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).cos()))
+<a href=#1421 id=1421 data-nosnippet>1421</a>  });
+<a href=#1422 id=1422 data-nosnippet>1422</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathcosec@ {}"</span>, sub[(a)] {
+<a href=#1423 id=1423 data-nosnippet>1423</a>    pgfmath_result_tokens(<span class="number">1.0 </span>/ pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(<span class="kw-2">&amp;</span>a)).sin()))
+<a href=#1424 id=1424 data-nosnippet>1424</a>  });
+<a href=#1425 id=1425 data-nosnippet>1425</a>
+<a href=#1426 id=1426 data-nosnippet>1426</a>  <span class="comment">// Exponential and logarithmic
+<a href=#1427 id=1427 data-nosnippet>1427</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathexp@ {}"</span>, sub[(a)] {
+<a href=#1428 id=1428 data-nosnippet>1428</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).exp())
+<a href=#1429 id=1429 data-nosnippet>1429</a>  });
+<a href=#1430 id=1430 data-nosnippet>1430</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathln@ {}"</span>, sub[(a)] {
+<a href=#1431 id=1431 data-nosnippet>1431</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).ln())
+<a href=#1432 id=1432 data-nosnippet>1432</a>  });
+<a href=#1433 id=1433 data-nosnippet>1433</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathlogten@ {}"</span>, sub[(a)] {
+<a href=#1434 id=1434 data-nosnippet>1434</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).ln() / LOG10)
+<a href=#1435 id=1435 data-nosnippet>1435</a>  });
+<a href=#1436 id=1436 data-nosnippet>1436</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsqrt@ {}"</span>, sub[(a)] {
+<a href=#1437 id=1437 data-nosnippet>1437</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).sqrt())
+<a href=#1438 id=1438 data-nosnippet>1438</a>  });
+<a href=#1439 id=1439 data-nosnippet>1439</a>
+<a href=#1440 id=1440 data-nosnippet>1440</a>  <span class="comment">// Random
+<a href=#1441 id=1441 data-nosnippet>1441</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathrnd@"</span>, sub[_args] {
+<a href=#1442 id=1442 data-nosnippet>1442</a>    pgfmath_result_tokens(<span class="number">0.5</span>) <span class="comment">// deterministic for reproducibility
+<a href=#1443 id=1443 data-nosnippet>1443</a>  </span>});
+<a href=#1444 id=1444 data-nosnippet>1444</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathrand@"</span>, sub[_args] {
+<a href=#1445 id=1445 data-nosnippet>1445</a>    pgfmath_result_tokens(<span class="number">0.0</span>) <span class="comment">// deterministic
+<a href=#1446 id=1446 data-nosnippet>1446</a>  </span>});
+<a href=#1447 id=1447 data-nosnippet>1447</a>
+<a href=#1448 id=1448 data-nosnippet>1448</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathreciprocal@ {}"</span>, sub[(a)] {
+<a href=#1449 id=1449 data-nosnippet>1449</a>    pgfmath_result_tokens(<span class="number">1.0 </span>/ pgfmath_divisor(parse_pgf_number(<span class="kw-2">&amp;</span>a)))
+<a href=#1450 id=1450 data-nosnippet>1450</a>  });
+<a href=#1451 id=1451 data-nosnippet>1451</a>
+<a href=#1452 id=1452 data-nosnippet>1452</a>  <span class="comment">// Modular arithmetic
+<a href=#1453 id=1453 data-nosnippet>1453</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathmod@ {} {}"</span>, sub[(a, b)] {
+<a href=#1454 id=1454 data-nosnippet>1454</a>    <span class="kw">let </span>a = parse_pgf_number(<span class="kw-2">&amp;</span>a);
+<a href=#1455 id=1455 data-nosnippet>1455</a>    <span class="kw">let </span>b = parse_pgf_number(<span class="kw-2">&amp;</span>b);
+<a href=#1456 id=1456 data-nosnippet>1456</a>    <span class="comment">// Perl: pgfmath_mod_floor — mod towards -infinity
+<a href=#1457 id=1457 data-nosnippet>1457</a>    </span><span class="kw">let </span>result = <span class="kw">if </span>a / b &lt; <span class="number">0.0 </span>{
+<a href=#1458 id=1458 data-nosnippet>1458</a>      -(a.abs() % b.abs()) + b.abs()
+<a href=#1459 id=1459 data-nosnippet>1459</a>    } <span class="kw">else </span>{
+<a href=#1460 id=1460 data-nosnippet>1460</a>      a.abs() % b.abs()
+<a href=#1461 id=1461 data-nosnippet>1461</a>    };
+<a href=#1462 id=1462 data-nosnippet>1462</a>    pgfmath_result_tokens(result)
+<a href=#1463 id=1463 data-nosnippet>1463</a>  });
+<a href=#1464 id=1464 data-nosnippet>1464</a>
+<a href=#1465 id=1465 data-nosnippet>1465</a>  <span class="comment">// Degree/radian conversion
+<a href=#1466 id=1466 data-nosnippet>1466</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathrad@ {}"</span>, sub[(a)] {
+<a href=#1467 id=1467 data-nosnippet>1467</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).to_radians())
+<a href=#1468 id=1468 data-nosnippet>1468</a>  });
+<a href=#1469 id=1469 data-nosnippet>1469</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathdeg@ {}"</span>, sub[(a)] {
+<a href=#1470 id=1470 data-nosnippet>1470</a>    pgfmath_result_tokens(parse_pgf_number(<span class="kw-2">&amp;</span>a).to_degrees())
+<a href=#1471 id=1471 data-nosnippet>1471</a>  });
+<a href=#1472 id=1472 data-nosnippet>1472</a>
+<a href=#1473 id=1473 data-nosnippet>1473</a>  <span class="comment">// Integer operations
+<a href=#1474 id=1474 data-nosnippet>1474</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathint@ {}"</span>, sub[(a)] {
+<a href=#1475 id=1475 data-nosnippet>1475</a>    <span class="kw">let </span>v = parse_pgf_number(<span class="kw-2">&amp;</span>a) <span class="kw">as </span>i64;
+<a href=#1476 id=1476 data-nosnippet>1476</a>    pgfmath_result_tokens(v <span class="kw">as </span>f64)
+<a href=#1477 id=1477 data-nosnippet>1477</a>  });
+<a href=#1478 id=1478 data-nosnippet>1478</a>
+<a href=#1479 id=1479 data-nosnippet>1479</a>  <span class="comment">// Calc package compatibility
+<a href=#1480 id=1480 data-nosnippet>1480</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@real{}"</span>, <span class="string">"#1"</span>);
+<a href=#1481 id=1481 data-nosnippet>1481</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@minof{}{}"</span>, <span class="string">"min(#1,#2)"</span>);
+<a href=#1482 id=1482 data-nosnippet>1482</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@maxof{}{}"</span>, <span class="string">"max(#1,#2)"</span>);
+<a href=#1483 id=1483 data-nosnippet>1483</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@ratio{}{}"</span>, <span class="string">"#1/#2"</span>);
+<a href=#1484 id=1484 data-nosnippet>1484</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@widthof{}"</span>, <span class="string">"width(\"#1\")"</span>);
+<a href=#1485 id=1485 data-nosnippet>1485</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@heightof{}"</span>, <span class="string">"height(\"#1\")"</span>);
+<a href=#1486 id=1486 data-nosnippet>1486</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@calc@depthof{}"</span>, <span class="string">"depth(\"#1\")"</span>);
+<a href=#1487 id=1487 data-nosnippet>1487</a>
+<a href=#1488 id=1488 data-nosnippet>1488</a>  <span class="comment">// Perl pgfmath.code.tex.ltxml L320-327: the seven calc-package CSes
+<a href=#1489 id=1489 data-nosnippet>1489</a>  // (`\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`, `\heightof`,
+<a href=#1490 id=1490 data-nosnippet>1490</a>  // `\depthof`) are `Let` to the `\pgfmath@calc@*` internals *inside*
+<a href=#1491 id=1491 data-nosnippet>1491</a>  // `sub pgfmathparse` — transiently, per parse, with local scope. They are
+<a href=#1492 id=1492 data-nosnippet>1492</a>  // deliberately NOT bound at package-load time: doing so globally clobbers
+<a href=#1493 id=1493 data-nosnippet>1493</a>  // `\real` (commonly `\mathbb{R}`) and friends for the whole document. See
+<a href=#1494 id=1494 data-nosnippet>1494</a>  // `expand_pgfmath_arg`, which replicates the exact transient scope around
+<a href=#1495 id=1495 data-nosnippet>1495</a>  // the pgfmath argument expansion.
+<a href=#1496 id=1496 data-nosnippet>1496</a>
+<a href=#1497 id=1497 data-nosnippet>1497</a>  // ==================== pgfmathparse override ====================
+<a href=#1498 id=1498 data-nosnippet>1498</a>  // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
+<a href=#1499 id=1499 data-nosnippet>1499</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@pgfmath@parse {}"</span>, sub[(tokens)] {
+<a href=#1500 id=1500 data-nosnippet>1500</a>    <span class="comment">// Expand tokens and convert to string. The seven calc-compat CSes are
+<a href=#1501 id=1501 data-nosnippet>1501</a>    // transiently bound only for this expansion (Perl `sub pgfmathparse`).
+<a href=#1502 id=1502 data-nosnippet>1502</a>    </span><span class="kw">let </span>expanded = expand_pgfmath_arg(tokens);
+<a href=#1503 id=1503 data-nosnippet>1503</a>    <span class="kw">let </span>input = expanded.to_string();
+<a href=#1504 id=1504 data-nosnippet>1504</a>    <span class="kw">let </span>(result, units) = pgfmathparse_eval_with_units(<span class="kw-2">&amp;</span>input);
+<a href=#1505 id=1505 data-nosnippet>1505</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = pgfmath_result_tokens_str(<span class="kw-2">&amp;</span>result);
+<a href=#1506 id=1506 data-nosnippet>1506</a>    <span class="comment">// Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
+<a href=#1507 id=1507 data-nosnippet>1507</a>    </span><span class="kw">if </span>units {
+<a href=#1508 id=1508 data-nosnippet>1508</a>      toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\pgfmathunitsdeclaredtrue"</span>));
+<a href=#1509 id=1509 data-nosnippet>1509</a>    } <span class="kw">else </span>{
+<a href=#1510 id=1510 data-nosnippet>1510</a>      toks.push(<span class="macro">T_CS!</span>(<span class="string">"\\pgfmathunitsdeclaredfalse"</span>));
+<a href=#1511 id=1511 data-nosnippet>1511</a>    }
+<a href=#1512 id=1512 data-nosnippet>1512</a>    toks
+<a href=#1513 id=1513 data-nosnippet>1513</a>  });
+<a href=#1514 id=1514 data-nosnippet>1514</a>
+<a href=#1515 id=1515 data-nosnippet>1515</a>  <span class="comment">// Perl L442: Let('\pgfmathparse', '\lx@pgfmath@parse');
+<a href=#1516 id=1516 data-nosnippet>1516</a>  </span><span class="macro">Let!</span>(<span class="string">"\\pgfmathparse"</span>, <span class="string">"\\lx@pgfmath@parse"</span>);
+<a href=#1517 id=1517 data-nosnippet>1517</a>
+<a href=#1518 id=1518 data-nosnippet>1518</a>  <span class="comment">// Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
+<a href=#1519 id=1519 data-nosnippet>1519</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@pgfmath@parseX {}"</span>, sub[(tokens)] {
+<a href=#1520 id=1520 data-nosnippet>1520</a>    <span class="kw">let </span>expanded = expand_pgfmath_arg(tokens);
+<a href=#1521 id=1521 data-nosnippet>1521</a>    <span class="kw">let </span>input = expanded.to_string();
+<a href=#1522 id=1522 data-nosnippet>1522</a>    <span class="kw">let </span>result = pgfmathparse_eval(<span class="kw-2">&amp;</span>input);
+<a href=#1523 id=1523 data-nosnippet>1523</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\def"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\lx@pgfmathresult"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#1524 id=1524 data-nosnippet>1524</a>    toks.extend(<span class="macro">Explode!</span>(result));
+<a href=#1525 id=1525 data-nosnippet>1525</a>    toks.push(<span class="macro">T_END!</span>());
+<a href=#1526 id=1526 data-nosnippet>1526</a>    toks
+<a href=#1527 id=1527 data-nosnippet>1527</a>  });
+<a href=#1528 id=1528 data-nosnippet>1528</a>
+<a href=#1529 id=1529 data-nosnippet>1529</a>  <span class="comment">// Perl L425: save original \pgfmathparse
+<a href=#1530 id=1530 data-nosnippet>1530</a>  </span><span class="macro">Let!</span>(<span class="string">"\\@orig@pgfmathparse"</span>, <span class="string">"\\pgfmathparse"</span>);
 <a href=#1531 id=1531 data-nosnippet>1531</a>
-<a href=#1532 id=1532 data-nosnippet>1532</a>  <span class="comment">// Also override \pgfmathsetlengthmacro (Perl L426 area — uses same approach
-<a href=#1533 id=1533 data-nosnippet>1533</a>  // but assigns to a macro instead of a register; we approximate by just doing
-<a href=#1534 id=1534 data-nosnippet>1534</a>  // pgfmathparse and \def-ing the result)
+<a href=#1532 id=1532 data-nosnippet>1532</a>  <span class="comment">// Override \pgfmathsincos to use our native sin/cos (for direct calls)
+<a href=#1533 id=1533 data-nosnippet>1533</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmathsincos{}"</span>,
+<a href=#1534 id=1534 data-nosnippet>1534</a>    <span class="string">"\\pgfmathparse{sin(#1)}\\let\\pgfmathresulty\\pgfmathresult\\pgfmathparse{cos(#1)}\\let\\pgfmathresultx\\pgfmathresult"</span>);
 <a href=#1535 id=1535 data-nosnippet>1535</a>
-<a href=#1536 id=1536 data-nosnippet>1536</a>  // ==================== \pgfmath@smuggleone ====================
-<a href=#1537 id=1537 data-nosnippet>1537</a>  // Perl L285-299: DefMacro('\pgfmath@smuggleone Until:\endgroup', sub { ... })
+<a href=#1536 id=1536 data-nosnippet>1536</a>  <span class="comment">// ==================== \pgfmathsetlength ====================
+<a href=#1537 id=1537 data-nosnippet>1537</a>  // Perl L405-423: DefPrimitive('\pgfmathsetlength DefToken {}', sub { ... })
 <a href=#1538 id=1538 data-nosnippet>1538</a>  //
-<a href=#1539 id=1539 data-nosnippet>1539</a>  // The raw TeX definition is: \def\pgfmath@smuggleone#1\endgroup{...}
-<a href=#1540 id=1540 data-nosnippet>1540</a>  // It "smuggles" a definition out of a group by expanding before \endgroup.
-<a href=#1541 id=1541 data-nosnippet>1541</a>  // Perl overrides: for expandables, emit the expansion chain; for primitives,
-<a href=#1542 id=1542 data-nosnippet>1542</a>  // just emit \endgroup (bindings are already global, no smuggling needed).
-<a href=#1543 id=1543 data-nosnippet>1543</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@smuggleone Until:\\endgroup"</span>, sub[(arg)] {
-<a href=#1544 id=1544 data-nosnippet>1544</a>    <span class="comment">// The arg is everything up to \endgroup. Extract the first meaningful token.
-<a href=#1545 id=1545 data-nosnippet>1545</a>    </span><span class="kw">let </span>first_tok = arg.unlist_ref().iter()
-<a href=#1546 id=1546 data-nosnippet>1546</a>      .find(|t| {
-<a href=#1547 id=1547 data-nosnippet>1547</a>        <span class="kw">let </span>cc = t.get_catcode();
-<a href=#1548 id=1548 data-nosnippet>1548</a>        cc != Catcode::SPACE &amp;&amp; cc != Catcode::COMMENT &amp;&amp; cc != Catcode::MARKER
-<a href=#1549 id=1549 data-nosnippet>1549</a>      })
-<a href=#1550 id=1550 data-nosnippet>1550</a>      .cloned();
-<a href=#1551 id=1551 data-nosnippet>1551</a>    <span class="kw">let </span><span class="kw-2">mut </span>smuggle = <span class="bool-val">false</span>;
-<a href=#1552 id=1552 data-nosnippet>1552</a>    <span class="kw">let </span><span class="kw-2">mut </span>first_cs = <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>); <span class="comment">// placeholder
-<a href=#1553 id=1553 data-nosnippet>1553</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(first) = first_tok {
-<a href=#1554 id=1554 data-nosnippet>1554</a>      <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(defn)) = state::lookup_definition(<span class="kw-2">&amp;</span>first) {
-<a href=#1555 id=1555 data-nosnippet>1555</a>        <span class="kw">if </span>defn.is_expandable() {
-<a href=#1556 id=1556 data-nosnippet>1556</a>          smuggle = <span class="bool-val">true</span>;
-<a href=#1557 id=1557 data-nosnippet>1557</a>          first_cs = first;
-<a href=#1558 id=1558 data-nosnippet>1558</a>        }
-<a href=#1559 id=1559 data-nosnippet>1559</a>      }
-<a href=#1560 id=1560 data-nosnippet>1560</a>    }
-<a href=#1561 id=1561 data-nosnippet>1561</a>    <span class="kw">if </span>smuggle {
-<a href=#1562 id=1562 data-nosnippet>1562</a>      <span class="comment">// Texlive 2020 definition: smuggle by expanding before endgroup
-<a href=#1563 id=1563 data-nosnippet>1563</a>      </span><span class="macro">vec!</span>[
-<a href=#1564 id=1564 data-nosnippet>1564</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>),
-<a href=#1565 id=1565 data-nosnippet>1565</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
-<a href=#1566 id=1566 data-nosnippet>1566</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), first_cs,
-<a href=#1567 id=1567 data-nosnippet>1567</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_BEGIN!</span>(),
-<a href=#1568 id=1568 data-nosnippet>1568</a>        first_cs,
-<a href=#1569 id=1569 data-nosnippet>1569</a>        <span class="macro">T_END!</span>(),
-<a href=#1570 id=1570 data-nosnippet>1570</a>      ]
-<a href=#1571 id=1571 data-nosnippet>1571</a>    } <span class="kw">else </span>{
-<a href=#1572 id=1572 data-nosnippet>1572</a>      <span class="comment">// For primitives/bindings: already global, just close the group
-<a href=#1573 id=1573 data-nosnippet>1573</a>      </span><span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>)]
-<a href=#1574 id=1574 data-nosnippet>1574</a>    }
-<a href=#1575 id=1575 data-nosnippet>1575</a>  });
-<a href=#1576 id=1576 data-nosnippet>1576</a>
-<a href=#1577 id=1577 data-nosnippet>1577</a>});
+<a href=#1539 id=1539 data-nosnippet>1539</a>  // The raw TeX \pgfmathsetlength uses \pgfmath@onquick with \pgfmath@ as a
+<a href=#1540 id=1540 data-nosnippet>1540</a>  // delimiter token. Our engine can choke on this delimiter pattern, causing
+<a href=#1541 id=1541 data-nosnippet>1541</a>  // "undefined:\pgfmath@" errors that cascade into group mismatches. The Perl
+<a href=#1542 id=1542 data-nosnippet>1542</a>  // binding overrides this with a native implementation that:
+<a href=#1543 id=1543 data-nosnippet>1543</a>  //   1. Strips leading spaces from #2
+<a href=#1544 id=1544 data-nosnippet>1544</a>  //   2. If #2 starts with '+', treats it as plain glue (readGlue)
+<a href=#1545 id=1545 data-nosnippet>1545</a>  //   3. Otherwise, evaluates via pgfmathparse and converts to Dimension
+<a href=#1546 id=1546 data-nosnippet>1546</a>  //   4. Assigns the result to register #1
+<a href=#1547 id=1547 data-nosnippet>1547</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pgfmathsetlength DefToken {}"</span>, sub[(register, tokens)] {
+<a href=#1548 id=1548 data-nosnippet>1548</a>    <span class="kw">let </span>toks: Vec&lt;Token&gt; = tokens.unlist_ref().iter()
+<a href=#1549 id=1549 data-nosnippet>1549</a>      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#1550 id=1550 data-nosnippet>1550</a>      .cloned()
+<a href=#1551 id=1551 data-nosnippet>1551</a>      .collect();
+<a href=#1552 id=1552 data-nosnippet>1552</a>
+<a href=#1553 id=1553 data-nosnippet>1553</a>    <span class="kw">if </span>toks.first().is_some_and(|t| t.text == <span class="macro">pin!</span>(<span class="string">"+"</span>)) {
+<a href=#1554 id=1554 data-nosnippet>1554</a>      <span class="comment">// Starts with '+' → treat as plain glue
+<a href=#1555 id=1555 data-nosnippet>1555</a>      // Unread the tokens and read as glue
+<a href=#1556 id=1556 data-nosnippet>1556</a>      </span>gullet::unread(Tokens::new(toks));
+<a href=#1557 id=1557 data-nosnippet>1557</a>      <span class="kw">let </span>glue = gullet::read_glue()<span class="question-mark">?</span>;
+<a href=#1558 id=1558 data-nosnippet>1558</a>      <span class="kw">let </span>cs = register.to_string();
+<a href=#1559 id=1559 data-nosnippet>1559</a>      state::assign_register(<span class="kw-2">&amp;</span>cs, glue.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+<a href=#1560 id=1560 data-nosnippet>1560</a>    } <span class="kw">else </span>{
+<a href=#1561 id=1561 data-nosnippet>1561</a>      <span class="comment">// Evaluate via pgfmathparse
+<a href=#1562 id=1562 data-nosnippet>1562</a>      </span><span class="kw">let </span>tok_str = Tokens::new(toks);
+<a href=#1563 id=1563 data-nosnippet>1563</a>      <span class="kw">let </span>expanded = gullet::do_expand(tok_str).unwrap_or_default();
+<a href=#1564 id=1564 data-nosnippet>1564</a>      <span class="kw">let </span>input = expanded.to_string();
+<a href=#1565 id=1565 data-nosnippet>1565</a>      <span class="kw">let </span>(result_str, _units) = pgfmathparse_eval_with_units(<span class="kw-2">&amp;</span>input);
+<a href=#1566 id=1566 data-nosnippet>1566</a>      <span class="kw">let </span>value: f64 = result_str.parse().unwrap_or(<span class="number">0.0</span>);
+<a href=#1567 id=1567 data-nosnippet>1567</a>
+<a href=#1568 id=1568 data-nosnippet>1568</a>      <span class="comment">// Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
+<a href=#1569 id=1569 data-nosnippet>1569</a>      </span><span class="kw">let </span>cs = register.to_string();
+<a href=#1570 id=1570 data-nosnippet>1570</a>      <span class="kw">let </span>is_mu = if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\ifpgfmathmathunitsdeclared"</span>))
+<a href=#1571 id=1571 data-nosnippet>1571</a>        .unwrap_or(<span class="prelude-val">None</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
+<a href=#1572 id=1572 data-nosnippet>1572</a>      <span class="kw">if </span>is_mu {
+<a href=#1573 id=1573 data-nosnippet>1573</a>        <span class="kw">let </span>mu_sp = state::convert_unit(<span class="string">"mu"</span>);
+<a href=#1574 id=1574 data-nosnippet>1574</a>        <span class="kw">let </span>mu_dim = Dimension((value * mu_sp <span class="kw">as </span>f64).round() <span class="kw">as </span>i64);
+<a href=#1575 id=1575 data-nosnippet>1575</a>        state::assign_register(<span class="kw-2">&amp;</span>cs, mu_dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+<a href=#1576 id=1576 data-nosnippet>1576</a>      } <span class="kw">else </span>{
+<a href=#1577 id=1577 data-nosnippet>1577</a>        <span class="comment">// Convert pgfmath result (in pt) to sp (× 65536), round to nearest
+<a href=#1578 id=1578 data-nosnippet>1578</a>        </span><span class="kw">let </span>dim = Dimension((value * <span class="number">65536.0</span>).round() <span class="kw">as </span>i64);
+<a href=#1579 id=1579 data-nosnippet>1579</a>        state::assign_register(<span class="kw-2">&amp;</span>cs, dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+<a href=#1580 id=1580 data-nosnippet>1580</a>      }
+<a href=#1581 id=1581 data-nosnippet>1581</a>    }
+<a href=#1582 id=1582 data-nosnippet>1582</a>  });
+<a href=#1583 id=1583 data-nosnippet>1583</a>
+<a href=#1584 id=1584 data-nosnippet>1584</a>  <span class="comment">// Also override \pgfmathsetlengthmacro (Perl L426 area — uses same approach
+<a href=#1585 id=1585 data-nosnippet>1585</a>  // but assigns to a macro instead of a register; we approximate by just doing
+<a href=#1586 id=1586 data-nosnippet>1586</a>  // pgfmathparse and \def-ing the result)
+<a href=#1587 id=1587 data-nosnippet>1587</a>
+<a href=#1588 id=1588 data-nosnippet>1588</a>  // ==================== \pgfmath@smuggleone ====================
+<a href=#1589 id=1589 data-nosnippet>1589</a>  // Perl L285-299: DefMacro('\pgfmath@smuggleone Until:\endgroup', sub { ... })
+<a href=#1590 id=1590 data-nosnippet>1590</a>  //
+<a href=#1591 id=1591 data-nosnippet>1591</a>  // The raw TeX definition is: \def\pgfmath@smuggleone#1\endgroup{...}
+<a href=#1592 id=1592 data-nosnippet>1592</a>  // It "smuggles" a definition out of a group by expanding before \endgroup.
+<a href=#1593 id=1593 data-nosnippet>1593</a>  // Perl overrides: for expandables, emit the expansion chain; for primitives,
+<a href=#1594 id=1594 data-nosnippet>1594</a>  // just emit \endgroup (bindings are already global, no smuggling needed).
+<a href=#1595 id=1595 data-nosnippet>1595</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@smuggleone Until:\\endgroup"</span>, sub[(arg)] {
+<a href=#1596 id=1596 data-nosnippet>1596</a>    <span class="comment">// The arg is everything up to \endgroup. Extract the first meaningful token.
+<a href=#1597 id=1597 data-nosnippet>1597</a>    </span><span class="kw">let </span>first_tok = arg.unlist_ref().iter()
+<a href=#1598 id=1598 data-nosnippet>1598</a>      .find(|t| {
+<a href=#1599 id=1599 data-nosnippet>1599</a>        <span class="kw">let </span>cc = t.get_catcode();
+<a href=#1600 id=1600 data-nosnippet>1600</a>        cc != Catcode::SPACE &amp;&amp; cc != Catcode::COMMENT &amp;&amp; cc != Catcode::MARKER
+<a href=#1601 id=1601 data-nosnippet>1601</a>      })
+<a href=#1602 id=1602 data-nosnippet>1602</a>      .cloned();
+<a href=#1603 id=1603 data-nosnippet>1603</a>    <span class="kw">let </span><span class="kw-2">mut </span>smuggle = <span class="bool-val">false</span>;
+<a href=#1604 id=1604 data-nosnippet>1604</a>    <span class="kw">let </span><span class="kw-2">mut </span>first_cs = <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>); <span class="comment">// placeholder
+<a href=#1605 id=1605 data-nosnippet>1605</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(first) = first_tok {
+<a href=#1606 id=1606 data-nosnippet>1606</a>      <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(defn)) = state::lookup_definition(<span class="kw-2">&amp;</span>first) {
+<a href=#1607 id=1607 data-nosnippet>1607</a>        <span class="kw">if </span>defn.is_expandable() {
+<a href=#1608 id=1608 data-nosnippet>1608</a>          smuggle = <span class="bool-val">true</span>;
+<a href=#1609 id=1609 data-nosnippet>1609</a>          first_cs = first;
+<a href=#1610 id=1610 data-nosnippet>1610</a>        }
+<a href=#1611 id=1611 data-nosnippet>1611</a>      }
+<a href=#1612 id=1612 data-nosnippet>1612</a>    }
+<a href=#1613 id=1613 data-nosnippet>1613</a>    <span class="kw">if </span>smuggle {
+<a href=#1614 id=1614 data-nosnippet>1614</a>      <span class="comment">// Texlive 2020 definition: smuggle by expanding before endgroup
+<a href=#1615 id=1615 data-nosnippet>1615</a>      </span><span class="macro">vec!</span>[
+<a href=#1616 id=1616 data-nosnippet>1616</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>),
+<a href=#1617 id=1617 data-nosnippet>1617</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
+<a href=#1618 id=1618 data-nosnippet>1618</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), first_cs,
+<a href=#1619 id=1619 data-nosnippet>1619</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_BEGIN!</span>(),
+<a href=#1620 id=1620 data-nosnippet>1620</a>        first_cs,
+<a href=#1621 id=1621 data-nosnippet>1621</a>        <span class="macro">T_END!</span>(),
+<a href=#1622 id=1622 data-nosnippet>1622</a>      ]
+<a href=#1623 id=1623 data-nosnippet>1623</a>    } <span class="kw">else </span>{
+<a href=#1624 id=1624 data-nosnippet>1624</a>      <span class="comment">// For primitives/bindings: already global, just close the group
+<a href=#1625 id=1625 data-nosnippet>1625</a>      </span><span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>)]
+<a href=#1626 id=1626 data-nosnippet>1626</a>    }
+<a href=#1627 id=1627 data-nosnippet>1627</a>  });
+<a href=#1628 id=1628 data-nosnippet>1628</a>
+<a href=#1629 id=1629 data-nosnippet>1629</a>});
 </code></pre></div></section></main></body></html>

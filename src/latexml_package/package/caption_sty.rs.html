@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/caption_sty.rs`."><title>caption_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>caption_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/caption_sty.rs`."><title>caption_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>caption_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -97,162 +97,218 @@
 <a href=#97 id=97 data-nosnippet>97</a>  <span class="comment">// caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
 <a href=#98 id=98 data-nosnippet>98</a>  // of `\DeclareCaptionFormat` for text-only caption-format definers.
 <a href=#99 id=99 data-nosnippet>99</a>  </span>def_macro_noop(<span class="string">"\\DeclareCaptionTextFormat{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#100 id=100 data-nosnippet>100</a>  def_macro_noop(<span class="string">"\\DeclareCaptionJustification{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#101 id=101 data-nosnippet>101</a>  def_macro_noop(<span class="string">"\\DeclareCaptionOption{}[]{}"</span>)<span class="question-mark">?</span>;
-<a href=#102 id=102 data-nosnippet>102</a>  def_macro_noop(<span class="string">"\\DeclareCaptionPackage{}"</span>)<span class="question-mark">?</span>;
-<a href=#103 id=103 data-nosnippet>103</a>  <span class="comment">// caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
-<a href=#104 id=104 data-nosnippet>104</a>  // "caption@box@&lt;name&gt;" macro via \@namedef. We don't render caption
-<a href=#105 id=105 data-nosnippet>105</a>  // box layouts; gobble both args.
-<a href=#106 id=106 data-nosnippet>106</a>  </span>def_macro_noop(<span class="string">"\\DeclareCaptionBox{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#107 id=107 data-nosnippet>107</a>  <span class="comment">// caption3.sty L573: \DeclareCaptionListFormat{name}{body}
-<a href=#108 id=108 data-nosnippet>108</a>  </span>def_macro_noop(<span class="string">"\\DeclareCaptionListFormat{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// caption3 internals used by raw-loaded sibling packages like
-<a href=#111 id=111 data-nosnippet>111</a>  // floatrow.sty. Real `\caption@setkeys [opt] {family} {kvs}` calls
-<a href=#112 id=112 data-nosnippet>112</a>  // `\setkeys{family}{kvs}` with caption-specific error handling
-<a href=#113 id=113 data-nosnippet>113</a>  // (caption3_2020-10-26.sty L337-360). Stub to a plain `\setkeys`
-<a href=#114 id=114 data-nosnippet>114</a>  // — drops the optional error-handler context but preserves
-<a href=#115 id=115 data-nosnippet>115</a>  // keyval-processing semantics. Witness cluster: papers using
-<a href=#116 id=116 data-nosnippet>116</a>  // `\usepackage{floatrow}` which raw-loads its body containing
-<a href=#117 id=117 data-nosnippet>117</a>  // `\caption@setkeys{...}{...}` calls.
-<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@setkeys[]{}{}"</span>, <span class="string">"\\setkeys{#2}{#3}"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="comment">// `\undefine@key` removes a keyval. Real keyval.sty defines it
-<a href=#120 id=120 data-nosnippet>120</a>  // post-2018; xkeyval too. Both Perl LaTeXML's keyval.sty.ltxml
-<a href=#121 id=121 data-nosnippet>121</a>  // hand-port and our Rust binding pre-date that and don't include
-<a href=#122 id=122 data-nosnippet>122</a>  // it. Stub as a no-op — keyval removal is mostly an authoring
-<a href=#123 id=123 data-nosnippet>123</a>  // hygiene issue; missing it means stale keys linger but no
-<a href=#124 id=124 data-nosnippet>124</a>  // tokenization breakage. Witness: same floatrow chain.
-<a href=#125 id=125 data-nosnippet>125</a>  </span>def_macro_noop(<span class="string">"\\undefine@key{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#126 id=126 data-nosnippet>126</a>
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bothIfFirst{}{}"</span>, sub[(first, second)] {
-<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">if </span>first.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) } <span class="kw">else </span>{
-<a href=#129 id=129 data-nosnippet>129</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = first.unlist();
-<a href=#130 id=130 data-nosnippet>130</a>      result.extend(second.unlist());
-<a href=#131 id=131 data-nosnippet>131</a>      <span class="prelude-val">Ok</span>(Tokens::new(result))
-<a href=#132 id=132 data-nosnippet>132</a>    }
-<a href=#133 id=133 data-nosnippet>133</a>  });
-<a href=#134 id=134 data-nosnippet>134</a>
-<a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bothIfSecond{}{}"</span>, sub[(first, second)] {
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="kw">if </span>second.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) } <span class="kw">else </span>{
-<a href=#137 id=137 data-nosnippet>137</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = first.unlist();
-<a href=#138 id=138 data-nosnippet>138</a>      result.extend(second.unlist());
-<a href=#139 id=139 data-nosnippet>139</a>      <span class="prelude-val">Ok</span>(Tokens::new(result))
-<a href=#140 id=140 data-nosnippet>140</a>    }
-<a href=#141 id=141 data-nosnippet>141</a>  });
-<a href=#142 id=142 data-nosnippet>142</a>
-<a href=#143 id=143 data-nosnippet>143</a>  def_macro_noop(<span class="string">"\\AtBeginCaption{}"</span>)<span class="question-mark">?</span>;
-<a href=#144 id=144 data-nosnippet>144</a>  def_macro_noop(<span class="string">"\\AtEndCaption{}"</span>)<span class="question-mark">?</span>;
-<a href=#145 id=145 data-nosnippet>145</a>  def_macro_noop(<span class="string">"\\ContinuedFloat"</span>)<span class="question-mark">?</span>;
-<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// caption.sty L: `\providecommand*\nextfloat{...}` — used to mark
-<a href=#147 id=147 data-nosnippet>147</a>  // sub-caption float continuation. Gobble safely (visual-only).
-<a href=#148 id=148 data-nosnippet>148</a>  // Witness 2202.03356.
-<a href=#149 id=149 data-nosnippet>149</a>  </span>def_macro_noop(<span class="string">"\\nextfloat"</span>)<span class="question-mark">?</span>;
-<a href=#150 id=150 data-nosnippet>150</a>  def_macro_noop(<span class="string">"\\ProcessOptionsWithKV{}"</span>)<span class="question-mark">?</span>;
-<a href=#151 id=151 data-nosnippet>151</a>
-<a href=#152 id=152 data-nosnippet>152</a>  def_macro_noop(<span class="string">"\\captionfont"</span>)<span class="question-mark">?</span>;
-<a href=#153 id=153 data-nosnippet>153</a>  def_macro_noop(<span class="string">"\\captionsize"</span>)<span class="question-mark">?</span>;
-<a href=#154 id=154 data-nosnippet>154</a>
-<a href=#155 id=155 data-nosnippet>155</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionparindent"  </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#156 id=156 data-nosnippet>156</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionindent"     </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#157 id=157 data-nosnippet>157</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionhangindent" </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#158 id=158 data-nosnippet>158</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionmargin"     </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionwidth"      </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#160 id=160 data-nosnippet>160</a>
-<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// Override \caption to support \caption* (starred form)
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption"</span>,
-<a href=#163 id=163 data-nosnippet>163</a>    <span class="string">r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@caption\expandafter{\@captype}}}"
-<a href=#164 id=164 data-nosnippet>164</a>  </span>);
-<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@scaption{}"</span>, <span class="string">"\\@@caption{#1}"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="comment">// \captionof — fake a caption in any context.
-<a href=#168 id=168 data-nosnippet>168</a>  //
-<a href=#169 id=169 data-nosnippet>169</a>  // Perl caption.sty.ltxml L110-115 routes through the `CAPTION_type` state
-<a href=#170 id=170 data-nosnippet>170</a>  // value set by `\captionsetup{type=…}`: when the author has declared a
-<a href=#171 id=171 data-nosnippet>171</a>  // float type, `\maybe@@generic@caption` expands to `\@captionof{type}`
-<a href=#172 id=172 data-nosnippet>172</a>  // so the caption digests inside the proper environment; otherwise it
-<a href=#173 id=173 data-nosnippet>173</a>  // falls through to `\@@generic@caption`. Rust previously hardcoded the
-<a href=#174 id=174 data-nosnippet>174</a>  // fallback, silently dropping the captionsetup type.
-<a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\maybe@@generic@caption"</span>, sub[_args] {
-<a href=#176 id=176 data-nosnippet>176</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(t)) = state::lookup_value(<span class="string">"CAPTION_type"</span>) {
-<a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">let </span>ty = arena::with(t, |s| s.to_string());
-<a href=#178 id=178 data-nosnippet>178</a>      <span class="kw">if </span>!ty.is_empty() {
-<a href=#179 id=179 data-nosnippet>179</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@captionof"</span>), <span class="macro">T_BEGIN!</span>()];
-<a href=#180 id=180 data-nosnippet>180</a>        out.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span>ty));
-<a href=#181 id=181 data-nosnippet>181</a>        out.push(<span class="macro">T_END!</span>());
-<a href=#182 id=182 data-nosnippet>182</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(out));
-<a href=#183 id=183 data-nosnippet>183</a>      }
-<a href=#184 id=184 data-nosnippet>184</a>    }
-<a href=#185 id=185 data-nosnippet>185</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@generic@caption"</span>)))
-<a href=#186 id=186 data-nosnippet>186</a>  });
-<a href=#187 id=187 data-nosnippet>187</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\captionof"</span>, <span class="string">"\\@ifstar{\\@scaptionof}{\\@captionof}"</span>);
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@captionof{}[]{}"</span>, <span class="string">r"\@ifnext\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}"</span>);
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim"</span>, <span class="string">r"\@captionof@{#1}{#2}{#3\label{#4}}"</span>);
-<a href=#190 id=190 data-nosnippet>190</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@captionof@{}{}{}"</span>, <span class="string">r"\begin{#1}\@caption@{#1}{#2}{#3}\end{#1}"</span>);
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@scaptionof{}{}"</span>, <span class="string">r"\begin{#1*}\@scaption{#2}\end{#1*}"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>
-<a href=#193 id=193 data-nosnippet>193</a>  def_macro_noop(<span class="string">"\\clearcaptionsetup"</span>)<span class="question-mark">?</span>;
-<a href=#194 id=194 data-nosnippet>194</a>  def_macro_noop(<span class="string">"\\rotcaption"</span>)<span class="question-mark">?</span>;
-<a href=#195 id=195 data-nosnippet>195</a>  def_macro_noop(<span class="string">"\\showcaptionsetup[]{}"</span>)<span class="question-mark">?</span>;
-<a href=#196 id=196 data-nosnippet>196</a>
-<a href=#197 id=197 data-nosnippet>197</a>  <span class="comment">// \caption@ifinlist{val}{csv-list}{then}{else} — caption3.sty L87.
-<a href=#198 id=198 data-nosnippet>198</a>  // Returns `then` if val matches one of the comma-separated list items,
-<a href=#199 id=199 data-nosnippet>199</a>  // else `else`. Used by floatrow (`\caption@ifinlist{#1}{0,false,no,off}{...}{...}`)
-<a href=#200 id=200 data-nosnippet>200</a>  // and by caption-key parsing. Witness 2405.18938.
-<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@ifinlist{}{}"</span>, sub[(val, list)] {
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>v_str = val.to_string();
-<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">let </span>v = v_str.trim();
-<a href=#204 id=204 data-nosnippet>204</a>    <span class="kw">let </span>l_str = list.to_string();
-<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">let </span>found = l_str.split(<span class="string">','</span>).any(|item| item.trim() == v);
-<a href=#206 id=206 data-nosnippet>206</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>found {
-<a href=#207 id=207 data-nosnippet>207</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@firstoftwo"</span>))
-<a href=#208 id=208 data-nosnippet>208</a>    } <span class="kw">else </span>{
-<a href=#209 id=209 data-nosnippet>209</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@secondoftwo"</span>))
-<a href=#210 id=210 data-nosnippet>210</a>    })
-<a href=#211 id=211 data-nosnippet>211</a>  });
-<a href=#212 id=212 data-nosnippet>212</a>
-<a href=#213 id=213 data-nosnippet>213</a>  <span class="comment">// \caption@setposition{value} — caption3.sty L1007. Sets the caption
-<a href=#214 id=214 data-nosnippet>214</a>  // position. We don't materialize caption-position logic; stub as
-<a href=#215 id=215 data-nosnippet>215</a>  // no-op so floatrow-style position setters don't crash.
-<a href=#216 id=216 data-nosnippet>216</a>  </span>def_macro_noop(<span class="string">"\\caption@setposition{}"</span>)<span class="question-mark">?</span>;
-<a href=#217 id=217 data-nosnippet>217</a>
-<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// \caption@set@bool{cs}{value} — caption3.sty L131. Defines `cs` as
-<a href=#219 id=219 data-nosnippet>219</a>  // `\@firstoftwo` if value is in {1,true,yes,on}, `\@secondoftwo` for
-<a href=#220 id=220 data-nosnippet>220</a>  // {0,false,no,off}, else error. We don't model caption boolean state
-<a href=#221 id=221 data-nosnippet>221</a>  // (caption settings don't affect XML output), so stub the dispatch
-<a href=#222 id=222 data-nosnippet>222</a>  // — \let the CS to \@secondoftwo by default. Witness 2408.09623,
-<a href=#223 id=223 data-nosnippet>223</a>  // 2408.12461, 2409.01528.
-<a href=#224 id=224 data-nosnippet>224</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@set@bool DefToken {}"</span>, sub[(cs, value)] {
-<a href=#225 id=225 data-nosnippet>225</a>    <span class="kw">let </span>val = value.to_string();
-<a href=#226 id=226 data-nosnippet>226</a>    <span class="kw">let </span>truthy = <span class="macro">matches!</span>(val.trim(), <span class="string">"1" </span>| <span class="string">"true" </span>| <span class="string">"yes" </span>| <span class="string">"on"</span>);
-<a href=#227 id=227 data-nosnippet>227</a>    <span class="kw">let </span>target_name = <span class="kw">if </span>truthy { <span class="string">"\\@firstoftwo" </span>} <span class="kw">else </span>{ <span class="string">"\\@secondoftwo" </span>};
-<a href=#228 id=228 data-nosnippet>228</a>    state::let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(target_name), <span class="prelude-val">None</span>);
-<a href=#229 id=229 data-nosnippet>229</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-<a href=#230 id=230 data-nosnippet>230</a>  });
-<a href=#231 id=231 data-nosnippet>231</a>  <span class="comment">// \caption@setbool{name} — wraps caption@set@bool by building \caption@if&lt;name&gt;.
-<a href=#232 id=232 data-nosnippet>232</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@setbool{}{}"</span>,
-<a href=#233 id=233 data-nosnippet>233</a>    <span class="string">"\\expandafter\\caption@set@bool\\csname caption@if#1\\endcsname{#2}"</span>);
-<a href=#234 id=234 data-nosnippet>234</a>  <span class="comment">// \caption@ifbool{name} — \@nameuse{caption@if&lt;name&gt;} dispatch helper.
-<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@ifbool{}"</span>, <span class="string">"\\@nameuse{caption@if#1}"</span>);
-<a href=#236 id=236 data-nosnippet>236</a>
-<a href=#237 id=237 data-nosnippet>237</a>  <span class="comment">// \caption@setoptions{name} (caption3.sty L325-333) — apply the
-<a href=#238 id=238 data-nosnippet>238</a>  // named option setup if defined, else do nothing. Used by floatrow
-<a href=#239 id=239 data-nosnippet>239</a>  // (line 473) and various caption-extension packages. Stub as no-op
-<a href=#240 id=240 data-nosnippet>240</a>  // since the actual option dictionary `\caption@opt@&lt;name&gt;` isn't
-<a href=#241 id=241 data-nosnippet>241</a>  // populated under our digestion model. Witness 2412.15378 (floatrow).
-<a href=#242 id=242 data-nosnippet>242</a>  </span>def_macro_noop(<span class="string">"\\caption@setoptions{}"</span>)<span class="question-mark">?</span>;
-<a href=#243 id=243 data-nosnippet>243</a>  <span class="comment">// \caption@@make — internal caption-rendering hook used by float
-<a href=#244 id=244 data-nosnippet>244</a>  // wrappers. No-op for our XML pipeline (caption text is emitted via
-<a href=#245 id=245 data-nosnippet>245</a>  // ltx:caption regardless of formatting). Witness 2412.15378.
-<a href=#246 id=246 data-nosnippet>246</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@@make{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="comment">// caption3.sty L850 defines \caption@setfont{kind}{value} — used
-<a href=#248 id=248 data-nosnippet>248</a>  // internally to apply font options (font/labelfont/textfont/size).
-<a href=#249 id=249 data-nosnippet>249</a>  // Font formatting is irrelevant in our XML output; gobble args.
-<a href=#250 id=250 data-nosnippet>250</a>  // Witness 2504.00326.
-<a href=#251 id=251 data-nosnippet>251</a>  </span>def_macro_noop(<span class="string">"\\caption@setfont{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#252 id=252 data-nosnippet>252</a>  <span class="comment">// \phantomcaption (caption package, originally subcaption) — adds an
-<a href=#253 id=253 data-nosnippet>253</a>  // invisible caption for layout reasons; we don't need spacing in XML
-<a href=#254 id=254 data-nosnippet>254</a>  // output, so stub as no-op. Witness 2503.21681.
-<a href=#255 id=255 data-nosnippet>255</a>  </span>def_macro_noop(<span class="string">"\\phantomcaption"</span>)<span class="question-mark">?</span>;
-<a href=#256 id=256 data-nosnippet>256</a>  def_macro_noop(<span class="string">"\\phantomsubcaption"</span>)<span class="question-mark">?</span>;
-<a href=#257 id=257 data-nosnippet>257</a>});
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="comment">// caption3.sty L955-959: `\DeclareCaptionJustification[&lt;pkg&gt;]{&lt;name&gt;}{&lt;body&gt;}`
+<a href=#101 id=101 data-nosnippet>101</a>  // defines `\caption@justification@&lt;name&gt;` (the body) AND lets
+<a href=#102 id=102 data-nosnippet>102</a>  // `\caption@hj@&lt;name&gt;` equal it. The `\caption@hj@&lt;name&gt;` macros are
+<a href=#103 id=103 data-nosnippet>103</a>  // probed by other packages — notably floatrow.sty L1169
+<a href=#104 id=104 data-nosnippet>104</a>  // (`\@ifundefined{caption@hj@#1}` for `objectset=centering`/`raggedright`);
+<a href=#105 id=105 data-nosnippet>105</a>  // a pure no-op leaves them undefined → `Package floatrow Error: Undefined
+<a href=#106 id=106 data-nosnippet>106</a>  // object setting` (witness 1504.02564, 1608.07117, 1704.01862,
+<a href=#107 id=107 data-nosnippet>107</a>  // 1708.07230, 1712.06479). Faithfully define `\caption@hj@&lt;name&gt;` to the
+<a href=#108 id=108 data-nosnippet>108</a>  // body (collapsing caption3's justification@→hj@ \let into one \@namedef).
+<a href=#109 id=109 data-nosnippet>109</a>  // The optional `[&lt;pkg&gt;]` arg (caption3 L1361 `[ragged2e]{Justified}{...}`)
+<a href=#110 id=110 data-nosnippet>110</a>  // is consumed and ignored — it only triggers package-autoload, moot here.
+<a href=#111 id=111 data-nosnippet>111</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\DeclareCaptionJustification{\@ifnextchar[\lx@caption@decljust@opt{\lx@caption@decljust@opt[]}}"</span>);
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@caption@decljust@opt[#1]#2#3{\@namedef{caption@hj@#2}{#3}\@namedef{caption@justification@#2}{#3}}"</span>);
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="comment">// Seed the standard justifications caption3.sty declares at load time
+<a href=#114 id=114 data-nosnippet>114</a>  // (L964-969) so they exist even when a paper never re-declares them.
+<a href=#115 id=115 data-nosnippet>115</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\DeclareCaptionJustification{justified}{}%
+<a href=#116 id=116 data-nosnippet>116</a>\DeclareCaptionJustification{centering}{\centering}%
+<a href=#117 id=117 data-nosnippet>117</a>\DeclareCaptionJustification{centerfirst}{\centering}%
+<a href=#118 id=118 data-nosnippet>118</a>\DeclareCaptionJustification{centerlast}{\centering}%
+<a href=#119 id=119 data-nosnippet>119</a>\DeclareCaptionJustification{raggedleft}{\raggedleft}%
+<a href=#120 id=120 data-nosnippet>120</a>\DeclareCaptionJustification{raggedright}{\raggedright}"</span>);
+<a href=#121 id=121 data-nosnippet>121</a>  def_macro_noop(<span class="string">"\\DeclareCaptionOption{}[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// caption3.sty L640+: `\DeclareCaptionOptionNoValue{name}{body}` —
+<a href=#123 id=123 data-nosnippet>123</a>  // sibling of `\DeclareCaptionOption` for options without values.
+<a href=#124 id=124 data-nosnippet>124</a>  // 5 papers in R-stages emit `Error:undefined`. Same no-op as the
+<a href=#125 id=125 data-nosnippet>125</a>  // valued sibling: caption-option declarations are typesetting-only
+<a href=#126 id=126 data-nosnippet>126</a>  // setup, not body content.
+<a href=#127 id=127 data-nosnippet>127</a>  </span>def_macro_noop(<span class="string">"\\DeclareCaptionOptionNoValue{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#128 id=128 data-nosnippet>128</a>  def_macro_noop(<span class="string">"\\DeclareCaptionPackage{}"</span>)<span class="question-mark">?</span>;
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="comment">// caption3.sty internals that user code or extension packages
+<a href=#130 id=130 data-nosnippet>130</a>  // (e.g. caption-style extensions, fltrace, ccaption) sometimes
+<a href=#131 id=131 data-nosnippet>131</a>  // reach for. All no-ops — caption-package internals are
+<a href=#132 id=132 data-nosnippet>132</a>  // typesetting-only and have no body-content effect:
+<a href=#133 id=133 data-nosnippet>133</a>  //   * `\SetCaptionDefault{name}{body}` — set default value for
+<a href=#134 id=134 data-nosnippet>134</a>  //     a named caption option (5 R-stage papers).
+<a href=#135 id=135 data-nosnippet>135</a>  //   * `\caption@ifundefined{cs}{then}{else}` — internal version
+<a href=#136 id=136 data-nosnippet>136</a>  //     of `\@ifundefined`. Treat as undefined (always run `\else`).
+<a href=#137 id=137 data-nosnippet>137</a>  //   * `\caption@ExecuteOptions[opt-list]` — internal option-
+<a href=#138 id=138 data-nosnippet>138</a>  //     execution helper. No-op.
+<a href=#139 id=139 data-nosnippet>139</a>  </span>def_macro_noop(<span class="string">"\\SetCaptionDefault{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\caption@ifundefined{}{}{}"</span>, <span class="string">"#3"</span>);  <span class="comment">// always take else branch
+<a href=#141 id=141 data-nosnippet>141</a>  </span>def_macro_noop(<span class="string">"\\caption@ExecuteOptions[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="comment">// caption.sty L184-185 call these as part of package-init bootstrap of
+<a href=#143 id=143 data-nosnippet>143</a>  // the caption3 backend (`\caption@SetupOptions{caption}{\caption@setkeys...}`
+<a href=#144 id=144 data-nosnippet>144</a>  // / `\caption@ProcessOptions*{caption}`). Our binding intercepts
+<a href=#145 id=145 data-nosnippet>145</a>  // caption.sty before caption3.sty raw-loads, so these caption3
+<a href=#146 id=146 data-nosnippet>146</a>  // internals are undefined. No-op stubs are safe — option setup is
+<a href=#147 id=147 data-nosnippet>147</a>  // typesetting-only, and `\captionsetup` (handled above) already
+<a href=#148 id=148 data-nosnippet>148</a>  // stores keyvals as `CAPTION_&lt;key&gt;` state regardless of this
+<a href=#149 id=149 data-nosnippet>149</a>  // bootstrap chain. Witness clusters: ~5 R-stage papers each.
+<a href=#150 id=150 data-nosnippet>150</a>  </span>def_macro_noop(<span class="string">"\\caption@SetupOptions{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#151 id=151 data-nosnippet>151</a>  def_macro_noop(<span class="string">"\\caption@ProcessOptions OptionalMatch:* {}"</span>)<span class="question-mark">?</span>;
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// \caption@IfPackageLoaded{pkg}[date]{body}{else} (caption.sty L700-702
+<a href=#153 id=153 data-nosnippet>153</a>  // + L703-708). caption.sty self-registers conditional adapters for
+<a href=#154 id=154 data-nosnippet>154</a>  // float / hyperref / longtable / ... — our XML pipeline doesn't need
+<a href=#155 id=155 data-nosnippet>155</a>  // any of those adapters, so always take the `else` branch as if the
+<a href=#156 id=156 data-nosnippet>156</a>  // package is not loaded.
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@IfPackageLoaded{}[]{}{}"</span>, <span class="string">"#4"</span>);
+<a href=#158 id=158 data-nosnippet>158</a>  def_macro_noop(<span class="string">"\\caption@@IfPackageLoaded{}[]{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="comment">// caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
+<a href=#160 id=160 data-nosnippet>160</a>  // "caption@box@&lt;name&gt;" macro via \@namedef. We don't render caption
+<a href=#161 id=161 data-nosnippet>161</a>  // box layouts; gobble both args.
+<a href=#162 id=162 data-nosnippet>162</a>  </span>def_macro_noop(<span class="string">"\\DeclareCaptionBox{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="comment">// caption3.sty L573: \DeclareCaptionListFormat{name}{body}
+<a href=#164 id=164 data-nosnippet>164</a>  </span>def_macro_noop(<span class="string">"\\DeclareCaptionListFormat{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="comment">// caption3 internals used by raw-loaded sibling packages like
+<a href=#167 id=167 data-nosnippet>167</a>  // floatrow.sty. Real `\caption@setkeys [opt] {family} {kvs}` calls
+<a href=#168 id=168 data-nosnippet>168</a>  // `\setkeys{family}{kvs}` with caption-specific error handling
+<a href=#169 id=169 data-nosnippet>169</a>  // (caption3_2020-10-26.sty L337-360). Stub to a plain `\setkeys`
+<a href=#170 id=170 data-nosnippet>170</a>  // — drops the optional error-handler context but preserves
+<a href=#171 id=171 data-nosnippet>171</a>  // keyval-processing semantics. Witness cluster: papers using
+<a href=#172 id=172 data-nosnippet>172</a>  // `\usepackage{floatrow}` which raw-loads its body containing
+<a href=#173 id=173 data-nosnippet>173</a>  // `\caption@setkeys{...}{...}` calls.
+<a href=#174 id=174 data-nosnippet>174</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@setkeys[]{}{}"</span>, <span class="string">"\\setkeys{#2}{#3}"</span>);
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="comment">// `\undefine@key` removes a keyval. Real keyval.sty defines it
+<a href=#176 id=176 data-nosnippet>176</a>  // post-2018; xkeyval too. Both Perl LaTeXML's keyval.sty.ltxml
+<a href=#177 id=177 data-nosnippet>177</a>  // hand-port and our Rust binding pre-date that and don't include
+<a href=#178 id=178 data-nosnippet>178</a>  // it. Stub as a no-op — keyval removal is mostly an authoring
+<a href=#179 id=179 data-nosnippet>179</a>  // hygiene issue; missing it means stale keys linger but no
+<a href=#180 id=180 data-nosnippet>180</a>  // tokenization breakage. Witness: same floatrow chain.
+<a href=#181 id=181 data-nosnippet>181</a>  </span>def_macro_noop(<span class="string">"\\undefine@key{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#182 id=182 data-nosnippet>182</a>
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bothIfFirst{}{}"</span>, sub[(first, second)] {
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">if </span>first.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) } <span class="kw">else </span>{
+<a href=#185 id=185 data-nosnippet>185</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = first.unlist();
+<a href=#186 id=186 data-nosnippet>186</a>      result.extend(second.unlist());
+<a href=#187 id=187 data-nosnippet>187</a>      <span class="prelude-val">Ok</span>(Tokens::new(result))
+<a href=#188 id=188 data-nosnippet>188</a>    }
+<a href=#189 id=189 data-nosnippet>189</a>  });
+<a href=#190 id=190 data-nosnippet>190</a>
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bothIfSecond{}{}"</span>, sub[(first, second)] {
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="kw">if </span>second.is_empty() { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) } <span class="kw">else </span>{
+<a href=#193 id=193 data-nosnippet>193</a>      <span class="kw">let </span><span class="kw-2">mut </span>result = first.unlist();
+<a href=#194 id=194 data-nosnippet>194</a>      result.extend(second.unlist());
+<a href=#195 id=195 data-nosnippet>195</a>      <span class="prelude-val">Ok</span>(Tokens::new(result))
+<a href=#196 id=196 data-nosnippet>196</a>    }
+<a href=#197 id=197 data-nosnippet>197</a>  });
+<a href=#198 id=198 data-nosnippet>198</a>
+<a href=#199 id=199 data-nosnippet>199</a>  def_macro_noop(<span class="string">"\\AtBeginCaption{}"</span>)<span class="question-mark">?</span>;
+<a href=#200 id=200 data-nosnippet>200</a>  def_macro_noop(<span class="string">"\\AtEndCaption{}"</span>)<span class="question-mark">?</span>;
+<a href=#201 id=201 data-nosnippet>201</a>  def_macro_noop(<span class="string">"\\ContinuedFloat"</span>)<span class="question-mark">?</span>;
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="comment">// caption.sty L: `\providecommand*\nextfloat{...}` — used to mark
+<a href=#203 id=203 data-nosnippet>203</a>  // sub-caption float continuation. Gobble safely (visual-only).
+<a href=#204 id=204 data-nosnippet>204</a>  // Witness 2202.03356.
+<a href=#205 id=205 data-nosnippet>205</a>  </span>def_macro_noop(<span class="string">"\\nextfloat"</span>)<span class="question-mark">?</span>;
+<a href=#206 id=206 data-nosnippet>206</a>  def_macro_noop(<span class="string">"\\ProcessOptionsWithKV{}"</span>)<span class="question-mark">?</span>;
+<a href=#207 id=207 data-nosnippet>207</a>
+<a href=#208 id=208 data-nosnippet>208</a>  def_macro_noop(<span class="string">"\\captionfont"</span>)<span class="question-mark">?</span>;
+<a href=#209 id=209 data-nosnippet>209</a>  def_macro_noop(<span class="string">"\\captionsize"</span>)<span class="question-mark">?</span>;
+<a href=#210 id=210 data-nosnippet>210</a>
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionparindent"  </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#212 id=212 data-nosnippet>212</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionindent"     </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionhangindent" </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionmargin"     </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\captionwidth"      </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#216 id=216 data-nosnippet>216</a>
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="comment">// Override \caption to support \caption* (starred form)
+<a href=#218 id=218 data-nosnippet>218</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption"</span>,
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="string">r"\lx@donecaptiontrue\@ifundefined{@captype}{\maybe@@generic@caption}{\@ifstar{\@scaption}{\expandafter\@caption\expandafter{\@captype}}}"
+<a href=#220 id=220 data-nosnippet>220</a>  </span>);
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@scaption{}"</span>, <span class="string">"\\@@caption{#1}"</span>);
+<a href=#222 id=222 data-nosnippet>222</a>
+<a href=#223 id=223 data-nosnippet>223</a>  <span class="comment">// \captionof — fake a caption in any context.
+<a href=#224 id=224 data-nosnippet>224</a>  //
+<a href=#225 id=225 data-nosnippet>225</a>  // Perl caption.sty.ltxml L110-115 routes through the `CAPTION_type` state
+<a href=#226 id=226 data-nosnippet>226</a>  // value set by `\captionsetup{type=…}`: when the author has declared a
+<a href=#227 id=227 data-nosnippet>227</a>  // float type, `\maybe@@generic@caption` expands to `\@captionof{type}`
+<a href=#228 id=228 data-nosnippet>228</a>  // so the caption digests inside the proper environment; otherwise it
+<a href=#229 id=229 data-nosnippet>229</a>  // falls through to `\@@generic@caption`. Rust previously hardcoded the
+<a href=#230 id=230 data-nosnippet>230</a>  // fallback, silently dropping the captionsetup type.
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\maybe@@generic@caption"</span>, sub[_args] {
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(t)) = state::lookup_value(<span class="string">"CAPTION_type"</span>) {
+<a href=#233 id=233 data-nosnippet>233</a>      <span class="kw">let </span>ty = arena::with(t, |s| s.to_string());
+<a href=#234 id=234 data-nosnippet>234</a>      <span class="kw">if </span>!ty.is_empty() {
+<a href=#235 id=235 data-nosnippet>235</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@captionof"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#236 id=236 data-nosnippet>236</a>        out.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span>ty));
+<a href=#237 id=237 data-nosnippet>237</a>        out.push(<span class="macro">T_END!</span>());
+<a href=#238 id=238 data-nosnippet>238</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(Tokens::new(out));
+<a href=#239 id=239 data-nosnippet>239</a>      }
+<a href=#240 id=240 data-nosnippet>240</a>    }
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@@generic@caption"</span>)))
+<a href=#242 id=242 data-nosnippet>242</a>  });
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\captionof"</span>, <span class="string">"\\@ifstar{\\@scaptionof}{\\@captionof}"</span>);
+<a href=#244 id=244 data-nosnippet>244</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@captionof{}[]{}"</span>, <span class="string">r"\@ifnext\label{\@captionof@postlabel{#1}{#2}{#3}}{\@captionof@{#1}{#2}{#3}}"</span>);
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@captionof@postlabel{}{}{} SkipMatch:\\label Semiverbatim"</span>, <span class="string">r"\@captionof@{#1}{#2}{#3\label{#4}}"</span>);
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@captionof@{}{}{}"</span>, <span class="string">r"\begin{#1}\@caption@{#1}{#2}{#3}\end{#1}"</span>);
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@scaptionof{}{}"</span>, <span class="string">r"\begin{#1*}\@scaption{#2}\end{#1*}"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>
+<a href=#249 id=249 data-nosnippet>249</a>  def_macro_noop(<span class="string">"\\clearcaptionsetup"</span>)<span class="question-mark">?</span>;
+<a href=#250 id=250 data-nosnippet>250</a>  def_macro_noop(<span class="string">"\\rotcaption"</span>)<span class="question-mark">?</span>;
+<a href=#251 id=251 data-nosnippet>251</a>  def_macro_noop(<span class="string">"\\showcaptionsetup[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#252 id=252 data-nosnippet>252</a>
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="comment">// \caption@ifinlist{val}{csv-list}{then}{else} — caption3.sty L87.
+<a href=#254 id=254 data-nosnippet>254</a>  // Returns `then` if val matches one of the comma-separated list items,
+<a href=#255 id=255 data-nosnippet>255</a>  // else `else`. Used by floatrow (`\caption@ifinlist{#1}{0,false,no,off}{...}{...}`)
+<a href=#256 id=256 data-nosnippet>256</a>  // and by caption-key parsing. Witness 2405.18938.
+<a href=#257 id=257 data-nosnippet>257</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@ifinlist{}{}"</span>, sub[(val, list)] {
+<a href=#258 id=258 data-nosnippet>258</a>    <span class="kw">let </span>v_str = val.to_string();
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let </span>v = v_str.trim();
+<a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">let </span>l_str = list.to_string();
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="kw">let </span>found = l_str.split(<span class="string">','</span>).any(|item| item.trim() == v);
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>found {
+<a href=#263 id=263 data-nosnippet>263</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@firstoftwo"</span>))
+<a href=#264 id=264 data-nosnippet>264</a>    } <span class="kw">else </span>{
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@secondoftwo"</span>))
+<a href=#266 id=266 data-nosnippet>266</a>    })
+<a href=#267 id=267 data-nosnippet>267</a>  });
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>  <span class="comment">// \caption@setposition{value} — caption3.sty L1007. Sets the caption
+<a href=#270 id=270 data-nosnippet>270</a>  // position. We don't materialize caption-position logic; stub as
+<a href=#271 id=271 data-nosnippet>271</a>  // no-op so floatrow-style position setters don't crash.
+<a href=#272 id=272 data-nosnippet>272</a>  </span>def_macro_noop(<span class="string">"\\caption@setposition{}"</span>)<span class="question-mark">?</span>;
+<a href=#273 id=273 data-nosnippet>273</a>
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="comment">// \caption@set@bool{cs}{value} — caption3.sty L131. Defines `cs` as
+<a href=#275 id=275 data-nosnippet>275</a>  // `\@firstoftwo` if value is in {1,true,yes,on}, `\@secondoftwo` for
+<a href=#276 id=276 data-nosnippet>276</a>  // {0,false,no,off}, else error. We don't model caption boolean state
+<a href=#277 id=277 data-nosnippet>277</a>  // (caption settings don't affect XML output), so stub the dispatch
+<a href=#278 id=278 data-nosnippet>278</a>  // — \let the CS to \@secondoftwo by default. Witness 2408.09623,
+<a href=#279 id=279 data-nosnippet>279</a>  // 2408.12461, 2409.01528.
+<a href=#280 id=280 data-nosnippet>280</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@set@bool DefToken {}"</span>, sub[(cs, value)] {
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="kw">let </span>val = value.to_string();
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="kw">let </span>truthy = <span class="macro">matches!</span>(val.trim(), <span class="string">"1" </span>| <span class="string">"true" </span>| <span class="string">"yes" </span>| <span class="string">"on"</span>);
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="kw">let </span>target_name = <span class="kw">if </span>truthy { <span class="string">"\\@firstoftwo" </span>} <span class="kw">else </span>{ <span class="string">"\\@secondoftwo" </span>};
+<a href=#284 id=284 data-nosnippet>284</a>    state::let_i(<span class="kw-2">&amp;</span>cs, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(target_name), <span class="prelude-val">None</span>);
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+<a href=#286 id=286 data-nosnippet>286</a>  });
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="comment">// \caption@setbool{name} — wraps caption@set@bool by building \caption@if&lt;name&gt;.
+<a href=#288 id=288 data-nosnippet>288</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@setbool{}{}"</span>,
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"\\expandafter\\caption@set@bool\\csname caption@if#1\\endcsname{#2}"</span>);
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="comment">// \caption@ifbool{name} — \@nameuse{caption@if&lt;name&gt;} dispatch helper.
+<a href=#291 id=291 data-nosnippet>291</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@ifbool{}"</span>, <span class="string">"\\@nameuse{caption@if#1}"</span>);
+<a href=#292 id=292 data-nosnippet>292</a>
+<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// \caption@setoptions{name} (caption3.sty L325-333) — apply the
+<a href=#294 id=294 data-nosnippet>294</a>  // named option setup if defined, else do nothing. Used by floatrow
+<a href=#295 id=295 data-nosnippet>295</a>  // (line 473) and various caption-extension packages. Stub as no-op
+<a href=#296 id=296 data-nosnippet>296</a>  // since the actual option dictionary `\caption@opt@&lt;name&gt;` isn't
+<a href=#297 id=297 data-nosnippet>297</a>  // populated under our digestion model. Witness 2412.15378 (floatrow).
+<a href=#298 id=298 data-nosnippet>298</a>  </span>def_macro_noop(<span class="string">"\\caption@setoptions{}"</span>)<span class="question-mark">?</span>;
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// \caption@@make — internal caption-rendering hook used by float
+<a href=#300 id=300 data-nosnippet>300</a>  // wrappers. No-op for our XML pipeline (caption text is emitted via
+<a href=#301 id=301 data-nosnippet>301</a>  // ltx:caption regardless of formatting). Witness 2412.15378.
+<a href=#302 id=302 data-nosnippet>302</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\caption@@make{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="comment">// caption3.sty L850 defines \caption@setfont{kind}{value} — used
+<a href=#304 id=304 data-nosnippet>304</a>  // internally to apply font options (font/labelfont/textfont/size).
+<a href=#305 id=305 data-nosnippet>305</a>  // Font formatting is irrelevant in our XML output; gobble args.
+<a href=#306 id=306 data-nosnippet>306</a>  // Witness 2504.00326.
+<a href=#307 id=307 data-nosnippet>307</a>  </span>def_macro_noop(<span class="string">"\\caption@setfont{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="comment">// \phantomcaption (caption package, originally subcaption) — adds an
+<a href=#309 id=309 data-nosnippet>309</a>  // invisible caption for layout reasons; we don't need spacing in XML
+<a href=#310 id=310 data-nosnippet>310</a>  // output, so stub as no-op. Witness 2503.21681.
+<a href=#311 id=311 data-nosnippet>311</a>  </span>def_macro_noop(<span class="string">"\\phantomcaption"</span>)<span class="question-mark">?</span>;
+<a href=#312 id=312 data-nosnippet>312</a>  def_macro_noop(<span class="string">"\\phantomsubcaption"</span>)<span class="question-mark">?</span>;
+<a href=#313 id=313 data-nosnippet>313</a>});
 </code></pre></div></section></main></body></html>

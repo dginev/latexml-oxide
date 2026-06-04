@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex.rs`."><title>tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex.rs`."><title>tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="comment">// Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
@@ -96,300 +96,310 @@
 <a href=#96 id=96 data-nosnippet>96</a>  // paper-local symbol; without this flag the autoload trigger silently
 <a href=#97 id=97 data-nosnippet>97</a>  // wins, then expands `\Bbb $arg…$` as `\mathbb{$}` and cascades into
 <a href=#98 id=98 data-nosnippet>98</a>  // 62 mode-switch errors. Perl on the same input: 0 errors.
-<a href=#99 id=99 data-nosnippet>99</a>  </span>state::assign_value(
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs_name}:autoload"</span>),
-<a href=#101 id=101 data-nosnippet>101</a>    Stored::Bool(<span class="bool-val">true</span>),
-<a href=#102 id=102 data-nosnippet>102</a>    <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#103 id=103 data-nosnippet>103</a>  );
-<a href=#104 id=104 data-nosnippet>104</a>  <span class="prelude-val">Ok</span>(())
-<a href=#105 id=105 data-nosnippet>105</a>}
-<a href=#106 id=106 data-nosnippet>106</a>
-<a href=#107 id=107 data-nosnippet>107</a><span class="doccomment">/// Variant of `def_autoload` that loads a `.pool` (engine-level
-<a href=#108 id=108 data-nosnippet>108</a>/// definitions file) instead of a `.sty` package. Mirrors Perl's
-<a href=#109 id=109 data-nosnippet>109</a>/// `DefAutoload($trigger, '&lt;Pool&gt;.pool.ltxml')` form used by TeX.pool
-<a href=#110 id=110 data-nosnippet>110</a>/// to lazy-load AmSTeX.pool on amstex-style triggers.
-<a href=#111 id=111 data-nosnippet>111</a></span><span class="kw">fn </span>def_autoload_pool(cs_name: <span class="kw-2">&amp;</span>str, pool: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#112 id=112 data-nosnippet>112</a>  <span class="kw">use </span>latexml_core::common::store::Stored;
-<a href=#113 id=113 data-nosnippet>113</a>  <span class="kw">use </span>latexml_core::definition::ExpansionBody;
-<a href=#114 id=114 data-nosnippet>114</a>  <span class="kw">let </span>cs_tok = <span class="macro">T_CS!</span>(cs_name);
-<a href=#115 id=115 data-nosnippet>115</a>  <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs_tok) {
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#117 id=117 data-nosnippet>117</a>  }
-<a href=#118 id=118 data-nosnippet>118</a>  <span class="kw">let </span>pool_name = pool.to_string();
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="kw">let </span>cs_for_closure = cs_tok;
-<a href=#120 id=120 data-nosnippet>120</a>  def_macro(
-<a href=#121 id=121 data-nosnippet>121</a>    cs_tok,
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="prelude-val">None</span>,
-<a href=#123 id=123 data-nosnippet>123</a>    ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#124 id=124 data-nosnippet>124</a>      state::assign_meaning(<span class="kw-2">&amp;</span>cs_for_closure, Stored::None, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#125 id=125 data-nosnippet>125</a>      <span class="kw">let </span>pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
-<a href=#126 id=126 data-nosnippet>126</a>      input_definitions(<span class="kw-2">&amp;</span>pool_name, InputDefinitionOptions {
-<a href=#127 id=127 data-nosnippet>127</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
-<a href=#128 id=128 data-nosnippet>128</a>        ..InputDefinitionOptions::default()
-<a href=#129 id=129 data-nosnippet>129</a>      })<span class="question-mark">?</span>;
-<a href=#130 id=130 data-nosnippet>130</a>      latexml_core::state::hoist_top_frame_meaning_delta(<span class="kw-2">&amp;</span>pre_keys);
-<a href=#131 id=131 data-nosnippet>131</a>      <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[cs_for_closure]))
-<a href=#132 id=132 data-nosnippet>132</a>    })),
-<a href=#133 id=133 data-nosnippet>133</a>    <span class="prelude-val">None</span>,
-<a href=#134 id=134 data-nosnippet>134</a>  )<span class="question-mark">?</span>;
-<a href=#135 id=135 data-nosnippet>135</a>  state::assign_value(
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs_name}:autoload"</span>),
-<a href=#137 id=137 data-nosnippet>137</a>    Stored::Bool(<span class="bool-val">true</span>),
-<a href=#138 id=138 data-nosnippet>138</a>    <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#139 id=139 data-nosnippet>139</a>  );
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="prelude-val">Ok</span>(())
-<a href=#141 id=141 data-nosnippet>141</a>}
-<a href=#142 id=142 data-nosnippet>142</a>
-<a href=#143 id=143 data-nosnippet>143</a><span class="doccomment">/// Perl `FindFile($format._dump, ...)` parity for the plain dump.
-<a href=#144 id=144 data-nosnippet>144</a>/// Delegates to [`crate::plain_dump::plain_dump_available`], which
-<a href=#145 id=145 data-nosnippet>145</a>/// consults env overrides, the exe-relative install layout, the
-<a href=#146 id=146 data-nosnippet>146</a>/// dev-tree path, and the embedded fallback.
-<a href=#147 id=147 data-nosnippet>147</a></span><span class="kw">fn </span>plain_dump_available() -&gt; bool {
-<a href=#148 id=148 data-nosnippet>148</a>  <span class="kw">crate</span>::plain_dump::plain_dump_available()
-<a href=#149 id=149 data-nosnippet>149</a>}
-<a href=#150 id=150 data-nosnippet>150</a>
-<a href=#151 id=151 data-nosnippet>151</a>
-<a href=#152 id=152 data-nosnippet>152</a><span class="macro">LoadDefinitions!</span>({
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="comment">// port of TeX.pool.ltxml
-<a href=#154 id=154 data-nosnippet>154</a>  // commit 4cd73e7584c5f0422293ba38f9b757332584afec
-<a href=#155 id=155 data-nosnippet>155</a>  // Author: Bruce Miller &lt;nebconinc@gmail.com&gt;
-<a href=#156 id=156 data-nosnippet>156</a>  // Date:   Thu May 9 13:19:32 2024 -0400
-<a href=#157 id=157 data-nosnippet>157</a>
-<a href=#158 id=158 data-nosnippet>158</a>  // Perl TeX.pool.ltxml L22: LoadPool('Base'); — loads the entire
-<a href=#159 id=159 data-nosnippet>159</a>  // Base subsystem (schemas, parameter types, utilities, XMath,
-<a href=#160 id=160 data-nosnippet>160</a>  // TeX_*, eTeX, pdfTeX, Base_Deprecated). Rust mirrors this with
-<a href=#161 id=161 data-nosnippet>161</a>  // a single call to the `base` LoadDefinitions module so the same
-<a href=#162 id=162 data-nosnippet>162</a>  // pool is reusable from `ini_tex.rs` for dump-build (which
-<a href=#163 id=163 data-nosnippet>163</a>  // needs ONLY Base.pool, not the autoload triggers below).
-<a href=#164 id=164 data-nosnippet>164</a>  </span><span class="macro">InnerPool!</span>(base);
-<a href=#165 id=165 data-nosnippet>165</a>
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-<a href=#167 id=167 data-nosnippet>167</a>  // Pre-LoadFormat content. In Perl TeX.pool.ltxml these are AFTER
-<a href=#168 id=168 data-nosnippet>168</a>  // `LoadFormat('plain')` (lines 33-65), but Rust must define them
-<a href=#169 id=169 data-nosnippet>169</a>  // BEFORE the dump-write snapshot — otherwise they pollute
-<a href=#170 id=170 data-nosnippet>170</a>  // plain.dump.txt with autoload triggers that Perl's
-<a href=#171 id=171 data-nosnippet>171</a>  // plain_dump.pool.ltxml does NOT contain. Functionally equivalent:
-<a href=#172 id=172 data-nosnippet>172</a>  // by engine init's end, all these are in state regardless of order.
-<a href=#173 id=173 data-nosnippet>173</a>  //======================================================================
-<a href=#174 id=174 data-nosnippet>174</a>
-<a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">Let!</span>(<span class="string">"\\protect"</span>, <span class="string">"\\relax"</span>);
-<a href=#176 id=176 data-nosnippet>176</a>
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// Perl TeX.pool.ltxml L33-56: autoload triggers for LaTeX, expl3, AmSTeX.
-<a href=#178 id=178 data-nosnippet>178</a>  </span><span class="kw">for </span>ltxtrigger <span class="kw">in </span>[
-<a href=#179 id=179 data-nosnippet>179</a>    <span class="string">"\\documentclass"</span>,
-<a href=#180 id=180 data-nosnippet>180</a>    <span class="string">"\\newcommand"</span>,
-<a href=#181 id=181 data-nosnippet>181</a>    <span class="string">"\\renewcommand"</span>,
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="string">"\\newenvironment"</span>,
-<a href=#183 id=183 data-nosnippet>183</a>    <span class="string">"\\renewenvironment"</span>,
-<a href=#184 id=184 data-nosnippet>184</a>    <span class="string">"\\NeedsTeXFormat"</span>,
-<a href=#185 id=185 data-nosnippet>185</a>    <span class="string">"\\ProvidesPackage"</span>,
-<a href=#186 id=186 data-nosnippet>186</a>    <span class="string">"\\RequirePackage"</span>,
-<a href=#187 id=187 data-nosnippet>187</a>    <span class="string">"\\ProvidesFile"</span>,
-<a href=#188 id=188 data-nosnippet>188</a>    <span class="string">"\\makeatletter"</span>,
-<a href=#189 id=189 data-nosnippet>189</a>    <span class="string">"\\makeatother"</span>,
-<a href=#190 id=190 data-nosnippet>190</a>    <span class="string">"\\begin"</span>,
-<a href=#191 id=191 data-nosnippet>191</a>    <span class="string">"\\listfiles"</span>,
-<a href=#192 id=192 data-nosnippet>192</a>    <span class="string">"\\nofiles"</span>,
-<a href=#193 id=193 data-nosnippet>193</a>    <span class="string">"\\typeout"</span>,
-<a href=#194 id=194 data-nosnippet>194</a>    <span class="string">"\\PassOptionsToPackage"</span>,
-<a href=#195 id=195 data-nosnippet>195</a>    <span class="comment">// \UseRawInputEncoding is a LaTeX kernel command defined by latex.ltx
-<a href=#196 id=196 data-nosnippet>196</a>    // (L18268-18324). Some papers invoke it on line 1 col 1, BEFORE
-<a href=#197 id=197 data-nosnippet>197</a>    // \documentclass — e.g. as a UTF-8 / fontenc shield. Treat it as a
-<a href=#198 id=198 data-nosnippet>198</a>    // LaTeX-pool trigger so the kernel binds load and its `\relax` stub
-<a href=#199 id=199 data-nosnippet>199</a>    // (latex_constructs_rust_only.rs L59) is in place. Witness 2403.19280.
-<a href=#200 id=200 data-nosnippet>200</a>    </span><span class="string">"\\UseRawInputEncoding"</span>,
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="comment">// \DocumentMetadata{...} is the LaTeX 2024 kernel command for PDF
-<a href=#202 id=202 data-nosnippet>202</a>    // accessibility metadata; LaTeX expects it BEFORE \documentclass.
-<a href=#203 id=203 data-nosnippet>203</a>    // Same pre-documentclass autoload pattern as \UseRawInputEncoding.
-<a href=#204 id=204 data-nosnippet>204</a>    // Witness 2305.08034.
-<a href=#205 id=205 data-nosnippet>205</a>    </span><span class="string">"\\DocumentMetadata"</span>,
-<a href=#206 id=206 data-nosnippet>206</a>  ]
-<a href=#207 id=207 data-nosnippet>207</a>  .iter()
-<a href=#208 id=208 data-nosnippet>208</a>  {
-<a href=#209 id=209 data-nosnippet>209</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(ltxtrigger), <span class="prelude-val">None</span>, {
-<a href=#210 id=210 data-nosnippet>210</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@load@latex@pool"</span>), <span class="macro">T_CS!</span>(ltxtrigger))
-<a href=#211 id=211 data-nosnippet>211</a>    });
-<a href=#212 id=212 data-nosnippet>212</a>  }
-<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@load@latex@pool"</span>, {
-<a href=#214 id=214 data-nosnippet>214</a>    input_definitions(<span class="string">"LaTeX"</span>, InputDefinitionOptions {
-<a href=#215 id=215 data-nosnippet>215</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
-<a href=#216 id=216 data-nosnippet>216</a>      ..InputDefinitionOptions::default()
-<a href=#217 id=217 data-nosnippet>217</a>    })<span class="question-mark">?</span>;
-<a href=#218 id=218 data-nosnippet>218</a>    <span class="comment">// Restore our `\documentstyle` impl after the LaTeX pool load. The
-<a href=#219 id=219 data-nosnippet>219</a>    // latex_dump unconditionally redefines `\documentstyle` to the
-<a href=#220 id=220 data-nosnippet>220</a>    // kernel-style `\input{latex209.def}\documentclass`; in Perl that's
-<a href=#221 id=221 data-nosnippet>221</a>    // overridden by latex_constructs.pool.ltxml's DefConstructor, but
-<a href=#222 id=222 data-nosnippet>222</a>    // our latex_constructs.rs port doesn't redefine it. Re-Let to our
-<a href=#223 id=223 data-nosnippet>223</a>    // backup to win. See tex_job.rs `\lx@documentstyle@impl` for the
-<a href=#224 id=224 data-nosnippet>224</a>    // full diagnostic context (hep-th9912229 witness).
-<a href=#225 id=225 data-nosnippet>225</a>    </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
-<a href=#226 id=226 data-nosnippet>226</a>  });
-<a href=#227 id=227 data-nosnippet>227</a>
-<a href=#228 id=228 data-nosnippet>228</a>  <span class="comment">// Perl TeX.pool.ltxml L42-48: expl3 triggers
-<a href=#229 id=229 data-nosnippet>229</a>  </span><span class="kw">for </span>ltx3trigger <span class="kw">in </span>[
-<a href=#230 id=230 data-nosnippet>230</a>    <span class="string">"\\ExplSyntaxOn"</span>,
-<a href=#231 id=231 data-nosnippet>231</a>    <span class="string">"\\ProvidesExplClass"</span>,
-<a href=#232 id=232 data-nosnippet>232</a>    <span class="string">"\\ProvidesExplPackage"</span>,
-<a href=#233 id=233 data-nosnippet>233</a>  ] {
-<a href=#234 id=234 data-nosnippet>234</a>    def_autoload(ltx3trigger, <span class="string">"expl3"</span>)<span class="question-mark">?</span>;
-<a href=#235 id=235 data-nosnippet>235</a>  }
-<a href=#236 id=236 data-nosnippet>236</a>
-<a href=#237 id=237 data-nosnippet>237</a>  <span class="comment">// OmniBus autoloads (Perl: OmniBus.cls.ltxml DefAutoload entries)
-<a href=#238 id=238 data-nosnippet>238</a>  </span>def_autoload(<span class="string">"\\mathfrak"</span>, <span class="string">"amsfonts"</span>)<span class="question-mark">?</span>;
-<a href=#239 id=239 data-nosnippet>239</a>  def_autoload(<span class="string">"\\mathbb"</span>, <span class="string">"amsfonts"</span>)<span class="question-mark">?</span>;
-<a href=#240 id=240 data-nosnippet>240</a>  def_autoload(<span class="string">"\\Bbb"</span>, <span class="string">"amsfonts"</span>)<span class="question-mark">?</span>;
-<a href=#241 id=241 data-nosnippet>241</a>  def_autoload(<span class="string">"\\theoremstyle"</span>, <span class="string">"amsthm"</span>)<span class="question-mark">?</span>;
-<a href=#242 id=242 data-nosnippet>242</a>  def_autoload(<span class="string">"\\numberwithin"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
-<a href=#243 id=243 data-nosnippet>243</a>  def_autoload(<span class="string">"\\align"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
-<a href=#244 id=244 data-nosnippet>244</a>  def_autoload(<span class="string">"\\subequations"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
-<a href=#245 id=245 data-nosnippet>245</a>  def_autoload(<span class="string">"\\multline"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
-<a href=#246 id=246 data-nosnippet>246</a>  def_autoload(<span class="string">"\\curraddr"</span>, <span class="string">"ams_support"</span>)<span class="question-mark">?</span>;
-<a href=#247 id=247 data-nosnippet>247</a>  def_autoload(<span class="string">"\\subjclass"</span>, <span class="string">"ams_support"</span>)<span class="question-mark">?</span>;
-<a href=#248 id=248 data-nosnippet>248</a>
-<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">// LaTeX2HTML-era papers use the html.sty CSes without an explicit
-<a href=#250 id=250 data-nosnippet>250</a>  // `\usepackage{html}` because in the original LaTeX2HTML toolchain
-<a href=#251 id=251 data-nosnippet>251</a>  // those CSes were part of the implicit "html-on-load" expectation.
-<a href=#252 id=252 data-nosnippet>252</a>  // Auto-load `html.sty` (our binding maps these to hyperref equivalents)
-<a href=#253 id=253 data-nosnippet>253</a>  // when any of these triggers is referenced. Driver:
-<a href=#254 id=254 data-nosnippet>254</a>  // arxiv-examples/2108.04969 (uses `\htmladdnormallink{...}{...}` without
-<a href=#255 id=255 data-nosnippet>255</a>  // loading html.sty).
-<a href=#256 id=256 data-nosnippet>256</a>  </span>def_autoload(<span class="string">"\\htmladdnormallink"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#257 id=257 data-nosnippet>257</a>  def_autoload(<span class="string">"\\htmladdnormallinkfoot"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#258 id=258 data-nosnippet>258</a>  def_autoload(<span class="string">"\\htmladdimg"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#259 id=259 data-nosnippet>259</a>  def_autoload(<span class="string">"\\latextohtml"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#260 id=260 data-nosnippet>260</a>  def_autoload(<span class="string">"\\externalref"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#261 id=261 data-nosnippet>261</a>  def_autoload(<span class="string">"\\externalcite"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#262 id=262 data-nosnippet>262</a>  def_autoload(<span class="string">"\\htmlref"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#263 id=263 data-nosnippet>263</a>  def_autoload(<span class="string">"\\htmlurl"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#264 id=264 data-nosnippet>264</a>  def_autoload(<span class="string">"\\latexonly"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
-<a href=#265 id=265 data-nosnippet>265</a>
-<a href=#266 id=266 data-nosnippet>266</a>  <span class="comment">// Perl TeX.pool.ltxml L50-56: AmSTeX-pool autoload triggers. When any
-<a href=#267 id=267 data-nosnippet>267</a>  // of these CSes is invoked in plain-TeX-with-AmSTeX style (or before
-<a href=#268 id=268 data-nosnippet>268</a>  // `\documentstyle{amsppt}` arrives — see e.g. math/9610224's
-<a href=#269 id=269 data-nosnippet>269</a>  // `\NoBlackBoxes\documentstyle{amsppt}` ordering), Perl auto-loads
-<a href=#270 id=270 data-nosnippet>270</a>  // `AmSTeX.pool.ltxml` first. Without this, our Rust port emitted
-<a href=#271 id=271 data-nosnippet>271</a>  // `Error:undefined:\NoBlackBoxes` because the AmSTeX pool hadn't
-<a href=#272 id=272 data-nosnippet>272</a>  // been loaded yet.
-<a href=#273 id=273 data-nosnippet>273</a>  </span><span class="kw">for </span>amstrigger <span class="kw">in </span>[
-<a href=#274 id=274 data-nosnippet>274</a>    <span class="string">"\\BlackBoxes"</span>,     <span class="string">"\\NoBlackBoxes"</span>,
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="string">"\\TagsAsMath"</span>,     <span class="string">"\\TagsAsText"</span>,
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="string">"\\TagsOnLeft"</span>,     <span class="string">"\\TagsOnRight"</span>,
-<a href=#277 id=277 data-nosnippet>277</a>    <span class="string">"\\CenteredTagsOnSplits"</span>, <span class="string">"\\TopOrBottomTagsOnSplits"</span>,
-<a href=#278 id=278 data-nosnippet>278</a>    <span class="string">"\\LimitsOnInts"</span>,   <span class="string">"\\NoLimitsOnInts"</span>,
-<a href=#279 id=279 data-nosnippet>279</a>    <span class="string">"\\LimitsOnNames"</span>,  <span class="string">"\\NoLimitsOnNames"</span>,
-<a href=#280 id=280 data-nosnippet>280</a>    <span class="string">"\\LimitsOnSums"</span>,   <span class="string">"\\NoLimitsOnSums"</span>,
-<a href=#281 id=281 data-nosnippet>281</a>    <span class="string">"\\loadbold"</span>,       <span class="string">"\\loadeufb"</span>, <span class="string">"\\loadeufm"</span>,
-<a href=#282 id=282 data-nosnippet>282</a>    <span class="string">"\\loadeurb"</span>,       <span class="string">"\\loadeurm"</span>,
-<a href=#283 id=283 data-nosnippet>283</a>    <span class="string">"\\loadeusb"</span>,       <span class="string">"\\loadeusm"</span>,
-<a href=#284 id=284 data-nosnippet>284</a>    <span class="string">"\\loadmathfont"</span>,   <span class="string">"\\loadmsam"</span>, <span class="string">"\\loadmsbm"</span>,
-<a href=#285 id=285 data-nosnippet>285</a>  ] {
-<a href=#286 id=286 data-nosnippet>286</a>    def_autoload_pool(amstrigger, <span class="string">"AmSTeX"</span>)<span class="question-mark">?</span>;
-<a href=#287 id=287 data-nosnippet>287</a>  }
-<a href=#288 id=288 data-nosnippet>288</a>
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="comment">// File bookkeeping (Perl TeX.pool.ltxml, needed before LaTeX.pool loads)
-<a href=#290 id=290 data-nosnippet>290</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#291 id=291 data-nosnippet>291</a>    <span class="string">"\\@pushfilename"</span>,
-<a href=#292 id=292 data-nosnippet>292</a>    <span class="string">r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"
-<a href=#293 id=293 data-nosnippet>293</a>  </span>);
-<a href=#294 id=294 data-nosnippet>294</a>  <span class="macro">DefMacro!</span>(
-<a href=#295 id=295 data-nosnippet>295</a>    <span class="string">"\\@popfilename"</span>,
-<a href=#296 id=296 data-nosnippet>296</a>    <span class="string">r"\expandafter\@p@pfilename\@currnamestack\@nil"
-<a href=#297 id=297 data-nosnippet>297</a>  </span>);
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">DefMacro!</span>(
-<a href=#299 id=299 data-nosnippet>299</a>    <span class="string">"\\@p@pfilename {}{}{} Until:\\@nil"</span>,
-<a href=#300 id=300 data-nosnippet>300</a>    <span class="string">r"\gdef\@currname{#1}%
-<a href=#301 id=301 data-nosnippet>301</a>      \gdef\@currext{#2}%
-<a href=#302 id=302 data-nosnippet>302</a>      \catcode`\@#3\relax
-<a href=#303 id=303 data-nosnippet>303</a>      \gdef\@currnamestack{#4}"
-<a href=#304 id=304 data-nosnippet>304</a>  </span>);
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currnamestack"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="macro">Let!</span>(<span class="string">"\\@currname"</span>, <span class="string">"\\lx@empty"</span>);
-<a href=#307 id=307 data-nosnippet>307</a>  <span class="macro">Let!</span>(<span class="string">"\\@currext"</span>, <span class="string">"\\lx@empty"</span>);
-<a href=#308 id=308 data-nosnippet>308</a>
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="comment">// Early stubs needed by ProcessOptions/DeclareOption before LaTeX.pool loads
-<a href=#310 id=310 data-nosnippet>310</a>  </span><span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@unknownoptionerror"</span>)) {
-<a href=#311 id=311 data-nosnippet>311</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\@unknownoptionerror"</span>, {});
-<a href=#312 id=312 data-nosnippet>312</a>  }
-<a href=#313 id=313 data-nosnippet>313</a>  <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\OptionNotUsed"</span>)) {
-<a href=#314 id=314 data-nosnippet>314</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\OptionNotUsed"</span>, {});
-<a href=#315 id=315 data-nosnippet>315</a>  }
-<a href=#316 id=316 data-nosnippet>316</a>  <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\AtBeginDocument"</span>)) {
-<a href=#317 id=317 data-nosnippet>317</a>    def_macro_noop(<span class="string">"\\AtBeginDocument{}"</span>)<span class="question-mark">?</span>;
-<a href=#318 id=318 data-nosnippet>318</a>  }
-<a href=#319 id=319 data-nosnippet>319</a>  <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@addtofilelist"</span>)) {
-<a href=#320 id=320 data-nosnippet>320</a>    def_macro_noop(<span class="string">"\\@addtofilelist{}"</span>)<span class="question-mark">?</span>;
-<a href=#321 id=321 data-nosnippet>321</a>  }
-<a href=#322 id=322 data-nosnippet>322</a>
-<a href=#323 id=323 data-nosnippet>323</a>  <span class="comment">// Perl: LoadFormat('plain') — Package.pm L2734-2752. Mutually
-<a href=#324 id=324 data-nosnippet>324</a>  // exclusive dump-or-base path (see strict-Perl LoadFormat parity).
-<a href=#325 id=325 data-nosnippet>325</a>  </span><span class="macro">InnerPool!</span>(plain_bootstrap); <span class="comment">// Perl: plain_bootstrap.pool.ltxml
-<a href=#326 id=326 data-nosnippet>326</a>
-<a href=#327 id=327 data-nosnippet>327</a>  // In `--init=plain.tex` (dump-build) mode, stop after plain_bootstrap.
-<a href=#328 id=328 data-nosnippet>328</a>  // The whole point is to take a snapshot at this point, then digest raw
-<a href=#329 id=329 data-nosnippet>329</a>  // plain.tex against it — pre-loading plain_dump / plain_base /
-<a href=#330 id=330 data-nosnippet>330</a>  // plain_constructs would pollute the snapshot and silence the diff for
-<a href=#331 id=331 data-nosnippet>331</a>  // every register/macro plain.tex defines (e.g. `\countdef\allocationnumber=21`
-<a href=#332 id=332 data-nosnippet>332</a>  // → `Stored::Register{address:"\count21"}` then identical to itself).
-<a href=#333 id=333 data-nosnippet>333</a>  // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
-<a href=#334 id=334 data-nosnippet>334</a>  // `prepare_session`, so this branch fires before tex.rs runs in init mode.
-<a href=#335 id=335 data-nosnippet>335</a>  // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
-<a href=#336 id=336 data-nosnippet>336</a>  // `Base.pool` (no LoadFormat) before `DumpFile`.
-<a href=#337 id=337 data-nosnippet>337</a>  </span><span class="kw">if </span>!<span class="kw-2">*</span>INI_MODE {
-<a href=#338 id=338 data-nosnippet>338</a>    <span class="comment">// Perl `LoadFormat('plain')` strict split (mirrors latex.rs):
-<a href=#339 id=339 data-nosnippet>339</a>    //   if dump available: bootstrap → dump → constructs (NO base)
-<a href=#340 id=340 data-nosnippet>340</a>    //   else:              bootstrap → base → constructs (NO dump)
-<a href=#341 id=341 data-nosnippet>341</a>    </span><span class="kw">if </span>!<span class="kw-2">*</span>NODUMP &amp;&amp; plain_dump_available() {
-<a href=#342 id=342 data-nosnippet>342</a>      <span class="macro">InnerPool!</span>(plain_dump); <span class="comment">// runtime loader for resources/dumps/plain.dump.txt
-<a href=#343 id=343 data-nosnippet>343</a>    </span>} <span class="kw">else </span>{
-<a href=#344 id=344 data-nosnippet>344</a>      <span class="macro">InnerPool!</span>(plain_base); <span class="comment">// Perl: plain_base.pool.ltxml
-<a href=#345 id=345 data-nosnippet>345</a>    </span>}
-<a href=#346 id=346 data-nosnippet>346</a>    <span class="macro">InnerPool!</span>(plain_constructs); <span class="comment">// Perl: plain_constructs.pool.ltxml → math_common
-<a href=#347 id=347 data-nosnippet>347</a>
-<a href=#348 id=348 data-nosnippet>348</a>    // Symmetric with latex.rs: any PA/MPA let-aliases whose target wasn't
-<a href=#349 id=349 data-nosnippet>349</a>    // defined at dump-load time were queued; flush them now that
-<a href=#350 id=350 data-nosnippet>350</a>    // plain_constructs has run.
-<a href=#351 id=351 data-nosnippet>351</a>    </span><span class="kw">let </span>(applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
-<a href=#352 id=352 data-nosnippet>352</a>    <span class="kw">if </span>applied + skipped &gt; <span class="number">0 </span>{
-<a href=#353 id=353 data-nosnippet>353</a>      <span class="macro">Info!</span>(
-<a href=#354 id=354 data-nosnippet>354</a>        <span class="string">"plain_dump"</span>, <span class="string">"deferred"</span>,
-<a href=#355 id=355 data-nosnippet>355</a>        <span class="macro">s!</span>(<span class="string">"deferred aliases: {} applied, {} skipped"</span>, applied, skipped)
-<a href=#356 id=356 data-nosnippet>356</a>      );
-<a href=#357 id=357 data-nosnippet>357</a>    }
-<a href=#358 id=358 data-nosnippet>358</a>  }
-<a href=#359 id=359 data-nosnippet>359</a>
-<a href=#360 id=360 data-nosnippet>360</a>  <span class="comment">//======================================================================
-<a href=#361 id=361 data-nosnippet>361</a>  // After all other rewrites have acted, a little cleanup
-<a href=#362 id=362 data-nosnippet>362</a>  // [This suggests that it should be (one of) the LAST (math) rewrite applied?
-<a href=#363 id=363 data-nosnippet>363</a>  // Do we need to define it last?]
-<a href=#364 id=364 data-nosnippet>364</a>  // DefRewrite(xpath =&gt; 'descendant-or-self::ltx:XMWrap[count(child::*)=1]',
-<a href=#365 id=365 data-nosnippet>365</a>  //   replace =&gt; sub { my ($document, $wrap) = @_;
-<a href=#366 id=366 data-nosnippet>366</a>  //     if (my $node = $document-&gt;getFirstChildElement($wrap)) {
-<a href=#367 id=367 data-nosnippet>367</a>  //       # Copy attributes but NOT internal ones,
-<a href=#368 id=368 data-nosnippet>368</a>  //       # NOR xml:id, else we get clashes
-<a href=#369 id=369 data-nosnippet>369</a>  //       foreach my $attribute ($wrap-&gt;attributes) {
-<a href=#370 id=370 data-nosnippet>370</a>  //         if ($attribute-&gt;nodeType == XML_ATTRIBUTE_NODE) {
-<a href=#371 id=371 data-nosnippet>371</a>  //           my $attr = $document-&gt;getNodeQName($attribute);
-<a href=#372 id=372 data-nosnippet>372</a>  //           $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue)
-<a href=#373 id=373 data-nosnippet>373</a>  //             unless ($attr eq 'xml:id') || $attr =~ /^_/;
-<a href=#374 id=374 data-nosnippet>374</a>  //           if    ($attr =~ /^_/) { }
-<a href=#375 id=375 data-nosnippet>375</a>  //           elsif ($attr eq 'xml:id') {
-<a href=#376 id=376 data-nosnippet>376</a>  //             my $id = $attribute-&gt;getValue;
-<a href=#377 id=377 data-nosnippet>377</a>  //             if (my $previd = $node-&gt;getAttribute('xml:id')) {    # Keep original id
-<a href=#378 id=378 data-nosnippet>378</a>  //                   # but swap any references to the one on the wrapper!
-<a href=#379 id=379 data-nosnippet>379</a>  //               foreach my $ref ($document-&gt;findnodes("//*[\@idref='$id']")) {
-<a href=#380 id=380 data-nosnippet>380</a>  //                 $ref-&gt;setAttribute(idref =&gt; $previd); }
-<a href=#381 id=381 data-nosnippet>381</a>  //               $wrap-&gt;removeAttribute('xml"id');
-<a href=#382 id=382 data-nosnippet>382</a>  //               $document-&gt;unRecordID($id); }
-<a href=#383 id=383 data-nosnippet>383</a>  //             else {
-<a href=#384 id=384 data-nosnippet>384</a>  //               $wrap-&gt;removeAttribute('xml:id');
-<a href=#385 id=385 data-nosnippet>385</a>  //               $document-&gt;unRecordID($id);
-<a href=#386 id=386 data-nosnippet>386</a>  //               $document-&gt;setAttribute($node, 'xml:id' =&gt; $id); } }
-<a href=#387 id=387 data-nosnippet>387</a>  //           else {
-<a href=#388 id=388 data-nosnippet>388</a>  //             $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue); } } }
-<a href=#389 id=389 data-nosnippet>389</a>  //       # But keep $node's font from being overwritten.
-<a href=#390 id=390 data-nosnippet>390</a>  //       $document-&gt;setNodeFont($wrap, $document-&gt;getNodeFont($node));
-<a href=#391 id=391 data-nosnippet>391</a>  //       ## WHY THIS????
-<a href=#392 id=392 data-nosnippet>392</a>  //       $document-&gt;getNode-&gt;appendChild($node);
-<a href=#393 id=393 data-nosnippet>393</a>  // } });
-<a href=#394 id=394 data-nosnippet>394</a></span>});
+<a href=#99 id=99 data-nosnippet>99</a>  //
+<a href=#100 id=100 data-nosnippet>100</a>  // Store the PACKAGE NAME (not just a bool) so readers can distinguish an
+<a href=#101 id=101 data-nosnippet>101</a>  // UNFIRED trigger from one whose package has since loaded. Once `&lt;package&gt;`
+<a href=#102 id=102 data-nosnippet>102</a>  // is loaded — explicitly via `\usepackage` (which redefines the trigger CS
+<a href=#103 id=103 data-nosnippet>103</a>  // to the real macro WITHOUT firing this closure) or via the closure firing —
+<a href=#104 id=104 data-nosnippet>104</a>  // the CS is genuinely defined, and `\lx@ifundefined` must report it as such.
+<a href=#105 id=105 data-nosnippet>105</a>  // Witness: `\@ifundefined{align}` after `\usepackage{amsmath}` wrongly
+<a href=#106 id=106 data-nosnippet>106</a>  // returned "undefined" (the stale flag masked the real `\align`), breaking
+<a href=#107 id=107 data-nosnippet>107</a>  // extract.sty's `\begin ` env-existence probe → 90-error cascade on
+<a href=#108 id=108 data-nosnippet>108</a>  // 1611.02736. `.pool` triggers keep the bool form (no `&lt;pkg&gt;.sty_loaded`).
+<a href=#109 id=109 data-nosnippet>109</a>  </span>state::assign_value(
+<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs_name}:autoload"</span>),
+<a href=#111 id=111 data-nosnippet>111</a>    Stored::String(latexml_core::common::arena::pin(package)),
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#113 id=113 data-nosnippet>113</a>  );
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="prelude-val">Ok</span>(())
+<a href=#115 id=115 data-nosnippet>115</a>}
+<a href=#116 id=116 data-nosnippet>116</a>
+<a href=#117 id=117 data-nosnippet>117</a><span class="doccomment">/// Variant of `def_autoload` that loads a `.pool` (engine-level
+<a href=#118 id=118 data-nosnippet>118</a>/// definitions file) instead of a `.sty` package. Mirrors Perl's
+<a href=#119 id=119 data-nosnippet>119</a>/// `DefAutoload($trigger, '&lt;Pool&gt;.pool.ltxml')` form used by TeX.pool
+<a href=#120 id=120 data-nosnippet>120</a>/// to lazy-load AmSTeX.pool on amstex-style triggers.
+<a href=#121 id=121 data-nosnippet>121</a></span><span class="kw">fn </span>def_autoload_pool(cs_name: <span class="kw-2">&amp;</span>str, pool: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="kw">use </span>latexml_core::common::store::Stored;
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="kw">use </span>latexml_core::definition::ExpansionBody;
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="kw">let </span>cs_tok = <span class="macro">T_CS!</span>(cs_name);
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span>cs_tok) {
+<a href=#126 id=126 data-nosnippet>126</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#127 id=127 data-nosnippet>127</a>  }
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="kw">let </span>pool_name = pool.to_string();
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="kw">let </span>cs_for_closure = cs_tok;
+<a href=#130 id=130 data-nosnippet>130</a>  def_macro(
+<a href=#131 id=131 data-nosnippet>131</a>    cs_tok,
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="prelude-val">None</span>,
+<a href=#133 id=133 data-nosnippet>133</a>    ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#134 id=134 data-nosnippet>134</a>      state::assign_meaning(<span class="kw-2">&amp;</span>cs_for_closure, Stored::None, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#135 id=135 data-nosnippet>135</a>      <span class="kw">let </span>pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
+<a href=#136 id=136 data-nosnippet>136</a>      input_definitions(<span class="kw-2">&amp;</span>pool_name, InputDefinitionOptions {
+<a href=#137 id=137 data-nosnippet>137</a>        extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
+<a href=#138 id=138 data-nosnippet>138</a>        ..InputDefinitionOptions::default()
+<a href=#139 id=139 data-nosnippet>139</a>      })<span class="question-mark">?</span>;
+<a href=#140 id=140 data-nosnippet>140</a>      latexml_core::state::hoist_top_frame_meaning_delta(<span class="kw-2">&amp;</span>pre_keys);
+<a href=#141 id=141 data-nosnippet>141</a>      <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">vec!</span>[cs_for_closure]))
+<a href=#142 id=142 data-nosnippet>142</a>    })),
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="prelude-val">None</span>,
+<a href=#144 id=144 data-nosnippet>144</a>  )<span class="question-mark">?</span>;
+<a href=#145 id=145 data-nosnippet>145</a>  state::assign_value(
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs_name}:autoload"</span>),
+<a href=#147 id=147 data-nosnippet>147</a>    Stored::Bool(<span class="bool-val">true</span>),
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#149 id=149 data-nosnippet>149</a>  );
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="prelude-val">Ok</span>(())
+<a href=#151 id=151 data-nosnippet>151</a>}
+<a href=#152 id=152 data-nosnippet>152</a>
+<a href=#153 id=153 data-nosnippet>153</a><span class="doccomment">/// Perl `FindFile($format._dump, ...)` parity for the plain dump.
+<a href=#154 id=154 data-nosnippet>154</a>/// Delegates to [`crate::plain_dump::plain_dump_available`], which
+<a href=#155 id=155 data-nosnippet>155</a>/// consults env overrides, the exe-relative install layout, the
+<a href=#156 id=156 data-nosnippet>156</a>/// dev-tree path, and the embedded fallback.
+<a href=#157 id=157 data-nosnippet>157</a></span><span class="kw">fn </span>plain_dump_available() -&gt; bool {
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="kw">crate</span>::plain_dump::plain_dump_available()
+<a href=#159 id=159 data-nosnippet>159</a>}
+<a href=#160 id=160 data-nosnippet>160</a>
+<a href=#161 id=161 data-nosnippet>161</a>
+<a href=#162 id=162 data-nosnippet>162</a><span class="macro">LoadDefinitions!</span>({
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="comment">// port of TeX.pool.ltxml
+<a href=#164 id=164 data-nosnippet>164</a>  // commit 4cd73e7584c5f0422293ba38f9b757332584afec
+<a href=#165 id=165 data-nosnippet>165</a>  // Author: Bruce Miller &lt;nebconinc@gmail.com&gt;
+<a href=#166 id=166 data-nosnippet>166</a>  // Date:   Thu May 9 13:19:32 2024 -0400
+<a href=#167 id=167 data-nosnippet>167</a>
+<a href=#168 id=168 data-nosnippet>168</a>  // Perl TeX.pool.ltxml L22: LoadPool('Base'); — loads the entire
+<a href=#169 id=169 data-nosnippet>169</a>  // Base subsystem (schemas, parameter types, utilities, XMath,
+<a href=#170 id=170 data-nosnippet>170</a>  // TeX_*, eTeX, pdfTeX, Base_Deprecated). Rust mirrors this with
+<a href=#171 id=171 data-nosnippet>171</a>  // a single call to the `base` LoadDefinitions module so the same
+<a href=#172 id=172 data-nosnippet>172</a>  // pool is reusable from `ini_tex.rs` for dump-build (which
+<a href=#173 id=173 data-nosnippet>173</a>  // needs ONLY Base.pool, not the autoload triggers below).
+<a href=#174 id=174 data-nosnippet>174</a>  </span><span class="macro">InnerPool!</span>(base);
+<a href=#175 id=175 data-nosnippet>175</a>
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+<a href=#177 id=177 data-nosnippet>177</a>  // Pre-LoadFormat content. In Perl TeX.pool.ltxml these are AFTER
+<a href=#178 id=178 data-nosnippet>178</a>  // `LoadFormat('plain')` (lines 33-65), but Rust must define them
+<a href=#179 id=179 data-nosnippet>179</a>  // BEFORE the dump-write snapshot — otherwise they pollute
+<a href=#180 id=180 data-nosnippet>180</a>  // plain.dump.txt with autoload triggers that Perl's
+<a href=#181 id=181 data-nosnippet>181</a>  // plain_dump.pool.ltxml does NOT contain. Functionally equivalent:
+<a href=#182 id=182 data-nosnippet>182</a>  // by engine init's end, all these are in state regardless of order.
+<a href=#183 id=183 data-nosnippet>183</a>  //======================================================================
+<a href=#184 id=184 data-nosnippet>184</a>
+<a href=#185 id=185 data-nosnippet>185</a>  </span><span class="macro">Let!</span>(<span class="string">"\\protect"</span>, <span class="string">"\\relax"</span>);
+<a href=#186 id=186 data-nosnippet>186</a>
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// Perl TeX.pool.ltxml L33-56: autoload triggers for LaTeX, expl3, AmSTeX.
+<a href=#188 id=188 data-nosnippet>188</a>  </span><span class="kw">for </span>ltxtrigger <span class="kw">in </span>[
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="string">"\\documentclass"</span>,
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="string">"\\newcommand"</span>,
+<a href=#191 id=191 data-nosnippet>191</a>    <span class="string">"\\renewcommand"</span>,
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="string">"\\newenvironment"</span>,
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="string">"\\renewenvironment"</span>,
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="string">"\\NeedsTeXFormat"</span>,
+<a href=#195 id=195 data-nosnippet>195</a>    <span class="string">"\\ProvidesPackage"</span>,
+<a href=#196 id=196 data-nosnippet>196</a>    <span class="string">"\\RequirePackage"</span>,
+<a href=#197 id=197 data-nosnippet>197</a>    <span class="string">"\\ProvidesFile"</span>,
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="string">"\\makeatletter"</span>,
+<a href=#199 id=199 data-nosnippet>199</a>    <span class="string">"\\makeatother"</span>,
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"\\begin"</span>,
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"\\listfiles"</span>,
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="string">"\\nofiles"</span>,
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="string">"\\typeout"</span>,
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="string">"\\PassOptionsToPackage"</span>,
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="comment">// \UseRawInputEncoding is a LaTeX kernel command defined by latex.ltx
+<a href=#206 id=206 data-nosnippet>206</a>    // (L18268-18324). Some papers invoke it on line 1 col 1, BEFORE
+<a href=#207 id=207 data-nosnippet>207</a>    // \documentclass — e.g. as a UTF-8 / fontenc shield. Treat it as a
+<a href=#208 id=208 data-nosnippet>208</a>    // LaTeX-pool trigger so the kernel binds load and its `\relax` stub
+<a href=#209 id=209 data-nosnippet>209</a>    // (latex_constructs_rust_only.rs L59) is in place. Witness 2403.19280.
+<a href=#210 id=210 data-nosnippet>210</a>    </span><span class="string">"\\UseRawInputEncoding"</span>,
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="comment">// \DocumentMetadata{...} is the LaTeX 2024 kernel command for PDF
+<a href=#212 id=212 data-nosnippet>212</a>    // accessibility metadata; LaTeX expects it BEFORE \documentclass.
+<a href=#213 id=213 data-nosnippet>213</a>    // Same pre-documentclass autoload pattern as \UseRawInputEncoding.
+<a href=#214 id=214 data-nosnippet>214</a>    // Witness 2305.08034.
+<a href=#215 id=215 data-nosnippet>215</a>    </span><span class="string">"\\DocumentMetadata"</span>,
+<a href=#216 id=216 data-nosnippet>216</a>  ]
+<a href=#217 id=217 data-nosnippet>217</a>  .iter()
+<a href=#218 id=218 data-nosnippet>218</a>  {
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(ltxtrigger), <span class="prelude-val">None</span>, {
+<a href=#220 id=220 data-nosnippet>220</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@load@latex@pool"</span>), <span class="macro">T_CS!</span>(ltxtrigger))
+<a href=#221 id=221 data-nosnippet>221</a>    });
+<a href=#222 id=222 data-nosnippet>222</a>  }
+<a href=#223 id=223 data-nosnippet>223</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\@load@latex@pool"</span>, {
+<a href=#224 id=224 data-nosnippet>224</a>    input_definitions(<span class="string">"LaTeX"</span>, InputDefinitionOptions {
+<a href=#225 id=225 data-nosnippet>225</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
+<a href=#226 id=226 data-nosnippet>226</a>      ..InputDefinitionOptions::default()
+<a href=#227 id=227 data-nosnippet>227</a>    })<span class="question-mark">?</span>;
+<a href=#228 id=228 data-nosnippet>228</a>    <span class="comment">// Restore our `\documentstyle` impl after the LaTeX pool load. The
+<a href=#229 id=229 data-nosnippet>229</a>    // latex_dump unconditionally redefines `\documentstyle` to the
+<a href=#230 id=230 data-nosnippet>230</a>    // kernel-style `\input{latex209.def}\documentclass`; in Perl that's
+<a href=#231 id=231 data-nosnippet>231</a>    // overridden by latex_constructs.pool.ltxml's DefConstructor, but
+<a href=#232 id=232 data-nosnippet>232</a>    // our latex_constructs.rs port doesn't redefine it. Re-Let to our
+<a href=#233 id=233 data-nosnippet>233</a>    // backup to win. See tex_job.rs `\lx@documentstyle@impl` for the
+<a href=#234 id=234 data-nosnippet>234</a>    // full diagnostic context (hep-th9912229 witness).
+<a href=#235 id=235 data-nosnippet>235</a>    </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
+<a href=#236 id=236 data-nosnippet>236</a>  });
+<a href=#237 id=237 data-nosnippet>237</a>
+<a href=#238 id=238 data-nosnippet>238</a>  <span class="comment">// Perl TeX.pool.ltxml L42-48: expl3 triggers
+<a href=#239 id=239 data-nosnippet>239</a>  </span><span class="kw">for </span>ltx3trigger <span class="kw">in </span>[
+<a href=#240 id=240 data-nosnippet>240</a>    <span class="string">"\\ExplSyntaxOn"</span>,
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="string">"\\ProvidesExplClass"</span>,
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="string">"\\ProvidesExplPackage"</span>,
+<a href=#243 id=243 data-nosnippet>243</a>  ] {
+<a href=#244 id=244 data-nosnippet>244</a>    def_autoload(ltx3trigger, <span class="string">"expl3"</span>)<span class="question-mark">?</span>;
+<a href=#245 id=245 data-nosnippet>245</a>  }
+<a href=#246 id=246 data-nosnippet>246</a>
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="comment">// OmniBus autoloads (Perl: OmniBus.cls.ltxml DefAutoload entries)
+<a href=#248 id=248 data-nosnippet>248</a>  </span>def_autoload(<span class="string">"\\mathfrak"</span>, <span class="string">"amsfonts"</span>)<span class="question-mark">?</span>;
+<a href=#249 id=249 data-nosnippet>249</a>  def_autoload(<span class="string">"\\mathbb"</span>, <span class="string">"amsfonts"</span>)<span class="question-mark">?</span>;
+<a href=#250 id=250 data-nosnippet>250</a>  def_autoload(<span class="string">"\\Bbb"</span>, <span class="string">"amsfonts"</span>)<span class="question-mark">?</span>;
+<a href=#251 id=251 data-nosnippet>251</a>  def_autoload(<span class="string">"\\theoremstyle"</span>, <span class="string">"amsthm"</span>)<span class="question-mark">?</span>;
+<a href=#252 id=252 data-nosnippet>252</a>  def_autoload(<span class="string">"\\numberwithin"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
+<a href=#253 id=253 data-nosnippet>253</a>  def_autoload(<span class="string">"\\align"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
+<a href=#254 id=254 data-nosnippet>254</a>  def_autoload(<span class="string">"\\subequations"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
+<a href=#255 id=255 data-nosnippet>255</a>  def_autoload(<span class="string">"\\multline"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>;
+<a href=#256 id=256 data-nosnippet>256</a>  def_autoload(<span class="string">"\\curraddr"</span>, <span class="string">"ams_support"</span>)<span class="question-mark">?</span>;
+<a href=#257 id=257 data-nosnippet>257</a>  def_autoload(<span class="string">"\\subjclass"</span>, <span class="string">"ams_support"</span>)<span class="question-mark">?</span>;
+<a href=#258 id=258 data-nosnippet>258</a>
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// LaTeX2HTML-era papers use the html.sty CSes without an explicit
+<a href=#260 id=260 data-nosnippet>260</a>  // `\usepackage{html}` because in the original LaTeX2HTML toolchain
+<a href=#261 id=261 data-nosnippet>261</a>  // those CSes were part of the implicit "html-on-load" expectation.
+<a href=#262 id=262 data-nosnippet>262</a>  // Auto-load `html.sty` (our binding maps these to hyperref equivalents)
+<a href=#263 id=263 data-nosnippet>263</a>  // when any of these triggers is referenced. Driver:
+<a href=#264 id=264 data-nosnippet>264</a>  // arxiv-examples/2108.04969 (uses `\htmladdnormallink{...}{...}` without
+<a href=#265 id=265 data-nosnippet>265</a>  // loading html.sty).
+<a href=#266 id=266 data-nosnippet>266</a>  </span>def_autoload(<span class="string">"\\htmladdnormallink"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#267 id=267 data-nosnippet>267</a>  def_autoload(<span class="string">"\\htmladdnormallinkfoot"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#268 id=268 data-nosnippet>268</a>  def_autoload(<span class="string">"\\htmladdimg"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#269 id=269 data-nosnippet>269</a>  def_autoload(<span class="string">"\\latextohtml"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#270 id=270 data-nosnippet>270</a>  def_autoload(<span class="string">"\\externalref"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#271 id=271 data-nosnippet>271</a>  def_autoload(<span class="string">"\\externalcite"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#272 id=272 data-nosnippet>272</a>  def_autoload(<span class="string">"\\htmlref"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#273 id=273 data-nosnippet>273</a>  def_autoload(<span class="string">"\\htmlurl"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#274 id=274 data-nosnippet>274</a>  def_autoload(<span class="string">"\\latexonly"</span>, <span class="string">"html"</span>)<span class="question-mark">?</span>;
+<a href=#275 id=275 data-nosnippet>275</a>
+<a href=#276 id=276 data-nosnippet>276</a>  <span class="comment">// Perl TeX.pool.ltxml L50-56: AmSTeX-pool autoload triggers. When any
+<a href=#277 id=277 data-nosnippet>277</a>  // of these CSes is invoked in plain-TeX-with-AmSTeX style (or before
+<a href=#278 id=278 data-nosnippet>278</a>  // `\documentstyle{amsppt}` arrives — see e.g. math/9610224's
+<a href=#279 id=279 data-nosnippet>279</a>  // `\NoBlackBoxes\documentstyle{amsppt}` ordering), Perl auto-loads
+<a href=#280 id=280 data-nosnippet>280</a>  // `AmSTeX.pool.ltxml` first. Without this, our Rust port emitted
+<a href=#281 id=281 data-nosnippet>281</a>  // `Error:undefined:\NoBlackBoxes` because the AmSTeX pool hadn't
+<a href=#282 id=282 data-nosnippet>282</a>  // been loaded yet.
+<a href=#283 id=283 data-nosnippet>283</a>  </span><span class="kw">for </span>amstrigger <span class="kw">in </span>[
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="string">"\\BlackBoxes"</span>,     <span class="string">"\\NoBlackBoxes"</span>,
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="string">"\\TagsAsMath"</span>,     <span class="string">"\\TagsAsText"</span>,
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="string">"\\TagsOnLeft"</span>,     <span class="string">"\\TagsOnRight"</span>,
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="string">"\\CenteredTagsOnSplits"</span>, <span class="string">"\\TopOrBottomTagsOnSplits"</span>,
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="string">"\\LimitsOnInts"</span>,   <span class="string">"\\NoLimitsOnInts"</span>,
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"\\LimitsOnNames"</span>,  <span class="string">"\\NoLimitsOnNames"</span>,
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="string">"\\LimitsOnSums"</span>,   <span class="string">"\\NoLimitsOnSums"</span>,
+<a href=#291 id=291 data-nosnippet>291</a>    <span class="string">"\\loadbold"</span>,       <span class="string">"\\loadeufb"</span>, <span class="string">"\\loadeufm"</span>,
+<a href=#292 id=292 data-nosnippet>292</a>    <span class="string">"\\loadeurb"</span>,       <span class="string">"\\loadeurm"</span>,
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="string">"\\loadeusb"</span>,       <span class="string">"\\loadeusm"</span>,
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="string">"\\loadmathfont"</span>,   <span class="string">"\\loadmsam"</span>, <span class="string">"\\loadmsbm"</span>,
+<a href=#295 id=295 data-nosnippet>295</a>  ] {
+<a href=#296 id=296 data-nosnippet>296</a>    def_autoload_pool(amstrigger, <span class="string">"AmSTeX"</span>)<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>  }
+<a href=#298 id=298 data-nosnippet>298</a>
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// File bookkeeping (Perl TeX.pool.ltxml, needed before LaTeX.pool loads)
+<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="string">"\\@pushfilename"</span>,
+<a href=#302 id=302 data-nosnippet>302</a>    <span class="string">r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"
+<a href=#303 id=303 data-nosnippet>303</a>  </span>);
+<a href=#304 id=304 data-nosnippet>304</a>  <span class="macro">DefMacro!</span>(
+<a href=#305 id=305 data-nosnippet>305</a>    <span class="string">"\\@popfilename"</span>,
+<a href=#306 id=306 data-nosnippet>306</a>    <span class="string">r"\expandafter\@p@pfilename\@currnamestack\@nil"
+<a href=#307 id=307 data-nosnippet>307</a>  </span>);
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="macro">DefMacro!</span>(
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="string">"\\@p@pfilename {}{}{} Until:\\@nil"</span>,
+<a href=#310 id=310 data-nosnippet>310</a>    <span class="string">r"\gdef\@currname{#1}%
+<a href=#311 id=311 data-nosnippet>311</a>      \gdef\@currext{#2}%
+<a href=#312 id=312 data-nosnippet>312</a>      \catcode`\@#3\relax
+<a href=#313 id=313 data-nosnippet>313</a>      \gdef\@currnamestack{#4}"
+<a href=#314 id=314 data-nosnippet>314</a>  </span>);
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currnamestack"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
+<a href=#316 id=316 data-nosnippet>316</a>  <span class="macro">Let!</span>(<span class="string">"\\@currname"</span>, <span class="string">"\\lx@empty"</span>);
+<a href=#317 id=317 data-nosnippet>317</a>  <span class="macro">Let!</span>(<span class="string">"\\@currext"</span>, <span class="string">"\\lx@empty"</span>);
+<a href=#318 id=318 data-nosnippet>318</a>
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="comment">// Early stubs needed by ProcessOptions/DeclareOption before LaTeX.pool loads
+<a href=#320 id=320 data-nosnippet>320</a>  </span><span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@unknownoptionerror"</span>)) {
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\@unknownoptionerror"</span>, {});
+<a href=#322 id=322 data-nosnippet>322</a>  }
+<a href=#323 id=323 data-nosnippet>323</a>  <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\OptionNotUsed"</span>)) {
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\OptionNotUsed"</span>, {});
+<a href=#325 id=325 data-nosnippet>325</a>  }
+<a href=#326 id=326 data-nosnippet>326</a>  <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\AtBeginDocument"</span>)) {
+<a href=#327 id=327 data-nosnippet>327</a>    def_macro_noop(<span class="string">"\\AtBeginDocument{}"</span>)<span class="question-mark">?</span>;
+<a href=#328 id=328 data-nosnippet>328</a>  }
+<a href=#329 id=329 data-nosnippet>329</a>  <span class="kw">if </span>!<span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@addtofilelist"</span>)) {
+<a href=#330 id=330 data-nosnippet>330</a>    def_macro_noop(<span class="string">"\\@addtofilelist{}"</span>)<span class="question-mark">?</span>;
+<a href=#331 id=331 data-nosnippet>331</a>  }
+<a href=#332 id=332 data-nosnippet>332</a>
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="comment">// Perl: LoadFormat('plain') — Package.pm L2734-2752. Mutually
+<a href=#334 id=334 data-nosnippet>334</a>  // exclusive dump-or-base path (see strict-Perl LoadFormat parity).
+<a href=#335 id=335 data-nosnippet>335</a>  </span><span class="macro">InnerPool!</span>(plain_bootstrap); <span class="comment">// Perl: plain_bootstrap.pool.ltxml
+<a href=#336 id=336 data-nosnippet>336</a>
+<a href=#337 id=337 data-nosnippet>337</a>  // In `--init=plain.tex` (dump-build) mode, stop after plain_bootstrap.
+<a href=#338 id=338 data-nosnippet>338</a>  // The whole point is to take a snapshot at this point, then digest raw
+<a href=#339 id=339 data-nosnippet>339</a>  // plain.tex against it — pre-loading plain_dump / plain_base /
+<a href=#340 id=340 data-nosnippet>340</a>  // plain_constructs would pollute the snapshot and silence the diff for
+<a href=#341 id=341 data-nosnippet>341</a>  // every register/macro plain.tex defines (e.g. `\countdef\allocationnumber=21`
+<a href=#342 id=342 data-nosnippet>342</a>  // → `Stored::Register{address:"\count21"}` then identical to itself).
+<a href=#343 id=343 data-nosnippet>343</a>  // `LATEXML_INI_MODE=1` is set by `bin/latexml_oxide.rs` BEFORE
+<a href=#344 id=344 data-nosnippet>344</a>  // `prepare_session`, so this branch fires before tex.rs runs in init mode.
+<a href=#345 id=345 data-nosnippet>345</a>  // Mirrors Perl `Core.pm::iniTeX` default `mode='Base'`, which loads only
+<a href=#346 id=346 data-nosnippet>346</a>  // `Base.pool` (no LoadFormat) before `DumpFile`.
+<a href=#347 id=347 data-nosnippet>347</a>  </span><span class="kw">if </span>!<span class="kw-2">*</span>INI_MODE {
+<a href=#348 id=348 data-nosnippet>348</a>    <span class="comment">// Perl `LoadFormat('plain')` strict split (mirrors latex.rs):
+<a href=#349 id=349 data-nosnippet>349</a>    //   if dump available: bootstrap → dump → constructs (NO base)
+<a href=#350 id=350 data-nosnippet>350</a>    //   else:              bootstrap → base → constructs (NO dump)
+<a href=#351 id=351 data-nosnippet>351</a>    </span><span class="kw">if </span>!<span class="kw-2">*</span>NODUMP &amp;&amp; plain_dump_available() {
+<a href=#352 id=352 data-nosnippet>352</a>      <span class="macro">InnerPool!</span>(plain_dump); <span class="comment">// runtime loader for resources/dumps/plain.dump.txt
+<a href=#353 id=353 data-nosnippet>353</a>    </span>} <span class="kw">else </span>{
+<a href=#354 id=354 data-nosnippet>354</a>      <span class="macro">InnerPool!</span>(plain_base); <span class="comment">// Perl: plain_base.pool.ltxml
+<a href=#355 id=355 data-nosnippet>355</a>    </span>}
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="macro">InnerPool!</span>(plain_constructs); <span class="comment">// Perl: plain_constructs.pool.ltxml → math_common
+<a href=#357 id=357 data-nosnippet>357</a>
+<a href=#358 id=358 data-nosnippet>358</a>    // Symmetric with latex.rs: any PA/MPA let-aliases whose target wasn't
+<a href=#359 id=359 data-nosnippet>359</a>    // defined at dump-load time were queued; flush them now that
+<a href=#360 id=360 data-nosnippet>360</a>    // plain_constructs has run.
+<a href=#361 id=361 data-nosnippet>361</a>    </span><span class="kw">let </span>(applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">if </span>applied + skipped &gt; <span class="number">0 </span>{
+<a href=#363 id=363 data-nosnippet>363</a>      <span class="macro">Info!</span>(
+<a href=#364 id=364 data-nosnippet>364</a>        <span class="string">"plain_dump"</span>, <span class="string">"deferred"</span>,
+<a href=#365 id=365 data-nosnippet>365</a>        <span class="macro">s!</span>(<span class="string">"deferred aliases: {} applied, {} skipped"</span>, applied, skipped)
+<a href=#366 id=366 data-nosnippet>366</a>      );
+<a href=#367 id=367 data-nosnippet>367</a>    }
+<a href=#368 id=368 data-nosnippet>368</a>  }
+<a href=#369 id=369 data-nosnippet>369</a>
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="comment">//======================================================================
+<a href=#371 id=371 data-nosnippet>371</a>  // After all other rewrites have acted, a little cleanup
+<a href=#372 id=372 data-nosnippet>372</a>  // [This suggests that it should be (one of) the LAST (math) rewrite applied?
+<a href=#373 id=373 data-nosnippet>373</a>  // Do we need to define it last?]
+<a href=#374 id=374 data-nosnippet>374</a>  // DefRewrite(xpath =&gt; 'descendant-or-self::ltx:XMWrap[count(child::*)=1]',
+<a href=#375 id=375 data-nosnippet>375</a>  //   replace =&gt; sub { my ($document, $wrap) = @_;
+<a href=#376 id=376 data-nosnippet>376</a>  //     if (my $node = $document-&gt;getFirstChildElement($wrap)) {
+<a href=#377 id=377 data-nosnippet>377</a>  //       # Copy attributes but NOT internal ones,
+<a href=#378 id=378 data-nosnippet>378</a>  //       # NOR xml:id, else we get clashes
+<a href=#379 id=379 data-nosnippet>379</a>  //       foreach my $attribute ($wrap-&gt;attributes) {
+<a href=#380 id=380 data-nosnippet>380</a>  //         if ($attribute-&gt;nodeType == XML_ATTRIBUTE_NODE) {
+<a href=#381 id=381 data-nosnippet>381</a>  //           my $attr = $document-&gt;getNodeQName($attribute);
+<a href=#382 id=382 data-nosnippet>382</a>  //           $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue)
+<a href=#383 id=383 data-nosnippet>383</a>  //             unless ($attr eq 'xml:id') || $attr =~ /^_/;
+<a href=#384 id=384 data-nosnippet>384</a>  //           if    ($attr =~ /^_/) { }
+<a href=#385 id=385 data-nosnippet>385</a>  //           elsif ($attr eq 'xml:id') {
+<a href=#386 id=386 data-nosnippet>386</a>  //             my $id = $attribute-&gt;getValue;
+<a href=#387 id=387 data-nosnippet>387</a>  //             if (my $previd = $node-&gt;getAttribute('xml:id')) {    # Keep original id
+<a href=#388 id=388 data-nosnippet>388</a>  //                   # but swap any references to the one on the wrapper!
+<a href=#389 id=389 data-nosnippet>389</a>  //               foreach my $ref ($document-&gt;findnodes("//*[\@idref='$id']")) {
+<a href=#390 id=390 data-nosnippet>390</a>  //                 $ref-&gt;setAttribute(idref =&gt; $previd); }
+<a href=#391 id=391 data-nosnippet>391</a>  //               $wrap-&gt;removeAttribute('xml"id');
+<a href=#392 id=392 data-nosnippet>392</a>  //               $document-&gt;unRecordID($id); }
+<a href=#393 id=393 data-nosnippet>393</a>  //             else {
+<a href=#394 id=394 data-nosnippet>394</a>  //               $wrap-&gt;removeAttribute('xml:id');
+<a href=#395 id=395 data-nosnippet>395</a>  //               $document-&gt;unRecordID($id);
+<a href=#396 id=396 data-nosnippet>396</a>  //               $document-&gt;setAttribute($node, 'xml:id' =&gt; $id); } }
+<a href=#397 id=397 data-nosnippet>397</a>  //           else {
+<a href=#398 id=398 data-nosnippet>398</a>  //             $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue); } } }
+<a href=#399 id=399 data-nosnippet>399</a>  //       # But keep $node's font from being overwritten.
+<a href=#400 id=400 data-nosnippet>400</a>  //       $document-&gt;setNodeFont($wrap, $document-&gt;getNodeFont($node));
+<a href=#401 id=401 data-nosnippet>401</a>  //       ## WHY THIS????
+<a href=#402 id=402 data-nosnippet>402</a>  //       $document-&gt;getNode-&gt;appendChild($node);
+<a href=#403 id=403 data-nosnippet>403</a>  // } });
+<a href=#404 id=404 data-nosnippet>404</a></span>});
 </code></pre></div></section></main></body></html>

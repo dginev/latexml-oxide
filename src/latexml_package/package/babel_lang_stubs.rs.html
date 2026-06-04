@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/babel_lang_stubs.rs`."><title>babel_lang_stubs.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>babel_lang_stubs.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! babel-language stubs for `.ldf` files that aren't installed in
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/babel_lang_stubs.rs`."><title>babel_lang_stubs.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>babel_lang_stubs.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! babel-language stubs for `.ldf` files that aren't installed in
 <a href=#2 id=2 data-nosnippet>2</a>//! minimal TeXLive environments.
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! When babel-italian (or babel-spanish, babel-portuges, …) is
@@ -59,33 +59,97 @@
 <a href=#59 id=59 data-nosnippet>59</a>}
 <a href=#60 id=60 data-nosnippet>60</a>
 <a href=#61 id=61 data-nosnippet>61</a><span class="kw">pub fn </span>load_italian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    { install_lang_stub(<span class="string">"italian"</span>) }
-<a href=#62 id=62 data-nosnippet>62</a><span class="kw">pub fn </span>load_spanish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    {
-<a href=#63 id=63 data-nosnippet>63</a>  install_lang_stub(<span class="string">"spanish"</span>)<span class="question-mark">?</span>;
-<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// babel-spanish-specific `\decimalpoint` — switches decimal separator
-<a href=#65 id=65 data-nosnippet>65</a>  // from `,` (Spanish default) to `.`. We don't render locale-aware
-<a href=#66 id=66 data-nosnippet>66</a>  // numerics; HTML uses `.` by default. No-op preserves intent.
-<a href=#67 id=67 data-nosnippet>67</a>  // Driver 2511.19353 (`\usepackage[spanish]{babel}\decimalpoint`).
-<a href=#68 id=68 data-nosnippet>68</a>  // Also `\decimalcomma` for the reverse direction.
-<a href=#69 id=69 data-nosnippet>69</a>  </span>latexml_core::stomach::raw_tex(
-<a href=#70 id=70 data-nosnippet>70</a>    <span class="string">r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}"
-<a href=#71 id=71 data-nosnippet>71</a>  </span>)<span class="question-mark">?</span>;
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="prelude-val">Ok</span>(())
-<a href=#73 id=73 data-nosnippet>73</a>}
-<a href=#74 id=74 data-nosnippet>74</a><span class="kw">pub fn </span>load_portuges() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"portuges"</span>) }
-<a href=#75 id=75 data-nosnippet>75</a><span class="kw">pub fn </span>load_portuguese() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { install_lang_stub(<span class="string">"portuguese"</span>) }
-<a href=#76 id=76 data-nosnippet>76</a><span class="kw">pub fn </span>load_brazil() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;     { install_lang_stub(<span class="string">"brazil"</span>) }
-<a href=#77 id=77 data-nosnippet>77</a><span class="kw">pub fn </span>load_brazilian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;  { install_lang_stub(<span class="string">"brazilian"</span>) }
-<a href=#78 id=78 data-nosnippet>78</a><span class="kw">pub fn </span>load_czech() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"czech"</span>) }
-<a href=#79 id=79 data-nosnippet>79</a><span class="kw">pub fn </span>load_polish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;     { install_lang_stub(<span class="string">"polish"</span>) }
-<a href=#80 id=80 data-nosnippet>80</a><span class="kw">pub fn </span>load_romanian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"romanian"</span>) }
-<a href=#81 id=81 data-nosnippet>81</a><span class="kw">pub fn </span>load_slovene() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    { install_lang_stub(<span class="string">"slovene"</span>) }
-<a href=#82 id=82 data-nosnippet>82</a><span class="kw">pub fn </span>load_turkish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    { install_lang_stub(<span class="string">"turkish"</span>) }
-<a href=#83 id=83 data-nosnippet>83</a><span class="kw">pub fn </span>load_vietnamese() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { install_lang_stub(<span class="string">"vietnamese"</span>) }
-<a href=#84 id=84 data-nosnippet>84</a><span class="kw">pub fn </span>load_icelandic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;  { install_lang_stub(<span class="string">"icelandic"</span>) }
-<a href=#85 id=85 data-nosnippet>85</a><span class="kw">pub fn </span>load_arabic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;     { install_lang_stub(<span class="string">"arabic"</span>) }
-<a href=#86 id=86 data-nosnippet>86</a><span class="kw">pub fn </span>load_dutch() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"dutch"</span>) }
-<a href=#87 id=87 data-nosnippet>87</a><span class="kw">pub fn </span>load_farsi() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"farsi"</span>) }
-<a href=#88 id=88 data-nosnippet>88</a><span class="kw">pub fn </span>load_hindi() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"hindi"</span>) }
-<a href=#89 id=89 data-nosnippet>89</a><span class="kw">pub fn </span>load_latin() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"latin"</span>) }
-<a href=#90 id=90 data-nosnippet>90</a><span class="kw">pub fn </span>load_croatian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"croatian"</span>) }
+<a href=#62 id=62 data-nosnippet>62</a><span class="comment">// English-family stubs. babel-english.ldf uses `\@namedef{captions
+<a href=#63 id=63 data-nosnippet>63</a>// \CurrentOption}` etc., so each variant gets its own
+<a href=#64 id=64 data-nosnippet>64</a>// `\captions&lt;variant&gt;` / `\date&lt;variant&gt;`. When babel dispatches a
+<a href=#65 id=65 data-nosnippet>65</a>// `\selectlanguage{american}` it expects `\captionsamerican` or the
+<a href=#66 id=66 data-nosnippet>66</a>// `\captionsenglish` fallback. With incomplete raw-load these aren't
+<a href=#67 id=67 data-nosnippet>67</a>// defined and the language-switch errors out (~17 papers in R-stages
+<a href=#68 id=68 data-nosnippet>68</a>// for `\dateUSenglish`, 13 for `\captionsenglish`).
+<a href=#69 id=69 data-nosnippet>69</a>//
+<a href=#70 id=70 data-nosnippet>70</a>// We register the captions/extras/date hooks for the canonical
+<a href=#71 id=71 data-nosnippet>71</a>// english variants (english, american, british, USenglish, UKenglish,
+<a href=#72 id=72 data-nosnippet>72</a>// canadian, australian, newzealand) as no-ops — the variant captions
+<a href=#73 id=73 data-nosnippet>73</a>// (chaptername etc.) just stay English in our HTML output, which is
+<a href=#74 id=74 data-nosnippet>74</a>// already the project's default. Witness:
+<a href=#75 id=75 data-nosnippet>75</a>// arXiv:1502.05791 (`\usepackage[british,american]{babel}`)
+<a href=#76 id=76 data-nosnippet>76</a>// CONVERR_2 → expected OK.
+<a href=#77 id=77 data-nosnippet>77</a></span><span class="kw">pub fn </span>load_english() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    { install_lang_stub(<span class="string">"english"</span>) }
+<a href=#78 id=78 data-nosnippet>78</a><span class="kw">pub fn </span>load_american() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   {
+<a href=#79 id=79 data-nosnippet>79</a>  install_lang_stub(<span class="string">"american"</span>)<span class="question-mark">?</span>;
+<a href=#80 id=80 data-nosnippet>80</a>  install_lang_stub(<span class="string">"USenglish"</span>)<span class="question-mark">?</span>;
+<a href=#81 id=81 data-nosnippet>81</a>  install_lang_stub(<span class="string">"english"</span>) <span class="comment">// fallback chain
+<a href=#82 id=82 data-nosnippet>82</a></span>}
+<a href=#83 id=83 data-nosnippet>83</a><span class="kw">pub fn </span>load_british() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    {
+<a href=#84 id=84 data-nosnippet>84</a>  install_lang_stub(<span class="string">"british"</span>)<span class="question-mark">?</span>;
+<a href=#85 id=85 data-nosnippet>85</a>  install_lang_stub(<span class="string">"UKenglish"</span>)<span class="question-mark">?</span>;
+<a href=#86 id=86 data-nosnippet>86</a>  install_lang_stub(<span class="string">"english"</span>)
+<a href=#87 id=87 data-nosnippet>87</a>}
+<a href=#88 id=88 data-nosnippet>88</a><span class="kw">pub fn </span>load_usenglish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;  { install_lang_stub(<span class="string">"USenglish"</span>)<span class="question-mark">?</span>; install_lang_stub(<span class="string">"english"</span>) }
+<a href=#89 id=89 data-nosnippet>89</a><span class="kw">pub fn </span>load_ukenglish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;  { install_lang_stub(<span class="string">"UKenglish"</span>)<span class="question-mark">?</span>; install_lang_stub(<span class="string">"english"</span>) }
+<a href=#90 id=90 data-nosnippet>90</a><span class="kw">pub fn </span>load_canadian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"canadian"</span>)<span class="question-mark">?</span>; install_lang_stub(<span class="string">"english"</span>) }
+<a href=#91 id=91 data-nosnippet>91</a><span class="kw">pub fn </span>load_australian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { install_lang_stub(<span class="string">"australian"</span>)<span class="question-mark">?</span>; install_lang_stub(<span class="string">"english"</span>) }
+<a href=#92 id=92 data-nosnippet>92</a><span class="kw">pub fn </span>load_newzealand() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { install_lang_stub(<span class="string">"newzealand"</span>)<span class="question-mark">?</span>; install_lang_stub(<span class="string">"english"</span>) }
+<a href=#93 id=93 data-nosnippet>93</a>
+<a href=#94 id=94 data-nosnippet>94</a><span class="kw">pub fn </span>load_spanish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    {
+<a href=#95 id=95 data-nosnippet>95</a>  install_lang_stub(<span class="string">"spanish"</span>)<span class="question-mark">?</span>;
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="comment">// babel-spanish-specific `\decimalpoint` — switches decimal separator
+<a href=#97 id=97 data-nosnippet>97</a>  // from `,` (Spanish default) to `.`. We don't render locale-aware
+<a href=#98 id=98 data-nosnippet>98</a>  // numerics; HTML uses `.` by default. No-op preserves intent.
+<a href=#99 id=99 data-nosnippet>99</a>  // Driver 2511.19353 (`\usepackage[spanish]{babel}\decimalpoint`).
+<a href=#100 id=100 data-nosnippet>100</a>  // Also `\decimalcomma` for the reverse direction.
+<a href=#101 id=101 data-nosnippet>101</a>  //
+<a href=#102 id=102 data-nosnippet>102</a>  // Spanish math-operator aliases — historical babel-spanish
+<a href=#103 id=103 data-nosnippet>103</a>  // `\extrasspanish` hook adds the Spanish-language trig function
+<a href=#104 id=104 data-nosnippet>104</a>  // names. Cataluña/Spain convention uses `sen` (seno), `tg`
+<a href=#105 id=105 data-nosnippet>105</a>  // (tangente), `cotg` (cotangente), `cosec` (cosecante) etc. instead
+<a href=#106 id=106 data-nosnippet>106</a>  // of the English/AMS \sin, \tan, \cot, \csc. We install them
+<a href=#107 id=107 data-nosnippet>107</a>  // unconditionally rather than via the `\extras` hook — same
+<a href=#108 id=108 data-nosnippet>108</a>  // outcome for our XML output and avoids the hook-timing complexity.
+<a href=#109 id=109 data-nosnippet>109</a>  // Witness: arXiv:1909.12119 — `Error:undefined:\sen` /
+<a href=#110 id=110 data-nosnippet>110</a>  // `\cotg` / `\tg` / `\arcsen` cluster on `\usepackage[spanish]{babel}`.
+<a href=#111 id=111 data-nosnippet>111</a>  </span>latexml_core::stomach::raw_tex(
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="string">r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}
+<a href=#113 id=113 data-nosnippet>113</a>    \providecommand\sen{\mathop{\mathrm{sen}}\nolimits}
+<a href=#114 id=114 data-nosnippet>114</a>    \providecommand\tg{\mathop{\mathrm{tg}}\nolimits}
+<a href=#115 id=115 data-nosnippet>115</a>    \providecommand\cotg{\mathop{\mathrm{cotg}}\nolimits}
+<a href=#116 id=116 data-nosnippet>116</a>    \providecommand\cosec{\mathop{\mathrm{cosec}}\nolimits}
+<a href=#117 id=117 data-nosnippet>117</a>    \providecommand\arcsen{\mathop{\mathrm{arc\,sen}}\nolimits}
+<a href=#118 id=118 data-nosnippet>118</a>    \providecommand\arctg{\mathop{\mathrm{arc\,tg}}\nolimits}
+<a href=#119 id=119 data-nosnippet>119</a>    \providecommand\arccotg{\mathop{\mathrm{arc\,cotg}}\nolimits}"
+<a href=#120 id=120 data-nosnippet>120</a>  </span>)<span class="question-mark">?</span>;
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="prelude-val">Ok</span>(())
+<a href=#122 id=122 data-nosnippet>122</a>}
+<a href=#123 id=123 data-nosnippet>123</a><span class="kw">pub fn </span>load_portuges() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"portuges"</span>) }
+<a href=#124 id=124 data-nosnippet>124</a><span class="kw">pub fn </span>load_portuguese() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { install_lang_stub(<span class="string">"portuguese"</span>) }
+<a href=#125 id=125 data-nosnippet>125</a><span class="kw">pub fn </span>load_brazil() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;     { install_lang_stub(<span class="string">"brazil"</span>) }
+<a href=#126 id=126 data-nosnippet>126</a><span class="kw">pub fn </span>load_brazilian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;  { install_lang_stub(<span class="string">"brazilian"</span>) }
+<a href=#127 id=127 data-nosnippet>127</a><span class="kw">pub fn </span>load_czech() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"czech"</span>) }
+<a href=#128 id=128 data-nosnippet>128</a><span class="kw">pub fn </span>load_polish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;     { install_lang_stub(<span class="string">"polish"</span>) }
+<a href=#129 id=129 data-nosnippet>129</a><span class="kw">pub fn </span>load_romanian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"romanian"</span>) }
+<a href=#130 id=130 data-nosnippet>130</a><span class="kw">pub fn </span>load_slovene() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    { install_lang_stub(<span class="string">"slovene"</span>) }
+<a href=#131 id=131 data-nosnippet>131</a><span class="kw">pub fn </span>load_turkish() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;    { install_lang_stub(<span class="string">"turkish"</span>) }
+<a href=#132 id=132 data-nosnippet>132</a><span class="kw">pub fn </span>load_vietnamese() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#133 id=133 data-nosnippet>133</a>  install_lang_stub(<span class="string">"vietnamese"</span>)<span class="question-mark">?</span>;
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// babel-vietnamese (vietnam.ldf) selects T5 font encoding and defines
+<a href=#135 id=135 data-nosnippet>135</a>  // the Vietnamese precomposed-character command set (`\ecircumflex`,
+<a href=#136 id=136 data-nosnippet>136</a>  // `\ocircumflex`, `\abreve`, `\ohorn`, `\uhorn`, hook-above `\h`, …).
+<a href=#137 id=137 data-nosnippet>137</a>  // vietnam.ldf is NOT installed in TeX Live's base tree, so without
+<a href=#138 id=138 data-nosnippet>138</a>  // this the commands stay undefined when a paper uses
+<a href=#139 id=139 data-nosnippet>139</a>  // `\usepackage[vietnamese]{babel}` with Vietnamese author names.
+<a href=#140 id=140 data-nosnippet>140</a>  // Surpass-Perl: Perl's babel can't find vietnam.ldf either; route
+<a href=#141 id=141 data-nosnippet>141</a>  // through our t5enc binding (mirrors Perl `t5enc.def.ltxml`) — the
+<a href=#142 id=142 data-nosnippet>142</a>  // same set vntex.sty pulls in. Witness 2003.07696
+<a href=#143 id=143 data-nosnippet>143</a>  // (`\usepackage[english,vietnamese]{babel}`, author
+<a href=#144 id=144 data-nosnippet>144</a>  // "Nguy\~\ecircumflex n Th\d{i} B\'ich Th\h{u}y").
+<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="kw">crate</span>::package::t5enc_def::load_definitions()<span class="question-mark">?</span>;
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="prelude-val">Ok</span>(())
+<a href=#147 id=147 data-nosnippet>147</a>}
+<a href=#148 id=148 data-nosnippet>148</a><span class="kw">pub fn </span>load_icelandic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;  { install_lang_stub(<span class="string">"icelandic"</span>) }
+<a href=#149 id=149 data-nosnippet>149</a><span class="kw">pub fn </span>load_arabic() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;     { install_lang_stub(<span class="string">"arabic"</span>) }
+<a href=#150 id=150 data-nosnippet>150</a><span class="kw">pub fn </span>load_dutch() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"dutch"</span>) }
+<a href=#151 id=151 data-nosnippet>151</a><span class="kw">pub fn </span>load_farsi() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"farsi"</span>) }
+<a href=#152 id=152 data-nosnippet>152</a><span class="kw">pub fn </span>load_hindi() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"hindi"</span>) }
+<a href=#153 id=153 data-nosnippet>153</a><span class="kw">pub fn </span>load_latin() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;      { install_lang_stub(<span class="string">"latin"</span>) }
+<a href=#154 id=154 data-nosnippet>154</a><span class="kw">pub fn </span>load_croatian() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt;   { install_lang_stub(<span class="string">"croatian"</span>) }
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/keyvals.rs`."><title>keyvals.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>keyvals.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>core::slice::Iter;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/keyvals.rs`."><title>keyvals.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/</div>keyvals.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>core::slice::Iter;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>libxml::tree::Node;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>std::borrow::Cow;
@@ -897,181 +897,195 @@
 <a href=#897 id=897 data-nosnippet>897</a>              }
 <a href=#898 id=898 data-nosnippet>898</a>            }
 <a href=#899 id=899 data-nosnippet>899</a>          }
-<a href=#900 id=900 data-nosnippet>900</a>          <span class="comment">// and cleanup
-<a href=#901 id=901 data-nosnippet>901</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(<span class="kw-2">ref </span>keydef)) = keytype_opt {
-<a href=#902 id=902 data-nosnippet>902</a>            keydef.revert_catcodes()<span class="question-mark">?</span>;
-<a href=#903 id=903 data-nosnippet>903</a>          }
-<a href=#904 id=904 data-nosnippet>904</a>        }
-<a href=#905 id=905 data-nosnippet>905</a>        <span class="comment">// and store our value please
-<a href=#906 id=906 data-nosnippet>906</a>        </span><span class="kw">if </span>!silence_missing || <span class="self">self</span>.can_resolve_keyval_for(key) {
-<a href=#907 id=907 data-nosnippet>907</a>          <span class="self">self</span>.add_value(key, value, !is_explicit, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#908 id=908 data-nosnippet>908</a>        }
-<a href=#909 id=909 data-nosnippet>909</a>      }
-<a href=#910 id=910 data-nosnippet>910</a>
-<a href=#911 id=911 data-nosnippet>911</a>      <span class="comment">// we finish if we have the last element
-<a href=#912 id=912 data-nosnippet>912</a>      </span><span class="kw">if </span>delim_opt.as_ref() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>until) {
-<a href=#913 id=913 data-nosnippet>913</a>        <span class="kw">break</span>;
-<a href=#914 id=914 data-nosnippet>914</a>      }
-<a href=#915 id=915 data-nosnippet>915</a>    }
-<a href=#916 id=916 data-nosnippet>916</a>
-<a href=#917 id=917 data-nosnippet>917</a>    <span class="comment">// rebuild and return nothing
-<a href=#918 id=918 data-nosnippet>918</a>    </span><span class="self">self</span>.rebuild(<span class="prelude-val">None</span>);
-<a href=#919 id=919 data-nosnippet>919</a>
-<a href=#920 id=920 data-nosnippet>920</a>    <span class="comment">// restore all settings if we silenced the missing keys
-<a href=#921 id=921 data-nosnippet>921</a>    </span><span class="kw">if </span>silence_missing {
-<a href=#922 id=922 data-nosnippet>922</a>      <span class="self">self</span>.skip_missing = skip_missing;
-<a href=#923 id=923 data-nosnippet>923</a>      <span class="self">self</span>.hook_missing = hook_missing;
-<a href=#924 id=924 data-nosnippet>924</a>    }
-<a href=#925 id=925 data-nosnippet>925</a>    <span class="prelude-val">Ok</span>(())
-<a href=#926 id=926 data-nosnippet>926</a>  }
-<a href=#927 id=927 data-nosnippet>927</a>
-<a href=#928 id=928 data-nosnippet>928</a>  <span class="doccomment">/// TODO: This is an improvised method for switching KeyVals into Tokens, but losing all collected
-<a href=#929 id=929 data-nosnippet>929</a>  /// metadata.
-<a href=#930 id=930 data-nosnippet>930</a>  /// The long-term solution ought to be via a type system extension, where the
-<a href=#931 id=931 data-nosnippet>931</a>  /// arguments to our before-digest closures are a vector of a new type
-<a href=#932 id=932 data-nosnippet>932</a>  /// ReadValue ::= [Token, KeyVals, RegisterValue]       potentially?
-<a href=#933 id=933 data-nosnippet>933</a>  /// On the other hand, we can also put the
-<a href=#934 id=934 data-nosnippet>934</a>  /// extra effort of *postponing* the build of KV metadata until digestion,
-<a href=#935 id=935 data-nosnippet>935</a>  /// this way not losing any time reserializing metadata
-<a href=#936 id=936 data-nosnippet>936</a>  </span><span class="kw">pub fn </span>into_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#937 id=937 data-nosnippet>937</a>    <span class="kw">let </span><span class="kw-2">mut </span>tks: Vec&lt;Token&gt; = Vec::new();
-<a href=#938 id=938 data-nosnippet>938</a>    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="self">self</span>.cached_pairs.into_iter() {
-<a href=#939 id=939 data-nosnippet>939</a>      tks.push(<span class="macro">T_OTHER!</span>(k));
-<a href=#940 id=940 data-nosnippet>940</a>      <span class="kw">match </span>v {
-<a href=#941 id=941 data-nosnippet>941</a>        ArgWrap::Tokens(vtks) =&gt; {
-<a href=#942 id=942 data-nosnippet>942</a>          <span class="kw">let </span>expanded = gullet::do_expand(vtks)<span class="question-mark">?</span>;
-<a href=#943 id=943 data-nosnippet>943</a>          <span class="kw">let </span><span class="kw-2">mut </span>exp_str = expanded.to_string();
-<a href=#944 id=944 data-nosnippet>944</a>          <span class="kw">if </span>exp_str == <span class="string">"{}" </span>{
-<a href=#945 id=945 data-nosnippet>945</a>            exp_str = String::new();
-<a href=#946 id=946 data-nosnippet>946</a>          }
-<a href=#947 id=947 data-nosnippet>947</a>          tks.push(<span class="macro">T_OTHER!</span>(exp_str));
-<a href=#948 id=948 data-nosnippet>948</a>        },
-<a href=#949 id=949 data-nosnippet>949</a>        ArgWrap::Token(vtk) =&gt; tks.push(vtk),
-<a href=#950 id=950 data-nosnippet>950</a>        other =&gt; {
-<a href=#951 id=951 data-nosnippet>951</a>          <span class="macro">log::warn!</span>(<span class="string">"Unexpected ArgWrap variant in KeyVals revert: {:?}"</span>, other);
-<a href=#952 id=952 data-nosnippet>952</a>        },
-<a href=#953 id=953 data-nosnippet>953</a>      }
-<a href=#954 id=954 data-nosnippet>954</a>    }
-<a href=#955 id=955 data-nosnippet>955</a>    <span class="prelude-val">Ok</span>(Tokens::new(tks))
-<a href=#956 id=956 data-nosnippet>956</a>  }
-<a href=#957 id=957 data-nosnippet>957</a>}
-<a href=#958 id=958 data-nosnippet>958</a>
-<a href=#959 id=959 data-nosnippet>959</a><span class="kw">impl </span>From&lt;KeyVals&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#960 id=960 data-nosnippet>960</a>  <span class="kw">fn </span>from(value: KeyVals) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#961 id=961 data-nosnippet>961</a>    <span class="kw">let </span>tmp: Digested = value.into();
-<a href=#962 id=962 data-nosnippet>962</a>    tmp.into()
-<a href=#963 id=963 data-nosnippet>963</a>  }
-<a href=#964 id=964 data-nosnippet>964</a>}
-<a href=#965 id=965 data-nosnippet>965</a>
-<a href=#966 id=966 data-nosnippet>966</a><span class="attr">#[cfg(test)]
-<a href=#967 id=967 data-nosnippet>967</a></span><span class="kw">mod </span>tests {
-<a href=#968 id=968 data-nosnippet>968</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#969 id=969 data-nosnippet>969</a>
-<a href=#970 id=970 data-nosnippet>970</a>  <span class="attr">#[test]
-<a href=#971 id=971 data-nosnippet>971</a>  </span><span class="kw">fn </span>skip_missing_default_is_none() {
-<a href=#972 id=972 data-nosnippet>972</a>    <span class="kw">let </span>s = SkipMissing::default();
-<a href=#973 id=973 data-nosnippet>973</a>    <span class="macro">assert_eq!</span>(s, SkipMissing::None);
-<a href=#974 id=974 data-nosnippet>974</a>  }
-<a href=#975 id=975 data-nosnippet>975</a>
-<a href=#976 id=976 data-nosnippet>976</a>  <span class="attr">#[test]
-<a href=#977 id=977 data-nosnippet>977</a>  </span><span class="kw">fn </span>skip_missing_variants_not_equal() {
-<a href=#978 id=978 data-nosnippet>978</a>    <span class="macro">assert_ne!</span>(SkipMissing::None, SkipMissing::All);
-<a href=#979 id=979 data-nosnippet>979</a>  }
-<a href=#980 id=980 data-nosnippet>980</a>
-<a href=#981 id=981 data-nosnippet>981</a>  <span class="attr">#[test]
-<a href=#982 id=982 data-nosnippet>982</a>  </span><span class="kw">fn </span>keyvals_config_default_all_empty() {
-<a href=#983 id=983 data-nosnippet>983</a>    <span class="kw">let </span>c = KeyvalsConfig::default();
-<a href=#984 id=984 data-nosnippet>984</a>    <span class="macro">assert!</span>(c.prefix.is_none());
-<a href=#985 id=985 data-nosnippet>985</a>    <span class="macro">assert!</span>(c.keysets.is_empty());
-<a href=#986 id=986 data-nosnippet>986</a>    <span class="macro">assert!</span>(!c.set_all);
-<a href=#987 id=987 data-nosnippet>987</a>    <span class="macro">assert!</span>(!c.set_internals);
-<a href=#988 id=988 data-nosnippet>988</a>    <span class="macro">assert!</span>(c.skip.is_empty());
-<a href=#989 id=989 data-nosnippet>989</a>    <span class="macro">assert_eq!</span>(c.skip_missing, SkipMissing::None);
-<a href=#990 id=990 data-nosnippet>990</a>    <span class="macro">assert!</span>(c.hook_missing.is_none());
-<a href=#991 id=991 data-nosnippet>991</a>  }
-<a href=#992 id=992 data-nosnippet>992</a>
-<a href=#993 id=993 data-nosnippet>993</a>  <span class="attr">#[test]
-<a href=#994 id=994 data-nosnippet>994</a>  </span><span class="kw">fn </span>keyvals_default_prefix_and_anonymous_keyset() {
-<a href=#995 id=995 data-nosnippet>995</a>    <span class="comment">// Default KeyVals has prefix=KV, keysets=["_anonymous_"].
-<a href=#996 id=996 data-nosnippet>996</a>    </span><span class="kw">let </span>kv = KeyVals::default();
-<a href=#997 id=997 data-nosnippet>997</a>    <span class="macro">assert_eq!</span>(kv.prefix, <span class="string">"KV"</span>);
-<a href=#998 id=998 data-nosnippet>998</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()]);
-<a href=#999 id=999 data-nosnippet>999</a>    <span class="macro">assert!</span>(!kv.set_all);
-<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="macro">assert!</span>(!kv.set_internals);
-<a href=#1001 id=1001 data-nosnippet>1001</a>  }
-<a href=#1002 id=1002 data-nosnippet>1002</a>
-<a href=#1003 id=1003 data-nosnippet>1003</a>  <span class="attr">#[test]
-<a href=#1004 id=1004 data-nosnippet>1004</a>  </span><span class="kw">fn </span>keyvals_new_with_empty_keysets_defaults_to_anonymous() {
-<a href=#1005 id=1005 data-nosnippet>1005</a>    <span class="kw">let </span>kv = KeyVals::new(KeyvalsConfig::default());
-<a href=#1006 id=1006 data-nosnippet>1006</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()]);
-<a href=#1007 id=1007 data-nosnippet>1007</a>  }
-<a href=#1008 id=1008 data-nosnippet>1008</a>
-<a href=#1009 id=1009 data-nosnippet>1009</a>  <span class="attr">#[test]
-<a href=#1010 id=1010 data-nosnippet>1010</a>  </span><span class="kw">fn </span>keyvals_new_with_custom_keysets_preserved() {
-<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
-<a href=#1012 id=1012 data-nosnippet>1012</a>      keysets: <span class="macro">vec!</span>[<span class="string">"tabular"</span>.to_string(), <span class="string">"array"</span>.to_string()],
-<a href=#1013 id=1013 data-nosnippet>1013</a>      ..KeyvalsConfig::default()
-<a href=#1014 id=1014 data-nosnippet>1014</a>    };
-<a href=#1015 id=1015 data-nosnippet>1015</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
-<a href=#1016 id=1016 data-nosnippet>1016</a>    <span class="macro">assert_eq!</span>(kv.keysets.len(), <span class="number">2</span>);
-<a href=#1017 id=1017 data-nosnippet>1017</a>    <span class="macro">assert_eq!</span>(kv.keysets[<span class="number">0</span>], <span class="string">"tabular"</span>);
-<a href=#1018 id=1018 data-nosnippet>1018</a>  }
-<a href=#1019 id=1019 data-nosnippet>1019</a>
-<a href=#1020 id=1020 data-nosnippet>1020</a>  <span class="attr">#[test]
-<a href=#1021 id=1021 data-nosnippet>1021</a>  </span><span class="kw">fn </span>keyvals_new_custom_prefix() {
-<a href=#1022 id=1022 data-nosnippet>1022</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
-<a href=#1023 id=1023 data-nosnippet>1023</a>      prefix: <span class="prelude-val">Some</span>(<span class="string">"P"</span>.to_string()),
-<a href=#1024 id=1024 data-nosnippet>1024</a>      ..KeyvalsConfig::default()
-<a href=#1025 id=1025 data-nosnippet>1025</a>    };
-<a href=#1026 id=1026 data-nosnippet>1026</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
-<a href=#1027 id=1027 data-nosnippet>1027</a>    <span class="macro">assert_eq!</span>(kv.prefix, <span class="string">"P"</span>);
-<a href=#1028 id=1028 data-nosnippet>1028</a>  }
-<a href=#1029 id=1029 data-nosnippet>1029</a>
-<a href=#1030 id=1030 data-nosnippet>1030</a>  <span class="attr">#[test]
-<a href=#1031 id=1031 data-nosnippet>1031</a>  </span><span class="kw">fn </span>keyvals_new_default_prefix_on_none() {
-<a href=#1032 id=1032 data-nosnippet>1032</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
-<a href=#1033 id=1033 data-nosnippet>1033</a>      prefix: <span class="prelude-val">None</span>,
-<a href=#1034 id=1034 data-nosnippet>1034</a>      ..KeyvalsConfig::default()
-<a href=#1035 id=1035 data-nosnippet>1035</a>    };
-<a href=#1036 id=1036 data-nosnippet>1036</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
-<a href=#1037 id=1037 data-nosnippet>1037</a>    <span class="macro">assert_eq!</span>(kv.prefix, <span class="string">"KV"</span>);
-<a href=#1038 id=1038 data-nosnippet>1038</a>  }
-<a href=#1039 id=1039 data-nosnippet>1039</a>
-<a href=#1040 id=1040 data-nosnippet>1040</a>  <span class="attr">#[test]
-<a href=#1041 id=1041 data-nosnippet>1041</a>  </span><span class="kw">fn </span>keyvals_new_set_all_flag() {
-<a href=#1042 id=1042 data-nosnippet>1042</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
-<a href=#1043 id=1043 data-nosnippet>1043</a>      set_all: <span class="bool-val">true</span>,
-<a href=#1044 id=1044 data-nosnippet>1044</a>      ..KeyvalsConfig::default()
-<a href=#1045 id=1045 data-nosnippet>1045</a>    };
-<a href=#1046 id=1046 data-nosnippet>1046</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
-<a href=#1047 id=1047 data-nosnippet>1047</a>    <span class="macro">assert!</span>(kv.set_all);
-<a href=#1048 id=1048 data-nosnippet>1048</a>  }
-<a href=#1049 id=1049 data-nosnippet>1049</a>
-<a href=#1050 id=1050 data-nosnippet>1050</a>  <span class="attr">#[test]
-<a href=#1051 id=1051 data-nosnippet>1051</a>  </span><span class="kw">fn </span>keyvals_new_filters_empty_keysets() {
-<a href=#1052 id=1052 data-nosnippet>1052</a>    <span class="comment">// Perl KeyVals.pm #2777 (fdc8bf91): \pst@famlist accumulates as
-<a href=#1053 id=1053 data-nosnippet>1053</a>    // ",pstricks"; a naive split yields ["", "pstricks"]. The empty
-<a href=#1054 id=1054 data-nosnippet>1054</a>    // entry would collide with `\def\psset@@ArrowInside` via the
-<a href=#1055 id=1055 data-nosnippet>1055</a>    // keyval_qname("psset","","ArrowInside") → "psset@@ArrowInside"
-<a href=#1056 id=1056 data-nosnippet>1056</a>    // path. Empty entries must be filtered before any default fallback.
-<a href=#1057 id=1057 data-nosnippet>1057</a>    </span><span class="kw">let </span>cfg = KeyvalsConfig {
-<a href=#1058 id=1058 data-nosnippet>1058</a>      keysets: <span class="macro">vec!</span>[<span class="string">""</span>.to_string(), <span class="string">"pstricks"</span>.to_string()],
-<a href=#1059 id=1059 data-nosnippet>1059</a>      ..KeyvalsConfig::default()
-<a href=#1060 id=1060 data-nosnippet>1060</a>    };
-<a href=#1061 id=1061 data-nosnippet>1061</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
-<a href=#1062 id=1062 data-nosnippet>1062</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"pstricks"</span>.to_string()]);
-<a href=#1063 id=1063 data-nosnippet>1063</a>  }
-<a href=#1064 id=1064 data-nosnippet>1064</a>
-<a href=#1065 id=1065 data-nosnippet>1065</a>  <span class="attr">#[test]
-<a href=#1066 id=1066 data-nosnippet>1066</a>  </span><span class="kw">fn </span>keyvals_new_all_empty_keysets_defaults_to_anonymous() {
-<a href=#1067 id=1067 data-nosnippet>1067</a>    <span class="comment">// If every keyset entry is empty, we still fall back to
-<a href=#1068 id=1068 data-nosnippet>1068</a>    // _anonymous_ (not retain an empty keyset).
-<a href=#1069 id=1069 data-nosnippet>1069</a>    </span><span class="kw">let </span>cfg = KeyvalsConfig {
-<a href=#1070 id=1070 data-nosnippet>1070</a>      keysets: <span class="macro">vec!</span>[<span class="string">""</span>.to_string(), <span class="string">""</span>.to_string()],
-<a href=#1071 id=1071 data-nosnippet>1071</a>      ..KeyvalsConfig::default()
-<a href=#1072 id=1072 data-nosnippet>1072</a>    };
-<a href=#1073 id=1073 data-nosnippet>1073</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
-<a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()]);
-<a href=#1075 id=1075 data-nosnippet>1075</a>  }
-<a href=#1076 id=1076 data-nosnippet>1076</a>}
+<a href=#900 id=900 data-nosnippet>900</a>          <span class="comment">// An explicit `=` always assigns a value, even when it is empty
+<a href=#901 id=901 data-nosnippet>901</a>          // (`key=` or `key={}`): that is an EXPLICIT empty override, distinct
+<a href=#902 id=902 data-nosnippet>902</a>          // from a missing key. Keep it as empty Tokens rather than the
+<a href=#903 id=903 data-nosnippet>903</a>          // `ArgWrap::None` the value was initialised to — `None` is reserved
+<a href=#904 id=904 data-nosnippet>904</a>          // for a missing key and its Display is the literal string "None",
+<a href=#905 id=905 data-nosnippet>905</a>          // which leaks into consumers that stringify the value. Concretely, a
+<a href=#906 id=906 data-nosnippet>906</a>          // starred matrix with no alignment bracket emits `alignment=` (empty);
+<a href=#907 id=907 data-nosnippet>907</a>          // without this the keyval value was "None", so `\lx@gen@matrix@bindings`
+<a href=#908 id=908 data-nosnippet>908</a>          // saw `alignment="None"` instead of defaulting to "c", producing a
+<a href=#909 id=909 data-nosnippet>909</a>          // malformed column alignment that made a `\dots` cell swallow the next
+<a href=#910 id=910 data-nosnippet>910</a>          // `&amp;` → "Stray alignment". Witness 1910.00678.
+<a href=#911 id=911 data-nosnippet>911</a>          </span><span class="kw">if </span>value.is_none() {
+<a href=#912 id=912 data-nosnippet>912</a>            value = ArgWrap::Tokens(<span class="macro">Tokens!</span>());
+<a href=#913 id=913 data-nosnippet>913</a>          }
+<a href=#914 id=914 data-nosnippet>914</a>          <span class="comment">// and cleanup
+<a href=#915 id=915 data-nosnippet>915</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Parameter(<span class="kw-2">ref </span>keydef)) = keytype_opt {
+<a href=#916 id=916 data-nosnippet>916</a>            keydef.revert_catcodes()<span class="question-mark">?</span>;
+<a href=#917 id=917 data-nosnippet>917</a>          }
+<a href=#918 id=918 data-nosnippet>918</a>        }
+<a href=#919 id=919 data-nosnippet>919</a>        <span class="comment">// and store our value please
+<a href=#920 id=920 data-nosnippet>920</a>        </span><span class="kw">if </span>!silence_missing || <span class="self">self</span>.can_resolve_keyval_for(key) {
+<a href=#921 id=921 data-nosnippet>921</a>          <span class="self">self</span>.add_value(key, value, !is_explicit, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#922 id=922 data-nosnippet>922</a>        }
+<a href=#923 id=923 data-nosnippet>923</a>      }
+<a href=#924 id=924 data-nosnippet>924</a>
+<a href=#925 id=925 data-nosnippet>925</a>      <span class="comment">// we finish if we have the last element
+<a href=#926 id=926 data-nosnippet>926</a>      </span><span class="kw">if </span>delim_opt.as_ref() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>until) {
+<a href=#927 id=927 data-nosnippet>927</a>        <span class="kw">break</span>;
+<a href=#928 id=928 data-nosnippet>928</a>      }
+<a href=#929 id=929 data-nosnippet>929</a>    }
+<a href=#930 id=930 data-nosnippet>930</a>
+<a href=#931 id=931 data-nosnippet>931</a>    <span class="comment">// rebuild and return nothing
+<a href=#932 id=932 data-nosnippet>932</a>    </span><span class="self">self</span>.rebuild(<span class="prelude-val">None</span>);
+<a href=#933 id=933 data-nosnippet>933</a>
+<a href=#934 id=934 data-nosnippet>934</a>    <span class="comment">// restore all settings if we silenced the missing keys
+<a href=#935 id=935 data-nosnippet>935</a>    </span><span class="kw">if </span>silence_missing {
+<a href=#936 id=936 data-nosnippet>936</a>      <span class="self">self</span>.skip_missing = skip_missing;
+<a href=#937 id=937 data-nosnippet>937</a>      <span class="self">self</span>.hook_missing = hook_missing;
+<a href=#938 id=938 data-nosnippet>938</a>    }
+<a href=#939 id=939 data-nosnippet>939</a>    <span class="prelude-val">Ok</span>(())
+<a href=#940 id=940 data-nosnippet>940</a>  }
+<a href=#941 id=941 data-nosnippet>941</a>
+<a href=#942 id=942 data-nosnippet>942</a>  <span class="doccomment">/// TODO: This is an improvised method for switching KeyVals into Tokens, but losing all collected
+<a href=#943 id=943 data-nosnippet>943</a>  /// metadata.
+<a href=#944 id=944 data-nosnippet>944</a>  /// The long-term solution ought to be via a type system extension, where the
+<a href=#945 id=945 data-nosnippet>945</a>  /// arguments to our before-digest closures are a vector of a new type
+<a href=#946 id=946 data-nosnippet>946</a>  /// ReadValue ::= [Token, KeyVals, RegisterValue]       potentially?
+<a href=#947 id=947 data-nosnippet>947</a>  /// On the other hand, we can also put the
+<a href=#948 id=948 data-nosnippet>948</a>  /// extra effort of *postponing* the build of KV metadata until digestion,
+<a href=#949 id=949 data-nosnippet>949</a>  /// this way not losing any time reserializing metadata
+<a href=#950 id=950 data-nosnippet>950</a>  </span><span class="kw">pub fn </span>into_tokens(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#951 id=951 data-nosnippet>951</a>    <span class="kw">let </span><span class="kw-2">mut </span>tks: Vec&lt;Token&gt; = Vec::new();
+<a href=#952 id=952 data-nosnippet>952</a>    <span class="kw">for </span>(k, v) <span class="kw">in </span><span class="self">self</span>.cached_pairs.into_iter() {
+<a href=#953 id=953 data-nosnippet>953</a>      tks.push(<span class="macro">T_OTHER!</span>(k));
+<a href=#954 id=954 data-nosnippet>954</a>      <span class="kw">match </span>v {
+<a href=#955 id=955 data-nosnippet>955</a>        ArgWrap::Tokens(vtks) =&gt; {
+<a href=#956 id=956 data-nosnippet>956</a>          <span class="kw">let </span>expanded = gullet::do_expand(vtks)<span class="question-mark">?</span>;
+<a href=#957 id=957 data-nosnippet>957</a>          <span class="kw">let </span><span class="kw-2">mut </span>exp_str = expanded.to_string();
+<a href=#958 id=958 data-nosnippet>958</a>          <span class="kw">if </span>exp_str == <span class="string">"{}" </span>{
+<a href=#959 id=959 data-nosnippet>959</a>            exp_str = String::new();
+<a href=#960 id=960 data-nosnippet>960</a>          }
+<a href=#961 id=961 data-nosnippet>961</a>          tks.push(<span class="macro">T_OTHER!</span>(exp_str));
+<a href=#962 id=962 data-nosnippet>962</a>        },
+<a href=#963 id=963 data-nosnippet>963</a>        ArgWrap::Token(vtk) =&gt; tks.push(vtk),
+<a href=#964 id=964 data-nosnippet>964</a>        other =&gt; {
+<a href=#965 id=965 data-nosnippet>965</a>          <span class="macro">log::warn!</span>(<span class="string">"Unexpected ArgWrap variant in KeyVals revert: {:?}"</span>, other);
+<a href=#966 id=966 data-nosnippet>966</a>        },
+<a href=#967 id=967 data-nosnippet>967</a>      }
+<a href=#968 id=968 data-nosnippet>968</a>    }
+<a href=#969 id=969 data-nosnippet>969</a>    <span class="prelude-val">Ok</span>(Tokens::new(tks))
+<a href=#970 id=970 data-nosnippet>970</a>  }
+<a href=#971 id=971 data-nosnippet>971</a>}
+<a href=#972 id=972 data-nosnippet>972</a>
+<a href=#973 id=973 data-nosnippet>973</a><span class="kw">impl </span>From&lt;KeyVals&gt; <span class="kw">for </span><span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#974 id=974 data-nosnippet>974</a>  <span class="kw">fn </span>from(value: KeyVals) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#975 id=975 data-nosnippet>975</a>    <span class="kw">let </span>tmp: Digested = value.into();
+<a href=#976 id=976 data-nosnippet>976</a>    tmp.into()
+<a href=#977 id=977 data-nosnippet>977</a>  }
+<a href=#978 id=978 data-nosnippet>978</a>}
+<a href=#979 id=979 data-nosnippet>979</a>
+<a href=#980 id=980 data-nosnippet>980</a><span class="attr">#[cfg(test)]
+<a href=#981 id=981 data-nosnippet>981</a></span><span class="kw">mod </span>tests {
+<a href=#982 id=982 data-nosnippet>982</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#983 id=983 data-nosnippet>983</a>
+<a href=#984 id=984 data-nosnippet>984</a>  <span class="attr">#[test]
+<a href=#985 id=985 data-nosnippet>985</a>  </span><span class="kw">fn </span>skip_missing_default_is_none() {
+<a href=#986 id=986 data-nosnippet>986</a>    <span class="kw">let </span>s = SkipMissing::default();
+<a href=#987 id=987 data-nosnippet>987</a>    <span class="macro">assert_eq!</span>(s, SkipMissing::None);
+<a href=#988 id=988 data-nosnippet>988</a>  }
+<a href=#989 id=989 data-nosnippet>989</a>
+<a href=#990 id=990 data-nosnippet>990</a>  <span class="attr">#[test]
+<a href=#991 id=991 data-nosnippet>991</a>  </span><span class="kw">fn </span>skip_missing_variants_not_equal() {
+<a href=#992 id=992 data-nosnippet>992</a>    <span class="macro">assert_ne!</span>(SkipMissing::None, SkipMissing::All);
+<a href=#993 id=993 data-nosnippet>993</a>  }
+<a href=#994 id=994 data-nosnippet>994</a>
+<a href=#995 id=995 data-nosnippet>995</a>  <span class="attr">#[test]
+<a href=#996 id=996 data-nosnippet>996</a>  </span><span class="kw">fn </span>keyvals_config_default_all_empty() {
+<a href=#997 id=997 data-nosnippet>997</a>    <span class="kw">let </span>c = KeyvalsConfig::default();
+<a href=#998 id=998 data-nosnippet>998</a>    <span class="macro">assert!</span>(c.prefix.is_none());
+<a href=#999 id=999 data-nosnippet>999</a>    <span class="macro">assert!</span>(c.keysets.is_empty());
+<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="macro">assert!</span>(!c.set_all);
+<a href=#1001 id=1001 data-nosnippet>1001</a>    <span class="macro">assert!</span>(!c.set_internals);
+<a href=#1002 id=1002 data-nosnippet>1002</a>    <span class="macro">assert!</span>(c.skip.is_empty());
+<a href=#1003 id=1003 data-nosnippet>1003</a>    <span class="macro">assert_eq!</span>(c.skip_missing, SkipMissing::None);
+<a href=#1004 id=1004 data-nosnippet>1004</a>    <span class="macro">assert!</span>(c.hook_missing.is_none());
+<a href=#1005 id=1005 data-nosnippet>1005</a>  }
+<a href=#1006 id=1006 data-nosnippet>1006</a>
+<a href=#1007 id=1007 data-nosnippet>1007</a>  <span class="attr">#[test]
+<a href=#1008 id=1008 data-nosnippet>1008</a>  </span><span class="kw">fn </span>keyvals_default_prefix_and_anonymous_keyset() {
+<a href=#1009 id=1009 data-nosnippet>1009</a>    <span class="comment">// Default KeyVals has prefix=KV, keysets=["_anonymous_"].
+<a href=#1010 id=1010 data-nosnippet>1010</a>    </span><span class="kw">let </span>kv = KeyVals::default();
+<a href=#1011 id=1011 data-nosnippet>1011</a>    <span class="macro">assert_eq!</span>(kv.prefix, <span class="string">"KV"</span>);
+<a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()]);
+<a href=#1013 id=1013 data-nosnippet>1013</a>    <span class="macro">assert!</span>(!kv.set_all);
+<a href=#1014 id=1014 data-nosnippet>1014</a>    <span class="macro">assert!</span>(!kv.set_internals);
+<a href=#1015 id=1015 data-nosnippet>1015</a>  }
+<a href=#1016 id=1016 data-nosnippet>1016</a>
+<a href=#1017 id=1017 data-nosnippet>1017</a>  <span class="attr">#[test]
+<a href=#1018 id=1018 data-nosnippet>1018</a>  </span><span class="kw">fn </span>keyvals_new_with_empty_keysets_defaults_to_anonymous() {
+<a href=#1019 id=1019 data-nosnippet>1019</a>    <span class="kw">let </span>kv = KeyVals::new(KeyvalsConfig::default());
+<a href=#1020 id=1020 data-nosnippet>1020</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()]);
+<a href=#1021 id=1021 data-nosnippet>1021</a>  }
+<a href=#1022 id=1022 data-nosnippet>1022</a>
+<a href=#1023 id=1023 data-nosnippet>1023</a>  <span class="attr">#[test]
+<a href=#1024 id=1024 data-nosnippet>1024</a>  </span><span class="kw">fn </span>keyvals_new_with_custom_keysets_preserved() {
+<a href=#1025 id=1025 data-nosnippet>1025</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
+<a href=#1026 id=1026 data-nosnippet>1026</a>      keysets: <span class="macro">vec!</span>[<span class="string">"tabular"</span>.to_string(), <span class="string">"array"</span>.to_string()],
+<a href=#1027 id=1027 data-nosnippet>1027</a>      ..KeyvalsConfig::default()
+<a href=#1028 id=1028 data-nosnippet>1028</a>    };
+<a href=#1029 id=1029 data-nosnippet>1029</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
+<a href=#1030 id=1030 data-nosnippet>1030</a>    <span class="macro">assert_eq!</span>(kv.keysets.len(), <span class="number">2</span>);
+<a href=#1031 id=1031 data-nosnippet>1031</a>    <span class="macro">assert_eq!</span>(kv.keysets[<span class="number">0</span>], <span class="string">"tabular"</span>);
+<a href=#1032 id=1032 data-nosnippet>1032</a>  }
+<a href=#1033 id=1033 data-nosnippet>1033</a>
+<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="attr">#[test]
+<a href=#1035 id=1035 data-nosnippet>1035</a>  </span><span class="kw">fn </span>keyvals_new_custom_prefix() {
+<a href=#1036 id=1036 data-nosnippet>1036</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
+<a href=#1037 id=1037 data-nosnippet>1037</a>      prefix: <span class="prelude-val">Some</span>(<span class="string">"P"</span>.to_string()),
+<a href=#1038 id=1038 data-nosnippet>1038</a>      ..KeyvalsConfig::default()
+<a href=#1039 id=1039 data-nosnippet>1039</a>    };
+<a href=#1040 id=1040 data-nosnippet>1040</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
+<a href=#1041 id=1041 data-nosnippet>1041</a>    <span class="macro">assert_eq!</span>(kv.prefix, <span class="string">"P"</span>);
+<a href=#1042 id=1042 data-nosnippet>1042</a>  }
+<a href=#1043 id=1043 data-nosnippet>1043</a>
+<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="attr">#[test]
+<a href=#1045 id=1045 data-nosnippet>1045</a>  </span><span class="kw">fn </span>keyvals_new_default_prefix_on_none() {
+<a href=#1046 id=1046 data-nosnippet>1046</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
+<a href=#1047 id=1047 data-nosnippet>1047</a>      prefix: <span class="prelude-val">None</span>,
+<a href=#1048 id=1048 data-nosnippet>1048</a>      ..KeyvalsConfig::default()
+<a href=#1049 id=1049 data-nosnippet>1049</a>    };
+<a href=#1050 id=1050 data-nosnippet>1050</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
+<a href=#1051 id=1051 data-nosnippet>1051</a>    <span class="macro">assert_eq!</span>(kv.prefix, <span class="string">"KV"</span>);
+<a href=#1052 id=1052 data-nosnippet>1052</a>  }
+<a href=#1053 id=1053 data-nosnippet>1053</a>
+<a href=#1054 id=1054 data-nosnippet>1054</a>  <span class="attr">#[test]
+<a href=#1055 id=1055 data-nosnippet>1055</a>  </span><span class="kw">fn </span>keyvals_new_set_all_flag() {
+<a href=#1056 id=1056 data-nosnippet>1056</a>    <span class="kw">let </span>cfg = KeyvalsConfig {
+<a href=#1057 id=1057 data-nosnippet>1057</a>      set_all: <span class="bool-val">true</span>,
+<a href=#1058 id=1058 data-nosnippet>1058</a>      ..KeyvalsConfig::default()
+<a href=#1059 id=1059 data-nosnippet>1059</a>    };
+<a href=#1060 id=1060 data-nosnippet>1060</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
+<a href=#1061 id=1061 data-nosnippet>1061</a>    <span class="macro">assert!</span>(kv.set_all);
+<a href=#1062 id=1062 data-nosnippet>1062</a>  }
+<a href=#1063 id=1063 data-nosnippet>1063</a>
+<a href=#1064 id=1064 data-nosnippet>1064</a>  <span class="attr">#[test]
+<a href=#1065 id=1065 data-nosnippet>1065</a>  </span><span class="kw">fn </span>keyvals_new_filters_empty_keysets() {
+<a href=#1066 id=1066 data-nosnippet>1066</a>    <span class="comment">// Perl KeyVals.pm #2777 (fdc8bf91): \pst@famlist accumulates as
+<a href=#1067 id=1067 data-nosnippet>1067</a>    // ",pstricks"; a naive split yields ["", "pstricks"]. The empty
+<a href=#1068 id=1068 data-nosnippet>1068</a>    // entry would collide with `\def\psset@@ArrowInside` via the
+<a href=#1069 id=1069 data-nosnippet>1069</a>    // keyval_qname("psset","","ArrowInside") → "psset@@ArrowInside"
+<a href=#1070 id=1070 data-nosnippet>1070</a>    // path. Empty entries must be filtered before any default fallback.
+<a href=#1071 id=1071 data-nosnippet>1071</a>    </span><span class="kw">let </span>cfg = KeyvalsConfig {
+<a href=#1072 id=1072 data-nosnippet>1072</a>      keysets: <span class="macro">vec!</span>[<span class="string">""</span>.to_string(), <span class="string">"pstricks"</span>.to_string()],
+<a href=#1073 id=1073 data-nosnippet>1073</a>      ..KeyvalsConfig::default()
+<a href=#1074 id=1074 data-nosnippet>1074</a>    };
+<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
+<a href=#1076 id=1076 data-nosnippet>1076</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"pstricks"</span>.to_string()]);
+<a href=#1077 id=1077 data-nosnippet>1077</a>  }
+<a href=#1078 id=1078 data-nosnippet>1078</a>
+<a href=#1079 id=1079 data-nosnippet>1079</a>  <span class="attr">#[test]
+<a href=#1080 id=1080 data-nosnippet>1080</a>  </span><span class="kw">fn </span>keyvals_new_all_empty_keysets_defaults_to_anonymous() {
+<a href=#1081 id=1081 data-nosnippet>1081</a>    <span class="comment">// If every keyset entry is empty, we still fall back to
+<a href=#1082 id=1082 data-nosnippet>1082</a>    // _anonymous_ (not retain an empty keyset).
+<a href=#1083 id=1083 data-nosnippet>1083</a>    </span><span class="kw">let </span>cfg = KeyvalsConfig {
+<a href=#1084 id=1084 data-nosnippet>1084</a>      keysets: <span class="macro">vec!</span>[<span class="string">""</span>.to_string(), <span class="string">""</span>.to_string()],
+<a href=#1085 id=1085 data-nosnippet>1085</a>      ..KeyvalsConfig::default()
+<a href=#1086 id=1086 data-nosnippet>1086</a>    };
+<a href=#1087 id=1087 data-nosnippet>1087</a>    <span class="kw">let </span>kv = KeyVals::new(cfg);
+<a href=#1088 id=1088 data-nosnippet>1088</a>    <span class="macro">assert_eq!</span>(kv.keysets, <span class="macro">vec!</span>[<span class="string">"_anonymous_"</span>.to_string()]);
+<a href=#1089 id=1089 data-nosnippet>1089</a>  }
+<a href=#1090 id=1090 data-nosnippet>1090</a>}
 </code></pre></div></section></main></body></html>

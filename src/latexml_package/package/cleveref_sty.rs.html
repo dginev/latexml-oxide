@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/cleveref_sty.rs`."><title>cleveref_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>cleveref_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/cleveref_sty.rs`."><title>cleveref_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>cleveref_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="comment">// Perl: cleveref.sty.ltxml — cleveref cross-referencing
 <a href=#4 id=4 data-nosnippet>4</a>// Provides \cref, \Cref, \crefrange, etc. with type-aware formatting
@@ -53,13 +53,13 @@
 <a href=#53 id=53 data-nosnippet>53</a>  // Perl: DefMacro('\cref OptionalMatch:* Semiverbatim', sub { crefMulti(...) })
 <a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cref OptionalMatch:* Semiverbatim"</span>, sub[args] {
 <a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">let </span>starred = !args[<span class="number">0</span>].is_none();
-<a href=#56 id=56 data-nosnippet>56</a>    <span class="kw">let </span>labels_str = args[<span class="number">1</span>].to_string();
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, <span class="kw-2">&amp;</span>labels_str, <span class="bool-val">true</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="kw">let </span>label_tokens = args.into_iter().nth(<span class="number">1</span>).and_then(|a| a.owned_tokens()).unwrap_or_default();
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, label_tokens, <span class="bool-val">true</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
 <a href=#58 id=58 data-nosnippet>58</a>  });
 <a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Cref OptionalMatch:* Semiverbatim"</span>, sub[args] {
 <a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">let </span>starred = !args[<span class="number">0</span>].is_none();
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">let </span>labels_str = args[<span class="number">1</span>].to_string();
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, <span class="kw-2">&amp;</span>labels_str, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>)
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">let </span>label_tokens = args.into_iter().nth(<span class="number">1</span>).and_then(|a| a.owned_tokens()).unwrap_or_default();
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, label_tokens, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>)
 <a href=#63 id=63 data-nosnippet>63</a>  });
 <a href=#64 id=64 data-nosnippet>64</a>
 <a href=#65 id=65 data-nosnippet>65</a>  <span class="comment">// \crefrange, \Crefrange
@@ -73,13 +73,13 @@
 <a href=#73 id=73 data-nosnippet>73</a>  <span class="comment">// Page refs (same as regular refs for now)
 <a href=#74 id=74 data-nosnippet>74</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cpageref OptionalMatch:* Semiverbatim"</span>, sub[args] {
 <a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>starred = !args[<span class="number">0</span>].is_none();
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">let </span>labels_str = args[<span class="number">1</span>].to_string();
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, <span class="kw-2">&amp;</span>labels_str, <span class="bool-val">true</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">let </span>label_tokens = args.into_iter().nth(<span class="number">1</span>).and_then(|a| a.owned_tokens()).unwrap_or_default();
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, label_tokens, <span class="bool-val">true</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
 <a href=#78 id=78 data-nosnippet>78</a>  });
 <a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Cpageref OptionalMatch:* Semiverbatim"</span>, sub[args] {
 <a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">let </span>starred = !args[<span class="number">0</span>].is_none();
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">let </span>labels_str = args[<span class="number">1</span>].to_string();
-<a href=#82 id=82 data-nosnippet>82</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, <span class="kw-2">&amp;</span>labels_str, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>)
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">let </span>label_tokens = args.into_iter().nth(<span class="number">1</span>).and_then(|a| a.owned_tokens()).unwrap_or_default();
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="prelude-val">Ok</span>(cref_multi(starred, label_tokens, <span class="bool-val">true</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>)
 <a href=#83 id=83 data-nosnippet>83</a>  });
 <a href=#84 id=84 data-nosnippet>84</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cpagerefrange OptionalMatch:* Semiverbatim Semiverbatim"</span>,
 <a href=#85 id=85 data-nosnippet>85</a>    <span class="string">"\\lx@cref#1{creftype~refnum}{#2}\\crefrangeconjunction\\lx@cref#1{creftype~refnum}{#3}"</span>);
@@ -95,12 +95,12 @@
 <a href=#95 id=95 data-nosnippet>95</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lcnamecrefs Semiverbatim"</span>, <span class="string">"\\lx@cref{creftypeplural}{#1}"</span>);
 <a href=#96 id=96 data-nosnippet>96</a>
 <a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\labelcref Semiverbatim"</span>, sub[args] {
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">let </span>labels_str = args[<span class="number">0</span>].to_string();
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="prelude-val">Ok</span>(cref_multi(<span class="bool-val">false</span>, <span class="kw-2">&amp;</span>labels_str, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">let </span>label_tokens = args.into_iter().next().and_then(|a| a.owned_tokens()).unwrap_or_default();
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="prelude-val">Ok</span>(cref_multi(<span class="bool-val">false</span>, label_tokens, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
 <a href=#100 id=100 data-nosnippet>100</a>  });
 <a href=#101 id=101 data-nosnippet>101</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\labelcpageref Semiverbatim"</span>, sub[args] {
-<a href=#102 id=102 data-nosnippet>102</a>    <span class="kw">let </span>labels_str = args[<span class="number">0</span>].to_string();
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="prelude-val">Ok</span>(cref_multi(<span class="bool-val">false</span>, <span class="kw-2">&amp;</span>labels_str, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="kw">let </span>label_tokens = args.into_iter().next().and_then(|a| a.owned_tokens()).unwrap_or_default();
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="prelude-val">Ok</span>(cref_multi(<span class="bool-val">false</span>, label_tokens, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
 <a href=#104 id=104 data-nosnippet>104</a>  });
 <a href=#105 id=105 data-nosnippet>105</a>
 <a href=#106 id=106 data-nosnippet>106</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\crefalias{}{}"</span>, sub[(_counter, _ctype)] { <span class="prelude-val">Ok</span>(Vec::new()) });
@@ -163,66 +163,108 @@
 <a href=#163 id=163 data-nosnippet>163</a>
 <a href=#164 id=164 data-nosnippet>164</a><span class="doccomment">/// Perl: crefMulti($starred, $labels, $showtype, $capitalized)
 <a href=#165 id=165 data-nosnippet>165</a>/// Generates tokens for \cref{label1,label2,...}
-<a href=#166 id=166 data-nosnippet>166</a></span><span class="kw">fn </span>cref_multi(starred: bool, labels: <span class="kw-2">&amp;</span>str, showtype: bool, capitalized: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="kw">let </span>label_list: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = labels
-<a href=#168 id=168 data-nosnippet>168</a>    .split(<span class="string">','</span>)
-<a href=#169 id=169 data-nosnippet>169</a>    .map(|s| s.trim())
-<a href=#170 id=170 data-nosnippet>170</a>    .filter(|s| !s.is_empty())
-<a href=#171 id=171 data-nosnippet>171</a>    .collect();
-<a href=#172 id=172 data-nosnippet>172</a>  <span class="kw">let </span>star = <span class="kw">if </span>starred { <span class="string">"*" </span>} <span class="kw">else </span>{ <span class="string">"" </span>};
-<a href=#173 id=173 data-nosnippet>173</a>
-<a href=#174 id=174 data-nosnippet>174</a>  <span class="kw">if </span>label_list.len() &lt; <span class="number">2 </span>{
-<a href=#175 id=175 data-nosnippet>175</a>    <span class="comment">// Single reference
-<a href=#176 id=176 data-nosnippet>176</a>    // Perl uses HyperVerbatim which preserves ~ literally.
-<a href=#177 id=177 data-nosnippet>177</a>    // We use {} parameter, so ~ (ACTIVE) expands to space.
-<a href=#178 id=178 data-nosnippet>178</a>    // Fix: embed catcode-12 ~ directly in show string by using \lx@tilde
-<a href=#179 id=179 data-nosnippet>179</a>    </span><span class="kw">let </span>show = <span class="kw">if </span>showtype {
-<a href=#180 id=180 data-nosnippet>180</a>      <span class="kw">if </span>capitalized {
-<a href=#181 id=181 data-nosnippet>181</a>        <span class="string">"creftypecap\\lx@tilde refnum"
-<a href=#182 id=182 data-nosnippet>182</a>      </span>} <span class="kw">else </span>{
-<a href=#183 id=183 data-nosnippet>183</a>        <span class="string">"creftype\\lx@tilde refnum"
-<a href=#184 id=184 data-nosnippet>184</a>      </span>}
-<a href=#185 id=185 data-nosnippet>185</a>    } <span class="kw">else </span>{
-<a href=#186 id=186 data-nosnippet>186</a>      <span class="string">"refnum"
-<a href=#187 id=187 data-nosnippet>187</a>    </span>};
-<a href=#188 id=188 data-nosnippet>188</a>    <span class="kw">let </span>label = label_list.first().copied().unwrap_or(<span class="string">""</span>);
-<a href=#189 id=189 data-nosnippet>189</a>    <span class="kw">let </span>expansion = <span class="macro">s!</span>(<span class="string">"\\lx@cref{star}{{{show}}}{{{label}}}"</span>);
-<a href=#190 id=190 data-nosnippet>190</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion))
-<a href=#191 id=191 data-nosnippet>191</a>  } <span class="kw">else </span>{
-<a href=#192 id=192 data-nosnippet>192</a>    <span class="comment">// Multiple references
-<a href=#193 id=193 data-nosnippet>193</a>    </span><span class="kw">let </span>show = <span class="kw">if </span>showtype {
-<a href=#194 id=194 data-nosnippet>194</a>      <span class="kw">if </span>capitalized {
-<a href=#195 id=195 data-nosnippet>195</a>        <span class="string">"creftypepluralcap\\lx@tilde refnum"
-<a href=#196 id=196 data-nosnippet>196</a>      </span>} <span class="kw">else </span>{
-<a href=#197 id=197 data-nosnippet>197</a>        <span class="string">"creftypeplural\\lx@tilde refnum"
-<a href=#198 id=198 data-nosnippet>198</a>      </span>}
-<a href=#199 id=199 data-nosnippet>199</a>    } <span class="kw">else </span>{
-<a href=#200 id=200 data-nosnippet>200</a>      <span class="string">"refnum"
-<a href=#201 id=201 data-nosnippet>201</a>    </span>};
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span><span class="kw-2">mut </span>parts = Vec::new();
-<a href=#203 id=203 data-nosnippet>203</a>    <span class="comment">// First label with type
-<a href=#204 id=204 data-nosnippet>204</a>    </span>parts.push(<span class="macro">s!</span>(<span class="string">"\\lx@cref{star}{{{show}}}{{{}}}"</span>, label_list[<span class="number">0</span>]));
-<a href=#205 id=205 data-nosnippet>205</a>
-<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">if </span>label_list.len() == <span class="number">2 </span>{
-<a href=#207 id=207 data-nosnippet>207</a>      <span class="comment">// Pair: use \crefpairconjunction
-<a href=#208 id=208 data-nosnippet>208</a>      </span>parts.push(<span class="macro">s!</span>(
-<a href=#209 id=209 data-nosnippet>209</a>        <span class="string">"\\crefpairconjunction\\lx@cref{star}{{refnum}}{{{}}}"</span>,
-<a href=#210 id=210 data-nosnippet>210</a>        label_list[<span class="number">1</span>]
-<a href=#211 id=211 data-nosnippet>211</a>      ));
-<a href=#212 id=212 data-nosnippet>212</a>    } <span class="kw">else </span>{
-<a href=#213 id=213 data-nosnippet>213</a>      <span class="comment">// Multiple: use \crefmiddleconjunction for all but last, \creflastconjunction for last
-<a href=#214 id=214 data-nosnippet>214</a>      </span><span class="kw">for </span>label <span class="kw">in </span><span class="kw-2">&amp;</span>label_list[<span class="number">1</span>..label_list.len() - <span class="number">1</span>] {
-<a href=#215 id=215 data-nosnippet>215</a>        parts.push(<span class="macro">s!</span>(
-<a href=#216 id=216 data-nosnippet>216</a>          <span class="string">"\\crefmiddleconjunction\\lx@cref{star}{{refnum}}{{{label}}}"
-<a href=#217 id=217 data-nosnippet>217</a>        </span>));
-<a href=#218 id=218 data-nosnippet>218</a>      }
-<a href=#219 id=219 data-nosnippet>219</a>      parts.push(<span class="macro">s!</span>(
-<a href=#220 id=220 data-nosnippet>220</a>        <span class="string">"\\creflastconjunction\\lx@cref{star}{{refnum}}{{{}}}"</span>,
-<a href=#221 id=221 data-nosnippet>221</a>        label_list.last().unwrap()
-<a href=#222 id=222 data-nosnippet>222</a>      ));
-<a href=#223 id=223 data-nosnippet>223</a>    }
-<a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">let </span>expansion = parts.join(<span class="string">""</span>);
-<a href=#225 id=225 data-nosnippet>225</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span>expansion))
-<a href=#226 id=226 data-nosnippet>226</a>  }
-<a href=#227 id=227 data-nosnippet>227</a>}
+<a href=#166 id=166 data-nosnippet>166</a>/// Trim leading/trailing SPACE tokens from a label group.
+<a href=#167 id=167 data-nosnippet>167</a></span><span class="kw">fn </span>trim_space_tokens(tokens: Tokens) -&gt; Tokens {
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="kw">let </span><span class="kw-2">mut </span>v = tokens.unlist();
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="kw">while </span>v.first().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(<span class="bool-val">false</span>) {
+<a href=#170 id=170 data-nosnippet>170</a>    v.remove(<span class="number">0</span>);
+<a href=#171 id=171 data-nosnippet>171</a>  }
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="kw">while </span>v.last().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(<span class="bool-val">false</span>) {
+<a href=#173 id=173 data-nosnippet>173</a>    v.pop();
+<a href=#174 id=174 data-nosnippet>174</a>  }
+<a href=#175 id=175 data-nosnippet>175</a>  Tokens::new(v)
+<a href=#176 id=176 data-nosnippet>176</a>}
+<a href=#177 id=177 data-nosnippet>177</a>
+<a href=#178 id=178 data-nosnippet>178</a><span class="doccomment">/// Split a Semiverbatim label argument on top-level OTHER commas, trimming
+<a href=#179 id=179 data-nosnippet>179</a>/// surrounding spaces and dropping empties. Mirrors Perl cleveref `splitLabels`,
+<a href=#180 id=180 data-nosnippet>180</a>/// which splits the **Tokens** object — NOT a stringified form. Critical for
+<a href=#181 id=181 data-nosnippet>181</a>/// labels whose name contains a control word, e.g.
+<a href=#182 id=182 data-nosnippet>182</a>/// `\cref{… the \SW moduli space …}` (`\SW` is a user `\newcommand`): the space
+<a href=#183 id=183 data-nosnippet>183</a>/// after the control word `\SW` is consumed at tokenization, so the tokens are
+<a href=#184 id=184 data-nosnippet>184</a>/// `… \SW moduli …` (no space token between). Stringifying and re-tokenizing
+<a href=#185 id=185 data-nosnippet>185</a>/// (as the old code did via `\lx@cref{…}{label-string}`) rejoins them into a
+<a href=#186 id=186 data-nosnippet>186</a>/// bogus `\SWmoduli` control sequence that then gets DIGESTED → `undefined`.
+<a href=#187 id=187 data-nosnippet>187</a>/// Keeping the original tokens and splicing them straight into the `\lx@cref`
+<a href=#188 id=188 data-nosnippet>188</a>/// invocation (as Perl's `Invocation(T_CS('\lx@cref'), …, $label_tokens)` does)
+<a href=#189 id=189 data-nosnippet>189</a>/// avoids the round-trip entirely. Witness 1704.05859.
+<a href=#190 id=190 data-nosnippet>190</a></span><span class="kw">fn </span>split_label_tokens(tokens: Tokens) -&gt; Vec&lt;Tokens&gt; {
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="kw">let </span><span class="kw-2">mut </span>groups: Vec&lt;Tokens&gt; = Vec::new();
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="kw">let </span><span class="kw-2">mut </span>cur: Vec&lt;Token&gt; = Vec::new();
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="kw">for </span>t <span class="kw">in </span>tokens.unlist() {
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="kw">if </span>t.get_catcode() == Catcode::OTHER &amp;&amp; t.with_str(|s| s == <span class="string">","</span>) {
+<a href=#195 id=195 data-nosnippet>195</a>      groups.push(Tokens::new(std::mem::take(<span class="kw-2">&amp;mut </span>cur)));
+<a href=#196 id=196 data-nosnippet>196</a>    } <span class="kw">else </span>{
+<a href=#197 id=197 data-nosnippet>197</a>      cur.push(t);
+<a href=#198 id=198 data-nosnippet>198</a>    }
+<a href=#199 id=199 data-nosnippet>199</a>  }
+<a href=#200 id=200 data-nosnippet>200</a>  groups.push(Tokens::new(cur));
+<a href=#201 id=201 data-nosnippet>201</a>  groups
+<a href=#202 id=202 data-nosnippet>202</a>    .into_iter()
+<a href=#203 id=203 data-nosnippet>203</a>    .map(trim_space_tokens)
+<a href=#204 id=204 data-nosnippet>204</a>    .filter(|g| !g.is_empty())
+<a href=#205 id=205 data-nosnippet>205</a>    .collect()
+<a href=#206 id=206 data-nosnippet>206</a>}
+<a href=#207 id=207 data-nosnippet>207</a>
+<a href=#208 id=208 data-nosnippet>208</a><span class="kw">fn </span>cref_multi(
+<a href=#209 id=209 data-nosnippet>209</a>  starred: bool,
+<a href=#210 id=210 data-nosnippet>210</a>  label_tokens: Tokens,
+<a href=#211 id=211 data-nosnippet>211</a>  showtype: bool,
+<a href=#212 id=212 data-nosnippet>212</a>  capitalized: bool,
+<a href=#213 id=213 data-nosnippet>213</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="kw">let </span>labels = split_label_tokens(label_tokens);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="kw">let </span>n = labels.len();
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// Emit one `\lx@cref [*] {&lt;show&gt;} {&lt;label tokens&gt;}`. The `&lt;show&gt;` is a fixed
+<a href=#219 id=219 data-nosnippet>219</a>  // internal string (no user macros) so tokenizing it is safe; the `&lt;label&gt;`
+<a href=#220 id=220 data-nosnippet>220</a>  // is spliced from the ORIGINAL tokens (never re-tokenized), matching Perl's
+<a href=#221 id=221 data-nosnippet>221</a>  // `Invocation(T_CS('\lx@cref'), $starred, T_OTHER(show), $label)`.
+<a href=#222 id=222 data-nosnippet>222</a>  // `\lx@tilde` carries the inter-word `~` (HyperVerbatim in Perl).
+<a href=#223 id=223 data-nosnippet>223</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>emit = |out: <span class="kw-2">&amp;mut </span>Vec&lt;Token&gt;, show: <span class="kw-2">&amp;</span>str, label: <span class="kw-2">&amp;</span>Tokens| {
+<a href=#224 id=224 data-nosnippet>224</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@cref"</span>));
+<a href=#225 id=225 data-nosnippet>225</a>    <span class="kw">if </span>starred {
+<a href=#226 id=226 data-nosnippet>226</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>));
+<a href=#227 id=227 data-nosnippet>227</a>    }
+<a href=#228 id=228 data-nosnippet>228</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#229 id=229 data-nosnippet>229</a>    out.extend(mouth::tokenize_internal(show).unlist());
+<a href=#230 id=230 data-nosnippet>230</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#231 id=231 data-nosnippet>231</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#232 id=232 data-nosnippet>232</a>    out.extend(label.clone().unlist());
+<a href=#233 id=233 data-nosnippet>233</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#234 id=234 data-nosnippet>234</a>  };
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="kw">if </span>n &lt; <span class="number">2 </span>{
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="kw">let </span>show = <span class="kw">if </span>showtype {
+<a href=#238 id=238 data-nosnippet>238</a>      <span class="kw">if </span>capitalized { <span class="string">"creftypecap\\lx@tilde refnum" </span>} <span class="kw">else </span>{ <span class="string">"creftype\\lx@tilde refnum" </span>}
+<a href=#239 id=239 data-nosnippet>239</a>    } <span class="kw">else </span>{
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="string">"refnum"
+<a href=#241 id=241 data-nosnippet>241</a>    </span>};
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="kw">let </span>empty = Tokens::new(Vec::new());
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="kw">let </span>label = labels.first().unwrap_or(<span class="kw-2">&amp;</span>empty);
+<a href=#244 id=244 data-nosnippet>244</a>    emit(<span class="kw-2">&amp;mut </span>out, show, label);
+<a href=#245 id=245 data-nosnippet>245</a>  } <span class="kw">else </span>{
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="kw">let </span>show = <span class="kw">if </span>showtype {
+<a href=#247 id=247 data-nosnippet>247</a>      <span class="kw">if </span>capitalized {
+<a href=#248 id=248 data-nosnippet>248</a>        <span class="string">"creftypepluralcap\\lx@tilde refnum"
+<a href=#249 id=249 data-nosnippet>249</a>      </span>} <span class="kw">else </span>{
+<a href=#250 id=250 data-nosnippet>250</a>        <span class="string">"creftypeplural\\lx@tilde refnum"
+<a href=#251 id=251 data-nosnippet>251</a>      </span>}
+<a href=#252 id=252 data-nosnippet>252</a>    } <span class="kw">else </span>{
+<a href=#253 id=253 data-nosnippet>253</a>      <span class="string">"refnum"
+<a href=#254 id=254 data-nosnippet>254</a>    </span>};
+<a href=#255 id=255 data-nosnippet>255</a>    emit(<span class="kw-2">&amp;mut </span>out, show, <span class="kw-2">&amp;</span>labels[<span class="number">0</span>]);
+<a href=#256 id=256 data-nosnippet>256</a>    <span class="kw">if </span>n == <span class="number">2 </span>{
+<a href=#257 id=257 data-nosnippet>257</a>      out.push(<span class="macro">T_CS!</span>(<span class="string">"\\crefpairconjunction"</span>));
+<a href=#258 id=258 data-nosnippet>258</a>      emit(<span class="kw-2">&amp;mut </span>out, <span class="string">"refnum"</span>, <span class="kw-2">&amp;</span>labels[<span class="number">1</span>]);
+<a href=#259 id=259 data-nosnippet>259</a>    } <span class="kw">else </span>{
+<a href=#260 id=260 data-nosnippet>260</a>      <span class="kw">for </span>label <span class="kw">in </span><span class="kw-2">&amp;</span>labels[<span class="number">1</span>..n - <span class="number">1</span>] {
+<a href=#261 id=261 data-nosnippet>261</a>        out.push(<span class="macro">T_CS!</span>(<span class="string">"\\crefmiddleconjunction"</span>));
+<a href=#262 id=262 data-nosnippet>262</a>        emit(<span class="kw-2">&amp;mut </span>out, <span class="string">"refnum"</span>, label);
+<a href=#263 id=263 data-nosnippet>263</a>      }
+<a href=#264 id=264 data-nosnippet>264</a>      out.push(<span class="macro">T_CS!</span>(<span class="string">"\\creflastconjunction"</span>));
+<a href=#265 id=265 data-nosnippet>265</a>      emit(<span class="kw-2">&amp;mut </span>out, <span class="string">"refnum"</span>, <span class="kw-2">&amp;</span>labels[n - <span class="number">1</span>]);
+<a href=#266 id=266 data-nosnippet>266</a>    }
+<a href=#267 id=267 data-nosnippet>267</a>  }
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#269 id=269 data-nosnippet>269</a>}
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/babel_sty.rs`."><title>babel_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>babel_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! babel.sty — multilingual support
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/babel_sty.rs`."><title>babel_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>babel_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! babel.sty — multilingual support
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Perl: babel.sty.ltxml (30 lines) — `InputDefinitions('babel', noltxml=&gt;1)`.
 <a href=#4 id=4 data-nosnippet>4</a>//! Our Rust port carries a thin orchestration layer on top of the raw babel
@@ -84,65 +84,162 @@
 <a href=#84 id=84 data-nosnippet>84</a>    // Driver: 2102.11084 `\usepackage[spanish, es-tabla]{babel}` selected
 <a href=#85 id=85 data-nosnippet>85</a>    // "es-tabla" as the language → "haven't defined the language 'es-tabla'"
 <a href=#86 id=86 data-nosnippet>86</a>    // GenericError.
-<a href=#87 id=87 data-nosnippet>87</a>    </span><span class="kw">let </span>is_lang_candidate = |s: <span class="kw-2">&amp;</span>str| -&gt; bool {
-<a href=#88 id=88 data-nosnippet>88</a>      !s.is_empty() &amp;&amp; s != <span class="string">"nil" </span>&amp;&amp; !s.contains(<span class="string">'='</span>)
-<a href=#89 id=89 data-nosnippet>89</a>        &amp;&amp; !s.starts_with(<span class="string">"es-"</span>)
-<a href=#90 id=90 data-nosnippet>90</a>    };
-<a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">let </span>pkg_last = main_kv.clone().unwrap_or_else(|| {
-<a href=#92 id=92 data-nosnippet>92</a>      opt_babel.split(<span class="string">','</span>).map(str::trim).rfind(|s| is_lang_candidate(s)).unwrap_or_default().to_string()
-<a href=#93 id=93 data-nosnippet>93</a>    });
-<a href=#94 id=94 data-nosnippet>94</a>    <span class="comment">// Pick the active main-lang. The non-trivial case is when the user's
-<a href=#95 id=95 data-nosnippet>95</a>    // OPTION NAME differs from the .ldf's CANONICAL language name —
-<a href=#96 id=96 data-nosnippet>96</a>    // e.g. `\usepackage[russianb]{babel}` loads russianb.ldf which calls
-<a href=#97 id=97 data-nosnippet>97</a>    // `\ldf@finish{russian}`. babel's `\select@language` later needs
-<a href=#98 id=98 data-nosnippet>98</a>    // `\l@&lt;canonical&gt;` (russian), so we must use the canonical name
-<a href=#99 id=99 data-nosnippet>99</a>    // when an alias is in play. But when our Rust binding for a `.ldf`
-<a href=#100 id=100 data-nosnippet>100</a>    // (e.g. french_ldf) bypasses raw load, no `\main@language` runs,
-<a href=#101 id=101 data-nosnippet>101</a>    // and `\bbl@main@language` retains whatever the FIRST option's
-<a href=#102 id=102 data-nosnippet>102</a>    // raw-loaded .ldf set — which is wrong (user wants the LAST option).
-<a href=#103 id=103 data-nosnippet>103</a>    //
-<a href=#104 id=104 data-nosnippet>104</a>    // Heuristic: trust `main` (the `\bbl@main@language` value) only
-<a href=#105 id=105 data-nosnippet>105</a>    // when it maps to the same ISO code as `pkg_last`. That captures
-<a href=#106 id=106 data-nosnippet>106</a>    // the canonical-alias case (russianb → russian, ukrainianb →
-<a href=#107 id=107 data-nosnippet>107</a>    // ukrainian, brazilian → brazil) while still falling through to
-<a href=#108 id=108 data-nosnippet>108</a>    // `pkg_last` for the no-Rust-ldf-binding case (where `main`
-<a href=#109 id=109 data-nosnippet>109</a>    // points at the first option, not the user's intended last one).
-<a href=#110 id=110 data-nosnippet>110</a>    //
-<a href=#111 id=111 data-nosnippet>111</a>    // Witnesses: 2312.08012 (russianb → russian alias, needed canonical),
-<a href=#112 id=112 data-nosnippet>112</a>    // tests/babel/elsart_keyword_brace_form (`[english,french]` →
-<a href=#113 id=113 data-nosnippet>113</a>    // french_ldf binding doesn't update main, but user wants french).
-<a href=#114 id=114 data-nosnippet>114</a>    </span><span class="kw">let </span>same_alias_class = !main.is_empty() &amp;&amp; !pkg_last.is_empty()
-<a href=#115 id=115 data-nosnippet>115</a>      &amp;&amp; main != pkg_last
-<a href=#116 id=116 data-nosnippet>116</a>      &amp;&amp; <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>main)
-<a href=#117 id=117 data-nosnippet>117</a>         == <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>pkg_last)
-<a href=#118 id=118 data-nosnippet>118</a>      &amp;&amp; <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>main).is_some();
-<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">let </span>lang = <span class="kw">if let </span><span class="prelude-val">Some</span>(m) = main_kv {
-<a href=#120 id=120 data-nosnippet>120</a>      m
-<a href=#121 id=121 data-nosnippet>121</a>    } <span class="kw">else if </span>same_alias_class {
-<a href=#122 id=122 data-nosnippet>122</a>      <span class="comment">// canonical aliases — use the canonical name from \ldf@finish
-<a href=#123 id=123 data-nosnippet>123</a>      </span>main
-<a href=#124 id=124 data-nosnippet>124</a>    } <span class="kw">else if </span>!pkg_last.is_empty() {
-<a href=#125 id=125 data-nosnippet>125</a>      pkg_last
-<a href=#126 id=126 data-nosnippet>126</a>    } <span class="kw">else if </span>main != <span class="string">"nil" </span>&amp;&amp; !main.is_empty() {
-<a href=#127 id=127 data-nosnippet>127</a>      main
-<a href=#128 id=128 data-nosnippet>128</a>    } <span class="kw">else </span>{
-<a href=#129 id=129 data-nosnippet>129</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]);
-<a href=#130 id=130 data-nosnippet>130</a>    };
-<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">let </span>iso = <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>lang);
-<a href=#132 id=132 data-nosnippet>132</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(code) = iso {
-<a href=#133 id=133 data-nosnippet>133</a>      state::assign_value(<span class="string">"DOCUMENT_LANGUAGE"</span>,
-<a href=#134 id=134 data-nosnippet>134</a>        Stored::from(code.to_string()), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#135 id=135 data-nosnippet>135</a>      merge_font(Font { language: <span class="prelude-val">Some</span>(Cow::Owned(code.to_string())), ..Font::default() });
-<a href=#136 id=136 data-nosnippet>136</a>    }
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="comment">// Set \bbl@main@language so babel's AtBeginDocument
-<a href=#138 id=138 data-nosnippet>138</a>    // \selectlanguage{\bbl@main@language} picks up the canonical name.
-<a href=#139 id=139 data-nosnippet>139</a>    </span>def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\bbl@main@language"</span>), <span class="prelude-val">None</span>,
-<a href=#140 id=140 data-nosnippet>140</a>      <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lang.clone())),
-<a href=#141 id=141 data-nosnippet>141</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Global), ..ExpandableOptions::default() }))<span class="question-mark">?</span>;
-<a href=#142 id=142 data-nosnippet>142</a>  });
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// Run mainlang at load time so DOCUMENT_LANGUAGE is set before
-<a href=#144 id=144 data-nosnippet>144</a>  // \begin{document} opens (and base_schema's after_open reads it).
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\lx@babel@activate@mainlang"</span>);
-<a href=#146 id=146 data-nosnippet>146</a>
-<a href=#147 id=147 data-nosnippet>147</a>});
+<a href=#87 id=87 data-nosnippet>87</a>    // ALSO drop babel's own bare KEYWORD options — `\DeclareOption{&lt;kw&gt;}` in
+<a href=#88 id=88 data-nosnippet>88</a>    // babel.sty that are package switches, NOT languages (so babel consumes
+<a href=#89 id=89 data-nosnippet>89</a>    // them via their `\ds@` handler and never treats them as a language to
+<a href=#90 id=90 data-nosnippet>90</a>    // load/select). Without this, `\usepackage[english,strings]{babel}`
+<a href=#91 id=91 data-nosnippet>91</a>    // selected the LAST bare option "strings" as the main language →
+<a href=#92 id=92 data-nosnippet>92</a>    // `\selectlanguage{strings}` → "You haven't defined the language
+<a href=#93 id=93 data-nosnippet>93</a>    // 'strings'". babel.sty L296/L336-379 (the no-`=` ones). Driver
+<a href=#94 id=94 data-nosnippet>94</a>    // 2006.10240 (`[english,strings]`).
+<a href=#95 id=95 data-nosnippet>95</a>    </span><span class="kw">const </span>BABEL_KEYWORD_OPTS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
+<a href=#96 id=96 data-nosnippet>96</a>      <span class="string">"base"</span>, <span class="string">"showlanguages"</span>, <span class="string">"KeepShorthandsActive"</span>, <span class="string">"activeacute"</span>,
+<a href=#97 id=97 data-nosnippet>97</a>      <span class="string">"activegrave"</span>, <span class="string">"debug"</span>, <span class="string">"noconfigs"</span>, <span class="string">"silent"</span>, <span class="string">"strings"</span>, <span class="string">"nocase"</span>,
+<a href=#98 id=98 data-nosnippet>98</a>      <span class="string">"leqno"</span>, <span class="string">"fleqn"</span>,
+<a href=#99 id=99 data-nosnippet>99</a>    ];
+<a href=#100 id=100 data-nosnippet>100</a>    <span class="kw">let </span>is_lang_candidate = |s: <span class="kw-2">&amp;</span>str| -&gt; bool {
+<a href=#101 id=101 data-nosnippet>101</a>      !s.is_empty() &amp;&amp; s != <span class="string">"nil" </span>&amp;&amp; !s.contains(<span class="string">'='</span>)
+<a href=#102 id=102 data-nosnippet>102</a>        &amp;&amp; !s.starts_with(<span class="string">"es-"</span>)
+<a href=#103 id=103 data-nosnippet>103</a>        &amp;&amp; !BABEL_KEYWORD_OPTS.contains(<span class="kw-2">&amp;</span>s)
+<a href=#104 id=104 data-nosnippet>104</a>    };
+<a href=#105 id=105 data-nosnippet>105</a>    <span class="kw">let </span>pkg_last = main_kv.clone().unwrap_or_else(|| {
+<a href=#106 id=106 data-nosnippet>106</a>      opt_babel.split(<span class="string">','</span>).map(str::trim).rfind(|s| is_lang_candidate(s)).unwrap_or_default().to_string()
+<a href=#107 id=107 data-nosnippet>107</a>    });
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="comment">// Pick the active main-lang. The non-trivial case is when the user's
+<a href=#109 id=109 data-nosnippet>109</a>    // OPTION NAME differs from the .ldf's CANONICAL language name —
+<a href=#110 id=110 data-nosnippet>110</a>    // e.g. `\usepackage[russianb]{babel}` loads russianb.ldf which calls
+<a href=#111 id=111 data-nosnippet>111</a>    // `\ldf@finish{russian}`. babel's `\select@language` later needs
+<a href=#112 id=112 data-nosnippet>112</a>    // `\l@&lt;canonical&gt;` (russian), so we must use the canonical name
+<a href=#113 id=113 data-nosnippet>113</a>    // when an alias is in play. But when our Rust binding for a `.ldf`
+<a href=#114 id=114 data-nosnippet>114</a>    // (e.g. french_ldf) bypasses raw load, no `\main@language` runs,
+<a href=#115 id=115 data-nosnippet>115</a>    // and `\bbl@main@language` retains whatever the FIRST option's
+<a href=#116 id=116 data-nosnippet>116</a>    // raw-loaded .ldf set — which is wrong (user wants the LAST option).
+<a href=#117 id=117 data-nosnippet>117</a>    //
+<a href=#118 id=118 data-nosnippet>118</a>    // Heuristic: trust `main` (the `\bbl@main@language` value) only
+<a href=#119 id=119 data-nosnippet>119</a>    // when it maps to the same ISO code as `pkg_last`. That captures
+<a href=#120 id=120 data-nosnippet>120</a>    // the canonical-alias case (russianb → russian, ukrainianb →
+<a href=#121 id=121 data-nosnippet>121</a>    // ukrainian, brazilian → brazil) while still falling through to
+<a href=#122 id=122 data-nosnippet>122</a>    // `pkg_last` for the no-Rust-ldf-binding case (where `main`
+<a href=#123 id=123 data-nosnippet>123</a>    // points at the first option, not the user's intended last one).
+<a href=#124 id=124 data-nosnippet>124</a>    //
+<a href=#125 id=125 data-nosnippet>125</a>    // Witnesses: 2312.08012 (russianb → russian alias, needed canonical),
+<a href=#126 id=126 data-nosnippet>126</a>    // tests/babel/elsart_keyword_brace_form (`[english,french]` →
+<a href=#127 id=127 data-nosnippet>127</a>    // french_ldf binding doesn't update main, but user wants french).
+<a href=#128 id=128 data-nosnippet>128</a>    </span><span class="kw">let </span>same_alias_class = !main.is_empty() &amp;&amp; !pkg_last.is_empty()
+<a href=#129 id=129 data-nosnippet>129</a>      &amp;&amp; main != pkg_last
+<a href=#130 id=130 data-nosnippet>130</a>      &amp;&amp; <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>main)
+<a href=#131 id=131 data-nosnippet>131</a>         == <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>pkg_last)
+<a href=#132 id=132 data-nosnippet>132</a>      &amp;&amp; <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>main).is_some();
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="kw">let </span>lang = <span class="kw">if let </span><span class="prelude-val">Some</span>(m) = main_kv {
+<a href=#134 id=134 data-nosnippet>134</a>      m
+<a href=#135 id=135 data-nosnippet>135</a>    } <span class="kw">else if </span>same_alias_class {
+<a href=#136 id=136 data-nosnippet>136</a>      <span class="comment">// canonical aliases — use the canonical name from \ldf@finish
+<a href=#137 id=137 data-nosnippet>137</a>      </span>main
+<a href=#138 id=138 data-nosnippet>138</a>    } <span class="kw">else if </span>!pkg_last.is_empty() {
+<a href=#139 id=139 data-nosnippet>139</a>      pkg_last
+<a href=#140 id=140 data-nosnippet>140</a>    } <span class="kw">else if </span>main != <span class="string">"nil" </span>&amp;&amp; !main.is_empty() {
+<a href=#141 id=141 data-nosnippet>141</a>      main
+<a href=#142 id=142 data-nosnippet>142</a>    } <span class="kw">else </span>{
+<a href=#143 id=143 data-nosnippet>143</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[]);
+<a href=#144 id=144 data-nosnippet>144</a>    };
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">let </span>iso = <span class="kw">crate</span>::package::babel_support_sty::babel_language_to_iso(<span class="kw-2">&amp;</span>lang);
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(code) = iso {
+<a href=#147 id=147 data-nosnippet>147</a>      state::assign_value(<span class="string">"DOCUMENT_LANGUAGE"</span>,
+<a href=#148 id=148 data-nosnippet>148</a>        Stored::from(code.to_string()), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#149 id=149 data-nosnippet>149</a>      merge_font(Font { language: <span class="prelude-val">Some</span>(Cow::Owned(code.to_string())), ..Font::default() });
+<a href=#150 id=150 data-nosnippet>150</a>    }
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="comment">// Set \bbl@main@language so babel's AtBeginDocument
+<a href=#152 id=152 data-nosnippet>152</a>    // \selectlanguage{\bbl@main@language} picks up the canonical name.
+<a href=#153 id=153 data-nosnippet>153</a>    </span>def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\bbl@main@language"</span>), <span class="prelude-val">None</span>,
+<a href=#154 id=154 data-nosnippet>154</a>      <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(lang.clone())),
+<a href=#155 id=155 data-nosnippet>155</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Global), ..ExpandableOptions::default() }))<span class="question-mark">?</span>;
+<a href=#156 id=156 data-nosnippet>156</a>  });
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="comment">// Run mainlang at load time so DOCUMENT_LANGUAGE is set before
+<a href=#158 id=158 data-nosnippet>158</a>  // \begin{document} opens (and base_schema's after_open reads it).
+<a href=#159 id=159 data-nosnippet>159</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\lx@babel@activate@mainlang"</span>);
+<a href=#160 id=160 data-nosnippet>160</a>
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// English-family caption/date/extras hook backfill. Modern babel's .ini
+<a href=#162 id=162 data-nosnippet>162</a>  // path defines the per-variant `\captions&lt;v&gt;`/`\date&lt;v&gt;`/`\extras&lt;v&gt;`
+<a href=#163 id=163 data-nosnippet>163</a>  // hooks only for the variant(s) whose .ini actually loaded (e.g.
+<a href=#164 id=164 data-nosnippet>164</a>  // babel-british for `[british]`). A paper listing SEVERAL english
+<a href=#165 id=165 data-nosnippet>165</a>  // variants — `\usepackage[british,USenglish]{babel}` — then invokes a
+<a href=#166 id=166 data-nosnippet>166</a>  // variant whose .ini never ran (`\dateUSenglish`) or the `\captionsenglish`
+<a href=#167 id=167 data-nosnippet>167</a>  // base, erroring at `\selectlanguage`/option dispatch. The classic .ldf
+<a href=#168 id=168 data-nosnippet>168</a>  // loaders (`babel_lang_stubs::load_*`) also miss this because the .ini
+<a href=#169 id=169 data-nosnippet>169</a>  // path bypasses them, and `english.sty`'s aliasing loop only runs for
+<a href=#170 id=170 data-nosnippet>170</a>  // `\usepackage{english}`, not a direct `\usepackage[...]{babel}`. Backfill
+<a href=#171 id=171 data-nosnippet>171</a>  // with `\@ifundefined` guards: never overrides a real definition; captions
+<a href=#172 id=172 data-nosnippet>172</a>  // stay English (our HTML default); `\date&lt;v&gt;` aliases to `\dateenglish`
+<a href=#173 id=173 data-nosnippet>173</a>  // (keeps `\today` faithful). Runs after babel's own option processing
+<a href=#174 id=174 data-nosnippet>174</a>  // (InputDefinitions above), before the invocation in later preamble.
+<a href=#175 id=175 data-nosnippet>175</a>  // Witness arXiv:1508.06150 (`\usepackage[british,USenglish]{babel}`); Perl rc=0.
+<a href=#176 id=176 data-nosnippet>176</a>  // NB: no \makeatletter/\makeatother — RawTeX already digests with `@` as a
+<a href=#177 id=177 data-nosnippet>177</a>  // letter; emitting \makeatother here would leave `@` catcode-12 globally and
+<a href=#178 id=178 data-nosnippet>178</a>  // break babel's later `\l@&lt;lang&gt;`/`\bbl@…` parsing (manifested as a spurious
+<a href=#179 id=179 data-nosnippet>179</a>  // "haven't defined the language" error).
+<a href=#180 id=180 data-nosnippet>180</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"%
+<a href=#181 id=181 data-nosnippet>181</a>    \@ifundefined{dateenglish}{\@namedef{dateenglish}{}}{}%
+<a href=#182 id=182 data-nosnippet>182</a>    \@for\lx@bbl@engtmp:={english,USenglish,UKenglish,american,british,canadian,australian,newzealand}\do{%
+<a href=#183 id=183 data-nosnippet>183</a>      \@ifundefined{captions\lx@bbl@engtmp}{\expandafter\let\csname captions\lx@bbl@engtmp\endcsname\@empty}{}%
+<a href=#184 id=184 data-nosnippet>184</a>      \@ifundefined{extras\lx@bbl@engtmp}{\expandafter\let\csname extras\lx@bbl@engtmp\endcsname\@empty}{}%
+<a href=#185 id=185 data-nosnippet>185</a>      \@ifundefined{noextras\lx@bbl@engtmp}{\expandafter\let\csname noextras\lx@bbl@engtmp\endcsname\@empty}{}%
+<a href=#186 id=186 data-nosnippet>186</a>      \@ifundefined{date\lx@bbl@engtmp}{\expandafter\let\csname date\lx@bbl@engtmp\endcsname\dateenglish}{}%
+<a href=#187 id=187 data-nosnippet>187</a>      \@ifundefined{l@\lx@bbl@engtmp}{\expandafter\let\csname l@\lx@bbl@engtmp\endcsname\l@english}{}}"</span>);
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// ^ Also alias the hyphenation language register `\l@&lt;variant&gt;` to
+<a href=#189 id=189 data-nosnippet>189</a>  // `\l@english` when undefined. The `.ini` path defines `\l@british` only for
+<a href=#190 id=190 data-nosnippet>190</a>  // the variant whose `.ini` actually ran; a paper that loads several english
+<a href=#191 id=191 data-nosnippet>191</a>  // variants then does `\selectlanguage{british}` → `\bbl@iflanguage{british}`
+<a href=#192 id=192 data-nosnippet>192</a>  // tests `\ifx\csname l@british\endcsname\relax` and, finding it relax, errors
+<a href=#193 id=193 data-nosnippet>193</a>  // "You haven't defined the language 'british' yet". english.ldf normally
+<a href=#194 id=194 data-nosnippet>194</a>  // `\let`s every variant's `\l@` to `\l@english` (british uses English
+<a href=#195 id=195 data-nosnippet>195</a>  // hyphenation); backfill the same. Witness 1508.06150.
+<a href=#196 id=196 data-nosnippet>196</a>
+<a href=#197 id=197 data-nosnippet>197</a>  // `\shorthandoff{&lt;chars&gt;}` / `\shorthandon{&lt;chars&gt;}`: babel shorthand
+<a href=#198 id=198 data-nosnippet>198</a>  // toggles. Babel's raw implementation (babel.sty L1492-1496) iterates the
+<a href=#199 id=199 data-nosnippet>199</a>  // argument switching each active-char shorthand, but ALSO fires
+<a href=#200 id=200 data-nosnippet>200</a>  // `\PackageError{babel}{I can't switch '&lt;c&gt;' on or off--not a shorthand}`
+<a href=#201 id=201 data-nosnippet>201</a>  // for any char that isn't a registered shorthand. Our language stubs
+<a href=#202 id=202 data-nosnippet>202</a>  // (`install_lang_stub`) don't install the full shorthand machinery, so the
+<a href=#203 id=203 data-nosnippet>203</a>  // raw impl errored on every call — which is why this was a no-op.
+<a href=#204 id=204 data-nosnippet>204</a>  //
+<a href=#205 id=205 data-nosnippet>205</a>  // But a pure no-op is WRONG: the *observable* effect of `\shorthandoff` is
+<a href=#206 id=206 data-nosnippet>206</a>  // the CATCODE change (active → other), which genuinely affects tokenization,
+<a href=#207 id=207 data-nosnippet>207</a>  // not just typesetting. French babel makes `;:!?` active; leaving them
+<a href=#208 id=208 data-nosnippet>208</a>  // active when an author explicitly turned them off breaks downstream parsers
+<a href=#209 id=209 data-nosnippet>209</a>  // that expect the literal chars — e.g. xy-pic `\xymatrix @!=8mm{…}` reads
+<a href=#210 id=210 data-nosnippet>210</a>  // `@!=` expecting `!` at catcode 12; an active `!` derails the xymatrix so
+<a href=#211 id=211 data-nosnippet>211</a>  // its `^`/`_` reach the math handler in text mode → 100+ `^`/`_` "can only
+<a href=#212 id=212 data-nosnippet>212</a>  // appear in math mode" errors (witness arXiv:1804.10128, French + xy-pic).
+<a href=#213 id=213 data-nosnippet>213</a>  //
+<a href=#214 id=214 data-nosnippet>214</a>  // So apply the catcode change (the part our pipeline observes) and skip the
+<a href=#215 id=215 data-nosnippet>215</a>  // error (the part the stub gap can't satisfy): `\shorthandoff` → OTHER(12),
+<a href=#216 id=216 data-nosnippet>216</a>  // `\shorthandon` → ACTIVE(13). Local to the current group, mirroring TeX's
+<a href=#217 id=217 data-nosnippet>217</a>  // local `\catcode`. Still correct for the defensive-call witness
+<a href=#218 id=218 data-nosnippet>218</a>  // arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}…}`) — catcode 12 is the
+<a href=#219 id=219 data-nosnippet>219</a>  // intended effect, no error.
+<a href=#220 id=220 data-nosnippet>220</a>  </span><span class="kw">fn </span>shorthand_set_catcode(chars: Tokens, cc: Catcode) {
+<a href=#221 id=221 data-nosnippet>221</a>    <span class="kw">for </span>tok <span class="kw">in </span>chars.unlist() {
+<a href=#222 id=222 data-nosnippet>222</a>      <span class="kw">if </span>tok.get_catcode() == Catcode::SPACE {
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="kw">continue</span>;
+<a href=#224 id=224 data-nosnippet>224</a>      }
+<a href=#225 id=225 data-nosnippet>225</a>      <span class="kw">let </span>single = tok.with_str(|s| {
+<a href=#226 id=226 data-nosnippet>226</a>        <span class="kw">let </span><span class="kw-2">mut </span>it = s.chars();
+<a href=#227 id=227 data-nosnippet>227</a>        <span class="kw">match </span>(it.next(), it.next()) {
+<a href=#228 id=228 data-nosnippet>228</a>          (<span class="prelude-val">Some</span>(c), <span class="prelude-val">None</span>) =&gt; <span class="prelude-val">Some</span>(c),
+<a href=#229 id=229 data-nosnippet>229</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#230 id=230 data-nosnippet>230</a>        }
+<a href=#231 id=231 data-nosnippet>231</a>      });
+<a href=#232 id=232 data-nosnippet>232</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = single {
+<a href=#233 id=233 data-nosnippet>233</a>        state::assign_catcode(c, cc, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#234 id=234 data-nosnippet>234</a>      }
+<a href=#235 id=235 data-nosnippet>235</a>    }
+<a href=#236 id=236 data-nosnippet>236</a>  }
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\shorthandoff{}"</span>, sub[(chars)] {
+<a href=#238 id=238 data-nosnippet>238</a>    shorthand_set_catcode(chars, Catcode::OTHER);
+<a href=#239 id=239 data-nosnippet>239</a>  });
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\shorthandon{}"</span>, sub[(chars)] {
+<a href=#241 id=241 data-nosnippet>241</a>    shorthand_set_catcode(chars, Catcode::ACTIVE);
+<a href=#242 id=242 data-nosnippet>242</a>  });
+<a href=#243 id=243 data-nosnippet>243</a>
+<a href=#244 id=244 data-nosnippet>244</a>});
 </code></pre></div></section></main></body></html>

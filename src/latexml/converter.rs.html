@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_oxide/src/converter.rs`."><title>converter.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-17e0aaed.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (cced03bfd 2026-05-28)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml/</div>converter.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_core::common::arena;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_oxide/src/converter.rs`."><title>converter.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml/</div>converter.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_core::common::arena;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>latexml_core::Note;
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span>latexml_core::common::error::<span class="kw-2">*</span>;
 <a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span>latexml_core::common::object::Object;
@@ -357,97 +357,104 @@
 <a href=#357 id=357 data-nosnippet>357</a>        });
 <a href=#358 id=358 data-nosnippet>358</a>      }
 <a href=#359 id=359 data-nosnippet>359</a>    }
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="comment">// Perl: Note("Conversion complete: " . $$runtime{status});
-<a href=#361 id=361 data-nosnippet>361</a>    </span><span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"Conversion complete: {}"</span>, <span class="self">self</span>.runtime.status));
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">let </span>log = <span class="self">self</span>.flush_log();
-<a href=#363 id=363 data-nosnippet>363</a>    <span class="comment">// self-&gt;sanitize($log) if ($$runtime{status_code} == 3);
-<a href=#364 id=364 data-nosnippet>364</a>
-<a href=#365 id=365 data-nosnippet>365</a>    </span>ConversionResponse {
-<a href=#366 id=366 data-nosnippet>366</a>      result: <span class="prelude-val">Some</span>(serialized),
-<a href=#367 id=367 data-nosnippet>367</a>      log,
-<a href=#368 id=368 data-nosnippet>368</a>      status: <span class="self">self</span>.runtime.status.clone(),
-<a href=#369 id=369 data-nosnippet>369</a>      status_code: <span class="self">self</span>.runtime.status_code,
-<a href=#370 id=370 data-nosnippet>370</a>    }
-<a href=#371 id=371 data-nosnippet>371</a>  }
-<a href=#372 id=372 data-nosnippet>372</a>
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">pub fn </span>prepare_session&lt;<span class="lifetime">'preplifetime</span>&gt;(
-<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span><span class="kw-2">mut </span><span class="self">self</span>,
-<a href=#375 id=375 data-nosnippet>375</a>    _opts: <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span>Config,
-<a href=#376 id=376 data-nosnippet>376</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#377 id=377 data-nosnippet>377</a>    <span class="kw">if </span>!<span class="self">self</span>.ready {
-<a href=#378 id=378 data-nosnippet>378</a>      <span class="self">self</span>.initialize_session()<span class="question-mark">?
-<a href=#379 id=379 data-nosnippet>379</a>    </span>}
-<a href=#380 id=380 data-nosnippet>380</a>    <span class="prelude-val">Ok</span>(())
-<a href=#381 id=381 data-nosnippet>381</a>  }
-<a href=#382 id=382 data-nosnippet>382</a>}
-<a href=#383 id=383 data-nosnippet>383</a>
-<a href=#384 id=384 data-nosnippet>384</a><span class="doccomment">/// Resolve the `(preamble, postamble)` to wrap the source in, based on
-<a href=#385 id=385 data-nosnippet>385</a>/// the requested input chunk size. Faithful port of Perl `LaTeXML.pm`
-<a href=#386 id=386 data-nosnippet>386</a>/// L165-172 — note both ambles key on **`whatsin`** (not `whatsout`):
-<a href=#387 id=387 data-nosnippet>387</a>///
-<a href=#388 id=388 data-nosnippet>388</a>/// * `math` → `\begin{document}\ensuremathfollows` …
-<a href=#389 id=389 data-nosnippet>389</a>///   `\ensuremathpreceeds\end{document}` (magic math-mode trigger).
-<a href=#390 id=390 data-nosnippet>390</a>/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting
-<a href=#391 id=391 data-nosnippet>391</a>///   to `standard_preamble.tex` / `standard_postamble.tex`.
-<a href=#392 id=392 data-nosnippet>392</a>/// * everything else (`document`, `archive`, …) → no wrapping.
-<a href=#393 id=393 data-nosnippet>393</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>resolve_amble(
-<a href=#394 id=394 data-nosnippet>394</a>  whatsin: <span class="kw-2">&amp;</span>DataSize,
-<a href=#395 id=395 data-nosnippet>395</a>  preamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#396 id=396 data-nosnippet>396</a>  postamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#397 id=397 data-nosnippet>397</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;String&gt;) {
-<a href=#398 id=398 data-nosnippet>398</a>  <span class="kw">match </span>whatsin {
-<a href=#399 id=399 data-nosnippet>399</a>    DataSize::Math =&gt; (
-<a href=#400 id=400 data-nosnippet>400</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\begin{{document}}\\ensuremathfollows"</span>)),
-<a href=#401 id=401 data-nosnippet>401</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{{document}}"</span>)),
-<a href=#402 id=402 data-nosnippet>402</a>    ),
-<a href=#403 id=403 data-nosnippet>403</a>    DataSize::Fragment =&gt; (
-<a href=#404 id=404 data-nosnippet>404</a>      <span class="prelude-val">Some</span>(preamble.clone().unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_preamble.tex"</span>))),
-<a href=#405 id=405 data-nosnippet>405</a>      <span class="prelude-val">Some</span>(postamble.clone().unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_postamble.tex"</span>))),
-<a href=#406 id=406 data-nosnippet>406</a>    ),
-<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
-<a href=#408 id=408 data-nosnippet>408</a>  }
-<a href=#409 id=409 data-nosnippet>409</a>}
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a><span class="attr">#[cfg(test)]
-<a href=#412 id=412 data-nosnippet>412</a></span><span class="kw">mod </span>tests {
-<a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#414 id=414 data-nosnippet>414</a>
-<a href=#415 id=415 data-nosnippet>415</a>  <span class="attr">#[test]
-<a href=#416 id=416 data-nosnippet>416</a>  </span><span class="kw">fn </span>amble_math_wraps_both_ends() {
-<a href=#417 id=417 data-nosnippet>417</a>    <span class="comment">// Perl LaTeXML.pm:166-168 — math sets BOTH preamble and postamble.
-<a href=#418 id=418 data-nosnippet>418</a>    </span><span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Math, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
-<a href=#419 id=419 data-nosnippet>419</a>    <span class="macro">assert_eq!</span>(
-<a href=#420 id=420 data-nosnippet>420</a>      pre.as_deref(),
-<a href=#421 id=421 data-nosnippet>421</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\begin{document}\\ensuremathfollows"</span>)
-<a href=#422 id=422 data-nosnippet>422</a>    );
-<a href=#423 id=423 data-nosnippet>423</a>    <span class="macro">assert_eq!</span>(
-<a href=#424 id=424 data-nosnippet>424</a>      post.as_deref(),
-<a href=#425 id=425 data-nosnippet>425</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{document}"</span>)
-<a href=#426 id=426 data-nosnippet>426</a>    );
-<a href=#427 id=427 data-nosnippet>427</a>  }
-<a href=#428 id=428 data-nosnippet>428</a>
-<a href=#429 id=429 data-nosnippet>429</a>  <span class="attr">#[test]
-<a href=#430 id=430 data-nosnippet>430</a>  </span><span class="kw">fn </span>amble_fragment_defaults_to_standard_files() {
-<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Fragment, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_preamble.tex"</span>));
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_postamble.tex"</span>));
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="comment">// Perl: Note("Conversion complete: " . $$runtime{status}); (LaTeXML.pm:315)
+<a href=#361 id=361 data-nosnippet>361</a>    // is reached only on success — a Fatal `die`s before it, and bin/latexml:127
+<a href=#362 id=362 data-nosnippet>362</a>    // then prints `"Conversion " . ($code == 3 ? 'failed' : 'complete')`. Rust
+<a href=#363 id=363 data-nosnippet>363</a>    // recovers from a Fatal (graceful degradation) instead of dying, so it reaches
+<a href=#364 id=364 data-nosnippet>364</a>    // this note even when status_code == 3; fold in bin/latexml's verdict here so
+<a href=#365 id=365 data-nosnippet>365</a>    // a fatal run reports "failed", never the self-contradictory "complete: N fatal
+<a href=#366 id=366 data-nosnippet>366</a>    // error". Success cases (status_code &lt; 3) stay byte-identical.
+<a href=#367 id=367 data-nosnippet>367</a>    </span><span class="kw">let </span>verb = <span class="kw">if </span><span class="self">self</span>.runtime.status_code == <span class="number">3 </span>{ <span class="string">"failed" </span>} <span class="kw">else </span>{ <span class="string">"complete" </span>};
+<a href=#368 id=368 data-nosnippet>368</a>    <span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"Conversion {}: {}"</span>, verb, <span class="self">self</span>.runtime.status));
+<a href=#369 id=369 data-nosnippet>369</a>    <span class="kw">let </span>log = <span class="self">self</span>.flush_log();
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="comment">// self-&gt;sanitize($log) if ($$runtime{status_code} == 3);
+<a href=#371 id=371 data-nosnippet>371</a>
+<a href=#372 id=372 data-nosnippet>372</a>    </span>ConversionResponse {
+<a href=#373 id=373 data-nosnippet>373</a>      result: <span class="prelude-val">Some</span>(serialized),
+<a href=#374 id=374 data-nosnippet>374</a>      log,
+<a href=#375 id=375 data-nosnippet>375</a>      status: <span class="self">self</span>.runtime.status.clone(),
+<a href=#376 id=376 data-nosnippet>376</a>      status_code: <span class="self">self</span>.runtime.status_code,
+<a href=#377 id=377 data-nosnippet>377</a>    }
+<a href=#378 id=378 data-nosnippet>378</a>  }
+<a href=#379 id=379 data-nosnippet>379</a>
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="kw">pub fn </span>prepare_session&lt;<span class="lifetime">'preplifetime</span>&gt;(
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span><span class="kw-2">mut </span><span class="self">self</span>,
+<a href=#382 id=382 data-nosnippet>382</a>    _opts: <span class="kw-2">&amp;</span><span class="lifetime">'preplifetime </span>Config,
+<a href=#383 id=383 data-nosnippet>383</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#384 id=384 data-nosnippet>384</a>    <span class="kw">if </span>!<span class="self">self</span>.ready {
+<a href=#385 id=385 data-nosnippet>385</a>      <span class="self">self</span>.initialize_session()<span class="question-mark">?
+<a href=#386 id=386 data-nosnippet>386</a>    </span>}
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="prelude-val">Ok</span>(())
+<a href=#388 id=388 data-nosnippet>388</a>  }
+<a href=#389 id=389 data-nosnippet>389</a>}
+<a href=#390 id=390 data-nosnippet>390</a>
+<a href=#391 id=391 data-nosnippet>391</a><span class="doccomment">/// Resolve the `(preamble, postamble)` to wrap the source in, based on
+<a href=#392 id=392 data-nosnippet>392</a>/// the requested input chunk size. Faithful port of Perl `LaTeXML.pm`
+<a href=#393 id=393 data-nosnippet>393</a>/// L165-172 — note both ambles key on **`whatsin`** (not `whatsout`):
+<a href=#394 id=394 data-nosnippet>394</a>///
+<a href=#395 id=395 data-nosnippet>395</a>/// * `math` → `\begin{document}\ensuremathfollows` …
+<a href=#396 id=396 data-nosnippet>396</a>///   `\ensuremathpreceeds\end{document}` (magic math-mode trigger).
+<a href=#397 id=397 data-nosnippet>397</a>/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting
+<a href=#398 id=398 data-nosnippet>398</a>///   to `standard_preamble.tex` / `standard_postamble.tex`.
+<a href=#399 id=399 data-nosnippet>399</a>/// * everything else (`document`, `archive`, …) → no wrapping.
+<a href=#400 id=400 data-nosnippet>400</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>resolve_amble(
+<a href=#401 id=401 data-nosnippet>401</a>  whatsin: <span class="kw-2">&amp;</span>DataSize,
+<a href=#402 id=402 data-nosnippet>402</a>  preamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#403 id=403 data-nosnippet>403</a>  postamble: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#404 id=404 data-nosnippet>404</a>) -&gt; (<span class="prelude-ty">Option</span>&lt;String&gt;, <span class="prelude-ty">Option</span>&lt;String&gt;) {
+<a href=#405 id=405 data-nosnippet>405</a>  <span class="kw">match </span>whatsin {
+<a href=#406 id=406 data-nosnippet>406</a>    DataSize::Math =&gt; (
+<a href=#407 id=407 data-nosnippet>407</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\begin{{document}}\\ensuremathfollows"</span>)),
+<a href=#408 id=408 data-nosnippet>408</a>      <span class="prelude-val">Some</span>(<span class="macro">s!</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{{document}}"</span>)),
+<a href=#409 id=409 data-nosnippet>409</a>    ),
+<a href=#410 id=410 data-nosnippet>410</a>    DataSize::Fragment =&gt; (
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="prelude-val">Some</span>(preamble.clone().unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_preamble.tex"</span>))),
+<a href=#412 id=412 data-nosnippet>412</a>      <span class="prelude-val">Some</span>(postamble.clone().unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"standard_postamble.tex"</span>))),
+<a href=#413 id=413 data-nosnippet>413</a>    ),
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>),
+<a href=#415 id=415 data-nosnippet>415</a>  }
+<a href=#416 id=416 data-nosnippet>416</a>}
+<a href=#417 id=417 data-nosnippet>417</a>
+<a href=#418 id=418 data-nosnippet>418</a><span class="attr">#[cfg(test)]
+<a href=#419 id=419 data-nosnippet>419</a></span><span class="kw">mod </span>tests {
+<a href=#420 id=420 data-nosnippet>420</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#421 id=421 data-nosnippet>421</a>
+<a href=#422 id=422 data-nosnippet>422</a>  <span class="attr">#[test]
+<a href=#423 id=423 data-nosnippet>423</a>  </span><span class="kw">fn </span>amble_math_wraps_both_ends() {
+<a href=#424 id=424 data-nosnippet>424</a>    <span class="comment">// Perl LaTeXML.pm:166-168 — math sets BOTH preamble and postamble.
+<a href=#425 id=425 data-nosnippet>425</a>    </span><span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Math, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
+<a href=#426 id=426 data-nosnippet>426</a>    <span class="macro">assert_eq!</span>(
+<a href=#427 id=427 data-nosnippet>427</a>      pre.as_deref(),
+<a href=#428 id=428 data-nosnippet>428</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\begin{document}\\ensuremathfollows"</span>)
+<a href=#429 id=429 data-nosnippet>429</a>    );
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="macro">assert_eq!</span>(
+<a href=#431 id=431 data-nosnippet>431</a>      post.as_deref(),
+<a href=#432 id=432 data-nosnippet>432</a>      <span class="prelude-val">Some</span>(<span class="string">"literal:\\ensuremathpreceeds\\end{document}"</span>)
+<a href=#433 id=433 data-nosnippet>433</a>    );
 <a href=#434 id=434 data-nosnippet>434</a>  }
 <a href=#435 id=435 data-nosnippet>435</a>
 <a href=#436 id=436 data-nosnippet>436</a>  <span class="attr">#[test]
-<a href=#437 id=437 data-nosnippet>437</a>  </span><span class="kw">fn </span>amble_fragment_honors_explicit_files() {
-<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">let </span>(pre, post) = resolve_amble(
-<a href=#439 id=439 data-nosnippet>439</a>      <span class="kw-2">&amp;</span>DataSize::Fragment,
-<a href=#440 id=440 data-nosnippet>440</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>.into()),
-<a href=#441 id=441 data-nosnippet>441</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>.into()),
-<a href=#442 id=442 data-nosnippet>442</a>    );
-<a href=#443 id=443 data-nosnippet>443</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>));
-<a href=#444 id=444 data-nosnippet>444</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>));
-<a href=#445 id=445 data-nosnippet>445</a>  }
-<a href=#446 id=446 data-nosnippet>446</a>
-<a href=#447 id=447 data-nosnippet>447</a>  <span class="attr">#[test]
-<a href=#448 id=448 data-nosnippet>448</a>  </span><span class="kw">fn </span>amble_document_and_archive_have_no_wrapping() {
-<a href=#449 id=449 data-nosnippet>449</a>    <span class="macro">assert_eq!</span>(resolve_amble(<span class="kw-2">&amp;</span>DataSize::Document, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>), (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>));
-<a href=#450 id=450 data-nosnippet>450</a>    <span class="macro">assert_eq!</span>(resolve_amble(<span class="kw-2">&amp;</span>DataSize::Archive, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>), (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>));
-<a href=#451 id=451 data-nosnippet>451</a>  }
-<a href=#452 id=452 data-nosnippet>452</a>}
+<a href=#437 id=437 data-nosnippet>437</a>  </span><span class="kw">fn </span>amble_fragment_defaults_to_standard_files() {
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">let </span>(pre, post) = resolve_amble(<span class="kw-2">&amp;</span>DataSize::Fragment, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>);
+<a href=#439 id=439 data-nosnippet>439</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_preamble.tex"</span>));
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"standard_postamble.tex"</span>));
+<a href=#441 id=441 data-nosnippet>441</a>  }
+<a href=#442 id=442 data-nosnippet>442</a>
+<a href=#443 id=443 data-nosnippet>443</a>  <span class="attr">#[test]
+<a href=#444 id=444 data-nosnippet>444</a>  </span><span class="kw">fn </span>amble_fragment_honors_explicit_files() {
+<a href=#445 id=445 data-nosnippet>445</a>    <span class="kw">let </span>(pre, post) = resolve_amble(
+<a href=#446 id=446 data-nosnippet>446</a>      <span class="kw-2">&amp;</span>DataSize::Fragment,
+<a href=#447 id=447 data-nosnippet>447</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>.into()),
+<a href=#448 id=448 data-nosnippet>448</a>      <span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>.into()),
+<a href=#449 id=449 data-nosnippet>449</a>    );
+<a href=#450 id=450 data-nosnippet>450</a>    <span class="macro">assert_eq!</span>(pre.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_pre.tex"</span>));
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="macro">assert_eq!</span>(post.as_deref(), <span class="prelude-val">Some</span>(<span class="string">"my_post.tex"</span>));
+<a href=#452 id=452 data-nosnippet>452</a>  }
+<a href=#453 id=453 data-nosnippet>453</a>
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="attr">#[test]
+<a href=#455 id=455 data-nosnippet>455</a>  </span><span class="kw">fn </span>amble_document_and_archive_have_no_wrapping() {
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="macro">assert_eq!</span>(resolve_amble(<span class="kw-2">&amp;</span>DataSize::Document, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>), (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>));
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="macro">assert_eq!</span>(resolve_amble(<span class="kw-2">&amp;</span>DataSize::Archive, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="prelude-val">None</span>), (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>));
+<a href=#458 id=458 data-nosnippet>458</a>  }
+<a href=#459 id=459 data-nosnippet>459</a>}
 </code></pre></div></section></main></body></html>

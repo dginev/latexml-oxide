@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="No-op stub for showexpl.sty."><title>latexml_package::package::showexpl_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (b354133fb 2026-06-03)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module showexpl_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module showexpl_<wbr>sty</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>package::<wbr>package</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_package</a>::<wbr><a href="../index.html">package</a></div><h1>Module <span>showexpl_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_package/package/showexpl_sty.rs.html#1-49">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>No-op stub for showexpl.sty.</p>
+<p>showexpl.sty (TL) builds the <code>LTXexample</code> environment and
+<code>\LTXinputExample</code> command (display LaTeX source + its typeset
+result side by side) on top of <code>listings</code>. Its package body uses
+<code>\lst@newenvironment{LTXexample}{...}{...\SX@put@code@result}</code>
+whose end-group <code>\xdef\SX@@explpreset{\the\@temptokena,...}</code> parse
+tickles a readBalanced <code>Expected opening '{'</code> error in our raw-load
+path, then <code>\SX@put@code@result</code> (defined just after, at L208)
+never registers, cascading.</p>
+<p>Perl LaTeXML never observes this: its default TEXINPUTS excludes
+<code>/usr/share/texlive</code>, so showexpl.sty is reported as missing-file
+and skipped, completing cleanly. Verified on arXiv:2002.09910
+(<code>\usepackage{...showexpl...}</code>): Perl emits
+<code>Warning:missing_file:showexpl</code> and 0 errors.</p>
+<p>Match Perl’s effective behavior with a stub that (a) pulls in
+showexpl’s real <code>\RequirePackage</code> dependency chain so any
+transitively-needed macros (listings, varwidth, float) resolve, and
+(b) no-ops the user-facing showexpl commands. All 15 R-stage papers
+blocked on <code>\SX@put@code@result</code> were checked: NONE invoke
+<code>\begin{LTXexample}</code> or <code>\LTXinputExample</code> — they only load the
+package — so the stub costs no document content.</p>
+<p>Witnesses (CONVERR_7/CONVERR_3 → OK): 1604.00381, 1606.01035,
+1706.03232, 1804.02704, 1804.07221, 1612.01022, 1905.12059,
+1706.09226, 1701.01402, 1812.06820, 1801.01025, 1806.10927,
+2001.08314, 2002.09910, 1901.08750.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_package::package::showexpl_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>
