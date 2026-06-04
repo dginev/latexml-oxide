@@ -298,138 +298,143 @@
 <a href=#298 id=298 data-nosnippet>298</a>        <span class="kw">_ </span>=&gt; String::from(<span class="string">"matrix(1 0 0 1 0 0)"</span>),
 <a href=#299 id=299 data-nosnippet>299</a>      };
 <a href=#300 id=300 data-nosnippet>300</a>      <span class="kw">let </span>g_attrs = <span class="macro">string_map!</span>(<span class="string">"transform" </span>=&gt; transform);
-<a href=#301 id=301 data-nosnippet>301</a>      document.open_element(<span class="string">"svg:g"</span>, <span class="prelude-val">Some</span>(g_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#302 id=302 data-nosnippet>302</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(content)) = args.first() {
-<a href=#303 id=303 data-nosnippet>303</a>        document.absorb(content, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#304 id=304 data-nosnippet>304</a>      }
-<a href=#305 id=305 data-nosnippet>305</a>      document.close_element(<span class="string">"svg:g"</span>)<span class="question-mark">?</span>;
-<a href=#306 id=306 data-nosnippet>306</a>    },
-<a href=#307 id=307 data-nosnippet>307</a>    after_digest =&gt; sub[whatsit] {
-<a href=#308 id=308 data-nosnippet>308</a>      <span class="kw">let </span>range_str = state::lookup_string(<span class="string">"saved_xy_range"</span>);
-<a href=#309 id=309 data-nosnippet>309</a>      <span class="kw">let </span>dpi_val = state::lookup_int(<span class="string">"DPI"</span>);
-<a href=#310 id=310 data-nosnippet>310</a>      <span class="kw">let </span>dpi = <span class="kw">if </span>dpi_val &gt; <span class="number">0 </span>{ dpi_val <span class="kw">as </span>f64 } <span class="kw">else </span>{ <span class="number">100.0 </span>};
-<a href=#311 id=311 data-nosnippet>311</a>      <span class="kw">let </span>dims: Vec&lt;f64&gt; = range_str.split(<span class="string">','</span>)
-<a href=#312 id=312 data-nosnippet>312</a>        .filter_map(|s| s.trim().parse::&lt;i64&gt;().ok())
-<a href=#313 id=313 data-nosnippet>313</a>        .map(|v| (v <span class="kw">as </span>f64 / <span class="number">65536.0</span>) * (dpi / <span class="number">72.27</span>))
-<a href=#314 id=314 data-nosnippet>314</a>        .collect();
-<a href=#315 id=315 data-nosnippet>315</a>      <span class="kw">let </span>(x0, y0, _x1, y1) = (
-<a href=#316 id=316 data-nosnippet>316</a>        dims.first().copied().unwrap_or(<span class="number">0.0</span>),
-<a href=#317 id=317 data-nosnippet>317</a>        dims.get(<span class="number">1</span>).copied().unwrap_or(<span class="number">0.0</span>),
-<a href=#318 id=318 data-nosnippet>318</a>        dims.get(<span class="number">2</span>).copied().unwrap_or(<span class="number">0.0</span>),
-<a href=#319 id=319 data-nosnippet>319</a>        dims.get(<span class="number">3</span>).copied().unwrap_or(<span class="number">0.0</span>),
-<a href=#320 id=320 data-nosnippet>320</a>      );
-<a href=#321 id=321 data-nosnippet>321</a>      <span class="kw">let </span>h = y1 - y0;
-<a href=#322 id=322 data-nosnippet>322</a>      <span class="kw">let </span>x_px = <span class="kw">if </span>x0 &gt; <span class="number">0.0 </span>{ x0 } <span class="kw">else </span>{ <span class="number">0.0 </span>};
-<a href=#323 id=323 data-nosnippet>323</a>      <span class="kw">let </span>in_math = state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
-<a href=#324 id=324 data-nosnippet>324</a>      <span class="kw">let </span>y_px = <span class="kw">if </span>in_math { -(h / <span class="number">2.0</span>) } <span class="kw">else </span>{ <span class="number">0.0 </span>};
-<a href=#325 id=325 data-nosnippet>325</a>      whatsit.set_property(<span class="string">"transform"</span>, Stored::from(
-<a href=#326 id=326 data-nosnippet>326</a>        <span class="macro">s!</span>(<span class="string">"matrix(1 0 0 1 {} {})"</span>, x_px, y_px)));
-<a href=#327 id=327 data-nosnippet>327</a>    }
-<a href=#328 id=328 data-nosnippet>328</a>  );
-<a href=#329 id=329 data-nosnippet>329</a>
-<a href=#330 id=330 data-nosnippet>330</a>  <span class="comment">// Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151).
-<a href=#331 id=331 data-nosnippet>331</a>  //
-<a href=#332 id=332 data-nosnippet>332</a>  // GUARD against double-application. This binding can be entered more
-<a href=#333 id=333 data-nosnippet>333</a>  // than once: `\usepackage{xypic}` → xypic_sty → RequirePackage("xy")
-<a href=#334 id=334 data-nosnippet>334</a>  // runs it once (capturing the REAL xypic `\xy` into `\lx@xy@original`,
-<a href=#335 id=335 data-nosnippet>335</a>  // then installing the SVG wrapper as `\xy`). But the real xy.tex,
-<a href=#336 id=336 data-nosnippet>336</a>  // raw-loaded above, itself issues a `\input xy.tex` (its own re-input
-<a href=#337 id=337 data-nosnippet>337</a>  // guard is bypassed because our `\input` resolves "xy.tex" to the
-<a href=#338 id=338 data-nosnippet>338</a>  // `("xy","tex")` Rust binding = this file). On that second entry,
-<a href=#339 id=339 data-nosnippet>339</a>  // `\xy` is ALREADY the wrapper, so an unguarded
-<a href=#340 id=340 data-nosnippet>340</a>  // `Let('\lx@xy@original','\xy')` would capture the wrapper — making
-<a href=#341 id=341 data-nosnippet>341</a>  // `\lx@xy@original` self-recursive (`…\fi\lx@xy@original`) and, since
-<a href=#342 id=342 data-nosnippet>342</a>  // the real xy processing that sets `\xy@`≠`\xyinitial@` never runs,
-<a href=#343 id=343 data-nosnippet>343</a>  // `\inxy@` always reports "not nested" → every internal `\xy` re-enters
-<a href=#344 id=344 data-nosnippet>344</a>  // `\lx@xy@svg` UNBOUNDEDLY → `Fatal:Stomach:Recursion`. Perl's
-<a href=#345 id=345 data-nosnippet>345</a>  // xy.tex.ltxml overlay is applied exactly once (idempotent package
-<a href=#346 id=346 data-nosnippet>346</a>  // load); mirror that by only installing the wrapper when
-<a href=#347 id=347 data-nosnippet>347</a>  // `\lx@xy@original` is not yet defined. Witness 2009.05542 (`\xymatrix`
-<a href=#348 id=348 data-nosnippet>348</a>  // in an equation: FATAL → clean, matching Perl's 0-error output).
-<a href=#349 id=349 data-nosnippet>349</a>  </span><span class="kw">if </span>!is_defined(<span class="string">"\\lx@xy@original"</span>) {
-<a href=#350 id=350 data-nosnippet>350</a>    <span class="macro">Let!</span>(<span class="string">"\\lx@xy@original"</span>, <span class="string">"\\xy"</span>);
-<a href=#351 id=351 data-nosnippet>351</a>    <span class="macro">Let!</span>(<span class="string">"\\end@lx@xy@original"</span>, <span class="string">"\\endxy"</span>);
-<a href=#352 id=352 data-nosnippet>352</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\xy"</span>, <span class="string">"\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original"</span>);
-<a href=#353 id=353 data-nosnippet>353</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\endxy"</span>, <span class="string">"\\relax\\lx@xy@capturerange\\end@lx@xy@original"</span>);
-<a href=#354 id=354 data-nosnippet>354</a>  }
-<a href=#355 id=355 data-nosnippet>355</a>
-<a href=#356 id=356 data-nosnippet>356</a>  <span class="comment">//======================================================================
-<a href=#357 id=357 data-nosnippet>357</a>  // Step 4
-<a href=#358 id=358 data-nosnippet>358</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"ifpdf"</span>);
-<a href=#359 id=359 data-nosnippet>359</a>  <span class="comment">// Pre-load amstext to provide `\text{...}` for in-math text. Perl's
-<a href=#360 id=360 data-nosnippet>360</a>  // xy chain ends up with `\text` defined via xyv2.tex's
-<a href=#361 id=361 data-nosnippet>361</a>  // `\def\text{\relax\textC}` (raw-loaded by Perl's xypic.tex.ltxml
-<a href=#362 id=362 data-nosnippet>362</a>  // chain). Rust's xy.tex raw-load doesn't reach xyv2.tex with the
-<a href=#363 id=363 data-nosnippet>363</a>  // same definition, leaving `\text` undefined for papers that use
-<a href=#364 id=364 data-nosnippet>364</a>  // it inside math (witness: math0211451 `\text{deg}` in math).
-<a href=#365 id=365 data-nosnippet>365</a>  // amstext provides a clean DefConstructor path. This is a
-<a href=#366 id=366 data-nosnippet>366</a>  // pragmatic Rust-side bridge; not a Perl divergence since amstext
-<a href=#367 id=367 data-nosnippet>367</a>  // is part of the standard math chain Perl effectively reaches.
-<a href=#368 id=368 data-nosnippet>368</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amstext"</span>);
-<a href=#369 id=369 data-nosnippet>369</a>
-<a href=#370 id=370 data-nosnippet>370</a>  <span class="comment">//======================================================================
-<a href=#371 id=371 data-nosnippet>371</a>  // Step 5: DeclareOption (Perl xy.sty.ltxml L27-53)
-<a href=#372 id=372 data-nosnippet>372</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"cmactex"</span>, <span class="string">"\\xyoption{dvips}"</span>);
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvips"</span>, <span class="string">"\\xyoption{dvips}"</span>);
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvitops"</span>, <span class="string">"\\xyoption{dvitops}"</span>);
-<a href=#375 id=375 data-nosnippet>375</a>  <span class="macro">DeclareOption!</span>(<span class="string">"emtex"</span>, <span class="string">"\\xyoption{emtex}"</span>);
-<a href=#376 id=376 data-nosnippet>376</a>  <span class="macro">DeclareOption!</span>(<span class="string">"ln"</span>, <span class="string">"\\xyoption{ln}"</span>);
-<a href=#377 id=377 data-nosnippet>377</a>  <span class="macro">DeclareOption!</span>(<span class="string">"oztex"</span>, <span class="string">"\\xyoption{oztex}"</span>);
-<a href=#378 id=378 data-nosnippet>378</a>  <span class="macro">DeclareOption!</span>(<span class="string">"textures"</span>, <span class="string">"\\xyoption{textures}"</span>);
-<a href=#379 id=379 data-nosnippet>379</a>  <span class="macro">DeclareOption!</span>(<span class="string">"xdvi"</span>, <span class="string">"\\xyoption{xdvi}"</span>);
-<a href=#380 id=380 data-nosnippet>380</a>  <span class="macro">DeclareOption!</span>(<span class="string">"pdftex"</span>, <span class="string">"\\xyoption{pdf}"</span>);
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfm"</span>, <span class="string">"\\xyoption{pdf}"</span>);
-<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfmx"</span>, <span class="string">"\\xyoption{pdf}"</span>);
-<a href=#383 id=383 data-nosnippet>383</a>  <span class="macro">DeclareOption!</span>(<span class="string">"colour"</span>, <span class="string">"\\xyoption{color}"</span>);
-<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DeclareOption!</span>(<span class="string">"cmtip"</span>, <span class="string">"\\xyoption{cmtip}\\UseComputerModernTips"</span>);
-<a href=#385 id=385 data-nosnippet>385</a>  <span class="macro">DeclareOption!</span>(<span class="string">"10pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{10}}"</span>);
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="macro">DeclareOption!</span>(<span class="string">"11pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{11}}"</span>);
-<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">DeclareOption!</span>(<span class="string">"12pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{12}}"</span>);
-<a href=#388 id=388 data-nosnippet>388</a>
-<a href=#389 id=389 data-nosnippet>389</a>  <span class="comment">// Catch-all: DeclareOption(undef, ...)
-<a href=#390 id=390 data-nosnippet>390</a>  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
-<a href=#391 id=391 data-nosnippet>391</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span>current_option = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
-<a href=#393 id=393 data-nosnippet>393</a>    gullet::unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
-<a href=#394 id=394 data-nosnippet>394</a>  });
-<a href=#395 id=395 data-nosnippet>395</a>
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="comment">//======================================================================
-<a href=#397 id=397 data-nosnippet>397</a>  // Step 6
-<a href=#398 id=398 data-nosnippet>398</a>  </span><span class="macro">ProcessOptions!</span>();
-<a href=#399 id=399 data-nosnippet>399</a>
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="comment">//======================================================================
-<a href=#401 id=401 data-nosnippet>401</a>  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
-<a href=#402 id=402 data-nosnippet>402</a>  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
-<a href=#403 id=403 data-nosnippet>403</a>  // a stub, papers using `\xymatrix@1{a &amp; b \\ c &amp; d}` (e.g.
-<a href=#404 id=404 data-nosnippet>404</a>  // arXiv:1409.7007) cascade 100+ "Stray alignment '&amp;'" errors as the
-<a href=#405 id=405 data-nosnippet>405</a>  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
-<a href=#406 id=406 data-nosnippet>406</a>  // implicit-brace-stop pattern to read xy-pic's `@&lt;modifier&gt;` prefix
-<a href=#407 id=407 data-nosnippet>407</a>  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
-<a href=#408 id=408 data-nosnippet>408</a>  // swallows the brace-balanced body. The diagram is dropped — but
-<a href=#409 id=409 data-nosnippet>409</a>  // the cascade is gone, matching latexml's general philosophy of
-<a href=#410 id=410 data-nosnippet>410</a>  // "drop unsupported package content rather than fail conversion".
-<a href=#411 id=411 data-nosnippet>411</a>  //
-<a href=#412 id=412 data-nosnippet>412</a>  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
-<a href=#413 id=413 data-nosnippet>413</a>  // option pipeline didn't auto-load matrix/arrow features.
-<a href=#414 id=414 data-nosnippet>414</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{xymatrix}{%
-<a href=#415 id=415 data-nosnippet>415</a>    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
-<a href=#416 id=416 data-nosnippet>416</a>    \def\lx@xy@stub@xymatrix@body#1{}%
-<a href=#417 id=417 data-nosnippet>417</a>  }{}"</span>);
-<a href=#418 id=418 data-nosnippet>418</a>
-<a href=#419 id=419 data-nosnippet>419</a>  <span class="comment">// Step 8: Defensive stubs for xy2cell.tex's `\UseTwocells` /
-<a href=#420 id=420 data-nosnippet>420</a>  // `\UseHalfTwocells` / `\UseCompositeMaps` / `\UseAllTwocells`.
-<a href=#421 id=421 data-nosnippet>421</a>  // Papers using `\input xy \xyoption{all} \usepackage[all,2cell]{xy}
-<a href=#422 id=422 data-nosnippet>422</a>  // \UseAllTwocells` bypass our ProcessOptions (xy.tex already-loaded
-<a href=#423 id=423 data-nosnippet>423</a>  // by \input), so \xyoption{2cell} never fires and xy2cell.tex never
-<a href=#424 id=424 data-nosnippet>424</a>  // loads. The morphism semantics (definesupermorphism for twocell,
-<a href=#425 id=425 data-nosnippet>425</a>  // halftwocell, compositemap) need the full xy machinery — but at
-<a href=#426 id=426 data-nosnippet>426</a>  // least preventing the undefined-CS error lets the paper render
-<a href=#427 id=427 data-nosnippet>427</a>  // (sans 2cell-specific diagrams). Witness 2305.08678.
-<a href=#428 id=428 data-nosnippet>428</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{UseAllTwocells}{%
-<a href=#429 id=429 data-nosnippet>429</a>    \def\UseTwocells{}%
-<a href=#430 id=430 data-nosnippet>430</a>    \def\UseHalfTwocells{}%
-<a href=#431 id=431 data-nosnippet>431</a>    \def\UseCompositeMaps{}%
-<a href=#432 id=432 data-nosnippet>432</a>    \def\UseAllTwocells{}%
-<a href=#433 id=433 data-nosnippet>433</a>  }{}"</span>);
-<a href=#434 id=434 data-nosnippet>434</a>});
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if </span><span class="kw">crate</span>::package::xylatexml_tex::svg_insertion_hopeless(document, <span class="string">"svg:g"</span>) {
+<a href=#302 id=302 data-nosnippet>302</a>        <span class="comment">// Orphaned nested xy picture (outer \xy wrapper aborted) — skip,
+<a href=#303 id=303 data-nosnippet>303</a>        // see xylatexml_tex::svg_empty_element for witness/rationale.
+<a href=#304 id=304 data-nosnippet>304</a>      </span>} <span class="kw">else </span>{
+<a href=#305 id=305 data-nosnippet>305</a>        document.open_element(<span class="string">"svg:g"</span>, <span class="prelude-val">Some</span>(g_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#306 id=306 data-nosnippet>306</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(content)) = args.first() {
+<a href=#307 id=307 data-nosnippet>307</a>          document.absorb(content, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>        }
+<a href=#309 id=309 data-nosnippet>309</a>        document.close_element(<span class="string">"svg:g"</span>)<span class="question-mark">?</span>;
+<a href=#310 id=310 data-nosnippet>310</a>      }
+<a href=#311 id=311 data-nosnippet>311</a>    },
+<a href=#312 id=312 data-nosnippet>312</a>    after_digest =&gt; sub[whatsit] {
+<a href=#313 id=313 data-nosnippet>313</a>      <span class="kw">let </span>range_str = state::lookup_string(<span class="string">"saved_xy_range"</span>);
+<a href=#314 id=314 data-nosnippet>314</a>      <span class="kw">let </span>dpi_val = state::lookup_int(<span class="string">"DPI"</span>);
+<a href=#315 id=315 data-nosnippet>315</a>      <span class="kw">let </span>dpi = <span class="kw">if </span>dpi_val &gt; <span class="number">0 </span>{ dpi_val <span class="kw">as </span>f64 } <span class="kw">else </span>{ <span class="number">100.0 </span>};
+<a href=#316 id=316 data-nosnippet>316</a>      <span class="kw">let </span>dims: Vec&lt;f64&gt; = range_str.split(<span class="string">','</span>)
+<a href=#317 id=317 data-nosnippet>317</a>        .filter_map(|s| s.trim().parse::&lt;i64&gt;().ok())
+<a href=#318 id=318 data-nosnippet>318</a>        .map(|v| (v <span class="kw">as </span>f64 / <span class="number">65536.0</span>) * (dpi / <span class="number">72.27</span>))
+<a href=#319 id=319 data-nosnippet>319</a>        .collect();
+<a href=#320 id=320 data-nosnippet>320</a>      <span class="kw">let </span>(x0, y0, _x1, y1) = (
+<a href=#321 id=321 data-nosnippet>321</a>        dims.first().copied().unwrap_or(<span class="number">0.0</span>),
+<a href=#322 id=322 data-nosnippet>322</a>        dims.get(<span class="number">1</span>).copied().unwrap_or(<span class="number">0.0</span>),
+<a href=#323 id=323 data-nosnippet>323</a>        dims.get(<span class="number">2</span>).copied().unwrap_or(<span class="number">0.0</span>),
+<a href=#324 id=324 data-nosnippet>324</a>        dims.get(<span class="number">3</span>).copied().unwrap_or(<span class="number">0.0</span>),
+<a href=#325 id=325 data-nosnippet>325</a>      );
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span>h = y1 - y0;
+<a href=#327 id=327 data-nosnippet>327</a>      <span class="kw">let </span>x_px = <span class="kw">if </span>x0 &gt; <span class="number">0.0 </span>{ x0 } <span class="kw">else </span>{ <span class="number">0.0 </span>};
+<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">let </span>in_math = state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
+<a href=#329 id=329 data-nosnippet>329</a>      <span class="kw">let </span>y_px = <span class="kw">if </span>in_math { -(h / <span class="number">2.0</span>) } <span class="kw">else </span>{ <span class="number">0.0 </span>};
+<a href=#330 id=330 data-nosnippet>330</a>      whatsit.set_property(<span class="string">"transform"</span>, Stored::from(
+<a href=#331 id=331 data-nosnippet>331</a>        <span class="macro">s!</span>(<span class="string">"matrix(1 0 0 1 {} {})"</span>, x_px, y_px)));
+<a href=#332 id=332 data-nosnippet>332</a>    }
+<a href=#333 id=333 data-nosnippet>333</a>  );
+<a href=#334 id=334 data-nosnippet>334</a>
+<a href=#335 id=335 data-nosnippet>335</a>  <span class="comment">// Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151).
+<a href=#336 id=336 data-nosnippet>336</a>  //
+<a href=#337 id=337 data-nosnippet>337</a>  // GUARD against double-application. This binding can be entered more
+<a href=#338 id=338 data-nosnippet>338</a>  // than once: `\usepackage{xypic}` → xypic_sty → RequirePackage("xy")
+<a href=#339 id=339 data-nosnippet>339</a>  // runs it once (capturing the REAL xypic `\xy` into `\lx@xy@original`,
+<a href=#340 id=340 data-nosnippet>340</a>  // then installing the SVG wrapper as `\xy`). But the real xy.tex,
+<a href=#341 id=341 data-nosnippet>341</a>  // raw-loaded above, itself issues a `\input xy.tex` (its own re-input
+<a href=#342 id=342 data-nosnippet>342</a>  // guard is bypassed because our `\input` resolves "xy.tex" to the
+<a href=#343 id=343 data-nosnippet>343</a>  // `("xy","tex")` Rust binding = this file). On that second entry,
+<a href=#344 id=344 data-nosnippet>344</a>  // `\xy` is ALREADY the wrapper, so an unguarded
+<a href=#345 id=345 data-nosnippet>345</a>  // `Let('\lx@xy@original','\xy')` would capture the wrapper — making
+<a href=#346 id=346 data-nosnippet>346</a>  // `\lx@xy@original` self-recursive (`…\fi\lx@xy@original`) and, since
+<a href=#347 id=347 data-nosnippet>347</a>  // the real xy processing that sets `\xy@`≠`\xyinitial@` never runs,
+<a href=#348 id=348 data-nosnippet>348</a>  // `\inxy@` always reports "not nested" → every internal `\xy` re-enters
+<a href=#349 id=349 data-nosnippet>349</a>  // `\lx@xy@svg` UNBOUNDEDLY → `Fatal:Stomach:Recursion`. Perl's
+<a href=#350 id=350 data-nosnippet>350</a>  // xy.tex.ltxml overlay is applied exactly once (idempotent package
+<a href=#351 id=351 data-nosnippet>351</a>  // load); mirror that by only installing the wrapper when
+<a href=#352 id=352 data-nosnippet>352</a>  // `\lx@xy@original` is not yet defined. Witness 2009.05542 (`\xymatrix`
+<a href=#353 id=353 data-nosnippet>353</a>  // in an equation: FATAL → clean, matching Perl's 0-error output).
+<a href=#354 id=354 data-nosnippet>354</a>  </span><span class="kw">if </span>!is_defined(<span class="string">"\\lx@xy@original"</span>) {
+<a href=#355 id=355 data-nosnippet>355</a>    <span class="macro">Let!</span>(<span class="string">"\\lx@xy@original"</span>, <span class="string">"\\xy"</span>);
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="macro">Let!</span>(<span class="string">"\\end@lx@xy@original"</span>, <span class="string">"\\endxy"</span>);
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\xy"</span>, <span class="string">"\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original"</span>);
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\endxy"</span>, <span class="string">"\\relax\\lx@xy@capturerange\\end@lx@xy@original"</span>);
+<a href=#359 id=359 data-nosnippet>359</a>  }
+<a href=#360 id=360 data-nosnippet>360</a>
+<a href=#361 id=361 data-nosnippet>361</a>  <span class="comment">//======================================================================
+<a href=#362 id=362 data-nosnippet>362</a>  // Step 4
+<a href=#363 id=363 data-nosnippet>363</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"ifpdf"</span>);
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="comment">// Pre-load amstext to provide `\text{...}` for in-math text. Perl's
+<a href=#365 id=365 data-nosnippet>365</a>  // xy chain ends up with `\text` defined via xyv2.tex's
+<a href=#366 id=366 data-nosnippet>366</a>  // `\def\text{\relax\textC}` (raw-loaded by Perl's xypic.tex.ltxml
+<a href=#367 id=367 data-nosnippet>367</a>  // chain). Rust's xy.tex raw-load doesn't reach xyv2.tex with the
+<a href=#368 id=368 data-nosnippet>368</a>  // same definition, leaving `\text` undefined for papers that use
+<a href=#369 id=369 data-nosnippet>369</a>  // it inside math (witness: math0211451 `\text{deg}` in math).
+<a href=#370 id=370 data-nosnippet>370</a>  // amstext provides a clean DefConstructor path. This is a
+<a href=#371 id=371 data-nosnippet>371</a>  // pragmatic Rust-side bridge; not a Perl divergence since amstext
+<a href=#372 id=372 data-nosnippet>372</a>  // is part of the standard math chain Perl effectively reaches.
+<a href=#373 id=373 data-nosnippet>373</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amstext"</span>);
+<a href=#374 id=374 data-nosnippet>374</a>
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="comment">//======================================================================
+<a href=#376 id=376 data-nosnippet>376</a>  // Step 5: DeclareOption (Perl xy.sty.ltxml L27-53)
+<a href=#377 id=377 data-nosnippet>377</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"cmactex"</span>, <span class="string">"\\xyoption{dvips}"</span>);
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvips"</span>, <span class="string">"\\xyoption{dvips}"</span>);
+<a href=#379 id=379 data-nosnippet>379</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvitops"</span>, <span class="string">"\\xyoption{dvitops}"</span>);
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="macro">DeclareOption!</span>(<span class="string">"emtex"</span>, <span class="string">"\\xyoption{emtex}"</span>);
+<a href=#381 id=381 data-nosnippet>381</a>  <span class="macro">DeclareOption!</span>(<span class="string">"ln"</span>, <span class="string">"\\xyoption{ln}"</span>);
+<a href=#382 id=382 data-nosnippet>382</a>  <span class="macro">DeclareOption!</span>(<span class="string">"oztex"</span>, <span class="string">"\\xyoption{oztex}"</span>);
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="macro">DeclareOption!</span>(<span class="string">"textures"</span>, <span class="string">"\\xyoption{textures}"</span>);
+<a href=#384 id=384 data-nosnippet>384</a>  <span class="macro">DeclareOption!</span>(<span class="string">"xdvi"</span>, <span class="string">"\\xyoption{xdvi}"</span>);
+<a href=#385 id=385 data-nosnippet>385</a>  <span class="macro">DeclareOption!</span>(<span class="string">"pdftex"</span>, <span class="string">"\\xyoption{pdf}"</span>);
+<a href=#386 id=386 data-nosnippet>386</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfm"</span>, <span class="string">"\\xyoption{pdf}"</span>);
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="macro">DeclareOption!</span>(<span class="string">"dvipdfmx"</span>, <span class="string">"\\xyoption{pdf}"</span>);
+<a href=#388 id=388 data-nosnippet>388</a>  <span class="macro">DeclareOption!</span>(<span class="string">"colour"</span>, <span class="string">"\\xyoption{color}"</span>);
+<a href=#389 id=389 data-nosnippet>389</a>  <span class="macro">DeclareOption!</span>(<span class="string">"cmtip"</span>, <span class="string">"\\xyoption{cmtip}\\UseComputerModernTips"</span>);
+<a href=#390 id=390 data-nosnippet>390</a>  <span class="macro">DeclareOption!</span>(<span class="string">"10pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{10}}"</span>);
+<a href=#391 id=391 data-nosnippet>391</a>  <span class="macro">DeclareOption!</span>(<span class="string">"11pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{11}}"</span>);
+<a href=#392 id=392 data-nosnippet>392</a>  <span class="macro">DeclareOption!</span>(<span class="string">"12pt"</span>, <span class="string">"\\xywithoption{tips}{\\def\\tipsize@@{12}}"</span>);
+<a href=#393 id=393 data-nosnippet>393</a>
+<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// Catch-all: DeclareOption(undef, ...)
+<a href=#395 id=395 data-nosnippet>395</a>  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
+<a href=#396 id=396 data-nosnippet>396</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>current_option = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
+<a href=#398 id=398 data-nosnippet>398</a>    gullet::unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
+<a href=#399 id=399 data-nosnippet>399</a>  });
+<a href=#400 id=400 data-nosnippet>400</a>
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="comment">//======================================================================
+<a href=#402 id=402 data-nosnippet>402</a>  // Step 6
+<a href=#403 id=403 data-nosnippet>403</a>  </span><span class="macro">ProcessOptions!</span>();
+<a href=#404 id=404 data-nosnippet>404</a>
+<a href=#405 id=405 data-nosnippet>405</a>  <span class="comment">//======================================================================
+<a href=#406 id=406 data-nosnippet>406</a>  // Step 7: Defensive stub for `\xymatrix` when bare `\usepackage{xy}`
+<a href=#407 id=407 data-nosnippet>407</a>  // (no [matrix,arrow] options) leaves `xymatrix.tex` unloaded. Without
+<a href=#408 id=408 data-nosnippet>408</a>  // a stub, papers using `\xymatrix@1{a &amp; b \\ c &amp; d}` (e.g.
+<a href=#409 id=409 data-nosnippet>409</a>  // arXiv:1409.7007) cascade 100+ "Stray alignment '&amp;'" errors as the
+<a href=#410 id=410 data-nosnippet>410</a>  // unguarded body is parsed in math mode. The stub uses TeX's `#{`
+<a href=#411 id=411 data-nosnippet>411</a>  // implicit-brace-stop pattern to read xy-pic's `@&lt;modifier&gt;` prefix
+<a href=#412 id=412 data-nosnippet>412</a>  // tokens (`@1`, `@C=10pt`, `@R=2cm`, etc.) up to the brace, then
+<a href=#413 id=413 data-nosnippet>413</a>  // swallows the brace-balanced body. The diagram is dropped — but
+<a href=#414 id=414 data-nosnippet>414</a>  // the cascade is gone, matching latexml's general philosophy of
+<a href=#415 id=415 data-nosnippet>415</a>  // "drop unsupported package content rather than fail conversion".
+<a href=#416 id=416 data-nosnippet>416</a>  //
+<a href=#417 id=417 data-nosnippet>417</a>  // Gated by `\@ifundefined{xymatrix}` so it only fires when xy.tex's
+<a href=#418 id=418 data-nosnippet>418</a>  // option pipeline didn't auto-load matrix/arrow features.
+<a href=#419 id=419 data-nosnippet>419</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{xymatrix}{%
+<a href=#420 id=420 data-nosnippet>420</a>    \def\xymatrix#1#{\lx@xy@stub@xymatrix@body}%
+<a href=#421 id=421 data-nosnippet>421</a>    \def\lx@xy@stub@xymatrix@body#1{}%
+<a href=#422 id=422 data-nosnippet>422</a>  }{}"</span>);
+<a href=#423 id=423 data-nosnippet>423</a>
+<a href=#424 id=424 data-nosnippet>424</a>  <span class="comment">// Step 8: Defensive stubs for xy2cell.tex's `\UseTwocells` /
+<a href=#425 id=425 data-nosnippet>425</a>  // `\UseHalfTwocells` / `\UseCompositeMaps` / `\UseAllTwocells`.
+<a href=#426 id=426 data-nosnippet>426</a>  // Papers using `\input xy \xyoption{all} \usepackage[all,2cell]{xy}
+<a href=#427 id=427 data-nosnippet>427</a>  // \UseAllTwocells` bypass our ProcessOptions (xy.tex already-loaded
+<a href=#428 id=428 data-nosnippet>428</a>  // by \input), so \xyoption{2cell} never fires and xy2cell.tex never
+<a href=#429 id=429 data-nosnippet>429</a>  // loads. The morphism semantics (definesupermorphism for twocell,
+<a href=#430 id=430 data-nosnippet>430</a>  // halftwocell, compositemap) need the full xy machinery — but at
+<a href=#431 id=431 data-nosnippet>431</a>  // least preventing the undefined-CS error lets the paper render
+<a href=#432 id=432 data-nosnippet>432</a>  // (sans 2cell-specific diagrams). Witness 2305.08678.
+<a href=#433 id=433 data-nosnippet>433</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{UseAllTwocells}{%
+<a href=#434 id=434 data-nosnippet>434</a>    \def\UseTwocells{}%
+<a href=#435 id=435 data-nosnippet>435</a>    \def\UseHalfTwocells{}%
+<a href=#436 id=436 data-nosnippet>436</a>    \def\UseCompositeMaps{}%
+<a href=#437 id=437 data-nosnippet>437</a>    \def\UseAllTwocells{}%
+<a href=#438 id=438 data-nosnippet>438</a>  }{}"</span>);
+<a href=#439 id=439 data-nosnippet>439</a>});
 </code></pre></div></section></main></body></html>
