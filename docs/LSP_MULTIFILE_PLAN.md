@@ -1,9 +1,12 @@
-# LSP multi-file: project-root + overlay model (plan)
+# LSP multi-file: project-root + overlay model
 
-> Status: **planned** (PR #243 review follow-up, 2026-06-04). The shipped
-> server equates *buffer* with *document*; this plan makes it think in
-> *project roots*. Companion docs: `docs/SOURCE_PROVENANCE.md` (product
-> track), `docs/SYNC_STATUS.md` § Persistent server (current state + gaps).
+> Status: **LANDED 2026-06-04** (all three phases, same day as planned —
+> see "Implementation deltas" at the end for where reality improved on
+> the plan). Live-verified end-to-end by `tools/lsp_smoke.py multifile`:
+> chapter-buffer convert resolves to the detected root, the preview uses
+> the UNSAVED buffer over the disk file, diagnostics attribute to
+> `sections/ch2.tex`. Companion docs: `docs/SOURCE_PROVENANCE.md`
+> (product track), `docs/SYNC_STATUS.md` § Persistent server.
 
 ## 1. Problem
 
@@ -195,3 +198,40 @@ and Phase 1 already kills failure (1) — the worst user-facing lie.
   unless the magic-comment phase is added to `find_main_tex` (then it
   is a documented Rust-side extension — Perl's Pack.pm has no
   `% !TEX root` support).
+
+## 7. Implementation deltas (landed 2026-06-04)
+
+Where the landed implementation deliberately differs from §3:
+
+* **The overlay rides the engine's EXISTING `{file}_contents` channel**
+  (the Perl-faithful `\begin{filecontents}` cache) instead of a new
+  `Mouth::create` hook. `find_file_aux` (existence), the definitions
+  loader, the `\input` open path, and the raw cls/sty dep-scan already
+  consult it (`binding/content.rs:1252/1343/1820/2494`) — so the engine
+  diff is ZERO lines, and fork children inherit the values via state
+  COW. Buffers register under absolute / project-relative / basename
+  keys, each ± `.tex` (the engine probes both literal and resolved
+  names); ambiguous basenames get no bare key (disk wins).
+* **The read-log is the source table.** Rather than a new recording
+  hook, the warm-up dep snapshot reuses `source_table_snapshot()` — the
+  locator table already records every named source the engine opened.
+  The old same-dir mtime scan is KEPT alongside (it catches files
+  *appearing*, which a read-log of successful opens cannot).
+* **Root detection adds a self-containment fast path**: a buffer with an
+  un-commented `\documentclass`/`\documentstyle` is its own root with
+  zero directory scanning (v1-identical single-file behavior), and a
+  detected candidate ≠ buffer is only trusted when its text *references*
+  the buffer's stem on an un-commented `\input`/`\include` line — so a
+  directory of unrelated documents can never hijack a fragment.
+  `% !TEX root` is handled server-side only; `find_main_tex` itself is
+  untouched (Perl Pack.pm parity).
+* **Preemption/coalescing went project-scoped**: any conversion trigger
+  for a file of the same project supersedes the in-flight compile of
+  that project (`same_project`, lexical containment in the root's dir).
+* **Per-file publish includes stale-clear**: files diagnosed last round
+  but clean now get an explicit empty `publishDiagnostics`
+  (`Server.last_published`), so squiggles don't linger.
+* Diagnostics parsing was upgraded to the record format (severity line +
+  tab-indented `at <source>; line N col M - …` continuation) — the old
+  line parser never saw locators at all. Same record shape
+  ar5iv-editor's `parse_diagnostics` consumes.

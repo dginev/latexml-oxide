@@ -20,6 +20,9 @@ pub(crate) struct ConvertOutput {
   pub(crate) log:     String,
   pub(crate) diags:   Vec<Diag>,
   pub(crate) sources: Vec<String>,
+  /// Absolute path of the project root that was actually converted
+  /// (multi-file model — may differ from the request's uri).
+  pub(crate) root:    Option<String>,
   /// Human-facing status label (the engine's status message, or `"timeout"`).
   pub(crate) status:  String,
   /// Engine status code: 0 = no problem, 1 = warning, 2 = error, 3 = fatal.
@@ -43,13 +46,9 @@ impl ConvertOutput {
     ConvertOutput {
       html: String::new(),
       log: message.clone(),
-      diags: vec![Diag {
-        severity: Severity::Fatal,
-        line: None,
-        col: None,
-        message,
-      }],
+      diags: vec![Diag::new(Severity::Fatal, message)],
       sources: Vec::new(),
+      root: None,
       status: status.to_string(),
       status_code,
     }
@@ -60,7 +59,7 @@ impl ConvertOutput {
 
   /// The `latexml/convert` result object the ar5iv-editor client consumes.
   pub(crate) fn to_result_object(&self) -> Value {
-    jobj(vec![
+    let mut pairs = vec![
       ("html", jstr(self.html.clone())),
       ("log", jstr(self.log.clone())),
       (
@@ -73,7 +72,11 @@ impl ConvertOutput {
       ),
       ("status", jstr(self.status.clone())),
       ("statusCode", Value::from(self.status_code)),
-    ])
+    ];
+    if let Some(ref root) = self.root {
+      pairs.push(("root", jstr(root.clone())));
+    }
+    jobj(pairs)
   }
 }
 
@@ -157,18 +160,22 @@ pub(crate) fn message_doc_uri(request: &Value) -> Option<String> {
   }
 }
 
-/// Is a newer conversion trigger for `uri` already waiting in `pending`?
-/// (Everything in `pending` arrived AFTER the message currently being
-/// dispatched, so any match supersedes it.) Running the current conversion
-/// anyway would serialize a stale compile in front of the fresh one — the
-/// didChange-flurry snowball.
-pub(crate) fn superseded_in_pending(pending: &VecDeque<String>, uri: &str) -> bool {
+/// Is a newer conversion trigger for the project rooted at `root` already
+/// waiting in `pending`? (Everything in `pending` arrived AFTER the message
+/// currently being dispatched, so any match supersedes it.) Running the
+/// current conversion anyway would serialize a stale compile in front of the
+/// fresh one — the didChange-flurry snowball. Project-scoped: a trigger for
+/// ANY file of the same project supersedes (they all convert the same root).
+pub(crate) fn superseded_in_pending(pending: &VecDeque<String>, root: &std::path::Path) -> bool {
   pending.iter().any(|body| {
     parse_json(body)
       .ok()
       .and_then(|req| message_doc_uri(&req))
-      .as_deref()
-      == Some(uri)
+      .map(|uri| {
+        let path = get_file_path(&uri);
+        same_project(root, std::path::Path::new(&path))
+      })
+      .unwrap_or(false)
   })
 }
 
@@ -224,10 +231,12 @@ mod tests {
     assert_eq!(message_doc_uri(&parse_json(close).unwrap()), None);
 
     let mut pending = VecDeque::new();
+    let root_a = std::path::Path::new("/a.tex");
+    let root_other = std::path::Path::new("/other/b.tex");
     pending.push_back(close.to_string());
-    assert!(!superseded_in_pending(&pending, "file:///a.tex"), "didClose does not supersede");
+    assert!(!superseded_in_pending(&pending, root_a), "didClose does not supersede");
     pending.push_back(chg.to_string());
-    assert!(superseded_in_pending(&pending, "file:///a.tex"), "queued didChange supersedes");
-    assert!(!superseded_in_pending(&pending, "file:///b.tex"), "other docs unaffected");
+    assert!(superseded_in_pending(&pending, root_a), "queued didChange supersedes");
+    assert!(!superseded_in_pending(&pending, root_other), "other projects unaffected");
   }
 }

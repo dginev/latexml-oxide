@@ -27,6 +27,8 @@ mod document;
 #[cfg(not(unix))]
 mod generic;
 mod json;
+mod overlay;
+mod project;
 mod protocol;
 mod server;
 #[cfg(unix)]
@@ -35,6 +37,8 @@ mod unix;
 pub(crate) use diagnostics::*;
 pub(crate) use document::*;
 pub(crate) use json::*;
+pub(crate) use overlay::*;
+pub(crate) use project::*;
 pub(crate) use protocol::*;
 pub(crate) use server::*;
 

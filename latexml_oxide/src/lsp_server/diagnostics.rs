@@ -45,10 +45,32 @@ pub(crate) struct Diag {
   pub(crate) severity: Severity,
   pub(crate) line:     Option<usize>,
   pub(crate) col:      Option<usize>,
+  /// Optional range end (the locator can carry `- line N col M`).
+  pub(crate) to_line:  Option<usize>,
+  pub(crate) to_col:   Option<usize>,
+  /// The locator's source name as logged (the mouth's SHORT name, e.g.
+  /// `ch2` — not a path).
+  pub(crate) source:   Option<String>,
+  /// Absolute path this diagnostic was attributed to (multi-file model;
+  /// `attribute_diag_files`). `None` = attach to the edited buffer.
+  pub(crate) file:     Option<String>,
   pub(crate) message:  String,
 }
 
 impl Diag {
+  pub(crate) fn new(severity: Severity, message: String) -> Self {
+    Diag {
+      severity,
+      line: None,
+      col: None,
+      to_line: None,
+      to_col: None,
+      source: None,
+      file: None,
+      message,
+    }
+  }
+
   /// LSP `Diagnostic` (0-based positions).
   pub(crate) fn to_lsp(&self) -> Value {
     let line0 = self.line.map(|l| l.saturating_sub(1)).unwrap_or(0);
@@ -57,10 +79,17 @@ impl Diag {
       ("line", jnum(line0 as f64)),
       ("character", jnum(col0 as f64)),
     ]);
-    // One-character caret anchor; the message carries the detail.
+    // Range end from the locator when present; else a one-character caret
+    // anchor (the message carries the detail).
+    let end_line0 = self.to_line.map(|l| l.saturating_sub(1)).unwrap_or(line0);
+    let end_col0 = match self.to_col {
+      Some(c) if end_line0 > line0 => c.saturating_sub(1),
+      Some(c) => c.saturating_sub(1).max(col0 + 1),
+      None => col0 + 1,
+    };
     let end = jobj(vec![
-      ("line", jnum(line0 as f64)),
-      ("character", jnum((col0 + 1) as f64)),
+      ("line", jnum(end_line0 as f64)),
+      ("character", jnum(end_col0 as f64)),
     ]);
     jobj(vec![
       ("range", jobj(vec![("start", start), ("end", end)])),
@@ -83,6 +112,9 @@ impl Diag {
         from.push(("column", jnum(col as f64)));
       }
       pairs.push(("from", jobj(from)));
+    }
+    if let Some(ref file) = self.file {
+      pairs.push(("file", jstr(file.clone())));
     }
     jobj(pairs)
   }
@@ -107,29 +139,144 @@ pub(crate) fn parse_line_col(line: &str) -> (Option<usize>, Option<usize>) {
   }
 }
 
+/// Record-based log parser. The engine's log format is:
+///
+/// ```text
+/// {Severity}:{Category}:{Object} {message-first-line}
+/// \tat {source}; line N col M[ - line N col M]
+/// \t[detail line(s)]
+/// \tIn {rust_file}:{line}:{col}
+/// ```
+///
+/// Locators live on the tab-indented CONTINUATION line — the previous
+/// line-by-line parser never saw them, so every diagnostic came back
+/// position-less. (Same record shape ar5iv-editor's proven
+/// `parse_diagnostics` consumes.) Inline `; line N col M` on the severity
+/// line itself is still honored as a fallback.
 pub(crate) fn parse_log_diagnostics(log_str: &str) -> Vec<Diag> {
-  let mut diagnostics = Vec::new();
+  let mut out: Vec<Diag> = Vec::new();
+  let mut current: Option<Diag> = None;
   for line in log_str.lines() {
     let severity = if line.starts_with("Error:") {
-      Severity::Error
+      Some(Severity::Error)
     } else if line.starts_with("Warn:") {
-      Severity::Warning
+      Some(Severity::Warning)
     } else if line.starts_with("Fatal:") {
-      Severity::Fatal
+      Some(Severity::Fatal)
     } else if line.starts_with("Info:") {
-      Severity::Info
+      Some(Severity::Info)
     } else {
-      continue;
+      None
     };
-    let (l, c) = parse_line_col(line);
-    diagnostics.push(Diag {
-      severity,
-      line: l,
-      col: c,
-      message: line.to_string(),
-    });
+    if let Some(sev) = severity {
+      if let Some(d) = current.take() {
+        out.push(d);
+      }
+      let mut d = Diag::new(sev, line.to_string());
+      // Inline-locator fallback (synthetic / single-line messages).
+      let (l, c) = parse_line_col(line);
+      d.line = l;
+      d.col = c;
+      current = Some(d);
+      continue;
+    }
+    // Continuation lines are tab-indented.
+    if let Some(rest) = line.strip_prefix('\t') {
+      if let Some(d) = current.as_mut() {
+        if rest.starts_with("In ") {
+          continue; // internal Rust location
+        }
+        if let Some(loc) = rest.strip_prefix("at ") {
+          fill_location(d, loc);
+          continue;
+        }
+        if !rest.trim().is_empty() {
+          d.message.push('\n');
+          d.message.push_str(rest);
+        }
+        continue;
+      }
+    }
+    // Non-continuation, non-severity line: closes any open record.
+    if let Some(d) = current.take() {
+      out.push(d);
+    }
   }
-  diagnostics
+  if let Some(d) = current.take() {
+    out.push(d);
+  }
+  out
+}
+
+/// Parse the `at {source}; line N col M[ - line N col M]` locator payload.
+fn fill_location(d: &mut Diag, loc: &str) {
+  let (source, rest) = match loc.find(';') {
+    Some(i) => (loc[..i].trim(), &loc[i + 1..]),
+    None => (loc.trim(), ""),
+  };
+  if !source.is_empty() {
+    d.source = Some(source.to_string());
+  }
+  let mut segments = rest.split('-').map(str::trim);
+  if let Some(from) = segments.next() {
+    let (l, c) = parse_line_col_words(from);
+    if l.is_some() {
+      d.line = l;
+      d.col = c;
+    }
+  }
+  if let Some(to) = segments.next() {
+    let (l, c) = parse_line_col_words(to);
+    d.to_line = l;
+    d.to_col = c;
+  }
+}
+
+/// `"line N col M"` / `"line N"` word-pair parse.
+fn parse_line_col_words(seg: &str) -> (Option<usize>, Option<usize>) {
+  let (mut line, mut col) = (None, None);
+  let mut tokens = seg.split_ascii_whitespace();
+  while let Some(tok) = tokens.next() {
+    match tok {
+      "line" => line = tokens.next().and_then(|n| n.parse().ok()),
+      "col" => col = tokens.next().and_then(|n| n.parse().ok()),
+      _ => {},
+    }
+  }
+  (line, col)
+}
+
+/// Attribute each diagnostic to an absolute project file from its locator
+/// `source` (the mouth's SHORT name, e.g. `ch2`): match open buffers, then
+/// `<project-dir>/**` direct candidates (`<src>`, `<src>.tex`). Ambiguous or
+/// unmatched sources stay `None` (the caller attaches them to the edited
+/// buffer's uri).
+pub(crate) fn attribute_diag_files(
+  diags: &mut [Diag],
+  root: &std::path::Path,
+  buffers: &rustc_hash::FxHashMap<String, Buffer>,
+) {
+  let dir = project_dir(root);
+  for d in diags.iter_mut() {
+    let Some(ref src) = d.source else { continue };
+    // 1. Unique open-buffer stem/basename match.
+    let mut matches = buffers.keys().filter(|path| {
+      let p = std::path::Path::new(path.as_str());
+      p.file_stem().and_then(|s| s.to_str()) == Some(src.as_str())
+        || p.file_name().and_then(|s| s.to_str()) == Some(src.as_str())
+    });
+    if let (Some(only), None) = (matches.next(), matches.next()) {
+      d.file = Some(only.clone());
+      continue;
+    }
+    // 2. Direct project-dir candidates.
+    for candidate in [dir.join(src.as_str()), dir.join(format!("{src}.tex"))] {
+      if candidate.is_file() {
+        d.file = Some(candidate.to_string_lossy().into_owned());
+        break;
+      }
+    }
+  }
 }
 
 
@@ -142,6 +289,62 @@ mod tests {
     assert_eq!(parse_line_col("Error:foo:bar baz; line 12 col 7"), (Some(12), Some(7)));
     assert_eq!(parse_line_col("Warn:foo bar at line 3"), (Some(3), None));
     assert_eq!(parse_line_col("Info:foo no position here"), (None, None));
+  }
+
+  #[test]
+  fn record_parser_reads_continuation_locators() {
+    // The REAL engine log shape (probe: /tmp/mf undefined-macro run):
+    // locator on a tab-indented continuation line, with a range and a
+    // trailing internal-Rust-location line that must be skipped.
+    let log = "Error:undefined:\\foo The token is not defined.\n\
+               \tat ch2; line 3 col 46 - line 3 col 52\n\
+               \t\n\
+               \tIn latexml_core/src/state.rs:1165:7\n\
+               (Loading something else)\n\
+               Warn:unexpected:x lone warning, no locator\n";
+    let diags = parse_log_diagnostics(log);
+    assert_eq!(diags.len(), 2);
+    let d = &diags[0];
+    assert_eq!(d.severity, Severity::Error);
+    assert_eq!(d.source.as_deref(), Some("ch2"));
+    assert_eq!((d.line, d.col), (Some(3), Some(46)));
+    assert_eq!((d.to_line, d.to_col), (Some(3), Some(52)));
+    assert!(!d.message.contains("state.rs"), "internal Rust loc skipped");
+    assert_eq!(diags[1].severity, Severity::Warning);
+    assert_eq!(diags[1].line, None);
+  }
+
+  #[test]
+  fn attribution_maps_short_source_to_project_file() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("main.tex");
+    std::fs::write(&root, "x").unwrap();
+    let on_disk = tmp.path().join("appendix.tex");
+    std::fs::write(&on_disk, "y").unwrap();
+
+    let mut buffers: rustc_hash::FxHashMap<String, Buffer> = rustc_hash::FxHashMap::default();
+    buffers.insert("/proj/sections/ch2.tex".to_string(), Buffer {
+      version: 1,
+      text:    String::new(),
+    });
+
+    let mut diags = vec![
+      Diag::new(Severity::Error, "e1".into()),
+      Diag::new(Severity::Error, "e2".into()),
+      Diag::new(Severity::Error, "e3".into()),
+    ];
+    diags[0].source = Some("ch2".into()); // open buffer, by stem
+    diags[1].source = Some("appendix".into()); // disk sibling of the root
+    diags[2].source = Some("nowhere".into()); // unattributable
+
+    attribute_diag_files(&mut diags, &root, &buffers);
+    assert_eq!(diags[0].file.as_deref(), Some("/proj/sections/ch2.tex"));
+    assert_eq!(
+      diags[1].file.as_deref(),
+      on_disk.to_str(),
+      "disk candidate <dir>/<src>.tex"
+    );
+    assert_eq!(diags[2].file, None, "unmatched stays None (edited-buffer uri)");
   }
 
   #[test]

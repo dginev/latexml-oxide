@@ -160,14 +160,20 @@ fn reap(pid: i32) -> i32 {
   }
 }
 
-/// Does this raw message supersede the in-flight conversion for
-/// `current_uri`? A newer `latexml/convert` OR `didChange`/`didOpen` of the
-/// *same* document preempts: in both cases the in-flight result is already
-/// stale (the buffer changed), and finishing it would only delay the newer
-/// request behind a wasted compile.
-fn preempts(body: &str, current_uri: &str) -> bool {
+/// Does this raw message supersede the in-flight conversion of the project
+/// rooted at `current_root`? A newer `latexml/convert` OR
+/// `didChange`/`didOpen` of ANY file in the same project preempts: every
+/// trigger of a project converts the same root, so the in-flight result is
+/// already stale and finishing it would only delay the newer request behind a
+/// wasted compile.
+fn preempts(body: &str, current_root: &std::path::Path) -> bool {
   match parse_json(body) {
-    Ok(req) => super::message_doc_uri(&req).as_deref() == Some(current_uri),
+    Ok(req) => super::message_doc_uri(&req)
+      .map(|uri| {
+        let path = get_file_path(&uri);
+        same_project(current_root, std::path::Path::new(&path))
+      })
+      .unwrap_or(false),
     Err(_) => false,
   }
 }
@@ -192,7 +198,7 @@ fn is_exit(body: &str) -> bool {
 fn wait_for_child(
   pid: i32,
   read_fd: i32,
-  current_uri: &str,
+  current_root: &std::path::Path,
   reader: &mut FdReader,
   pending: &mut VecDeque<String>,
 ) -> WarmResult {
@@ -213,7 +219,7 @@ fn wait_for_child(
         kill_and_reap(pid);
         std::process::exit(0);
       }
-      if preempts(&body, current_uri) {
+      if preempts(&body, current_root) {
         kill_and_reap(pid);
         pending.push_back(body);
         return WarmResult::Cancelled;
@@ -341,6 +347,7 @@ fn finish(bytes: &[u8], exit_code: i32) -> WarmResult {
           log: combined_log,
           diags,
           sources,
+          root: None, // attributed by convert_trigger
           status,
           status_code,
         })
@@ -564,6 +571,7 @@ impl Server {
     let body = &text[mat_end..];
     let offset_lines = preamble.matches('\n').count();
     let deps = get_directory_dependencies(uri);
+    let root_path = std::path::PathBuf::from(get_file_path(uri));
     let timeout = self.timeout_secs;
     // Cooperative deadline for the (parent-side) warm-up digest. The forked
     // body child re-arms its own fresh deadline; see `run_body_child`.
@@ -572,7 +580,10 @@ impl Server {
     let cache_hit = self.warmed_uri.as_deref() == Some(uri)
       && self.warmed_preamble.as_deref() == Some(preamble)
       && self.warmed_preamble_digested.is_some()
-      && self.warmed_dependencies == deps;
+      && self.warmed_dependencies == deps
+      // Read-log snapshot: every source the warm-up opened must still be at
+      // its pinned Overlay(version)/Disk(mtime) state (multi-file model).
+      && deps_still_current(&self.warmed_source_deps, &self.open_buffers);
 
     if !cache_hit {
       log::info!("Warming preamble cache for {uri}");
@@ -584,6 +595,11 @@ impl Server {
       if converter.prepare_session(&opts).is_err() {
         return WarmResult::Done(self.convert_in_process(uri, text));
       }
+      // The reset wiped the engine state: re-apply the unsaved-buffer overlay
+      // BEFORE the preamble digest, so preamble-time \input / \usepackage of
+      // open buffers see editor state.
+      self.overlay_keys.clear();
+      self.apply_overlay(&root_path);
       // Name the preamble source after the document path so its locators are
       // stampable user sources (and share tag 0 with the body).
       match converter.digest_content_with_provenance(&get_file_path(uri), preamble.to_string()) {
@@ -593,12 +609,19 @@ impl Server {
           self.warmed_preamble = Some(preamble.to_string());
           self.warmed_preamble_digested = Some(pre);
           self.warmed_dependencies = deps;
+          // Pin the warm-up read-log (which sources, at which state).
+          self.warmed_source_deps = warmup_dep_snapshot(&self.open_buffers);
         },
         Err(e) => {
           log::error!("Preamble warmup failed ({e}); falling back to in-process");
           return WarmResult::Done(self.convert_in_process(uri, text));
         },
       }
+    } else {
+      // Cache hit: refresh the overlay so the BODY fork inherits current
+      // buffer state (body-time \input of an edited chapter). The preamble
+      // deps were just verified unchanged, so the warm state stays valid.
+      self.apply_overlay(&root_path);
     }
 
     let warmed = self.warmed_preamble_digested.as_ref().unwrap();
@@ -616,7 +639,7 @@ impl Server {
     // loop) without threading it through every signature.
     PREAMBLE_LOG.with(|c| *c.borrow_mut() = self.warmed_preamble_log.clone());
 
-    match wait_for_child(pid, read_fd, uri, reader, pending) {
+    match wait_for_child(pid, read_fd, &root_path, reader, pending) {
       WarmResult::Cancelled => WarmResult::Cancelled,
       // A child that reported an internal error is reported as-is rather than
       // silently re-run in-process: re-running would reset the warm cache and
@@ -671,6 +694,16 @@ fn dispatch(
 
   match method {
     "initialize" => {
+      // Multi-file model: a client-configured project root wins over all
+      // detection (docs/LSP_MULTIFILE_PLAN.md §3A).
+      if let Some(root) = request
+        .get("params")
+        .and_then(|p| p.get("initializationOptions"))
+        .and_then(|o| o.get("rootDocument"))
+        .and_then(|r| r.as_str())
+      {
+        server.root_override = Some(std::path::PathBuf::from(root));
+      }
       let caps = jobj(vec![(
         "capabilities",
         jobj(vec![("textDocumentSync", jnum(1.0))]),
@@ -680,20 +713,12 @@ fn dispatch(
     "initialized" => {},
     "textDocument/didOpen" => {
       if let Some((uri, text)) = did_open_params(&request) {
-        // Coalesce: if a newer conversion trigger for this doc is already
-        // queued, this compile would be stale before it starts — skip it
-        // (the newer run publishes). Prevents a didChange flurry from
-        // queueing N serial full conversions.
-        if !superseded_in_pending(pending, &uri) {
-          run_diagnostics(server, reader, pending, &uri, &text, stdout)?;
-        }
+        convert_trigger(server, reader, pending, &uri, &text, doc_version(&request), stdout, None)?;
       }
     },
     "textDocument/didChange" => {
       if let Some((uri, text)) = did_change_params(&request) {
-        if !superseded_in_pending(pending, &uri) {
-          run_diagnostics(server, reader, pending, &uri, &text, stdout)?;
-        }
+        convert_trigger(server, reader, pending, &uri, &text, doc_version(&request), stdout, None)?;
       }
     },
     "textDocument/didClose" => {
@@ -703,7 +728,9 @@ fn dispatch(
         .and_then(|d| d.get("uri"))
         .and_then(|u| u.as_str())
       {
-        // Clear diagnostics for the closed document.
+        // Forget the buffer (the overlay reverts to disk state on the next
+        // apply) and clear its diagnostics.
+        server.open_buffers.remove(&get_file_path(uri));
         send_message(stdout, &publish_diagnostics_notification(uri, &[]))?;
       }
     },
@@ -722,20 +749,7 @@ fn dispatch(
           .and_then(|t| t.as_str()),
       ) {
         let (uri, text) = (uri.to_string(), text.to_string());
-        // Coalesce: a newer trigger for this doc already queued makes this
-        // compile stale before it starts — answer `cancelled` immediately.
-        if superseded_in_pending(pending, &uri) {
-          send_message(stdout, &response(id, cancelled_result_object()))?;
-        } else {
-          match server.run_warm(&uri, &text, reader, pending) {
-            WarmResult::Done(out) => {
-              send_message(stdout, &response(id, out.to_result_object()))?;
-            },
-            WarmResult::Cancelled => {
-              send_message(stdout, &response(id, cancelled_result_object()))?;
-            },
-          }
-        }
+        convert_trigger(server, reader, pending, &uri, &text, None, stdout, Some(id))?;
       } else if id != Value::Null {
         // A request (has an id) MUST be answered — silently dropping it
         // leaves the client awaiting the response forever.
@@ -760,23 +774,89 @@ fn dispatch(
   Ok(true)
 }
 
-/// Run a conversion for its diagnostics (didOpen/didChange) and publish them.
-/// Uses the same warm-fork pipeline as `latexml/convert` so the cache is
-/// shared and stays coherent; a superseded run publishes nothing (the newer
-/// run will).
-fn run_diagnostics(
+/// LSP `textDocument.version` of a didOpen/didChange payload.
+fn doc_version(request: &Value) -> Option<i64> {
+  request
+    .get("params")
+    .and_then(|p| p.get("textDocument"))
+    .and_then(|d| d.get("version"))
+    .and_then(|v| v.as_i64())
+}
+
+/// One conversion trigger (didOpen / didChange / `latexml/convert`), through
+/// the multi-file pipeline: record the buffer, resolve the project root,
+/// coalesce against newer same-project triggers, convert the ROOT via the
+/// shared warm-fork path, then answer (`request_id`-carrying convert gets the
+/// result object; notifications publish diagnostics).
+#[allow(clippy::too_many_arguments)]
+fn convert_trigger(
   server: &mut Server,
   reader: &mut FdReader,
   pending: &mut VecDeque<String>,
   uri: &str,
   text: &str,
+  version: Option<i64>,
   stdout: &mut std::io::Stdout,
+  request_id: Option<Value>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-  if let WarmResult::Done(out) = server.run_warm(uri, text, reader, pending) {
-    send_message(stdout, &publish_diagnostics_notification(uri, &out.diags))?;
+  let buffer_path = get_file_path(uri);
+  server.upsert_buffer(buffer_path.clone(), text.to_string(), version);
+  let override_root = server.root_override.clone();
+  let root = resolve_root(
+    &mut server.root_cache,
+    override_root.as_deref(),
+    std::path::Path::new(&buffer_path),
+    Some(text),
+  );
+
+  // Coalesce: a newer trigger for this PROJECT already queued makes this
+  // compile stale before it starts.
+  if superseded_in_pending(pending, &root) {
+    if let Some(id) = request_id {
+      send_message(stdout, &response(id, cancelled_result_object()))?;
+    }
+    return Ok(());
+  }
+
+  // The root's text: the edited buffer itself, another open buffer, or disk.
+  let root_str = root.to_string_lossy().into_owned();
+  let root_text = if root_str == buffer_path {
+    text.to_string()
+  } else if let Some(buf) = server.open_buffers.get(&root_str) {
+    buf.text.clone()
+  } else {
+    match std::fs::read_to_string(&root) {
+      Ok(t) => t,
+      Err(e) => {
+        // Degrade to v1 behavior: convert the buffer standalone.
+        log::warn!("cannot read project root {root_str} ({e}); converting the buffer standalone");
+        text.to_string()
+      },
+    }
+  };
+  let root_uri = format!("file://{root_str}");
+
+  match server.run_warm(&root_uri, &root_text, reader, pending) {
+    WarmResult::Done(mut out) => {
+      // Attribute diagnostics to project files (multi-file model).
+      attribute_diag_files(&mut out.diags, &root, &server.open_buffers);
+      out.root = Some(root_str);
+      match request_id {
+        Some(id) => send_message(stdout, &response(id, out.to_result_object()))?,
+        None => publish_grouped_diagnostics(server, &root_uri, uri, &out, stdout)?,
+      }
+    },
+    WarmResult::Cancelled => {
+      if let Some(id) = request_id {
+        send_message(stdout, &response(id, cancelled_result_object()))?;
+      }
+      // A superseded notification publishes nothing — the newer run will.
+    },
   }
   Ok(())
 }
+
+
 
 #[cfg(test)]
 mod framing_tests {
@@ -863,14 +943,16 @@ mod framing_tests {
   }
 
   #[test]
-  fn preempts_same_uri_convert_and_didchange() {
-    let conv = r#"{"method":"latexml/convert","params":{"uri":"file:///a.tex","text":"x"}}"#;
-    let chg = r#"{"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///a.tex"},"contentChanges":[{"text":"y"}]}}"#;
-    let other = r#"{"method":"latexml/convert","params":{"uri":"file:///b.tex","text":"x"}}"#;
-    let close = r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///a.tex"}}}"#;
-    assert!(preempts(conv, "file:///a.tex"));
-    assert!(preempts(chg, "file:///a.tex"), "didChange of the same doc preempts");
-    assert!(!preempts(other, "file:///a.tex"), "different doc does not");
-    assert!(!preempts(close, "file:///a.tex"), "didClose does not");
+  fn preempts_same_project_convert_and_didchange() {
+    use std::path::Path;
+    let conv = r#"{"method":"latexml/convert","params":{"uri":"file:///proj/main.tex","text":"x"}}"#;
+    let chg = r#"{"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///proj/sections/ch2.tex"},"contentChanges":[{"text":"y"}]}}"#;
+    let other = r#"{"method":"latexml/convert","params":{"uri":"file:///elsewhere/b.tex","text":"x"}}"#;
+    let close = r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///proj/main.tex"}}}"#;
+    let root = Path::new("/proj/main.tex");
+    assert!(preempts(conv, root), "same-doc convert preempts");
+    assert!(preempts(chg, root), "didChange anywhere in the project preempts");
+    assert!(!preempts(other, root), "another project does not");
+    assert!(!preempts(close, root), "didClose does not");
   }
 }

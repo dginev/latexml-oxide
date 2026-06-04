@@ -7590,14 +7590,19 @@ ported — required before any thread-reusing daemon mode relies on it).
   the cooperative deadline — a Marpa/libxslt tight loop wedges the whole
   server (a Watchdog would kill the server itself). Mitigation candidate:
   fork the fallback too.
-* Dependency mtime scan is non-recursive: editing an `\input`-ed file in a
-  *subdirectory* doesn't invalidate the warm cache (same-dir edits do).
-  Superseded by the warm-up read-log snapshot in
-  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) §3E once that lands.
-* **No multi-file project model** (buffer == document): root detection,
-  unsaved-buffer overlay, and per-file diagnostics are PLANNED in
-  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) (PR #243 review
-  follow-up).
+* ~~Dependency mtime scan is non-recursive~~ FIXED 2026-06-04 by the
+  warm-up read-log snapshot (`overlay::warmup_dep_snapshot`, pinned
+  Overlay(version)/Disk(mtime) per opened source); the same-dir mtime
+  scan is kept alongside to catch files *appearing*.
+* ~~No multi-file project model~~ **LANDED 2026-06-04**: project-root
+  detection (override > `% !TEX root` > `find_main_tex` with
+  reference-guarded walk-up), unsaved-buffer overlay via the engine's
+  `{file}_contents` channel (zero engine diff, COW-inherited by forks),
+  read-log dep snapshot keying the warm cache, per-file diagnostics
+  (record-format log parser + attribution + stale-clear publishes).
+  Design + implementation deltas:
+  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md). Live-verified:
+  `tools/lsp_smoke.py` (basic/preempt/multifile, 15/15).
 * Body content following `\begin{document}` on the same line gets correct
   line numbers but wrong *columns* for that first line (the body mouth
   starts at column 1).

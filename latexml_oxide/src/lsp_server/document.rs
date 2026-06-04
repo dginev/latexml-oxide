@@ -47,7 +47,7 @@ pub(crate) fn get_file_path(uri: &str) -> String {
 /// control word) a `%` DOES start a comment. Verbatim environments are not
 /// modeled — a preamble `verbatim` containing `\begin{document}` is out of
 /// scope.
-fn comment_spans(text: &str) -> Vec<(usize, usize)> {
+pub(crate) fn comment_spans(text: &str) -> Vec<(usize, usize)> {
   let bytes = text.as_bytes();
   let mut spans = Vec::new();
   let mut i = 0;
