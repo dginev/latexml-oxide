@@ -343,14 +343,14 @@ fn push_pop_daemon_frames() {
   assign_value("daemon_mode", Stored::Bool(true), Some(Scope::Global));
   match lookup_value("daemon_mode") {
     None => panic!("Couldn't lookup daemon_mode value after assignment"),
-    Some(Stored::Bool(b)) => assert_eq!(b, true, "in daemon mode"),
+    Some(Stored::Bool(b)) => assert!(b, "in daemon mode"),
     Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
   };
 
   pop_daemon_frame().unwrap();
   match lookup_value("daemon_mode") {
     None => panic!("Couldn't lookup daemon_mode value after assignment"),
-    Some(Stored::Bool(b)) => assert_eq!(b, false, "out of daemon mode"),
+    Some(Stored::Bool(b)) => assert!(!b, "out of daemon mode"),
     Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
   };
 }
