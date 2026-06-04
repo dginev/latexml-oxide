@@ -7592,6 +7592,12 @@ ported — required before any thread-reusing daemon mode relies on it).
   fork the fallback too.
 * Dependency mtime scan is non-recursive: editing an `\input`-ed file in a
   *subdirectory* doesn't invalidate the warm cache (same-dir edits do).
+  Superseded by the warm-up read-log snapshot in
+  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) §3E once that lands.
+* **No multi-file project model** (buffer == document): root detection,
+  unsaved-buffer overlay, and per-file diagnostics are PLANNED in
+  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) (PR #243 review
+  follow-up).
 * Body content following `\begin{document}` on the same line gets correct
   line numbers but wrong *columns* for that first line (the body mouth
   starts at column 1).
