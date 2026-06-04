@@ -283,7 +283,8 @@ fn cancelled_result_object() -> Value {
     ("diagnostics", Value::Array(Vec::new())),
     ("sources", Value::Array(Vec::new())),
     ("status", jstr("cancelled")),
-    ("statusCode", jnum(0.0)),
+    // Integer, matching the int statusCode every other result carries.
+    ("statusCode", Value::from(0i64)),
   ])
 }
 
@@ -318,30 +319,73 @@ fn send_message(writer: &mut impl std::io::Write, val: &Value) -> std::io::Resul
 
 fn get_file_path(uri: &str) -> String {
   let s = uri.strip_prefix("file://").unwrap_or(uri);
-  let mut decoded = String::new();
-  let mut chars = s.chars();
-  while let Some(c) = chars.next() {
-    if c == '%' {
-      let mut hex = String::new();
-      if let Some(h1) = chars.next() {
-        hex.push(h1);
-      }
-      if let Some(h2) = chars.next() {
-        hex.push(h2);
-      }
-      if hex.len() == 2 {
-        if let Ok(byte) = u8::from_str_radix(&hex, 16) {
-          decoded.push(byte as char);
-          continue;
+  // Percent-decode at the BYTE level, then reassemble as UTF-8. Decoding
+  // each %XX to `byte as char` would turn multi-byte sequences (e.g.
+  // `%C3%A9` = é) into Latin-1 mojibake — wrong SOURCEDIRECTORY/search
+  // paths for any non-ASCII document path.
+  let bytes = s.as_bytes();
+  let mut decoded: Vec<u8> = Vec::with_capacity(bytes.len());
+  let mut i = 0;
+  while i < bytes.len() {
+    if bytes[i] == b'%' {
+      if let Some(hex) = bytes.get(i + 1..i + 3) {
+        if hex.is_ascii() {
+          if let Ok(byte) = u8::from_str_radix(std::str::from_utf8(hex).unwrap_or(""), 16) {
+            decoded.push(byte);
+            i += 3;
+            continue;
+          }
         }
       }
-      decoded.push('%');
-      decoded.push_str(&hex);
+      decoded.push(b'%');
+      i += 1;
     } else {
-      decoded.push(c);
+      decoded.push(bytes[i]);
+      i += 1;
     }
   }
-  decoded
+  String::from_utf8_lossy(&decoded).into_owned()
+}
+
+/// Byte ranges of `%`-comments in `text` (from each unescaped `%` to its line
+/// end). A `%` is escaped only when immediately preceded by a backslash that
+/// is itself a control-sequence escape (`\%`); after `\\` (the line-break
+/// control word) a `%` DOES start a comment. Verbatim environments are not
+/// modeled — a preamble `verbatim` containing `\begin{document}` is out of
+/// scope.
+fn comment_spans(text: &str) -> Vec<(usize, usize)> {
+  let bytes = text.as_bytes();
+  let mut spans = Vec::new();
+  let mut i = 0;
+  while i < bytes.len() {
+    match bytes[i] {
+      b'\\' => i += 2, // skip the escaped char (covers \% and \\ alike)
+      b'%' => {
+        let end = bytes[i..]
+          .iter()
+          .position(|&b| b == b'\n')
+          .map(|p| i + p)
+          .unwrap_or(bytes.len());
+        spans.push((i, end));
+        i = end + 1;
+      },
+      _ => i += 1,
+    }
+  }
+  spans
+}
+
+/// Find the **effective** `\begin{document}` — the first regex match that is
+/// not inside a `%`-comment. A commented-out `\begin{document}` (common in
+/// templates) must not split the preamble: the old `regex.find` cut the text
+/// at the commented occurrence, leaking the rest of the comment line into the
+/// body as content.
+fn find_begin_document(regex: &regex::Regex, text: &str) -> Option<(usize, usize)> {
+  let spans = comment_spans(text);
+  regex
+    .find_iter(text)
+    .find(|m| !spans.iter().any(|&(s, e)| s < m.start() && m.start() < e))
+    .map(|m| (m.start(), m.end()))
 }
 
 /// Final path component (e.g. `main.tex`). The client lowercases for matching.
@@ -610,7 +654,11 @@ mod unix_server {
   }
 
   impl FdReader {
-    fn new() -> Self { FdReader { fd: 0, buf: Vec::new() } }
+    fn new() -> Self { Self::from_fd(0) }
+
+    /// Reader over an arbitrary fd — the framing logic is fd-agnostic; tests
+    /// drive it over a `pipe(2)` instead of stdin.
+    fn from_fd(fd: i32) -> Self { FdReader { fd, buf: Vec::new() } }
 
     /// One blocking `read` into the buffer; `Ok(0)` is EOF.
     fn fill(&mut self) -> std::io::Result<usize> {
@@ -634,35 +682,26 @@ mod unix_server {
       }
     }
 
-    /// Is a *complete* LSP frame already buffered (no syscall)? Used to decide
-    /// stdin-readiness without consuming, so `poll` and the buffer agree.
-    fn has_complete_frame(&self) -> bool {
-      if let Some(he) = find_subseq(&self.buf, b"\r\n\r\n") {
-        let cl = parse_content_length(&self.buf[..he]).unwrap_or(0);
-        self.buf.len() >= he + 4 + cl
-      } else {
-        false
-      }
-    }
-
-    /// Pull one complete frame out of the buffer, if present.
+    /// Pull one complete frame out of the buffer, if present. A loop (not
+    /// recursion) so a flood of malformed headers can't grow the stack.
     fn take_frame(&mut self) -> Option<String> {
-      let he = find_subseq(&self.buf, b"\r\n\r\n")?;
-      let cl = parse_content_length(&self.buf[..he]);
-      let body_start = he + 4;
-      match cl {
-        Some(cl) if self.buf.len() >= body_start + cl => {
-          let body: Vec<u8> = self.buf[body_start..body_start + cl].to_vec();
-          self.buf.drain(..body_start + cl);
-          Some(String::from_utf8_lossy(&body).into_owned())
-        },
-        // Malformed header with no parseable Content-Length: drop it and retry.
-        None => {
-          self.buf.drain(..body_start);
-          self.take_frame()
-        },
-        // Header present but body not fully arrived yet.
-        Some(_) => None,
+      loop {
+        let he = find_subseq(&self.buf, b"\r\n\r\n")?;
+        let cl = parse_content_length(&self.buf[..he]);
+        let body_start = he + 4;
+        match cl {
+          Some(cl) if self.buf.len() >= body_start + cl => {
+            let body: Vec<u8> = self.buf[body_start..body_start + cl].to_vec();
+            self.buf.drain(..body_start + cl);
+            return Some(String::from_utf8_lossy(&body).into_owned());
+          },
+          // Malformed header with no parseable Content-Length: drop it and retry.
+          None => {
+            self.buf.drain(..body_start);
+          },
+          // Header present but body not fully arrived yet.
+          Some(_) => return None,
+        }
       }
     }
 
@@ -689,6 +728,16 @@ mod unix_server {
     haystack.windows(needle.len()).position(|w| w == needle)
   }
 
+  /// `true` when this process has exactly one live thread (Linux: count
+  /// `/proc/self/task` entries). On platforms without `/proc`, returns `true`
+  /// (the check is advisory — used in a `debug_assert!` at the fork site).
+  fn single_threaded() -> bool {
+    match std::fs::read_dir("/proc/self/task") {
+      Ok(entries) => entries.count() == 1,
+      Err(_) => true,
+    }
+  }
+
   fn parse_content_length(header: &[u8]) -> Option<usize> {
     let s = std::str::from_utf8(header).ok()?;
     for line in s.split("\r\n") {
@@ -704,34 +753,35 @@ mod unix_server {
     None
   }
 
-  /// Reap `pid`, returning its exit code (or `-1` if it died from a signal).
-  /// The shared `Watchdog` in the child exits `124` on timeout / `137` on the
-  /// memory ceiling, which `finish` maps back to a result.
+  /// Reap `pid`, returning its exit code; a signal death maps to the shell
+  /// convention `128 + signo` (so an OS OOM-killer SIGKILL reports as `137`,
+  /// same as the Watchdog's deliberate memory-ceiling exit — both mean "ran
+  /// out of memory" to `finish`). The shared `Watchdog` in the child exits
+  /// `124` on timeout / `137` on the memory ceiling.
   fn reap(pid: i32) -> i32 {
     let mut status = 0i32;
     unsafe {
       libc::waitpid(pid, &mut status, 0);
       if libc::WIFEXITED(status) {
         libc::WEXITSTATUS(status)
+      } else if libc::WIFSIGNALED(status) {
+        128 + libc::WTERMSIG(status)
       } else {
         -1
       }
     }
   }
 
-  /// Does this raw message supersede the in-flight `latexml/convert` for
-  /// `current_uri`? Only a newer convert of the *same* document preempts.
+  /// Does this raw message supersede the in-flight conversion for
+  /// `current_uri`? A newer `latexml/convert` OR `didChange`/`didOpen` of the
+  /// *same* document preempts: in both cases the in-flight result is already
+  /// stale (the buffer changed), and finishing it would only delay the newer
+  /// request behind a wasted compile.
   fn preempts(body: &str, current_uri: &str) -> bool {
-    if let Ok(req) = parse_json(body) {
-      if req.get("method").and_then(|m| m.as_str()) == Some("latexml/convert") {
-        return req
-          .get("params")
-          .and_then(|p| p.get("uri"))
-          .and_then(|u| u.as_str())
-          == Some(current_uri);
-      }
+    match parse_json(body) {
+      Ok(req) => super::message_doc_uri(&req).as_deref() == Some(current_uri),
+      Err(_) => false,
     }
-    false
   }
 
   fn is_exit(body: &str) -> bool {
@@ -762,72 +812,98 @@ mod unix_server {
     let mut pipe = unsafe { std::fs::File::from_raw_fd(read_fd) };
 
     loop {
-      // Already-buffered stdin frame takes priority (poll wouldn't re-report
-      // bytes we've pulled into user space).
-      let stdin_ready = if reader.has_complete_frame() {
-        true
-      } else {
-        let mut fds = [
-          libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 },
-          libc::pollfd { fd: read_fd, events: libc::POLLIN, revents: 0 },
-        ];
-        let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
-        if rc < 0 {
-          let err = std::io::Error::last_os_error();
-          if err.raw_os_error() == Some(libc::EINTR) {
-            continue;
-          }
-          // poll failed: fall back to a blocking drain of the child.
-          let mut bytes = Vec::new();
-          let _ = pipe.read_to_end(&mut bytes);
-          let code = reap(pid);
-          return finish(current_uri, &bytes, code);
+      // 1. Handle every COMPLETE stdin frame already buffered. We never block
+      //    waiting for the rest of a partial frame here — doing so (the old
+      //    `next_message()` call) ignored the child pipe while blocked, and a
+      //    client that stalls mid-frame while the child blocks writing a
+      //    > pipe-capacity payload would deadlock all three parties.
+      while let Some(body) = reader.take_frame() {
+        if body.is_empty() {
+          continue;
         }
-        let pipe_ready = (fds[1].revents & (libc::POLLIN | libc::POLLHUP)) != 0;
-        if pipe_ready {
-          // The child writes its whole payload in one shot at the very end, so
-          // pipe-readable means the compile is essentially done — drain & reap.
-          let mut bytes = Vec::new();
-          let _ = pipe.read_to_end(&mut bytes);
-          let code = reap(pid);
-          return finish(current_uri, &bytes, code);
+        if is_exit(&body) {
+          kill_and_reap(pid);
+          std::process::exit(0);
         }
-        (fds[0].revents & libc::POLLIN) != 0
-      };
+        if preempts(&body, current_uri) {
+          kill_and_reap(pid);
+          pending.push_back(body);
+          return WarmResult::Cancelled;
+        }
+        // Unrelated message (didClose, shutdown, a different document):
+        // queue it for after this compile and keep waiting.
+        pending.push_back(body);
+      }
 
-      if stdin_ready {
-        match reader.next_message() {
+      // 2. Poll both fds.
+      let mut fds = [
+        libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 },
+        libc::pollfd { fd: read_fd, events: libc::POLLIN, revents: 0 },
+      ];
+      let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
+      if rc < 0 {
+        let err = std::io::Error::last_os_error();
+        if err.raw_os_error() == Some(libc::EINTR) {
+          continue;
+        }
+        // poll failed: fall back to a blocking drain of the child.
+        let mut bytes = Vec::new();
+        let _ = pipe.read_to_end(&mut bytes);
+        let code = reap(pid);
+        return finish(&bytes, code);
+      }
+      let pipe_ready = (fds[1].revents & (libc::POLLIN | libc::POLLHUP)) != 0;
+      if pipe_ready {
+        // The child writes its whole payload in one shot at the very end, so
+        // pipe-readable means the compile is essentially done — drain & reap.
+        let mut bytes = Vec::new();
+        let _ = pipe.read_to_end(&mut bytes);
+        let code = reap(pid);
+        return finish(&bytes, code);
+      }
+      if (fds[0].revents & (libc::POLLIN | libc::POLLHUP)) != 0 {
+        // 3. One non-blocking-equivalent fill; complete frames are handled at
+        //    the top of the next iteration.
+        match reader.fill() {
           // stdin EOF mid-compile: client gone — kill the child and stop.
-          None => {
-            unsafe {
-              libc::kill(pid, libc::SIGKILL);
-            }
-            reap(pid);
+          Ok(0) => {
+            kill_and_reap(pid);
             return WarmResult::Cancelled;
           },
-          Some(body) => {
-            if is_exit(&body) {
-              unsafe {
-                libc::kill(pid, libc::SIGKILL);
-              }
-              reap(pid);
-              std::process::exit(0);
-            }
-            if preempts(&body, current_uri) {
-              unsafe {
-                libc::kill(pid, libc::SIGKILL);
-              }
-              reap(pid);
-              pending.push_back(body);
-              return WarmResult::Cancelled;
-            }
-            // Unrelated message (didClose, shutdown, a different document):
-            // queue it for after this compile and keep waiting.
-            pending.push_back(body);
+          Ok(_) => {},
+          Err(_) => {
+            kill_and_reap(pid);
+            return WarmResult::Cancelled;
           },
         }
       }
     }
+  }
+
+  /// Terminate the in-flight body child: SIGTERM first (default disposition
+  /// kills it, but gives any future cleanup handler a chance), a short grace
+  /// for it to disappear, then SIGKILL, then reap. The child's graphics
+  /// subprocesses are protected separately via `PR_SET_PDEATHSIG` (see
+  /// `graphics::run_with_timeout`): when the child dies, the kernel reaps the
+  /// `setsid`-detached converter grandchildren that would otherwise be
+  /// orphaned with no watcher.
+  fn kill_and_reap(pid: i32) {
+    unsafe {
+      libc::kill(pid, libc::SIGTERM);
+    }
+    // Brief grace: poll for exit up to ~50 ms before escalating.
+    for _ in 0..10 {
+      let mut status = 0i32;
+      let r = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
+      if r == pid {
+        return; // already reaped
+      }
+      std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    unsafe {
+      libc::kill(pid, libc::SIGKILL);
+    }
+    reap(pid);
   }
 
   /// Parse the child's pipe payload into a `ConvertOutput`. The parent owns the
@@ -835,7 +911,7 @@ mod unix_server {
   /// `exit_code` is the child's exit status: a child hard-terminated by its
   /// `Watchdog` writes no payload and exits [`watchdog::EXIT_TIMEOUT`] /
   /// [`watchdog::EXIT_OOM`], which we map to a fatal result.
-  fn finish(current_uri: &str, bytes: &[u8], exit_code: i32) -> WarmResult {
+  fn finish(bytes: &[u8], exit_code: i32) -> WarmResult {
     use latexml_core::watchdog::{EXIT_OOM, EXIT_TIMEOUT};
     // Threaded back through a thread-local set just before the fork; see
     // `run_warm`. We stash the preamble log in a cell to avoid widening this
@@ -865,7 +941,6 @@ mod unix_server {
           };
           let combined_log = format!("{}{}", PREAMBLE_LOG.with(|c| c.borrow().clone()), body_log);
           let diags = parse_log_diagnostics(&combined_log);
-          let _ = current_uri;
           // Engine status/code reported by the child (0/1/2/3).
           let status_code = payload.get("statusCode").and_then(|c| c.as_i64()).unwrap_or(0);
           let status = payload
@@ -929,6 +1004,18 @@ mod unix_server {
     }
     let (read_fd, write_fd) = (fds[0], fds[1]);
 
+    // INVARIANT: the parent must be single-threaded at fork time — a second
+    // thread could hold the allocator (or logger) lock mid-operation, and the
+    // forked child would deadlock on its first allocation, BEFORE its
+    // Watchdog spawns, wedging the server on the pipe forever. Today this
+    // holds: graphics workers are `thread::scope`-joined, `run_with_timeout`
+    // is poll-based, and `Watchdog`s are created child-side only. The debug
+    // assertion catches any future `thread::spawn` that silently breaks it.
+    debug_assert!(
+      single_threaded(),
+      "forking the body child while the parent has extra live threads — fork-unsafe"
+    );
+
     let pid = unsafe { libc::fork() };
     if pid < 0 {
       unsafe {
@@ -942,6 +1029,16 @@ mod unix_server {
       // ---- child ----
       unsafe {
         libc::close(read_fd);
+        // Insurance: the child inherits the parent's stdout (fd 1) — the LSP
+        // protocol stream. No engine path writes to stdout today, but a
+        // single stray `println!` would corrupt the framing for every client.
+        // Point the child's fd 1 at /dev/null; its payload goes over the
+        // pipe and its logging over stderr.
+        let devnull = libc::open(c"/dev/null".as_ptr(), libc::O_WRONLY);
+        if devnull >= 0 {
+          libc::dup2(devnull, 1);
+          libc::close(devnull);
+        }
       }
       let payload = run_body_child(uri, offset_lines, body, warmed, timeout_secs, max_rss_kb);
       let bytes = payload.to_string().into_bytes();
@@ -1062,12 +1159,13 @@ mod unix_server {
       reader: &mut FdReader,
       pending: &mut VecDeque<String>,
     ) -> WarmResult {
-      let Some(mat) = self.begin_doc_regex.find(text) else {
-        // No document body boundary — just convert the whole thing in-process.
+      let Some((_, mat_end)) = find_begin_document(&self.begin_doc_regex, text) else {
+        // No (un-commented) document body boundary — convert the whole thing
+        // in-process.
         return WarmResult::Done(self.convert_in_process(uri, text));
       };
-      let preamble = &text[..mat.end()];
-      let body = &text[mat.end()..];
+      let preamble = &text[..mat_end];
+      let body = &text[mat_end..];
       let offset_lines = preamble.matches('\n').count();
       let deps = get_directory_dependencies(uri);
       let timeout = self.timeout_secs;
@@ -1184,12 +1282,20 @@ mod unix_server {
       "initialized" => {},
       "textDocument/didOpen" => {
         if let Some((uri, text)) = did_open_params(&request) {
-          run_diagnostics(server, reader, pending, &uri, &text, stdout)?;
+          // Coalesce: if a newer conversion trigger for this doc is already
+          // queued, this compile would be stale before it starts — skip it
+          // (the newer run publishes). Prevents a didChange flurry from
+          // queueing N serial full conversions.
+          if !superseded_in_pending(pending, &uri) {
+            run_diagnostics(server, reader, pending, &uri, &text, stdout)?;
+          }
         }
       },
       "textDocument/didChange" => {
         if let Some((uri, text)) = did_change_params(&request) {
-          run_diagnostics(server, reader, pending, &uri, &text, stdout)?;
+          if !superseded_in_pending(pending, &uri) {
+            run_diagnostics(server, reader, pending, &uri, &text, stdout)?;
+          }
         }
       },
       "textDocument/didClose" => {
@@ -1218,14 +1324,27 @@ mod unix_server {
             .and_then(|t| t.as_str()),
         ) {
           let (uri, text) = (uri.to_string(), text.to_string());
-          match server.run_warm(&uri, &text, reader, pending) {
-            WarmResult::Done(out) => {
-              send_message(stdout, &response(id, out.to_result_object()))?;
-            },
-            WarmResult::Cancelled => {
-              send_message(stdout, &response(id, cancelled_result_object()))?;
-            },
+          // Coalesce: a newer trigger for this doc already queued makes this
+          // compile stale before it starts — answer `cancelled` immediately.
+          if superseded_in_pending(pending, &uri) {
+            send_message(stdout, &response(id, cancelled_result_object()))?;
+          } else {
+            match server.run_warm(&uri, &text, reader, pending) {
+              WarmResult::Done(out) => {
+                send_message(stdout, &response(id, out.to_result_object()))?;
+              },
+              WarmResult::Cancelled => {
+                send_message(stdout, &response(id, cancelled_result_object()))?;
+              },
+            }
           }
+        } else if id != Value::Null {
+          // A request (has an id) MUST be answered — silently dropping it
+          // leaves the client awaiting the response forever.
+          send_message(
+            stdout,
+            &error_response(id, -32602.0, "latexml/convert: missing params.uri/params.text".to_string()),
+          )?;
         }
       },
       "exit" => return Ok(false),
@@ -1259,6 +1378,103 @@ mod unix_server {
       send_message(stdout, &publish_diagnostics_notification(uri, &out.diags))?;
     }
     Ok(())
+  }
+
+  #[cfg(test)]
+  mod framing_tests {
+    use super::*;
+
+    /// A `pipe(2)` pair: write fragments into `w`, read frames via FdReader on
+    /// the read end. Closed on drop.
+    struct PipePair {
+      r: i32,
+      w: i32,
+    }
+    impl PipePair {
+      fn new() -> Self {
+        let mut fds = [0i32; 2];
+        assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0);
+        PipePair { r: fds[0], w: fds[1] }
+      }
+      fn write(&self, bytes: &[u8]) {
+        let n = unsafe { libc::write(self.w, bytes.as_ptr() as *const libc::c_void, bytes.len()) };
+        assert_eq!(n, bytes.len() as isize);
+      }
+    }
+    impl Drop for PipePair {
+      fn drop(&mut self) {
+        unsafe {
+          libc::close(self.r);
+          libc::close(self.w);
+        }
+      }
+    }
+
+    fn frame(body: &str) -> Vec<u8> {
+      format!("Content-Length: {}\r\n\r\n{}", body.len(), body).into_bytes()
+    }
+
+    #[test]
+    fn take_frame_handles_fragmented_input() {
+      let pipe = PipePair::new();
+      let mut reader = FdReader::from_fd(pipe.r);
+      let msg = frame(r#"{"method":"initialized"}"#);
+      // Header fragment only: no frame yet.
+      pipe.write(&msg[..10]);
+      reader.fill().unwrap();
+      assert_eq!(reader.take_frame(), None);
+      // Rest of header + partial body: still no frame.
+      let header_len = msg.len() - 24;
+      pipe.write(&msg[10..header_len + 5]);
+      reader.fill().unwrap();
+      assert_eq!(reader.take_frame(), None);
+      // Remainder: one complete frame.
+      pipe.write(&msg[header_len + 5..]);
+      reader.fill().unwrap();
+      assert_eq!(
+        reader.take_frame().as_deref(),
+        Some(r#"{"method":"initialized"}"#)
+      );
+      assert_eq!(reader.take_frame(), None);
+    }
+
+    #[test]
+    fn take_frame_two_frames_one_fill() {
+      let pipe = PipePair::new();
+      let mut reader = FdReader::from_fd(pipe.r);
+      let mut bytes = frame("{\"a\":1}");
+      bytes.extend(frame("{\"b\":2}"));
+      pipe.write(&bytes);
+      reader.fill().unwrap();
+      assert_eq!(reader.take_frame().as_deref(), Some("{\"a\":1}"));
+      assert_eq!(reader.take_frame().as_deref(), Some("{\"b\":2}"));
+      assert_eq!(reader.take_frame(), None);
+    }
+
+    #[test]
+    fn take_frame_skips_malformed_header() {
+      let pipe = PipePair::new();
+      let mut reader = FdReader::from_fd(pipe.r);
+      let mut bytes = b"Garbage-Header: x\r\n\r\n".to_vec();
+      bytes.extend(frame("{\"ok\":true}"));
+      pipe.write(&bytes);
+      reader.fill().unwrap();
+      // The malformed (no Content-Length) header is dropped; the good frame
+      // behind it is returned — in a loop, not recursion.
+      assert_eq!(reader.take_frame().as_deref(), Some("{\"ok\":true}"));
+    }
+
+    #[test]
+    fn preempts_same_uri_convert_and_didchange() {
+      let conv = r#"{"method":"latexml/convert","params":{"uri":"file:///a.tex","text":"x"}}"#;
+      let chg = r#"{"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///a.tex"},"contentChanges":[{"text":"y"}]}}"#;
+      let other = r#"{"method":"latexml/convert","params":{"uri":"file:///b.tex","text":"x"}}"#;
+      let close = r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///a.tex"}}}"#;
+      assert!(preempts(conv, "file:///a.tex"));
+      assert!(preempts(chg, "file:///a.tex"), "didChange of the same doc preempts");
+      assert!(!preempts(other, "file:///a.tex"), "different doc does not");
+      assert!(!preempts(close, "file:///a.tex"), "didClose does not");
+    }
   }
 }
 
@@ -1364,6 +1580,12 @@ mod generic_server {
           ) {
             let out = server.convert_in_process(uri, text);
             send_message(&mut stdout, &response(id, out.to_result_object()))?;
+          } else if id != Value::Null {
+            // A request MUST be answered (see unix dispatch).
+            send_message(
+              &mut stdout,
+              &error_response(id, -32602.0, "latexml/convert: missing params.uri/params.text".to_string()),
+            )?;
           }
         },
         "exit" => return Ok(()),
@@ -1382,6 +1604,44 @@ mod generic_server {
 }
 
 // Shared param extraction (used by both server flavors).
+
+/// The document uri of a *conversion-triggering* message — `latexml/convert`
+/// (`params.uri`) or `textDocument/didOpen`/`didChange`
+/// (`params.textDocument.uri`). `None` for every other method. Used both for
+/// preemption (a newer trigger for the same doc supersedes the in-flight
+/// child) and for pending-queue coalescing (only the newest trigger per doc
+/// runs).
+fn message_doc_uri(request: &Value) -> Option<String> {
+  match request.get("method").and_then(|m| m.as_str()) {
+    Some("latexml/convert") => request
+      .get("params")
+      .and_then(|p| p.get("uri"))
+      .and_then(|u| u.as_str())
+      .map(String::from),
+    Some("textDocument/didOpen") | Some("textDocument/didChange") => request
+      .get("params")
+      .and_then(|p| p.get("textDocument"))
+      .and_then(|d| d.get("uri"))
+      .and_then(|u| u.as_str())
+      .map(String::from),
+    _ => None,
+  }
+}
+
+/// Is a newer conversion trigger for `uri` already waiting in `pending`?
+/// (Everything in `pending` arrived AFTER the message currently being
+/// dispatched, so any match supersedes it.) Running the current conversion
+/// anyway would serialize a stale compile in front of the fresh one — the
+/// didChange-flurry snowball.
+fn superseded_in_pending(pending: &VecDeque<String>, uri: &str) -> bool {
+  pending.iter().any(|body| {
+    parse_json(body)
+      .ok()
+      .and_then(|req| message_doc_uri(&req))
+      .as_deref()
+      == Some(uri)
+  })
+}
 
 fn did_open_params(request: &Value) -> Option<(String, String)> {
   let td = request.get("params")?.get("textDocument")?;
@@ -1507,5 +1767,57 @@ mod tests {
     let v = cancelled_result_object();
     assert_eq!(v.get("status"), Some(&Value::String("cancelled".to_string())));
     assert_eq!(v.get("html"), Some(&Value::String(String::new())));
+    // Integer statusCode, consistent with every other result object.
+    assert_eq!(v.get("statusCode").and_then(Value::as_i64), Some(0));
+  }
+
+  #[test]
+  fn file_path_percent_decodes_utf8() {
+    // %C3%A9 = é (two UTF-8 bytes) — the old char-per-byte decode produced
+    // "Ã©" mojibake and broke SOURCEDIRECTORY for non-ASCII paths.
+    assert_eq!(get_file_path("file:///home/u/caf%C3%A9/main.tex"), "/home/u/café/main.tex");
+    assert_eq!(get_file_path("file:///plain/path.tex"), "/plain/path.tex");
+    // Malformed escapes pass through unmangled.
+    assert_eq!(get_file_path("file:///x%2/y%"), "/x%2/y%");
+    assert_eq!(get_file_path("file:///sp%20ace.tex"), "/sp ace.tex");
+  }
+
+  #[test]
+  fn begin_document_skips_commented_occurrences() {
+    let re = regex::Regex::new(r"\\begin\s*\{\s*document\s*\}").unwrap();
+    // Commented-out \begin{document} (template style) must not split there.
+    let text = "\\documentclass{article}\n% \\begin{document} not yet!\n\\begin{document}\nBody\n\\end{document}\n";
+    let (start, end) = find_begin_document(&re, text).unwrap();
+    assert_eq!(&text[start..end], "\\begin{document}");
+    assert!(text[..start].contains("not yet!"), "split is AFTER the commented line");
+    // An escaped \% does not start a comment.
+    let text2 = "100\\% sure\\begin{document}x";
+    let (s2, _) = find_begin_document(&re, text2).unwrap();
+    assert_eq!(s2, "100\\% sure".len());
+    // All occurrences commented → no split (in-process fallback path).
+    assert_eq!(find_begin_document(&re, "% \\begin{document}\n"), None);
+  }
+
+  #[test]
+  fn message_doc_uri_extraction_and_coalescing() {
+    let conv = r#"{"method":"latexml/convert","params":{"uri":"file:///a.tex","text":"x"}}"#;
+    let chg = r#"{"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///a.tex"},"contentChanges":[{"text":"y"}]}}"#;
+    let close = r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///a.tex"}}}"#;
+    assert_eq!(
+      message_doc_uri(&parse_json(conv).unwrap()).as_deref(),
+      Some("file:///a.tex")
+    );
+    assert_eq!(
+      message_doc_uri(&parse_json(chg).unwrap()).as_deref(),
+      Some("file:///a.tex")
+    );
+    assert_eq!(message_doc_uri(&parse_json(close).unwrap()), None);
+
+    let mut pending = VecDeque::new();
+    pending.push_back(close.to_string());
+    assert!(!superseded_in_pending(&pending, "file:///a.tex"), "didClose does not supersede");
+    pending.push_back(chg.to_string());
+    assert!(superseded_in_pending(&pending, "file:///a.tex"), "queued didChange supersedes");
+    assert!(!superseded_in_pending(&pending, "file:///b.tex"), "other docs unaffected");
   }
 }

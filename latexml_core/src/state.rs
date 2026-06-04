@@ -2356,14 +2356,22 @@ pub fn end_semiverbatim() -> Result<()> { pop_frame() }
 
 //   #======================================================================
 
-// Faithful port of Perl `LaTeXML::Core::State::push/popDaemonFrame`
+// PARTIAL port of Perl `LaTeXML::Core::State::push/popDaemonFrame`
 // (used by the Perl `latexmls` daemon to reset bindings between runs while
-// keeping the loaded Pool). The Rust persistent server (`latexml_oxide
-// --server`) instead isolates each conversion in a `fork()`ed child, so these
-// are not currently wired into a caller — kept (with the round-trip test in
-// `tests/00_unit_state.rs`) as the in-process reset primitive for a future
-// thread-reusing, non-forking daemon mode. See `lsp_server` for the chosen
-// fork-isolation design.
+// keeping the loaded Pool). `pop_daemon_frame` is faithful (pop unlocked
+// frames, unlock + pop the daemon frame, Fatal on the last frame).
+// `push_daemon_frame` is NOT yet: Perl (State.pm L607-627) additionally
+// `daemon_copy`s every mutable HASH/ARRAY value binding into the new frame —
+// so IN-PLACE mutations under the daemon frame (Rust: `with_value_mut` on
+// `VecDequeStored`/`HashTagData`/... values) can't corrupt the pre-frame
+// state — and records `_PRELOADED_POOL_`. Without that copy, a daemon reset
+// only undoes frame-tracked ASSIGNMENTS, not in-place mutations. The Rust
+// persistent server (`latexml_oxide --server`) instead isolates each
+// conversion in a `fork()`ed child, so these are not currently wired into a
+// caller — kept (with the round-trip test in `tests/00_unit_state.rs`) as the
+// seed of an in-process reset primitive for a future thread-reusing daemon
+// mode, which MUST add the deep-copy semantics before relying on it. See
+// `lsp_server` for the chosen fork-isolation design.
 pub fn push_daemon_frame() {
   let daemon_frame = UndoFrame {
     locked: true,
@@ -2374,7 +2382,9 @@ pub fn push_daemon_frame() {
 
 pub fn pop_daemon_frame() -> Result<()> {
   let mut state = state_mut!();
-  while !state.undo.front().as_ref().unwrap().locked {
+  // `is_some_and(!locked)` rather than `unwrap()`: an (impossible-in-practice)
+  // empty undo stack must fall through to the Fatal below, not panic.
+  while state.undo.front().is_some_and(|f| !f.locked) {
     drop(state);
     pop_frame()?;
     state = state_mut!();

@@ -7565,7 +7565,36 @@ statusCode}` — the shape the `ar5iv-editor` client consumes.
   diagnostic parsing/0-basing, basename, cancelled-shape); daemon-frame
   round-trip in `tests/00_unit_state.rs`.
 
+### Code review 2026-06-04 (PR #243) — fixes landed
+A line-by-line audit of the server (assumptions + bug hunt) landed fixes for:
+unanswered `latexml/convert` requests on missing params (-32602 now);
+didChange-flurry snowball (same-uri didChange/didOpen now PREEMPTS the
+in-flight child, and the pending queue COALESCES — only the newest trigger
+per doc runs); orphaned `setsid` graphics converters when a body child is
+killed mid-post (`PR_SET_PDEATHSIG` in `run_with_timeout` `pre_exec`,
+SIGTERM-grace-SIGKILL preemption); mojibake percent-decoding of non-ASCII
+URIs (byte-level decode); `--max-memory` being a silent no-op outside
+`--server` (standalone CLI now `Watchdog::with_limits`); preamble split at a
+COMMENTED-OUT `\begin{document}` (comment-aware `find_begin_document`);
+partial-frame stdin deadlock window in `wait_for_child` (poll-driven fill,
+never blocks mid-frame); child stdout corrupting the protocol stream
+(`dup2(/dev/null, 1)` insurance); fork-safety invariant now `debug_assert`ed
+(single thread at fork, `/proc/self/task`); signal deaths reported as
+`128+signo` (OS OOM-kill maps to the same 137 as the Watchdog ceiling);
+`push_daemon_frame` comment corrected (Perl's `daemon_copy` deep-copy is NOT
+ported — required before any thread-reusing daemon mode relies on it).
+
 ### Known gaps / follow-ups
+* **In-process fallback is unguarded against native hangs.** The fallback
+  (no `\begin{document}`, fork failure) runs on the server thread with only
+  the cooperative deadline — a Marpa/libxslt tight loop wedges the whole
+  server (a Watchdog would kill the server itself). Mitigation candidate:
+  fork the fallback too.
+* Dependency mtime scan is non-recursive: editing an `\input`-ed file in a
+  *subdirectory* doesn't invalidate the warm cache (same-dir edits do).
+* Body content following `\begin{document}` on the same line gets correct
+  line numbers but wrong *columns* for that first line (the body mouth
+  starts at column 1).
 * Interner growth: long-lived sessions keep interning new symbols (the daemon
   uses `reset_thread_state`, not `reset_thread_engine`); a periodic full reset
   is a future hardening.
