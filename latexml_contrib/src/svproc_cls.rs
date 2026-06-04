@@ -14,6 +14,14 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("article");
+  // svproc.cls has no class binding in Perl, so Perl falls back to OmniBus,
+  // whose `RequirePackage('graphicx')` (OmniBus.cls.ltxml L44 / our
+  // omnibus_cls.rs L46 — "loaded by random cls files 10-to-1") defines
+  // `\includegraphics`. This contrib binding intercepts svproc BEFORE the
+  // OmniBus fallback, so without this the class's figures hit
+  // `undefined:\includegraphics` and cascade (`_` in text mode). Mirror the
+  // OmniBus outcome. Witness 2004.07524 (svproc proceedings with `\includegraphics`).
+  RequirePackage!("graphicx");
   RequirePackage!("sv_support");
   RequirePackage!("amsmath");
   // Pre-load xcolor with [dvipsnames, table] so a paper's later
