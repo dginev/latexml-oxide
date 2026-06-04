@@ -6485,8 +6485,11 @@ creator/contact system — `queue/dequeue_front_matter`
 `\lx@annotate@frontmatter[@now]` with label/labelseq/annotate
 (all|new|n) attachment, `\lx@request@frontmatter@annotation`,
 `\lx@set@frontmatter@label`, `digest_front_matter` (deferred until
-`\maketitle`; keeps the Rust-only clear-before-digest +
-fatal-swallow protections), `insert_frontmatter_rec`,
+`\maketitle`; queue pre-cleared before digesting — intentional
+divergence `OXIDIZED_DESIGN` #27: PR-head Perl deep-recursion-fatals
+on re-entrant queues, witness 0907.0384 / `KNOWN_PERL_ERRORS` #30;
+the master-era fatal-swallow was REMOVED 2026-06-04 — a Fatal in the
+deferred digest now propagates, matching Perl), `insert_frontmatter_rec`,
 `relocate_annotations` (label/unprefixed/fuzzy tables),
 `\lx@personname` (moved from latex_constructs), SplitTokens on
 Token-OR-Tokens delimiters with space-trim semantics,
@@ -6494,8 +6497,18 @@ Token-OR-Tokens delimiters with space-trim semantics,
 heuristics, ~35 shorthands + `\lx@<tag>[@role]@name` macros, and the
 `ltx:_Capture_`-based `\lx@frontmatter@fallback`.
 `XUntil` now only expands (Perl removed the digesting clause; the
-Rust witnessed-workaround family for that clause was removed with it
-— its call sites moved to digestion-based capture).
+Rust witnessed-workaround family for that clause was removed with it).
+**Open: XUntil witness gate.** Witnesses 1902.01143 / 0805.1712 /
+2403.14274 / 2103.11356 still route through XUntil (elsart
+keyword/classification `XUntil:\@keyword@cut` and amsppt `\@bibfield`
+are unchanged by the PR — only the base engine's abstract/keywords
+environments moved to `digestNextBody`) and have **not** been re-run
+under pure-expand; the 12-paper spot-check below contained no elsart
+paper. Re-verify in the next sandbox sweep; if any re-breaks, fix the
+root cause (`\href` self-marker re-expansion, `\edef`/`\let` reversion
+lossiness) rather than re-adding XUntil branches
+(`docs/frontmatter_api_refactor.md` Appendix A.4). Witnesses
+astro-ph9903386 / math0610119 are *fixed* by pure-expand.
 Base_Deprecated grew the `\@personname` / `\@add@frontmatter` /
 `\@add@to@frontmatter` / `\@ADDCLASS` shims; non-PR bindings still
 work through them, exactly like out-of-tree Perl bindings.
@@ -6554,7 +6567,7 @@ lingering in Rust) caught 3 in revtex4_support (`\doauthor`,
 `\altaddress`, `\andname`) — removed. Review fixes: aas ORCID check
 tightened to Perl's digits-only regex; OmniBus `\ead{}[]` upstream
 typo (`#2` = the optional, drops the address) recorded as
-KNOWN_PERL_ERRORS **#27** and fixed to `#1` in Rust. Functional smoke
+KNOWN_PERL_ERRORS **#29** and fixed to `#1` in Rust. Functional smoke
 battery (8 synthetic docs, all 0-error): superscript-marker author
 splitting, revtex `annotate=new` shared-affiliation fan-out, authblk
 label marks, jheppub `label=` + `labelseq=author` email sequencing,

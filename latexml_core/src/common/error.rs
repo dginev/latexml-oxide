@@ -234,6 +234,69 @@ pub fn get_status_code() -> usize {
   }
 }
 
+//======================================================================
+// Debuggable features (Perl: `DebuggableFeature($name)` registration +
+// `$LaTeXML::DEBUG{$name}` gating, enabled by the CLI's `--debug NAME`).
+// Process-global (not thread-local): the CLI parses args on one thread
+// and may convert on another (e.g. the big-stack worker in
+// bin/latexml_oxide.rs); reads only occur on gated debug paths.
+//======================================================================
+
+static KNOWN_DEBUG_FEATURES: Lazy<std::sync::RwLock<std::collections::BTreeSet<String>>> =
+  Lazy::new(|| std::sync::RwLock::new(std::collections::BTreeSet::new()));
+static ENABLED_DEBUG_FEATURES: Lazy<std::sync::RwLock<std::collections::HashSet<String>>> =
+  Lazy::new(|| std::sync::RwLock::new(std::collections::HashSet::new()));
+
+/// Perl: `DebuggableFeature($name)` — register a feature name so it can
+/// be listed/validated for `--debug`.
+pub fn debuggable_feature(name: &str) {
+  if let Ok(mut known) = KNOWN_DEBUG_FEATURES.write() {
+    known.insert(name.to_string());
+  }
+}
+
+/// All registered feature names (sorted), for `--debug` diagnostics.
+pub fn known_debug_features() -> Vec<String> {
+  KNOWN_DEBUG_FEATURES
+    .read()
+    .map(|k| k.iter().cloned().collect())
+    .unwrap_or_default()
+}
+
+/// Perl: `$LaTeXML::DEBUG{$name} = 1` — called by the CLI per `--debug NAME`.
+pub fn enable_debug_feature(name: &str) {
+  if let Ok(mut enabled) = ENABLED_DEBUG_FEATURES.write() {
+    enabled.insert(name.to_string());
+  }
+}
+
+/// Perl: truthiness of `$LaTeXML::DEBUG{$name}`.
+pub fn debug_enabled(name: &str) -> bool {
+  ENABLED_DEBUG_FEATURES
+    .read()
+    .map(|enabled| enabled.contains(name))
+    .unwrap_or(false)
+}
+
+/// Feature-gated debug logging — Perl's `Debug(...) if $LaTeXML::DEBUG{feature}`.
+/// Usage: `DebugFeature!("frontmatter", "FRONT Add {}", entry)`.
+/// Logs with the feature name as the `log` target (so output matches the
+/// previous `log::debug!(target: "frontmatter", ...)` form) and counts a
+/// Debug in the status report, like `Debug!`. NB deliberately does NOT
+/// forward to `Debug!` — its 3-expr `(category, object, message)` arm
+/// would mis-capture a format string with two arguments.
+#[macro_export]
+macro_rules! DebugFeature {
+  ($feature:literal, $($arg:tt)*) => {{
+    if $crate::common::error::debug_enabled($feature) {
+      $crate::common::error::note_status(
+        $crate::common::error::LogStatus::Debug, None);
+      use log::debug;
+      debug!(target: $feature, $($arg)*);
+    }
+  }};
+}
+
 #[macro_export]
 macro_rules! Debug {
   ($category:expr, $object:expr, $message:expr) => {{

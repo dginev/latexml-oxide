@@ -197,7 +197,8 @@ LoadDefinitions!({
   // Note: could be circumstances where you'd want modular frontmatter?
   // (ie. frontmatter for each sectional unit)
 
-  // Perl: DebuggableFeature('frontmatter') — Rust uses `log` target "frontmatter".
+  // Perl: DebuggableFeature('frontmatter'); enable with `--debug frontmatter`.
+  latexml_core::common::error::debuggable_feature("frontmatter");
 
   // Perl Base_Utility.pool.ltxml (PR #2767): moved here from latex_constructs
   // (was \@personname); `mode => "text"` + `bounded` carried over from the
@@ -376,7 +377,7 @@ LoadDefinitions!({
       attr: options,
       content: vec![TagContent::PlaceKeeper], // (in case embedded)
     };
-    log::debug!(target: "frontmatter", "FRONT Add {}\n   for: {}",
+    DebugFeature!("frontmatter", "FRONT Add {}\n   for: {}",
       show_frontmatter(&entry), content);
     let index = frontmatter_push(&tag, entry);
     // REPLACE only 'place_keeper'!!
@@ -428,7 +429,7 @@ LoadDefinitions!({
     let index = frontmatter_push(&tag, entry);
     let body = stomach::digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
-    log::debug!(target: "frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
+    DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
   }, bounded => true);
 
@@ -538,7 +539,7 @@ LoadDefinitions!({
           attr: stub_attr,
           content: vec![TagContent::PlaceKeeper],
         };
-        log::debug!(target: "frontmatter", "FRONT Add stub {}\n  for annotation {} [{}]",
+        DebugFeature!("frontmatter", "FRONT Add stub {}\n  for annotation {} [{}]",
           show_frontmatter(&stub), tag, options.get("_label").map(String::as_str).unwrap_or(""));
         list.push(stub);
         (parent_indices, list.len() - 1)
@@ -571,7 +572,7 @@ LoadDefinitions!({
     };
     if !preformatted && (!stub_label.is_empty() || nparents == 0) {
       // deferred until we can compare labels
-      log::debug!(target: "frontmatter", "... deferring to label={stub_label}");
+      DebugFeature!("frontmatter", "... deferring to label={stub_label}");
       frontmatter_set_first_content(&parenttag, stub_idx, datum);
     } else {
       let annotate = options.get("annotate").cloned().unwrap_or_default();
@@ -587,7 +588,7 @@ LoadDefinitions!({
         Info!("unexpected", &tag, s!("Frontmatter annotate '{annotate}' unrecognized"));
         (1, false)
       };
-      log::debug!(target: "frontmatter", "...adding to {nprev} previous{}",
+      DebugFeature!("frontmatter", "...adding to {nprev} previous{}",
         if newonly { " new" } else { "" });
       state::with_value_mut("frontmatter", |val_opt| {
         if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
@@ -645,7 +646,7 @@ LoadDefinitions!({
     with_pending_entry_attr(move |attr| {
       let labels = attr.get("_annotations").cloned().unwrap_or_default();
       let newval = if labels.is_empty() { label.clone() } else { s!("{labels},{label}") };
-      log::debug!(target: "frontmatter", "FRONT add annotation label {label}");
+      DebugFeature!("frontmatter", "FRONT add annotation label {label}");
       attr.insert("_annotations".to_string(), newval);
     });
   });
@@ -660,7 +661,7 @@ LoadDefinitions!({
     with_pending_entry_attr(move |attr| {
       match label {
         Some(label) => {
-          log::debug!(target: "frontmatter", "FRONT set label {label}");
+          DebugFeature!("frontmatter", "FRONT set label {label}");
           attr.insert("_annotations".to_string(), label);
         },
         None => {
@@ -1329,7 +1330,7 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       }
     }
   }
-  log::debug!(target: "frontmatter", "FRONT Queuing {tag} [{:?}] {command}", attr_hash);
+  DebugFeature!("frontmatter", "FRONT Queuing {tag} [{:?}] {command}", attr_hash);
   let missing = state::with_value("frontmatter_raw", |v| {
     !matches!(v, Some(Stored::FrontmatterRaw(_)))
   });
@@ -1359,7 +1360,7 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
             .iter()
             .any(|(k, v)| entry.1.get(*k).map(String::as_str).unwrap_or("") != *v);
         if !keep {
-          log::debug!(target: "frontmatter", "FRONT DEQueuing {} [{:?}]", entry.0, entry.1);
+          DebugFeature!("frontmatter", "FRONT DEQueuing {} [{:?}]", entry.0, entry.1);
         }
         keep
       });
@@ -1427,12 +1428,23 @@ fn clean_frontmatter_labels(labels: &str, prefix: &str) -> Vec<String> {
   }
   for label in pieces {
     let label = label.trim();
+    // INTENTIONAL DIVERGENCE (OXIDIZED_DESIGN #28, KNOWN_PERL_ERRORS #31,
+    // plan decisions log #5): Perl prefixes empty fields too, so a doubled
+    // comma or empty keyval yields a contentless "prefix:" label that can
+    // spuriously match another in relocate_annotations. Drop them.
+    if label.is_empty() {
+      continue;
+    }
     let mut label = if let Some(inner) = label
       .strip_prefix("\\ref{")
       .and_then(|rest| rest.strip_suffix('}'))
       .filter(|inner| !inner.contains('}'))
     {
-      s!("LABEL:{}", inner.trim())
+      let inner = inner.trim();
+      if inner.is_empty() {
+        continue; // \ref{} ⇒ contentless "LABEL:" — drop (same divergence)
+      }
+      s!("LABEL:{inner}")
     } else if !prefix.is_empty() {
       s!("{prefix}:{label}")
     } else {
@@ -1521,13 +1533,21 @@ fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
   stomach::bgroup();
-  // Clear queue BEFORE digesting (revtex/aa.cls 0907.0384): if frontmatter
-  // body contains tokens that re-invoke \lx@frontmatterhere/fallback (e.g.
-  // through cls-supplied macros that themselves emit \lx@add@frontmatter
-  // calls), nested invocations would otherwise see the SAME queue and
-  // recursively re-digest it. Clear first → nested invocations see empty,
-  // safely skip — and any newly-pushed entries during this digest will be
-  // processed by the next invocation (or end-of-document fallback).
+  // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
+  // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
+  // from the live queue and wipes it after the loop — but when a queued
+  // entry's own content re-triggers digestFrontMatter (witness aa.cls
+  // 0907.0384: `\abstract{...}{}` dispatches the 5-arg \abstract@new,
+  // whose greedy params swallow the document's `\maketitle` into arg #5,
+  // so the queued abstract CONTAINS \maketitle → \lx@frontmatterhere →
+  // afterDigest → re-entry), Perl re-digests the same queue unboundedly:
+  // PR-head Perl dies `Fatal:perl:deep_recursion ... invokeToken`, zero
+  // output (verified 2026-06-04). Pre-clearing makes the nested
+  // invocation see an empty queue and terminate; the same paper then
+  // converts with zero errors (real LaTeX also compiles it). Everything
+  // else — deferred timing, digestion order, late re-let/\def fidelity —
+  // is exactly the PR's. Newly-queued entries during this digest are
+  // processed by the next invocation (or the end-of-document fallback).
   let commands: Vec<RawFrontmatter> = match state::remove_value("frontmatter_raw") {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),
@@ -1544,32 +1564,17 @@ pub fn digest_front_matter() -> Result<()> {
       None,
     );
     for (tag, attr, command) in commands {
-      log::debug!(target: "frontmatter", "FRONT Digesting {tag} [{:?}] {command}", attr);
-      // The deferred-frontmatter digest is best-effort: errors here
-      // (e.g. a malformed `\title{...}` body or a paper-local hook
-      // that raises Fatal!) shouldn't bubble up as a hard fatal,
-      // since the rest of the document body has already converted
-      // successfully. But the Fatal! macro sets `report.fatal=true`
-      // BEFORE returning Err, so `let _ = digest(...)` silently
-      // swallows the Err while leaving the fatal-flag set —
-      // producing "1 fatal error" with NO Fatal: log line in the
-      // output (witness arXiv:1903.01633). Snapshot the fatal flag
-      // around the digest call and restore it if it flipped — we
-      // surface the underlying issue via a Warn instead.
-      let fatal_before = latexml_core::common::error::get_status(
-        latexml_core::common::error::LogStatus::Fatal,
-      ) > 0;
-      if let Err(e) = stomach::digest(command) {
-        if !fatal_before {
-          latexml_core::common::error::clear_fatal_flag();
-        }
-        log::warn!(
-          "frontmatter digest swallowed Err: {:?}:{:?} {}",
-          e.target,
-          e.category,
-          e.message
-        );
-      }
+      DebugFeature!("frontmatter", "FRONT Digesting {tag} [{:?}] {command}", attr);
+      // Perl parity (review 2026-06-04, replacing the master-era
+      // fatal-swallow from witness arXiv:1903.01633): a Fatal raised
+      // while digesting deferred frontmatter propagates and aborts
+      // the conversion with a proper `Fatal:` log line, exactly like
+      // Perl's un-eval'd `$stomach->digest($command)`. The 1903.01633
+      // bug was the *silent* swallow (`let _ = digest(...)` left
+      // `report.fatal=true` with no log line); propagation fixes the
+      // silence without diverging from Perl. Non-fatal Error!s inside
+      // the digest log-and-continue in both engines as before.
+      stomach::digest(command)?;
     }
   }
   // Add punctuation to all ltx:creators, now that we know how many of each role.
@@ -1697,7 +1702,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 /// Perl: insertFrontMatter_rec($document, $item) for the ARRAY case.
 fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<()> {
   let TagData { tag, attr, content } = entry;
-  log::debug!(target: "frontmatter", "FRONT Inserting {}", show_frontmatter(entry));
+  DebugFeature!("frontmatter", "FRONT Inserting {}", show_frontmatter(entry));
   // token-locators: frontmatter elements (e.g. <ltx:title> from `\title{…}`)
   // are opened here, far from their source, around content that was digested
   // and stored back at `\lx@add@frontmatter` time. open_element would otherwise
@@ -1801,7 +1806,7 @@ fn relocate_annotations(document: &mut Document) -> Result<()> {
         .or_else(|| unlabeltable.get(noprefix));
       if let Some(targets) = targets {
         for target in targets.clone() {
-          log::debug!(target: "frontmatter", "FRONT Moving annotation for {label}");
+          DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
         }

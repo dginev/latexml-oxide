@@ -291,14 +291,22 @@ LoadDefinitions!({
         // Perl PR #2767 ("ParameterType XUntil should only expand, not
         // digest") removed the LookupDefinition → Invocation(readArguments)
         // clause that used to live here: "This clause tends to digest, not
-        // only expand; Why was it felt needed???". The Rust port had grown
-        // a family of witnessed workarounds for exactly the failure modes
-        // of that clause (astro-ph9903386 \hspace over-read; math0610119
-        // \sb; 1902.01143 \href hang; 0805.1712 \def\@date; 2403.14274
-        // \edef; 2103.11356 \let) — all on `\begin{keyword}`/`\institute`
-        // bodies that the same PR moves OFF XUntil onto digestion-based
-        // capture (\lx@add@frontmatter@until / digestNextBody). With the
+        // only expand; Why was it felt needed???". We follow: with the
         // clause gone, a bare token push is all that remains.
+        //
+        // NOTE: the witnessed Rust workaround family that lived here
+        // (astro-ph9903386 \hspace over-read; math0610119 \sb; 1902.01143
+        // \href hang; 0805.1712 \def\@date; 2403.14274 \edef; 2103.11356
+        // \let) was removed with the clause. Witnesses #1/#2 are FIXED by
+        // pure-expand. #3-#6 still route through XUntil — elsart
+        // `\@keyword XUntil:\@keyword@cut` and amsppt `\@bibfield
+        // XUntil:\@end@bibfield` are unchanged by the PR (only the base
+        // engine's abstract/keywords environments moved to
+        // digestNextBody) — and are NOT yet re-verified. Tracked in
+        // docs/SYNC_STATUS.md "XUntil witness gate"; re-verify in the
+        // next sandbox sweep covering elsart papers, fixing any re-break
+        // at its root cause (href self-marker, \edef/\let reversion)
+        // rather than re-adding branches here (plan Appendix A.4).
         tokens.push(token);
       }
     }

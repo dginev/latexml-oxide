@@ -926,6 +926,75 @@ Perl: `<contact role="email"></contact>` (empty). Expected: the address.
 **Rust:** `omnibus_cls.rs` deliberately uses `{#1}` (documented
 divergence; this entry). Revisit if upstream fixes the typo.
 
+## 30. PR-2767 `digestFrontMatter` unguarded re-entry → `deep_recursion` fatal
+
+**Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml` (post-#2767),
+`digestFrontMatter` — digests from the **live** `frontmatter_raw` queue
+and wipes it only after the loop.
+
+**Symptom:** conversion dies with
+```
+Fatal:perl:deep_recursion Deep recursion on subroutine "LaTeXML::Core::Stomach::invokeToken"
+```
+(stack alternates `\lx@frontmatterhere` ↔ `\lx@add@frontmatter@now`),
+**zero output**. Verified on `LaTeXML@23f3acfa` 2026-06-04.
+
+**Root cause:** when a queued entry's *content* contains `\maketitle`
+(→ `\lx@frontmatterhere`, whose `afterDigest` calls
+`digestFrontMatter`), the nested invocation re-reads the still-live
+queue and re-digests it — including the entry being digested —
+unboundedly. `\maketitle`'s own `\global\let\maketitle\relax` cannot
+stop it: it sits *after* `\lx@frontmatterhere` in the expansion, so
+the recursion dives first.
+
+**Real-world trigger:** arXiv:0907.0384 (A&A). aa.cls's `\abstract`
+is 1-arg *or* 5-arg; the paper writes `\abstract{…} {}` so the
+binding (faithfully, in both engines) dispatches the 5-arg
+`\abstract@new`, whose greedy `{}` parameters swallow `\keywords`
+(#3, #4) and **`\maketitle` (#5)** into the queued abstract content.
+pdflatex compiles this paper.
+
+**Minimal trigger** (with aa.cls):
+```latex
+\documentclass{aa}
+\begin{document}
+\title{T}\author{A}
+\abstract{body} {}
+\keywords{k}
+\maketitle
+\end{document}
+```
+
+**Rust:** not affected — `digest_front_matter` snapshots and
+pre-clears the queue, so the nested invocation terminates and the
+paper converts with zero errors (intentional divergence,
+`OXIDIZED_DESIGN.md` #27). Worth reporting upstream.
+
+## 31. `cleanFrontmatterLabels` prefixes empty fields → contentless `"prefix:"` labels
+
+**Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml`
+(post-#2767), `cleanFrontmatterLabels` — `split(',')` then
+unconditional `$prefix . ':' . $label`.
+
+**Symptom:** a doubled comma or empty keyval field (`label={a,,b}`,
+`\inst{1,,2}`) yields a contentless label like `affiliation:`. It
+enters the `_annotations`/`_label` matching tables, where two
+unrelated contentless labels can spuriously match each other during
+`relocateAnnotations`, attaching an annotation to the wrong parent.
+
+**Minimal trigger:**
+```latex
+\author{A. Author\inst{1,}}
+\institute{Univ A}
+```
+→ creator `_annotations` gains `affiliation:1,affiliation:` (the
+second field is empty but still prefixed).
+
+**Rust:** drops fields with no real content before prefixing
+(intentional divergence, `OXIDIZED_DESIGN.md` #28; plan decisions
+log #5). Perl's trailing-empty `split` semantics is otherwise
+preserved byte-exactly.
+
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
 `catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded

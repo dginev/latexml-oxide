@@ -1242,6 +1242,64 @@ width.
 
 ---
 
+### 27. Frontmatter Queue Pre-Cleared Before Deferred Digestion
+
+**Decision:** `digest_front_matter` snapshots **and clears**
+`frontmatter_raw` before digesting the queued commands. Perl
+(post-PR-2767 `digestFrontMatter`) digests from the live queue and
+wipes it only after the loop.
+
+**Perl behavior:** when a queued entry's own content re-triggers
+`digestFrontMatter` — which genuinely happens when a class binding's
+greedy argument capture swallows the document's `\maketitle` into
+queued frontmatter content — the nested invocation re-reads the
+still-live queue and re-digests it, unboundedly. PR-head Perl dies
+with `Fatal:perl:deep_recursion … Stomach::invokeToken` and produces
+**no output** (verified against `LaTeXML@23f3acfa`, 2026-06-04). See
+`KNOWN_PERL_ERRORS.md` #30 for the Perl-origin record.
+
+**Rust behavior:** the nested invocation sees an empty queue and
+terminates; the digest still happens at exactly the PR's deferred
+moments (`\maketitle` / document-begin / end-of-document fallback),
+in the PR's order, with late `\let`/`\def` redefinitions honored —
+the divergence is *only* the termination guard. Entries queued
+*during* a digest survive for the next invocation or the fallback
+(Perl's post-loop wipe silently deletes them).
+
+**Witness:** arXiv:0907.0384 (A&A, aa.cls): `\abstract{…}{}` makes
+the binding dispatch the 5-arg `\abstract@new`, whose greedy `{}`
+parameters swallow `\keywords` (#3, #4) and `\maketitle` (#5); the
+queued abstract therefore contains `\maketitle` →
+`\lx@frontmatterhere` → afterDigest re-entry. Perl: fatal, 0 bytes.
+Rust: 0 errors, correct title/creator/affiliation/email joins.
+(pdflatex also compiles this paper — robust behavior is the
+LaTeX-like one.)
+
+---
+
+### 28. Contentless Frontmatter Annotation Labels Are Dropped
+
+**Decision:** `clean_frontmatter_labels` skips fields with no real
+content. Perl `cleanFrontmatterLabels` prefixes empty fields too, so
+a doubled comma, a trailing-comma-plus-interior-empty, or an empty
+keyval (`label={a,,b}`) yields a contentless `"prefix:"` label.
+
+**Perl behavior:** `split(',')` + unconditional `$prefix . ':' . $label`
+emits `affiliation:`-style labels with no payload; these enter the
+`_annotations`/`_label` matching tables and can spuriously match
+*another* contentless label during `relocateAnnotations`, attaching
+an annotation to an unrelated parent. Recorded as a Perl-origin
+buglet in `KNOWN_PERL_ERRORS.md` #31.
+
+**Rust behavior:** empty fields (after trim; including `\ref{}` with
+empty referent) are dropped before prefixing. Perl's `split`-drops-
+trailing-empties semantics is otherwise preserved exactly.
+
+**Witness:** none in the corpus (defensive); decided at plan time —
+`docs/frontmatter_api_refactor.md` decisions log #5.
+
+---
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML
