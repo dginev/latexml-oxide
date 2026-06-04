@@ -26,9 +26,22 @@ When a body contains an alignment template like `\halign{#\hfil&...}`, the
 \def\foo{\halign{#\hfil\cr test\cr}}
 ```
 
-**Impact:** Non-fatal. Warning is noisy but harmless — tokens are preserved.
+**Impact:** Non-fatal in principle — but Perl's branch emits a *counted* `Error`
+**and drops both tokens**, corrupting the template. Perl rarely reaches it
+because it often can't find the offending package and skips the raw load; we
+*do* raw-load such packages, so it broke the error-free target for the common
+halign-in-macro idiom (e.g. easyeqn.sty's `{MATRIX}` env → `$\mathstrut##$`).
 
-**Perl status:** Still present (Tokens.pm line 139). Unfixed.
+**Perl status:** Still present (Tokens.pm line 139). Unfixed upstream.
+
+**Rust status (FIXED 2026-05-28, beneficial divergence):** `pack_parameters`
+(`latexml_core/src/tokens.rs`) now **preserves** the `#` and the following
+token losslessly (so the alignment template / `#{` delimiter survives) and logs
+at `Info` (non-counted) instead of `Error`. Real TeX resolves the
+PARAM-vs-alignment-cell ambiguity during alignment processing, below the level
+LaTeXML operates at, so a genuine typo can't be reliably told apart — preserving
++ Info is strictly more faithful to TeX than erroring + dropping. Witness
+2006.02269 (easyeqn `{MATRIX}`): 2 errors → 0. cargo test 1344/0/0.
 
 ---
 
@@ -728,3 +741,234 @@ overwrites itself identically.
 including in dump output (Perl emits `\@evenfoot` 3× in
 `latex_dump.pool.ltxml`). No fix because no observable behavior
 diverges. Documented here in case future Perl-side audit fixes it.
+
+---
+
+## 25. `latex_constructs.pool.ltxml` `\@checkend` body has a stray trailing `}`
+
+**Perl source (`Engine/latex_constructs.pool.ltxml` L190):**
+```perl
+DefMacro('\@checkend{}', '\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi}');
+```
+
+The replacement-text string ends with a stray `}`. It is a
+transcription artifact from the LaTeX kernel's
+`\def\@checkend#1{\def\reserved@a{#1}\ifx\reserved@a\@currenvir
+\else\@badend{#1}\fi}` — that final `}` closes the `\def`, it is **not**
+part of the macro body. Standard-LaTeX `\@checkend` therefore expands
+to `\def\reserved@a{#1}\ifx…\fi` (no trailing brace), but LaTeXML's
+`DefMacro` body includes the `}`, so every `\@checkend{env}` expansion
+emits one unmatched `}`.
+
+**Impact:** LaTeXML's own `\begin{}`/`\end{}` never call `\@checkend`
+(the magic-CS path skips it), so the stray brace is normally invisible.
+It only surfaces when a package **redefines `\end` to call
+`\@checkend`** the standard-LaTeX way — e.g. `extract.sty`'s
+`AfterEndEnv` machinery:
+```latex
+\def\begin#1{...\begingroup ...\csname #1\endcsname}
+\def\end#1{\csname end#1\endcsname\@checkend{#1}\expandafter\endgroup ...}
+```
+Here `\@checkend{#1}`'s stray `}` runs while extract's wrapping
+`\begingroup` is the open frame. Perl's gullet silently tolerates the
+extra `}`; the Rust port raises `Error:unexpected:} Attempt to close
+boxing group; current frame is non-boxing group due to \begingroup`
+— **one error per environment** in the affected document.
+
+**Rust resolution (`latex_constructs.rs` `\@checkend`):** dropped the
+stray trailing `}` so the body matches standard-LaTeX semantics.
+`\@checkend` is only reachable via packages that mimic the kernel
+`\end`, all of which assume the kernel (brace-free) body, so this is
+strictly more faithful. Witness 2007.09971 (IEEEtran + `extract.sty`
+under ar5iv: 41 boxing-group errors → clean, matching Perl's 0 errors /
+9 warnings).
+
+## 26. `\raise`/`\lower` of a void box register (`\copy`/`\box`/`\lastbox`) spuriously errors
+
+**Trigger (real-LaTeX-valid, errors in Perl):**
+```latex
+\setbox0=\hbox{X\raise1pt\copy\strutbox\lower1pt\copy\strutbox Y}
+```
+Perl emits `Error:expected:<box> A <box> was supposed to be here` twice; Rust
+(pre-fix) did the same.
+
+**Why it is wrong:** In TeX, fetching an UNSET box register via `\box`/`\copy`/
+`\lastbox` yields a **void box**, which is a perfectly valid `<box>` operand for
+`\raise`/`\lower`/`\moveleft`/`\moveright` (TeXbook p.388). The LaTeX kernel
+relies on this — `\raise1pt\copy\strutbox` is a standard strut idiom — and
+LaTeXML never `\setbox`es the visual `\strutbox`, so `\copy\strutbox` is always
+void. Both engines' `MoveableBox` parameter reader treated the empty result as
+"no box at all" and raised `expected:<box>`, where real TeX raises nothing.
+
+**Impact:** Mostly invisible, EXCEPT when such an op sits in a `\halign` column
+template (`\halign{...\raise1pt\copy\strutbox\lower1pt\copy\strutbox\vrule#...}`),
+where it fires **once per cell/row**. On a many-row manual table this floods the
+log: witness **1907.04219** — a `\halign`+`\Hline`/`\vrule` table → **102 errors
+→ FATAL_3 abort (no output)** in Rust, while Perl (erroring fewer times) completed
+with 7. Real TeX emits none.
+
+**Rust resolution (`base_parameter_types.rs`, `MoveableBox::predigest`):** on an
+empty box-fetch result, ERROR only when the box-starter was NOT a box-register op;
+for `\box`/`\copy`/`\lastbox` substitute a void box silently (the substitution was
+already there — only the spurious `Error!` was removed). Faithful to real TeX,
+eliminates the per-cell cascade. Witness 1907.04219: 102 errors / FATAL_3 → **0
+errors, 4.9 MB doc** (6 tables, 787 tabulars). Surpasses Perl on this shared
+Perl/LaTeXML bug.
+
+## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
+
+`catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded
+by Perl LaTeXML either. With `--includestyles` (or the ar5iv
+`rawstyles` profile) Perl FATALs:
+
+```
+Error:unexpected:\let ... should not appear between \csname and \endcsname
+  at catoptions.sty; line 6362
+Fatal:too_many_errors:100 Too many errors (> 100)!
+```
+
+catoptions does heavy `\csname`-driven catcode machinery that neither
+engine interprets. Perl's *default* (no `--includestyles`) treats
+`keyval2e.sty`/`catoptions.sty` as **missing files** and skips them,
+producing output; the ar5iv pipeline (rawstyles on) fails identically
+in Perl and Rust. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{keyval2e}   % → \RequirePackage{catoptions}
+\begin{document}x\end{document}
+```
+
+Witnesses (round-37 second-500K, all SHARED): 1501.07012, 1502.01082,
+1507.04637, 1512.01732 (a Cretan/Hadamard-matrix paper family). Our
+engine FATALs earlier with `ParamSpec:Expected` (the `\@namedef{#1@#2@…}`
+body executes at load time because catoptions' `\robust@def`/`\cpt@def@`
+expansion misfires), but the net outcome — no HTML — matches Perl. Not
+actionable as a Rust-only fix; revisit only if catoptions raw-load
+becomes a deliberate engine goal.
+
+## `mdwmath.sty` `\sq@readrad` `#`-leak — `\meaning\sqrtsign` lacks the `"` delimiter (SHARED)
+
+`mdwmath.sty` (mdwtools) redefines `\sqrt`/`\root` by reading the
+*meaning* of the kernel `\sqrtsign` mathchar to recover its radical
+delimiter code. With `|` temporarily made the escape character it
+defines (L50–51):
+
+```tex
+|def|sq@readrad#1"#2\#3|relax{|global|sq@sqrt"#2|relax}
+|expandafter|sq@readrad|meaning|sqrtsign|relax
+```
+
+i.e. `\def\sq@readrad #1"#2\#3\relax{…}` then
+`\expandafter\sq@readrad \meaning\sqrtsign \relax`. The macro is
+delimited by a literal `"` (the `#2` runs *up to* a double-quote) and
+expects `\meaning\sqrtsign` to expand to something like
+`\mathchar"1270` so that `#2` captures the hex code after the `"`.
+
+This only works when `\sqrtsign` is a genuine **`\mathchar` primitive**
+whose `\meaning` string contains `"`. Under LaTeXML — **both** engines —
+`\sqrtsign` is not a raw `\mathchar`, so `\meaning\sqrtsign` carries no
+`"`; the `#1"#2\#3` delimited scan never finds its `"` terminator,
+over-runs the intended argument, and the literal `#` parameter tokens
+from the *body* leak out to be digested. The result is a burst of:
+
+```
+Error:misdefined:# The token "#" (catcode PARAM) should never reach Stomach!
+```
+
+emitted **while processing `mdwmath.sty` itself** (load time, not use
+time). Confirmed SHARED 2026-05-29 against Perl `~/perl5/bin/latexml
+--path=~/git/ar5iv-bindings/bindings --preload=ar5iv.sty`: witness
+**1811.09652** gives RUST 43 / PERL 44 errors, and Perl's own log shows
+the identical `Error:misdefined:# The token T_PARAM[#] should never reach
+Stomach! at mdwmath.s…`. Re-confirmed 2026-05-31 by a fresh untested-corpus
+sweep: **1405.7843** (RUST 43 / PERL 51) and **1711.06771** (RUST 43 / PERL 44)
+— in both, Perl emits the identical 43 `misdefined:#` *plus* extra
+alignment/`\omit`/`\tab@*` errors, so Perl is strictly worse. The `misdefined:#`
+cluster is one of the largest in the corpus (~1300 papers via the mdwtools
+largest in the corpus (~1300 papers via the mdwtools family), but it is
+an **upstream LaTeXML limitation** — `\meaning` of LaTeXML's `\sqrtsign`
+does not reproduce TeX's `\mathchar"…` form — not a Rust-only defect.
+Not actionable as a Rust-only fix; would require teaching LaTeXML's
+`\sqrtsign`/`\meaning` to round-trip mathchar codes the way TeX does,
+which is out of scope and equally absent in Perl.
+
+## A text-symbol CS (`\i`/`\j`) in a `\usepackage` Semiverbatim option hangs (SHARED)
+
+`\usepackage[pdfauthor={…Mar{\'\i}n…}]{hyperref}` — i.e. a font-encoding
+text symbol (`\i`, `\j`, …) inside a `\usepackage`/`\RequirePackage`
+**Semiverbatim** option value — infinite-loops in **both** Perl and Rust
+(`Fatal:Timeout:PushbackLimit`, Perl exit 143 under `timeout`). Confirmed
+2026-05-28 against Perl `~/perl5/bin/latexml --path=~/git/ar5iv-bindings
+--preload=ar5iv.sty` on the real paper **2004.08143** *and* minimal
+reproducers.
+
+Minimal trigger (both engines hang):
+
+```latex
+\documentclass{article}
+\usepackage[pdfauthor={Daniel Mar{\'\i}n}]{hyperref}
+\begin{document}\href{u}{t}\end{document}
+```
+
+Mechanism (identical in both engines):
+1. `\usepackage`'s `Semiverbatim` option is digested by *expanding* it
+   under `beginSemiverbatim`, which merges the current font with
+   `encoding => 'ASCII'` (Perl `State.pm:597`, Rust `state.rs:2296` —
+   faithful) — a "stay-ASCII" neutralization. The expansion is a pure
+   `readXToken` collect-loop (Perl `Parameter.pm::digest` "BLECH!!!!",
+   Rust `parameter.rs:388`).
+2. `\i` is `\DeclareTextSymbol`-defined `\i → \T1-cmd \i \T1\i`, with
+   `\T1-cmd`≡`\@changed@cmd`. In the preamble `\protect`≡`\relax`≡
+   `\@typeset@protect`, so the *typeset* branch resolves the glyph via
+   `\csname\cf@encoding\string\i\endcsname` → `\csname ASCII\string\i…` =
+   `\ASCII\i`, which is **undefined** (ASCII is a char-decode font *map*,
+   not a LaTeX text *encoding* with `\i` glyphs).
+3. `\@changed@cmd` `\global\let`s `\ASCII\i` to the `?`-fallback `\?\i` =
+   `\UseTextSymbol{OT1}\i` = `{\fontencoding{OT1}\i}`. But `{` and
+   `\fontencoding{OT1}` are non-expandable, so the `readXToken` loop
+   *collects* them without executing — the font encoding stays "ASCII" —
+   and the inner `\i` re-expands → step 2. Infinite.
+
+Breaking the loop requires making `\fontencoding{OT1}` take effect inside
+the semiverbatim `readXToken` (so the inner `\i` resolves to `\OT1\i`,
+CD 16, which IS defined). Perl does not, so Perl hangs too. **This is a
+RELEASE_CRITERIA surpass-Perl reliability item, not a translation parity
+bug.** Tracked in memory `robust-cs-semiverbatim-loop`. (Separately, a
+genuine adjacent divergence was fixed: Rust's `\cf@encoding`/`\f@encoding`
+fell back to *empty* when the live font's encoding slot is `None`; Perl's
+Font always carries OT1 — `Common/Font.pm:331`/`$DEFENCODING`. Now falls
+back to OT1 when a font exists. That does not fix this shared loop.)
+
+## `aas_support.sty.ltxml` omits `\floattable` (aastex62/631 macro)
+
+The AASTeX class macro `\floattable` — `aastex62.cls` L4574
+`\def\floattable{\global\deluxestartrue\global\floattrue}`, a no-arg
+declaration that makes the FOLLOWING deluxetable a full-width (spanning)
+float in two-column PDF layout — is **not** provided by Perl's
+`aas_support.sty.ltxml` (which has `\deluxetable`/`\planotable`/
+`\splitdeluxetable` but not `\floattable`). So a paper that bundles
+`aastex62.cls` and writes `\floattable` before a table raises
+`Error:undefined:\floattable` in Perl too:
+
+```
+Conversion complete: … 1 error; 1 undefined macro[\floattable]
+```
+
+Witness: 1909.08916 (`\documentclass{aastex62}`, `\floattable` before
+deluxetables). Both LaTeXML bindings route `aastex62` through the
+`aastex.cls.ltxml`/`aas_support` path rather than raw-loading the bundled
+`.cls`, so the gap is shared. Since `\floattable` is pure page-layout
+(full-width float placement), it is moot in our HTML paradigm; the Rust
+port adds it as a no-op in `aas_support_sty.rs` (alongside `\placetable`/
+`\platewidth`), which makes Rust convert the witness cleanly where Perl
+still errors. Minimal trigger:
+
+```latex
+\documentclass{aastex62}    % bundled aastex62.cls
+\begin{document}
+\floattable
+\begin{deluxetable}{cc}\tablehead{\colhead{a} & \colhead{b}}
+\startdata 1 & 2 \enddata\end{deluxetable}
+\end{document}
+```

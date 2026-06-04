@@ -24,6 +24,21 @@ LoadDefinitions!({
     "curve2e.sty is minimally stubbed — Bezier curve / vector picture extensions are no-ops."
   );
 
+  // curve2e.sty L16: `\RequirePackage{graphicx,color}` — these are the
+  // package's *unconditional* hard dependencies (the curve/vector
+  // machinery on lines 17-21 is what we stub out as no-ops below, but
+  // graphicx+color are user-visible and papers rely on curve2e to pull
+  // them in). Perl has no curve2e binding, so it raw-loads the real .sty
+  // and executes this `\RequirePackage`, defining `\color`/`\definecolor`
+  // etc. Our no-op stub previously omitted it, so a paper that uses
+  // `\definecolor` *without* its own `\usepackage{color}` — relying on
+  // curve2e to supply it — left `\definecolor` undefined where Perl is
+  // clean. Witness 1810.10468 (ieeeconf + curve2e, `\definecolor{rouge}…`
+  // with no explicit color load): RUST 1 (`undefined:\definecolor`) /
+  // PERL 0 of that error. graphicx is idempotent if already loaded.
+  RequirePackage!("graphicx");
+  RequirePackage!("color");
+
   // curve2e exports — silently consume their arguments. None of
   // these have a faithful HTML rendering anyway.
   def_macro_noop("\\Curve")?;

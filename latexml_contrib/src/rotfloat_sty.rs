@@ -29,8 +29,13 @@ LoadDefinitions!({
     "rotfloat.sty",
     "rotfloat.sty is minimally stubbed — rotating+float glue is a no-op; sidewaystable/sidewaysfigure still come from rotating."
   );
-  // rotfloat only adds the rotated wrappers; we let the rotating
-  // package binding (already loaded as a dependency in most papers)
-  // provide the actual sidewaystable / sidewaysfigure environments.
+  // rotfloat.sty L24-25 does `\RequirePackage{float}` then
+  // `\RequirePackageWithOptions{rotating}`. Mirror both: float provides
+  // `\restylefloat`/`\newfloat`/`\floatstyle` (which papers call
+  // directly, e.g. `\restylefloat{figure}` — undefined without it,
+  // witness 1604.07054/1808.04014), and rotating provides the
+  // sidewaystable/sidewaysfigure environments. float comes first to
+  // match the real load order.
+  RequirePackage!("float");
   RequirePackage!("rotating");
 });

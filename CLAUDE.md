@@ -125,6 +125,7 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 - **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; what ships in a release; the self-contained-binary requirement.
 - **[`docs/SAFETY.md`](docs/SAFETY.md)** — Threat model and `unsafe` inventory (local-CLI posture; distribution posture is tracked in `RELEASE_CRITERIA.md` §6).
 - **[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)** — Average-wall performance bands and Perl-parity baselines.
+- **[`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)** — Living worklist of reliability/performance witness papers (timeout/OOM/peak-RSS/hang), with current-binary + Perl baselines and root-cause notes. Distinct from `SYNC_STATUS.md` (correctness errors).
 - **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
 
 **Dated diagnostic snapshots** (point-in-time studies — see naming rule):
@@ -234,6 +235,35 @@ truth for macro-expanded diagnostics.
 
 ## Practical guidance
 
+- **Canvas signal integrity — robust log parsing is the #1 method (fail toward flagging errors).**
+  In the large-canvas auto-upgrade path, the single most important thing for a trustworthy
+  signal is **robust parsing of the conversion log so that EVERY `Error:` and `Fatal:` message
+  is captured.** The bias must be **fail-safe toward detecting failure**: it is acceptable to
+  produce **false positives** (flag a clean conversion as an error), but a **failure to parse
+  the log must NEVER be silently treated as a success** — that is a false negative, and it
+  hides real regressions. Concretely: latexml_oxide/cortex emit **ANSI-colored** logs
+  (`\x1b[31mError:`), so a naive `grep -c '^Error:'` matches **zero** and silently reports
+  "0 errors / fixed" on a paper that actually has hundreds (this exact bug masked
+  2002.05958=654, 1808.04050=441, 1705.10306=293, 1910.06783=859 as "fixed" — see
+  `docs/SYNC_STATUS.md`).
+  **Two reliable, ANSI-free signals exist — prefer them over grepping colored stderr:**
+  (1) **cortex's status code** — `Status:conversion:N` (written to the `status` member of the
+  output zip and to stdout), where **3 = fatal, 2 = error**, lower = OK/warnings; this integer
+  is the canonical pass/fail. (2) **the on-disk `.latexml.log`** — captured via the
+  ANSI-stripped `LOG_BUFFER`, so it is color-free by construction.
+  **As of 2026-06-01 the logger also TTY-gates stderr colors** (`logger.rs::stderr_use_color`,
+  `is_terminal() && NO_COLOR unset`), so **redirected stderr is now ANSI-free too** — a naive
+  `grep '^Error:'` works on `cortex ... > log.txt 2>&1`. Still, defensively `sed
+  's/\x1b\[[0-9;]*m//g'` before `grep -acE '^(Error|Fatal):'` (logs from older binaries carry
+  ANSI), and gate on **cortex's own `Processing content` file** (multi-file papers ship decoy
+  `\begin{document}` stubs). `canvas/run_one.sh` was HARDENED 2026-06-01 to **strip ANSI before
+  the `^Error:`/`^Fatal:` count** — behaviour-preserving on the current ANSI-emitting release
+  binary AND future-proof for an ANSI-free one (so the old landmine, where rebuilding release
+  with the TTY-gate fix would zero-out run_one.sh's `$'^\x1b[31mError:'` grep and mark every
+  paper a false "OK", is DEFUSED; release may now be rebuilt safely). Validated against ground
+  truth on a 100-undefined-macro + recursion article: 101 errors / 1 fatal, identical counts on
+  both the ANSI and ANSI-free binaries, matching `Status:conversion:3`. When in doubt, count it
+  as a failure to investigate, not a pass.
 - When an adjacent `TODO` note is relevant to the current task, extend scope to complete the TODO as well.
 - Stay as close as possible to the organization and abstractions of the original Perl, as we aim for parity of the rewrite.
 - **Active work**: the strict-Perl dump-parity mission is complete (see above). Remaining sub-tasks — including the ~72-CS Perl-only long tail — are tracked in `docs/SYNC_STATUS.md`; the completed audit is at `docs/archive/PERL_LOADFORMAT_AUDIT.md`.

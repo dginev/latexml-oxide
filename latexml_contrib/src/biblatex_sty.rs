@@ -104,7 +104,7 @@ LoadDefinitions!({
   // bibliography body is not assembled.
   //
   // Audit cycle 2: caught Rust-only bugs vs Perl source
-  //   * duplicate `\newtoggle{blx@citation}` (etoolbox toggle redef)
+  //   * duplicate `\providetoggle{blx@citation}` (etoolbox toggle redef)
   //   * missing 38 of 60 toggles in trailing RawTeX
   //   * missing `\addbibresource` / `\printbibliography` /
   //     `Let \bibliography → \addbibresource` chain
@@ -880,6 +880,16 @@ LoadDefinitions!({
   DefRegister!("\\bibinitsep" => Glue!("0pt"));
   DefRegister!("\\bibparsep" => Glue!("0pt"));
   DefRegister!("\\bibhang" => Glue!("0pt"));
+  // \lositemsep — itemsep length for biblatex's "list of shorthands" (los).
+  // Declared `\newlength{\lositemsep}` in the biblatex-chicago bibliography
+  // styles (chicago-notes.bbx L22, chicago-authordate.bbx, …) and `\setlength`
+  // by biblatex-chicago.sty L154. Our biblatex binding doesn't implement the
+  // `style=`-option `.bbx`/`.cbx` style-file load (Perl raw-loads the whole
+  // chain), so `\lositemsep` was undefined when biblatex-chicago.sty sets it →
+  // `\setlength` error + `<variable> expected` cascade. Provide the length
+  // defensively (biblatex-chicago always loads biblatex). Witness 1802.09944
+  // (`\usepackage[notes,backend=biber]{biblatex-chicago}`).
+  DefRegister!("\\lositemsep" => Glue!("0pt"));
 
   // Perl L553-604: 50 conditionals
   DefConditional!("\\ifandothers");
@@ -1067,6 +1077,21 @@ LoadDefinitions!({
 
   // Perl L736-801: trailing RawTeX with 9 \newbool + 60 \newtoggle
   // declarations. EXACT order and content from the Perl source.
+  //
+  // Use `\providetoggle` (etoolbox's define-if-absent form) rather than
+  // `\newtoggle` for the toggle allocations: when a paper bundles a
+  // `mybiblatex.sty`-style wrapper that re-enters biblatex's init (the
+  // `_loaded` guard covers only a direct second `\usepackage{biblatex}`,
+  // not every re-entry path), this block runs twice and `\newtoggle`
+  // hard-errors on an already-defined toggle (`Package etoolbox Error:
+  // Toggle 'blx@…' already defined`), 57× per re-entry. The `\newbool`
+  // (=`\newif`) half is already tolerated (redefinition downgraded to
+  // Info), so only the toggle half surfaced as errors. Allocating these
+  // toggles is idempotent (same names, no carried state), and
+  // `\providetoggle` is etoolbox's own re-entrant allocator — so this
+  // stays faithful (Perl's `\newtoggle` never re-enters because Perl
+  // can't find the bundled wrapper). Witness 2007.06815
+  // (`\usepackage{mybiblatex}` → 55 toggle errors → 0).
   RawTeX!(r#"
 \newbool{refcontextdefaults}
 \booltrue{refcontextdefaults}%
@@ -1077,61 +1102,61 @@ LoadDefinitions!({
 \newbool{citerequest}
 \booltrue{citerequest}
 \newbool{sortcites}
-\newtoggle{blx@bbldone}
-\newtoggle{blx@tempa}
-\newtoggle{blx@tempb}
-\newtoggle{blx@runltx}
-\newtoggle{blx@runbiber}
-\newtoggle{blx@block}
-\newtoggle{blx@unit}
-\newtoggle{blx@skipentry}
-\newtoggle{blx@insert}
-\newtoggle{blx@lastins}
-\newtoggle{blx@keepunit}
-\newtoggle{blx@bibtex}
-\newtoggle{blx@debug}
-\newtoggle{blx@sortcase}
-\newtoggle{blx@sortupper}
-\newtoggle{blx@autolangbib}
-\newtoggle{blx@autolangcite}
-\newtoggle{blx@clearlang}
-\newtoggle{blx@defernumbers}
-\newtoggle{blx@omitnumbers}
-\newtoggle{blx@footnote}
-\newtoggle{blx@labelalpha}
-\newtoggle{blx@labelnumber}
-\newtoggle{blx@labeltitle}
-\newtoggle{blx@labeltitleyear}
-\newtoggle{blx@labeldateparts}
-\newtoggle{blx@natbib}
-\newtoggle{blx@mcite}
-\newtoggle{blx@loadfiles}
-\newtoggle{blx@sortsets}
-\newtoggle{blx@crossrefsource}
-\newtoggle{blx@xrefsource}
-\newtoggle{blx@terseinits}
-\newtoggle{blx@useprefix}
-\newtoggle{blx@addset}
-\newtoggle{blx@setonly}
-\newtoggle{blx@dataonly}
-\newtoggle{blx@skipbib}
-\newtoggle{blx@skipbiblist}
-\newtoggle{blx@skiplab}
-\newtoggle{blx@citation}
-\newtoggle{blx@volcite}
-\newtoggle{blx@bibliography}
-\newtoggle{blx@citeindex}
-\newtoggle{blx@bibindex}
-\newtoggle{blx@localnumber}
-\newtoggle{blx@refcontext}
-\newtoggle{blx@noroman}
-\newtoggle{blx@nohashothers}
-\newtoggle{blx@nosortothers}
-\newtoggle{blx@singletitle}
-\newtoggle{blx@uniquebaretitle}
-\newtoggle{blx@uniqueprimaryauthor}
-\newtoggle{blx@uniquetitle}
-\newtoggle{blx@uniquework}
+\providetoggle{blx@bbldone}
+\providetoggle{blx@tempa}
+\providetoggle{blx@tempb}
+\providetoggle{blx@runltx}
+\providetoggle{blx@runbiber}
+\providetoggle{blx@block}
+\providetoggle{blx@unit}
+\providetoggle{blx@skipentry}
+\providetoggle{blx@insert}
+\providetoggle{blx@lastins}
+\providetoggle{blx@keepunit}
+\providetoggle{blx@bibtex}
+\providetoggle{blx@debug}
+\providetoggle{blx@sortcase}
+\providetoggle{blx@sortupper}
+\providetoggle{blx@autolangbib}
+\providetoggle{blx@autolangcite}
+\providetoggle{blx@clearlang}
+\providetoggle{blx@defernumbers}
+\providetoggle{blx@omitnumbers}
+\providetoggle{blx@footnote}
+\providetoggle{blx@labelalpha}
+\providetoggle{blx@labelnumber}
+\providetoggle{blx@labeltitle}
+\providetoggle{blx@labeltitleyear}
+\providetoggle{blx@labeldateparts}
+\providetoggle{blx@natbib}
+\providetoggle{blx@mcite}
+\providetoggle{blx@loadfiles}
+\providetoggle{blx@sortsets}
+\providetoggle{blx@crossrefsource}
+\providetoggle{blx@xrefsource}
+\providetoggle{blx@terseinits}
+\providetoggle{blx@useprefix}
+\providetoggle{blx@addset}
+\providetoggle{blx@setonly}
+\providetoggle{blx@dataonly}
+\providetoggle{blx@skipbib}
+\providetoggle{blx@skipbiblist}
+\providetoggle{blx@skiplab}
+\providetoggle{blx@citation}
+\providetoggle{blx@volcite}
+\providetoggle{blx@bibliography}
+\providetoggle{blx@citeindex}
+\providetoggle{blx@bibindex}
+\providetoggle{blx@localnumber}
+\providetoggle{blx@refcontext}
+\providetoggle{blx@noroman}
+\providetoggle{blx@nohashothers}
+\providetoggle{blx@nosortothers}
+\providetoggle{blx@singletitle}
+\providetoggle{blx@uniquebaretitle}
+\providetoggle{blx@uniqueprimaryauthor}
+\providetoggle{blx@uniquetitle}
+\providetoggle{blx@uniquework}
 "#);
 
   // biblatex internals commonly invoked by user preamble. Witnesses

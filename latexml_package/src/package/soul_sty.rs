@@ -116,7 +116,9 @@ LoadDefinitions!({
   // Customizing underlines
   DefPrimitive!("\\setulcolor{}", sub[(color_arg)] {
     let color_str = color_arg.to_string();
-    assign_value("soul_ul_color", color_str, Some(Scope::Global));
+    // Perl L75 `AssignValue(soul_ul_color => …)` — no scope arg → LOCAL (reverts
+    // with the enclosing group), NOT global. See \sethlcolor note below.
+    assign_value("soul_ul_color", color_str, None);
     Ok(())
   });
   def_macro_noop("\\setul{Dimension}{Dimension}")?;
@@ -155,7 +157,9 @@ LoadDefinitions!({
   // stores the raw Tokens argument (no ToString). Mirror by storing Stored::Tokens so a later
   // redefinition of a CS argument resolves against the then-current expansion (as in Perl).
   DefPrimitive!("\\setstcolor{}", sub[(color_arg)] {
-    assign_value("soul_strike_color", Stored::Tokens(color_arg), Some(Scope::Global));
+    // Perl L93 `AssignValue(soul_strike_color => …)` — LOCAL (no scope). See
+    // \sethlcolor note below.
+    assign_value("soul_strike_color", Stored::Tokens(color_arg), None);
     Ok(())
   });
 
@@ -195,7 +199,15 @@ LoadDefinitions!({
   // Perl L104: `DefPrimitive('\sethlcolor{}', sub { AssignValue(soul_hl_color => $_[1]); });`
   // stores the raw Tokens argument (no ToString). Mirror by storing Stored::Tokens.
   DefPrimitive!("\\sethlcolor{}", sub[(color_arg)] {
-    assign_value("soul_hl_color", Stored::Tokens(color_arg), Some(Scope::Global));
+    // Perl L104 `AssignValue(soul_hl_color => $_[1])` — NO scope arg → LOCAL
+    // (reverts with the enclosing group). Storing it `Scope::Global` leaked the
+    // highlight colour out of its group: the common `\colorlet{foo}{C}` +
+    // `\sethlcolor{foo}` + `\hl{…}` idiom (e.g. a `\hlc` wrapper macro) defines
+    // `foo` LOCALLY, so once that group closes a later plain `\hl{…}` would
+    // still see the global `soul_hl_color=foo` but the colour `foo` is gone →
+    // "Can't find color named 'foo'". Local scope reverts both together, like
+    // Perl. Witness 1909.01528.
+    assign_value("soul_hl_color", Stored::Tokens(color_arg), None);
     Ok(())
   });
 

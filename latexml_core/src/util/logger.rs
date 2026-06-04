@@ -12,6 +12,24 @@ const ANSI_WHITE: &str = "\x1b[37m";
 
 fn paint(color: &str, text: &str) -> String { format!("{color}{text}{ANSI_RESET}") }
 
+/// Whether to emit ANSI color escapes on stderr. Colors are a convenience for
+/// an interactive terminal ONLY; when stderr is redirected to a file or pipe
+/// (the canvas/auto-upgrade path: `cortex_worker ... > log.txt 2>&1`) they are
+/// noise that breaks line-anchored error parsing — a naive `grep '^Error:'`
+/// matches `\x1b[31mError:` ZERO times and silently reports "0 errors" on a
+/// failed paper (the false-negative that masked real Rust-only regressions; see
+/// CLAUDE.md "canvas signal integrity"). So: colorize iff stderr is a TTY and
+/// `NO_COLOR` is unset. Cached once — stderr's terminal-ness can't change
+/// mid-process. Note the captured LOG_BUFFER (`.latexml.log`) is already
+/// ANSI-stripped independently; this makes the *redirected stderr* match it.
+fn stderr_use_color() -> bool {
+  use std::io::IsTerminal;
+  use std::sync::OnceLock;
+  static USE_COLOR: OnceLock<bool> = OnceLock::new();
+  *USE_COLOR
+    .get_or_init(|| std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none())
+}
+
 struct LatexmlLogger;
 static LOGGER: LatexmlLogger = LatexmlLogger;
 
@@ -120,7 +138,25 @@ impl log::Log for LatexmlLogger {
         }
       }
 
-      println_stderr!("\r{}", painted_message);
+      // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
+      // line in both TTY and file output. The previous `\r` prefix made
+      // log lines visually overlay any in-flight progress indicator like
+      // `(Loading "foo.sty" definitions... )` — convenient in a terminal
+      // but produced `(...)<CR>Error:...` byte sequences in log files,
+      // breaking line-anchored counts in canvas harnesses
+      // (`grep -cE '^...Error:'` silently returned 0 even when errors
+      // were present). Trade-off: progress indicators in a TTY no longer
+      // get overwritten, but they were not really self-erasing anyway
+      // (they always emitted ` )` to close their parens), so the visual
+      // change is small.
+      // Colorize for an interactive terminal only; when stderr is redirected
+      // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
+      // grep-clean (matches the captured `.latexml.log` buffer above).
+      if stderr_use_color() {
+        println_stderr!("\n{}", painted_message);
+      } else {
+        println_stderr!("\n{}", strip_ansi(&painted_message));
+      }
     }
   }
 

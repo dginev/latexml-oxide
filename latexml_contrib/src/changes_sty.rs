@@ -23,7 +23,20 @@ LoadDefinitions!({
   // semantic class is lost in HTML output. Witness 2404.13783,
   // 2110.12098 (aastex63 with `\added{\section{Model Limitations}...}`).
   DefMacro!("\\added[]{}",    "#2");
-  DefMacro!("\\deleted[]{}",  "#2");
+  // `\deleted[author]{text}` → gobble to nothing, matching Perl's
+  // changes.sty.ltxml L25 `DefMacro('\deleted[]{}',Tokens())`. The
+  // `changes` package's `final` option (and Perl's always-final stub)
+  // ACCEPTS deletions — the text is removed from the typeset output. The
+  // `{}` parameter reads the text as an unexpanded balanced group, so any
+  // command inside (even an undefined one) is discarded as raw tokens
+  // rather than executed. Keeping the text (`#2`, the old behavior)
+  // diverged from Perl, rendered author-deleted text as if present, AND
+  // expanded fragile inner commands: witness 1901.02252 (`\usepackage
+  // [final]{changes}`, `\deleted{… \citep{…} …}` with paclic32's ACL-style
+  // citations that lack natbib's `\citep`) → `undefined:\citep` + a
+  // `malformed:ltx:para` cascade where Perl is clean. `\added`/`\replaced`
+  // stay content-preserving (`#2`), exactly as Perl does. RUST 2 → 0.
+  DefMacro!("\\deleted[]{}",  "");
   DefMacro!("\\replaced[]{}{}", "#2");
   DefMacro!("\\highlight[]{}", "#2");
   DefMacro!("\\comment[]{}",   "#2");

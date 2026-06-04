@@ -1791,12 +1791,30 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
         });
         Ok(Some(Number::new(n)))
       } else if token == T_OTHER!("'") {
-        // Read Octal literal
-        let decimal = i64::from_str_radix(&read_digits(&OCT_RE, true)?, 8)?;
+        // Read Octal literal. Perl: `Number(oct(readDigits(...)))`, and
+        // Perl's `oct("")` is 0 — so a `'` with no octal digit following
+        // yields 0 (TeX's "Missing number, treated as zero"), NOT a fatal
+        // error. Mirror that, and clamp overflow to i64::MAX like the
+        // decimal arm rather than propagating a ParseIntError.
+        let digits = read_digits(&OCT_RE, true)?;
+        let decimal = if digits.is_empty() {
+          0
+        } else {
+          i64::from_str_radix(&digits, 8).unwrap_or(i64::MAX)
+        };
         Ok(Some(Number::new(decimal)))
       } else if token == T_OTHER!("\"") {
-        //  Read Hex literal
-        let decimal = i64::from_str_radix(&read_digits(&HEX_RE, true)?, 16)?;
+        //  Read Hex literal. Perl: `Number(hex(readDigits(...)))`, and
+        // Perl's `hex("")` is 0 — so a `"` with no hex digit following
+        // yields 0, NOT a fatal error. (Witness 2008.10843: mdwmath.sty
+        // raw-load reads a bare `"` with no hex digit → previously a
+        // `Fatal:Document:Generic(ParseIntError)` aborting the run.)
+        let digits = read_digits(&HEX_RE, true)?;
+        let decimal = if digits.is_empty() {
+          0
+        } else {
+          i64::from_str_radix(&digits, 16).unwrap_or(i64::MAX)
+        };
         Ok(Some(Number::new(decimal)))
       } else if token == T_OTHER!("`") {
         //  Read Charcode: `<character token><one optional space>

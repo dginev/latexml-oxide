@@ -1227,6 +1227,18 @@ pub fn infix_apply_nary(
   // left-to-right associative:
   // 1. if "left" is already an application of "infixop",
   // 2. then tuck "right" inside it.
+  //
+  // Note (ASF + LOSTNODES): in pure-Tree-iter parsing it would be
+  // natural to record `ReplacedBy(infixop, left_op)` here so the
+  // absorbed operator's xml:id is redirected to the kept operator's.
+  // But this action runs inside the ASF Cartesian-product loop —
+  // `action_on` fires for every candidate combo, including ones
+  // ultimately discarded. Recording from action time would pollute
+  // LOSTNODES with mappings from pruned parses, breaking the
+  // top-level rewrite walk on the *final* tree. The recording
+  // therefore lives at `parse_single` (after `into_xmath` +
+  // `append_tree` commit the chosen tree), via the pre/post-snapshot
+  // diff against the document idstore.
   if let Some(XM::Apply(ref left_op, ref mut left_args, _, ref _m)) = left {
     if let XM::Lexeme(left_op_lex, _xmeta) = &*left_op.0 {
       if let Some(XM::Lexeme(ref infix_op_lex, _)) = infixop {
@@ -3012,6 +3024,10 @@ pub fn apply_invisible_times(
     if let XM::Token(xop, _xmeta) = &*op.0 {
       match xop.meaning {
         Some(ref name) if name == "times" => {
+          // No external operator to absorb here — `apply_invisible_times`
+          // synthesizes its own `times` token, so there's no second
+          // operator with an xml:id to redirect. Just absorb the
+          // right-hand factor into the existing chain.
           left_args.0.push(right);
           return Ok(left);
         },

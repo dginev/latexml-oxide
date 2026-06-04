@@ -1030,25 +1030,31 @@ LoadDefinitions!({
       }
     });
 
+  // Faithful to Perl `\hphantom{}` (math_common.pool.ltxml:655): a plain
+  // DefConstructor with an `afterDigest` sizer and NO mode wrapping —
+  // exactly like sibling `\phantom`/`\vphantom`.
+  //
+  // A prior Rust-only divergence added a `before_digest` that, in text mode,
+  // did `begin_mode("restricted_horizontal")` to stop display math `$$…$$`
+  // leaking out of a text-mode `\hphantom{…}` (porting a NEWER upstream Perl
+  // commit, 09fb2e6f, that our installed ground-truth Perl predates). But the
+  // mode-switch frame it pushed made the strict mode-end check
+  // (stomach.rs end_mode_opt, mirroring Perl Stomach.pm L527-528) FATAL for a
+  // common malformed-but-harmless idiom: `\minipage…\hphantom\endminipage`
+  // (no braces on `\hphantom`, so its single-token argument is the *next*
+  // control word, `\endminipage`). The `\endminipage` then ran inside the
+  // phantom's `restricted_horizontal` frame and tried to end the minipage's
+  // `internal_vertical` → "Attempt to end mode internal_vertical in
+  // restricted_horizontal". Installed Perl (no wrapping) digests the argument
+  // in the ambient mode, so `\endminipage` closes the minipage cleanly.
+  // Driver: 2004.10048. The `$$`-leak case errors in installed Perl too, so
+  // dropping the wrapping introduces no Rust-only regression.
   DefConstructor!(
     "\\hphantom{}",
     "?#isMath(<ltx:XMHint width='#width' name='hphantom'/>)\
       (<ltx:text class='ltx_phantom'>#1</ltx:text>)",
     properties => { stored_map!("isSpace" => true) },
-    // Perl 09fb2e6f: In text mode, wrap argument in restricted_horizontal
-    // to prevent display math from leaking through (e.g. quantikz2).
-    before_digest => {
-      if !LookupBool!("IN_MATH") {
-        begin_mode("restricted_horizontal")?;
-        AssignValue!("_hphantom_mode_override" => true);
-      } else {
-        AssignValue!("_hphantom_mode_override" => false);
-      }
-    },
     after_digest => sub[whatsit] {
-      if LookupBool!("_hphantom_mode_override") {
-        end_mode("restricted_horizontal")?;
-      }
       if let Some(arg) = whatsit.get_arg_mut(1) {
         let (w, h, d, _, _, _) = arg.get_size(None)?;
         whatsit.set_property("width", Stored::Dimension(w));

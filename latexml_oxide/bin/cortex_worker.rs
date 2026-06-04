@@ -1091,6 +1091,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     } else {
       std::io::stdout().write_all(&result_data)?;
     }
+    // Clean up the temp file created by convert_archive
+    // (`std::env::temp_dir().join("cortex_output_<pid>.zip")`).
+    // The dispatcher path (Worker::convert) removes it after consuming;
+    // the standalone path forgot, leaking one ~10-100 KB zip per run.
+    // Under a 947K-run canvas these accumulated to ~685 GB in /tmp.
+    let _ = fs::remove_file(&result_path);
     // Propagate FATAL conversion status into the process exit code so
     // pathological failures (memory-budget guard, wall-clock timeout
     // surfaced via Error::log_fatal, etc.) classify as failures

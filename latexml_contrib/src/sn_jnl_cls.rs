@@ -7,7 +7,12 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  RequirePackage!("xcolor");
+  // Do NOT eager-load xcolor (Perl ships no sn-jnl binding → OmniBus, no
+  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
+  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
+  // "Unrecognized tabular template" → "Extra alignment tab". The document
+  // loads xcolor with its own options; `\color`/`\definecolor` stay
+  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
   // Real sn-jnl.cls loads geometry for page setup — papers commonly
@@ -21,6 +26,20 @@ LoadDefinitions!({
   RequirePackage!("algorithm");
   RequirePackage!("algorithmicx");
   RequirePackage!("algpseudocode");
+  // Real sn-jnl.cls L298/301/302 raw-loads multirow, mathrsfs and
+  // `[figuresright]{rotating}`. Because this binding short-circuits the
+  // unbound-class dependency scan (a real `.cls` binding is responsible for
+  // its own `\RequirePackage`s), those deps would otherwise stay unloaded:
+  // a paper using `\begin{sidewaystable}` (rotating) then hits
+  // `undefined:{sidewaystable}` + `\caption outside any known float`, where
+  // Perl — which ships NO sn-jnl binding and so OmniBus-dep-scans the raw
+  // .cls — loads rotating and is clean. `rotating`'s `figuresright` option
+  // is pure figure-orientation (no XML signal). Add the three benign,
+  // commonly-used deps (NOT xcolor — see the option-conflict note above).
+  // Witness 2101.02753 (`\begin{sidewaystable}` ×2).
+  RequirePackage!("multirow");
+  RequirePackage!("mathrsfs");
+  RequirePackage!("rotating");
 
   // sn-jnl frontmatter — gobble layout-only / preserve author text.
   DefMacro!("\\bmhead{}", "\\subsubsection*{#1}");

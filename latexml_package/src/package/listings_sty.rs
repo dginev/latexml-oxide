@@ -150,7 +150,7 @@ fn tokenize_balanced(text: &str) -> Vec<Token> {
 /// Handles mathescape: within $...$, content is read with normal catcodes
 /// and preserved as TeX (backslashes intact). Outside math, CS tokens have \ stripped.
 /// Returns UnTeX'd string representation.
-fn listings_read_raw_string(until: Option<&Token>) -> String {
+fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catcode)]) -> String {
   let mathescape = lst_get_boolean("mathescape");
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
@@ -168,9 +168,16 @@ fn listings_read_raw_string(until: Option<&Token>) -> String {
         break;
       }
     }
-    // Check for mathescape $ toggle
+    // Check for mathescape $ toggle. Perl `listings.sty.ltxml:292-293`:
+    // entering math restores the saved (normal) catcode table, exiting
+    // returns to the verbatim (empty) one. This is what makes `{`/`}` balance
+    // and `\{`/`\}` read as CS tokens *only within* the mathescape'd `$…$`.
     if mathescape && token.text == pin!("$") {
       inmath = !inmath;
+      for &(c, cc) in saved_catcodes {
+        let target = if inmath { cc } else { Catcode::OTHER };
+        state::assign_catcode(c, target, Some(Scope::Local));
+      }
       tokens.push(T_OTHER!("$"));
       continue;
     }
@@ -1921,6 +1928,27 @@ LoadDefinitions!({
   def_macro_noop("\\lst@InstallFamily{}{}{}{}{}")?;
   def_macro_noop("\\lst@InstallFamily@{}{}{}{}{}{}{}{}")?;
 
+  // listings aspect machinery — `\lst@RequireAspects{<aspect-name>}`
+  // is listings's plug-in loader for optional behaviour like
+  // `writefile` (loaded by `showexpl.sty` to capture rendered code
+  // for re-display). We don't expand aspects (they're typesetting
+  // concerns — actual code rendering goes via our listings model,
+  // not via aspect-mediated file I/O), so the require call is a no-op.
+  // Witness: arXiv:1604.00381 / 1706.09226 (`\usepackage{showexpl}`
+  // calls `\lst@RequireAspects{writefile}` at load time → cascade
+  // of `Error:undefined:\lst@RequireAspects` + `\lstKV@OptArg` +
+  // `\lst@EndWriteFile` + downstream `\SX@put@code@result` from
+  // showexpl. Adding the no-op breaks the cascade.
+  def_macro_noop("\\lst@RequireAspects{}")?;
+  // `\lstKV@OptArg` is a keyval helper used by aspect modules. The
+  // listings binding doesn't expose listings's key parser; this no-op
+  // matches the same content-preserving philosophy as the aspects.
+  // Signature from lstmisc.sty: `\lstKV@OptArg[default]{arg}{body}`.
+  def_macro_noop("\\lstKV@OptArg[]{}{}")?;
+  // writefile aspect entry points — stubbed as no-ops since we
+  // don't capture/re-include code-listings via file I/O.
+  def_macro_noop("\\lst@EndWriteFile")?;
+
   // Initialize state values
   state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
   state::assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
@@ -1962,11 +1990,21 @@ LoadDefinitions!({
     // MODE/IN_MATH which is unwanted here (the `\lstinline` body lives
     // inside the surrounding paragraph mode and the post-frame `\(`
     // math switches must keep working).
+    // Capture the normal catcodes of the verbatim-tweaked chars BEFORE going
+    // verbatim, so a mathescape'd `$…$` can restore them mid-read (Perl
+    // `$STATE = $SAVESTATE`): within the math escape, `{`/`}` must balance and
+    // `\{`/`\}` must be CS tokens, not OTHER chars. Without this a `\}` inside
+    // `\lstinline{…$\{x\}$…}` prematurely matches the `}` close delimiter.
+    let verbatim_chars = ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'];
+    let saved_catcodes: Vec<(char, Catcode)> = verbatim_chars
+      .iter()
+      .map(|&c| (c, state::lookup_catcode(c).unwrap_or(Catcode::OTHER)))
+      .collect();
     state::push_frame();
-    for c in ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'] {
+    for c in verbatim_chars {
       state::assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
     }
-    let body = listings_read_raw_string(until.as_ref());
+    let body = listings_read_raw_string(until.as_ref(), &saved_catcodes);
     state::pop_frame()?;
     let mut result = Vec::new();
     if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
@@ -3019,9 +3057,22 @@ LoadDefinitions!({
       let replacement = Tokens::new(read_balanced_group(&tokens, &mut i));
       // Skip whitespace
       while i < tokens.len() && tokens[i].get_catcode() == Catcode::SPACE { i += 1; }
-      // Read length: number token(s)
-      while i < tokens.len() && tokens[i].get_catcode() != Catcode::SPACE
-        && tokens[i].get_catcode() != Catcode::BEGIN { i += 1; }
+      // Read length (Perl `\lst@@literate` reads it via a third `readArg`, so it
+      // is a BALANCED GROUP — listings writes `{key}{replacement}{N}` with the
+      // count brace-wrapped). The prior loop stopped at the count's opening `{`
+      // and never consumed `{N}`, so `{N}` was re-read as the NEXT pattern,
+      // shifting every subsequent triple by one (a count `1` became a key
+      // mapping to the next entry's text, e.g. `1 → _argmax`, injecting a bare
+      // catcode-8 `_` into the listing → "Script _ can only appear in math
+      // mode"). Mirror `readArg`: consume one balanced `{N}` group, or a single
+      // bare token if not brace-wrapped. Witness 1501.06715.
+      if i < tokens.len() {
+        if tokens[i].get_catcode() == Catcode::BEGIN {
+          let _ = read_balanced_group(&tokens, &mut i);
+        } else {
+          i += 1;
+        }
+      }
       let pattern_str: String = pattern.iter().map(|t| t.to_string()).collect();
       if !pattern_str.is_empty() {
         // Store as individual entries keyed by pattern

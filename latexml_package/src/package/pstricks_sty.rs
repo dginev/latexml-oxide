@@ -88,22 +88,44 @@ LoadDefinitions!({
   // idiom: peek for `(`; consume one tuple; recurse.
   RawTeX!("\\def\\lx@psgobble@parens{\\@ifnextchar({\\lx@psgobble@one}{}}");
   RawTeX!("\\def\\lx@psgobble@one(#1){\\lx@psgobble@parens}");
+  // `\lx@psgobble@shape`: consume an OPTIONAL leading `{<arrows>}` brace group
+  // (e.g. `\psline{->}…`), THEN the trailing `(x,y)(x,y)…` coordinate tuples.
+  // The pstricks open-curve commands take an OPTIONAL arrow spec before the
+  // coordinates; the previous signatures declared it as a MANDATORY `{}` arg,
+  // so when arrows were absent (`\pscurve[opts](x,y)…`) the `{}` swallowed the
+  // first `(` and `\lx@psgobble@parens` then saw a digit, stopped, and left the
+  // remaining coordinates as stray picture text. Following an open `\put{…}`
+  // `<ltx:text>`, that stray text trapped every later block in an un-closeable
+  // `<ltx:text>` (witness 1112.2096). Peeking for the leading brace makes the
+  // arrow spec optional without over-gobbling any trailing document braces.
+  RawTeX!("\\def\\lx@psgobble@shape{\\@ifnextchar\\bgroup{\\lx@psgobble@arrows}{\\lx@psgobble@parens}}");
+  RawTeX!("\\def\\lx@psgobble@arrows#1{\\lx@psgobble@parens}");
 
-  // Drawing commands — all no-ops for HTML, but MUST consume trailing
-  // PSCoordList via `\lx@psgobble@parens` so coords don't leak as text.
-  DefMacro!("\\psline OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psframe OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\pscircle OptionalMatch:* []{}{}", "\\lx@psgobble@parens");
+  // Drawing commands — all no-ops for HTML, but MUST consume their
+  // optional `{arrows}` + trailing `(x,y)…` coordinate tuples so nothing
+  // leaks as text. Open curves use `\lx@psgobble@shape` (optional arrows);
+  // closed shapes have no arrows so `\lx@psgobble@parens` (coords only)
+  // suffices and is equally arrow-tolerant via the peek.
+  DefMacro!("\\psline OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\psframe OptionalMatch:* []", "\\lx@psgobble@shape");
+  // \pscircle[par](x,y){radius}: one coord pair + braced radius (real pstricks
+  // `\def\pscircle(#1){#2}` style). Pair reads `(x,y)`, `{}` the radius.
+  DefMacro!("\\pscircle OptionalMatch:* [] Pair {}", "\\lx@psgobble@parens");
   DefMacro!("\\psarc OptionalMatch:* []{}{}{}{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psbezier OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\pscurve OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psecurve OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psccurve OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\parabola OptionalMatch:* []{}{}", "\\lx@psgobble@parens");
-  DefMacro!("\\pspolygon OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psdots OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psdot OptionalMatch:* []{}", "\\lx@psgobble@parens");
-  def_macro_noop("\\qline{}{}")?;
+  DefMacro!("\\psbezier OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\pscurve OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\psecurve OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\psccurve OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\parabola OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\pspolygon OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\psdots OptionalMatch:* []", "\\lx@psgobble@shape");
+  DefMacro!("\\psdot OptionalMatch:* []", "\\lx@psgobble@shape");
+  // \qline(x1,y1)(x2,y2) — two coordinate pairs, real pstricks
+  // `\def\qline(#1)(#2){…}` (pstricks.tex L2150). The `{}{}` signature read
+  // two brace/single-token args instead of the parenthesised coordinate
+  // pairs, so `\qline(0,0)(1,1)` mis-parsed (consumed `\qline` + `(` + `0`)
+  // and dumped the remainder `,0)(1,1)` as stray picture text.
+  def_macro_noop("\\qline Pair Pair")?;
 
   // \Rput[refpoint](x,y){body} — placement at coords (real pstricks
   // defines this in pstricks.tex / pst-code-put.tex, raw-loaded by
@@ -114,7 +136,17 @@ LoadDefinitions!({
   DefMacro!("\\Rput OptionalMatch:* [] Pair {}", "#4");
   DefMacro!("\\rput OptionalMatch:* [] Pair {}", "#4");
   DefMacro!("\\uput OptionalMatch:* {} [] Pair {}", "#5");
-  def_macro_noop("\\qdisk{}{}")?;
+  // \qdisk(x0,y0){radius} — coordinate pair + braced radius, real pstricks
+  // `\def\qdisk(#1)#2{…}` (pstricks.tex L3411). The old `{}{}` signature read
+  // two brace/single-token args instead of `(coord){radius}`, so
+  // `\qdisk(3,2.5){2.5pt}` consumed only `\qdisk` + `(` + `3` and left the
+  // remainder `,2.5){2.5pt}` as stray picture text. Following a `\put{…}`
+  // (whose `<ltx:text>` was still open), that stray text trapped every
+  // subsequent block (proof/theorem/section/bibliography) inside an
+  // un-closeable `<ltx:text>` → "ltx:* isn't allowed in <ltx:text>" cascade.
+  // Witness: arXiv:1112.2096 (`\put(2.5,1.4){$a$}` then `\qdisk(3,2.5){2.5pt}`
+  // inside `\mbox{\scalebox{\begin{pspicture}…}}`).
+  def_macro_noop("\\qdisk Pair {}")?;
 
   // Text placement — drop both coords AND the text body. Perl's
   // `DefPSConstructor` would wrap the labelled text inside a
@@ -128,18 +160,32 @@ LoadDefinitions!({
   // lost — but it eliminates the cascading schema errors. TODO: port
   // `DefPSConstructor` framework so pstricks output lives in
   // `<ltx:picture>` and labels survive.
-  RawTeX!("\\def\\lx@rput@parens(#1)#2{}");
-  RawTeX!("\\def\\lx@rput@bracket[#1]{\\lx@rput@parens}");
-  RawTeX!("\\def\\rput{\\@ifstar\\lx@rput@i\\lx@rput@i}");
-  RawTeX!("\\def\\lx@rput@i{\\@ifnextchar[\\lx@rput@bracket{\\lx@rput@parens}}");
+  // Runaway-safe placement gobbler shared by \rput/\cput. Consumes (and
+  // drops) optional [refpoint], optional {angle}, optional (coords), and the
+  // mandatory {body}. The PREVIOUS def used a *delimited* `(#1)` parameter
+  // (`\def\lx@rput@parens(#1)#2{}`): for the braced-angle / no-coords form
+  // `\rput{angle}{body}` there is no `(`, so TeX scanned FORWARD eating
+  // tokens — including `\end{pspicture}` — until the next `(` anywhere
+  // later. That swallowed the env end, so pspicture's `end_mode` never fired
+  // and its mode-switch frame leaked, tripping `\endgroup Attempt to close a
+  // group that switched to mode restricted_horizontal` (witness 1505.07999 +
+  // the ~17-paper `\endgroup` mode-leak cluster). Perl avoids this with
+  // `OptionalBracketed`+`ZeroPSCoord` (coords optional); we PEEK for `(`
+  // instead of requiring it. (Body still dropped — see the <ltx:p>-cascade
+  // note above; faithful `<ltx:g>`-with-body is the separate TODO.)
+  RawTeX!("\\def\\lx@put@cb(#1)#2{}");      // (coords){body} -> drop
+  RawTeX!("\\def\\lx@put@bb#1{}");          // {body} -> drop (no coords)
+  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb\\lx@put@bb}"); // {angle}; then (coords)? body
+  RawTeX!("\\def\\lx@put@s{\\@ifnextchar(\\lx@put@cb\\lx@put@b}");    // ( -> coords; else {angle}|{body}
+  RawTeX!("\\def\\lx@put@opt[#1]{\\lx@put@s}");                       // [refpoint] -> continue
+  RawTeX!("\\def\\lx@put@start{\\@ifnextchar[\\lx@put@opt\\lx@put@s}");
+  RawTeX!("\\def\\rput{\\@ifstar\\lx@put@start\\lx@put@start}");
   RawTeX!("\\def\\lx@uput@parens#1(#2)#3{}"); // {dist}(coord){text} → drop
   RawTeX!("\\def\\lx@uput@bracket[#1]{\\lx@uput@parens}");
   RawTeX!("\\def\\uput{\\@ifstar\\lx@uput@i\\lx@uput@i}");
   RawTeX!("\\def\\lx@uput@i{\\@ifnextchar[\\lx@uput@bracket{\\lx@uput@parens}}");
-  RawTeX!("\\def\\lx@cput@parens(#1)#2{}");
-  RawTeX!("\\def\\lx@cput@bracket[#1]{\\lx@cput@parens}");
-  RawTeX!("\\def\\cput{\\@ifstar\\lx@cput@i\\lx@cput@i}");
-  RawTeX!("\\def\\lx@cput@i{\\@ifnextchar[\\lx@cput@bracket{\\lx@cput@parens}}");
+  // \cput shares the runaway-safe gobbler (same delimited-`(` hazard).
+  RawTeX!("\\def\\cput{\\@ifstar\\lx@put@start\\lx@put@start}");
 
   // Box commands
   DefMacro!("\\psframebox OptionalMatch:* []{}", "#2");

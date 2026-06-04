@@ -82,14 +82,23 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
   }
 }
 
-/// True if the script body is a space-like TBox (or a list containing
-/// such a TBox at the top level). Mirrors Perl's behavior where a math
-/// space such as `\,` / `\ ` inside `^{...}` / `_{...}` is treated as
-/// a valid script body (not an empty argument).
+/// True if the script body is a space-like box/whatsit (or a list
+/// containing one). Mirrors Perl's `IsEmpty` (Package.pm:1029), which —
+/// unlike our `Digested::is_empty`/`Whatsit::is_empty` — does NOT count an
+/// `isSpace` whatsit as empty: a `Whatsit` with no `content_box` property
+/// returns `0` (not empty) there regardless of `isSpace`. So a math space
+/// (`\,` / `\ `, a TBox) AND a strut/hint (`\mathstrut` / `\vphantom`, a
+/// `DefConstructor` whatsit carrying `isSpace=true`) inside `^{...}` /
+/// `_{...}` are both valid, non-empty script bodies. Without the whatsit
+/// arm, `x_e{}^{\mathstrut}_{t}` dropped the empty `^{\mathstrut}` floating
+/// superscript, consumed the `{}` separator, and then `_{t}` re-attacked
+/// the earlier `_e` for a spurious "Double subscript" (witness 1803.08859,
+/// `\vort_e{}^{\mathstrut}_{t}`; cluster across 1904.07182 etc.).
 fn script_has_space_content(d: &Digested) -> bool {
   use latexml_core::digested::DigestedData;
   match d.data() {
     DigestedData::TBox(b) => b.borrow().get_property_bool("isSpace"),
+    DigestedData::Whatsit(w) => w.borrow().get_property_bool("isSpace"),
     DigestedData::List(l) => l.borrow().boxes.iter().any(script_has_space_content),
     _ => false,
   }
@@ -118,6 +127,22 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
         // Perl `TeX_Math.pool.ltxml:378-379`: "If empty, the script floats,
         // can't conflict, but don't put back". `cs` stays at `\lx@floating@*`
         // (initial value); the empty `{}` is consumed.
+        //
+        // BUT a box that is `is_empty()` only because its sole content is a
+        // phantom/strut (an isSpace XMHint wrapped in a group, e.g.
+        // `{\vphantom{x}}`) must be treated like a space — put back, set
+        // `prevspace` — NOT discarded. In Perl that group reports
+        // `getProperty('isSpace')` (caught above); our List wrapper carries
+        // the isSpace on the inner whatsit only, so detect it recursively.
+        // Discarding it lets a following `_x` re-attack the real base and
+        // fire a spurious "Double subscript": witness 1904.07182
+        // (`\ibraket`/`\mprescript` → `… {\vphantom{x}}^{}_{i}`), the cluster
+        // already noted on `script_has_space_content` above.
+        if script_has_space_content(&prev) {
+          prevspace = true;
+          putback.push_front(prev);
+          continue;
+        }
         break;
       } else if let Some(prevop) = is_script(&prev) {
         if prevop.1 == cc {

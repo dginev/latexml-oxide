@@ -18,5 +18,14 @@ LoadDefinitions!({
   DefPrimitive!("\\ohorn", "\u{01A1}");
   DefPrimitive!("\\uhorn", "\u{01B0}");
   DefAccent!("\\k", '\u{0328}', "\u{02DB}");
+  // vntex's `\textviet{…}` (`\DeclareTextFontCommand{\textviet}{\viet}`)
+  // selects the Vietnamese font and typesets its argument. Font
+  // selection is typesetting-only for our XML output, so the command is
+  // a content passthrough. vntex.sty isn't installed in TeX Live, so
+  // neither Perl nor our raw-load defines it — define it here (with the
+  // rest of the Vietnamese command set) so author names like
+  // `C\textviet{\uhorn\`{\ohorn}}ng` survive. Witness 2005.09299
+  // (`\usepackage[vietnamese,english]{babel}`).
+  DefMacro!("\\textviet{}", "#1");
   InputDefinitions!("t5enc", extension => Some("def".into()), noltxml => true);
 });

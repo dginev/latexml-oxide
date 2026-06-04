@@ -243,7 +243,19 @@ LoadDefinitions!({
   DefMacro!("\\tablefootmark{}", "\\footnotemark[$#1$]");
   DefMacro!("\\tablefoottext{}{}", "\\footnotetext[$#1$]{#2}");
   DefMacro!("\\tablefont", "\\small");
-  DefMacro!("\\tablenote{}{}", "\\footnote{#2}");
+  // NOTE: do NOT define `\tablenote` here. aa.cls does NOT provide it (its
+  // table-footnote command is `\tablefoot`, above) — A&A papers that want
+  // `\tablenote` `\newcommand` it THEMSELVES (and `\newcommand` would error in
+  // real LaTeX if aa.cls already defined it). Perl ships no `\tablenote` in its
+  // aa binding either. Our earlier 2-arg `\tablenote{}{}`→`\footnote{#2}` (a
+  // cross-class copy from aipproc/elsart/revtex, where `\tablenote` IS a 2-arg
+  // `{label}{text}` command) PRE-defined it, so the paper's 1-arg
+  // `\newcommand{\tablenote}[1]{...}` became a no-op and the spurious 2nd arg
+  // greedily ate the following `\end{table*}`'s `\end`, opening a stray
+  // `\footnote`/`\lx@note` (internal_vertical) whose mode-frame then collided
+  // with the float's `\endgroup`. Witness arXiv:2007.00572 (`\documentclass{aa}`
+  // + `\tablenote{\\ …}` inside `table*`): Perl 0 err, Rust 2. Let the document
+  // define `\tablenote` itself, matching Perl.
   DefMacro!("\\tablecaption{}", "\\caption{#1}");
 
   //======================================================================

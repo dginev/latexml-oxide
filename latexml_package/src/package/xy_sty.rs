@@ -42,7 +42,25 @@ LoadDefinitions!({
   // Step 3: xy.tex.ltxml overlay (Perl L26-151)
   //======================================================================
 
-  // Redefine \xyoption to filter incompatible drivers (Perl L27-50)
+  // NOTE: `\CompileMatrices` is neutralized in the `\xyoption` handler
+  // below, right after the matrix feature (xymatrix.tex) loads — that's
+  // where it is defined, so a no-op here (before option processing) would
+  // be clobbered. See the comment there.
+
+  // Redefine \xyoption to filter incompatible drivers (Perl L27-50).
+  //
+  // IDEMPOTENCY GUARD: with the xypic.tex / xypic.sty split, the xy overlay
+  // can load TWICE — once via `\input xypic` (xypic_tex →
+  // InputDefinitions('xy','tex'), which does NOT mark the xy package loaded)
+  // and again via the document's own `\usepackage[all]{xy}` (which re-runs
+  // this whole binding to process its `[all]` options). Re-running
+  // `Let('\lx@xy@xyoption@orig','\xyoption')` on the second pass would capture
+  // the ALREADY-redefined `\xyoption`, making `\lx@xy@xyoption@orig`
+  // self-referential and looping any later `\xyoption{<unknown>}` fallthrough.
+  // Guard exactly like the `\lx@xy@original` block below, so the overlay's CS
+  // rebinds happen once (Perl loads xy.tex.ltxml once; only xy.sty.ltxml's
+  // ProcessOptions re-runs to digest options). Witness 2011.01105.
+  if !is_defined("\\lx@xy@xyoption@orig") {
   Let!("\\lx@xy@xyoption@orig", "\\xyoption");
   DefMacro!("\\xyoption{}", sub[(option)] {
     let option_s = option.to_string();
@@ -97,11 +115,23 @@ LoadDefinitions!({
           noltxml: true,
           ..Default::default()
         });
+        // The matrix feature (xymatrix.tex L91) defines `\CompileMatrices`
+        // as `\let\xymatrix=\xymatrixcompile`, which routes matrices through
+        // the `.xyc` disk-cache compile/re-input cycle — a TeX-runtime speed
+        // optimization that produces identical output but blows our RSS past
+        // the budget (unbounded `\global\toks9=` accumulation; math0203082).
+        // Neutralize it the moment the feature loads so a document-preamble
+        // `\CompileMatrices` (which runs before \begin{document}, too early
+        // for at_begin_document) is a no-op and matrices render directly.
+        if single == "matrix" {
+          def_macro_noop("\\CompileMatrices")?;
+        }
         return Ok(Tokens!());
       },
       _ => &[][..],
     };
     if !feature_files.is_empty() {
+      let loads_matrix = feature_files.contains(&"matrix");
       for name in feature_files {
         let n = s!("xy{}", name);
         let _ = input_definitions(&n, InputDefinitionOptions {
@@ -110,10 +140,15 @@ LoadDefinitions!({
           ..Default::default()
         });
       }
+      if loads_matrix {
+        // See note above: neutralize `\CompileMatrices` after xymatrix.tex.
+        def_macro_noop("\\CompileMatrices")?;
+      }
       return Ok(Tokens!());
     }
     Ok(Tokens!(T_CS!("\\lx@xy@xyoption@orig"), T_BEGIN!(), option, T_END!()))
   });
+  } // end idempotency guard: \xyoption redefinition runs once per overlay
 
   // At BeginDocument, also load xygraph.tex defensively if not already
   // loaded — papers that use `\xygraph{...}` may have come in via
@@ -292,11 +327,31 @@ LoadDefinitions!({
     }
   );
 
-  // Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151)
-  Let!("\\lx@xy@original", "\\xy");
-  Let!("\\end@lx@xy@original", "\\endxy");
-  DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
-  DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
+  // Save original \xy/\endxy, redefine to wrap with SVG (Perl L148-151).
+  //
+  // GUARD against double-application. This binding can be entered more
+  // than once: `\usepackage{xypic}` → xypic_sty → RequirePackage("xy")
+  // runs it once (capturing the REAL xypic `\xy` into `\lx@xy@original`,
+  // then installing the SVG wrapper as `\xy`). But the real xy.tex,
+  // raw-loaded above, itself issues a `\input xy.tex` (its own re-input
+  // guard is bypassed because our `\input` resolves "xy.tex" to the
+  // `("xy","tex")` Rust binding = this file). On that second entry,
+  // `\xy` is ALREADY the wrapper, so an unguarded
+  // `Let('\lx@xy@original','\xy')` would capture the wrapper — making
+  // `\lx@xy@original` self-recursive (`…\fi\lx@xy@original`) and, since
+  // the real xy processing that sets `\xy@`≠`\xyinitial@` never runs,
+  // `\inxy@` always reports "not nested" → every internal `\xy` re-enters
+  // `\lx@xy@svg` UNBOUNDEDLY → `Fatal:Stomach:Recursion`. Perl's
+  // xy.tex.ltxml overlay is applied exactly once (idempotent package
+  // load); mirror that by only installing the wrapper when
+  // `\lx@xy@original` is not yet defined. Witness 2009.05542 (`\xymatrix`
+  // in an equation: FATAL → clean, matching Perl's 0-error output).
+  if !is_defined("\\lx@xy@original") {
+    Let!("\\lx@xy@original", "\\xy");
+    Let!("\\end@lx@xy@original", "\\endxy");
+    DefMacro!("\\xy", "\\if\\inxy@\\lx@xy@svgnested\\else\\lx@xy@svg\\fi\\lx@xy@original");
+    DefMacro!("\\endxy", "\\relax\\lx@xy@capturerange\\end@lx@xy@original");
+  }
 
   //======================================================================
   // Step 4

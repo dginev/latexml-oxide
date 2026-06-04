@@ -40,10 +40,32 @@ LoadDefinitions!({
   def_macro_noop("\\ADLnullwidehline")?;
   def_macro_noop("\\ADLsomewide")?;
   def_macro_noop("\\ADLsomewidehline")?;
-  def_macro_noop("\\arrayrulecolor")?;
+  // `\arrayrulecolor[model]{color}` and `\doublerulesepcolor[model]{color}` are
+  // colortbl's commands (colortbl.sty.ltxml L85/L88: `[]{}`). The ar5iv arydshln
+  // binding declares them 0-arg (`DefMacro('\arrayrulecolor', Tokens())`) — which
+  // is order-fragile: it only behaves when colortbl loads AFTER arydshln (so
+  // colortbl's `[]{}` overrides). When colortbl loads FIRST (e.g. pulled in
+  // ahead of arydshln via the package dep graph — witness 1909.02323, mnras +
+  // arydshln + colortbl), arydshln's 0-arg form is the final meaning and
+  // `\arrayrulecolor{gray}\hline` leaves `{gray}` behind as a cell, so the
+  // following `\hline` (= `\noalign{…}`) fires "\noalign cannot be used here".
+  // Declare them with colortbl's `[]{}` arity so the color argument is consumed
+  // regardless of load order — matching Perl's *effective* (colortbl-wins) result.
+  DefMacro!("\\arrayrulecolor[]{}", None);
   def_macro_noop("\\dashgapcolor{}")?;
-  def_macro_noop("\\doublerulesepcolor")?;
-  def_macro_noop("\\endlongtable")?;
+  DefMacro!("\\doublerulesepcolor[]{}", None);
+  // NOTE: do NOT noop `\endlongtable`. The ar5iv Perl binding
+  // (arydshln.sty.ltxml L45) does `DefMacro('\endlongtable', Tokens())`, but
+  // that diverges from the REAL arydshln.sty, which SAVES and RESTORES
+  // longtable's original `\endlongtable` (`\let\endlongtable\adl@org@endlongtable`,
+  // arydshln.sty L796) rather than neutralizing it. Our longtable binding
+  // relies on `\endlongtable` = `\lx@end@alignment\@end@tabular` to close the
+  // alignment's boxing group; noop'ing it leaks that `{`-group so the
+  // environment's `\endgroup` mismatches → mode cascade → `pop last locked
+  // stack frame` FATAL (1510.04473: any `arydshln` + `longtable` with `p{}`
+  // columns). Perl recovers from the same mismatch with 9 errors; our engine
+  // aborts. Keeping longtable's `\endlongtable` functional matches the real
+  // package and produces clean output (0 errors).
   def_macro_noop("\\nodashgapcolor")?;
   def_macro_noop("\\xleaders")?;
 });

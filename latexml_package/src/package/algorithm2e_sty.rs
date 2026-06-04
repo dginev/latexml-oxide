@@ -17,81 +17,124 @@ LoadDefinitions!({
   DefMacro!("\\fnum@font@algorithm", "\\bf");
   DefMacro!("\\ext@algorithm", "loa");
 
-  // {algorithm} environment
-  DefEnvironment!("{algorithm}[]",
-    "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
-    mode => "internal_vertical",
-    before_digest => {
-      use crate::engine::latex_constructs::before_float;
-      // Perl L73-86: mirror full beforeDigest sequence.
-      DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
-      DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
-      Let!("\\par", "\\lx@algo@par");
-      Let!("\\parbox", "\\lx@algo@parbox");
-      Let!("\\\\", "\\lx@algo@par");
-      Let!("\\strut", "\\lx@algo@strut");
-      // \BlankLine = \vskip 1ex leaks "1ex" as text inside listings;
-      // override to produce a blank listingline via the par mechanism — Perl equivalent behavior
-      DefMacro!("\\BlankLine", "\\lx@algo@par");
-      DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
-      before_float("algorithm", None);
-    },
-    after_digest => sub[whatsit] {
-      use crate::engine::latex_constructs::after_float;
-      // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
-      // whatsit so afterConstruct's addFloatFrames draws the rectangle.
-      // Without this, algorithm2e's [boxed] / [boxruled] options silently
-      // dropped their frame instructions in Rust.
-      if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
-        if style_tokens.to_string().contains("box") {
-          whatsit.set_property("frame", Stored::from("boxed"));
+  // {algorithm}, {algorithm*}, {algorithm2e}, {algorithm2e*} environments.
+  // Perl algorithm2e.sty.ltxml L62-64 loops a FULL `DefEnvironment` over each
+  // of `algorithm2e`, `algorithm`, `algorithm*` (same body). The previous Rust
+  // port only `DefEnvironment`'d `{algorithm}` and `\let`-aliased the others to
+  // `\algorithm`. That breaks when the `algorithm` (floats) package is ALSO
+  // loaded: it raw-defines a `{algorithm*}` (two-column float) environment, and
+  // a bare `\let\algorithm*\algorithm` leaves the env's name registration as
+  // `algorithm`, so `\begin{algorithm*}` opens the float-package's paragraph
+  // wrapper while algorithm2e's listing machinery runs inside it — the
+  // listinglines then mis-nest in an `<ltx:p><ltx:text>` and the close fails
+  // ("ltx:listingline isn't allowed in <ltx:text>"). A proper DefEnvironment
+  // for each name (matching Perl) registers `algorithm*` as its own listing
+  // environment, overriding the float-package definition cleanly. Witness
+  // 2002.09766 (`\usepackage{algorithm,algorithmic}` + `[algo2e]{algorithm2e}`,
+  // `\begin{algorithm*}`). Same 40-line body for every name → local macro.
+  macro_rules! def_algo2e_env {
+    ($name:literal) => {
+      DefEnvironment!($name,
+        "<ltx:float xml:id='#id' class='ltx_algorithm'>#tags<ltx:listing class='ltx_lst_numbers_left'><ltx:listingline>#body</ltx:listingline></ltx:listing></ltx:float>",
+        mode => "internal_vertical",
+        before_digest => {
+          use crate::engine::latex_constructs::before_float;
+          // Perl L73-86: mirror full beforeDigest sequence.
+          DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
+          DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
+          Let!("\\par", "\\lx@algo@par");
+          Let!("\\parbox", "\\lx@algo@parbox");
+          Let!("\\\\", "\\lx@algo@par");
+          Let!("\\strut", "\\lx@algo@strut");
+          // \BlankLine stays the raw algorithm2e.sty `\vskip 1ex` (NOT overridden).
+          // Perl's algorithm2e.sty.ltxml does NOT redefine \BlankLine either, and
+          // Perl's body output leaks "1ex" as a listingline's text — so the earlier
+          // Rust override to `\lx@algo@par` (to suppress that leak) was an unfaithful
+          // divergence that ALSO fired the listingline endline/startline machinery
+          // inside `\caption{… \BlankLine …}` (where no listingline is open) →
+          // `</ltx:listingline> isn't open` + `listingline isn't allowed in <float>`
+          // + malformed caption/toccaption. Leaving it raw, `\vskip 1ex` in the
+          // caption goes through leaveHorizontal's INTERNAL_PAR → the gentle
+          // `\lx@normal@par` path (no line machinery), matching Perl (0 errors).
+          // Witness 1901.07768 (algorithm2e `\caption{Co-Bandit \BlankLine …}`).
+          DefMacro!("\\;", "\\ifmmode\\@mathsemicolon\\else\\@endalgoln\\fi");
+          // All variants share the SAME float counter ("algorithm"), matching
+          // Perl (its loop body always calls beginItemize/RefStepCounter on
+          // "algorithm").
+          before_float("algorithm", None);
+        },
+        after_digest => sub[whatsit] {
+          use crate::engine::latex_constructs::after_float;
+          // Perl L88-91: if \algocf@style contains "box", set frame=boxed on the
+          // whatsit so afterConstruct's addFloatFrames draws the rectangle.
+          // Without this, algorithm2e's [boxed] / [boxruled] options silently
+          // dropped their frame instructions in Rust.
+          if let Ok(Some(style_tokens)) = DigestIf!(T_CS!("\\algocf@style")) {
+            if style_tokens.to_string().contains("box") {
+              whatsit.set_property("frame", Stored::from("boxed"));
+            }
+          }
+          after_float(whatsit);
+        },
+        // Perl L92: afterConstruct => addFloatFrames($_[0], $_[1]->getProperty('frame'))
+        // Pulls the frame from properties (set above for boxed/boxruled options)
+        // and dispatches to float_sty's add_float_frames helper.
+        after_construct => sub[document, whatsit] {
+          let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
+          if !style.is_empty() {
+            crate::package::float_sty::add_float_frames(document, &style)?;
+          }
         }
-      }
-      after_float(whatsit);
-    },
-    // Perl L92: afterConstruct => addFloatFrames($_[0], $_[1]->getProperty('frame'))
-    // Pulls the frame from properties (set above for boxed/boxruled options)
-    // and dispatches to float_sty's add_float_frames helper.
-    after_construct => sub[document, whatsit] {
-      let style = whatsit.get_property("frame").map(|v| v.to_string()).unwrap_or_default();
-      if !style.is_empty() {
-        crate::package::float_sty::add_float_frames(document, &style)?;
-      }
-    }
-  );
-  // {algorithm*}, {algorithm2e}, {algorithm2e*} — same as {algorithm} — Perl L63
-  Let!("\\algorithm*", "\\algorithm");
-  Let!("\\endalgorithm*", "\\endalgorithm");
-  Let!("\\algorithm2e", "\\algorithm");
-  Let!("\\endalgorithm2e", "\\endalgorithm");
-  state::let_i(&T_CS!("\\algorithm2e*"), &T_CS!("\\algorithm"), None);
-  state::let_i(&T_CS!("\\endalgorithm2e*"), &T_CS!("\\endalgorithm"), None);
+      );
+    };
+  }
+  def_algo2e_env!("{algorithm}[]");
+  def_algo2e_env!("{algorithm*}[]");
+  def_algo2e_env!("{algorithm2e}[]");
+  def_algo2e_env!("{algorithm2e*}[]");
 
   DefMacro!("\\lx@algo@parbox[]{}{}", "#3");
   def_macro_noop("\\lx@algo@strut SkipMatch:\\par")?;
   def_macro_noop("\\@marker{}")?;
 
-  // Par dedup — Perl L109-116
-  // Conditional that prevents double-\par from producing blank lines.
-  // Perl's dedup relies on `$STATE->setPrefix/getPrefix('didpar')` via a
-  // DefPrimitiveI+isPrefix pair; Rust has no setPrefix/getPrefix
-  // infrastructure, so the dedup is disabled (conditional never fires,
-  // setpar is a no-op, newpar always takes the else branch). Downstream
-  // callers only use the PAR-marker path, which still emits correctly.
+  // Par dedup — Perl L109-116. Prevents a double/empty `\par` from running
+  // the endline+startline line machinery twice (which would emit blank lines
+  // AND, critically, re-fire `\lx@prepend@indentation@`'s
+  // `floatToElement('ltx:tags')` — repositioning the cursor OUT of an
+  // in-progress `_CaptureBlock_` capture, e.g. a `{center}`/`{flushleft}` env
+  // whose body holds content + `\vspace` inside an algorithm: the stray
+  // `\par` from `\vspace`'s `leaveHorizontal` then abandons the capture and
+  // `insertBlock`'s closeNode fails with "ltx:_CaptureBlock_ ... isn't open".
+  // Witness 1510.02728.
   //
-  // Intentional divergence (WISDOM #44 class: blocked-on-missing-state
-  // primitive): the \lx@algo@setpar DefPrimitiveI → DefMacro flip is
-  // the only observable footprint of the disabled dedup — when the
-  // setPrefix/getPrefix pair is implemented in Rust, this reverts
-  // cleanly to a DefPrimitive that sets the `didpar` prefix. DP-audit
-  // flags the single L82 entry.
-  DefConditional!("\\if@lx@algo@par SkipSpaces");
-  def_macro_noop("\\lx@algo@setpar")?;
-  DefMacro!("\\lx@algo@newpar{}{}", "#2");
+  // Faithful port of Perl's prefix-based guard (`$STATE->setPrefix/getPrefix
+  // ('didpar')` via a `DefPrimitiveI isPrefix => 1` pair) — Rust DOES have the
+  // prefix infrastructure (`state::set_prefix`/`get_prefix`, `is_prefix =>`),
+  // same as `\global`/`\long` (tex_macro.rs). The earlier stub's claim that it
+  // didn't was outdated. The `didpar` prefix is set by `\lx@algo@setpar` and
+  // auto-clears when the next non-prefix token is digested, so it suppresses
+  // only CONSECUTIVE pars.
+  DefConditional!("\\if@lx@algo@par SkipSpaces", { state::get_prefix("didpar") });
+  DefPrimitive!("\\lx@algo@setpar", { state::set_prefix("didpar"); }, is_prefix => true);
+  DefMacro!("\\lx@algo@newpar{}{}",
+    "\\if@lx@algo@par\\@marker{SKIP#1}\\else\\@marker{pre#1 }#2\\@marker{post#1}\\fi\\lx@algo@setpar");
 
+  // An INTERNAL par (fired by the stomach's `leaveHorizontal` to end horizontal
+  // mode — e.g. a `\vspace`/`\vskip` inside a `{center}`/`{flushleft}` body that
+  // sits inside an algorithm) must NOT run the endline+startline line machinery:
+  // that re-fires `\lx@prepend@indentation@`'s `floatToElement('ltx:tags')`,
+  // which repositions the cursor OUT of an in-progress `_CaptureBlock_` (the
+  // aligning-env capture), abandoning it so `insertBlock`'s closeNode fails
+  // ("ltx:_CaptureBlock_ … isn't open"). An invisible internal par is not an
+  // algorithm line, so route it to the gentle `\lx@normal@par` (which already
+  // special-cases `INTERNAL_PAR`) instead — matching Perl's observed result (no
+  // spurious line; the `\vspace` produces nothing). Explicit `\\`/`\par`
+  // (INTERNAL_PAR unset) still take the full line machinery. Witness 1510.02728.
+  DefConditional!("\\if@lx@algo@internalpar SkipSpaces",
+    { matches!(state::lookup_value("INTERNAL_PAR"), Some(Stored::Bool(true))) });
   // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
-    "\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}");
+    "\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi");
   DefMacro!("\\lx@algo@parx",
     "\\lx@algo@newpar{PARx}{\\lx@algo@endline\\lx@algo@startline}");
   DefMacro!("\\lx@algo@parb",
@@ -162,13 +205,56 @@ LoadDefinitions!({
   DefMacro!("\\lx@algo@startline", "\\lx@algo@@startline\\the\\lx@algo@indentation");
   DefMacro!("\\lx@algo@endline", "\\lx@prepend@indentation\\the\\everypar\\lx@algo@@endline");
 
-  // Indentation prepending — Perl L197-198
-  // Perl absorbs + prepends via DOM manipulation; Rust emits at startline, so this is a no-op consumer.
+  // Indentation prepending — Perl L197-208.
+  // Perl's `\lx@prepend@indentation@{}` does `$doc->floatToElement('ltx:tags')`
+  // FIRST, then prepends the indentation. That `floatToElement('ltx:tags')` is
+  // critical structurally: it repositions the cursor UP to the listingline,
+  // OUT of any open inline box — notably the `_noautoclose` `<ltx:text>` an
+  // `\hbox` opens when an algorithm2e listing is wrapped in `\colorbox{…}{…}`
+  // (→ `\hbox{…}`). With the cursor back at the listingline, the immediately
+  // following `\lx@algo@@endline` (`</ltx:listingline>`) closes cleanly.
+  //
+  // The previous Rust port emitted indentation at `\lx@algo@startline` instead
+  // and stubbed this as an EMPTY constructor "to avoid DOM manipulation" — but
+  // that dropped the reposition, so a listing inside an `\hbox`/`\colorbox`
+  // left the cursor inside the box's `_noautoclose` `<ltx:text>` and closing
+  // the listingline errored: "ltx:listingline … whose open descendents do not
+  // auto-close. Descendants are text". We keep Rust's startline-indentation
+  // approach (so we deliberately do NOT re-absorb `#1` here — that would double
+  // the indent), but restore Perl's cursor-repositioning float. Witnesses
+  // 1911.01815, 1903.04631 (algorithm2e inside `\colorbox`/`\hbox`).
   DefMacro!("\\lx@prepend@indentation", "\\lx@prepend@indentation@{\\the\\lx@algo@indentation}");
-  DefConstructor!("\\lx@prepend@indentation@{}", "");
+  DefConstructor!("\\lx@prepend@indentation@{}", sub[document] {
+    document.float_to_element("ltx:tags", false)?;
+  });
 
-  // Line numbering — Perl L195, L210-221
-  DefConstructor!("\\algocf@printnl{}", "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>");
+  // Line numbering — Perl L210-221 (the ACTIVE \algocf@printnl; Perl L195's
+  // plain template is immediately overridden).
+  //
+  // The earlier Rust port used the plain L195 template
+  // (`<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>`), which emits the line-number
+  // tags at the CURRENT cursor. That errors "ltx:tags isn't allowed in
+  // <ltx:text>" whenever `\nl` fires while an inline `<ltx:text>` is open — e.g.
+  // a `\SetKwInput{KwInit}{\nl initialize}` line, where the KwInput label
+  // wrapper opens an `<ltx:text>` before `\nl`. Perl's active definition first
+  // `floatToElement('ltx:tags')` to climb OUT of that `<ltx:text>` up to the
+  // enclosing `<ltx:listingline>` (which can contain tags), emits the tags
+  // there, then leaves the cursor restored so following content flows on. This
+  // is the same float used by `\lx@prepend@indentation@` above. We restore the
+  // saved node (rather than Perl's manual childNode remove/re-append prepend)
+  // so the KwInput label's content keeps its wrapper. Witness 2104.02680
+  // (`\SetKwInput{KwInit}{\nl initialize}`).
+  DefConstructor!("\\algocf@printnl{}", sub[document, args] {
+    let num = args.first().and_then(|a| a.as_ref());
+    let savenode = document.float_to_element("ltx:tags", false)?;
+    document.open_element("ltx:tags", None, None)?;
+    match num {
+      Some(n) => { document.insert_element("ltx:tag", vec![n], None)?; },
+      None => { document.insert_element("ltx:tag", Vec::new(), None)?; },
+    }
+    document.close_element("ltx:tags")?;
+    if let Some(sn) = savenode { document.set_node(&sn); }
+  });
 
   // Strip trailing pars — Perl L141-145
   DefMacro!("\\lx@strippar{}", "#1\\lx@algo@parx\\lx@algo@parx\\lx@algo@parx");

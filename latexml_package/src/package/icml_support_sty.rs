@@ -20,6 +20,14 @@ LoadDefinitions!({
   DefMacro!("\\yrcite Semiverbatim", "\\citeyearpar{#1}");
   DefMacro!("\\cite Semiverbatim", "\\citep{#1}");
 
+  // icml2018.sty L709: `\long\def\comment#1{}` — a review-annotation macro that
+  // gobbles its argument (authors write `\comment{\ref{…}}` to hide draft
+  // notes). Our binding intercepts icml2016/2017/2018 but had omitted it, so a
+  // paper using `\comment{…}` (via arxiv.sty → `\RequirePackage{icml2018}`) hit
+  // `undefined:\comment` where Perl (which loads icml2018) is clean. Gobbling
+  // is the intended, source-faithful behavior. Witness 1803.00942.
+  DefMacro!("\\comment{}", "");
+
   // Frontmatter
   Let!("\\icmltitle", "\\title");
   // Perl gobbles \icmltitlerunning; surpass: it's the running-head
@@ -94,6 +102,28 @@ LoadDefinitions!({
   // Witness 2401.00604.
   DefMacro!("\\icmlIntershipWork",
     "\\textsuperscript{*}Work done during an internship");
+  // `\icmlInternship` — paper-bundled internship marker (correct spelling,
+  // distinct from the `\icmlIntershipWork` typo above). icml2019.sty L502
+  // `\newcommand{\icmlInternship}{\textsuperscript{*}This work has been done
+  // during the internship at <institution>.}`. Papers pass it into
+  // `\printAffiliationsAndNotice{\icmlInternship}`; our binding intercepts
+  // icml20xx (so the paper's bundled def never runs) and — unlike Perl,
+  // whose `\printAffiliationsAndNotice{}` gobbles its arg — preserves the
+  // notice arg as a frontmatter note, expanding the inner CS. Provide a
+  // generic fallback (institution unknowable from the binding) so the note
+  // survives error-free. Witness 1902.02603 (icml2019.sty L502).
+  DefMacro!("\\icmlInternship",
+    "\\textsuperscript{*}Work done during an internship");
+  // `\airesident` — paper-bundled AI-residency marker, same family as
+  // `\icmlInternship`. icml2019.sty L503 `\newcommand{\airesident}{
+  // \textsuperscript{$\dagger$}This work was completed as part of the
+  // <program> AI Residency}`. Passed into
+  // `\printAffiliationsAndNotice{\icmlEqualContribution\airesident}`; our
+  // binding intercepts icml20xx so the bundled def never runs, and the
+  // preserved notice arg expands the undefined CS. Generic fallback
+  // (program unknowable from the binding). Witness 1902.09574.
+  DefMacro!("\\airesident",
+    "\\textsuperscript{\\char`\u{2020}}Work completed as part of an AI Residency");
   // \icmlOutsideContribution — paper-bundled marker noting that the
   // contribution was made outside the author's primary affiliation.
   // Witness 2310.14751.
@@ -124,6 +154,19 @@ LoadDefinitions!({
   // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.
   DefConditional!("\\ificlrfinal");
   def_macro_noop("\\iclrfinalcopy")?;
+
+  // `\toptitlebar`/`\bottomtitlebar` — the decorative rules drawn above and
+  // below the title block. Real icml20XX.sty (e.g. icml2019.sty L410-411):
+  //   \def\toptitlebar{\hrule height1pt \vskip .25in}
+  //   \def\bottomtitlebar{\vskip .22in \hrule height1pt \vskip .3in}
+  // No-arg macros (the `\toptitlebar{\Large\bf #1}` in some bundled `arxiv.sty`
+  // is `\toptitlebar` followed by a separate title group). Our binding
+  // intercepts the paper-bundled icml20XX.sty so those defs never run; Perl
+  // ships no icml2019 binding and raw-loads the .sty, reaching L410. Supply
+  // them directly. Witness 1905.03711 (article + arxiv.sty →
+  // `\RequirePackage[accepted]{icml2019}`).
+  DefMacro!("\\toptitlebar", "\\hrule height1pt \\vskip .25in");
+  DefMacro!("\\bottomtitlebar", "\\vskip .22in \\hrule height1pt \\vskip .3in");
 
   // Random extra bits
   def_macro_noop("\\abovestrut{}")?;

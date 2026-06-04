@@ -162,7 +162,87 @@ fn meaning_to_cmml_element(meaning: &str) -> Option<&'static str> {
 /// Convert an XMath tree to Content MathML.
 ///
 /// Port of `MathML::Content::convertNode` + `cmml_top`.
-pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData { cmml_contents(doc, xmath) }
+pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData {
+  CMML_DEPTH.with(|d| d.set(0));
+  CMML_PATH.with(|p| p.borrow_mut().clear());
+  cmml_contents(doc, xmath)
+}
+
+// Recursion guard. Perl uses `no warnings 'recursion'` and relies on
+// its native stack; we cap to avoid blowing the 256 MB worker stack
+// when malformed/cyclic XMath (e.g. duplicate xml:id whose target
+// loops via XMRef) drives `cmml` into unbounded descent. Two failure
+// modes seen on the second-500K canvas (stage_53/54):
+//
+// 1. Plain stack overflow on linearly-deep XMath — witnesses
+//    arXiv:1505.06709, 1505.06978 (both emitted `Info:malformed:id
+//    Duplicated attribute xml:id` then overflowed during
+//    MathML[Content]). Cap at `CMML_MAX_DEPTH` (256, well above any
+//    legitimate XMApp nesting we've measured).
+//
+// 2. Cyclic XMRef chains: an `ltx:XMRef` whose `find_node_by_id`
+//    target's subtree contains another XMRef back into an ancestor
+//    of the current cmml frame. Linear depth cap alone is not
+//    enough — each cycle iteration doubles the generated
+//    NodeData::Element subtree, exhausting the 6 GB worker
+//    memory budget long before the depth limit fires. Witness:
+//    arXiv:1508.06324 (stage_54) — 440 maths, OOMs with 5-byte
+//    alloc failure mid-CMML. Track a `CMML_PATH` set of node
+//    pointers along the current recursion path; if we visit a
+//    node already on the path, return `cmml_error("cycle")` and
+//    unwind.
+const CMML_MAX_DEPTH: u32 = 256;
+thread_local! {
+  static CMML_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+  static CMML_PATH: std::cell::RefCell<rustc_hash::FxHashSet<usize>>
+    = std::cell::RefCell::new(rustc_hash::FxHashSet::default());
+}
+
+enum CmmlEnter {
+  Ok,
+  DepthExceeded,
+  Cycle,
+}
+
+fn cmml_enter(node: &Node) -> CmmlEnter {
+  let ptr = node.node_ptr() as usize;
+  let in_path = CMML_PATH.with(|p| !p.borrow_mut().insert(ptr));
+  if in_path {
+    // Diagnostic: dump the current path so the math-parser bisect can see
+    // exactly which node-ids form the cycle. Behind an env so production
+    // canvas runs stay silent. Format: `cmml_cycle: <id_or_tag>(<ptr>) <-
+    // ... <- <cycling node>` — most recent ancestor first; the cycling
+    // node is repeated at the end so the loop is visually obvious.
+    if std::env::var_os("LATEXML_CMML_TRACE_CYCLE").is_some() {
+      let id = node
+        .get_attribute("xml:id")
+        .or_else(|| node.get_attribute("id"))
+        .unwrap_or_else(|| format!("({})", node.get_name()));
+      eprintln!("cmml_cycle: re-entering {} ptr=0x{:x}", id, ptr);
+    }
+    return CmmlEnter::Cycle;
+  }
+  CMML_DEPTH.with(|d| {
+    let cur = d.get();
+    if cur >= CMML_MAX_DEPTH {
+      // Pop the path entry we just inserted before returning.
+      CMML_PATH.with(|p| {
+        p.borrow_mut().remove(&ptr);
+      });
+      CmmlEnter::DepthExceeded
+    } else {
+      d.set(cur + 1);
+      CmmlEnter::Ok
+    }
+  })
+}
+
+fn cmml_exit(node: &Node) {
+  CMML_PATH.with(|p| {
+    p.borrow_mut().remove(&(node.node_ptr() as usize));
+  });
+  CMML_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
+}
 
 /// Convert the contents of a node (which normally has a single child).
 ///
@@ -182,6 +262,17 @@ fn cmml_contents(doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of `cmml` + `cmml_internal`.
 fn cmml(doc: &PostDocument, node: &Node) -> NodeData {
+  match cmml_enter(node) {
+    CmmlEnter::Cycle => return cmml_error("cycle"),
+    CmmlEnter::DepthExceeded => return cmml_error("recursion-depth-exceeded"),
+    CmmlEnter::Ok => {},
+  }
+  let result = cmml_impl(doc, node);
+  cmml_exit(node);
+  result
+}
+
+fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
   let tag = doc.get_qname(node).unwrap_or_default();
 
   // Follow XMRef

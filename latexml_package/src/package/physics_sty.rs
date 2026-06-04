@@ -208,7 +208,11 @@ LoadDefinitions!({
   // file, all under the same rationale. Individual entries don't
   // re-carry the WISDOM #44 tag to avoid comment noise.
 
-  DefPrimitive!("\\quantity", {
+  // DefMacro (expansion-time), not DefPrimitive — it reads a delimited `(…)`/`[…]`
+  // body via `phys_read_arg`, so inside an alignment a digestion-time primitive would
+  // let the column scan grab the body's `&`/`\\` first (same WISDOM #44 alignment bug
+  // fixed for `\mqty` and `\lx@physics@operatorP`). Return the dual.
+  DefMacro!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let (arg, open, close) = phys_read_arg(true, physics_delimiters)?;
     let arg = arg.unwrap_or_default();
@@ -238,7 +242,7 @@ LoadDefinitions!({
       &[("reversion", reversion)],
       content, presentation, vec![arg],
     )?;
-    gullet::unread(result);
+    Ok(result)
   });
   Let!("\\qty", "\\quantity");
 
@@ -303,7 +307,10 @@ LoadDefinitions!({
   // only; no call site is known to wrap `\evaluated` in `\edef`.
   // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
   // uses of `\evaluated` across LaTeXML/lib + ar5iv-bindings.
-  DefPrimitive!("\\evaluated", {
+  // DefMacro (expansion-time) — reads a delimited `(…|`/`[…|` arg via `phys_read_arg`
+  // (then optional `_`/`^` limits); same WISDOM #44 alignment reason as `\mqty`/
+  // `\lx@physics@operatorP`. Return the dual.
+  DefMacro!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
     let (arg, open, close) = phys_read_arg(true, |s| {
@@ -375,7 +382,7 @@ LoadDefinitions!({
     pres.extend(pres_suffix);
     let presentation = Tokens::new(pres);
     let result = i_dual(&[("reversion", reversion)], content, presentation, all_args)?;
-    gullet::unread(result);
+    Ok(result)
   });
   Let!("\\eval", "\\evaluated");
 
@@ -461,7 +468,9 @@ LoadDefinitions!({
   Let!("\\cp", "\\crossproduct");
 
   // Perl: \lx@physics@operator — operator with optional delimited arg
-  DefPrimitive!("\\lx@physics@operator{}{}{}", sub[(cs, semantic, function)] {
+  // DefMacro (expansion-time) — reads a delimited arg via `phys_read_arg`; same
+  // WISDOM #44 alignment reason as `\mqty`/`\lx@physics@operatorP`. Return the dual.
+  DefMacro!("\\lx@physics@operator{}{}{}", sub[(cs, semantic, function)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let function_tks = function;
@@ -492,14 +501,14 @@ LoadDefinitions!({
         &[("reversion", reversion)],
         content, presentation, vec![arg_tks],
       )?;
-      gullet::unread(result);
+      Ok(result)
     } else {
       // No argument: just the operator symbol
       let result = i_dual(
         &[("role", Tokenize!("OPERATOR")), ("reversion", cs_tks)],
         cfunc, function_tks, vec![],
       )?;
-      gullet::unread(result);
+      Ok(result)
     }
   });
 
@@ -516,7 +525,18 @@ LoadDefinitions!({
   // Operators with power
   // Perl: \lx@physics@operatorP — operator with optional power and paren-delimited arg
 
-  DefPrimitive!("\\lx@physics@operatorP{}{}{}", sub[(cs, semantic, function)] {
+  // MUST be a DefMacro (expansion-time), not a DefPrimitive — see WISDOM #44's
+  // alignment-exception. This operator reads a delimited/optional argument
+  // (`[power]` via `read_optional`, `(arg)` via `phys_read_arg`); as a
+  // digestion-time primitive an enclosing eqnarray's column scan saw the `\\`
+  // inside that argument BEFORE this code consumed it — so `\tr\big[ A \\ B \big]`
+  // (the trace arg straddling an eqnarray row break) leaked its `\\` into the
+  // eqnarray → `\lx@begin@alignment … mode-switch to math due to
+  // \lx@begin@inline@math` + `equationgroup`-in-`XMath` cascade (witness
+  // 2003.02721, 13 errors, Perl 0). Perl's `\lx@physics@operatorP` is a DefMacro
+  // (expansion-time), so it grabs the argument first. Return the dual(s) instead
+  // of `gullet::unread`.
+  DefMacro!("\\lx@physics@operatorP{}{}{}", sub[(cs, semantic, function)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let function_tks = function;
@@ -529,20 +549,18 @@ LoadDefinitions!({
     })?;
 
     if arg.is_none() {
-      // No argument — put back the power and return bare operator
-      if let Some(ref pwr) = power {
-        let pwr_toks = pwr.unlist_ref();
-        let mut bracketed = Vec::with_capacity(pwr_toks.len() + 2);
-        bracketed.push(T_OTHER!("["));
-        bracketed.extend_from_slice(pwr_toks);
-        bracketed.push(T_OTHER!("]"));
-        gullet::unread(Tokens::new(bracketed));
-      }
+      // No argument — return bare operator followed by the (re-bracketed) power.
       let result = i_dual(
         &[("reversion", cs_tks)],
         cfunc, pfunc, vec![],
       )?;
-      gullet::unread(result);
+      let mut out: Vec<Token> = result.unlist();
+      if let Some(ref pwr) = power {
+        out.push(T_OTHER!("["));
+        out.extend_from_slice(pwr.unlist_ref());
+        out.push(T_OTHER!("]"));
+      }
+      Ok(Tokens::new(out))
     } else {
       let arg_tks = arg.unwrap();
       let a1 = Tokens::new(vec![i_arg("1")]);
@@ -585,7 +603,7 @@ LoadDefinitions!({
         &[("reversion", reversion)],
         content, presentation, all_args,
       )?;
-      gullet::unread(result);
+      Ok(result)
     }
   });
 
@@ -768,8 +786,10 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   Let!("\\flatfrac", "\\ifrac");
 
-  // Perl: \lx@physics@diff — differential operator
-  DefPrimitive!("\\lx@physics@diff{}{}{}", sub[(cs, semantic, diff)] {
+  // Perl: \lx@physics@diff — differential operator.
+  // DefMacro (expansion-time) — reads a delimited `(…)` arg via `phys_read_arg`; same
+  // WISDOM #44 alignment reason as `\mqty`/`\lx@physics@operatorP`. Return the dual.
+  DefMacro!("\\lx@physics@diff{}{}{}", sub[(cs, semantic, diff)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let diff_tks = diff;
@@ -822,7 +842,7 @@ LoadDefinitions!({
       }
 
       let result = i_dual(&[("reversion", reversion)], content, presentation, all_args)?;
-      gullet::unread(result);
+      Ok(result)
     } else if let Some(deg) = degree {
       let a2 = Tokens::new(vec![i_arg("2")]);
       all_args.push(deg);
@@ -833,13 +853,13 @@ LoadDefinitions!({
       let result = i_dual(
         &[("role", Tokenize!("DIFFOP")), ("reversion", reversion)],
         content, presentation, all_args)?;
-      gullet::unread(result);
+      Ok(result)
     } else {
       // Bare differential: just the symbol
       let result = i_dual(
         &[("role", Tokenize!("DIFFOP")), ("reversion", reversion)],
         cfunc, pfunc, vec![])?;
-      gullet::unread(result);
+      Ok(result)
     }
   });
 
@@ -1334,12 +1354,17 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
-  // Perl: \diagonalmatrix[zero]{diag,diag,...}
+  // Perl: \diagonalmatrix[zero]{diag,diag,...} (physics.sty.ltxml L636-654).
+  // Split the diagonal entries on `,` at the TOKEN level (Perl
+  // `SplitTokens($diag, T_OTHER(','))`), NOT by `to_string()`+re-tokenize:
+  // the string round-trip drops the inter-token space that separates a
+  // control word from a following letter, so e.g. `\vb h` collapses into
+  // the undefined CS `\vbh`. Witness 2004.07845 (`\dmat{\vb h \vdot
+  // \vb*{\sigma}, ...}` → `\vbh`/`\tildeN`/`\tilded` undefined; Perl
+  // converts it cleanly).
   DefPrimitive!("\\diagonalmatrix[]{}", sub[(z, diag)] {
-    let z_str = z.as_ref().map(|t| t.to_string()).unwrap_or_default();
-    let z_tok = if z_str.is_empty() { T_SPACE!() } else { Token::from(&*z_str) };
-    let diag_str = diag.to_string();
-    let items: Vec<&str> = diag_str.split(',').collect();
+    let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
+    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",")]);
     let n = items.len();
     let mut tks = Vec::new();
     for (i, item) in items.iter().enumerate() {
@@ -1347,9 +1372,9 @@ LoadDefinitions!({
       for j in 0..n {
         if j > 0 { tks.push(T_ALIGN!()); }
         if i == j {
-          tks.extend(Tokenize!(item).unlist());
+          tks.extend(item.clone().unlist());
         } else {
-          tks.push(z_tok);
+          tks.extend(z_tok.clone());
         }
       }
     }
@@ -1357,12 +1382,11 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
-  // Perl: \antidiagonalmatrix[zero]{diag,diag,...}
+  // Perl: \antidiagonalmatrix[zero]{diag,diag,...} (physics.sty.ltxml
+  // L655-672). Same token-level split as \diagonalmatrix.
   DefPrimitive!("\\antidiagonalmatrix[]{}", sub[(z, diag)] {
-    let z_str = z.as_ref().map(|t| t.to_string()).unwrap_or_default();
-    let z_tok = if z_str.is_empty() { T_SPACE!() } else { Token::from(&*z_str) };
-    let diag_str = diag.to_string();
-    let items: Vec<&str> = diag_str.split(',').collect();
+    let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
+    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",")]);
     let n = items.len();
     let mut tks = Vec::new();
     for i in 0..n {
@@ -1370,9 +1394,9 @@ LoadDefinitions!({
       for j in 0..n {
         if j > 0 { tks.push(T_ALIGN!()); }
         if j == n - i - 1 {
-          tks.extend(Tokenize!(items[n - i - 1]).unlist());
+          tks.extend(items[n - i - 1].clone().unlist());
         } else {
-          tks.push(z_tok);
+          tks.extend(z_tok.clone());
         }
       }
     }
@@ -1382,7 +1406,19 @@ LoadDefinitions!({
 
   // Perl: \lx@physics@mat — wraps matrix content in an env, with delimiters
   // Reads optional * then required arg (TeX {} or delimiter-fenced)
-  DefPrimitive!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
+  //
+  // This MUST be a DefMacro (expandable), NOT a DefPrimitive — matching Perl
+  // `DefMacro('\lx@physics@mat{}{}{}{}{}', sub {…})` (physics.sty.ltxml L677). The
+  // matrix body is read here via `phys_read_arg` (a delimited `(…)`/`[…]` read, not
+  // a brace group). As a digestion-time PRIMITIVE, an alignment's column scan would
+  // see the matrix's own `&`/`\\` BEFORE this code consumes them — so `\mqty(a&b\\c&d)`
+  // inside an `eqnarray` leaked its `&`/`\\` into the eqnarray, splitting the row and
+  // orphaning the `\left(`/`\right)` fences → `\lx@begin@alignment … mode-switch to
+  // restricted_horizontal due to \lx@begin@inmath@text` + "Unbalanced \right" cascade
+  // (witness 2007.06211: revtex4-1 + physics, 11 errors, Perl 0). As an EXPANSION-time
+  // macro it grabs `(…)` first (like Perl), so the alignment never sees the inner
+  // `&`/`\\`. Return the dual instead of `gullet::unread`.
+  DefMacro!("\\lx@physics@mat{}{}{}{}{}", sub[(cs, semantic, env, defopen, defclose)] {
     let cs_tks = cs;
     let semantic_str = semantic.to_string();
     let semantic_opt = if semantic_str.is_empty() { None } else { Some(semantic_str.as_str()) };
@@ -1429,7 +1465,7 @@ LoadDefinitions!({
     let presentation = Tokens::new(pres);
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![matrix])?;
-    gullet::unread(result);
+    Ok(result)
   });
 
   // Perl: \lx@physics@matrix / \lx@physics@smallmatrix environments

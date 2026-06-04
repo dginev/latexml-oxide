@@ -91,6 +91,23 @@ LoadDefinitions!({
   Let!("\\ltx@ifpackageloaded", r"\@ifpackageloaded");
   Let!("\\ltx@ifclassloaded",   r"\@ifclassloaded");
 
+  // `\*` — invisible-times (U+2062, MULOP). Perl `TeX.pool.ltxml:7124`:
+  //   DefMathI('\*', undef, "\x{2062}", role=>'MULOP', name=>'', meaning=>'times');
+  // and our plain layer mirrors it at plain_base.rs:119. Perl's LaTeX
+  // emulation NEVER raw-loads latex.ltx's `\DeclareRobustCommand\*`
+  // (the discretionary-multiplication `\discretionary{\thinspace\the
+  // \textfont2\char2}{}{}`), so `\*` stays the invisible-times DefMath
+  // in the latex context. Rust DOES raw-load latex.ltx in
+  // `latex_bootstrap`, whose `\*` discretionary clobbers the TeX.pool
+  // DefMath and gets baked into the latex dump (as an Expandable macro
+  // that simply vanishes in math mode). Re-establish the Perl-faithful
+  // invisible-times definition here, post-dump, so `$a\*b$` yields
+  // `⁢(a,b)` and — crucially — `$a_\beta\*_\alpha$` makes `\*` the BASE
+  // of the second subscript (matching Perl's `<XMTok meaning="times">⁢`
+  // base), instead of vanishing and letting `_\alpha` re-attack the
+  // prior `_\beta` → spurious "Double subscript". Witness 1909.03262.
+  DefMath!("\\*", None, "\u{2062}", role => "MULOP", name => "", meaning => "times");
+
   //======================================================================
   // 3. List internals — defensive NODUMP-path overrides
   //
@@ -322,7 +339,17 @@ LoadDefinitions!({
   //======================================================================
   fn cache_filecontents(end_marker: &str, header_star: bool) -> Result<()> {
     gullet::skip_spaces()?;
-    let filename_toks = gullet::read_arg(ExpansionLevel::Off)?;
+    // Real LaTeX `\filecontents` `\edef`s the filename argument, so
+    // `\begin{filecontents}{\jobname-acro.tex}` writes — and a later
+    // `\input`/`\loadglsentries` finds — the file under the EXPANDED name
+    // (e.g. `root-acro.tex`). Read with Full expansion (not Off) so `\jobname`
+    // and friends are resolved; otherwise the content is cached under the
+    // literal key `\jobname-acro.tex_contents` and the lookup for
+    // `root-acro.tex_contents` misses, leaving the file "not found" and any
+    // entries it defines (glossaries acronyms, etc.) undefined. Witness
+    // 1905.05350 (`\begin{filecontents}{\jobname-acro.tex}` …
+    // `\loadglsentries[\acronymtype]{\jobname-acro}`).
+    let filename_toks = gullet::read_arg(ExpansionLevel::Full)?;
     let filename = filename_toks.to_string();
     // Perl latex_constructs L4316-4353: header comments match Perl's
     // three-line preamble. The \jobname line is synthesized as `\jobname`

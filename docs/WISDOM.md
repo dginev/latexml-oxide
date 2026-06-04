@@ -1247,6 +1247,28 @@ dismissing them all by pattern is unsafe. When in doubt, err toward
 keeping Perl's kind and porting the sub body as a DefMacro with
 gullet-token return.
 
+**A FOURTH gullet context the triage above missed: ALIGNMENT column-scan
+(added 2026-05-31).** If the `sub{}` reads a **non-brace DELIMITED argument**
+(`(…)`/`[…]`/`<…>` via `phys_read_arg`/`readBalanced`-style) whose content can
+contain `&` or `\\`, and the CS may appear **inside an alignment** (`eqnarray`,
+`align`, `\halign`, matrix), then DefPrimitive is NOT safe: the alignment's
+column reader (`digest_alignment_column`) scans the row for `&`/`\\` at
+STOMACH time, and a digestion-time primitive hasn't yet consumed its
+delimited body — so the alignment grabs the body's `&`/`\\` as its own column/
+row separators, splitting the construct and orphaning its fences. A DefMacro
+grabs the delimited body at EXPANSION time (before the column scan), like Perl.
+Witness: `\mqty(a&b\\c&d)` inside an `eqnarray` (2007.06211) — Perl 0, Rust 11
+(`\lx@begin@alignment … mode-switch … due to \lx@begin@inmath@text` + Unbalanced
+`\right`). Fix: `physics_sty.rs` `\lx@physics@mat` reverted to `DefMacro`
+(commit 6721f53232). The OTHER physics quantity constructs (`\quantity`/`\qty`,
+`\lx@physics@fenced`→`\pqty`/`\abs`/`\norm`/`\order`, `\evaluated`,
+`\lx@physics@operator/operatorP`, `\lx@physics@diff`) keep their deliberate
+DefPrimitive (this entry's ~16-flip rationale) because their delimited body is a
+single EXPRESSION with no `&`/`\\` — only the MATRIX family carries alignment
+separators, so only it needs the macro kind. **Triage step 1 must therefore add:
+"…and if the sub reads a delimited (non-brace) arg that can hold `&`/`\\`, can
+the CS occur inside an alignment?"** See [[project_physics_mat_defmacro_not_primitive]].
+
 ## #45 Rust `mode => "text"` auto-implies `enter_horizontal => true`
 
 When porting a Perl `DefConstructor` that carries
@@ -1678,6 +1700,91 @@ adaptation to our tab-separated text format.
 exactly one in TL2025 — `fontdimen_fontinfo_cmr10 at 14sp` with 9
 sparse slots. If a future expl3 release adds more sparse intarrays,
 the fallback handles it; the only cost is a few extra V records.
+
+## #55 `OmniBus` is a LAST-RESORT fallback for *unknown* classes — never a dependency
+
+**The principle (user directive 2026-05-28).** `OmniBus.cls` exists so
+that a `\documentclass{<thing-we-have-no-binding-for>}` still produces
+*something* — it bundles a broad, generic grab-bag (frontmatter macros
+`\email`/`\affil`/`\address`/`\keywords`/`\shorttitle`/…, theorem +
+natbib autoloads, a `\bibitem` override, `{frontmatter}`/`{mainmatter}`/
+`{backmatter}` envs, AAS/elsevier-ish coverage). That grab-bag is the
+right move when we know *nothing* about the class. It is the WRONG base
+for a class binding we *do* have a `.rs` for: pulling in OmniBus means
+the binding inherits ~600 lines of generic guesses it never asked for,
+and — crucially — those guesses can actively break the document. A known
+binding must `LoadClass!("article")` (the real base most journal classes
+build on) and then load *exactly* its own specific needs.
+
+**Why it actively breaks things (the witnessed failure).** OmniBus
+eagerly pre-loads helpers (e.g. journal-class bindings layered
+`RequirePackage!("amsthm")` on top of `LoadClass!("OmniBus")`). Eager
+amsthm broke the ubiquitous `\let\proof\relax`\,+\,`\usepackage{amsthm}`
+idiom: the paper's explicit `\usepackage{amsthm}` no-ops (already loaded),
+so amsthm's `\let\proof\@proof` never re-runs after the paper cleared
+`\proof` → `Error:undefined:{proof}` (witness 1707.03222 svproc,
+1612.03054 imsart; both convert cleanly in Perl, which does NOT pre-load
+amsthm). OmniBus *itself* already provides *lazy* amsthm autoload (the
+theorem-env stubs at omnibus_cls.rs L399+), so the eager preload was both
+redundant and harmful. The deeper lesson: every generic provision OmniBus
+makes is a potential clash with what the real class/paper does.
+
+**Decisive finding (2026-05-28 audit).** ALL 51 `_cls.rs` files that do
+`LoadClass!("OmniBus")` are for classes Perl LaTeXML has **no binding
+for** (`grep` of `LaTeXML/lib/.../Package/*.cls.ltxml` → zero matches).
+Perl handles every one via its *automatic* fallback
+(`Package.pm:LoadClass` L2700-2716): warn `missing_file` → load OmniBus →
+`maybeRequireDependencies($class,'cls')` (dep-scan the raw `.cls` for
+`\RequirePackage`/`\usepackage`, load each binding). Rust mirrors this
+exactly in `binding/content.rs::load_class` (L1962-2067, incl.
+`maybe_require_dependencies`). So **a hand-rolled `*_cls.rs` that just does
+`LoadClass!("OmniBus")` is functionally what Rust does anyway if the file
+didn't exist** — except registering the stub SKIPS the dep-scan of the
+real `.cls` (the `<name>.cls.ltxml_loaded` flag short-circuits L2009),
+usually a *regression* vs. letting the fallback run.
+
+**User guidance (2026-05-28, refined — supersedes the "switch to article"
+plan above).** Codifying "no binding → OmniBus stub" is a **shortcut**: OK
+to lean on today, NOT acceptable long-term. Converting those stubs to
+`LoadClass!("article")` + hand-derived specifics is *also* a shortcut
+(still a hand-rolled binding for a class Perl has no binding for). The
+**principled fix is to add NO new binding files and instead improve the
+raw interpretation of reading the original `.sty`/`.cls`** so the automatic
+OmniBus+dep-scan+raw-read fallback simply works. Therefore:
+  * **Do NOT** build a `journal_support` mega-helper or otherwise invest
+    in making the OmniBus-stub pattern "nicer" — that entrenches the
+    shortcut. (The svproc→article+sv_support conversion `ce6ecb16c7` is
+    fine to keep — sv_support is a *real* Perl support pkg — but it is NOT
+    a template to replicate across the other 50.)
+  * Existing OmniBus stubs are tolerated as-is short-term. De-risking
+    them (e.g. dropping eager `RequirePackage!("amsthm")`, which breaks
+    `\let\proof\relax`+`\usepackage{amsthm}`) is a fine bounded cleanup.
+  * For a NEW class-related error: prefer avoiding a stub and fixing the
+    raw `.cls`/`.sty` read path so the fallback covers it. Keep/extend a
+    stub only when raw interpretation genuinely can't yet.
+  * **Autoload-shadowing trap (strong reason to DELETE a stub).** OmniBus
+    registers *lazy autoload triggers*: `\subjclass`/`\curraddr`→ams_support,
+    `\citet`/`\citep`→natbib, `\begin{theorem}`→amsthm, `\mathfrak`/`\mathbb`
+    →amsfonts, `\thechapter`→book (omnibus_cls.rs L542-587 + L404-444). A
+    stub that hand-rolls one of these CSes (e.g. `\subjclass{}` as a
+    frontmatter macro) **shadows the trigger**, so the autoload never fires
+    and everything that package would have defined (e.g. `\bysame` from
+    ams_support) stays undefined. Witnessed: birkjour/mcom-l stubs →
+    `undefined:\bysame`. Deleting the stub restores the autoload chain and
+    matches Perl. So: a one-error CONVERR on an ams/natbib/theorem macro
+    under an OmniBus-loading stub is very often this — delete, don't patch.
+
+Concrete wins applying this (2026-05-28): deleted `fundam_cls.rs`
+(`{keywords}`), `mcom_l_cls.rs` (mcom-l/proc-l/tran-l, `\bysame` via
+amsart dep-scan), `birkjour_cls.rs` (`\bysame` via `\subjclass`-autoload
+un-shadowing). Each → 0 errors, matches Perl, removes a stub.
+
+**Reference.** `latexml_package/src/package/omnibus_cls.rs` (the grab-bag),
+`binding/content.rs::load_class` (the automatic fallback + dep-scan — the
+*legitimate* OmniBus path). Companion: [[feedback_prefer_raw_load]],
+[[feedback_perl_parity_bindings]], [[feedback_no_papering]].
+
+---
 
 ## #54 TeXLive year detection uses `kpsewhich -var-value=SELFAUTOPARENT`, NOT `--version`
 

@@ -7,6 +7,22 @@ LoadDefinitions!({
   // (considering we don't do hyphenation, etc)
   RequirePackage!("babel", options => vec!["german".to_string()]);
 
+  // Alias the `germanb` dialect's language number to `german` (kernel/dump
+  // `\l@german`), exactly as the real germanb.ldf does via
+  // `\let\l@germanb\l@german`. Without this, `\usepackage[…,germanb]{babel}`
+  // selects `germanb` as the main language and babel's
+  // `\selectlanguage{germanb}` → `\bbl@iflanguage{germanb}` errors "You haven't
+  // defined the language 'germanb' yet" — because this binding REPLACES the raw
+  // germanb.ldf load (which is where `\l@germanb` would otherwise come from).
+  // Witness: arXiv:1010.4065 (`\usepackage[english,germanb]{babel}`).
+  RawTeX!(r"\expandafter\ifx\csname l@germanb\endcsname\relax
+    \expandafter\ifx\csname l@german\endcsname\relax
+      \expandafter\newlanguage\csname l@germanb\endcsname
+    \else
+      \expandafter\let\csname l@germanb\expandafter\endcsname\csname l@german\endcsname
+    \fi
+  \fi");
+
   // German caption strings (from germanb.ldf). \providecommand so raw
   // babel/germanb.ldf processing (if any) doesn't overwrite.
   RawTeX!(r"\providecommand\captionsgerman{%
@@ -56,6 +72,19 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\mdqon", { state::assign_catcode('"', Catcode::ACTIVE, None); });
   DefPrimitive!("\\mdqoff", { state::assign_catcode('"', Catcode::OTHER, None); });
+  // Faithful to babel germanb.ldf's `\initiate@active@char{"}`, which binds
+  // the active-`"` MEANING when german is LOADED — independent of catcode and
+  // of which language is the document main. Bind it here too, so that if ANY
+  // package later flips `"` to catcode-13 ACTIVE (witness 1006.0641:
+  // `\usepackage[german,english]{babel}` + a package + `fabfeynmp`, whose
+  // `{\catcode`\"=11 …}` group + babel's deferred activation leave `"` active),
+  // the active `"` always has the dispatch meaning rather than erroring
+  // "T_ACTIVE["] is not defined" on the first bare `"` in the body. The
+  // `\selectlanguage{german}` hook (babel_support_sty.rs) still (re)binds
+  // catcode+meaning together when german is actually selected.
+  if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+    state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+  }
   // germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
   RawTeX!(r"\providecommand\bbl@allowhyphens{}");
   RawTeX!(r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}");

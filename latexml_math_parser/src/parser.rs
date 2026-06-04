@@ -169,6 +169,36 @@ static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> = Lazy::new(|| {
     Err(_) => Some(500),
   }
 });
+
+// Maximum number of grammar lexemes in a single formula before we skip the
+// full Marpa grammar parse and fall through to the kludge parser (the same
+// path a genuine parse failure takes). Marpa's Earley recognizer allocates
+// O(n²)+ obstack memory in the number of lexemes; on a pathologically huge
+// single formula (witness 1706.06621: an explicitly-expanded E6 fluxbrane
+// polynomial `H3 = B_1^4 B_2^8 …` of ~43k lexemes / 1 MB) it exhausts memory
+// and libmarpa's `default_out_of_memory` calls `abort()` — an UNCATCHABLE
+// SIGABRT that takes down the whole conversion (the parse runs on the worker
+// thread; there is no Rust panic to catch). Perl (Parse::RecDescent) parses
+// the same formula in bounded memory, so this is a Rust-only abort; the cap
+// degrades only the one giant formula to a kludge parse (OPEN/CLOSE matching,
+// linear), keeping the rest of the document convertible. The largest real
+// formula observed parsing cleanly is ~8.7k lexemes, so the default 12000 is
+// comfortably above genuine math while well below the explosion. Override via
+// `LATEXML_MAX_GRAMMAR_LEXEMES`; set `0`/`none` to disable (full Perl parity,
+// at the risk of the abort). See SYNC_STATUS "FATAL_134 marpa-OOM".
+static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> = Lazy::new(|| {
+  match std::env::var("LATEXML_MAX_GRAMMAR_LEXEMES") {
+    Ok(v) => {
+      let trimmed = v.trim();
+      if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
+        None
+      } else {
+        Some(trimmed.parse::<usize>().unwrap_or(12000))
+      }
+    },
+    Err(_) => Some(12000),
+  }
+});
 // Compatibility alias: `PARSE_VIA_ASF` is true when we're NOT taking
 // the legacy path — both hybrid and ASF-only flavours go through the
 // ASF traverser at least some of the time. The downstream branch
@@ -562,6 +592,11 @@ impl MathParser {
       // Populate the thread-local idstore for XMRef resolution during parsing.
       // Perl uses $doc->lookupID which accesses the document's idstore directly.
       crate::data::set_math_idstore(document.get_idstore_clone());
+      // Reset the per-document LOSTNODES map. The map accumulates as
+      // semantics rules absorb operator nodes; it's drained at the end of
+      // this call. A leftover from a previous document on the same thread
+      // would cross-pollinate `idref` rewrites here.
+      crate::data::clear_lost_nodes();
       for math in xmath_nodes {
         let math_ref = math.clone();
         // Per-formula timing feeds the math_parse_buckets histogram in
@@ -669,6 +704,72 @@ impl MathParser {
             }
           }
         }
+      }
+
+      // Resolve LOSTNODES: rewrite XMRef[@idref=lost_id] -> kept_id via
+      // transitive chase, OR unlink the XMRef entirely if the lost node
+      // has no replacement (sentinel `__LOSTNODE__`). Mirrors Perl
+      // `MathParser.pm` L287-297. Without this, operators absorbed by
+      // left-recursion in `infix_apply_nary` (e.g. the second `+` in
+      // `a+b+c`) and orphans of `parse_lexemes` tree-replacement leave
+      // their xml:id dangling for any pre-existing XMRef (typically
+      // XMDual content branches pointing at scripted/decorated forms of
+      // the operator). Observed as the dominant CONVERR cluster on
+      // second-500K stages.
+      let lost = crate::data::take_lost_nodes();
+      if !lost.is_empty() {
+        // Resolve transitively. Returns:
+        //   None         — start not in lost map
+        //   Some("")     — start is in lost map but maps to sentinel
+        //                  (orphan with no replacement → drop XMRef)
+        //   Some(id)     — start maps (transitively) to surviving id
+        const SENTINEL: &str = "__LOSTNODE__";
+        let resolve = |start: &str| -> Option<String> {
+          let mut id = start;
+          let mut hops = 0usize;
+          while let Some(next) = lost.get(id) {
+            if next == SENTINEL {
+              return Some(String::new());
+            }
+            if next == start || hops > lost.len() {
+              return None; // cycle or pathological depth — bail
+            }
+            id = next.as_str();
+            hops += 1;
+          }
+          if id == start { None } else { Some(id.to_string()) }
+        };
+        let mut rewrites = 0usize;
+        let mut unlinks = 0usize;
+        for mut xmref in document.findnodes("//ltx:XMRef[@idref]", None) {
+          if let Some(idref) = xmref.get_attribute("idref") {
+            match resolve(&idref) {
+              Some(new_id) if new_id.is_empty() => {
+                xmref.unlink();
+                unlinks += 1;
+              },
+              Some(new_id) => {
+                let _ = xmref.set_attribute("idref", &new_id);
+                rewrites += 1;
+              },
+              None => {},
+            }
+          }
+        }
+        latexml_core::Info!(
+          "cleanup",
+          "xmref",
+          format!(
+            "LOSTNODES cleanup: {rewrites} XMRef idref(s) rewritten, {unlinks} unlinked ({} map entries)",
+            lost.len()
+          )
+        );
+      } else {
+        latexml_core::Info!(
+          "cleanup",
+          "xmref",
+          "LOSTNODES cleanup: 0 map entries — skipped"
+        );
       }
 
       // Note: ltx_math_unparsed class is NOT applied here because any DOM
@@ -1227,10 +1328,67 @@ impl MathParser {
       // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called
       // above)
       let (lexemes, mut nodes) = node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
-      if let Ok(Some(parse_tree)) = self.parse_lexemes(lexemes, &nodes, document) {
+      // Skip the full grammar parse for a pathologically huge formula —
+      // Marpa's Earley recognizer would exhaust memory and `abort()`
+      // (uncatchable). Fall through to the kludge parser instead (the
+      // `Ok(None)` branch). See MAX_GRAMMAR_LEXEMES (witness 1706.06621).
+      let parse_outcome = match *MAX_GRAMMAR_LEXEMES {
+        Some(cap) if lexemes.len() > cap => {
+          // Emit a real Warning (not just a progress tick) so a human — or a
+          // future Claude tasked with raising/removing this cap — has the full
+          // context. The message explains WHAT was degraded, WHY the cap
+          // exists, and HOW to make the formula parsable again.
+          let warn_fn = || -> Result<()> {
+            Warn!(
+              "toobig",
+              "math",
+              s!(
+                "Formula has {} grammar lexemes (> cap {}); skipping the Marpa \
+                 grammar parse and falling back to the KLUDGE parser (linear \
+                 OPEN/CLOSE matching — no real semantic/Content-MathML tree). \
+                 WHY: Marpa's Earley recognizer allocates O(n^2)+ obstack \
+                 memory in the lexeme count; on inputs this large it exhausts \
+                 RAM and libmarpa's default_out_of_memory calls abort() — an \
+                 UNCATCHABLE SIGABRT that kills the whole conversion (the parse \
+                 runs on a worker thread; there is no Rust panic to catch). Perl \
+                 LaTeXML (Parse::RecDescent) parses such formulae in bounded \
+                 memory, so this cap is a Rust-only divergence. TO RAISE/REMOVE \
+                 IT (set LATEXML_MAX_GRAMMAR_LEXEMES, 0=disable): the blow-up is \
+                 dominated by grammar AMBIGUITY (chiefly implicit-multiplication / \
+                 juxtaposition associativity, which makes Earley-set growth \
+                 super-linear), so tighten those rules to reduce ambiguity, or \
+                 give the marpa fork a bounded-memory / graceful-OOM recognizer \
+                 path. Witness: 1706.06621-class explicitly-expanded polynomials.",
+                lexemes.len(),
+                cap
+              )
+            );
+            Ok(())
+          };
+          warn_fn().ok();
+          Ok(None)
+        },
+        _ => self.parse_lexemes(lexemes, &nodes, document),
+      };
+      if let Ok(Some(parse_tree)) = parse_outcome {
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
         // Replace the content of XMath with parsed result
         // unbindNode followed by (append|replace)Tree (which removes ID's) should be safe
+        //
+        // Pre-snapshot the xml:ids that the old subtree exposes. Any of
+        // these that don't reappear in the new tree below have been
+        // "orphaned" by the parse — pre-existing XMRefs pointing at them
+        // would go dangling. Mirrors Perl `MathParser.pm` LOSTNODES
+        // tracking for the tree-replacement path (the analogue of
+        // `ReplacedBy(lost, undef)` cases).
+        let mut pre_replacement_ids: Vec<String> = Vec::new();
+        for child_el in element_nodes(mathnode) {
+          for descendant in document.findnodes("descendant-or-self::*[@xml:id]", Some(&child_el)) {
+            if let Some(id) = descendant.get_attribute("xml:id") {
+              pre_replacement_ids.push(id);
+            }
+          }
+        }
         for child_el in element_nodes(mathnode) {
           document.unrecord_node_ids(&child_el);
         }
@@ -1241,6 +1399,15 @@ impl MathParser {
         document.append_tree(mathnode, vec![new_xml_tree])?;
         // Resolve _xmkey references: match XMRef[@_xmkey] to elements with same _xmkey
         resolve_xmkeys(mathnode, document)?;
+        // Detect orphaned IDs: any pre-snapshot ID that no longer resolves
+        // in the document idstore. Record each as a LOSTNODE with an empty
+        // replacement (sentinel — the top-level cleanup interprets empty
+        // replacement as "drop the XMRef").
+        for pre_id in &pre_replacement_ids {
+          if document.lookup_id(pre_id).is_none() {
+            crate::data::record_replacement(pre_id, "__LOSTNODE__");
+          }
+        }
         let result = element_nodes(mathnode).remove(0);
         //END reparent.
         if !punct_nodes.is_empty() {

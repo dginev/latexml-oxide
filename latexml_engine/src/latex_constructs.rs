@@ -469,7 +469,32 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       in_math = !in_math;
       result.push(tok);
     } else if in_math {
-      result.push(tok);
+      // Math content is preserved verbatim (no case change). One hazard: a
+      // robust command nested in the math — e.g. `$\MakeUppercase{C}$` — is
+      // expanded by read_x_token above to `\protect\MakeUppercase ` (the
+      // robust real macro). If we let the following `\MakeUppercase ` body
+      // expand here, its OWN definition's literal `$` tokens (from
+      // `\def\({$}\let\)\(`) get read into this loop and miscount the CC_MATH
+      // toggle, desynchronising `in_math` and leaking math mode into the
+      // surrounding digestion (witnessed in amsart frontmatter:
+      // `\@add@frontmatter@now Attempt to end mode text in math`). On
+      // `\protect` inside math, grab the following token WITHOUT expansion and
+      // shield it with `\dont_expand` so the caller's `\edef\reserved@a{...}`
+      // keeps it literal; it is then digested as ordinary math later. This
+      // mirrors Perl, whose robust-command `\protect` survives the outer
+      // `\edef` via `\noexpand`. Plain math symbols (`\alpha`, …) are not
+      // `\protect`-prefixed, so normal math is unaffected.
+      if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
+        if let Some(next) = gullet::read_token()? {
+          result.push(tok);
+          result.push(T_CS!("\\dont_expand"));
+          result.push(next);
+        } else {
+          result.push(tok);
+        }
+      } else {
+        result.push(tok);
+      }
     } else if cc == Catcode::LETTER || cc == Catcode::OTHER {
       let new_str: String = tok.with_str(|s| {
         if is_upper {
@@ -1032,13 +1057,16 @@ pub fn eqnarray_bindings() -> Result<()> {
     None,
   );
   // Perl: Let('\lx@eqnarray@save@label', '\lx@label');
-  // Save the original \label as \lx@eqnarray@save@label — global so the
-  // noalign-deferred `\lx@eqnarray@save@label{#1}` expansion still resolves
-  // if it fires AFTER the eqnarray group pops (witness 2404.19499 align
-  // case).
+  // Save the canonical \lx@label (NOT the mutable \label) as
+  // \lx@eqnarray@save@label — global so the noalign-deferred
+  // `\lx@eqnarray@save@label{#1}` expansion still resolves if it fires AFTER
+  // the eqnarray group pops (witness 2404.19499 align case). Saving \lx@label
+  // (immutable canonical) rather than \label avoids the self-recursion when
+  // this binding re-runs while \label is already \lx@eqnarray@label (nested
+  // align/gather, 2008.13358).
   state::let_i(
     &T_CS!("\\lx@eqnarray@save@label"),
-    &T_CS!("\\label"),
+    &T_CS!("\\lx@label"),
     Some(Scope::Global),
   );
   // Perl: Let('\label', '\lx@eqnarray@label');
@@ -1477,8 +1505,26 @@ pub fn define_new_theorem(
     );
   }
 
-  // Define the environment
-  let thmset_for_env = thmset_str.clone();
+  // Define the environment.
+  //
+  // The env-trigger key MUST match what `\begin{<name>}`/`\end{<name>}`
+  // look up, which is `ToString(Expand(<name>))` (see `\begin{}` above and
+  // Perl LaTeX.pool L164). `\newenvironment` likewise registers under
+  // `Expand!(name).to_string()`. But `thmset_str` (used for classname /
+  // listname / counter / ids) is the *raw* `thmset.to_string()` — matching
+  // Perl `defineNewTheorem` L3054 `ToString($thmset)`. These two agree for
+  // Perl because Perl drops invalid input bytes (an undeclared Latin-1 `é`
+  // never becomes a char, so raw == expanded == "df"). We preserve the
+  // `é` (better output: café stays café), so for a theorem env whose name
+  // carries an *active* accented char — e.g. `\newtheorem{déf}` in a
+  // Latin-1 source under `[T1]{fontenc}`, where t1enc.dfu's
+  // `\DeclareUnicodeCharacter{00E9}` makes `é` active → `\'e` →
+  // `\lx@applyaccent…` — the raw name ("déf") and the `\begin`-expanded
+  // name ("d\lx@applyaccent\'{e}f") diverge, and `\begin{déf}` fails to
+  // find the env ("environment is not defined"). Expanding the trigger key
+  // (only the key — classname/ids stay raw & clean) restores the match.
+  // No-op for ASCII names. Witness: arXiv:1509.06785.
+  let thmset_for_env = Expand!(thmset).to_string();
 
   // Hand-written replacement closure (compile_replacement! only works with literals)
   let inlist_val = s!("thm {listname}");
@@ -1535,6 +1581,23 @@ pub fn define_new_theorem(
       document.close_element("ltx:title")?;
       // #body
       if let Some(stored_digested) = props.get("body") {
+        let digested_opt: Option<Digested> = stored_digested.into();
+        if let Some(ref digested) = digested_opt {
+          document.absorb(digested, None)?;
+        }
+      }
+      // #trailer — `set_body` (whatsit.rs) pops the LAST captured box off the
+      // body and stashes it as the `trailer`. For a well-formed
+      // `\begin{thm}…\end{thm}` that trailer is the content-less `\end{thm}`
+      // whatsit (empty replacement → no-op absorb). But when a `\newtheorem`
+      // command is used BARE in a brace group — `{\lem … }` with no `\end{lem}`
+      // (common for inference/lemma figures) — the body capture over-captures
+      // the *following* document content (the next `{\cor …}`, sections, …) and
+      // it all lands in that last box, so the trailer holds real content. The
+      // replacement absorbed only `#body`, silently dropping it (witness
+      // 1905.00186: ~90 % of the document lost). Absorbing the trailer recovers
+      // it (Perl keeps the content; both engines over-capture identically).
+      if let Some(stored_digested) = props.get("trailer") {
         let digested_opt: Option<Digested> = stored_digested.into();
         if let Some(ref digested) = digested_opt {
           document.absorb(digested, None)?;
@@ -2072,7 +2135,43 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
               tokens.remove(0);
             }
             if !tokens.is_empty() {
-              bibtitle = Some(Tokens::new(tokens));
+              // Perl L4052 flags a TODO right here: "Check for balanced? or
+              // just take balanced begining?" — i.e. the bib-section title is
+              // the sectional unit's *argument* (the leading brace group), not
+              // every trailing token. Perl nonetheless takes all of @t, which
+              // is fine until \bibsection is a parameterized renewal such as
+              //   \renewcommand\bibsection[1]{\section*{\refname}\small #1}
+              // (witness 1702.01165). After the unit+star strip that leaves
+              // `{\refname}\small #1`; digesting all of it pushes the page/font
+              // directive `\small` AND the bare parameter token `#1` — an
+              // ARG-catcode token that errors "should never reach Stomach!".
+              // Take only the leading balanced {...} group as the title (the
+              // unit argument); fall back to all tokens when there is no
+              // leading group (Perl's behavior for un-braced titles). This
+              // realizes the Perl author's own "take balanced beginning" note
+              // and drops trailing page/font junk LaTeXML never renders. See
+              // docs/OXIDIZED_DESIGN.md (bib-section title = leading group).
+              let title_toks = if tokens[0].get_catcode() == Catcode::BEGIN {
+                let mut depth = 0i32;
+                let mut end = tokens.len();
+                for (i, t) in tokens.iter().enumerate() {
+                  match t.get_catcode() {
+                    Catcode::BEGIN => depth += 1,
+                    Catcode::END => {
+                      depth -= 1;
+                      if depth == 0 {
+                        end = i + 1;
+                        break;
+                      }
+                    },
+                    _ => {},
+                  }
+                }
+                tokens[..end].to_vec()
+              } else {
+                tokens
+              };
+              bibtitle = Some(Tokens::new(title_toks));
             }
           }
         }
@@ -2609,7 +2708,22 @@ LoadDefinitions!({
         Some(opts) => split_trim_options(&opts.to_string()),
         None => Vec::new(),
       };
-      load_class(&(whatsit.get_arg(2).unwrap().to_string()),
+      // Perl LaTeX.pool.ltxml:57 — `$class =~ s/\s+//g;`. Strip ALL
+      // whitespace from the class name before LoadClass. A multi-line
+      // `\documentclass[...]{<newline>revtex4}` makes the Semiverbatim arg
+      // ` revtex4` (the newline right after `{` becomes a leading space
+      // token); unstripped, the name fails to match the `revtex4` binding
+      // registration and falls through to OmniBus — which lacks revtex4's
+      // `\email [] Semiverbatim`, so an `\email{a_b@…}` with `_` then errors
+      // "Script _ can only appear in math mode". Witness 1601.06734.
+      let class_name: String = whatsit
+        .get_arg(2)
+        .unwrap()
+        .to_string()
+        .chars()
+        .filter(|c| !c.is_ascii_whitespace())
+        .collect();
+      load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))
   });
@@ -2746,8 +2860,21 @@ LoadDefinitions!({
   });
   Let!("\\@currenvline", "\\@empty");
 
-  // Perl: latex_constructs.pool.ltxml line 190
-  DefMacro!("\\@checkend{}", r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi}");
+  // Perl: latex_constructs.pool.ltxml line 190. Perl's body string ends
+  // with a STRAY `}` — a transcription artifact from copying the LaTeX
+  // kernel's `\def\@checkend#1{...\fi}` (the final `}` closes the `\def`,
+  // it is NOT part of the replacement text). Standard LaTeX `\@checkend`
+  // has no trailing brace. Perl's lenient gullet silently tolerates the
+  // extra `}`, but ours raises `Error:unexpected:} Attempt to close
+  // boxing group` when the brace pops a `\begingroup` frame. `\@checkend`
+  // is only ever reached when a package redefines `\end` to call it (e.g.
+  // extract.sty's `\def\end#1{\csname end#1\endcsname\@checkend{#1}...
+  // \endgroup}`); there the stray `}` collided with extract's wrapping
+  // `\begingroup`, producing one boxing-group error per environment.
+  // Dropping the artifact matches standard-LaTeX semantics. Witness
+  // 2007.09971 (IEEEtran+extract under ar5iv: 41 errors -> clean). See
+  // KNOWN_PERL_ERRORS.md.
+  DefMacro!("\\@checkend{}", r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi");
 
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
@@ -3298,15 +3425,19 @@ LoadDefinitions!({
 
   def_primitive_noop("\\linespread{}")?;
 
-  // Some papers (e.g. WileyMSP-template) use `\geometry{…}` in the
-  // preamble without explicitly `\usepackage{geometry}`. Real LaTeX
-  // would complain but the convention is widely tolerated. Provide
-  // no-op stubs at the kernel level so we don't fire
-  // `Error:undefined:\geometry`. Our geometry_sty.rs binding redefines
-  // these as no-ops too — both paths reach the same outcome.
-  // Witness: 2306.02129 (Wiley template).
-  def_macro_noop("\\geometry{}")?;
-  def_macro_noop("\\newgeometry{}")?;
+  // NOTE: do NOT define `\geometry`/`\newgeometry` at the kernel level.
+  // Perl only defines them when geometry.sty loads (geometry.sty.ltxml), so
+  // `\ifcsname geometry\endcsname` is FALSE until then — a guard documents
+  // legitimately use to detect whether the geometry package is loaded.
+  // Defining `\geometry` unconditionally here made that guard always true:
+  // witness 2005.03740, whose definitions.tex does
+  // `\ifcsname geometry\endcsname \ingfxfiletrue \else \ingfxfilefalse
+  // \usepackage{geometry}\fi` and then defines all its theorem environments
+  // only in the \else branch — the false-positive guard skipped every
+  // `\newtheorem` → cascade of "environment {theorem} is not defined" (Perl 0).
+  // Classes/packages that genuinely page-set with geometry pull it in via
+  // `\RequirePackage{geometry}` (geometry_sty.rs provides the no-op `\geometry`),
+  // including the WileyMSP-template binding (the prior witness 2306.02129).
 
   // ?
   def_macro_noop("\\@noligs")?;
@@ -3902,6 +4033,13 @@ LoadDefinitions!({
         None => Vec::new(),
       };
       for package in package_list {
+        // Record that THIS source-level \usepackage actually executed (the
+        // dep-scan's executed-set gate, content.rs maybe_require_dependencies,
+        // reads `<pkg>.usepackage_executed` to distinguish a top-level require
+        // from one inside a false `\if…\fi` the raw-load skipped). Set only
+        // here in the constructor — NOT in require_package — so the dep-scan's
+        // own programmatic require_package loads don't self-populate the set.
+        state::assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
         require_package(&package, RequireOptions {
           options: options_list.clone(),
           ..RequireOptions::default()
@@ -3930,6 +4068,9 @@ LoadDefinitions!({
       None => Vec::new(),
     };
     for package in package_list {
+      // See \usepackage above — record the executed source-level require for
+      // the dep-scan's executed-set gate.
+      state::assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
       require_package(&package, RequireOptions {
         options: options_list.clone(),
         ..RequireOptions::default()
@@ -4362,10 +4503,12 @@ LoadDefinitions!({
   Let!("\\@title", "\\@empty");
   DefMacro!("\\title{}", "\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}", locked => true);
   DefMacro!("\\@date", "\\@empty");
+  // Single logical line: a `\` + newline in a raw string is a literal
+  // backslash + end-of-line = a spurious CONTROL-SPACE `\ ` in the body
+  // (see the \maketitle note above; driver 1708.07027).
   DefMacro!(
     "\\date{}",
-    r"\def\@date{#1}\
-\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
+    r"\def\@date{#1}\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
   // Conference-template "equal contribution" markers used inside \author{...}
   // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
@@ -4561,12 +4704,20 @@ LoadDefinitions!({
   // Locked: raw TeX packages (e.g., nips_2017.sty) may \renewcommand{\maketitle}, but
   // LaTeXML's frontmatter handling must take precedence. Perl achieves this by having
   // the compiled binding override raw TeX; we use `locked` to prevent raw overwrite.
+  // NOTE: this body MUST be on one logical line with NO `\` line-continuations.
+  // In a Rust raw string `\` + newline is a literal backslash followed by an
+  // end-of-line, which the LaTeXML tokenizer reads as a CONTROL-SPACE `\ ` in
+  // the macro body. That is normally harmless (it digests as a space), but a
+  // document that (mis)redefines control-space — e.g. 1708.07027's
+  // `\def\<eol>case#1#2{…}`, where the line break after `\def\` makes it
+  // `\def\ case#1#2{…}` and `\ ` becomes a 2-arg macro — then has `\maketitle`'s
+  // body invoke the corrupted `\ `, derailing the whole frontmatter into a
+  // `\@maketitle`-undefined / XMApp-in-empty cascade. Perl builds this body by
+  // string concatenation (no `\`+eol), so its `\maketitle` has no control-space
+  // and is robust. Keep it single-line here to match.
   DefMacro!(
     "\\maketitle",
-    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\
-\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\
-\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\
-\global\let\author\relax\global\let\date\relax\global\let\and\relax",
+    r"\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\global\let\thanks\relax\global\let\maketitle\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\global\let\title\relax\global\let\author\relax\global\let\date\relax\global\let\and\relax",
     locked => true
   );
   // In case \maketitle isn't used in the document, let's check for it.
@@ -4906,8 +5057,27 @@ LoadDefinitions!({
 
   // Perl: latex_constructs.pool.ltxml L1505-1510 — paragraph before list items
   DefConstructor!("\\preitem@par", sub[document] {
-    let _ = document.maybe_close_element("ltx:p");
-    let _ = document.maybe_close_element("ltx:para");
+    // Perl latex_constructs.pool.ltxml L1505-1510: only close \ltx:p/\ltx:para
+    // when NOT in the preamble AND the current element is NOT an \ltx:itemize.
+    //   if (!$props{inPreamble} && !getNodeQName(getElement, 'ltx:itemize')) {
+    //     maybeCloseElement('ltx:p'); maybeCloseElement('ltx:para'); }
+    // A \trivlist (e.g. an amsthm-style {proofof} / proof env) opens an
+    // <ltx:itemize> that may be wrapped in an enclosing <ltx:para> when it sits
+    // inside an outer list item. Unconditionally closing that <ltx:para> here
+    // ALSO closes the freshly-opened trivlist itemize, so the trivlist's own
+    // \item escapes to the OUTER list and the later \end{itemize} finds nothing
+    // open ("ltx:itemize ... isn't open"). The guard keeps the itemize open so
+    // the item nests correctly. Witness 2004.07710 ({proofof} trivlist inside
+    // an itemize).
+    let in_preamble = state::lookup_bool_sym(pin!("inPreamble"));
+    let cur_is_itemize = document
+      .get_element()
+      .map(|e| document::get_node_qname(&e) == arena::pin_static("ltx:itemize"))
+      .unwrap_or(false);
+    if !in_preamble && !cur_is_itemize {
+      let _ = document.maybe_close_element("ltx:p");
+      let _ = document.maybe_close_element("ltx:para");
+    }
   }, alias => "\\par");
 
   // Perl: latex_constructs.pool.ltxml L1560
@@ -5685,9 +5855,16 @@ LoadDefinitions!({
       use latexml_core::mouth;
       // Step the equation counter and get properties (id, refnum, tags)
       let eqn_props = ref_step_counter("equation", false)?;
-      // Expand \theequation to get the parent equation number text
+      // Expand \theequation to get the parent equation number tokens.
+      // Keep the TOKEN list — do NOT round-trip through `.to_string()` +
+      // re-tokenize: a `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`
+      // expands to `{ \rm S } <n>`, and serializing that drops the space
+      // between the control word `\rm` and the letter `S`, so re-tokenizing
+      // "{\rmS}<n>" yields the undefined CS `\rmS`. Perl fixates the parent
+      // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
+      // L1134) — token-level, no string round-trip. Witness 2005.06712
+      // (subequation tags `(S15a)` → `(\rmS15a)`).
       let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
-      let eqnum_str = eqnum_toks.to_string();
       // Save current equation counter value
       let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
         match rv {
@@ -5709,10 +5886,13 @@ LoadDefinitions!({
       // inside subequations, expecting \theparentequation to resolve.
       // Witness 2402.03202.
       def_macro(T_CS!("\\theparentequation"), None,
-        mouth::tokenize_internal(&eqnum_str), None)?;
-      // Redefine \theequation to parent_number + \alph{equation}
-      let new_theequation = format!("{}\\alph{{equation}}", eqnum_str);
-      def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
+        eqnum_toks.clone(), None)?;
+      // Redefine \theequation to parent_number + \alph{equation} — append
+      // the `\alph{equation}` tokens to the parent tokens directly (again
+      // no string round-trip, to preserve `\rm S` etc.).
+      let mut new_theequation = eqnum_toks.unlist();
+      new_theequation.extend(mouth::tokenize_internal("\\alph{equation}").unlist());
+      def_macro(T_CS!("\\theequation"), None, Tokens::new(new_theequation), None)?;
       // Redefine \theequation@ID for xml:id generation
       if let Some(id_val) = whatsit.get_property("id") {
         let id_str = match &*id_val {
@@ -5960,7 +6140,13 @@ LoadDefinitions!({
 
   DefPrimitive!("\\providecommand OptionalMatch:* DefToken [Number][]{}",
   sub[(_star, cs, nargs, opt, body)] {
-    if IsDefinable!(&cs) {
+    // Use `is_definable_latex` (honors the `:autoload` flag) rather than the bare
+    // `IsDefinable!`, for the same reason as `\newcommand`/`\newenvironment`: an
+    // autoload TRIGGER (e.g. `\align`→amsmath from `def_autoload`) appears defined
+    // but is genuinely undefined in Perl (its `DefAutoload` lives in OmniBus, not
+    // loaded for typical papers), so `\providecommand{\align}{…}` must DEFINE it
+    // there. See [[project_newenvironment_autoload_clobber]].
+    if is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       let cs_args = convert_latex_args(nargs, opt)?;
       DefMacro!(cs, cs_args, body);
@@ -6137,18 +6323,37 @@ LoadDefinitions!({
   // to empty output instead of crashing; Rust must mirror that. Earlier code
   // chained `.unwrap().get_encoding().unwrap()`, which panicked on text-only
   // CSes used in math mode (e.g. `\i`, sandbox papers 0802.1100, 0811.2815,
-  // 0901.4716, 0904.1706, 0905.1491). Chain the Options and fall back to "".
+  // 0901.4716, 0904.1706, 0905.1491).
+  //
+  // BUT a plain `.unwrap_or_default()` (→ "") on a live-font-with-no-encoding
+  // diverges from Perl: a real Perl Font ALWAYS carries an encoding
+  // (`Common/Font.pm:331` `encoding => $enc || 'OT1'`, `$DEFENCODING='OT1'`),
+  // so `LookupValue('font')->getEncoding` is never empty when a font exists.
+  // Rust's `Font::math_default()` deliberately leaves `encoding: None`
+  // (font.rs:588 — char decoding differs), so the empty fallback leaked an
+  // empty encoding name into the `\@changed@cmd`/`\@current@cmd` glyph lookup
+  // `\csname\cf@encoding\string<cs>\endcsname` whenever a text-symbol CS
+  // (`\i`, `\j`, accents) was expanded under the math font: "" builds the
+  // bogus CS named "<cs>" (undefined) instead of the real `\<enc>\<cs>` glyph.
+  // Mirror Perl: font present → its encoding, or OT1 when its slot is None
+  // (Perl's always-OT1 default); no font at all → "" (Perl `undef->getEncoding`).
+  //
+  // NOTE: this does NOT fix the SHARED hyperref hang on 2004.08143
+  // (`pdfauthor={…Mar{\'\i}n…}`) — there the font encoding is "ASCII" (set by
+  // `beginSemiverbatim`), not None, so the OT1 fallback never triggers; that
+  // loop reproduces in Perl too (see docs/KNOWN_PERL_ERRORS.md, "text-symbol
+  // CS in a Semiverbatim option").
   DefMacro!("\\f@encoding", {
     ExplodeText!(
       LookupFont!()
-        .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+        .map(|f| f.get_encoding().map(|e| e.to_string()).unwrap_or_else(|| "OT1".to_string()))
         .unwrap_or_default()
     )
   });
   DefMacro!("\\cf@encoding", {
     ExplodeText!(
       LookupFont!()
-        .and_then(|f| f.get_encoding().map(|e| e.to_string()))
+        .map(|f| f.get_encoding().map(|e| e.to_string()).unwrap_or_else(|| "OT1".to_string()))
         .unwrap_or_default()
     )
   });
@@ -6228,12 +6433,41 @@ LoadDefinitions!({
     //   \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
     //   \DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}
     // where no u.fontmap exists.
+    //
+    // XML-validity guard: slots in the C0 control range (0x00-0x1F, minus
+    // tab/LF/CR) are NOT valid XML 1.0 characters and break downstream
+    // libxml2 parsing of the serialized document (XPath aborts mid-tree
+    // when it encounters one, so post-processor `find_node_by_id` returns
+    // None for any id past the bad byte — manifested as the
+    // `Error:expected:id Cannot find a node` cluster on 1501.05180,
+    // where `\DeclareMathSymbol\onto\mathrel{latex-font msa}{"10}`
+    // emits `<XMTok>\x10</XMTok>` with no msa fontmap installed).
+    // Render U+FFFD (REPLACEMENT CHARACTER) for forbidden control chars
+    // when no fontmap mapping is available — visually surfaces the
+    // missing-fontmap case without poisoning the XML.
+    fn xml_safe_char(codepoint: u32) -> String {
+      if let Some(c) = char::from_u32(codepoint) {
+        // XML 1.0 §2.2 valid Char: #x9 | #xA | #xD | [#x20-#xD7FF] |
+        // [#xE000-#xFFFD] | [#x10000-#x10FFFF]
+        let cp = c as u32;
+        let valid = cp == 0x09
+          || cp == 0x0A
+          || cp == 0x0D
+          || (0x20..=0xD7FF).contains(&cp)
+          || (0xE000..=0xFFFD).contains(&cp)
+          || (0x10000..=0x10FFFF).contains(&cp);
+        if valid {
+          c.to_string()
+        } else {
+          "\u{FFFD}".to_string()
+        }
+      } else {
+        String::new()
+      }
+    }
     let presentation = match glyph {
       Some(ch) => ch.to_string(),
-      None => {
-        let codepoint = code.value_of() as u32;
-        char::from_u32(codepoint).map(|c| c.to_string()).unwrap_or_default()
-      },
+      None => xml_safe_char(code.value_of() as u32),
     };
     let mut opts = MathPrimitiveOptions::default();
     if let Some(r) = role {
@@ -6310,23 +6544,21 @@ LoadDefinitions!({
   // SHARED-FAILURE with Perl (both fatal on this macro without a stub).
   def_macro_noop("\\new@internalmathalphabet{}{}{}{}{}")?;
 
-  // LaTeX 2.09 size aliases. Defined in latex_base.rs but that pool is
-  // SKIPPED when the latex.ltx dump is loaded (latex.rs:83-89). Old
-  // hep-th/hep-ph papers from the 1990s still use `\xpt` / `\xipt` /
-  // `\xiipt` directly to set the math/text font size; without these
-  // defines they error as undefined and we leak `\edef\f@size{…}\rm`
-  // expansion tokens. Stub them as no-ops since font-size selection in
-  // 2.09 mode is a typesetting concern that doesn't affect our XML
-  // output. Witnesses: arXiv:hep-ph9306327, hep-ph9307211,
-  // hep-th9409059 (~6 papers in stage-4 of the 100k warning corpus).
-  for cs_name in [
-    "\\vpt", "\\vipt", "\\viipt", "\\viiipt", "\\ixpt", "\\xpt",
-    "\\xipt", "\\xiipt", "\\xivpt", "\\xviipt", "\\xxpt", "\\xxvpt",
-  ].iter() {
-    if !state::has_meaning(&T_CS!(*cs_name)) {
-      def_macro(T_CS!(*cs_name), None, None, None)?;
-    }
-  }
+  // LaTeX 2.09 size aliases (`\vpt`…`\xxvpt`) are intentionally NOT defined
+  // here. Perl `latex_base.pool.ltxml:142-153` defines them, but they do NOT
+  // survive into the dumped `latex.ltx` snapshot (only the `\@vpt`…`\@xxvpt`
+  // dimensions do), so at runtime Perl leaves `\vpt`…`\xxvpt` *undefined*:
+  // a 1990s hep-th paper that USES `\xpt` gets `Error:undefined:\xpt` in
+  // Perl (verified), i.e. a SHARED error — not a Rust-only gap. A previous
+  // port stubbed them as no-ops "to help those papers", but that (a) masked
+  // the SHARED Perl error and, worse, (b) made the CS already-defined so a
+  // paper's own `\newcommand{\vpt}{\tilde\varphi}` (a perfectly valid user
+  // macro — `\vpt`/`\xpt` are NOT reserved in LaTeX 2e) was silently
+  // dropped, then the now-empty `\vpt` left its `^`/`_` to re-attack the
+  // previous atom for a spurious "Double/­triple sub/superscript". Witness
+  // 1801.08339 (`\newcommand{\vpt}{\tilde{\varphi}}`, then `c^3\vpt^\circ` →
+  // Rust double-superscript, Perl clean). Faithful parity: leave them
+  // undefined, exactly like the Perl runtime.
   // DeclareMathAlphabet: define math font command if not already defined
   DefPrimitive!("\\DeclareMathAlphabet{}{}{}{}{}", sub[(cs, _enc, family, series, shape)] {
     let cs_tok = T_CS!(cs.to_string());
@@ -6504,7 +6736,19 @@ LoadDefinitions!({
   sub[(_star_opt, name, nargs, opt, begin, end)] {
     let name = { Expand!(name).to_string() };
     let name_cs = T_CS!(format!("\\{name}"));
-    if IsDefined!(&name_cs) {
+    // Use `is_definable_latex` (not a bare `IsDefined!`) so an autoload TRIGGER
+    // for `\<name>` (installed by `def_autoload`, e.g. `\align`→amsmath) does NOT
+    // block the user's `\newenvironment`. Perl's analogous `DefAutoload` entries
+    // live in OmniBus.cls.ltxml (not loaded for typical papers), so there `\align`
+    // is genuinely undefined and `\newenvironment{align}{…}` SUCCEEDS. `\newcommand`
+    // already uses this check; `\newenvironment` must match. Witness 1907.04260
+    // (iopart + amssymb): `\newenvironment{align}{\begin{eqnarray}}{\end{eqnarray}}`
+    // was silently ignored because amssymb→amsfonts left the `\align` autoload
+    // trigger in place; the doc then ran amsmath's `align`, and a following
+    // `\cases`-equation desynced math mode → 71-error cascade. Perl: 0 (its `align`
+    // is the author's eqnarray wrapper).
+    let (definable, _plain_origin) = is_definable_latex(&name_cs)?;
+    if !definable {
       let is_locked = lookup_bool(&s!("\\{}:locked",name)) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
@@ -7024,8 +7268,16 @@ LoadDefinitions!({
   DefRegister!("\\@dblfptop"        => Glue::new(0));
   DefRegister!("\\@dblfpsep"        => Glue::new(0));
   DefRegister!("\\@dblfpbot"        => Glue::new(0));
-  // \abovecaptionskip, \belowcaptionskip — not in Perl engine
-  // (Perl: article.cls.ltxml; Rust: article_cls.rs already defines them)
+  // Perl LaTeX.pool.ltxml L3648-3649 defines these in the BASE (not only in
+  // article.cls.ltxml), so they are available under ANY document class. The
+  // prior Rust comment ("not in Perl engine") was mistaken — it saw only the
+  // article.cls copy. A paper on a custom class that does NOT load article
+  // (e.g. `\documentclass{style/vldb}`, witness 1703.00080) then hit
+  // `undefined:\abovecaptionskip` on `\setlength{\abovecaptionskip}{…}`.
+  // Define them here too (Glue 0, exactly Perl), as a base fallback that
+  // article/book/ams_support still override with their own values.
+  DefRegister!("\\abovecaptionskip" => Glue::new(0));
+  DefRegister!("\\belowcaptionskip" => Glue::new(0));
   Let!("\\topfigrule", "\\relax");
   Let!("\\botfigrule", "\\relax");
   Let!("\\dblfigrule", "\\relax");
@@ -7428,7 +7680,7 @@ LoadDefinitions!({
   // \label attaches a label to the nearest parent that can accept a labels attribute
   // but only those that have an xml:id (but should this require a refnum and/or title ???)
   // Note that latex essentially allows redundant labels, but we can record only one!!!
-  DefConstructor!("\\label Semiverbatim", sub[document, _olabel, props] {
+  DefConstructor!("\\lx@label Semiverbatim", sub[document, _olabel, props] {
     if let Some(savenode) = document.float_to_label() {
       let mut labels : HashMap<String,bool> = HashMap::default();
       if let Some(label) = props.get("label") {
@@ -7472,6 +7724,11 @@ LoadDefinitions!({
     }
   }
   );
+  // Perl L3862: Let('\label', '\lx@label'). The canonical label constructor is
+  // \lx@label; \label is an alias. Saving \lx@label (not the mutable \label)
+  // in eqnarray/ams rearrangeable bindings prevents an infinite
+  // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
+  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
 
   // If a node has been labeled, but still hasn't yet got an id by afterClose:late,
   // we'd better generate an id for it.
@@ -7542,38 +7799,42 @@ LoadDefinitions!({
       Info!("missing", "bib_config", "BIB_CONFIG was empty, ignoring bibliography phase.");
       return Ok(Tokens!());
     }
-    // Iterate through config phases as a fallback chain
-    for phase in bib_config.iter() {
-      let is_bbl = arena::with(*phase, |s| s == "bbl");
-      if is_bbl {
-        if bbl_path.is_some() {
-          return Ok(bbl_clause);
-        }
-        // bbl not found — fall through to next phase
-        Info!("expected", "bbl", "Couldn't find bbl file, trying next bibliography phase.");
-      } else {
-        // 'bib' phase — check if .bib files exist
-        let mut missing_bibs = String::new();
-        for bf in bib_files.split(',') {
-          let bib_path = FindFile!(bf, type => "bib");
-          if bib_path.is_none() {
-            if !missing_bibs.is_empty() {
-              missing_bibs.push(',');
-            }
-            missing_bibs.push_str(bf);
+    // Perl `\lx@ifusebbl` (latex_constructs.pool.ltxml L3967-3983) acts on the
+    // FIRST configured phase ONLY (`$$bib_config[0]`); it does NOT fall through
+    // to later phases. The earlier Rust port iterated all phases as a fallback
+    // chain, which — with a `bbl,bib` config and no `\jobname.bbl` on disk —
+    // fell through to the `bib` phase and emitted a spurious empty
+    // `\lx@bibliography` placeholder, i.e. a SECOND, content-less "References"
+    // section, whenever the real entries arrived via a differently-named
+    // `.bbl` processed as content. Witness 2107.03065 (refs.bbl, not
+    // <jobname>.bbl): Perl emits 1 bibliography, the old Rust 2. Mirror Perl:
+    // branch on the first phase only.
+    let first_is_bbl = arena::with(bib_config[0], |s| s == "bbl");
+    if first_is_bbl {
+      if bbl_path.is_none() {
+        Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
+        return Ok(Tokens!());
+      }
+      Ok(bbl_clause)
+    } else {
+      // 'bib' phase — check if .bib files exist
+      let mut missing_bibs = String::new();
+      for bf in bib_files.split(',') {
+        let bib_path = FindFile!(bf, type => "bib");
+        if bib_path.is_none() {
+          if !missing_bibs.is_empty() {
+            missing_bibs.push(',');
           }
-        }
-        if missing_bibs.is_empty() || bbl_path.is_none() {
-          return Ok(bib_clause);
-        } else {
-          Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
-          return Ok(bbl_clause);
+          missing_bibs.push_str(bf);
         }
       }
+      if missing_bibs.is_empty() || bbl_path.is_none() {
+        Ok(bib_clause)
+      } else {
+        Info!("expected", missing_bibs, s!("Couldn't find all bib files, using {jobname}.bbl instead"));
+        Ok(bbl_clause)
+      }
     }
-    // All phases exhausted — no bibliography found
-    Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
-    Ok(Tokens!())
   });
 
   AssignMapping!("BACKMATTER_ELEMENT", "ltx:bibliography" => "ltx:section");
@@ -8131,10 +8392,20 @@ LoadDefinitions!({
   DefMacro!("\\seename",       "see");
   DefMacro!("\\alsoname",      "see also");
   DefMacro!("\\glossaryname",  "Glossary");
-  DefMacro!("\\enclname",      "encl");
-  DefMacro!("\\ccname",        "cc");
-  DefMacro!("\\headtoname",    "To");
   DefMacro!("\\pagename",      "Page");
+  // NOTE: the letter-class captions `\ccname`/`\enclname`/`\headtoname` are NOT
+  // defaulted here. Perl LaTeXML defines them NOWHERE (not in the base, babel,
+  // or letter.cls.ltxml — its babel shim merely absorbs undefined references),
+  // so they are undefined for a plain article unless the author defines them.
+  // Pre-defining `\ccname` (= "cc", the carbon-copy label) unconditionally
+  // silently blocked an author's `\newcommand{\ccname}` (`\@ifdefinable` sees it
+  // as already-defined → the redefinition no-ops, keeping "cc"). Witness
+  // 1706.00283 repurposes `\ccname` as a `c_i` constant-generator
+  // (`\newcommand{\ccname}[1]{\cc\ccdef{#1}}`); with the default present its
+  // `\ccname\ccT` minted nothing and every `\cc*` constant was undefined (10
+  // errors). Real letters get these captions from letter.cls; defaulting them
+  // for every article is non-faithful and clobbers author macros (cf. the
+  // iopart `\revised` and pgfmath `\real` clobber traps).
   // Additional babel-english.ldf captions (\captionsenglish hook).
   DefMacro!("\\prefacename",   "Preface");
   DefMacro!("\\proofname",     "Proof");
@@ -8634,7 +8905,18 @@ LoadDefinitions!({
     },
     mode => "internal_vertical",
     before_digest => {
-      Let!("\\\\", "\\lx@newline");
+      // Perl `\@parboxrestore` does `\let\\\@normalcr` (latex_dump L2310): a parbox
+      // restores `\\` to the STABLE newline alias, not to the `\lx@newline` CS.
+      // `\@normalcr` holds the original newline constructor directly, so it is
+      // immune to `\shortstack`'s `\let\lx@newline\@shortstack@cr` rebinding. Using
+      // `\lx@newline` here meant that inside `\shortstack{…\parbox{…}{… \\ …}…}`
+      // the parbox's `\\` resolved to the shortstack row-break `\@shortstack@cr`,
+      // which then tried to close the surrounding alignment from inside a nested
+      // `itemize` → "Attempt to close a group that switched to mode … due to
+      // \begin{itemize}" (witness 1904.00943). In the non-shortstack case
+      // `\@normalcr` equals `\lx@newline`'s original meaning, so behavior is
+      // unchanged.
+      Let!("\\\\", "\\@normalcr");
     }
   );
   def_macro_noop("\\@parboxrestore")?;
@@ -9096,14 +9378,48 @@ LoadDefinitions!({
     }
   );
 
-  // \qbezier[N](p1)(p2)(p3) — decompose 3 pairs into coordinates.
-  // Insert `SkipSpaces` between successive `Match:(` patterns so a single
-  // (or double) space between paren-tuples doesn't break the read; e.g.
-  //   \qbezier(6.4,0.5)(7.35,2)  (8.3,0.5)
-  // (witness: 0904.1097 line 422 has multi-space gaps between coord
-  // tuples, which previously failed `Missing argument Match:(`).
-  DefMacro!("\\qbezier [Number] Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:) SkipSpaces Match:( Until:, Until:)",
-    "\\lx@pic@qbezier{#1}{#3}{#4}{#6}{#7}{#9}{#10}");
+  // \qbezier[N](p1)(p2)(p3) — quadratic Bezier. Perl LaTeX.pool.ltxml L5182:
+  //   DefConstructor('\qbezier [Number] Pair Pair Pair', …).
+  // Read each coordinate via the `Pair` parameter type (`(x,y)`, skipping
+  // leading spaces), mirroring Perl, rather than a manual
+  // `Match:( Until:, Until:)` decomposition. The manual form had two faults:
+  // (1) the THIRD pair's y-coordinate was always dropped — the terminal
+  // `Until:)` slot returned empty, so `\qbezier(1,2)(3,4)(5,6)` rendered
+  // `points="…,0"` instead of `…,6` (with an optional `[N]` it grabbed
+  // unrelated garbage); (2) a space after the optional `[N]`
+  // (`\qbezier[10] (…)`) failed the first match. `Pair` reads each `(x,y)`
+  // cleanly (and skips leading spaces), fixing both. Witness 1701.03735
+  // (`\qbezier[10] (…)`) + the long-standing y3 drop (picture.xml baseline).
+  // The DefMacro extracts the three Pair structs and forwards the six
+  // coordinates as text to `\lx@pic@qbezier`, whose constructor scales them
+  // by \unitlength (px) exactly as before — the px-scaling is a separate,
+  // pre-existing divergence from Perl's raw storage, kept unchanged.
+  DefMacro!("\\qbezier [Number] Pair Pair Pair", sub[args] {
+    let get_pair = |i: usize| -> (f64, f64) {
+      args.get(i).and_then(|a| match a {
+        ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+        _ => None,
+      }).unwrap_or((0.0_f64, 0.0_f64))
+    };
+    let n = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let (x1, y1) = get_pair(1);
+    let (x2, y2) = get_pair(2);
+    let (x3, y3) = get_pair(3);
+    let mut result = Vec::with_capacity(40);
+    result.push(T_CS!("\\lx@pic@qbezier"));
+    result.push(T_BEGIN!());
+    result.extend(n.unlist_ref().iter().copied());
+    result.push(T_END!());
+    for (x, y) in [(x1, y1), (x2, y2), (x3, y3)] {
+      result.push(T_BEGIN!());
+      result.extend(Explode!(s!("{}", x)));
+      result.push(T_END!());
+      result.push(T_BEGIN!());
+      result.extend(Explode!(s!("{}", y)));
+      result.push(T_END!());
+    }
+    Ok(Tokens::new(result))
+  });
   DefConstructor!("\\lx@pic@qbezier{}{}{}{}{}{}{}",
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\qbezier",
@@ -9558,24 +9874,34 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // Perl L5333-5339: \DeclareTextFontCommand — creates a text font command.
-  // Simplified: \cmd{} → {\font #1} (group with font change).
+  // Perl L5428-5434: \DeclareTextFontCommand defines the command as a
+  // CONSTRUCTOR (non-expandable), digesting the font argument at
+  // digestion time in beforeDigest:
+  //   DefConstructorI($cmd, "{}",
+  //     "?#isMath(<ltx:text _noautoclose='1'>#1</ltx:text>)(#1)",
+  //     mode => 'text', bounded => 1, beforeDigest => sub { Digest($font); () });
+  // It is CRITICAL that this be a constructor, not an expandable macro
+  // expanding to `{<font> #1}`. natbib's `\lx@NAT@parselabel` `Expand!`s
+  // bibitem labels for-execution (full expansion). An expandable
+  // `\textcyr{…}` → `{\cyrfamily …}` would, during that expansion, run
+  // `\cyrfamily`→`\cyracc`, whose body ends with
+  // `\def\!{…\def\result{\@stressit}\fi\result}`; for-execution expansion
+  // of a `\def`'s replacement-text wrongly expands that body, invoking
+  // `\result`→`\@stressit`→`\futurelet\chartest\@stresschar`, which loops
+  // until the 650000 PushbackLimit fires (FATAL). As a constructor (the
+  // Perl form) `Expand!` leaves `\textcyr{…}` intact — the font is digested
+  // only when the constructor is actually digested. Witness 1803.11541
+  // (Cyrillic bibliography: amsfonts `cyracc.def` + `\DeclareTextFontCommand`
+  // `\textcyr` + natbib `\bibitem[{\textcyr{…\u\i…}}(1906)]{key}`); Perl
+  // converts it (282 KB), Rust looped to FATAL before this fix.
   DefPrimitive!("\\DeclareTextFontCommand DefToken {}", sub[(cmd, font)] {
     let cs = cmd;
-    let font_rev: Tokens = font;
-    // Build expansion: {<font> #1}
-    let mut expansion = vec![T_BEGIN!()];
-    expansion.extend(font_rev.unlist());
-    expansion.push(T_PARAM!());
-    expansion.push(T_OTHER!("1"));
-    expansion.push(T_END!());
-    // init_flag=true: engine is up at \DeclareTextFontCommand expansion
-    // time, so Parameter::init() can resolve readers via PARAMETER_TYPES.
-    // With init=false the declared command's Plain arg uses the mock
-    // reader and fails to consume input at invocation.
+    let font_toks: Tokens = font;
     let params = parse_parameters("{}", &cs, true)?;
-    def_macro(cs, params,
-      Some(ExpansionBody::Tokens(Tokens::new(expansion))), None)?;
+    DefConstructor!(cs, params,
+      "?#isMath(<ltx:text _noautoclose='1'>#1</ltx:text>)(#1)",
+      mode => "text", bounded => true,
+      before_digest => { Digest!(font_toks.clone())?; });
   });
 
   // Perl L5341-5348: \mathversion — switches between bold/normal math fonts

@@ -282,6 +282,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fullpage", "sty", package::fullpage_sty::load_definitions),
   ("comment", "sty", package::comment_sty::load_definitions),
   ("csquotes", "sty", package::csquotes_sty::load_definitions),
+  ("ctable", "sty", package::ctable_sty::load_definitions),
   ("dcolumn", "sty", package::dcolumn_sty::load_definitions),
   ("delarray", "sty", package::delarray_sty::load_definitions),
   (
@@ -307,6 +308,18 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // package/babel_lang_stubs.rs for details.
   ("italian",    "ldf", package::babel_lang_stubs::load_italian),
   ("spanish",    "ldf", package::babel_lang_stubs::load_spanish),
+  // English variant stubs — register `\captions<variant>` /
+  // `\date<variant>` hooks for each of the babel-english variants so
+  // `\selectlanguage{<variant>}` doesn't hit `Error:undefined`.
+  // See `babel_lang_stubs::load_english` and friends.
+  ("english",    "ldf", package::babel_lang_stubs::load_english),
+  ("american",   "ldf", package::babel_lang_stubs::load_american),
+  ("british",    "ldf", package::babel_lang_stubs::load_british),
+  ("USenglish",  "ldf", package::babel_lang_stubs::load_usenglish),
+  ("UKenglish",  "ldf", package::babel_lang_stubs::load_ukenglish),
+  ("canadian",   "ldf", package::babel_lang_stubs::load_canadian),
+  ("australian", "ldf", package::babel_lang_stubs::load_australian),
+  ("newzealand", "ldf", package::babel_lang_stubs::load_newzealand),
   ("portuges",   "ldf", package::babel_lang_stubs::load_portuges),
   ("portuguese", "ldf", package::babel_lang_stubs::load_portuguese),
   ("brazil",     "ldf", package::babel_lang_stubs::load_brazil),
@@ -329,6 +342,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("gensymb", "sty", package::gensymb_sty::load_definitions),
   ("geometry", "sty", package::geometry_sty::load_definitions),
   ("german", "sty", package::german_sty::load_definitions),
+  // babel's german-family `.ldf` files are intercepted by german_sty/ngerman_sty
+  // bindings (deterministic `"`-shorthand handling via `\lx@german@dq@dispatch`).
+  // The bindings now also alias `\l@<lang>b` → `\l@<lang>` (the dialect babel's
+  // `\selectlanguage{germanb}` / `{ngermanb}` needs) — see german_sty.rs /
+  // ngerman_sty.rs. NOTE: raw-loading these `.ldf` files (Perl-faithful — Perl
+  // has only `german.sty.ltxml`) DOES define `\l@germanb` correctly, but routes
+  // `\mdqoff` through babel's `\initiate@active@char` machinery, which is
+  // non-deterministic under concurrent test load in our engine (`german_test`
+  // `\mdqoff "o` → `ö` vs `”o`). Until that engine determinism is fixed, the
+  // binding's explicit catcode-based `\mdqon`/`\mdqoff` is the stable path.
   ("germanb", "ldf", package::german_sty::load_definitions),
   ("german", "ldf", package::german_sty::load_definitions),
   ("ngerman", "ldf", package::ngerman_sty::load_definitions),
@@ -360,7 +383,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   (
     "icml2019",
     "sty",
-    package::icml_support_sty::load_definitions,
+    package::icml2019_sty::load_definitions,
   ),
   (
     "icml2020",
@@ -451,6 +474,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nameref", "sty", package::nameref_sty::load_definitions),
   ("nomencl", "sty", package::nomencl_sty::load_definitions),
   ("verbatim", "sty", package::verbatim_sty::load_definitions),
+  ("vntex", "sty", package::vntex_sty::load_definitions),
   ("eucal", "sty", package::eucal_sty::load_definitions),
   ("eufrak", "sty", package::eufrak_sty::load_definitions),
   ("fontenc", "sty", package::fontenc_sty::load_definitions),
@@ -684,8 +708,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // `RequirePackage('pstricks_support')`. See pstricks_tex.rs.
   ("pstricks", "tex", package::pstricks_tex::load_definitions),
   // Perl: xypic.tex.ltxml does InputDefinitions('xy', type=>'tex') + RawTeX('\xyoption{v2}').
-  // Rust xypic_sty does `RequirePackage!("xy", options=["v2"])`, which is equivalent.
-  ("xypic", "tex", package::xypic_sty::load_definitions),
+  // Faithful to that, `xypic_tex` loads the xy *tex* overlay WITHOUT marking
+  // the xy *package* loaded, so a later `\usepackage[all]{xy}` still processes
+  // its options (curve/arrow/... features). `xypic_sty` keeps the `.sty`-entry
+  // `RequirePackage('xy', ['v2'])` semantics (Perl xypic.sty.ltxml).
+  ("xypic", "tex", package::xypic_tex::load_definitions),
   // Perl: xy.tex.ltxml does InputDefinitions('xy', type=>'tex', noltxml=>1, at_letter=>0)
   // plus \xyoption driver filtering. Rust xy_sty matches this structure.
   ("xy", "tex", package::xy_sty::load_definitions),
@@ -821,6 +848,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("sidecap", "sty", package::sidecap_sty::load_definitions),
   ("siunitx", "sty", package::siunitx_sty::load_definitions),
   ("showkeys", "sty", package::showkeys_sty::load_definitions),
+  ("showexpl", "sty", package::showexpl_sty::load_definitions),
   (
     "underscore",
     "sty",
@@ -864,6 +892,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chancery", "sty", package::chancery_sty::load_definitions),
   ("charter", "sty", package::charter_sty::load_definitions),
   ("concmath", "sty", package::concmath_sty::load_definitions),
+  ("constants", "sty", package::constants_sty::load_definitions),
   ("courier", "sty", package::courier_sty::load_definitions),
   ("etex", "sty", package::etex_sty::load_definitions),
   ("euler", "sty", package::euler_sty::load_definitions),

@@ -10,6 +10,12 @@ LoadDefinitions!({
   // thm-kv.sty, but our binding replaces raw thmtools.sty so the chain breaks.
   RequirePackage!("keyval");
   RequirePackage!("kvsetkeys");
+  // Real thmtools.sty L47-49 does `\RequirePackage{thm-patch, thm-kv,
+  // thm-restate}`, so `\usepackage{thmtools}` alone provides the
+  // `restatable` environment via thm-restate.sty. Mirror that dependency
+  // so we don't have to (and must NOT) define `restatable` ourselves —
+  // see the note below where the native DefEnvironment was removed.
+  RequirePackage!("thm-restate");
 
   // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
   // which load as raw TeX and expect these from thmtools internals.
@@ -153,51 +159,21 @@ LoadDefinitions!({
     save_theorem_style(&name_str, saved);
   });
 
-  // \begin{restatable}[opt]{thmname}{storename} ... \end{restatable}
-  // — thm-restate.sty's env that lets authors define a theorem-like
-  // body and ALSO save it under a CS name for later restating via
-  // `\storename`. Render as a generic ltx:theorem; the "restate later"
-  // feature is approximated by defining `\storename` as a no-op so
-  // subsequent `\storename` calls (to re-render the theorem) don't
-  // cascade as undefined CS. The body appears once, where first
-  // declared — content is preserved. Witness 2403.07095
-  // (\begin{restatable}{theorem}{glsinfdiff}).
-  DefEnvironment!("{restatable}[]{}{}",
-    "<ltx:theorem>#body</ltx:theorem>",
-    mode => "internal_vertical",
-    after_digest_begin => sub[whatsit] {
-      // get_arg(3) is the store-name token (3rd arg, 1-based). Define
-      // `\storename` GLOBALLY as a no-op so later restate calls in the
-      // doc (which happen outside this env scope) don't cascade undefined.
-      // (get_arg is 1-indexed per whatsit.rs warning.)
-      if let Some(storename_arg) = whatsit.get_arg(3) {
-        let s = storename_arg.to_string();
-        let cs = s!("\\{}", s.trim());
-        if !cs.is_empty() && cs.len() > 1 {
-          let _ = def_macro(T_CS!(cs), None, Tokens::default(),
-            Some(ExpandableOptions { scope: Some(Scope::Global),
-              ..ExpandableOptions::default() }));
-        }
-      }
-    });
-  DefEnvironment!("{restatable*}[]{}{}",
-    "<ltx:theorem>#body</ltx:theorem>",
-    mode => "internal_vertical",
-    after_digest_begin => sub[whatsit] {
-      // Mirror {restatable}: define `\storename` GLOBALLY as a no-op
-      // so later restate calls outside this env's scope don't cascade
-      // undefined. (Previously this branch omitted Scope::Global, so
-      // the def was env-local — defeating the restate-later guard.)
-      if let Some(storename_arg) = whatsit.get_arg(3) {
-        let s = storename_arg.to_string();
-        let cs = s!("\\{}", s.trim());
-        if cs.len() > 1 {
-          let _ = def_macro(T_CS!(cs), None, Tokens::default(),
-            Some(ExpandableOptions { scope: Some(Scope::Global),
-              ..ExpandableOptions::default() }));
-        }
-      }
-    });
+  // NOTE: `restatable`/`restatable*` are intentionally NOT defined here.
+  // Perl's thmtools.sty.ltxml does not define them either — the env comes
+  // solely from thm-restate.sty (`\newenvironment{restatable}[3][]{...
+  // \label{restatable:#3}\expandafter\gdef\csname #3\endcsname{...}}`),
+  // which we RequirePackage above. A previous native DefEnvironment here
+  // both diverged from Perl AND blocked thm-restate's definition: LaTeX's
+  // `\newenvironment{restatable}` refuses to redefine an already-defined
+  // env, so when a document loaded thmtools then thm-restate the buggy
+  // native version stayed active. That version digested the store-name
+  // argument (3rd arg) in text mode, so a name containing `_` (e.g.
+  // `two_var_indp`) raised `Error:unexpected:_ Script _ can only appear
+  // in math mode` once per use. Witness 2007.12335 (thmtools+thm-restate,
+  // `\begin{restatable}{theorem}{two_var_indp}`: Rust-only errors → clean,
+  // Perl is clean). The clean thm-restate `\newenvironment` builds
+  // `\csname #3\endcsname` (catcode-agnostic) and never typesets `#3`.
 
   // \listtheoremname
   DefMacro!("\\listtheoremname", "List of Theorems");

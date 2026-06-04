@@ -897,6 +897,20 @@ impl KeyVals {
               }
             }
           }
+          // An explicit `=` always assigns a value, even when it is empty
+          // (`key=` or `key={}`): that is an EXPLICIT empty override, distinct
+          // from a missing key. Keep it as empty Tokens rather than the
+          // `ArgWrap::None` the value was initialised to — `None` is reserved
+          // for a missing key and its Display is the literal string "None",
+          // which leaks into consumers that stringify the value. Concretely, a
+          // starred matrix with no alignment bracket emits `alignment=` (empty);
+          // without this the keyval value was "None", so `\lx@gen@matrix@bindings`
+          // saw `alignment="None"` instead of defaulting to "c", producing a
+          // malformed column alignment that made a `\dots` cell swallow the next
+          // `&` → "Stray alignment". Witness 1910.00678.
+          if value.is_none() {
+            value = ArgWrap::Tokens(Tokens!());
+          }
           // and cleanup
           if let Some(Stored::Parameter(ref keydef)) = keytype_opt {
             keydef.revert_catcodes()?;

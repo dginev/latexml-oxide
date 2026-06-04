@@ -4,6 +4,23 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // IEEEtran.cls L232-260 declares each class-option flag with
+  // `\newif\ifCLASSOPTION<name>`, which creates BOTH the `\ifCLASSOPTION<name>`
+  // conditional AND the `\CLASSOPTION<name>true`/`false` setters. IEEEtran
+  // template papers toggle these directly (e.g. bare_adv.tex L1014
+  // `\CLASSOPTIONcaptionsofftrue`). The DeclareOption `\let\ifCLASSOPTION<name>
+  // \iftrue` logic below only sets the conditional VALUE — it never creates the
+  // setters, and `captionsoff` (etc.) weren't handled at all → undefined.
+  // `\newif` them all up front (faithful to IEEEtran.cls; defaults false, as
+  // the class does) so the setters exist; the option logic below then refines
+  // values. Witness 1810.05731 (`\CLASSOPTIONcaptionsofftrue`).
+  RawTeX!(r"\newif\ifCLASSOPTIONcaptionsoff
+\newif\ifCLASSOPTIONcompsoc \newif\ifCLASSOPTIONcomsoc \newif\ifCLASSOPTIONconference
+\newif\ifCLASSOPTIONdraft \newif\ifCLASSOPTIONdraftcls \newif\ifCLASSOPTIONdraftclsnofoot
+\newif\ifCLASSOPTIONfinal \newif\ifCLASSOPTIONjournal \newif\ifCLASSOPTIONnofonttune
+\newif\ifCLASSOPTIONonecolumn \newif\ifCLASSOPTIONoneside \newif\ifCLASSOPTIONpeerreview
+\newif\ifCLASSOPTIONpeerreviewca \newif\ifCLASSOPTIONromanappendices \newif\ifCLASSOPTIONtechnote
+\newif\ifCLASSOPTIONtransmag \newif\ifCLASSOPTIONtwocolumn \newif\ifCLASSOPTIONtwoside");
   // DeclareOption stubs — Perl L18-108
   DeclareOption!("9pt", {});
   DeclareOption!("10pt", {});
@@ -47,10 +64,39 @@ LoadDefinitions!({
     Let!("\\ifCLASSOPTIONtransmag","\\iftrue");
   });
   DeclareOption!("romanappendices", { Let!("\\ifCLASSOPTIONromanappendices", "\\iftrue"); });
-  DeclareOption!("onecolumn", {});
-  DeclareOption!("twocolumn", {});
-  DeclareOption!("peerreview", {});
-  DeclareOption!("peerreviewca", {});
+  // Perl IEEEtran.cls.ltxml L72-73: the column-mode options flip BOTH flags.
+  // Default is twocolumn (set in the Let block below, matching Perl L19-20's
+  // `\CLASSOPTIONtwocolumntrue`); the `onecolumn` option must flip it OFF.
+  // These previously were empty no-ops, so `\ifCLASSOPTIONtwocolumn` stayed
+  // hardcoded-true even for `\documentclass[onecolumn]{IEEEtran}` — a paper's
+  // `\ifCLASSOPTIONtwocolumn \begin{strip}…\end{strip} \else …\fi` then took
+  // the twocolumn branch and the `cuted` `strip` env errored "Not in outer par
+  // mode". Witness 1508.02556. The handlers run during ProcessOptions (after
+  // the default Lets), so the flip survives.
+  DeclareOption!("onecolumn", {
+    Let!("\\ifCLASSOPTIONonecolumn", "\\iftrue");
+    Let!("\\ifCLASSOPTIONtwocolumn", "\\iffalse");
+  });
+  DeclareOption!("twocolumn", {
+    Let!("\\ifCLASSOPTIONtwocolumn", "\\iftrue");
+    Let!("\\ifCLASSOPTIONonecolumn", "\\iffalse");
+  });
+  // Perl L95-99: peerreview/peerreviewca set their flag and clear the
+  // mutually-exclusive journal/conference/technote modes.
+  DeclareOption!("peerreview", {
+    Let!("\\ifCLASSOPTIONpeerreview",   "\\iftrue");
+    Let!("\\ifCLASSOPTIONpeerreviewca", "\\iffalse");
+    Let!("\\ifCLASSOPTIONjournal",      "\\iffalse");
+    Let!("\\ifCLASSOPTIONconference",   "\\iffalse");
+    Let!("\\ifCLASSOPTIONtechnote",     "\\iffalse");
+  });
+  DeclareOption!("peerreviewca", {
+    Let!("\\ifCLASSOPTIONpeerreview",   "\\iftrue");
+    Let!("\\ifCLASSOPTIONpeerreviewca", "\\iftrue");
+    Let!("\\ifCLASSOPTIONjournal",      "\\iffalse");
+    Let!("\\ifCLASSOPTIONconference",   "\\iffalse");
+    Let!("\\ifCLASSOPTIONtechnote",     "\\iffalse");
+  });
   // Option conditionals — Perl L18-108. These are the FALSE defaults
   // (mirroring `\newif\if@CLASSOPTIONcompsoc \@CLASSOPTIONcompsocfalse`).
   // MUST come BEFORE ProcessOptions so the option-handler `\let` flips to
@@ -278,14 +324,27 @@ LoadDefinitions!({
     // exercises \IEEEQEDhere against Perl ground truth, so accepting
     // the simplification.
     //
-    // mode => internal_vertical so authors can use `$$..$$` display
-    // math inside `\begin{proof}` — `$$` is only recognized as display
-    // math when BOUND_MODE ends with "vertical" (tex_math.rs L467).
-    // The DefEnvironment default bound mode is restricted_horizontal,
-    // which makes a `$$..$$` block fail with cascading
-    // "Script _ can only appear in math mode" on each subscript inside.
-    // Witness 2303.10133 (ieeeconf paper).
-    mode => "internal_vertical");
+    // NB: Perl IEEEtran.cls.ltxml L206 declares `{IEEEproof}` with NO
+    // `mode =>`, so it stays in the ambient (restricted_horizontal)
+    // mode. We must match that. A previous `mode => "internal_vertical"`
+    // was a surpass-Perl tweak so that `$$..$$` inside `\begin{IEEEproof}`
+    // would be recognized as display math (`$$` is display only when
+    // BOUND_MODE ends with "vertical" — tex_math.rs / Perl TeX_Math L65,
+    // identical). But Perl is ground truth, and Perl does NOT treat such
+    // `$$` as display: it emits the cascading "Script _/^ can only appear
+    // in math mode" errors (verified on a synthetic IEEEproof with `$$`).
+    // Worse, the vertical mode meant `\endIEEEproof` ended `internal_vertical`,
+    // which matches the BOUND_MODE bound on the LOCKED document frame by
+    // `\begin{document}`'s `begin_mode_opt("internal_vertical")`; so a
+    // *bare* `\endIEEEproof` (author error, no matching `\begin{IEEEproof}`)
+    // popped the locked frame → `Fatal:TargetUnexpected:Endgroup "attempt
+    // to pop last locked stack frame"`, aborting the whole run (empty
+    // HTML). With no mode, `\endIEEEproof` ends restricted_horizontal,
+    // which never matches the locked frame, so Perl's recover-branch
+    // ("Attempt to end mode") fires and the run completes — matching Perl.
+    // Witness 2009.01572 (bare `\endIEEEproof` at line 570: FATAL/empty →
+    // completes, matching Perl's 1-error output).
+    );
 
   // IEEEbiography (Perl IEEEtran.cls.ltxml L238-247) — two-column
   // tabular-in-float: photo/placeholder on left, bolded author + body

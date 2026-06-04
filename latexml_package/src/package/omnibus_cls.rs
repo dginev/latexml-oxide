@@ -133,8 +133,10 @@ LoadDefinitions!({
   DefMacro!("\\runningtitle{}",
     "\\@add@frontmatter{ltx:toctitle}{#1}");
   Let!("\\runninghead", "\\runningtitle");
-  DefMacro!("\\shortauthors{}",
-    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // Perl `OmniBus.cls.ltxml` L75: `DefMacro('\shortauthors{}', Tokens())` —
+  // gobble (redundant running head). Match Perl; preserving it errored on a
+  // literal `&` in the running head. See 0709.4236 and aas_support_sty.rs.
+  def_macro_noop("\\shortauthors{}")?;
   // \authors{author list} — alternative to \author; preserve as
   // author list note.
   DefMacro!("\\authors{}",
@@ -199,8 +201,13 @@ LoadDefinitions!({
   // Page numbers — author metadata; preserve as ltx:note.
   DefMacro!("\\firstpage{}",       "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
   DefMacro!("\\lastpage{}",        "\\@add@frontmatter{ltx:note}[role=lastpage]{#1}");
-  DefMacro!("\\runauthor{}",       "\\@add@frontmatter{ltx:note}[role=runauthor]{#1}");
-  DefMacro!("\\runtitle{}",        "\\@add@frontmatter{ltx:toctitle}{#1}");
+  // \runauthor / \runtitle are running-header SHORT forms, layout-only and
+  // redundant with \author/\title. Perl OmniBus.cls.ltxml L114-115 GOBBLES both
+  // (`DefMacro('\runauthor{}', Tokens())`); preserving them digests the
+  // running-head content and errors on author typos (stray `\` before a name →
+  // undefined CS). Gobble to match Perl; \author/\title keep the real content.
+  def_macro_noop("\\runauthor{}")?;
+  def_macro_noop("\\runtitle{}")?;
   // \corref{label} — marker for corresponding author. Preserve as note.
   DefMacro!("\\corref{}",          "\\@add@frontmatter{ltx:note}[role=corref]{#1}");
   DefMacro!("\\listofauthors{}",   "\\@add@frontmatter{ltx:note}[role=listofauthors]{#1}");
@@ -228,7 +235,16 @@ LoadDefinitions!({
   def_macro_identity("\\pfx{}")?;      // name prefix (e.g. "Dr.")
   def_macro_identity("\\sfx{}")?;      // name suffix
   def_macro_identity("\\tanm{}")?;      // title-as-name
-  def_macro_identity("\\dgr{}")?;      // degree
+  // `\dgr` (Springer sn-jnl "degree", 1-arg) CONFLICTS with the common
+  // physics-paper convention `\newcommand{\dgr}{\dagger}` (0-arg). Defining
+  // it eagerly here blocks the user's `\newcommand` (already-defined) so a
+  // later `c_i^\dgr c_j` consumed the following `c` as `\dgr`'s argument →
+  // `c_i^{c}_j` → spurious `Double subscript` (witness 1603.02507, ×23; Perl
+  // rc=0 — Perl's OmniBus never defines `\dgr`). Defer to \AtBeginDocument
+  // with \providecommand so a user preamble definition wins, while the
+  // Springer `\author{… \dgr{…} …}` (expanded at \maketitle, after
+  // begin-document) still gets the 1-arg fallback. `##1` doubles for the hook.
+  RawTeX!(r"\AtBeginDocument{\providecommand{\dgr}[1]{##1}}");
   def_macro_identity("\\orgdiv{}")?;
   def_macro_identity("\\orgname{}")?;
   def_macro_identity("\\orgaddress{}")?;
@@ -289,9 +305,20 @@ LoadDefinitions!({
   // `\@add@frontmatter` matches Perl's net effect — its after_digest_keywords
   // pushes the body into `frontmatter`{ltx:classification} — without the
   // inline detour that confuses the schema.
+  // NOTE: unlike Perl L154 we do NOT append `\let\endkeyword\relax
+  // \let\endkeywords\relax` here. Those `\let`s exist in Perl to neutralise the
+  // ENV ending after its `\begin{keywords}#1\end{keywords}` one-shot. We route
+  // through `\@add@frontmatter` (no env opened, see comment above), so the
+  // `\let`s are vestigial — and harmful: a later BARE `\keywords text` opens a
+  // classification whose auto-close hook is `\maybe@end@keywords`→`\endkeywords`,
+  // and a persisted `\endkeywords=\relax` made that close a no-op, so the
+  // classification stayed open and the following `\section` nested inside it
+  // ("ltx:section isn't allowed in ltx:classification"). This bites whenever a
+  // braced `\keywords{}` precedes a bare one — e.g. `\category{a}{b}{c}` expands
+  // to `…\keywords{#4}` (empty #4) THEN the document's own `\keywords …`.
+  // Witness 1601.07962 (sig-alternate, \category + bare \terms/\keywords).
   DefMacro!("\\keywords@onearg{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}\
-     \\let\\endkeyword\\relax\\let\\endkeywords\\relax");
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
   DefMacro!("\\maybe@end@keywords",
     "\\endkeywords\\let\\maybe@end@keywords\\relax");
   // Perl L145-153: `\keyword` / `\keywords` overloaded: with {...} arg, run

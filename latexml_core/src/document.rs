@@ -2871,12 +2871,22 @@ impl Document {
     let final_id = if let Some(prev) = prev_opt {
       let badid = id;
       let new_id = self.modify_id(id.to_owned());
+      // Concise node descriptions, mirroring Perl `Stringify($node)`
+      // (Common/Object.pm L40-49: `<tag attrs…>` with no child
+      // serialization). Rust previously dumped the FULL node via
+      // `node_to_string`, which (a) diverged from Perl's concise form and
+      // (b) spilled child TEXT into the log — e.g. a figure caption
+      // beginning "Error bars are the standard deviations…" then appears as
+      // a line starting "Error" and is mis-counted as an error by
+      // text-grep error sweeps (false positive on 2009.01426, which has
+      // ZERO real errors). Use just the qname (+ the relevant id), which is
+      // what an id-dedup diagnostic actually needs.
       let message = s!(
-        "Duplicated attribute xml:id. Using id='{}' on {} id='{}' already set on {}",
+        "Duplicated attribute xml:id. Using id='{}' on <{}> id='{}' already set on <{}>",
         new_id,
-        self.document.node_to_string(node),
+        arena::to_string(get_node_qname(node)),
         badid,
-        self.document.node_to_string(&prev)
+        arena::to_string(get_node_qname(&prev))
       );
       // Perl-faithful (Document.pm L1454): Info-level. The id-counter
       // collision is the dedup-recovery path (`modify_id` appends
@@ -3735,9 +3745,27 @@ impl Document {
                 }) {
                   Ok(ns) => Some(ns),
                   Err(_) => {
-                    let message = s!("failed to create namespace: {:?}", prefix);
-                    Error!("document", "open_element_internal", message);
-                    None
+                    // The namespace already exists on root (declared by an
+                    // earlier element of the same namespace — e.g. a prior
+                    // tikz/SVG picture) but `lookup_namespace_prefix` did not
+                    // find it from this deeply-nested insertion point. Recover
+                    // by reusing the root declaration (or creating it on the
+                    // insertion point), exactly as the already-declared branch
+                    // below — do NOT drop the namespace. Witness 1802.00756:
+                    // a `tikzpicture` inside a nested `gather*`/`minipage`/
+                    // `figure*` emitted 14× "failed to create namespace: svg"
+                    // and the `<svg:svg>`/`<svg:g>` lost their namespace.
+                    arena::with(prefix, |prefix_str| {
+                      let found = root
+                        .get_namespace_declarations()
+                        .into_iter()
+                        .find(|ns| ns.get_prefix() == prefix_str);
+                      if found.is_none() {
+                        Namespace::new(prefix_str, &ns_uri, point).ok()
+                      } else {
+                        found
+                      }
+                    })
                   },
                 }
               } else {
@@ -4350,21 +4378,36 @@ impl Document {
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {
-    for node in self.findnodes("//*[@labels]", None) {
+    for mut node in self.findnodes("//*[@labels]", None) {
       if let Some(labels) = node.get_attribute("labels") {
-        if let Some(id) = node.get_attribute("id") {
+        // A labelled node MUST carry an xml:id so `\ref` can resolve to it.
+        // Normally the `Tag('ltx:*', afterClose:late)` GenerateID hook
+        // (latex_constructs.rs) stamps one, but it does not reach every node
+        // — notably the <ltx:document> root, which receives a label when a
+        // bare `\label{…}` appears with no enclosing id'd sectioning (e.g.
+        // `\input{abs}` then `\label{sec:intro}` before any \section; witness
+        // 1703.09326). Perl handles this by giving the root an xml:id — its
+        // output is `<document … labels="LABEL:sec:intro" xml:id="id1">` —
+        // NOT by erroring. Match Perl: generate an id here when one is
+        // missing, exactly as Perl's GenerateID does (an id-less root yields
+        // "id1" from `generate_id`'s empty-prefix→"id", no-ancestor path).
+        let id = match node.get_attribute("id") {
+          Some(id) => Some(id),
+          None => {
+            self.generate_id(&mut node, "")?;
+            node.get_attribute_ns("id", XML_NS)
+          },
+        };
+        if let Some(id) = id {
           for label in labels.split_whitespace() {
             self
               .rewrite_labels
               .insert(label.to_string(), id.clone());
           }
-        } else {
-          Error!(
-            "malformed",
-            "label",
-            format!("Node {} has labels but no xml:id", node.get_name())
-          );
         }
+        // If generate_id still couldn't assign one (a node the model forbids
+        // an xml:id on), the label is simply unresolvable — drop it silently
+        // (Perl does not error here either).
       }
     }
     Ok(())

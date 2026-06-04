@@ -22,6 +22,38 @@ LoadDefinitions!({
   RequirePackage!("lineno");
   // MDPI papers use {adjustwidth} from changepage. Witness 2503.13839 +5.
   RequirePackage!("changepage");
+  // mdpi.cls also requires these for table + citation + endnote markup
+  // (L50 multirow, L58 tabularx, L240 natbib sort&compress, L65 enotez).
+  // Without them papers using \citep/\citet, \multirow, {tabularx},
+  // \endnote/\printendnotes hit undefined-CS cascades. Witness
+  // 2003.10420 (CONVERR_9: \citep/\citet/\multirow/{tabularx} +
+  // \endnote/\printendnotes + mdpi-specific \tablesize/\fulllength).
+  RequirePackage!("natbib");
+  RequirePackage!("multirow");
+  RequirePackage!("tabularx");
+  RequirePackage!("makecell");
+  RequirePackage!("array");
+  RequirePackage!("colortbl");
+
+  // mdpi.cls L1297-1298: `\newlength{\fulllength}` (page-rule width).
+  // Pure layout — define as a register so `\rule{\fulllength}{..}` and
+  // friends resolve. Value irrelevant to XML output.
+  DefRegister!("\\fulllength" => Dimension::new(0));
+  // mdpi.cls L1114-1115: `\def\@tablesize{}` +
+  // `\newcommand{\tablesize}[1]{\gdef\@tablesize{#1}}`. Sets the font
+  // size used inside `tabularx` — typesetting-only; store the arg in
+  // `\@tablesize` (some code probes `\ifx\@tablesize\@empty`).
+  DefMacro!("\\@tablesize", "");
+  DefMacro!("\\tablesize{}", "\\gdef\\@tablesize{#1}");
+  // enotez/endnotes endnote API. mdpi.cls L65 loads enotez; we have no
+  // enotez binding, so define the two endnote commands authors use.
+  // `\endnote{text}` → render inline as an ltx:note (footnote-style);
+  // `\printendnotes` is the deferred-output hook — no-op (the notes are
+  // already emitted inline). Mirrors how Perl LaTeXML's endnotes.sty
+  // handling routes endnotes to ltx:note.
+  DefConstructor!("\\endnote{}",
+    "<ltx:note role='endnote'>#1</ltx:note>");
+  def_macro_noop("\\printendnotes")?;
 
   // MDPI frontmatter — preserve author content as ltx:note frontmatter.
   DefMacro!("\\corresref[]{}", "\\textsuperscript{*#1}");

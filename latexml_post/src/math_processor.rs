@@ -249,17 +249,24 @@ fn process_math_node(
   if !keep_xmath {
     // Mark XMath IDs as reusable (it will be removed)
     doc.preremove_nodes(&[xmath.clone()]);
-    // Remove XMath from the Math element
-    doc.remove_nodes(&[xmath.clone()]);
-    // After unlink, the `xmath` Rc must not fire `_Node::drop` — that
-    // would call `xmlFreeNode` on a subtree whose props/ns are still
-    // shared with the enclosing Document, leading to a UAF at
-    // `xmlFreeDoc` time. Wrap in `DocOwnedNode` which suppresses the
-    // Drop; `xmlFreeDoc` remains the sole owner.
+    // Defer the actual unlink to a final pass. Parallel-format
+    // chains (the CorTeX canvas configures both pmml + cmml) need
+    // the XMath subtree to survive across processors so each
+    // processor's `mark_xm_node_visibility` walk finds live
+    // `XMRef` targets. The first processor's eager unlink left
+    // the second processor reading freed children and emitting
+    // `Error:expected:id Cannot find a node with xml:id=…`
+    // (the dominant CONVERR cluster on the second-500K canvas).
+    // Mirrors Perl `Post.pm` L373-393's "XMath will be removed
+    // (LATER!), but mark its ids as reusable" — the actual
+    // `unlink` happens in `PostDocument::drain_pending_xmath_unlinks`
+    // after every math-format processor in the chain has finished.
     //
-    // Reproducer (cycle 236): `$X$` with ar5iv preload → SIGSEGV in
-    // PMML pass without this wrapper. See docs/known_crashes/README.md.
-    let _kept = crate::doc_owned_node::DocOwnedNode::new(xmath);
+    // `DocOwnedNode` wrapping is performed inside `drain_…` to
+    // keep the SIGSEGV-suppression policy from cycle-236's
+    // `$X$` + ar5iv reproducer (`docs/known_crashes/README.md`)
+    // intact across the deferred path.
+    doc.defer_xmath_unlink(xmath);
   }
 
   // Remove blank text nodes from Math

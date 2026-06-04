@@ -198,12 +198,18 @@ LoadDefinitions!({
   DefMacro!("\\fnref{}", "\\lx@elsart@noteref{#1}");
 
   // Title/metadata — Perl L60-106
-  // \runauthor / \runtitle carry author-typed short forms for the
-  // running header. Preserve as ltx:note (content-preserving).
-  DefMacro!("\\runauthor{}",
-    "\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}");
-  DefMacro!("\\runtitle{}",
-    "\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}");
+  // \runauthor / \runtitle are running-header SHORT forms (real elsart.cls
+  // L1235 `\def\runauthor#1{\gdef\@runauthor{#1}}` just stores them for
+  // `\@oddhead`; never typeset in the body). Perl elsart_support_core.sty.ltxml
+  // L60-61 GOBBLES both (`DefMacro('\runauthor{}', Tokens())`) — they are
+  // layout-only and redundant with `\author`/`\title` (which preserve the full
+  // author/title). The prior Rust over-preservation digested the running-head
+  // content, so an author typo like `\runauthor{… T.\Pasurek/Journal…}`
+  // (a stray `\` before a name) hit `undefined:\Pasurek`. Gobble to match Perl;
+  // no author material is lost (`\author` keeps it). Same class as the
+  // `\shortauthors` gobble fix. Witness 1503.06349.
+  def_macro_noop("\\runauthor{}")?;
+  def_macro_noop("\\runtitle{}")?;
   DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
   DefMacro!("\\ead Optional:email Semiverbatim",
     "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
@@ -286,12 +292,79 @@ LoadDefinitions!({
   // 1-error reduction is the entire test suite OOM-aborting at
   // `81_babel::elsart_keyword_brace_form_test`.
   //
-  // The trailing-`}` arxiv 1710.03688 / hep-ph0702114 case is now a
-  // deferred parity gap. Any future fix must distinguish balanced vs
-  // unbalanced input WITHOUT speculatively reading to EOF — e.g. peek
-  // for the trailing `}` after a strict balanced read, or scope the
-  // lenient reader by an explicit token budget.
-  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut");
+  // RESOLVED 2026-05-30 via the design note's first suggestion: keep the
+  // strict balanced read of the keyword argument, then peek past spaces and
+  // gobble an OPTIONAL trailing `}` (catcode END). This reproduces Perl's
+  // lenient `readBalanced` *result* (it absorbs the legacy unbalanced `}`)
+  // for the trailing-`}` idiom — abstract bodies that end
+  //     \keyword{Kw1; Kw2; …}   <comments/spaces>   }   \end{abstract}
+  // (the stray `}` is the orphaned close of a commented-out brace group;
+  // witness 1601.01227, also 1710.03688 / hep-ph0702114) — WITHOUT the
+  // speculative read-to-EOF that OOM'd the balanced fixture: for the common
+  // `\keyword{Higgs; Boson}\end{abstract}` form the token after the strict
+  // read is `\end` (a CS, not `}`), so nothing is gobbled. The peek is
+  // bounded to one token, never crossing `\end`.
+  // Skip leading spaces and blank-line `\par`s, then gobble a single trailing
+  // `}` (catcode END) if one is there — Perl's `readBalanced` reads straight
+  // through the `\par` from a blank line before the stray brace (witness
+  // 1705.01354 separates `\keyword{…}` and the orphaned `}` by a blank line).
+  // The skipped whitespace/`\par` tokens are buffered and FULLY RESTORED when
+  // no trailing `}` follows, so the common `\keyword{…}\end{abstract}` form
+  // (and `\keyword{…}<blank>\end{abstract}`) is left byte-for-byte untouched.
+  // Bounded: stops at the first non-space, non-`\par` token; never crosses
+  // `\end`.
+  // Perl's `readBalanced` (L140) reads tokens up to the next UNMATCHED `}`
+  // (tracking brace depth), absorbing that stray `}` as its terminator —
+  // regardless of what non-brace material (spaces, `\par`, `\vskip <dimen>`,
+  // `\noindent`, …) sits between `\keyword{…}` and the orphaned brace. The
+  // earlier version only skipped spaces/`\par`s, so it stopped at the first
+  // real token (e.g. `\vskip`) and left the stray `}` to hit the abstract's
+  // mode-switch frame (`ltx:para`-free `}` → "close a group that switched to
+  // mode internal_vertical"; witness 1604.00855:
+  // `\keyword{…} \vskip 0.5\baselineskip}`).
+  //
+  // Walk forward tracking brace depth: an unmatched `}` (depth 0) is the
+  // stray terminator — DROP it, re-inject everything else (so the `\vskip`
+  // etc. still render, content-preserving). Bound the scan at `\end` (depth
+  // 0) — the env terminator — and a hard token cap, so the common
+  // `\keyword{Higgs; Boson}\end{abstract}` form (no stray `}`) reads one
+  // token (`\end`), restores it, and is left untouched (this is also what
+  // averts the read-to-EOF OOM a naive `readBalanced` hit). Witnesses:
+  // 1604.00855, 1601.01227, 1705.01354, 1710.03688, hep-ph0702114.
+  DefPrimitive!("\\lx@elsart@gobble@optbrace", {
+    let mut skipped: Vec<Token> = Vec::new();
+    let mut depth: i32 = 0;
+    let mut count: usize = 0;
+    while let Some(tok) = gullet::read_token()? {
+      count += 1;
+      if count > 4096 {
+        skipped.push(tok); // safety cap: restore everything, gobble nothing
+        break;
+      }
+      let cc = tok.get_catcode();
+      if cc == Catcode::BEGIN {
+        depth += 1;
+        skipped.push(tok);
+      } else if cc == Catcode::END {
+        if depth == 0 {
+          break; // unmatched stray `}` — drop it (absorbed, like readBalanced)
+        }
+        depth -= 1;
+        skipped.push(tok);
+      } else if depth == 0 && tok == T_CS!("\\end") {
+        skipped.push(tok); // env end reached before any stray `}` — restore all
+        break;
+      } else {
+        skipped.push(tok);
+      }
+    }
+    // Re-inject everything we buffered, in order. The only token ever removed
+    // is the stray `}` (which is never pushed onto `skipped`).
+    for tok in skipped.into_iter().rev() {
+      gullet::unread_one(tok);
+    }
+  });
+  DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut\\lx@elsart@gobble@optbrace");
   DefMacro!("\\endkeyword", "\\@keyword@cut");
   DefMacro!("\\PACS", "\\@keyword@cut\\@PACS");
   DefMacro!("\\MSC[]", "\\@keyword@cut\\@MSC{#1}");
@@ -349,8 +422,22 @@ LoadDefinitions!({
   def_macro_noop("\\MARK{}")?;
   def_macro_noop("\\mpfootnotemark")?;
 
-  // Perl L189: \note{} — emit <ltx:note> wrapper. Previously unported.
-  DefConstructor!("\\note{}", "<ltx:note>#1</ltx:note>");
+  // Perl elsart_support_core.sty.ltxml L189:
+  //   DefMacro('\note{}', "<ltx:note>#1</ltx:note>");    # ?
+  // This is a *DefMacro* (token expansion), NOT a DefConstructor — so the
+  // body tokenises to LITERAL TEXT (`<`, `>` are catcode-OTHER): `\note{X}`
+  // expands to the characters `<ltx:note>` + X + `</ltx:note>`, NOT a real
+  // <ltx:note> element. Perl's own `# ?` flags it as questionable, but it is
+  // the ground truth and crucially is ERROR-FREE: a block argument such as
+  // `\note{\begin{remark}…\end{remark}}` (a `\newtheorem`-based environment)
+  // renders the remark as a normal <ltx:theorem> bracketed by stray literal
+  // text, with no content-model violation. Porting it as a DefConstructor
+  // (real <ltx:note>) instead made `ltx:theorem isn't allowed in <ltx:note>`
+  // — papers that wrap a theorem-like env in `\note{…}` (common with a
+  // user `\newcommand\note[1]{…}` that LaTeX/Perl *ignore* because elsart
+  // already defined `\note`) then failed. Match Perl: use DefMacro.
+  // Witness 2006.06087 (elsarticle, `\note{\begin{remark}…}`): 1 error → 0.
+  DefMacro!("\\note{}", "<ltx:note>#1</ltx:note>");
 
   // Float environment
   DefEnvironment!("{esmark}",  "#body");

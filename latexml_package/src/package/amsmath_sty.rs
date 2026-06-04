@@ -44,6 +44,7 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
 fn ams_rearrangeable_bindings(
   template: Template,
   xml_attributes: HashMap<String, String>,
+  redirect_label: bool,
 ) -> Result<()> {
   let properties = SymHashMap::default();
   // Create alignment with equationgroup/equation/_Capture_ hooks
@@ -118,19 +119,31 @@ fn ams_rearrangeable_bindings(
   );
   // Perl: Let('\intertext', '\@ams@intertext');
   state::let_i(&T_CS!("\\intertext"), &T_CS!("\\@ams@intertext"), None);
-  // Redirect \label to the noalign version (matching Perl eqnarray behavior).
-  // In Perl, \hfil makes cells with only \label non-skippable, so the \label
-  // constructor runs during beAbsorbed. In Rust, \hfil doesn't contribute width,
-  // so such cells are skippable and the constructor is never invoked.
-  // By routing \label through \lx@hidden@noalign, the label is processed at the
-  // row level (equation element), ensuring labels= is always set.
-  // Save \label globally so the noalign-deferred `\lx@eqnarray@save@label{#1}`
-  // expansion still resolves cleanly if it fires AFTER the alignment's group
-  // has popped (witness 2404.19499: align body's deferred noalign-label fires
-  // post-group → undefined). The \label override itself stays local — the
-  // user-visible \label semantics revert when align ends.
-  state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\label"), Some(Scope::Global));
-  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
+  // `\label` redirect — applied ONLY to multi-column rearrangeable envs
+  // ({align}/{alignat}/{flalign}), NOT single-column {gather}.
+  //
+  // Perl's `amsRearrangeableBindings` (amsmath.sty.ltxml L120-147) does NOT
+  // redirect `\label` at all; only `\@eqnarray@bindings` does. The redirect
+  // here is a Rust-only workaround: a multi-column cell whose ONLY content
+  // is a `\label` is "skippable" (Rust's `\hfil` contributes no width, unlike
+  // Perl's), so the plain `\lx@label` constructor never floats `labels=` onto
+  // the parent equation. Routing it through `\lx@hidden@noalign` processes
+  // the label at row level so `labels=` survives (witness split.tex's
+  // `\label{eq:before}\n&x`).
+  //
+  // But that same redirect BREAKS single-column {gather}: a `\label` before
+  // `\lefteqn` gets swallowed by the column-scan loop as `\lx@hidden@noalign`
+  // (never starting the column), so `\lefteqn` is expanded with
+  // `\if@in@firstcolumn` still TRUE and emits `\multicolumn{3}` into a 1-column
+  // gather -> "Extra alignment tab '&'" (driver 1906.11496). For gather we
+  // therefore match Perl exactly (no redirect): the plain `\label` starts the
+  // column, so `\lefteqn` takes the `\rlap` branch. gather has no `&`, so the
+  // skippable-label-only-cell case the redirect guards against does not arise
+  // (a bare `\label\\` row is dropped by both engines anyway).
+  if redirect_label {
+    state::let_i(&T_CS!("\\lx@eqnarray@save@label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+    state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
+  }
   Ok(())
 }
 
@@ -155,7 +168,9 @@ fn ams_gather_bindings() -> Result<()> {
   });
   let mut attrs = HashMap::default();
   attrs.insert(String::from("class"), String::from("ltx_eqn_gather"));
-  ams_rearrangeable_bindings(template, attrs)
+  // gather is single-column: NO `\label` redirect (Perl-faithful; keeps
+  // `\lefteqn` -> `\rlap`). See ams_rearrangeable_bindings.
+  ams_rearrangeable_bindings(template, attrs, false)
 }
 
 /// Perl: \@ams@align@bindings — repeated pairs of columns
@@ -186,7 +201,10 @@ fn ams_align_bindings() -> Result<()> {
   let mut attrs = HashMap::default();
   attrs.insert(String::from("class"), String::from("ltx_eqn_align"));
   attrs.insert(String::from("colsep"), String::from("0pt"));
-  ams_rearrangeable_bindings(template, attrs)
+  // align is multi-column: redirect `\label` to preserve labels= on
+  // label-only cells (Rust workaround for skippable cells). See
+  // ams_rearrangeable_bindings.
+  ams_rearrangeable_bindings(template, attrs, true)
 }
 
 /// Perl: \@ams@aligned@bindings — for aligned/alignedat/split within math
@@ -447,6 +465,19 @@ LoadDefinitions!({
       // Read and digest the next box (like Perl's Digested parameter)
       let mut after_boxes = Vec::new();
       while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
+        // An alignment tab `&` ends the cell — it is NOT the dots' following
+        // box. Perl's `Digested` parameter stops at `&`; we must too. Digesting
+        // it here would consume the column separator (firing "Stray alignment"
+        // and leaving the next `&` unmatched). This bites only when the column
+        // template has no trailing `\hfil` after the cell (right-/no-aligned
+        // starred matrices): with a trailing `\hfil` the loop breaks on that
+        // box first. Unread the `&` so the alignment still sees it; the dots
+        // then has no following box → renders as `\ldots` (…). See the
+        // 1910.00678 residual note in SYNC_STATUS.
+        if tok.get_catcode() == latexml_core::token::Catcode::ALIGN {
+          gullet::unread_one(tok);
+          break;
+        }
         after_boxes = stomach::invoke_token(&tok)?;
         if !after_boxes.is_empty() {
           break;
@@ -1456,6 +1487,19 @@ LoadDefinitions!({
       Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
   });
   DefMacro!("\\thetag{}", "{\\rm #1}");
+
+  // amsmath.sty L1219: `\def\tagform@#1{\maketag@@@{(\ignorespaces#1
+  // \unskip\@@italiccorr)}}` — the low-level equation-tag formatter that
+  // wraps a tag body in parentheses. We model `\eqref` directly (above)
+  // rather than via `\tagform@`, so `\tagform@` itself stayed undefined —
+  // but papers reach for it directly inside custom cross-ref macros
+  // (e.g. `\hyperref[#1]{\textup{\tagform@{\ref*{#1}}}}`). Perl's
+  // amsmath binding ALSO lacks `\tagform@` (verified 2026-05-27 on
+  // 2004.10115: Perl emits the same `undefined:\tagform@`), so defining
+  // it is a faithful surpass-Perl port of the real amsmath macro
+  // (`\maketag@@@` just typesets text-mode, so the visible effect is
+  // `(#1)`; `\@@italiccorr` is the dump's `\/`). Witness 2004.10115.
+  DefMacro!("\\tagform@{}", "{(\\ignorespaces#1\\unskip\\@@italiccorr)}");
 
   // Perl: amsmath.sty.ltxml L882-896 — `robust => 1` keeps the mmode
   // dispatch frozen under \write/\edef (moving formulas in toc etc.).

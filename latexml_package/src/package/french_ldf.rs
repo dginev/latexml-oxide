@@ -19,6 +19,13 @@ LoadDefinitions!({
   // (\textdegree, \texttrademark, etc.) that French abbreviations
   // may reference via the raw frenchb ordinals.
   RequirePackage!("textcomp");
+  // babel-french french.ldf L694: `\AtEndOfPackage{\RequirePackage{scalefnt}}`
+  // — French superscript scaling (`\FBsupS`/`\textsuperscript` at L702 uses
+  // `\scalefont`). Documents loading babel-French therefore expect `\scalefont`
+  // to be defined even when they never `\usepackage{scalefnt}` themselves.
+  // Our raw-load is skipped (see below), so pull scalefnt explicitly to match.
+  // Witness 2010.03230 (`\usepackage{babel}`[french] + bare `\scalefont{0.78}`).
+  RequirePackage!("scalefnt");
 
   // \captionsfrench — the French caption strings, equivalent to what
   // babel's frenchb.ldf defines. Use \providecommand so the raw load
@@ -84,6 +91,20 @@ LoadDefinitions!({
   DefMacro!("\\og", "\\guillemotleft\\nobreakspace");
   DefMacro!("\\fg", "\\nobreakspace\\guillemotright\\xspace");
 
+  // \frquote — french.ldf L601-610 (\ifLaTeXe branch): the modern
+  // babel-french quotation command, `\frquote[*]{text}` → guillemets
+  // around the text. The real macro routes both the starred and unstarred
+  // forms through `\fr@quote` (a multi-level `\FBguill@level` guillemet
+  // engine, L611+); the multi-level nesting is a visual nuance with no
+  // semantic effect, so we render single-level guillemets via the `\og`/
+  // `\fg` pair defined just above (Perl, which raw-loads french.ldf, emits
+  // `«⁠text⁠»` with French spacing — same content). Our curated french.ldf
+  // skips the raw-load (babel-3.x `\SetString` failure), so `\frquote` was
+  // undefined where Perl is clean. Witness 1808.04243 (`[french]{babel}` +
+  // `\frquote`). `\@ifstar` handles the `\frquote*` multi-paragraph form.
+  RawTeX!(r"\DeclareRobustCommand\frquote{\@ifstar\lx@fr@quote\lx@fr@quote}");
+  RawTeX!(r"\newcommand\lx@fr@quote[1]{\og #1\fg}");
+
   // Perl french.ldf.ltxml L31-37: AtBeginDocument(sub { ... }) — defer
   // so any later package's redefinition of \textdegree/\textasciitilde/
   // \textasciicircum is captured (e.g. textcomp loaded after french.ldf).
@@ -124,6 +145,47 @@ LoadDefinitions!({
   def_macro_noop("\\AutoSpaceBeforeFDP")?;
   // `\FBautospacing` toggle (legacy) — same family.
   def_macro_noop("\\FBautospacing")?;
+  // `\NoAutoSpacing` — french.ldf L506 (`\DeclareRobustCommand*`): the
+  // user-facing French auto-spacing kill-switch (`\FB@spacing@off` +
+  // `\ifFB@active@punct\shorthandoff{;:!?}\fi`). Same family as the FDP
+  // toggles above: the thin-space-before-`;:!?` is font-language-driven via
+  // our `\lx@french@punct@*` primitives (not per-paper toggleable), and
+  // babel's `\shorthandoff` is itself a no-op in Rust (babel_sty.rs L182),
+  // so the faithful semantic-output behavior is a no-op. Our curated
+  // french.ldf skips the raw-load, so `\NoAutoSpacing` was undefined where
+  // Perl (raw-loads french.ldf) is clean. Witness 1810.02869
+  // (`[frenchb]{babel}` + `\NoAutoSpacing`).
+  def_macro_noop("\\NoAutoSpacing")?;
+  // `\AddThinSpaceBeforeFootnotes` — french.ldf L1976
+  // (`\newcommand*{\AddThinSpaceBeforeFootnotes}{\FBAutoSpaceFootnotestrue}`):
+  // toggles a thin space before footnote markers in French. Pure typeset
+  // spacing — moot in our HTML paradigm — so a no-op matches its net output,
+  // same family as the FDP/auto-spacing toggles above. Our curated french.ldf
+  // skips the raw-load, so it was undefined where Perl (raw-loads french.ldf)
+  // is clean. Witness 1610.09195. (No `\No…` companion exists in french.ldf.)
+  def_macro_noop("\\AddThinSpaceBeforeFootnotes")?;
+
+  // `\DecimalMathComma` / `\StandardMathComma` — french.ldf L815-877.
+  // French writes decimals with a comma (`3,14`); the real macros toggle
+  // the math comma's `\mathcode` between *punctuation* (class 6, small
+  // trailing space → list "1, 5") and *ordinary* (class 0, no space →
+  // decimal "1,5") via `\dec@math@comma`/`\std@math@comma` (L838-841).
+  // This is a purely *visual* spacing nuance: LaTeXML's number tokenizer
+  // already recognizes a digit-comma-digit run as a single decimal NUMBER
+  // independent of the mathcode, so the toggle has NO effect on LaTeXML's
+  // semantic output. Verified against Perl (which raw-loads french.ldf via
+  // `InputDefinitions('french', noltxml=>1)` and runs the real macros):
+  // converting the same `[francais]{babel}` + `\DecimalMathComma` document
+  // WITH vs WITHOUT the call produces *byte-identical* XML — i.e. the macro
+  // is an effective no-op in LaTeXML. (Attempting to honor the `\mathcode`
+  // change literally is also wrong: it reroutes `,` through a family-1 font
+  // slot that maps to `;`, corrupting the glyph.) Our curated french.ldf
+  // skips the raw-load (babel-3.x `\SetString` failure), so these were
+  // undefined where Perl is clean. Faithful port = no-op. Witness 1812.03061
+  // (`[francais]{babel}` + `\DecimalMathComma` in the preamble, revtex4):
+  // RUST 1 -> 0, matching Perl 0.
+  def_macro_noop("\\DecimalMathComma")?;
+  def_macro_noop("\\StandardMathComma")?;
 
   // \frenchsetup — babel-french 3.x configuration command. Takes a
   // keyval list `\frenchsetup{key=val,...}` (e.g. `OldFigTabCaptions=true`,
@@ -182,6 +244,20 @@ LoadDefinitions!({
     Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
   });
 
+  // babel.def `\initiate@active@char{?}` (TL `babel/babel.def` L1372)
+  // evaluates `\bbl@add@special\csname?\endcsname`; expanding
+  // `\csname?\endcsname` turns the (previously undefined) escaped `\?`
+  // into `\relax` per TeX's csname rule — a permanent, global,
+  // language-INDEPENDENT side-effect of *loading* french (the catcode
+  // flip to active is separate, in `\extrasfrench`). `\:`/`\;`/`\!` are
+  // already math-spacing commands, so only `\?` is affected. A bare `\?`
+  // (e.g. a stray set-builder `D([0,T];\R^k):\? u_C=v_C`) therefore
+  // silently vanishes under Perl rather than erroring. We skip the raw
+  // french.ldf load, so replicate the exact end-state: an undefined `\?`
+  // becomes `\relax` (a pre-existing `\?` is left untouched). Witness
+  // 2007.04819 (`\usepackage[frenchb,english]{babel}`, `:\? u_C=v_C`).
+  RawTeX!(r"\@ifundefined{?}{\let\?\relax}{}");
+
   // french.ldf user-facing typesetting knobs that some papers call
   // directly (rather than via `\frenchsetup{key=value}`). All are
   // typographical no-ops in our XML/HTML pipeline since we don't
@@ -235,5 +311,40 @@ LoadDefinitions!({
     \expandafter\let\csname noextrasfrenchb\expandafter\endcsname
                     \csname noextrasfrench\endcsname
     \expandafter\let\csname datefrenchb\expandafter\endcsname
+                    \csname datefrench\endcsname
+    %
+    % french.ldf L88-92: `acadian` and `canadien` are dialects of
+    % `french` (`\adddialect\l@acadian\l@french` / `\l@canadien`), and its
+    % `\StartBabelCommands*{\BabelLanguages}{captions|date}` defines the
+    % `acadian`-suffixed hooks (BabelLanguages = {french,acadian}). The
+    % thin wrappers `acadian.ldf` / `canadien.ldf` just `\input french.ldf`.
+    % This binding doesn't replicate `\StartBabelCommands`, so alias the
+    % `\l@` slots + babel hooks to their `french` counterparts (parallels
+    % the `frenchb` shim above). Without this `\usepackage[canadien]{babel}`
+    % / `[acadian]{babel}` error haven-not-defined-the-language at the final
+    % `\selectlanguage{\bbl@main@language}` (e.g. 1712.07952). canadien.ldf
+    % already `\def`s the `canadien`-suffixed hooks → `acadian`; we fill in
+    % the `acadian` ones + the language slots.
+    \expandafter\ifx\csname l@acadian\endcsname\relax
+      \chardef\l@acadian=\l@french
+    \fi
+    \expandafter\ifx\csname l@canadien\endcsname\relax
+      \chardef\l@canadien=\l@french
+    \fi
+    \expandafter\let\csname captionsacadian\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrasacadian\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrasacadian\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname dateacadian\expandafter\endcsname
+                    \csname datefrench\endcsname
+    \expandafter\let\csname captionscanadien\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrascanadien\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrascanadien\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname datecanadien\expandafter\endcsname
                     \csname datefrench\endcsname");
 });

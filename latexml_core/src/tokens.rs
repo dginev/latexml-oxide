@@ -557,16 +557,34 @@ impl Tokens {
         } else if next_cc == Some(Catcode::PARAM) {
           rescanned.push(t);
         } else {
-          // any other case, preserve as-is, let the higher level call resolve any errors
-          // e.g. \detokenize{#,} is legal, while \textbf{#,} is not
-          // Note: this also fires for alignment templates (\halign{#\hfil&...}) which is valid TeX.
-          // Perl has the same warning (Tokens.pm packParameters line 139). Non-fatal.
-          Error!(
+          // A PARAM (`#`) followed by neither a digit nor another `#` is, in
+          // real documents, almost always a `\halign`/`\valign` alignment-cell
+          // marker embedded in a macro body (e.g. `\def\foo{\halign{#\hfil&...}}`)
+          // or the `#{` end-of-parameter-text delimiter — both VALID TeX where
+          // the catcode-6 `#` must survive losslessly into the template/preamble.
+          // Real TeX resolves the parameter-vs-cell ambiguity during alignment
+          // processing, a lower level than LaTeXML operates at, so we cannot
+          // reliably tell this apart from a genuine typo.
+          //
+          // Perl's packParameters (Tokens.pm L139) emits a *counted* Error here
+          // AND drops both tokens, corrupting the template — but Perl rarely
+          // reaches it (it often can't find the offending package and skips the
+          // raw load). We DO raw-load such packages, so erroring+dropping broke
+          // the error-free target for the common halign-in-macro idiom. Preserve
+          // both tokens and log at Info (non-counted) instead. Documented as a
+          // beneficial divergence in docs/KNOWN_PERL_ERRORS.md item 1. Witness
+          // 2006.02269 (easyeqn.sty `{MATRIX}` env → `$\mathstrut##$` template;
+          // 2 errors → 0).
+          Info!(
             "misdefined",
             "expansion",
-            "Parameter has a malformed arg, should be #1-#9 or ##. In expansion {}",
+            "Lone # (catcode PARAM) preserved as alignment/template marker. In expansion {}",
             Tokens::new(toks.clone().into_iter().collect()).to_string()
           );
+          rescanned.push(t);
+          if let Some(nt) = next_t {
+            rescanned.push(nt);
+          }
         }
       } else {
         rescanned.push(t);

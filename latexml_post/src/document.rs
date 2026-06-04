@@ -79,6 +79,19 @@ pub struct PostDocument {
   cache:                       HashMap<String, String>,
   /// Whether caching is disabled.
   pub nocache:                 bool,
+  /// XMath subtrees queued for deferred unlink. Parallel-format
+  /// processors (pmml + cmml) BOTH need the original XMath for their
+  /// per-format `convert_node` pass; if the first processor unlinks
+  /// the subtree, the second's `mark_xm_node_visibility` walks
+  /// stale `XMRef` targets and emits `Error:expected:id Cannot find
+  /// a node with xml:id=…`. Mirrors Perl `Post.pm` L373-393's
+  /// "XMath will be removed (LATER!), but mark its ids as reusable"
+  /// pattern: each per-math `process_math_node` call queues the
+  /// XMath here (and registers its xml:ids as reusable via
+  /// `preremove_nodes`), and a final post-pipeline pass — see
+  /// `drain_pending_unlinks` — does the actual unlink once all
+  /// math-format passes have completed.
+  pending_xmath_unlinks:       Vec<Node>,
 }
 
 impl Drop for PostDocument {
@@ -174,6 +187,7 @@ impl PostDocument {
       validate: options.validate,
       cache: HashMap::default(),
       nocache: options.nocache,
+      pending_xmath_unlinks: Vec::new(),
     }
   }
 
@@ -1018,6 +1032,42 @@ impl PostDocument {
           }
         }
       }
+    }
+  }
+
+  /// Queue an XMath subtree for unlinking at the end of post-processing.
+  ///
+  /// Mirrors Perl `Post.pm` L373-393's "XMath will be removed (LATER!),
+  /// but mark its ids as reusable" pattern. The actual unlink happens
+  /// in [`drain_pending_xmath_unlinks`], which the post-pipeline
+  /// invokes once *all* math-format processors have completed. Without
+  /// the defer, parallel-format chains (pmml + cmml) lose the XMath
+  /// subtree on the first processor's unlink and the second
+  /// processor's `mark_xm_node_visibility` walks stale `XMRef`
+  /// targets, emitting `Error:expected:id Cannot find a node with
+  /// xml:id=…`.
+  pub fn defer_xmath_unlink(&mut self, node: Node) {
+    self.pending_xmath_unlinks.push(node);
+  }
+
+  /// Drain the deferred XMath unlinks: actually detach each subtree
+  /// from the document. Idempotent against multiple processors
+  /// queueing the same node — the second `unlink_node` is a no-op on
+  /// an already-detached subtree. The deferred subtrees are wrapped
+  /// in `DocOwnedNode` to suppress libxml's `_Node::drop` →
+  /// `xmlFreeNode` chain; the enclosing Document remains the sole
+  /// owner. See `math_processor::process_math_node` for the prior
+  /// in-place wrapping pattern.
+  pub fn drain_pending_xmath_unlinks(&mut self) {
+    let pending = std::mem::take(&mut self.pending_xmath_unlinks);
+    for mut node in pending {
+      // Detach the (still-parented) subtree. If a prior processor
+      // already unlinked it (shouldn't happen with this API but
+      // defensive), libxml's `unlink_node` is idempotent.
+      if node.get_parent().is_some() {
+        node.unlink();
+      }
+      let _kept = crate::doc_owned_node::DocOwnedNode::new(node);
     }
   }
 

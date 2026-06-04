@@ -9,7 +9,14 @@ use latexml_package::prelude::*;
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
-  RequirePackage!("amsthm");
+  // NOTE: do NOT eagerly `RequirePackage!("amsthm")` here. OmniBus already
+  // provides lazy amsthm autoload (theorem-env stubs), and pre-loading it
+  // broke the common `\let\proof\relax` + `\usepackage{amsthm}` idiom: the
+  // paper's explicit \usepackage{amsthm} would no-op (already loaded), so
+  // amsthm's `\let\proof\@proof` never re-ran after the paper cleared
+  // `\proof` → `Error:undefined:{proof}`. Letting the paper's
+  // \usepackage{amsthm} be the first real load matches Perl (clean).
+  // Witness 1612.03054 (`\let\proof\relax` L5 + amsthm L22).
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
@@ -94,4 +101,30 @@ LoadDefinitions!({
   def_macro_identity("\\bparticle{}")?;
   def_macro_identity("\\bnote{}")?;
   def_macro_identity("\\btype{}")?;
+  // imsart.sty `\common@pub@types` also `\let`s these to `\@firstofone`
+  // (identity), but they were missing from the list above — so an imsart
+  // `.bbl` using `\begin{barticle}…\betal{…}` (bold-"et al." separator) or
+  // `\banumber{…}` saw them undefined. Witness 1912.11583 (`\betal`, 1 error
+  // → 0). Mirror `\common@pub@types`.
+  def_macro_identity("\\betal{}")?;
+  def_macro_identity("\\banumber{}")?;
+  // Additional imsart bibliography field macros. The bundled imsart.cls/sty
+  // `\let`s each of these to `\@firstofone` (identity) inside its bib setup
+  // (or applies a style via `\set@bibl@cmd`, e.g. `\bbooktitle` → \itshape —
+  // we keep content-preserving identity, matching the sibling stubs above).
+  // They were missing, so an imsart `.bbl` using `\bbooktitle{…}` (book title
+  // in an `In …` reference), `\bchapter`, `\bschool` (theses), etc. saw them
+  // undefined. Witness 2006.02044 (`\bbooktitle`, 1 error → 0; Perl errors on
+  // ALL 28 imsart `\b*`/`{b*}` constructs, so this also surpasses Perl). NB:
+  // `\bmisc` is intentionally NOT added as a macro — it would clobber the
+  // `{bmisc}` environment defined above.
+  def_macro_identity("\\bbooktitle{}")?;
+  def_macro_identity("\\bchapter{}")?;
+  def_macro_identity("\\bhowpublished{}")?;
+  def_macro_identity("\\binstitution{}")?;
+  def_macro_identity("\\bisbn{}")?;
+  def_macro_identity("\\blocation{}")?;
+  def_macro_identity("\\bnumber{}")?;
+  def_macro_identity("\\bschool{}")?;
+  def_macro_identity("\\bsuffix{}")?;
 });

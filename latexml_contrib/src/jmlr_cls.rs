@@ -7,7 +7,12 @@ LoadDefinitions!({
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
-  RequirePackage!("xcolor");
+  // Do NOT eager-load xcolor (Perl ships no jmlr binding → OmniBus, no
+  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
+  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
+  // "Unrecognized tabular template" → "Extra alignment tab". The document
+  // loads xcolor with its own options; `\color`/`\definecolor` stay
+  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
 

@@ -63,4 +63,26 @@ LoadDefinitions!({
   // {APPENDICES} env — render contents as appendix section.
   DefMacro!(T_CS!("\\begin{APPENDICES}"), None, "\\appendix");
   DefMacro!(T_CS!("\\end{APPENDICES}"), None, "");
+
+  // informs3.cls L932: `\def\Halmos{\mbox{\quad$\square$}}` — proof-end
+  // QED box. Render the square in math mode.
+  DefMacro!("\\Halmos", "\\ensuremath{\\square}");
+  // informs3.cls L1231: `\def\EMAIL#1{#1}` — used within \AFF; plain
+  // passthrough of the email text.
+  DefMacro!("\\EMAIL{}", "#1");
+  // informs3.cls L1273: `\long\def\ACKNOWLEDGMENT#1{\section*{\bf
+  // \theACKname.}{#1}}` (\theACKname defaults to "Acknowledgments").
+  // Route the body to a structural acknowledgements block (see
+  // feedback: prefer ltx:acknowledgements over a flattened \section*).
+  DefConstructor!("\\ACKNOWLEDGMENT{}",
+    "<ltx:acknowledgements name='Acknowledgments'>#1</ltx:acknowledgements>");
+  // \ACKname{name} sets the acknowledgements heading name.
+  def_macro_noop("\\ACKname{}")?;
+  // informs3.cls L2642: `\newenvironment{APPENDIX}[1]{…appendix with
+  // title #1…}`. The singular env wraps a single titled appendix.
+  // Begin enters appendix mode + emits the title as a section; the arg
+  // is read by the helper. Mirrors the {APPENDICES} handling.
+  DefMacro!(T_CS!("\\begin{APPENDIX}"), None, "\\appendix\\lx@informs@appendixhead");
+  DefMacro!("\\lx@informs@appendixhead{}", "\\section{#1}");
+  DefMacro!(T_CS!("\\end{APPENDIX}"), None, "");
 });

@@ -82,8 +82,11 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=shortauthor]{#1}");
   DefMacro!("\\authors{}",
     "\\@add@frontmatter{ltx:note}[role=authors]{#1}");
-  DefMacro!("\\shortauthors{}",
-    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // Perl `ams_support.sty.ltxml` L82: `DefMacro('\shortauthors{}', Tokens())`
+  // — gobble (redundant running head). Match Perl; preserving it errored on a
+  // literal `&` in the running head (catcode-4 `&` → stray-`&`). See 0709.4236
+  // and aas_support_sty.rs.
+  def_macro_noop("\\shortauthors{}")?;
   DefMacro!("\\addresses{}",
     "\\@add@frontmatter{ltx:note}[role=addresses]{#1}");
   DefMacro!("\\publname{}",

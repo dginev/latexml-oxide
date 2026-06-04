@@ -6,6 +6,26 @@
 use crate::prelude::*;
 use crate::xmath_helpers::*;
 
+/// Read the control-sequence argument of a siunitx `\Declare…` primitive,
+/// handling BOTH the bare form `\DeclareSIPrefix \yocto {…}{…}` AND the
+/// braced `m`-arg form `\DeclareSIPrefix{\million}{…}{…}` (Perl uses the
+/// `DefToken` parameter type, which accepts either). A plain
+/// `gullet::read_token()` reads `{` (catcode BEGIN) for the braced form, so
+/// the real cs (`\million`) was never registered and stayed undefined —
+/// witness 1811.03510 (`\DeclareSIPrefix{\million}{\text{M}}{2}` then
+/// `\SI{185}{\million rays/s}`). `read_arg` strips the optional braces and
+/// yields the single cs token in both cases.
+fn read_si_declare_cs() -> Result<Token> {
+  let toks = gullet::read_arg(ExpansionLevel::Off)?;
+  Ok(
+    toks
+      .unlist_ref()
+      .first()
+      .copied()
+      .unwrap_or_else(|| T_CS!("\\relax")),
+  )
+}
+
 /// Structured error emission for siunitx (parallels
 /// `latexml_post::diag::log_post_error!` and the engine `Error!` macro).
 ///
@@ -229,17 +249,29 @@ fn six_begin_processing(kv: Option<&KeyVals>) {
   if let Some(kv) = kv {
     six_setup(kv);
   }
-  // Redefine input-protect-tokens: make each CS token into T_OTHER of its name
+  // Perl L98-100: `Let($token, T_OTHER($name))` — make each input-protect
+  // CS *let-equal to a non-expandable character token* of its own name, so a
+  // later `Expand($expr)` in `\num` leaves the CS in place (instead of
+  // expanding it to its `\def` body) and it then matches the `input-symbols`
+  // list, which holds the same CS. This MUST be a let-to-char (`Stored::Token`),
+  // NOT an expandable macro: an expandable redefinition still expands (e.g.
+  // `\def\odd{\xi}` → `\odd` → `\xi`) and the now-bare `\xi` fails to match
+  // `input-symbols={\odd}`, yielding `Not matched in \num: \xi`. Witness:
+  // si.tex L98-100 `\num[input-symbols=\odd, input-protect-tokens=\odd]{3\odd}`.
   if let Some(Stored::Tokens(protect)) = six_get_sym(six_pin!("input-protect-tokens")) {
+    // A control sequence token has catcode CS (or ACTIVE) AFTER tokenization —
+    // NOT ESCAPE (catcode 0, the pre-tokenization backslash *character*). The
+    // prior `== Catcode::ESCAPE` guard was therefore always false, so the
+    // protect-token redefinition never fired and `input-protect-tokens` was a
+    // silent no-op (the root cause of the `\xi` long tail). Perl
+    // (`six_begin_processing` L98-100) applies `Let` to every token in the
+    // list unconditionally; restrict to CS/active so `getCSName`/name-trim is
+    // well-defined.
     for token in protect.unlist() {
-      if token.get_catcode() == Catcode::ESCAPE {
+      if token.get_catcode().is_active_or_cs() {
         let name = token.to_string();
         let other_name = name.trim_start_matches('\\');
-        let expansion = Tokens::new(vec![T_OTHER!(other_name)]);
-        if let Ok(def) = Expandable::new(token, None, Some(ExpansionBody::Tokens(expansion)), None)
-        {
-          state::install_definition(def, None);
-        }
+        state::assign_meaning(&token, Stored::Token(T_OTHER!(other_name)), None);
       }
     }
   }
@@ -356,6 +388,22 @@ fn six_match_keys(tokens: &mut Vec<Token>, keys: &[SymStr]) -> Option<Tokens> {
   }
 }
 
+/// Perl `six_match1($token, @keys)`: non-consuming test of whether a *single*
+/// leading token belongs to any of the named option lists (used by the column
+/// pre-peel loop to decide whether a leading control sequence is an
+/// input-symbol/comparator/protect-token — which stays for number matching —
+/// or surrounding formatting material — which is peeled into `pre`).
+fn six_token_matches_keys(tok: &Token, keys: &[SymStr]) -> bool {
+  for key in keys {
+    if let Some(Stored::Tokens(toks)) = six_get_sym(*key) {
+      if toks.unlist().iter().any(|m| tok == m) {
+        return true;
+      }
+    }
+  }
+  false
+}
+
 fn six_match_sign(tokens: &mut Vec<Token>) -> Option<Tokens> {
   six_match_keys(tokens, &[six_pin!("input-signs")])
 }
@@ -447,20 +495,38 @@ fn six_match_uncertainnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
 }
 
 fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
-  let mut number = six_match_uncertainnumber(tokens)?;
+  // Perl siunitx.sty.ltxml:253 `my $number = six_match_uncertainnumber($tokens)`
+  // — `$number` MAY be undef. Do NOT early-return here: a pure-imaginary input
+  // like `\num{i}` (the imaginary unit alone, no preceding number) has no
+  // uncertain-number but must still match the `input-complex-roots` key below.
+  let number_opt = six_match_uncertainnumber(tokens);
 
   if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
-    let sign = number.get_sign().cloned();
-    number.set_sign(None);
+    // pure imaginary! Perl L255-256: $sign = $$number{sign}; $$number{sign}=undef
+    // (make the sign "infix"); $number = {complex, symbol=>i, sign, arg2=>$number}.
+    // $number may be undef (`\num{i}`) → no sign, no arg2.
+    let (sign, arg2) = match number_opt {
+      Some(mut n) => {
+        let s = n.get_sign().cloned();
+        n.set_sign(None);
+        (s, Some(Box::new(n)))
+      },
+      None => (None, None),
+    };
     return Some(SixNumber::Operator {
       operator: "complex".to_string(),
       arg1: None,
-      arg2: Some(Box::new(number)),
+      arg2,
       sign,
       symbol: Some(i),
       comparator: None,
     });
   }
+
+  // Past the pure-imaginary case the remaining forms (`a ± b i`) all operate on
+  // a real preceding number; if there wasn't one, Perl returns the undef
+  // `$number` and the caller reports the "Not matched" error.
+  let mut number = number_opt?;
 
   if let Some(sign) = six_match_sign(tokens) {
     if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {
@@ -686,6 +752,11 @@ fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
 enum SixParseResult {
   Parsed(SixNumber),
   Raw(Tokens),
+  /// An EMPTY component between `;` separators in `\ang` / `\numlist` etc.
+  /// Perl represents these as `undef` in `six_parse_numbers`'s result list —
+  /// e.g. `\ang{;;1.0}` (empty degrees, empty minutes, 1.0 seconds) yields
+  /// `(undef, undef, <1.0>)`. The component is skipped at format time.
+  Empty,
 }
 
 fn six_parse_number(expr: &Tokens) -> SixParseResult {
@@ -719,11 +790,18 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let mut results = Vec::new();
     loop {
+      // Perl siunitx.sty.ltxml:six_parse_numbers ALWAYS pushes the result —
+      // `undef` (our `Empty`) for an empty component between `;` separators —
+      // then consumes the `;` and continues. Breaking on `None` (the previous
+      // Rust behavior) made `\ang{;;1.0}` (empty;empty;1.0) leave `;;1.0`
+      // unconsumed → spurious "Not matched in \num: ;;1.0". The trailing `;`
+      // check still guarantees progress (each iteration either matches a
+      // number or consumes one `;`). Witness: 2007.08215.
       let result = six_postprocess(six_match_number(&mut tokens));
-      match result {
-        Some(n) => results.push(SixParseResult::Parsed(n)),
-        None => break,
-      }
+      results.push(match result {
+        Some(n) => SixParseResult::Parsed(n),
+        None => SixParseResult::Empty,
+      });
       if tokens.first().is_some_and(|t| t.text == pin!(";")) {
         tokens.remove(0);
       } else {
@@ -1048,6 +1126,7 @@ fn six_format_number(number: &SixParseResult, bracket: i32) -> Tokens {
   match number {
     SixParseResult::Raw(toks) => i_wrap(None, toks.clone()),
     SixParseResult::Parsed(num) => six_format_number_inner(num, bracket),
+    SixParseResult::Empty => Tokens::default(),
   }
 }
 
@@ -1251,12 +1330,18 @@ fn six_format_range(bracketed: bool, first: Tokens, last: Tokens) -> Tokens {
   range_pres.push(i_arg("2"));
 
   if bracketed {
-    range_pres.insert(
-      0,
-      six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket"))
-        .unlist()
-        .remove(0),
-    );
+    // Perl six_format_range: `unshift(@range, six_get_op({role=>'OPEN'},
+    // 'open-bracket'))` prepends the ENTIRE open-bracket op. The earlier
+    // Rust port did `range_pres.insert(0, open.unlist().remove(0))`, which
+    // kept only the op's FIRST token and dropped the rest — corrupting the
+    // bracketed presentation so the dual lost its first argument
+    // (`range@([], 4)` instead of `range@(2, 4)`). Prepend the whole op,
+    // matching Perl. Witness: si.tex `\SIrange[range-units=brackets]{2}{4}
+    // {\degreeCelsius}`.
+    let mut bracketed_pres =
+      six_get_op_sym(&[("role", Tokenize!("OPEN"))], six_pin!("open-bracket")).unlist();
+    bracketed_pres.append(&mut range_pres);
+    range_pres = bracketed_pres;
     range_pres
       .extend(six_get_op_sym(&[("role", Tokenize!("CLOSE"))], six_pin!("close-bracket")).unlist());
   }
@@ -1326,6 +1411,38 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
   );
 
   i_dual(&[], content, Tokens::new(list_pres), items).unwrap_or_default()
+}
+
+/// Perl siunitx.sty.ltxml L1379-1399 `DefColumnType('S'|'s' Optional, …)`: add
+/// an alignment column whose `before`/`after` wrap each cell as
+/// `{ \lx@si@column@prep[kv] <parse> <cell> \lx@si@column@end }`, routing the
+/// cell through the SI parser so table numbers/units render in MATH mode (like
+/// `\num`/`\si`). `parse_cs` is `\lx@SI@column@parse` (number parse, the `S`
+/// column) or `\lx@si@column@parse` (unit parse, the lowercase `s` column).
+/// The Rust S/s columns used to be stubs (default Cell, no before/after) →
+/// cells rendered as bare text, never `<ltx:Math>`. Witness 1909.01486
+/// (siunitx `S[table-format=…]` tables: RUST 303 Math vs PERL 578; table@671
+/// RUST 6 vs PERL 174).
+fn add_si_column(kv: Option<Tokens>, parse_cs: &str) {
+  let mut before: Vec<Token> = vec![T_BEGIN!(), T_CS!("\\lx@si@column@prep")];
+  if let Some(kv) = kv {
+    if !kv.is_empty() {
+      before.push(T_OTHER!("["));
+      before.extend(kv.unlist());
+      before.push(T_OTHER!("]"));
+    }
+  }
+  before.push(T_CS!(parse_cs));
+  let after = Tokens!(T_CS!("\\lx@si@column@end"), T_END!());
+  with_current_build_template(|template_opt| {
+    if let Some(t) = template_opt {
+      t.add_column(latexml_core::alignment::cell::Cell {
+        before: Some(Tokens::new(before.clone())),
+        after: Some(after.clone()),
+        ..latexml_core::alignment::cell::Cell::default()
+      });
+    }
+  });
 }
 
 /// Perl siunitx.sty.ltxml L751-759: `sub six_wrap`. Reads color ONCE
@@ -1589,50 +1706,88 @@ fn six_format_unitproduct(bracketed: bool, units: &[SixUnit]) -> Tokens {
 /// Format units handling per-mode
 fn six_format_units(units: &[SixUnit]) -> Tokens {
   let permode = six_get_choice_sym(six_pin!("per-mode"));
+  // Perl siunitx.sty.ltxml L1062-1063: `symbol-or-fraction` is resolved up
+  // front to `fraction` in display math, `symbol` otherwise. Without this
+  // remap it falls through to the "Unknown siunitx per-mode" catchall.
+  // Witness 1811.06895 (`\sisetup{per-mode=symbol-or-fraction}`).
+  let permode = if permode == "symbol-or-fraction" {
+    let is_display = lookup_font()
+      .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.as_ref() == "display"))
+      .unwrap_or(false);
+    if is_display { "fraction".to_string() } else { "symbol".to_string() }
+  } else {
+    permode
+  };
   if permode == "reciprocal" || units.iter().all(|u| !u.per) {
+    // Perl siunitx.sty.ltxml L1065-1066: each unit processed in order with
+    // its own per (if any).
     return six_format_unitproduct(false, units);
   }
 
-  // For "fraction" and "symbol" modes we need partitioned owned
-  // unit lists. For any other permode the original `units` slice
-  // is used as-is.
-  if permode == "fraction" || permode == "symbol" {
-    let (numer_units, denom_units): (Vec<SixUnit>, Vec<SixUnit>) = {
-      let mut n = Vec::with_capacity(units.len());
-      let mut d = Vec::with_capacity(units.len());
-      for u in units {
-        if u.per {
-          let mut uu = u.clone();
-          uu.per = false;
-          d.push(uu);
-        } else {
-          n.push(u.clone());
-        }
-      }
-      (n, d)
-    };
-    if permode == "fraction" {
-      let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
-      tks.extend(six_format_unitproduct(false, &numer_units).unlist());
-      tks.push(T_END!());
-      tks.push(T_BEGIN!());
-      tks.extend(six_format_unitproduct(false, &denom_units).unlist());
-      tks.push(T_END!());
-      Tokens::new(tks)
+  // Perl L1068-1072: collect numerator & denominator units (positive vs
+  // negative powers). The denominator units keep their `per` markers for
+  // now — `reciprocal-positive-first` needs them intact.
+  let mut numer_units: Vec<SixUnit> = Vec::with_capacity(units.len());
+  let mut denom_units: Vec<SixUnit> = Vec::with_capacity(units.len());
+  for u in units {
+    if u.per {
+      denom_units.push(u.clone());
     } else {
-      let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
-      let per_sym = six_get_op_sym(
-        &[
-          ("role", Tokenize!("MULOP")),
-          ("meaning", Tokenize!("divide")),
-        ],
-        six_pin!("per-symbol"),
-      );
-      six_format_infix(per_sym, None, None, vec![
-        six_format_unitproduct(false, &numer_units),
-        six_format_unitproduct(bracket, &denom_units),
-      ])
+      numer_units.push(u.clone());
     }
+  }
+
+  if permode == "reciprocal-positive-first" {
+    // Perl L1073-1074: re-ordered (numerators first, then denominators),
+    // each per left as-is (markers NOT stripped).
+    let mut all = numer_units;
+    all.extend(denom_units);
+    return six_format_unitproduct(false, &all);
+  }
+
+  // Perl L1075-1076: otherwise, remove the per markers from the
+  // denominator units before formatting.
+  for u in &mut denom_units {
+    u.per = false;
+  }
+
+  if permode == "fraction" {
+    // Perl L1077-1080
+    let mut tks = vec![T_CS!("\\frac"), T_BEGIN!()];
+    tks.extend(six_format_unitproduct(false, &numer_units).unlist());
+    tks.push(T_END!());
+    tks.push(T_BEGIN!());
+    tks.extend(six_format_unitproduct(false, &denom_units).unlist());
+    tks.push(T_END!());
+    Tokens::new(tks)
+  } else if permode == "repeated-symbol" {
+    // Perl L1081-1085: the per-symbol (divide MULOP) prefixes EACH
+    // denominator unit in turn — `numer / d1 / d2 / …` rather than
+    // `numer / (d1·d2)`. Witness 1812.05943 (elsarticle,
+    // `\sisetup{per-mode=repeated-symbol}`).
+    let per_sym = six_get_op_sym(
+      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
+      six_pin!("per-symbol"),
+    );
+    let mut result = six_format_unitproduct(false, &numer_units);
+    for d in &denom_units {
+      result = six_format_infix(per_sym.clone(), None, None, vec![result, six_format_1unit(d)]);
+    }
+    result
+  } else if permode == "symbol" {
+    // Perl L1086-1093
+    let bracket = denom_units.len() > 1 && six_get_bool_sym(six_pin!("bracket-unit-denominator"));
+    let per_sym = six_get_op_sym(
+      &[
+        ("role", Tokenize!("MULOP")),
+        ("meaning", Tokenize!("divide")),
+      ],
+      six_pin!("per-symbol"),
+    );
+    six_format_infix(per_sym, None, None, vec![
+      six_format_unitproduct(false, &numer_units),
+      six_format_unitproduct(bracket, &denom_units),
+    ])
   } else {
     // Perl siunitx.sty.ltxml:1094 — Error('unexpected', $permode, undef,
     //   "Unknown siunitx per-mode $permode") for the catchall arm.
@@ -2336,7 +2491,7 @@ LoadDefinitions!({
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareSIPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -2358,7 +2513,7 @@ LoadDefinitions!({
   // \DeclareSIPrePower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPrePower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2377,7 +2532,7 @@ LoadDefinitions!({
   // \DeclareSIPostPower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPostPower[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2397,7 +2552,7 @@ LoadDefinitions!({
   // \DeclareSIQualifier [kv] \cs {qualifier}
   DefPrimitive!("\\DeclareSIQualifier[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let qualifier = gullet::read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
@@ -2416,7 +2571,7 @@ LoadDefinitions!({
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareBinaryPrefix[]", {
     gullet::skip_spaces()?;
-    let cs = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let cs = read_si_declare_cs()?;
     gullet::skip_spaces()?;
     let presentation = gullet::read_arg(ExpansionLevel::Off)?;
     let power = gullet::read_arg(ExpansionLevel::Off)?;
@@ -2505,31 +2660,78 @@ LoadDefinitions!({
     let expr = expr_arg;
     six_begin_processing(kv.as_ref());
 
-    let items = six_parse_numbers(&expr);
+    let mut items = six_parse_numbers(&expr);
+    // Pad to 3 components so degree/minute/second indices are addressable.
+    while items.len() < 3 {
+      items.push(SixParseResult::Empty);
+    }
+    // Perl `\ang`: substitute "0" for an EMPTY component when the matching
+    // `add-arc-<unit>-zero` option is set — minute/second gated on the earlier
+    // components carrying no fractional part (siunitx.sty.ltxml L802-813).
+    {
+      let is_empty = |it: &SixParseResult| matches!(it, SixParseResult::Empty);
+      let has_frac = |it: &SixParseResult| {
+        matches!(it, SixParseResult::Parsed(SixNumber::Simple { fraction: Some(_), .. }))
+      };
+      let addd0 = is_empty(&items[0]) && six_get_bool_sym(six_pin!("add-arc-degree-zero"));
+      let addm0 = is_empty(&items[1])
+        && six_get_bool_sym(six_pin!("add-arc-minute-zero"))
+        && (is_empty(&items[0]) || !has_frac(&items[0]));
+      let adds0 = is_empty(&items[2])
+        && six_get_bool_sym(six_pin!("add-arc-second-zero"))
+        && (is_empty(&items[0]) || !has_frac(&items[0]))
+        && (is_empty(&items[1]) || !has_frac(&items[1]));
+      if addd0 {
+        items[0] = SixParseResult::Parsed(SixNumber::simple(None, Some(Tokenize!("0")), None, None));
+      }
+      if addm0 {
+        items[1] = SixParseResult::Parsed(SixNumber::simple(None, Some(Tokenize!("0")), None, None));
+      }
+      if adds0 {
+        items[2] = SixParseResult::Parsed(SixNumber::simple(None, Some(Tokenize!("0")), None, None));
+      }
+    }
+    // Perl `\ang`: pull the (overall) sign out of the first signed component —
+    // it applies to the whole angle — and clear the per-component signs so it
+    // renders once, in front (siunitx.sty.ltxml L815-821). Without this,
+    // `\ang{;-2;}` with add-arc-degree-zero formats as `0°-2′` instead of
+    // Perl's `-0°2′`.
+    let overall_sign: Option<Tokens> = items.iter().find_map(|it| match it {
+      SixParseResult::Parsed(n) => n.get_sign().cloned(),
+      _ => None,
+    });
+    for it in items.iter_mut() {
+      if let SixParseResult::Parsed(n) = it {
+        n.set_sign(None);
+      }
+    }
+    let sign_prefix: &str = match overall_sign.as_ref().map(|s| s.to_string()) {
+      Some(st) if st.contains('-') => "-",
+      Some(st) if st.contains('+') => "+",
+      _ => "",
+    };
     let mulop = Tokens::new(vec![T_CS!("\\lx@InvisibleTimes")]);
     let mut parts = Vec::new();
 
-    if let Some(d) = items.first() {
-      let fd = six_format_number(d, 0);
-      parts.push(six_format_infix(
-        mulop.clone(), None, None,
-        vec![fd, Tokens::new(vec![T_CS!("\\SIUnitSymbolDegree")])],
-      ));
-    }
-    if let Some(m) = items.get(1) {
-      let fm = six_format_number(m, 0);
-      parts.push(six_format_infix(
-        mulop.clone(), None, None,
-        vec![fm, Tokens::new(vec![T_CS!("\\SIUnitSymbolArcminute")])],
-      ));
-    }
-    if let Some(s) = items.get(2) {
-      let fs = six_format_number(s, 0);
-      parts.push(six_format_infix(
-        mulop, None, None,
-        vec![fs, Tokens::new(vec![T_CS!("\\SIUnitSymbolArcsecond")])],
-      ));
-    }
+    // Perl `\ang` pushes a D/M/S component only if it is defined AND formats
+    // to non-empty (`if ($fdegrees && $fdegrees->unlist)`). An `Empty`
+    // component (e.g. the `;;` of `\ang{;;1.0}`) contributes no symbol.
+    let push_part = |parts: &mut Vec<Tokens>, item: Option<&SixParseResult>, symbol: &str, mulop: &Tokens| {
+      if let Some(c) = item {
+        if !matches!(c, SixParseResult::Empty) {
+          let f = six_format_number(c, 0);
+          if !f.is_empty() {
+            parts.push(six_format_infix(
+              mulop.clone(), None, None,
+              vec![f, Tokens::new(vec![T_CS!(symbol)])],
+            ));
+          }
+        }
+      }
+    };
+    push_part(&mut parts, items.first(), "\\SIUnitSymbolDegree", &mulop);
+    push_part(&mut parts, items.get(1), "\\SIUnitSymbolArcminute", &mulop);
+    push_part(&mut parts, items.get(2), "\\SIUnitSymbolArcsecond", &mulop);
 
     let combined = if parts.len() > 1 {
       let addop = Tokens::new(vec![T_CS!("\\lx@InvisiblePlus")]);
@@ -2537,8 +2739,14 @@ LoadDefinitions!({
     } else {
       parts.into_iter().next().unwrap_or_default()
     };
+    // Perl: `if ($sign) { @punctuated = I_apply({}, $sign, @punctuated); }`
+    let combined = if let Some(sign) = &overall_sign {
+      i_apply(&[], sign.clone(), vec![combined])
+    } else {
+      combined
+    };
 
-    let mut meaning = String::new();
+    let mut meaning = String::from(sign_prefix);
     if let Some(SixParseResult::Parsed(d)) = items.first() {
       meaning.push_str(&six_number_string(d)); meaning.push('\u{00B0}');
     }
@@ -2569,9 +2777,19 @@ LoadDefinitions!({
     Ok(funits)
   });
 
-  // siunitx v3 \unit[options]{units} — equivalent to v2 \si.
-  // Witnesses 2406.02765, 2406.18417.
-  Let!("\\unit", "\\si");
+  // siunitx v3 \unit[options]{units} — equivalent to v2 \si — but ONLY when
+  // `\unit` isn't already defined. The older `units` package also defines
+  // `\unit` (the `\unit[value]{unit}` syntax), and when both packages are
+  // loaded Perl keeps units' `\unit` (siunitx.sty.ltxml never redefines it).
+  // Unconditionally `\let`-ing `\unit` to `\si` clobbered units' command, so
+  // `\unit[1.8$\times$10$^{17}$]{s$^{-1}$}` (units syntax) had its optional
+  // `[…]` mis-scanned by `\si` → the inner `$…$` never entered math → `^`
+  // "can only appear in math mode" (witness 1610.06392, units+siunitx). The
+  // `\@ifundefined` guard preserves siunitx-only `\unit` (witnesses 2406.02765,
+  // 2406.18417: `\unit` is undefined there, so it is defined here) while
+  // deferring to units' `\unit` when that package is present — matching Perl,
+  // and order-independent (if siunitx loads first, units' later DefMacro wins).
+  RawTeX!(r"\@ifundefined{unit}{\let\unit\si}{}");
 
   // siunitx v3 \qty[options]{number}{units} — equivalent to v2 \SI.
   // Witness 2406.20067, 2407.03167. Defined below by Let to \SI after
@@ -2665,19 +2883,145 @@ LoadDefinitions!({
   // be consumed by the column-type reader; otherwise each character of the
   // option string leaks back into the tabular template parser as a separate
   // column letter (driver: 1904.04279 with `S[round-precision=1]`).
-  DefColumnType!("S Optional", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
-        ..latexml_core::alignment::cell::Cell::default()
-      })
-    });
+  // Perl L1401-1407: cell-prep (begin SI processing for this column's [kv])
+  // and the empty end-delimiter.
+  DefMacro!("\\lx@si@column@prep OptionalKeyVals:SIX", sub[(kv)] {
+    six_begin_processing(kv.as_ref());
+    six_enable_unit_macros(true);
+    Ok(Tokens!())
   });
-  DefColumnType!("s Optional", {
-    with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
-        ..latexml_core::alignment::cell::Cell::default()
-      })
-    });
+  DefPrimitive!("\\lx@si@column@end", {});
+  // Perl L1414-1451 `\lx@SI@column@parse` (the `S`, number column): read the
+  // cell up to `\lx@si@column@end`, peel leading "surrounding material" —
+  // spaces, leading non-symbol control sequences (formatting like `\bfseries`,
+  // `\color`), and whole braced groups — into `pre`, parse the rest as a
+  // number (NO error on leftover, UNLIKE `\num`), then emit
+  // `pre + {\color{…}}?six_wrap(result) + post`. A leading `\color` cancels
+  // the column's auto-color (Perl L1429).
+  DefMacro!("\\lx@SI@column@parse XUntil:\\lx@si@column@end", sub[args] {
+    use latexml_core::token::Catcode;
+    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let doparse = six_get_bool_sym(six_pin!("parse-numbers"));
+    let mut color = six_get_tokens_sym(six_pin!("color"));
+    let mut pre: Vec<Token> = Vec::new();
+    let color_cs = T_CS!("\\color");
+    loop {
+      match tokens.first().map(|t| t.get_catcode()) {
+        // SPACE, or (parsing AND a leading CS that is NOT an
+        // input-comparator/protect-token/symbol) → peel into `pre`.
+        Some(Catcode::SPACE) => { pre.push(tokens.remove(0)); },
+        Some(Catcode::ESCAPE) if doparse
+          && !six_token_matches_keys(&tokens[0], &[
+            six_pin!("input-comparators"),
+            six_pin!("input-protect-tokens"),
+            six_pin!("input-symbols")]) => {
+          if tokens[0] == color_cs { color = Tokens::new(vec![]); }
+          pre.push(tokens.remove(0));
+        },
+        Some(Catcode::BEGIN) => {
+          let mut depth = 0i32;
+          let mut i = 0usize;
+          while i < tokens.len() {
+            match tokens[i].get_catcode() {
+              Catcode::BEGIN => depth += 1,
+              Catcode::END => { depth -= 1; if depth == 0 { i += 1; break; } },
+              _ => {},
+            }
+            i += 1;
+          }
+          pre.extend(tokens.drain(0..i));
+        },
+        _ => break,
+      }
+    }
+    let (result, mut post): (Tokens, Vec<Token>) = if doparse {
+      let mut toks = six_apply_mathligatures(tokens);
+      let parsed = six_postprocess(six_match_number(&mut toks));
+      let res = match parsed {
+        Some(num) => six_format_number(&SixParseResult::Parsed(num), 0),
+        None => Tokens!(),
+      };
+      (res, toks)
+    } else {
+      (Tokens::new(tokens), Vec::new())
+    };
+    // Perl L1445-1447: color wraps the result (pre … {\color{c} result } … post).
+    if !color.is_empty() {
+      pre.push(T_BEGIN!());
+      pre.push(color_cs);
+      pre.push(T_BEGIN!());
+      pre.extend(color.unlist());
+      pre.push(T_END!());
+      post.insert(0, T_END!());
+    }
+    six_end_processing();
+    let mut out: Vec<Token> = pre;
+    if !result.is_empty() {
+      out.extend(six_wrap(result).unlist());
+    }
+    out.extend(post);
+    Ok(Tokens::new(out))
+  });
+  // Perl L1454-1485 `\lx@si@column@parse` (the lowercase `s`, UNIT column):
+  // peel leading spaces / braced groups into `pre`, then parse the remainder
+  // as UNITS (`six_convertUnits`/`six_parse_units`/`six_format_units`, via the
+  // shared `six_process_units` used by `\si`) rather than as a number. Color
+  // wraps the whole cell (Perl L1479-1481: `{\color{c} pre result post }`).
+  DefMacro!("\\lx@si@column@parse XUntil:\\lx@si@column@end", sub[args] {
+    use latexml_core::token::Catcode;
+    let mut tokens: Vec<Token> = args[0].clone().into_tokens_result()?.unlist();
+    let color = six_get_tokens_sym(six_pin!("color"));
+    let mut pre: Vec<Token> = Vec::new();
+    loop {
+      match tokens.first().map(|t| t.get_catcode()) {
+        Some(Catcode::SPACE) => { pre.push(tokens.remove(0)); },
+        Some(Catcode::BEGIN) => {
+          let mut depth = 0i32;
+          let mut i = 0usize;
+          while i < tokens.len() {
+            match tokens[i].get_catcode() {
+              Catcode::BEGIN => depth += 1,
+              Catcode::END => { depth -= 1; if depth == 0 { i += 1; break; } },
+              _ => {},
+            }
+            i += 1;
+          }
+          pre.extend(tokens.drain(0..i));
+        },
+        _ => break,
+      }
+    }
+    // Perl L1472: drop a trailing `\lx@column@trimright` sentinel if present.
+    if tokens.last().map(|t| *t == T_CS!("\\lx@column@trimright")).unwrap_or(false) {
+      tokens.pop();
+    }
+    let result = six_process_units(&Tokens::new(tokens));
+    let mut post: Vec<Token> = Vec::new();
+    let mut pre_out: Vec<Token> = Vec::new();
+    // Perl L1479-1481: color wraps EVERYTHING (`{\color{c}` at the FRONT).
+    if !color.is_empty() {
+      pre_out.push(T_BEGIN!());
+      pre_out.push(T_CS!("\\color"));
+      pre_out.push(T_BEGIN!());
+      pre_out.extend(color.unlist());
+      pre_out.push(T_END!());
+      post.push(T_END!());
+    }
+    pre_out.extend(pre);
+    six_end_processing();
+    let mut out: Vec<Token> = pre_out;
+    if !result.is_empty() {
+      out.extend(six_wrap(result).unlist());
+    }
+    out.extend(post);
+    Ok(Tokens::new(out))
+  });
+  // Perl L1379-1399: `S` → number parse, lowercase `s` → unit parse.
+  DefColumnType!("S Optional", sub[args] {
+    add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@SI@column@parse");
+  });
+  DefColumnType!("s Optional", sub[args] {
+    add_si_column(args.first().cloned().and_then(ArgWrap::owned_tokens), "\\lx@si@column@parse");
   });
 
   //======================================================================

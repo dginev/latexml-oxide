@@ -304,12 +304,19 @@ impl Model {
   pub fn describe_model(&self) {}
   fn load_internal_extensions(&mut self) {
     if !self.tagprop.contains_key("ltx:_CaptureBlock_") {
-      // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block, ltx:para,
+      // Synthesize ltx:_CaptureBlock_ to act like the union of ltx:block,
+      // ltx:logical-block, ltx:sectional-block, Caption, FrontMatter,
+      // BackMatter (Perl Common/Model.pm loadInternalExtensions L96-97).
+      // FrontMatter/BackMatter were missing here, so a captured box that
+      // legitimately holds frontmatter/backmatter content was modelled
+      // more narrowly than Perl.
       self.synthesize_element("ltx:_CaptureBlock_", &[
         "ltx:block",
         "ltx:logical-block",
         "ltx:sectional-block",
         "Caption",
+        "FrontMatter",
+        "BackMatter",
       ]);
       let cb_entry = self.tagprop.entry("ltx:_CaptureBlock_").or_default();
       cb_entry.model.insert(arena::pin_static("svg:g"));

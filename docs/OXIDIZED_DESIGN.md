@@ -1135,6 +1135,111 @@ deliberate:
 `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`
 blocks). 3 errors → 0. Tests 1328/0/0.
 
+### 27. `\DeclareMathSymbol` U-encoding Fallback: U+FFFD, not Empty
+
+**Decision:** When `\DeclareMathSymbol{cs}{type}{fontkind}{slot}` resolves
+the symbol-font's encoding to a value whose `LoadFontMap()` returns
+`None` (the most common case is `U` — "Unknown" encoding declared via
+`\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}`), we substitute U+FFFD
+(REPLACEMENT CHARACTER) for any slot in the C0 control range (0x00-0x1F
+minus tab/LF/CR) and the raw codepoint otherwise. Perl's
+`Package.pm::FontDecode` returns `undef` glyph for the same case;
+Perl's `DefMathI($cs, undef, undef, role => …)` defines the CS as an
+**empty** XMTok with just the role attribute set.
+
+**Why diverge:** Perl emits the literal byte (e.g. `\x10` for hex slot
+`"10`) into the XML, which is **not valid XML 1.0** (§2.2: C0 chars
+except 0x09/0x0A/0x0D are forbidden). When libxml2 later parses the
+serialized document for post-processing (`find_node_by_id` / XPath),
+it aborts mid-tree on the first invalid byte. Every `xml:id` past that
+point becomes unresolvable, surfacing as the
+`Error:expected:id Cannot find a node with xml:id=…` cluster (which
+dominated CONVERR on second-500K canvas stage_51, ~63% of papers
+with errors). U+FFFD is the canonical "unrepresentable character"
+placeholder and is XML-1.0-valid, so the downstream parse stays
+clean.
+
+**Shared upstream gap:** Neither Perl nor we ship a `u.fontmap.ltxml`
+nor a `("U", family="msa")`-keyed registration of the AMSa table.
+Resolving the slot to its correct Unicode codepoint (e.g. U+21A0 for
+`\onto` at AMSa slot 0x10) would require registering the existing
+`AMSa_fontmap` data under the `"U_msa_fontmap"` key, which neither
+engine currently does. The fix is parity-neutral if landed on both
+sides; we defer it as a beyond-Perl improvement.
+
+**Witness:** arXiv:1501.05180 (`\DeclareMathSymbol\onto\mathrel
+{latex-font msa}{"10}`). With the U+FFFD substitution, the paper
+converts cleanly through post-processing; without it, the dominant
+CONVERR_N cluster fires. See `latexml_engine/src/latex_constructs.rs`
+the `xml_safe_char` helper around line 6243.
+
+---
+
+### 28. Bib-section title = leading balanced group, not all trailing tokens
+
+**Decision:** In `begin_bibliography_clean`
+(`latexml_engine/src/latex_constructs.rs`), when deciphering
+`\bibsection`'s body for the bibliography title, after stripping the
+sectional-unit CS and an optional `*` we take **only the leading
+balanced `{...}` group** as the title, rather than all remaining
+expansion tokens. When there is no leading group (an un-braced title)
+we fall back to all tokens — Perl's behavior.
+
+**Perl ground truth:** `beginBibliography_clean`
+(`LaTeX.pool.ltxml` L4035-4053) sets `$bibtitle = Tokens(@t)` — *all*
+remaining tokens after the unit + `*`. Right at that line the Perl
+author left the TODO: `# Check for balanced? or just take balanced
+begining?` — i.e. they knew the title should be the unit's argument
+(the brace group), not whatever trails it. We realize that intent.
+
+**Why diverge:** Papers that prevent the bibliography from breaking to
+a new page do
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}`
+(a *parameterized* `\bibsection`). After the unit+`*` strip Perl's
+"all tokens" leaves `{\refname}\small #1`, and digesting that pushes
+the page/font directive `\small` **and** the bare parameter token
+`#1` — an ARG-catcode token that errors `The token "#1" (catcode ARG)
+should never reach Stomach!`. Perl only escapes this in the witness by
+a fragile, comment-line-dependent mouth artifact (the *same*
+`\bibsection` macro leaks in a minimal Perl repro, perl-rc=1); the
+leading-group rule fixes it deterministically and is strictly more
+robust. Output is identical to Perl on the witness:
+`<bibliography xml:id="bib"><title>References</title>…`. Trailing
+page/font directives (`\small`, `\markboth`, `\thispagestyle`) that
+LaTeXML never renders in a title are correctly dropped.
+
+**Witness:** arXiv:1702.01165 (llncs + IEEEtranN `.bbl`,
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}`).
+
+### 29. `wrapfigure`/`wraptable` emit the declared wrap width
+
+**Decision:** `wrapfig.sty`'s `{wrapfigure}`/`{wraptable}` set the figure/table
+element's `@width` to the mandatory `{Dimension}` wrap-width argument (→ CSS
+`width:`), capping the float — image *and* caption — to that width.
+
+**Perl behavior:** Perl `wrapfig.sty.ltxml` captures the wrap width as the last
+`{Dimension}` argument of the environment but then **discards it** — the emitted
+`ltx:figure` carries only `float='right'|'left'`, no width.
+
+**Why diverge:** A wrapfig float with no width constraint shrinks/expands to its
+content. Under ar5iv.css (`.ltx_align_floatright { float:right }`, no width cap)
+a small figure whose caption fits on one long line balloons into an enormous
+box — the caption sets the float width, not the image. Real LaTeX confines the
+float to the declared wrap width (`\begin{wrapfigure}{r}{0.4\textwidth}`); we
+honor that intent. The width renders via the existing `@width` → `base-styling`
+`width:` path (the same mechanism `{minipage}` uses), so the image (CSS
+`width:auto; max-width:100%`) and the caption both wrap within the declared
+width. This keeps `width:auto` working as CSS intends (the SVG/image keeps its
+natural intrinsic size; the *figure* is what's bounded) rather than pinning the
+image's own dimensions.
+
+**Impact:** `<ltx:figure>`/`<ltx:table>` from wrap environments gain a
+`width="<dim>"` attribute (e.g. `width="138.0pt"` for `0.35\textwidth`). Witness
+arXiv:2012.00499 Figure 3 (`\begin{wrapfigure}{r}{0.4\textwidth}` around a
+`width=0.4\textwidth` histogram): previously the float filled the column width to
+fit the single-line caption; now both image and caption are capped to the wrap
+width.
+
 ---
 
 ## Future Work (Beyond Perl Parity)

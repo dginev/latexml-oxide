@@ -117,6 +117,19 @@ LoadDefinitions!({
   // Driver: 2406.14142 (duckuments cascade, 21 errors → 4 expected
   // (matching Perl's residual undefined-CS count)).
   Let!("\\c_sys_jobname_str", "\\jobname");
+
+  // expl3 historical-alias: `\hbox_unpack_clear:N` was deprecated
+  // around 2018 in favor of `\hbox_unpack_drop:N` (both call `\unhbox`
+  // — read out the box's contents AND clear/drop the box itself).
+  // Modern l3kernel no longer ships the alias, so our dump doesn't
+  // contain it, but third-party expl3 packages (mmacells.sty,
+  // letgut-lstlang.sty) still call the deprecated name. Add the
+  // alias post-dump so those packages load cleanly. Witness:
+  // arXiv:2002.07146 (uses `\usepackage{mmacells}`).
+  // (See also `\hbox_unpack:N` in dump = `\unhcopy` which is the
+  // non-clearing version.)
+  Let!("\\hbox_unpack_clear:N", "\\hbox_unpack_drop:N");
+
   RawTeX!(r"
     \edef\c_sys_minute_int{0}%
     \edef\c_sys_hour_int{0}%

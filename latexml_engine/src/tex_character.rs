@@ -8,6 +8,20 @@ use unicode_normalization::char::compose;
 
 static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 
+/// Convert a char-code register argument (`\catcode`, `\lccode`, `\uccode`,
+/// `\sfcode`) to the `char` it keys. LaTeXML is Unicode-aware: a code like
+/// `\catcode`‹=\active` carries the FULL codepoint (U+2039 = 8249), so the
+/// old `(n as u8) as char` truncated it to `8249 & 0xFF = 57` ('9') —
+/// silently activating the wrong character (witness: csquotes
+/// `\MakeAutoQuote*{‹}{›}` made '9'/':' active+undefined, 2007.09691). Perl
+/// keys the catcode table on `chr($charcode)` with no truncation. Mirror that
+/// with `char::from_u32`; only fall back to the 8-bit form for an out-of-range
+/// code (negative / surrogate / > U+10FFFF), where no valid `char` exists.
+#[inline]
+fn charcode_to_char(n: i64) -> char {
+  char::from_u32(n as u32).unwrap_or((n as u8) as char)
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Character Family of primitive control sequences
@@ -160,41 +174,41 @@ LoadDefinitions!({
   DefRegister!("\\catcode Number", Number::new(0),
     getter => sub[args] {
       unpack_opt!(args => num);
-      let refchar = (num.expect_number().value_of() as u8) as char;
+      let refchar = charcode_to_char(num.expect_number().value_of());
       let code = lookup_catcode(refchar).unwrap_or(Catcode::OTHER);
       Number::from(code)
     },
     setter => sub[value, scope, args] {
       unpack_opt!(args => num);
-      let c_char = (num.expect_number().value_of() as u8) as char;
+      let c_char = charcode_to_char(num.expect_number().value_of());
       let c_code : Catcode = From::from(value.value_of() as u8);
       assign_catcode(c_char, c_code, scope);
     }
   );
   DefRegister!("\\sfcode Number", Number::new(0),
   getter=> sub[args] {
-  let code = lookup_sfcode(args[0].value_of() as u8 as char);
+  let code = lookup_sfcode(charcode_to_char(args[0].value_of()));
     Number::new(code.unwrap_or(1000) as i64)  // Perl default is 1000 for undefined sfcodes
   },
   setter => sub[value, scope, args] {
-    assign_sfcode(args[0].value_of() as u8 as char,
+    assign_sfcode(charcode_to_char(args[0].value_of()),
       value.value_of() as u16, scope); });
   DefRegister!("\\lccode Number", Number::new(0),
   getter=> sub[args] {
-    let code = lookup_lccode(args[0].value_of() as u8 as char);
+    let code = lookup_lccode(charcode_to_char(args[0].value_of()));
     Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, scope, args] {
-    assign_lccode(args[0].value_of() as u8 as char,
+    assign_lccode(charcode_to_char(args[0].value_of()),
       value.value_of() as u16, scope);
   });
   DefRegister!("\\uccode Number", Number::new(0),
   getter=> sub[args] {
-    let code = lookup_uccode(args[0].value_of() as u8 as char);
+    let code = lookup_uccode(charcode_to_char(args[0].value_of()));
     Number::new(code.unwrap_or_default() as i64)
   },
   setter => sub[value, scope, args] {
-    assign_uccode(args[0].value_of() as u8 as char,
+    assign_uccode(charcode_to_char(args[0].value_of()),
       value.value_of() as u16, scope);
   });
 

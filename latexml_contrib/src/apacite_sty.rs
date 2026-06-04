@@ -75,6 +75,21 @@ LoadDefinitions!({
   DefMacro!("\\citeA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
   DefMacro!("\\citeNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
   DefMacro!("\\citeyearNP[][] Semiverbatim", "\\citeyear[#1][#2]{#3}");
+  // apacite "short" cite family (apacite.sty L277-401, the CLASSIC block —
+  // distinct from the `\citet`/`\citep` defined only under the `natbibemu`
+  // option at L587+). These are abbreviated-author variants of
+  // \cite/\citeA/\citeNP/\citeauthor: apacite shortens long author lists to
+  // "et al." sooner, but the reference resolves identically, so we delegate
+  // to the matching natbib command (same approximation as `\citeNP` above).
+  //   \shortcite       — parenthetical          → \citep
+  //   \shortciteA      — textual                → \citet
+  //   \shortciteNP     — no parentheses         → \citealp
+  //   \shortciteauthor — author-only            → \citeauthor
+  // Witness 1606.03620 (`\shortciteNP`, via apacdoc's `\DSMshortciteNP`).
+  DefMacro!("\\shortcite[][] Semiverbatim", "\\citep[#1][#2]{#3}");
+  DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
+  DefMacro!("\\shortciteNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
+  DefMacro!("\\shortciteauthor[][] Semiverbatim", "\\citeauthor{#3}");
   def_macro_noop("\\APACrestorebibitem")?;
   def_macro_noop("\\APACemindex{}")?;
   def_macro_noop("\\APACltxemindex{}")?;
@@ -101,6 +116,10 @@ LoadDefinitions!({
   def_macro_identity("\\BPGS{}")?;
   def_macro_identity("\\BVOL{}")?;
   DefMacro!("\\BOthers{}", "et al.");
+  // apacite.sty L2082: `\newcommand{\BOthersPeriod}[1]{et al.\hbox{}}` —
+  // "et al." variant ending the author list with a period. Used in
+  // .bbl `\APACrefauthors` blocks. Witness 2005.03899 (apacite bibstyle).
+  DefMacro!("\\BOthersPeriod{}", "et al.");
   DefMacro!("\\BEDS", "Eds.");
   DefMacro!("\\BED", "Ed.");
   DefMacro!("\\BIn", "In");
@@ -115,6 +134,58 @@ LoadDefinitions!({
   // article + apacite .bbl): "\BPGS\ 1173--1182" plural already worked,
   // but single-page entries use "\BPG\ N". apacite.sty L1336.
   DefMacro!("\\BPG{}", "p.\\ #1");
+  // Remaining apacite bibliography abbreviation text-macros (apacite.sty
+  // L2018-2075). Perl ships no apacite binding and raw-loads apacite.sty, so
+  // it gets ALL of these; our hand-built binding was missing many, surfacing
+  // one-undefined-macro-at-a-time as `.bbl` entries used them. Port the full
+  // text-abbreviation set verbatim from apacite.sty (the `\hbox{}` in the
+  // originals is a no-op spacing hack we drop). NB `\BEd` (lowercase, "ed.")
+  // is DISTINCT from the already-defined `\BED` ("Ed.", editor). Witness
+  // 2106.02003 (`\PrintOrdinal{3}\ \BEd` in an apacite `main.bbl`).
+  DefMacro!("\\BEd", "ed.");           // edition (apacite L2037)
+  DefMacro!("\\BVOLS", "Vols.");       // volumes
+  DefMacro!("\\BCHAP", "chap.");       // chapter
+  DefMacro!("\\BCHAPS", "chap.");      // chapters
+  DefMacro!("\\BCHAIR", "Chair");
+  DefMacro!("\\BCHAIRS", "Chairs");
+  DefMacro!("\\BIP", "in press");
+  DefMacro!("\\Bby", "by");
+  DefMacro!("\\BMTh", "Master's thesis");
+  DefMacro!("\\BUMTh", "Unpublished master's thesis");
+  DefMacro!("\\BPhD", "Doctoral dissertation");
+  DefMacro!("\\BUPhD", "Unpublished doctoral dissertation");
+  DefMacro!("\\BAuthor", "Author");
+  DefMacro!("\\BOWP", "Original work published");
+  DefMacro!("\\BREPR", "Reprinted from");
+  DefMacro!("\\BAvailFrom", "Available from\\ ");
+  DefMacro!("\\BRetrievedFrom", "Retrieved from\\ ");
+  DefMacro!("\\BMsgPostedTo", "Message posted to\\ ");
+  DefMacro!("\\BRetrieved{}", "Retrieved #1");
+  DefMacro!("\\BBOP", "(");            // bibliography open paren
+  DefMacro!("\\BBCP", ")");            // bibliography close paren
+  // \PrintOrdinal{N} → "Nth" ordinal (1st/2nd/3rd/4th…11th/12th/13th/Nth).
+  // Ported verbatim from apacite.sty L2098-2138 (pure TeX; uses \count@,
+  // \afterassignment, \ifcase, last-digit recursion). Used in `.bbl` edition
+  // fields, e.g. `\PrintOrdinal{3}` → "3rd".
+  RawTeX!(r"%
+\let\@xp\expandafter
+\newcommand{\PrintOrdinal}[1]{%
+    \afterassignment\print@ordinal
+    \count@ 0#1\relax\@nil}
+\def\print@ordinal#1#2\@nil{%
+    \ifx\relax#1\relax
+        \ifnum\count@>\z@ \CardinalNumeric\count@ \else ??th\fi
+    \else
+        \ifnum \count@>\z@ \number\count@ \fi #1#2\relax
+    \fi}
+\newcommand{\CardinalNumeric}[1]{%
+    \number#1\relax
+    \if \ifnum#1<14 \ifnum#1>\thr@@ T\else F\fi \else F\fi Tth%
+    \else \@xp\keep@last@digit\@xp#1\number#1\relax
+        \ifcase#1th\or st\or nd\or rd\else th\fi
+    \fi}
+\def\keep@last@digit#1#2{%
+    \ifx\relax#2\@xp\@gobbletwo \else #1=#2\relax \fi \keep@last@digit#1}");
   // \shortciteA[pre][post]{key} — author-only short cite (apacite
   // citation form). Delegate to natbib's \citet (author-name cite).
   DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");

@@ -97,9 +97,65 @@ LoadDefinitions!({
   // caption3.sty L432: `\DeclareCaptionTextFormat{name}{body}` — sibling
   // of `\DeclareCaptionFormat` for text-only caption-format definers.
   def_macro_noop("\\DeclareCaptionTextFormat{}{}")?;
-  def_macro_noop("\\DeclareCaptionJustification{}{}")?;
+  // caption3.sty L955-959: `\DeclareCaptionJustification[<pkg>]{<name>}{<body>}`
+  // defines `\caption@justification@<name>` (the body) AND lets
+  // `\caption@hj@<name>` equal it. The `\caption@hj@<name>` macros are
+  // probed by other packages — notably floatrow.sty L1169
+  // (`\@ifundefined{caption@hj@#1}` for `objectset=centering`/`raggedright`);
+  // a pure no-op leaves them undefined → `Package floatrow Error: Undefined
+  // object setting` (witness 1504.02564, 1608.07117, 1704.01862,
+  // 1708.07230, 1712.06479). Faithfully define `\caption@hj@<name>` to the
+  // body (collapsing caption3's justification@→hj@ \let into one \@namedef).
+  // The optional `[<pkg>]` arg (caption3 L1361 `[ragged2e]{Justified}{...}`)
+  // is consumed and ignored — it only triggers package-autoload, moot here.
+  RawTeX!(r"\def\DeclareCaptionJustification{\@ifnextchar[\lx@caption@decljust@opt{\lx@caption@decljust@opt[]}}");
+  RawTeX!(r"\def\lx@caption@decljust@opt[#1]#2#3{\@namedef{caption@hj@#2}{#3}\@namedef{caption@justification@#2}{#3}}");
+  // Seed the standard justifications caption3.sty declares at load time
+  // (L964-969) so they exist even when a paper never re-declares them.
+  RawTeX!(r"\DeclareCaptionJustification{justified}{}%
+\DeclareCaptionJustification{centering}{\centering}%
+\DeclareCaptionJustification{centerfirst}{\centering}%
+\DeclareCaptionJustification{centerlast}{\centering}%
+\DeclareCaptionJustification{raggedleft}{\raggedleft}%
+\DeclareCaptionJustification{raggedright}{\raggedright}");
   def_macro_noop("\\DeclareCaptionOption{}[]{}")?;
+  // caption3.sty L640+: `\DeclareCaptionOptionNoValue{name}{body}` —
+  // sibling of `\DeclareCaptionOption` for options without values.
+  // 5 papers in R-stages emit `Error:undefined`. Same no-op as the
+  // valued sibling: caption-option declarations are typesetting-only
+  // setup, not body content.
+  def_macro_noop("\\DeclareCaptionOptionNoValue{}{}")?;
   def_macro_noop("\\DeclareCaptionPackage{}")?;
+  // caption3.sty internals that user code or extension packages
+  // (e.g. caption-style extensions, fltrace, ccaption) sometimes
+  // reach for. All no-ops — caption-package internals are
+  // typesetting-only and have no body-content effect:
+  //   * `\SetCaptionDefault{name}{body}` — set default value for
+  //     a named caption option (5 R-stage papers).
+  //   * `\caption@ifundefined{cs}{then}{else}` — internal version
+  //     of `\@ifundefined`. Treat as undefined (always run `\else`).
+  //   * `\caption@ExecuteOptions[opt-list]` — internal option-
+  //     execution helper. No-op.
+  def_macro_noop("\\SetCaptionDefault{}{}")?;
+  DefMacro!("\\caption@ifundefined{}{}{}", "#3");  // always take else branch
+  def_macro_noop("\\caption@ExecuteOptions[]{}")?;
+  // caption.sty L184-185 call these as part of package-init bootstrap of
+  // the caption3 backend (`\caption@SetupOptions{caption}{\caption@setkeys...}`
+  // / `\caption@ProcessOptions*{caption}`). Our binding intercepts
+  // caption.sty before caption3.sty raw-loads, so these caption3
+  // internals are undefined. No-op stubs are safe — option setup is
+  // typesetting-only, and `\captionsetup` (handled above) already
+  // stores keyvals as `CAPTION_<key>` state regardless of this
+  // bootstrap chain. Witness clusters: ~5 R-stage papers each.
+  def_macro_noop("\\caption@SetupOptions{}{}")?;
+  def_macro_noop("\\caption@ProcessOptions OptionalMatch:* {}")?;
+  // \caption@IfPackageLoaded{pkg}[date]{body}{else} (caption.sty L700-702
+  // + L703-708). caption.sty self-registers conditional adapters for
+  // float / hyperref / longtable / ... — our XML pipeline doesn't need
+  // any of those adapters, so always take the `else` branch as if the
+  // package is not loaded.
+  DefMacro!("\\caption@IfPackageLoaded{}[]{}{}", "#4");
+  def_macro_noop("\\caption@@IfPackageLoaded{}[]{}{}")?;
   // caption3.sty L564: \DeclareCaptionBox{name}{body} defines a
   // "caption@box@<name>" macro via \@namedef. We don't render caption
   // box layouts; gobble both args.

@@ -84,9 +84,23 @@ LoadDefinitions!({
     // Driver: 2102.11084 `\usepackage[spanish, es-tabla]{babel}` selected
     // "es-tabla" as the language → "haven't defined the language 'es-tabla'"
     // GenericError.
+    // ALSO drop babel's own bare KEYWORD options — `\DeclareOption{<kw>}` in
+    // babel.sty that are package switches, NOT languages (so babel consumes
+    // them via their `\ds@` handler and never treats them as a language to
+    // load/select). Without this, `\usepackage[english,strings]{babel}`
+    // selected the LAST bare option "strings" as the main language →
+    // `\selectlanguage{strings}` → "You haven't defined the language
+    // 'strings'". babel.sty L296/L336-379 (the no-`=` ones). Driver
+    // 2006.10240 (`[english,strings]`).
+    const BABEL_KEYWORD_OPTS: &[&str] = &[
+      "base", "showlanguages", "KeepShorthandsActive", "activeacute",
+      "activegrave", "debug", "noconfigs", "silent", "strings", "nocase",
+      "leqno", "fleqn",
+    ];
     let is_lang_candidate = |s: &str| -> bool {
       !s.is_empty() && s != "nil" && !s.contains('=')
         && !s.starts_with("es-")
+        && !BABEL_KEYWORD_OPTS.contains(&s)
     };
     let pkg_last = main_kv.clone().unwrap_or_else(|| {
       opt_babel.split(',').map(str::trim).rfind(|s| is_lang_candidate(s)).unwrap_or_default().to_string()
@@ -143,5 +157,88 @@ LoadDefinitions!({
   // Run mainlang at load time so DOCUMENT_LANGUAGE is set before
   // \begin{document} opens (and base_schema's after_open reads it).
   RawTeX!(r"\lx@babel@activate@mainlang");
+
+  // English-family caption/date/extras hook backfill. Modern babel's .ini
+  // path defines the per-variant `\captions<v>`/`\date<v>`/`\extras<v>`
+  // hooks only for the variant(s) whose .ini actually loaded (e.g.
+  // babel-british for `[british]`). A paper listing SEVERAL english
+  // variants — `\usepackage[british,USenglish]{babel}` — then invokes a
+  // variant whose .ini never ran (`\dateUSenglish`) or the `\captionsenglish`
+  // base, erroring at `\selectlanguage`/option dispatch. The classic .ldf
+  // loaders (`babel_lang_stubs::load_*`) also miss this because the .ini
+  // path bypasses them, and `english.sty`'s aliasing loop only runs for
+  // `\usepackage{english}`, not a direct `\usepackage[...]{babel}`. Backfill
+  // with `\@ifundefined` guards: never overrides a real definition; captions
+  // stay English (our HTML default); `\date<v>` aliases to `\dateenglish`
+  // (keeps `\today` faithful). Runs after babel's own option processing
+  // (InputDefinitions above), before the invocation in later preamble.
+  // Witness arXiv:1508.06150 (`\usepackage[british,USenglish]{babel}`); Perl rc=0.
+  // NB: no \makeatletter/\makeatother — RawTeX already digests with `@` as a
+  // letter; emitting \makeatother here would leave `@` catcode-12 globally and
+  // break babel's later `\l@<lang>`/`\bbl@…` parsing (manifested as a spurious
+  // "haven't defined the language" error).
+  RawTeX!(r"%
+    \@ifundefined{dateenglish}{\@namedef{dateenglish}{}}{}%
+    \@for\lx@bbl@engtmp:={english,USenglish,UKenglish,american,british,canadian,australian,newzealand}\do{%
+      \@ifundefined{captions\lx@bbl@engtmp}{\expandafter\let\csname captions\lx@bbl@engtmp\endcsname\@empty}{}%
+      \@ifundefined{extras\lx@bbl@engtmp}{\expandafter\let\csname extras\lx@bbl@engtmp\endcsname\@empty}{}%
+      \@ifundefined{noextras\lx@bbl@engtmp}{\expandafter\let\csname noextras\lx@bbl@engtmp\endcsname\@empty}{}%
+      \@ifundefined{date\lx@bbl@engtmp}{\expandafter\let\csname date\lx@bbl@engtmp\endcsname\dateenglish}{}%
+      \@ifundefined{l@\lx@bbl@engtmp}{\expandafter\let\csname l@\lx@bbl@engtmp\endcsname\l@english}{}}");
+  // ^ Also alias the hyphenation language register `\l@<variant>` to
+  // `\l@english` when undefined. The `.ini` path defines `\l@british` only for
+  // the variant whose `.ini` actually ran; a paper that loads several english
+  // variants then does `\selectlanguage{british}` → `\bbl@iflanguage{british}`
+  // tests `\ifx\csname l@british\endcsname\relax` and, finding it relax, errors
+  // "You haven't defined the language 'british' yet". english.ldf normally
+  // `\let`s every variant's `\l@` to `\l@english` (british uses English
+  // hyphenation); backfill the same. Witness 1508.06150.
+
+  // `\shorthandoff{<chars>}` / `\shorthandon{<chars>}`: babel shorthand
+  // toggles. Babel's raw implementation (babel.sty L1492-1496) iterates the
+  // argument switching each active-char shorthand, but ALSO fires
+  // `\PackageError{babel}{I can't switch '<c>' on or off--not a shorthand}`
+  // for any char that isn't a registered shorthand. Our language stubs
+  // (`install_lang_stub`) don't install the full shorthand machinery, so the
+  // raw impl errored on every call — which is why this was a no-op.
+  //
+  // But a pure no-op is WRONG: the *observable* effect of `\shorthandoff` is
+  // the CATCODE change (active → other), which genuinely affects tokenization,
+  // not just typesetting. French babel makes `;:!?` active; leaving them
+  // active when an author explicitly turned them off breaks downstream parsers
+  // that expect the literal chars — e.g. xy-pic `\xymatrix @!=8mm{…}` reads
+  // `@!=` expecting `!` at catcode 12; an active `!` derails the xymatrix so
+  // its `^`/`_` reach the math handler in text mode → 100+ `^`/`_` "can only
+  // appear in math mode" errors (witness arXiv:1804.10128, French + xy-pic).
+  //
+  // So apply the catcode change (the part our pipeline observes) and skip the
+  // error (the part the stub gap can't satisfy): `\shorthandoff` → OTHER(12),
+  // `\shorthandon` → ACTIVE(13). Local to the current group, mirroring TeX's
+  // local `\catcode`. Still correct for the defensive-call witness
+  // arXiv:1912.08056 (`\def\diag{\shorthandoff{;:!?}…}`) — catcode 12 is the
+  // intended effect, no error.
+  fn shorthand_set_catcode(chars: Tokens, cc: Catcode) {
+    for tok in chars.unlist() {
+      if tok.get_catcode() == Catcode::SPACE {
+        continue;
+      }
+      let single = tok.with_str(|s| {
+        let mut it = s.chars();
+        match (it.next(), it.next()) {
+          (Some(c), None) => Some(c),
+          _ => None,
+        }
+      });
+      if let Some(c) = single {
+        state::assign_catcode(c, cc, Some(Scope::Local));
+      }
+    }
+  }
+  DefPrimitive!("\\shorthandoff{}", sub[(chars)] {
+    shorthand_set_catcode(chars, Catcode::OTHER);
+  });
+  DefPrimitive!("\\shorthandon{}", sub[(chars)] {
+    shorthand_set_catcode(chars, Catcode::ACTIVE);
+  });
 
 });

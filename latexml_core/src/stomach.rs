@@ -347,7 +347,14 @@ pub fn current_frame_message() -> String {
   } else {
     String::new()
   };
-  let locator = lookup_string_from_sym(crate::pin!("groupInitiatorLocator"));
+  // Render the initiator's source locator as a readable "file; line N"
+  // (the raw Stored Debug is redacted to `Stored::Locator[[...]]`, which is
+  // useless for diagnosing where an unbalanced group opened).
+  let locator = match crate::state::lookup_value("groupInitiatorLocator") {
+    Some(Stored::Locator(loc)) => s!("at {}", loc),
+    Some(other) => other.to_string(),
+    None => String::new(),
+  };
   s!(
     "current frame is {} due to {} {}",
     target,
@@ -657,9 +664,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // d162803d2.)
     let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
     let bound_on_top = is_value_bound("BOUND_MODE", Some(0));
-    if !bound_on_top || current_bound != bound_mode {
-      // Last stack frame was NOT a mode switch, or was a switch to a different mode.
-      // Perl: Don't pop if there's an error; maybe we'll recover?
+    let make_mode_error = || {
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
@@ -669,6 +674,12 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),
       };
+      (category, message)
+    };
+    if !bound_on_top || current_bound != bound_mode {
+      // Last stack frame was NOT a mode switch, or was a switch to a different mode.
+      // Perl: Don't pop if there's an error; maybe we'll recover?
+      let (category, message) = make_mode_error();
       Error!("unexpected", category, &message);
     } else {
       // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
@@ -678,6 +689,21 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       if noframe {
         // No pop, but at least do beforeAfterGroup
         execute_before_after_group()?;
+      } else if crate::state::current_frame_locked() {
+        // After `leave_horizontal_internal` the only frame left is the LOCKED
+        // bottom frame — there is no mode-switch frame to pop, so
+        // `pop_stack_frame` → `pop_frame` would FATAL ("pop last locked stack
+        // frame"). This happens on a STRAY mode-ender with no matching begin:
+        // e.g. `$Proof.$ … \quad \endproof` (no `\begin{proof}`) leaves
+        // BOUND_MODE bound on the bottom frame, so the value-guard above passes
+        // but the pop is illegal. Emit a recoverable Error and DON'T pop (Perl's
+        // "maybe we'll recover" intent — Perl completes such papers; Rust used
+        // to crash). Note the check is HERE (after `leave_horizontal_internal`,
+        // which can repack a horizontal frame that legitimately becomes the
+        // pop target — e.g. a normal document's `\end{document}`), not at the
+        // value-guard above. Witness 1703.05010 (svjour3 + bare `\endproof`).
+        let (category, message) = make_mode_error();
+        Error!("unexpected", category, &message);
       } else {
         pop_stack_frame(false)?;
       }

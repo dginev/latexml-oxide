@@ -26,22 +26,25 @@ LoadDefinitions!({
   RequirePackage!("nameref");
   RequirePackage!("url");
   RequirePackage!("bitset");
-  // Eager `color` load. Many papers do
-  //   \usepackage{hyperref}
-  //   \definecolor{darkblue}{rgb}{0,0,0.5}
-  //   \hypersetup{colorlinks=true, linkcolor=darkblue, ...}
-  // i.e. they reference \definecolor BEFORE \hypersetup triggers our
-  // colorlinks-driven RequirePackage('color'). pdflatex tolerates this
-  // because the user is expected to load color/xcolor themselves —
-  // but the same author script also passes through Perl LaTeXML
-  // without erroring (the hyperref binding's package-options handler
-  // calls RequirePackage('color') unconditionally on `colorlinks`,
-  // and many papers pass colorlinks via the load-options not the
-  // \hypersetup body, so color is in scope before \definecolor).
-  // Loading color eagerly here matches that expected end-state and
-  // closes the 15+ paper "\definecolor undefined" cluster from
-  // stage 10 (witnesses 2503.15484, .21332, .21480, .22115, .22884).
-  RequirePackage!("color");
+  // NOTE: do NOT eager-load `color` here. Perl hyperref.sty.ltxml loads color
+  // ONLY on `colorlinks` — in the package-options handler (L476-477, our colorlinks
+  // option arm below) and in `\hypersetup{colorlinks=true}` (L114-115, our
+  // `\hypersetup` primitive). After `\usepackage[citecolor=blue]{hyperref}` (no
+  // colorlinks) Perl leaves `\color`/`\definecolor`/`\textcolor` UNDEFINED.
+  //
+  // A prior unconditional `RequirePackage!("color")` here diverged from Perl: it
+  // pre-defined `\color`, so a document that redefines it — e.g. arXiv:1606.06730
+  // `\newcommand{\color}{\mbox{$\mathsf{Col}$}}` after loading hyperref — had its
+  // `\newcommand` ignored ("Ignoring redefinition of \color"), then every body
+  // `\color` ran the color primitive and read `;`/`]` as a color name ("Can't find
+  // color named …"). Perl leaves `\color` undefined there, so `\newcommand{\color}`
+  // succeeds (verified: `\ifdefined\color`→UNDEFINED, result→user macro).
+  //
+  // The eager load was added to mask a `\definecolor`-before-`\hypersetup{colorlinks}`
+  // pattern — but Perl ERRORS on that exact pattern too (`\definecolor` undefined,
+  // verified), so masking it made Rust *surpass* Perl rather than match it. Papers
+  // that pass `colorlinks` in the load-OPTIONS still get color via the option arm
+  // below (color is in scope before any later `\definecolor`), matching Perl.
   //RequirePackage("atbegshi");    // not ported
 
   // Can we load hyperref, to get all it's random sundry definitions?
@@ -199,7 +202,24 @@ LoadDefinitions!({
     // Perl only declares `baseurl` Semiverbatim and errors on every
     // other `_`-containing value. Witness: 2602.11111 `linkcolor=
     // tab_blue` (4 errors → 0).
-    DefKeyVal!("Hyp", option, "Semiverbatim");
+    //
+    // EXCEPTION — the PDF *metadata-string* keys (pdftitle/pdfauthor/
+    // pdfsubject/pdfkeywords/pdflang) are DIGESTED later (hypersetup's
+    // `\@add@PDF@RDFa@triples`) and routinely carry inline math, e.g.
+    // `pdftitle={Contractions of $\Mznb$}` where `\Mznb` expands to
+    // `\overline{\mathrm M}_{0,n}`. Semiverbatim neutralizes `$` to OTHER,
+    // so that digest runs `\Mznb`'s `_{0,n}` in TEXT mode →
+    // "Script _ can only appear in math mode" (driver 1508.03915; Perl=0,
+    // since Perl reads the raw value with `$` live). Register these with the
+    // default value type (`""`) so `$…$` stays math; the key is still
+    // registered, so the Warn-suppression still holds.
+    if matches!(option,
+      "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdflang")
+    {
+      DefKeyVal!("Hyp", option, "");
+    } else {
+      DefKeyVal!("Hyp", option, "Semiverbatim");
+    }
   }
 
   // \hypersetup{keyvals} configures various parameters,
@@ -320,6 +340,22 @@ LoadDefinitions!({
     let open = gullet::read_token()?.unwrap();
     begin_semiverbatim(Some(&['%']));
     state::let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
+    // URLs are verbatim: any character a shorthand package made ACTIVE must
+    // appear literally, not expand. We read the arg with partial expansion
+    // ("expand as we go", below) to allow `\macro`s in URLs, but that also
+    // expands active chars — and an active char whose meaning is a `\newif`
+    // conditional (e.g. `"` made active by bosisio quotes.sty →
+    // `\@VIRGOLETTE` = `\if@virgolette…\else…\fi`) leaks its `\fi` through
+    // `read_balanced`, so the conditional "falls off end". Neutralise the
+    // common shorthand-active chars to OTHER (same `\let`-to-literal trick as
+    // `~` above). `:` is doubly important — French babel makes it active and
+    // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
+    // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
+    for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
+      if state::lookup_catcode(ch) == Some(Catcode::ACTIVE) {
+        state::assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
+      }
+    }
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
       ( T_OTHER!("{"), T_OTHER!("}"),
         read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!

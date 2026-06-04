@@ -40,6 +40,15 @@ static PATHNAME_IS_NASTY_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r#"[`$;|<>"\x00\n\r]"#).unwrap());
 // TODO: This is very pragmatic for now, we ought to use a real URL path library long-term
 static URL_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w+://(.+)/([^/]+)$").unwrap());
+// Perl `pathname_is_url` is `$pathname =~ /^($PROTOCOL_RE)/` — the protocol is
+// ANCHORED at the start. The previous `is_url` used `URL_RE` (`^\w+://…`),
+// whose leading `\w+` (which includes `_`) matches a filename PREFIX like
+// `myers_http`, so a JabRef `\bibAnnoteFile{myers_http://…/welcome.html_2014}`
+// key (a filename, NOT a URL) read as a URL → `find_file` returned "exists" →
+// `\IfFileExists` took its true branch → the `_` in the key got typeset in
+// text mode ("Script _ can only appear in math mode"; witness 1509.01434).
+// Match Perl: only `http`/`https`/`ftp` followed by `:` at the very start.
+static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp):").unwrap());
 
 /// Process-global kpathsea handle (cross-thread shared, NOT
 /// `thread_local!`).
@@ -133,7 +142,7 @@ static CANONICAL_URL_RE: Lazy<Regex> =
 // map { pathname_canonical($_ . $SEP . 'LaTeXML') } @INC;    # [CONSTANT]
 
 /// checks if the path is a conforming URL string
-pub fn is_url(path: &str) -> bool { URL_RE.is_match(path) }
+pub fn is_url(path: &str) -> bool { URL_PREFIX_RE.is_match(path) }
 /// checks if the path starts with the "literal:" protocol
 pub fn is_literaldata(data: &str) -> bool { data.starts_with(LITERAL_PROTOCOL) }
 
@@ -604,14 +613,20 @@ mod tests {
 
   #[test]
   fn is_url_schemes() {
-    // URL_RE requires scheme://host/file, i.e. trailing /file component.
+    // Perl `pathname_is_url`: `=~ /^($PROTOCOL_RE)/` — the protocol must be
+    // ANCHORED at the start; a bare host (no /path) still matches.
     assert!(is_url("http://example.com/path"));
     assert!(is_url("http://example.com/path/file.tex"));
     assert!(is_url("ftp://host/file"));
-    // Bare host (no /path) doesn't match.
-    assert!(!is_url("https://example.com"));
+    assert!(is_url("https://example.com")); // bare host — Perl matches the prefix
     assert!(!is_url("plain/path/file.tex"));
     assert!(!is_url("/absolute/path"));
+    // A filename that merely CONTAINS a protocol mid-string is NOT a URL —
+    // the old `^\w+://…` matched `myers_http://…` via its leading `\w+`,
+    // wrongly resolving a JabRef `\bibAnnoteFile` key as an existing URL
+    // (witness 1509.01434, "Script _").
+    assert!(!is_url("myers_http://www.mscs.dal.ca/myers/welcome.html_2014"));
+    assert!(!is_url("foo_ftp://bar/baz"));
   }
 
   #[test]

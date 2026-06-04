@@ -56,8 +56,15 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "scale", "");
   DefKeyVal!("Gin", "angle", "");
   DefKeyVal!("Gin", "alt", "");
-  DefKeyVal!("Gin", "trim", "");
-  DefKeyVal!("Gin", "viewport", "");
+  // Perl graphicx.sty.ltxml L37-38 types both as `GraphixDimensions` (the
+  // ≤4-dimension parser registered in graphics_sty.rs). With an empty type
+  // the raw value tokens are kept verbatim, so a malformed trailing token —
+  // e.g. `trim=2.5cm 0.5cm 3cm 1cm \clip` (witness 1512.05119, user meant
+  // `,clip`) — is later digested and fires `undefined:\clip`. The
+  // GraphixDimensions reader consumes the four dimensions and STOPS at the
+  // first non-dimension token (`\clip`), discarding it, exactly like Perl.
+  DefKeyVal!("Gin", "trim", "GraphixDimensions");
+  DefKeyVal!("Gin", "viewport", "GraphixDimensions");
   // NOTE: graphicx defines @angle to actually carry out the rotation (on \box\z@) w/\Gin@erotate
   // rather than to simply record the angle for later use. (also origin redefines)
   // This is used by adjustbox.

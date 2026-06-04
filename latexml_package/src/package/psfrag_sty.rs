@@ -59,8 +59,21 @@ LoadDefinitions!({
   // This requires image type detection (psfrag_requirepicture) which
   // we don't have. For now, includegraphics works normally without overlay.
 
-  // Rescan macros — Perl L78-85
-  DefMacro!("\\tex Semiverbatim", "#1");
+  // Rescan/debug macros — Perl psfrag.sty.ltxml.
+  // NOTE: do NOT define `\tex`. Real psfrag.sty does NOT define `\tex` as a
+  // LaTeX macro (its only `\tex` is `\string\\tex…` written verbatim into the
+  // .ps file for PostScript-side processing, psfrag.sty L201), and neither
+  // does Perl LaTeXML's psfrag binding. A prior Rust-only
+  // `DefMacro!("\\tex Semiverbatim", "#1")` intercepted papers that load
+  // psfrag but `\newcommand{\tex}{…}` for their own purposes — e.g.
+  // 1505.01267 does `\newcommand{\tex}{\textstyle}` and writes
+  // `\tex{…c_0…\mbox{as $\hat s\to\infty$}…}` inside display math. With the
+  // Rust `\tex` winning (newcommand ignored) and reading its arg Semiverbatim,
+  // `_` was neutralized to OTHER (literal `\_`) and the inline-math `\to`
+  // built an `ltx:XMApp` that leaked into the surrounding `ltx:text` →
+  // "ltx:XMApp isn't allowed in <ltx:text>". Leaving `\tex` undefined (Perl-
+  // faithful) lets the author's `\newcommand` win, so `\tex{…}`=`\textstyle{…}`
+  // digests as math.
   def_macro_noop("\\psfragrescan")?;
   def_macro_noop("\\psfragrescanoff")?;
   def_macro_noop("\\psfragrescanon")?;

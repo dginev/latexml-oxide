@@ -32,8 +32,21 @@ LoadDefinitions!({
   def_macro_noop("\\DeclareCharacterInheritance[]{}{}")?;
   def_macro_noop("\\DeclareMicrotypeVariants OptionalMatch:* {}")?;
   def_macro_noop("\\LoadMicrotypeFile{}")?;
-  def_macro_noop("\\microtypecontext{}")?;
+  // microtype provides BOTH `\microtypecontext{settings}` (a scoped
+  // settings *declaration* — no body, applies to the rest of the current
+  // group) AND a `{microtypecontext}` environment. Our `DefEnvironment`
+  // defines the bare `\microtypecontext` CS as the env-begin, which
+  // clobbers the declaration form — so a bare
+  // `\begingroup\microtypecontext{expansion=sloppy}…\endgroup` (common
+  // around `\bibliography`) treated `\microtypecontext` as an unclosed
+  // env-begin, opening a restricted_horizontal mode-switch group that
+  // the later `\endgroup` couldn't close (`unexpected:\endgroup`).
+  // Define the environment FIRST, then the no-op declaration macro, so
+  // `\microtypecontext{…}` resolves to the harmless declaration while
+  // `\begin{microtypecontext}` still finds the environment (env lookup
+  // is independent of the `\microtypecontext` CS). Witness 2007.06927.
   DefEnvironment!("{microtypecontext}", "#body");
+  def_macro_noop("\\microtypecontext{}")?;
   DefMacro!("\\textmicrotypecontext{}{}", "#2");
   def_macro_noop("\\DeclareMicrotypeBabelHook{}{}")?;
 });

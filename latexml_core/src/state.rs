@@ -1095,6 +1095,30 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
+  // Perl-faithful counter leniency. A `\c@<ctr>` control sequence is, by
+  // LaTeX convention, the count register backing counter `<ctr>`. When code
+  // reads an *undefined* one in a number/register context (e.g.
+  // `\setcounter{x}{\value{y}}` or `\algrestore`/`\ContinuedFloat` reading
+  // `\c@subalgorithm@save`), Perl does NOT raise a hard "undefined control
+  // sequence" error — its counter machinery warns "Counter '<ctr>' was not
+  // defined; assuming 0" (Package.pm L712) and treats it as 0. Without this,
+  // `read_x_token` expands the bare undefined `\c@<ctr>` through the generic
+  // <ltx:ERROR/> path below and the run gains a spurious error. Mirror Perl:
+  // warn and define the register as 0 so the reader sees a register value,
+  // not an undefined CS. Same category/message as `counter::dialect::
+  // counter_value`. Witness 1910.02851 (`\algrestore{RLZFactorization}` +
+  // `\ContinuedFloat` → `\c@subalgorithm@save`); Perl rc=0.
+  if let Some(ctr) = cs.strip_prefix("\\c@") {
+    if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
+      Warn!(
+        "undefined",
+        ctr,
+        s!("Counter {} was not defined; assuming 0", ctr)
+      );
+    }
+    crate::binding::def::dialect::def_register(*token, None, Number::new(0), None)?;
+    return Ok(*token);
+  }
   // Gate the undefined-CS summary tally by SUPPRESS_UNDEFINED_ERRORS so it
   // matches the `Error!` gate at L1021 below — during expl3-code.tex raw
   // load with thousands of forward-references we install the ERROR stub
@@ -2137,6 +2161,23 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
             }
           }
         }
+        // Perl State.pm:474 lookupDigestableDefinition: the guard
+        // `($defn = $$entry[0])` is FALSE when the entry's value is undef, so
+        // execution falls through to `return $token` (self-inserting) for a
+        // LETTER/OTHER token and to `return undef` for an active/CS one. A
+        // math-active LETTER/OTHER character whose active meaning was `\let`
+        // to an undefined CS hits exactly this case — e.g. braket-style
+        // `\Pr{A|B}`: the macro body does `\mathcode`\|=32768 \let|\SetVert`
+        // with `\SetVert` itself undefined (neither our nor Perl's braket
+        // binding defines it), leaving `|`'s meaning an explicit
+        // `Stored::None`. Returning `Some(Stored::None)` here routed the `|`
+        // to generateErrorStub ("The token T_OTHER[|] is not defined"); Perl
+        // instead self-inserts the literal char. Mirror Perl: a None-valued
+        // entry for a non-active/CS (math-active) char self-inserts; active/CS
+        // tokens still fall to the `None` return below. Witness 1602.01342.
+        if matches!(front, Stored::None) && !is_active_or_cs {
+          return Some(token.into());
+        }
         // if a regular definition, just return.
         return Some(front.clone());
       }
@@ -2274,6 +2315,12 @@ pub fn pop_frame() -> Result<()> {
 /// by counting all frames which are not Daemon frames (and thus don't possess _FRAME_LOCK_).
 /// This may give incorrect results for some special environments (e.g. minipage)
 pub fn get_frame_depth() -> usize { state!().undo.iter().filter(|frame| !frame.locked).count() }
+
+/// `true` when the CURRENT (front) stack frame is the locked bottom frame —
+/// i.e. there is no openable group/mode frame to pop. Popping it would FATAL.
+pub fn current_frame_locked() -> bool {
+  state!().undo.front().map(|f| f.locked).unwrap_or(true)
+}
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?

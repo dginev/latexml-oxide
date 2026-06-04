@@ -6,6 +6,33 @@ LoadDefinitions!({
   // Pretend keyval loaded too
   AssignValue!("keyval.sty_loaded" => 1, Some(Scope::Global));
 
+  // `\XKV@ifundefined{<csname>}{<undefined>}{<defined>}` — xkeyval's group-safe
+  // existence test (xkvutils.tex L59, e-TeX branch). Our binding REPLACES
+  // xkeyval.sty and never \input's xkvutils.tex, so this low-level internal was
+  // missing — yet packages built on xkeyval use it DIRECTLY (e.g. extract.sty
+  // L84: `\XKV@ifundefined{XTR@file}{...deactivate...}{}`). Ported verbatim from
+  // xkvutils.tex (e-TeX `\ifcsname` branch; we always have e-TeX). Witness
+  // 1611.02736 (extract.sty). `\@firstoftwo`/`\@secondoftwo` are kernel macros.
+  TeX!(r"\def\XKV@ifundefined#1{\ifcsname#1\endcsname\expandafter\@secondoftwo\else\expandafter\@firstoftwo\fi}");
+
+  // xkeyval's comma-list for-loop machinery (xkvutils.tex L44, L84-107).
+  // Same gap as \XKV@ifundefined: packages built on xkeyval call these
+  // directly (e.g. extract.sty L62 `\XKV@for@n{#1}\XTR@tempa\XTR@tempb` to
+  // iterate the extract-env list). Ported verbatim. Witness 1611.02736.
+  TeX!(r"\newtoks\XKV@tempa@toks
+\long\def\XKV@for@n#1#2#3{%
+  \XKV@tempa@toks{#1}\edef#2{\the\XKV@tempa@toks}%
+  \ifx#2\@empty\XKV@for@break\else\expandafter\XKV@f@r\fi#2{#3}#1,\@nil,%
+}%
+\long\def\XKV@f@r#1#2#3,{%
+  \XKV@tempa@toks{#3}\edef#1{\the\XKV@tempa@toks}%
+  \ifx#1\@nnil\expandafter\@gobbletwo\else#2\expandafter\XKV@f@r\fi#1{#2}%
+}%
+\long\def\XKV@for@break #1\@nil,{\fi}%
+\long\def\XKV@for@o#1{\expandafter\XKV@for@n\expandafter{#1}}%
+\long\def\XKV@for@en#1#2#3{\XKV@f@r#2{#3}#1,\@nil,}%
+\long\def\XKV@for@eo#1#2#3{\def#2{\XKV@f@r#2{#3}}\expandafter#2#1,\@nil,}");
+
   //
   // Basic \setkeys
   //

@@ -177,24 +177,40 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   };
 
   // If loading a class, store class options (Perl Package.pm lines 2561-2564).
-  // Also set `\@classoptionslist` even when options is empty: the kernel
-  // default (`\let \@classoptionslist \relax`) breaks csname-reads like
-  // babel's `\csname \ds@\@classoptionslist\endcsname` (babel.sty L4287).
-  // Real LaTeX defines `\@classoptionslist` to the comma-list (possibly
-  // empty) at every `\@fileswith@pti@ns` call; Perl only does so when
-  // non-empty. Witness 2504.00009 (`\documentclass{...}` with no options
-  // → babel csname runaway "should not appear between csname and endcsname").
+  // Perl L2561: `if ($astype eq 'cls' and $options{options})` — only
+  // (re)define `\@classoptionslist` when THIS cls load actually carries
+  // options. A nested `\LoadClass` with empty options (e.g. amsart →
+  // ams_core; our `*_cls.rs` bindings pass `Tokens!()` rather than forwarding
+  // the outer options as Perl's `withoptions=>1` does) must NOT clobber the
+  // document class's option list — babel iterates `\@classoptionslist`
+  // (`\bbl@foreach`, babel.sty L4270) to pick up a GLOBAL language option such
+  // as `\documentclass[french]{amsart}` and only then declares/loads that
+  // language. Clobbering it to empty silently dropped global babel languages
+  // for every bound class. Witness 1911.07001 (`[oneside,french,titlepage]
+  // {amsart}` + bare `\usepackage{babel}` → french.ldf must load).
+  //
+  // DIVERGENCE retained from Perl: still define `\@classoptionslist` as EMPTY
+  // for an option-less *document* class so babel's
+  // `\csname\ds@\@classoptionslist\endcsname` doesn't run away (the kernel
+  // default `\let\@classoptionslist\relax`; witness 2504.00009). We gate that
+  // on "no class options recorded yet", so it fires for the first/outermost
+  // class load but never clobbers an already-populated list on a nested load.
   if as_type == "cls" {
     for opt in &options.options {
       push_value("class_options", arena::pin(opt))?;
     }
     let class_opts_str = options.options.join(",");
-    def_macro(
-      T_CS!("\\@classoptionslist"),
-      None,
-      Tokens!(Explode!(class_opts_str)),
-      None,
-    )?;
+    let have_recorded_opts = lookup_vecdeque("class_options")
+      .map(|v| !v.is_empty())
+      .unwrap_or(false);
+    if !class_opts_str.is_empty() || !have_recorded_opts {
+      def_macro(
+        T_CS!("\\@classoptionslist"),
+        None,
+        Tokens!(Explode!(class_opts_str)),
+        None,
+      )?;
+    }
   }
 
   // Compute the exact name based on the type
@@ -1725,9 +1741,37 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   }
   let _guard = ResetGuard;
 
+  // EXECUTED-SET GATE (Rust-only, more-robust-than-Perl). When this file was
+  // actually RAW-LOADED, its `\usepackage`/`\RequirePackage` constructors ran
+  // for every require the load REACHED — recording `<pkg>.usepackage_executed`.
+  // A candidate the regex finds in the text but that is NOT in that set is one
+  // whose `\usepackage` never executed — i.e. it sits inside a FALSE `\if…\fi`
+  // the raw-load already skipped (e.g. `\ifpdf … \usepackage{hyperref} … \fi`
+  // with `\ifpdf` false). Perl never dep-scans a raw-loaded file, so it never
+  // anticipates such a package; mirror that by skipping it. The gate applies
+  // ONLY when the file raw-loaded (key `<file>.<ext>_raw_loaded`): in the
+  // miss-handler / `INCLUDE_STYLES=false` path no constructor ran, so the set
+  // is empty and we must NOT filter (keep the anticipation). The flag is
+  // cumulative+global, so a candidate that DID execute anywhere is kept — only
+  // never-executed ones are dropped, which can never be a false skip.
+  // Witnesses 1910.05586 (hyperref in false `\ifpdf` → cleveref "must be loaded
+  // after hyperref"), 1804.09301 (xcolor in false `\ifacl@hyperref`).
+  let raw_loaded = lookup_bool(&s!("{file}.{ext_type}_raw_loaded"));
+
   // Perl L2776: `s/%[^\n]*\n//gs` — drop comment AND its trailing newline,
   // replacement is the empty string.
   static COMMENT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"%[^\n]*\n").unwrap());
+  // `comment`-package block: `\begin{comment}…\end{comment}` is a verbatim-SKIP
+  // environment, so a `\usepackage`/`\RequirePackage` inside it is NEVER loaded
+  // by LaTeX. The dep-scan must not anticipate it. Same "more-robust than Perl"
+  // rationale as the macro-def-body skip below. Witness 1901.05713: thesis.sty
+  // has a commented-out `\usepackage{hyperref}` inside `\begin{comment}`, which
+  // the scan otherwise loaded — tripping cleveref's "must be loaded after
+  // hyperref" `\AtBeginDocument` order-check (hyperref appears loaded though the
+  // author commented it out). `comment` doesn't nest, so a non-greedy match to
+  // the first `\end{comment}` is correct.
+  static COMMENT_ENV_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\begin\s*\{comment\}.*?\\end\s*\{comment\}").unwrap());
   // Perl L2777-2779 runs two separate substitutions, in this order:
   // first `\RequirePackage`, then `\usepackage`. Use two regexes so that
   // collected order matches Perl's call order to `$collect`.
@@ -1737,6 +1781,23 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     Lazy::new(|| Regex::new(r"\\usepackage\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
   static CLS_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"\\LoadClass\s*(?:\[([^\]]*)\])?\s*\{([^\}]*)\}").unwrap());
+  // Matches a `\newcommand`/`\def`-family DEFINITION HEADER ending exactly at a
+  // `{` — i.e. the brace that follows opens the macro BODY. Used to detect a
+  // `\usepackage` that lives in a deferred macro body (loads only when the
+  // macro is later expanded) vs one inside a load-time conditional.
+  static DEF_BODY_HEADER_RE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      r"(?s)(?:\\(?:re|provide)?newcommand|\\DeclareRobustCommand)\*?\s*(?:\{\s*\\[A-Za-z@]+\s*\}|\\[A-Za-z@]+)\s*(?:\[[^\]]*\]\s*)*$|\\[egx]?def\s*\\[A-Za-z@]+[^{}]*$",
+    )
+    .unwrap()
+  });
+  // The `\def`-family sub-case of DEF_BODY_HEADER_RE, capturing the defined
+  // macro NAME (without backslash). A `\def\<m>{… \RequirePackage{P} …}` body
+  // is only truly deferred if `\<m>` is never invoked; the AMS-class idiom
+  // `\def\@tempa{\RequirePackage{amsmath}}…\@tempa` invokes it immediately and
+  // so DOES load P (witness ijnam.cls → amsmath → `{aligned}`, 1911.03415).
+  static DEF_NAME_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\[egx]?def\s*\\([A-Za-z@]+)[^{}]*$").unwrap());
 
   // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
   // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
@@ -1780,16 +1841,120 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
 
   // Perl L2776: strip comments (replacement empty).
   let code = COMMENT_RE.replace_all(&code, "");
+  // Strip `\begin{comment}…\end{comment}` blocks (see COMMENT_ENV_RE above).
+  let code = COMMENT_ENV_RE.replace_all(&code, "");
+
+  // DIVERGENCE FROM PERL (deliberate, more-robust): do NOT dep-load a
+  // `\usepackage` / `\RequirePackage` that sits in a DEFERRED macro-definition
+  // body (a `\newcommand` / `\def`-family body) — it loads only if that macro
+  // is later expanded, which the dep-scan must not eagerly force. Requires
+  // inside LOAD-TIME conditionals (`\IfFileExists{X.sty}{\usepackage{X}}`,
+  // `\@ifundefined{..}{..}`, `\if…\usepackage…\fi`) DO execute during raw-load
+  // and MUST still be picked up. (Perl never force-loads the deferred ones: for
+  // a normally raw-loaded file it doesn't dep-scan at all, and the bundled deps
+  // it wants in the binding-bypass case run at load.) Witnesses:
+  //   - 1506.06200 — categorytheory.sty `\newcommand{\usediagrams}{\usepackage
+  //     {diagrams}}` (never invoked) must be SKIPPED (else the `diagrams` stub's
+  //     `locked` `\begin{diagram}` shadows the paper's tikz `{diagram}`).
+  //   - 1703.03673 — iau.cls `\IfFileExists{amssymb.sty}{…\usepackage{amssymb}…}`
+  //     must be KEPT (else `\bigstar` is undefined). An earlier brace-DEPTH
+  //     filter wrongly skipped this conditional; the def-body check is precise.
+  // A `\usepackage` is deferred iff ANY enclosing `{…}` group is opened directly
+  // by a `\newcommand`/`\def` definition header.
+  // Is `\<name>` INVOKED (not merely defined) somewhere in the file? A bare
+  // control-sequence occurrence not directly preceded by a `\…def`/`\let`
+  // introducer counts as an invocation. Used to tell an executed deferred-load
+  // idiom (`\def\@tempa{…\RequirePackage{P}…}\@tempa`) from a never-called one.
+  let is_invoked = |name: &str| -> bool {
+    let pat = s!("\\{name}");
+    let mut from = 0usize;
+    while let Some(rel) = code[from..].find(&pat) {
+      let at = from + rel;
+      from = at + pat.len();
+      // Full control sequence: next char must not extend the name.
+      let after_ok = code[at + pat.len()..]
+        .chars()
+        .next()
+        .is_none_or(|c| !c.is_ascii_alphabetic() && c != '@');
+      if !after_ok {
+        continue;
+      }
+      // Not a (re)definition: the chars just before `\name` aren't `…def`/`…let`.
+      let before = code[at.saturating_sub(8)..at].trim_end();
+      if before.ends_with("def") || before.ends_with("let") {
+        continue;
+      }
+      return true;
+    }
+    false
+  };
+  let in_macro_def_body = |start: usize| -> bool {
+    let bytes = code.as_bytes();
+    let mut stack: Vec<usize> = Vec::new();
+    let mut i = 0usize;
+    while i < start {
+      match bytes[i] {
+        b'\\' => {
+          i += 2;
+          continue;
+        },
+        b'{' => stack.push(i),
+        b'}' => {
+          stack.pop();
+        },
+        _ => {},
+      }
+      i += 1;
+    }
+    stack.iter().any(|&ob| {
+      let lo = ob.saturating_sub(400);
+      let window = code.get(lo..ob).unwrap_or(&code[..ob]);
+      // A `\def\<m>{…}` body only defers if `\<m>` is never invoked; an invoked
+      // scratch macro (`\@tempa`) runs its body at load, so its require loads.
+      if let Some(caps) = DEF_NAME_RE.captures(window) {
+        return !is_invoked(&caps[1]);
+      }
+      // `\newcommand`/`\DeclareRobustCommand` user-command bodies stay deferred
+      // (witness 1506.06200 `\newcommand{\usediagrams}{\usepackage{diagrams}}`).
+      DEF_BODY_HEADER_RE.is_match(window)
+    })
+  };
+  let top_level = |cap: &regex::Captures| -> bool {
+    cap.get(0).map(|m| !in_macro_def_body(m.start())).unwrap_or(true)
+  };
+
+  // NOTE — a former Rust-only "conflicting option sets" heuristic was REMOVED
+  // here (was: drop a package `\RequirePackage`'d / `\usepackage`'d with two or
+  // more DIFFERENT option sets, as the signature of a deferred require inside a
+  // `\def`/`\DeclareOption` body, e.g. aa.cls's
+  // `\DeclareOption{ascii}{\def\aa@inputenc{\RequirePackage[ascii]{inputenc}}}`
+  // …`{utf8}{…[utf8]…}`). It over-fired on a package required in BOTH arms of a
+  // load-time `\if…\else…\fi` with different options — mutually exclusive, so
+  // exactly one branch loads and the package MUST be kept. Witness: rist.cls's
+  // `\ifpdf \RequirePackage[pdftex,…]{hyperref} \else \RequirePackage[dvipdfm,…]
+  // {hyperref} \fi` (1912.00781: hyperref dropped → `\url` undefined). The
+  // heuristic was also provably REDUNDANT: it only ever saw TOP-LEVEL requires
+  // (the captures feeding it were `top_level`-filtered), but aa.cls's inputenc
+  // lives in a `\def`/`\DeclareOption` BODY — already dropped by the def-body
+  // `top_level` skip below, so it never entered the conflicting set at all. Perl
+  // has no such gate (L2767-2774 is a plain dedup); the def-body `top_level` skip
+  // plus the executed-set gate cover the legitimate cases faithfully.
+  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
 
   // Perl L2767-2774: shared `%dups` map, $collect closure splits on
   // `\s*,\s*` and only enrolls a package once, AND only if its
   // `.sty.ltxml_loaded` flag is unset.
   let mut packages: Vec<(String, Option<String>)> = Vec::new();
   let mut dups: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
-  static OPT_SPLIT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s*,\s*").unwrap());
   let mut collect = |pkg_csv: &str, raw_options: Option<&str>| {
     for p in OPT_SPLIT.split(pkg_csv) {
       if p.is_empty() {
+        continue;
+      }
+      // Executed-set gate (see top of fn): when this file raw-loaded, drop a
+      // candidate whose `\usepackage` never executed anywhere — it was inside a
+      // false conditional the raw-load skipped.
+      if raw_loaded && !lookup_bool(&s!("{p}.usepackage_executed")) {
         continue;
       }
       // Perl L2773: `!$dups{$p} && !LookupValue($p . '.sty.ltxml_loaded')`
@@ -1802,10 +1967,16 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
 
   // Perl L2777: `\RequirePackage` first.
   for cap in REQ_RE.captures_iter(&code) {
+    if !top_level(&cap) {
+      continue;
+    }
     collect(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
   // Perl L2778-2779: `\usepackage` second.
   for cap in USE_RE.captures_iter(&code) {
+    if !top_level(&cap) {
+      continue;
+    }
     collect(&cap[2], cap.get(1).map(|m| m.as_str()));
   }
 
@@ -1813,6 +1984,9 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   let mut classes: Vec<(String, Option<String>)> = Vec::new();
   if ext_type == "cls" {
     for cap in CLS_RE.captures_iter(&code) {
+      if !top_level(&cap) {
+        continue;
+      }
       let class = cap[2].to_string();
       if !class.is_empty() {
         classes.push((class, cap.get(1).map(|m| m.as_str().to_string())));
@@ -1936,15 +2110,19 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // if the binding is missing, fall through to OmniBus (below). Allowing raw
   // .cls to "succeed" the load prevents the OmniBus fallback that provides
   // generic frontmatter / counter / theorem bindings.
-  // EXCEPTION: a name with a directory prefix (`misc/ieeetran`,
-  // `./sty/foo`) is a strong signal of a user-local class file. The
-  // INCLUDE_CLASSES gate is meant to avoid arbitrary system .cls
-  // pollution; it shouldn't suppress files the user explicitly
-  // bundled. Driver: 2105.02087 (`\documentclass{misc/ieeetran}` —
-  // local copy of IEEEtran with author edits — fell through to
-  // OmniBus, missing \IEEEoverridecommandlockouts and friends).
-  let has_path_prefix = name.contains('/') || name.contains('\\');
-  let notex_default = !lookup_bool("INCLUDE_CLASSES") && !has_path_prefix;
+  //
+  // PERL-FAITHFUL (2026-05-30): a directory prefix does NOT force a raw .cls
+  // load. Perl resolves a path-prefixed class to its basename BINDING when one
+  // exists, else OmniBus — it loads `IEEEtran.cls.ltxml` for
+  // `\documentclass{misc/ieeetran}` and falls to OmniBus for
+  // `\documentclass{JINST-Sample-files/JINST}`. The basename→binding match is
+  // handled in the `alternate` search below (it strips the path). Forcing a raw
+  // load for any path-prefixed name (the old `&& !has_path_prefix` exception)
+  // broke bundled classes whose raw load is semantically incomplete — JINST's
+  // begin-document `\author`/`\abstract` checks fire and `\abstract@cs` is left
+  // undefined, where Perl (OmniBus) is clean. Witness 1504.01965; the
+  // misc/ieeetran case (2105.02087) now matches Perl via the basename binding.
+  let notex_default = !lookup_bool("INCLUDE_CLASSES");
   // Perl Package.pm L2690: LoadClass can be limited to local SEARCHPATHS when
   // `localrawclasses` option sets `INCLUDE_CLASSES => 'searchpaths'`.
   let searchpaths_only = !notex_default && lookup_string("INCLUDE_CLASSES") == "searchpaths";
@@ -2023,20 +2201,45 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
         .filter(|n| *n != "OmniBus" && *n != name)
         .collect();
       sorted.sort_by_key(|n| std::cmp::Reverse(n.len()));
-      // Strict-case prefix first (Perl-faithful), then case-insensitive
-      // as a fallback so e.g. `WileyNJDv5` matches a `wileyNJDv5`
-      // binding entry that differs only in capitalization. Witness
-      // 2406.08163 (+~10 papers across WileyNJDv5 / similar).
+      // Strict-case prefix first (Perl-faithful: `$class =~ /^\Q$_\E/`), then
+      // a case-insensitive fallback for binding entries that differ from the
+      // class name ONLY in capitalization (e.g. `WileyNJDv5` class vs a
+      // `wileyNJDv5` binding entry, witness 2406.08163). The ci fallback uses
+      // FULL equality, NOT prefix: a ci-PREFIX match wrongly fired
+      // `AAAI-Std` → `aa` (the 2-char A&A astronomy binding) because
+      // `"aaai-std".starts_with("aa")` — but Perl's case-SENSITIVE `/^aa/`
+      // against `AAAI-Std` finds nothing, so Perl falls back to OmniBus
+      // (which defines `\address`). Full ci-equality keeps the
+      // capitalization-only Wiley case while matching Perl's no-match →
+      // OmniBus for AAAI-Std. Witness 2008.08548.
       sorted
         .iter()
         .copied()
         .find(|candidate| name.starts_with(candidate))
         .or_else(|| {
-          let name_lc = name.to_ascii_lowercase();
           sorted
             .iter()
             .copied()
-            .find(|candidate| name_lc.starts_with(&candidate.to_ascii_lowercase()))
+            .find(|candidate| name.eq_ignore_ascii_case(candidate))
+        })
+        .or_else(|| {
+          // Path-prefixed class (`misc/ieeetran`, `JINST-Sample-files/JINST`):
+          // strip the directory and match the basename against a binding, so
+          // `misc/ieeetran` → IEEEtran (Perl loads IEEEtran.cls.ltxml for it)
+          // while `JINST-Sample-files/JINST` → no basename binding → OmniBus.
+          // Case-insensitive FULL equality only (not prefix) — mirrors the
+          // capitalization-only ci fallback above and avoids a basename like
+          // `AAAI-Std` wrongly prefix-matching the 2-char `aa` binding.
+          // Witnesses 1504.01965 (JINST→OmniBus), 2105.02087 (misc/ieeetran).
+          let basename = name.rsplit(['/', '\\']).next().unwrap_or(name);
+          if basename != name {
+            sorted
+              .iter()
+              .copied()
+              .find(|candidate| basename.eq_ignore_ascii_case(candidate))
+          } else {
+            None
+          }
         })
     };
 
@@ -2227,7 +2430,19 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
   };
   let dir_stripped = base != name;
   let mut suffix_stripped = false;
-  // Iteratively strip suffixes, then glued, then prefixes
+  // Iteratively strip suffixes, then glued, then prefixes.
+  //
+  // Perl's FindFile_fallback (Package.pm:2174) version-strips the FULL `$file`
+  // *with its directory prefix intact*, so the prefix regex `^(rw|my|preprint)`
+  // — anchored at the very START of the string — never matches a name that
+  // begins with a directory (e.g. `sty/myunits` starts with `sty/`, not `my`).
+  // We strip the directory FIRST (to allow a basename-exact binding match like
+  // `misc/ieeetran` → IEEEtran), so we must NOT then apply the `^`-anchored
+  // prefix strip to the basename, or `sty/myunits` wrongly becomes `units` and
+  // loads the stock units.sty instead of the paper-local myunits.sty (which
+  // defines `\T`/`\fC`/`\Cm` via its `\defUnit` mechanism). Witness 1702.05093.
+  // The suffix/glued strips ARE `$`-anchored, so they still match the tail of a
+  // dir-prefixed name in Perl (`./aaspp4` → `./aaspp`); keep applying them.
   loop {
     if let Some(m) = suffix_rx.find(&base) {
       base = base[..m.start()].to_string();
@@ -2239,10 +2454,12 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
       suffix_stripped = true;
       continue;
     }
-    if let Some(m) = prefix_rx.find(&base) {
-      base = base[m.end()..].to_string();
-      suffix_stripped = true;
-      continue;
+    if !dir_stripped {
+      if let Some(m) = prefix_rx.find(&base) {
+        base = base[m.end()..].to_string();
+        suffix_stripped = true;
+        continue;
+      }
     }
     break;
   }
@@ -2480,9 +2697,19 @@ pub fn def_color(
   use crate::common::color;
   // Check ifglobalcolors — Perl: $scope='global' if lookupDefinition(\ifglobalcolors) &&
   // IfCondition(\ifglobalcolors) Guard with lookup first: xcolor may not be loaded (e.g.
-  // colordvi-only documents)
-  let effective_scope = if lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
-    && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true)
+  // colordvi-only documents).
+  //
+  // ALSO force global when `color_force_global` is set: color_sty.rs's lazy
+  // dvipsnam.def loader (recovering a dropped `\usepackage[dvipsnames]{color}`
+  // option, e.g. when hyperref preloaded `color` first) fires from WITHIN a
+  // grouped digestion (`\textcolor{Blue}{…}` / a listings keywordstyle), so the
+  // 68 dvips colors would otherwise be defined in that local group and revert
+  // before the next `\color{…}` — making only the FIRST color resolve. Perl
+  // loads dvipsnam at the preamble (top level), so its colors persist; the flag
+  // reproduces that global effect. Witness 1705.06183.
+  let effective_scope = if (lookup_definition(&T_CS!("\\ifglobalcolors"))?.is_some()
+    && if_condition(&T_CS!("\\ifglobalcolors"))? == Some(true))
+    || lookup_bool("color_force_global")
   {
     Some(Scope::Global)
   } else {

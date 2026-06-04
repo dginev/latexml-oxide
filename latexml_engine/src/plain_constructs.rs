@@ -35,11 +35,46 @@ LoadDefinitions!({
   // time, so we need the protected flag to restore the round-trip
   // semantics. Witness: hep-th9306154 / hep-ph9803499 /
   // hep-th9203004 (harvmac `\listrefs` writing `\&` in references).
-  DefMacro!("\\#", "\\ifmmode\\lx@math@hash\\else\\lx@text@hash\\fi", protected => true);
-  DefMacro!("\\&", "\\ifmmode\\lx@math@amp\\else\\lx@text@amp\\fi", protected => true);
-  DefMacro!("\\%", "\\ifmmode\\lx@math@percent\\else\\lx@text@percent\\fi", protected => true);
-  DefMacro!("\\$", "\\ifmmode\\lx@math@dollar\\else\\lx@text@dollar\\fi", protected => true);
-  DefMacro!("\\_", "\\ifmmode\\lx@math@underscore\\else\\lx@text@underscore\\fi", protected => true);
+  // `\#` as a single mode-aware PRIMITIVE (Perl's Box-dispatching DefPrimitive),
+  // not a protected dispatch MACRO. A primitive is non-expandable (survives the
+  // `\write`/`\input` round-trip — harvmac) AND `\ifx`-stable, so a paper using
+  // `\#` as a macro-stack sentinel (algochl.sty's `\alg@push`/`\alg@pop` —
+  // `\xdef\alg@Sc{\#}` then `\ifx`-compares the popped top against `\#`) works:
+  // the prior protected dispatch macro was NOT `\ifx`-stable in that context.
+  // Routes by IN_MATH to the existing math/text helpers at digest time,
+  // preserving rendering (and avoiding the dump CharDef's dropped-`#` in math).
+  // Witness 1811.00200 (llncs + algochl.sty). WISDOM #44.
+  DefPrimitive!("\\#", {
+    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@hash") } else { T_CS!("\\lx@text@hash") };
+    stomach::digest(Tokens!(target))?
+  });
+  // Same single-primitive treatment for the rest of the family (see `\#` above):
+  // non-expandable + `\ifx`-stable, dispatching to the existing math/text
+  // helpers by IN_MATH at digest time. (The math helpers carry the proper
+  // role/meaning, so math-mode `$\&\&$` still routes through `\lx@math@amp`
+  // rather than injecting a catcode-4 `&` — the breakage the prior override
+  // guarded against.)
+  DefPrimitive!("\\&", {
+    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@amp") } else { T_CS!("\\lx@text@amp") };
+    stomach::digest(Tokens!(target))?
+  });
+  DefPrimitive!("\\%", {
+    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@percent") } else { T_CS!("\\lx@text@percent") };
+    stomach::digest(Tokens!(target))?
+  });
+  DefPrimitive!("\\$", {
+    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@dollar") } else { T_CS!("\\lx@text@dollar") };
+    stomach::digest(Tokens!(target))?
+  });
+  DefPrimitive!("\\_", {
+    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+      T_CS!("\\lx@math@underscore") } else { T_CS!("\\lx@text@underscore") };
+    stomach::digest(Tokens!(target))?
+  });
   DefPrimitive!(T_CS!("\\lx@text@hash"), None, "#",  alias => "\\#");
   DefPrimitive!(T_CS!("\\lx@text@amp"), None, "&",  alias => "\\&");
   DefPrimitive!(T_CS!("\\lx@text@percent"), None, "%",  alias => "\\%");

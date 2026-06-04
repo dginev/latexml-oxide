@@ -12,6 +12,40 @@ LoadDefinitions!({
   RequirePackage!("longtable");
   RequirePackage!("dcolumn");
 
+  // ltxutil boolean-switch infrastructure. The real revtex4.cls is a generated
+  // monolith that bundles `ltxutil` (ltxutil.sty L146-205), so these low-level
+  // switch macros are available to any class built on revtex4. Our revtex4
+  // binding REPLACES revtex4.cls with LaTeXML constructs and so never pulled
+  // them in — but derived classes use them DIRECTLY in their own bodies. E.g.
+  // AIAA.cls does `\LoadClass{revtex4}` then `\@ifxundefined\twoside@sw{...}{}`
+  // (AIAA.cls L97), which left `\@ifxundefined`/`\@booleanfalse`/`\twoside@sw`
+  // undefined. Ported verbatim from ltxutil.sty so revtex4-derived local
+  // classes load. (Perl skips this by treating such a local .cls as a missing
+  // file and falling back to article; we resolve the bundled .cls — as real
+  // LaTeX does — so we must provide its expected infrastructure.)
+  // Witness: 1904.07479 (AIAA.cls). Format-version probing (\IfFormatAtLeastTF)
+  // is omitted — not needed for the switch semantics.
+  TeX!(r"\long\def\true@sw#1#2{#1}%
+\long\def\false@sw#1#2{#2}%
+\def\@boolean#1#2{\long\def#1{#2\expandafter\true@sw\else\expandafter\false@sw\fi}}%
+\def\@boole@def#1#{\@boolean{#1}}%
+\def\@booleantrue#1{\let#1\true@sw}%
+\def\@booleanfalse#1{\let#1\false@sw}%
+\@boole@def\@ifx#1{\ifx#1}%
+\@boole@def\@ifx@empty#1{\ifx\@empty#1}%
+\@boole@def\@if@empty#1{\if!#1!}%
+\long\def\@ifxundefined#1{\@ifx{\undefined#1}}%
+\long\def\@ifnotrelax#1#2#3{\@ifx{\relax#1}{#3}{#2}}%
+\def\@ifxundefined@cs#1{\expandafter\@ifx\expandafter{\csname#1\endcsname\relax}}%
+\def\@if@sw#1#2{#1\expandafter\true@sw\else\expandafter\false@sw#2}%
+\long\def\@argswap#1#2{#2#1}%
+\long\def\@argswap@val#1#2{#2{#1}}%
+\@boole@def\@ifdim#1{\ifdim#1}%
+\@boole@def\@ifhmode{\ifhmode}%
+\@boole@def\@ifmmode{\ifmmode}%
+\@boole@def\@ifnum#1{\ifnum#1}%
+\@boole@def\@ifodd#1{\ifodd#1}%");
+
   // 4.3 Title/Author
   DefMacro!("\\title[]{}", "\\@add@frontmatter{ltx:title}{#2}");
   DefMacro!("\\doauthor{}{}{}", "#1 #2 #3");

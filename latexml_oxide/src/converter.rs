@@ -357,8 +357,15 @@ impl Converter {
         });
       }
     }
-    // Perl: Note("Conversion complete: " . $$runtime{status});
-    Note!(s!("Conversion complete: {}", self.runtime.status));
+    // Perl: Note("Conversion complete: " . $$runtime{status}); (LaTeXML.pm:315)
+    // is reached only on success — a Fatal `die`s before it, and bin/latexml:127
+    // then prints `"Conversion " . ($code == 3 ? 'failed' : 'complete')`. Rust
+    // recovers from a Fatal (graceful degradation) instead of dying, so it reaches
+    // this note even when status_code == 3; fold in bin/latexml's verdict here so
+    // a fatal run reports "failed", never the self-contradictory "complete: N fatal
+    // error". Success cases (status_code < 3) stay byte-identical.
+    let verb = if self.runtime.status_code == 3 { "failed" } else { "complete" };
+    Note!(s!("Conversion {}: {}", verb, self.runtime.status));
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
 

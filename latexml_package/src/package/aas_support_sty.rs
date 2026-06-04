@@ -67,8 +67,15 @@ LoadDefinitions!({
 
   // 2.1.5 Running Heads
   DefMacro!("\\shorttitle{}", "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\shortauthors{}",
-    "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
+  // Perl `aas_support.sty.ltxml` L83: `DefMacro('\shortauthors{}', '')` — GOBBLE
+  // (comment: "not useful?", "redundantly with an \author macro"). We previously
+  // preserved it as `ltx:note[role=shortauthors]` (Rust-over-Perl), but (a) it
+  // duplicates `\author`, and (b) digesting its content errors when an author
+  // writes a literal `&` (an "and" typo for `\&`) in the running head — the
+  // catcode-4 `&` hits the stray-`&` constructor (no alignment open). Witness
+  // 0709.4236 (`\shortauthors{Riaz, Gizis & Sammaddar}`): RUST 1 error → 0
+  // (Perl clean). Match Perl: gobble.
+  def_macro_noop("\\shortauthors{}")?;
   DefMacro!("\\correspondingauthor{}", "\\lx@contact{correspondent}{#1}");
   // \lefthead{author} / \righthead{title} — running-header text;
   // preserve as ltx:note (was gobbled).
@@ -143,6 +150,17 @@ LoadDefinitions!({
   def_macro_noop("\\placetable{}")?;
   def_macro_noop("\\placefigure{}")?;
   def_macro_noop("\\placeplate{}")?;
+  // `\floattable` (aastex62.cls L4574: `\def\floattable{\global\deluxestartrue
+  // \global\floattrue}`) — a no-arg declaration that makes the FOLLOWING
+  // deluxetable a full-width (spanning) float in two-column PDF layout. Pure
+  // page-layout, moot in our HTML paradigm (WISDOM #50 / size-layout-errors-
+  // moot), so a no-op. Both this binding and Perl's aas_support.sty.ltxml had
+  // omitted it (it lives in the aastex62/aastex631 .cls, not aas_support), so
+  // a paper bundling aastex62.cls + `\floattable` saw it undefined. Witness
+  // 1909.08916 (`\documentclass{aastex62}`, `\floattable` before tables):
+  // 1 error → 0. (Perl ALSO errors here — its aas_support binding has the same
+  // gap; see docs/KNOWN_PERL_ERRORS.md.)
+  def_macro_noop("\\floattable")?;
   NewCounter!("plate");
   DefMacro!("\\platename", "Plate");
   def_macro_noop("\\platewidth{Dimension}")?;

@@ -12,36 +12,68 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
   RequirePackage!("xcolor");
   def_macro_noop("\\newmdtheoremenv[]{}{}[]")?;
-  def_macro_noop("\\newmdenv[]{}")?;
-  def_macro_noop("\\renewmdenv[]{}")?;
+  // `\newmdenv[opts]{name}` defines a new environment `name` that wraps
+  // `mdframed` (mdframed.sty L578-585:
+  //   \newenvironment{#2}{\mdfsetup{#1}\begin{mdframed}}{\end{mdframed}}).
+  // `\mdfsetup` is our no-op, so the body reduces to a mdframed wrapper.
+  // Surpass-Perl: ar5iv-bindings/mdframed.sty.ltxml L22 also no-ops this,
+  // leaving the user's custom env undefined (Perl then errors with
+  // `{name} is not defined`). Faithfully porting the real definer makes
+  // the custom env work. Witness arXiv:2002.06879
+  // (`\newmdenv[...]{mdfigure}` then `\begin{mdfigure}`).
+  DefMacro!("\\newmdenv[]{}",
+    "\\newenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}");
+  DefMacro!("\\renewmdenv[]{}",
+    "\\renewenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}");
   def_macro_noop("\\surroundwithmdframed[]{}")?;
   def_macro_noop("\\mdfsubtitle[]{}")?;
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
   def_macro_noop("\\mdfsetup{}")?;
   def_macro_noop("\\mdfdefinestyle{}{}")?;
   DefRegister!("\\mdflength" => Dimension::new(0));
-  // Wrap body in `inline-logical-block` (Misc.class container that
-  // accepts Para.model body).
+  // Wrap body in `inline-logical-block` (Misc.class container with Para.model body).
   //
-  // Rust-only surpass-Perl divergence: Perl ar5iv-bindings/mdframed.sty.ltxml
-  // L31-34 uses `inline-block` (Block.model only), which the schema rejects
-  // when an `mdframed` body contains a `\begin{theorem}` (theorem lives in
-  // Para.class, not Block.class). `inline-logical-block` is the strictly
-  // safer swap:
-  //   * Same `Misc.class` membership as `inline-block` — accepted in every
-  //     parent context where Perl's choice fits (inline AND block). The
-  //     alternative `logical-block` is in `Para.class` and would BREAK
-  //     inline-context uses of mdframed (`\fbox{\begin{mdframed}…}` etc.).
-  //   * Same Backgroundable.attributes surface (`framed`, `framecolor`,
-  //     `backgroundcolor`).
-  //   * Same `display: inline-block` CSS in LaTeXML.css (no visual change).
-  //   * `Para.model` body — accepts theorem/proof/para inside.
+  // The schema offers three framed-box elements, each satisfying only TWO of
+  // the three placements an `mdframed` must support (verified against
+  // resources/RelaxNG: float_model ⊇ Block.model = Block.class|Misc.class|
+  // Meta.class; Para.model = Para.class|Meta.class):
+  //   * `inline-block`        (Misc.class, body=Block.model): in-float ✓, nests ✓
+  //       (Block.model ⊇ Misc.class), theorem ✗ (Block.model ⊉ Para.class).
+  //       This is what Perl ar5iv-bindings/mdframed.sty.ltxml L31-34 uses, so
+  //       Perl ITSELF errors `malformed:ltx:theorem` on a theorem-in-mdframed.
+  //   * `inline-logical-block`(Misc.class, body=Para.model): in-float ✓
+  //       (Misc.class ⊂ Block.model ⊂ float_model), theorem ✓ (Para.model ⊇
+  //       Para.class), nests ✗ — a directly-nested inner `inline-logical-block`
+  //       (Misc.class) isn't in the outer's Para.model.
+  //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓
+  //       (Para.class ∈ Para.model), in-float ✗ — Para.class ⊄ float_model.
+  //
+  // No single element does all three, and the missing auto-open bridge
+  // (inline-logical-block → para → inline-logical-block, which para_model =
+  // Block.model WOULD admit) is intentionally suppressed by the `($tag ne $kid)`
+  // self-nesting guard in BOTH Perl `Document::computeIndirectModel` (L207) and
+  // our `state::compute_indirect_model` — so adding it would diverge from Perl's
+  // document model. We therefore pick the element that fails the RAREST case:
+  //
+  // History: this was `logical-block` (theorem ✓ + nests ✓) until a fresh sweep
+  // surfaced arXiv:1907.05772 — an `mdframed` inside a `\begin{algorithm}`
+  // float, where Perl is clean (0 err, its `inline-block` is Misc.class) but
+  // `logical-block` (Para.class) tripped `"logical-block" isn't allowed in
+  // <float>` ×3 (Rust-only, Perl=0). mdframed-in-float (framed algorithm/figure
+  // boxes) is far more common than nested frames, so `inline-logical-block`
+  // strictly dominates `logical-block`: it FIXES the float regression and keeps
+  // the theorem-in-mdframed surpass (arXiv:2506.03074, 2402.07712 — beyond Perl,
+  // which errors there). The residual cost is the rare directly-nested-frame
+  // case (1712.00062): inner frame as the FIRST child of an outer frame errors
+  // `"inline-logical-block" isn't allowed in <inline-logical-block>` (any leading
+  // text auto-opens a `para` that then admits the inner frame, so only the
+  // bare-first-child variant is affected). Net: trades a moderate Rust-only
+  // regression (float) for a rare one (bare-nested-frame), maximizing error-free
+  // conversions.
   //
   // The template emits `framecolor=` only when the #framecolor property is
   // set (via the `?#framecolor(...)` guard), so an unset color correctly
-  // omits the attribute rather than emitting `framecolor=''`. Driver:
-  // arXiv:2506.03074v1 (ICML 2025 paper with
-  // `\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`).
+  // omits the attribute rather than emitting `framecolor=''`.
   DefEnvironment!(
     "{mdframed}[]",
     "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",

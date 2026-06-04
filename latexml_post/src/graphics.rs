@@ -246,6 +246,21 @@ impl Graphics {
             .and_then(|e| e.to_str())
             .unwrap_or("")
             .to_lowercase();
+          // Skip candidates whose extension is NOT a known graphics type.
+          // Perl's `findGraphicFile` re-searches with `types =>
+          // getGraphicsSourceTypes` (Post/Graphics.pm L150-151), which excludes
+          // non-graphics types — notably `.pdf_tex`, the inkscape "PDF+LaTeX"
+          // wrapper that is `\input`'d (it itself does `\includegraphics{grid}`),
+          // NOT a raster/vector image. `image_candidates` is deliberately
+          // unfiltered (matching Perl's `types => ['*']`), so a sibling
+          // `grid.pdf_tex` lands in the `candidates` attribute next to the real
+          // `grid.pdf`/`grid.eps`; without this filter it sorts first and gets
+          // picked, then fails to convert (`pdf_tex` has no destination_type).
+          // Empty ext is kept (the file may carry no extension but known content).
+          // Witness 1907.12308 (`\input{grid.pdf_tex}` → `\includegraphics{grid}`).
+          if !ext.is_empty() && !self.graphics_types.iter().any(|t| t == &ext) {
+            continue;
+          }
           let props = self.type_properties.get(&ext);
           let d = props.map(|p| p.desirability as i32).unwrap_or(0);
           let is_same_type = props

@@ -10,6 +10,22 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // xwatermark.sty L31/L52 `\RequirePackage{catoptions}` +
+  // `\ifcsndefTF{ver@hyperref.sty}{}{\usepackage{hyperref}}` — loading
+  // xwatermark pulls in hyperref (and catoptions). Perl has no xwatermark
+  // binding: it raw-loads xwatermark.sty and gets hyperref → `\href`/`\url`
+  // become available to the whole document (e.g. a `plainurl` .bbl with
+  // `\href{doi}{...}` entries). This stub previously omitted the hyperref
+  // dependency, so a paper that loads xwatermark but NOT hyperref directly
+  // saw `\href` undefined when the bibliography rendered — and the entire
+  // <ltx:bibliography> failed (witness 2001.03244: `\usepackage[printwatermark]
+  // {xwatermark}` + `\bibliographystyle{plainurl}`; 1 error + empty bib → 0
+  // errors + full bib). Mirror the real package's dependencies. (catoptions is
+  // the safe Rust stub, not the cascade-prone raw load this stub was created
+  // to avoid.)
+  RequirePackage!("catoptions");
+  RequirePackage!("hyperref");
+
   // No-op the public watermark API
   def_macro_noop("\\newwatermark{}")?;
   def_macro_noop("\\xnewwatermark[]{}")?;

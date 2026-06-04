@@ -90,7 +90,18 @@ LoadDefinitions!({
   DefMacro!("\\lx@longtable@endhead",      r"\crcr\noalign{\lx@longtable@grab{HEAD}}");
   DefMacro!("\\lx@longtable@endfoot",      r"\crcr\noalign{\lx@longtable@grab{FOOT}}");
   DefMacro!("\\lx@longtable@endlastfoot",  r"\crcr\noalign{\lx@longtable@grab{LASTFOOT}}");
-  DefMacro!("\\lx@longtable@kill",         r"\crcr\noalign{\lx@longtable@kill@marker}");
+  // Real longtable `\kill` is `\LT@echunk` — it ENDS the current row (the row
+  // is measured for widths then discarded). Model that faithfully: end the row
+  // via `\crcr` (which closes the column's `\vtop{\hbox{…` boxing through the
+  // normal cr path, exactly like `\\`), with a flag that tells the alignment
+  // driver to drop the just-ended row. The older `\crcr\noalign{marker}` form
+  // (still defined below for compatibility) leaked the cell box / popped the
+  // wrong row; routing through this flag avoids both. Witness 2010.09763.
+  DefPrimitive!("\\lx@longtable@kill@flag", sub[_args] {
+    assign_value("LONGTABLE_KILL_NEXT", true, Some(Scope::Global));
+    Ok(())
+  });
+  DefMacro!("\\lx@longtable@kill",         r"\lx@longtable@kill@flag\crcr");
 
   DefPrimitive!("\\lx@longtable@grab{}", sub[(name_arg)] {
     let name = name_arg.to_string();
@@ -192,7 +203,7 @@ fn longtable_bindings(template: Template) -> Result<()> {
   );
   state::let_i(&T_CS!("\\caption"), &T_CS!("\\lx@longtable@caption"), None);
   state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@longtable@label"), None);
-  state::let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill@marker"), None);
+  state::let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill"), None);
 
   assign_value("LONGTABLE_LABEL", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));

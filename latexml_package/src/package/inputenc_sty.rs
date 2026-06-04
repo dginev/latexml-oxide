@@ -56,6 +56,17 @@ LoadDefinitions!({
     Error!("unexpected", "<char>", message);
   });
 
+  // `\@inpenc@test` is inputenc.sty's one-shot initialization guard.
+  // The raw source (inputenc.sty L79) defines it inline as
+  //   `\gdef\@inpenc@test{\global\let\@inpenc@test\relax}`
+  // — i.e. self-defining and self-disabling — but our binding
+  // short-circuits the raw-load before reaching that point, so
+  // downstream code (e.g. utf8.def L195, the encoding .def files,
+  // and `\DeclareInputMath`) hits `Error:undefined`. Mirror the
+  // upstream's effective behavior: no-op (post-init state).
+  // Witness: 15 papers in R-stages affected (~1 paper per stage).
+  DefMacro!("\\@inpenc@test", None);
+
   DefPrimitive!("\\inputencoding{}", sub[(encoding)] {
     set_input_encoding(&Expand!(encoding).to_string())?;
   });

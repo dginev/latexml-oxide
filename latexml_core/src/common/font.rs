@@ -18,7 +18,7 @@ use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
 use std::cmp::max;
 use std::fmt;
-use std::hash::{BuildHasher, Hash, Hasher};
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 pub mod standard_metrics;
@@ -603,10 +603,16 @@ impl Font {
   }
 
   pub fn to_hashable(&self) -> u64 {
-    let s = std::collections::hash_map::RandomState::new();
-    let mut new_s = s.build_hasher();
-    Hash::hash(self, &mut new_s);
-    new_s.finish()
+    // MUST be deterministic: equal Fonts must hash equal, stably across calls
+    // AND across process runs. `set_node_font`/`get_node_font` use this as the
+    // `_font` key and `node_fonts` map key, so a randomized seed
+    // (`RandomState::new()`, used here previously) gave the same Font a
+    // different id on every call — breaking font dedup and making the document
+    // build run-to-run non-deterministic (intermittent locked-frame/mode
+    // FATALs, e.g. 1510.04473). `FxHasher` has a fixed seed.
+    let mut hasher = rustc_hash::FxHasher::default();
+    Hash::hash(self, &mut hasher);
+    hasher.finish()
   }
 
   /// Condensed string showing only non-default components.

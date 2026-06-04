@@ -4,7 +4,7 @@ use crate::prelude::*;
 // wrapfig.sty — wrapping figures/tables around text
 LoadDefinitions!({
   DefEnvironment!("{wrapfigure} [Number] {} [Dimension] {Dimension}",
-    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
+    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:figure>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
       let dir = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
@@ -19,13 +19,20 @@ LoadDefinitions!({
       if !float_val.is_empty() {
         whatsit.set_property("float", Stored::String(arena::pin(float_val)));
       }
+      // INTENTIONAL DIVERGENCE from Perl wrapfig.sty.ltxml (which captures the
+      // mandatory {Dimension} wrap width as arg 4 but then DISCARDS it): emit it
+      // as the figure @width (→ base-styling `width:`) so the float — image AND
+      // caption — is capped to the declared wrap width instead of expanding to
+      // fit a single-line caption (which leaves a small figure in an enormous
+      // box). Mirrors the {minipage} width idiom. See OXIDIZED_DESIGN.
+      set_wrap_width(whatsit);
     },
     before_digest => { before_float("figure", None) },
     after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
   );
 
   DefEnvironment!("{wraptable} [Number] {} [Dimension] {Dimension}",
-    "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
+    "<ltx:table xml:id='#id' inlist='#inlist' float='#float' ?#width(width='#width')>#tags#body</ltx:table>",
     mode => "internal_vertical",
     after_digest_begin => sub[whatsit] {
       let dir = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
@@ -40,6 +47,9 @@ LoadDefinitions!({
       if !float_val.is_empty() {
         whatsit.set_property("float", Stored::String(arena::pin(float_val)));
       }
+      // Same intentional divergence as {wrapfigure}: cap the float to the
+      // declared wrap width (Perl discards it). See OXIDIZED_DESIGN.
+      set_wrap_width(whatsit);
     },
     before_digest => { before_float("table", None) },
     after_digest => sub[whatsit] { after_float(whatsit); Ok(Vec::new()) }
@@ -48,3 +58,16 @@ LoadDefinitions!({
   DefMacro!("\\WFclear", "\\par");
   DefRegister!("\\wrapoverhang", Dimension!("0pt"));
 });
+
+// Emit the wrapfig/wraptable mandatory {Dimension} (arg 4 = the declared wrap
+// width) as the float's `width` property so it renders as a CSS `width:`,
+// capping the float (image + caption) to that width. Perl's wrapfig binding
+// discards this arg; applying it is an intentional ar5iv-rendering divergence.
+fn set_wrap_width(whatsit: &mut Whatsit) {
+  if let Some(width_arg) = whatsit.get_arg(4) {
+    let v = width_arg.value_of();
+    if v != 0 {
+      whatsit.set_property("width", Stored::Dimension(Dimension::new(v)));
+    }
+  }
+}

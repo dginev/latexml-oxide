@@ -48,7 +48,15 @@ RESULTS_TSV=""  # set below after OUTPUT_DIR is finalized
 # CLI flag for explicit canvases.
 WORKERS="${WORKERS:-8}"
 TIMEOUT_S="${TIMEOUT_S:-120}"
-MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v)
+MAX_RAM_KB="${MAX_RAM_KB:-8388608}"   # 8 GB in KB (for ulimit -v, per-worker)
+# Aggregate memory guard (2026-06-02): the per-worker `ulimit -v $MAX_RAM_KB`
+# bounds ONE worker but NOT the sum — a cluster of heavy papers under -j N can
+# collectively exhaust system RAM, at which point the system-wide OOM-killer can
+# take the desktop/claude and the machine thrashes into a freeze. Running the
+# whole `parallel` fan-out inside ONE systemd --user cgroup scope with a hard
+# aggregate cap fixes this: a hit OOM-kills a worker INSIDE the cgroup only.
+# Sized for a 62 GiB box (override via env); disable with MEM_SCOPE=0.
+MEM_HIGH="${MEM_HIGH:-40G}"; MEM_MAX="${MEM_MAX:-46G}"; MEM_SWAP="${MEM_SWAP:-2G}"
 BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
 LIMIT=0              # 0 = no limit
 RERUN_FAILURES=false
@@ -524,7 +532,17 @@ echo ""
 RUN_START=$(date +%s)
 
 PARALLEL_EXIT=0
-parallel --will-cite \
+# Build the aggregate-memory-cap wrapper (empty if disabled or no --user systemd).
+MEM_SCOPE_CMD=()
+if [[ "${MEM_SCOPE:-1}" != "0" ]] && \
+   systemd-run --user --scope --collect -q -p MemoryMax=64M /bin/true >/dev/null 2>&1; then
+  MEM_SCOPE_CMD=(systemd-run --user --scope --collect --expand-environment=no \
+    -p MemoryHigh="$MEM_HIGH" -p MemoryMax="$MEM_MAX" -p MemorySwapMax="$MEM_SWAP" --)
+  echo "Aggregate memory guard: cgroup cap MemoryMax=$MEM_MAX MemoryHigh=$MEM_HIGH MemorySwapMax=$MEM_SWAP" >&2
+else
+  echo "Aggregate memory guard: DISABLED (MEM_SCOPE=0 or no systemd --user) — per-worker ulimit only" >&2
+fi
+"${MEM_SCOPE_CMD[@]}" parallel --will-cite \
   --jobs "$WORKERS" \
   convert_one {} \
   < "$TASK_LIST" || PARALLEL_EXIT=$?

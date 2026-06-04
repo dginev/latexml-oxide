@@ -72,6 +72,26 @@ pub fn babel_language_to_iso(lang: &str) -> Option<&'static str> {
   }
 }
 
+/// Flip the French active punctuation (`:`, `;`, `!`, `?`) to catcode ACTIVE
+/// and attach their thin-space dispatch meanings. Shared by the runtime
+/// `\selectlanguage` hook (body switches) and the `\begin{document}` deferral
+/// (preamble switches — see `\lx@bbl@begindoc@french@punct`). Real babel turns
+/// shorthands on only at `\begin{document}`; activating in the preamble
+/// corrupts packages loaded after `\selectlanguage{french}`.
+pub(crate) fn activate_french_active_punct() {
+  for &(ch, cs_name) in &[
+    (':', "\\lx@french@punct@colon"),
+    (';', "\\lx@french@punct@semi"),
+    ('!', "\\lx@french@punct@exclam"),
+    ('?', "\\lx@french@punct@question"),
+  ] {
+    if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
+      state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
+      state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
+    }
+  }
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Many TL2025 babel language files (e.g. babel-italian italian.ldf,
@@ -181,19 +201,23 @@ LoadDefinitions!({
       // `\noextrasfrench` deactivates on language exit. We mirror that.
       //
       // Dispatch primitives are defined in babel_sty.rs unconditionally.
-      if code == "fr" {
-        // Entering French: flip catcodes to ACTIVE, attach dispatch meanings.
-        for &(ch, cs_name) in &[
-          (':', "\\lx@french@punct@colon"),
-          (';', "\\lx@french@punct@semi"),
-          ('!', "\\lx@french@punct@exclam"),
-          ('?', "\\lx@french@punct@question"),
-        ] {
-          if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
-            state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
-            state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
-          }
-        }
+      // Real babel defers shorthand activation to `\begin{document}`:
+      // flipping `:;!?` to active while still in the PREAMBLE corrupts any
+      // package loaded after `\selectlanguage{french}` — e.g. adjustbox,
+      // whose graphicx `!` natural-size sentinel then tokenizes as an active
+      // char and the glue parser hits it: "Missing close parenthesis in Glue
+      // expr. Got T_ACTIVE[!]". Skip activation in the preamble; babel
+      // re-fires `\selectlanguage{\bbl@main@language}` at `\begin{document}`
+      // (via its AtBeginDocument hook), running this hook again with
+      // `inPreamble` cleared, which performs the activation then. A body-level
+      // `\selectlanguage` switch (inPreamble already false) still activates
+      // immediately. Witness 1712.07003 (`\selectlanguage{french}` in the
+      // preamble, then `\usepackage{adjustbox}`).
+      if code == "fr" && !lookup_bool("inPreamble") {
+        // Entering French in the document body: activate immediately. Preamble
+        // switches are deferred to \begin{document} by the begin-document hook
+        // below (so packages loaded after \selectlanguage see catcode-12 `!`).
+        activate_french_active_punct();
       }
       // German: activate " as the shorthand dispatch for umlauts + opens
       // the \mdqon / \mdqoff toggle. Babel's germanb.ldf normally does this
@@ -212,6 +236,21 @@ LoadDefinitions!({
       // clobber the root xml:lang when the body switches languages).
     }
   });
+
+  // Deferred French-shorthand activation. The `\selectlanguage` hook above
+  // skips activation while `inPreamble`, so `\selectlanguage{french}` followed
+  // by `\usepackage{adjustbox}` (or any package whose macros embed a literal
+  // `!`, e.g. graphicx's natural-size sentinel) loads with `!` still catcode-12
+  // — matching real babel, which turns shorthands on at `\begin{document}`.
+  // Re-run the activation here if the resolved document language is French.
+  // Witness 1712.07003. (Body-level `\selectlanguage` switches happen after
+  // `inPreamble` is cleared and activate immediately in the hook above.)
+  DefPrimitive!("\\lx@bbl@begindoc@french@punct", {
+    if lookup_string("DOCUMENT_LANGUAGE") == "fr" {
+      activate_french_active_punct();
+    }
+  });
+  RawTeX!(r"\AtBeginDocument{\lx@bbl@begindoc@french@punct}");
 
   // Pretend we've got hyphenation patterns for ANY language (Perl L158-167)
   DefMacro!("\\iflanguage{}", r#"\expandafter\ifx\csname l@#1\endcsname\relax
