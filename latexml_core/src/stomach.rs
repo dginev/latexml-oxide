@@ -679,6 +679,17 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     if !bound_on_top || current_bound != bound_mode {
       // Last stack frame was NOT a mode switch, or was a switch to a different mode.
       // Perl: Don't pop if there's an error; maybe we'll recover?
+      if *TRACE_BOUND_MODE {
+        let cur_tok = get_current_token()
+          .map(|t| t.to_string())
+          .unwrap_or_default();
+        eprintln!(
+          "[trace] end_mode ERROR: mode={mode} cur_tok={cur_tok} bound_on_top={bound_on_top} current_bound={current_bound} depth={}\n  {}\n{}",
+          crate::state::get_frame_depth(),
+          current_frame_message(),
+          std::backtrace::Backtrace::force_capture()
+        );
+      }
       let (category, message) = make_mode_error();
       Error!("unexpected", category, &message);
     } else {

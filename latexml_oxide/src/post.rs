@@ -99,6 +99,14 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 
   telemetry::phase_enter(Phase::PostXmlParse);
   let t_parse = audit_start("PostDocument::new_from_string");
+  // Perl LaTeXML.pm L330-336: a completely empty core-conversion result
+  // (e.g. after a Fatal abort) is still post-processed — Perl sets a bare
+  // <document/> root first, "important for utility features such as
+  // packing .zip archives for output". Mirror that for the empty-string
+  // serialization instead of failing the parse with a libxml "Got a Null
+  // pointer" and echoing the empty input through (witness: cortex_worker
+  // on any Fatal paper produced a 0-byte .html).
+  let xml = if xml.trim().is_empty() { "<document/>" } else { xml };
   let doc = match PostDocument::new_from_string(xml, doc_opts) {
     Ok(d) => d,
     Err(e) => {
