@@ -424,8 +424,8 @@ LoadDefinitions!({
           latexml_core::common::error::clear_fatal_flag();
         }
         log::warn!(
-          "maketitle frontmatter digest swallowed Err: {}:{} {}",
-          format!("{:?}", e.target), format!("{:?}", e.category), e.message
+          "maketitle frontmatter digest swallowed Err: {:?}:{:?} {}",
+          e.target, e.category, e.message
         );
       }
     }

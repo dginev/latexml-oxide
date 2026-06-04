@@ -220,7 +220,7 @@ fn cref_multi(
   // is spliced from the ORIGINAL tokens (never re-tokenized), matching Perl's
   // `Invocation(T_CS('\lx@cref'), $starred, T_OTHER(show), $label)`.
   // `\lx@tilde` carries the inter-word `~` (HyperVerbatim in Perl).
-  let mut emit = |out: &mut Vec<Token>, show: &str, label: &Tokens| {
+  let emit = |out: &mut Vec<Token>, show: &str, label: &Tokens| {
     out.push(T_CS!("\\lx@cref"));
     if starred {
       out.push(T_OTHER!("*"));

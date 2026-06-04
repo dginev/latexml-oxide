@@ -526,7 +526,7 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
   // Past the pure-imaginary case the remaining forms (`a ± b i`) all operate on
   // a real preceding number; if there wasn't one, Perl returns the undef
   // `$number` and the caller reports the "Not matched" error.
-  let mut number = number_opt?;
+  let number = number_opt?;
 
   if let Some(sign) = six_match_sign(tokens) {
     if let Some(i) = six_match_keys(tokens, &[six_pin!("input-complex-roots")]) {

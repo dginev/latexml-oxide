@@ -556,7 +556,7 @@ mod embedded_xslt {
   pub fn lookup(name: &str) -> Option<&'static [u8]> {
     FILES
       .iter()
-      .find_map(|(n, c)| (*n == name).then(|| c.as_bytes()))
+      .find_map(|(n, c)| (*n == name).then_some(c.as_bytes()))
   }
 
   /// Install the libxml2 input callback that serves `embed:///`
@@ -671,7 +671,7 @@ mod embedded_resources {
     CSS_FILES
       .iter()
       .chain(JS_FILES.iter())
-      .find_map(|(n, c)| (*n == basename).then(|| c.as_bytes()))
+      .find_map(|(n, c)| (*n == basename).then_some(c.as_bytes()))
   }
 }
 
