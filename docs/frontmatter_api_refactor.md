@@ -52,14 +52,14 @@ How each decision landed on `feature/frontmatter-refactor`:
    during the digestion window — verified safe) instead of §3's stable id;
    attrs stay `HashMap` because `open_element_at` sorts keys at emission.
 5. **Contentless labels dropped** ✅ implemented + recorded
-   (`OXIDIZED_DESIGN.md` #28, `KNOWN_PERL_ERRORS.md` #31).
+   (`OXIDIZED_DESIGN.md` #31, `KNOWN_PERL_ERRORS.md` #31).
 
 Beyond the plan, the review surfaced an **upstream PR bug**: Perl's new
 `digestFrontMatter` digests from the live queue, so a queued entry whose
 content re-triggers the digest (aa.cls `\abstract{…}{}` swallowing `\maketitle`
 into arg #5) recurses unboundedly — PR-head Perl dies `deep_recursion`, zero
 output (witness arXiv:0907.0384). Rust pre-clears the queue and converts the
-same paper cleanly: `KNOWN_PERL_ERRORS.md` #30, `OXIDIZED_DESIGN.md` #27.
+same paper cleanly: `KNOWN_PERL_ERRORS.md` #30, `OXIDIZED_DESIGN.md` #30.
 A Fatal *during* the deferred digest now propagates (Perl parity; the
 master-era fatal-swallow from witness 1903.01633 was removed — the silence
 bug it patched is fixed by propagation itself).

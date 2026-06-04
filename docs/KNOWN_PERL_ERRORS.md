@@ -968,7 +968,7 @@ pdflatex compiles this paper.
 **Rust:** not affected — `digest_front_matter` snapshots and
 pre-clears the queue, so the nested invocation terminates and the
 paper converts with zero errors (intentional divergence,
-`OXIDIZED_DESIGN.md` #27). Worth reporting upstream.
+`OXIDIZED_DESIGN.md` #30). Worth reporting upstream.
 
 ## 31. `cleanFrontmatterLabels` prefixes empty fields → contentless `"prefix:"` labels
 
@@ -991,7 +991,7 @@ unrelated contentless labels can spuriously match each other during
 second field is empty but still prefixed).
 
 **Rust:** drops fields with no real content before prefixing
-(intentional divergence, `OXIDIZED_DESIGN.md` #28; plan decisions
+(intentional divergence, `OXIDIZED_DESIGN.md` #31; plan decisions
 log #5). Perl's trailing-empty `split` semantics is otherwise
 preserved byte-exactly.
 

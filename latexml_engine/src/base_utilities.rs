@@ -1428,7 +1428,7 @@ fn clean_frontmatter_labels(labels: &str, prefix: &str) -> Vec<String> {
   }
   for label in pieces {
     let label = label.trim();
-    // INTENTIONAL DIVERGENCE (OXIDIZED_DESIGN #28, KNOWN_PERL_ERRORS #31,
+    // INTENTIONAL DIVERGENCE (OXIDIZED_DESIGN #31, KNOWN_PERL_ERRORS #31,
     // plan decisions log #5): Perl prefixes empty fields too, so a doubled
     // comma or empty keyval yields a contentless "prefix:" label that can
     // spuriously match another in relocate_annotations. Drop them.

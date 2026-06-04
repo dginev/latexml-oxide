@@ -1242,7 +1242,7 @@ width.
 
 ---
 
-### 27. Frontmatter Queue Pre-Cleared Before Deferred Digestion
+### 30. Frontmatter Queue Pre-Cleared Before Deferred Digestion
 
 **Decision:** `digest_front_matter` snapshots **and clears**
 `frontmatter_raw` before digesting the queued commands. Perl
@@ -1277,7 +1277,7 @@ LaTeX-like one.)
 
 ---
 
-### 28. Contentless Frontmatter Annotation Labels Are Dropped
+### 31. Contentless Frontmatter Annotation Labels Are Dropped
 
 **Decision:** `clean_frontmatter_labels` skips fields with no real
 content. Perl `cleanFrontmatterLabels` prefixes empty fields too, so

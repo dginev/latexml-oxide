@@ -6486,7 +6486,7 @@ creator/contact system — `queue/dequeue_front_matter`
 (all|new|n) attachment, `\lx@request@frontmatter@annotation`,
 `\lx@set@frontmatter@label`, `digest_front_matter` (deferred until
 `\maketitle`; queue pre-cleared before digesting — intentional
-divergence `OXIDIZED_DESIGN` #27: PR-head Perl deep-recursion-fatals
+divergence `OXIDIZED_DESIGN` #30: PR-head Perl deep-recursion-fatals
 on re-entrant queues, witness 0907.0384 / `KNOWN_PERL_ERRORS` #30;
 the master-era fatal-swallow was REMOVED 2026-06-04 — a Fatal in the
 deferred digest now propagates, matching Perl), `insert_frontmatter_rec`,
