@@ -556,7 +556,7 @@
 <a href=#556 id=556 data-nosnippet>556</a>  </span><span class="kw">pub fn </span>lookup(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[u8]&gt; {
 <a href=#557 id=557 data-nosnippet>557</a>    FILES
 <a href=#558 id=558 data-nosnippet>558</a>      .iter()
-<a href=#559 id=559 data-nosnippet>559</a>      .find_map(|(n, c)| (<span class="kw-2">*</span>n == name).then(|| c.as_bytes()))
+<a href=#559 id=559 data-nosnippet>559</a>      .find_map(|(n, c)| (<span class="kw-2">*</span>n == name).then_some(c.as_bytes()))
 <a href=#560 id=560 data-nosnippet>560</a>  }
 <a href=#561 id=561 data-nosnippet>561</a>
 <a href=#562 id=562 data-nosnippet>562</a>  <span class="doccomment">/// Install the libxml2 input callback that serves `embed:///`
@@ -671,7 +671,7 @@
 <a href=#671 id=671 data-nosnippet>671</a>    CSS_FILES
 <a href=#672 id=672 data-nosnippet>672</a>      .iter()
 <a href=#673 id=673 data-nosnippet>673</a>      .chain(JS_FILES.iter())
-<a href=#674 id=674 data-nosnippet>674</a>      .find_map(|(n, c)| (<span class="kw-2">*</span>n == basename).then(|| c.as_bytes()))
+<a href=#674 id=674 data-nosnippet>674</a>      .find_map(|(n, c)| (<span class="kw-2">*</span>n == basename).then_some(c.as_bytes()))
 <a href=#675 id=675 data-nosnippet>675</a>  }
 <a href=#676 id=676 data-nosnippet>676</a>}
 <a href=#677 id=677 data-nosnippet>677</a>

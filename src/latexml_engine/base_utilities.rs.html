@@ -424,8 +424,8 @@
 <a href=#424 id=424 data-nosnippet>424</a>          latexml_core::common::error::clear_fatal_flag();
 <a href=#425 id=425 data-nosnippet>425</a>        }
 <a href=#426 id=426 data-nosnippet>426</a>        <span class="macro">log::warn!</span>(
-<a href=#427 id=427 data-nosnippet>427</a>          <span class="string">"maketitle frontmatter digest swallowed Err: {}:{} {}"</span>,
-<a href=#428 id=428 data-nosnippet>428</a>          <span class="macro">format!</span>(<span class="string">"{:?}"</span>, e.target), <span class="macro">format!</span>(<span class="string">"{:?}"</span>, e.category), e.message
+<a href=#427 id=427 data-nosnippet>427</a>          <span class="string">"maketitle frontmatter digest swallowed Err: {:?}:{:?} {}"</span>,
+<a href=#428 id=428 data-nosnippet>428</a>          e.target, e.category, e.message
 <a href=#429 id=429 data-nosnippet>429</a>        );
 <a href=#430 id=430 data-nosnippet>430</a>      }
 <a href=#431 id=431 data-nosnippet>431</a>    }
