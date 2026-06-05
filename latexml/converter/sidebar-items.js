@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["ConversionResponse","Converter","Runtime"]};
+window.SIDEBAR_ITEMS = {"fn":["open_named_in_memory_mouth"],"struct":["ConversionResponse","Converter","Runtime"]};

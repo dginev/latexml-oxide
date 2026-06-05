@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["set_pre_exit_hook"],"struct":["Watchdog"]};
+window.SIDEBAR_ITEMS = {"constant":["EXIT_OOM","EXIT_TIMEOUT"],"fn":["process_rss_kb","set_pre_exit_hook"],"struct":["Watchdog"]};
