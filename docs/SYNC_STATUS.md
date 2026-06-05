@@ -7122,6 +7122,23 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   `\setboolean` undefined (the ifthen-loading settings file never
   runs). Byte-identical in Perl (verified 2026-05-27). Witness
   2003.12614 (R14, CONVERR_12).
+* **`mdwmath.sty` raw-load `#`-leak** (canvas-3 third batch, 2026-06-05) —
+  raw-loading `mdwmath.sty` (TL `mdwtools`) fails on the `\def\bbigg@#1#2#3{\hbox{$…
+  \left#3…$}}` family (line 133, redefining `\big`/`\Big`/`\bigg`/`\Bigg`) and on
+  `\sq@readrad` (a `"`-delimited `\root`/`\sqrt` macro): ~43 `Error:misdefined:#
+  …should never reach Stomach` per paper. Verified SHARED — Perl `latexml
+  --includestyles` (and with full ar5iv parity `--path=ar5iv-bindings
+  --preload=ar5iv.sty`) emits the byte-identical 43–44 errors; **no** mdwmath
+  binding exists in upstream LaTeXML or ar5iv. Probe (`\meaning\bbigg@`) shows
+  `\bbigg@` ends up **undefined** while `\big` stays the LaTeXML built-in (which
+  works) → output is fine, the errors are load-time *noise*. Recorded in
+  `docs/KNOWN_PERL_ERRORS.md`. Frequent: ~25–30 papers / 10k in the canvas (469
+  in stages 1–17). **Future work (surpass-Perl, HIGH difficulty — not attempted):**
+  either (a) harden the raw-loader's handling of `\def` bodies containing
+  `$…$`/`\left#n` + unusual delimiters (risky engine internals, broad blast
+  radius), or (b) ship a faithful `mdwmath.sty.ltxml` binding so the raw-load is
+  skipped. Witnesses: 2112.14809, 2204.08135, 2308.03312, 2306.01408, 2212.09944.
+  Deterministic minimal repro: `\usepackage{mdwmath}` + `$\big( x \big)$`.
 
 ---
 

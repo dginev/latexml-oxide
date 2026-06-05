@@ -972,3 +972,30 @@ still errors. Minimal trigger:
 \startdata 1 & 2 \enddata\end{deluxetable}
 \end{document}
 ```
+
+## `mdwmath.sty` raw-load — `#` (catcode PARAM) reaches Stomach
+
+`mdwmath.sty` (TeX Live `mdwtools`) cannot be raw-loaded cleanly by LaTeXML —
+**Perl and Rust both** emit ~43 `Error:misdefined:# The token "#" (catcode
+PARAM) should never reach Stomach!` at `mdwmath.sty line 133` (the `\bbigg@#1#2#3`
+body redefining `\big`/`\Big`/`\bigg`/`\Bigg`), plus a Perl
+`Error:expected:Until:"` on `\sq@readrad` (the `\root`/`\sqrt` delimited-arg
+macro). The `#1/#2/#3` parameters in the `\bbigg@` body leak to digestion when
+the macro is used. There is **no** `mdwmath` binding in upstream LaTeXML or
+ar5iv-bindings, so it is always raw-loaded and always errors.
+
+This is an **upstream LaTeXML limitation, shared by Perl** — Rust is faithful and
+must NOT "fix" it (doing so would diverge from the ground truth). Conversions
+still complete (rc=0) with these errors in both engines. Frequent in the wild
+(~25–30 affected papers per 10k in the large-scale canvas). Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{mdwmath}
+\begin{document}
+$\big( x \big)$ and $\Big[ y \Big]$
+\end{document}
+```
+
+Reproduce both: `latexml --includestyles test.tex` (Perl) vs `cortex_worker
+--standalone --input test.zip` (Rust) — identical `#`-leak error count.
