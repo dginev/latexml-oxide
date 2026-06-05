@@ -7522,7 +7522,8 @@ unchanged: ~99.4% on the 100k warning subset, no error-downgrading.
 
 ## Persistent server (`latexml_oxide --server`)
 
-**Moved to [`docs/LSP_SERVER.md`](LSP_SERVER.md) (2026-06-05).** The
+**Moved to [`docs/archive/LSP_SERVER.md`](archive/LSP_SERVER.md)
+(2026-06-05, archived same day to keep `docs/` parity-focused).** The
 editor server is *beyond-Perl* product work, not Perl parity — this log
 stays the parity ledger. Architecture, the PR #243 review records
 (code review 2026-06-04, performance review 2026-06-05 incl. the

@@ -1,4 +1,4 @@
-//! Unsaved-buffer overlay (`docs/LSP_MULTIFILE_PLAN.md` §3B), riding
+//! Unsaved-buffer overlay (`docs/archive/LSP_MULTIFILE_PLAN.md` §3B), riding
 //! the engine's **existing** `{file}_contents` state-value channel —
 //! the Perl-faithful `\begin{filecontents}` cache that `find_file_aux`
 //! (existence), the definitions loader, the `\input` open path, and the

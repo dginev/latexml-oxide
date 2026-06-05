@@ -6,8 +6,9 @@
 > chapter-buffer convert resolves to the detected root, the preview uses
 > the UNSAVED buffer over the disk file, diagnostics attribute to
 > `sections/ch2.tex`. Companion docs: `docs/SOURCE_PROVENANCE.md`
-> (product track), `docs/LSP_SERVER.md` (the server's living
-> design/status/known-gaps doc).
+> (product track), [`LSP_SERVER.md`](LSP_SERVER.md) (the server's
+> design/status/known-gaps doc). Both archived 2026-06-05 — landed
+> work, moved out of top-level `docs/` to keep focus on parity.
 
 ## 1. Problem
 

@@ -33,6 +33,22 @@ Each ran to completion and the actionable findings landed as commits.
   one live residual (~72-CS Perl-only long tail) is an active item in
   `../SYNC_STATUS.md` "Engine file open gaps (MINOR)".
 
+## `--server` editor LSP (beyond-Perl; landed, deprioritized)
+
+Archived 2026-06-05 to keep the top-level `docs/` focused on the parity
+mission. These are NOT stale — they describe the shipped `--server`
+code (PR #243) — they are just out of the current focus. Live smoke:
+`tools/lsp_smoke.py`.
+
+- `LSP_SERVER.md` — design/status of the warm-preamble + fork-body
+  server: architecture, the PR #243 review records (code review
+  2026-06-04, performance review 2026-06-05 incl. the stale-preamble
+  fix), and the known-gaps worklist (unpreemptible warm-up, graphics
+  CWD output, `.bib` overlay).
+- `LSP_MULTIFILE_PLAN.md` — the multi-file project-root + overlay
+  model (landed 2026-06-04), with implementation-delta notes.
+  `lsp_server/{project,overlay}.rs` comments cite its §3A/§3B.
+
 ## Parity audits (one-shot, completed)
 
 - `LATEX_CONSTRUCTS_PARITY_AUDIT.md` — Rust 54%-larger investigation.

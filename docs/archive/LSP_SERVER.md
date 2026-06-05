@@ -4,10 +4,12 @@
 > architecture, review records, and the known-gaps worklist. Moved out
 > of `SYNC_STATUS.md` 2026-06-05 — the server is *beyond-Perl* product
 > work (issues #47/#92, `docs/SOURCE_PROVENANCE.md`), not Perl parity,
-> so it does not belong in the parity log. Companions:
-> [`LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) (the landed
-> multi-file root/overlay design),
-> [`SOURCE_PROVENANCE.md`](SOURCE_PROVENANCE.md) (product track).
+> so it does not belong in the parity log. Archived 2026-06-05 (with
+> its companion plan) to keep top-level `docs/` on the parity mission —
+> the content describes the SHIPPED `--server` code, it is not stale.
+> Companions: [`LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md) (the
+> landed multi-file root/overlay design),
+> [`SOURCE_PROVENANCE.md`](../SOURCE_PROVENANCE.md) (product track).
 > Live smoke: `tools/lsp_smoke.py <binary>` (basic/preempt/multifile/
 > staledep).
 
@@ -117,7 +119,7 @@ saves = warm (was: re-warm).
   read-log dep snapshot keying the warm cache, per-file diagnostics
   (record-format log parser + attribution + stale-clear publishes).
   Design + implementation deltas:
-  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md). Live-verified:
+  [`LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md). Live-verified:
   `tools/lsp_smoke.py` (basic/preempt/multifile/staledep, 19/19).
 * **Warm-up is synchronous and unpreemptible** (2026-06-05 review). The
   preamble digest runs on the event-loop thread BEFORE the fork; stdin is

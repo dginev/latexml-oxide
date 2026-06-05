@@ -1,5 +1,5 @@
 //! Project-root resolution: map an edited buffer to the document the
-//! engine should actually convert (`docs/LSP_MULTIFILE_PLAN.md` §3A).
+//! engine should actually convert (`docs/archive/LSP_MULTIFILE_PLAN.md` §3A).
 //!
 //! Resolution order (first hit wins):
 //!  1. client override (`initializationOptions.rootDocument`),

@@ -698,7 +698,7 @@ fn dispatch(
   match method {
     "initialize" => {
       // Multi-file model: a client-configured project root wins over all
-      // detection (docs/LSP_MULTIFILE_PLAN.md §3A).
+      // detection (docs/archive/LSP_MULTIFILE_PLAN.md §3A).
       if let Some(root) = request
         .get("params")
         .and_then(|p| p.get("initializationOptions"))
