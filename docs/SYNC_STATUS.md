@@ -7139,6 +7139,23 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   radius), or (b) ship a faithful `mdwmath.sty.ltxml` binding so the raw-load is
   skipped. Witnesses: 2112.14809, 2204.08135, 2308.03312, 2306.01408, 2212.09944.
   Deterministic minimal repro: `\usepackage{mdwmath}` + `$\big( x \big)$`.
+* **`eccv.sty` lineno-patch `\else`/`\fi` "not in a conditional"** (canvas-3 third
+  batch, 2026-06-05) — **#1 error driver in the late-2023 (ECCV-2024) population**:
+  ~47 papers/10k and rising; 47 of 53 conditional-error papers in stage 20 are
+  eccv. `eccv.sty` (~line 189) does
+  `\expandafter\ifx\linenomath\linenomathWithnumbers …\else …\fi` to patch the
+  **lineno** package; LaTeXML's lineno support is incomplete (`\linenomath` /
+  `\linenomathWithnumbers` / `\linenomathNonumbers` / `\linenomathAMS` not defined
+  as eccv expects), so the `\ifx` never opens a conditional frame and the
+  `\else`/`\fi` leak (4 errors/paper). **Verified SHARED** — Perl emits the
+  byte-identical 4 errors at `eccv.sty line 191` (witness 2310.18293, both
+  engines CONVERR_4). Output is fine (line-numbering is cosmetic); errors are
+  noise. **Better-than-Perl fix (cause CLEAR, MODERATE difficulty — the
+  recommended next fix):** define the lineno `\linenomath*` family (+
+  `\linenomathpatch`/`\linenomathpatchAMS`) in the lineno binding so the `\ifx`
+  evaluates and opens the conditional. Verify the 4 errors vanish on 2310.18293
+  and `cargo test --tests` stays green. Witnesses: 2310.18293, 2309.17074,
+  2309.17389, 2310.00161, 2310.00615, 2310.02296 (62 collected in stages 19–20).
 
 ---
 
