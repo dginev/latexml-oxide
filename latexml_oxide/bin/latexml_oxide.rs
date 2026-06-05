@@ -161,6 +161,13 @@ struct Cli {
   #[arg(long, value_name = "SECONDS", default_value = "60")]
   timeout: u64,
 
+  /// Per-conversion resident-memory ceiling in MiB (default: 6144 = 6 GiB).
+  /// Use 0 to disable. Enforced by the shared `Watchdog` (exit 137 on
+  /// breach): in normal mode it guards this process; in `--server` mode each
+  /// forked body child self-guards and is reaped by the parent.
+  #[arg(long, value_name = "MIB", default_value = "6144")]
+  max_memory: u64,
+
   /// Maximum number of tokens to process before aborting (default: 100M).
   /// Protects against infinite loops in macro expansion.
   #[arg(long, value_name = "N")]
@@ -278,6 +285,11 @@ struct Cli {
   /// See `docs/TELEMETRY.md`.
   #[arg(long, value_name = "PATH")]
   telemetry_out: Option<String>,
+
+  /// Run as a persistent JSON-RPC-over-stdio server for editor/preview
+  /// integration (LSP framing; see `latexml::lsp_server`).
+  #[arg(long)]
+  server: bool,
 }
 
 /// Allocation-failure hook — emits a `Fatal:` line in the project's
@@ -369,6 +381,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         process::exit(1);
       },
     }
+  }
+
+  // Persistent LSP Server mode — handle early before source file checks
+  if cli.server {
+    log::info!("Starting persistent LSP server...");
+    latexml::lsp_server::run_lsp_server(cli.timeout, cli.max_memory)?;
+    process::exit(0);
   }
 
   // Determine source: --source > --init > positional
@@ -591,8 +610,12 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Err(Fatal) when the digestion loop can poll it, and the Watchdog forcibly
     // aborts the process if the deadline is reached without cooperation (e.g. a
     // tight native loop in Marpa / libxml2 / libxslt). The Watchdog cancels
-    // automatically on drop at end of main.
-    let _watchdog = latexml_core::watchdog::Watchdog::new(cli.timeout);
+    // automatically on drop at end of main. `--max-memory` rides the same
+    // Watchdog (it was previously a silent no-op outside `--server`).
+    let _watchdog = latexml_core::watchdog::Watchdog::with_limits(
+      cli.timeout,
+      cli.max_memory.saturating_mul(1024),
+    );
     if cli.timeout > 0 {
       latexml_core::stomach::set_timeout(cli.timeout);
     }

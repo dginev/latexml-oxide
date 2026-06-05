@@ -63,6 +63,13 @@ smoke corpus + size gate + dependency check:
 reproducibility risk — pin a known-good nightly, track stabilization.
 "Carries our resources" ≠ "portable across platforms."
 
+**Editor-distributed binary is a stricter bar than the CLI.** The ladder
+above allows "host system libs" — fine for the CLI/sandbox, where the user
+(or the .deb deps) provides libxml2/libxslt. A binary shipped *inside a
+VSCode extension* cannot assume that, especially on macOS/Windows: it must
+be **self-contained** re: libxml2/libxslt (static/vendored). That stricter
+bar — and the editor distribution model it gates — is §11.
+
 ## 4. License audit (blocker)
 
 Crates are `CC0`, but the binary ships more. Before any public-domain claim:
@@ -161,3 +168,65 @@ validation contract.
   the stale SYNC_STATUS "unported" line is fixed. B1–B6 / Phase 4–5 polish is
   product correctness; `--nobibtex` is not the default escape hatch.
 - **#47 is not purely post-1.0** — Tier A is near-term.
+
+## 11. Editor distribution — the rust-analyzer model (issues #47, #92, #217, #143)
+
+§9's "persistent server/LSP" is the editor backend; this section is **how it
+reaches every VSCode user (and beyond)**, modeled on rust-analyzer: a native
+LSP server binary + a thin client extension. The bundling mechanism is the
+easy part — **Stage 1 (a self-contained cross-platform binary) is the gate**,
+an engine/release-pipeline effort, not extension code.
+
+**Architecture (correct, already in place).** `latexml_oxide --server` — the
+warm-preamble, fork-isolated, resource-guarded JSON-RPC/LSP server — *is* the
+server; the extension only spawns + supervises it. Two invariants to keep:
+- **Editor-agnostic.** Diagnostics/linting (#47) and author errors (#92) must
+  ride **standard LSP** (`publishDiagnostics`), so the same server serves
+  Neovim/Emacs/Helix/Zed, not just VSCode. Only the *preview* is a custom
+  request (`latexml/convert`) + a VSCode webview — rust-analyzer likewise
+  mixes standard LSP with custom requests.
+- **Supervised subprocess, never in-process.** A runaway must not take down
+  the editor, so the per-conversion **timeout + RAM (`--timeout` /
+  `--max-memory`) + fork-reap + same-document preemption guards are mandatory**
+  (built; shared `latexml_core::watchdog::Watchdog`). This is *why* the engine
+  stays an out-of-process binary rather than an in-process N-API `.node`
+  addon — an addon in the extension host can't be killed without killing
+  VSCode. (`.node` ≠ WASM; WASM is Stage 4.)
+
+**Stage 1 — self-contained, cross-platform binary (the pacing item).**
+Nothing reaches macOS/Windows until `latexml_oxide` *builds and runs* there
+**without the user installing system libs**:
+- **Static/vendor the C deps** (libxml2, libxslt) so the shipped binary is
+  self-contained — the real work; §3's "host system libs" allowance does not
+  hold for an editor-bundled binary.
+- **CI release matrix**: {linux, macOS, windows} × {x64, arm64} (a subset of
+  §3's ladder), each emitting a self-contained `latexml_oxide`; per-target
+  size + smoke + *no-host-lib-dependency* gate (extend §7).
+- **kpathsea / TeX Live stays out of scope** (CLAUDE.md) and is *expected* on
+  the user's machine; when it is absent the editor must **degrade with a clear
+  diagnostic, not crash** — we do not vendor a TeX tree.
+
+**Stage 2 — turnkey distribution (once Stage 1 exists).**
+- **Platform-specific VSIXes** (`vsce package --target linux-x64 | win32-x64 |
+  darwin-arm64 | …`), each bundling the matching self-contained binary; the
+  Marketplace auto-serves the right one → single install, works immediately,
+  no download, no path. The turnkey end-state.
+- **Download-on-activation fallback** for unlisted platforms / a universal
+  VSIX — fetch the matching release asset into extension global storage,
+  checksum-verified, cached (mirrors the ar5iv-editor `managedServer`
+  pattern). The near-term interim while the platform-VSIX matrix is built.
+- **PATH / explicit-path override** for devs (works today via
+  `ar5iv.latexmlOxidePath`).
+
+**Stage 4 — WASM (web-only).** The native model fails *only* in the web
+extension host (vscode.dev, github.dev): no subprocess. That alone needs a
+`wasm32` server build — hard for the same libxml2/libxslt reason — and is a
+separate, later track. **Not** required for "all desktop VSCode users."
+
+| Stage | Deliverable | Reaches |
+|---|---|---|
+| 0 (done) | `--server` + guards + thin client | linux desktop (PATH / download) |
+| 1 | self-contained cross-platform binary matrix | all desktop OSes — **pacing item** |
+| 2 | platform-specific VSIXes (+ download fallback) | all desktop VSCode, turnkey |
+| 3 | standard-LSP diagnostics/linting (#47/#92) | all LSP editors |
+| 4 | WASM server | web / browser editors |

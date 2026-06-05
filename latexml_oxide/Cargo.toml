@@ -61,6 +61,7 @@ flate2 = "1"
 # Used by latexml_oxide / cortex_worker binaries for `getrusage(RUSAGE_CHILDREN)`
 # child-process CPU/memory accounting in telemetry (see *.rs `peak_rss_kb`).
 libc = "0.2"
+serde_json = "1"
 # `default-features = false` drops tar's optional `xattr` extended-attribute
 # support — we only use `tar::Archive::new(...).unpack(dest)` for arxiv
 # .tar.gz extraction; extended-attribute round-tripping on .tex sources

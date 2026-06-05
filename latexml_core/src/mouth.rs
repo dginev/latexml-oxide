@@ -187,6 +187,8 @@ impl Mouth {
       let (_dir, name, ext) = pathname::split(source);
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
+      // Read-log: a named cached-content open (filecontents / LSP overlay).
+      state::record_opened_source(crate::common::arena::pin(source));
       Mouth::new(&content, Some(options))
     } else if source.starts_with("literal:") {
       let source = source.replacen("literal:", "", 1);
@@ -207,6 +209,10 @@ impl Mouth {
           s!("{}.{}", name, ext)
         });
       }
+      // Read-log: a named file open (recorded even when the open then
+      // fails — a pinned-but-missing path that later APPEARS must read
+      // as a dependency change).
+      state::record_opened_source(crate::common::arena::pin(source));
       Mouth::new(source, Some(options))
     }
   }

@@ -26,11 +26,50 @@
 //!   fires before the hard abort, giving callers a nice `Err(Fatal)` with proper error propagation.
 //!   The watchdog is a safety net for the pathological cases where cooperative polling doesn't
 //!   happen.
+//!
+//! # Resource limits
+//!
+//! [`Watchdog::with_limits`] guards **both** a wall-clock deadline and a
+//! resident-memory ceiling — the two defenses any executable that converts
+//! arbitrary input needs. It is the shared guard reused by both
+//! `cortex_worker` (in-process, one paper per process) and the
+//! `latexml_oxide --server` LSP (run inside each forked body child, which
+//! self-terminates on breach so the parent reaps it via pipe EOF). The exit
+//! codes are distinct so a supervising parent can tell them apart:
+//! `124` = wall-clock timeout, `137` = memory ceiling.
+//!
+//! # Portability
+//!
+//! The wall-clock guard is portable (`std::thread` + `Instant`). The RAM guard
+//! samples RSS from `/proc/self/status` and is therefore **Linux-only** today;
+//! on other platforms [`process_rss_kb`] returns `None` and the memory ceiling
+//! is silently inactive (the time guard still works). LONG-TERM the guards
+//! should be fully portable — macOS via `task_info(TASK_BASIC_INFO)` and
+//! Windows via `GetProcessMemoryInfo` — so every supported OS gets the same
+//! reliable time + RAM defenses. Tracked as a portability follow-up.
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
+
+/// Current resident set size of this process in KiB, or `None` if it can't be
+/// determined (non-Linux, or `/proc` unavailable). Reads `VmRSS` from
+/// `/proc/self/status`. Cheap enough to poll a few times a second.
+pub fn process_rss_kb() -> Option<u64> {
+  let status = std::fs::read_to_string("/proc/self/status").ok()?;
+  for line in status.lines() {
+    if let Some(rest) = line.strip_prefix("VmRSS:") {
+      return rest.split_whitespace().next()?.parse::<u64>().ok();
+    }
+  }
+  None
+}
+
+/// Exit code used when the wall-clock deadline is exceeded (standard `timeout`).
+pub const EXIT_TIMEOUT: i32 = 124;
+/// Exit code used when the memory ceiling is exceeded (128 + SIGKILL).
+pub const EXIT_OOM: i32 = 137;
 
 /// Handle to a watchdog thread. Cancels on drop.
 ///
@@ -71,56 +110,81 @@ pub struct Watchdog {
 }
 
 impl Watchdog {
-  /// Create a new watchdog. `timeout_secs = 0` disables the watchdog.
+  /// Create a wall-clock-only watchdog. `timeout_secs = 0` disables it.
+  /// Equivalent to [`Watchdog::with_limits(timeout_secs, 0)`].
+  pub fn new(timeout_secs: u64) -> Self { Self::with_limits(timeout_secs, 0) }
+
+  /// Create a watchdog guarding a wall-clock deadline **and** a resident-memory
+  /// ceiling. `timeout_secs = 0` disables the time guard; `max_rss_kb = 0`
+  /// disables the memory guard. With both `0` this is a no-op handle.
   ///
-  /// The watchdog thread polls `cancelled` every `poll_interval` and aborts
-  /// the process if the deadline is reached without cancellation.
-  pub fn new(timeout_secs: u64) -> Self {
+  /// The thread polls `cancelled`, the deadline, and RSS every `poll_interval`.
+  /// On a time breach it exits [`EXIT_TIMEOUT`]; on a memory breach,
+  /// [`EXIT_OOM`]. The memory guard is inactive where [`process_rss_kb`]
+  /// returns `None` (non-Linux); see the module portability note.
+  pub fn with_limits(timeout_secs: u64, max_rss_kb: u64) -> Self {
     let cancelled = Arc::new(AtomicBool::new(false));
-    if timeout_secs > 0 {
+    if timeout_secs > 0 || max_rss_kb > 0 {
       let c = cancelled.clone();
       thread::Builder::new()
         .name("latexml-watchdog".to_string())
-        .spawn(move || Self::run(c, timeout_secs))
+        .spawn(move || Self::run(c, timeout_secs, max_rss_kb))
         .expect("watchdog thread spawn failed");
     }
     Self { cancelled }
   }
 
-  fn run(cancelled: Arc<AtomicBool>, timeout_secs: u64) {
-    let deadline = Instant::now() + Duration::from_secs(timeout_secs);
+  fn run(cancelled: Arc<AtomicBool>, timeout_secs: u64, max_rss_kb: u64) {
+    let deadline = (timeout_secs > 0).then(|| Instant::now() + Duration::from_secs(timeout_secs));
     let poll_interval = Duration::from_millis(100);
-    while Instant::now() < deadline {
+    loop {
       if cancelled.load(Ordering::Relaxed) {
         return; // cancelled: graceful exit.
       }
+      if let Some(deadline) = deadline {
+        if Instant::now() >= deadline {
+          if cancelled.load(Ordering::Relaxed) {
+            return;
+          }
+          eprintln!(
+            "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
+          );
+          // Run the optional pre-exit hook (e.g. cortex_worker writing a
+          // structured Status:conversion:3 placeholder to its --output path)
+          // BEFORE exiting. The hook is invoked at most once per process.
+          run_pre_exit_hook();
+          // `std::process::exit(124)` instead of `abort()`: the watchdog must
+          // terminate the whole process (the worker thread is presumed wedged
+          // in a tight loop that won't observe a cooperative cancel), but
+          // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
+          // the shell. `exit(124)` (standard timeout exit code) runs atexit
+          // handlers, flushes stderr, and leaves a clean exit signal the
+          // parent harness can interpret as "paper timed out" without
+          // conflating it with a Rust panic / memory corruption. Witnesses:
+          // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
+          // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
+          // 2026-05-13 588-paper sweep.
+          std::process::exit(EXIT_TIMEOUT);
+        }
+      }
+      if max_rss_kb > 0 {
+        if let Some(rss) = process_rss_kb() {
+          if rss > max_rss_kb {
+            if cancelled.load(Ordering::Relaxed) {
+              return;
+            }
+            eprintln!(
+              "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process",
+              rss / 1024,
+              max_rss_kb / 1024
+            );
+            run_pre_exit_hook();
+            std::process::exit(EXIT_OOM);
+          }
+        }
+      }
       thread::sleep(poll_interval);
     }
-    // One last check — avoid racing a cancellation that lands during the
-    // final sleep.
-    if cancelled.load(Ordering::Relaxed) {
-      return;
-    }
-    eprintln!(
-      "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {}s — exiting process",
-      timeout_secs
-    );
-    // Run the optional pre-exit hook (e.g. cortex_worker writing a
-    // structured Status:conversion:3 placeholder to its --output path)
-    // BEFORE `exit(124)`. The hook is invoked at most once per process.
-    run_pre_exit_hook();
-    // `std::process::exit(124)` instead of `abort()`: the watchdog must
-    // terminate the whole process (the worker thread is presumed wedged
-    // in a tight loop that won't observe a cooperative cancel), but
-    // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
-    // the shell. `exit(124)` (standard timeout exit code) runs atexit
-    // handlers, flushes stderr, and leaves a clean exit signal the
-    // parent harness can interpret as "paper timed out" without
-    // conflating it with a Rust panic / memory corruption. Witnesses:
-    // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
-    // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
-    // 2026-05-13 588-paper sweep.
-    std::process::exit(124);
   }
 
   /// Explicitly cancel the watchdog. Idempotent.
