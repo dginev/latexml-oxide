@@ -73,26 +73,6 @@ never blocks mid-frame); child stdout corrupting the protocol stream
 `push_daemon_frame` comment corrected (Perl's `daemon_copy` deep-copy is NOT
 ported — required before any thread-reusing daemon mode relies on it).
 
-## Known gaps / follow-ups
-* **In-process fallback is unguarded against native hangs.** The fallback
-  (no `\begin{document}`, fork failure) runs on the server thread with only
-  the cooperative deadline — a Marpa/libxslt tight loop wedges the whole
-  server (a Watchdog would kill the server itself). Mitigation candidate:
-  fork the fallback too.
-* ~~Dependency mtime scan is non-recursive~~ FIXED 2026-06-04 by the
-  warm-up read-log snapshot (`overlay::warmup_dep_snapshot`, pinned
-  Overlay(version)/Disk(mtime) per opened source); the same-dir scan is
-  kept alongside to catch files *appearing/disappearing*.
-* ~~No multi-file project model~~ **LANDED 2026-06-04**: project-root
-  detection (override > `% !TEX root` > `find_main_tex` with
-  reference-guarded walk-up), unsaved-buffer overlay via the engine's
-  `{file}_contents` channel (zero engine diff, COW-inherited by forks),
-  read-log dep snapshot keying the warm cache, per-file diagnostics
-  (record-format log parser + attribution + stale-clear publishes).
-  Design + implementation deltas:
-  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md). Live-verified:
-  `tools/lsp_smoke.py` (basic/preempt/multifile/staledep, 19/19).
-
 ## Performance review 2026-06-05 (PR #243) — stale-preamble bug found & fixed
 A per-edit-location cost review ("what does one keystroke cost, where?")
 found the multi-file landing's dep snapshot was **vacuously empty**: it
@@ -119,6 +99,26 @@ captions, `thebibliography`, body frontmatter) = fork + body redigest
 (~0.05s on the probe document vs ~0.7s cold); preamble-region or
 preamble-dep edits = full re-warm (correct, by design); same-dir body
 saves = warm (was: re-warm).
+
+## Known gaps / follow-ups
+* **In-process fallback is unguarded against native hangs.** The fallback
+  (no `\begin{document}`, fork failure) runs on the server thread with only
+  the cooperative deadline — a Marpa/libxslt tight loop wedges the whole
+  server (a Watchdog would kill the server itself). Mitigation candidate:
+  fork the fallback too.
+* ~~Dependency mtime scan is non-recursive~~ FIXED 2026-06-04 by the
+  warm-up read-log snapshot (`overlay::warmup_dep_snapshot`, pinned
+  Overlay(version)/Disk(mtime) per opened source); the same-dir scan is
+  kept alongside to catch files *appearing/disappearing*.
+* ~~No multi-file project model~~ **LANDED 2026-06-04**: project-root
+  detection (override > `% !TEX root` > `find_main_tex` with
+  reference-guarded walk-up), unsaved-buffer overlay via the engine's
+  `{file}_contents` channel (zero engine diff, COW-inherited by forks),
+  read-log dep snapshot keying the warm cache, per-file diagnostics
+  (record-format log parser + attribution + stale-clear publishes).
+  Design + implementation deltas:
+  [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md). Live-verified:
+  `tools/lsp_smoke.py` (basic/preempt/multifile/staledep, 19/19).
 * **Warm-up is synchronous and unpreemptible** (2026-06-05 review). The
   preamble digest runs on the event-loop thread BEFORE the fork; stdin is
   only drained while waiting on the body child. Typing in the PREAMBLE
