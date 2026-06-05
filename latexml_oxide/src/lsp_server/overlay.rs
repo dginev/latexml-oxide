@@ -17,9 +17,10 @@
 //!   so the texmf tree is structurally exempt (plan §2).
 //!
 //! Also home to the warm-cache dependency snapshot: the set of sources
-//! the preamble warm-up actually opened (`source_table_snapshot` — the
-//! engine's locator table doubles as the read-log), each pinned as
-//! `Overlay(version)` or `Disk(mtime)`.
+//! the preamble warm-up actually opened
+//! (`state::opened_sources_snapshot()` — the dedicated
+//! `Mouth::create`-level read-log), each pinned as `Overlay(version)`
+//! or `Disk(mtime)`.
 
 use std::path::Path;
 use std::time::SystemTime;
@@ -149,15 +150,36 @@ fn dep_state(source: &str, buffers: &FxHashMap<String, Buffer>) -> DepState {
 }
 
 /// Snapshot the warm-up read-log: every named source the engine opened
-/// (the locator/source table), pinned at its current state. Call right
+/// during the preamble digest (`state::opened_sources_snapshot()` — the
+/// `Mouth::create`-level log), pinned at its current state. Call right
 /// after the preamble digest, on the warm-up thread.
-pub(crate) fn warmup_dep_snapshot(buffers: &FxHashMap<String, Buffer>) -> Vec<(String, DepState)> {
-  state::source_table_snapshot()
+///
+/// NOT the locator `source_table` — that one is populated lazily at
+/// *document-construction* time (which happens in the forked body
+/// child, after this snapshot) and filters to user sources (no `.sty`),
+/// so it is empty/blind exactly when this snapshot runs. Using it
+/// shipped a stale-preamble bug: unsaved edits of a preamble-consumed
+/// file never invalidated the warm cache.
+///
+/// `root` (the document whose preamble was digested) is EXCLUDED: its
+/// preamble half is already keyed by exact string equality in the
+/// cache-hit check, and pinning the whole root buffer's version here
+/// would invalidate on every *body* keystroke — defeating the warm
+/// cache for the most common editing flow.
+pub(crate) fn warmup_dep_snapshot(
+  buffers: &FxHashMap<String, Buffer>,
+  root: &Path,
+) -> Vec<(String, DepState)> {
+  let root_str = root.to_string_lossy();
+  state::opened_sources_snapshot()
     .iter()
-    .map(|sym| {
+    .filter_map(|sym| {
       let name = latexml_core::common::arena::with(*sym, |s| s.to_string());
+      if name == root_str {
+        return None;
+      }
       let st = dep_state(&name, buffers);
-      (name, st)
+      Some((name, st))
     })
     .collect()
 }
@@ -226,6 +248,29 @@ mod tests {
       DepState::Disk(Some(_))
     ));
     assert_eq!(dep_state("Anonymous String", &bufs), DepState::Ephemeral);
+  }
+
+  #[test]
+  fn warmup_snapshot_uses_read_log_and_excludes_root() {
+    use latexml_core::common::arena;
+    latexml_core::state::reset_thread_state();
+    latexml_core::state::record_opened_source(arena::pin("/proj/main.tex"));
+    latexml_core::state::record_opened_source(arena::pin("/proj/defs.tex"));
+    latexml_core::state::record_opened_source(arena::pin("/proj/defs.tex")); // deduped
+    let bufs = buffers(&[("/proj/main.tex", 3, "root"), ("/proj/defs.tex", 5, "defs")]);
+    let snap = warmup_dep_snapshot(&bufs, Path::new("/proj/main.tex"));
+    assert!(
+      snap.iter().all(|(n, _)| n != "/proj/main.tex"),
+      "the root must not be pinned (body edits bump its version): {snap:?}"
+    );
+    assert_eq!(snap, vec![("/proj/defs.tex".to_string(), DepState::Overlay(5))]);
+    // Bumping the ROOT's version must not invalidate (preamble equality is
+    // its key); bumping the preamble-consumed dep's version must.
+    let mut bufs2 = bufs.clone();
+    bufs2.get_mut("/proj/main.tex").unwrap().version = 99;
+    assert!(deps_still_current(&snap, &bufs2));
+    bufs2.get_mut("/proj/defs.tex").unwrap().version = 6;
+    assert!(!deps_still_current(&snap, &bufs2));
   }
 
   #[test]

@@ -212,11 +212,24 @@ Where the landed implementation deliberately differs from §3:
   COW. Buffers register under absolute / project-relative / basename
   keys, each ± `.tex` (the engine probes both literal and resolved
   names); ambiguous basenames get no bare key (disk wins).
-* **The read-log is the source table.** Rather than a new recording
-  hook, the warm-up dep snapshot reuses `source_table_snapshot()` — the
-  locator table already records every named source the engine opened.
-  The old same-dir mtime scan is KEPT alongside (it catches files
-  *appearing*, which a read-log of successful opens cannot).
+* **The read-log is a dedicated `Mouth::create`-level log** —
+  `state::opened_sources` / `record_opened_source()`, ~15 engine lines.
+  (The first landing reused `source_table_snapshot()` on the belief the
+  locator table "already records every named source the engine opened".
+  That was WRONG twice over: `source_tag` populates at
+  *document-construction* time — which happens in the forked body child,
+  AFTER the parent takes the snapshot — and it filters to user sources,
+  excluding `.sty`/`.cls` entirely. The snapshot was therefore always
+  empty, and an unsaved edit of a preamble-consumed file never
+  invalidated the warm cache: a live-confirmed **stale-preamble bug**,
+  caught in the 2026-06-05 performance review and fixed same-day.
+  Guarded by `tools/lsp_smoke.py staledep`.) The snapshot EXCLUDES the
+  root itself — its preamble half is keyed by string equality, and
+  pinning the root buffer's version would re-warm on every body
+  keystroke. The same-dir scan is KEPT alongside but narrowed to
+  file-SET equality (it catches files *appearing/disappearing*, which
+  can flip `find_file` resolution; comparing mtimes there forced a full
+  re-warm on every save of a same-dir *body* file).
 * **Root detection adds a self-containment fast path**: a buffer with an
   un-commented `\documentclass`/`\documentstyle` is its own root with
   zero directory scanning (v1-identical single-file behavior), and a

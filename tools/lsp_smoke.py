@@ -12,6 +12,11 @@ Scenarios (default: all):
     multifile  project-root detection (find_main_tex), unsaved-buffer
                overlay (didOpen text visible in the preview without
                saving), per-file diagnostics attribution
+    staledep   warm-cache invalidation on a PREAMBLE-consumed dependency:
+               an unsaved didChange of a file the preamble \\input-s must
+               re-warm (guards the stale-preamble bug where the read-log
+               snapshot was empty and the old macro body kept winning),
+               while a same-dir body-file save must NOT re-warm
 
 Exit code 0 only if every requested scenario passes. This is a manual /
 CI-extra tool (needs the built binary + a TeX Live tree), not part of
@@ -210,8 +215,64 @@ def scenario_multifile(binary):
     srv.shutdown("multifile")
 
 
+def scenario_staledep(binary):
+    print("== staledep ==")
+    srv = Server(binary)
+    with tempfile.TemporaryDirectory() as tmp:
+        main = os.path.join(tmp, "main.tex")
+        defs = os.path.join(tmp, "defs.tex")
+        ch = os.path.join(tmp, "ch.tex")
+        main_text = ("\\documentclass{article}\n\\input{defs}\n"
+                     "\\begin{document}\nProbe: \\probe\n\\input{ch}\n"
+                     "\\end{document}\n")
+        with open(main, "w") as f:
+            f.write(main_text)
+        with open(defs, "w") as f:
+            f.write("\\def\\probe{DISKONE}\n")
+        with open(ch, "w") as f:
+            f.write("chapter version A.\n")
+        srv.send(init_msg(),
+                 # Open the PREAMBLE-consumed dependency with unsaved text.
+                 {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+                  "params": {"textDocument": {
+                      "uri": f"file://{defs}", "version": 1,
+                      "languageId": "latex",
+                      "text": "\\def\\probe{OVERLAYTWO}\n"}}})
+        srv.send(convert_msg(2, main, main_text))
+        resp, _ = srv.collect(want_ids=(2,))
+        html = ((resp.get(2) or {}).get("result") or {}).get("html", "")
+        check("OVERLAYTWO" in html,
+              "staledep: preamble \\input sees the unsaved overlay")
+
+        # The regression guard: an unsaved didChange of the preamble dep
+        # must invalidate the warm cache (Overlay-version pin), not keep
+        # serving the previously-warmed macro body.
+        srv.send({"jsonrpc": "2.0", "method": "textDocument/didChange",
+                  "params": {"textDocument": {"uri": f"file://{defs}",
+                                              "version": 2},
+                             "contentChanges":
+                                 [{"text": "\\def\\probe{OVERLAYTHREE}\n"}]}})
+        srv.send(convert_msg(3, main, main_text))
+        resp, _ = srv.collect(want_ids=(3,))
+        html = ((resp.get(3) or {}).get("result") or {}).get("html", "")
+        check("OVERLAYTHREE" in html and "OVERLAYTWO" not in html,
+              "staledep: didChange of a preamble dep re-warms (no stale macro)")
+
+        # A same-dir BODY-file save must not break the warm path: the body
+        # is re-digested every conversion, so the new disk content shows up
+        # regardless — assert content (timing is too flaky for CI).
+        with open(ch, "w") as f:
+            f.write("chapter version B.\n")
+        srv.send(convert_msg(4, main, main_text))
+        resp, _ = srv.collect(want_ids=(4,))
+        html = ((resp.get(4) or {}).get("result") or {}).get("html", "")
+        check("version B" in html and "OVERLAYTHREE" in html,
+              "staledep: body-file save visible; overlay still applied")
+    srv.shutdown("staledep")
+
+
 SCENARIOS = {"basic": scenario_basic, "preempt": scenario_preempt,
-             "multifile": scenario_multifile}
+             "multifile": scenario_multifile, "staledep": scenario_staledep}
 
 
 def main():

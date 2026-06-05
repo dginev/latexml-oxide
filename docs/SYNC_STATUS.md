@@ -7592,8 +7592,8 @@ ported — required before any thread-reusing daemon mode relies on it).
   fork the fallback too.
 * ~~Dependency mtime scan is non-recursive~~ FIXED 2026-06-04 by the
   warm-up read-log snapshot (`overlay::warmup_dep_snapshot`, pinned
-  Overlay(version)/Disk(mtime) per opened source); the same-dir mtime
-  scan is kept alongside to catch files *appearing*.
+  Overlay(version)/Disk(mtime) per opened source); the same-dir scan is
+  kept alongside to catch files *appearing/disappearing*.
 * ~~No multi-file project model~~ **LANDED 2026-06-04**: project-root
   detection (override > `% !TEX root` > `find_main_tex` with
   reference-guarded walk-up), unsaved-buffer overlay via the engine's
@@ -7602,7 +7602,59 @@ ported — required before any thread-reusing daemon mode relies on it).
   (record-format log parser + attribution + stale-clear publishes).
   Design + implementation deltas:
   [`docs/LSP_MULTIFILE_PLAN.md`](LSP_MULTIFILE_PLAN.md). Live-verified:
-  `tools/lsp_smoke.py` (basic/preempt/multifile, 15/15).
+  `tools/lsp_smoke.py` (basic/preempt/multifile/staledep, 19/19).
+
+### Performance review 2026-06-05 (PR #243) — stale-preamble bug found & fixed
+A per-edit-location cost review ("what does one keystroke cost, where?")
+found the multi-file landing's dep snapshot was **vacuously empty**: it
+reused the locator `source_table`, which is populated at
+*document-construction* time (in the forked body child, AFTER the parent
+snapshots) and filters out `.sty`/`.cls`. Consequence (live-confirmed):
+an **unsaved edit of a preamble-consumed file** (`\input{defs}` in the
+preamble, a local `.sty`) never invalidated the warm cache — the preview
+silently kept the stale macro bodies until the file was saved to disk.
+Fixed by a dedicated `Mouth::create`-level read-log
+(`state::opened_sources`, recorded for named file/cached-content mouths,
+`\openin` included; ~15 engine lines), with the ROOT excluded from the
+snapshot (its preamble half is keyed by string equality; pinning its
+buffer version would kill the cache for every body keystroke). The
+same-dir dependency scan was simultaneously narrowed from mtime-equality
+to file-SET equality: mtime comparison forced a **full preamble re-warm
+on every save of a same-dir body file** (`.tex` chapters, `.bib`) even
+though body files are re-read each conversion anyway; content staleness
+of warm-up-opened files is precisely the read-log's job. Guards:
+`lsp_server::overlay` unit tests + `tools/lsp_smoke.py staledep`
+(overlay edit of a preamble dep re-warms; body-file save converts warm).
+Verified per-edit-location costs after the fix: body edits (footnotes,
+captions, `thebibliography`, body frontmatter) = fork + body redigest
+(~0.05s on the probe document vs ~0.7s cold); preamble-region or
+preamble-dep edits = full re-warm (correct, by design); same-dir body
+saves = warm (was: re-warm).
+* **Warm-up is synchronous and unpreemptible** (2026-06-05 review). The
+  preamble digest runs on the event-loop thread BEFORE the fork; stdin is
+  only drained while waiting on the body child. Typing in the PREAMBLE
+  region (e.g. `\title`/`\author`/`\newcommand` in article-style classes,
+  or an open local `.sty`) therefore serializes one full re-warm per
+  coalesced burst, during which the server is deaf (even `exit` queues).
+  Preemption only saves the body phase. Mitigation candidates: client-side
+  debounce keyed on edit region (preamble vs body), or a zygote chain — a
+  second checkpoint process after the package block so volatile preamble
+  tails (`\title`/`\author`/macros) re-digest in milliseconds. (revtex-style
+  documents put frontmatter AFTER `\begin{document}`, so those edits are
+  already on the fast body path.)
+* **Graphics conversion output lands in the server's CWD** (2026-06-05
+  review). `post_process_html` passes `destination: None`, and the Graphics
+  phase defaults `dest_dir` to `"."` — a figure-bearing paper hardlinks/
+  copies converted images into wherever the server was started, per
+  conversion. (Reconversion itself is cheap: the content-hash XDG
+  `graphics_cache` serves repeats without subprocesses.) Fix candidate: a
+  per-project temp dir + absolute `imagesrc`, or data-URI inlining for the
+  preview.
+* **`.bib` files bypass the unsaved-buffer overlay** (plan §3B item 3, v2):
+  `pre_bibtex.rs` reads bibliographies via `std::fs::read_to_string` — no
+  `{file}_contents` consult, so unsaved `.bib` edits are invisible until
+  saved. Body-time read, so a *saved* `.bib` is picked up warm (and no
+  longer triggers a spurious re-warm since the file-set narrowing).
 * Body content following `\begin{document}` on the same line gets correct
   line numbers but wrong *columns* for that first line (the body mouth
   starts at column 1).

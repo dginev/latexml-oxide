@@ -580,6 +580,9 @@ impl Server {
     let cache_hit = self.warmed_uri.as_deref() == Some(uri)
       && self.warmed_preamble.as_deref() == Some(preamble)
       && self.warmed_preamble_digested.is_some()
+      // Same-dir file SET unchanged (no file appeared/disappeared that
+      // could change find_file resolution — mtimes deliberately not
+      // compared; see `get_directory_dependencies`).
       && self.warmed_dependencies == deps
       // Read-log snapshot: every source the warm-up opened must still be at
       // its pinned Overlay(version)/Disk(mtime) state (multi-file model).
@@ -610,7 +613,7 @@ impl Server {
           self.warmed_preamble_digested = Some(pre);
           self.warmed_dependencies = deps;
           // Pin the warm-up read-log (which sources, at which state).
-          self.warmed_source_deps = warmup_dep_snapshot(&self.open_buffers);
+          self.warmed_source_deps = warmup_dep_snapshot(&self.open_buffers, &root_path);
         },
         Err(e) => {
           log::error!("Preamble warmup failed ({e}); falling back to in-process");

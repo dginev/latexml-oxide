@@ -265,6 +265,14 @@ pub struct State {
   /// path). Populated lazily via `source_tag()` only when `source_map` is
   /// on. See `docs/SOURCE_PROVENANCE.md` §0.1.
   pub source_table:            Vec<SymStr>,
+  /// Read-log of every *named* source opened through `Mouth::create`
+  /// (file paths and cached-content names; literal/anonymous mouths are
+  /// not named, so not recorded). Distinct from `source_table`, which
+  /// is populated lazily at *document-construction* time and filters to
+  /// user sources — this log is complete and available right after a
+  /// digest, which the LSP server's warm-cache dependency snapshot
+  /// relies on (`lsp_server/overlay.rs::warmup_dep_snapshot`).
+  pub opened_sources:          HashSet<SymStr>,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the in-distro latexml bindings
   pub bindings_dispatch:       Option<BindingDispatcher>,
@@ -338,6 +346,7 @@ impl Default for State {
       nomathparse:             false,
       source_map:              false,
       source_table:            Vec::new(),
+      opened_sources:          HashSet::default(),
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
       binding_names:           Vec::new(),
@@ -2845,6 +2854,16 @@ pub fn source_tag(source: SymStr) -> u32 {
 /// Snapshot of the `sources` table (index = tag) for emitting the
 /// document-level tag→file header.
 pub fn source_table_snapshot() -> Vec<SymStr> { state!().source_table.clone() }
+
+/// Record a *named* source in the opened-sources read-log. Called from
+/// `Mouth::create` for file and cached-content mouths — a cold path (one
+/// call per file open, not per token).
+pub fn record_opened_source(source: SymStr) { state_mut!().opened_sources.insert(source); }
+
+/// Snapshot of the opened-sources read-log (see `record_opened_source`).
+pub fn opened_sources_snapshot() -> Vec<SymStr> {
+  state!().opened_sources.iter().copied().collect()
+}
 
 pub fn current_verbosity() -> i32 { state!().verbosity }
 

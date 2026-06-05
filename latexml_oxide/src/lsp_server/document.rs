@@ -2,7 +2,7 @@
 //! split, source-map decoder ring, post-processing to HTML5, engine
 //! `Config`, and the dependency snapshot keying the warm cache.
 
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::rc::Rc;
 
 use latexml_core::common::{Config, DataSize, OutputFormat};
@@ -191,8 +191,19 @@ pub(crate) fn make_config(uri: &str) -> Config {
   }
 }
 
-pub(crate) fn get_directory_dependencies(uri: &str) -> BTreeMap<String, std::time::SystemTime> {
-  let mut deps = BTreeMap::new();
+/// The *set* of TeX-relevant files in the root's directory. Compared by
+/// key set only (not mtimes) in the warm-cache check: it exists to catch
+/// files APPEARING or DISAPPEARING, which can change `find_file`
+/// resolution (a new local `foo.sty` shadowing the texmf one) — something
+/// the warm-up read-log of *successful opens* cannot see. Content changes
+/// of files the warm-up actually opened are caught precisely by the
+/// read-log's `Disk(mtime)`/`Overlay(version)` pins
+/// (`overlay::warmup_dep_snapshot`); content changes of files it did NOT
+/// open cannot affect a replay of the same preamble. Comparing mtimes
+/// here (as this scan originally did) forced a full preamble re-warm on
+/// every save of a same-directory *body* file — pure waste.
+pub(crate) fn get_directory_dependencies(uri: &str) -> BTreeSet<String> {
+  let mut deps = BTreeSet::new();
   let file_path = get_file_path(uri);
   if let Some(parent) = std::path::Path::new(&file_path).parent() {
     if let Ok(entries) = std::fs::read_dir(parent) {
@@ -214,10 +225,8 @@ pub(crate) fn get_directory_dependencies(uri: &str) -> BTreeMap<String, std::tim
         if !is_dep {
           continue;
         }
-        if let (Ok(metadata), Some(path_str)) = (entry.metadata(), path.to_str()) {
-          if let Ok(mtime) = metadata.modified() {
-            deps.insert(path_str.to_string(), mtime);
-          }
+        if let Some(path_str) = path.to_str() {
+          deps.insert(path_str.to_string());
         }
       }
     }

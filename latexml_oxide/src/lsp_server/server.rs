@@ -2,7 +2,7 @@
 //! fallback conversion. The unix warm-fork pipeline (`unix.rs`)
 //! adds `run_warm` in its own `impl Server` block.
 
-use std::collections::BTreeMap;
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use rustc_hash::FxHashMap;
@@ -28,7 +28,10 @@ pub(crate) struct Server {
   /// survive across body-only fork conversions (the warmup only re-runs on a
   /// cache miss).
   pub(crate) warmed_preamble_log:      String,
-  pub(crate) warmed_dependencies:      BTreeMap<String, std::time::SystemTime>,
+  /// File SET of the root's directory at warm time (appearance /
+  /// disappearance check — see `get_directory_dependencies`). Content
+  /// staleness of opened files is `warmed_source_deps`' job.
+  pub(crate) warmed_dependencies:      BTreeSet<String>,
   /// Warm-up read-log snapshot: every source the preamble digest opened,
   /// pinned as Overlay(version)/Disk(mtime) (`overlay::warmup_dep_snapshot`).
   pub(crate) warmed_source_deps:       Vec<(String, DepState)>,
@@ -57,7 +60,7 @@ impl Server {
       warmed_preamble: None,
       warmed_preamble_digested: None,
       warmed_preamble_log: String::new(),
-      warmed_dependencies: BTreeMap::new(),
+      warmed_dependencies: BTreeSet::new(),
       warmed_source_deps: Vec::new(),
       open_buffers: FxHashMap::default(),
       overlay_keys: Vec::new(),
