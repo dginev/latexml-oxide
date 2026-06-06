@@ -7,7 +7,7 @@
 Strict Perl parity at the format/dump and package-loading boundary is
 the current top priority, followed by sandbox long-tail cleanup.
 Current local verification in `docs/SYNC_STATUS.md`: `cargo test
---tests` is **1334/0/0** and `cargo clippy --workspace --all-targets`
+--tests` is **1359/0/0** and `cargo clippy --workspace --all-targets`
 is **14 warnings (all in `latexml_math_parser`, residual clippy
 cleanup of post-ASF-migration code — collaborator's lane)**. The latest sandbox result for
 the 100k `next_warning_papers` corpus is ~99.4% OK; the latest 10k

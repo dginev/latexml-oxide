@@ -5049,6 +5049,35 @@ not Perl-parity gaps.)
 * **1910.10243** — pstricks/pst-plot → `\ifpst@useCalc`/`\ifpst@psfonts`/
   `\colorlet`/`\ifluatex` undefined. pstricks cascade.
 
+### Canvas-3 THIRD batch (551,849 papers) complete + fix phase (2026-06-06)
+
+Third/final batch of the large-scale canvas (rows 1,000,001–1,551,849 of
+`all_warnings.txt`) completed: **545,522/551,849 OK = 98.85%** (CONVERR 1.03%,
+FATAL 0.087%, TIMEOUT 0.024%, OOM 0.003%). The raw error rate massively
+*overcounts* Rust regressions — shared-with-Perl dominates (mdwmath ~1,080
+papers, eccv/lineno conditional ~thousands, most `_`/`^`); true Rust-only rate is
+far below 1%. Triage in `~/data/large_scale_canvas_3_third/{TARGET_SET,PROGRESS}.md`.
+
+**Rust Error Fixes (this batch):**
+- **`3a1c2c3a61`** — eTeX `\dimexpr`/`\numexpr`/`\glueexpr`/`\muexpr` getters made
+  total. FATAL_101 (~8 papers: 2302.02182, 2308.14409, 2501.11779, 2504.15265,
+  2509.15275, 2603.17645, 2604.02289…): `\dimexpr` inside a pgf-calc coordinate —
+  `pgfmath_register_lookup` looks it up as a 0-arg register (`lookup_register(cs,
+  vec![])`), so `args` is empty and `args.remove(0)` panicked. Fix: guard getters
+  on `args.is_empty()`→zero default + `RegisterValue::coerce_to(rtype)` in
+  `etex_readexpr`.
+- **`5297f88f5e`** — `state::lookup_font()` uses `try_borrow`. FATAL_101 "RefCell
+  already mutably borrowed" (hep-th9908053, `\documentstyle` 2.09): reachable from
+  a Whatsit Display/revert (`tex_glue::revert_skip`) while `state_mut()` held.
+  Degrade to None (all 83 callers default the font).
+
+**Recorded, not fixed:** 2205.03260 SIGABRT — runaway shipping 36,545 pages
+(45MB) → OOM-abort under canvas 6GB ulimit; 1 paper, deferred (Perl-compare
+needed). eccv/lineno + mdwmath = SHARED, hard, in SHARED-FAILURE log. Algorithmic
+`\While`/`\If` verified NOT Rust-only (both engines clean in isolation).
+
+`cargo test --tests` after fixes: **1359/0/0**.
+
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
 Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
@@ -7212,7 +7241,7 @@ first non-empty return that doesn't match the expected expansion.
 
 | Gate | Current (2026-05-22) | Target |
 |---|---|---|
-| `cargo test --tests` | **1334/0/0** | unchanged |
+| `cargo test --tests` | **1359/0/0** | +25 (eTeX getter + font fixes; canvas-3 batch 3) |
 | `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser`, post-ASF cleanup — collaborator's lane) | 0 warnings |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1`) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1`) | 0 errors |
@@ -7331,7 +7360,7 @@ Multi-session ASF traversal migration is **landed**. Marpa is back
 on master (`dginev/marpa` master, commit `0bf241116fcef…`,
 PRs #3 + #4 merged). HYBRID is the default; `LATEXML_MARPA_ASF=1`
 turns on the ASF traversal; `LATEXML_MARPA_ASF_ONLY=1` forces it
-alone. Both modes: **1334/0/0** on this branch.
+alone. Both modes: **1359/0/0** on this branch.
 
 Full design + retro: [`docs/MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md),
 [`docs/MATH_PARSER_ASF_TIEBREAKING.md`](MATH_PARSER_ASF_TIEBREAKING.md),
