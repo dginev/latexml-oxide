@@ -1456,7 +1456,18 @@ pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
 }
 /// convenience method to lookup the current value at the "font" key
 pub fn lookup_font() -> Option<Rc<Font>> {
-  match state!().lookup_value_sym(pin!("font")) {
+  // try_borrow, not state!()'s borrow(): this accessor is reachable from a
+  // Whatsit's Display/revert path (e.g. tex_glue::revert_skip → lookup_font)
+  // which can run *while STATE is already mutably borrowed* — e.g. formatting a
+  // whatsit into a log/error message inside a state_mut() scope. A plain
+  // borrow() then panics "RefCell already mutably borrowed", aborting the worker
+  // (FATAL_101; crashed hep-th9908053, a \documentstyle[12pt]{article} 2.09
+  // paper). All 83 callers handle None (defaulting the font), so degrade to None
+  // on contention instead of crashing.
+  let Ok(st) = (*STATE).try_borrow() else {
+    return None;
+  };
+  match st.lookup_value_sym(pin!("font")) {
     None | Some(Stored::None) => None,
     Some(f) => f.into(),
   }
