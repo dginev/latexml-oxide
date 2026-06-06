@@ -7168,6 +7168,17 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   radius), or (b) ship a faithful `mdwmath.sty.ltxml` binding so the raw-load is
   skipped. Witnesses: 2112.14809, 2204.08135, 2308.03312, 2306.01408, 2212.09944.
   Deterministic minimal repro: `\usepackage{mdwmath}` + `$\big( x \big)$`.
+  **ROOT CAUSE CRACKED (2026-06-06):** mdwmath L51 `\sq@readrad|meaning|sqrtsign` runs away —
+  LaTeXML `\meaning\sqrtsign`=`\sqrtsign` lacks the `"` of TeX's `\mathchar"1270`, so the
+  `"`-delimited read consumes `\endgroup` + the rest of the file → the L49 `\catcode`\\12`
+  (backslash→other) is never restored → every `\def` from L53 on is read as raw chars and their
+  `#` params leak (43 errors). SHARED (Perl: `Until:" Missing argument for \sq@readrad`).
+  **FIX (surpass-Perl, ready):** make `\meaning\sqrtsign` TeX-faithful — (1) `\sqrtsign` is a
+  constructor (latex_constructs.rs:10005, unused in core) → redefine `\mathchardef\sqrtsign="1270`;
+  (2) Rust `\meaning` of a `\mathchardef` returns "Register" (non-faithful) → make it
+  `\mathchar"<hex>`. Broad-ish blast radius (all mathchardef symbols) → gate on full suite +
+  verify \sqrt renders + sample mdwmath papers. Full analysis in
+  ~/data/large_scale_canvas_3_third/PROGRESS.md.
 * **`eccv.sty` lineno-patch `\else`/`\fi` "not in a conditional"** (canvas-3 third
   batch, 2026-06-05) — **#1 error driver in the late-2023 (ECCV-2024) population**:
   ~47 papers/10k and rising; 47 of 53 conditional-error papers in stage 20 are
