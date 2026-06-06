@@ -111,6 +111,47 @@ impl Object for RegisterValue {
   }
 }
 
+impl RegisterValue {
+  /// Coerce a numeric value to the requested register type, preserving the raw
+  /// scaled value. eTeX `\dimexpr`/`\numexpr`/`\glueexpr`/`\muexpr` fix the
+  /// result type by the *command*, not by the operands — but our expression
+  /// evaluator's "missing number, treated as zero" recovery and LHS-typed
+  /// arithmetic can return e.g. `Number(0)` for a `\dimexpr` (Dimension)
+  /// request, which then panics the register getter's `expect_dimension()`
+  /// (witness: `\dimexpr` inside a pgf-calc coordinate — arXiv 2302.02182 and
+  /// ~8 siblings in the large-scale canvas crashed here). Coercing the final
+  /// value to `rtype` keeps the getter total. Non-numeric values (Token/Tokens/
+  /// Pair) and already-matching types pass through unchanged.
+  pub fn coerce_to(self, rtype: RegisterType) -> RegisterValue {
+    let cur = self.register_type();
+    if cur == rtype {
+      return self;
+    }
+    let numeric = matches!(
+      cur,
+      RegisterType::Number
+        | RegisterType::Dimension
+        | RegisterType::MuDimension
+        | RegisterType::Glue
+        | RegisterType::MuGlue
+    );
+    if !numeric {
+      return self;
+    }
+    let raw = self.value_of();
+    match rtype {
+      RegisterType::Number => RegisterValue::Number(Number::new(raw)),
+      RegisterType::Dimension => RegisterValue::Dimension(Dimension::new(raw)),
+      RegisterType::MuDimension => RegisterValue::MuDimension(MuDimension::new(raw)),
+      RegisterType::Glue => RegisterValue::Glue(Glue::new(raw)),
+      RegisterType::MuGlue => RegisterValue::MuGlue(MuGlue::new(raw)),
+      // Token/Tokens/Pair targets are nonsensical for a numeric expr result;
+      // fall back to a plain number rather than panicking downstream.
+      _ => RegisterValue::Number(Number::new(raw)),
+    }
+  }
+}
+
 impl NumericOps for RegisterValue {
   fn new(number: i64) -> Self { RegisterValue::Number(Number::new(number)) }
   fn new_f64(number: f64) -> Self { RegisterValue::Number(Number::new_f64(number)) }
