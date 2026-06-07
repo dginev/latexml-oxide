@@ -46,6 +46,10 @@ LoadDefinitions!({
   DefEnvironment!("{icmlauthorlist}", "#body");
 
   DefMacro!("\\icmlauthor{}{}", "\\author{#1}");
+  // icml20XX.sty: \newcommand{\icmlCorrespondingAuthor}{\textsuperscript{$\dagger$}Corresponding author}
+  // (0-arg marker). Was undefined → error (Perl defines it). Witness 2403.01475.
+  DefMacro!("\\icmlCorrespondingAuthor",
+    "\\textsuperscript{$\\dagger$}Corresponding author");
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
   DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
   // ICML: \icmlaffiliation{shortname}{full text} maps a short id to

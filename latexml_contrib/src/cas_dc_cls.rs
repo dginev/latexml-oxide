@@ -29,6 +29,11 @@ LoadDefinitions!({
   // 2-col docs). Without it, papers using `\balance` near the end
   // trip Error:undefined. Witness 2303.04712.
   RequirePackage!("balance");
+  // cas-dc.cls (Elsevier CAS) aliases \newdefinition and \newproof to \newtheorem
+  // (elsarticle convention), used to declare definition/proof-like theorem envs.
+  // Were undefined (Perl defines them). Witness 2306.04212.
+  Let!("\\newdefinition", "\\newtheorem");
+  Let!("\\newproof", "\\newtheorem");
 
   // cas-common.sty dynamically defines `\tblwidth` via
   // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its

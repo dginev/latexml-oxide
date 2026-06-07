@@ -15,6 +15,16 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("natbib");
 
+  // jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
+  // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data
+  // availability) with a bold title. Was undefined (Perl defines it). Render as the
+  // faithful bold-title paragraph. The title is always given as the optional arg in
+  // practice; default to "Acknowledgements". Witness 2309.14752.
+  DefMacro!("\\backsectionname", "Acknowledgements");
+  // Optional title arg (always supplied in practice, e.g. [Acknowledgements] /
+  // [Declaration of interests] / [Data availability statement]); empty default.
+  DefMacro!("\\backsection[]{}",
+    "\\par\\noindent\\textbf{#1.} #2\\par");
   // jfm.cls L?: \def\aff#1{\ignorespaces\textsuperscript{#1}} — affil
   // marker as superscript.
   DefMacro!("\\aff{}", "\\textsuperscript{#1}");
