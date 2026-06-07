@@ -5173,7 +5173,21 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   `\usepackage{jabbrv}` + `\emph{...}` doc is CLEAN. The `\emph` mode/group imbalance
   is context-specific (jabbrv loaded + a specific construct in the author/affil block) and
   SHARED — so the co-fix needs a real-paper repro, not a minimal one. Confirmed deep
-  (not minimally reproducible).
+  (not minimally reproducible). **★ BREAKTHROUGH (2026-06-07): jabbrv raw-loads
+  CLEANLY when loaded EARLY — the `\emph` errors are a LOAD-ORDER package interaction,
+  and the cluster is fixable to SURPASS Perl.** Injecting `\usepackage{jabbrv}` right
+  after `\documentclass` in 2112.00489 (so jabbrv loads before the dep-scanned packages)
+  → **0 errors**, `\JournalTitle` defined, 251 KB HTML — vs Perl's 95 errors (Perl
+  raw-executes wlscirep.cls so jabbrv loads mid-list, AFTER a package that also touches
+  `\emph` — `soul` is the prime suspect, it wraps `\emph` for highlighting). So jabbrv's
+  raw-load WORKS; the imbalance is purely jabbrv-loaded-AFTER-the-emph-wrapper. **Refined
+  next-session plan (supersedes the earlier 'dep-scan + jabbrv-\emph co-fix'):** apply the
+  dep-scan `notex:raw_loaded` fix AND load shipped/raw-only packages EARLY (before the
+  bound packages, or at least before `soul`/other `\emph`-wrappers) → the wlscirep+jabbrv
+  cluster goes CLEAN (surpass Perl), not parity-with-errors. NO stub (respects prefer-raw-load
+  + preserves jabbrv's abbreviation). Bisecting the exact `\emph`-wrapper conflict
+  (soul-vs-jabbrv order) and choosing the load-order policy is the focused-session work.
+  Witnesses: 2112.00489 (0 errors when jabbrv early), 2202.06999, 2205.05249, 2211.03054.
 
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
