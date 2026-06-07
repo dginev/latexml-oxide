@@ -58,7 +58,13 @@ jobs:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-      RUST_BACKTRACE: "1"
+      RUST_BACKTRACE: "full"
+      # TEMPORARY diagnostic (issue #217): symbolize the macOS worker-thread
+      # crashes. The `ci` profile strips symbols (debug=false, strip=symbols);
+      # override to line-tables + no-strip so a panic backtrace names the
+      # use-site call chain. Revert once the dangling-node bug is fixed.
+      CARGO_PROFILE_CI_DEBUG: "line-tables-only"
+      CARGO_PROFILE_CI_STRIP: "false"
     steps:
       - uses: actions/checkout@v6
 
@@ -145,4 +151,12 @@ jobs:
       # expensive macOS round-trip.
       - name: run tests
         if: matrix.tex == 'brew-texlive'
+        # MallocScribble=1 fills FREED memory with 0x55 (Apple malloc debug):
+        # if the crash reads a node type of 0x55 / panics on 0x55555555, it is
+        # a confirmed use-after-free (vs uninitialized). Safe — only touches
+        # already-freed blocks. Combined with the symbolized build above, a
+        # panic backtrace then names where the freed node is read.
+        # TEMPORARY diagnostic (issue #217) — revert with the env block above.
+        env:
+          MallocScribble: "1"
         run: cargo test --profile ci --tests --workspace --no-fail-fast -- --test-threads=1
