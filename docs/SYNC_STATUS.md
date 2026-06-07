@@ -7151,6 +7151,7 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   `\setboolean` undefined (the ifthen-loading settings file never
   runs). Byte-identical in Perl (verified 2026-05-27). Witness
   2003.12614 (R14, CONVERR_12).
+* **✅ FIXED 2026-06-07 (surpass-Perl, commit 58b662b064): `\sqrtsign` defined as the real-LaTeX macro `\def\sqrtsign{\radical"270370\relax}` so `\meaning\sqrtsign` matches `macro:->\radical "270370\relax ` and mdwmath's `\sq@readrad` parses without runaway. --preload mdwmath 43→0; 6/6 sampled papers (2110.05686/06287/06649/07734/08425/10854) CONVERR_43→0; tests 1359/0. Perl still errors — Rust now exceeds it.** Original analysis below.
 * **`mdwmath.sty` raw-load `#`-leak** (canvas-3 third batch, 2026-06-05) —
   raw-loading `mdwmath.sty` (TL `mdwtools`) fails on the `\def\bbigg@#1#2#3{\hbox{$…
   \left#3…$}}` family (line 133, redefining `\big`/`\Big`/`\bigg`/`\Bigg`) and on
