@@ -5180,6 +5180,15 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   GENERIC package/kernel commands used WITHOUT their package (\textcolor/\vspace/\captionof/
   \widthof/\nolinenumbers) are SHARED user-error. Target the former in future per-class sweeps.
 
+  **Batch 6 (2026-06-07), 8 class-specific candidates → 4 FIXED (batched, commit
+  c61c15d57f):** `\icmlCorrespondingAuthor` (icml, 2403.01475), `\newdefinition`/`\newproof`
+  (cas-dc → \newtheorem, 2306.04212), `\backsection` (jfm backmatter para, 2309.14752),
+  `\relatedversiondetails` (lipics related-version note, 2311.17226) — all 1→0. SHARED:
+  `\KWD`/`\jpa`/`\sidecaptionvpos`/`\doi` (elsarticle/iopart/svproc/revtex — generic or
+  both-undefined). The heuristic held (4/4 class-specific RUST-ONLY became clean wins; the
+  SHARED ones were generic/both-undefined). NOTE: `[\macro]` is NOT a valid DefMacro
+  optional-default (parsed as a param needing an arg) — use `[]` (empty default).
+
   **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
   packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
   `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
