@@ -5111,6 +5111,25 @@ Schema-validation limitations shared with (or worse in) Perl → not a Rust-only
 class. Any future work here is per-subtype, surpass-Perl, low priority. Witnesses: 2206.02232,
 2112.08503 (XMApp); 2202.09438 (XMHint); 2110.05841 (ltx:p); 2201.05745 (subsubsection).
 
+**MIXED — recorded 2026-06-07 — `undefined:<cs>` cluster (1451 papers):** DIVERSE,
+no single cause. Two classes after Rust-vs-Perl sampling:
+* **SHARED (user error / context):** `\textcolor`/`\color` (doc forgot
+  color/xcolor — both engines undefined; 2112.07368 1/1), `\xpt`/`\xipt`/`\xiipt`
+  (both engines define these in latex_base but the paper's non-article base lacks them;
+  hep-ph9306327 1/1). Not Rust regressions.
+* **RUST-ONLY long-tail (class-stub incompleteness — Perl raw-loads the real .cls, Rust
+  intercepts with an incomplete contrib stub):** the established one-class-per-session
+  pattern (cf. [[project_sn_jnl_unbound_class_depscan]], [[project_ifacconf_stub_eager_hyperref_url]]).
+  Examples found: WileyNJDv5 (`wileynjd_cls.rs`) deliberately omits algorithm/algorithmic
+  (stub comment: conflicts with algpseudocode → schema violations) → 2110.07892 has
+  `{algorithm}`/`\State`/`\For`/… undefined that Perl resolves — a KNOWN accepted
+  trade-off, not a clean fix; sn-jnl (`sn_jnl_cls.rs`) → 2203.14682 `\toprule`/`\midrule`
+  undefined (real sn-jnl.cls does NOT require booktabs; Perl resolves via a subtler
+  path — booktabs appears once in Perl's log; needs auto-load investigation). These are
+  per-class, subtle, and best tackled in focused fresh-context sessions; NOT clean
+  single-fix wins. Witnesses: 2110.07892 (Wiley/algorithm), 2203.14682 (sn-jnl/booktabs),
+  2112.00489 (\JournalTitle, 49 papers — class metadata).
+
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
 Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
