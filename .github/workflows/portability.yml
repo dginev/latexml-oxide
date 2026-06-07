@@ -1,0 +1,84 @@
+# Portability probe — Phase 0 of the portability ladder
+# (issue #217, docs/RELEASE_CRITERIA.md §3).
+#
+# NON-GATING: this workflow gathers facts about macOS as a build host.
+# It runs tools/portability_probe.sh on a macos arm64 runner under two
+# TeX providers:
+#
+#   basictex     — the BasicTeX cask (MacTeX's small distribution; what
+#                  a typical Mac TeX user has). Tests the #217 claim
+#                  that MacTeX "may already bring" kpathsea headers.
+#   brew-texlive — Homebrew's texlive formula (built from TL source;
+#                  the candidate carrier of libkpathsea + kpathsea.pc).
+#
+# Each leg uploads its full probe report as an artifact.
+
+name: Portability probe
+
+on:
+  push:
+    branches: [portability-macos]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos-probe:
+    name: macOS probe (${{ matrix.tex }})
+    runs-on: macos-15
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        tex: [basictex, brew-texlive]
+    env:
+      # macos arm64 runners: 3 vCPU / 7 GB RAM — tighter than the
+      # 16 GB Linux runner, so reuse the RAM-tuned `ci` profile and
+      # the conservative jobs=2 from CI.yml. No mold (Linux-only).
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: install brew deps (libxml2, libxslt, pkg-config)
+        run: |
+          command -v pkg-config >/dev/null || brew install pkgconf
+          brew install libxml2 libxslt
+
+      - name: install TeX (BasicTeX cask)
+        if: matrix.tex == 'basictex'
+        run: |
+          brew install --cask basictex
+          echo "/Library/TeX/texbin" >> "$GITHUB_PATH"
+
+      - name: install TeX (brew texlive formula)
+        if: matrix.tex == 'brew-texlive'
+        run: brew install texlive
+
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: probe-${{ matrix.tex }}
+
+      - name: portability probe
+        run: |
+          set -o pipefail
+          # Keg-only Homebrew libs need their pkgconfig dirs surfaced.
+          # Whatever we have to add here is exactly what the README's
+          # macOS instructions will need to document.
+          export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
+          tools/portability_probe.sh 2>&1 | tee probe-report-${{ matrix.tex }}.txt
+
+      - name: upload probe report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-report-${{ matrix.tex }}
+          path: probe-report-*.txt
+          if-no-files-found: ignore
