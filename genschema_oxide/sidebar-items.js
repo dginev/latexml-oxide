@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["lift_module_abstract","main","parse_ns_arg","resolve_schema_path"],"static":["GLOBAL"],"struct":["Cli"]};
+window.SIDEBAR_ITEMS = {"fn":["hoist_document_abstract","lift_module_abstract","main","parse_ns_arg","read_tex_group","resolve_schema_path"],"static":["GLOBAL"],"struct":["Cli"]};
