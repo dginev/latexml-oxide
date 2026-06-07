@@ -25,9 +25,13 @@ accumulating across overrides / re-definitions.</li>
 <li>[<code>defs</code>]             — pattern qname → its (combined) body pattern.</li>
 <li>[<code>def_combiner</code>]     — pattern qname → the combiner that won the
 most recent definition.</li>
-<li>[<code>uses_name</code>]        — pattern qname → set of containers (pattern or
-element ids) that reference it. Drives the “Used by” lists in the
-schema docs.</li>
+<li>[<code>uses_name</code>]        — pattern qname → set of containers that
+reference it: <code>pattern:QNAME</code> for refs at define scope,
+<code>element:TAG@pattern:HOST</code> for refs inside an <code>element TAG {…}</code>
+hosted by define HOST (bare <code>element:TAG</code> when the element sits
+outside any define). Drives the “Used by” lists in the schema
+docs; <code>tex::symbol_uses</code> reports the element or the host pattern,
+whichever identifies the definition uniquely.</li>
 <li>[<code>internal_grammars</code>] — counter for naming embedded <code>&lt;grammar&gt;</code>
 blocks (<code>grammar1</code>, <code>grammar2</code>, …).</li>
 </ul>
