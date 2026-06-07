@@ -58,13 +58,7 @@ jobs:
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
-      RUST_BACKTRACE: "full"
-      # TEMPORARY diagnostic (issue #217): symbolize the macOS worker-thread
-      # crashes. The `ci` profile strips symbols (debug=false, strip=symbols);
-      # override to line-tables + no-strip so a panic backtrace names the
-      # use-site call chain. Revert once the dangling-node bug is fixed.
-      CARGO_PROFILE_CI_DEBUG: "line-tables-only"
-      CARGO_PROFILE_CI_STRIP: "false"
+      RUST_BACKTRACE: "1"
     steps:
       - uses: actions/checkout@v6
 
@@ -133,30 +127,20 @@ jobs:
         if: matrix.tex == 'brew-texlive'
         run: cargo test --profile ci --tests --workspace --no-run
 
-      # --test-threads=1: the macOS suite hits a small, NONDETERMINISTIC
-      # set of crashes (a node read with a garbage libxml2 type, e.g.
-      # DOCBDocumentNode/21 — see get_node_qname / get_node_font) that
-      # reproduce ONLY on macOS: clean on Linux even under TL2026 +
-      # --test-threads=16 (valgrind-clean too). The shipping CLI binary
-      # is unaffected — it runs one conversion on the MAIN thread and
-      # exits; only libtest's concurrent WORKER threads trip it, pointing
-      # at a data race on libxml2's process-global C state across threads
-      # that Linux's libxml2 tolerates and brew's macOS libxml2 does not.
-      # Running the suite serially removes the cross-thread concurrency
-      # without touching the engine's #[thread_local] design. (Slower on
-      # macOS, but the build dominates wall-clock, not the serial run.)
+      # The macOS suite previously hit a small, NONDETERMINISTIC set of
+      # worker-thread crashes (a node read with a garbage libxml2 type, e.g.
+      # EntityDecl/17, DOCBDocumentNode/21 → panics + SIGSEGV/SIGBUS) that
+      # reproduced ONLY on macOS — clean on Linux even under TL2026 +
+      # --test-threads=16, and valgrind/ASan-clean. Root cause: the engine's
+      # `#[thread_local]` roots lazily initialized RE-ENTRANTLY (one root's
+      # Lazy init touching another's), benign on Linux/ELF TLS but the
+      # documented macOS hazard (rust-lang/rust#29594). Fixed by forcing
+      # leaves-first eager init at `Core::new` (latexml_core::common::arena
+      # /model::force_init) — the #[thread_local] design is unchanged.
       #
-      # --no-fail-fast keeps full coverage cheap: when green it runs
-      # everything anyway; when red it surfaces every failure in one
-      # expensive macOS round-trip.
+      # --test-threads=1 is retained as the conservative setting (the
+      # reliably-failing pre-fix baseline; harmless once green) and
+      # --no-fail-fast surfaces every failure in one macOS round-trip.
       - name: run tests
         if: matrix.tex == 'brew-texlive'
-        # MallocScribble=1 fills FREED memory with 0x55 (Apple malloc debug):
-        # if the crash reads a node type of 0x55 / panics on 0x55555555, it is
-        # a confirmed use-after-free (vs uninitialized). Safe — only touches
-        # already-freed blocks. Combined with the symbolized build above, a
-        # panic backtrace then names where the freed node is read.
-        # TEMPORARY diagnostic (issue #217) — revert with the env block above.
-        env:
-          MallocScribble: "1"
         run: cargo test --profile ci --tests --workspace --no-fail-fast -- --test-threads=1

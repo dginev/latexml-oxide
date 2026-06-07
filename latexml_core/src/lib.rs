@@ -189,6 +189,21 @@ pub struct CoreOptions {
 impl Core {
   /// instantiate a new Core processor
   pub fn new(options: CoreOptions) -> Self {
+    // Eagerly initialize the engine's `#[thread_local]` roots, leaves-first,
+    // on THIS thread before any of them is touched re-entrantly. ARENA is the
+    // universal leaf (every root's Lazy initializer interns via arena::pin);
+    // MODEL's initializer reaches into ARENA. Forcing ARENA then MODEL up
+    // front — before `set_stomach`/`set_state` below trigger their own
+    // initializers — guarantees no root's Lazy init runs another root's init
+    // *re-entrantly*. That cross-`#[thread_local]`-during-init pattern is
+    // benign on Linux/ELF TLS but is the documented macOS hazard
+    // (rust-lang/rust#29594) behind the macOS worker-thread memory
+    // corruption in issue #217 (varying garbage node types → panics /
+    // SIGSEGV / SIGBUS, only on macOS, only in libtest's worker threads —
+    // the single-conversion main-thread CLI was never affected). No
+    // behavioral change on Linux.
+    crate::common::arena::force_init();
+    crate::common::model::force_init();
     let preload = options.preload.unwrap_or_default();
     // pass on the state::options, defaults are handled in state::new
     let state_options = StateOptions {
