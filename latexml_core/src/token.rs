@@ -421,6 +421,29 @@ pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
       #[cfg(feature = "token-locators")] loc: 0
     });
 
+/// Eagerly initialize this thread's pre-built `#[thread_local]` token
+/// constants. Each one's `Lazy` initializer interns its control-sequence
+/// name via `arena::pin_static`, so they must be forced AFTER
+/// [`arena::force_init`](crate::common::arena::force_init) and before any
+/// code accesses them during another root's initialization — otherwise the
+/// first access re-entrantly initializes the token from within that other
+/// root's init, the macOS `#[thread_local]` hazard (rust-lang/rust#29594,
+/// issue #217). No behavioral change on Linux.
+pub fn force_init() {
+  Lazy::force(&TOKEN_BEGIN);
+  Lazy::force(&TOKEN_END);
+  Lazy::force(&TOKEN_MATH);
+  Lazy::force(&TOKEN_ALIGN);
+  Lazy::force(&TOKEN_PARAM);
+  Lazy::force(&TOKEN_SUPER);
+  Lazy::force(&TOKEN_SUB);
+  Lazy::force(&TOKEN_SPACE);
+  Lazy::force(&TOKEN_CR);
+  Lazy::force(&TOKEN_RELAX);
+  Lazy::force(&TOKEN_EXPANDAFTER);
+  Lazy::force(&TOKEN_ENDCSNAME);
+}
+
 #[macro_export]
 /// macro for a BEGIN "{" token
 macro_rules! T_BEGIN(() => { *$crate::token::TOKEN_BEGIN });
