@@ -5189,7 +5189,22 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   SHARED ones were generic/both-undefined). NOTE: `[\macro]` is NOT a valid DefMacro
   optional-default (parsed as a param needing an arg) — use `[]` (empty default).
 
-  **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
+  **✅ RESOLVED 2026-06-07 (commit 4e63c5f891) — jabbrv STUB BINDING, ~42 papers,
+  surpass-Perl.** The clean fix turned out NOT to need the dep-scan core change OR the
+  deep jabbrv-`\emph` loading-path work: a Rust STUB BINDING for jabbrv (`jabbrv_sty.rs`:
+  `\JournalTitle`→`#1` full name + `\Define*`→no-ops, no `.ldf` machinery) IS resolved by
+  the dep-scan's `notex=true` `find_file` (Rust bindings count as "found"), so it loads
+  for wlscirep's `\RequirePackage{jabbrv}` → `\JournalTitle` defined, 0 errors, full
+  journal names preserved. Surpasses Perl (95 errors — Perl raw-loads jabbrv and hits the
+  `\emph` imbalance). Witnesses 2112.00489/2202.06999/2205.05249/2211.03054 all 1→0; suite
+  1359/0. **GENERALIZABLE INSIGHT:** for a shipped-only package whose raw-load is broken
+  (or whose dep-scan-skip causes undefined CS), a small STUB BINDING (public API only) is
+  the clean fix — the dep-scan resolves it, no core-loading change needed. The general
+  dep-scan-shipped-package gap + the jabbrv-`\emph` loading-path mechanism remain as
+  documented future work (for shipped packages WITHOUT a binding), but the high-value
+  `\JournalTitle` driver is now fixed. (Original diagnosis kept below for reference.)
+
+  **PRECISE general root cause (2026-06-07) — dep-scan skips shipped-only
   packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
   `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
   fallback + dep-scans the `.cls` (reads but does NOT execute it). The dep-scan package
