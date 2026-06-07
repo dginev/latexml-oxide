@@ -1,23 +1,29 @@
-# Portability probe — Phase 0 of the portability ladder
-# (issue #217, docs/RELEASE_CRITERIA.md §3).
+# Portability — macOS build + smoke gate (issue #217,
+# docs/RELEASE_CRITERIA.md §3 stage 4).
 #
-# NON-GATING: this workflow gathers facts about macOS as a build host.
-# It runs tools/portability_probe.sh on a macos arm64 runner under two
+# Started as the Phase 0 fact-finding probe (2026-06-07); promoted to a
+# gating job on pull requests once both legs went green: full workspace
+# build + latexmlmath/hello.tex smoke runs on macos arm64, under two
 # TeX providers:
 #
 #   basictex     — the BasicTeX cask (MacTeX's small distribution; what
-#                  a typical Mac TeX user has). Tests the #217 claim
-#                  that MacTeX "may already bring" kpathsea headers.
-#   brew-texlive — Homebrew's texlive formula (built from TL source;
-#                  the candidate carrier of libkpathsea + kpathsea.pc).
+#                  a typical Mac TeX user has). MacTeX ships NO
+#                  libkpathsea (probe-verified), so this leg exercises
+#                  the kpathsea 0.3 subprocess-`kpsewhich` fallback
+#                  end-to-end.
+#   brew-texlive — Homebrew's texlive formula (built from TL source,
+#                  ships libkpathsea + kpathsea.pc) — exercises the
+#                  in-process linked backend.
 #
-# Each leg uploads its full probe report as an artifact.
+# Each leg uploads its full probe report as an artifact. Findings doc:
+# docs/PORTABILITY_MACOS_PROBE_2026-06-07.md.
 
 name: Portability probe
 
 on:
   push:
-    branches: [portability-macos]
+    branches: [master, portability-macos]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
