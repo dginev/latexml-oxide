@@ -5149,6 +5149,15 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   * **SHARED (not Rust-only):** `{NiceTabular}` (nicematrix not loaded, 2212.09528 1/1),
     `\setboolean` (2310.11437 1/1) — both byte-identical Perl/Rust.
 
+  **Batch 3 (2026-06-07), 5 more sub-clusters:** RUST-ONLY (deferred, need semantic care
+  or source access): `\orcid` (sn-jnl, 2211.09693 — used inside `\author{name\orcid{id}}`;
+  sn_jnl_cls has \author/\affil/\fnm/\sur but not \orcid; needs content-preserving
+  author-metadata handling), `{pf}` (elsart, 2309.12476 — elsart_cls DOES load
+  elsart_support with `\newproof`→`\newtheorem`, yet the `{pf}` usage isn't locatable in
+  the source .tex/.sty; murky), `\Year` (w-art, 2206.06885, multi-error), `subfigure`
+  (lipics-v2019, 2404.10023, multi-error). SHARED: `fmfgraph` (revtex4-1 + feynmf,
+  2309.07343 43/43 — deep).
+
   **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
   packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
   `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
