@@ -5189,6 +5189,20 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   (soul-vs-jabbrv order) and choosing the load-order policy is the focused-session work.
   Witnesses: 2112.00489 (0 errors when jabbrv early), 2202.06999, 2205.05249, 2211.03054.
 
+  **CORRECTION (same session, after a disambiguating test): NOT load-order.** Injecting
+  `\usepackage{jabbrv}` LATE — right before `\begin{document}`, AFTER the doc's
+  `\usepackage{soul}` — is ALSO 0 errors. So the soul-order theory above is WRONG. The
+  real discriminator is the LOADING PATH: jabbrv loaded via `\usepackage` in the document
+  PREAMBLE = clean (surpass Perl), whereas jabbrv loaded via the CLASS `\RequirePackage`
+  path (Rust dep-scan OR Perl raw-executing wlscirep.cls during `\documentclass`) = 95
+  `\emph`/`\egroup` errors in BOTH engines. Mechanism still uncertain (something about the
+  class-loading CONTEXT vs the preamble context — re-entrancy `SCANNING` guard during the
+  dep-scan, or `\makeatletter`/catcode/`\AtBeginDocument` timing — needs bisection). The
+  surpass-Perl fix is to make the class-load path load jabbrv in the same clean context as
+  `\usepackage` (NOT a load-order tweak). Deep; focused-session work. The dep-scan
+  `notex:raw_loaded` fix alone reproduces Perl's 95 (it loads jabbrv via the class path), so
+  it must be paired with this path/context fix to make the cluster clean.
+
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
 Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
