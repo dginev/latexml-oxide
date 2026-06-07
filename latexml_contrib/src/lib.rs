@@ -169,6 +169,7 @@ pub mod ieeetaes_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;
+pub mod jabbrv_sty;
 pub mod jair_sty;
 pub mod jgcc_cls;
 pub mod jfm_cls;
@@ -442,6 +443,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("interact", "cls", interact_cls::load_definitions),
   ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
+  ("jabbrv", "sty", jabbrv_sty::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),
   ("jgcc", "cls", jgcc_cls::load_definitions),
   ("jfm", "cls", jfm_cls::load_definitions),
