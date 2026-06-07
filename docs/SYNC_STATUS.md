@@ -7201,6 +7201,14 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   difficulty, broad blast radius. **Future-work surpass-Perl target**, not attempted.
   Witnesses: 2310.18293, 2309.17074, 2309.17389, 2310.00161, 2310.00615, 2310.02296
   (62 collected in stages 19–20).
+  **SMOKING GUN (2026-06-06):** config-specific — reproduces ONLY under `cortex_worker --standalone`
+  (INCLUDE_STYLES raw-loads real `lineno.sty`), NOT in `latexml_oxide` (uses the `lineno_sty.rs`
+  BINDING) — both base & HEAD give 0 eccv conditional errors in latexml_oxide; cortex_worker gives 4.
+  Root: raw-loading lineno + eccv's `\linenomathpatchAMS` (etoolbox `\cspreto`→`\ifdefmacro` on
+  amsmath env primitives) leaks `\else`/`\fi`. The binding sidesteps it. SHARED w/ Perl (raw-load).
+  FIX is a binding-vs-raw-load policy call (robust lineno/eccv raw-load OR let the lineno binding win)
+  — touches INCLUDE_STYLES philosophy; needs a focused config session + dev cortex_worker. NOT a safe
+  unilateral unattended change. Error site: conditional.rs:388/429.
 
 ---
 
