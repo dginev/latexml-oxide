@@ -10001,10 +10001,15 @@ LoadDefinitions!({
   DefMacro!("\\dag", "\\ifmmode{\\dagger}\\else\\textdagger\\fi");
   DefMacro!("\\ddag", "\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi");
 
-  DefConstructor!(
-    "\\sqrtsign Digested",
-    "<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#1</ltx:XMArg></ltx:XMApp>"
-  );
+  // Real LaTeX (latex.ltx) defines `\sqrtsign` as a MACRO: `\def\sqrtsign{\radical"270370\relax}`.
+  // `\meaning\sqrtsign` is therefore `macro:->\radical "270370\relax ` — note the TWO catcode-12
+  // backslashes (`\radical`, `\relax`). mdwmath's catcode-tricky `\sq@readrad #1"#2\#3` parses
+  // exactly this: #1 up to `"` = `macro:->\radical `, #2 up to the `\` of `\relax` = `270370`,
+  // #3 up to `\relax`. LaTeXML had `\sqrtsign` as a 1-arg square-root *constructor*, whose meaning
+  // lacked that structure → `\sq@readrad` ran away consuming `\endgroup`, leaving `\` at catcode-12
+  // and corrupting every later `\def` (43 `#`-to-Stomach leaks; ~1080 canvas papers; SHARED w/ Perl).
+  // Match real LaTeX. `\sqrt` does its own construction; nothing in core calls `\sqrtsign{…}`.
+  TeX!(r#"\def\sqrtsign{\radical"270370\relax}"#);
 
   DefPrimitive!("\\mathparagraph", "\u{00B6}");
   DefPrimitive!("\\mathsection", "\u{00A7}");
