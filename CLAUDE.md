@@ -50,18 +50,31 @@ tackle latex. Historical test regressions during the dump pivot are
 recorded in `SYNC_STATUS.md`; do not assume they are current without
 re-running the relevant test or dump-generation command.
 
-**Distribution follow-up — LANDED 2026-05-15.** Per-TL-year dump
-files (`resources/dumps/{plain,latex}.YYYY.dump.txt` +
-`texlive.YYYY.version`) are committed to the repo and embedded into
-the binary at build time via `include_str!`. Runtime resolves the
-ambient year via `kpsewhich -var-value=SELFAUTOPARENT` with
-`pdflatex --version` fallback (`kpsewhich --version` returns the
-same kpathsea-library string on TL2023 and TL2025, so it's NOT a
-reliable discriminator). TL2023 + TL2025 are bundled currently; add
-new years via `tools/make_formats.sh`. Follow-up IA-record
-consolidation (`81176ba689`) halved `latex.YYYY.dump.txt` size by
-collapsing per-slot fontdimen V-records into per-(font,size) `IA`
-records with RLE-encoded data.
+**Distribution model — REDESIGNED 2026-06-07 (was: committed dumps,
+landed 2026-05-15).** Per-TL-year dump files
+(`resources/dumps/{plain,latex}.YYYY.dump.txt` + `texlive.YYYY.version`)
+are **NOT committed to the repo**. They are generated at release time by
+`.github/workflows/release-dumps.yml` (called from `release.yml` on tag
+push, dispatchable standalone): a 5-year moving TL window — currently
+2022–2026 — each generated inside a pinned TL-year container
+(`ghcr.io/tkw1536/texlive-docker:YYYY`, the image family behind Perl
+LaTeXML's CI; 2026 interim: islandoftex `latest` until
+tkw1536/historic-texlive-docker#1 publishes). One kpathsea-UNLINKED
+dumper binary (subprocess-`kpsewhich` backend) serves all containers.
+Each `--init` runs under `LATEXML_INIT_DEBUG=1` with a strict
+zero-`Error:`/`Fatal:` gate (init output is suppressed otherwise —
+naive grepping sees nothing). The release build then embeds the whole
+window at build time (gzip, DEP-12; `latexml_engine/build.rs` scans
+`resources/dumps/`). **Dev/CI generate their ambient-year dump via
+`tools/make_formats.sh`** — run it once after checkout, after a TL
+upgrade, or before test runs needing dumps (CI.yml does). Runtime
+resolves the ambient year via `kpsewhich -var-value=SELFAUTOPARENT`
+(leading-digit parse, so MacTeX's `2026basic` works) with
+`pdflatex --version` fallback (`kpsewhich --version` returns the same
+kpathsea-library string on TL2023 and TL2025, so it's NOT a reliable
+discriminator). Earlier IA-record consolidation (`81176ba689`) halved
+`latex.YYYY.dump.txt` size by collapsing per-slot fontdimen V-records
+into per-(font,size) `IA` records with RLE-encoded data.
 
 ## Project Overview
 

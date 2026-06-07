@@ -22,10 +22,16 @@ Four files attached to each `X.Y.Z` GitHub Release:
 The shipped `latexml_oxide` binary is fully self-contained — XSLT
 stylesheets, CSS, JavaScript, and the RelaxNG schema tree are
 embedded at build time (`include_str!` / `include_bytes!`). Format
-dumps for TeX Live 2023 and 2025 are also embedded
-(`resources/dumps/*.YYYY.dump.txt`). The release workflow builds with
-`--profile maxperf` (`release.yml`), so a single optimized, portable
-artifact is what users download.
+dumps for a **5-year moving TeX Live window** (currently 2022–2026)
+are also embedded. They are NOT in git: `release.yml` first calls
+`release-dumps.yml`, which generates each year's
+`{plain,latex}.YYYY.dump.txt` + `texlive.YYYY.version` inside a pinned
+TL-year container (`ghcr.io/tkw1536/texlive-docker:YYYY` — the image
+family behind Perl LaTeXML's CI) under a strict zero-error `--init`
+gate, then the release job downloads the full window into
+`resources/dumps/` and verifies completeness before building. The
+release workflow builds with `--profile maxperf` (`release.yml`), so a
+single optimized, portable artifact is what users download.
 
 **Design requirement — portability.** A conversion must not *read* any of
 latexml_oxide's *own* resources from disk during its main operation: the
