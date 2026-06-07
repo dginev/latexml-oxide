@@ -5089,6 +5089,28 @@ isolation).
 
 `cargo test --tests` after fixes: **1359/0/0**.
 
+**SHARED (not Rust-only), recorded 2026-06-07 — alignment-mode cluster
+(`\lx@begin@alignment`/`\end@amsalign`/`\lx@hidden@egroup`/`\endgroup`):** 171
+distinct papers in the retained canvas-3 failures. Verified SHARED — Perl
+(`latexml --includestyles --path=ar5iv-bindings/bindings --preload=ar5iv.sty`) emits
+the **byte-identical** alignment errors, and is **strictly worse overall** (2110.12034:
+Perl 34 / Rust 8 — Perl adds 25 `malformed:ltx:XMTok`; 2112.09098: Perl 22 / Rust 15,
+alignment lines identical 1/1/3/1). Root: malformed alignment input (alignment env tokens
+leaking when used in an unexpected mode/context) — diverse per-paper causes, mode-mismatch
+family (cf. [[project_endgroup_modeswitch_frame_leak]], mostly SHARED). HIGH difficulty,
+no single clear fix, Rust already ahead of Perl → **future work, not attempted**. Witnesses:
+2110.12034, 2112.09098, 2204.13603, 2203.05327, 2205.14578.
+
+**SHARED (not Rust-only), recorded 2026-06-07 — `malformed:ltx:*` schema-validation
+cluster:** 1133 distinct papers, top subtypes XMApp (2688 lines), XMTok (726), bibitem
+(562), listingline (462), Math (430), XMArray (316), section (314), XMDual (305). DIVERSE
+(no single cause — spans many element types). Sampled SHARED: `malformed:ltx:XMApp` (the
+biggest subtype) is byte-identical Perl/Rust on 2206.02232 (2/2) and 2112.08503 (2/2);
+`malformed:ltx:XMTok` is often **Perl-only** (Rust better — 2110.12034: Perl 25, Rust 0).
+Schema-validation limitations shared with (or worse in) Perl → not a Rust-only regression
+class. Any future work here is per-subtype, surpass-Perl, low priority. Witnesses: 2206.02232,
+2112.08503 (XMApp); 2202.09438 (XMHint); 2110.05841 (ltx:p); 2201.05745 (subsubsection).
+
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
 Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
