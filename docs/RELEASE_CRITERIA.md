@@ -55,9 +55,21 @@ smoke corpus + size gate + dependency check:
 1. Debian/Ubuntu x86_64 (current).
 2. aarch64 Linux.
 3. Container image (reproducible TeX Live + graphics).
-4. macOS (#217) — blocker is `libkpathsea-dev`; needs `rust-kpathsea` to
-   find MacTeX headers via `pkg-config` + README + CI sanity job.
-5. Windows / musl — deferred.
+4. macOS (#217) — **measured 2026-06-07**
+   ([`PORTABILITY_MACOS_PROBE_2026-06-07.md`](PORTABILITY_MACOS_PROBE_2026-06-07.md)):
+   builds + converts on `macos-15` arm64 with `brew install texlive
+   libxml2 libxslt` (probe workflow, brew-texlive leg green). MacTeX
+   ships NO libkpathsea (nothing to find — the old "find MacTeX headers"
+   framing was moot); covered instead by kpathsea 0.3's
+   subprocess-`kpsewhich` fallback (rust-kpathsea `subprocess-fallback`
+   branch; Perl-parity ls-R cache). Remaining: crates.io release +
+   README install matrix + promote the probe to a gating CI job.
+5. Windows / musl — deferred. Known blockers: `libmarpa-sys`
+   `./configure && make` (needs a cc-crate port; tarball is vendored),
+   `lsp_server` unix sockets, `graphics*.rs` cfg(unix) paths,
+   vcpkg-sourced libxml2/libxslt. The subprocess-`kpsewhich` fallback
+   already removes the kpathsea blocker (MiKTeX's kpsewhich.exe
+   delegates to MiKTeX's own resolver — better than linking could do).
 
 **Nightly (#143):** required (`thread_local`). For a long-lived tool, a
 reproducibility risk — pin a known-good nightly, track stabilization.

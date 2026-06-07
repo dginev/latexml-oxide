@@ -102,10 +102,16 @@ through the same path. Upstream follow-up for rust-libxslt: drop the
 `\u{1}` link_names from statics (plain `extern "C"` statics let Rust
 apply per-platform decoration), or generate bindings at build time.
 
-Smoke runs: skipped in run 2 on both legs (workspace did not fully
-build). Expected in run 3 on brew-texlive after the dlsym fix; the
-basictex leg stays red until the Phase 1 subprocess-`kpsewhich`
-fallback exists — its red status is honest signal, not noise.
+**Run 3 (`27092594389`, after the dlsym fix): brew-texlive leg fully
+GREEN** — workspace build OK, `latexmlmath '1+1=2'` OK, hello.tex
+conversion OK. That smoke run also exercises the dump-year fallback in
+anger: a TL2026 tree served by the embedded TL2025 dump. **macOS arm64
+is a working build host today** via `brew install texlive libxml2
+libxslt` + the `PKG_CONFIG_PATH` export. The basictex leg stays red at
+the `kpathsea_sys` panic until the Phase 1 subprocess-`kpsewhich`
+fallback exists (decided 2026-06-07: implemented **upstream in
+rust-kpathsea first**, then dep-bumped here) — its red status is honest
+signal, not noise.
 
 ## The kpathsea dichotomy → Phase 1 plan
 
@@ -131,26 +137,42 @@ The Rust-side surface is ideally small: the entire in-process kpathsea
 dependency funnels through `latexml_core/src/util/pathname.rs` —
 a `KPSE: Lazy<Mutex<Option<Kpaths>>>` singleton, the perf-only
 `prewarm_kpathsea()`, and `kpsewhich(candidates)` with **one** call site
-(`binding/content.rs:2634`). Phase 1 spec:
+(`binding/content.rs:2634`).
 
-1. **`KpseBackend` enum** behind the existing singleton:
-   `InProcess(Kpaths)` (status quo, fast path) →
-   `Subprocess { kpsewhich: PathBuf, cache }` (when the lib is absent at
-   build time, feature-gated; or selected at runtime) → `None`.
-   Subprocess mode mirrors Perl `pathname_kpsewhich`: one `kpsewhich`
-   invocation per candidate batch, first hit wins, memoized; the Perl
-   `build_kpse_cache` ls-R port is the optional perf upgrade.
-   `prewarm_kpathsea()` becomes a no-op (or ls-R cache build) in
-   subprocess mode.
-2. **rust-kpathsea upgrade** (the issue's named step, rescoped): the
-   `kpathsea_sys` `panic!`-on-missing-pkg-config becomes a cargo feature
-   question — `links`-style env overrides (`KPATHSEA_LIB_DIR`/
-   `KPATHSEA_INCLUDE_DIR`) are still worth adding, but "find MacTeX
-   headers via pkg-config" is moot (MacTeX has none). The oxide-side
-   feature split decides whether `kpathsea_sys` is compiled at all.
-3. **macOS distribution artifact** builds with subprocess-only kpathsea →
-   no `libkpathsea.dylib` in `otool -L` output, runnable on any Mac with
-   any TeX distribution on PATH.
+**IMPLEMENTED upstream 2026-06-07** (decision: subprocess + ls-R cache,
+in rust-kpathsea first; the c2rust-transpile alternative was rejected —
+kpathsea is LGPL, so an embedded transpiled copy would encumber every
+shipped artifact and end the §4 public-domain ambition, besides freezing
+a snapshot of a library whose entire value is staying in sync with the
+host). rust-kpathsea branch `subprocess-fallback`, kpathsea 0.3.0 /
+kpathsea_sys 0.2.0:
+
+1. `kpathsea_sys` build.rs no longer panics: `KPATHSEA_LIB_DIR` override
+   → pkg-config → graceful unlinked build, publishing
+   `DEP_KPATHSEA_LINKED` via the `links = "kpathsea"` channel.
+2. `Kpaths` is backend-dispatched at compile time: in-process FFI when
+   linked (unchanged fast path); otherwise subprocess-`kpsewhich`
+   fronted by a one-shot ls-R cache — a faithful port of Perl
+   `pathname_kpsewhich` + `build_kpse_cache`, with two deliberate
+   divergences (first-wins across TEXMF trees instead of Perl's
+   last-wins overwrite; unconditional `-dev` subdir skip, required for
+   first-wins correctness). New API: `new_subprocess()`,
+   `with_kpsewhich(path)`, `find_first(&[..])`, `is_in_process()`;
+   `KPSEWHICH` env override.
+3. Bonus fix while in there: the `guess_format_from_filename`
+   alt-suffix overflow panic (the bug oxide guards with `catch_unwind`
+   in `pathname.rs`) now carries the missing length guard upstream.
+4. oxide consumes it via `[patch.crates-io]` (git branch) until the
+   crates.io release; `prewarm_kpathsea()` returns early on the
+   subprocess backend (no format table to warm; ls-R cache builds
+   lazily instead).
+5. **macOS distribution artifact** follow-up: build with subprocess-only
+   kpathsea → no `libkpathsea.dylib` in `otool -L` output, runnable on
+   any Mac with any TeX distribution on PATH.
+
+Validated in both configurations on Linux (linked, and unlinked via a
+pkg-config view hiding only `kpathsea.pc` — the MacTeX simulation);
+the basictex CI leg is the macOS ground truth.
 
 ## Remaining macOS ladder items (beyond kpathsea)
 

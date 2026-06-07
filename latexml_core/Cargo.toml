@@ -39,7 +39,12 @@ libxml = "0.3.12"
 # (replaced `dirs` 2026-05-17 — its single use was `dirs::home_dir()`,
 # which on Linux is exactly `std::env::var_os("HOME")`. On Windows
 # dirs falls back to `SHGetKnownFolderPath`; not relevant for us.)
-kpathsea = "0.2.5"
+# 0.3: backend-dispatched — in-process libkpathsea when linked at build
+# time, subprocess-kpsewhich fallback otherwise (MacTeX ships no
+# libkpathsea at all; see docs/PORTABILITY_MACOS_PROBE_2026-06-07.md).
+# Resolved from git via the workspace [patch.crates-io] until 0.3 is
+# published to crates.io.
+kpathsea = "0.3"
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }
