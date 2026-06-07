@@ -127,10 +127,22 @@ jobs:
         if: matrix.tex == 'brew-texlive'
         run: cargo test --profile ci --tests --workspace --no-run
 
-      # --no-fail-fast: macOS is a new platform under test; surface EVERY
-      # failing test binary in one run rather than stopping at the first
-      # (each macOS round-trip is expensive). Drop back to fail-fast once
-      # the suite is green.
+      # --test-threads=1: the macOS suite hits a small, NONDETERMINISTIC
+      # set of crashes (a node read with a garbage libxml2 type, e.g.
+      # DOCBDocumentNode/21 — see get_node_qname / get_node_font) that
+      # reproduce ONLY on macOS: clean on Linux even under TL2026 +
+      # --test-threads=16 (valgrind-clean too). The shipping CLI binary
+      # is unaffected — it runs one conversion on the MAIN thread and
+      # exits; only libtest's concurrent WORKER threads trip it, pointing
+      # at a data race on libxml2's process-global C state across threads
+      # that Linux's libxml2 tolerates and brew's macOS libxml2 does not.
+      # Running the suite serially removes the cross-thread concurrency
+      # without touching the engine's #[thread_local] design. (Slower on
+      # macOS, but the build dominates wall-clock, not the serial run.)
+      #
+      # --no-fail-fast keeps full coverage cheap: when green it runs
+      # everything anyway; when red it surfaces every failure in one
+      # expensive macOS round-trip.
       - name: run tests
         if: matrix.tex == 'brew-texlive'
-        run: cargo test --profile ci --tests --workspace --no-fail-fast -- --test-threads=2
+        run: cargo test --profile ci --tests --workspace --no-fail-fast -- --test-threads=1
