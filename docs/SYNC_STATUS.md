@@ -5189,6 +5189,12 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   SHARED ones were generic/both-undefined). NOTE: `[\macro]` is NOT a valid DefMacro
   optional-default (parsed as a param needing an arg) — use `[]` (empty default).
 
+  **Batch 7 (2026-06-07):** FIXED `\published` (ws-journal) + `\pagerange` (jfm) — clean
+  binding extensions, 1→0. RUST-ONLY deferred: `\RSsectxt` (2208.03073 — used by the
+  paper's preamble.sty but defined elsewhere/unclear source; murky), `\linkable` (spieman
+  — UNBOUND class, \linkable in cls body; a class binding would lose the dep-scan, needs
+  care). SHARED: `\orcidID` (svmult), `\subsubsubsection` (article — both undefined).
+
   **✅ RESOLVED 2026-06-07 (commit 4e63c5f891) — jabbrv STUB BINDING, ~42 papers,
   surpass-Perl.** The clean fix turned out NOT to need the dep-scan core change OR the
   deep jabbrv-`\emph` loading-path work: a Rust STUB BINDING for jabbrv (`jabbrv_sty.rs`:
