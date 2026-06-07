@@ -5168,6 +5168,18 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   surpass-Perl only), `\vspace` (2201.05271 — `\vspace{-20pt}` BEFORE `\documentclass`,
   invalid in both), `\captionof` (IEEEtran — no caption pkg loaded, both undefined).
 
+  **Batch 5 (2026-06-07), class/package-specific candidates:** FIXED — `\refcite`
+  (ws-journal, World Scientific bare-number cite → `\cite`; 2306.15982 1→0, commit
+  75e02e53bf). RUST-ONLY deferred (niche): `\doititle` (fdsOF — UNBOUND obscure class,
+  `\newcommand{\doititle}[1]{...#1...}` DOI-title formatter in the cls body → needs a
+  new fdsOF stub for 1 niche command, low value). SHARED: `\nolinenumbers` (aa class +
+  lineno not loaded, both undefined), `\restartappendixnumbering` (aastex631, both),
+  `\AppendGraphicsExtensions` (ieeeconf, both — Perl worse 4).
+  **Heuristic confirmed across batches 4-5:** class/package-SPECIFIC undefined commands
+  (\coltauthor/\affil/\orcid/\sep/\refcite/{pf}) are clean RUST-ONLY (binding-gap) wins;
+  GENERIC package/kernel commands used WITHOUT their package (\textcolor/\vspace/\captionof/
+  \widthof/\nolinenumbers) are SHARED user-error. Target the former in future per-class sweeps.
+
   **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
   packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
   `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
