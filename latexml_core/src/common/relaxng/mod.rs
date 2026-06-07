@@ -144,9 +144,13 @@ pub enum Pattern {
 /// * [`defs`]             — pattern qname → its (combined) body pattern.
 /// * [`def_combiner`]     — pattern qname → the combiner that won the
 ///   most recent definition.
-/// * [`uses_name`]        — pattern qname → set of containers (pattern or
-///   element ids) that reference it. Drives the "Used by" lists in the
-///   schema docs.
+/// * [`uses_name`]        — pattern qname → set of containers that
+///   reference it: `pattern:QNAME` for refs at define scope,
+///   `element:TAG@pattern:HOST` for refs inside an `element TAG {…}`
+///   hosted by define HOST (bare `element:TAG` when the element sits
+///   outside any define). Drives the "Used by" lists in the schema
+///   docs; `tex::symbol_uses` reports the element or the host pattern,
+///   whichever identifies the definition uniquely.
 /// * [`internal_grammars`] — counter for naming embedded `<grammar>`
 ///   blocks (`grammar1`, `grammar2`, …).
 #[derive(Debug)]
