@@ -7327,7 +7327,11 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   indirection — `\alignat` (parameterless) → `\lx@alignat@col{}` (arg-reader), so
   `\expandonce\alignat` is a single token (no brace-grab, no premature conditional).
   Applied to all 5 arg-taking variants. Witnesses 2310.18293 (4→0), 2309.17074,
-  2310.00161 all error-free; normal `\begin{alignat}{2}` rendering unchanged
+  2310.00161 all error-free; **scale-validated 2026-06-07: 24/25 random eccv CONVERR_4
+  papers now 0 errors** (the 1 outlier math9807064 is a DIFFERENT `\else` cause at
+  "Anonymous String", 0 alignat uses — a signature-regex false-positive, not an eccv
+  miss; so the ~187 count slightly overcounts but ~all true-eccv papers recover);
+  normal `\begin{alignat}{2}` rendering unchanged
   (3 align/4 rows/27 cells verified); full suite 1359/0. Doc: KNOWN_PERL_ERRORS.md
   "`\alignat` family arg-taking breaks etoolbox `\preto`/`\cspreto`".
   *(Method note: the 4-layer "deep/cortex-only/binding-policy" framing during
