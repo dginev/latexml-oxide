@@ -5158,6 +5158,16 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   (lipics-v2019, 2404.10023, multi-error). SHARED: `fmfgraph` (revtex4-1 + feynmf,
   2309.07343 43/43 — deep).
 
+  **Batch 4 (2026-06-07), CONVERR_1 candidates:** FIXED — `\sep` (sn-jnl keyword
+  separator, `\unskip, ` elsarticle convention; 2309.06763 1→0, commit 4294b53fc5).
+  RUST-ONLY deferred (medium): `\widthof` (2401.06320, class=article — used via enumitem
+  `\setlist[...]{labelwidth=\widthof{...}}` WITHOUT `\usepackage{calc}`; Rust's `\widthof`
+  lives in calc_sty so it's undefined when calc isn't loaded; Perl provides it — a
+  calc-loading-chain issue, who pulls calc, NOT a clean per-class fix). SHARED (user
+  error / shared gap): `\ioptwocol` (iopart — Perl's iopart binding ALSO lacks it,
+  surpass-Perl only), `\vspace` (2201.05271 — `\vspace{-20pt}` BEFORE `\documentclass`,
+  invalid in both), `\captionof` (IEEEtran — no caption pkg loaded, both undefined).
+
   **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
   packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
   `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
