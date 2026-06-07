@@ -5148,6 +5148,28 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   raw-loaded .sty/.cls) — NOT a safe unattended patch; deferred with this precise
   diagnosis. Witness: 2112.00489 (wlscirep + shipped jabbrv.sty).
 
+  **IMPLEMENTED + VALIDATED then REVERTED (2026-06-07) — needs a co-fix before
+  landing.** The one-line fix (`notex: raw_loaded` instead of `notex: true` in the
+  dep-scan package loop, `content.rs:2040`) was implemented and validated: full suite
+  **1359/0**, **0/22** previously-OK papers regressed (no OK→FAIL), and witness
+  2112.00489 now loads jabbrv.sty + both .ldf files and defines `\JournalTitle`,
+  reaching **exact Perl parity (Rust 95 = Perl 95)**. HOWEVER, on its *dominant target*
+  (the wlscirep+jabbrv `\JournalTitle` cluster) the fix's measured effect is to EXPOSE a
+  **SHARED downstream `jabbrv`-`\emph` issue** (47 `\emph` + 47 `\egroup` "close a group
+  switched to mode restricted_horizontal due to `\emph`" — byte-identical in Perl), so
+  error counts EXPLODE 1→~90 while still NOT producing a clean conversion. Sampled
+  2202.06999 (1→102), 2203.00456 (2→30), 2205.05249 (1→95), 2211.03054 (1→83) — all
+  parity-with-Perl, none clean. So the dep-scan fix alone is *faithful but not a net
+  win*: it trades a hidden-incomplete conversion (low error, `\JournalTitle` lost) for a
+  faithful-but-error-flagged one. To be a clean surpass-Perl win it must be PAIRED with
+  fixing the **shared `jabbrv`-`\emph` mode/group imbalance** (jabbrv hooks `\emph` for
+  journal-name abbreviation; the redefinition's restricted-horizontal group is left
+  unbalanced — both engines). Also still needs a BROAD shipped-package regression sweep
+  (validated on only the wlscirep+jabbrv cluster; other unbound-class+shipped-pkg combos
+  untested → residual Rust-only-regression risk). REVERTED to keep the tree + canvas
+  signal clean; both pieces recorded for a focused session. Witnesses for the
+  `jabbrv`-`\emph` SHARED follow-up: 2112.00489, 2202.06999, 2205.05249, 2211.03054.
+
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
 Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
