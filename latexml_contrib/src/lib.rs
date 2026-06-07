@@ -53,6 +53,7 @@ pub mod chngpage_sty;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
 pub mod cmcal_sty;
+pub mod colt2024_cls;
 pub mod commath_sty;
 pub mod crckapb_sty;
 pub mod currfile_sty;
@@ -272,6 +273,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chngpage", "sty", chngpage_sty::load_definitions),
   ("commath", "sty", commath_sty::load_definitions),
   ("crckapb", "sty", crckapb_sty::load_definitions),
+  ("colt2024", "cls", colt2024_cls::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),
   ("daj", "cls", daj_cls::load_definitions),
   ("dmtcs-episciences", "cls", dmtcs_episciences_cls::load_definitions),
