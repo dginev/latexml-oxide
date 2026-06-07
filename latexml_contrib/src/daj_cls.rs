@@ -11,11 +11,25 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("article");
+  // daj.cls does `\LoadClass{tocbase}`; we use article-base + a curated
+  // emulation of tocbase's `\RequirePackage` set (tocbase.cls), so daj papers
+  // get the packages tocbase would have loaded. Previously only ams*/hyperref
+  // were here, so tocbase's graphicx was missing → `\includegraphics` undefined
+  // (Perl raw-loads daj→tocbase→graphicx; witness 2208.01327, Discrete Analysis).
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
   RequirePackage!("amsfonts");
   RequirePackage!("hyperref");
+  // tocbase.cls core requires (the safe, commonly-used ones with bindings):
+  RequirePackage!("graphicx"); // \includegraphics — the witnessed gap
+  RequirePackage!("xcolor");
+  RequirePackage!("etoolbox");
+  RequirePackage!("eucal"); // math journal: \mathcal/\mathscr script font
+  RequirePackage!("mathptmx"); // tocbase's text/math font choice
+  RequirePackage!("microtype");
+  RequirePackage!("lastpage");
+  RequirePackage!("textcomp");
 
   // \dajdetails / \dajAUTHORdetails / \dajEDITORdetails — argument
   // is a comma-separated key=val list (publication details, ORCID,
