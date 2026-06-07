@@ -53,6 +53,8 @@ LoadDefinitions!({
   DefMacro!("\\received{}", "Received #1\\par");
   DefMacro!("\\revised{}", "Revised #1\\par");
   DefMacro!("\\accepted{}", "Accepted #1\\par");
+  // ws-*.cls: \def\published#1{Published~#1\par}. Witness 2411.01389 (ws-ijmpa).
+  DefMacro!("\\published{}", "Published~#1\\par");
   DefMacro!("\\comby{}", "Communicated by #1\\par");
   // \email / \http / \uurl — render contact info inline.
   DefMacro!("\\email{}", "\\textit{#1}\\par");

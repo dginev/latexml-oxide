@@ -20,6 +20,10 @@ LoadDefinitions!({
   // availability) with a bold title. Was undefined (Perl defines it). Render as the
   // faithful bold-title paragraph. The title is always given as the optional arg in
   // practice; default to "Acknowledgements". Witness 2309.14752.
+  // jfm.cls: \newcommand\pagerange[1]{\gdef\@pagerange{#1}} — stores the page range
+  // for the running head (no body output). Gobble (faithful: not rendered in body).
+  // Was undefined. Witness 2406.18711.
+  DefMacro!("\\pagerange{}", "");
   DefMacro!("\\backsectionname", "Acknowledgements");
   // Optional title arg (always supplied in practice, e.g. [Acknowledgements] /
   // [Declaration of interests] / [Data availability statement]); empty default.
