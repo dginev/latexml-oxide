@@ -5130,6 +5130,24 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   single-fix wins. Witnesses: 2110.07892 (Wiley/algorithm), 2203.14682 (sn-jnl/booktabs),
   2112.00489 (\JournalTitle, 49 papers — class metadata).
 
+  **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
+  packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
+  `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
+  fallback + dep-scans the `.cls` (reads but does NOT execute it). The dep-scan package
+  loop (`latexml_core/src/binding/content.rs:2035`) gates each `\RequirePackage` on
+  `find_file(pkg, type=sty, notex=true)` — i.e. **bindings-only**. So a class's
+  `\RequirePackage{jabbrv}` where `jabbrv.sty` is **shipped-only** (in the job dir, no
+  TL entry, no binding) is SILENTLY SKIPPED → `\JournalTitle` (defined in jabbrv.sty)
+  undefined. PROOF it's a dep-scan-path gap, not a raw-load failure: an explicit
+  `\usepackage{jabbrv}` raw-loads jabbrv.sty + its .ldf files cleanly and defines
+  `\JournalTitle`. Perl avoids the gap because it RAW-EXECUTES the unbound `.cls`, so
+  its `\RequirePackage{jabbrv}` actually runs. **FIX direction (focused session, full
+  regression):** relax the dep-scan `notex` gate to also raw-load shipped/raw-only
+  packages (compensating for not executing the .cls), OR raw-execute unbound classes.
+  CORE loading-mechanism change, broad blast radius (the dep-scan runs on every
+  raw-loaded .sty/.cls) — NOT a safe unattended patch; deferred with this precise
+  diagnosis. Witness: 2112.00489 (wlscirep + shipped jabbrv.sty).
+
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
 Built a fresh `--release` binary (all 8 session fixes) and scanned ~2500+
