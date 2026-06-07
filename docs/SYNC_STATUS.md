@@ -5168,7 +5168,12 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   (validated on only the wlscirep+jabbrv cluster; other unbound-class+shipped-pkg combos
   untested → residual Rust-only-regression risk). REVERTED to keep the tree + canvas
   signal clean; both pieces recorded for a focused session. Witnesses for the
-  `jabbrv`-`\emph` SHARED follow-up: 2112.00489, 2202.06999, 2205.05249, 2211.03054.
+  `jabbrv`-`\emph` SHARED follow-up: 2112.00489, 2202.06999, 2205.05249, 2211.03054. NOTE: jabbrv does NOT
+  redefine `\emph` globally (only `\jabbrv@`-prefixed diacritic helpers); a minimal
+  `\usepackage{jabbrv}` + `\emph{...}` doc is CLEAN. The `\emph` mode/group imbalance
+  is context-specific (jabbrv loaded + a specific construct in the author/affil block) and
+  SHARED — so the co-fix needs a real-paper repro, not a minimal one. Confirmed deep
+  (not minimally reproducible).
 
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
