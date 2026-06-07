@@ -127,6 +127,10 @@ jobs:
         if: matrix.tex == 'brew-texlive'
         run: cargo test --profile ci --tests --workspace --no-run
 
+      # --no-fail-fast: macOS is a new platform under test; surface EVERY
+      # failing test binary in one run rather than stopping at the first
+      # (each macOS round-trip is expensive). Drop back to fail-fast once
+      # the suite is green.
       - name: run tests
         if: matrix.tex == 'brew-texlive'
-        run: cargo test --profile ci --tests --workspace -- --test-threads=2
+        run: cargo test --profile ci --tests --workspace --no-fail-fast -- --test-threads=2
