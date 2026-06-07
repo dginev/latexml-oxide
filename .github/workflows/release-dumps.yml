@@ -51,6 +51,13 @@ jobs:
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
       RUST_BACKTRACE: "1"
+      # kpathsea 0.3 refuses to build with no TeX backend visible (neither
+      # libkpathsea nor a `kpsewhich` on PATH) unless this is set. That is
+      # exactly the build-dumper case: build here (TeX-free runner) and
+      # deploy into TL containers that supply `kpsewhich` at RUNTIME. The
+      # resulting binary is kpathsea-UNLINKED (asserted below). Without it
+      # the build fails with "kpathsea: no usable TeX backend".
+      KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
     steps:
       - uses: actions/checkout@v6
       # libxml2/libxslt + mold — deliberately NO libkpathsea-dev (see header).
