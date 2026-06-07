@@ -84,7 +84,10 @@ jobs:
       - name: verify dump window completeness
         run: |
           ls -la resources/dumps/
-          for year in 2022 2023 2024 2025 2026; do
+          # 2026 is temporarily out of the window: no usable TL2026 container
+          # exists yet (see release-dumps.yml — tkw1536:2026 / PR #1 pending).
+          # TL2026 hosts fall back to the most-recent embedded dump at runtime.
+          for year in 2022 2023 2024 2025; do
             for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
               if [ ! -s "resources/dumps/$f" ]; then
                 echo "::error::release dump window incomplete: missing resources/dumps/$f"

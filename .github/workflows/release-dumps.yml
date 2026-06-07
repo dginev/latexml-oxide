@@ -108,10 +108,16 @@ jobs:
             image: ghcr.io/tkw1536/texlive-docker:2024
           - year: 2025
             image: ghcr.io/tkw1536/texlive-docker:2025
-          # TODO(#217): switch to ghcr.io/tkw1536/texlive-docker:2026 once
-          # tkw1536/historic-texlive-docker#1 is merged and published.
-          - year: 2026
-            image: registry.gitlab.com/islandoftex/images/texlive:latest
+          # TODO(#217): re-add 2026 once ghcr.io/tkw1536/texlive-docker:2026
+          # is published (tkw1536/historic-texlive-docker#1, still OPEN). The
+          # islandoftex `latest` image is NOT a usable interim: it is Debian
+          # testing (libxml2 2.15 → soname libxml2.so.16, apt pkg `libxml2-16`),
+          # so the dumper binary — built on ubuntu-22.04 against libxml2.so.2 —
+          # cannot run there at all (the apt-get even lacks a `libxml2`
+          # candidate). The whole single-binary-serves-all-containers design
+          # relies on the tkw1536 family sharing one (bookworm/.so.2) base.
+          # Until then the window is 2022–2025; a TL2026 host falls back to the
+          # most-recent embedded dump (2025) at runtime.
     container:
       image: ${{ matrix.image }}
       options: --entrypoint ""
