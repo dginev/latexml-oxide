@@ -152,7 +152,7 @@ search_artifact "libexslt library" "libexslt.*"
 if command -v brew >/dev/null 2>&1; then
   if brew list libxslt >/dev/null 2>&1; then
     note "brew libxslt keg: $(brew --prefix libxslt 2>/dev/null)"
-    note "keg-only: $(brew info --json=v2 libxslt 2>/dev/null | grep -o '"keg_only":[a-z]*' | head -1)"
+    note "keg-only: $(brew info --json=v2 libxslt 2>/dev/null | grep -o '"keg_only": *[a-z]*' | head -1)"
   fi
 fi
 
@@ -187,6 +187,9 @@ if [ "${PROBE_SKIP_BUILD:-0}" = "1" ]; then
   record "builds: skipped"
 else
   section "8. Build attempts (crate-by-crate native-binding attribution)"
+  # ANSI-free build logs — report files must be grep-able (the same
+  # lesson as CLAUDE.md "Canvas signal integrity").
+  export CARGO_TERM_COLOR=never
   # Extend PKG_CONFIG_PATH with every directory holding a discovered
   # kpathsea.pc, so a TL-tree-shipped .pc gets a chance even when the
   # distribution didn't register it. Report the extension explicitly:
@@ -207,7 +210,7 @@ else
   build_one() { # package name
     local pkg="$1"
     printf '  cargo build -p %s ... ' "$pkg"
-    if cargo build --locked -p "$pkg" >"$BUILD_LOG" 2>&1; then
+    if cargo build -p "$pkg" >"$BUILD_LOG" 2>&1; then
       printf 'OK\n'
       record "build $pkg: OK"
     else
@@ -225,7 +228,7 @@ else
 
   note ""
   note "workspace build (--profile $PROBE_PROFILE) ..."
-  if cargo build --locked --profile "$PROBE_PROFILE" --workspace >"$BUILD_LOG" 2>&1; then
+  if cargo build --profile "$PROBE_PROFILE" --workspace >"$BUILD_LOG" 2>&1; then
     note "workspace build: OK"
     record "workspace build ($PROBE_PROFILE): OK"
   else
@@ -239,7 +242,7 @@ else
   # -------------------------------------------------------------------------
   section "9. Smoke runs (only meaningful if the workspace built)"
   if [ "$WORKSPACE_BUILD_FAILED" -eq 0 ]; then
-    if cargo run --locked --profile "$PROBE_PROFILE" --bin latexmlmath_oxide -- '1+1=2' >"$BUILD_LOG" 2>&1; then
+    if cargo run --profile "$PROBE_PROFILE" --bin latexmlmath_oxide -- '1+1=2' >"$BUILD_LOG" 2>&1; then
       note "latexmlmath '1+1=2': OK"
       record "smoke latexmlmath: OK"
     else
@@ -248,7 +251,7 @@ else
       tail -40 "$BUILD_LOG" | sed 's/^/    /'
     fi
     SMOKE_DEST="$(mktemp -d)/hello.xml"
-    if cargo run --locked --profile "$PROBE_PROFILE" --bin latexml_oxide -- \
+    if cargo run --profile "$PROBE_PROFILE" --bin latexml_oxide -- \
         latexml_oxide/tests/hello/hello.tex --destination="$SMOKE_DEST" >"$BUILD_LOG" 2>&1; then
       note "hello.tex conversion: OK ($SMOKE_DEST)"
       record "smoke hello.tex: OK"

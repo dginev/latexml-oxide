@@ -77,7 +77,7 @@ jobs:
 
       - name: upload probe report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: probe-report-${{ matrix.tex }}
           path: probe-report-*.txt
