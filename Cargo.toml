@@ -27,14 +27,6 @@ resolver = "2"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
-# kpathsea 0.3 (subprocess-kpsewhich fallback for hosts without
-# libkpathsea, e.g. MacTeX — issue #217 and
-# docs/PORTABILITY_MACOS_PROBE_2026-06-07.md) is consumed from its git
-# branch until published to crates.io. Drop this patch (and `cargo
-# update -p kpathsea`) once 0.3.0 / kpathsea_sys 0.2.0 are released.
-[patch.crates-io]
-kpathsea = { git = "https://github.com/dginev/rust-kpathsea", branch = "subprocess-fallback" }
-
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries

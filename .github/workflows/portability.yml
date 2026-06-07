@@ -1,4 +1,4 @@
-# Portability — macOS build + smoke gate (issue #217,
+# Portability — macOS build + smoke + full-test gate (issue #217,
 # docs/RELEASE_CRITERIA.md §3 stage 4).
 #
 # Started as the Phase 0 fact-finding probe (2026-06-07); promoted to a
@@ -10,10 +10,17 @@
 #                  a typical Mac TeX user has). MacTeX ships NO
 #                  libkpathsea (probe-verified), so this leg exercises
 #                  the kpathsea 0.3 subprocess-`kpsewhich` fallback
-#                  end-to-end.
+#                  end-to-end. Build + smoke only — BasicTeX lacks the
+#                  package set the full integration suite needs.
 #   brew-texlive — Homebrew's texlive formula (built from TL source,
 #                  ships libkpathsea + kpathsea.pc) — exercises the
-#                  in-process linked backend.
+#                  in-process linked backend AND runs the full
+#                  `cargo test --tests --workspace` suite (mirrors
+#                  CI.yml), because it ships a complete TeX tree. The
+#                  suite passes on Linux against TL2023 (ubuntu-latest)
+#                  through TL2025 (dev box), so brew's current TL is
+#                  expected to pass too; remaining diffs are triaged as
+#                  macOS-platform vs TeX-Live-version skew.
 #
 # Each leg uploads its full probe report as an artifact. Findings doc:
 # docs/PORTABILITY_MACOS_PROBE_2026-06-07.md.
@@ -34,7 +41,10 @@ jobs:
   macos-probe:
     name: macOS probe (${{ matrix.tex }})
     runs-on: macos-15
-    timeout-minutes: 120
+    # brew-texlive now also builds + runs the full integration suite on a
+    # 3 vCPU / 7 GB runner; give it headroom (basictex still finishes in
+    # ~15 min — the per-leg timeout is shared but only one leg runs long).
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -42,7 +52,9 @@ jobs:
     env:
       # macos arm64 runners: 3 vCPU / 7 GB RAM — tighter than the
       # 16 GB Linux runner, so reuse the RAM-tuned `ci` profile and
-      # the conservative jobs=2 from CI.yml. No mold (Linux-only).
+      # the conservative jobs=2 from CI.yml. No mold (Linux-only:
+      # .cargo/config.toml gates -fuse-ld=mold to x86_64-linux, so the
+      # aarch64-darwin link uses the system linker untouched).
       CARGO_BUILD_JOBS: "2"
       CARGO_INCREMENTAL: "0"
       CARGO_NET_GIT_FETCH_WITH_CLI: "true"
@@ -54,6 +66,14 @@ jobs:
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
           brew install libxml2 libxslt
+
+      # Keg-only Homebrew libs need their pkgconfig dirs surfaced for
+      # every cargo step below (probe, make_formats, test build). Export
+      # once into the job env. Whatever we add here is exactly what the
+      # README's macOS instructions document.
+      - name: surface keg-only pkg-config paths
+        run: |
+          echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
 
       - name: install TeX (BasicTeX cask)
         if: matrix.tex == 'basictex'
@@ -74,10 +94,6 @@ jobs:
       - name: portability probe
         run: |
           set -o pipefail
-          # Keg-only Homebrew libs need their pkgconfig dirs surfaced.
-          # Whatever we have to add here is exactly what the README's
-          # macOS instructions will need to document.
-          export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
           echo "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"
           tools/portability_probe.sh 2>&1 | tee probe-report-${{ matrix.tex }}.txt
 
@@ -88,3 +104,29 @@ jobs:
           name: probe-report-${{ matrix.tex }}
           path: probe-report-*.txt
           if-no-files-found: ignore
+
+      # ---- Full integration suite (brew-texlive only) ----------------
+      # brew's texlive ships a complete TeX tree, so the same suite that
+      # gates Linux CI can run here. BasicTeX is skipped (missing
+      # packages). This is the "CI passing all tests on macOS" gate.
+
+      # Mirror CI.yml's `make formats`: generate the ambient-TL-year
+      # kernel dump on disk (resources/dumps/ is empty on a fresh
+      # checkout now that dumps aren't committed). PROFILE=ci so the
+      # dumper binary shares the test profile's warm target dir.
+      - name: make formats
+        if: matrix.tex == 'brew-texlive'
+        env:
+          PROFILE: ci
+        run: tools/make_formats.sh
+
+      # Split build from run (as CI.yml does) so the rustc/linker RSS
+      # peak completes and is reclaimed before test workers spin up —
+      # important on the 7 GB runner.
+      - name: build test binaries
+        if: matrix.tex == 'brew-texlive'
+        run: cargo test --profile ci --tests --workspace --no-run
+
+      - name: run tests
+        if: matrix.tex == 'brew-texlive'
+        run: cargo test --profile ci --tests --workspace -- --test-threads=2

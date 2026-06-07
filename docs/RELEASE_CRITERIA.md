@@ -60,10 +60,13 @@ smoke corpus + size gate + dependency check:
    builds + converts on `macos-15` arm64 with `brew install texlive
    libxml2 libxslt` (probe workflow, brew-texlive leg green). MacTeX
    ships NO libkpathsea (nothing to find — the old "find MacTeX headers"
-   framing was moot); covered instead by kpathsea 0.3's
-   subprocess-`kpsewhich` fallback (rust-kpathsea `subprocess-fallback`
-   branch; Perl-parity ls-R cache). Remaining: crates.io release +
-   README install matrix + promote the probe to a gating CI job.
+   framing was moot); covered instead by **kpathsea 0.3.0 (crates.io,
+   released 2026-06-07)** subprocess-`kpsewhich` fallback (Perl-parity
+   ls-R cache w/ ambiguous-basename eviction). crates.io release + dep
+   swap **done**; README install matrix **done**; probe **promoted to a
+   gating CI job**, and the brew-texlive leg now runs the full
+   `cargo test --tests --workspace` suite. Remaining: drive that full
+   macOS suite to green.
 5. Windows / musl — deferred. Known blockers: `libmarpa-sys`
    `./configure && make` (needs a cc-crate port; tarball is vendored),
    `lsp_server` unix sockets, `graphics*.rs` cfg(unix) paths,

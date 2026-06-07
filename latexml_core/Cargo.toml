@@ -42,8 +42,6 @@ libxml = "0.3.12"
 # 0.3: backend-dispatched — in-process libkpathsea when linked at build
 # time, subprocess-kpsewhich fallback otherwise (MacTeX ships no
 # libkpathsea at all; see docs/PORTABILITY_MACOS_PROBE_2026-06-07.md).
-# Resolved from git via the workspace [patch.crates-io] until 0.3 is
-# published to crates.io.
 kpathsea = "0.3"
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"

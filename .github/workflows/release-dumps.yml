@@ -53,12 +53,17 @@ jobs:
       RUST_BACKTRACE: "1"
     steps:
       - uses: actions/checkout@v6
-      # libxml2/libxslt only — deliberately NO libkpathsea-dev (see header).
+      # libxml2/libxslt + mold — deliberately NO libkpathsea-dev (see header).
+      # `mold` is required because the checked-in `.cargo/config.toml` passes
+      # `-Clink-arg=-fuse-ld=mold` for the x86_64-linux target, and this job
+      # (unlike CI.yml) sets no overriding RUSTFLAGS env. Without it the link
+      # fails with `collect2: fatal error: cannot find 'ld'`. This mirrors
+      # the proven release.yml apt set (0.6.1 built this way on 22.04).
       - name: install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libxml2-dev libxslt1-dev
+            libxml2-dev libxslt1-dev mold
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
         with:

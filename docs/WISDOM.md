@@ -1896,3 +1896,30 @@ build.rs regenerates real bindings per-platform, so it does not bite.
 `kpathsea_sys` bindings: statics-free in the referenced surface.
 When adding any new `-sys`-style dependency, grep its bindings for
 `link_name = "\u{1}` + `static` before assuming portability.
+
+## #57 Validate resolver changes by byte-comparing format dumps across backends — ls-R order cannot emulate kpathsea ranking
+
+**Context (2026-06-07, release-dumps work):** kpathsea 0.3's
+subprocess backend fronts `kpsewhich` with an `ls-R` basename cache.
+Generating `latex.ltx` dumps with the linked vs subprocess backends on
+identical code and diffing them exposed a silent resolution divergence
+no test had caught: the subprocess dump was 756 entries smaller and
+its text encoding was **IL2 (Czech)** — the cache had resolved
+`fonttext.cfg` to `tex/cslatex/base/` instead of `tex/latex/base/`.
+
+**The general lesson:** TL ships duplicate basenames whose winner is
+decided by kpathsea's *path-spec ranking*, which raw `ls-R` order
+cannot reproduce with ANY single-pass tie-break — first-wins picks
+csLaTeX's `fonttext.cfg` (cslatex < latex alphabetically); Perl's
+last-wins picks antomega's `hyphen.cfg` (lambda > generic). The
+correct cache design **evicts ambiguous basenames** and lets them
+fall through to a direct (memoized) `kpsewhich` call.
+
+**The method:** a format dump is a deterministic, high-coverage
+witness of every file resolution the kernel load makes — the embedded
+`__file_seen_*` markers are a literal file-load ledger, and CS-name
+diffs localize the divergence (font-shape names flagged the encoding
+swap immediately). Byte-compare dumps across backends (expect identity
+modulo the `texsys.aux_contents` timestamp record) before trusting any
+file-resolution change. Upstream regression test:
+rust-kpathsea `lsr_cache_agrees_with_cli_on_shadowed_basenames`.
