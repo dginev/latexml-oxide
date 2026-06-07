@@ -5195,6 +5195,21 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   — UNBOUND class, \linkable in cls body; a class binding would lose the dep-scan, needs
   care). SHARED: `\orcidID` (svmult), `\subsubsubsection` (article — both undefined).
 
+  **Batch 8 (2026-06-07) — clean per-class vein harvested; remaining are DEEP, deferred:**
+  `\emails`/`\affiliations` (kr.sty, KR conference, ~9 papers) — defined LOCALLY inside
+  kr's `\maketitle` `\vbox` as formatting switches (`\author{Name\affiliations Affil
+  \emails Email}`); kr.sty raw-loads fine (647 warns) but LaTeXML extracts author metadata
+  OUTSIDE that title-group scope → the local `\def`s aren't in scope → undefined. Deep
+  (LaTeXML author-model vs switch-based author block). `\RSsectxt`/`\RS@ifundefined`
+  (Royal Society style, ~4 papers) — paper preamble.sty uses RS internals from an RS
+  class/style of unclear provenance; murky. `{forest}` (~23 papers) — DELIBERATE
+  non-implementation stub (forest_sty.rs blocks raw-load; pgf/tikz tree rendering is deep;
+  Perl raw-loads it). All deferred — need focused deep work, not the per-class method.
+  **Conclusion: the clean RUST-ONLY per-class binding-gap wins are harvested (batches 2-8:
+  ~16 commands fixed across daj/colt2024/ieeeoj/sn-jnl/autart/ws-journal/icml/cas-dc/jfm/
+  lipics/jabbrv); the remaining undefined long-tail is deep (author-model/pgf/murky) or
+  tiny (1-2 papers) — diminishing returns in this session, documented for fresh focus.**
+
   **✅ RESOLVED 2026-06-07 (commit 4e63c5f891) — jabbrv STUB BINDING, ~42 papers,
   surpass-Perl.** The clean fix turned out NOT to need the dep-scan core change OR the
   deep jabbrv-`\emph` loading-path work: a Rust STUB BINDING for jabbrv (`jabbrv_sty.rs`:
