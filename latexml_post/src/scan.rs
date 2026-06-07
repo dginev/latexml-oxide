@@ -582,6 +582,14 @@ impl Scan {
     let exists = self.db.lookup(&key).is_some();
     if !exists {
       let mut props = vec![];
+      // Perl registers `phrases => [@phrases]` — the ltx:indexphrase
+      // NODES — so MakeIndex can key the tree off their `key`
+      // attributes and re-render the phrases with their markup
+      // (math inside an index phrase survives into the index).
+      props.push((
+        "phrases",
+        Value::List(phrases.iter().map(|n| Value::from(n.clone())).collect()),
+      ));
       if let Some(il) = inlist {
         props.push(("inlist", il));
       }
@@ -590,10 +598,10 @@ impl Scan {
 
     if !see_also.is_empty() {
       if let Some(entry) = self.db.lookup_mut(&key) {
-        let nodes: Vec<Value> = see_also
-          .iter()
-          .map(|n| Value::from(n.get_content()))
-          .collect();
+        // Store the ltx:indexsee NODES (not their flattened text):
+        // MakeIndex needs the `name` attribute ("see"/"see also") and
+        // the phrase's inline markup to render the cross-reference.
+        let nodes: Vec<Value> = see_also.iter().map(|n| Value::from(n.clone())).collect();
         entry.push_new("see_also", nodes);
       }
     } else if let Some(pid) = parent_id {
