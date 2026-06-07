@@ -5130,6 +5130,25 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   single-fix wins. Witnesses: 2110.07892 (Wiley/algorithm), 2203.14682 (sn-jnl/booktabs),
   2112.00489 (\JournalTitle, 49 papers — class metadata).
 
+  **Batch per-class triage (2026-06-07), 5 more undefined sub-clusters Rust-vs-Perl:**
+  * **FIXED — `\includegraphics` via daj** (`5a90ac4415`): daj_cls.rs stub used
+    article-base + ams/hyperref only, but real daj `\LoadClass{tocbase}` and tocbase
+    `\RequirePackage{graphicx,...}`. Completed the stub with tocbase's core requires;
+    2208.01327 1→0, daj witnesses 2305.10828/2305.11062 still 0, suite 1359/0.
+  * **RUST-ONLY, deferred (medium):** `\affil` (IEEEoj, 2203.03906) — `IEEEoj` is
+    dispatched to `ieeeaerospace_cls` (lib.rs:426), which LoadClass IEEEtran but omits
+    authblk (→ `\affil`); sibling `ieeeojcsys_cls` DOES load authblk. Fix needs a proper
+    separate IEEEoj binding OR careful authblk add (risk: authblk `\author` vs IEEEtran
+    author style for the SHARED IEEEAerospace papers — needs 2408.05924/2408.06274/1610.07252
+    regression check). `\coltauthor` (colt2024, 2308.08218) — colt2024.cls `\LoadClass{jmlr}`
+    and defines `\coltauthor` in its BODY; unbound class → OmniBus fallback doesn't execute
+    the .cls body → undefined (the class-body-not-executed face of the dep-scan gap). Needs a
+    colt2024 stub or the raw-execute-unbound-class fix.
+  * **RUST-ONLY, deep:** `{forest}` (IEEEtran, 2210.00379) — forest.sty IS in TL but its
+    raw-load fails (large pgf/tikz-based package); Perl handles it. Deep raw-load robustness.
+  * **SHARED (not Rust-only):** `{NiceTabular}` (nicematrix not loaded, 2212.09528 1/1),
+    `\setboolean` (2310.11437 1/1) — both byte-identical Perl/Rust.
+
   **★ PRECISE general root cause isolated (2026-06-07) — dep-scan skips shipped-only
   packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
   `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
