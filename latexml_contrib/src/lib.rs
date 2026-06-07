@@ -162,6 +162,7 @@ pub mod ieeeaccess_cls;
 pub mod ieeeaerospace_cls;
 pub mod interspeech_cls;
 pub mod ieeecolor_cls;
+pub mod ieeeoj_cls;
 pub mod ieeeojcsys_cls;
 pub mod ifacconf_cls;
 pub mod ieeetaes_cls;
@@ -425,7 +426,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
   ("IEEEapm", "cls", ieeeaerospace_cls::load_definitions),
-  ("IEEEoj", "cls", ieeeaerospace_cls::load_definitions),
+  ("IEEEoj", "cls", ieeeoj_cls::load_definitions),
   ("IEEEtai", "cls", ieeeaerospace_cls::load_definitions),
   ("IEEEojcsys", "cls", ieeeojcsys_cls::load_definitions),
   // ifacconf: intentionally unregistered — raw-load the paper-supplied
