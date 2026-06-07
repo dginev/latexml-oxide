@@ -91,6 +91,11 @@ LoadDefinitions!({
   // it fires inside the author-name digestion and is dropped. Was undefined →
   // error (Perl defines it). Witness 2211.09693.
   DefMacro!("\\orcid{}", "\\href{https://orcid.org/#1}{#1}");
+  // \sep — elsarticle-family keyword separator (`\def\sep{\unskip, }`). sn-jnl
+  // papers use it in keyword lists (`kw1 \sep kw2 \sep ...`); the sn-jnl cls
+  // doesn't define it but Perl provides it (elsarticle convention). Render as a
+  // comma separator. Was undefined → error. Witness 2309.06763.
+  DefMacro!("\\sep", "\\unskip, ");
   // Name part helpers (first-name, surname) — emit inline.
   DefMacro!("\\fnm{}", "#1");
   DefMacro!("\\sur{}", "#1");
