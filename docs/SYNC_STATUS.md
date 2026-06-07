@@ -5055,7 +5055,8 @@ Third/final batch of the large-scale canvas (rows 1,000,001–1,551,849 of
 `all_warnings.txt`) completed: **545,522/551,849 OK = 98.85%** (CONVERR 1.03%,
 FATAL 0.087%, TIMEOUT 0.024%, OOM 0.003%). The raw error rate massively
 *overcounts* Rust regressions — shared-with-Perl dominates (mdwmath ~1,080
-papers, eccv/lineno conditional ~thousands, most `_`/`^`); true Rust-only rate is
+papers, eccv/lineno conditional ~thousands [**now FIXED 2026-06-07** via the
+parameterless-`alignat` fix — surpasses Perl], most `_`/`^`); true Rust-only rate is
 far below 1%. Triage in `~/data/large_scale_canvas_3_third/{TARGET_SET,PROGRESS}.md`.
 
 **Rust Error Fixes (this batch):**
@@ -5070,11 +5071,21 @@ far below 1%. Triage in `~/data/large_scale_canvas_3_third/{TARGET_SET,PROGRESS}
   already mutably borrowed" (hep-th9908053, `\documentstyle` 2.09): reachable from
   a Whatsit Display/revert (`tex_glue::revert_skip`) while `state_mut()` held.
   Degrade to None (all 83 callers default the font).
+- **eccv/lineno `\else`/`\fi` cluster (2026-06-07, surpass-Perl)** — the **#1
+  conditional-error driver** in the ECCV-2024 population (~47 papers/10k). Root: the
+  `alignat` env-family was arg-taking (`\alignat{}`…), so eccv's
+  `\linenomathpatchAMS{alignat}` → etoolbox `\cspreto` → `\expandonce\alignat`
+  grabbed the brace and leaked `\ifmmode…\else…\fi`. Fixed by making the 5
+  arg-taking variants parameterless-via-indirection in `amsmath_sty.rs`, matching
+  real amsmath. SHARED with Perl (faithful port of the bug); Rust now surpasses.
+  Witnesses 2310.18293 (4→0), 2309.17074, 2310.00161. Detail in the canvas-cluster
+  list above + KNOWN_PERL_ERRORS.md.
 
 **Recorded, not fixed:** 2205.03260 SIGABRT — runaway shipping 36,545 pages
 (45MB) → OOM-abort under canvas 6GB ulimit; 1 paper, deferred (Perl-compare
-needed). eccv/lineno + mdwmath = SHARED, hard, in SHARED-FAILURE log. Algorithmic
-`\While`/`\If` verified NOT Rust-only (both engines clean in isolation).
+needed). mdwmath = SHARED, hard, in SHARED-FAILURE log (eccv/lineno now FIXED, see
+above). Algorithmic `\While`/`\If` verified NOT Rust-only (both engines clean in
+isolation).
 
 `cargo test --tests` after fixes: **1359/0/0**.
 
@@ -7180,35 +7191,36 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   `\mathchar"<hex>`. Broad-ish blast radius (all mathchardef symbols) → gate on full suite +
   verify \sqrt renders + sample mdwmath papers. Full analysis in
   ~/data/large_scale_canvas_3_third/PROGRESS.md.
-* **`eccv.sty` lineno-patch `\else`/`\fi` "not in a conditional"** (canvas-3 third
-  batch, 2026-06-05) — **#1 error driver in the late-2023 (ECCV-2024) population**:
-  ~47 papers/10k and rising; 47 of 53 conditional-error papers in stage 20 are
-  eccv. **Verified SHARED** — Perl emits the byte-identical 4 errors at `eccv.sty
-  line 191` (witness 2310.18293, both engines CONVERR_4). Output is fine
-  (line-numbering is cosmetic); errors are noise.
-  **Root cause — HARD to trace, deferred (investigated 2026-06-05).** Errors fire
-  at eccv.sty line 191 = the `\linenomathpatchAMS{gather/align/alignat/...}` calls,
-  which run `\cspreto{align}{\linenomathAMS}` → etoolbox `\preto` → `\ifdefmacro`.
-  etoolbox's `\ifdefmacro` (the `\detokenize{macro}:`-on-`\meaning` trick,
-  `etoolbox_sty.rs` L146-152) mis-handles LaTeXML **primitive** amsmath env macros
-  (`\align`/`\gather`, whose `\meaning` is not `macro:…`), and the
-  `\else`/`\fi` of that machinery leak. The initial "just define lineno
-  `\linenomath*`" hypothesis was **DISPROVEN**: `\ifx\linenomath\linenomathWithnumbers`
-  takes the else-branch cleanly in isolation, and a minimal `\cspreto{align}{\relax}`
-  does NOT reproduce — the failure is an emergent full-eccv lineno+amsmath+etoolbox
-  interaction. A correct fix means hardening the 1795-line RawTeX `etoolbox.sty.ltxml`
-  `\ifdefmacro`/`\preto` path against non-macro (primitive) targets — HIGH
-  difficulty, broad blast radius. **Future-work surpass-Perl target**, not attempted.
-  Witnesses: 2310.18293, 2309.17074, 2309.17389, 2310.00161, 2310.00615, 2310.02296
-  (62 collected in stages 19–20).
-  **SMOKING GUN (2026-06-06):** config-specific — reproduces ONLY under `cortex_worker --standalone`
-  (INCLUDE_STYLES raw-loads real `lineno.sty`), NOT in `latexml_oxide` (uses the `lineno_sty.rs`
-  BINDING) — both base & HEAD give 0 eccv conditional errors in latexml_oxide; cortex_worker gives 4.
-  Root: raw-loading lineno + eccv's `\linenomathpatchAMS` (etoolbox `\cspreto`→`\ifdefmacro` on
-  amsmath env primitives) leaks `\else`/`\fi`. The binding sidesteps it. SHARED w/ Perl (raw-load).
-  FIX is a binding-vs-raw-load policy call (robust lineno/eccv raw-load OR let the lineno binding win)
-  — touches INCLUDE_STYLES philosophy; needs a focused config session + dev cortex_worker. NOT a safe
-  unilateral unattended change. Error site: conditional.rs:388/429.
+* **✅ FIXED 2026-06-07 — `eccv.sty` lineno-patch `\else`/`\fi` "not in a conditional"**
+  (canvas-3 third batch) — was **#1 error driver in the late-2023 (ECCV-2024)
+  population** (~47 papers/10k; 47 of 53 conditional-error papers in stage 20 were
+  eccv). **Verified SHARED** with Perl (`latexml --includestyles`, byte-identical 4
+  errors at eccv.sty line 191) — now **surpassed in Rust**.
+  **TRUE ROOT CAUSE (the earlier `\ifdefmacro`/primitive-meaning hypothesis below was
+  WRONG):** LaTeXML defines the `alignat`-family env-start macros **arg-taking**
+  (`\alignat{}`, `\alignat*`, `\xalignat`, `\xalignat*`, `\xxalignat`), faithfully
+  porting Perl `amsmath.sty.ltxml` L514-545. **Real amsmath's `\alignat` is
+  PARAMETERLESS** (`\start@align\z@\st@rredfalse`; `\start@align` reads the count
+  later). eccv's `\linenomathpatchAMS{alignat}` runs `\cspreto{alignat}{\linenomathAMS}`
+  + `\cspreto{alignat*}{…}`; etoolbox's `\preto`/`\cspreto` re-`\edef`s the target with
+  `\unexpanded\expandafter{\alignat}` (= `\expandonce`), forcing ONE expansion. For an
+  arg-taking macro that grabs the group's closing `}` as `#1`, collapsing the
+  `\unexpanded` braces → the body's `\ifmmode…\else…\fi` escapes as bare `\else`+`\fi`
+  (2 errors per `\cspreto` → 4 total). `align`/`gather`/`multline`/`flalign` are
+  parameterless → always clean. Isolation proof: `\linenomathpatchAMS{X}` errors
+  ONLY for `X=alignat`.
+  **FIX:** `amsmath_sty.rs` now mirrors amsmath's parameterless structure via
+  indirection — `\alignat` (parameterless) → `\lx@alignat@col{}` (arg-reader), so
+  `\expandonce\alignat` is a single token (no brace-grab, no premature conditional).
+  Applied to all 5 arg-taking variants. Witnesses 2310.18293 (4→0), 2309.17074,
+  2310.00161 all error-free; normal `\begin{alignat}{2}` rendering unchanged
+  (3 align/4 rows/27 cells verified); full suite 1359/0. Doc: KNOWN_PERL_ERRORS.md
+  "`\alignat` family arg-taking breaks etoolbox `\preto`/`\cspreto`".
+  *(Method note: the 4-layer "deep/cortex-only/binding-policy" framing during
+  2026-06-05/06 triage was a red herring — the leak is config-independent at the
+  amsmath level; latexml_oxide merely hid it because the `lineno_sty.rs` binding
+  stubs `\linenomathAMS`→`\@empty`, so `\cspreto{alignat}{\@empty}` never reaches
+  the arg-grab. Ground-truth `\meaning` comparison cracked it in one focused pass.)*
 
 ---
 

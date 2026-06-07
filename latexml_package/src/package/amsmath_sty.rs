@@ -978,9 +978,20 @@ LoadDefinitions!({
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
 
-  // alignat — same as align (ignores number-of-pairs arg)
+  // alignat — same as align (ignores number-of-pairs arg).
+  // PARAMETERLESS wrapper -> arg-reading helper. etoolbox's \preto/\cspreto
+  // (used by lineno/eccv: `\cspreto{alignat}{\linenomathAMS}`) does
+  // `\unexpanded\expandafter{\alignat}`, which forces ONE expansion of \alignat.
+  // If \alignat takes #1, that expansion mis-grabs the group's closing `}`,
+  // collapsing the \unexpanded braces and letting the body's \ifmmode..\else..\fi
+  // leak as bare \else/\fi. Real amsmath's \alignat is parameterless
+  // (\start@align reads the count later), which is why eccv works there. We
+  // mirror that structure: parameterless \alignat -> \lx@alignat@col, with the
+  // count read by the helper. Surpasses a shared Perl bug (Perl defines
+  // `\alignat{}` arg-taking too) — see docs/KNOWN_PERL_ERRORS.md.
+  DefMacro!("\\alignat", "\\lx@alignat@col");
   DefMacro!(
-    "\\alignat{}",
+    "\\lx@alignat@col{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
@@ -990,8 +1001,9 @@ LoadDefinitions!({
     "\\endalignat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
+  DefMacro!("\\csname alignat*\\endcsname", "\\lx@alignatStar@col");
   DefMacro!(
-    "\\csname alignat*\\endcsname{}",
+    "\\lx@alignatStar@col{}",
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
@@ -1003,8 +1015,10 @@ LoadDefinitions!({
   );
 
   // xalignat — like alignat but full-width (Perl L530-545)
+  // xalignat — parameterless wrapper -> arg-reading helper (see \alignat note)
+  DefMacro!("\\xalignat", "\\lx@xalignat@col");
   DefMacro!(
-    "\\xalignat{}",
+    "\\lx@xalignat@col{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
@@ -1014,8 +1028,9 @@ LoadDefinitions!({
     "\\endxalignat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
+  DefMacro!("\\csname xalignat*\\endcsname", "\\lx@xalignatStar@col");
   DefMacro!(
-    "\\csname xalignat*\\endcsname{}",
+    "\\lx@xalignatStar@col{}",
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
@@ -1026,9 +1041,11 @@ LoadDefinitions!({
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
 
-  // xxalignat — like xalignat (Perl L547-551)
+  // xxalignat — like xalignat (Perl L547-551).
+  // Parameterless wrapper -> arg-reading helper (see \alignat note).
+  DefMacro!("\\xxalignat", "\\lx@xxalignat@col");
   DefMacro!(
-    "\\xxalignat{}",
+    "\\lx@xxalignat@col{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
