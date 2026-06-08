@@ -209,7 +209,18 @@
 >      `|v(x)|≤|v(x')|` is 4 parses (prior ambiguity work; no longer the doc's old 48-58).
 >    - **Remaining `expected:id` are NON-VERTBAR** (a separate XMDual-dangling cluster): subequations
 >      `…m1.1a/1b` (2207.08945, 2311.01600), algorithm math (2306.04445 `alg2.m13`), examples
->      (2307.02913 `Ex17`) — none load/use a bra-ket. Likely the same id-sharing family; future work.
+>      (2307.02913 `Ex17`) — none load/use a bra-ket.
+>      **DIAGNOSED 2026-06-08, DEFERRED (deep, high-risk).** The `…m1.Na`/`…m1.Nb` letter suffixes are
+>      ID-COLLISION disambiguation (`Document::modify_id` → `radix_alpha`): two math sub-nodes both
+>      claim base id `…m1.N`, so they get `…m1.Na`/`…m1.Nb`. The dangle is a content XMRef whose
+>      `idref` (e.g. `A1.E66.m1.1a`, inside `<XMApp><XMTok meaning="probability"/><XMRef …/></XMApp>`
+>      — a custom `\Pr`/function-macro XMDual) PREDICTS a suffixed id the target node never actually
+>      receives → `Cannot find a node`. Root: the dual id-PREDICTION (base_xmath `\lx@dual`
+>      afterConstruct / resolve path) does not track the collision-suffixing of the ACTUAL assignment.
+>      This is the historical expected:id-cascade class ([[project_xmref_dangling_split]]); a fix
+>      touches core math id-generation (every `|`-/XMDual-bearing doc) — needs a focused session with
+>      a collision-prediction reconciliation design, not an ad-hoc patch. Witnesses 2311.01600 (E66,
+>      physics + custom prob macros + multi-line `\left.`/`\right.` split), 2207.08945 (E49).
 > 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
 >    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
 >    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
