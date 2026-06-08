@@ -77,13 +77,28 @@ load-bearing and should be migrated.
 matches `"id"` too.) The `string_map!("xml:id" => …)` constructor sites are
 **writes** (fine — `set_attribute` namespaces them).
 
-### C. `remove_attribute("xml:id")` — 9 sites (silent no-op!)
-`document.rs:376,3342`, `math_common.rs:617`, `latex_constructs.rs:1952`,
-`parser.rs:841,1092`, `writer.rs:113`, `core_interface.rs:1046,1086`.
-**Highest-risk category:** these believe they stripped the id but didn't. Where
-the intent is to drop an id before re-assigning/relocating, this leaves a stale
-id (and a possible later dedup-collision). Each should become
-`remove_attribute_ns("id", XML_NS)` (verify the node isn't an SVG `id`).
+### C. `remove_attribute("xml:id")` — 9 sites (silent no-op) — **individually analysed; none an active bug**
+Looked like the highest-risk category; per-site analysis (2026-06-08) shows it
+is **not an active bug surface** — every site is either redundant or masked:
+- **SAFE / redundant** (paired with a working `remove_attribute_ns("id", …)`
+  immediately after, or a subsequent `set_attribute` overwrite):
+  `document.rs:376`, `latex_constructs.rs:1952`, `core_interface.rs:1046,1086`.
+- **DEAD but masked** (the *guard* — a broken `get_attribute`/`has_attribute`/
+  `key == "xml:id"` — never lets the block run, so the no-op never matters, and
+  the cleanup's effect is achieved elsewhere): `document.rs:3342` (leaked dual
+  content-id — but `merge_attributes`/dedup handles it), `parser.rs:841,1092`
+  (id-move bookkeeping — superseded by the parse reinstall), `writer.rs:113`
+  (`TEMPORARY_DOCUMENT_ID` — verified removed earlier by the split
+  id-renumbering pass at `core_interface.rs:1086`, which uses the *working*
+  `remove_attribute_ns`; confirmed no leak in `--splitat` output).
+- **SUSPECT** (id moved to a sibling via `unrecord_id`+`set_attribute`, original
+  keeps a stale attribute): `math_common.rs:617` (`\not` strike) — no observed
+  dup-id in output; the original node is consumed.
+
+**Conclusion:** do **not** blanket-convert these to `_ns`. Each broken `remove`
+is compensated; "correcting" them is churn at best and a regression risk at
+worst (cf. `rewrite.rs:1242`). Only touch one if a *confirmed* output
+divergence from Perl is traced to it.
 
 ### A′. The SAME footgun on other namespaced attributes — exhaustive sweep
 A grep of **every** `(get|has|remove)_(attribute|property)("PREFIX:LOCAL")`
@@ -157,10 +172,20 @@ review.
    ```
    (SVG elements use plain `id` — keep those on the plain accessor; gate the
    helper to `ltx:`/non-svg callers.)
-2. **Migrate** the load-bearing sites in categories A/C/D to the helper; delete
-   the dead `.or_else(get_attribute("xml:id"))` fallbacks. Prioritize **C**
-   (silent-no-op removes) — those can corrupt id state.
-3. **Lint guard:** a grep/CI check forbidding new `*_attribute("xml:id")` use.
+2. **Migrate conservatively, NOT as a blanket sweep.** Per-site analysis
+   (2026-06-08) found the **only confirmed active bugs were the three already
+   fixed** (`rename_node` id loss, `amsmath` `eq_id` read, `get_node_language`
+   `xml:lang`). Category **C** is *not* a corruption surface — every broken
+   `remove` is redundant or masked (see C). Category **D** guards are
+   re-checked by `generate_id`. Many **A** reads carry working
+   `.or_else(get_property("id"))` masks. **The masks are sometimes
+   load-bearing** (`rewrite.rs:1242`): "correcting" the accessor changed
+   output away from Perl. So migrate a site **only** when a *confirmed* Perl
+   divergence is traced to it, validated by a clean-build suite + the affected
+   fixture diffed against Perl. New code should use the helper from day one.
+3. **Lint guard:** a grep/CI check forbidding new `*_attribute("xml:id")` /
+   `*_property("xml:id")` use (the cheap, high-value preventive — stops *new*
+   footguns without churning the masked-but-working existing ones).
 4. **Namespace constant:** replace the ~30 remaining literal
    `"http://www.w3.org/XML/1998/namespace"` strings with `XML_NS`
    (`latexml_core::common::xml::XML_NS`, re-exported via the engine prelude).
