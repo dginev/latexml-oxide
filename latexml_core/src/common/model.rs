@@ -656,23 +656,13 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       }
     },
     // Need others?
-    t => {
-      // #217: a node with an unexpected libxml2 type reached qname
-      // resolution. On macOS this is the `self.node`-corruption residual —
-      // a detached/reused current node read as e.g. EntityDecl(17) or
-      // DOCBDocumentNode(21) (types LaTeXML never builds). Degrade to the
-      // same `#BrokenNode` sentinel the `node_type.is_none()` arm above
-      // already returns, instead of the original hard `panic!`. On Linux
-      // this arm is never reached (no corrupt nodes), so behavior is
-      // unchanged there; on macOS the conversion produces (wrong-but-not-
-      // crashing) output. TEMP diagnostic: log + backtrace so a macOS run
-      // still surfaces where the corrupt node is read; remove the eprintln
-      // once the corruption source is fixed (the `#BrokenNode` guard stays).
-      eprintln!(
-        "[#217] get_node_qname: unexpected node type {t:?} (corrupt/detached node) \
-         — returning #BrokenNode instead of panicking.\n{}",
-        std::backtrace::Backtrace::force_capture()
-      );
+    _ => {
+      // Defense-in-depth (issue #217): a node with an unexpected libxml2 type
+      // reached qname resolution. Degrade to the same `#BrokenNode` sentinel
+      // the `node_type.is_none()` arm above already returns, rather than the
+      // original hard `panic!`. LaTeXML never builds such nodes, so on a
+      // healthy tree this arm is unreachable; it exists only so a stray
+      // corrupt/foreign node can never crash qname resolution.
       arena::pin_static("#BrokenNode")
     },
   }

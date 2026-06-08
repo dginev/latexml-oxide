@@ -41,29 +41,6 @@ static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
 static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
 static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
 
-/// #217 diagnostic (TEMP): the source location of the most recent
-/// `set_node` assignment to `self.node`, so a macOS run can report where
-/// the current node was set when a later read finds it corrupt. Remove
-/// together with the `[#217]` eprintln guards once the corruption source
-/// is fixed.
-#[thread_local]
-static LAST_SET_NODE_LOC: std::cell::Cell<Option<&'static std::panic::Location<'static>>> =
-  std::cell::Cell::new(None);
-
-/// Node types that may legitimately be the document's current insertion
-/// node (`self.node`). Anything else read there is a corrupt/freed node —
-/// the macOS #217 residual. Used by the defensive guards below.
-fn is_sane_current_node_type(t: &Option<NodeType>) -> bool {
-  matches!(
-    t,
-    Some(
-      NodeType::ElementNode
-        | NodeType::TextNode
-        | NodeType::DocumentNode
-        | NodeType::DocumentFragNode
-    )
-  )
-}
 static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
   HashSet::from_iter([
     "about",
@@ -1549,11 +1526,7 @@ impl Document {
     serialized
   }
 
-  #[track_caller]
   pub fn set_node(&mut self, node: &Node) {
-    // #217 diagnostic (TEMP): remember where the current node is being set,
-    // so a later corrupt read can name this assignment site.
-    LAST_SET_NODE_LOC.set(Some(std::panic::Location::caller()));
     // Perl Document.pm:setNode L74-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check
@@ -1590,18 +1563,6 @@ impl Document {
       }
     }
     self.node = chosen;
-    // #217 diagnostic (TEMP): catch a corrupt node being made current. If
-    // this fires, the macOS corruption is upstream of THIS caller (it passed
-    // a freed/garbage node); if it does NOT fire but a later read finds
-    // `self.node` corrupt, the node was valid when set and freed afterwards.
-    if !is_sane_current_node_type(&self.node.get_type()) {
-      eprintln!(
-        "[#217] set_node: self.node set to UNEXPECTED type {:?} by caller {}\n{}",
-        self.node.get_type(),
-        std::panic::Location::caller(),
-        std::backtrace::Backtrace::force_capture()
-      );
-    }
   }
 
   // Internals
@@ -1840,23 +1801,6 @@ impl Document {
 
   pub fn open_text(&mut self, text: &str, font: &Font) -> Result<Option<Node>> {
     let node_type = self.node.get_type();
-    // #217 robustness + diagnostic: if the current node is corrupt (a
-    // freed/reused node read as an impossible libxml2 type — the macOS
-    // residual), recover by skipping this insert instead of crashing
-    // downstream in open_text_internal/can_contain. Report where the
-    // corrupt node was last set so the source can be localized. On Linux
-    // self.node is always a sane container here, so this never fires.
-    if !is_sane_current_node_type(&node_type) {
-      eprintln!(
-        "[#217] open_text: self.node has UNEXPECTED type {:?} (corrupt current node); \
-         last set_node at {:?}; skipping insert of {:?}.\n{}",
-        node_type,
-        LAST_SET_NODE_LOC.get(),
-        text,
-        std::backtrace::Backtrace::force_capture()
-      );
-      return Ok(None);
-    }
     {
       // Ignore initial whitespace
       if (text.is_empty() || ONLY_SPACE_RE.is_match(text))
@@ -1890,30 +1834,16 @@ impl Document {
     let element_sym = arena::pin(elementname);
     // If not at document begin. And not appending text in same font.
     //
-    // Defensive (issue #217): when `self.node` is a TextNode it should ALWAYS
-    // have a parent element, so the original `self.node.get_parent().unwrap()`
-    // was "safe" — but it was the macOS-only CI panic: under the macOS
-    // allocator/TLS conditions `self.node` could be a DETACHED text node
-    // (parent == None), a state never reached on Linux (this exact site is
-    // hit ~3900×/sizes_test and always resolves to a live p/title/td/tag
-    // parent). Match the None instead of unwrapping, and recover by skipping
-    // this un-anchorable insert rather than crashing.
+    // Defense-in-depth (issue #217): a current TextNode should always have a
+    // parent element, so this used to be `self.node.get_parent().unwrap()`.
+    // Match the `None` instead of unwrapping — if the current node were ever a
+    // detached text node, skip this un-anchorable insert rather than panic.
+    // (The macOS corruption that could produce such a node was root-caused
+    // and fixed in open_text_internal's text-merge detection.)
     let text_same_font = if node_type == Some(NodeType::TextNode) {
       match self.node.get_parent() {
         Some(parent) => font.distance(self.get_node_font(&parent)) == 0,
-        None => {
-          // TEMP diagnostic (#217): log + full backtrace so a macOS run
-          // reveals which digestion op left `self.node` detached. Remove
-          // once root-caused; the None guard itself stays.
-          eprintln!(
-            "[#217] open_text: current TextNode is DETACHED (get_parent()==None) — \
-             content={:?} insert={:?}; skipping insert.\n{}",
-            self.node.get_content(),
-            text,
-            std::backtrace::Backtrace::force_capture()
-          );
-          return Ok(None);
-        },
+        None => return Ok(None),
       }
     } else {
       false
@@ -2237,8 +2167,18 @@ impl Document {
             // Swap: move text node after comment node
             let mut comment_node = last_child;
             comment_node.add_next_sibling(&mut prev_text)?;
-            // Set current node to the text node and recurse
-            self.set_node(&prev_text);
+            // Set current node to the moved text node and recurse. Use
+            // pointer-identity, not the `prev_text` handle directly:
+            // `add_next_sibling` of a text node can MERGE it into an adjacent
+            // text sibling and FREE it (the same libxml2 hazard fixed in
+            // open_text_internal — benign on glibc, a use-after-free on macOS
+            // libmalloc, issue #217). The moved/merged text is `comment_node`'s
+            // next sibling either way; if that is still `prev_text` it survived,
+            // otherwise `prev_text` was freed — fall back to the live sibling.
+            match comment_node.get_next_sibling() {
+              Some(moved) => self.set_node(&moved),
+              None => self.set_node(&prev_text),
+            }
             self.open_text_internal(text)?;
             return Ok(true);
           }
