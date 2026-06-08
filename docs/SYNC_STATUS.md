@@ -230,12 +230,20 @@
 >      assignment until after the parse) — deep core math id-management (every XMDual-bearing doc),
 >      needs a focused session. Witnesses 2311.01600 (E66, physics + custom prob-macro XMDuals +
 >      multi-line `\left.`/`\right.` split), 2207.08945 (E49).
->      **DESIGN SCOPED (2026-06-08):** [`EXPECTED_ID_XMREF_DESIGN.md`](EXPECTED_ID_XMREF_DESIGN.md).
->      Root pinned: the LOSTNODES orphan snapshot (parser.rs:1383) captures only PRE-parse ids, so a
->      parse-time-created-then-lost id (`…m1.1a`) escapes the cleanup. Phased plan: ship the robust
->      reconciliation sweep (Option A — drop/absent-token any unresolved idref after LOSTNODES; clears
->      the error cluster, low risk) first, then per-construct fidelity (Option B — record the real
->      successor so refs redirect not drop). Phase-0 instrumentation + test/risk plan in the doc.
+>      **DESIGN SCOPED + PHASE-0 RUN (2026-06-08):** [`EXPECTED_ID_XMREF_DESIGN.md`](EXPECTED_ID_XMREF_DESIGN.md).
+>      **Phase 0 REFRAMED the root cause** — fully traced 2311.01600 (id-lifecycle instrumentation,
+>      reverted). The dominant remainder is **NOT** the math-parser LOSTNODES gap; it is a
+>      **document-builder equation→equationgroup refnum-id loss (Class B)**: a lone-aligned
+>      `\begin{equation}\begin{aligned}` opens `<equation xml:id="A1.E66">`, mints the `\Pr` content
+>      refs against `A1.E66.m1.*` (SAME scheme Perl uses), but the refnum id is gone by the equation's
+>      `afterClose`, so `rearrange_lone_ams_aligned` renames it to an **id-less** equationgroup that then
+>      falls to a generic paragraph id `A1.p10.1` (Perl keeps `A1.E66` → refs resolve, 0 errors). Fix
+>      (faithful) is in the **document builder**: keep the equation refnum id stable so the rename carries
+>      it (Perl `rearrangeLoneAMSAligned` `renameNode` preserves the id). The original LOSTNODES/absorption
+>      story is now **Class A** (the already-fixed VERTBAR/bra-ket family; Option B = faithful `ReplacedBy`
+>      port via a `Meta`-carried redirect harvested at commit — no confirmed non-VERTBAR witness yet).
+>      Option A (generic orphan sweep) demoted to last-resort safety net. Re-classify 2207.08945 /
+>      2306.04445 / 2307.02913 before assuming Class B covers them.
 > 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
 >    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
 >    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
