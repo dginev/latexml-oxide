@@ -195,11 +195,21 @@
 >      `no_stretch` directly via `\lx@physics@fenced`); a physics paper failing only on compound
 >      `\abs`/`\norm` (e.g. 2305.07971) is the *modulus*-VERTBAR variant, deferred with the cases
 >      below.
->    - **Remaining (genuine parser-VERTBAR, DEFERRED):** the `braket` *package* (2205.06843,
->      `\braket{a|op|c}`) and `mathtools` (2306.04445) hit the same modulus ambiguity but with
->      *intentionally* non-stretchy delimiters (faithful to the package + Perl), so they need the
->      grammar fix (recognize the outer `⟨…⟩`/fence before pairing inner `|` as modulus, or respect
->      `\lx@xmarg` boundaries against modulus pairing) — deep, high regression risk to all `|`-math.
+>    - **✅ BRA-KET VERTBAR sub-cluster FIXED (2026-06-08, commits `50c8a6a35e` + `275d249acc`).**
+>      Two faithful mathparser fixes: (a) `create_xmrefs` now PRESERVES an existing `_xmkey` instead
+>      of clobbering it (Perl `createXMRefs` never clobbers — the op node keeps both the package
+>      dual's key and the grammar dual's ref); (b) a **balanced-Dirac-delimiter prune** in
+>      `apply_invisible_times` hard-rejects the spurious `bra ⟨a|·op·ket |c⟩` multiplicative parse
+>      Marpa over-generates for `⟨a|op|c⟩` (it splits the matched `⟨…⟩` across the product — a
+>      balanced-nesting violation; physically a bra+ket under one `⟨…⟩` span is a single matrix
+>      element, and the operator was getting split). Directional (ket-before-bra `|c⟩⟨a|` outer
+>      products untouched), tight (qm_bra/qm_ket meanings). Witness **2205.06843 (braket pkg): 2 → 0**;
+>      a full minimal sweep — `\braket`/`\Braket`/mathtools `\delimsize\vert` bra-kets, `\norm`,
+>      `\abs`, `\Set{x|cond}`, `\matrixelement`, `\dyad` — is **0 dangling**. Suite 1390/0; modulus
+>      `|v(x)|≤|v(x')|` is 4 parses (prior ambiguity work; no longer the doc's old 48-58).
+>    - **Remaining `expected:id` are NON-VERTBAR** (a separate XMDual-dangling cluster): subequations
+>      `…m1.1a/1b` (2207.08945, 2311.01600), algorithm math (2306.04445 `alg2.m13`), examples
+>      (2307.02913 `Ex17`) — none load/use a bra-ket. Likely the same id-sharing family; future work.
 > 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
 >    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
 >    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
