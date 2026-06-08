@@ -168,6 +168,33 @@ numbered equations are unaffected — `A1.E53 … A1.E64` survive in the same
 document — because there is no rename competing with the late id pass; only the
 lone-aligned rearrange reads the id mid-window.
 
+## 3b. The `S7.E46`/`E48`/`E50` cluster (Phase-0d, 2026-06-08) — benign warnings + a separate deep mis-parse
+
+Investigated as the "more tractable" sibling cluster. It splits into two
+non-fixes:
+
+1. **27 `expected:id` warnings are benign.** Every target *exists in the final
+   output* (verified); they're transient parse-time misses because
+   `realize_xmnode` consults the **live** `document.lookup_id`, which is mutated
+   as each XMath element reinstalls (old ids unrecorded, new registered), while
+   the grammar's role path (`data::resolve_xmref`) uses the **frozen
+   `MATH_IDSTORE` snapshot**. WARN-level, no rc/canvas-signal impact. **Routing
+   `realize_xmnode` through `resolve_xmref` to silence them DUPLICATES content**
+   (`\choose` → `a + ba + b binomial c + dc + d`; regresses
+   `choose`/`declare`/`sampler`) — callers rely on an unresolved ref returning
+   the XMRef itself. Left as-is with a do-not-fix comment at the call site.
+2. **`S7.E46` is genuinely mis-parsed** (Rust leaves one `XMWrap rule="Anything,"`
+   with empty `[]` superscripts; Perl parses fully, `rho^[virtual]_(K_A…)`).
+   But this is a *deep* parse/expansion issue on a complex lone-aligned
+   `\begin{equation}\begin{aligned}` with paper macros (`\suplabelsbrkt` (empty),
+   `\Cfull`, `\tracenorm`), entangled with the §3 MathFork structural divergence
+   — **not** the ref-resolution warnings, and not a drive-by. **Deferred** with
+   the same discipline as §3.
+
+Net: the residual `expected:id` work is **not** more tractable than §3; both the
+`\Pr` content-branch and the `S7.E46` mis-parse are deep math-parser/MathFork
+work for a dedicated session.
+
 ## 4. Design options
 
 ### For Class B (dominant) — faithful: keep the equation refnum id stable

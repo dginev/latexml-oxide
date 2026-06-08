@@ -2636,8 +2636,18 @@ pub fn p_get_value(node: &Node) -> String {
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
   if with_node_qname(node, |name| name == "ltx:XMRef") {
     if let Some(idref) = node.get_attribute("idref") {
-      // Can it happen that $realnode is, itself, an XMRef?
-      // Then we should recurse recurse!
+      // NOTE: this intentionally uses the LIVE `document.lookup_id`, NOT the
+      // frozen `MATH_IDSTORE` snapshot path (`data::resolve_xmref`) that
+      // `get_grammatical_role` uses. Routing this through `resolve_xmref` so
+      // that more refs resolve mid-parse looked like it would silence the
+      // benign transient `expected:id` warnings (refs that miss the live
+      // idstore during a sibling element's reinstall but exist in the final
+      // doc) — but it DUPLICATES content (`\choose` → "a + ba + b binomial
+      // c + dc + d", regressing choose/declare/sampler): callers here rely on
+      // an unresolved ref returning the XMRef itself. The warnings are benign
+      // (WARN-level, targets resolve in the final tree); do not "fix" them by
+      // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN.md.
+      // Can it happen that the target is itself an XMRef? Then recurse.
       if let Some(realnode) = document.lookup_id(&idref) {
         return Cow::Borrowed(realnode);
       } else {
