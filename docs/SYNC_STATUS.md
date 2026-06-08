@@ -131,6 +131,21 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ TEST-SUITE RECOVERY + xparse loader fix (2026-06-08, commit `128891d587`).** A clean
+> (from-scratch) rebuild exposed 3 long-standing failures — `xparse_test`, `regex_match_test`,
+> `chemformula_raw_l3keys` — that incremental builds had masked (they fail on a clean build of
+> `origin/master` too, so NOT a merge regression). ROOT CAUSE: `input_definitions` never consulted
+> the `INTERPRETABLE_SOURCES` mapping, so `xparse.sty.ltxml`'s registration of `xparse-2018-04-12.sty`
+> was dead code. When the raw xparse.sty `\file_input`s its rollback `xparse-2018-04-12`, the
+> version-suffix fallback stripped it to `xparse` and re-entered the in-progress xparse binding
+> (short-circuited, Task #260) → the rollback file that DEFINES `\NewDocumentCommand` never loaded →
+> `\NewDocumentCommand` undefined + l3 cascade. FIX = faithful port of Perl `Package.pm:FindFile_aux`
+> L2107/L2115/L2119: `interpretable = LookupMapping('INTERPRETABLE_SOURCES', file)`; Step 2 (raw
+> local) fires on `interpreting || interpretable`, Step 3 (fallback) skips when `interpretable` → the
+> file falls through to kpsewhich and the real `xparse-2018-04-12.sty` raw-loads. **Suite 1390/0**
+> (was 1377/3). Canvas witness **2309.17288: 6 → 1 error** (`\NewDocumentCommand` gone, now == Perl).
+> Broadly relevant: any xparse-using paper hitting the rollback path.
+
 > **🔬 DIFFERENTIAL SWEEP (2026-06-08) — third-batch canvas, reliable Rust-vs-Perl harness.**
 > Re-triaged the third-batch canvas (`~/data/large_scale_canvas_3_third`, 56 stages, 6,327 failure
 > logs) against the **current** binary. Headline reframe: the canvas's 98.85% predates this
