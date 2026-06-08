@@ -5210,6 +5210,17 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   lipics/jabbrv); the remaining undefined long-tail is deep (author-model/pgf/murky) or
   tiny (1-2 papers) — diminishing returns in this session, documented for fresh focus.**
 
+  **Batch 8b (2026-06-07): `\widthof` FIXED (commit 04d0a73a49)** — NOT as deep as
+  first thought: adjustbox.sty `\RequirePackage{calc}` didn't propagate through the raw
+  InputDefinitions, so `\widthof` (used via enumitem `labelwidth=\widthof{...}`) was
+  undefined; fixed by an explicit `RequirePackage!("calc")` in adjustbox_sty.rs (faithful;
+  2401.06320 1→0). LESSON: some "deep dependency-chain" undefined-CS have a clean targeted
+  fix (add the missing `\RequirePackage` that a binding's raw-load drops). RS `\RSsectxt`
+  RE-DIAGNOSED as genuinely deep: used in `\newref{subsec}{name=\RSsectxt}` (varioref) but
+  never defined — Perl stores the name lazily (never expands → no error), Rust expands it
+  eagerly during `\newref` → undefined. A varioref `\newref` name-expansion-timing issue
+  (~4 papers), deferred.
+
   **✅ RESOLVED 2026-06-07 (commit 4e63c5f891) — jabbrv STUB BINDING, ~42 papers,
   surpass-Perl.** The clean fix turned out NOT to need the dep-scan core change OR the
   deep jabbrv-`\emph` loading-path work: a Rust STUB BINDING for jabbrv (`jabbrv_sty.rs`:
