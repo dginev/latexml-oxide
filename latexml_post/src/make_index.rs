@@ -906,7 +906,7 @@ fn seealso_partition(see: &Node) -> Vec<SeeChunk> {
   // Pass 2: a pure-space chunk merges its neighbours into one phrase.
   let mut iter = result.into_iter();
   let mut merged: Vec<SeeChunk> = vec![iter.next().unwrap()];
-  let mut rest: Vec<SeeChunk> = iter.collect();
+  let rest: Vec<SeeChunk> = iter.collect();
   let mut i = 0;
   while i < rest.len() {
     let next = rest[i].clone();
