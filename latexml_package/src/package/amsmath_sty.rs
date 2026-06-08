@@ -1743,7 +1743,13 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
 
   // Rename equation → equationgroup
   let mut eqgroup = document.rename_node(equation.clone(), "ltx:equationgroup", false)?;
-  let eq_id = eqgroup.get_attribute("xml:id").unwrap_or_default();
+  // `xml:id` is stored namespaced (local name "id"); `get_attribute("xml:id")`
+  // always returns None (libxml `xmlGetProp` matches the literal name). Read it
+  // via the XML namespace so the inner equations get the Perl `{id}X` suffix
+  // instead of colliding under the group id.
+  let eq_id = eqgroup
+    .get_attribute_ns("id", XML_NS)
+    .unwrap_or_default();
 
   // For each XMRow in the array, create a new equation
   let rows: Vec<Node> = document.findnodes("ltx:XMRow", Some(&array));
@@ -1982,11 +1988,11 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
   let mut ref_ids: Vec<String> = Vec::new();
   for node in cells.iter_mut() {
     // Generate xml:id if needed
-    if !node.has_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
+    if !node.has_attribute_ns("id", XML_NS) {
       document.generate_id(node, "")?;
     }
     if let Some(id) = node
-      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .get_attribute_ns("id", XML_NS)
       .or_else(|| node.get_attribute("xml:id"))
     {
       ref_ids.push(id);

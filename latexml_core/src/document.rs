@@ -4175,12 +4175,24 @@ impl Document {
     // Copy ALL attributes from `node` to `newnode`
     let mut id = None;
     for (key, value) in node.get_attributes() {
+      // `get_attributes()` returns the `xml:id` attribute under its LOCAL name
+      // `"id"` (it lives in the XML namespace), NOT the prefixed `"xml:id"`.
+      // Capture it here so it can be re-registered on `new` AFTER `remove_node`
+      // unrecords it below — and re-set it through `Document::set_attribute`
+      // (which routes "id"/"xml:id" through `record_id_with_node` + the XML
+      // namespace), rather than the raw `Node::set_attribute` copy used for
+      // ordinary attributes (that would drop the namespace AND the idstore
+      // registration). Missing this stranded the equation refnum id across
+      // `rearrange_lone_ams_aligned`'s equation→equationgroup rename, leaving
+      // the group with a generic paragraph id and dangling intra-math XMRefs
+      // (witness 2311.01600; see docs/EXPECTED_ID_XMREF_DESIGN.md).
+      if key == "xml:id" || key == "id" {
+        id = Some(value);
+        continue;
+      }
       let can_have = model::can_have_attribute(newname, arena::pin(&key));
       if can_have {
         new.set_attribute(&key, &value)?;
-      }
-      if key == "xml:id" {
-        id = Some(value); // Save to register after removal of old node.
       }
     }
     // AND move all content from `node` to `newnode`
@@ -4213,10 +4225,13 @@ impl Document {
     self.remove_node(node);
 
     // and FINALLY, we can register the new node under the id.
+    // `Document::set_attribute("xml:id", …)` routes through
+    // `record_id_with_node` (idstore registration + dedup) and sets the
+    // correctly-namespaced `xml:id` attribute. Only set it when the new qname
+    // can carry an id (mirrors the per-attribute `can_have_attribute` gate).
     if let Some(id) = id {
-      let newid = self.record_id_with_node(&id, &new);
-      if newid != id {
-        new.set_attribute("xml:id", &newid)?;
+      if model::can_have_attribute(newname, arena::pin("xml:id")) {
+        self.set_attribute(&mut new, "xml:id", &id)?;
       }
     }
 

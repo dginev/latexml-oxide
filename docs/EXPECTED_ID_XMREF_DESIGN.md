@@ -62,6 +62,22 @@ own Phase 0 before assuming it is.
 
 ### Class B — document-builder equation→equationgroup refnum-id loss *(DOMINANT; 2311.01600)*
 
+> **IMPLEMENTATION UPDATE (2026-06-08): root cause found + container-id half
+> FIXED.** Phase-0b pinned the drop to a **libxml string-accessor footgun**, not
+> a provisional-id reassignment: `xml:id` is stored namespaced (local name
+> `"id"`), so `rename_node_internal`'s `key == "xml:id"` capture never matched
+> (id lost across the equation→equationgroup rename) and
+> `rearrange_lone_ams_aligned`'s `get_attribute("xml:id")` always read empty.
+> Both fixed (see [`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
+> Result: the equationgroup now keeps its refnum id and the inner equation gets
+> the Perl `{id}X` suffix — **`split.tex` is now full Perl parity** (re-blessed),
+> and 2311.01600's containers are correct (`A1.E66`/`A1.E66X`, the
+> presentation-branch refs resolve). **Residual:** 2311.01600's `\Pr` *content*
+> refs (`A1.E66.m1.1a/1b…`) still dangle — they were minted against the
+> pre-rearrange Math/XMArg id scheme and need the MathFork **content-branch**
+> id reconciliation (the shallow-XMArg-ref nuance below; a distinct, deeper
+> sub-issue, still open).
+
 **This is not a math-parser bug at all.** The source is the classic
 lone-aligned equation:
 

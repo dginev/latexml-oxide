@@ -307,10 +307,10 @@
   </para>
   <para xml:id="p5">
     <p>Aligned within math</p>
-    <equationgroup>
-      <equation>
+    <equationgroup xml:id="Ch0.Ex2">
+      <equation xml:id="Ch0.Ex2X">
         <MathFork>
-          <Math tex="\displaystyle A=B" text="A = B" xml:id="p5.m1">
+          <Math tex="\displaystyle A=B" text="A = B" xml:id="Ch0.Ex2X.m1">
             <XMath>
               <XMApp>
                 <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -320,7 +320,7 @@
             </XMath>
           </Math>
           <MathBranch>
-            <td align="right"><Math tex="\displaystyle A=" text="A = absent" xml:id="p5.m2">
+            <td align="right"><Math tex="\displaystyle A=" text="A = absent" xml:id="Ch0.Ex2X.m2">
                 <XMath>
                   <XMApp>
                     <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -329,7 +329,7 @@
                   </XMApp>
                 </XMath>
               </Math></td>
-            <td align="left"><Math tex="\displaystyle B" text="B" xml:id="p5.m3">
+            <td align="left"><Math tex="\displaystyle B" text="B" xml:id="Ch0.Ex2X.m3">
                 <XMath>
                   <XMTok font="italic" role="UNKNOWN">B</XMTok>
                 </XMath>
