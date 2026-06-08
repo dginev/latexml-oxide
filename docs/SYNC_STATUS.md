@@ -144,7 +144,13 @@
 > local) fires on `interpreting || interpretable`, Step 3 (fallback) skips when `interpretable` → the
 > file falls through to kpsewhich and the real `xparse-2018-04-12.sty` raw-loads. **Suite 1390/0**
 > (was 1377/3). Canvas witness **2309.17288: 6 → 1 error** (`\NewDocumentCommand` gone, now == Perl).
-> Broadly relevant: any xparse-using paper hitting the rollback path.
+> **Broad cascade impact** — any package built on xparse breaks downstream when `\NewDocumentCommand`
+> is undefined: witness **2403.14015 (lipsum): 40 → 1 error** (the 13 undefined `\__lipsum_*` /
+> `\IfBooleanF` / `\SetLipsumText` were ALL downstream of the dropped xparse rollback; remaining 1 is
+> `\xywithoption`, separate xy-pic). The 2026-06-08 random 17-paper sweep hit xparse/`\NewDocumentCommand`
+> cascades in **5 papers** — a meaningful slice of the failing set, now protected. This was a
+> *post-canvas* regression (the canvas binary predates it), so a canvas re-run would have spiked
+> without this fix.
 
 > **🔬 DIFFERENTIAL SWEEP (2026-06-08) — third-batch canvas, reliable Rust-vs-Perl harness.**
 > Re-triaged the third-batch canvas (`~/data/large_scale_canvas_3_third`, 56 stages, 6,327 failure
