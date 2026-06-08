@@ -131,6 +131,55 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **🔬 DIFFERENTIAL SWEEP (2026-06-08) — third-batch canvas, reliable Rust-vs-Perl harness.**
+> Re-triaged the third-batch canvas (`~/data/large_scale_canvas_3_third`, 56 stages, 6,327 failure
+> logs) against the **current** binary. Headline reframe: the canvas's 98.85% predates this
+> session's fixes — **the single biggest cluster, `misdefined:#` (1052 papers = mdwmath), is
+> ALREADY FIXED** by `58b662b064` (verified: 3 witnesses + minimal `\usepackage{mdwmath}` all 0
+> errors now). The big live clusters are **SHARED**: `\else`-not-in-conditional (240, e.g.
+> 2204.00588 Rust 2 / Perl 101, 2204.03209 Rust 6 / Perl 7 — `\MakeLowercase`-in-math malformed),
+> `_`/`^`-script-in-text (971, e.g. 2110.10921 Rust 8 == Perl 8), theorem-as-group mode-switch
+> (`{\definition(..){..}}` → "close a group that switched to mode"; minimal repro errors in BOTH),
+> GenericError aaai/csquotes/embedfile/babel (all Perl≈Rust), `\end{figure}`/`\noalign`/`\state`/
+> `\ixpt`/`\ioptwocol`/tabularht (all SHARED). **Methodology landmine caught + recorded**
+> ([[feedback_differential_perl_runner_rigor]]): a buggy Perl runner (relative unzip → "No input
+> file given" → false 0) produced a phantom "12/12 RUST-ONLY" batch; all 12 were SHARED once the
+> runner was fixed. Always assert the Perl log processed input + use the SAME `(Error|Fatal)` grep
+> on both sides + sanity-check a surprising RUST-ONLY with a minimal repro.
+>
+> **The genuine Rust-only clusters surfaced:**
+> 1. **`expected:id Cannot find a node with xml:id` (~32 papers) — bra-ket XMDual dangling XMRef.**
+>    Witnesses 2205.06843, 2211.16395, 2306.04445 (all Rust 2 / **Perl 0**). ROOT CAUSE pinned via
+>    minimal repro `\usepackage{physics}` + `\matrixelement{a}{\varrho_{B}\partial_{\mu}}{c}`: a
+>    **compound (multi-atom) operator arg flanked by two `\vert`** (presentation `⟨#1|#2|#3⟩`) trips
+>    the **open VERTBAR-modulus grammar ambiguity**
+>    ([`MATH_AMBIGUITY_AUDIT_2026-05-21.md`](MATH_AMBIGUITY_AUDIT_2026-05-21.md) Pattern 2): the
+>    parser reads `|…op…|` as a bare-modulus `\abs`, **dissolving the `\lx@xmarg` wrapper that
+>    carries the dual's shared id** → the content branch's `\lx@xmref` to the operator dangles
+>    (resolves to the ket's id, referenced twice) → Post `mark_xm_node_visibility_aux` errors
+>    `Cannot find a node`. **Single-`\vert` duals are fine** (`\ket`/`\innerproduct`/
+>    `\expectationvalue` with compound args: 0 dangles); only the *operator-between-two-bars* case
+>    breaks. (Supersedes the stale 2026-06-01 "`expected:id` FIXED" note: that drained *other*
+>    causes; this VERTBAR sub-cause remained.)
+>    - **✅ PHYSICS-PACKAGE sub-cluster FIXED (commit pending, 2026-06-08, surpass-Perl-faithful).**
+>      The `physics` `\matrixelement`/`\innerproduct`/`\bra` defaulted to **non-stretchy** delimiters
+>      (`physics_sty.rs` passed `phys_open(!no_stretch,…)` — a double-negation of the already-
+>      "no-stretch"-meaning flag), while **Perl uniformly defaults stretchy="true"** (verified: 4/4
+>      langle+rangle on a 6-command probe). The non-stretchy bare-`|` path is exactly what trips the
+>      VERTBAR modulus. Fix = pass `no_stretch` directly (matching `\expectationvalue`, already
+>      correct). New Rust output on `tests/complex/physics.tex` is now **byte-for-byte stretchy-
+>      identical to Perl** (14/21 langle, 8/19 rangle, 6 MIDDLE); `physics.xml` re-blessed; suite
+>      green; witness **2211.16395 → 0 errors**.
+>    - **Remaining (genuine parser-VERTBAR, DEFERRED):** the `braket` *package* (2205.06843,
+>      `\braket{a|op|c}`) and `mathtools` (2306.04445) hit the same modulus ambiguity but with
+>      *intentionally* non-stretchy delimiters (faithful to the package + Perl), so they need the
+>      grammar fix (recognize the outer `⟨…⟩`/fence before pairing inner `|` as modulus, or respect
+>      `\lx@xmarg` boundaries against modulus pairing) — deep, high regression risk to all `|`-math.
+> 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
+>    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
+>    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
+>    the axis alone (cumulative state); deep pgfplots internals. DEFERRED.
+
 > **🛡️ MACHINE-STABILITY FORENSICS + MEMORY GUARD (2026-06-02).** User reported the machine
 > became unstable and was rebooted. **Forensic finding (honest): our canvas did NOT cause the
 > reboot.** The full 100-stage canvas finished CLEANLY at 04:07:59 local (EDT); the reboot was

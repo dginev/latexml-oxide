@@ -1129,10 +1129,13 @@ LoadDefinitions!({
 
       let content = i_apply(&[],
         i_symbol(&[("meaning", Tokenize!("bra"))], None), vec![a1]);
+      // Stretchy by default (Perl parity); `no_stretch` passed directly — see the
+      // `\matrixelement` note. A prior `!no_stretch` made plain `\bra` default
+      // non-stretchy, diverging from Perl.
       let mut pres = Vec::new();
-      pres.extend(phys_open(!no_stretch, &None, Tokenize!("\\langle")).unlist());
+      pres.extend(phys_open(no_stretch, &None, Tokenize!("\\langle")).unlist());
       pres.push(i_arg("1"));
-      pres.extend(phys_close(!no_stretch, &None, Tokenize!("\\vert")).unlist());
+      pres.extend(phys_close(no_stretch, &None, Tokenize!("\\vert")).unlist());
       let presentation = Tokens::new(pres);
 
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
@@ -1165,12 +1168,15 @@ LoadDefinitions!({
     let content = i_apply(&[],
       i_symbol(&[("meaning", Tokenize!(&semantic_str))], None),
       vec![a1, a2]);
+    // Stretchy by default (Perl parity); `no_stretch` passed directly — see the
+    // `\matrixelement` note. A prior `!no_stretch` made `\innerproduct`/`\outerproduct`
+    // default non-stretchy, diverging from Perl.
     let mut pres = Vec::new();
-    pres.extend(phys_open(!no_stretch, &None, open_tks).unlist());
+    pres.extend(phys_open(no_stretch, &None, open_tks).unlist());
     pres.push(i_arg("1"));
-    pres.extend(phys_mid(!no_stretch, &None, middle_tks).unlist());
+    pres.extend(phys_mid(no_stretch, &None, middle_tks).unlist());
     pres.push(i_arg("2"));
-    pres.extend(phys_close(!no_stretch, &None, close_tks).unlist());
+    pres.extend(phys_close(no_stretch, &None, close_tks).unlist());
     let presentation = Tokens::new(pres);
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0, arg1])?;
@@ -1244,9 +1250,20 @@ LoadDefinitions!({
     let no_stretch = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
       gullet::read_match(&[&Tokenize!("*")])?.is_none()
     } else { false };
-    let open_tks = phys_open(!no_stretch, &None, Tokenize!("\\langle"));
-    let middle_tks = phys_mid(!no_stretch, &None, Tokenize!("\\vert"));
-    let close_tks = phys_close(!no_stretch, &None, Tokenize!("\\rangle"));
+    // Default (no `*`) is stretchy (`\left…\middle…\right`), matching Perl's
+    // physics.sty.ltxml (all bra-ket delimiters default stretchy="true"). The
+    // `no_stretch` variable already means "no stretch" (true only when `*` given),
+    // so pass it DIRECTLY — an earlier `!no_stretch` double-negated it, making the
+    // default non-stretchy. Beyond the rendering divergence, the bare-VERTBAR
+    // (non-stretchy) `⟨#1|#2|#3⟩` form hits the open VERTBAR-modulus grammar
+    // ambiguity: a compound `#2` between two bare `|` parses as bare modulus,
+    // dissolving the `\lx@xmarg` that carries the XMDual's shared id → dangling
+    // `\lx@xmref` → Post `expected:id Cannot find a node`. The stretchy
+    // `\middle\vert` form parses correctly. Witnesses 2205.06843, 2211.16395,
+    // 2306.04445 (physics `\matrixelement`/`\mel`). See SYNC_STATUS.md.
+    let open_tks = phys_open(no_stretch, &None, Tokenize!("\\langle"));
+    let middle_tks = phys_mid(no_stretch, &None, Tokenize!("\\vert"));
+    let close_tks = phys_close(no_stretch, &None, Tokenize!("\\rangle"));
     let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
     let arg1 = gullet::read_arg(ExpansionLevel::Off)?;
     let arg2 = gullet::read_arg(ExpansionLevel::Off)?;
