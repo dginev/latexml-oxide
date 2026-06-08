@@ -5203,8 +5203,13 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   (LaTeXML author-model vs switch-based author block). `\RSsectxt`/`\RS@ifundefined`
   (Royal Society style, ~4 papers) — paper preamble.sty uses RS internals from an RS
   class/style of unclear provenance; murky. `{forest}` (~23 papers) — DELIBERATE
-  non-implementation stub (forest_sty.rs blocks raw-load; pgf/tikz tree rendering is deep;
-  Perl raw-loads it). All deferred — need focused deep work, not the per-class method.
+  non-implementation stub (forest_sty.rs `discard_env_body` emits `<ltx:ERROR>` + a
+  first-time `Error:undefined:{forest}... stub binding`). CORRECTION 2026-06-07: this error
+  is SHARED — Perl ar5iv-bindings forest.sty.ltxml uses the SAME `discard_env_body` pattern
+  (logs the identical error). The batch6 "RUST-ONLY" was a measurement artifact (Perl may
+  have raw-loaded forest.sty and rendered the trees, 0 errors, since Perl's pgf/tikz is
+  complete). Actually rendering forest trees needs deep pgf/tikz tree support — out of scope
+  for a quick fix; the discard+stub-error matches ar5iv-Perl's accepted limitation. All deferred — need focused deep work, not the per-class method.
   **Conclusion: the clean RUST-ONLY per-class binding-gap wins are harvested (batches 2-8:
   ~16 commands fixed across daj/colt2024/ieeeoj/sn-jnl/autart/ws-journal/icml/cas-dc/jfm/
   lipics/jabbrv); the remaining undefined long-tail is deep (author-model/pgf/murky) or
