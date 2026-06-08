@@ -22,14 +22,46 @@ fn set_xslt_max_depth() {
   static SET_MAX_DEPTH: std::sync::Once = std::sync::Once::new();
   SET_MAX_DEPTH.call_once(|| {
     // SAFETY: `xsltMaxDepth` is libxslt's process-global recursion cap
-    // (a plain C `int`). The libxslt crate exposes no safe setter, so a
-    // direct write to the `static mut` is the only path. `Once` guarantees a
-    // single writer; libxslt only ever READS this value (when creating each
-    // transform context), so there is no data race with concurrent transforms.
+    // (a plain C `int`). The libxslt crate exposes no safe setter. `Once`
+    // guarantees a single writer; libxslt only ever READS this value (when
+    // creating each transform context), so there is no data race with
+    // concurrent transforms.
+    //
+    // PORTABILITY: resolved via `dlsym` rather than the crate's
+    // `libxslt::bindings::xsltMaxDepth` extern static. Those pregenerated
+    // (bindgen-on-Linux) bindings pin the raw ELF symbol name with
+    // `#[link_name = "\u{1}xsltMaxDepth"]`, which fails to LINK on Mach-O
+    // where the C symbol is `_xsltMaxDepth` (macOS probe 2026-06-07 — the
+    // sole undefined symbol in the whole workspace link; see
+    // docs/PORTABILITY_MACOS_PROBE_2026-06-07.md). `dlsym` applies the
+    // platform's own C-symbol decoration, so it works on ELF and Mach-O
+    // alike. If the symbol is ever absent (NULL), we skip the write:
+    // libxslt's built-in default cap of 3000 still bounds recursion.
     unsafe {
-      libxslt::bindings::xsltMaxDepth = 1000;
+      let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
+      if !sym.is_null() {
+        *(sym as *mut std::os::raw::c_int) = 1000;
+      }
     }
   });
+}
+
+#[cfg(test)]
+mod max_depth_tests {
+  /// The dlsym write must actually land: after `set_xslt_max_depth`,
+  /// reading the global back through the same runtime resolution path
+  /// must yield Perl's value (1000). Guards both the symbol lookup
+  /// (platform decoration) and the write.
+  #[test]
+  fn dlsym_sets_perl_parity_cap() {
+    super::set_xslt_max_depth();
+    let val = unsafe {
+      let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
+      assert!(!sym.is_null(), "xsltMaxDepth not resolvable via dlsym");
+      *(sym as *const std::os::raw::c_int)
+    };
+    assert_eq!(val, 1000);
+  }
 }
 
 /// Resource type information.

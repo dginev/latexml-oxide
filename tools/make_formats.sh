@@ -38,13 +38,18 @@ case "$PROFILE" in
   *) echo "PROFILE must be 'release', 'debug', or 'ci' (got: $PROFILE)" >&2; exit 2 ;;
 esac
 
-# Build the binary if it doesn't exist. We build only the latexml_oxide bin
-# target to avoid pulling in unrelated workspace members / test deps.
+# Always (re)build the binary — `cargo build` is the staleness authority.
+# We build only the latexml_oxide bin target to avoid pulling in unrelated
+# workspace members / test deps. A plain `[ -x "$BIN" ]` guard is unsafe when
+# an older binary survives in a persistent build cache (e.g. the deploy
+# Dockerfile's BuildKit `target/` cache mount): the guard would skip the
+# rebuild and run that STALE binary, which then emits a yearless
+# `plain.dump.txt` instead of `plain.YYYY.dump.txt` (pre-year-stamping naming),
+# silently shipping dumps the runtime can't find. cargo is near-instant when
+# nothing changed, so building unconditionally costs nothing.
 BIN="target/$PROFILE/latexml_oxide"
-if [ ! -x "$BIN" ]; then
-  echo "[make_formats] building latexml_oxide ($PROFILE)..."
-  cargo build $CARGO_PROFILE_FLAG --bin latexml_oxide
-fi
+echo "[make_formats] building latexml_oxide ($PROFILE)..."
+cargo build $CARGO_PROFILE_FLAG --bin latexml_oxide
 
 # Generate BOTH dumps — strict mirror of Perl Makefile.PL `formats`
 # target (LaTeXML/Makefile.PL):
@@ -58,11 +63,16 @@ fi
 # doesn't redefine — without the plain dump those CSes are missing
 # at runtime. The binary writes each to resources/dumps/<basename>.dump.txt
 # relative to CWD.
-TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null | sed -n 's:.*/\([0-9]\{4\}\)$:\1:p')"
+# The trailing component may carry a non-digit suffix: MacTeX/BasicTeX
+# install to /usr/local/texlive/2026basic — accept `YYYY[suffix]`, like
+# the runtime's `dump_paths::parse_year_str`.
+TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null | sed -n 's:.*/\([0-9]\{4\}\)[A-Za-z]*$:\1:p')"
 # Fallback: Debian/Ubuntu's texlive package puts TL into /usr/share/texlive
-# with no year-versioned hierarchy, so SELFAUTOPARENT returns `/`. Pick up
-# the year from `pdflatex --version` instead — mirrors the runtime
-# `dump_paths::detect_ambient_texlive_year` two-step strategy.
+# with no year-versioned hierarchy, so SELFAUTOPARENT returns `/`; Homebrew's
+# texlive lives in a yearless Cellar path. Pick up the year from
+# `pdflatex --version` instead ("TeX Live 2026" / "TeX Live 2026/Homebrew")
+# — mirrors the runtime `dump_paths::detect_ambient_texlive_year` two-step
+# strategy.
 if [ -z "$TL_YEAR" ]; then
   TL_YEAR="$(pdflatex --version 2>/dev/null | head -3 | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)"
 fi

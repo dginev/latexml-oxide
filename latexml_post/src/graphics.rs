@@ -909,6 +909,26 @@ impl Graphics {
             // Fall back: setpgid(0, 0). If both fail we proceed anyway.
             let _ = libc::setpgid(0, 0);
           }
+          // Die-with-watcher: `setsid` detaches this converter from every
+          // process group, so if the process running `run_with_timeout` is
+          // itself killed (e.g. the LSP server SIGKILLs a preempted body
+          // child mid-post-processing), nothing would ever time out or kill
+          // a runaway gs/inkscape — the exact orphan pathology this
+          // function's group-kill solves, reintroduced one level up.
+          // PR_SET_PDEATHSIG makes the kernel SIGKILL the converter when its
+          // spawning thread dies; it survives execve, so setting it here
+          // (between fork and exec) covers the exec'd tool. Linux-only —
+          // elsewhere the orphan window simply remains. prctl is
+          // async-signal-safe. Guard the fork→prctl race: if the watcher
+          // died before prctl took effect we are already reparented (to
+          // init or a subreaper) — exit instead of running unwatched.
+          #[cfg(target_os = "linux")]
+          {
+            libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL);
+            if libc::getppid() == 1 {
+              libc::_exit(127);
+            }
+          }
           Ok(())
         });
       }

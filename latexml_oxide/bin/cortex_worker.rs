@@ -102,6 +102,14 @@ struct Cli {
   #[arg(long, default_value = "120")]
   timeout: u64,
 
+  /// Per-document resident-memory ceiling in MiB (0 disables). The shared
+  /// `Watchdog` exits with code 137 if RSS exceeds this, giving a clean
+  /// `Fatal:oom:rss` artifact instead of relying solely on the external
+  /// `ulimit -v` (which the OS enforces by failing an allocation, harder to
+  /// attribute). Defaults to 6 GiB, matching the sandbox `ulimit -v`.
+  #[arg(long, default_value = "6144")]
+  max_rss_mb: u64,
+
   /// Disable Presentation MathML
   #[arg(long)]
   no_pmml: bool,
@@ -129,10 +137,18 @@ struct ConversionProfile {
   noinvisibletimes:   bool,
   nodefaultresources: bool,
   timeout:            u64,
+  /// Resident-memory ceiling in KiB for the shared `Watchdog` (0 = disabled).
+  max_rss_kb:         u64,
 }
 
 impl ConversionProfile {
-  fn ar5iv(extra_preloads: &[String], timeout: u64, no_pmml: bool, no_mathtex: bool) -> Self {
+  fn ar5iv(
+    extra_preloads: &[String],
+    timeout: u64,
+    max_rss_mb: u64,
+    no_pmml: bool,
+    no_mathtex: bool,
+  ) -> Self {
     // Preload only ar5iv.sty (which RequirePackages latexml.sty). LaTeX.pool
     // is loaded lazily by \documentclass / \documentstyle digestion. Eagerly
     // preloading LaTeX.pool here previously clobbered plain-TeX papers'
@@ -147,10 +163,17 @@ impl ConversionProfile {
       noinvisibletimes: true,
       nodefaultresources: true,
       timeout,
+      max_rss_kb: max_rss_mb * 1024,
     }
   }
 
-  fn generic(extra_preloads: &[String], timeout: u64, no_pmml: bool, no_mathtex: bool) -> Self {
+  fn generic(
+    extra_preloads: &[String],
+    timeout: u64,
+    max_rss_mb: u64,
+    no_pmml: bool,
+    no_mathtex: bool,
+  ) -> Self {
     ConversionProfile {
       preloads: extra_preloads.to_vec(),
       pmml: !no_pmml,
@@ -158,6 +181,7 @@ impl ConversionProfile {
       noinvisibletimes: false,
       nodefaultresources: false,
       timeout,
+      max_rss_kb: max_rss_mb * 1024,
     }
   }
 }
@@ -193,7 +217,8 @@ impl LatexmlWorker {
     //   2. Cooperative stomach::set_timeout gives a graceful Err(Fatal) for the common case where
     //      digestion polls check_timeout.
     // Watchdog cancels automatically on drop at end of this function.
-    let _watchdog = latexml_core::watchdog::Watchdog::new(self.profile.timeout);
+    let _watchdog =
+      latexml_core::watchdog::Watchdog::with_limits(self.profile.timeout, self.profile.max_rss_kb);
     if self.profile.timeout > 0 {
       latexml_core::stomach::set_timeout(self.profile.timeout);
     }
@@ -1028,11 +1053,19 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   latexml_core::util::logger::init(log_level).ok();
 
   let profile = match cli.profile.as_str() {
-    "ar5iv" => ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.no_pmml, cli.no_mathtex),
-    "generic" => ConversionProfile::generic(&cli.preload, cli.timeout, cli.no_pmml, cli.no_mathtex),
+    "ar5iv" => {
+      ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.max_rss_mb, cli.no_pmml, cli.no_mathtex)
+    },
+    "generic" => ConversionProfile::generic(
+      &cli.preload,
+      cli.timeout,
+      cli.max_rss_mb,
+      cli.no_pmml,
+      cli.no_mathtex,
+    ),
     other => {
       eprintln!("Unknown profile '{}', using ar5iv", other);
-      ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.no_pmml, cli.no_mathtex)
+      ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.max_rss_mb, cli.no_pmml, cli.no_mathtex)
     },
   };
 

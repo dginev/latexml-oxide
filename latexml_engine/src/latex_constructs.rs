@@ -2367,24 +2367,29 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
           .map(|t| t.with_str(|s| s.to_string()))
           .collect();
         if extra.starts_with("see{") || extra.starts_with("see {") {
-          // \@indexsee{content}
-          // Skip "see{", collect until "}"
+          // \@indexsee{content} — pass the ORIGINAL tokens (Perl:
+          // @tokens[3..]) rather than a re-Exploded string, so macros
+          // and math inside the see-phrase keep their catcodes and
+          // expand normally (e.g. \index{X|see{\foo $n$-cube}}).
+          // The brace tokens ride along as the constructor's argument
+          // delimiters.
           expansion.push(T_CS!("\\@indexsee"));
-          // Find the content between { and }
-          let content = extra.trim_start_matches("see").trim();
-          let content = content.strip_prefix('{').unwrap_or(content);
-          let content = content.strip_suffix('}').unwrap_or(content);
-          expansion.push(T_BEGIN!());
-          expansion.extend(Explode!(content));
-          expansion.push(T_END!());
+          expansion.extend(toks[i + 3..].iter().cloned());
         } else if extra.starts_with("seealso{") || extra.starts_with("seealso {") {
           expansion.push(T_CS!("\\@indexseealso"));
-          let content = extra.trim_start_matches("seealso").trim();
-          let content = content.strip_prefix('{').unwrap_or(content);
-          let content = content.strip_suffix('}').unwrap_or(content);
-          expansion.push(T_BEGIN!());
-          expansion.extend(Explode!(content));
-          expansion.push(T_END!());
+          expansion.extend(toks[i + 7..].iter().cloned());
+        } else if extra.starts_with("seeonly{") || extra.starts_with("seeonly {") {
+          // DEVIATION from Perl LaTeXML, which lets `|seeonly{...}`
+          // fall through to the style branch below: the raw string
+          // (catcode-mangled) ends up as a font attribute and renders
+          // as a garbage ltx_font_* class (98 occurrences in the AoBF
+          // book, 181 validation errors). The makeindex idiom means
+          // "print ONLY the see-reference, no locators" — treating it
+          // as \@indexsee both renders it correctly and suppresses
+          // this mark's locator refs (Scan skips referrer recording
+          // when ltx:indexsee children are present).
+          expansion.push(T_CS!("\\@indexsee"));
+          expansion.extend(toks[i + 7..].iter().cloned());
         } else if extra == "(" {
           style = Some("rangestart".to_string());
         } else if extra == ")" {
@@ -8284,7 +8289,7 @@ LoadDefinitions!({
   );
 
   // \@indexphrase[sortkey]{phrase} → <ltx:indexphrase>
-  DefConstructor!("\\@indexphrase[]{}", "<ltx:indexphrase key='#key'>#2</ltx:indexphrase>",
+  DefConstructor!("\\@indexphrase[]{}", "<ltx:indexphrase key='#key' _standalone_font='true'>#2</ltx:indexphrase>",
     properties => sub[args] {
       let key = args[0].as_ref()
         .map(|a| clean_index_key(&a.to_string()))
@@ -8298,22 +8303,32 @@ LoadDefinitions!({
   );
 
   // \@indexsee{key} → <ltx:indexsee>
-  DefConstructor!("\\@indexsee{}", "<ltx:indexsee key='#key'>#1</ltx:indexsee>",
+  // Perl carries name => DigestIf('\seename') so the post-processor can
+  // print the italic "see" word in front of the cross-reference.
+  DefConstructor!("\\@indexsee{}", "<ltx:indexsee key='#key' name='#name' _standalone_font='true'>#1</ltx:indexsee>",
     properties => sub[args] {
       let key = args[0].as_ref()
         .map(|a| clean_index_key(&a.to_string()))
         .unwrap_or_default();
-      Ok(stored_map!("key" => key))
+      let mut props = stored_map!("key" => key);
+      if let Some(name) = DigestIf!("\\seename")? {
+        props.insert("name", name.into());
+      }
+      Ok(props)
     }
   );
 
   // \@indexseealso{key} → <ltx:indexsee>
-  DefConstructor!("\\@indexseealso{}", "<ltx:indexsee key='#key'>#1</ltx:indexsee>",
+  DefConstructor!("\\@indexseealso{}", "<ltx:indexsee key='#key' name='#name' _standalone_font='true'>#1</ltx:indexsee>",
     properties => sub[args] {
       let key = args[0].as_ref()
         .map(|a| clean_index_key(&a.to_string()))
         .unwrap_or_default();
-      Ok(stored_map!("key" => key))
+      let mut props = stored_map!("key" => key);
+      if let Some(name) = DigestIf!("\\alsoname")? {
+        props.insert("name", name.into());
+      }
+      Ok(props)
     }
   );
 
@@ -8326,8 +8341,40 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\indexname", "Index");
+  // Perl latex_constructs.pool.ltxml L4567-4585: theindex generates the
+  // "Index" title, computes a document-relative xml:id (the root the
+  // post-processor's per-entry idx.* anchors chain off — without it,
+  // see-refs have nothing to resolve to), and registers as a backmatter
+  // element so a \printindex inside the last open section relocates to
+  // the document/backmatter level instead of nesting (the BACKMATTER_ELEMENT
+  // mapping for ltx:index already exists alongside ltx:bibliography's).
   DefEnvironment!("{theindex}",
-    "<ltx:index xml:id='#id'>#body</ltx:index>");
+    "<ltx:index xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#body</ltx:index>",
+    before_digest => {
+      Let!("\\item", "\\index@item");
+      Let!("\\subitem", "\\index@subitem");
+      Let!("\\subsubitem", "\\index@subsubitem");
+    },
+    before_digest_end => { stomach::digest(Tokens!(T_CS!("\\index@done")))?; },
+    after_digest_begin => sub[whatsit] {
+      note_backmatter_element(whatsit, "ltx:index");
+      let docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
+      let id = if docid.is_empty() {
+        "idx".to_string()
+      } else {
+        s!("{docid}.idx")
+      };
+      whatsit.set_property("id", id);
+      if let Some(title) = DigestIf!("\\indexname")? {
+        if let Some(titlefont) = title.get_font()? {
+          whatsit.set_property("titlefont", titlefont);
+        }
+        whatsit.set_property("title", title);
+      }
+    },
+    before_construct => sub[doc, whatsit] {
+      adjust_backmatter_element(doc, whatsit)?;
+    });
 
   def_primitive_noop("\\indexspace")?;
   def_primitive_noop("\\makeindex")?;

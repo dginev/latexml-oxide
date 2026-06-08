@@ -97,6 +97,14 @@ pub fn prewarm_kpathsea() {
   let Some(ref kpse) = *kpse_guard else {
     return;
   };
+  // Subprocess backend (kpathsea 0.3, hosts without libkpathsea — e.g.
+  // MacTeX): there is no in-process format-info table to warm, and each
+  // sentinel would cost a real `kpsewhich` subprocess invocation
+  // (~10-20 ms × 11). The backend builds its own ls-R cache lazily on
+  // the first real lookup instead.
+  if !kpse.is_in_process() {
+    return;
+  }
   for sentinel in &[
     "warmup_lxoxide.tex",
     "warmup_lxoxide.sty",

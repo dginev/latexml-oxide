@@ -48,12 +48,36 @@ if [[ -n "${GITHUB_REF_NAME:-}" && "${GITHUB_REF_NAME}" != "${version}" ]]; then
   exit 1
 fi
 
-target_triple="x86_64-unknown-linux-gnu"
+# Target triple. Defaults to the historical Linux target; the macOS release
+# leg sets RELEASE_TARGET=aarch64-apple-darwin. We build NATIVELY on the
+# matching runner (no `--target` cross-compile step), so RELEASE_TARGET is the
+# *label* the host arch produces and MUST match the runner's architecture.
+# Native binaries are never cross-OS (ELF vs Mach-O) — there is one artifact
+# per (OS, arch); see docs/RELEASING.md "Release asset strategy".
+target_triple="${RELEASE_TARGET:-x86_64-unknown-linux-gnu}"
+case "${target_triple}" in
+  *-linux-*)      os_family="linux" ;;
+  *-apple-darwin) os_family="macos" ;;
+  *) echo "make_release: unsupported RELEASE_TARGET='${target_triple}'" >&2; exit 1 ;;
+esac
+
+# SHA-256 sidecar helper: GNU coreutils `sha256sum` on Linux, BSD `shasum`
+# on macOS. Both emit the same "<hash>  <file>" two-space format. Call from
+# inside artifacts_dir so the sidecar records the bare filename.
+sha256_sidecar() {
+  local f="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "${f}" > "${f}.sha256"
+  else
+    shasum -a 256 "${f}" > "${f}.sha256"
+  fi
+}
+
 stage_dir_name="latexml-oxide-${version}-${target_triple}"
 artifacts_dir="target/release-artifacts"
 stage_dir="${artifacts_dir}/${stage_dir_name}"
 
-echo "make_release: version=${version} target=${target_triple}"
+echo "make_release: version=${version} target=${target_triple} os=${os_family}"
 
 # --- clean staging area -----------------------------------------------------
 rm -rf "${artifacts_dir}"
@@ -73,8 +97,13 @@ fi
 
 # Strip aggressively. The `maxperf` profile already sets `strip = "symbols"`
 # at link time, but a second pass removes any straggling debug sections that
-# slipped through (e.g. from C deps).
-strip --strip-all "${bin_path}" 2>/dev/null || true
+# slipped through (e.g. from C deps). GNU strip uses --strip-all; macOS
+# (Mach-O) strip has no such flag, so use -x there (best-effort).
+if [[ "${os_family}" == "macos" ]]; then
+  strip -x "${bin_path}" 2>/dev/null || true
+else
+  strip --strip-all "${bin_path}" 2>/dev/null || true
+fi
 
 # --- stage tarball contents -------------------------------------------------
 cp "${bin_path}" "${stage_dir}/latexml_oxide"
@@ -85,23 +114,33 @@ cp LICENSE "${stage_dir}/LICENSE"
 # --- build tarball ----------------------------------------------------------
 tarball="latexml-oxide-${version}-${target_triple}.tar.gz"
 ( cd "${artifacts_dir}" && tar -czf "${tarball}" "${stage_dir_name}" )
-( cd "${artifacts_dir}" && sha256sum "${tarball}" > "${tarball}.sha256" )
+( cd "${artifacts_dir}" && sha256_sidecar "${tarball}" )
 
-# --- build .deb -------------------------------------------------------------
-# `cargo deb` requires the package name (`-p latexml`, not the binary name).
-# `--no-build` reuses the maxperf target/maxperf/latexml_oxide we just built.
-echo "make_release: cargo deb --no-build --profile maxperf -p latexml"
-cargo deb --no-build --profile maxperf -p latexml --output "${artifacts_dir}/latexml-oxide_${version}-1_amd64.deb"
+# --- build .deb (Debian-family targets only) --------------------------------
+# macOS has no .deb equivalent in this pipeline (a Homebrew tap is the natural
+# future analogue); the tarball above is the macOS deliverable.
+deb_path=""
+if [[ "${os_family}" == "linux" ]]; then
+  # `cargo deb` requires the package name (`-p latexml`, not the binary name).
+  # `--no-build` reuses the maxperf target/maxperf/latexml_oxide we just built.
+  echo "make_release: cargo deb --no-build --profile maxperf -p latexml"
+  cargo deb --no-build --profile maxperf -p latexml --output "${artifacts_dir}/latexml-oxide_${version}-1_amd64.deb"
 
-deb_path="${artifacts_dir}/latexml-oxide_${version}-1_amd64.deb"
-if [[ ! -f "${deb_path}" ]]; then
-  echo "make_release: cargo deb did not produce ${deb_path}" >&2
-  exit 1
+  deb_path="${artifacts_dir}/latexml-oxide_${version}-1_amd64.deb"
+  if [[ ! -f "${deb_path}" ]]; then
+    echo "make_release: cargo deb did not produce ${deb_path}" >&2
+    exit 1
+  fi
+  ( cd "${artifacts_dir}" && sha256_sidecar "$(basename "${deb_path}")" )
 fi
-( cd "${artifacts_dir}" && sha256sum "$(basename "${deb_path}")" > "$(basename "${deb_path}").sha256" )
 
 # --- release body (Install + CHANGELOG slice) -------------------------------
+# The shared release body is emitted by the publishing (Linux) leg only. The
+# macOS leg uploads its tarball as a CI artifact that the Linux `release` job
+# collects before publishing; set RELEASE_MACOS_TARBALL to that filename to
+# include its install section here.
 release_body="${artifacts_dir}/RELEASE_BODY.md"
+if [[ "${os_family}" == "linux" ]]; then
 {
   cat <<EOF
 ## Install
@@ -129,6 +168,30 @@ sudo apt install libxml2 libxslt1.1 libkpathsea6 texlive-latex-base texlive-late
 
 EOF
 
+  if [[ -n "${RELEASE_MACOS_TARBALL:-}" ]]; then
+    cat <<EOF
+### macOS (Apple Silicon)
+
+\`\`\`
+curl -LO https://github.com/dginev/latexml-oxide/releases/download/${version}/${RELEASE_MACOS_TARBALL}
+tar xzf ${RELEASE_MACOS_TARBALL}
+sudo cp latexml-oxide-${version}-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
+\`\`\`
+
+macOS users also need the runtime libraries and a TeX distribution:
+
+\`\`\`
+brew install libxml2 libxslt
+# plus TeX Live — either Homebrew's (ships libkpathsea, fastest path):
+brew install texlive
+# …or MacTeX / BasicTeX, served via the subprocess-kpsewhich fallback.
+\`\`\`
+
+> Apple Silicon (arm64) only. Intel Macs are not yet a published target.
+
+EOF
+  fi
+
   # Slice the CHANGELOG section for this version. CHANGELOG entries use
   # `## [VERSION]` headers (CommonMark task-list style — see CHANGELOG.md
   # for shape). Extract from the matching header up to the next `## `.
@@ -146,6 +209,7 @@ EOF
     echo "_See [CHANGELOG.md](https://github.com/dginev/latexml-oxide/blob/master/CHANGELOG.md) for release notes._"
   fi
 } > "${release_body}"
+fi
 
 # --- summary ----------------------------------------------------------------
 echo
@@ -154,4 +218,6 @@ ls -la "${artifacts_dir}"
 echo
 echo "make_release: SHA-256 sidecars"
 cat "${artifacts_dir}/${tarball}.sha256"
-cat "${artifacts_dir}/$(basename "${deb_path}").sha256"
+if [[ -n "${deb_path}" ]]; then
+  cat "${artifacts_dir}/$(basename "${deb_path}").sha256"
+fi

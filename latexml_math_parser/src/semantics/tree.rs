@@ -787,7 +787,7 @@ impl XM {
       return false;
     };
     let outer_meaning = match &**content {
-      XM::Apply(Operator(op), _, ..) => match &**op {
+      XM::Apply(Operator(op), ..) => match &**op {
         XM::Token(props, _) => props.meaning.as_deref().map(String::from),
         XM::Lexeme(name, _) => Some(name.to_string()),
         _ => None,
@@ -814,7 +814,7 @@ impl XM {
     // outer (or is a closely-related "list"/"vector"/"formulae"
     // meaning — common when `interpret_delimited` lifts the list
     // wrapper above an inner Dual).
-    if let XM::Apply(Operator(inner_op), _, ..) = &**inner_content {
+    if let XM::Apply(Operator(inner_op), ..) = &**inner_content {
       let inner_meaning = match &**inner_op {
         XM::Token(props, _) => props.meaning.as_deref(),
         XM::Lexeme(name, _) => Some(&**name),
@@ -999,6 +999,7 @@ impl XM {
   /// math-parser grammar admits both:
   ///   - `interval_term → open-interval@(_, _)` / `closed-interval@(_, _)` (the named-interval interpretation)
   ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket interpretation)
+  ///
   /// Math convention reads these as intervals. Tree-iteration order in
   /// legacy picks the interval; under ASF the Cartesian-product
   /// order goes the other way.
@@ -1329,7 +1330,7 @@ impl XM {
       let trees = args.trees();
       let is_absent = |x: Option<&&XM>| -> bool {
         matches!(x,
-          Some(&XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"))
+          Some(XM::Token(p, _)) if p.meaning.as_deref() == Some("absent"))
       };
       is_absent(trees.first()) && is_absent(trees.last())
     }

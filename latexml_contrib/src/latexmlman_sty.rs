@@ -112,6 +112,17 @@ LoadDefinitions!({
     "\\moduleabstract{}",
     "<ltx:para class='schema_module_narrative'>#1</ltx:para>"
   );
+  // Document-level narrative: the driver module's head comments,
+  // hoisted by genschema_oxide before the first `\section` so the
+  // overview survives the section split and renders on `index.html`.
+  // Mirrors \moduleabstract's shape; multi-paragraph content splits
+  // into sibling paras during digestion, so styling hooks should
+  // target the container region rather than rely on this class
+  // reaching every paragraph.
+  DefConstructor!(
+    "\\documentabstract{}",
+    "<ltx:para class='schema_document_narrative'>#1</ltx:para>"
+  );
 
   //--- Cross-references -----------------------------------------------
   DefMacro!("\\moduleref{}",  "\\hyperref[schema.#1]{{\\ttfamily #1}}");

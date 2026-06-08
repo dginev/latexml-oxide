@@ -72,7 +72,24 @@ pub fn simplify(
     },
 
     Pattern::Element { name, body } => {
-      let elem_container = format!("element:{}", name);
+      // Qualify the element container with the innermost enclosing
+      // pattern (`element:NAME@pattern:QNAME`) when one exists.
+      // Element names in HTML-shaped schemas are generic (`div`,
+      // `span`), so the bare element name doesn't identify a use
+      // site; the host pattern does. Nested elements inherit the
+      // same host. `tex::symbol_uses` splits the form back apart and
+      // picks whichever half identifies the definition uniquely.
+      let elem_container = match container {
+        Some(c) => {
+          let host = c.split_once('@').map_or(c, |(_, h)| h);
+          if host.starts_with("pattern:") {
+            format!("element:{}@{}", name, host)
+          } else {
+            format!("element:{}", name)
+          }
+        },
+        None => format!("element:{}", name),
+      };
       let new_body: Vec<Pattern> = body
         .into_iter()
         .flat_map(|p| simplify(rng, p, binding, parent, Some(&elem_container)))
@@ -170,14 +187,20 @@ fn simplify_def(
   let args = simplify_args(rng, body, binding, parent, Some(&pattern_container));
 
   // Special case: a plain `<define>` with one Element body folds into
-  // `elementdefs[qname] -> tag` and is replaced by the bare element.
+  // `elementdefs[qname] -> tag`. The returned AST keeps the Def
+  // wrapper (the fold used to return the bare element): the emitter
+  // needs the define's name to document schemas where many defines
+  // share one element tag (HTML profiles, where every pattern renders
+  // a `div`/`span`). For uniquely-named tags `tex::to_tex_def`
+  // reproduces the folded `\elementdef` rendering, so XML-schema docs
+  // are unchanged.
   if combiner == DefCombiner::Group && args.len() == 1 {
     if let Pattern::Element { name: el_name, .. } = &args[0] {
       rng.elementdefs.insert(qname.clone(), el_name.clone());
       rng
         .element_reverse_defs
-        .insert(el_name.clone(), qname);
-      return args;
+        .insert(el_name.clone(), qname.clone());
+      return vec![Pattern::Def { combiner, name: qname, body: args }];
     }
   }
 
@@ -491,12 +514,13 @@ mod tests {
       "uses_name for grammar1:Q should be populated, got {:?}",
       rng.uses_name.keys().collect::<Vec<_>>()
     );
-    // The Ref appears inside element:p (not pattern:grammar1:P, because
-    // simplify resets the container when entering an Element).
+    // The Ref appears inside element:p, host-qualified with the define
+    // that hosts the element (pattern:grammar1:P) so the doc emitter
+    // can fall back to the pattern name for generic tags.
     let containers = p_uses.unwrap();
     assert!(
-      containers.contains("element:p"),
-      "expected Q usage under element:p, got {:?}",
+      containers.contains("element:p@pattern:grammar1:P"),
+      "expected Q usage under element:p@pattern:grammar1:P, got {:?}",
       containers
     );
   }

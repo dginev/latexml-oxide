@@ -39,12 +39,20 @@ resources/dumps/
 **the dumps cannot be regenerated from `cargo build` alone** — they
 are generated explicitly by `tools/make_formats.sh` (which builds
 the binary, detects the TL year, and writes the versioned files).
-Versioned dump files matching `plain.*.dump.txt`, `latex.*.dump.txt`,
-and `texlive.*.version` ARE tracked in git (the rest of
-`resources/dumps/` is gitignored). `build.rs` embeds each tracked
-year via `include_str!` so a binary built without a co-located
+Dump files are **NOT tracked in git** (decision 2026-06-07; all of
+`resources/dumps/` is gitignored). Release binaries embed a 5-year
+moving TL window (currently 2022–2026) generated at tag time by
+`.github/workflows/release-dumps.yml` — each year produced inside a
+pinned TL-year container with a strict zero-error `--init` gate
+(`LATEXML_INIT_DEBUG=1`, since init suppresses error output by
+default) — and downloaded into `resources/dumps/` before the maxperf
+build. `build.rs` scans that directory and embeds whatever years are
+present via `include_str!`, so a binary built without a co-located
 `resources/dumps/` directory still has every shipped year's dump
-available at runtime via the embedded fallback.
+available at runtime via the embedded fallback. Dev/CI builds embed
+whatever the local `tools/make_formats.sh` run produced (typically
+just the ambient year; nothing on a fresh clone — the runtime then
+falls back to raw format loading).
 
 ## Architecture
 

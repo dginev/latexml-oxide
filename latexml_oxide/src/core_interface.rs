@@ -689,28 +689,12 @@ impl DigestionAPI for Core {
       self.initialize_singletons(preloads)?;
     }
     {
-      if !pathname::is_literaldata(&request) {
-        state::assign_value("SOURCEFILE", request.clone(), None);
-      }
-      if !dir.is_empty() {
-        state::assign_value("SOURCEDIRECTORY", dir.clone(), None);
-      }
-      state::search_paths_push_front(dir.clone());
-      // Perl Core.pm L200:
-      //   $state->unshiftValue(GRAPHICSPATHS => $dir)
-      //     if !grep { $_ eq $dir } @{ $state->lookupValue('GRAPHICSPATHS') };
-      if !state::graphics_paths_contains(&dir) {
-        state::graphics_paths_push_front(dir);
-      }
-      state::install_definition(
-        Stored::Expandable(Rc::new(Expandable {
-          cs: T_CS!("\\jobname"),
-          paramlist: None,
-          expansion: Tokens::new(Explode!(name)).into(),
-          ..Expandable::default()
-        })),
-        None,
-      );
+      let source_file = if pathname::is_literaldata(&request) {
+        None
+      } else {
+        Some(request.as_str())
+      };
+      establish_source_context(source_file, &name, &dir);
     }
 
     // Reverse order, since last opened is first read!
@@ -757,6 +741,42 @@ impl DigestionAPI for Core {
     note_end(&s!("Digesting {} {}", mode, name));
     Ok(list)
   }
+}
+
+/// Establish the document-global *source context* for a **top-level** document
+/// load — `SOURCEFILE`, `SOURCEDIRECTORY`, the front of `SEARCHPATHS`,
+/// `GRAPHICSPATHS`, and `\jobname` (Perl Core.pm L195-200). Shared by
+/// [`DigestionAPI::digest_file`] (content read from disk) and
+/// [`crate::converter::Converter::digest_content_with_provenance`] (content
+/// supplied in memory) so the two cannot drift.
+///
+/// `source_file` is the value for `SOURCEFILE` — the source's path/identity —
+/// or `None` for an anonymous/literal source. `jobname` is the bare job name
+/// (file stem). `dir` is the source directory (may be empty, e.g. a literal).
+///
+/// This is for the *main* document only; a nested `\input`/continuation must
+/// not reset these document-global values.
+pub(crate) fn establish_source_context(source_file: Option<&str>, jobname: &str, dir: &str) {
+  if let Some(sf) = source_file {
+    state::assign_value("SOURCEFILE", sf.to_string(), None);
+  }
+  if !dir.is_empty() {
+    state::assign_value("SOURCEDIRECTORY", dir.to_string(), None);
+  }
+  state::search_paths_push_front(dir.to_string());
+  // Perl Core.pm L200: unshift GRAPHICSPATHS => $dir unless already present.
+  if !state::graphics_paths_contains(dir) {
+    state::graphics_paths_push_front(dir.to_string());
+  }
+  state::install_definition(
+    Stored::Expandable(Rc::new(Expandable {
+      cs: T_CS!("\\jobname"),
+      paramlist: None,
+      expansion: Tokens::new(Explode!(jobname)).into(),
+      ..Expandable::default()
+    })),
+    None,
+  );
 }
 
 /// Load a `.latexml` file alongside a `.tex` source file.

@@ -7905,3 +7905,14 @@ out so it doesn't crowd the parity worklist:
 These replace the inline 2026-05-24 codex "public-quality gaps" pass; its
 errors are corrected in `RELEASE_CRITERIA.md` §10. The parity mission is
 unchanged: ~99.4% on the 100k warning subset, no error-downgrading.
+
+---
+
+## Persistent server (`latexml_oxide --server`)
+
+**Moved to [`docs/archive/LSP_SERVER.md`](archive/LSP_SERVER.md)
+(2026-06-05, archived same day to keep `docs/` parity-focused).** The
+editor server is *beyond-Perl* product work, not Perl parity — this log
+stays the parity ledger. Architecture, the PR #243 review records
+(code review 2026-06-04, performance review 2026-06-05 incl. the
+stale-preamble fix), and the live known-gaps worklist all live there.

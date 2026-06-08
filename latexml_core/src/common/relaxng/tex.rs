@@ -53,11 +53,69 @@ struct EmitState<'a> {
   /// `-1` = at least one `\patternadd{name}` emitted but no `\patterndef` yet.
   /// Final pass upgrades `\patternadd` → `\patterndefadd` for any -1.
   defined_patterns: HashMap<String, i8>,
+  /// Element tags claimed by more than one singleton-element define —
+  /// see [`ambiguous_element_tags`].
+  ambiguous_elements: rustc_hash::FxHashSet<String>,
+}
+
+/// Element tags hosted by more than one define (`element TAG {…}`
+/// appearing in several patterns).
+///
+/// In LaTeXML's XML schema every tag is unique (`section = element
+/// ltx:section {…}`), so the docs can identify a definition by its
+/// element name alone — refs render `\elementref{TAG}` and the define
+/// renders as an Element card (the Perl theme). HTML profiles break
+/// that assumption: dozens of defines share `div` / `span` / `h6`,
+/// and reporting the tag erases the only identifying handle — content
+/// models read `(div | div | div)` and "Used by" lists say `div`.
+/// Rendering switches on this set: ambiguous tags keep the define's
+/// own name (`\patternref` + a patterndef card); unique tags keep the
+/// legacy element-folded rendering byte-for-byte.
+///
+/// Hosts are counted across all three places a tag claims a define:
+/// the singleton-fold registry (`elementdefs`), doc-carrying singleton
+/// defines (whose stored def collapses to a bare `Element`), and the
+/// use-site graph (`element:TAG@pattern:HOST` entries — which also
+/// counts tags appearing in multi-element choices like
+/// `element h2 {…} | element h3 {…}`).
+fn ambiguous_element_tags(rng: &Relaxng) -> rustc_hash::FxHashSet<String> {
+  let mut hosts: HashMap<&str, rustc_hash::FxHashSet<&str>> = HashMap::default();
+  for (qname, tag) in &rng.elementdefs {
+    hosts.entry(tag.as_str()).or_default().insert(qname.as_str());
+  }
+  for (qname, pat) in &rng.defs {
+    if let Pattern::Element { name, .. } = pat {
+      hosts.entry(name.as_str()).or_default().insert(qname.as_str());
+    }
+  }
+  for uses in rng.uses_name.values() {
+    for u in uses {
+      if let Some(rest) = u.strip_prefix("element:") {
+        if let Some((tag, host)) = rest.split_once('@') {
+          // Normalize to the bare define qname so the same define
+          // counted from `elementdefs`/`defs` (plain qname) and from
+          // the uses graph (`pattern:`-prefixed) stays one host.
+          let host = host.strip_prefix("pattern:").unwrap_or(host);
+          hosts.entry(tag).or_default().insert(host);
+        }
+      }
+    }
+  }
+  hosts
+    .into_iter()
+    .filter(|(_, h)| h.len() > 1)
+    .map(|(tag, _)| tag.to_string())
+    .collect()
 }
 
 /// Top-level emission. Returns a single `schema.tex` string.
 pub fn document_modules(rng: &Relaxng, opts: Options) -> String {
-  let mut emit = EmitState { rng, opts, defined_patterns: HashMap::default() };
+  let mut emit = EmitState {
+    rng,
+    opts,
+    defined_patterns: HashMap::default(),
+    ambiguous_elements: ambiguous_element_tags(rng),
+  };
   let mut docs = String::new();
   // Each Module renders as one page (`--splitat=section`), regardless
   // of def count. Page-size is mitigated client-side by CSS lazy
@@ -332,11 +390,17 @@ impl EmitState<'_> {
 
   fn to_tex_ref(&self, name: &str) -> String {
     if let Some(el) = self.rng.elementdefs.get(name) {
-      let cleaned = clean_tex_name(el, &self.rng.display_strip_prefixes);
-      if self.opts.skip_xhtml && cleaned == "xhtml:*" {
-        return String::from("\\texttt{xhtml:*}");
+      // Ambiguous tags (every `*.elem` define in an HTML profile is a
+      // `div`) fall through to the `\patternref` rendering below — the
+      // element name doesn't identify the definition, the pattern
+      // name does, and it links the define's own card.
+      if !self.ambiguous_elements.contains(el) {
+        let cleaned = clean_tex_name(el, &self.rng.display_strip_prefixes);
+        if self.opts.skip_xhtml && cleaned == "xhtml:*" {
+          return String::from("\\texttt{xhtml:*}");
+        }
+        return format!("\\elementref{{{}}}", cleaned);
       }
-      return format!("\\elementref{{{}}}", cleaned);
     }
     if name.ends_with("_attributes") || name.ends_with("_model") {
       if let Some(def) = self.rng.defs.get(name) {
@@ -344,9 +408,10 @@ impl EmitState<'_> {
         // the ref-expansion path (Perl doesn't either).
         let cloned = def.clone();
         let mut tmp = EmitState {
-          rng:              self.rng,
-          opts:             self.opts,
-          defined_patterns: HashMap::default(),
+          rng:                self.rng,
+          opts:               self.opts,
+          defined_patterns:   HashMap::default(),
+          ambiguous_elements: self.ambiguous_elements.clone(),
         };
         return tmp.to_tex(&cloned);
       }
@@ -359,6 +424,22 @@ impl EmitState<'_> {
   }
 
   fn to_tex_def(&mut self, combiner: &str, qname: &str, data: &[Pattern]) -> String {
+    // Singleton-element define (`X = element TAG {…}`) — the
+    // simplifier registers these in `elementdefs` and keeps the Def
+    // wrapper so the rendering can choose by tag uniqueness. Unique
+    // tag: render the element card directly, exactly as the
+    // previously-folded AST did (XML-schema docs unchanged).
+    // Ambiguous tag (HTML profiles where every define is a `div`):
+    // fall through to the generic path, which emits a
+    // `\patterndef{X}` card — the anchor that `\patternref{X}` links
+    // from `to_tex_ref` need — with the element as a sibling card.
+    if combiner.is_empty() && self.rng.elementdefs.contains_key(qname) && data.len() == 1 {
+      if let Pattern::Element { name, body } = &data[0] {
+        if !self.ambiguous_elements.contains(name) {
+          return self.to_tex_element(name, body);
+        }
+      }
+    }
     if self.opts.skip_aria && qname.contains("aria") {
       return String::new();
     }
@@ -371,6 +452,60 @@ impl EmitState<'_> {
     }
     let cleaned_name = clean_tex(&stripped);
     let (docs, spec) = self.extract_docs(data);
+
+    // Compact card for a singleton-element define whose tag is
+    // ambiguous (`X = element div {…}` in a profile where many defines
+    // are a `div`). The element-choice rendering below would emit
+    // `Content: \elementref{div}` plus an anonymous "Element div"
+    // sibling card — two cards, both titled by the uninformative tag.
+    // Collapse them into one patterndef card: an `Element:` fact row
+    // naming the rendered tag, then the element's own attribute /
+    // content rows. The patterndef anchor is what `\patternref{X}`
+    // links (`to_tex_ref` falls back to it for ambiguous tags).
+    if combiner.is_empty() && spec.len() == 1 {
+      if let Pattern::Element { name, body } = &spec[0] {
+        if self.ambiguous_elements.contains(name) && !is_wildcard_name(name) {
+          if matches!(self.defined_patterns.get(&cleaned_name), Some(v) if *v > 0) {
+            return String::new();
+          }
+          self.defined_patterns.insert(cleaned_name.clone(), 1);
+          let (el_docs, el_spec) = self.extract_docs(body);
+          let merged_docs = format!("{}{}", docs, el_docs);
+          let (attr, content) = self.to_tex_body(&el_spec);
+          let mut card = format!(
+            "\\item[\\textit{{Element}}:] \\texttt{{{}}}",
+            clean_tex_name(name, &self.rng.display_strip_prefixes)
+          );
+          card.push_str(&attr);
+          if !content.is_empty() {
+            card.push_str(&format!("\\item[\\textit{{Content}}:] {}", content));
+          }
+          if let Some(uses) = self.symbol_uses(qname) {
+            card.push_str(&format!("\\item[\\textit{{Used by}}:] {}", uses));
+          }
+          let mut out =
+            format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, merged_docs, card);
+          // Anonymous elements nested in the content render inline as
+          // `\elementref` links; give them their sibling cards so the
+          // links resolve on this page (same idiom as the generic
+          // patterndef path below).
+          for (el_name, el_body) in &collect_element_descendants(&el_spec) {
+            let cleaned_el = clean_tex_name(el_name, &self.rng.display_strip_prefixes);
+            let (el_attr, el_content) = self.to_tex_body(el_body);
+            let mut eb = el_attr;
+            if !el_content.is_empty() {
+              eb.push_str(&format!("\\item[\\textit{{Content}}:] {}", el_content));
+            }
+            eb.push_str(&format!(
+              "\\item[\\textit{{Used by}}:] \\patternref{{{}}}",
+              cleaned_name
+            ));
+            out.push_str(&format!("\\elementdef{{{}}}{{}}{{{}}}\n", cleaned_el, eb));
+          }
+          return out;
+        }
+      }
+    }
 
     // Compact rendering for `X = element a {B} | element b {B} | …`
     // shapes, where every alternative is a same-bodied element. The
@@ -925,13 +1060,36 @@ impl EmitState<'_> {
   fn symbol_uses(&self, qname: &str) -> Option<String> {
     let uses = self.rng.uses_name.get(qname)?;
     let mut sorted: Vec<&String> = uses.iter().collect();
-    sorted.sort();
-    let mut transformed: Vec<String> = Vec::new();
+    // Sort on the host-stripped form so the `@pattern:HOST` qualifier
+    // doesn't perturb the legacy ordering (`:` sorts below `@`, which
+    // would e.g. flip the `*` / `*:*` wildcard pair); the full string
+    // breaks ties between same-tag entries from different hosts.
+    sorted.sort_by(|a, b| {
+      let ka = a.split('@').next().unwrap_or(a);
+      let kb = b.split('@').next().unwrap_or(b);
+      ka.cmp(kb).then_with(|| a.cmp(b))
+    });
+    // Use sites come in three shapes:
+    //  * `pattern:G:NAME`               — a reference inside define NAME;
+    //  * `pattern:G:NAME_attributes` /
+    //    `pattern:G:NAME_model`         — LaTeXML's convention pairing
+    //    a `*_model` define with element NAME: report the element;
+    //  * `element:TAG@pattern:G:HOST`   — a reference inside `element
+    //    TAG {…}` hosted by define HOST (`@`-suffix recorded by the
+    //    simplifier; absent for elements outside any define). Report
+    //    the element when TAG names a unique definition; otherwise
+    //    the host pattern is the only identifying handle (HTML
+    //    profiles, where TAG is a generic `div`/`span`).
+    // Pattern links group before element links; each group keeps the
+    // raw sort order. Dedup is needed because one definition may be
+    // referenced under several (TAG, HOST) pairs that render the same
+    // link.
+    let mut pattern_parts: Vec<String> = Vec::new();
+    let mut element_parts: Vec<String> = Vec::new();
     for u in sorted {
       if self.opts.skip_svg && u.contains("SVG.") {
         continue;
       }
-      // pattern:[^:]*:NAME_(attributes|model) → element:NAME
       if let Some(rest) = u.strip_prefix("pattern:") {
         if let Some(idx) = rest.find(':') {
           let after = &rest[idx + 1..];
@@ -939,25 +1097,40 @@ impl EmitState<'_> {
             .strip_suffix("_attributes")
             .or_else(|| after.strip_suffix("_model"))
           {
-            transformed.push(format!("element:{}", name));
-            continue;
+            element_parts.push(format!(
+              "\\elementref{{{}}}",
+              clean_tex_name(name, &self.rng.display_strip_prefixes)
+            ));
+          } else {
+            pattern_parts.push(format!("\\patternref{{{}}}", clean_tex(after)));
           }
         }
+        continue;
       }
-      transformed.push(u.clone());
+      if let Some(rest) = u.strip_prefix("element:") {
+        let (tag, host) = match rest.split_once('@') {
+          Some((t, h)) => (t, Some(h)),
+          None => (rest, None),
+        };
+        if self.ambiguous_elements.contains(tag) {
+          if let Some(hrest) = host.and_then(|h| h.strip_prefix("pattern:")) {
+            if let Some(idx) = hrest.find(':') {
+              pattern_parts
+                .push(format!("\\patternref{{{}}}", clean_tex(&hrest[idx + 1..])));
+              continue;
+            }
+          }
+        }
+        element_parts.push(format!(
+          "\\elementref{{{}}}",
+          clean_tex_name(tag, &self.rng.display_strip_prefixes)
+        ));
+      }
     }
     let mut parts: Vec<String> = Vec::new();
-    for t in &transformed {
-      if let Some(rest) = t.strip_prefix("pattern:") {
-        if let Some(idx) = rest.find(':') {
-          let name = &rest[idx + 1..];
-          parts.push(format!("\\patternref{{{}}}", clean_tex(name)));
-        }
-      }
-    }
-    for t in &transformed {
-      if let Some(name) = t.strip_prefix("element:") {
-        parts.push(format!("\\elementref{{{}}}", clean_tex_name(name, &self.rng.display_strip_prefixes)));
+    for p in pattern_parts.into_iter().chain(element_parts) {
+      if !parts.contains(&p) {
+        parts.push(p);
       }
     }
     if parts.is_empty() {
@@ -1239,7 +1412,12 @@ mod tests {
   #[test]
   fn combination_rendering() {
     let rng = Relaxng::default();
-    let mut emit = EmitState { rng: &rng, opts: Options::default(), defined_patterns: HashMap::default() };
+    let mut emit = EmitState {
+      rng: &rng,
+      opts: Options::default(),
+      defined_patterns: HashMap::default(),
+      ambiguous_elements: ambiguous_element_tags(&rng),
+    };
     let body = vec![
       Pattern::Ref { qname: "g:A".into() },
       Pattern::Ref { qname: "g:B".into() },
@@ -1255,7 +1433,12 @@ mod tests {
   #[test]
   fn singleton_group_collapses_in_combination() {
     let rng = Relaxng::default();
-    let mut emit = EmitState { rng: &rng, opts: Options::default(), defined_patterns: HashMap::default() };
+    let mut emit = EmitState {
+      rng: &rng,
+      opts: Options::default(),
+      defined_patterns: HashMap::default(),
+      ambiguous_elements: ambiguous_element_tags(&rng),
+    };
     let body = vec![Pattern::Ref { qname: "g:Only".into() }];
     let result = emit.to_tex_combination(CombineOp::Group, &body);
     assert_eq!(result, "\\patternref{Only}");
@@ -1270,7 +1453,12 @@ mod tests {
       .entry("g:Foo".into())
       .or_default()
       .insert("element:bar".into());
-    let mut emit = EmitState { rng: &rng, opts: Options::default(), defined_patterns: HashMap::default() };
+    let mut emit = EmitState {
+      rng: &rng,
+      opts: Options::default(),
+      defined_patterns: HashMap::default(),
+      ambiguous_elements: ambiguous_element_tags(&rng),
+    };
     let out = emit.to_tex_element("foo", &[Pattern::Text]);
     assert!(out.contains("\\elementdef{foo}"));
     assert!(out.contains("\\item[\\textit{Content}:]"));
@@ -1280,7 +1468,12 @@ mod tests {
   #[test]
   fn def_emits_patterndef_then_skips_duplicates() {
     let rng = Relaxng::default();
-    let mut emit = EmitState { rng: &rng, opts: Options::default(), defined_patterns: HashMap::default() };
+    let mut emit = EmitState {
+      rng: &rng,
+      opts: Options::default(),
+      defined_patterns: HashMap::default(),
+      ambiguous_elements: ambiguous_element_tags(&rng),
+    };
     let body = vec![Pattern::Text];
     let first = emit.to_tex_def("", "g:X", &body);
     let second = emit.to_tex_def("", "g:X", &body);
@@ -1291,7 +1484,12 @@ mod tests {
   #[test]
   fn def_combine_choice_emits_patternadd() {
     let rng = Relaxng::default();
-    let mut emit = EmitState { rng: &rng, opts: Options::default(), defined_patterns: HashMap::default() };
+    let mut emit = EmitState {
+      rng: &rng,
+      opts: Options::default(),
+      defined_patterns: HashMap::default(),
+      ambiguous_elements: ambiguous_element_tags(&rng),
+    };
     let out = emit.to_tex_def("choice", "g:X", &[Pattern::Text]);
     assert!(out.contains("\\patternadd{X}"));
     // -1 marker recorded so the post-pass can upgrade if no \patterndef was emitted.

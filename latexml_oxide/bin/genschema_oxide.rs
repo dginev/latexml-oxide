@@ -157,6 +157,7 @@ fn main() {
   };
   let mut docs = document_modules(&rng, tex_opts);
   if cli.module_abstract {
+    docs = hoist_document_abstract(&docs);
     docs = lift_module_abstract(&docs);
   }
 
@@ -187,6 +188,91 @@ fn resolve_schema_path(schema: &Path, paths: &[PathBuf]) -> Option<PathBuf> {
 /// Promote the first `\patterndef`'s doc-arg of each `\schemamodule`
 /// to a top-level `\moduleabstract{...}` macro.
 ///
+/// Scan a TeX group starting at the byte offset of its opening brace;
+/// return the contents and the offset just past the closing brace.
+/// Needed because doc-args routinely carry nested `\code{...}` groups,
+/// which a `[^}]*` regex would truncate at the first inner brace.
+fn read_tex_group(tex: &str, open: usize) -> Option<(&str, usize)> {
+  let bytes = tex.as_bytes();
+  if bytes.get(open) != Some(&b'{') {
+    return None;
+  }
+  let mut depth = 0usize;
+  for (i, &b) in bytes.iter().enumerate().skip(open) {
+    match b {
+      b'{' => depth += 1,
+      b'}' => {
+        depth -= 1;
+        if depth == 0 {
+          return Some((&tex[open + 1..i], i + 1));
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// The driver module is the first `\begin{schemamodule}` in the
+/// emitted TeX, and the `## comments` at the head of the driver file
+/// are the schema's own front-page overview. Left in place they would
+/// be sectioned away with the rest of the module when the postprocessor
+/// splits at `\section` — landing on the module page while the
+/// document's `index.html` shows only the title and table of contents.
+/// Hoist them: when the driver's first patterndef carries a
+/// multi-paragraph doc-arg, move the whole narrative to document level
+/// (before the first `\begin{schemamodule}`) as `\documentabstract`,
+/// leaving the patterndef's doc empty. Single-paragraph docs stay put —
+/// those are per-pattern commentary (e.g. `Inline.model` in
+/// LaTeXML.rnc), not a front-page narrative.
+fn hoist_document_abstract(tex: &str) -> String {
+  let Some(module_start) = tex.find("\\begin{schemamodule}") else {
+    return tex.to_owned();
+  };
+  let Some(pdef_rel) = tex[module_start..].find("\\patterndef{") else {
+    return tex.to_owned();
+  };
+  let pdef_start = module_start + pdef_rel;
+  // Don't reach into a later module: the patterndef must belong to
+  // the driver module block.
+  if let Some(next_module_rel) = tex[module_start + 1..].find("\\begin{schemamodule}") {
+    if module_start + 1 + next_module_rel < pdef_start {
+      return tex.to_owned();
+    }
+  }
+  let name_open = pdef_start + "\\patterndef".len();
+  let Some((_name, doc_open)) = read_tex_group(tex, name_open) else {
+    return tex.to_owned();
+  };
+  let Some((doc, doc_end)) = read_tex_group(tex, doc_open) else {
+    return tex.to_owned();
+  };
+  let paragraphs: Vec<&str> = doc
+    .split("\n\n")
+    .map(str::trim)
+    .filter(|p| !p.is_empty())
+    .collect();
+  if paragraphs.len() < 2 {
+    return tex.to_owned();
+  }
+  // All paragraphs but the last form the document narrative; the
+  // final paragraph is the first define's own documentation and
+  // stays on the patterndef (mirroring the module-lift convention,
+  // where trailing paragraphs document the define they precede).
+  let (narrative, pattern_doc) = paragraphs.split_at(paragraphs.len() - 1);
+  let mut out = String::with_capacity(tex.len() + 32);
+  out.push_str(&tex[..module_start]);
+  out.push_str("\\documentabstract{");
+  out.push_str(&narrative.join("\n\n"));
+  out.push_str("}\n");
+  out.push_str(&tex[module_start..doc_open]);
+  out.push('{');
+  out.push_str(pattern_doc[0]);
+  out.push('}');
+  out.push_str(&tex[doc_end..]);
+  out
+}
+
 /// Mirrors the Perl regex in `tools/genschema`'s post-processing step:
 /// the `## comments` at the head of each RNC file land — via trang's
 /// `<a:documentation>` and `RelaxNG.pm`'s `doc` op — as the doc-arg of

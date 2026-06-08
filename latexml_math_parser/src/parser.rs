@@ -218,6 +218,10 @@ thread_local! {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+// `Accepted(XM)` is the hot/common variant; boxing it to equalize variant
+// sizes would add an allocation + indirection on every accepted parse. The
+// value is short-lived (a per-parse outcome), so the size disparity is benign.
+#[allow(clippy::large_enum_variant)]
 pub(crate) enum ParseOutcome {
   Accepted(XM),
   Empty,
@@ -286,10 +290,8 @@ fn canonicalize_xm_ids_inner(
     XM::Apply(operator, args, props, _) => {
       canonicalize_xprops_ids(props, ids, next_id);
       canonicalize_xm_ids_inner(&mut operator.0, ids, next_id);
-      for arg in &mut args.0 {
-        if let Some(arg) = arg {
-          canonicalize_xm_ids_inner(arg, ids, next_id);
-        }
+      for arg in args.0.iter_mut().flatten() {
+        canonicalize_xm_ids_inner(arg, ids, next_id);
       }
     },
     XM::Dual(content, presentation, props, _) => {
@@ -1521,6 +1523,9 @@ impl MathParser {
       }
       match hybrid_result {
         Ok(HybridParseResult::Unambiguous(mut tree_iter)) => {
+          // Release `traverser`'s borrow of the recognizer before re-borrowing
+          // below; `drop` is the intent even though the type has no Drop impl.
+          #[allow(clippy::drop_non_drop)]
           drop(traverser);
           record_ambiguity_metric(1, input);
           let tree_outcome = if let Some(val) = tree_iter.next() {
@@ -1572,14 +1577,12 @@ impl MathParser {
           }
           let alts_vec =
             std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
-          for opt in alts_vec {
-            if let Some(tree) = opt {
-              if parses.contains(&tree) {
-                deduped += 1;
-              } else {
-                ok_trees += 1;
-                parses.push(tree);
-              }
+          for tree in alts_vec.into_iter().flatten() {
+            if parses.contains(&tree) {
+              deduped += 1;
+            } else {
+              ok_trees += 1;
+              parses.push(tree);
             }
           }
         },
@@ -1590,6 +1593,8 @@ impl MathParser {
           // the ASF. Walk it with the same 6 convergence caps that the
           // legacy path uses — those caps are exactly what makes
           // Tree-iteration tractable on highly-ambiguous forests.
+          // Release `traverser`'s borrow before re-borrowing below.
+          #[allow(clippy::drop_non_drop)]
           drop(traverser);
           record_ambiguity_metric(2, input);
           if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
@@ -1709,14 +1714,12 @@ impl MathParser {
           // deep clone on the cold path.
           let alts_vec =
             std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
-          for opt in alts_vec {
-            if let Some(tree) = opt {
-              if parses.contains(&tree) {
-                deduped += 1;
-              } else {
-                ok_trees += 1;
-                parses.push(tree);
-              }
+          for tree in alts_vec.into_iter().flatten() {
+            if parses.contains(&tree) {
+              deduped += 1;
+            } else {
+              ok_trees += 1;
+              parses.push(tree);
             }
           }
         },

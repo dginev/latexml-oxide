@@ -1,4 +1,9 @@
-on: [push, pull_request]
+on:
+  # `push` only on master, so a PR branch isn't checked twice (the
+  # `pull_request` event already covers branch updates via `synchronize`).
+  push:
+    branches: [master]
+  pull_request:
 
 name: CI
 
@@ -78,5 +83,52 @@ jobs:
       - name: build test binaries
         run: cargo test --profile ci --tests --workspace --no-run
 
+      - name: run tests
+        run: cargo test --profile ci --tests --workspace -- --test-threads=2
+
+  # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
+  # same make-formats → build → run flow; only the platform deps differ:
+  # Homebrew instead of apt, and NO mold (the .cargo/config.toml
+  # `-fuse-ld=mold` rustflags are gated to x86_64-linux, so the
+  # aarch64-darwin link uses the system linker — we simply don't set the
+  # mold RUSTFLAGS here). Uses Homebrew's `texlive`, which ships
+  # libkpathsea + kpathsea.pc, so the in-process linked kpathsea backend is
+  # exercised end-to-end. (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback
+  # is documented in README.md but not gated here — it lacks the package set
+  # the full suite needs.)
+  macos:
+    name: latexml-oxide CI (macOS)
+    runs-on: macos-15
+    # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
+    # RAM-tuned `ci` profile + jobs=2 apply; the cold build dominates, so
+    # allow more wall-clock than the Linux leg.
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+    steps:
+      # libxml2 + libxslt are keg-only on Homebrew; install them and surface
+      # their pkgconfig dirs so the libxml/libxslt build scripts find them.
+      - name: install dependencies
+        run: |
+          command -v pkg-config >/dev/null || brew install pkgconf
+          brew install libxml2 libxslt texlive
+      - name: surface keg-only pkg-config paths
+        run: |
+          echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: macos
+      - name: make formats
+        env:
+          PROFILE: ci
+        run: tools/make_formats.sh
+      - name: build test binaries
+        run: cargo test --profile ci --tests --workspace --no-run
       - name: run tests
         run: cargo test --profile ci --tests --workspace -- --test-threads=2

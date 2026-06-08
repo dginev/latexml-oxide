@@ -265,6 +265,14 @@ pub struct State {
   /// path). Populated lazily via `source_tag()` only when `source_map` is
   /// on. See `docs/SOURCE_PROVENANCE.md` §0.1.
   pub source_table:            Vec<SymStr>,
+  /// Read-log of every *named* source opened through `Mouth::create`
+  /// (file paths and cached-content names; literal/anonymous mouths are
+  /// not named, so not recorded). Distinct from `source_table`, which
+  /// is populated lazily at *document-construction* time and filters to
+  /// user sources — this log is complete and available right after a
+  /// digest, which the LSP server's warm-cache dependency snapshot
+  /// relies on (`lsp_server/overlay.rs::warmup_dep_snapshot`).
+  pub opened_sources:          HashSet<SymStr>,
   // TODO: We can make this a Vec<BindingDispatcher> if we want to accumulate more definitions
   /// A dispatcher routing to the compiled code of the in-distro latexml bindings
   pub bindings_dispatch:       Option<BindingDispatcher>,
@@ -338,6 +346,7 @@ impl Default for State {
       nomathparse:             false,
       source_map:              false,
       source_table:            Vec::new(),
+      opened_sources:          HashSet::default(),
       bindings_dispatch:       None,
       extra_bindings_dispatch: None,
       binding_names:           Vec::new(),
@@ -367,6 +376,20 @@ static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
     ..StateOptions::default()
   }))
 });
+
+/// Eagerly initialize this thread's `STD_STATE`/`STY_STATE` catcode-regime
+/// templates. They are accessed mid-conversion on catcode switches
+/// (`\makeatletter`, verbatim, …); each one's `Lazy` initializer runs
+/// `State::new`, which interns via the arena. Forcing them at conversion
+/// entry — AFTER [`arena::force_init`](crate::common::arena::force_init) —
+/// keeps them from initializing re-entrantly mid-expansion, the macOS
+/// `#[thread_local]` hazard behind issue #217. (The active `STATE` is
+/// already forced by `set_state` in `Core::new`.) No behavioral change on
+/// Linux.
+pub(crate) fn force_init() {
+  Lazy::force(&STD_STATE);
+  Lazy::force(&STY_STATE);
+}
 
 macro_rules! state {
   () => {
@@ -2367,41 +2390,52 @@ pub fn end_semiverbatim() -> Result<()> { pop_frame() }
 
 //   #======================================================================
 
-// sub pushDaemonFrame {
-// ...  TODO
-// }
+// PARTIAL port of Perl `LaTeXML::Core::State::push/popDaemonFrame`
+// (used by the Perl `latexmls` daemon to reset bindings between runs while
+// keeping the loaded Pool). `pop_daemon_frame` is faithful (pop unlocked
+// frames, unlock + pop the daemon frame, Fatal on the last frame).
+// `push_daemon_frame` is NOT yet: Perl (State.pm L607-627) additionally
+// `daemon_copy`s every mutable HASH/ARRAY value binding into the new frame —
+// so IN-PLACE mutations under the daemon frame (Rust: `with_value_mut` on
+// `VecDequeStored`/`HashTagData`/... values) can't corrupt the pre-frame
+// state — and records `_PRELOADED_POOL_`. Without that copy, a daemon reset
+// only undoes frame-tracked ASSIGNMENTS, not in-place mutations. The Rust
+// persistent server (`latexml_oxide --server`) instead isolates each
+// conversion in a `fork()`ed child, so these are not currently wired into a
+// caller — kept (with the round-trip test in `tests/00_unit_state.rs`) as the
+// seed of an in-process reset primitive for a future thread-reusing daemon
+// mode, which MUST add the deep-copy semantics before relying on it. See
+// `lsp_server` for the chosen fork-isolation design.
+pub fn push_daemon_frame() {
+  let daemon_frame = UndoFrame {
+    locked: true,
+    ..UndoFrame::default()
+  };
+  state_mut!().undo.push_front(daemon_frame);
+}
 
-// sub daemon_copy {
-//   my ($ob) = @_;
-//   if (ref $ob eq 'HASH') {
-//     my %hash = map { ($_ => daemon_copy($$ob{$_})) } keys %$ob;
-//     return \%hash; }
-//   elsif (ref $ob eq 'ARRAY') {
-//     return [map { daemon_copy($_) } @$ob]; }
-//   else {
-//     return $ob; } }
-
-// sub popDaemonFrame {
-//   my ($self) = @_;
-//   while (!$$self{undo}[0]{_FRAME_LOCK_}) {
-//     $self->popFrame; }
-//   if (scalar(@{ $$self{undo} } > 1)) {
-//     delete $$self{undo}[0]{_FRAME_LOCK_};
-//     # Any non-preloaded Pool routines should be wiped away, as we
-//     # might want to reuse the Pool namespaces for the next run.
-//     my $pool_preloaded_hash = $self->lookupValue('_PRELOADED_POOL_');
-//     $self->assignValue('_PRELOADED_POOL_', undef, 'global');
-//     foreach my $subname (keys %LaTeXML::Package::Pool::) {
-//       unless (exists $$pool_preloaded_hash{$subname}) {
-//         undef $LaTeXML::Package::Pool::{$subname};
-//         delete $LaTeXML::Package::Pool::{$subname};
-//       } }
-//     # Finally, pop the frame
-//     $self->popFrame; }
-//   else {
-//     Fatal('unexpected', '<endgroup>', $self->getStomach,
-//       "Daemon Attempt to pop last stack frame"); }
-//   return; }
+pub fn pop_daemon_frame() -> Result<()> {
+  let mut state = state_mut!();
+  // `is_some_and(!locked)` rather than `unwrap()`: an (impossible-in-practice)
+  // empty undo stack must fall through to the Fatal below, not panic.
+  while state.undo.front().is_some_and(|f| !f.locked) {
+    drop(state);
+    pop_frame()?;
+    state = state_mut!();
+  }
+  if state.undo.len() > 1 {
+    state.undo.front_mut().unwrap().locked = false;
+    drop(state);
+    pop_frame()?;
+  } else {
+    fatal!(
+      TargetUnexpected,
+      Endgroup,
+      "Daemon Attempt to pop last stack frame"
+    );
+  }
+  Ok(())
+}
 
 // ======================================================================
 /// Set one of the definition prefixes global, etc (only global matters!)
@@ -2845,6 +2879,16 @@ pub fn source_tag(source: SymStr) -> u32 {
 /// Snapshot of the `sources` table (index = tag) for emitting the
 /// document-level tag→file header.
 pub fn source_table_snapshot() -> Vec<SymStr> { state!().source_table.clone() }
+
+/// Record a *named* source in the opened-sources read-log. Called from
+/// `Mouth::create` for file and cached-content mouths — a cold path (one
+/// call per file open, not per token).
+pub fn record_opened_source(source: SymStr) { state_mut!().opened_sources.insert(source); }
+
+/// Snapshot of the opened-sources read-log (see `record_opened_source`).
+pub fn opened_sources_snapshot() -> Vec<SymStr> {
+  state!().opened_sources.iter().copied().collect()
+}
 
 pub fn current_verbosity() -> i32 { state!().verbosity }
 
