@@ -77,6 +77,31 @@ own Phase 0 before assuming it is.
 > pre-rearrange Math/XMArg id scheme and need the MathFork **content-branch**
 > id reconciliation (the shallow-XMArg-ref nuance below; a distinct, deeper
 > sub-issue, still open).
+>
+> **STRUCTURAL DIAGNOSIS (Phase-0c, 2026-06-08) — deeper than an id fix.**
+> Dumping both trees for the eq:statedefs `\begin{equation}\begin{aligned}` (3
+> rows of `\Pr(\fullaccevent{i})…`) shows Rust and Perl build *structurally
+> different* equationgroups:
+> * **Perl:** group `A1.E66` → **5 per-row presentation equations**
+>   (`A1.E66X`, `A1.E66Xa`–`Xd`) **+ a separate CONTENT `<Math A1.E66.m1>`**
+>   carrying the deep semantic tree (`A1.E66.m1.1.1.…`, with a `.mf` MathFork
+>   marker). The `\Pr` content refs resolve into that content Math — 360
+>   `A1.E66.m1.*` nodes exist.
+> * **Rust:** group `A1.E66` → **one** inner equation `A1.E66X` with three math
+>   elements (`A1.E66X.m1/m2/m3`); **no separate content Math**, so the
+>   digestion-minted `A1.E66.m1.*` refs have no target.
+>
+> So this is **not** an id-preservation fix: `split.tex` (a lone-aligned
+> equation with NO content-bearing duals) has Perl `Ch0.Ex2X.m1` — the X-on-Math
+> scheme Rust already matches — and re-blessing confirmed it. There is **no
+> single "keep the Math id" rule**; the behaviour forks on whether the equation
+> carries content-bearing XMDual macros (`\Pr`-style) that Perl splits into a
+> dedicated content Math + per-row presentation equations. Closing the residual
+> requires porting that **content/presentation MathFork split** in
+> `rearrange_lone_ams_aligned` (a structural rebuild, high fixture-churn risk —
+> validate every `equationgroup`/MathFork fixture vs Perl). **Deferred as a
+> dedicated effort**, not a drive-by — same discipline as the `rewrite.rs:1242`
+> lesson ([`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
 
 **This is not a math-parser bug at all.** The source is the classic
 lone-aligned equation:
