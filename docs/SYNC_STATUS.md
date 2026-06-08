@@ -149,8 +149,12 @@
 >   OmniBus stub omitted it so author `\geometry{...}` was undefined. Added it. 2407.02650 1→0.
 >
 > Remaining positive-delta gaps are DEEP/delicate single papers (out of quick-fix scope, logged
-> for later): pgfplots `symbolic x coords` + `nodes near coords`/`bar shift` interaction
-> (2110.14597, +12); kvoptions/cleveref raw-load `#`/`\fi` cascade (2411.03393, +4); tabularht
+> for later): **spath3/xparse expl3 catcode clobber (2112.11932, Rust 1003 / Perl 5, +998 — the
+> SINGLE BIGGEST Rust-only gap; root-caused + 4 band-aids tried & all regress something, see
+> [`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](EXPL3_CATCODE_GAP_2026-06-08.md); real fix is
+> `\ExplSyntaxOff` catcode-stack completeness, not a loader patch)**; pgfplots `symbolic x coords`
+> + `nodes near coords`/`bar shift` interaction (2110.14597, +12); kvoptions/cleveref raw-load
+> `#`/`\fi` cascade (2411.03393, +4); tabularht
 > DVI-driver GenericError + `\@array` (2206.08989, +3); siamart eager-xcolor vs colortbl
 > (2511.10796, +1, delicate); deluxetable `$`-column template (2305.16141, +1); revtex bbl
 > internal-CS leak (2312.14913, +1). The 64 slow/timeout witnesses are being recovered serially
