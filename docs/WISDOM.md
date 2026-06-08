@@ -1923,3 +1923,51 @@ swap immediately). Byte-compare dumps across backends (expect identity
 modulo the `texsys.aux_contents` timestamp record) before trusting any
 file-resolution change. Upstream regression test:
 rust-kpathsea `lsr_cache_agrees_with_cli_on_shadowed_basenames`.
+
+## #58 macOS libmalloc exposes latent use-after-free that glibc hides — the `node.get_type().is_none()`-after-`add_child` trap
+
+**Context (2026-06-08, issue #217 macOS port):** the full test suite
+crashed nondeterministically *only* on macOS (worker threads), with a
+node read as a garbage libxml2 type (`EntityDecl`/17,
+`DOCBDocumentNode`/21 — types LaTeXML never builds) → `get_node_qname`
+panic, plus SIGSEGV/SIGBUS. Linux was clean under **valgrind AND ASan**
+(TL2025+TL2026, full-binary, `--test-threads=16`), and the bug was a
+Heisenbug (symbol/`MallocScribble` builds masked it).
+
+**Root cause:** a genuine use-after-free. In
+`document.rs::open_text_internal`, after `point.add_child(&mut node)`
+libxml2 **merges adjacent text nodes** — it appends the new text to
+`point`'s existing last text child and **frees the just-created
+`node`**. The merge was detected with `node.get_type().is_none()`,
+which *reads the freed node*. That read is **benign on glibc** (the
+freed slot keeps its old/None `type`, so the merge is detected) but
+**unsound on macOS libmalloc**, which recycles/scribbles the freed slot
+so `get_type()` returns garbage → the check fails → the freed node is
+installed as `self.node`, corrupting the current insertion point (one
+bad `set_node` cascaded to dozens of corrupt reads → crash).
+
+**Two load-bearing lessons:**
+1. **macOS's system allocator (libmalloc) surfaces latent UAFs that
+   glibc's lazy bin-reuse silently tolerates** — and Linux valgrind/ASan
+   miss them when the freed memory is never read on the Linux path (here
+   the read *was* on the path, but glibc made it benign and valgrind
+   only flags reads of memory it knows is freed-then-read with a *bad*
+   outcome — the stale-but-valid read passed). When a bug is macOS-only
+   and Linux-tooling-clean, suspect allocator-exposed UAF, not just TLS.
+2. **Never detect a libxml2 text-merge by reading the merged node.**
+   `add_child`/`add_next_sibling` of a text node can free it. Detect via
+   **pointer identity** instead: after the add, the text is the parent's
+   last child either way — if it *is* the original node it was appended
+   (live), else it was merged+freed. `libxml::Node`'s `PartialEq`
+   compares the stored `xmlNodePtr` *without dereferencing*, so
+   `parent.get_last_child() == Some(&node)` is UAF-safe and
+   allocator-independent. Audit any `X.add_*sibling/add_child(&mut t)`
+   followed by a read of `t` for the same trap (fixed:
+   `open_text_internal`, `swap_comment_text_if_needed`).
+
+**Diagnostic technique that cracked it:** an lldb backtrace on the
+brew-texlive CI leg + a `#[track_caller]` `set_node` tracer pinned every
+corrupt assignment to one site (`open_text_internal`'s post-`add_child`
+`set_node`). The `#[global_allocator]=mimalloc` is bin-only and never
+touches libxml2's `xmlNode`s (no `xmlMemSetup`), so it is NOT in the
+recipe — the system **libmalloc** is the exposer.

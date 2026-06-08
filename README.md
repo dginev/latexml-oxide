@@ -85,7 +85,7 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkp
                    texlive-bibtex-extra texlive-publishers poppler-utils
 ```
 
-Example for macOS (arm64; validated on the CI probe — see
+Example for macOS (arm64; the full test suite runs on macOS CI — see
 [docs/PORTABILITY_MACOS_PROBE_2026-06-07.md](docs/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
 
 ```

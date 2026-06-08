@@ -55,18 +55,18 @@ smoke corpus + size gate + dependency check:
 1. Debian/Ubuntu x86_64 (current).
 2. aarch64 Linux.
 3. Container image (reproducible TeX Live + graphics).
-4. macOS (#217) — **measured 2026-06-07**
+4. macOS (#217) — **DONE 2026-06-08**
    ([`PORTABILITY_MACOS_PROBE_2026-06-07.md`](PORTABILITY_MACOS_PROBE_2026-06-07.md)):
-   builds + converts on `macos-15` arm64 with `brew install texlive
-   libxml2 libxslt` (probe workflow, brew-texlive leg green). MacTeX
-   ships NO libkpathsea (nothing to find — the old "find MacTeX headers"
-   framing was moot); covered instead by **kpathsea 0.3.0 (crates.io,
-   released 2026-06-07)** subprocess-`kpsewhich` fallback (Perl-parity
-   ls-R cache w/ ambiguous-basename eviction). crates.io release + dep
-   swap **done**; README install matrix **done**; probe **promoted to a
-   gating CI job**, and the brew-texlive leg now runs the full
-   `cargo test --tests --workspace` suite. Remaining: drive that full
-   macOS suite to green.
+   the full `cargo test --tests --workspace` suite is **green on `macos-15`
+   arm64** (brew-texlive gating leg: 1390 passed / 0 failed / 0 crashes,
+   43 binaries). MacTeX ships NO libkpathsea → covered by **kpathsea 0.3.0
+   (crates.io)** subprocess-`kpsewhich` fallback. The macOS-only
+   worker-thread Node corruption was a **use-after-free of a
+   libxml2-merged text node** — detected via a read of the freed node
+   (benign on glibc, exposed by macOS libmalloc); fixed in
+   `open_text_internal` with a pointer-identity merge check (WISDOM #58)
+   and audited for sibling sites. crates.io release + dep swap, README
+   install matrix, and the gating CI job all **done**.
 5. Windows / musl — deferred. Known blockers: `libmarpa-sys`
    `./configure && make` (needs a cc-crate port; tarball is vendored),
    `lsp_server` unix sockets, `graphics*.rs` cfg(unix) paths,
