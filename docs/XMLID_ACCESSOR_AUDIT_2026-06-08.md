@@ -85,6 +85,23 @@ the intent is to drop an id before re-assigning/relocating, this leaves a stale
 id (and a possible later dedup-collision). Each should become
 `remove_attribute_ns("id", XML_NS)` (verify the node isn't an SVG `id`).
 
+### A′. The SAME footgun on other namespaced attributes — exhaustive sweep
+A grep of **every** `(get|has|remove)_attribute("PREFIX:LOCAL")` (any colon)
+across the workspace returns exactly two distinct names:
+- **`xml:id`** — 49 read/has/remove sites (above) + 16 `set_attribute` writes (writes are fine).
+- **`xml:lang`** — **1 site, `document.rs:3556` in `get_node_language`** — same
+  bug (always `None`). It drives decimal/thousands-separator selection in math
+  ligatures (`base_xmath.rs:723` → `DefMathLigature`), so non-English math
+  numbers used English `.`/`,` conventions. **FIXED 2026-06-08:**
+  `get_attribute_ns("lang", XML_NS)`; also fixed an adjacent Perl-divergence in
+  the same loop (it read `_font` off the original `node` instead of the walked
+  `node_ref`; Perl `getNodeLanguage` walks the ancestor).
+
+No `xlink:href`, `svg:*`, or other prefixed attribute names appear in any
+string accessor. Writes (`set_attribute("…:…")`) and XPath `findnodes` (which
+resolve prefixes through registered namespaces) are unaffected. So `xml:id`
+and `xml:lang` are the complete set.
+
 ### D. `has_attribute("xml:id")` — 7 sites (always `false`)
 `document.rs:486,2035,3334,3339`, `rewrite.rs:1248`,
 `latex_constructs.rs:7741`, `base_xmath.rs:480`.

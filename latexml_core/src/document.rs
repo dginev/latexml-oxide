@@ -3553,10 +3553,16 @@ impl Document {
       if node_ref.get_type() != Some(NodeType::ElementNode) {
         break;
       }
-      if let Some(lang) = node_ref.get_attribute("xml:lang") {
+      // `xml:lang` is stored namespaced (local name "lang"); the string
+      // accessor `get_attribute("xml:lang")` always returns None — read it via
+      // the XML namespace. (Same libxml footgun as xml:id; see
+      // docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.)
+      if let Some(lang) = node_ref.get_attribute_ns("lang", XML_NS) {
         return lang;
       }
-      if let Some(fontid) = node.get_attribute("_font") {
+      // Perl `getNodeLanguage` reads `_font` off the SAME (walked) ancestor,
+      // not the original node — use `node_ref`, not `node`.
+      if let Some(fontid) = node_ref.get_attribute("_font") {
         if let Some(font) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
           if let Some(lang) = font.get_language() {
             return lang.to_string();
