@@ -230,6 +230,12 @@
 >      assignment until after the parse) — deep core math id-management (every XMDual-bearing doc),
 >      needs a focused session. Witnesses 2311.01600 (E66, physics + custom prob-macro XMDuals +
 >      multi-line `\left.`/`\right.` split), 2207.08945 (E49).
+>      **DESIGN SCOPED (2026-06-08):** [`EXPECTED_ID_XMREF_DESIGN.md`](EXPECTED_ID_XMREF_DESIGN.md).
+>      Root pinned: the LOSTNODES orphan snapshot (parser.rs:1383) captures only PRE-parse ids, so a
+>      parse-time-created-then-lost id (`…m1.1a`) escapes the cleanup. Phased plan: ship the robust
+>      reconciliation sweep (Option A — drop/absent-token any unresolved idref after LOSTNODES; clears
+>      the error cluster, low risk) first, then per-construct fidelity (Option B — record the real
+>      successor so refs redirect not drop). Phase-0 instrumentation + test/risk plan in the doc.
 > 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
 >    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
 >    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
