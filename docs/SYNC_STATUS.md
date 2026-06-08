@@ -169,7 +169,11 @@
 >      VERTBAR modulus. Fix = pass `no_stretch` directly (matching `\expectationvalue`, already
 >      correct). New Rust output on `tests/complex/physics.tex` is now **byte-for-byte stretchy-
 >      identical to Perl** (14/21 langle, 8/19 rangle, 6 MIDDLE); `physics.xml` re-blessed; suite
->      green; witness **2211.16395 → 0 errors**.
+>      green; witnesses **2211.16395, 2401.16728, 2404.05917 → 0 errors** (broader recovery beyond
+>      the one debugged). NOTE: physics `\abs`/`\norm`/`\qty` are NOT affected (they already pass
+>      `no_stretch` directly via `\lx@physics@fenced`); a physics paper failing only on compound
+>      `\abs`/`\norm` (e.g. 2305.07971) is the *modulus*-VERTBAR variant, deferred with the cases
+>      below.
 >    - **Remaining (genuine parser-VERTBAR, DEFERRED):** the `braket` *package* (2205.06843,
 >      `\braket{a|op|c}`) and `mathtools` (2306.04445) hit the same modulus ambiguity but with
 >      *intentionally* non-stretchy delimiters (faithful to the package + Perl), so they need the
