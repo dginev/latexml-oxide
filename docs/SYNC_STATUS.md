@@ -217,10 +217,19 @@
 >      — a custom `\Pr`/function-macro XMDual) PREDICTS a suffixed id the target node never actually
 >      receives → `Cannot find a node`. Root: the dual id-PREDICTION (base_xmath `\lx@dual`
 >      afterConstruct / resolve path) does not track the collision-suffixing of the ACTUAL assignment.
->      This is the historical expected:id-cascade class ([[project_xmref_dangling_split]]); a fix
->      touches core math id-generation (every `|`-/XMDual-bearing doc) — needs a focused session with
->      a collision-prediction reconciliation design, not an ad-hoc patch. Witnesses 2311.01600 (E66,
->      physics + custom prob macros + multi-line `\left.`/`\right.` split), 2207.08945 (E49).
+>      This is the historical expected:id-cascade class ([[project_xmref_dangling_split]]). REFINED
+>      ROOT (2026-06-08): `createXMRefs` (`base_xmath.rs` `ltx:XMDual` after_close_late) sets `idref`
+>      to the target XMArg's ACTUAL `generate_id` value at CONSTRUCTION time (the node had `m1.1a`
+>      then) — NOT a prediction. The dangle appears because the MATH PARSER, running LATER, removes /
+>      restructures that node (its `replace_tree`/`unbind` paths, cf. the parser.rs:~1103 "Danger" id
+>      redirect) without redirecting the construction-assigned idref. **DISPROVED the
+>      `record_node_ids` subtree-scope hypothesis** — widening that redirect document-wide changed
+>      NOTHING on the witnesses (2311.01600 still 12, 2207.08945 still 8), so the reassignment is the
+>      parse-time node-drop path, not a `modify_id` collision redirect. Fix = redirect/preserve
+>      construction-assigned idrefs across the math-parser's node removals (or defer createXMRefs id
+>      assignment until after the parse) — deep core math id-management (every XMDual-bearing doc),
+>      needs a focused session. Witnesses 2311.01600 (E66, physics + custom prob-macro XMDuals +
+>      multi-line `\left.`/`\right.` split), 2207.08945 (E49).
 > 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
 >    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
 >    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
