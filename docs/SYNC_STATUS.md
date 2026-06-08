@@ -5200,7 +5200,14 @@ no single cause. Two classes after Rust-vs-Perl sampling:
   kr's `\maketitle` `\vbox` as formatting switches (`\author{Name\affiliations Affil
   \emails Email}`); kr.sty raw-loads fine (647 warns) but LaTeXML extracts author metadata
   OUTSIDE that title-group scope → the local `\def`s aren't in scope → undefined. Deep
-  (LaTeXML author-model vs switch-based author block). `\RSsectxt`/`\RS@ifundefined`
+  (LaTeXML author-model vs switch-based author block). RE-CONFIRMED 2026-06-08: the kr
+  `\author` block is `Name1\and..\and NameN \\ \affiliations $^1$A1\and $^2$A2 \\
+  \emails e1\and e2` — affil/email blocks contain their OWN `\and`s, so LaTeXML's
+  `\author` (which splits creators on `\and`) would mis-structure affils/emails as extra
+  "authors". A gobble-fix (`\affiliations`/`\emails`→empty) yields 0 errors but a
+  mis-structured author block (content-partial, against faithfulness); the proper fix
+  (route affil/email blocks to contact elements + stop the `\and`-split inside them) needs
+  real kr-author-block handling. Genuinely deep — deferred. `\RSsectxt`/`\RS@ifundefined`
   (Royal Society style, ~4 papers) — paper preamble.sty uses RS internals from an RS
   class/style of unclear provenance; murky. `{forest}` (~23 papers) — DELIBERATE
   non-implementation stub (forest_sty.rs `discard_env_body` emits `<ltx:ERROR>` + a
