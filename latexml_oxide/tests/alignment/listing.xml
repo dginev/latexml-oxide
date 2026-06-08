@@ -2182,6 +2182,8 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
       <p><text font="bold italic">bfit</text>
 <text font="bold italic">itbf</text></p>
     </para>
-    <index/>
   </section>
+  <index xml:id="idx">
+    <title>Index</title>
+  </index>
 </document>
