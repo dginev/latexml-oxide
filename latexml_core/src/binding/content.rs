@@ -126,6 +126,56 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   }
   let _guard = InputDepthGuard;
 
+  // TeX-faithful subdir search: when a package/class is loaded with a
+  // directory-prefixed name (e.g. `\usepackage{AISTATS/aistats2026}`),
+  // make that directory searchable for the DURATION of this load. TeX's
+  // input stack keeps the loaded file's directory on the search path, so
+  // the file — and any sibling it pulls in — resolves. This matters when a
+  // basename-keyed binding (contrib registry) is matched on the basename
+  // and then raw-loads its own file BY basename (dropping the directory):
+  // without the subdir on the path, that nested raw-load misses a
+  // paper-bundled file living in the subdir. Restored on every exit via the
+  // guard's Drop. Witness: 2510.09534 (`\usepackage{AISTATS/aistats2026}`;
+  // aistats2026.sty lives in an `AISTATS/` subdir; the contrib `aistats2026`
+  // binding does `InputDefinitions!("aistats2026")` → \aistatstitle /
+  // \aistatsauthor / \aistatsaddress undefined without this. Perl has no
+  // such binding and raw-loads the subdir path directly: 0 errors).
+  struct SearchPathGuard(Option<Vec<String>>);
+  impl Drop for SearchPathGuard {
+    fn drop(&mut self) {
+      if let Some(sp) = self.0.take() {
+        crate::state::set_search_paths(sp);
+      }
+    }
+  }
+  let _sp_guard = {
+    let basename = pathname::file_name(name);
+    let has_dir = !basename.is_empty() && basename != name;
+    let mut restore = None;
+    if has_dir {
+      let ext = options
+        .extension
+        .as_deref()
+        .unwrap_or(if options.as_class { "cls" } else { "sty" })
+        .to_string();
+      if let Some(full) = find_file(name, Some(FindFileOptions {
+        forbid_ltxml:      true,
+        notex:             false,
+        ext_type:          Some(Cow::Owned(ext)),
+        search_paths_only: false,
+      })) {
+        if let Some(parent) = std::path::Path::new(&full).parent() {
+          let pd = parent.to_string_lossy().to_string();
+          if !pd.is_empty() && !get_search_paths().iter().any(|p| p == &pd) {
+            restore = Some(get_search_paths());
+            search_paths_push_front(pd);
+          }
+        }
+      }
+    }
+    SearchPathGuard(restore)
+  };
+
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   //
