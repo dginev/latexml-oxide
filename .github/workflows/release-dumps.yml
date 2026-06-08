@@ -1,0 +1,181 @@
+# Kernel-dump generation for the release binary (issue #217 follow-up;
+# docs/DUMP_DESIGN.md, docs/RELEASING.md).
+#
+# Generates {plain,latex}.YYYY.dump.txt + texlive.YYYY.version for the
+# 5-year moving TeX Live window (currently 2022-2026), each inside a
+# pinned TL-year container — the same image family Perl LaTeXML's CI
+# uses (ghcr.io/tkw1536/texlive-docker, built from
+# github.com/tkw1536/historic-texlive-docker).
+#
+# Dump files are NOT committed to the repo: this workflow produces them
+# at release time and release.yml embeds all of them (gzip, DEP-12) into
+# the maxperf binary. Dev/CI environments generate their ambient-year
+# dump via tools/make_formats.sh instead.
+#
+# Design notes:
+# * ONE dumper binary is built on ubuntu-22.04 (glibc 2.35) and runs in
+#   every container (images are modern-Debian based — trixie/glibc 2.41
+#   measured 2026-06-07 — only the TL tree inside is historic).
+# * The dumper is built WITHOUT libkpathsea on purpose: kpathsea 0.3's
+#   subprocess backend then resolves TeX files through each container's
+#   own `kpsewhich`, so one binary serves every TL year. (No
+#   libkpathsea-dev in the apt set below — do not "fix" that.)
+# * Zero-error gate: --init suppresses error output by default
+#   (ini_tex.rs), so each init runs with LATEXML_INIT_DEBUG=1 and the
+#   log is ANSI-stripped and grepped for ^(Error|Fatal): — ANY hit
+#   fails that year (fail toward flagging, per CLAUDE.md "Canvas
+#   signal integrity").
+#
+# Callable from release.yml (workflow_call) and testable standalone
+# (workflow_dispatch).
+
+name: Release dumps
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  # Self-testing trigger: runs when this workflow file itself changes on a
+  # branch push, so the dump pipeline is CI-validated before any tag uses
+  # it (workflow_dispatch only works once the file is on the default
+  # branch). Quiet otherwise.
+  push:
+    paths:
+      - '.github/workflows/release-dumps.yml'
+
+jobs:
+  build-dumper:
+    name: Build dump-generator binary
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+      # kpathsea 0.3 refuses to build with no TeX backend visible (neither
+      # libkpathsea nor a `kpsewhich` on PATH) unless this is set. That is
+      # exactly the build-dumper case: build here (TeX-free runner) and
+      # deploy into TL containers that supply `kpsewhich` at RUNTIME. The
+      # resulting binary is kpathsea-UNLINKED (asserted below). Without it
+      # the build fails with "kpathsea: no usable TeX backend".
+      KPATHSEA_SKIP_TOOLCHAIN_CHECK: "1"
+    steps:
+      - uses: actions/checkout@v6
+      # libxml2/libxslt + mold — deliberately NO libkpathsea-dev (see header).
+      # `mold` is required because the checked-in `.cargo/config.toml` passes
+      # `-Clink-arg=-fuse-ld=mold` for the x86_64-linux target, and this job
+      # (unlike CI.yml) sets no overriding RUSTFLAGS env. Without it the link
+      # fails with `collect2: fatal error: cannot find 'ld'`. This mirrors
+      # the proven release.yml apt set (0.6.1 built this way on 22.04).
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxslt1-dev mold
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: release-dumper
+      - name: build (release, kpathsea-unlinked)
+        run: |
+          cargo build --release --bin latexml_oxide
+          # Hard assertion: the dumper must NOT link libkpathsea, or it
+          # cannot run inside the TL containers.
+          if ldd target/release/latexml_oxide | grep -q kpathsea; then
+            echo "::error::dumper unexpectedly links libkpathsea — it would not be portable across TL containers"
+            exit 1
+          fi
+      - uses: actions/upload-artifact@v5
+        with:
+          name: dumper-binary
+          path: target/release/latexml_oxide
+          retention-days: 3
+
+  generate:
+    name: TL ${{ matrix.year }} dumps
+    needs: build-dumper
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - year: 2022
+            image: ghcr.io/tkw1536/texlive-docker:2022
+          - year: 2023
+            image: ghcr.io/tkw1536/texlive-docker:2023
+          - year: 2024
+            image: ghcr.io/tkw1536/texlive-docker:2024
+          - year: 2025
+            image: ghcr.io/tkw1536/texlive-docker:2025
+          # TODO(#217): re-add 2026 once ghcr.io/tkw1536/texlive-docker:2026
+          # is published (tkw1536/historic-texlive-docker#1, still OPEN). The
+          # islandoftex `latest` image is NOT a usable interim: it is Debian
+          # testing (libxml2 2.15 → soname libxml2.so.16, apt pkg `libxml2-16`),
+          # so the dumper binary — built on ubuntu-22.04 against libxml2.so.2 —
+          # cannot run there at all (the apt-get even lacks a `libxml2`
+          # candidate). The whole single-binary-serves-all-containers design
+          # relies on the tkw1536 family sharing one (bookworm/.so.2) base.
+          # Until then the window is 2022–2025; a TL2026 host falls back to the
+          # most-recent embedded dump (2025) at runtime.
+    container:
+      image: ${{ matrix.image }}
+      options: --entrypoint ""
+    steps:
+      # The binary needs libxml2/libxslt runtime libs inside the container.
+      - name: install runtime libraries
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends libxml2 libxslt1.1 ca-certificates
+      - uses: actions/download-artifact@v6
+        with:
+          name: dumper-binary
+      - name: generate and gate dumps
+        run: |
+          set -u
+          chmod +x ./latexml_oxide
+          mkdir -p resources/dumps
+
+          # Sanity: the container's TL year must match the matrix year
+          # (guards against image drift, e.g. a `latest` tag moving on).
+          AMBIENT="$(kpsewhich -var-value=SELFAUTOPARENT | sed -n 's:.*/\([0-9]\{4\}\)[A-Za-z]*$:\1:p')"
+          if [ -z "$AMBIENT" ]; then
+            AMBIENT="$(pdflatex --version | head -3 | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)"
+          fi
+          if [ "$AMBIENT" != "${{ matrix.year }}" ]; then
+            echo "::error::container TL year is '$AMBIENT', expected ${{ matrix.year }}"
+            exit 1
+          fi
+
+          # Zero-error gate per init (see workflow header).
+          run_init() {
+            local init="$1" log="init-$1.log"
+            echo "=== --init=$init (TL ${{ matrix.year }}) ==="
+            LATEXML_INIT_DEBUG=1 ./latexml_oxide --init="$init" >"$log" 2>&1
+            status=$?
+            # ANSI-strip defensively, then strict error count.
+            errors=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -acE '^(Error|Fatal):' || true)
+            tail -5 "$log"
+            if [ "$status" -ne 0 ] || [ "$errors" -ne 0 ]; then
+              echo "::error::--init=$init on TL ${{ matrix.year }}: exit=$status errors=$errors"
+              sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -aE '^(Error|Fatal):' | head -20
+              exit 1
+            fi
+          }
+          run_init plain.tex
+          run_init latex.ltx
+
+          # All three artifacts must exist and be non-trivial.
+          for f in plain.${{ matrix.year }}.dump.txt latex.${{ matrix.year }}.dump.txt texlive.${{ matrix.year }}.version; do
+            if [ ! -s "resources/dumps/$f" ]; then
+              echo "::error::missing or empty resources/dumps/$f"
+              ls -la resources/dumps/ || true
+              exit 1
+            fi
+          done
+          wc -c resources/dumps/*
+      - uses: actions/upload-artifact@v5
+        with:
+          name: dumps-${{ matrix.year }}
+          path: resources/dumps/*
+          retention-days: 7

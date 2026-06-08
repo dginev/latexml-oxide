@@ -75,11 +75,43 @@ fn year_from_pdflatex_version() -> Option<u32> {
 }
 
 fn parse_year_str(s: &str) -> Option<u32> {
-  let y: u32 = s.parse().ok()?;
+  // Accept a trailing non-digit suffix: MacTeX/BasicTeX name their TL root
+  // with one (e.g. `/usr/local/texlive/2026basic`), so SELFAUTOPARENT's
+  // final component carries the year + "basic". Parse the leading digit
+  // run; a string that doesn't START with the year (e.g. "texlive") still
+  // fails over to the `pdflatex --version` detection.
+  let digits = &s[..s.find(|c: char| !c.is_ascii_digit()).unwrap_or(s.len())];
+  let y: u32 = digits.parse().ok()?;
   if (2000..=2099).contains(&y) {
     Some(y)
   } else {
     None
+  }
+}
+
+#[cfg(test)]
+mod year_parse_tests {
+  use super::parse_year_str;
+
+  #[test]
+  fn vanilla_tl_year() {
+    assert_eq!(parse_year_str("2025"), Some(2025));
+    assert_eq!(parse_year_str("2026"), Some(2026));
+  }
+
+  #[test]
+  fn basictex_suffixed_year() {
+    // MacTeX/BasicTeX layout: /usr/local/texlive/2026basic
+    assert_eq!(parse_year_str("2026basic"), Some(2026));
+  }
+
+  #[test]
+  fn non_year_components_rejected() {
+    assert_eq!(parse_year_str("texlive"), None); // brew Cellar layout
+    assert_eq!(parse_year_str("basic2026"), None);
+    assert_eq!(parse_year_str(""), None);
+    assert_eq!(parse_year_str("1999"), None); // outside the sane range
+    assert_eq!(parse_year_str("20269"), None); // 5-digit run is not a year
   }
 }
 

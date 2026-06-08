@@ -189,6 +189,29 @@ pub struct CoreOptions {
 impl Core {
   /// instantiate a new Core processor
   pub fn new(options: CoreOptions) -> Self {
+    // Eagerly initialize the engine's `#[thread_local]` roots, LEAVES-FIRST,
+    // on THIS thread before any of them is touched re-entrantly. ARENA is the
+    // universal leaf (every root's Lazy initializer interns via arena::pin);
+    // the token constants, MODEL, the gullet roots and the STD/STY catcode
+    // templates all reach into ARENA (and the gullet/template roots build
+    // tokens). Forcing them in dependency order up front — before
+    // `set_stomach`/`set_state` below trigger their own initializers, and
+    // before expansion lazily touches the gullet/catcode roots mid-run —
+    // guarantees no root's `Lazy` init ever runs another root's init
+    // *re-entrantly*. That cross-`#[thread_local]`-during-init pattern is
+    // benign on Linux/ELF TLS but is the documented macOS hazard
+    // (rust-lang/rust#29594) behind the macOS worker-thread memory
+    // corruption in issue #217 (varying garbage node types → panics /
+    // SIGSEGV / SIGBUS, only on macOS, only in libtest's worker threads —
+    // the single-conversion main-thread CLI was never affected). Forcing
+    // just ARENA+MODEL cut the failures 4→1; this completes the set. No
+    // behavioral change on Linux (these all initialize during any
+    // conversion anyway — this only fixes the ORDER).
+    crate::common::arena::force_init(); // leaf
+    crate::token::force_init(); // token constants -> arena
+    crate::common::model::force_init(); // Model::new -> arena
+    crate::gullet::force_init(); // DEFERRED_COMMANDS / COLUMN_ENDS / GULLET -> arena
+    crate::state::force_init(); // STD_STATE / STY_STATE templates -> arena
     let preload = options.preload.unwrap_or_default();
     // pass on the state::options, defaults are handled in state::new
     let state_options = StateOptions {

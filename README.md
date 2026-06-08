@@ -85,6 +85,28 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkp
                    texlive-bibtex-extra texlive-publishers poppler-utils
 ```
 
+Example for macOS (arm64; the full test suite runs on macOS CI — see
+[docs/PORTABILITY_MACOS_PROBE_2026-06-07.md](docs/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
+
+```
+$ brew install libxml2 libxslt texlive
+$ export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig"
+$ cargo build --bin latexml_oxide
+```
+
+libxml2 and libxslt are keg-only in Homebrew, hence the
+`PKG_CONFIG_PATH` export (put it in your shell profile for regular
+work). Homebrew's `texlive` ships `libkpathsea` + `kpathsea.pc`, so the
+build links it in-process — the fastest configuration.
+
+**Using MacTeX/BasicTeX instead?** That also works: MacTeX ships *no*
+`libkpathsea` at all (no header, no dylib, no `.pc`), so the build
+prints a one-time `kpathsea_sys` notice and falls back to resolving
+TeX files through your distribution's own `kpsewhich` executable
+(`/Library/TeX/texbin` must be on PATH — the MacTeX installer sets
+this up). Same conversions, slightly slower cold file lookups. You
+still need `brew install libxml2 libxslt` either way.
+
 `poppler-utils` provides `pdftocairo`, used as the default fast PDF →
 PNG/SVG rasterizer (≈25× faster than ImageMagick `convert` on
 vector-heavy PDFs).

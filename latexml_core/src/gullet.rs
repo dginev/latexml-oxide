@@ -126,6 +126,20 @@ pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
   })
 });
 
+/// Eagerly initialize this thread's gullet-phase `#[thread_local]` roots
+/// (`DEFERRED_COMMANDS`, `COLUMN_ENDS`, `GULLET`). Their initializers intern
+/// `SymStr`s / build `Token`s via the arena, so force them AFTER
+/// [`arena::force_init`](crate::common::arena::force_init) /
+/// [`token::force_init`](crate::token::force_init). Forcing them at
+/// conversion entry keeps them from initializing re-entrantly from within
+/// another root's init mid-conversion — the macOS `#[thread_local]` hazard
+/// behind issue #217. No behavioral change on Linux.
+pub(crate) fn force_init() {
+  Lazy::force(&DEFERRED_COMMANDS);
+  Lazy::force(&COLUMN_ENDS);
+  Lazy::force(&GULLET);
+}
+
 macro_rules! gullet {
   () => {
     (*GULLET).borrow()

@@ -377,6 +377,20 @@ static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
   }))
 });
 
+/// Eagerly initialize this thread's `STD_STATE`/`STY_STATE` catcode-regime
+/// templates. They are accessed mid-conversion on catcode switches
+/// (`\makeatletter`, verbatim, …); each one's `Lazy` initializer runs
+/// `State::new`, which interns via the arena. Forcing them at conversion
+/// entry — AFTER [`arena::force_init`](crate::common::arena::force_init) —
+/// keeps them from initializing re-entrantly mid-expansion, the macOS
+/// `#[thread_local]` hazard behind issue #217. (The active `STATE` is
+/// already forced by `set_state` in `Core::new`.) No behavioral change on
+/// Linux.
+pub(crate) fn force_init() {
+  Lazy::force(&STD_STATE);
+  Lazy::force(&STY_STATE);
+}
+
 macro_rules! state {
   () => {
     (*STATE).borrow()

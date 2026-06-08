@@ -77,6 +77,17 @@ pub fn initialize_model() {
   *global_model = Model::new();
 }
 
+/// Eagerly initialize this thread's `#[thread_local]` `MODEL` Lazy.
+///
+/// `Model::new()` interns the `xml` namespace prefix/URI via `arena::pin`,
+/// so its `Lazy` initializer reaches into the `ARENA` thread-local. Forcing
+/// it at conversion entry — *after* [`arena::force_init`](crate::common::arena::force_init)
+/// and before `STATE`/`STOMACH` are built — keeps that init from running
+/// re-entrantly from within another root's initialization, the macOS
+/// `#[thread_local]` hazard behind issue #217. No behavioral change on
+/// Linux (a later `set_model` for a schema-driven model still replaces it).
+pub(crate) fn force_init() { Lazy::force(&MODEL); }
+
 impl Model {
   pub fn new() -> Self {
     let mut model = Model::default();
@@ -645,8 +656,14 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       }
     },
     // Need others?
-    t => {
-      panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
+    _ => {
+      // Defense-in-depth (issue #217): a node with an unexpected libxml2 type
+      // reached qname resolution. Degrade to the same `#BrokenNode` sentinel
+      // the `node_type.is_none()` arm above already returns, rather than the
+      // original hard `panic!`. LaTeXML never builds such nodes, so on a
+      // healthy tree this arm is unreachable; it exists only so a stray
+      // corrupt/foreign node can never crash qname resolution.
+      arena::pin_static("#BrokenNode")
     },
   }
 }

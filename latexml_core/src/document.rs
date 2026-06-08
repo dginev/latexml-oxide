@@ -40,6 +40,7 @@ use crate::{BoxOps, Digested, DigestedData};
 static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
 static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
 static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
+
 static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
   HashSet::from_iter([
     "about",
@@ -1832,9 +1833,22 @@ impl Document {
     };
     let element_sym = arena::pin(elementname);
     // If not at document begin. And not appending text in same font.
-    if node_type != Some(NodeType::DocumentNode)
-      && !(node_type == Some(NodeType::TextNode)
-        && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+    //
+    // Defense-in-depth (issue #217): a current TextNode should always have a
+    // parent element, so this used to be `self.node.get_parent().unwrap()`.
+    // Match the `None` instead of unwrapping — if the current node were ever a
+    // detached text node, skip this un-anchorable insert rather than panic.
+    // (The macOS corruption that could produce such a node was root-caused
+    // and fixed in open_text_internal's text-merge detection.)
+    let text_same_font = if node_type == Some(NodeType::TextNode) {
+      match self.node.get_parent() {
+        Some(parent) => font.distance(self.get_node_font(&parent)) == 0,
+        None => return Ok(None),
+      }
+    } else {
+      false
+    };
+    if node_type != Some(NodeType::DocumentNode) && !text_same_font
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal()?; // Close text node, if any.
@@ -2108,14 +2122,31 @@ impl Document {
       );
       let mut node = Node::new_text(text, &self.document)?;
       point.add_child(&mut node)?;
-      if node.get_type().is_none() {
-        // Extremely important note! the Rust wrapper `add_child` follows `xmlAddChild` strictly,
-        // so in a case where adjacent text nodes are added, libxml will **MERGE** them leading to
-        // `node`'s underlying pointer disappearing.
-        // Thus - we check if the node is gone - and use its parent instead if so.
-        self.set_node(&point);
-      } else {
+      // libxml2 MERGES adjacent text nodes: when `point`'s last child was
+      // already a text node, `xmlAddChild` appends our content to it and
+      // FREES the just-created `node`, leaving its wrapper dangling.
+      //
+      // The previous detection — `node.get_type().is_none()` — is a
+      // use-after-free: it reads the freed node's `type` field. That is
+      // *benign on glibc* (the freed slot still reads as the old/None type,
+      // so the merge is detected), but **unsound on macOS libmalloc**, which
+      // recycles/scribbles the freed slot so `get_type()` returns garbage
+      // (EntityNode/ElementDecl/…) and the merge goes UNDETECTED — installing
+      // a freed node as `self.node` and corrupting the current insertion
+      // point (issue #217; the macOS-only worker-thread crashes).
+      //
+      // Detect the merge WITHOUT dereferencing the possibly-freed node:
+      // after `add_child` our text is `point`'s last child in both cases
+      // (the appended `node`, or the sibling it merged into). `Node`'s
+      // `PartialEq` compares the stored `xmlNodePtr` values (no deref), so
+      // this pointer-identity check is allocator-independent and UAF-safe.
+      if point.get_last_child().as_ref() == Some(&node) {
+        // `node` was appended (not merged) — it is live and current.
         self.set_node(&node);
+      } else {
+        // `node` was merged into a text sibling and freed — fall back to the
+        // parent insertion point (matches the prior merged-case behavior).
+        self.set_node(&point);
       }
     }
     Ok(self.node.clone())
@@ -2136,8 +2167,18 @@ impl Document {
             // Swap: move text node after comment node
             let mut comment_node = last_child;
             comment_node.add_next_sibling(&mut prev_text)?;
-            // Set current node to the text node and recurse
-            self.set_node(&prev_text);
+            // Set current node to the moved text node and recurse. Use
+            // pointer-identity, not the `prev_text` handle directly:
+            // `add_next_sibling` of a text node can MERGE it into an adjacent
+            // text sibling and FREE it (the same libxml2 hazard fixed in
+            // open_text_internal — benign on glibc, a use-after-free on macOS
+            // libmalloc, issue #217). The moved/merged text is `comment_node`'s
+            // next sibling either way; if that is still `prev_text` it survived,
+            // otherwise `prev_text` was freed — fall back to the live sibling.
+            match comment_node.get_next_sibling() {
+              Some(moved) => self.set_node(&moved),
+              None => self.set_node(&prev_text),
+            }
             self.open_text_internal(text)?;
             return Ok(true);
           }

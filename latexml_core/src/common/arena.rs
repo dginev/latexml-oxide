@@ -265,6 +265,21 @@ pub fn reset() {
   });
 }
 
+/// Eagerly initialize this thread's `#[thread_local]` `ARENA` Lazy.
+///
+/// `ARENA` is the *leaf* of the engine's thread-local dependency graph:
+/// every other root's `Lazy` initializer interns symbols via [`pin`], so it
+/// reaches into `ARENA`. Calling this at conversion entry (see
+/// `Core::new`), before any other root is touched, guarantees those later
+/// initializers find a fully-constructed `ARENA` instead of triggering its
+/// initialization *re-entrantly from within their own*. That re-entrant
+/// cross-`#[thread_local]` initialization is benign on Linux/ELF TLS but is
+/// the documented macOS hazard (rust-lang/rust#29594) behind the macOS
+/// worker-thread memory corruption in issue #217. `ARENA`'s own initializer
+/// touches no other thread-local, so forcing it first is always safe.
+/// No behavioral change on Linux.
+pub(crate) fn force_init() { Lazy::force(&ARENA); }
+
 #[cfg(test)]
 mod tests {
   use super::*;

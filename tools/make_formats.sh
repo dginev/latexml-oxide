@@ -58,11 +58,16 @@ fi
 # doesn't redefine — without the plain dump those CSes are missing
 # at runtime. The binary writes each to resources/dumps/<basename>.dump.txt
 # relative to CWD.
-TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null | sed -n 's:.*/\([0-9]\{4\}\)$:\1:p')"
+# The trailing component may carry a non-digit suffix: MacTeX/BasicTeX
+# install to /usr/local/texlive/2026basic — accept `YYYY[suffix]`, like
+# the runtime's `dump_paths::parse_year_str`.
+TL_YEAR="$(kpsewhich -var-value=SELFAUTOPARENT 2>/dev/null | sed -n 's:.*/\([0-9]\{4\}\)[A-Za-z]*$:\1:p')"
 # Fallback: Debian/Ubuntu's texlive package puts TL into /usr/share/texlive
-# with no year-versioned hierarchy, so SELFAUTOPARENT returns `/`. Pick up
-# the year from `pdflatex --version` instead — mirrors the runtime
-# `dump_paths::detect_ambient_texlive_year` two-step strategy.
+# with no year-versioned hierarchy, so SELFAUTOPARENT returns `/`; Homebrew's
+# texlive lives in a yearless Cellar path. Pick up the year from
+# `pdflatex --version` instead ("TeX Live 2026" / "TeX Live 2026/Homebrew")
+# — mirrors the runtime `dump_paths::detect_ambient_texlive_year` two-step
+# strategy.
 if [ -z "$TL_YEAR" ]; then
   TL_YEAR="$(pdflatex --version 2>/dev/null | head -3 | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)"
 fi

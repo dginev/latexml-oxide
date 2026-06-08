@@ -50,18 +50,31 @@ tackle latex. Historical test regressions during the dump pivot are
 recorded in `SYNC_STATUS.md`; do not assume they are current without
 re-running the relevant test or dump-generation command.
 
-**Distribution follow-up — LANDED 2026-05-15.** Per-TL-year dump
-files (`resources/dumps/{plain,latex}.YYYY.dump.txt` +
-`texlive.YYYY.version`) are committed to the repo and embedded into
-the binary at build time via `include_str!`. Runtime resolves the
-ambient year via `kpsewhich -var-value=SELFAUTOPARENT` with
-`pdflatex --version` fallback (`kpsewhich --version` returns the
-same kpathsea-library string on TL2023 and TL2025, so it's NOT a
-reliable discriminator). TL2023 + TL2025 are bundled currently; add
-new years via `tools/make_formats.sh`. Follow-up IA-record
-consolidation (`81176ba689`) halved `latex.YYYY.dump.txt` size by
-collapsing per-slot fontdimen V-records into per-(font,size) `IA`
-records with RLE-encoded data.
+**Distribution model — REDESIGNED 2026-06-07 (was: committed dumps,
+landed 2026-05-15).** Per-TL-year dump files
+(`resources/dumps/{plain,latex}.YYYY.dump.txt` + `texlive.YYYY.version`)
+are **NOT committed to the repo**. They are generated at release time by
+`.github/workflows/release-dumps.yml` (called from `release.yml` on tag
+push, dispatchable standalone): a 5-year moving TL window — currently
+2022–2026 — each generated inside a pinned TL-year container
+(`ghcr.io/tkw1536/texlive-docker:YYYY`, the image family behind Perl
+LaTeXML's CI; 2026 interim: islandoftex `latest` until
+tkw1536/historic-texlive-docker#1 publishes). One kpathsea-UNLINKED
+dumper binary (subprocess-`kpsewhich` backend) serves all containers.
+Each `--init` runs under `LATEXML_INIT_DEBUG=1` with a strict
+zero-`Error:`/`Fatal:` gate (init output is suppressed otherwise —
+naive grepping sees nothing). The release build then embeds the whole
+window at build time (gzip, DEP-12; `latexml_engine/build.rs` scans
+`resources/dumps/`). **Dev/CI generate their ambient-year dump via
+`tools/make_formats.sh`** — run it once after checkout, after a TL
+upgrade, or before test runs needing dumps (CI.yml does). Runtime
+resolves the ambient year via `kpsewhich -var-value=SELFAUTOPARENT`
+(leading-digit parse, so MacTeX's `2026basic` works) with
+`pdflatex --version` fallback (`kpsewhich --version` returns the same
+kpathsea-library string on TL2023 and TL2025, so it's NOT a reliable
+discriminator). Earlier IA-record consolidation (`81176ba689`) halved
+`latex.YYYY.dump.txt` size by collapsing per-slot fontdimen V-records
+into per-(font,size) `IA` records with RLE-encoded data.
 
 ## Project Overview
 
@@ -130,6 +143,7 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 - **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
 
 **Dated diagnostic snapshots** (point-in-time studies — see naming rule):
+- **[`docs/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/PORTABILITY_MACOS_PROBE_2026-06-07.md)** — macOS native-dependency probe for issue #217 (BasicTeX vs brew texlive; the kpathsea dichotomy → subprocess-`kpsewhich` Phase 1 spec).
 - **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.
 - **[`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md)** — Math-parser ambiguity sweep; patterns 1/3/4 closed, pattern 2 (VERTBAR-modulus) open. (Code in `latexml_math_parser/*` points here for the open pattern.)
 - **[`docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)** — Close reading of Perl `Core/Dumper.pm` on-disk record format.
