@@ -466,8 +466,22 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // over raw .sty files that may contain layout checks (like ICML's \ifdim
     // page-margin checks) that produce spurious warnings.
     let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
+    // Perl Package.pm:FindFile_aux L2107: `$interpretable =
+    // LookupMapping('INTERPRETABLE_SOURCES', $file)`. A binding may
+    // register specific raw sources (keyed by `name.ext`) that MUST be
+    // raw-loaded directly rather than version-stripped to a fallback
+    // binding. Driver: xparse.sty.ltxml registers `xparse-2018-04-12.sty`
+    // so the rollback `\file_input` from the real xparse.sty loads the
+    // actual definitions (`\NewDocumentCommand`) — WITHOUT this, the
+    // version-suffix fallback strips `xparse-2018-04-12` → `xparse`, which
+    // re-enters the in-progress xparse binding (short-circuited) and the
+    // rollback file is never loaded (`\NewDocumentCommand` undefined →
+    // xparse/l3 cascade; canvas witness 2309.17288, tests xparse/regex_match).
+    let interpretable = crate::state::lookup_mapping("INTERPRETABLE_SOURCES", &filename).is_some();
 
-    // Step 2: If we're already interpreting raw TeX definitions, look for the file directly.
+    // Step 2: If we're interpreting raw TeX definitions (or this file is
+    // explicitly INTERPRETABLE), look for the file directly.
+    // Perl L2115: `(!notex && ($interpreting || $interpretable) && pathname_find)`.
     // Perl Package.pm L2117-2119: `pathname_find($file, paths => $paths)` —
     // LOCAL PATHS ONLY, no kpsewhich. Rust must mirror this: kpsewhich
     // here would short-circuit Step 3 (fallback ltxml) for any TeX-Live-
@@ -477,7 +491,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // returned the real caption3.sty from TL, raw-loading it and
     // triggering the `\DeclareCaptionFormat{hang}[#1#2#3\par]{...}`
     // PARAM-leak cascade (arXiv:2506.19291: Rust=30 vs Perl=2).
-    let found_raw = if interpreting && !options.notex {
+    let found_raw = if (interpreting || interpretable) && !options.notex {
       find_file(
         &filename,
         Some(FindFileOptions {
@@ -510,7 +524,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     //     this name).
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.noltxml {
+    } else if !options.noltxml && !interpretable {
+      // Perl L2119: `(!noltxml && !$interpretable && FindFile_fallback)` —
+      // an INTERPRETABLE source must NOT be version-stripped to a fallback
+      // binding; it falls through to the raw-TeX/kpsewhich path below.
       if let Some((fallback, _kind)) = find_file_fallback(name, &as_type) {
         Info!(
           "fallback",
