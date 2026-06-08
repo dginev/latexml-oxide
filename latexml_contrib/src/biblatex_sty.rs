@@ -93,15 +93,97 @@ fn bib_as_thebibliography() -> Tokens {
   Tokens::new(result)
 }
 
+/// Perl `$fullname =~ s/\\\w+|[}{]//g` (ar5iv biblatex.sty.ltxml L324):
+/// strip leftover control sequences (`\bibinitperiod`, …) and braces from a
+/// name fragment, then trim. `\w` is Perl-ASCII (`[A-Za-z0-9_]`) — a backslash
+/// NOT followed by a word char (e.g. the `\"` of an accent) is preserved, as
+/// in Perl.
+fn bib_clean_name(s: &str) -> String {
+  let mut out = String::with_capacity(s.len());
+  let mut chars = s.chars().peekable();
+  while let Some(ch) = chars.next() {
+    if ch == '\\' {
+      if chars.peek().is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_') {
+        while chars.peek().is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_') {
+          chars.next();
+        }
+      } else {
+        out.push(ch);
+      }
+    } else if ch != '{' && ch != '}' {
+      out.push(ch);
+    }
+  }
+  out.trim().to_string()
+}
+
+/// Parse a biblatex keyval name block — the inner sub-group of a modern
+/// (biber, bbl format ≥ 3.x) `\name` author record, e.g.
+/// `family={Turtayev},familyi={T\bibinitperiod},given={Rustem},giveni=…,givenun=0`.
+/// Splits on depth-0 commas (commas inside `{…}` don't split), then for each
+/// `key=value` strips one layer of surrounding braces off the value. Mirrors
+/// the outcome of Perl's `LaTeXML::Core::KeyVals->readFrom` (L302-306) without
+/// the full KeyVals machinery — we only need `given`/`family` (and their
+/// `i`-initial fallbacks).
+fn parse_name_keyvals(s: &str) -> Vec<(String, String)> {
+  let mut pairs: Vec<(String, String)> = Vec::new();
+  let mut depth = 0i32;
+  let mut cur = String::new();
+  let flush = |seg: &str, pairs: &mut Vec<(String, String)>| {
+    let seg = seg.trim();
+    if seg.is_empty() {
+      return;
+    }
+    if let Some(eq) = seg.find('=') {
+      let key = seg[..eq].trim().to_string();
+      let mut val = seg[eq + 1..].trim();
+      if val.starts_with('{') && val.ends_with('}') && val.len() >= 2 {
+        val = &val[1..val.len() - 1];
+      }
+      pairs.push((key, val.to_string()));
+    }
+  };
+  for ch in s.chars() {
+    match ch {
+      '{' => { depth += 1; cur.push(ch); }
+      '}' => { depth -= 1; cur.push(ch); }
+      ',' if depth == 0 => { flush(&cur, &mut pairs); cur.clear(); }
+      _ => cur.push(ch),
+    }
+  }
+  flush(&cur, &mut pairs);
+  pairs
+}
+
+/// Perl L232-237 / L253-258: strip leading SPACE/`{` and trailing SPACE/`}`
+/// tokens from a captured DOI/eprint field value before splicing it into an
+/// `\href{…}` target, so a `\field{doi}{ {10.x/y} }`-style value yields a
+/// clean URI.
+fn bib_trim_url_tokens(toks: Tokens) -> Vec<Token> {
+  let mut v = toks.unlist();
+  let mut start = 0usize;
+  while start < v.len() {
+    let t = &v[start];
+    if t.code == Catcode::SPACE || t.with_str(|s| s == "{") { start += 1; } else { break; }
+  }
+  let mut end = v.len();
+  while end > start {
+    let t = &v[end - 1];
+    if t.code == Catcode::SPACE || t.with_str(|s| s == "}") { end -= 1; } else { break; }
+  }
+  v.truncate(end);
+  v.drain(..start);
+  v
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
-  // (803 lines). Most macro definitions, conditionals, registers,
-  // and the trailing RawTeX toggle block are now line-by-line
-  // mirrors. The deep-closure bibliography rebuilder remains
-  // DEFERRED (Perl L110-263 / L270-340 / L367-397) — those are
-  // stubbed as no-op `DefMacro` so documents compile but the
-  // bibliography body is not assembled.
+  // (803 lines). All macro definitions, conditionals, registers, the
+  // trailing RawTeX toggle block, AND the deep-closure bibliography
+  // rebuilder (Perl L110-263 \entry/\endentry, L270-340 \name,
+  // L367-397 \verb) are now ported — the `.bbl` is assembled into a
+  // real `\thebibliography`.
   //
   // Audit cycle 2: caught Rust-only bugs vs Perl source
   //   * duplicate `\providetoggle{blx@citation}` (etoolbox toggle redef)
@@ -109,6 +191,25 @@ LoadDefinitions!({
   //   * missing `\addbibresource` / `\printbibliography` /
   //     `Let \bibliography → \addbibresource` chain
   //   * 60+ DefMacro/DefRegister/DefConditional declarations missing
+  //
+  // Audit cycle 3 (full Perl-parity pass of the rebuilder closures):
+  //   * \name: ported the keyval-name branch (Perl L301-306) gated on
+  //     `biblatex_with_keyvals`. Modern biber .bbl (format ≥ 3.x) encodes
+  //     authors as `{{meta,hash}{family={…},given={…}}}`; the old port only
+  //     handled the positional form and leaked the whole keyval blob as the
+  //     "family" string (`family=…,familyi=…,given=…`) into the HTML.
+  //   * \endentry: ported the label collision-suffixing (L148-162) and the
+  //     previously-dropped fields — series (L220-222), howpublished (L227),
+  //     organization (L230), eprintclass (L248), the DOI/eprint leading-{/
+  //     trailing-} URI trim (L232-237/L253-258), and the url-branch
+  //     eprinttype label (L240-244).
+  //   * \bibrangedash: restored the Perl/real-biblatex en-dash (a late
+  //     redefinition had clobbered it to a hyphen).
+  //   KNOWN LIMITATION: the `maxbibnames=N` package *option* is not wired to
+  //   the et-al threshold — Perl's keyval `code` callback (L19-20) needs
+  //   DefKeyVal-callback support we don't have, so the limit stays at the
+  //   shared Perl default of 4. The 3-arg `\name` variant is likewise not
+  //   auto-detected (we declare the 4-arg modern shape).
 
   // Perl L14-15: Warn that biblatex.sty is only minimally stubbed.
   Warn!("missing_file", "biblatex.sty",
@@ -297,37 +398,46 @@ LoadDefinitions!({
     let entry = bib_entry_get();
     state::assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
 
-    // label: Perl uses labelalpha if present, else label, else auto-counter.
-    let label_toks = bib_entry_get_tokens(&entry, "labelalpha")
-      .or_else(|| bib_entry_get_tokens(&entry, "label"));
-    let label_str: String = match label_toks {
-      Some(t) if !t.is_empty() => {
-        // Perl: strip \word and braces from label for safety.
-        let s = t.to_string();
-        let mut cleaned = String::with_capacity(s.len());
-        let mut chars = s.chars();
-        while let Some(ch) = chars.next() {
-          if ch == '\\' {
-            // skip \word
-            for c in chars.by_ref() { if !c.is_ascii_alphabetic() { break; } }
-          } else if ch != '{' && ch != '}' {
-            cleaned.push(ch);
-          }
-        }
-        let cleaned = cleaned.trim().to_string();
-        if cleaned.is_empty() {
+    // label: Perl L137-162 — labelalpha if present, else label; strip CSes +
+    // braces; if empty fall back to an incrementing counter; else ensure
+    // uniqueness with a/b/.../z suffixing.
+    let label_str: String = {
+      let cleaned = bib_entry_get_tokens(&entry, "labelalpha")
+        .or_else(|| bib_entry_get_tokens(&entry, "label"))
+        .map(|t| bib_clean_name(&t.to_string()))
+        .filter(|s| !s.is_empty());
+      match cleaned {
+        Some(label) => {
+          // Perl L148-162: collision-avoidance suffixing, tracked globally in
+          // `biblatex_author_labels`. The `z`-wraparound (append another base
+          // 'a' and restart) is faithfully ported — see arXiv:1212.4446.
+          let mut labels: SymHashMap<Stored> = match state::lookup_value("biblatex_author_labels") {
+            Some(Stored::HashStored(m)) => m,
+            _ => SymHashMap::default(),
+          };
+          let final_label = if labels.contains_key(&label) {
+            let mut base = label.clone();
+            let mut suffix = b'a';
+            while labels.contains_key(&format!("{base}{}", suffix as char)) {
+              if suffix == b'z' { base.push('a'); suffix = b'a'; }
+              else { suffix += 1; }
+            }
+            format!("{base}{}", suffix as char)
+          } else {
+            label
+          };
+          labels.insert(&final_label, Stored::from(1));
+          state::assign_value("biblatex_author_labels",
+            Stored::HashStored(labels), Some(Scope::Global));
+          final_label
+        },
+        None => {
+          // Perl L144-147: no usable label → simple incrementing counter.
           let n = bib_state_int("biblatex_auto_label") + 1;
           bib_state_set_int("biblatex_auto_label", n);
           n.to_string()
-        } else {
-          cleaned
-        }
-      },
-      _ => {
-        let n = bib_state_int("biblatex_auto_label") + 1;
-        bib_state_set_int("biblatex_auto_label", n);
-        n.to_string()
-      },
+        },
+      }
     };
 
     // Bump entry count for thebibliography wrapper.
@@ -389,9 +499,12 @@ LoadDefinitions!({
         variant.push(T_END!());
       }
     }
-    // Volume + (number)
+    // Volume + (number) — Perl L217-219: gated on a booktitle/journaltitle/series.
+    let series = bib_entry_get_tokens(&entry, "series");
+    let has_volume = bib_entry_get_tokens(&entry, "volume")
+      .map(|v| !v.is_empty()).unwrap_or(false);
     if let Some(volume) = bib_entry_get_tokens(&entry, "volume") {
-      if journal.is_some() && !volume.is_empty() {
+      if !volume.is_empty() && (journal.is_some() || series.is_some()) {
         variant.push(T_SPACE!());
         variant.push(T_CS!("\\textbf"));
         variant.push(T_BEGIN!());
@@ -403,6 +516,22 @@ LoadDefinitions!({
           }
         }
         variant.push(T_END!());
+      }
+    }
+    // Series — Perl L220-222. Trailing number only when there is no volume.
+    if let Some(series) = series.as_ref() {
+      if !series.is_empty() {
+        variant.push(T_OTHER!(","));
+        variant.push(T_SPACE!());
+        variant.extend(series.clone().unlist());
+        if !has_volume {
+          if let Some(num) = bib_entry_get_tokens(&entry, "number") {
+            if !num.is_empty() {
+              variant.push(T_SPACE!());
+              variant.extend(num.unlist());
+            }
+          }
+        }
       }
     }
     // Publisher / location
@@ -417,6 +546,14 @@ LoadDefinitions!({
           }
         }
         variant.extend(publisher.unlist());
+      }
+    }
+    // howpublished — Perl L227.
+    if let Some(howpub) = bib_entry_get_tokens(&entry, "howpublished") {
+      if !howpub.is_empty() {
+        variant.push(T_OTHER!(","));
+        variant.push(T_SPACE!());
+        variant.extend(howpub.unlist());
       }
     }
     // Year
@@ -436,51 +573,71 @@ LoadDefinitions!({
         variant.extend(pages.unlist());
       }
     }
-    // DOI / URL / eprint (URL-style)
-    if let Some(doi) = bib_entry_get_tokens(&entry, "doi") {
-      if !doi.is_empty() {
+    // organization — Perl L230.
+    if let Some(org) = bib_entry_get_tokens(&entry, "organization") {
+      if !org.is_empty() {
         variant.push(T_CS!("\\newblock"));
-        variant.extend(ExplodeText!("DOI: "));
+        variant.extend(org.unlist());
+      }
+    }
+    // DOI / URL / eprint — Perl L231-260.
+    if let Some(doi) = bib_entry_get_tokens(&entry, "doi").filter(|t| !t.is_empty()) {
+      // Perl L232-237: trim leading/trailing space + braces for a clean URI.
+      let doi_toks = bib_trim_url_tokens(doi);
+      variant.push(T_CS!("\\newblock"));
+      variant.extend(ExplodeText!("DOI: "));
+      variant.push(T_CS!("\\href"));
+      variant.push(T_BEGIN!());
+      variant.extend(ExplodeText!("https://dx.doi.org/"));
+      variant.extend(doi_toks.clone());
+      variant.push(T_END!());
+      variant.push(T_BEGIN!());
+      variant.extend(doi_toks);
+      variant.push(T_END!());
+    } else if let Some(url) = bib_entry_get_tokens(&entry, "url").filter(|t| !t.is_empty()) {
+      // Perl L240-244: label from eprinttype (uppercased), default URL, arXiv if ARXIV.
+      let etype = bib_entry_get_tokens(&entry, "eprinttype")
+        .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
+      let etype = if etype.is_empty() { "URL".to_string() }
+        else if etype == "ARXIV" { "arXiv".to_string() }
+        else { etype };
+      variant.push(T_CS!("\\newblock"));
+      variant.extend(ExplodeText!(&format!("{etype}: ")));
+      variant.push(T_CS!("\\url"));
+      variant.push(T_BEGIN!());
+      variant.extend(url.unlist());
+      variant.push(T_END!());
+    } else if let Some(eprint) = bib_entry_get_tokens(&entry, "eprint").filter(|t| !t.is_empty()) {
+      // Perl L245-260.
+      let etype = bib_entry_get_tokens(&entry, "eprinttype")
+        .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
+      let is_arxiv = etype == "ARXIV";
+      let etype = if etype.is_empty() { "eprint".to_string() }
+        else if is_arxiv { "arXiv".to_string() }
+        else { etype };
+      let eprint_class = bib_entry_get_tokens(&entry, "eprintclass").filter(|t| !t.is_empty());
+      variant.push(T_CS!("\\newblock"));
+      // Perl L260: no space between the "type:" label and the target.
+      variant.extend(ExplodeText!(&format!("{etype}:")));
+      if is_arxiv {
+        let eprint_toks = bib_trim_url_tokens(eprint);
         variant.push(T_CS!("\\href"));
         variant.push(T_BEGIN!());
-        variant.extend(ExplodeText!("https://dx.doi.org/"));
-        variant.extend(doi.clone().unlist());
+        variant.extend(ExplodeText!("https://arxiv.org/abs/"));
+        variant.extend(eprint_toks.clone());
         variant.push(T_END!());
         variant.push(T_BEGIN!());
-        variant.extend(doi.unlist());
-        variant.push(T_END!());
-      }
-    } else if let Some(url) = bib_entry_get_tokens(&entry, "url") {
-      if !url.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        variant.extend(ExplodeText!("URL: "));
-        variant.push(T_CS!("\\url"));
-        variant.push(T_BEGIN!());
-        variant.extend(url.unlist());
-        variant.push(T_END!());
-      }
-    } else if let Some(eprint) = bib_entry_get_tokens(&entry, "eprint") {
-      if !eprint.is_empty() {
-        variant.push(T_CS!("\\newblock"));
-        let etype = bib_entry_get_tokens(&entry, "eprinttype")
-          .map(|t| t.to_string().to_uppercase()).unwrap_or_default();
-        let etype = if etype == "ARXIV" { "arXiv".to_string() }
-          else if etype.is_empty() { "eprint".to_string() }
-          else { etype };
-        variant.extend(ExplodeText!(&format!("{etype}:")));
-        variant.push(T_SPACE!());
-        if etype == "arXiv" {
-          variant.push(T_CS!("\\href"));
-          variant.push(T_BEGIN!());
-          variant.extend(ExplodeText!("https://arxiv.org/abs/"));
-          variant.extend(eprint.clone().unlist());
-          variant.push(T_END!());
-          variant.push(T_BEGIN!());
-          variant.extend(eprint.unlist());
-          variant.push(T_END!());
-        } else {
-          variant.extend(eprint.unlist());
+        variant.extend(eprint_toks);
+        // Perl L248: eprintclass → " [class]" suffix, inside the link text.
+        if let Some(cls) = eprint_class {
+          variant.push(T_SPACE!());
+          variant.push(T_OTHER!("["));
+          variant.extend(cls.unlist());
+          variant.push(T_OTHER!("]"));
         }
+        variant.push(T_END!());
+      } else {
+        variant.extend(eprint.unlist());
       }
     }
 
@@ -538,6 +695,13 @@ LoadDefinitions!({
       }
       Some(out) // unterminated: best effort
     }
+    // Perl L286: `$keyvals_flag = LookupValue('biblatex_with_keyvals')`, set
+    // by \datalist / \sortlist. Modern biber .bbl (format ≥ 3.x) encodes each
+    // author as `{{meta,hash}{family={…},given={…},…}}` (keyval block); older
+    // .bbl uses positional `{{hash}{family}{familyi}{given}{giveni}…}`. Without
+    // this dispatch the keyval block was grabbed wholesale as "family" and
+    // leaked verbatim into the bibliography (`family=…,familyi=…,given=…`).
+    let keyvals_flag = bib_state_int("biblatex_with_keyvals") != 0;
     let mut names: Vec<String> = Vec::new();
     let mut idx = 0usize;
     while idx < body_toks.len() {
@@ -552,17 +716,32 @@ LoadDefinitions!({
         Some(g) => g,
         None => break,
       };
-      // Inside, read up to 5 sub-groups: hash, family, familyi, given, giveni
+      // First sub-group is always the per-author metadata/hash block
+      // (`{hash=…}` or `{un=0,uniquepart=base,hash=…}`); skip it (Perl L294).
       let mut j = 0usize;
-      let _hash = read_group(&author_grp, &mut j);
-      let family = read_group(&author_grp, &mut j)
-        .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-      let _familyi = read_group(&author_grp, &mut j);
-      let given = read_group(&author_grp, &mut j)
-        .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-      // Trim whitespace.
-      let family = family.trim().to_string();
-      let given = given.trim().to_string();
+      let _meta = read_group(&author_grp, &mut j);
+      let (given, family) = if keyvals_flag {
+        // Keyval form (Perl L301-306): the next sub-group is the keyval block.
+        let kv_str = read_group(&author_grp, &mut j)
+          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
+        let kvs = parse_name_keyvals(&kv_str);
+        let get = |k: &str| kvs.iter().find(|(kk, _)| kk == k).map(|(_, v)| v.clone());
+        // Perl prefers the full `given`/`family` over the `i`-initial forms.
+        let given = get("given").or_else(|| get("giveni")).unwrap_or_default();
+        let family = get("family").or_else(|| get("familyi")).unwrap_or_default();
+        (given, family)
+      } else {
+        // Positional form (Perl L308-321): {family}{familyi}{given}{giveni}…
+        let family = read_group(&author_grp, &mut j)
+          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
+        let _familyi = read_group(&author_grp, &mut j);
+        let given = read_group(&author_grp, &mut j)
+          .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
+        (given, family)
+      };
+      // Perl L324: strip leftover CSes/braces, then trim.
+      let family = bib_clean_name(family.trim());
+      let given = bib_clean_name(given.trim());
       let fullname = if !given.is_empty() && !family.is_empty() {
         format!("{given} {family}")
       } else if !family.is_empty() {
@@ -1169,8 +1348,10 @@ LoadDefinitions!({
   def_macro_noop("\\refcontext[]{}")?;
 
   // biblatex L3408+ bibliography range separators. Define defensively.
+  // NB: do NOT redefine \bibrangedash here — Perl L353 sets it to an en-dash
+  // (U+2013), as do we above; a hyphen override would diverge from both Perl
+  // and real biblatex. The date/time range separators are en-dashes too.
   def_macro_noop("\\bibrangessep")?;
-  DefMacro!("\\bibrangedash", "-");
-  DefMacro!("\\bibdaterangesep", "/");
-  DefMacro!("\\bibtimerangesep", "-");
+  DefMacro!("\\bibdaterangesep", "\u{2013}");
+  DefMacro!("\\bibtimerangesep", "\u{2013}");
 });
