@@ -1819,6 +1819,17 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
           // map { $main->firstChild->appendChild($_) } map { $_->childNodes } @cells
           // This flattens by taking the CHILDREN of each cell's first child,
           // not the first child itself. We clone into main XMath.
+          //
+          // NOTE: Perl MOVES (appendChild) these originals, keeping their ids;
+          // we clone. Switching to a move does NOT fix the dangling `\Pr`
+          // content refs (witness 2311.01600) — verified: the subsequent math
+          // parse re-ids the content branch from the INNER-equation-derived
+          // main Math id (`<group>X.m1`) regardless, so the refs minted against
+          // `<group>.m1.*` still strand. Closing it needs the multi-part
+          // structural change (main Math id derived from the GROUP not the X
+          // equation + parse-time id preservation), per
+          // docs/EXPECTED_ID_XMREF_DESIGN.md §3. Left as clone (no behaviour
+          // change) until that dedicated effort.
           if let Some(mut mx) = document
             .findnodes("ltx:XMath", Some(&main))
             .into_iter()

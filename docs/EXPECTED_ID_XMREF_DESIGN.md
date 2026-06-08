@@ -195,6 +195,29 @@ Net: the residual `expected:id` work is **not** more tractable than §3; both th
 `\Pr` content-branch and the `S7.E46` mis-parse are deep math-parser/MathFork
 work for a dedicated session.
 
+### 3c. Attempted the §3 fix (Phase-0e, 2026-06-08) — it's multi-part, not one line
+
+Pinned the exact divergence: Perl `rearrangeLoneAMSAligned` (amsmath.sty.ltxml
+L657-671) **MOVES** the original cell nodes into the MathFork MAIN/content
+branch (`appendChild`, keeping their `<group>.m1.*` ids); the Rust port
+(`amsmath_sty.rs` ~L1835) **clones** them (`append_clone`), re-id'ing to the
+X-equation scheme so the `\Pr` refs strand. **Switched it to a move and it
+changed NOTHING** (witness still 27 `expected:id` / 6 `expected:node`, `…m1.1a`
+still absent) — because the subsequent **math parse re-ids the content branch**
+from the inner-equation-derived main Math id (`<group>X.m1`) regardless of
+move-vs-clone. Reverted (no behaviour change), left a comment at the site.
+
+So closing §3 is a **multi-part** change, not a one-liner:
+1. the MathFork **main Math id must derive from the GROUP** (`<group>.m1`), not
+   the inner `X` equation (`<group>X.m1`) — so parsed content lands on the
+   scheme the digestion-minted refs expect;
+2. **move** (not clone) the originals into main; and
+3. the math-parse reinstall must **preserve** those ids for the main branch.
+Plus the presentation branch needs the Perl `.mf` `ID_SUFFIX`. This touches the
+MathFork id derivation in the core builder + the parse reinstall — genuinely a
+dedicated effort, and the third core-math change in this area to be reverted
+(after `rewrite.rs:1242` and the `realize_xmnode` snapshot route). **Deferred.**
+
 ## 4. Design options
 
 ### For Class B (dominant) — faithful: keep the equation refnum id stable
