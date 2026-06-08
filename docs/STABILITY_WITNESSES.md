@@ -176,6 +176,20 @@ is the right floor.
 `hep-ph0012156` (12,778 maths) → graceful OOM-abort under 6 GB ulimit, Cluster A
 inherent-large-math. No genuine Rust-only defect in the batch.)
 
+## Cluster E — tikz/pgf path-processing memory blowup (RUST-ONLY, DEFERRED)
+
+**Witness:** `2110.08101` (third-batch canvas, `Fatal:Timeout:MemoryBudget RSS 4500 MB`).
+**Differential (2026-06-08, current binary + release):** Perl **completes** (1 error) on the
+same paper; Rust blows the 4500 MB RSS cap → RUST-ONLY. The blowup is while digesting
+`FIG/Flow_Chart.tikz` (a `pgfcircflow` flowchart) at line 112 — a `\draw[-latex, rounded
+corners=10pt] (block4) -- node{…} (com2) |- (block10);` path (the `|-` H-then-V path op).
+No `\foreach`/loop in the file (121 lines), so it is not a loop explosion — Rust's pgf path/
+coordinate machinery allocates far more than Perl (`arena:strings_allocated 220193` before the
+cap). Only ~4 of ~37 `MemoryBudget` fatals are tikz-related (the rest are diverse "regular
+`.tex`" blowups, sampled mostly SHARED), so this is a minority cluster. DEFERRED — deep pgf/tikz
+internals; needs a focused profile of pgf path-op allocation vs Perl. Sibling of the pgfplots
+`symbolic x coords` Rust-only case (SYNC_STATUS.md differential-sweep note).
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
