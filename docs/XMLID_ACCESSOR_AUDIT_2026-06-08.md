@@ -86,9 +86,23 @@ id (and a possible later dedup-collision). Each should become
 `remove_attribute_ns("id", XML_NS)` (verify the node isn't an SVG `id`).
 
 ### A′. The SAME footgun on other namespaced attributes — exhaustive sweep
-A grep of **every** `(get|has|remove)_attribute("PREFIX:LOCAL")` (any colon)
-across the workspace returns exactly two distinct names:
-- **`xml:id`** — 49 read/has/remove sites (above) + 16 `set_attribute` writes (writes are fine).
+A grep of **every** `(get|has|remove)_(attribute|property)("PREFIX:LOCAL")`
+(any colon — note `get_attribute` *aliases* `get_property`, so both must be
+swept; the first pass missed `get_property` and undercounted) across the
+workspace returns exactly two distinct names:
+- **`xml:id`** — **53** read/has/remove sites (`get_attribute` ×49 +
+  `get_property` ×4: `rewrite.rs:1063,1072,1242`, `latexml_sty.rs:761`) + 16
+  `set_attribute` writes (writes are fine). `rewrite.rs:1063,1072` and
+  `latexml_sty.rs:761` carry `.or_else(get_property("id"))` masks.
+  **`rewrite.rs:1242`** (XMArg→inner id transfer, no fallback) is a no-op —
+  but **do NOT "fix" it by swapping the accessor**: doing so makes the wildcard
+  `1`/`n` tokens acquire `xml:id`s that **Perl does not emit** (Perl renders
+  `f _ 1` with no id on the `1`), regressing `simplemath.xml`/`declare.xml`.
+  The masked no-op is *closer to Perl* here; a genuine fix needs dedicated
+  analysis of the wildcard/XMRef content path. **Lesson: a masked broken
+  accessor is not automatically a bug to fix — the surrounding logic may have
+  evolved to depend on the no-op. Verify against Perl before "correcting" any
+  of these.**
 - **`xml:lang`** — **1 site, `document.rs:3556` in `get_node_language`** — same
   bug (always `None`). It drives decimal/thousands-separator selection in math
   ligatures (`base_xmath.rs:723` → `DefMathLigature`), so non-English math
