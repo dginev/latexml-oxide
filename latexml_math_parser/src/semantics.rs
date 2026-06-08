@@ -2730,6 +2730,48 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
   }
 }
 
+/// The `meaning` on an `XM::Dual`'s content operator, if it is an `Apply`
+/// whose operator is a meaning-bearing token. Used to recognise the
+/// `qm_bra`/`qm_ket` fences (content `Apply(meaning="bra"/"ket")`).
+fn dual_content_meaning(xm: &XM) -> Option<&str> {
+  if let XM::Dual(content, _, _, _) = xm {
+    if let XM::Apply(op, _, _, _) = &**content {
+      if let XM::Token(props, _) = &*op.0 {
+        return props.meaning.as_deref();
+      }
+    }
+  }
+  None
+}
+
+/// True iff the leftmost factor of `xm` (descending through the first arg of
+/// invisible-times/prefix applications) is a Dirac `bra` (`⟨…|`).
+fn reaches_dirac_bra_on_left(xm: &XM) -> bool {
+  if dual_content_meaning(xm) == Some("bra") {
+    return true;
+  }
+  if let XM::Apply(_, args, _, _) = xm {
+    if let Some(Some(first)) = args.0.first() {
+      return reaches_dirac_bra_on_left(first);
+    }
+  }
+  false
+}
+
+/// True iff the rightmost factor of `xm` (descending through the last arg of
+/// applications) is a Dirac `ket` (`|…⟩`).
+fn reaches_dirac_ket_on_right(xm: &XM) -> bool {
+  if dual_content_meaning(xm) == Some("ket") {
+    return true;
+  }
+  if let XM::Apply(_, args, _, _) = xm {
+    if let Some(Some(last)) = args.0.last() {
+      return reaches_dirac_ket_on_right(last);
+    }
+  }
+  false
+}
+
 pub fn apply_invisible_times(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -2739,6 +2781,29 @@ pub fn apply_invisible_times(
   unp!(args => left, right);
   let mut left = left;
   let mut right = right;
+  // Balanced-Dirac-delimiter refutation. Marpa also admits the spurious
+  // decomposition of a single bracket `⟨…|…|…⟩` into an invisible-times
+  // product: bra `⟨…|` · (middle) · ket `|…⟩`. It is grammatically valid but
+  // refutable — the matched `⟨…⟩` delimiters get split across the product
+  // (the leading `⟨` pairs with an inner `|`, the trailing `⟩` with another
+  // inner `|`), violating balanced nesting; and physically a bra and ket
+  // enclosed by ONE `⟨…⟩` span denote a single matrix element / inner product
+  // (one scalar), not free multiplicative factors (the operator can even get
+  // split across the boundary). Hard-reject so the `qm_bracket`/`qm_braket`
+  // parse survives. DIRECTIONAL: a bra must precede a ket; `|…⟩⟨…|`
+  // (ket-then-bra, a genuine outer product) is NOT rejected. Tight: keyed on
+  // the qm_bra/qm_ket meanings (langle/rangle + VERTBAR Dirac fences only).
+  if let (Some(l), Some(r)) = (&left, &right) {
+    if reaches_dirac_bra_on_left(l) && reaches_dirac_ket_on_right(r) {
+      // Hard-reject via Err (not Ok(None)): Err prunes this parse tree so the
+      // `qm_bracket` alternative survives; Ok(None) would instead yield a None
+      // value that propagates up to a parent action (e.g. list_apply's
+      // `right.unwrap()`) and panics.
+      return Err(
+        "apply_invisible_times: refute Dirac bra·…·ket product (use qm_bracket)".into(),
+      );
+    }
+  }
   // OPFUNCTION/TRIGFUNCTION/FUNCTION tokens absorb the next argument via prefix_apply,
   // NOT via invisible times. When these appear as left of invisible_times (because
   // tight_term includes factor which includes opfunction), prune in favor of prefix_apply.

@@ -292,7 +292,7 @@
             </XMWrap>
           </XMDual>
         </XMath>
-      </Math> has <text class="ltx_count_parses">3</text> parses.</p>
+      </Math> has <text class="ltx_count_parses">2</text> parses.</p>
   </para>
   <para xml:id="p9">
     <p><Math mode="inline" tex="f(x)=\int h(x)\,dx" text="f@(x) = integral@(h@(x) * differential-d@(x))" xml:id="p9.m1">
