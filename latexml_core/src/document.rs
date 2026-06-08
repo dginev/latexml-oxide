@@ -2192,14 +2192,31 @@ impl Document {
       );
       let mut node = Node::new_text(text, &self.document)?;
       point.add_child(&mut node)?;
-      if node.get_type().is_none() {
-        // Extremely important note! the Rust wrapper `add_child` follows `xmlAddChild` strictly,
-        // so in a case where adjacent text nodes are added, libxml will **MERGE** them leading to
-        // `node`'s underlying pointer disappearing.
-        // Thus - we check if the node is gone - and use its parent instead if so.
-        self.set_node(&point);
-      } else {
+      // libxml2 MERGES adjacent text nodes: when `point`'s last child was
+      // already a text node, `xmlAddChild` appends our content to it and
+      // FREES the just-created `node`, leaving its wrapper dangling.
+      //
+      // The previous detection — `node.get_type().is_none()` — is a
+      // use-after-free: it reads the freed node's `type` field. That is
+      // *benign on glibc* (the freed slot still reads as the old/None type,
+      // so the merge is detected), but **unsound on macOS libmalloc**, which
+      // recycles/scribbles the freed slot so `get_type()` returns garbage
+      // (EntityNode/ElementDecl/…) and the merge goes UNDETECTED — installing
+      // a freed node as `self.node` and corrupting the current insertion
+      // point (issue #217; the macOS-only worker-thread crashes).
+      //
+      // Detect the merge WITHOUT dereferencing the possibly-freed node:
+      // after `add_child` our text is `point`'s last child in both cases
+      // (the appended `node`, or the sibling it merged into). `Node`'s
+      // `PartialEq` compares the stored `xmlNodePtr` values (no deref), so
+      // this pointer-identity check is allocator-independent and UAF-safe.
+      if point.get_last_child().as_ref() == Some(&node) {
+        // `node` was appended (not merged) — it is live and current.
         self.set_node(&node);
+      } else {
+        // `node` was merged into a text sibling and freed — fall back to the
+        // parent insertion point (matches the prior merged-case behavior).
+        self.set_node(&point);
       }
     }
     Ok(self.node.clone())
