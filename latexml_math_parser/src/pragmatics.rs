@@ -572,11 +572,10 @@ fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str
   };
   let recognize_close = |x: Option<&XM>, fence: &Fence| -> bool {
     match x {
-      Some(XM::Token(p, _)) => match (p.role.as_deref(), p.content.as_deref(), fence) {
-        (Some("CLOSE"), Some(")"), Fence::Parens) => true,
-        (Some("CLOSE"), Some("]"), Fence::Brackets) => true,
-        _ => false,
-      },
+      Some(XM::Token(p, _)) => matches!(
+        (p.role.as_deref(), p.content.as_deref(), fence),
+        (Some("CLOSE"), Some(")"), Fence::Parens) | (Some("CLOSE"), Some("]"), Fence::Brackets)
+      ),
       Some(XM::Lexeme(name, _)) => match fence {
         Fence::Parens => name.starts_with("CLOSE:):"),
         Fence::Brackets => name.starts_with("CLOSE:]:"),
@@ -585,9 +584,7 @@ fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str
     }
   };
 
-  let Some(fence) = recognize_open(items.first()) else {
-    return None;
-  };
+  let fence = recognize_open(items.first())?;
   if !recognize_close(items.last(), &fence) {
     return None;
   }

@@ -278,7 +278,7 @@ pub fn reset() {
 /// worker-thread memory corruption in issue #217. `ARENA`'s own initializer
 /// touches no other thread-local, so forcing it first is always safe.
 /// No behavioral change on Linux.
-pub fn force_init() { Lazy::force(&ARENA); }
+pub(crate) fn force_init() { Lazy::force(&ARENA); }
 
 #[cfg(test)]
 mod tests {

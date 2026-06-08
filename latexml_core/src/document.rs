@@ -40,6 +40,30 @@ use crate::{BoxOps, Digested, DigestedData};
 static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
 static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
 static DASHES_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\-\-+").unwrap());
+
+/// #217 diagnostic (TEMP): the source location of the most recent
+/// `set_node` assignment to `self.node`, so a macOS run can report where
+/// the current node was set when a later read finds it corrupt. Remove
+/// together with the `[#217]` eprintln guards once the corruption source
+/// is fixed.
+#[thread_local]
+static LAST_SET_NODE_LOC: std::cell::Cell<Option<&'static std::panic::Location<'static>>> =
+  std::cell::Cell::new(None);
+
+/// Node types that may legitimately be the document's current insertion
+/// node (`self.node`). Anything else read there is a corrupt/freed node —
+/// the macOS #217 residual. Used by the defensive guards below.
+fn is_sane_current_node_type(t: &Option<NodeType>) -> bool {
+  matches!(
+    t,
+    Some(
+      NodeType::ElementNode
+        | NodeType::TextNode
+        | NodeType::DocumentNode
+        | NodeType::DocumentFragNode
+    )
+  )
+}
 static NON_MERGEABLE_ATTRIBUTES: Lazy<HashSet<&'static str>> = Lazy::new(|| {
   HashSet::from_iter([
     "about",
@@ -1525,7 +1549,11 @@ impl Document {
     serialized
   }
 
+  #[track_caller]
   pub fn set_node(&mut self, node: &Node) {
+    // #217 diagnostic (TEMP): remember where the current node is being set,
+    // so a later corrupt read can name this assignment site.
+    LAST_SET_NODE_LOC.set(Some(std::panic::Location::caller()));
     // Perl Document.pm:setNode L74-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check
@@ -1562,6 +1590,18 @@ impl Document {
       }
     }
     self.node = chosen;
+    // #217 diagnostic (TEMP): catch a corrupt node being made current. If
+    // this fires, the macOS corruption is upstream of THIS caller (it passed
+    // a freed/garbage node); if it does NOT fire but a later read finds
+    // `self.node` corrupt, the node was valid when set and freed afterwards.
+    if !is_sane_current_node_type(&self.node.get_type()) {
+      eprintln!(
+        "[#217] set_node: self.node set to UNEXPECTED type {:?} by caller {}\n{}",
+        self.node.get_type(),
+        std::panic::Location::caller(),
+        std::backtrace::Backtrace::force_capture()
+      );
+    }
   }
 
   // Internals
@@ -1800,6 +1840,23 @@ impl Document {
 
   pub fn open_text(&mut self, text: &str, font: &Font) -> Result<Option<Node>> {
     let node_type = self.node.get_type();
+    // #217 robustness + diagnostic: if the current node is corrupt (a
+    // freed/reused node read as an impossible libxml2 type — the macOS
+    // residual), recover by skipping this insert instead of crashing
+    // downstream in open_text_internal/can_contain. Report where the
+    // corrupt node was last set so the source can be localized. On Linux
+    // self.node is always a sane container here, so this never fires.
+    if !is_sane_current_node_type(&node_type) {
+      eprintln!(
+        "[#217] open_text: self.node has UNEXPECTED type {:?} (corrupt current node); \
+         last set_node at {:?}; skipping insert of {:?}.\n{}",
+        node_type,
+        LAST_SET_NODE_LOC.get(),
+        text,
+        std::backtrace::Backtrace::force_capture()
+      );
+      return Ok(None);
+    }
     {
       // Ignore initial whitespace
       if (text.is_empty() || ONLY_SPACE_RE.is_match(text))

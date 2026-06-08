@@ -134,7 +134,7 @@ pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
 /// conversion entry keeps them from initializing re-entrantly from within
 /// another root's init mid-conversion — the macOS `#[thread_local]` hazard
 /// behind issue #217. No behavioral change on Linux.
-pub fn force_init() {
+pub(crate) fn force_init() {
   Lazy::force(&DEFERRED_COMMANDS);
   Lazy::force(&COLUMN_ENDS);
   Lazy::force(&GULLET);

@@ -386,7 +386,7 @@ static STATE: Lazy<RefCell<State>> = Lazy::new(|| {
 /// `#[thread_local]` hazard behind issue #217. (The active `STATE` is
 /// already forced by `set_state` in `Core::new`.) No behavioral change on
 /// Linux.
-pub fn force_init() {
+pub(crate) fn force_init() {
   Lazy::force(&STD_STATE);
   Lazy::force(&STY_STATE);
 }

@@ -86,7 +86,7 @@ pub fn initialize_model() {
 /// re-entrantly from within another root's initialization, the macOS
 /// `#[thread_local]` hazard behind issue #217. No behavioral change on
 /// Linux (a later `set_model` for a schema-driven model still replaces it).
-pub fn force_init() { Lazy::force(&MODEL); }
+pub(crate) fn force_init() { Lazy::force(&MODEL); }
 
 impl Model {
   pub fn new() -> Self {
@@ -657,7 +657,23 @@ pub fn get_node_qname(node: &Node) -> SymStr {
     },
     // Need others?
     t => {
-      panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
+      // #217: a node with an unexpected libxml2 type reached qname
+      // resolution. On macOS this is the `self.node`-corruption residual —
+      // a detached/reused current node read as e.g. EntityDecl(17) or
+      // DOCBDocumentNode(21) (types LaTeXML never builds). Degrade to the
+      // same `#BrokenNode` sentinel the `node_type.is_none()` arm above
+      // already returns, instead of the original hard `panic!`. On Linux
+      // this arm is never reached (no corrupt nodes), so behavior is
+      // unchanged there; on macOS the conversion produces (wrong-but-not-
+      // crashing) output. TEMP diagnostic: log + backtrace so a macOS run
+      // still surfaces where the corrupt node is read; remove the eprintln
+      // once the corruption source is fixed (the `#BrokenNode` guard stays).
+      eprintln!(
+        "[#217] get_node_qname: unexpected node type {t:?} (corrupt/detached node) \
+         — returning #BrokenNode instead of panicking.\n{}",
+        std::backtrace::Backtrace::force_capture()
+      );
+      arena::pin_static("#BrokenNode")
     },
   }
 }

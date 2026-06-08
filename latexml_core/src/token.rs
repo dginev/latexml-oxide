@@ -429,7 +429,7 @@ pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
 /// first access re-entrantly initializes the token from within that other
 /// root's init, the macOS `#[thread_local]` hazard (rust-lang/rust#29594,
 /// issue #217). No behavioral change on Linux.
-pub fn force_init() {
+pub(crate) fn force_init() {
   Lazy::force(&TOKEN_BEGIN);
   Lazy::force(&TOKEN_END);
   Lazy::force(&TOKEN_MATH);

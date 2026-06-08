@@ -1,4 +1,4 @@
-use crate::data::{get_grammatical_role, get_token_meaning, record_replacement};
+use crate::data::{get_grammatical_role, get_token_meaning};
 use crate::semantics::ActionContext;
 use crate::semantics::XProps;
 use crate::semantics::tree::XM;
@@ -7,55 +7,6 @@ use latexml_core::binding::def::dialect::get_xmarg_id;
 use libxml::tree::{Node, NodeType};
 use std::borrow::Cow;
 use std::error::Error;
-
-/// Best-effort recovery of an xml:id (or _xmkey, as deferred id) for an
-/// `XM` value as it appears in a semantics-rule input. Returns `None` if
-/// the value isn't a single addressable node — composite Apply/Dual/etc.
-/// have IDs only via their props.id field (rarely set at this layer).
-pub fn xm_id_or_xmkey(xm: &XM, nodes: &[Node]) -> Option<String> {
-  match xm {
-    XM::Token(props, _) => {
-      props
-        .id
-        .as_deref()
-        .or(props.xmkey.as_deref())
-        .map(|s| s.to_string())
-    },
-    XM::Lexeme(lex, _) => {
-      lookup_lex_node(lex, nodes).ok().and_then(|n| {
-        n.get_attribute("xml:id")
-          .or_else(|| n.get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace"))
-      })
-    },
-    XM::Apply(_, _, props, _) | XM::Ref(props) => {
-      props
-        .id
-        .as_deref()
-        .or(props.xmkey.as_deref())
-        .map(|s| s.to_string())
-    },
-    XM::Wrap(_, props, _) | XM::Dual(_, _, props, _) => {
-      props
-        .id
-        .as_deref()
-        .or(props.xmkey.as_deref())
-        .map(|s| s.to_string())
-    },
-    _ => None,
-  }
-}
-
-/// Record that the operator portion of `lost` was absorbed into `keep`'s
-/// existing application (the canonical Perl `ReplacedBy(lost, keep)`
-/// pattern from `infix_apply_nary`-style left-recursion). Walks the
-/// applicable id-bearing fields on each side; no-op if neither side
-/// has an extractable id.
-pub fn record_replacement_xm(lost: &XM, keep: &XM, nodes: &[Node]) {
-  if let (Some(lost_id), Some(keep_id)) = (xm_id_or_xmkey(lost, nodes), xm_id_or_xmkey(keep, nodes))
-  {
-    record_replacement(&lost_id, &keep_id);
-  }
-}
 
 /// Generate a textual token for each node; The parser operates on this encoded
 /// string.
