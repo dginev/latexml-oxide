@@ -31,11 +31,86 @@ jobs:
   dumps:
     uses: ./.github/workflows/release-dumps.yml
 
+  # macOS (Apple Silicon) release tarball. Native binaries are never
+  # cross-OS — Linux emits ELF, macOS emits Mach-O — so the macOS asset is
+  # built on its own runner, NOT cross-compiled from the Linux leg. We build
+  # natively on the arm64 `macos-15` runner (the same arch the CI.yml macOS
+  # job validates, #217). Apple Silicon only; Intel macOS (x86_64-apple-darwin)
+  # is not yet a published target — see docs/RELEASING.md "Release asset
+  # strategy". The TL-window dumps are OS-agnostic gzipped text, so this leg
+  # embeds the exact bytes the `dumps` job produced for the Linux leg.
+  build-macos:
+    name: Build macOS arm64 ${{ github.ref_name }}
+    runs-on: macos-15
+    # maxperf is fat-LTO / codegen-units=1 — the slowest, most RAM-hungry
+    # build. macos-15 free-tier runners are 3 vCPU / 7 GB; allow generous
+    # wall-clock. If the LTO link OOMs on 7 GB, the documented mitigation is a
+    # larger runner or relaxing the macOS leg's codegen-units (RELEASING.md).
+    timeout-minutes: 90
+    needs: dumps
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # libxml2 + libxslt are keg-only on Homebrew; install them and surface
+      # their pkgconfig dirs so the libxml/libxslt build scripts find them.
+      # kpathsea is NOT linked here: the distributed binary uses the
+      # subprocess-`kpsewhich` backend (decoupled from libkpathsea ABI;
+      # mandatory on MacTeX, which ships no libkpathsea).
+      - name: install dependencies
+        run: |
+          command -v pkg-config >/dev/null || brew install pkgconf
+          brew install libxml2 libxslt
+      - name: surface keg-only pkg-config paths
+        run: |
+          echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: release-maxperf-macos
+
+      # Same TL-window dumps as the Linux leg (OS-agnostic gzipped text).
+      - name: collect TL-window dumps
+        uses: actions/download-artifact@v6
+        with:
+          pattern: dumps-*
+          path: resources/dumps/
+          merge-multiple: true
+      - name: verify dump window completeness
+        run: |
+          ls -la resources/dumps/
+          for year in 2022 2023 2024 2025; do
+            for f in plain.$year.dump.txt latex.$year.dump.txt texlive.$year.version; do
+              if [ ! -s "resources/dumps/$f" ]; then
+                echo "::error::release dump window incomplete: missing resources/dumps/$f"
+                exit 1
+              fi
+            done
+          done
+
+      - name: build macOS release tarball
+        run: bash tools/make_release.sh
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          RELEASE_TARGET: aarch64-apple-darwin
+
+      - name: upload macOS artifact
+        uses: actions/upload-artifact@v5
+        with:
+          name: macos-tarball
+          path: |
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
+          if-no-files-found: error
+
   release:
     name: Build and publish ${{ github.ref_name }}
     runs-on: ubuntu-22.04
     timeout-minutes: 60
-    needs: dumps
+    needs: [dumps, build-macos]
 
     steps:
       - uses: actions/checkout@v6
@@ -102,6 +177,19 @@ jobs:
           # make_release.sh verifies this matches the Cargo.toml version
           # and refuses to build on mismatch.
           GITHUB_REF_NAME: ${{ github.ref_name }}
+          # Include the macOS install section in the shared release body. The
+          # tarball file itself is collected from the build-macos artifact in
+          # the next step — make_release.sh wipes target/release-artifacts/ at
+          # start, so the download MUST follow it.
+          RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+
+      # Pull the macOS tarball (+ sidecar) built by the build-macos job into
+      # the staging dir so they publish alongside the Linux artifacts.
+      - name: collect macOS tarball
+        uses: actions/download-artifact@v6
+        with:
+          name: macos-tarball
+          path: target/release-artifacts/
 
       - name: publish GitHub release
         uses: softprops/action-gh-release@v2
@@ -114,6 +202,8 @@ jobs:
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz.sha256
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb
             target/release-artifacts/latexml-oxide_${{ github.ref_name }}-1_amd64.deb.sha256
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+            target/release-artifacts/latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz.sha256
           draft: false
           prerelease: false
           fail_on_unmatched_files: true

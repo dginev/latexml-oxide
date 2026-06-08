@@ -24,7 +24,7 @@ Numbers are verified current state (2026-05-24) unless marked TODO.
 | Corpus (100k warning subset) | ~99.39% / ~99.44% rerun-adj | no regression; gate cohorts separately (`no-problem`, warning subset, random full sample, hard package/class) |
 | Tail latency / RSS | mean bands only ([`PERFORMANCE.md`](PERFORMANCE.md)) | P50/P90/P99 dashboard; "no unbounded growth" gate — §5 |
 | Binary size (`maxperf`) | **45 MB / 14 MB tarball** | budget + growth alarm — §2 |
-| OS/arch | `x86_64-linux-gnu` only | staged ladder — §3 |
+| OS/arch | `x86_64-linux-gnu` + `aarch64-apple-darwin` | staged ladder — §3 |
 | Toolchain | **nightly** (`#![feature(thread_local)]`) | pin nightly; track stabilization (#143) |
 | License inventory | crates `CC0`; embedded assets uninventoried | blocker — §4 |
 | Safety | local-CLI model ([`SAFETY.md`](SAFETY.md)) | + distribution profile — §6 |
@@ -47,10 +47,14 @@ fails on budget breach (§7).
 
 ## 3. Portability staging (issues #217, #143)
 
-Current: one self-contained `x86_64-linux-gnu` artifact (Ubuntu 22.04 /
-glibc 2.35), embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
-system libs ([`RELEASING.md`](RELEASING.md)). Ladder — each stage needs a
-smoke corpus + size gate + dependency check:
+Current: **two** self-contained published artifacts — `x86_64-linux-gnu`
+(Ubuntu 22.04 / glibc 2.35) and `aarch64-apple-darwin` (macOS Apple
+Silicon) — each embedding our XSLT/CSS/JS/schema/dumps, host TeX Live +
+system libs ([`RELEASING.md`](RELEASING.md) → "Release asset strategy").
+A native binary is never cross-OS (ELF vs Mach-O), so it is one artifact
+per `(OS, arch)` triple, built on its own native runner — not
+cross-compiled. Ladder — each stage needs a smoke corpus + size gate +
+dependency check:
 
 1. Debian/Ubuntu x86_64 (current).
 2. aarch64 Linux.
@@ -66,7 +70,14 @@ smoke corpus + size gate + dependency check:
    (benign on glibc, exposed by macOS libmalloc); fixed in
    `open_text_internal` with a pointer-identity merge check (WISDOM #58)
    and audited for sibling sites. crates.io release + dep swap, README
-   install matrix, and the gating CI job all **done**.
+   install matrix, and the gating CI job all **done**. **Release asset
+   automated 2026-06-08**: `release.yml`'s `build-macos` job builds the
+   `aarch64-apple-darwin` tarball natively on `macos-15` (subprocess-
+   `kpsewhich`, host brew libxml2/libxslt, same embedded TL-window dumps)
+   and the Linux `release` job publishes it alongside the Linux assets.
+   *Not yet published:* Intel macOS (`x86_64-apple-darwin`) — needs a
+   `macos-13` leg or a `lipo` universal; arm64 binaries don't run on
+   Intel.
 5. Windows / musl — deferred. Known blockers: `libmarpa-sys`
    `./configure && make` (needs a cc-crate port; tarball is vendored),
    `lsp_server` unix sockets, `graphics*.rs` cfg(unix) paths,
