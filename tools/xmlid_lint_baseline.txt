@@ -1,0 +1,53 @@
+latexml_core/src/document.rs	&& !current.has_attribute("xml:id")
+latexml_core/src/document.rs	if let Some(id) = node.get_attribute("xml:id") {
+latexml_core/src/document.rs	if let Some(id) = pres.get_attribute("xml:id") {
+latexml_core/src/document.rs	if !pres_had_id && !dual.has_attribute("xml:id") {
+latexml_core/src/document.rs	let pres_had_id = pres.has_attribute("xml:id");
+latexml_core/src/document.rs	let _ = pres.remove_attribute("xml:id");
+latexml_core/src/document.rs	let to_has_id = to.has_attribute("xml:id")
+latexml_core/src/document.rs	let _ = tok.remove_attribute("xml:id");
+latexml_core/src/rewrite.rs	.get_property("xml:id")
+latexml_core/src/rewrite.rs	.get_property("xml:id")
+latexml_core/src/rewrite.rs	if !inner.has_attribute("xml:id") {
+latexml_core/src/rewrite.rs	let id = tree.get_attribute("xml:id").unwrap_or_default();
+latexml_core/src/rewrite.rs	let xmarg_id = child.get_property("xml:id");
+latexml_core/src/rewrite.rs	|| n.get_attribute("xml:id").as_deref() == Some(&target_id)
+latexml_engine/src/base_xmath.rs	arena::with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
+latexml_engine/src/base_xmath.rs	.get_attribute("xml:id")
+latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
+latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
+latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
+latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"));
+latexml_engine/src/latex_constructs.rs	float.remove_attribute("xml:id").ok();
+latexml_engine/src/latex_constructs.rs	.get_attribute("xml:id")
+latexml_engine/src/latex_constructs.rs	if node.has_attribute("labels") && !node.has_attribute("xml:id") {
+latexml_engine/src/math_common.rs	not_node.remove_attribute("xml:id")?;
+latexml_math_parser/src/data.rs	if child.get_attribute("xml:id").as_deref() == Some(id) {
+latexml_math_parser/src/parser.rs	.get_attribute("xml:id")
+latexml_math_parser/src/parser.rs	.get_attribute("xml:id")
+latexml_math_parser/src/parser.rs	if let Some(id) = descendant.get_attribute("xml:id") {
+latexml_math_parser/src/parser.rs	if script.get_attribute("xml:id").is_none() {
+latexml_math_parser/src/parser.rs	let appid = match app.get_attribute("xml:id") {
+latexml_math_parser/src/parser.rs	let _ = app.remove_attribute("xml:id");
+latexml_math_parser/src/parser.rs	let script_id = match script.get_attribute("xml:id") {
+latexml_math_parser/src/parser.rs	node.remove_attribute("xml:id")?;
+latexml_math_parser/src/util.rs	.get_attribute("xml:id")
+latexml_math_parser/src/util.rs	match node.get_attribute("xml:id") {
+latexml_oxide/src/core_interface.rs	let _ = node.remove_attribute("xml:id");
+latexml_oxide/src/core_interface.rs	let _ = node.remove_attribute("xml:id");
+latexml_oxide/src/core_interface.rs	.or_else(|| p.get_attribute("xml:id"))
+latexml_package/src/package/amsmath_sty.rs	.or_else(|| node.get_attribute("xml:id"))
+latexml_package/src/package/latexml_sty.rs	if let Some(id) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
+latexml_post/src/collector.rs	let root_id = root.get_attribute("xml:id").unwrap_or_default();
+latexml_post/src/document.rs	if let Some(id) = idd.get_attribute("xml:id") {
+latexml_post/src/document.rs	if let Some(id) = n.get_attribute("xml:id") {
+latexml_post/src/document.rs	if let Some(id) = p.get_attribute("xml:id") {
+latexml_post/src/document.rs	.or_else(|| node.get_attribute("xml:id"))
+latexml_post/src/make_bibliography.rs	.and_then(|r| r.get_attribute("xml:id"))
+latexml_post/src/make_bibliography.rs	.get_attribute("xml:id")
+latexml_post/src/make_bibliography.rs	let orig_id = bibentry.get_attribute("xml:id").unwrap_or_default();
+latexml_post/src/make_bibliography.rs	let orig_id = bibentry.get_attribute("xml:id").unwrap_or_default();
+latexml_post/src/mathml/content.rs	.get_attribute("xml:id")
+latexml_post/src/scan.rs	.get_attribute("xml:id")
+latexml_post/src/writer.rs	if let Some(id) = root.get_attribute("xml:id") {
+latexml_post/src/writer.rs	let _ = root.remove_attribute("xml:id");

@@ -6,4 +6,6 @@
 # appropriate message if it wants to stop the commit.
 #
 
-cargo +nightly fmt --all && cargo +nightly clippy -- --deny warnings
+tools/lint_xmlid_accessor.sh \
+  && cargo +nightly fmt --all \
+  && cargo +nightly clippy -- --deny warnings

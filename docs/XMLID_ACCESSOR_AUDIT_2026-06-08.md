@@ -183,9 +183,13 @@ review.
    output away from Perl. So migrate a site **only** when a *confirmed* Perl
    divergence is traced to it, validated by a clean-build suite + the affected
    fixture diffed against Perl. New code should use the helper from day one.
-3. **Lint guard:** a grep/CI check forbidding new `*_attribute("xml:id")` /
-   `*_property("xml:id")` use (the cheap, high-value preventive — stops *new*
-   footguns without churning the masked-but-working existing ones).
+3. **Lint guard — IMPLEMENTED 2026-06-08:** `tools/lint_xmlid_accessor.sh` is a
+   ratchet that bans NEW `*_{attribute,property}("xml:…")` reads/has/removes
+   against a checked-in baseline (`tools/xmlid_lint_baseline.txt`, the 53
+   existing masked sites). Wired into the pre-push hook and CI (`CI.yml`, before
+   the build so it fails fast). `--bless` refreshes the baseline when a site is
+   intentionally added/removed. This stops *new* footguns without churning the
+   masked-but-working existing ones.
 4. **Namespace constant:** replace the ~30 remaining literal
    `"http://www.w3.org/XML/1998/namespace"` strings with `XML_NS`
    (`latexml_core::common::xml::XML_NS`, re-exported via the engine prelude).

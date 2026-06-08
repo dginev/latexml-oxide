@@ -64,6 +64,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+      # Cheap source-level ratchet: ban NEW string-keyed xml: attribute
+      # accessors (the libxml namespaced-attribute footgun). Runs before the
+      # expensive build so it fails fast. See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
+      - name: lint (xml:id accessor footgun)
+        run: tools/lint_xmlid_accessor.sh
       # NOTE: CI intentionally does NOT enable the `cortex` feature.
       # Cortex worker is a production deployment artifact, built separately.
       #
