@@ -3,6 +3,13 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: adjustbox.sty.ltxml
+  // adjustbox.sty `\RequirePackage{adjcalc}` + `\RequirePackage{calc}` at its top —
+  // calc supplies \widthof/\heightof/\depthof. The raw InputDefinitions below does not
+  // reliably propagate adjustbox's own `\RequirePackage{calc}`, so docs that use
+  // \widthof (e.g. via enumitem `labelwidth=\widthof{...}`) without explicitly loading
+  // calc get \widthof undefined. Load calc explicitly first (faithful — adjustbox
+  // requires it). Witness 2401.06320. RUST-ONLY (Perl loads calc via adjustbox).
+  RequirePackage!("calc");
   InputDefinitions!("adjustbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Some strategic redefinitions
