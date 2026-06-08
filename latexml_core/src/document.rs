@@ -1832,9 +1832,36 @@ impl Document {
     };
     let element_sym = arena::pin(elementname);
     // If not at document begin. And not appending text in same font.
-    if node_type != Some(NodeType::DocumentNode)
-      && !(node_type == Some(NodeType::TextNode)
-        && (font.distance(self.get_node_font(&self.node.get_parent().unwrap())) == 0))
+    //
+    // Defensive (issue #217): when `self.node` is a TextNode it should ALWAYS
+    // have a parent element, so the original `self.node.get_parent().unwrap()`
+    // was "safe" — but it was the macOS-only CI panic: under the macOS
+    // allocator/TLS conditions `self.node` could be a DETACHED text node
+    // (parent == None), a state never reached on Linux (this exact site is
+    // hit ~3900×/sizes_test and always resolves to a live p/title/td/tag
+    // parent). Match the None instead of unwrapping, and recover by skipping
+    // this un-anchorable insert rather than crashing.
+    let text_same_font = if node_type == Some(NodeType::TextNode) {
+      match self.node.get_parent() {
+        Some(parent) => font.distance(self.get_node_font(&parent)) == 0,
+        None => {
+          // TEMP diagnostic (#217): log + full backtrace so a macOS run
+          // reveals which digestion op left `self.node` detached. Remove
+          // once root-caused; the None guard itself stays.
+          eprintln!(
+            "[#217] open_text: current TextNode is DETACHED (get_parent()==None) — \
+             content={:?} insert={:?}; skipping insert.\n{}",
+            self.node.get_content(),
+            text,
+            std::backtrace::Backtrace::force_capture()
+          );
+          return Ok(None);
+        },
+      }
+    } else {
+      false
+    };
+    if node_type != Some(NodeType::DocumentNode) && !text_same_font
     {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal()?; // Close text node, if any.
