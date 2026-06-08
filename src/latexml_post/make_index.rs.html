@@ -906,7 +906,7 @@
 <a href=#906 id=906 data-nosnippet>906</a>  <span class="comment">// Pass 2: a pure-space chunk merges its neighbours into one phrase.
 <a href=#907 id=907 data-nosnippet>907</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>iter = result.into_iter();
 <a href=#908 id=908 data-nosnippet>908</a>  <span class="kw">let </span><span class="kw-2">mut </span>merged: Vec&lt;SeeChunk&gt; = <span class="macro">vec!</span>[iter.next().unwrap()];
-<a href=#909 id=909 data-nosnippet>909</a>  <span class="kw">let </span><span class="kw-2">mut </span>rest: Vec&lt;SeeChunk&gt; = iter.collect();
+<a href=#909 id=909 data-nosnippet>909</a>  <span class="kw">let </span>rest: Vec&lt;SeeChunk&gt; = iter.collect();
 <a href=#910 id=910 data-nosnippet>910</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
 <a href=#911 id=911 data-nosnippet>911</a>  <span class="kw">while </span>i &lt; rest.len() {
 <a href=#912 id=912 data-nosnippet>912</a>    <span class="kw">let </span>next = rest[i].clone();
