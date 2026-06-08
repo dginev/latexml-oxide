@@ -131,6 +131,31 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ FRESH-CORPUS DELTA SWEEP + 2 loader fixes (2026-06-08).** Re-confirmed the PARITY
+> conclusion on an independent corpus: the 160 `next_warning_papers` witnesses, Rust-vs-Perl
+> delta (`latexml_oxide` vs `latexml`, both `--path=ar5iv-bindings --preload=ar5iv.sty`,
+> ANSI-stripped `^(Error|Fatal):`). 71 error-bearing papers, **374 errors total, only ~26
+> Rust-only (positive-delta) across 8 papers** — every big cluster (71/53/35/14-error papers)
+> is delta=0 SHARED (e.g. `$$`-in-IEEEproof `unexpected:_` = Rust 2 / Perl 2, verified). Method
+> + isolation discipline saved to memory ([[feedback_rust_perl_delta_method]],
+> [[feedback_canvas_measurement_isolation]]). Two CLEAN Rust-only gaps fixed + committed:
+> - `df56acbab5` **subdir package loads** — `\usepackage{AISTATS/aistats2026}` (dir-prefixed
+>   name): the contrib `aistats2026` binding is matched on the basename then raw-loads
+>   `aistats2026.sty` by basename, dropping `AISTATS/`, so the subdir file is missed →
+>   `\aistatstitle/author/address` undefined. Fix: `input_definitions` now adds the requested
+>   name's directory to the search paths for the load's duration (TeX input-stack behavior),
+>   restored via Drop guard. Additive; never changes which binding wins. 2510.09534 3→0.
+> - `5b57feb226` **achemso `\geometry`** — achemso.cls L308 `\RequirePackage{geometry}`; the
+>   OmniBus stub omitted it so author `\geometry{...}` was undefined. Added it. 2407.02650 1→0.
+>
+> Remaining positive-delta gaps are DEEP/delicate single papers (out of quick-fix scope, logged
+> for later): pgfplots `symbolic x coords` + `nodes near coords`/`bar shift` interaction
+> (2110.14597, +12); kvoptions/cleveref raw-load `#`/`\fi` cascade (2411.03393, +4); tabularht
+> DVI-driver GenericError + `\@array` (2206.08989, +3); siamart eager-xcolor vs colortbl
+> (2511.10796, +1, delicate); deluxetable `$`-column template (2305.16141, +1); revtex bbl
+> internal-CS leak (2312.14913, +1). The 64 slow/timeout witnesses are being recovered serially
+> (reliability track, STABILITY_WITNESSES).
+
 > **✅ TEST-SUITE RECOVERY + xparse loader fix (2026-06-08, commit `128891d587`).** A clean
 > (from-scratch) rebuild exposed 3 long-standing failures — `xparse_test`, `regex_match_test`,
 > `chemformula_raw_l3keys` — that incremental builds had masked (they fail on a clean build of
