@@ -145,12 +145,18 @@
 >   2.5 s** (period-2 box cycle). Box-memory note: ~626 B per lightweight
 >   Digested ⇒ ~7M boxes under the 4.5 GB cap; the 50k stomach activation is
 >   ~30 MB (<1% of the ceiling). 7 unit tests + suite 1398/0 (no false
->   positives). **Open follow-up:** the *root cause* of 2201.09268 is a Rust-only
->   pgf arc-drawing non-termination (Perl converts it with 1 error) — a pgfmath
->   divergence in the `to [loop]` arc loop, to be root-caused next (the guard
->   makes it graceful but the paper still fails). Raising the RSS cap to 10 GB
->   was considered and rejected: this is an unbounded runaway (hard-OOMs at
->   6.3 GB), so a higher cap removes the protective soft fuse rather than helping.
+>   positives). **Root cause now nailed (`PGF_ARC_BISECTION_2201.09268_2026-06-09.md`):**
+>   pgf's `\pgfmathpointintersectionoflineandarc` (curved-node-boundary
+>   intersection) runs an UNBOUNDED bisection whose only exit is the exact
+>   `\ifdim\x pt=\q pt`; a rare last-digit (1e-5) drift in the composed
+>   `\pgfmathanglebetweenpoints` makes that exact match miss in Rust (every
+>   isolated op — sin/cos/atan2/dimen×factor/sys@tonumber/divide/rad2deg —
+>   matches Perl bit-for-bit; only the full chain drifts). Landed one related
+>   faithfulness fix (`02a5b2103f`: `@`-internal pgfmath functions return raw
+>   integers, no spurious `.0`, matching Perl). The bit-exact-trig fix is
+>   deferred as deep/high-risk for one paper while the guard holds. Raising the
+>   RSS cap to 10 GB was considered and rejected: it's an unbounded runaway
+>   (hard-OOMs at 6.3 GB), so a higher cap removes the protective soft fuse.
 >
 > **✅ CORRECTED GAP LANDSCAPE + pgfplots units-flag fix (2026-06-09, with dump).**
 > Re-quantified Rust(release+**dump**)-vs-Perl over 50 `next_warning_papers`
