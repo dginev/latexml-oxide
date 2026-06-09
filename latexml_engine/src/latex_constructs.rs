@@ -6992,6 +6992,14 @@ LoadDefinitions!({
   DefMacro!("\\@arabic{Number}", sub[(number)] {
     ExplodeText!(number.value_of().to_string())
   });
+  // latex.ltx L15715: \def\two@digits#1{\ifnum#1<10 0\fi\number#1}
+  // Zero-pad a number to at least two digits (date/time formatting helper,
+  // used by \today and many class/package date macros). Faithful literal
+  // port of the kernel `\def`. Was undefined in Rust → packages calling it
+  // directly errored and cascaded (witness 2206.12768: undefined:\two@digits
+  // → expected:<relationaltoken> in the surrounding \ifnum). Perl defines it
+  // via the kernel; minimal repro `\two@digits{7}` → Rust nothing / Perl 07.
+  DefMacro!("\\two@digits{}", r"\ifnum#1<10 0\fi\number#1");
   DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
