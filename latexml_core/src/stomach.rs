@@ -896,6 +896,23 @@ pub fn expire_local_box_list() -> Vec<Digested> {
 #[inline]
 fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
   if st.pending_cycle_fatal.is_none() {
+    // Hard size backstop — platform-INDEPENDENT (the RSS soft cap in
+    // `check_timeout` reads `/proc/self/statm` and is therefore Linux-only;
+    // on macOS/Windows it is inactive). This bounds `box_list` everywhere and
+    // also catches APERIODIC runaways the windowed cycle detector cannot
+    // (boxes that vary per iteration, e.g. a `\@whilenum` loop with a
+    // counter, or period > MAX_WINDOW). 40× the validated cycle-activation
+    // size, far past any flushed-document list. Analogous to the gullet's
+    // platform-independent `token_limit`.
+    if st.box_list.len() > STOMACH_BOX_HARD_CAP {
+      st.pending_cycle_fatal = Some(s!(
+        "Box-list runaway: {} accumulated boxes exceeded the hard cap of {} \
+         (unbounded digestion with no detectable cycle)",
+        st.box_list.len(),
+        STOMACH_BOX_HARD_CAP
+      ));
+      return;
+    }
     let fp = d.cycle_fingerprint();
     if let Some(period) = st.cycle_guard.push(fp) {
       st.pending_cycle_fatal = Some(s!(
@@ -908,6 +925,11 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     }
   }
 }
+
+/// Hard, platform-independent ceiling on `box_list` length. A normal list is
+/// flushed continuously and stays tiny; reaching this is an unbounded
+/// accumulation. 40× [`STOMACH_CYCLE_ACTIVATE`].
+const STOMACH_BOX_HARD_CAP: usize = 2_000_000;
 
 pub fn extend_box_list<I>(arg: I)
 where I: IntoIterator<Item = Digested> {
