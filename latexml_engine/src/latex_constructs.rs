@@ -7000,6 +7000,15 @@ LoadDefinitions!({
   // → expected:<relationaltoken> in the surrounding \ifnum). Perl defines it
   // via the kernel; minimal repro `\two@digits{7}` → Rust nothing / Perl 07.
   DefMacro!("\\two@digits{}", r"\ifnum#1<10 0\fi\number#1");
+  // latex.ltx L6977-6982: \@removeelement{elt}{list}{\cmd} — remove the
+  // comma-list element `elt` from `list`, store the result in `\cmd`.
+  // Faithful literal port of the kernel `\def` (nested delimited macros over
+  // `\reserved@a`/`\reserved@b`). Was undefined in Rust; Perl defines it via
+  // the kernel. Used by grfext and other comma-list-manipulating packages
+  // (witness 2309.13586 chain). `\@empty` already exists; `\reserved@a/b` are
+  // scratch macros defined inline by the body.
+  DefMacro!("\\@removeelement{}{}{}",
+    r"\def\reserved@a##1,#1,##2\reserved@a{##1,##2\reserved@b}\def\reserved@b##1,\reserved@b##2\reserved@b{\ifx,##1\@empty\else##1\fi}\edef#3{\expandafter\reserved@b\reserved@a,#2,\reserved@b,#1,\reserved@a}");
   DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
