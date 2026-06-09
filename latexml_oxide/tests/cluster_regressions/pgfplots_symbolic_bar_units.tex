@@ -1,0 +1,23 @@
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
+\begin{document}
+% Minimal reproduction of 2110.14597 (pgfplots bar chart, +12 Rust-only errors).
+% `bar shift={...\pgfplotbarwidth}` under `symbolic x coords` + `ybar`:
+% `\pgfplotbarwidth` evaluates (via the `pgfplotsbarwidthgeneric` pseudo-
+% constant) to a unit'd dimension, but if the native pgfmath parser drops the
+% `\ifpgfmathunitsdeclared` flag through that 0-arg function evaluation, the
+% unitless shift is mis-routed through the symbolic x-coord trafo →
+% `Package pgfplots Error: ... \pgfplots@loc@TMPa has not been defined with
+% 'symbolic x coords=...'`. Perl converts this cleanly (0 errors).
+\begin{tikzpicture}
+\begin{axis}[
+  symbolic x coords={1, 2, 3},
+  ybar,
+  bar width=10pt,
+  bar shift={-1.125*\pgfplotbarwidth}
+]
+\addplot[fill=blue] coordinates {(1, 0.95) (2, 0.94) (3, 0.92)};
+\end{axis}
+\end{tikzpicture}
+\end{document}

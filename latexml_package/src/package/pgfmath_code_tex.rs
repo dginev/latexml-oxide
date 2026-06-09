@@ -530,6 +530,18 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
     tokens.extend(Explode!(s));
     tokens.push(T_END!());
   }
+  // Reset the global `\ifpgfmathunitsdeclared` flag BEFORE digesting the body
+  // so that, afterwards, the flag reflects ONLY whether THIS function body
+  // parsed a unit'd value. A user function body may run a nested
+  // `\pgfmathparse` (e.g. pgfplots' `pgfplotsbarwidthgeneric` body parses the
+  // `<bar width>pt` dimension); the outer parser must inherit that via
+  // `absorb_units_flag` so it doesn't clobber the flag back to false on exit.
+  // Without the reset a prior parse's stale flag would leak in for bodies that
+  // set `\pgfmathresult` directly (e.g. `\def\pgfmathresult{42}`). Mirrors
+  // Perl, where `\ifpgfmathunitsdeclared` is a persistent global threaded
+  // through nested evaluations. Fixes `bar shift={\pgfplotbarwidth}` under
+  // `symbolic x coords` (2110.14597).
+  let _ = stomach::digest(Tokens::from(vec![T_CS!("\\pgfmathunitsdeclaredfalse")]));
   // Digest the invocation (sets \pgfmathresult)
   let _ = stomach::digest(Tokens::from(tokens));
   // Read back \pgfmathresult via expansion
@@ -888,7 +900,9 @@ impl<'a> PgfMathParser<'a> {
       }
       // User-defined constant?
       if is_user_constant(&name) {
-        return Some(pgfmath_apply_fn(&name, &[]));
+        let v = pgfmath_apply_fn(&name, &[]);
+        self.absorb_units_flag();
+        return Some(v);
       }
       // Unknown — might be 0
       return None;
@@ -925,11 +939,15 @@ impl<'a> PgfMathParser<'a> {
       }
       self.skip();
       self.try_char(b')');
-      return Some(pgfmath_apply_fn(name, &args));
+      let v = pgfmath_apply_fn(name, &args);
+      self.absorb_units_flag();
+      return Some(v);
     }
     // FUNCTION simplefactor
     let arg = self.simplefactor()?;
-    Some(pgfmath_apply_fn(name, &[arg]))
+    let v = pgfmath_apply_fn(name, &[arg]);
+    self.absorb_units_flag();
+    Some(v)
   }
 
   /// Try to parse a number (Perl L707-712)
@@ -1085,6 +1103,21 @@ impl<'a> PgfMathParser<'a> {
     // Witnesses 1908.10041, 1901.08716 (and pgfplots bar charts generally).
     self.units_declared = true;
     Some(pgfmath_register_lookup(cs))
+  }
+
+  /// After evaluating a user-declared pgfmath function/constant, inherit the
+  /// global `\ifpgfmathunitsdeclared` flag that its body may have set (its body
+  /// runs with the flag reset, then a nested `\pgfmathparse` of a unit'd value
+  /// sets it — see `pgfmath_apply_user`). Mirrors Perl, where the flag is a
+  /// persistent global threaded through nested evaluations. Monotonic — only
+  /// ever sets the flag, matching `try_cs_register`'s unconditional set. Fixes
+  /// `bar shift={\pgfplotbarwidth}` under `symbolic x coords` (2110.14597):
+  /// `\pgfplotbarwidth` → `pgfplotsbarwidthgeneric` (a 0-arg pseudo-constant)
+  /// whose body parses the bar-width dimension.
+  fn absorb_units_flag(&mut self) {
+    if if_condition(&T_CS!("\\ifpgfmathunitsdeclared")).unwrap_or(None) == Some(true) {
+      self.units_declared = true;
+    }
   }
 
   /// Read an identifier: [a-zA-Z][a-zA-Z0-9_]*
