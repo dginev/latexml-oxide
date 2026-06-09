@@ -318,3 +318,20 @@ emission; the **runtime** path does not slashify (correct — there is no Rust
 source to embed into). The two therefore differ only for *literal backslash text*,
 which does not occur in any active template (escapes appear only in commented
 Perl-only bindings). Tracked as a benign, untriggered divergence.
+
+## Performance gate — PASSED (2026-06-09)
+
+Measured against the pre-#171 commit (`d70282644b`), release profile, same
+embedded TL2025 dumps in both binaries:
+
+- **Binary size**: 45,794,032 → 45,819,888 bytes = **+25.9 KB (+0.056%)** —
+  the entire monomorphized winnow cost; far inside the 1–2% budget.
+- **Wall clock** (`tests/complex/si.tex`, 5 interleaved release runs each):
+  base ≈ 1.780 s, new ≈ 1.792 s — **±0.7%, within run-to-run noise** on the
+  measurement host. Peak RSS unchanged (~331 MB both).
+- **Output**: converted XML is **byte-identical** between the two binaries.
+- **Runtime template path is strictly faster by construction**: parse-once
+  cached AST at wire time vs the old per-invocation byte-scan.
+- Full native suite after the retarget: **1409 passed / 0 failed** (55 test
+  binaries; the earlier "failures" were a dumpless-checkout artifact, fixed by
+  generating dumps + the `build.rs` dumps-dir tracking fix).
