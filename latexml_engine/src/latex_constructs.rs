@@ -7016,6 +7016,16 @@ LoadDefinitions!({
   // unexpanded — it surfaced inside serialized .bbl math (witness 2312.14913).
   // Faithful port; \ifvmode/\indent already exist.
   DefMacro!("\\leavevmode@ifvmode", r"\ifvmode\expandafter\indent\fi", protected => true);
+  // latex.ltx L14276-14285: \@starttoc{ext} — input the .ext toc-style file
+  // and (re)open it for writing the \contentsline entries. Faithful literal
+  // port; in LaTeXML the file I/O is in-memory-cached (\openout/\@input) and
+  // the actual TOC is built from the captured \contentsline entries during
+  // post-processing, so this just lets packages that drive custom lists via
+  // \@starttoc{loa}/etc. run without erroring. Was undefined in Rust; Perl
+  // defines it via the kernel (witness 2211.02345). All deps
+  // (\@input/\newwrite/\if@filesw/\@nobreakfalse) already exist.
+  DefMacro!("\\@starttoc{}",
+    r"\begingroup\makeatletter\@input{\jobname.#1}\if@filesw\expandafter\newwrite\csname tf@#1\endcsname\immediate\openout \csname tf@#1\endcsname \jobname.#1\relax\fi\@nobreakfalse\endgroup");
   DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
