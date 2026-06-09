@@ -456,6 +456,12 @@ impl BoxOps for Digested {
 /// content (depth-first) to tell apart same-shaped boxes.
 const FP_BUDGET: u32 = 48;
 
+/// Per-box traversal cap for [`Digested::estimate_bytes`]. Larger than
+/// [`FP_BUDGET`] (the estimate is computed only on a small *sample* of the box
+/// list, so a deeper walk is affordable and improves accuracy for nested
+/// boxes).
+const EB_BUDGET: u32 = 256;
+
 impl Digested {
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
@@ -545,6 +551,70 @@ impl Digested {
       },
     }
   }
+  /// A COST-BOUNDED estimate of the heap bytes this digested box (and its
+  /// nested content) occupies. Used by the stomach's portable
+  /// memory-budget guard ([`crate::stomach`]) to detect a runaway *by the
+  /// resource that actually matters — bytes — rather than box COUNT*, since
+  /// per-box weight varies several-fold (a bare text box vs a deeply nested
+  /// `\hbox{\raise…\hbox{…}}`). Traversal is capped at [`EB_BUDGET`] sub-boxes
+  /// (depth-first) so the estimate stays O(1) per box; deeply nested boxes
+  /// beyond the budget are under-counted, which is safe (the guard only needs
+  /// a monotone lower bound to catch unbounded growth).
+  pub fn estimate_bytes(&self) -> usize {
+    let mut budget: u32 = EB_BUDGET;
+    self.estimate_bytes_into(&mut budget)
+  }
+
+  fn estimate_bytes_into(&self, budget: &mut u32) -> usize {
+    if *budget == 0 {
+      return 0;
+    }
+    *budget -= 1;
+    // Per-node fixed overhead: the `Rc<DigestedData>` control block + the
+    // enum discriminant + the inner `RefCell`/`Box`. Deliberately coarse.
+    const NODE: usize = 64;
+    // Note: text is interned (`SymbolU32`, shared across boxes), so it adds no
+    // marginal per-box bytes — the cost that actually accumulates is the
+    // STRUCTURE (the `Rc`/`RefCell`/`Vec`/`HashMap` of each box and its nested
+    // children), which is exactly what makes a deeply nested box "heavy".
+    match self.data() {
+      DigestedData::TBox(_) => NODE + 48,
+      DigestedData::Whatsit(w) => {
+        let mut bytes = NODE + 96;
+        if let Ok(wb) = w.try_borrow() {
+          bytes += wb.args.len() * 16;
+          for arg in &wb.args {
+            if *budget == 0 {
+              break;
+            }
+            if let Some(d) = arg {
+              bytes += d.estimate_bytes_into(budget);
+            }
+          }
+        }
+        bytes
+      },
+      DigestedData::List(l) => {
+        let mut bytes = NODE + 48;
+        if let Ok(lb) = l.try_borrow() {
+          bytes += lb.boxes.len() * 8;
+          for child in &lb.boxes {
+            if *budget == 0 {
+              break;
+            }
+            bytes += child.estimate_bytes_into(budget);
+          }
+        }
+        bytes
+      },
+      DigestedData::Postponed(_) => NODE + 32,
+      DigestedData::Comment(_) => NODE + 16,
+      DigestedData::Alignment(_)
+      | DigestedData::KeyVals(_)
+      | DigestedData::RegisterValue(_) => NODE,
+    }
+  }
+
   // convenience subset of NumericOps, added here for now as an experiment:
   /// Obtain the i64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn value_of(&self) -> i64 {

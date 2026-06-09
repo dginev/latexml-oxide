@@ -114,8 +114,9 @@ pub fn check_timeout() -> Result<()> {
               // TEMP diagnostic: which accumulating list is growing?
               if let Ok(st) = STOMACH.try_borrow() {
                 eprintln!(
-                  "[membudget] box_list={} token_stack={} boxing={} localized_box_list_total={}",
+                  "[membudget] box_list={} (~{} MB est) token_stack={} boxing={} localized_box_list_total={}",
                   st.box_list.len(),
+                  estimate_box_list_bytes(&st.box_list) / 1_000_000,
                   st.token_stack.len(),
                   st.boxing.len(),
                   st.localized_box_list.iter().map(|v| v.len()).sum::<usize>(),
@@ -336,9 +337,13 @@ pub fn execute_before_after_group() -> Result<()> {
           );
         }
       }
-      {
-        stomach_mut!().box_list.extend(filtered);
-      }
+      // Route the group's digested boxes through the GUARDED appender (not a
+      // raw `box_list.extend`) so the stomach's cycle / count / byte-budget
+      // runaway guards see them. This is the path a grouped drawing loop
+      // (`\@whiledim{…\hbox{…}…}`) flushes through, so bypassing it let a
+      // heavy-box runaway accumulate unguarded until only the Linux RSS cap
+      // caught it. Witness math0102053.
+      extend_box_list(filtered);
     }
   }
   Ok(())
@@ -913,6 +918,32 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
       ));
       return;
     }
+    // Portable, BYTE-based memory guard. The count caps above are a proxy for
+    // memory, but per-box weight varies several-fold (a bare text box vs a
+    // deeply nested `\hbox{\raise…\hbox{…}}`), so a count calibrated for light
+    // boxes lets a HEAVY-box runaway sail past it — only the Linux-only RSS cap
+    // in `check_timeout` (4.5 GB) then catches it, late and non-portably.
+    // Here we estimate the box list's actual heap footprint (by sampling, so
+    // it stays O(1) amortised) and `Fatal` once it crosses a budget set BELOW
+    // the RSS cap. This fires EARLIER than the external RSS guard AND works on
+    // macOS/Windows where `/proc/self/statm` is unavailable. Driver:
+    // math0102053 (plain-TeX `\@whiledim` line-drawing loop — Perl OOMs too;
+    // ~1.87 M heavy line-segment boxes reached 4.5 GB RSS before the 2 M count
+    // cap could fire).
+    let len = st.box_list.len();
+    if len >= BYTE_CHECK_ACTIVATE && len % BYTE_CHECK_EVERY == 0 {
+      let est = estimate_box_list_bytes(&st.box_list);
+      if est > STOMACH_BOX_BYTES_BUDGET {
+        st.pending_cycle_fatal = Some(s!(
+          "Box-list memory runaway: ~{} MB estimated across {} boxes exceeded \
+           the {} MB internal budget (unbounded accumulation)",
+          est / 1_000_000,
+          len,
+          STOMACH_BOX_BYTES_BUDGET / 1_000_000
+        ));
+        return;
+      }
+    }
     let fp = d.cycle_fingerprint();
     if let Some(period) = st.cycle_guard.push(fp) {
       st.pending_cycle_fatal = Some(s!(
@@ -930,6 +961,62 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
 /// flushed continuously and stays tiny; reaching this is an unbounded
 /// accumulation. 40× [`STOMACH_CYCLE_ACTIVATE`].
 const STOMACH_BOX_HARD_CAP: usize = 2_000_000;
+
+/// Portable byte-budget for the accumulated `box_list`. The estimate is a
+/// deliberate *lower bound* — it counts the `Rc`/`RefCell`/`Vec` structure but
+/// not the interned text (shared) nor the per-`Whatsit` `properties` HashMap /
+/// allocator overhead, so it runs ~2.3× under true RSS (calibrated on
+/// math0102053: ~1.94 GB estimate at 4.5 GB RSS). 1.8 GB of *estimate* therefore
+/// corresponds to ~4 GB of RSS — just under the Linux 4.5 GB cap, so on Linux it
+/// `Fatal`s slightly earlier, and on macOS/Windows (where the `/proc` RSS check
+/// is inactive) it is the ONLY memory guard for a heavy-box runaway. A real,
+/// continuously-flushed document never accumulates anywhere near this, so the
+/// guard is inert for normal conversions. The 2 M count cap above remains the
+/// backstop for very-light-box runaways.
+const STOMACH_BOX_BYTES_BUDGET: usize = 1_600_000_000;
+/// Don't bother byte-sampling until the list is already well past the cycle
+/// activation size (a normal list never gets here).
+const BYTE_CHECK_ACTIVATE: usize = 200_000;
+/// Re-estimate the box-list footprint every this-many boxes (amortises the
+/// sampling cost to O(1) per push).
+const BYTE_CHECK_EVERY: usize = 50_000;
+/// Boxes sampled per byte estimate. Box weights are bimodal (light text
+/// segments vs heavy nested structures), so a *dense* sample is needed to keep
+/// the extrapolation from aliasing against the heavy-box stride.
+const BYTE_SAMPLE_N: usize = 8192;
+
+/// Cost-bounded estimate of the heap bytes held by `list`, via even sampling +
+/// extrapolation (each sampled box is itself depth-bounded — see
+/// [`crate::digested::Digested::estimate_bytes`]). O(`BYTE_SAMPLE_N`) regardless
+/// of list length. The sample is taken as contiguous *blocks* spread across the
+/// list rather than a single large stride, which is far more robust to clustered
+/// heavy boxes than evenly-strided point sampling.
+fn estimate_box_list_bytes(list: &[Digested]) -> usize {
+  let len = list.len();
+  if len == 0 {
+    return 0;
+  }
+  if len <= BYTE_SAMPLE_N {
+    return list.iter().map(Digested::estimate_bytes).sum();
+  }
+  // 32 blocks of (BYTE_SAMPLE_N/32) contiguous boxes, evenly spaced — captures
+  // local clustering of heavy boxes that point sampling misses.
+  const BLOCKS: usize = 32;
+  let block = (BYTE_SAMPLE_N / BLOCKS).max(1);
+  let gap = len / BLOCKS;
+  let mut sum = 0usize;
+  let mut n = 0usize;
+  for b in 0..BLOCKS {
+    let start = b * gap;
+    let end = (start + block).min(len);
+    for d in &list[start..end] {
+      sum += d.estimate_bytes();
+      n += 1;
+    }
+  }
+  // average-per-box × len; usize (64-bit) cannot overflow at realistic sizes.
+  (sum / n.max(1)) * len
+}
 
 pub fn extend_box_list<I>(arg: I)
 where I: IntoIterator<Item = Digested> {
