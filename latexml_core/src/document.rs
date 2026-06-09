@@ -2573,6 +2573,31 @@ impl Document {
           // Cascading rejection — skip the error log (Perl-faithful).
           return Ok(self.node.clone());
         }
+        // Sectioning-unit-in-frontmatter leniency (Perl-faithful). A
+        // `\paragraph{Keywords.}` / `\paragraph{MSC.}` inside an `abstract`
+        // (a common author idiom) produces `<ltx:paragraph>` inside
+        // `<ltx:abstract>`. The RNG `abstract_model = Block.model` excludes
+        // sectioning units, but Perl's builder inserts it WITHOUT erroring
+        // (Perl 0 / Rust 2 on 2311.06870) — its output literally nests
+        // `<ltx:paragraph inlist="toc">` in `<ltx:abstract>`. Mirror that
+        // build-leniency for the narrow sectioning-into-frontmatter case so
+        // we don't out-strict Perl. Same `return self.node` "insert anyway"
+        // mechanism as the math-leaf cascade above.
+        let is_sectioning_unit =
+          qsym_str == "ltx:paragraph" || qsym_str == "ltx:subparagraph";
+        // Container is either a frontmatter block (abstract/acknowledgements,
+        // Block.model — no sectioning units) OR another sectioning unit that
+        // can't hold it (a 2nd `\paragraph` nests inside the 1st when the
+        // enclosing abstract can't auto-close to a section level). Perl's
+        // builder produces exactly this nested `<ltx:paragraph><ltx:paragraph>`
+        // shape inside `<ltx:abstract>` without erroring (2311.06870: Perl 0).
+        let is_lenient_container = cur_str == "ltx:abstract"
+          || cur_str == "ltx:acknowledgements"
+          || cur_str == "ltx:paragraph"
+          || cur_str == "ltx:subparagraph";
+        if is_sectioning_unit && is_lenient_container {
+          return Ok(self.node.clone());
+        }
         // Didn't find a legit place.
         let message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
           s!(
