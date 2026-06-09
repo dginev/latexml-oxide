@@ -16,7 +16,7 @@ use latexml_core::state;
 use latexml_core::{Core, CoreOptions};
 
 /// A sample contrib binding, authored in Rhai (no Rust toolchain, no recompile).
-const SAMPLE: &str = r#"
+const SAMPLE: &str = r##"
   // Expandable macro: \twicex{X} -> XX
   DefMacro("\\twicex{}", |x| x + x);
 
@@ -68,7 +68,42 @@ const SAMPLE: &str = r#"
   // Primitive: digestion-time side-effect into State (global, so it survives the
   // document group for the post-conversion assertion).
   DefPrimitive("\\setx{}", |v| { assign_global("script:x", v); });
-"#;
+
+  // Corpus-shaped template constructor exercising a top-level CONDITIONAL with
+  // `#n` rendering through the real Document pipeline (the #171 template AST):
+  // \cif{X} -> <ltx:emph>X</ltx:emph> when the arg is truthy, else the else-branch.
+  DefConstructor("\\cif{}", "?#1(<ltx:emph>#1</ltx:emph>)(<ltx:text class=\"empty\">none</ltx:text>)");
+
+  // A 1:1 port of plain TeX's \footnote constructor (plain_constructs.rs L292,
+  // Perl TeX.pool `\footnote`) — the richest real template in the corpus: `^`
+  // float prefix, conditional attribute pair on a `#mark` property hole,
+  // conditional `#prenote` content hole, plus mode + an afterDigest hook that
+  // routes the digested mark arg into the property the template consumes.
+  DefConstructor("\\fnote{}{}",
+    "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>?#prenote(#prenote )()#2</ltx:note>", #{
+    mode: "internal_vertical",
+    beforeDigest: || neutralize_font(),
+    afterDigest: || {
+      let m = whatsit().argString(1);
+      if m != "" { whatsit().setProperty("mark", m); }
+    }
+  });
+
+  // `properties` as a CLOSURE (Perl `properties => sub {…}`): computes the
+  // whatsit's property map from the digested args; the template reads it
+  // through a `#cls` hole at attribute position.
+  DefConstructor("\\pnote{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
+    properties: |x| #{ cls: "from-" + x }
+  });
+
+  // `properties` as a STATIC MAP (Perl `properties => { key => value }`).
+  DefConstructor("\\snote{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
+    properties: #{ cls: "static-props" }
+  });
+
+  // Processing-instruction template (the class/package PI dialect shape).
+  DefConstructor("\\mypi{}", "<?mypi data=\"#1\"?>");
+"##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
 fn script_dispatch(request: &str) -> Option<Result<()>> {
@@ -93,7 +128,9 @@ fn script_binding_macro_and_constructor_convert() {
 
   let tex = concat!(
     "literal:\\documentclass{article}\\usepackage{lxrhaitest}",
-    "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\note{N} \\rot{xx}{yy}{zz2} \\endreferences \\setx{hello}\\end{document}"
+    "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
+    "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
+    "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
     .convert_file(tex.to_string())
@@ -127,6 +164,43 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("zz2xx") && !xml.contains("yy"),
     "variable-order/omitted-arg handling failed; xml=\n{xml}"
+  );
+  // Template CONDITIONAL through the real pipeline (#171 AST): \cif{Y} takes the
+  // truthy then-branch (<emph>Y</emph>); \cif{} takes the else-branch.
+  assert!(
+    xml.contains("<emph>Y</emph>"),
+    "template conditional then-branch (\\cif{{Y}}) failed; xml=\n{xml}"
+  );
+  assert!(
+    xml.contains("class=\"empty\"") && xml.contains("none"),
+    "template conditional else-branch (\\cif{{}}) failed; xml=\n{xml}"
+  );
+  // \footnote port: `^` float + `?#mark(mark="#mark")()` conditional attribute
+  // fed by the afterDigest setProperty hook. \fnote{*}{Marked} must carry the
+  // mark; \fnote{}{Plain} must not (the hook skips the empty mark).
+  assert!(
+    xml.contains("role=\"footnote\"") && xml.contains("mark=\"*\"") && xml.contains("Marked"),
+    "footnote port: marked note missing/incomplete; xml=\n{xml}"
+  );
+  let unmarked = xml
+    .split("<note")
+    .skip(1)
+    .any(|n| n.contains("Plain") && !n.split('>').next().unwrap_or("").contains("mark="));
+  assert!(unmarked, "footnote port: unmarked note should have no mark attribute; xml=\n{xml}");
+  // properties-as-closure: #cls hole filled from the computed map.
+  assert!(
+    xml.contains("class=\"from-dyn\""),
+    "properties closure (\\pnote) did not populate #cls; xml=\n{xml}"
+  );
+  // properties-as-static-map.
+  assert!(
+    xml.contains("class=\"static-props\""),
+    "static properties map (\\snote) did not populate #cls; xml=\n{xml}"
+  );
+  // PI template through the runtime interpreter.
+  assert!(
+    xml.contains("<?mypi") && xml.contains("data=\"d1\""),
+    "PI template (\\mypi) did not emit; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

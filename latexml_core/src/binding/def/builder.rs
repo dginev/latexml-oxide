@@ -18,7 +18,9 @@
 use crate::common::def_parser::parse_prototype;
 use crate::common::error::{Error, Result};
 use crate::definition::constructor::ConstructorOptions;
-use crate::definition::{DigestionClosure, ReplacementClosure};
+use crate::definition::{
+  BeforeDigestClosure, DigestionClosure, PropertiesClosure, ReplacementClosure,
+};
 use crate::parameter::Parameters;
 use crate::token::Token;
 
@@ -96,6 +98,22 @@ impl ConstructorBuilder {
   /// `sizer`, `before/afterConstruct`) follow this identical shape.
   pub fn after_digest(mut self, hook: DigestionClosure) -> Self {
     self.options.after_digest.push(hook);
+    self
+  }
+
+  /// Set the `properties` closure (computes the whatsit's property map from the
+  /// digested args — Perl's `properties => sub {…}` / `properties => {…}`).
+  /// Same typed-setter shape as [`Self::after_digest`]: the closure is produced
+  /// by whichever front-end (a macro `sub [args]` block, or a Rhai trampoline).
+  pub fn properties(mut self, props: PropertiesClosure) -> Self {
+    self.options.properties = props;
+    self
+  }
+
+  /// Push a `beforeDigest` hook (runs before the arguments are digested —
+  /// Perl's `beforeDigest => sub {…}`, e.g. `\footnote`'s `neutralize_font`).
+  pub fn before_digest(mut self, hook: BeforeDigestClosure) -> Self {
+    self.options.before_digest.push(hook);
     self
   }
 

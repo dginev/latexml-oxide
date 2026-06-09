@@ -42,6 +42,7 @@ use rhai::{Dynamic, Engine, EvalAltResult, FnPtr, Map, AST};
 
 use latexml_core::binding::def::builder::{ConstructorBuilder, OptionValue};
 use latexml_core::binding::def::dialect::{def_macro, def_primitive};
+use latexml_core::binding::def::replacement;
 use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::def_parser::parse_prototype;
 use latexml_core::common::error::{Error, Result};
@@ -49,8 +50,8 @@ use latexml_core::common::store::Stored;
 use latexml_core::definition::argument::ArgWrap;
 use latexml_core::definition::primitive::PrimitiveOptions;
 use latexml_core::definition::{
-  DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveBody, PrimitiveClosure,
-  ReplacementClosure,
+  BeforeDigestClosure, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveBody,
+  PrimitiveClosure, PropertiesClosure, ReplacementClosure,
 };
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
@@ -58,6 +59,7 @@ use latexml_core::mouth;
 use latexml_core::state::Scope;
 use latexml_core::tokens::Tokens;
 use latexml_core::whatsit::Whatsit;
+use latexml_core::BoxOps;
 
 // Sandbox limits (docs/script_bindings_plan.md §6).
 const MAX_OPERATIONS: u64 = 50_000_000;
@@ -214,6 +216,9 @@ fn make_engine() -> Engine {
   engine.register_fn("assign_global", |key: &str, val: &str| {
     latexml_core::state::assign_value(key, val.to_string(), Some(Scope::Global));
   });
+  // Curated pool helpers, registered 1:1 under their Perl/Rust names so binding
+  // bodies read like the originals (e.g. `beforeDigest: || neutralize_font()`).
+  engine.register_fn("neutralize_font", latexml_engine::base_utilities::neutralize_font);
   engine.register_fn("lookup_value", |key: &str| -> String {
     match latexml_core::state::lookup_value(key) {
       Some(Stored::String(s)) => arena::to_string(s),
@@ -313,6 +318,26 @@ fn make_engine() -> Engine {
         Some(d) => d.untex().map_err(|e| Box::<EvalAltResult>::from(e.to_string())),
         None => Ok(String::new()),
       }
+    },
+  );
+  // Set a whatsit property from a hook body (Perl `$whatsit->setProperty(k, v)`,
+  // e.g. plain `\footnote`'s afterDigest routing its mark arg to `mark`/`prenote`).
+  // The value lands as a string `Stored`, which the template interpreter renders
+  // at attribute (`to_attribute`), content (absorb), and truth-test positions.
+  engine.register_fn(
+    "setProperty",
+    |_w: &mut WhatsitProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      let w = unsafe { &mut *current_whatsit()? };
+      w.set_property(key, val.to_string());
+      Ok(())
+    },
+  );
+  // Read a whatsit property as a string ("" when absent) — Perl `getProperty`.
+  engine.register_fn(
+    "propertyString",
+    |_w: &mut WhatsitProxy, key: &str| -> std::result::Result<String, Box<EvalAltResult>> {
+      let w = unsafe { &*current_whatsit()? };
+      Ok(w.get_property_string(key))
     },
   );
 
@@ -426,9 +451,16 @@ fn closure_replacement(
   })
 }
 
-/// The string-template replacement closure (pure-Rust template interpreter).
-fn template_replacement(template: String) -> ReplacementClosure {
-  Rc::new(move |document: &mut Document, args, props| apply_template(&template, document, args, props))
+/// The string-template replacement closure. The template is parsed **once** here
+/// (at wire time) into the shared `ReplacementOp` AST — the same parser the
+/// compile-time codegen uses (#171) — and the cached AST is interpreted per
+/// invocation. This eliminates the former per-invocation byte-scan and removes
+/// the second, divergent template implementation.
+fn template_replacement(template: &str) -> Result<ReplacementClosure> {
+  let ops = Rc::new(replacement::parse_replacement(template)?);
+  Ok(Rc::new(move |document: &mut Document, args, props| {
+    replacement::apply_ops(&ops, document, args, props)
+  }))
 }
 
 /// Install one `DefConstructor` (imperative body, no options) via the shared
@@ -451,18 +483,32 @@ fn wire_constructor_opts(
   opts: Map,
 ) -> Result<()> {
   let replacement = match repl {
-    ConstructorRepl::Template(t) => template_replacement(t),
+    ConstructorRepl::Template(t) => template_replacement(&t)?,
     ConstructorRepl::Closure(b) => closure_replacement(b, engine.clone(), ast.clone(), proto.to_string()),
   };
   let mut builder = ConstructorBuilder::new(proto)?.replacement(replacement);
   for (key, val) in opts {
     if let Some(fp) = val.clone().try_cast::<FnPtr>() {
       // Closure option → typed builder setter (front-end builds the closure).
-      // As more closure options land (properties/reversion/sizer/…) this becomes
-      // a `match`; unknown options are ignored (forgiving, like Perl %options).
-      if key.as_str() == "afterDigest" {
-        builder = builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+      // Unknown closure options are ignored (forgiving, like Perl %options).
+      match key.as_str() {
+        "afterDigest" => {
+          builder = builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        "properties" => {
+          builder = builder.properties(properties_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        "beforeDigest" => {
+          builder = builder.before_digest(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        // Unknown closure options are silently ignored (forgiving, like Perl
+        // %options; the builder's set_option does the same for scalars).
+        _ => {},
       }
+    } else if key.as_str() == "properties" && val.is_map() {
+      // Static property map (Perl's `properties => { key => value, … }`).
+      let map = val.cast::<Map>();
+      builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
     } else if let Some(ov) = dynamic_to_option_value(&val) {
       // Scalar option → the builder's generic, single-source `set_option`.
       builder = builder.set_option(key.as_str(), ov)?;
@@ -483,6 +529,53 @@ fn after_digest_trampoline(fp: FnPtr, engine: Rc<Engine>, ast: Rc<AST>) -> Diges
     let _: Dynamic = r.map_err(|e| Error::from(format!("script afterDigest: {e}")))?;
     Ok(Vec::new())
   })
+}
+
+/// Build a `beforeDigest` trampoline (Perl `beforeDigest => sub {…}`): runs the
+/// parameterless Rhai closure before the constructor's arguments are digested
+/// (state/font side-effects, e.g. `neutralize_font()`); contributes no boxes.
+fn before_digest_trampoline(fp: FnPtr, engine: Rc<Engine>, ast: Rc<AST>) -> BeforeDigestClosure {
+  Rc::new(move || -> Result<Vec<Digested>> {
+    let _: Dynamic = fp
+      .call::<Dynamic>(&engine, &ast, ())
+      .map_err(|e| Error::from(format!("script beforeDigest: {e}")))?;
+    Ok(Vec::new())
+  })
+}
+
+/// Build a `properties` trampoline (Perl `properties => sub {…}`): the Rhai
+/// closure receives each digested argument as its TeX-source string (`()` for an
+/// omitted optional) and returns a map; its entries become the whatsit's
+/// properties as string `Stored`s, ready for the template's `#name` holes.
+fn properties_trampoline(fp: FnPtr, engine: Rc<Engine>, ast: Rc<AST>) -> PropertiesClosure {
+  Rc::new(move |args: &Vec<Option<Digested>>| -> Result<SymHashMap<Stored>> {
+    let dyn_args: Vec<Dynamic> = args
+      .iter()
+      .map(|a| match a {
+        Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
+        None => Dynamic::UNIT,
+      })
+      .collect();
+    let ret: Dynamic = fp
+      .call::<Dynamic>(&engine, &ast, dyn_args)
+      .map_err(|e| Error::from(format!("script properties: {e}")))?;
+    if ret.is_unit() {
+      Ok(SymHashMap::default())
+    } else if ret.is_map() {
+      Ok(rhai_map_to_props(ret.cast::<Map>()))
+    } else {
+      Err(Error::from("script properties: body must return a map (or unit)"))
+    }
+  })
+}
+
+/// Convert a Rhai object map into a whatsit property map (string values).
+fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
+  let mut props: SymHashMap<Stored> = SymHashMap::default();
+  for (k, v) in map {
+    props.insert(k.as_str(), dynamic_to_string(v).into());
+  }
+  props
 }
 
 /// Map a Rhai scalar `Dynamic` to a builder `OptionValue` (string/bool/int).
@@ -528,151 +621,12 @@ fn wire_option(engine: &Rc<Engine>, ast: &Rc<AST>, opt: &str, body: FnPtr) -> Re
 }
 
 /// Install a string-template `DefConstructor` as a native constructor. The
-/// template is executed by a pure-Rust interpreter at construction time — no
-/// Rhai involved per invocation, so this path is fast.
+/// template is parsed into the shared `ReplacementOp` AST once and interpreted by
+/// the core runtime — no Rhai involved per invocation, so this path is fast.
 fn wire_constructor_template(proto: &str, template: String) -> Result<()> {
   ConstructorBuilder::new(proto)?
-    .replacement(template_replacement(template))
+    .replacement(template_replacement(&template)?)
     .install()
-}
-
-/// Minimal runtime interpreter for the XML constructor-template dialect,
-/// mirroring the operations `latexml_codegen::constructable` emits at compile
-/// time: `<ns:tag a="v">` → `open_element` + `set_attribute`; `</ns:tag>` →
-/// `close_element`; `<ns:tag/>` → open+close; `#1`..`#9` → `absorb` the digested
-/// argument; literal text → `absorb_string`. Attribute values interpolate
-/// `#1`..`#9` as the argument's TeX-source. (Property `#name` interpolation and
-/// conditionals are not yet covered — see the plan's coverage notes.)
-fn apply_template(
-  template: &str,
-  document: &mut Document,
-  args: &[Option<Digested>],
-  props: &SymHashMap<Stored>,
-) -> Result<()> {
-  let bytes = template.as_bytes();
-  let mut i = 0;
-  while i < bytes.len() {
-    match bytes[i] {
-      b'<' => {
-        let close = bytes.get(i + 1) == Some(&b'/');
-        let start = if close { i + 2 } else { i + 1 };
-        let rel = template[start..]
-          .find('>')
-          .ok_or_else(|| Error::from("script template: unterminated tag"))?;
-        let end = start + rel;
-        let inner = template[start..end].trim();
-        if close {
-          document.close_element(inner)?;
-        } else {
-          let self_closing = inner.ends_with('/');
-          let inner = if self_closing {
-            inner[..inner.len() - 1].trim_end()
-          } else {
-            inner
-          };
-          let (qname, rest) = match inner.find(char::is_whitespace) {
-            Some(p) => (&inner[..p], inner[p..].trim_start()),
-            None => (inner, ""),
-          };
-          document.open_element(qname, None, None)?;
-          for (k, v) in parse_attrs(rest, args)? {
-            let mut node = document.get_node().clone();
-            document.set_attribute(&mut node, &k, &v)?;
-          }
-          if self_closing {
-            document.close_element(qname)?;
-          }
-        }
-        i = end + 1;
-      },
-      b'#' => match bytes.get(i + 1) {
-        Some(d) if d.is_ascii_digit() => {
-          let n = (d - b'0') as usize;
-          if n >= 1 {
-            if let Some(Some(dig)) = args.get(n - 1) {
-              document.absorb(dig, None)?;
-            }
-          }
-          i += 2;
-        },
-        _ => {
-          document.absorb_string("#", props)?;
-          i += 1;
-        },
-      },
-      _ => {
-        let s = i;
-        while i < bytes.len() && bytes[i] != b'<' && bytes[i] != b'#' {
-          i += 1;
-        }
-        document.absorb_string(&template[s..i], props)?;
-      },
-    }
-  }
-  Ok(())
-}
-
-/// Parse `key="val" key2='val2'` attribute pairs, interpolating `#1`..`#9` in
-/// values as the argument's TeX-source.
-fn parse_attrs(s: &str, args: &[Option<Digested>]) -> Result<Vec<(String, String)>> {
-  let mut out = Vec::new();
-  let bytes = s.as_bytes();
-  let mut i = 0;
-  while i < bytes.len() {
-    while i < bytes.len() && bytes[i].is_ascii_whitespace() {
-      i += 1;
-    }
-    if i >= bytes.len() {
-      break;
-    }
-    let kstart = i;
-    while i < bytes.len() && bytes[i] != b'=' && !bytes[i].is_ascii_whitespace() {
-      i += 1;
-    }
-    let key = s[kstart..i].to_string();
-    while i < bytes.len() && (bytes[i].is_ascii_whitespace() || bytes[i] == b'=') {
-      i += 1;
-    }
-    if i >= bytes.len() {
-      break;
-    }
-    let q = bytes[i];
-    if q != b'"' && q != b'\'' {
-      break;
-    }
-    i += 1;
-    let vstart = i;
-    while i < bytes.len() && bytes[i] != q {
-      i += 1;
-    }
-    let raw = &s[vstart..i];
-    if i < bytes.len() {
-      i += 1;
-    }
-    out.push((key, interpolate_attr(raw, args)?));
-  }
-  Ok(out)
-}
-
-/// Interpolate `#1`..`#9` in an attribute value with the argument's TeX-source.
-fn interpolate_attr(raw: &str, args: &[Option<Digested>]) -> Result<String> {
-  let mut out = String::new();
-  let mut chars = raw.chars().peekable();
-  while let Some(c) = chars.next() {
-    if c == '#' {
-      if let Some(n) = chars.peek().and_then(|d| d.to_digit(10)) {
-        chars.next();
-        if n >= 1 {
-          if let Some(Some(dig)) = args.get((n - 1) as usize) {
-            out.push_str(&dig.untex()?);
-          }
-        }
-        continue;
-      }
-    }
-    out.push(c);
-  }
-  Ok(out)
 }
 
 /// Marshal a digested macro argument into a Rhai value. Every argument is passed
@@ -734,7 +688,7 @@ mod tests {
     });
     ConstructorBuilder::new("\\mfoo{}")
       .expect("builder")
-      .replacement(template_replacement("<ltx:text>#1</ltx:text>".to_string()))
+      .replacement(template_replacement("<ltx:text>#1</ltx:text>").expect("template"))
       .set_option("mode", OptionValue::Str("text".to_string()))
       .expect("set_option")
       .after_digest(after)

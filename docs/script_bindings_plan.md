@@ -376,6 +376,28 @@ Maturation landed:
 Test status: `latexml_contrib` unit suite 4/4 (macro ×2, cache, errors);
 integration 1/1 (all four dialects + re-entrancy + primitive side-effect).
 
+## Complex-binding surface — `\footnote` port GREEN (2026-06-09)
+
+With the shared `ReplacementOp` AST (#171) as the runtime template engine, the
+richest real binding shape now runs from Rhai end-to-end. New surface, each
+mirroring its Perl idiom 1:1:
+
+- **`properties` option**, both Perl shapes: static map and closure (digested
+  args in as TeX-source strings, property map out). Routed through the new
+  `ConstructorBuilder::properties` typed setter (same anti-drift spine as
+  `after_digest`).
+- **`whatsit().setProperty(key, val)` / `propertyString(key)`** for hook bodies.
+- **`beforeDigest` option** (parameterless closure trampoline) and the
+  `neutralize_font()` pool helper registered under its native name — completing
+  the `\footnote` option set.
+- e2e specimens in `30_script_bindings.rs`: a **fully 1:1** port of plain TeX's
+  `\footnote{}{}` (its `^` float prefix, `?#mark(mark="#mark")()` conditional
+  attribute, `?#prenote(…)()` content conditional, `mode`,
+  `beforeDigest: || neutralize_font()`, and the afterDigest mark routing), a
+  `properties`-closure constructor, a static-map constructor, and a `<?pi…?>`
+  template — all asserted on the produced XML, including the negative case
+  (empty mark ⇒ no `mark=` attribute).
+
 ---
 
 # Post-PoC critical re-evaluation (2026-06-08)
@@ -445,9 +467,14 @@ cached by source (`SCRIPT_CACHE`).
 - `DefMacro("\\cs{}", |args…| -> string)` — expandable; body returns TeX source
   (faithfully re-tokenized). Args arrive as TeX-source strings.
 - `DefPrimitive("\\cs{}", |args…| { … })` — digestion-time side-effects.
-- `DefConstructor("\\cs{}", "<ltx:tag a=\"#1\">#2</ltx:tag>")` — template form
-  (elements, nesting, self-close, `#1`..`#9` content + attribute interpolation,
-  literal text).
+- `DefConstructor("\\cs{}", "<ltx:tag a=\"#1\">#2</ltx:tag>")` — template form.
+  Since #171 landed, the template is parsed once into the shared `ReplacementOp`
+  AST (`latexml_core::binding::def::replacement`) — the *same* parser the
+  compile-time `DefConstructor!` macro uses — so the **full dialect** is
+  supported at runtime: elements, nesting, self-close, `#1`..`#9` and `#prop`
+  holes at content + attribute position, `?test(then)(else)` conditionals (top
+  level, attribute-pair, and attribute-value), `^`/`^^` float prefixes, `<?pi…?>`
+  processing instructions, literal text.
 - `DefConstructor("\\cs{}", |document, arg1, …| { … })` — imperative form. The
   body gets a **`document` proxy** as its first argument (Perl's `$_[0]`) and each
   digested argument as an opaque handle — so it reads like the Perl original.
@@ -456,10 +483,23 @@ cached by source (`SCRIPT_CACHE`).
   `%options` / the `DefConstructor!` macro's `key => value`: named, any order,
   omittable; values may be strings *or* closures. `parse_ctor_options` maps each
   key onto native `ConstructorOptions` — a *value* option sets a field, a
-  *closure* option pushes a trampoline. Wired so far: `mode`, `afterDigest`;
-  the rest (`reversion`, `properties`, `beforeDigest`, `sizer`,
-  `before/afterConstruct`, `requireMath`, `bounded`, …) are one-line additions of
+  *closure* option pushes a trampoline. Wired so far: the scalar options routed
+  through `ConstructorBuilder::set_option` (`mode`, `bounded`, `requireMath`,
+  `forbidMath`, `enterHorizontal`, `leaveHorizontal`, `captureBody`, `alias`),
+  plus the closure options `afterDigest`, `beforeDigest` (parameterless, for
+  state/font side-effects like `neutralize_font()`), and `properties` — the
+  latter in **both** Perl shapes: a static map (`properties: #{ k: "v" }`) and a
+  closure (`properties: |arg1, …| #{ k: … }`, receiving each digested arg as its
+  TeX-source string, returning the whatsit's property map). The rest
+  (`reversion`, `sizer`, `before/afterConstruct`, …) are one-line additions of
   the same two shapes.
+
+**`whatsit` proxy (inside `afterDigest`-style hook bodies):**
+- `whatsit().argString(n)` — the n-th (1-based) digested argument's TeX source.
+- `whatsit().setProperty(key, val)` — set a string property (Perl
+  `$whatsit->setProperty`); read by the template's `#key` holes, e.g. the
+  plain-`\footnote` port's afterDigest routing its mark arg to `mark`.
+- `whatsit().propertyString(key)` — read a property back ("" when absent).
 
 **`document` proxy methods (inside an imperative constructor body):**
 - `document.openElement(tag)`, `document.closeElement(tag)`,
@@ -487,11 +527,13 @@ breach, document op failure) surface as clean latexml `Error`s and degrade only
 the offending binding.
 
 **Not yet covered** (see the critical re-eval): structural arg/return marshaling
-(`Token`/`Tokens`/`Whatsit` as types rather than strings); template conditionals
-/`#prop`/`#body`; gullet access from bodies; constructor `properties`/
-`afterDigest`/`reversion`/`sizer`; `DefEnvironment`/`DefMath`/`DefRegister`/
-`DefConditional`; configurable assignment scope per-call + key namespacing for
-untrusted scripts.
+(`Token`/`Tokens`/`Whatsit` as types rather than strings); `#body` capture;
+gullet access from bodies; constructor `reversion`/`sizer`;
+`DefEnvironment`/`DefMath`/`DefRegister`/`DefConditional`; configurable
+assignment scope per-call + key namespacing for untrusted scripts.
+(Template conditionals/`#prop`/floats/PIs and constructor `properties`/
+`afterDigest`/`beforeDigest` + the `neutralize_font()` pool helper are covered
+as of 2026-06-09 — see above.)
 
 ---
 
