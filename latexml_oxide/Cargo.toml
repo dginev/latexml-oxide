@@ -54,6 +54,9 @@ token-locators = [
   "latexml_contrib/token-locators",
   "latexml_math_parser/token-locators",
 ]
+# Runtime script bindings (docs/script_bindings_plan.md) — propagates to
+# latexml_contrib (the only crate that embeds Rhai). OFF by default.
+script-bindings = ["latexml_contrib/script-bindings"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
