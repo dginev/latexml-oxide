@@ -3268,6 +3268,35 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-09): 2111.00584 FIXED — natbib `\lx@NAT@parselabel` must not full-`Expand!` a label with text-encoding symbols (`\i`/`\j`/…) → infinite loop
+
+**2111.00584 (revtex4-1 + `aipnum4-1.bst` `.bbl`, 63 `\bibitem`s): rc=1 with a
+`Fatal:Timeout:PushbackLimit` + 41 `malformed:ltx:bibitem` → rc=0, full 1.59 MB
+doc (Perl: rc=0 / 3 SHARED undefined-math errors — we now have FEWER errors).**
+The loop fired inside `.bbl` digestion; the 41 malformed-bibitem errors were
+downstream fallout of the aborted bibliography (bibitems mis-nesting once the
+fatal cut the list short). Root-caused via minimal repro to a SINGLE bibitem —
+`\bibitem [{\citenamefont {M{\'\i}guez}(2009)…}]{porteiro2009}` — and then to
+the `\i` (dotless-i) in the author name.
+
+natbib's `\lx@NAT@parselabel` (`natbib_sty.rs`) fully-expands a "bare" bibitem
+label via `Expand!(label)` to locate the `(year)` paren. Under `[T1]{fontenc}`
+(here via `mathptmx`) the LaTeX kernel redefines `\i` to the `\@changed@cmd`
+dispatcher `\T1-cmd \i \T1\i`; its typeset branch re-injects `\i` through
+`\csname\cf@encoding\string\i\endcsname`, so **full expansion re-expands `\i`
+forever** (PushbackLimit + box-list runaway). Accented author names
+(`M{\'\i}guez`, `Pati{\~n}o`) are exactly where this bites. Perl does the SAME
+`Expand($label)` (`natbib.sty.ltxml:564`) but happens to terminate; ours did
+not. **Fix:** extend the existing "don't force-expand" guard (already covering
+`\cite`/`\href`/`\bibinfo` — the 2404.06289 fix) to text-encoding *symbol*
+commands (`\i \j \l \L \o \O \aa \AA \ss \ae \AE \oe \OE \dh \DH \dj \DJ \th \TH
+\ng \NG`). The `(year)` is always a literal `(` in natbib/BibTeX output, so the
+raw label suffices — no expansion needed. Regression:
+`latexml_oxide/tests/59_natbib_label_dotless_i.rs` (gated on dump +
+revtex4-1/mathptmx/pgfplots). Residual on this paper is 1 PRE-EXISTING
+`Error:expected:}` in `xinttrig.sty` loading (unrelated to bibliographies).
+Suite **1401/0/0**.
+
 ### Round-37 (2026-06-09): 2110.10227 FIXED — `\href` must be `protected` (robust) so `\edef`/`\xdef` don't infinite-loop; + babel-french `\ifFB@mainlanguage@FR`
 
 **2110.10227 (`article` + shipped `ems-journal.sty`, `[american,british,french]{babel}`):

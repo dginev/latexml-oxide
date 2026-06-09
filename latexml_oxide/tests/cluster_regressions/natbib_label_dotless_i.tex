@@ -1,0 +1,21 @@
+% natbib \bibitem label with a dotless-i (\i) author name must not loop.
+%
+% Distilled from 2111.00584 (revtex4-1 + aipnum .bbl). natbib's
+% \lx@NAT@parselabel fully-expands a "bare" bibitem label to locate the
+% (year) paren. Under [T1]{fontenc} (here via mathptmx) the kernel
+% redefines \i to the \@changed@cmd dispatcher `\T1-cmd \i \T1\i`, whose
+% typeset branch re-injects \i through \csname\cf@encoding\string\i\endcsname
+% -> full Expand! loops (PushbackLimit / box-list runaway). The exact
+% package set matters to drive the encoding state into the looping form, so
+% this mirrors the paper's preamble closely.
+\documentclass[aip,pof,amsmath,amssymb,floatfix]{revtex4-1}
+\usepackage{amssymb, mathtools, bm, nicefrac, amsthm, dsfont, commath, color, tikz, pgfplots, xintexpr, booktabs, multirow, graphicx, dcolumn, mathptmx, etoolbox, enumitem}
+\usepackage{printlen}\usepackage{standalone}\usepackage[normalem]{ulem}\usepackage{soul}
+\usepackage{siunitx}\usepackage[caption=false]{subfig}\usepackage[hidelinks, colorlinks]{hyperref}
+\begin{document}
+Body text.
+\begin{thebibliography}{9}
+\bibitem [{\citenamefont {M{\'\i}guez}(2009)}]{miguez2009}%
+A reference with a dotless-i author name.
+\end{thebibliography}
+\end{document}
