@@ -459,13 +459,18 @@ impl State {
         catcodes.insert('\t', SPACE);
         catcodes.insert('%', COMMENT);
         catcodes.insert('~', ACTIVE);
-        // TeX standard: NUL (`\^^@`, U+0000) has catcode 9 IGNORED — see
-        // The TeXbook ch.8 `\catcode \^^@ = 9`. Silently discard NUL
-        // bytes that appear in input. Real-world bbl files (e.g.
-        // astro-ph0004127's spie4012-01a.bbl line 120) have stray NULs
-        // from BibTeX's `\"u`-mangling; without IGNORE we read the NUL
-        // as ESCAPE and the next letters as a (bogus) CS like `\uninger`.
-        catcodes.insert('\0', IGNORE);
+        // NUL (`\^^@`, U+0000): Perl LaTeXML's default is catcode 12 (OTHER),
+        // NOT the TeXbook's 9 (IGNORE). We follow Perl (ground truth) so that
+        // `\^^@`/`` `^^@ `` reads code 0 (TeXbook 9 would *drop* the NUL token,
+        // making `` `^^@ `` skip to the next token — `\relax` etc. — and return
+        // a bogus code; xint's `\romannumeral`&&@` expansion idiom needs 0).
+        // Real-world bbl files (e.g. astro-ph0004127's spie4012-01a.bbl) carry
+        // stray NULs from BibTeX `\"u`-mangling; as OTHER they become harmless
+        // literal chars (stripped at XML serialization), matching Perl —
+        // crucially NOT ESCAPE, so no bogus `\uninger`-style CS forms. An
+        // explicit `\catcode`^^Q=9` (user/package) is still honored; only the
+        // *default* changes.
+        catcodes.insert('\0', OTHER);
         catcodes.insert('\u{000c}', ACTIVE);
         for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
           catcodes.insert(c, LETTER);

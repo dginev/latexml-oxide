@@ -3268,6 +3268,32 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-09): NUL default catcode must be 12 (OTHER), matching Perl — fixes `` `^^@ `` alphabetic constant; xint `\xintdeffloatfunc` residual deferred
+
+While triaging the 2111.00584 residual (`Error:expected:}` in `xinttrig.sty`
+load), found a real Perl-parity bug in the tokenizer: **Rust set NUL's
+(`\^^@`, U+0000) DEFAULT catcode to 9 (IGNORE)** per the TeXbook, whereas **Perl
+LaTeXML uses 12 (OTHER)**. With IGNORE the `^^@`-notation char is *dropped*, so
+the alphabetic constant `` `^^@ `` skips to the next token (`\relax` → 114)
+instead of reading 0 (probe: `\count0=`^^@` → 114 Rust vs 0 Perl). **Fix:**
+`state.rs` NUL default → OTHER (`catcodes.insert('\0', OTHER)`). Validated:
+`` `^^@ ``→0, `` `^^A ``→1; an explicit `\catcode`^^Q=9` is still honored (only
+the default changes, so `tokenize/par.tex` passes); a raw stray NUL byte
+(astro-ph0004127 `\"u`-mangling case the old IGNORE hack guarded) becomes a
+harmless OTHER char — NO bogus `\uninger`-style CS, NO invalid-XML NUL in output
+(stripped at serialization). Regression: `tests/60_caret_charcode.rs`
+(dump-independent). Suite **1402/0/0**.
+
+**Residual NOT fixed (deferred — deep xint machinery):** the actual 2111.00584
+`xinttrig.sty` error is independent of the NUL fix — xint's `\XINTsetcatcodes`
+already sets `\catcode0=12` itself (xintkernel.sty:102). The error is a
+`readBalanced ran out of input` during `\xintdeffloatfunc @sin_series(x) := x *
+@sin_aux(sqr(x));` (xinttrig.sty:350) — deep in xint's float-function compiler
+(catcode-3 `&&A` MATH separators, `\expanded`, nested delimited macros). Perl
+loads xintexpr cleanly. 1 NON-FATAL package-load error; the document converts
+rc=0 (after the natbib fix below). Classified deep/low-priority like the pgf
+bisection (2201.09268) and xy-pic (2403.14015) cases.
+
 ### Round-37 (2026-06-09): 2111.00584 FIXED — natbib `\lx@NAT@parselabel` must not full-`Expand!` a label with text-encoding symbols (`\i`/`\j`/…) → infinite loop
 
 **2111.00584 (revtex4-1 + `aipnum4-1.bst` `.bbl`, 63 `\bibitem`s): rc=1 with a
