@@ -157,8 +157,24 @@
 > `#`/`\fi` cascade (2411.03393, +4); tabularht
 > DVI-driver GenericError + `\@array` (2206.08989, +3); siamart eager-xcolor vs colortbl
 > (2511.10796, +1, delicate); deluxetable `$`-column template (2305.16141, +1); revtex bbl
-> internal-CS leak (2312.14913, +1). The 64 slow/timeout witnesses are being recovered serially
-> (reliability track, STABILITY_WITNESSES).
+> internal-CS leak (2312.14913, +1).
+>
+> **The 64 "timeout" witnesses were a DEBUG ARTIFACT, now resolved.** They did not time out in
+> release — the default `latexml_oxide --timeout` is 60s and the DEBUG binary is ~10-20× slower,
+> so heavy papers hit the 60s watchdog mid-conversion and aborted with a falsely-LOW error count
+> (2112.11932 read as 0 in debug, is 1003 in release). Re-swept all 64 in RELEASE (`--timeout 120`):
+> 0 genuine wall-timeouts, 54 error-bearing, and Perl-delta'd them. Result: **the dominant
+> remaining Rust-only cluster is expl3** — `unexpected:_` (1326, mostly the spath3/xparse catcode
+> clobber above) plus undefined expl3 KERNEL internals (`\__kernel_msg_error`,
+> `\__text_case_exclude_arg_tl`, `\__kgl_process`, `\bool_*`, `\NewDocumentCommand`,
+> `\IfBooleanTF` …) — all the same `\ExplSyntaxOff`/expl3-kernel-completeness family. Fresh
+> non-expl3 positive-delta gaps catalogued: 2204.05282 (86/Perl 0 — babel + the expl3-code:33075
+> cross-boundary `\group_begin:` dangle), 2204.03209 (45/7), 2112.09098 (44/22), 2403.14015
+> (`\xywithoption`, xy-pic, 1/0), 2203.07669 (pgfplots symbolic coords, same cluster as 2110.14597).
+> **Strategic conclusion: a single focused expl3-kernel-completeness effort (`\ExplSyntaxOff`
+> catcode-stack restore + the missing `\__*` kernel functions) would clear the large majority of
+> the remaining Rust-only error volume; the rest is a sparse per-package/per-class tail.** The
+> genuine slow-paper reliability tail is separate (STABILITY_WITNESSES); measure it in release.
 
 > **✅ TEST-SUITE RECOVERY + xparse loader fix (2026-06-08, commit `128891d587`).** A clean
 > (from-scratch) rebuild exposed 3 long-standing failures — `xparse_test`, `regex_match_test`,
