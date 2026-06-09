@@ -7009,6 +7009,13 @@ LoadDefinitions!({
   // scratch macros defined inline by the body.
   DefMacro!("\\@removeelement{}{}{}",
     r"\def\reserved@a##1,#1,##2\reserved@a{##1,##2\reserved@b}\def\reserved@b##1,\reserved@b##2\reserved@b{\ifx,##1\@empty\else##1\fi}\edef#3{\expandafter\reserved@b\reserved@a,#2,\reserved@b,#1,\reserved@a}");
+  // latex.ltx L7634: \protected\def\leavevmode@ifvmode{\ifvmode\expandafter\indent\fi}
+  // Emit \indent only when currently in vertical mode (used by \enspace and
+  // by `\vcenter`/box helpers). Was undefined in Rust; Perl defines it via the
+  // kernel. `\protected` (matched here) so it survives \edef/serialization
+  // unexpanded — it surfaced inside serialized .bbl math (witness 2312.14913).
+  // Faithful port; \ifvmode/\indent already exist.
+  DefMacro!("\\leavevmode@ifvmode", r"\ifvmode\expandafter\indent\fi", protected => true);
   DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
