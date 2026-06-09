@@ -707,6 +707,21 @@ impl Token {
     Token { text: arena::pin(text), code, #[cfg(feature = "token-locators")] loc: 0 }
   }
 
+  /// A cheap structural fingerprint for the cycle-detection guard
+  /// ([`crate::cycle_guard`]). Matches [`PartialEq`] semantics: SPACE tokens
+  /// fingerprint by catcode alone (their text is irrelevant to equality).
+  /// NOT a stable hash across processes — for in-run loop detection only.
+  #[inline]
+  pub fn cycle_fingerprint(&self) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = rustc_hash::FxHasher::default();
+    self.code.hash(&mut h);
+    if self.code != Catcode::SPACE {
+      self.text.hash(&mut h);
+    }
+    h.finish()
+  }
+
   /// Get the CS Name of the token. This is the name that definitions will be
   /// stored under; It's the same for various `different' BEGIN tokens, eg.
   pub fn get_cs_name(&self) -> SymStr {

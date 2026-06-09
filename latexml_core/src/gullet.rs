@@ -112,6 +112,11 @@ pub struct Gullet {
   pub token_limit:      Option<usize>,
   pub pushback_limit:   Option<usize>,
   pub progress:         usize,
+  /// Windowed cycle detector over the expansion (read-token) stream — catches
+  /// small-period infinite expansion loops (`\def\x{a\x}` etc.) far earlier
+  /// and more cheaply than `token_limit`/`pushback_limit`. Gated on a high
+  /// `progress` so normal documents never touch it. See [`crate::cycle_guard`].
+  pub cycle_guard:      crate::cycle_guard::CycleGuard,
 }
 
 #[thread_local]
@@ -186,6 +191,10 @@ pub fn initialize_gullet() {
   gullet.runtime = None;
   gullet.mouthstack = VecDeque::new();
   gullet.pending_comments = VecDeque::new();
+  // Fresh per-conversion progress + cycle-guard history (the engine is a
+  // thread-local singleton reused across conversions in the test harness).
+  gullet.progress = 0;
+  gullet.cycle_guard.reset();
   // Reset smuggled token from previous conversion
   SPECIAL_RELAX_SMUGGLED.set(None);
 }
@@ -535,9 +544,39 @@ pub fn read_token() -> Result<Option<Token>> {
       Catcode::END => decrement_align_group_count(),
       _ => {},
     }
+    // Windowed cycle guard over the expansion stream. Only engaged once the
+    // token count is already pathologically high (`CYCLE_GUARD_ACTIVATE`), so
+    // ordinary documents — even token-heavy tikz ones up to that bound — never
+    // record a fingerprint. A small-period infinite expansion loop then trips
+    // a clean Fatal in O(window) extra tokens instead of grinding to the 100M
+    // `token_limit` (and the gigabytes of RSS that implies).
+    {
+      let fp = nextt.cycle_fingerprint();
+      let mut g = gullet_mut!();
+      if g.progress > CYCLE_GUARD_ACTIVATE {
+        if let Some(period) = g.cycle_guard.push(fp) {
+          drop(g);
+          let msg = s!(
+            "Infinite expansion loop: a window of {} token(s) repeated {}+ times",
+            period,
+            crate::cycle_guard::REPEAT
+          );
+          Fatal!(Timeout, Recursion, msg);
+        }
+      }
+    }
   }
   Ok(next_token)
 }
+
+/// Engage the gullet's expansion-stream cycle guard only after this many
+/// tokens have been read. A typical document is ~5M tokens and even heavy
+/// tikz/pgf documents land in the tens of millions; this threshold sits above
+/// the ordinary range so light/normal conversions never record a fingerprint,
+/// yet an actual runaway (which heads for the 100M `token_limit` / multi-GB
+/// RSS) blows past it and gets cut off in O(window) extra tokens. False
+/// positives are guarded by the period-`REPEAT` requirement, not this bound.
+const CYCLE_GUARD_ACTIVATE: usize = 12_000_000;
 
 /// Read the next non-expandable token (expanding tokens until there's a non-expandable one).
 ///

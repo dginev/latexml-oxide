@@ -454,6 +454,32 @@ impl BoxOps for Digested {
 impl Digested {
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
+
+  /// A cheap, intentionally SHALLOW fingerprint for the stomach cycle guard
+  /// ([`crate::cycle_guard`]): same-shaped boxes hash to the same value, with
+  /// no deep traversal so it stays cheap on the digestion hot path. NOT a
+  /// stable cross-process hash — for in-run loop detection only.
+  pub fn cycle_fingerprint(&self) -> u64 {
+    use std::hash::{Hash, Hasher};
+    let mut h = rustc_hash::FxHasher::default();
+    match self.data() {
+      DigestedData::TBox(b) => {
+        0u8.hash(&mut h);
+        b.borrow().text.hash(&mut h);
+      },
+      DigestedData::Whatsit(_) => 1u8.hash(&mut h),
+      DigestedData::Alignment(_) => 2u8.hash(&mut h),
+      DigestedData::List(l) => {
+        3u8.hash(&mut h);
+        l.borrow().boxes.len().hash(&mut h);
+      },
+      DigestedData::Postponed(_) => 4u8.hash(&mut h),
+      DigestedData::KeyVals(_) => 5u8.hash(&mut h),
+      DigestedData::RegisterValue(_) => 6u8.hash(&mut h),
+      DigestedData::Comment(_) => 7u8.hash(&mut h),
+    }
+    h.finish()
+  }
   // convenience subset of NumericOps, added here for now as an experiment:
   /// Obtain the i64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn value_of(&self) -> i64 {

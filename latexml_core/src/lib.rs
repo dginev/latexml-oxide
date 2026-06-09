@@ -13,6 +13,7 @@ pub mod token;
 /// Common abstractions that are useful at various stages of Core processing
 #[macro_use]
 pub mod common;
+pub mod cycle_guard;
 /// Grouping Tokens together
 #[macro_use]
 pub mod tokens;

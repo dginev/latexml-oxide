@@ -44,6 +44,18 @@ pub fn set_timeout(seconds: u64) {
 /// `panic="unwind"`. Sampling RSS here at well below the OS ulimit
 /// gives us a clean diagnostic and a unwound stack via `fatal!`.
 pub fn check_timeout() -> Result<()> {
+  // Box-list cycle guard fired in `push_box_list` (which cannot unwind) —
+  // surface it here, the regular Result-returning digestion checkpoint.
+  // (The `stomach_mut!` macro is defined textually below; use STOMACH
+  // directly, with a try-borrow so a transient borrow just defers to the
+  // next tick.)
+  let pending = STOMACH
+    .try_borrow_mut()
+    .ok()
+    .and_then(|mut s| s.pending_cycle_fatal.take());
+  if let Some(msg) = pending {
+    fatal!(Stomach, Recursion, msg);
+  }
   CONVERSION_DEADLINE.with(|d| {
     if let Some(deadline) = d.get() {
       if Instant::now() > deadline {
@@ -99,6 +111,20 @@ pub fn check_timeout() -> Result<()> {
                 rss_bytes / 1_000_000,
                 cap / 1_000_000
               );
+              // TEMP diagnostic: which accumulating list is growing?
+              if let Ok(st) = STOMACH.try_borrow() {
+                eprintln!(
+                  "[membudget] box_list={} token_stack={} boxing={} localized_box_list_total={}",
+                  st.box_list.len(),
+                  st.token_stack.len(),
+                  st.boxing.len(),
+                  st.localized_box_list.iter().map(|v| v.len()).sum::<usize>(),
+                );
+              }
+              if let Ok(g) = crate::gullet::GULLET.try_borrow() {
+                let pb = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
+                eprintln!("[membudget] gullet pushback={pb} progress={}", g.progress);
+              }
               let bt = std::backtrace::Backtrace::force_capture();
               eprintln!("{bt}");
             }
@@ -150,6 +176,17 @@ pub struct Stomach {
   localized_box_list: Vec<Vec<Digested>>,
   /// collects the intermediate boxes resulting from a `digest` call.
   pub box_list:       Vec<Digested>,
+  /// Windowed cycle detector over the accumulated digest list — the stomach
+  /// analog of the gullet's expansion-stream guard. Catches box-accumulation
+  /// runaways (a recursive macro/path that digests the same boxes forever, e.g.
+  /// pgf's `to [loop]` arc on a pathological picture, 2201.09268) that bypass
+  /// the gullet read loop entirely. Engaged only once `box_list` has grown far
+  /// past any flushed-document size. See [`crate::cycle_guard`].
+  cycle_guard:        crate::cycle_guard::CycleGuard,
+  /// Set by `push_box_list` when `cycle_guard` fires; consumed and turned into
+  /// a `Fatal` by `check_timeout` (the next `Result`-returning checkpoint —
+  /// `push_box_list` itself returns `()` and cannot unwind).
+  pending_cycle_fatal: Option<String>,
 }
 
 #[thread_local]
@@ -173,6 +210,8 @@ pub fn initialize_stomach() {
   stomach.token_stack = Vec::new();
   stomach.box_list = Vec::new();
   stomach.localized_box_list = Vec::new();
+  stomach.cycle_guard.reset();
+  stomach.pending_cycle_fatal = None;
 
   assign_value("BOUND_MODE", "vertical", Some(Scope::Global));
   assign_value("MODE", "vertical", Some(Scope::Global));
@@ -848,12 +887,58 @@ pub fn expire_local_box_list() -> Vec<Digested> {
   buffer
 }
 
+/// Stomach-level cycle guard: only once `box_list` has grown far past any
+/// flushed-document size (a normal `box_list` is drained as paragraphs/boxes
+/// complete and stays small) do we record the digest-push stream and look for
+/// a short repeating window — a box-accumulation infinite loop. Cuts it off
+/// with a clean Fatal long before the RSS soft cap. Caller must already hold
+/// the stomach borrow and have appended past the activation size.
+#[inline]
+fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
+  if st.pending_cycle_fatal.is_none() {
+    let fp = d.cycle_fingerprint();
+    if let Some(period) = st.cycle_guard.push(fp) {
+      st.pending_cycle_fatal = Some(s!(
+        "Infinite digestion loop: a window of {} box(es) repeated {}+ times \
+         while the box list grew past {}",
+        period,
+        crate::cycle_guard::REPEAT,
+        STOMACH_CYCLE_ACTIVATE
+      ));
+    }
+  }
+}
+
 pub fn extend_box_list<I>(arg: I)
 where I: IntoIterator<Item = Digested> {
-  stomach_mut!().box_list.extend(arg)
+  let mut st = stomach_mut!();
+  // Fast path (the overwhelming common case): box list still small — just
+  // extend, no per-box fingerprinting.
+  if st.box_list.len() <= STOMACH_CYCLE_ACTIVATE {
+    st.box_list.extend(arg);
+    return;
+  }
+  // Runaway territory: record each appended box into the cycle guard.
+  for d in arg {
+    cycle_guard_record(&mut st, &d);
+    st.box_list.push(d);
+  }
 }
-pub fn push_box_list(arg: Digested) { stomach_mut!().box_list.push(arg) }
-fn push_box_list_vec(args: Vec<Digested>) { stomach_mut!().box_list.extend(args) }
+pub fn push_box_list(arg: Digested) {
+  let mut st = stomach_mut!();
+  if st.box_list.len() > STOMACH_CYCLE_ACTIVATE {
+    cycle_guard_record(&mut st, &arg);
+  }
+  st.box_list.push(arg);
+}
+fn push_box_list_vec(args: Vec<Digested>) { extend_box_list(args) }
+
+/// Engage the stomach's box-list cycle guard only once the (normally
+/// flushed-small) `box_list` has grown past this. A real document's list is
+/// drained continuously; a runaway accumulates boxes without bound. Keeps the
+/// guard inert for every ordinary conversion. (~50k boxes is already well past
+/// any sane un-flushed list yet ~30× below the 4.5 GB OOM ceiling.)
+const STOMACH_CYCLE_ACTIVATE: usize = 50_000;
 pub fn pop_box_list() -> Option<Digested> { stomach_mut!().box_list.pop() }
 pub fn with_box_list<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&[Digested]) -> R {
