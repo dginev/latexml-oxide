@@ -131,6 +131,27 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ OOM HARDENING — windowed cycle-detection guards (2026-06-09, `7190b48b8e`).**
+> New `cycle_guard::CycleGuard`: records a u64-fingerprint stream in a ring
+> buffer and (throttled) flags a window of W∈1..=10 items repeated ≥100× (phase
+> independent). Two layered instances complement the coarse 100M-token limit /
+> 4.5 GB RSS soft cap / wall-clock timeout:
+> - **Gullet** over the read-token stream (engaged >12M tokens): catches
+>   read-churn loops (`\def\x{\advance\c1 \x}\x` → Fatal:Timeout:Recursion).
+> - **Stomach** over the digest-push stream (engaged once box_list >50k):
+>   catches box-accumulation loops that bypass the gullet read loop — incl.
+>   **2201.09268** (pgf `to [loop]` arc on a pathological tikzpicture): was
+>   **OOM 4.5 GB / 31 s**, now a clean **Fatal:Stomach:Recursion at 526 MB /
+>   2.5 s** (period-2 box cycle). Box-memory note: ~626 B per lightweight
+>   Digested ⇒ ~7M boxes under the 4.5 GB cap; the 50k stomach activation is
+>   ~30 MB (<1% of the ceiling). 7 unit tests + suite 1398/0 (no false
+>   positives). **Open follow-up:** the *root cause* of 2201.09268 is a Rust-only
+>   pgf arc-drawing non-termination (Perl converts it with 1 error) — a pgfmath
+>   divergence in the `to [loop]` arc loop, to be root-caused next (the guard
+>   makes it graceful but the paper still fails). Raising the RSS cap to 10 GB
+>   was considered and rejected: this is an unbounded runaway (hard-OOMs at
+>   6.3 GB), so a higher cap removes the protective soft fuse rather than helping.
+>
 > **✅ CORRECTED GAP LANDSCAPE + pgfplots units-flag fix (2026-06-09, with dump).**
 > Re-quantified Rust(release+**dump**)-vs-Perl over 50 `next_warning_papers`
 > witnesses (ANSI-stripped `^(Error|Fatal):`): **28 Rust-better, 19 equal, only 3
