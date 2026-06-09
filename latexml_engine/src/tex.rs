@@ -351,6 +351,11 @@ LoadDefinitions!({
     if !*NODUMP && plain_dump_available() {
       InnerPool!(plain_dump); // runtime loader for resources/dumps/plain.dump.txt
     } else {
+      // Degraded raw-load path — surface the missing dump loudly (shared
+      // one-shot banner with latex.rs). See dump_paths::warn_degraded_no_dump.
+      if !*NODUMP {
+        crate::dump_paths::warn_degraded_no_dump();
+      }
       InnerPool!(plain_base); // Perl: plain_base.pool.ltxml
     }
     InnerPool!(plain_constructs); // Perl: plain_constructs.pool.ltxml → math_common

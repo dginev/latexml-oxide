@@ -131,6 +131,32 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **🔑 MAJOR CORRECTION (2026-06-09, deep dive): the "expl3 catcode cluster" was a
+> MISSING-KERNEL-DUMP measurement artifact, NOT a Rust parity gap.** The dominant
+> ~1100-error cluster claimed in the entries below (2112.11932 +998, 2110.10227 +55,
+> 2112.09098 +22, 2110.12034 +11, etc.) was produced by measuring with an **empty
+> `resources/dumps/`**. With no dump, the `LoadFormat` else-branch (`latex.rs` / `tex.rs`)
+> silently raw-loads `latex.ltx` + `expl3-code.tex`, which hits two raw-load-ONLY cascades
+> the dump avoids: (1) the `expl3-code.tex` L33075 codepoint **dangling group**
+> (`\__codepoint_finalise_blocks:`/intarray over real `UnicodeData.txt` rows), and (2) the
+> `\@expl@pop@filename@@` **expl-status desync** (the local tl-var `\l__expl_status_stack_tl`
+> push is reverted across the binding+raw double-load `\RequirePackage{xparse}` → nested
+> `\RequirePackage{xparse-2018-04-12}`, so every `\@popfilename` flips `\ExplSyntaxOff`).
+> **Proof:** `tools/make_formats.sh` (build the dump) takes 2112.11932 1003→**1**, 2110.10227
+> 102→**4**, 2112.05805 1004→**71**, 2203.05327 1004→**443** — with **zero code change**.
+> `dump+nofix == dump+fix` on every tested paper; the candidate `\@popfilename` expl-status
+> restore (deeply investigated this session, Perl-faithful, suite-green) is a **no-op when the
+> dump is present**, so it was NOT landed. **The dump is a required kernel piece for canvas /
+> Rust-vs-Perl parity work (user-confirmed). ALWAYS run `tools/make_formats.sh` after checkout
+> / TL upgrade / before any measurement; the release binary embeds dumps at build time, so
+> build it AFTER the dumps exist.** A loud one-shot stderr banner now fires when no dump is
+> found (`dump_paths::warn_degraded_no_dump`, called from both `LoadFormat` else-branches; NOT
+> an `Error:`/`Fatal:` so it can't corrupt canvas counts; silenced by `LATEXML_NODUMP=1`).
+> **Action: treat the gap analysis in the two entries immediately below as MEASURED WITHOUT THE
+> DUMP and therefore inflated — re-quantify with the dump built.** `EXPL3_CATCODE_GAP_2026-06-08.md`
+> describes the raw-load symptom, not a production gap. Smaller real (dump-present) residuals
+> remain (2203.05327 443 vs Perl 102; 2112.05805 71) — separate roots, triage independently.
+>
 > **✅ /loop SESSION: 10 clean Rust-only fixes + re-quantified gap landscape (2026-06-09).**
 > Eleven suite-green (1390/0), Perl-faithful fixes landed across three mined veins, each
 > root-caused via minimal `.tex` repro + Rust-vs-Perl `\ifdefined`/`\detokenize` probe:

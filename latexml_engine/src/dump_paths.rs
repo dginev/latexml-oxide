@@ -121,6 +121,40 @@ pub fn dump_filename(kind: &str, year: u32) -> String {
   format!("{}.{}.dump.txt", kind, year)
 }
 
+/// One-shot stderr banner emitted by the `LoadFormat` branches in
+/// `tex.rs` / `latex.rs` when NO precompiled kernel dump is available
+/// and the engine falls back to the raw `latex.ltx` + `expl3-code.tex`
+/// load path.
+///
+/// Why this exists: the raw-load path hits known raw-load-ONLY cascades
+/// (the `expl3-code.tex` L33075 codepoint dangling-group and the
+/// `\@expl@pop@filename@@` expl-status desync) that the dump avoids. On
+/// expl3-heavy arXiv articles this inflates per-paper error counts by
+/// ~1000× (2112.11932: 1 → 1003; 2110.10227: 4 → 102), which previously
+/// masqueraded as a Rust parity gap when it was really a missing-dump
+/// SETUP error (`resources/dumps/` not populated — run
+/// `tools/make_formats.sh`). The dump is a required kernel piece for
+/// canvas/parity work, so its absence must never be silent.
+///
+/// Fires at most once per process (shared `Once`), and is a plain stderr
+/// line — NOT an `Error:`/`Fatal:` (those are reserved for the per-paper
+/// conversion log and would corrupt canvas error counts).
+pub fn warn_degraded_no_dump() {
+  static WARNED: std::sync::Once = std::sync::Once::new();
+  WARNED.call_once(|| {
+    let year = detect_ambient_texlive_year()
+      .map(|y| y.to_string())
+      .unwrap_or_else(|| "unknown".into());
+    eprintln!(
+      "[latexml-oxide] WARNING: no precompiled kernel dump found (TL{year}); \
+       running in DEGRADED raw-load mode. Conversions will show many spurious \
+       errors (expl3 catcode/group cascades). Build the dump with \
+       `tools/make_formats.sh` before canvas/parity runs. (Set \
+       LATEXML_NODUMP=1 to silence this if the raw path is intentional.)"
+    );
+  });
+}
+
 /// Versioned filename for the texlive stamp, e.g.
 /// `version_filename(2025) == "texlive.2025.version"`.
 pub fn version_filename(year: u32) -> String {
