@@ -398,6 +398,36 @@ mirroring its Perl idiom 1:1:
   template — all asserted on the produced XML, including the negative case
   (empty mark ⇒ no `mark=` attribute).
 
+## DefEnvironment runtime front-end — GREEN (2026-06-09)
+
+`DefEnvironment` joins the script surface, same four shapes as `DefConstructor`
+(template/closure × bare/option-bag), via a new core `EnvironmentBuilder`
+(prototype parsed exactly as `DefEnvironmentWO!`: braced name + parameters
+against a synthetic `\name`). The scalar-option key→field map is now a shared
+free function (`apply_scalar_option`) used by both builders, and the contrib
+option-bag loop is generic over a local `BindingBuilder` trait — one
+`apply_opts` serves constructors and environments. New proxy:
+`document.absorbProperty("body")`, the imperative analog of a template's
+`#body` hole (mirrors natives like `{center}`'s `sub[document, _args, props]`).
+
+e2e specimens (all green through a real conversion):
+- `{rquote}` — 1:1 port of latex_base's `{quote}` (`#body` + `mode`).
+- `{bio}{}` — 1:1 port of the cas-dc contrib class's biography environment.
+- `{biop}{}` — env arg → `properties` closure → `#prop` hole at attribute
+  position (the Perl-idiomatic route, asserted `class="Ada"`).
+- `{rbox}` — imperative body using `absorbProperty("body")`.
+
+Two **faithful-semantics findings** pinned by these specimens, each verified
+identical across Perl LaTeXML (direct `.sty.ltxml` probes), Rust native, and
+the Rhai runtime:
+1. An environment's `#n` at **attribute** position renders **empty** (the
+   begin's args don't interpolate into attributes; Perl consumes the arg and
+   emits no attribute). The cas-dc `name='#1'` is dead weight in the original
+   too. The working idiom is `properties` + `#prop` (the `{biop}` specimen).
+2. **Schema-disallowed attributes are silently dropped** by both Perl and Rust
+   `Document` (e.g. `ltx:note` has no `@name`; a literal `name='LIT'` probe is
+   dropped by both). Pick schema-allowed attributes (`class` is universal).
+
 ---
 
 # Post-PoC critical re-evaluation (2026-06-08)
@@ -501,12 +531,21 @@ cached by source (`SCRIPT_CACHE`).
   plain-`\footnote` port's afterDigest routing its mark arg to `mark`.
 - `whatsit().propertyString(key)` — read a property back ("" when absent).
 
+- `DefEnvironment("{name}{}…", replacement[, #{ options }])` — environments,
+  same four shapes as `DefConstructor`; the template typically references
+  `#body`. Prototype is the `DefEnvironment!` form: braced name, then the
+  parameter list. Routed through the core `EnvironmentBuilder` (the environment
+  analog of `ConstructorBuilder`, sharing the same option machinery).
+
 **`document` proxy methods (inside an imperative constructor body):**
 - `document.openElement(tag)`, `document.closeElement(tag)`,
   `document.maybeCloseElement(tag)`.
 - `document.setAttribute(key, val)` — attribute on the current node.
 - `document.absorbString(s)` — insert literal text.
 - `document.absorb(arg)` — absorb a digested argument handle (`arg1`, …).
+- `document.absorbProperty(name)` — absorb a whatsit property at the current
+  point (the imperative analog of a template's `#name` hole; `"body"` inside an
+  imperative `DefEnvironment`).
 
 This proxy is the **extension point for the full prelude**: each additional
 `$document->method` is a one-line registration (the `doc_qname_method!` mini-DSL
@@ -527,13 +566,14 @@ breach, document op failure) surface as clean latexml `Error`s and degrade only
 the offending binding.
 
 **Not yet covered** (see the critical re-eval): structural arg/return marshaling
-(`Token`/`Tokens`/`Whatsit` as types rather than strings); `#body` capture;
-gullet access from bodies; constructor `reversion`/`sizer`;
-`DefEnvironment`/`DefMath`/`DefRegister`/`DefConditional`; configurable
-assignment scope per-call + key namespacing for untrusted scripts.
-(Template conditionals/`#prop`/floats/PIs and constructor `properties`/
-`afterDigest`/`beforeDigest` + the `neutralize_font()` pool helper are covered
-as of 2026-06-09 — see above.)
+(`Token`/`Tokens`/`Whatsit` as types rather than strings); gullet access from
+bodies; constructor `reversion`/`sizer`; `DefMath`/`DefRegister`/
+`DefConditional`; configurable assignment scope per-call + key namespacing for
+untrusted scripts.
+(Template conditionals/`#prop`/floats/PIs, constructor `properties`/
+`afterDigest`/`beforeDigest` + the `neutralize_font()` pool helper, and
+`DefEnvironment` with `#body` — template and imperative — are covered as of
+2026-06-09; see above.)
 
 ---
 

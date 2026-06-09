@@ -40,7 +40,7 @@ use std::rc::Rc;
 
 use rhai::{Dynamic, Engine, EvalAltResult, FnPtr, Map, AST};
 
-use latexml_core::binding::def::builder::{ConstructorBuilder, OptionValue};
+use latexml_core::binding::def::builder::{ConstructorBuilder, EnvironmentBuilder, OptionValue};
 use latexml_core::binding::def::dialect::{def_macro, def_primitive};
 use latexml_core::binding::def::replacement;
 use latexml_core::common::arena::{self, SymHashMap};
@@ -84,6 +84,10 @@ enum Reg {
   /// `DefConstructor(proto, replacement, #{ options })` — the option-bag form,
   /// mirroring the `DefConstructor!` macro's variadic `key => value` options.
   ConstructorOpts(String, ConstructorRepl, Map),
+  /// `DefEnvironment(proto, replacement[, #{ options }])` — all four shapes
+  /// (template/closure × with/without options) collapse here (empty `Map` when
+  /// no options were given).
+  Environment(String, ConstructorRepl, Map),
   Option(String, FnPtr),
 }
 
@@ -259,6 +263,46 @@ fn make_engine() -> Engine {
     });
   });
 
+  // ── DefEnvironment: same four shapes as DefConstructor; the prototype is the
+  // `DefEnvironment!` form (`"{name}"` / `"{name}{}…"`), the template will
+  // typically reference `#body`. ──
+  engine.register_fn("DefEnvironment", |proto: &str, template: &str| {
+    REGS.with(|m| {
+      m.borrow_mut().push(Reg::Environment(
+        proto.to_string(),
+        ConstructorRepl::Template(template.to_string()),
+        Map::new(),
+      ))
+    });
+  });
+  engine.register_fn("DefEnvironment", |proto: &str, body: FnPtr| {
+    REGS.with(|m| {
+      m.borrow_mut().push(Reg::Environment(
+        proto.to_string(),
+        ConstructorRepl::Closure(body),
+        Map::new(),
+      ))
+    });
+  });
+  engine.register_fn("DefEnvironment", |proto: &str, template: &str, opts: Map| {
+    REGS.with(|m| {
+      m.borrow_mut().push(Reg::Environment(
+        proto.to_string(),
+        ConstructorRepl::Template(template.to_string()),
+        opts,
+      ))
+    });
+  });
+  engine.register_fn("DefEnvironment", |proto: &str, body: FnPtr, opts: Map| {
+    REGS.with(|m| {
+      m.borrow_mut().push(Reg::Environment(
+        proto.to_string(),
+        ConstructorRepl::Closure(body),
+        opts,
+      ))
+    });
+  });
+
   // ── document proxy: methods mirror Perl's `$document->method` idiom ──
   // The body receives `document` (a DocProxy) as its first arg, and each digested
   // argument as an opaque `Digested` handle it can pass back to `document.absorb`.
@@ -302,6 +346,25 @@ fn make_engine() -> Engine {
     |_d: &mut DocProxy, arg: Digested| -> std::result::Result<(), Box<EvalAltResult>> {
       let doc = unsafe { &mut *current_ctx()?.document };
       doc.absorb(&arg, None).map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
+      Ok(())
+    },
+  );
+  // Absorb a whatsit property at the current point — the imperative analog of a
+  // template's `#name` hole at content position. The workhorse is
+  // `document.absorbProperty("body")` inside an imperative `DefEnvironment`
+  // (mirroring natives like `{center}`'s `sub[document, _args, props]` body).
+  engine.register_fn(
+    "absorbProperty",
+    |_d: &mut DocProxy, name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      let ctx = current_ctx()?;
+      let doc = unsafe { &mut *ctx.document };
+      let props = unsafe { &*ctx.props };
+      if let Some(stored) = props.get(name) {
+        let dig: Option<Digested> = stored.into();
+        if let Some(ref d) = dig {
+          doc.absorb(d, None).map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
+        }
+      }
       Ok(())
     },
   );
@@ -392,6 +455,9 @@ pub fn load_script(src: &str) -> Result<usize> {
       Reg::ConstructorTemplate(proto, tmpl) => wire_constructor_template(proto, tmpl.clone())?,
       Reg::ConstructorOpts(proto, repl, opts) => {
         wire_constructor_opts(&cached.engine, &cached.ast, proto, repl.clone(), opts.clone())?
+      },
+      Reg::Environment(proto, repl, opts) => {
+        wire_environment(&cached.engine, &cached.ast, proto, repl.clone(), opts.clone())?
       },
       Reg::Option(opt, body) => wire_option(&cached.engine, &cached.ast, opt, body.clone())?,
     }
@@ -486,11 +552,71 @@ fn wire_constructor_opts(
     ConstructorRepl::Template(t) => template_replacement(&t)?,
     ConstructorRepl::Closure(b) => closure_replacement(b, engine.clone(), ast.clone(), proto.to_string()),
   };
-  let mut builder = ConstructorBuilder::new(proto)?.replacement(replacement);
+  let builder = ConstructorBuilder::new(proto)?.replacement(replacement);
+  apply_opts(builder, opts, engine, ast)?.install()
+}
+
+/// Install one `DefEnvironment` registration (template or imperative body, with
+/// an option bag — possibly empty) through the shared `EnvironmentBuilder`.
+/// The imperative body reaches `#body` via `document.absorbProperty("body")`.
+fn wire_environment(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  proto: &str,
+  repl: ConstructorRepl,
+  opts: Map,
+) -> Result<()> {
+  let replacement = match repl {
+    ConstructorRepl::Template(t) => template_replacement(&t)?,
+    ConstructorRepl::Closure(b) => closure_replacement(b, engine.clone(), ast.clone(), proto.to_string()),
+  };
+  let builder = EnvironmentBuilder::new(proto)?.replacement(replacement);
+  apply_opts(builder, opts, engine, ast)?.install()
+}
+
+/// The builder surface the option-bag loop needs — implemented for both core
+/// builders so [`apply_opts`] is written once. (A local trait over the foreign
+/// builder types; new closure options are added in `apply_opts` + one impl line
+/// per builder.)
+trait BindingBuilder: Sized {
+  fn set_option(self, key: &str, value: OptionValue) -> Result<Self>;
+  fn after_digest(self, hook: DigestionClosure) -> Self;
+  fn before_digest(self, hook: BeforeDigestClosure) -> Self;
+  fn properties(self, props: PropertiesClosure) -> Self;
+  // (`install` stays inherent on each builder: call sites get the concrete
+  // type back from `apply_opts`, so a trait method would be dead code.)
+}
+
+macro_rules! impl_binding_builder {
+  ($t:ty) => {
+    impl BindingBuilder for $t {
+      fn set_option(self, key: &str, value: OptionValue) -> Result<Self> {
+        <$t>::set_option(self, key, value)
+      }
+      fn after_digest(self, hook: DigestionClosure) -> Self { <$t>::after_digest(self, hook) }
+      fn before_digest(self, hook: BeforeDigestClosure) -> Self {
+        <$t>::before_digest(self, hook)
+      }
+      fn properties(self, props: PropertiesClosure) -> Self { <$t>::properties(self, props) }
+    }
+  };
+}
+impl_binding_builder!(ConstructorBuilder);
+impl_binding_builder!(EnvironmentBuilder);
+
+/// Apply a Rhai option bag onto a builder: closure options become trampolines
+/// (typed setters), `properties` also accepts a static map, scalars route
+/// through the builder's single-source `set_option`. Shared by the constructor
+/// and environment front-ends.
+fn apply_opts<B: BindingBuilder>(
+  mut builder: B,
+  opts: Map,
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+) -> Result<B> {
   for (key, val) in opts {
     if let Some(fp) = val.clone().try_cast::<FnPtr>() {
       // Closure option → typed builder setter (front-end builds the closure).
-      // Unknown closure options are ignored (forgiving, like Perl %options).
       match key.as_str() {
         "afterDigest" => {
           builder = builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
@@ -514,7 +640,7 @@ fn wire_constructor_opts(
       builder = builder.set_option(key.as_str(), ov)?;
     }
   }
-  builder.install()
+  Ok(builder)
 }
 
 /// Build an `afterDigest` trampoline: publish the whatsit so a parameterless body

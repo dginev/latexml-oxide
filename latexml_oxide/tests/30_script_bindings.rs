@@ -103,6 +103,44 @@ const SAMPLE: &str = r##"
 
   // Processing-instruction template (the class/package PI dialect shape).
   DefConstructor("\\mypi{}", "<?mypi data=\"#1\"?>");
+
+  // Environment, template form — a 1:1 port of latex_base's {quote}
+  // (latex_constructs.rs L5019): the template's #body hole receives the
+  // digested environment body.
+  DefEnvironment("{rquote}", "<ltx:quote class=\"rhai\">#body</ltx:quote>", #{
+    mode: "internal_vertical"
+  });
+
+  // Environment with a required argument — a 1:1 port of the cas-dc contrib
+  // class's {bio}{} (cas_dc_cls.rs L108): #1 at attribute position + #body.
+  // NB: an environment's `#n` at ATTRIBUTE position renders EMPTY — verified
+  // identical in Perl LaTeXML, Rust native, and this runtime path (all three
+  // emit <note role="biography"> with no name=). That's faithful semantics,
+  // not a bug; the working idiom is `properties` (next specimen).
+  DefEnvironment("{bio}{}",
+    "<ltx:note role=\"biography\" name=\"#1\">#body</ltx:note>", #{
+    mode: "internal_vertical"
+  });
+
+  // The Perl-idiomatic way to get an environment argument into an attribute:
+  // route it through `properties` and use a `#prop` hole. (The attribute must
+  // be schema-allowed: ltx:note has no @name, and BOTH Perl and Rust silently
+  // drop schema-disallowed attributes — verified identical with a literal
+  // name='LIT' probe. `class` is universally allowed.)
+  DefEnvironment("{biop}{}",
+    "<ltx:note role=\"biography\" class=\"#pname\">#body</ltx:note>", #{
+    properties: |a| #{ pname: a }
+  });
+
+  // Environment, IMPERATIVE form — the {center}-style native shape
+  // (sub[document, _args, props]): the body reaches #body through
+  // document.absorbProperty.
+  DefEnvironment("{rbox}", |document| {
+    document.openElement("ltx:text");
+    document.setAttribute("class", "rbox");
+    document.absorbProperty("body");
+    document.closeElement("ltx:text");
+  });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -130,6 +168,8 @@ fn script_binding_macro_and_constructor_convert() {
     "literal:\\documentclass{article}\\usepackage{lxrhaitest}",
     "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
     "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
+    "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
+    "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -201,6 +241,36 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("<?mypi") && xml.contains("data=\"d1\""),
     "PI template (\\mypi) did not emit; xml=\n{xml}"
+  );
+  // DefEnvironment, template form ({quote} port): #body lands inside the element.
+  assert!(
+    xml.contains("class=\"rhai\"") && xml.contains("Quotable"),
+    "environment template ({{rquote}}) did not wrap its body; xml=\n{xml}"
+  );
+  // DefEnvironment with a required argument ({bio}{} port from cas-dc):
+  // faithful-Perl behavior is role+body present and `name=` ABSENT (an env's
+  // `#n` at attribute position renders empty in Perl, Rust native, and here —
+  // all three verified identical; "Ada" is consumed by the begin's arg read).
+  let bio_note = xml
+    .split("<note")
+    .skip(1)
+    .find(|n| n.contains("Pioneer"))
+    .expect("bio note missing");
+  assert!(
+    bio_note.contains("role=\"biography\"")
+      && !bio_note.split('>').next().unwrap_or("").contains("name="),
+    "environment with arg ({{bio}}{{Ada}}) diverged from faithful-Perl output; xml=\n{xml}"
+  );
+  // The working idiom ({biop}): env arg → properties closure → #pname hole at
+  // attribute position, on a schema-allowed attribute.
+  assert!(
+    xml.contains("class=\"Ada\"") && xml.contains("Idiom"),
+    "environment properties idiom ({{biop}}) failed; xml=\n{xml}"
+  );
+  // DefEnvironment, imperative form: absorbProperty(\"body\").
+  assert!(
+    xml.contains("class=\"rbox\"") && xml.contains("Boxed"),
+    "imperative environment ({{rbox}}) / absorbProperty failed; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

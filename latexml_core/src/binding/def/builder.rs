@@ -15,7 +15,7 @@
 //!   `install` are shared, while the closure itself is produced by whichever
 //!   front-end (a macro `$body:block`, or a Rhai trampoline).
 
-use crate::common::def_parser::parse_prototype;
+use crate::common::def_parser::{parse_parameters, parse_prototype};
 use crate::common::error::{Error, Result};
 use crate::definition::constructor::ConstructorOptions;
 use crate::definition::{
@@ -23,8 +23,9 @@ use crate::definition::{
 };
 use crate::parameter::Parameters;
 use crate::token::Token;
+use crate::util::text::{extract_bracketed, Delimiter};
 
-use super::dialect::def_constructor;
+use super::dialect::{def_constructor, def_environment};
 
 /// A scalar option value handed to [`ConstructorBuilder::set_option`]. Both
 /// front-ends produce these (the macro from a literal, Rhai from a `Dynamic`),
@@ -73,22 +74,10 @@ impl ConstructorBuilder {
     self
   }
 
-  /// Apply a **scalar** option by name. THE single source of truth for the
-  /// option-name → `ConstructorOptions`-field mapping — both front-ends route
-  /// scalar options through here, so a new scalar option is added in one place.
-  /// Unknown keys are ignored (runtime-forgiving, matching Perl `%options`).
+  /// Apply a **scalar** option by name (see [`apply_scalar_option`], the
+  /// single-source key→field map shared with [`EnvironmentBuilder`]).
   pub fn set_option(mut self, key: &str, value: OptionValue) -> Result<Self> {
-    match key {
-      "mode" => self.options.mode = Some(value.into_string()?),
-      "bounded" => self.options.bounded = value.into_bool()?,
-      "requireMath" => self.options.require_math = value.into_bool()?,
-      "forbidMath" => self.options.forbid_math = value.into_bool()?,
-      "enterHorizontal" => self.options.enter_horizontal = value.into_bool()?,
-      "leaveHorizontal" => self.options.leave_horizontal = value.into_bool()?,
-      "captureBody" => self.options.capture_body = value.into_bool()?,
-      "alias" => self.options.alias = Some(value.into_string()?),
-      _ => log::debug!("ConstructorBuilder: ignoring unknown scalar option '{key}'"),
-    }
+    apply_scalar_option(&mut self.options, key, value)?;
     Ok(self)
   }
 
@@ -120,6 +109,97 @@ impl ConstructorBuilder {
   /// Install the accumulated definition.
   pub fn install(self) -> Result<()> {
     def_constructor(self.cs, self.paramlist, self.replacement, self.options);
+    Ok(())
+  }
+}
+
+/// Apply a **scalar** option by name onto `ConstructorOptions`. THE single
+/// source of truth for the option-name → field mapping — both builders (and so
+/// both front-ends) route scalar options through here, so a new scalar option is
+/// added in exactly one place. Unknown keys are ignored (runtime-forgiving,
+/// matching Perl `%options`).
+fn apply_scalar_option(
+  options: &mut ConstructorOptions,
+  key: &str,
+  value: OptionValue,
+) -> Result<()> {
+  match key {
+    "mode" => options.mode = Some(value.into_string()?),
+    "bounded" => options.bounded = value.into_bool()?,
+    "requireMath" => options.require_math = value.into_bool()?,
+    "forbidMath" => options.forbid_math = value.into_bool()?,
+    "enterHorizontal" => options.enter_horizontal = value.into_bool()?,
+    "leaveHorizontal" => options.leave_horizontal = value.into_bool()?,
+    "captureBody" => options.capture_body = value.into_bool()?,
+    "alias" => options.alias = Some(value.into_string()?),
+    _ => log::debug!("binding builder: ignoring unknown scalar option '{key}'"),
+  }
+  Ok(())
+}
+
+/// Accumulates an environment definition and installs it via [`def_environment`]
+/// — the environment analog of [`ConstructorBuilder`], sharing the same
+/// option machinery. The prototype is the `DefEnvironment!` shape:
+/// `"{name}"` or `"{name}{}…"` (env name in braces, then the parameter list).
+pub struct EnvironmentBuilder {
+  name: String,
+  paramlist: Option<Parameters>,
+  replacement: Option<ReplacementClosure>,
+  options: ConstructorOptions,
+}
+
+impl EnvironmentBuilder {
+  /// Parse the `{name}<params>` prototype (mirrors the `DefEnvironmentWO!`
+  /// macro: extract the braced name, parse the remainder as parameters against
+  /// a synthetic `\name` control sequence).
+  pub fn new(proto: &str) -> Result<Self> {
+    let mut proto = proto.trim_start().to_string();
+    let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace))
+      .ok_or_else(|| Error::from(format!("DefEnvironment prototype must start with {{name}}: {proto:?}")))?;
+    let paramlist_str = proto.trim_start().to_string();
+    let paramlist = if paramlist_str.is_empty() {
+      None
+    } else {
+      let cs = crate::T_CS!(crate::s!("\\{}", &name));
+      parse_parameters(&paramlist_str, &cs, true)?
+    };
+    Ok(Self { name, paramlist, replacement: None, options: ConstructorOptions::default() })
+  }
+
+  /// Set the XML replacement (typically referencing `#body`).
+  pub fn replacement(mut self, repl: ReplacementClosure) -> Self {
+    self.replacement = Some(repl);
+    self
+  }
+
+  /// Apply a **scalar** option by name (shared map: [`apply_scalar_option`]).
+  pub fn set_option(mut self, key: &str, value: OptionValue) -> Result<Self> {
+    apply_scalar_option(&mut self.options, key, value)?;
+    Ok(self)
+  }
+
+  /// Push an `afterDigest` hook (runs on the `\begin{env}` whatsit after the
+  /// body is digested — see `def_environment`).
+  pub fn after_digest(mut self, hook: DigestionClosure) -> Self {
+    self.options.after_digest.push(hook);
+    self
+  }
+
+  /// Set the `properties` closure (see [`ConstructorBuilder::properties`]).
+  pub fn properties(mut self, props: PropertiesClosure) -> Self {
+    self.options.properties = props;
+    self
+  }
+
+  /// Push a `beforeDigest` hook (runs at `\begin{env}` before digestion).
+  pub fn before_digest(mut self, hook: BeforeDigestClosure) -> Self {
+    self.options.before_digest.push(hook);
+    self
+  }
+
+  /// Install the accumulated environment definition.
+  pub fn install(self) -> Result<()> {
+    def_environment(self.name, self.paramlist, self.replacement, self.options);
     Ok(())
   }
 }
