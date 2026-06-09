@@ -131,6 +131,27 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ CORRECTED GAP LANDSCAPE + pgfplots units-flag fix (2026-06-09, with dump).**
+> Re-quantified Rust(release+**dump**)-vs-Perl over 50 `next_warning_papers`
+> witnesses (ANSI-stripped `^(Error|Fatal):`): **28 Rust-better, 19 equal, only 3
+> Rust-only positive-delta** (vs the old dumpless "1178 excess"): 2203.05327 (+341 —
+> the expl3-code L33075 codepoint dangling-group "second root", deep/separate),
+> 2110.14597 (+12 — **FIXED below**), 2201.09268 (+1). Excluding the 2203 codepoint
+> root the whole Rust-only excess was **13 errors**.
+> - **`00ef6f8689` pgfmath units-flag through user-function eval** (2110.14597 12→0):
+>   pgfplots `symbolic x coords` + `bar shift={...\pgfplotbarwidth}` emitted
+>   `\pgfplots@loc@TMPa has not been defined`. `\pgfplotbarwidth` →
+>   `pgfplotsbarwidthgeneric` (a 0-arg pgfmath pseudo-constant whose body parses
+>   `<bar width>pt`); the native parser digested that body (nested `\pgfmathparse`
+>   set the global `\ifpgfmathunitsdeclared`) but never read it back, so the outer
+>   parse clobbered it false → `\pgfplots@bar@mathparse@` mis-routed the unitless
+>   shift through the symbolic x-coord trafo. Direct probe nailed it:
+>   `\pgfmathparse{\pgfplotbarwidth}` = 10.0/units=NOT (Rust) vs 10.0/units=DECL
+>   (Perl). Fix: reset the flag before each function-body digest + `absorb_units_flag`
+>   after at the 3 call sites (`pgfmath_apply_user` / `parse_function_call`). Same
+>   family as the `try_cs_register` register-units fix. RED/GREEN TDD test
+>   `tests/57_pgfplots_units.rs` (gated on dump + pgf.sty). Suite 1391/0.
+>
 > **🔑 MAJOR CORRECTION (2026-06-09, deep dive): the "expl3 catcode cluster" was a
 > MISSING-KERNEL-DUMP measurement artifact, NOT a Rust parity gap.** The dominant
 > ~1100-error cluster claimed in the entries below (2112.11932 +998, 2110.10227 +55,
