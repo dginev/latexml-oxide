@@ -119,6 +119,21 @@ pub struct Gullet {
   pub cycle_guard:      crate::cycle_guard::CycleGuard,
 }
 
+thread_local! {
+  /// Debug-only (LATEXML_DEBUG_FATAL): ring of the most recent read tokens,
+  /// dumped when the gullet cycle guard trips so the repeating window is
+  /// identifiable from logs (this is how the math0402448 xymatrix
+  /// false-positive was diagnosed).
+  static DEBUG_RECENT_TOKENS: RefCell<std::collections::VecDeque<String>> =
+    RefCell::new(std::collections::VecDeque::with_capacity(512));
+}
+
+/// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics — read once, so
+/// the per-token hot path in `read_token` pays a single bool test, not an
+/// environment lookup per token.
+static DEBUG_FATAL: Lazy<bool> =
+  Lazy::new(|| std::env::var_os("LATEXML_DEBUG_FATAL").is_some());
+
 #[thread_local]
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
   RefCell::new(Gullet {
@@ -126,7 +141,16 @@ pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
     // A typical LaTeX document with expl3 processes ~5M tokens. TikZ documents
     // with complex figures can reach 30-80M tokens due to pgf's TeX-level math engine.
     // Papers with 30+ tikzpictures (e.g., graph theory) need ~80M.
-    token_limit: Some(100_000_000),
+    // `LATEXML_TOKEN_LIMIT` overrides (0 disables) — diagnostic/operator
+    // control, mirroring LATEXML_RSS_CAP_BYTES.
+    token_limit: match std::env::var("LATEXML_TOKEN_LIMIT")
+      .ok()
+      .and_then(|v| v.parse::<usize>().ok())
+    {
+      Some(0) => None,
+      Some(n) => Some(n),
+      None => Some(100_000_000),
+    },
     ..Gullet::default()
   })
 });
@@ -471,35 +495,98 @@ fn read_internal_token() -> Option<Token> {
   next_token
 }
 
+/// Per-token-read resource checkpoint: progress/token-limit accounting and
+/// the pushback-limit probe, in a single mutable borrow. Shared by
+/// [`read_token`] AND [`read_x_token`] — the latter loops on
+/// `read_internal_token` directly, so without its own checkpoint every
+/// full-expansion read path (`\edef` bodies, `read_balanced`, csname
+/// construction, …) would BYPASS all gullet guards: a `\def\x{a\x}\edef\y{\x}`
+/// runaway then grinds to the multi-GB process watchdog instead of a clean
+/// early `Fatal` (pre-existing gap found while diagnosing math0402448).
+#[inline]
+fn read_resource_checkpoint() -> Result<()> {
+  let mut g = gullet_mut!();
+  if g.runtime.is_none() {
+    return Ok(());
+  }
+  if let Some(limit) = g.token_limit {
+    g.progress += 1;
+    if g.progress > limit {
+      let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
+      drop(g);
+      Fatal!(Timeout, TokenLimit, msg);
+    }
+  }
+  if let Some(limit) = g.pushback_limit {
+    let pb_len = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
+    if pb_len > limit {
+      // Diagnostic: the looping token window is right here in the
+      // pushback — dump its head so the cycle is identifiable from logs.
+      if *DEBUG_FATAL {
+        if let Some(rt) = g.runtime.as_ref() {
+          let head: Vec<String> =
+            rt.pushback.iter().take(48).map(|t| format!("{t:?}")).collect();
+          eprintln!("[debug-fatal] pushback head: {}", head.join(" "));
+        }
+      }
+      let msg = s!("Pushback limit of {} exceeded, infinite loop?", limit);
+      drop(g);
+      Fatal!(Timeout, PushbackLimit, msg);
+    }
+  }
+  Ok(())
+}
+
+/// Windowed cycle-guard checkpoint over the token-read stream. Only engaged
+/// once `progress` is already pathologically high (`CYCLE_GUARD_ACTIVATE`), so
+/// ordinary documents never record a fingerprint (nor pay the hash — the gate
+/// is checked FIRST). A small-period infinite expansion loop then trips a
+/// clean Fatal in O(window) extra tokens instead of grinding to the token
+/// limit (and the gigabytes of RSS that implies). Shared by [`read_token`]
+/// and [`read_x_token`] (see [`read_resource_checkpoint`] on why the latter
+/// needs its own checkpoints).
+#[inline]
+fn cycle_guard_checkpoint(nextt: &Token) -> Result<()> {
+  if *DEBUG_FATAL {
+    DEBUG_RECENT_TOKENS.with(|ring| {
+      let mut ring = ring.borrow_mut();
+      if ring.len() >= 512 {
+        ring.pop_front();
+      }
+      ring.push_back(format!("{nextt:?}"));
+    });
+  }
+  let mut g = gullet_mut!();
+  if g.progress > CYCLE_GUARD_ACTIVATE {
+    let fp = nextt.cycle_fingerprint();
+    if let Some(period) = g.cycle_guard.push(fp) {
+      drop(g);
+      let msg = s!(
+        "Infinite expansion loop: a window of {} token(s) repeated {}+ times",
+        period,
+        crate::cycle_guard::REPEAT
+      );
+      if *DEBUG_FATAL {
+        eprintln!("[debug-fatal] gullet cycle guard tripping on token {nextt:?}: {msg}");
+        DEBUG_RECENT_TOKENS.with(|ring| {
+          let ring = ring.borrow();
+          let recent: Vec<&str> = ring.iter().map(String::as_str).collect();
+          eprintln!("[debug-fatal] last 512 read tokens: {}", recent.join(" "));
+        });
+      }
+      Fatal!(Timeout, Recursion, msg);
+    }
+  }
+  Ok(())
+}
+
 pub fn read_token() -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
   loop {
-    // Defensive checks: combine into a single mutable borrow to avoid
-    // the previous immutable→drop→mutable borrow dance. Also skip the
-    // pushback_limit probe entirely when no limit is set (the default
-    // for normal conversion runs).
-    {
-      let mut g = gullet_mut!();
-      if g.runtime.is_none() {
-        return Ok(None);
-      }
-      if let Some(limit) = g.token_limit {
-        g.progress += 1;
-        if g.progress > limit {
-          let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
-          drop(g);
-          Fatal!(Timeout, TokenLimit, msg);
-        }
-      }
-      if let Some(limit) = g.pushback_limit {
-        let pb_len = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
-        if pb_len > limit {
-          let msg = s!("Pushback limit of {} exceeded, infinite loop?", limit);
-          drop(g);
-          Fatal!(Timeout, PushbackLimit, msg);
-        }
-      }
+    if gullet!().runtime.is_none() {
+      return Ok(None);
     }
+    read_resource_checkpoint()?;
     // internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
     next_token = read_internal_token();
@@ -544,27 +631,7 @@ pub fn read_token() -> Result<Option<Token>> {
       Catcode::END => decrement_align_group_count(),
       _ => {},
     }
-    // Windowed cycle guard over the expansion stream. Only engaged once the
-    // token count is already pathologically high (`CYCLE_GUARD_ACTIVATE`), so
-    // ordinary documents — even token-heavy tikz ones up to that bound — never
-    // record a fingerprint. A small-period infinite expansion loop then trips
-    // a clean Fatal in O(window) extra tokens instead of grinding to the 100M
-    // `token_limit` (and the gigabytes of RSS that implies).
-    {
-      let fp = nextt.cycle_fingerprint();
-      let mut g = gullet_mut!();
-      if g.progress > CYCLE_GUARD_ACTIVATE {
-        if let Some(period) = g.cycle_guard.push(fp) {
-          drop(g);
-          let msg = s!(
-            "Infinite expansion loop: a window of {} token(s) repeated {}+ times",
-            period,
-            crate::cycle_guard::REPEAT
-          );
-          Fatal!(Timeout, Recursion, msg);
-        }
-      }
-    }
+    cycle_guard_checkpoint(nextt)?;
   }
   Ok(next_token)
 }
@@ -604,6 +671,13 @@ pub fn read_x_token(
   let autoclose = toplevel;
   let fully_expand = fully_expand_opt.unwrap_or(toplevel);
   loop {
+    // Resource + cycle checkpoints: this loop reads via the low-level
+    // `read_internal_token` (NOT `read_token`), so it must run the same
+    // guards itself — otherwise every full-expansion read path (`\edef`,
+    // `read_balanced`, csname construction) bypasses the token/pushback
+    // limits and the expansion cycle guard entirely, and a `\def\x{a\x}`
+    // runaway grinds to the multi-GB watchdog instead of a clean Fatal.
+    read_resource_checkpoint()?;
     // internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
     let next_token = read_internal_token();
@@ -627,6 +701,7 @@ pub fn read_x_token(
     }
     // we got a token
     let token = next_token.unwrap();
+    cycle_guard_checkpoint(&token)?;
     if token.get_catcode() == Catcode::CS && token.text == pin!("\\dont_expand") {
       let unexpanded = match read_token()? {
         Some(t) => t,
@@ -909,6 +984,12 @@ pub fn read_balanced(
   let mut tokens: Vec<Token> = Vec::with_capacity(16);
   let mut level = 1;
   loop {
+    // Resource checkpoint: this loop reads RAW (pushback.pop / mouth
+    // read_token below), not via read_token/read_x_token — without its own
+    // checkpoint, `\edef`-body expansion loops (`\def\x{a\x}\edef\y{\x}`)
+    // bypass the token/pushback limits AND the expansion cycle guard, and
+    // grind to the multi-GB process watchdog instead of a clean early Fatal.
+    read_resource_checkpoint()?;
     // we'll keep comments in the result
     let mut next_token = None;
     if !gullet!().pending_comments.is_empty() {
@@ -939,6 +1020,11 @@ pub fn read_balanced(
       }
     }
     // ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
+    if let Some(ref t) = next_token {
+      // Cycle-guard checkpoint on the raw read stream (see the resource
+      // checkpoint at the loop top for why read_balanced needs its own).
+      cycle_guard_checkpoint(t)?;
+    }
     match next_token {
       // What's the right error handling now?
       None => break,
@@ -2407,6 +2493,21 @@ fn handle_marker(marker_token: Token) {
 pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
+  // A cycle is only a cycle WITHIN one expansion context: reset the
+  // expansion-stream cycle-guard history at this mouth boundary. A genuine
+  // small-period loop (`\def\x{a\x}`, `\href` self-reemission, …) spins
+  // inside ONE reading context and re-accumulates its window immediately, so
+  // it is still caught. WITHOUT this reset, a legitimate run of *consecutive
+  // identical short expansions* — e.g. a giant xymatrix whose `fenced`
+  // semantics calls `get_xmarg_id`→`do_expand(\the@lx@xmarg@ID)` once per
+  // cell, each reading the same `\ifx`-probe tokens — concatenates into a
+  // pseudo-periodic stream across calls and FALSE-POSITIVES the guard once
+  // `progress` crosses the activation gate. Witness math0402448 (amsart +
+  // xy-pic, 3464 formulae): a swallowed `Fatal:Timeout:Recursion` during
+  // math-parser semantics ("Conversion failed: 1 fatal error" with no
+  // `Fatal:` line in the log); with the guard fully disabled the paper
+  // converts cleanly in 9.7 s — i.e. no real loop exists.
+  gullet_mut!().cycle_guard.reset();
   open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
   let reader_result = reader();
   // If the reader returned an error (e.g., Fatal from token limit),

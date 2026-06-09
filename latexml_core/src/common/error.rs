@@ -122,7 +122,17 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
     Info => report.info += 1,
     Warning => report.warning += 1,
     Error => report.error += 1,
-    Fatal => report.fatal = true,
+    Fatal => {
+      // Diagnostic for "phantom fatals" (a fatal counted in the final summary
+      // with no `Fatal:` line in the log — an `Err` raised via `Fatal!` that
+      // some caller swallowed without `log_fatal`): dump a backtrace at the
+      // moment the tally first flips. Witness math0402448.
+      if !report.fatal && std::env::var_os("LATEXML_DEBUG_FATAL").is_some() {
+        eprintln!("[debug-fatal] LogStatus::Fatal first noted here:");
+        eprintln!("{}", std::backtrace::Backtrace::force_capture());
+      }
+      report.fatal = true;
+    },
     Undefined => {
       let entry = report
         .undefined

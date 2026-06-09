@@ -216,8 +216,21 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
         T_CS!(thectrid),
         None,
         Some(ExpansionBody::Closure(Rc::new(move |_args| {
+          // Perl Package.pm L696 probes `\lx@empty`, NOT `\@empty` — and
+          // deliberately so: `\@empty` is LaTeX-pool-only (latex_base.rs
+          // aliases it to `\lx@empty`), while `\lx@empty` is engine-level
+          // (base_schema.rs) and exists in PLAIN TeX documents too. With
+          // `\@empty` here, a plain-TeX document's `\the<ctr>@ID` probe
+          // compared `\thedocument@ID` (an alias of `\lx@empty`) against an
+          // UNDEFINED `\@empty` → unequal → the \else branch re-expands the
+          // parent's @ID formatter, spinning the gullet into a 4-token
+          // expansion cycle (caught by the cycle guard as a phantom
+          // `Fatal:Timeout:Recursion`, swallowed inside math-parser
+          // semantics — `create_xmrefs`/`get_xmarg_id`). Witness
+          // math0402448 (plain TeX + 3464 formulae): "Conversion failed:
+          // 1 fatal error" with no Fatal: line in the log.
           Ok(mouth::tokenize_internal(&s!(
-            "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
+            "\\expandafter\\ifx\\csname the{}@ID\\endcsname\\lx@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname",
             idwithin,
             idwithin,
             prefix,

@@ -3268,6 +3268,55 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-09): math0402448 phantom fatal ROOT-CAUSED — cycle-guard false positive + ALL gullet guards bypassed by `read_balanced`/`read_x_token` (now fixed); canvas_3 = 16/16 CLEAN
+
+**math0402448 (amsart + xy-pic, 3464 formulae): "Conversion failed: 1 fatal
+error" with NO `Fatal:` line in the log → rc=0, 0 errors, "No obvious
+problems". With it, the canvas_3 corpus is a PERFECT 16/16 (rc=0, 0 errors).**
+Diagnosed with new permanent `LATEXML_DEBUG_FATAL` tooling (first-noted-fatal
+backtrace in `note_status`, pushback-head dump, 512-token recent-read ring).
+Four distinct findings:
+
+1. **Gullet cycle-guard FALSE POSITIVE.** The phantom was
+   `Fatal:Timeout:Recursion` raised mid-math-parsing: a giant `\xymatrix`'s
+   `fenced` semantics calls `get_xmarg_id`→`do_expand(\the@lx@xmarg@ID)` once
+   per cell; hundreds of consecutive identical short expansions concatenate
+   into a pseudo-periodic read stream (`\ifx \csname \thedocument@ID
+   \lx@empty` …) that the windowed detector mistook for an infinite loop once
+   `progress` crossed the 12M activation gate (proof: guard disabled → clean
+   convert in 9.7 s). **Fix:** a cycle is only a cycle WITHIN one expansion
+   context — `reading_from_mouth` now resets the guard history at each mouth
+   boundary. Real loops spin inside one context and stay caught.
+2. **ALL gullet guards were bypassed by the main expansion paths.**
+   `read_x_token` and `read_balanced` read via `read_internal_token` /
+   raw `pushback.pop()`+`mouth.read_token()`, so token-limit, pushback-limit
+   AND the cycle guard only ever ran in `read_token` — a textbook
+   `\def\x{a\x}\edef\y{\x}` runaway sailed past every limit (even
+   `LATEXML_TOKEN_LIMIT=1000000`) and ground to the 6 GB process watchdog
+   (rc=137, ~18 s). **Fix:** extracted `read_resource_checkpoint()` +
+   `cycle_guard_checkpoint()` and wired them into both raw loops. The same
+   runaway now dies in **0.35 s** with a clean
+   `Fatal:Timeout:Recursion (window of 2)`.
+3. **Math parser swallowed resource fatals as parse rejections** (the actual
+   phantom mechanism): semantics-action errors flatten into
+   `marpa::error::Error` strings and were dropped (audit-gated eprintln only)
+   — the `Fatal!` macro had already set the report's fatal flag, so the
+   summary counted a fatal that never hit the log. **Fix:**
+   `resource_fatal_from_message()` reconstructs Timeout-class fatals from the
+   engine-owned message prefixes; both swallow sites now `log_fatal()` and
+   abort math parsing (bounded + honest).
+4. **Counter-ID formatter faithfulness:** Rust probed
+   `\ifx\csname the<within>@ID\endcsname\@empty` where Perl (Package.pm L696)
+   probes **`\lx@empty`** — deliberately, since `\@empty` is LaTeX-pool-only
+   while `\lx@empty` is engine-level and exists for plain-TeX documents too.
+   Fixed to `\lx@empty` (dialect.rs).
+
+Also: `LATEXML_TOKEN_LIMIT` env override (0 disables; mirrors
+`LATEXML_RSS_CAP_BYTES`); the `DEBUG_FATAL` env probe is hoisted to a `Lazy`
+so the hot paths pay one bool test. Suite **1406/0/0**; canvas_3 16/16; no
+perf regression (math0102053 3.15 s). Loop-catching regression tests
+(58 href / 59 natbib) unaffected (PushbackLimit family).
+
 ### Round-37 (2026-06-09): canvas_3 OOM cluster ROOT-CAUSE FIXED — missing `line`/`lcircle` fontmaps made picture chars 0pt wide → `\@whiledim` infinite loop
 
 **All 6 OOM witnesses (math0102053/0102089/0212126/0504436/0506088/0604321)

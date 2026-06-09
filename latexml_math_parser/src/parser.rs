@@ -427,6 +427,35 @@ impl Default for MathParser {
 
 // ================================================================================
 
+/// Recognize a RESOURCE fatal (gullet token/pushback limit, expansion cycle
+/// guard, memory budget) that was raised inside a Marpa semantics action and
+/// flattened into a `marpa::error::Error` string on its way up. These are NOT
+/// semantic parse rejections — swallowing them produced "phantom fatals" (the
+/// `Fatal!` macro had already set the report's fatal flag, so the final
+/// summary said "1 fatal error" while no `Fatal:` line ever reached the log).
+/// The target/category structure is reconstructed from the (distinctive,
+/// engine-owned) message prefixes so the caller can `log_fatal()` + abort
+/// math parsing honestly. Witness math0402448 (amsart + xy-pic).
+fn resource_fatal_from_message(msg: &str) -> Option<latexml_core::common::error::Error> {
+  use latexml_core::common::error::{Error, ErrorCategory, ErrorTarget};
+  let category = if msg.contains("Infinite expansion loop") {
+    ErrorCategory::Recursion
+  } else if msg.contains("Token limit of") {
+    ErrorCategory::TokenLimit
+  } else if msg.contains("Pushback limit of") {
+    ErrorCategory::PushbackLimit
+  } else if msg.contains("Memory budget exceeded") {
+    ErrorCategory::MemoryBudget
+  } else {
+    return None;
+  };
+  Some(Error {
+    target: ErrorTarget::Timeout,
+    category,
+    message: msg.to_string(),
+  })
+}
+
 impl MathParser {
   fn audit_hybrid_unambiguous_parity(
     &self,
@@ -1664,6 +1693,19 @@ impl MathParser {
           }
         },
         Err(e) => {
+          // A Timeout-class error here is a RESOURCE fatal raised inside a
+          // semantics action (e.g. the gullet cycle guard during
+          // `create_xmrefs`→`get_xmarg_id` expansion), not a semantic parse
+          // rejection. Swallowing it produced "phantom fatals": the `Fatal!`
+          // macro had already counted it (final summary says "1 fatal
+          // error") but no `Fatal:` line ever reached the log, and parsing
+          // ground on formula-by-formula. Surface it and ABORT math parsing
+          // (bounded + honest; witness math0402448). Non-resource errors
+          // keep the old reject-and-continue behaviour.
+          if let Some(err) = resource_fatal_from_message(&e.to_string()) {
+            err.log_fatal();
+            return Err(err);
+          }
           if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
             eprintln!("HYBRID_AUDIT: parse_hybrid Err: {e}");
           }
@@ -1724,6 +1766,12 @@ impl MathParser {
           }
         },
         Err(e) => {
+          // Same resource-fatal surfacing as the hybrid path above — see the
+          // comment there (witness math0402448's phantom fatal).
+          if let Some(err) = resource_fatal_from_message(&e.to_string()) {
+            err.log_fatal();
+            return Err(err);
+          }
           if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
             eprintln!("ASF_AUDIT: traverse_forest Err: {e}");
           }
