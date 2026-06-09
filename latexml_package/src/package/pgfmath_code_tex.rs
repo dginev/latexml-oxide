@@ -15,23 +15,37 @@ const MAX_PGF_NUMBER: f64 = 16383.99998;
 
 // ==================== Result Formatting ====================
 
-/// Format a pgfmath result: 5 decimal places, strip trailing zeros
-/// Perl: sub pgfmathresult { sprintf("%.5f", $value); $value =~ s/0+$//; }
+/// Format a RAW pgfmath result, as set by pgf's internal `@`-suffixed
+/// functions (e.g. `\pgfmathmod@`, the trig used by
+/// `\pgfmathanglebetweenpoints`). Perl LaTeXML / real pgf:
+///   `sub pgfmathresult { sprintf("%.5f", $value); $value =~ s/0+$//; ... }`
+/// — i.e. it STRIPS trailing zeros AND the now-bare decimal point, so an
+/// integer prints as `10`, not `10.0`. (The PUBLIC `\pgfmathparse` path keeps
+/// the `.0` — that is `format_parse_result`, deliberately separate.)
+///
+/// Faithfulness matters here beyond cosmetics: pgf's
+/// `\pgfmathpointintersectionoflineandarc` runs an UNBOUNDED bisection
+/// (`pgfmathcalc.code.tex`) whose only exit is the exact comparison
+/// `\ifdim\x pt=\q pt`. When the `@`-functions append a spurious `.0`, the
+/// probe angle's string never matches the target the way TeX's raw fixed-point
+/// output does, the bisection over-narrows to `\p == \s` (no break there) and
+/// spins forever — each iteration opening a `{` group that accumulates as an
+/// empty box → OOM (witness 2201.09268, a `rounded rectangle`/callout node
+/// boundary).
 fn pgfmath_result_str(value: f64) -> String {
   if value.is_nan() || value.is_infinite() {
-    return "0.0".to_string();
+    return "0".to_string();
   }
   let clamped = value.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
   if clamped == (clamped as i64) as f64 {
-    // Integer result — pgf prints with .0 suffix
-    return format!("{}.0", clamped as i64);
+    // Integer result — raw, NO `.0` (matches Perl `@`-function output).
+    return format!("{}", clamped as i64);
   }
   let mut s = format!("{:.5}", clamped);
-  // Strip trailing zeros after decimal point (keep at least one)
-  if s.contains('.') {
-    while s.ends_with('0') && !s.ends_with(".0") {
-      s.pop();
-    }
+  // Strip trailing zeros after the decimal point (the fractional case always
+  // keeps at least one non-zero fractional digit, so this never bares the dot).
+  while s.ends_with('0') {
+    s.pop();
   }
   s
 }
