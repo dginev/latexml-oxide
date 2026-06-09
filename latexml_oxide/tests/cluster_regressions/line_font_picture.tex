@@ -1,0 +1,23 @@
+% LaTeX-2.09 picture-mode line drawing in plain TeX — the canvas OOM-cluster
+% reproducer (math0102053 et al., distilled). The \@whiledim loop advances by
+% \wd of an \hbox{\tenln\char...}; if the line10 fontmap is missing that width
+% is 0pt and the loop NEVER terminates (~1.9M boxes -> 4.5GB RSS; real TeX gets
+% nonzero TFM widths). The line.fontmap binding must keep these widths nonzero.
+\font\tenln=line10
+\newbox\linechar
+\newdimen\clnwd
+\newdimen\linelen
+\def\whilenoop#1{}
+\def\whiledim#1\do #2{\ifdim #1\relax#2\iwhiledim{#1\relax#2}\fi}
+\def\iwhiledim#1{\ifdim #1\let\nextwhile=\iwhiledim
+        \else\let\nextwhile=\whilenoop\fi\nextwhile{#1}}
+\setbox\linechar\hbox{\tenln \char'27}
+\ifdim\wd\linechar>0pt LINEWIDTH-OK\else LINEWIDTH-ZERO\fi
+% the witness loop shape: terminates iff \wd\linechar > 0
+\linelen=30pt
+\clnwd=\wd\linechar
+\whiledim \clnwd <\linelen \do
+  {\copy\linechar
+   \advance\clnwd \wd\linechar}%
+LOOP-DONE
+\bye

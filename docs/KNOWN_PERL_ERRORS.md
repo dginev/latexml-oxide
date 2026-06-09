@@ -1065,3 +1065,43 @@ applied to `\alignat`, `\alignat*`, `\xalignat`, `\xalignat*`,
 error-free; normal `\begin{alignat}{2}` rendering (rows/cells/eqno)
 unchanged; full Rust suite 1359/0. The Perl reference is left as-is per
 the no-modify-`LaTeXML/` rule.
+
+## Missing `line`/`lcircle` fontmaps → zero-width picture chars → `\@whiledim` infinite loop / OOM (2026-06-09)
+
+Perl LaTeXML ships **no fontmap for the LaTeX picture-mode line fonts**
+(`line10`, `linew10`, `lcircle10`, `lcirclew10`); `FontDecode` reports
+`Info:fontmap:line Couldn't find fontmap for 'line'` and drops every
+`\char` from those fonts, so an `\hbox{\@linefnt\@getlinechar(x,y)}`
+measures **0 pt wide**. LaTeX-2.09-era plain-TeX documents (arXiv
+math0102053, math0102089, math0212126, math0504436, math0506088,
+math0604321, …) inline picture mode's `\@sline`, whose drawing loop
+advances by exactly that width:
+
+```tex
+\@clnwd=\wd\@linechar
+\@whiledim \@clnwd <\@linelen \do {…\advance\@clnwd \wd\@linechar}
+```
+
+Real TeX gets nonzero widths (2.5–10 pt) from `line10.tfm` and terminates;
+Perl loops forever, accumulating boxes until OOM (observed: rc=124 after
+3 m 19 s at a 6 GB cap on math0102053). Modern `latex.ltx` even guards this
+exact hazard (`\ifdim\wd\@linechar=\z@\setbox\@linechar\hbox{.}%
+\@badlinearg\fi`), but pre-guard 2.09 macro copies bypass it, so the font
+width is the only lever that reaches them.
+
+**Minimal trigger** (Perl hangs, real TeX prints 2.5 pt):
+
+```tex
+\font\tenln=line10
+\setbox0=\hbox{\tenln \char'27}
+\message{WD=\the\wd0}
+\bye
+```
+
+**FIXED in Rust (surpasses Perl), 2026-06-09:** shipped `line.fontmap` +
+`lcircle.fontmap` bindings (`latexml_package/src/package/line_fontmap.rs`,
+`lcircle_fontmap.rs`) mapping the TFM slots to diagonal/arrow/arc/disk
+glyphs — every populated slot gets a nonzero-width glyph, so the loops
+terminate. All six witness papers now convert error-free with full-size
+documents (math0102053: 4.5 GB OOM → 3.2 s, 0 errors). No control-flow
+divergence: Perl given the same fontmap would behave identically.

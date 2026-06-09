@@ -3268,6 +3268,34 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-09): canvas_3 OOM cluster ROOT-CAUSE FIXED — missing `line`/`lcircle` fontmaps made picture chars 0pt wide → `\@whiledim` infinite loop
+
+**All 6 OOM witnesses (math0102053/0102089/0212126/0504436/0506088/0604321)
+go from `Fatal:Timeout:MemoryBudget` (4.5 GB RSS) to 0 errors + full
+documents; math0102053: 4.5 GB OOM in ~200 s → 3.2 s, 3.4 MB output.** The
+guards landed earlier today (cycle/byte/depth) remain as defense-in-depth, but
+the cluster itself is now FIXED at the root, and Rust SURPASSES Perl (which
+still OOMs — rc=124 after 3m19s at a 6 GB cap).
+
+Root cause: these LaTeX-2.09-era plain-TeX papers inline picture mode's
+`\@sline`, whose loop advances by `\wd` of an
+`\hbox{\@linefnt\@getlinechar(x,y)}` (the `line10` font). Probe ground truth:
+real TeX `\wd` = 2.5–10 pt (TFM); Rust AND Perl = **0 pt** (no `line` fontmap →
+`FontDecode` drops the char → empty box) → `\advance\@clnwd 0pt` never reaches
+`\@linelen`. Modern latex.ltx guards this exact hazard
+(`\ifdim\wd\@linechar=\z@\setbox\@linechar\hbox{.}\@badlinearg\fi` ~L13777),
+but the unguarded 2.09 copies bypass it — the FONT width is the only lever
+that reaches hand-rolled drawing code. **Fix:** ship `line.fontmap` +
+`lcircle.fontmap` bindings (`line_fontmap.rs`, `lcircle_fontmap.rs`; slot
+semantics from kernel `\@getlinechar`/`\@getlarrow` + `line10.tfm`/
+`lcircle10.tfm` inventories via `tftopl`) mapping every populated slot to a
+nonzero-width diagonal/arrow/arc/disk glyph. Upstream-Perl gap recorded in
+`KNOWN_PERL_ERRORS.md`. Regression: `tests/61_line_fontmap.rs`
+(dump-independent: asserts nonzero `\wd` + loop termination). canvas_3 sweep:
+15/16 fully clean (residual: math0402448's pre-existing phantom-fatal,
+"Conversion failed: 1 fatal error" with NO `Fatal:` line in the log — a
+log-fidelity bug to chase separately). Suite **1406/0/0**.
+
 ### Round-37 (2026-06-09): NUL default catcode must be 12 (OTHER), matching Perl — fixes `` `^^@ `` alphabetic constant; xint `\xintdeffloatfunc` residual deferred
 
 While triaging the 2111.00584 residual (`Error:expected:}` in `xinttrig.sty`

@@ -9,6 +9,16 @@ RSS cap; the 10 clean papers are unaffected — no false positives), suite 1403/
 +2 `estimate_bytes` unit tests. The "Remaining work" below is now reduced to one
 deferred, optional item (lowering the count cap).
 
+**FOLLOW-UP (same day): the witness cluster itself is now ROOT-CAUSE FIXED** —
+the runaway was LaTeX-2.09 `\@sline` advancing by the width of a `line10` char
+box that measured **0 pt** because no `line` fontmap existed (real TeX: 2.5–10 pt
+from the TFM; Perl LaTeXML has the same gap and still OOMs). Shipping
+`line.fontmap`/`lcircle.fontmap` (`line_fontmap.rs`, `lcircle_fontmap.rs`) makes
+the loops terminate: all 6 OOM witnesses → 0 errors, full documents
+(math0102053: 4.5 GB OOM → 3.2 s). See `KNOWN_PERL_ERRORS.md` (upstream gap) and
+`SYNC_STATUS.md`. The guards in this document remain as **defense-in-depth** for
+the next aperiodic heavy-box runaway of a different origin.
+
 ## The question (user)
 
 > Why do we have a cluster hitting OOM if we already guard the accumulation of
