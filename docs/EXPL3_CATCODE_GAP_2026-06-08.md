@@ -88,6 +88,45 @@ fidelity), not a loader patch. Until then, 2112.11932-class papers
 (tikz knots / spath3 / any expl3 pkg that `\RequirePackage`s xparse
 mid-body) carry the `unexpected:_` cascade.
 
+## SECOND, RELATED root: the codepoint-data block dangles a group
+
+There is a sibling expl3 gap that produces a different but co-occurring
+cascade — `Error:unexpected:} Attempt to close boxing group; current
+frame is non-boxing group due to T_CS[\group_begin:] at expl3-code; line
+33075`. Root: expl3-code.tex L33074-33245 reads `UnicodeData.txt` /
+`CaseFolding.txt` / `SpecialCasing.txt` / `GraphemeBreakProperty.txt` via
+`\ior_open` + `\ior_map_variable`, EACH inside a `\group_begin:`…
+`\group_end:`, then calls `\__codepoint_finalise_blocks:` (L33084) which
+iterates the per-block intarrays the map built. Our raw expl3 load can't
+finish the ~35k-line per-line `\__codepoint_data_auxi:w` processing, so
+the tables are (partly) empty and **`\__codepoint_finalise_blocks:`
+errors → the matching `\group_end:` (L33085) is never reached → the
+`\group_begin:` at L33075 dangles** → a downstream `}` (e.g. in babel)
+hits the boxing-group mismatch and an undefined-CS cascade. Witness
+2204.05282 (Rust 86 / Perl 0 — babel), contributes to 2203.05327.
+
+Two dead ends tried here (2026-06-08):
+- **Skip the data files in `\openin`** (exact-name match on the 4 files →
+  no mouth → `\ifeof`=true → map no-ops → reach `\group_end:`). Result:
+  big SPEEDUP (2204.05282 became 1s — these were a major slowness/timeout
+  source), but **error count UNCHANGED (86)** — `\__codepoint_finalise_blocks:`
+  still errors on the empty tables, so the group still dangles. AND it
+  **breaks glossary_test** (108-line output → 1): glossaries depends on
+  the *partially*-populated codepoint tables, so forcing them fully empty
+  regresses it.
+- (the catcode band-aids above also break glossary_test.)
+
+**Every expl3 Unicode/catcode patch tried so far breaks glossary_test.**
+The codepoint module is load-bearing (case-folding + glossary sorting),
+so it cannot simply be stubbed empty. The correct fix is to make the raw
+expl3-code.tex codepoint load actually COMPLETE (the per-line
+`\__codepoint_data_auxi:w` / `\ior_map_variable` path + the
+`\__codepoint_finalise_blocks:` intarray finalisation), which would both
+populate the tables (glossaries happy) and balance the groups (cascade
+gone) — and, by skipping nothing, keep case-folding correct. That is the
+same "complete the expl3 kernel load" effort as the `\ExplSyntaxOff` fix
+above; they should be tackled together as one focused expl3-kernel pass.
+
 ## Repro
 
 ```
