@@ -1,10 +1,13 @@
 # Memory-runaway guard hardening — root cause + WIP handoff (2026-06-09)
 
-**Status: WORK IN PROGRESS, paused at a handoff point.** The code changes
-described below are committed but INCOMPLETE (see "Remaining work"). They are
-*inert for normal documents* (the new guard only activates past 200 k unflushed
-boxes), so the suite is green (1403/0) and nothing regresses — but they do NOT
-yet achieve the goal of firing earlier than the RSS cap on the witness paper.
+**Status: RESOLVED (2026-06-09).** The byte-estimate guard now tracks true RSS
+within ~10% and `Fatal`s the witness at **1.45 M boxes / ~3.26 GB estimate
+(≈ 3.5 GB RSS) — ~1 GB BEFORE the 4.5 GB RSS cap**, portably (no `/proc`). A
+boxing-stack depth cap covers the second (deep-nesting) path. Validated: all 16
+canvas_3 papers (the 6 heavy-box runaways now abort on the byte guard, not the
+RSS cap; the 10 clean papers are unaffected — no false positives), suite 1403/0,
++2 `estimate_bytes` unit tests. The "Remaining work" below is now reduced to one
+deferred, optional item (lowering the count cap).
 
 ## The question (user)
 
@@ -82,44 +85,45 @@ heavy-box runaway.
   `STOMACH_BOX_BYTES_BUDGET` (currently 1.6 GB). Portable (no `/proc`).
 - Routed `stomach.rs:341` through the guarded `extend_box_list` (path #1 above).
 
-## Remaining work (resume here)
+## What was done (DONE — landed)
 
-**The byte estimate UNDERCOUNTS RSS by ~3.7×, so the guard does NOT yet fire
-before the RSS cap on the witness.** Measured: the block-sampled estimate is
-smooth + monotonic but plateaus at **~1.2 GB while RSS is 4.5 GB** (≈ 639 B/box
-structural vs ≈ 2.4 KB/box RSS). The missing cost is each box's `properties`
-HashMap + allocator overhead, which the structural estimate ignores.
+1. **`estimate_bytes` now counts each box's OWNED heavy data** — the `properties`
+   HashMap (`Whatsit`/`List`/`Tbox`, via `map_bytes(n) = 64 + 96n`) and the
+   `Tbox.tokens` source-TeX vector (`tokens.len() × 16`), plus nested children.
+   The estimate jumped from ~639 B/box (structural only) to **~2.25 KB/box**, vs
+   measured RSS ~2.4 KB/box — within ~10%.
+2. **`STOMACH_BOX_BYTES_BUDGET` = 3.2 GB** of estimate ≈ 3.4–3.5 GB RSS, ~1 GB
+   under the 4.5 GB RSS cap. The block-sampled estimate is smooth + monotonic;
+   the witness `Fatal`s at 1.45 M boxes / 3.26 GB estimate.
+3. **Boxing-stack depth cap** (`STOMACH_BOXING_DEPTH_CAP = 100_000`) in
+   `new_local_box_list` — O(1), covers the deep-`\hbox`/`\setbox`-nesting path
+   where the per-level `box_list` stays small and evades the byte guard. No real
+   document nests boxes anywhere near 100 k deep (math0102053 sits at 13).
+4. **`stomach.rs:341` routed through the guarded `extend_box_list`** — closed the
+   group-flush bypass.
+5. Validated (see Status above): canvas_3 16/16 as expected, suite 1403/0, +2
+   `estimate_bytes` unit tests in digested.rs.
 
-1. **Make `estimate_bytes` count the `properties` HashMap** of `Whatsit`
-   (`whatsit.rs:30 properties: HashMap<Stored>`) and `List` (`list.rs:24
-   properties: HashMap<Stored>`) — roughly `entries × (48 + value_size)`. This
-   should lift the estimate toward ~2–3 GB at 1.87 M boxes, close enough to RSS
-   that a budget BELOW the 4.5 GB cap fires first. Also consider a flat
-   allocator-overhead multiplier (RSS/est ≈ 2–4×) instead of perfect accounting.
-2. **Recalibrate `STOMACH_BOX_BYTES_BUDGET`** once the estimate tracks RSS, so it
-   `Fatal`s at ~3.5–4 GB-equivalent (before the 4.5 GB RSS cap) WITHOUT
-   false-positives on legitimate large figures.
-3. **Guard the `localized_box_list` (boxing stack)** — path #2. Either sum its
-   byte estimate into the check, or cap the boxing-stack depth / total box count.
-   A loop building 1.87 M-deep nested boxes is never legitimate; a depth/total
-   cap is a clean portable signal.
-4. **Reconsider lowering `STOMACH_BOX_HARD_CAP`** (2 M → ~1.5 M) as a *portable*
-   early signal (the RSS cap is Linux-only). RISK: a legitimate huge tikz/pgfplots
-   figure could hold 1.5–2 M boxes (~3.6–4.8 GB) and complete under the RSS cap;
-   lowering would kill it. Cannot assess without canvas source (the 551 k corpus
-   at `~/data/large_scale_canvas_3_third` is output-only — see
-   [[project_large_scale_corpus_location]]). Defer until testable, or keep 2 M.
-5. **Validate**: once the estimate is fixed, confirm the byte guard fires on
-   math0102053 BEFORE the RSS cap (target ~3.5 GB), and run the full suite +ideally
-   a canvas sample to confirm no legitimate large document is newly killed.
-6. **Add unit tests** for `estimate_bytes` (monotonicity, bounded cost) mirroring
-   the `cycle_fingerprint` tests in digested.rs.
+## Remaining work (deferred, optional)
+
+- **Reconsider lowering `STOMACH_BOX_HARD_CAP`** (2 M → ~1.5 M) as a *portable
+   count* signal complementary to the byte budget. RISK: a legitimate huge
+   tikz/pgfplots figure could hold 1.5–2 M boxes (~3.6–4.8 GB) and complete under
+   the RSS cap; lowering would kill it. Cannot assess the false-positive rate
+   without canvas source (the 551 k corpus at
+   `~/data/large_scale_canvas_3_third` is output-only — see
+   [[project_large_scale_corpus_location]]). Kept at 2 M for now; the byte budget
+   (3.2 GB) already fires first for heavy boxes, so this is low-priority.
+- **Validate on a broader corpus** when the `data/arxmliv` source tree is
+   mounted, to confirm no legitimate large document lands in the new 3.4–4.5 GB
+   kill band.
 
 ## Files touched
 
-- `latexml_core/src/digested.rs` — `estimate_bytes()` + `EB_BUDGET`.
-- `latexml_core/src/stomach.rs` — byte-budget guard + sampling helper +
-  constants; `:341` routed through `extend_box_list`; membudget debug prints the
-  estimate.
+- `latexml_core/src/digested.rs` — `estimate_bytes()` (+ `EB_BUDGET`), now counts
+  `properties`/`tokens`; +2 unit tests.
+- `latexml_core/src/stomach.rs` — byte-budget guard + block-sampling helper +
+  constants; `STOMACH_BOXING_DEPTH_CAP` in `new_local_box_list`; `:341` routed
+  through `extend_box_list`; membudget debug prints the estimate.
 
-Suite: **1403/0/0** (guards inert for normal docs). Not pushed.
+Suite: **1403/0/0**. Not pushed.

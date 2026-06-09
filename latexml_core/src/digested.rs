@@ -573,15 +573,31 @@ impl Digested {
     // Per-node fixed overhead: the `Rc<DigestedData>` control block + the
     // enum discriminant + the inner `RefCell`/`Box`. Deliberately coarse.
     const NODE: usize = 64;
-    // Note: text is interned (`SymbolU32`, shared across boxes), so it adds no
-    // marginal per-box bytes — the cost that actually accumulates is the
-    // STRUCTURE (the `Rc`/`RefCell`/`Vec`/`HashMap` of each box and its nested
-    // children), which is exactly what makes a deeply nested box "heavy".
+    // Note: text and the `Rc<Font>` are shared (interned / ref-counted), so they
+    // add no marginal per-box bytes. What DOES accumulate per box and dominates
+    // RSS is each box's OWNED data: the `properties` HashMap, the `tokens`
+    // source-TeX vector (`Tbox`), the args/children vectors, and — crucially —
+    // the nested children themselves.
+    //
+    // `map_bytes`: a `SymHashMap` (hashbrown) allocates a control-byte table +
+    // key/value slots at ~7/8 load; ~96 B per live entry plus the base table
+    // covers control bytes, the `Stored` value enum, and growth slack.
+    fn map_bytes(n: usize) -> usize {
+      if n == 0 { 0 } else { 64 + n * 96 }
+    }
     match self.data() {
-      DigestedData::TBox(_) => NODE + 48,
+      DigestedData::TBox(b) => {
+        let mut bytes = NODE + 48;
+        if let Ok(tb) = b.try_borrow() {
+          bytes += map_bytes(tb.properties.len());
+          bytes += tb.tokens.len() * 16; // owned source-TeX tokens
+        }
+        bytes
+      },
       DigestedData::Whatsit(w) => {
-        let mut bytes = NODE + 96;
+        let mut bytes = NODE + 64;
         if let Ok(wb) = w.try_borrow() {
+          bytes += map_bytes(wb.properties.len());
           bytes += wb.args.len() * 16;
           for arg in &wb.args {
             if *budget == 0 {
@@ -597,6 +613,7 @@ impl Digested {
       DigestedData::List(l) => {
         let mut bytes = NODE + 48;
         if let Ok(lb) = l.try_borrow() {
+          bytes += map_bytes(lb.properties.len());
           bytes += lb.boxes.len() * 8;
           for child in &lb.boxes {
             if *budget == 0 {
@@ -886,5 +903,41 @@ mod tests {
     }
     let _ = deep.cycle_fingerprint(); // must not hang / overflow
     assert_ne!(deep.cycle_fingerprint(), tbox_with("z").cycle_fingerprint());
+  }
+
+  #[test]
+  fn estimate_bytes_is_positive_and_nesting_increases_it() {
+    // Every box has some positive footprint.
+    assert!(tbox_with("a").estimate_bytes() > 0);
+    // A list of N boxes weighs more than a single box (the children count).
+    let one = list_of(vec![tbox_with("a")]);
+    let many = list_of(vec![
+      tbox_with("a"),
+      tbox_with("b"),
+      tbox_with("c"),
+      tbox_with("d"),
+    ]);
+    assert!(
+      many.estimate_bytes() > one.estimate_bytes(),
+      "a wider list must estimate heavier than a narrow one"
+    );
+  }
+
+  #[test]
+  fn estimate_bytes_is_cost_bounded_for_deep_nests() {
+    // A pathologically deep nest must terminate (EB_BUDGET) without hanging /
+    // overflowing, and still return a finite positive estimate.
+    let mut deep = tbox_with("z");
+    for _ in 0..100_000 {
+      deep = list_of(vec![deep]);
+    }
+    let est = deep.estimate_bytes();
+    assert!(est > 0);
+    // Budget-bounded: the walk visits at most EB_BUDGET nodes, so a 100k-deep
+    // nest cannot estimate more than roughly EB_BUDGET node-overheads.
+    assert!(
+      est < (EB_BUDGET as usize) * 4096,
+      "estimate must stay bounded regardless of nest depth (got {est})"
+    );
   }
 }

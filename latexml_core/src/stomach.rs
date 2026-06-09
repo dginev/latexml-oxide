@@ -882,9 +882,32 @@ pub fn repack_horizontal() {
 pub fn new_local_box_list() {
   let mut buffer = Vec::new();
   let mut stomach = stomach_mut!();
+  // Guard the OTHER aberrant accumulation path: the boxing stack. When a loop
+  // builds *inside* boxes (`\setbox`/`\hbox`), each nesting suspends the partial
+  // outer list here and opens a fresh `box_list`; an unbounded `\hbox{\hbox{…}}`
+  // nest grows this stack without ever touching the byte/cycle guards on the
+  // (small, innermost) `box_list`. A depth cap is O(1) and safe — no real
+  // document nests boxes anywhere near this deep (typical depth is tens; the
+  // math0102053 line-drawing loop sits at 13). Platform-independent, fires long
+  // before any RSS/OOM ceiling.
+  if stomach.localized_box_list.len() > STOMACH_BOXING_DEPTH_CAP
+    && stomach.pending_cycle_fatal.is_none()
+  {
+    stomach.pending_cycle_fatal = Some(s!(
+      "Boxing-stack runaway: box nesting depth exceeded {} \
+       (unbounded \\hbox/\\setbox nesting)",
+      STOMACH_BOXING_DEPTH_CAP
+    ));
+  }
   std::mem::swap(&mut stomach.box_list, &mut buffer);
   stomach.localized_box_list.push(buffer);
 }
+
+/// Hard cap on box-nesting depth (the `localized_box_list` boxing stack). No
+/// real document nests `\hbox`/`\setbox` more than tens deep; a runaway nest
+/// grows this without bound while the per-level `box_list` stays small, evading
+/// the byte/cycle guards. Platform-independent.
+const STOMACH_BOXING_DEPTH_CAP: usize = 100_000;
 pub fn expire_local_box_list() -> Vec<Digested> {
   let mut stomach = stomach_mut!();
   let mut buffer = stomach.localized_box_list.pop().unwrap_or_default();
@@ -962,18 +985,20 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
 /// accumulation. 40× [`STOMACH_CYCLE_ACTIVATE`].
 const STOMACH_BOX_HARD_CAP: usize = 2_000_000;
 
-/// Portable byte-budget for the accumulated `box_list`. The estimate is a
-/// deliberate *lower bound* — it counts the `Rc`/`RefCell`/`Vec` structure but
-/// not the interned text (shared) nor the per-`Whatsit` `properties` HashMap /
-/// allocator overhead, so it runs ~2.3× under true RSS (calibrated on
-/// math0102053: ~1.94 GB estimate at 4.5 GB RSS). 1.8 GB of *estimate* therefore
-/// corresponds to ~4 GB of RSS — just under the Linux 4.5 GB cap, so on Linux it
-/// `Fatal`s slightly earlier, and on macOS/Windows (where the `/proc` RSS check
-/// is inactive) it is the ONLY memory guard for a heavy-box runaway. A real,
-/// continuously-flushed document never accumulates anywhere near this, so the
-/// guard is inert for normal conversions. The 2 M count cap above remains the
-/// backstop for very-light-box runaways.
-const STOMACH_BOX_BYTES_BUDGET: usize = 1_600_000_000;
+/// Portable byte-budget for the accumulated `box_list`. `estimate_bytes` now
+/// counts each box's OWNED heavy data (the `properties` HashMap, the `Tbox`
+/// `tokens` source-TeX vector, args/children vectors + nested children), so the
+/// estimate tracks true RSS within ~10% (calibrated on math0102053: ~2.25 KB
+/// estimate per box vs ~2.4 KB RSS per box). At 3.2 GB of estimate the box list
+/// is ~1.4 M boxes ≈ ~3.4 GB RSS — about 1 GB UNDER the Linux 4.5 GB RSS cap, so
+/// on Linux the internal estimate `Fatal`s ~1 GB earlier, and on macOS/Windows
+/// (where the `/proc` RSS check is inactive) it is the ONLY memory guard for a
+/// heavy-box runaway. A continuously-flushed document never accumulates a
+/// multi-GB box list, so the guard is inert for normal conversions; the band of
+/// documents this newly affects is the narrow 3.4–4.5 GB extreme that the RSS
+/// cap barely admitted anyway. The 2 M count cap above remains the backstop for
+/// very-light-box runaways.
+const STOMACH_BOX_BYTES_BUDGET: usize = 3_200_000_000;
 /// Don't bother byte-sampling until the list is already well past the cycle
 /// activation size (a normal list never gets here).
 const BYTE_CHECK_ACTIVATE: usize = 200_000;
