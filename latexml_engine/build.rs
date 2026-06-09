@@ -59,6 +59,13 @@ fn main() {
   // OUT_DIR, recording (year, plain_path, latex_path, stamp_path) tuples
   // in a manifest. The manifest is `include!`d by `embedded_dumps.rs` which
   // turns each file into an `include_str!`.
+  //
+  // Track the dumps DIRECTORY itself, not just the files found in it: a fresh
+  // checkout builds dumpless (no resources/dumps/ yet), and without this
+  // directive a later `tools/make_formats.sh` would never trigger a re-embed —
+  // every test binary would silently stay dumpless. (Per-file directives below
+  // cover content changes; this one covers files appearing/disappearing.)
+  println!("cargo:rerun-if-changed={}", dumps_dir.display());
   let mut manifest_entries: Vec<(u32, String, String, String)> = Vec::new();
   if let Ok(entries) = std::fs::read_dir(&dumps_dir) {
     let mut years: std::collections::BTreeSet<u32> = std::collections::BTreeSet::new();
