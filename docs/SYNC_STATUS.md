@@ -131,6 +131,19 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ VALIDATION — the 16 canvas_3 FATAL/OOM papers are now ALL graceful (2026-06-09).**
+> Re-ran `~/data/canvas_3_failures_sandbox` (16 old gr-qc/hep/math papers that
+> previously crashed/OOM'd) through the current binary (dump + cycle guards +
+> RSS cap): **every one exits rc=0** — 9 convert cleanly, 1 with errors, 2 caught
+> by the GULLET cycle guard (`Fatal:Timeout:Recursion` — real infinite
+> expansions in the wild), 4 by the RSS soft cap (`MemoryBudget`, ~4.3 GB box
+> accumulation, aperiodic so the cycle guard's ≤10 window doesn't apply). The 6
+> guarded/capped ones are **SHARED infinite loops** — Perl *hangs* on them
+> (rc=124 timeout, stuck in `\@iwhile` / Stomach `\let`), so Rust now strictly
+> **beats Perl** here (graceful Fatal in ~7-10 s vs Perl's 150 s+ hang). The
+> layered defense (cycle guard for small-period, RSS cap for aperiodic/large-
+> period, wall-clock for do_expand recursion) is doing exactly its job.
+>
 > **✅ OOM HARDENING — windowed cycle-detection guards (2026-06-09, `7190b48b8e`).**
 > New `cycle_guard::CycleGuard`: records a u64-fingerprint stream in a ring
 > buffer and (throttled) flags a window of W∈1..=10 items repeated ≥100× (phase
