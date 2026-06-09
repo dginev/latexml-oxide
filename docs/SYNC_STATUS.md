@@ -131,6 +131,37 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ /loop SESSION: 10 clean Rust-only fixes + re-quantified gap landscape (2026-06-09).**
+> Eleven suite-green (1390/0), Perl-faithful fixes landed across three mined veins, each
+> root-caused via minimal `.tex` repro + Rust-vs-Perl `\ifdefined`/`\detokenize` probe:
+> - **expl3-mode `~`-catcode leaks** (siunitx `dd3cbe405b`, expl3-level `36bf1f2174`): an expl3
+>   package's load left `~` at catcode 10 (SPACE) → a LATER `\usepackage[english]{babel}`
+>   `\initiate@active@char{~}` cascaded `expected:<relationaltoken>`. Restore `~`→ACTIVE
+>   (glossary-safe; `~` isn't an expl3 LETTER char). 2204.05282 86→0.
+> - **missing standard kernel/file-hook macros** (`\two@digits` `13cd01eb52`, `\n@space`
+>   `a80da1fd3e`, `\@removeelement` `e047321dc1`, `\@ehd` `ef975450f1`, `\leavevmode@ifvmode`
+>   `a68dbecaf3`, `\@starttoc` `146c2c81a4`, `\CurrentFile`-set `fff1009836`): faithful literal
+>   ports of latex.ltx/fontmath.ltx defs Rust lacked. A `\ifdefined` batch-probe Rust-vs-Perl
+>   audited the kernel; it is now near-complete (residual UNDEFs like `\big@size` are SHARED).
+> - **content-model build-leniency** (`478730bc28`): `\paragraph{Keywords.}`/`{MSC.}` inside an
+>   abstract → `<ltx:paragraph>` in `<ltx:abstract>`; Perl inserts it without erroring (out-strict
+>   gap). Extended the math-leaf cascade-suppression to sectioning-unit-in-frontmatter. 2311.06870 2→0.
+>
+> **Re-sweep after the fixes (125 error-bearing witnesses, Rust release `--timeout 120` vs the
+> unchanged Perl baselines):** 19 positive-delta papers, **total excess 1178, of which ~1123
+> (95%) is the single expl3 catcode/`\@popfilename`-restore cluster** (2112.11932 +998,
+> 2110.10227 +55, 2204.03209 +37, 2112.09098 +22, 2110.12034 +11). Confirmed `\ExplSyntaxOn`/
+> `\ExplSyntaxOff` are the SAME real expl3 macros in both engines (both restore via
+> `\char_value_catcode:n`); the leak is the file-boundary `\@popfilename` expl-status restore,
+> which every band-aid (broad input_definitions `_`/`:` restore, xparse caller-restore) breaks
+> glossary_test or 2203.05327's expl3-code cross-boundary `\group_end:` — see
+> `docs/EXPL3_CATCODE_GAP_2026-06-08.md`. The remaining ~55 non-expl3 excess is a sparse tail of
+> DEEP/delicate single papers (pgfplots symbolic coords, tabularht `\@array` alignment-model,
+> deluxetable, siamart eager-xcolor, xy.tex `\xywithoption`, theorem `example`-env mode,
+> version-specific expl3 `\l__text_case_exclude_arg_tl`). **Strategic conclusion unchanged: the
+> clean/safe vein is mined; the dominant remaining lever is one focused, glossary-safe
+> `\@popfilename`/`\ExplSyntaxOff` expl-status-restore effort.**
+
 > **✅ FRESH-CORPUS DELTA SWEEP + 2 loader fixes (2026-06-08).** Re-confirmed the PARITY
 > conclusion on an independent corpus: the 160 `next_warning_papers` witnesses, Rust-vs-Perl
 > delta (`latexml_oxide` vs `latexml`, both `--path=ar5iv-bindings --preload=ar5iv.sty`,
