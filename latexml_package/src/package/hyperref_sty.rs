@@ -322,9 +322,25 @@ LoadDefinitions!({
   // # Additional User Macros
 
   // \href{url}{text}
+  //
+  // `protected => true`: in real hyperref `\href` is a *robust* command
+  // (`\DeclareRobustCommand`/`\protected`), so an `\edef`/`\xdef` over it
+  // leaves the literal `\href{url}{text}` in the macro body rather than
+  // expanding it. LaTeXML's expansion re-emits `\href` itself (for the
+  // `\lx@hyper@url@` reversion `#1`), so WITHOUT the protected flag a
+  // partial-expansion context re-expands that re-emitted `\href` forever:
+  // `\href` → `\lx@hyper@url@\href{}{}…` → (constructor kept) → `\href` →
+  // … an unbounded expansion loop. Perl LaTeXML omits the flag and so
+  // *hangs* on `\xdef\x{\href{u}{t}}` (rc=124); marking it protected is
+  // both faithful to real-TeX robustness and fixes the loop. At top-level
+  // digestion `fully_expand` is true, so normal `\href{…}{…}` still
+  // expands exactly as before — only edef-family contexts defer it.
+  // Witness 2110.10227 (ems-journal.sty `\Emsaffil`→`\build@ffil`'s
+  // `\xdef\ems@temp{…\href{mailto:…}{\mbox{…}}…}`).
   DefMacro!(
     "\\href HyperVerbatim {}",
-    "\\lx@hyper@url@\\href{}{}{#1}{#2}"
+    "\\lx@hyper@url@\\href{}{}{#1}{#2}",
+    protected => true
   );
 
   // \XeTeXLinkBox{content} — hyperref.sty L4915/4947 wraps content in

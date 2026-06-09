@@ -3268,6 +3268,44 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-09): 2110.10227 FIXED — `\href` must be `protected` (robust) so `\edef`/`\xdef` don't infinite-loop; + babel-french `\ifFB@mainlanguage@FR`
+
+**2110.10227 (`article` + shipped `ems-journal.sty`, `[american,british,french]{babel}`):
+93 stale errors (pre-dump artifact) → after the kernel dump, 2 fatals + 1 undefined → 0
+errors, full 3.3 MB doc (Perl: rc=0 but 20 errors + degraded author block — we now SURPASS
+Perl).** Two independent Rust-only gaps, both root-caused via minimal repros:
+
+1. **`\href` infinite-loop in `\edef`/`\xdef` (the fatal).** `ems-journal.sty`'s `\Emsaffil`
+   → `\build@ffil` does `\xdef\ems@temp{… \href{mailto:…}{\mbox{…}} …}`. LaTeXML defines
+   `\href` as an *expandable* `DefMacro` whose body re-emits `\href` (for the
+   `\lx@hyper@url@` constructor's reversion arg `#1`). Under partial expansion (`\edef`)
+   the constructor is left untouched and the re-emitted `\href` is expanded *again* →
+   unbounded `\href`→`\lx@hyper@url@\href{}{}…`→`\href`→… loop (caught by the gullet/stomach
+   cycle guards as `Fatal:Timeout:PushbackLimit` + `Fatal:Stomach:Recursion`, ~528 MB).
+   **Perl LaTeXML hangs on the same isolated `\xdef\x{\href{u}{t}}` (rc=124)** — it only
+   dodges the paper because, lacking an `ems-journal` binding, it *dependency-scans* the
+   class without executing its body (so `\build@ffil`/`\href` never run). We raw-load the
+   body (INCLUDE_STYLES=true, ar5iv). **Fix:** `DefMacro!("\\href HyperVerbatim {}", …,
+   protected => true)` — in real hyperref `\href` is `\DeclareRobustCommand`/`\protected`,
+   so `\edef` leaves the literal `\href{…}{…}` in the body. At top-level digestion
+   `fully_expand` is true so protected macros still expand → normal `\href` unchanged.
+   Faithful to real-TeX *and* a surpass-Perl robustness win. Only `\href` has the looping
+   self-reemission (`\url`/`\nolinkurl`/`\hyperref`/`\hyperlink` verified clean in `\edef`).
+   Regression: `latexml_oxide/tests/58_href_edef_loop.rs` (dump-independent).
+
+2. **`\ifFB@mainlanguage@FR` undefined (the error).** `ems-journal.sty` L605 probes
+   `\ifFB@mainlanguage@FR \frenchsetup{…} \fi` directly in its preamble. The real
+   `french.ldf` declares it (`\newif`, L1171) and resolves it at `\AtEndOfPackage` from
+   `\bbl@main@language`; Perl's `french.ldf.ltxml` gets it for free via
+   `InputDefinitions('french', noltxml=>1)` (raw-loads the real `.ldf`). Our curated
+   `french_ldf.rs` skips that raw-load, so the bare `\if` was undefined → spurious
+   `Error:undefined` + mis-nested `\fi`. **Fix:** port french.ldf L1169-1175 verbatim into
+   `french_ldf.rs` (`\def\FB@french{french}\def\FB@acadian{acadian}\newif\ifFB@mainlanguage@FR`
+   + the `\AtEndOfPackage` main-language detection). The layout body it gates is French
+   typesetting nuance already no-op'd by `\FrenchLayout`/`\FrenchLists`.
+
+Suite stays **1400/0/0**.
+
 ### Round-37 (2026-05-31): 1907.05772 FIXED — mdframed must be `inline-logical-block` (Misc.class), not `logical-block` (Para.class), to sit in a `float`
 
 **1907.05772 (article, `mdframed` inside `\begin{algorithm}`) 3→0 errors.** Found by the
