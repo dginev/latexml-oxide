@@ -3363,4 +3363,19 @@ LoadDefinitions!({
   DefMacro!("\\tothe{}", "\\textsuperscript{#1}");
   DefMacro!("\\raiseto{}", "\\textsuperscript{#1}");
   DefMacro!("\\per", "/");
+
+  // Restore `~` to its normal ACTIVE (13) catcode after the expl3-backed
+  // load. siunitx is an expl3 package; `\RequirePackage{expl3}` (above) plus
+  // the `\ExplSyntaxOn` regime in our RawTeX blocks leave `~` at catcode 10
+  // (SPACE), because Rust's `\ExplSyntaxOff` does not fully restore it (the
+  // known partial-expl3-kernel gap). Real siunitx's `\ExplSyntaxOff` puts
+  // `~` back to ACTIVE; xparse_sty.rs already does this same restore for its
+  // own load. Without it, a LATER `\usepackage[english]{babel}` runs
+  // `\initiate@active@char{~}` with `~` at catcode 10 → an
+  // `expected:<relationaltoken>` cascade (Rust 86 / Perl 0 on 2204.05282;
+  // minimal repro: `\usepackage{siunitx}\usepackage[english]{babel}`). Order-
+  // sensitive: babel-before-siunitx was already fine. `~` is not part of the
+  // expl3 LETTER set (unlike `_`/`:`), so this restore does not touch the
+  // glossary-sensitive codepoint path.
+  state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
 });
