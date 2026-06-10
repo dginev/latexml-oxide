@@ -4,6 +4,16 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // lipics-v2021.cls L193/L1015-1016: the `thm-restate` documentclass OPTION
+  // (`\DeclareOption{thm-restate}{\let\usethmrestate\relax}` →
+  // `\ifx\usethmrestate\relax\RequirePackage{thm-restate}\fi`) loads
+  // thm-restate, providing the `restatable` environment. Perl raw-loads the
+  // real cls so the option is honored; our OmniBus stub doesn't process class
+  // options, so `{restatable}` was undefined (Perl defines it). thm-restate's
+  // `restatable` is self-contained and harmless when unused, so load it
+  // unconditionally here. Witness 2211.04601
+  // (`\documentclass[...,thm-restate]{lipics-v2021}`).
+  RequirePackage!("thm-restate");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   RequirePackage!("amssymb");
@@ -17,6 +27,12 @@ LoadDefinitions!({
 
   // LIPIcs frontmatter — preserve author content as ltx:note
   // frontmatter entries with role markers.
+  // lipics-v2021.cls L919: \newcommand{\relatedversiondetails}[3][]{...\textit{#2}:
+  // \href{#3}{...}...} — a "Related Version" line (type + URL, with optional
+  // linktext=/cite= keyval). Was undefined (Perl defines it). Preserve the core
+  // (type + linked URL); the optional keyval is dropped. Witness 2311.17226.
+  DefMacro!("\\relatedversiondetails[]{}{}",
+    "\\@add@frontmatter{ltx:note}[role=related-version]{\\textit{#2}: \\href{#3}{#3}}");
   DefMacro!("\\Copyright{}",
     "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
   def_macro_noop("\\CopyrightDetails")?;

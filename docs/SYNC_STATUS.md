@@ -131,6 +131,287 @@
 > It REFUSES to run while the canvas orchestration is active (guard verified). Run it on the idle
 > machine after stage 100 completes; the RUST-ONLY rows are the definitive remaining worklist.
 
+> **✅ VALIDATION — the 16 canvas_3 FATAL/OOM papers are now ALL graceful (2026-06-09).**
+> Re-ran `~/data/canvas_3_failures_sandbox` (16 old gr-qc/hep/math papers that
+> previously crashed/OOM'd) through the current binary (dump + cycle guards +
+> RSS cap): **every one exits rc=0** — 9 convert cleanly, 1 with errors, 2 caught
+> by the GULLET cycle guard (`Fatal:Timeout:Recursion` — real infinite
+> expansions in the wild), 4 by the RSS soft cap (`MemoryBudget`, ~4.3 GB box
+> accumulation, aperiodic so the cycle guard's ≤10 window doesn't apply). The 6
+> guarded/capped ones are **SHARED infinite loops** — Perl *hangs* on them
+> (rc=124 timeout, stuck in `\@iwhile` / Stomach `\let`), so Rust now strictly
+> **beats Perl** here (graceful Fatal in ~7-10 s vs Perl's 150 s+ hang). The
+> layered defense (cycle guard for small-period, RSS cap for aperiodic/large-
+> period, wall-clock for do_expand recursion) is doing exactly its job.
+>
+> **✅ OOM HARDENING — windowed cycle-detection guards (2026-06-09, `7190b48b8e`).**
+> New `cycle_guard::CycleGuard`: records a u64-fingerprint stream in a ring
+> buffer and (throttled) flags a window of W∈1..=10 items repeated ≥100× (phase
+> independent). Two layered instances complement the coarse 100M-token limit /
+> 4.5 GB RSS soft cap / wall-clock timeout:
+> - **Gullet** over the read-token stream (engaged >12M tokens): catches
+>   read-churn loops (`\def\x{\advance\c1 \x}\x` → Fatal:Timeout:Recursion).
+> - **Stomach** over the digest-push stream (engaged once box_list >50k):
+>   catches box-accumulation loops that bypass the gullet read loop — incl.
+>   **2201.09268** (pgf `to [loop]` arc on a pathological tikzpicture): was
+>   **OOM 4.5 GB / 31 s**, now a clean **Fatal:Stomach:Recursion at 526 MB /
+>   2.5 s** (period-2 box cycle). Box-memory note: ~626 B per lightweight
+>   Digested ⇒ ~7M boxes under the 4.5 GB cap; the 50k stomach activation is
+>   ~30 MB (<1% of the ceiling). 7 unit tests + suite 1398/0 (no false
+>   positives). **Root cause now nailed (`PGF_ARC_BISECTION_2201.09268_2026-06-09.md`):**
+>   pgf's `\pgfmathpointintersectionoflineandarc` (curved-node-boundary
+>   intersection) runs an UNBOUNDED bisection whose only exit is the exact
+>   `\ifdim\x pt=\q pt`; a rare last-digit (1e-5) drift in the composed
+>   `\pgfmathanglebetweenpoints` makes that exact match miss in Rust (every
+>   isolated op — sin/cos/atan2/dimen×factor/sys@tonumber/divide/rad2deg —
+>   matches Perl bit-for-bit; only the full chain drifts). Landed one related
+>   faithfulness fix (`02a5b2103f`: `@`-internal pgfmath functions return raw
+>   integers, no spurious `.0`, matching Perl). The bit-exact-trig fix is
+>   deferred as deep/high-risk for one paper while the guard holds. Raising the
+>   RSS cap to 10 GB was considered and rejected: it's an unbounded runaway
+>   (hard-OOMs at 6.3 GB), so a higher cap removes the protective soft fuse.
+>
+> **✅ CORRECTED GAP LANDSCAPE + pgfplots units-flag fix (2026-06-09, with dump).**
+> Re-quantified Rust(release+**dump**)-vs-Perl over 50 `next_warning_papers`
+> witnesses (ANSI-stripped `^(Error|Fatal):`): **28 Rust-better, 19 equal, only 3
+> Rust-only positive-delta** (vs the old dumpless "1178 excess"): 2203.05327 (+341 —
+> the expl3-code L33075 codepoint dangling-group "second root", deep/separate),
+> 2110.14597 (+12 — **FIXED below**), 2201.09268 (+1). Excluding the 2203 codepoint
+> root the whole Rust-only excess was **13 errors**.
+> - **`00ef6f8689` pgfmath units-flag through user-function eval** (2110.14597 12→0):
+>   pgfplots `symbolic x coords` + `bar shift={...\pgfplotbarwidth}` emitted
+>   `\pgfplots@loc@TMPa has not been defined`. `\pgfplotbarwidth` →
+>   `pgfplotsbarwidthgeneric` (a 0-arg pgfmath pseudo-constant whose body parses
+>   `<bar width>pt`); the native parser digested that body (nested `\pgfmathparse`
+>   set the global `\ifpgfmathunitsdeclared`) but never read it back, so the outer
+>   parse clobbered it false → `\pgfplots@bar@mathparse@` mis-routed the unitless
+>   shift through the symbolic x-coord trafo. Direct probe nailed it:
+>   `\pgfmathparse{\pgfplotbarwidth}` = 10.0/units=NOT (Rust) vs 10.0/units=DECL
+>   (Perl). Fix: reset the flag before each function-body digest + `absorb_units_flag`
+>   after at the 3 call sites (`pgfmath_apply_user` / `parse_function_call`). Same
+>   family as the `try_cs_register` register-units fix. RED/GREEN TDD test
+>   `tests/57_pgfplots_units.rs` (gated on dump + pgf.sty). Suite 1391/0.
+>
+> **🔑 MAJOR CORRECTION (2026-06-09, deep dive): the "expl3 catcode cluster" was a
+> MISSING-KERNEL-DUMP measurement artifact, NOT a Rust parity gap.** The dominant
+> ~1100-error cluster claimed in the entries below (2112.11932 +998, 2110.10227 +55,
+> 2112.09098 +22, 2110.12034 +11, etc.) was produced by measuring with an **empty
+> `resources/dumps/`**. With no dump, the `LoadFormat` else-branch (`latex.rs` / `tex.rs`)
+> silently raw-loads `latex.ltx` + `expl3-code.tex`, which hits two raw-load-ONLY cascades
+> the dump avoids: (1) the `expl3-code.tex` L33075 codepoint **dangling group**
+> (`\__codepoint_finalise_blocks:`/intarray over real `UnicodeData.txt` rows), and (2) the
+> `\@expl@pop@filename@@` **expl-status desync** (the local tl-var `\l__expl_status_stack_tl`
+> push is reverted across the binding+raw double-load `\RequirePackage{xparse}` → nested
+> `\RequirePackage{xparse-2018-04-12}`, so every `\@popfilename` flips `\ExplSyntaxOff`).
+> **Proof:** `tools/make_formats.sh` (build the dump) takes 2112.11932 1003→**1**, 2110.10227
+> 102→**4**, 2112.05805 1004→**71**, 2203.05327 1004→**443** — with **zero code change**.
+> `dump+nofix == dump+fix` on every tested paper; the candidate `\@popfilename` expl-status
+> restore (deeply investigated this session, Perl-faithful, suite-green) is a **no-op when the
+> dump is present**, so it was NOT landed. **The dump is a required kernel piece for canvas /
+> Rust-vs-Perl parity work (user-confirmed). ALWAYS run `tools/make_formats.sh` after checkout
+> / TL upgrade / before any measurement; the release binary embeds dumps at build time, so
+> build it AFTER the dumps exist.** A loud one-shot stderr banner now fires when no dump is
+> found (`dump_paths::warn_degraded_no_dump`, called from both `LoadFormat` else-branches; NOT
+> an `Error:`/`Fatal:` so it can't corrupt canvas counts; silenced by `LATEXML_NODUMP=1`).
+> **Action: treat the gap analysis in the two entries immediately below as MEASURED WITHOUT THE
+> DUMP and therefore inflated — re-quantify with the dump built.** `EXPL3_CATCODE_GAP_2026-06-08.md`
+> describes the raw-load symptom, not a production gap. Smaller real (dump-present) residuals
+> remain (2203.05327 443 vs Perl 102; 2112.05805 71) — separate roots, triage independently.
+>
+> **✅ /loop SESSION: 10 clean Rust-only fixes + re-quantified gap landscape (2026-06-09).**
+> Eleven suite-green (1390/0), Perl-faithful fixes landed across three mined veins, each
+> root-caused via minimal `.tex` repro + Rust-vs-Perl `\ifdefined`/`\detokenize` probe:
+> - **expl3-mode `~`-catcode leaks** (siunitx `dd3cbe405b`, expl3-level `36bf1f2174`): an expl3
+>   package's load left `~` at catcode 10 (SPACE) → a LATER `\usepackage[english]{babel}`
+>   `\initiate@active@char{~}` cascaded `expected:<relationaltoken>`. Restore `~`→ACTIVE
+>   (glossary-safe; `~` isn't an expl3 LETTER char). 2204.05282 86→0.
+> - **missing standard kernel/file-hook macros** (`\two@digits` `13cd01eb52`, `\n@space`
+>   `a80da1fd3e`, `\@removeelement` `e047321dc1`, `\@ehd` `ef975450f1`, `\leavevmode@ifvmode`
+>   `a68dbecaf3`, `\@starttoc` `146c2c81a4`, `\CurrentFile`-set `fff1009836`): faithful literal
+>   ports of latex.ltx/fontmath.ltx defs Rust lacked. A `\ifdefined` batch-probe Rust-vs-Perl
+>   audited the kernel; it is now near-complete (residual UNDEFs like `\big@size` are SHARED).
+> - **content-model build-leniency** (`478730bc28`): `\paragraph{Keywords.}`/`{MSC.}` inside an
+>   abstract → `<ltx:paragraph>` in `<ltx:abstract>`; Perl inserts it without erroring (out-strict
+>   gap). Extended the math-leaf cascade-suppression to sectioning-unit-in-frontmatter. 2311.06870 2→0.
+>
+> **Re-sweep after the fixes (125 error-bearing witnesses, Rust release `--timeout 120` vs the
+> unchanged Perl baselines):** 19 positive-delta papers, **total excess 1178, of which ~1123
+> (95%) is the single expl3 catcode/`\@popfilename`-restore cluster** (2112.11932 +998,
+> 2110.10227 +55, 2204.03209 +37, 2112.09098 +22, 2110.12034 +11). Confirmed `\ExplSyntaxOn`/
+> `\ExplSyntaxOff` are the SAME real expl3 macros in both engines (both restore via
+> `\char_value_catcode:n`); the leak is the file-boundary `\@popfilename` expl-status restore,
+> which every band-aid (broad input_definitions `_`/`:` restore, xparse caller-restore) breaks
+> glossary_test or 2203.05327's expl3-code cross-boundary `\group_end:` — see
+> `docs/EXPL3_CATCODE_GAP_2026-06-08.md`. The remaining ~55 non-expl3 excess is a sparse tail of
+> DEEP/delicate single papers (pgfplots symbolic coords, tabularht `\@array` alignment-model,
+> deluxetable, siamart eager-xcolor, xy.tex `\xywithoption`, theorem `example`-env mode,
+> version-specific expl3 `\l__text_case_exclude_arg_tl`). **Strategic conclusion unchanged: the
+> clean/safe vein is mined; the dominant remaining lever is one focused, glossary-safe
+> `\@popfilename`/`\ExplSyntaxOff` expl-status-restore effort.**
+
+> **✅ FRESH-CORPUS DELTA SWEEP + 2 loader fixes (2026-06-08).** Re-confirmed the PARITY
+> conclusion on an independent corpus: the 160 `next_warning_papers` witnesses, Rust-vs-Perl
+> delta (`latexml_oxide` vs `latexml`, both `--path=ar5iv-bindings --preload=ar5iv.sty`,
+> ANSI-stripped `^(Error|Fatal):`). 71 error-bearing papers, **374 errors total, only ~26
+> Rust-only (positive-delta) across 8 papers** — every big cluster (71/53/35/14-error papers)
+> is delta=0 SHARED (e.g. `$$`-in-IEEEproof `unexpected:_` = Rust 2 / Perl 2, verified). Method
+> + isolation discipline saved to memory ([[feedback_rust_perl_delta_method]],
+> [[feedback_canvas_measurement_isolation]]). Two CLEAN Rust-only gaps fixed + committed:
+> - `df56acbab5` **subdir package loads** — `\usepackage{AISTATS/aistats2026}` (dir-prefixed
+>   name): the contrib `aistats2026` binding is matched on the basename then raw-loads
+>   `aistats2026.sty` by basename, dropping `AISTATS/`, so the subdir file is missed →
+>   `\aistatstitle/author/address` undefined. Fix: `input_definitions` now adds the requested
+>   name's directory to the search paths for the load's duration (TeX input-stack behavior),
+>   restored via Drop guard. Additive; never changes which binding wins. 2510.09534 3→0.
+> - `5b57feb226` **achemso `\geometry`** — achemso.cls L308 `\RequirePackage{geometry}`; the
+>   OmniBus stub omitted it so author `\geometry{...}` was undefined. Added it. 2407.02650 1→0.
+>
+> Remaining positive-delta gaps are DEEP/delicate single papers (out of quick-fix scope, logged
+> for later): **spath3/xparse expl3 catcode clobber (2112.11932, Rust 1003 / Perl 5, +998 — the
+> SINGLE BIGGEST Rust-only gap; root-caused + 4 band-aids tried & all regress something, see
+> [`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](EXPL3_CATCODE_GAP_2026-06-08.md); real fix is
+> `\ExplSyntaxOff` catcode-stack completeness, not a loader patch)**; pgfplots `symbolic x coords`
+> + `nodes near coords`/`bar shift` interaction (2110.14597, +12); kvoptions/cleveref raw-load
+> `#`/`\fi` cascade (2411.03393, +4); tabularht
+> DVI-driver GenericError + `\@array` (2206.08989, +3); siamart eager-xcolor vs colortbl
+> (2511.10796, +1, delicate); deluxetable `$`-column template (2305.16141, +1); revtex bbl
+> internal-CS leak (2312.14913, +1).
+>
+> **The 64 "timeout" witnesses were a DEBUG ARTIFACT, now resolved.** They did not time out in
+> release — the default `latexml_oxide --timeout` is 60s and the DEBUG binary is ~10-20× slower,
+> so heavy papers hit the 60s watchdog mid-conversion and aborted with a falsely-LOW error count
+> (2112.11932 read as 0 in debug, is 1003 in release). Re-swept all 64 in RELEASE (`--timeout 120`):
+> 0 genuine wall-timeouts, 54 error-bearing, and Perl-delta'd them. Result: **the dominant
+> remaining Rust-only cluster is expl3** — `unexpected:_` (1326, mostly the spath3/xparse catcode
+> clobber above) plus undefined expl3 KERNEL internals (`\__kernel_msg_error`,
+> `\__text_case_exclude_arg_tl`, `\__kgl_process`, `\bool_*`, `\NewDocumentCommand`,
+> `\IfBooleanTF` …) — all the same `\ExplSyntaxOff`/expl3-kernel-completeness family. Fresh
+> non-expl3 positive-delta gaps catalogued: 2204.05282 (86/Perl 0 — babel + the expl3-code:33075
+> cross-boundary `\group_begin:` dangle), 2204.03209 (45/7), 2112.09098 (44/22), 2403.14015
+> (`\xywithoption`, xy-pic, 1/0), 2203.07669 (pgfplots symbolic coords, same cluster as 2110.14597).
+> **Strategic conclusion: a single focused expl3-kernel-completeness effort (`\ExplSyntaxOff`
+> catcode-stack restore + the missing `\__*` kernel functions) would clear the large majority of
+> the remaining Rust-only error volume; the rest is a sparse per-package/per-class tail.** The
+> genuine slow-paper reliability tail is separate (STABILITY_WITNESSES); measure it in release.
+
+> **✅ TEST-SUITE RECOVERY + xparse loader fix (2026-06-08, commit `128891d587`).** A clean
+> (from-scratch) rebuild exposed 3 long-standing failures — `xparse_test`, `regex_match_test`,
+> `chemformula_raw_l3keys` — that incremental builds had masked (they fail on a clean build of
+> `origin/master` too, so NOT a merge regression). ROOT CAUSE: `input_definitions` never consulted
+> the `INTERPRETABLE_SOURCES` mapping, so `xparse.sty.ltxml`'s registration of `xparse-2018-04-12.sty`
+> was dead code. When the raw xparse.sty `\file_input`s its rollback `xparse-2018-04-12`, the
+> version-suffix fallback stripped it to `xparse` and re-entered the in-progress xparse binding
+> (short-circuited, Task #260) → the rollback file that DEFINES `\NewDocumentCommand` never loaded →
+> `\NewDocumentCommand` undefined + l3 cascade. FIX = faithful port of Perl `Package.pm:FindFile_aux`
+> L2107/L2115/L2119: `interpretable = LookupMapping('INTERPRETABLE_SOURCES', file)`; Step 2 (raw
+> local) fires on `interpreting || interpretable`, Step 3 (fallback) skips when `interpretable` → the
+> file falls through to kpsewhich and the real `xparse-2018-04-12.sty` raw-loads. **Suite 1390/0**
+> (was 1377/3). Canvas witness **2309.17288: 6 → 1 error** (`\NewDocumentCommand` gone, now == Perl).
+> **Broad cascade impact** — any package built on xparse breaks downstream when `\NewDocumentCommand`
+> is undefined: witness **2403.14015 (lipsum): 40 → 1 error** (the 13 undefined `\__lipsum_*` /
+> `\IfBooleanF` / `\SetLipsumText` were ALL downstream of the dropped xparse rollback; remaining 1 is
+> `\xywithoption`, separate xy-pic). The 2026-06-08 random 17-paper sweep hit xparse/`\NewDocumentCommand`
+> cascades in **5 papers** — a meaningful slice of the failing set, now protected. This was a
+> *post-canvas* regression (the canvas binary predates it), so a canvas re-run would have spiked
+> without this fix.
+
+> **🔬 DIFFERENTIAL SWEEP (2026-06-08) — third-batch canvas, reliable Rust-vs-Perl harness.**
+> Re-triaged the third-batch canvas (`~/data/large_scale_canvas_3_third`, 56 stages, 6,327 failure
+> logs) against the **current** binary. Headline reframe: the canvas's 98.85% predates this
+> session's fixes — **the single biggest cluster, `misdefined:#` (1052 papers = mdwmath), is
+> ALREADY FIXED** by `58b662b064` (verified: 3 witnesses + minimal `\usepackage{mdwmath}` all 0
+> errors now). The big live clusters are **SHARED**: `\else`-not-in-conditional (240, e.g.
+> 2204.00588 Rust 2 / Perl 101, 2204.03209 Rust 6 / Perl 7 — `\MakeLowercase`-in-math malformed),
+> `_`/`^`-script-in-text (971, e.g. 2110.10921 Rust 8 == Perl 8), theorem-as-group mode-switch
+> (`{\definition(..){..}}` → "close a group that switched to mode"; minimal repro errors in BOTH),
+> GenericError aaai/csquotes/embedfile/babel (all Perl≈Rust), `\end{figure}`/`\noalign`/`\state`/
+> `\ixpt`/`\ioptwocol`/tabularht (all SHARED). **Methodology landmine caught + recorded**
+> ([[feedback_differential_perl_runner_rigor]]): a buggy Perl runner (relative unzip → "No input
+> file given" → false 0) produced a phantom "12/12 RUST-ONLY" batch; all 12 were SHARED once the
+> runner was fixed. Always assert the Perl log processed input + use the SAME `(Error|Fatal)` grep
+> on both sides + sanity-check a surprising RUST-ONLY with a minimal repro.
+>
+> **The genuine Rust-only clusters surfaced:**
+> 1. **`expected:id Cannot find a node with xml:id` (~32 papers) — bra-ket XMDual dangling XMRef.**
+>    Witnesses 2205.06843, 2211.16395, 2306.04445 (all Rust 2 / **Perl 0**). ROOT CAUSE pinned via
+>    minimal repro `\usepackage{physics}` + `\matrixelement{a}{\varrho_{B}\partial_{\mu}}{c}`: a
+>    **compound (multi-atom) operator arg flanked by two `\vert`** (presentation `⟨#1|#2|#3⟩`) trips
+>    the **open VERTBAR-modulus grammar ambiguity**
+>    ([`MATH_AMBIGUITY_AUDIT_2026-05-21.md`](MATH_AMBIGUITY_AUDIT_2026-05-21.md) Pattern 2): the
+>    parser reads `|…op…|` as a bare-modulus `\abs`, **dissolving the `\lx@xmarg` wrapper that
+>    carries the dual's shared id** → the content branch's `\lx@xmref` to the operator dangles
+>    (resolves to the ket's id, referenced twice) → Post `mark_xm_node_visibility_aux` errors
+>    `Cannot find a node`. **Single-`\vert` duals are fine** (`\ket`/`\innerproduct`/
+>    `\expectationvalue` with compound args: 0 dangles); only the *operator-between-two-bars* case
+>    breaks. (Supersedes the stale 2026-06-01 "`expected:id` FIXED" note: that drained *other*
+>    causes; this VERTBAR sub-cause remained.)
+>    - **✅ PHYSICS-PACKAGE sub-cluster FIXED (commit pending, 2026-06-08, surpass-Perl-faithful).**
+>      The `physics` `\matrixelement`/`\innerproduct`/`\bra` defaulted to **non-stretchy** delimiters
+>      (`physics_sty.rs` passed `phys_open(!no_stretch,…)` — a double-negation of the already-
+>      "no-stretch"-meaning flag), while **Perl uniformly defaults stretchy="true"** (verified: 4/4
+>      langle+rangle on a 6-command probe). The non-stretchy bare-`|` path is exactly what trips the
+>      VERTBAR modulus. Fix = pass `no_stretch` directly (matching `\expectationvalue`, already
+>      correct). New Rust output on `tests/complex/physics.tex` is now **byte-for-byte stretchy-
+>      identical to Perl** (14/21 langle, 8/19 rangle, 6 MIDDLE); `physics.xml` re-blessed; suite
+>      green; witnesses **2211.16395, 2401.16728, 2404.05917 → 0 errors** (broader recovery beyond
+>      the one debugged). NOTE: physics `\abs`/`\norm`/`\qty` are NOT affected (they already pass
+>      `no_stretch` directly via `\lx@physics@fenced`); a physics paper failing only on compound
+>      `\abs`/`\norm` (e.g. 2305.07971) is the *modulus*-VERTBAR variant, deferred with the cases
+>      below.
+>    - **✅ BRA-KET VERTBAR sub-cluster FIXED (2026-06-08, commits `50c8a6a35e` + `275d249acc`).**
+>      Two faithful mathparser fixes: (a) `create_xmrefs` now PRESERVES an existing `_xmkey` instead
+>      of clobbering it (Perl `createXMRefs` never clobbers — the op node keeps both the package
+>      dual's key and the grammar dual's ref); (b) a **balanced-Dirac-delimiter prune** in
+>      `apply_invisible_times` hard-rejects the spurious `bra ⟨a|·op·ket |c⟩` multiplicative parse
+>      Marpa over-generates for `⟨a|op|c⟩` (it splits the matched `⟨…⟩` across the product — a
+>      balanced-nesting violation; physically a bra+ket under one `⟨…⟩` span is a single matrix
+>      element, and the operator was getting split). Directional (ket-before-bra `|c⟩⟨a|` outer
+>      products untouched), tight (qm_bra/qm_ket meanings). Witness **2205.06843 (braket pkg): 2 → 0**;
+>      a full minimal sweep — `\braket`/`\Braket`/mathtools `\delimsize\vert` bra-kets, `\norm`,
+>      `\abs`, `\Set{x|cond}`, `\matrixelement`, `\dyad` — is **0 dangling**. Suite 1390/0; modulus
+>      `|v(x)|≤|v(x')|` is 4 parses (prior ambiguity work; no longer the doc's old 48-58).
+>    - **Remaining `expected:id` are NON-VERTBAR** (a separate XMDual-dangling cluster): subequations
+>      `…m1.1a/1b` (2207.08945, 2311.01600), algorithm math (2306.04445 `alg2.m13`), examples
+>      (2307.02913 `Ex17`) — none load/use a bra-ket.
+>      **DIAGNOSED 2026-06-08, DEFERRED (deep, high-risk).** The `…m1.Na`/`…m1.Nb` letter suffixes are
+>      ID-COLLISION disambiguation (`Document::modify_id` → `radix_alpha`): two math sub-nodes both
+>      claim base id `…m1.N`, so they get `…m1.Na`/`…m1.Nb`. The dangle is a content XMRef whose
+>      `idref` (e.g. `A1.E66.m1.1a`, inside `<XMApp><XMTok meaning="probability"/><XMRef …/></XMApp>`
+>      — a custom `\Pr`/function-macro XMDual) PREDICTS a suffixed id the target node never actually
+>      receives → `Cannot find a node`. Root: the dual id-PREDICTION (base_xmath `\lx@dual`
+>      afterConstruct / resolve path) does not track the collision-suffixing of the ACTUAL assignment.
+>      This is the historical expected:id-cascade class ([[project_xmref_dangling_split]]). REFINED
+>      ROOT (2026-06-08): `createXMRefs` (`base_xmath.rs` `ltx:XMDual` after_close_late) sets `idref`
+>      to the target XMArg's ACTUAL `generate_id` value at CONSTRUCTION time (the node had `m1.1a`
+>      then) — NOT a prediction. The dangle appears because the MATH PARSER, running LATER, removes /
+>      restructures that node (its `replace_tree`/`unbind` paths, cf. the parser.rs:~1103 "Danger" id
+>      redirect) without redirecting the construction-assigned idref. **DISPROVED the
+>      `record_node_ids` subtree-scope hypothesis** — widening that redirect document-wide changed
+>      NOTHING on the witnesses (2311.01600 still 12, 2207.08945 still 8), so the reassignment is the
+>      parse-time node-drop path, not a `modify_id` collision redirect. Fix = redirect/preserve
+>      construction-assigned idrefs across the math-parser's node removals (or defer createXMRefs id
+>      assignment until after the parse) — deep core math id-management (every XMDual-bearing doc),
+>      needs a focused session. Witnesses 2311.01600 (E66, physics + custom prob-macro XMDuals +
+>      multi-line `\left.`/`\right.` split), 2207.08945 (E49).
+>      **DESIGN SCOPED + PHASE-0 RUN (2026-06-08):** [`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
+>      **Phase 0 REFRAMED the root cause** — fully traced 2311.01600 (id-lifecycle instrumentation,
+>      reverted). The dominant remainder is **NOT** the math-parser LOSTNODES gap; it is a
+>      **document-builder equation→equationgroup refnum-id loss (Class B)**: a lone-aligned
+>      `\begin{equation}\begin{aligned}` opens `<equation xml:id="A1.E66">`, mints the `\Pr` content
+>      refs against `A1.E66.m1.*` (SAME scheme Perl uses), but the refnum id is gone by the equation's
+>      `afterClose`, so `rearrange_lone_ams_aligned` renames it to an **id-less** equationgroup that then
+>      falls to a generic paragraph id `A1.p10.1` (Perl keeps `A1.E66` → refs resolve, 0 errors). Fix
+>      (faithful) is in the **document builder**: keep the equation refnum id stable so the rename carries
+>      it (Perl `rearrangeLoneAMSAligned` `renameNode` preserves the id). The original LOSTNODES/absorption
+>      story is now **Class A** (the already-fixed VERTBAR/bra-ket family; Option B = faithful `ReplacedBy`
+>      port via a `Meta`-carried redirect harvested at commit — no confirmed non-VERTBAR witness yet).
+>      Option A (generic orphan sweep) demoted to last-resort safety net. Re-classify 2207.08945 /
+>      2306.04445 / 2307.02913 before assuming Class B covers them.
+> 2. **pgfplots `symbolic x coords` (~14 papers).** Witness 2203.07669 (Rust 2 / **Perl 0**):
+>    "input coordinate `\pgfplots@loc@TMPa` has not been defined with 'symbolic x coords={…}'" — the
+>    symbolic-coord name is used un-expanded (literal internal temp). Not minimally reproducible from
+>    the axis alone (cumulative state); deep pgfplots internals. DEFERRED.
+
 > **🛡️ MACHINE-STABILITY FORENSICS + MEMORY GUARD (2026-06-02).** User reported the machine
 > became unstable and was rebooted. **Forensic finding (honest): our canvas did NOT cause the
 > reboot.** The full 100-stage canvas finished CLEANLY at 04:07:59 local (EDT); the reboot was
@@ -2987,6 +3268,200 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-10): PR #249 senior review — ALL findings resolved
+
+A 7-angle adversarial review of the branch ahead of merge surfaced 23
+candidates (2 refuted on verification). Every confirmed finding (P0→P3) was
+fixed, verified red/green where testable, and committed individually — see the
+`git log` `(review P*)` commits. Landed: NUL-sanitizing serialization sinks
+(test 62); unconditional progress counting; token-budget recalibration vs the
+new all-loops accounting; uniform-run cycle-guard suppression; context-serial
+guard scoping (replacing the blanket reset); one-borrow read checkpoints across
+all four reader loops (9–12% wall win); structured resource-fatal transport
+with real abort propagation; per-iteration guard ticks in `digest()`/`raw_tex`;
+distinct `Stomach:MemoryBudget` vs `:Recursion` categories; shared test
+helpers; TFM slot-coverage test; single RSS seam + shared debug-flag probe;
+OXIDIZED_DESIGN divergences #30–32. Clippy back to the documented baseline
+(0 outside `latexml_math_parser`).
+
+**One live OPEN item spun out of the review** — **T1 `\@changed@cmd`
+encoding-dispatcher expansion loop** (root cause behind natbib's text-symbol
+no-expand stopgap, OXIDIZED_DESIGN #31, witness 2111.00584). Not reproducible
+in isolation (`\edef\x{\i}` under T1/mathptmx is clean — needs the full revtex
+package-set encoding state), so the fix needs the witness state captured first.
+When fixed, delete `has_text_symbol` in `natbib_sty.rs` and restore the
+Perl-faithful unconditional `Expand`.
+
+### Round-37 (2026-06-09): math0402448 phantom fatal ROOT-CAUSED — cycle-guard false positive + ALL gullet guards bypassed by `read_balanced`/`read_x_token` (now fixed); canvas_3 = 16/16 CLEAN
+
+**math0402448 (amsart + xy-pic, 3464 formulae): "Conversion failed: 1 fatal
+error" with NO `Fatal:` line in the log → rc=0, 0 errors, "No obvious
+problems". With it, the canvas_3 corpus is a PERFECT 16/16 (rc=0, 0 errors).**
+Diagnosed with new permanent `LATEXML_DEBUG_FATAL` tooling (first-noted-fatal
+backtrace in `note_status`, pushback-head dump, 512-token recent-read ring).
+Four distinct findings:
+
+1. **Gullet cycle-guard FALSE POSITIVE.** The phantom was
+   `Fatal:Timeout:Recursion` raised mid-math-parsing: a giant `\xymatrix`'s
+   `fenced` semantics calls `get_xmarg_id`→`do_expand(\the@lx@xmarg@ID)` once
+   per cell; hundreds of consecutive identical short expansions concatenate
+   into a pseudo-periodic read stream (`\ifx \csname \thedocument@ID
+   \lx@empty` …) that the windowed detector mistook for an infinite loop once
+   `progress` crossed the 12M activation gate (proof: guard disabled → clean
+   convert in 9.7 s). **Fix:** a cycle is only a cycle WITHIN one expansion
+   context — `reading_from_mouth` now resets the guard history at each mouth
+   boundary. Real loops spin inside one context and stay caught.
+2. **ALL gullet guards were bypassed by the main expansion paths.**
+   `read_x_token` and `read_balanced` read via `read_internal_token` /
+   raw `pushback.pop()`+`mouth.read_token()`, so token-limit, pushback-limit
+   AND the cycle guard only ever ran in `read_token` — a textbook
+   `\def\x{a\x}\edef\y{\x}` runaway sailed past every limit (even
+   `LATEXML_TOKEN_LIMIT=1000000`) and ground to the 6 GB process watchdog
+   (rc=137, ~18 s). **Fix:** extracted `read_resource_checkpoint()` +
+   `cycle_guard_checkpoint()` and wired them into both raw loops. The same
+   runaway now dies in **0.35 s** with a clean
+   `Fatal:Timeout:Recursion (window of 2)`.
+3. **Math parser swallowed resource fatals as parse rejections** (the actual
+   phantom mechanism): semantics-action errors flatten into
+   `marpa::error::Error` strings and were dropped (audit-gated eprintln only)
+   — the `Fatal!` macro had already set the report's fatal flag, so the
+   summary counted a fatal that never hit the log. **Fix:**
+   `resource_fatal_from_message()` reconstructs Timeout-class fatals from the
+   engine-owned message prefixes; both swallow sites now `log_fatal()` and
+   abort math parsing (bounded + honest).
+4. **Counter-ID formatter faithfulness:** Rust probed
+   `\ifx\csname the<within>@ID\endcsname\@empty` where Perl (Package.pm L696)
+   probes **`\lx@empty`** — deliberately, since `\@empty` is LaTeX-pool-only
+   while `\lx@empty` is engine-level and exists for plain-TeX documents too.
+   Fixed to `\lx@empty` (dialect.rs).
+
+Also: `LATEXML_TOKEN_LIMIT` env override (0 disables; mirrors
+`LATEXML_RSS_CAP_BYTES`); the `DEBUG_FATAL` env probe is hoisted to a `Lazy`
+so the hot paths pay one bool test. Suite **1406/0/0**; canvas_3 16/16; no
+perf regression (math0102053 3.15 s). Loop-catching regression tests
+(58 href / 59 natbib) unaffected (PushbackLimit family).
+
+### Round-37 (2026-06-09): canvas_3 OOM cluster ROOT-CAUSE FIXED — missing `line`/`lcircle` fontmaps made picture chars 0pt wide → `\@whiledim` infinite loop
+
+**All 6 OOM witnesses (math0102053/0102089/0212126/0504436/0506088/0604321)
+go from `Fatal:Timeout:MemoryBudget` (4.5 GB RSS) to 0 errors + full
+documents; math0102053: 4.5 GB OOM in ~200 s → 3.2 s, 3.4 MB output.** The
+guards landed earlier today (cycle/byte/depth) remain as defense-in-depth, but
+the cluster itself is now FIXED at the root, and Rust SURPASSES Perl (which
+still OOMs — rc=124 after 3m19s at a 6 GB cap).
+
+Root cause: these LaTeX-2.09-era plain-TeX papers inline picture mode's
+`\@sline`, whose loop advances by `\wd` of an
+`\hbox{\@linefnt\@getlinechar(x,y)}` (the `line10` font). Probe ground truth:
+real TeX `\wd` = 2.5–10 pt (TFM); Rust AND Perl = **0 pt** (no `line` fontmap →
+`FontDecode` drops the char → empty box) → `\advance\@clnwd 0pt` never reaches
+`\@linelen`. Modern latex.ltx guards this exact hazard
+(`\ifdim\wd\@linechar=\z@\setbox\@linechar\hbox{.}\@badlinearg\fi` ~L13777),
+but the unguarded 2.09 copies bypass it — the FONT width is the only lever
+that reaches hand-rolled drawing code. **Fix:** ship `line.fontmap` +
+`lcircle.fontmap` bindings (`line_fontmap.rs`, `lcircle_fontmap.rs`; slot
+semantics from kernel `\@getlinechar`/`\@getlarrow` + `line10.tfm`/
+`lcircle10.tfm` inventories via `tftopl`) mapping every populated slot to a
+nonzero-width diagonal/arrow/arc/disk glyph. Upstream-Perl gap recorded in
+`KNOWN_PERL_ERRORS.md`. Regression: `tests/61_line_fontmap.rs`
+(dump-independent: asserts nonzero `\wd` + loop termination). canvas_3 sweep:
+15/16 fully clean (residual: math0402448's pre-existing phantom-fatal,
+"Conversion failed: 1 fatal error" with NO `Fatal:` line in the log — a
+log-fidelity bug to chase separately). Suite **1406/0/0**.
+
+### Round-37 (2026-06-09): NUL default catcode must be 12 (OTHER), matching Perl — fixes `` `^^@ `` alphabetic constant; xint `\xintdeffloatfunc` residual deferred
+
+While triaging the 2111.00584 residual (`Error:expected:}` in `xinttrig.sty`
+load), found a real Perl-parity bug in the tokenizer: **Rust set NUL's
+(`\^^@`, U+0000) DEFAULT catcode to 9 (IGNORE)** per the TeXbook, whereas **Perl
+LaTeXML uses 12 (OTHER)**. With IGNORE the `^^@`-notation char is *dropped*, so
+the alphabetic constant `` `^^@ `` skips to the next token (`\relax` → 114)
+instead of reading 0 (probe: `\count0=`^^@` → 114 Rust vs 0 Perl). **Fix:**
+`state.rs` NUL default → OTHER (`catcodes.insert('\0', OTHER)`). Validated:
+`` `^^@ ``→0, `` `^^A ``→1; an explicit `\catcode`^^Q=9` is still honored (only
+the default changes, so `tokenize/par.tex` passes); a raw stray NUL byte
+(astro-ph0004127 `\"u`-mangling case the old IGNORE hack guarded) becomes a
+harmless OTHER char — NO bogus `\uninger`-style CS, NO invalid-XML NUL in output
+(stripped at serialization). Regression: `tests/60_caret_charcode.rs`
+(dump-independent). Suite **1402/0/0**.
+
+**Residual NOT fixed (deferred — deep xint machinery):** the actual 2111.00584
+`xinttrig.sty` error is independent of the NUL fix — xint's `\XINTsetcatcodes`
+already sets `\catcode0=12` itself (xintkernel.sty:102). The error is a
+`readBalanced ran out of input` during `\xintdeffloatfunc @sin_series(x) := x *
+@sin_aux(sqr(x));` (xinttrig.sty:350) — deep in xint's float-function compiler
+(catcode-3 `&&A` MATH separators, `\expanded`, nested delimited macros). Perl
+loads xintexpr cleanly. 1 NON-FATAL package-load error; the document converts
+rc=0 (after the natbib fix below). Classified deep/low-priority like the pgf
+bisection (2201.09268) and xy-pic (2403.14015) cases.
+
+### Round-37 (2026-06-09): 2111.00584 FIXED — natbib `\lx@NAT@parselabel` must not full-`Expand!` a label with text-encoding symbols (`\i`/`\j`/…) → infinite loop
+
+**2111.00584 (revtex4-1 + `aipnum4-1.bst` `.bbl`, 63 `\bibitem`s): rc=1 with a
+`Fatal:Timeout:PushbackLimit` + 41 `malformed:ltx:bibitem` → rc=0, full 1.59 MB
+doc (Perl: rc=0 / 3 SHARED undefined-math errors — we now have FEWER errors).**
+The loop fired inside `.bbl` digestion; the 41 malformed-bibitem errors were
+downstream fallout of the aborted bibliography (bibitems mis-nesting once the
+fatal cut the list short). Root-caused via minimal repro to a SINGLE bibitem —
+`\bibitem [{\citenamefont {M{\'\i}guez}(2009)…}]{porteiro2009}` — and then to
+the `\i` (dotless-i) in the author name.
+
+natbib's `\lx@NAT@parselabel` (`natbib_sty.rs`) fully-expands a "bare" bibitem
+label via `Expand!(label)` to locate the `(year)` paren. Under `[T1]{fontenc}`
+(here via `mathptmx`) the LaTeX kernel redefines `\i` to the `\@changed@cmd`
+dispatcher `\T1-cmd \i \T1\i`; its typeset branch re-injects `\i` through
+`\csname\cf@encoding\string\i\endcsname`, so **full expansion re-expands `\i`
+forever** (PushbackLimit + box-list runaway). Accented author names
+(`M{\'\i}guez`, `Pati{\~n}o`) are exactly where this bites. Perl does the SAME
+`Expand($label)` (`natbib.sty.ltxml:564`) but happens to terminate; ours did
+not. **Fix:** extend the existing "don't force-expand" guard (already covering
+`\cite`/`\href`/`\bibinfo` — the 2404.06289 fix) to text-encoding *symbol*
+commands (`\i \j \l \L \o \O \aa \AA \ss \ae \AE \oe \OE \dh \DH \dj \DJ \th \TH
+\ng \NG`). The `(year)` is always a literal `(` in natbib/BibTeX output, so the
+raw label suffices — no expansion needed. Regression:
+`latexml_oxide/tests/59_natbib_label_dotless_i.rs` (gated on dump +
+revtex4-1/mathptmx/pgfplots). Residual on this paper is 1 PRE-EXISTING
+`Error:expected:}` in `xinttrig.sty` loading (unrelated to bibliographies).
+Suite **1401/0/0**.
+
+### Round-37 (2026-06-09): 2110.10227 FIXED — `\href` must be `protected` (robust) so `\edef`/`\xdef` don't infinite-loop; + babel-french `\ifFB@mainlanguage@FR`
+
+**2110.10227 (`article` + shipped `ems-journal.sty`, `[american,british,french]{babel}`):
+93 stale errors (pre-dump artifact) → after the kernel dump, 2 fatals + 1 undefined → 0
+errors, full 3.3 MB doc (Perl: rc=0 but 20 errors + degraded author block — we now SURPASS
+Perl).** Two independent Rust-only gaps, both root-caused via minimal repros:
+
+1. **`\href` infinite-loop in `\edef`/`\xdef` (the fatal).** `ems-journal.sty`'s `\Emsaffil`
+   → `\build@ffil` does `\xdef\ems@temp{… \href{mailto:…}{\mbox{…}} …}`. LaTeXML defines
+   `\href` as an *expandable* `DefMacro` whose body re-emits `\href` (for the
+   `\lx@hyper@url@` constructor's reversion arg `#1`). Under partial expansion (`\edef`)
+   the constructor is left untouched and the re-emitted `\href` is expanded *again* →
+   unbounded `\href`→`\lx@hyper@url@\href{}{}…`→`\href`→… loop (caught by the gullet/stomach
+   cycle guards as `Fatal:Timeout:PushbackLimit` + `Fatal:Stomach:Recursion`, ~528 MB).
+   **Perl LaTeXML hangs on the same isolated `\xdef\x{\href{u}{t}}` (rc=124)** — it only
+   dodges the paper because, lacking an `ems-journal` binding, it *dependency-scans* the
+   class without executing its body (so `\build@ffil`/`\href` never run). We raw-load the
+   body (INCLUDE_STYLES=true, ar5iv). **Fix:** `DefMacro!("\\href HyperVerbatim {}", …,
+   protected => true)` — in real hyperref `\href` is `\DeclareRobustCommand`/`\protected`,
+   so `\edef` leaves the literal `\href{…}{…}` in the body. At top-level digestion
+   `fully_expand` is true so protected macros still expand → normal `\href` unchanged.
+   Faithful to real-TeX *and* a surpass-Perl robustness win. Only `\href` has the looping
+   self-reemission (`\url`/`\nolinkurl`/`\hyperref`/`\hyperlink` verified clean in `\edef`).
+   Regression: `latexml_oxide/tests/58_href_edef_loop.rs` (dump-independent).
+
+2. **`\ifFB@mainlanguage@FR` undefined (the error).** `ems-journal.sty` L605 probes
+   `\ifFB@mainlanguage@FR \frenchsetup{…} \fi` directly in its preamble. The real
+   `french.ldf` declares it (`\newif`, L1171) and resolves it at `\AtEndOfPackage` from
+   `\bbl@main@language`; Perl's `french.ldf.ltxml` gets it for free via
+   `InputDefinitions('french', noltxml=>1)` (raw-loads the real `.ldf`). Our curated
+   `french_ldf.rs` skips that raw-load, so the bare `\if` was undefined → spurious
+   `Error:undefined` + mis-nested `\fi`. **Fix:** port french.ldf L1169-1175 verbatim into
+   `french_ldf.rs` (`\def\FB@french{french}\def\FB@acadian{acadian}\newif\ifFB@mainlanguage@FR`
+   + the `\AtEndOfPackage` main-language detection). The layout body it gates is French
+   typesetting nuance already no-op'd by `\FrenchLayout`/`\FrenchLists`.
+
+Suite stays **1400/0/0**.
+
 ### Round-37 (2026-05-31): 1907.05772 FIXED — mdframed must be `inline-logical-block` (Misc.class), not `logical-block` (Para.class), to sit in a `float`
 
 **1907.05772 (article, `mdframed` inside `\begin{algorithm}`) 3→0 errors.** Found by the
@@ -5048,6 +5523,278 @@ not Perl-parity gaps.)
   polutoniko unknown" + `\Greeknumeral`. Multi-error Greek-typography stack.
 * **1910.10243** — pstricks/pst-plot → `\ifpst@useCalc`/`\ifpst@psfonts`/
   `\colorlet`/`\ifluatex` undefined. pstricks cascade.
+
+### Canvas-3 THIRD batch (551,849 papers) complete + fix phase (2026-06-06)
+
+Third/final batch of the large-scale canvas (rows 1,000,001–1,551,849 of
+`all_warnings.txt`) completed: **545,522/551,849 OK = 98.85%** (CONVERR 1.03%,
+FATAL 0.087%, TIMEOUT 0.024%, OOM 0.003%). The raw error rate massively
+*overcounts* Rust regressions — shared-with-Perl dominates (mdwmath ~1,080
+papers, eccv/lineno conditional ~thousands [**now FIXED 2026-06-07** via the
+parameterless-`alignat` fix — surpasses Perl], most `_`/`^`); true Rust-only rate is
+far below 1%. Triage in `~/data/large_scale_canvas_3_third/{TARGET_SET,PROGRESS}.md`.
+
+**Rust Error Fixes (this batch):**
+- **`3a1c2c3a61`** — eTeX `\dimexpr`/`\numexpr`/`\glueexpr`/`\muexpr` getters made
+  total. FATAL_101 (~8 papers: 2302.02182, 2308.14409, 2501.11779, 2504.15265,
+  2509.15275, 2603.17645, 2604.02289…): `\dimexpr` inside a pgf-calc coordinate —
+  `pgfmath_register_lookup` looks it up as a 0-arg register (`lookup_register(cs,
+  vec![])`), so `args` is empty and `args.remove(0)` panicked. Fix: guard getters
+  on `args.is_empty()`→zero default + `RegisterValue::coerce_to(rtype)` in
+  `etex_readexpr`.
+- **`5297f88f5e`** — `state::lookup_font()` uses `try_borrow`. FATAL_101 "RefCell
+  already mutably borrowed" (hep-th9908053, `\documentstyle` 2.09): reachable from
+  a Whatsit Display/revert (`tex_glue::revert_skip`) while `state_mut()` held.
+  Degrade to None (all 83 callers default the font).
+- **eccv/lineno `\else`/`\fi` cluster (2026-06-07, surpass-Perl)** — the **#1
+  conditional-error driver** in the ECCV-2024 population (~47 papers/10k). Root: the
+  `alignat` env-family was arg-taking (`\alignat{}`…), so eccv's
+  `\linenomathpatchAMS{alignat}` → etoolbox `\cspreto` → `\expandonce\alignat`
+  grabbed the brace and leaked `\ifmmode…\else…\fi`. Fixed by making the 5
+  arg-taking variants parameterless-via-indirection in `amsmath_sty.rs`, matching
+  real amsmath. SHARED with Perl (faithful port of the bug); Rust now surpasses.
+  Witnesses 2310.18293 (4→0), 2309.17074, 2310.00161. Detail in the canvas-cluster
+  list above + KNOWN_PERL_ERRORS.md.
+
+**Recorded, not fixed:** 2205.03260 SIGABRT — runaway shipping 36,545 pages
+(45MB) → OOM-abort under canvas 6GB ulimit; 1 paper, deferred (Perl-compare
+needed). mdwmath = SHARED, hard, in SHARED-FAILURE log (eccv/lineno now FIXED, see
+above). Algorithmic `\While`/`\If` verified NOT Rust-only (both engines clean in
+isolation).
+
+`cargo test --tests` after fixes: **1359/0/0**.
+
+**SHARED (not Rust-only), recorded 2026-06-07 — alignment-mode cluster
+(`\lx@begin@alignment`/`\end@amsalign`/`\lx@hidden@egroup`/`\endgroup`):** 171
+distinct papers in the retained canvas-3 failures. Verified SHARED — Perl
+(`latexml --includestyles --path=ar5iv-bindings/bindings --preload=ar5iv.sty`) emits
+the **byte-identical** alignment errors, and is **strictly worse overall** (2110.12034:
+Perl 34 / Rust 8 — Perl adds 25 `malformed:ltx:XMTok`; 2112.09098: Perl 22 / Rust 15,
+alignment lines identical 1/1/3/1). Root: malformed alignment input (alignment env tokens
+leaking when used in an unexpected mode/context) — diverse per-paper causes, mode-mismatch
+family (cf. [[project_endgroup_modeswitch_frame_leak]], mostly SHARED). HIGH difficulty,
+no single clear fix, Rust already ahead of Perl → **future work, not attempted**. Witnesses:
+2110.12034, 2112.09098, 2204.13603, 2203.05327, 2205.14578.
+
+**SHARED (not Rust-only), recorded 2026-06-07 — `malformed:ltx:*` schema-validation
+cluster:** 1133 distinct papers, top subtypes XMApp (2688 lines), XMTok (726), bibitem
+(562), listingline (462), Math (430), XMArray (316), section (314), XMDual (305). DIVERSE
+(no single cause — spans many element types). Sampled SHARED: `malformed:ltx:XMApp` (the
+biggest subtype) is byte-identical Perl/Rust on 2206.02232 (2/2) and 2112.08503 (2/2);
+`malformed:ltx:XMTok` is often **Perl-only** (Rust better — 2110.12034: Perl 25, Rust 0).
+Schema-validation limitations shared with (or worse in) Perl → not a Rust-only regression
+class. Any future work here is per-subtype, surpass-Perl, low priority. Witnesses: 2206.02232,
+2112.08503 (XMApp); 2202.09438 (XMHint); 2110.05841 (ltx:p); 2201.05745 (subsubsection).
+
+**MIXED — recorded 2026-06-07 — `undefined:<cs>` cluster (1451 papers):** DIVERSE,
+no single cause. Two classes after Rust-vs-Perl sampling:
+* **SHARED (user error / context):** `\textcolor`/`\color` (doc forgot
+  color/xcolor — both engines undefined; 2112.07368 1/1), `\xpt`/`\xipt`/`\xiipt`
+  (both engines define these in latex_base but the paper's non-article base lacks them;
+  hep-ph9306327 1/1). Not Rust regressions.
+* **RUST-ONLY long-tail (class-stub incompleteness — Perl raw-loads the real .cls, Rust
+  intercepts with an incomplete contrib stub):** the established one-class-per-session
+  pattern (cf. [[project_sn_jnl_unbound_class_depscan]], [[project_ifacconf_stub_eager_hyperref_url]]).
+  Examples found: WileyNJDv5 (`wileynjd_cls.rs`) deliberately omits algorithm/algorithmic
+  (stub comment: conflicts with algpseudocode → schema violations) → 2110.07892 has
+  `{algorithm}`/`\State`/`\For`/… undefined that Perl resolves — a KNOWN accepted
+  trade-off, not a clean fix; sn-jnl (`sn_jnl_cls.rs`) → 2203.14682 `\toprule`/`\midrule`
+  undefined (real sn-jnl.cls does NOT require booktabs; Perl resolves via a subtler
+  path — booktabs appears once in Perl's log; needs auto-load investigation). These are
+  per-class, subtle, and best tackled in focused fresh-context sessions; NOT clean
+  single-fix wins. Witnesses: 2110.07892 (Wiley/algorithm), 2203.14682 (sn-jnl/booktabs),
+  2112.00489 (\JournalTitle, 49 papers — class metadata).
+
+  **Batch per-class triage (2026-06-07), 5 more undefined sub-clusters Rust-vs-Perl:**
+  * **FIXED — `\includegraphics` via daj** (`5a90ac4415`): daj_cls.rs stub used
+    article-base + ams/hyperref only, but real daj `\LoadClass{tocbase}` and tocbase
+    `\RequirePackage{graphicx,...}`. Completed the stub with tocbase's core requires;
+    2208.01327 1→0, daj witnesses 2305.10828/2305.11062 still 0, suite 1359/0.
+  * **RUST-ONLY, deferred (medium):** `\affil` (IEEEoj, 2203.03906) — `IEEEoj` is
+    dispatched to `ieeeaerospace_cls` (lib.rs:426), which LoadClass IEEEtran but omits
+    authblk (→ `\affil`); sibling `ieeeojcsys_cls` DOES load authblk. Fix needs a proper
+    separate IEEEoj binding OR careful authblk add (risk: authblk `\author` vs IEEEtran
+    author style for the SHARED IEEEAerospace papers — needs 2408.05924/2408.06274/1610.07252
+    regression check). `\coltauthor` (colt2024, 2308.08218) — colt2024.cls `\LoadClass{jmlr}`
+    and defines `\coltauthor` in its BODY; unbound class → OmniBus fallback doesn't execute
+    the .cls body → undefined (the class-body-not-executed face of the dep-scan gap). Needs a
+    colt2024 stub or the raw-execute-unbound-class fix.
+  * **RUST-ONLY, deep:** `{forest}` (IEEEtran, 2210.00379) — forest.sty IS in TL but its
+    raw-load fails (large pgf/tikz-based package); Perl handles it. Deep raw-load robustness.
+  * **SHARED (not Rust-only):** `{NiceTabular}` (nicematrix not loaded, 2212.09528 1/1),
+    `\setboolean` (2310.11437 1/1) — both byte-identical Perl/Rust.
+
+  **Batch 3 (2026-06-07), 5 more sub-clusters:** RUST-ONLY (deferred, need semantic care
+  or source access): `\orcid` (sn-jnl, 2211.09693 — used inside `\author{name\orcid{id}}`;
+  sn_jnl_cls has \author/\affil/\fnm/\sur but not \orcid; needs content-preserving
+  author-metadata handling), `{pf}` (elsart, 2309.12476 — elsart_cls DOES load
+  elsart_support with `\newproof`→`\newtheorem`, yet the `{pf}` usage isn't locatable in
+  the source .tex/.sty; murky), `\Year` (w-art, 2206.06885, multi-error), `subfigure`
+  (lipics-v2019, 2404.10023, multi-error). SHARED: `fmfgraph` (revtex4-1 + feynmf,
+  2309.07343 43/43 — deep).
+
+  **Batch 4 (2026-06-07), CONVERR_1 candidates:** FIXED — `\sep` (sn-jnl keyword
+  separator, `\unskip, ` elsarticle convention; 2309.06763 1→0, commit 4294b53fc5).
+  RUST-ONLY deferred (medium): `\widthof` (2401.06320, class=article — used via enumitem
+  `\setlist[...]{labelwidth=\widthof{...}}` WITHOUT `\usepackage{calc}`; Rust's `\widthof`
+  lives in calc_sty so it's undefined when calc isn't loaded; Perl provides it — a
+  calc-loading-chain issue, who pulls calc, NOT a clean per-class fix). SHARED (user
+  error / shared gap): `\ioptwocol` (iopart — Perl's iopart binding ALSO lacks it,
+  surpass-Perl only), `\vspace` (2201.05271 — `\vspace{-20pt}` BEFORE `\documentclass`,
+  invalid in both), `\captionof` (IEEEtran — no caption pkg loaded, both undefined).
+
+  **Batch 5 (2026-06-07), class/package-specific candidates:** FIXED — `\refcite`
+  (ws-journal, World Scientific bare-number cite → `\cite`; 2306.15982 1→0, commit
+  75e02e53bf). RUST-ONLY deferred (niche): `\doititle` (fdsOF — UNBOUND obscure class,
+  `\newcommand{\doititle}[1]{...#1...}` DOI-title formatter in the cls body → needs a
+  new fdsOF stub for 1 niche command, low value). SHARED: `\nolinenumbers` (aa class +
+  lineno not loaded, both undefined), `\restartappendixnumbering` (aastex631, both),
+  `\AppendGraphicsExtensions` (ieeeconf, both — Perl worse 4).
+  **Heuristic confirmed across batches 4-5:** class/package-SPECIFIC undefined commands
+  (\coltauthor/\affil/\orcid/\sep/\refcite/{pf}) are clean RUST-ONLY (binding-gap) wins;
+  GENERIC package/kernel commands used WITHOUT their package (\textcolor/\vspace/\captionof/
+  \widthof/\nolinenumbers) are SHARED user-error. Target the former in future per-class sweeps.
+
+  **Batch 6 (2026-06-07), 8 class-specific candidates → 4 FIXED (batched, commit
+  c61c15d57f):** `\icmlCorrespondingAuthor` (icml, 2403.01475), `\newdefinition`/`\newproof`
+  (cas-dc → \newtheorem, 2306.04212), `\backsection` (jfm backmatter para, 2309.14752),
+  `\relatedversiondetails` (lipics related-version note, 2311.17226) — all 1→0. SHARED:
+  `\KWD`/`\jpa`/`\sidecaptionvpos`/`\doi` (elsarticle/iopart/svproc/revtex — generic or
+  both-undefined). The heuristic held (4/4 class-specific RUST-ONLY became clean wins; the
+  SHARED ones were generic/both-undefined). NOTE: `[\macro]` is NOT a valid DefMacro
+  optional-default (parsed as a param needing an arg) — use `[]` (empty default).
+
+  **Batch 7 (2026-06-07):** FIXED `\published` (ws-journal) + `\pagerange` (jfm) — clean
+  binding extensions, 1→0. RUST-ONLY deferred: `\RSsectxt` (2208.03073 — used by the
+  paper's preamble.sty but defined elsewhere/unclear source; murky), `\linkable` (spieman
+  — UNBOUND class, \linkable in cls body; a class binding would lose the dep-scan, needs
+  care). SHARED: `\orcidID` (svmult), `\subsubsubsection` (article — both undefined).
+
+  **Batch 8 (2026-06-07) — clean per-class vein harvested; remaining are DEEP, deferred:**
+  `\emails`/`\affiliations` (kr.sty, KR conference, ~9 papers) — defined LOCALLY inside
+  kr's `\maketitle` `\vbox` as formatting switches (`\author{Name\affiliations Affil
+  \emails Email}`); kr.sty raw-loads fine (647 warns) but LaTeXML extracts author metadata
+  OUTSIDE that title-group scope → the local `\def`s aren't in scope → undefined. Deep
+  (LaTeXML author-model vs switch-based author block). RE-CONFIRMED 2026-06-08: the kr
+  `\author` block is `Name1\and..\and NameN \\ \affiliations $^1$A1\and $^2$A2 \\
+  \emails e1\and e2` — affil/email blocks contain their OWN `\and`s, so LaTeXML's
+  `\author` (which splits creators on `\and`) would mis-structure affils/emails as extra
+  "authors". A gobble-fix (`\affiliations`/`\emails`→empty) yields 0 errors but a
+  mis-structured author block (content-partial, against faithfulness); the proper fix
+  (route affil/email blocks to contact elements + stop the `\and`-split inside them) needs
+  real kr-author-block handling. Genuinely deep — deferred. `\RSsectxt`/`\RS@ifundefined`
+  (Royal Society style, ~4 papers) — paper preamble.sty uses RS internals from an RS
+  class/style of unclear provenance; murky. `{forest}` (~23 papers) — DELIBERATE
+  non-implementation stub (forest_sty.rs `discard_env_body` emits `<ltx:ERROR>` + a
+  first-time `Error:undefined:{forest}... stub binding`). CORRECTION 2026-06-07: this error
+  is SHARED — Perl ar5iv-bindings forest.sty.ltxml uses the SAME `discard_env_body` pattern
+  (logs the identical error). The batch6 "RUST-ONLY" was a measurement artifact (Perl may
+  have raw-loaded forest.sty and rendered the trees, 0 errors, since Perl's pgf/tikz is
+  complete). Actually rendering forest trees needs deep pgf/tikz tree support — out of scope
+  for a quick fix; the discard+stub-error matches ar5iv-Perl's accepted limitation. All deferred — need focused deep work, not the per-class method.
+  **Conclusion: the clean RUST-ONLY per-class binding-gap wins are harvested (batches 2-8:
+  ~16 commands fixed across daj/colt2024/ieeeoj/sn-jnl/autart/ws-journal/icml/cas-dc/jfm/
+  lipics/jabbrv); the remaining undefined long-tail is deep (author-model/pgf/murky) or
+  tiny (1-2 papers) — diminishing returns in this session, documented for fresh focus.**
+
+  **Batch 8b (2026-06-07): `\widthof` FIXED (commit 04d0a73a49)** — NOT as deep as
+  first thought: adjustbox.sty `\RequirePackage{calc}` didn't propagate through the raw
+  InputDefinitions, so `\widthof` (used via enumitem `labelwidth=\widthof{...}`) was
+  undefined; fixed by an explicit `RequirePackage!("calc")` in adjustbox_sty.rs (faithful;
+  2401.06320 1→0). LESSON: some "deep dependency-chain" undefined-CS have a clean targeted
+  fix (add the missing `\RequirePackage` that a binding's raw-load drops). RS `\RSsectxt`
+  RE-DIAGNOSED as genuinely deep: used in `\newref{subsec}{name=\RSsectxt}` (varioref) but
+  never defined — Perl stores the name lazily (never expands → no error), Rust expands it
+  eagerly during `\newref` → undefined. A varioref `\newref` name-expansion-timing issue
+  (~4 papers), deferred.
+
+  **✅ RESOLVED 2026-06-07 (commit 4e63c5f891) — jabbrv STUB BINDING, ~42 papers,
+  surpass-Perl.** The clean fix turned out NOT to need the dep-scan core change OR the
+  deep jabbrv-`\emph` loading-path work: a Rust STUB BINDING for jabbrv (`jabbrv_sty.rs`:
+  `\JournalTitle`→`#1` full name + `\Define*`→no-ops, no `.ldf` machinery) IS resolved by
+  the dep-scan's `notex=true` `find_file` (Rust bindings count as "found"), so it loads
+  for wlscirep's `\RequirePackage{jabbrv}` → `\JournalTitle` defined, 0 errors, full
+  journal names preserved. Surpasses Perl (95 errors — Perl raw-loads jabbrv and hits the
+  `\emph` imbalance). Witnesses 2112.00489/2202.06999/2205.05249/2211.03054 all 1→0; suite
+  1359/0. **GENERALIZABLE INSIGHT:** for a shipped-only package whose raw-load is broken
+  (or whose dep-scan-skip causes undefined CS), a small STUB BINDING (public API only) is
+  the clean fix — the dep-scan resolves it, no core-loading change needed. The general
+  dep-scan-shipped-package gap + the jabbrv-`\emph` loading-path mechanism remain as
+  documented future work (for shipped packages WITHOUT a binding), but the high-value
+  `\JournalTitle` driver is now fixed. (Original diagnosis kept below for reference.)
+
+  **PRECISE general root cause (2026-06-07) — dep-scan skips shipped-only
+  packages for unbound classes.** `\JournalTitle` (49 papers, e.g. 2112.00489 class
+  `wlscirep`) traces to: an UNBOUND class (no `.ltxml` binding) → Rust uses OmniBus
+  fallback + dep-scans the `.cls` (reads but does NOT execute it). The dep-scan package
+  loop (`latexml_core/src/binding/content.rs:2035`) gates each `\RequirePackage` on
+  `find_file(pkg, type=sty, notex=true)` — i.e. **bindings-only**. So a class's
+  `\RequirePackage{jabbrv}` where `jabbrv.sty` is **shipped-only** (in the job dir, no
+  TL entry, no binding) is SILENTLY SKIPPED → `\JournalTitle` (defined in jabbrv.sty)
+  undefined. PROOF it's a dep-scan-path gap, not a raw-load failure: an explicit
+  `\usepackage{jabbrv}` raw-loads jabbrv.sty + its .ldf files cleanly and defines
+  `\JournalTitle`. Perl avoids the gap because it RAW-EXECUTES the unbound `.cls`, so
+  its `\RequirePackage{jabbrv}` actually runs. **FIX direction (focused session, full
+  regression):** relax the dep-scan `notex` gate to also raw-load shipped/raw-only
+  packages (compensating for not executing the .cls), OR raw-execute unbound classes.
+  CORE loading-mechanism change, broad blast radius (the dep-scan runs on every
+  raw-loaded .sty/.cls) — NOT a safe unattended patch; deferred with this precise
+  diagnosis. Witness: 2112.00489 (wlscirep + shipped jabbrv.sty).
+
+  **IMPLEMENTED + VALIDATED then REVERTED (2026-06-07) — needs a co-fix before
+  landing.** The one-line fix (`notex: raw_loaded` instead of `notex: true` in the
+  dep-scan package loop, `content.rs:2040`) was implemented and validated: full suite
+  **1359/0**, **0/22** previously-OK papers regressed (no OK→FAIL), and witness
+  2112.00489 now loads jabbrv.sty + both .ldf files and defines `\JournalTitle`,
+  reaching **exact Perl parity (Rust 95 = Perl 95)**. HOWEVER, on its *dominant target*
+  (the wlscirep+jabbrv `\JournalTitle` cluster) the fix's measured effect is to EXPOSE a
+  **SHARED downstream `jabbrv`-`\emph` issue** (47 `\emph` + 47 `\egroup` "close a group
+  switched to mode restricted_horizontal due to `\emph`" — byte-identical in Perl), so
+  error counts EXPLODE 1→~90 while still NOT producing a clean conversion. Sampled
+  2202.06999 (1→102), 2203.00456 (2→30), 2205.05249 (1→95), 2211.03054 (1→83) — all
+  parity-with-Perl, none clean. So the dep-scan fix alone is *faithful but not a net
+  win*: it trades a hidden-incomplete conversion (low error, `\JournalTitle` lost) for a
+  faithful-but-error-flagged one. To be a clean surpass-Perl win it must be PAIRED with
+  fixing the **shared `jabbrv`-`\emph` mode/group imbalance** (jabbrv hooks `\emph` for
+  journal-name abbreviation; the redefinition's restricted-horizontal group is left
+  unbalanced — both engines). Also still needs a BROAD shipped-package regression sweep
+  (validated on only the wlscirep+jabbrv cluster; other unbound-class+shipped-pkg combos
+  untested → residual Rust-only-regression risk). REVERTED to keep the tree + canvas
+  signal clean; both pieces recorded for a focused session. Witnesses for the
+  `jabbrv`-`\emph` SHARED follow-up: 2112.00489, 2202.06999, 2205.05249, 2211.03054. NOTE: jabbrv does NOT
+  redefine `\emph` globally (only `\jabbrv@`-prefixed diacritic helpers); a minimal
+  `\usepackage{jabbrv}` + `\emph{...}` doc is CLEAN. The `\emph` mode/group imbalance
+  is context-specific (jabbrv loaded + a specific construct in the author/affil block) and
+  SHARED — so the co-fix needs a real-paper repro, not a minimal one. Confirmed deep
+  (not minimally reproducible). **★ BREAKTHROUGH (2026-06-07): jabbrv raw-loads
+  CLEANLY when loaded EARLY — the `\emph` errors are a LOAD-ORDER package interaction,
+  and the cluster is fixable to SURPASS Perl.** Injecting `\usepackage{jabbrv}` right
+  after `\documentclass` in 2112.00489 (so jabbrv loads before the dep-scanned packages)
+  → **0 errors**, `\JournalTitle` defined, 251 KB HTML — vs Perl's 95 errors (Perl
+  raw-executes wlscirep.cls so jabbrv loads mid-list, AFTER a package that also touches
+  `\emph` — `soul` is the prime suspect, it wraps `\emph` for highlighting). So jabbrv's
+  raw-load WORKS; the imbalance is purely jabbrv-loaded-AFTER-the-emph-wrapper. **Refined
+  next-session plan (supersedes the earlier 'dep-scan + jabbrv-\emph co-fix'):** apply the
+  dep-scan `notex:raw_loaded` fix AND load shipped/raw-only packages EARLY (before the
+  bound packages, or at least before `soul`/other `\emph`-wrappers) → the wlscirep+jabbrv
+  cluster goes CLEAN (surpass Perl), not parity-with-errors. NO stub (respects prefer-raw-load
+  + preserves jabbrv's abbreviation). Bisecting the exact `\emph`-wrapper conflict
+  (soul-vs-jabbrv order) and choosing the load-order policy is the focused-session work.
+  Witnesses: 2112.00489 (0 errors when jabbrv early), 2202.06999, 2205.05249, 2211.03054.
+
+  **CORRECTION (same session, after a disambiguating test): NOT load-order.** Injecting
+  `\usepackage{jabbrv}` LATE — right before `\begin{document}`, AFTER the doc's
+  `\usepackage{soul}` — is ALSO 0 errors. So the soul-order theory above is WRONG. The
+  real discriminator is the LOADING PATH: jabbrv loaded via `\usepackage` in the document
+  PREAMBLE = clean (surpass Perl), whereas jabbrv loaded via the CLASS `\RequirePackage`
+  path (Rust dep-scan OR Perl raw-executing wlscirep.cls during `\documentclass`) = 95
+  `\emph`/`\egroup` errors in BOTH engines. Mechanism still uncertain (something about the
+  class-loading CONTEXT vs the preamble context — re-entrancy `SCANNING` guard during the
+  dep-scan, or `\makeatletter`/catcode/`\AtBeginDocument` timing — needs bisection). The
+  surpass-Perl fix is to make the class-load path load jabbrv in the same clean context as
+  `\usepackage` (NOT a load-order tweak). Deep; focused-session work. The dep-scan
+  `notex:raw_loaded` fix alone reproduces Perl's 95 (it loads jabbrv via the class path), so
+  it must be paired with this path/context fix to make the cluster clean.
 
 ### Round-37 release-binary fresh scan (2026-05-29): high parity confirmed
 
@@ -7122,6 +7869,69 @@ as **out of scope** for R36 and should not be triaged repeatedly.
   `\setboolean` undefined (the ifthen-loading settings file never
   runs). Byte-identical in Perl (verified 2026-05-27). Witness
   2003.12614 (R14, CONVERR_12).
+* **✅ FIXED 2026-06-07 (surpass-Perl, commit 58b662b064): `\sqrtsign` defined as the real-LaTeX macro `\def\sqrtsign{\radical"270370\relax}` so `\meaning\sqrtsign` matches `macro:->\radical "270370\relax ` and mdwmath's `\sq@readrad` parses without runaway. --preload mdwmath 43→0; 6/6 sampled papers (2110.05686/06287/06649/07734/08425/10854) CONVERR_43→0; tests 1359/0. Perl still errors — Rust now exceeds it.** Original analysis below.
+* **`mdwmath.sty` raw-load `#`-leak** (canvas-3 third batch, 2026-06-05) —
+  raw-loading `mdwmath.sty` (TL `mdwtools`) fails on the `\def\bbigg@#1#2#3{\hbox{$…
+  \left#3…$}}` family (line 133, redefining `\big`/`\Big`/`\bigg`/`\Bigg`) and on
+  `\sq@readrad` (a `"`-delimited `\root`/`\sqrt` macro): ~43 `Error:misdefined:#
+  …should never reach Stomach` per paper. Verified SHARED — Perl `latexml
+  --includestyles` (and with full ar5iv parity `--path=ar5iv-bindings
+  --preload=ar5iv.sty`) emits the byte-identical 43–44 errors; **no** mdwmath
+  binding exists in upstream LaTeXML or ar5iv. Probe (`\meaning\bbigg@`) shows
+  `\bbigg@` ends up **undefined** while `\big` stays the LaTeXML built-in (which
+  works) → output is fine, the errors are load-time *noise*. Recorded in
+  `docs/KNOWN_PERL_ERRORS.md`. Frequent: ~25–30 papers / 10k in the canvas (469
+  in stages 1–17). **Future work (surpass-Perl, HIGH difficulty — not attempted):**
+  either (a) harden the raw-loader's handling of `\def` bodies containing
+  `$…$`/`\left#n` + unusual delimiters (risky engine internals, broad blast
+  radius), or (b) ship a faithful `mdwmath.sty.ltxml` binding so the raw-load is
+  skipped. Witnesses: 2112.14809, 2204.08135, 2308.03312, 2306.01408, 2212.09944.
+  Deterministic minimal repro: `\usepackage{mdwmath}` + `$\big( x \big)$`.
+  **ROOT CAUSE CRACKED (2026-06-06):** mdwmath L51 `\sq@readrad|meaning|sqrtsign` runs away —
+  LaTeXML `\meaning\sqrtsign`=`\sqrtsign` lacks the `"` of TeX's `\mathchar"1270`, so the
+  `"`-delimited read consumes `\endgroup` + the rest of the file → the L49 `\catcode`\\12`
+  (backslash→other) is never restored → every `\def` from L53 on is read as raw chars and their
+  `#` params leak (43 errors). SHARED (Perl: `Until:" Missing argument for \sq@readrad`).
+  **FIX (surpass-Perl, ready):** make `\meaning\sqrtsign` TeX-faithful — (1) `\sqrtsign` is a
+  constructor (latex_constructs.rs:10005, unused in core) → redefine `\mathchardef\sqrtsign="1270`;
+  (2) Rust `\meaning` of a `\mathchardef` returns "Register" (non-faithful) → make it
+  `\mathchar"<hex>`. Broad-ish blast radius (all mathchardef symbols) → gate on full suite +
+  verify \sqrt renders + sample mdwmath papers. Full analysis in
+  ~/data/large_scale_canvas_3_third/PROGRESS.md.
+* **✅ FIXED 2026-06-07 — `eccv.sty` lineno-patch `\else`/`\fi` "not in a conditional"**
+  (canvas-3 third batch) — was **#1 error driver in the late-2023 (ECCV-2024)
+  population** (~47 papers/10k; 47 of 53 conditional-error papers in stage 20 were
+  eccv). **Verified SHARED** with Perl (`latexml --includestyles`, byte-identical 4
+  errors at eccv.sty line 191) — now **surpassed in Rust**.
+  **TRUE ROOT CAUSE (the earlier `\ifdefmacro`/primitive-meaning hypothesis below was
+  WRONG):** LaTeXML defines the `alignat`-family env-start macros **arg-taking**
+  (`\alignat{}`, `\alignat*`, `\xalignat`, `\xalignat*`, `\xxalignat`), faithfully
+  porting Perl `amsmath.sty.ltxml` L514-545. **Real amsmath's `\alignat` is
+  PARAMETERLESS** (`\start@align\z@\st@rredfalse`; `\start@align` reads the count
+  later). eccv's `\linenomathpatchAMS{alignat}` runs `\cspreto{alignat}{\linenomathAMS}`
+  + `\cspreto{alignat*}{…}`; etoolbox's `\preto`/`\cspreto` re-`\edef`s the target with
+  `\unexpanded\expandafter{\alignat}` (= `\expandonce`), forcing ONE expansion. For an
+  arg-taking macro that grabs the group's closing `}` as `#1`, collapsing the
+  `\unexpanded` braces → the body's `\ifmmode…\else…\fi` escapes as bare `\else`+`\fi`
+  (2 errors per `\cspreto` → 4 total). `align`/`gather`/`multline`/`flalign` are
+  parameterless → always clean. Isolation proof: `\linenomathpatchAMS{X}` errors
+  ONLY for `X=alignat`.
+  **FIX:** `amsmath_sty.rs` now mirrors amsmath's parameterless structure via
+  indirection — `\alignat` (parameterless) → `\lx@alignat@col{}` (arg-reader), so
+  `\expandonce\alignat` is a single token (no brace-grab, no premature conditional).
+  Applied to all 5 arg-taking variants. Witnesses 2310.18293 (4→0), 2309.17074,
+  2310.00161 all error-free; **scale-validated 2026-06-07: 24/25 random eccv CONVERR_4
+  papers now 0 errors** (the 1 outlier math9807064 is a DIFFERENT `\else` cause at
+  "Anonymous String", 0 alignat uses — a signature-regex false-positive, not an eccv
+  miss; so the ~187 count slightly overcounts but ~all true-eccv papers recover);
+  normal `\begin{alignat}{2}` rendering unchanged
+  (3 align/4 rows/27 cells verified); full suite 1359/0. Doc: KNOWN_PERL_ERRORS.md
+  "`\alignat` family arg-taking breaks etoolbox `\preto`/`\cspreto`".
+  *(Method note: the 4-layer "deep/cortex-only/binding-policy" framing during
+  2026-06-05/06 triage was a red herring — the leak is config-independent at the
+  amsmath level; latexml_oxide merely hid it because the `lineno_sty.rs` binding
+  stubs `\linenomathAMS`→`\@empty`, so `\cspreto{alignat}{\@empty}` never reaches
+  the arg-grab. Ground-truth `\meaning` comparison cracked it in one focused pass.)*
 
 ---
 
@@ -7174,7 +7984,7 @@ first non-empty return that doesn't match the expected expansion.
 
 | Gate | Current (2026-05-22) | Target |
 |---|---|---|
-| `cargo test --tests` | **1334/0/0** | unchanged |
+| `cargo test --tests` | **1359/0/0** | +25 (eTeX getter + font fixes; canvas-3 batch 3) |
 | `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser`, post-ASF cleanup — collaborator's lane) | 0 warnings |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1`) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1`) | 0 errors |
@@ -7293,7 +8103,7 @@ Multi-session ASF traversal migration is **landed**. Marpa is back
 on master (`dginev/marpa` master, commit `0bf241116fcef…`,
 PRs #3 + #4 merged). HYBRID is the default; `LATEXML_MARPA_ASF=1`
 turns on the ASF traversal; `LATEXML_MARPA_ASF_ONLY=1` forces it
-alone. Both modes: **1334/0/0** on this branch.
+alone. Both modes: **1359/0/0** on this branch.
 
 Full design + retro: [`docs/MATH_PARSER_AND_ASF.md`](MATH_PARSER_AND_ASF.md),
 [`docs/MATH_PARSER_ASF_TIEBREAKING.md`](MATH_PARSER_ASF_TIEBREAKING.md),

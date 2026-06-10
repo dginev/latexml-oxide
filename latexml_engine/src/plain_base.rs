@@ -587,6 +587,14 @@ LoadDefinitions!({
   DefMacro!("\\llap{}", r"\hbox to 0pt{\hss#1}");
   DefMacro!("\\rlap{}", r"\hbox to 0pt{#1\hss}");
   DefMacro!("\\m@th", "\\mathsurround=0pt ");
+  // fontmath.ltx L521: \def\n@space{\nulldelimiterspace\z@ \m@th}
+  // Zero the null-delimiter space and mathsurround for hand-built math
+  // delimiter boxes (\big/\Big… and many package delimiter helpers use it).
+  // Rust defines \big etc. without going through fontmath.ltx's `\n@space`
+  // path, so the macro itself was missing — packages/documents calling it
+  // directly errored (witness 2206.12768 et al.). Perl defines it via the
+  // kernel. Faithful literal port. \z@/\m@th/\nulldelimiterspace all exist.
+  DefMacro!("\\n@space", r"\nulldelimiterspace\z@ \m@th");
 
   // \strutbox
   def_macro_noop("\\strut")?;

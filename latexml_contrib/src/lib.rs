@@ -53,6 +53,7 @@ pub mod chngpage_sty;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
 pub mod cmcal_sty;
+pub mod colt2024_cls;
 pub mod commath_sty;
 pub mod crckapb_sty;
 pub mod currfile_sty;
@@ -161,12 +162,14 @@ pub mod ieeeaccess_cls;
 pub mod ieeeaerospace_cls;
 pub mod interspeech_cls;
 pub mod ieeecolor_cls;
+pub mod ieeeoj_cls;
 pub mod ieeeojcsys_cls;
 pub mod ifacconf_cls;
 pub mod ieeetaes_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;
+pub mod jabbrv_sty;
 pub mod jair_sty;
 pub mod jgcc_cls;
 pub mod jfm_cls;
@@ -272,6 +275,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("chngpage", "sty", chngpage_sty::load_definitions),
   ("commath", "sty", commath_sty::load_definitions),
   ("crckapb", "sty", crckapb_sty::load_definitions),
+  ("colt2024", "cls", colt2024_cls::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),
   ("daj", "cls", daj_cls::load_definitions),
   ("dmtcs-episciences", "cls", dmtcs_episciences_cls::load_definitions),
@@ -423,7 +427,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("getfiledate", "sty", getfiledate_sty::load_definitions),
   ("gretsi", "cls", gretsi_cls::load_definitions),
   ("IEEEapm", "cls", ieeeaerospace_cls::load_definitions),
-  ("IEEEoj", "cls", ieeeaerospace_cls::load_definitions),
+  ("IEEEoj", "cls", ieeeoj_cls::load_definitions),
   ("IEEEtai", "cls", ieeeaerospace_cls::load_definitions),
   ("IEEEojcsys", "cls", ieeeojcsys_cls::load_definitions),
   // ifacconf: intentionally unregistered — raw-load the paper-supplied
@@ -439,6 +443,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("interact", "cls", interact_cls::load_definitions),
   ("Interspeech", "cls", interspeech_cls::load_definitions),
   ("clear2025", "cls", jmlr_cls::load_definitions),
+  ("jabbrv", "sty", jabbrv_sty::load_definitions),
   ("jair", "sty", jair_sty::load_definitions),
   ("jgcc", "cls", jgcc_cls::load_definitions),
   ("jfm", "cls", jfm_cls::load_definitions),

@@ -126,6 +126,56 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   }
   let _guard = InputDepthGuard;
 
+  // TeX-faithful subdir search: when a package/class is loaded with a
+  // directory-prefixed name (e.g. `\usepackage{AISTATS/aistats2026}`),
+  // make that directory searchable for the DURATION of this load. TeX's
+  // input stack keeps the loaded file's directory on the search path, so
+  // the file — and any sibling it pulls in — resolves. This matters when a
+  // basename-keyed binding (contrib registry) is matched on the basename
+  // and then raw-loads its own file BY basename (dropping the directory):
+  // without the subdir on the path, that nested raw-load misses a
+  // paper-bundled file living in the subdir. Restored on every exit via the
+  // guard's Drop. Witness: 2510.09534 (`\usepackage{AISTATS/aistats2026}`;
+  // aistats2026.sty lives in an `AISTATS/` subdir; the contrib `aistats2026`
+  // binding does `InputDefinitions!("aistats2026")` → \aistatstitle /
+  // \aistatsauthor / \aistatsaddress undefined without this. Perl has no
+  // such binding and raw-loads the subdir path directly: 0 errors).
+  struct SearchPathGuard(Option<Vec<String>>);
+  impl Drop for SearchPathGuard {
+    fn drop(&mut self) {
+      if let Some(sp) = self.0.take() {
+        crate::state::set_search_paths(sp);
+      }
+    }
+  }
+  let _sp_guard = {
+    let basename = pathname::file_name(name);
+    let has_dir = !basename.is_empty() && basename != name;
+    let mut restore = None;
+    if has_dir {
+      let ext = options
+        .extension
+        .as_deref()
+        .unwrap_or(if options.as_class { "cls" } else { "sty" })
+        .to_string();
+      if let Some(full) = find_file(name, Some(FindFileOptions {
+        forbid_ltxml:      true,
+        notex:             false,
+        ext_type:          Some(Cow::Owned(ext)),
+        search_paths_only: false,
+      })) {
+        if let Some(parent) = std::path::Path::new(&full).parent() {
+          let pd = parent.to_string_lossy().to_string();
+          if !pd.is_empty() && !get_search_paths().iter().any(|p| p == &pd) {
+            restore = Some(get_search_paths());
+            search_paths_push_front(pd);
+          }
+        }
+      }
+    }
+    SearchPathGuard(restore)
+  };
+
   // Note: we always need a gullet to expand, and we sometimes need a stomach to load_definitions...
   // so let's make stomach a mandatory option.
   //
@@ -466,8 +516,22 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // over raw .sty files that may contain layout checks (like ICML's \ifdim
     // page-margin checks) that produce spurious warnings.
     let interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
+    // Perl Package.pm:FindFile_aux L2107: `$interpretable =
+    // LookupMapping('INTERPRETABLE_SOURCES', $file)`. A binding may
+    // register specific raw sources (keyed by `name.ext`) that MUST be
+    // raw-loaded directly rather than version-stripped to a fallback
+    // binding. Driver: xparse.sty.ltxml registers `xparse-2018-04-12.sty`
+    // so the rollback `\file_input` from the real xparse.sty loads the
+    // actual definitions (`\NewDocumentCommand`) — WITHOUT this, the
+    // version-suffix fallback strips `xparse-2018-04-12` → `xparse`, which
+    // re-enters the in-progress xparse binding (short-circuited) and the
+    // rollback file is never loaded (`\NewDocumentCommand` undefined →
+    // xparse/l3 cascade; canvas witness 2309.17288, tests xparse/regex_match).
+    let interpretable = crate::state::lookup_mapping("INTERPRETABLE_SOURCES", &filename).is_some();
 
-    // Step 2: If we're already interpreting raw TeX definitions, look for the file directly.
+    // Step 2: If we're interpreting raw TeX definitions (or this file is
+    // explicitly INTERPRETABLE), look for the file directly.
+    // Perl L2115: `(!notex && ($interpreting || $interpretable) && pathname_find)`.
     // Perl Package.pm L2117-2119: `pathname_find($file, paths => $paths)` —
     // LOCAL PATHS ONLY, no kpsewhich. Rust must mirror this: kpsewhich
     // here would short-circuit Step 3 (fallback ltxml) for any TeX-Live-
@@ -477,7 +541,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // returned the real caption3.sty from TL, raw-loading it and
     // triggering the `\DeclareCaptionFormat{hang}[#1#2#3\par]{...}`
     // PARAM-leak cascade (arXiv:2506.19291: Rust=30 vs Perl=2).
-    let found_raw = if interpreting && !options.notex {
+    let found_raw = if (interpreting || interpretable) && !options.notex {
       find_file(
         &filename,
         Some(FindFileOptions {
@@ -510,7 +574,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     //     this name).
     let found_raw = if found_raw.is_some() {
       found_raw
-    } else if !options.noltxml {
+    } else if !options.noltxml && !interpretable {
+      // Perl L2119: `(!noltxml && !$interpretable && FindFile_fallback)` —
+      // an INTERPRETABLE source must NOT be version-stripped to a fallback
+      // binding; it falls through to the raw-TeX/kpsewhich path below.
       if let Some((fallback, _kind)) = find_file_fallback(name, &as_type) {
         Info!(
           "fallback",

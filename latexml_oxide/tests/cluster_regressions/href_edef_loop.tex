@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+% Real hyperref's \href is robust (\protected); an \edef/\xdef over it must
+% leave the literal \href{..}{..} in the macro body, NOT expand it. LaTeXML's
+% \href expansion re-emits \href (for the \lx@hyper@url@ reversion), so without
+% the protected flag this \xdef expands \href forever -> infinite loop.
+% Distilled from 2110.14597-class ems-journal.sty \Emsaffil -> \build@ffil,
+% which does exactly \xdef\ems@temp{... \href{mailto:..}{\mbox{..}} ...}.
+% Witness 2110.10227.
+\xdef\foo{\href{mailto:author@example.com}{\mbox{author@example.com}}}
+A\foo B
+\end{document}

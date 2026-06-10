@@ -31,6 +31,19 @@ LoadDefinitions!({
   DefEnvironment!("{ack*}", "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
 
+  // autart.cls L537 `\newenvironment{pf}{…{\bfseries\Elproofname}…}{…}` with
+  // `\def\Elproofname{PROOF.}`, plus `\@namedef{pf*}#1{…custom label…}`. autart's
+  // own proof environment — distinct from amsthm's {proof} (handled lazily via
+  // OmniBus), so the OmniBus theorem-env autoload never covers it and `{pf}` was
+  // undefined (Perl raw-executes the cls). Bind as a semantic ltx:proof (mirrors
+  // mn2e_support's {proof} pattern; self-contained, no amsthm dep — avoids the
+  // eager-amsthm hazard noted below). Witness 2309.12476 (autart, `\begin{pf}` in
+  // \input'd subfiles).
+  DefEnvironment!("{pf}",
+    "<ltx:proof><ltx:title>PROOF.</ltx:title>#body</ltx:proof>");
+  DefEnvironment!("{pf*}{}",
+    "<ltx:proof><ltx:title>#1</ltx:title>#body</ltx:proof>");
+
   // Common elsart frontmatter macros (autart inherits elsart style) —
   // preserve author-supplied content as ltx:note frontmatter.
   DefMacro!("\\address[]{}",

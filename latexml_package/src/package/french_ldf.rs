@@ -43,6 +43,27 @@ LoadDefinitions!({
     \def\alsoname{voir aussi}\def\proofname{D\'emonstration}}");
   RawTeX!(r"\providecommand\datefrench{}");
 
+  // french.ldf L1169-1175: `\ifFB@mainlanguage@FR` — true iff French (or
+  // its Acadian dialect) is babel's *main* language. The real french.ldf
+  // declares the `\newif` then resolves it at `\AtEndOfPackage` time, once
+  // babel has set `\bbl@main@language`. Classes built on babel-french probe
+  // the boolean DIRECTLY in their preamble — e.g. ems-journal.sty L605:
+  //   `\ifFB@mainlanguage@FR \frenchsetup{...} \fi`
+  // Our curated french.ldf skips the raw-load, so the bare `\if` was
+  // undefined → a spurious `Error:undefined:\ifFB@mainlanguage@FR` plus a
+  // mis-nested `\fi` (Perl, which raw-loads french.ldf via
+  // `InputDefinitions('french', noltxml=>1)`, defines it and is silent).
+  // Port the conditional verbatim. The layout body the real macro gates
+  // (`\FBGlobalLayoutFrenchtrue`, beamer list tweaks) is French-typesetting
+  // nuance already no-op'd by `\FrenchLayout`/`\FrenchLists` &c. below, so
+  // only the boolean itself is needed. Witness 2110.10227 (ems-journal.sty,
+  // `[american,british,french]{babel}` — French is NOT main → false).
+  RawTeX!(r"\def\FB@french{french}\def\FB@acadian{acadian}\newif\ifFB@mainlanguage@FR
+    \AtEndOfPackage{%
+      \ifx\bbl@main@language\FB@french \FB@mainlanguage@FRtrue
+      \else \ifx\bbl@main@language\FB@acadian \FB@mainlanguage@FRtrue \fi
+      \fi}");
+
   // French superscript (Perl french.ldf.ltxml L24-26)
   DefConstructor!("\\up{}", "<ltx:sup>#1</ltx:sup>", enter_horizontal => true);
   DefConstructor!("\\fup{}", "<ltx:sup>#1</ltx:sup>", enter_horizontal => true);

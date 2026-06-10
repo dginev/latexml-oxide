@@ -15,23 +15,37 @@ const MAX_PGF_NUMBER: f64 = 16383.99998;
 
 // ==================== Result Formatting ====================
 
-/// Format a pgfmath result: 5 decimal places, strip trailing zeros
-/// Perl: sub pgfmathresult { sprintf("%.5f", $value); $value =~ s/0+$//; }
+/// Format a RAW pgfmath result, as set by pgf's internal `@`-suffixed
+/// functions (e.g. `\pgfmathmod@`, the trig used by
+/// `\pgfmathanglebetweenpoints`). Perl LaTeXML / real pgf:
+///   `sub pgfmathresult { sprintf("%.5f", $value); $value =~ s/0+$//; ... }`
+/// — i.e. it STRIPS trailing zeros AND the now-bare decimal point, so an
+/// integer prints as `10`, not `10.0`. (The PUBLIC `\pgfmathparse` path keeps
+/// the `.0` — that is `format_parse_result`, deliberately separate.)
+///
+/// Faithfulness matters here beyond cosmetics: pgf's
+/// `\pgfmathpointintersectionoflineandarc` runs an UNBOUNDED bisection
+/// (`pgfmathcalc.code.tex`) whose only exit is the exact comparison
+/// `\ifdim\x pt=\q pt`. When the `@`-functions append a spurious `.0`, the
+/// probe angle's string never matches the target the way TeX's raw fixed-point
+/// output does, the bisection over-narrows to `\p == \s` (no break there) and
+/// spins forever — each iteration opening a `{` group that accumulates as an
+/// empty box → OOM (witness 2201.09268, a `rounded rectangle`/callout node
+/// boundary).
 fn pgfmath_result_str(value: f64) -> String {
   if value.is_nan() || value.is_infinite() {
-    return "0.0".to_string();
+    return "0".to_string();
   }
   let clamped = value.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
   if clamped == (clamped as i64) as f64 {
-    // Integer result — pgf prints with .0 suffix
-    return format!("{}.0", clamped as i64);
+    // Integer result — raw, NO `.0` (matches Perl `@`-function output).
+    return format!("{}", clamped as i64);
   }
   let mut s = format!("{:.5}", clamped);
-  // Strip trailing zeros after decimal point (keep at least one)
-  if s.contains('.') {
-    while s.ends_with('0') && !s.ends_with(".0") {
-      s.pop();
-    }
+  // Strip trailing zeros after the decimal point (the fractional case always
+  // keeps at least one non-zero fractional digit, so this never bares the dot).
+  while s.ends_with('0') {
+    s.pop();
   }
   s
 }
@@ -530,6 +544,18 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
     tokens.extend(Explode!(s));
     tokens.push(T_END!());
   }
+  // Reset the global `\ifpgfmathunitsdeclared` flag BEFORE digesting the body
+  // so that, afterwards, the flag reflects ONLY whether THIS function body
+  // parsed a unit'd value. A user function body may run a nested
+  // `\pgfmathparse` (e.g. pgfplots' `pgfplotsbarwidthgeneric` body parses the
+  // `<bar width>pt` dimension); the outer parser must inherit that via
+  // `absorb_units_flag` so it doesn't clobber the flag back to false on exit.
+  // Without the reset a prior parse's stale flag would leak in for bodies that
+  // set `\pgfmathresult` directly (e.g. `\def\pgfmathresult{42}`). Mirrors
+  // Perl, where `\ifpgfmathunitsdeclared` is a persistent global threaded
+  // through nested evaluations. Fixes `bar shift={\pgfplotbarwidth}` under
+  // `symbolic x coords` (2110.14597).
+  let _ = stomach::digest(Tokens::from(vec![T_CS!("\\pgfmathunitsdeclaredfalse")]));
   // Digest the invocation (sets \pgfmathresult)
   let _ = stomach::digest(Tokens::from(tokens));
   // Read back \pgfmathresult via expansion
@@ -888,7 +914,9 @@ impl<'a> PgfMathParser<'a> {
       }
       // User-defined constant?
       if is_user_constant(&name) {
-        return Some(pgfmath_apply_fn(&name, &[]));
+        let v = pgfmath_apply_fn(&name, &[]);
+        self.absorb_units_flag();
+        return Some(v);
       }
       // Unknown — might be 0
       return None;
@@ -925,11 +953,15 @@ impl<'a> PgfMathParser<'a> {
       }
       self.skip();
       self.try_char(b')');
-      return Some(pgfmath_apply_fn(name, &args));
+      let v = pgfmath_apply_fn(name, &args);
+      self.absorb_units_flag();
+      return Some(v);
     }
     // FUNCTION simplefactor
     let arg = self.simplefactor()?;
-    Some(pgfmath_apply_fn(name, &[arg]))
+    let v = pgfmath_apply_fn(name, &[arg]);
+    self.absorb_units_flag();
+    Some(v)
   }
 
   /// Try to parse a number (Perl L707-712)
@@ -1085,6 +1117,21 @@ impl<'a> PgfMathParser<'a> {
     // Witnesses 1908.10041, 1901.08716 (and pgfplots bar charts generally).
     self.units_declared = true;
     Some(pgfmath_register_lookup(cs))
+  }
+
+  /// After evaluating a user-declared pgfmath function/constant, inherit the
+  /// global `\ifpgfmathunitsdeclared` flag that its body may have set (its body
+  /// runs with the flag reset, then a nested `\pgfmathparse` of a unit'd value
+  /// sets it — see `pgfmath_apply_user`). Mirrors Perl, where the flag is a
+  /// persistent global threaded through nested evaluations. Monotonic — only
+  /// ever sets the flag, matching `try_cs_register`'s unconditional set. Fixes
+  /// `bar shift={\pgfplotbarwidth}` under `symbolic x coords` (2110.14597):
+  /// `\pgfplotbarwidth` → `pgfplotsbarwidthgeneric` (a 0-arg pseudo-constant)
+  /// whose body parses the bar-width dimension.
+  fn absorb_units_flag(&mut self) {
+    if if_condition(&T_CS!("\\ifpgfmathunitsdeclared")).unwrap_or(None) == Some(true) {
+      self.units_declared = true;
+    }
   }
 
   /// Read an identifier: [a-zA-Z][a-zA-Z0-9_]*

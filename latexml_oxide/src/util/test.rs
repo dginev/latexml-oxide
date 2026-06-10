@@ -346,3 +346,60 @@ macro_rules! tex_tests {
     struct _TestDirective;
   };
 }
+
+// ======================================================================
+// Shared helpers for the standalone integration tests (PR #249 review P3-10).
+// The lax error grep, the dump/kpsewhich gates, and the converter
+// boilerplate previously lived as per-test-file copies — a drift hazard for
+// the project's #1 signal-integrity rule (robust error-log counting).
+
+/// Count inline `Error:<class>:` markers (parity_check.sh's lax pattern, see
+/// feedback_strict_vs_lax_error_grep.md). Errors are emitted INLINE within
+/// `(Building...Error:..)` envelopes, not at line starts.
+pub fn error_count(log: &str) -> usize {
+  log
+    .match_indices("Error:")
+    .filter(|(i, _)| {
+      let tail = &log.as_bytes()[*i + 6..];
+      let n_class = tail.iter().take_while(|b| b.is_ascii_lowercase()).count();
+      n_class > 0 && tail.get(n_class) == Some(&b':')
+    })
+    .count()
+}
+
+/// True iff a year-versioned latex kernel dump is present in the dev tree.
+/// Without it the engine raw-loads `expl3-code.tex` (degraded mode) and the
+/// error landscape is dominated by unrelated raw-load cascades — dump-gated
+/// tests should SKIP rather than measure the wrong thing. Delegates to the
+/// engine's own dump-name convention so a filename-scheme change cannot make
+/// the tests silently self-skip forever.
+pub fn dump_available() -> bool {
+  let dir = std::path::Path::new(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../resources/dumps"
+  ));
+  !latexml_engine::dump_paths::available_years_in_dir(dir, "latex").is_empty()
+}
+
+/// True iff `kpsewhich` resolves the named file in the host TeX tree.
+pub fn kpse_has(file: &str) -> bool {
+  std::process::Command::new("kpsewhich")
+    .arg(file)
+    .output()
+    .map(|o| o.status.success() && !o.stdout.is_empty())
+    .unwrap_or(false)
+}
+
+/// Convert a test fixture with the standard HTML5 config and return the full
+/// response (result/log/status). The shared boilerplate for the standalone
+/// regression tests.
+pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = latexml_core::common::Config {
+    format: latexml_core::common::OutputFormat::HTML5,
+    ..latexml_core::common::Config::default()
+  };
+  let mut c = crate::converter::Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  c.convert(source.to_string())
+}

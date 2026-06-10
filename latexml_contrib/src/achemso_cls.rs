@@ -20,6 +20,13 @@ LoadDefinitions!({
   // achemso uses setspace internally; user papers also call
   // \singlespacing / \doublespacing in preambles. Witness 2503.21357.
   RequirePackage!("setspace");
+  // achemso.cls L308: `\RequirePackage[margin=2.54cm]{geometry}` and L1306
+  // calls `\geometry{...}` for its own layout. The real class (which Perl
+  // raw-loads) thus has `\geometry` defined; our OmniBus stub must mirror
+  // that so authors' preamble `\geometry{...}` resolves. Layout itself is
+  // moot in the XML/HTML paradigm, but the CS must exist. Witness 2407.02650
+  // (`\geometry{voffset=10pt,...}` → undefined without this; Perl: 0 errors).
+  RequirePackage!("geometry");
 
   // ACS authorship primitives — preserve author content as ltx:note
   // frontmatter entries.

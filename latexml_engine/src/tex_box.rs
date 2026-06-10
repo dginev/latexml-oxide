@@ -561,7 +561,13 @@ LoadDefinitions!({
     // Perl L318-321: cleanup auto-opened svg:g/svg:svg (only when NOT in SVG),
     // then always close the specific node we opened.
     if !is_svg {
-      while !document.get_element().unwrap().has_attribute("_beginscope") &&
+      // `get_element()` returns None at the document root (e.g. a malformed
+      // `\hbox` whose body over-closed up to the root). Perl's `getElement`
+      // there yields the document node whose `hasAttribute('_beginscope')` is
+      // false → its loop falls through to a no-op `maybeCloseElement` and stops.
+      // Rust must NOT `.unwrap()` the None (FATAL_101 panic, witness 2312.10730):
+      // treat "no current element" as "stop" — behaviour-equivalent to Perl.
+      while document.get_element().is_some_and(|e| !e.has_attribute("_beginscope")) &&
         document.maybe_close_element("svg:g")?.is_some() {}
       document.maybe_close_element("svg:svg")?;
     }

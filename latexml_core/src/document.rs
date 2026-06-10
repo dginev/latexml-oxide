@@ -2073,9 +2073,10 @@ impl Document {
     }
     // Sibling guard to open_math_text_internal: libxml's append_text uses
     // CString and panics on embedded NULs (forbidden in XML text per spec).
-    // Strip them up-front so all downstream append_text calls are safe.
-    if text.contains('\0') {
-      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
+    // Strip them — and the rest of the XML-invalid control class — up-front
+    // so all downstream append_text calls are safe and the output stays
+    // well-formed (shared policy with `set_attribute`, see `xml_sanitize`).
+    if let Cow::Owned(cleaned) = xml_sanitize(text) {
       return self.open_text_internal(&cleaned);
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
@@ -2261,16 +2262,12 @@ impl Document {
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
     // libxml's append_text uses CString and panics on embedded NULs. NUL is
-    // forbidden in XML text per spec anyway, so strip it. Witness:
-    // astro-ph0202376 (a paper that produces math tokens with \char0 / NUL
-    // bytes embedded in their content). Matches Perl's libxml behavior which
-    // silently drops NULs in text content.
-    if text.contains('\0') {
-      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
-      node.append_text(&cleaned)?;
-    } else {
-      node.append_text(text)?;
-    }
+    // forbidden in XML text per spec anyway, so strip it (and the rest of the
+    // XML-invalid control class — shared policy with `set_attribute`, see
+    // `xml_sanitize`). Witness: astro-ph0202376 (a paper that produces math
+    // tokens with \char0 / NUL bytes embedded in their content). Matches
+    // Perl's libxml behavior which silently drops NULs in text content.
+    node.append_text(&xml_sanitize(text))?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state::get_nomathparse_flag() {
       self.apply_math_ligatures(&mut node)?;
@@ -2573,6 +2570,31 @@ impl Document {
           // Cascading rejection — skip the error log (Perl-faithful).
           return Ok(self.node.clone());
         }
+        // Sectioning-unit-in-frontmatter leniency (Perl-faithful). A
+        // `\paragraph{Keywords.}` / `\paragraph{MSC.}` inside an `abstract`
+        // (a common author idiom) produces `<ltx:paragraph>` inside
+        // `<ltx:abstract>`. The RNG `abstract_model = Block.model` excludes
+        // sectioning units, but Perl's builder inserts it WITHOUT erroring
+        // (Perl 0 / Rust 2 on 2311.06870) — its output literally nests
+        // `<ltx:paragraph inlist="toc">` in `<ltx:abstract>`. Mirror that
+        // build-leniency for the narrow sectioning-into-frontmatter case so
+        // we don't out-strict Perl. Same `return self.node` "insert anyway"
+        // mechanism as the math-leaf cascade above.
+        let is_sectioning_unit =
+          qsym_str == "ltx:paragraph" || qsym_str == "ltx:subparagraph";
+        // Container is either a frontmatter block (abstract/acknowledgements,
+        // Block.model — no sectioning units) OR another sectioning unit that
+        // can't hold it (a 2nd `\paragraph` nests inside the 1st when the
+        // enclosing abstract can't auto-close to a section level). Perl's
+        // builder produces exactly this nested `<ltx:paragraph><ltx:paragraph>`
+        // shape inside `<ltx:abstract>` without erroring (2311.06870: Perl 0).
+        let is_lenient_container = cur_str == "ltx:abstract"
+          || cur_str == "ltx:acknowledgements"
+          || cur_str == "ltx:paragraph"
+          || cur_str == "ltx:subparagraph";
+        if is_sectioning_unit && is_lenient_container {
+          return Ok(self.node.clone());
+        }
         // Didn't find a legit place.
         let message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
           s!(
@@ -2710,6 +2732,16 @@ impl Document {
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
   pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) -> Result<()> {
+    // Sanitize BEFORE the empty check: a value of only invalid chars (e.g. a
+    // lone NUL) must degrade to the skip path, not reach libxml. Without this
+    // an interior NUL panics in libxml's `CString::new(value).unwrap()`
+    // (node.rs:639) and aborts the whole conversion — witness `$a^^@b$`-class
+    // stray NULs (BibTeX `\"u`-mangling) reaching the `tex=` reversion
+    // attribute now that NUL's catcode is 12/OTHER like Perl. The text sinks
+    // (`open_text_internal`/`open_math_text_internal`) already stripped NUL;
+    // this attribute sink did not. PR #249 review P0-1.
+    let value_sanitized = xml_sanitize(value);
+    let value: &str = &value_sanitized;
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
@@ -3553,10 +3585,16 @@ impl Document {
       if node_ref.get_type() != Some(NodeType::ElementNode) {
         break;
       }
-      if let Some(lang) = node_ref.get_attribute("xml:lang") {
+      // `xml:lang` is stored namespaced (local name "lang"); the string
+      // accessor `get_attribute("xml:lang")` always returns None — read it via
+      // the XML namespace. (Same libxml footgun as xml:id; see
+      // docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.)
+      if let Some(lang) = node_ref.get_attribute_ns("lang", XML_NS) {
         return lang;
       }
-      if let Some(fontid) = node.get_attribute("_font") {
+      // Perl `getNodeLanguage` reads `_font` off the SAME (walked) ancestor,
+      // not the original node — use `node_ref`, not `node`.
+      if let Some(fontid) = node_ref.get_attribute("_font") {
         if let Some(font) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
           if let Some(lang) = font.get_language() {
             return lang.to_string();
@@ -4175,12 +4213,24 @@ impl Document {
     // Copy ALL attributes from `node` to `newnode`
     let mut id = None;
     for (key, value) in node.get_attributes() {
+      // `get_attributes()` returns the `xml:id` attribute under its LOCAL name
+      // `"id"` (it lives in the XML namespace), NOT the prefixed `"xml:id"`.
+      // Capture it here so it can be re-registered on `new` AFTER `remove_node`
+      // unrecords it below — and re-set it through `Document::set_attribute`
+      // (which routes "id"/"xml:id" through `record_id_with_node` + the XML
+      // namespace), rather than the raw `Node::set_attribute` copy used for
+      // ordinary attributes (that would drop the namespace AND the idstore
+      // registration). Missing this stranded the equation refnum id across
+      // `rearrange_lone_ams_aligned`'s equation→equationgroup rename, leaving
+      // the group with a generic paragraph id and dangling intra-math XMRefs
+      // (witness 2311.01600; see docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
+      if key == "xml:id" || key == "id" {
+        id = Some(value);
+        continue;
+      }
       let can_have = model::can_have_attribute(newname, arena::pin(&key));
       if can_have {
         new.set_attribute(&key, &value)?;
-      }
-      if key == "xml:id" {
-        id = Some(value); // Save to register after removal of old node.
       }
     }
     // AND move all content from `node` to `newnode`
@@ -4213,10 +4263,13 @@ impl Document {
     self.remove_node(node);
 
     // and FINALLY, we can register the new node under the id.
+    // `Document::set_attribute("xml:id", …)` routes through
+    // `record_id_with_node` (idstore registration + dedup) and sets the
+    // correctly-namespaced `xml:id` attribute. Only set it when the new qname
+    // can carry an id (mirrors the per-attribute `can_have_attribute` gate).
     if let Some(id) = id {
-      let newid = self.record_id_with_node(&id, &new);
-      if newid != id {
-        new.set_attribute("xml:id", &newid)?;
+      if model::can_have_attribute(newname, arena::pin("xml:id")) {
+        self.set_attribute(&mut new, "xml:id", &id)?;
       }
     }
 
@@ -4588,6 +4641,24 @@ impl Document {
 }
 
 // Auxiliary
+
+/// Strip characters that may not appear in XML 1.0 content at all: NUL and
+/// the other C0 controls except TAB/LF/CR, plus the non-characters
+/// U+FFFE/U+FFFF. libxml's `CString`-based APIs *panic* on interior NULs
+/// (node.rs:639), and the rest produce non-well-formed output that downstream
+/// XML consumers reject. Single shared policy for the document sinks
+/// (`set_attribute`, `open_text_internal`, `open_math_text_internal`).
+/// Borrow-free in the (overwhelmingly common) clean case.
+fn xml_sanitize(value: &str) -> Cow<'_, str> {
+  fn invalid(c: char) -> bool {
+    (c < '\u{20}' && c != '\t' && c != '\n' && c != '\r') || c == '\u{FFFE}' || c == '\u{FFFF}'
+  }
+  if value.chars().any(invalid) {
+    Cow::Owned(value.chars().filter(|c| !invalid(*c)).collect())
+  } else {
+    Cow::Borrowed(value)
+  }
+}
 
 fn serialize_string(string: &str) -> String {
   // Basic entities

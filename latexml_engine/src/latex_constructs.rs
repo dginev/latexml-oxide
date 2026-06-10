@@ -6992,6 +6992,40 @@ LoadDefinitions!({
   DefMacro!("\\@arabic{Number}", sub[(number)] {
     ExplodeText!(number.value_of().to_string())
   });
+  // latex.ltx L15715: \def\two@digits#1{\ifnum#1<10 0\fi\number#1}
+  // Zero-pad a number to at least two digits (date/time formatting helper,
+  // used by \today and many class/package date macros). Faithful literal
+  // port of the kernel `\def`. Was undefined in Rust → packages calling it
+  // directly errored and cascaded (witness 2206.12768: undefined:\two@digits
+  // → expected:<relationaltoken> in the surrounding \ifnum). Perl defines it
+  // via the kernel; minimal repro `\two@digits{7}` → Rust nothing / Perl 07.
+  DefMacro!("\\two@digits{}", r"\ifnum#1<10 0\fi\number#1");
+  // latex.ltx L6977-6982: \@removeelement{elt}{list}{\cmd} — remove the
+  // comma-list element `elt` from `list`, store the result in `\cmd`.
+  // Faithful literal port of the kernel `\def` (nested delimited macros over
+  // `\reserved@a`/`\reserved@b`). Was undefined in Rust; Perl defines it via
+  // the kernel. Used by grfext and other comma-list-manipulating packages
+  // (witness 2309.13586 chain). `\@empty` already exists; `\reserved@a/b` are
+  // scratch macros defined inline by the body.
+  DefMacro!("\\@removeelement{}{}{}",
+    r"\def\reserved@a##1,#1,##2\reserved@a{##1,##2\reserved@b}\def\reserved@b##1,\reserved@b##2\reserved@b{\ifx,##1\@empty\else##1\fi}\edef#3{\expandafter\reserved@b\reserved@a,#2,\reserved@b,#1,\reserved@a}");
+  // latex.ltx L7634: \protected\def\leavevmode@ifvmode{\ifvmode\expandafter\indent\fi}
+  // Emit \indent only when currently in vertical mode (used by \enspace and
+  // by `\vcenter`/box helpers). Was undefined in Rust; Perl defines it via the
+  // kernel. `\protected` (matched here) so it survives \edef/serialization
+  // unexpanded — it surfaced inside serialized .bbl math (witness 2312.14913).
+  // Faithful port; \ifvmode/\indent already exist.
+  DefMacro!("\\leavevmode@ifvmode", r"\ifvmode\expandafter\indent\fi", protected => true);
+  // latex.ltx L14276-14285: \@starttoc{ext} — input the .ext toc-style file
+  // and (re)open it for writing the \contentsline entries. Faithful literal
+  // port; in LaTeXML the file I/O is in-memory-cached (\openout/\@input) and
+  // the actual TOC is built from the captured \contentsline entries during
+  // post-processing, so this just lets packages that drive custom lists via
+  // \@starttoc{loa}/etc. run without erroring. Was undefined in Rust; Perl
+  // defines it via the kernel (witness 2211.02345). All deps
+  // (\@input/\newwrite/\if@filesw/\@nobreakfalse) already exist.
+  DefMacro!("\\@starttoc{}",
+    r"\begingroup\makeatletter\@input{\jobname.#1}\if@filesw\expandafter\newwrite\csname tf@#1\endcsname\immediate\openout \csname tf@#1\endcsname \jobname.#1\relax\fi\@nobreakfalse\endgroup");
   DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
@@ -10048,10 +10082,15 @@ LoadDefinitions!({
   DefMacro!("\\dag", "\\ifmmode{\\dagger}\\else\\textdagger\\fi");
   DefMacro!("\\ddag", "\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi");
 
-  DefConstructor!(
-    "\\sqrtsign Digested",
-    "<ltx:XMApp><ltx:XMTok meaning='square-root'/><ltx:XMArg>#1</ltx:XMArg></ltx:XMApp>"
-  );
+  // Real LaTeX (latex.ltx) defines `\sqrtsign` as a MACRO: `\def\sqrtsign{\radical"270370\relax}`.
+  // `\meaning\sqrtsign` is therefore `macro:->\radical "270370\relax ` — note the TWO catcode-12
+  // backslashes (`\radical`, `\relax`). mdwmath's catcode-tricky `\sq@readrad #1"#2\#3` parses
+  // exactly this: #1 up to `"` = `macro:->\radical `, #2 up to the `\` of `\relax` = `270370`,
+  // #3 up to `\relax`. LaTeXML had `\sqrtsign` as a 1-arg square-root *constructor*, whose meaning
+  // lacked that structure → `\sq@readrad` ran away consuming `\endgroup`, leaving `\` at catcode-12
+  // and corrupting every later `\def` (43 `#`-to-Stomach leaks; ~1080 canvas papers; SHARED w/ Perl).
+  // Match real LaTeX. `\sqrt` does its own construction; nothing in core calls `\sqrtsign{…}`.
+  TeX!(r#"\def\sqrtsign{\radical"270370\relax}"#);
 
   DefPrimitive!("\\mathparagraph", "\u{00B6}");
   DefPrimitive!("\\mathsection", "\u{00A7}");

@@ -451,9 +451,195 @@ impl BoxOps for Digested {
   }
 }
 
+/// Hard cap on the number of sub-boxes visited by [`Digested::cycle_fingerprint`].
+/// Bounds the fingerprint cost to O(1) per box while still sampling enough
+/// content (depth-first) to tell apart same-shaped boxes.
+const FP_BUDGET: u32 = 48;
+
+/// Per-box traversal cap for [`Digested::estimate_bytes`]. Larger than
+/// [`FP_BUDGET`] (the estimate is computed only on a small *sample* of the box
+/// list, so a deeper walk is affordable and improves accuracy for nested
+/// boxes).
+const EB_BUDGET: u32 = 256;
+
 impl Digested {
   /// immutably borrow the inner Digested data
   pub fn data(&self) -> &DigestedData { &self.0 }
+
+  /// A content-aware but COST-BOUNDED fingerprint for the stomach cycle guard
+  /// ([`crate::cycle_guard`]).
+  ///
+  /// Design tension: it must (a) distinguish boxes by *content* so two
+  /// different boxes that merely share a shape (e.g. two `List`s of equal
+  /// length but different children) don't collide into a false cycle, yet
+  /// (b) be cheap on the digestion path. We reconcile both with a hard
+  /// **node budget**: at most [`FP_BUDGET`] sub-boxes are ever visited (a
+  /// depth-first sample of the content), so cost is O(1) per box regardless
+  /// of how large or deeply nested the structure is, while the sample is rich
+  /// enough that real content differences change the hash. (It is also only
+  /// ever invoked once `box_list` has already blown past the stomach guard's
+  /// activation size, so ordinary conversions never pay for it at all.)
+  /// NOT a stable cross-process hash — for in-run loop detection only.
+  pub fn cycle_fingerprint(&self) -> u64 {
+    use std::hash::Hasher;
+    let mut h = rustc_hash::FxHasher::default();
+    let mut budget: u32 = FP_BUDGET;
+    self.fingerprint_into(&mut h, &mut budget);
+    h.finish()
+  }
+
+  // NOTE: `fingerprint_into` and `estimate_bytes_into` are PAIRED budgeted
+  // traversals over `DigestedData` (one hashes, one sizes — different
+  // per-variant work, same walk shape). Both matches are deliberately
+  // EXHAUSTIVE (no `_` catch-all): adding a `DigestedData` variant breaks
+  // both at compile time, so the two cannot silently drift on coverage —
+  // only keep that property when editing either (PR #249 review P3-11).
+  fn fingerprint_into<H: std::hash::Hasher>(&self, h: &mut H, budget: &mut u32) {
+    use std::hash::Hash;
+    if *budget == 0 {
+      return;
+    }
+    *budget -= 1;
+    match self.data() {
+      DigestedData::TBox(b) => {
+        0u8.hash(h);
+        if let Ok(tb) = b.try_borrow() {
+          tb.text.hash(h);
+        }
+      },
+      DigestedData::Whatsit(w) => {
+        1u8.hash(h);
+        if let Ok(wb) = w.try_borrow() {
+          // The creating definition's identity distinguishes whatsits of
+          // different kinds (Rc data-pointer, stable within a run); the args
+          // distinguish their content.
+          (Rc::as_ptr(&wb.definition) as *const () as usize).hash(h);
+          wb.args.len().hash(h);
+          for arg in &wb.args {
+            if *budget == 0 {
+              break;
+            }
+            match arg {
+              Some(d) => d.fingerprint_into(h, budget),
+              None => {
+                *budget -= 1;
+                0xFEu8.hash(h);
+              },
+            }
+          }
+        }
+      },
+      DigestedData::Alignment(_) => 2u8.hash(h),
+      DigestedData::List(l) => {
+        3u8.hash(h);
+        if let Ok(lb) = l.try_borrow() {
+          lb.boxes.len().hash(h);
+          for child in &lb.boxes {
+            if *budget == 0 {
+              break;
+            }
+            child.fingerprint_into(h, budget);
+          }
+        }
+      },
+      DigestedData::Postponed(t) => {
+        4u8.hash(h);
+        t.len().hash(h);
+      },
+      DigestedData::KeyVals(_) => 5u8.hash(h),
+      DigestedData::RegisterValue(r) => {
+        6u8.hash(h);
+        std::mem::discriminant(r).hash(h);
+      },
+      DigestedData::Comment(c) => {
+        7u8.hash(h);
+        c.0.hash(h);
+      },
+    }
+  }
+  /// A COST-BOUNDED estimate of the heap bytes this digested box (and its
+  /// nested content) occupies. Used by the stomach's portable
+  /// memory-budget guard ([`crate::stomach`]) to detect a runaway *by the
+  /// resource that actually matters — bytes — rather than box COUNT*, since
+  /// per-box weight varies several-fold (a bare text box vs a deeply nested
+  /// `\hbox{\raise…\hbox{…}}`). Traversal is capped at [`EB_BUDGET`] sub-boxes
+  /// (depth-first) so the estimate stays O(1) per box; deeply nested boxes
+  /// beyond the budget are under-counted, which is safe (the guard only needs
+  /// a monotone lower bound to catch unbounded growth).
+  pub fn estimate_bytes(&self) -> usize {
+    let mut budget: u32 = EB_BUDGET;
+    self.estimate_bytes_into(&mut budget)
+  }
+
+  // Paired with `fingerprint_into` above — keep both matches exhaustive
+  // (see the note there).
+  fn estimate_bytes_into(&self, budget: &mut u32) -> usize {
+    if *budget == 0 {
+      return 0;
+    }
+    *budget -= 1;
+    // Per-node fixed overhead: the `Rc<DigestedData>` control block + the
+    // enum discriminant + the inner `RefCell`/`Box`. Deliberately coarse.
+    const NODE: usize = 64;
+    // Note: text and the `Rc<Font>` are shared (interned / ref-counted), so they
+    // add no marginal per-box bytes. What DOES accumulate per box and dominates
+    // RSS is each box's OWNED data: the `properties` HashMap, the `tokens`
+    // source-TeX vector (`Tbox`), the args/children vectors, and — crucially —
+    // the nested children themselves.
+    //
+    // `map_bytes`: a `SymHashMap` (hashbrown) allocates a control-byte table +
+    // key/value slots at ~7/8 load; ~96 B per live entry plus the base table
+    // covers control bytes, the `Stored` value enum, and growth slack.
+    fn map_bytes(n: usize) -> usize {
+      if n == 0 { 0 } else { 64 + n * 96 }
+    }
+    match self.data() {
+      DigestedData::TBox(b) => {
+        let mut bytes = NODE + 48;
+        if let Ok(tb) = b.try_borrow() {
+          bytes += map_bytes(tb.properties.len());
+          bytes += tb.tokens.len() * 16; // owned source-TeX tokens
+        }
+        bytes
+      },
+      DigestedData::Whatsit(w) => {
+        let mut bytes = NODE + 64;
+        if let Ok(wb) = w.try_borrow() {
+          bytes += map_bytes(wb.properties.len());
+          bytes += wb.args.len() * 16;
+          for arg in &wb.args {
+            if *budget == 0 {
+              break;
+            }
+            if let Some(d) = arg {
+              bytes += d.estimate_bytes_into(budget);
+            }
+          }
+        }
+        bytes
+      },
+      DigestedData::List(l) => {
+        let mut bytes = NODE + 48;
+        if let Ok(lb) = l.try_borrow() {
+          bytes += map_bytes(lb.properties.len());
+          bytes += lb.boxes.len() * 8;
+          for child in &lb.boxes {
+            if *budget == 0 {
+              break;
+            }
+            bytes += child.estimate_bytes_into(budget);
+          }
+        }
+        bytes
+      },
+      DigestedData::Postponed(_) => NODE + 32,
+      DigestedData::Comment(_) => NODE + 16,
+      DigestedData::Alignment(_)
+      | DigestedData::KeyVals(_)
+      | DigestedData::RegisterValue(_) => NODE,
+    }
+  }
+
   // convenience subset of NumericOps, added here for now as an experiment:
   /// Obtain the i64 value of the digested object, iff it wraps a `RegisterValue`
   pub fn value_of(&self) -> i64 {
@@ -683,5 +869,112 @@ mod tests {
     let d: Digested = Tbox::default().into();
     let o: Option<Digested> = (&d).into();
     assert!(o.is_some());
+  }
+
+  fn tbox_with(text: &str) -> Digested {
+    Tbox { text: arena::pin(text), ..Default::default() }.into()
+  }
+  fn list_of(items: Vec<Digested>) -> Digested {
+    List {
+      boxes: items,
+      ..Default::default()
+    }
+    .into()
+  }
+
+  /// Iteratively dismantle a deeply-nested `Digested` so its `Drop` does NOT
+  /// recurse once per nesting level. A deep singly-owned `Rc<DigestedData>`
+  /// chain otherwise overflows the small per-test-thread stack under CI's
+  /// `--test-threads=2` (a SIGABRT that passes locally on the larger default
+  /// stack). Descends into the FIRST child of each `List`, dropping the
+  /// shallow remainder (leaf boxes + the now-childless outer) as it goes, so
+  /// teardown is O(1) in stack depth. (The analogous PRODUCTION concern — a
+  /// boxing-depth-cap Fatal unwinding a deep structure — is tracked
+  /// separately; the real box-list runaway is a WIDE `Vec`, already
+  /// iteratively dropped.)
+  fn drain_nest(mut cur: Digested) {
+    loop {
+      let child = if let DigestedData::List(l) = &*cur.0 {
+        let mut boxes = std::mem::take(&mut l.borrow_mut().boxes);
+        (!boxes.is_empty()).then(|| boxes.swap_remove(0))
+      } else {
+        None
+      };
+      match child {
+        Some(c) => cur = c,
+        None => break,
+      }
+    }
+  }
+
+  #[test]
+  fn cycle_fingerprint_is_content_aware_for_lists() {
+    // The whole point of recursing into a List (rather than hashing its length
+    // alone): two lists of the SAME length but DIFFERENT content must not
+    // collide, or the stomach cycle guard would false-positive.
+    let ab = list_of(vec![tbox_with("a"), tbox_with("b")]);
+    let ac = list_of(vec![tbox_with("a"), tbox_with("c")]);
+    assert_ne!(
+      ab.cycle_fingerprint(),
+      ac.cycle_fingerprint(),
+      "same-length lists with different content must NOT share a fingerprint"
+    );
+    // ...while structurally identical lists DO (so real cycles are still caught).
+    let ab2 = list_of(vec![tbox_with("a"), tbox_with("b")]);
+    assert_eq!(ab.cycle_fingerprint(), ab2.cycle_fingerprint());
+  }
+
+  #[test]
+  fn cycle_fingerprint_distinguishes_text_and_is_bounded() {
+    assert_ne!(
+      tbox_with("a").cycle_fingerprint(),
+      tbox_with("b").cycle_fingerprint()
+    );
+    // A pathologically deep/wide nest must still return (budget-bounded) — and
+    // remain distinguishable from a shallow one.
+    let mut deep = tbox_with("z");
+    for _ in 0..10_000 {
+      deep = list_of(vec![deep, tbox_with("z")]);
+    }
+    let _ = deep.cycle_fingerprint(); // must not hang / overflow
+    assert_ne!(deep.cycle_fingerprint(), tbox_with("z").cycle_fingerprint());
+    drain_nest(deep); // O(1)-stack teardown — see `drain_nest`.
+  }
+
+  #[test]
+  fn estimate_bytes_is_positive_and_nesting_increases_it() {
+    // Every box has some positive footprint.
+    assert!(tbox_with("a").estimate_bytes() > 0);
+    // A list of N boxes weighs more than a single box (the children count).
+    let one = list_of(vec![tbox_with("a")]);
+    let many = list_of(vec![
+      tbox_with("a"),
+      tbox_with("b"),
+      tbox_with("c"),
+      tbox_with("d"),
+    ]);
+    assert!(
+      many.estimate_bytes() > one.estimate_bytes(),
+      "a wider list must estimate heavier than a narrow one"
+    );
+  }
+
+  #[test]
+  fn estimate_bytes_is_cost_bounded_for_deep_nests() {
+    // A pathologically deep nest must terminate (EB_BUDGET) without hanging /
+    // overflowing, and still return a finite positive estimate.
+    let mut deep = tbox_with("z");
+    for _ in 0..100_000 {
+      deep = list_of(vec![deep]);
+    }
+    let est = deep.estimate_bytes();
+    assert!(est > 0);
+    // Budget-bounded: the walk visits at most EB_BUDGET nodes, so a 100k-deep
+    // nest cannot estimate more than roughly EB_BUDGET node-overheads.
+    assert!(
+      est < (EB_BUDGET as usize) * 4096,
+      "estimate must stay bounded regardless of nest depth (got {est})"
+    );
+    drain_nest(deep); // O(1)-stack teardown — see `drain_nest`.
   }
 }

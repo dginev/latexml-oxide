@@ -52,7 +52,12 @@ LoadDefinitions!({
         gullet::unread_one(token);
       }
     }
-    Ok(value)
+    // eTeX fixes the result type by the command (\dimexpr→Dimension, etc.), not
+    // by the operands. The evaluator's "missing number, treated as zero"
+    // recovery / LHS-typed arithmetic can return a mismatched variant (e.g.
+    // Number(0) for \dimexpr), which then panics the register getter's
+    // expect_dimension(). Coerce to the declared type so the getter stays total.
+    Ok(value.coerce_to(rtype))
   }
 
   fn etex_readexpr_i(rtype: RegisterType, prec: usize) -> Result<RegisterValue> {
@@ -337,17 +342,23 @@ LoadDefinitions!({
     etex_readexpr(RegisterType::MuGlue)?
   });
 
+  // These getters must stay TOTAL: pgfmath (pgfmath_code_tex.rs::pgfmath_register_lookup)
+  // looks up `\dimexpr` & friends as if they were 0-arg registers — `lookup_register(cs,
+  // vec![])` — so the parameter is never parsed and `args` is EMPTY. A bare `args.remove(0)`
+  // then panics ("removal index 0 should be < len 0"), crashing the worker (FATAL_101;
+  // ~8 papers in the large-scale canvas, e.g. 2302.02182 — `\dimexpr…` inside a pgf-calc
+  // coordinate). Degrade to the zero default instead of crashing.
   DefRegister!("\\numexpr NumExpr", Number::new(0), getter => sub[args] {
-    args.remove(0).expect_number()
+    if args.is_empty() { Number::new(0) } else { args.remove(0).expect_number() }
   });
   DefRegister!("\\dimexpr DimExpr", Dimension::new(0), getter => sub[args] {
-    args.remove(0).expect_dimension()
+    if args.is_empty() { Dimension::new(0) } else { args.remove(0).expect_dimension() }
   });
   DefRegister!("\\glueexpr GlueExpr", Glue::new(0), getter => sub[args] {
-    args.remove(0).expect_glue()
+    if args.is_empty() { Glue::new(0) } else { args.remove(0).expect_glue() }
   });
   DefRegister!("\\muexpr MuExpr", MuGlue::new(0), getter => sub[args] {
-    args.remove(0).expect_mu_glue()
+    if args.is_empty() { MuGlue::new(0) } else { args.remove(0).expect_mu_glue() }
   });
 
   // Parts of Glue — Perl L207-214

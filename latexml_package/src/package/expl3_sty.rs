@@ -267,6 +267,17 @@ LoadDefinitions!({
 
   state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
   state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+  // Also restore `~` to ACTIVE (13). `\usepackage{expl3}` in real LaTeX
+  // leaves expl3 syntax OFF — `~` back to its document catcode (13/active),
+  // not the expl3 `~`=10 (SPACE). Our raw expl3-code.tex load leaves `~` at
+  // 10 because Rust's `\ExplSyntaxOff` is incomplete; the `:`/`_` restores
+  // above already turn expl3-letters off, but `~` was missed. Without this, a
+  // LATER `\usepackage[english]{babel}` runs `\initiate@active@char{~}` with
+  // `~` at catcode 10 → an `expected:<relationaltoken>` cascade. Minimal
+  // repro `\usepackage{expl3}\usepackage[english]{babel}` (2 errors → 0).
+  // `~` is not an expl3 LETTER char (unlike `:`/`_`), so this is glossary-safe.
+  // Complements the per-package restore in xparse_sty.rs / siunitx_sty.rs.
+  state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
 });
 
 /// Translate an expl3 regex pattern string into a Rust regex.

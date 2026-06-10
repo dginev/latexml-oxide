@@ -122,7 +122,17 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
     Info => report.info += 1,
     Warning => report.warning += 1,
     Error => report.error += 1,
-    Fatal => report.fatal = true,
+    Fatal => {
+      // Diagnostic for "phantom fatals" (a fatal counted in the final summary
+      // with no `Fatal:` line in the log — an `Err` raised via `Fatal!` that
+      // some caller swallowed without `log_fatal`): dump a backtrace at the
+      // moment the tally first flips. Witness math0402448.
+      if !report.fatal && debug_fatal_enabled() {
+        eprintln!("[debug-fatal] LogStatus::Fatal first noted here:");
+        eprintln!("{}", std::backtrace::Backtrace::force_capture());
+      }
+      report.fatal = true;
+    },
     Undefined => {
       let entry = report
         .undefined
@@ -157,10 +167,68 @@ pub fn get_status(status: LogStatus) -> usize {
   }
 }
 
+/// One shared probe for the `LATEXML_DEBUG_FATAL` diagnostics (first-fatal
+/// backtrace, gullet pushback dump, recent-token ring). Lazy-cached so hot
+/// paths pay a single bool test, and a single seam if the env contract grows
+/// (PR #249 review P3-13).
+pub fn debug_fatal_enabled() -> bool {
+  use std::sync::OnceLock;
+  static FLAG: OnceLock<bool> = OnceLock::new();
+  *FLAG.get_or_init(|| std::env::var_os("LATEXML_DEBUG_FATAL").is_some())
+}
+
 pub fn initialize_report() {
   let mut report = REPORT.borrow_mut();
   *report = LogState::default();
   reset_consecutive_error_tracker();
+  LAST_RESOURCE_FATAL.with(|c| *c.borrow_mut() = None);
+}
+
+thread_local! {
+  /// Latch for the most recent RESOURCE-class fatal (`ErrorTarget::Timeout`
+  /// with a unit category: token/pushback/if limits, cycle-guard recursion,
+  /// memory budget, conversion deadline). Some layers flatten `Error` into a
+  /// plain string on the way up (the marpa semantics boundary turns it into
+  /// `marpa::error::Error`), destroying the structured identity — which made
+  /// resource fatals indistinguishable from semantic parse rejections and
+  /// produced "phantom fatals" (counted in the summary, never logged, parse
+  /// grinding on). The `Fatal!` macro records here at raise time; consumers
+  /// `take` it to re-classify a flattened error. PR #249 review P1-4.
+  static LAST_RESOURCE_FATAL: RefCell<Option<Error>> = const { RefCell::new(None) };
+}
+
+/// Record a fatal into the resource-fatal latch — only Timeout-target fatals
+/// with payload-free categories are kept (the latch exists for resource
+/// fatals; payload-carrying `ErrorCategory` variants are not cloneable and
+/// are never resource-class).
+pub fn record_last_fatal(e: &Error) {
+  use ErrorCategory as C;
+  if !matches!(e.target, ErrorTarget::Timeout) {
+    return;
+  }
+  let category = match &e.category {
+    C::TokenLimit => C::TokenLimit,
+    C::PushbackLimit => C::PushbackLimit,
+    C::Recursion => C::Recursion,
+    C::IfLimit => C::IfLimit,
+    C::MemoryBudget => C::MemoryBudget,
+    C::Convert => C::Convert,
+    _ => return,
+  };
+  LAST_RESOURCE_FATAL.with(|c| {
+    *c.borrow_mut() = Some(Error {
+      target: ErrorTarget::Timeout,
+      category,
+      message: e.message.clone(),
+    });
+  });
+}
+
+/// Take (and clear) the latched resource fatal, if any. Returns the
+/// structured `Error` so a boundary that received only a flattened string can
+/// propagate the real thing.
+pub fn take_last_resource_fatal() -> Option<Error> {
+  LAST_RESOURCE_FATAL.with(|c| c.borrow_mut().take())
 }
 
 /// Build a status message matching Perl's `getStatusMessage()`.
@@ -361,7 +429,21 @@ macro_rules! Error {
 macro_rules! Fatal {
   ($target:expr, $category:expr, $message:expr) => {{
     $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
-    fatal!($target, $category, $message);
+    {
+      use $crate::common::error::Error as LatexmlError;
+      use $crate::common::error::ErrorCategory::*;
+      use $crate::common::error::ErrorTarget::*;
+      let __fatal_err = LatexmlError {
+        target:   $target,
+        category: $category,
+        message:  $message.to_string(),
+      };
+      // Latch resource-class fatals so layers that flatten errors to strings
+      // (e.g. the marpa semantics boundary) can still recover the STRUCTURED
+      // identity downstream. See `take_last_resource_fatal`.
+      $crate::common::error::record_last_fatal(&__fatal_err);
+      return Err(__fatal_err);
+    }
   }};
 }
 
@@ -752,6 +834,35 @@ mod tests {
     assert_eq!(get_status(LogStatus::Warning), 2);
     assert_eq!(get_status(LogStatus::Error), 1);
     assert_eq!(get_status(LogStatus::Fatal), 0);
+  }
+
+  #[test]
+  fn fatal_macro_latches_resource_fatals() {
+    // The `Fatal!` macro must record Timeout-target fatals in the
+    // resource-fatal latch so boundaries that flatten errors to strings
+    // (marpa semantics) can recover the structured identity (P1-4).
+    initialize_report();
+    fn raise() -> Result<()> {
+      Fatal!(Timeout, TokenLimit, "Token limit of 5 exceeded, infinite loop?");
+    }
+    let err = raise().unwrap_err();
+    assert!(matches!(err.target, ErrorTarget::Timeout));
+    let latched = take_last_resource_fatal().expect("latch must hold the fatal");
+    assert!(matches!(latched.target, ErrorTarget::Timeout));
+    assert!(matches!(latched.category, ErrorCategory::TokenLimit));
+    assert_eq!(latched.message, "Token limit of 5 exceeded, infinite loop?");
+    // take() clears the latch.
+    assert!(take_last_resource_fatal().is_none());
+    // Non-Timeout fatals are NOT latched (the latch serves resource fatals).
+    fn raise_other() -> Result<()> {
+      Fatal!(Internal, EoF, "fell off the end");
+    }
+    let _ = raise_other().unwrap_err();
+    assert!(take_last_resource_fatal().is_none());
+    // initialize_report clears a stale latch.
+    let _ = raise().unwrap_err();
+    initialize_report();
+    assert!(take_last_resource_fatal().is_none());
   }
 
   #[test]

@@ -1,0 +1,13 @@
+% `` `^^@ `` (backtick + caret-notation NUL) must read code 0, like Perl.
+% Rust formerly set NUL's default catcode to 9 (IGNORE), so `^^@` produced a
+% dropped token and `` `^^@ `` skipped to the next token (\relax -> 114).
+% Perl's default is catcode 12 (OTHER). xint's `\romannumeral`&&@` idiom
+% relies on `` `^^@ `` == 0. Witness 2111.00584 (xintexpr/xinttrig).
+\documentclass{article}
+\begin{document}
+\newcount\mycnt
+\mycnt=`^^@\relax
+The value is [\the\mycnt].
+\mycnt=`^^A\relax
+Second [\the\mycnt].
+\end{document}

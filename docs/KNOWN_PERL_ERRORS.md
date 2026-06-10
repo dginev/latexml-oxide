@@ -972,3 +972,136 @@ still errors. Minimal trigger:
 \startdata 1 & 2 \enddata\end{deluxetable}
 \end{document}
 ```
+
+## `mdwmath.sty` raw-load — `#` (catcode PARAM) reaches Stomach
+
+`mdwmath.sty` (TeX Live `mdwtools`) cannot be raw-loaded cleanly by LaTeXML —
+**Perl and Rust both** emit ~43 `Error:misdefined:# The token "#" (catcode
+PARAM) should never reach Stomach!` at `mdwmath.sty line 133` (the `\bbigg@#1#2#3`
+body redefining `\big`/`\Big`/`\bigg`/`\Bigg`), plus a Perl
+`Error:expected:Until:"` on `\sq@readrad` (the `\root`/`\sqrt` delimited-arg
+macro). The `#1/#2/#3` parameters in the `\bbigg@` body leak to digestion when
+the macro is used. There is **no** `mdwmath` binding in upstream LaTeXML or
+ar5iv-bindings, so it is always raw-loaded and always errors.
+
+This is an **upstream LaTeXML limitation, shared by Perl** — Rust is faithful and
+must NOT "fix" it (doing so would diverge from the ground truth). Conversions
+still complete (rc=0) with these errors in both engines. Frequent in the wild
+(~25–30 affected papers per 10k in the large-scale canvas). Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{mdwmath}
+\begin{document}
+$\big( x \big)$ and $\Big[ y \Big]$
+\end{document}
+```
+
+Reproduce both: `latexml --includestyles test.tex` (Perl) vs `cortex_worker
+--standalone --input test.zip` (Rust) — identical `#`-leak error count.
+
+## `\alignat` family arg-taking breaks etoolbox `\preto`/`\cspreto` — `\else`/`\fi` leak (SHARED; FIXED in Rust)
+
+`amsmath.sty.ltxml` (Perl L514–545) and the Rust port both define the
+`alignat`-family environment-start macros **arg-taking**, to capture (and
+ignore) the column-pair count:
+
+```perl
+DefMacro('\alignat{}',
+  '\ifmmode\let\endalignat\endalignedat\alignedat{#1}\else'
+    . '\lx@hidden@bgroup\@ams@align@bindings\@@amsalign'
+    . '\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}'
+    . '\lx@begin@alignment\fi');
+```
+
+(likewise `\csname alignat*\endcsname{}`, `\xalignat{}`,
+`\csname xalignat*\endcsname{}`, `\xxalignat{}`).
+
+**Real amsmath's `\alignat` is parameterless** — `\alignat ->
+\start@align \z@ \st@rredfalse` — and `\start@align` reads the count
+*later* from the stream. LaTeXML's arg-taking form is the divergence.
+
+etoolbox's `\preto`/`\appto`/`\cspreto`/`\csappto` prepend/append to a
+macro by re-`\edef`-ing it with `\unexpanded\expandafter{<cs>}` (=
+`\expandonce<cs>`), which **forces exactly one expansion** of the target.
+For a *parameterless* macro that just stores the body tokens (wrapped by
+`\unexpanded`) — safe. For an **arg-taking** macro, the forced expansion
+makes `<cs>` read its `#1` from the only token available — the group's
+closing `}` — which collapses the `\unexpanded{...}` braces and lets the
+body's `\ifmmode … \else … \fi` escape as a **bare `\else` then `\fi`**:
+
+```
+Error:unexpected:\else Didn't expect a "T_CS[\else]" since we seem not to be in a conditional
+Error:unexpected:fi    Didn't expect a "T_CS[\fi]"    since we seem not to be in a conditional
+```
+
+This is exactly what `lineno`'s amsmath patch does (and what conference
+classes like **eccv** invoke):
+
+```tex
+\newcommand*\linenomathpatchAMS[1]{\cspreto{#1}{\linenomathAMS}\cspreto{#1*}{\linenomathAMS}…}
+\linenomathpatchAMS{alignat}   % -> \cspreto{alignat}{…} + \cspreto{alignat*}{…}, each leaks one \else/\fi
+```
+
+so `\linenomathpatchAMS{alignat}` alone produces **4** errors (2 per
+`\cspreto`); `align`/`gather`/`multline`/`flalign` are parameterless and
+stay clean. Confirmed SHARED: Perl `latexml --includestyles` on an eccv
+witness emits the identical 4 conditional errors.
+
+**FIXED in Rust (surpasses Perl), 2026-06-07.** `amsmath_sty.rs` now
+mirrors real amsmath's *parameterless* structure via indirection: the
+public macro is parameterless and forwards to an internal arg-reader, so
+`\expandonce\alignat` yields a single token (no brace-grab, no premature
+conditional):
+
+```rust
+DefMacro!("\\alignat", "\\lx@alignat@col");      // parameterless wrapper
+DefMacro!("\\lx@alignat@col{}", "\\ifmmode…\\alignedat{#1}\\else…\\fi");
+```
+
+applied to `\alignat`, `\alignat*`, `\xalignat`, `\xalignat*`,
+`\xxalignat`. Witness papers (canvas `large_scale_canvas_3_third`):
+**2310.18293** (4→0), **2309.17074**, **2310.00161** — all now convert
+error-free; normal `\begin{alignat}{2}` rendering (rows/cells/eqno)
+unchanged; full Rust suite 1359/0. The Perl reference is left as-is per
+the no-modify-`LaTeXML/` rule.
+
+## Missing `line`/`lcircle` fontmaps → zero-width picture chars → `\@whiledim` infinite loop / OOM (2026-06-09)
+
+Perl LaTeXML ships **no fontmap for the LaTeX picture-mode line fonts**
+(`line10`, `linew10`, `lcircle10`, `lcirclew10`); `FontDecode` reports
+`Info:fontmap:line Couldn't find fontmap for 'line'` and drops every
+`\char` from those fonts, so an `\hbox{\@linefnt\@getlinechar(x,y)}`
+measures **0 pt wide**. LaTeX-2.09-era plain-TeX documents (arXiv
+math0102053, math0102089, math0212126, math0504436, math0506088,
+math0604321, …) inline picture mode's `\@sline`, whose drawing loop
+advances by exactly that width:
+
+```tex
+\@clnwd=\wd\@linechar
+\@whiledim \@clnwd <\@linelen \do {…\advance\@clnwd \wd\@linechar}
+```
+
+Real TeX gets nonzero widths (2.5–10 pt) from `line10.tfm` and terminates;
+Perl loops forever, accumulating boxes until OOM (observed: rc=124 after
+3 m 19 s at a 6 GB cap on math0102053). Modern `latex.ltx` even guards this
+exact hazard (`\ifdim\wd\@linechar=\z@\setbox\@linechar\hbox{.}%
+\@badlinearg\fi`), but pre-guard 2.09 macro copies bypass it, so the font
+width is the only lever that reaches them.
+
+**Minimal trigger** (Perl hangs, real TeX prints 2.5 pt):
+
+```tex
+\font\tenln=line10
+\setbox0=\hbox{\tenln \char'27}
+\message{WD=\the\wd0}
+\bye
+```
+
+**FIXED in Rust (surpasses Perl), 2026-06-09:** shipped `line.fontmap` +
+`lcircle.fontmap` bindings (`latexml_package/src/package/line_fontmap.rs`,
+`lcircle_fontmap.rs`) mapping the TFM slots to diagonal/arrow/arc/disk
+glyphs — every populated slot gets a nonzero-width glyph, so the loops
+terminate. All six witness papers now convert error-free with full-size
+documents (math0102053: 4.5 GB OOM → 3.2 s, 0 errors). No control-flow
+divergence: Perl given the same fontmap would behave identically.

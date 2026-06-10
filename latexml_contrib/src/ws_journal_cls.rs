@@ -53,6 +53,8 @@ LoadDefinitions!({
   DefMacro!("\\received{}", "Received #1\\par");
   DefMacro!("\\revised{}", "Revised #1\\par");
   DefMacro!("\\accepted{}", "Accepted #1\\par");
+  // ws-*.cls: \def\published#1{Published~#1\par}. Witness 2411.01389 (ws-ijmpa).
+  DefMacro!("\\published{}", "Published~#1\\par");
   DefMacro!("\\comby{}", "Communicated by #1\\par");
   // \email / \http / \uurl — render contact info inline.
   DefMacro!("\\email{}", "\\textit{#1}\\par");
@@ -68,4 +70,10 @@ LoadDefinitions!({
   DefMacro!("\\ttbl{}{}{}", "\\caption{#2}\\label{#1}#3");
   // \tcaption{caption} — single-arg variant in some ws families.
   DefMacro!("\\tcaption{}", "\\caption{#1}");
+  // ws-*.cls L406 `\def\refcite{\@ifnextchar[...\@refcitex...}` — a bare-number
+  // citation variant (used as "Ref.~\refcite{key}" → "Ref. 5"). The ws_journal
+  // binding lacked it → undefined (Perl defines it). Map to \cite (a linked
+  // citation; the bare-vs-bracketed number is a post-processing nuance). Accepts
+  // comma-separated keys like \cite. Witness 2306.15982 (ws-ijmpd).
+  DefMacro!("\\refcite{}", "\\cite{#1}");
 });

@@ -13,6 +13,20 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\@currnamestack"), None, Tokens!());
   Let!("\\@currname", "\\lx@empty");
   Let!("\\@currext", "\\lx@empty");
+  // LaTeX2e (2020+) file-hook current-file token lists (latex.ltx:
+  // `\tl_new:N \CurrentFile` etc., transiently `\tl_set` during \input).
+  // Perl defines them (empty by default); Rust's file-hook layer doesn't,
+  // so packages reading them (scrlfile-hook, achemso/koma chains, hyperref
+  // driver detection) hit `undefined:\CurrentFile`. Define them as empty
+  // token lists — matching Perl's initial/at-rest state (`\detokenize` =
+  // empty in both). The actual per-file value isn't tracked here, but an
+  // empty defined tl is what these consumers compare against
+  // (`\ifx\CurrentFile\CurrentFileUsed`) at the points that matter.
+  // Witnesses 2204.03209, 2205.10749, 2311.06870.
+  DefMacro!(T_CS!("\\CurrentFile"), None, Tokens!());
+  DefMacro!(T_CS!("\\CurrentFilePath"), None, Tokens!());
+  DefMacro!(T_CS!("\\CurrentFileUsed"), None, Tokens!());
+  DefMacro!(T_CS!("\\CurrentFilePathUsed"), None, Tokens!());
   DefMacro!(
     "\\lx@pushfilename",
     r"\xdef\@currnamestack{{\@currname}{\@currext}{\the\catcode`\@}\@currnamestack}"

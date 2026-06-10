@@ -95,6 +95,23 @@ LoadDefinitions!({
       Warn!("latex_dump", "load", s!("{}", e));
     }
   } else {
+    // DEGRADED raw-load path: no precompiled LaTeX kernel dump is
+    // available. This silently fires `latex.ltx` + `expl3-code.tex` raw,
+    // which in turn hits known raw-load-only cascades (the expl3-code
+    // L33075 codepoint dangling-group, and the `\@expl@pop@filename@@`
+    // expl-status desync) that the dump avoids. Running the large canvas
+    // here inflates per-paper error counts by ~1000× on expl3-heavy
+    // articles (e.g. 2112.11932: 1 → 1003), masquerading as a Rust parity
+    // gap when it is really a missing-kernel-dump setup error.
+    //
+    // The dump is REQUIRED for canvas/parity work. Surface its absence
+    // loudly, once per process, unless `LATEXML_NODUMP=1` made it
+    // intentional. Not an `Error:`/`Fatal:` (those are reserved for the
+    // conversion log and would corrupt canvas error counts) — a plain
+    // one-shot stderr banner the operator cannot miss.
+    if !*NODUMP {
+      crate::dump_paths::warn_degraded_no_dump();
+    }
     InnerPool!(latex_base);
   }
 

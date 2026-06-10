@@ -20,18 +20,9 @@ fn convert_clean(source: &str) {
     r.result.is_some(),
     "{source}: conversion produced no result"
   );
-  // Count inline `Error:<class>:` markers (parity_check.sh's lax pattern,
-  // see feedback_strict_vs_lax_error_grep.md). Errors are emitted INLINE
-  // within `(Building...Error:..)` envelopes, not at line starts.
-  let n_errors = r
-    .log
-    .match_indices("Error:")
-    .filter(|(i, _)| {
-      let tail = &r.log.as_bytes()[*i + 6..];
-      let n_class = tail.iter().take_while(|b| b.is_ascii_lowercase()).count();
-      n_class > 0 && tail.get(n_class) == Some(&b':')
-    })
-    .count();
+  // Shared lax `Error:<class>:` counter — see util::test::error_count
+  // (single source of truth for the signal-integrity pattern).
+  let n_errors = latexml::util::test::error_count(&r.log);
   assert_eq!(
     n_errors, 0,
     "{source}: expected 0 errors but log contained {n_errors} Error:<class>: markers (status_code={})",

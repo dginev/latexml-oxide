@@ -83,6 +83,19 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}");
   DefMacro!("\\presentaddress{}",
     "\\@add@frontmatter{ltx:note}[role=present-address]{#1}");
+  // sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
+  // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
+  // ORCID link showing the id (content-preserving: the id stays in the output,
+  // both as visible text and the proper orcid.org href; the real cls's logo
+  // image Orcidlogo.eps isn't shipped). A frontmatter note does NOT work here —
+  // it fires inside the author-name digestion and is dropped. Was undefined →
+  // error (Perl defines it). Witness 2211.09693.
+  DefMacro!("\\orcid{}", "\\href{https://orcid.org/#1}{#1}");
+  // \sep — elsarticle-family keyword separator (`\def\sep{\unskip, }`). sn-jnl
+  // papers use it in keyword lists (`kw1 \sep kw2 \sep ...`); the sn-jnl cls
+  // doesn't define it but Perl provides it (elsarticle convention). Render as a
+  // comma separator. Was undefined → error. Witness 2309.06763.
+  DefMacro!("\\sep", "\\unskip, ");
   // Name part helpers (first-name, surname) — emit inline.
   DefMacro!("\\fnm{}", "#1");
   DefMacro!("\\sur{}", "#1");

@@ -89,36 +89,44 @@ fn parse_year_str(s: &str) -> Option<u32> {
   }
 }
 
-#[cfg(test)]
-mod year_parse_tests {
-  use super::parse_year_str;
-
-  #[test]
-  fn vanilla_tl_year() {
-    assert_eq!(parse_year_str("2025"), Some(2025));
-    assert_eq!(parse_year_str("2026"), Some(2026));
-  }
-
-  #[test]
-  fn basictex_suffixed_year() {
-    // MacTeX/BasicTeX layout: /usr/local/texlive/2026basic
-    assert_eq!(parse_year_str("2026basic"), Some(2026));
-  }
-
-  #[test]
-  fn non_year_components_rejected() {
-    assert_eq!(parse_year_str("texlive"), None); // brew Cellar layout
-    assert_eq!(parse_year_str("basic2026"), None);
-    assert_eq!(parse_year_str(""), None);
-    assert_eq!(parse_year_str("1999"), None); // outside the sane range
-    assert_eq!(parse_year_str("20269"), None); // 5-digit run is not a year
-  }
-}
-
 /// Versioned filename for a kernel dump, e.g.
 /// `dump_filename("plain", 2025) == "plain.2025.dump.txt"`.
 pub fn dump_filename(kind: &str, year: u32) -> String {
   format!("{}.{}.dump.txt", kind, year)
+}
+
+/// One-shot stderr banner emitted by the `LoadFormat` branches in
+/// `tex.rs` / `latex.rs` when NO precompiled kernel dump is available
+/// and the engine falls back to the raw `latex.ltx` + `expl3-code.tex`
+/// load path.
+///
+/// Why this exists: the raw-load path hits known raw-load-ONLY cascades
+/// (the `expl3-code.tex` L33075 codepoint dangling-group and the
+/// `\@expl@pop@filename@@` expl-status desync) that the dump avoids. On
+/// expl3-heavy arXiv articles this inflates per-paper error counts by
+/// ~1000× (2112.11932: 1 → 1003; 2110.10227: 4 → 102), which previously
+/// masqueraded as a Rust parity gap when it was really a missing-dump
+/// SETUP error (`resources/dumps/` not populated — run
+/// `tools/make_formats.sh`). The dump is a required kernel piece for
+/// canvas/parity work, so its absence must never be silent.
+///
+/// Fires at most once per process (shared `Once`), and is a plain stderr
+/// line — NOT an `Error:`/`Fatal:` (those are reserved for the per-paper
+/// conversion log and would corrupt canvas error counts).
+pub fn warn_degraded_no_dump() {
+  static WARNED: std::sync::Once = std::sync::Once::new();
+  WARNED.call_once(|| {
+    let year = detect_ambient_texlive_year()
+      .map(|y| y.to_string())
+      .unwrap_or_else(|| "unknown".into());
+    eprintln!(
+      "[latexml-oxide] WARNING: no precompiled kernel dump found (TL{year}); \
+       running in DEGRADED raw-load mode. Conversions will show many spurious \
+       errors (expl3 catcode/group cascades). Build the dump with \
+       `tools/make_formats.sh` before canvas/parity runs. (Set \
+       LATEXML_NODUMP=1 to silence this if the raw path is intentional.)"
+    );
+  });
 }
 
 /// Versioned filename for the texlive stamp, e.g.
@@ -178,4 +186,30 @@ pub fn resolve_versioned_in_dir(dir: &Path, kind: &str, prefer: Option<u32>) -> 
 /// next to `latex.2025.dump.txt`.
 pub fn stamp_path_for_dump(dump_path: &Path, year: u32) -> Option<PathBuf> {
   Some(dump_path.parent()?.join(version_filename(year)))
+}
+
+#[cfg(test)]
+mod year_parse_tests {
+  use super::parse_year_str;
+
+  #[test]
+  fn vanilla_tl_year() {
+    assert_eq!(parse_year_str("2025"), Some(2025));
+    assert_eq!(parse_year_str("2026"), Some(2026));
+  }
+
+  #[test]
+  fn basictex_suffixed_year() {
+    // MacTeX/BasicTeX layout: /usr/local/texlive/2026basic
+    assert_eq!(parse_year_str("2026basic"), Some(2026));
+  }
+
+  #[test]
+  fn non_year_components_rejected() {
+    assert_eq!(parse_year_str("texlive"), None); // brew Cellar layout
+    assert_eq!(parse_year_str("basic2026"), None);
+    assert_eq!(parse_year_str(""), None);
+    assert_eq!(parse_year_str("1999"), None); // outside the sane range
+    assert_eq!(parse_year_str("20269"), None); // 5-digit run is not a year
+  }
 }

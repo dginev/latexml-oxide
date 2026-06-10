@@ -529,7 +529,12 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("ifgeo", "fontmap", package::ifgeo_fontmap::load_definitions),
   ("ifsym", "fontmap", package::ifsym_fontmap::load_definitions),
   ("ifwea", "fontmap", package::ifwea_fontmap::load_definitions),
+  // Picture-mode fonts (line10/linew10, lcircle10/lcirclew10): zero-width
+  // chars here drive LaTeX-2.09 `\@sline`'s `\@whiledim` into an infinite
+  // box-accumulation loop (canvas OOM cluster) — see line_fontmap.rs.
+  ("lcircle", "fontmap", package::lcircle_fontmap::load_definitions),
   ("lgr", "fontmap", package::lgr_fontmap::load_definitions),
+  ("line", "fontmap", package::line_fontmap::load_definitions),
   ("ot4", "fontmap", package::ot4_fontmap::load_definitions),
   ("ly1", "fontmap", package::ly1_fontmap::load_definitions),
   ("t1", "fontmap", package::t1_fontmap::load_definitions),

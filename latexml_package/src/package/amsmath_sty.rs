@@ -978,9 +978,20 @@ LoadDefinitions!({
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
 
-  // alignat — same as align (ignores number-of-pairs arg)
+  // alignat — same as align (ignores number-of-pairs arg).
+  // PARAMETERLESS wrapper -> arg-reading helper. etoolbox's \preto/\cspreto
+  // (used by lineno/eccv: `\cspreto{alignat}{\linenomathAMS}`) does
+  // `\unexpanded\expandafter{\alignat}`, which forces ONE expansion of \alignat.
+  // If \alignat takes #1, that expansion mis-grabs the group's closing `}`,
+  // collapsing the \unexpanded braces and letting the body's \ifmmode..\else..\fi
+  // leak as bare \else/\fi. Real amsmath's \alignat is parameterless
+  // (\start@align reads the count later), which is why eccv works there. We
+  // mirror that structure: parameterless \alignat -> \lx@alignat@col, with the
+  // count read by the helper. Surpasses a shared Perl bug (Perl defines
+  // `\alignat{}` arg-taking too) — see docs/KNOWN_PERL_ERRORS.md.
+  DefMacro!("\\alignat", "\\lx@alignat@col");
   DefMacro!(
-    "\\alignat{}",
+    "\\lx@alignat@col{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
@@ -990,8 +1001,9 @@ LoadDefinitions!({
     "\\endalignat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
+  DefMacro!("\\csname alignat*\\endcsname", "\\lx@alignatStar@col");
   DefMacro!(
-    "\\csname alignat*\\endcsname{}",
+    "\\lx@alignatStar@col{}",
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
@@ -1003,8 +1015,10 @@ LoadDefinitions!({
   );
 
   // xalignat — like alignat but full-width (Perl L530-545)
+  // xalignat — parameterless wrapper -> arg-reading helper (see \alignat note)
+  DefMacro!("\\xalignat", "\\lx@xalignat@col");
   DefMacro!(
-    "\\xalignat{}",
+    "\\lx@xalignat@col{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,postset=1,grouped=1,aligned=1}\
@@ -1014,8 +1028,9 @@ LoadDefinitions!({
     "\\endxalignat",
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
+  DefMacro!("\\csname xalignat*\\endcsname", "\\lx@xalignatStar@col");
   DefMacro!(
-    "\\csname xalignat*\\endcsname{}",
+    "\\lx@xalignatStar@col{}",
     "\\ifmmode\\expandafter\\let\\csname endalignat*\\endcsname\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=0,postset=1,grouped=1,aligned=1}\
@@ -1026,9 +1041,11 @@ LoadDefinitions!({
     "\\lx@hidden@cr{}\\lx@end@alignment\\end@amsalign\\lx@hidden@egroup"
   );
 
-  // xxalignat — like xalignat (Perl L547-551)
+  // xxalignat — like xalignat (Perl L547-551).
+  // Parameterless wrapper -> arg-reading helper (see \alignat note).
+  DefMacro!("\\xxalignat", "\\lx@xxalignat@col");
   DefMacro!(
-    "\\xxalignat{}",
+    "\\lx@xxalignat@col{}",
     "\\ifmmode\\let\\endalignat\\endalignedat\\alignedat{#1}\\else\
      \\lx@hidden@bgroup\\@ams@align@bindings\\@@amsalign\
      \\@equationgroup@numbering{numbered=1,post=1,grouped=1,aligned=1}\
@@ -1726,7 +1743,13 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
 
   // Rename equation → equationgroup
   let mut eqgroup = document.rename_node(equation.clone(), "ltx:equationgroup", false)?;
-  let eq_id = eqgroup.get_attribute("xml:id").unwrap_or_default();
+  // `xml:id` is stored namespaced (local name "id"); `get_attribute("xml:id")`
+  // always returns None (libxml `xmlGetProp` matches the literal name). Read it
+  // via the XML namespace so the inner equations get the Perl `{id}X` suffix
+  // instead of colliding under the group id.
+  let eq_id = eqgroup
+    .get_attribute_ns("id", XML_NS)
+    .unwrap_or_default();
 
   // For each XMRow in the array, create a new equation
   let rows: Vec<Node> = document.findnodes("ltx:XMRow", Some(&array));
@@ -1796,6 +1819,17 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
           // map { $main->firstChild->appendChild($_) } map { $_->childNodes } @cells
           // This flattens by taking the CHILDREN of each cell's first child,
           // not the first child itself. We clone into main XMath.
+          //
+          // NOTE: Perl MOVES (appendChild) these originals, keeping their ids;
+          // we clone. Switching to a move does NOT fix the dangling `\Pr`
+          // content refs (witness 2311.01600) — verified: the subsequent math
+          // parse re-ids the content branch from the INNER-equation-derived
+          // main Math id (`<group>X.m1`) regardless, so the refs minted against
+          // `<group>.m1.*` still strand. Closing it needs the multi-part
+          // structural change (main Math id derived from the GROUP not the X
+          // equation + parse-time id preservation), per
+          // docs/EXPECTED_ID_XMREF_DESIGN.md §3. Left as clone (no behaviour
+          // change) until that dedicated effort.
           if let Some(mut mx) = document
             .findnodes("ltx:XMath", Some(&main))
             .into_iter()
@@ -1965,11 +1999,11 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
   let mut ref_ids: Vec<String> = Vec::new();
   for node in cells.iter_mut() {
     // Generate xml:id if needed
-    if !node.has_attribute_ns("id", "http://www.w3.org/XML/1998/namespace") {
+    if !node.has_attribute_ns("id", XML_NS) {
       document.generate_id(node, "")?;
     }
     if let Some(id) = node
-      .get_attribute_ns("id", "http://www.w3.org/XML/1998/namespace")
+      .get_attribute_ns("id", XML_NS)
       .or_else(|| node.get_attribute("xml:id"))
     {
       ref_ids.push(id);

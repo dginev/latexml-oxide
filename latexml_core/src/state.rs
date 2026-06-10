@@ -459,13 +459,18 @@ impl State {
         catcodes.insert('\t', SPACE);
         catcodes.insert('%', COMMENT);
         catcodes.insert('~', ACTIVE);
-        // TeX standard: NUL (`\^^@`, U+0000) has catcode 9 IGNORED — see
-        // The TeXbook ch.8 `\catcode \^^@ = 9`. Silently discard NUL
-        // bytes that appear in input. Real-world bbl files (e.g.
-        // astro-ph0004127's spie4012-01a.bbl line 120) have stray NULs
-        // from BibTeX's `\"u`-mangling; without IGNORE we read the NUL
-        // as ESCAPE and the next letters as a (bogus) CS like `\uninger`.
-        catcodes.insert('\0', IGNORE);
+        // NUL (`\^^@`, U+0000): Perl LaTeXML's default is catcode 12 (OTHER),
+        // NOT the TeXbook's 9 (IGNORE). We follow Perl (ground truth) so that
+        // `\^^@`/`` `^^@ `` reads code 0 (TeXbook 9 would *drop* the NUL token,
+        // making `` `^^@ `` skip to the next token — `\relax` etc. — and return
+        // a bogus code; xint's `\romannumeral`&&@` expansion idiom needs 0).
+        // Real-world bbl files (e.g. astro-ph0004127's spie4012-01a.bbl) carry
+        // stray NULs from BibTeX `\"u`-mangling; as OTHER they become harmless
+        // literal chars (stripped at XML serialization), matching Perl —
+        // crucially NOT ESCAPE, so no bogus `\uninger`-style CS forms. An
+        // explicit `\catcode`^^Q=9` (user/package) is still honored; only the
+        // *default* changes.
+        catcodes.insert('\0', OTHER);
         catcodes.insert('\u{000c}', ACTIVE);
         for c in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".chars() {
           catcodes.insert(c, LETTER);
@@ -1479,7 +1484,27 @@ pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
 }
 /// convenience method to lookup the current value at the "font" key
 pub fn lookup_font() -> Option<Rc<Font>> {
-  match state!().lookup_value_sym(pin!("font")) {
+  // try_borrow, not state!()'s borrow(): this accessor is reachable from a
+  // Whatsit's Display/revert path (e.g. tex_glue::revert_skip → lookup_font)
+  // which can run *while STATE is already mutably borrowed* — e.g. formatting a
+  // whatsit into a log/error message inside a state_mut() scope. A plain
+  // borrow() then panics "RefCell already mutably borrowed", aborting the worker
+  // (FATAL_101; crashed hep-th9908053, a \documentstyle[12pt]{article} 2.09
+  // paper). Degrade to None on contention instead of crashing.
+  //
+  // CAUTION for future callers (PR #249 review P3-18): None-on-contention is
+  // only correct for Display/revert/log-formatting consumers (where a
+  // defaulted font is cosmetic). Several digestion-path callers `.unwrap()`
+  // the result (tbox.rs, whatsit.rs, stomach.rs) — they would panic loudly on
+  // contention, which is the desired behavior there: a DIGESTION-path
+  // re-entrant lookup is a real bug, and silently defaulting the font would
+  // turn it into invisible wrong-font drift in the XML. If you add a caller,
+  // pick deliberately: `.unwrap()` on digestion paths, graceful None only
+  // where the font is presentational.
+  let Ok(st) = (*STATE).try_borrow() else {
+    return None;
+  };
+  match st.lookup_value_sym(pin!("font")) {
     None | Some(Stored::None) => None,
     Some(f) => f.into(),
   }

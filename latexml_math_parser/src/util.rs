@@ -382,6 +382,13 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
             id: Some(id.clone()),
             ..XProps::default()
           }));
+        } else if let Some(existing) = props.xmkey.clone() {
+          // Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
+          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
+          refs.push(XM::Ref(XProps {
+            xmkey: Some(existing),
+            ..XProps::default()
+          }));
         } else {
           // Parser-created token without id — use _xmkey for deferred resolution
           let key = get_xmarg_id()?.to_string();
@@ -440,6 +447,19 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
             id: Some(id.clone()),
             ..XProps::default()
           }));
+        } else if let Some(existing) = props.xmkey.clone() {
+          // PRESERVE an existing _xmkey. Faithful to Perl `createXMRefs`
+          // (Package.pm:1527): it `GenerateID`s an XML arg but NEVER clobbers
+          // its `_xmkey`, so a node that is ALREADY an arg of an outer
+          // package XMDual (via `\lx@xmarg`, e.g. braket `\braket{a|op|c}`)
+          // keeps that key while also being referenced by THIS (grammar) dual
+          // — both content XMRefs resolve to the same shared node. Overwriting
+          // the key (as before) dangled the package's XMRef →
+          // `expected:id Cannot find a node` (compound op; witness 2205.06843).
+          refs.push(XM::Ref(XProps {
+            xmkey: Some(existing),
+            ..XProps::default()
+          }));
         } else {
           // not yet instanciated, so hasn't had chance to get auto-id; use _xmkey
           let key = get_xmarg_id()?.to_string();
@@ -458,6 +478,13 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         if let Some(id) = props.id.as_ref() {
           refs.push(XM::Ref(XProps {
             id: Some(id.clone()),
+            ..XProps::default()
+          }));
+        } else if let Some(existing) = props.xmkey.clone() {
+          // Preserve an existing _xmkey (see the XM::Apply arm) — faithful to
+          // Perl `createXMRefs`, which never clobbers an arg's `_xmkey`.
+          refs.push(XM::Ref(XProps {
+            xmkey: Some(existing),
             ..XProps::default()
           }));
         } else {

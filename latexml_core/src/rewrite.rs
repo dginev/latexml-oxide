@@ -1238,7 +1238,15 @@ fn restructure_scripts_in_dual(
           child.unlink();
           // Unwrap XMArg if present (Perl doesn't use XMArg in the parsed form)
           if child.get_name() == "XMArg" {
-            // Transfer xml:id from XMArg to its single element child (wildcard ID)
+            // Transfer xml:id from XMArg to its single element child (wildcard ID).
+            // NOTE: `get_property("xml:id")` always returns None (xml:id is
+            // ns-stored as local "id"; see docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md),
+            // so this transfer is effectively a NO-OP. That is INTENTIONALLY left
+            // as-is: "correcting" the accessor makes the wildcard `1`/`n` tokens
+            // acquire ids that Perl does NOT emit (Perl `f _ 1`, no id on the
+            // `1`), diverging from `simplemath.xml`/`declare.xml`. The masked
+            // behaviour is closer to Perl here; a real fix needs dedicated
+            // analysis of the wildcard/XMRef content path, not an accessor swap.
             let xmarg_id = child.get_property("xml:id");
             let xmarg_children: Vec<Node> = child.get_child_nodes();
             if xmarg_children.len() == 1 {

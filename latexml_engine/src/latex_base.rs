@@ -60,6 +60,13 @@ LoadDefinitions!({
 
   // Perl L38
   DefMacro!("\\@ehc", "I can't help");
+  // latex.ltx L7180: \gdef\@ehd{You're in trouble here.  \space\@ehc}
+  // The error-help default text used by \@latex@error / \PackageError when
+  // no specific help is given. Rust had \@ehc but not its sibling \@ehd, so
+  // packages referencing it directly (e.g. subfig, hypdvips) errored
+  // (undefined:\@ehd). Help text is log-only (not rendered) but must exist.
+  // Faithful port; Perl defines it via the kernel.
+  DefMacro!("\\@ehd", r"You're in trouble here.  \space\@ehc");
 
   // Perl L40-47: gobble/firstof/secondof macros
   def_macro_noop("\\@gobble{}")?;

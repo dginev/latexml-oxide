@@ -217,17 +217,29 @@ fi
 # the ambient-TL year. Re-run `tools/make_formats.sh` after a TexLive
 # upgrade. The plain-dump path (`plain.dump.txt`) of the old layout is
 # also accepted for in-flight migrations.
-shopt -s nullglob
-PLAIN_DUMPS=("$REPO_ROOT"/resources/dumps/plain.*.dump.txt "$REPO_ROOT"/resources/dumps/plain.dump.txt)
-LATEX_DUMPS=("$REPO_ROOT"/resources/dumps/latex.*.dump.txt "$REPO_ROOT"/resources/dumps/latex.dump.txt)
-shopt -u nullglob
-if (( ${#PLAIN_DUMPS[@]} == 0 )); then
-  echo "WARNING: no resources/dumps/plain.*.dump.txt found."
-  echo "  Run: tools/make_formats.sh"
-fi
-if (( ${#LATEX_DUMPS[@]} == 0 )); then
-  echo "WARNING: no resources/dumps/latex.*.dump.txt found. Canvas will run"
-  echo "  with raw expl3 load (slow). Run: tools/make_formats.sh"
+# The kernel dump is CORRECTNESS-critical, not just a speed knob. Without
+# the latex dump the engine raw-loads latex.ltx + expl3-code.tex, which hits
+# raw-load-ONLY cascades (the expl3-code L33075 codepoint dangling group and
+# the \@expl@pop@filename@@ expl-status desync) that inflate per-paper error
+# counts by ~1000× on expl3-heavy articles (2112.11932: 1 → 1003). A canvas
+# run without the dump produces MEANINGLESS error counts, not just slow ones.
+# So: AUTO-BUILD the dump if missing, and ABORT if that build fails — never
+# run a misleading canvas. (User directive 2026-06-09: always use the dumps.)
+list_dumps() { shopt -s nullglob; printf '%s\n' "$REPO_ROOT"/resources/dumps/$1.*.dump.txt "$REPO_ROOT"/resources/dumps/$1.dump.txt; shopt -u nullglob; }
+if [[ -z "$(list_dumps plain)" || -z "$(list_dumps latex)" ]]; then
+  echo "=== No kernel dump found in resources/dumps/ — building it (CORRECTNESS-critical) ==="
+  echo "    Running tools/make_formats.sh (one-time; ~minutes). Set LATEXML_NODUMP=1 to"
+  echo "    intentionally run the raw path (NOT for canvas/parity — counts will be inflated)."
+  if [[ -n "${LATEXML_NODUMP:-}" ]]; then
+    echo "    LATEXML_NODUMP set — skipping dump build (raw path; counts WILL be inflated)."
+  elif PROFILE=release "$REPO_ROOT/tools/make_formats.sh"; then
+    echo "=== Dump build complete. ==="
+  else
+    echo "FATAL: dump build failed. Refusing to run the canvas without a kernel dump" >&2
+    echo "       (error counts would be meaningless). Fix make_formats.sh first, or set" >&2
+    echo "       LATEXML_NODUMP=1 to force the raw path knowingly." >&2
+    exit 1
+  fi
 fi
 
 # ─── Disk space check ────────────────────────────────────────────────────────

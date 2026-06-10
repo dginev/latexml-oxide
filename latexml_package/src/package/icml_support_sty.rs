@@ -46,6 +46,23 @@ LoadDefinitions!({
   DefEnvironment!("{icmlauthorlist}", "#body");
 
   DefMacro!("\\icmlauthor{}{}", "\\author{#1}");
+  // icml20XX.sty: \newcommand{\icmlCorrespondingAuthor}{\textsuperscript{$\dagger$}Corresponding author}
+  // (0-arg marker). icml2025.sty L530: \newcommand{\icmlCorr}{\textsuperscript{\dag}Corresponding author }
+  // (shorter alias, used as `\printAffiliationsAndNotice{\icmlCorr}`). Our binding
+  // intercepts the raw .sty so the `\newcommand`s never run → undefined where Perl
+  // (which loads the raw .sty) defines them. Witnesses 2403.01475, 2507.11588.
+  //
+  // The real macros are a `\textsuperscript{\dagger}` footnote marker, but that is a
+  // typographic cross-reference that is meaningless in our structured model (no author
+  // is marked with the matching dagger). Per the frontmatter-framework spirit, route the
+  // corresponding-author indication into structured metadata as an `ltx:note`
+  // (role=corresponding-author, matching `\icmlcorrespondingauthor` below) rather than
+  // emitting raw inline `\textsuperscript` text. INTERIM: a fuller author↔contact
+  // association will come with the frontmatter-refactor (PR #241 / upstream PR #2767).
+  DefMacro!("\\icmlCorrespondingAuthor",
+    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}");
+  DefMacro!("\\icmlCorr",
+    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}");
   DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
   DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
   // ICML: \icmlaffiliation{shortname}{full text} maps a short id to

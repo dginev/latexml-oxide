@@ -11,7 +11,7 @@ use latexml_core::state::{
   source_table_snapshot,
 };
 use latexml_core::telemetry::{self, Phase};
-use latexml_core::{Core, CoreOptions, Error, Fatal, Info, fatal, report_mut, s};
+use latexml_core::{Core, CoreOptions, Error, Fatal, Info, report_mut, s};
 use std::rc::Rc;
 
 use crate::core_interface::DigestionAPI;
@@ -250,12 +250,20 @@ impl Converter {
             dom.serialize_to_string()
           },
           Err(e) => {
-            let message = s!("{:?}", e);
-            let err = || {
-              Error!("document", "convert", message);
-              Ok(())
-            };
-            err().ok();
+            // A resource fatal (Timeout target — e.g. a cycle-guard abort
+            // propagated out of math parsing, P1-4) must surface as the
+            // standard `Fatal:` log line, not a generic document error;
+            // otherwise the summary counts a fatal the log never shows.
+            if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) {
+              e.log_fatal();
+            } else {
+              let message = s!("{:?}", e);
+              let err = || {
+                Error!("document", "convert", message);
+                Ok(())
+              };
+              err().ok();
+            }
             String::new()
           },
         }
@@ -334,6 +342,11 @@ impl Converter {
     // 5.2 Finalize logging and return a response containing the document result, log and status
     if self.opts.verbosity >= 0 {
       Info!("arena", "strings_allocated", arena::len());
+      // Final token-read progress: the calibration basis for `token_limit`
+      // and `CYCLE_GUARD_ACTIVATE` (the read-checkpoint accounting changed
+      // in PR #249 — read_x_token/read_balanced now count too — so limits
+      // must be recalibrated against THIS metric, not historical figures).
+      Info!("gullet", "progress", latexml_core::gullet::final_progress());
     }
     // MARPA_ASF_STATS=1: emit ASF instrumentation counters once
     // per converted document. Codex instrumentation plan, see
@@ -420,12 +433,18 @@ impl Converter {
         Err(e) => {
           // `Error!` expands into a `Result`-returning context; wrap it the
           // same way `convert` does so it composes in this `-> ConversionResponse` fn.
-          let message = s!("{:?}", e);
-          let err = || {
-            Error!("document", "convert", message);
-            Ok(())
-          };
-          err().ok();
+          // Timeout-target resource fatals get the standard `Fatal:` line
+          // (see the sibling handler in `convert` — P1-4).
+          if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) {
+            e.log_fatal();
+          } else {
+            let message = s!("{:?}", e);
+            let err = || {
+              Error!("document", "convert", message);
+              Ok(())
+            };
+            err().ok();
+          }
           String::new()
         },
       }

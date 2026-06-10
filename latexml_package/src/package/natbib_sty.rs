@@ -910,6 +910,30 @@ LoadDefinitions!({
       // Perl on the same input is silent (`natbib.sty.ltxml:564`'s
       // `Expand` runs the macros differently for these cases). Driver:
       // 2404.06289 `\bibitem [{...\cite{a}...}]{key}`.
+      // Text-encoding *symbol* commands (`\i`, `\j`, `\ss`, `\oe`, …) must
+      // ALSO be kept un-expanded, for a different reason: under `\usepackage
+      // [T1]{fontenc}` (here via mathptmx) the LaTeX kernel redefines them to
+      // the `\@changed@cmd` dispatcher `\<enc>-cmd <cs> \<enc><cs>` (e.g. `\i`
+      // → `\T1-cmd \i \T1\i`). The dispatcher's typeset branch re-injects the
+      // original CS through `\csname\cf@encoding\string#1\endcsname`, which
+      // under FULL `Expand!` re-expands forever (PushbackLimit / box-list
+      // runaway). Accented author names — `M{\'\i}guez`, `Pati{\~n}o`,
+      // `M\"uller` — are exactly where this bites in a natbib label. Perl's
+      // `Expand` (natbib.sty.ltxml:564) happens to terminate on these; ours
+      // does not. The `(year)` we look for is always a *literal* `(` in
+      // natbib/BibTeX output, so walking the raw label is sufficient — no
+      // expansion needed. Witness 2111.00584 (revtex4-1 + mathptmx,
+      // `\bibitem[{\citenamefont{...}\ \emph{et~al.}(2009)...\citenamefont
+      // {M{\'\i}guez}}]{porteiro2009}`).
+      let has_text_symbol = label.unlist_ref().iter().any(|t| {
+        if t.get_catcode() != Catcode::CS { return false; }
+        matches!(t.to_string().as_str(),
+          "\\i" | "\\j" | "\\l" | "\\L" | "\\o" | "\\O"
+          | "\\aa" | "\\AA" | "\\ss" | "\\ae" | "\\AE" | "\\oe" | "\\OE"
+          | "\\dh" | "\\DH" | "\\dj" | "\\DJ" | "\\th" | "\\TH"
+          | "\\ng" | "\\NG"
+        )
+      });
       let has_complex_cs = label.unlist_ref().iter().any(|t| {
         if t.get_catcode() != Catcode::CS { return false; }
         let n = t.to_string();
@@ -919,7 +943,7 @@ LoadDefinitions!({
           | "\\BibitemOpen" | "\\BibitemShut" | "\\bibinfo" | "\\bibfield"
         )
       });
-      let expanded = if has_complex_cs {
+      let expanded = if has_complex_cs || has_text_symbol {
         label
       } else {
         Expand!(label)
