@@ -663,13 +663,13 @@ pub(super) fn def_accent_impl(
     .init()?,
   ]));
   def_macro(
-    latexml_core::T_CS!(accent.to_string()),
+    latexml_core::T_CS!(accent),
     plain_param,
     ExpansionBody::Tokens(latexml_core::Tokens!(
       latexml_core::T_CS!("\\lx@applyaccent"),
-      latexml_core::T_OTHER!(accent.to_string()),
+      latexml_core::T_OTHER!(accent),
       latexml_core::T_OTHER!(comb_char.to_string()),
-      latexml_core::T_OTHER!(standalone.to_string()),
+      latexml_core::T_OTHER!(standalone),
       latexml_core::T_BEGIN!(),
       latexml_core::T_ARG!(1),
       latexml_core::T_END!()
