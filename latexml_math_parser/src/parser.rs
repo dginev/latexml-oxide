@@ -634,7 +634,15 @@ impl MathParser {
         // telemetry. ~20 ns Instant cost per formula is negligible vs Marpa.
         // See docs/TELEMETRY.md.
         let t0 = std::time::Instant::now();
-        self.parse(math, document)?;
+        if let Err(e) = self.parse(math, document) {
+          // Aborting math parsing (a propagated resource fatal — P1-4):
+          // clear the thread-local idstore (cloned libxml Node pointers)
+          // before unwinding, or they leak into the next conversion of this
+          // persistent --server / test-harness thread.
+          crate::data::clear_math_idstore();
+          note_end("Math Parsing");
+          return Err(e);
+        }
         let elapsed_us = t0.elapsed().as_micros() as u64;
         latexml_core::telemetry::record_math_parse(elapsed_us, self.last_parsetrees_count as u32);
         // Store parse tree count as attribute on the Math element for diagnostics.
@@ -1401,6 +1409,15 @@ impl MathParser {
         },
         _ => self.parse_lexemes(lexemes, &nodes, document),
       };
+      // Resource fatals must propagate, not be dropped by the if-let below
+      // (PR #249 review P1-4); other Errs keep the old treated-as-failure
+      // behavior.
+      let parse_outcome = match parse_outcome {
+        Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+          return Err(e);
+        },
+        other => other,
+      };
       if let Ok(Some(parse_tree)) = parse_outcome {
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
         // Replace the content of XMath with parsed result
@@ -1702,8 +1719,12 @@ impl MathParser {
           // ground on formula-by-formula. Surface it and ABORT math parsing
           // (bounded + honest; witness math0402448). Non-resource errors
           // keep the old reject-and-continue behaviour.
-          if let Some(err) = resource_fatal_from_message(&e.to_string()) {
-            err.log_fatal();
+          if let Some(err) = latexml_core::common::error::take_last_resource_fatal()
+            .or_else(|| resource_fatal_from_message(&e.to_string()))
+          {
+            // No log_fatal here: the Err now PROPAGATES through
+            // parse_lexemes/parse_single/parse_math to the converter's outer
+            // handler, which logs the Fatal: line exactly once (P1-4).
             return Err(err);
           }
           if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
@@ -1768,8 +1789,12 @@ impl MathParser {
         Err(e) => {
           // Same resource-fatal surfacing as the hybrid path above — see the
           // comment there (witness math0402448's phantom fatal).
-          if let Some(err) = resource_fatal_from_message(&e.to_string()) {
-            err.log_fatal();
+          if let Some(err) = latexml_core::common::error::take_last_resource_fatal()
+            .or_else(|| resource_fatal_from_message(&e.to_string()))
+          {
+            // No log_fatal here: the Err now PROPAGATES through
+            // parse_lexemes/parse_single/parse_math to the converter's outer
+            // handler, which logs the Fatal: line exactly once (P1-4).
             return Err(err);
           }
           if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
@@ -2125,8 +2150,16 @@ impl MathParser {
         crate::semantics::combine_supop_post(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))
       },
-      Err(_e) => {
+      Err(e) => {
         self.reset_engine();
+        // Resource fatals (token/pushback/cycle/memory limits) must ABORT
+        // math parsing, not degrade into a silent per-formula rejection —
+        // this arm was the swallow that made parse_marpa's abort dead code
+        // (PR #249 review P1-4). Semantic parse errors keep the old
+        // reject-and-continue behavior.
+        if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) {
+          return Err(e);
+        }
         Ok(None)
       },
     }
@@ -2786,6 +2819,32 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
 mod tests {
   use super::*;
   use libxml::parser::Parser as XmlParser;
+
+  /// Pin the message↔classifier coupling for the string-fallback path of
+  /// resource-fatal recovery (P1-4). The PRIMARY transport is the structured
+  /// `take_last_resource_fatal` latch; this fallback exists for errors that
+  /// were flattened before the latch landed. If an engine message is
+  /// reworded, this test points at the matcher to update.
+  #[test]
+  fn resource_fatal_message_fallback_recognizes_engine_messages() {
+    use latexml_core::common::error::ErrorCategory as C;
+    let cases = [
+      ("Infinite expansion loop: a window of 2 token(s) repeated 100+ times", C::Recursion),
+      ("Token limit of 400000000 exceeded, infinite loop?", C::TokenLimit),
+      ("Pushback limit of 650000 exceeded, infinite loop?", C::PushbackLimit),
+      ("Memory budget exceeded: RSS 4500 MB > cap 4500 MB", C::MemoryBudget),
+    ];
+    for (msg, expected) in cases {
+      let err = resource_fatal_from_message(msg)
+        .unwrap_or_else(|| panic!("classifier must recognize: {msg}"));
+      assert_eq!(
+        std::mem::discriminant(&err.category),
+        std::mem::discriminant(&expected),
+        "wrong category for: {msg}"
+      );
+    }
+    assert!(resource_fatal_from_message("Some unrelated parse failure").is_none());
+  }
 
   // Keep the Document alive for the duration of each test — Node holds an
   // implicit weak ref, so dropping the owning Document before reading the

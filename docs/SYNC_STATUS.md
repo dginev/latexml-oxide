@@ -3289,25 +3289,6 @@ fixes landed" below)*
 
 **P1 — canvas-risk, fix before the next large sweep:**
 
-4. **`parse_marpa`'s resource-fatal abort is dead code — the phantom fatal is
-   only half-fixed.** The new `return Err(err)` arms never propagate:
-   `parse_lexemes` (parser.rs:2128) maps Err→`Ok(None)` and `parse_single`
-   (parser.rs:1404) drops Errs via `if let Ok(Some(...))`. Net behavior: the
-   `Fatal:` line now appears (good) but math parsing continues
-   formula-by-formula, each re-tripping formula re-grinding its full budget
-   (progress is reset to 0 by `reading_from_mouth`'s error path) and
-   emitting a duplicate `Fatal:` line. Also: the
-   `"Memory budget exceeded"` match arm is unreachable (stomach errors
-   can't flow into these Err arms — verified) and the string-substring
-   classification is fragile (rewording a gullet message silently reverts
-   the fix; no test ties the strings together). Action: thread the abort
-   through `parse_lexemes`/`parse_single` (or set an abort flag the
-   per-formula loop checks); replace substring matching with structured
-   error transport through the marpa boundary (carry
-   `latexml_core::common::error::Error` as a source, or a thread-local
-   `last_resource_fatal` set by the `Fatal!` macro); add a test pinning the
-   message↔classifier coupling until then.
-
 **P2 — guard-architecture hardening (follow-up PR):**
 
 6. **Stomach guards are inert on `digest()`/`raw_tex` paths, and self-disable
