@@ -194,6 +194,25 @@ const ERROR_DEBT: &[(&str, &str)] = &[
   ),
 ];
 
+/// Emit a line to the process's REAL stderr, SURVIVING libtest's per-test
+/// output capture. libtest only intercepts the `print!`/`eprint!` macros and
+/// replays them solely on FAILURE, so a plain `eprintln!` from a PASSING test
+/// is swallowed — which defeats the `[error-debt] … review for removal` and
+/// `[intentional-fail]` notices, whose entire purpose is to be SEEN on a green
+/// run (review m2). A direct `write(2)` bypasses the capture. One syscall per
+/// line is atomic up to PIPE_BUF, so concurrent test threads don't interleave.
+#[cfg(unix)]
+fn note_uncaptured(line: &str) {
+  use std::io::Write;
+  use std::os::unix::io::FromRawFd;
+  // SAFETY: fd 2 is the process stderr, valid for the whole run. `ManuallyDrop`
+  // stops the `File`'s Drop from `close()`-ing the shared descriptor.
+  let mut f = std::mem::ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(2) });
+  let _ = f.write_all(format!("{line}\n").as_bytes());
+}
+#[cfg(not(unix))]
+fn note_uncaptured(line: &str) { eprintln!("{line}"); }
+
 pub fn latexml_test_single(
   tex_file_str: &str,
   name: &str,
@@ -342,9 +361,9 @@ fn process_texfile(
     // Permanent contract: exact SOFT-error count, and NEVER fatal — the point is
     // graceful recovery. Drift fails both ways; a Fatal is always a regression.
     (Some((_, expect, reason)), _) => {
-      eprintln!(
+      note_uncaptured(&format!(
         "[intentional-fail] {name}: {n_soft} soft errors, {n_fatal} fatal (expect {expect}, 0) — {reason}"
-      );
+      ));
       if n_fatal > 0 {
         Err(format!(
           "{name}: INTENTIONALLY_FAILING must degrade to a SOFT error, but got a Fatal \
@@ -373,10 +392,10 @@ fn process_texfile(
     // entry is clean EVERYWHERE (the `[error-debt] … 0 errors` log flags it).
     (None, Some((_, reason))) => {
       if n_err == 0 {
-        eprintln!("[error-debt] {name}: 0 errors HERE — clean in this environment; \
-          review for removal once clean everywhere — {reason}");
+        note_uncaptured(&format!("[error-debt] {name}: 0 errors HERE — clean in this \
+          environment; review for removal once clean everywhere — {reason}"));
       } else {
-        eprintln!("[error-debt] {name}: {n_err} errors — {reason}");
+        note_uncaptured(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
       }
       Ok(())
     },
@@ -533,4 +552,58 @@ pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
   let mut c = crate::converter::Converter::from_config(cfg);
   c.initialize_session().expect("initialize");
   c.convert(source.to_string())
+}
+
+#[cfg(test)]
+mod exemption_audit {
+  use super::{ERROR_DEBT, INTENTIONALLY_FAILING};
+  use std::path::{Path, PathBuf};
+
+  /// Review m1: the exemption tables match on the bare `file_stem`, which is
+  /// NOT unique across the suite's globbed test dirs. A future `glossary.tex`
+  /// (etc.) under a different directory would silently inherit the
+  /// ERROR_DEBT / INTENTIONALLY_FAILING exemption — an ERROR_DEBT collision
+  /// could then MASK a real regression. Guard the invariant the match relies
+  /// on: every exemption key resolves to AT MOST ONE `.tex` across `tests/`.
+  /// (Cheaper and lower-churn than dir-qualifying the keys; if this ever fails,
+  /// rename the fixture or dir-qualify that entry.)
+  #[test]
+  fn exemption_keys_have_unique_stems() {
+    fn collect(dir: &Path, out: &mut Vec<(String, PathBuf)>) {
+      let Ok(rd) = std::fs::read_dir(dir) else { return };
+      for ent in rd.flatten() {
+        let p = ent.path();
+        if p.is_dir() {
+          collect(&p, out);
+        } else if p.extension().and_then(|e| e.to_str()) == Some("tex") {
+          if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
+            out.push((stem.to_string(), p.clone()));
+          }
+        }
+      }
+    }
+    let mut all = Vec::new();
+    collect(Path::new("tests"), &mut all);
+    assert!(!all.is_empty(), "no .tex fixtures found under tests/ — wrong CWD?");
+
+    let keys = INTENTIONALLY_FAILING
+      .iter()
+      .map(|(n, _, _)| *n)
+      .chain(ERROR_DEBT.iter().map(|(n, _)| *n));
+    for key in keys {
+      let hits: Vec<&PathBuf> = all
+        .iter()
+        .filter(|(s, _)| s == key)
+        .map(|(_, p)| p)
+        .collect();
+      assert!(
+        hits.len() <= 1,
+        "exemption key {key:?} matches {} .tex fixtures {:?} — the bare-stem \
+         match would apply the exemption to ALL of them, potentially masking a \
+         regression. Dir-qualify the entry or rename the fixture.",
+        hits.len(),
+        hits
+      );
+    }
+  }
 }
