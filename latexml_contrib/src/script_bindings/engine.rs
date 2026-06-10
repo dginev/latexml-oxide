@@ -493,6 +493,12 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // DefMathLigature: pattern/replacement/attrs are plain data — the XMTok
+  // prev-sibling matcher is built natively (same lowering as the macro).
+  engine.register_fn("DefMathLigature", |pattern: &str, replacement: &str, opts: Map| {
+    def_math_ligature_impl(pattern, replacement, opts);
+  });
+
   // Minimal gullet seam: skip following spaces mid-expansion.
   engine.register_fn("SkipSpaces", || -> std::result::Result<(), Box<EvalAltResult>> {
     latexml_core::gullet::skip_spaces().map_err(rhai_err)

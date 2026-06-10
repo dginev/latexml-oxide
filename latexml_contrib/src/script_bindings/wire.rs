@@ -678,3 +678,53 @@ pub(super) fn def_accent_impl(
   )?;
   Ok(())
 }
+
+/// The `DefMathLigature!` data-form lowering: walk `ntomatch` preceding
+/// `ltx:XMTok` siblings matching the pattern (reversed), then rewrite to
+/// `replacement` with the given role/name/meaning attributes.
+pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map) {
+  use latexml_core::ligature::{Ligature, MathLigatureOptions};
+  let mut attr = MathLigatureOptions::default();
+  for (key, val) in opts {
+    let v = dynamic_to_string(val);
+    match key.as_str() {
+      "role" => attr.role = Some(v),
+      "name" => attr.name = Some(v),
+      "meaning" => attr.meaning = Some(v),
+      _ => {},
+    }
+  }
+  let chars: Vec<char> = pattern.chars().rev().collect();
+  let ntomatch = chars.len();
+  let replacement = replacement.to_string();
+  let matcher: Option<latexml_core::ligature::LigatureMatcher> =
+    Some(Rc::new(move |_document: &mut Document, node_opt: &mut libxml::tree::Node| {
+      let mut node: libxml::tree::Node;
+      let mut node_mut = node_opt;
+      for c in chars.iter() {
+        if latexml_core::common::model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
+          || node_mut.get_content() != c.to_string()
+        {
+          return Ok(None);
+        }
+        if let Some(sibling) = node_mut.get_prev_sibling() {
+          node = sibling;
+          node_mut = &mut node;
+        } else {
+          return Ok(None);
+        }
+      }
+      if ntomatch > 0 {
+        Ok(Some((ntomatch, replacement.clone(), attr.clone())))
+      } else {
+        Ok(None)
+      }
+    }));
+  latexml_core::state::unshift_value("MATH_LIGATURES", vec![Ligature {
+    id: latexml_core::state::generate_ligature_id(),
+    matcher,
+    code: None,
+    font_test: None,
+    regex: None,
+  }]);
+}

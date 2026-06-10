@@ -195,6 +195,9 @@ const SAMPLE: &str = r##"
 
   // DefAccent: \racc{o} routes through \lx@applyaccent (combining acute).
   DefAccent("\\racc", "́", "´");
+
+  // DefMathLigature: ":=" collapses to one ASSIGN token (data-form matcher).
+  DefMathLigature(":=", "≔", #{ role: "ASSIGN", name: "assign" });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -225,7 +228,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
-    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} ",
+    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -371,6 +374,11 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("ó") || xml.contains("o\u{0301}"),
     "DefAccent (\\racc) failed; xml=\n{xml}"
+  );
+  // DefMathLigature: := merged to a single ≔ token with the ASSIGN role.
+  assert!(
+    xml.contains("≔"),
+    "DefMathLigature (:=) did not merge; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.
