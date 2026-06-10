@@ -875,9 +875,11 @@ mod tests {
     Tbox { text: arena::pin(text), ..Default::default() }.into()
   }
   fn list_of(items: Vec<Digested>) -> Digested {
-    let mut l = List::default();
-    l.boxes = items;
-    l.into()
+    List {
+      boxes: items,
+      ..Default::default()
+    }
+    .into()
   }
 
   #[test]

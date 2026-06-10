@@ -89,32 +89,6 @@ fn parse_year_str(s: &str) -> Option<u32> {
   }
 }
 
-#[cfg(test)]
-mod year_parse_tests {
-  use super::parse_year_str;
-
-  #[test]
-  fn vanilla_tl_year() {
-    assert_eq!(parse_year_str("2025"), Some(2025));
-    assert_eq!(parse_year_str("2026"), Some(2026));
-  }
-
-  #[test]
-  fn basictex_suffixed_year() {
-    // MacTeX/BasicTeX layout: /usr/local/texlive/2026basic
-    assert_eq!(parse_year_str("2026basic"), Some(2026));
-  }
-
-  #[test]
-  fn non_year_components_rejected() {
-    assert_eq!(parse_year_str("texlive"), None); // brew Cellar layout
-    assert_eq!(parse_year_str("basic2026"), None);
-    assert_eq!(parse_year_str(""), None);
-    assert_eq!(parse_year_str("1999"), None); // outside the sane range
-    assert_eq!(parse_year_str("20269"), None); // 5-digit run is not a year
-  }
-}
-
 /// Versioned filename for a kernel dump, e.g.
 /// `dump_filename("plain", 2025) == "plain.2025.dump.txt"`.
 pub fn dump_filename(kind: &str, year: u32) -> String {
@@ -212,4 +186,30 @@ pub fn resolve_versioned_in_dir(dir: &Path, kind: &str, prefer: Option<u32>) -> 
 /// next to `latex.2025.dump.txt`.
 pub fn stamp_path_for_dump(dump_path: &Path, year: u32) -> Option<PathBuf> {
   Some(dump_path.parent()?.join(version_filename(year)))
+}
+
+#[cfg(test)]
+mod year_parse_tests {
+  use super::parse_year_str;
+
+  #[test]
+  fn vanilla_tl_year() {
+    assert_eq!(parse_year_str("2025"), Some(2025));
+    assert_eq!(parse_year_str("2026"), Some(2026));
+  }
+
+  #[test]
+  fn basictex_suffixed_year() {
+    // MacTeX/BasicTeX layout: /usr/local/texlive/2026basic
+    assert_eq!(parse_year_str("2026basic"), Some(2026));
+  }
+
+  #[test]
+  fn non_year_components_rejected() {
+    assert_eq!(parse_year_str("texlive"), None); // brew Cellar layout
+    assert_eq!(parse_year_str("basic2026"), None);
+    assert_eq!(parse_year_str(""), None);
+    assert_eq!(parse_year_str("1999"), None); // outside the sane range
+    assert_eq!(parse_year_str("20269"), None); // 5-digit run is not a year
+  }
 }

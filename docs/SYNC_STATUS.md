@@ -3268,54 +3268,29 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
-### Round-37 (2026-06-10): PR #249 SENIOR REVIEW — handoff of actionable findings (7-angle fan-out + adversarial verification)
+### Round-37 (2026-06-10): PR #249 senior review — ALL findings resolved
 
-A full critical review of the `large-scale-testing-round-5` branch (110 commits,
-138 files, ~15.4k diff lines) ahead of merge. Method: 7 independent finder
-angles (line-by-line, removed-behavior, cross-file, reuse, simplification,
-efficiency, altitude) → 23 candidates → adversarial verification (each verdict
-backed by quoted code or live repro; 2 candidates REFUTED and dropped — the
-"giant uniform table trips the stomach cycle guard" scenario is impossible
-because every cell digests into a FRESH `new_local_box_list` and is drained
-per-cell, and "stomach-guard messages missing from `resource_fatal_from_message`"
-is unreachable because math-parser semantics never enter the stomach).
-**Merge verdict: request changes — P0 must land before merge; P1 before the
-next canvas sweep; P2/P3 as tracked follow-ups.** The branch's wins (canvas_3
-16/16, OOM root-causes, guard architecture) are real and validated; the items
-below are the cost of the speed.
+A 7-angle adversarial review of the branch ahead of merge surfaced 23
+candidates (2 refuted on verification). Every confirmed finding (P0→P3) was
+fixed, verified red/green where testable, and committed individually — see the
+`git log` `(review P*)` commits. Landed: NUL-sanitizing serialization sinks
+(test 62); unconditional progress counting; token-budget recalibration vs the
+new all-loops accounting; uniform-run cycle-guard suppression; context-serial
+guard scoping (replacing the blanket reset); one-borrow read checkpoints across
+all four reader loops (9–12% wall win); structured resource-fatal transport
+with real abort propagation; per-iteration guard ticks in `digest()`/`raw_tex`;
+distinct `Stomach:MemoryBudget` vs `:Recursion` categories; shared test
+helpers; TFM slot-coverage test; single RSS seam + shared debug-flag probe;
+OXIDIZED_DESIGN divergences #30–32. Clippy back to the documented baseline
+(0 outside `latexml_math_parser`).
 
-**P0 — regression, must fix before merge:** *(all resolved — see "Review
-fixes landed" below)*
-
-**P1 — canvas-risk, fix before the next large sweep:**
-
-**P1/P2 — all resolved** *(see "Review fixes landed" below)*
-
-**P0/P1/P2/P3 — ALL REVIEW ITEMS RESOLVED (2026-06-10).** Every finding was
-fixed, verified (red/green where testable), and committed individually; the
-review section above is retained as the record of the method and verdicts.
-Landed: NUL-sanitizing serialization sinks (+test 62); unconditional progress
-counting; token-budget recalibration against the new all-loops accounting
-(measured table in gullet.rs); uniform-run cycle-guard suppression (+unit
-tests); context-serial guard scoping replacing the blanket reset; one-borrow
-read checkpoints across all FOUR reader loops (9–12% wall-time win);
-structured resource-fatal transport with real abort propagation (+2 unit
-tests); per-iteration guard ticks in digest()/raw_tex; distinct
-Stomach:MemoryBudget vs Stomach:Recursion categories; shared test helpers;
-TFM slot-coverage test; single RSS seam + shared debug-flag probe;
-OXIDIZED_DESIGN divergences #30–32; docs indexed + design snapshot dated.
-
-**One live OPEN item spun out of the review (tracked):**
-
-* **T1 `\@changed@cmd` encoding-dispatcher expansion loop** — the root cause
-  behind natbib's text-symbol no-expand guard (OXIDIZED_DESIGN #31, witness
-  2111.00584): under full expansion Rust's dispatcher re-injection
-  (`\csname\cf@encoding\string#1\endcsname`) can loop where Perl's
-  terminates. NOT reproducible in isolation (`\edef\x{\i}` under
-  T1/mathptmx is clean — the loop needed the full revtex package-set encoding
-  state), so the fix needs the witness's state captured first. When fixed,
-  DELETE `has_text_symbol` in natbib_sty.rs and restore the Perl-faithful
-  unconditional `Expand`.
+**One live OPEN item spun out of the review** — **T1 `\@changed@cmd`
+encoding-dispatcher expansion loop** (root cause behind natbib's text-symbol
+no-expand stopgap, OXIDIZED_DESIGN #31, witness 2111.00584). Not reproducible
+in isolation (`\edef\x{\i}` under T1/mathptmx is clean — needs the full revtex
+package-set encoding state), so the fix needs the witness state captured first.
+When fixed, delete `has_text_symbol` in `natbib_sty.rs` and restore the
+Perl-faithful unconditional `Expand`.
 
 ### Round-37 (2026-06-09): math0402448 phantom fatal ROOT-CAUSED — cycle-guard false positive + ALL gullet guards bypassed by `read_balanced`/`read_x_token` (now fixed); canvas_3 = 16/16 CLEAN
 

@@ -981,7 +981,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     // ~1.87 M heavy line-segment boxes reached 4.5 GB RSS before the 2 M count
     // cap could fire).
     let len = st.box_list.len();
-    if len >= BYTE_CHECK_ACTIVATE && len % BYTE_CHECK_EVERY == 0 {
+    if len >= BYTE_CHECK_ACTIVATE && len.is_multiple_of(BYTE_CHECK_EVERY) {
       let est = estimate_box_list_bytes(&st.box_list);
       if est > STOMACH_BOX_BYTES_BUDGET {
         st.pending_cycle_fatal = Some((

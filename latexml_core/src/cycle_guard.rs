@@ -159,7 +159,7 @@ mod tests {
     // tokens (`\def\x{a\x}` → a, \x, a, \x …), and a pure single-token
     // self-expansion is caught by the Expandable self-recursion error
     // before any guard. PR #249 review P1-3.
-    let s: Vec<u64> = std::iter::repeat(7).take(2000).collect();
+    let s: Vec<u64> = std::iter::repeat_n(7, 2000).collect();
     assert_eq!(run(&s), None);
   }
 
