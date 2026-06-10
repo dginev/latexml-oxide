@@ -322,14 +322,15 @@ no file/network/process access is exposed. Errors (compile, `throw`, limit
 breach, document op failure) surface as clean latexml `Error`s and degrade only
 the offending binding.
 
-**Not yet covered**: structural arg/return marshaling (`Token`/`Whatsit` as
-rich types — `Tokens`/`Digested` ARE handles already); gullet access from
-bodies; `sizer` and closure-form `reversion` (string-form reversion IS
-covered); `DefColumnType`/`DefAccent`/`DefMathLigature`/`DefRewrite`;
-`GetKeyVal` accessors over a KeyVals handle (the dict currently arrives as its
-TeX-source string); whatsit exposure inside `before/afterConstruct` bodies
-(document ops work; `whatsit()` does not there); configurable assignment scope
-per-call + key namespacing for untrusted scripts.
+**Not yet covered** (truth as of 2026-06-09, post-residual pass):
+`DefMathLigature`/`DefRewrite`/`DefMathRewrite` (their matcher closures
+manipulate XML nodes — needs a document-tree proxy surface); gullet access
+beyond `SkipSpaces()`; structural `Token`/`Whatsit` marshaling (handles
+cover `Tokens`/`Digested`); per-script key namespacing; sandboxed file-I/O
+policy. Everything else in `setup_binding_language.rs`/`content.rs` is
+covered — incl. (this pass) `sizer`, closure-form `reversion`, `DefAccent`,
+read-only whatsit contexts in construction hooks, and default `.rhai` file
+discovery.
 
 ## Binding-language surface — the 2026-06-09 "feature-complete" expansion
 
