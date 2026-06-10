@@ -794,13 +794,32 @@ pub(super) fn wire_rewrite_replace(
   }
   let engine = engine.clone();
   let ast = ast.clone();
+  // The core Replace clause positions the document at the splice parent
+  // before calling us; publish it so the body's `document.*` proxy inserts
+  // land there. The props map carries a default text font — at finalization
+  // there is no box_to_absorb for absorb_string to fall back on. (One tiny
+  // leaked map per registered rule.)
+  let rewrite_props: &'static SymHashMap<Stored> = {
+    let mut m = SymHashMap::default();
+    m.insert(
+      "font",
+      Stored::Font(Rc::new(latexml_core::common::font::Font::text_default())),
+    );
+    Box::leak(Box::new(m))
+  };
   o.replace = Some(Rc::new(
-    move |_document: &mut Document, nodes: Vec<&mut libxml::tree::Node>| -> Result<()> {
+    move |document: &mut Document, nodes: Vec<&mut libxml::tree::Node>| -> Result<()> {
       let arr: rhai::Array =
         nodes.into_iter().map(|n| Dynamic::from(NodeProxy(n.clone()))).collect();
-      let _: Dynamic = replace
-        .call::<Dynamic>(&engine, &ast, (arr,))
-        .map_err(|e| Error::from(format!("script rewrite replace: {e}")))?;
+      CTOR_CTX.with(|c| {
+        c.borrow_mut().push(CtorCtx { document, props: rewrite_props });
+      });
+      let result = replace.call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy), arr));
+      CTOR_CTX.with(|c| {
+        c.borrow_mut().pop();
+      });
+      let _: Dynamic =
+        result.map_err(|e| Error::from(format!("script rewrite replace: {e}")))?;
       Ok(())
     },
   ));

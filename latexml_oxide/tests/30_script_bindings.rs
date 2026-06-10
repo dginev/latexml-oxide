@@ -218,6 +218,16 @@ const SAMPLE: &str = r##"
     "G(" + opt + ":" + arg + ")"
   });
 
+  // DefRewrite, replace-closure form (replace-by-reinsertion, the native
+  // sub[document,nodes] shape): detach the victim, insert a replacement.
+  DefConstructor("\\rwvictim{}", "<ltx:text class=\"victim\">#1</ltx:text>");
+  DefRewrite(#{ select: "descendant-or-self::ltx:text[@class='victim']" }, |document, nodes| {
+    document.openElement("ltx:text");
+    document.setAttribute("class", "replaced");
+    document.absorbString("REPL");
+    document.closeElement("ltx:text");
+  });
+
   // DefRewrite (data form): stamp every biography note at finalization.
   DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
                 attributes: #{ class: "rw-stamp" } });
@@ -251,7 +261,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
-    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} ",
+    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} \\rwvictim{OLD} ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -412,6 +422,11 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("G(x:y)"),
     "gullet seams (\\gread ReadOptional/ReadArg) failed; xml=\n{xml}"
+  );
+  // Replace-closure rewrite: victim detached, replacement inserted.
+  assert!(
+    xml.contains("REPL") && xml.contains("class=\"replaced\"") && !xml.contains("OLD"),
+    "DefRewrite replace-closure (reinsertion) failed; xml=\n{xml}"
   );
   // DefRewrite: the xpath+attributes rule fired at finalization.
   assert!(

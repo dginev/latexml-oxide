@@ -323,10 +323,9 @@ breach, document op failure) surface as clean latexml `Error`s and degrade only
 the offending binding.
 
 **Not yet covered** (truth as of 2026-06-09, post-residual pass):
-`DefRewrite`'s `replace` closure (node MUTATION — the read-only `Node`
-proxy now covers closure-form `DefMathLigature` matchers: qname/content/
-getAttribute/prevSibling/parent); deeper gullet access (ReadArg/
-ReadUntil/ReadOptional/SkipSpaces ARE covered); structural `Token`/`Whatsit` marshaling (handles
+deeper gullet access (ReadArg/ReadUntil/ReadOptional/SkipSpaces ARE
+covered; DefRewrite's replace-closure — replace-by-reinsertion with
+document context — and Node proxy read/write are covered too); structural `Token`/`Whatsit` marshaling (handles
 cover `Tokens`/`Digested`); per-script key namespacing; sandboxed file-I/O
 policy. Everything else in `setup_binding_language.rs`/`content.rs` is
 covered — incl. (this pass) `sizer`, closure-form `reversion`, `DefAccent`,
