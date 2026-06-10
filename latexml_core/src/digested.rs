@@ -882,6 +882,31 @@ mod tests {
     .into()
   }
 
+  /// Iteratively dismantle a deeply-nested `Digested` so its `Drop` does NOT
+  /// recurse once per nesting level. A deep singly-owned `Rc<DigestedData>`
+  /// chain otherwise overflows the small per-test-thread stack under CI's
+  /// `--test-threads=2` (a SIGABRT that passes locally on the larger default
+  /// stack). Descends into the FIRST child of each `List`, dropping the
+  /// shallow remainder (leaf boxes + the now-childless outer) as it goes, so
+  /// teardown is O(1) in stack depth. (The analogous PRODUCTION concern — a
+  /// boxing-depth-cap Fatal unwinding a deep structure — is tracked
+  /// separately; the real box-list runaway is a WIDE `Vec`, already
+  /// iteratively dropped.)
+  fn drain_nest(mut cur: Digested) {
+    loop {
+      let child = if let DigestedData::List(l) = &*cur.0 {
+        let mut boxes = std::mem::take(&mut l.borrow_mut().boxes);
+        (!boxes.is_empty()).then(|| boxes.swap_remove(0))
+      } else {
+        None
+      };
+      match child {
+        Some(c) => cur = c,
+        None => break,
+      }
+    }
+  }
+
   #[test]
   fn cycle_fingerprint_is_content_aware_for_lists() {
     // The whole point of recursing into a List (rather than hashing its length
@@ -913,6 +938,7 @@ mod tests {
     }
     let _ = deep.cycle_fingerprint(); // must not hang / overflow
     assert_ne!(deep.cycle_fingerprint(), tbox_with("z").cycle_fingerprint());
+    drain_nest(deep); // O(1)-stack teardown — see `drain_nest`.
   }
 
   #[test]
@@ -949,5 +975,6 @@ mod tests {
       est < (EB_BUDGET as usize) * 4096,
       "estimate must stay bounded regardless of nest depth (got {est})"
     );
+    drain_nest(deep); // O(1)-stack teardown — see `drain_nest`.
   }
 }
