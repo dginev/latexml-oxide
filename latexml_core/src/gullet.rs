@@ -532,19 +532,28 @@ fn read_internal_token() -> Option<Token> {
   next_token
 }
 
-/// Per-token-read resource checkpoint: progress/token-limit accounting and
-/// the pushback-limit probe, in a single mutable borrow. Shared by
-/// [`read_token`] AND [`read_x_token`] — the latter loops on
-/// `read_internal_token` directly, so without its own checkpoint every
-/// full-expansion read path (`\edef` bodies, `read_balanced`, csname
-/// construction, …) would BYPASS all gullet guards: a `\def\x{a\x}\edef\y{\x}`
-/// runaway then grinds to the multi-GB process watchdog instead of a clean
-/// early `Fatal` (pre-existing gap found while diagnosing math0402448).
+/// Per-token-read resource checkpoint: runtime probe, progress/token-limit
+/// accounting, pushback-limit probe, and the cycle-guard activation state —
+/// in ONE combined mutable borrow. Returns `Ok(None)` when the gullet has no
+/// runtime (caller returns end-of-input), otherwise
+/// `Ok(Some(cycle_guard_active))` — the caller passes that flag to
+/// [`cycle_guard_checkpoint`] so the per-token fast path costs exactly one
+/// `RefCell` borrow (PR #249 review P2-9; master's `read_token` comment
+/// demanded the same single-borrow shape).
+///
+/// Shared by all FOUR reader loops (`read_token`, `read_x_token`,
+/// `read_balanced`, `read_next_conditional`) — they are siblings over the
+/// low-level `read_internal_token`/raw-mouth reads, NOT a delegation chain,
+/// so each must run its own checkpoint; otherwise full-expansion read paths
+/// (`\edef` bodies, csname construction, conditional skipping) bypass all
+/// gullet guards and a `\def\x{a\x}\edef\y{\x}` runaway grinds to the
+/// multi-GB watchdog instead of a clean early `Fatal` (pre-existing gap
+/// found while diagnosing math0402448).
 #[inline]
-fn read_resource_checkpoint() -> Result<()> {
+fn read_resource_checkpoint() -> Result<Option<bool>> {
   let mut g = gullet_mut!();
   if g.runtime.is_none() {
-    return Ok(());
+    return Ok(None);
   }
   // Progress counts UNCONDITIONALLY: the cycle guard's activation gate
   // (`progress > CYCLE_GUARD_ACTIVATE`) feeds off it, so nesting the
@@ -578,19 +587,23 @@ fn read_resource_checkpoint() -> Result<()> {
       Fatal!(Timeout, PushbackLimit, msg);
     }
   }
-  Ok(())
+  Ok(Some(g.progress > CYCLE_GUARD_ACTIVATE))
 }
 
 /// Windowed cycle-guard checkpoint over the token-read stream. Only engaged
-/// once `progress` is already pathologically high (`CYCLE_GUARD_ACTIVATE`), so
-/// ordinary documents never record a fingerprint (nor pay the hash — the gate
-/// is checked FIRST). A small-period infinite expansion loop then trips a
+/// once `progress` is already pathologically high — the caller passes the
+/// activation state computed by [`read_resource_checkpoint`] in the SAME
+/// borrow, so below the gate this costs one branch and zero borrows (and no
+/// fingerprint hash). A small-period infinite expansion loop then trips a
 /// clean Fatal in O(window) extra tokens instead of grinding to the token
-/// limit (and the gigabytes of RSS that implies). Shared by [`read_token`]
-/// and [`read_x_token`] (see [`read_resource_checkpoint`] on why the latter
-/// needs its own checkpoints).
+/// limit (and the gigabytes of RSS that implies). Shared by all four reader
+/// loops (see [`read_resource_checkpoint`] on why each loop needs its own
+/// checkpoints — they do NOT delegate to one another).
 #[inline]
-fn cycle_guard_checkpoint(nextt: &Token) -> Result<()> {
+fn cycle_guard_checkpoint(active: bool, nextt: &Token) -> Result<()> {
+  if !active {
+    return Ok(());
+  }
   if *DEBUG_FATAL {
     DEBUG_RECENT_TOKENS.with(|ring| {
       let mut ring = ring.borrow_mut();
@@ -601,7 +614,7 @@ fn cycle_guard_checkpoint(nextt: &Token) -> Result<()> {
     });
   }
   let mut g = gullet_mut!();
-  if g.progress > CYCLE_GUARD_ACTIVATE {
+  {
     // Mix the reading-context serial into the fingerprint (see the
     // `Gullet::ctx_serial` field doc): tokens read in different
     // `reading_from_mouth` contexts can then never form a matching window,
@@ -634,10 +647,11 @@ fn cycle_guard_checkpoint(nextt: &Token) -> Result<()> {
 pub fn read_token() -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
   loop {
-    if gullet!().runtime.is_none() {
-      return Ok(None);
-    }
-    read_resource_checkpoint()?;
+    // Single combined borrow: runtime probe + limits + activation state.
+    let guard_active = match read_resource_checkpoint()? {
+      None => return Ok(None),
+      Some(active) => active,
+    };
     // internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
     next_token = read_internal_token();
@@ -648,6 +662,10 @@ pub fn read_token() -> Result<Option<Token>> {
     //   ALIGN_STATE tracking happens AFTER the loop, on the FINAL
     //   token to be returned (Perl L320-324).
     if let Some(ref nextt) = next_token {
+      // Uniform placement across all reader loops: fingerprint the token AS
+      // READ (before alignment/\dont_expand special-casing), so the cycle
+      // guard sees the same stream regardless of which loop reads it.
+      cycle_guard_checkpoint(guard_active, nextt)?;
       if (align_group_count() == 0) && has_reading_alignment() {
         if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
           let reading_alignment = get_reading_alignment().unwrap();
@@ -682,7 +700,6 @@ pub fn read_token() -> Result<Option<Token>> {
       Catcode::END => decrement_align_group_count(),
       _ => {},
     }
-    cycle_guard_checkpoint(nextt)?;
   }
   Ok(next_token)
 }
@@ -734,7 +751,9 @@ pub fn read_x_token(
     // `read_balanced`, csname construction) bypasses the token/pushback
     // limits and the expansion cycle guard entirely, and a `\def\x{a\x}`
     // runaway grinds to the multi-GB watchdog instead of a clean Fatal.
-    read_resource_checkpoint()?;
+    // (One combined borrow; the returned activation state feeds the cycle
+    // checkpoint below so the fast path pays a single RefCell borrow.)
+    let guard_active = read_resource_checkpoint()?.unwrap_or(false);
     // internal low-level reader that extracts a token from a mouth,
     // but always keeps comment tokens pending.
     let next_token = read_internal_token();
@@ -758,7 +777,7 @@ pub fn read_x_token(
     }
     // we got a token
     let token = next_token.unwrap();
-    cycle_guard_checkpoint(&token)?;
+    cycle_guard_checkpoint(guard_active, &token)?;
     if token.get_catcode() == Catcode::CS && token.text == pin!("\\dont_expand") {
       let unexpanded = match read_token()? {
         Some(t) => t,
@@ -1046,7 +1065,7 @@ pub fn read_balanced(
     // checkpoint, `\edef`-body expansion loops (`\def\x{a\x}\edef\y{\x}`)
     // bypass the token/pushback limits AND the expansion cycle guard, and
     // grind to the multi-GB process watchdog instead of a clean early Fatal.
-    read_resource_checkpoint()?;
+    let guard_active = read_resource_checkpoint()?.unwrap_or(false);
     // we'll keep comments in the result
     let mut next_token = None;
     if !gullet!().pending_comments.is_empty() {
@@ -1080,7 +1099,7 @@ pub fn read_balanced(
     if let Some(ref t) = next_token {
       // Cycle-guard checkpoint on the raw read stream (see the resource
       // checkpoint at the loop top for why read_balanced needs its own).
-      cycle_guard_checkpoint(t)?;
+      cycle_guard_checkpoint(guard_active, t)?;
     }
     match next_token {
       // What's the right error handling now?
@@ -1601,9 +1620,20 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
 /// and track BEGIN/END manually, matching Perl byte-for-byte.
 pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
   loop {
+    // The FOURTH reader loop over `read_internal_token` (the `\else`/`\fi`
+    // skipper — it must not delegate to read_token, whose alignment trigger
+    // misfires during conditional-skip; see the fn doc). It still needs the
+    // resource/cycle checkpoints: a skip over a pathologically large stream
+    // must count progress and remain loop-detectable like every other read
+    // path (PR #249 review P2-9).
+    let guard_active = match read_resource_checkpoint()? {
+      None => return Ok(None),
+      Some(active) => active,
+    };
     let next_low = read_internal_token();
     match next_low {
       Some(token) => {
+        cycle_guard_checkpoint(guard_active, &token)?;
         let cc = token.get_catcode();
         // Perl L128-130: manual ALIGN_STATE tracking for `{` / `}` (avoids
         // the trigger check that read_token applies).

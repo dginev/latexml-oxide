@@ -3332,17 +3332,6 @@ fixes landed" below)*
    categories (e.g. `Stomach:MemoryBudget`, precedent at
    `Timeout:MemoryBudget`).
 
-9. **Hot-path borrow regression + checkpoint placement drift.** `read_token`
-   now takes 3 RefCell borrows/token (master: 1, with a comment explicitly
-   demanding the single-borrow shape); `read_x_token`/`read_balanced` take 2
-   (master: 0). Sequential (no panic risk) but on the engine's hottest loops;
-   single-paper timing showed no regression, but the `docs/PERFORMANCE.md`
-   band check was NOT run. Also `read_token` runs `cycle_guard_checkpoint`
-   after align-state bookkeeping while the other two run it before the
-   `\dont_expand` branch — undocumented fingerprint-stream asymmetry. Action:
-   merge the checkpoint into each loop's existing borrow (checkpoint returns
-   the activation state), align placement, run the perf bands.
-
 **P3 — hygiene/altitude (cheap, batchable):**
 
 10. **Test-helper duplication is a signal-integrity drift risk**:
