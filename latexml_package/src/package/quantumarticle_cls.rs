@@ -9,23 +9,29 @@ LoadDefinitions!({
   ProcessOptions!();
 
   RequirePackage!("bbm");
-  RequirePackage!("inst_support");
   // Pre-load with [dvipsnames, table] so user xcolor calls don't
   // silently option-clash. Quantum papers commonly use \cellcolor.
   RequirePackage!("xcolor", options => vec!["dvipsnames".to_string(), "table".to_string()]);
 
-  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#2'>#1</ltx:contact>");
-  DefMacro!("\\email{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{email}}");
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefConstructor!("\\@@@homepage{}", "^ <ltx:contact role='homepage'>#1</ltx:contact>");
-  DefMacro!("\\address[]{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#2}}");
-  DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-  DefMacro!("\\homepage{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@homepage{#1}}");
-  // Preserve ORCID as ltx:note frontmatter (content: the iD string
-  // identifies the author and downstream JATS/HTML may surface it).
-  DefMacro!("\\orcid{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  // Note: This seems similar to revtex4; should we just require revtex4_support ?
+  // \author[labels]{name}   One \author per author
+  // If label given, the corresponding affiliation from \affil is attached
+  // otherwise, \author should be followed by \affiliation  (Perl PR #2767)
+  DefMacro!("\\author[]{}",    "\\lx@add@creator[role=author,annotations={#1}]{#2}");
+  DefMacro!("\\affiliation{}", "\\lx@add@contact[annotate=new,role=affiliation]{#1}");
+  DefMacro!("\\affil OptionalSemiverbatim {}",
+    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
+  // \address provides address for previous \author
+  DefMacro!("\\address{}", "\\lx@add@contact[annotate=new,role=address]{#1}");
+  // These add contacts to most recent author
+  // The optional arguments here are a sort of prefix to the footnote (NOT label!)
+  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{#2}");
+  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{#2}");
+  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  DefMacro!("\\orcid[]{}",               "\\lx@add@contact[role=orcid,name={#1}]{#2}");
+
+  DefMacro!("\\collaboration{}",    "\\author{#1}");
+  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
 
   RawTeX!("\\DeclareRobustCommand\\openone{\\mathbbm{1}}");
   RawTeX!("\\definecolor{quantumviolet}{HTML}{53257F}");
@@ -44,12 +50,9 @@ LoadDefinitions!({
   // quantumarticle.cls L1412-1414: \keywords{x} stores in \@keywords.
   // Render as classification block to preserve the metadata.
   DefMacro!("\\keywords{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
-  // \ead is the elsart-style email-address macro often inherited by
-  // quantumarticle users from journal templates. Preserve as note.
-  // Witness 2406.10832.
-  DefMacro!("\\ead[]{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#2}");
+    "\\lx@add@classification[scheme=keywords]{#1}");
+  // some elsearticle style commands?  (Perl PR #2767)
+  DefMacro!("\\ead[]{}", "\\email{#1}"); // Strictly if #1=url, should be homepage.
 
   // quantumarticle is REVTeX-based and inherits the REVTeX
   // \acknowledgments / \acknowledgements bare-command pattern

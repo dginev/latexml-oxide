@@ -31,7 +31,7 @@ LoadDefinitions!({
   // \title with optional * to affect numbering (* => numart, none => book)
   DefMacro!("\\title OptionalMatch:* {}",
     "\\if.#1.\\else\\def\\thesection{\\arabic{section}}\\fi\
-     \\@add@frontmatter{ltx:title}{#2}");
+     \\lx@add@title{#2}");
 
   //======================================================================
   // Upright greek letters
@@ -134,5 +134,5 @@ LoadDefinitions!({
   // Springer Multi-author authors use \orcid for ORCID identifier.
   // Witness 2408.17087, 2411.17645 (2 svmult papers).
   DefMacro!("\\orcid{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=orcid]{#1}");
 });

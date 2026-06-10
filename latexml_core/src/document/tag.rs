@@ -10,7 +10,35 @@ use crate::document::Document;
 /// The $box is the Digested (whatsit) associated with the node, retrieved via getNodeBox.
 pub type TagConstructionClosure =
   Rc<dyn Fn(&mut Document, &mut Node, Option<&Digested>) -> Result<()>>;
-pub type TagData = (String, Option<HashMap<String, String>>, Digested);
+
+/// Attribute map of a frontmatter entry (Perl: the `{%attr}` hashref).
+pub type TagAttrs = HashMap<String, String>;
+
+/// One frontmatter entry: Perl's `[$tag, {%attr}, @content]`
+/// (Base_Utility.pool.ltxml, PR #2767 frontmatter refactor).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TagData {
+  pub tag:     String,
+  pub attr:    TagAttrs,
+  pub content: Vec<TagContent>,
+}
+
+/// A content item within a frontmatter entry: digested material (Box, List,
+/// Whatsit), recursively a nested `[tag, {attr}, @content]` annotation entry,
+/// or the `'place_keeper'` marker used while the entry's own content is still
+/// being digested (Perl uses the literal string `'place_keeper'`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum TagContent {
+  PlaceKeeper,
+  Box(Digested),
+  Entry(TagData),
+}
+
+/// A queued-but-not-yet-digested frontmatter command: Perl's
+/// `[$tag, {%attr}, $command]` entries in the `frontmatter_raw` state value.
+/// Digestion is deferred until `\maketitle` (or similar) so that entries
+/// (eg. `\title`, `\author`) can still be redefined & replaced.
+pub type RawFrontmatter = (String, TagAttrs, crate::tokens::Tokens);
 
 // Specify the properties of a Node tag.
 pub enum TagOptionName {

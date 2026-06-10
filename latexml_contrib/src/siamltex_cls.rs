@@ -18,7 +18,11 @@ fn push_classification_to_frontmatter(
   if let Some(body) = whatsit.get_body()? {
     let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
     attrs.insert("scheme".to_string(), scheme.to_string());
-    let entry = ("ltx:classification".to_string(), Some(attrs), body);
+    let entry = latexml_core::document::tag::TagData {
+      tag: "ltx:classification".to_string(),
+      attr: attrs,
+      content: vec![latexml_core::document::tag::TagContent::Box(body)],
+    };
     latexml_core::state::with_value_mut("frontmatter", |val_opt| {
       if let Some(Stored::HashTagData(ref mut frnt)) = val_opt {
         frnt

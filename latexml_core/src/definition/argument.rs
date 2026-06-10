@@ -477,6 +477,7 @@ impl From<Stored> for Result<ArgWrap> {
       | Stored::Ligature(_)
       | Stored::HashStored(_)
       | Stored::HashTagData(_)
+      | Stored::FrontmatterRaw(_)
       | Stored::HashString(_)
       | Stored::Digested(_)
       | Stored::FontDirective(_)

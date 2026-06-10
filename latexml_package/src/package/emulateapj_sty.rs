@@ -34,8 +34,8 @@ LoadDefinitions!({
   def_macro_noop("\\tabletypesize{}")?;
   Let!("\\tablefontsize", "\\tabletypesize");
   def_macro_noop("\\subtitle")?;
-  DefMacro!("\\submitted{}",   "\\@add@frontmatter{ltx:date}[role=submitted]{#1}");
-  DefMacro!("\\journalinfo{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
+  DefMacro!("\\submitted{}",   "\\lx@add@date[role=submitted]{#1}");
+  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal]{#1}");
   DefMacro!("\\keywordsname", "Subject headings");
   DefMacro!("\\ulap{}", "\\hbox{#1}");
   DefMacro!("\\dlap{}", "\\hbox{#1}");

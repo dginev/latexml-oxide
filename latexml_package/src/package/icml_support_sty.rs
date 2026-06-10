@@ -33,7 +33,7 @@ LoadDefinitions!({
   // Perl gobbles \icmltitlerunning; surpass: it's the running-head
   // variant of the title, genuine author metadata.
   DefMacro!("\\icmltitlerunning{}",
-    "\\@add@frontmatter{ltx:toctitle}{#1}");
+    "\\lx@add@frontmatter{ltx:toctitle}{#1}");
   // \icmlsetsymbol{name}{symbol} — creates `\<name>` macro expanding
   // to <symbol> for use in author lists. Real icml2024.sty L100-ish:
   //   `\def\icmlsetsymbol#1#2{\expandafter\def\csname #1\endcsname{#2}}`
@@ -45,44 +45,30 @@ LoadDefinitions!({
 
   DefEnvironment!("{icmlauthorlist}", "#body");
 
-  DefMacro!("\\icmlauthor{}{}", "\\author{#1}");
+  // \icmlauthor{author}{labels}   One per author; labels used to connect to affiliation
+  DefMacro!("\\icmlauthor{} Semiverbatim", "\\lx@add@creator[role=author,annotations={#2}]{#1}");
   // icml20XX.sty: \newcommand{\icmlCorrespondingAuthor}{\textsuperscript{$\dagger$}Corresponding author}
   // (0-arg marker). icml2025.sty L530: \newcommand{\icmlCorr}{\textsuperscript{\dag}Corresponding author }
   // (shorter alias, used as `\printAffiliationsAndNotice{\icmlCorr}`). Our binding
   // intercepts the raw .sty so the `\newcommand`s never run → undefined where Perl
   // (which loads the raw .sty) defines them. Witnesses 2403.01475, 2507.11588.
   //
-  // The real macros are a `\textsuperscript{\dagger}` footnote marker, but that is a
-  // typographic cross-reference that is meaningless in our structured model (no author
-  // is marked with the matching dagger). Per the frontmatter-framework spirit, route the
-  // corresponding-author indication into structured metadata as an `ltx:note`
-  // (role=corresponding-author, matching `\icmlcorrespondingauthor` below) rather than
-  // emitting raw inline `\textsuperscript` text. INTERIM: a fuller author↔contact
-  // association will come with the frontmatter-refactor (PR #241 / upstream PR #2767).
+  // These are 0-arg footnote-style markers carrying no author identity, so — unlike the
+  // 2-arg `\icmlcorrespondingauthor` below (name+email → `\lx@add@contact`) — they stay
+  // note-style metadata (role=corresponding-author) via `\lx@add@frontmatter` rather
+  // than emitting a raw inline `\textsuperscript` footnote marker.
   DefMacro!("\\icmlCorrespondingAuthor",
-    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}");
+    "\\lx@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}");
   DefMacro!("\\icmlCorr",
-    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}");
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\icmladdress{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
-  // ICML: \icmlaffiliation{shortname}{full text} maps a short id to
-  // an affiliation string used in author list. Preserve only the
-  // full-text — the shortname (#1) is an internal identifier that
-  // commonly contains `_` characters (e.g. `mit_idss`, `osu_ece`),
-  // which our frontmatter pipeline tokenizes as math-mode subscript
-  // and errors with "Script _ can only appear in math mode" when
-  // rendered into ltx:note text. Witness 2404.08592.
-  DefMacro!("\\icmlaffiliation{}{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
-  // \icmlcorrespondingauthor{name}{email} — preserve as ltx:note.
-  // The email arg often contains `_` (e.g. `m_smith@apple.com`) which would
-  // otherwise be tokenized as subscript-mode at digest time, triggering
-  // "Script _ can only appear in math mode" cascades. Semiverbatim
-  // neutralizes `_`/`#`/`&`/`%`/`^`/`~`/`$`/`{`/`}` in the email arg.
-  // Perl's icml_support binding gobbles both args (empty body); we surpass
-  // by preserving the contact text as a frontmatter note. Witness 2312.09299.
-  DefMacro!("\\icmlcorrespondingauthor{} Semiverbatim",
-    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 <#1>}");
+    "\\lx@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}");
+  // \icmlaffiliation{label}{address}  provides affiliation for author with same label
+  DefMacro!("\\icmlaffiliation Semiverbatim {}", "\\lx@add@contact[role=affiliation,label={#1}]{#2}");
+  DefMacro!("\\icmladdress OptionalSemiverbatim {}", "\\lx@add@contact[role=address,label={#1}]{#2}"); // deprecated
+  // \icmlcorrespondingauthor{author}{email}
+  // Attempt to use author name as a matching label to connect to author
+  // (should be a fuzzy match?)
+  DefMacro!("\\icmlcorrespondingauthor{}{}",
+    "\\lx@add@contact[label={\\ifx.#1.\\else fuzzy:#1\\fi},role=email,name={Correspondence to: }]{#2}");
 
   // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
   // a re-iteration of the affiliation list + a free-form notice. Since
@@ -91,9 +77,9 @@ LoadDefinitions!({
   // author-supplied "Work done while at X" string survives.
   // Witness: 2502.18679 (icml2025.sty L564).
   DefMacro!("\\printAffiliationsAndNotice{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   DefMacro!("\\printAffiliationsAndWorkNotice{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
   // ICML 2024: simpler `\printAffiliations` no-arg form (newer template
   // emits the affiliation list inline without trailing notice). Witness
   // 2310.18127.
@@ -165,7 +151,7 @@ LoadDefinitions!({
   // Witness 2402.04924 (icml2024.sty L535).
   DefMacro!("\\icmlProjectLead",
     "\\textsuperscript{\\char`\u{2020}}Project lead");
-  DefMacro!("\\icmlkeywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\icmlkeywords{}", "\\lx@add@keywords{#1}");
   // \iclrfinalcopy — some icml*-bundled papers also use ICLR's
   // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
   // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.

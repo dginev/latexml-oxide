@@ -18,10 +18,9 @@ LoadDefinitions!({
 
   RequireResource!("ltx-cv.css");
 
-  TeX!(r"\@add@frontmatter{ltx:creator}[role=cv]{}");
+  TeX!(r"\lx@add@frontmatter{ltx:creator}[role=cv]{}");
 
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\address{}{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1\\newline #2}}");
+  DefMacro!("\\address{}{}", "\\lx@add@address{#1\\newline #2}");
 
   def_macro_noop("\\addressfont")?;
   def_macro_noop("\\addressstyle")?;
@@ -42,12 +41,10 @@ LoadDefinitions!({
     enter_horizontal => true
   );
 
-  DefConstructor!("\\@@@homepage{}", "^ <ltx:contact role='homepage'>#1</ltx:contact>");
-  DefMacro!("\\homepage{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@homepage{\\url{#1}}}");
+  DefMacro!("\\homepage Semiverbatim", "\\lx@add@url{#1}");
   def_macro_noop("\\homepagesymbol")?;
 
-  DefConstructor!("\\@@@mobile{}", "^ <ltx:contact role='mobile'>#1</ltx:contact>");
-  DefMacro!("\\mobile{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@mobile{#1}}");
+  DefMacro!("\\mobile{}", "\\lx@add@contact[role=mobile,name=Mobile]{#1}");
 
   // @@cv@section: replaces both @@numbered@section and @@unnumbered@section
   DefConstructor!("\\@@cv@section{} Undigested OptionalUndigested Undigested",
@@ -115,10 +112,11 @@ LoadDefinitions!({
   DefMacro!("\\closesection{}", "", locked => true);
 
   // Redefine \title, \email, \firstname, \familyname for CV frontmatter
-  DefMacro!("\\title Semiverbatim",      "\\@add@to@frontmatter{ltx:creator}{\\@@@position{#1}}");
-  DefMacro!("\\email Semiverbatim",      "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
-  DefMacro!("\\firstname Semiverbatim",  "\\@add@to@frontmatter{ltx:creator}{\\@@@firstname{#1}}");
-  DefMacro!("\\familyname Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@familyname{#1}}");
+  // (Perl PR #2767)
+  DefMacro!("\\title {}",                "\\lx@add@title{#1}");
+  DefMacro!("\\email Semiverbatim",      "\\lx@add@email{#1}");
+  DefMacro!("\\firstname Semiverbatim",  "\\lx@add@contact[role=firstname]{#1}");
+  DefMacro!("\\familyname Semiverbatim", "\\lx@add@contact[role=familyname]{#1}");
   def_macro_noop("\\photo[]{}")?; // TODO
 
   DefConstructor!("\\@@@position{}",   "^ <ltx:contact role='position'>#1</ltx:contact>");

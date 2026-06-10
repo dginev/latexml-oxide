@@ -288,109 +288,26 @@ LoadDefinitions!({
         tokens.extend(gullet::read_balanced(ExpansionLevel::Off,false,false)?.unlist());
         tokens.push(T_END!());
       } else {
-        // After read_x_token, an expandable macro should already have been
-        // expanded — what remains here is non-expandable (Primitive,
-        // Constructor, Conditional, Register, MathPrimitive) or a Let to
-        // a literal token. Eagerly calling `read_arguments()` on those
-        // was a bug: e.g. for `\hspace*{-4mm} $^*\,$` inside an XUntil
-        // body, `\hspace`'s primitive `Dimension` reader would
-        // over-consume past `}`, eating the following `$` token and
-        // causing the math frame to leak (witness: astro-ph9903386
-        // \institute math-mode leak). Only re-Invocation-emit for
-        // GENUINE Expandable defs that for some reason escaped
-        // `read_x_token`'s expansion (e.g. \protected macros). Inspect
-        // the raw `Stored` variant rather than `lookup_definition_stored`
-        // (which synthesizes a no-op Expandable around `Stored::Token`
-        // entries like `\sb`-Let-to-T_SUB; rebuilding such a synthesized
-        // invocation calls `build_invocation`, which rejects Token
-        // meanings and erroneously fires "Can't invoke; it is undefined"
-        // — witness: math0610119 `\sb` inside amsppt
-        // `\@bibfield XUntil:\@end@bibfield`).
-        let is_real_expandable =
-          matches!(state::lookup_meaning(&token), Some(Stored::Expandable(_)));
-        // Perl XUntil L144-146: ALWAYS calls `readArguments` for any defined
-        // token, wrapping in `Invocation`. Without this, a Constructor
-        // body like `\href{u}{t}` → `\lx@hyper@url@\href{}{}{u}{t}` lets
-        // XUntil's outer `read_x_token` re-expand the `\href` token (which
-        // the Constructor is supposed to consume as Undigested arg #1),
-        // producing infinite recursion. Witness: 1902.01143 elsarticle
-        // `\begin{keyword} ... \href{...}{...}` hangs at 100M token limit.
-        // Targeted to Constructors only — Primitives have side-effecting
-        // arg readers (e.g. `\hspace`'s Dimension reader over-consumed
-        // past `}` in astro-ph9903386 — the recorded regression that
-        // motivated the original "bare-token push" else-branch).
-        let is_constructor =
-          matches!(state::lookup_meaning(&token), Some(Stored::Constructor(_)));
-        // Definitional primitives (\def/\edef/\gdef/\xdef/\let/\futurelet) consume
-        // their target token from the input AT EXECUTION TIME — but XUntil's outer
-        // `read_x_token` would expand the target away if it's `\let`-bound to
-        // something expandable (e.g. `\@date` Let'd to `\@empty`). Witness:
-        // 0805.1712 elsart `\date{X}` inside `\begin{keyword}` body, where
-        // `\date` expands to `\def\@date{X}\@add@frontmatter{ltx:date}[...]{X}`,
-        // and inside the keyword's XUntil read, `\@date` (Let'd to `\@empty`)
-        // gets consumed by `read_x_token` BEFORE `\def` ever runs, leaving the
-        // captured tokens malformed (`\def {X} ...` with no def-target).
-        // Re-Invoke these primitives to read their parameters from the gullet
-        // here, matching Perl's XUntil L144-146 behavior. Targeted to the def
-        // family to avoid the `\hspace`/dimension-reader over-read issue
-        // recorded in the comment above (astro-ph9903386 leak).
-        let is_def_family = token.with_cs_name(|cs| {
-          matches!(cs, "\\def" | "\\gdef"
-            | "\\futurelet" | "\\global" | "\\protected" | "\\long" | "\\outer")
-        });
-        // \edef, \xdef AND \let need their target/body captured RAW — not
-        // through read_arguments→Invocation. Reasons:
-        //   - \edef/\xdef: DefExpanded body parameter expands eagerly
-        //     (`\itdefault` → `it`); Invocation revert drops the target
-        //     Token and the {…}-braces, leaving `\edef i t \selectfont`
-        //     stream that re-reads as malformed at EOF.
-        //     Driver: 2403.14274 IEEEconf `\itshape …`.
-        //   - \let: DefToken/Token reversion in some test paths emits the
-        //     `\let` token alone without the cs1/cs2 args, then the body
-        //     re-reads `\let \let \let …` recursively as `\let {…}` with
-        //     the next `\let`'s target = `{` — triggering 100-deep
-        //     recursion through `\lx@acronym`. Driver: 2103.11356 elsart
-        //     `\begin{keyword}\ac{CNNs} …`.
-        // Capture all three RAW: `<token> <skipped-spaces> <Token>
-        // <until-brace> {<balanced-raw>}`. Preserves original input
-        // exactly so re-emission re-reads cleanly.
-        let is_def_raw_capture =
-          token.with_cs_name(|cs| matches!(cs, "\\edef" | "\\xdef" | "\\let"));
-        if is_def_raw_capture {
-          tokens.push(token);
-          gullet::skip_spaces()?;
-          if let Some(target) = gullet::read_token()? {
-            tokens.push(target);
-          }
-          // \let has no UntilBrace + body — just `<target> <value>`.
-          // \edef/\xdef have UntilBrace + balanced-body.
-          let is_let = token.with_cs_name(|cs| cs == "\\let");
-          if is_let {
-            // Read second token (the value to alias to).
-            // Optional `=` and one space are also valid in real TeX
-            // — DefToken handles those, but Token doesn't. Peek for `=`.
-            gullet::skip_spaces()?;
-            if let Some(value) = gullet::read_token()? {
-              tokens.push(value);
-            }
-          } else {
-            if let Some(prebrace) = gullet::read_until_brace()? {
-              tokens.extend(prebrace.unlist());
-            }
-            tokens.push(T_BEGIN!());
-            tokens.extend(gullet::read_balanced(ExpansionLevel::Off, false, true)?.unlist());
-            tokens.push(T_END!());
-          }
-        } else if is_real_expandable || is_def_family || is_constructor {
-          if let Some(defn) = lookup_definition_stored(&token)? {
-            let args = defn.read_arguments()?;
-            tokens.extend(Invocation!(token, args).unlist());
-          } else {
-            tokens.push(token);
-          }
-        } else {
-          tokens.push(token);
-        }
+        // Perl PR #2767 ("ParameterType XUntil should only expand, not
+        // digest") removed the LookupDefinition → Invocation(readArguments)
+        // clause that used to live here: "This clause tends to digest, not
+        // only expand; Why was it felt needed???". We follow: with the
+        // clause gone, a bare token push is all that remains.
+        //
+        // NOTE: the witnessed Rust workaround family that lived here
+        // (astro-ph9903386 \hspace over-read; math0610119 \sb; 1902.01143
+        // \href hang; 0805.1712 \def\@date; 2403.14274 \edef; 2103.11356
+        // \let) was removed with the clause. Witnesses #1/#2 are FIXED by
+        // pure-expand. #3-#6 still route through XUntil — elsart
+        // `\@keyword XUntil:\@keyword@cut` and amsppt `\@bibfield
+        // XUntil:\@end@bibfield` are unchanged by the PR (only the base
+        // engine's abstract/keywords environments moved to
+        // digestNextBody) — and are NOT yet re-verified. Tracked in
+        // docs/SYNC_STATUS.md "XUntil witness gate"; re-verify in the
+        // next sandbox sweep covering elsart papers, fixing any re-break
+        // at its root cause (href self-marker, \edef/\let reversion)
+        // rather than re-adding branches here (plan Appendix A.4).
+        tokens.push(token);
       }
     }
     Ok(Tokens::new(tokens))

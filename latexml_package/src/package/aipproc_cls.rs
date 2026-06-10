@@ -63,35 +63,36 @@ LoadDefinitions!({
   // Frontmatter
   def_macro_noop("\\layoutstyle{}")?;
 
-  // Perl aipproc.cls.ltxml L74-84: \author{name} RequiredKeyVals — the
-  // keyvals carry address / altaddress / email, and the Perl sub wraps
-  // each present key in `\lx@contact{key}{value}`. Prior Rust version
-  // used the bare stub "\\lx@author{#1}" that silently dropped all keys.
+  // \author{name}[keys]  Use one \author per author;
+  // various contact information is supplied via the optional keyvals
+  // (Perl PR #2767: each present key becomes a contact shorthand inside
+  // the \lx@add@author content).
   DefMacro!("\\author{} RequiredKeyVals", sub[(author, kv)] {
-    let mut out: Vec<Token> = Vec::new();
-    // \lx@author{author}
-    out.push(T_CS!("\\lx@author"));
-    out.push(T_BEGIN!());
-    out.extend(author.unlist_ref().iter().cloned());
-    out.push(T_END!());
-    for field in ["address", "altaddress", "email"] {
-      if let Some(val) = kv.get_value(field) {
-        // \lx@contact{field}{value}
-        out.push(T_CS!("\\lx@contact"));
-        out.push(T_BEGIN!());
-        out.extend(ExplodeText!(field));
-        out.push(T_END!());
-        out.push(T_BEGIN!());
-        out.extend(val.revert()?.unlist());
-        out.push(T_END!());
+    let mut content: Vec<Token> = author.unlist();
+    for (field, code) in [
+      ("address",    "\\lx@add@contact[role=address]{#1}"),
+      ("altaddress", "\\lx@add@contact[role=altaddress]{#1}"),
+      ("email",      "\\lx@add@contact[role=email]{#1}"),
+      ("homepage",   "\\lx@add@contact[role=url]{#1}"),
+      ("thanks",     "\\lx@add@contact[role=thanks]{#1}"),
+    ] {
+      if let Some(value) = kv.get_value(field) {
+        content.extend(build_invocation_str(code, vec![Some(value.revert()?)])?.unlist());
       }
     }
-    Ok(Tokens::new(out))
+    Ok(Invocation!("\\lx@add@author{#1}", vec![Some(Tokens::new(content))]))
   });
 
   DefMacro!("\\keywordsname", "Keywords");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}[name={\\keywordsname}]{#1}");
-  DefMacro!("\\classification{}", "\\@add@frontmatter{ltx:classification}{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname:~}]{#1}");
+  DefMacro!("\\classification{}", "\\lx@add@classification{#1}");
+
+  DefMacro!("\\received{}", "\\lx@add@date[role=received]{#1}");
+  DefMacro!("\\revised{}", "\\lx@add@date[role=revised]{#1}");
+  DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted]{#1}");
+  DefMacro!("\\draftdate{}", "\\lx@add@date[role=draft]{#1}");
+  DefMacro!("\\copyrightholder{}", "\\lx@add@copyrightholder{#1}");
+  DefMacro!("\\copyrightyear{}", "\\lx@add@copyrightyear{#1}");
 
   DefEnvironment!("{theacknowledgments}",
     "<ltx:acknowledgements>#body</ltx:acknowledgements>");

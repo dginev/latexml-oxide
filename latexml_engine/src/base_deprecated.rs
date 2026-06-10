@@ -97,6 +97,13 @@ LoadDefinitions!({
   // Perl L152-153
   DefMacro!("\\@ASSERT@MEANING", "\\lx@assert@meaning");
 
+  // Perl Base_Deprecated.pool.ltxml (PR #2767): old frontmatter API
+  DefMacro!("\\@personname", "\\lx@personname");
+  DefMacro!("\\@add@frontmatter", "\\lx@add@frontmatter");
+  DefMacro!("\\@add@to@frontmatter {}[]{}",
+    "\\lx@annotate@frontmatter{#1}{preformatted}[#2]{#3}");
+  DefMacro!("\\@ADDCLASS", "\\lx@add@cssclass");
+
   // Perl L161-180 — older deprecations (XMath wrappers)
   DefMacro!("\\FCN{}", "\\lx@wrap[role=FUNCTION]{#1}");
   DefMacro!("\\ROLE{}{}", "\\lx@wrap[role={#1}]{#2}");

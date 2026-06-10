@@ -849,11 +849,16 @@ macro_rules! Input {
 
 /// Builds a representation of a single command sequence invoked on a
 /// `Vec<Token>` of its arguments.
-/// A leading string argument is interpreted as `T_CS`.
+/// A leading string argument is tokenized (`TokenizeInternal`); if it yields a single
+/// token it is interpreted as that command sequence, otherwise the tokens are treated
+/// as an "anonymous macro" containing parameter markers like `#1`, with the arguments
+/// substituted in (Perl `Invocation`, Package.pm).
 #[macro_export]
 macro_rules! Invocation {
-  ($csname:literal) => {{ Invocation!(T_CS!($csname)) }};
-  ($csname:literal, $args:expr) => {{ Invocation!(T_CS!($csname), $args) }};
+  ($csname:literal) => {{ Invocation!($csname, vec![None]) }};
+  ($csname:literal, $args:expr) => {{
+    build_invocation_str($csname, $args.into_iter().map(Into::into).collect())?
+  }};
   ($token:expr) => {
     Invocation!($token, vec![None])
   };

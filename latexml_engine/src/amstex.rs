@@ -139,21 +139,13 @@ LoadDefinitions!({
     });
 
   //======================================================================
-  // Front Matter (Perl L131-141)
+  // Front Matter (Perl PR #2767)
   def_macro_noop("\\topmatter")?;
   def_macro_noop("\\endtopmatter")?;
-  DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
-  DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
-    mode => "restricted_horizontal");
-  DefMacro!("\\author Until:\\endauthor",
-    "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#1}}");
-  DefConstructor!("\\@institute{}",
-    "<ltx:contact role='institute'>#1</ltx:contact>",
-    bounded => true);
-  DefMacro!("\\thanks Until:\\endthanks",
-    "\\@add@to@frontmatter{ltx:creator}{\\@institute{#1}}");
-  DefMacro!("\\abstract Until:\\endabstract",
-    "\\@add@frontmatter{ltx:abstract}{#1}");
+  DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
+  DefMacro!("\\author Until:\\endauthor", "\\lx@add@author{#1}");
+  DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks]{#1}");
+  DefMacro!("\\abstract Until:\\endabstract", "\\lx@add@abstract{#1}");
 
   //======================================================================
   // Document structure (Perl L144-158)

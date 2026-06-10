@@ -1381,7 +1381,7 @@ LoadDefinitions!({
   // converts it cleanly).
   DefPrimitive!("\\diagonalmatrix[]{}", sub[(z, diag)] {
     let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
-    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",")]);
+    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",").into()]);
     let n = items.len();
     let mut tks = Vec::new();
     for (i, item) in items.iter().enumerate() {
@@ -1403,7 +1403,7 @@ LoadDefinitions!({
   // L655-672). Same token-level split as \diagonalmatrix.
   DefPrimitive!("\\antidiagonalmatrix[]{}", sub[(z, diag)] {
     let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
-    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",")]);
+    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",").into()]);
     let n = items.len();
     let mut tks = Vec::new();
     for i in 0..n {
