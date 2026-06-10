@@ -61,59 +61,36 @@ LoadDefinitions!({
       def_macro(T_CS!(sz), None, None, None)?;
     }
   }
-  DefMacro!("\\title Until:\\endtitle", "\\@add@frontmatter{ltx:title}{#1}");
+  // Specific front matter commands (Perl PR #2767)
+  DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
   Let!("\\endtitle", "\\relax");
-  DefMacro!("\\author Until:\\endauthor",
-    "\\@add@frontmatter{ltx:creator}[role=author]{\\@personname{#1}}");
+  DefMacro!("\\author Until:\\endauthor", "\\lx@add@author{#1}");
   Let!("\\endauthor", "\\relax");
-
-  // Affiliations and contacts — Perl L85-130
-  DefConstructor!("\\@@@affil{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affil Until:\\endaffil",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@affil{#1}}");
+  DefMacro!("\\affil Until:\\endaffil", "\\lx@add@affiliation{#1}");
   Let!("\\endaffil", "\\relax");
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>");
-  DefMacro!("\\address Until:\\endaddress",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
+  DefMacro!("\\address Until:\\endaddress", "\\lx@add@address{#1}");
   Let!("\\endaddress", "\\relax");
-  DefConstructor!("\\@@@curraddr{}", "^ <ltx:contact role='current_address'>#1</ltx:contact>");
-  DefMacro!("\\curraddr Until:\\endcurraddr",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@curraddr{#1}}");
+  DefMacro!("\\curraddr Until:\\endcurraddr", "\\lx@add@currentaddress{#1}");
   Let!("\\endcurraddr", "\\relax");
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email Until:\\endemail",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
+  DefMacro!("\\email Until:\\endemail", "\\lx@add@email{#1}");
   Let!("\\endemail", "\\relax");
-  DefConstructor!("\\@@@urladdr{}", "^ <ltx:contact role='url'>#1</ltx:contact>");
-  DefMacro!("\\urladdr Until:\\endurladdr",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@urladdr{#1}}");
+  DefMacro!("\\urladdr Until:\\endurladdr", "\\lx@add@url{#1}");
   Let!("\\endurladdr", "\\relax");
 
-  // Perl amsppt.sty.ltxml L72-75: thanks/date/dedicatory/translator —
-  // previously absent in Rust.
-  DefMacro!("\\thanks Until:\\endthanks",
-    "\\@add@frontmatter{ltx:note}[role=support]{#1}");
+  DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks]{#1}");
   Let!("\\endthanks", "\\relax");
-  DefMacro!("\\date Until:\\enddate",
-    "\\@add@frontmatter{ltx:date}[role=creation]{#1}");
+  DefMacro!("\\date Until:\\enddate", "\\lx@add@date{#1}");
   Let!("\\enddate", "\\relax");
-  DefMacro!("\\dedicatory Until:\\enddedicatory",
-    "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
+  DefMacro!("\\dedicatory Until:\\enddedicatory", "\\lx@add@pubnote[role=dedication]{#1}");
   Let!("\\enddedicatory", "\\relax");
-  DefMacro!("\\translator Until:\\endtranslator",
-    "\\@add@frontmatter{ltx:creator}[role=translator]{\\@personname{#1}}");
+  DefMacro!("\\translator Until:\\endtranslator", "\\lx@add@translator{#1}");
   Let!("\\endtranslator", "\\relax");
-
-  // Abstract and classification — Perl L76-79.
-  DefMacro!("\\keywords Until:\\endkeywords",
-    "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\keywords Until:\\endkeywords", "\\lx@add@keywords{#1}");
   Let!("\\endkeywords", "\\relax");
-  DefMacro!("\\subjclass Until:\\endsubjclass",
-    "\\@add@frontmatter{ltx:classification}[scheme=MSC]{#1}");
+  DefMacro!("\\subjclass Until:\\endsubjclass", "\\lx@add@classification{#1}");
   Let!("\\endsubjclass", "\\relax");
-  DefMacro!("\\abstract Until:\\endabstract",
-    "\\@add@frontmatter{ltx:abstract}{#1}");
-  Let!("\\endabstract", "\\relax");
+  DefMacro!("\\abstract", "\\lx@begin@abstract");
+  DefMacro!("\\endabstract", "\\lx@end@abstract\\let\\maybe@end@abstract\\relax");
 
   // Section structure — Perl L112-147. AmSTeX uses terminator-delimited
   // syntax (`\head Foo \endhead`) not balanced `\section{Foo}`.
@@ -790,17 +767,17 @@ LoadDefinitions!({
   // Round-34 surpass-Perl: \leftheadtext/\rightheadtext carry author
   // text for running heads; \cvolyear/\issueinfo are journal metadata.
   DefMacro!("\\leftheadtext{}",
-    "\\@add@frontmatter{ltx:note}[role=lefthead]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=lefthead]{#1}");
   DefMacro!("\\rightheadtext{}",
-    "\\@add@frontmatter{ltx:note}[role=righthead]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=righthead]{#1}");
   Let!("\\flheadline", "\\hfil");
   Let!("\\frheadline", "\\hfil");
   def_macro_noop("\\headmark{}")?;
   def_macro_noop("\\pagecontents")?;
   DefMacro!("\\cvolyear{}",
-    "\\@add@frontmatter{ltx:note}[role=cvolyear]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=cvolyear]{#1}");
   DefMacro!("\\issueinfo{}{}{}{}",
-    "\\@add@frontmatter{ltx:note}[role=issueinfo]{#1 #2 #3 #4}");
+    "\\lx@add@frontmatter{ltx:note}[role=issueinfo]{#1 #2 #3 #4}");
   def_macro_noop("\\NoRunningHeads")?;
   def_macro_noop("\\Monograph")?;
 
@@ -835,6 +812,7 @@ LoadDefinitions!({
   DefPrimitive!("\\tildechar", "~", font => { family => "typewriter" });
   def_macro_noop("\\breakcheck")?;
   DefMacro!("\\usualspace", " ");
+  DefMacro!("\\@", "@"); // Perl PR #2767
   // Perl L329: \normalparindent — zero-Dimension register. Without it,
   // `\the\normalparindent` fails on amsppt documents that probe it.
   DefRegister!("\\normalparindent" => Dimension::new(0));

@@ -8,9 +8,10 @@
   <title xml:lang="en">T</title>
   <creator xml:lang="en" role="author">
     <personname>A</personname>
-    <contact role="address">X</contact>
+    <contact name="Address: " role="address">X</contact>
   </creator>
-  <classification xml:lang="en" scheme="keywords">Higgs; Boson; Symmetry </classification>
+  <abstract name="Abstract"/>
+  <keywords xml:lang="en" name="Keywords: ">Higgs; Boson; Symmetry </keywords>
   <para xml:id="p1">
     <p><text xml:lang="en">After.</text></p>
   </para>

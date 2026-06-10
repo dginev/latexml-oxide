@@ -65,7 +65,7 @@ LoadDefinitions!({
     let font_target = s!("\\format@title@font@{sec}");
     let mut font_body: Vec<Token> = format.unlist();
     if let Some(cls) = class {
-      font_body.push(T_CS!("\\@ADDCLASS"));
+      font_body.push(T_CS!("\\lx@add@cssclass"));
       font_body.push(T_OTHER!(cls));
     }
     def_macro(T_CS!(&font_target), None, Tokens::new(font_body), None)?;

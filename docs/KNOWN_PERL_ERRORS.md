@@ -815,6 +815,186 @@ eliminates the per-cell cascade. Witness 1907.04219: 102 errors / FATAL_3 → **
 errors, 4.9 MB doc** (6 tables, 787 tabulars). Surpasses Perl on this shared
 Perl/LaTeXML bug.
 
+## 27. `\expandafter{\alignat}` orphans `\else`/`\fi` (amsmath env-begin macros modeled with a `{}` arg)
+
+**Perl source:** `LaTeXML/Package/amsmath.sty.ltxml` L515-518 (`\alignat`),
+plus siblings `alignat*`, `xalignat`, `xxalignat`.
+
+**Symptom:** two errors per occurrence:
+```
+Error:unexpected:\else Didn't expect a T_CS[\else] since we seem not to be in a conditional
+Error:unexpected:\fi   Didn't expect a T_CS[\fi] since we seem not to be in a conditional
+```
+
+**Minimal example** (verified identical on Perl 0.8.8 and Rust, 2026-06-03):
+```tex
+\usepackage{amsmath}
+\edef\foo{\unexpanded\expandafter{\alignat}}
+```
+
+**Real-world trigger:** etoolbox `\cspreto{alignat}{...}` — used by the
+ECCV class (`eccv.sty` "linenomathpatchAMS" block, arXiv:2409.02543) to
+patch AMS environments for line numbering. `\preto`'s false branch runs
+`\edef#1{\unexpanded{#2}\unexpanded\expandafter{#1}}`.
+
+**Root cause:** real amsmath defines the `alignat` *begin-code* as a
+parameterless macro (the pair-count is read downstream by
+`\start@align`), so `\expandafter{\alignat}` is harmless in real TeX.
+LaTeXML models it as `DefMacro('\alignat{}', '\ifmmode...\else...\fi')`
+— a macro with one parameter. Forcing one expansion step via
+`\expandafter` makes it read its argument from a stream whose next token
+is `}`; the argument read derails the brace balance, and the
+`\ifmmode...\else...\fi` body tokens subsequently surface with no active
+conditional frame, yielding the orphaned `\else`/`\fi` pair.
+
+**Impact:** 2 non-fatal errors per `\cspreto`/`\csappto`-style single-step
+expansion of an affected env-begin CS; the patch the author intended is
+also silently lost (same as Perl).
+
+**Rust resolution:** none needed — behavior is verified bit-identical to
+Perl (warn + 2 errors). Reproducers under
+`~/data/reproducers/` (`alignat-cspreto-eccv.tex`,
+`alignat-expandafter-orphaned-elsefi.tex` — see its README.md).
+A genuine fix belongs upstream (model `alignat`-family begin-code as
+parameterless, reading the pair count in the alignment setup), and would
+be a documented divergence if taken before Perl does.
+
+## 28. tikz-cd / quantikz matrix coordinates unparseable by the LaTeXML tikz interpretation — error cascade to fatal
+
+**Perl source:** the raw-TikZ interpretation pathway (`tikz.sty.ltxml` +
+pgfsys driver). Both engines interpret the *real* tikz/pgf from texmf;
+`tikz-cd`'s arrow/matrix machinery produces coordinates the
+LaTeXML-driven pgf parsing cannot handle.
+
+**Symptom:** with a TeX Live that provides `quantikz`/`tikz-cd`
+(library `quantikz2`, TL2024+), every cell of every `tikzcd` diagram
+yields
+```
+Error:latex:(tikz) Package tikz Error: Cannot parse this coordinate
+```
+cascading until the error cap kills the conversion:
+- Perl 0.8.8 (TL2025): 90×, then `Fatal:too_many_errors:100 Too many errors (> 100)!`
+- Rust HEAD f5637c92ba: same cascade, `Fatal:TooManyErrors:MaxLimit(500)`
+  ("same error fired 501 times in a row"; 514 errors total).
+
+Also identical in both: `Error:undefined:\tikzcdmatrixname`, "Giving up
+on this path. Did you forget a semicolon?".
+
+**Witness:** arXiv:2403.19758 (`\usepackage{tikz}` +
+`\usetikzlibrary{quantikz2}`, inline `\begin{tikzcd} \qw & \gate{X} ...`).
+On *older* TL (production cortex container) quantikz2 is absent, so
+`{tikzcd}` is simply undefined → 95 recoverable errors and a surviving
+(degraded) document — the failure mode is TL-vintage-dependent.
+
+**Impact:** papers using quantikz/tikz-cd convert to nothing (fatal) on
+modern TL, in both engines.
+
+**Rust resolution:** parity confirmed (2026-06-03) — no Rust-side defect.
+Two follow-ups worth separate consideration:
+1. cap-semantics alignment: Perl fatals at >100 *total* errors; Rust's
+   consecutive-same-error cap (500) let this run reach 514 total before
+   dying. Same outcome here, but counts/log shape diverge.
+2. an actual tikz-cd/quantikz coordinate fix would be upstream-grade work
+   benefiting both engines (or a Rust-first divergence to be documented).
+
+## 29. OmniBus `\ead{}[]` emits the optional arg as the email (PR #2767 typo)
+
+Upstream PR #2767 rewrote OmniBus.cls.ltxml's email macros:
+
+```perl
+DefMacro('\email{}',     '\lx@add@email{#1}');
+DefMacro('\emailaddr{}', '\lx@add@email{#1}');
+DefMacro('\ead{}[]',     '\lx@add@email{#2}');   # <-- #2 is the OPTIONAL
+```
+
+With prototype `{}[]`, `#1` is the address and `#2` the trailing
+optional (the elsart-style type, e.g. `[url]`). The body passes `#2`,
+so the common call `\ead{user@example.org}` produces an **empty**
+`<ltx:contact role="email"/>` and drops the address. The pre-PR body
+correctly used `#1` (`\@@@email{#1}{#2}`).
+
+**Minimal trigger** (with an OmniBus-fallback class):
+
+```latex
+\documentclass{unknownclass}
+\author{A. Author}\ead{user@example.org}
+\begin{document}\maketitle x\end{document}
+```
+
+Perl: `<contact role="email"></contact>` (empty). Expected: the address.
+
+**Rust:** `omnibus_cls.rs` deliberately uses `{#1}` (documented
+divergence; this entry). Revisit if upstream fixes the typo.
+
+## 30. PR-2767 `digestFrontMatter` unguarded re-entry → `deep_recursion` fatal
+
+**Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml` (post-#2767),
+`digestFrontMatter` — digests from the **live** `frontmatter_raw` queue
+and wipes it only after the loop.
+
+**Symptom:** conversion dies with
+```
+Fatal:perl:deep_recursion Deep recursion on subroutine "LaTeXML::Core::Stomach::invokeToken"
+```
+(stack alternates `\lx@frontmatterhere` ↔ `\lx@add@frontmatter@now`),
+**zero output**. Verified on `LaTeXML@23f3acfa` 2026-06-04.
+
+**Root cause:** when a queued entry's *content* contains `\maketitle`
+(→ `\lx@frontmatterhere`, whose `afterDigest` calls
+`digestFrontMatter`), the nested invocation re-reads the still-live
+queue and re-digests it — including the entry being digested —
+unboundedly. `\maketitle`'s own `\global\let\maketitle\relax` cannot
+stop it: it sits *after* `\lx@frontmatterhere` in the expansion, so
+the recursion dives first.
+
+**Real-world trigger:** arXiv:0907.0384 (A&A). aa.cls's `\abstract`
+is 1-arg *or* 5-arg; the paper writes `\abstract{…} {}` so the
+binding (faithfully, in both engines) dispatches the 5-arg
+`\abstract@new`, whose greedy `{}` parameters swallow `\keywords`
+(#3, #4) and **`\maketitle` (#5)** into the queued abstract content.
+pdflatex compiles this paper.
+
+**Minimal trigger** (with aa.cls):
+```latex
+\documentclass{aa}
+\begin{document}
+\title{T}\author{A}
+\abstract{body} {}
+\keywords{k}
+\maketitle
+\end{document}
+```
+
+**Rust:** not affected — `digest_front_matter` snapshots and
+pre-clears the queue, so the nested invocation terminates and the
+paper converts with zero errors (intentional divergence,
+`OXIDIZED_DESIGN.md` #33). Worth reporting upstream.
+
+## 31. `cleanFrontmatterLabels` prefixes empty fields → contentless `"prefix:"` labels
+
+**Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml`
+(post-#2767), `cleanFrontmatterLabels` — `split(',')` then
+unconditional `$prefix . ':' . $label`.
+
+**Symptom:** a doubled comma or empty keyval field (`label={a,,b}`,
+`\inst{1,,2}`) yields a contentless label like `affiliation:`. It
+enters the `_annotations`/`_label` matching tables, where two
+unrelated contentless labels can spuriously match each other during
+`relocateAnnotations`, attaching an annotation to the wrong parent.
+
+**Minimal trigger:**
+```latex
+\author{A. Author\inst{1,}}
+\institute{Univ A}
+```
+→ creator `_annotations` gains `affiliation:1,affiliation:` (the
+second field is empty but still prefixed).
+
+**Rust:** drops fields with no real content before prefixing
+(intentional divergence, `OXIDIZED_DESIGN.md` #34; plan decisions
+log #5). Perl's trailing-empty `split` semantics is otherwise
+preserved byte-exactly.
+
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
 `catoptions.sty` (a dependency of `keyval2e.sty`) cannot be raw-loaded

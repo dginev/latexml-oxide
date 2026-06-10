@@ -248,6 +248,12 @@ struct Cli {
   #[arg(short = 'q', long)]
   quiet: bool,
 
+  /// Enable a named debug feature (repeatable), e.g. --debug frontmatter.
+  /// Perl: `--debug=NAME` → `$LaTeXML::DEBUG{NAME}`. Implies debug-level
+  /// logging.
+  #[arg(long = "debug", value_name = "FEATURE")]
+  debug: Vec<String>,
+
   /// Assign an ID to the document root element
   #[arg(long, value_name = "ID")]
   documentid: Option<String>,
@@ -351,12 +357,22 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     0
   };
-  let log_level = match verbosity {
-    v if v < 0 => log::LevelFilter::Warn,
-    0 => log::LevelFilter::Info,
-    _ => log::LevelFilter::Debug,
+  let log_level = if !cli.debug.is_empty() {
+    // --debug NAME implies debug-level logging (Perl: Debug() output is
+    // emitted whenever the feature flag is set).
+    log::LevelFilter::Debug
+  } else {
+    match verbosity {
+      v if v < 0 => log::LevelFilter::Warn,
+      0 => log::LevelFilter::Info,
+      _ => log::LevelFilter::Debug,
+    }
   };
   latexml_core::util::logger::init(log_level).ok();
+  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites.
+  for feature in &cli.debug {
+    latexml_core::common::error::enable_debug_feature(feature);
+  }
 
   // Dump-model mode — load the embedded LaTeXML schema, serialise to
   // stdout in `.model` format, exit. Mirrors Perl

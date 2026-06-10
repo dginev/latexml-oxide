@@ -48,26 +48,26 @@ LoadDefinitions!({
 
   //======================================================================
   // Various bits of frontmatter
-  DefMacro!("\\copyrightyear{}", "\\@add@frontmatter{ltx:date}[role=copyright]{#1}");
-  DefMacro!("\\setcopyright{}", "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
-  DefMacro!("\\received[]{}", "\\@add@frontmatter{ltx:date}[role=received]{#2}");
-  DefMacro!("\\acmJournal{}", "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\acmSubmissionID{}", "\\@add@frontmatter{ltx:note}[role=submissionid]{#1}");
-  DefMacro!("\\acmConference[]{}{}{}", "\\@add@frontmatter{ltx:note}[role=conference]{#2; #3; #4}");
-  DefMacro!("\\acmBooktitle{}", "\\@add@frontmatter{ltx:note}[role=booktitle]{#1}");
-  DefMacro!("\\acmArticle{}", "\\@add@frontmatter{ltx:note}[role=article]{#1}");
-  DefMacro!("\\acmArticleSeq{}", "\\@add@frontmatter{ltx:note}[role=articleseq]{#1}");
-  DefMacro!("\\acmDOI{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
-  DefMacro!("\\acmISBN{}", "\\@add@frontmatter{ltx:note}[role=isbn]{#1}");
-  DefMacro!("\\acmMonth{}", "\\@add@frontmatter{ltx:note}[role=publicationmonth]{#1}");
-  DefMacro!("\\acmNumber{}", "\\@add@frontmatter{ltx:note}[role=journalnumber]{#1}");
-  DefMacro!("\\acmPrice{}", "\\@add@frontmatter{ltx:note}[role=price]{#1}");
-  DefMacro!("\\acmVolume{}", "\\@add@frontmatter{ltx:note}[role=journalvolume]{#1}");
-  DefMacro!("\\acmYear{}", "\\@add@frontmatter{ltx:note}[role=journalyear]{#1}");
-  DefMacro!("\\editor{}", "\\@add@frontmatter{ltx:creator}[role=editor]{\\@personname{#1}}");
-  DefMacro!("\\subtitle{}", "\\@add@frontmatter{ltx:subtitle}{#1}");
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
-  DefMacro!("\\terms{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\copyrightyear{}", "\\lx@add@copyrightyear{#1}");
+  // This should be keyvals!
+  DefMacro!("\\setcopyright{}", "\\lx@add@copyright{#1}");
+  DefMacro!("\\received[]{}", "\\lx@add@date[role=received]{#2}");
+  DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
+  DefMacro!("\\acmConference[]{}{}{}", "\\lx@add@pubnote[role=conference]{#2; #3; #4}");
+  DefMacro!("\\acmBooktitle{}", "\\lx@add@pubnote[role=booktitle]{#1}");
+  DefMacro!("\\acmArticle{}", "\\lx@add@pubnote[role=article]{#1}");
+  DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
+  DefMacro!("\\acmDOI{}", "\\lx@add@pubnote[role=doi]{#1}");
+  DefMacro!("\\acmISBN{}", "\\lx@add@pubnote[role=isbn]{#1}");
+  DefMacro!("\\acmMonth{}", "\\lx@add@pubnote[role=publicationmonth]{#1}");
+  DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");
+  DefMacro!("\\acmPrice{}", "\\lx@add@pubnote[role=price,name={Price:~}]{#1}");
+  DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\acmYear{}", "\\lx@add@date[role=published]{#1}");
+  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
+  DefMacro!("\\terms{}", "\\lx@add@keywords{#1}");
 
   //======================================================================
   // Accessible figure descriptions
@@ -91,64 +91,46 @@ LoadDefinitions!({
   );
 
   //======================================================================
-  // Affiliation contact constructors
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefMacro!("\\affiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#1}}");
-
-  DefConstructor!("\\@@@addaffiliation{}", "^ <ltx:contact role='additional_affiliation'>#1</ltx:contact>");
-  DefMacro!("\\additionalaffiliation{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@addaffiliation{#1}}");
-
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
-  DefMacro!("\\email [] Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#2}}");
-
-  DefMacro!("\\orcid Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@orcid{\\@@orcid{#1}}}");
-  // Perl acmart.cls.ltxml has `mode=>'restricted_horizontal',
-  // enterHorizontal=>1` on \@@orcid and all eight affiliation
-  // constructors. enter_horizontal triggers an implicit horizontal-mode
-  // entry when invoked between paragraphs (vertical mode), so these
-  // text-shaped <ltx:text> wrappers don't get emitted as block-level
-  // children of the section root with no enclosing <ltx:p>. Same
-  // class as cancel_sty cycle 86 / hyperref cycle 87.
-  DefConstructor!("\\@@orcid{}",
-    "<ltx:ref title='ORCID identifier' href='https://orcid.org/#1'>#1</ltx:ref>",
-    mode => "restricted_horizontal", enter_horizontal => true
-  );
-  DefConstructor!("\\@@@orcid{}", "^ <ltx:contact role='orcid'>#1</ltx:contact>");
+  // Use \author for EACH author, follow with \orcid, \affiliation, \email as needed.
+  // Note that \affiliation can apply to all preceding authors without one
+  // (Perl PR #2767)
+  DefMacro!("\\author{}",                "\\lx@add@creator[role=author]{#1}");
+  DefMacro!("\\editor{}",                "\\lx@add@creator[role=editor]{#1}");
+  DefMacro!("\\affiliation{}",           "\\lx@add@contact[role=affiliation,annotate=new]{#1}");
+  DefMacro!("\\additionalaffiliation{}", "\\lx@add@contact[role=altaffiliation]{#1}");
+  DefMacro!("\\email [] Semiverbatim",   "\\lx@add@contact[role=email,name={email: }]{#2}");
+  DefMacro!("\\orcid{}",                 "\\lx@add@contact[role=orcid, name={OrcID: }]{#1}");
 
   //======================================================================
-  // Internal structure to affiliation — Perl uses enterHorizontal=>1
-  // on each so each `\institution{...}` etc. between paragraphs of an
-  // \affiliation block opens a paragraph instead of a stray block.
-  DefConstructor!("\\position{}", "<ltx:text class='ltx_affiliation_position' _noautoclose='1'>#1</ltx:text>",
+  // Internal structure to affiliation (Perl PR #2767: comma-joined parts;
+  // empty parts skipped)
+  DefMacro!("\\lx@acm@addresspartsep", "");
+  DefMacro!("\\lx@acm@addresspart{}{}",
+    "\\ifx.#2.\\else\\lx@acm@addresspartsep\\def\\lx@acm@addresspartsep{,~}\\lx@acm@addresspart@{#1}{#2}\\fi");
+  DefConstructor!("\\lx@acm@addresspart@{}{}",
+    "<ltx:text class='ltx_affiliation_#1' _noautoclose='1'>#2</ltx:text>",
     mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\institution{}", "<ltx:text class='ltx_affiliation_institution' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\department{}", "<ltx:text class='ltx_affiliation_department' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\streetaddress{}", "<ltx:text class='ltx_affiliation_streetaddress' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\city{}", "<ltx:text class='ltx_affiliation_city' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\state{}", "<ltx:text class='ltx_affiliation_state' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\postcode{}", "<ltx:text class='ltx_affiliation_postcode' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
-  DefConstructor!("\\country{}", "<ltx:text class='ltx_affiliation_country' _noautoclose='1'>#1</ltx:text>",
-    mode => "restricted_horizontal", enter_horizontal => true);
+  DefMacro!("\\position{}",      "\\lx@acm@addresspart{position}{#1}");
+  DefMacro!("\\institution{}",   "\\lx@acm@addresspart{institution}{#1}");
+  DefMacro!("\\department{}",    "\\lx@acm@addresspart{department}{#1}");
+  DefMacro!("\\streetaddress{}", "\\lx@acm@addresspart{streetaddress}{#1}");
+  DefMacro!("\\city{}",          "\\lx@acm@addresspart{city}{#1}");
+  DefMacro!("\\state{}",         "\\lx@acm@addresspart{state}{#1}");
+  DefMacro!("\\postcode{}",      "\\lx@acm@addresspart{postcode}{#1}");
+  DefMacro!("\\country{}",       "\\lx@acm@addresspart{country}{#1}");
 
-  //======================================================================
-  // Author-content notes. Perl L128-132 gobbles these silently; we
-  // surpass with content preservation per the user's "content-preserving
-  // AND error-free" directive — ACM authors regularly put real prose
-  // here (invited-paper credit, supplementary URLs, corresponding
-  // author email). Route to `<ltx:note>` with semantic role.
-  DefMacro!("\\shortauthors{}", "\\@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
-  DefMacro!("\\titlenote{}",    "\\@add@frontmatter{ltx:note}[role=titlenote]{#1}");
-  DefMacro!("\\subtitlenote{}", "\\@add@frontmatter{ltx:note}[role=subtitlenote]{#1}");
-  DefMacro!("\\authornote{}",   "\\@add@frontmatter{ltx:note}[role=authornote]{#1}");
+  DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note]{#1}");
+  DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note]{#1}");
+  DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
+
+  DefMacro!("\\abstract",    "\\lx@begin@abstract");
+  DefMacro!("\\endabstract", "\\lx@end@abstract");
+
+  // Rust-only content preserves (Perl gobbles these)
+  DefMacro!("\\shortauthors{}", "\\lx@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
   def_macro_noop("\\authornotemark[]")?;
   DefMacro!("\\authorsaddresses{}",
-    "\\@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}");
   def_macro_noop("\\startPage")?;
   def_macro_noop("\\settopmatter{}")?;
   def_macro_noop("\\copyrightpermissionfootnoterule")?;
@@ -176,7 +158,7 @@ LoadDefinitions!({
 
   //======================================================================
   // CCS descriptions
-  DefMacro!("\\ccsdesc[]{}", "\\@add@frontmatter{ltx:note}[role=ccs]{#2}");
+  DefMacro!("\\ccsdesc[]{}", "\\lx@add@pubnote[role=ccs,name={CCS:~}]{#2}");
 
   // Exclude CCSXML environment (Perl: defineExcluded(undef, 'CCSXML'))
   RawTeX!(r"\excludecomment{CCSXML}");
@@ -281,7 +263,7 @@ LoadDefinitions!({
   // Commons license. Preserve the license spec as ltx:note.
   // Witnesses 2406.04861, 2406.09266.
   DefMacro!("\\setcctype[]{}",
-    "\\@add@frontmatter{ltx:note}[role=cc-license]{#2}");
+    "\\lx@add@frontmatter{ltx:note}[role=cc-license]{#2}");
 
   // acmart conditional toggles — declare as conditionals so user
   // paper's \@printpermissiontrue / \@printccstrue / \@printcopyrighttrue

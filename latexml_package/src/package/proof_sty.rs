@@ -13,7 +13,7 @@ LoadDefinitions!({
   // Single clause → pass through; multiple → wrap with I_apply around
   // \lx@proof@logical@and so the semantic structure is an n-ary AND.
   DefMacro!("\\lx@proof@split@and {}", sub[(tokens)] {
-    let clauses = split_tokens(tokens, vec![T_ALIGN!()]);
+    let clauses = split_tokens(tokens, vec![T_ALIGN!().into()]);
     if clauses.is_empty() {
       Ok(Tokens!())
     } else if clauses.len() == 1 {

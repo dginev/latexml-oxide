@@ -28,12 +28,13 @@ LoadDefinitions!({
 
   // Frontmatter — Perl L33-90
   DefMacro!("\\title[]{}",
-    "\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\@add@frontmatter{ltx:title}{#2}");
+    "\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}");
   Let!("\\paper", "\\title");
   def_macro_noop("\\@articletype")?;
   DefMacro!("\\article[]{}{}",
-    "\\ifx.#1.\\else\\@add@frontmatter{ltx:toctitle}{#1}\\fi\\ifx.#2.\\else\\@add@frontmatter{ltx:classification}[scheme=type]{#2}\\fi\\@add@frontmatter{ltx:title}{#3}");
+    "\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\ifx.#2.\\else\\lx@add@pubnote[role=type]{#2}\\fi\\lx@add@title{#3}");
   DefMacro!("\\letter{}", "\\article[Letter to the Editor]{Letter to the Editor}{#1}\\lettertrue");
+  DefMacro!("\\ftc{}", "\\article[Fast Track Communication]{Fast Track Communication}{#1}");
   DefMacro!("\\review[]{}", "\\article[#1]{Review Article}{#2}");
   DefMacro!("\\topical[]{}", "\\article[#1]{Topical Review}{#2}");
   DefMacro!("\\comment[]{}", "\\article[#1]{Comment}{#2}");
@@ -44,11 +45,9 @@ LoadDefinitions!({
   // Equation numbering — Perl L29
   DefMacro!("\\theequation", "\\ifnumbysec\\arabic{section}.\\arabic{equation}\\else\\arabic{equation}\\fi");
 
-  // Authors — Perl L52-57
-  DefConstructor!("\\@@@address{}", "^ <ltx:contact role='address'>#1</ltx:contact>", bounded => true);
-  DefMacro!("\\address{}", "\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}");
-  DefMacro!("\\ead Semiverbatim", "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}}");
-  DefConstructor!("\\@@@email{}", "^ <ltx:contact role='email'>#1</ltx:contact>");
+  // Authors (Perl PR #2767)
+  DefMacro!("\\address{}", "\\lx@add@affiliations{#1}");
+  DefMacro!("\\ead Semiverbatim", "\\lx@add@email{#1}");
 
   // NOTE: NO `\received`/`\revised`/`\accepted`/`\published`/`\online` date
   // macros here. The prior port added them citing "Perl L82-86", but those Perl
@@ -67,10 +66,10 @@ LoadDefinitions!({
   Let!("\\mailto", "\\ead");
   DefMacro!("\\eads{}", "#1");
 
-  // Classification — Perl L61-63
-  DefMacro!("\\pacno{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}");
-  DefMacro!("\\pacs{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs]{#1}");
-  DefMacro!("\\ams{}", "\\@add@frontmatter{ltx:classification}[scheme=ams]{#1}");
+  // Classification
+  DefMacro!("\\pacno{}", "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
+  DefMacro!("\\pacs{}", "\\lx@add@classification[scheme=pacs,name={PACS:~}]{#1}");
+  DefMacro!("\\ams{}", "\\lx@add@classification[scheme=ams,name={AMS Classification:~}]{#1}");
 
   // Journal — Perl L65-104
   static IOP_JOURNALS: &[&str] = &[
@@ -111,7 +110,7 @@ LoadDefinitions!({
   ];
   DefMacro!("\\journal", "Institute of Physics Publishing");
   DefMacro!("\\submitted", "\\submitto{\\journal}");
-  DefMacro!("\\submitto{}", "\\def\\journal{#1}\\@add@to@frontmatter{ltx:note}[role=submitted]{#1}");
+  DefMacro!("\\submitto{}", "\\def\\journal{#1}\\lx@add@pubnote[role=journal]{#1}");
 
   // Perl L102-104: \jl{n} — sets \journal to journals[n]
   DefPrimitive!("\\jl{}", sub[(n)] {
@@ -123,7 +122,7 @@ LoadDefinitions!({
 
   // Abstract/Keywords — Perl L95-120
   def_macro_noop("\\nosections")?;
-  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@frontmatter{ltx:keywords}{#1}");
 
   // Acknowledgements — Perl L249-251 (DefConstructor, defined below)
 

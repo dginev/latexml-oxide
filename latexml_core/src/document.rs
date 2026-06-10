@@ -3593,9 +3593,15 @@ impl Document {
         return lang;
       }
       // Perl `getNodeLanguage` reads `_font` off the SAME (walked) ancestor,
-      // not the original node — use `node_ref`, not `node`.
+      // not the original node — use `node_ref`, not `node`. Be robust against a
+      // missing/foreign _font property (Perl PR #2767): never panic on a
+      // non-numeric font id.
       if let Some(fontid) = node_ref.get_attribute("_font") {
-        if let Some(font) = self.node_fonts.get(&fontid.parse::<u64>().unwrap()) {
+        if let Some(font) = fontid
+          .parse::<u64>()
+          .ok()
+          .and_then(|id| self.node_fonts.get(&id))
+        {
           if let Some(lang) = font.get_language() {
             return lang.to_string();
           }

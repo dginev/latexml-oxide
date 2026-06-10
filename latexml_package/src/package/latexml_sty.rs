@@ -321,6 +321,16 @@ LoadDefinitions!({
     AssignValue!("GUESS_TABULAR_HEADERS" => false, Scope::Global);
   });
 
+  // Styling options (Perl PR #2767)
+  DeclareOption!("authorsoneline", {
+    assign_mapping("DOCUMENT_CLASSES", "ltx_authors_1line", Some(Stored::Bool(true)));
+    assign_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline", None::<Stored>);
+  });
+  DeclareOption!("authorsmultiline", {
+    assign_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline", Some(Stored::Bool(true)));
+    assign_mapping("DOCUMENT_CLASSES", "ltx_authors_1line", None::<Stored>);
+  });
+
   // Finer control over which (if any) raw .sty/.cls files to include
   DeclareOption!("rawstyles", {
     AssignValue!("INCLUDE_STYLES"  => true, Scope::Global);
@@ -518,12 +528,11 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // Perl latexml.sty.ltxml L246-247: \lxKeywords{text} — add keywords to
-  // the frontmatter. Thin macro wrapper around the existing \@add@frontmatter
-  // dispatch; previously missing so `\lxKeywords{foo, bar}` hit undefined-CS.
+  // Perl latexml.sty.ltxml (PR #2767): \lxKeywords{text} — add keywords to
+  // the frontmatter.
   DefMacro!(
     "\\lxKeywords{}",
-    "\\@add@frontmatter{ltx:keywords}[name={keywords}]{#1}"
+    "\\lx@add@keywords[name={keywords}]{#1}"
   );
 
   // Perl latexml.sty.ltxml L249-250: \lxContextTOC — emits a TOC element

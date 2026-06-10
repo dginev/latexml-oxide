@@ -1971,3 +1971,28 @@ corrupt assignment to one site (`open_text_internal`'s post-`add_child`
 `set_node`). The `#[global_allocator]=mimalloc` is bin-only and never
 touches libxml2's `xmlNode`s (no `xmlMemSetup`), so it is NOT in the
 recipe — the system **libmalloc** is the exposer.
+## #59 Rust XPath context evaluates from the root ELEMENT — Perl-relative document paths silently miss
+
+Perl `Document::findnodes($xpath, $node)` defaults `$node` to
+`$$self{document}` — the **document node** (parent of the root
+element). A Perl binding xpath like
+`'ltx:document/ltx:resource[last()]'` therefore matches the root
+`<ltx:document>` and steps into its children.
+
+The Rust `Document::findnode/findnodes(xpath, None)` path ends at the
+cached libxml `Context`, whose default evaluation node is effectively
+the **root element** — so the same relative path looks for an
+`ltx:document` *child of* `<ltx:document>` and returns nothing, with
+no error. The miss is silent: code that falls back (e.g. "append at
+end of root") produces structurally-wrong-but-valid XML.
+
+**Rule:** when porting a Perl binding xpath that starts with a
+relative step naming the root element (`ltx:document/...`), translate
+it to the absolute form (`/ltx:document/...`). Paths starting `.//`
+or `//` are unaffected.
+
+**Witness:** PR-2767 port, `\lx@frontmatter@fallback` — frontmatter
+(title/creator) landed at the *end* of `<ltx:document>` instead of
+after the `ltx:resource` block; caught by `20_digestion::rebox_test`.
+Fixed in `base_utilities.rs` by using
+`/ltx:document/ltx:resource[last()]`.

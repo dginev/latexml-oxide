@@ -10,14 +10,14 @@ LoadDefinitions!({
   RequirePackage!("mathptmx");
   RequirePackage!("graphicx");
 
-  DefMacro!("\\ShortTitle{}",  "\\@add@frontmatter{ltx:toctitle}{#1}");
-  DefMacro!("\\PoScopydate{}", "\\@add@frontmatter{ltx:date}[role=accepted]{#1}");
+  DefMacro!("\\ShortTitle{}",     "\\lx@add@toctitle{#1}");
+  DefMacro!("\\PoScopydate{}",    "\\lx@add@date[role=accepted]{#1}");
   DefMacro!("\\PACSname",      "\\textbf{PACS}");
-  DefMacro!("\\PACS{}", "\\@add@frontmatter{ltx:classification}[scheme=pacs,name={\\PACSname}]{#1}");
+  DefMacro!("\\PACS{}",           "\\lx@add@classification[scheme=pacs,name={\\PACSname:~}]{#1}");
   // \FullConference{name} — conference identification text. Round-34
   // surpass-Perl: preserve as ltx:note frontmatter.
   DefMacro!("\\FullConference{}",
-    "\\@add@frontmatter{ltx:note}[role=conference]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=conference]{#1}");
 
   DefMacro!("\\Jmath", "J");
 });

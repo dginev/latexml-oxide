@@ -18,33 +18,8 @@ use latexml_core::common::xml::is_descendant_or_self;
 use latexml_core::digested::DigestedData;
 use std::collections::VecDeque;
 
-/// Walk a `Digested` and concatenate its text content (for attribute use,
-/// matching Perl's `setAttribute(..., DigestText(...))` semantics). Tbox
-/// children contribute their text; nested Lists recurse; `\hskip`-style
-/// Whatsits (which are side-effect-only constructors with no text content)
-/// fall back to `dimension_to_spaces(width)` instead of reverting to the
-/// macro name. All other Whatsits use their normal `get_string` path.
-fn digested_to_text(d: &latexml_core::digested::Digested) -> Result<String> {
-  let mut out = String::new();
-  match d.data() {
-    DigestedData::TBox(b) => out.push_str(&b.borrow().get_string()?),
-    DigestedData::List(l) => {
-      for child in l.borrow().boxes.iter() {
-        out.push_str(&digested_to_text(child)?);
-      }
-    },
-    DigestedData::Whatsit(w) => {
-      let w = w.borrow();
-      if let Some(Stored::Dimension(width)) = w.get_property("width").as_deref() {
-        out.push_str(&super::tex_glue::dimension_to_spaces(*width));
-      } else {
-        out.push_str(&w.get_string()?);
-      }
-    },
-    _ => out.push_str(&d.to_string()),
-  }
-  Ok(out)
-}
+// digested_to_text moved to base_utilities.rs (PR #2767: needed by
+// digest_front_matter for the creator before-separators).
 
 // Mirrors Perl `Package.pm` (`split(/\s*,\s*/, $options)`) — strips
 // whitespace on BOTH sides of each comma so option names are normalized
@@ -4506,14 +4481,21 @@ LoadDefinitions!({
   // See frontmatter support in TeX.ltxml
 
   Let!("\\@title", "\\@empty");
-  DefMacro!("\\title{}", "\\def\\@title{#1}\\@add@frontmatter{ltx:title}{#1}", locked => true);
+  Let!("\\@shorttitle", "\\@empty");
+  // Perl (PR #2767): '\gdef\@shorttitle{#1}\gdef\@title{#2}
+  //   \ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}'.
+  // Rust-only: also \gdef the non-@ \shorttitle, which user styles reference
+  // (e.g. arxiv.sty \hypersetup{pdftitle={\shorttitle}}; see \shortauthor note below).
+  // Single logical line (here and below): a `\` + newline in a raw string is
+  // a literal backslash + end-of-line = a spurious CONTROL-SPACE `\ ` in the
+  // body (see the \maketitle note above; driver 1708.07027).
+  DefMacro!("\\title[]{}",
+    r"\gdef\@shorttitle{#1}\gdef\shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}",
+    locked => true);
   DefMacro!("\\@date", "\\@empty");
-  // Single logical line: a `\` + newline in a raw string is a literal
-  // backslash + end-of-line = a spurious CONTROL-SPACE `\ ` in the body
-  // (see the \maketitle note above; driver 1708.07027).
   DefMacro!(
     "\\date{}",
-    r"\def\@date{#1}\@add@frontmatter{ltx:date}[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
+    r"\def\@date{#1}\lx@add@date[role=creation,name={\@ifundefined{datename}{}{\datename}}]{#1}"
   );
   // Conference-template "equal contribution" markers used inside \author{...}
   // by AAAI's aaai22.sty, NeurIPS templates, Springer Nature sn-jnl,
@@ -4562,140 +4544,48 @@ LoadDefinitions!({
   // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
   // Witnesses: 2 papers in Stage-15 v3.
   def_macro_identity("\\polhk{}")?;
-  // Perl L1065-1067: DefConstructor('\@personname{}', ...,
-  //   beforeDigest => { Let('\thanks', '\person@thanks') },
-  //   mode => 'restricted_horizontal', enterHorizontal => 1).
-  DefConstructor!("\\@personname{}", "<ltx:personname>#1</ltx:personname>",
-    before_digest => { Let!("\\thanks", "\\person@thanks"); },
-    bounded => true,
-    mode => "text",
-    enter_horizontal => true
-  );
-
-  // Sanitize person names for (obvious) punctuation abuse at start+end
-  Tag!("ltx:personname", after_close => sub[_document, node] {
-    if let Some(mut first) = node.get_first_child() {
-      if first.get_type() == Some(NodeType::TextNode) {
-        let first_text = first.get_content();
-        let mut first_text_iter = first_text.chars().peekable();
-        while let Some(peeked) = first_text_iter.peek() {
-          if peeked.is_whitespace() || matches!(peeked, ',' | '!' | ';' | '.' | ':' | '?') {
-            first_text_iter.next();
-          } else {
-            break;
-          }
-        }
-        let new_text = first_text_iter.collect::<String>();
-        if first_text != new_text {
-          first.set_content(&new_text)?;
-        }
-      }
-      if let Some(mut last) = node.get_last_child() {
-        if last.get_type() == Some(NodeType::TextNode) {
-          let last_text = last.get_content();
-          let mut last_text_iter  = last_text.chars().rev().peekable();
-          while let Some(peeked) = last_text_iter.peek() {
-            if peeked.is_whitespace() || matches!(peeked, ',' | '!' | ';' | '.' | ':' | '?') {
-              last_text_iter.next();
-            } else {
-              break;
-            }
-          }
-          let new_text = last_text_iter.rev().collect::<String>();
-
-          if last_text != new_text {
-            last.set_content(&new_text)?;
-          }
-        }
-      }
-    }
-  });
+  // \@personname (now \lx@personname) and the ltx:personname sanitize Tag
+  // moved to base_utilities.rs (Perl PR #2767: Base_Utility.pool.ltxml).
 
   DefConstructor!("\\and", " and ");
 
-  AssignValue!("NUMBER_OF_AUTHORS" => 0);
-  DefPrimitive!("\\lx@count@author", {
-    let current = lookup_int("NUMBER_OF_AUTHORS");
-    AssignValue!("NUMBER_OF_AUTHORS" => current + 1, Some(Scope::Global));
-  });
-  DefMacro!(
-    "\\lx@author{}",
-    r"\lx@count@author\@add@frontmatter{ltx:creator}[role=author]{\lx@author@prefix\@personname{#1}}"
-  );
-  DefConstructor!("\\lx@@@contact{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
-  DefMacro!("\\lx@contact{}{}",
-  r"\@add@to@frontmatter{ltx:creator}{\lx@@@contact{#1}{#2}}");
   DefMacro!("\\lx@author@sep", "\\qquad");
   DefMacro!("\\lx@author@conj", "\\qquad");
-  DefConstructor!("\\lx@author@prefix", sub[document, _args, _props] {
-    let mut node   = document.get_element().unwrap();
-    let nauthors   = lookup_int("NUMBER_OF_AUTHORS");
-    let i          = document.findnodes("//ltx:creator[@role='author']", None).len() as i64;
-    if i <= 1 { }
-    else if i == nauthors {
-      // Perl: setAttribute(before => DigestText(T_CS('\lx@author@conj'))).
-      // `\lx@author@conj` is overridable: latex_constructs sets it to
-      // `\qquad` (em-spaces); ams_support overrides to `\ and\ `. Use
-      // `get_string()` rather than `to_string()` so Tbox text content
-      // (chars from `\ and\ `) is concatenated, but we also need
-      // `\hskip` Whatsits (from `\qquad → \hskip 2em\relax`) to fall
-      // back to `dimension_to_spaces(width)` since `\hskip`'s Display
-      // would revert to the macro name. Digest the macro and walk the
-      // tree extracting text-or-spaces.
-      let conj = DigestText!(Tokens!(T_CS!("\\lx@author@conj")))?;
-      let s = digested_to_text(&conj)?;
-      document.set_attribute(&mut node, "before", &s)?;
-    } else {
-      let sep = DigestText!(Tokens!(T_CS!("\\lx@author@sep")))?;
-      let s = digested_to_text(&sep)?;
-      document.set_attribute(&mut node, "before", &s)?;
-    }
-  });
 
   DefMacro!("\\@author", "\\@empty");
+  DefMacro!("\\@shortauthor", "\\@empty");
   // \shortauthor / \shorttitle: many journal classes (mnras, arxiv,
   // ICML, NeurIPS templates) reference \shortauthor in
   // \hypersetup{pdfauthor=...} and similar before \author has run.
   // Without an initial empty definition, the reference errors out.
-  // Perl-faithful: the standard idiom is `\renewcommand*{\author}[2][]
-  // {\gdef\shortauthor{#1}\gdef\@author{#2}}` in user-style; since our
-  // \author below is locked and that renewcommand cannot override it,
-  // we save the same value ourselves and pre-define empty so any
-  // earlier reference (driver: 2406.14142 arxiv.sty L64
-  // `\hypersetup{pdfauthor={\shortauthor}}` before \author fires) is
-  // safe.
+  // (Rust-only; Perl PR #2767 only pre-defines the @-forms. Driver:
+  // 2406.14142 arxiv.sty L64 `\hypersetup{pdfauthor={\shortauthor}}`
+  // before \author fires.)
   DefMacro!("\\shortauthor", "\\@empty");
   DefMacro!("\\shorttitle", "\\@empty");
-  // Perl latex_constructs.pool.ltxml L1116:
-  //   DefMacro('\author[]{}', '\def\@author{#2}\lx@make@authors@anded{#2}', locked => 1);
-  // The optional `[short]` arg is standard for many journal classes (mn,
-  // elsart, revtex variants, etc.); without it, `\author[short]{long}`
-  // leaves `[short]` in the token stream, dumping it into whatever context
-  // was around — most visibly, if the author has `$...$` math, the leftover
-  // `[short]` gets parsed inside math, which then drifts into `\thanks`
-  // bodies and produces XMTok-in-note schema errors (arxiv 0709.4470,
-  // 0802.3360). The short form is used for running heads/toc and is
-  // otherwise discarded.
-  // Also save the optional `[short]` arg to `\shortauthor` so that
-  // user-style references work even though our \author is locked
-  // (driver: 2406.14142 arxiv.sty's renewcommand cannot override our
-  // locked \author, so we must save \shortauthor ourselves).
+  // Perl (PR #2767): '\def\@shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}'.
+  // Rust-only: also \gdef the non-@ \shortauthor for user-style references
+  // (see note above; our \author is locked so renewcommand can't add it).
   DefMacro!("\\author[]{}",
-    "\\gdef\\shortauthor{#1}\\def\\@author{#2}\\lx@make@authors@anded{#2}",
+    r"\def\@shortauthor{#1}\gdef\shortauthor{#1}\def\@author{#2}\lx@add@authors{#2}",
     locked => true);
-  DefMacro!("\\lx@make@authors@anded{}", sub[(authors)] {
-    and_split(T_CS!("\\lx@author"), authors)
+
+  DefPrimitive!("\\lx@authors@oneline", {
+    if state::lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline").is_none() {
+      AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_1line" => true);
+    }
   });
-  DefPrimitive!("\\ltx@authors@oneline", {
-    AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_1line" => true);
+  DefPrimitive!("\\lx@authors@multiline", {
+    if state::lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_1line").is_none() {
+      AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
+    }
   });
-  DefPrimitive!("\\ltx@authors@multiline", {
-    AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
-  });
+  Let!("\\ltx@authors@oneline", "\\lx@authors@oneline");
+  Let!("\\ltx@authors@multiline", "\\lx@authors@multiline");
 
   DefMacro!(
     "\\@add@conversion@date",
-    "\\@add@frontmatter{ltx:date}[role=creation]{\\today}"
+    "\\lx@add@date[role=conversion]{\\today}"
   );
 
   // Perl: latex_constructs.pool.ltxml L1128-1129
@@ -4732,90 +4622,46 @@ LoadDefinitions!({
     Tokens!(T_CS!("\\lx@frontmatter@fallback")));
 
   DefMacro!("\\@thanks", "\\@empty");
-  // Perl latex_constructs.pool.ltxml L1154: `\thanks[]{}` — optional arg for
-  // OmniBus use (thrown away). #2 is the required body.
+  // Perl (PR #2767): `\thanks[]{}` → '\def\@thanks{#2}\lx@add@pubnote{#2}' —
+  // optional arg for OmniBus use (thrown away). #2 is the required body.
   //
   // SURPASS-PERL (Cluster A, docs/SYNC_STATUS.md L201-208): `[opt]` is
   // identifier-shape (a label tag, e.g. `\thanks[funding-1]{…}`). Switch
   // to `OptionalSemiverbatim` so a literal `_` in the label doesn't bleed
   // through as `T_SUB` and trip the script-handler text-mode error.
   // Perl uses default catcodes for `[opt]` and SHARES the failure mode.
-  DefMacro!("\\thanks OptionalSemiverbatim {}", r"\def\@thanks{#2}\lx@make@thanks{#2}");
-  DefConstructor!(
-    "\\lx@make@thanks{}",
-    "<ltx:note role='thanks'>#1</ltx:note>"
-  );
+  DefMacro!("\\thanks OptionalSemiverbatim {}", r"\def\@thanks{#2}\lx@add@pubnote{#2}");
 
-  // Abstract SHOULD have been so simple, but seems to be a magnet for abuse.
-  // For one thing, we'd like to just write
-  //   DefEnvironment('{abstract}','<ltx:abstract>//body</ltx:abstract>');
-  // However, we don't want to place the <ltx:abstract> environment directly where
-  // we found it, but we want to add it to frontmatter. This requires capturing the
-  // recently digested list and storing it in the frontmatter structure.
+  // Abstract SHOULD have been so simple, but seems to be a magnet for abuse & confusion.
+  // Standard LaTeX classes expect it after \maketitle, and deposit it where found.
+  // But many others expect it declared before \maketitle & include it within!
+  // Moreover, while it's generally defined as an environment,
+  // some users get away with writing \abstract{text} or even \abstract text ... \section?
 
-  // The really messy stuff comes from the way authors -- and style designers -- misuse it.
-  // Basic LaTeX wants it to be an environment WITHIN the document environment,
-  // and AFTER the \maketitle.
-  // However, since all it really does is typeset "Abstract" in bold, it allows:
-  //   \abstract stuff...
-  // without even an \endabstract!  We MUST know when the abstract ends, so we've got
-  // to recognize when we've moved on to other stuff... \sections at the VERY LEAST.
-
-  // Additional complications come from certain other classes and styles that
-  // redefine abstract to take the text as an argument. And some treat it
-  // like \title, \author, and such, that are expected to appear in the preamble!!
-  // The treatment below allows an abstract environment in the preamble,
-  // (even though straight latex doesn't) but does not cover the 1-arg case in preamble!
-  //
-  // Probably there are other places (eg in titlepage?) that should force the close??
-
-  // Perl: latex_constructs.pool.ltxml lines 1180-1194
-  DefEnvironment!("{abstract}", "",
-    after_digest_begin => {
-      AssignValue!("inPreamble" => false);
-    },
-    after_digest => {
-      let abstract_title = stomach::digest(Tokens!(T_CS!("\\format@title@abstract"),
-        T_BEGIN!(), T_CS!("\\abstractname"), T_END!()))?;
-      let regurgitated = List::new(clone_box_list());
-
-      with_value_mut("frontmatter",|frontmatter_opt| {
-        let frontmatter = match frontmatter_opt {
-          Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-          _ => Fatal!(TexPool, Expected,
-              "Global TeX Frontmatter hash was not available, should never happen"),
-        };
-        let abstr = frontmatter.entry("ltx:abstract".to_string()).or_insert_with(Vec::new);
-        abstr.push(("ltx:abstract".to_string(),
-          Some(string_map!("name" => abstract_title)), regurgitated.into()));
-        Ok(())
-      })?;
-      DefMacro!("\\maybe@end@abstract", "", scope => Some(Scope::Global));
-    },
-    after_construct => sub[doc, _whatsit] {
-      insert_frontmatter(doc)?; // HERE if not already done.
-    },
-    locked => true,
-    mode => "internal_vertical"
-  );
-  // If we get a plain \abstract, instead of an environment, look for \abstract{the abstract}
-  AssignValue!("\\abstract:locked" => false); // REDEFINE the above locked definition!
-  // Perl: latex_constructs.pool.ltxml lines 1197-1203
+  // If called as environment, it SHOULD close as environment, as well.
+  DefMacro!(T_CS!("\\begin{abstract}"), None, "\\lx@begin@abstract");
+  DefMacro!(T_CS!("\\end{abstract}"), None, "\\lx@end@abstract");
+  // If called directly, maybe as
+  //   \abstract{text}
+  // OR \abstract text \endabstract
+  // OR even \abstract text... \somethingelse  (section? \par ?)
   DefMacro!("\\abstract", {
     if gullet::if_next(T_BEGIN!())? {
-      Tokens!(T_CS!("\\abstract@onearg"))
+      Tokens!(T_CS!("\\lx@add@abstract"))
     } else {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),
       // add \maybe@end@abstract to \@startsection@hook so the abstract closes
       // when the next sectioning command starts.
       Tokens!(
         T_CS!("\\g@addto@macro"), T_CS!("\\@startsection@hook"), T_CS!("\\maybe@end@abstract"),
-        T_CS!("\\begin{abstract}"))
+        T_CS!("\\lx@begin@abstract"))
     }
   },
   locked => true);
-  DefMacro!("\\abstract@onearg{}", "\\begin{abstract}#1\\end{abstract}\\let\\endabstract\\relax");
-  DefMacro!("\\maybe@end@abstract", "\\endabstract");
+
+  DefMacro!("\\endabstract", "\\lx@end@abstract\\let\\maybe@end@abstract\\relax");
+  DefMacro!("\\maybe@end@abstract", "\\lx@end@abstract");
+  DefMacro!("\\lx@abstract@name", "\\format@title@abstract{\\abstractname}"); // Redefine
   DefMacro!("\\abstractname", "Abstract");
   def_macro_identity("\\format@title@abstract{}")?;
 
@@ -4860,7 +4706,8 @@ LoadDefinitions!({
       // `mode => "internal_vertical"` for the same reason. Match it.
       DefEnvironment!("{abstract}", "<ltx:abstract>#body</ltx:abstract>",
         mode => "internal_vertical");
-      Let!("\\abstract", "\\abstract@onearg");
+      // Perl (PR #2767): Titlepage env should redefine \abstract correctly.
+      DefConstructor!("\\abstract{}", "<ltx:abstract>#1</ltx:abstract>");
     },
     before_digest_end => {
       stomach::digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?

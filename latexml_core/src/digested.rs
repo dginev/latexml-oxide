@@ -708,7 +708,10 @@ impl Digested {
       Comment(_) => true,
       TBox(ref b) => {
         let b = b.borrow();
-        if b.get_property_bool("isEmpty")
+        if b.get_property_bool("alignmentPreserve") {
+          // Perl PR #2767: explicitly preserved content is never skippable
+          false
+        } else if b.get_property_bool("isEmpty")
           || b.get_property_bool("isSpace")
           || b.get_property_bool("alignmentSkippable")
         {
@@ -721,10 +724,17 @@ impl Digested {
             .unwrap_or(false)
         }
       },
-      List(ref l) => l.borrow().boxes.iter().all(|d| d.is_skippable()),
+      List(ref l) => {
+        let l = l.borrow();
+        // Perl PR #2767: explicitly preserved content is never skippable
+        !l.get_property_bool("alignmentPreserve") && l.boxes.iter().all(|d| d.is_skippable())
+      },
       Whatsit(ref w) => {
         let w = w.borrow();
-        if w.get_property_bool("isEmpty")
+        if w.get_property_bool("alignmentPreserve") {
+          // Perl PR #2767: explicitly preserved content is never skippable
+          false
+        } else if w.get_property_bool("isEmpty")
           || w.get_property_bool("isSpace")
           || w.get_property_bool("alignmentSkippable")
         {

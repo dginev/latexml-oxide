@@ -28,7 +28,7 @@ use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
 use crate::definition::primitive::Primitive;
 use crate::definition::register::{Register, RegisterValue};
 use crate::definition::{Definition, FontDirective};
-use crate::document::tag::TagData;
+use crate::document::tag::{RawFrontmatter, TagData};
 use crate::keyval::KeyVal;
 use crate::keyvals::KeyVals;
 use crate::ligature::Ligature;
@@ -92,6 +92,8 @@ pub enum Stored {
   HashStored(SymHashMap<Stored>),
   /// boxed map (latexml)
   HashTagData(HashMap<String, Vec<TagData>>),
+  /// queued-but-undigested frontmatter commands (Perl: `frontmatter_raw`)
+  FrontmatterRaw(Vec<RawFrontmatter>),
   // LaTeXML primitives (Copy types)
   /// latexml object
   Catcode(Catcode),
@@ -196,6 +198,7 @@ impl fmt::Debug for Stored {
       VecDequeStored(ref vec) => write!(f, "VecDequeStored{vec:?}"),
       HashStored(ref hos) => write!(f, "HashStored{hos:?}"),
       HashTagData(ref htd) => write!(f, "HashTagData[{htd:?}]"),
+      FrontmatterRaw(ref raw) => write!(f, "FrontmatterRaw[{raw:?}]"),
       HashString(ref hstr) => write!(f, "HashStr[{hstr:?}]"),
       Ligature(ref lig) => write!(f, "Ligature[{lig:?}]"),
       KeyVal(ref kv) => write!(f, "KeyVal[{kv:?}]"),
@@ -502,6 +505,13 @@ impl PartialEq for Stored {
       HashTagData(ref htd) => {
         if let HashTagData(htd2) = other {
           *htd == *htd2
+        } else {
+          false
+        }
+      },
+      FrontmatterRaw(ref raw) => {
+        if let FrontmatterRaw(raw2) = other {
+          *raw == *raw2
         } else {
           false
         }
