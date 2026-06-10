@@ -172,10 +172,13 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// **Error debt** — valid input we INTEND to convert cleanly (a desired,
 /// surpass-Perl success), but which errors today. TEMPORARY: each MUST be
 /// driven to zero by improving the Rust core, then removed. The harness
-/// tolerates `>0` errors (logged `[error-debt]`) but FAILS at **zero** to force
-/// the entry's removal once clean. Each note records Perl's current behavior
-/// (verify with `latexml --verbose` — `--quiet` HIDES Perl errors). Tracked in
-/// `docs/SYNC_STATUS.md`.
+/// tolerates ANY count (logged `[error-debt]`) and does NOT fail at zero,
+/// because the count is **environment-dependent** for some entries (e.g.
+/// `glossary` errors on one host's datatool/expl3 but converts clean in CI) —
+/// failing at zero would break whichever environment is already clean. When an
+/// entry's `[error-debt] … 0 errors` shows up EVERYWHERE, remove it by review.
+/// Each note records Perl's current behavior (verify with `latexml --verbose`
+/// — `--quiet` HIDES Perl errors). Tracked in `docs/SYNC_STATUS.md`.
 const ERROR_DEBT: &[(&str, &str)] = &[
   (
     "figure_mixed_content",
@@ -320,7 +323,8 @@ fn process_texfile(
   //   • normal test            → MUST be error-clean (n_err == 0).
   //   • INTENTIONALLY_FAILING  → MUST emit its exact SOFT count, NEVER fatal
   //                              (graceful recovery is the contract; permanent).
-  //   • ERROR_DEBT             → tolerated `>0` today, FAILS at 0 (force removal).
+  //   • ERROR_DEBT             → tolerated (count is env-dependent for some);
+  //                              logged, never fails; manual review for removal.
   //
   // Perf (runs on every test): the hot path is two thread-local integer reads
   // via `get_status` (no allocation, no log-string scan) plus tiny slice
@@ -362,17 +366,19 @@ fn process_texfile(
         ))
       }
     },
-    // Temporary debt: tolerate >0, FAIL at 0 to force the entry's removal.
+    // Temporary debt: tolerate whatever it does today (the count is
+    // environment-dependent for some entries — e.g. `glossary` errors on one
+    // box but converts clean in CI, per the host's datatool/expl3 version), so
+    // the gate does NOT fail at zero. Removal is a manual review step when an
+    // entry is clean EVERYWHERE (the `[error-debt] … 0 errors` log flags it).
     (None, Some((_, reason))) => {
-      eprintln!("[error-debt] {name}: {n_err} errors — {reason}");
-      if n_err > 0 {
-        Ok(())
+      if n_err == 0 {
+        eprintln!("[error-debt] {name}: 0 errors HERE — clean in this environment; \
+          review for removal once clean everywhere — {reason}");
       } else {
-        Err(format!(
-          "{name}: listed in ERROR_DEBT but now converts CLEAN — remove it from \
-           ERROR_DEBT so the gate keeps it clean. (Debt resolved: {reason})"
-        ))
+        eprintln!("[error-debt] {name}: {n_err} errors — {reason}");
       }
+      Ok(())
     },
     // Normal test: must be error-clean.
     (None, None) => {
