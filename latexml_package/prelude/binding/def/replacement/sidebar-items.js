@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AttrPair","AttrPart","FloatKind","FuncArg","ReplacementOp","Value"],"fn":["apply_ops","parse_replacement","slashify","unquote"],"struct":["AttrValue"]};
