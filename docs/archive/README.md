@@ -33,6 +33,13 @@ Each ran to completion and the actionable findings landed as commits.
   one live residual (~72-CS Perl-only long tail) is an active item in
   `../SYNC_STATUS.md` "Engine file open gaps (MINOR)".
 
+## Script bindings (Rhai) — historical log
+
+- `SCRIPT_BINDINGS_LOG_2026-06.md` — the M0 spike, M1/M2-M4 progress
+  log, `\footnote`/DefEnvironment landing notes, and the two dated
+  critical re-evaluations, archived from `docs/script_bindings_plan.md`
+  (the live doc keeps the current surface reference).
+
 ## `--server` editor LSP (beyond-Perl; landed, deprioritized)
 
 Archived 2026-06-05 to keep the top-level `docs/` focused on the parity

@@ -13,6 +13,14 @@ crate-type = ["lib"]
 # Source-map precision build — propagates to latexml_core. Enable via
 # `latexml_oxide/token-locators`. See docs/SOURCE_PROVENANCE.md §3.1.1.
 token-locators = ["latexml_core/token-locators"]
+# Runtime script bindings (docs/script_bindings_plan.md). Named for the
+# capability (bindings loaded at runtime), not the engine. Embeds the
+# pure-Rust Rhai interpreter so users can contribute package/class bindings
+# at runtime (no toolchain, no recompile) at an interpreted-speed cost. The
+# ONLY place Rhai enters the workspace; core/engine/package untouched.
+runtime-bindings = ["dep:rhai"]
+# Back-compat alias for the original feature name.
+script-bindings = ["runtime-bindings"]
 
 [dependencies]
 latexml_core = {path = "../latexml_core"}
@@ -20,3 +28,8 @@ latexml_codegen = {path = "../latexml_codegen"}
 latexml_engine = {path = "../latexml_engine"}
 latexml_package = {path = "../latexml_package"}
 rustc-hash = "2.0.0"
+log = "0.4"
+libxml = "0.3.12"
+regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }
+# Optional — only compiled under `script-bindings`. Pure Rust, no native deps.
+rhai = { version = "1", optional = true, features = ["no_module", "no_time"] }

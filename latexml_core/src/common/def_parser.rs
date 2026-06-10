@@ -1,13 +1,11 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::borrow::Cow;
 
 use crate::common::arena::{self};
 use crate::common::error::*;
 
 use crate::mouth;
 use crate::parameter::{Parameter, Parameters};
-use crate::pin;
 use crate::token::*;
 use crate::tokens::Tokens;
 
@@ -26,11 +24,6 @@ static CS_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@_]+(?::[a-zA-Z]*)?)").unwrap());
 static SINGLE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\.)").unwrap());
 static ACTIVE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(.)").unwrap());
-static DEFAULT_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Default:(.*)$").unwrap());
-static NESTED_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\{([^\}]*)\})\s*").unwrap());
-static OPTIONAL_CHECK_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\[([^\]]*)\])\s*").unwrap());
-static PARAMSPECT_CHECK_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^((\w*)(:([^\s\{\[]*))?)\s*").unwrap());
 
 /// If calling at compile-time, pass `None` for state, to avoid initialization.
 pub fn parse_prototype(proto: &str, init_flag: bool) -> Result<(Token, Option<Parameters>)> {
@@ -86,173 +79,213 @@ pub fn parse_parameters(
   cs: &Token,
   init_flag: bool,
 ) -> Result<Option<Parameters>> {
-  let mut prototype = Cow::Borrowed(outer_prototype);
-  // parameters is capped at MAX_STEPS; most prototypes have ≤ 4 params,
-  // so pre-size conservatively for the common case.
-  let mut parameters = Vec::with_capacity(4);
-  let mut steps = 0;
-  const MAX_STEPS: usize = 50;
-  while !prototype.is_empty() {
-    steps += 1;
-    if steps > MAX_STEPS {
-      fatal!(
-        Parameter,
-        Misdefined,
-        s!(
-          "parse_parameters exceeded {} steps for {:?} (remaining: {:?})",
-          MAX_STEPS,
-          cs,
-          prototype
-        )
-      );
+  // The prototype grammar, as a winnow parse (#171 family; the golden corpus
+  // in `golden_tests` pins byte-equivalence with the prior regex munch loop):
+  //   item := "{" inner "}" \s*          (Plain, recursive inner)
+  //         | "[" inner "]" \s*          (Optional; inner may be Default:…)
+  //         | word (":" extra)? \s*      (named type, extra |-split)   [nonempty]
+  //         | any-single-char            (literal Token; spaces too — each
+  //                                       space is its own Token, faithfully)
+  use winnow::combinator::{delimited, opt, preceded};
+  use winnow::prelude::*;
+  use winnow::token::{any, take_while};
+
+  fn ws0(input: &mut &str) -> winnow::ModalResult<()> {
+    take_while(0.., |c: char| c.is_whitespace()).void().parse_next(input)
+  }
+  /// `{inner}` / `[inner]` group: returns the inner slice; trailing \s* eaten.
+  fn group<'a>(open: char, close: char) -> impl FnMut(&mut &'a str) -> winnow::ModalResult<&'a str> {
+    move |input: &mut &'a str| {
+      let inner = delimited(open, take_while(0.., move |c| c != close), close)
+        .parse_next(input)?;
+      ws0(input)?;
+      Ok(inner)
     }
-    let next_proto: Cow<str>;
-    // Handle possibly nested cases, such as {Number}
-    if NESTED_CHECK_RE.is_match(&prototype) {
-      let captures = NESTED_CHECK_RE.captures(&prototype).unwrap();
-      next_proto = NESTED_CHECK_RE.replace(&prototype, "");
-      let spec = captures.get(1).map_or("", |m| m.as_str());
-      let inner_spec = captures.get(2).map_or("", |m| m.as_str());
+  }
+  /// `word(:extra)?` with word ∈ \w+ or a bare nonempty `:extra`; \s* eaten.
+  fn paramspec<'a>(input: &mut &'a str) -> winnow::ModalResult<(&'a str, Option<&'a str>)> {
+    let word = take_while(0.., |c: char| c.is_alphanumeric() || c == '_').parse_next(input)?;
+    let extra = opt(preceded(
+      ':',
+      take_while(0.., |c: char| !c.is_whitespace() && c != '{' && c != '['),
+    ))
+    .parse_next(input)?;
+    if word.is_empty() && extra.is_none() {
+      return Err(winnow::error::ErrMode::Backtrack(winnow::error::ContextError::new()));
+    }
+    ws0(input)?;
+    Ok((word, extra))
+  }
+
+  let mut parameters = Vec::with_capacity(4);
+  let mut rest: &str = outer_prototype;
+  let input = &mut rest;
+  while !input.is_empty() {
+    // Probe-and-commit on a copy per branch: a failing branch must not consume
+    // (`delimited` advances past its opening token before failing otherwise —
+    // e.g. a lone "{" from the non-nesting inner of "{{}}").
+    let mut probe;
+    let mut p: Parameter = if let Ok(inner_spec) = {
+      probe = *input;
+      group('{', '}').parse_next(&mut probe).inspect(|_| *input = probe)
+    } {
+      // Plain (possibly typed-inner) braced group, spec keeps its braces.
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
       } else {
         parse_parameters(inner_spec, cs, init_flag)?
       };
-      let mut p = Parameter {
+      Parameter {
         name: arena::pin_static("Plain"),
-        spec: if spec.is_empty() {
-          pin!("")
-        } else {
-          arena::pin(spec)
-        },
+        spec: arena::pin(format!("{{{inner_spec}}}")),
         inner: inner.map(|ps| ps.into()).unwrap_or_default(),
         ..Parameter::default()
-      };
-      if init_flag {
-        p = p.init()?;
       }
-      parameters.push(p);
-    } else if let Some(captures) = OPTIONAL_CHECK_RE.captures(&prototype) {
-      // Ditto for Optional
-      let spec = captures.get(1).map_or("", |m| m.as_str());
-      let inner_spec = captures.get(2).map_or("", |m| m.as_str());
-      next_proto = OPTIONAL_CHECK_RE.replace(&prototype, "");
-      if let Some(default_captures) = DEFAULT_CHECK_RE.captures(inner_spec) {
-        // Store the default value as extra tokens so the Optional parameter
-        // returns it when no [...] is present (Perl: $param->{default}).
-        let default_str = default_captures.get(1).map_or("", |m| m.as_str());
-        let default_tokens = if default_str.is_empty() {
+    } else if let Ok(inner_spec) = {
+      probe = *input;
+      group('[', ']').parse_next(&mut probe).inspect(|_| *input = probe)
+    } {
+      let spec = arena::pin(format!("[{inner_spec}]"));
+      if let Some(default_str) = inner_spec.strip_prefix("Default:") {
+        let extra = if default_str.is_empty() {
           vec![]
         } else {
           vec![crate::mouth::tokenize_internal(default_str)]
         };
-        let mut p = Parameter {
-          name: arena::pin_static("Optional"),
-          spec: if spec.is_empty() {
-            pin!("")
-          } else {
-            arena::pin(spec)
-          },
-          extra: default_tokens,
-          ..Parameter::default()
-        };
-        if init_flag {
-          p = p.init()?;
-        }
-        parameters.push(p);
+        Parameter { name: arena::pin_static("Optional"), spec, extra, ..Parameter::default() }
       } else if !inner_spec.is_empty() {
-        let mut p = Parameter {
+        Parameter {
           name: arena::pin_static("Optional"),
-          spec: if spec.is_empty() {
-            pin!("")
-          } else {
-            arena::pin(spec)
-          },
+          spec,
           inner: parse_parameters(inner_spec, cs, init_flag)?
             .map(|ps| ps.into())
             .unwrap_or_default(),
           ..Parameter::default()
-        };
-        if init_flag {
-          p = p.init()?;
         }
-        parameters.push(p);
       } else {
-        let mut p = Parameter {
-          name: arena::pin_static("Optional"),
-          spec: arena::pin(spec),
-          ..Parameter::default()
-        };
-        if init_flag {
-          p = p.init()?;
-        }
-        parameters.push(p);
+        Parameter { name: arena::pin_static("Optional"), spec, ..Parameter::default() }
       }
-    } else if let Some(captures) = PARAMSPECT_CHECK_RE.captures(&prototype) {
-      let full_match = captures.get(0).map_or("", |m| m.as_str());
-      if full_match.is_empty() || full_match.chars().all(|c| c.is_whitespace()) {
-        // PARAMSPECT_CHECK_RE matched empty string (e.g. on '+', '-').
-        // Perl fallback: consume next char as a literal Token parameter.
-        // Perl: push(@params, LaTeXML::Core::Parameter->new('Token','Token',
-        //   extra => [T_OTHER($ch)]));
-        let ch = prototype.chars().next().unwrap();
-        let ch_token = CharToken!(ch, Catcode::OTHER);
-        let mut p = Parameter {
-          name: arena::pin_static("Token"),
-          spec: arena::pin_static("Token"),
-          extra: vec![Tokens::new(vec![ch_token])],
-          ..Parameter::default()
-        };
-        if init_flag {
-          p = p.init()?;
-        }
-        parameters.push(p);
-        next_proto = Cow::Owned(prototype[ch.len_utf8()..].to_string());
-      } else {
-        let spec = arena::pin(captures.get(1).map_or("", |m| m.as_str()));
-        let name = arena::pin(captures.get(2).map_or("", |m| m.as_str()));
-        let extra_str = captures.get(4).map_or("", |m| m.as_str()).to_string();
-        next_proto = PARAMSPECT_CHECK_RE.replace(&prototype, "");
-        let extra: Vec<Tokens> = if extra_str.is_empty() {
-          Vec::new()
-        } else {
-          extra_str
-            .split('|')
-            .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
-            .collect()
-        };
-        let mut p = Parameter {
-          name,
-          spec,
-          extra,
-          ..Parameter::default()
-        };
-        if init_flag {
-          p = p.init()?;
-        }
-        parameters.push(p);
+    } else if let Ok((word, extra_opt)) = {
+      probe = *input;
+      paramspec.parse_next(&mut probe).inspect(|_| *input = probe)
+    } {
+      let spec_str = match extra_opt {
+        Some(extra) => format!("{word}:{extra}"),
+        None => word.to_string(),
+      };
+      let extra: Vec<Tokens> = match extra_opt {
+        None | Some("") => Vec::new(),
+        Some(extra_str) => extra_str
+          .split('|')
+          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
+          .collect(),
+      };
+      Parameter {
+        name: arena::pin(word),
+        spec: arena::pin(&spec_str),
+        extra,
+        ..Parameter::default()
       }
     } else {
-      // Perl fallback: consume next char as a literal Token parameter.
-      let ch = prototype.chars().next().unwrap();
+      // Literal single char (incl. each whitespace char) as a Token parameter.
+      let ch = any.parse_next(input).map_err(|_: winnow::error::ErrMode<winnow::error::ContextError>| {
+        Error::from(s!("parse_parameters: unreadable prototype tail for {:?}", cs))
+      })?;
       let ch_token = CharToken!(ch, Catcode::OTHER);
-      let mut p = Parameter {
+      Parameter {
         name: arena::pin_static("Token"),
         spec: arena::pin_static("Token"),
         extra: vec![Tokens::new(vec![ch_token])],
         ..Parameter::default()
-      };
-      if init_flag {
-        p = p.init()?;
       }
-      parameters.push(p);
-      next_proto = Cow::Owned(prototype[ch.len_utf8()..].to_string());
+    };
+    if init_flag {
+      p = p.init()?;
     }
-    prototype = Cow::Owned(next_proto.to_string());
+    parameters.push(p);
   }
   if parameters.is_empty() {
     Ok(None)
   } else {
     Ok(Some(Parameters::new(parameters)))
+  }
+}
+
+
+#[cfg(test)]
+mod golden_tests {
+  /// Render a parse result in a stable, comparison-friendly form.
+  fn describe(proto: &str) -> String {
+    match super::parse_parameters(proto, &crate::T_CS!("\\x"), false) {
+      Ok(None) => "None".to_string(),
+      Ok(Some(ps)) => ps
+        .get_parameters()
+        .iter()
+        .map(|p| {
+          format!(
+            "{}:{}/x{}/i{}",
+            crate::common::arena::with(p.name, |s| s.to_string()),
+            crate::common::arena::with(p.spec, |s| s.to_string()),
+            p.extra.len(),
+            p.inner.as_ref().map(|ps| ps.get_parameters().len()).unwrap_or(0)
+          )
+        })
+        .collect::<Vec<_>>()
+        .join(" | "),
+      Err(e) => format!("ERR:{e}"),
+    }
+  }
+
+  /// Golden corpus pinning the prototype grammar's behavior (captured from
+  /// the regex implementation 2026-06-10) — the gate for the winnow rewrite:
+  /// any divergence here is a semantics change, not a refactor.
+  #[test]
+  fn golden_prototype_corpus() {
+    crate::state::set_state(crate::state::State::new(crate::state::StateOptions::default()));
+    let golden: &[(&str, &str)] = &[
+      ("{}", "Plain:{}/x0/i0"),
+      ("{}{}", "Plain:{}/x0/i0 | Plain:{}/x0/i0"),
+      ("[]", "Optional:[]/x0/i0"),
+      ("[]{}", "Optional:[]/x0/i0 | Plain:{}/x0/i0"),
+      ("{Number}", "Plain:{Number}/x0/i1"),
+      ("{Float}{Float} {}", "Plain:{Float}/x0/i1 | Plain:{Float}/x0/i1 | Plain:{}/x0/i0"),
+      (
+        "OptionalMatch:* [][] Semiverbatim",
+        "OptionalMatch:OptionalMatch:*/x1/i0 | Optional:[]/x0/i0 | Optional:[]/x0/i0 | \
+         Semiverbatim:Semiverbatim/x0/i0",
+      ),
+      ("OptionalKeyVals:LST", "OptionalKeyVals:OptionalKeyVals:LST/x1/i0"),
+      ("RequiredKeyVals:RH {}", "RequiredKeyVals:RequiredKeyVals:RH/x1/i0 | Plain:{}/x0/i0"),
+      ("Until:\\end", "Until:Until:\\end/x1/i0"),
+      ("XUntil:\\fi {}", "XUntil:XUntil:\\fi/x1/i0 | Plain:{}/x0/i0"),
+      ("[Default:0]{}", "Optional:[Default:0]/x1/i0 | Plain:{}/x0/i0"),
+      ("Semiverbatim", "Semiverbatim:Semiverbatim/x0/i0"),
+      ("SkipSpaces {}", "SkipSpaces:SkipSpaces/x0/i0 | Plain:{}/x0/i0"),
+      ("Digested", "Digested:Digested/x0/i0"),
+      ("DigestedBody", "DigestedBody:DigestedBody/x0/i0"),
+      ("(){}", "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{}/x0/i0"),
+      (
+        "( {Float} , {Float} )",
+        "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0 | \
+         Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0",
+      ),
+      ("Optional:=Default:9", "Optional:Optional:=Default:9/x1/i0"),
+      ("{Until:;}", "Plain:{Until:;}/x0/i1"),
+      ("+", "Token:Token/x1/i0"),
+      ("Match:- {}", "Match:Match:-/x1/i0 | Plain:{}/x0/i0"),
+      // pst_all_sty shapes: non-nesting braced inner ("{{}}" -> Plain with a
+      // lone "{" inner Token, then a dangling "}" Token) — regex-faithful.
+      (
+        "OptionalMatch:* {{}} [] {}",
+        "OptionalMatch:OptionalMatch:*/x1/i0 | Plain:{{}/x0/i1 | Token:Token/x1/i0 | Token:Token/x1/i0 | \
+         Optional:[]/x0/i0 | Plain:{}/x0/i0",
+      ),
+      ("{", "Token:Token/x1/i0"),
+    ];
+    for (proto, expected) in golden {
+      let expected = expected.split_whitespace().collect::<Vec<_>>().join(" ");
+      let actual = describe(proto).split_whitespace().collect::<Vec<_>>().join(" ");
+      assert_eq!(actual, expected, "prototype grammar diverged on {proto:?}");
+    }
   }
 }

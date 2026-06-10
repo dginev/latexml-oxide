@@ -211,14 +211,15 @@ fn parse_parameters_param_with_extra() {
 }
 
 #[test]
-fn parse_parameters_caps_at_max_steps() {
+fn parse_parameters_long_prototypes_terminate() {
   setup();
-  // 60 consecutive `{}` groups blow past MAX_STEPS (50) and return Err via fatal!
+  // The winnow grammar consumes >=1 char per parameter, so termination is
+  // structural — the old MAX_STEPS=50 fatal cap is gone and long (if
+  // pathological) prototypes now parse instead of erroring.
   let cs = T_CS!("\\foo");
   let proto = "{}".repeat(60);
-  let result = parse_parameters(&proto, &cs, false);
-  assert!(
-    result.is_err(),
-    "over-MAX_STEPS prototype should return Err"
-  );
+  let ps = parse_parameters(&proto, &cs, false)
+    .expect("long prototype parses")
+    .expect("non-empty");
+  assert_eq!(ps.get_parameters().len(), 60);
 }

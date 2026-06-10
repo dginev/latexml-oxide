@@ -49,3 +49,8 @@ string-interner = { version = "0.20.0", default-features = false, features = ["s
 marpa = { git = "https://github.com/dginev/marpa" }
 unicode-normalization = "0.1.25"
 stacker = "0.1.24"
+# Parser combinators for the shared XML-replacement template parser (#171).
+# Already lock-pinned at 0.7.x via `toml_edit` (clap-family, trusted); the AST +
+# parser live here so both the compile-time codegen (latexml_codegen, which
+# depends on this crate) and the runtime interpreter consume one grammar.
+winnow = "0.7"

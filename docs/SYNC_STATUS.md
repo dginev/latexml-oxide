@@ -13,6 +13,116 @@
 
 ---
 
+## Open task: drain `ERROR_DEBT` (test-harness error gate, opened 2026-06-10)
+
+The test harness (`latexml_oxide/src/util/test.rs`) enforces an **error gate**
+on every `.tex`/`.xml` regression test via the O(1) status counter
+(`get_status(Error|Fatal)` — no allocation, no log-string scan), so each
+regression test is also an error-regression sentinel, not just an XML-shape
+check. Verified red/green. Two decoupled, documented categories with OPPOSITE
+long-term contracts:
+
+**`INTENTIONALLY_FAILING`** — a *permanent contract* that the input SHOULD
+error, **softly**: a recoverable `Error:` (never `Fatal:` — graceful recovery
+and a completed conversion is the whole point). The gate asserts the exact
+**soft** count AND `fatal == 0`; *zero* or a *fatal* is a regression. Not debt.
+- `protect_self_ref` (1) — `\def\cs{\protect\cs}` typeset self-recurses;
+  **pdflatex HANGS**, Perl+Rust both emit 1 soft error (the recursion guard
+  prevents the hang). Verified 2026-06-10 (`latexml --verbose`, pdflatex).
+- `io` (2) — `exists.data` line 21 deliberately has an unbalanced brace
+  (`line { with extra } }`) to verify the engine emits a SOFT recoverable error
+  (not Fatal) and completes. **pdflatex errors+recovers** (`! Too many }'s …
+  silently discards }`); Perl+Rust both emit 2 soft errors. The fixture may
+  have been valid in an older TeX Live; the malformed line now serves as the
+  intentional soft-error test it always was.
+
+**`ERROR_DEBT`** — valid input we INTEND to convert cleanly (a desired,
+surpass-Perl success) but which errors today. The gate tolerates `>0` (logged
+`[error-debt]`) and **FAILS at zero** to force removal once fixed. Drive each
+to clean via a real core fix (never a downgrade — see the banner above):
+- `glossary` — **Rust-only** (Perl: 0 errors): ~50 undefined datatool/expl3
+  macros (`\__datatool_*`, `\DTLinitials`, …). Root cause: **l3regex** gap —
+  datatool's word/initials parsing uses `\regex_new:N` + capture groups. Large
+  (l3regex is a full regex engine) — its own effort.
+- `figure_mixed_content` — complex figures should convert clean; today
+  `ltx:theorem` not allowed in `ltx:figure` (Perl also errors 1). True fix =
+  **schema expansion** (theorems in figures) — a separate, deferred issue.
+
+**Resolved 2026-06-10:**
+- `let_alias_to_conditional` — was mis-filed as a bug; the `_`-in-text-mode
+  errors were *incidental* to the literals (`PASS_A`), which both Perl and
+  `pdflatex` also error on. Renamed (`PASS_A`→`PASSA`) so it cleanly exercises
+  only its subject (`\let \drcond \ifx`); now a normal error-clean test.
+- `io` and `protect_self_ref` — moved to `INTENTIONALLY_FAILING` after
+  `pdflatex` confirmed both inputs are intrinsically erroring (io: deliberate
+  malformed read content; protect: infinite recursion). They are soft-error
+  recovery contracts, not bugs to fix.
+
+**Pitfalls recorded:** classify with `bin/latexml --verbose` — `--quiet` HIDES
+Perl's errors (it once mis-classified two intrinsic cases as Rust-only). Always
+cross-check with `pdflatex`: if real TeX errors too, the input is intrinsic
+(→ `INTENTIONALLY_FAILING`), not error debt.
+
+---
+
+## PR #248 critical-review findings — HANDOFF (opened 2026-06-10, paused)
+
+Critical review of `feature/winnow-rhai` (shared winnow AST #171 + Rhai
+`runtime-bindings` front-end + error gate). **All items RESOLVED** (2026-06-10;
+see the `(review …)` commits): B2, M1–M4 and m1–m5 are fixed, and **B1** is an
+accepted+documented caveat (its prescribed fix turned out to deadlock — see
+below — so the residual UB is recorded, not a blocker). The "Verified SOUND"
+list at the end is a don't-re-investigate reference.
+
+### B1 — re-entrant `&mut Document` aliasing UB (runtime-bindings) — PARTIAL
+The Rhai constructor trampoline stashes `&mut Document` as a `*mut Document` in
+`CTOR_CTX` and each proxy op re-mints `unsafe { &mut *ptr }`. A re-entrant script
+constructor (`\wrap{\myemph{..}}`) re-mints a 2nd `&mut` while the outer
+`Document::absorb`'s `&mut self` is still live ⇒ Stacked/Tree-Borrows UB (works
+today only because `Document` is `Rc`/`RefCell`/libxml-heavy; a `maxperf` build
+could miscompile).
+
+**Done (2026-06-10):** the `unsafe` re-mint is consolidated into ONE audited
+site — `script_bindings/mod.rs::with_doc` — with the full soundness caveat
+documented there (instead of being scattered across every proxy op). M1's RAII
+guards make the surrounding context stacks panic-safe.
+
+**The review's prescribed fix does NOT work.** Routing the re-mint through a
+checked guard (thread-local `RefCell`) so the re-entrant op *fails* — panic OR
+clean error — **deadlocks `Document::absorb`** (reproduced: `\wrap{\myemph{x}}`
+hangs at 0 CPU). The absorb loop (`document.rs:648-723`) calls
+`be_absorbed(self)?` and needs the nested construction to **succeed**; failing
+it parks the loop. So re-entrancy cannot be "rejected/checked" as the review
+imagined — it must be made *sound while still succeeding*. That needs an
+architectural change (interior-mutable `Document`, or a core handle installed
+around `do_absorption`) — out of scope for a review pass. A Miri gate is
+likewise INFEASIBLE: `latexml_contrib` links libxml2/libxslt via FFI, which Miri
+cannot execute.
+
+**Decisions (2026-06-10):**
+- **Accepted the documented caveat** as a known limitation of the experimental
+  front-end; the architectural sound-re-entrancy fix (interior-mutable
+  `Document` / core `do_absorption` handle) is deferred future work.
+- **`runtime-bindings` stays ON by default** — the documented caveat is accepted
+  in the default build (the branch deliberately enabled the feature).
+
+So B1 is no longer a merge blocker — it is a recorded, accepted caveat. The
+remaining work is the optional architectural fix above.
+
+### Verified SOUND / not-bugs (don't re-investigate)
+- read-only `*const Whatsit→*mut` casts (reversion/sizer): never mutated;
+  `setProperty` errors in read-only contexts. Sound.
+- `afterDigest` whatsit re-derivation: benign (outer reborrow not used after).
+- winnow `repeat(0.., op)` non-termination: every `op` consumes ≥1 byte;
+  245k-input fuzz: zero panics/hangs.
+- `def_parser` probe-and-commit: correct (throwaway copy, commit only on Ok).
+- `split_keyval_source`: total, no panic (minor: silently absorbs stray `}`).
+- `parse_replacement` compile-time `panic!` on malformed template: acceptable
+  (only fed compile-constant templates). Latent gap: `##` at content position
+  is unparseable (Perl allows it) — no active template uses it.
+
+---
+
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
 > **✅ PARITY-TRACK Rust-only pool DRAINED across the sampled corpus (capstone, 2026-06-01).**

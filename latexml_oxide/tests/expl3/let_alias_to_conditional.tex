@@ -7,23 +7,23 @@
 %      runtime currently passes, but if the dump round-trip ever needs
 %      `\X` to survive, the dump-writer must capture it.
 %
-% Perl LaTeXML output: PASS_A. PASS_B. PASS_C.
+% Perl LaTeXML output: PASSA. PASSB. PASSC.
 \documentclass{article}
 \makeatletter
 
 % Direct \let to a conditional — Stored::Conditional alias
 \let \drcond \ifx
 
-\def\rA{FAIL_A}\def\rB{FAIL_B}\def\rC{FAIL_C}
+\def\rA{FAILA}\def\rB{FAILB}\def\rC{FAILC}
 
 % A. The alias should be \ifx-equal to its target
-\ifx \drcond \ifx \def\rA{PASS_A}\fi
+\ifx \drcond \ifx \def\rA{PASSA}\fi
 
 % B. The aliased CS should perform conditional behavior (false branch)
-\drcond AB \def\rB{FAIL_B}\else \def\rB{PASS_B}\fi
+\drcond AB \def\rB{FAILB}\else \def\rB{PASSB}\fi
 
 % C. The aliased CS should perform conditional behavior (true branch)
-\drcond AA \def\rC{PASS_C}\else \def\rC{FAIL_C}\fi
+\drcond AA \def\rC{PASSC}\else \def\rC{FAILC}\fi
 
 \makeatother
 \begin{document}

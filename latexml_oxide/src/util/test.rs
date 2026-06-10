@@ -138,16 +138,80 @@ fn install_sigsegv_handler() {
   }
 }
 
-/// Tests whose TeX input is *known* to produce Error/Warn messages in both
-/// the Perl reference implementation and the Rust port.  We suppress log
-/// output for these so that `cargo test` runs cleanly, while still counting
-/// errors internally (MAX_ERRORS check still fires).
-/// Tests where Perl LaTeXML also produces Error/Warn messages.
-/// ONLY add tests here if verified that Perl `bin/latexml` emits errors on the same input.
-const KNOWN_ERROR_TESTS: &[&str] = &[
-  "io",                   // Perl: 2 errors (mode-switch egroup from \readnext)
-  "figure_mixed_content", // Perl: 1 error (ltx:theorem not allowed in ltx:figure)
+/// **Intentionally-failing tests** — a *permanent contract* that this input
+/// SHOULD produce errors. The TeX is genuinely ill-formed / pathological, so
+/// erroring is the CORRECT, desired outcome forever — NOT something to "fix".
+/// (The discriminator is the input's validity, NOT whether Perl also errors:
+/// see `ERROR_DEBT` for valid inputs that merely error today.)
+///
+/// The contract is a SOFT, RECOVERABLE error: the harness asserts the **exact**
+/// `Error:` count AND that there was **no `Fatal:`** — the whole point is that
+/// the engine recovers and completes the conversion (graceful degradation),
+/// never crashes. Drift fails BOTH ways: *more*/fatal = a handling regression;
+/// *zero* = we silently STOPPED detecting the bad input. Logged
+/// `[intentional-fail]`.
+const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
+  (
+    "protect_self_ref",
+    1,
+    "intrinsic self-recursion (\\def\\cs{\\protect\\cs} typeset): pdflatex HANGS, \
+     Perl+Rust both emit 1 SOFT error — the recursion guard prevents the hang. \
+     Verified 2026-06-10 (latexml --verbose=1 error, pdflatex=timeout).",
+  ),
+  (
+    "io",
+    2,
+    "deliberate malformed read content: `exists.data` line 21 has an unbalanced \
+     brace (`line { with extra } }`) to verify the engine emits a SOFT, \
+     recoverable error (not Fatal) and completes. pdflatex also errors+recovers \
+     (`! Too many }'s, silently discards }`); Perl+Rust both emit 2 soft errors. \
+     Verified 2026-06-10.",
+  ),
 ];
+
+/// **Error debt** — valid input we INTEND to convert cleanly (a desired,
+/// surpass-Perl success), but which errors today. TEMPORARY: each MUST be
+/// driven to zero by improving the Rust core, then removed. The harness
+/// tolerates ANY count (logged `[error-debt]`) and does NOT fail at zero,
+/// because the count is **environment-dependent** for some entries (e.g.
+/// `glossary` errors on one host's datatool/expl3 but converts clean in CI) —
+/// failing at zero would break whichever environment is already clean. When an
+/// entry's `[error-debt] … 0 errors` shows up EVERYWHERE, remove it by review.
+/// Each note records Perl's current behavior (verify with `latexml --verbose`
+/// — `--quiet` HIDES Perl errors). Tracked in `docs/SYNC_STATUS.md`.
+const ERROR_DEBT: &[(&str, &str)] = &[
+  (
+    "figure_mixed_content",
+    "complex figures should convert clean; today: ltx:theorem not allowed in \
+     ltx:figure (Perl also: 1). True fix = schema expansion (theorems in \
+     figures) — tracked as a separate issue.",
+  ),
+  (
+    "glossary",
+    "~50 undefined datatool/expl3 macros (\\__datatool_*, \\DTLinitials, …); \
+     Rust-only (Perl: 0 errors). Root cause: l3regex gap (datatool word/initials \
+     parsing uses \\regex_new:N + capture groups). Large — own effort.",
+  ),
+];
+
+/// Emit a line to the process's REAL stderr, SURVIVING libtest's per-test
+/// output capture. libtest only intercepts the `print!`/`eprint!` macros and
+/// replays them solely on FAILURE, so a plain `eprintln!` from a PASSING test
+/// is swallowed — which defeats the `[error-debt] … review for removal` and
+/// `[intentional-fail]` notices, whose entire purpose is to be SEEN on a green
+/// run (review m2). A direct `write(2)` bypasses the capture. One syscall per
+/// line is atomic up to PIPE_BUF, so concurrent test threads don't interleave.
+#[cfg(unix)]
+fn note_uncaptured(line: &str) {
+  use std::io::Write;
+  use std::os::unix::io::FromRawFd;
+  // SAFETY: fd 2 is the process stderr, valid for the whole run. `ManuallyDrop`
+  // stops the `File`'s Drop from `close()`-ing the shared descriptor.
+  let mut f = std::mem::ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(2) });
+  let _ = f.write_all(format!("{line}\n").as_bytes());
+}
+#[cfg(not(unix))]
+fn note_uncaptured(line: &str) { eprintln!("{line}"); }
 
 pub fn latexml_test_single(
   tex_file_str: &str,
@@ -160,7 +224,10 @@ pub fn latexml_test_single(
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
-  let suppress = KNOWN_ERROR_TESTS.contains(&name);
+  // Suppress log output for any test expected to emit errors (both categories)
+  // so single-test runs stay readable; the gate still counts + classifies them.
+  let suppress = INTENTIONALLY_FAILING.iter().any(|(n, _, _)| *n == name)
+    || ERROR_DEBT.iter().any(|(n, _)| *n == name);
   if suppress {
     latexml_core::common::error::set_suppress_log_output(true);
   }
@@ -268,8 +335,91 @@ fn process_texfile(
   // its ~110 MB engine, accumulating to ~4.9 GB across the suite. The
   // output is already owned `String`s by now, so no live `SymStr`
   // survives the reset. See `latexml_core::reset_thread_engine`.
+  // Error gate: every `.tex`/`.xml` regression test is an error-regression
+  // sentinel, not just an XML-shape check. `note_status` counts `Error:`/
+  // `Fatal:` even when log output is off, so this is the canonical signal.
+  // Three contracts:
+  //   • normal test            → MUST be error-clean (n_err == 0).
+  //   • INTENTIONALLY_FAILING  → MUST emit its exact SOFT count, NEVER fatal
+  //                              (graceful recovery is the contract; permanent).
+  //   • ERROR_DEBT             → tolerated (count is env-dependent for some);
+  //                              logged, never fails; manual review for removal.
+  //
+  // Perf (runs on every test): the hot path is two thread-local integer reads
+  // via `get_status` (no allocation, no log-string scan) plus tiny slice
+  // lookups; messages build only on the cold panic path. `convert_file` reset
+  // the report at conversion start, so this count is exactly this conversion's.
+  // Read BEFORE `reset_thread_engine`.
+  use latexml_core::common::error::{get_status, LogStatus};
+  let n_soft = get_status(LogStatus::Error);
+  let n_fatal = get_status(LogStatus::Fatal);
+  let n_err = n_soft + n_fatal;
+  let intentional = INTENTIONALLY_FAILING.iter().find(|(n, _, _)| *n == name).copied();
+  let debt = ERROR_DEBT.iter().find(|(n, _)| *n == name).copied();
+  // Decide the verdict (and any cold-path message) before tearing down.
+  let verdict: std::result::Result<(), String> = match (intentional, debt) {
+    // Permanent contract: exact SOFT-error count, and NEVER fatal — the point is
+    // graceful recovery. Drift fails both ways; a Fatal is always a regression.
+    (Some((_, expect, reason)), _) => {
+      note_uncaptured(&format!(
+        "[intentional-fail] {name}: {n_soft} soft errors, {n_fatal} fatal (expect {expect}, 0) — {reason}"
+      ));
+      if n_fatal > 0 {
+        Err(format!(
+          "{name}: INTENTIONALLY_FAILING must degrade to a SOFT error, but got a Fatal \
+           ({}) — graceful recovery regressed. Reason: {reason}",
+          latexml_core::common::error::get_status_message()
+        ))
+      } else if n_soft == expect {
+        Ok(())
+      } else if n_soft == 0 {
+        Err(format!(
+          "{name}: INTENTIONALLY_FAILING expects {expect} error(s) but got 0 — error \
+           detection regressed (this input must still error). Reason: {reason}"
+        ))
+      } else {
+        Err(format!(
+          "{name}: INTENTIONALLY_FAILING expects exactly {expect} soft error(s), got {n_soft} \
+           ({}) — handling drifted. Reason: {reason}",
+          latexml_core::common::error::get_status_message()
+        ))
+      }
+    },
+    // Temporary debt: tolerate whatever it does today (the count is
+    // environment-dependent for some entries — e.g. `glossary` errors on one
+    // box but converts clean in CI, per the host's datatool/expl3 version), so
+    // the gate does NOT fail at zero. Removal is a manual review step when an
+    // entry is clean EVERYWHERE (the `[error-debt] … 0 errors` log flags it).
+    (None, Some((_, reason))) => {
+      if n_err == 0 {
+        note_uncaptured(&format!("[error-debt] {name}: 0 errors HERE — clean in this \
+          environment; review for removal once clean everywhere — {reason}"));
+      } else {
+        note_uncaptured(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
+      }
+      Ok(())
+    },
+    // Normal test: must be error-clean.
+    (None, None) => {
+      if n_err == 0 {
+        Ok(())
+      } else {
+        Err(format!(
+          "{name}: conversion logged errors ({}) — a normal-TeX test must be error-clean. \
+           Fix the engine/binding/specimen. If the input SHOULD error (verify with \
+           bin/latexml --verbose), add to INTENTIONALLY_FAILING; if it should convert \
+           clean but doesn't yet, add to ERROR_DEBT with a SYNC_STATUS entry. See \
+           docs/reproducers/MALFORMED_CLOSE_NUMBERED_2026-06-10.md.",
+          latexml_core::common::error::get_status_message()
+        ))
+      }
+    },
+  };
   drop(latexml);
   latexml_core::reset_thread_engine();
+  if let Err(msg) = verdict {
+    panic!("{msg}");
+  }
   r
 }
 
@@ -402,4 +552,58 @@ pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
   let mut c = crate::converter::Converter::from_config(cfg);
   c.initialize_session().expect("initialize");
   c.convert(source.to_string())
+}
+
+#[cfg(test)]
+mod exemption_audit {
+  use super::{ERROR_DEBT, INTENTIONALLY_FAILING};
+  use std::path::{Path, PathBuf};
+
+  /// Review m1: the exemption tables match on the bare `file_stem`, which is
+  /// NOT unique across the suite's globbed test dirs. A future `glossary.tex`
+  /// (etc.) under a different directory would silently inherit the
+  /// ERROR_DEBT / INTENTIONALLY_FAILING exemption — an ERROR_DEBT collision
+  /// could then MASK a real regression. Guard the invariant the match relies
+  /// on: every exemption key resolves to AT MOST ONE `.tex` across `tests/`.
+  /// (Cheaper and lower-churn than dir-qualifying the keys; if this ever fails,
+  /// rename the fixture or dir-qualify that entry.)
+  #[test]
+  fn exemption_keys_have_unique_stems() {
+    fn collect(dir: &Path, out: &mut Vec<(String, PathBuf)>) {
+      let Ok(rd) = std::fs::read_dir(dir) else { return };
+      for ent in rd.flatten() {
+        let p = ent.path();
+        if p.is_dir() {
+          collect(&p, out);
+        } else if p.extension().and_then(|e| e.to_str()) == Some("tex") {
+          if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
+            out.push((stem.to_string(), p.clone()));
+          }
+        }
+      }
+    }
+    let mut all = Vec::new();
+    collect(Path::new("tests"), &mut all);
+    assert!(!all.is_empty(), "no .tex fixtures found under tests/ — wrong CWD?");
+
+    let keys = INTENTIONALLY_FAILING
+      .iter()
+      .map(|(n, _, _)| *n)
+      .chain(ERROR_DEBT.iter().map(|(n, _)| *n));
+    for key in keys {
+      let hits: Vec<&PathBuf> = all
+        .iter()
+        .filter(|(s, _)| s == key)
+        .map(|(_, p)| p)
+        .collect();
+      assert!(
+        hits.len() <= 1,
+        "exemption key {key:?} matches {} .tex fixtures {:?} — the bare-stem \
+         match would apply the exemption to ALL of them, potentially masking a \
+         regression. Dir-qualify the entry or rename the fixture.",
+        hits.len(),
+        hits
+      );
+    }
+  }
 }

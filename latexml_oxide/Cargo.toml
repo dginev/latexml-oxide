@@ -28,7 +28,7 @@ path = "bin/cortex_worker.rs"
 required-features = ["cortex"]
 
 [features]
-default = ["test-utils"]
+default = ["test-utils", "runtime-bindings"]
 # Enable building the cortex_worker binary (ZMQ-based CorTeX dispatcher client).
 # Off by default because pericortex pulls in zmq + zeromq-src (C library build),
 # rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
@@ -54,6 +54,14 @@ token-locators = [
   "latexml_contrib/token-locators",
   "latexml_math_parser/token-locators",
 ]
+# Runtime (Rhai) script bindings (docs/script_bindings_plan.md) — propagates
+# to latexml_contrib (the only crate that embeds Rhai). ON by default:
+# downstream consumers of the single-file binary customize bindings without
+# recompiling. Distribution builds use `--no-default-features --features
+# runtime-bindings` (drop test-utils, keep this).
+runtime-bindings = ["latexml_contrib/runtime-bindings"]
+# Back-compat alias for the original feature name.
+script-bindings = ["runtime-bindings"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
