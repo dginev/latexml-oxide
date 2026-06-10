@@ -143,11 +143,10 @@ thread_local! {
     RefCell::new(std::collections::VecDeque::with_capacity(512));
 }
 
-/// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics — read once, so
-/// the per-token hot path in `read_token` pays a single bool test, not an
-/// environment lookup per token.
+/// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics (shared seam in
+/// `common::error`; read once so the per-token hot path pays one bool test).
 static DEBUG_FATAL: Lazy<bool> =
-  Lazy::new(|| std::env::var_os("LATEXML_DEBUG_FATAL").is_some());
+  Lazy::new(crate::common::error::debug_fatal_enabled);
 
 #[thread_local]
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {

@@ -1490,8 +1490,17 @@ pub fn lookup_font() -> Option<Rc<Font>> {
   // whatsit into a log/error message inside a state_mut() scope. A plain
   // borrow() then panics "RefCell already mutably borrowed", aborting the worker
   // (FATAL_101; crashed hep-th9908053, a \documentstyle[12pt]{article} 2.09
-  // paper). All 83 callers handle None (defaulting the font), so degrade to None
-  // on contention instead of crashing.
+  // paper). Degrade to None on contention instead of crashing.
+  //
+  // CAUTION for future callers (PR #249 review P3-18): None-on-contention is
+  // only correct for Display/revert/log-formatting consumers (where a
+  // defaulted font is cosmetic). Several digestion-path callers `.unwrap()`
+  // the result (tbox.rs, whatsit.rs, stomach.rs) — they would panic loudly on
+  // contention, which is the desired behavior there: a DIGESTION-path
+  // re-entrant lookup is a real bug, and silently defaulting the font would
+  // turn it into invisible wrong-font drift in the XML. If you add a caller,
+  // pick deliberately: `.unwrap()` on digestion paths, graceful None only
+  // where the font is presentational.
   let Ok(st) = (*STATE).try_borrow() else {
     return None;
   };

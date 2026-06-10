@@ -82,11 +82,13 @@ pub fn check_timeout() -> Result<()> {
     v
   });
   if tick & 0x3FF == 0 {
-    if let Ok(s) = std::fs::read_to_string("/proc/self/statm") {
-      // statm: size resident shared text lib data dt  (in pages)
-      if let Some(rss_pages_str) = s.split_whitespace().nth(1) {
-        if let Ok(rss_pages) = rss_pages_str.parse::<u64>() {
-          let rss_bytes = rss_pages * 4096;
+    // Single RSS-reading seam: `watchdog::process_rss_kb` (this was a second
+    // hand-rolled /proc parser; PR #249 review P3-12). When the watchdog
+    // grows macOS/Windows backends, this cap follows for free.
+    {
+      {
+        if let Some(rss_kb) = crate::watchdog::process_rss_kb() {
+          let rss_bytes = rss_kb * 1024;
           // R35.A safety cap: 4.5 GB RSS. Worker ulimit is 6 GB
           // virtual; RSS at 4.5 GB means we still have headroom for
           // post-processing (XSLT, MathML chain) but are clearly
@@ -117,7 +119,9 @@ pub fn check_timeout() -> Result<()> {
                 rss_bytes / 1_000_000,
                 cap / 1_000_000
               );
-              // TEMP diagnostic: which accumulating list is growing?
+              // Permanent LATEXML_DEBUG_MEMBUDGET diagnostic: which
+              // accumulating list is growing? (MEMORY.md's OOM-diagnosis
+              // recipe depends on this dump — do not remove as "temp".)
               if let Ok(st) = STOMACH.try_borrow() {
                 eprintln!(
                   "[membudget] box_list={} (~{} MB est) token_stack={} boxing={} localized_box_list_total={}",

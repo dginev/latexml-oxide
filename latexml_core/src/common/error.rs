@@ -127,7 +127,7 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
       // with no `Fatal:` line in the log — an `Err` raised via `Fatal!` that
       // some caller swallowed without `log_fatal`): dump a backtrace at the
       // moment the tally first flips. Witness math0402448.
-      if !report.fatal && std::env::var_os("LATEXML_DEBUG_FATAL").is_some() {
+      if !report.fatal && debug_fatal_enabled() {
         eprintln!("[debug-fatal] LogStatus::Fatal first noted here:");
         eprintln!("{}", std::backtrace::Backtrace::force_capture());
       }
@@ -165,6 +165,16 @@ pub fn get_status(status: LogStatus) -> usize {
     Undefined => report.undefined.0.values().sum(),
     Missing => report.missing.0.values().sum(),
   }
+}
+
+/// One shared probe for the `LATEXML_DEBUG_FATAL` diagnostics (first-fatal
+/// backtrace, gullet pushback dump, recent-token ring). Lazy-cached so hot
+/// paths pay a single bool test, and a single seam if the env contract grows
+/// (PR #249 review P3-13).
+pub fn debug_fatal_enabled() -> bool {
+  use std::sync::OnceLock;
+  static FLAG: OnceLock<bool> = OnceLock::new();
+  *FLAG.get_or_init(|| std::env::var_os("LATEXML_DEBUG_FATAL").is_some())
 }
 
 pub fn initialize_report() {

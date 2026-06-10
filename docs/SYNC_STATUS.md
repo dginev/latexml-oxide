@@ -3293,13 +3293,6 @@ fixes landed" below)*
 
 **P3 — hygiene/altitude (cheap, batchable):**
 
-12. Third hand-rolled `/proc` RSS reader (`watchdog::process_rss_kb`,
-    stomach `check_timeout`, cortex_worker VmHWM) — make stomach call the
-    watchdog helper so the future macOS/Windows port is one seam.
-13. `LATEXML_DEBUG_FATAL` probed in two idioms (Lazy in gullet, inline in
-    error.rs) — export one `debug_fatal_enabled()`; relabel the
-    `// TEMP diagnostic` comment on the (permanent, env-gated)
-    `[membudget]` dump.
 14. `\href protected => true` is a deliberate, well-tested Perl divergence but
     is NOT recorded in `docs/OXIDIZED_DESIGN.md` (the canonical divergence
     registry per CLAUDE.md) — add it (likewise the natbib no-expand guard and
@@ -3316,11 +3309,7 @@ fixes landed" below)*
     `EXPECTED_ID_XMREF_DESIGN.md` is undated but substantially a
     point-in-time Phase-0 study — date it or split the living design from
     the snapshot.
-18. (Noted, no action) `lookup_font` try_borrow→None: verification found 6
-    callers still `.unwrap()` (loud), and the silent-defaulting callers are
-    only reachable via the Display/revert re-entrancy the fix targeted — the
-    claimed digestion-path drift is not constructible today; add a comment
-    warning future callers.
+
 
 ### Round-37 (2026-06-09): math0402448 phantom fatal ROOT-CAUSED — cycle-guard false positive + ALL gullet guards bypassed by `read_balanced`/`read_x_token` (now fixed); canvas_3 = 16/16 CLEAN
 
