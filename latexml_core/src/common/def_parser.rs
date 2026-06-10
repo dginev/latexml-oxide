@@ -256,3 +256,73 @@ pub fn parse_parameters(
     Ok(Some(Parameters::new(parameters)))
   }
 }
+
+#[cfg(test)]
+mod golden_tests {
+  /// Render a parse result in a stable, comparison-friendly form.
+  fn describe(proto: &str) -> String {
+    match super::parse_parameters(proto, &crate::T_CS!("\\x"), false) {
+      Ok(None) => "None".to_string(),
+      Ok(Some(ps)) => ps
+        .get_parameters()
+        .iter()
+        .map(|p| {
+          format!(
+            "{}:{}/x{}/i{}",
+            crate::common::arena::with(p.name, |s| s.to_string()),
+            crate::common::arena::with(p.spec, |s| s.to_string()),
+            p.extra.len(),
+            p.inner.as_ref().map(|ps| ps.get_parameters().len()).unwrap_or(0)
+          )
+        })
+        .collect::<Vec<_>>()
+        .join(" | "),
+      Err(e) => format!("ERR:{e}"),
+    }
+  }
+
+  /// Golden corpus pinning the prototype grammar's behavior (captured from
+  /// the regex implementation 2026-06-10) — the gate for the winnow rewrite:
+  /// any divergence here is a semantics change, not a refactor.
+  #[test]
+  fn golden_prototype_corpus() {
+    crate::state::set_state(crate::state::State::new(crate::state::StateOptions::default()));
+    let golden: &[(&str, &str)] = &[
+      ("{}", "Plain:{}/x0/i0"),
+      ("{}{}", "Plain:{}/x0/i0 | Plain:{}/x0/i0"),
+      ("[]", "Optional:[]/x0/i0"),
+      ("[]{}", "Optional:[]/x0/i0 | Plain:{}/x0/i0"),
+      ("{Number}", "Plain:{Number}/x0/i1"),
+      ("{Float}{Float} {}", "Plain:{Float}/x0/i1 | Plain:{Float}/x0/i1 | Plain:{}/x0/i0"),
+      (
+        "OptionalMatch:* [][] Semiverbatim",
+        "OptionalMatch:OptionalMatch:*/x1/i0 | Optional:[]/x0/i0 | Optional:[]/x0/i0 | \
+         Semiverbatim:Semiverbatim/x0/i0",
+      ),
+      ("OptionalKeyVals:LST", "OptionalKeyVals:OptionalKeyVals:LST/x1/i0"),
+      ("RequiredKeyVals:RH {}", "RequiredKeyVals:RequiredKeyVals:RH/x1/i0 | Plain:{}/x0/i0"),
+      ("Until:\\end", "Until:Until:\\end/x1/i0"),
+      ("XUntil:\\fi {}", "XUntil:XUntil:\\fi/x1/i0 | Plain:{}/x0/i0"),
+      ("[Default:0]{}", "Optional:[Default:0]/x1/i0 | Plain:{}/x0/i0"),
+      ("Semiverbatim", "Semiverbatim:Semiverbatim/x0/i0"),
+      ("SkipSpaces {}", "SkipSpaces:SkipSpaces/x0/i0 | Plain:{}/x0/i0"),
+      ("Digested", "Digested:Digested/x0/i0"),
+      ("DigestedBody", "DigestedBody:DigestedBody/x0/i0"),
+      ("(){}", "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{}/x0/i0"),
+      (
+        "( {Float} , {Float} )",
+        "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0 | \
+         Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0",
+      ),
+      ("Optional:=Default:9", "Optional:Optional:=Default:9/x1/i0"),
+      ("{Until:;}", "Plain:{Until:;}/x0/i1"),
+      ("+", "Token:Token/x1/i0"),
+      ("Match:- {}", "Match:Match:-/x1/i0 | Plain:{}/x0/i0"),
+    ];
+    for (proto, expected) in golden {
+      let expected = expected.split_whitespace().collect::<Vec<_>>().join(" ");
+      let actual = describe(proto).split_whitespace().collect::<Vec<_>>().join(" ");
+      assert_eq!(actual, expected, "prototype grammar diverged on {proto:?}");
+    }
+  }
+}
