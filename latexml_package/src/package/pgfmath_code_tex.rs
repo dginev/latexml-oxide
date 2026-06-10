@@ -105,10 +105,13 @@ fn pgfmath_factorial(n: i64) -> f64 {
     // Perl pgfmath.code.tex.ltxml L68:
     //   Error("pgfmath", "overflow", undef,
     //     "Arithmetic overflow: $arg! is too large.");
-    // Original Perl returned 0 (Pgfmath::FALSE); Rust still computes the
-    // recursive product (matches what Perl did just-prior-to-error in some
-    // versions) but emits the same diagnostic. f64 will saturate to inf
-    // around n>=170, so the diagnostic is the user-visible signal.
+    //   return Pgfmath::FALSE;   # i.e. 0
+    // Emit the diagnostic and return 0 exactly like Perl. We must NOT run the
+    // product loop: `n` is a saturating `f64 as i64 as usize`, so a user
+    // `\pgfmathparse{1e20!}` makes `n ≈ 9.2e18` and `(22..=n).fold(..)` spins
+    // ~9.2e18 iterations — a hang reachable from plain document TeX (review
+    // B2). 0 is also benign downstream and any n ≥ 22! already overflows pgf's
+    // MAX_PGF_NUMBER range, so the prior `clamp`-to-max output was meaningless.
     let _ = (|| -> Result<()> {
       Error!(
         "pgfmath",
@@ -117,7 +120,7 @@ fn pgfmath_factorial(n: i64) -> f64 {
       );
       Ok(())
     })();
-    FACTS[21] * ((22..=n).fold(1.0, |acc, i| acc * i as f64))
+    0.0
   } else {
     FACTS[n]
   }
@@ -1078,6 +1081,15 @@ fn pgfmath_cmp_op(op: &str, left: f64, right: f64) -> f64 {
 /// Format the result of pgfmathparse for output
 /// Perl: L383-393 of pgfmath.code.tex.ltxml
 fn format_parse_result(result: f64, input: &str) -> String {
+  // A non-finite result — NaN from `sqrt(-1)`/`ln(-1)`/`asin(5)`, or ±inf from
+  // an overflow — must NOT serialize as the literal "NaN"/"inf": that string
+  // poisons every downstream `\pgfmathresult` dimension read. Mirror the
+  // sibling `pgfmath_result_str` guard (L21) and degrade to 0; the public path
+  // keeps the `.0`. NB `clamp` below does NOT rescue NaN (`NaN.clamp(..) ==
+  // NaN`), so this must come first. Review M4.
+  if result.is_nan() || result.is_infinite() {
+    return "0.0".to_string();
+  }
   // Overflow check
   let result = result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
 
@@ -1665,6 +1677,41 @@ mod pgfmath_golden_tests {
     ];
     for (expr, expected) in golden {
       assert_eq!(&describe(expr), expected, "pgfmath diverged on {expr:?}");
+    }
+  }
+
+  /// Review B2: a huge factorial argument must NOT spin the product loop.
+  /// `1e20!` saturates `n` to ~9.2e18; the pre-fix code looped that many
+  /// times (hang/DoS reachable from `\pgfmathparse{1e20!}`). It must now
+  /// return promptly with the Perl overflow value (0). The test itself
+  /// completing IS the DoS assertion.
+  #[test]
+  fn factorial_overflow_is_bounded() {
+    latexml_core::state::set_state(latexml_core::state::State::new(
+      latexml_core::state::StateOptions::default(),
+    ));
+    assert_eq!(super::pgfmathparse_eval("1e20!"), "0.0");
+    // A few more saturating / large arguments — all overflow → 0, no spin.
+    assert_eq!(super::pgfmathparse_eval("1000000!"), "0.0");
+    assert_eq!(super::pgfmathparse_eval("100!"), "0.0");
+    // Small factorials still compute (table path).
+    assert_eq!(super::pgfmathparse_eval("5!"), "120.0");
+  }
+
+  /// Review M4: an invalid op yields NaN; the PUBLIC parse path must degrade
+  /// it to "0.0", never serialize the literal "NaN" (which would poison a
+  /// downstream `\pgfmathresult` dimension read).
+  #[test]
+  fn nan_results_format_as_zero() {
+    latexml_core::state::set_state(latexml_core::state::State::new(
+      latexml_core::state::StateOptions::default(),
+    ));
+    for expr in ["sqrt(-1)", "ln(-1)", "asin(5)", "acos(-5)"] {
+      assert_eq!(
+        super::pgfmathparse_eval(expr),
+        "0.0",
+        "non-finite {expr} must format as 0.0, not the literal NaN/inf"
+      );
     }
   }
 }
