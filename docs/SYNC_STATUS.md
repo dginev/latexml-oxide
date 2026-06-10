@@ -3289,20 +3289,6 @@ fixes landed" below)*
 
 **P1 — canvas-risk, fix before the next large sweep:**
 
-3. **Gullet cycle guard has a verified uniform-run false positive.**
-   `cycle_guard::detect()` has no period-1 suppression (the
-   `detects_period_one` unit test proves 300 identical fingerprints fire),
-   and `Token::cycle_fingerprint` = catcode+text only. Any ≥356-token run of
-   identical tokens read past the 12M gate with no intervening
-   `reading_from_mouth` — e.g. a verbatim listing's `====…` separator row, or
-   a register-driven `\loop` with a ≤10-token body iterated 100+ times
-   (register values are invisible to the fingerprint) — fires a spurious
-   `Fatal:Timeout:Recursion`. Made more reachable by item 2 (gate crossed
-   sooner). Action: require the window to contain ≥2 distinct fingerprints
-   (uniform runs are textually legitimate), or require pushback to be
-   non-draining across the window (a real loop re-injects; a literal run
-   consumes mouth input).
-
 4. **`parse_marpa`'s resource-fatal abort is dead code — the phantom fatal is
    only half-fixed.** The new `return Err(err)` arms never propagate:
    `parse_lexemes` (parser.rs:2128) maps Err→`Ok(None)` and `parse_single`

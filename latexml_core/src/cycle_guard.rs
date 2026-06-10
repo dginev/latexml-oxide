@@ -97,7 +97,7 @@ impl CycleGuard {
   }
 
   fn detect(&self) -> Option<usize> {
-    // Smallest period first, so `\def\x{\x}` reports period 1, not 2/3/…
+    // Smallest period first, so a 2-cycle reports period 2, not 4/6/…
     for w in 1..=MAX_WINDOW {
       let need = w * REPEAT;
       if self.len < need {
@@ -114,7 +114,21 @@ impl CycleGuard {
         }
       }
       if periodic {
-        return Some(w);
+        // UNIFORM-run suppression (PR #249 review P1-3): a window whose
+        // items are all IDENTICAL describes a long run of one repeated
+        // fingerprint — textually legitimate input (a verbatim `====…`
+        // separator row, dot leaders, repeated rule glyphs), not a loop.
+        // Real macro loops re-read ≥2 distinct tokens per cycle
+        // (`\def\x{a\x}` → a,\x,a,\x…), and the pure single-token
+        // self-expansion `\def\x{\x}` is caught by the Expandable
+        // self-recursion error before any guard. Note a uniform stream
+        // matches EVERY w, so rejecting uniform windows here rejects the
+        // whole stream (each larger window is uniform too) — by design.
+        let first = self.at_from_end(0);
+        let has_distinct = (1..w).any(|k| self.at_from_end(k) != first);
+        if has_distinct {
+          return Some(w);
+        }
       }
     }
     None
@@ -138,10 +152,23 @@ mod tests {
   }
 
   #[test]
-  fn detects_period_one() {
-    // 300 identical fingerprints → period 1.
-    let s: Vec<u64> = std::iter::repeat(7).take(300).collect();
-    assert_eq!(run(&s), Some(1));
+  fn uniform_run_does_not_fire() {
+    // A long run of IDENTICAL fingerprints is textually legitimate input
+    // (a verbatim `====…` separator row, a dot-leader, a repeated rule
+    // glyph) — NOT a loop. Real macro loops re-read at least two distinct
+    // tokens (`\def\x{a\x}` → a, \x, a, \x …), and a pure single-token
+    // self-expansion is caught by the Expandable self-recursion error
+    // before any guard. PR #249 review P1-3.
+    let s: Vec<u64> = std::iter::repeat(7).take(2000).collect();
+    assert_eq!(run(&s), None);
+  }
+
+  #[test]
+  fn alternating_pair_still_fires() {
+    // `\def\x{a\x}` shape: two distinct fingerprints alternating — the
+    // canonical real loop must still be detected (as period 2).
+    let s: Vec<u64> = (0..900).map(|i| (i % 2) as u64).collect();
+    assert_eq!(run(&s), Some(2));
   }
 
   #[test]
