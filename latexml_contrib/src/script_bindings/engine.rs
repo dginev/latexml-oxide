@@ -543,9 +543,30 @@ pub(super) fn make_engine() -> Engine {
     def_math_ligature_impl(pattern, replacement, opts);
   });
 
-  // Minimal gullet seam: skip following spaces mid-expansion.
+  // ── gullet seams (Perl `$gullet->…` reads from inside macro bodies) ──
   engine.register_fn("SkipSpaces", || -> std::result::Result<(), Box<EvalAltResult>> {
     latexml_core::gullet::skip_spaces().map_err(rhai_err)
+  });
+  // ReadArg: one balanced argument off the stream (unexpanded), as TeX source.
+  engine.register_fn("ReadArg", || -> std::result::Result<String, Box<EvalAltResult>> {
+    latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off)
+      .map(|t| t.untex())
+      .map_err(rhai_err)
+  });
+  // ReadUntil(delim): tokens up to (and consuming) the delimiter TeX string.
+  engine.register_fn(
+    "ReadUntil",
+    |delim: &str| -> std::result::Result<String, Box<EvalAltResult>> {
+      latexml_core::gullet::read_until(&mouth::tokenize_internal(delim))
+        .map(|t| t.untex())
+        .map_err(rhai_err)
+    },
+  );
+  // ReadOptional: a bracketed [..] optional ("" when absent).
+  engine.register_fn("ReadOptional", || -> std::result::Result<String, Box<EvalAltResult>> {
+    latexml_core::gullet::read_optional(None)
+      .map(|t| t.map(|tt| tt.untex()).unwrap_or_default())
+      .map_err(rhai_err)
   });
 
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──

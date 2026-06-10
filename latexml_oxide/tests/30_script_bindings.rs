@@ -210,6 +210,14 @@ const SAMPLE: &str = r##"
     } else { () }
   });
 
+  // Gullet seams from a macro body (Perl $gullet->readOptional/readArg):
+  // \gread[x]{y} -> G(x:y) — mid-expansion stream reads from Rhai.
+  DefMacro("\\gread", || {
+    let opt = ReadOptional();
+    let arg = ReadArg();
+    "G(" + opt + ":" + arg + ")"
+  });
+
   // DefRewrite (data form): stamp every biography note at finalization.
   DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
                 attributes: #{ class: "rw-stamp" } });
@@ -243,7 +251,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
-    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ ",
+    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ \\gread[x]{y} ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -399,6 +407,11 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("‼"),
     "matcher-closure DefMathLigature (!!) did not merge; xml=\n{xml}"
+  );
+  // Gullet reads from a Rhai macro body.
+  assert!(
+    xml.contains("G(x:y)"),
+    "gullet seams (\\gread ReadOptional/ReadArg) failed; xml=\n{xml}"
   );
   // DefRewrite: the xpath+attributes rule fired at finalization.
   assert!(
