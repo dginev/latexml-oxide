@@ -310,7 +310,7 @@ pub(super) fn make_engine() -> Engine {
   // `OptionalKeyVals:` argument reaches a script body): "k=v,k2={v2}" → value
   // by key / a Rhai map of all pairs. Brace-aware at depth 0, like keyval.
   engine.register_fn("GetKeyVal", |kv: &str, key: &str| -> String {
-    keyval_pairs(kv)
+    latexml_core::keyval::split_keyval_source(kv)
       .into_iter()
       .find(|(k, _)| k == key)
       .map(|(_, v)| v)
@@ -318,7 +318,7 @@ pub(super) fn make_engine() -> Engine {
   });
   engine.register_fn("GetKeyVals", |kv: &str| -> Map {
     let mut m = Map::new();
-    for (k, v) in keyval_pairs(kv) {
+    for (k, v) in latexml_core::keyval::split_keyval_source(kv) {
       m.insert(k.into(), Dynamic::from(v));
     }
     m

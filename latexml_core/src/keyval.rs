@@ -599,3 +599,84 @@ mod tests {
     assert_eq!(keyval_qname("P", "set", "k"), "P@set@k");
   }
 }
+
+// ── keyval TeX-source splitting (winnow) ─────────────────────────────────
+// The same `winnow` grammar family as the XML-replacement template parser
+// (binding/def/replacement.rs); used by the runtime-bindings GetKeyVal(s)
+// accessors over a dict's TeX-source form.
+
+/// Split a keyval dict's TeX-source form (`"k=v, k2={v, 2}"`) into
+/// `(key, value)` pairs: comma/equals splitting at brace depth 0 only, one
+/// level of outer braces stripped from values, whitespace trimmed, empty
+/// keys dropped (keyval semantics).
+pub fn split_keyval_source(kv: &str) -> Vec<(String, String)> {
+  use winnow::combinator::{opt, separated};
+  use winnow::prelude::*;
+
+  /// One item: everything up to a depth-0 comma (consumed by the separator).
+  fn item(input: &mut &str) -> winnow::ModalResult<(String, String)> {
+    let mut depth = 0usize;
+    let mut split = None; // byte offset of the depth-0 `=`, if any
+    let mut end = input.len();
+    for (i, c) in input.char_indices() {
+      match c {
+        '{' => depth += 1,
+        '}' => depth = depth.saturating_sub(1),
+        '=' if depth == 0 && split.is_none() => split = Some(i),
+        ',' if depth == 0 => {
+          end = i;
+          break;
+        },
+        _ => {},
+      }
+    }
+    let (raw, rest) = input.split_at(end);
+    *input = rest;
+    let (k, v) = match split.filter(|s| *s < end) {
+      Some(eq) => (&raw[..eq], &raw[eq + 1..]),
+      None => (raw, ""),
+    };
+    let v = v.trim();
+    let v = v.strip_prefix('{').and_then(|s| s.strip_suffix('}')).unwrap_or(v);
+    Ok((k.trim().to_string(), v.to_string()))
+  }
+
+  let mut parser = (separated(0.., item, ","), opt(","));
+  let items: Vec<(String, String)> = match parser.parse(kv) {
+    Ok((items, _)) => items,
+    Err(_) => Vec::new(), // total parser: `item` consumes anything, so unreachable
+  };
+  items.into_iter().filter(|(k, _)| !k.is_empty()).collect()
+}
+
+#[cfg(test)]
+mod keyval_source_tests {
+  use super::split_keyval_source;
+
+  #[test]
+  fn splits_at_depth_zero_only() {
+    assert_eq!(split_keyval_source("lang=rust, size={1, 2}"), vec![
+      ("lang".to_string(), "rust".to_string()),
+      ("size".to_string(), "1, 2".to_string()),
+    ]);
+  }
+
+  #[test]
+  fn flag_keys_and_empties() {
+    assert_eq!(split_keyval_source("draft,, a=1 ,"), vec![
+      ("draft".to_string(), String::new()),
+      ("a".to_string(), "1".to_string()),
+    ]);
+  }
+
+  #[test]
+  fn braced_equals_is_not_a_split() {
+    assert_eq!(split_keyval_source("k={a=b}"), vec![(
+      "k".to_string(),
+      "a=b".to_string()
+    )]);
+  }
+
+  #[test]
+  fn empty_input() { assert!(split_keyval_source("").is_empty()); }
+}
