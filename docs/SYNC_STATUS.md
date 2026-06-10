@@ -65,6 +65,131 @@ cross-check with `pdflatex`: if real TeX errors too, the input is intrinsic
 
 ---
 
+## PR #248 critical-review findings — HANDOFF (opened 2026-06-10, paused)
+
+Critical review of `feature/winnow-rhai` (shared winnow AST #171 + Rhai
+`runtime-bindings` front-end + error gate). **Verdict: NOT merge-ready.** Two
+must-fix defects (B1, B2) before merge; B1 is also an argument to revert
+`runtime-bindings` to off-by-default until fixed. Each item below was
+**independently confirmed** (read + reproduced where noted). Severity: B=blocker,
+M=major, m=minor. Subtasks are checkboxes.
+
+### B1 — CRITICAL: re-entrant `&mut Document` aliasing UB (runtime-bindings)
+The Rhai constructor trampoline stashes `&mut Document` as a `*mut Document`
+in `CTOR_CTX` (`wire.rs` `closure_replacement`) and each proxy op re-mints
+`unsafe { &mut *ptr }` (`engine.rs` openElement/absorb/…). A **re-entrant
+script constructor** (`\wrap{\myemph{..}}`, both script bindings) re-mints a
+2nd `&mut` from the same pointer **while the outer `Document::absorb`'s
+`&mut self` is still live** — `absorb`'s `while` loop calls `be_absorbed(self)`
+then uses `self` again (`close_constructed_nodes`/loop), confirmed at
+`document.rs:648-723`. Two sibling `&mut` to one object with the outer used
+after the inner ⇒ Stacked/Tree-Borrows UB. Works today only because
+`Document` is `Rc`/`RefCell`/libxml-heavy (suppresses opt); a `maxperf`/release
+build can miscompile. The native path is sound (it *reborrows* `&mut` through
+the call chain); only the Rhai layer launders it through a raw pointer. The
+plan's "re-entrancy is pure Rust, never UB" claim is wrong.
+- [ ] Eliminate the raw `*mut Document`: route proxy ops through an owned
+  indirection (thread-local `RefCell`/handle the core installs around
+  `do_absorption`) so the re-entrant borrow is **checked** — a clean panic, not
+  UB. The read-only `*const Whatsit` casts (reversion/sizer) ARE sound (never
+  mutated; `setProperty` gates on the `mutable` flag) and can stay.
+- [ ] Add a Miri gate: `cargo +nightly miri test -p latexml_contrib --features
+  runtime-bindings` with a `\wrap{\myemph{x}}` re-entrancy fixture.
+- [ ] Decide: revert `runtime-bindings` to **off-by-default** until B1 lands
+  (it was flipped on this branch).
+
+### B2 — HIGH: pgfmath factorial DoS (reachable from user TeX)
+`\pgfmathparse{1e20!}` **hangs** (confirmed: timeout/exit 124).
+`pgfmath_code_tex.rs:~106` overflow branch runs `(22..=n).fold(...)` where
+`n` is a saturating `f64 as i64 as usize` ≈ `i64::MAX` ⇒ ~9.2e18 iterations.
+- [ ] In the `n >= FACTS.len()` branch, do NOT run the product loop — emit the
+  existing diagnostic and return `f64::INFINITY` (or `0.0`, matching Perl).
+
+### M1 — context stacks are not panic-safe (cortex worker poisoning)
+`CTOR_CTX`/`WHATSIT_CTX`/`CURRENT_SCRIPT` use manual `push`…`pop()` around
+`fnptr.call`. Rhai does NOT `catch_unwind` native calls, and
+`reset_thread_state` doesn't clear these `latexml_contrib` thread-locals — so a
+panic in a script body (or deep `RefCell` borrow panic) skips the pop, leaving
+a **dangling** stale entry that survives the cortex per-paper `catch_unwind`.
+Latent (each entry re-pushes a fresh top) but real.
+- [ ] Replace every manual push/pop with an RAII `Drop` guard.
+
+### M2 — `Box::leak` is per-conversion, not per-rule (unbounded in worker)
+`wire.rs` `wire_rewrite_replace` does `Box::leak(Box::new(props))` per replace
+rule, but `load_script` RUNS per conversion (AST cached, run not) ⇒ leaks one
+`SymHashMap` per replace-rule **per paper** in a long-lived worker. The
+`'static` is unnecessary (`CtorCtx.props` is `*const`).
+- [ ] Capture an `Rc<SymHashMap>` (or build a fresh stack-local published for
+  the call, like `construction_trampoline`); drop the `'static`/leak.
+
+### M3 — `DefRewrite` data-form vs replace-form option sets drifted
+Confirmed: `def_rewrite_impl` handles `attributes` but not `select_count`;
+`wire_rewrite_replace` handles `select_count` but **drops `attributes`** — each
+silently ignores (`_ => {}`) the other's key.
+- [ ] Extract one `parse_rewrite_options(kind, opts)` filling the full
+  `RewriteOptions` superset; replace-form only adds the closure.
+
+### M4 — pgfmath emits the literal `"NaN"` into `\pgfmathresult`
+Confirmed: `format_parse_result` (`pgfmath_code_tex.rs:1007`) lacks the
+`is_nan()/is_infinite()→"0.0"` guard its sibling `pgfmath_result_str` (L21)
+has; `sqrt(-1)`/`ln(-1)`/`asin(5)` → `"NaN"`, breaking downstream dimen reads.
+- [ ] Add the same NaN/inf early-return to `format_parse_result`.
+
+### m1 — exemption tables keyed by bare `file_stem` (latent collision)
+`INTENTIONALLY_FAILING`/`ERROR_DEBT` match `tex_file.file_stem()`, which is NOT
+unique across the suite's globbed dirs. Currently safe (the 4 names aren't
+duplicated; only 3 unrelated dup stems exist) but a future `glossary.tex`/etc.
+elsewhere would silently inherit the exemption (an ERROR_DEBT collision would
+mask a real regression).
+- [ ] Dir-qualify the keys (or assert stem-uniqueness at startup).
+
+### m2 — `[error-debt]`/`[intentional-fail]` logs swallowed on PASS
+libtest captures stdout/stderr and only replays on FAILURE, so the
+"review-for-removal once clean everywhere" `[error-debt] … 0 errors` line is
+never seen in a normal `cargo test`. The "tracked in log messages" goal is
+unmet for passing tests.
+- [ ] Surface via a capture-surviving channel (a file like the SIGSEGV handler,
+  or `log` at warn), or document/run CI with `-- --nocapture`.
+
+### m3 — silent error-swallowing in node-write proxies
+`engine.rs` `setAttribute`/`setContent` on `NodeProxy` discard the libxml
+`Result` (`let _ = …`); `Tag` coerces `as_bool().ok()` to `None`. A failed
+write from a rewrite-replace body vanishes.
+- [ ] Surface via `rhai_err` (or at least `log::debug!` the discard).
+
+### m4 — DRY (no correctness impact, but drift-prone)
+- [ ] `props → Map` marshal duplicated 3× (`RefStepCounter`/`RefStepID`/
+  `RefCurrentID`) → extract `props_to_map`.
+- [ ] Boundary error conversion has two spellings — inline
+  `Box::<EvalAltResult>::from(e.to_string())` vs the `rhai_err` helper; route
+  all through `rhai_err` so error formatting has one source.
+- [ ] Option-coercion policy differs across `expandable_/primitive_/
+  math_options_from_map` and the builder's `OptionValue` (`bounded: "yes"` /
+  `protected: 1` mean different things) → one shared coercion helper.
+- [ ] Adding a constructor hook needs edits in 3 places (`shared_hook_setters!`,
+  `BindingBuilder` trait, `impl_binding_builder!`) — collapse.
+
+### m5 — `NodeProxy` is a UAF footgun if held past the call
+`NodeProxy` wraps a live libxml `Node` (Drop=`xmlFreeNode`); a script that
+stows it in a variable and uses it after `unlink()`/end-of-conversion is a
+C-level UAF (cf. WISDOM #58). `DocProxy`/`WhatsitProxy` are pointer-free and
+safe; only `NodeProxy` carries a handle.
+- [ ] Generation-stamp `NodeProxy` (stale use → clean error) and/or doc-note.
+
+### Verified SOUND / not-bugs (don't re-investigate)
+- read-only `*const Whatsit→*mut` casts (reversion/sizer): never mutated;
+  `setProperty` errors in read-only contexts. Sound.
+- `afterDigest` whatsit re-derivation: benign (outer reborrow not used after).
+- winnow `repeat(0.., op)` non-termination: every `op` consumes ≥1 byte;
+  245k-input fuzz: zero panics/hangs.
+- `def_parser` probe-and-commit: correct (throwaway copy, commit only on Ok).
+- `split_keyval_source`: total, no panic (minor: silently absorbs stray `}`).
+- `parse_replacement` compile-time `panic!` on malformed template: acceptable
+  (only fed compile-constant templates). Latent gap: `##` at content position
+  is unparseable (Perl allows it) — no active template uses it.
+
+---
+
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
 > **✅ PARITY-TRACK Rust-only pool DRAINED across the sampled corpus (capstone, 2026-06-01).**
