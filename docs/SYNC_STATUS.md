@@ -3268,6 +3268,183 @@ Found via a fresh sample of the offset-18 remaining slice.
     post-fix "xy worker re-entrance → empty" was a stale-state artifact of
     the caught FATAL, not reproducible on the clean binary.
 
+### Round-37 (2026-06-10): PR #249 SENIOR REVIEW — handoff of actionable findings (7-angle fan-out + adversarial verification)
+
+A full critical review of the `large-scale-testing-round-5` branch (110 commits,
+138 files, ~15.4k diff lines) ahead of merge. Method: 7 independent finder
+angles (line-by-line, removed-behavior, cross-file, reuse, simplification,
+efficiency, altitude) → 23 candidates → adversarial verification (each verdict
+backed by quoted code or live repro; 2 candidates REFUTED and dropped — the
+"giant uniform table trips the stomach cycle guard" scenario is impossible
+because every cell digests into a FRESH `new_local_box_list` and is drained
+per-cell, and "stomach-guard messages missing from `resource_fatal_from_message`"
+is unreachable because math-parser semantics never enter the stomach).
+**Merge verdict: request changes — P0 must land before merge; P1 before the
+next canvas sweep; P2/P3 as tracked follow-ups.** The branch's wins (canvas_3
+16/16, OOM root-causes, guard architecture) are real and validated; the items
+below are the cost of the speed.
+
+**P0 — regression, must fix before merge:**
+
+1. **NUL-byte attribute panic (LIVE-REPRO'D conversion killer).** Commit
+   `88f8bd44ce` changed NUL's default catcode IGNORE→OTHER (Perl parity for
+   `` `^^@ ``) but the claim "stray NULs are stripped at XML serialization"
+   only holds for TEXT sinks (`open_text_internal`). The ATTRIBUTE sink does
+   not strip: `$a\0b$` (NUL inside math — exactly the stray-NUL-in-`.bbl`
+   class the old IGNORE guarded, witness astro-ph0004127) reaches
+   `Document::set_attribute` → libxml `CString::new(value).unwrap()` →
+   **panic at libxml node.rs:639, whole conversion dies** (process abort
+   under the maxperf `panic=abort` distribution build). Master converted the
+   same input cleanly. Fix: sanitize XML-invalid control chars (at minimum
+   NUL) in `Document::set_attribute` (and audit text sinks for the full
+   XML-1.0 invalid-char class) — keeping catcode-12 Perl parity while making
+   serialization total. Add `$a\0b$` as a regression test.
+
+**P1 — canvas-risk, fix before the next large sweep:**
+
+2. **Token-progress accounting inflated; limits not recalibrated.** On master
+   only `read_token` counted progress — `read_x_token` ("most tokens pass
+   through here") and `read_balanced` counted ZERO. The guard-bypass fix
+   (`4b1f104278`) now counts all three loops, so the same document accrues
+   a large multiple of master's progress (~1x plain text, 2-4x+
+   macro-heavy), but `token_limit=100M` (comment: "30+ tikzpictures need
+   ~80M" — measured under OLD counting), ar5iv's `tokenlimit=249999999`, and
+   `CYCLE_GUARD_ACTIVATE=12M` were all calibrated against the old counting.
+   Risk: legit heavy tikz/pgf papers newly die with
+   `Fatal:Timeout:TokenLimit`, and far more papers enter the cycle-guard's
+   fingerprint-recording regime. Action: measure progress-vs-master on ~10
+   heavy known-good papers, recalibrate the three constants (or count
+   progress at one chokepoint only), THEN re-run a canvas stage as the gate.
+
+3. **Gullet cycle guard has a verified uniform-run false positive.**
+   `cycle_guard::detect()` has no period-1 suppression (the
+   `detects_period_one` unit test proves 300 identical fingerprints fire),
+   and `Token::cycle_fingerprint` = catcode+text only. Any ≥356-token run of
+   identical tokens read past the 12M gate with no intervening
+   `reading_from_mouth` — e.g. a verbatim listing's `====…` separator row, or
+   a register-driven `\loop` with a ≤10-token body iterated 100+ times
+   (register values are invisible to the fingerprint) — fires a spurious
+   `Fatal:Timeout:Recursion`. Made more reachable by item 2 (gate crossed
+   sooner). Action: require the window to contain ≥2 distinct fingerprints
+   (uniform runs are textually legitimate), or require pushback to be
+   non-draining across the window (a real loop re-injects; a literal run
+   consumes mouth input).
+
+4. **`parse_marpa`'s resource-fatal abort is dead code — the phantom fatal is
+   only half-fixed.** The new `return Err(err)` arms never propagate:
+   `parse_lexemes` (parser.rs:2128) maps Err→`Ok(None)` and `parse_single`
+   (parser.rs:1404) drops Errs via `if let Ok(Some(...))`. Net behavior: the
+   `Fatal:` line now appears (good) but math parsing continues
+   formula-by-formula, each re-tripping formula re-grinding its full budget
+   (progress is reset to 0 by `reading_from_mouth`'s error path) and
+   emitting a duplicate `Fatal:` line. Also: the
+   `"Memory budget exceeded"` match arm is unreachable (stomach errors
+   can't flow into these Err arms — verified) and the string-substring
+   classification is fragile (rewording a gullet message silently reverts
+   the fix; no test ties the strings together). Action: thread the abort
+   through `parse_lexemes`/`parse_single` (or set an abort flag the
+   per-formula loop checks); replace substring matching with structured
+   error transport through the marpa boundary (carry
+   `latexml_core::common::error::Error` as a source, or a thread-local
+   `last_resource_fatal` set by the `Fatal!` macro); add a test pinning the
+   message↔classifier coupling until then.
+
+**P2 — guard-architecture hardening (follow-up PR):**
+
+5. **`LATEXML_TOKEN_LIMIT=0` silently disables the cycle guard too** —
+   `g.progress += 1` is nested inside `if let Some(limit) = g.token_limit`,
+   so limit-off ⇒ progress frozen ⇒ the `progress > 12M` activation gate
+   never opens. Same freeze applies during `ini_tex` format-init
+   (`set_token_limit(None)`). Trivial fix: increment progress
+   unconditionally; keep only the comparison conditional.
+
+6. **Stomach guards are inert on `digest()`/`raw_tex` paths, and self-disable
+   once pending.** All four stomach guards only SET `pending_cycle_fatal`;
+   the sole raiser is `check_timeout`, whose only call site is
+   `digest_next_body`. `stomach::digest()` (constructor-arg digestion) and
+   `raw_tex` never call it — and `cycle_guard_record` early-returns once
+   `pending.is_some()`, so after first detection ALL stomach guards (count,
+   byte, cycle) stop checking while `box_list` keeps growing; the RSS soft
+   cap also lives in `check_timeout` so it is equally dead there. (Narrowed
+   by verification: gullet token/pushback limits remain live on those paths,
+   and many boxing runaways re-enter `digest_next_body` via constructors —
+   the gap is pushes strictly inside `digest()`/`raw_tex`.) Action: call
+   `check_timeout` from `digest()`'s and `raw_tex`'s loops (or raise at
+   detection point), and don't gate further guard checks on
+   `pending.is_none()`.
+
+7. **Mouth-boundary `cycle_guard.reset()` should be save/restore.** The reset
+   (math0402448 false-positive fix) wipes the OUTER context's history on
+   every `reading_from_mouth` entry (~164 `do_expand` call sites alone), so a
+   genuine runaway whose loop body contains any `do_expand` (e.g. an
+   environment-recursion stepping `\theequation`) is now invisible to the
+   gullet cycle guard forever — only `token_limit` catches it, after minutes
+   of grinding. Save/restore (push/pop) the guard state per mouth so outer
+   periodicity survives inner expansions.
+
+8. **All stomach guard breaches raise as `Fatal:Stomach:Recursion`** — the 2M
+   count cap, 3.2GB byte budget, and 100k depth cap are size events, not
+   recursion; canvas/telemetry clustering on `target:category` cannot
+   distinguish byte-budget regressions from genuine cycles. Use distinct
+   categories (e.g. `Stomach:MemoryBudget`, precedent at
+   `Timeout:MemoryBudget`).
+
+9. **Hot-path borrow regression + checkpoint placement drift.** `read_token`
+   now takes 3 RefCell borrows/token (master: 1, with a comment explicitly
+   demanding the single-borrow shape); `read_x_token`/`read_balanced` take 2
+   (master: 0). Sequential (no panic risk) but on the engine's hottest loops;
+   single-paper timing showed no regression, but the `docs/PERFORMANCE.md`
+   band check was NOT run. Also `read_token` runs `cycle_guard_checkpoint`
+   after align-state bookkeeping while the other two run it before the
+   `\dont_expand` branch — undocumented fingerprint-stream asymmetry. Action:
+   merge the checkpoint into each loop's existing borrow (checkpoint returns
+   the activation state), align placement, run the perf bands.
+
+**P3 — hygiene/altitude (cheap, batchable):**
+
+10. **Test-helper duplication is a signal-integrity drift risk**:
+    `error_count()` (the lax `Error:<class>:` filter — the project's #1
+    signal-integrity concern) now has copies in 06_cluster_regressions and
+    57_pgfplots_units; `dump_available()`/`kpse_has()` duplicated across
+    57/59 (and `dump_available` re-implements
+    `dump_paths::available_years_in_dir`); all five new tests repeat the
+    Converter boilerplate. Hoist into a shared test util.
+11. `estimate_bytes_into` duplicates `fingerprint_into`'s budgeted traversal —
+    one budgeted visitor parameterized over an accumulator keeps a single
+    source of truth when `DigestedData` grows a variant.
+12. Third hand-rolled `/proc` RSS reader (`watchdog::process_rss_kb`,
+    stomach `check_timeout`, cortex_worker VmHWM) — make stomach call the
+    watchdog helper so the future macOS/Windows port is one seam.
+13. `LATEXML_DEBUG_FATAL` probed in two idioms (Lazy in gullet, inline in
+    error.rs) — export one `debug_fatal_enabled()`; relabel the
+    `// TEMP diagnostic` comment on the (permanent, env-gated)
+    `[membudget]` dump.
+14. `\href protected => true` is a deliberate, well-tested Perl divergence but
+    is NOT recorded in `docs/OXIDIZED_DESIGN.md` (the canonical divergence
+    registry per CLAUDE.md) — add it (likewise the natbib no-expand guard and
+    the NUL catcode change once P0 lands).
+15. **natbib `has_text_symbol` blocklist is a consumer-level patch on an
+    engine bug**: the root cause (T1 `\@changed@cmd` encoding-dispatcher
+    re-injection looping under FULL expansion where Perl's terminates) is
+    untouched, so any `\DeclareTextSymbol` outside the 21-name list (e.g.
+    textcomp's) re-triggers the loop in bibitem labels, and every OTHER
+    full-expansion consumer of author text remains exposed. Track the
+    dispatcher fix (same family as the `\href protected` fix); delete the
+    blocklist when it lands.
+16. `line_fontmap`/`lcircle_fontmap`: add a unit test asserting every
+    TFM-populated slot maps to `Some` (cross-check via `tftopl` output
+    committed as a fixture, or a hardcoded slot list) — a missed slot
+    silently resurrects the zero-width `\@whiledim` OOM for that slope.
+17. Five new docs are not in CLAUDE.md's doc index;
+    `EXPECTED_ID_XMREF_DESIGN.md` is undated but substantially a
+    point-in-time Phase-0 study — date it or split the living design from
+    the snapshot.
+18. (Noted, no action) `lookup_font` try_borrow→None: verification found 6
+    callers still `.unwrap()` (loud), and the silent-defaulting callers are
+    only reachable via the Display/revert re-entrancy the fix targeted — the
+    claimed digestion-path drift is not constructible today; add a comment
+    warning future callers.
+
 ### Round-37 (2026-06-09): math0402448 phantom fatal ROOT-CAUSED — cycle-guard false positive + ALL gullet guards bypassed by `read_balanced`/`read_x_token` (now fixed); canvas_3 = 16/16 CLEAN
 
 **math0402448 (amsart + xy-pic, 3464 formulae): "Conversion failed: 1 fatal
