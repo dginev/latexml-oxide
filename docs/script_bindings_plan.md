@@ -408,3 +408,12 @@ routes through the builder) — and both produce identical behaviour. This is th
 mechanical guard: evolve `setup_binding_language.rs` freely, and the test fails
 the moment the Rhai layer falls behind. The same pattern extends to `MacroBuilder`/
 `PrimitiveBuilder`/etc. as those front-ends are unified.
+
+## Default-on cost (measured 2026-06-09)
+
+`runtime-bindings` default-on adds **+3.36 MB (+7.3%)** to the release
+binary (45.82 → 49.18 MB; rhai built with `no_module`/`no_time`, which
+trimmed ~0.2 MB — the remainder is the core interpreter). Accepted as the
+price of downstream customize-without-recompiling (user decision); the
+maxperf/fat-LTO distribution build compresses the delta further. Opting out:
+`--no-default-features` (the old distribution recipe) drops it.
