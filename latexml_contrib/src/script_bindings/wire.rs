@@ -144,6 +144,7 @@ pub(super) trait BindingBuilder: Sized {
   fn properties(self, props: PropertiesClosure) -> Self;
   fn reversion(self, rev: Reversion) -> Self;
   fn font(self, font: FontDirective) -> Self;
+  fn sizer(self, sizer: latexml_core::definition::SizingClosure) -> Self;
   // (`install` stays inherent on each builder: call sites get the concrete
   // type back from `apply_opts`, so a trait method would be dead code.)
 }
@@ -171,6 +172,9 @@ macro_rules! impl_binding_builder {
       fn properties(self, props: PropertiesClosure) -> Self { <$t>::properties(self, props) }
       fn reversion(self, rev: Reversion) -> Self { <$t>::reversion(self, rev) }
       fn font(self, font: FontDirective) -> Self { <$t>::font(self, font) }
+      fn sizer(self, sizer: latexml_core::definition::SizingClosure) -> Self {
+        <$t>::sizer(self, sizer)
+      }
     }
   };
 }
@@ -212,6 +216,16 @@ pub(super) fn apply_opts<B: BindingBuilder>(
         "beforeConstruct" => {
           builder =
             builder.before_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        "reversion" => {
+          builder = builder.reversion(Reversion::Closure(reversion_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+          )));
+        },
+        "sizer" => {
+          builder = builder.sizer(sizer_trampoline(fp, engine.clone(), ast.clone()));
         },
         "afterConstruct" => {
           builder =
@@ -276,7 +290,7 @@ pub(super) fn after_digest_trampoline(
   ast: Rc<AST>,
 ) -> DigestionClosure {
   Rc::new(move |w: &mut Whatsit| -> Result<Vec<Digested>> {
-    WHATSIT_CTX.with(|c| c.borrow_mut().push(w as *mut Whatsit));
+    WHATSIT_CTX.with(|c| c.borrow_mut().push((w as *mut Whatsit, true)));
     let r = fp.call::<Dynamic>(&engine, &ast, ());
     WHATSIT_CTX.with(|c| {
       c.borrow_mut().pop();
@@ -572,4 +586,95 @@ pub(super) fn wire_constructor_template(proto: &str, template: String) -> Result
   ConstructorBuilder::new(proto)?
     .replacement(template_replacement(&template)?)
     .install()
+}
+
+/// Build a closure-form `reversion` trampoline: the body runs with the whatsit
+/// published READ-ONLY (argString/propertyString available) and each digested
+/// arg as its TeX-source string; its returned string is the reversion TeX.
+pub(super) fn reversion_trampoline(
+  fp: FnPtr,
+  engine: Rc<Engine>,
+  ast: Rc<AST>,
+) -> latexml_core::definition::DigestedReversionClosure {
+  Rc::new(move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
+    WHATSIT_CTX.with(|c| c.borrow_mut().push((w as *const Whatsit as *mut Whatsit, false)));
+    let dyn_args: Vec<Dynamic> = args
+      .iter()
+      .map(|a| match a {
+        Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
+        None => Dynamic::UNIT,
+      })
+      .collect();
+    let result = fp.call::<Dynamic>(&engine, &ast, dyn_args);
+    WHATSIT_CTX.with(|c| {
+      c.borrow_mut().pop();
+    });
+    let ret = result.map_err(|e| Error::from(format!("script reversion: {e}")))?;
+    Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+  })
+}
+
+/// Build a `sizer` trampoline: the body sees the read-only whatsit and returns
+/// "w;h;d" dimension specs (e.g. "10pt;8pt;2pt").
+pub(super) fn sizer_trampoline(
+  fp: FnPtr,
+  engine: Rc<Engine>,
+  ast: Rc<AST>,
+) -> latexml_core::definition::SizingClosure {
+  Rc::new(move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
+    WHATSIT_CTX.with(|c| c.borrow_mut().push((w as *const Whatsit as *mut Whatsit, false)));
+    let result = fp.call::<Dynamic>(&engine, &ast, ());
+    WHATSIT_CTX.with(|c| {
+      c.borrow_mut().pop();
+    });
+    let ret = result.map_err(|e| Error::from(format!("script sizer: {e}")))?;
+    let spec = dynamic_to_string(ret);
+    let mut parts = spec.split(';');
+    let mut next_dim = || -> Result<Dimension> {
+      Ok(Dimension::new_f64(Dimension::spec_to_f64(
+        parts.next().unwrap_or("0pt").trim(),
+      )?))
+    };
+    Ok((next_dim()?, next_dim()?, next_dim()?))
+  })
+}
+
+/// The `DefAccent!` lowering: register the combiner mapping and the protected
+/// `\<accent>` macro expanding to `\lx@applyaccent`.
+pub(super) fn def_accent_impl(
+  accent: &str,
+  combining: &str,
+  standalone: &str,
+  below: bool,
+) -> Result<()> {
+  use latexml_core::parameter::{Parameter, Parameters};
+  let comb_char = combining
+    .chars()
+    .next()
+    .ok_or_else(|| Error::from("DefAccent: empty combining char"))?;
+  let map = if below { "accent_combiner_below" } else { "accent_combiner_above" };
+  latexml_core::state::assign_mapping(map, standalone, Some(combining.to_string()));
+  let plain_param = Some(Parameters::new(vec![
+    Parameter {
+      name: arena::pin_static("Plain"),
+      spec: arena::pin_static("{}"),
+      ..Parameter::default()
+    }
+    .init()?,
+  ]));
+  def_macro(
+    latexml_core::T_CS!(accent.to_string()),
+    plain_param,
+    ExpansionBody::Tokens(latexml_core::Tokens!(
+      latexml_core::T_CS!("\\lx@applyaccent"),
+      latexml_core::T_OTHER!(accent.to_string()),
+      latexml_core::T_OTHER!(comb_char.to_string()),
+      latexml_core::T_OTHER!(standalone.to_string()),
+      latexml_core::T_BEGIN!(),
+      latexml_core::T_ARG!(1),
+      latexml_core::T_END!()
+    )),
+    Some(ExpandableOptions { protected: true, ..ExpandableOptions::default() }),
+  )?;
+  Ok(())
 }

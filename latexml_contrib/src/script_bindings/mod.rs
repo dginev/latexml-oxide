@@ -118,7 +118,11 @@ thread_local! {
   /// Active-context stack for whatsit-receiving hook closures (`afterDigest`, …).
   /// Lets a parameterless hook body reach the in-flight whatsit via `whatsit()` —
   /// referenced only when needed (the "omit as implied" model).
-  static WHATSIT_CTX: RefCell<Vec<*mut Whatsit>> = const { RefCell::new(Vec::new()) };
+  /// Entries are (whatsit pointer, mutable?). Digestion hooks (`afterDigest`,
+  /// `properties`-adjacent) publish mutable whatsits; construction hooks
+  /// (`before/afterConstruct`, `reversion`, `sizer`) publish READ-ONLY ones —
+  /// `setProperty` errors there instead of mutating through a shared ref.
+  static WHATSIT_CTX: RefCell<Vec<(*mut Whatsit, bool)>> = const { RefCell::new(Vec::new()) };
 }
 
 #[derive(Clone, Copy)]
@@ -178,6 +182,11 @@ struct WhatsitProxy;
 
 /// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
 fn current_whatsit() -> std::result::Result<*mut Whatsit, Box<EvalAltResult>> {
+  current_whatsit_entry().map(|(w, _)| w)
+}
+
+/// The top whatsit entry incl. its mutability flag.
+fn current_whatsit_entry() -> std::result::Result<(*mut Whatsit, bool), Box<EvalAltResult>> {
   WHATSIT_CTX.with(|c| {
     c.borrow()
       .last()

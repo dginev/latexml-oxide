@@ -90,6 +90,12 @@ macro_rules! shared_hook_setters {
       self.options.font = Some(font);
       self
     }
+
+    /// Set the sizer (`sizer => sub {…}` computing (width, height, depth)).
+    pub fn sizer(mut self, sizer: crate::definition::SizingClosure) -> Self {
+      self.options.sizer = Some(sizer);
+      self
+    }
   };
 }
 

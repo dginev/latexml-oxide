@@ -186,6 +186,15 @@ const SAMPLE: &str = r##"
   DefMacro("\\kvprobe OptionalKeyVals:RH {}", |kv, body| {
     "(" + kv + ")" + body
   });
+
+  // sizer + closure-form reversion (read-only whatsit context in both).
+  DefConstructor("\\sized{}", "<ltx:text class=\"sz\">#1</ltx:text>", #{
+    sizer: || "10pt;8pt;2pt",
+    reversion: |x| "\\sized{" + x + "}"
+  });
+
+  // DefAccent: \racc{o} routes through \lx@applyaccent (combining acute).
+  DefAccent("\\racc", "́", "´");
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -216,7 +225,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
-    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} ",
+    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -352,6 +361,16 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("rust") && xml.contains("KVB"),
     "OptionalKeyVals (\\kvprobe) marshaling failed; xml=\n{xml}"
+  );
+  // sizer + closure reversion wire without breaking construction.
+  assert!(
+    xml.contains("class=\"sz\"") && xml.contains("SZ"),
+    "sizer/closure-reversion constructor (\\sized) failed; xml=\n{xml}"
+  );
+  // DefAccent through \lx@applyaccent: o + combining acute.
+  assert!(
+    xml.contains("ó") || xml.contains("o\u{0301}"),
+    "DefAccent (\\racc) failed; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

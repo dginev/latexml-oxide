@@ -474,6 +474,30 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // DefAccent: combining/standalone accent chars + the protected applyaccent
+  // macro (mirrors the DefAccent! lowering; below=true for under-accents).
+  engine.register_fn(
+    "DefAccent",
+    |accent: &str, combining: &str, standalone: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      def_accent_impl(accent, combining, standalone, false).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DefAccent",
+    |accent: &str,
+     combining: &str,
+     standalone: &str,
+     below: bool|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      def_accent_impl(accent, combining, standalone, below).map_err(rhai_err)
+    },
+  );
+
+  // Minimal gullet seam: skip following spaces mid-expansion.
+  engine.register_fn("SkipSpaces", || -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::gullet::skip_spaces().map_err(rhai_err)
+  });
+
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
   engine.register_fn(
     "RequirePackage",
@@ -750,7 +774,13 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "setProperty",
     |_w: &mut WhatsitProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let w = unsafe { &mut *current_whatsit()? };
+      let (ptr, mutable) = current_whatsit_entry()?;
+      if !mutable {
+        return Err(Box::<EvalAltResult>::from(
+          "setProperty in a construction hook (whatsit is read-only there)",
+        ));
+      }
+      let w = unsafe { &mut *ptr };
       w.set_property(key, val.to_string());
       Ok(())
     },
