@@ -634,315 +634,302 @@ fn is_user_function(name: &str) -> bool {
 //   simplefactor: ( formula ) | PREFIX simplefactor | FUNCTION(...) |
 //                 FUNCTION0 | NUMBER UNIT | NUMBER | REGISTER
 
-struct PgfMathParser<'a> {
-  input:          &'a [u8],
-  pos:            usize,
-  /// Set to true when the parsed expression contains dimension units (pt, cm, etc.)
-  /// Used by tikz's \tikz@checkunit via \ifpgfmathunitsdeclared
-  units_declared: bool,
+/// Read the global `\ifpgfmathunitsdeclared` boolean — true iff the most
+/// recent (possibly nested) evaluation parsed a unit'd value. The winnow
+/// grammar inherits this after a user function/constant via
+/// `pgfmath_grammar::absorb_units_flag`; see `pgfmath_apply_user`, which resets
+/// the flag before digesting each user body. Mirrors Perl, where
+/// `\ifpgfmathunitsdeclared` is a persistent global threaded through nested
+/// evaluations. Lives at file scope (not in the grammar module) because
+/// `if_condition` / `T_CS!` come from the crate prelude here.
+fn pgfmath_units_declared_global() -> bool {
+  if_condition(&T_CS!("\\ifpgfmathunitsdeclared")).unwrap_or(None) == Some(true)
 }
 
-impl<'a> PgfMathParser<'a> {
-  fn new(input: &'a str) -> Self {
-    Self {
-      input:          input.as_bytes(),
-      pos:            0,
-      units_declared: false,
-    }
+// ── pgfmath grammar (winnow; #171 family) ────────────────────────────────
+// A 1:1 port of the battle-tested hand-written recdescent above-replaced
+// (which itself mirrored Perl pgfmath.code.tex.ltxml's Parse::RecDescent
+// grammar, `<skip:'[\s\{\}]*'>`), preserving its post-port improvements —
+// gated by the 64-expression golden corpus + the 85_pgf/86_tikz suites.
+// State (`units_declared`) rides the winnow `Stateful` input and is NOT
+// rolled back on backtrack, matching the original's flag semantics.
+mod pgfmath_grammar {
+  use super::{pgfmath_apply_fn, pgfmath_cmp_op, pgfmath_convert, pgfmath_divisor,
+              pgfmath_factorial, pgfmath_register_lookup, is_builtin_constant,
+              is_builtin_function, is_user_constant, is_user_function, PGF_UNITS};
+  use winnow::error::{ContextError, ErrMode};
+  use winnow::prelude::*;
+  use winnow::stream::Stream;
+
+  pub(super) type In<'a> = winnow::Stateful<&'a str, Flags>;
+
+  #[derive(Debug, Default, Clone)]
+  pub(super) struct Flags {
+    pub units_declared: bool,
   }
 
-  /// Skip whitespace and braces (Perl: <skip:'[\s\{\}]*'>)
-  fn skip(&mut self) {
-    while self.pos < self.input.len() {
-      match self.input[self.pos] {
-        b' ' | b'\t' | b'\n' | b'\r' | b'{' | b'}' => self.pos += 1,
-        _ => break,
-      }
-    }
-  }
+  fn fail<T>() -> ModalResult<T> { Err(ErrMode::Backtrack(ContextError::new())) }
 
-  fn try_char(&mut self, c: u8) -> bool {
-    self.skip();
-    if self.pos < self.input.len() && self.input[self.pos] == c {
-      self.pos += 1;
+  /// The grammar-wide skip: `[\s\{\}]*`.
+  fn sb(i: &mut In) {
+    let n = i
+      .input
+      .bytes()
+      .take_while(|b| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | b'{' | b'}'))
+      .count();
+    i.input = &i.input[n..];
+  }
+  fn first(i: &In) -> Option<u8> { i.input.as_bytes().first().copied() }
+  fn second(i: &In) -> Option<u8> { i.input.as_bytes().get(1).copied() }
+  fn bump(i: &mut In, n: usize) { i.input = &i.input[n..]; }
+  fn eat(i: &mut In, b: u8) -> bool {
+    sb(i);
+    if first(i) == Some(b) {
+      bump(i, 1);
       true
     } else {
       false
     }
   }
 
-  fn remaining_trimmed(&self) -> &str {
-    let mut p = self.pos;
-    while p < self.input.len() {
-      match self.input[p] {
-        b' ' | b'\t' | b'\n' | b'\r' | b'{' | b'}' => p += 1,
-        _ => break,
-      }
+  /// formula := expr ('?' expr ':' expr)? | expr CMPOP expr
+  pub(super) fn formula(i: &mut In) -> ModalResult<f64> {
+    let left = expr(i)?;
+    sb(i);
+    if eat(i, b'?') {
+      let then_val = expr(i)?;
+      sb(i);
+      eat(i, b':');
+      let else_val = expr(i)?;
+      return Ok(if left != 0.0 { then_val } else { else_val });
     }
-    std::str::from_utf8(&self.input[p..]).unwrap_or("")
+    let cp = i.checkpoint();
+    if let Some(op) = cmp_op(i) {
+      if let Ok(right) = expr(i) {
+        return Ok(pgfmath_cmp_op(&op, left, right));
+      }
+      i.reset(&cp);
+    }
+    Ok(left)
   }
 
-  // ---- Grammar Rules ----
-
-  /// formula: expr ? expr : expr | expr CMP expr | expr
-  fn formula(&mut self) -> Option<f64> {
-    let left = self.expr()?;
-    self.skip();
-    // Ternary: expr ? expr : expr
-    if self.try_char(b'?') {
-      let then_val = self.expr()?;
-      self.skip();
-      self.try_char(b':');
-      let else_val = self.expr()?;
-      return Some(if left != 0.0 { then_val } else { else_val });
-    }
-    // Comparison operators
-    let saved = self.pos;
-    if let Some(op) = self.try_cmp_op() {
-      if let Some(right) = self.expr() {
-        return Some(pgfmath_cmp_op(&op, left, right));
-      }
-      self.pos = saved;
-    }
-    Some(left)
-  }
-
-  /// Try to match a comparison operator (Perl L726)
-  fn try_cmp_op(&mut self) -> Option<String> {
-    self.skip();
-    if self.pos >= self.input.len() {
-      return None;
-    }
-    // Two-char operators
-    if self.pos + 1 < self.input.len() {
-      let two = [self.input[self.pos], self.input[self.pos + 1]];
-      let op = match &two {
-        b"==" | b"!=" | b">=" | b"<=" | b"&&" | b"||" => {
-          Some(std::str::from_utf8(&two).unwrap().to_string())
-        },
-        _ => None,
-      };
-      if let Some(op) = op {
-        self.pos += 2;
+  fn cmp_op(i: &mut In) -> Option<String> {
+    sb(i);
+    let b = i.input.as_bytes();
+    if b.len() >= 2 {
+      if let two @ (b"==" | b"!=" | b">=" | b"<=" | b"&&" | b"||") = &[b[0], b[1]] {
+        let op = std::str::from_utf8(two.as_slice()).unwrap().to_string();
+        bump(i, 2);
         return Some(op);
       }
     }
-    // Single-char: > <
-    match self.input[self.pos] {
-      b'>' | b'<' => {
-        let op = (self.input[self.pos] as char).to_string();
-        self.pos += 1;
+    match b.first() {
+      Some(c @ (b'>' | b'<')) => {
+        let op = (*c as char).to_string();
+        bump(i, 1);
         Some(op)
       },
       _ => None,
     }
   }
 
-  /// expr: term (ADDOP term)*
-  fn expr(&mut self) -> Option<f64> {
-    let mut result = self.term()?;
+  /// expr := term (('+'|'-') term)*
+  fn expr(i: &mut In) -> ModalResult<f64> {
+    let mut result = term(i)?;
     loop {
-      self.skip();
-      if self.pos >= self.input.len() {
-        break;
-      }
-      match self.input[self.pos] {
-        b'+' => {
-          self.pos += 1;
-          result += self.term()?;
+      sb(i);
+      match first(i) {
+        Some(b'+') => {
+          bump(i, 1);
+          result += term(i)?;
         },
-        b'-' => {
-          self.pos += 1;
-          result -= self.term()?;
+        Some(b'-') => {
+          bump(i, 1);
+          result -= term(i)?;
         },
         _ => break,
       }
     }
-    Some(result)
+    Ok(result)
   }
 
-  /// term: factor (MULOP factor)*
-  fn term(&mut self) -> Option<f64> {
-    let mut result = self.factor()?;
+  /// term := factor (('*'|'/') factor)*
+  fn term(i: &mut In) -> ModalResult<f64> {
+    let mut result = factor(i)?;
     loop {
-      self.skip();
-      if self.pos >= self.input.len() {
-        break;
-      }
-      match self.input[self.pos] {
-        b'*' => {
-          self.pos += 1;
-          result *= self.factor()?;
+      sb(i);
+      match first(i) {
+        Some(b'*') => {
+          bump(i, 1);
+          result *= factor(i)?;
         },
-        b'/' => {
-          self.pos += 1;
-          result /= pgfmath_divisor(self.factor()?);
+        Some(b'/') => {
+          bump(i, 1);
+          result /= pgfmath_divisor(factor(i)?);
         },
         _ => break,
       }
     }
-    Some(result)
+    Ok(result)
   }
 
-  /// factor: simplefactor ^ simplefactor | simplefactor postfix*
-  fn factor(&mut self) -> Option<f64> {
-    let base = self.simplefactor()?;
-    self.skip();
-    // Power
-    if self.try_char(b'^') {
-      let exp = self.simplefactor()?;
-      return Some(base.powf(exp));
+  /// factor := simplefactor '^' simplefactor | simplefactor ('!'|'r')*
+  fn factor(i: &mut In) -> ModalResult<f64> {
+    let base = simplefactor(i)?;
+    sb(i);
+    if eat(i, b'^') {
+      let exp = simplefactor(i)?;
+      return Ok(base.powf(exp));
     }
-    // Postfix operators
     let mut result = base;
     loop {
-      self.skip();
-      if self.pos >= self.input.len() {
-        break;
-      }
-      match self.input[self.pos] {
-        b'!' => {
-          // Avoid matching != (comparison)
-          if self.pos + 1 < self.input.len() && self.input[self.pos + 1] == b'=' {
-            break;
-          }
-          self.pos += 1;
+      sb(i);
+      match first(i) {
+        Some(b'!') if second(i) != Some(b'=') => {
+          bump(i, 1);
           result = pgfmath_factorial(result as i64);
         },
-        b'r' => {
-          // Only if not followed by letter (avoid matching identifiers)
-          if self.pos + 1 < self.input.len() && self.input[self.pos + 1].is_ascii_alphabetic() {
-            break;
-          }
-          self.pos += 1;
+        Some(b'r') if !second(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) => {
+          bump(i, 1);
           result = result.to_degrees();
         },
         _ => break,
       }
     }
-    Some(result)
+    Ok(result)
   }
 
-  /// simplefactor — the core atom parser
-  fn simplefactor(&mut self) -> Option<f64> {
-    self.skip();
-    if self.pos >= self.input.len() {
-      return None;
-    }
-
-    // 1. Parenthesized expression: ( formula )
-    if self.input[self.pos] == b'(' {
-      self.pos += 1;
-      let val = self.formula()?;
-      self.skip();
-      self.try_char(b')'); // Perl: allow unclosed ) at end
-      return Some(val);
-    }
-
-    // 2. Prefix operators: - + !
-    match self.input[self.pos] {
-      b'-' => {
-        self.pos += 1;
-        return Some(-self.simplefactor()?);
+  /// simplefactor — the atom: parens, prefix ops, numbers (with unit/register
+  /// suffix), registers, identifiers (functions/constants), lone dot.
+  fn simplefactor(i: &mut In) -> ModalResult<f64> {
+    sb(i);
+    match first(i) {
+      None => return fail(),
+      Some(b'(') => {
+        bump(i, 1);
+        let val = formula(i)?;
+        sb(i);
+        eat(i, b')'); // forgive unclosed at end (Perl)
+        return Ok(val);
       },
-      b'+' => {
-        self.pos += 1;
-        return self.simplefactor();
+      Some(b'-') => {
+        bump(i, 1);
+        return Ok(-simplefactor(i)?);
       },
-      b'!' => {
-        // Only prefix ! if not != (but != is at CMP level, unlikely here)
-        if self.pos + 1 < self.input.len() && self.input[self.pos + 1] == b'=' {
-          return None; // not a prefix
+      Some(b'+') => {
+        bump(i, 1);
+        return simplefactor(i);
+      },
+      Some(b'!') => {
+        if second(i) == Some(b'=') {
+          return fail();
         }
-        self.pos += 1;
-        let val = self.simplefactor()?;
-        return Some(if val == 0.0 { 1.0 } else { 0.0 });
+        bump(i, 1);
+        let val = simplefactor(i)?;
+        return Ok(if val == 0.0 { 1.0 } else { 0.0 });
       },
       _ => {},
     }
 
-    // 3. Try number first
-    if let Some(num) = self.try_number() {
-      self.skip();
-      // NUMBER UNIT
-      if let Some(unit) = self.try_unit() {
-        self.units_declared = true;
-        return Some(pgfmath_convert(num, &unit));
+    if let Some(num) = try_number(i) {
+      sb(i);
+      if let Some(unit) = try_unit(i) {
+        i.state.units_declared = true;
+        return Ok(pgfmath_convert(num, &unit));
       }
-      // NUMBER REGISTER
-      if self.pos < self.input.len() && self.input[self.pos] == b'\\' {
-        let saved = self.pos;
-        if let Some(reg) = self.try_cs_register() {
-          return Some(num * reg);
+      if first(i) == Some(b'\\') {
+        let cp = i.checkpoint();
+        if let Some(reg) = try_cs_register(i) {
+          return Ok(num * reg);
         }
-        self.pos = saved;
+        i.reset(&cp);
       }
-      return Some(num);
+      return Ok(num);
     }
 
-    // 4. CS register: \something
-    if self.pos < self.input.len() && self.input[self.pos] == b'\\' {
-      if let Some(reg) = self.try_cs_register() {
-        self.skip();
-        // REGISTER REGISTER
-        if self.pos < self.input.len() && self.input[self.pos] == b'\\' {
-          let saved = self.pos;
-          if let Some(reg2) = self.try_cs_register() {
-            return Some(reg * reg2);
+    if first(i) == Some(b'\\') {
+      if let Some(reg) = try_cs_register(i) {
+        sb(i);
+        if first(i) == Some(b'\\') {
+          let cp = i.checkpoint();
+          if let Some(reg2) = try_cs_register(i) {
+            return Ok(reg * reg2);
           }
-          self.pos = saved;
+          i.reset(&cp);
         }
-        return Some(reg);
+        return Ok(reg);
       }
     }
 
-    // 5. Identifier: function, constant, or user-defined
-    if self.pos < self.input.len() && self.input[self.pos].is_ascii_alphabetic() {
-      let name = self.read_identifier();
-
-      // Built-in function?
+    if first(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
+      let name = read_identifier(i);
       if is_builtin_function(&name) {
-        return self.parse_function_call(&name);
+        return function_call(i, &name);
       }
-      // Built-in constant?
       if is_builtin_constant(&name) {
-        return Some(pgfmath_apply_fn(&name, &[]));
+        return Ok(pgfmath_apply_fn(&name, &[]));
       }
-      // User-defined function?
       if is_user_function(&name) {
-        return self.parse_function_call(&name);
+        // A user function whose TeX body may declare units — inherit them
+        // afterwards (see `absorb_units_flag`). Builtin functions above must
+        // NOT absorb: they compute purely in Rust and never touch the global
+        // `\ifpgfmathunitsdeclared`, so reading it could only pick up a STALE
+        // true from an earlier evaluation and wrongly mark e.g. `sin(30)` as
+        // unit'd. (Real `\pgfmathparse` resets the global at parse-start, which
+        // is why #249's recdescent — which absorbed for builtins too — never
+        // tripped; the golden corpus runs evals back-to-back without that
+        // reset and exposes the staleness.)
+        let v = function_call(i, &name)?;
+        absorb_units_flag(i);
+        return Ok(v);
       }
-      // User-defined constant?
       if is_user_constant(&name) {
+        // A 0-arg user pseudo-constant whose body may parse a unit'd value
+        // (e.g. `pgfplotsbarwidthgeneric`). Inherit its units flag — see
+        // `absorb_units_flag`. Builtin constants above are pure and need no
+        // absorb.
         let v = pgfmath_apply_fn(&name, &[]);
-        self.absorb_units_flag();
-        return Some(v);
+        absorb_units_flag(i);
+        return Ok(v);
       }
-      // Unknown — might be 0
-      return None;
+      return fail();
     }
 
-    // 6. Single dot = 0.0 (Perl L712)
-    if self.pos < self.input.len() && self.input[self.pos] == b'.' {
-      self.pos += 1;
-      return Some(0.0);
+    if first(i) == Some(b'.') {
+      bump(i, 1);
+      return Ok(0.0);
     }
-
-    None
+    fail()
   }
 
-  /// Parse a function call with parenthesized or bare args
-  fn parse_function_call(&mut self, name: &str) -> Option<f64> {
-    self.skip();
-    // FUNCTION ( formula (, formula)* )
-    if self.pos < self.input.len() && self.input[self.pos] == b'(' {
-      self.pos += 1;
-      let first = self.formula()?;
-      let mut args = vec![first];
+  /// After evaluating a USER-declared pgfmath function/constant (NOT a
+  /// builtin), inherit the global `\ifpgfmathunitsdeclared` flag that its body
+  /// may have set (its body runs with the flag reset by `pgfmath_apply_user`,
+  /// then a nested `\pgfmathparse` of a unit'd value sets it). Mirrors Perl,
+  /// where the flag is a persistent global threaded through nested evaluations.
+  /// Monotonic — only ever sets the flag, matching `try_cs_register`'s
+  /// unconditional set. Call ONLY from the user-function / user-constant
+  /// dispatch arms: builtins never touch the global, so absorbing after one
+  /// would leak a stale true into a dimensionless result. Fixes
+  /// `bar shift={\pgfplotbarwidth}` under `symbolic x coords` (2110.14597):
+  /// `\pgfplotbarwidth` → `pgfplotsbarwidthgeneric` (a 0-arg pseudo-constant)
+  /// whose body parses the bar-width dimension.
+  fn absorb_units_flag(i: &mut In) {
+    if super::pgfmath_units_declared_global() {
+      i.state.units_declared = true;
+    }
+  }
+
+  /// FUNCTION '(' formula (',' formula)* ')' | FUNCTION simplefactor
+  fn function_call(i: &mut In, name: &str) -> ModalResult<f64> {
+    sb(i);
+    if first(i) == Some(b'(') {
+      bump(i, 1);
+      let mut args = vec![formula(i)?];
       loop {
-        self.skip();
-        if self.try_char(b',') {
-          if let Some(arg) = self.formula() {
+        sb(i);
+        if eat(i, b',') {
+          if let Ok(arg) = formula(i) {
             args.push(arg);
           } else {
             break;
@@ -951,200 +938,122 @@ impl<'a> PgfMathParser<'a> {
           break;
         }
       }
-      self.skip();
-      self.try_char(b')');
-      let v = pgfmath_apply_fn(name, &args);
-      self.absorb_units_flag();
+      sb(i);
+      eat(i, b')');
+      return Ok(pgfmath_apply_fn(name, &args));
+    }
+    let arg = simplefactor(i)?;
+    Ok(pgfmath_apply_fn(name, &[arg]))
+  }
+
+  /// `(\d+\.?[\d.]*|\d*\.?\d+)([eE][+-]?\d+)?` with hex/binary forms and
+  /// the embedded-dot tolerance ("1.2.3"), exactly as the recdescent had it.
+  fn try_number(i: &mut In) -> Option<f64> {
+    sb(i);
+    let b = i.input.as_bytes();
+    if b.is_empty() {
+      return None;
+    }
+    if b.len() >= 2 && b[0] == b'0' && b[1] == b'x' {
+      let n = b[2..].iter().take_while(|c| c.is_ascii_hexdigit()).count();
+      if n == 0 {
+        return None;
+      }
+      let v = i64::from_str_radix(&i.input[2..2 + n], 16).unwrap_or(0) as f64;
+      bump(i, 2 + n);
       return Some(v);
     }
-    // FUNCTION simplefactor
-    let arg = self.simplefactor()?;
-    let v = pgfmath_apply_fn(name, &[arg]);
-    self.absorb_units_flag();
+    if b.len() >= 2 && b[0] == b'0' && b[1] == b'b' {
+      let n = b[2..].iter().take_while(|c| matches!(c, b'0' | b'1')).count();
+      if n == 0 {
+        return None;
+      }
+      let v = i64::from_str_radix(&i.input[2..2 + n], 2).unwrap_or(0) as f64;
+      bump(i, 2 + n);
+      return Some(v);
+    }
+    let mut pos = 0;
+    let mut has_digit = false;
+    while pos < b.len() && b[pos].is_ascii_digit() {
+      pos += 1;
+      has_digit = true;
+    }
+    if pos < b.len() && b[pos] == b'.' {
+      if has_digit || (pos + 1 < b.len() && b[pos + 1].is_ascii_digit()) {
+        pos += 1;
+        while pos < b.len() && (b[pos].is_ascii_digit() || b[pos] == b'.') {
+          pos += 1;
+        }
+        has_digit = true;
+      } else if has_digit {
+        pos += 1;
+      }
+    }
+    if !has_digit || pos == 0 {
+      return None;
+    }
+    if pos < b.len() && (b[pos] == b'e' || b[pos] == b'E') {
+      let saved = pos;
+      pos += 1;
+      if pos < b.len() && (b[pos] == b'+' || b[pos] == b'-') {
+        pos += 1;
+      }
+      if pos < b.len() && b[pos].is_ascii_digit() {
+        while pos < b.len() && b[pos].is_ascii_digit() {
+          pos += 1;
+        }
+      } else {
+        pos = saved;
+      }
+    }
+    let v = i.input[..pos].parse::<f64>().unwrap_or(0.0);
+    bump(i, pos);
     Some(v)
   }
 
-  /// Try to parse a number (Perl L707-712)
-  fn try_number(&mut self) -> Option<f64> {
-    self.skip();
-    if self.pos >= self.input.len() {
-      return None;
-    }
-
-    // Hex: 0x...
-    if self.pos + 1 < self.input.len()
-      && self.input[self.pos] == b'0'
-      && self.input[self.pos + 1] == b'x'
-    {
-      self.pos += 2;
-      let start = self.pos;
-      while self.pos < self.input.len() && self.input[self.pos].is_ascii_hexdigit() {
-        self.pos += 1;
-      }
-      if self.pos == start {
-        return None;
-      }
-      let s = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
-      return Some(i64::from_str_radix(s, 16).unwrap_or(0) as f64);
-    }
-
-    // Binary: 0b...
-    if self.pos + 1 < self.input.len()
-      && self.input[self.pos] == b'0'
-      && self.input[self.pos + 1] == b'b'
-    {
-      self.pos += 2;
-      let start = self.pos;
-      while self.pos < self.input.len()
-        && (self.input[self.pos] == b'0' || self.input[self.pos] == b'1')
-      {
-        self.pos += 1;
-      }
-      if self.pos == start {
-        return None;
-      }
-      let s = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
-      return Some(i64::from_str_radix(s, 2).unwrap_or(0) as f64);
-    }
-
-    // Regular number: (\d+\.?\d*|\d*\.?\d+)([eE][+-]?\d+)?
-    let start = self.pos;
-    let mut has_digit = false;
-
-    // Integer part
-    while self.pos < self.input.len() && self.input[self.pos].is_ascii_digit() {
-      self.pos += 1;
-      has_digit = true;
-    }
-
-    // Decimal point
-    if self.pos < self.input.len() && self.input[self.pos] == b'.' {
-      // Consume dot if we have leading digits OR next is digit
-      if has_digit || (self.pos + 1 < self.input.len() && self.input[self.pos + 1].is_ascii_digit())
-      {
-        self.pos += 1; // consume dot
-        // Fractional digits (Perl [\d.]* — allows embedded dots like 1.2.3)
-        while self.pos < self.input.len()
-          && (self.input[self.pos].is_ascii_digit() || self.input[self.pos] == b'.')
-        {
-          self.pos += 1;
-        }
-        has_digit = true; // ".5" counts as having digits
-      } else if has_digit {
-        // "3." — trailing dot is part of the number
-        self.pos += 1;
-      }
-    }
-
-    if !has_digit || self.pos == start {
-      return None;
-    }
-
-    // Scientific notation: [eE][+-]?\d+
-    if self.pos < self.input.len() && (self.input[self.pos] == b'e' || self.input[self.pos] == b'E')
-    {
-      let saved = self.pos;
-      self.pos += 1;
-      if self.pos < self.input.len()
-        && (self.input[self.pos] == b'+' || self.input[self.pos] == b'-')
-      {
-        self.pos += 1;
-      }
-      if self.pos < self.input.len() && self.input[self.pos].is_ascii_digit() {
-        while self.pos < self.input.len() && self.input[self.pos].is_ascii_digit() {
-          self.pos += 1;
-        }
-      } else {
-        self.pos = saved; // Not scientific notation, restore
-      }
-    }
-
-    let s = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
-    Some(s.parse::<f64>().unwrap_or(0.0))
-  }
-
-  /// Try to match a TeX unit (Perl L714-715)
-  fn try_unit(&mut self) -> Option<String> {
-    self.skip();
-    if self.pos >= self.input.len() {
-      return None;
-    }
+  fn try_unit(i: &mut In) -> Option<String> {
+    sb(i);
     for &unit in PGF_UNITS {
-      let bytes = unit.as_bytes();
-      if self.pos + bytes.len() <= self.input.len()
-        && &self.input[self.pos..self.pos + bytes.len()] == bytes
-      {
-        // Don't match if followed by a letter (e.g. "ptx" is not "pt")
-        let end = self.pos + bytes.len();
-        if end < self.input.len() && self.input[end].is_ascii_alphabetic() {
+      if let Some(rest) = i.input.strip_prefix(unit) {
+        // not a unit if a letter follows ("ptx" is not "pt")
+        if rest.as_bytes().first().map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
           continue;
         }
-        self.pos += bytes.len();
+        bump(i, unit.len());
         return Some(unit.to_string());
       }
     }
     None
   }
 
-  /// Try to read a CS register (\name) and return its value
-  fn try_cs_register(&mut self) -> Option<f64> {
-    self.skip();
-    if self.pos >= self.input.len() || self.input[self.pos] != b'\\' {
+  /// `\\[a-zA-Z@]+` — a TeX register; reading one declares units (see the
+  /// pgfplots ybar witnesses on the original implementation).
+  fn try_cs_register(i: &mut In) -> Option<f64> {
+    sb(i);
+    let b = i.input.as_bytes();
+    if b.first() != Some(&b'\\') {
       return None;
     }
-    let start = self.pos;
-    self.pos += 1; // skip backslash
-    while self.pos < self.input.len()
-      && (self.input[self.pos].is_ascii_alphabetic() || self.input[self.pos] == b'@')
-    {
-      self.pos += 1;
-    }
-    if self.pos == start + 1 {
-      self.pos = start;
+    let n = b[1..].iter().take_while(|c| c.is_ascii_alphabetic() || **c == b'@').count();
+    if n == 0 {
       return None;
     }
-    let cs = std::str::from_utf8(&self.input[start..self.pos]).unwrap();
-    // Perl `sub pgfmath_register` (pgfmath.code.tex.ltxml L487-493) sets
-    // `\ifpgfmathunitsdeclared` = 1 (global) UNCONDITIONALLY whenever a CS
-    // register is read — it is a register, hence "we saw a unit". Without
-    // this, `\pgfmathparse{\pgflinewidth}` (or any `\dimen`/`\skip`/`\count`
-    // register) reported `pgfmathunitsdeclared` FALSE while a literal `2pt`
-    // reported TRUE. pgfplots' `\pgfplots@bar@mathparse@` keys off this flag:
-    // for `ybar=\pgflinewidth` (a dimension-register value, common in bar
-    // charts) the false flag sent it into the x-axis unit-conversion branch,
-    // which corrupts coordinate resolution under `symbolic x coords` →
-    // `Package pgfplots Error: ... \pgfplots@loc@TMPa has not been defined`.
-    // Witnesses 1908.10041, 1901.08716 (and pgfplots bar charts generally).
-    self.units_declared = true;
-    Some(pgfmath_register_lookup(cs))
+    let cs = &i.input[..1 + n];
+    let value = pgfmath_register_lookup(cs);
+    bump(i, 1 + n);
+    i.state.units_declared = true;
+    Some(value)
   }
 
-  /// After evaluating a user-declared pgfmath function/constant, inherit the
-  /// global `\ifpgfmathunitsdeclared` flag that its body may have set (its body
-  /// runs with the flag reset, then a nested `\pgfmathparse` of a unit'd value
-  /// sets it — see `pgfmath_apply_user`). Mirrors Perl, where the flag is a
-  /// persistent global threaded through nested evaluations. Monotonic — only
-  /// ever sets the flag, matching `try_cs_register`'s unconditional set. Fixes
-  /// `bar shift={\pgfplotbarwidth}` under `symbolic x coords` (2110.14597):
-  /// `\pgfplotbarwidth` → `pgfplotsbarwidthgeneric` (a 0-arg pseudo-constant)
-  /// whose body parses the bar-width dimension.
-  fn absorb_units_flag(&mut self) {
-    if if_condition(&T_CS!("\\ifpgfmathunitsdeclared")).unwrap_or(None) == Some(true) {
-      self.units_declared = true;
-    }
-  }
-
-  /// Read an identifier: [a-zA-Z][a-zA-Z0-9_]*
-  fn read_identifier(&mut self) -> String {
-    let start = self.pos;
-    while self.pos < self.input.len()
-      && (self.input[self.pos].is_ascii_alphanumeric() || self.input[self.pos] == b'_')
-    {
-      self.pos += 1;
-    }
-    std::str::from_utf8(&self.input[start..self.pos])
-      .unwrap()
-      .to_string()
+  fn read_identifier(i: &mut In) -> String {
+    let n = i
+      .input
+      .bytes()
+      .take_while(|c| c.is_ascii_alphanumeric() || *c == b'_')
+      .count();
+    let name = i.input[..n].to_string();
+    bump(i, n);
+    name
   }
 }
 
@@ -1267,15 +1176,11 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   // 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/ Handled by the parser below,
   //    since it's a subset of the grammar.
 
-  // 3. Parse with recursive descent (replaces both Perl eval and RecDescent)
-  let mut parser = PgfMathParser::new(input);
-  if let Some(result) = parser.formula() {
-    // Perl L378: forgive trailing ) or ]
-    let remaining = parser.remaining_trimmed().trim_start_matches([')', ']']);
-    if !remaining.is_empty() {
-      // Partial parse — still return what we got
-    }
-    return (format_parse_result(result, input), parser.units_declared);
+  // 3. Parse with the winnow grammar (replaces both Perl eval and RecDescent;
+  //    partial parses still return what was read, as before).
+  let mut stream = winnow::Stateful { input, state: pgfmath_grammar::Flags::default() };
+  if let Ok(result) = pgfmath_grammar::formula(&mut stream) {
+    return (format_parse_result(result, input), stream.state.units_declared);
   }
 
   // 4. Fallback
@@ -1307,9 +1212,10 @@ fn try_string_ternary(input: &str) -> Option<String> {
   if !then_is_str && !else_is_str {
     return None;
   }
-  // Evaluate the test as a number via the regular f64 parser
-  let mut p = PgfMathParser::new(cond.trim());
-  let test_val = p.formula()?;
+  // Evaluate the test as a number via the regular f64 grammar
+  let mut stream =
+    winnow::Stateful { input: cond.trim(), state: pgfmath_grammar::Flags::default() };
+  let test_val = pgfmath_grammar::formula(&mut stream).ok()?;
   let chosen = if test_val != 0.0 { then_part } else { else_part };
   // Strip outer quotes if present; otherwise return as-is
   let trimmed = chosen.trim();
