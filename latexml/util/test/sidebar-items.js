@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["init_logger","latexml_test_single","latexml_tests","latexml_tests_internal"]};
+window.SIDEBAR_ITEMS = {"fn":["convert_fixture","dump_available","error_count","init_logger","kpse_has","latexml_test_single","latexml_tests","latexml_tests_internal"]};

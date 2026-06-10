@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["available_years_in_dir","detect_ambient_texlive_year","dump_filename","parse_year_from_dump_filename","resolve_versioned_in_dir","stamp_path_for_dump","version_filename"]};
+window.SIDEBAR_ITEMS = {"fn":["available_years_in_dir","detect_ambient_texlive_year","dump_filename","parse_year_from_dump_filename","resolve_versioned_in_dir","stamp_path_for_dump","version_filename","warn_degraded_no_dump"]};

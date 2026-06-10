@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/icml_support_sty.rs`."><title>icml_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (f20a92ec0 2026-06-07)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>icml_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">/// Perl: icml_support.sty.ltxml — Support for ICML conference styles
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/icml_support_sty.rs`."><title>icml_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>icml_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">/// Perl: icml_support.sty.ltxml — Support for ICML conference styles
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="attr">#[rustfmt::skip]
@@ -46,134 +46,151 @@
 <a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{icmlauthorlist}"</span>, <span class="string">"#body"</span>);
 <a href=#47 id=47 data-nosnippet>47</a>
 <a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmlauthor{}{}"</span>, <span class="string">"\\author{#1}"</span>);
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@@address{}"</span>, <span class="string">"^ &lt;ltx:contact role='address'&gt;#1&lt;/ltx:contact&gt;"</span>);
-<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmladdress{}"</span>, <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}"</span>);
-<a href=#51 id=51 data-nosnippet>51</a>  <span class="comment">// ICML: \icmlaffiliation{shortname}{full text} maps a short id to
-<a href=#52 id=52 data-nosnippet>52</a>  // an affiliation string used in author list. Preserve only the
-<a href=#53 id=53 data-nosnippet>53</a>  // full-text — the shortname (#1) is an internal identifier that
-<a href=#54 id=54 data-nosnippet>54</a>  // commonly contains `_` characters (e.g. `mit_idss`, `osu_ece`),
-<a href=#55 id=55 data-nosnippet>55</a>  // which our frontmatter pipeline tokenizes as math-mode subscript
-<a href=#56 id=56 data-nosnippet>56</a>  // and errors with "Script _ can only appear in math mode" when
-<a href=#57 id=57 data-nosnippet>57</a>  // rendered into ltx:note text. Witness 2404.08592.
-<a href=#58 id=58 data-nosnippet>58</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlaffiliation{}{}"</span>,
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"</span>);
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// \icmlcorrespondingauthor{name}{email} — preserve as ltx:note.
-<a href=#61 id=61 data-nosnippet>61</a>  // The email arg often contains `_` (e.g. `m_smith@apple.com`) which would
-<a href=#62 id=62 data-nosnippet>62</a>  // otherwise be tokenized as subscript-mode at digest time, triggering
-<a href=#63 id=63 data-nosnippet>63</a>  // "Script _ can only appear in math mode" cascades. Semiverbatim
-<a href=#64 id=64 data-nosnippet>64</a>  // neutralizes `_`/`#`/`&amp;`/`%`/`^`/`~`/`$`/`{`/`}` in the email arg.
-<a href=#65 id=65 data-nosnippet>65</a>  // Perl's icml_support binding gobbles both args (empty body); we surpass
-<a href=#66 id=66 data-nosnippet>66</a>  // by preserving the contact text as a frontmatter note. Witness 2312.09299.
-<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlcorrespondingauthor{} Semiverbatim"</span>,
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 &lt;#1&gt;}"</span>);
-<a href=#69 id=69 data-nosnippet>69</a>
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
-<a href=#71 id=71 data-nosnippet>71</a>  // a re-iteration of the affiliation list + a free-form notice. Since
-<a href=#72 id=72 data-nosnippet>72</a>  // \icmladdress already feeds frontmatter, the affiliation list is
-<a href=#73 id=73 data-nosnippet>73</a>  // captured separately; preserve the notice arg as a ltx:note so the
-<a href=#74 id=74 data-nosnippet>74</a>  // author-supplied "Work done while at X" string survives.
-<a href=#75 id=75 data-nosnippet>75</a>  // Witness: 2502.18679 (icml2025.sty L564).
-<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printAffiliationsAndNotice{}"</span>,
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}"</span>);
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\printAffiliationsAndWorkNotice{}"</span>,
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}"</span>);
-<a href=#80 id=80 data-nosnippet>80</a>  <span class="comment">// ICML 2024: simpler `\printAffiliations` no-arg form (newer template
-<a href=#81 id=81 data-nosnippet>81</a>  // emits the affiliation list inline without trailing notice). Witness
-<a href=#82 id=82 data-nosnippet>82</a>  // 2310.18127.
-<a href=#83 id=83 data-nosnippet>83</a>  </span>def_macro_noop(<span class="string">"\\printAffiliations"</span>)<span class="question-mark">?</span>;
-<a href=#84 id=84 data-nosnippet>84</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualContribution"</span>, <span class="string">"Equal contribution"</span>);
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="comment">// ICML 2023 (icml2023.sty L526): per-paper "equal advising" marker.
-<a href=#86 id=86 data-nosnippet>86</a>  // Witness 2306.01153.
-<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualAdvising"</span>, <span class="string">"Equal advising"</span>);
-<a href=#88 id=88 data-nosnippet>88</a>  <span class="comment">// ICML 2025: extended marker for joint first + senior authorship.
-<a href=#89 id=89 data-nosnippet>89</a>  // Witness: 2503.15703 (icml2025.sty L534).
-<a href=#90 id=90 data-nosnippet>90</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualContributionAndSenior"</span>,
-<a href=#91 id=91 data-nosnippet>91</a>    <span class="string">"\\textsuperscript{*}Equal contribution, \
-<a href=#92 id=92 data-nosnippet>92</a>     \\textsuperscript{\\char`\u{2020}}Equal senior authorship"</span>);
-<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// ICML 2024 introduced `\icmlEqualSeniorContribution` — senior-only
-<a href=#94 id=94 data-nosnippet>94</a>  // joint authorship marker (no joint-first). Witness 2305.xxxxx in
-<a href=#95 id=95 data-nosnippet>95</a>  // wp4 (2 papers in stage 1).
-<a href=#96 id=96 data-nosnippet>96</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualSeniorContribution"</span>,
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="string">"\\textsuperscript{\\char`\u{2020}}Equal senior contribution"</span>);
-<a href=#98 id=98 data-nosnippet>98</a>  <span class="comment">// Some paper-bundled icml*.sty templates add author-status markers
-<a href=#99 id=99 data-nosnippet>99</a>  // beyond the kernel `\icmlEqualContribution`. The most common is
-<a href=#100 id=100 data-nosnippet>100</a>  // `\icmlIntershipWork`, an internship-affiliation annotation passed
-<a href=#101 id=101 data-nosnippet>101</a>  // to `\printAffiliationsAndNotice{...}` in icml2024 papers.
-<a href=#102 id=102 data-nosnippet>102</a>  // Witness 2401.00604.
-<a href=#103 id=103 data-nosnippet>103</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlIntershipWork"</span>,
-<a href=#104 id=104 data-nosnippet>104</a>    <span class="string">"\\textsuperscript{*}Work done during an internship"</span>);
-<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// `\icmlInternship` — paper-bundled internship marker (correct spelling,
-<a href=#106 id=106 data-nosnippet>106</a>  // distinct from the `\icmlIntershipWork` typo above). icml2019.sty L502
-<a href=#107 id=107 data-nosnippet>107</a>  // `\newcommand{\icmlInternship}{\textsuperscript{*}This work has been done
-<a href=#108 id=108 data-nosnippet>108</a>  // during the internship at &lt;institution&gt;.}`. Papers pass it into
-<a href=#109 id=109 data-nosnippet>109</a>  // `\printAffiliationsAndNotice{\icmlInternship}`; our binding intercepts
-<a href=#110 id=110 data-nosnippet>110</a>  // icml20xx (so the paper's bundled def never runs) and — unlike Perl,
-<a href=#111 id=111 data-nosnippet>111</a>  // whose `\printAffiliationsAndNotice{}` gobbles its arg — preserves the
-<a href=#112 id=112 data-nosnippet>112</a>  // notice arg as a frontmatter note, expanding the inner CS. Provide a
-<a href=#113 id=113 data-nosnippet>113</a>  // generic fallback (institution unknowable from the binding) so the note
-<a href=#114 id=114 data-nosnippet>114</a>  // survives error-free. Witness 1902.02603 (icml2019.sty L502).
-<a href=#115 id=115 data-nosnippet>115</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlInternship"</span>,
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="string">"\\textsuperscript{*}Work done during an internship"</span>);
-<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// `\airesident` — paper-bundled AI-residency marker, same family as
-<a href=#118 id=118 data-nosnippet>118</a>  // `\icmlInternship`. icml2019.sty L503 `\newcommand{\airesident}{
-<a href=#119 id=119 data-nosnippet>119</a>  // \textsuperscript{$\dagger$}This work was completed as part of the
-<a href=#120 id=120 data-nosnippet>120</a>  // &lt;program&gt; AI Residency}`. Passed into
-<a href=#121 id=121 data-nosnippet>121</a>  // `\printAffiliationsAndNotice{\icmlEqualContribution\airesident}`; our
-<a href=#122 id=122 data-nosnippet>122</a>  // binding intercepts icml20xx so the bundled def never runs, and the
-<a href=#123 id=123 data-nosnippet>123</a>  // preserved notice arg expands the undefined CS. Generic fallback
-<a href=#124 id=124 data-nosnippet>124</a>  // (program unknowable from the binding). Witness 1902.09574.
-<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\airesident"</span>,
-<a href=#126 id=126 data-nosnippet>126</a>    <span class="string">"\\textsuperscript{\\char`\u{2020}}Work completed as part of an AI Residency"</span>);
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="comment">// \icmlOutsideContribution — paper-bundled marker noting that the
-<a href=#128 id=128 data-nosnippet>128</a>  // contribution was made outside the author's primary affiliation.
-<a href=#129 id=129 data-nosnippet>129</a>  // Witness 2310.14751.
-<a href=#130 id=130 data-nosnippet>130</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlOutsideContribution"</span>,
-<a href=#131 id=131 data-nosnippet>131</a>    <span class="string">"\\textsuperscript{*}Work done outside of primary affiliation"</span>);
-<a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// \icmlEqualLast — paper-bundled co-last-authors marker (icml2024.sty
-<a href=#133 id=133 data-nosnippet>133</a>  // L525). Witness 2402.02526.
-<a href=#134 id=134 data-nosnippet>134</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualLast"</span>,
-<a href=#135 id=135 data-nosnippet>135</a>    <span class="string">"\\textsuperscript{*}Co last authors"</span>);
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// \icmlIntern — paper-bundled internship-affiliation marker.
-<a href=#137 id=137 data-nosnippet>137</a>  // Witness 2312.05253 (icml2024.sty L534).
-<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlIntern"</span>,
-<a href=#139 id=139 data-nosnippet>139</a>    <span class="string">"\\textsuperscript{*}Work done while interning"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// \icmlEqualwork — paper-bundled joint-work marker (icml2021 papers
-<a href=#141 id=141 data-nosnippet>141</a>  // routinely redefine this in their bundled icml2021.sty to a custom
-<a href=#142 id=142 data-nosnippet>142</a>  // institutional note). Provide a generic fallback so the canonical
-<a href=#143 id=143 data-nosnippet>143</a>  // binding fires when the paper's bundled .sty is masked by ours.
-<a href=#144 id=144 data-nosnippet>144</a>  // Witness 2111.13293.
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualwork"</span>,
-<a href=#146 id=146 data-nosnippet>146</a>    <span class="string">"\\textsuperscript{*}Joint work"</span>);
-<a href=#147 id=147 data-nosnippet>147</a>  <span class="comment">// \icmlProjectLead — paper-bundled project-lead marker.
-<a href=#148 id=148 data-nosnippet>148</a>  // Witness 2402.04924 (icml2024.sty L535).
-<a href=#149 id=149 data-nosnippet>149</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlProjectLead"</span>,
-<a href=#150 id=150 data-nosnippet>150</a>    <span class="string">"\\textsuperscript{\\char`\u{2020}}Project lead"</span>);
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmlkeywords{}"</span>, <span class="string">"\\@add@frontmatter{ltx:keywords}{#1}"</span>);
-<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// \iclrfinalcopy — some icml*-bundled papers also use ICLR's
-<a href=#153 id=153 data-nosnippet>153</a>  // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
-<a href=#154 id=154 data-nosnippet>154</a>  // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.
-<a href=#155 id=155 data-nosnippet>155</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ificlrfinal"</span>);
-<a href=#156 id=156 data-nosnippet>156</a>  def_macro_noop(<span class="string">"\\iclrfinalcopy"</span>)<span class="question-mark">?</span>;
-<a href=#157 id=157 data-nosnippet>157</a>
-<a href=#158 id=158 data-nosnippet>158</a>  <span class="comment">// `\toptitlebar`/`\bottomtitlebar` — the decorative rules drawn above and
-<a href=#159 id=159 data-nosnippet>159</a>  // below the title block. Real icml20XX.sty (e.g. icml2019.sty L410-411):
-<a href=#160 id=160 data-nosnippet>160</a>  //   \def\toptitlebar{\hrule height1pt \vskip .25in}
-<a href=#161 id=161 data-nosnippet>161</a>  //   \def\bottomtitlebar{\vskip .22in \hrule height1pt \vskip .3in}
-<a href=#162 id=162 data-nosnippet>162</a>  // No-arg macros (the `\toptitlebar{\Large\bf #1}` in some bundled `arxiv.sty`
-<a href=#163 id=163 data-nosnippet>163</a>  // is `\toptitlebar` followed by a separate title group). Our binding
-<a href=#164 id=164 data-nosnippet>164</a>  // intercepts the paper-bundled icml20XX.sty so those defs never run; Perl
-<a href=#165 id=165 data-nosnippet>165</a>  // ships no icml2019 binding and raw-loads the .sty, reaching L410. Supply
-<a href=#166 id=166 data-nosnippet>166</a>  // them directly. Witness 1905.03711 (article + arxiv.sty →
-<a href=#167 id=167 data-nosnippet>167</a>  // `\RequirePackage[accepted]{icml2019}`).
-<a href=#168 id=168 data-nosnippet>168</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\toptitlebar"</span>, <span class="string">"\\hrule height1pt \\vskip .25in"</span>);
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomtitlebar"</span>, <span class="string">"\\vskip .22in \\hrule height1pt \\vskip .3in"</span>);
-<a href=#170 id=170 data-nosnippet>170</a>
-<a href=#171 id=171 data-nosnippet>171</a>  <span class="comment">// Random extra bits
-<a href=#172 id=172 data-nosnippet>172</a>  </span>def_macro_noop(<span class="string">"\\abovestrut{}"</span>)<span class="question-mark">?</span>;
-<a href=#173 id=173 data-nosnippet>173</a>  def_macro_noop(<span class="string">"\\belowstrut{}"</span>)<span class="question-mark">?</span>;
-<a href=#174 id=174 data-nosnippet>174</a>  def_macro_noop(<span class="string">"\\abovespace"</span>)<span class="question-mark">?</span>;
-<a href=#175 id=175 data-nosnippet>175</a>  def_macro_noop(<span class="string">"\\aroundspace"</span>)<span class="question-mark">?</span>;
-<a href=#176 id=176 data-nosnippet>176</a>  def_macro_noop(<span class="string">"\\belowspace"</span>)<span class="question-mark">?</span>;
-<a href=#177 id=177 data-nosnippet>177</a>  def_macro_noop(<span class="string">"\\icmlruler{}"</span>)<span class="question-mark">?</span>;
-<a href=#178 id=178 data-nosnippet>178</a>});
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// icml20XX.sty: \newcommand{\icmlCorrespondingAuthor}{\textsuperscript{$\dagger$}Corresponding author}
+<a href=#50 id=50 data-nosnippet>50</a>  // (0-arg marker). icml2025.sty L530: \newcommand{\icmlCorr}{\textsuperscript{\dag}Corresponding author }
+<a href=#51 id=51 data-nosnippet>51</a>  // (shorter alias, used as `\printAffiliationsAndNotice{\icmlCorr}`). Our binding
+<a href=#52 id=52 data-nosnippet>52</a>  // intercepts the raw .sty so the `\newcommand`s never run → undefined where Perl
+<a href=#53 id=53 data-nosnippet>53</a>  // (which loads the raw .sty) defines them. Witnesses 2403.01475, 2507.11588.
+<a href=#54 id=54 data-nosnippet>54</a>  //
+<a href=#55 id=55 data-nosnippet>55</a>  // The real macros are a `\textsuperscript{\dagger}` footnote marker, but that is a
+<a href=#56 id=56 data-nosnippet>56</a>  // typographic cross-reference that is meaningless in our structured model (no author
+<a href=#57 id=57 data-nosnippet>57</a>  // is marked with the matching dagger). Per the frontmatter-framework spirit, route the
+<a href=#58 id=58 data-nosnippet>58</a>  // corresponding-author indication into structured metadata as an `ltx:note`
+<a href=#59 id=59 data-nosnippet>59</a>  // (role=corresponding-author, matching `\icmlcorrespondingauthor` below) rather than
+<a href=#60 id=60 data-nosnippet>60</a>  // emitting raw inline `\textsuperscript` text. INTERIM: a fuller author↔contact
+<a href=#61 id=61 data-nosnippet>61</a>  // association will come with the frontmatter-refactor (PR #241 / upstream PR #2767).
+<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlCorrespondingAuthor"</span>,
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}"</span>);
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmlCorr"</span>,
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding-author]{Corresponding author}"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@@address{}"</span>, <span class="string">"^ &lt;ltx:contact role='address'&gt;#1&lt;/ltx:contact&gt;"</span>);
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmladdress{}"</span>, <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@address{#1}}"</span>);
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// ICML: \icmlaffiliation{shortname}{full text} maps a short id to
+<a href=#69 id=69 data-nosnippet>69</a>  // an affiliation string used in author list. Preserve only the
+<a href=#70 id=70 data-nosnippet>70</a>  // full-text — the shortname (#1) is an internal identifier that
+<a href=#71 id=71 data-nosnippet>71</a>  // commonly contains `_` characters (e.g. `mit_idss`, `osu_ece`),
+<a href=#72 id=72 data-nosnippet>72</a>  // which our frontmatter pipeline tokenizes as math-mode subscript
+<a href=#73 id=73 data-nosnippet>73</a>  // and errors with "Script _ can only appear in math mode" when
+<a href=#74 id=74 data-nosnippet>74</a>  // rendered into ltx:note text. Witness 2404.08592.
+<a href=#75 id=75 data-nosnippet>75</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlaffiliation{}{}"</span>,
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"</span>);
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="comment">// \icmlcorrespondingauthor{name}{email} — preserve as ltx:note.
+<a href=#78 id=78 data-nosnippet>78</a>  // The email arg often contains `_` (e.g. `m_smith@apple.com`) which would
+<a href=#79 id=79 data-nosnippet>79</a>  // otherwise be tokenized as subscript-mode at digest time, triggering
+<a href=#80 id=80 data-nosnippet>80</a>  // "Script _ can only appear in math mode" cascades. Semiverbatim
+<a href=#81 id=81 data-nosnippet>81</a>  // neutralizes `_`/`#`/`&amp;`/`%`/`^`/`~`/`$`/`{`/`}` in the email arg.
+<a href=#82 id=82 data-nosnippet>82</a>  // Perl's icml_support binding gobbles both args (empty body); we surpass
+<a href=#83 id=83 data-nosnippet>83</a>  // by preserving the contact text as a frontmatter note. Witness 2312.09299.
+<a href=#84 id=84 data-nosnippet>84</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlcorrespondingauthor{} Semiverbatim"</span>,
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding-author]{#2 &lt;#1&gt;}"</span>);
+<a href=#86 id=86 data-nosnippet>86</a>
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
+<a href=#88 id=88 data-nosnippet>88</a>  // a re-iteration of the affiliation list + a free-form notice. Since
+<a href=#89 id=89 data-nosnippet>89</a>  // \icmladdress already feeds frontmatter, the affiliation list is
+<a href=#90 id=90 data-nosnippet>90</a>  // captured separately; preserve the notice arg as a ltx:note so the
+<a href=#91 id=91 data-nosnippet>91</a>  // author-supplied "Work done while at X" string survives.
+<a href=#92 id=92 data-nosnippet>92</a>  // Witness: 2502.18679 (icml2025.sty L564).
+<a href=#93 id=93 data-nosnippet>93</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printAffiliationsAndNotice{}"</span>,
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}"</span>);
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\printAffiliationsAndWorkNotice{}"</span>,
+<a href=#96 id=96 data-nosnippet>96</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}"</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="comment">// ICML 2024: simpler `\printAffiliations` no-arg form (newer template
+<a href=#98 id=98 data-nosnippet>98</a>  // emits the affiliation list inline without trailing notice). Witness
+<a href=#99 id=99 data-nosnippet>99</a>  // 2310.18127.
+<a href=#100 id=100 data-nosnippet>100</a>  </span>def_macro_noop(<span class="string">"\\printAffiliations"</span>)<span class="question-mark">?</span>;
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualContribution"</span>, <span class="string">"Equal contribution"</span>);
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="comment">// ICML 2023 (icml2023.sty L526): per-paper "equal advising" marker.
+<a href=#103 id=103 data-nosnippet>103</a>  // Witness 2306.01153.
+<a href=#104 id=104 data-nosnippet>104</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualAdvising"</span>, <span class="string">"Equal advising"</span>);
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// ICML 2025: extended marker for joint first + senior authorship.
+<a href=#106 id=106 data-nosnippet>106</a>  // Witness: 2503.15703 (icml2025.sty L534).
+<a href=#107 id=107 data-nosnippet>107</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualContributionAndSenior"</span>,
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="string">"\\textsuperscript{*}Equal contribution, \
+<a href=#109 id=109 data-nosnippet>109</a>     \\textsuperscript{\\char`\u{2020}}Equal senior authorship"</span>);
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// ICML 2024 introduced `\icmlEqualSeniorContribution` — senior-only
+<a href=#111 id=111 data-nosnippet>111</a>  // joint authorship marker (no joint-first). Witness 2305.xxxxx in
+<a href=#112 id=112 data-nosnippet>112</a>  // wp4 (2 papers in stage 1).
+<a href=#113 id=113 data-nosnippet>113</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualSeniorContribution"</span>,
+<a href=#114 id=114 data-nosnippet>114</a>    <span class="string">"\\textsuperscript{\\char`\u{2020}}Equal senior contribution"</span>);
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="comment">// Some paper-bundled icml*.sty templates add author-status markers
+<a href=#116 id=116 data-nosnippet>116</a>  // beyond the kernel `\icmlEqualContribution`. The most common is
+<a href=#117 id=117 data-nosnippet>117</a>  // `\icmlIntershipWork`, an internship-affiliation annotation passed
+<a href=#118 id=118 data-nosnippet>118</a>  // to `\printAffiliationsAndNotice{...}` in icml2024 papers.
+<a href=#119 id=119 data-nosnippet>119</a>  // Witness 2401.00604.
+<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlIntershipWork"</span>,
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="string">"\\textsuperscript{*}Work done during an internship"</span>);
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// `\icmlInternship` — paper-bundled internship marker (correct spelling,
+<a href=#123 id=123 data-nosnippet>123</a>  // distinct from the `\icmlIntershipWork` typo above). icml2019.sty L502
+<a href=#124 id=124 data-nosnippet>124</a>  // `\newcommand{\icmlInternship}{\textsuperscript{*}This work has been done
+<a href=#125 id=125 data-nosnippet>125</a>  // during the internship at &lt;institution&gt;.}`. Papers pass it into
+<a href=#126 id=126 data-nosnippet>126</a>  // `\printAffiliationsAndNotice{\icmlInternship}`; our binding intercepts
+<a href=#127 id=127 data-nosnippet>127</a>  // icml20xx (so the paper's bundled def never runs) and — unlike Perl,
+<a href=#128 id=128 data-nosnippet>128</a>  // whose `\printAffiliationsAndNotice{}` gobbles its arg — preserves the
+<a href=#129 id=129 data-nosnippet>129</a>  // notice arg as a frontmatter note, expanding the inner CS. Provide a
+<a href=#130 id=130 data-nosnippet>130</a>  // generic fallback (institution unknowable from the binding) so the note
+<a href=#131 id=131 data-nosnippet>131</a>  // survives error-free. Witness 1902.02603 (icml2019.sty L502).
+<a href=#132 id=132 data-nosnippet>132</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlInternship"</span>,
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="string">"\\textsuperscript{*}Work done during an internship"</span>);
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// `\airesident` — paper-bundled AI-residency marker, same family as
+<a href=#135 id=135 data-nosnippet>135</a>  // `\icmlInternship`. icml2019.sty L503 `\newcommand{\airesident}{
+<a href=#136 id=136 data-nosnippet>136</a>  // \textsuperscript{$\dagger$}This work was completed as part of the
+<a href=#137 id=137 data-nosnippet>137</a>  // &lt;program&gt; AI Residency}`. Passed into
+<a href=#138 id=138 data-nosnippet>138</a>  // `\printAffiliationsAndNotice{\icmlEqualContribution\airesident}`; our
+<a href=#139 id=139 data-nosnippet>139</a>  // binding intercepts icml20xx so the bundled def never runs, and the
+<a href=#140 id=140 data-nosnippet>140</a>  // preserved notice arg expands the undefined CS. Generic fallback
+<a href=#141 id=141 data-nosnippet>141</a>  // (program unknowable from the binding). Witness 1902.09574.
+<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\airesident"</span>,
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="string">"\\textsuperscript{\\char`\u{2020}}Work completed as part of an AI Residency"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>  <span class="comment">// \icmlOutsideContribution — paper-bundled marker noting that the
+<a href=#145 id=145 data-nosnippet>145</a>  // contribution was made outside the author's primary affiliation.
+<a href=#146 id=146 data-nosnippet>146</a>  // Witness 2310.14751.
+<a href=#147 id=147 data-nosnippet>147</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlOutsideContribution"</span>,
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="string">"\\textsuperscript{*}Work done outside of primary affiliation"</span>);
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="comment">// \icmlEqualLast — paper-bundled co-last-authors marker (icml2024.sty
+<a href=#150 id=150 data-nosnippet>150</a>  // L525). Witness 2402.02526.
+<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualLast"</span>,
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="string">"\\textsuperscript{*}Co last authors"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="comment">// \icmlIntern — paper-bundled internship-affiliation marker.
+<a href=#154 id=154 data-nosnippet>154</a>  // Witness 2312.05253 (icml2024.sty L534).
+<a href=#155 id=155 data-nosnippet>155</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlIntern"</span>,
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="string">"\\textsuperscript{*}Work done while interning"</span>);
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="comment">// \icmlEqualwork — paper-bundled joint-work marker (icml2021 papers
+<a href=#158 id=158 data-nosnippet>158</a>  // routinely redefine this in their bundled icml2021.sty to a custom
+<a href=#159 id=159 data-nosnippet>159</a>  // institutional note). Provide a generic fallback so the canonical
+<a href=#160 id=160 data-nosnippet>160</a>  // binding fires when the paper's bundled .sty is masked by ours.
+<a href=#161 id=161 data-nosnippet>161</a>  // Witness 2111.13293.
+<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlEqualwork"</span>,
+<a href=#163 id=163 data-nosnippet>163</a>    <span class="string">"\\textsuperscript{*}Joint work"</span>);
+<a href=#164 id=164 data-nosnippet>164</a>  <span class="comment">// \icmlProjectLead — paper-bundled project-lead marker.
+<a href=#165 id=165 data-nosnippet>165</a>  // Witness 2402.04924 (icml2024.sty L535).
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\icmlProjectLead"</span>,
+<a href=#167 id=167 data-nosnippet>167</a>    <span class="string">"\\textsuperscript{\\char`\u{2020}}Project lead"</span>);
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\icmlkeywords{}"</span>, <span class="string">"\\@add@frontmatter{ltx:keywords}{#1}"</span>);
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="comment">// \iclrfinalcopy — some icml*-bundled papers also use ICLR's
+<a href=#170 id=170 data-nosnippet>170</a>  // `\iclrfinalcopy` macro (bundled icml2023.sty L: `\def\iclrfinalcopy
+<a href=#171 id=171 data-nosnippet>171</a>  // {\iclrfinaltrue}`). Stub both as no-op. Witness 2206.06661.
+<a href=#172 id=172 data-nosnippet>172</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ificlrfinal"</span>);
+<a href=#173 id=173 data-nosnippet>173</a>  def_macro_noop(<span class="string">"\\iclrfinalcopy"</span>)<span class="question-mark">?</span>;
+<a href=#174 id=174 data-nosnippet>174</a>
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="comment">// `\toptitlebar`/`\bottomtitlebar` — the decorative rules drawn above and
+<a href=#176 id=176 data-nosnippet>176</a>  // below the title block. Real icml20XX.sty (e.g. icml2019.sty L410-411):
+<a href=#177 id=177 data-nosnippet>177</a>  //   \def\toptitlebar{\hrule height1pt \vskip .25in}
+<a href=#178 id=178 data-nosnippet>178</a>  //   \def\bottomtitlebar{\vskip .22in \hrule height1pt \vskip .3in}
+<a href=#179 id=179 data-nosnippet>179</a>  // No-arg macros (the `\toptitlebar{\Large\bf #1}` in some bundled `arxiv.sty`
+<a href=#180 id=180 data-nosnippet>180</a>  // is `\toptitlebar` followed by a separate title group). Our binding
+<a href=#181 id=181 data-nosnippet>181</a>  // intercepts the paper-bundled icml20XX.sty so those defs never run; Perl
+<a href=#182 id=182 data-nosnippet>182</a>  // ships no icml2019 binding and raw-loads the .sty, reaching L410. Supply
+<a href=#183 id=183 data-nosnippet>183</a>  // them directly. Witness 1905.03711 (article + arxiv.sty →
+<a href=#184 id=184 data-nosnippet>184</a>  // `\RequirePackage[accepted]{icml2019}`).
+<a href=#185 id=185 data-nosnippet>185</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\toptitlebar"</span>, <span class="string">"\\hrule height1pt \\vskip .25in"</span>);
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomtitlebar"</span>, <span class="string">"\\vskip .22in \\hrule height1pt \\vskip .3in"</span>);
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// Random extra bits
+<a href=#189 id=189 data-nosnippet>189</a>  </span>def_macro_noop(<span class="string">"\\abovestrut{}"</span>)<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>  def_macro_noop(<span class="string">"\\belowstrut{}"</span>)<span class="question-mark">?</span>;
+<a href=#191 id=191 data-nosnippet>191</a>  def_macro_noop(<span class="string">"\\abovespace"</span>)<span class="question-mark">?</span>;
+<a href=#192 id=192 data-nosnippet>192</a>  def_macro_noop(<span class="string">"\\aroundspace"</span>)<span class="question-mark">?</span>;
+<a href=#193 id=193 data-nosnippet>193</a>  def_macro_noop(<span class="string">"\\belowspace"</span>)<span class="question-mark">?</span>;
+<a href=#194 id=194 data-nosnippet>194</a>  def_macro_noop(<span class="string">"\\icmlruler{}"</span>)<span class="question-mark">?</span>;
+<a href=#195 id=195 data-nosnippet>195</a>});
 </code></pre></div></section></main></body></html>

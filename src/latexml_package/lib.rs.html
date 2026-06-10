@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (f20a92ec0 2026-06-07)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Binding definitions for the `LaTeXML` converter, reimplemented in Rust
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/lib.rs`."><title>lib.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/</div>lib.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Binding definitions for the `LaTeXML` converter, reimplemented in Rust
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="attr">#![recursion_limit = <span class="string">"1024"</span>]
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a>#[macro_use]
@@ -529,560 +529,565 @@
 <a href=#529 id=529 data-nosnippet>529</a>  (<span class="string">"ifgeo"</span>, <span class="string">"fontmap"</span>, package::ifgeo_fontmap::load_definitions),
 <a href=#530 id=530 data-nosnippet>530</a>  (<span class="string">"ifsym"</span>, <span class="string">"fontmap"</span>, package::ifsym_fontmap::load_definitions),
 <a href=#531 id=531 data-nosnippet>531</a>  (<span class="string">"ifwea"</span>, <span class="string">"fontmap"</span>, package::ifwea_fontmap::load_definitions),
-<a href=#532 id=532 data-nosnippet>532</a>  (<span class="string">"lgr"</span>, <span class="string">"fontmap"</span>, package::lgr_fontmap::load_definitions),
-<a href=#533 id=533 data-nosnippet>533</a>  (<span class="string">"ot4"</span>, <span class="string">"fontmap"</span>, package::ot4_fontmap::load_definitions),
-<a href=#534 id=534 data-nosnippet>534</a>  (<span class="string">"ly1"</span>, <span class="string">"fontmap"</span>, package::ly1_fontmap::load_definitions),
-<a href=#535 id=535 data-nosnippet>535</a>  (<span class="string">"t1"</span>, <span class="string">"fontmap"</span>, package::t1_fontmap::load_definitions),
-<a href=#536 id=536 data-nosnippet>536</a>  (<span class="string">"t2a"</span>, <span class="string">"fontmap"</span>, package::t2a_fontmap::load_definitions),
-<a href=#537 id=537 data-nosnippet>537</a>  (<span class="string">"t2b"</span>, <span class="string">"fontmap"</span>, package::t2b_fontmap::load_definitions),
-<a href=#538 id=538 data-nosnippet>538</a>  (<span class="string">"t2c"</span>, <span class="string">"fontmap"</span>, package::t2c_fontmap::load_definitions),
-<a href=#539 id=539 data-nosnippet>539</a>  (<span class="string">"ts1"</span>, <span class="string">"fontmap"</span>, package::ts1_fontmap::load_definitions),
-<a href=#540 id=540 data-nosnippet>540</a>  (<span class="string">"pzd"</span>, <span class="string">"fontmap"</span>, package::pzd_fontmap::load_definitions),
-<a href=#541 id=541 data-nosnippet>541</a>  (<span class="string">"pifont"</span>, <span class="string">"sty"</span>, package::pifont_sty::load_definitions),
-<a href=#542 id=542 data-nosnippet>542</a>  (<span class="string">"pict2e"</span>, <span class="string">"sty"</span>, package::pict2e_sty::load_definitions),
-<a href=#543 id=543 data-nosnippet>543</a>  (<span class="string">"utf8"</span>, <span class="string">"def"</span>, package::utf8_def::load_definitions),
-<a href=#544 id=544 data-nosnippet>544</a>  <span class="comment">// Perl utf8x.def.ltxml L18: "Note: this is a copy of utf8.def.ltxml
-<a href=#545 id=545 data-nosnippet>545</a>  // for now" — dispatch utf8x to the same loader.
-<a href=#546 id=546 data-nosnippet>546</a>  </span>(<span class="string">"utf8x"</span>, <span class="string">"def"</span>, package::utf8_def::load_definitions),
-<a href=#547 id=547 data-nosnippet>547</a>  (<span class="string">"tcilatex"</span>, <span class="string">"tex"</span>, package::tcilatex_tex::load_definitions),
-<a href=#548 id=548 data-nosnippet>548</a>  (<span class="string">"textcase"</span>, <span class="string">"sty"</span>, package::textcase_sty::load_definitions),
-<a href=#549 id=549 data-nosnippet>549</a>  (<span class="string">"citesort"</span>, <span class="string">"sty"</span>, package::citesort_sty::load_definitions),
-<a href=#550 id=550 data-nosnippet>550</a>  (<span class="string">"cite"</span>, <span class="string">"sty"</span>, package::cite_sty::load_definitions),
-<a href=#551 id=551 data-nosnippet>551</a>  (<span class="string">"color"</span>, <span class="string">"sty"</span>, package::color_sty::load_definitions),
-<a href=#552 id=552 data-nosnippet>552</a>  (<span class="string">"calc"</span>, <span class="string">"sty"</span>, package::calc_sty::load_definitions),
-<a href=#553 id=553 data-nosnippet>553</a>  (<span class="string">"accents"</span>, <span class="string">"sty"</span>, package::accents_sty::load_definitions),
-<a href=#554 id=554 data-nosnippet>554</a>  (<span class="string">"acronym"</span>, <span class="string">"sty"</span>, package::acronym_sty::load_definitions),
-<a href=#555 id=555 data-nosnippet>555</a>  (<span class="string">"cancel"</span>, <span class="string">"sty"</span>, package::cancel_sty::load_definitions),
-<a href=#556 id=556 data-nosnippet>556</a>  (<span class="string">"ccfonts"</span>, <span class="string">"sty"</span>, package::ccfonts_sty::load_definitions),
-<a href=#557 id=557 data-nosnippet>557</a>  (<span class="string">"cases"</span>, <span class="string">"sty"</span>, package::cases_sty::load_definitions),
-<a href=#558 id=558 data-nosnippet>558</a>  (<span class="string">"colortbl"</span>, <span class="string">"sty"</span>, package::colortbl_sty::load_definitions),
-<a href=#559 id=559 data-nosnippet>559</a>  (<span class="string">"crop"</span>, <span class="string">"sty"</span>, package::crop_sty::load_definitions),
-<a href=#560 id=560 data-nosnippet>560</a>  (<span class="string">"chngcntr"</span>, <span class="string">"sty"</span>, package::chngcntr_sty::load_definitions),
-<a href=#561 id=561 data-nosnippet>561</a>  (<span class="string">"natbib"</span>, <span class="string">"sty"</span>, package::natbib_sty::load_definitions),
-<a href=#562 id=562 data-nosnippet>562</a>  (
-<a href=#563 id=563 data-nosnippet>563</a>    <span class="string">"pdftexcmds"</span>,
-<a href=#564 id=564 data-nosnippet>564</a>    <span class="string">"sty"</span>,
-<a href=#565 id=565 data-nosnippet>565</a>    package::pdftexcmds_sty::load_definitions,
-<a href=#566 id=566 data-nosnippet>566</a>  ),
-<a href=#567 id=567 data-nosnippet>567</a>  (<span class="string">"pdfx"</span>, <span class="string">"sty"</span>, package::pdfx_sty::load_definitions),
-<a href=#568 id=568 data-nosnippet>568</a>  (<span class="string">"ngerman"</span>, <span class="string">"sty"</span>, package::ngerman_sty::load_definitions),
-<a href=#569 id=569 data-nosnippet>569</a>  (<span class="string">"orcidlink"</span>, <span class="string">"sty"</span>, package::orcidlink_sty::load_definitions),
-<a href=#570 id=570 data-nosnippet>570</a>  (<span class="string">"newtxmath"</span>, <span class="string">"sty"</span>, package::newtxmath_sty::load_definitions),
-<a href=#571 id=571 data-nosnippet>571</a>  (<span class="string">"newtxtext"</span>, <span class="string">"sty"</span>, package::newtxtext_sty::load_definitions),
-<a href=#572 id=572 data-nosnippet>572</a>  (<span class="string">"bibunits"</span>, <span class="string">"sty"</span>, package::bibunits_sty::load_definitions),
-<a href=#573 id=573 data-nosnippet>573</a>  (
-<a href=#574 id=574 data-nosnippet>574</a>    <span class="string">"subeqnarray"</span>,
-<a href=#575 id=575 data-nosnippet>575</a>    <span class="string">"sty"</span>,
-<a href=#576 id=576 data-nosnippet>576</a>    package::subeqnarray_sty::load_definitions,
-<a href=#577 id=577 data-nosnippet>577</a>  ),
+<a href=#532 id=532 data-nosnippet>532</a>  <span class="comment">// Picture-mode fonts (line10/linew10, lcircle10/lcirclew10): zero-width
+<a href=#533 id=533 data-nosnippet>533</a>  // chars here drive LaTeX-2.09 `\@sline`'s `\@whiledim` into an infinite
+<a href=#534 id=534 data-nosnippet>534</a>  // box-accumulation loop (canvas OOM cluster) — see line_fontmap.rs.
+<a href=#535 id=535 data-nosnippet>535</a>  </span>(<span class="string">"lcircle"</span>, <span class="string">"fontmap"</span>, package::lcircle_fontmap::load_definitions),
+<a href=#536 id=536 data-nosnippet>536</a>  (<span class="string">"lgr"</span>, <span class="string">"fontmap"</span>, package::lgr_fontmap::load_definitions),
+<a href=#537 id=537 data-nosnippet>537</a>  (<span class="string">"line"</span>, <span class="string">"fontmap"</span>, package::line_fontmap::load_definitions),
+<a href=#538 id=538 data-nosnippet>538</a>  (<span class="string">"ot4"</span>, <span class="string">"fontmap"</span>, package::ot4_fontmap::load_definitions),
+<a href=#539 id=539 data-nosnippet>539</a>  (<span class="string">"ly1"</span>, <span class="string">"fontmap"</span>, package::ly1_fontmap::load_definitions),
+<a href=#540 id=540 data-nosnippet>540</a>  (<span class="string">"t1"</span>, <span class="string">"fontmap"</span>, package::t1_fontmap::load_definitions),
+<a href=#541 id=541 data-nosnippet>541</a>  (<span class="string">"t2a"</span>, <span class="string">"fontmap"</span>, package::t2a_fontmap::load_definitions),
+<a href=#542 id=542 data-nosnippet>542</a>  (<span class="string">"t2b"</span>, <span class="string">"fontmap"</span>, package::t2b_fontmap::load_definitions),
+<a href=#543 id=543 data-nosnippet>543</a>  (<span class="string">"t2c"</span>, <span class="string">"fontmap"</span>, package::t2c_fontmap::load_definitions),
+<a href=#544 id=544 data-nosnippet>544</a>  (<span class="string">"ts1"</span>, <span class="string">"fontmap"</span>, package::ts1_fontmap::load_definitions),
+<a href=#545 id=545 data-nosnippet>545</a>  (<span class="string">"pzd"</span>, <span class="string">"fontmap"</span>, package::pzd_fontmap::load_definitions),
+<a href=#546 id=546 data-nosnippet>546</a>  (<span class="string">"pifont"</span>, <span class="string">"sty"</span>, package::pifont_sty::load_definitions),
+<a href=#547 id=547 data-nosnippet>547</a>  (<span class="string">"pict2e"</span>, <span class="string">"sty"</span>, package::pict2e_sty::load_definitions),
+<a href=#548 id=548 data-nosnippet>548</a>  (<span class="string">"utf8"</span>, <span class="string">"def"</span>, package::utf8_def::load_definitions),
+<a href=#549 id=549 data-nosnippet>549</a>  <span class="comment">// Perl utf8x.def.ltxml L18: "Note: this is a copy of utf8.def.ltxml
+<a href=#550 id=550 data-nosnippet>550</a>  // for now" — dispatch utf8x to the same loader.
+<a href=#551 id=551 data-nosnippet>551</a>  </span>(<span class="string">"utf8x"</span>, <span class="string">"def"</span>, package::utf8_def::load_definitions),
+<a href=#552 id=552 data-nosnippet>552</a>  (<span class="string">"tcilatex"</span>, <span class="string">"tex"</span>, package::tcilatex_tex::load_definitions),
+<a href=#553 id=553 data-nosnippet>553</a>  (<span class="string">"textcase"</span>, <span class="string">"sty"</span>, package::textcase_sty::load_definitions),
+<a href=#554 id=554 data-nosnippet>554</a>  (<span class="string">"citesort"</span>, <span class="string">"sty"</span>, package::citesort_sty::load_definitions),
+<a href=#555 id=555 data-nosnippet>555</a>  (<span class="string">"cite"</span>, <span class="string">"sty"</span>, package::cite_sty::load_definitions),
+<a href=#556 id=556 data-nosnippet>556</a>  (<span class="string">"color"</span>, <span class="string">"sty"</span>, package::color_sty::load_definitions),
+<a href=#557 id=557 data-nosnippet>557</a>  (<span class="string">"calc"</span>, <span class="string">"sty"</span>, package::calc_sty::load_definitions),
+<a href=#558 id=558 data-nosnippet>558</a>  (<span class="string">"accents"</span>, <span class="string">"sty"</span>, package::accents_sty::load_definitions),
+<a href=#559 id=559 data-nosnippet>559</a>  (<span class="string">"acronym"</span>, <span class="string">"sty"</span>, package::acronym_sty::load_definitions),
+<a href=#560 id=560 data-nosnippet>560</a>  (<span class="string">"cancel"</span>, <span class="string">"sty"</span>, package::cancel_sty::load_definitions),
+<a href=#561 id=561 data-nosnippet>561</a>  (<span class="string">"ccfonts"</span>, <span class="string">"sty"</span>, package::ccfonts_sty::load_definitions),
+<a href=#562 id=562 data-nosnippet>562</a>  (<span class="string">"cases"</span>, <span class="string">"sty"</span>, package::cases_sty::load_definitions),
+<a href=#563 id=563 data-nosnippet>563</a>  (<span class="string">"colortbl"</span>, <span class="string">"sty"</span>, package::colortbl_sty::load_definitions),
+<a href=#564 id=564 data-nosnippet>564</a>  (<span class="string">"crop"</span>, <span class="string">"sty"</span>, package::crop_sty::load_definitions),
+<a href=#565 id=565 data-nosnippet>565</a>  (<span class="string">"chngcntr"</span>, <span class="string">"sty"</span>, package::chngcntr_sty::load_definitions),
+<a href=#566 id=566 data-nosnippet>566</a>  (<span class="string">"natbib"</span>, <span class="string">"sty"</span>, package::natbib_sty::load_definitions),
+<a href=#567 id=567 data-nosnippet>567</a>  (
+<a href=#568 id=568 data-nosnippet>568</a>    <span class="string">"pdftexcmds"</span>,
+<a href=#569 id=569 data-nosnippet>569</a>    <span class="string">"sty"</span>,
+<a href=#570 id=570 data-nosnippet>570</a>    package::pdftexcmds_sty::load_definitions,
+<a href=#571 id=571 data-nosnippet>571</a>  ),
+<a href=#572 id=572 data-nosnippet>572</a>  (<span class="string">"pdfx"</span>, <span class="string">"sty"</span>, package::pdfx_sty::load_definitions),
+<a href=#573 id=573 data-nosnippet>573</a>  (<span class="string">"ngerman"</span>, <span class="string">"sty"</span>, package::ngerman_sty::load_definitions),
+<a href=#574 id=574 data-nosnippet>574</a>  (<span class="string">"orcidlink"</span>, <span class="string">"sty"</span>, package::orcidlink_sty::load_definitions),
+<a href=#575 id=575 data-nosnippet>575</a>  (<span class="string">"newtxmath"</span>, <span class="string">"sty"</span>, package::newtxmath_sty::load_definitions),
+<a href=#576 id=576 data-nosnippet>576</a>  (<span class="string">"newtxtext"</span>, <span class="string">"sty"</span>, package::newtxtext_sty::load_definitions),
+<a href=#577 id=577 data-nosnippet>577</a>  (<span class="string">"bibunits"</span>, <span class="string">"sty"</span>, package::bibunits_sty::load_definitions),
 <a href=#578 id=578 data-nosnippet>578</a>  (
-<a href=#579 id=579 data-nosnippet>579</a>    <span class="string">"subcaption"</span>,
+<a href=#579 id=579 data-nosnippet>579</a>    <span class="string">"subeqnarray"</span>,
 <a href=#580 id=580 data-nosnippet>580</a>    <span class="string">"sty"</span>,
-<a href=#581 id=581 data-nosnippet>581</a>    package::subcaption_sty::load_definitions,
+<a href=#581 id=581 data-nosnippet>581</a>    package::subeqnarray_sty::load_definitions,
 <a href=#582 id=582 data-nosnippet>582</a>  ),
-<a href=#583 id=583 data-nosnippet>583</a>  (<span class="string">"subfigure"</span>, <span class="string">"sty"</span>, package::subfigure_sty::load_definitions),
-<a href=#584 id=584 data-nosnippet>584</a>  (<span class="string">"subfiles"</span>, <span class="string">"cls"</span>, package::subfiles_cls::load_definitions),
-<a href=#585 id=585 data-nosnippet>585</a>  (<span class="string">"subfiles"</span>, <span class="string">"sty"</span>, package::subfiles_sty::load_definitions),
-<a href=#586 id=586 data-nosnippet>586</a>  (<span class="string">"soul"</span>, <span class="string">"sty"</span>, package::soul_sty::load_definitions),
-<a href=#587 id=587 data-nosnippet>587</a>  (
-<a href=#588 id=588 data-nosnippet>588</a>    <span class="string">"spectralsequences"</span>,
-<a href=#589 id=589 data-nosnippet>589</a>    <span class="string">"sty"</span>,
-<a href=#590 id=590 data-nosnippet>590</a>    package::spectralsequences_sty::load_definitions,
-<a href=#591 id=591 data-nosnippet>591</a>  ),
-<a href=#592 id=592 data-nosnippet>592</a>  (<span class="string">"stfloats"</span>, <span class="string">"sty"</span>, package::stfloats_sty::load_definitions),
-<a href=#593 id=593 data-nosnippet>593</a>  (<span class="string">"stmaryrd"</span>, <span class="string">"sty"</span>, package::stmaryrd_sty::load_definitions),
-<a href=#594 id=594 data-nosnippet>594</a>  (<span class="string">"mathabx"</span>, <span class="string">"sty"</span>, package::mathabx_sty::load_definitions),
-<a href=#595 id=595 data-nosnippet>595</a>  (<span class="string">"mathdots"</span>, <span class="string">"sty"</span>, package::mathdots_sty::load_definitions),
-<a href=#596 id=596 data-nosnippet>596</a>  (<span class="string">"wasysym"</span>, <span class="string">"sty"</span>, package::wasysym_sty::load_definitions),
-<a href=#597 id=597 data-nosnippet>597</a>  (<span class="string">"wrapfig"</span>, <span class="string">"sty"</span>, package::wrapfig_sty::load_definitions),
-<a href=#598 id=598 data-nosnippet>598</a>  (<span class="string">"xkeyval"</span>, <span class="string">"sty"</span>, package::xkeyval_sty::load_definitions),
-<a href=#599 id=599 data-nosnippet>599</a>  (<span class="string">"xfor"</span>, <span class="string">"sty"</span>, package::xfor_sty::load_definitions),
-<a href=#600 id=600 data-nosnippet>600</a>  (<span class="string">"mfirstuc"</span>, <span class="string">"sty"</span>, package::mfirstuc_sty::load_definitions),
-<a href=#601 id=601 data-nosnippet>601</a>  (<span class="string">"datatool-base"</span>, <span class="string">"sty"</span>, package::datatool_base_sty::load_definitions),
-<a href=#602 id=602 data-nosnippet>602</a>  (<span class="string">"chemgreek"</span>, <span class="string">"sty"</span>, package::chemgreek_sty::load_definitions),
-<a href=#603 id=603 data-nosnippet>603</a>  (<span class="string">"chemmacros"</span>, <span class="string">"sty"</span>, package::chemmacros_sty::load_definitions),
-<a href=#604 id=604 data-nosnippet>604</a>  (<span class="string">"substr"</span>, <span class="string">"sty"</span>, package::substr_sty::load_definitions),
-<a href=#605 id=605 data-nosnippet>605</a>  (<span class="string">"shellesc"</span>, <span class="string">"sty"</span>, package::shellesc_sty::load_definitions),
-<a href=#606 id=606 data-nosnippet>606</a>  (<span class="string">"tracklang"</span>, <span class="string">"sty"</span>, package::tracklang_sty::load_definitions),
-<a href=#607 id=607 data-nosnippet>607</a>  (<span class="string">"translations"</span>, <span class="string">"sty"</span>, package::translations_sty::load_definitions),
-<a href=#608 id=608 data-nosnippet>608</a>  (<span class="string">"translator"</span>, <span class="string">"sty"</span>, package::translator_sty::load_definitions),
-<a href=#609 id=609 data-nosnippet>609</a>  (<span class="string">"xspace"</span>, <span class="string">"sty"</span>, package::xspace_sty::load_definitions),
-<a href=#610 id=610 data-nosnippet>610</a>  (<span class="string">"xurl"</span>, <span class="string">"sty"</span>, package::xurl_sty::load_definitions),
-<a href=#611 id=611 data-nosnippet>611</a>  (<span class="string">"lineno"</span>, <span class="string">"sty"</span>, package::lineno_sty::load_definitions),
-<a href=#612 id=612 data-nosnippet>612</a>  (<span class="string">"libertinust1math"</span>, <span class="string">"sty"</span>, package::libertinust1math_sty::load_definitions),
-<a href=#613 id=613 data-nosnippet>613</a>  (<span class="string">"preview"</span>, <span class="string">"sty"</span>, package::preview_sty::load_definitions),
-<a href=#614 id=614 data-nosnippet>614</a>  (<span class="string">"proof"</span>, <span class="string">"sty"</span>, package::proof_sty::load_definitions),
-<a href=#615 id=615 data-nosnippet>615</a>  (<span class="string">"proofwiki"</span>, <span class="string">"sty"</span>, package::proofwiki_sty::load_definitions),
-<a href=#616 id=616 data-nosnippet>616</a>  (
-<a href=#617 id=617 data-nosnippet>617</a>    <span class="string">"pstricks_support"</span>,
-<a href=#618 id=618 data-nosnippet>618</a>    <span class="string">"sty"</span>,
-<a href=#619 id=619 data-nosnippet>619</a>    package::pstricks_support_sty::load_definitions,
-<a href=#620 id=620 data-nosnippet>620</a>  ),
-<a href=#621 id=621 data-nosnippet>621</a>  (<span class="string">"pst-node"</span>, <span class="string">"sty"</span>, package::pst_node_sty::load_definitions),
-<a href=#622 id=622 data-nosnippet>622</a>  (<span class="string">"turing"</span>, <span class="string">"sty"</span>, package::turing_sty::load_definitions),
-<a href=#623 id=623 data-nosnippet>623</a>  (<span class="string">"amsppt"</span>, <span class="string">"sty"</span>, package::amsppt_sty::load_definitions),
-<a href=#624 id=624 data-nosnippet>624</a>  <span class="comment">// \documentstyle{amsppt} (sandbox math0004154 + \Cal/\Refs/
-<a href=#625 id=625 data-nosnippet>625</a>  // \topmatter cluster) routes through .cls lookup. amsppt is
-<a href=#626 id=626 data-nosnippet>626</a>  // canonically a .sty (AmS-TeX style file) used as a pseudo-class.
-<a href=#627 id=627 data-nosnippet>627</a>  // Direct alias was unblocked by the def_autoload re-entry guard
-<a href=#628 id=628 data-nosnippet>628</a>  // (engine/tex.rs:18-29) which prevents \mathfrak/\theoremstyle
-<a href=#629 id=629 data-nosnippet>629</a>  // autoloads from looping mid-package-load.
-<a href=#630 id=630 data-nosnippet>630</a>  </span>(<span class="string">"amsppt"</span>, <span class="string">"cls"</span>, package::amsppt_sty::load_definitions),
-<a href=#631 id=631 data-nosnippet>631</a>  (<span class="string">"titlesec"</span>, <span class="string">"sty"</span>, package::titlesec_sty::load_definitions),
-<a href=#632 id=632 data-nosnippet>632</a>  (<span class="string">"upgreek"</span>, <span class="string">"sty"</span>, package::upgreek_sty::load_definitions),
-<a href=#633 id=633 data-nosnippet>633</a>  (<span class="string">"xcolor"</span>, <span class="string">"sty"</span>, package::xcolor_sty::load_definitions),
-<a href=#634 id=634 data-nosnippet>634</a>  (<span class="string">"xparse"</span>, <span class="string">"sty"</span>, package::xparse_sty::load_definitions),
-<a href=#635 id=635 data-nosnippet>635</a>  (
-<a href=#636 id=636 data-nosnippet>636</a>    <span class="string">"thm-restate"</span>,
-<a href=#637 id=637 data-nosnippet>637</a>    <span class="string">"sty"</span>,
-<a href=#638 id=638 data-nosnippet>638</a>    package::thm_restate_sty::load_definitions,
-<a href=#639 id=639 data-nosnippet>639</a>  ),
-<a href=#640 id=640 data-nosnippet>640</a>  (<span class="string">"subfloat"</span>, <span class="string">"sty"</span>, package::subfloat_sty::load_definitions),
-<a href=#641 id=641 data-nosnippet>641</a>  (<span class="string">"svg"</span>, <span class="string">"sty"</span>, package::svg_sty::load_definitions),
-<a href=#642 id=642 data-nosnippet>642</a>  (<span class="string">"subfig"</span>, <span class="string">"sty"</span>, package::subfig_sty::load_definitions),
-<a href=#643 id=643 data-nosnippet>643</a>  (<span class="string">"babel"</span>, <span class="string">"def"</span>, package::babel_def::load_definitions),
-<a href=#644 id=644 data-nosnippet>644</a>  (
-<a href=#645 id=645 data-nosnippet>645</a>    <span class="string">"babel_support"</span>,
-<a href=#646 id=646 data-nosnippet>646</a>    <span class="string">"sty"</span>,
-<a href=#647 id=647 data-nosnippet>647</a>    package::babel_support_sty::load_definitions,
-<a href=#648 id=648 data-nosnippet>648</a>  ),
-<a href=#649 id=649 data-nosnippet>649</a>  (<span class="string">"txtbabel"</span>, <span class="string">"def"</span>, package::txtbabel_def::load_definitions),
-<a href=#650 id=650 data-nosnippet>650</a>  (<span class="string">"xy"</span>, <span class="string">"sty"</span>, package::xy_sty::load_definitions),
-<a href=#651 id=651 data-nosnippet>651</a>  (<span class="string">"xylatexml"</span>, <span class="string">"tex"</span>, package::xylatexml_tex::load_definitions),
-<a href=#652 id=652 data-nosnippet>652</a>  (<span class="string">"xypic"</span>, <span class="string">"sty"</span>, package::xypic_sty::load_definitions),
-<a href=#653 id=653 data-nosnippet>653</a>  (<span class="string">"pgf"</span>, <span class="string">"sty"</span>, package::pgf_sty::load_definitions),
-<a href=#654 id=654 data-nosnippet>654</a>  (
-<a href=#655 id=655 data-nosnippet>655</a>    <span class="string">"pgfcircutils"</span>,
-<a href=#656 id=656 data-nosnippet>656</a>    <span class="string">"tex"</span>,
-<a href=#657 id=657 data-nosnippet>657</a>    package::pgfcircutils_tex::load_definitions,
-<a href=#658 id=658 data-nosnippet>658</a>  ),
+<a href=#583 id=583 data-nosnippet>583</a>  (
+<a href=#584 id=584 data-nosnippet>584</a>    <span class="string">"subcaption"</span>,
+<a href=#585 id=585 data-nosnippet>585</a>    <span class="string">"sty"</span>,
+<a href=#586 id=586 data-nosnippet>586</a>    package::subcaption_sty::load_definitions,
+<a href=#587 id=587 data-nosnippet>587</a>  ),
+<a href=#588 id=588 data-nosnippet>588</a>  (<span class="string">"subfigure"</span>, <span class="string">"sty"</span>, package::subfigure_sty::load_definitions),
+<a href=#589 id=589 data-nosnippet>589</a>  (<span class="string">"subfiles"</span>, <span class="string">"cls"</span>, package::subfiles_cls::load_definitions),
+<a href=#590 id=590 data-nosnippet>590</a>  (<span class="string">"subfiles"</span>, <span class="string">"sty"</span>, package::subfiles_sty::load_definitions),
+<a href=#591 id=591 data-nosnippet>591</a>  (<span class="string">"soul"</span>, <span class="string">"sty"</span>, package::soul_sty::load_definitions),
+<a href=#592 id=592 data-nosnippet>592</a>  (
+<a href=#593 id=593 data-nosnippet>593</a>    <span class="string">"spectralsequences"</span>,
+<a href=#594 id=594 data-nosnippet>594</a>    <span class="string">"sty"</span>,
+<a href=#595 id=595 data-nosnippet>595</a>    package::spectralsequences_sty::load_definitions,
+<a href=#596 id=596 data-nosnippet>596</a>  ),
+<a href=#597 id=597 data-nosnippet>597</a>  (<span class="string">"stfloats"</span>, <span class="string">"sty"</span>, package::stfloats_sty::load_definitions),
+<a href=#598 id=598 data-nosnippet>598</a>  (<span class="string">"stmaryrd"</span>, <span class="string">"sty"</span>, package::stmaryrd_sty::load_definitions),
+<a href=#599 id=599 data-nosnippet>599</a>  (<span class="string">"mathabx"</span>, <span class="string">"sty"</span>, package::mathabx_sty::load_definitions),
+<a href=#600 id=600 data-nosnippet>600</a>  (<span class="string">"mathdots"</span>, <span class="string">"sty"</span>, package::mathdots_sty::load_definitions),
+<a href=#601 id=601 data-nosnippet>601</a>  (<span class="string">"wasysym"</span>, <span class="string">"sty"</span>, package::wasysym_sty::load_definitions),
+<a href=#602 id=602 data-nosnippet>602</a>  (<span class="string">"wrapfig"</span>, <span class="string">"sty"</span>, package::wrapfig_sty::load_definitions),
+<a href=#603 id=603 data-nosnippet>603</a>  (<span class="string">"xkeyval"</span>, <span class="string">"sty"</span>, package::xkeyval_sty::load_definitions),
+<a href=#604 id=604 data-nosnippet>604</a>  (<span class="string">"xfor"</span>, <span class="string">"sty"</span>, package::xfor_sty::load_definitions),
+<a href=#605 id=605 data-nosnippet>605</a>  (<span class="string">"mfirstuc"</span>, <span class="string">"sty"</span>, package::mfirstuc_sty::load_definitions),
+<a href=#606 id=606 data-nosnippet>606</a>  (<span class="string">"datatool-base"</span>, <span class="string">"sty"</span>, package::datatool_base_sty::load_definitions),
+<a href=#607 id=607 data-nosnippet>607</a>  (<span class="string">"chemgreek"</span>, <span class="string">"sty"</span>, package::chemgreek_sty::load_definitions),
+<a href=#608 id=608 data-nosnippet>608</a>  (<span class="string">"chemmacros"</span>, <span class="string">"sty"</span>, package::chemmacros_sty::load_definitions),
+<a href=#609 id=609 data-nosnippet>609</a>  (<span class="string">"substr"</span>, <span class="string">"sty"</span>, package::substr_sty::load_definitions),
+<a href=#610 id=610 data-nosnippet>610</a>  (<span class="string">"shellesc"</span>, <span class="string">"sty"</span>, package::shellesc_sty::load_definitions),
+<a href=#611 id=611 data-nosnippet>611</a>  (<span class="string">"tracklang"</span>, <span class="string">"sty"</span>, package::tracklang_sty::load_definitions),
+<a href=#612 id=612 data-nosnippet>612</a>  (<span class="string">"translations"</span>, <span class="string">"sty"</span>, package::translations_sty::load_definitions),
+<a href=#613 id=613 data-nosnippet>613</a>  (<span class="string">"translator"</span>, <span class="string">"sty"</span>, package::translator_sty::load_definitions),
+<a href=#614 id=614 data-nosnippet>614</a>  (<span class="string">"xspace"</span>, <span class="string">"sty"</span>, package::xspace_sty::load_definitions),
+<a href=#615 id=615 data-nosnippet>615</a>  (<span class="string">"xurl"</span>, <span class="string">"sty"</span>, package::xurl_sty::load_definitions),
+<a href=#616 id=616 data-nosnippet>616</a>  (<span class="string">"lineno"</span>, <span class="string">"sty"</span>, package::lineno_sty::load_definitions),
+<a href=#617 id=617 data-nosnippet>617</a>  (<span class="string">"libertinust1math"</span>, <span class="string">"sty"</span>, package::libertinust1math_sty::load_definitions),
+<a href=#618 id=618 data-nosnippet>618</a>  (<span class="string">"preview"</span>, <span class="string">"sty"</span>, package::preview_sty::load_definitions),
+<a href=#619 id=619 data-nosnippet>619</a>  (<span class="string">"proof"</span>, <span class="string">"sty"</span>, package::proof_sty::load_definitions),
+<a href=#620 id=620 data-nosnippet>620</a>  (<span class="string">"proofwiki"</span>, <span class="string">"sty"</span>, package::proofwiki_sty::load_definitions),
+<a href=#621 id=621 data-nosnippet>621</a>  (
+<a href=#622 id=622 data-nosnippet>622</a>    <span class="string">"pstricks_support"</span>,
+<a href=#623 id=623 data-nosnippet>623</a>    <span class="string">"sty"</span>,
+<a href=#624 id=624 data-nosnippet>624</a>    package::pstricks_support_sty::load_definitions,
+<a href=#625 id=625 data-nosnippet>625</a>  ),
+<a href=#626 id=626 data-nosnippet>626</a>  (<span class="string">"pst-node"</span>, <span class="string">"sty"</span>, package::pst_node_sty::load_definitions),
+<a href=#627 id=627 data-nosnippet>627</a>  (<span class="string">"turing"</span>, <span class="string">"sty"</span>, package::turing_sty::load_definitions),
+<a href=#628 id=628 data-nosnippet>628</a>  (<span class="string">"amsppt"</span>, <span class="string">"sty"</span>, package::amsppt_sty::load_definitions),
+<a href=#629 id=629 data-nosnippet>629</a>  <span class="comment">// \documentstyle{amsppt} (sandbox math0004154 + \Cal/\Refs/
+<a href=#630 id=630 data-nosnippet>630</a>  // \topmatter cluster) routes through .cls lookup. amsppt is
+<a href=#631 id=631 data-nosnippet>631</a>  // canonically a .sty (AmS-TeX style file) used as a pseudo-class.
+<a href=#632 id=632 data-nosnippet>632</a>  // Direct alias was unblocked by the def_autoload re-entry guard
+<a href=#633 id=633 data-nosnippet>633</a>  // (engine/tex.rs:18-29) which prevents \mathfrak/\theoremstyle
+<a href=#634 id=634 data-nosnippet>634</a>  // autoloads from looping mid-package-load.
+<a href=#635 id=635 data-nosnippet>635</a>  </span>(<span class="string">"amsppt"</span>, <span class="string">"cls"</span>, package::amsppt_sty::load_definitions),
+<a href=#636 id=636 data-nosnippet>636</a>  (<span class="string">"titlesec"</span>, <span class="string">"sty"</span>, package::titlesec_sty::load_definitions),
+<a href=#637 id=637 data-nosnippet>637</a>  (<span class="string">"upgreek"</span>, <span class="string">"sty"</span>, package::upgreek_sty::load_definitions),
+<a href=#638 id=638 data-nosnippet>638</a>  (<span class="string">"xcolor"</span>, <span class="string">"sty"</span>, package::xcolor_sty::load_definitions),
+<a href=#639 id=639 data-nosnippet>639</a>  (<span class="string">"xparse"</span>, <span class="string">"sty"</span>, package::xparse_sty::load_definitions),
+<a href=#640 id=640 data-nosnippet>640</a>  (
+<a href=#641 id=641 data-nosnippet>641</a>    <span class="string">"thm-restate"</span>,
+<a href=#642 id=642 data-nosnippet>642</a>    <span class="string">"sty"</span>,
+<a href=#643 id=643 data-nosnippet>643</a>    package::thm_restate_sty::load_definitions,
+<a href=#644 id=644 data-nosnippet>644</a>  ),
+<a href=#645 id=645 data-nosnippet>645</a>  (<span class="string">"subfloat"</span>, <span class="string">"sty"</span>, package::subfloat_sty::load_definitions),
+<a href=#646 id=646 data-nosnippet>646</a>  (<span class="string">"svg"</span>, <span class="string">"sty"</span>, package::svg_sty::load_definitions),
+<a href=#647 id=647 data-nosnippet>647</a>  (<span class="string">"subfig"</span>, <span class="string">"sty"</span>, package::subfig_sty::load_definitions),
+<a href=#648 id=648 data-nosnippet>648</a>  (<span class="string">"babel"</span>, <span class="string">"def"</span>, package::babel_def::load_definitions),
+<a href=#649 id=649 data-nosnippet>649</a>  (
+<a href=#650 id=650 data-nosnippet>650</a>    <span class="string">"babel_support"</span>,
+<a href=#651 id=651 data-nosnippet>651</a>    <span class="string">"sty"</span>,
+<a href=#652 id=652 data-nosnippet>652</a>    package::babel_support_sty::load_definitions,
+<a href=#653 id=653 data-nosnippet>653</a>  ),
+<a href=#654 id=654 data-nosnippet>654</a>  (<span class="string">"txtbabel"</span>, <span class="string">"def"</span>, package::txtbabel_def::load_definitions),
+<a href=#655 id=655 data-nosnippet>655</a>  (<span class="string">"xy"</span>, <span class="string">"sty"</span>, package::xy_sty::load_definitions),
+<a href=#656 id=656 data-nosnippet>656</a>  (<span class="string">"xylatexml"</span>, <span class="string">"tex"</span>, package::xylatexml_tex::load_definitions),
+<a href=#657 id=657 data-nosnippet>657</a>  (<span class="string">"xypic"</span>, <span class="string">"sty"</span>, package::xypic_sty::load_definitions),
+<a href=#658 id=658 data-nosnippet>658</a>  (<span class="string">"pgf"</span>, <span class="string">"sty"</span>, package::pgf_sty::load_definitions),
 <a href=#659 id=659 data-nosnippet>659</a>  (
-<a href=#660 id=660 data-nosnippet>660</a>    <span class="string">"pgfsys-latexml"</span>,
-<a href=#661 id=661 data-nosnippet>661</a>    <span class="string">"def"</span>,
-<a href=#662 id=662 data-nosnippet>662</a>    package::pgfsys_latexml_def::load_definitions,
+<a href=#660 id=660 data-nosnippet>660</a>    <span class="string">"pgfcircutils"</span>,
+<a href=#661 id=661 data-nosnippet>661</a>    <span class="string">"tex"</span>,
+<a href=#662 id=662 data-nosnippet>662</a>    package::pgfcircutils_tex::load_definitions,
 <a href=#663 id=663 data-nosnippet>663</a>  ),
 <a href=#664 id=664 data-nosnippet>664</a>  (
-<a href=#665 id=665 data-nosnippet>665</a>    <span class="string">"pgfutil-common"</span>,
-<a href=#666 id=666 data-nosnippet>666</a>    <span class="string">"tex"</span>,
-<a href=#667 id=667 data-nosnippet>667</a>    package::pgfutil_common_tex::load_definitions,
+<a href=#665 id=665 data-nosnippet>665</a>    <span class="string">"pgfsys-latexml"</span>,
+<a href=#666 id=666 data-nosnippet>666</a>    <span class="string">"def"</span>,
+<a href=#667 id=667 data-nosnippet>667</a>    package::pgfsys_latexml_def::load_definitions,
 <a href=#668 id=668 data-nosnippet>668</a>  ),
 <a href=#669 id=669 data-nosnippet>669</a>  (
-<a href=#670 id=670 data-nosnippet>670</a>    <span class="string">"pgfmath"</span>,
-<a href=#671 id=671 data-nosnippet>671</a>    <span class="string">"code.tex"</span>,
-<a href=#672 id=672 data-nosnippet>672</a>    package::pgfmath_code_tex::load_definitions,
+<a href=#670 id=670 data-nosnippet>670</a>    <span class="string">"pgfutil-common"</span>,
+<a href=#671 id=671 data-nosnippet>671</a>    <span class="string">"tex"</span>,
+<a href=#672 id=672 data-nosnippet>672</a>    package::pgfutil_common_tex::load_definitions,
 <a href=#673 id=673 data-nosnippet>673</a>  ),
 <a href=#674 id=674 data-nosnippet>674</a>  (
-<a href=#675 id=675 data-nosnippet>675</a>    <span class="string">"pgfmathcalc"</span>,
+<a href=#675 id=675 data-nosnippet>675</a>    <span class="string">"pgfmath"</span>,
 <a href=#676 id=676 data-nosnippet>676</a>    <span class="string">"code.tex"</span>,
-<a href=#677 id=677 data-nosnippet>677</a>    package::pgfmathcalc_code_tex::load_definitions,
+<a href=#677 id=677 data-nosnippet>677</a>    package::pgfmath_code_tex::load_definitions,
 <a href=#678 id=678 data-nosnippet>678</a>  ),
-<a href=#679 id=679 data-nosnippet>679</a>  (<span class="string">"pgfplots"</span>, <span class="string">"sty"</span>, package::pgfplots_sty::load_definitions),
-<a href=#680 id=680 data-nosnippet>680</a>  (<span class="string">"tikz"</span>, <span class="string">"sty"</span>, package::tikz_sty::load_definitions),
-<a href=#681 id=681 data-nosnippet>681</a>  (<span class="string">"llncs"</span>, <span class="string">"cls"</span>, package::llncs_cls::load_definitions),
-<a href=#682 id=682 data-nosnippet>682</a>  (<span class="string">"xkvview"</span>, <span class="string">"sty"</span>, package::xkvview_sty::load_definitions),
-<a href=#683 id=683 data-nosnippet>683</a>  (<span class="string">"wiki"</span>, <span class="string">"sty"</span>, package::wiki_sty::load_definitions),
-<a href=#684 id=684 data-nosnippet>684</a>  (
-<a href=#685 id=685 data-nosnippet>685</a>    <span class="string">"tikzbricks"</span>,
-<a href=#686 id=686 data-nosnippet>686</a>    <span class="string">"sty"</span>,
-<a href=#687 id=687 data-nosnippet>687</a>    package::tikzbricks_sty::load_definitions,
-<a href=#688 id=688 data-nosnippet>688</a>  ),
+<a href=#679 id=679 data-nosnippet>679</a>  (
+<a href=#680 id=680 data-nosnippet>680</a>    <span class="string">"pgfmathcalc"</span>,
+<a href=#681 id=681 data-nosnippet>681</a>    <span class="string">"code.tex"</span>,
+<a href=#682 id=682 data-nosnippet>682</a>    package::pgfmathcalc_code_tex::load_definitions,
+<a href=#683 id=683 data-nosnippet>683</a>  ),
+<a href=#684 id=684 data-nosnippet>684</a>  (<span class="string">"pgfplots"</span>, <span class="string">"sty"</span>, package::pgfplots_sty::load_definitions),
+<a href=#685 id=685 data-nosnippet>685</a>  (<span class="string">"tikz"</span>, <span class="string">"sty"</span>, package::tikz_sty::load_definitions),
+<a href=#686 id=686 data-nosnippet>686</a>  (<span class="string">"llncs"</span>, <span class="string">"cls"</span>, package::llncs_cls::load_definitions),
+<a href=#687 id=687 data-nosnippet>687</a>  (<span class="string">"xkvview"</span>, <span class="string">"sty"</span>, package::xkvview_sty::load_definitions),
+<a href=#688 id=688 data-nosnippet>688</a>  (<span class="string">"wiki"</span>, <span class="string">"sty"</span>, package::wiki_sty::load_definitions),
 <a href=#689 id=689 data-nosnippet>689</a>  (
-<a href=#690 id=690 data-nosnippet>690</a>    <span class="string">"tikz-3dplot"</span>,
+<a href=#690 id=690 data-nosnippet>690</a>    <span class="string">"tikzbricks"</span>,
 <a href=#691 id=691 data-nosnippet>691</a>    <span class="string">"sty"</span>,
-<a href=#692 id=692 data-nosnippet>692</a>    package::tikz_3dplot_sty::load_definitions,
+<a href=#692 id=692 data-nosnippet>692</a>    package::tikzbricks_sty::load_definitions,
 <a href=#693 id=693 data-nosnippet>693</a>  ),
-<a href=#694 id=694 data-nosnippet>694</a>  (<span class="string">"pst-grad"</span>, <span class="string">"sty"</span>, package::pst_grad_sty::load_definitions),
-<a href=#695 id=695 data-nosnippet>695</a>  (<span class="string">"pspicture"</span>, <span class="string">"sty"</span>, package::pspicture_sty::load_definitions),
-<a href=#696 id=696 data-nosnippet>696</a>  (<span class="string">"psfrag"</span>, <span class="string">"sty"</span>, package::psfrag_sty::load_definitions),
-<a href=#697 id=697 data-nosnippet>697</a>  (<span class="string">"psfig"</span>, <span class="string">"sty"</span>, package::psfig_sty::load_definitions),
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="comment">// Perl: psfig.tex.ltxml just does `RequirePackage('epsfig')`.
-<a href=#699 id=699 data-nosnippet>699</a>  // Paper 0803.3406 does `\input{psfig}` (.tex form), hitting this dispatch.
-<a href=#700 id=700 data-nosnippet>700</a>  </span>(<span class="string">"psfig"</span>, <span class="string">"tex"</span>, package::epsfig_sty::load_definitions),
-<a href=#701 id=701 data-nosnippet>701</a>  <span class="comment">// Perl: aipcheck.tex.ltxml — "Do nothing" stub. Paper 0809.2681 does
-<a href=#702 id=702 data-nosnippet>702</a>  // `\input{aipcheck}`.
-<a href=#703 id=703 data-nosnippet>703</a>  </span>(<span class="string">"aipcheck"</span>, <span class="string">"tex"</span>, package::aipcheck_tex::load_definitions),
-<a href=#704 id=704 data-nosnippet>704</a>  <span class="comment">// Perl: epsf.tex.ltxml just does `RequirePackage('epsf')`.
-<a href=#705 id=705 data-nosnippet>705</a>  </span>(<span class="string">"epsf"</span>, <span class="string">"tex"</span>, package::epsf_sty::load_definitions),
-<a href=#706 id=706 data-nosnippet>706</a>  <span class="comment">// Perl (post-#2777 / fdc8bf91): pstricks.tex.ltxml now does
-<a href=#707 id=707 data-nosnippet>707</a>  // `InputDefinitions('pstricks', type=&gt;'tex', noltxml=&gt;1)` + then
-<a href=#708 id=708 data-nosnippet>708</a>  // `RequirePackage('pstricks_support')`. See pstricks_tex.rs.
-<a href=#709 id=709 data-nosnippet>709</a>  </span>(<span class="string">"pstricks"</span>, <span class="string">"tex"</span>, package::pstricks_tex::load_definitions),
-<a href=#710 id=710 data-nosnippet>710</a>  <span class="comment">// Perl: xypic.tex.ltxml does InputDefinitions('xy', type=&gt;'tex') + RawTeX('\xyoption{v2}').
-<a href=#711 id=711 data-nosnippet>711</a>  // Faithful to that, `xypic_tex` loads the xy *tex* overlay WITHOUT marking
-<a href=#712 id=712 data-nosnippet>712</a>  // the xy *package* loaded, so a later `\usepackage[all]{xy}` still processes
-<a href=#713 id=713 data-nosnippet>713</a>  // its options (curve/arrow/... features). `xypic_sty` keeps the `.sty`-entry
-<a href=#714 id=714 data-nosnippet>714</a>  // `RequirePackage('xy', ['v2'])` semantics (Perl xypic.sty.ltxml).
-<a href=#715 id=715 data-nosnippet>715</a>  </span>(<span class="string">"xypic"</span>, <span class="string">"tex"</span>, package::xypic_tex::load_definitions),
-<a href=#716 id=716 data-nosnippet>716</a>  <span class="comment">// Perl: xy.tex.ltxml does InputDefinitions('xy', type=&gt;'tex', noltxml=&gt;1, at_letter=&gt;0)
-<a href=#717 id=717 data-nosnippet>717</a>  // plus \xyoption driver filtering. Rust xy_sty matches this structure.
-<a href=#718 id=718 data-nosnippet>718</a>  </span>(<span class="string">"xy"</span>, <span class="string">"tex"</span>, package::xy_sty::load_definitions),
-<a href=#719 id=719 data-nosnippet>719</a>  (<span class="string">"newlfont"</span>, <span class="string">"sty"</span>, package::newlfont_sty::load_definitions),
-<a href=#720 id=720 data-nosnippet>720</a>  (<span class="string">"ltxcmds"</span>, <span class="string">"sty"</span>, package::ltxcmds_sty::load_definitions),
-<a href=#721 id=721 data-nosnippet>721</a>  (<span class="string">"kvsetkeys"</span>, <span class="string">"sty"</span>, package::kvsetkeys_sty::load_definitions),
-<a href=#722 id=722 data-nosnippet>722</a>  (<span class="string">"amsbook"</span>, <span class="string">"cls"</span>, package::amsbook_cls::load_definitions),
-<a href=#723 id=723 data-nosnippet>723</a>  (<span class="string">"aa"</span>, <span class="string">"cls"</span>, package::aa_cls::load_definitions),
-<a href=#724 id=724 data-nosnippet>724</a>  (
-<a href=#725 id=725 data-nosnippet>725</a>    <span class="string">"aa_support"</span>,
-<a href=#726 id=726 data-nosnippet>726</a>    <span class="string">"sty"</span>,
-<a href=#727 id=727 data-nosnippet>727</a>    package::aa_support_sty::load_definitions,
-<a href=#728 id=728 data-nosnippet>728</a>  ),
+<a href=#694 id=694 data-nosnippet>694</a>  (
+<a href=#695 id=695 data-nosnippet>695</a>    <span class="string">"tikz-3dplot"</span>,
+<a href=#696 id=696 data-nosnippet>696</a>    <span class="string">"sty"</span>,
+<a href=#697 id=697 data-nosnippet>697</a>    package::tikz_3dplot_sty::load_definitions,
+<a href=#698 id=698 data-nosnippet>698</a>  ),
+<a href=#699 id=699 data-nosnippet>699</a>  (<span class="string">"pst-grad"</span>, <span class="string">"sty"</span>, package::pst_grad_sty::load_definitions),
+<a href=#700 id=700 data-nosnippet>700</a>  (<span class="string">"pspicture"</span>, <span class="string">"sty"</span>, package::pspicture_sty::load_definitions),
+<a href=#701 id=701 data-nosnippet>701</a>  (<span class="string">"psfrag"</span>, <span class="string">"sty"</span>, package::psfrag_sty::load_definitions),
+<a href=#702 id=702 data-nosnippet>702</a>  (<span class="string">"psfig"</span>, <span class="string">"sty"</span>, package::psfig_sty::load_definitions),
+<a href=#703 id=703 data-nosnippet>703</a>  <span class="comment">// Perl: psfig.tex.ltxml just does `RequirePackage('epsfig')`.
+<a href=#704 id=704 data-nosnippet>704</a>  // Paper 0803.3406 does `\input{psfig}` (.tex form), hitting this dispatch.
+<a href=#705 id=705 data-nosnippet>705</a>  </span>(<span class="string">"psfig"</span>, <span class="string">"tex"</span>, package::epsfig_sty::load_definitions),
+<a href=#706 id=706 data-nosnippet>706</a>  <span class="comment">// Perl: aipcheck.tex.ltxml — "Do nothing" stub. Paper 0809.2681 does
+<a href=#707 id=707 data-nosnippet>707</a>  // `\input{aipcheck}`.
+<a href=#708 id=708 data-nosnippet>708</a>  </span>(<span class="string">"aipcheck"</span>, <span class="string">"tex"</span>, package::aipcheck_tex::load_definitions),
+<a href=#709 id=709 data-nosnippet>709</a>  <span class="comment">// Perl: epsf.tex.ltxml just does `RequirePackage('epsf')`.
+<a href=#710 id=710 data-nosnippet>710</a>  </span>(<span class="string">"epsf"</span>, <span class="string">"tex"</span>, package::epsf_sty::load_definitions),
+<a href=#711 id=711 data-nosnippet>711</a>  <span class="comment">// Perl (post-#2777 / fdc8bf91): pstricks.tex.ltxml now does
+<a href=#712 id=712 data-nosnippet>712</a>  // `InputDefinitions('pstricks', type=&gt;'tex', noltxml=&gt;1)` + then
+<a href=#713 id=713 data-nosnippet>713</a>  // `RequirePackage('pstricks_support')`. See pstricks_tex.rs.
+<a href=#714 id=714 data-nosnippet>714</a>  </span>(<span class="string">"pstricks"</span>, <span class="string">"tex"</span>, package::pstricks_tex::load_definitions),
+<a href=#715 id=715 data-nosnippet>715</a>  <span class="comment">// Perl: xypic.tex.ltxml does InputDefinitions('xy', type=&gt;'tex') + RawTeX('\xyoption{v2}').
+<a href=#716 id=716 data-nosnippet>716</a>  // Faithful to that, `xypic_tex` loads the xy *tex* overlay WITHOUT marking
+<a href=#717 id=717 data-nosnippet>717</a>  // the xy *package* loaded, so a later `\usepackage[all]{xy}` still processes
+<a href=#718 id=718 data-nosnippet>718</a>  // its options (curve/arrow/... features). `xypic_sty` keeps the `.sty`-entry
+<a href=#719 id=719 data-nosnippet>719</a>  // `RequirePackage('xy', ['v2'])` semantics (Perl xypic.sty.ltxml).
+<a href=#720 id=720 data-nosnippet>720</a>  </span>(<span class="string">"xypic"</span>, <span class="string">"tex"</span>, package::xypic_tex::load_definitions),
+<a href=#721 id=721 data-nosnippet>721</a>  <span class="comment">// Perl: xy.tex.ltxml does InputDefinitions('xy', type=&gt;'tex', noltxml=&gt;1, at_letter=&gt;0)
+<a href=#722 id=722 data-nosnippet>722</a>  // plus \xyoption driver filtering. Rust xy_sty matches this structure.
+<a href=#723 id=723 data-nosnippet>723</a>  </span>(<span class="string">"xy"</span>, <span class="string">"tex"</span>, package::xy_sty::load_definitions),
+<a href=#724 id=724 data-nosnippet>724</a>  (<span class="string">"newlfont"</span>, <span class="string">"sty"</span>, package::newlfont_sty::load_definitions),
+<a href=#725 id=725 data-nosnippet>725</a>  (<span class="string">"ltxcmds"</span>, <span class="string">"sty"</span>, package::ltxcmds_sty::load_definitions),
+<a href=#726 id=726 data-nosnippet>726</a>  (<span class="string">"kvsetkeys"</span>, <span class="string">"sty"</span>, package::kvsetkeys_sty::load_definitions),
+<a href=#727 id=727 data-nosnippet>727</a>  (<span class="string">"amsbook"</span>, <span class="string">"cls"</span>, package::amsbook_cls::load_definitions),
+<a href=#728 id=728 data-nosnippet>728</a>  (<span class="string">"aa"</span>, <span class="string">"cls"</span>, package::aa_cls::load_definitions),
 <a href=#729 id=729 data-nosnippet>729</a>  (
-<a href=#730 id=730 data-nosnippet>730</a>    <span class="string">"elsarticle"</span>,
-<a href=#731 id=731 data-nosnippet>731</a>    <span class="string">"cls"</span>,
-<a href=#732 id=732 data-nosnippet>732</a>    package::elsarticle_cls::load_definitions,
+<a href=#730 id=730 data-nosnippet>730</a>    <span class="string">"aa_support"</span>,
+<a href=#731 id=731 data-nosnippet>731</a>    <span class="string">"sty"</span>,
+<a href=#732 id=732 data-nosnippet>732</a>    package::aa_support_sty::load_definitions,
 <a href=#733 id=733 data-nosnippet>733</a>  ),
-<a href=#734 id=734 data-nosnippet>734</a>  (<span class="string">"iopams"</span>, <span class="string">"sty"</span>, package::iopams_sty::load_definitions),
-<a href=#735 id=735 data-nosnippet>735</a>  (<span class="string">"ijcai"</span>, <span class="string">"sty"</span>, package::ijcai_sty::load_definitions),
-<a href=#736 id=736 data-nosnippet>736</a>  (
-<a href=#737 id=737 data-nosnippet>737</a>    <span class="string">"ifplatform"</span>,
-<a href=#738 id=738 data-nosnippet>738</a>    <span class="string">"sty"</span>,
-<a href=#739 id=739 data-nosnippet>739</a>    package::ifplatform_sty::load_definitions,
-<a href=#740 id=740 data-nosnippet>740</a>  ),
-<a href=#741 id=741 data-nosnippet>741</a>  (<span class="string">"html"</span>, <span class="string">"sty"</span>, package::html_sty::load_definitions),
-<a href=#742 id=742 data-nosnippet>742</a>  (<span class="string">"floatflt"</span>, <span class="string">"sty"</span>, package::floatflt_sty::load_definitions),
-<a href=#743 id=743 data-nosnippet>743</a>  (<span class="string">"espcrc"</span>, <span class="string">"sty"</span>, package::espcrc_sty::load_definitions),
-<a href=#744 id=744 data-nosnippet>744</a>  (<span class="string">"epsf"</span>, <span class="string">"sty"</span>, package::epsf_sty::load_definitions),
-<a href=#745 id=745 data-nosnippet>745</a>  (<span class="string">"epsfig"</span>, <span class="string">"sty"</span>, package::epsfig_sty::load_definitions),
-<a href=#746 id=746 data-nosnippet>746</a>  (
-<a href=#747 id=747 data-nosnippet>747</a>    <span class="string">"emulateapj"</span>,
-<a href=#748 id=748 data-nosnippet>748</a>    <span class="string">"sty"</span>,
-<a href=#749 id=749 data-nosnippet>749</a>    package::emulateapj_sty::load_definitions,
-<a href=#750 id=750 data-nosnippet>750</a>  ),
+<a href=#734 id=734 data-nosnippet>734</a>  (
+<a href=#735 id=735 data-nosnippet>735</a>    <span class="string">"elsarticle"</span>,
+<a href=#736 id=736 data-nosnippet>736</a>    <span class="string">"cls"</span>,
+<a href=#737 id=737 data-nosnippet>737</a>    package::elsarticle_cls::load_definitions,
+<a href=#738 id=738 data-nosnippet>738</a>  ),
+<a href=#739 id=739 data-nosnippet>739</a>  (<span class="string">"iopams"</span>, <span class="string">"sty"</span>, package::iopams_sty::load_definitions),
+<a href=#740 id=740 data-nosnippet>740</a>  (<span class="string">"ijcai"</span>, <span class="string">"sty"</span>, package::ijcai_sty::load_definitions),
+<a href=#741 id=741 data-nosnippet>741</a>  (
+<a href=#742 id=742 data-nosnippet>742</a>    <span class="string">"ifplatform"</span>,
+<a href=#743 id=743 data-nosnippet>743</a>    <span class="string">"sty"</span>,
+<a href=#744 id=744 data-nosnippet>744</a>    package::ifplatform_sty::load_definitions,
+<a href=#745 id=745 data-nosnippet>745</a>  ),
+<a href=#746 id=746 data-nosnippet>746</a>  (<span class="string">"html"</span>, <span class="string">"sty"</span>, package::html_sty::load_definitions),
+<a href=#747 id=747 data-nosnippet>747</a>  (<span class="string">"floatflt"</span>, <span class="string">"sty"</span>, package::floatflt_sty::load_definitions),
+<a href=#748 id=748 data-nosnippet>748</a>  (<span class="string">"espcrc"</span>, <span class="string">"sty"</span>, package::espcrc_sty::load_definitions),
+<a href=#749 id=749 data-nosnippet>749</a>  (<span class="string">"epsf"</span>, <span class="string">"sty"</span>, package::epsf_sty::load_definitions),
+<a href=#750 id=750 data-nosnippet>750</a>  (<span class="string">"epsfig"</span>, <span class="string">"sty"</span>, package::epsfig_sty::load_definitions),
 <a href=#751 id=751 data-nosnippet>751</a>  (
-<a href=#752 id=752 data-nosnippet>752</a>    <span class="string">"emulateapj5"</span>,
+<a href=#752 id=752 data-nosnippet>752</a>    <span class="string">"emulateapj"</span>,
 <a href=#753 id=753 data-nosnippet>753</a>    <span class="string">"sty"</span>,
-<a href=#754 id=754 data-nosnippet>754</a>    package::emulateapj5_sty::load_definitions,
+<a href=#754 id=754 data-nosnippet>754</a>    package::emulateapj_sty::load_definitions,
 <a href=#755 id=755 data-nosnippet>755</a>  ),
-<a href=#756 id=756 data-nosnippet>756</a>  (<span class="string">"cropmark"</span>, <span class="string">"sty"</span>, package::cropmark_sty::load_definitions),
-<a href=#757 id=757 data-nosnippet>757</a>  (<span class="string">"colordvi"</span>, <span class="string">"sty"</span>, package::colordvi_sty::load_definitions),
-<a href=#758 id=758 data-nosnippet>758</a>  (
-<a href=#759 id=759 data-nosnippet>759</a>    <span class="string">"circuitikz"</span>,
-<a href=#760 id=760 data-nosnippet>760</a>    <span class="string">"sty"</span>,
-<a href=#761 id=761 data-nosnippet>761</a>    package::circuitikz_sty::load_definitions,
-<a href=#762 id=762 data-nosnippet>762</a>  ),
+<a href=#756 id=756 data-nosnippet>756</a>  (
+<a href=#757 id=757 data-nosnippet>757</a>    <span class="string">"emulateapj5"</span>,
+<a href=#758 id=758 data-nosnippet>758</a>    <span class="string">"sty"</span>,
+<a href=#759 id=759 data-nosnippet>759</a>    package::emulateapj5_sty::load_definitions,
+<a href=#760 id=760 data-nosnippet>760</a>  ),
+<a href=#761 id=761 data-nosnippet>761</a>  (<span class="string">"cropmark"</span>, <span class="string">"sty"</span>, package::cropmark_sty::load_definitions),
+<a href=#762 id=762 data-nosnippet>762</a>  (<span class="string">"colordvi"</span>, <span class="string">"sty"</span>, package::colordvi_sty::load_definitions),
 <a href=#763 id=763 data-nosnippet>763</a>  (
-<a href=#764 id=764 data-nosnippet>764</a>    <span class="string">"chapterbib"</span>,
+<a href=#764 id=764 data-nosnippet>764</a>    <span class="string">"circuitikz"</span>,
 <a href=#765 id=765 data-nosnippet>765</a>    <span class="string">"sty"</span>,
-<a href=#766 id=766 data-nosnippet>766</a>    package::chapterbib_sty::load_definitions,
+<a href=#766 id=766 data-nosnippet>766</a>    package::circuitikz_sty::load_definitions,
 <a href=#767 id=767 data-nosnippet>767</a>  ),
-<a href=#768 id=768 data-nosnippet>768</a>  (<span class="string">"braket"</span>, <span class="string">"sty"</span>, package::braket_sty::load_definitions),
-<a href=#769 id=769 data-nosnippet>769</a>  (<span class="string">"authblk"</span>, <span class="string">"sty"</span>, package::authblk_sty::load_definitions),
-<a href=#770 id=770 data-nosnippet>770</a>  (
-<a href=#771 id=771 data-nosnippet>771</a>    <span class="string">"attachfile"</span>,
-<a href=#772 id=772 data-nosnippet>772</a>    <span class="string">"sty"</span>,
-<a href=#773 id=773 data-nosnippet>773</a>    package::attachfile_sty::load_definitions,
-<a href=#774 id=774 data-nosnippet>774</a>  ),
-<a href=#775 id=775 data-nosnippet>775</a>  (<span class="string">"apjfonts"</span>, <span class="string">"sty"</span>, package::apjfonts_sty::load_definitions),
-<a href=#776 id=776 data-nosnippet>776</a>  (<span class="string">"aipproc"</span>, <span class="string">"cls"</span>, package::aipproc_cls::load_definitions),
-<a href=#777 id=777 data-nosnippet>777</a>  (<span class="string">"aipproc"</span>, <span class="string">"sty"</span>, package::aipproc_sty::load_definitions),
-<a href=#778 id=778 data-nosnippet>778</a>  (
-<a href=#779 id=779 data-nosnippet>779</a>    <span class="string">"actuarialangle"</span>,
-<a href=#780 id=780 data-nosnippet>780</a>    <span class="string">"sty"</span>,
-<a href=#781 id=781 data-nosnippet>781</a>    package::actuarialangle_sty::load_definitions,
-<a href=#782 id=782 data-nosnippet>782</a>  ),
-<a href=#783 id=783 data-nosnippet>783</a>  (<span class="string">"framed"</span>, <span class="string">"sty"</span>, package::framed_sty::load_definitions),
-<a href=#784 id=784 data-nosnippet>784</a>  (<span class="string">"tabularx"</span>, <span class="string">"sty"</span>, package::tabularx_sty::load_definitions),
-<a href=#785 id=785 data-nosnippet>785</a>  (<span class="string">"tabulary"</span>, <span class="string">"sty"</span>, package::tabulary_sty::load_definitions),
-<a href=#786 id=786 data-nosnippet>786</a>  (<span class="string">"tcolorbox"</span>, <span class="string">"sty"</span>, package::tcolorbox_sty::load_definitions),
-<a href=#787 id=787 data-nosnippet>787</a>  (
-<a href=#788 id=788 data-nosnippet>788</a>    <span class="string">"threeparttable"</span>,
-<a href=#789 id=789 data-nosnippet>789</a>    <span class="string">"sty"</span>,
-<a href=#790 id=790 data-nosnippet>790</a>    package::threeparttable_sty::load_definitions,
-<a href=#791 id=791 data-nosnippet>791</a>  ),
-<a href=#792 id=792 data-nosnippet>792</a>  (<span class="string">"tocbibind"</span>, <span class="string">"sty"</span>, package::tocbibind_sty::load_definitions),
-<a href=#793 id=793 data-nosnippet>793</a>  (<span class="string">"todonotes"</span>, <span class="string">"sty"</span>, package::todonotes_sty::load_definitions),
-<a href=#794 id=794 data-nosnippet>794</a>  (
-<a href=#795 id=795 data-nosnippet>795</a>    <span class="string">"transparent"</span>,
-<a href=#796 id=796 data-nosnippet>796</a>    <span class="string">"sty"</span>,
-<a href=#797 id=797 data-nosnippet>797</a>    package::transparent_sty::load_definitions,
-<a href=#798 id=798 data-nosnippet>798</a>  ),
-<a href=#799 id=799 data-nosnippet>799</a>  (<span class="string">"twoopt"</span>, <span class="string">"sty"</span>, package::twoopt_sty::load_definitions),
-<a href=#800 id=800 data-nosnippet>800</a>  (<span class="string">"type1cm"</span>, <span class="string">"sty"</span>, package::type1cm_sty::load_definitions),
-<a href=#801 id=801 data-nosnippet>801</a>  (<span class="string">"slashed"</span>, <span class="string">"sty"</span>, package::slashed_sty::load_definitions),
-<a href=#802 id=802 data-nosnippet>802</a>  (<span class="string">"slashbox"</span>, <span class="string">"sty"</span>, package::slashbox_sty::load_definitions),
-<a href=#803 id=803 data-nosnippet>803</a>  (<span class="string">"diagbox"</span>, <span class="string">"sty"</span>, package::diagbox_sty::load_definitions),
-<a href=#804 id=804 data-nosnippet>804</a>  (<span class="string">"nicefrac"</span>, <span class="string">"sty"</span>, package::nicefrac_sty::load_definitions),
-<a href=#805 id=805 data-nosnippet>805</a>  (<span class="string">"units"</span>, <span class="string">"sty"</span>, package::units_sty::load_definitions),
-<a href=#806 id=806 data-nosnippet>806</a>  (<span class="string">"parskip"</span>, <span class="string">"sty"</span>, package::parskip_sty::load_definitions),
-<a href=#807 id=807 data-nosnippet>807</a>  (<span class="string">"lscape"</span>, <span class="string">"sty"</span>, package::lscape_sty::load_definitions),
-<a href=#808 id=808 data-nosnippet>808</a>  (<span class="string">"enumerate"</span>, <span class="string">"sty"</span>, package::enumerate_sty::load_definitions),
-<a href=#809 id=809 data-nosnippet>809</a>  (<span class="string">"makeidx"</span>, <span class="string">"sty"</span>, package::makeidx_sty::load_definitions),
-<a href=#810 id=810 data-nosnippet>810</a>  (<span class="string">"bm"</span>, <span class="string">"sty"</span>, package::bm_sty::load_definitions),
-<a href=#811 id=811 data-nosnippet>811</a>  (
-<a href=#812 id=812 data-nosnippet>812</a>    <span class="string">"mleftright"</span>,
-<a href=#813 id=813 data-nosnippet>813</a>    <span class="string">"sty"</span>,
-<a href=#814 id=814 data-nosnippet>814</a>    package::mleftright_sty::load_definitions,
-<a href=#815 id=815 data-nosnippet>815</a>  ),
-<a href=#816 id=816 data-nosnippet>816</a>  (<span class="string">"placeins"</span>, <span class="string">"sty"</span>, package::placeins_sty::load_definitions),
-<a href=#817 id=817 data-nosnippet>817</a>  (<span class="string">"ragged2e"</span>, <span class="string">"sty"</span>, package::ragged2e_sty::load_definitions),
-<a href=#818 id=818 data-nosnippet>818</a>  (<span class="string">"relsize"</span>, <span class="string">"sty"</span>, package::relsize_sty::load_definitions),
-<a href=#819 id=819 data-nosnippet>819</a>  (<span class="string">"scalefnt"</span>, <span class="string">"sty"</span>, package::scalefnt_sty::load_definitions),
-<a href=#820 id=820 data-nosnippet>820</a>  (<span class="string">"sectsty"</span>, <span class="string">"sty"</span>, package::sectsty_sty::load_definitions),
-<a href=#821 id=821 data-nosnippet>821</a>  (<span class="string">"xfrac"</span>, <span class="string">"sty"</span>, package::xfrac_sty::load_definitions),
-<a href=#822 id=822 data-nosnippet>822</a>  (<span class="string">"adjustbox"</span>, <span class="string">"sty"</span>, package::adjustbox_sty::load_definitions),
-<a href=#823 id=823 data-nosnippet>823</a>  (<span class="string">"afterpage"</span>, <span class="string">"sty"</span>, package::afterpage_sty::load_definitions),
-<a href=#824 id=824 data-nosnippet>824</a>  (<span class="string">"mathrsfs"</span>, <span class="string">"sty"</span>, package::mathrsfs_sty::load_definitions),
-<a href=#825 id=825 data-nosnippet>825</a>  (<span class="string">"blindtext"</span>, <span class="string">"sty"</span>, package::blindtext_sty::load_definitions),
-<a href=#826 id=826 data-nosnippet>826</a>  (<span class="string">"bookmark"</span>, <span class="string">"sty"</span>, package::bookmark_sty::load_definitions),
-<a href=#827 id=827 data-nosnippet>827</a>  (<span class="string">"cmap"</span>, <span class="string">"sty"</span>, package::cmap_sty::load_definitions),
-<a href=#828 id=828 data-nosnippet>828</a>  (<span class="string">"doi"</span>, <span class="string">"sty"</span>, package::doi_sty::load_definitions),
-<a href=#829 id=829 data-nosnippet>829</a>  (<span class="string">"dsfont"</span>, <span class="string">"sty"</span>, package::dsfont_sty::load_definitions),
-<a href=#830 id=830 data-nosnippet>830</a>  (<span class="string">"ellipsis"</span>, <span class="string">"sty"</span>, package::ellipsis_sty::load_definitions),
-<a href=#831 id=831 data-nosnippet>831</a>  (<span class="string">"epstopdf"</span>, <span class="string">"sty"</span>, package::epstopdf_sty::load_definitions),
-<a href=#832 id=832 data-nosnippet>832</a>  (<span class="string">"fancyvrb"</span>, <span class="string">"sty"</span>, package::fancyvrb_sty::load_definitions),
-<a href=#833 id=833 data-nosnippet>833</a>  (<span class="string">"fdsymbol"</span>, <span class="string">"sty"</span>, package::fdsymbol_sty::load_definitions),
-<a href=#834 id=834 data-nosnippet>834</a>  (<span class="string">"flafter"</span>, <span class="string">"sty"</span>, package::flafter_sty::load_definitions),
-<a href=#835 id=835 data-nosnippet>835</a>  (<span class="string">"here"</span>, <span class="string">"sty"</span>, package::here_sty::load_definitions),
-<a href=#836 id=836 data-nosnippet>836</a>  (
-<a href=#837 id=837 data-nosnippet>837</a>    <span class="string">"indentfirst"</span>,
-<a href=#838 id=838 data-nosnippet>838</a>    <span class="string">"sty"</span>,
-<a href=#839 id=839 data-nosnippet>839</a>    package::indentfirst_sty::load_definitions,
-<a href=#840 id=840 data-nosnippet>840</a>  ),
-<a href=#841 id=841 data-nosnippet>841</a>  (<span class="string">"lastpage"</span>, <span class="string">"sty"</span>, package::lastpage_sty::load_definitions),
-<a href=#842 id=842 data-nosnippet>842</a>  (<span class="string">"lipsum"</span>, <span class="string">"sty"</span>, package::lipsum_sty::load_definitions),
-<a href=#843 id=843 data-nosnippet>843</a>  (<span class="string">"lmodern"</span>, <span class="string">"sty"</span>, package::lmodern_sty::load_definitions),
-<a href=#844 id=844 data-nosnippet>844</a>  (<span class="string">"luximono"</span>, <span class="string">"sty"</span>, package::luximono_sty::load_definitions),
-<a href=#845 id=845 data-nosnippet>845</a>  (<span class="string">"nopageno"</span>, <span class="string">"sty"</span>, package::nopageno_sty::load_definitions),
-<a href=#846 id=846 data-nosnippet>846</a>  (<span class="string">"pdfpages"</span>, <span class="string">"sty"</span>, package::pdfpages_sty::load_definitions),
-<a href=#847 id=847 data-nosnippet>847</a>  (<span class="string">"pdflscape"</span>, <span class="string">"sty"</span>, package::pdflscape_sty::load_definitions),
-<a href=#848 id=848 data-nosnippet>848</a>  (<span class="string">"sidecap"</span>, <span class="string">"sty"</span>, package::sidecap_sty::load_definitions),
-<a href=#849 id=849 data-nosnippet>849</a>  (<span class="string">"siunitx"</span>, <span class="string">"sty"</span>, package::siunitx_sty::load_definitions),
-<a href=#850 id=850 data-nosnippet>850</a>  (<span class="string">"showkeys"</span>, <span class="string">"sty"</span>, package::showkeys_sty::load_definitions),
-<a href=#851 id=851 data-nosnippet>851</a>  (<span class="string">"showexpl"</span>, <span class="string">"sty"</span>, package::showexpl_sty::load_definitions),
-<a href=#852 id=852 data-nosnippet>852</a>  (
-<a href=#853 id=853 data-nosnippet>853</a>    <span class="string">"underscore"</span>,
-<a href=#854 id=854 data-nosnippet>854</a>    <span class="string">"sty"</span>,
-<a href=#855 id=855 data-nosnippet>855</a>    package::underscore_sty::load_definitions,
-<a href=#856 id=856 data-nosnippet>856</a>  ),
+<a href=#768 id=768 data-nosnippet>768</a>  (
+<a href=#769 id=769 data-nosnippet>769</a>    <span class="string">"chapterbib"</span>,
+<a href=#770 id=770 data-nosnippet>770</a>    <span class="string">"sty"</span>,
+<a href=#771 id=771 data-nosnippet>771</a>    package::chapterbib_sty::load_definitions,
+<a href=#772 id=772 data-nosnippet>772</a>  ),
+<a href=#773 id=773 data-nosnippet>773</a>  (<span class="string">"braket"</span>, <span class="string">"sty"</span>, package::braket_sty::load_definitions),
+<a href=#774 id=774 data-nosnippet>774</a>  (<span class="string">"authblk"</span>, <span class="string">"sty"</span>, package::authblk_sty::load_definitions),
+<a href=#775 id=775 data-nosnippet>775</a>  (
+<a href=#776 id=776 data-nosnippet>776</a>    <span class="string">"attachfile"</span>,
+<a href=#777 id=777 data-nosnippet>777</a>    <span class="string">"sty"</span>,
+<a href=#778 id=778 data-nosnippet>778</a>    package::attachfile_sty::load_definitions,
+<a href=#779 id=779 data-nosnippet>779</a>  ),
+<a href=#780 id=780 data-nosnippet>780</a>  (<span class="string">"apjfonts"</span>, <span class="string">"sty"</span>, package::apjfonts_sty::load_definitions),
+<a href=#781 id=781 data-nosnippet>781</a>  (<span class="string">"aipproc"</span>, <span class="string">"cls"</span>, package::aipproc_cls::load_definitions),
+<a href=#782 id=782 data-nosnippet>782</a>  (<span class="string">"aipproc"</span>, <span class="string">"sty"</span>, package::aipproc_sty::load_definitions),
+<a href=#783 id=783 data-nosnippet>783</a>  (
+<a href=#784 id=784 data-nosnippet>784</a>    <span class="string">"actuarialangle"</span>,
+<a href=#785 id=785 data-nosnippet>785</a>    <span class="string">"sty"</span>,
+<a href=#786 id=786 data-nosnippet>786</a>    package::actuarialangle_sty::load_definitions,
+<a href=#787 id=787 data-nosnippet>787</a>  ),
+<a href=#788 id=788 data-nosnippet>788</a>  (<span class="string">"framed"</span>, <span class="string">"sty"</span>, package::framed_sty::load_definitions),
+<a href=#789 id=789 data-nosnippet>789</a>  (<span class="string">"tabularx"</span>, <span class="string">"sty"</span>, package::tabularx_sty::load_definitions),
+<a href=#790 id=790 data-nosnippet>790</a>  (<span class="string">"tabulary"</span>, <span class="string">"sty"</span>, package::tabulary_sty::load_definitions),
+<a href=#791 id=791 data-nosnippet>791</a>  (<span class="string">"tcolorbox"</span>, <span class="string">"sty"</span>, package::tcolorbox_sty::load_definitions),
+<a href=#792 id=792 data-nosnippet>792</a>  (
+<a href=#793 id=793 data-nosnippet>793</a>    <span class="string">"threeparttable"</span>,
+<a href=#794 id=794 data-nosnippet>794</a>    <span class="string">"sty"</span>,
+<a href=#795 id=795 data-nosnippet>795</a>    package::threeparttable_sty::load_definitions,
+<a href=#796 id=796 data-nosnippet>796</a>  ),
+<a href=#797 id=797 data-nosnippet>797</a>  (<span class="string">"tocbibind"</span>, <span class="string">"sty"</span>, package::tocbibind_sty::load_definitions),
+<a href=#798 id=798 data-nosnippet>798</a>  (<span class="string">"todonotes"</span>, <span class="string">"sty"</span>, package::todonotes_sty::load_definitions),
+<a href=#799 id=799 data-nosnippet>799</a>  (
+<a href=#800 id=800 data-nosnippet>800</a>    <span class="string">"transparent"</span>,
+<a href=#801 id=801 data-nosnippet>801</a>    <span class="string">"sty"</span>,
+<a href=#802 id=802 data-nosnippet>802</a>    package::transparent_sty::load_definitions,
+<a href=#803 id=803 data-nosnippet>803</a>  ),
+<a href=#804 id=804 data-nosnippet>804</a>  (<span class="string">"twoopt"</span>, <span class="string">"sty"</span>, package::twoopt_sty::load_definitions),
+<a href=#805 id=805 data-nosnippet>805</a>  (<span class="string">"type1cm"</span>, <span class="string">"sty"</span>, package::type1cm_sty::load_definitions),
+<a href=#806 id=806 data-nosnippet>806</a>  (<span class="string">"slashed"</span>, <span class="string">"sty"</span>, package::slashed_sty::load_definitions),
+<a href=#807 id=807 data-nosnippet>807</a>  (<span class="string">"slashbox"</span>, <span class="string">"sty"</span>, package::slashbox_sty::load_definitions),
+<a href=#808 id=808 data-nosnippet>808</a>  (<span class="string">"diagbox"</span>, <span class="string">"sty"</span>, package::diagbox_sty::load_definitions),
+<a href=#809 id=809 data-nosnippet>809</a>  (<span class="string">"nicefrac"</span>, <span class="string">"sty"</span>, package::nicefrac_sty::load_definitions),
+<a href=#810 id=810 data-nosnippet>810</a>  (<span class="string">"units"</span>, <span class="string">"sty"</span>, package::units_sty::load_definitions),
+<a href=#811 id=811 data-nosnippet>811</a>  (<span class="string">"parskip"</span>, <span class="string">"sty"</span>, package::parskip_sty::load_definitions),
+<a href=#812 id=812 data-nosnippet>812</a>  (<span class="string">"lscape"</span>, <span class="string">"sty"</span>, package::lscape_sty::load_definitions),
+<a href=#813 id=813 data-nosnippet>813</a>  (<span class="string">"enumerate"</span>, <span class="string">"sty"</span>, package::enumerate_sty::load_definitions),
+<a href=#814 id=814 data-nosnippet>814</a>  (<span class="string">"makeidx"</span>, <span class="string">"sty"</span>, package::makeidx_sty::load_definitions),
+<a href=#815 id=815 data-nosnippet>815</a>  (<span class="string">"bm"</span>, <span class="string">"sty"</span>, package::bm_sty::load_definitions),
+<a href=#816 id=816 data-nosnippet>816</a>  (
+<a href=#817 id=817 data-nosnippet>817</a>    <span class="string">"mleftright"</span>,
+<a href=#818 id=818 data-nosnippet>818</a>    <span class="string">"sty"</span>,
+<a href=#819 id=819 data-nosnippet>819</a>    package::mleftright_sty::load_definitions,
+<a href=#820 id=820 data-nosnippet>820</a>  ),
+<a href=#821 id=821 data-nosnippet>821</a>  (<span class="string">"placeins"</span>, <span class="string">"sty"</span>, package::placeins_sty::load_definitions),
+<a href=#822 id=822 data-nosnippet>822</a>  (<span class="string">"ragged2e"</span>, <span class="string">"sty"</span>, package::ragged2e_sty::load_definitions),
+<a href=#823 id=823 data-nosnippet>823</a>  (<span class="string">"relsize"</span>, <span class="string">"sty"</span>, package::relsize_sty::load_definitions),
+<a href=#824 id=824 data-nosnippet>824</a>  (<span class="string">"scalefnt"</span>, <span class="string">"sty"</span>, package::scalefnt_sty::load_definitions),
+<a href=#825 id=825 data-nosnippet>825</a>  (<span class="string">"sectsty"</span>, <span class="string">"sty"</span>, package::sectsty_sty::load_definitions),
+<a href=#826 id=826 data-nosnippet>826</a>  (<span class="string">"xfrac"</span>, <span class="string">"sty"</span>, package::xfrac_sty::load_definitions),
+<a href=#827 id=827 data-nosnippet>827</a>  (<span class="string">"adjustbox"</span>, <span class="string">"sty"</span>, package::adjustbox_sty::load_definitions),
+<a href=#828 id=828 data-nosnippet>828</a>  (<span class="string">"afterpage"</span>, <span class="string">"sty"</span>, package::afterpage_sty::load_definitions),
+<a href=#829 id=829 data-nosnippet>829</a>  (<span class="string">"mathrsfs"</span>, <span class="string">"sty"</span>, package::mathrsfs_sty::load_definitions),
+<a href=#830 id=830 data-nosnippet>830</a>  (<span class="string">"blindtext"</span>, <span class="string">"sty"</span>, package::blindtext_sty::load_definitions),
+<a href=#831 id=831 data-nosnippet>831</a>  (<span class="string">"bookmark"</span>, <span class="string">"sty"</span>, package::bookmark_sty::load_definitions),
+<a href=#832 id=832 data-nosnippet>832</a>  (<span class="string">"cmap"</span>, <span class="string">"sty"</span>, package::cmap_sty::load_definitions),
+<a href=#833 id=833 data-nosnippet>833</a>  (<span class="string">"doi"</span>, <span class="string">"sty"</span>, package::doi_sty::load_definitions),
+<a href=#834 id=834 data-nosnippet>834</a>  (<span class="string">"dsfont"</span>, <span class="string">"sty"</span>, package::dsfont_sty::load_definitions),
+<a href=#835 id=835 data-nosnippet>835</a>  (<span class="string">"ellipsis"</span>, <span class="string">"sty"</span>, package::ellipsis_sty::load_definitions),
+<a href=#836 id=836 data-nosnippet>836</a>  (<span class="string">"epstopdf"</span>, <span class="string">"sty"</span>, package::epstopdf_sty::load_definitions),
+<a href=#837 id=837 data-nosnippet>837</a>  (<span class="string">"fancyvrb"</span>, <span class="string">"sty"</span>, package::fancyvrb_sty::load_definitions),
+<a href=#838 id=838 data-nosnippet>838</a>  (<span class="string">"fdsymbol"</span>, <span class="string">"sty"</span>, package::fdsymbol_sty::load_definitions),
+<a href=#839 id=839 data-nosnippet>839</a>  (<span class="string">"flafter"</span>, <span class="string">"sty"</span>, package::flafter_sty::load_definitions),
+<a href=#840 id=840 data-nosnippet>840</a>  (<span class="string">"here"</span>, <span class="string">"sty"</span>, package::here_sty::load_definitions),
+<a href=#841 id=841 data-nosnippet>841</a>  (
+<a href=#842 id=842 data-nosnippet>842</a>    <span class="string">"indentfirst"</span>,
+<a href=#843 id=843 data-nosnippet>843</a>    <span class="string">"sty"</span>,
+<a href=#844 id=844 data-nosnippet>844</a>    package::indentfirst_sty::load_definitions,
+<a href=#845 id=845 data-nosnippet>845</a>  ),
+<a href=#846 id=846 data-nosnippet>846</a>  (<span class="string">"lastpage"</span>, <span class="string">"sty"</span>, package::lastpage_sty::load_definitions),
+<a href=#847 id=847 data-nosnippet>847</a>  (<span class="string">"lipsum"</span>, <span class="string">"sty"</span>, package::lipsum_sty::load_definitions),
+<a href=#848 id=848 data-nosnippet>848</a>  (<span class="string">"lmodern"</span>, <span class="string">"sty"</span>, package::lmodern_sty::load_definitions),
+<a href=#849 id=849 data-nosnippet>849</a>  (<span class="string">"luximono"</span>, <span class="string">"sty"</span>, package::luximono_sty::load_definitions),
+<a href=#850 id=850 data-nosnippet>850</a>  (<span class="string">"nopageno"</span>, <span class="string">"sty"</span>, package::nopageno_sty::load_definitions),
+<a href=#851 id=851 data-nosnippet>851</a>  (<span class="string">"pdfpages"</span>, <span class="string">"sty"</span>, package::pdfpages_sty::load_definitions),
+<a href=#852 id=852 data-nosnippet>852</a>  (<span class="string">"pdflscape"</span>, <span class="string">"sty"</span>, package::pdflscape_sty::load_definitions),
+<a href=#853 id=853 data-nosnippet>853</a>  (<span class="string">"sidecap"</span>, <span class="string">"sty"</span>, package::sidecap_sty::load_definitions),
+<a href=#854 id=854 data-nosnippet>854</a>  (<span class="string">"siunitx"</span>, <span class="string">"sty"</span>, package::siunitx_sty::load_definitions),
+<a href=#855 id=855 data-nosnippet>855</a>  (<span class="string">"showkeys"</span>, <span class="string">"sty"</span>, package::showkeys_sty::load_definitions),
+<a href=#856 id=856 data-nosnippet>856</a>  (<span class="string">"showexpl"</span>, <span class="string">"sty"</span>, package::showexpl_sty::load_definitions),
 <a href=#857 id=857 data-nosnippet>857</a>  (
-<a href=#858 id=858 data-nosnippet>858</a>    <span class="string">"undertilde"</span>,
+<a href=#858 id=858 data-nosnippet>858</a>    <span class="string">"underscore"</span>,
 <a href=#859 id=859 data-nosnippet>859</a>    <span class="string">"sty"</span>,
-<a href=#860 id=860 data-nosnippet>860</a>    package::undertilde_sty::load_definitions,
+<a href=#860 id=860 data-nosnippet>860</a>    package::underscore_sty::load_definitions,
 <a href=#861 id=861 data-nosnippet>861</a>  ),
-<a href=#862 id=862 data-nosnippet>862</a>  (<span class="string">"upquote"</span>, <span class="string">"sty"</span>, package::upquote_sty::load_definitions),
-<a href=#863 id=863 data-nosnippet>863</a>  (<span class="string">"minimal"</span>, <span class="string">"cls"</span>, package::minimal_cls::load_definitions),
-<a href=#864 id=864 data-nosnippet>864</a>  <span class="comment">// sprocl: no binding — papers bundle their own sprocl.sty (World Scientific
-<a href=#865 id=865 data-nosnippet>865</a>  // proceedings style), which Perl raw-loads cleanly. The earlier stub
-<a href=#866 id=866 data-nosnippet>866</a>  // intercepted the load and only stubbed \address/\abstracts, leaving
-<a href=#867 id=867 data-nosnippet>867</a>  // \citelow / \citeup / \cite-with-* and the rest of sprocl undefined.
-<a href=#868 id=868 data-nosnippet>868</a>  </span>(<span class="string">"srcltx"</span>, <span class="string">"sty"</span>, package::srcltx_sty::load_definitions),
-<a href=#869 id=869 data-nosnippet>869</a>  (
-<a href=#870 id=870 data-nosnippet>870</a>    <span class="string">"standalone"</span>,
-<a href=#871 id=871 data-nosnippet>871</a>    <span class="string">"cls"</span>,
-<a href=#872 id=872 data-nosnippet>872</a>    package::standalone_cls::load_definitions,
-<a href=#873 id=873 data-nosnippet>873</a>  ),
+<a href=#862 id=862 data-nosnippet>862</a>  (
+<a href=#863 id=863 data-nosnippet>863</a>    <span class="string">"undertilde"</span>,
+<a href=#864 id=864 data-nosnippet>864</a>    <span class="string">"sty"</span>,
+<a href=#865 id=865 data-nosnippet>865</a>    package::undertilde_sty::load_definitions,
+<a href=#866 id=866 data-nosnippet>866</a>  ),
+<a href=#867 id=867 data-nosnippet>867</a>  (<span class="string">"upquote"</span>, <span class="string">"sty"</span>, package::upquote_sty::load_definitions),
+<a href=#868 id=868 data-nosnippet>868</a>  (<span class="string">"minimal"</span>, <span class="string">"cls"</span>, package::minimal_cls::load_definitions),
+<a href=#869 id=869 data-nosnippet>869</a>  <span class="comment">// sprocl: no binding — papers bundle their own sprocl.sty (World Scientific
+<a href=#870 id=870 data-nosnippet>870</a>  // proceedings style), which Perl raw-loads cleanly. The earlier stub
+<a href=#871 id=871 data-nosnippet>871</a>  // intercepted the load and only stubbed \address/\abstracts, leaving
+<a href=#872 id=872 data-nosnippet>872</a>  // \citelow / \citeup / \cite-with-* and the rest of sprocl undefined.
+<a href=#873 id=873 data-nosnippet>873</a>  </span>(<span class="string">"srcltx"</span>, <span class="string">"sty"</span>, package::srcltx_sty::load_definitions),
 <a href=#874 id=874 data-nosnippet>874</a>  (
 <a href=#875 id=875 data-nosnippet>875</a>    <span class="string">"standalone"</span>,
-<a href=#876 id=876 data-nosnippet>876</a>    <span class="string">"sty"</span>,
-<a href=#877 id=877 data-nosnippet>877</a>    package::standalone_sty::load_definitions,
+<a href=#876 id=876 data-nosnippet>876</a>    <span class="string">"cls"</span>,
+<a href=#877 id=877 data-nosnippet>877</a>    package::standalone_cls::load_definitions,
 <a href=#878 id=878 data-nosnippet>878</a>  ),
-<a href=#879 id=879 data-nosnippet>879</a>  (<span class="string">"subeqn"</span>, <span class="string">"sty"</span>, package::subeqn_sty::load_definitions),
-<a href=#880 id=880 data-nosnippet>880</a>  (<span class="string">"a0poster"</span>, <span class="string">"cls"</span>, package::a0poster_cls::load_definitions),
-<a href=#881 id=881 data-nosnippet>881</a>  (<span class="string">"a0size"</span>, <span class="string">"sty"</span>, package::a0size_sty::load_definitions),
-<a href=#882 id=882 data-nosnippet>882</a>  (<span class="string">"avant"</span>, <span class="string">"sty"</span>, package::avant_sty::load_definitions),
-<a href=#883 id=883 data-nosnippet>883</a>  (<span class="string">"bbding"</span>, <span class="string">"sty"</span>, package::bbding_sty::load_definitions),
-<a href=#884 id=884 data-nosnippet>884</a>  (<span class="string">"beton"</span>, <span class="string">"sty"</span>, package::beton_sty::load_definitions),
-<a href=#885 id=885 data-nosnippet>885</a>  (<span class="string">"bezier"</span>, <span class="string">"sty"</span>, package::bezier_sty::load_definitions),
-<a href=#886 id=886 data-nosnippet>886</a>  (<span class="string">"bookman"</span>, <span class="string">"sty"</span>, package::bookman_sty::load_definitions),
-<a href=#887 id=887 data-nosnippet>887</a>  (
-<a href=#888 id=888 data-nosnippet>888</a>    <span class="string">"boxedminipage"</span>,
-<a href=#889 id=889 data-nosnippet>889</a>    <span class="string">"sty"</span>,
-<a href=#890 id=890 data-nosnippet>890</a>    package::boxedminipage_sty::load_definitions,
-<a href=#891 id=891 data-nosnippet>891</a>  ),
-<a href=#892 id=892 data-nosnippet>892</a>  (<span class="string">"chancery"</span>, <span class="string">"sty"</span>, package::chancery_sty::load_definitions),
-<a href=#893 id=893 data-nosnippet>893</a>  (<span class="string">"charter"</span>, <span class="string">"sty"</span>, package::charter_sty::load_definitions),
-<a href=#894 id=894 data-nosnippet>894</a>  (<span class="string">"concmath"</span>, <span class="string">"sty"</span>, package::concmath_sty::load_definitions),
-<a href=#895 id=895 data-nosnippet>895</a>  (<span class="string">"constants"</span>, <span class="string">"sty"</span>, package::constants_sty::load_definitions),
-<a href=#896 id=896 data-nosnippet>896</a>  (<span class="string">"courier"</span>, <span class="string">"sty"</span>, package::courier_sty::load_definitions),
-<a href=#897 id=897 data-nosnippet>897</a>  (<span class="string">"etex"</span>, <span class="string">"sty"</span>, package::etex_sty::load_definitions),
-<a href=#898 id=898 data-nosnippet>898</a>  (<span class="string">"euler"</span>, <span class="string">"sty"</span>, package::euler_sty::load_definitions),
-<a href=#899 id=899 data-nosnippet>899</a>  (<span class="string">"eulervm"</span>, <span class="string">"sty"</span>, package::eulervm_sty::load_definitions),
-<a href=#900 id=900 data-nosnippet>900</a>  (<span class="string">"exscale"</span>, <span class="string">"sty"</span>, package::exscale_sty::load_definitions),
-<a href=#901 id=901 data-nosnippet>901</a>  (<span class="string">"fourier"</span>, <span class="string">"sty"</span>, package::fourier_sty::load_definitions),
-<a href=#902 id=902 data-nosnippet>902</a>  (<span class="string">"helvet"</span>, <span class="string">"sty"</span>, package::helvet_sty::load_definitions),
-<a href=#903 id=903 data-nosnippet>903</a>  (<span class="string">"ifsym"</span>, <span class="string">"sty"</span>, package::ifsym_sty::load_definitions),
-<a href=#904 id=904 data-nosnippet>904</a>  (<span class="string">"l3keys2e"</span>, <span class="string">"sty"</span>, package::l3keys2e_sty::load_definitions),
-<a href=#905 id=905 data-nosnippet>905</a>  (<span class="string">"newcent"</span>, <span class="string">"sty"</span>, package::newcent_sty::load_definitions),
-<a href=#906 id=906 data-nosnippet>906</a>  (<span class="string">"palatino"</span>, <span class="string">"sty"</span>, package::palatino_sty::load_definitions),
-<a href=#907 id=907 data-nosnippet>907</a>  (<span class="string">"pgfkeys"</span>, <span class="string">"sty"</span>, package::pgfkeys_sty::load_definitions),
-<a href=#908 id=908 data-nosnippet>908</a>  (
-<a href=#909 id=909 data-nosnippet>909</a>    <span class="string">"pgfplotstable"</span>,
-<a href=#910 id=910 data-nosnippet>910</a>    <span class="string">"sty"</span>,
-<a href=#911 id=911 data-nosnippet>911</a>    package::pgfplotstable_sty::load_definitions,
-<a href=#912 id=912 data-nosnippet>912</a>  ),
-<a href=#913 id=913 data-nosnippet>913</a>  (<span class="string">"pgfrcs"</span>, <span class="string">"sty"</span>, package::pgfrcs_sty::load_definitions),
-<a href=#914 id=914 data-nosnippet>914</a>  (<span class="string">"physics"</span>, <span class="string">"sty"</span>, package::physics_sty::load_definitions),
-<a href=#915 id=915 data-nosnippet>915</a>  (<span class="string">"prettyref"</span>, <span class="string">"sty"</span>, package::prettyref_sty::load_definitions),
-<a href=#916 id=916 data-nosnippet>916</a>  (<span class="string">"pstricks"</span>, <span class="string">"sty"</span>, package::pstricks_sty::load_definitions),
-<a href=#917 id=917 data-nosnippet>917</a>  (<span class="string">"pslatex"</span>, <span class="string">"sty"</span>, package::pslatex_sty::load_definitions),
-<a href=#918 id=918 data-nosnippet>918</a>  (<span class="string">"pxfonts"</span>, <span class="string">"sty"</span>, package::pxfonts_sty::load_definitions),
-<a href=#919 id=919 data-nosnippet>919</a>  (<span class="string">"times"</span>, <span class="string">"sty"</span>, package::times_sty::load_definitions),
-<a href=#920 id=920 data-nosnippet>920</a>  (<span class="string">"trace"</span>, <span class="string">"sty"</span>, package::trace_sty::load_definitions),
-<a href=#921 id=921 data-nosnippet>921</a>  (<span class="string">"tracefnt"</span>, <span class="string">"sty"</span>, package::tracefnt_sty::load_definitions),
-<a href=#922 id=922 data-nosnippet>922</a>  (<span class="string">"upref"</span>, <span class="string">"sty"</span>, package::upref_sty::load_definitions),
-<a href=#923 id=923 data-nosnippet>923</a>  (<span class="string">"utopia"</span>, <span class="string">"sty"</span>, package::utopia_sty::load_definitions),
-<a href=#924 id=924 data-nosnippet>924</a>  (<span class="string">"PoS"</span>, <span class="string">"cls"</span>, package::pos_cls::load_definitions),
-<a href=#925 id=925 data-nosnippet>925</a>  (
-<a href=#926 id=926 data-nosnippet>926</a>    <span class="string">"quantumarticle"</span>,
-<a href=#927 id=927 data-nosnippet>927</a>    <span class="string">"cls"</span>,
-<a href=#928 id=928 data-nosnippet>928</a>    package::quantumarticle_cls::load_definitions,
-<a href=#929 id=929 data-nosnippet>929</a>  ),
+<a href=#879 id=879 data-nosnippet>879</a>  (
+<a href=#880 id=880 data-nosnippet>880</a>    <span class="string">"standalone"</span>,
+<a href=#881 id=881 data-nosnippet>881</a>    <span class="string">"sty"</span>,
+<a href=#882 id=882 data-nosnippet>882</a>    package::standalone_sty::load_definitions,
+<a href=#883 id=883 data-nosnippet>883</a>  ),
+<a href=#884 id=884 data-nosnippet>884</a>  (<span class="string">"subeqn"</span>, <span class="string">"sty"</span>, package::subeqn_sty::load_definitions),
+<a href=#885 id=885 data-nosnippet>885</a>  (<span class="string">"a0poster"</span>, <span class="string">"cls"</span>, package::a0poster_cls::load_definitions),
+<a href=#886 id=886 data-nosnippet>886</a>  (<span class="string">"a0size"</span>, <span class="string">"sty"</span>, package::a0size_sty::load_definitions),
+<a href=#887 id=887 data-nosnippet>887</a>  (<span class="string">"avant"</span>, <span class="string">"sty"</span>, package::avant_sty::load_definitions),
+<a href=#888 id=888 data-nosnippet>888</a>  (<span class="string">"bbding"</span>, <span class="string">"sty"</span>, package::bbding_sty::load_definitions),
+<a href=#889 id=889 data-nosnippet>889</a>  (<span class="string">"beton"</span>, <span class="string">"sty"</span>, package::beton_sty::load_definitions),
+<a href=#890 id=890 data-nosnippet>890</a>  (<span class="string">"bezier"</span>, <span class="string">"sty"</span>, package::bezier_sty::load_definitions),
+<a href=#891 id=891 data-nosnippet>891</a>  (<span class="string">"bookman"</span>, <span class="string">"sty"</span>, package::bookman_sty::load_definitions),
+<a href=#892 id=892 data-nosnippet>892</a>  (
+<a href=#893 id=893 data-nosnippet>893</a>    <span class="string">"boxedminipage"</span>,
+<a href=#894 id=894 data-nosnippet>894</a>    <span class="string">"sty"</span>,
+<a href=#895 id=895 data-nosnippet>895</a>    package::boxedminipage_sty::load_definitions,
+<a href=#896 id=896 data-nosnippet>896</a>  ),
+<a href=#897 id=897 data-nosnippet>897</a>  (<span class="string">"chancery"</span>, <span class="string">"sty"</span>, package::chancery_sty::load_definitions),
+<a href=#898 id=898 data-nosnippet>898</a>  (<span class="string">"charter"</span>, <span class="string">"sty"</span>, package::charter_sty::load_definitions),
+<a href=#899 id=899 data-nosnippet>899</a>  (<span class="string">"concmath"</span>, <span class="string">"sty"</span>, package::concmath_sty::load_definitions),
+<a href=#900 id=900 data-nosnippet>900</a>  (<span class="string">"constants"</span>, <span class="string">"sty"</span>, package::constants_sty::load_definitions),
+<a href=#901 id=901 data-nosnippet>901</a>  (<span class="string">"courier"</span>, <span class="string">"sty"</span>, package::courier_sty::load_definitions),
+<a href=#902 id=902 data-nosnippet>902</a>  (<span class="string">"etex"</span>, <span class="string">"sty"</span>, package::etex_sty::load_definitions),
+<a href=#903 id=903 data-nosnippet>903</a>  (<span class="string">"euler"</span>, <span class="string">"sty"</span>, package::euler_sty::load_definitions),
+<a href=#904 id=904 data-nosnippet>904</a>  (<span class="string">"eulervm"</span>, <span class="string">"sty"</span>, package::eulervm_sty::load_definitions),
+<a href=#905 id=905 data-nosnippet>905</a>  (<span class="string">"exscale"</span>, <span class="string">"sty"</span>, package::exscale_sty::load_definitions),
+<a href=#906 id=906 data-nosnippet>906</a>  (<span class="string">"fourier"</span>, <span class="string">"sty"</span>, package::fourier_sty::load_definitions),
+<a href=#907 id=907 data-nosnippet>907</a>  (<span class="string">"helvet"</span>, <span class="string">"sty"</span>, package::helvet_sty::load_definitions),
+<a href=#908 id=908 data-nosnippet>908</a>  (<span class="string">"ifsym"</span>, <span class="string">"sty"</span>, package::ifsym_sty::load_definitions),
+<a href=#909 id=909 data-nosnippet>909</a>  (<span class="string">"l3keys2e"</span>, <span class="string">"sty"</span>, package::l3keys2e_sty::load_definitions),
+<a href=#910 id=910 data-nosnippet>910</a>  (<span class="string">"newcent"</span>, <span class="string">"sty"</span>, package::newcent_sty::load_definitions),
+<a href=#911 id=911 data-nosnippet>911</a>  (<span class="string">"palatino"</span>, <span class="string">"sty"</span>, package::palatino_sty::load_definitions),
+<a href=#912 id=912 data-nosnippet>912</a>  (<span class="string">"pgfkeys"</span>, <span class="string">"sty"</span>, package::pgfkeys_sty::load_definitions),
+<a href=#913 id=913 data-nosnippet>913</a>  (
+<a href=#914 id=914 data-nosnippet>914</a>    <span class="string">"pgfplotstable"</span>,
+<a href=#915 id=915 data-nosnippet>915</a>    <span class="string">"sty"</span>,
+<a href=#916 id=916 data-nosnippet>916</a>    package::pgfplotstable_sty::load_definitions,
+<a href=#917 id=917 data-nosnippet>917</a>  ),
+<a href=#918 id=918 data-nosnippet>918</a>  (<span class="string">"pgfrcs"</span>, <span class="string">"sty"</span>, package::pgfrcs_sty::load_definitions),
+<a href=#919 id=919 data-nosnippet>919</a>  (<span class="string">"physics"</span>, <span class="string">"sty"</span>, package::physics_sty::load_definitions),
+<a href=#920 id=920 data-nosnippet>920</a>  (<span class="string">"prettyref"</span>, <span class="string">"sty"</span>, package::prettyref_sty::load_definitions),
+<a href=#921 id=921 data-nosnippet>921</a>  (<span class="string">"pstricks"</span>, <span class="string">"sty"</span>, package::pstricks_sty::load_definitions),
+<a href=#922 id=922 data-nosnippet>922</a>  (<span class="string">"pslatex"</span>, <span class="string">"sty"</span>, package::pslatex_sty::load_definitions),
+<a href=#923 id=923 data-nosnippet>923</a>  (<span class="string">"pxfonts"</span>, <span class="string">"sty"</span>, package::pxfonts_sty::load_definitions),
+<a href=#924 id=924 data-nosnippet>924</a>  (<span class="string">"times"</span>, <span class="string">"sty"</span>, package::times_sty::load_definitions),
+<a href=#925 id=925 data-nosnippet>925</a>  (<span class="string">"trace"</span>, <span class="string">"sty"</span>, package::trace_sty::load_definitions),
+<a href=#926 id=926 data-nosnippet>926</a>  (<span class="string">"tracefnt"</span>, <span class="string">"sty"</span>, package::tracefnt_sty::load_definitions),
+<a href=#927 id=927 data-nosnippet>927</a>  (<span class="string">"upref"</span>, <span class="string">"sty"</span>, package::upref_sty::load_definitions),
+<a href=#928 id=928 data-nosnippet>928</a>  (<span class="string">"utopia"</span>, <span class="string">"sty"</span>, package::utopia_sty::load_definitions),
+<a href=#929 id=929 data-nosnippet>929</a>  (<span class="string">"PoS"</span>, <span class="string">"cls"</span>, package::pos_cls::load_definitions),
 <a href=#930 id=930 data-nosnippet>930</a>  (
-<a href=#931 id=931 data-nosnippet>931</a>    <span class="string">"bigintcalc"</span>,
-<a href=#932 id=932 data-nosnippet>932</a>    <span class="string">"sty"</span>,
-<a href=#933 id=933 data-nosnippet>933</a>    package::bigintcalc_sty::load_definitions,
+<a href=#931 id=931 data-nosnippet>931</a>    <span class="string">"quantumarticle"</span>,
+<a href=#932 id=932 data-nosnippet>932</a>    <span class="string">"cls"</span>,
+<a href=#933 id=933 data-nosnippet>933</a>    package::quantumarticle_cls::load_definitions,
 <a href=#934 id=934 data-nosnippet>934</a>  ),
-<a href=#935 id=935 data-nosnippet>935</a>  (<span class="string">"bigstrut"</span>, <span class="string">"sty"</span>, package::bigstrut_sty::load_definitions),
-<a href=#936 id=936 data-nosnippet>936</a>  (<span class="string">"bitset"</span>, <span class="string">"sty"</span>, package::bitset_sty::load_definitions),
-<a href=#937 id=937 data-nosnippet>937</a>  (<span class="string">"calrsfs"</span>, <span class="string">"sty"</span>, package::calrsfs_sty::load_definitions),
-<a href=#938 id=938 data-nosnippet>938</a>  (<span class="string">"cmbright"</span>, <span class="string">"sty"</span>, package::cmbright_sty::load_definitions),
-<a href=#939 id=939 data-nosnippet>939</a>  (<span class="string">"euscript"</span>, <span class="string">"sty"</span>, package::euscript_sty::load_definitions),
-<a href=#940 id=940 data-nosnippet>940</a>  (<span class="string">"everyshi"</span>, <span class="string">"sty"</span>, package::everyshi_sty::load_definitions),
-<a href=#941 id=941 data-nosnippet>941</a>  (<span class="string">"expl3"</span>, <span class="string">"lua"</span>, package::expl3_lua::load_definitions),
-<a href=#942 id=942 data-nosnippet>942</a>  (<span class="string">"expl3"</span>, <span class="string">"sty"</span>, package::expl3_sty::load_definitions),
-<a href=#943 id=943 data-nosnippet>943</a>  (<span class="string">"expl3"</span>, <span class="string">"ltx"</span>, package::expl3_ltx::load_definitions),
-<a href=#944 id=944 data-nosnippet>944</a>  (<span class="string">"fixme"</span>, <span class="string">"sty"</span>, package::fixme_sty::load_definitions),
-<a href=#945 id=945 data-nosnippet>945</a>  (<span class="string">"fleqn"</span>, <span class="string">"sty"</span>, package::fleqn_sty::load_definitions),
-<a href=#946 id=946 data-nosnippet>946</a>  (<span class="string">"flowchart"</span>, <span class="string">"sty"</span>, package::flowchart_sty::load_definitions),
-<a href=#947 id=947 data-nosnippet>947</a>  (
-<a href=#948 id=948 data-nosnippet>948</a>    <span class="string">"gettitlestring"</span>,
-<a href=#949 id=949 data-nosnippet>949</a>    <span class="string">"sty"</span>,
-<a href=#950 id=950 data-nosnippet>950</a>    package::gettitlestring_sty::load_definitions,
-<a href=#951 id=951 data-nosnippet>951</a>  ),
-<a href=#952 id=952 data-nosnippet>952</a>  (<span class="string">"hepunits"</span>, <span class="string">"sty"</span>, package::hepunits_sty::load_definitions),
-<a href=#953 id=953 data-nosnippet>953</a>  (<span class="string">"infwarerr"</span>, <span class="string">"sty"</span>, package::infwarerr_sty::load_definitions),
-<a href=#954 id=954 data-nosnippet>954</a>  (<span class="string">"intcalc"</span>, <span class="string">"sty"</span>, package::intcalc_sty::load_definitions),
-<a href=#955 id=955 data-nosnippet>955</a>  (
-<a href=#956 id=956 data-nosnippet>956</a>    <span class="string">"kvdefinekeys"</span>,
-<a href=#957 id=957 data-nosnippet>957</a>    <span class="string">"sty"</span>,
-<a href=#958 id=958 data-nosnippet>958</a>    package::kvdefinekeys_sty::load_definitions,
-<a href=#959 id=959 data-nosnippet>959</a>  ),
-<a href=#960 id=960 data-nosnippet>960</a>  (<span class="string">"kvoptions"</span>, <span class="string">"sty"</span>, package::kvoptions_sty::load_definitions),
-<a href=#961 id=961 data-nosnippet>961</a>  (<span class="string">"pdfsync"</span>, <span class="string">"sty"</span>, package::pdfsync_sty::load_definitions),
-<a href=#962 id=962 data-nosnippet>962</a>  (<span class="string">"pgfmath"</span>, <span class="string">"sty"</span>, package::pgfmath_sty::load_definitions),
-<a href=#963 id=963 data-nosnippet>963</a>  (
-<a href=#964 id=964 data-nosnippet>964</a>    <span class="string">"tablefootnote"</span>,
-<a href=#965 id=965 data-nosnippet>965</a>    <span class="string">"sty"</span>,
-<a href=#966 id=966 data-nosnippet>966</a>    package::tablefootnote_sty::load_definitions,
-<a href=#967 id=967 data-nosnippet>967</a>  ),
-<a href=#968 id=968 data-nosnippet>968</a>  (<span class="string">"tikz-cd"</span>, <span class="string">"sty"</span>, package::tikz_cd_sty::load_definitions),
-<a href=#969 id=969 data-nosnippet>969</a>];
-<a href=#970 id=970 data-nosnippet>970</a>
-<a href=#971 id=971 data-nosnippet>971</a><span class="doccomment">/// Runtime lookup: route `filename` (e.g. `"aastex.cls"`, `"pgfmath.code.tex"`)
-<a href=#972 id=972 data-nosnippet>972</a>/// through its compiled `load_definitions` fn, or return `None` when the
-<a href=#973 id=973 data-nosnippet>973</a>/// filename has no registered binding (caller falls back to raw
-<a href=#974 id=974 data-nosnippet>974</a>/// `.sty` / `.cls` / similar). Splits on the *first* `.` so multi-dot
-<a href=#975 id=975 data-nosnippet>975</a>/// filenames like `pgfmath.code.tex` are matched as `("pgfmath", "code.tex")`
-<a href=#976 id=976 data-nosnippet>976</a>/// rather than `("pgfmath.code", "tex")` — the latter silently dropped
-<a href=#977 id=977 data-nosnippet>977</a>/// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
-<a href=#978 id=978 data-nosnippet>978</a></span><span class="kw">pub fn </span>dispatch(filename: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
-<a href=#979 id=979 data-nosnippet>979</a>  <span class="kw">let </span>(base, ext) = filename.split_once(<span class="string">'.'</span>)<span class="question-mark">?</span>;
-<a href=#980 id=980 data-nosnippet>980</a>  <span class="comment">// Strip a leading directory path: `\documentclass{Definitions/mdpi}` →
-<a href=#981 id=981 data-nosnippet>981</a>  // dispatch on basename `mdpi`. Perl Package.pm L2167-2170
-<a href=#982 id=982 data-nosnippet>982</a>  // (FindFile_fallback) does the same. Without this, paper-bundled
-<a href=#983 id=983 data-nosnippet>983</a>  // class files like `Definitions/mdpi.cls` miss the registered
-<a href=#984 id=984 data-nosnippet>984</a>  // `mdpi.cls.ltxml`-style binding and fall through to OmniBus,
-<a href=#985 id=985 data-nosnippet>985</a>  // producing 50+ cascading undefined errors. Witness 2403.18716.
-<a href=#986 id=986 data-nosnippet>986</a>  </span><span class="kw">let </span>base_only = base.rsplit_once([<span class="string">'/'</span>, <span class="string">'\\'</span>]).map_or(base, |(<span class="kw">_</span>, b)| b);
-<a href=#987 id=987 data-nosnippet>987</a>  <span class="comment">// Perl pathname_find L383-389: try strict-case match first, then fall back
-<a href=#988 id=988 data-nosnippet>988</a>  // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
-<a href=#989 id=989 data-nosnippet>989</a>  // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
-<a href=#990 id=990 data-nosnippet>990</a>  // Without the fallback, lowercase-input / uppercase-binding pairs miss
-<a href=#991 id=991 data-nosnippet>991</a>  // and trigger spurious `missing_file` warnings.
-<a href=#992 id=992 data-nosnippet>992</a>  </span>BINDINGS
-<a href=#993 id=993 data-nosnippet>993</a>    .iter()
-<a href=#994 id=994 data-nosnippet>994</a>    .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base &amp;&amp; <span class="kw-2">*</span>extension == ext)
-<a href=#995 id=995 data-nosnippet>995</a>    .or_else(|| {
-<a href=#996 id=996 data-nosnippet>996</a>      BINDINGS
-<a href=#997 id=997 data-nosnippet>997</a>        .iter()
-<a href=#998 id=998 data-nosnippet>998</a>        .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base_only &amp;&amp; <span class="kw-2">*</span>extension == ext)
-<a href=#999 id=999 data-nosnippet>999</a>    })
+<a href=#935 id=935 data-nosnippet>935</a>  (
+<a href=#936 id=936 data-nosnippet>936</a>    <span class="string">"bigintcalc"</span>,
+<a href=#937 id=937 data-nosnippet>937</a>    <span class="string">"sty"</span>,
+<a href=#938 id=938 data-nosnippet>938</a>    package::bigintcalc_sty::load_definitions,
+<a href=#939 id=939 data-nosnippet>939</a>  ),
+<a href=#940 id=940 data-nosnippet>940</a>  (<span class="string">"bigstrut"</span>, <span class="string">"sty"</span>, package::bigstrut_sty::load_definitions),
+<a href=#941 id=941 data-nosnippet>941</a>  (<span class="string">"bitset"</span>, <span class="string">"sty"</span>, package::bitset_sty::load_definitions),
+<a href=#942 id=942 data-nosnippet>942</a>  (<span class="string">"calrsfs"</span>, <span class="string">"sty"</span>, package::calrsfs_sty::load_definitions),
+<a href=#943 id=943 data-nosnippet>943</a>  (<span class="string">"cmbright"</span>, <span class="string">"sty"</span>, package::cmbright_sty::load_definitions),
+<a href=#944 id=944 data-nosnippet>944</a>  (<span class="string">"euscript"</span>, <span class="string">"sty"</span>, package::euscript_sty::load_definitions),
+<a href=#945 id=945 data-nosnippet>945</a>  (<span class="string">"everyshi"</span>, <span class="string">"sty"</span>, package::everyshi_sty::load_definitions),
+<a href=#946 id=946 data-nosnippet>946</a>  (<span class="string">"expl3"</span>, <span class="string">"lua"</span>, package::expl3_lua::load_definitions),
+<a href=#947 id=947 data-nosnippet>947</a>  (<span class="string">"expl3"</span>, <span class="string">"sty"</span>, package::expl3_sty::load_definitions),
+<a href=#948 id=948 data-nosnippet>948</a>  (<span class="string">"expl3"</span>, <span class="string">"ltx"</span>, package::expl3_ltx::load_definitions),
+<a href=#949 id=949 data-nosnippet>949</a>  (<span class="string">"fixme"</span>, <span class="string">"sty"</span>, package::fixme_sty::load_definitions),
+<a href=#950 id=950 data-nosnippet>950</a>  (<span class="string">"fleqn"</span>, <span class="string">"sty"</span>, package::fleqn_sty::load_definitions),
+<a href=#951 id=951 data-nosnippet>951</a>  (<span class="string">"flowchart"</span>, <span class="string">"sty"</span>, package::flowchart_sty::load_definitions),
+<a href=#952 id=952 data-nosnippet>952</a>  (
+<a href=#953 id=953 data-nosnippet>953</a>    <span class="string">"gettitlestring"</span>,
+<a href=#954 id=954 data-nosnippet>954</a>    <span class="string">"sty"</span>,
+<a href=#955 id=955 data-nosnippet>955</a>    package::gettitlestring_sty::load_definitions,
+<a href=#956 id=956 data-nosnippet>956</a>  ),
+<a href=#957 id=957 data-nosnippet>957</a>  (<span class="string">"hepunits"</span>, <span class="string">"sty"</span>, package::hepunits_sty::load_definitions),
+<a href=#958 id=958 data-nosnippet>958</a>  (<span class="string">"infwarerr"</span>, <span class="string">"sty"</span>, package::infwarerr_sty::load_definitions),
+<a href=#959 id=959 data-nosnippet>959</a>  (<span class="string">"intcalc"</span>, <span class="string">"sty"</span>, package::intcalc_sty::load_definitions),
+<a href=#960 id=960 data-nosnippet>960</a>  (
+<a href=#961 id=961 data-nosnippet>961</a>    <span class="string">"kvdefinekeys"</span>,
+<a href=#962 id=962 data-nosnippet>962</a>    <span class="string">"sty"</span>,
+<a href=#963 id=963 data-nosnippet>963</a>    package::kvdefinekeys_sty::load_definitions,
+<a href=#964 id=964 data-nosnippet>964</a>  ),
+<a href=#965 id=965 data-nosnippet>965</a>  (<span class="string">"kvoptions"</span>, <span class="string">"sty"</span>, package::kvoptions_sty::load_definitions),
+<a href=#966 id=966 data-nosnippet>966</a>  (<span class="string">"pdfsync"</span>, <span class="string">"sty"</span>, package::pdfsync_sty::load_definitions),
+<a href=#967 id=967 data-nosnippet>967</a>  (<span class="string">"pgfmath"</span>, <span class="string">"sty"</span>, package::pgfmath_sty::load_definitions),
+<a href=#968 id=968 data-nosnippet>968</a>  (
+<a href=#969 id=969 data-nosnippet>969</a>    <span class="string">"tablefootnote"</span>,
+<a href=#970 id=970 data-nosnippet>970</a>    <span class="string">"sty"</span>,
+<a href=#971 id=971 data-nosnippet>971</a>    package::tablefootnote_sty::load_definitions,
+<a href=#972 id=972 data-nosnippet>972</a>  ),
+<a href=#973 id=973 data-nosnippet>973</a>  (<span class="string">"tikz-cd"</span>, <span class="string">"sty"</span>, package::tikz_cd_sty::load_definitions),
+<a href=#974 id=974 data-nosnippet>974</a>];
+<a href=#975 id=975 data-nosnippet>975</a>
+<a href=#976 id=976 data-nosnippet>976</a><span class="doccomment">/// Runtime lookup: route `filename` (e.g. `"aastex.cls"`, `"pgfmath.code.tex"`)
+<a href=#977 id=977 data-nosnippet>977</a>/// through its compiled `load_definitions` fn, or return `None` when the
+<a href=#978 id=978 data-nosnippet>978</a>/// filename has no registered binding (caller falls back to raw
+<a href=#979 id=979 data-nosnippet>979</a>/// `.sty` / `.cls` / similar). Splits on the *first* `.` so multi-dot
+<a href=#980 id=980 data-nosnippet>980</a>/// filenames like `pgfmath.code.tex` are matched as `("pgfmath", "code.tex")`
+<a href=#981 id=981 data-nosnippet>981</a>/// rather than `("pgfmath.code", "tex")` — the latter silently dropped
+<a href=#982 id=982 data-nosnippet>982</a>/// pgf / pgfmath / pgfmathcalc bindings, breaking tikz tests.
+<a href=#983 id=983 data-nosnippet>983</a></span><span class="kw">pub fn </span>dispatch(filename: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="prelude-ty">Result</span>&lt;()&gt;&gt; {
+<a href=#984 id=984 data-nosnippet>984</a>  <span class="kw">let </span>(base, ext) = filename.split_once(<span class="string">'.'</span>)<span class="question-mark">?</span>;
+<a href=#985 id=985 data-nosnippet>985</a>  <span class="comment">// Strip a leading directory path: `\documentclass{Definitions/mdpi}` →
+<a href=#986 id=986 data-nosnippet>986</a>  // dispatch on basename `mdpi`. Perl Package.pm L2167-2170
+<a href=#987 id=987 data-nosnippet>987</a>  // (FindFile_fallback) does the same. Without this, paper-bundled
+<a href=#988 id=988 data-nosnippet>988</a>  // class files like `Definitions/mdpi.cls` miss the registered
+<a href=#989 id=989 data-nosnippet>989</a>  // `mdpi.cls.ltxml`-style binding and fall through to OmniBus,
+<a href=#990 id=990 data-nosnippet>990</a>  // producing 50+ cascading undefined errors. Witness 2403.18716.
+<a href=#991 id=991 data-nosnippet>991</a>  </span><span class="kw">let </span>base_only = base.rsplit_once([<span class="string">'/'</span>, <span class="string">'\\'</span>]).map_or(base, |(<span class="kw">_</span>, b)| b);
+<a href=#992 id=992 data-nosnippet>992</a>  <span class="comment">// Perl pathname_find L383-389: try strict-case match first, then fall back
+<a href=#993 id=993 data-nosnippet>993</a>  // to case-insensitive (`m/$i_regex/i` then `@nocase_paths`) — so
+<a href=#994 id=994 data-nosnippet>994</a>  // `\documentclass{jhep}` resolves the `JHEP.cls.ltxml`-derived binding.
+<a href=#995 id=995 data-nosnippet>995</a>  // Without the fallback, lowercase-input / uppercase-binding pairs miss
+<a href=#996 id=996 data-nosnippet>996</a>  // and trigger spurious `missing_file` warnings.
+<a href=#997 id=997 data-nosnippet>997</a>  </span>BINDINGS
+<a href=#998 id=998 data-nosnippet>998</a>    .iter()
+<a href=#999 id=999 data-nosnippet>999</a>    .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base &amp;&amp; <span class="kw-2">*</span>extension == ext)
 <a href=#1000 id=1000 data-nosnippet>1000</a>    .or_else(|| {
-<a href=#1001 id=1001 data-nosnippet>1001</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
-<a href=#1002 id=1002 data-nosnippet>1002</a>        name.eq_ignore_ascii_case(base) &amp;&amp; extension.eq_ignore_ascii_case(ext)
-<a href=#1003 id=1003 data-nosnippet>1003</a>      })
+<a href=#1001 id=1001 data-nosnippet>1001</a>      BINDINGS
+<a href=#1002 id=1002 data-nosnippet>1002</a>        .iter()
+<a href=#1003 id=1003 data-nosnippet>1003</a>        .find(|(name, extension, <span class="kw">_</span>)| <span class="kw-2">*</span>name == base_only &amp;&amp; <span class="kw-2">*</span>extension == ext)
 <a href=#1004 id=1004 data-nosnippet>1004</a>    })
 <a href=#1005 id=1005 data-nosnippet>1005</a>    .or_else(|| {
 <a href=#1006 id=1006 data-nosnippet>1006</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
-<a href=#1007 id=1007 data-nosnippet>1007</a>        name.eq_ignore_ascii_case(base_only) &amp;&amp; extension.eq_ignore_ascii_case(ext)
+<a href=#1007 id=1007 data-nosnippet>1007</a>        name.eq_ignore_ascii_case(base) &amp;&amp; extension.eq_ignore_ascii_case(ext)
 <a href=#1008 id=1008 data-nosnippet>1008</a>      })
 <a href=#1009 id=1009 data-nosnippet>1009</a>    })
-<a href=#1010 id=1010 data-nosnippet>1010</a>    .map(|(<span class="kw">_</span>, <span class="kw">_</span>, loader)| loader())
-<a href=#1011 id=1011 data-nosnippet>1011</a>}
-<a href=#1012 id=1012 data-nosnippet>1012</a>
-<a href=#1013 id=1013 data-nosnippet>1013</a><span class="doccomment">/// All registered (name, extension) pairs across the BINDINGS table.
-<a href=#1014 id=1014 data-nosnippet>1014</a>/// Consumed by `find_file(notex=true)` to discover whether a compiled
-<a href=#1015 id=1015 data-nosnippet>1015</a>/// binding exists for a given filename — across `.cls` / `.sty` / `.def`
-<a href=#1016 id=1016 data-nosnippet>1016</a>/// / `.pool` / `code.tex` / etc. Also surfaces classes (extension `"cls"`)
-<a href=#1017 id=1017 data-nosnippet>1017</a>/// for `load_class`'s Perl-parity prefix-match fallback via
-<a href=#1018 id=1018 data-nosnippet>1018</a>/// `state::get_class_binding_names()` (a filtered view of this list).
-<a href=#1019 id=1019 data-nosnippet>1019</a></span><span class="kw">pub fn </span>binding_names() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)] {
-<a href=#1020 id=1020 data-nosnippet>1020</a>  <span class="kw">use </span>std::sync::OnceLock;
-<a href=#1021 id=1021 data-nosnippet>1021</a>  <span class="kw">static </span>NAMES: OnceLock&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)&gt;&gt; = OnceLock::new();
-<a href=#1022 id=1022 data-nosnippet>1022</a>  NAMES
-<a href=#1023 id=1023 data-nosnippet>1023</a>    .get_or_init(|| {
-<a href=#1024 id=1024 data-nosnippet>1024</a>      BINDINGS
-<a href=#1025 id=1025 data-nosnippet>1025</a>        .iter()
-<a href=#1026 id=1026 data-nosnippet>1026</a>        .map(|(name, ext, <span class="kw">_</span>)| (<span class="kw-2">*</span>name, <span class="kw-2">*</span>ext))
-<a href=#1027 id=1027 data-nosnippet>1027</a>        .collect()
-<a href=#1028 id=1028 data-nosnippet>1028</a>    })
-<a href=#1029 id=1029 data-nosnippet>1029</a>    .as_slice()
-<a href=#1030 id=1030 data-nosnippet>1030</a>}
-<a href=#1031 id=1031 data-nosnippet>1031</a>
-<a href=#1032 id=1032 data-nosnippet>1032</a><span class="attr">#[cfg(test)]
-<a href=#1033 id=1033 data-nosnippet>1033</a></span><span class="kw">mod </span>tests {
-<a href=#1034 id=1034 data-nosnippet>1034</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#1035 id=1035 data-nosnippet>1035</a>
-<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="attr">#[test]
-<a href=#1037 id=1037 data-nosnippet>1037</a>  </span><span class="kw">fn </span>bindings_registry_is_non_empty() {
-<a href=#1038 id=1038 data-nosnippet>1038</a>    <span class="macro">assert!</span>(!BINDINGS.is_empty(), <span class="string">"at least one package registered"</span>);
-<a href=#1039 id=1039 data-nosnippet>1039</a>  }
+<a href=#1010 id=1010 data-nosnippet>1010</a>    .or_else(|| {
+<a href=#1011 id=1011 data-nosnippet>1011</a>      BINDINGS.iter().find(|(name, extension, <span class="kw">_</span>)| {
+<a href=#1012 id=1012 data-nosnippet>1012</a>        name.eq_ignore_ascii_case(base_only) &amp;&amp; extension.eq_ignore_ascii_case(ext)
+<a href=#1013 id=1013 data-nosnippet>1013</a>      })
+<a href=#1014 id=1014 data-nosnippet>1014</a>    })
+<a href=#1015 id=1015 data-nosnippet>1015</a>    .map(|(<span class="kw">_</span>, <span class="kw">_</span>, loader)| loader())
+<a href=#1016 id=1016 data-nosnippet>1016</a>}
+<a href=#1017 id=1017 data-nosnippet>1017</a>
+<a href=#1018 id=1018 data-nosnippet>1018</a><span class="doccomment">/// All registered (name, extension) pairs across the BINDINGS table.
+<a href=#1019 id=1019 data-nosnippet>1019</a>/// Consumed by `find_file(notex=true)` to discover whether a compiled
+<a href=#1020 id=1020 data-nosnippet>1020</a>/// binding exists for a given filename — across `.cls` / `.sty` / `.def`
+<a href=#1021 id=1021 data-nosnippet>1021</a>/// / `.pool` / `code.tex` / etc. Also surfaces classes (extension `"cls"`)
+<a href=#1022 id=1022 data-nosnippet>1022</a>/// for `load_class`'s Perl-parity prefix-match fallback via
+<a href=#1023 id=1023 data-nosnippet>1023</a>/// `state::get_class_binding_names()` (a filtered view of this list).
+<a href=#1024 id=1024 data-nosnippet>1024</a></span><span class="kw">pub fn </span>binding_names() -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)] {
+<a href=#1025 id=1025 data-nosnippet>1025</a>  <span class="kw">use </span>std::sync::OnceLock;
+<a href=#1026 id=1026 data-nosnippet>1026</a>  <span class="kw">static </span>NAMES: OnceLock&lt;Vec&lt;(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)&gt;&gt; = OnceLock::new();
+<a href=#1027 id=1027 data-nosnippet>1027</a>  NAMES
+<a href=#1028 id=1028 data-nosnippet>1028</a>    .get_or_init(|| {
+<a href=#1029 id=1029 data-nosnippet>1029</a>      BINDINGS
+<a href=#1030 id=1030 data-nosnippet>1030</a>        .iter()
+<a href=#1031 id=1031 data-nosnippet>1031</a>        .map(|(name, ext, <span class="kw">_</span>)| (<span class="kw-2">*</span>name, <span class="kw-2">*</span>ext))
+<a href=#1032 id=1032 data-nosnippet>1032</a>        .collect()
+<a href=#1033 id=1033 data-nosnippet>1033</a>    })
+<a href=#1034 id=1034 data-nosnippet>1034</a>    .as_slice()
+<a href=#1035 id=1035 data-nosnippet>1035</a>}
+<a href=#1036 id=1036 data-nosnippet>1036</a>
+<a href=#1037 id=1037 data-nosnippet>1037</a><span class="attr">#[cfg(test)]
+<a href=#1038 id=1038 data-nosnippet>1038</a></span><span class="kw">mod </span>tests {
+<a href=#1039 id=1039 data-nosnippet>1039</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
 <a href=#1040 id=1040 data-nosnippet>1040</a>
 <a href=#1041 id=1041 data-nosnippet>1041</a>  <span class="attr">#[test]
-<a href=#1042 id=1042 data-nosnippet>1042</a>  </span><span class="kw">fn </span>binding_names_round_trips_with_bindings() {
-<a href=#1043 id=1043 data-nosnippet>1043</a>    <span class="comment">// Cross-check: every (name, ext) in `binding_names()` matches an entry in
-<a href=#1044 id=1044 data-nosnippet>1044</a>    // `BINDINGS`, and the lengths agree.
-<a href=#1045 id=1045 data-nosnippet>1045</a>    </span><span class="kw">let </span>names = binding_names();
-<a href=#1046 id=1046 data-nosnippet>1046</a>    <span class="macro">assert_eq!</span>(names.len(), BINDINGS.len());
-<a href=#1047 id=1047 data-nosnippet>1047</a>    <span class="kw">for </span>(name, ext) <span class="kw">in </span>names {
-<a href=#1048 id=1048 data-nosnippet>1048</a>      <span class="kw">let </span>matched = BINDINGS.iter().any(|(n, e, <span class="kw">_</span>)| n == name &amp;&amp; e == ext);
-<a href=#1049 id=1049 data-nosnippet>1049</a>      <span class="macro">assert!</span>(matched, <span class="string">"{}.{} must round-trip via BINDINGS"</span>, name, ext);
-<a href=#1050 id=1050 data-nosnippet>1050</a>    }
-<a href=#1051 id=1051 data-nosnippet>1051</a>  }
-<a href=#1052 id=1052 data-nosnippet>1052</a>
-<a href=#1053 id=1053 data-nosnippet>1053</a>  <span class="attr">#[test]
-<a href=#1054 id=1054 data-nosnippet>1054</a>  </span><span class="kw">fn </span>binding_names_cached_via_once_lock() {
-<a href=#1055 id=1055 data-nosnippet>1055</a>    <span class="comment">// Two consecutive calls return the same &amp;'static slice (same data pointer).
-<a href=#1056 id=1056 data-nosnippet>1056</a>    </span><span class="kw">let </span>first = binding_names();
-<a href=#1057 id=1057 data-nosnippet>1057</a>    <span class="kw">let </span>second = binding_names();
-<a href=#1058 id=1058 data-nosnippet>1058</a>    <span class="macro">assert_eq!</span>(first.as_ptr(), second.as_ptr());
-<a href=#1059 id=1059 data-nosnippet>1059</a>    <span class="macro">assert_eq!</span>(first.len(), second.len());
-<a href=#1060 id=1060 data-nosnippet>1060</a>  }
-<a href=#1061 id=1061 data-nosnippet>1061</a>
-<a href=#1062 id=1062 data-nosnippet>1062</a>  <span class="attr">#[test]
-<a href=#1063 id=1063 data-nosnippet>1063</a>  </span><span class="kw">fn </span>dispatch_none_for_unknown_filename() {
-<a href=#1064 id=1064 data-nosnippet>1064</a>    <span class="comment">// No ".foo" extension registered anywhere → None.
-<a href=#1065 id=1065 data-nosnippet>1065</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"definitely-not-a-package.foo"</span>).is_none());
-<a href=#1066 id=1066 data-nosnippet>1066</a>  }
-<a href=#1067 id=1067 data-nosnippet>1067</a>
-<a href=#1068 id=1068 data-nosnippet>1068</a>  <span class="attr">#[test]
-<a href=#1069 id=1069 data-nosnippet>1069</a>  </span><span class="kw">fn </span>dispatch_none_for_no_dot() {
-<a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="comment">// No dot → split_once returns None → dispatch returns None.
-<a href=#1071 id=1071 data-nosnippet>1071</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"bareword"</span>).is_none());
-<a href=#1072 id=1072 data-nosnippet>1072</a>  }
-<a href=#1073 id=1073 data-nosnippet>1073</a>
-<a href=#1074 id=1074 data-nosnippet>1074</a>  <span class="attr">#[test]
-<a href=#1075 id=1075 data-nosnippet>1075</a>  </span><span class="kw">fn </span>dispatch_splits_on_first_dot() {
-<a href=#1076 id=1076 data-nosnippet>1076</a>    <span class="comment">// The doc-comment promises first-dot splitting. Verify by checking a
-<a href=#1077 id=1077 data-nosnippet>1077</a>    // name that only makes sense when split at the *first* dot (a hypothetical
-<a href=#1078 id=1078 data-nosnippet>1078</a>    // "foo.code.tex" with no "foo.code" binding should be found as ("foo",
-<a href=#1079 id=1079 data-nosnippet>1079</a>    // "code.tex") if that exact tuple is registered, or None otherwise).
-<a href=#1080 id=1080 data-nosnippet>1080</a>    // We can't commit to a specific tuple without coupling to registry state,
-<a href=#1081 id=1081 data-nosnippet>1081</a>    // so just confirm that misleading "last-dot" splits do not resolve:
-<a href=#1082 id=1082 data-nosnippet>1082</a>    // If a name like "nonexistent.code.tex" yields anything other than None,
-<a href=#1083 id=1083 data-nosnippet>1083</a>    // that's a bug regardless of split direction — since no "nonexistent"
-<a href=#1084 id=1084 data-nosnippet>1084</a>    // binding exists in any form.
-<a href=#1085 id=1085 data-nosnippet>1085</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"nonexistent.code.tex"</span>).is_none());
-<a href=#1086 id=1086 data-nosnippet>1086</a>  }
-<a href=#1087 id=1087 data-nosnippet>1087</a>}
+<a href=#1042 id=1042 data-nosnippet>1042</a>  </span><span class="kw">fn </span>bindings_registry_is_non_empty() {
+<a href=#1043 id=1043 data-nosnippet>1043</a>    <span class="macro">assert!</span>(!BINDINGS.is_empty(), <span class="string">"at least one package registered"</span>);
+<a href=#1044 id=1044 data-nosnippet>1044</a>  }
+<a href=#1045 id=1045 data-nosnippet>1045</a>
+<a href=#1046 id=1046 data-nosnippet>1046</a>  <span class="attr">#[test]
+<a href=#1047 id=1047 data-nosnippet>1047</a>  </span><span class="kw">fn </span>binding_names_round_trips_with_bindings() {
+<a href=#1048 id=1048 data-nosnippet>1048</a>    <span class="comment">// Cross-check: every (name, ext) in `binding_names()` matches an entry in
+<a href=#1049 id=1049 data-nosnippet>1049</a>    // `BINDINGS`, and the lengths agree.
+<a href=#1050 id=1050 data-nosnippet>1050</a>    </span><span class="kw">let </span>names = binding_names();
+<a href=#1051 id=1051 data-nosnippet>1051</a>    <span class="macro">assert_eq!</span>(names.len(), BINDINGS.len());
+<a href=#1052 id=1052 data-nosnippet>1052</a>    <span class="kw">for </span>(name, ext) <span class="kw">in </span>names {
+<a href=#1053 id=1053 data-nosnippet>1053</a>      <span class="kw">let </span>matched = BINDINGS.iter().any(|(n, e, <span class="kw">_</span>)| n == name &amp;&amp; e == ext);
+<a href=#1054 id=1054 data-nosnippet>1054</a>      <span class="macro">assert!</span>(matched, <span class="string">"{}.{} must round-trip via BINDINGS"</span>, name, ext);
+<a href=#1055 id=1055 data-nosnippet>1055</a>    }
+<a href=#1056 id=1056 data-nosnippet>1056</a>  }
+<a href=#1057 id=1057 data-nosnippet>1057</a>
+<a href=#1058 id=1058 data-nosnippet>1058</a>  <span class="attr">#[test]
+<a href=#1059 id=1059 data-nosnippet>1059</a>  </span><span class="kw">fn </span>binding_names_cached_via_once_lock() {
+<a href=#1060 id=1060 data-nosnippet>1060</a>    <span class="comment">// Two consecutive calls return the same &amp;'static slice (same data pointer).
+<a href=#1061 id=1061 data-nosnippet>1061</a>    </span><span class="kw">let </span>first = binding_names();
+<a href=#1062 id=1062 data-nosnippet>1062</a>    <span class="kw">let </span>second = binding_names();
+<a href=#1063 id=1063 data-nosnippet>1063</a>    <span class="macro">assert_eq!</span>(first.as_ptr(), second.as_ptr());
+<a href=#1064 id=1064 data-nosnippet>1064</a>    <span class="macro">assert_eq!</span>(first.len(), second.len());
+<a href=#1065 id=1065 data-nosnippet>1065</a>  }
+<a href=#1066 id=1066 data-nosnippet>1066</a>
+<a href=#1067 id=1067 data-nosnippet>1067</a>  <span class="attr">#[test]
+<a href=#1068 id=1068 data-nosnippet>1068</a>  </span><span class="kw">fn </span>dispatch_none_for_unknown_filename() {
+<a href=#1069 id=1069 data-nosnippet>1069</a>    <span class="comment">// No ".foo" extension registered anywhere → None.
+<a href=#1070 id=1070 data-nosnippet>1070</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"definitely-not-a-package.foo"</span>).is_none());
+<a href=#1071 id=1071 data-nosnippet>1071</a>  }
+<a href=#1072 id=1072 data-nosnippet>1072</a>
+<a href=#1073 id=1073 data-nosnippet>1073</a>  <span class="attr">#[test]
+<a href=#1074 id=1074 data-nosnippet>1074</a>  </span><span class="kw">fn </span>dispatch_none_for_no_dot() {
+<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="comment">// No dot → split_once returns None → dispatch returns None.
+<a href=#1076 id=1076 data-nosnippet>1076</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"bareword"</span>).is_none());
+<a href=#1077 id=1077 data-nosnippet>1077</a>  }
+<a href=#1078 id=1078 data-nosnippet>1078</a>
+<a href=#1079 id=1079 data-nosnippet>1079</a>  <span class="attr">#[test]
+<a href=#1080 id=1080 data-nosnippet>1080</a>  </span><span class="kw">fn </span>dispatch_splits_on_first_dot() {
+<a href=#1081 id=1081 data-nosnippet>1081</a>    <span class="comment">// The doc-comment promises first-dot splitting. Verify by checking a
+<a href=#1082 id=1082 data-nosnippet>1082</a>    // name that only makes sense when split at the *first* dot (a hypothetical
+<a href=#1083 id=1083 data-nosnippet>1083</a>    // "foo.code.tex" with no "foo.code" binding should be found as ("foo",
+<a href=#1084 id=1084 data-nosnippet>1084</a>    // "code.tex") if that exact tuple is registered, or None otherwise).
+<a href=#1085 id=1085 data-nosnippet>1085</a>    // We can't commit to a specific tuple without coupling to registry state,
+<a href=#1086 id=1086 data-nosnippet>1086</a>    // so just confirm that misleading "last-dot" splits do not resolve:
+<a href=#1087 id=1087 data-nosnippet>1087</a>    // If a name like "nonexistent.code.tex" yields anything other than None,
+<a href=#1088 id=1088 data-nosnippet>1088</a>    // that's a bug regardless of split direction — since no "nonexistent"
+<a href=#1089 id=1089 data-nosnippet>1089</a>    // binding exists in any form.
+<a href=#1090 id=1090 data-nosnippet>1090</a>    </span><span class="macro">assert!</span>(dispatch(<span class="string">"nonexistent.code.tex"</span>).is_none());
+<a href=#1091 id=1091 data-nosnippet>1091</a>  }
+<a href=#1092 id=1092 data-nosnippet>1092</a>}
 </code></pre></div></section></main></body></html>

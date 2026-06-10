@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex.rs`."><title>latex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (f20a92ec0 2026-06-07)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>latex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">///**********************************************************************
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex.rs`."><title>latex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>latex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">///**********************************************************************
 <a href=#2 id=2 data-nosnippet>2</a>/// Organized following
 <a href=#3 id=3 data-nosnippet>3</a>///  "`LaTeX`: A Document Preparation System"
 <a href=#4 id=4 data-nosnippet>4</a>///   by Leslie Lamport
@@ -95,28 +95,45 @@
 <a href=#95 id=95 data-nosnippet>95</a>      <span class="macro">Warn!</span>(<span class="string">"latex_dump"</span>, <span class="string">"load"</span>, <span class="macro">s!</span>(<span class="string">"{}"</span>, e));
 <a href=#96 id=96 data-nosnippet>96</a>    }
 <a href=#97 id=97 data-nosnippet>97</a>  } <span class="kw">else </span>{
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="macro">InnerPool!</span>(latex_base);
-<a href=#99 id=99 data-nosnippet>99</a>  }
-<a href=#100 id=100 data-nosnippet>100</a>
-<a href=#101 id=101 data-nosnippet>101</a>  <span class="macro">InnerPool!</span>(latex_constructs);
-<a href=#102 id=102 data-nosnippet>102</a>
-<a href=#103 id=103 data-nosnippet>103</a>  <span class="comment">// Rust-only overrides — loaded LAST so they can patch CSes set up by
-<a href=#104 id=104 data-nosnippet>104</a>  // any earlier pool (dump, bootstrap, base, constructs). Without this
-<a href=#105 id=105 data-nosnippet>105</a>  // call, definitions in `latex_constructs_rust_only.rs` (e.g.
-<a href=#106 id=106 data-nosnippet>106</a>  // `\UseRawInputEncoding`, `\ltx@hard@MessageBreak`) never register.
-<a href=#107 id=107 data-nosnippet>107</a>  </span><span class="macro">InnerPool!</span>(latex_constructs_rust_only);
-<a href=#108 id=108 data-nosnippet>108</a>
-<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// Retry any PA/MPA let-aliases whose target wasn't defined at
-<a href=#110 id=110 data-nosnippet>110</a>  // dump-load time (they were queued rather than silently dropped).
-<a href=#111 id=111 data-nosnippet>111</a>  // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`
-<a href=#112 id=112 data-nosnippet>112</a>  // itself is defined in latex_constructs (which loads after the
-<a href=#113 id=113 data-nosnippet>113</a>  // dump), so the alias has to wait until now.
-<a href=#114 id=114 data-nosnippet>114</a>  </span><span class="kw">let </span>(applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
-<a href=#115 id=115 data-nosnippet>115</a>  <span class="kw">if </span>applied + skipped &gt; <span class="number">0 </span>{
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="macro">Info!</span>(
-<a href=#117 id=117 data-nosnippet>117</a>      <span class="string">"latex_dump"</span>, <span class="string">"deferred"</span>,
-<a href=#118 id=118 data-nosnippet>118</a>      <span class="macro">s!</span>(<span class="string">"deferred aliases: {} applied, {} skipped"</span>, applied, skipped)
-<a href=#119 id=119 data-nosnippet>119</a>    );
-<a href=#120 id=120 data-nosnippet>120</a>  }
-<a href=#121 id=121 data-nosnippet>121</a>});
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="comment">// DEGRADED raw-load path: no precompiled LaTeX kernel dump is
+<a href=#99 id=99 data-nosnippet>99</a>    // available. This silently fires `latex.ltx` + `expl3-code.tex` raw,
+<a href=#100 id=100 data-nosnippet>100</a>    // which in turn hits known raw-load-only cascades (the expl3-code
+<a href=#101 id=101 data-nosnippet>101</a>    // L33075 codepoint dangling-group, and the `\@expl@pop@filename@@`
+<a href=#102 id=102 data-nosnippet>102</a>    // expl-status desync) that the dump avoids. Running the large canvas
+<a href=#103 id=103 data-nosnippet>103</a>    // here inflates per-paper error counts by ~1000× on expl3-heavy
+<a href=#104 id=104 data-nosnippet>104</a>    // articles (e.g. 2112.11932: 1 → 1003), masquerading as a Rust parity
+<a href=#105 id=105 data-nosnippet>105</a>    // gap when it is really a missing-kernel-dump setup error.
+<a href=#106 id=106 data-nosnippet>106</a>    //
+<a href=#107 id=107 data-nosnippet>107</a>    // The dump is REQUIRED for canvas/parity work. Surface its absence
+<a href=#108 id=108 data-nosnippet>108</a>    // loudly, once per process, unless `LATEXML_NODUMP=1` made it
+<a href=#109 id=109 data-nosnippet>109</a>    // intentional. Not an `Error:`/`Fatal:` (those are reserved for the
+<a href=#110 id=110 data-nosnippet>110</a>    // conversion log and would corrupt canvas error counts) — a plain
+<a href=#111 id=111 data-nosnippet>111</a>    // one-shot stderr banner the operator cannot miss.
+<a href=#112 id=112 data-nosnippet>112</a>    </span><span class="kw">if </span>!<span class="kw-2">*</span>NODUMP {
+<a href=#113 id=113 data-nosnippet>113</a>      <span class="kw">crate</span>::dump_paths::warn_degraded_no_dump();
+<a href=#114 id=114 data-nosnippet>114</a>    }
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="macro">InnerPool!</span>(latex_base);
+<a href=#116 id=116 data-nosnippet>116</a>  }
+<a href=#117 id=117 data-nosnippet>117</a>
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="macro">InnerPool!</span>(latex_constructs);
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="comment">// Rust-only overrides — loaded LAST so they can patch CSes set up by
+<a href=#121 id=121 data-nosnippet>121</a>  // any earlier pool (dump, bootstrap, base, constructs). Without this
+<a href=#122 id=122 data-nosnippet>122</a>  // call, definitions in `latex_constructs_rust_only.rs` (e.g.
+<a href=#123 id=123 data-nosnippet>123</a>  // `\UseRawInputEncoding`, `\ltx@hard@MessageBreak`) never register.
+<a href=#124 id=124 data-nosnippet>124</a>  </span><span class="macro">InnerPool!</span>(latex_constructs_rust_only);
+<a href=#125 id=125 data-nosnippet>125</a>
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// Retry any PA/MPA let-aliases whose target wasn't defined at
+<a href=#127 id=127 data-nosnippet>127</a>  // dump-load time (they were queued rather than silently dropped).
+<a href=#128 id=128 data-nosnippet>128</a>  // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`
+<a href=#129 id=129 data-nosnippet>129</a>  // itself is defined in latex_constructs (which loads after the
+<a href=#130 id=130 data-nosnippet>130</a>  // dump), so the alias has to wait until now.
+<a href=#131 id=131 data-nosnippet>131</a>  </span><span class="kw">let </span>(applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="kw">if </span>applied + skipped &gt; <span class="number">0 </span>{
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="macro">Info!</span>(
+<a href=#134 id=134 data-nosnippet>134</a>      <span class="string">"latex_dump"</span>, <span class="string">"deferred"</span>,
+<a href=#135 id=135 data-nosnippet>135</a>      <span class="macro">s!</span>(<span class="string">"deferred aliases: {} applied, {} skipped"</span>, applied, skipped)
+<a href=#136 id=136 data-nosnippet>136</a>    );
+<a href=#137 id=137 data-nosnippet>137</a>  }
+<a href=#138 id=138 data-nosnippet>138</a>});
 </code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex.rs`."><title>tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (f20a92ec0 2026-06-07)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex.rs`."><title>tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>once_cell::sync::Lazy;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="comment">// Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
@@ -351,55 +351,60 @@
 <a href=#351 id=351 data-nosnippet>351</a>    </span><span class="kw">if </span>!<span class="kw-2">*</span>NODUMP &amp;&amp; plain_dump_available() {
 <a href=#352 id=352 data-nosnippet>352</a>      <span class="macro">InnerPool!</span>(plain_dump); <span class="comment">// runtime loader for resources/dumps/plain.dump.txt
 <a href=#353 id=353 data-nosnippet>353</a>    </span>} <span class="kw">else </span>{
-<a href=#354 id=354 data-nosnippet>354</a>      <span class="macro">InnerPool!</span>(plain_base); <span class="comment">// Perl: plain_base.pool.ltxml
-<a href=#355 id=355 data-nosnippet>355</a>    </span>}
-<a href=#356 id=356 data-nosnippet>356</a>    <span class="macro">InnerPool!</span>(plain_constructs); <span class="comment">// Perl: plain_constructs.pool.ltxml → math_common
-<a href=#357 id=357 data-nosnippet>357</a>
-<a href=#358 id=358 data-nosnippet>358</a>    // Symmetric with latex.rs: any PA/MPA let-aliases whose target wasn't
-<a href=#359 id=359 data-nosnippet>359</a>    // defined at dump-load time were queued; flush them now that
-<a href=#360 id=360 data-nosnippet>360</a>    // plain_constructs has run.
-<a href=#361 id=361 data-nosnippet>361</a>    </span><span class="kw">let </span>(applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
-<a href=#362 id=362 data-nosnippet>362</a>    <span class="kw">if </span>applied + skipped &gt; <span class="number">0 </span>{
-<a href=#363 id=363 data-nosnippet>363</a>      <span class="macro">Info!</span>(
-<a href=#364 id=364 data-nosnippet>364</a>        <span class="string">"plain_dump"</span>, <span class="string">"deferred"</span>,
-<a href=#365 id=365 data-nosnippet>365</a>        <span class="macro">s!</span>(<span class="string">"deferred aliases: {} applied, {} skipped"</span>, applied, skipped)
-<a href=#366 id=366 data-nosnippet>366</a>      );
-<a href=#367 id=367 data-nosnippet>367</a>    }
-<a href=#368 id=368 data-nosnippet>368</a>  }
-<a href=#369 id=369 data-nosnippet>369</a>
-<a href=#370 id=370 data-nosnippet>370</a>  <span class="comment">//======================================================================
-<a href=#371 id=371 data-nosnippet>371</a>  // After all other rewrites have acted, a little cleanup
-<a href=#372 id=372 data-nosnippet>372</a>  // [This suggests that it should be (one of) the LAST (math) rewrite applied?
-<a href=#373 id=373 data-nosnippet>373</a>  // Do we need to define it last?]
-<a href=#374 id=374 data-nosnippet>374</a>  // DefRewrite(xpath =&gt; 'descendant-or-self::ltx:XMWrap[count(child::*)=1]',
-<a href=#375 id=375 data-nosnippet>375</a>  //   replace =&gt; sub { my ($document, $wrap) = @_;
-<a href=#376 id=376 data-nosnippet>376</a>  //     if (my $node = $document-&gt;getFirstChildElement($wrap)) {
-<a href=#377 id=377 data-nosnippet>377</a>  //       # Copy attributes but NOT internal ones,
-<a href=#378 id=378 data-nosnippet>378</a>  //       # NOR xml:id, else we get clashes
-<a href=#379 id=379 data-nosnippet>379</a>  //       foreach my $attribute ($wrap-&gt;attributes) {
-<a href=#380 id=380 data-nosnippet>380</a>  //         if ($attribute-&gt;nodeType == XML_ATTRIBUTE_NODE) {
-<a href=#381 id=381 data-nosnippet>381</a>  //           my $attr = $document-&gt;getNodeQName($attribute);
-<a href=#382 id=382 data-nosnippet>382</a>  //           $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue)
-<a href=#383 id=383 data-nosnippet>383</a>  //             unless ($attr eq 'xml:id') || $attr =~ /^_/;
-<a href=#384 id=384 data-nosnippet>384</a>  //           if    ($attr =~ /^_/) { }
-<a href=#385 id=385 data-nosnippet>385</a>  //           elsif ($attr eq 'xml:id') {
-<a href=#386 id=386 data-nosnippet>386</a>  //             my $id = $attribute-&gt;getValue;
-<a href=#387 id=387 data-nosnippet>387</a>  //             if (my $previd = $node-&gt;getAttribute('xml:id')) {    # Keep original id
-<a href=#388 id=388 data-nosnippet>388</a>  //                   # but swap any references to the one on the wrapper!
-<a href=#389 id=389 data-nosnippet>389</a>  //               foreach my $ref ($document-&gt;findnodes("//*[\@idref='$id']")) {
-<a href=#390 id=390 data-nosnippet>390</a>  //                 $ref-&gt;setAttribute(idref =&gt; $previd); }
-<a href=#391 id=391 data-nosnippet>391</a>  //               $wrap-&gt;removeAttribute('xml"id');
-<a href=#392 id=392 data-nosnippet>392</a>  //               $document-&gt;unRecordID($id); }
-<a href=#393 id=393 data-nosnippet>393</a>  //             else {
-<a href=#394 id=394 data-nosnippet>394</a>  //               $wrap-&gt;removeAttribute('xml:id');
-<a href=#395 id=395 data-nosnippet>395</a>  //               $document-&gt;unRecordID($id);
-<a href=#396 id=396 data-nosnippet>396</a>  //               $document-&gt;setAttribute($node, 'xml:id' =&gt; $id); } }
-<a href=#397 id=397 data-nosnippet>397</a>  //           else {
-<a href=#398 id=398 data-nosnippet>398</a>  //             $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue); } } }
-<a href=#399 id=399 data-nosnippet>399</a>  //       # But keep $node's font from being overwritten.
-<a href=#400 id=400 data-nosnippet>400</a>  //       $document-&gt;setNodeFont($wrap, $document-&gt;getNodeFont($node));
-<a href=#401 id=401 data-nosnippet>401</a>  //       ## WHY THIS????
-<a href=#402 id=402 data-nosnippet>402</a>  //       $document-&gt;getNode-&gt;appendChild($node);
-<a href=#403 id=403 data-nosnippet>403</a>  // } });
-<a href=#404 id=404 data-nosnippet>404</a></span>});
+<a href=#354 id=354 data-nosnippet>354</a>      <span class="comment">// Degraded raw-load path — surface the missing dump loudly (shared
+<a href=#355 id=355 data-nosnippet>355</a>      // one-shot banner with latex.rs). See dump_paths::warn_degraded_no_dump.
+<a href=#356 id=356 data-nosnippet>356</a>      </span><span class="kw">if </span>!<span class="kw-2">*</span>NODUMP {
+<a href=#357 id=357 data-nosnippet>357</a>        <span class="kw">crate</span>::dump_paths::warn_degraded_no_dump();
+<a href=#358 id=358 data-nosnippet>358</a>      }
+<a href=#359 id=359 data-nosnippet>359</a>      <span class="macro">InnerPool!</span>(plain_base); <span class="comment">// Perl: plain_base.pool.ltxml
+<a href=#360 id=360 data-nosnippet>360</a>    </span>}
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="macro">InnerPool!</span>(plain_constructs); <span class="comment">// Perl: plain_constructs.pool.ltxml → math_common
+<a href=#362 id=362 data-nosnippet>362</a>
+<a href=#363 id=363 data-nosnippet>363</a>    // Symmetric with latex.rs: any PA/MPA let-aliases whose target wasn't
+<a href=#364 id=364 data-nosnippet>364</a>    // defined at dump-load time were queued; flush them now that
+<a href=#365 id=365 data-nosnippet>365</a>    // plain_constructs has run.
+<a href=#366 id=366 data-nosnippet>366</a>    </span><span class="kw">let </span>(applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="kw">if </span>applied + skipped &gt; <span class="number">0 </span>{
+<a href=#368 id=368 data-nosnippet>368</a>      <span class="macro">Info!</span>(
+<a href=#369 id=369 data-nosnippet>369</a>        <span class="string">"plain_dump"</span>, <span class="string">"deferred"</span>,
+<a href=#370 id=370 data-nosnippet>370</a>        <span class="macro">s!</span>(<span class="string">"deferred aliases: {} applied, {} skipped"</span>, applied, skipped)
+<a href=#371 id=371 data-nosnippet>371</a>      );
+<a href=#372 id=372 data-nosnippet>372</a>    }
+<a href=#373 id=373 data-nosnippet>373</a>  }
+<a href=#374 id=374 data-nosnippet>374</a>
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="comment">//======================================================================
+<a href=#376 id=376 data-nosnippet>376</a>  // After all other rewrites have acted, a little cleanup
+<a href=#377 id=377 data-nosnippet>377</a>  // [This suggests that it should be (one of) the LAST (math) rewrite applied?
+<a href=#378 id=378 data-nosnippet>378</a>  // Do we need to define it last?]
+<a href=#379 id=379 data-nosnippet>379</a>  // DefRewrite(xpath =&gt; 'descendant-or-self::ltx:XMWrap[count(child::*)=1]',
+<a href=#380 id=380 data-nosnippet>380</a>  //   replace =&gt; sub { my ($document, $wrap) = @_;
+<a href=#381 id=381 data-nosnippet>381</a>  //     if (my $node = $document-&gt;getFirstChildElement($wrap)) {
+<a href=#382 id=382 data-nosnippet>382</a>  //       # Copy attributes but NOT internal ones,
+<a href=#383 id=383 data-nosnippet>383</a>  //       # NOR xml:id, else we get clashes
+<a href=#384 id=384 data-nosnippet>384</a>  //       foreach my $attribute ($wrap-&gt;attributes) {
+<a href=#385 id=385 data-nosnippet>385</a>  //         if ($attribute-&gt;nodeType == XML_ATTRIBUTE_NODE) {
+<a href=#386 id=386 data-nosnippet>386</a>  //           my $attr = $document-&gt;getNodeQName($attribute);
+<a href=#387 id=387 data-nosnippet>387</a>  //           $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue)
+<a href=#388 id=388 data-nosnippet>388</a>  //             unless ($attr eq 'xml:id') || $attr =~ /^_/;
+<a href=#389 id=389 data-nosnippet>389</a>  //           if    ($attr =~ /^_/) { }
+<a href=#390 id=390 data-nosnippet>390</a>  //           elsif ($attr eq 'xml:id') {
+<a href=#391 id=391 data-nosnippet>391</a>  //             my $id = $attribute-&gt;getValue;
+<a href=#392 id=392 data-nosnippet>392</a>  //             if (my $previd = $node-&gt;getAttribute('xml:id')) {    # Keep original id
+<a href=#393 id=393 data-nosnippet>393</a>  //                   # but swap any references to the one on the wrapper!
+<a href=#394 id=394 data-nosnippet>394</a>  //               foreach my $ref ($document-&gt;findnodes("//*[\@idref='$id']")) {
+<a href=#395 id=395 data-nosnippet>395</a>  //                 $ref-&gt;setAttribute(idref =&gt; $previd); }
+<a href=#396 id=396 data-nosnippet>396</a>  //               $wrap-&gt;removeAttribute('xml"id');
+<a href=#397 id=397 data-nosnippet>397</a>  //               $document-&gt;unRecordID($id); }
+<a href=#398 id=398 data-nosnippet>398</a>  //             else {
+<a href=#399 id=399 data-nosnippet>399</a>  //               $wrap-&gt;removeAttribute('xml:id');
+<a href=#400 id=400 data-nosnippet>400</a>  //               $document-&gt;unRecordID($id);
+<a href=#401 id=401 data-nosnippet>401</a>  //               $document-&gt;setAttribute($node, 'xml:id' =&gt; $id); } }
+<a href=#402 id=402 data-nosnippet>402</a>  //           else {
+<a href=#403 id=403 data-nosnippet>403</a>  //             $document-&gt;setAttribute($node, $attr =&gt; $attribute-&gt;getValue); } } }
+<a href=#404 id=404 data-nosnippet>404</a>  //       # But keep $node's font from being overwritten.
+<a href=#405 id=405 data-nosnippet>405</a>  //       $document-&gt;setNodeFont($wrap, $document-&gt;getNodeFont($node));
+<a href=#406 id=406 data-nosnippet>406</a>  //       ## WHY THIS????
+<a href=#407 id=407 data-nosnippet>407</a>  //       $document-&gt;getNode-&gt;appendChild($node);
+<a href=#408 id=408 data-nosnippet>408</a>  // } });
+<a href=#409 id=409 data-nosnippet>409</a></span>});
 </code></pre></div></section></main></body></html>
