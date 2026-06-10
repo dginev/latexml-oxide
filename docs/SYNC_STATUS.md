@@ -3291,21 +3291,6 @@ fixes landed" below)*
 
 **P2 — guard-architecture hardening (follow-up PR):**
 
-6. **Stomach guards are inert on `digest()`/`raw_tex` paths, and self-disable
-   once pending.** All four stomach guards only SET `pending_cycle_fatal`;
-   the sole raiser is `check_timeout`, whose only call site is
-   `digest_next_body`. `stomach::digest()` (constructor-arg digestion) and
-   `raw_tex` never call it — and `cycle_guard_record` early-returns once
-   `pending.is_some()`, so after first detection ALL stomach guards (count,
-   byte, cycle) stop checking while `box_list` keeps growing; the RSS soft
-   cap also lives in `check_timeout` so it is equally dead there. (Narrowed
-   by verification: gullet token/pushback limits remain live on those paths,
-   and many boxing runaways re-enter `digest_next_body` via constructors —
-   the gap is pushes strictly inside `digest()`/`raw_tex`.) Action: call
-   `check_timeout` from `digest()`'s and `raw_tex`'s loops (or raise at
-   detection point), and don't gate further guard checks on
-   `pending.is_none()`.
-
 8. **All stomach guard breaches raise as `Fatal:Stomach:Recursion`** — the 2M
    count cap, 3.2GB byte budget, and 100k depth cap are size events, not
    recursion; canvas/telemetry clustering on `target:category` cannot

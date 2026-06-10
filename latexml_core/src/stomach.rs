@@ -923,6 +923,13 @@ pub fn expire_local_box_list() -> Vec<Digested> {
 /// the stomach borrow and have appended past the activation size.
 #[inline]
 fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
+  // Once a fatal is pending, further detection work is pointless — the raise
+  // happens at the NEXT `check_timeout` tick, which (since PR #249 review
+  // P2-6) every digestion loop runs per iteration (`digest_next_body`,
+  // `digest`, `raw_tex`), so the window between detection and raise is at
+  // most one `invoke_token`. (Before that fix, a runaway confined to
+  // `digest()` set the flag and the guards then self-disabled while the list
+  // grew unbounded — the flag was never raised on that path.)
   if st.pending_cycle_fatal.is_none() {
     // Hard size backstop — platform-INDEPENDENT (the RSS soft cap in
     // `check_timeout` reads `/proc/self/statm` and is therefore Linux-only;
@@ -1120,6 +1127,13 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
       Some(comment) => Some(comment),
       None => gullet::read_x_token(Some(true), false, None)?,
     } {
+      // Raise any pending stomach-guard fatal + deadline/RSS checks. This
+      // loop is a digestion path of its own — without a tick here, a runaway
+      // confined to constructor-argument digestion set `pending_cycle_fatal`
+      // at detection but nothing ever RAISED it (check_timeout's only call
+      // site was digest_next_body), and the RSS soft cap / wall-clock
+      // deadline were equally dead on this path. PR #249 review P2-6.
+      check_timeout()?;
       // Done if we run out of tokens
       let invoked = invoke_token(&token)?;
       extend_box_list(invoked);
@@ -1231,6 +1245,11 @@ pub fn raw_tex(text: &str) -> Result<()> {
   )?;
   gullet::reading_from_mouth(raw_tex_mouth, || -> Result<()> {
     while let Some(token) = gullet::read_x_token(Some(false), false, None)? {
+      // Same per-iteration guard tick as digest()/digest_next_body — see the
+      // comment in `digest` (PR #249 review P2-6): raw-loaded .sty/.cls
+      // digestion must raise pending stomach fatals and honor the deadline
+      // and RSS caps too.
+      check_timeout()?;
       if token.get_catcode() != Catcode::SPACE {
         invoke_token(&token)?;
       }
