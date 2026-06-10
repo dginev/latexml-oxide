@@ -158,11 +158,17 @@ const SAMPLE: &str = r##"
     }
   });
 
-  // amsmath-style numbered construct: RefStepCounter feeding #tags, plus a
-  // string reversion (the `\@@multline` option shape, scaled down).
+  // amsmath-style numbered construct: RefStepCounter as the properties
+  // closure, plus a string reversion (the `\@@multline` option shape, scaled
+  // down). NB `#tags` (an `ltx:tags`) is BLOCK-level and cannot be rendered
+  // inside an inline `ltx:text` — doing so makes the document validly
+  // auto-close the text to host the block, leaving the template's
+  // `</ltx:text>` with nothing to close (a benign-but-logged malformed close).
+  // So we render the refnum as a STRING property instead; RefStepCounter is
+  // still exercised (it steps the counter and returns its map).
   NewCounter("rqeq");
-  DefConstructor("\\numbered{}", "<ltx:text class=\"eq\">#tags #1</ltx:text>", #{
-    properties: |x| RefStepCounter("rqeq"),
+  DefConstructor("\\numbered{}", "<ltx:text class=\"eq\">(#refnum) #1</ltx:text>", #{
+    properties: |x| { let m = RefStepCounter("rqeq"); m.refnum = CounterValue("rqeq").to_string(); m },
     reversion: "\\numbered{#1}"
   });
 
@@ -245,6 +251,13 @@ fn script_dispatch(request: &str) -> Option<Result<()>> {
 
 #[test]
 fn script_binding_macro_and_constructor_convert() {
+  // Capture this conversion's log deterministically (independent of whichever
+  // other test happened to `logger::init` first) so the zero-error assertion
+  // below is order-stable. Without this, a benign error would surface or hide
+  // based on test ordering.
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+  latexml_core::util::logger::bind_log();
+
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     include_comments: Some(false),
@@ -268,6 +281,16 @@ fn script_binding_macro_and_constructor_convert() {
     .convert_file(tex.to_string())
     .expect("conversion with a script binding should succeed");
   let xml = doc.serialize_to_string();
+
+  // No spurious `Error:` from any specimen — pins the malformed-close class
+  // (a block hole rendered in inline text would auto-close the text and leave
+  // the template's `</…>` dangling). The captured log is bound above so this
+  // is independent of test order.
+  let log = latexml_core::util::logger::flush_log();
+  assert!(
+    !log.contains("Error:") && !log.contains("Fatal:"),
+    "conversion logged errors:\n{log}"
+  );
 
   // NB: the serializer emits the LaTeXML namespace as the default (no `ltx:`
   // prefix), so elements appear unprefixed.
@@ -375,9 +398,10 @@ fn script_binding_macro_and_constructor_convert() {
     xml.contains("<proof") && xml.contains("Proof:") && xml.contains("QED-body"),
     "IEEEproof-style ({{rproof}}) properties-digestion failed; xml=\n{xml}"
   );
-  // amsmath-style: RefStepCounter feeds #tags (the tag renders as "1").
+  // amsmath-style: RefStepCounter (as properties) steps the counter and the
+  // refnum (1 after the first step) renders inline alongside the arg.
   assert!(
-    xml.contains("class=\"eq\"") && xml.contains("NUM"),
+    xml.contains("class=\"eq\"") && xml.contains("(1)") && xml.contains("NUM"),
     "RefStepCounter-properties constructor (\\numbered) failed; xml=\n{xml}"
   );
   // natbib-style parameter types: star + optionals + semiverbatim keys.
