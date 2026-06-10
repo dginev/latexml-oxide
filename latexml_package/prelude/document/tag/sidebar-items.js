@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["TagOptionName"],"struct":["TagOptions"],"type":["TagConstructionClosure","TagData"]};
+window.SIDEBAR_ITEMS = {"enum":["TagContent","TagOptionName"],"struct":["TagData","TagOptions"],"type":["RawFrontmatter","TagAttrs","TagConstructionClosure"]};

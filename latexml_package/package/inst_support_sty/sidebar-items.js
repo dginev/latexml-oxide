@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","relocate_institute"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};

@@ -1381,7 +1381,7 @@
 <a href=#1381 id=1381 data-nosnippet>1381</a>  // converts it cleanly).
 <a href=#1382 id=1382 data-nosnippet>1382</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\diagonalmatrix[]{}"</span>, sub[(z, diag)] {
 <a href=#1383 id=1383 data-nosnippet>1383</a>    <span class="kw">let </span>z_tok = <span class="kw">match </span>z { <span class="prelude-val">Some</span>(t) <span class="kw">if </span>!t.is_empty() =&gt; t.unlist(), <span class="kw">_ </span>=&gt; <span class="macro">vec!</span>[<span class="macro">T_SPACE!</span>()] };
-<a href=#1384 id=1384 data-nosnippet>1384</a>    <span class="kw">let </span>items = <span class="kw">crate</span>::engine::base_utilities::split_tokens(diag, <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">","</span>)]);
+<a href=#1384 id=1384 data-nosnippet>1384</a>    <span class="kw">let </span>items = <span class="kw">crate</span>::engine::base_utilities::split_tokens(diag, <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">","</span>).into()]);
 <a href=#1385 id=1385 data-nosnippet>1385</a>    <span class="kw">let </span>n = items.len();
 <a href=#1386 id=1386 data-nosnippet>1386</a>    <span class="kw">let </span><span class="kw-2">mut </span>tks = Vec::new();
 <a href=#1387 id=1387 data-nosnippet>1387</a>    <span class="kw">for </span>(i, item) <span class="kw">in </span>items.iter().enumerate() {
@@ -1403,7 +1403,7 @@
 <a href=#1403 id=1403 data-nosnippet>1403</a>  // L655-672). Same token-level split as \diagonalmatrix.
 <a href=#1404 id=1404 data-nosnippet>1404</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\antidiagonalmatrix[]{}"</span>, sub[(z, diag)] {
 <a href=#1405 id=1405 data-nosnippet>1405</a>    <span class="kw">let </span>z_tok = <span class="kw">match </span>z { <span class="prelude-val">Some</span>(t) <span class="kw">if </span>!t.is_empty() =&gt; t.unlist(), <span class="kw">_ </span>=&gt; <span class="macro">vec!</span>[<span class="macro">T_SPACE!</span>()] };
-<a href=#1406 id=1406 data-nosnippet>1406</a>    <span class="kw">let </span>items = <span class="kw">crate</span>::engine::base_utilities::split_tokens(diag, <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">","</span>)]);
+<a href=#1406 id=1406 data-nosnippet>1406</a>    <span class="kw">let </span>items = <span class="kw">crate</span>::engine::base_utilities::split_tokens(diag, <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">","</span>).into()]);
 <a href=#1407 id=1407 data-nosnippet>1407</a>    <span class="kw">let </span>n = items.len();
 <a href=#1408 id=1408 data-nosnippet>1408</a>    <span class="kw">let </span><span class="kw-2">mut </span>tks = Vec::new();
 <a href=#1409 id=1409 data-nosnippet>1409</a>    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..n {

@@ -708,274 +708,284 @@
 <a href=#708 id=708 data-nosnippet>708</a>      Comment(<span class="kw">_</span>) =&gt; <span class="bool-val">true</span>,
 <a href=#709 id=709 data-nosnippet>709</a>      TBox(<span class="kw-2">ref </span>b) =&gt; {
 <a href=#710 id=710 data-nosnippet>710</a>        <span class="kw">let </span>b = b.borrow();
-<a href=#711 id=711 data-nosnippet>711</a>        <span class="kw">if </span>b.get_property_bool(<span class="string">"isEmpty"</span>)
-<a href=#712 id=712 data-nosnippet>712</a>          || b.get_property_bool(<span class="string">"isSpace"</span>)
-<a href=#713 id=713 data-nosnippet>713</a>          || b.get_property_bool(<span class="string">"alignmentSkippable"</span>)
-<a href=#714 id=714 data-nosnippet>714</a>        {
-<a href=#715 id=715 data-nosnippet>715</a>          <span class="bool-val">true
-<a href=#716 id=716 data-nosnippet>716</a>        </span>} <span class="kw">else </span>{
-<a href=#717 id=717 data-nosnippet>717</a>          <span class="comment">// Perl: getString, check if only whitespace
-<a href=#718 id=718 data-nosnippet>718</a>          </span>b.get_string()
-<a href=#719 id=719 data-nosnippet>719</a>            .ok()
-<a href=#720 id=720 data-nosnippet>720</a>            .map(|s| s.trim().is_empty())
-<a href=#721 id=721 data-nosnippet>721</a>            .unwrap_or(<span class="bool-val">false</span>)
-<a href=#722 id=722 data-nosnippet>722</a>        }
-<a href=#723 id=723 data-nosnippet>723</a>      },
-<a href=#724 id=724 data-nosnippet>724</a>      List(<span class="kw-2">ref </span>l) =&gt; l.borrow().boxes.iter().all(|d| d.is_skippable()),
-<a href=#725 id=725 data-nosnippet>725</a>      Whatsit(<span class="kw-2">ref </span>w) =&gt; {
-<a href=#726 id=726 data-nosnippet>726</a>        <span class="kw">let </span>w = w.borrow();
-<a href=#727 id=727 data-nosnippet>727</a>        <span class="kw">if </span>w.get_property_bool(<span class="string">"isEmpty"</span>)
-<a href=#728 id=728 data-nosnippet>728</a>          || w.get_property_bool(<span class="string">"isSpace"</span>)
-<a href=#729 id=729 data-nosnippet>729</a>          || w.get_property_bool(<span class="string">"alignmentSkippable"</span>)
-<a href=#730 id=730 data-nosnippet>730</a>        {
-<a href=#731 id=731 data-nosnippet>731</a>          <span class="bool-val">true
-<a href=#732 id=732 data-nosnippet>732</a>        </span>} <span class="kw">else if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(body)) = w.get_body() {
-<a href=#733 id=733 data-nosnippet>733</a>          body.is_skippable()
-<a href=#734 id=734 data-nosnippet>734</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>prop) = w.get_property(<span class="string">"content_box"</span>) {
-<a href=#735 id=735 data-nosnippet>735</a>          <span class="comment">// Perl: $thing-&gt;getProperty('content_box') — for \hbox etc.
-<a href=#736 id=736 data-nosnippet>736</a>          </span><span class="kw">match </span><span class="kw-2">&amp;**</span>prop {
-<a href=#737 id=737 data-nosnippet>737</a>            Stored::Digested(cb) =&gt; cb.is_skippable(),
-<a href=#738 id=738 data-nosnippet>738</a>            <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#739 id=739 data-nosnippet>739</a>          }
-<a href=#740 id=740 data-nosnippet>740</a>        } <span class="kw">else </span>{
-<a href=#741 id=741 data-nosnippet>741</a>          <span class="bool-val">false
-<a href=#742 id=742 data-nosnippet>742</a>        </span>}
-<a href=#743 id=743 data-nosnippet>743</a>      },
-<a href=#744 id=744 data-nosnippet>744</a>      Postponed(<span class="kw-2">ref </span>tks) =&gt; {
-<a href=#745 id=745 data-nosnippet>745</a>        <span class="comment">// Perl checks token catcodes: letters, others, active, CS are NOT skippable
-<a href=#746 id=746 data-nosnippet>746</a>        </span>tks.unlist_ref().iter().all(|t| {
-<a href=#747 id=747 data-nosnippet>747</a>          <span class="kw">let </span>cc = t.get_catcode();
-<a href=#748 id=748 data-nosnippet>748</a>          !<span class="macro">matches!</span>(
-<a href=#749 id=749 data-nosnippet>749</a>            cc,
-<a href=#750 id=750 data-nosnippet>750</a>            <span class="kw">crate</span>::token::Catcode::LETTER
-<a href=#751 id=751 data-nosnippet>751</a>              | <span class="kw">crate</span>::token::Catcode::OTHER
-<a href=#752 id=752 data-nosnippet>752</a>              | <span class="kw">crate</span>::token::Catcode::ACTIVE
-<a href=#753 id=753 data-nosnippet>753</a>              | <span class="kw">crate</span>::token::Catcode::CS
-<a href=#754 id=754 data-nosnippet>754</a>          )
-<a href=#755 id=755 data-nosnippet>755</a>        })
-<a href=#756 id=756 data-nosnippet>756</a>      },
-<a href=#757 id=757 data-nosnippet>757</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
-<a href=#758 id=758 data-nosnippet>758</a>    }
-<a href=#759 id=759 data-nosnippet>759</a>  }
-<a href=#760 id=760 data-nosnippet>760</a>
-<a href=#761 id=761 data-nosnippet>761</a>  <span class="doccomment">/// Provide a way of emulating an `Undigested` argument, by requesting
-<a href=#762 id=762 data-nosnippet>762</a>  /// raw tokens, only when they are preserved -- empty otherwise.
-<a href=#763 id=763 data-nosnippet>763</a>  </span><span class="kw">pub fn </span>raw_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt; {
-<a href=#764 id=764 data-nosnippet>764</a>    <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-<a href=#765 id=765 data-nosnippet>765</a>      DigestedData::Postponed(<span class="kw-2">ref </span>tks) =&gt; <span class="prelude-val">Some</span>(tks),
-<a href=#766 id=766 data-nosnippet>766</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#767 id=767 data-nosnippet>767</a>    }
-<a href=#768 id=768 data-nosnippet>768</a>  }
-<a href=#769 id=769 data-nosnippet>769</a>
-<a href=#770 id=770 data-nosnippet>770</a>  <span class="doccomment">/// builds an attribute-friendly String form of the digested object, suitable for XML attributes
-<a href=#771 id=771 data-nosnippet>771</a>  </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-<a href=#772 id=772 data-nosnippet>772</a>    <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-<a href=#773 id=773 data-nosnippet>773</a>      DigestedData::RegisterValue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
-<a href=#774 id=774 data-nosnippet>774</a>      <span class="kw">_ </span>=&gt; <span class="self">self</span>.to_string(),
-<a href=#775 id=775 data-nosnippet>775</a>    }
-<a href=#776 id=776 data-nosnippet>776</a>  }
-<a href=#777 id=777 data-nosnippet>777</a>
-<a href=#778 id=778 data-nosnippet>778</a>  <span class="doccomment">/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its
-<a href=#779 id=779 data-nosnippet>779</a>  /// content
-<a href=#780 id=780 data-nosnippet>780</a>  </span><span class="kw">pub fn </span>untex(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.revert()<span class="question-mark">?</span>.untex()) }
-<a href=#781 id=781 data-nosnippet>781</a>
-<a href=#782 id=782 data-nosnippet>782</a>  <span class="kw">pub fn </span>alignment_cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RefCell&lt;Alignment&gt;&gt; {
-<a href=#783 id=783 data-nosnippet>783</a>    <span class="kw">if let </span>DigestedData::Alignment(<span class="kw-2">ref </span>alignment) = <span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
-<a href=#784 id=784 data-nosnippet>784</a>      <span class="prelude-val">Some</span>(alignment)
-<a href=#785 id=785 data-nosnippet>785</a>    } <span class="kw">else </span>{
-<a href=#786 id=786 data-nosnippet>786</a>      <span class="prelude-val">None
-<a href=#787 id=787 data-nosnippet>787</a>    </span>}
-<a href=#788 id=788 data-nosnippet>788</a>  }
-<a href=#789 id=789 data-nosnippet>789</a>}
-<a href=#790 id=790 data-nosnippet>790</a>
-<a href=#791 id=791 data-nosnippet>791</a><span class="attr">#[cfg(test)]
-<a href=#792 id=792 data-nosnippet>792</a></span><span class="kw">mod </span>tests {
-<a href=#793 id=793 data-nosnippet>793</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#794 id=794 data-nosnippet>794</a>
-<a href=#795 id=795 data-nosnippet>795</a>  <span class="attr">#[test]
-<a href=#796 id=796 data-nosnippet>796</a>  </span><span class="kw">fn </span>digested_from_tokens_roundtrip() {
-<a href=#797 id=797 data-nosnippet>797</a>    <span class="kw">let </span>ts = Tokens::new(<span class="macro">vec!</span>[]);
-<a href=#798 id=798 data-nosnippet>798</a>    <span class="kw">let </span>d: Digested = ts.into();
-<a href=#799 id=799 data-nosnippet>799</a>    <span class="comment">// Default variant is Postponed for raw Tokens.
-<a href=#800 id=800 data-nosnippet>800</a>    </span><span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
-<a href=#801 id=801 data-nosnippet>801</a>      DigestedData::Postponed(<span class="kw">_</span>) =&gt; {},
-<a href=#802 id=802 data-nosnippet>802</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected Postponed, got {other:?}"</span>),
-<a href=#803 id=803 data-nosnippet>803</a>    }
-<a href=#804 id=804 data-nosnippet>804</a>  }
-<a href=#805 id=805 data-nosnippet>805</a>
-<a href=#806 id=806 data-nosnippet>806</a>  <span class="attr">#[test]
-<a href=#807 id=807 data-nosnippet>807</a>  </span><span class="kw">fn </span>digested_from_string_is_postponed_tokens() {
-<a href=#808 id=808 data-nosnippet>808</a>    <span class="kw">let </span>d: Digested = <span class="string">"abc"</span>.to_string().into();
-<a href=#809 id=809 data-nosnippet>809</a>    <span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
-<a href=#810 id=810 data-nosnippet>810</a>      DigestedData::Postponed(<span class="kw">_</span>) =&gt; {},
-<a href=#811 id=811 data-nosnippet>811</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected Postponed, got {other:?}"</span>),
-<a href=#812 id=812 data-nosnippet>812</a>    }
-<a href=#813 id=813 data-nosnippet>813</a>  }
-<a href=#814 id=814 data-nosnippet>814</a>
-<a href=#815 id=815 data-nosnippet>815</a>  <span class="attr">#[test]
-<a href=#816 id=816 data-nosnippet>816</a>  </span><span class="kw">fn </span>digested_from_tbox_is_tbox_variant() {
-<a href=#817 id=817 data-nosnippet>817</a>    <span class="kw">let </span>tb = Tbox::default();
-<a href=#818 id=818 data-nosnippet>818</a>    <span class="kw">let </span>d: Digested = tb.into();
+<a href=#711 id=711 data-nosnippet>711</a>        <span class="kw">if </span>b.get_property_bool(<span class="string">"alignmentPreserve"</span>) {
+<a href=#712 id=712 data-nosnippet>712</a>          <span class="comment">// Perl PR #2767: explicitly preserved content is never skippable
+<a href=#713 id=713 data-nosnippet>713</a>          </span><span class="bool-val">false
+<a href=#714 id=714 data-nosnippet>714</a>        </span>} <span class="kw">else if </span>b.get_property_bool(<span class="string">"isEmpty"</span>)
+<a href=#715 id=715 data-nosnippet>715</a>          || b.get_property_bool(<span class="string">"isSpace"</span>)
+<a href=#716 id=716 data-nosnippet>716</a>          || b.get_property_bool(<span class="string">"alignmentSkippable"</span>)
+<a href=#717 id=717 data-nosnippet>717</a>        {
+<a href=#718 id=718 data-nosnippet>718</a>          <span class="bool-val">true
+<a href=#719 id=719 data-nosnippet>719</a>        </span>} <span class="kw">else </span>{
+<a href=#720 id=720 data-nosnippet>720</a>          <span class="comment">// Perl: getString, check if only whitespace
+<a href=#721 id=721 data-nosnippet>721</a>          </span>b.get_string()
+<a href=#722 id=722 data-nosnippet>722</a>            .ok()
+<a href=#723 id=723 data-nosnippet>723</a>            .map(|s| s.trim().is_empty())
+<a href=#724 id=724 data-nosnippet>724</a>            .unwrap_or(<span class="bool-val">false</span>)
+<a href=#725 id=725 data-nosnippet>725</a>        }
+<a href=#726 id=726 data-nosnippet>726</a>      },
+<a href=#727 id=727 data-nosnippet>727</a>      List(<span class="kw-2">ref </span>l) =&gt; {
+<a href=#728 id=728 data-nosnippet>728</a>        <span class="kw">let </span>l = l.borrow();
+<a href=#729 id=729 data-nosnippet>729</a>        <span class="comment">// Perl PR #2767: explicitly preserved content is never skippable
+<a href=#730 id=730 data-nosnippet>730</a>        </span>!l.get_property_bool(<span class="string">"alignmentPreserve"</span>) &amp;&amp; l.boxes.iter().all(|d| d.is_skippable())
+<a href=#731 id=731 data-nosnippet>731</a>      },
+<a href=#732 id=732 data-nosnippet>732</a>      Whatsit(<span class="kw-2">ref </span>w) =&gt; {
+<a href=#733 id=733 data-nosnippet>733</a>        <span class="kw">let </span>w = w.borrow();
+<a href=#734 id=734 data-nosnippet>734</a>        <span class="kw">if </span>w.get_property_bool(<span class="string">"alignmentPreserve"</span>) {
+<a href=#735 id=735 data-nosnippet>735</a>          <span class="comment">// Perl PR #2767: explicitly preserved content is never skippable
+<a href=#736 id=736 data-nosnippet>736</a>          </span><span class="bool-val">false
+<a href=#737 id=737 data-nosnippet>737</a>        </span>} <span class="kw">else if </span>w.get_property_bool(<span class="string">"isEmpty"</span>)
+<a href=#738 id=738 data-nosnippet>738</a>          || w.get_property_bool(<span class="string">"isSpace"</span>)
+<a href=#739 id=739 data-nosnippet>739</a>          || w.get_property_bool(<span class="string">"alignmentSkippable"</span>)
+<a href=#740 id=740 data-nosnippet>740</a>        {
+<a href=#741 id=741 data-nosnippet>741</a>          <span class="bool-val">true
+<a href=#742 id=742 data-nosnippet>742</a>        </span>} <span class="kw">else if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(body)) = w.get_body() {
+<a href=#743 id=743 data-nosnippet>743</a>          body.is_skippable()
+<a href=#744 id=744 data-nosnippet>744</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>prop) = w.get_property(<span class="string">"content_box"</span>) {
+<a href=#745 id=745 data-nosnippet>745</a>          <span class="comment">// Perl: $thing-&gt;getProperty('content_box') — for \hbox etc.
+<a href=#746 id=746 data-nosnippet>746</a>          </span><span class="kw">match </span><span class="kw-2">&amp;**</span>prop {
+<a href=#747 id=747 data-nosnippet>747</a>            Stored::Digested(cb) =&gt; cb.is_skippable(),
+<a href=#748 id=748 data-nosnippet>748</a>            <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#749 id=749 data-nosnippet>749</a>          }
+<a href=#750 id=750 data-nosnippet>750</a>        } <span class="kw">else </span>{
+<a href=#751 id=751 data-nosnippet>751</a>          <span class="bool-val">false
+<a href=#752 id=752 data-nosnippet>752</a>        </span>}
+<a href=#753 id=753 data-nosnippet>753</a>      },
+<a href=#754 id=754 data-nosnippet>754</a>      Postponed(<span class="kw-2">ref </span>tks) =&gt; {
+<a href=#755 id=755 data-nosnippet>755</a>        <span class="comment">// Perl checks token catcodes: letters, others, active, CS are NOT skippable
+<a href=#756 id=756 data-nosnippet>756</a>        </span>tks.unlist_ref().iter().all(|t| {
+<a href=#757 id=757 data-nosnippet>757</a>          <span class="kw">let </span>cc = t.get_catcode();
+<a href=#758 id=758 data-nosnippet>758</a>          !<span class="macro">matches!</span>(
+<a href=#759 id=759 data-nosnippet>759</a>            cc,
+<a href=#760 id=760 data-nosnippet>760</a>            <span class="kw">crate</span>::token::Catcode::LETTER
+<a href=#761 id=761 data-nosnippet>761</a>              | <span class="kw">crate</span>::token::Catcode::OTHER
+<a href=#762 id=762 data-nosnippet>762</a>              | <span class="kw">crate</span>::token::Catcode::ACTIVE
+<a href=#763 id=763 data-nosnippet>763</a>              | <span class="kw">crate</span>::token::Catcode::CS
+<a href=#764 id=764 data-nosnippet>764</a>          )
+<a href=#765 id=765 data-nosnippet>765</a>        })
+<a href=#766 id=766 data-nosnippet>766</a>      },
+<a href=#767 id=767 data-nosnippet>767</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#768 id=768 data-nosnippet>768</a>    }
+<a href=#769 id=769 data-nosnippet>769</a>  }
+<a href=#770 id=770 data-nosnippet>770</a>
+<a href=#771 id=771 data-nosnippet>771</a>  <span class="doccomment">/// Provide a way of emulating an `Undigested` argument, by requesting
+<a href=#772 id=772 data-nosnippet>772</a>  /// raw tokens, only when they are preserved -- empty otherwise.
+<a href=#773 id=773 data-nosnippet>773</a>  </span><span class="kw">pub fn </span>raw_tokens(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt; {
+<a href=#774 id=774 data-nosnippet>774</a>    <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
+<a href=#775 id=775 data-nosnippet>775</a>      DigestedData::Postponed(<span class="kw-2">ref </span>tks) =&gt; <span class="prelude-val">Some</span>(tks),
+<a href=#776 id=776 data-nosnippet>776</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#777 id=777 data-nosnippet>777</a>    }
+<a href=#778 id=778 data-nosnippet>778</a>  }
+<a href=#779 id=779 data-nosnippet>779</a>
+<a href=#780 id=780 data-nosnippet>780</a>  <span class="doccomment">/// builds an attribute-friendly String form of the digested object, suitable for XML attributes
+<a href=#781 id=781 data-nosnippet>781</a>  </span><span class="kw">pub fn </span>to_attribute(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+<a href=#782 id=782 data-nosnippet>782</a>    <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
+<a href=#783 id=783 data-nosnippet>783</a>      DigestedData::RegisterValue(<span class="kw-2">ref </span>v) =&gt; v.to_attribute(),
+<a href=#784 id=784 data-nosnippet>784</a>      <span class="kw">_ </span>=&gt; <span class="self">self</span>.to_string(),
+<a href=#785 id=785 data-nosnippet>785</a>    }
+<a href=#786 id=786 data-nosnippet>786</a>  }
+<a href=#787 id=787 data-nosnippet>787</a>
+<a href=#788 id=788 data-nosnippet>788</a>  <span class="doccomment">/// Reverts a digested object to `Tokens` and extracts a TeX-near string representation of its
+<a href=#789 id=789 data-nosnippet>789</a>  /// content
+<a href=#790 id=790 data-nosnippet>790</a>  </span><span class="kw">pub fn </span>untex(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; { <span class="prelude-val">Ok</span>(<span class="self">self</span>.revert()<span class="question-mark">?</span>.untex()) }
+<a href=#791 id=791 data-nosnippet>791</a>
+<a href=#792 id=792 data-nosnippet>792</a>  <span class="kw">pub fn </span>alignment_cell(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>RefCell&lt;Alignment&gt;&gt; {
+<a href=#793 id=793 data-nosnippet>793</a>    <span class="kw">if let </span>DigestedData::Alignment(<span class="kw-2">ref </span>alignment) = <span class="kw-2">*</span><span class="self">self</span>.<span class="number">0 </span>{
+<a href=#794 id=794 data-nosnippet>794</a>      <span class="prelude-val">Some</span>(alignment)
+<a href=#795 id=795 data-nosnippet>795</a>    } <span class="kw">else </span>{
+<a href=#796 id=796 data-nosnippet>796</a>      <span class="prelude-val">None
+<a href=#797 id=797 data-nosnippet>797</a>    </span>}
+<a href=#798 id=798 data-nosnippet>798</a>  }
+<a href=#799 id=799 data-nosnippet>799</a>}
+<a href=#800 id=800 data-nosnippet>800</a>
+<a href=#801 id=801 data-nosnippet>801</a><span class="attr">#[cfg(test)]
+<a href=#802 id=802 data-nosnippet>802</a></span><span class="kw">mod </span>tests {
+<a href=#803 id=803 data-nosnippet>803</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#804 id=804 data-nosnippet>804</a>
+<a href=#805 id=805 data-nosnippet>805</a>  <span class="attr">#[test]
+<a href=#806 id=806 data-nosnippet>806</a>  </span><span class="kw">fn </span>digested_from_tokens_roundtrip() {
+<a href=#807 id=807 data-nosnippet>807</a>    <span class="kw">let </span>ts = Tokens::new(<span class="macro">vec!</span>[]);
+<a href=#808 id=808 data-nosnippet>808</a>    <span class="kw">let </span>d: Digested = ts.into();
+<a href=#809 id=809 data-nosnippet>809</a>    <span class="comment">// Default variant is Postponed for raw Tokens.
+<a href=#810 id=810 data-nosnippet>810</a>    </span><span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
+<a href=#811 id=811 data-nosnippet>811</a>      DigestedData::Postponed(<span class="kw">_</span>) =&gt; {},
+<a href=#812 id=812 data-nosnippet>812</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected Postponed, got {other:?}"</span>),
+<a href=#813 id=813 data-nosnippet>813</a>    }
+<a href=#814 id=814 data-nosnippet>814</a>  }
+<a href=#815 id=815 data-nosnippet>815</a>
+<a href=#816 id=816 data-nosnippet>816</a>  <span class="attr">#[test]
+<a href=#817 id=817 data-nosnippet>817</a>  </span><span class="kw">fn </span>digested_from_string_is_postponed_tokens() {
+<a href=#818 id=818 data-nosnippet>818</a>    <span class="kw">let </span>d: Digested = <span class="string">"abc"</span>.to_string().into();
 <a href=#819 id=819 data-nosnippet>819</a>    <span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
-<a href=#820 id=820 data-nosnippet>820</a>      DigestedData::TBox(<span class="kw">_</span>) =&gt; {},
-<a href=#821 id=821 data-nosnippet>821</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected TBox, got {other:?}"</span>),
+<a href=#820 id=820 data-nosnippet>820</a>      DigestedData::Postponed(<span class="kw">_</span>) =&gt; {},
+<a href=#821 id=821 data-nosnippet>821</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected Postponed, got {other:?}"</span>),
 <a href=#822 id=822 data-nosnippet>822</a>    }
 <a href=#823 id=823 data-nosnippet>823</a>  }
 <a href=#824 id=824 data-nosnippet>824</a>
 <a href=#825 id=825 data-nosnippet>825</a>  <span class="attr">#[test]
-<a href=#826 id=826 data-nosnippet>826</a>  </span><span class="kw">fn </span>digested_from_list_is_list_variant() {
-<a href=#827 id=827 data-nosnippet>827</a>    <span class="kw">let </span>l = List::default();
-<a href=#828 id=828 data-nosnippet>828</a>    <span class="kw">let </span>d: Digested = l.into();
+<a href=#826 id=826 data-nosnippet>826</a>  </span><span class="kw">fn </span>digested_from_tbox_is_tbox_variant() {
+<a href=#827 id=827 data-nosnippet>827</a>    <span class="kw">let </span>tb = Tbox::default();
+<a href=#828 id=828 data-nosnippet>828</a>    <span class="kw">let </span>d: Digested = tb.into();
 <a href=#829 id=829 data-nosnippet>829</a>    <span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
-<a href=#830 id=830 data-nosnippet>830</a>      DigestedData::List(<span class="kw">_</span>) =&gt; {},
-<a href=#831 id=831 data-nosnippet>831</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected List, got {other:?}"</span>),
+<a href=#830 id=830 data-nosnippet>830</a>      DigestedData::TBox(<span class="kw">_</span>) =&gt; {},
+<a href=#831 id=831 data-nosnippet>831</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected TBox, got {other:?}"</span>),
 <a href=#832 id=832 data-nosnippet>832</a>    }
 <a href=#833 id=833 data-nosnippet>833</a>  }
 <a href=#834 id=834 data-nosnippet>834</a>
 <a href=#835 id=835 data-nosnippet>835</a>  <span class="attr">#[test]
-<a href=#836 id=836 data-nosnippet>836</a>  </span><span class="kw">fn </span>digested_from_whatsit_is_whatsit_variant() {
-<a href=#837 id=837 data-nosnippet>837</a>    <span class="kw">let </span>w = Whatsit::default();
-<a href=#838 id=838 data-nosnippet>838</a>    <span class="kw">let </span>d: Digested = w.into();
+<a href=#836 id=836 data-nosnippet>836</a>  </span><span class="kw">fn </span>digested_from_list_is_list_variant() {
+<a href=#837 id=837 data-nosnippet>837</a>    <span class="kw">let </span>l = List::default();
+<a href=#838 id=838 data-nosnippet>838</a>    <span class="kw">let </span>d: Digested = l.into();
 <a href=#839 id=839 data-nosnippet>839</a>    <span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
-<a href=#840 id=840 data-nosnippet>840</a>      DigestedData::Whatsit(<span class="kw">_</span>) =&gt; {},
-<a href=#841 id=841 data-nosnippet>841</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected Whatsit, got {other:?}"</span>),
+<a href=#840 id=840 data-nosnippet>840</a>      DigestedData::List(<span class="kw">_</span>) =&gt; {},
+<a href=#841 id=841 data-nosnippet>841</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected List, got {other:?}"</span>),
 <a href=#842 id=842 data-nosnippet>842</a>    }
 <a href=#843 id=843 data-nosnippet>843</a>  }
 <a href=#844 id=844 data-nosnippet>844</a>
 <a href=#845 id=845 data-nosnippet>845</a>  <span class="attr">#[test]
-<a href=#846 id=846 data-nosnippet>846</a>  </span><span class="kw">fn </span>digested_from_keyvals_is_keyvals_variant() {
-<a href=#847 id=847 data-nosnippet>847</a>    <span class="kw">let </span>kv = KeyVals::default();
-<a href=#848 id=848 data-nosnippet>848</a>    <span class="kw">let </span>d: Digested = kv.into();
+<a href=#846 id=846 data-nosnippet>846</a>  </span><span class="kw">fn </span>digested_from_whatsit_is_whatsit_variant() {
+<a href=#847 id=847 data-nosnippet>847</a>    <span class="kw">let </span>w = Whatsit::default();
+<a href=#848 id=848 data-nosnippet>848</a>    <span class="kw">let </span>d: Digested = w.into();
 <a href=#849 id=849 data-nosnippet>849</a>    <span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
-<a href=#850 id=850 data-nosnippet>850</a>      DigestedData::KeyVals(<span class="kw">_</span>) =&gt; {},
-<a href=#851 id=851 data-nosnippet>851</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected KeyVals, got {other:?}"</span>),
+<a href=#850 id=850 data-nosnippet>850</a>      DigestedData::Whatsit(<span class="kw">_</span>) =&gt; {},
+<a href=#851 id=851 data-nosnippet>851</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected Whatsit, got {other:?}"</span>),
 <a href=#852 id=852 data-nosnippet>852</a>    }
 <a href=#853 id=853 data-nosnippet>853</a>  }
 <a href=#854 id=854 data-nosnippet>854</a>
 <a href=#855 id=855 data-nosnippet>855</a>  <span class="attr">#[test]
-<a href=#856 id=856 data-nosnippet>856</a>  </span><span class="kw">fn </span>digested_clone_shares_rc() {
-<a href=#857 id=857 data-nosnippet>857</a>    <span class="comment">// Digested is Rc-wrapped; clone should share the same underlying
-<a href=#858 id=858 data-nosnippet>858</a>    // RefCell, not a deep copy.
-<a href=#859 id=859 data-nosnippet>859</a>    </span><span class="kw">let </span>tb = Tbox::default();
-<a href=#860 id=860 data-nosnippet>860</a>    <span class="kw">let </span>a: Digested = tb.into();
-<a href=#861 id=861 data-nosnippet>861</a>    <span class="kw">let </span>b = a.clone();
-<a href=#862 id=862 data-nosnippet>862</a>    <span class="comment">// Rc strong count is at least 2 now.
-<a href=#863 id=863 data-nosnippet>863</a>    </span><span class="macro">assert!</span>(Rc::strong_count(<span class="kw-2">&amp;</span>a.<span class="number">0</span>) &gt;= <span class="number">2</span>);
-<a href=#864 id=864 data-nosnippet>864</a>    <span class="macro">assert!</span>(Rc::strong_count(<span class="kw-2">&amp;</span>b.<span class="number">0</span>) &gt;= <span class="number">2</span>);
-<a href=#865 id=865 data-nosnippet>865</a>  }
-<a href=#866 id=866 data-nosnippet>866</a>
-<a href=#867 id=867 data-nosnippet>867</a>  <span class="attr">#[test]
-<a href=#868 id=868 data-nosnippet>868</a>  </span><span class="kw">fn </span>digested_ref_to_option_some() {
-<a href=#869 id=869 data-nosnippet>869</a>    <span class="kw">let </span>d: Digested = Tbox::default().into();
-<a href=#870 id=870 data-nosnippet>870</a>    <span class="kw">let </span>o: <span class="prelude-ty">Option</span>&lt;Digested&gt; = (<span class="kw-2">&amp;</span>d).into();
-<a href=#871 id=871 data-nosnippet>871</a>    <span class="macro">assert!</span>(o.is_some());
-<a href=#872 id=872 data-nosnippet>872</a>  }
-<a href=#873 id=873 data-nosnippet>873</a>
-<a href=#874 id=874 data-nosnippet>874</a>  <span class="kw">fn </span>tbox_with(text: <span class="kw-2">&amp;</span>str) -&gt; Digested {
-<a href=#875 id=875 data-nosnippet>875</a>    Tbox { text: arena::pin(text), ..Default::default() }.into()
-<a href=#876 id=876 data-nosnippet>876</a>  }
-<a href=#877 id=877 data-nosnippet>877</a>  <span class="kw">fn </span>list_of(items: Vec&lt;Digested&gt;) -&gt; Digested {
-<a href=#878 id=878 data-nosnippet>878</a>    List {
-<a href=#879 id=879 data-nosnippet>879</a>      boxes: items,
-<a href=#880 id=880 data-nosnippet>880</a>      ..Default::default()
-<a href=#881 id=881 data-nosnippet>881</a>    }
-<a href=#882 id=882 data-nosnippet>882</a>    .into()
-<a href=#883 id=883 data-nosnippet>883</a>  }
-<a href=#884 id=884 data-nosnippet>884</a>
-<a href=#885 id=885 data-nosnippet>885</a>  <span class="doccomment">/// Iteratively dismantle a deeply-nested `Digested` so its `Drop` does NOT
-<a href=#886 id=886 data-nosnippet>886</a>  /// recurse once per nesting level. A deep singly-owned `Rc&lt;DigestedData&gt;`
-<a href=#887 id=887 data-nosnippet>887</a>  /// chain otherwise overflows the small per-test-thread stack under CI's
-<a href=#888 id=888 data-nosnippet>888</a>  /// `--test-threads=2` (a SIGABRT that passes locally on the larger default
-<a href=#889 id=889 data-nosnippet>889</a>  /// stack). Descends into the FIRST child of each `List`, dropping the
-<a href=#890 id=890 data-nosnippet>890</a>  /// shallow remainder (leaf boxes + the now-childless outer) as it goes, so
-<a href=#891 id=891 data-nosnippet>891</a>  /// teardown is O(1) in stack depth. (The analogous PRODUCTION concern — a
-<a href=#892 id=892 data-nosnippet>892</a>  /// boxing-depth-cap Fatal unwinding a deep structure — is tracked
-<a href=#893 id=893 data-nosnippet>893</a>  /// separately; the real box-list runaway is a WIDE `Vec`, already
-<a href=#894 id=894 data-nosnippet>894</a>  /// iteratively dropped.)
-<a href=#895 id=895 data-nosnippet>895</a>  </span><span class="kw">fn </span>drain_nest(<span class="kw-2">mut </span>cur: Digested) {
-<a href=#896 id=896 data-nosnippet>896</a>    <span class="kw">loop </span>{
-<a href=#897 id=897 data-nosnippet>897</a>      <span class="kw">let </span>child = <span class="kw">if let </span>DigestedData::List(l) = <span class="kw-2">&amp;*</span>cur.<span class="number">0 </span>{
-<a href=#898 id=898 data-nosnippet>898</a>        <span class="kw">let </span><span class="kw-2">mut </span>boxes = std::mem::take(<span class="kw-2">&amp;mut </span>l.borrow_mut().boxes);
-<a href=#899 id=899 data-nosnippet>899</a>        (!boxes.is_empty()).then(|| boxes.swap_remove(<span class="number">0</span>))
-<a href=#900 id=900 data-nosnippet>900</a>      } <span class="kw">else </span>{
-<a href=#901 id=901 data-nosnippet>901</a>        <span class="prelude-val">None
-<a href=#902 id=902 data-nosnippet>902</a>      </span>};
-<a href=#903 id=903 data-nosnippet>903</a>      <span class="kw">match </span>child {
-<a href=#904 id=904 data-nosnippet>904</a>        <span class="prelude-val">Some</span>(c) =&gt; cur = c,
-<a href=#905 id=905 data-nosnippet>905</a>        <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
-<a href=#906 id=906 data-nosnippet>906</a>      }
-<a href=#907 id=907 data-nosnippet>907</a>    }
-<a href=#908 id=908 data-nosnippet>908</a>  }
-<a href=#909 id=909 data-nosnippet>909</a>
-<a href=#910 id=910 data-nosnippet>910</a>  <span class="attr">#[test]
-<a href=#911 id=911 data-nosnippet>911</a>  </span><span class="kw">fn </span>cycle_fingerprint_is_content_aware_for_lists() {
-<a href=#912 id=912 data-nosnippet>912</a>    <span class="comment">// The whole point of recursing into a List (rather than hashing its length
-<a href=#913 id=913 data-nosnippet>913</a>    // alone): two lists of the SAME length but DIFFERENT content must not
-<a href=#914 id=914 data-nosnippet>914</a>    // collide, or the stomach cycle guard would false-positive.
-<a href=#915 id=915 data-nosnippet>915</a>    </span><span class="kw">let </span>ab = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>), tbox_with(<span class="string">"b"</span>)]);
-<a href=#916 id=916 data-nosnippet>916</a>    <span class="kw">let </span>ac = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>), tbox_with(<span class="string">"c"</span>)]);
-<a href=#917 id=917 data-nosnippet>917</a>    <span class="macro">assert_ne!</span>(
-<a href=#918 id=918 data-nosnippet>918</a>      ab.cycle_fingerprint(),
-<a href=#919 id=919 data-nosnippet>919</a>      ac.cycle_fingerprint(),
-<a href=#920 id=920 data-nosnippet>920</a>      <span class="string">"same-length lists with different content must NOT share a fingerprint"
-<a href=#921 id=921 data-nosnippet>921</a>    </span>);
-<a href=#922 id=922 data-nosnippet>922</a>    <span class="comment">// ...while structurally identical lists DO (so real cycles are still caught).
-<a href=#923 id=923 data-nosnippet>923</a>    </span><span class="kw">let </span>ab2 = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>), tbox_with(<span class="string">"b"</span>)]);
-<a href=#924 id=924 data-nosnippet>924</a>    <span class="macro">assert_eq!</span>(ab.cycle_fingerprint(), ab2.cycle_fingerprint());
-<a href=#925 id=925 data-nosnippet>925</a>  }
-<a href=#926 id=926 data-nosnippet>926</a>
-<a href=#927 id=927 data-nosnippet>927</a>  <span class="attr">#[test]
-<a href=#928 id=928 data-nosnippet>928</a>  </span><span class="kw">fn </span>cycle_fingerprint_distinguishes_text_and_is_bounded() {
-<a href=#929 id=929 data-nosnippet>929</a>    <span class="macro">assert_ne!</span>(
-<a href=#930 id=930 data-nosnippet>930</a>      tbox_with(<span class="string">"a"</span>).cycle_fingerprint(),
-<a href=#931 id=931 data-nosnippet>931</a>      tbox_with(<span class="string">"b"</span>).cycle_fingerprint()
-<a href=#932 id=932 data-nosnippet>932</a>    );
-<a href=#933 id=933 data-nosnippet>933</a>    <span class="comment">// A pathologically deep/wide nest must still return (budget-bounded) — and
-<a href=#934 id=934 data-nosnippet>934</a>    // remain distinguishable from a shallow one.
-<a href=#935 id=935 data-nosnippet>935</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>deep = tbox_with(<span class="string">"z"</span>);
-<a href=#936 id=936 data-nosnippet>936</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10_000 </span>{
-<a href=#937 id=937 data-nosnippet>937</a>      deep = list_of(<span class="macro">vec!</span>[deep, tbox_with(<span class="string">"z"</span>)]);
-<a href=#938 id=938 data-nosnippet>938</a>    }
-<a href=#939 id=939 data-nosnippet>939</a>    <span class="kw">let _ </span>= deep.cycle_fingerprint(); <span class="comment">// must not hang / overflow
-<a href=#940 id=940 data-nosnippet>940</a>    </span><span class="macro">assert_ne!</span>(deep.cycle_fingerprint(), tbox_with(<span class="string">"z"</span>).cycle_fingerprint());
-<a href=#941 id=941 data-nosnippet>941</a>    drain_nest(deep); <span class="comment">// O(1)-stack teardown — see `drain_nest`.
-<a href=#942 id=942 data-nosnippet>942</a>  </span>}
-<a href=#943 id=943 data-nosnippet>943</a>
-<a href=#944 id=944 data-nosnippet>944</a>  <span class="attr">#[test]
-<a href=#945 id=945 data-nosnippet>945</a>  </span><span class="kw">fn </span>estimate_bytes_is_positive_and_nesting_increases_it() {
-<a href=#946 id=946 data-nosnippet>946</a>    <span class="comment">// Every box has some positive footprint.
-<a href=#947 id=947 data-nosnippet>947</a>    </span><span class="macro">assert!</span>(tbox_with(<span class="string">"a"</span>).estimate_bytes() &gt; <span class="number">0</span>);
-<a href=#948 id=948 data-nosnippet>948</a>    <span class="comment">// A list of N boxes weighs more than a single box (the children count).
-<a href=#949 id=949 data-nosnippet>949</a>    </span><span class="kw">let </span>one = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>)]);
-<a href=#950 id=950 data-nosnippet>950</a>    <span class="kw">let </span>many = list_of(<span class="macro">vec!</span>[
-<a href=#951 id=951 data-nosnippet>951</a>      tbox_with(<span class="string">"a"</span>),
-<a href=#952 id=952 data-nosnippet>952</a>      tbox_with(<span class="string">"b"</span>),
-<a href=#953 id=953 data-nosnippet>953</a>      tbox_with(<span class="string">"c"</span>),
-<a href=#954 id=954 data-nosnippet>954</a>      tbox_with(<span class="string">"d"</span>),
-<a href=#955 id=955 data-nosnippet>955</a>    ]);
-<a href=#956 id=956 data-nosnippet>956</a>    <span class="macro">assert!</span>(
-<a href=#957 id=957 data-nosnippet>957</a>      many.estimate_bytes() &gt; one.estimate_bytes(),
-<a href=#958 id=958 data-nosnippet>958</a>      <span class="string">"a wider list must estimate heavier than a narrow one"
-<a href=#959 id=959 data-nosnippet>959</a>    </span>);
-<a href=#960 id=960 data-nosnippet>960</a>  }
-<a href=#961 id=961 data-nosnippet>961</a>
-<a href=#962 id=962 data-nosnippet>962</a>  <span class="attr">#[test]
-<a href=#963 id=963 data-nosnippet>963</a>  </span><span class="kw">fn </span>estimate_bytes_is_cost_bounded_for_deep_nests() {
-<a href=#964 id=964 data-nosnippet>964</a>    <span class="comment">// A pathologically deep nest must terminate (EB_BUDGET) without hanging /
-<a href=#965 id=965 data-nosnippet>965</a>    // overflowing, and still return a finite positive estimate.
-<a href=#966 id=966 data-nosnippet>966</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>deep = tbox_with(<span class="string">"z"</span>);
-<a href=#967 id=967 data-nosnippet>967</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">100_000 </span>{
-<a href=#968 id=968 data-nosnippet>968</a>      deep = list_of(<span class="macro">vec!</span>[deep]);
-<a href=#969 id=969 data-nosnippet>969</a>    }
-<a href=#970 id=970 data-nosnippet>970</a>    <span class="kw">let </span>est = deep.estimate_bytes();
-<a href=#971 id=971 data-nosnippet>971</a>    <span class="macro">assert!</span>(est &gt; <span class="number">0</span>);
-<a href=#972 id=972 data-nosnippet>972</a>    <span class="comment">// Budget-bounded: the walk visits at most EB_BUDGET nodes, so a 100k-deep
-<a href=#973 id=973 data-nosnippet>973</a>    // nest cannot estimate more than roughly EB_BUDGET node-overheads.
-<a href=#974 id=974 data-nosnippet>974</a>    </span><span class="macro">assert!</span>(
-<a href=#975 id=975 data-nosnippet>975</a>      est &lt; (EB_BUDGET <span class="kw">as </span>usize) * <span class="number">4096</span>,
-<a href=#976 id=976 data-nosnippet>976</a>      <span class="string">"estimate must stay bounded regardless of nest depth (got {est})"
-<a href=#977 id=977 data-nosnippet>977</a>    </span>);
-<a href=#978 id=978 data-nosnippet>978</a>    drain_nest(deep); <span class="comment">// O(1)-stack teardown — see `drain_nest`.
-<a href=#979 id=979 data-nosnippet>979</a>  </span>}
-<a href=#980 id=980 data-nosnippet>980</a>}
+<a href=#856 id=856 data-nosnippet>856</a>  </span><span class="kw">fn </span>digested_from_keyvals_is_keyvals_variant() {
+<a href=#857 id=857 data-nosnippet>857</a>    <span class="kw">let </span>kv = KeyVals::default();
+<a href=#858 id=858 data-nosnippet>858</a>    <span class="kw">let </span>d: Digested = kv.into();
+<a href=#859 id=859 data-nosnippet>859</a>    <span class="kw">match </span><span class="kw-2">&amp;*</span>d.<span class="number">0 </span>{
+<a href=#860 id=860 data-nosnippet>860</a>      DigestedData::KeyVals(<span class="kw">_</span>) =&gt; {},
+<a href=#861 id=861 data-nosnippet>861</a>      other =&gt; <span class="macro">panic!</span>(<span class="string">"expected KeyVals, got {other:?}"</span>),
+<a href=#862 id=862 data-nosnippet>862</a>    }
+<a href=#863 id=863 data-nosnippet>863</a>  }
+<a href=#864 id=864 data-nosnippet>864</a>
+<a href=#865 id=865 data-nosnippet>865</a>  <span class="attr">#[test]
+<a href=#866 id=866 data-nosnippet>866</a>  </span><span class="kw">fn </span>digested_clone_shares_rc() {
+<a href=#867 id=867 data-nosnippet>867</a>    <span class="comment">// Digested is Rc-wrapped; clone should share the same underlying
+<a href=#868 id=868 data-nosnippet>868</a>    // RefCell, not a deep copy.
+<a href=#869 id=869 data-nosnippet>869</a>    </span><span class="kw">let </span>tb = Tbox::default();
+<a href=#870 id=870 data-nosnippet>870</a>    <span class="kw">let </span>a: Digested = tb.into();
+<a href=#871 id=871 data-nosnippet>871</a>    <span class="kw">let </span>b = a.clone();
+<a href=#872 id=872 data-nosnippet>872</a>    <span class="comment">// Rc strong count is at least 2 now.
+<a href=#873 id=873 data-nosnippet>873</a>    </span><span class="macro">assert!</span>(Rc::strong_count(<span class="kw-2">&amp;</span>a.<span class="number">0</span>) &gt;= <span class="number">2</span>);
+<a href=#874 id=874 data-nosnippet>874</a>    <span class="macro">assert!</span>(Rc::strong_count(<span class="kw-2">&amp;</span>b.<span class="number">0</span>) &gt;= <span class="number">2</span>);
+<a href=#875 id=875 data-nosnippet>875</a>  }
+<a href=#876 id=876 data-nosnippet>876</a>
+<a href=#877 id=877 data-nosnippet>877</a>  <span class="attr">#[test]
+<a href=#878 id=878 data-nosnippet>878</a>  </span><span class="kw">fn </span>digested_ref_to_option_some() {
+<a href=#879 id=879 data-nosnippet>879</a>    <span class="kw">let </span>d: Digested = Tbox::default().into();
+<a href=#880 id=880 data-nosnippet>880</a>    <span class="kw">let </span>o: <span class="prelude-ty">Option</span>&lt;Digested&gt; = (<span class="kw-2">&amp;</span>d).into();
+<a href=#881 id=881 data-nosnippet>881</a>    <span class="macro">assert!</span>(o.is_some());
+<a href=#882 id=882 data-nosnippet>882</a>  }
+<a href=#883 id=883 data-nosnippet>883</a>
+<a href=#884 id=884 data-nosnippet>884</a>  <span class="kw">fn </span>tbox_with(text: <span class="kw-2">&amp;</span>str) -&gt; Digested {
+<a href=#885 id=885 data-nosnippet>885</a>    Tbox { text: arena::pin(text), ..Default::default() }.into()
+<a href=#886 id=886 data-nosnippet>886</a>  }
+<a href=#887 id=887 data-nosnippet>887</a>  <span class="kw">fn </span>list_of(items: Vec&lt;Digested&gt;) -&gt; Digested {
+<a href=#888 id=888 data-nosnippet>888</a>    List {
+<a href=#889 id=889 data-nosnippet>889</a>      boxes: items,
+<a href=#890 id=890 data-nosnippet>890</a>      ..Default::default()
+<a href=#891 id=891 data-nosnippet>891</a>    }
+<a href=#892 id=892 data-nosnippet>892</a>    .into()
+<a href=#893 id=893 data-nosnippet>893</a>  }
+<a href=#894 id=894 data-nosnippet>894</a>
+<a href=#895 id=895 data-nosnippet>895</a>  <span class="doccomment">/// Iteratively dismantle a deeply-nested `Digested` so its `Drop` does NOT
+<a href=#896 id=896 data-nosnippet>896</a>  /// recurse once per nesting level. A deep singly-owned `Rc&lt;DigestedData&gt;`
+<a href=#897 id=897 data-nosnippet>897</a>  /// chain otherwise overflows the small per-test-thread stack under CI's
+<a href=#898 id=898 data-nosnippet>898</a>  /// `--test-threads=2` (a SIGABRT that passes locally on the larger default
+<a href=#899 id=899 data-nosnippet>899</a>  /// stack). Descends into the FIRST child of each `List`, dropping the
+<a href=#900 id=900 data-nosnippet>900</a>  /// shallow remainder (leaf boxes + the now-childless outer) as it goes, so
+<a href=#901 id=901 data-nosnippet>901</a>  /// teardown is O(1) in stack depth. (The analogous PRODUCTION concern — a
+<a href=#902 id=902 data-nosnippet>902</a>  /// boxing-depth-cap Fatal unwinding a deep structure — is tracked
+<a href=#903 id=903 data-nosnippet>903</a>  /// separately; the real box-list runaway is a WIDE `Vec`, already
+<a href=#904 id=904 data-nosnippet>904</a>  /// iteratively dropped.)
+<a href=#905 id=905 data-nosnippet>905</a>  </span><span class="kw">fn </span>drain_nest(<span class="kw-2">mut </span>cur: Digested) {
+<a href=#906 id=906 data-nosnippet>906</a>    <span class="kw">loop </span>{
+<a href=#907 id=907 data-nosnippet>907</a>      <span class="kw">let </span>child = <span class="kw">if let </span>DigestedData::List(l) = <span class="kw-2">&amp;*</span>cur.<span class="number">0 </span>{
+<a href=#908 id=908 data-nosnippet>908</a>        <span class="kw">let </span><span class="kw-2">mut </span>boxes = std::mem::take(<span class="kw-2">&amp;mut </span>l.borrow_mut().boxes);
+<a href=#909 id=909 data-nosnippet>909</a>        (!boxes.is_empty()).then(|| boxes.swap_remove(<span class="number">0</span>))
+<a href=#910 id=910 data-nosnippet>910</a>      } <span class="kw">else </span>{
+<a href=#911 id=911 data-nosnippet>911</a>        <span class="prelude-val">None
+<a href=#912 id=912 data-nosnippet>912</a>      </span>};
+<a href=#913 id=913 data-nosnippet>913</a>      <span class="kw">match </span>child {
+<a href=#914 id=914 data-nosnippet>914</a>        <span class="prelude-val">Some</span>(c) =&gt; cur = c,
+<a href=#915 id=915 data-nosnippet>915</a>        <span class="prelude-val">None </span>=&gt; <span class="kw">break</span>,
+<a href=#916 id=916 data-nosnippet>916</a>      }
+<a href=#917 id=917 data-nosnippet>917</a>    }
+<a href=#918 id=918 data-nosnippet>918</a>  }
+<a href=#919 id=919 data-nosnippet>919</a>
+<a href=#920 id=920 data-nosnippet>920</a>  <span class="attr">#[test]
+<a href=#921 id=921 data-nosnippet>921</a>  </span><span class="kw">fn </span>cycle_fingerprint_is_content_aware_for_lists() {
+<a href=#922 id=922 data-nosnippet>922</a>    <span class="comment">// The whole point of recursing into a List (rather than hashing its length
+<a href=#923 id=923 data-nosnippet>923</a>    // alone): two lists of the SAME length but DIFFERENT content must not
+<a href=#924 id=924 data-nosnippet>924</a>    // collide, or the stomach cycle guard would false-positive.
+<a href=#925 id=925 data-nosnippet>925</a>    </span><span class="kw">let </span>ab = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>), tbox_with(<span class="string">"b"</span>)]);
+<a href=#926 id=926 data-nosnippet>926</a>    <span class="kw">let </span>ac = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>), tbox_with(<span class="string">"c"</span>)]);
+<a href=#927 id=927 data-nosnippet>927</a>    <span class="macro">assert_ne!</span>(
+<a href=#928 id=928 data-nosnippet>928</a>      ab.cycle_fingerprint(),
+<a href=#929 id=929 data-nosnippet>929</a>      ac.cycle_fingerprint(),
+<a href=#930 id=930 data-nosnippet>930</a>      <span class="string">"same-length lists with different content must NOT share a fingerprint"
+<a href=#931 id=931 data-nosnippet>931</a>    </span>);
+<a href=#932 id=932 data-nosnippet>932</a>    <span class="comment">// ...while structurally identical lists DO (so real cycles are still caught).
+<a href=#933 id=933 data-nosnippet>933</a>    </span><span class="kw">let </span>ab2 = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>), tbox_with(<span class="string">"b"</span>)]);
+<a href=#934 id=934 data-nosnippet>934</a>    <span class="macro">assert_eq!</span>(ab.cycle_fingerprint(), ab2.cycle_fingerprint());
+<a href=#935 id=935 data-nosnippet>935</a>  }
+<a href=#936 id=936 data-nosnippet>936</a>
+<a href=#937 id=937 data-nosnippet>937</a>  <span class="attr">#[test]
+<a href=#938 id=938 data-nosnippet>938</a>  </span><span class="kw">fn </span>cycle_fingerprint_distinguishes_text_and_is_bounded() {
+<a href=#939 id=939 data-nosnippet>939</a>    <span class="macro">assert_ne!</span>(
+<a href=#940 id=940 data-nosnippet>940</a>      tbox_with(<span class="string">"a"</span>).cycle_fingerprint(),
+<a href=#941 id=941 data-nosnippet>941</a>      tbox_with(<span class="string">"b"</span>).cycle_fingerprint()
+<a href=#942 id=942 data-nosnippet>942</a>    );
+<a href=#943 id=943 data-nosnippet>943</a>    <span class="comment">// A pathologically deep/wide nest must still return (budget-bounded) — and
+<a href=#944 id=944 data-nosnippet>944</a>    // remain distinguishable from a shallow one.
+<a href=#945 id=945 data-nosnippet>945</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>deep = tbox_with(<span class="string">"z"</span>);
+<a href=#946 id=946 data-nosnippet>946</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">10_000 </span>{
+<a href=#947 id=947 data-nosnippet>947</a>      deep = list_of(<span class="macro">vec!</span>[deep, tbox_with(<span class="string">"z"</span>)]);
+<a href=#948 id=948 data-nosnippet>948</a>    }
+<a href=#949 id=949 data-nosnippet>949</a>    <span class="kw">let _ </span>= deep.cycle_fingerprint(); <span class="comment">// must not hang / overflow
+<a href=#950 id=950 data-nosnippet>950</a>    </span><span class="macro">assert_ne!</span>(deep.cycle_fingerprint(), tbox_with(<span class="string">"z"</span>).cycle_fingerprint());
+<a href=#951 id=951 data-nosnippet>951</a>    drain_nest(deep); <span class="comment">// O(1)-stack teardown — see `drain_nest`.
+<a href=#952 id=952 data-nosnippet>952</a>  </span>}
+<a href=#953 id=953 data-nosnippet>953</a>
+<a href=#954 id=954 data-nosnippet>954</a>  <span class="attr">#[test]
+<a href=#955 id=955 data-nosnippet>955</a>  </span><span class="kw">fn </span>estimate_bytes_is_positive_and_nesting_increases_it() {
+<a href=#956 id=956 data-nosnippet>956</a>    <span class="comment">// Every box has some positive footprint.
+<a href=#957 id=957 data-nosnippet>957</a>    </span><span class="macro">assert!</span>(tbox_with(<span class="string">"a"</span>).estimate_bytes() &gt; <span class="number">0</span>);
+<a href=#958 id=958 data-nosnippet>958</a>    <span class="comment">// A list of N boxes weighs more than a single box (the children count).
+<a href=#959 id=959 data-nosnippet>959</a>    </span><span class="kw">let </span>one = list_of(<span class="macro">vec!</span>[tbox_with(<span class="string">"a"</span>)]);
+<a href=#960 id=960 data-nosnippet>960</a>    <span class="kw">let </span>many = list_of(<span class="macro">vec!</span>[
+<a href=#961 id=961 data-nosnippet>961</a>      tbox_with(<span class="string">"a"</span>),
+<a href=#962 id=962 data-nosnippet>962</a>      tbox_with(<span class="string">"b"</span>),
+<a href=#963 id=963 data-nosnippet>963</a>      tbox_with(<span class="string">"c"</span>),
+<a href=#964 id=964 data-nosnippet>964</a>      tbox_with(<span class="string">"d"</span>),
+<a href=#965 id=965 data-nosnippet>965</a>    ]);
+<a href=#966 id=966 data-nosnippet>966</a>    <span class="macro">assert!</span>(
+<a href=#967 id=967 data-nosnippet>967</a>      many.estimate_bytes() &gt; one.estimate_bytes(),
+<a href=#968 id=968 data-nosnippet>968</a>      <span class="string">"a wider list must estimate heavier than a narrow one"
+<a href=#969 id=969 data-nosnippet>969</a>    </span>);
+<a href=#970 id=970 data-nosnippet>970</a>  }
+<a href=#971 id=971 data-nosnippet>971</a>
+<a href=#972 id=972 data-nosnippet>972</a>  <span class="attr">#[test]
+<a href=#973 id=973 data-nosnippet>973</a>  </span><span class="kw">fn </span>estimate_bytes_is_cost_bounded_for_deep_nests() {
+<a href=#974 id=974 data-nosnippet>974</a>    <span class="comment">// A pathologically deep nest must terminate (EB_BUDGET) without hanging /
+<a href=#975 id=975 data-nosnippet>975</a>    // overflowing, and still return a finite positive estimate.
+<a href=#976 id=976 data-nosnippet>976</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>deep = tbox_with(<span class="string">"z"</span>);
+<a href=#977 id=977 data-nosnippet>977</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">100_000 </span>{
+<a href=#978 id=978 data-nosnippet>978</a>      deep = list_of(<span class="macro">vec!</span>[deep]);
+<a href=#979 id=979 data-nosnippet>979</a>    }
+<a href=#980 id=980 data-nosnippet>980</a>    <span class="kw">let </span>est = deep.estimate_bytes();
+<a href=#981 id=981 data-nosnippet>981</a>    <span class="macro">assert!</span>(est &gt; <span class="number">0</span>);
+<a href=#982 id=982 data-nosnippet>982</a>    <span class="comment">// Budget-bounded: the walk visits at most EB_BUDGET nodes, so a 100k-deep
+<a href=#983 id=983 data-nosnippet>983</a>    // nest cannot estimate more than roughly EB_BUDGET node-overheads.
+<a href=#984 id=984 data-nosnippet>984</a>    </span><span class="macro">assert!</span>(
+<a href=#985 id=985 data-nosnippet>985</a>      est &lt; (EB_BUDGET <span class="kw">as </span>usize) * <span class="number">4096</span>,
+<a href=#986 id=986 data-nosnippet>986</a>      <span class="string">"estimate must stay bounded regardless of nest depth (got {est})"
+<a href=#987 id=987 data-nosnippet>987</a>    </span>);
+<a href=#988 id=988 data-nosnippet>988</a>    drain_nest(deep); <span class="comment">// O(1)-stack teardown — see `drain_nest`.
+<a href=#989 id=989 data-nosnippet>989</a>  </span>}
+<a href=#990 id=990 data-nosnippet>990</a>}
 </code></pre></div></section></main></body></html>

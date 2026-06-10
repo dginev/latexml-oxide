@@ -252,11 +252,11 @@
 <a href=#252 id=252 data-nosnippet>252</a>      <span class="kw">if </span>key == <span class="string">"colorlinks" </span>&amp;&amp; value_str == <span class="string">"true" </span>{
 <a href=#253 id=253 data-nosnippet>253</a>        <span class="macro">RequirePackage!</span>(<span class="string">"color"</span>);
 <a href=#254 id=254 data-nosnippet>254</a>      }
-<a href=#255 id=255 data-nosnippet>255</a>      <span class="comment">// Perl digests the value tokens to apply font conversions
-<a href=#256 id=256 data-nosnippet>256</a>      // (e.g. ' → curly quote in pdfauthor).
-<a href=#257 id=257 data-nosnippet>257</a>      </span><span class="kw">let </span>digested = stomach::digest(value.revert()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-<a href=#258 id=258 data-nosnippet>258</a>      <span class="kw">let </span>digested_str = digested.to_string();
-<a href=#259 id=259 data-nosnippet>259</a>      state::assign_mapping(<span class="string">"Hyperref_options"</span>, key, <span class="prelude-val">Some</span>(digested_str));
+<a href=#255 id=255 data-nosnippet>255</a>      <span class="comment">// Perl (PR #2767): don't digest \hypersetup keyvals, since they are
+<a href=#256 id=256 data-nosnippet>256</a>      // restricted to plain text(?) — `hyperref_setoption($key, ToString($value))`.
+<a href=#257 id=257 data-nosnippet>257</a>      // (This actually needs some sort of "safe" digestion, recognizing
+<a href=#258 id=258 data-nosnippet>258</a>      // unicode, but no macros.)
+<a href=#259 id=259 data-nosnippet>259</a>      </span>state::assign_mapping(<span class="string">"Hyperref_options"</span>, key, <span class="prelude-val">Some</span>(value_str.clone()));
 <a href=#260 id=260 data-nosnippet>260</a>      <span class="kw">if </span>key == <span class="string">"baseurl" </span>{
 <a href=#261 id=261 data-nosnippet>261</a>        <span class="macro">AssignValue!</span>(<span class="string">"BASE_URL" </span>=&gt; value_str);
 <a href=#262 id=262 data-nosnippet>262</a>      }

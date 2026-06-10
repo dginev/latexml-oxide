@@ -10,14 +10,14 @@
 <a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">RequirePackage!</span>(<span class="string">"mathptmx"</span>);
 <a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
 <a href=#12 id=12 data-nosnippet>12</a>
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ShortTitle{}"</span>,  <span class="string">"\\@add@frontmatter{ltx:toctitle}{#1}"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PoScopydate{}"</span>, <span class="string">"\\@add@frontmatter{ltx:date}[role=accepted]{#1}"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ShortTitle{}"</span>,     <span class="string">"\\lx@add@toctitle{#1}"</span>);
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PoScopydate{}"</span>,    <span class="string">"\\lx@add@date[role=accepted]{#1}"</span>);
 <a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PACSname"</span>,      <span class="string">"\\textbf{PACS}"</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PACS{}"</span>, <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=pacs,name={\\PACSname}]{#1}"</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\PACS{}"</span>,           <span class="string">"\\lx@add@classification[scheme=pacs,name={\\PACSname:~}]{#1}"</span>);
 <a href=#17 id=17 data-nosnippet>17</a>  <span class="comment">// \FullConference{name} — conference identification text. Round-34
 <a href=#18 id=18 data-nosnippet>18</a>  // surpass-Perl: preserve as ltx:note frontmatter.
 <a href=#19 id=19 data-nosnippet>19</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\FullConference{}"</span>,
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=conference]{#1}"</span>);
+<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=conference]{#1}"</span>);
 <a href=#21 id=21 data-nosnippet>21</a>
 <a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Jmath"</span>, <span class="string">"J"</span>);
 <a href=#23 id=23 data-nosnippet>23</a>});

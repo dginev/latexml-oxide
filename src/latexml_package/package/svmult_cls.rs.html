@@ -31,7 +31,7 @@
 <a href=#31 id=31 data-nosnippet>31</a>  <span class="comment">// \title with optional * to affect numbering (* =&gt; numart, none =&gt; book)
 <a href=#32 id=32 data-nosnippet>32</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\title OptionalMatch:* {}"</span>,
 <a href=#33 id=33 data-nosnippet>33</a>    <span class="string">"\\if.#1.\\else\\def\\thesection{\\arabic{section}}\\fi\
-<a href=#34 id=34 data-nosnippet>34</a>     \\@add@frontmatter{ltx:title}{#2}"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>     \\lx@add@title{#2}"</span>);
 <a href=#35 id=35 data-nosnippet>35</a>
 <a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">//======================================================================
 <a href=#37 id=37 data-nosnippet>37</a>  // Upright greek letters
@@ -134,6 +134,6 @@
 <a href=#134 id=134 data-nosnippet>134</a>  <span class="comment">// Springer Multi-author authors use \orcid for ORCID identifier.
 <a href=#135 id=135 data-nosnippet>135</a>  // Witness 2408.17087, 2411.17645 (2 svmult papers).
 <a href=#136 id=136 data-nosnippet>136</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>,
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=orcid]{#1}"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="string">"\\lx@add@frontmatter{ltx:note}[role=orcid]{#1}"</span>);
 <a href=#138 id=138 data-nosnippet>138</a>});
 </code></pre></div></section></main></body></html>
