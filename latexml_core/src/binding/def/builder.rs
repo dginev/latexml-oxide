@@ -116,7 +116,11 @@ impl OptionValue {
     }
   }
 
-  fn into_bool(self) -> Result<bool> {
+  /// Coerce to bool: `Bool` as-is, `Int` non-zero, `Str` non-empty. Public so
+  /// the runtime (Rhai) front-end's `dynamic_to_bool` can share this exact
+  /// policy instead of re-deriving it (review m4 — keeps `bounded: 1` /
+  /// `protected: "yes"` meaning the same on both front-ends).
+  pub fn into_bool(self) -> Result<bool> {
     match self {
       OptionValue::Bool(b) => Ok(b),
       OptionValue::Int(i) => Ok(i != 0),

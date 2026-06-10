@@ -15,11 +15,12 @@ macro_rules! doc_qname_method {
     $engine.register_fn(
       $rhai,
       |_d: &mut DocProxy, qname: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-        let doc = unsafe { &mut *current_ctx()?.document };
-        doc
-          .$rust(qname)
-          .map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
-        Ok(())
+        with_doc(|doc, _props| {
+          doc
+            .$rust(qname)
+            .map_err(rhai_err)?;
+          Ok(())
+        })
       },
     );
   };
@@ -81,7 +82,7 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "Digest",
     |t: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
-      latexml_core::stomach::digest(t).map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
+      latexml_core::stomach::digest(t).map_err(rhai_err)?;
       Ok(())
     },
   );
@@ -278,11 +279,7 @@ pub(super) fn make_engine() -> Engine {
     |c: &str| -> std::result::Result<Map, Box<EvalAltResult>> {
       let props =
         latexml_core::binding::counter::dialect::ref_step_counter(c, false).map_err(rhai_err)?;
-      let mut m = Map::new();
-      for (k, v) in props {
-        m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
-      }
-      Ok(m)
+      Ok(props_to_map(props))
     },
   );
 
@@ -329,22 +326,14 @@ pub(super) fn make_engine() -> Engine {
     "RefStepID",
     |c: &str| -> std::result::Result<Map, Box<EvalAltResult>> {
       let props = latexml_core::binding::counter::dialect::ref_step_id(c).map_err(rhai_err)?;
-      let mut m = Map::new();
-      for (k, v) in props {
-        m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
-      }
-      Ok(m)
+      Ok(props_to_map(props))
     },
   );
   engine.register_fn(
     "RefCurrentID",
     |c: &str| -> std::result::Result<Map, Box<EvalAltResult>> {
       let props = latexml_core::binding::counter::dialect::ref_current_id(c).map_err(rhai_err)?;
-      let mut m = Map::new();
-      for (k, v) in props {
-        m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
-      }
-      Ok(m)
+      Ok(props_to_map(props))
     },
   );
 
@@ -511,12 +500,20 @@ pub(super) fn make_engine() -> Engine {
   // Write methods (libxml handles alias the same C node, so mutation through
   // a cloned handle is the library's intended model — used by the rewrite
   // `replace` closure form, which owns its matched nodes).
-  engine.register_fn("setAttribute", |n: &mut NodeProxy, k: &str, v: &str| {
-    let _ = n.0.set_attribute(k, v);
-  });
-  engine.register_fn("setContent", |n: &mut NodeProxy, v: &str| {
-    let _ = n.0.set_content(v);
-  });
+  // A failed libxml write from a rewrite-replace body must NOT vanish — surface
+  // it as a Rhai error the script (and the conversion log) can see (review m3).
+  engine.register_fn(
+    "setAttribute",
+    |n: &mut NodeProxy, k: &str, v: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      n.0.set_attribute(k, v).map(|_| ()).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "setContent",
+    |n: &mut NodeProxy, v: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      n.0.set_content(v).map(|_| ()).map_err(rhai_err)
+    },
+  );
   engine.register_fn("unlink", |n: &mut NodeProxy| { n.0.unlink(); });
   engine.register_fn("parent", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_parent() {
@@ -784,44 +781,46 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "openElement",
     |_d: &mut DocProxy, tag: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let doc = unsafe { &mut *current_ctx()?.document };
-      doc
-        .open_element(tag, None, None)
-        .map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
-      Ok(())
+      with_doc(|doc, _props| {
+        doc
+          .open_element(tag, None, None)
+          .map_err(rhai_err)?;
+        Ok(())
+      })
     },
   );
   engine.register_fn(
     "setAttribute",
     |_d: &mut DocProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let doc = unsafe { &mut *current_ctx()?.document };
-      let mut node = doc.get_node().clone();
-      doc
-        .set_attribute(&mut node, key, val)
-        .map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
-      Ok(())
+      with_doc(|doc, _props| {
+        let mut node = doc.get_node().clone();
+        doc
+          .set_attribute(&mut node, key, val)
+          .map_err(rhai_err)?;
+        Ok(())
+      })
     },
   );
   engine.register_fn(
     "absorbString",
     |_d: &mut DocProxy, s: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let ctx = current_ctx()?;
-      let doc = unsafe { &mut *ctx.document };
-      let props = unsafe { &*ctx.props };
-      doc
-        .absorb_string(s, props)
-        .map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
-      Ok(())
+      with_doc(|doc, props| {
+        doc
+          .absorb_string(s, props)
+          .map_err(rhai_err)?;
+        Ok(())
+      })
     },
   );
   engine.register_fn(
     "absorb",
     |_d: &mut DocProxy, arg: Digested| -> std::result::Result<(), Box<EvalAltResult>> {
-      let doc = unsafe { &mut *current_ctx()?.document };
-      doc
-        .absorb(&arg, None)
-        .map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
-      Ok(())
+      with_doc(|doc, _props| {
+        doc
+          .absorb(&arg, None)
+          .map_err(rhai_err)?;
+        Ok(())
+      })
     },
   );
   // Absorb a whatsit property at the current point — the imperative analog of a
@@ -831,18 +830,17 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "absorbProperty",
     |_d: &mut DocProxy, name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      let ctx = current_ctx()?;
-      let doc = unsafe { &mut *ctx.document };
-      let props = unsafe { &*ctx.props };
-      if let Some(stored) = props.get(name) {
-        let dig: Option<Digested> = stored.into();
-        if let Some(ref d) = dig {
-          doc
-            .absorb(d, None)
-            .map_err(|e| Box::<EvalAltResult>::from(e.to_string()))?;
+      with_doc(|doc, props| {
+        if let Some(stored) = props.get(name) {
+          let dig: Option<Digested> = stored.into();
+          if let Some(ref d) = dig {
+            doc
+              .absorb(d, None)
+              .map_err(rhai_err)?;
+          }
         }
-      }
-      Ok(())
+        Ok(())
+      })
     },
   );
 
@@ -857,7 +855,7 @@ pub(super) fn make_engine() -> Engine {
       match w.get_arg(n as usize) {
         Some(d) => d
           .untex()
-          .map_err(|e| Box::<EvalAltResult>::from(e.to_string())),
+          .map_err(rhai_err),
         None => Ok(String::new()),
       }
     },

@@ -298,8 +298,11 @@ fn script_binding_macro_and_constructor_convert() {
     xml.contains("class=\"rhai\"") && xml.contains("zz"),
     "template constructor \\mytext did not emit; xml=\n{xml}"
   );
-  // Re-entrancy (GATE-1): the nested script constructor ran inside another
-  // script constructor's body without a borrow panic.
+  // Re-entrancy: the nested script constructor (\myemph) ran inside \wrap's
+  // body — one script constructor's body triggering another's construction
+  // while \wrap's active-context is live. (See the B1 soundness caveat in
+  // `script_bindings/mod.rs::with_doc`: this works but rests on a raw-pointer
+  // re-mint that a checked guard could not replace without deadlocking absorb.)
   assert!(
     xml.contains("<emph>deep</emph>"),
     "re-entrant nested script constructor failed; xml=\n{xml}"
@@ -504,3 +507,4 @@ fn script_binding_discovered_from_file() {
   );
   latexml_core::reset_thread_engine();
 }
+

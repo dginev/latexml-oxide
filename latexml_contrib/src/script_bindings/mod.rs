@@ -134,6 +134,39 @@ struct CtorCtx {
   props:    *const SymHashMap<Stored>,
 }
 
+/// Generate an RAII push/pop guard for one of the active-context stacks.
+///
+/// Why RAII and not manual `push`…`pop()`: Rhai does NOT `catch_unwind` its
+/// native calls, so a panic in a script body (or a deep `RefCell` borrow panic,
+/// incl. the B1 re-entrancy guard) skips a trailing manual `pop()` — leaving a
+/// **stale** entry on the stack. `reset_thread_state` doesn't clear these
+/// `latexml_contrib` thread-locals, so the dangling entry survives the cortex
+/// per-paper `catch_unwind` and leaks into the next paper. A `Drop` guard pops
+/// on EVERY scope exit — normal return, `?` early-return, or unwind. Review M1.
+macro_rules! ctx_stack_guard {
+  ($guard:ident, $stack:ident, $elem:ty) => {
+    #[must_use = "the guard pops on drop; binding it to `_` would pop immediately"]
+    struct $guard(());
+    impl $guard {
+      fn new(entry: $elem) -> Self {
+        $stack.with(|c| c.borrow_mut().push(entry));
+        Self(())
+      }
+    }
+    impl Drop for $guard {
+      fn drop(&mut self) {
+        $stack.with(|c| {
+          c.borrow_mut().pop();
+        });
+      }
+    }
+  };
+}
+
+ctx_stack_guard!(CtorCtxGuard, CTOR_CTX, CtorCtx);
+ctx_stack_guard!(WhatsitCtxGuard, WHATSIT_CTX, (*mut Whatsit, bool));
+ctx_stack_guard!(ScriptCtxGuard, CURRENT_SCRIPT, (Rc<Engine>, Rc<AST>));
+
 /// The engine/AST of the innermost running script (for immediate wiring).
 fn current_script() -> std::result::Result<(Rc<Engine>, Rc<AST>), Box<EvalAltResult>> {
   CURRENT_SCRIPT.with(|c| {
@@ -169,6 +202,40 @@ fn current_ctx() -> std::result::Result<CtorCtx, Box<EvalAltResult>> {
   })
 }
 
+/// Run `f` with the active constructor's live document and props — the SINGLE
+/// audited site that re-mints the `&mut Document` the core published for the
+/// in-flight body (review B1: consolidated here so the `unsafe` has one
+/// documented home instead of being scattered across every proxy op).
+///
+/// SOUNDNESS CAVEAT (B1, NOT fully resolved): for a NESTED script construct —
+/// `\wrap{\myemph{..}}`, where the outer body's `Document::absorb` re-enters the
+/// bridge while its own `&mut self` is still live — this re-mints a second
+/// `&mut` from a raw pointer while the outer one is parked on the stack, which
+/// the Stacked/Tree-Borrows model treats as aliasing UB (it works today only
+/// because `Document` is `Rc`/`RefCell`/libxml-heavy, suppressing the
+/// optimization that would miscompile it). The native path is sound because it
+/// *reborrows* `&mut` down the call chain; the Rhai closure boundary erases that
+/// lifetime, so the round-trip through `*mut` is unavoidable here. A checked
+/// guard was tried and REJECTED: failing the re-entrant op (panic OR error)
+/// deadlocks `Document::absorb`'s loop, which requires the nested construction
+/// to SUCCEED. A real fix needs an architectural change (interior-mutable
+/// `Document`, or a core handle installed around `do_absorption`). This is an
+/// ACCEPTED, documented limitation of the experimental `runtime-bindings`
+/// front-end (decision 2026-06-10: keep the feature on, defer the architectural
+/// fix) — tracked in `docs/SYNC_STATUS.md` "PR #248 critical-review findings", B1.
+fn with_doc<R>(
+  f: impl FnOnce(&mut Document, &SymHashMap<Stored>) -> std::result::Result<R, Box<EvalAltResult>>,
+) -> std::result::Result<R, Box<EvalAltResult>> {
+  let ctx = current_ctx()?;
+  // SAFETY: `ctx.document` is the `&mut Document` the core published for this
+  // body (valid for its duration). For the non-nested case this is the unique
+  // live `&mut`; for the nested case see the CAVEAT above. `ctx.props` is read
+  // only — never mutated through this `*const`.
+  let doc = unsafe { &mut *ctx.document };
+  let props = unsafe { &*ctx.props };
+  f(doc, props)
+}
+
 /// Rhai proxy for the live document, passed to a constructor body as its first
 /// argument — so a binding reads like the Perl original (`$document->method`).
 /// It carries no pointer itself; its methods resolve the active-context, so it
@@ -177,9 +244,20 @@ fn current_ctx() -> std::result::Result<CtorCtx, Box<EvalAltResult>> {
 #[derive(Clone)]
 struct DocProxy;
 
-/// Rhai proxy for a document-tree node (read-only): wraps the clonable
-/// libxml handle directly — no lifetimes, no active context needed. Handed to
-/// closure-form matcher bodies (`DefMathLigature(|node| …)`).
+/// Rhai proxy for a document-tree node: wraps the clonable libxml handle
+/// directly — no lifetimes, no active context. Handed to closure-form matcher
+/// bodies (`DefMathLigature(|node| …)`, read-only) and rewrite-`replace` bodies
+/// (mutable — `setAttribute`/`setContent`/`unlink`).
+///
+/// ⚠ LIFETIME FOOTGUN (review m5): the wrapped handle aliases a live C `xmlNode`
+/// owned by the conversion's document tree, and is valid ONLY for the duration
+/// of the body that received it. A script that stows a `NodeProxy` in a variable
+/// and dereferences it AFTER `unlink()` has detached the node, or after the
+/// conversion ends and the tree is freed (`reset_thread_engine`), is a C-level
+/// use-after-free (cf. WISDOM #58). Unlike `DocProxy`/`WhatsitProxy` — which
+/// resolve their target through the active-context stack on each call and carry
+/// no pointer — `NodeProxy` is the only proxy holding a raw tree handle. Use it
+/// within the body; never retain it across calls or past `unlink()`.
 #[derive(Clone)]
 pub(crate) struct NodeProxy(pub(crate) libxml::tree::Node);
 
@@ -248,19 +326,16 @@ pub fn load_script(src: &str) -> Result<usize> {
   };
 
   // Publish the script handles for the registration closures, run, unpublish
-  // (a stack, so a script loading another script nests correctly).
-  CURRENT_SCRIPT.with(|c| {
-    c.borrow_mut()
-      .push((cached.engine.clone(), cached.ast.clone()))
-  });
+  // (a stack, so a script loading another script nests correctly). RAII pop on
+  // every exit incl. a panic out of `run_ast` (review M1).
   let before = WIRED_COUNT.with(|c| *c.borrow());
-  let run = cached
-    .engine
-    .run_ast(&cached.ast)
-    .map_err(|e| Error::from(format!("script-binding run error: {e}")));
-  CURRENT_SCRIPT.with(|c| {
-    c.borrow_mut().pop();
-  });
+  let run = {
+    let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
+    cached
+      .engine
+      .run_ast(&cached.ast)
+      .map_err(|e| Error::from(format!("script-binding run error: {e}")))
+  };
   run?;
   Ok(WIRED_COUNT.with(|c| *c.borrow()) - before)
 }
@@ -312,8 +387,25 @@ fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
   props
 }
 
-/// Map a latexml error into a Rhai error (the standard boundary conversion).
-fn rhai_err(e: Error) -> Box<EvalAltResult> { Box::<EvalAltResult>::from(e.to_string()) }
+/// Marshal a counter/whatsit property map back into a Rhai object map (the
+/// inverse of [`rhai_map_to_props`]). The single source shared by
+/// `RefStepCounter`/`RefStepID`/`RefCurrentID`, which inlined this 3× before
+/// (review m4).
+fn props_to_map(props: SymHashMap<Stored>) -> Map {
+  let mut m = Map::new();
+  for (k, v) in props {
+    m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
+  }
+  m
+}
+
+/// Map ANY displayable error (latexml `Error`, libxml `Box<dyn Error>`, …) into
+/// a Rhai error — the SINGLE boundary-conversion source. Review m4: the inline
+/// `Box::<EvalAltResult>::from(e.to_string())` spelling scattered across the
+/// proxy ops is routed through here so error formatting has one definition.
+fn rhai_err(e: impl std::fmt::Display) -> Box<EvalAltResult> {
+  Box::<EvalAltResult>::from(e.to_string())
+}
 
 /// Parse a scope string ("local"/"global", anything else = None → TeX default).
 fn scope_of(scope: &str) -> Option<Scope> {

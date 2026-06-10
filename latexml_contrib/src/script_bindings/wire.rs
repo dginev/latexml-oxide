@@ -39,10 +39,10 @@ pub(super) fn closure_replacement(
 ) -> ReplacementClosure {
   Rc::new(
     move |document: &mut Document, args: &Vec<Option<Digested>>, props| -> Result<()> {
-      // Each `with` is a short borrow; the body's document ops re-borrow freshly.
-      CTOR_CTX.with(|c| {
-        c.borrow_mut().push(CtorCtx { document, props });
-      });
+      // RAII: the entry is popped on EVERY exit of this closure, including a
+      // panic out of `body.call` (Rhai doesn't catch_unwind native calls) — so
+      // a script-body panic can't leave a stale CTOR_CTX entry. Review M1.
+      let _ctx_guard = CtorCtxGuard::new(CtorCtx { document, props });
       // `document` first (Perl's `$_[0]`), then each digested arg as a handle.
       let mut call_args: Vec<Dynamic> = Vec::with_capacity(args.len() + 1);
       call_args.push(Dynamic::from(DocProxy));
@@ -52,11 +52,8 @@ pub(super) fn closure_replacement(
           None => Dynamic::UNIT,
         });
       }
-      let result = body.call::<Dynamic>(&engine, &ast, call_args);
-      CTOR_CTX.with(|c| {
-        c.borrow_mut().pop();
-      });
-      result
+      body
+        .call::<Dynamic>(&engine, &ast, call_args)
         .map(|_| ())
         .map_err(|e| Error::from(format!("script constructor {cs_name}: {e}")))
     },
@@ -266,17 +263,14 @@ pub(super) fn construction_trampoline(
 ) -> ConstructionClosure {
   Rc::new(
     move |document: &mut Document, whatsit: &Whatsit| -> Result<()> {
-      CTOR_CTX.with(|c| {
-        c.borrow_mut().push(CtorCtx {
-          document,
-          props: whatsit.get_properties(),
-        });
+      // RAII pop on every exit incl. panic (review M1).
+      let _ctx_guard = CtorCtxGuard::new(CtorCtx {
+        document,
+        props: whatsit.get_properties(),
       });
-      let result = fp.call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy),));
-      CTOR_CTX.with(|c| {
-        c.borrow_mut().pop();
-      });
-      let _: Dynamic = result.map_err(|e| Error::from(format!("script afterConstruct: {e}")))?;
+      let _: Dynamic = fp
+        .call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy),))
+        .map_err(|e| Error::from(format!("script afterConstruct: {e}")))?;
       Ok(())
     },
   )
@@ -290,12 +284,11 @@ pub(super) fn after_digest_trampoline(
   ast: Rc<AST>,
 ) -> DigestionClosure {
   Rc::new(move |w: &mut Whatsit| -> Result<Vec<Digested>> {
-    WHATSIT_CTX.with(|c| c.borrow_mut().push((w as *mut Whatsit, true)));
-    let r = fp.call::<Dynamic>(&engine, &ast, ());
-    WHATSIT_CTX.with(|c| {
-      c.borrow_mut().pop();
-    });
-    let _: Dynamic = r.map_err(|e| Error::from(format!("script afterDigest: {e}")))?;
+    // RAII pop on every exit incl. panic (review M1).
+    let _whatsit_guard = WhatsitCtxGuard::new((w as *mut Whatsit, true));
+    let _: Dynamic = fp
+      .call::<Dynamic>(&engine, &ast, ())
+      .map_err(|e| Error::from(format!("script afterDigest: {e}")))?;
     Ok(Vec::new())
   })
 }
@@ -363,6 +356,19 @@ pub(super) fn dynamic_to_option_value(v: &Dynamic) -> Option<OptionValue> {
   }
 }
 
+/// Coerce a Rhai scalar to a bool with the SAME policy as the builder's
+/// `OptionValue::into_bool` (bool as-is, int ≠ 0, non-empty string = true) —
+/// the single shared coercion. Review m4: the `*_options_from_map` loops below
+/// previously used `as_bool().unwrap_or(false)`, which silently coerced an int
+/// (`bounded: 1`) or string (`protected: "yes"`) option to `false`, diverging
+/// from the `OptionValue`/`set_option` path that the same bindings reach via
+/// scalar options.
+fn dynamic_to_bool(v: &Dynamic) -> bool {
+  dynamic_to_option_value(v)
+    .and_then(|ov| ov.into_bool().ok())
+    .unwrap_or(false)
+}
+
 /// Install one `DefPrimitive` registration as a native primitive whose body
 /// runs at digestion time for side-effects (state assignments, etc.). The body
 /// receives args as strings and its return value is ignored (pure side-effect);
@@ -428,7 +434,7 @@ pub(super) fn wire_macro_opts(
 pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
   let mut o = ExpandableOptions::default();
   for (key, val) in opts {
-    let b = val.as_bool().unwrap_or(false);
+    let b = dynamic_to_bool(&val);
     match key.as_str() {
       "locked" => o.locked = b,
       "protected" => o.protected = b,
@@ -448,7 +454,7 @@ pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
 pub(super) fn primitive_options_from_map(opts: Map) -> PrimitiveOptions {
   let mut o = PrimitiveOptions::default();
   for (key, val) in opts {
-    let b = val.as_bool().unwrap_or(false);
+    let b = dynamic_to_bool(&val);
     match key.as_str() {
       "bounded" => o.bounded = b,
       "isPrefix" => o.is_prefix = b,
@@ -532,7 +538,7 @@ pub(super) fn math_options_from_map(opts: Map) -> Result<MathPrimitiveOptions> {
   let mut o = MathPrimitiveOptions::default();
   for (key, val) in opts {
     let s = || dynamic_to_string(val.clone());
-    let b = || val.as_bool().unwrap_or(false);
+    let b = || dynamic_to_bool(&val);
     match key.as_str() {
       "name" => o.name = Some(s()),
       "meaning" => o.meaning = Some(s()),
@@ -597,7 +603,8 @@ pub(super) fn reversion_trampoline(
   ast: Rc<AST>,
 ) -> latexml_core::definition::DigestedReversionClosure {
   Rc::new(move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
-    WHATSIT_CTX.with(|c| c.borrow_mut().push((w as *const Whatsit as *mut Whatsit, false)));
+    // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
+    let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
     let dyn_args: Vec<Dynamic> = args
       .iter()
       .map(|a| match a {
@@ -605,11 +612,9 @@ pub(super) fn reversion_trampoline(
         None => Dynamic::UNIT,
       })
       .collect();
-    let result = fp.call::<Dynamic>(&engine, &ast, dyn_args);
-    WHATSIT_CTX.with(|c| {
-      c.borrow_mut().pop();
-    });
-    let ret = result.map_err(|e| Error::from(format!("script reversion: {e}")))?;
+    let ret = fp
+      .call::<Dynamic>(&engine, &ast, dyn_args)
+      .map_err(|e| Error::from(format!("script reversion: {e}")))?;
     Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
   })
 }
@@ -622,12 +627,11 @@ pub(super) fn sizer_trampoline(
   ast: Rc<AST>,
 ) -> latexml_core::definition::SizingClosure {
   Rc::new(move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
-    WHATSIT_CTX.with(|c| c.borrow_mut().push((w as *const Whatsit as *mut Whatsit, false)));
-    let result = fp.call::<Dynamic>(&engine, &ast, ());
-    WHATSIT_CTX.with(|c| {
-      c.borrow_mut().pop();
-    });
-    let ret = result.map_err(|e| Error::from(format!("script sizer: {e}")))?;
+    // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
+    let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
+    let ret = fp
+      .call::<Dynamic>(&engine, &ast, ())
+      .map_err(|e| Error::from(format!("script sizer: {e}")))?;
     let spec = dynamic_to_string(ret);
     let mut parts = spec.split(';');
     let mut next_dim = || -> Result<Dimension> {
@@ -729,16 +733,22 @@ pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map
   }]);
 }
 
-/// The `DefRewrite!`/`DefMathRewrite!` data-form lowering: build
-/// `RewriteOptions` from the option bag and push the rule.
-pub(super) fn def_rewrite_impl(kind: &str, opts: Map) -> Result<()> {
-  use latexml_core::rewrite::{Rewrite, RewriteOptions};
+/// Parse a rewrite option bag into the FULL `RewriteOptions` superset — the
+/// single source shared by the data form (`def_rewrite_impl`) and the
+/// replace-closure form (`wire_rewrite_replace`), so the two cannot drift on
+/// which keys they honor. (Review M3: the data form silently dropped
+/// `select_count` and the replace form silently dropped `attributes`; each
+/// `_ => {}`-ignored the other's key.) The replace form just sets its closure
+/// and a `select_count` default afterward.
+fn parse_rewrite_options(kind: &str, opts: Map) -> latexml_core::rewrite::RewriteOptions {
+  use latexml_core::rewrite::RewriteOptions;
   let mut o = RewriteOptions { is_math: kind == "math", ..RewriteOptions::default() };
   for (key, val) in opts {
     match key.as_str() {
       "label" => o.label = Some(dynamic_to_string(val)),
       "xpath" => o.xpath = Some(dynamic_to_string(val)),
       "select" => o.select = Some(dynamic_to_string(val)),
+      "select_count" => o.select_count = val.as_int().ok().map(|i| i as usize),
       "attributes" => {
         if val.is_map() {
           let mut m = rustc_hash::FxHashMap::default();
@@ -756,7 +766,17 @@ pub(super) fn def_rewrite_impl(kind: &str, opts: Map) -> Result<()> {
       _ => {},
     }
   }
-  latexml_core::state::push_value("DOCUMENT_REWRITE_RULES", Rewrite::new(kind, o))?;
+  o
+}
+
+/// The `DefRewrite!`/`DefMathRewrite!` data-form lowering: build
+/// `RewriteOptions` from the option bag and push the rule.
+pub(super) fn def_rewrite_impl(kind: &str, opts: Map) -> Result<()> {
+  let o = parse_rewrite_options(kind, opts);
+  latexml_core::state::push_value(
+    "DOCUMENT_REWRITE_RULES",
+    latexml_core::rewrite::Rewrite::new(kind, o),
+  )?;
   Ok(())
 }
 
@@ -772,54 +792,44 @@ pub(super) fn wire_rewrite_replace(
   opts: Map,
   replace: FnPtr,
 ) -> Result<()> {
-  use latexml_core::rewrite::{Rewrite, RewriteOptions};
-  let mut o = RewriteOptions {
-    is_math: kind == "math",
-    // The Replace clause consumes `select_count` matched nodes (native
-    // replace-rewrites always set it); default to 1, override via the bag.
-    select_count: Some(1),
-    ..RewriteOptions::default()
-  };
-  for (key, val) in opts {
-    match key.as_str() {
-      "label" => o.label = Some(dynamic_to_string(val)),
-      "xpath" => o.xpath = Some(dynamic_to_string(val)),
-      "select" => o.select = Some(dynamic_to_string(val)),
-      "select_count" => o.select_count = val.as_int().ok().map(|i| i as usize),
-      "regexp" => o.regexp = Some(dynamic_to_string(val)),
-      "match" => o.on_match = Some(mouth::tokenize_internal(&dynamic_to_string(val))),
-      "scope" => o.scope = scope_of(&dynamic_to_string(val)),
-      _ => {},
-    }
-  }
+  use latexml_core::rewrite::Rewrite;
+  // Same superset parser as the data form (review M3) — so the replace form now
+  // honors `attributes` too, and neither form silently drops the other's key.
+  let mut o = parse_rewrite_options(kind, opts);
+  // The Replace clause consumes `select_count` matched nodes (native
+  // replace-rewrites always set it); default to 1 when the bag didn't.
+  o.select_count.get_or_insert(1);
   let engine = engine.clone();
   let ast = ast.clone();
-  // The core Replace clause positions the document at the splice parent
-  // before calling us; publish it so the body's `document.*` proxy inserts
-  // land there. The props map carries a default text font — at finalization
-  // there is no box_to_absorb for absorb_string to fall back on. (One tiny
-  // leaked map per registered rule.)
-  let rewrite_props: &'static SymHashMap<Stored> = {
+  // The core Replace clause positions the document at the splice parent before
+  // calling us; publish it so the body's `document.*` proxy inserts land there.
+  // The props map carries a default text font — at finalization there is no
+  // box_to_absorb for absorb_string to fall back on. Held by an `Rc` MOVED into
+  // the replace closure (NOT `Box::leak`ed): the map lives exactly as long as
+  // the rule and is freed when the rule is dropped — `load_script` runs per
+  // conversion, so the old leak grew one map per replace-rule PER PAPER in a
+  // long-lived worker (review M2). `CtorCtx.props` is `*const`, and the captured
+  // `Rc` keeps the target alive for the whole call.
+  let rewrite_props: Rc<SymHashMap<Stored>> = {
     let mut m = SymHashMap::default();
     m.insert(
       "font",
       Stored::Font(Rc::new(latexml_core::common::font::Font::text_default())),
     );
-    Box::leak(Box::new(m))
+    Rc::new(m)
   };
   o.replace = Some(Rc::new(
     move |document: &mut Document, nodes: Vec<&mut libxml::tree::Node>| -> Result<()> {
       let arr: rhai::Array =
         nodes.into_iter().map(|n| Dynamic::from(NodeProxy(n.clone()))).collect();
-      CTOR_CTX.with(|c| {
-        c.borrow_mut().push(CtorCtx { document, props: rewrite_props });
+      // RAII pop on every exit incl. panic (review M1).
+      let _ctx_guard = CtorCtxGuard::new(CtorCtx {
+        document,
+        props: Rc::as_ptr(&rewrite_props),
       });
-      let result = replace.call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy), arr));
-      CTOR_CTX.with(|c| {
-        c.borrow_mut().pop();
-      });
-      let _: Dynamic =
-        result.map_err(|e| Error::from(format!("script rewrite replace: {e}")))?;
+      let _: Dynamic = replace
+        .call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy), arr))
+        .map_err(|e| Error::from(format!("script rewrite replace: {e}")))?;
       Ok(())
     },
   ));
