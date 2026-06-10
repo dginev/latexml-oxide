@@ -3338,13 +3338,6 @@ fixes landed" below)*
 
 **P2 — guard-architecture hardening (follow-up PR):**
 
-5. **`LATEXML_TOKEN_LIMIT=0` silently disables the cycle guard too** —
-   `g.progress += 1` is nested inside `if let Some(limit) = g.token_limit`,
-   so limit-off ⇒ progress frozen ⇒ the `progress > 12M` activation gate
-   never opens. Same freeze applies during `ini_tex` format-init
-   (`set_token_limit(None)`). Trivial fix: increment progress
-   unconditionally; keep only the comparison conditional.
-
 6. **Stomach guards are inert on `digest()`/`raw_tex` paths, and self-disable
    once pending.** All four stomach guards only SET `pending_cycle_fatal`;
    the sole raiser is `check_timeout`, whose only call site is

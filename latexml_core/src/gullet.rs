@@ -509,8 +509,15 @@ fn read_resource_checkpoint() -> Result<()> {
   if g.runtime.is_none() {
     return Ok(());
   }
+  // Progress counts UNCONDITIONALLY: the cycle guard's activation gate
+  // (`progress > CYCLE_GUARD_ACTIVATE`) feeds off it, so nesting the
+  // increment inside the token-limit branch made `LATEXML_TOKEN_LIMIT=0`
+  // (and `set_token_limit(None)` during format init) silently disable the
+  // cycle guard as well — exactly when an operator disables the limit to
+  // let a big document through is when the loop guard matters most.
+  // (PR #249 review P2-5.) Only the limit COMPARISON stays conditional.
+  g.progress += 1;
   if let Some(limit) = g.token_limit {
-    g.progress += 1;
     if g.progress > limit {
       let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
       drop(g);
