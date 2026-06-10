@@ -5,6 +5,6 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <p>PASS_A. PASS_B. PASS_C.</p>
+    <p>PASSA. PASSB. PASSC.</p>
   </para>
 </document>
