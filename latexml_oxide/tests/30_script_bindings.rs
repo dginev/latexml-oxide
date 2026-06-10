@@ -251,13 +251,6 @@ fn script_dispatch(request: &str) -> Option<Result<()>> {
 
 #[test]
 fn script_binding_macro_and_constructor_convert() {
-  // Capture this conversion's log deterministically (independent of whichever
-  // other test happened to `logger::init` first) so the zero-error assertion
-  // below is order-stable. Without this, a benign error would surface or hide
-  // based on test ordering.
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
-  latexml_core::util::logger::bind_log();
-
   let mut latexml = Core::new(CoreOptions {
     verbosity: Some(-2),
     include_comments: Some(false),
@@ -282,14 +275,16 @@ fn script_binding_macro_and_constructor_convert() {
     .expect("conversion with a script binding should succeed");
   let xml = doc.serialize_to_string();
 
-  // No spurious `Error:` from any specimen — pins the malformed-close class
-  // (a block hole rendered in inline text would auto-close the text and leave
-  // the template's `</…>` dangling). The captured log is bound above so this
-  // is independent of test order.
-  let log = latexml_core::util::logger::flush_log();
+  // No spurious `Error:`/`Fatal:` from any specimen — pins the malformed-close
+  // class (a block hole rendered in inline text would auto-close the text and
+  // leave the template's `</…>` dangling). Uses the O(1) status counter
+  // (`convert_file` reset it at conversion start), not a log-string scan —
+  // order-independent and allocation-free.
+  use latexml_core::common::error::{get_status, LogStatus};
   assert!(
-    !log.contains("Error:") && !log.contains("Fatal:"),
-    "conversion logged errors:\n{log}"
+    get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
+    "conversion logged errors: {}",
+    latexml_core::common::error::get_status_message()
   );
 
   // NB: the serializer emits the LaTeXML namespace as the default (no `ltx:`

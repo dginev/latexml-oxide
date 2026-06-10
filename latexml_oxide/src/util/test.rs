@@ -149,6 +149,34 @@ const KNOWN_ERROR_TESTS: &[&str] = &[
   "figure_mixed_content", // Perl: 1 error (ltx:theorem not allowed in ltx:figure)
 ];
 
+/// PRE-EXISTING **Rust-only** errors the zero-error gate surfaced on
+/// 2026-06-10 (Perl LaTeXML converts all three CLEANLY — verified with
+/// `bin/latexml` — so these are genuine engine bugs, NOT parity-accepted
+/// `KNOWN_ERROR_TESTS`). They are exempted ONLY so the gate can protect the
+/// rest of the suite; each MUST be driven to zero and removed. They passed
+/// before merely because the XML-diff matched via error-recovery output.
+/// Tracked in `docs/SYNC_STATUS.md` ("drive KNOWN_ERROR_TESTS / Rust-only
+/// gate debt to zero"). Do NOT add to this list to silence new errors —
+/// fix them.
+const RUST_ERROR_DEBT: &[&str] = &[
+  // Rust: recursion guard fires on `\def\cs{\protect\cs}` under
+  // `\protected@edef` even though `\protect` is unexpandable there (the very
+  // case the test was written to prevent). Perl: clean.
+  "protect_self_ref",
+  // Rust: `_` in the macro bodies (`PASS_A`/`FAIL_A`) errors "Script _ can
+  // only appear in math mode" in text mode. Perl: clean (handles text `_`).
+  "let_alias_to_conditional",
+  // Rust: ~50 undefined datatool/expl3 macros (`\__datatool_*`, `\DTLinitials`,
+  // …) → 64 errors; a datatool/expl3 coverage gap. Perl: clean.
+  "glossary",
+];
+
+/// A test is exempt from the zero-error gate if it is a Perl-parity
+/// known-error case OR tracked Rust-error debt (see the two lists above).
+fn error_gate_exempt(name: &str) -> bool {
+  KNOWN_ERROR_TESTS.contains(&name) || RUST_ERROR_DEBT.contains(&name)
+}
+
 pub fn latexml_test_single(
   tex_file_str: &str,
   name: &str,
@@ -268,8 +296,37 @@ fn process_texfile(
   // its ~110 MB engine, accumulating to ~4.9 GB across the suite. The
   // output is already owned `String`s by now, so no live `SymStr`
   // survives the reset. See `latexml_core::reset_thread_engine`.
+  // Zero-error gate: a normal TeX-emulation conversion must log no
+  // `Error:`/`Fatal:` (the status `note_status` counts even when log output is
+  // off), so every regression test is also an error-regression sentinel — not
+  // just an XML-shape check. Tests that legitimately emit errors opt out via
+  // `KNOWN_ERROR_TESTS`.
+  //
+  // Perf (this runs on every test, often): the hot path is two thread-local
+  // integer reads via `get_status` (no allocation, no log-string scan) plus a
+  // 2-element slice lookup; the status *message* is built only on the cold
+  // panic path. `convert_file` reset the report at conversion start, so this
+  // count is exactly this conversion's. Read BEFORE `reset_thread_engine`.
+  let errored = !error_gate_exempt(name)
+    && (latexml_core::common::error::get_status(latexml_core::common::error::LogStatus::Error) > 0
+      || latexml_core::common::error::get_status(latexml_core::common::error::LogStatus::Fatal) > 0);
+  let status_msg = if errored {
+    Some(latexml_core::common::error::get_status_message())
+  } else {
+    None
+  };
   drop(latexml);
   latexml_core::reset_thread_engine();
+  if let Some(msg) = status_msg {
+    panic!(
+      "{name}: conversion logged errors ({msg}) — a normal-TeX test must be \
+       error-clean. Fix the engine/binding/specimen. Only if Perl LaTeXML \
+       errors on the SAME input, add {name:?} to KNOWN_ERROR_TESTS (parity); \
+       if Perl is clean and the fix is deferred, add it to RUST_ERROR_DEBT \
+       with a SYNC_STATUS entry. See \
+       docs/reproducers/MALFORMED_CLOSE_NUMBERED_2026-06-10.md."
+    );
+  }
   r
 }
 

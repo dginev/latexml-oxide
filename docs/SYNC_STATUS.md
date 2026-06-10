@@ -13,6 +13,55 @@
 
 ---
 
+## Open task: drive `KNOWN_ERROR_TESTS` to error-free conversions (opened 2026-06-10)
+
+The test harness (`latexml_oxide/src/util/test.rs`) now enforces a
+**zero-`Error:`/`Fatal:` gate** on every `.tex`/`.xml` regression test
+via the O(1) status counter (`get_status(Error|Fatal)`), so each
+regression test is also an error-regression sentinel — not just an
+XML-shape check. Verified red/green (removing an allowlist entry makes
+its test fail with the exact count). Blast radius when introduced: **zero**
+— all 1428 tests across 55 binaries were already error-clean except the
+allowlist.
+
+There are TWO opt-out buckets in `latexml_oxide/src/util/test.rs`:
+
+**A. `KNOWN_ERROR_TESTS`** — Perl LaTeXML **also errors** on the same input
+(parity-accepted; surpass-Perl is optional polish):
+- `io` — Perl: 2 errors (mode-switch egroup from `\readnext`).
+- `figure_mixed_content` — Perl: 1 error (`ltx:theorem` not allowed in
+  `ltx:figure`).
+
+**B. `RUST_ERROR_DEBT`** — **PRE-EXISTING Rust-only bugs** the gate
+surfaced 2026-06-10. Perl converts all three **cleanly** (verified with
+`bin/latexml`), so these are genuine engine gaps, NOT parity cases. They
+passed before only because the XML-diff matched via error-recovery output;
+the gate is exempting them ONLY so it can protect the rest of the suite.
+**These are HIGH PRIORITY to fix and remove** (do NOT treat as accepted):
+- `protect_self_ref` — Rust fires `recursion:\msgheader expands into
+  itself` on `\def\cs{\protect\cs}` under `\protected@edef` even though
+  `\protect` is unexpandable there. This is the exact case the test was
+  written to guard (msg.sty's `\msgheader`/`\msgtrailer`; an 8-paper
+  cluster per the test comment). Perl: clean. Fix: `Expandable::invoke`'s
+  static body-pattern recursion check must respect `\protect`'s current
+  meaning.
+- `let_alias_to_conditional` — Rust errors `unexpected:_ Script _ can
+  only appear in math mode` on the `_` in the `PASS_A`/`FAIL_A` macro
+  bodies (text mode). Perl: clean (handles a text-mode `_`). Fix: text-mode
+  `_` handling (the conditional/`\let` logic the test names actually works;
+  the failure is the underscore catcode).
+- `glossary` — Rust ~50 undefined datatool/expl3 macros
+  (`\__datatool_*`, `\DTLinitials`, …) → 64 errors. Perl: clean. Fix:
+  datatool/expl3 coverage gap.
+
+**Task:** (B first, as real bugs) drive each `RUST_ERROR_DEBT` case to a
+clean conversion via a real engine fix (never a downgrade — see the banner
+above) and delete it from the list; the gate then keeps it clean. (A) is
+optional surpass-Perl polish. When an entry is resolved, remove it and the
+zero-error gate enforces it thereafter.
+
+---
+
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
 > **✅ PARITY-TRACK Rust-only pool DRAINED across the sampled corpus (capstone, 2026-06-01).**
