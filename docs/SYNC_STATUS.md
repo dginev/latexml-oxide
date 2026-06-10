@@ -23,32 +23,45 @@ check. Verified red/green. Two decoupled, documented categories with OPPOSITE
 long-term contracts:
 
 **`INTENTIONALLY_FAILING`** — a *permanent contract* that the input SHOULD
-error (genuinely ill-formed/pathological; erroring is correct forever). The
-gate asserts the **exact** count; *zero* errors is itself a regression (we
-stopped detecting the bad input). Not debt.
+error, **softly**: a recoverable `Error:` (never `Fatal:` — graceful recovery
+and a completed conversion is the whole point). The gate asserts the exact
+**soft** count AND `fatal == 0`; *zero* or a *fatal* is a regression. Not debt.
 - `protect_self_ref` (1) — `\def\cs{\protect\cs}` typeset self-recurses;
-  **pdflatex HANGS**, Perl+Rust both emit 1 (the recursion guard prevents the
-  hang). Verified 2026-06-10 (latexml --verbose).
+  **pdflatex HANGS**, Perl+Rust both emit 1 soft error (the recursion guard
+  prevents the hang). Verified 2026-06-10 (`latexml --verbose`, pdflatex).
+- `io` (2) — `exists.data` line 21 deliberately has an unbalanced brace
+  (`line { with extra } }`) to verify the engine emits a SOFT recoverable error
+  (not Fatal) and completes. **pdflatex errors+recovers** (`! Too many }'s …
+  silently discards }`); Perl+Rust both emit 2 soft errors. The fixture may
+  have been valid in an older TeX Live; the malformed line now serves as the
+  intentional soft-error test it always was.
 
 **`ERROR_DEBT`** — valid input we INTEND to convert cleanly (a desired,
 surpass-Perl success) but which errors today. The gate tolerates `>0` (logged
 `[error-debt]`) and **FAILS at zero** to force removal once fixed. Drive each
 to clean via a real core fix (never a downgrade — see the banner above):
-- `io` — clean file I/O is the goal; today: mode-switch egroup from
-  `\readnext` (Perl also errors 2; surpass-Perl).
-- `figure_mixed_content` — complex figures should convert clean; today:
-  `ltx:theorem` not allowed in `ltx:figure` (Perl also errors 1; surpass-Perl).
 - `glossary` — **Rust-only** (Perl: 0 errors): ~50 undefined datatool/expl3
-  macros (`\__datatool_*`, `\DTLinitials`, …). Highest priority — a genuine
-  coverage gap, not a surpass-Perl reach.
+  macros (`\__datatool_*`, `\DTLinitials`, …). Root cause: **l3regex** gap —
+  datatool's word/initials parsing uses `\regex_new:N` + capture groups. Large
+  (l3regex is a full regex engine) — its own effort.
+- `figure_mixed_content` — complex figures should convert clean; today
+  `ltx:theorem` not allowed in `ltx:figure` (Perl also errors 1). True fix =
+  **schema expansion** (theorems in figures) — a separate, deferred issue.
 
-**Resolved 2026-06-10:** `let_alias_to_conditional` — was mis-filed as a bug;
-the `_`-in-text-mode errors were *incidental* to the literals (`PASS_A`), which
-both Perl and `pdflatex` also error on. Renamed the literals (`PASS_A`→`PASSA`)
-so the test cleanly exercises only its subject (`\let \drcond \ifx`); now a
-normal error-clean test, no exemption.
+**Resolved 2026-06-10:**
+- `let_alias_to_conditional` — was mis-filed as a bug; the `_`-in-text-mode
+  errors were *incidental* to the literals (`PASS_A`), which both Perl and
+  `pdflatex` also error on. Renamed (`PASS_A`→`PASSA`) so it cleanly exercises
+  only its subject (`\let \drcond \ifx`); now a normal error-clean test.
+- `io` and `protect_self_ref` — moved to `INTENTIONALLY_FAILING` after
+  `pdflatex` confirmed both inputs are intrinsically erroring (io: deliberate
+  malformed read content; protect: infinite recursion). They are soft-error
+  recovery contracts, not bugs to fix.
 
-**Pitfall recorded:** classify with **non-quiet** `bin/latexml` — `--quiet` HIDES Perl's errors and wrongly makes parity/intrinsic cases look "Perl-clean."
+**Pitfalls recorded:** classify with `bin/latexml --verbose` — `--quiet` HIDES
+Perl's errors (it once mis-classified two intrinsic cases as Rust-only). Always
+cross-check with `pdflatex`: if real TeX errors too, the input is intrinsic
+(→ `INTENTIONALLY_FAILING`), not error debt.
 
 ---
 

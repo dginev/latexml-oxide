@@ -144,16 +144,28 @@ fn install_sigsegv_handler() {
 /// (The discriminator is the input's validity, NOT whether Perl also errors:
 /// see `ERROR_DEBT` for valid inputs that merely error today.)
 ///
-/// The harness asserts the **exact** error count. Drift fails BOTH ways: *more*
-/// = a handling regression; *zero* = we silently STOPPED detecting the bad
-/// input (also a regression). Logged `[intentional-fail]`.
+/// The contract is a SOFT, RECOVERABLE error: the harness asserts the **exact**
+/// `Error:` count AND that there was **no `Fatal:`** — the whole point is that
+/// the engine recovers and completes the conversion (graceful degradation),
+/// never crashes. Drift fails BOTH ways: *more*/fatal = a handling regression;
+/// *zero* = we silently STOPPED detecting the bad input. Logged
+/// `[intentional-fail]`.
 const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
   (
     "protect_self_ref",
     1,
     "intrinsic self-recursion (\\def\\cs{\\protect\\cs} typeset): pdflatex HANGS, \
-     Perl+Rust both emit 1 — the recursion guard prevents the hang. \
+     Perl+Rust both emit 1 SOFT error — the recursion guard prevents the hang. \
      Verified 2026-06-10 (latexml --verbose=1 error, pdflatex=timeout).",
+  ),
+  (
+    "io",
+    2,
+    "deliberate malformed read content: `exists.data` line 21 has an unbalanced \
+     brace (`line { with extra } }`) to verify the engine emits a SOFT, \
+     recoverable error (not Fatal) and completes. pdflatex also errors+recovers \
+     (`! Too many }'s, silently discards }`); Perl+Rust both emit 2 soft errors. \
+     Verified 2026-06-10.",
   ),
 ];
 
@@ -165,14 +177,17 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// (verify with `latexml --verbose` — `--quiet` HIDES Perl errors). Tracked in
 /// `docs/SYNC_STATUS.md`.
 const ERROR_DEBT: &[(&str, &str)] = &[
-  ("io", "clean file I/O is the goal; today: mode-switch egroup from \\readnext (Perl also: 2)"),
   (
     "figure_mixed_content",
-    "complex figures should convert clean; today: ltx:theorem not allowed in ltx:figure (Perl also: 1)",
+    "complex figures should convert clean; today: ltx:theorem not allowed in \
+     ltx:figure (Perl also: 1). True fix = schema expansion (theorems in \
+     figures) — tracked as a separate issue.",
   ),
   (
     "glossary",
-    "~50 undefined datatool/expl3 macros (\\__datatool_*, \\DTLinitials, …); Rust-only (Perl: 0 errors)",
+    "~50 undefined datatool/expl3 macros (\\__datatool_*, \\DTLinitials, …); \
+     Rust-only (Perl: 0 errors). Root cause: l3regex gap (datatool word/initials \
+     parsing uses \\regex_new:N + capture groups). Large — own effort.",
   ),
 ];
 
@@ -303,7 +318,8 @@ fn process_texfile(
   // `Fatal:` even when log output is off, so this is the canonical signal.
   // Three contracts:
   //   • normal test            → MUST be error-clean (n_err == 0).
-  //   • INTENTIONALLY_FAILING  → MUST emit its exact count (permanent).
+  //   • INTENTIONALLY_FAILING  → MUST emit its exact SOFT count, NEVER fatal
+  //                              (graceful recovery is the contract; permanent).
   //   • ERROR_DEBT             → tolerated `>0` today, FAILS at 0 (force removal).
   //
   // Perf (runs on every test): the hot path is two thread-local integer reads
@@ -312,24 +328,35 @@ fn process_texfile(
   // the report at conversion start, so this count is exactly this conversion's.
   // Read BEFORE `reset_thread_engine`.
   use latexml_core::common::error::{get_status, LogStatus};
-  let n_err = get_status(LogStatus::Error) + get_status(LogStatus::Fatal);
+  let n_soft = get_status(LogStatus::Error);
+  let n_fatal = get_status(LogStatus::Fatal);
+  let n_err = n_soft + n_fatal;
   let intentional = INTENTIONALLY_FAILING.iter().find(|(n, _, _)| *n == name).copied();
   let debt = ERROR_DEBT.iter().find(|(n, _)| *n == name).copied();
   // Decide the verdict (and any cold-path message) before tearing down.
   let verdict: std::result::Result<(), String> = match (intentional, debt) {
-    // Permanent contract: exact count, both-direction drift detection.
+    // Permanent contract: exact SOFT-error count, and NEVER fatal — the point is
+    // graceful recovery. Drift fails both ways; a Fatal is always a regression.
     (Some((_, expect, reason)), _) => {
-      eprintln!("[intentional-fail] {name}: {n_err} errors (expect {expect}) — {reason}");
-      if n_err == expect {
+      eprintln!(
+        "[intentional-fail] {name}: {n_soft} soft errors, {n_fatal} fatal (expect {expect}, 0) — {reason}"
+      );
+      if n_fatal > 0 {
+        Err(format!(
+          "{name}: INTENTIONALLY_FAILING must degrade to a SOFT error, but got a Fatal \
+           ({}) — graceful recovery regressed. Reason: {reason}",
+          latexml_core::common::error::get_status_message()
+        ))
+      } else if n_soft == expect {
         Ok(())
-      } else if n_err == 0 {
+      } else if n_soft == 0 {
         Err(format!(
           "{name}: INTENTIONALLY_FAILING expects {expect} error(s) but got 0 — error \
            detection regressed (this input must still error). Reason: {reason}"
         ))
       } else {
         Err(format!(
-          "{name}: INTENTIONALLY_FAILING expects exactly {expect} error(s), got {n_err} \
+          "{name}: INTENTIONALLY_FAILING expects exactly {expect} soft error(s), got {n_soft} \
            ({}) — handling drifted. Reason: {reason}",
           latexml_core::common::error::get_status_message()
         ))
