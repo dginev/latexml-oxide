@@ -388,3 +388,39 @@ fn script_binding_macro_and_constructor_convert() {
   drop(latexml);
   latexml_core::reset_thread_engine();
 }
+
+/// Default `.rhai` FILE discovery (no embedder dispatcher): a
+/// `<name>.sty.rhai` next to the document is found via the searchpath
+/// machinery and loaded on `\usepackage{<name>}` — the downstream
+/// customize-without-recompiling story for the single-file binary.
+#[test]
+fn script_binding_discovered_from_file() {
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
+
+  let dir = std::env::temp_dir().join("lx_rhai_discovery");
+  std::fs::create_dir_all(&dir).expect("tempdir");
+  std::fs::write(
+    dir.join("lxdisc.sty.rhai"),
+    r#"DefMacro("\\discmark", || "DISCOVERED");"#,
+  )
+  .expect("write rhai");
+  let tex = dir.join("disc.tex");
+  std::fs::write(
+    &tex,
+    "\\documentclass{article}\\usepackage{lxdisc}\\begin{document}\\discmark\\end{document}",
+  )
+  .expect("write tex");
+
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config { format: OutputFormat::XML, ..Config::default() };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(tex.to_string_lossy().to_string());
+  let xml = r.result.expect("conversion should produce a document");
+  assert!(
+    xml.contains("DISCOVERED"),
+    "discovered .rhai binding did not load/expand; xml=\n{xml}"
+  );
+  latexml_core::reset_thread_engine();
+}

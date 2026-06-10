@@ -70,6 +70,19 @@ impl Converter {
     if let Some(closure) = &self.opts.extra_bindings_dispatch {
       set_extra_bindings_dispatch(closure.clone());
     }
+    // Default runtime-binding discovery (docs/script_bindings_plan.md §7):
+    // when no embedder-supplied dispatcher exists, resolve `<name>.<ext>.rhai`
+    // (e.g. `mypkg.sty.rhai`) through the same searchpath machinery as raw
+    // TeX sources and load it — downstream users of the single-file binary
+    // drop a .rhai next to their document to customize without recompiling.
+    #[cfg(feature = "runtime-bindings")]
+    if self.opts.extra_bindings_dispatch.is_none() {
+      set_extra_bindings_dispatch(Rc::new(|request: &str| {
+        let candidate = format!("{request}.rhai");
+        latexml_core::binding::content::find_file(&candidate, None)
+          .map(|path| latexml_contrib::script_bindings::load_file(&path).map(|_| ()))
+      }));
+    }
     // Also expose contrib's bindings (memoir / siamltex / scrbook / etc.)
     // so they participate in the same resolution pool. We unconditionally
     // register latexml_contrib here because the canonical setup for both
