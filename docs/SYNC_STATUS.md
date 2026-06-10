@@ -3289,14 +3289,7 @@ fixes landed" below)*
 
 **P1 — canvas-risk, fix before the next large sweep:**
 
-**P2 — guard-architecture hardening (follow-up PR):**
-
-8. **All stomach guard breaches raise as `Fatal:Stomach:Recursion`** — the 2M
-   count cap, 3.2GB byte budget, and 100k depth cap are size events, not
-   recursion; canvas/telemetry clustering on `target:category` cannot
-   distinguish byte-budget regressions from genuine cycles. Use distinct
-   categories (e.g. `Stomach:MemoryBudget`, precedent at
-   `Timeout:MemoryBudget`).
+**P1/P2 — all resolved** *(see "Review fixes landed" below)*
 
 **P3 — hygiene/altitude (cheap, batchable):**
 

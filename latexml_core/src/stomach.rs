@@ -53,8 +53,14 @@ pub fn check_timeout() -> Result<()> {
     .try_borrow_mut()
     .ok()
     .and_then(|mut s| s.pending_cycle_fatal.take());
-  if let Some(msg) = pending {
-    fatal!(Stomach, Recursion, msg);
+  if let Some((category, msg)) = pending {
+    use crate::common::error::Error as LatexmlError;
+    use crate::common::error::ErrorTarget;
+    return Err(LatexmlError {
+      target: ErrorTarget::Stomach,
+      category,
+      message: msg,
+    });
   }
   CONVERSION_DEADLINE.with(|d| {
     if let Some(deadline) = d.get() {
@@ -184,10 +190,14 @@ pub struct Stomach {
   /// the gullet read loop entirely. Engaged only once `box_list` has grown far
   /// past any flushed-document size. See [`crate::cycle_guard`].
   cycle_guard:        crate::cycle_guard::CycleGuard,
-  /// Set by `push_box_list` when `cycle_guard` fires; consumed and turned into
-  /// a `Fatal` by `check_timeout` (the next `Result`-returning checkpoint —
-  /// `push_box_list` itself returns `()` and cannot unwind).
-  pending_cycle_fatal: Option<String>,
+  /// Set by the guarded box appenders when a stomach guard fires; consumed
+  /// and turned into a `Fatal` by `check_timeout` (the next
+  /// `Result`-returning checkpoint — `push_box_list` itself returns `()` and
+  /// cannot unwind). Carries the structured category so size/byte/depth
+  /// breaches report as `Stomach:MemoryBudget` while only genuine detected
+  /// cycles report as `Stomach:Recursion` — canvas/telemetry clustering on
+  /// `target:category` can tell them apart (PR #249 review P2-8).
+  pending_cycle_fatal: Option<(crate::common::error::ErrorCategory, String)>,
 }
 
 #[thread_local]
@@ -893,10 +903,13 @@ pub fn new_local_box_list() {
   if stomach.localized_box_list.len() > STOMACH_BOXING_DEPTH_CAP
     && stomach.pending_cycle_fatal.is_none()
   {
-    stomach.pending_cycle_fatal = Some(s!(
-      "Boxing-stack runaway: box nesting depth exceeded {} \
-       (unbounded \\hbox/\\setbox nesting)",
-      STOMACH_BOXING_DEPTH_CAP
+    stomach.pending_cycle_fatal = Some((
+      crate::common::error::ErrorCategory::MemoryBudget,
+      s!(
+        "Boxing-stack runaway: box nesting depth exceeded {} \
+         (unbounded \\hbox/\\setbox nesting)",
+        STOMACH_BOXING_DEPTH_CAP
+      ),
     ));
   }
   std::mem::swap(&mut stomach.box_list, &mut buffer);
@@ -940,11 +953,14 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     // size, far past any flushed-document list. Analogous to the gullet's
     // platform-independent `token_limit`.
     if st.box_list.len() > STOMACH_BOX_HARD_CAP {
-      st.pending_cycle_fatal = Some(s!(
-        "Box-list runaway: {} accumulated boxes exceeded the hard cap of {} \
-         (unbounded digestion with no detectable cycle)",
-        st.box_list.len(),
-        STOMACH_BOX_HARD_CAP
+      st.pending_cycle_fatal = Some((
+        crate::common::error::ErrorCategory::MemoryBudget,
+        s!(
+          "Box-list runaway: {} accumulated boxes exceeded the hard cap of {} \
+           (unbounded digestion with no detectable cycle)",
+          st.box_list.len(),
+          STOMACH_BOX_HARD_CAP
+        ),
       ));
       return;
     }
@@ -964,24 +980,30 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     if len >= BYTE_CHECK_ACTIVATE && len % BYTE_CHECK_EVERY == 0 {
       let est = estimate_box_list_bytes(&st.box_list);
       if est > STOMACH_BOX_BYTES_BUDGET {
-        st.pending_cycle_fatal = Some(s!(
-          "Box-list memory runaway: ~{} MB estimated across {} boxes exceeded \
-           the {} MB internal budget (unbounded accumulation)",
-          est / 1_000_000,
-          len,
-          STOMACH_BOX_BYTES_BUDGET / 1_000_000
+        st.pending_cycle_fatal = Some((
+          crate::common::error::ErrorCategory::MemoryBudget,
+          s!(
+            "Box-list memory runaway: ~{} MB estimated across {} boxes exceeded \
+             the {} MB internal budget (unbounded accumulation)",
+            est / 1_000_000,
+            len,
+            STOMACH_BOX_BYTES_BUDGET / 1_000_000
+          ),
         ));
         return;
       }
     }
     let fp = d.cycle_fingerprint();
     if let Some(period) = st.cycle_guard.push(fp) {
-      st.pending_cycle_fatal = Some(s!(
-        "Infinite digestion loop: a window of {} box(es) repeated {}+ times \
-         while the box list grew past {}",
-        period,
-        crate::cycle_guard::REPEAT,
-        STOMACH_CYCLE_ACTIVATE
+      st.pending_cycle_fatal = Some((
+        crate::common::error::ErrorCategory::Recursion,
+        s!(
+          "Infinite digestion loop: a window of {} box(es) repeated {}+ times \
+           while the box list grew past {}",
+          period,
+          crate::cycle_guard::REPEAT,
+          STOMACH_CYCLE_ACTIVATE
+        ),
       ));
     }
   }
