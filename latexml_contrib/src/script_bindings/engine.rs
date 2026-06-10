@@ -286,6 +286,36 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // AssignMapping / mapping lookup (Perl AssignMapping/LookupMapping).
+  engine.register_fn("AssignMapping", |map: &str, key: &str, value: &str| {
+    latexml_core::state::assign_mapping(map, key, Some(value.to_string()));
+  });
+  engine.register_fn("LookupMapping", |map: &str, key: &str| -> String {
+    latexml_core::state::with_mapping(map, key, |meaning| match meaning {
+      Some(Stored::String(s)) => arena::to_string(*s),
+      Some(other) => other.to_string(),
+      None => String::new(),
+    })
+  });
+
+  // GetKeyVal / GetKeyVals over the keyval dict's TeX-source form (how an
+  // `OptionalKeyVals:` argument reaches a script body): "k=v,k2={v2}" → value
+  // by key / a Rhai map of all pairs. Brace-aware at depth 0, like keyval.
+  engine.register_fn("GetKeyVal", |kv: &str, key: &str| -> String {
+    keyval_pairs(kv)
+      .into_iter()
+      .find(|(k, _)| k == key)
+      .map(|(_, v)| v)
+      .unwrap_or_default()
+  });
+  engine.register_fn("GetKeyVals", |kv: &str| -> Map {
+    let mut m = Map::new();
+    for (k, v) in keyval_pairs(kv) {
+      m.insert(k.into(), Dynamic::from(v));
+    }
+    m
+  });
+
   // RefStepID / RefCurrentID: the id-only siblings of RefStepCounter.
   engine.register_fn(
     "RefStepID",

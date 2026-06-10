@@ -47,6 +47,12 @@ fn pool_surface_state_counters_tokens() {
       assign_global("ws:meaning", if LookupMeaning("\\wsfoo") == "" { "none" } else { "some" });
       let idmap = RefStepID("wsctr");
       assign_global("ws:refid", if "id" in idmap { "has" } else { "none" });
+
+      AssignMapping("wsmap", "alpha", "A1");
+      assign_global("ws:map", LookupMapping("wsmap", "alpha"));
+      assign_global("ws:kv1", GetKeyVal("lang=rust, size={1, 2}", "size"));
+      let kvm = GetKeyVals("lang=rust, size={1, 2}");
+      assign_global("ws:kv2", kvm.lang);
     "##,
   )
   .expect("wave-A surface script should load cleanly");
@@ -75,6 +81,9 @@ fn pool_surface_state_counters_tokens() {
     "LookupMeaning sees \\wsfoo"
   );
   assert_eq!(lookup_str("ws:refid"), "has", "RefStepID returns id");
+    assert_eq!(lookup_str("ws:map"), "A1", "AssignMapping/LookupMapping");
+    assert_eq!(lookup_str("ws:kv1"), "1, 2", "GetKeyVal brace-aware value");
+    assert_eq!(lookup_str("ws:kv2"), "rust", "GetKeyVals map access");
 }
 
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional

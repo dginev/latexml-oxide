@@ -330,5 +330,47 @@ fn dynamic_to_string(d: Dynamic) -> String {
   }
 }
 
+/// Split a keyval dict's TeX-source form ("k=v, k2={v 2}") into (key, value)
+/// pairs — comma/equals splitting at brace depth 0 only, one level of outer
+/// braces stripped from values (keyval semantics).
+fn keyval_pairs(kv: &str) -> Vec<(String, String)> {
+  let mut pairs = Vec::new();
+  let mut depth = 0usize;
+  let mut item = String::new();
+  let mut items: Vec<String> = Vec::new();
+  for c in kv.chars() {
+    match c {
+      '{' => {
+        depth += 1;
+        item.push(c);
+      },
+      '}' => {
+        depth = depth.saturating_sub(1);
+        item.push(c);
+      },
+      ',' if depth == 0 => items.push(std::mem::take(&mut item)),
+      _ => item.push(c),
+    }
+  }
+  if !item.trim().is_empty() {
+    items.push(item);
+  }
+  for it in items {
+    let (k, v) = match it.find('=') {
+      Some(eq) => (it[..eq].trim(), it[eq + 1..].trim()),
+      None => (it.trim(), ""),
+    };
+    if k.is_empty() {
+      continue;
+    }
+    let v = v
+      .strip_prefix('{')
+      .and_then(|s| s.strip_suffix('}'))
+      .unwrap_or(v);
+    pairs.push((k.to_string(), v.to_string()));
+  }
+  pairs
+}
+
 #[cfg(test)]
 mod tests;
