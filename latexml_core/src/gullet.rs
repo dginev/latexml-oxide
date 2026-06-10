@@ -138,9 +138,24 @@ static DEBUG_FATAL: Lazy<bool> =
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
   RefCell::new(Gullet {
     // Safety limit: prevents infinite loops from corrupted macro state.
-    // A typical LaTeX document with expl3 processes ~5M tokens. TikZ documents
-    // with complex figures can reach 30-80M tokens due to pgf's TeX-level math engine.
-    // Papers with 30+ tikzpictures (e.g., graph theory) need ~80M.
+    //
+    // RECALIBRATED 2026-06-10 (PR #249 review P1-2): the read checkpoints now
+    // count in ALL THREE reader loops (read_token, read_x_token,
+    // read_balanced) — the historical "TikZ papers need ~80M" figure was
+    // measured when ONLY read_token counted, so the old 100M cap silently
+    // shrank by the multi-counting factor. Measured end-of-run progress
+    // under the NEW accounting (`Info:gullet:progress`, release build,
+    // known-good papers):
+    //   math0402448 (amsart + xy-pic, 3464 formulae)  80.2M  ← heaviest
+    //   hep-ph0012156 (28 MB output)                   7.5M
+    //   math0104252                                    3.1M
+    //   2110.10227 (ems-journal + babel)               2.7M
+    //   gr-qc0209055                                   1.7M
+    // 400M = 5× the heaviest measured legitimate paper, preserving the old
+    // margin ratio while absorbing the counting change. The token limit is
+    // the BACKSTOP — real runaways are cut far earlier by the cycle guards /
+    // pushback limit / byte budget — so erring high costs nothing in
+    // detection latency.
     // `LATEXML_TOKEN_LIMIT` overrides (0 disables) — diagnostic/operator
     // control, mirroring LATEXML_RSS_CAP_BYTES.
     token_limit: match std::env::var("LATEXML_TOKEN_LIMIT")
@@ -149,7 +164,7 @@ pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
     {
       Some(0) => None,
       Some(n) => Some(n),
-      None => Some(100_000_000),
+      None => Some(400_000_000),
     },
     ..Gullet::default()
   })
@@ -190,6 +205,10 @@ pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
 
 /// Set the pushback limit (maximum pushback stack size before fatal error).
 pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit = limit; }
+
+/// The conversion's final token-read progress (for end-of-run telemetry —
+/// the calibration basis for `token_limit` / `CYCLE_GUARD_ACTIVATE`).
+pub fn final_progress() -> usize { gullet!().progress }
 
 /// Restore the token limit and progress from a previous set_token_limit call.
 pub fn restore_token_limit(saved: (Option<usize>, usize)) {
@@ -644,13 +663,19 @@ pub fn read_token() -> Result<Option<Token>> {
 }
 
 /// Engage the gullet's expansion-stream cycle guard only after this many
-/// tokens have been read. A typical document is ~5M tokens and even heavy
-/// tikz/pgf documents land in the tens of millions; this threshold sits above
-/// the ordinary range so light/normal conversions never record a fingerprint,
-/// yet an actual runaway (which heads for the 100M `token_limit` / multi-GB
-/// RSS) blows past it and gets cut off in O(window) extra tokens. False
-/// positives are guarded by the period-`REPEAT` requirement, not this bound.
-const CYCLE_GUARD_ACTIVATE: usize = 12_000_000;
+/// tokens have been read. Sits above the ordinary range so light/normal
+/// conversions never record a fingerprint, while an actual runaway (which
+/// heads for the 400M `token_limit` / multi-GB RSS) blows past it and gets
+/// cut off in O(window) extra tokens. False positives are guarded by the
+/// period-`REPEAT` requirement, not this bound.
+///
+/// RECALIBRATED 2026-06-10 (PR #249 review P1-2) against the NEW
+/// all-three-loops progress accounting (see the `token_limit` table above):
+/// typical known-good papers measure 0.6–7.5M; 20M keeps every measured
+/// ordinary paper fingerprint-free with ~2.7× headroom. (math0402448 at
+/// 80M does enter the recording regime — its xymatrix stream is exactly why
+/// the guard is context-scoped, see `reading_from_mouth`.)
+const CYCLE_GUARD_ACTIVATE: usize = 20_000_000;
 
 /// Read the next non-expandable token (expanding tokens until there's a non-expandable one).
 ///

@@ -21,6 +21,16 @@ LoadDefinitions!({
   // and 2× Perl's (iflimit) on heavily macro-driven IEEEtran + tikz +
   // pgfplots input; root-causing those is tracked as a follow-up but
   // would let us tighten the constants back toward the Perl defaults.
+  //
+  // tokenlimit RECALIBRATED 2026-06-10 (PR #249 review P1-2): the gullet
+  // read checkpoints now count in all three reader loops (was: read_token
+  // only), so the old 249999999 — calibrated under the old accounting —
+  // silently shrank by the multi-counting factor. Measured heaviest
+  // known-good ar5iv-profile paper under the new accounting: math0402448 at
+  // 80.2M (`Info:gullet:progress`). 999999999 keeps the canvas profile's
+  // generous backstop posture (runaways are cut much earlier by the cycle
+  // guards / pushbacklimit / byte budget; the tokenlimit only bounds
+  // aperiodic grind).
   latexml_core::binding::content::pass_options("latexml", "sty", vec![
     s!("ids"),
     s!("rawstyles"),
@@ -28,7 +38,7 @@ LoadDefinitions!({
     s!("nobreakuntex"),
     s!("magnify=1.2"),
     s!("zoomout=1.2"),
-    s!("tokenlimit=249999999"),
+    s!("tokenlimit=999999999"),
     s!("iflimit=8000000"),
     s!("absorblimit=1299999"),
     s!("pushbacklimit=650000"),

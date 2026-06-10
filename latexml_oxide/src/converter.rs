@@ -334,6 +334,11 @@ impl Converter {
     // 5.2 Finalize logging and return a response containing the document result, log and status
     if self.opts.verbosity >= 0 {
       Info!("arena", "strings_allocated", arena::len());
+      // Final token-read progress: the calibration basis for `token_limit`
+      // and `CYCLE_GUARD_ACTIVATE` (the read-checkpoint accounting changed
+      // in PR #249 — read_x_token/read_balanced now count too — so limits
+      // must be recalibrated against THIS metric, not historical figures).
+      Info!("gullet", "progress", latexml_core::gullet::final_progress());
     }
     // MARPA_ASF_STATS=1: emit ASF instrumentation counters once
     // per converted document. Codex instrumentation plan, see

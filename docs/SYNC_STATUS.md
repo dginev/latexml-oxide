@@ -3289,20 +3289,6 @@ fixes landed" below)*
 
 **P1 — canvas-risk, fix before the next large sweep:**
 
-2. **Token-progress accounting inflated; limits not recalibrated.** On master
-   only `read_token` counted progress — `read_x_token` ("most tokens pass
-   through here") and `read_balanced` counted ZERO. The guard-bypass fix
-   (`4b1f104278`) now counts all three loops, so the same document accrues
-   a large multiple of master's progress (~1x plain text, 2-4x+
-   macro-heavy), but `token_limit=100M` (comment: "30+ tikzpictures need
-   ~80M" — measured under OLD counting), ar5iv's `tokenlimit=249999999`, and
-   `CYCLE_GUARD_ACTIVATE=12M` were all calibrated against the old counting.
-   Risk: legit heavy tikz/pgf papers newly die with
-   `Fatal:Timeout:TokenLimit`, and far more papers enter the cycle-guard's
-   fingerprint-recording regime. Action: measure progress-vs-master on ~10
-   heavy known-good papers, recalibrate the three constants (or count
-   progress at one chokepoint only), THEN re-run a canvas stage as the gate.
-
 3. **Gullet cycle guard has a verified uniform-run false positive.**
    `cycle_guard::detect()` has no period-1 suppression (the
    `detects_period_one` unit test proves 300 identical fingerprints fire),
