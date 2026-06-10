@@ -3284,21 +3284,8 @@ next canvas sweep; P2/P3 as tracked follow-ups.** The branch's wins (canvas_3
 16/16, OOM root-causes, guard architecture) are real and validated; the items
 below are the cost of the speed.
 
-**P0 — regression, must fix before merge:**
-
-1. **NUL-byte attribute panic (LIVE-REPRO'D conversion killer).** Commit
-   `88f8bd44ce` changed NUL's default catcode IGNORE→OTHER (Perl parity for
-   `` `^^@ ``) but the claim "stray NULs are stripped at XML serialization"
-   only holds for TEXT sinks (`open_text_internal`). The ATTRIBUTE sink does
-   not strip: `$a\0b$` (NUL inside math — exactly the stray-NUL-in-`.bbl`
-   class the old IGNORE guarded, witness astro-ph0004127) reaches
-   `Document::set_attribute` → libxml `CString::new(value).unwrap()` →
-   **panic at libxml node.rs:639, whole conversion dies** (process abort
-   under the maxperf `panic=abort` distribution build). Master converted the
-   same input cleanly. Fix: sanitize XML-invalid control chars (at minimum
-   NUL) in `Document::set_attribute` (and audit text sinks for the full
-   XML-1.0 invalid-char class) — keeping catcode-12 Perl parity while making
-   serialization total. Add `$a\0b$` as a regression test.
+**P0 — regression, must fix before merge:** *(all resolved — see "Review
+fixes landed" below)*
 
 **P1 — canvas-risk, fix before the next large sweep:**
 

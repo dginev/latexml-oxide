@@ -2073,9 +2073,10 @@ impl Document {
     }
     // Sibling guard to open_math_text_internal: libxml's append_text uses
     // CString and panics on embedded NULs (forbidden in XML text per spec).
-    // Strip them up-front so all downstream append_text calls are safe.
-    if text.contains('\0') {
-      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
+    // Strip them — and the rest of the XML-invalid control class — up-front
+    // so all downstream append_text calls are safe and the output stays
+    // well-formed (shared policy with `set_attribute`, see `xml_sanitize`).
+    if let Cow::Owned(cleaned) = xml_sanitize(text) {
       return self.open_text_internal(&cleaned);
     }
     if self.node.get_type() == Some(NodeType::TextNode) {
@@ -2261,16 +2262,12 @@ impl Document {
     let mut node = self.node.clone();
     // my $font = $self->getNodeFont($node);
     // libxml's append_text uses CString and panics on embedded NULs. NUL is
-    // forbidden in XML text per spec anyway, so strip it. Witness:
-    // astro-ph0202376 (a paper that produces math tokens with \char0 / NUL
-    // bytes embedded in their content). Matches Perl's libxml behavior which
-    // silently drops NULs in text content.
-    if text.contains('\0') {
-      let cleaned: String = text.chars().filter(|c| *c != '\0').collect();
-      node.append_text(&cleaned)?;
-    } else {
-      node.append_text(text)?;
-    }
+    // forbidden in XML text per spec anyway, so strip it (and the rest of the
+    // XML-invalid control class — shared policy with `set_attribute`, see
+    // `xml_sanitize`). Witness: astro-ph0202376 (a paper that produces math
+    // tokens with \char0 / NUL bytes embedded in their content). Matches
+    // Perl's libxml behavior which silently drops NULs in text content.
+    node.append_text(&xml_sanitize(text))?;
     // print STDERR "Trying Math Ligatures at \"$string\"\n";
     if !state::get_nomathparse_flag() {
       self.apply_math_ligatures(&mut node)?;
@@ -2735,6 +2732,16 @@ impl Document {
   // Also records, and checks, any id attributes.
   // [xml:id and namespaced attributes are always allowed]
   pub fn set_attribute(&mut self, node: &mut Node, key: &str, value: &str) -> Result<()> {
+    // Sanitize BEFORE the empty check: a value of only invalid chars (e.g. a
+    // lone NUL) must degrade to the skip path, not reach libxml. Without this
+    // an interior NUL panics in libxml's `CString::new(value).unwrap()`
+    // (node.rs:639) and aborts the whole conversion — witness `$a^^@b$`-class
+    // stray NULs (BibTeX `\"u`-mangling) reaching the `tex=` reversion
+    // attribute now that NUL's catcode is 12/OTHER like Perl. The text sinks
+    // (`open_text_internal`/`open_math_text_internal`) already stripped NUL;
+    // this attribute sink did not. PR #249 review P0-1.
+    let value_sanitized = xml_sanitize(value);
+    let value: &str = &value_sanitized;
     if value.is_empty() {
       return Ok(()); // skip if empty
     }
@@ -4634,6 +4641,24 @@ impl Document {
 }
 
 // Auxiliary
+
+/// Strip characters that may not appear in XML 1.0 content at all: NUL and
+/// the other C0 controls except TAB/LF/CR, plus the non-characters
+/// U+FFFE/U+FFFF. libxml's `CString`-based APIs *panic* on interior NULs
+/// (node.rs:639), and the rest produce non-well-formed output that downstream
+/// XML consumers reject. Single shared policy for the document sinks
+/// (`set_attribute`, `open_text_internal`, `open_math_text_internal`).
+/// Borrow-free in the (overwhelmingly common) clean case.
+fn xml_sanitize(value: &str) -> Cow<'_, str> {
+  fn invalid(c: char) -> bool {
+    (c < '\u{20}' && c != '\t' && c != '\n' && c != '\r') || c == '\u{FFFE}' || c == '\u{FFFF}'
+  }
+  if value.chars().any(invalid) {
+    Cow::Owned(value.chars().filter(|c| !invalid(*c)).collect())
+  } else {
+    Cow::Borrowed(value)
+  }
+}
 
 fn serialize_string(string: &str) -> String {
   // Basic entities
