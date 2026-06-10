@@ -286,6 +286,14 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // AssignMeaning: bind a CS's meaning to another CS's current meaning by
+  // name (the string form; Tokens-meaning binding goes via Let/RawTeX).
+  engine.register_fn("AssignMeaning", |cs: &str, other: &str| {
+    if let Some(m) = latexml_core::state::lookup_meaning(&latexml_core::T_CS!(other)) {
+      latexml_core::state::assign_meaning(&latexml_core::T_CS!(cs), m, None);
+    }
+  });
+
   // AssignMapping / mapping lookup (Perl AssignMapping/LookupMapping).
   engine.register_fn("AssignMapping", |map: &str, key: &str, value: &str| {
     latexml_core::state::assign_mapping(map, key, Some(value.to_string()));
