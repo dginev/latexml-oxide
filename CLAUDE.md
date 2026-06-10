@@ -143,6 +143,11 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 - **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
 
 **Dated diagnostic snapshots** (point-in-time studies — see naming rule):
+- **[`docs/MEMORY_GUARD_HARDENING_2026-06-09.md`](docs/MEMORY_GUARD_HARDENING_2026-06-09.md)** — Root-cause analysis of the canvas_3 OOM cluster + the layered runaway-guard architecture (cycle guards, byte budget, boxing-depth cap); resolved, kept as the guard-design record.
+- **[`docs/PGF_ARC_BISECTION_2201.09268_2026-06-09.md`](docs/PGF_ARC_BISECTION_2201.09268_2026-06-09.md)** — pgf line–arc bisection non-termination root cause (1e-5 trig drift); mitigated by guards, bit-exact fix deferred.
+- **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — Phase-0 study + design scoping for the `expected:id` dangling-XMRef cluster (no code landed yet).
+- **[`docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md`](docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md)** — xml:id accessor-discipline audit feeding the expected:id design.
+- **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study (largely superseded by the missing-dump finding; see SYNC_STATUS).
 - **[`docs/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/PORTABILITY_MACOS_PROBE_2026-06-07.md)** — macOS native-dependency probe for issue #217 (BasicTeX vs brew texlive; the kpathsea dichotomy → subprocess-`kpsewhich` Phase 1 spec).
 - **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.
 - **[`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md)** — Math-parser ambiguity sweep; patterns 1/3/4 closed, pattern 2 (VERTBAR-modulus) open. (Code in `latexml_math_parser/*` points here for the open pattern.)

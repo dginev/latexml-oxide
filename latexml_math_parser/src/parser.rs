@@ -2727,7 +2727,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
       // c + dc + d", regressing choose/declare/sampler): callers here rely on
       // an unresolved ref returning the XMRef itself. The warnings are benign
       // (WARN-level, targets resolve in the final tree); do not "fix" them by
-      // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN.md.
+      // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
       // Can it happen that the target is itself an XMRef? Then recurse.
       if let Some(realnode) = document.lookup_id(&idref) {
         return Cow::Borrowed(realnode);

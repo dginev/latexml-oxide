@@ -1242,6 +1242,47 @@ width.
 
 ---
 
+### 30. `\href` is `protected` (robust), unlike Perl's
+
+Rust's hyperref binding marks `\href` `protected => true`; Perl LaTeXML does
+not. Real hyperref's `\href` IS robust (`\DeclareRobustCommand`), so this is
+*more* faithful to real TeX: an `\edef`/`\xdef` over `\href{u}{t}` leaves the
+literal call in the body. LaTeXML's `\href` expansion re-emits `\href` itself
+(the `\lx@hyper@url@` reversion argument), so WITHOUT the flag any
+partial-expansion context re-expands it forever — Perl *hangs* on
+`\xdef\x{\href{u}{t}}` (rc=124), and ems-journal.sty's `\Emsaffil` does
+exactly that (witness 2110.10227). At top-level digestion (`fully_expand`)
+protected macros still expand, so normal `\href` behavior is unchanged.
+Pinned by `tests/58_href_edef_loop.rs`.
+
+### 31. natbib bibitem labels with text-encoding symbols are not force-expanded
+
+Perl's `\lx@NAT@parselabel` (natbib.sty.ltxml L564) unconditionally
+`Expand`s a "bare" bibitem label to locate the `(year)` paren. Rust skips the
+full expansion when the label carries text-encoding symbol commands
+(`\i`, `\j`, `\ss`, `\oe`, …) — under `[T1]{fontenc}` the kernel's
+`\@changed@cmd` dispatcher (`\T1-cmd \i \T1\i`) re-injects the CS through
+`\csname\cf@encoding\string#1\endcsname`, which loops under Rust's full
+expansion where Perl's happens to terminate (witness 2111.00584,
+`M{\'\i}guez`). The `(year)` is always a literal paren in natbib/BibTeX
+output, so the raw label suffices. This is a STOPGAP at the consumer level —
+the tracked root cause is the encoding-dispatcher expansion loop itself
+(SYNC_STATUS "natbib dispatcher" open item); the guard list should be deleted
+when that lands. Pinned by `tests/59_natbib_label_dotless_i.rs`.
+
+### 32. NUL's default catcode is 12 (OTHER) — Perl parity over TeXbook
+
+The TeXbook gives NUL (`^^@`) catcode 9 (IGNORED); Perl LaTeXML uses 12
+(OTHER), and Rust now matches Perl. With IGNORE, the `^^@`-notation char was
+dropped at tokenization, so the alphabetic constant `` `^^@ `` skipped to the
+NEXT token and returned its code (114 for `\relax`) instead of 0 — breaking
+xint's `\romannumeral`&&@`` expansion idiom. An explicit `\catcode`^^Q=9`
+is still honored (only the *default* changed). Stray raw NUL bytes (BibTeX
+`\"u`-mangling) become OTHER chars and are stripped at the XML serialization
+sinks (`xml_sanitize` in document.rs — NUL + C0 controls + U+FFFE/FFFF), so
+no invalid XML and no libxml `CString` panic. Pinned by
+`tests/60_caret_charcode.rs` + `tests/62_nul_byte_input.rs`.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

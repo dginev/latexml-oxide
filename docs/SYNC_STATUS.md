@@ -393,7 +393,7 @@
 >      assignment until after the parse) — deep core math id-management (every XMDual-bearing doc),
 >      needs a focused session. Witnesses 2311.01600 (E66, physics + custom prob-macro XMDuals +
 >      multi-line `\left.`/`\right.` split), 2207.08945 (E49).
->      **DESIGN SCOPED + PHASE-0 RUN (2026-06-08):** [`EXPECTED_ID_XMREF_DESIGN.md`](EXPECTED_ID_XMREF_DESIGN.md).
+>      **DESIGN SCOPED + PHASE-0 RUN (2026-06-08):** [`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
 >      **Phase 0 REFRAMED the root cause** — fully traced 2311.01600 (id-lifecycle instrumentation,
 >      reverted). The dominant remainder is **NOT** the math-parser LOSTNODES gap; it is a
 >      **document-builder equation→equationgroup refnum-id loss (Class B)**: a lone-aligned
@@ -3291,25 +3291,31 @@ fixes landed" below)*
 
 **P1/P2 — all resolved** *(see "Review fixes landed" below)*
 
-**P3 — hygiene/altitude (cheap, batchable):**
+**P0/P1/P2/P3 — ALL REVIEW ITEMS RESOLVED (2026-06-10).** Every finding was
+fixed, verified (red/green where testable), and committed individually; the
+review section above is retained as the record of the method and verdicts.
+Landed: NUL-sanitizing serialization sinks (+test 62); unconditional progress
+counting; token-budget recalibration against the new all-loops accounting
+(measured table in gullet.rs); uniform-run cycle-guard suppression (+unit
+tests); context-serial guard scoping replacing the blanket reset; one-borrow
+read checkpoints across all FOUR reader loops (9–12% wall-time win);
+structured resource-fatal transport with real abort propagation (+2 unit
+tests); per-iteration guard ticks in digest()/raw_tex; distinct
+Stomach:MemoryBudget vs Stomach:Recursion categories; shared test helpers;
+TFM slot-coverage test; single RSS seam + shared debug-flag probe;
+OXIDIZED_DESIGN divergences #30–32; docs indexed + design snapshot dated.
 
-14. `\href protected => true` is a deliberate, well-tested Perl divergence but
-    is NOT recorded in `docs/OXIDIZED_DESIGN.md` (the canonical divergence
-    registry per CLAUDE.md) — add it (likewise the natbib no-expand guard and
-    the NUL catcode change once P0 lands).
-15. **natbib `has_text_symbol` blocklist is a consumer-level patch on an
-    engine bug**: the root cause (T1 `\@changed@cmd` encoding-dispatcher
-    re-injection looping under FULL expansion where Perl's terminates) is
-    untouched, so any `\DeclareTextSymbol` outside the 21-name list (e.g.
-    textcomp's) re-triggers the loop in bibitem labels, and every OTHER
-    full-expansion consumer of author text remains exposed. Track the
-    dispatcher fix (same family as the `\href protected` fix); delete the
-    blocklist when it lands.
-17. Five new docs are not in CLAUDE.md's doc index;
-    `EXPECTED_ID_XMREF_DESIGN.md` is undated but substantially a
-    point-in-time Phase-0 study — date it or split the living design from
-    the snapshot.
+**One live OPEN item spun out of the review (tracked):**
 
+* **T1 `\@changed@cmd` encoding-dispatcher expansion loop** — the root cause
+  behind natbib's text-symbol no-expand guard (OXIDIZED_DESIGN #31, witness
+  2111.00584): under full expansion Rust's dispatcher re-injection
+  (`\csname\cf@encoding\string#1\endcsname`) can loop where Perl's
+  terminates. NOT reproducible in isolation (`\edef\x{\i}` under
+  T1/mathptmx is clean — the loop needed the full revtex package-set encoding
+  state), so the fix needs the witness's state captured first. When fixed,
+  DELETE `has_text_symbol` in natbib_sty.rs and restore the Perl-faithful
+  unconditional `Expand`.
 
 ### Round-37 (2026-06-09): math0402448 phantom fatal ROOT-CAUSED — cycle-guard false positive + ALL gullet guards bypassed by `read_balanced`/`read_x_token` (now fixed); canvas_3 = 16/16 CLEAN
 

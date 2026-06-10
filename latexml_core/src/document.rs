@@ -4223,7 +4223,7 @@ impl Document {
       // registration). Missing this stranded the equation refnum id across
       // `rearrange_lone_ams_aligned`'s equation→equationgroup rename, leaving
       // the group with a generic paragraph id and dangling intra-math XMRefs
-      // (witness 2311.01600; see docs/EXPECTED_ID_XMREF_DESIGN.md).
+      // (witness 2311.01600; see docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md).
       if key == "xml:id" || key == "id" {
         id = Some(value);
         continue;
