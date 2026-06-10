@@ -1,6 +1,9 @@
 //! Runtime script bindings via embedded **Rhai** (see `docs/script_bindings_plan.md`).
 //!
-//! Feature-gated behind `script-bindings` (OFF by default). The ONLY module in
+//! Feature-gated behind `runtime-bindings` (ON by default for the dev/test
+//! profile and the documented distribution build — downstream single-binary
+//! consumers customize without recompiling; `script-bindings` is a back-compat
+//! alias). The ONLY module in
 //! the workspace that embeds Rhai; core/engine/package are untouched. Pure-Rust,
 //! no FFI, no ABI — the reliable successor to the abandoned libperl approach.
 //!

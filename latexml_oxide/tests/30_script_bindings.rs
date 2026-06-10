@@ -6,7 +6,7 @@
 //! `\usepackage{lxrhaitest}`s it — exactly the path real contrib packages use.
 //! We then assert on the produced XML: the macro must expand and the constructor
 //! must emit its element.
-#![cfg(feature = "script-bindings")]
+#![cfg(feature = "runtime-bindings")]
 
 use std::rc::Rc;
 

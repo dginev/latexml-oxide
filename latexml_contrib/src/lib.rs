@@ -13,7 +13,7 @@ use latexml_core::common::error::*;
 
 // Runtime script bindings (docs/script_bindings_plan.md). Feature-gated; OFF by
 // default. The ONLY module that embeds Rhai.
-#[cfg(feature = "script-bindings")]
+#[cfg(feature = "runtime-bindings")]
 pub mod script_bindings;
 
 // =======================
