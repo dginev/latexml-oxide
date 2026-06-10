@@ -760,6 +760,54 @@ pub(super) fn def_rewrite_impl(kind: &str, opts: Map) -> Result<()> {
   Ok(())
 }
 
+/// `DefRewrite(opts, |nodes| …)` — the `replace` closure form. NB the core
+/// Replace clause DETACHES the matched nodes and splices in whatever the
+/// closure inserts (replace-by-reinsertion, Perl Rewrite.pm L122): the Rhai
+/// body receives the detached nodes as proxies; document-insertion context
+/// for the body is the pending follow-up (e2e lands with it).
+pub(super) fn wire_rewrite_replace(
+  kind: &str,
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  opts: Map,
+  replace: FnPtr,
+) -> Result<()> {
+  use latexml_core::rewrite::{Rewrite, RewriteOptions};
+  let mut o = RewriteOptions {
+    is_math: kind == "math",
+    // The Replace clause consumes `select_count` matched nodes (native
+    // replace-rewrites always set it); default to 1, override via the bag.
+    select_count: Some(1),
+    ..RewriteOptions::default()
+  };
+  for (key, val) in opts {
+    match key.as_str() {
+      "label" => o.label = Some(dynamic_to_string(val)),
+      "xpath" => o.xpath = Some(dynamic_to_string(val)),
+      "select" => o.select = Some(dynamic_to_string(val)),
+      "select_count" => o.select_count = val.as_int().ok().map(|i| i as usize),
+      "regexp" => o.regexp = Some(dynamic_to_string(val)),
+      "match" => o.on_match = Some(mouth::tokenize_internal(&dynamic_to_string(val))),
+      "scope" => o.scope = scope_of(&dynamic_to_string(val)),
+      _ => {},
+    }
+  }
+  let engine = engine.clone();
+  let ast = ast.clone();
+  o.replace = Some(Rc::new(
+    move |_document: &mut Document, nodes: Vec<&mut libxml::tree::Node>| -> Result<()> {
+      let arr: rhai::Array =
+        nodes.into_iter().map(|n| Dynamic::from(NodeProxy(n.clone()))).collect();
+      let _: Dynamic = replace
+        .call::<Dynamic>(&engine, &ast, (arr,))
+        .map_err(|e| Error::from(format!("script rewrite replace: {e}")))?;
+      Ok(())
+    },
+  ));
+  latexml_core::state::push_value("DOCUMENT_REWRITE_RULES", Rewrite::new(kind, o))?;
+  Ok(())
+}
+
 /// Closure-form `DefMathLigature` (`matcher => sub[document,node]`): the Rhai
 /// body receives a read-only `Node` proxy; UNIT means no match, a map
 /// `#{ n, replacement, role?, name?, meaning? }` reports one.

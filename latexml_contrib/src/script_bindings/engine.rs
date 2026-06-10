@@ -508,6 +508,16 @@ pub(super) fn make_engine() -> Engine {
       None => Dynamic::UNIT,
     }
   });
+  // Write methods (libxml handles alias the same C node, so mutation through
+  // a cloned handle is the library's intended model — used by the rewrite
+  // `replace` closure form, which owns its matched nodes).
+  engine.register_fn("setAttribute", |n: &mut NodeProxy, k: &str, v: &str| {
+    let _ = n.0.set_attribute(k, v);
+  });
+  engine.register_fn("setContent", |n: &mut NodeProxy, v: &str| {
+    let _ = n.0.set_content(v);
+  });
+  engine.register_fn("unlink", |n: &mut NodeProxy| { n.0.unlink(); });
   engine.register_fn("parent", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_parent() {
       Some(p) => Dynamic::from(NodeProxy(p)),
@@ -530,6 +540,20 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("DefRewrite", |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
     def_rewrite_impl("text", opts).map_err(rhai_err)
   });
+  // replace-closure form: xpath/select picks nodes, the Rhai body receives
+  // them as an array of Node proxies and mutates in place.
+  engine.register_fn(
+    "DefRewrite",
+    |opts: Map, replace: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_rewrite_replace("text", e, a, opts, replace))
+    },
+  );
+  engine.register_fn(
+    "DefMathRewrite",
+    |opts: Map, replace: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_rewrite_replace("math", e, a, opts, replace))
+    },
+  );
   engine.register_fn(
     "DefMathRewrite",
     |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
