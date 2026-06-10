@@ -493,6 +493,38 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // Read-only node proxy (closure-form matcher bodies).
+  engine.register_type_with_name::<NodeProxy>("Node");
+  engine.register_fn("qname", |n: &mut NodeProxy| -> String {
+    latexml_core::common::model::with_node_qname(&n.0, |q| q.to_string())
+  });
+  engine.register_fn("content", |n: &mut NodeProxy| -> String { n.0.get_content() });
+  engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> String {
+    n.0.get_attribute(k).unwrap_or_default()
+  });
+  engine.register_fn("prevSibling", |n: &mut NodeProxy| -> Dynamic {
+    match n.0.get_prev_sibling() {
+      Some(p) => Dynamic::from(NodeProxy(p)),
+      None => Dynamic::UNIT,
+    }
+  });
+  engine.register_fn("parent", |n: &mut NodeProxy| -> Dynamic {
+    match n.0.get_parent() {
+      Some(p) => Dynamic::from(NodeProxy(p)),
+      None => Dynamic::UNIT,
+    }
+  });
+
+  // DefMathLigature, matcher-closure form (`matcher => sub[document,node]`):
+  // the body inspects the node (and its prevSibling chain) and returns UNIT
+  // for no-match, or #{ n, replacement, role?, name?, meaning? }.
+  engine.register_fn(
+    "DefMathLigature",
+    |matcher: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_math_ligature_matcher(e, a, matcher))
+    },
+  );
+
   // DefRewrite/DefMathRewrite (data forms: xpath/select/attributes/regexp/
   // attributes-map/on_match; the `replace` closure form stays native-only).
   engine.register_fn("DefRewrite", |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {

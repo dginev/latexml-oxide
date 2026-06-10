@@ -199,6 +199,17 @@ const SAMPLE: &str = r##"
   // DefMathLigature: ":=" collapses to one ASSIGN token (data-form matcher).
   DefMathLigature(":=", "≔", #{ role: "ASSIGN", name: "assign" });
 
+  // DefMathLigature, matcher-CLOSURE form: a Rhai body walking the node
+  // chain (read-only Node proxy), merging "!!" into a single double-bang.
+  DefMathLigature(|node| {
+    if node.qname() != "ltx:XMTok" || node.content() != "!" { return (); }
+    let prev = node.prevSibling();
+    if prev == () { return (); }
+    if prev.qname() == "ltx:XMTok" && prev.content() == "!" {
+      #{ n: 2, replacement: "‼", role: "POSTFIX" }
+    } else { () }
+  });
+
   // DefRewrite (data form): stamp every biography note at finalization.
   DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
                 attributes: #{ class: "rw-stamp" } });
@@ -232,7 +243,7 @@ fn script_binding_macro_and_constructor_convert() {
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
     "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
-    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ ",
+    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} \\sized{SZ} \\racc{o} $a := b$ $c!!$ ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -383,6 +394,11 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("≔"),
     "DefMathLigature (:=) did not merge; xml=\n{xml}"
+  );
+  // Matcher-closure DefMathLigature: !! merged via the Node proxy walk.
+  assert!(
+    xml.contains("‼"),
+    "matcher-closure DefMathLigature (!!) did not merge; xml=\n{xml}"
   );
   // DefRewrite: the xpath+attributes rule fired at finalization.
   assert!(

@@ -177,6 +177,12 @@ fn current_ctx() -> std::result::Result<CtorCtx, Box<EvalAltResult>> {
 #[derive(Clone)]
 struct DocProxy;
 
+/// Rhai proxy for a document-tree node (read-only): wraps the clonable
+/// libxml handle directly — no lifetimes, no active context needed. Handed to
+/// closure-form matcher bodies (`DefMathLigature(|node| …)`).
+#[derive(Clone)]
+pub(crate) struct NodeProxy(pub(crate) libxml::tree::Node);
+
 /// Rhai proxy for the in-flight whatsit, obtained inside a hook body via
 /// `whatsit()`. Like `DocProxy`, it carries no pointer; methods resolve the
 /// active whatsit context.

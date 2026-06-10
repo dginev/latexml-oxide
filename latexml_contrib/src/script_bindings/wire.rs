@@ -759,3 +759,46 @@ pub(super) fn def_rewrite_impl(kind: &str, opts: Map) -> Result<()> {
   latexml_core::state::push_value("DOCUMENT_REWRITE_RULES", Rewrite::new(kind, o))?;
   Ok(())
 }
+
+/// Closure-form `DefMathLigature` (`matcher => sub[document,node]`): the Rhai
+/// body receives a read-only `Node` proxy; UNIT means no match, a map
+/// `#{ n, replacement, role?, name?, meaning? }` reports one.
+pub(super) fn wire_math_ligature_matcher(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  matcher: FnPtr,
+) -> Result<()> {
+  use latexml_core::ligature::{Ligature, MathLigatureOptions};
+  let engine = engine.clone();
+  let ast = ast.clone();
+  let rust_matcher: latexml_core::ligature::LigatureMatcher =
+    Rc::new(move |_document: &mut Document, node: &mut libxml::tree::Node| {
+      let ret: Dynamic = matcher
+        .call::<Dynamic>(&engine, &ast, (Dynamic::from(NodeProxy(node.clone())),))
+        .map_err(|e| Error::from(format!("script math-ligature matcher: {e}")))?;
+      if !ret.is_map() {
+        return Ok(None);
+      }
+      let m = ret.cast::<Map>();
+      let n = m.get("n").and_then(|v| v.as_int().ok()).unwrap_or(0) as usize;
+      let replacement =
+        m.get("replacement").map(|v| dynamic_to_string(v.clone())).unwrap_or_default();
+      if n == 0 {
+        return Ok(None);
+      }
+      let attr = MathLigatureOptions {
+        role:    m.get("role").map(|v| dynamic_to_string(v.clone())),
+        name:    m.get("name").map(|v| dynamic_to_string(v.clone())),
+        meaning: m.get("meaning").map(|v| dynamic_to_string(v.clone())),
+      };
+      Ok(Some((n, replacement, attr)))
+    });
+  latexml_core::state::unshift_value("MATH_LIGATURES", vec![Ligature {
+    id:        latexml_core::state::generate_ligature_id(),
+    matcher:   Some(rust_matcher),
+    code:      None,
+    font_test: None,
+    regex:     None,
+  }]);
+  Ok(())
+}
