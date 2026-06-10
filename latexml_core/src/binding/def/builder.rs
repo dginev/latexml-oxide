@@ -19,13 +19,79 @@ use crate::common::def_parser::{parse_parameters, parse_prototype};
 use crate::common::error::{Error, Result};
 use crate::definition::constructor::ConstructorOptions;
 use crate::definition::{
-  BeforeDigestClosure, DigestionClosure, PropertiesClosure, ReplacementClosure,
+  BeforeDigestClosure, ConstructionClosure, DigestionClosure, FontDirective, PropertiesClosure,
+  ReplacementClosure, Reversion,
 };
 use crate::parameter::Parameters;
 use crate::token::Token;
 use crate::util::text::{extract_bracketed, Delimiter};
 
 use super::dialect::{def_constructor, def_environment};
+
+/// The typed (closure/structured) option setters shared verbatim by
+/// [`ConstructorBuilder`] and [`EnvironmentBuilder`] — one macro invocation per
+/// builder keeps the two surfaces identical without a trait object.
+macro_rules! shared_hook_setters {
+  () => {
+    /// Push an `afterDigest` hook (constructor: after digestion; environment:
+    /// runs on the `\end` whatsit — Perl semantics).
+    pub fn after_digest(mut self, hook: DigestionClosure) -> Self {
+      self.options.after_digest.push(hook);
+      self
+    }
+
+    /// Push an `afterDigestBegin` hook (environments: runs on the `\begin`
+    /// whatsit right after its arguments digest).
+    pub fn after_digest_begin(mut self, hook: DigestionClosure) -> Self {
+      self.options.after_digest_begin.push(hook);
+      self
+    }
+
+    /// Push a `beforeDigest` hook (runs before the arguments are digested —
+    /// Perl's `beforeDigest => sub {…}`, e.g. `\footnote`'s `neutralize_font`).
+    pub fn before_digest(mut self, hook: BeforeDigestClosure) -> Self {
+      self.options.before_digest.push(hook);
+      self
+    }
+
+    /// Push a `beforeDigestEnd` hook (environments: before `\end{…}` digests).
+    pub fn before_digest_end(mut self, hook: BeforeDigestClosure) -> Self {
+      self.options.before_digest_end.push(hook);
+      self
+    }
+
+    /// Push a `beforeConstruct` hook (runs before the replacement absorbs).
+    pub fn before_construct(mut self, hook: ConstructionClosure) -> Self {
+      self.options.before_construct.push(hook);
+      self
+    }
+
+    /// Push an `afterConstruct` hook (runs after the replacement absorbs).
+    pub fn after_construct(mut self, hook: ConstructionClosure) -> Self {
+      self.options.after_construct.push(hook);
+      self
+    }
+
+    /// Set the `properties` closure (computes the whatsit's property map from
+    /// the digested args — Perl's `properties => sub {…}` / `properties => {…}`).
+    pub fn properties(mut self, props: PropertiesClosure) -> Self {
+      self.options.properties = props;
+      self
+    }
+
+    /// Set the reversion (`reversion => "…"` token form or a closure).
+    pub fn reversion(mut self, rev: Reversion) -> Self {
+      self.options.reversion = Some(rev);
+      self
+    }
+
+    /// Set the font directive (`font => { family => …, … }`).
+    pub fn font(mut self, font: FontDirective) -> Self {
+      self.options.font = Some(font);
+      self
+    }
+  };
+}
 
 /// A scalar option value handed to [`ConstructorBuilder::set_option`]. Both
 /// front-ends produce these (the macro from a literal, Rhai from a `Dynamic`),
@@ -81,30 +147,7 @@ impl ConstructorBuilder {
     Ok(self)
   }
 
-  /// Push an `afterDigest` hook. Typed setter: the field + `install` are shared;
-  /// the closure is produced by the front-end (macro block or Rhai trampoline).
-  /// The other closure options (`beforeDigest`, `properties`, `reversion`,
-  /// `sizer`, `before/afterConstruct`) follow this identical shape.
-  pub fn after_digest(mut self, hook: DigestionClosure) -> Self {
-    self.options.after_digest.push(hook);
-    self
-  }
-
-  /// Set the `properties` closure (computes the whatsit's property map from the
-  /// digested args — Perl's `properties => sub {…}` / `properties => {…}`).
-  /// Same typed-setter shape as [`Self::after_digest`]: the closure is produced
-  /// by whichever front-end (a macro `sub [args]` block, or a Rhai trampoline).
-  pub fn properties(mut self, props: PropertiesClosure) -> Self {
-    self.options.properties = props;
-    self
-  }
-
-  /// Push a `beforeDigest` hook (runs before the arguments are digested —
-  /// Perl's `beforeDigest => sub {…}`, e.g. `\footnote`'s `neutralize_font`).
-  pub fn before_digest(mut self, hook: BeforeDigestClosure) -> Self {
-    self.options.before_digest.push(hook);
-    self
-  }
+  shared_hook_setters!();
 
   /// Install the accumulated definition.
   pub fn install(self) -> Result<()> {
@@ -178,24 +221,7 @@ impl EnvironmentBuilder {
     Ok(self)
   }
 
-  /// Push an `afterDigest` hook (runs on the `\begin{env}` whatsit after the
-  /// body is digested — see `def_environment`).
-  pub fn after_digest(mut self, hook: DigestionClosure) -> Self {
-    self.options.after_digest.push(hook);
-    self
-  }
-
-  /// Set the `properties` closure (see [`ConstructorBuilder::properties`]).
-  pub fn properties(mut self, props: PropertiesClosure) -> Self {
-    self.options.properties = props;
-    self
-  }
-
-  /// Push a `beforeDigest` hook (runs at `\begin{env}` before digestion).
-  pub fn before_digest(mut self, hook: BeforeDigestClosure) -> Self {
-    self.options.before_digest.push(hook);
-    self
-  }
+  shared_hook_setters!();
 
   /// Install the accumulated environment definition.
   pub fn install(self) -> Result<()> {

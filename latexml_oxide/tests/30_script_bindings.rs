@@ -141,6 +141,51 @@ const SAMPLE: &str = r##"
     document.absorbProperty("body");
     document.closeElement("ltx:text");
   });
+
+  // ── Wave C/E: package-option machinery through a real \usepackage[draft] ──
+  // (ieeetran/article classes' DeclareOption + ProcessOptions shape.)
+  DeclareOption("draft", || assign_global("rh:opt", "draft-on"));
+  ProcessOptions();
+
+  // ieeetran {IEEEproof}-style: the `properties` closure DIGESTS content
+  // up-front (title + its font), the template consumes #title/#font holes.
+  DefEnvironment("{rproof}[]",
+    "<ltx:proof class=\"ltx_proof\"><ltx:title font=\"#font\">#title</ltx:title>#body</ltx:proof>", #{
+    mode: "internal_vertical",
+    properties: |_a| {
+      let title = DigestText("{\\bfseries Proof:}");
+      #{ title: title, font: title }
+    }
+  });
+
+  // amsmath-style numbered construct: RefStepCounter feeding #tags, plus a
+  // string reversion (the `\@@multline` option shape, scaled down).
+  NewCounter("rqeq");
+  DefConstructor("\\numbered{}", "<ltx:text class=\"eq\">#tags #1</ltx:text>", #{
+    properties: |x| RefStepCounter("rqeq"),
+    reversion: "\\numbered{#1}"
+  });
+
+  // natbib \cite-style parameter types: star match + two optionals +
+  // Semiverbatim keys — the prototype dialect is shared with the macros.
+  DefMacro("\\rcite OptionalMatch:* [][] Semiverbatim", |star, pre, post, keys| {
+    "[" + pre + ";" + post + ";" + keys + ";" + star + "]"
+  });
+
+  // graphics \Gscale@box-style: {Float} params + a properties closure that
+  // COMPUTES from the numeric args (the dual properties/afterDigest pattern).
+  DefConstructor("\\gsbox {Float}{Float} {}",
+    "<ltx:inline-block class=\"gs\" xscale=\"#xscale\" yscale=\"#yscale\">#3</ltx:inline-block>", #{
+    properties: |xs, ys, _box| #{ xscale: xs, yscale: ys }
+  });
+
+  // listings/siunitx-style OptionalKeyVals: the keyval dict arrives as the
+  // macro's first argument (its TeX-source form).
+  DefKeyVal("RH", "lang", "");
+  DefKeyVal("RH", "size", "");
+  DefMacro("\\kvprobe OptionalKeyVals:RH {}", |kv, body| {
+    "(" + kv + ")" + body
+  });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -165,11 +210,13 @@ fn script_binding_macro_and_constructor_convert() {
   state::set_extra_bindings_dispatch(Rc::new(script_dispatch));
 
   let tex = concat!(
-    "literal:\\documentclass{article}\\usepackage{lxrhaitest}",
+    "literal:\\documentclass{article}\\usepackage[draft]{lxrhaitest}",
     "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
     "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
+    "\\begin{rproof}QED-body\\end{rproof} \\numbered{NUM} \\rcite*[pre][post]{k1,k2} ",
+    "\\gsbox{2}{3}{SCL} \\kvprobe[lang=rust]{KVB} ",
     "\\endreferences \\setx{hello}\\end{document}"
   );
   let doc = latexml
@@ -271,6 +318,40 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("class=\"rbox\"") && xml.contains("Boxed"),
     "imperative environment ({{rbox}}) / absorbProperty failed; xml=\n{xml}"
+  );
+  // Wave C: \usepackage[draft] → DeclareOption body ran via ProcessOptions.
+  let opt = match latexml_core::state::lookup_value("rh:opt") {
+    Some(latexml_core::common::store::Stored::String(s)) => latexml_core::common::arena::to_string(s),
+    _ => String::from("<unset>"),
+  };
+  assert_eq!(opt, "draft-on", "DeclareOption+ProcessOptions did not fire for [draft]");
+  // IEEEproof port: properties closure digests the title; #title/#font holes.
+  assert!(
+    xml.contains("<proof") && xml.contains("Proof:") && xml.contains("QED-body"),
+    "IEEEproof-style ({{rproof}}) properties-digestion failed; xml=\n{xml}"
+  );
+  // amsmath-style: RefStepCounter feeds #tags (the tag renders as "1").
+  assert!(
+    xml.contains("class=\"eq\"") && xml.contains("NUM"),
+    "RefStepCounter-properties constructor (\\numbered) failed; xml=\n{xml}"
+  );
+  // natbib-style parameter types: star + optionals + semiverbatim keys.
+  assert!(
+    xml.contains("[pre;post;k1,k2;*]"),
+    "natbib-style \\rcite param marshaling failed; xml=\n{xml}"
+  );
+  // graphics-style {Float} params -> properties closure -> attribute holes.
+  assert!(
+    xml.contains("class=\"gs\"")
+      && xml.contains("xscale=\"2")
+      && xml.contains("yscale=\"3")
+      && xml.contains("SCL"),
+    "Gscale-style (\\gsbox) Float-args properties failed; xml=\n{xml}"
+  );
+  // OptionalKeyVals macro arg: the dict reaches the body as TeX source.
+  assert!(
+    xml.contains("rust") && xml.contains("KVB"),
+    "OptionalKeyVals (\\kvprobe) marshaling failed; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

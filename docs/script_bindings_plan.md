@@ -565,15 +565,58 @@ no file/network/process access is exposed. Errors (compile, `throw`, limit
 breach, document op failure) surface as clean latexml `Error`s and degrade only
 the offending binding.
 
-**Not yet covered** (see the critical re-eval): structural arg/return marshaling
-(`Token`/`Tokens`/`Whatsit` as types rather than strings); gullet access from
-bodies; constructor `reversion`/`sizer`; `DefMath`/`DefRegister`/
-`DefConditional`; configurable assignment scope per-call + key namespacing for
-untrusted scripts.
-(Template conditionals/`#prop`/floats/PIs, constructor `properties`/
-`afterDigest`/`beforeDigest` + the `neutralize_font()` pool helper, and
-`DefEnvironment` with `#body` — template and imperative — are covered as of
-2026-06-09; see above.)
+**Not yet covered**: structural arg/return marshaling (`Token`/`Whatsit` as
+rich types — `Tokens`/`Digested` ARE handles already); gullet access from
+bodies; `sizer` and closure-form `reversion` (string-form reversion IS
+covered); `DefColumnType`/`DefAccent`/`DefMathLigature`/`DefRewrite`;
+`GetKeyVal` accessors over a KeyVals handle (the dict currently arrives as its
+TeX-source string); whatsit exposure inside `before/afterConstruct` bodies
+(document ops work; `whatsit()` does not there); configurable assignment scope
+per-call + key namespacing for untrusted scripts.
+
+## Binding-language surface — the 2026-06-09 "feature-complete" expansion
+
+The Rhai surface now covers the working majority of
+`setup_binding_language.rs` + `content.rs` under the **same names** (each
+registration lowers to the same native function its macro does):
+
+- **State**: `AssignValue(k,v[,scope])`, `LookupString/Number/Bool`,
+  `lookup_value`, `assign_value`/`assign_global` (legacy snake_case kept).
+- **Definitions**: `Let`, `XEquals`, `IsDefined`, `RawTeX`, `TeX`,
+  `DefRegister` (int → count, "5pt" → dimen), `DefKeyVal` (3/4-arg),
+  `DefLigature(regex, replacement)`, `DefMath(proto, presentation[, #{opts}])`
+  with the full scalar option set, `DefConditional(proto, |args|->bool)`.
+- **Tokens/boxes**: `Tokenize`, `TokenizeInternal`, `Expand`,
+  `ExpandPartially`, `UnTeX`, `Digest`, `DigestText` → `Digested` handle,
+  `ToString`/`ToAttribute`/`Revert` on handles, `Today`.
+- **Counters**: `NewCounter(c[,within])`, `StepCounter`, `ResetCounter`,
+  `AddToCounter`, `CounterValue`, `RefStepCounter` → map with live `Digested`
+  values (returnable directly from a `properties` closure — the amsmath idiom).
+- **Package/class**: `RequirePackage(name[,opts])`, `LoadClass(name[,opts])`,
+  `DeclareOption`, `ProcessOptions([inorder])`, `ExecuteOptions`,
+  `PassOptions`, `RequireResource`, `Tag(name, #{autoOpen, autoClose})`,
+  `MergeFont(#{family,…})`, `Warn`/`Error` (with MAX_ERRORS escalation).
+- **Option bags everywhere**: `DefMacro`/`DefPrimitive` now also take a
+  trailing `#{…}` (scope/locked/protected/robust/… via per-struct mappers);
+  constructors/environments add `afterDigestBegin`, `beforeDigestEnd`,
+  `before/afterConstruct` (document context published; whatsit TBD),
+  string-form `reversion`, and `font: #{family: …}` directives.
+
+**Load semantics fixed (load-bearing):** `load_script` now caches only the
+COMPILATION; the script RUNS on every load and each `Def…`/side-effect call
+installs immediately, in script order — exactly Perl `.ltxml` semantics. (The
+old run-once-then-rewire model both broke `DeclareOption` → `ProcessOptions()`
+ordering and silently dropped `RawTeX`/`Let`/`NewCounter` effects on every
+conversion after the first.)
+
+**Challenging-specimen e2e corpus** (all green through real conversions,
+`30_script_bindings.rs`): plain `\footnote{}{}` (full hook set), ieeetran
+`{IEEEproof}`-style (properties closure that DIGESTS its title + `#font` from
+a `Digested`), amsmath-style `\numbered` (RefStepCounter properties + `#tags`
++ string reversion), natbib-style `\rcite OptionalMatch:* [][] Semiverbatim`,
+graphics `\Gscale@box`-style `{Float}{Float}` → Transformable attributes,
+listings-style `OptionalKeyVals:RH`, cas-dc `{bio}{}`, `{quote}`, plus
+`\usepackage[draft]` exercising DeclareOption+ProcessOptions end-to-end.
 
 ---
 

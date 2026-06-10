@@ -41,33 +41,44 @@ use std::rc::Rc;
 use rhai::{Dynamic, Engine, EvalAltResult, FnPtr, Map, AST};
 
 use latexml_core::binding::def::builder::{ConstructorBuilder, EnvironmentBuilder, OptionValue};
-use latexml_core::binding::def::dialect::{def_macro, def_primitive};
+use latexml_core::binding::def::dialect::{def_conditional, def_macro, def_primitive};
+use latexml_core::common::dimension::Dimension;
+use latexml_core::common::numeric_ops::NumericOps;
+use latexml_core::definition::conditional::ConditionalOptions;
+use latexml_core::definition::expandable::ExpandableOptions;
+use latexml_core::definition::math_primitive::MathPrimitiveOptions;
+use latexml_core::definition::ConditionalClosure;
 use latexml_core::binding::def::replacement;
 use latexml_core::common::arena::{self, SymHashMap};
 use latexml_core::common::def_parser::parse_prototype;
 use latexml_core::common::error::{Error, Result};
+use latexml_core::common::number::Number;
 use latexml_core::common::store::Stored;
 use latexml_core::definition::argument::ArgWrap;
 use latexml_core::definition::primitive::PrimitiveOptions;
 use latexml_core::definition::{
-  BeforeDigestClosure, DigestionClosure, ExpansionBody, ExpansionClosure, PrimitiveBody,
-  PrimitiveClosure, PropertiesClosure, ReplacementClosure,
+  BeforeDigestClosure, ConstructionClosure, DigestionClosure, ExpansionBody, ExpansionClosure,
+  FontDirective, PrimitiveBody, PrimitiveClosure, PropertiesClosure, ReplacementClosure, Reversion,
 };
 use latexml_core::digested::Digested;
 use latexml_core::document::Document;
 use latexml_core::mouth;
 use latexml_core::state::Scope;
 use latexml_core::tokens::Tokens;
+use latexml_core::common::object::Object;
+use latexml_core::token::{Catcode, Token};
 use latexml_core::whatsit::Whatsit;
 use latexml_core::BoxOps;
+// `Error!` expands a `Fatal!`/`fatal!` arm (too-many-errors escalation); the
+// whole macro chain must be in scope at the expansion site (non-hygienic).
+#[allow(unused_imports)]
+use latexml_core::{fatal, Fatal};
 
 // Sandbox limits (docs/script_bindings_plan.md §6).
 const MAX_OPERATIONS: u64 = 50_000_000;
 const MAX_CALL_LEVELS: usize = 128;
 const MAX_STRING_SIZE: usize = 4 * 1024 * 1024;
 
-/// A registration collected while a script runs. `Clone` so it can be cached
-/// and re-wired into successive conversions' States without recompiling.
 /// A constructor's replacement — either an XML template or an imperative body.
 #[derive(Clone)]
 enum ConstructorRepl {
@@ -75,34 +86,26 @@ enum ConstructorRepl {
   Closure(FnPtr),
 }
 
-#[derive(Clone)]
-enum Reg {
-  Macro(String, FnPtr),
-  Primitive(String, FnPtr),
-  Constructor(String, FnPtr),
-  ConstructorTemplate(String, String),
-  /// `DefConstructor(proto, replacement, #{ options })` — the option-bag form,
-  /// mirroring the `DefConstructor!` macro's variadic `key => value` options.
-  ConstructorOpts(String, ConstructorRepl, Map),
-  /// `DefEnvironment(proto, replacement[, #{ options }])` — all four shapes
-  /// (template/closure × with/without options) collapse here (empty `Map` when
-  /// no options were given).
-  Environment(String, ConstructorRepl, Map),
-  Option(String, FnPtr),
-}
-
-/// A compiled-and-collected script, cached by source so the (relatively
-/// expensive) Rhai compile + run happens once per unique binding even when the
-/// same contrib package is loaded across many conversions.
+/// A compiled script, cached by source so the (relatively expensive) Rhai
+/// compile happens once per unique binding. The RUN is per-load (per
+/// conversion) — Perl semantics: each `Def…`/side-effect call installs into
+/// the current State sequentially as the script executes.
 #[derive(Clone)]
 struct CachedScript {
   engine: Rc<Engine>,
   ast: Rc<AST>,
-  regs: Vec<Reg>,
 }
 
 thread_local! {
-  static REGS: RefCell<Vec<Reg>> = const { RefCell::new(Vec::new()) };
+  /// The script currently being RUN (a stack — a script can trigger loading
+  /// another script). `Def…` registration closures grab these handles to wire
+  /// their trampolines immediately, in script order — so e.g. a
+  /// `DeclareOption` is installed before a following `ProcessOptions()` runs.
+  static CURRENT_SCRIPT: RefCell<Vec<(Rc<Engine>, Rc<AST>)>> = const { RefCell::new(Vec::new()) };
+
+  /// Definitions installed by the innermost running script (the load_script
+  /// return value).
+  static WIRED_COUNT: RefCell<usize> = const { RefCell::new(0) };
 
   static SCRIPT_CACHE: RefCell<HashMap<String, CachedScript>> =
     RefCell::new(HashMap::new());
@@ -124,6 +127,30 @@ thread_local! {
 struct CtorCtx {
   document: *mut Document,
   props: *const SymHashMap<Stored>,
+}
+
+/// The engine/AST of the innermost running script (for immediate wiring).
+fn current_script() -> std::result::Result<(Rc<Engine>, Rc<AST>), Box<EvalAltResult>> {
+  CURRENT_SCRIPT.with(|c| {
+    c.borrow()
+      .last()
+      .cloned()
+      .ok_or_else(|| Box::<EvalAltResult>::from("registration called outside a script load"))
+  })
+}
+
+/// Count one installed definition (the `load_script` return value).
+fn note_wired() { WIRED_COUNT.with(|c| *c.borrow_mut() += 1); }
+
+/// Wire immediately from inside a registration closure: resolve the current
+/// script handles, run the wiring fn, count, map errors to Rhai.
+fn wire_now(
+  wire: impl FnOnce(&Rc<Engine>, &Rc<AST>) -> Result<()>,
+) -> std::result::Result<(), Box<EvalAltResult>> {
+  let (engine, ast) = current_script()?;
+  wire(&engine, &ast).map_err(rhai_err)?;
+  note_wired();
+  Ok(())
 }
 
 /// Copy the top active-context out (so we never hold the `CTOR_CTX` borrow
@@ -185,19 +212,43 @@ fn make_engine() -> Engine {
   engine.set_max_call_levels(MAX_CALL_LEVELS);
   engine.set_max_string_size(MAX_STRING_SIZE);
 
-  // ── registration API (collected, wired to native defs after the run) ──
-  engine.register_fn("DefMacro", |proto: &str, body: FnPtr| {
-    REGS.with(|m| m.borrow_mut().push(Reg::Macro(proto.to_string(), body)));
-  });
-  engine.register_fn("DefPrimitive", |proto: &str, body: FnPtr| {
-    REGS.with(|m| m.borrow_mut().push(Reg::Primitive(proto.to_string(), body)));
-  });
+  // ── registration API (wired to native defs IMMEDIATELY, in script order) ──
+  engine.register_fn(
+    "DefMacro",
+    |proto: &str, body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_macro(e, a, proto, body))
+    },
+  );
+  // Option-bag form (Perl's trailing `key => value`s): scalars onto
+  // `ExpandableOptions` via the shared mapper.
+  engine.register_fn(
+    "DefMacro",
+    |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_macro_opts(e, a, proto, body, opts))
+    },
+  );
+  engine.register_fn(
+    "DefPrimitive",
+    |proto: &str, body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_primitive(e, a, proto, body, PrimitiveOptions::default()))
+    },
+  );
+  engine.register_fn(
+    "DefPrimitive",
+    |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_primitive(e, a, proto, body, primitive_options_from_map(opts)))
+    },
+  );
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
   // (setup_binding_language.rs): push the name onto `@declaredoptions` and
-  // define a `\ds@<opt>` primitive carrying the body.
-  engine.register_fn("DeclareOption", |opt: &str, body: FnPtr| {
-    REGS.with(|m| m.borrow_mut().push(Reg::Option(opt.to_string(), body)));
-  });
+  // define a `\ds@<opt>` primitive carrying the body. Installed immediately,
+  // so a following `ProcessOptions()` in the same script sees it.
+  engine.register_fn(
+    "DeclareOption",
+    |opt: &str, body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_option(e, a, opt, body))
+    },
+  );
 
   // ── free-function helpers (prelude names) over core datatypes ──
   // `Tokens` is registered as an opaque pass-through handle (Tier-2): a script
@@ -230,78 +281,387 @@ fn make_engine() -> Engine {
       None => String::new(),
     }
   });
-  engine.register_fn("DefConstructor", |proto: &str, body: FnPtr| {
-    REGS.with(|m| m.borrow_mut().push(Reg::Constructor(proto.to_string(), body)));
+
+  // ── the binding-language surface, 1:1 under its macro names ──
+  // Each registration lowers to the SAME native function its compile-time
+  // macro does (setup_binding_language.rs), so a Rhai binding reads like the
+  // `.pool`/`_sty.rs` original. String values in, strings/handles out.
+  engine.register_fn("AssignValue", |k: &str, v: &str| {
+    latexml_core::state::assign_value(k, v.to_string(), None);
   });
-  // String-template form (the dominant constructor dialect): the second arg is
-  // an XML template instead of a closure. Rhai dispatches by the arg's type.
-  engine.register_fn("DefConstructor", |proto: &str, template: &str| {
-    REGS.with(|m| {
-      m.borrow_mut()
-        .push(Reg::ConstructorTemplate(proto.to_string(), template.to_string()))
+  engine.register_fn("AssignValue", |k: &str, v: &str, scope: &str| {
+    latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
+  });
+  engine.register_fn("LookupString", |k: &str| -> String { latexml_core::state::lookup_string(k) });
+  engine.register_fn("LookupNumber", |k: &str| -> i64 {
+    latexml_core::state::lookup_number(k).map(|n| n.0).unwrap_or(0)
+  });
+  engine.register_fn("LookupBool", |k: &str| -> bool { latexml_core::state::lookup_bool(k) });
+  engine.register_fn("Let", |a: &str, b: &str| {
+    latexml_core::state::let_i(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b), None);
+  });
+  engine.register_fn("XEquals", |a: &str, b: &str| -> bool {
+    latexml_core::state::x_equals(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b))
+  });
+  engine.register_fn("IsDefined", |cs: &str| -> bool {
+    latexml_core::binding::def::dialect::is_defined_token(&latexml_core::T_CS!(cs))
+  });
+  // RawTeX: process literal TeX as definitions input (the raw-`\def` escape
+  // hatch every nontrivial binding uses). TeX: tokenize-internal + digest.
+  engine.register_fn("RawTeX", |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::stomach::raw_tex(text).map_err(rhai_err)
+  });
+  engine.register_fn("TeX", |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::stomach::digest(mouth::tokenize_internal(text)).map_err(rhai_err)?;
+    Ok(())
+  });
+  engine.register_fn("Expand", |t: Tokens| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+    latexml_core::gullet::do_expand(t).map_err(rhai_err)
+  });
+  engine.register_fn(
+    "ExpandPartially",
+    |t: Tokens| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+      latexml_core::gullet::do_expand_partially(t).map_err(rhai_err)
+    },
+  );
+  engine.register_fn("UnTeX", |t: Tokens| -> String { t.untex() });
+  // DigestText: digest a TeX string into a `Digested` handle — the workhorse
+  // of `properties` closures that precompute content (e.g. IEEEproof's title).
+  engine.register_fn(
+    "DigestText",
+    |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::digest_text(mouth::tokenize_internal(s)).map_err(rhai_err)
+    },
+  );
+  // ToString/ToAttribute/Revert on a Digested handle (Perl ToString/Revert).
+  engine.register_fn("ToString", |d: Digested| -> String { d.to_string() });
+  engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
+  engine.register_fn("Revert", |d: Digested| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+    d.revert().map_err(rhai_err)
+  });
+  engine.register_fn("Today", || -> std::result::Result<String, Box<EvalAltResult>> {
+    latexml_engine::base_utilities::today().map_err(rhai_err)
+  });
+  engine.register_fn("Warn", |cat: &str, obj: &str, msg: &str| {
+    latexml_core::Warn!(cat, obj, msg.to_string());
+  });
+  engine.register_fn(
+    "Error",
+    |cat: &str, obj: &str, msg: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      // Error! escalates to Fatal past MAX_ERRORS (a latexml `Err`) — surface
+      // that to the script as a Rhai error so conversion aborts cleanly.
+      let res: Result<()> = (|| {
+        latexml_core::Error!(cat, obj, msg.to_string());
+        Ok(())
+      })();
+      res.map_err(rhai_err)
+    },
+  );
+
+  // ── counters (counter_dialect, the NewCounter!/StepCounter!/… family) ──
+  engine.register_fn("NewCounter", |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::binding::counter::dialect::new_counter(c, "", None).map_err(rhai_err)
+  });
+  engine.register_fn(
+    "NewCounter",
+    |c: &str, within: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::counter::dialect::new_counter(c, within, None).map_err(rhai_err)
+    },
+  );
+  engine.register_fn("StepCounter", |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::binding::counter::dialect::step_counter(c, false).map_err(rhai_err)
+  });
+  engine.register_fn("ResetCounter", |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::binding::counter::dialect::reset_counter(&latexml_core::T_LETTER!(c))
+      .map_err(rhai_err)
+  });
+  engine.register_fn(
+    "AddToCounter",
+    |c: &str, n: i64| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::counter::dialect::add_to_counter(c, Number(n)).map_err(rhai_err)
+    },
+  );
+  engine.register_fn("CounterValue", |c: &str| -> std::result::Result<i64, Box<EvalAltResult>> {
+    latexml_core::binding::counter::dialect::counter_value(c).map(|n| n.0).map_err(rhai_err)
+  });
+  // RefStepCounter: returns the refnum/id property map (Digested values come
+  // back as handles a `properties` closure can return directly — the amsmath
+  // `properties => ref_step_counter("equation")` idiom).
+  engine.register_fn(
+    "RefStepCounter",
+    |c: &str| -> std::result::Result<Map, Box<EvalAltResult>> {
+      let props = latexml_core::binding::counter::dialect::ref_step_counter(c, false).map_err(rhai_err)?;
+      let mut m = Map::new();
+      for (k, v) in props {
+        m.insert(arena::to_string(k).into(), stored_to_dynamic(v));
+      }
+      Ok(m)
+    },
+  );
+
+  // ── further definition forms (DefRegister/DefKeyVal/DefMath/DefLigature) ──
+  // These run when the script executes (per conversion, like a Perl .ltxml),
+  // lowering to the same dialect functions their compile-time macros use.
+  engine.register_fn(
+    "DefRegister",
+    |proto: &str, v: i64| -> std::result::Result<(), Box<EvalAltResult>> {
+      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
+      latexml_core::binding::def::dialect::def_register(cs, params, Number(v), None)
+        .map_err(rhai_err)
+    },
+  );
+  // String value = a dimension spec ("5pt", "0.4em", …) → Dimension register.
+  engine.register_fn(
+    "DefRegister",
+    |proto: &str, spec: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
+      let dim = Dimension::new_f64(Dimension::spec_to_f64(spec).map_err(rhai_err)?);
+      latexml_core::binding::def::dialect::def_register(cs, params, dim, None).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DefKeyVal",
+    |keyset: &str, key: &str, vtype: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::keyval::define(latexml_core::keyval::KeyvalConfig {
+        prefix: "KV",
+        keyset,
+        key,
+        vtype,
+        default: None,
+        ..latexml_core::keyval::KeyvalConfig::default()
+      })
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DefKeyVal",
+    |keyset: &str,
+     key: &str,
+     vtype: &str,
+     default: &str|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::keyval::define(latexml_core::keyval::KeyvalConfig {
+        prefix: "KV",
+        keyset,
+        key,
+        vtype,
+        default: Some(default),
+        ..latexml_core::keyval::KeyvalConfig::default()
+      })
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DefLigature",
+    |pattern: &str, replacement: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      let regex_compiled = regex::Regex::new(pattern)
+        .map_err(|e| Box::<EvalAltResult>::from(format!("DefLigature bad regex: {e}")))?;
+      let replacement = replacement.to_string();
+      latexml_core::state::unshift_value("TEXT_LIGATURES", vec![latexml_core::ligature::Ligature {
+        id:        latexml_core::state::generate_ligature_id(),
+        regex:     Some(pattern.to_string()),
+        code:      Some(Rc::new(move |text| {
+          regex_compiled.replace_all(text, replacement.as_str()).to_string()
+        })),
+        font_test: None,
+        matcher:   None,
+      }]);
+      Ok(())
+    },
+  );
+  // DefMath: presentation-string form (the dominant one) + option bag with the
+  // macro's scalar option set.
+  engine.register_fn(
+    "DefMath",
+    |proto: &str, presentation: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
+      latexml_core::binding::def::dialect::def_math(
+        cs,
+        params,
+        presentation.to_string(),
+        MathPrimitiveOptions::default(),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DefMath",
+    |proto: &str, presentation: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
+      let options = math_options_from_map(opts).map_err(rhai_err)?;
+      latexml_core::binding::def::dialect::def_math(cs, params, presentation.to_string(), options)
+        .map_err(rhai_err)
+    },
+  );
+  // DefConditional: the test is a Rhai closure receiving args as strings and
+  // returning a bool.
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str, test: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, test))
+    },
+  );
+
+  // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
+  engine.register_fn(
+    "RequirePackage",
+    |name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::require_package(
+        name,
+        latexml_core::binding::content::RequireOptions::default(),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "RequirePackage",
+    |name: &str, options: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::require_package(
+        name,
+        latexml_core::binding::content::RequireOptions {
+          options: options.into_iter().map(dynamic_to_string).collect(),
+          ..latexml_core::binding::content::RequireOptions::default()
+        },
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn("LoadClass", |name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::binding::content::load_class(name, Vec::new(), Tokens::default())
+      .map_err(rhai_err)
+  });
+  engine.register_fn(
+    "LoadClass",
+    |name: &str, options: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::load_class(
+        name,
+        options.into_iter().map(dynamic_to_string).collect(),
+        Tokens::default(),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn("ProcessOptions", || -> std::result::Result<(), Box<EvalAltResult>> {
+    latexml_core::binding::content::process_options(false, &[]).map_err(rhai_err)
+  });
+  // ProcessOptions(true) = the `\ProcessOptions*` in-order variant.
+  engine.register_fn(
+    "ProcessOptions",
+    |inorder: bool| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::process_options(inorder, &[]).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "ExecuteOptions",
+    |options: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
+      let opts: Vec<String> = options.into_iter().map(dynamic_to_string).collect();
+      let refs: Vec<&str> = opts.iter().map(String::as_str).collect();
+      latexml_core::binding::content::execute_options(&refs).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "PassOptions",
+    |name: &str, ext: &str, options: rhai::Array| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::pass_options(
+        name,
+        ext,
+        options.into_iter().map(dynamic_to_string).collect(),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  engine.register_fn("RequireResource", |resource: &str| {
+    latexml_core::binding::content::require_resource(latexml_core::document::resource::Resource {
+      name: resource.to_string(),
+      ..latexml_core::document::resource::Resource::default()
     });
   });
+  // Tag: the scalar subset (autoOpen/autoClose) of TagOptions.
+  engine.register_fn("Tag", |tag: &str, opts: Map| {
+    let mut options = latexml_core::document::tag::TagOptions::default();
+    for (key, val) in opts {
+      match key.as_str() {
+        "autoOpen" => options.auto_open = val.as_bool().ok(),
+        "autoClose" => options.auto_close = val.as_bool().ok(),
+        _ => {},
+      }
+    }
+    latexml_core::binding::content::install_tag(tag, options);
+  });
+  // MergeFont: merge the given partial font into the current one (Perl
+  // `MergeFont(family=>…)`); string keys family/series/shape/size.
+  engine.register_fn("MergeFont", |opts: Map| {
+    latexml_core::binding::content::merge_font(font_from_rhai_map(opts));
+  });
+  engine.register_fn(
+    "DefConstructor",
+    |proto: &str, body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_constructor(e, a, proto, body))
+    },
+  );
+  // String-template form (the dominant constructor dialect): the second arg is
+  // an XML template instead of a closure. Rhai dispatches by the arg's type.
+  engine.register_fn(
+    "DefConstructor",
+    |proto: &str, template: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|_e, _a| wire_constructor_template(proto, template.to_string()))
+    },
+  );
   // Option-bag forms: a trailing Rhai object map `#{ mode: …, afterDigest: |…| … }`
   // — the analog of Perl's `%options` / the `DefConstructor!` macro's `key => value`
   // (named, any order, omittable; values may be strings or closures).
-  engine.register_fn("DefConstructor", |proto: &str, template: &str, opts: Map| {
-    REGS.with(|m| {
-      m.borrow_mut().push(Reg::ConstructorOpts(
-        proto.to_string(),
-        ConstructorRepl::Template(template.to_string()),
-        opts,
-      ))
-    });
-  });
-  engine.register_fn("DefConstructor", |proto: &str, body: FnPtr, opts: Map| {
-    REGS.with(|m| {
-      m.borrow_mut().push(Reg::ConstructorOpts(
-        proto.to_string(),
-        ConstructorRepl::Closure(body),
-        opts,
-      ))
-    });
-  });
+  engine.register_fn(
+    "DefConstructor",
+    |proto: &str, template: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| {
+        wire_constructor_opts(e, a, proto, ConstructorRepl::Template(template.to_string()), opts)
+      })
+    },
+  );
+  engine.register_fn(
+    "DefConstructor",
+    |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_constructor_opts(e, a, proto, ConstructorRepl::Closure(body), opts))
+    },
+  );
 
   // ── DefEnvironment: same four shapes as DefConstructor; the prototype is the
   // `DefEnvironment!` form (`"{name}"` / `"{name}{}…"`), the template will
   // typically reference `#body`. ──
-  engine.register_fn("DefEnvironment", |proto: &str, template: &str| {
-    REGS.with(|m| {
-      m.borrow_mut().push(Reg::Environment(
-        proto.to_string(),
-        ConstructorRepl::Template(template.to_string()),
-        Map::new(),
-      ))
-    });
-  });
-  engine.register_fn("DefEnvironment", |proto: &str, body: FnPtr| {
-    REGS.with(|m| {
-      m.borrow_mut().push(Reg::Environment(
-        proto.to_string(),
-        ConstructorRepl::Closure(body),
-        Map::new(),
-      ))
-    });
-  });
-  engine.register_fn("DefEnvironment", |proto: &str, template: &str, opts: Map| {
-    REGS.with(|m| {
-      m.borrow_mut().push(Reg::Environment(
-        proto.to_string(),
-        ConstructorRepl::Template(template.to_string()),
-        opts,
-      ))
-    });
-  });
-  engine.register_fn("DefEnvironment", |proto: &str, body: FnPtr, opts: Map| {
-    REGS.with(|m| {
-      m.borrow_mut().push(Reg::Environment(
-        proto.to_string(),
-        ConstructorRepl::Closure(body),
-        opts,
-      ))
-    });
-  });
+  engine.register_fn(
+    "DefEnvironment",
+    |proto: &str, template: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| {
+        wire_environment(
+          e,
+          a,
+          proto,
+          ConstructorRepl::Template(template.to_string()),
+          Map::new(),
+        )
+      })
+    },
+  );
+  engine.register_fn(
+    "DefEnvironment",
+    |proto: &str, body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_environment(e, a, proto, ConstructorRepl::Closure(body), Map::new()))
+    },
+  );
+  engine.register_fn(
+    "DefEnvironment",
+    |proto: &str, template: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| {
+        wire_environment(e, a, proto, ConstructorRepl::Template(template.to_string()), opts)
+      })
+    },
+  );
+  engine.register_fn(
+    "DefEnvironment",
+    |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_environment(e, a, proto, ConstructorRepl::Closure(body), opts))
+    },
+  );
 
   // ── document proxy: methods mirror Perl's `$document->method` idiom ──
   // The body receives `document` (a DocProxy) as its first arg, and each digested
@@ -415,9 +775,14 @@ pub fn load_file(path: &str) -> Result<usize> {
   load_script(&src)
 }
 
-/// Load a binding script: compile + run once (cached by source), then install a
-/// native definition for each registration into the current State. Returns the
-/// number of bindings installed.
+/// Load a binding script: compile once (cached by source), then RUN the script
+/// against the current State. Every `Def…` registration wires its native
+/// definition IMMEDIATELY as the script executes (sequential, Perl `.ltxml`
+/// semantics — so `DeclareOption` precedes a later `ProcessOptions()`), and
+/// top-level side-effect calls (`RawTeX`, `Let`, `NewCounter`, `AssignValue`,
+/// `DefRegister`, …) re-apply on every load — i.e. per conversion, not just
+/// the first one that happened to compile the script. Returns the number of
+/// definitions installed.
 pub fn load_script(src: &str) -> Result<usize> {
   // Fast path: a previously-compiled script with the same source.
   let cached = SCRIPT_CACHE.with(|c| c.borrow().get(src).cloned());
@@ -428,12 +793,7 @@ pub fn load_script(src: &str) -> Result<usize> {
       let ast = engine
         .compile(src)
         .map_err(|e| Error::from(format!("script-binding compile error: {e}")))?;
-      REGS.with(|m| m.borrow_mut().clear());
-      engine
-        .run_ast(&ast)
-        .map_err(|e| Error::from(format!("script-binding run error: {e}")))?;
-      let regs: Vec<Reg> = REGS.with(|m| m.borrow_mut().drain(..).collect());
-      let cs = CachedScript { engine: Rc::new(engine), ast: Rc::new(ast), regs };
+      let cs = CachedScript { engine: Rc::new(engine), ast: Rc::new(ast) };
       SCRIPT_CACHE.with(|c| {
         c.borrow_mut().insert(src.to_string(), cs.clone());
       });
@@ -441,28 +801,19 @@ pub fn load_script(src: &str) -> Result<usize> {
     },
   };
 
-  // Wire each registration into the current State (cheap; done per conversion).
-  let count = cached.regs.len();
-  for reg in &cached.regs {
-    match reg {
-      Reg::Macro(proto, body) => wire_macro(&cached.engine, &cached.ast, proto, body.clone())?,
-      Reg::Primitive(proto, body) => {
-        wire_primitive(&cached.engine, &cached.ast, proto, body.clone())?
-      },
-      Reg::Constructor(proto, body) => {
-        wire_constructor(&cached.engine, &cached.ast, proto, body.clone())?
-      },
-      Reg::ConstructorTemplate(proto, tmpl) => wire_constructor_template(proto, tmpl.clone())?,
-      Reg::ConstructorOpts(proto, repl, opts) => {
-        wire_constructor_opts(&cached.engine, &cached.ast, proto, repl.clone(), opts.clone())?
-      },
-      Reg::Environment(proto, repl, opts) => {
-        wire_environment(&cached.engine, &cached.ast, proto, repl.clone(), opts.clone())?
-      },
-      Reg::Option(opt, body) => wire_option(&cached.engine, &cached.ast, opt, body.clone())?,
-    }
-  }
-  Ok(count)
+  // Publish the script handles for the registration closures, run, unpublish
+  // (a stack, so a script loading another script nests correctly).
+  CURRENT_SCRIPT.with(|c| c.borrow_mut().push((cached.engine.clone(), cached.ast.clone())));
+  let before = WIRED_COUNT.with(|c| *c.borrow());
+  let run = cached
+    .engine
+    .run_ast(&cached.ast)
+    .map_err(|e| Error::from(format!("script-binding run error: {e}")));
+  CURRENT_SCRIPT.with(|c| {
+    c.borrow_mut().pop();
+  });
+  run?;
+  Ok(WIRED_COUNT.with(|c| *c.borrow()) - before)
 }
 
 /// Install one `DefMacro` registration as a native expandable definition.
@@ -581,8 +932,14 @@ fn wire_environment(
 trait BindingBuilder: Sized {
   fn set_option(self, key: &str, value: OptionValue) -> Result<Self>;
   fn after_digest(self, hook: DigestionClosure) -> Self;
+  fn after_digest_begin(self, hook: DigestionClosure) -> Self;
   fn before_digest(self, hook: BeforeDigestClosure) -> Self;
+  fn before_digest_end(self, hook: BeforeDigestClosure) -> Self;
+  fn before_construct(self, hook: ConstructionClosure) -> Self;
+  fn after_construct(self, hook: ConstructionClosure) -> Self;
   fn properties(self, props: PropertiesClosure) -> Self;
+  fn reversion(self, rev: Reversion) -> Self;
+  fn font(self, font: FontDirective) -> Self;
   // (`install` stays inherent on each builder: call sites get the concrete
   // type back from `apply_opts`, so a trait method would be dead code.)
 }
@@ -594,10 +951,24 @@ macro_rules! impl_binding_builder {
         <$t>::set_option(self, key, value)
       }
       fn after_digest(self, hook: DigestionClosure) -> Self { <$t>::after_digest(self, hook) }
+      fn after_digest_begin(self, hook: DigestionClosure) -> Self {
+        <$t>::after_digest_begin(self, hook)
+      }
       fn before_digest(self, hook: BeforeDigestClosure) -> Self {
         <$t>::before_digest(self, hook)
       }
+      fn before_digest_end(self, hook: BeforeDigestClosure) -> Self {
+        <$t>::before_digest_end(self, hook)
+      }
+      fn before_construct(self, hook: ConstructionClosure) -> Self {
+        <$t>::before_construct(self, hook)
+      }
+      fn after_construct(self, hook: ConstructionClosure) -> Self {
+        <$t>::after_construct(self, hook)
+      }
       fn properties(self, props: PropertiesClosure) -> Self { <$t>::properties(self, props) }
+      fn reversion(self, rev: Reversion) -> Self { <$t>::reversion(self, rev) }
+      fn font(self, font: FontDirective) -> Self { <$t>::font(self, font) }
     }
   };
 }
@@ -621,11 +992,25 @@ fn apply_opts<B: BindingBuilder>(
         "afterDigest" => {
           builder = builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
         },
+        "afterDigestBegin" => {
+          builder =
+            builder.after_digest_begin(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+        },
         "properties" => {
           builder = builder.properties(properties_trampoline(fp, engine.clone(), ast.clone()));
         },
         "beforeDigest" => {
           builder = builder.before_digest(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        "beforeDigestEnd" => {
+          builder =
+            builder.before_digest_end(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        "beforeConstruct" => {
+          builder = builder.before_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
+        },
+        "afterConstruct" => {
+          builder = builder.after_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
         },
         // Unknown closure options are silently ignored (forgiving, like Perl
         // %options; the builder's set_option does the same for scalars).
@@ -635,12 +1020,57 @@ fn apply_opts<B: BindingBuilder>(
       // Static property map (Perl's `properties => { key => value, … }`).
       let map = val.cast::<Map>();
       builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
+    } else if key.as_str() == "reversion" {
+      // String reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
+      builder =
+        builder.reversion(Reversion::Tokens(mouth::tokenize_internal(&dynamic_to_string(val))));
+    } else if key.as_str() == "font" && val.is_map() {
+      // Partial-font directive (`font => { family => 'typewriter', … }`).
+      let font = font_from_rhai_map(val.cast::<Map>());
+      builder = builder.font(FontDirective::Asset(Rc::new(font)));
     } else if let Some(ov) = dynamic_to_option_value(&val) {
       // Scalar option → the builder's generic, single-source `set_option`.
       builder = builder.set_option(key.as_str(), ov)?;
     }
   }
   Ok(builder)
+}
+
+/// Build a `before/afterConstruct` trampoline: the body runs with the live
+/// document published as active context (so `document.*` proxy calls work);
+/// the whatsit itself is not yet exposed there (read-only marshaling TBD).
+fn construction_trampoline(fp: FnPtr, engine: Rc<Engine>, ast: Rc<AST>) -> ConstructionClosure {
+  Rc::new(move |document: &mut Document, whatsit: &Whatsit| -> Result<()> {
+    CTOR_CTX.with(|c| {
+      c.borrow_mut().push(CtorCtx { document, props: whatsit.get_properties() });
+    });
+    let result = fp.call::<Dynamic>(&engine, &ast, (Dynamic::from(DocProxy),));
+    CTOR_CTX.with(|c| {
+      c.borrow_mut().pop();
+    });
+    let _: Dynamic = result.map_err(|e| Error::from(format!("script afterConstruct: {e}")))?;
+    Ok(())
+  })
+}
+
+/// Build a partial `Font` from a Rhai map (family/series/shape/… keys — the
+/// `fontmap!` analog, shared by `MergeFont` and the `font =>` option).
+fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
+  let mut font = latexml_core::common::font::Font::default();
+  for (key, val) in opts {
+    let v = dynamic_to_string(val.clone());
+    match key.as_str() {
+      "family" => font.family = Some(v.into()),
+      "series" => font.series = Some(v.into()),
+      "shape" => font.shape = Some(v.into()),
+      "encoding" => font.encoding = Some(v.into()),
+      "language" => font.language = Some(v.into()),
+      "mathstyle" => font.mathstyle = Some(v.into()),
+      "size" => font.size = val.as_float().ok().or_else(|| val.as_int().ok().map(|i| i as f64)),
+      _ => {},
+    }
+  }
+  font
 }
 
 /// Build an `afterDigest` trampoline: publish the whatsit so a parameterless body
@@ -695,13 +1125,49 @@ fn properties_trampoline(fp: FnPtr, engine: Rc<Engine>, ast: Rc<AST>) -> Propert
   })
 }
 
-/// Convert a Rhai object map into a whatsit property map (string values).
+/// Convert a Rhai object map into a whatsit property map. `Digested` handles
+/// (from `DigestText`, `RefStepCounter`, …) pass through as `Stored::Digested`;
+/// a `Digested` under the `font` key contributes its FONT (the IEEEproof
+/// "titlefont" idiom); everything else lands as its string form.
 fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   for (k, v) in map {
-    props.insert(k.as_str(), dynamic_to_string(v).into());
+    if let Some(d) = v.clone().try_cast::<Digested>() {
+      if k.as_str() == "font" {
+        if let Ok(Some(f)) = d.get_font() {
+          props.insert("font", Stored::Font(Rc::new(f.into_owned())));
+          continue;
+        }
+      }
+      props.insert(k.as_str(), Stored::Digested(d));
+    } else {
+      props.insert(k.as_str(), dynamic_to_string(v).into());
+    }
   }
   props
+}
+
+/// Map a latexml error into a Rhai error (the standard boundary conversion).
+fn rhai_err(e: Error) -> Box<EvalAltResult> { Box::<EvalAltResult>::from(e.to_string()) }
+
+/// Parse a scope string ("local"/"global", anything else = None → TeX default).
+fn scope_of(scope: &str) -> Option<Scope> {
+  match scope {
+    "local" => Some(Scope::Local),
+    "global" => Some(Scope::Global),
+    _ => None,
+  }
+}
+
+/// Marshal a `Stored` out to a Rhai value: `Digested` as a live handle,
+/// scalars as scalars, the rest via `Display`.
+fn stored_to_dynamic(v: Stored) -> Dynamic {
+  match v {
+    Stored::Digested(d) => Dynamic::from(d),
+    Stored::String(s) => Dynamic::from(arena::to_string(s)),
+    Stored::Bool(b) => Dynamic::from(b),
+    other => Dynamic::from(other.to_string()),
+  }
 }
 
 /// Map a Rhai scalar `Dynamic` to a builder `OptionValue` (string/bool/int).
@@ -719,7 +1185,13 @@ fn dynamic_to_option_value(v: &Dynamic) -> Option<OptionValue> {
 /// runs at digestion time for side-effects (state assignments, etc.). The body
 /// receives args as strings and its return value is ignored (pure side-effect);
 /// the primitive contributes no boxes.
-fn wire_primitive(engine: &Rc<Engine>, ast: &Rc<AST>, proto: &str, body: FnPtr) -> Result<()> {
+fn wire_primitive(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  proto: &str,
+  body: FnPtr,
+  options: PrimitiveOptions,
+) -> Result<()> {
   let (cs, paramlist) = parse_prototype(proto, true)?;
   let cs_name = cs.to_string();
   let engine = engine.clone();
@@ -733,8 +1205,131 @@ fn wire_primitive(engine: &Rc<Engine>, ast: &Rc<AST>, proto: &str, body: FnPtr) 
     Ok(Vec::new())
   });
 
-  def_primitive(cs, paramlist, Some(PrimitiveBody::Closure(closure)), PrimitiveOptions::default())?;
+  def_primitive(cs, paramlist, Some(PrimitiveBody::Closure(closure)), options)?;
   Ok(())
+}
+
+/// `DefMacro` with an option bag: scalars onto `ExpandableOptions`.
+fn wire_macro_opts(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  proto: &str,
+  body: FnPtr,
+  opts: Map,
+) -> Result<()> {
+  let (cs, paramlist) = parse_prototype(proto, true)?;
+  let cs_name = cs.to_string();
+  let engine = engine.clone();
+  let ast = ast.clone();
+  let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
+    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let ret: Dynamic = body
+      .call::<Dynamic>(&engine, &ast, dyn_args)
+      .map_err(|e| Error::from(format!("script macro {cs_name}: {e}")))?;
+    Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+  });
+  def_macro(cs, paramlist, ExpansionBody::Closure(closure), Some(expandable_options_from_map(opts)))?;
+  Ok(())
+}
+
+/// Map a Rhai option bag onto `ExpandableOptions` (the `DefMacro!` scalar set).
+fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
+  let mut o = ExpandableOptions::default();
+  for (key, val) in opts {
+    let b = val.as_bool().unwrap_or(false);
+    match key.as_str() {
+      "locked" => o.locked = b,
+      "protected" => o.protected = b,
+      "outer" => o.outer = b,
+      "long" => o.long = b,
+      "mathactive" => o.mathactive = b,
+      "robust" => o.robust = b,
+      "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
+      "alias" => o.alias = Some(dynamic_to_string(val.clone())),
+      _ => {},
+    }
+  }
+  o
+}
+
+/// Map a Rhai option bag onto `PrimitiveOptions` (the `DefPrimitive!` scalar set).
+fn primitive_options_from_map(opts: Map) -> PrimitiveOptions {
+  let mut o = PrimitiveOptions::default();
+  for (key, val) in opts {
+    let b = val.as_bool().unwrap_or(false);
+    match key.as_str() {
+      "bounded" => o.bounded = b,
+      "isPrefix" => o.is_prefix = b,
+      "requireMath" => o.require_math = b,
+      "forbidMath" => o.forbid_math = b,
+      "robust" => o.robust = b,
+      "locked" => o.locked = b,
+      "enterHorizontal" => o.enter_horizontal = b,
+      "leaveHorizontal" => o.leave_horizontal = b,
+      "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
+      "mode" => o.mode = Some(dynamic_to_string(val.clone())),
+      "nargs" => o.nargs = val.as_int().ok().map(|i| i as usize),
+      _ => {},
+    }
+  }
+  o
+}
+
+/// Install one `DefConditional` registration: the Rhai test closure receives
+/// each argument as its TeX-source string and must return a bool (mirrors the
+/// `DefConditional!` macro's `sub` test → `def_conditional`).
+fn wire_conditional(engine: &Rc<Engine>, ast: &Rc<AST>, proto: &str, test: FnPtr) -> Result<()> {
+  let (cs, paramlist) = parse_prototype(proto, true)?;
+  let cs_name = cs.to_string();
+  let engine = engine.clone();
+  let ast = ast.clone();
+  let closure: ConditionalClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
+    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let ret: Dynamic = test
+      .call::<Dynamic>(&engine, &ast, dyn_args)
+      .map_err(|e| Error::from(format!("script conditional {cs_name}: {e}")))?;
+    Ok(ret.as_bool().unwrap_or(false))
+  });
+  def_conditional(cs, paramlist, Some(closure), ConditionalOptions::default())
+}
+
+/// Map a Rhai option bag onto `MathPrimitiveOptions` (the `DefMath!` scalar
+/// option set; unknown keys are ignored, matching Perl %options forgiveness).
+fn math_options_from_map(opts: Map) -> Result<MathPrimitiveOptions> {
+  let mut o = MathPrimitiveOptions::default();
+  for (key, val) in opts {
+    let s = || dynamic_to_string(val.clone());
+    let b = || val.as_bool().unwrap_or(false);
+    match key.as_str() {
+      "name" => o.name = Some(s()),
+      "meaning" => o.meaning = Some(s()),
+      "omcd" => o.omcd = Some(s()),
+      "role" => o.role = Some(s()),
+      "operator_role" => o.operator_role = Some(s()),
+      "mathstyle" => o.mathstyle = Some(s()),
+      "scriptpos" => o.scriptpos = Some(s()),
+      "mode" => o.mode = Some(s()),
+      "alias" => o.alias = Some(s()),
+      "revert_as" => o.revert_as = Some(std::borrow::Cow::Owned(s())),
+      "bounded" => o.bounded = b(),
+      "requireMath" => o.require_math = b(),
+      "forbidMath" => o.forbid_math = b(),
+      "isPrefix" => o.is_prefix = b(),
+      "reorder" => o.reorder = b(),
+      "dual" => o.dual = b(),
+      "nogroup" => o.nogroup = b(),
+      "stretchy" => o.stretchy = val.as_bool().ok(),
+      "operator_stretchy" => o.operator_stretchy = val.as_bool().ok(),
+      "protected" => o.protected = b(),
+      "robust" => o.robust = b(),
+      "locked" => o.locked = b(),
+      "hide_content_reversion" => o.hide_content_reversion = b(),
+      "lpadding" => o.lpadding = val.as_int().ok().map(|i| i as usize),
+      "rpadding" => o.rpadding = val.as_int().ok().map(|i| i as usize),
+      _ => {},
+    }
+  }
+  Ok(o)
 }
 
 /// Install a `DeclareOption` registration. Mirrors the `DeclareOption!` macro
@@ -743,7 +1338,7 @@ fn wire_primitive(engine: &Rc<Engine>, ast: &Rc<AST>, proto: &str, body: FnPtr) 
 fn wire_option(engine: &Rc<Engine>, ast: &Rc<AST>, opt: &str, body: FnPtr) -> Result<()> {
   latexml_core::state::push_value("@declaredoptions", opt.to_string())?;
   let cs_proto = format!("\\ds@{opt}");
-  wire_primitive(engine, ast, &cs_proto, body)
+  wire_primitive(engine, ast, &cs_proto, body, PrimitiveOptions::default())
 }
 
 /// Install a string-template `DefConstructor` as a native constructor. The
@@ -782,6 +1377,93 @@ mod tests {
     set_state(State::new(StateOptions::default()));
     latexml_core::stomach::initialize_stomach();
     latexml_engine::base::load_definitions().expect("bootstrap base parameter types");
+  }
+
+  /// The Wave-A pool surface (state, Let/RawTeX, counters, token helpers):
+  /// every registration must round-trip through a real script execution.
+  #[test]
+  fn pool_surface_state_counters_tokens() {
+    fresh_state();
+    load_script(
+      r##"
+      AssignValue("ws:k", "v1");
+      assign_global("ws:str", LookupString("ws:k"));
+
+      RawTeX("\\def\\wsfoo{FOO}");
+      Let("\\wsalias", "\\wsfoo");
+      assign_global("ws:def", if IsDefined("\\wsfoo") { "yes" } else { "no" });
+      assign_global("ws:alias", if IsDefined("\\wsalias") { "yes" } else { "no" });
+      assign_global("ws:xeq", if XEquals("\\wsalias", "\\wsfoo") { "eq" } else { "ne" });
+      assign_global("ws:expand", UnTeX(Expand(TokenizeInternal("\\wsfoo"))));
+
+      NewCounter("wsctr");
+      StepCounter("wsctr");
+      StepCounter("wsctr");
+      AddToCounter("wsctr", 3);
+      assign_global("ws:cv", CounterValue("wsctr").to_string());
+      let refmap = RefStepCounter("wsctr");
+      assign_global("ws:ref", if ("tags" in refmap) && ("id" in refmap) { "has" } else { "none" });
+      ResetCounter("wsctr");
+      assign_global("ws:cv0", CounterValue("wsctr").to_string());
+
+      assign_global("ws:digest", ToString(DigestText("ab")));
+    "##,
+    )
+    .expect("wave-A surface script should load cleanly");
+    assert_eq!(lookup_str("ws:str"), "v1", "AssignValue/LookupString");
+    assert_eq!(lookup_str("ws:def"), "yes", "RawTeX \\def + IsDefined");
+    assert_eq!(lookup_str("ws:alias"), "yes", "Let installs the alias");
+    assert_eq!(lookup_str("ws:xeq"), "eq", "XEquals alias == \\wsfoo");
+    assert_eq!(lookup_str("ws:expand"), "FOO", "Expand through the gullet");
+    assert_eq!(lookup_str("ws:cv"), "5", "2 steps + 3 = 5");
+    assert_eq!(lookup_str("ws:ref"), "has", "RefStepCounter returns tags+id");
+    assert_eq!(lookup_str("ws:cv0"), "0", "ResetCounter zeroes");
+    assert_eq!(lookup_str("ws:digest"), "ab", "DigestText -> Digested handle");
+  }
+
+  /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
+  /// (Rhai test driven from real TeX), DefKeyVal, DefLigature, DefMath.
+  #[test]
+  fn pool_surface_definition_forms() {
+    fresh_state();
+    load_script(
+      r##"
+      DefRegister("\\wbcount", 42);
+      DefRegister("\\wbdimen", "5pt");
+      DefKeyVal("WB", "color", "");
+      DefLigature("ff", "F");
+      DefMath("\\wbsum", "∑", #{ role: "SUMOP", meaning: "sum" });
+      DefConditional("\\ifwb{}", |x| x == "on");
+      DefMacro("\\wbprobe{}", |x| "\\ifwb{" + x + "}YES\\else NO\\fi");
+    "##,
+    )
+    .expect("wave-B surface script should load cleanly");
+    // Registers installed and readable through the native register store.
+    assert!(
+      latexml_core::state::lookup_definition(&latexml_core::T_CS!("\\wbcount"))
+        .expect("lookup")
+        .is_some(),
+      "\\wbcount register installed"
+    );
+    assert!(
+      latexml_core::state::lookup_definition(&latexml_core::T_CS!("\\wbdimen"))
+        .expect("lookup")
+        .is_some(),
+      "\\wbdimen register installed"
+    );
+    assert!(
+      latexml_core::state::lookup_definition(&latexml_core::T_CS!("\\wbsum"))
+        .expect("lookup")
+        .is_some(),
+      "DefMath \\wbsum installed"
+    );
+    // The conditional drives real expansion: \ifwb{on} -> YES, \ifwb{off} -> NO.
+    let on = latexml_core::gullet::do_expand(mouth::tokenize_internal("\\wbprobe{on}"))
+      .expect("expand on");
+    assert_eq!(on.to_string().trim(), "YES", "conditional true branch");
+    let off = latexml_core::gullet::do_expand(mouth::tokenize_internal("\\wbprobe{off}"))
+      .expect("expand off");
+    assert_eq!(off.to_string().trim(), "NO", "conditional false branch");
   }
 
   fn lookup_str(key: &str) -> String {
