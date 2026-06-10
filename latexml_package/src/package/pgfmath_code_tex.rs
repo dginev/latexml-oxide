@@ -1674,3 +1674,91 @@ LoadDefinitions!({
   });
 
 });
+
+#[cfg(test)]
+mod pgfmath_golden_tests {
+  fn describe(expr: &str) -> String {
+    let (result, units) = super::pgfmathparse_eval_with_units(expr);
+    format!("{result}@{}", if units { "u" } else { "-" })
+  }
+
+  /// Golden corpus pinning the battle-tested recdescent's behavior
+  /// (captured 2026-06-10) — incl. its deliberate quirks (ternary dropped
+  /// after a comparison parse, pass-through formatting of "+3"/"3.").
+  /// The gate for the winnow grammar: divergence = regression.
+  #[test]
+  fn golden_pgfmath_corpus() {
+    latexml_core::state::set_state(latexml_core::state::State::new(
+      latexml_core::state::StateOptions::default(),
+    ));
+    let golden: &[(&str, &str)] = &[
+      ("1+1", "2.0@-"),
+      ("2+3*4", "14.0@-"),
+      ("2*3+4", "10.0@-"),
+      ("10/4", "2.5@-"),
+      ("2^10", "1024.0@-"),
+      ("(1+2)*3", "9.0@-"),
+      ("-5+2", "-3.0@-"),
+      ("+3", "3@-"),
+      ("--2", "2.0@-"),
+      ("3!", "6.0@-"),
+      ("1.5^2", "2.25@-"),
+      ("7/2", "3.5@-"),
+      ("1/3", "0.33333@-"),
+      ("57.29577951r", "3282.80635@-"),
+      ("0x1F", "31.0@-"),
+      ("0b101", "5.0@-"),
+      (".5", "0.5@-"),
+      ("3.", "3.@-"),
+      ("1.2e3", "1200.0@-"),
+      ("1e-2", "0.01@-"),
+      ("2.5E+2", "250.0@-"),
+      (".", "0.0@-"),
+      ("2pt", "2.0@u"),
+      ("1cm", "28.45276@u"),
+      ("10mm", "28.45276@u"),
+      ("1in", "72.27@u"),
+      ("3bp", "3.01125@u"),
+      ("1dd", "1.07001@u"),
+      ("1cc", "12.8401@u"),
+      ("100sp", "0.00153@u"),
+      ("3>2", "1.0@-"),
+      ("2>=3", "0.0@-"),
+      ("1==1", "1.0@-"),
+      ("1!=2", "1.0@-"),
+      ("1&&0", "0.0@-"),
+      ("0||1", "1.0@-"),
+      ("3>2 ? 10 : 20", "1.0@-"),
+      ("(1<2)&&(3<4)", "1.0@-"),
+      ("!1", "0.0@-"),
+      ("!0", "1.0@-"),
+      ("sin(30)", "0.5@-"),
+      ("cos(60)", "0.5@-"),
+      ("tan(45)", "1.0@-"),
+      ("min(3,5)", "3.0@-"),
+      ("max(3,5)", "5.0@-"),
+      ("mod(7,3)", "1.0@-"),
+      ("abs(-4)", "4.0@-"),
+      ("sqrt(16)", "4.0@-"),
+      ("floor(1.7)", "1.0@-"),
+      ("ceil(1.2)", "2.0@-"),
+      ("round(2.5)", "3.0@-"),
+      ("int(3.9)", "3@-"),
+      ("exp(1)", "2.71828@-"),
+      ("ln(2.718281828)", "1.0@-"),
+      ("pow(2,8)", "256.0@-"),
+      ("veclen(3,4)", "5.0@-"),
+      ("atan(1)", "45.0@-"),
+      ("pi", "3.14159@-"),
+      ("e", "2.71828@-"),
+      ("pi*2", "6.28319@-"),
+      ("sin 30", "0.5@-"),
+      ("{1}+{2}", "3.0@-"),
+      (" 1 + { 2 } ", "3.0@-"),
+      ("2*3pt", "6.0@u"),
+    ];
+    for (expr, expected) in golden {
+      assert_eq!(&describe(expr), expected, "pgfmath diverged on {expr:?}");
+    }
+  }
+}
