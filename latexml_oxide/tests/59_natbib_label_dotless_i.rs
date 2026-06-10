@@ -19,30 +19,7 @@
 //! Conditional: needs the kernel dump (so expl3/pgf load cleanly) AND
 //! revtex4-1 + mathptmx + pgfplots installed (the exact package set drives
 //! the encoding state into the looping `\T1-cmd` form).
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
-use std::process::Command;
-
-fn dump_available() -> bool {
-  let dir = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps");
-  std::fs::read_dir(dir)
-    .map(|rd| {
-      rd.filter_map(|e| e.ok()).any(|e| {
-        let n = e.file_name();
-        let n = n.to_string_lossy();
-        n.starts_with("latex.") && n.ends_with(".dump.txt")
-      })
-    })
-    .unwrap_or(false)
-}
-
-fn kpse_has(file: &str) -> bool {
-  Command::new("kpsewhich")
-    .arg(file)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
+use latexml::util::test::{convert_fixture, dump_available, kpse_has};
 
 #[test]
 fn natbib_dotless_i_label_does_not_loop() {
@@ -61,14 +38,7 @@ fn natbib_dotless_i_label_does_not_loop() {
     return;
   }
 
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert("tests/cluster_regressions/natbib_label_dotless_i.tex".to_string());
+  let r = convert_fixture("tests/cluster_regressions/natbib_label_dotless_i.tex");
 
   assert!(
     r.result.is_some(),

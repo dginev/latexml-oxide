@@ -488,6 +488,12 @@ impl Digested {
     h.finish()
   }
 
+  // NOTE: `fingerprint_into` and `estimate_bytes_into` are PAIRED budgeted
+  // traversals over `DigestedData` (one hashes, one sizes — different
+  // per-variant work, same walk shape). Both matches are deliberately
+  // EXHAUSTIVE (no `_` catch-all): adding a `DigestedData` variant breaks
+  // both at compile time, so the two cannot silently drift on coverage —
+  // only keep that property when editing either (PR #249 review P3-11).
   fn fingerprint_into<H: std::hash::Hasher>(&self, h: &mut H, budget: &mut u32) {
     use std::hash::Hash;
     if *budget == 0 {
@@ -565,6 +571,8 @@ impl Digested {
     self.estimate_bytes_into(&mut budget)
   }
 
+  // Paired with `fingerprint_into` above — keep both matches exhaustive
+  // (see the note there).
   fn estimate_bytes_into(&self, budget: &mut u32) -> usize {
     if *budget == 0 {
       return 0;

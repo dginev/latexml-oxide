@@ -15,19 +15,11 @@
 //! these old documents inline the unguarded 2.09 macros.
 //!
 //! Dump-independent (plain-TeX input; the fontmap binding is compiled in).
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
+use latexml::util::test::convert_fixture;
 
 #[test]
 fn line_font_chars_have_nonzero_width_and_loops_terminate() {
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert("tests/cluster_regressions/line_font_picture.tex".to_string());
+  let r = convert_fixture("tests/cluster_regressions/line_font_picture.tex");
 
   let out = r
     .result

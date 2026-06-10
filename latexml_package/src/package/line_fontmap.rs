@@ -36,49 +36,115 @@
 //! approximation either way (hand-rolled `\raise`/`\hskip` positioning).
 use crate::prelude::*;
 
+/// The `line` encoding slot table (0x00–0x7F), exposed for the TFM
+/// slot-coverage test (every `line10.tfm`-populated slot must be `Some` —
+/// a `None` on a populated slot silently resurrects the zero-width
+/// `\@whiledim` infinite-loop OOM for that slope).
+#[rustfmt::skip]
+pub const LINE_SLOTS: [Option<char>; 128] = [
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2190}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
+  Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'), Some('\u{2571}'),
+  Some('\u{2571}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
+  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
+  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2191}'), Some('\u{2572}'),
+  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'),
+  Some('\u{2572}'), Some('\u{2572}'), Some('\u{2572}'), Some('\u{2193}'),
+  Some('\u{2572}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'), Some('\u{2197}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'),
+  Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), None,
+];
+
+
 LoadDefinitions!({
   #[rustfmt::skip]
-  DeclareFontMap!("line", mixrc![
-    // 0x00-0x0F: rising segments \line(1..2, 1..6) — ╱
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    // 0x10-0x17: mixed band (rising x=3 / falling x=1) — favour ╱, ╲ tail
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    '\u{2571}', '\u{2571}', '\u{2572}', '\u{2572}',
-    // 0x18-0x1F: mixed; 0x1B ('33) = \@getlarrow(1,0) left arrowhead
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2190}',
-    '\u{2571}', '\u{2571}', '\u{2572}', '\u{2572}',
-    // 0x20-0x2F: steeper bands — falling ╲ dominates the upper half
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    '\u{2571}', '\u{2572}', '\u{2572}', '\u{2572}',
-    '\u{2571}', '\u{2571}', '\u{2571}', '\u{2571}',
-    '\u{2571}', '\u{2572}', '\u{2572}', '\u{2572}',
-    // 0x30-0x3F: falling band; 0x36 ('66) up vector head, 0x3F ('77) down head
-    '\u{2572}', '\u{2572}', '\u{2572}', '\u{2572}',
-    '\u{2572}', '\u{2572}', '\u{2191}', '\u{2572}',
-    '\u{2572}', '\u{2572}', '\u{2572}', '\u{2572}',
-    '\u{2572}', '\u{2572}', '\u{2572}', '\u{2193}',
-    // 0x40-0x4F: arrowheaded segments (letter range, \@getlarrow/\@getrarrow)
-    '\u{2572}', '\u{2197}', '\u{2197}', '\u{2197}',
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    // 0x50-0x5F: arrowheaded segments (upper letters cont.)
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    '\u{2197}', '\u{2197}', '\u{2197}', '\u{2197}',
-    // 0x60-0x6F: arrowheaded falling/left set (lowercase, +64 offset)
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    // 0x70-0x7F: arrowheaded falling/left set (cont.)
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    '\u{2198}', '\u{2198}', '\u{2198}', '\u{2198}',
-    '\u{2198}', '\u{2198}', '\u{2198}', None
-  ]);
+  DeclareFontMap!("line", Rc::from(&LINE_SLOTS[..]));
 });
+
+#[cfg(test)]
+mod tests {
+  use super::LINE_SLOTS;
+  use crate::package::lcircle_fontmap::LCIRCLE_SLOTS;
+  use std::process::Command;
+
+  /// The TFM-populated slots of a picture font, parsed from `tftopl` output
+  /// (lines like `(CHARACTER O 27` / `(CHARACTER C a`). Returns None when the
+  /// host TeX tree lacks the font or `tftopl` (test self-skips).
+  fn tfm_slots(font: &str) -> Option<Vec<usize>> {
+    let tfm = Command::new("kpsewhich").arg(format!("{font}.tfm")).output().ok()?;
+    if !tfm.status.success() {
+      return None;
+    }
+    let path = String::from_utf8_lossy(&tfm.stdout).trim().to_string();
+    let out = Command::new("tftopl").arg(&path).output().ok()?;
+    if !out.status.success() {
+      return None;
+    }
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    let mut slots = Vec::new();
+    for line in text.lines() {
+      if let Some(rest) = line.strip_prefix("(CHARACTER ") {
+        let mut it = rest.split_whitespace();
+        match (it.next(), it.next()) {
+          (Some("O"), Some(oct)) => {
+            if let Ok(n) = usize::from_str_radix(oct, 8) {
+              slots.push(n);
+            }
+          },
+          (Some("C"), Some(ch)) => {
+            if let Some(c) = ch.chars().next() {
+              slots.push(c as usize);
+            }
+          },
+          _ => {},
+        }
+      }
+    }
+    Some(slots)
+  }
+
+  /// Every TFM-populated slot MUST map to `Some` glyph: a `None` on a
+  /// populated slot gives that char a zero-width box and silently resurrects
+  /// the `\@whiledim` infinite-loop OOM (the canvas_3 cluster this map
+  /// fixed) for documents drawing that slope/arc. PR #249 review P3-16.
+  #[test]
+  fn every_tfm_populated_slot_is_mapped() {
+    for (font, map) in [("line10", &LINE_SLOTS), ("lcircle10", &LCIRCLE_SLOTS)] {
+      let Some(slots) = tfm_slots(font) else {
+        eprintln!("SKIP every_tfm_populated_slot_is_mapped: {font}.tfm / tftopl unavailable");
+        continue;
+      };
+      assert!(!slots.is_empty(), "{font}.tfm parsed to zero slots?");
+      for slot in slots {
+        if slot < map.len() {
+          assert!(
+            map[slot].is_some(),
+            "{font} slot {slot} (0o{slot:o}) is populated in the TFM but maps \
+             to None — zero-width box, \\@whiledim OOM risk"
+          );
+        }
+      }
+    }
+  }
+}

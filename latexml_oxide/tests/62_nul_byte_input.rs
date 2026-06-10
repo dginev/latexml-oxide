@@ -13,21 +13,13 @@
 //! catcode-12 Perl parity is kept while serialization stays total.
 //!
 //! Dump-independent.
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
+use latexml::util::test::convert_fixture;
 
 #[test]
 fn nul_byte_in_math_does_not_abort() {
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
   // The conversion runs in-process: a libxml CString panic would unwind
   // through (and fail) this test directly.
-  let r = c.convert("tests/cluster_regressions/nul_byte_input.tex".to_string());
+  let r = convert_fixture("tests/cluster_regressions/nul_byte_input.tex");
 
   let out = r
     .result

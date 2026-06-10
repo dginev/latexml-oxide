@@ -14,19 +14,11 @@
 //! `\uninger`-style CS, no invalid-XML NUL in output).
 //!
 //! Dump-independent.
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
+use latexml::util::test::convert_fixture;
 
 #[test]
 fn backtick_caret_notation_reads_charcode() {
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert("tests/cluster_regressions/caret_charcode.tex".to_string());
+  let r = convert_fixture("tests/cluster_regressions/caret_charcode.tex");
   let out = r.result.expect("conversion produced no result");
   let xml = out.to_string();
 

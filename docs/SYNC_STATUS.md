@@ -3293,16 +3293,6 @@ fixes landed" below)*
 
 **P3 — hygiene/altitude (cheap, batchable):**
 
-10. **Test-helper duplication is a signal-integrity drift risk**:
-    `error_count()` (the lax `Error:<class>:` filter — the project's #1
-    signal-integrity concern) now has copies in 06_cluster_regressions and
-    57_pgfplots_units; `dump_available()`/`kpse_has()` duplicated across
-    57/59 (and `dump_available` re-implements
-    `dump_paths::available_years_in_dir`); all five new tests repeat the
-    Converter boilerplate. Hoist into a shared test util.
-11. `estimate_bytes_into` duplicates `fingerprint_into`'s budgeted traversal —
-    one budgeted visitor parameterized over an accumulator keeps a single
-    source of truth when `DigestedData` grows a variant.
 12. Third hand-rolled `/proc` RSS reader (`watchdog::process_rss_kb`,
     stomach `check_timeout`, cortex_worker VmHWM) — make stomach call the
     watchdog helper so the future macOS/Windows port is one seam.
@@ -3322,10 +3312,6 @@ fixes landed" below)*
     full-expansion consumer of author text remains exposed. Track the
     dispatcher fix (same family as the `\href protected` fix); delete the
     blocklist when it lands.
-16. `line_fontmap`/`lcircle_fontmap`: add a unit test asserting every
-    TFM-populated slot maps to `Some` (cross-check via `tftopl` output
-    committed as a fixture, or a hardcoded slot list) — a missed slot
-    silently resurrects the zero-width `\@whiledim` OOM for that slope.
 17. Five new docs are not in CLAUDE.md's doc index;
     `EXPECTED_ID_XMREF_DESIGN.md` is undated but substantially a
     point-in-time Phase-0 study — date it or split the living design from

@@ -17,19 +17,11 @@
 //! robustness win that is also faithful to real-TeX semantics.
 //!
 //! Dump-independent: the hyperref binding (and `\href`) is compiled in.
-use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
+use latexml::util::test::convert_fixture;
 
 #[test]
 fn href_inside_xdef_does_not_loop() {
-  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config {
-    format: OutputFormat::HTML5,
-    ..Config::default()
-  };
-  let mut c = Converter::from_config(cfg);
-  c.initialize_session().expect("initialize");
-  let r = c.convert("tests/cluster_regressions/href_edef_loop.tex".to_string());
+  let r = convert_fixture("tests/cluster_regressions/href_edef_loop.tex");
 
   // The loop manifested as a fatal recursion/timeout abort with no result.
   assert!(

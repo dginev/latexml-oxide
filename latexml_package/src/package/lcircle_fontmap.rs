@@ -17,49 +17,45 @@
 //! ◜ ◝ ◟ ◞ (U+25DC..U+25DF).
 use crate::prelude::*;
 
+/// The `lcircle` encoding slot table (0x00–0x7F) — see [`super::line_fontmap::LINE_SLOTS`].
+#[rustfmt::skip]
+pub const LCIRCLE_SLOTS: [Option<char>; 128] = [
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  Some('\u{25DC}'), Some('\u{25DD}'), Some('\u{25DF}'), Some('\u{25DE}'),
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  None, None, None, None,
+  Some('\u{2022}'), Some('\u{2022}'), Some('\u{2022}'), Some('\u{2022}'),
+  Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'),
+  Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'),
+  Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'),
+  Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'),
+  Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'),
+  Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{25CF}'), Some('\u{2B24}'),
+  Some('\u{2B24}'), Some('\u{2B24}'), Some('\u{2B24}'), None,
+];
+
+
 LoadDefinitions!({
   #[rustfmt::skip]
-  DeclareFontMap!("lcircle", mixrc![
-    // 0x00-0x0F: quarter arcs, smallest size groups (4 quadrants per group)
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    // 0x10-0x1F: quarter arcs, middle size groups
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    // 0x20-0x27: quarter arcs, largest size groups (O40-O47)
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    '\u{25DC}', '\u{25DD}', '\u{25DF}', '\u{25DE}',
-    // 0x28-0x2F: unpopulated in lcircle10.tfm
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    // 0x30-0x3F: unpopulated
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    // 0x40-0x4F: unpopulated
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    // 0x50-0x5F: unpopulated
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    None,        None,        None,        None,
-    // 0x60-0x6F: filled disks (\circle* / \@dot), increasing diameter
-    '\u{2022}', '\u{2022}', '\u{2022}', '\u{2022}',
-    '\u{25CF}', '\u{25CF}', '\u{25CF}', '\u{25CF}',
-    '\u{25CF}', '\u{25CF}', '\u{25CF}', '\u{25CF}',
-    '\u{25CF}', '\u{25CF}', '\u{25CF}', '\u{25CF}',
-    // 0x70-0x7F: filled disks (cont., largest)
-    '\u{25CF}', '\u{25CF}', '\u{25CF}', '\u{25CF}',
-    '\u{25CF}', '\u{25CF}', '\u{25CF}', '\u{25CF}',
-    '\u{25CF}', '\u{25CF}', '\u{25CF}', '\u{2B24}',
-    '\u{2B24}', '\u{2B24}', '\u{2B24}', None
-  ]);
+  DeclareFontMap!("lcircle", Rc::from(&LCIRCLE_SLOTS[..]));
 });
