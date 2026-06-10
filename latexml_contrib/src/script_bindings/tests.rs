@@ -309,3 +309,18 @@ fn m1_errors_are_clean() {
   assert!(r.is_err(), "throwing body should error, got {r:?}");
   latexml_core::reset_thread_engine();
 }
+
+/// The SHIPPED example binding must always load cleanly — pins
+/// `docs/examples/sample.sty.rhai` against surface drift.
+#[test]
+fn shipped_example_loads() {
+  fresh_state();
+  let src = std::fs::read_to_string(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../docs/examples/sample.sty.rhai"
+  ))
+  .expect("read shipped example");
+  let n = load_script(&src).expect("shipped example must load");
+  assert!(n >= 15, "expected the full surface tour to install (got {n})");
+  latexml_core::reset_thread_engine();
+}
