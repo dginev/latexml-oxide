@@ -3325,15 +3325,6 @@ fixes landed" below)*
    detection point), and don't gate further guard checks on
    `pending.is_none()`.
 
-7. **Mouth-boundary `cycle_guard.reset()` should be save/restore.** The reset
-   (math0402448 false-positive fix) wipes the OUTER context's history on
-   every `reading_from_mouth` entry (~164 `do_expand` call sites alone), so a
-   genuine runaway whose loop body contains any `do_expand` (e.g. an
-   environment-recursion stepping `\theequation`) is now invisible to the
-   gullet cycle guard forever — only `token_limit` catches it, after minutes
-   of grinding. Save/restore (push/pop) the guard state per mouth so outer
-   periodicity survives inner expansions.
-
 8. **All stomach guard breaches raise as `Fatal:Stomach:Recursion`** — the 2M
    count cap, 3.2GB byte budget, and 100k depth cap are size events, not
    recursion; canvas/telemetry clustering on `target:category` cannot

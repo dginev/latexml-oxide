@@ -117,6 +117,21 @@ pub struct Gullet {
   /// and more cheaply than `token_limit`/`pushback_limit`. Gated on a high
   /// `progress` so normal documents never touch it. See [`crate::cycle_guard`].
   pub cycle_guard:      crate::cycle_guard::CycleGuard,
+  /// Reading-context serial, mixed into every cycle-guard fingerprint so that
+  /// windows never match ACROSS `reading_from_mouth` contexts: a cycle is only
+  /// a cycle within one expansion context. Each `reading_from_mouth` entry
+  /// allocates a fresh serial (from `ctx_next`) and restores the outer one on
+  /// exit (`ctx_stack`), so (a) consecutive IDENTICAL short expansions — the
+  /// math0402448 xymatrix per-cell `get_xmarg_id` stream — get distinct
+  /// serials and can never concatenate into a pseudo-periodic window (the
+  /// false positive an earlier blanket `reset()` suppressed), while (b) an
+  /// OUTER loop's tokens keep their serial across inner expansions, so a
+  /// runaway whose body calls `do_expand` each iteration (~164 call sites)
+  /// remains detectable — the blind spot the blanket reset had (PR #249
+  /// review P2-7).
+  pub ctx_serial:       u64,
+  ctx_next:             u64,
+  ctx_stack:            Vec<u64>,
 }
 
 thread_local! {
@@ -238,6 +253,9 @@ pub fn initialize_gullet() {
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
   gullet.cycle_guard.reset();
+  gullet.ctx_serial = 0;
+  gullet.ctx_next = 0;
+  gullet.ctx_stack.clear();
   // Reset smuggled token from previous conversion
   SPECIAL_RELAX_SMUGGLED.set(None);
 }
@@ -584,7 +602,14 @@ fn cycle_guard_checkpoint(nextt: &Token) -> Result<()> {
   }
   let mut g = gullet_mut!();
   if g.progress > CYCLE_GUARD_ACTIVATE {
-    let fp = nextt.cycle_fingerprint();
+    // Mix the reading-context serial into the fingerprint (see the
+    // `Gullet::ctx_serial` field doc): tokens read in different
+    // `reading_from_mouth` contexts can then never form a matching window,
+    // scoping cycle detection to ONE expansion context without destroying
+    // the outer context's history. The multiplier spreads the serial across
+    // the hash bits (splitmix64's odd constant).
+    let fp =
+      nextt.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     if let Some(period) = g.cycle_guard.push(fp) {
       drop(g);
       let msg = s!(
@@ -2525,23 +2550,31 @@ fn handle_marker(marker_token: Token) {
 pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
-  // A cycle is only a cycle WITHIN one expansion context: reset the
-  // expansion-stream cycle-guard history at this mouth boundary. A genuine
-  // small-period loop (`\def\x{a\x}`, `\href` self-reemission, …) spins
-  // inside ONE reading context and re-accumulates its window immediately, so
-  // it is still caught. WITHOUT this reset, a legitimate run of *consecutive
-  // identical short expansions* — e.g. a giant xymatrix whose `fenced`
-  // semantics calls `get_xmarg_id`→`do_expand(\the@lx@xmarg@ID)` once per
-  // cell, each reading the same `\ifx`-probe tokens — concatenates into a
-  // pseudo-periodic stream across calls and FALSE-POSITIVES the guard once
-  // `progress` crosses the activation gate. Witness math0402448 (amsart +
-  // xy-pic, 3464 formulae): a swallowed `Fatal:Timeout:Recursion` during
-  // math-parser semantics ("Conversion failed: 1 fatal error" with no
-  // `Fatal:` line in the log); with the guard fully disabled the paper
-  // converts cleanly in 9.7 s — i.e. no real loop exists.
-  gullet_mut!().cycle_guard.reset();
+  // A cycle is only a cycle WITHIN one expansion context. Rather than
+  // resetting the guard history here (an earlier fix that also BLINDED the
+  // guard to outer loops whose body calls `do_expand` each iteration), give
+  // this reading context a fresh SERIAL that `cycle_guard_checkpoint` mixes
+  // into every fingerprint: windows can never match across contexts, so
+  // consecutive identical short expansions — the math0402448 xymatrix
+  // per-cell `get_xmarg_id` stream that false-positived as a "loop" — stay
+  // inert, while the OUTER context's serial (restored on exit) keeps outer
+  // periodicity intact and detectable. PR #249 review P2-7.
+  {
+    let mut g = gullet_mut!();
+    let outer = g.ctx_serial;
+    g.ctx_stack.push(outer);
+    g.ctx_next += 1;
+    g.ctx_serial = g.ctx_next;
+  }
   open_mouth(mouth, false); // only allow mouth to be explicitly closed here.
   let reader_result = reader();
+  // Reading in this context is over (whether Ok or Err): restore the outer
+  // context's serial before any cleanup/return path below.
+  {
+    let mut g = gullet_mut!();
+    let restored = g.ctx_stack.pop().unwrap_or(0);
+    g.ctx_serial = restored;
+  }
   // If the reader returned an error (e.g., Fatal from token limit),
   // we STILL need to clean up the mouth to preserve the caller's state.
   let results: R = match reader_result {
