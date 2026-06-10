@@ -198,6 +198,10 @@ const SAMPLE: &str = r##"
 
   // DefMathLigature: ":=" collapses to one ASSIGN token (data-form matcher).
   DefMathLigature(":=", "≔", #{ role: "ASSIGN", name: "assign" });
+
+  // DefRewrite (data form): stamp every biography note at finalization.
+  DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
+                attributes: #{ class: "rw-stamp" } });
 "##;
 
 /// Extra dispatcher: load the sample script when `lxrhaitest` is requested.
@@ -379,6 +383,11 @@ fn script_binding_macro_and_constructor_convert() {
   assert!(
     xml.contains("≔"),
     "DefMathLigature (:=) did not merge; xml=\n{xml}"
+  );
+  // DefRewrite: the xpath+attributes rule fired at finalization.
+  assert!(
+    xml.contains("rw-stamp"),
+    "DefRewrite xpath/attributes rule did not fire; xml=\n{xml}"
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.

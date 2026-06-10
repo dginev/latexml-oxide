@@ -493,6 +493,18 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
+  // DefRewrite/DefMathRewrite (data forms: xpath/select/attributes/regexp/
+  // attributes-map/on_match; the `replace` closure form stays native-only).
+  engine.register_fn("DefRewrite", |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+    def_rewrite_impl("text", opts).map_err(rhai_err)
+  });
+  engine.register_fn(
+    "DefMathRewrite",
+    |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      def_rewrite_impl("math", opts).map_err(rhai_err)
+    },
+  );
+
   // DefMathLigature: pattern/replacement/attrs are plain data — the XMTok
   // prev-sibling matcher is built natively (same lowering as the macro).
   engine.register_fn("DefMathLigature", |pattern: &str, replacement: &str, opts: Map| {

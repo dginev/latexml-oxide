@@ -728,3 +728,34 @@ pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map
     regex: None,
   }]);
 }
+
+/// The `DefRewrite!`/`DefMathRewrite!` data-form lowering: build
+/// `RewriteOptions` from the option bag and push the rule.
+pub(super) fn def_rewrite_impl(kind: &str, opts: Map) -> Result<()> {
+  use latexml_core::rewrite::{Rewrite, RewriteOptions};
+  let mut o = RewriteOptions { is_math: kind == "math", ..RewriteOptions::default() };
+  for (key, val) in opts {
+    match key.as_str() {
+      "label" => o.label = Some(dynamic_to_string(val)),
+      "xpath" => o.xpath = Some(dynamic_to_string(val)),
+      "select" => o.select = Some(dynamic_to_string(val)),
+      "attributes" => {
+        if val.is_map() {
+          let mut m = rustc_hash::FxHashMap::default();
+          for (k, v) in val.cast::<Map>() {
+            m.insert(k.to_string(), dynamic_to_string(v));
+          }
+          o.attributes_map = Some(m);
+        } else {
+          o.attributes = Some(dynamic_to_string(val));
+        }
+      },
+      "regexp" => o.regexp = Some(dynamic_to_string(val)),
+      "match" => o.on_match = Some(mouth::tokenize_internal(&dynamic_to_string(val))),
+      "scope" => o.scope = scope_of(&dynamic_to_string(val)),
+      _ => {},
+    }
+  }
+  latexml_core::state::push_value("DOCUMENT_REWRITE_RULES", Rewrite::new(kind, o))?;
+  Ok(())
+}
