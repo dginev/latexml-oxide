@@ -56,4 +56,4 @@ stacker = "0.1.24"
 # Already lock-pinned at 0.7.x via `toml_edit` (clap-family, trusted); the AST +
 # parser live here so both the compile-time codegen (latexml_codegen, which
 # depends on this crate) and the runtime interpreter consume one grammar.
-winnow = "0.7"
+winnow = "1.0"
