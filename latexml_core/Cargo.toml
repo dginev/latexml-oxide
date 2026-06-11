@@ -14,6 +14,17 @@ name = "latexml_core"
 crate-type = ["lib"]
 
 [features]
+# The kpathsea file-resolution backend (libkpathsea / subprocess kpsewhich) is a
+# RUNTIME concern — default-on for every normal build. It is optional so the
+# host-side proc-macro build (`latexml_codegen`, which uses only the binding AST
+# and never resolves TeX files) can drop it via `default-features = false`,
+# keeping kpathsea — and its static-link / PIC constraints — out of the
+# proc-macro cdylib. Resolver v2 isolates proc-macro features from the runtime,
+# so the runtime `latexml_core` still gets kpathsea. See util/pathname.rs for the
+# gated code + no-op fallbacks.
+default = ["kpathsea"]
+kpathsea = ["dep:kpathsea"]
+
 # Activated by `latexml_codegen` (host-side proc-macro) to enable the
 # `impl ToTokens for Tokens / Catcode / Token / Parameters / Parameter`
 # blocks. Resolver v2 isolates proc-macro feature unification, so the
@@ -45,7 +56,7 @@ libxml = "0.3.12"
 # 0.3: backend-dispatched — in-process libkpathsea when linked at build
 # time, subprocess-kpsewhich fallback otherwise (MacTeX ships no
 # libkpathsea at all; see docs/PORTABILITY_MACOS_PROBE_2026-06-07.md).
-kpathsea = "0.3"
+kpathsea = { version = "0.3", optional = true }
 unidecode = "0.3.0"
 rustc-hash = "2.0.0"
 string-interner = { version = "0.20.0", default-features = false, features = ["std", "backends", "inline-more"] }
