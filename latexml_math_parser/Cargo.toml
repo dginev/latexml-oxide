@@ -19,7 +19,7 @@ crate-type = ["lib"]
 token-locators = ["latexml_core/token-locators"]
 
 [dependencies]
-libxml = "0.3.12"
+libxml = "0.3.13"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 log = "0.4"
 marpa = { git = "https://github.com/dginev/marpa" }

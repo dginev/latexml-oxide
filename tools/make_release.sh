@@ -163,10 +163,11 @@ tar xzf latexml-oxide-${version}-${target_triple}.tar.gz
 sudo cp latexml-oxide-${version}-${target_triple}/latexml_oxide /usr/local/bin/
 \`\`\`
 
-Tarball users also need the runtime apt deps:
+The binary bundles libxml2/libxslt/kpathsea, so tarball users only need a TeX
+Live installation (read from your texmf tree) plus graphics tools:
 
 \`\`\`
-sudo apt install libxml2 libxslt1.1 libkpathsea6 texlive-latex-base texlive-latex-extra texlive-science
+sudo apt install texlive-latex-base texlive-latex-extra texlive-science imagemagick
 \`\`\`
 
 EOF
@@ -181,11 +182,10 @@ tar xzf ${RELEASE_MACOS_TARBALL}
 sudo cp latexml-oxide-${version}-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
 \`\`\`
 
-macOS users also need the runtime libraries and a TeX distribution:
+The binary bundles libxml2/libxslt, so macOS users only need a TeX distribution:
 
 \`\`\`
-brew install libxml2 libxslt
-# plus TeX Live — either Homebrew's (ships libkpathsea, fastest path):
+# TeX Live — either Homebrew's:
 brew install texlive
 # …or MacTeX / BasicTeX, served via the subprocess-kpsewhich fallback.
 \`\`\`
