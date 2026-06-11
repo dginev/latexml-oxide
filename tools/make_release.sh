@@ -84,10 +84,13 @@ rm -rf "${artifacts_dir}"
 mkdir -p "${stage_dir}"
 
 # --- build the binary -------------------------------------------------------
-# Distribution build: drop test-utils (audit DEP-02) and use the publish-grade
-# profile (fat LTO, panic=abort, codegen-units=1).
-echo "make_release: cargo build --no-default-features --profile maxperf --bin latexml_oxide"
-cargo build --no-default-features --profile maxperf --bin latexml_oxide
+# Distribution build: drop test-utils (audit DEP-02) but KEEP runtime-bindings
+# (ship the Rhai script-bindings capability so users customize contributed
+# bindings without recompiling — runtime opt-in, so default conversions are
+# unchanged), on the publish-grade profile (fat LTO, panic=abort,
+# codegen-units=1).
+echo "make_release: cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide"
+cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide
 
 bin_path="target/maxperf/latexml_oxide"
 if [[ ! -x "${bin_path}" ]]; then
