@@ -85,6 +85,26 @@ dependency check:
    already removes the kpathsea blocker (MiKTeX's kpsewhich.exe
    delegates to MiKTeX's own resolver — better than linking could do).
 
+**v0.7.1 target — self-contained libxml2/libxslt (the SONAME-portability
+completion).** 0.7.0 dynamically links the build host's libxml2/libxslt
+SONAME (`libxml2.so.2` on the ubuntu-22.04 runner). That binary loads on
+every libxml2-2.x system (Ubuntu 22.04/24.04 LTS, Debian 12 — ~20 years
+of a stable `.so.2`) but **NOT** on libxml2 ≥ 2.14, which bumped its
+SONAME to `libxml2.so.16`. A SONAME change is, by the rules of shared
+libraries, the loader's "not ABI-compatible" token — so no symlink
+bridges `.so.2` ↔ `.so.16` by design; that's the mechanism working, not
+failing. Fix = static-link libxml2 + libxslt + libexslt into the binary
+(the kpathsea playbook: PIC static `.a`, needed because the proc-macro
+cdylib links libxml via `latexml_core`; `libxml2-dev` ships `libxml2.a`
+but `libxslt`/`libexslt` have no packaged `.a` → source-build; transitive
+`-lz`/`-lgcrypt` stay dynamic — stable SONAMEs, no churn). After kpathsea
+(done) + these three, the only dynamic deps left are the glibc family +
+zlib + libgcrypt — all stable-SONAME, so the binary becomes "any
+glibc-2.35+ Linux, any libxml/libxslt version." **Test bed: this dev box
+runs libxml2.so.16 (2.15.2)** — the 0.7.0 `.so.2` binary fails to load
+here, so a successful `latexml_oxide --version` on the dev box is the
+portability gate for the static-linked build.
+
 **Nightly (#143):** required (`thread_local`). For a long-lived tool, a
 reproducibility risk — pin a known-good nightly, track stabilization.
 "Carries our resources" ≠ "portable across platforms."

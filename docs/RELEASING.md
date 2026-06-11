@@ -24,8 +24,9 @@ What this means concretely:
 
 - **Per-triple build legs, not cross-compilation.** Each platform builds
   on its own native runner (`release.yml`: the Linux `release` job +
-  the `build-macos` job). We do *not* cross-compile, because the C deps
-  (libxml2/libxslt) link against the host's libraries.
+  the `build-macos` job). We do *not* cross-compile: each leg source-builds
+  its own PIC static libxml2/libxslt/libkpathsea for the native toolchain
+  (ELF vs Mach-O) and statically links them in.
 - **macOS = Apple Silicon (arm64) only, for now.** That's the arch the
   CI suite validates (`CI.yml` macOS job runs on arm64 `macos-15`, #217).
   An arm64 binary will **not** run on an Intel Mac (Rosetta only
@@ -33,17 +34,22 @@ What this means concretely:
   `x86_64-apple-darwin` tarball or a `lipo` universal binary — both
   require a `macos-13` (Intel) build leg to validate, deferred until
   there's demand.
-- **Distribution linkage:** the CLI assets dynamically link host-provided
-  libxml2/libxslt (Linux: `.deb` `Depends:` / apt; macOS: `brew install
-  libxml2 libxslt`) and resolve TeX paths via the **subprocess-`kpsewhich`
-  backend** of `kpathsea` 0.3 — ABI-decoupled across TeX Live years and
-  mandatory on MacTeX (ships no libkpathsea). Our *own* resources
-  (XSLT/CSS/JS/schema/dumps) are always embedded; see the portability
-  note below.
-- **Editor-distributed binary is a stricter bar** (VSCode extension): it
-  cannot assume host libxml2/libxslt and must statically link/vendor
-  them. That is a separate track (`RELEASE_CRITERIA.md` §11), not these
-  CLI assets.
+- **Distribution linkage (self-contained):** the CLI assets STATICALLY link
+  libxml2 + libxslt + libexslt (source-built PIC,
+  `tools/build_static_libxml.sh`) and — on Linux — libkpathsea
+  (`tools/build_static_kpathsea.sh`, in-process lookups). The binary carries
+  NO versioned libxml2/libxslt SONAME dependency, so it is independent of the
+  host's libxml2 era: libxml2 2.14 bumped the SONAME `.so.2` → `.so.16`, and a
+  dynamically-linked binary loads on only one side of that split. On macOS,
+  kpathsea stays the **subprocess-`kpsewhich` backend** of `kpathsea` 0.3 —
+  mandatory on MacTeX (ships no libkpathsea). Only the glibc/libSystem family
+  remains dynamic. Our *own* resources (XSLT/CSS/JS/schema/dumps) are always
+  embedded; see the portability note below. A `release.yml` step
+  `ldd`/`otool`-asserts the absence of dynamic libxml2/libxslt/kpathsea and
+  fails the release otherwise.
+- **Editor-distributed binary:** the stricter "no host libxml2/libxslt" bar
+  (`RELEASE_CRITERIA.md` §11) is now MET by these same CLI assets, so a VSCode
+  extension can ship the binary directly.
 - **Deferred matrix rungs:** `aarch64-unknown-linux-gnu`, a macOS
   universal/Intel slice, then Windows/musl (`RELEASE_CRITERIA.md` §3).
   Each new triple is one more native build leg in `release.yml` plus a
@@ -57,7 +63,7 @@ Six files attached to each `X.Y.Z` GitHub Release:
 |---|---|
 | `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz` | Portable Linux archive: stripped `latexml_oxide` binary, `README.md`, `CHANGELOG.md`, `LICENSE`. |
 | `latexml-oxide-X.Y.Z-x86_64-unknown-linux-gnu.tar.gz.sha256` | SHA-256 sidecar (ripgrep-style). |
-| `latexml-oxide_X.Y.Z-1_amd64.deb` | Debian package with declared runtime `Depends:` on `libxml2`, `libxslt1.1`, `libkpathsea6`, `texlive-latex-{base,extra}`, `texlive-science`. |
+| `latexml-oxide_X.Y.Z-1_amd64.deb` | Debian package. With libxml2/libxslt/kpathsea statically linked, `$auto` resolves to just the glibc family — `Depends:` carries NO libxml2/libxslt SONAME, only `imagemagick`, `mupdf-tools`, `texlive-latex-{base,extra}`, `texlive-science`. |
 | `latexml-oxide_X.Y.Z-1_amd64.deb.sha256` | SHA-256 sidecar. |
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz` | Portable macOS (Apple Silicon) archive: same contents as the Linux tarball. No `.deb` on macOS (a Homebrew tap is the natural future analogue). |
 | `latexml-oxide-X.Y.Z-aarch64-apple-darwin.tar.gz.sha256` | SHA-256 sidecar. |
@@ -91,15 +97,17 @@ allowed and expected (see the runtime-dependency note below). See the
 "Self-contained, portable binary" principle in
 [`OXIDIZED_DESIGN.md`](OXIDIZED_DESIGN.md).
 
-System libraries remain dynamically linked, host-provided:
+The churn-prone C libraries are STATICALLY linked, so only the platform's
+core runtime stays dynamic:
 
-- **Linux**: `libxml2`, `libxslt1.1`, `libkpathsea6` — installed by the
-  `.deb`'s `Depends:` or the tarball user's own apt invocation.
-- **macOS**: `libxml2`, `libxslt` via `brew install libxml2 libxslt`.
-  `kpathsea` is *not* linked on macOS — the binary resolves TeX paths
-  through the subprocess-`kpsewhich` backend (works with both Homebrew
-  TeX Live and MacTeX/BasicTeX, neither of which the binary needs to
-  link against).
+- **Linux**: `libc`, `libm`, `libgcc_s`, `ld-linux` (the glibc family) —
+  nothing else. libxml2/libxslt/libexslt and libkpathsea are baked in
+  (verified by `ldd` in `release.yml`), so the binary runs on any
+  glibc-2.35+ host regardless of its libxml2 SONAME (or the absence of one).
+- **macOS**: `libSystem` plus the bundled libxml2/libxslt. `kpathsea` is
+  *not* linked on macOS — the binary resolves TeX paths through the
+  subprocess-`kpsewhich` backend (works with both Homebrew TeX Live and
+  MacTeX/BasicTeX).
 
 TeX Live (`kpsewhich`, `pdflatex`) is required at runtime and not
 bundled on any platform.

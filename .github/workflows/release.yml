@@ -98,11 +98,30 @@ jobs:
       - name: build static libkpathsea from source
         run: bash tools/build_static_kpathsea.sh
 
+      # Static, self-contained libxml2 + libxslt + libexslt (no runtime
+      # libxml2/libxslt .dylib dependency, so the binary is independent of the
+      # host's libxml2 SONAME — libxml2 2.14 bumped .so.2 -> .so.16). Sets
+      # PKG_CONFIG_PATH + LIBXML2_STATIC + LIBXSLT_STATIC for the build below;
+      # supersedes the brew libxml2/libxslt above (kept only as a fallback).
+      - name: build static libxml2 + libxslt from source
+        run: bash tools/build_static_libxml.sh
+
       - name: build macOS release tarball
         run: bash tools/make_release.sh
         env:
           GITHUB_REF_NAME: ${{ github.ref_name }}
           RELEASE_TARGET: aarch64-apple-darwin
+
+      # Fail the release if the binary still dynamically links a C library we
+      # bundle — the point is SONAME-independence + no host libxml2/libxslt.
+      - name: verify self-contained binary
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          echo "checking $bin"; otool -L "$bin"
+          if otool -L "$bin" | grep -Eiq 'libxml2|libxslt|libexslt|libkpathsea'; then
+            echo "::error::release binary dynamically links a library that must be static"; exit 1
+          fi
+          echo "OK: no dynamic libxml2/libxslt/kpathsea"
 
       - name: upload macOS artifact
         uses: actions/upload-artifact@v5
@@ -191,6 +210,14 @@ jobs:
       - name: build static libkpathsea from source
         run: bash tools/build_static_kpathsea.sh
 
+      # Static, self-contained libxml2 + libxslt + libexslt. Source-built PIC (the
+      # system libxml2.a is non-PIC and our proc-macro cdylib links libxml; libxslt
+      # ships no system .a at all). Makes the binary independent of the host libxml2
+      # SONAME (.so.2 -> .so.16 at libxml2 2.14) and drops libxml2/libxslt from the
+      # .deb's $auto deps. Sets PKG_CONFIG_PATH + LIBXML2_STATIC + LIBXSLT_STATIC.
+      - name: build static libxml2 + libxslt from source
+        run: bash tools/build_static_libxml.sh
+
       - name: build release artifacts
         run: bash tools/make_release.sh
         env:
@@ -202,6 +229,18 @@ jobs:
           # the next step — make_release.sh wipes target/release-artifacts/ at
           # start, so the download MUST follow it.
           RELEASE_MACOS_TARBALL: latexml-oxide-${{ github.ref_name }}-aarch64-apple-darwin.tar.gz
+
+      # Fail the release if the Linux binary still dynamically links a C library we
+      # bundle — the point is a glibc-only, SONAME-independent artifact. Runs before
+      # the macOS tarball is downloaded, so `find` inspects the Linux binary.
+      - name: verify self-contained binary
+        run: |
+          bin=$(find target/release-artifacts -name latexml_oxide -type f | head -1)
+          echo "checking $bin"; ldd "$bin" || true
+          if ldd "$bin" | grep -Eiq 'libxml2|libxslt|libexslt|libkpathsea'; then
+            echo "::error::release binary dynamically links a library that must be static"; exit 1
+          fi
+          echo "OK: glibc-only (no dynamic libxml2/libxslt/kpathsea)"
 
       # Pull the macOS tarball (+ sidecar) built by the build-macos job into
       # the staging dir so they publish alongside the Linux artifacts.

@@ -1,6 +1,6 @@
 [package]
 name = "latexml"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2024"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0-1.0"
@@ -96,7 +96,7 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2", "
 indexmap = "=2.14.0"
 tempfile = "3"
 log = "0.4"
-libxml = "0.3.12"
+libxml = "0.3.13"
 once_cell = "1.17.0"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
@@ -133,9 +133,12 @@ formats (HTML5, XHTML, EPUB3, JATS). Drop-in replacement for the
 upstream Perl tool with significant throughput improvements on the
 arXiv corpus."""
 # `$auto` runs dpkg-shlibdeps on the packaged binary, deriving the exact,
-# versioned linked-library deps (libc6, libgcc-s1, zlib1g, libxml2 (>= the
-# SONAME we link), libxslt1.1, libgcrypt20, libgpg-error0, libkpathsea6, …) so
-# the list never drifts from what we actually link. The remaining entries are
+# versioned linked-library deps so the list never drifts from what we link.
+# Since the release build STATICALLY links libxml2, libxslt and libkpathsea
+# (tools/build_static_libxml.sh + build_static_kpathsea.sh), those no longer
+# appear — `$auto` resolves to just the glibc family (libc6, libgcc-s1), and the
+# package carries NO versioned libxml2/libxslt SONAME dependency (so it installs
+# on any libxml2 era — .so.2 and .so.16 alike). The remaining entries are
 # appended manually — they are runtime data/tools, not linked libraries:
 #   * imagemagick — our PRIMARY graphics processor (`convert`, the most-invoked
 #     graphics tool).

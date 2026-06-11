@@ -1,5 +1,19 @@
 # Change Log
 
+## [0.7.1] (portable binary: SONAME-independent, self-contained C libraries)
+
+  - **Self-contained C libraries** — the release binary now statically links
+    libxml2 + libxslt + libexslt (PIC, source-built) on top of libkpathsea, so
+    it runs on any glibc-2.35+ Linux regardless of the host's libxml2 SONAME.
+    libxml2 2.14 bumped the SONAME `.so.2` → `.so.16`; a dynamically-linked
+    binary loads on only one side of that split, whereas this binary has no
+    libxml2/libxslt runtime dependency at all — only the glibc family remains
+    dynamic. Requires `libxml 0.3.13` / `libxslt 0.1.4` (opt-in `LIBXML2_STATIC`
+    / `LIBXSLT_STATIC` build.rs branches); `release.yml` source-builds the static
+    archives on both the Linux and macOS legs, gated by a CI step that asserts
+    the binary carries no dynamic libxml2/libxslt/kpathsea. The `.deb` no longer
+    declares a libxml2 SONAME dependency, so it installs on any libxml2 era.
+
 ## [0.7.0] (single-binary release: portability, runtime bindings, edition 2024)
 
   - **Self-contained, redistributable binary** (#236). Engine dumps, the
