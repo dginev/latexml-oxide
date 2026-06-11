@@ -5,7 +5,7 @@
 <a href=#5 id=5 data-nosnippet>5</a></span><span class="doccomment">/// build a Font from key=&gt;val pairs
 <a href=#6 id=6 data-nosnippet>6</a></span><span class="attr">#[macro_export]
 <a href=#7 id=7 data-nosnippet>7</a></span><span class="macro">macro_rules!</span> Font {
-<a href=#8 id=8 data-nosnippet>8</a>  ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (
+<a href=#8 id=8 data-nosnippet>8</a>  ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr_2021),<span class="kw-2">*</span>) =&gt; (
 <a href=#9 id=9 data-nosnippet>9</a>    <span class="prelude-val">Some</span>(Font { $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_font_field(),)* .. Font::default() })
 <a href=#10 id=10 data-nosnippet>10</a>)}
 <a href=#11 id=11 data-nosnippet>11</a>
@@ -13,7 +13,7 @@
 <a href=#13 id=13 data-nosnippet>13</a>/// (currently only FontDirective::Asset is supported in this macro)
 <a href=#14 id=14 data-nosnippet>14</a></span><span class="attr">#[macro_export]
 <a href=#15 id=15 data-nosnippet>15</a></span><span class="macro">macro_rules!</span> FontDirective {
-<a href=#16 id=16 data-nosnippet>16</a>  ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (
+<a href=#16 id=16 data-nosnippet>16</a>  ($(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr_2021),<span class="kw-2">*</span>) =&gt; (
 <a href=#17 id=17 data-nosnippet>17</a>    <span class="prelude-val">Some</span>(FontDirective::Asset(Rc::new(
 <a href=#18 id=18 data-nosnippet>18</a>      Font { $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_font_field(),)* .. Font::default() }
 <a href=#19 id=19 data-nosnippet>19</a>    ))))
@@ -23,7 +23,7 @@
 <a href=#23 id=23 data-nosnippet>23</a>/// and complete the remaining entries via the Default instance
 <a href=#24 id=24 data-nosnippet>24</a></span><span class="attr">#[macro_export]
 <a href=#25 id=25 data-nosnippet>25</a></span><span class="macro">macro_rules!</span> NewDefault {
-<a href=#26 id=26 data-nosnippet>26</a>  (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
+<a href=#26 id=26 data-nosnippet>26</a>  (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr_2021),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
 <a href=#27 id=27 data-nosnippet>27</a>    $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>,)*
 <a href=#28 id=28 data-nosnippet>28</a>    ..<span class="macro-nonterminal">$name::default</span>()
 <a href=#29 id=29 data-nosnippet>29</a>  })
@@ -32,7 +32,7 @@
 <a href=#32 id=32 data-nosnippet>32</a><span class="doccomment">/// Just like NewDefault, but adds a mandatory `.into_option()` to all values
 <a href=#33 id=33 data-nosnippet>33</a></span><span class="attr">#[macro_export]
 <a href=#34 id=34 data-nosnippet>34</a></span><span class="macro">macro_rules!</span> NewDefaultV {
-<a href=#35 id=35 data-nosnippet>35</a>  (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
+<a href=#35 id=35 data-nosnippet>35</a>  (<span class="macro-nonterminal">$name</span>:ident, $(<span class="macro-nonterminal">$key</span>:ident =&gt; <span class="macro-nonterminal">$value</span>:expr_2021),<span class="kw-2">*</span>) =&gt; (<span class="macro-nonterminal">$name </span>{
 <a href=#36 id=36 data-nosnippet>36</a>    $(<span class="macro-nonterminal">$key</span>: <span class="macro-nonterminal">$value</span>.into_option(),)*
 <a href=#37 id=37 data-nosnippet>37</a>    ..<span class="macro-nonterminal">$name::default</span>()
 <a href=#38 id=38 data-nosnippet>38</a>  })
@@ -172,7 +172,7 @@
 <a href=#172 id=172 data-nosnippet>172</a>      },
 <a href=#173 id=173 data-nosnippet>173</a>    )
 <a href=#174 id=174 data-nosnippet>174</a>  };
-<a href=#175 id=175 data-nosnippet>175</a>  (<span class="macro-nonterminal">$value</span>:expr) =&gt; {
+<a href=#175 id=175 data-nosnippet>175</a>  (<span class="macro-nonterminal">$value</span>:expr_2021) =&gt; {
 <a href=#176 id=176 data-nosnippet>176</a>    Rc::new(
 <a href=#177 id=177 data-nosnippet>177</a>      <span class="kw">move </span>|_args: <span class="kw-2">&amp;</span>Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;SymHashMap&lt;Stored&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="macro-nonterminal">$value</span>.clone()) },
 <a href=#178 id=178 data-nosnippet>178</a>    )
@@ -284,9 +284,9 @@
 <a href=#284 id=284 data-nosnippet>284</a>
 <a href=#285 id=285 data-nosnippet>285</a></span><span class="attr">#[macro_export]
 <a href=#286 id=286 data-nosnippet>286</a></span><span class="macro">macro_rules!</span> prop_digested {
-<a href=#287 id=287 data-nosnippet>287</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
+<a href=#287 id=287 data-nosnippet>287</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr_2021) =&gt; {
 <a href=#288 id=288 data-nosnippet>288</a>    <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
-<a href=#289 id=289 data-nosnippet>289</a>      <span class="prelude-val">Some</span>(Stored::VecDigested(<span class="kw-2">ref </span>vd)) =&gt; vd.iter().collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>Digested&gt;&gt;(),
+<a href=#289 id=289 data-nosnippet>289</a>      <span class="prelude-val">Some</span>(Stored::VecDigested(vd)) =&gt; vd.iter().collect::&lt;Vec&lt;<span class="kw-2">&amp;</span>Digested&gt;&gt;(),
 <a href=#290 id=290 data-nosnippet>290</a>      <span class="prelude-val">Some</span>(Stored::Digested(d)) =&gt; <span class="macro">vec!</span>[<span class="kw-2">&amp;*</span>d],
 <a href=#291 id=291 data-nosnippet>291</a>      <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; <span class="macro">panic!</span>(
 <a href=#292 id=292 data-nosnippet>292</a>        <span class="string">"prop_digested! called on a string property {:?} with value {:?}."</span>,
@@ -316,7 +316,7 @@
 <a href=#316 id=316 data-nosnippet>316</a>
 <a href=#317 id=317 data-nosnippet>317</a></span><span class="attr">#[macro_export]
 <a href=#318 id=318 data-nosnippet>318</a></span><span class="macro">macro_rules!</span> prop_str {
-<a href=#319 id=319 data-nosnippet>319</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
+<a href=#319 id=319 data-nosnippet>319</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr_2021) =&gt; {
 <a href=#320 id=320 data-nosnippet>320</a>    <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
 <a href=#321 id=321 data-nosnippet>321</a>      <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::String(<span class="kw-2">ref </span>id)) =&gt; <span class="kw-2">*</span>id,
 <a href=#322 id=322 data-nosnippet>322</a>      <span class="kw">_ </span>=&gt; <span class="macro">pin!</span>(<span class="string">""</span>),
@@ -326,7 +326,7 @@
 <a href=#326 id=326 data-nosnippet>326</a>
 <a href=#327 id=327 data-nosnippet>327</a><span class="attr">#[macro_export]
 <a href=#328 id=328 data-nosnippet>328</a></span><span class="macro">macro_rules!</span> prop_string {
-<a href=#329 id=329 data-nosnippet>329</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
+<a href=#329 id=329 data-nosnippet>329</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr_2021) =&gt; {
 <a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
 <a href=#331 id=331 data-nosnippet>331</a>      <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::String(id)) =&gt; arena::to_string(id),
 <a href=#332 id=332 data-nosnippet>332</a>      <span class="kw">_ </span>=&gt; String::new(),
@@ -336,7 +336,7 @@
 <a href=#336 id=336 data-nosnippet>336</a>
 <a href=#337 id=337 data-nosnippet>337</a><span class="attr">#[macro_export]
 <a href=#338 id=338 data-nosnippet>338</a></span><span class="macro">macro_rules!</span> prop_whatsit {
-<a href=#339 id=339 data-nosnippet>339</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
+<a href=#339 id=339 data-nosnippet>339</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr_2021) =&gt; {
 <a href=#340 id=340 data-nosnippet>340</a>    <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
 <a href=#341 id=341 data-nosnippet>341</a>      <span class="comment">// Cloning here is OK now, as there is an Rc&lt;&gt; guard over the DigestedData
 <a href=#342 id=342 data-nosnippet>342</a>      </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Digested(<span class="kw-2">ref </span>rc)) =&gt; (<span class="kw-2">**</span>rc).clone(),
@@ -347,7 +347,7 @@
 <a href=#347 id=347 data-nosnippet>347</a>
 <a href=#348 id=348 data-nosnippet>348</a><span class="attr">#[macro_export]
 <a href=#349 id=349 data-nosnippet>349</a></span><span class="macro">macro_rules!</span> prop_bool {
-<a href=#350 id=350 data-nosnippet>350</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr) =&gt; {
+<a href=#350 id=350 data-nosnippet>350</a>  (<span class="macro-nonterminal">$props</span>:ident, <span class="macro-nonterminal">$key</span>:expr_2021) =&gt; {
 <a href=#351 id=351 data-nosnippet>351</a>    <span class="kw">match </span><span class="macro-nonterminal">$props</span>.get(<span class="macro-nonterminal">$key</span>) {
 <a href=#352 id=352 data-nosnippet>352</a>      <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(v)) =&gt; v,
 <a href=#353 id=353 data-nosnippet>353</a>      <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
@@ -365,10 +365,10 @@
 <a href=#365 id=365 data-nosnippet>365</a>}
 <a href=#366 id=366 data-nosnippet>366</a><span class="attr">#[macro_export]
 <a href=#367 id=367 data-nosnippet>367</a></span><span class="macro">macro_rules!</span> count_unpack_ref {
-<a href=#368 id=368 data-nosnippet>368</a>  (<span class="macro-nonterminal">$index</span>:expr, <span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident) =&gt; {
+<a href=#368 id=368 data-nosnippet>368</a>  (<span class="macro-nonterminal">$index</span>:expr_2021, <span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident) =&gt; {
 <a href=#369 id=369 data-nosnippet>369</a>    <span class="kw">let </span><span class="macro-nonterminal">$var </span>= <span class="macro-nonterminal">$args</span>[<span class="macro-nonterminal">$index</span>].as_ref().unwrap();
 <a href=#370 id=370 data-nosnippet>370</a>  };
-<a href=#371 id=371 data-nosnippet>371</a>  (<span class="macro-nonterminal">$index</span>:expr, <span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident,$(<span class="macro-nonterminal">$tail</span>:ident),<span class="kw-2">*</span>) =&gt; {
+<a href=#371 id=371 data-nosnippet>371</a>  (<span class="macro-nonterminal">$index</span>:expr_2021, <span class="macro-nonterminal">$args</span>:ident =&gt; <span class="macro-nonterminal">$var</span>:ident,$(<span class="macro-nonterminal">$tail</span>:ident),<span class="kw-2">*</span>) =&gt; {
 <a href=#372 id=372 data-nosnippet>372</a>    <span class="macro">count_unpack_ref!</span>(<span class="macro-nonterminal">$index</span>,<span class="macro-nonterminal">$args </span>=&gt; <span class="macro-nonterminal">$var</span>);
 <a href=#373 id=373 data-nosnippet>373</a>    <span class="macro">count_unpack_ref!</span>(<span class="number">1usize</span>+<span class="macro-nonterminal">$index</span>, <span class="macro-nonterminal">$args </span>=&gt; $(<span class="macro-nonterminal">$tail</span>),<span class="kw-2">*</span>)
 <a href=#374 id=374 data-nosnippet>374</a>  };
@@ -417,21 +417,21 @@
 <a href=#417 id=417 data-nosnippet>417</a><span class="doccomment">/// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
 <a href=#418 id=418 data-nosnippet>418</a></span><span class="attr">#[macro_export]
 <a href=#419 id=419 data-nosnippet>419</a></span><span class="macro">macro_rules!</span> roman {
-<a href=#420 id=420 data-nosnippet>420</a>  (<span class="macro-nonterminal">$stuff</span>:expr) =&gt; {
+<a href=#420 id=420 data-nosnippet>420</a>  (<span class="macro-nonterminal">$stuff</span>:expr_2021) =&gt; {
 <a href=#421 id=421 data-nosnippet>421</a>    Tokens::new(<span class="macro">ExplodeText!</span>(roman_aux(<span class="macro-nonterminal">$stuff </span><span class="kw">as </span>i64)))
 <a href=#422 id=422 data-nosnippet>422</a>  };
 <a href=#423 id=423 data-nosnippet>423</a>}
 <a href=#424 id=424 data-nosnippet>424</a><span class="doccomment">/// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
 <a href=#425 id=425 data-nosnippet>425</a></span><span class="attr">#[macro_export]
 <a href=#426 id=426 data-nosnippet>426</a></span><span class="macro">macro_rules!</span> Roman {
-<a href=#427 id=427 data-nosnippet>427</a>  (<span class="macro-nonterminal">$stuff</span>:expr) =&gt; {
+<a href=#427 id=427 data-nosnippet>427</a>  (<span class="macro-nonterminal">$stuff</span>:expr_2021) =&gt; {
 <a href=#428 id=428 data-nosnippet>428</a>    Tokens::new(<span class="macro">ExplodeText!</span>(roman_aux(<span class="macro-nonterminal">$stuff </span><span class="kw">as </span>i64).to_ascii_uppercase()))
 <a href=#429 id=429 data-nosnippet>429</a>  };
 <a href=#430 id=430 data-nosnippet>430</a>}
 <a href=#431 id=431 data-nosnippet>431</a>
 <a href=#432 id=432 data-nosnippet>432</a><span class="attr">#[macro_export]
 <a href=#433 id=433 data-nosnippet>433</a></span><span class="macro">macro_rules!</span> requireMath {
-<a href=#434 id=434 data-nosnippet>434</a>  (<span class="macro-nonterminal">$cs_name</span>:expr) =&gt; {
+<a href=#434 id=434 data-nosnippet>434</a>  (<span class="macro-nonterminal">$cs_name</span>:expr_2021) =&gt; {
 <a href=#435 id=435 data-nosnippet>435</a>    <span class="kw">if </span>!<span class="macro-nonterminal">$crate::state::lookup_bool_sym</span>(<span class="macro-nonterminal">$crate::pin</span>!(<span class="string">"IN_MATH"</span>)) {
 <a href=#436 id=436 data-nosnippet>436</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{} should only appear in math mode"</span>, <span class="macro-nonterminal">$cs_name</span>);
 <a href=#437 id=437 data-nosnippet>437</a>      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"mode"</span>, message);
@@ -440,7 +440,7 @@
 <a href=#440 id=440 data-nosnippet>440</a>}
 <a href=#441 id=441 data-nosnippet>441</a><span class="attr">#[macro_export]
 <a href=#442 id=442 data-nosnippet>442</a></span><span class="macro">macro_rules!</span> forbidMath {
-<a href=#443 id=443 data-nosnippet>443</a>  (<span class="macro-nonterminal">$cs_name</span>:expr) =&gt; {
+<a href=#443 id=443 data-nosnippet>443</a>  (<span class="macro-nonterminal">$cs_name</span>:expr_2021) =&gt; {
 <a href=#444 id=444 data-nosnippet>444</a>    <span class="kw">if </span><span class="macro-nonterminal">$crate::state::lookup_bool_sym</span>(<span class="macro-nonterminal">$crate::pin</span>!(<span class="string">"IN_MATH"</span>)) {
 <a href=#445 id=445 data-nosnippet>445</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"{} should not appear in math mode"</span>, <span class="macro-nonterminal">$cs_name</span>);
 <a href=#446 id=446 data-nosnippet>446</a>      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, <span class="string">"mode"</span>, message);
@@ -450,10 +450,10 @@
 <a href=#450 id=450 data-nosnippet>450</a>
 <a href=#451 id=451 data-nosnippet>451</a><span class="attr">#[macro_export]
 <a href=#452 id=452 data-nosnippet>452</a></span><span class="macro">macro_rules!</span> AssignRegister {
-<a href=#453 id=453 data-nosnippet>453</a>  (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$value</span>:expr) =&gt; {
+<a href=#453 id=453 data-nosnippet>453</a>  (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$value</span>:expr_2021) =&gt; {
 <a href=#454 id=454 data-nosnippet>454</a>    <span class="macro">AssignRegister!</span>(<span class="macro-nonterminal">$cs</span>, <span class="macro-nonterminal">$value</span>, Vec::new())
 <a href=#455 id=455 data-nosnippet>455</a>  };
-<a href=#456 id=456 data-nosnippet>456</a>  (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$value</span>:expr, <span class="macro-nonterminal">$args</span>:expr) =&gt; {
+<a href=#456 id=456 data-nosnippet>456</a>  (<span class="macro-nonterminal">$cs</span>:literal, <span class="macro-nonterminal">$value</span>:expr_2021, <span class="macro-nonterminal">$args</span>:expr_2021) =&gt; {
 <a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">let </span>value_ident = { <span class="macro-nonterminal">$value </span>};
 <a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = state::lookup_register_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro-nonterminal">$cs</span>)) {
 <a href=#459 id=459 data-nosnippet>459</a>      (<span class="kw-2">*</span>defn).set_value(value_ident, <span class="prelude-val">None</span>, <span class="macro-nonterminal">$args</span>);
@@ -466,10 +466,10 @@
 <a href=#466 id=466 data-nosnippet>466</a>
 <a href=#467 id=467 data-nosnippet>467</a><span class="attr">#[macro_export]
 <a href=#468 id=468 data-nosnippet>468</a></span><span class="macro">macro_rules!</span> SetCounter {
-<a href=#469 id=469 data-nosnippet>469</a>  (<span class="macro-nonterminal">$ctr</span>:expr =&gt; <span class="macro-nonterminal">$value</span>:expr) =&gt; {
+<a href=#469 id=469 data-nosnippet>469</a>  (<span class="macro-nonterminal">$ctr</span>:expr_2021 =&gt; <span class="macro-nonterminal">$value</span>:expr_2021) =&gt; {
 <a href=#470 id=470 data-nosnippet>470</a>    <span class="macro">SetCounter!</span>(<span class="macro-nonterminal">$ctr</span>, <span class="macro-nonterminal">$value</span>)
 <a href=#471 id=471 data-nosnippet>471</a>  };
-<a href=#472 id=472 data-nosnippet>472</a>  (<span class="macro-nonterminal">$ctr</span>:expr, <span class="macro-nonterminal">$value</span>:expr) =&gt; {
+<a href=#472 id=472 data-nosnippet>472</a>  (<span class="macro-nonterminal">$ctr</span>:expr_2021, <span class="macro-nonterminal">$value</span>:expr_2021) =&gt; {
 <a href=#473 id=473 data-nosnippet>473</a>    state::assign_register(
 <a href=#474 id=474 data-nosnippet>474</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{}"</span>, <span class="macro-nonterminal">$ctr</span>),
 <a href=#475 id=475 data-nosnippet>475</a>      <span class="macro-nonterminal">$value</span>.into(),

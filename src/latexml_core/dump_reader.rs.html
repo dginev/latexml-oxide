@@ -88,7 +88,7 @@
 <a href=#88 id=88 data-nosnippet>88</a>    }
 <a href=#89 id=89 data-nosnippet>89</a>    <span class="comment">// Perl `Lt()` parity: look up target's meaning, write it at
 <a href=#90 id=90 data-nosnippet>90</a>    // alias key via `assign_internal('meaning', ..., 'global')`.
-<a href=#91 id=91 data-nosnippet>91</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(meaning) = state::lookup_meaning(<span class="kw-2">&amp;</span>target_tok) {
+<a href=#91 id=91 data-nosnippet>91</a>    </span><span class="kw">match </span>state::lookup_meaning(<span class="kw-2">&amp;</span>target_tok) { <span class="prelude-val">Some</span>(meaning) =&gt; {
 <a href=#92 id=92 data-nosnippet>92</a>      state::assign_internal(
 <a href=#93 id=93 data-nosnippet>93</a>        TableName::Meaning,
 <a href=#94 id=94 data-nosnippet>94</a>        cs_tok.get_cs_name(),
@@ -96,9 +96,9 @@
 <a href=#96 id=96 data-nosnippet>96</a>        <span class="prelude-val">Some</span>(Scope::Global),
 <a href=#97 id=97 data-nosnippet>97</a>      );
 <a href=#98 id=98 data-nosnippet>98</a>      applied += <span class="number">1</span>;
-<a href=#99 id=99 data-nosnippet>99</a>    } <span class="kw">else </span>{
+<a href=#99 id=99 data-nosnippet>99</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#100 id=100 data-nosnippet>100</a>      skipped += <span class="number">1</span>;
-<a href=#101 id=101 data-nosnippet>101</a>    }
+<a href=#101 id=101 data-nosnippet>101</a>    }}
 <a href=#102 id=102 data-nosnippet>102</a>  }
 <a href=#103 id=103 data-nosnippet>103</a>  (applied, skipped)
 <a href=#104 id=104 data-nosnippet>104</a>}

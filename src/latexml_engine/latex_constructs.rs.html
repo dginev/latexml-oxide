@@ -517,14 +517,14 @@
 <a href=#517 id=517 data-nosnippet>517</a>          result.push(<span class="macro">T_BEGIN!</span>());
 <a href=#518 id=518 data-nosnippet>518</a>          result.extend(arg.unlist());
 <a href=#519 id=519 data-nosnippet>519</a>          result.push(<span class="macro">T_END!</span>());
-<a href=#520 id=520 data-nosnippet>520</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(changed) = lookup_mapping(
+<a href=#520 id=520 data-nosnippet>520</a>        } <span class="kw">else </span>{ <span class="kw">match </span>lookup_mapping(
 <a href=#521 id=521 data-nosnippet>521</a>          <span class="kw">if </span>is_upper {
 <a href=#522 id=522 data-nosnippet>522</a>            <span class="string">"text_uppercase"
 <a href=#523 id=523 data-nosnippet>523</a>          </span>} <span class="kw">else </span>{
 <a href=#524 id=524 data-nosnippet>524</a>            <span class="string">"text_lowercase"
 <a href=#525 id=525 data-nosnippet>525</a>          </span>},
 <a href=#526 id=526 data-nosnippet>526</a>          <span class="kw-2">&amp;</span>next_key_case,
-<a href=#527 id=527 data-nosnippet>527</a>        ) {
+<a href=#527 id=527 data-nosnippet>527</a>        ) { <span class="prelude-val">Some</span>(changed) =&gt; {
 <a href=#528 id=528 data-nosnippet>528</a>          <span class="kw">if let </span>Stored::Token(changed_tok) = changed {
 <a href=#529 id=529 data-nosnippet>529</a>            result.push(changed_tok);
 <a href=#530 id=530 data-nosnippet>530</a>          } <span class="kw">else </span>{
@@ -534,7 +534,7 @@
 <a href=#534 id=534 data-nosnippet>534</a>          <span class="kw">if </span>req_case == <span class="string">"sentence" </span>|| req_case == <span class="string">"title" </span>{
 <a href=#535 id=535 data-nosnippet>535</a>            is_upper = <span class="bool-val">false</span>;
 <a href=#536 id=536 data-nosnippet>536</a>          }
-<a href=#537 id=537 data-nosnippet>537</a>        } <span class="kw">else </span>{
+<a href=#537 id=537 data-nosnippet>537</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#538 id=538 data-nosnippet>538</a>          <span class="comment">// Fall-through: not in exclude list, not in case-mapping. Pass
 <a href=#539 id=539 data-nosnippet>539</a>          // both `\protect` and the munged CS through, but mark the CS
 <a href=#540 id=540 data-nosnippet>540</a>          // un-expandable via `\dont_expand` so the OUTER `\edef`'s
@@ -548,7 +548,7 @@
 <a href=#548 id=548 data-nosnippet>548</a>          </span>result.push(tok);
 <a href=#549 id=549 data-nosnippet>549</a>          result.push(<span class="macro">T_CS!</span>(<span class="string">"\\dont_expand"</span>));
 <a href=#550 id=550 data-nosnippet>550</a>          result.push(next_tok);
-<a href=#551 id=551 data-nosnippet>551</a>        }
+<a href=#551 id=551 data-nosnippet>551</a>        }}}
 <a href=#552 id=552 data-nosnippet>552</a>      }
 <a href=#553 id=553 data-nosnippet>553</a>    } <span class="kw">else </span>{
 <a href=#554 id=554 data-nosnippet>554</a>      result.push(tok);
@@ -578,11 +578,11 @@
 <a href=#578 id=578 data-nosnippet>578</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = doc.get_element() {
 <a href=#579 id=579 data-nosnippet>579</a>    <span class="comment">// Save node and its current last child so we only apply to NEW children later
 <a href=#580 id=580 data-nosnippet>580</a>    </span>state::assign_value(<span class="string">"ALIGNING_NODE"</span>, Stored::Node(node.clone()), <span class="prelude-val">None</span>);
-<a href=#581 id=581 data-nosnippet>581</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = node.get_last_child() {
+<a href=#581 id=581 data-nosnippet>581</a>    <span class="kw">match </span>node.get_last_child() { <span class="prelude-val">Some</span>(last) =&gt; {
 <a href=#582 id=582 data-nosnippet>582</a>      state::assign_value(<span class="string">"ALIGNING_PREV_CHILD"</span>, Stored::Node(last), <span class="prelude-val">None</span>);
-<a href=#583 id=583 data-nosnippet>583</a>    } <span class="kw">else </span>{
+<a href=#583 id=583 data-nosnippet>583</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#584 id=584 data-nosnippet>584</a>      state::assign_value(<span class="string">"ALIGNING_PREV_CHILD"</span>, Stored::None, <span class="prelude-val">None</span>);
-<a href=#585 id=585 data-nosnippet>585</a>    }
+<a href=#585 id=585 data-nosnippet>585</a>    }}
 <a href=#586 id=586 data-nosnippet>586</a>  }
 <a href=#587 id=587 data-nosnippet>587</a>}
 <a href=#588 id=588 data-nosnippet>588</a><span class="doccomment">/// Perl: applyAligningContext — applies align/class to children added AFTER \centering.
@@ -731,7 +731,7 @@
 <a href=#731 id=731 data-nosnippet>731</a>  <span class="kw">let </span><span class="kw-2">mut </span>is_numbered = <span class="bool-val">false</span>;
 <a href=#732 id=732 data-nosnippet>732</a>  maybe_peek_label()<span class="question-mark">?</span>;
 <a href=#733 id=733 data-nosnippet>733</a>  <span class="kw">let </span>ctr = with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |val_opt| {
-<a href=#734 id=734 data-nosnippet>734</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>numbering)) = val_opt {
+<a href=#734 id=734 data-nosnippet>734</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(numbering)) = val_opt {
 <a href=#735 id=735 data-nosnippet>735</a>      numbering.insert(<span class="string">"in_equation"</span>, <span class="bool-val">true</span>.into());
 <a href=#736 id=736 data-nosnippet>736</a>      is_numbered = <span class="macro">matches!</span>(numbering.get(<span class="string">"numbered"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)));
 <a href=#737 id=737 data-nosnippet>737</a>      has_preset = numbering.contains_key(<span class="string">"preset"</span>);
@@ -787,11 +787,11 @@
 <a href=#787 id=787 data-nosnippet>787</a>  <span class="kw">let </span><span class="kw-2">mut </span>is_numbered_for_postset = <span class="bool-val">false</span>;
 <a href=#788 id=788 data-nosnippet>788</a>  <span class="kw">let </span><span class="kw-2">mut </span>ctr = String::from(<span class="string">"equation"</span>);
 <a href=#789 id=789 data-nosnippet>789</a>  with_value(<span class="string">"EQUATION_NUMBERING"</span>, |eq_num_opt| {
-<a href=#790 id=790 data-nosnippet>790</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>numbering)) = eq_num_opt {
+<a href=#790 id=790 data-nosnippet>790</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(numbering)) = eq_num_opt {
 <a href=#791 id=791 data-nosnippet>791</a>      is_aligned = <span class="macro">matches!</span>(numbering.get(<span class="string">"aligned"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)));
 <a href=#792 id=792 data-nosnippet>792</a>      is_numbered_for_postset = <span class="macro">matches!</span>(numbering.get(<span class="string">"numbered"</span>), <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Stored::Bool(<span class="bool-val">true</span>)));
 <a href=#793 id=793 data-nosnippet>793</a>      with_value(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| {
-<a href=#794 id=794 data-nosnippet>794</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>tags)) = tags_opt {
+<a href=#794 id=794 data-nosnippet>794</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(tags)) = tags_opt {
 <a href=#795 id=795 data-nosnippet>795</a>          ctr = tags
 <a href=#796 id=796 data-nosnippet>796</a>            .get(<span class="string">"counter"</span>)
 <a href=#797 id=797 data-nosnippet>797</a>            .map_or_else(|| numbering.get(<span class="string">"counter"</span>), <span class="prelude-val">Some</span>)
@@ -840,7 +840,7 @@
 <a href=#840 id=840 data-nosnippet>840</a>      ))])<span class="question-mark">?</span>;
 <a href=#841 id=841 data-nosnippet>841</a>      <span class="kw">let </span>stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)<span class="question-mark">?</span>);
 <a href=#842 id=842 data-nosnippet>842</a>      with_value_mut(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| {
-<a href=#843 id=843 data-nosnippet>843</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>tags)) = tags_opt {
+<a href=#843 id=843 data-nosnippet>843</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(tags)) = tags_opt {
 <a href=#844 id=844 data-nosnippet>844</a>          tags.insert(<span class="string">"tags"</span>, stored_tags_update);
 <a href=#845 id=845 data-nosnippet>845</a>        }
 <a href=#846 id=846 data-nosnippet>846</a>      });
@@ -849,7 +849,7 @@
 <a href=#849 id=849 data-nosnippet>849</a>  }
 <a href=#850 id=850 data-nosnippet>850</a>  <span class="comment">// Phase 3: Reset in_equation flag
 <a href=#851 id=851 data-nosnippet>851</a>  </span>with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |eq_num_opt| {
-<a href=#852 id=852 data-nosnippet>852</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>numbering)) = eq_num_opt {
+<a href=#852 id=852 data-nosnippet>852</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(numbering)) = eq_num_opt {
 <a href=#853 id=853 data-nosnippet>853</a>      numbering.insert(<span class="string">"in_equation"</span>, Stored::Bool(<span class="bool-val">false</span>));
 <a href=#854 id=854 data-nosnippet>854</a>    }
 <a href=#855 id=855 data-nosnippet>855</a>  });
@@ -1681,7 +1681,7 @@
 <a href=#1681 id=1681 data-nosnippet>1681</a>        <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>format_title_cs),
 <a href=#1682 id=1682 data-nosnippet>1682</a>        <span class="macro">T_BEGIN!</span>(),
 <a href=#1683 id=1683 data-nosnippet>1683</a>      ];
-<a href=#1684 id=1684 data-nosnippet>1684</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg)) = args.first() {
+<a href=#1684 id=1684 data-nosnippet>1684</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(arg)) = args.first() {
 <a href=#1685 id=1685 data-nosnippet>1685</a>        title_tokens.extend(arg.revert()<span class="question-mark">?</span>.unlist());
 <a href=#1686 id=1686 data-nosnippet>1686</a>      }
 <a href=#1687 id=1687 data-nosnippet>1687</a>      title_tokens.push(<span class="macro">T_END!</span>());
@@ -2017,11 +2017,11 @@
 <a href=#2017 id=2017 data-nosnippet>2017</a>
 <a href=#2018 id=2018 data-nosnippet>2018</a><span class="kw">pub fn </span>adjust_backmatter_element(document: <span class="kw-2">&amp;mut </span>Document, whatsit: <span class="kw-2">&amp;</span>Whatsit) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 <a href=#2019 id=2019 data-nosnippet>2019</a>  <span class="kw">let </span>asif_opt =
-<a href=#2020 id=2020 data-nosnippet>2020</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::String(asif_sym)) = whatsit.get_property(<span class="string">"backmatterelement"</span>).as_deref() {
+<a href=#2020 id=2020 data-nosnippet>2020</a>    <span class="kw">match </span>whatsit.get_property(<span class="string">"backmatterelement"</span>).as_deref() { <span class="prelude-val">Some</span>(Stored::String(asif_sym)) =&gt; {
 <a href=#2021 id=2021 data-nosnippet>2021</a>      <span class="prelude-val">Some</span>(arena::to_string(<span class="kw-2">*</span>asif_sym))
-<a href=#2022 id=2022 data-nosnippet>2022</a>    } <span class="kw">else </span>{
+<a href=#2022 id=2022 data-nosnippet>2022</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#2023 id=2023 data-nosnippet>2023</a>      <span class="prelude-val">None
-<a href=#2024 id=2024 data-nosnippet>2024</a>    </span>};
+<a href=#2024 id=2024 data-nosnippet>2024</a>    </span>}};
 <a href=#2025 id=2025 data-nosnippet>2025</a>  <span class="comment">// Note: We allocate a string here, since
 <a href=#2026 id=2026 data-nosnippet>2026</a>  // it looks like arena::with can deadlock with find_insertion_point
 <a href=#2027 id=2027 data-nosnippet>2027</a>  // we may need a find_insertion_point_sym to avoid that...
@@ -3094,15 +3094,15 @@
 <a href=#3094 id=3094 data-nosnippet>3094</a>  </span><span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{document}"</span>), <span class="prelude-val">None</span>, sub[document, _args, props] {
 <a href=#3095 id=3095 data-nosnippet>3095</a>    <span class="kw">let </span>id = <span class="macro">prop_str!</span>(props,<span class="string">"id"</span>);
 <a href=#3096 id=3096 data-nosnippet>3096</a>    <span class="comment">// Already (auto) created?
-<a href=#3097 id=3097 data-nosnippet>3097</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>docel) = document.findnode(<span class="string">"/ltx:document"</span>, <span class="prelude-val">None</span>) {
+<a href=#3097 id=3097 data-nosnippet>3097</a>    </span><span class="kw">match </span>document.findnode(<span class="string">"/ltx:document"</span>, <span class="prelude-val">None</span>) { <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>docel) =&gt; {
 <a href=#3098 id=3098 data-nosnippet>3098</a>      <span class="kw">if </span>id != <span class="macro">pin!</span>(<span class="string">""</span>) {
 <a href=#3099 id=3099 data-nosnippet>3099</a>        <span class="kw">let </span>id_s = arena::with(id, |s| s.to_string());
 <a href=#3100 id=3100 data-nosnippet>3100</a>        document.set_attribute(<span class="kw-2">&amp;mut </span>docel, <span class="string">"xml:id"</span>, <span class="kw-2">&amp;</span>id_s)<span class="question-mark">?</span>;
 <a href=#3101 id=3101 data-nosnippet>3101</a>      }
-<a href=#3102 id=3102 data-nosnippet>3102</a>    } <span class="kw">else </span>{
+<a href=#3102 id=3102 data-nosnippet>3102</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#3103 id=3103 data-nosnippet>3103</a>      <span class="kw">let </span>props = arena::with(id, |id_str| <span class="macro">string_map!</span>(<span class="string">"xml:id" </span>=&gt; id_str));
 <a href=#3104 id=3104 data-nosnippet>3104</a>      document.open_element(<span class="string">"ltx:document"</span>, <span class="prelude-val">Some</span>(props), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#3105 id=3105 data-nosnippet>3105</a>    }
+<a href=#3105 id=3105 data-nosnippet>3105</a>    }}
 <a href=#3106 id=3106 data-nosnippet>3106</a>  },
 <a href=#3107 id=3107 data-nosnippet>3107</a>  after_digest =&gt; sub[whatsit] {
 <a href=#3108 id=3108 data-nosnippet>3108</a>    <span class="comment">// Perl: beginMode('internal_vertical', 1) — noframe=1
@@ -5229,7 +5229,7 @@
 <a href=#5229 id=5229 data-nosnippet>5229</a>    <span class="comment">// At least an empty tag! ?
 <a href=#5230 id=5230 data-nosnippet>5230</a>    </span>properties =&gt; sub[args] {
 <a href=#5231 id=5231 data-nosnippet>5231</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>arg) = args[<span class="number">0</span>] {
-<a href=#5232 id=5232 data-nosnippet>5232</a>        <span class="kw">if let </span>DigestedData::Postponed(<span class="kw-2">ref </span>tag_tokens) = arg.data() {
+<a href=#5232 id=5232 data-nosnippet>5232</a>        <span class="kw">if let </span>DigestedData::Postponed(tag_tokens) = arg.data() {
 <a href=#5233 id=5233 data-nosnippet>5233</a>          <span class="kw">let </span>tag_expanded = <span class="macro">Expand!</span>(tag_tokens.clone());
 <a href=#5234 id=5234 data-nosnippet>5234</a>          <span class="kw">let </span>tag = stomach::digest(tag_expanded)<span class="question-mark">?</span>;
 <a href=#5235 id=5235 data-nosnippet>5235</a>          <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"tag" </span>=&gt; tag))
@@ -5531,7 +5531,7 @@
 <a href=#5531 id=5531 data-nosnippet>5531</a>    <span class="kw">if </span>in_equation {
 <a href=#5532 id=5532 data-nosnippet>5532</a>      <span class="kw">if </span>defer_retract {
 <a href=#5533 id=5533 data-nosnippet>5533</a>        with_value_mut(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| {
-<a href=#5534 id=5534 data-nosnippet>5534</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>tags)) = tags_opt {
+<a href=#5534 id=5534 data-nosnippet>5534</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(tags)) = tags_opt {
 <a href=#5535 id=5535 data-nosnippet>5535</a>            tags.insert(<span class="string">"retract"</span>, <span class="bool-val">true</span>.into());
 <a href=#5536 id=5536 data-nosnippet>5536</a>          }
 <a href=#5537 id=5537 data-nosnippet>5537</a>        });
@@ -5553,7 +5553,7 @@
 <a href=#5553 id=5553 data-nosnippet>5553</a>      <span class="comment">// Perl uses Digested parameter type; we manually digest here
 <a href=#5554 id=5554 data-nosnippet>5554</a>      </span><span class="kw">let </span>digested = stomach::digest(content)<span class="question-mark">?</span>;
 <a href=#5555 id=5555 data-nosnippet>5555</a>      with_value_mut(<span class="string">"EQUATIONROW_TAGS"</span>, |tags_opt| {
-<a href=#5556 id=5556 data-nosnippet>5556</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>tags)) = tags_opt {
+<a href=#5556 id=5556 data-nosnippet>5556</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(tags)) = tags_opt {
 <a href=#5557 id=5557 data-nosnippet>5557</a>          tags.insert(<span class="string">"tags"</span>, Stored::Digested(digested));
 <a href=#5558 id=5558 data-nosnippet>5558</a>        }
 <a href=#5559 id=5559 data-nosnippet>5559</a>      });
@@ -5668,7 +5668,7 @@
 <a href=#5668 id=5668 data-nosnippet>5668</a>
 <a href=#5669 id=5669 data-nosnippet>5669</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 2243-2247
 <a href=#5670 id=5670 data-nosnippet>5670</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@in@firstcolumn"</span>, {
-<a href=#5671 id=5671 data-nosnippet>5671</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_digested) = lookup_alignment() {
+<a href=#5671 id=5671 data-nosnippet>5671</a>    <span class="kw">match </span>lookup_alignment() { <span class="prelude-val">Some</span>(alignment_digested) =&gt; {
 <a href=#5672 id=5672 data-nosnippet>5672</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_cell) = alignment_digested.alignment_cell() {
 <a href=#5673 id=5673 data-nosnippet>5673</a>        <span class="kw">let </span>alignment = alignment_cell.borrow();
 <a href=#5674 id=5674 data-nosnippet>5674</a>        !alignment.is_in_row()
@@ -5676,9 +5676,9 @@
 <a href=#5676 id=5676 data-nosnippet>5676</a>      } <span class="kw">else </span>{
 <a href=#5677 id=5677 data-nosnippet>5677</a>        <span class="bool-val">false
 <a href=#5678 id=5678 data-nosnippet>5678</a>      </span>}
-<a href=#5679 id=5679 data-nosnippet>5679</a>    } <span class="kw">else </span>{
+<a href=#5679 id=5679 data-nosnippet>5679</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#5680 id=5680 data-nosnippet>5680</a>      <span class="bool-val">false
-<a href=#5681 id=5681 data-nosnippet>5681</a>    </span>}
+<a href=#5681 id=5681 data-nosnippet>5681</a>    </span>}}
 <a href=#5682 id=5682 data-nosnippet>5682</a>  });
 <a href=#5683 id=5683 data-nosnippet>5683</a>
 <a href=#5684 id=5684 data-nosnippet>5684</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 2251-2254
@@ -6360,11 +6360,11 @@
 <a href=#6360 id=6360 data-nosnippet>6360</a>  });
 <a href=#6361 id=6361 data-nosnippet>6361</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareSymbolFontAlphabet {Token} {}"</span>, sub[(cs, name)] {
 <a href=#6362 id=6362 data-nosnippet>6362</a>    <span class="kw">let </span>fontkey = <span class="macro">s!</span>(<span class="string">"fontdeclarations@{}"</span>, name.to_string());
-<a href=#6363 id=6363 data-nosnippet>6363</a>    <span class="kw">let </span>font : <span class="prelude-ty">Option</span>&lt;Font&gt; = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(value)) = lookup_value(<span class="kw-2">&amp;</span>fontkey) {
+<a href=#6363 id=6363 data-nosnippet>6363</a>    <span class="kw">let </span>font : <span class="prelude-ty">Option</span>&lt;Font&gt; = <span class="kw">match </span>lookup_value(<span class="kw-2">&amp;</span>fontkey) { <span class="prelude-val">Some</span>(Stored::Font(value)) =&gt; {
 <a href=#6364 id=6364 data-nosnippet>6364</a>      <span class="prelude-val">Some</span>((<span class="kw-2">*</span>value).clone())
-<a href=#6365 id=6365 data-nosnippet>6365</a>    } <span class="kw">else </span>{
+<a href=#6365 id=6365 data-nosnippet>6365</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#6366 id=6366 data-nosnippet>6366</a>      <span class="prelude-val">None
-<a href=#6367 id=6367 data-nosnippet>6367</a>    </span>};
+<a href=#6367 id=6367 data-nosnippet>6367</a>    </span>}};
 <a href=#6368 id=6368 data-nosnippet>6368</a>    <span class="macro">DefPrimitive!</span>(cs, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, font =&gt; font);
 <a href=#6369 id=6369 data-nosnippet>6369</a>  });
 <a href=#6370 id=6370 data-nosnippet>6370</a>
@@ -7017,11 +7017,11 @@
 <a href=#7017 id=7017 data-nosnippet>7017</a>    // `\thefigure\par` undefined errors when captype was "figure\par".
 <a href=#7018 id=7018 data-nosnippet>7018</a>    </span><span class="kw">let </span>captype = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\@captype"</span>))<span class="question-mark">?</span>.to_string();
 <a href=#7019 id=7019 data-nosnippet>7019</a>    <span class="kw">let </span>prekey = <span class="macro">s!</span>(<span class="string">"PREINCREMENTED_{captype}"</span>);
-<a href=#7020 id=7020 data-nosnippet>7020</a>    <span class="kw">let </span>props = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(pre)) = state::remove_value(<span class="kw-2">&amp;</span>prekey) {
+<a href=#7020 id=7020 data-nosnippet>7020</a>    <span class="kw">let </span>props = <span class="kw">match </span>state::remove_value(<span class="kw-2">&amp;</span>prekey) { <span class="prelude-val">Some</span>(Stored::HashStored(pre)) =&gt; {
 <a href=#7021 id=7021 data-nosnippet>7021</a>      pre
-<a href=#7022 id=7022 data-nosnippet>7022</a>    } <span class="kw">else </span>{
+<a href=#7022 id=7022 data-nosnippet>7022</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#7023 id=7023 data-nosnippet>7023</a>      ref_step_counter(<span class="kw-2">&amp;</span>captype, <span class="bool-val">false</span>)<span class="question-mark">?
-<a href=#7024 id=7024 data-nosnippet>7024</a>    </span>};
+<a href=#7024 id=7024 data-nosnippet>7024</a>    </span>}};
 <a href=#7025 id=7025 data-nosnippet>7025</a>    <span class="kw">let </span>inlist  = stomach::digest(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{}"</span>, captype)))<span class="question-mark">?</span>.to_string();
 <a href=#7026 id=7026 data-nosnippet>7026</a>    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_tags"</span>, captype), props.get(<span class="string">"tags"</span>), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#7027 id=7027 data-nosnippet>7027</a>    state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_id"</span>, captype), props.get(<span class="string">"id"</span>),   <span class="prelude-val">Some</span>(Scope::Global));
@@ -7255,20 +7255,20 @@
 <a href=#7255 id=7255 data-nosnippet>7255</a>  );
 <a href=#7256 id=7256 data-nosnippet>7256</a>
 <a href=#7257 id=7257 data-nosnippet>7257</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@tabbing@start@tabs"</span>, sub [_args] {
-<a href=#7258 id=7258 data-nosnippet>7258</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(toks)) = state::lookup_value(<span class="string">"tabbing_start_tabs"</span>) {
+<a href=#7258 id=7258 data-nosnippet>7258</a>    <span class="kw">match </span>state::lookup_value(<span class="string">"tabbing_start_tabs"</span>) { <span class="prelude-val">Some</span>(Stored::Tokens(toks)) =&gt; {
 <a href=#7259 id=7259 data-nosnippet>7259</a>      toks
-<a href=#7260 id=7260 data-nosnippet>7260</a>    } <span class="kw">else </span>{
+<a href=#7260 id=7260 data-nosnippet>7260</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#7261 id=7261 data-nosnippet>7261</a>      <span class="macro">Tokens!</span>()
-<a href=#7262 id=7262 data-nosnippet>7262</a>    }
+<a href=#7262 id=7262 data-nosnippet>7262</a>    }}
 <a href=#7263 id=7263 data-nosnippet>7263</a>  });
 <a href=#7264 id=7264 data-nosnippet>7264</a>
 <a href=#7265 id=7265 data-nosnippet>7265</a>  <span class="comment">// \+ increments tab start by adding \&gt; to tabbing_start_tabs
 <a href=#7266 id=7266 data-nosnippet>7266</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@increment"</span>, sub [_args] {
-<a href=#7267 id=7267 data-nosnippet>7267</a>    <span class="kw">let </span><span class="kw-2">mut </span>tabs = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(toks)) = state::lookup_value(<span class="string">"tabbing_start_tabs"</span>) {
+<a href=#7267 id=7267 data-nosnippet>7267</a>    <span class="kw">let </span><span class="kw-2">mut </span>tabs = <span class="kw">match </span>state::lookup_value(<span class="string">"tabbing_start_tabs"</span>) { <span class="prelude-val">Some</span>(Stored::Tokens(toks)) =&gt; {
 <a href=#7268 id=7268 data-nosnippet>7268</a>      toks.unlist()
-<a href=#7269 id=7269 data-nosnippet>7269</a>    } <span class="kw">else </span>{
+<a href=#7269 id=7269 data-nosnippet>7269</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#7270 id=7270 data-nosnippet>7270</a>      Vec::new()
-<a href=#7271 id=7271 data-nosnippet>7271</a>    };
+<a href=#7271 id=7271 data-nosnippet>7271</a>    }};
 <a href=#7272 id=7272 data-nosnippet>7272</a>    tabs.push(<span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>));
 <a href=#7273 id=7273 data-nosnippet>7273</a>    state::assign_value(
 <a href=#7274 id=7274 data-nosnippet>7274</a>      <span class="string">"tabbing_start_tabs"</span>,
@@ -7279,15 +7279,15 @@
 <a href=#7279 id=7279 data-nosnippet>7279</a>
 <a href=#7280 id=7280 data-nosnippet>7280</a>  <span class="comment">// \- decrements tab start by removing first element from tabbing_start_tabs
 <a href=#7281 id=7281 data-nosnippet>7281</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@tabbing@decrement"</span>, sub [_args] {
-<a href=#7282 id=7282 data-nosnippet>7282</a>    <span class="kw">let </span>tabs = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(toks)) = state::lookup_value(<span class="string">"tabbing_start_tabs"</span>) {
+<a href=#7282 id=7282 data-nosnippet>7282</a>    <span class="kw">let </span>tabs = <span class="kw">match </span>state::lookup_value(<span class="string">"tabbing_start_tabs"</span>) { <span class="prelude-val">Some</span>(Stored::Tokens(toks)) =&gt; {
 <a href=#7283 id=7283 data-nosnippet>7283</a>      <span class="kw">let </span><span class="kw-2">mut </span>v = toks.unlist();
 <a href=#7284 id=7284 data-nosnippet>7284</a>      <span class="kw">if </span>!v.is_empty() {
 <a href=#7285 id=7285 data-nosnippet>7285</a>        v.remove(<span class="number">0</span>);
 <a href=#7286 id=7286 data-nosnippet>7286</a>      }
 <a href=#7287 id=7287 data-nosnippet>7287</a>      v
-<a href=#7288 id=7288 data-nosnippet>7288</a>    } <span class="kw">else </span>{
+<a href=#7288 id=7288 data-nosnippet>7288</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#7289 id=7289 data-nosnippet>7289</a>      Vec::new()
-<a href=#7290 id=7290 data-nosnippet>7290</a>    };
+<a href=#7290 id=7290 data-nosnippet>7290</a>    }};
 <a href=#7291 id=7291 data-nosnippet>7291</a>    state::assign_value(
 <a href=#7292 id=7292 data-nosnippet>7292</a>      <span class="string">"tabbing_start_tabs"</span>,
 <a href=#7293 id=7293 data-nosnippet>7293</a>      Stored::Tokens(Tokens::new(tabs)),
@@ -8277,9 +8277,9 @@
 <a href=#8277 id=8277 data-nosnippet>8277</a>    <span class="kw">let </span>current = document.get_node().clone();
 <a href=#8278 id=8278 data-nosnippet>8278</a>    <span class="kw">let </span>current_name = arena::with(get_node_qname(<span class="kw-2">&amp;</span>current), |s| s.to_string());
 <a href=#8279 id=8279 data-nosnippet>8279</a>    <span class="kw">let </span>parent_name = <span class="kw">if </span>current_name == <span class="string">"#PCDATA" </span>{
-<a href=#8280 id=8280 data-nosnippet>8280</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(p) = current.get_parent() {
+<a href=#8280 id=8280 data-nosnippet>8280</a>      <span class="kw">match </span>current.get_parent() { <span class="prelude-val">Some</span>(p) =&gt; {
 <a href=#8281 id=8281 data-nosnippet>8281</a>        arena::with(get_node_qname(<span class="kw-2">&amp;</span>p), |s| s.to_string())
-<a href=#8282 id=8282 data-nosnippet>8282</a>      } <span class="kw">else </span>{ current_name }
+<a href=#8282 id=8282 data-nosnippet>8282</a>      } <span class="kw">_ </span>=&gt; { current_name }}
 <a href=#8283 id=8283 data-nosnippet>8283</a>    } <span class="kw">else </span>{ current_name };
 <a href=#8284 id=8284 data-nosnippet>8284</a>    <span class="kw">let </span>in_flow = parent_name.starts_with(<span class="string">"ltx:p"</span>) || parent_name == <span class="string">"ltx:text"</span>;
 <a href=#8285 id=8285 data-nosnippet>8285</a>    <span class="kw">if </span>in_flow {
@@ -8656,12 +8656,12 @@
 <a href=#8656 id=8656 data-nosnippet>8656</a>            whatsit.set_property(<span class="string">"mathframe"</span>, <span class="bool-val">true</span>);
 <a href=#8657 id=8657 data-nosnippet>8657</a>            <span class="comment">// Extract inner body for the XMArg template
 <a href=#8658 id=8658 data-nosnippet>8658</a>            // For \fbox{$...$}, get the math body from the inner whatsit
-<a href=#8659 id=8659 data-nosnippet>8659</a>            </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(body)) = a.get_body() {
+<a href=#8659 id=8659 data-nosnippet>8659</a>            </span><span class="kw">match </span>a.get_body() { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(body)) =&gt; {
 <a href=#8660 id=8660 data-nosnippet>8660</a>              whatsit.set_property(<span class="string">"inner"</span>, body);
-<a href=#8661 id=8661 data-nosnippet>8661</a>            } <span class="kw">else </span>{
+<a href=#8661 id=8661 data-nosnippet>8661</a>            } <span class="kw">_ </span>=&gt; {
 <a href=#8662 id=8662 data-nosnippet>8662</a>              <span class="comment">// Fallback: use the entire arg
 <a href=#8663 id=8663 data-nosnippet>8663</a>              </span>whatsit.set_property(<span class="string">"inner"</span>, a.clone());
-<a href=#8664 id=8664 data-nosnippet>8664</a>            }
+<a href=#8664 id=8664 data-nosnippet>8664</a>            }}
 <a href=#8665 id=8665 data-nosnippet>8665</a>          }
 <a href=#8666 id=8666 data-nosnippet>8666</a>        }
 <a href=#8667 id=8667 data-nosnippet>8667</a>      }

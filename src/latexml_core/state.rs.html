@@ -874,7 +874,7 @@
 <a href=#874 id=874 data-nosnippet>874</a>            <span class="prelude-val">Some</span>(Scope::Global),
 <a href=#875 id=875 data-nosnippet>875</a>          );
 <a href=#876 id=876 data-nosnippet>876</a>        }
-<a href=#877 id=877 data-nosnippet>877</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Stash(<span class="kw-2">ref mut </span>stash)) =
+<a href=#877 id=877 data-nosnippet>877</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Stash(stash)) =
 <a href=#878 id=878 data-nosnippet>878</a>          <span class="self">self</span>.stash.get_mut(<span class="kw-2">&amp;</span>scope_name).as_mut().unwrap().get_mut(<span class="number">0</span>)
 <a href=#879 id=879 data-nosnippet>879</a>        {
 <a href=#880 id=880 data-nosnippet>880</a>          stash.push((table_name, key, value.clone()));
@@ -941,11 +941,11 @@
 <a href=#941 id=941 data-nosnippet>941</a>    }
 <a href=#942 id=942 data-nosnippet>942</a>  }
 <a href=#943 id=943 data-nosnippet>943</a>  <span class="kw">pub fn </span>lookup_font_info(<span class="kw-2">&amp;</span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Stored&gt;&gt; {
-<a href=#944 id=944 data-nosnippet>944</a>    <span class="kw">let </span>key_str = <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(key)<span class="question-mark">? </span>{
+<a href=#944 id=944 data-nosnippet>944</a>    <span class="kw">let </span>key_str = <span class="kw">match </span>lookup_definition(key)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#945 id=945 data-nosnippet>945</a>      <span class="macro">s!</span>(<span class="string">"fontinfo_{}"</span>, defn.get_cs_name())
-<a href=#946 id=946 data-nosnippet>946</a>    } <span class="kw">else </span>{
+<a href=#946 id=946 data-nosnippet>946</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#947 id=947 data-nosnippet>947</a>      <span class="macro">s!</span>(<span class="string">"fontinfo_{key}"</span>)
-<a href=#948 id=948 data-nosnippet>948</a>    };
+<a href=#948 id=948 data-nosnippet>948</a>    }};
 <a href=#949 id=949 data-nosnippet>949</a>    <span class="prelude-val">Ok</span>(<span class="self">self</span>.lookup_value(<span class="kw-2">&amp;</span>key_str))
 <a href=#950 id=950 data-nosnippet>950</a>  }
 <a href=#951 id=951 data-nosnippet>951</a>  <span class="doccomment">/// manage a (global) hash of values
@@ -1398,7 +1398,7 @@
 <a href=#1398 id=1398 data-nosnippet>1398</a></span><span class="kw">pub fn </span>push_tokens(key: <span class="kw-2">&amp;</span>str, value: Tokens) {
 <a href=#1399 id=1399 data-nosnippet>1399</a>  <span class="kw">let </span><span class="kw-2">mut </span>state = <span class="macro">state_mut!</span>();
 <a href=#1400 id=1400 data-nosnippet>1400</a>  <span class="kw">match </span>state.lookup_value_mut(key) {
-<a href=#1401 id=1401 data-nosnippet>1401</a>    <span class="prelude-val">Some</span>(Stored::Tokens(<span class="kw-2">ref mut </span>tks)) =&gt; tks.unlist_mut().extend(value.unlist()),
+<a href=#1401 id=1401 data-nosnippet>1401</a>    <span class="prelude-val">Some</span>(Stored::Tokens(tks)) =&gt; tks.unlist_mut().extend(value.unlist()),
 <a href=#1402 id=1402 data-nosnippet>1402</a>    <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; state.assign_value(key, Stored::Tokens(value), <span class="prelude-val">None</span>),
 <a href=#1403 id=1403 data-nosnippet>1403</a>    <span class="prelude-val">Some</span>(other) =&gt; <span class="macro">panic!</span>(<span class="string">"Can only push_tokens into a Stored::Tokens, but got {other:?}"</span>),
 <a href=#1404 id=1404 data-nosnippet>1404</a>  }
@@ -1653,7 +1653,7 @@
 <a href=#1653 id=1653 data-nosnippet>1653</a>  cs: <span class="kw-2">&amp;</span>Token,
 <a href=#1654 id=1654 data-nosnippet>1654</a>  parameters: Vec&lt;ArgWrap&gt;,
 <a href=#1655 id=1655 data-nosnippet>1655</a>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;RegisterValue&gt;&gt; {
-<a href=#1656 id=1656 data-nosnippet>1656</a>  <span class="prelude-val">Ok</span>(<span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(cs)<span class="question-mark">? </span>{
+<a href=#1656 id=1656 data-nosnippet>1656</a>  <span class="prelude-val">Ok</span>(<span class="kw">match </span>lookup_definition(cs)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#1657 id=1657 data-nosnippet>1657</a>    <span class="kw">if </span>defn.is_register() {
 <a href=#1658 id=1658 data-nosnippet>1658</a>      defn.value_of(parameters)
 <a href=#1659 id=1659 data-nosnippet>1659</a>    } <span class="kw">else </span>{
@@ -1661,9 +1661,9 @@
 <a href=#1661 id=1661 data-nosnippet>1661</a>      <span class="macro">Warn!</span>(<span class="string">"expected"</span>, <span class="string">"register"</span>, message);
 <a href=#1662 id=1662 data-nosnippet>1662</a>      <span class="prelude-val">None
 <a href=#1663 id=1663 data-nosnippet>1663</a>    </span>}
-<a href=#1664 id=1664 data-nosnippet>1664</a>  } <span class="kw">else </span>{
+<a href=#1664 id=1664 data-nosnippet>1664</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#1665 id=1665 data-nosnippet>1665</a>    <span class="prelude-val">None
-<a href=#1666 id=1666 data-nosnippet>1666</a>  </span>})
+<a href=#1666 id=1666 data-nosnippet>1666</a>  </span>}})
 <a href=#1667 id=1667 data-nosnippet>1667</a>}
 <a href=#1668 id=1668 data-nosnippet>1668</a>
 <a href=#1669 id=1669 data-nosnippet>1669</a><span class="kw">pub fn </span>lookup_expandable(
@@ -2187,7 +2187,7 @@
 <a href=#2187 id=2187 data-nosnippet>2187</a>    <span class="comment">// Debug!("Found definition for: {:?}", lookupname);
 <a href=#2188 id=2188 data-nosnippet>2188</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(entry) = entry_opt {
 <a href=#2189 id=2189 data-nosnippet>2189</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(front) = entry.front() {
-<a href=#2190 id=2190 data-nosnippet>2190</a>        <span class="kw">if let </span>Stored::Token(<span class="kw-2">ref </span>t) = front {
+<a href=#2190 id=2190 data-nosnippet>2190</a>        <span class="kw">if let </span>Stored::Token(t) = front {
 <a href=#2191 id=2191 data-nosnippet>2191</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(lookup_name) = t.get_executable_primitive_name() {
 <a href=#2192 id=2192 data-nosnippet>2192</a>            <span class="kw">let </span>lookup_sym = arena::pin(lookup_name);
 <a href=#2193 id=2193 data-nosnippet>2193</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(retry_entry) = <span class="macro">state!</span>().meaning.get(<span class="kw-2">&amp;</span>lookup_sym) {

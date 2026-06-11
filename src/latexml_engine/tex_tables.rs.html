@@ -25,7 +25,7 @@
 <a href=#25 id=25 data-nosnippet>25</a>  // when \begin{aligned} is nested inside \begin{align}.
 <a href=#26 id=26 data-nosnippet>26</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@begin@alignment"</span>, <span class="string">"#alignment"</span>,
 <a href=#27 id=27 data-nosnippet>27</a>    reversion =&gt; sub[whatsit,_args] {
-<a href=#28 id=28 data-nosnippet>28</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(alignment)) = whatsit.get_property(<span class="string">"alignment"</span>).as_deref() {
+<a href=#28 id=28 data-nosnippet>28</a>      <span class="kw">match </span>whatsit.get_property(<span class="string">"alignment"</span>).as_deref() { <span class="prelude-val">Some</span>(Stored::Digested(alignment)) =&gt; {
 <a href=#29 id=29 data-nosnippet>29</a>        <span class="kw">if let </span>DigestedData::Alignment(data) = alignment.data() {
 <a href=#30 id=30 data-nosnippet>30</a>          <span class="comment">// Use try_borrow: nested array inside a delimited expression
 <a href=#31 id=31 data-nosnippet>31</a>          // (e.g. `\left( \begin{array}{ccc} ... \end{array} \right)`)
@@ -43,9 +43,9 @@
 <a href=#43 id=43 data-nosnippet>43</a>        } <span class="kw">else </span>{
 <a href=#44 id=44 data-nosnippet>44</a>          <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
 <a href=#45 id=45 data-nosnippet>45</a>        }
-<a href=#46 id=46 data-nosnippet>46</a>      } <span class="kw">else </span>{
+<a href=#46 id=46 data-nosnippet>46</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#47 id=47 data-nosnippet>47</a>        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
-<a href=#48 id=48 data-nosnippet>48</a>      }},
+<a href=#48 id=48 data-nosnippet>48</a>      }}},
 <a href=#49 id=49 data-nosnippet>49</a>    sizer =&gt; <span class="string">"#alignment"</span>,
 <a href=#50 id=50 data-nosnippet>50</a>    after_digest =&gt; sub[whatsit] {
 <a href=#51 id=51 data-nosnippet>51</a>      bgroup();
@@ -263,12 +263,12 @@
 <a href=#263 id=263 data-nosnippet>263</a>  bounded =&gt; <span class="bool-val">true</span>,
 <a href=#264 id=264 data-nosnippet>264</a>  leave_horizontal =&gt; <span class="bool-val">true</span>,
 <a href=#265 id=265 data-nosnippet>265</a>  sizer =&gt; sub[whatsit] {
-<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(alignment_d)) = whatsit.get_property(<span class="string">"alignment"</span>).as_deref() {
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="kw">match </span>whatsit.get_property(<span class="string">"alignment"</span>).as_deref() { <span class="prelude-val">Some</span>(Stored::Digested(alignment_d)) =&gt; {
 <a href=#267 id=267 data-nosnippet>267</a>      <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = alignment_d.clone().get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#268 id=268 data-nosnippet>268</a>      <span class="prelude-val">Ok</span>((w, h, d))
-<a href=#269 id=269 data-nosnippet>269</a>    } <span class="kw">else </span>{
+<a href=#269 id=269 data-nosnippet>269</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#270 id=270 data-nosnippet>270</a>      <span class="prelude-val">Ok</span>((Dimension::default(), Dimension::default(), Dimension::default()))
-<a href=#271 id=271 data-nosnippet>271</a>    }
+<a href=#271 id=271 data-nosnippet>271</a>    }}
 <a href=#272 id=272 data-nosnippet>272</a>  },
 <a href=#273 id=273 data-nosnippet>273</a>  before_construct =&gt; sub[document, _whatsit] {
 <a href=#274 id=274 data-nosnippet>274</a>    document.maybe_close_element(<span class="string">"ltx:p"</span>)<span class="question-mark">?</span>;
@@ -296,8 +296,8 @@
 <a href=#296 id=296 data-nosnippet>296</a>    // variant; the inner Rc&lt;Digested&gt; + RefCell&lt;Alignment&gt; mutation
 <a href=#297 id=297 data-nosnippet>297</a>    // still works fine through the borrow.
 <a href=#298 id=298 data-nosnippet>298</a>    </span>state::with_value(<span class="string">"Alignment"</span>, |v| {
-<a href=#299 id=299 data-nosnippet>299</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>d)) = v {
-<a href=#300 id=300 data-nosnippet>300</a>        <span class="kw">if let </span>latexml_core::digested::DigestedData::Alignment(<span class="kw-2">ref </span>alignment) = d.data() {
+<a href=#299 id=299 data-nosnippet>299</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(d)) = v {
+<a href=#300 id=300 data-nosnippet>300</a>        <span class="kw">if let </span>latexml_core::digested::DigestedData::Alignment(alignment) = d.data() {
 <a href=#301 id=301 data-nosnippet>301</a>          alignment.borrow_mut().is_halign = <span class="bool-val">true</span>;
 <a href=#302 id=302 data-nosnippet>302</a>        }
 <a href=#303 id=303 data-nosnippet>303</a>      }
@@ -496,25 +496,25 @@
 <a href=#496 id=496 data-nosnippet>496</a>  // Perl: DefRegisterI('\lx@alignment@ncolumns', undef, Dimension(0), getter =&gt; sub { ... })
 <a href=#497 id=497 data-nosnippet>497</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lx@alignment@ncolumns"</span>, Number::new(<span class="number">0</span>),
 <a href=#498 id=498 data-nosnippet>498</a>    getter =&gt; {
-<a href=#499 id=499 data-nosnippet>499</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
+<a href=#499 id=499 data-nosnippet>499</a>      <span class="kw">match </span>lookup_alignment() { <span class="prelude-val">Some</span>(alignment_stored) =&gt; {
 <a href=#500 id=500 data-nosnippet>500</a>        <span class="kw">let </span>data = alignment_stored.alignment_cell().unwrap();
 <a href=#501 id=501 data-nosnippet>501</a>        <span class="kw">let </span>borrowed = data.borrow();
 <a href=#502 id=502 data-nosnippet>502</a>        Number::new(borrowed.get_template().get_columns().len() <span class="kw">as </span>i64)
-<a href=#503 id=503 data-nosnippet>503</a>      } <span class="kw">else </span>{
+<a href=#503 id=503 data-nosnippet>503</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#504 id=504 data-nosnippet>504</a>        Number::new(<span class="number">0</span>)
-<a href=#505 id=505 data-nosnippet>505</a>      }
+<a href=#505 id=505 data-nosnippet>505</a>      }}
 <a href=#506 id=506 data-nosnippet>506</a>    }
 <a href=#507 id=507 data-nosnippet>507</a>  );
 <a href=#508 id=508 data-nosnippet>508</a>  <span class="comment">// Perl: DefRegisterI('\lx@alignment@column', undef, Dimension(0), getter =&gt; sub { ... })
 <a href=#509 id=509 data-nosnippet>509</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\lx@alignment@column"</span>, Number::new(<span class="number">0</span>),
 <a href=#510 id=510 data-nosnippet>510</a>    getter =&gt; {
-<a href=#511 id=511 data-nosnippet>511</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment_stored) = lookup_alignment() {
+<a href=#511 id=511 data-nosnippet>511</a>      <span class="kw">match </span>lookup_alignment() { <span class="prelude-val">Some</span>(alignment_stored) =&gt; {
 <a href=#512 id=512 data-nosnippet>512</a>        <span class="kw">let </span>data = alignment_stored.alignment_cell().unwrap();
 <a href=#513 id=513 data-nosnippet>513</a>        <span class="kw">let </span>borrowed = data.borrow();
 <a href=#514 id=514 data-nosnippet>514</a>        Number::new(borrowed.current_column_number() <span class="kw">as </span>i64)
-<a href=#515 id=515 data-nosnippet>515</a>      } <span class="kw">else </span>{
+<a href=#515 id=515 data-nosnippet>515</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#516 id=516 data-nosnippet>516</a>        Number::new(<span class="number">0</span>)
-<a href=#517 id=517 data-nosnippet>517</a>      }
+<a href=#517 id=517 data-nosnippet>517</a>      }}
 <a href=#518 id=518 data-nosnippet>518</a>    }
 <a href=#519 id=519 data-nosnippet>519</a>  );
 <a href=#520 id=520 data-nosnippet>520</a>
@@ -645,16 +645,16 @@
 <a href=#645 id=645 data-nosnippet>645</a>  // Note that the body MUST end with a \cr, and that we've made Special Arrangments
 <a href=#646 id=646 data-nosnippet>646</a>  // with \alignment@cr to recognize the end of the \halign
 <a href=#647 id=647 data-nosnippet>647</a>  </span>local_align_group_count(<span class="number">0</span>);
-<a href=#648 id=648 data-nosnippet>648</a>  <span class="kw">let </span>alignment_stored = <span class="kw">if let </span><span class="prelude-val">Some</span>(alignment) = lookup_alignment() {
+<a href=#648 id=648 data-nosnippet>648</a>  <span class="kw">let </span>alignment_stored = <span class="kw">match </span>lookup_alignment() { <span class="prelude-val">Some</span>(alignment) =&gt; {
 <a href=#649 id=649 data-nosnippet>649</a>    alignment
-<a href=#650 id=650 data-nosnippet>650</a>  } <span class="kw">else </span>{
+<a href=#650 id=650 data-nosnippet>650</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#651 id=651 data-nosnippet>651</a>    <span class="macro">Error!</span>(
 <a href=#652 id=652 data-nosnippet>652</a>      <span class="string">"missing"</span>,
 <a href=#653 id=653 data-nosnippet>653</a>      <span class="string">"alignment"</span>,
 <a href=#654 id=654 data-nosnippet>654</a>      <span class="string">"There is no open alignment structure here"
 <a href=#655 id=655 data-nosnippet>655</a>    </span>);
 <a href=#656 id=656 data-nosnippet>656</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#657 id=657 data-nosnippet>657</a>  };
+<a href=#657 id=657 data-nosnippet>657</a>  }};
 <a href=#658 id=658 data-nosnippet>658</a>  local_reading_alignment(<span class="kw-2">&amp;</span>alignment_stored);
 <a href=#659 id=659 data-nosnippet>659</a>  whatsit.set_property(<span class="string">"alignment"</span>, Stored::Digested(alignment_stored.clone()));
 <a href=#660 id=660 data-nosnippet>660</a>

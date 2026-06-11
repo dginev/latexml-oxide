@@ -449,7 +449,7 @@
 <a href=#449 id=449 data-nosnippet>449</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\IEEEnonumber OptionalMatch:*"</span>, sub[(star)] {
 <a href=#450 id=450 data-nosnippet>450</a>    <span class="kw">let </span>key = <span class="kw">if </span>star.is_some() { <span class="string">"EQUATION_NUMBERING" </span>} <span class="kw">else </span>{ <span class="string">"EQUATIONROW_TAGS" </span>};
 <a href=#451 id=451 data-nosnippet>451</a>    with_value_mut(key, |v| {
-<a href=#452 id=452 data-nosnippet>452</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>m)) = v {
+<a href=#452 id=452 data-nosnippet>452</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#453 id=453 data-nosnippet>453</a>        m.insert(<span class="string">"retract"</span>, Stored::Bool(<span class="bool-val">true</span>));
 <a href=#454 id=454 data-nosnippet>454</a>        m.remove(<span class="string">"counter"</span>);
 <a href=#455 id=455 data-nosnippet>455</a>      }
@@ -459,7 +459,7 @@
 <a href=#459 id=459 data-nosnippet>459</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\IEEEyesnumber OptionalMatch:*"</span>, sub[(star)] {
 <a href=#460 id=460 data-nosnippet>460</a>    <span class="comment">// Perl: if EQUATION_NUMBERING.counter == 'subequation', step the equation counter
 <a href=#461 id=461 data-nosnippet>461</a>    </span><span class="kw">let </span>subeq = with_value(<span class="string">"EQUATION_NUMBERING"</span>, |v| {
-<a href=#462 id=462 data-nosnippet>462</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref </span>m)) = v {
+<a href=#462 id=462 data-nosnippet>462</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#463 id=463 data-nosnippet>463</a>        <span class="macro">matches!</span>(m.get(<span class="string">"counter"</span>),
 <a href=#464 id=464 data-nosnippet>464</a>          <span class="prelude-val">Some</span>(Stored::String(s)) <span class="kw">if </span>arena::to_string(<span class="kw-2">*</span>s) == <span class="string">"subequation"</span>)
 <a href=#465 id=465 data-nosnippet>465</a>      } <span class="kw">else </span>{ <span class="bool-val">false </span>}
@@ -469,14 +469,14 @@
 <a href=#469 id=469 data-nosnippet>469</a>    }
 <a href=#470 id=470 data-nosnippet>470</a>    <span class="kw">if </span>star.is_some() {
 <a href=#471 id=471 data-nosnippet>471</a>      with_value_mut(<span class="string">"EQUATION_NUMBERING"</span>, |v| {
-<a href=#472 id=472 data-nosnippet>472</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>m)) = v {
+<a href=#472 id=472 data-nosnippet>472</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#473 id=473 data-nosnippet>473</a>          m.insert(<span class="string">"retract"</span>, Stored::Bool(<span class="bool-val">false</span>));
 <a href=#474 id=474 data-nosnippet>474</a>          m.remove(<span class="string">"counter"</span>);
 <a href=#475 id=475 data-nosnippet>475</a>        }
 <a href=#476 id=476 data-nosnippet>476</a>      });
 <a href=#477 id=477 data-nosnippet>477</a>    } <span class="kw">else </span>{
 <a href=#478 id=478 data-nosnippet>478</a>      with_value_mut(<span class="string">"EQUATIONROW_TAGS"</span>, |v| {
-<a href=#479 id=479 data-nosnippet>479</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>m)) = v {
+<a href=#479 id=479 data-nosnippet>479</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#480 id=480 data-nosnippet>480</a>          m.insert(<span class="string">"noretract"</span>, Stored::Bool(<span class="bool-val">true</span>));
 <a href=#481 id=481 data-nosnippet>481</a>          m.remove(<span class="string">"counter"</span>);
 <a href=#482 id=482 data-nosnippet>482</a>        }
@@ -487,7 +487,7 @@
 <a href=#487 id=487 data-nosnippet>487</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\IEEEyessubnumber OptionalMatch:*"</span>, sub[(star)] {
 <a href=#488 id=488 data-nosnippet>488</a>    <span class="kw">let </span>key = <span class="kw">if </span>star.is_some() { <span class="string">"EQUATION_NUMBERING" </span>} <span class="kw">else </span>{ <span class="string">"EQUATIONROW_TAGS" </span>};
 <a href=#489 id=489 data-nosnippet>489</a>    with_value_mut(key, |v| {
-<a href=#490 id=490 data-nosnippet>490</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>m)) = v {
+<a href=#490 id=490 data-nosnippet>490</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#491 id=491 data-nosnippet>491</a>        m.insert(<span class="string">"counter"</span>, Stored::String(<span class="macro">pin!</span>(<span class="string">"subequation"</span>)));
 <a href=#492 id=492 data-nosnippet>492</a>      }
 <a href=#493 id=493 data-nosnippet>493</a>    });
@@ -504,7 +504,7 @@
 <a href=#504 id=504 data-nosnippet>504</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\IEEEnosubnumber OptionalMatch:*"</span>, sub[(star)] {
 <a href=#505 id=505 data-nosnippet>505</a>    <span class="kw">let </span>key = <span class="kw">if </span>star.is_some() { <span class="string">"EQUATION_NUMBERING" </span>} <span class="kw">else </span>{ <span class="string">"EQUATIONROW_TAGS" </span>};
 <a href=#506 id=506 data-nosnippet>506</a>    with_value_mut(key, |v| {
-<a href=#507 id=507 data-nosnippet>507</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>m)) = v {
+<a href=#507 id=507 data-nosnippet>507</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#508 id=508 data-nosnippet>508</a>        m.insert(<span class="string">"counter"</span>, Stored::String(<span class="macro">pin!</span>(<span class="string">"equation"</span>)));
 <a href=#509 id=509 data-nosnippet>509</a>      }
 <a href=#510 id=510 data-nosnippet>510</a>    });

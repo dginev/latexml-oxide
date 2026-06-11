@@ -18,7 +18,7 @@
 <a href=#18 id=18 data-nosnippet>18</a>    <span class="string">"&lt;ltx:resource src='#src' type='application/pdf'/&gt;See #pages&lt;ltx:ref href='#src'&gt;#src&lt;/ltx:ref&gt;"</span>,
 <a href=#19 id=19 data-nosnippet>19</a>    properties =&gt; sub[args] {
 <a href=#20 id=20 data-nosnippet>20</a>      <span class="kw">let </span>pages = args[<span class="number">0</span>].as_ref().and_then(|d| {
-<a href=#21 id=21 data-nosnippet>21</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = d.data() {
+<a href=#21 id=21 data-nosnippet>21</a>        <span class="kw">if let </span>DigestedData::KeyVals(kvs) = d.data() {
 <a href=#22 id=22 data-nosnippet>22</a>          kvs.get_value(<span class="string">"pages"</span>).map(|v| v.to_string())
 <a href=#23 id=23 data-nosnippet>23</a>        } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
 <a href=#24 id=24 data-nosnippet>24</a>      });

@@ -73,7 +73,7 @@
 <a href=#73 id=73 data-nosnippet>73</a>
 <a href=#74 id=74 data-nosnippet>74</a>  state::set_nomathparse_flag(<span class="bool-val">false</span>);
 <a href=#75 id=75 data-nosnippet>75</a>  <span class="kw">let </span><span class="kw-2">mut </span>parser = MathParser::default();
-<a href=#76 id=76 data-nosnippet>76</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(parse_tree)) = parser.parse_lexemes(lexemes, <span class="kw-2">&amp;</span>lex_nodes, <span class="kw-2">&amp;mut </span>doc) {
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="kw">match </span>parser.parse_lexemes(lexemes, <span class="kw-2">&amp;</span>lex_nodes, <span class="kw-2">&amp;mut </span>doc) { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(parse_tree)) =&gt; {
 <a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span><span class="kw-2">mut </span>xmath = xmath_opt.unwrap();
 <a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">for </span><span class="kw-2">mut </span>node <span class="kw">in </span>xmath.get_child_nodes() {
 <a href=#79 id=79 data-nosnippet>79</a>      node.unlink();
@@ -120,10 +120,10 @@
 <a href=#120 id=120 data-nosnippet>120</a>        })
 <a href=#121 id=121 data-nosnippet>121</a>      );
 <a href=#122 id=122 data-nosnippet>122</a>    }
-<a href=#123 id=123 data-nosnippet>123</a>  } <span class="kw">else </span>{
+<a href=#123 id=123 data-nosnippet>123</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#124 id=124 data-nosnippet>124</a>    <span class="macro">Warn!</span>(<span class="string">"math"</span>, <span class="string">"parse"</span>, <span class="string">"Grammar did not recognize expression."</span>);
 <a href=#125 id=125 data-nosnippet>125</a>    process::exit(<span class="number">1</span>);
-<a href=#126 id=126 data-nosnippet>126</a>  }
+<a href=#126 id=126 data-nosnippet>126</a>  }}
 <a href=#127 id=127 data-nosnippet>127</a>  <span class="prelude-val">Ok</span>(())
 <a href=#128 id=128 data-nosnippet>128</a>}
 </code></pre></div></section></main></body></html>

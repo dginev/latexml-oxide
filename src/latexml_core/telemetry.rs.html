@@ -332,7 +332,7 @@
 <a href=#332 id=332 data-nosnippet>332</a>
 <a href=#333 id=333 data-nosnippet>333</a>    <span class="kw">let </span><span class="kw-2">mut </span>first = <span class="bool-val">true</span>;
 <a href=#334 id=334 data-nosnippet>334</a>    <span class="macro">macro_rules!</span> field {
-<a href=#335 id=335 data-nosnippet>335</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$val</span>:expr) =&gt; {{
+<a href=#335 id=335 data-nosnippet>335</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$val</span>:expr_2021) =&gt; {{
 <a href=#336 id=336 data-nosnippet>336</a>        <span class="kw">if </span>!first {
 <a href=#337 id=337 data-nosnippet>337</a>          s.push(<span class="string">','</span>);
 <a href=#338 id=338 data-nosnippet>338</a>        }
@@ -344,7 +344,7 @@
 <a href=#344 id=344 data-nosnippet>344</a>      }};
 <a href=#345 id=345 data-nosnippet>345</a>    }
 <a href=#346 id=346 data-nosnippet>346</a>    <span class="macro">macro_rules!</span> field_str {
-<a href=#347 id=347 data-nosnippet>347</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$val</span>:expr) =&gt; {{
+<a href=#347 id=347 data-nosnippet>347</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$val</span>:expr_2021) =&gt; {{
 <a href=#348 id=348 data-nosnippet>348</a>        <span class="kw">if </span>!first {
 <a href=#349 id=349 data-nosnippet>349</a>          s.push(<span class="string">','</span>);
 <a href=#350 id=350 data-nosnippet>350</a>        }
@@ -356,7 +356,7 @@
 <a href=#356 id=356 data-nosnippet>356</a>      }};
 <a href=#357 id=357 data-nosnippet>357</a>    }
 <a href=#358 id=358 data-nosnippet>358</a>    <span class="macro">macro_rules!</span> field_array_u64 {
-<a href=#359 id=359 data-nosnippet>359</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$arr</span>:expr) =&gt; {{
+<a href=#359 id=359 data-nosnippet>359</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$arr</span>:expr_2021) =&gt; {{
 <a href=#360 id=360 data-nosnippet>360</a>        <span class="kw">if </span>!first {
 <a href=#361 id=361 data-nosnippet>361</a>          s.push(<span class="string">','</span>);
 <a href=#362 id=362 data-nosnippet>362</a>        }
@@ -374,7 +374,7 @@
 <a href=#374 id=374 data-nosnippet>374</a>      }};
 <a href=#375 id=375 data-nosnippet>375</a>    }
 <a href=#376 id=376 data-nosnippet>376</a>    <span class="macro">macro_rules!</span> field_array_u32 {
-<a href=#377 id=377 data-nosnippet>377</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$arr</span>:expr) =&gt; {{
+<a href=#377 id=377 data-nosnippet>377</a>      (<span class="macro-nonterminal">$name</span>:literal, <span class="macro-nonterminal">$arr</span>:expr_2021) =&gt; {{
 <a href=#378 id=378 data-nosnippet>378</a>        <span class="macro">field_array_u64!</span>(<span class="macro-nonterminal">$name</span>, <span class="macro-nonterminal">$arr</span>);
 <a href=#379 id=379 data-nosnippet>379</a>      }};
 <a href=#380 id=380 data-nosnippet>380</a>    }

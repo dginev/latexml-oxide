@@ -89,7 +89,7 @@
 <a href=#89 id=89 data-nosnippet>89</a>    <span class="kw">let </span><span class="kw-2">mut </span>finished = <span class="bool-val">false</span>;
 <a href=#90 id=90 data-nosnippet>90</a>    <span class="comment">//   close the mouth (if any) and clear the variable
 <a href=#91 id=91 data-nosnippet>91</a>    </span>with_value(<span class="kw-2">&amp;</span>file_key, |mouth_opt|
-<a href=#92 id=92 data-nosnippet>92</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(<span class="kw-2">ref </span>mouth)) = mouth_opt {
+<a href=#92 id=92 data-nosnippet>92</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = mouth_opt {
 <a href=#93 id=93 data-nosnippet>93</a>        mouth.borrow_mut().finish();
 <a href=#94 id=94 data-nosnippet>94</a>        finished = <span class="bool-val">true</span>;
 <a href=#95 id=95 data-nosnippet>95</a>      });
@@ -299,7 +299,7 @@
 <a href=#299 id=299 data-nosnippet>299</a>      <span class="comment">// Map psfile-style options to graphicx-style. Perl L282-311.
 <a href=#300 id=300 data-nosnippet>300</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>options_vec: Vec&lt;String&gt; = Vec::new();
 <a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kv_digested) = args[<span class="number">0</span>] {
-<a href=#302 id=302 data-nosnippet>302</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_digested.data() {
+<a href=#302 id=302 data-nosnippet>302</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = kv_digested.data() {
 <a href=#303 id=303 data-nosnippet>303</a>          <span class="kw">let </span><span class="kw-2">mut </span>h_off: f64 = <span class="number">0.0</span>;
 <a href=#304 id=304 data-nosnippet>304</a>          <span class="kw">let </span><span class="kw-2">mut </span>v_off: f64 = <span class="number">0.0</span>;
 <a href=#305 id=305 data-nosnippet>305</a>          <span class="kw">for </span>(key, value) <span class="kw">in </span>kv.get_pairs() {

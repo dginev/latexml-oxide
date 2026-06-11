@@ -99,14 +99,14 @@
 <a href=#99 id=99 data-nosnippet>99</a>  <span class="kw">fn </span>revert(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
 <a href=#100 id=100 data-nosnippet>100</a>    <span class="kw">match </span><span class="self">self </span>{
 <a href=#101 id=101 data-nosnippet>101</a>      <span class="comment">// ExplodeText($self-&gt;toString);
-<a href=#102 id=102 data-nosnippet>102</a>      </span>RegisterValue::Number(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
-<a href=#103 id=103 data-nosnippet>103</a>      RegisterValue::Dimension(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
-<a href=#104 id=104 data-nosnippet>104</a>      RegisterValue::MuDimension(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
-<a href=#105 id=105 data-nosnippet>105</a>      RegisterValue::Glue(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
-<a href=#106 id=106 data-nosnippet>106</a>      RegisterValue::MuGlue(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
-<a href=#107 id=107 data-nosnippet>107</a>      RegisterValue::Token(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(value.revert())),
-<a href=#108 id=108 data-nosnippet>108</a>      RegisterValue::Tokens(<span class="kw-2">ref </span>value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(value.clone().revert())), <span class="comment">// clone?
-<a href=#109 id=109 data-nosnippet>109</a>      </span>RegisterValue::Pair(<span class="kw-2">ref </span>value) =&gt; value.revert(),
+<a href=#102 id=102 data-nosnippet>102</a>      </span>RegisterValue::Number(value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
+<a href=#103 id=103 data-nosnippet>103</a>      RegisterValue::Dimension(value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
+<a href=#104 id=104 data-nosnippet>104</a>      RegisterValue::MuDimension(value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
+<a href=#105 id=105 data-nosnippet>105</a>      RegisterValue::Glue(value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
+<a href=#106 id=106 data-nosnippet>106</a>      RegisterValue::MuGlue(value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(value))),
+<a href=#107 id=107 data-nosnippet>107</a>      RegisterValue::Token(value) =&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(value.revert())),
+<a href=#108 id=108 data-nosnippet>108</a>      RegisterValue::Tokens(value) =&gt; <span class="prelude-val">Ok</span>(Tokens::new(value.clone().revert())), <span class="comment">// clone?
+<a href=#109 id=109 data-nosnippet>109</a>      </span>RegisterValue::Pair(value) =&gt; value.revert(),
 <a href=#110 id=110 data-nosnippet>110</a>    }
 <a href=#111 id=111 data-nosnippet>111</a>  }
 <a href=#112 id=112 data-nosnippet>112</a>}
@@ -732,7 +732,7 @@
 <a href=#732 id=732 data-nosnippet>732</a>    <span class="kw">let </span>params = <span class="kw-2">&amp;</span><span class="self">self</span>.parameters;
 <a href=#733 id=733 data-nosnippet>733</a>    <span class="kw">match </span>params {
 <a href=#734 id=734 data-nosnippet>734</a>      <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(Vec::new()),
-<a href=#735 id=735 data-nosnippet>735</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>params) =&gt; params.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>)),
+<a href=#735 id=735 data-nosnippet>735</a>      <span class="prelude-val">Some</span>(params) =&gt; params.read_arguments(<span class="prelude-val">Some</span>(<span class="self">self</span>)),
 <a href=#736 id=736 data-nosnippet>736</a>    }
 <a href=#737 id=737 data-nosnippet>737</a>  }
 <a href=#738 id=738 data-nosnippet>738</a>

@@ -736,7 +736,7 @@
 <a href=#736 id=736 data-nosnippet>736</a></span><span class="kw">pub fn </span>needs_mathstyle(node: <span class="kw-2">&amp;</span>NodeData) -&gt; bool {
 <a href=#737 id=737 data-nosnippet>737</a>  <span class="kw">match </span>node {
 <a href=#738 id=738 data-nosnippet>738</a>    NodeData::Element { attributes, children, .. } =&gt; {
-<a href=#739 id=739 data-nosnippet>739</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>attrs) = attributes {
+<a href=#739 id=739 data-nosnippet>739</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(attrs) = attributes {
 <a href=#740 id=740 data-nosnippet>740</a>        <span class="kw">if </span>attrs.contains_key(<span class="string">"_largeop"</span>) {
 <a href=#741 id=741 data-nosnippet>741</a>          <span class="kw">return </span><span class="bool-val">true</span>;
 <a href=#742 id=742 data-nosnippet>742</a>        }
@@ -1048,7 +1048,7 @@
 <a href=#1048 id=1048 data-nosnippet>1048</a>    .into_iter()
 <a href=#1049 id=1049 data-nosnippet>1049</a>    .filter(|item| <span class="kw">match </span>item {
 <a href=#1050 id=1050 data-nosnippet>1050</a>      NodeData::Element { attributes, .. } =&gt; {
-<a href=#1051 id=1051 data-nosnippet>1051</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>attrs) = attributes {
+<a href=#1051 id=1051 data-nosnippet>1051</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(attrs) = attributes {
 <a href=#1052 id=1052 data-nosnippet>1052</a>          !attrs.contains_key(<span class="string">"_ignorable"</span>)
 <a href=#1053 id=1053 data-nosnippet>1053</a>        } <span class="kw">else </span>{
 <a href=#1054 id=1054 data-nosnippet>1054</a>          <span class="bool-val">true
@@ -1186,11 +1186,11 @@
 <a href=#1186 id=1186 data-nosnippet>1186</a>      <span class="kw">match </span>tag.as_str() {
 <a href=#1187 id=1187 data-nosnippet>1187</a>        <span class="string">"ltx:Math" </span>=&gt; {
 <a href=#1188 id=1188 data-nosnippet>1188</a>          <span class="comment">// Nested math: convert XMath if present
-<a href=#1189 id=1189 data-nosnippet>1189</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xmath) = doc.findnode_at(<span class="string">"ltx:XMath"</span>, node) {
+<a href=#1189 id=1189 data-nosnippet>1189</a>          </span><span class="kw">match </span>doc.findnode_at(<span class="string">"ltx:XMath"</span>, node) { <span class="prelude-val">Some</span>(xmath) =&gt; {
 <a href=#1190 id=1190 data-nosnippet>1190</a>            <span class="macro">vec!</span>[presentation::convert_to_pmml(doc, <span class="kw-2">&amp;</span>xmath)]
-<a href=#1191 id=1191 data-nosnippet>1191</a>          } <span class="kw">else </span>{
+<a href=#1191 id=1191 data-nosnippet>1191</a>          } <span class="kw">_ </span>=&gt; {
 <a href=#1192 id=1192 data-nosnippet>1192</a>            <span class="macro">vec!</span>[]
-<a href=#1193 id=1193 data-nosnippet>1193</a>          }
+<a href=#1193 id=1193 data-nosnippet>1193</a>          }}
 <a href=#1194 id=1194 data-nosnippet>1194</a>        },
 <a href=#1195 id=1195 data-nosnippet>1195</a>        <span class="string">"ltx:text" </span>=&gt; {
 <a href=#1196 id=1196 data-nosnippet>1196</a>          <span class="comment">// Recurse on children

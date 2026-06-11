@@ -29,7 +29,7 @@
 <a href=#29 id=29 data-nosnippet>29</a>/// Returns false if no \halign alignment was found.
 <a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">fn </span>set_halign_vattach(digested: <span class="kw-2">&amp;</span>Digested, valign: <span class="kw-2">&amp;</span>str) -&gt; bool {
 <a href=#31 id=31 data-nosnippet>31</a>  <span class="kw">match </span>digested.data() {
-<a href=#32 id=32 data-nosnippet>32</a>    DigestedData::Whatsit(<span class="kw-2">ref </span>w) =&gt; {
+<a href=#32 id=32 data-nosnippet>32</a>    DigestedData::Whatsit(w) =&gt; {
 <a href=#33 id=33 data-nosnippet>33</a>      <span class="kw">let </span>w_ref = w.borrow();
 <a href=#34 id=34 data-nosnippet>34</a>      <span class="kw">if </span>w_ref.get_property(<span class="string">"alignment"</span>).is_some() {
 <a href=#35 id=35 data-nosnippet>35</a>        <span class="comment">// Check if this whatsit's definition is \halign
@@ -37,7 +37,7 @@
 <a href=#37 id=37 data-nosnippet>37</a>        <span class="kw">let </span>is_halign = <span class="kw-2">*</span>def.get_cs_name() == <span class="kw-2">*</span><span class="string">"\\halign"</span>;
 <a href=#38 id=38 data-nosnippet>38</a>        <span class="kw">if </span>is_halign {
 <a href=#39 id=39 data-nosnippet>39</a>          <span class="comment">// Get the alignment property value and set vattach on it
-<a href=#40 id=40 data-nosnippet>40</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Cow::Borrowed(Stored::Digested(<span class="kw-2">ref </span>alignment_dig))) =
+<a href=#40 id=40 data-nosnippet>40</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Cow::Borrowed(Stored::Digested(alignment_dig))) =
 <a href=#41 id=41 data-nosnippet>41</a>            w_ref.get_property(<span class="string">"alignment"</span>)
 <a href=#42 id=42 data-nosnippet>42</a>          {
 <a href=#43 id=43 data-nosnippet>43</a>            <span class="kw">if let </span>DigestedData::Alignment(<span class="kw-2">ref </span>alignment_cell) = <span class="kw-2">*</span>alignment_dig.data() {
@@ -54,7 +54,7 @@
 <a href=#54 id=54 data-nosnippet>54</a>      }
 <a href=#55 id=55 data-nosnippet>55</a>      <span class="bool-val">false
 <a href=#56 id=56 data-nosnippet>56</a>    </span>},
-<a href=#57 id=57 data-nosnippet>57</a>    DigestedData::List(<span class="kw-2">ref </span>list_cell) =&gt; {
+<a href=#57 id=57 data-nosnippet>57</a>    DigestedData::List(list_cell) =&gt; {
 <a href=#58 id=58 data-nosnippet>58</a>      <span class="comment">// Walk children to find a \halign
 <a href=#59 id=59 data-nosnippet>59</a>      </span><span class="kw">let </span>children = list_cell.borrow().unlist();
 <a href=#60 id=60 data-nosnippet>60</a>      <span class="kw">for </span>child <span class="kw">in </span>children.iter() {
@@ -96,7 +96,7 @@
 <a href=#96 id=96 data-nosnippet>96</a>    <span class="kw">return </span>dims;
 <a href=#97 id=97 data-nosnippet>97</a>  }
 <a href=#98 id=98 data-nosnippet>98</a>  <span class="comment">// If zero dims: for Lists, sum children's dimensions
-<a href=#99 id=99 data-nosnippet>99</a>  </span><span class="kw">if let </span>DigestedData::List(<span class="kw-2">ref </span>list_cell) = digested.data() {
+<a href=#99 id=99 data-nosnippet>99</a>  </span><span class="kw">if let </span>DigestedData::List(list_cell) = digested.data() {
 <a href=#100 id=100 data-nosnippet>100</a>    <span class="kw">if let </span><span class="prelude-val">Ok</span>(list) = list_cell.try_borrow() {
 <a href=#101 id=101 data-nosnippet>101</a>      <span class="kw">let </span><span class="kw-2">mut </span>total_w: i64 = <span class="number">0</span>;
 <a href=#102 id=102 data-nosnippet>102</a>      <span class="kw">let </span><span class="kw-2">mut </span>max_h: i64 = <span class="number">0</span>;
@@ -344,9 +344,9 @@
 <a href=#344 id=344 data-nosnippet>344</a>    before_digest =&gt; { bgroup(); },
 <a href=#345 id=345 data-nosnippet>345</a>    capture_body =&gt; <span class="bool-val">true</span>,
 <a href=#346 id=346 data-nosnippet>346</a>    reversion =&gt; sub[whatsit, _args] {
-<a href=#347 id=347 data-nosnippet>347</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = whatsit.get_body()<span class="question-mark">? </span>{
+<a href=#347 id=347 data-nosnippet>347</a>      <span class="kw">match </span>whatsit.get_body()<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(body) =&gt; {
 <a href=#348 id=348 data-nosnippet>348</a>        body.revert()
-<a href=#349 id=349 data-nosnippet>349</a>      } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+<a href=#349 id=349 data-nosnippet>349</a>      } <span class="kw">_ </span>=&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }}
 <a href=#350 id=350 data-nosnippet>350</a>    }
 <a href=#351 id=351 data-nosnippet>351</a>  );
 <a href=#352 id=352 data-nosnippet>352</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@hidden@egroup"</span>, <span class="string">""</span>,
@@ -361,9 +361,9 @@
 <a href=#361 id=361 data-nosnippet>361</a>    before_digest =&gt; { bgroup(); },
 <a href=#362 id=362 data-nosnippet>362</a>    capture_body =&gt; <span class="bool-val">true</span>,
 <a href=#363 id=363 data-nosnippet>363</a>    reversion=&gt; sub[whatsit,_args] {
-<a href=#364 id=364 data-nosnippet>364</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(body) = whatsit.get_body()<span class="question-mark">? </span>{
+<a href=#364 id=364 data-nosnippet>364</a>      <span class="kw">match </span>whatsit.get_body()<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(body) =&gt; {
 <a href=#365 id=365 data-nosnippet>365</a>        body.revert()
-<a href=#366 id=366 data-nosnippet>366</a>      } <span class="kw">else </span>{ <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }
+<a href=#366 id=366 data-nosnippet>366</a>      } <span class="kw">_ </span>=&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>()) }}
 <a href=#367 id=367 data-nosnippet>367</a>    }
 <a href=#368 id=368 data-nosnippet>368</a>  );
 <a href=#369 id=369 data-nosnippet>369</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@hidden@egroup"</span>, <span class="string">""</span>,
@@ -550,7 +550,7 @@
 <a href=#550 id=550 data-nosnippet>550</a>    </span><span class="kw">let </span>newtag = <span class="kw">if </span>is_svg { <span class="string">"svg:g" </span>}
 <a href=#551 id=551 data-nosnippet>551</a>      <span class="kw">else if </span>vmode { <span class="kw">if </span>inline { <span class="string">"ltx:inline-block" </span>} <span class="kw">else </span>{ <span class="string">"ltx:p" </span>} }
 <a href=#552 id=552 data-nosnippet>552</a>      <span class="kw">else </span>{ <span class="string">"ltx:text" </span>};
-<a href=#553 id=553 data-nosnippet>553</a>    <span class="kw">let </span>width : String = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(<span class="kw-2">ref </span>w)) = props.get(<span class="string">"width"</span>) {
+<a href=#553 id=553 data-nosnippet>553</a>    <span class="kw">let </span>width : String = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(w)) = props.get(<span class="string">"width"</span>) {
 <a href=#554 id=554 data-nosnippet>554</a>      w.to_attribute()
 <a href=#555 id=555 data-nosnippet>555</a>    } <span class="kw">else </span>{
 <a href=#556 id=556 data-nosnippet>556</a>      String::new()
@@ -908,21 +908,21 @@
 <a href=#908 id=908 data-nosnippet>908</a>  <span class="comment">// Perl: \box does NOT call enterHorizontal (TeX_Box.pool.ltxml line 647)
 <a href=#909 id=909 data-nosnippet>909</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\box Number"</span>, sub[(number)] {
 <a href=#910 id=910 data-nosnippet>910</a>    <span class="kw">let </span>box_key = <span class="macro">s!</span>(<span class="string">"box{}"</span>, number.value_of());
-<a href=#911 id=911 data-nosnippet>911</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(stuff)) = state::remove_value(<span class="kw-2">&amp;</span>box_key) {
+<a href=#911 id=911 data-nosnippet>911</a>    <span class="kw">match </span>state::remove_value(<span class="kw-2">&amp;</span>box_key) { <span class="prelude-val">Some</span>(Stored::Digested(stuff)) =&gt; {
 <a href=#912 id=912 data-nosnippet>912</a>      <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stuff])
-<a href=#913 id=913 data-nosnippet>913</a>    } <span class="kw">else </span>{
+<a href=#913 id=913 data-nosnippet>913</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#914 id=914 data-nosnippet>914</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#915 id=915 data-nosnippet>915</a>    }
+<a href=#915 id=915 data-nosnippet>915</a>    }}
 <a href=#916 id=916 data-nosnippet>916</a>  });
 <a href=#917 id=917 data-nosnippet>917</a>
 <a href=#918 id=918 data-nosnippet>918</a>  <span class="comment">// Perl: \copy does NOT call enterHorizontal (TeX_Box.pool.ltxml line 653)
 <a href=#919 id=919 data-nosnippet>919</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\copy Number"</span>, sub[(number)] {
 <a href=#920 id=920 data-nosnippet>920</a>    <span class="kw">let </span>box_key = <span class="macro">s!</span>(<span class="string">"box{}"</span>, number.value_of());
-<a href=#921 id=921 data-nosnippet>921</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(stuff)) = lookup_value(<span class="kw-2">&amp;</span>box_key) {
+<a href=#921 id=921 data-nosnippet>921</a>    <span class="kw">match </span>lookup_value(<span class="kw-2">&amp;</span>box_key) { <span class="prelude-val">Some</span>(Stored::Digested(stuff)) =&gt; {
 <a href=#922 id=922 data-nosnippet>922</a>      <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stuff])
-<a href=#923 id=923 data-nosnippet>923</a>    } <span class="kw">else </span>{
+<a href=#923 id=923 data-nosnippet>923</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#924 id=924 data-nosnippet>924</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#925 id=925 data-nosnippet>925</a>    }
+<a href=#925 id=925 data-nosnippet>925</a>    }}
 <a href=#926 id=926 data-nosnippet>926</a>  });
 <a href=#927 id=927 data-nosnippet>927</a>
 <a href=#928 id=928 data-nosnippet>928</a>  <span class="comment">// \unhbox&lt;8bit&gt;, \unhcopy&lt;8bit&gt;
@@ -930,7 +930,7 @@
 <a href=#930 id=930 data-nosnippet>930</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\unhbox Number"</span>, sub[(number)] {
 <a href=#931 id=931 data-nosnippet>931</a>    enter_horizontal();
 <a href=#932 id=932 data-nosnippet>932</a>    <span class="kw">let </span>box_key = <span class="macro">s!</span>(<span class="string">"box{}"</span>, number.value_of());
-<a href=#933 id=933 data-nosnippet>933</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(stuff)) = state::remove_value(<span class="kw-2">&amp;</span>box_key) {
+<a href=#933 id=933 data-nosnippet>933</a>    <span class="kw">match </span>state::remove_value(<span class="kw-2">&amp;</span>box_key) { <span class="prelude-val">Some</span>(Stored::Digested(stuff)) =&gt; {
 <a href=#934 id=934 data-nosnippet>934</a>      <span class="comment">// Only unlist if box is horizontal (mode ends with "horizontal")
 <a href=#935 id=935 data-nosnippet>935</a>      </span><span class="kw">let </span>mode = stuff.get_property_string(<span class="string">"mode"</span>);
 <a href=#936 id=936 data-nosnippet>936</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"horizontal"</span>) {
@@ -938,24 +938,24 @@
 <a href=#938 id=938 data-nosnippet>938</a>      } <span class="kw">else </span>{
 <a href=#939 id=939 data-nosnippet>939</a>        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stuff])
 <a href=#940 id=940 data-nosnippet>940</a>      }
-<a href=#941 id=941 data-nosnippet>941</a>    } <span class="kw">else </span>{
+<a href=#941 id=941 data-nosnippet>941</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#942 id=942 data-nosnippet>942</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#943 id=943 data-nosnippet>943</a>    }
+<a href=#943 id=943 data-nosnippet>943</a>    }}
 <a href=#944 id=944 data-nosnippet>944</a>  });
 <a href=#945 id=945 data-nosnippet>945</a>
 <a href=#946 id=946 data-nosnippet>946</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\unhcopy Number"</span>, sub[(number)] {
 <a href=#947 id=947 data-nosnippet>947</a>    enter_horizontal();
 <a href=#948 id=948 data-nosnippet>948</a>    <span class="kw">let </span>box_key = <span class="macro">s!</span>(<span class="string">"box{}"</span>, number.value_of());
-<a href=#949 id=949 data-nosnippet>949</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(stuff)) = lookup_value(<span class="kw-2">&amp;</span>box_key) {
+<a href=#949 id=949 data-nosnippet>949</a>    <span class="kw">match </span>lookup_value(<span class="kw-2">&amp;</span>box_key) { <span class="prelude-val">Some</span>(Stored::Digested(stuff)) =&gt; {
 <a href=#950 id=950 data-nosnippet>950</a>      <span class="kw">let </span>mode = stuff.get_property_string(<span class="string">"mode"</span>);
 <a href=#951 id=951 data-nosnippet>951</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"horizontal"</span>) {
 <a href=#952 id=952 data-nosnippet>952</a>        <span class="prelude-val">Ok</span>(stuff.unlist())
 <a href=#953 id=953 data-nosnippet>953</a>      } <span class="kw">else </span>{
 <a href=#954 id=954 data-nosnippet>954</a>        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stuff])
 <a href=#955 id=955 data-nosnippet>955</a>      }
-<a href=#956 id=956 data-nosnippet>956</a>    } <span class="kw">else </span>{
+<a href=#956 id=956 data-nosnippet>956</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#957 id=957 data-nosnippet>957</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#958 id=958 data-nosnippet>958</a>    }
+<a href=#958 id=958 data-nosnippet>958</a>    }}
 <a href=#959 id=959 data-nosnippet>959</a>  });
 <a href=#960 id=960 data-nosnippet>960</a>
 <a href=#961 id=961 data-nosnippet>961</a>  <span class="comment">// \unvbox&lt;8bit&gt;, \unvcopy&lt;8bit&gt;
@@ -963,7 +963,7 @@
 <a href=#963 id=963 data-nosnippet>963</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\unvbox Number"</span>, sub[(number)] {
 <a href=#964 id=964 data-nosnippet>964</a>    leave_horizontal()<span class="question-mark">?</span>;
 <a href=#965 id=965 data-nosnippet>965</a>    <span class="kw">let </span>box_key = <span class="macro">s!</span>(<span class="string">"box{}"</span>, number.value_of());
-<a href=#966 id=966 data-nosnippet>966</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(stuff)) = state::remove_value(<span class="kw-2">&amp;</span>box_key) {
+<a href=#966 id=966 data-nosnippet>966</a>    <span class="kw">match </span>state::remove_value(<span class="kw-2">&amp;</span>box_key) { <span class="prelude-val">Some</span>(Stored::Digested(stuff)) =&gt; {
 <a href=#967 id=967 data-nosnippet>967</a>      <span class="comment">// Only unlist if box is vertical (mode ends with "vertical")
 <a href=#968 id=968 data-nosnippet>968</a>      </span><span class="kw">let </span>mode = stuff.get_property_string(<span class="string">"mode"</span>);
 <a href=#969 id=969 data-nosnippet>969</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"vertical"</span>) {
@@ -971,25 +971,25 @@
 <a href=#971 id=971 data-nosnippet>971</a>      } <span class="kw">else </span>{
 <a href=#972 id=972 data-nosnippet>972</a>        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stuff])
 <a href=#973 id=973 data-nosnippet>973</a>      }
-<a href=#974 id=974 data-nosnippet>974</a>    } <span class="kw">else </span>{
+<a href=#974 id=974 data-nosnippet>974</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#975 id=975 data-nosnippet>975</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#976 id=976 data-nosnippet>976</a>    }
+<a href=#976 id=976 data-nosnippet>976</a>    }}
 <a href=#977 id=977 data-nosnippet>977</a>  });
 <a href=#978 id=978 data-nosnippet>978</a>
 <a href=#979 id=979 data-nosnippet>979</a>  <span class="comment">// Perl: $stomach-&gt;leaveHorizontal (TeX_Box.pool.ltxml line 693)
 <a href=#980 id=980 data-nosnippet>980</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\unvcopy Number"</span>, sub[(number)] {
 <a href=#981 id=981 data-nosnippet>981</a>    leave_horizontal()<span class="question-mark">?</span>;
 <a href=#982 id=982 data-nosnippet>982</a>    <span class="kw">let </span>box_key = <span class="macro">s!</span>(<span class="string">"box{}"</span>, number.value_of());
-<a href=#983 id=983 data-nosnippet>983</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(stuff)) = lookup_value(<span class="kw-2">&amp;</span>box_key) {
+<a href=#983 id=983 data-nosnippet>983</a>    <span class="kw">match </span>lookup_value(<span class="kw-2">&amp;</span>box_key) { <span class="prelude-val">Some</span>(Stored::Digested(stuff)) =&gt; {
 <a href=#984 id=984 data-nosnippet>984</a>      <span class="kw">let </span>mode = stuff.get_property_string(<span class="string">"mode"</span>);
 <a href=#985 id=985 data-nosnippet>985</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"vertical"</span>) {
 <a href=#986 id=986 data-nosnippet>986</a>        <span class="prelude-val">Ok</span>(stuff.unlist())
 <a href=#987 id=987 data-nosnippet>987</a>      } <span class="kw">else </span>{
 <a href=#988 id=988 data-nosnippet>988</a>        <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[stuff])
 <a href=#989 id=989 data-nosnippet>989</a>      }
-<a href=#990 id=990 data-nosnippet>990</a>    } <span class="kw">else </span>{
+<a href=#990 id=990 data-nosnippet>990</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#991 id=991 data-nosnippet>991</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#992 id=992 data-nosnippet>992</a>    }
+<a href=#992 id=992 data-nosnippet>992</a>    }}
 <a href=#993 id=993 data-nosnippet>993</a>  });
 <a href=#994 id=994 data-nosnippet>994</a>
 <a href=#995 id=995 data-nosnippet>995</a>  <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1085,7 +1085,7 @@
 <a href=#1085 id=1085 data-nosnippet>1085</a>    <span class="kw">let </span>w_pt = width.map(|d| d.value_of() <span class="kw">as </span>f64 / <span class="number">65536.0</span>);
 <a href=#1086 id=1086 data-nosnippet>1086</a>    <span class="kw">let </span>h_pt = height.map(|d| d.value_of() <span class="kw">as </span>f64 / <span class="number">65536.0</span>);
 <a href=#1087 id=1087 data-nosnippet>1087</a>
-<a href=#1088 id=1088 data-nosnippet>1088</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(_alignment) = lookup_alignment() {
+<a href=#1088 id=1088 data-nosnippet>1088</a>    <span class="kw">match </span>lookup_alignment() { <span class="prelude-val">Some</span>(_alignment) =&gt; {
 <a href=#1089 id=1089 data-nosnippet>1089</a>      <span class="comment">// Perl: set isVerticalRule only if dimensions suggest a real rule
 <a href=#1090 id=1090 data-nosnippet>1090</a>      </span><span class="kw">let </span>dominated_by_height = <span class="kw">match </span>(h_pt, w_pt) {
 <a href=#1091 id=1091 data-nosnippet>1091</a>        (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>) =&gt; <span class="bool-val">true</span>,
@@ -1096,9 +1096,9 @@
 <a href=#1096 id=1096 data-nosnippet>1096</a>      <span class="kw">if </span>dominated_by_height {
 <a href=#1097 id=1097 data-nosnippet>1097</a>        whatsit.set_property(<span class="string">"isVerticalRule"</span>, <span class="bool-val">true</span>);
 <a href=#1098 id=1098 data-nosnippet>1098</a>      }
-<a href=#1099 id=1099 data-nosnippet>1099</a>    } <span class="kw">else if </span>w_pt == <span class="prelude-val">Some</span>(<span class="number">0.0</span>) {
+<a href=#1099 id=1099 data-nosnippet>1099</a>    } <span class="kw">_ </span>=&gt; <span class="kw">if </span>w_pt == <span class="prelude-val">Some</span>(<span class="number">0.0</span>) {
 <a href=#1100 id=1100 data-nosnippet>1100</a>      whatsit.set_property(<span class="string">"invisible"</span>, <span class="bool-val">true</span>);
-<a href=#1101 id=1101 data-nosnippet>1101</a>    }
+<a href=#1101 id=1101 data-nosnippet>1101</a>    }}
 <a href=#1102 id=1102 data-nosnippet>1102</a>    <span class="comment">// Set color from current font (Perl: only if NOT black)
 <a href=#1103 id=1103 data-nosnippet>1103</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(font) = lookup_font() {
 <a href=#1104 id=1104 data-nosnippet>1104</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(color) = font.color {
@@ -1195,13 +1195,13 @@
 <a href=#1195 id=1195 data-nosnippet>1195</a>    noautoclose_attrs.insert(String::from(<span class="string">"_noautoclose"</span>), String::from(<span class="string">"1"</span>));
 <a href=#1196 id=1196 data-nosnippet>1196</a>    <span class="kw">let </span><span class="kw-2">mut </span>container = document.open_element(<span class="string">"ltx:text"</span>, <span class="prelude-val">Some</span>(noautoclose_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#1197 id=1197 data-nosnippet>1197</a>
-<a href=#1198 id=1198 data-nosnippet>1198</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>filler_d) = filler {
+<a href=#1198 id=1198 data-nosnippet>1198</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(filler_d) = filler {
 <a href=#1199 id=1199 data-nosnippet>1199</a>      document.absorb(filler_d, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#1200 id=1200 data-nosnippet>1200</a>    }
 <a href=#1201 id=1201 data-nosnippet>1201</a>
 <a href=#1202 id=1202 data-nosnippet>1202</a>    <span class="comment">// Check if we should extend a rule to fill the requested width
 <a href=#1203 id=1203 data-nosnippet>1203</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>unwrap = <span class="bool-val">false</span>;
-<a href=#1204 id=1204 data-nosnippet>1204</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>rw)) = (<span class="kw-2">&amp;</span>cbox, <span class="kw-2">&amp;</span>req_width) {
+<a href=#1204 id=1204 data-nosnippet>1204</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>), <span class="prelude-val">Some</span>(rw)) = (<span class="kw-2">&amp;</span>cbox, <span class="kw-2">&amp;</span>req_width) {
 <a href=#1205 id=1205 data-nosnippet>1205</a>      <span class="comment">// Find the last child of the container — should be the absorbed rule
 <a href=#1206 id=1206 data-nosnippet>1206</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>fnode) = container.get_last_child() {
 <a href=#1207 id=1207 data-nosnippet>1207</a>        <span class="kw">let </span>qname = fnode.get_name();

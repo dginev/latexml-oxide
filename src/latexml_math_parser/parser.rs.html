@@ -997,7 +997,7 @@
 <a href=#997 id=997 data-nosnippet>997</a>    // $xnode)) {     my $id = $n-&gt;getAttribute('xml:id');
 <a href=#998 id=998 data-nosnippet>998</a>    //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
 <a href=#999 id=999 data-nosnippet>999</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>p = xnode.get_parent().unwrap();
-<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(result) = <span class="self">self</span>.parse_rec(xnode, <span class="string">"Anything,"</span>, document)<span class="question-mark">? </span>{
+<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="kw">match </span><span class="self">self</span>.parse_rec(xnode, <span class="string">"Anything,"</span>, document)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(result) =&gt; {
 <a href=#1001 id=1001 data-nosnippet>1001</a>      <span class="comment">// Add text representation to the containing Math element.
 <a href=#1002 id=1002 data-nosnippet>1002</a>
 <a href=#1003 id=1003 data-nosnippet>1003</a>      // This is a VERY screwy situation? How can the parent be a document fragment??
@@ -1036,12 +1036,12 @@
 <a href=#1036 id=1036 data-nosnippet>1036</a>      // ($document-&gt;findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
 <a href=#1037 id=1037 data-nosnippet>1037</a>      // $document-&gt;setAttribute($n, idref =&gt; $repid); } } }
 <a href=#1038 id=1038 data-nosnippet>1038</a>      </span>p.set_attribute(<span class="string">"text"</span>, <span class="kw-2">&amp;</span>text_form(<span class="kw-2">&amp;</span>result, document))<span class="question-mark">?</span>;
-<a href=#1039 id=1039 data-nosnippet>1039</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(text) = p
+<a href=#1039 id=1039 data-nosnippet>1039</a>    } <span class="kw">_ </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(text) = p
 <a href=#1040 id=1040 data-nosnippet>1040</a>      .get_attribute(<span class="string">"tex"</span>)
 <a href=#1041 id=1041 data-nosnippet>1041</a>      .and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str()))
 <a href=#1042 id=1042 data-nosnippet>1042</a>    {
 <a href=#1043 id=1043 data-nosnippet>1043</a>      p.set_attribute(<span class="string">"text"</span>, text)<span class="question-mark">?</span>;
-<a href=#1044 id=1044 data-nosnippet>1044</a>    }
+<a href=#1044 id=1044 data-nosnippet>1044</a>    }}
 <a href=#1045 id=1045 data-nosnippet>1045</a>    <span class="prelude-val">Ok</span>(())
 <a href=#1046 id=1046 data-nosnippet>1046</a>  }
 <a href=#1047 id=1047 data-nosnippet>1047</a>
@@ -1070,7 +1070,7 @@
 <a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="kw">if </span>rule == <span class="string">"kludge" </span>{
 <a href=#1071 id=1071 data-nosnippet>1071</a>      <span class="self">self</span>.parse_kludge(<span class="kw-2">&amp;mut </span>node, document);
 <a href=#1072 id=1072 data-nosnippet>1072</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#1073 id=1073 data-nosnippet>1073</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) = <span class="self">self</span>.parse_single(<span class="kw-2">&amp;mut </span>node, document, <span class="kw-2">&amp;</span>rule)<span class="question-mark">? </span>{
+<a href=#1073 id=1073 data-nosnippet>1073</a>    } <span class="kw">else </span>{ <span class="kw">match </span><span class="self">self</span>.parse_single(<span class="kw-2">&amp;mut </span>node, document, <span class="kw-2">&amp;</span>rule)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) =&gt; {
 <a href=#1074 id=1074 data-nosnippet>1074</a>      <span class="kw-2">*</span><span class="self">self</span>.passed.entry_sym(tag).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
 <a href=#1075 id=1075 data-nosnippet>1075</a>      <span class="kw">if </span>tag == <span class="macro">pin!</span>(<span class="string">"ltx:XMath"</span>) {
 <a href=#1076 id=1076 data-nosnippet>1076</a>        <span class="comment">// Replace the content of XMath with parsed result
@@ -1150,7 +1150,7 @@
 <a href=#1150 id=1150 data-nosnippet>1150</a>        }
 <a href=#1151 id=1151 data-nosnippet>1151</a>      }
 <a href=#1152 id=1152 data-nosnippet>1152</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(result))
-<a href=#1153 id=1153 data-nosnippet>1153</a>    } <span class="kw">else </span>{
+<a href=#1153 id=1153 data-nosnippet>1153</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#1154 id=1154 data-nosnippet>1154</a>      <span class="comment">// Parse failed — run kludge to wrap OPEN/CLOSE delimiters
 <a href=#1155 id=1155 data-nosnippet>1155</a>      </span><span class="kw-2">*</span><span class="self">self</span>.failed.entry_sym(tag).or_insert(<span class="number">0</span>) += <span class="number">1</span>;
 <a href=#1156 id=1156 data-nosnippet>1156</a>      <span class="kw">if </span>tag == <span class="macro">pin!</span>(<span class="string">"ltx:XMath"</span>) {
@@ -1159,7 +1159,7 @@
 <a href=#1159 id=1159 data-nosnippet>1159</a>        // using failed_xmath_ids to find the failed nodes.
 <a href=#1160 id=1160 data-nosnippet>1160</a>      </span>}
 <a href=#1161 id=1161 data-nosnippet>1161</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#1162 id=1162 data-nosnippet>1162</a>    }
+<a href=#1162 id=1162 data-nosnippet>1162</a>    }}}
 <a href=#1163 id=1163 data-nosnippet>1163</a>  }
 <a href=#1164 id=1164 data-nosnippet>1164</a>
 <a href=#1165 id=1165 data-nosnippet>1165</a>  <span class="comment">// Depth first parsing of XMArg nodes.
@@ -1179,14 +1179,14 @@
 <a href=#1179 id=1179 data-nosnippet>1179</a>          <span class="kw">if </span>saved_role.is_some() {
 <a href=#1180 id=1180 data-nosnippet>1180</a>            c.remove_attribute(<span class="string">"role"</span>).ok();
 <a href=#1181 id=1181 data-nosnippet>1181</a>          }
-<a href=#1182 id=1182 data-nosnippet>1182</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) = <span class="self">self</span>.parse_rec(child, <span class="string">"Anything"</span>, document)<span class="question-mark">? </span>{
+<a href=#1182 id=1182 data-nosnippet>1182</a>          <span class="kw">match </span><span class="self">self</span>.parse_rec(child, <span class="string">"Anything"</span>, document)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>result) =&gt; {
 <a href=#1183 id=1183 data-nosnippet>1183</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = saved_role {
 <a href=#1184 id=1184 data-nosnippet>1184</a>              result.set_attribute(<span class="string">"role"</span>, role).ok();
 <a href=#1185 id=1185 data-nosnippet>1185</a>            }
-<a href=#1186 id=1186 data-nosnippet>1186</a>          } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = saved_role {
+<a href=#1186 id=1186 data-nosnippet>1186</a>          } <span class="kw">_ </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>role) = saved_role {
 <a href=#1187 id=1187 data-nosnippet>1187</a>            <span class="comment">// Parse failed — XMWrap still in DOM, restore role
 <a href=#1188 id=1188 data-nosnippet>1188</a>            </span>c.set_attribute(<span class="string">"role"</span>, role).ok();
-<a href=#1189 id=1189 data-nosnippet>1189</a>          }
+<a href=#1189 id=1189 data-nosnippet>1189</a>          }}
 <a href=#1190 id=1190 data-nosnippet>1190</a>        } <span class="kw">else </span>{
 <a href=#1191 id=1191 data-nosnippet>1191</a>          <span class="self">self</span>.parse_rec(child, <span class="string">"Anything"</span>, document)<span class="question-mark">?</span>;
 <a href=#1192 id=1192 data-nosnippet>1192</a>        }
@@ -1574,7 +1574,7 @@
 <a href=#1574 id=1574 data-nosnippet>1574</a>          </span><span class="attr">#[allow(clippy::drop_non_drop)]
 <a href=#1575 id=1575 data-nosnippet>1575</a>          </span>drop(traverser);
 <a href=#1576 id=1576 data-nosnippet>1576</a>          record_ambiguity_metric(<span class="number">1</span>, input);
-<a href=#1577 id=1577 data-nosnippet>1577</a>          <span class="kw">let </span>tree_outcome = <span class="kw">if let </span><span class="prelude-val">Some</span>(val) = tree_iter.next() {
+<a href=#1577 id=1577 data-nosnippet>1577</a>          <span class="kw">let </span>tree_outcome = <span class="kw">match </span>tree_iter.next() { <span class="prelude-val">Some</span>(val) =&gt; {
 <a href=#1578 id=1578 data-nosnippet>1578</a>            <span class="kw">match </span><span class="self">self</span>.actions.get_tree(
 <a href=#1579 id=1579 data-nosnippet>1579</a>              <span class="self">self</span>.builder.clone(),
 <a href=#1580 id=1580 data-nosnippet>1580</a>              val,
@@ -1585,9 +1585,9 @@
 <a href=#1585 id=1585 data-nosnippet>1585</a>              <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) =&gt; ParseOutcome::Empty,
 <a href=#1586 id=1586 data-nosnippet>1586</a>              <span class="prelude-val">Err</span>(prune_err) =&gt; ParseOutcome::Rejected(prune_err.to_string()),
 <a href=#1587 id=1587 data-nosnippet>1587</a>            }
-<a href=#1588 id=1588 data-nosnippet>1588</a>          } <span class="kw">else </span>{
+<a href=#1588 id=1588 data-nosnippet>1588</a>          } <span class="kw">_ </span>=&gt; {
 <a href=#1589 id=1589 data-nosnippet>1589</a>            ParseOutcome::Empty
-<a href=#1590 id=1590 data-nosnippet>1590</a>          };
+<a href=#1590 id=1590 data-nosnippet>1590</a>          }};
 <a href=#1591 id=1591 data-nosnippet>1591</a>          <span class="macro">debug_assert!</span>(
 <a href=#1592 id=1592 data-nosnippet>1592</a>            tree_iter.next().is_none(),
 <a href=#1593 id=1593 data-nosnippet>1593</a>            <span class="string">"hybrid unambiguous branch should expose exactly one raw tree"
@@ -2644,11 +2644,11 @@
 <a href=#2644 id=2644 data-nosnippet>2644</a>      <span class="kw">let </span>cells: Vec&lt;String&gt; = element_nodes(<span class="kw-2">&amp;</span>row)
 <a href=#2645 id=2645 data-nosnippet>2645</a>        .into_iter()
 <a href=#2646 id=2646 data-nosnippet>2646</a>        .map(|cell| {
-<a href=#2647 id=2647 data-nosnippet>2647</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(first_child) = cell.get_first_child() {
+<a href=#2647 id=2647 data-nosnippet>2647</a>          <span class="kw">match </span>cell.get_first_child() { <span class="prelude-val">Some</span>(first_child) =&gt; {
 <a href=#2648 id=2648 data-nosnippet>2648</a>            textrec(<span class="kw-2">&amp;</span>first_child, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, document)
-<a href=#2649 id=2649 data-nosnippet>2649</a>          } <span class="kw">else </span>{
+<a href=#2649 id=2649 data-nosnippet>2649</a>          } <span class="kw">_ </span>=&gt; {
 <a href=#2650 id=2650 data-nosnippet>2650</a>            String::new()
-<a href=#2651 id=2651 data-nosnippet>2651</a>          }
+<a href=#2651 id=2651 data-nosnippet>2651</a>          }}
 <a href=#2652 id=2652 data-nosnippet>2652</a>        })
 <a href=#2653 id=2653 data-nosnippet>2653</a>        .collect();
 <a href=#2654 id=2654 data-nosnippet>2654</a>      <span class="macro">format!</span>(<span class="string">"[{}]"</span>, cells.join(<span class="string">", "</span>))

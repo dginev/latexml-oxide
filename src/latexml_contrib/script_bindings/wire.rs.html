@@ -189,7 +189,7 @@
 <a href=#189 id=189 data-nosnippet>189</a>  ast: <span class="kw-2">&amp;</span>Rc&lt;AST&gt;,
 <a href=#190 id=190 data-nosnippet>190</a>) -&gt; <span class="prelude-ty">Result</span>&lt;B&gt; {
 <a href=#191 id=191 data-nosnippet>191</a>  <span class="kw">for </span>(key, val) <span class="kw">in </span>opts {
-<a href=#192 id=192 data-nosnippet>192</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(fp) = val.clone().try_cast::&lt;FnPtr&gt;() {
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="kw">match </span>val.clone().try_cast::&lt;FnPtr&gt;() { <span class="prelude-val">Some</span>(fp) =&gt; {
 <a href=#193 id=193 data-nosnippet>193</a>      <span class="comment">// Closure option → typed builder setter (front-end builds the closure).
 <a href=#194 id=194 data-nosnippet>194</a>      </span><span class="kw">match </span>key.as_str() {
 <a href=#195 id=195 data-nosnippet>195</a>        <span class="string">"afterDigest" </span>=&gt; {
@@ -232,7 +232,7 @@
 <a href=#232 id=232 data-nosnippet>232</a>        // %options; the builder's set_option does the same for scalars).
 <a href=#233 id=233 data-nosnippet>233</a>        </span><span class="kw">_ </span>=&gt; {},
 <a href=#234 id=234 data-nosnippet>234</a>      }
-<a href=#235 id=235 data-nosnippet>235</a>    } <span class="kw">else if </span>key.as_str() == <span class="string">"properties" </span>&amp;&amp; val.is_map() {
+<a href=#235 id=235 data-nosnippet>235</a>    } <span class="kw">_ </span>=&gt; <span class="kw">if </span>key.as_str() == <span class="string">"properties" </span>&amp;&amp; val.is_map() {
 <a href=#236 id=236 data-nosnippet>236</a>      <span class="comment">// Static property map (Perl's `properties =&gt; { key =&gt; value, … }`).
 <a href=#237 id=237 data-nosnippet>237</a>      </span><span class="kw">let </span>map = val.cast::&lt;Map&gt;();
 <a href=#238 id=238 data-nosnippet>238</a>      builder = builder.properties(Rc::new(<span class="kw">move </span>|_args| <span class="prelude-val">Ok</span>(rhai_map_to_props(map.clone()))));
@@ -248,7 +248,7 @@
 <a href=#248 id=248 data-nosnippet>248</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(ov) = dynamic_to_option_value(<span class="kw-2">&amp;</span>val) {
 <a href=#249 id=249 data-nosnippet>249</a>      <span class="comment">// Scalar option → the builder's generic, single-source `set_option`.
 <a href=#250 id=250 data-nosnippet>250</a>      </span>builder = builder.set_option(key.as_str(), ov)<span class="question-mark">?</span>;
-<a href=#251 id=251 data-nosnippet>251</a>    }
+<a href=#251 id=251 data-nosnippet>251</a>    }}
 <a href=#252 id=252 data-nosnippet>252</a>  }
 <a href=#253 id=253 data-nosnippet>253</a>  <span class="prelude-val">Ok</span>(builder)
 <a href=#254 id=254 data-nosnippet>254</a>}
@@ -711,12 +711,12 @@
 <a href=#711 id=711 data-nosnippet>711</a>        {
 <a href=#712 id=712 data-nosnippet>712</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
 <a href=#713 id=713 data-nosnippet>713</a>        }
-<a href=#714 id=714 data-nosnippet>714</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(sibling) = node_mut.get_prev_sibling() {
+<a href=#714 id=714 data-nosnippet>714</a>        <span class="kw">match </span>node_mut.get_prev_sibling() { <span class="prelude-val">Some</span>(sibling) =&gt; {
 <a href=#715 id=715 data-nosnippet>715</a>          node = sibling;
 <a href=#716 id=716 data-nosnippet>716</a>          node_mut = <span class="kw-2">&amp;mut </span>node;
-<a href=#717 id=717 data-nosnippet>717</a>        } <span class="kw">else </span>{
+<a href=#717 id=717 data-nosnippet>717</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#718 id=718 data-nosnippet>718</a>          <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#719 id=719 data-nosnippet>719</a>        }
+<a href=#719 id=719 data-nosnippet>719</a>        }}
 <a href=#720 id=720 data-nosnippet>720</a>      }
 <a href=#721 id=721 data-nosnippet>721</a>      <span class="kw">if </span>ntomatch &gt; <span class="number">0 </span>{
 <a href=#722 id=722 data-nosnippet>722</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>((ntomatch, replacement.clone(), attr.clone())))

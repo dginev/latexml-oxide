@@ -11,11 +11,11 @@
 <a href=#11 id=11 data-nosnippet>11</a>  <span class="kw">let </span>pos_arg = pos_arg.trim().to_string();
 <a href=#12 id=12 data-nosnippet>12</a>  <span class="kw">let </span>pos = <span class="kw">if </span>!pos_arg.is_empty() {
 <a href=#13 id=13 data-nosnippet>13</a>    pos_arg
-<a href=#14 id=14 data-nosnippet>14</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(Stored::String(sym)) = state::lookup_value(<span class="string">"floatfltpos"</span>) {
+<a href=#14 id=14 data-nosnippet>14</a>  } <span class="kw">else </span>{ <span class="kw">match </span>state::lookup_value(<span class="string">"floatfltpos"</span>) { <span class="prelude-val">Some</span>(Stored::String(sym)) =&gt; {
 <a href=#15 id=15 data-nosnippet>15</a>    arena::with(sym, |s| s.to_string())
-<a href=#16 id=16 data-nosnippet>16</a>  } <span class="kw">else </span>{
+<a href=#16 id=16 data-nosnippet>16</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#17 id=17 data-nosnippet>17</a>    <span class="string">"v"</span>.to_string()
-<a href=#18 id=18 data-nosnippet>18</a>  };
+<a href=#18 id=18 data-nosnippet>18</a>  }}};
 <a href=#19 id=19 data-nosnippet>19</a>  <span class="kw">if </span>pos.starts_with(<span class="string">'v'</span>) || pos.starts_with(<span class="string">'r'</span>) {
 <a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"right"
 <a href=#21 id=21 data-nosnippet>21</a>  </span>} <span class="kw">else </span>{

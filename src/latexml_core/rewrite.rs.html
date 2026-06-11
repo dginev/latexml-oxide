@@ -530,11 +530,11 @@
 <a href=#530 id=530 data-nosnippet>530</a>          <span class="kw">let </span><span class="kw-2">mut </span>replaced = Vec::new();
 <a href=#531 id=531 data-nosnippet>531</a>          <span class="kw">for </span>_idx <span class="kw">in </span><span class="number">0</span>..nmatched {
 <a href=#532 id=532 data-nosnippet>532</a>            <span class="comment">// Remove the nodes to be replaced
-<a href=#533 id=533 data-nosnippet>533</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(popped) = following.pop_front() {
+<a href=#533 id=533 data-nosnippet>533</a>            </span><span class="kw">match </span>following.pop_front() { <span class="prelude-val">Some</span>(popped) =&gt; {
 <a href=#534 id=534 data-nosnippet>534</a>              replaced.push(popped);
-<a href=#535 id=535 data-nosnippet>535</a>            } <span class="kw">else </span>{
+<a href=#535 id=535 data-nosnippet>535</a>            } <span class="kw">_ </span>=&gt; {
 <a href=#536 id=536 data-nosnippet>536</a>              <span class="kw">break</span>; <span class="comment">// nmatched larger than available nodes — stop
-<a href=#537 id=537 data-nosnippet>537</a>            </span>}
+<a href=#537 id=537 data-nosnippet>537</a>            </span>}}
 <a href=#538 id=538 data-nosnippet>538</a>          }
 <a href=#539 id=539 data-nosnippet>539</a>          <span class="kw">for </span>rnode <span class="kw">in </span>replaced.iter() {
 <a href=#540 id=540 data-nosnippet>540</a>            document.unrecord_node_ids(rnode);
@@ -586,12 +586,12 @@
 <a href=#586 id=586 data-nosnippet>586</a>              <span class="comment">// Collect nmatched siblings
 <a href=#587 id=587 data-nosnippet>587</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>cur = tree.clone();
 <a href=#588 id=588 data-nosnippet>588</a>              <span class="kw">for _ in </span><span class="number">1</span>..nmatched {
-<a href=#589 id=589 data-nosnippet>589</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(sib) = cur.get_next_sibling() {
+<a href=#589 id=589 data-nosnippet>589</a>                <span class="kw">match </span>cur.get_next_sibling() { <span class="prelude-val">Some</span>(sib) =&gt; {
 <a href=#590 id=590 data-nosnippet>590</a>                  cur = sib.clone();
 <a href=#591 id=591 data-nosnippet>591</a>                  nodes.push(sib);
-<a href=#592 id=592 data-nosnippet>592</a>                } <span class="kw">else </span>{
+<a href=#592 id=592 data-nosnippet>592</a>                } <span class="kw">_ </span>=&gt; {
 <a href=#593 id=593 data-nosnippet>593</a>                  <span class="kw">break</span>;
-<a href=#594 id=594 data-nosnippet>594</a>                }
+<a href=#594 id=594 data-nosnippet>594</a>                }}
 <a href=#595 id=595 data-nosnippet>595</a>              }
 <a href=#596 id=596 data-nosnippet>596</a>              set_attributes_wild(document, attrs, nodes, nmatched)<span class="question-mark">?</span>;
 <a href=#597 id=597 data-nosnippet>597</a>            } <span class="kw">else if </span>nmatched &gt; <span class="number">1 </span>{
@@ -1161,11 +1161,11 @@
 <a href=#1161 id=1161 data-nosnippet>1161</a>  }
 <a href=#1162 id=1162 data-nosnippet>1162</a>
 <a href=#1163 id=1163 data-nosnippet>1163</a>  <span class="comment">// Insert content arm as first child (before presentation nodes)
-<a href=#1164 id=1164 data-nosnippet>1164</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first_child) = dual_node.get_first_child() {
+<a href=#1164 id=1164 data-nosnippet>1164</a>  </span><span class="kw">match </span>dual_node.get_first_child() { <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first_child) =&gt; {
 <a href=#1165 id=1165 data-nosnippet>1165</a>    first_child.add_prev_sibling(<span class="kw-2">&amp;mut </span>content_app)<span class="question-mark">?</span>;
-<a href=#1166 id=1166 data-nosnippet>1166</a>  } <span class="kw">else </span>{
+<a href=#1166 id=1166 data-nosnippet>1166</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#1167 id=1167 data-nosnippet>1167</a>    dual_node.add_child(<span class="kw-2">&amp;mut </span>content_app)<span class="question-mark">?</span>;
-<a href=#1168 id=1168 data-nosnippet>1168</a>  }
+<a href=#1168 id=1168 data-nosnippet>1168</a>  }}
 <a href=#1169 id=1169 data-nosnippet>1169</a>
 <a href=#1170 id=1170 data-nosnippet>1170</a>  <span class="comment">// Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
 <a href=#1171 id=1171 data-nosnippet>1171</a>  // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have

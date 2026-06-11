@@ -413,7 +413,7 @@
 <a href=#413 id=413 data-nosnippet>413</a>      <span class="comment">// Done for effect only.
 <a href=#414 id=414 data-nosnippet>414</a>      </span>pre()<span class="question-mark">?</span>; <span class="comment">// maybe pass extras?
 <a href=#415 id=415 data-nosnippet>415</a>    </span>}
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">let </span>digested_value = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>closure) = <span class="kw-2">&amp;</span><span class="self">self</span>.predigest {
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="kw">let </span>digested_value = <span class="kw">if let </span><span class="prelude-val">Some</span>(closure) = <span class="kw-2">&amp;</span><span class="self">self</span>.predigest {
 <a href=#417 id=417 data-nosnippet>417</a>      closure(value_arg, <span class="kw-2">&amp;</span><span class="self">self</span>.extra)<span class="question-mark">?
 <a href=#418 id=418 data-nosnippet>418</a>    </span>} <span class="kw">else </span>{
 <a href=#419 id=419 data-nosnippet>419</a>      <span class="comment">// Note: we have an open question for the type interface.

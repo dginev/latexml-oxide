@@ -762,21 +762,21 @@
 <a href=#762 id=762 data-nosnippet>762</a>    <span class="kw">let </span>r0 = prevbox
 <a href=#763 id=763 data-nosnippet>763</a>      .get_property(<span class="string">"role"</span>)
 <a href=#764 id=764 data-nosnippet>764</a>      .and_then(|s| {
-<a href=#765 id=765 data-nosnippet>765</a>        <span class="kw">if let </span>Stored::String(sym) = s.into_owned() {
+<a href=#765 id=765 data-nosnippet>765</a>        <span class="kw">match </span>s.into_owned() { Stored::String(sym) =&gt; {
 <a href=#766 id=766 data-nosnippet>766</a>          <span class="prelude-val">Some</span>(arena::with(sym, |s| s.to_string()))
-<a href=#767 id=767 data-nosnippet>767</a>        } <span class="kw">else </span>{
+<a href=#767 id=767 data-nosnippet>767</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#768 id=768 data-nosnippet>768</a>          <span class="prelude-val">None
-<a href=#769 id=769 data-nosnippet>769</a>        </span>}
+<a href=#769 id=769 data-nosnippet>769</a>        </span>}}
 <a href=#770 id=770 data-nosnippet>770</a>      })
 <a href=#771 id=771 data-nosnippet>771</a>      .unwrap_or_else(|| <span class="string">"ID"</span>.to_string());
 <a href=#772 id=772 data-nosnippet>772</a>    <span class="kw">let </span>r1 = thisbox
 <a href=#773 id=773 data-nosnippet>773</a>      .get_property(<span class="string">"role"</span>)
 <a href=#774 id=774 data-nosnippet>774</a>      .and_then(|s| {
-<a href=#775 id=775 data-nosnippet>775</a>        <span class="kw">if let </span>Stored::String(sym) = s.into_owned() {
+<a href=#775 id=775 data-nosnippet>775</a>        <span class="kw">match </span>s.into_owned() { Stored::String(sym) =&gt; {
 <a href=#776 id=776 data-nosnippet>776</a>          <span class="prelude-val">Some</span>(arena::with(sym, |s| s.to_string()))
-<a href=#777 id=777 data-nosnippet>777</a>        } <span class="kw">else </span>{
+<a href=#777 id=777 data-nosnippet>777</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#778 id=778 data-nosnippet>778</a>          <span class="prelude-val">None
-<a href=#779 id=779 data-nosnippet>779</a>        </span>}
+<a href=#779 id=779 data-nosnippet>779</a>        </span>}}
 <a href=#780 id=780 data-nosnippet>780</a>      })
 <a href=#781 id=781 data-nosnippet>781</a>      .unwrap_or_else(|| <span class="string">"ID"</span>.to_string());
 <a href=#782 id=782 data-nosnippet>782</a>    <span class="kw">let </span>t0 = <span class="kw-2">*</span>MATH_ATOM_TYPE.get(r0.as_str()).unwrap_or(<span class="kw-2">&amp;</span><span class="number">0</span>);
@@ -1904,7 +1904,7 @@
 <a href=#1904 id=1904 data-nosnippet>1904</a>  }
 <a href=#1905 id=1905 data-nosnippet>1905</a>  <span class="kw">let </span>mapname = <span class="macro">format!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>);
 <a href=#1906 id=1906 data-nosnippet>1906</a>  with_value(<span class="kw-2">&amp;</span>mapname, |val_opt| {
-<a href=#1907 id=1907 data-nosnippet>1907</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(<span class="kw-2">ref </span>map)) = val_opt {
+<a href=#1907 id=1907 data-nosnippet>1907</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(map)) = val_opt {
 <a href=#1908 id=1908 data-nosnippet>1908</a>      map.get(<span class="kw-2">&amp;</span>code.to_string()).cloned()
 <a href=#1909 id=1909 data-nosnippet>1909</a>    } <span class="kw">else </span>{
 <a href=#1910 id=1910 data-nosnippet>1910</a>      <span class="prelude-val">None
@@ -2010,7 +2010,7 @@
 <a href=#2010 id=2010 data-nosnippet>2010</a>  </span><span class="kw">let </span>multichar_map: <span class="prelude-ty">Option</span>&lt;HashMap&lt;String, String&gt;&gt; = <span class="kw">if </span>!encoding.is_empty() {
 <a href=#2011 id=2011 data-nosnippet>2011</a>    <span class="kw">let </span>mapname = <span class="macro">format!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>);
 <a href=#2012 id=2012 data-nosnippet>2012</a>    with_value(<span class="kw-2">&amp;</span>mapname, |val_opt| {
-<a href=#2013 id=2013 data-nosnippet>2013</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(<span class="kw-2">ref </span>m)) = val_opt {
+<a href=#2013 id=2013 data-nosnippet>2013</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashString(m)) = val_opt {
 <a href=#2014 id=2014 data-nosnippet>2014</a>        <span class="prelude-val">Some</span>(m.clone())
 <a href=#2015 id=2015 data-nosnippet>2015</a>      } <span class="kw">else </span>{
 <a href=#2016 id=2016 data-nosnippet>2016</a>        <span class="prelude-val">None

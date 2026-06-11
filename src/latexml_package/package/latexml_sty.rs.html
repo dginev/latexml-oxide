@@ -603,7 +603,7 @@
 <a href=#603 id=603 data-nosnippet>603</a>    <span class="kw">let </span><span class="kw-2">mut </span>tag_text = String::new();
 <a href=#604 id=604 data-nosnippet>604</a>    <span class="kw">let </span><span class="kw-2">mut </span>description_text = String::new();
 <a href=#605 id=605 data-nosnippet>605</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_arg) = whatsit.get_arg(<span class="number">2</span>) {
-<a href=#606 id=606 data-nosnippet>606</a>      <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_arg.data() {
+<a href=#606 id=606 data-nosnippet>606</a>      <span class="kw">if let </span>DigestedData::KeyVals(kv) = kv_arg.data() {
 <a href=#607 id=607 data-nosnippet>607</a>        <span class="kw">let </span>hash = kv.get_hash_digested();
 <a href=#608 id=608 data-nosnippet>608</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"role"</span>) { role = v.clone(); }
 <a href=#609 id=609 data-nosnippet>609</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = hash.get(<span class="string">"name"</span>) { name_val = v.clone(); }
@@ -673,7 +673,7 @@
 <a href=#673 id=673 data-nosnippet>673</a>              // holds a State borrow while its closure runs (see
 <a href=#674 id=674 data-nosnippet>674</a>              // mathchar.rs fix for 0711.4787 RefCell panic pattern).
 <a href=#675 id=675 data-nosnippet>675</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>encoding_opt: <span class="prelude-ty">Option</span>&lt;String&gt; = state::with_font_info(ftok, |fontinfo| {
-<a href=#676 id=676 data-nosnippet>676</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(<span class="kw-2">ref </span>info)) = fontinfo.unwrap_or(<span class="prelude-val">None</span>) {
+<a href=#676 id=676 data-nosnippet>676</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Font(info)) = fontinfo.unwrap_or(<span class="prelude-val">None</span>) {
 <a href=#677 id=677 data-nosnippet>677</a>                  info.encoding.as_ref().map(|s| s.to_string())
 <a href=#678 id=678 data-nosnippet>678</a>                } <span class="kw">else </span>{
 <a href=#679 id=679 data-nosnippet>679</a>                  <span class="prelude-val">None

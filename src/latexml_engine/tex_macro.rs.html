@@ -168,14 +168,14 @@
 <a href=#168 id=168 data-nosnippet>168</a>        <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"expandafter"</span>, <span class="string">"\\expandafter wrongly used without 2 arguments."</span>);
 <a href=#169 id=169 data-nosnippet>169</a>      }
 <a href=#170 id=170 data-nosnippet>170</a>    }
-<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">match </span>lookup_expandable(<span class="kw-2">&amp;</span>xtok, <span class="prelude-val">None</span>)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#172 id=172 data-nosnippet>172</a>      state::local_current_token(xtok);
 <a href=#173 id=173 data-nosnippet>173</a>      <span class="kw">let </span>invoked = defn.invoke(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#174 id=174 data-nosnippet>174</a>      <span class="kw">if </span>!invoked.is_empty() {
 <a href=#175 id=175 data-nosnippet>175</a>        skipped.extend(invoked.unlist()); <span class="comment">// Expand `xtok` ONCE ONLY!
 <a href=#176 id=176 data-nosnippet>176</a>      </span>}
 <a href=#177 id=177 data-nosnippet>177</a>      state::expire_current_token();
-<a href=#178 id=178 data-nosnippet>178</a>    } <span class="kw">else if </span>!has_meaning(<span class="kw-2">&amp;</span>xtok) {
+<a href=#178 id=178 data-nosnippet>178</a>    } <span class="kw">_ </span>=&gt; <span class="kw">if </span>!has_meaning(<span class="kw-2">&amp;</span>xtok) {
 <a href=#179 id=179 data-nosnippet>179</a>      <span class="comment">// Undefined token is an error, as expansion is expected.
 <a href=#180 id=180 data-nosnippet>180</a>      // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
 <a href=#181 id=181 data-nosnippet>181</a>      // since probably in a real TeX run it would have been defined.
@@ -183,7 +183,7 @@
 <a href=#183 id=183 data-nosnippet>183</a>      skipped.push(xtok);
 <a href=#184 id=184 data-nosnippet>184</a>    } <span class="kw">else </span>{
 <a href=#185 id=185 data-nosnippet>185</a>      skipped.push(xtok);
-<a href=#186 id=186 data-nosnippet>186</a>    };
+<a href=#186 id=186 data-nosnippet>186</a>    }};
 <a href=#187 id=187 data-nosnippet>187</a>    <span class="prelude-val">Ok</span>(Tokens::new(skipped))
 <a href=#188 id=188 data-nosnippet>188</a>  });
 <a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// If next token is expandable, prefix it with the internal marker \dont_expand
@@ -243,7 +243,7 @@
 <a href=#243 id=243 data-nosnippet>243</a>          <span class="kw">_ </span>=&gt; <span class="kw">break</span>,
 <a href=#244 id=244 data-nosnippet>244</a>        }
 <a href=#245 id=245 data-nosnippet>245</a>      }
-<a href=#246 id=246 data-nosnippet>246</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>effective_token)<span class="question-mark">? </span>{
+<a href=#246 id=246 data-nosnippet>246</a>      <span class="kw">match </span>lookup_definition(<span class="kw-2">&amp;</span>effective_token)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#247 id=247 data-nosnippet>247</a>        <span class="kw">if </span>defn.is_register() {
 <a href=#248 id=248 data-nosnippet>248</a>          <span class="comment">// SOME kind of register is acceptable
 <a href=#249 id=249 data-nosnippet>249</a>          </span><span class="kw">let </span>args = <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
@@ -259,11 +259,11 @@
 <a href=#259 id=259 data-nosnippet>259</a>          };
 <a href=#260 id=260 data-nosnippet>260</a>        } <span class="kw">else if </span>defn.get_cs_name() == <span class="string">"\\font" </span>{
 <a href=#261 id=261 data-nosnippet>261</a>          <span class="comment">// HACK to get the \fontcmd that would have selected the current font (see FontDef)
-<a href=#262 id=262 data-nosnippet>262</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Token(t)) = state::lookup_value(<span class="string">"current_FontDef"</span>) {
+<a href=#262 id=262 data-nosnippet>262</a>          </span><span class="kw">match </span>state::lookup_value(<span class="string">"current_FontDef"</span>) { <span class="prelude-val">Some</span>(Stored::Token(t)) =&gt; {
 <a href=#263 id=263 data-nosnippet>263</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(t));
-<a href=#264 id=264 data-nosnippet>264</a>          } <span class="kw">else </span>{
+<a href=#264 id=264 data-nosnippet>264</a>          } <span class="kw">_ </span>=&gt; {
 <a href=#265 id=265 data-nosnippet>265</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@default@font"</span>)));
-<a href=#266 id=266 data-nosnippet>266</a>          }
+<a href=#266 id=266 data-nosnippet>266</a>          }}
 <a href=#267 id=267 data-nosnippet>267</a>        } <span class="kw">else </span>{
 <a href=#268 id=268 data-nosnippet>268</a>          <span class="comment">// Perl: elsif ($defn-&gt;isFontDef) { return $defn-&gt;getCS; }
 <a href=#269 id=269 data-nosnippet>269</a>          // Check if this is a font CS defined by \font (has fontinfo in state)
@@ -272,7 +272,7 @@
 <a href=#272 id=272 data-nosnippet>272</a>            <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token));
 <a href=#273 id=273 data-nosnippet>273</a>          }
 <a href=#274 id=274 data-nosnippet>274</a>        }
-<a href=#275 id=275 data-nosnippet>275</a>      } <span class="kw">else </span>{
+<a href=#275 id=275 data-nosnippet>275</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#276 id=276 data-nosnippet>276</a>        <span class="comment">// the token is Undefined
 <a href=#277 id=277 data-nosnippet>277</a>        </span><span class="kw">if </span>token.get_catcode() == Catcode::CS {
 <a href=#278 id=278 data-nosnippet>278</a>          <span class="comment">// but IS a cs \something
@@ -286,7 +286,7 @@
 <a href=#286 id=286 data-nosnippet>286</a>          </span>def_register(token, <span class="prelude-val">None</span>, <span class="macro">Number!</span>(<span class="number">0</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>; <span class="comment">// Dimension, or what?
 <a href=#287 id=287 data-nosnippet>287</a>          </span><span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)));
 <a href=#288 id=288 data-nosnippet>288</a>        }
-<a href=#289 id=289 data-nosnippet>289</a>      }
+<a href=#289 id=289 data-nosnippet>289</a>      }}
 <a href=#290 id=290 data-nosnippet>290</a>      <span class="comment">// If we fall through to here, whatever $token is shouldn't have been used with \the
 <a href=#291 id=291 data-nosnippet>291</a>      </span><span class="kw">let </span>(the_t, msg) =
 <a href=#292 id=292 data-nosnippet>292</a>        token.with_str(|tstr| (<span class="macro">s!</span>(<span class="string">"\\the{tstr}"</span>), <span class="macro">s!</span>(<span class="string">"You can't use {tstr} after \\the"</span>)));

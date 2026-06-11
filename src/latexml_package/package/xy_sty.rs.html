@@ -198,7 +198,7 @@
 <a href=#198 id=198 data-nosnippet>198</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@xy@capturerange"</span>, {
 <a href=#199 id=199 data-nosnippet>199</a>    <span class="kw">let </span><span class="kw-2">mut </span>dims = String::new();
 <a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">for </span>reg <span class="kw">in </span>[<span class="string">"\\X@min"</span>, <span class="string">"\\Y@min"</span>, <span class="string">"\\X@max"</span>, <span class="string">"\\Y@max"</span>] {
-<a href=#201 id=201 data-nosnippet>201</a>      <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(val)) = state::lookup_register(reg, Vec::new()) {
+<a href=#201 id=201 data-nosnippet>201</a>      <span class="kw">match </span>state::lookup_register(reg, Vec::new()) { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(val)) =&gt; {
 <a href=#202 id=202 data-nosnippet>202</a>        <span class="kw">let </span>sp = <span class="kw">match </span>val {
 <a href=#203 id=203 data-nosnippet>203</a>          RegisterValue::Dimension(d) =&gt; d.value_of(),
 <a href=#204 id=204 data-nosnippet>204</a>          RegisterValue::Number(n) =&gt; n.value_of(),
@@ -206,10 +206,10 @@
 <a href=#206 id=206 data-nosnippet>206</a>        };
 <a href=#207 id=207 data-nosnippet>207</a>        <span class="kw">if </span>!dims.is_empty() { dims.push(<span class="string">','</span>); }
 <a href=#208 id=208 data-nosnippet>208</a>        dims.push_str(<span class="kw-2">&amp;</span>sp.to_string());
-<a href=#209 id=209 data-nosnippet>209</a>      } <span class="kw">else </span>{
+<a href=#209 id=209 data-nosnippet>209</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#210 id=210 data-nosnippet>210</a>        <span class="kw">if </span>!dims.is_empty() { dims.push(<span class="string">','</span>); }
 <a href=#211 id=211 data-nosnippet>211</a>        dims.push(<span class="string">'0'</span>);
-<a href=#212 id=212 data-nosnippet>212</a>      }
+<a href=#212 id=212 data-nosnippet>212</a>      }}
 <a href=#213 id=213 data-nosnippet>213</a>    }
 <a href=#214 id=214 data-nosnippet>214</a>    state::assign_value(<span class="string">"saved_xy_range"</span>, Stored::String(arena::pin(<span class="kw-2">&amp;</span>dims)), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#215 id=215 data-nosnippet>215</a>  });

@@ -231,9 +231,9 @@
 <a href=#231 id=231 data-nosnippet>231</a>    });
 <a href=#232 id=232 data-nosnippet>232</a>
 <a href=#233 id=233 data-nosnippet>233</a>  <span class="comment">// Apply outer wrapper if we got XML
-<a href=#234 id=234 data-nosnippet>234</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(xml) = conversion.xml.take() {
+<a href=#234 id=234 data-nosnippet>234</a>  </span><span class="kw">match </span>conversion.xml.take() { <span class="prelude-val">Some</span>(xml) =&gt; {
 <a href=#235 id=235 data-nosnippet>235</a>    conversion.xml = <span class="prelude-val">Some</span>(processor.outer_wrapper(doc, <span class="kw-2">&amp;</span>xmath, xml));
-<a href=#236 id=236 data-nosnippet>236</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>string) = conversion.string {
+<a href=#236 id=236 data-nosnippet>236</a>  } <span class="kw">_ </span>=&gt; <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>string) = conversion.string {
 <a href=#237 id=237 data-nosnippet>237</a>    <span class="comment">// Wrap string in ltx:text
 <a href=#238 id=238 data-nosnippet>238</a>    </span><span class="kw">let </span>mimetype = conversion.mimetype.as_deref().unwrap_or(<span class="string">"unknown"</span>);
 <a href=#239 id=239 data-nosnippet>239</a>    conversion.xml = <span class="prelude-val">Some</span>(NodeData::Element {
@@ -244,7 +244,7 @@
 <a href=#244 id=244 data-nosnippet>244</a>      )])),
 <a href=#245 id=245 data-nosnippet>245</a>      children:   <span class="macro">vec!</span>[NodeData::Text(string.clone())],
 <a href=#246 id=246 data-nosnippet>246</a>    });
-<a href=#247 id=247 data-nosnippet>247</a>  }
+<a href=#247 id=247 data-nosnippet>247</a>  }}
 <a href=#248 id=248 data-nosnippet>248</a>
 <a href=#249 id=249 data-nosnippet>249</a>  <span class="kw">if </span>!keep_xmath {
 <a href=#250 id=250 data-nosnippet>250</a>    <span class="comment">// Mark XMath IDs as reusable (it will be removed)

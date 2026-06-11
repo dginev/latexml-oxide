@@ -179,11 +179,11 @@
 <a href=#179 id=179 data-nosnippet>179</a>          <span class="self">self</span>.validate_recursive(arg_subtree)<span class="question-mark">?</span>;
 <a href=#180 id=180 data-nosnippet>180</a>        }
 <a href=#181 id=181 data-nosnippet>181</a>      },
-<a href=#182 id=182 data-nosnippet>182</a>      XM::Dual(<span class="kw-2">ref </span>content, <span class="kw-2">ref </span>pres, ..) =&gt; {
+<a href=#182 id=182 data-nosnippet>182</a>      XM::Dual(content, pres, ..) =&gt; {
 <a href=#183 id=183 data-nosnippet>183</a>        <span class="self">self</span>.validate_recursive(content)<span class="question-mark">?</span>;
 <a href=#184 id=184 data-nosnippet>184</a>        <span class="self">self</span>.validate_recursive(pres)<span class="question-mark">?</span>;
 <a href=#185 id=185 data-nosnippet>185</a>      },
-<a href=#186 id=186 data-nosnippet>186</a>      XM::Wrap(<span class="kw-2">ref </span>items, ..) =&gt; {
+<a href=#186 id=186 data-nosnippet>186</a>      XM::Wrap(items, ..) =&gt; {
 <a href=#187 id=187 data-nosnippet>187</a>        <span class="kw">for </span>item <span class="kw">in </span>items.iter() {
 <a href=#188 id=188 data-nosnippet>188</a>          <span class="self">self</span>.validate_recursive(item)<span class="question-mark">?</span>;
 <a href=#189 id=189 data-nosnippet>189</a>        }
@@ -423,7 +423,7 @@
 <a href=#423 id=423 data-nosnippet>423</a>
 <a href=#424 id=424 data-nosnippet>424</a><span class="kw">fn </span>pragma_fenced_atoms_are_not_functions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
 <a href=#425 id=425 data-nosnippet>425</a>  <span class="kw">if let </span>XM::Apply(Operator(op), ..) = tree {
-<a href=#426 id=426 data-nosnippet>426</a>    <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>_lexeme, <span class="kw-2">ref </span>atom_meta) = <span class="kw-2">&amp;**</span>op {
+<a href=#426 id=426 data-nosnippet>426</a>    <span class="kw">if let </span>XM::Lexeme(_lexeme, atom_meta) = <span class="kw-2">&amp;**</span>op {
 <a href=#427 id=427 data-nosnippet>427</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>fences) = atom_meta.fenced {
 <a href=#428 id=428 data-nosnippet>428</a>        <span class="kw">if </span>fences.as_str() == <span class="string">"parens" </span>{
 <a href=#429 id=429 data-nosnippet>429</a>          <span class="kw">return </span><span class="prelude-val">Err</span>(
@@ -442,7 +442,7 @@
 <a href=#442 id=442 data-nosnippet>442</a>  // ambiguous forest; this pragma chooses the mathematically-consistent one
 <a href=#443 id=443 data-nosnippet>443</a>  // unconditionally. MATHPARSER_SPECULATE has no role here — the decision is
 <a href=#444 id=444 data-nosnippet>444</a>  // a pragmatic preference, not a grammar switch.
-<a href=#445 id=445 data-nosnippet>445</a>  </span><span class="kw">let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree <span class="kw">else </span>{
+<a href=#445 id=445 data-nosnippet>445</a>  </span><span class="kw">let </span>XM::Apply(Operator(op), args, ..) = tree <span class="kw">else </span>{
 <a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
 <a href=#447 id=447 data-nosnippet>447</a>  };
 <a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">if </span>!is_invisible_times_op(op) {
@@ -531,7 +531,7 @@
 <a href=#531 id=531 data-nosnippet>531</a>/// `kind` is the fence-pair category for diagnostics:
 <a href=#532 id=532 data-nosnippet>532</a>/// "parens" / "brackets" / "vertbars".
 <a href=#533 id=533 data-nosnippet>533</a></span><span class="kw">fn </span>is_dual_fenced_rhs(top_rhs: <span class="kw-2">&amp;</span>XM, top_lhs: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>XM&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
-<a href=#534 id=534 data-nosnippet>534</a>  <span class="kw">let </span>XM::Dual(<span class="kw">_</span>, <span class="kw-2">ref </span>presentation, ..) = top_rhs <span class="kw">else </span>{
+<a href=#534 id=534 data-nosnippet>534</a>  <span class="kw">let </span>XM::Dual(<span class="kw">_</span>, presentation, ..) = top_rhs <span class="kw">else </span>{
 <a href=#535 id=535 data-nosnippet>535</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
 <a href=#536 id=536 data-nosnippet>536</a>  };
 <a href=#537 id=537 data-nosnippet>537</a>  <span class="kw">let </span>XM::Wrap(<span class="kw-2">ref </span>items, ..) = <span class="kw-2">**</span>presentation <span class="kw">else </span>{
@@ -695,10 +695,10 @@
 <a href=#695 id=695 data-nosnippet>695</a>/// Mostly since we can't enforce IDs to strictly have "curry=1", rather
 <a href=#696 id=696 data-nosnippet>696</a>/// we need them with "curry &gt;= 1", to stay a little more lenient.
 <a href=#697 id=697 data-nosnippet>697</a></span><span class="kw">fn </span>pragma_higher_order_ids_are_exceptions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="kw">if let </span>XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#698 id=698 data-nosnippet>698</a>  <span class="kw">if let </span>XM::Apply(op, args, ..) = tree {
 <a href=#699 id=699 data-nosnippet>699</a>    <span class="kw">if </span>args.<span class="number">0</span>.len() == <span class="number">1 </span>{
 <a href=#700 id=700 data-nosnippet>700</a>      <span class="kw">match </span><span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
-<a href=#701 id=701 data-nosnippet>701</a>        XM::Lexeme(<span class="kw-2">ref </span>op_name, <span class="kw">_</span>) <span class="kw">if </span>op_name.starts_with(<span class="string">"ID:"</span>) =&gt; <span class="kw">match </span>args.<span class="number">0</span>[<span class="number">0</span>] {
+<a href=#701 id=701 data-nosnippet>701</a>        XM::Lexeme(op_name, <span class="kw">_</span>) <span class="kw">if </span>op_name.starts_with(<span class="string">"ID:"</span>) =&gt; <span class="kw">match </span>args.<span class="number">0</span>[<span class="number">0</span>] {
 <a href=#702 id=702 data-nosnippet>702</a>          <span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>rhs_name, <span class="kw-2">ref </span>rhs_meta)) =&gt; {
 <a href=#703 id=703 data-nosnippet>703</a>            <span class="kw">if </span>rhs_name.starts_with(<span class="string">"FUNCTION"</span>) &amp;&amp; rhs_meta.fenced.is_none() {
 <a href=#704 id=704 data-nosnippet>704</a>              <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"ID of a higher order than a FUNCTION is not allowed."</span>.into());
@@ -724,7 +724,7 @@
 <a href=#724 id=724 data-nosnippet>724</a>/// A right-associative application h(f(x,y)) is instead.
 <a href=#725 id=725 data-nosnippet>725</a>/// Prune it out if possible.
 <a href=#726 id=726 data-nosnippet>726</a></span><span class="kw">fn </span>pragma_higher_order_invisible_ops_are_exceptions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#727 id=727 data-nosnippet>727</a>  <span class="kw">let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree <span class="kw">else </span>{
+<a href=#727 id=727 data-nosnippet>727</a>  <span class="kw">let </span>XM::Apply(Operator(op), args, ..) = tree <span class="kw">else </span>{
 <a href=#728 id=728 data-nosnippet>728</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
 <a href=#729 id=729 data-nosnippet>729</a>  };
 <a href=#730 id=730 data-nosnippet>730</a>  <span class="kw">if </span>!is_invisible_times_op(op) {
@@ -734,8 +734,8 @@
 <a href=#734 id=734 data-nosnippet>734</a>  <span class="kw">if </span>trees.len() == <span class="number">2 </span>{
 <a href=#735 id=735 data-nosnippet>735</a>    <span class="kw">let </span>lhs = trees[<span class="number">0</span>];
 <a href=#736 id=736 data-nosnippet>736</a>    <span class="kw">let </span>rhs = trees[<span class="number">1</span>];
-<a href=#737 id=737 data-nosnippet>737</a>    <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>lhs_name, <span class="kw">_</span>) = lhs.get_baseline() {
-<a href=#738 id=738 data-nosnippet>738</a>      <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>rhs_name, <span class="kw">_</span>) = rhs.get_baseline() {
+<a href=#737 id=737 data-nosnippet>737</a>    <span class="kw">if let </span>XM::Lexeme(lhs_name, <span class="kw">_</span>) = lhs.get_baseline() {
+<a href=#738 id=738 data-nosnippet>738</a>      <span class="kw">if let </span>XM::Lexeme(rhs_name, <span class="kw">_</span>) = rhs.get_baseline() {
 <a href=#739 id=739 data-nosnippet>739</a>        <span class="kw">if </span>name_is_functional_or_id(lhs_name) &amp;&amp; name_is_functional(rhs_name) {
 <a href=#740 id=740 data-nosnippet>740</a>          <span class="kw">return </span><span class="prelude-val">Err</span>(
 <a href=#741 id=741 data-nosnippet>741</a>            <span class="string">"Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to \
@@ -753,7 +753,7 @@
 <a href=#753 id=753 data-nosnippet>753</a>/// that they are to be multiplied Prune such parses. We have special rules for some notations, such
 <a href=#754 id=754 data-nosnippet>754</a>/// as "dlmf_range".
 <a href=#755 id=755 data-nosnippet>755</a></span><span class="kw">fn </span>pragma_adjacent_numbers_dont_use_invisible_times(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#756 id=756 data-nosnippet>756</a>  <span class="kw">let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree <span class="kw">else </span>{
+<a href=#756 id=756 data-nosnippet>756</a>  <span class="kw">let </span>XM::Apply(Operator(op), args, ..) = tree <span class="kw">else </span>{
 <a href=#757 id=757 data-nosnippet>757</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
 <a href=#758 id=758 data-nosnippet>758</a>  };
 <a href=#759 id=759 data-nosnippet>759</a>  <span class="kw">if </span>!is_invisible_times_op(op) {
@@ -778,10 +778,10 @@
 <a href=#778 id=778 data-nosnippet>778</a>/// The only case (that I currently know) of a standalone "d" is in the Lebnitz derivative notation.
 <a href=#779 id=779 data-nosnippet>779</a>/// For which we have a special rule. So the generic fraction parse should be pruned.
 <a href=#780 id=780 data-nosnippet>780</a></span><span class="kw">fn </span>pragma_standalone_diffops_are_not_numerators(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#781 id=781 data-nosnippet>781</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#781 id=781 data-nosnippet>781</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#782 id=782 data-nosnippet>782</a>    <span class="kw">match </span><span class="kw-2">**</span>op {
 <a href=#783 id=783 data-nosnippet>783</a>      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span>oplexeme.starts_with(<span class="string">"MULOP"</span>) =&gt; {
-<a href=#784 id=784 data-nosnippet>784</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(<span class="kw-2">ref </span>numlexeme, <span class="kw">_</span>)) = args.trees().first() {
+<a href=#784 id=784 data-nosnippet>784</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Lexeme(numlexeme, <span class="kw">_</span>)) = args.trees().first() {
 <a href=#785 id=785 data-nosnippet>785</a>          <span class="kw">if </span>numlexeme.starts_with(<span class="string">"DIFFOP"</span>) {
 <a href=#786 id=786 data-nosnippet>786</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="string">"pruning standalone diffops are not numerators"</span>.into());
 <a href=#787 id=787 data-nosnippet>787</a>          }
@@ -797,7 +797,7 @@
 <a href=#797 id=797 data-nosnippet>797</a>/// function symbols say " f_i g_j ". This pragma prunes trees that applies two adjacent scripted
 <a href=#798 id=798 data-nosnippet>798</a>/// constructs.
 <a href=#799 id=799 data-nosnippet>799</a></span><span class="kw">fn </span>pragma_adjacent_unfenced_scripts_dont_apply(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#800 id=800 data-nosnippet>800</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#800 id=800 data-nosnippet>800</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#801 id=801 data-nosnippet>801</a>    <span class="kw">if </span>args.trees().len() == <span class="number">1 </span>{
 <a href=#802 id=802 data-nosnippet>802</a>      <span class="kw">if let </span>XM::Apply(Operator(<span class="kw-2">ref </span>op_op), <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>op_meta) = <span class="kw-2">**</span>op {
 <a href=#803 id=803 data-nosnippet>803</a>        <span class="kw">let </span>op_base_name = op_op.base_operator_name();
@@ -845,7 +845,7 @@
 <a href=#845 id=845 data-nosnippet>845</a>}
 <a href=#846 id=846 data-nosnippet>846</a><span class="doccomment">/// Postfix
 <a href=#847 id=847 data-nosnippet>847</a></span><span class="kw">fn </span>pragma_postfix_terms_are_fenced_if_single_arg(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#848 id=848 data-nosnippet>848</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#848 id=848 data-nosnippet>848</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#849 id=849 data-nosnippet>849</a>    <span class="kw">let </span>arg_trees = args.trees();
 <a href=#850 id=850 data-nosnippet>850</a>    <span class="kw">if </span>arg_trees.len() == <span class="number">1 </span>{
 <a href=#851 id=851 data-nosnippet>851</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(XM::Apply(Operator(arg_op), <span class="kw">_</span>, <span class="kw">_</span>, arg_meta)) = arg_trees.first() {
@@ -876,7 +876,7 @@
 <a href=#876 id=876 data-nosnippet>876</a></span><span class="kw">fn </span>pragma_maximize_script_attachment(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
 <a href=#877 id=877 data-nosnippet>877</a>  <span class="comment">// Detect any script-op Apply where the first arg (base) is "absent".
 <a href=#878 id=878 data-nosnippet>878</a>  // This pattern means a standalone floating script that should be a pre-script.
-<a href=#879 id=879 data-nosnippet>879</a>  </span><span class="kw">if let </span>XM::Apply(Operator(<span class="kw-2">ref </span>op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#879 id=879 data-nosnippet>879</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#880 id=880 data-nosnippet>880</a>    <span class="kw">if let </span>XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) = <span class="kw-2">**</span>op {
 <a href=#881 id=881 data-nosnippet>881</a>      <span class="kw">if </span>props
 <a href=#882 id=882 data-nosnippet>882</a>        .role
@@ -884,7 +884,7 @@
 <a href=#884 id=884 data-nosnippet>884</a>        .is_some_and(|r| r == <span class="string">"SUBSCRIPTOP" </span>|| r == <span class="string">"SUPERSCRIPTOP"</span>)
 <a href=#885 id=885 data-nosnippet>885</a>      {
 <a href=#886 id=886 data-nosnippet>886</a>        <span class="comment">// Check if base (first arg) is "absent" — standalone script
-<a href=#887 id=887 data-nosnippet>887</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(XM::Token(<span class="kw-2">ref </span>base_props, <span class="kw">_</span>))) = args.<span class="number">0</span>.first() {
+<a href=#887 id=887 data-nosnippet>887</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(XM::Token(base_props, <span class="kw">_</span>))) = args.<span class="number">0</span>.first() {
 <a href=#888 id=888 data-nosnippet>888</a>          <span class="kw">if </span>base_props.meaning.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"absent"</span>) {
 <a href=#889 id=889 data-nosnippet>889</a>            <span class="kw">return </span><span class="prelude-val">Err</span>(
 <a href=#890 id=890 data-nosnippet>890</a>              <span class="string">"Prune: standalone floating script (base=absent) should attach as pre-script."</span>.into(),
@@ -903,13 +903,13 @@
 <a href=#903 id=903 data-nosnippet>903</a>/// too tortured. This prunes `&lt; a &gt;` from being parsed as a bilateral relation chain,
 <a href=#904 id=904 data-nosnippet>904</a>/// allowing QM expectation `&lt;a&gt;` to win instead.
 <a href=#905 id=905 data-nosnippet>905</a></span><span class="kw">fn </span>pragma_no_bilateral_absent(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#906 id=906 data-nosnippet>906</a>  <span class="kw">if let </span>XM::Apply(<span class="kw">_</span>, <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#906 id=906 data-nosnippet>906</a>  <span class="kw">if let </span>XM::Apply(<span class="kw">_</span>, args, ..) = tree {
 <a href=#907 id=907 data-nosnippet>907</a>    <span class="kw">let </span>trees = args.trees();
 <a href=#908 id=908 data-nosnippet>908</a>    <span class="kw">if </span>trees.len() &gt;= <span class="number">2 </span>{
 <a href=#909 id=909 data-nosnippet>909</a>      <span class="kw">let </span>first_absent = <span class="macro">matches!</span>(trees.first(),
-<a href=#910 id=910 data-nosnippet>910</a>        <span class="prelude-val">Some</span>(XM::Token(<span class="kw-2">ref </span>p, <span class="kw">_</span>)) <span class="kw">if </span>p.meaning.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"absent"</span>));
+<a href=#910 id=910 data-nosnippet>910</a>        <span class="prelude-val">Some</span>(XM::Token(p, <span class="kw">_</span>)) <span class="kw">if </span>p.meaning.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"absent"</span>));
 <a href=#911 id=911 data-nosnippet>911</a>      <span class="kw">let </span>last_absent = <span class="macro">matches!</span>(trees.last(),
-<a href=#912 id=912 data-nosnippet>912</a>        <span class="prelude-val">Some</span>(XM::Token(<span class="kw-2">ref </span>p, <span class="kw">_</span>)) <span class="kw">if </span>p.meaning.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"absent"</span>));
+<a href=#912 id=912 data-nosnippet>912</a>        <span class="prelude-val">Some</span>(XM::Token(p, <span class="kw">_</span>)) <span class="kw">if </span>p.meaning.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"absent"</span>));
 <a href=#913 id=913 data-nosnippet>913</a>      <span class="kw">if </span>first_absent &amp;&amp; last_absent {
 <a href=#914 id=914 data-nosnippet>914</a>        <span class="kw">return </span><span class="prelude-val">Err</span>(
 <a href=#915 id=915 data-nosnippet>915</a>          <span class="string">"Prune: bilateral absent (absent on both sides) is never valid notation."</span>.into(),
@@ -929,12 +929,12 @@
 <a href=#929 id=929 data-nosnippet>929</a>  // This forces the wider parse: function_app(f, narrow_arg * rhs)
 <a href=#930 id=930 data-nosnippet>930</a>  // Only fires when RHS is a simple factor (Lexeme/Token/Wrap), NOT another
 <a href=#931 id=931 data-nosnippet>931</a>  // function application — chained functions like sin(πx)*cos(2πy) should stay separate.
-<a href=#932 id=932 data-nosnippet>932</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#932 id=932 data-nosnippet>932</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#933 id=933 data-nosnippet>933</a>    <span class="kw">if </span>is_invisible_times_op(op) {
 <a href=#934 id=934 data-nosnippet>934</a>      <span class="kw">let </span>trees = args.trees();
 <a href=#935 id=935 data-nosnippet>935</a>      <span class="kw">if </span>trees.len() == <span class="number">2 </span>{
 <a href=#936 id=936 data-nosnippet>936</a>        <span class="comment">// LHS is a function application (Apply(function, arg))
-<a href=#937 id=937 data-nosnippet>937</a>        </span><span class="kw">if let </span>XM::Apply(Operator(<span class="kw-2">ref </span>func_op), <span class="kw-2">ref </span>func_args, <span class="kw">_</span>, <span class="kw-2">ref </span>func_meta) = trees[<span class="number">0</span>] {
+<a href=#937 id=937 data-nosnippet>937</a>        </span><span class="kw">if let </span>XM::Apply(Operator(func_op), func_args, <span class="kw">_</span>, func_meta) = trees[<span class="number">0</span>] {
 <a href=#938 id=938 data-nosnippet>938</a>          <span class="comment">// Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
 <a href=#939 id=939 data-nosnippet>939</a>          </span><span class="kw">let </span>func_name = func_op.base_operator_name();
 <a href=#940 id=940 data-nosnippet>940</a>          <span class="kw">if </span>(func_name.starts_with(<span class="string">"OPFUNCTION"</span>) || func_name.starts_with(<span class="string">"TRIGFUNCTION"</span>))
@@ -946,11 +946,11 @@
 <a href=#946 id=946 data-nosnippet>946</a>            </span><span class="kw">let </span>rhs = trees[<span class="number">1</span>];
 <a href=#947 id=947 data-nosnippet>947</a>            <span class="kw">let </span>rhs_is_simple = <span class="kw">match </span>rhs {
 <a href=#948 id=948 data-nosnippet>948</a>              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) =&gt; <span class="bool-val">true</span>,
-<a href=#949 id=949 data-nosnippet>949</a>              XM::Apply(Operator(<span class="kw-2">ref </span>rhs_op), ..) =&gt; {
+<a href=#949 id=949 data-nosnippet>949</a>              XM::Apply(Operator(rhs_op), ..) =&gt; {
 <a href=#950 id=950 data-nosnippet>950</a>                <span class="comment">// Scripted factors (SUPERSCRIPTOP/SUBSCRIPTOP) are simple
 <a href=#951 id=951 data-nosnippet>951</a>                </span><span class="kw">let </span>rhs_role = <span class="kw">match </span><span class="kw-2">&amp;**</span>rhs_op {
-<a href=#952 id=952 data-nosnippet>952</a>                  XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; props.role.as_deref().unwrap_or(<span class="string">""</span>),
-<a href=#953 id=953 data-nosnippet>953</a>                  XM::Lexeme(<span class="kw-2">ref </span>lex, <span class="kw">_</span>) =&gt; lex.split(<span class="string">':'</span>).next().unwrap_or(<span class="string">""</span>),
+<a href=#952 id=952 data-nosnippet>952</a>                  XM::Token(props, <span class="kw">_</span>) =&gt; props.role.as_deref().unwrap_or(<span class="string">""</span>),
+<a href=#953 id=953 data-nosnippet>953</a>                  XM::Lexeme(lex, <span class="kw">_</span>) =&gt; lex.split(<span class="string">':'</span>).next().unwrap_or(<span class="string">""</span>),
 <a href=#954 id=954 data-nosnippet>954</a>                  <span class="kw">_ </span>=&gt; <span class="string">""</span>,
 <a href=#955 id=955 data-nosnippet>955</a>                };
 <a href=#956 id=956 data-nosnippet>956</a>                rhs_role == <span class="string">"SUPERSCRIPTOP" </span>|| rhs_role == <span class="string">"SUBSCRIPTOP"
@@ -974,7 +974,7 @@
 <a href=#974 id=974 data-nosnippet>974</a>  // positions. E.g. Apply(×, [f@(x), d, x]) where d is bare OPFUNCTION at index 1
 <a href=#975 id=975 data-nosnippet>975</a>  // (not the last). The competing parse Apply(×, [f@(x), d@(x)]) is preferred.
 <a href=#976 id=976 data-nosnippet>976</a>  // This covers the pattern: ∫ f(x) \diffd x → f@(x) * diffd@(x), not f@(x)*d*x.
-<a href=#977 id=977 data-nosnippet>977</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#977 id=977 data-nosnippet>977</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#978 id=978 data-nosnippet>978</a>    <span class="kw">if </span>is_invisible_times_op(op) {
 <a href=#979 id=979 data-nosnippet>979</a>      <span class="kw">let </span>trees = args.trees();
 <a href=#980 id=980 data-nosnippet>980</a>      <span class="comment">// Check non-terminal positions for bare OPFUNCTION/TRIGFUNCTION tokens.
@@ -986,11 +986,11 @@
 <a href=#986 id=986 data-nosnippet>986</a>      </span><span class="kw">if </span>trees.len() &gt;= <span class="number">3 </span>{
 <a href=#987 id=987 data-nosnippet>987</a>        <span class="kw">for </span>tree <span class="kw">in </span>trees.iter().take(trees.len() - <span class="number">1</span>) {
 <a href=#988 id=988 data-nosnippet>988</a>          <span class="kw">let </span>is_bare_absorbing_func = <span class="kw">match </span>tree {
-<a href=#989 id=989 data-nosnippet>989</a>            XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; <span class="macro">matches!</span>(
+<a href=#989 id=989 data-nosnippet>989</a>            XM::Token(props, <span class="kw">_</span>) =&gt; <span class="macro">matches!</span>(
 <a href=#990 id=990 data-nosnippet>990</a>              props.role.as_deref(),
 <a href=#991 id=991 data-nosnippet>991</a>              <span class="prelude-val">Some</span>(<span class="string">"OPFUNCTION"</span>) | <span class="prelude-val">Some</span>(<span class="string">"TRIGFUNCTION"</span>)
 <a href=#992 id=992 data-nosnippet>992</a>            ),
-<a href=#993 id=993 data-nosnippet>993</a>            XM::Lexeme(<span class="kw-2">ref </span>lex, <span class="kw">_</span>) =&gt; {
+<a href=#993 id=993 data-nosnippet>993</a>            XM::Lexeme(lex, <span class="kw">_</span>) =&gt; {
 <a href=#994 id=994 data-nosnippet>994</a>              lex.starts_with(<span class="string">"OPFUNCTION:"</span>) || lex.starts_with(<span class="string">"TRIGFUNCTION:"</span>)
 <a href=#995 id=995 data-nosnippet>995</a>            },
 <a href=#996 id=996 data-nosnippet>996</a>            <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
@@ -1014,7 +1014,7 @@
 <a href=#1014 id=1014 data-nosnippet>1014</a>/// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
 <a href=#1015 id=1015 data-nosnippet>1015</a></span><span class="kw">fn </span>pragma_bigop_prefer_wider_absorption(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
 <a href=#1016 id=1016 data-nosnippet>1016</a>  <span class="comment">// Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
-<a href=#1017 id=1017 data-nosnippet>1017</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#1017 id=1017 data-nosnippet>1017</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#1018 id=1018 data-nosnippet>1018</a>    <span class="kw">let </span>is_mulop = <span class="kw">match </span><span class="kw-2">**</span>op {
 <a href=#1019 id=1019 data-nosnippet>1019</a>      XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; props.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"MULOP"</span>),
 <a href=#1020 id=1020 data-nosnippet>1020</a>      XM::Lexeme(<span class="kw-2">ref </span>lex, <span class="kw">_</span>) =&gt; lex.starts_with(<span class="string">"MULOP"</span>) || lex.contains(<span class="string">"invisible_operator"</span>),
@@ -1024,7 +1024,7 @@
 <a href=#1024 id=1024 data-nosnippet>1024</a>      <span class="kw">let </span>trees = args.trees();
 <a href=#1025 id=1025 data-nosnippet>1025</a>      <span class="kw">if </span>trees.len() == <span class="number">2 </span>{
 <a href=#1026 id=1026 data-nosnippet>1026</a>        <span class="comment">// LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
-<a href=#1027 id=1027 data-nosnippet>1027</a>        </span><span class="kw">if let </span>XM::Apply(Operator(<span class="kw-2">ref </span>bigop_op), ..) = trees[<span class="number">0</span>] {
+<a href=#1027 id=1027 data-nosnippet>1027</a>        </span><span class="kw">if let </span>XM::Apply(Operator(bigop_op), ..) = trees[<span class="number">0</span>] {
 <a href=#1028 id=1028 data-nosnippet>1028</a>          <span class="kw">let </span>bigop_name = bigop_op.base_operator_name();
 <a href=#1029 id=1029 data-nosnippet>1029</a>          <span class="kw">let </span>is_bigop = bigop_name.starts_with(<span class="string">"BIGOP"</span>)
 <a href=#1030 id=1030 data-nosnippet>1030</a>            || bigop_name.starts_with(<span class="string">"SUMOP"</span>)
@@ -1036,10 +1036,10 @@
 <a href=#1036 id=1036 data-nosnippet>1036</a>            </span><span class="kw">let </span>rhs = trees[<span class="number">1</span>];
 <a href=#1037 id=1037 data-nosnippet>1037</a>            <span class="kw">let </span>rhs_is_simple = <span class="kw">match </span>rhs {
 <a href=#1038 id=1038 data-nosnippet>1038</a>              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) =&gt; <span class="bool-val">true</span>,
-<a href=#1039 id=1039 data-nosnippet>1039</a>              XM::Apply(Operator(<span class="kw-2">ref </span>rhs_op), ..) =&gt; {
+<a href=#1039 id=1039 data-nosnippet>1039</a>              XM::Apply(Operator(rhs_op), ..) =&gt; {
 <a href=#1040 id=1040 data-nosnippet>1040</a>                <span class="kw">let </span>rhs_role = <span class="kw">match </span><span class="kw-2">&amp;**</span>rhs_op {
-<a href=#1041 id=1041 data-nosnippet>1041</a>                  XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; props.role.as_deref().unwrap_or(<span class="string">""</span>),
-<a href=#1042 id=1042 data-nosnippet>1042</a>                  XM::Lexeme(<span class="kw-2">ref </span>lex, <span class="kw">_</span>) =&gt; lex.split(<span class="string">':'</span>).next().unwrap_or(<span class="string">""</span>),
+<a href=#1041 id=1041 data-nosnippet>1041</a>                  XM::Token(props, <span class="kw">_</span>) =&gt; props.role.as_deref().unwrap_or(<span class="string">""</span>),
+<a href=#1042 id=1042 data-nosnippet>1042</a>                  XM::Lexeme(lex, <span class="kw">_</span>) =&gt; lex.split(<span class="string">':'</span>).next().unwrap_or(<span class="string">""</span>),
 <a href=#1043 id=1043 data-nosnippet>1043</a>                  <span class="kw">_ </span>=&gt; <span class="string">""</span>,
 <a href=#1044 id=1044 data-nosnippet>1044</a>                };
 <a href=#1045 id=1045 data-nosnippet>1045</a>                <span class="comment">// Scripted factors and invisible_times products are simple
@@ -1071,7 +1071,7 @@
 <a href=#1071 id=1071 data-nosnippet>1071</a>/// For `a - b + c`, this rejects `a + (prefix(-,b+c))` in favor of `(a-b)+c`.
 <a href=#1072 id=1072 data-nosnippet>1072</a></span><span class="kw">fn </span>pragma_prefer_binary_addop(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
 <a href=#1073 id=1073 data-nosnippet>1073</a>  <span class="comment">// Check: infix ADDOP application where one argument is itself a prefix ADDOP
-<a href=#1074 id=1074 data-nosnippet>1074</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#1074 id=1074 data-nosnippet>1074</a>  </span><span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="kw">let </span>is_addop = <span class="kw">match </span><span class="kw-2">**</span>op {
 <a href=#1076 id=1076 data-nosnippet>1076</a>      XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; props.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"ADDOP"</span>),
 <a href=#1077 id=1077 data-nosnippet>1077</a>      XM::Lexeme(<span class="kw-2">ref </span>lex, <span class="kw">_</span>) =&gt; lex.starts_with(<span class="string">"ADDOP"</span>),
@@ -1096,7 +1096,7 @@
 <a href=#1096 id=1096 data-nosnippet>1096</a>
 <a href=#1097 id=1097 data-nosnippet>1097</a><span class="doccomment">/// Check if a tree is a unary ADDOP prefix application (like -x or +x).
 <a href=#1098 id=1098 data-nosnippet>1098</a></span><span class="kw">fn </span>is_unary_addop_prefix(tree: <span class="kw-2">&amp;</span>XM) -&gt; bool {
-<a href=#1099 id=1099 data-nosnippet>1099</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#1099 id=1099 data-nosnippet>1099</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#1100 id=1100 data-nosnippet>1100</a>    <span class="kw">let </span>is_addop = <span class="kw">match </span><span class="kw-2">**</span>op {
 <a href=#1101 id=1101 data-nosnippet>1101</a>      XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; props.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"ADDOP"</span>),
 <a href=#1102 id=1102 data-nosnippet>1102</a>      XM::Lexeme(<span class="kw-2">ref </span>lex, <span class="kw">_</span>) =&gt; lex.starts_with(<span class="string">"ADDOP"</span>),
@@ -1110,7 +1110,7 @@
 <a href=#1110 id=1110 data-nosnippet>1110</a></span>}
 <a href=#1111 id=1111 data-nosnippet>1111</a>
 <a href=#1112 id=1112 data-nosnippet>1112</a><span class="kw">fn </span>pragma_restrict_numeral_fractions(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#1113 id=1113 data-nosnippet>1113</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#1113 id=1113 data-nosnippet>1113</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#1114 id=1114 data-nosnippet>1114</a>    <span class="kw">match </span><span class="kw-2">**</span>op {
 <a href=#1115 id=1115 data-nosnippet>1115</a>      XM::Lexeme(<span class="kw-2">ref </span>oplexeme, <span class="kw">_</span>) <span class="kw">if </span><span class="kw-2">&amp;**</span>oplexeme == <span class="string">"arith1.divide" </span>=&gt; {
 <a href=#1116 id=1116 data-nosnippet>1116</a>        <span class="kw">let </span>arg_trees = args.trees();
@@ -1277,7 +1277,7 @@
 <a href=#1277 id=1277 data-nosnippet>1277</a>
 <a href=#1278 id=1278 data-nosnippet>1278</a><span class="doccomment">/// Recursively check all subtrees for right-associative invisible-times chains.
 <a href=#1279 id=1279 data-nosnippet>1279</a></span><span class="kw">fn </span>check_invisible_times_recursive(tree: <span class="kw-2">&amp;</span>XM) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#1280 id=1280 data-nosnippet>1280</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#1280 id=1280 data-nosnippet>1280</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#1281 id=1281 data-nosnippet>1281</a>    <span class="kw">if </span>is_invisible_times_op(op) {
 <a href=#1282 id=1282 data-nosnippet>1282</a>      <span class="kw">let </span>trees = args.trees();
 <a href=#1283 id=1283 data-nosnippet>1283</a>      <span class="kw">if </span>trees.len() == <span class="number">2 </span>{
@@ -1317,7 +1317,7 @@
 <a href=#1317 id=1317 data-nosnippet>1317</a>      </span>meta.fenced.is_none()
 <a href=#1318 id=1318 data-nosnippet>1318</a>        &amp;&amp; (name.starts_with(<span class="string">"UNKNOWN"</span>) || name.starts_with(<span class="string">"ID"</span>) || name.starts_with(<span class="string">"NUMBER"</span>))
 <a href=#1319 id=1319 data-nosnippet>1319</a>    },
-<a href=#1320 id=1320 data-nosnippet>1320</a>    XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) =&gt; {
+<a href=#1320 id=1320 data-nosnippet>1320</a>    XM::Apply(Operator(op), args, ..) =&gt; {
 <a href=#1321 id=1321 data-nosnippet>1321</a>      <span class="comment">// For invisible-times applications (either operator shape),
 <a href=#1322 id=1322 data-nosnippet>1322</a>      // check operator and all args
 <a href=#1323 id=1323 data-nosnippet>1323</a>      </span><span class="kw">if </span>is_invisible_times_op(op) {
@@ -1335,7 +1335,7 @@
 <a href=#1335 id=1335 data-nosnippet>1335</a>      }
 <a href=#1336 id=1336 data-nosnippet>1336</a>      <span class="bool-val">false
 <a href=#1337 id=1337 data-nosnippet>1337</a>    </span>},
-<a href=#1338 id=1338 data-nosnippet>1338</a>    XM::Token(<span class="kw-2">ref </span>props, <span class="kw">_</span>) =&gt; {
+<a href=#1338 id=1338 data-nosnippet>1338</a>    XM::Token(props, <span class="kw">_</span>) =&gt; {
 <a href=#1339 id=1339 data-nosnippet>1339</a>      <span class="comment">// Token with UNKNOWN/ID/NUMBER role
 <a href=#1340 id=1340 data-nosnippet>1340</a>      </span>props
 <a href=#1341 id=1341 data-nosnippet>1341</a>        .role
@@ -1355,7 +1355,7 @@
 <a href=#1355 id=1355 data-nosnippet>1355</a>}
 <a href=#1356 id=1356 data-nosnippet>1356</a>
 <a href=#1357 id=1357 data-nosnippet>1357</a><span class="kw">fn </span>check_relops_recursive(tree: <span class="kw-2">&amp;</span>XM, inside_addop_or_mulop: bool) -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#1358 id=1358 data-nosnippet>1358</a>  <span class="kw">if let </span>XM::Apply(Operator(op), <span class="kw-2">ref </span>args, ..) = tree {
+<a href=#1358 id=1358 data-nosnippet>1358</a>  <span class="kw">if let </span>XM::Apply(Operator(op), args, ..) = tree {
 <a href=#1359 id=1359 data-nosnippet>1359</a>    <span class="kw">if let </span>XM::Lexeme(<span class="kw-2">ref </span>name, <span class="kw">_</span>) = <span class="kw-2">**</span>op {
 <a href=#1360 id=1360 data-nosnippet>1360</a>      <span class="kw">let </span>is_addop = name.starts_with(<span class="string">"ADDOP"</span>);
 <a href=#1361 id=1361 data-nosnippet>1361</a>      <span class="kw">let </span>is_mulop = name.starts_with(<span class="string">"MULOP"</span>) || <span class="kw-2">&amp;**</span>name == <span class="string">"x.invisible_operator"</span>;
@@ -1384,8 +1384,8 @@
 <a href=#1384 id=1384 data-nosnippet>1384</a><span class="doccomment">/// Check if a tree represents a fenced (parenthesized) expression.
 <a href=#1385 id=1385 data-nosnippet>1385</a></span><span class="kw">fn </span>is_fenced(tree: <span class="kw-2">&amp;</span>XM) -&gt; bool {
 <a href=#1386 id=1386 data-nosnippet>1386</a>  <span class="kw">match </span>tree {
-<a href=#1387 id=1387 data-nosnippet>1387</a>    XM::Lexeme(<span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta.fenced.is_some(),
-<a href=#1388 id=1388 data-nosnippet>1388</a>    XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta.fenced.is_some(),
+<a href=#1387 id=1387 data-nosnippet>1387</a>    XM::Lexeme(<span class="kw">_</span>, meta) =&gt; meta.fenced.is_some(),
+<a href=#1388 id=1388 data-nosnippet>1388</a>    XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta.fenced.is_some(),
 <a href=#1389 id=1389 data-nosnippet>1389</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
 <a href=#1390 id=1390 data-nosnippet>1390</a>  }
 <a href=#1391 id=1391 data-nosnippet>1391</a>}

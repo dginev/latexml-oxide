@@ -852,11 +852,11 @@
 <a href=#852 id=852 data-nosnippet>852</a>  is_in_schema_class(arena::pin(class_name), tag)
 <a href=#853 id=853 data-nosnippet>853</a>}
 <a href=#854 id=854 data-nosnippet>854</a><span class="kw">pub fn </span>is_in_schema_class(class_name: SymStr, tag: SymStr) -&gt; bool {
-<a href=#855 id=855 data-nosnippet>855</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(class) = <span class="macro">model!</span>().schema_class.get_sym(class_name) {
+<a href=#855 id=855 data-nosnippet>855</a>  <span class="kw">match </span><span class="macro">model!</span>().schema_class.get_sym(class_name) { <span class="prelude-val">Some</span>(class) =&gt; {
 <a href=#856 id=856 data-nosnippet>856</a>    class.contains(<span class="kw-2">&amp;</span>tag)
-<a href=#857 id=857 data-nosnippet>857</a>  } <span class="kw">else </span>{
+<a href=#857 id=857 data-nosnippet>857</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#858 id=858 data-nosnippet>858</a>    <span class="bool-val">false
-<a href=#859 id=859 data-nosnippet>859</a>  </span>}
+<a href=#859 id=859 data-nosnippet>859</a>  </span>}}
 <a href=#860 id=860 data-nosnippet>860</a>}
 <a href=#861 id=861 data-nosnippet>861</a>
 <a href=#862 id=862 data-nosnippet>862</a><span class="comment">//**********************************************************************

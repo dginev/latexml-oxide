@@ -1125,15 +1125,15 @@
 <a href=#1125 id=1125 data-nosnippet>1125</a>    }
 <a href=#1126 id=1126 data-nosnippet>1126</a>  }
 <a href=#1127 id=1127 data-nosnippet>1127</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(target) = found {
-<a href=#1128 id=1128 data-nosnippet>1128</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>anchor) = document.wrap_nodes(<span class="string">"ltx:anchor"</span>, <span class="macro">vec!</span>[target])<span class="question-mark">? </span>{
+<a href=#1128 id=1128 data-nosnippet>1128</a>    <span class="kw">match </span>document.wrap_nodes(<span class="string">"ltx:anchor"</span>, <span class="macro">vec!</span>[target])<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>anchor) =&gt; {
 <a href=#1129 id=1129 data-nosnippet>1129</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>anchor, <span class="string">"xml:id"</span>, <span class="kw-2">&amp;</span>id)<span class="question-mark">?</span>;
 <a href=#1130 id=1130 data-nosnippet>1130</a>      <span class="kw">if </span>document.is_open(<span class="kw-2">&amp;</span>anchor) {
 <a href=#1131 id=1131 data-nosnippet>1131</a>        document.close_node(<span class="kw-2">&amp;</span>anchor)<span class="question-mark">?</span>;
 <a href=#1132 id=1132 data-nosnippet>1132</a>      }
-<a href=#1133 id=1133 data-nosnippet>1133</a>    } <span class="kw">else </span>{
+<a href=#1133 id=1133 data-nosnippet>1133</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#1134 id=1134 data-nosnippet>1134</a>      <span class="macro">Warn!</span>(<span class="string">"malformed"</span>, <span class="string">"ltx:anchor"</span>,
 <a href=#1135 id=1135 data-nosnippet>1135</a>        <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"No available insertion point for ltx:anchor, failing \\hypertarget to {}"</span>, id));
-<a href=#1136 id=1136 data-nosnippet>1136</a>    }
+<a href=#1136 id=1136 data-nosnippet>1136</a>    }}
 <a href=#1137 id=1137 data-nosnippet>1137</a>  } <span class="kw">else </span>{
 <a href=#1138 id=1138 data-nosnippet>1138</a>    <span class="macro">Warn!</span>(<span class="string">"malformed"</span>, <span class="string">"ltx:anchor"</span>,
 <a href=#1139 id=1139 data-nosnippet>1139</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"No available insertion point for ltx:anchor, failing \\hypertarget to {}"</span>, id));

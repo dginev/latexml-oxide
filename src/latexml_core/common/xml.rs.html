@@ -143,12 +143,12 @@
 <a href=#143 id=143 data-nosnippet>143</a>    </span><span class="kw">if </span>p_node == parent {
 <a href=#144 id=144 data-nosnippet>144</a>      <span class="kw">return </span><span class="bool-val">true</span>;
 <a href=#145 id=145 data-nosnippet>145</a>    }
-<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(parent_node) = p_node.get_parent() {
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">match </span>p_node.get_parent() { <span class="prelude-val">Some</span>(parent_node) =&gt; {
 <a href=#147 id=147 data-nosnippet>147</a>      parent_opt = <span class="prelude-val">Some</span>(parent_node);
 <a href=#148 id=148 data-nosnippet>148</a>      p = parent_opt.as_ref();
-<a href=#149 id=149 data-nosnippet>149</a>    } <span class="kw">else </span>{
+<a href=#149 id=149 data-nosnippet>149</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#150 id=150 data-nosnippet>150</a>      <span class="kw">break</span>;
-<a href=#151 id=151 data-nosnippet>151</a>    }
+<a href=#151 id=151 data-nosnippet>151</a>    }}
 <a href=#152 id=152 data-nosnippet>152</a>  }
 <a href=#153 id=153 data-nosnippet>153</a>  <span class="bool-val">false
 <a href=#154 id=154 data-nosnippet>154</a></span>}

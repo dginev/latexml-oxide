@@ -89,8 +89,8 @@
 <a href=#89 id=89 data-nosnippet>89</a>          <span class="kw">if </span>box_in_list.get_property_bool(<span class="string">"isKern"</span>) {
 <a href=#90 id=90 data-nosnippet>90</a>            <span class="kw">let </span>width_stored = box_in_list.get_property(<span class="string">"width"</span>).unwrap();
 <a href=#91 id=91 data-nosnippet>91</a>            <span class="kw">match </span><span class="kw-2">&amp;*</span>width_stored {
-<a href=#92 id=92 data-nosnippet>92</a>              Stored::Dimension(<span class="kw-2">ref </span>width_d) =&gt; <span class="kw">return </span><span class="kw-2">*</span>width_d,
-<a href=#93 id=93 data-nosnippet>93</a>              Stored::Digested(<span class="kw-2">ref </span>d) =&gt; {
+<a href=#92 id=92 data-nosnippet>92</a>              Stored::Dimension(width_d) =&gt; <span class="kw">return </span><span class="kw-2">*</span>width_d,
+<a href=#93 id=93 data-nosnippet>93</a>              Stored::Digested(d) =&gt; {
 <a href=#94 id=94 data-nosnippet>94</a>                <span class="kw">if let </span>DigestedData::RegisterValue(RegisterValue::Dimension(dim)) = d.data() {
 <a href=#95 id=95 data-nosnippet>95</a>                  <span class="kw">return </span><span class="kw-2">*</span>dim;
 <a href=#96 id=96 data-nosnippet>96</a>                }

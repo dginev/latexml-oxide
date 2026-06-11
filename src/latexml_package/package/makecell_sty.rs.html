@@ -108,11 +108,11 @@
 <a href=#108 id=108 data-nosnippet>108</a>          <span class="kw">let _ </span>= line_node.set_attribute(<span class="string">"stroke-width"</span>, <span class="string">"0.4"</span>);
 <a href=#109 id=109 data-nosnippet>109</a>          <span class="comment">// Insert as first child of picture
 <a href=#110 id=110 data-nosnippet>110</a>          </span><span class="kw">let </span>pic_children = picture.get_child_nodes();
-<a href=#111 id=111 data-nosnippet>111</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first_g) = pic_children.into_iter().find(|c| c.get_name() == <span class="string">"g"</span>) {
+<a href=#111 id=111 data-nosnippet>111</a>          <span class="kw">match </span>pic_children.into_iter().find(|c| c.get_name() == <span class="string">"g"</span>) { <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first_g) =&gt; {
 <a href=#112 id=112 data-nosnippet>112</a>            first_g.add_prev_sibling(<span class="kw-2">&amp;mut </span>line_node)<span class="question-mark">?</span>;
-<a href=#113 id=113 data-nosnippet>113</a>          } <span class="kw">else </span>{
+<a href=#113 id=113 data-nosnippet>113</a>          } <span class="kw">_ </span>=&gt; {
 <a href=#114 id=114 data-nosnippet>114</a>            picture.add_child(<span class="kw-2">&amp;mut </span>line_node)<span class="question-mark">?</span>;
-<a href=#115 id=115 data-nosnippet>115</a>          }
+<a href=#115 id=115 data-nosnippet>115</a>          }}
 <a href=#116 id=116 data-nosnippet>116</a>          <span class="comment">// Set tex= attribute on &lt;picture&gt; from constructor reversion
 <a href=#117 id=117 data-nosnippet>117</a>          </span><span class="kw">let </span>tex_str = whatsit.revert()
 <a href=#118 id=118 data-nosnippet>118</a>            .map(|toks| toks.untex())
@@ -162,13 +162,13 @@
 <a href=#162 id=162 data-nosnippet>162</a>      <span class="comment">// Get width from space arg (#3)
 <a href=#163 id=163 data-nosnippet>163</a>      // Perl: $space-&gt;getWidth-&gt;pxValue
 <a href=#164 id=164 data-nosnippet>164</a>      </span><span class="kw">let </span>w = <span class="kw">if let </span><span class="prelude-val">Some</span>(sp) = whatsit.get_arg(<span class="number">3</span>) {
-<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(wd)) = sp.clone().get_width(<span class="prelude-val">None</span>) {
+<a href=#165 id=165 data-nosnippet>165</a>        <span class="kw">match </span>sp.clone().get_width(<span class="prelude-val">None</span>) { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(wd)) =&gt; {
 <a href=#166 id=166 data-nosnippet>166</a>          <span class="kw">let </span>dim: Dimension = wd.into();
 <a href=#167 id=167 data-nosnippet>167</a>          px(dim)
-<a href=#168 id=168 data-nosnippet>168</a>        } <span class="kw">else </span>{
+<a href=#168 id=168 data-nosnippet>168</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#169 id=169 data-nosnippet>169</a>          <span class="kw">let </span>(wd,<span class="kw">_</span>,<span class="kw">_</span>,<span class="kw">_</span>,<span class="kw">_</span>,<span class="kw">_</span>) = sp.clone().get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#170 id=170 data-nosnippet>170</a>          px(wd)
-<a href=#171 id=171 data-nosnippet>171</a>        }
+<a href=#171 id=171 data-nosnippet>171</a>        }}
 <a href=#172 id=172 data-nosnippet>172</a>      } <span class="kw">else </span>{ <span class="number">0.0 </span>};
 <a href=#173 id=173 data-nosnippet>173</a>      <span class="comment">// Perl: $h = $w * abs($diagV / $diagH); — raw pxValue, no rounding
 <a href=#174 id=174 data-nosnippet>174</a>      </span><span class="kw">let </span>h = w * (dv / dh).abs();

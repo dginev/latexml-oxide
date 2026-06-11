@@ -192,7 +192,7 @@
 <a href=#192 id=192 data-nosnippet>192</a>  <span class="kw">pub fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>, whatsit: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Whatsit&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Rc&lt;Font&gt;&gt; {
 <a href=#193 id=193 data-nosnippet>193</a>    <span class="kw">match </span><span class="self">self </span>{
 <a href=#194 id=194 data-nosnippet>194</a>      FontDirective::Closure(fc) =&gt; <span class="prelude-val">Ok</span>(Rc::new((fc)(whatsit)<span class="question-mark">?</span>)),
-<a href=#195 id=195 data-nosnippet>195</a>      FontDirective::Asset(<span class="kw-2">ref </span>font) =&gt; <span class="prelude-val">Ok</span>(Rc::clone(font)),
+<a href=#195 id=195 data-nosnippet>195</a>      FontDirective::Asset(font) =&gt; <span class="prelude-val">Ok</span>(Rc::clone(font)),
 <a href=#196 id=196 data-nosnippet>196</a>    }
 <a href=#197 id=197 data-nosnippet>197</a>  }
 <a href=#198 id=198 data-nosnippet>198</a>  <span class="kw">pub fn </span>get_asset(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Font&gt;&gt; {
@@ -364,8 +364,8 @@
 <a href=#364 id=364 data-nosnippet>364</a><span class="kw">impl </span>fmt::Display <span class="kw">for </span>ExpansionBody {
 <a href=#365 id=365 data-nosnippet>365</a>  <span class="kw">fn </span>fmt(<span class="kw-2">&amp;</span><span class="self">self</span>, f: <span class="kw-2">&amp;mut </span>fmt::Formatter) -&gt; fmt::Result {
 <a href=#366 id=366 data-nosnippet>366</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#367 id=367 data-nosnippet>367</a>      ExpansionBody::Tokens(<span class="kw-2">ref </span>t) =&gt; <span class="macro">write!</span>(f, <span class="string">"{t}"</span>),
-<a href=#368 id=368 data-nosnippet>368</a>      ExpansionBody::Closure(<span class="kw-2">ref </span>code) =&gt; {
+<a href=#367 id=367 data-nosnippet>367</a>      ExpansionBody::Tokens(t) =&gt; <span class="macro">write!</span>(f, <span class="string">"{t}"</span>),
+<a href=#368 id=368 data-nosnippet>368</a>      ExpansionBody::Closure(code) =&gt; {
 <a href=#369 id=369 data-nosnippet>369</a>        <span class="macro">write!</span>(f, <span class="string">"ExpansionBody::Closure({:p})"</span>, Rc::as_ptr(code))
 <a href=#370 id=370 data-nosnippet>370</a>      }, <span class="comment">// what is the right way to serialize this, e.g. for the \meaning macro
 <a href=#371 id=371 data-nosnippet>371</a>    </span>}

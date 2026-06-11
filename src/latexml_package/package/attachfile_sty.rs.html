@@ -24,7 +24,7 @@
 <a href=#24 id=24 data-nosnippet>24</a>) -&gt; latexml_core::common::arena::SymHashMap&lt;Stored&gt; {
 <a href=#25 id=25 data-nosnippet>25</a>  <span class="kw">let </span>icon_key = kv
 <a href=#26 id=26 data-nosnippet>26</a>    .and_then(|d| {
-<a href=#27 id=27 data-nosnippet>27</a>      <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = d.data() {
+<a href=#27 id=27 data-nosnippet>27</a>      <span class="kw">if let </span>DigestedData::KeyVals(kvs) = d.data() {
 <a href=#28 id=28 data-nosnippet>28</a>        kvs.get_value(<span class="string">"icon"</span>)
 <a href=#29 id=29 data-nosnippet>29</a>      } <span class="kw">else </span>{
 <a href=#30 id=30 data-nosnippet>30</a>        <span class="prelude-val">None
@@ -34,7 +34,7 @@
 <a href=#34 id=34 data-nosnippet>34</a>    .unwrap_or_else(|| <span class="string">"pushpin"</span>.to_string());
 <a href=#35 id=35 data-nosnippet>35</a>  <span class="kw">let </span>color = kv
 <a href=#36 id=36 data-nosnippet>36</a>    .and_then(|d| {
-<a href=#37 id=37 data-nosnippet>37</a>      <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = d.data() {
+<a href=#37 id=37 data-nosnippet>37</a>      <span class="kw">if let </span>DigestedData::KeyVals(kvs) = d.data() {
 <a href=#38 id=38 data-nosnippet>38</a>        kvs.get_value(<span class="string">"color"</span>)
 <a href=#39 id=39 data-nosnippet>39</a>      } <span class="kw">else </span>{
 <a href=#40 id=40 data-nosnippet>40</a>        <span class="prelude-val">None

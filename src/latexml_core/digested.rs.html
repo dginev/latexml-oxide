@@ -314,7 +314,7 @@
 <a href=#314 id=314 data-nosnippet>314</a>      Alignment(w) =&gt; w.borrow_mut().be_absorbed_mut(document),
 <a href=#315 id=315 data-nosnippet>315</a>      KeyVals(kvs) =&gt; kvs.be_absorbed(document),
 <a href=#316 id=316 data-nosnippet>316</a>      Postponed(<span class="kw">_</span>) =&gt; <span class="prelude-val">Ok</span>(Vec::new()), <span class="comment">// Postponed items absorbed silently
-<a href=#317 id=317 data-nosnippet>317</a>      </span>RegisterValue(<span class="kw-2">ref </span>_rv) =&gt; <span class="prelude-val">Ok</span>(Vec::new()), <span class="comment">// Register values not absorbable
+<a href=#317 id=317 data-nosnippet>317</a>      </span>RegisterValue(_rv) =&gt; <span class="prelude-val">Ok</span>(Vec::new()), <span class="comment">// Register values not absorbable
 <a href=#318 id=318 data-nosnippet>318</a>    </span>}
 <a href=#319 id=319 data-nosnippet>319</a>  }
 <a href=#320 id=320 data-nosnippet>320</a>
@@ -739,17 +739,17 @@
 <a href=#739 id=739 data-nosnippet>739</a>          || w.get_property_bool(<span class="string">"alignmentSkippable"</span>)
 <a href=#740 id=740 data-nosnippet>740</a>        {
 <a href=#741 id=741 data-nosnippet>741</a>          <span class="bool-val">true
-<a href=#742 id=742 data-nosnippet>742</a>        </span>} <span class="kw">else if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(body)) = w.get_body() {
+<a href=#742 id=742 data-nosnippet>742</a>        </span>} <span class="kw">else </span>{ <span class="kw">match </span>w.get_body() { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(body)) =&gt; {
 <a href=#743 id=743 data-nosnippet>743</a>          body.is_skippable()
-<a href=#744 id=744 data-nosnippet>744</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>prop) = w.get_property(<span class="string">"content_box"</span>) {
+<a href=#744 id=744 data-nosnippet>744</a>        } <span class="kw">_ </span>=&gt; { <span class="kw">match </span>w.get_property(<span class="string">"content_box"</span>) { <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>prop) =&gt; {
 <a href=#745 id=745 data-nosnippet>745</a>          <span class="comment">// Perl: $thing-&gt;getProperty('content_box') — for \hbox etc.
 <a href=#746 id=746 data-nosnippet>746</a>          </span><span class="kw">match </span><span class="kw-2">&amp;**</span>prop {
 <a href=#747 id=747 data-nosnippet>747</a>            Stored::Digested(cb) =&gt; cb.is_skippable(),
 <a href=#748 id=748 data-nosnippet>748</a>            <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
 <a href=#749 id=749 data-nosnippet>749</a>          }
-<a href=#750 id=750 data-nosnippet>750</a>        } <span class="kw">else </span>{
+<a href=#750 id=750 data-nosnippet>750</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#751 id=751 data-nosnippet>751</a>          <span class="bool-val">false
-<a href=#752 id=752 data-nosnippet>752</a>        </span>}
+<a href=#752 id=752 data-nosnippet>752</a>        </span>}}}}}
 <a href=#753 id=753 data-nosnippet>753</a>      },
 <a href=#754 id=754 data-nosnippet>754</a>      Postponed(<span class="kw-2">ref </span>tks) =&gt; {
 <a href=#755 id=755 data-nosnippet>755</a>        <span class="comment">// Perl checks token catcodes: letters, others, active, CS are NOT skippable

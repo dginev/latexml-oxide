@@ -139,16 +139,16 @@
 <a href=#139 id=139 data-nosnippet>139</a>    <span class="kw">return </span>v;
 <a href=#140 id=140 data-nosnippet>140</a>  }
 <a href=#141 id=141 data-nosnippet>141</a>  <span class="comment">// If direct parse fails (e.g. unexpanded macro), expand and retry
-<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(expanded) = gullet::do_expand(arg.clone()) {
+<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="kw">match </span>gullet::do_expand(arg.clone()) { <span class="prelude-val">Ok</span>(expanded) =&gt; {
 <a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">let </span>s = expanded.to_string();
 <a href=#144 id=144 data-nosnippet>144</a>    <span class="kw">let </span>s = strip_leading_double_negation(s.trim());
 <a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">if </span>s == <span class="string">"." </span>{
 <a href=#146 id=146 data-nosnippet>146</a>      <span class="kw">return </span><span class="number">0.0</span>;
 <a href=#147 id=147 data-nosnippet>147</a>    }
 <a href=#148 id=148 data-nosnippet>148</a>    s.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>)
-<a href=#149 id=149 data-nosnippet>149</a>  } <span class="kw">else </span>{
+<a href=#149 id=149 data-nosnippet>149</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#150 id=150 data-nosnippet>150</a>    <span class="number">0.0
-<a href=#151 id=151 data-nosnippet>151</a>  </span>}
+<a href=#151 id=151 data-nosnippet>151</a>  </span>}}
 <a href=#152 id=152 data-nosnippet>152</a>}
 <a href=#153 id=153 data-nosnippet>153</a>
 <a href=#154 id=154 data-nosnippet>154</a><span class="comment">// Perl #2711 uses `s/^\-\-//g`, which strips every leading `--` pair
@@ -245,16 +245,16 @@
 <a href=#245 id=245 data-nosnippet>245</a></span><span class="doccomment">/// Look up a TeX register value, return as points
 <a href=#246 id=246 data-nosnippet>246</a>/// Perl: sub pgfmath_register (L487-493)
 <a href=#247 id=247 data-nosnippet>247</a></span><span class="kw">fn </span>pgfmath_register_lookup(cs: <span class="kw-2">&amp;</span>str) -&gt; f64 {
-<a href=#248 id=248 data-nosnippet>248</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(reg)) = state::lookup_register(cs, <span class="macro">vec!</span>[]) {
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="kw">match </span>state::lookup_register(cs, <span class="macro">vec!</span>[]) { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(reg)) =&gt; {
 <a href=#249 id=249 data-nosnippet>249</a>    <span class="kw">match </span>reg {
 <a href=#250 id=250 data-nosnippet>250</a>      RegisterValue::Number(n) =&gt; n.value_of() <span class="kw">as </span>f64,
 <a href=#251 id=251 data-nosnippet>251</a>      RegisterValue::Dimension(d) =&gt; d.value_of() <span class="kw">as </span>f64 / <span class="number">65536.0</span>,
 <a href=#252 id=252 data-nosnippet>252</a>      RegisterValue::Glue(g) =&gt; g.value_of() <span class="kw">as </span>f64 / <span class="number">65536.0</span>,
 <a href=#253 id=253 data-nosnippet>253</a>      <span class="kw">_ </span>=&gt; <span class="number">0.0</span>,
 <a href=#254 id=254 data-nosnippet>254</a>    }
-<a href=#255 id=255 data-nosnippet>255</a>  } <span class="kw">else </span>{
+<a href=#255 id=255 data-nosnippet>255</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#256 id=256 data-nosnippet>256</a>    <span class="number">0.0
-<a href=#257 id=257 data-nosnippet>257</a>  </span>}
+<a href=#257 id=257 data-nosnippet>257</a>  </span>}}
 <a href=#258 id=258 data-nosnippet>258</a>}
 <a href=#259 id=259 data-nosnippet>259</a>
 <a href=#260 id=260 data-nosnippet>260</a><span class="comment">// ==================== Built-in Function Application ====================
@@ -932,11 +932,11 @@
 <a href=#932 id=932 data-nosnippet>932</a>      <span class="kw">loop </span>{
 <a href=#933 id=933 data-nosnippet>933</a>        sb(i);
 <a href=#934 id=934 data-nosnippet>934</a>        <span class="kw">if </span>eat(i, <span class="string">b','</span>) {
-<a href=#935 id=935 data-nosnippet>935</a>          <span class="kw">if let </span><span class="prelude-val">Ok</span>(arg) = formula(i) {
+<a href=#935 id=935 data-nosnippet>935</a>          <span class="kw">match </span>formula(i) { <span class="prelude-val">Ok</span>(arg) =&gt; {
 <a href=#936 id=936 data-nosnippet>936</a>            args.push(arg);
-<a href=#937 id=937 data-nosnippet>937</a>          } <span class="kw">else </span>{
+<a href=#937 id=937 data-nosnippet>937</a>          } <span class="kw">_ </span>=&gt; {
 <a href=#938 id=938 data-nosnippet>938</a>            <span class="kw">break</span>;
-<a href=#939 id=939 data-nosnippet>939</a>          }
+<a href=#939 id=939 data-nosnippet>939</a>          }}
 <a href=#940 id=940 data-nosnippet>940</a>        } <span class="kw">else </span>{
 <a href=#941 id=941 data-nosnippet>941</a>          <span class="kw">break</span>;
 <a href=#942 id=942 data-nosnippet>942</a>        }

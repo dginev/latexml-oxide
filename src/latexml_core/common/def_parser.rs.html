@@ -125,10 +125,10 @@
 <a href=#125 id=125 data-nosnippet>125</a>    // (`delimited` advances past its opening token before failing otherwise —
 <a href=#126 id=126 data-nosnippet>126</a>    // e.g. a lone "{" from the non-nesting inner of "{{}}").
 <a href=#127 id=127 data-nosnippet>127</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>probe;
-<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">let </span><span class="kw-2">mut </span>p: Parameter = <span class="kw">if let </span><span class="prelude-val">Ok</span>(inner_spec) = {
+<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">let </span><span class="kw-2">mut </span>p: Parameter = <span class="kw">match </span>{
 <a href=#129 id=129 data-nosnippet>129</a>      probe = <span class="kw-2">*</span>input;
 <a href=#130 id=130 data-nosnippet>130</a>      group(<span class="string">'{'</span>, <span class="string">'}'</span>).parse_next(<span class="kw-2">&amp;mut </span>probe).inspect(|<span class="kw">_</span>| <span class="kw-2">*</span>input = probe)
-<a href=#131 id=131 data-nosnippet>131</a>    } {
+<a href=#131 id=131 data-nosnippet>131</a>    } { <span class="prelude-val">Ok</span>(inner_spec) =&gt; {
 <a href=#132 id=132 data-nosnippet>132</a>      <span class="comment">// Plain (possibly typed-inner) braced group, spec keeps its braces.
 <a href=#133 id=133 data-nosnippet>133</a>      </span><span class="kw">let </span>inner: <span class="prelude-ty">Option</span>&lt;Parameters&gt; = <span class="kw">if </span>inner_spec.is_empty() {
 <a href=#134 id=134 data-nosnippet>134</a>        <span class="prelude-val">None
@@ -141,10 +141,10 @@
 <a href=#141 id=141 data-nosnippet>141</a>        inner: inner.map(|ps| ps.into()).unwrap_or_default(),
 <a href=#142 id=142 data-nosnippet>142</a>        ..Parameter::default()
 <a href=#143 id=143 data-nosnippet>143</a>      }
-<a href=#144 id=144 data-nosnippet>144</a>    } <span class="kw">else if let </span><span class="prelude-val">Ok</span>(inner_spec) = {
+<a href=#144 id=144 data-nosnippet>144</a>    } <span class="kw">_ </span>=&gt; { <span class="kw">match </span>{
 <a href=#145 id=145 data-nosnippet>145</a>      probe = <span class="kw-2">*</span>input;
 <a href=#146 id=146 data-nosnippet>146</a>      group(<span class="string">'['</span>, <span class="string">']'</span>).parse_next(<span class="kw-2">&amp;mut </span>probe).inspect(|<span class="kw">_</span>| <span class="kw-2">*</span>input = probe)
-<a href=#147 id=147 data-nosnippet>147</a>    } {
+<a href=#147 id=147 data-nosnippet>147</a>    } { <span class="prelude-val">Ok</span>(inner_spec) =&gt; {
 <a href=#148 id=148 data-nosnippet>148</a>      <span class="kw">let </span>spec = arena::pin(<span class="macro">format!</span>(<span class="string">"[{inner_spec}]"</span>));
 <a href=#149 id=149 data-nosnippet>149</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(default_str) = inner_spec.strip_prefix(<span class="string">"Default:"</span>) {
 <a href=#150 id=150 data-nosnippet>150</a>        <span class="kw">let </span>extra = <span class="kw">if </span>default_str.is_empty() {
@@ -165,10 +165,10 @@
 <a href=#165 id=165 data-nosnippet>165</a>      } <span class="kw">else </span>{
 <a href=#166 id=166 data-nosnippet>166</a>        Parameter { name: arena::pin_static(<span class="string">"Optional"</span>), spec, ..Parameter::default() }
 <a href=#167 id=167 data-nosnippet>167</a>      }
-<a href=#168 id=168 data-nosnippet>168</a>    } <span class="kw">else if let </span><span class="prelude-val">Ok</span>((word, extra_opt)) = {
+<a href=#168 id=168 data-nosnippet>168</a>    } <span class="kw">_ </span>=&gt; { <span class="kw">match </span>{
 <a href=#169 id=169 data-nosnippet>169</a>      probe = <span class="kw-2">*</span>input;
 <a href=#170 id=170 data-nosnippet>170</a>      paramspec.parse_next(<span class="kw-2">&amp;mut </span>probe).inspect(|<span class="kw">_</span>| <span class="kw-2">*</span>input = probe)
-<a href=#171 id=171 data-nosnippet>171</a>    } {
+<a href=#171 id=171 data-nosnippet>171</a>    } { <span class="prelude-val">Ok</span>((word, extra_opt)) =&gt; {
 <a href=#172 id=172 data-nosnippet>172</a>      <span class="kw">let </span>spec_str = <span class="kw">match </span>extra_opt {
 <a href=#173 id=173 data-nosnippet>173</a>        <span class="prelude-val">Some</span>(extra) =&gt; <span class="macro">format!</span>(<span class="string">"{word}:{extra}"</span>),
 <a href=#174 id=174 data-nosnippet>174</a>        <span class="prelude-val">None </span>=&gt; word.to_string(),
@@ -186,7 +186,7 @@
 <a href=#186 id=186 data-nosnippet>186</a>        extra,
 <a href=#187 id=187 data-nosnippet>187</a>        ..Parameter::default()
 <a href=#188 id=188 data-nosnippet>188</a>      }
-<a href=#189 id=189 data-nosnippet>189</a>    } <span class="kw">else </span>{
+<a href=#189 id=189 data-nosnippet>189</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#190 id=190 data-nosnippet>190</a>      <span class="comment">// Literal single char (incl. each whitespace char) as a Token parameter.
 <a href=#191 id=191 data-nosnippet>191</a>      </span><span class="kw">let </span>ch = any.parse_next(input).map_err(|<span class="kw">_</span>: winnow::error::ErrMode&lt;winnow::error::ContextError&gt;| {
 <a href=#192 id=192 data-nosnippet>192</a>        Error::from(<span class="macro">s!</span>(<span class="string">"parse_parameters: unreadable prototype tail for {:?}"</span>, cs))
@@ -198,7 +198,7 @@
 <a href=#198 id=198 data-nosnippet>198</a>        extra: <span class="macro">vec!</span>[Tokens::new(<span class="macro">vec!</span>[ch_token])],
 <a href=#199 id=199 data-nosnippet>199</a>        ..Parameter::default()
 <a href=#200 id=200 data-nosnippet>200</a>      }
-<a href=#201 id=201 data-nosnippet>201</a>    };
+<a href=#201 id=201 data-nosnippet>201</a>    }}}}}};
 <a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">if </span>init_flag {
 <a href=#203 id=203 data-nosnippet>203</a>      p = p.init()<span class="question-mark">?</span>;
 <a href=#204 id=204 data-nosnippet>204</a>    }

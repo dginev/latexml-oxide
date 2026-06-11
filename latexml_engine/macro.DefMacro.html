@@ -2,28 +2,28 @@
     ($proto:literal, None) =&gt; { ... };
     ($prototype:literal, sub [( $($var:ident),* )]
     $body:block $($input:tt)*) =&gt; { ... };
-    ($proto:expr, sub [$args:ident]
+    ($proto:expr_2021, sub [$args:ident]
     $body:block $($input:tt)*) =&gt; { ... };
-    ($proto:expr, $body:block $($input:tt)*) =&gt; { ... };
+    ($proto:expr_2021, $body:block $($input:tt)*) =&gt; { ... };
     ($proto:literal, $expansion:literal $($input:tt)*) =&gt; { ... };
-    ($cs:expr, $parameters:literal, $expansion: literal) =&gt; { ... };
-    ($cs:expr, $parameters:literal, sub [$args:ident]
+    ($cs:expr_2021, $parameters:literal, $expansion: literal) =&gt; { ... };
+    ($cs:expr_2021, $parameters:literal, sub [$args:ident]
     $body:block $($input:tt)*) =&gt; { ... };
-    ($cs:expr, $parameters:literal, sub [( $($var:ident),* )]
+    ($cs:expr_2021, $parameters:literal, sub [( $($var:ident),* )]
     $body:block $($input:tt)*) =&gt; { ... };
-    ($cs:expr, $parameters:expr, sub [$args:ident]
+    ($cs:expr_2021, $parameters:expr_2021, sub [$args:ident]
     $body:block $($input:tt)*) =&gt; { ... };
     ($cs:literal, None, $expansion:literal) =&gt; { ... };
     ($cs:literal, None, $expansion:literal, $($input:tt)*) =&gt; { ... };
-    ($cs:literal, None, $expansion:expr) =&gt; { ... };
-    ($cs:expr, None, $expansion:literal) =&gt; { ... };
-    ($cs:expr, None, $body:block) =&gt; { ... };
-    ($cs:expr, None, $expansion:expr) =&gt; { ... };
-    ($cs:expr, None, $expansion:literal, $($input:tt)+) =&gt; { ... };
-    ($cs:expr, None, $expansion:expr, $($input:tt)+) =&gt; { ... };
-    ($cs:expr, $parameters:expr, $expansion:expr) =&gt; { ... };
+    ($cs:literal, None, $expansion:expr_2021) =&gt; { ... };
+    ($cs:expr_2021, None, $expansion:literal) =&gt; { ... };
+    ($cs:expr_2021, None, $body:block) =&gt; { ... };
+    ($cs:expr_2021, None, $expansion:expr_2021) =&gt; { ... };
+    ($cs:expr_2021, None, $expansion:literal, $($input:tt)+) =&gt; { ... };
+    ($cs:expr_2021, None, $expansion:expr_2021, $($input:tt)+) =&gt; { ... };
+    ($cs:expr_2021, $parameters:expr_2021, $expansion:expr_2021) =&gt; { ... };
     ($proto:literal, None $($input:tt)*) =&gt; { ... };
-    ($cs:expr, $replacement:expr, $expansion:expr, $($input:tt)*) =&gt; { ... };
+    ($cs:expr_2021, $replacement:expr_2021, $expansion:expr_2021, $($input:tt)*) =&gt; { ... };
 }</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Defines a macro, a binding analog to <code>\def</code></p>
 <p>A <code>prototype</code> will be parsed into a command sequence and a list of parameters.
 Any macro arguments will be substituted for parameter indicators (eg #1)

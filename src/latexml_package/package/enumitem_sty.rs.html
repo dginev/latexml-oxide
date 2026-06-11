@@ -359,7 +359,7 @@
 <a href=#359 id=359 data-nosnippet>359</a></span><span class="kw">fn </span>extract_keyvals(args: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;]) -&gt; <span class="prelude-ty">Option</span>&lt;KeyVals&gt; {
 <a href=#360 id=360 data-nosnippet>360</a>  args.first().and_then(|a| {
 <a href=#361 id=361 data-nosnippet>361</a>    a.as_ref().and_then(|d| {
-<a href=#362 id=362 data-nosnippet>362</a>      <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#362 id=362 data-nosnippet>362</a>      <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#363 id=363 data-nosnippet>363</a>        <span class="prelude-val">Some</span>(kv.clone())
 <a href=#364 id=364 data-nosnippet>364</a>      } <span class="kw">else </span>{
 <a href=#365 id=365 data-nosnippet>365</a>        <span class="prelude-val">None

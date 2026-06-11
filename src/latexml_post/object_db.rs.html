@@ -195,7 +195,7 @@
 <a href=#195 id=195 data-nosnippet>195</a>      </span>.values
 <a href=#196 id=196 data-nosnippet>196</a>      .entry(attr.to_string())
 <a href=#197 id=197 data-nosnippet>197</a>      .or_insert_with(|| Value::List(Vec::new()));
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">if let </span>Value::List(<span class="kw-2">ref mut </span>items) = list {
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">if let </span>Value::List(items) = list {
 <a href=#199 id=199 data-nosnippet>199</a>      <span class="kw">for </span>v <span class="kw">in </span>values {
 <a href=#200 id=200 data-nosnippet>200</a>        items.push(v);
 <a href=#201 id=201 data-nosnippet>201</a>      }
@@ -210,7 +210,7 @@
 <a href=#210 id=210 data-nosnippet>210</a>      </span>.values
 <a href=#211 id=211 data-nosnippet>211</a>      .entry(attr.to_string())
 <a href=#212 id=212 data-nosnippet>212</a>      .or_insert_with(|| Value::List(Vec::new()));
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">if let </span>Value::List(<span class="kw-2">ref mut </span>items) = list {
+<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">if let </span>Value::List(items) = list {
 <a href=#214 id=214 data-nosnippet>214</a>      <span class="kw">for </span>v <span class="kw">in </span>values {
 <a href=#215 id=215 data-nosnippet>215</a>        <span class="kw">let </span>s = v.to_string();
 <a href=#216 id=216 data-nosnippet>216</a>        <span class="kw">if </span>!items.iter().any(|existing| existing.to_string() == s) {
@@ -242,7 +242,7 @@
 <a href=#242 id=242 data-nosnippet>242</a>      .entry(first.to_string())
 <a href=#243 id=243 data-nosnippet>243</a>      .or_insert_with(|| Value::Hash(HashMap::default()));
 <a href=#244 id=244 data-nosnippet>244</a>
-<a href=#245 id=245 data-nosnippet>245</a>    <span class="kw">if let </span>Value::Hash(<span class="kw-2">ref mut </span>h) = hash {
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="kw">if let </span>Value::Hash(h) = hash {
 <a href=#246 id=246 data-nosnippet>246</a>      <span class="kw">let </span><span class="kw-2">mut </span>current = h;
 <a href=#247 id=247 data-nosnippet>247</a>      <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>key) <span class="kw">in </span>rest.iter().enumerate() {
 <a href=#248 id=248 data-nosnippet>248</a>        <span class="kw">if </span>i == rest.len() - <span class="number">1 </span>{
@@ -253,7 +253,7 @@
 <a href=#253 id=253 data-nosnippet>253</a>          </span><span class="kw">let </span>entry = current
 <a href=#254 id=254 data-nosnippet>254</a>            .entry(key.to_string())
 <a href=#255 id=255 data-nosnippet>255</a>            .or_insert_with(|| Value::Hash(HashMap::default()));
-<a href=#256 id=256 data-nosnippet>256</a>          <span class="kw">if let </span>Value::Hash(<span class="kw-2">ref mut </span>inner) = entry {
+<a href=#256 id=256 data-nosnippet>256</a>          <span class="kw">if let </span>Value::Hash(inner) = entry {
 <a href=#257 id=257 data-nosnippet>257</a>            current = inner;
 <a href=#258 id=258 data-nosnippet>258</a>          } <span class="kw">else </span>{
 <a href=#259 id=259 data-nosnippet>259</a>            <span class="kw">break</span>;

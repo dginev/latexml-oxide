@@ -134,7 +134,7 @@
 <a href=#134 id=134 data-nosnippet>134</a>      // a graphics option.
 <a href=#135 id=135 data-nosnippet>135</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>alt_value: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
 <a href=#136 id=136 data-nosnippet>136</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kv_digested) = args[<span class="number">1</span>] {
-<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_digested.data() {
+<a href=#137 id=137 data-nosnippet>137</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = kv_digested.data() {
 <a href=#138 id=138 data-nosnippet>138</a>          <span class="kw">for </span>(key, value) <span class="kw">in </span>kv.get_pairs() {
 <a href=#139 id=139 data-nosnippet>139</a>            <span class="kw">if </span>key == <span class="string">"alt" </span>{
 <a href=#140 id=140 data-nosnippet>140</a>              alt_value = <span class="prelude-val">Some</span>(value.to_string());

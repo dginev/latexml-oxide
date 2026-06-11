@@ -21,7 +21,7 @@
 <a href=#21 id=21 data-nosnippet>21</a>  // Use get_hash_digested() since after digestion values are in cached_hash_digested
 <a href=#22 id=22 data-nosnippet>22</a>  </span><span class="kw">let </span>pairs: Vec&lt;(String, String)&gt; = <span class="kw">if let </span><span class="prelude-val">Some</span>(arg1) = whatsit.get_arg(<span class="number">1</span>) {
 <a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">match </span>arg1.data() {
-<a href=#24 id=24 data-nosnippet>24</a>      DigestedData::KeyVals(<span class="kw-2">ref </span>kv) =&gt; kv.get_hash_digested().into_iter().collect(),
+<a href=#24 id=24 data-nosnippet>24</a>      DigestedData::KeyVals(kv) =&gt; kv.get_hash_digested().into_iter().collect(),
 <a href=#25 id=25 data-nosnippet>25</a>      <span class="kw">_ </span>=&gt; Vec::new(),
 <a href=#26 id=26 data-nosnippet>26</a>    }
 <a href=#27 id=27 data-nosnippet>27</a>  } <span class="kw">else </span>{
@@ -447,7 +447,7 @@
 <a href=#447 id=447 data-nosnippet>447</a>      <span class="kw">let </span>arg = whatsit.get_arg(<span class="number">2</span>);
 <a href=#448 id=448 data-nosnippet>448</a>      <span class="kw">let </span>reversion_key = <span class="macro">s!</span>(<span class="string">"xref:{}@reversion"</span>, xmid);
 <a href=#449 id=449 data-nosnippet>449</a>      with_value_mut(<span class="string">"PENDING_DUAL_XMARGS"</span>, |pending_opt|
-<a href=#450 id=450 data-nosnippet>450</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(<span class="kw-2">ref mut </span>pending)) = pending_opt  {
+<a href=#450 id=450 data-nosnippet>450</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(pending)) = pending_opt  {
 <a href=#451 id=451 data-nosnippet>451</a>          pending.insert(<span class="kw-2">&amp;</span>xmid, arg.into());
 <a href=#452 id=452 data-nosnippet>452</a>        });
 <a href=#453 id=453 data-nosnippet>453</a>      <span class="comment">// TODO: Must we store the (currently &amp;mut) Whatsit?
@@ -673,12 +673,12 @@
 <a href=#673 id=673 data-nosnippet>673</a>         }
 <a href=#674 id=674 data-nosnippet>674</a>         n+=<span class="number">1</span>;
 <a href=#675 id=675 data-nosnippet>675</a>         text = node_text + <span class="kw-2">&amp;</span>text;
-<a href=#676 id=676 data-nosnippet>676</a>         <span class="kw">if let </span><span class="prelude-val">Some</span>(sibling) = node_mut.get_prev_sibling() {
+<a href=#676 id=676 data-nosnippet>676</a>         <span class="kw">match </span>node_mut.get_prev_sibling() { <span class="prelude-val">Some</span>(sibling) =&gt; {
 <a href=#677 id=677 data-nosnippet>677</a>           this_node = sibling;
 <a href=#678 id=678 data-nosnippet>678</a>           node_mut = <span class="kw-2">&amp;mut </span>this_node;
-<a href=#679 id=679 data-nosnippet>679</a>         } <span class="kw">else </span>{
+<a href=#679 id=679 data-nosnippet>679</a>         } <span class="kw">_ </span>=&gt; {
 <a href=#680 id=680 data-nosnippet>680</a>           <span class="kw">break</span>;
-<a href=#681 id=681 data-nosnippet>681</a>         }
+<a href=#681 id=681 data-nosnippet>681</a>         }}
 <a href=#682 id=682 data-nosnippet>682</a>       }
 <a href=#683 id=683 data-nosnippet>683</a>       <span class="kw">let </span>has_leading_letter = <span class="kw">match </span>text.chars().next() {
 <a href=#684 id=684 data-nosnippet>684</a>         <span class="prelude-val">Some</span>(fc) =&gt; fc.is_alphabetic(),
@@ -772,12 +772,12 @@
 <a href=#772 id=772 data-nosnippet>772</a>      <span class="kw">break</span>;
 <a href=#773 id=773 data-nosnippet>773</a>    }
 <a href=#774 id=774 data-nosnippet>774</a>    n+=<span class="number">1</span>;
-<a href=#775 id=775 data-nosnippet>775</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sibling) = node_ref.get_prev_sibling() {
+<a href=#775 id=775 data-nosnippet>775</a>    <span class="kw">match </span>node_ref.get_prev_sibling() { <span class="prelude-val">Some</span>(sibling) =&gt; {
 <a href=#776 id=776 data-nosnippet>776</a>      current = sibling;
 <a href=#777 id=777 data-nosnippet>777</a>      node_ref = <span class="kw-2">&amp;mut </span>current;
-<a href=#778 id=778 data-nosnippet>778</a>    } <span class="kw">else </span>{
+<a href=#778 id=778 data-nosnippet>778</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#779 id=779 data-nosnippet>779</a>      <span class="kw">break</span>;
-<a href=#780 id=780 data-nosnippet>780</a>    }
+<a href=#780 id=780 data-nosnippet>780</a>    }}
 <a href=#781 id=781 data-nosnippet>781</a>  }
 <a href=#782 id=782 data-nosnippet>782</a>  <span class="kw">if </span>n &gt; <span class="number">1 </span>&amp;&amp; (number.chars().any(|c| c.is_numeric())) {
 <a href=#783 id=783 data-nosnippet>783</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>((n, combined, MathLigatureOptions {
@@ -960,7 +960,7 @@
 <a href=#960 id=960 data-nosnippet>960</a>      // Pass all keyval pairs as properties
 <a href=#961 id=961 data-nosnippet>961</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
 <a href=#962 id=962 data-nosnippet>962</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#963 id=963 data-nosnippet>963</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#963 id=963 data-nosnippet>963</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#964 id=964 data-nosnippet>964</a>          <span class="comment">// Store left/right as Digested directly from digested keyvals.
 <a href=#965 id=965 data-nosnippet>965</a>          </span><span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
 <a href=#966 id=966 data-nosnippet>966</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
@@ -1000,7 +1000,7 @@
 <a href=#1000 id=1000 data-nosnippet>1000</a>      //   (T_CS('\\' . $name), T_BEGIN, $alignment-&gt;revert, T_END); }
 <a href=#1001 id=1001 data-nosnippet>1001</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>name = String::new();
 <a href=#1002 id=1002 data-nosnippet>1002</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1003 id=1003 data-nosnippet>1003</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1003 id=1003 data-nosnippet>1003</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#1004 id=1004 data-nosnippet>1004</a>          name = kv.get_value(<span class="string">"name"</span>).map(|v| v.to_string()).unwrap_or_default();
 <a href=#1005 id=1005 data-nosnippet>1005</a>        }
 <a href=#1006 id=1006 data-nosnippet>1006</a>      }
@@ -1009,8 +1009,8 @@
 <a href=#1009 id=1009 data-nosnippet>1009</a>        <span class="kw">let </span>prop = _whatsit.get_property(<span class="string">"alignment"</span>);
 <a href=#1010 id=1010 data-nosnippet>1010</a>        <span class="kw">let </span><span class="kw-2">mut </span>rev = <span class="prelude-val">None</span>;
 <a href=#1011 id=1011 data-nosnippet>1011</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(cow) = prop.as_ref() {
-<a href=#1012 id=1012 data-nosnippet>1012</a>          <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>alignment) = <span class="kw-2">&amp;**</span>cow {
-<a href=#1013 id=1013 data-nosnippet>1013</a>            <span class="kw">if let </span>DigestedData::Alignment(<span class="kw-2">ref </span>al) = alignment.data() {
+<a href=#1012 id=1012 data-nosnippet>1012</a>          <span class="kw">if let </span>Stored::Digested(alignment) = <span class="kw-2">&amp;**</span>cow {
+<a href=#1013 id=1013 data-nosnippet>1013</a>            <span class="kw">if let </span>DigestedData::Alignment(al) = alignment.data() {
 <a href=#1014 id=1014 data-nosnippet>1014</a>              rev = <span class="prelude-val">Some</span>(al.borrow().revert()<span class="question-mark">?</span>);
 <a href=#1015 id=1015 data-nosnippet>1015</a>            }
 <a href=#1016 id=1016 data-nosnippet>1016</a>          }
@@ -1043,7 +1043,7 @@
 <a href=#1043 id=1043 data-nosnippet>1043</a>    properties =&gt; sub[args] {
 <a href=#1044 id=1044 data-nosnippet>1044</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
 <a href=#1045 id=1045 data-nosnippet>1045</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1046 id=1046 data-nosnippet>1046</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1046 id=1046 data-nosnippet>1046</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#1047 id=1047 data-nosnippet>1047</a>          <span class="comment">// Store left/right as Digested directly from digested keyvals.
 <a href=#1048 id=1048 data-nosnippet>1048</a>          // Perl's absorb() handles Tokens natively; Rust constructor templates
 <a href=#1049 id=1049 data-nosnippet>1049</a>          // only absorb Digested. Using get_value_digested avoids the revert-&gt;re-digest
@@ -1087,7 +1087,7 @@
 <a href=#1087 id=1087 data-nosnippet>1087</a>      <span class="kw">let </span><span class="kw-2">mut </span>align = String::new();
 <a href=#1088 id=1088 data-nosnippet>1088</a>      <span class="kw">let </span><span class="kw-2">mut </span>alignment_required = <span class="bool-val">false</span>;
 <a href=#1089 id=1089 data-nosnippet>1089</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1090 id=1090 data-nosnippet>1090</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1090 id=1090 data-nosnippet>1090</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#1091 id=1091 data-nosnippet>1091</a>          name = kv.get_value(<span class="string">"name"</span>).map(|v| v.to_string()).unwrap_or_default();
 <a href=#1092 id=1092 data-nosnippet>1092</a>          align = kv.get_value(<span class="string">"alignment"</span>).map(|v| v.to_string()).unwrap_or_default();
 <a href=#1093 id=1093 data-nosnippet>1093</a>          alignment_required = kv.has_key(<span class="string">"alignment-required"</span>);
@@ -1228,7 +1228,7 @@
 <a href=#1228 id=1228 data-nosnippet>1228</a>    properties =&gt; sub[args] {
 <a href=#1229 id=1229 data-nosnippet>1229</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
 <a href=#1230 id=1230 data-nosnippet>1230</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1231 id=1231 data-nosnippet>1231</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1231 id=1231 data-nosnippet>1231</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#1232 id=1232 data-nosnippet>1232</a>          <span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
 <a href=#1233 id=1233 data-nosnippet>1233</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
 <a href=#1234 id=1234 data-nosnippet>1234</a>              props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1328,7 +1328,7 @@
 <a href=#1328 id=1328 data-nosnippet>1328</a>    properties =&gt; sub[args] {
 <a href=#1329 id=1329 data-nosnippet>1329</a>      <span class="kw">let </span><span class="kw-2">mut </span>props = <span class="macro">stored_map!</span>();
 <a href=#1330 id=1330 data-nosnippet>1330</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = <span class="kw-2">&amp;</span>args[<span class="number">0</span>] {
-<a href=#1331 id=1331 data-nosnippet>1331</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = d.data() {
+<a href=#1331 id=1331 data-nosnippet>1331</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = d.data() {
 <a href=#1332 id=1332 data-nosnippet>1332</a>          <span class="kw">for </span>prop_key <span class="kw">in </span><span class="kw-2">&amp;</span>[<span class="string">"left"</span>, <span class="string">"right"</span>] {
 <a href=#1333 id=1333 data-nosnippet>1333</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = kv.get_value_digested(prop_key) {
 <a href=#1334 id=1334 data-nosnippet>1334</a>              props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1740,19 +1740,19 @@
 <a href=#1740 id=1740 data-nosnippet>1740</a>      <span class="kw">continue</span>;
 <a href=#1741 id=1741 data-nosnippet>1741</a>    }
 <a href=#1742 id=1742 data-nosnippet>1742</a>    <span class="kw">if </span>col.is_multiple_of(ncols) {
-<a href=#1743 id=1743 data-nosnippet>1743</a>      <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1743 id=1743 data-nosnippet>1743</a>      <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
 <a href=#1744 id=1744 data-nosnippet>1744</a>        close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
 <a href=#1745 id=1745 data-nosnippet>1745</a>      }
 <a href=#1746 id=1746 data-nosnippet>1746</a>      <span class="kw">let </span>(mf, br) = open_math_fork(document, equation)<span class="question-mark">?</span>;
 <a href=#1747 id=1747 data-nosnippet>1747</a>      mainfork = <span class="prelude-val">Some</span>(mf);
 <a href=#1748 id=1748 data-nosnippet>1748</a>      branch = <span class="prelude-val">Some</span>(br);
 <a href=#1749 id=1749 data-nosnippet>1749</a>    }
-<a href=#1750 id=1750 data-nosnippet>1750</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1750 id=1750 data-nosnippet>1750</a>    <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
 <a href=#1751 id=1751 data-nosnippet>1751</a>      add_column_to_math_fork(document, mf, br, <span class="kw-2">&amp;mut </span>cell)<span class="question-mark">?</span>;
 <a href=#1752 id=1752 data-nosnippet>1752</a>    }
 <a href=#1753 id=1753 data-nosnippet>1753</a>    col += <span class="number">1</span>;
 <a href=#1754 id=1754 data-nosnippet>1754</a>  }
-<a href=#1755 id=1755 data-nosnippet>1755</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>mf), <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
+<a href=#1755 id=1755 data-nosnippet>1755</a>  <span class="kw">if let </span>(<span class="prelude-val">Some</span>(mf), <span class="prelude-val">Some</span>(br)) = (<span class="kw-2">&amp;mut </span>mainfork, <span class="kw-2">&amp;mut </span>branch) {
 <a href=#1756 id=1756 data-nosnippet>1756</a>    close_math_fork(document, equation, mf, br)<span class="question-mark">?</span>;
 <a href=#1757 id=1757 data-nosnippet>1757</a>  }
 <a href=#1758 id=1758 data-nosnippet>1758</a>  <span class="prelude-val">Ok</span>(())

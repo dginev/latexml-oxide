@@ -363,15 +363,15 @@
 <a href=#363 id=363 data-nosnippet>363</a>  <span class="kw">let </span>the_ctr_id = <span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>);
 <a href=#364 id=364 data-nosnippet>364</a>  <span class="kw">let </span>the_ctr = <span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>);
 <a href=#365 id=365 data-nosnippet>365</a>
-<a href=#366 id=366 data-nosnippet>366</a>  <span class="kw">let </span>has_id: bool = <span class="kw">if let </span><span class="prelude-val">Some</span>(iddef) = state::lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr_id))<span class="question-mark">? </span>{
+<a href=#366 id=366 data-nosnippet>366</a>  <span class="kw">let </span>has_id: bool = <span class="kw">match </span>state::lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr_id))<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(iddef) =&gt; {
 <a href=#367 id=367 data-nosnippet>367</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = iddef.get_parameters() {
 <a href=#368 id=368 data-nosnippet>368</a>      params.get_num_args() == <span class="number">0
 <a href=#369 id=369 data-nosnippet>369</a>    </span>} <span class="kw">else </span>{
 <a href=#370 id=370 data-nosnippet>370</a>      <span class="bool-val">true
 <a href=#371 id=371 data-nosnippet>371</a>    </span>}
-<a href=#372 id=372 data-nosnippet>372</a>  } <span class="kw">else </span>{
+<a href=#372 id=372 data-nosnippet>372</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#373 id=373 data-nosnippet>373</a>    <span class="bool-val">false
-<a href=#374 id=374 data-nosnippet>374</a>  </span>};
+<a href=#374 id=374 data-nosnippet>374</a>  </span>}};
 <a href=#375 id=375 data-nosnippet>375</a>
 <a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">let </span>the_ctr_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr);
 <a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">let </span>the_ctr_id_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr_id);

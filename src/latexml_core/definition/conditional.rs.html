@@ -307,7 +307,7 @@
 <a href=#307 id=307 data-nosnippet>307</a>            <span class="comment">// Make sure this \else is NOT for a nested \if that is part of the test clause!
 <a href=#308 id=308 data-nosnippet>308</a>            </span><span class="kw">let </span>maybe_last = with_value(<span class="string">"if_stack"</span>, |stack_opt| {
 <a href=#309 id=309 data-nosnippet>309</a>              <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = stack_opt {
-<a href=#310 id=310 data-nosnippet>310</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(<span class="kw-2">ref </span>stack_frame)) = stack.front() {
+<a href=#310 id=310 data-nosnippet>310</a>                <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(stack_frame)) = stack.front() {
 <a href=#311 id=311 data-nosnippet>311</a>                  <span class="kw">if </span><span class="kw-2">*</span>stack_frame.borrow() == <span class="kw-2">*</span>local_frame.as_ref().unwrap().borrow() {
 <a href=#312 id=312 data-nosnippet>312</a>                    <span class="comment">// No need to actually call elseHandler, but note that we've seen an \else!
 <a href=#313 id=313 data-nosnippet>313</a>                    </span>stack_frame.borrow_mut().elses = <span class="bool-val">true</span>;
@@ -396,7 +396,7 @@
 <a href=#396 id=396 data-nosnippet>396</a>
 <a href=#397 id=397 data-nosnippet>397</a>  <span class="kw">fn </span>invoke_fi(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
 <a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let </span>stack_frame_opt: <span class="prelude-ty">Option</span>&lt;Rc&lt;RefCell&lt;IfFrame&gt;&gt;&gt; = with_value(<span class="string">"if_stack"</span>, |stack_opt| {
-<a href=#399 id=399 data-nosnippet>399</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">ref </span>stack)) = stack_opt {
+<a href=#399 id=399 data-nosnippet>399</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) = stack_opt {
 <a href=#400 id=400 data-nosnippet>400</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::IfFrame(frame)) = stack.front() {
 <a href=#401 id=401 data-nosnippet>401</a>          <span class="prelude-val">Some</span>(Rc::clone(frame))
 <a href=#402 id=402 data-nosnippet>402</a>        } <span class="kw">else </span>{

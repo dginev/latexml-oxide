@@ -183,7 +183,7 @@
 <a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">let </span>new_lhs;
 <a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">let </span><span class="kw-2">mut </span>new_cmp = <span class="kw-2">*</span>cmp;
 <a href=#185 id=185 data-nosnippet>185</a>    <span class="kw">match </span>rhs {
-<a href=#186 id=186 data-nosnippet>186</a>      Literal(<span class="kw-2">ref </span>v) <span class="kw">if </span><span class="kw-2">*</span>v &gt; <span class="number">0 </span>=&gt; <span class="kw">match </span>lhs {
+<a href=#186 id=186 data-nosnippet>186</a>      Literal(v) <span class="kw">if </span><span class="kw-2">*</span>v &gt; <span class="number">0 </span>=&gt; <span class="kw">match </span>lhs {
 <a href=#187 id=187 data-nosnippet>187</a>        Literal(lv) =&gt; {
 <a href=#188 id=188 data-nosnippet>188</a>          new_lhs = Literal(lv - v);
 <a href=#189 id=189 data-nosnippet>189</a>          new_rhs = Literal(<span class="number">0</span>);

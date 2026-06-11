@@ -59,7 +59,7 @@
 <a href=#59 id=59 data-nosnippet>59</a>  // Sets: cached_width, cached_height, cached_depth, lpadding, rpadding (per cell) &amp; empty
 <a href=#60 id=60 data-nosnippet>60</a>  </span><span class="kw">for </span>row <span class="kw">in </span><span class="kw-2">&amp;mut </span>alignment.rows {
 <a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">for </span>cell <span class="kw">in </span>row.get_columns_mut() {
-<a href=#62 id=62 data-nosnippet>62</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>boxes) = <span class="kw-2">&amp;mut </span>cell.boxes {
+<a href=#62 id=62 data-nosnippet>62</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(boxes) = <span class="kw-2">&amp;mut </span>cell.boxes {
 <a href=#63 id=63 data-nosnippet>63</a>        <span class="kw">let </span>(w, <span class="kw-2">mut </span>h, <span class="kw-2">mut </span>d, cw, ch, cd) = boxes.get_size(<span class="prelude-val">Some</span>(<span class="macro">stored_map!</span>(
 <a href=#64 id=64 data-nosnippet>64</a>            <span class="string">"align" </span>=&gt; cell.align.as_ref().map(|a| a.char_code()), <span class="string">"width" </span>=&gt; cell.width,
 <a href=#65 id=65 data-nosnippet>65</a>            <span class="string">"vattach" </span>=&gt; cell.vattach.clone() )))<span class="question-mark">?</span>;
@@ -456,7 +456,7 @@
 <a href=#456 id=456 data-nosnippet>456</a>/// Rust doesn't populate lspaces from template, so we check tokens directly.
 <a href=#457 id=457 data-nosnippet>457</a></span><span class="kw">fn </span>cell_has_intercol(cell: <span class="kw-2">&amp;</span>Cell) -&gt; bool {
 <a href=#458 id=458 data-nosnippet>458</a>  <span class="kw">fn </span>has_intercol(tokens: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; bool {
-<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>toks) = tokens {
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(toks) = tokens {
 <a href=#460 id=460 data-nosnippet>460</a>      <span class="kw">for </span>tok <span class="kw">in </span>toks.unlist_ref() {
 <a href=#461 id=461 data-nosnippet>461</a>        <span class="kw">let </span>s = tok.to_string();
 <a href=#462 id=462 data-nosnippet>462</a>        <span class="kw">if </span>s == <span class="string">"\\lx@intercol" </span>|| s.contains(<span class="string">"intercol"</span>) {
@@ -640,9 +640,9 @@
 <a href=#640 id=640 data-nosnippet>640</a>  <span class="comment">// Uses cell's cached_width,cached_height,cached_depth
 <a href=#641 id=641 data-nosnippet>641</a>  // Computes net row &amp; column sizes &amp; positions
 <a href=#642 id=642 data-nosnippet>642</a>  </span><span class="kw">let </span>strut = <span class="kw">match </span>alignment.get_property(<span class="string">"strut"</span>).as_deref() {
-<a href=#643 id=643 data-nosnippet>643</a>    <span class="prelude-val">Some</span>(Stored::Dimension(<span class="kw-2">ref </span>d)) =&gt; <span class="kw-2">*</span>d,
-<a href=#644 id=644 data-nosnippet>644</a>    <span class="prelude-val">Some</span>(Stored::Glue(<span class="kw-2">ref </span>g)) =&gt; Dimension::new(g.value_of()),
-<a href=#645 id=645 data-nosnippet>645</a>    <span class="prelude-val">Some</span>(Stored::MuGlue(<span class="kw-2">ref </span>g)) =&gt; Dimension::new(g.value_of()),
+<a href=#643 id=643 data-nosnippet>643</a>    <span class="prelude-val">Some</span>(Stored::Dimension(d)) =&gt; <span class="kw-2">*</span>d,
+<a href=#644 id=644 data-nosnippet>644</a>    <span class="prelude-val">Some</span>(Stored::Glue(g)) =&gt; Dimension::new(g.value_of()),
+<a href=#645 id=645 data-nosnippet>645</a>    <span class="prelude-val">Some</span>(Stored::MuGlue(g)) =&gt; Dimension::new(g.value_of()),
 <a href=#646 id=646 data-nosnippet>646</a>    <span class="kw">_ </span>=&gt; Dimension::new(<span class="number">0</span>),
 <a href=#647 id=647 data-nosnippet>647</a>  };
 <a href=#648 id=648 data-nosnippet>648</a>  <span class="comment">// Perl: Glue-&gt;new($pts * 0.7) uses kround (adds 0.5 before int), not plain truncation
@@ -806,7 +806,7 @@
 <a href=#806 id=806 data-nosnippet>806</a>
 <a href=#807 id=807 data-nosnippet>807</a>        with_value_sym(<span class="macro">crate::pin!</span>(<span class="string">"font"</span>), |v_opt| {
 <a href=#808 id=808 data-nosnippet>808</a>          v_opt.and_then(|v| {
-<a href=#809 id=809 data-nosnippet>809</a>            <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>f) = v {
+<a href=#809 id=809 data-nosnippet>809</a>            <span class="kw">if let </span>Stored::Font(f) = v {
 <a href=#810 id=810 data-nosnippet>810</a>              f.get_size().map(|s| (s * UNITY <span class="kw">as </span>f64) <span class="kw">as </span>i64 / <span class="number">2</span>)
 <a href=#811 id=811 data-nosnippet>811</a>            } <span class="kw">else </span>{
 <a href=#812 id=812 data-nosnippet>812</a>              <span class="prelude-val">None

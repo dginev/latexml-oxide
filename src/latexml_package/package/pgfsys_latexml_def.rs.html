@@ -325,12 +325,12 @@
 <a href=#325 id=325 data-nosnippet>325</a>    <span class="string">"#alignment"</span>,
 <a href=#326 id=326 data-nosnippet>326</a>    bounded =&gt; <span class="bool-val">true</span>, leave_horizontal =&gt; <span class="bool-val">true</span>,
 <a href=#327 id=327 data-nosnippet>327</a>    sizer =&gt; sub[whatsit] {
-<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(alignment_d)) = whatsit.get_property(<span class="string">"alignment"</span>).as_deref() {
+<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">match </span>whatsit.get_property(<span class="string">"alignment"</span>).as_deref() { <span class="prelude-val">Some</span>(Stored::Digested(alignment_d)) =&gt; {
 <a href=#329 id=329 data-nosnippet>329</a>        <span class="kw">let </span>(w, h, d, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>) = alignment_d.clone().get_size(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#330 id=330 data-nosnippet>330</a>        <span class="prelude-val">Ok</span>((w, h, d))
-<a href=#331 id=331 data-nosnippet>331</a>      } <span class="kw">else </span>{
+<a href=#331 id=331 data-nosnippet>331</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#332 id=332 data-nosnippet>332</a>        <span class="prelude-val">Ok</span>((Dimension::default(), Dimension::default(), Dimension::default()))
-<a href=#333 id=333 data-nosnippet>333</a>      }
+<a href=#333 id=333 data-nosnippet>333</a>      }}
 <a href=#334 id=334 data-nosnippet>334</a>    },
 <a href=#335 id=335 data-nosnippet>335</a>    after_digest =&gt; sub[whatsit] {
 <a href=#336 id=336 data-nosnippet>336</a>      <span class="kw">use </span><span class="kw">crate</span>::engine::tex_tables::{
@@ -518,11 +518,11 @@
 <a href=#518 id=518 data-nosnippet>518</a>      <span class="kw">let </span>shift_str = shift_tokens.to_string();
 <a href=#519 id=519 data-nosnippet>519</a>      <span class="kw">let </span>shift_str = shift_str.trim();
 <a href=#520 id=520 data-nosnippet>520</a>      <span class="kw">let </span>base = <span class="kw">if </span>!shift_str.is_empty() &amp;&amp; shift_str != <span class="string">"0pt" </span>{
-<a href=#521 id=521 data-nosnippet>521</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(shift_dim) = Dimension::from_str(shift_str) {
+<a href=#521 id=521 data-nosnippet>521</a>        <span class="kw">match </span>Dimension::from_str(shift_str) { <span class="prelude-val">Ok</span>(shift_dim) =&gt; {
 <a href=#522 id=522 data-nosnippet>522</a>          <span class="comment">// Perl: $base = ($shift ? $miny-&gt;subtract(Dimension($shift))-&gt;pxValue : 0)
 <a href=#523 id=523 data-nosnippet>523</a>          </span><span class="kw">let </span>base_dim = Dimension::new(miny.value_of() - shift_dim.value_of());
 <a href=#524 id=524 data-nosnippet>524</a>          dim_to_px(base_dim)
-<a href=#525 id=525 data-nosnippet>525</a>        } <span class="kw">else </span>{ <span class="number">0.0 </span>}
+<a href=#525 id=525 data-nosnippet>525</a>        } <span class="kw">_ </span>=&gt; { <span class="number">0.0 </span>}}
 <a href=#526 id=526 data-nosnippet>526</a>      } <span class="kw">else </span>{ <span class="number">0.0 </span>};
 <a href=#527 id=527 data-nosnippet>527</a>
 <a href=#528 id=528 data-nosnippet>528</a>      whatsit.set_property(<span class="string">"minx"</span>, Stored::Float(Float::new_f64(<span class="number">0.0</span>)));
@@ -875,7 +875,7 @@
 <a href=#875 id=875 data-nosnippet>875</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs = <span class="macro">string_map!</span>(<span class="string">"_autoclose" </span>=&gt; <span class="string">"1"</span>.to_string());
 <a href=#876 id=876 data-nosnippet>876</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(kv_arg)) = args.first() {
 <a href=#877 id=877 data-nosnippet>877</a>        <span class="comment">// Perl: $doc-&gt;openElement('svg:g', $kv-&gt;getHash, _autoclose =&gt; 1);
-<a href=#878 id=878 data-nosnippet>878</a>        </span><span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kv) = kv_arg.data() {
+<a href=#878 id=878 data-nosnippet>878</a>        </span><span class="kw">if let </span>DigestedData::KeyVals(kv) = kv_arg.data() {
 <a href=#879 id=879 data-nosnippet>879</a>          <span class="kw">let </span>hash = kv.get_hash();
 <a href=#880 id=880 data-nosnippet>880</a>          <span class="kw">for </span>(k, v) <span class="kw">in </span>hash {
 <a href=#881 id=881 data-nosnippet>881</a>            attrs.insert(k, v);
@@ -1576,9 +1576,9 @@
 <a href=#1576 id=1576 data-nosnippet>1576</a>    <span class="kw">let </span>name = args.first().map(|a| a.to_string()).unwrap_or_default();
 <a href=#1577 id=1577 data-nosnippet>1577</a>    <span class="kw">let </span>flag: i64 = args.get(<span class="number">1</span>).map(|a| a.value_of()).unwrap_or(<span class="number">0</span>);
 <a href=#1578 id=1578 data-nosnippet>1578</a>    <span class="comment">// Collect digested stops from state
-<a href=#1579 id=1579 data-nosnippet>1579</a>    </span><span class="kw">let </span>stops: Vec&lt;Digested&gt; = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(vd)) = state::lookup_value(<span class="string">"pgf_sh_stops"</span>) {
+<a href=#1579 id=1579 data-nosnippet>1579</a>    </span><span class="kw">let </span>stops: Vec&lt;Digested&gt; = <span class="kw">match </span>state::lookup_value(<span class="string">"pgf_sh_stops"</span>) { <span class="prelude-val">Some</span>(Stored::VecDequeStored(vd)) =&gt; {
 <a href=#1580 id=1580 data-nosnippet>1580</a>      vd.into_iter().filter_map(|s| <span class="kw">if let </span>Stored::Digested(d) = s { <span class="prelude-val">Some</span>(d) } <span class="kw">else </span>{ <span class="prelude-val">None </span>}).collect()
-<a href=#1581 id=1581 data-nosnippet>1581</a>    } <span class="kw">else </span>{ <span class="macro">vec!</span>[] };
+<a href=#1581 id=1581 data-nosnippet>1581</a>    } <span class="kw">_ </span>=&gt; { <span class="macro">vec!</span>[] }};
 <a href=#1582 id=1582 data-nosnippet>1582</a>    state::assign_value(<span class="string">"pgf_sh_stops"</span>, Stored::VecDequeStored(VecDeque::new()), Scope::Global);
 <a href=#1583 id=1583 data-nosnippet>1583</a>    <span class="kw">let </span>x = dim_to_px(read_dim_register(<span class="string">"\\pgf@x"</span>));
 <a href=#1584 id=1584 data-nosnippet>1584</a>    <span class="kw">let </span>y = dim_to_px(read_dim_register(<span class="string">"\\pgf@y"</span>));
@@ -1641,9 +1641,9 @@
 <a href=#1641 id=1641 data-nosnippet>1641</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lxSVG@sh@defcircles{}"</span>, sub[args] {
 <a href=#1642 id=1642 data-nosnippet>1642</a>    <span class="kw">let </span>name = args.first().map(|a| a.to_string().trim().to_string()).unwrap_or_default();
 <a href=#1643 id=1643 data-nosnippet>1643</a>    <span class="comment">// Collect digested stops from state
-<a href=#1644 id=1644 data-nosnippet>1644</a>    </span><span class="kw">let </span>stops: Vec&lt;Digested&gt; = <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(vd)) = state::lookup_value(<span class="string">"pgf_sh_stops"</span>) {
+<a href=#1644 id=1644 data-nosnippet>1644</a>    </span><span class="kw">let </span>stops: Vec&lt;Digested&gt; = <span class="kw">match </span>state::lookup_value(<span class="string">"pgf_sh_stops"</span>) { <span class="prelude-val">Some</span>(Stored::VecDequeStored(vd)) =&gt; {
 <a href=#1645 id=1645 data-nosnippet>1645</a>      vd.into_iter().filter_map(|s| <span class="kw">if let </span>Stored::Digested(d) = s { <span class="prelude-val">Some</span>(d) } <span class="kw">else </span>{ <span class="prelude-val">None </span>}).collect()
-<a href=#1646 id=1646 data-nosnippet>1646</a>    } <span class="kw">else </span>{ <span class="macro">vec!</span>[] };
+<a href=#1646 id=1646 data-nosnippet>1646</a>    } <span class="kw">_ </span>=&gt; { <span class="macro">vec!</span>[] }};
 <a href=#1647 id=1647 data-nosnippet>1647</a>    state::assign_value(<span class="string">"pgf_sh_stops"</span>, Stored::VecDequeStored(VecDeque::new()), Scope::Global);
 <a href=#1648 id=1648 data-nosnippet>1648</a>    <span class="comment">// Perl: Dimension(ToString(Expand(T_CS('\pgf@sys@shading@end@pos'))))-&gt;pxValue
 <a href=#1649 id=1649 data-nosnippet>1649</a>    </span><span class="kw">let </span>endpos_tokens = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\pgf@sys@shading@end@pos"</span>))<span class="question-mark">?</span>;

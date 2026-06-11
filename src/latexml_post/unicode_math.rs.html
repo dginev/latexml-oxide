@@ -287,11 +287,11 @@
 <a href=#287 id=287 data-nosnippet>287</a>    },
 <a href=#288 id=288 data-nosnippet>288</a>    <span class="string">"ltx:XMText" </span>=&gt; unimath_text(node),
 <a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"ltx:XMRef" </span>=&gt; {
-<a href=#290 id=290 data-nosnippet>290</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(target) = realize(doc, node) {
+<a href=#290 id=290 data-nosnippet>290</a>      <span class="kw">match </span>realize(doc, node) { <span class="prelude-val">Some</span>(target) =&gt; {
 <a href=#291 id=291 data-nosnippet>291</a>        unimath_internal(doc, <span class="kw-2">&amp;</span>target)
-<a href=#292 id=292 data-nosnippet>292</a>      } <span class="kw">else </span>{
+<a href=#292 id=292 data-nosnippet>292</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#293 id=293 data-nosnippet>293</a>        unimath_error(<span class="string">"Unresolved XMRef"</span>)
-<a href=#294 id=294 data-nosnippet>294</a>      }
+<a href=#294 id=294 data-nosnippet>294</a>      }}
 <a href=#295 id=295 data-nosnippet>295</a>    },
 <a href=#296 id=296 data-nosnippet>296</a>    <span class="string">"ltx:ERROR" </span>=&gt; unimath_error(<span class="kw-2">&amp;</span>node.get_content()),
 <a href=#297 id=297 data-nosnippet>297</a>    <span class="kw">_ </span>=&gt; unimath_text(node),

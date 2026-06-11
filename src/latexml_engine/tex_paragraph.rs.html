@@ -174,12 +174,12 @@
 <a href=#174 id=174 data-nosnippet>174</a>          </span>{ state::assign_value(<span class="string">"next_para_class"</span>, <span class="string">"ltx_noindent"</span>, <span class="prelude-val">None</span>); }
 <a href=#175 id=175 data-nosnippet>175</a>        }
 <a href=#176 id=176 data-nosnippet>176</a>        <span class="comment">// Vertical adjustments
-<a href=#177 id=177 data-nosnippet>177</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Tokens(vadj)) = { state::remove_value(<span class="string">"vAdjust"</span>) } {
+<a href=#177 id=177 data-nosnippet>177</a>        </span><span class="kw">match </span>{ state::remove_value(<span class="string">"vAdjust"</span>) } { <span class="prelude-val">Some</span>(Stored::Tokens(vadj)) =&gt; {
 <a href=#178 id=178 data-nosnippet>178</a>          state::assign_value(<span class="string">"vAdjust"</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#179 id=179 data-nosnippet>179</a>          <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[ <span class="macro">Digest!</span>(vadj)<span class="question-mark">? </span>])
-<a href=#180 id=180 data-nosnippet>180</a>        } <span class="kw">else </span>{
+<a href=#180 id=180 data-nosnippet>180</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#181 id=181 data-nosnippet>181</a>          <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#182 id=182 data-nosnippet>182</a>        }
+<a href=#182 id=182 data-nosnippet>182</a>        }}
 <a href=#183 id=183 data-nosnippet>183</a>      }
 <a href=#184 id=184 data-nosnippet>184</a>    },
 <a href=#185 id=185 data-nosnippet>185</a>    properties =&gt; skippable_props,

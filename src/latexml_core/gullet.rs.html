@@ -1130,11 +1130,11 @@
 <a href=#1130 id=1130 data-nosnippet>1130</a>          // SHOULD count nesting of { }!!! when SCANNED (not digested)
 <a href=#1131 id=1131 data-nosnippet>1131</a>          </span><span class="kw">if </span>has_reading_alignment() &amp;&amp; align_group_count() == <span class="number">0 </span>{
 <a href=#1132 id=1132 data-nosnippet>1132</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>((_atoken, atype, ahidden)) = is_column_end(<span class="kw-2">&amp;</span>token) {
-<a href=#1133 id=1133 data-nosnippet>1133</a>              <span class="kw">if let </span>DigestedData::Alignment(data) = get_reading_alignment().unwrap().data() {
+<a href=#1133 id=1133 data-nosnippet>1133</a>              <span class="kw">match </span>get_reading_alignment().unwrap().data() { DigestedData::Alignment(data) =&gt; {
 <a href=#1134 id=1134 data-nosnippet>1134</a>                handle_template(data.borrow_mut(), token, atype, ahidden)<span class="question-mark">?</span>;
-<a href=#1135 id=1135 data-nosnippet>1135</a>              } <span class="kw">else </span>{
+<a href=#1135 id=1135 data-nosnippet>1135</a>              } <span class="kw">_ </span>=&gt; {
 <a href=#1136 id=1136 data-nosnippet>1136</a>                <span class="macro">panic!</span>(<span class="string">"malformed alignmed was stored?"</span>);
-<a href=#1137 id=1137 data-nosnippet>1137</a>              }
+<a href=#1137 id=1137 data-nosnippet>1137</a>              }}
 <a href=#1138 id=1138 data-nosnippet>1138</a>              <span class="kw">continue</span>;
 <a href=#1139 id=1139 data-nosnippet>1139</a>            }
 <a href=#1140 id=1140 data-nosnippet>1140</a>          }
@@ -1556,7 +1556,7 @@
 <a href=#1556 id=1556 data-nosnippet>1556</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = standalone {
 <a href=#1557 id=1557 data-nosnippet>1557</a>            c.with_str(|s| cs.push_str(s));
 <a href=#1558 id=1558 data-nosnippet>1558</a>          }
-<a href=#1559 id=1559 data-nosnippet>1559</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(Stored::Token(letted)) = <span class="kw">crate</span>::state::lookup_meaning(<span class="kw-2">&amp;</span>token) {
+<a href=#1559 id=1559 data-nosnippet>1559</a>        } <span class="kw">else </span>{ <span class="kw">match </span><span class="kw">crate</span>::state::lookup_meaning(<span class="kw-2">&amp;</span>token) { <span class="prelude-val">Some</span>(Stored::Token(letted)) =&gt; {
 <a href=#1560 id=1560 data-nosnippet>1560</a>          <span class="comment">// CS is \let-equivalent to a single token. If that token is
 <a href=#1561 id=1561 data-nosnippet>1561</a>          // a character (LETTER/OTHER/SPACE), append its string repr
 <a href=#1562 id=1562 data-nosnippet>1562</a>          // to the constructed csname — mirrors real TeX's behaviour
@@ -1581,7 +1581,7 @@
 <a href=#1581 id=1581 data-nosnippet>1581</a>            );
 <a href=#1582 id=1582 data-nosnippet>1582</a>            <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, token, message);
 <a href=#1583 id=1583 data-nosnippet>1583</a>          }
-<a href=#1584 id=1584 data-nosnippet>1584</a>        } <span class="kw">else if </span>!quiet {
+<a href=#1584 id=1584 data-nosnippet>1584</a>        } <span class="kw">_ </span>=&gt; <span class="kw">if </span>!quiet {
 <a href=#1585 id=1585 data-nosnippet>1585</a>          <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>.is_some() {
 <a href=#1586 id=1586 data-nosnippet>1586</a>            <span class="kw">let </span>message = <span class="macro">s!</span>(
 <a href=#1587 id=1587 data-nosnippet>1587</a>              <span class="string">"The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})"</span>,
@@ -1593,7 +1593,7 @@
 <a href=#1593 id=1593 data-nosnippet>1593</a>            <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {:?} is not defined"</span>, token);
 <a href=#1594 id=1594 data-nosnippet>1594</a>            <span class="macro">Error!</span>(<span class="string">"undefined"</span>, token, message);
 <a href=#1595 id=1595 data-nosnippet>1595</a>          }
-<a href=#1596 id=1596 data-nosnippet>1596</a>        }
+<a href=#1596 id=1596 data-nosnippet>1596</a>        }}}
 <a href=#1597 id=1597 data-nosnippet>1597</a>        <span class="comment">// In quiet mode (ifcsname), just skip the CS token
 <a href=#1598 id=1598 data-nosnippet>1598</a>      </span>},
 <a href=#1599 id=1599 data-nosnippet>1599</a>      Catcode::SPACE =&gt; cs.push(<span class="string">' '</span>), <span class="comment">// Keep newlines from having \n!
@@ -1821,7 +1821,7 @@
 <a href=#1821 id=1821 data-nosnippet>1821</a>    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
 <a href=#1822 id=1822 data-nosnippet>1822</a>    <span class="prelude-val">Some</span>(token) =&gt; {
 <a href=#1823 id=1823 data-nosnippet>1823</a>      <span class="kw">let </span>_is_fontdimen = token.with_str(|s| s == <span class="string">"\\fontdimen"</span>);
-<a href=#1824 id=1824 data-nosnippet>1824</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_register_definition(<span class="kw-2">&amp;</span>token) {
+<a href=#1824 id=1824 data-nosnippet>1824</a>      <span class="kw">match </span>lookup_register_definition(<span class="kw-2">&amp;</span>token) { <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#1825 id=1825 data-nosnippet>1825</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>register_type) = defn.register_type() {
 <a href=#1826 id=1826 data-nosnippet>1826</a>          <span class="kw">if </span>register_type == RegisterType::CharDef {
 <a href=#1827 id=1827 data-nosnippet>1827</a>            <span class="comment">// CharDefs treated as numbers here
@@ -1846,10 +1846,10 @@
 <a href=#1846 id=1846 data-nosnippet>1846</a>          unread_one(token); <span class="comment">// Unread
 <a href=#1847 id=1847 data-nosnippet>1847</a>          </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
 <a href=#1848 id=1848 data-nosnippet>1848</a>        }
-<a href=#1849 id=1849 data-nosnippet>1849</a>      } <span class="kw">else </span>{
+<a href=#1849 id=1849 data-nosnippet>1849</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#1850 id=1850 data-nosnippet>1850</a>        unread_one(token); <span class="comment">// Unread
 <a href=#1851 id=1851 data-nosnippet>1851</a>        </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#1852 id=1852 data-nosnippet>1852</a>      }
+<a href=#1852 id=1852 data-nosnippet>1852</a>      }}
 <a href=#1853 id=1853 data-nosnippet>1853</a>    },
 <a href=#1854 id=1854 data-nosnippet>1854</a>  }
 <a href=#1855 id=1855 data-nosnippet>1855</a>}
@@ -2358,7 +2358,7 @@
 <a href=#2358 id=2358 data-nosnippet>2358</a>      <span class="comment">// Perl: $$token[1] == CC_BEGIN — direct catcode check
 <a href=#2359 id=2359 data-nosnippet>2359</a>      </span><span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
 <a href=#2360 id=2360 data-nosnippet>2360</a>        <span class="prelude-val">Ok</span>(read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>)
-<a href=#2361 id=2361 data-nosnippet>2361</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_register_definition(<span class="kw-2">&amp;</span>token) {
+<a href=#2361 id=2361 data-nosnippet>2361</a>      } <span class="kw">else </span>{ <span class="kw">match </span>lookup_register_definition(<span class="kw-2">&amp;</span>token) { <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#2362 id=2362 data-nosnippet>2362</a>        <span class="kw">match </span>defn.register_type() {
 <a href=#2363 id=2363 data-nosnippet>2363</a>          <span class="prelude-val">Some</span>(RegisterType::Tokens) | <span class="prelude-val">Some</span>(RegisterType::Token) =&gt; {
 <a href=#2364 id=2364 data-nosnippet>2364</a>            <span class="comment">// TODO: The mismatch between Vec&lt;Tokens&gt; for read_arguments and Vec&lt;Token&gt; for
@@ -2372,7 +2372,7 @@
 <a href=#2372 id=2372 data-nosnippet>2372</a>          },
 <a href=#2373 id=2373 data-nosnippet>2373</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token)),
 <a href=#2374 id=2374 data-nosnippet>2374</a>        }
-<a href=#2375 id=2375 data-nosnippet>2375</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+<a href=#2375 id=2375 data-nosnippet>2375</a>      } <span class="kw">_ </span>=&gt; { <span class="kw">match </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#2376 id=2376 data-nosnippet>2376</a>        <span class="comment">// TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
 <a href=#2377 id=2377 data-nosnippet>2377</a>        // way to circumvent? Is it slow in the first place?
 <a href=#2378 id=2378 data-nosnippet>2378</a>        </span><span class="kw">if </span>defn.is_expandable() {
@@ -2384,9 +2384,9 @@
 <a href=#2384 id=2384 data-nosnippet>2384</a>        } <span class="kw">else </span>{
 <a href=#2385 id=2385 data-nosnippet>2385</a>          <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token))
 <a href=#2386 id=2386 data-nosnippet>2386</a>        }
-<a href=#2387 id=2387 data-nosnippet>2387</a>      } <span class="kw">else </span>{
+<a href=#2387 id=2387 data-nosnippet>2387</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#2388 id=2388 data-nosnippet>2388</a>        <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(token))
-<a href=#2389 id=2389 data-nosnippet>2389</a>      }
+<a href=#2389 id=2389 data-nosnippet>2389</a>      }}}}}
 <a href=#2390 id=2390 data-nosnippet>2390</a>    },
 <a href=#2391 id=2391 data-nosnippet>2391</a>  }
 <a href=#2392 id=2392 data-nosnippet>2392</a>}

@@ -372,7 +372,7 @@
 <a href=#372 id=372 data-nosnippet>372</a></span><span class="kw">fn </span>rhai_map_to_props(map: Map) -&gt; SymHashMap&lt;Stored&gt; {
 <a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">let </span><span class="kw-2">mut </span>props: SymHashMap&lt;Stored&gt; = SymHashMap::default();
 <a href=#374 id=374 data-nosnippet>374</a>  <span class="kw">for </span>(k, v) <span class="kw">in </span>map {
-<a href=#375 id=375 data-nosnippet>375</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(d) = v.clone().try_cast::&lt;Digested&gt;() {
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="kw">match </span>v.clone().try_cast::&lt;Digested&gt;() { <span class="prelude-val">Some</span>(d) =&gt; {
 <a href=#376 id=376 data-nosnippet>376</a>      <span class="kw">if </span>k.as_str() == <span class="string">"font" </span>{
 <a href=#377 id=377 data-nosnippet>377</a>        <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(f)) = d.get_font() {
 <a href=#378 id=378 data-nosnippet>378</a>          props.insert(<span class="string">"font"</span>, Stored::Font(Rc::new(f.into_owned())));
@@ -380,9 +380,9 @@
 <a href=#380 id=380 data-nosnippet>380</a>        }
 <a href=#381 id=381 data-nosnippet>381</a>      }
 <a href=#382 id=382 data-nosnippet>382</a>      props.insert(k.as_str(), Stored::Digested(d));
-<a href=#383 id=383 data-nosnippet>383</a>    } <span class="kw">else </span>{
+<a href=#383 id=383 data-nosnippet>383</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#384 id=384 data-nosnippet>384</a>      props.insert(k.as_str(), dynamic_to_string(v).into());
-<a href=#385 id=385 data-nosnippet>385</a>    }
+<a href=#385 id=385 data-nosnippet>385</a>    }}
 <a href=#386 id=386 data-nosnippet>386</a>  }
 <a href=#387 id=387 data-nosnippet>387</a>  props
 <a href=#388 id=388 data-nosnippet>388</a>}

@@ -168,7 +168,7 @@
 <a href=#168 id=168 data-nosnippet>168</a>      <span class="comment">// And copy any otherwise undefined properties from the trailer
 <a href=#169 id=169 data-nosnippet>169</a>      // Perl: copies properties from trailer (typically a Whatsit for \end{...})
 <a href=#170 id=170 data-nosnippet>170</a>      </span><span class="kw">match </span>digested.data() {
-<a href=#171 id=171 data-nosnippet>171</a>        DigestedData::Whatsit(<span class="kw-2">ref </span>trailer) =&gt; {
+<a href=#171 id=171 data-nosnippet>171</a>        DigestedData::Whatsit(trailer) =&gt; {
 <a href=#172 id=172 data-nosnippet>172</a>          <span class="kw">let </span>trailer_val = trailer.borrow();
 <a href=#173 id=173 data-nosnippet>173</a>          <span class="kw">let </span>props = trailer_val.get_properties();
 <a href=#174 id=174 data-nosnippet>174</a>          <span class="kw">for </span>(prop, value) <span class="kw">in </span>props {
@@ -178,7 +178,7 @@
 <a href=#178 id=178 data-nosnippet>178</a>              .or_insert_with(|| value.clone());
 <a href=#179 id=179 data-nosnippet>179</a>          }
 <a href=#180 id=180 data-nosnippet>180</a>        },
-<a href=#181 id=181 data-nosnippet>181</a>        DigestedData::TBox(<span class="kw-2">ref </span>tbox) =&gt; {
+<a href=#181 id=181 data-nosnippet>181</a>        DigestedData::TBox(tbox) =&gt; {
 <a href=#182 id=182 data-nosnippet>182</a>          <span class="kw">let </span>tbox_val = tbox.borrow();
 <a href=#183 id=183 data-nosnippet>183</a>          <span class="kw">let </span>props = tbox_val.get_properties();
 <a href=#184 id=184 data-nosnippet>184</a>          <span class="kw">for </span>(prop, value) <span class="kw">in </span>props {
@@ -188,7 +188,7 @@
 <a href=#188 id=188 data-nosnippet>188</a>              .or_insert_with(|| value.clone());
 <a href=#189 id=189 data-nosnippet>189</a>          }
 <a href=#190 id=190 data-nosnippet>190</a>        },
-<a href=#191 id=191 data-nosnippet>191</a>        DigestedData::List(<span class="kw-2">ref </span>list) =&gt; {
+<a href=#191 id=191 data-nosnippet>191</a>        DigestedData::List(list) =&gt; {
 <a href=#192 id=192 data-nosnippet>192</a>          <span class="kw">let </span>list_val = list.borrow();
 <a href=#193 id=193 data-nosnippet>193</a>          <span class="kw">let </span>props = list_val.get_properties();
 <a href=#194 id=194 data-nosnippet>194</a>          <span class="kw">for </span>(prop, value) <span class="kw">in </span>props {
@@ -422,8 +422,8 @@
 <a href=#422 id=422 data-nosnippet>422</a>    <span class="kw">match </span><span class="self">self</span>.properties.get(<span class="string">"font"</span>) {
 <a href=#423 id=423 data-nosnippet>423</a>      <span class="prelude-val">Some</span>(Stored::Font(font)) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned((<span class="kw-2">**</span>font).clone()))),
 <a href=#424 id=424 data-nosnippet>424</a>      <span class="prelude-val">Some</span>(Stored::FontDirective(fd)) =&gt; <span class="kw">match </span>fd {
-<a href=#425 id=425 data-nosnippet>425</a>        FontDirective::Closure(<span class="kw-2">ref </span>code) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>))),
-<a href=#426 id=426 data-nosnippet>426</a>        FontDirective::Asset(<span class="kw-2">ref </span>asset) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(asset))),
+<a href=#425 id=425 data-nosnippet>425</a>        FontDirective::Closure(code) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Owned(code(<span class="prelude-val">Some</span>(<span class="self">self</span>))<span class="question-mark">?</span>))),
+<a href=#426 id=426 data-nosnippet>426</a>        FontDirective::Asset(asset) =&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(asset))),
 <a href=#427 id=427 data-nosnippet>427</a>      },
 <a href=#428 id=428 data-nosnippet>428</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
 <a href=#429 id=429 data-nosnippet>429</a>    }
@@ -436,9 +436,9 @@
 <a href=#436 id=436 data-nosnippet>436</a>    <span class="kw-2">mut </span>options: HashMap&lt;Stored&gt;,
 <a href=#437 id=437 data-nosnippet>437</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
 <a href=#438 id=438 data-nosnippet>438</a>    <span class="kw">let </span>defn = <span class="self">self</span>.get_definition();
-<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sizer) = defn.get_sizer() {
+<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">match </span>defn.get_sizer() { <span class="prelude-val">Some</span>(sizer) =&gt; {
 <a href=#440 id=440 data-nosnippet>440</a>      sizer(<span class="self">self</span>)
-<a href=#441 id=441 data-nosnippet>441</a>    } <span class="kw">else if </span><span class="self">self</span>.has_property(<span class="string">"cached_width"</span>) || <span class="self">self</span>.has_property(<span class="string">"cached_height"</span>) {
+<a href=#441 id=441 data-nosnippet>441</a>    } <span class="kw">_ </span>=&gt; <span class="kw">if </span><span class="self">self</span>.has_property(<span class="string">"cached_width"</span>) || <span class="self">self</span>.has_property(<span class="string">"cached_height"</span>) {
 <a href=#442 id=442 data-nosnippet>442</a>      <span class="comment">// Perl: when after_digest sets cached dimensions (e.g. image_graphicx_sizer),
 <a href=#443 id=443 data-nosnippet>443</a>      // compute_size should return them instead of falling through to body/args sum.
 <a href=#444 id=444 data-nosnippet>444</a>      </span><span class="kw">let </span>w = <span class="kw">match </span><span class="self">self</span>.get_property(<span class="string">"cached_width"</span>).as_deref() {
@@ -480,13 +480,13 @@
 <a href=#480 id=480 data-nosnippet>480</a>          boxes.extend(arg.unlist());
 <a href=#481 id=481 data-nosnippet>481</a>        }
 <a href=#482 id=482 data-nosnippet>482</a>      }
-<a href=#483 id=483 data-nosnippet>483</a>      <span class="kw">let </span>font = <span class="kw">if let </span>Stored::Font(<span class="kw-2">ref </span>sf) = <span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">"font"</span>).unwrap() {
+<a href=#483 id=483 data-nosnippet>483</a>      <span class="kw">let </span>font = <span class="kw">match </span><span class="kw-2">*</span><span class="self">self</span>.get_property(<span class="string">"font"</span>).unwrap() { Stored::Font(<span class="kw-2">ref </span>sf) =&gt; {
 <a href=#484 id=484 data-nosnippet>484</a>        sf.clone()
-<a href=#485 id=485 data-nosnippet>485</a>      } <span class="kw">else </span>{
+<a href=#485 id=485 data-nosnippet>485</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#486 id=486 data-nosnippet>486</a>        lookup_font().unwrap()
-<a href=#487 id=487 data-nosnippet>487</a>      };
+<a href=#487 id=487 data-nosnippet>487</a>      }};
 <a href=#488 id=488 data-nosnippet>488</a>      font.compute_boxes_size(<span class="kw-2">&amp;</span>boxes, options)
-<a href=#489 id=489 data-nosnippet>489</a>    }
+<a href=#489 id=489 data-nosnippet>489</a>    }}
 <a href=#490 id=490 data-nosnippet>490</a>  }
 <a href=#491 id=491 data-nosnippet>491</a>}
 <a href=#492 id=492 data-nosnippet>492</a>

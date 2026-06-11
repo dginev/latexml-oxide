@@ -283,15 +283,15 @@
 <a href=#283 id=283 data-nosnippet>283</a>  <span class="kw">fn </span>get_font(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Cow&lt;<span class="lifetime">'_</span>, Font&gt;&gt;&gt; { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Cow::Borrowed(<span class="kw-2">&amp;</span><span class="self">self</span>.font))) }
 <a href=#284 id=284 data-nosnippet>284</a>
 <a href=#285 id=285 data-nosnippet>285</a>  <span class="kw">fn </span>compute_size(<span class="kw-2">&amp;</span><span class="self">self</span>, options: HashMap&lt;Stored&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(Dimension, Dimension, Dimension)&gt; {
-<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(body_stored) = <span class="self">self</span>.get_property(<span class="string">"body"</span>) {
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">match </span><span class="self">self</span>.get_property(<span class="string">"body"</span>) { <span class="prelude-val">Some</span>(body_stored) =&gt; {
 <a href=#287 id=287 data-nosnippet>287</a>      <span class="kw">if let </span>Stored::Digested(<span class="kw-2">ref </span>body) = <span class="kw-2">*</span>body_stored {
 <a href=#288 id=288 data-nosnippet>288</a>        body.compute_size(options)
 <a href=#289 id=289 data-nosnippet>289</a>      } <span class="kw">else </span>{
 <a href=#290 id=290 data-nosnippet>290</a>        <span class="macro">panic!</span>(<span class="string">"the stored 'body' property should always be a Stored::Digested enum case."</span>);
 <a href=#291 id=291 data-nosnippet>291</a>      }
-<a href=#292 id=292 data-nosnippet>292</a>    } <span class="kw">else </span>{
+<a href=#292 id=292 data-nosnippet>292</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#293 id=293 data-nosnippet>293</a>      <span class="prelude-val">Ok</span>(<span class="self">self</span>.font.compute_string_size(<span class="kw-2">&amp;</span><span class="self">self</span>.get_string()<span class="question-mark">?</span>, options))
-<a href=#294 id=294 data-nosnippet>294</a>    }
+<a href=#294 id=294 data-nosnippet>294</a>    }}
 <a href=#295 id=295 data-nosnippet>295</a>  }
 <a href=#296 id=296 data-nosnippet>296</a>}
 <a href=#297 id=297 data-nosnippet>297</a>

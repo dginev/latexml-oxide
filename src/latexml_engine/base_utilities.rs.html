@@ -938,11 +938,11 @@
 <a href=#938 id=938 data-nosnippet>938</a>    }
 <a href=#939 id=939 data-nosnippet>939</a>    <span class="kw">let </span>wrapper = <span class="kw">if let </span><span class="prelude-val">Some</span>(point) = point {
 <a href=#940 id=940 data-nosnippet>940</a>      <span class="prelude-val">Some</span>(document.insert_element_before(<span class="kw-2">&amp;</span>point, <span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>)
-<a href=#941 id=941 data-nosnippet>941</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>document_element) = document.get_document().get_root_element() {
+<a href=#941 id=941 data-nosnippet>941</a>    } <span class="kw">else </span>{ <span class="kw">match </span>document.get_document().get_root_element() { <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>document_element) =&gt; {
 <a href=#942 id=942 data-nosnippet>942</a>      <span class="prelude-val">Some</span>(document.open_element_at(<span class="kw-2">&amp;mut </span>document_element, <span class="string">"ltx:_Capture_"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>)
-<a href=#943 id=943 data-nosnippet>943</a>    } <span class="kw">else </span>{
+<a href=#943 id=943 data-nosnippet>943</a>    } <span class="kw">_ </span>=&gt; {
 <a href=#944 id=944 data-nosnippet>944</a>      <span class="prelude-val">None
-<a href=#945 id=945 data-nosnippet>945</a>    </span>};
+<a href=#945 id=945 data-nosnippet>945</a>    </span>}}};
 <a href=#946 id=946 data-nosnippet>946</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(wrapper) = wrapper {
 <a href=#947 id=947 data-nosnippet>947</a>      document.set_node(<span class="kw-2">&amp;</span>wrapper);
 <a href=#948 id=948 data-nosnippet>948</a>      insert_frontmatter(document)<span class="question-mark">?</span>;
@@ -1301,11 +1301,11 @@
 <a href=#1301 id=1301 data-nosnippet>1301</a>    },
 <a href=#1302 id=1302 data-nosnippet>1302</a>    DigestedData::Whatsit(w) =&gt; {
 <a href=#1303 id=1303 data-nosnippet>1303</a>      <span class="kw">let </span>w = w.borrow();
-<a href=#1304 id=1304 data-nosnippet>1304</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Dimension(width)) = w.get_property(<span class="string">"width"</span>).as_deref() {
+<a href=#1304 id=1304 data-nosnippet>1304</a>      <span class="kw">match </span>w.get_property(<span class="string">"width"</span>).as_deref() { <span class="prelude-val">Some</span>(Stored::Dimension(width)) =&gt; {
 <a href=#1305 id=1305 data-nosnippet>1305</a>        out.push_str(<span class="kw-2">&amp;</span><span class="kw">super</span>::tex_glue::dimension_to_spaces(<span class="kw-2">*</span>width));
-<a href=#1306 id=1306 data-nosnippet>1306</a>      } <span class="kw">else </span>{
+<a href=#1306 id=1306 data-nosnippet>1306</a>      } <span class="kw">_ </span>=&gt; {
 <a href=#1307 id=1307 data-nosnippet>1307</a>        out.push_str(<span class="kw-2">&amp;</span>w.get_string()<span class="question-mark">?</span>);
-<a href=#1308 id=1308 data-nosnippet>1308</a>      }
+<a href=#1308 id=1308 data-nosnippet>1308</a>      }}
 <a href=#1309 id=1309 data-nosnippet>1309</a>    },
 <a href=#1310 id=1310 data-nosnippet>1310</a>    <span class="kw">_ </span>=&gt; out.push_str(<span class="kw-2">&amp;</span>d.to_string()),
 <a href=#1311 id=1311 data-nosnippet>1311</a>  }
@@ -2053,8 +2053,8 @@
 <a href=#2053 id=2053 data-nosnippet>2053</a></span><span class="kw">pub fn </span>classify_box(boxnum: Number) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt; {
 <a href=#2054 id=2054 data-nosnippet>2054</a>  with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"box{}"</span>, boxnum.value_of()), |val_opt| {
 <a href=#2055 id=2055 data-nosnippet>2055</a>    <span class="prelude-val">Ok</span>(<span class="kw">match </span>val_opt {
-<a href=#2056 id=2056 data-nosnippet>2056</a>      <span class="prelude-val">Some</span>(Stored::Digested(<span class="kw-2">ref </span>d)) =&gt; <span class="kw">match </span>d.data() {
-<a href=#2057 id=2057 data-nosnippet>2057</a>        DigestedData::Whatsit(<span class="kw-2">ref </span>w)
+<a href=#2056 id=2056 data-nosnippet>2056</a>      <span class="prelude-val">Some</span>(Stored::Digested(d)) =&gt; <span class="kw">match </span>d.data() {
+<a href=#2057 id=2057 data-nosnippet>2057</a>        DigestedData::Whatsit(w)
 <a href=#2058 id=2058 data-nosnippet>2058</a>          <span class="kw">if </span>w.borrow().definition == lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\vbox"</span>))<span class="question-mark">?</span>.unwrap() =&gt;
 <a href=#2059 id=2059 data-nosnippet>2059</a>        {
 <a href=#2060 id=2060 data-nosnippet>2060</a>          <span class="string">"vbox"
@@ -2349,7 +2349,7 @@
 <a href=#2349 id=2349 data-nosnippet>2349</a><span class="doccomment">/// Perl: revertSpec($whatsit, $keyword)
 <a href=#2350 id=2350 data-nosnippet>2350</a>/// If whatsit has property $keyword, return Explode($keyword) ++ Revert($value)
 <a href=#2351 id=2351 data-nosnippet>2351</a></span><span class="kw">pub fn </span>revert_spec(whatsit: <span class="kw-2">&amp;</span>Whatsit, keyword: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;Token&gt; {
-<a href=#2352 id=2352 data-nosnippet>2352</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = whatsit.get_property(keyword) {
+<a href=#2352 id=2352 data-nosnippet>2352</a>  <span class="kw">match </span>whatsit.get_property(keyword) { <span class="prelude-val">Some</span>(value) =&gt; {
 <a href=#2353 id=2353 data-nosnippet>2353</a>    <span class="comment">// Explode the keyword + value strings into T_OTHER tokens. `pin_char`
 <a href=#2354 id=2354 data-nosnippet>2354</a>    // uses a stack-buffer encode_utf8 and skips the per-char
 <a href=#2355 id=2355 data-nosnippet>2355</a>    // `c.to_string()` heap alloc the previous version did.
@@ -2370,9 +2370,9 @@
 <a href=#2370 id=2370 data-nosnippet>2370</a>      </span>loc: <span class="number">0</span>,
 <a href=#2371 id=2371 data-nosnippet>2371</a>    }));
 <a href=#2372 id=2372 data-nosnippet>2372</a>    tokens
-<a href=#2373 id=2373 data-nosnippet>2373</a>  } <span class="kw">else </span>{
+<a href=#2373 id=2373 data-nosnippet>2373</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#2374 id=2374 data-nosnippet>2374</a>    Vec::new()
-<a href=#2375 id=2375 data-nosnippet>2375</a>  }
+<a href=#2375 id=2375 data-nosnippet>2375</a>  }}
 <a href=#2376 id=2376 data-nosnippet>2376</a>}
 <a href=#2377 id=2377 data-nosnippet>2377</a>
 <a href=#2378 id=2378 data-nosnippet>2378</a><span class="kw">pub fn </span>p_revert&lt;T&gt;(arg: T) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt;
@@ -3427,11 +3427,11 @@
 <a href=#3427 id=3427 data-nosnippet>3427</a></span>}
 <a href=#3428 id=3428 data-nosnippet>3428</a>
 <a href=#3429 id=3429 data-nosnippet>3429</a><span class="kw">pub fn </span>in_svg(document: <span class="kw-2">&amp;</span>Document) -&gt; bool {
-<a href=#3430 id=3430 data-nosnippet>3430</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(context) = document.get_element() {
+<a href=#3430 id=3430 data-nosnippet>3430</a>  <span class="kw">match </span>document.get_element() { <span class="prelude-val">Some</span>(context) =&gt; {
 <a href=#3431 id=3431 data-nosnippet>3431</a>    document::with_node_qname(<span class="kw-2">&amp;</span>context, |qname| qname.starts_with(<span class="string">"svg:"</span>))
-<a href=#3432 id=3432 data-nosnippet>3432</a>  } <span class="kw">else </span>{
+<a href=#3432 id=3432 data-nosnippet>3432</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#3433 id=3433 data-nosnippet>3433</a>    <span class="bool-val">false
-<a href=#3434 id=3434 data-nosnippet>3434</a>  </span>}
+<a href=#3434 id=3434 data-nosnippet>3434</a>  </span>}}
 <a href=#3435 id=3435 data-nosnippet>3435</a>}
 <a href=#3436 id=3436 data-nosnippet>3436</a>
 <a href=#3437 id=3437 data-nosnippet>3437</a><span class="kw">pub fn </span>adjust_box_color(tbox: <span class="kw-2">&amp;</span>Digested) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {

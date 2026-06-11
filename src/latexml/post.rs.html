@@ -142,7 +142,7 @@
 <a href=#142 id=142 data-nosnippet>142</a>  // Phase 1: Split (only attributes time when --split is on)
 <a href=#143 id=143 data-nosnippet>143</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>docs: Vec&lt;PostDocument&gt; = <span class="kw">if </span>split {
 <a href=#144 id=144 data-nosnippet>144</a>    telemetry::phase_enter(Phase::Split);
-<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">let </span>result = <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>xpath) = split_xpath {
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">let </span>result = <span class="kw">if let </span><span class="prelude-val">Some</span>(xpath) = split_xpath {
 <a href=#146 id=146 data-nosnippet>146</a>      <span class="kw">let </span>naming = <span class="kw">match </span>split_naming {
 <a href=#147 id=147 data-nosnippet>147</a>        <span class="prelude-val">Some</span>(<span class="string">"id"</span>) | <span class="prelude-val">None </span>=&gt; latexml_post::split::SplitNaming::Id,
 <a href=#148 id=148 data-nosnippet>148</a>        <span class="prelude-val">Some</span>(<span class="string">"idrelative"</span>) =&gt; latexml_post::split::SplitNaming::IdRelative,

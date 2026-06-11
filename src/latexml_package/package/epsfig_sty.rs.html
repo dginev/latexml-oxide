@@ -37,7 +37,7 @@
 <a href=#37 id=37 data-nosnippet>37</a>    properties =&gt; sub[args] {
 <a href=#38 id=38 data-nosnippet>38</a>      <span class="kw">use </span>DigestedData::<span class="kw-2">*</span>;
 <a href=#39 id=39 data-nosnippet>39</a>      <span class="kw">let </span>file = <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_arg) = args[<span class="number">0</span>].as_ref() {
-<a href=#40 id=40 data-nosnippet>40</a>        <span class="kw">if let </span>KeyVals(<span class="kw-2">ref </span>kv) = kv_arg.data() {
+<a href=#40 id=40 data-nosnippet>40</a>        <span class="kw">if let </span>KeyVals(kv) = kv_arg.data() {
 <a href=#41 id=41 data-nosnippet>41</a>          <span class="kw">let </span>raw = kv.get_value(<span class="string">"file"</span>)
 <a href=#42 id=42 data-nosnippet>42</a>            .or_else(|| kv.get_value(<span class="string">"figure"</span>))
 <a href=#43 id=43 data-nosnippet>43</a>            .map(|v| v.to_string())
@@ -53,7 +53,7 @@
 <a href=#53 id=53 data-nosnippet>53</a>        .unwrap_or(<span class="bool-val">false</span>);
 <a href=#54 id=54 data-nosnippet>54</a>      <span class="kw">let </span><span class="kw-2">mut </span>opts = Vec::&lt;String&gt;::new();
 <a href=#55 id=55 data-nosnippet>55</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_arg) = args[<span class="number">0</span>].as_ref() {
-<a href=#56 id=56 data-nosnippet>56</a>        <span class="kw">if let </span>KeyVals(<span class="kw-2">ref </span>kv) = kv_arg.data() {
+<a href=#56 id=56 data-nosnippet>56</a>        <span class="kw">if let </span>KeyVals(kv) = kv_arg.data() {
 <a href=#57 id=57 data-nosnippet>57</a>          <span class="kw">let </span><span class="kw-2">mut </span>saw_clip = <span class="bool-val">false</span>;
 <a href=#58 id=58 data-nosnippet>58</a>          <span class="kw">for </span>(k, v) <span class="kw">in </span>kv.get_pairs() {
 <a href=#59 id=59 data-nosnippet>59</a>            <span class="kw">if </span>k == <span class="string">"file" </span>|| k == <span class="string">"figure" </span>{ <span class="kw">continue</span>; }

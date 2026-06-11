@@ -202,7 +202,7 @@
 <a href=#202 id=202 data-nosnippet>202</a>    with_vecdeque(<span class="string">"@masquerading@as@class"</span>, |vdq_opt| {
 <a href=#203 id=203 data-nosnippet>203</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(vdq) = vdq_opt {
 <a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">if </span>vdq.iter().any(|x| {
-<a href=#205 id=205 data-nosnippet>205</a>          <span class="kw">if let </span>Stored::String(<span class="kw-2">ref </span>v) = x {
+<a href=#205 id=205 data-nosnippet>205</a>          <span class="kw">if let </span>Stored::String(v) = x {
 <a href=#206 id=206 data-nosnippet>206</a>            arena::with(<span class="kw-2">*</span>v, |str| str == prevname)
 <a href=#207 id=207 data-nosnippet>207</a>          } <span class="kw">else </span>{
 <a href=#208 id=208 data-nosnippet>208</a>            <span class="bool-val">false
@@ -2955,13 +2955,13 @@
 <a href=#2955 id=2955 data-nosnippet>2955</a>
 <a href=#2956 id=2956 data-nosnippet>2956</a><span class="kw">fn </span>build_invocation_token(token: Token, args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
 <a href=#2957 id=2957 data-nosnippet>2957</a>  <span class="comment">// Note: token may have been \let to another defn!
-<a href=#2958 id=2958 data-nosnippet>2958</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+<a href=#2958 id=2958 data-nosnippet>2958</a>  </span><span class="kw">match </span>lookup_definition(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#2959 id=2959 data-nosnippet>2959</a>    <span class="kw">let </span><span class="kw-2">mut </span>invoked_tokens = <span class="macro">vec!</span>[token];
 <a href=#2960 id=2960 data-nosnippet>2960</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = defn.get_parameters() {
 <a href=#2961 id=2961 data-nosnippet>2961</a>      invoked_tokens.extend(params.revert_arguments(args)<span class="question-mark">?</span>);
 <a href=#2962 id=2962 data-nosnippet>2962</a>    }
 <a href=#2963 id=2963 data-nosnippet>2963</a>    <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
-<a href=#2964 id=2964 data-nosnippet>2964</a>  } <span class="kw">else </span>{
+<a href=#2964 id=2964 data-nosnippet>2964</a>  } <span class="kw">_ </span>=&gt; {
 <a href=#2965 id=2965 data-nosnippet>2965</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Can't invoke {:?}; it is undefined"</span>, token.stringify());
 <a href=#2966 id=2966 data-nosnippet>2966</a>    token.with_cs_name(|csname| {
 <a href=#2967 id=2967 data-nosnippet>2967</a>      <span class="macro">Error!</span>(<span class="string">"undefined"</span>, csname, message);
@@ -2983,7 +2983,7 @@
 <a href=#2983 id=2983 data-nosnippet>2983</a>      .collect();
 <a href=#2984 id=2984 data-nosnippet>2984</a>    invoked_tokens.extend(wrapped_args);
 <a href=#2985 id=2985 data-nosnippet>2985</a>    <span class="prelude-val">Ok</span>(Tokens::new(invoked_tokens))
-<a href=#2986 id=2986 data-nosnippet>2986</a>  }
+<a href=#2986 id=2986 data-nosnippet>2986</a>  }}
 <a href=#2987 id=2987 data-nosnippet>2987</a>}
 <a href=#2988 id=2988 data-nosnippet>2988</a>
 <a href=#2989 id=2989 data-nosnippet>2989</a><span class="doccomment">/// Convert a LaTeX-style argument spec to our Package form.

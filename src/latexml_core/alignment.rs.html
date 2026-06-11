@@ -953,17 +953,17 @@
 <a href=#953 id=953 data-nosnippet>953</a>        <span class="kw">break</span>;
 <a href=#954 id=954 data-nosnippet>954</a>      }
 <a href=#955 id=955 data-nosnippet>955</a>      gullet::unread_one(last_op);
-<a href=#956 id=956 data-nosnippet>956</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(defn) = lookup_expandable(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\NC@rewrite@{op}"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">? </span>{
+<a href=#956 id=956 data-nosnippet>956</a>    } <span class="kw">else </span>{ <span class="kw">match </span>lookup_expandable(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\NC@rewrite@{op}"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(defn) =&gt; {
 <a href=#957 id=957 data-nosnippet>957</a>      <span class="kw">let </span>invoked = defn.invoke(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#958 id=958 data-nosnippet>958</a>      gullet::unread(invoked);
-<a href=#959 id=959 data-nosnippet>959</a>    } <span class="kw">else if </span>cc == Catcode::BEGIN {
+<a href=#959 id=959 data-nosnippet>959</a>    } <span class="kw">_ </span>=&gt; <span class="kw">if </span>cc == Catcode::BEGIN {
 <a href=#960 id=960 data-nosnippet>960</a>      <span class="kw">let </span>balanced_arg = gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
 <a href=#961 id=961 data-nosnippet>961</a>      <span class="kw">if </span>!balanced_arg.is_empty() {
 <a href=#962 id=962 data-nosnippet>962</a>        gullet::unread(balanced_arg);
 <a href=#963 id=963 data-nosnippet>963</a>      }
 <a href=#964 id=964 data-nosnippet>964</a>    } <span class="kw">else </span>{
 <a href=#965 id=965 data-nosnippet>965</a>      <span class="macro">Warn!</span>(<span class="string">"unexpected"</span>, op, <span class="macro">s!</span>(<span class="string">"Unrecognized tabular template {op:?}"</span>));
-<a href=#966 id=966 data-nosnippet>966</a>    }
+<a href=#966 id=966 data-nosnippet>966</a>    }}}
 <a href=#967 id=967 data-nosnippet>967</a>    <span class="kw">if </span>nopens &lt;= <span class="number">0 </span>{
 <a href=#968 id=968 data-nosnippet>968</a>      <span class="kw">break</span>;
 <a href=#969 id=969 data-nosnippet>969</a>    }
@@ -1008,7 +1008,7 @@
 <a href=#1008 id=1008 data-nosnippet>1008</a>/// for lpad/rpad; now superseded by template_has_intercol for better @{} handling.
 <a href=#1009 id=1009 data-nosnippet>1009</a></span><span class="attr">#[allow(dead_code)]
 <a href=#1010 id=1010 data-nosnippet>1010</a></span><span class="kw">fn </span>template_has_fill(tokens: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; bool {
-<a href=#1011 id=1011 data-nosnippet>1011</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>toks) = tokens {
+<a href=#1011 id=1011 data-nosnippet>1011</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(toks) = tokens {
 <a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="kw">for </span>tok <span class="kw">in </span>toks.unlist_ref() {
 <a href=#1013 id=1013 data-nosnippet>1013</a>      <span class="kw">let </span>s = tok.to_string();
 <a href=#1014 id=1014 data-nosnippet>1014</a>      <span class="kw">if </span>s == <span class="string">"\\hfil" </span>|| s == <span class="string">"\\hfill" </span>|| s == <span class="string">"\\hskip" </span>{
@@ -1026,7 +1026,7 @@
 <a href=#1026 id=1026 data-nosnippet>1026</a>/// For `\vrule\relax\lx@intercol\hfil`: reachable (vrule is skippable).
 <a href=#1027 id=1027 data-nosnippet>1027</a>/// For `@{1}\lx@intercol\hfil`: NOT reachable ("1" blocks the scan).
 <a href=#1028 id=1028 data-nosnippet>1028</a></span><span class="kw">fn </span>intercol_reachable_in_before(tokens: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; bool {
-<a href=#1029 id=1029 data-nosnippet>1029</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>toks) = tokens {
+<a href=#1029 id=1029 data-nosnippet>1029</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(toks) = tokens {
 <a href=#1030 id=1030 data-nosnippet>1030</a>    <span class="kw">for </span>tok <span class="kw">in </span>toks.unlist_ref() {
 <a href=#1031 id=1031 data-nosnippet>1031</a>      <span class="kw">let </span>s = tok.to_string();
 <a href=#1032 id=1032 data-nosnippet>1032</a>      <span class="kw">if </span>s == <span class="string">"\\lx@intercol" </span>|| s.contains(<span class="string">"intercol"</span>) {
@@ -1054,7 +1054,7 @@
 <a href=#1054 id=1054 data-nosnippet>1054</a>/// \lx@intercol indicates actual intercolumn padding; \hfil is just centering.
 <a href=#1055 id=1055 data-nosnippet>1055</a>/// For @{}c@{} columns, \lx@intercol is disabled but \hfil remains.
 <a href=#1056 id=1056 data-nosnippet>1056</a></span><span class="kw">fn </span>template_has_intercol(tokens: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; bool {
-<a href=#1057 id=1057 data-nosnippet>1057</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>toks) = tokens {
+<a href=#1057 id=1057 data-nosnippet>1057</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(toks) = tokens {
 <a href=#1058 id=1058 data-nosnippet>1058</a>    <span class="kw">for </span>tok <span class="kw">in </span>toks.unlist_ref() {
 <a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="kw">let </span>s = tok.to_string();
 <a href=#1060 id=1060 data-nosnippet>1060</a>      <span class="kw">if </span>s == <span class="string">"\\lx@intercol" </span>|| s.contains(<span class="string">"intercol"</span>) {

@@ -310,22 +310,22 @@
 <a href=#310 id=310 data-nosnippet>310</a><span class="kw">impl </span>XM {
 <a href=#311 id=311 data-nosnippet>311</a>  <span class="kw">pub fn </span>get_meta(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span>Meta {
 <a href=#312 id=312 data-nosnippet>312</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#313 id=313 data-nosnippet>313</a>      XM::Lexeme(<span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
-<a href=#314 id=314 data-nosnippet>314</a>      XM::Token(<span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
-<a href=#315 id=315 data-nosnippet>315</a>      XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
-<a href=#316 id=316 data-nosnippet>316</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
-<a href=#317 id=317 data-nosnippet>317</a>      XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref </span>meta) =&gt; meta,
+<a href=#313 id=313 data-nosnippet>313</a>      XM::Lexeme(<span class="kw">_</span>, meta) =&gt; meta,
+<a href=#314 id=314 data-nosnippet>314</a>      XM::Token(<span class="kw">_</span>, meta) =&gt; meta,
+<a href=#315 id=315 data-nosnippet>315</a>      XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta,
+<a href=#316 id=316 data-nosnippet>316</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta,
+<a href=#317 id=317 data-nosnippet>317</a>      XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta,
 <a href=#318 id=318 data-nosnippet>318</a>      XM::Choices(cs) =&gt; cs[<span class="number">0</span>].get_meta(), <span class="comment">// Should we return a none type instead?
 <a href=#319 id=319 data-nosnippet>319</a>      </span>XM::Ref(<span class="kw">_</span>) | XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
 <a href=#320 id=320 data-nosnippet>320</a>    }
 <a href=#321 id=321 data-nosnippet>321</a>  }
 <a href=#322 id=322 data-nosnippet>322</a>  <span class="kw">pub fn </span>get_meta_mut(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="kw-2">&amp;mut </span>Meta {
 <a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#324 id=324 data-nosnippet>324</a>      XM::Lexeme(<span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
-<a href=#325 id=325 data-nosnippet>325</a>      XM::Token(<span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
-<a href=#326 id=326 data-nosnippet>326</a>      XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
-<a href=#327 id=327 data-nosnippet>327</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
-<a href=#328 id=328 data-nosnippet>328</a>      XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw-2">ref mut </span>meta) =&gt; meta,
+<a href=#324 id=324 data-nosnippet>324</a>      XM::Lexeme(<span class="kw">_</span>, meta) =&gt; meta,
+<a href=#325 id=325 data-nosnippet>325</a>      XM::Token(<span class="kw">_</span>, meta) =&gt; meta,
+<a href=#326 id=326 data-nosnippet>326</a>      XM::Apply(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta,
+<a href=#327 id=327 data-nosnippet>327</a>      XM::Dual(<span class="kw">_</span>, <span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta,
+<a href=#328 id=328 data-nosnippet>328</a>      XM::Wrap(<span class="kw">_</span>, <span class="kw">_</span>, meta) =&gt; meta,
 <a href=#329 id=329 data-nosnippet>329</a>      XM::Choices(cs) =&gt; cs[<span class="number">0</span>].get_meta_mut(), <span class="comment">// Should we return a none type instead?
 <a href=#330 id=330 data-nosnippet>330</a>      </span>XM::Ref(<span class="kw">_</span>) | XM::Arg(<span class="kw">_</span>) =&gt; <span class="macro">todo!</span>(),
 <a href=#331 id=331 data-nosnippet>331</a>    }
@@ -1291,7 +1291,7 @@
 <a href=#1291 id=1291 data-nosnippet>1291</a>      }
 <a href=#1292 id=1292 data-nosnippet>1292</a>    }
 <a href=#1293 id=1293 data-nosnippet>1293</a>    <span class="kw">fn </span>arg_is_vertbar_fenced(arg: <span class="kw-2">&amp;</span>XM) -&gt; bool {
-<a href=#1294 id=1294 data-nosnippet>1294</a>      <span class="kw">let </span>XM::Dual(<span class="kw">_</span>, <span class="kw-2">ref </span>presentation, <span class="kw">_</span>, <span class="kw">_</span>) = arg <span class="kw">else </span>{
+<a href=#1294 id=1294 data-nosnippet>1294</a>      <span class="kw">let </span>XM::Dual(<span class="kw">_</span>, presentation, <span class="kw">_</span>, <span class="kw">_</span>) = arg <span class="kw">else </span>{
 <a href=#1295 id=1295 data-nosnippet>1295</a>        <span class="kw">return </span><span class="bool-val">false</span>;
 <a href=#1296 id=1296 data-nosnippet>1296</a>      };
 <a href=#1297 id=1297 data-nosnippet>1297</a>      <span class="kw">let </span>XM::Wrap(<span class="kw-2">ref </span>items, <span class="kw">_</span>, <span class="kw">_</span>) = <span class="kw-2">**</span>presentation <span class="kw">else </span>{
@@ -1638,7 +1638,7 @@
 <a href=#1638 id=1638 data-nosnippet>1638</a>        <span class="kw">let </span>items_str: Vec&lt;String&gt; = items.iter().map(|i| i.text_summary()).collect();
 <a href=#1639 id=1639 data-nosnippet>1639</a>        <span class="macro">format!</span>(<span class="string">"Wrap({})"</span>, items_str.join(<span class="string">", "</span>))
 <a href=#1640 id=1640 data-nosnippet>1640</a>      },
-<a href=#1641 id=1641 data-nosnippet>1641</a>      XM::Choices(<span class="kw-2">ref </span>trees) =&gt; <span class="macro">format!</span>(<span class="string">"Choices({})"</span>, trees.len()),
+<a href=#1641 id=1641 data-nosnippet>1641</a>      XM::Choices(trees) =&gt; <span class="macro">format!</span>(<span class="string">"Choices({})"</span>, trees.len()),
 <a href=#1642 id=1642 data-nosnippet>1642</a>      XM::Ref(idx) =&gt; <span class="macro">format!</span>(<span class="string">"Ref({})"</span>, idx),
 <a href=#1643 id=1643 data-nosnippet>1643</a>      XM::Arg(items) =&gt; {
 <a href=#1644 id=1644 data-nosnippet>1644</a>        <span class="kw">let </span>items_str: Vec&lt;String&gt; = items.iter().map(|i| i.text_summary()).collect();
@@ -1649,14 +1649,14 @@
 <a href=#1649 id=1649 data-nosnippet>1649</a>
 <a href=#1650 id=1650 data-nosnippet>1650</a>  <span class="kw">pub fn </span>base_operator_name(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
 <a href=#1651 id=1651 data-nosnippet>1651</a>    <span class="kw">match </span><span class="self">self </span>{
-<a href=#1652 id=1652 data-nosnippet>1652</a>      XM::Lexeme(<span class="kw-2">ref </span>name, <span class="kw">_</span>) =&gt; name.to_string(),
-<a href=#1653 id=1653 data-nosnippet>1653</a>      XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, ..) =&gt; {
+<a href=#1652 id=1652 data-nosnippet>1652</a>      XM::Lexeme(name, <span class="kw">_</span>) =&gt; name.to_string(),
+<a href=#1653 id=1653 data-nosnippet>1653</a>      XM::Apply(op, args, ..) =&gt; {
 <a href=#1654 id=1654 data-nosnippet>1654</a>        <span class="kw">match </span><span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
-<a href=#1655 id=1655 data-nosnippet>1655</a>          XM::Lexeme(<span class="kw-2">ref </span>name, <span class="kw">_</span>) <span class="kw">if </span><span class="kw-2">&amp;**</span>name == <span class="string">"unknown.subscript" </span>=&gt; {
+<a href=#1655 id=1655 data-nosnippet>1655</a>          XM::Lexeme(name, <span class="kw">_</span>) <span class="kw">if </span><span class="kw-2">&amp;**</span>name == <span class="string">"unknown.subscript" </span>=&gt; {
 <a href=#1656 id=1656 data-nosnippet>1656</a>            <span class="kw">let </span>arg_base = args.<span class="number">0</span>.first().unwrap().as_ref().unwrap().clone();
 <a href=#1657 id=1657 data-nosnippet>1657</a>            <span class="macro">format!</span>(<span class="string">"sub__{}"</span>, arg_base.base_operator_name())
 <a href=#1658 id=1658 data-nosnippet>1658</a>          },
-<a href=#1659 id=1659 data-nosnippet>1659</a>          XM::Lexeme(<span class="kw-2">ref </span>name, <span class="kw">_</span>) <span class="kw">if </span><span class="kw-2">&amp;**</span>name == <span class="string">"unknown.superscript" </span>=&gt; {
+<a href=#1659 id=1659 data-nosnippet>1659</a>          XM::Lexeme(name, <span class="kw">_</span>) <span class="kw">if </span><span class="kw-2">&amp;**</span>name == <span class="string">"unknown.superscript" </span>=&gt; {
 <a href=#1660 id=1660 data-nosnippet>1660</a>            <span class="comment">// TODO: Too much datastructure boilerplate with the unwrap incantation
 <a href=#1661 id=1661 data-nosnippet>1661</a>            //       might be better to create some getter methods to explain the intent better
 <a href=#1662 id=1662 data-nosnippet>1662</a>            //       this is meant to do "give me a clone of the first argument to this XM::Apply"
@@ -1678,7 +1678,7 @@
 <a href=#1678 id=1678 data-nosnippet>1678</a>      XM::Lexeme(..) =&gt; <span class="self">self</span>,
 <a href=#1679 id=1679 data-nosnippet>1679</a>      XM::Token(..) =&gt; <span class="self">self</span>,
 <a href=#1680 id=1680 data-nosnippet>1680</a>      XM::Ref(<span class="kw">_</span>) =&gt; <span class="self">self</span>,
-<a href=#1681 id=1681 data-nosnippet>1681</a>      XM::Apply(<span class="kw-2">ref </span>op, <span class="kw-2">ref </span>args, ..) =&gt; {
+<a href=#1681 id=1681 data-nosnippet>1681</a>      XM::Apply(op, args, ..) =&gt; {
 <a href=#1682 id=1682 data-nosnippet>1682</a>        <span class="kw">if let </span>XM::Lexeme(name, <span class="kw">_</span>) = <span class="kw-2">&amp;*</span>op.<span class="number">0 </span>{
 <a href=#1683 id=1683 data-nosnippet>1683</a>          <span class="kw">if </span><span class="kw-2">&amp;**</span>name == <span class="string">"unknown.subscript" </span>|| <span class="kw-2">&amp;**</span>name == <span class="string">"unknown.superscript" </span>{
 <a href=#1684 id=1684 data-nosnippet>1684</a>            args.trees().first().unwrap().get_baseline()
@@ -1993,7 +1993,7 @@
 <a href=#1993 id=1993 data-nosnippet>1993</a>          <span class="prelude-val">None </span>=&gt; <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>),
 <a href=#1994 id=1994 data-nosnippet>1994</a>        };
 <a href=#1995 id=1995 data-nosnippet>1995</a>      },
-<a href=#1996 id=1996 data-nosnippet>1996</a>      XM::Apply(<span class="kw-2">ref </span>op, ..) =&gt; {
+<a href=#1996 id=1996 data-nosnippet>1996</a>      XM::Apply(op, ..) =&gt; {
 <a href=#1997 id=1997 data-nosnippet>1997</a>        <span class="comment">// Compound operator (e.g. composed_bigop): get meaning from the operator
 <a href=#1998 id=1998 data-nosnippet>1998</a>        </span><span class="kw">return </span>op.<span class="number">0</span>.get_token_meaning(nodes);
 <a href=#1999 id=1999 data-nosnippet>1999</a>      },
@@ -2020,7 +2020,7 @@
 <a href=#2020 id=2020 data-nosnippet>2020</a>        <span class="kw">let </span>lex_node = lookup_lex_node(lex, ctxt.nodes)<span class="question-mark">?</span>;
 <a href=#2021 id=2021 data-nosnippet>2021</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(realize_xmnode(lex_node, ctxt.document).into_owned()))
 <a href=#2022 id=2022 data-nosnippet>2022</a>      },
-<a href=#2023 id=2023 data-nosnippet>2023</a>      XM::Ref(<span class="kw-2">ref </span>refprops) =&gt; {
+<a href=#2023 id=2023 data-nosnippet>2023</a>      XM::Ref(refprops) =&gt; {
 <a href=#2024 id=2024 data-nosnippet>2024</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {
 <a href=#2025 id=2025 data-nosnippet>2025</a>          <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(node.clone()))
 <a href=#2026 id=2026 data-nosnippet>2026</a>        } <span class="kw">else </span>{
