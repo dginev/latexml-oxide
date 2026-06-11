@@ -11,9 +11,11 @@
 
 use libxml::tree::Node;
 
-use crate::document::{PostDocument, element_children};
-use crate::math_processor::{MathConversion, MathProcessor};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::{PostDocument, element_children},
+  math_processor::{MathConversion, MathProcessor},
+  processor::{ProcessResult, Processor},
+};
 
 const UNICODE_MATH_MIMETYPE: &str = "application/x-unicodemath";
 
@@ -286,12 +288,9 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
       (format!("\u{25A0}({})", rows.join("@")), 0)
     },
     "ltx:XMText" => unimath_text(node),
-    "ltx:XMRef" => {
-      match realize(doc, node) { Some(target) => {
-        unimath_internal(doc, &target)
-      } _ => {
-        unimath_error("Unresolved XMRef")
-      }}
+    "ltx:XMRef" => match realize(doc, node) {
+      Some(target) => unimath_internal(doc, &target),
+      _ => unimath_error("Unresolved XMRef"),
     },
     "ltx:ERROR" => unimath_error(&node.get_content()),
     _ => unimath_text(node),

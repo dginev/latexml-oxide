@@ -1,5 +1,7 @@
-use crate::package::color_sty::{lookup_color, lookup_color_obj};
-use crate::prelude::*;
+use crate::{
+  package::color_sty::{lookup_color, lookup_color_obj},
+  prelude::*,
+};
 
 // RUST DIVERGENCE: `\sodef` routing via `\lx@soul@letterspaced` + `copy_soul_state`.
 // Perl (soul.sty.ltxml L27-35) implements `\sodef` by closure-capturing the
@@ -61,8 +63,8 @@ LoadDefinitions!({
       let cs_name = token.with_cs_name(|n| n.to_string());
       let font_key = s!("soul_font_{cs_name}");
       if let Some(Stored::String(font_sym)) = lookup_value(&font_key) {
-        let font_str = arena::to_string(font_sym);
-        let toks = latexml_core::mouth::tokenize_internal(&font_str);
+        let font_str = to_string(font_sym);
+        let toks = mouth::tokenize_internal(&font_str);
         digest(toks)?;
       }
     }
@@ -73,7 +75,7 @@ LoadDefinitions!({
       let cs_name = token.with_cs_name(|n| n.to_string());
       let spacing_key = s!("soul_spacing_{cs_name}");
       if let Some(Stored::String(spacing_sym)) = lookup_value(&spacing_key) {
-        let spacing = arena::to_string(spacing_sym);
+        let spacing = to_string(spacing_sym);
         whatsit.set_property("cssstyle", s!("letter-spacing:{spacing};"));
       }
     }
@@ -103,13 +105,12 @@ LoadDefinitions!({
   enter_horizontal => true,
   after_digest => sub[whatsit] {
     // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
-      if let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
-        let color_name = arena::to_string(color_sym);
+    if (lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded"))
+      && let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
+        let color_name = to_string(color_sym);
         let hex = lookup_color(&color_name);
         whatsit.set_property("framecolor", hex);
       }
-    }
     Ok(Vec::new())
   });
 
@@ -139,7 +140,7 @@ LoadDefinitions!({
     // Perl L64: `if (my $color = ToString(LookupValue($name)))` — stringify at read time.
     if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
       let color_name = match lookup_value("soul_strike_color") {
-        Some(Stored::String(sym)) => arena::to_string(sym),
+        Some(Stored::String(sym)) => to_string(sym),
         Some(Stored::Tokens(ts)) => ts.to_string(),
         _ => String::new(),
       };
@@ -177,7 +178,7 @@ LoadDefinitions!({
     // initial string 'yellow' assignment (L103).
     if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
       let color_name = match lookup_value("soul_hl_color") {
-        Some(Stored::String(sym)) => arena::to_string(sym),
+        Some(Stored::String(sym)) => to_string(sym),
         Some(Stored::Tokens(ts)) => ts.to_string(),
         _ => String::new(),
       };

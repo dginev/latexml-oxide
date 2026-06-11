@@ -5,8 +5,8 @@
 //!  * Continued captions (`\contcaption`)
 //!  * Bilingual captions (`\bicaption`)
 //!  * Sidecap-style captions, custom caption fonts/labels
-//!  * `[subfigure]` compatibility: redefines `\caption`,
-//!    `\@subcaption`, `\@float`, `\@dbflt` to track main-vs-sub state.
+//!  * `[subfigure]` compatibility: redefines `\caption`, `\@subcaption`, `\@float`, `\@dbflt` to
+//!    track main-vs-sub state.
 //!
 //! Raw-loading ccaption.sty into our engine is fragile: with the
 //! `[subfigure]` option, ccaption redefines `\@subcaption` to use
@@ -57,7 +57,10 @@ LoadDefinitions!({
   // specific float type. Define `cs` to forward.
   DefMacro!("\\newfixedcaption[]{}{}", "\\providecommand#2{\\caption}");
   DefMacro!("\\renewfixedcaption[]{}{}", "\\renewcommand#2{\\caption}");
-  DefMacro!("\\providefixedcaption[]{}{}", "\\providecommand#2{\\caption}");
+  DefMacro!(
+    "\\providefixedcaption[]{}{}",
+    "\\providecommand#2{\\caption}"
+  );
   // Continued-figure subitem counter (ccaption tracks via
   // `\@captype`); user code may `\thesubfigure` etc. We provide a
   // benign `\thesubfigure` placeholder if not defined.

@@ -1,0 +1,54 @@
+# cargo-deny configuration — dependency security + license discipline.
+# https://embarkstudios.github.io/cargo-deny/
+#
+# Run locally:  cargo deny --all-features check
+# CI's `lint` job runs the EmbarkStudios/cargo-deny-action, which injects
+# `--all-features` — so a bare `cargo deny check` (default features only) will
+# MISS advisories in feature-gated trees (e.g. the `cortex` worker tooling).
+# Always pass `--all-features` locally to match CI.
+#
+# Rationale: latexml-oxide ships a self-contained, redistributable binary
+# (docs/RELEASE_CRITERIA.md §license audit), so every transitive dependency's
+# license must be one we have vetted for that posture, and we want RUSTSEC
+# advisories to fail the build rather than ship silently.
+
+[advisories]
+version = 2
+# Fail on a yanked crate in the lockfile. Active vulnerabilities/unmaintained
+# crates are denied by default under advisories schema v2.
+yanked = "deny"
+# Add `"RUSTSEC-YYYY-NNNN"` here (with a comment justifying it) only when an
+# advisory is reviewed and accepted as not-applicable. Currently none:
+# the `cortex`-only `pericortex` dep used to drag in tempdir/ansi_term (three
+# advisories), but that was fixed at the source (cortex-peripherals 60bec10:
+# tempdir→tempfile, ansi_term→inline ANSI), so the graph is clean outright.
+ignore = []
+
+[licenses]
+version = 2
+confidence-threshold = 0.9
+# Permissive + public-domain set. A dependency whose license is NOT listed here
+# fails the check, forcing an explicit review before it enters the distribution.
+allow = [
+  "CC0-1.0", # the workspace itself
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "MPL-2.0", # weak (per-file) copyleft — safe to depend on for a CC0 binary
+]
+
+[bans]
+# Surface (but don't fail on) duplicate versions and wildcard version reqs.
+multiple-versions = "warn"
+wildcards = "warn"
+
+[sources]
+unknown-registry = "deny"
+# The marpa parser engine is sourced from github.com/dginev/marpa (see the
+# root Cargo.toml note), so a git source is expected.
+unknown-git = "allow"

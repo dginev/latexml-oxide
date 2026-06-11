@@ -8,28 +8,29 @@
 //! document elements (eg from \section*); this requires an additional counter
 //! (eg. UNsection) and  mechanisms to track it.
 
-use std::collections::VecDeque;
-use std::rc::Rc;
+use std::{collections::VecDeque, rc::Rc};
 
-use crate::binding::content::{build_invocation, digest_literal, digest_text};
-use crate::binding::def::dialect::{RegisterOptions, def_macro, def_register, is_defined};
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr};
-use crate::common::cleaners::{clean_id, clean_label, roman_aux};
-use crate::common::error::*;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-
-use crate::BoxOps;
-use crate::definition::expandable::ExpandableOptions;
-use crate::definition::{Definition, ExpansionBody};
-use crate::mouth;
-use crate::state;
-use crate::state::*;
-use crate::stomach;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
+use crate::{
+  BoxOps,
+  binding::{
+    content::{build_invocation, digest_literal, digest_text},
+    def::dialect::{RegisterOptions, def_macro, def_register, is_defined},
+  },
+  common::{
+    arena::{self, SymHashMap as HashMap, SymStr},
+    cleaners::{clean_id, clean_label, roman_aux},
+    error::*,
+    number::Number,
+    numeric_ops::NumericOps,
+  },
+  definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
+  mouth, state,
+  state::*,
+  stomach,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
+};
 
 /// configuration for new_counter
 #[derive(Default)]
@@ -71,8 +72,8 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
       // Counter already exists as a register — fine, just continue (may change within/nesting)
     } else {
       // Warn unless the previous definition was \relax
-      let relax_meaning = state::lookup_meaning(&T_RELAX!());
-      let prev_meaning = state::lookup_meaning(&cs_cctr);
+      let relax_meaning = lookup_meaning(&T_RELAX!());
+      let prev_meaning = lookup_meaning(&cs_cctr);
       if prev_meaning != relax_meaning {
         Warn!(
           "unexpected",
@@ -103,30 +104,30 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
   }
   after_assignment();
   if !has_value(&clctr) {
-    state::assign_value(&clctr, Tokens!(), Some(Scope::Global));
+    assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
   def_register(T_CS!(&cunctr), None, Number::new(0), None)?;
   if !has_value(&clunctr) {
-    state::assign_value(&clunctr, Tokens!(), Some(Scope::Global));
+    assign_value(&clunctr, Tokens!(), Some(Scope::Global));
   }
 
   if !within.is_empty() {
     let clwithin = s!("\\cl@{within}");
     let clunwithin = s!("\\cl@UN{within}");
-    let x = if let Some(cl) = state::lookup_tokens(&clwithin) {
+    let x = if let Some(cl) = lookup_tokens(&clwithin) {
       cl.unlist()
     } else {
       Vec::new()
     };
     let mut clwithin_tokens = vec![T_CS!(ctr), T_CS!(&unctr)];
     clwithin_tokens.extend(x);
-    state::assign_value(
+    assign_value(
       &clwithin,
       Stored::Tokens(Tokens::new(clwithin_tokens)),
       Some(Scope::Global),
     );
 
-    let mut unx = if let Some(clun) = state::lookup_tokens(&clunwithin) {
+    let mut unx = if let Some(clun) = lookup_tokens(&clunwithin) {
       clun.unlist()
     } else {
       Vec::new()
@@ -134,21 +135,21 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     let mut clunwithin_tokens = vec![T_CS!(unctr)];
     clunwithin_tokens.append(&mut unx);
 
-    state::assign_value(
+    assign_value(
       &clunwithin,
       Stored::Tokens(Tokens::new(clunwithin_tokens)),
       Some(Scope::Global),
     )
   }
 
-  if let Some(ref options) = options_opt {
-    if !options.nested.is_empty() {
-      state::assign_value(
-        &s!("nested_counters_{}", ctr),
-        options.nested.clone(),
-        Some(Scope::Global),
-      )
-    }
+  if let Some(ref options) = options_opt
+    && !options.nested.is_empty()
+  {
+    assign_value(
+      &s!("nested_counters_{}", ctr),
+      options.nested.clone(),
+      Some(Scope::Global),
+    )
   }
 
   // default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
@@ -183,13 +184,13 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     Some(ref opt) => opt.idprefix.to_string(),
   };
   if !prefix.is_empty() {
-    state::assign_value(
+    assign_value(
       &s!("@ID@prefix@{}", ctr),
       prefix.clone(),
       Some(Scope::Global),
     );
   } else {
-    prefix = state::lookup_string(&s!("@ID@prefix@{}", ctr));
+    prefix = lookup_string(&s!("@ID@prefix@{}", ctr));
     if prefix.is_empty() {
       prefix = ctr.to_string();
     }
@@ -272,7 +273,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 }
 /// Fetches the value associated with the counter C<$ctr>.
 pub fn counter_value(ctr: &str) -> Result<Number> {
-  match state::lookup_register(&s!("\\c@{ctr}"), Vec::new())? {
+  match lookup_register(&s!("\\c@{ctr}"), Vec::new())? {
     None => {
       let message = s!("Counter {} was not defined; assuming 0", ctr);
       Warn!("undefined", ctr, message);
@@ -284,7 +285,7 @@ pub fn counter_value(ctr: &str) -> Result<Number> {
 /// increments a named counter by a `Number`
 pub fn add_to_counter(ctr: &str, value: Number) -> Result<()> {
   let v = counter_value(ctr)?.add(value);
-  state::assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
+  assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
   after_assignment();
   let id_cs = T_CS!(s!("\\@{ctr}@ID"));
   def_macro(
@@ -304,8 +305,8 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
   let value = counter_value(ctr)?;
   let newvalue = value.add(Number::new(1));
   let c_ctr = s!("\\c@{ctr}");
-  state::assign_register(&c_ctr, newvalue.into(), Some(Scope::Global), Vec::new())?;
-  state::after_assignment();
+  assign_register(&c_ctr, newvalue.into(), Some(Scope::Global), Vec::new())?;
+  after_assignment();
   let token_value = Tokens::new(Explode!(newvalue.value_of()));
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
@@ -318,11 +319,9 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
   )?;
 
   // and reset any within counters!
-  if !noreset {
-    if let Some(nested) = state::lookup_tokens(&s!("\\cl@{ctr}")) {
-      for c in nested.unlist() {
-        reset_counter(&c)?;
-      }
+  if !noreset && let Some(nested) = lookup_tokens(&s!("\\cl@{ctr}")) {
+    for c in nested.unlist() {
+      reset_counter(&c)?;
     }
   }
   Ok(())
@@ -363,15 +362,16 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
   let the_ctr_id = s!("\\the{ctr}@ID");
   let the_ctr = s!("\\the{ctr}");
 
-  let has_id: bool = match state::lookup_definition(&T_CS!(&the_ctr_id))? { Some(iddef) => {
-    if let Some(params) = iddef.get_parameters() {
-      params.get_num_args() == 0
-    } else {
-      true
-    }
-  } _ => {
-    false
-  }};
+  let has_id: bool = match lookup_definition(&T_CS!(&the_ctr_id))? {
+    Some(iddef) => {
+      if let Some(params) = iddef.get_parameters() {
+        params.get_num_args() == 0
+      } else {
+        true
+      }
+    },
+    _ => false,
+  };
 
   let the_ctr_cs = T_CS!(&the_ctr);
   let the_ctr_id_cs = T_CS!(&the_ctr_id);
@@ -417,17 +417,17 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
   deactivate_counter_scope(arena::pin(&ctr));
 
   // And install the scope (if any) for this reference number.
-  state::assign_value("current_counter", ctr.clone(), Some(Scope::Local));
+  assign_value("current_counter", ctr.clone(), Some(Scope::Local));
 
   let scope = arena::pin(format!("{ctr}:{refnum}"));
   let mut receiver = VecDeque::new();
   receiver.push_front(Stored::String(scope));
-  state::assign_value(
+  assign_value(
     &s!("scopes_for_counter:{ctr}"),
     receiver,
     Some(Scope::Local),
   );
-  state::activate_scope(scope);
+  activate_scope(scope);
 
   Ok(stored_map!(
     "tags" => Stored::Digested(tags),
@@ -444,39 +444,39 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
 /// Assign a sub to LABEL_MAPPING_HOOK: &sub($label,$counter,$norefnum)
 /// to return the desired refnum and id for a given object.
 fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
-  if let Some(mapper) = state::get_label_mapping_hook() {
+  if let Some(mapper) = get_label_mapping_hook() {
     let hj_refnum = T_CS!(s!("\\_PREEMPTED_REFNUM_{ctr}"));
     let hj_id = T_CS!(s!("\\_PREEMPTED_ID_{ctr}"));
     // First, restore the \the<ctr> and \the<ctr>@ID macros to defaults
-    if !norefnum && state::has_meaning(&hj_refnum) {
-      state::let_i(&T_CS!(s!("\\the{ctr}")), &hj_refnum, Some(Scope::Global));
+    if !norefnum && has_meaning(&hj_refnum) {
+      let_i(&T_CS!(s!("\\the{ctr}")), &hj_refnum, Some(Scope::Global));
     }
-    if state::has_meaning(&hj_id) {
-      state::let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
+    if has_meaning(&hj_id) {
+      let_i(&T_CS!(s!("\\the{ctr}@ID")), &hj_id, Some(Scope::Global));
     }
-    let label = state::lookup_string("PEEKED_LABEL");
+    let label = lookup_string("PEEKED_LABEL");
     let (fixedrefnum, fixedid) = mapper(&label, ctr, norefnum);
-    if let Some(refnum) = fixedrefnum {
-      if !norefnum {
-        if !state::has_meaning(&hj_refnum) {
-          // Save for later
-          state::let_i(&hj_refnum, &T_CS!(s!("\\the{ctr}")), Some(Scope::Global));
-        }
-        let _ = def_macro(
-          T_CS!(s!("\\the{ctr}")),
-          None,
-          ExpansionBody::Tokens(Tokens::new(Explode!(&refnum))),
-          Some(ExpandableOptions {
-            scope: Some(Scope::Global),
-            ..Default::default()
-          }),
-        );
+    if let Some(refnum) = fixedrefnum
+      && !norefnum
+    {
+      if !has_meaning(&hj_refnum) {
+        // Save for later
+        let_i(&hj_refnum, &T_CS!(s!("\\the{ctr}")), Some(Scope::Global));
       }
+      let _ = def_macro(
+        T_CS!(s!("\\the{ctr}")),
+        None,
+        ExpansionBody::Tokens(Tokens::new(Explode!(&refnum))),
+        Some(ExpandableOptions {
+          scope: Some(Scope::Global),
+          ..Default::default()
+        }),
+      );
     }
     if let Some(id) = fixedid {
-      if !state::has_meaning(&hj_id) {
+      if !has_meaning(&hj_id) {
         // Save for later
-        state::let_i(&hj_id, &T_CS!(s!("\\the{ctr}@ID")), Some(Scope::Global));
+        let_i(&hj_id, &T_CS!(s!("\\the{ctr}@ID")), Some(Scope::Global));
       }
       let _ = def_macro(
         T_CS!(s!("\\the{ctr}@ID")),
@@ -488,8 +488,8 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
         }),
       );
     }
-    state::remove_value("PEEKED_LABEL"); // CONSUME the label
-    state::assign_value(
+    remove_value("PEEKED_LABEL"); // CONSUME the label
+    assign_value(
       "PROCESSED_LABEL",
       Stored::String(arena::pin(label)),
       Some(Scope::Global),
@@ -500,16 +500,16 @@ fn maybe_preempt_refnum(ctr: &str, norefnum: bool) {
 /// Use to peek for FOLLOWING \label{...} to support label-derived reference numbers
 /// (Perl: MaybePeekLabel)
 pub fn maybe_peek_label() -> Result<()> {
-  if state::get_label_mapping_hook().is_some() {
+  if get_label_mapping_hook().is_some() {
     let peek = crate::gullet::read_non_space()?;
     if let Some(ref token) = peek {
       if x_equals(token, &T_CS!("\\label")) {
-        state::begin_semiverbatim(None);
+        begin_semiverbatim(None);
         let arg = crate::gullet::read_arg(crate::gullet::ExpansionLevel::Off)?;
-        state::end_semiverbatim()?;
+        end_semiverbatim()?;
         let arg_str = arg.to_string();
         let label = clean_label(&arg_str, Some("")).into_owned();
-        state::assign_value(
+        assign_value(
           "PEEKED_LABEL",
           Stored::String(arena::pin(&label)),
           Some(Scope::Global),
@@ -517,8 +517,8 @@ pub fn maybe_peek_label() -> Result<()> {
         // Put back the arg wrapped in braces so \label can re-read it
         crate::gullet::unread(Tokens!(T_BEGIN!(), arg, T_END!()));
       } else {
-        state::remove_value("PROCESSED_LABEL");
-        state::remove_value("PEEKED_LABEL");
+        remove_value("PROCESSED_LABEL");
+        remove_value("PEEKED_LABEL");
       }
     }
     if let Some(token) = peek {
@@ -532,13 +532,13 @@ pub fn maybe_peek_label() -> Result<()> {
 /// Can by used by \label, among others. Note we only record the label
 /// if it hasn't already been peeked, and consumed.
 pub fn maybe_note_label(label: &str) {
-  if state::get_label_mapping_hook().is_some() {
+  if get_label_mapping_hook().is_some() {
     let label = clean_label(label, Some(""));
-    let processed = state::lookup_string("PROCESSED_LABEL");
+    let processed = lookup_string("PROCESSED_LABEL");
     if processed.is_empty() || processed != label {
       // Only if not already processed
-      state::remove_value("PROCESSED_LABEL");
-      state::assign_value(
+      remove_value("PROCESSED_LABEL");
+      assign_value(
         "PEEKED_LABEL",
         Stored::String(arena::pin(label)),
         Some(Scope::Global),
@@ -557,7 +557,7 @@ fn deactivate_counter_scope(ctr: SymStr) {
   // with_value avoids the outer Stored::clone by reading through a
   // borrow; we still collect the scope SymStrs (Copy) or panic-pointers
   // into owned Vecs to outlive the borrow.
-  let scope_syms: Vec<SymStr> = state::with_value(&scopes_for_counter, |v| match v {
+  let scope_syms: Vec<SymStr> = with_value(&scopes_for_counter, |v| match v {
     Some(Stored::VecDequeStored(stored_scopes)) => stored_scopes
       .iter()
       .map(|s| match s {
@@ -568,12 +568,12 @@ fn deactivate_counter_scope(ctr: SymStr) {
     _ => Vec::new(),
   });
   for scope in scope_syms {
-    state::deactivate_scope(scope);
+    deactivate_scope(scope);
   }
 
   // TODO: if we ever want to unshift from the nested_counters, we'll need to also use
   // Stored::VecDequeStored for them.
-  let inner_ctrs: Vec<SymStr> = state::with_value(&nested_counters, |v| match v {
+  let inner_ctrs: Vec<SymStr> = with_value(&nested_counters, |v| match v {
     Some(Stored::Strings(stored_counters)) => stored_counters.iter().copied().collect(),
     _ => Vec::new(),
   });
@@ -599,7 +599,7 @@ pub fn ref_step_id(ctype: &str) -> Result<HashMap<Stored>> {
   // Let's to `\chapter*{}` even though amsart has no chapter counter) hit
   // Error:undefined:\thechapter@ID because the counter was never created.
   let unctr_cmd = s!("\\c@{unctr}");
-  let unctr_defined = state::lookup_register(&unctr_cmd, Vec::new())
+  let unctr_defined = lookup_register(&unctr_cmd, Vec::new())
     .ok()
     .flatten()
     .is_some();
@@ -643,7 +643,7 @@ pub fn ref_current_id(ctype: &str) -> Result<HashMap<Stored>> {
 pub fn reset_counter(ctr: &Token) -> Result<()> {
   let (c_ctr, c_un_ctr, ctr_id) =
     ctr.with_str(|ctr| (s!("\\c@{ctr}"), s!("\\c@UN{ctr}"), s!("\\@{ctr}@ID")));
-  state::assign_register(
+  assign_register(
     &c_ctr,
     Number::new(0).into(),
     Some(Scope::Global),
@@ -651,7 +651,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
   )?;
   if !ctr.with_str(|cstr| cstr.starts_with("UN")) {
     // but not UN
-    state::assign_register(
+    assign_register(
       &c_un_ctr,
       Number::new(0).into(),
       Some(Scope::Global),
@@ -668,7 +668,7 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
     }),
   )?;
   // and reset any within counters!
-  if let Some(nested) = state::lookup_tokens(&s!("\\cl@{ctr}")) {
+  if let Some(nested) = lookup_tokens(&s!("\\cl@{ctr}")) {
     for c in nested.unlist() {
       reset_counter(&c)?;
     }
@@ -678,16 +678,16 @@ pub fn reset_counter(ctr: &Token) -> Result<()> {
 
 /// Create id, and tags for an itemize type \item
 pub fn ref_step_item_counter(tag_opt: Option<&Tokens>) -> Result<HashMap<Stored>> {
-  let counter = state::lookup_string("itemcounter");
+  let counter = lookup_string("itemcounter");
   let n = lookup_int("itemization_items");
-  state::assign_value("itemization_items", n + 1, None);
+  assign_value("itemization_items", n + 1, None);
   let mut attr: HashMap<Stored> = HashMap::default();
-  if n > 0 {
-    if let Some(sep) = lookup_dimension("\\itemsep") {
-      let default_opt = lookup_dimension("\\lx@default@itemsep");
-      if default_opt.is_none() || sep.value_of() != default_opt.unwrap().value_of() {
-        attr.insert("itemsep", sep.into());
-      }
+  if n > 0
+    && let Some(sep) = lookup_dimension("\\itemsep")
+  {
+    let default_opt = lookup_dimension("\\lx@default@itemsep");
+    if default_opt.is_none() || sep.value_of() != default_opt.unwrap().value_of() {
+      attr.insert("itemsep", sep.into());
     }
   }
 
@@ -779,7 +779,7 @@ pub fn begin_itemize(
   options: BeginItemizeOptions,
 ) -> Result<HashMap<Stored>> {
   // The list-type and level of the *containing* list (if any!)
-  let outercounter = state::lookup_string("itemcounter");
+  let outercounter = lookup_string("itemcounter");
   let outerlevel = if !outercounter.is_empty() {
     lookup_int(&s!("{outercounter}level"))
   } else {
@@ -795,9 +795,9 @@ pub fn begin_itemize(
       .unwrap_or_default()
       .into()
   );
-  state::assign_value("itemization_level", listlevel, None);
-  state::assign_value(&s!("{counter}level"), level, None);
-  state::assign_value("itemization_items", 0, None);
+  assign_value("itemization_level", listlevel, None);
+  assign_value(&s!("{counter}level"), level, None);
+  assign_value("itemization_items", 0, None);
   let listpostfix = roman!(listlevel).to_string();
   let postfix = roman!(level).to_string();
   let mut usecounter = counter.to_string();
@@ -806,10 +806,10 @@ pub fn begin_itemize(
   }
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{itype}@item"));
-    state::let_i(&T_CS!("\\item"), &itype_cs, None);
+    let_i(&T_CS!("\\item"), &itype_cs, None);
   }
   // In case within odd environment.
-  state::let_i(&T_CS!("\\par"), &T_CS!("\\lx@normal@par"), None);
+  let_i(&T_CS!("\\par"), &T_CS!("\\lx@normal@par"), None);
   def_macro(
     T_CS!("\\@listctr"),
     None,
@@ -818,7 +818,7 @@ pub fn begin_itemize(
   )?;
   // Now arrange that this list's id's are relative to the current (outer) item (if any)
   // And that the items within this list's id's are relative to this (new) list.
-  state::assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
+  assign_value("itemcounter", Stored::String(arena::pin(&usecounter)), None);
   let listcounter = s!("@itemize{listpostfix}");
   if lookup_definition(&T_CS!(s!("\\c@{listcounter}")))?.is_none() {
     //Create new list counters as needed
@@ -839,12 +839,12 @@ pub fn begin_itemize(
     // AND reset this list's counter when the outer item is stepped
     let mut cl_toks = vec![T_CS!(&listcounter)];
     let cl_name = s!("\\cl@{outerusecounter}");
-    let existing = state::with_value(&cl_name, |v| match v {
+    let existing = with_value(&cl_name, |v| match v {
       Some(Stored::Tokens(tks)) => tks.clone().unlist(),
       _ => Vec::new(),
     });
     cl_toks.extend(existing);
-    state::assign_value(
+    assign_value(
       &cl_name,
       Stored::Tokens(Tokens::new(cl_toks)),
       Some(Scope::Global),
@@ -1025,15 +1025,15 @@ pub fn set_enumeration_style(stuff: Option<&Tokens>, level: Option<i32>) -> Resu
 /// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
 pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
   let tagskey = &s!("{captype}_tags");
-  if let Some(tags) = state::remove_value(tagskey) {
+  if let Some(tags) = remove_value(tagskey) {
     whatsit.set_property("tags", tags);
   }
   let idkey = s!("{captype}_id");
-  if let Some(id) = state::remove_value(&idkey) {
+  if let Some(id) = remove_value(&idkey) {
     whatsit.set_property("id", id);
   }
   let inlistkey = s!("{captype}_inlist");
-  if let Some(inlist) = state::remove_value(&inlistkey) {
+  if let Some(inlist) = remove_value(&inlistkey) {
     whatsit.set_property("inlist", inlist);
   }
 }

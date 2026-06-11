@@ -1,5 +1,4 @@
-use crate::engine::latex_constructs::*;
-use crate::prelude::*;
+use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   // Basically, this package is similar to amsthm.sty (or theorem.sty)
@@ -74,36 +73,36 @@ LoadDefinitions!({
   ]);
 
   DefMacro!("\\theoremheaderfont{}", sub[(font)] {
-    state::assign_register("\\thm@headfont",
+    assign_register("\\thm@headfont",
       RegisterValue::Tokens(font), None, vec![])?;
     Ok(Tokens!())
   });
 
   DefMacro!("\\theoremseparator{}", sub[(punct)] {
-    state::assign_register("\\thm@headpunct",
+    assign_register("\\thm@headpunct",
       RegisterValue::Tokens(punct), None, vec![])?;
     Ok(Tokens!())
   });
   DefMacro!("\\theoremsymbol{}", sub[(sym)] {
-    state::assign_register("\\thm@symbol",
+    assign_register("\\thm@symbol",
       RegisterValue::Tokens(sym), None, vec![])?;
     Ok(Tokens!())
   });
 
   DefMacro!("\\theoremprework{}", sub[(work)] {
-    state::assign_register("\\thm@prework",
+    assign_register("\\thm@prework",
       RegisterValue::Tokens(work), None, vec![])?;
     Ok(Tokens!())
   });
   DefMacro!("\\theorempostwork{}", sub[(work)] {
-    state::assign_register("\\thm@postwork",
+    assign_register("\\thm@postwork",
       RegisterValue::Tokens(work), None, vec![])?;
     Ok(Tokens!())
   });
   DefMacro!("\\theoremnumbering{}", sub[(numbering)] {
     let numbering_str = numbering.to_string();
     let cs = T_CS!(s!("\\{numbering_str}"));
-    state::assign_register("\\thm@numbering",
+    assign_register("\\thm@numbering",
       RegisterValue::Tokens(Tokens::new(vec![cs])), None, vec![])?;
     Ok(Tokens!())
   });
@@ -150,7 +149,7 @@ LoadDefinitions!({
         };
         saved.push((key.clone(), Stored::Tokens(tokens)));
       } else {
-        let val = state::lookup_value(key).unwrap_or(Stored::None);
+        let val = lookup_value(key).unwrap_or(Stored::None);
         saved.push((key.clone(), val));
       }
     }
@@ -179,7 +178,7 @@ LoadDefinitions!({
         };
         saved.push((key.clone(), Stored::Tokens(tokens)));
       } else {
-        let val = state::lookup_value(key).unwrap_or(Stored::None);
+        let val = lookup_value(key).unwrap_or(Stored::None);
         saved.push((key.clone(), val));
       }
     }
@@ -203,7 +202,7 @@ LoadDefinitions!({
     document.set_attribute(&mut node, "framed", "rectangle")?;
     // Add padding from \FrameSep register
     if let Some(Stored::String(margin)) = props.get("margin") {
-      let margin_str = arena::with(*margin, |s| s.to_string());
+      let margin_str = with(*margin, |s| s.to_string());
       let pad = s!("padding:{}pt;", margin_str);
       let existing = node.get_attribute("cssstyle").unwrap_or_default();
       let css = if existing.is_empty() { pad } else { s!("{};{}", existing, pad) };
@@ -356,7 +355,7 @@ LoadDefinitions!({
   // \newtheorem{definition}{Definition}, etc. — without it, papers using
   // [standard]{ntheorem} fail with `\begin{lemma}` undefined. Witness:
   // 0810.4249 (R=1→0).
-  if state::lookup_bool("thm@usestd") {
+  if lookup_bool("thm@usestd") {
     InputDefinitions!("ntheorem", noltxml => true, extension => Some(Cow::Borrowed("std")));
   }
 });

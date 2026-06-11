@@ -1,8 +1,11 @@
 //! Unit tests for the script-binding surface (real State, no Document).
 
+use latexml_core::{
+  gullet,
+  state::{State, StateOptions, set_state},
+};
+
 use super::*;
-use latexml_core::gullet;
-use latexml_core::state::{State, StateOptions, set_state};
 
 /// Bootstrap enough engine to validate prototypes (`{}` etc. need the base
 /// parameter-type registry). In a real conversion this is already loaded.
@@ -81,9 +84,9 @@ fn pool_surface_state_counters_tokens() {
     "LookupMeaning sees \\wsfoo"
   );
   assert_eq!(lookup_str("ws:refid"), "has", "RefStepID returns id");
-    assert_eq!(lookup_str("ws:map"), "A1", "AssignMapping/LookupMapping");
-    assert_eq!(lookup_str("ws:kv1"), "1, 2", "GetKeyVal brace-aware value");
-    assert_eq!(lookup_str("ws:kv2"), "rust", "GetKeyVals map access");
+  assert_eq!(lookup_str("ws:map"), "A1", "AssignMapping/LookupMapping");
+  assert_eq!(lookup_str("ws:kv1"), "1, 2", "GetKeyVal brace-aware value");
+  assert_eq!(lookup_str("ws:kv2"), "rust", "GetKeyVals map access");
 }
 
 /// Wave-B definition forms: DefRegister (count + dimen), DefConditional
@@ -123,11 +126,9 @@ fn pool_surface_definition_forms() {
     "DefMath \\wbsum installed"
   );
   // The conditional drives real expansion: \ifwb{on} -> YES, \ifwb{off} -> NO.
-  let on =
-    latexml_core::gullet::do_expand(mouth::tokenize_internal("\\wbprobe{on}")).expect("expand on");
+  let on = gullet::do_expand(mouth::tokenize_internal("\\wbprobe{on}")).expect("expand on");
   assert_eq!(on.to_string().trim(), "YES", "conditional true branch");
-  let off = latexml_core::gullet::do_expand(mouth::tokenize_internal("\\wbprobe{off}"))
-    .expect("expand off");
+  let off = gullet::do_expand(mouth::tokenize_internal("\\wbprobe{off}")).expect("expand off");
   assert_eq!(off.to_string().trim(), "NO", "conditional false branch");
 }
 
@@ -321,6 +322,9 @@ fn shipped_example_loads() {
   ))
   .expect("read shipped example");
   let n = load_script(&src).expect("shipped example must load");
-  assert!(n >= 15, "expected the full surface tour to install (got {n})");
+  assert!(
+    n >= 15,
+    "expected the full surface tour to install (got {n})"
+  );
   latexml_core::reset_thread_engine();
 }

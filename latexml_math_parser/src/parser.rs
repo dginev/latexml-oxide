@@ -1,26 +1,29 @@
+use std::{borrow::Cow, cell::RefCell, io::Cursor};
+
+use latexml_core::{
+  Warn,
+  common::{
+    arena::{self, SymHashMap},
+    error::{Result, note_begin, note_end, note_progress},
+    xml::*,
+  },
+  document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname},
+  fatal, map, pin, s, static_map, sym_map,
+};
 use libxml::tree::{Node, NodeType};
+use marpa::{
+  lexer::byte_scanner::*, parser::*, thin::Grammar as ThinGrammar, tree_builder::TreeBuilder,
+};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::io::Cursor;
 
-use latexml_core::common::arena::{self, SymHashMap};
-use latexml_core::common::error::{Result, note_begin, note_end, note_progress};
-use latexml_core::common::xml::*;
-use latexml_core::document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname};
-use latexml_core::pin;
-use latexml_core::{Warn, fatal, map, s, static_map, sym_map};
-
-use crate::grammar::builder::init_grammar;
-use crate::pragmatics::ValidationPragmatics;
-use crate::semantics::*;
-use crate::util::{filter_hints, node_to_grammar_lexemes_from};
-use marpa::lexer::byte_scanner::*;
-use marpa::parser::*;
-use marpa::thin::Grammar as ThinGrammar;
-use marpa::tree_builder::TreeBuilder;
+use crate::{
+  grammar::builder::init_grammar,
+  pragmatics::ValidationPragmatics,
+  semantics::*,
+  util::{filter_hints, node_to_grammar_lexemes_from},
+};
 
 /// Fallback table for formulas the Marpa grammar cannot yet parse.
 /// Maps tex attribute → text attribute for known test formulas.
@@ -114,10 +117,10 @@ static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
 // **HYBRID is now the default** (2026-05-17). Hybrid reads the tokens
 // once, builds the bocage once, then checks Marpa's raw
 // `ambiguity_metric()`:
-//   * metric == 1 (unambiguous) → cheap Tree-iteration via
-//     `Actions::get_tree`, same machinery the legacy path uses.
-//   * metric >= 2 (ambiguous)   → ASF traversal via `MathTraverser`,
-//     same machinery the ASF-only default used.
+//   * metric == 1 (unambiguous) → cheap Tree-iteration via `Actions::get_tree`, same machinery the
+//     legacy path uses.
+//   * metric >= 2 (ambiguous)   → ASF traversal via `MathTraverser`, same machinery the ASF-only
+//     default used.
 //
 // Measured: Article-2025.tex (579 math-heavy formulae) wall is
 // 12.40s under HYBRID vs 17.00s under pure ASF and 12.21s under
@@ -126,18 +129,15 @@ static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
 // raw-ambiguous fraction (12.7%–40% across corpus papers).
 //
 // Escape hatches:
-//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the 6
-//     convergence caps. Useful for engine-divergence debugging.
-//   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch).
-//     Useful for measuring ASF-only cost or debugging ASF behaviour
-//     in isolation.
+//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the 6 convergence caps. Useful for
+//     engine-divergence debugging.
+//   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch). Useful for measuring ASF-only
+//     cost or debugging ASF behaviour in isolation.
 static PARSE_VIA_LEGACY: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_MARPA_LEGACY").is_ok());
-static PARSE_VIA_ASF_ONLY: Lazy<bool> = Lazy::new(|| {
-  !*PARSE_VIA_LEGACY && std::env::var("LATEXML_MARPA_ASF_ONLY").is_ok()
-});
+static PARSE_VIA_ASF_ONLY: Lazy<bool> =
+  Lazy::new(|| !*PARSE_VIA_LEGACY && std::env::var("LATEXML_MARPA_ASF_ONLY").is_ok());
 // Default = hybrid unless LEGACY or ASF_ONLY is requested.
-static PARSE_VIA_HYBRID: Lazy<bool> =
-  Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
+static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE_VIA_ASF_ONLY);
 // Large-bocage fallback cap (marpa commit 5f6a19e + perf branch).
 // When the post-recognizer bocage exceeds this many total and-nodes,
 // `parse_hybrid_with_and_node_limit` routes us back through Tree
@@ -156,19 +156,20 @@ static PARSE_VIA_HYBRID: Lazy<bool> =
 // which already match what semantic selection can use. Override via
 // `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
 // disable the cap and force pure ASF on every ambiguous formula.
-static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> = Lazy::new(|| {
-  match std::env::var("LATEXML_MARPA_HYBRID_AND_NODE_LIMIT") {
-    Ok(v) => {
-      let trimmed = v.trim();
-      if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
-        None
-      } else {
-        trimmed.parse::<usize>().ok().or(Some(500))
-      }
+static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
+  Lazy::new(
+    || match std::env::var("LATEXML_MARPA_HYBRID_AND_NODE_LIMIT") {
+      Ok(v) => {
+        let trimmed = v.trim();
+        if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
+          None
+        } else {
+          trimmed.parse::<usize>().ok().or(Some(500))
+        }
+      },
+      Err(_) => Some(500),
     },
-    Err(_) => Some(500),
-  }
-});
+  );
 
 // Maximum number of grammar lexemes in a single formula before we skip the
 // full Marpa grammar parse and fall through to the kludge parser (the same
@@ -186,8 +187,8 @@ static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> = Lazy::new(|| {
 // comfortably above genuine math while well below the explosion. Override via
 // `LATEXML_MAX_GRAMMAR_LEXEMES`; set `0`/`none` to disable (full Perl parity,
 // at the risk of the abort). See SYNC_STATUS "FATAL_134 marpa-OOM".
-static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> = Lazy::new(|| {
-  match std::env::var("LATEXML_MAX_GRAMMAR_LEXEMES") {
+static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> =
+  Lazy::new(|| match std::env::var("LATEXML_MAX_GRAMMAR_LEXEMES") {
     Ok(v) => {
       let trimmed = v.trim();
       if trimmed == "0" || trimmed.eq_ignore_ascii_case("none") {
@@ -197,8 +198,7 @@ static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> = Lazy::new(|| {
       }
     },
     Err(_) => Some(12000),
-  }
-});
+  });
 // Compatibility alias: `PARSE_VIA_ASF` is true when we're NOT taking
 // the legacy path — both hybrid and ASF-only flavours go through the
 // ASF traverser at least some of the time. The downstream branch
@@ -207,7 +207,7 @@ static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
 
 #[derive(Default)]
 struct AmbiguityAuditCounts {
-  total:        usize,
+  total:       usize,
   unambiguous: usize,
   ambiguous:   usize,
 }
@@ -473,9 +473,9 @@ impl MathParser {
     // be used on disposable benchmark/test runs, not normal conversion.
     let mut parser = Parser::with_precomputed_grammar(self.grammar.clone());
     let mut traverser = crate::asf_traverser::MathTraverser {
-      actions:      &self.actions,
-      pragmas:      self.expert_pragmatics.as_slice(),
-      builder:      &self.builder,
+      actions: &self.actions,
+      pragmas: self.expert_pragmatics.as_slice(),
+      builder: &self.builder,
       nodes,
       document,
       pruned_count: 0,
@@ -552,7 +552,8 @@ impl MathParser {
         // the conversion outright would be more disruptive than
         // proceeding with the prior grammar state.
         log_math_warn!(
-          "expected", "MathGrammar",
+          "expected",
+          "MathGrammar",
           "math parser: init_grammar fallback failed ({}) — leaving engine in last known state",
           e
         );
@@ -647,13 +648,11 @@ impl MathParser {
         latexml_core::telemetry::record_math_parse(elapsed_us, self.last_parsetrees_count as u32);
         // Store parse tree count as attribute on the Math element for diagnostics.
         // Find the ancestor ltx:Math of this XMath node and set _parsetrees.
-        if self.last_parsetrees_count > 0 {
-          if let Some(mut math_parent) = math_ref.get_parent() {
-            if math_parent.get_name() == "Math" {
-              let _ =
-                math_parent.set_attribute("_parsetrees", &self.last_parsetrees_count.to_string());
-            }
-          }
+        if self.last_parsetrees_count > 0
+          && let Some(mut math_parent) = math_ref.get_parent()
+          && math_parent.get_name() == "Math"
+        {
+          let _ = math_parent.set_attribute("_parsetrees", &self.last_parsetrees_count.to_string());
         }
       }
       crate::data::clear_math_idstore();
@@ -723,24 +722,22 @@ impl MathParser {
           if matches!(
             op_role.as_deref(),
             Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")
-          ) {
-            if let Some(base_role) = children[1].get_attribute("role") {
-              if matches!(
-                base_role.as_str(),
-                "MULOP"
-                  | "ADDOP"
-                  | "BINOP"
-                  | "RELOP"
-                  | "ARROW"
-                  | "METARELOP"
-                  | "MODIFIER"
-                  | "MODIFIEROP"
-                  | "OPERATOR"
-                  | "DIFFOP"
-              ) {
-                let _ = xmapp.set_attribute("role", &base_role);
-              }
-            }
+          ) && let Some(base_role) = children[1].get_attribute("role")
+            && matches!(
+              base_role.as_str(),
+              "MULOP"
+                | "ADDOP"
+                | "BINOP"
+                | "RELOP"
+                | "ARROW"
+                | "METARELOP"
+                | "MODIFIER"
+                | "MODIFIEROP"
+                | "OPERATOR"
+                | "DIFFOP"
+            )
+          {
+            let _ = xmapp.set_attribute("role", &base_role);
           }
         }
       }
@@ -776,7 +773,11 @@ impl MathParser {
             id = next.as_str();
             hops += 1;
           }
-          if id == start { None } else { Some(id.to_string()) }
+          if id == start {
+            None
+          } else {
+            Some(id.to_string())
+          }
         };
         let mut rewrites = 0usize;
         let mut unlinks = 0usize;
@@ -997,51 +998,56 @@ impl MathParser {
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
     let mut p = xnode.get_parent().unwrap();
-    match self.parse_rec(xnode, "Anything,", document)? { Some(result) => {
-      // Add text representation to the containing Math element.
+    match self.parse_rec(xnode, "Anything,", document)? {
+      Some(result) => {
+        // Add text representation to the containing Math element.
 
-      // This is a VERY screwy situation? How can the parent be a document fragment??
-      // This has got to be a LibXML bug???
-      if p.get_type() == Some(NodeType::DocumentFragNode) {
-        let child_nodes = p.get_child_nodes();
-        if child_nodes.len() == 1 {
-          p = child_nodes[0].clone();
-        } else {
-          fatal!(
-            XMath,
-            Malformed,
-            "XMath node has DOCUMENT_FRAGMENT for parent!"
-          );
-          // xnode,
+        // This is a VERY screwy situation? How can the parent be a document fragment??
+        // This has got to be a LibXML bug???
+        if p.get_type() == Some(NodeType::DocumentFragNode) {
+          let child_nodes = p.get_child_nodes();
+          if child_nodes.len() == 1 {
+            p = child_nodes[0].clone();
+          } else {
+            fatal!(
+              XMath,
+              Malformed,
+              "XMath node has DOCUMENT_FRAGMENT for parent!"
+            );
+            // xnode,
+          }
         }
-      }
-      // HACK: replace XMRef's to stray trailing punctution
-      //     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
-      //       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
-      //       $r->removeAttribute('xml:id');
-      // foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']",
-      // $p)) {         $document->replaceTree($r, $n); } }
-      //     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
-      //       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
-      //       # but the replacement my have been replaced as well!
-      //       while (my $reprepid = $$LaTeXML::MathParser::LOSTNODES{$repid}) {
-      //         $repid = $reprepid; }
-      //       if ($document->findnodes("descendant-or-self::*[\@xml:id='$id']")
-      // &&
-      // !$document->findnodes("descendant-or-self::*[\@xml:id='$repid']")) {
-      // # Do nothing if the node never actually got replaced (parse ultimately
-      // failed?)       }
-      //       else {
-      // foreach my $n
-      // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
-      // $document->setAttribute($n, idref => $repid); } } }
-      p.set_attribute("text", &text_form(&result, document))?;
-    } _ => if let Some(text) = p
-      .get_attribute("tex")
-      .and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str()))
-    {
-      p.set_attribute("text", text)?;
-    }}
+        // HACK: replace XMRef's to stray trailing punctution
+        //     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
+        //       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
+        //       $r->removeAttribute('xml:id');
+        // foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']",
+        // $p)) {         $document->replaceTree($r, $n); } }
+        //     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
+        //       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
+        //       # but the replacement my have been replaced as well!
+        //       while (my $reprepid = $$LaTeXML::MathParser::LOSTNODES{$repid}) {
+        //         $repid = $reprepid; }
+        //       if ($document->findnodes("descendant-or-self::*[\@xml:id='$id']")
+        // &&
+        // !$document->findnodes("descendant-or-self::*[\@xml:id='$repid']")) {
+        // # Do nothing if the node never actually got replaced (parse ultimately
+        // failed?)       }
+        //       else {
+        // foreach my $n
+        // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
+        // $document->setAttribute($n, idref => $repid); } } }
+        p.set_attribute("text", &text_form(&result, document))?;
+      },
+      _ => {
+        if let Some(text) = p
+          .get_attribute("tex")
+          .and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str()))
+        {
+          p.set_attribute("text", text)?;
+        }
+      },
+    }
     Ok(())
   }
 
@@ -1070,96 +1076,101 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(&mut node, document);
       Ok(None)
-    } else { match self.parse_single(&mut node, document, &rule)? { Some(mut result) => {
-      *self.passed.entry_sym(tag).or_insert(0) += 1;
-      if tag == pin!("ltx:XMath") {
-        // Replace the content of XMath with parsed result
-        self.n_parsed += 1;
-        note_progress(&s!("[{}]", self.n_parsed));
-        for el_node in element_nodes(&node) {
-          document.unrecord_node_ids(&el_node);
-        }
-        // unbindNode followed by (append|replace)Tree (which removes ID's) should
-        // be safe
-        for mut child in node.get_child_nodes() {
-          child.unbind_node();
-        }
-        document.append_tree(&mut node, vec![result])?;
-        let mut new_element_children = element_nodes(&node);
-        result = new_element_children.remove(0);
-      } else {
-        // Replace the whole node for XMArg, XMWrap; preserve some attributes
-        //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
-        // Copy all attributes
-        let resultid = p_get_attribute(&result, "id");
-        let mut attr = node.get_attributes();
+    } else {
+      match self.parse_single(&mut node, document, &rule)? {
+        Some(mut result) => {
+          *self.passed.entry_sym(tag).or_insert(0) += 1;
+          if tag == pin!("ltx:XMath") {
+            // Replace the content of XMath with parsed result
+            self.n_parsed += 1;
+            note_progress(&s!("[{}]", self.n_parsed));
+            for el_node in element_nodes(&node) {
+              document.unrecord_node_ids(&el_node);
+            }
+            // unbindNode followed by (append|replace)Tree (which removes ID's) should
+            // be safe
+            for mut child in node.get_child_nodes() {
+              child.unbind_node();
+            }
+            document.append_tree(&mut node, vec![result])?;
+            let mut new_element_children = element_nodes(&node);
+            result = new_element_children.remove(0);
+          } else {
+            // Replace the whole node for XMArg, XMWrap; preserve some attributes
+            //ProgressStep() if ($$self{progress}++ % $MATHPARSE_PROGRESS_QUANTUM) == 0;
+            // Copy all attributes
+            let resultid = p_get_attribute(&result, "id");
+            let mut attr = node.get_attributes();
 
-        // add to result, even allowing modification of xml node, since we're committed.
-        // [Annotate converts node to array which messes up clearing the id!]
-        let rtag = get_node_qname(&result);
-        // TODO: Is this needed in a world where `result` is always a `Node` ?
-        // // // Make sure font is "Appropriate", if we're creating a new token (yuck)
-        // // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
-        // // my $content = join('', @$result[2 .. $#$result]);
-        // // if ((!defined $content) || ($content eq '')) {
-        // //   delete $attr{_font}; }    # No font needed
-        // // elsif (my $font = $document->decodeFont($attr{_font})) {
-        // //   delete $attr{_font};
-        // //   $attr{font} = $font->specialize($content); } }
-        // // } else {
-        attr.remove("_font");
-        // TODO: See the namespaced attribute issue for libxml's wrapper:
-        //  https://github.com/KWARC/rust-libxml/issues/104
-        // until then, HACK ids.
-        let newid = attr.remove("id");
-        if let Some(ref nid) = newid {
-          attr.insert(String::from("xml:id"), nid.to_owned());
-        }
-        // Perl guard: don't overwrite _box if result already has one
-        if attr.contains_key("_box") && result.has_attribute("_box") {
-          attr.remove("_box");
-        }
-        for (key, value) in attr {
-          if !(key.starts_with('_') || sym_can_have_attribute(rtag, arena::pin(&key))) {
-            continue;
-          }
-          if key == "xml:id" {
-            // Since we're moving the id...bookkeeping
-            document.unrecord_id(&value);
-            node.remove_attribute("xml:id")?;
-          }
-          // TODO: is the array/XM case still relevant?
-          // if ($isarr) { $$result[1]{$key} = $value; } else {
-          document.set_attribute(&mut result, &key, &value)?;
-          // }
-        }
-        if let Some(r) = document.replace_tree(result.clone(), node)? {
-          result = r;
-        }
-        // If replace_tree returns None, node was already detached; keep result as-is.
-        // Danger: the above code replaced the id on the parsed result with the one from XMArg,..
-        // If there are any references to `resultid`, we need to point them to `newid`!
-        if let Some(rid) = resultid {
-          if let Some(nid) = newid {
-            if rid != nid {
+            // add to result, even allowing modification of xml node, since we're committed.
+            // [Annotate converts node to array which messes up clearing the id!]
+            let rtag = get_node_qname(&result);
+            // TODO: Is this needed in a world where `result` is always a `Node` ?
+            // // // Make sure font is "Appropriate", if we're creating a new token (yuck)
+            // // if ($isarr && $attr{_font} && ($rtag eq 'ltx:XMTok')) {
+            // // my $content = join('', @$result[2 .. $#$result]);
+            // // if ((!defined $content) || ($content eq '')) {
+            // //   delete $attr{_font}; }    # No font needed
+            // // elsif (my $font = $document->decodeFont($attr{_font})) {
+            // //   delete $attr{_font};
+            // //   $attr{font} = $font->specialize($content); } }
+            // // } else {
+            attr.remove("_font");
+            // TODO: See the namespaced attribute issue for libxml's wrapper:
+            //  https://github.com/KWARC/rust-libxml/issues/104
+            // until then, HACK ids.
+            let newid = attr.remove("id");
+            if let Some(ref nid) = newid {
+              attr.insert(String::from("xml:id"), nid.to_owned());
+            }
+            // Perl guard: don't overwrite _box if result already has one
+            if attr.contains_key("_box") && result.has_attribute("_box") {
+              attr.remove("_box");
+            }
+            for (key, value) in attr {
+              if !(key.starts_with('_') || sym_can_have_attribute(rtag, arena::pin(&key))) {
+                continue;
+              }
+              if key == "xml:id" {
+                // Since we're moving the id...bookkeeping
+                document.unrecord_id(&value);
+                node.remove_attribute("xml:id")?;
+              }
+              // TODO: is the array/XM case still relevant?
+              // if ($isarr) { $$result[1]{$key} = $value; } else {
+              document.set_attribute(&mut result, &key, &value)?;
+              // }
+            }
+            if let Some(r) = document.replace_tree(result.clone(), node)? {
+              result = r;
+            }
+            // If replace_tree returns None, node was already detached; keep result as-is.
+            // Danger: the above code replaced the id on the parsed result with the one from
+            // XMArg,.. If there are any references to `resultid`, we need to point them
+            // to `newid`!
+            if let Some(rid) = resultid
+              && let Some(nid) = newid
+              && rid != nid
+            {
               for mut tref in document.findnodes(&s!("//*[@idref='{}']", rid), None) {
                 tref.set_attribute("idref", &nid)?;
               }
             }
           }
-        }
+          Ok(Some(result))
+        },
+        _ => {
+          // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
+          *self.failed.entry_sym(tag).or_insert(0) += 1;
+          if tag == pin!("ltx:XMath") {
+            self.failed_xmath_ids.push(node.to_hashable());
+            // Kludge (OPEN/CLOSE wrapping) runs post-parse in core_interface.rs
+            // using failed_xmath_ids to find the failed nodes.
+          }
+          Ok(None)
+        },
       }
-      Ok(Some(result))
-    } _ => {
-      // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
-      *self.failed.entry_sym(tag).or_insert(0) += 1;
-      if tag == pin!("ltx:XMath") {
-        self.failed_xmath_ids.push(node.to_hashable());
-        // Kludge (OPEN/CLOSE wrapping) runs post-parse in core_interface.rs
-        // using failed_xmath_ids to find the failed nodes.
-      }
-      Ok(None)
-    }}}
+    }
   }
 
   // Depth first parsing of XMArg nodes.
@@ -1179,14 +1190,19 @@ impl MathParser {
           if saved_role.is_some() {
             c.remove_attribute("role").ok();
           }
-          match self.parse_rec(child, "Anything", document)? { Some(mut result) => {
-            if let Some(ref role) = saved_role {
-              result.set_attribute("role", role).ok();
-            }
-          } _ => if let Some(ref role) = saved_role {
-            // Parse failed — XMWrap still in DOM, restore role
-            c.set_attribute("role", role).ok();
-          }}
+          match self.parse_rec(child, "Anything", document)? {
+            Some(mut result) => {
+              if let Some(ref role) = saved_role {
+                result.set_attribute("role", role).ok();
+              }
+            },
+            _ => {
+              if let Some(ref role) = saved_role {
+                // Parse failed — XMWrap still in DOM, restore role
+                c.set_attribute("role", role).ok();
+              }
+            },
+          }
         } else {
           self.parse_rec(child, "Anything", document)?;
         }
@@ -1551,9 +1567,9 @@ impl MathParser {
       // Do not compare this number across routing modes as a semantic
       // invariant.
       let mut traverser = crate::asf_traverser::MathTraverser {
-        actions:      &self.actions,
-        pragmas:      self.expert_pragmatics.as_slice(),
-        builder:      &self.builder,
+        actions: &self.actions,
+        pragmas: self.expert_pragmatics.as_slice(),
+        builder: &self.builder,
         nodes,
         document,
         pruned_count: 0,
@@ -1574,20 +1590,21 @@ impl MathParser {
           #[allow(clippy::drop_non_drop)]
           drop(traverser);
           record_ambiguity_metric(1, input);
-          let tree_outcome = match tree_iter.next() { Some(val) => {
-            match self.actions.get_tree(
-              self.builder.clone(),
-              val,
-              self.expert_pragmatics.as_slice(),
-              ActionContext { nodes, document },
-            ) {
-              Ok(Some(tree)) => ParseOutcome::Accepted(tree),
-              Ok(None) => ParseOutcome::Empty,
-              Err(prune_err) => ParseOutcome::Rejected(prune_err.to_string()),
-            }
-          } _ => {
-            ParseOutcome::Empty
-          }};
+          let tree_outcome = match tree_iter.next() {
+            Some(val) => {
+              match self.actions.get_tree(
+                self.builder.clone(),
+                val,
+                self.expert_pragmatics.as_slice(),
+                ActionContext { nodes, document },
+              ) {
+                Ok(Some(tree)) => ParseOutcome::Accepted(tree),
+                Ok(None) => ParseOutcome::Empty,
+                Err(prune_err) => ParseOutcome::Rejected(prune_err.to_string()),
+              }
+            },
+            _ => ParseOutcome::Empty,
+          };
           debug_assert!(
             tree_iter.next().is_none(),
             "hybrid unambiguous branch should expose exactly one raw tree"
@@ -1621,8 +1638,7 @@ impl MathParser {
               pruned_trees,
             );
           }
-          let alts_vec =
-            std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
             if parses.contains(&tree) {
               deduped += 1;
@@ -1740,16 +1756,18 @@ impl MathParser {
       // bandages. See `latexml_math_parser/src/asf_traverser.rs` and
       // docs/MATH_PARSER_AND_ASF.md.
       let mut traverser = crate::asf_traverser::MathTraverser {
-        actions:      &self.actions,
-        pragmas:      self.expert_pragmatics.as_slice(),
-        builder:      &self.builder,
+        actions: &self.actions,
+        pragmas: self.expert_pragmatics.as_slice(),
+        builder: &self.builder,
         nodes,
         document,
         pruned_count: 0,
       };
-      let asf_result = self
-        .engine
-        .parse_and_traverse_forest(ByteScanner::new(Cursor::new(input)), (), &mut traverser);
+      let asf_result = self.engine.parse_and_traverse_forest(
+        ByteScanner::new(Cursor::new(input)),
+        (),
+        &mut traverser,
+      );
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
@@ -1775,8 +1793,7 @@ impl MathParser {
           // holds a copy in its cache (it returned its own clone via
           // `cache.insert(peak, output.clone())`), so fall back to
           // deep clone on the cold path.
-          let alts_vec =
-            std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
             if parses.contains(&tree) {
               deduped += 1;
@@ -1946,7 +1963,8 @@ impl MathParser {
       // Diagnostic only — high ambiguity isn't a Perl-side Error in
       // MathParser.pm; the warn target uses a Rust-internal class.
       log_math_warn!(
-        "ambiguous", "math",
+        "ambiguous",
+        "math",
         "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
         ok_trees + pruned_trees + deduped,
         ok_trees + deduped,
@@ -2093,26 +2111,21 @@ impl MathParser {
         // as a sibling absolute-value.
         reduced_forest = reduced_forest.prefer_wider_addition_root();
 
-
         // Multi-tree shape pragmas (`prefer_fewer_absent`,
         // `prefer_smaller_tree`) exist on `XM` but are
         // **deliberately not wired in by default**. Both proved
         // too coarse to apply universally — see
         // docs/MATH_PARSER_ASF_TIEBREAKING.md § "Empirical results":
         //
-        // * `prefer_fewer_absent`: on the legacy path it is
-        //   essentially neutral (1300/1 vs 1301 baseline), but on
-        //   the ASF path it costs 9 tests because ASF surfaces
-        //   absent-free parses that are semantically WRONG (e.g.
-        //   `<a|f|b>` parsed as a multiplication chain without the
-        //   bra-ket interpretation). The deeper issue: `absent` has
-        //   two valid uses (structural filler vs missing-operand
-        //   fallback) and the pragma can't tell them apart.
+        // * `prefer_fewer_absent`: on the legacy path it is essentially neutral (1300/1 vs 1301
+        //   baseline), but on the ASF path it costs 9 tests because ASF surfaces absent-free parses
+        //   that are semantically WRONG (e.g. `<a|f|b>` parsed as a multiplication chain without
+        //   the bra-ket interpretation). The deeper issue: `absent` has two valid uses (structural
+        //   filler vs missing-operand fallback) and the pragma can't tell them apart.
         //
-        // * `prefer_smaller_tree`: 3 improvements vs 6 regressions
-        //   on legacy. "Smaller is better" works for `norm@(a)` vs
-        //   `abs(abs(a))` but not for `annotated@(x, expr)` vs
-        //   `x@(expr)` where the larger tree is the intended one.
+        // * `prefer_smaller_tree`: 3 improvements vs 6 regressions on legacy. "Smaller is better"
+        //   works for `norm@(a)` vs `abs(abs(a))` but not for `annotated@(x, expr)` vs `x@(expr)`
+        //   where the larger tree is the intended one.
         //
         // The correct path forward is case-by-case semantic
         // pragmas (named-operator recognition, domain-typed
@@ -2143,11 +2156,11 @@ impl MathParser {
         // here saves the ~8% CPU time that precompute consumed per formula.
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
-        crate::semantics::restructure_formulae_right(&mut parse_tree)?;
+        restructure_formulae_right(&mut parse_tree)?;
         // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
-        crate::semantics::rename_fenced_lists(&mut parse_tree, nodes)?;
+        rename_fenced_lists(&mut parse_tree, nodes)?;
         // Combine adjacent SUPOP tokens (prime+prime → prime2)
-        crate::semantics::combine_supop_post(&mut parse_tree, nodes)?;
+        combine_supop_post(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))
       },
       Err(e) => {
@@ -2304,10 +2317,10 @@ fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Docu
   // Perl: if base was a float script, bump level
   if base.get_attribute("_wasfloat").is_some() {
     l += 1;
-  } else if let Some(bump_str) = base.get_attribute("_bumplevel") {
-    if let Ok(bump) = bump_str.parse::<u32>() {
-      l = bump;
-    }
+  } else if let Some(bump_str) = base.get_attribute("_bumplevel")
+    && let Ok(bump) = bump_str.parse::<u32>()
+  {
+    l = bump;
   }
 
   // Perl L1632: position from base or script, defaulting to "post"
@@ -2643,12 +2656,9 @@ fn textrec_array(node: &Node, document: &Document) -> String {
     .map(|row| {
       let cells: Vec<String> = element_nodes(&row)
         .into_iter()
-        .map(|cell| {
-          match cell.get_first_child() { Some(first_child) => {
-            textrec(&first_child, None, None, document)
-          } _ => {
-            String::new()
-          }}
+        .map(|cell| match cell.get_first_child() {
+          Some(first_child) => textrec(&first_child, None, None, document),
+          _ => String::new(),
         })
         .collect();
       format!("[{}]", cells.join(", "))
@@ -2715,36 +2725,36 @@ pub fn p_get_value(node: &Node) -> String {
 //================================================================================
 
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
-  if with_node_qname(node, |name| name == "ltx:XMRef") {
-    if let Some(idref) = node.get_attribute("idref") {
-      // NOTE: this intentionally uses the LIVE `document.lookup_id`, NOT the
-      // frozen `MATH_IDSTORE` snapshot path (`data::resolve_xmref`) that
-      // `get_grammatical_role` uses. Routing this through `resolve_xmref` so
-      // that more refs resolve mid-parse looked like it would silence the
-      // benign transient `expected:id` warnings (refs that miss the live
-      // idstore during a sibling element's reinstall but exist in the final
-      // doc) — but it DUPLICATES content (`\choose` → "a + ba + b binomial
-      // c + dc + d", regressing choose/declare/sampler): callers here rely on
-      // an unresolved ref returning the XMRef itself. The warnings are benign
-      // (WARN-level, targets resolve in the final tree); do not "fix" them by
-      // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
-      // Can it happen that the target is itself an XMRef? Then recurse.
-      if let Some(realnode) = document.lookup_id(&idref) {
-        return Cow::Borrowed(realnode);
-      } else {
-        let message = s!("Cannot find a node with xml:id='{}'", idref);
-        // TODO:
-        // LaTeXML::MathParser::IDREFS{$idref}
-        // ? "Previously bound to " .
-        // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-        // Perl Document.pm L1553: Warn, not Error (missing XMRef targets are common)
-        let warn_fn = || -> Result<()> {
-          Warn!("expected", "id", message);
-          Ok(())
-        };
-        warn_fn().ok();
-        //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
-      }
+  if with_node_qname(node, |name| name == "ltx:XMRef")
+    && let Some(idref) = node.get_attribute("idref")
+  {
+    // NOTE: this intentionally uses the LIVE `document.lookup_id`, NOT the
+    // frozen `MATH_IDSTORE` snapshot path (`data::resolve_xmref`) that
+    // `get_grammatical_role` uses. Routing this through `resolve_xmref` so
+    // that more refs resolve mid-parse looked like it would silence the
+    // benign transient `expected:id` warnings (refs that miss the live
+    // idstore during a sibling element's reinstall but exist in the final
+    // doc) — but it DUPLICATES content (`\choose` → "a + ba + b binomial
+    // c + dc + d", regressing choose/declare/sampler): callers here rely on
+    // an unresolved ref returning the XMRef itself. The warnings are benign
+    // (WARN-level, targets resolve in the final tree); do not "fix" them by
+    // swapping the resolver. See docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
+    // Can it happen that the target is itself an XMRef? Then recurse.
+    if let Some(realnode) = document.lookup_id(&idref) {
+      return Cow::Borrowed(realnode);
+    } else {
+      let message = s!("Cannot find a node with xml:id='{}'", idref);
+      // TODO:
+      // LaTeXML::MathParser::IDREFS{$idref}
+      // ? "Previously bound to " .
+      // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
+      // Perl Document.pm L1553: Warn, not Error (missing XMRef targets are common)
+      let warn_fn = || -> Result<()> {
+        Warn!("expected", "id", message);
+        Ok(())
+      };
+      warn_fn().ok();
+      //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
     }
   }
   Cow::Borrowed(node)
@@ -2817,8 +2827,9 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use libxml::parser::Parser as XmlParser;
+
+  use super::*;
 
   /// Pin the message↔classifier coupling for the string-fallback path of
   /// resource-fatal recovery (P1-4). The PRIMARY transport is the structured
@@ -2829,10 +2840,22 @@ mod tests {
   fn resource_fatal_message_fallback_recognizes_engine_messages() {
     use latexml_core::common::error::ErrorCategory as C;
     let cases = [
-      ("Infinite expansion loop: a window of 2 token(s) repeated 100+ times", C::Recursion),
-      ("Token limit of 400000000 exceeded, infinite loop?", C::TokenLimit),
-      ("Pushback limit of 650000 exceeded, infinite loop?", C::PushbackLimit),
-      ("Memory budget exceeded: RSS 4500 MB > cap 4500 MB", C::MemoryBudget),
+      (
+        "Infinite expansion loop: a window of 2 token(s) repeated 100+ times",
+        C::Recursion,
+      ),
+      (
+        "Token limit of 400000000 exceeded, infinite loop?",
+        C::TokenLimit,
+      ),
+      (
+        "Pushback limit of 650000 exceeded, infinite loop?",
+        C::PushbackLimit,
+      ),
+      (
+        "Memory budget exceeded: RSS 4500 MB > cap 4500 MB",
+        C::MemoryBudget,
+      ),
     ];
     for (msg, expected) in cases {
       let err = resource_fatal_from_message(msg)
@@ -2885,13 +2908,14 @@ mod tests {
   // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
   // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 
-  fn lex(name: &str) -> XM {
-    XM::Lexeme(std::rc::Rc::from(name), crate::semantics::metadata::Meta::default())
-  }
+  fn lex(name: &str) -> XM { XM::Lexeme(std::rc::Rc::from(name), metadata::Meta::default()) }
 
   #[test]
   fn parity_outcomes_compatible_both_empty_is_ok() {
-    assert!(parity_outcomes_compatible(&ParseOutcome::Empty, &ParseOutcome::Empty));
+    assert!(parity_outcomes_compatible(
+      &ParseOutcome::Empty,
+      &ParseOutcome::Empty
+    ));
   }
 
   #[test]

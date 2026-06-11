@@ -1,45 +1,46 @@
+use std::{borrow::Cow, cell::RefCell, collections::VecDeque, fmt, rc::Rc};
+
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::collections::VecDeque;
-use std::fmt;
-use std::rc::Rc;
 
-use crate::alignment::Alignment;
-use crate::common::arena::data::SymHashMap;
-use crate::common::arena::{self, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::float::Float;
-use crate::common::font::Font;
-use crate::common::glue::Glue;
-use crate::common::locator::Locator;
-use crate::common::mudimension::MuDimension;
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-use crate::definition::Reversion;
-use crate::definition::argument::ArgWrap;
-use crate::definition::conditional::{Conditional, IfFrame};
-use crate::definition::constructor::Constructor;
-use crate::definition::expandable::Expandable;
 use crate::definition::math_primitive::MathPrimitive; //MathPrimitiveOptions
-use crate::definition::primitive::Primitive;
-use crate::definition::register::{Register, RegisterValue};
-use crate::definition::{Definition, FontDirective};
-use crate::document::tag::{RawFrontmatter, TagData};
-use crate::keyval::KeyVal;
-use crate::keyvals::KeyVals;
-use crate::ligature::Ligature;
-use crate::list::List;
-use crate::mouth;
-use crate::mouth::Mouth;
-use crate::parameter::Parameter;
-use crate::rewrite::Rewrite;
-use crate::state::StashTable;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
+use crate::{
+  alignment::Alignment,
+  common::{
+    arena::{self, SymStr, data::SymHashMap},
+    dimension::Dimension,
+    error::*,
+    float::Float,
+    font::Font,
+    glue::Glue,
+    locator::Locator,
+    mudimension::MuDimension,
+    muglue::MuGlue,
+    number::Number,
+    numeric_ops::NumericOps,
+  },
+  definition::{
+    Definition, FontDirective, Reversion,
+    argument::ArgWrap,
+    conditional::{Conditional, IfFrame},
+    constructor::Constructor,
+    expandable::Expandable,
+    primitive::Primitive,
+    register::{Register, RegisterValue},
+  },
+  document::tag::{RawFrontmatter, TagData},
+  keyval::KeyVal,
+  keyvals::KeyVals,
+  ligature::Ligature,
+  list::List,
+  mouth,
+  mouth::Mouth,
+  parameter::Parameter,
+  rewrite::Rewrite,
+  state::StashTable,
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 const STORED_TRUE: Stored = Stored::Bool(true);
 const STORED_FALSE: Stored = Stored::Bool(false);
@@ -241,7 +242,7 @@ impl PartialEq for Stored {
   fn eq(&self, other: &Stored) -> bool {
     use crate::Stored::*;
     match *self {
-      Stored::None => matches!(other, Stored::None),
+      None => matches!(other, None),
       String(ref s) => {
         if let String(s2) = other {
           *s == *s2
@@ -776,11 +777,11 @@ impl From<Node> for Stored {
 }
 
 impl From<crate::Digested> for Stored {
-  fn from(value: crate::Digested) -> Self { crate::Stored::Digested(value) }
+  fn from(value: crate::Digested) -> Self { Stored::Digested(value) }
 }
 
 impl From<&crate::Digested> for Stored {
-  fn from(value: &crate::Digested) -> Self { crate::Stored::Digested(value.clone()) }
+  fn from(value: &crate::Digested) -> Self { Stored::Digested(value.clone()) }
 }
 
 impl<T> From<Option<T>> for Stored
@@ -795,7 +796,7 @@ where T: Into<Stored> + Sized
 }
 
 impl<'a> From<Cow<'a, crate::Digested>> for Stored {
-  fn from(value: Cow<'a, crate::Digested>) -> Self { crate::Stored::Digested(value.into_owned()) }
+  fn from(value: Cow<'a, crate::Digested>) -> Self { Stored::Digested(value.into_owned()) }
 }
 
 impl From<Box<crate::Digested>> for Stored {
@@ -1183,8 +1184,11 @@ impl<'a> From<&'a Stored> for Token {
     match value {
       Stored::Tokens(ts) => ts.into(),
       Stored::Token(t) => *t,
-      Stored::String(text) => {
-        Token { text: *text, code: Catcode::CS, #[cfg(feature = "token-locators")] loc: 0 }
+      Stored::String(text) => Token {
+        text: *text,
+        code: Catcode::CS,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
       },
       t => {
         let message = s!("dangerous cast to CS for {:?}", t);

@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("xcolor");
   RequirePackage!("keyval");

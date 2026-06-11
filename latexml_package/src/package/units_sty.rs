@@ -1,10 +1,11 @@
-use crate::prelude::*;
 use latexml_core::document::get_node_qname;
+
+use crate::prelude::*;
 
 /// Perl: units_assert_units — walks DOM and sets role=ID, class=ltx_unit on UNKNOWN XMToks
 fn units_assert_units(document: &mut Document, node: &Node) -> Result<()> {
   let qname = get_node_qname(node);
-  let tag = arena::to_string(qname);
+  let tag = to_string(qname);
   if tag == "ltx:XMTok" {
     let role = node.get_attribute("role").unwrap_or_default();
     if role == "UNKNOWN" || role.is_empty() {

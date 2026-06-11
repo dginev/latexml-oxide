@@ -65,10 +65,10 @@ LoadDefinitions!({
      #body\
      </ltx:bibliography>",
     before_digest => {
-      crate::engine::latex_constructs::before_digest_bibliography()?;
+      engine::latex_constructs::before_digest_bibliography()?;
     },
     after_digest_begin => sub[whatsit] {
-      crate::engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+      engine::latex_constructs::begin_bibliography_clean(whatsit)?;
       Let!("\\par", "\\relax");
     });
 
@@ -84,8 +84,8 @@ LoadDefinitions!({
     enter_horizontal => true,
     properties => sub[args] {
       let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-      let re = RE.get_or_init(|| regex::Regex::new(r"\s+\\#\s*").unwrap());
+      static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+      let re = RE.get_or_init(|| Regex::new(r"\s+\\#\s*").unwrap());
       let mr = re.replace(&raw, ":").to_string();
       let href = format!("http://www.ams.org/mathscinet-getitem?mr={}", mr);
       Ok(stored_map!("mr" => mr, "href" => href))

@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::common::color::from_model_components;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -51,7 +52,7 @@ LoadDefinitions!({
     );
     for def_str in [&text_def, &name_def] {
       let tokens = mouth::tokenize_internal(def_str);
-      gullet::do_expand(tokens)?;
+      do_expand(tokens)?;
     }
     Ok(Vec::new())
   });
@@ -61,7 +62,7 @@ LoadDefinitions!({
   // `\DefineNamedColor` so colordvi works WITHOUT `color.sty`/`xcolor.sty`.
   DefPrimitive!("\\lx@colordvi@setcolor{}", sub[(name_arg)] {
     let name_str = do_expand(name_arg)?.to_string();
-    let color = crate::package::color_sty::lookup_color_obj(&name_str);
+    let color = color_sty::lookup_color_obj(&name_str);
     MergeFont!(color => color);
     Ok(Vec::new())
   });
@@ -69,7 +70,7 @@ LoadDefinitions!({
   // Perl L34-37: \background — sets background color
   DefPrimitive!("\\background{}", sub[(color_arg)] {
     let color_str = do_expand(color_arg)?.to_string();
-    let color = crate::package::color_sty::lookup_color_obj(&color_str);
+    let color = color_sty::lookup_color_obj(&color_str);
     MergeFont!(bg => color);
     Ok(Vec::new())
   });
@@ -86,8 +87,8 @@ LoadDefinitions!({
       spec.split_whitespace().filter_map(|s| s.parse().ok()).collect()
     };
     let color = from_model_components("cmyk", &comps);
-    if state::lookup_bool_sym(pin!("inPreamble")) {
-      assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
+    if lookup_bool_sym(pin!("inPreamble")) {
+      assign_value("preambleTextcolor", Stored::String(pin(color.to_stored())), None);
     }
     MergeFont!(color => color);
     Ok(Vec::new())

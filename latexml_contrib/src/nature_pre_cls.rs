@@ -24,8 +24,12 @@ LoadDefinitions!({
   // \addendumlabel — bold-label macro used by \item inside addendum.
   DefMacro!("\\addendumlabel{}", "\\textbf{#1}\\hspace{1em}");
   // Preserve author content.
-  DefMacro!("\\correspondingauthor[]{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
-  DefMacro!("\\thanks{}",
-    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+  DefMacro!(
+    "\\correspondingauthor[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
+  );
+  DefMacro!(
+    "\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
+  );
 });

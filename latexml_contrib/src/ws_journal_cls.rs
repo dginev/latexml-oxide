@@ -9,7 +9,6 @@
 //! Witness: 2306.12455 (ws-ijgmmp.cls), 2306.15982 (ws-ijmpd.cls).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -21,8 +20,10 @@ LoadDefinitions!({
 
   // \catchline{vol}{issue}{year}{pageStart}{pageEnd} — bibliographic
   // running-header metadata. Preserve as frontmatter note.
-  DefMacro!("\\catchline{}{}{}{}{}",
-    "\\@add@frontmatter{ltx:note}[role=catchline]{Vol. #1, No. #2 (#3) #4--#5}");
+  DefMacro!(
+    "\\catchline{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=catchline]{Vol. #1, No. #2 (#3) #4--#5}"
+  );
 
   // \Journal{...} {...}{...}{...} — citation format helper (4-arg per WS conv).
   // Render the args inline as a generic citation string.
@@ -36,11 +37,15 @@ LoadDefinitions!({
   // \ccode{...} — WS classification-codes block (PACS-style codes in
   // ws-ijmpe and friends). Real def is styled paragraph; preserve as
   // a classification note. Witness 2307.12748, 2307.16467.
-  DefMacro!("\\ccode{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}");
+  DefMacro!(
+    "\\ccode{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=PACS]{#1}"
+  );
   // \category{code}{name} — ws classification 2-arg variant.
-  DefMacro!("\\category{}{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#2}");
+  DefMacro!(
+    "\\category{}{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#2}"
+  );
 
   // {history} env — publication-history wrapper (received/revised/
   // accepted dates). Preserve as a frontmatter note. Witness

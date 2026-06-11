@@ -165,7 +165,7 @@ LoadDefinitions!({
   // commands (e.g. \bfseries, \itshape) — ignored in LaTeXML (both
   // Perl and Rust do the same).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
-    crate::engine::latex_constructs::define_new_theorem(
+    engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset.filter(|t| !t.is_empty()),

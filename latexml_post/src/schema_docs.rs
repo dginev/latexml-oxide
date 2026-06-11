@@ -4,28 +4,27 @@
 //! Three string-level passes run against each split sub-page after the
 //! standard LaTeXML XSLT has produced HTML:
 //!
-//! 1. **Content-model rendering** — pretty-print RelaxNG-style structural
-//!    expressions (`A , B | C?`) from one-line walls into operator-leading
-//!    multi-line layout. Replaces `tools/render-content-models.py`.
+//! 1. **Content-model rendering** — pretty-print RelaxNG-style structural expressions (`A , B |
+//!    C?`) from one-line walls into operator-leading multi-line layout. Replaces
+//!    `tools/render-content-models.py`.
 //!
-//! 2. **Definition-card decoration** — promote `schema.X` anchor ids onto
-//!    parent `<dt>` elements, wrap kind words ("Pattern" / "Element" /
-//!    "Attribute" / "Add to") in chip spans, and append `§` permalink
-//!    anchors. Replaces `tools/decorate-definitions.py`.
+//! 2. **Definition-card decoration** — promote `schema.X` anchor ids onto parent `<dt>` elements,
+//!    wrap kind words ("Pattern" / "Element" / "Attribute" / "Add to") in chip spans, and append
+//!    `§` permalink anchors. Replaces `tools/decorate-definitions.py`.
 //!
-//! 3. **Sidebar item index + module narrative** — collect each page's
-//!    Pattern/Element/Attribute definitions and inject a per-module item
-//!    index into the navbar, and prepend a curated narrative aside above
-//!    the section heading (loaded from a TOML file). Replaces
+//! 3. **Sidebar item index + module narrative** — collect each page's Pattern/Element/Attribute
+//!    definitions and inject a per-module item index into the navbar, and prepend a curated
+//!    narrative aside above the section heading (loaded from a TOML file). Replaces
 //!    `tools/inject-module-sidebar.py`.
 //!
 //! All three passes are idempotent: re-running on already-processed HTML
 //! is a no-op. The driver is `process_page`; `load_summaries` reads the
 //! per-module narrative TOML once.
 
+use std::sync::OnceLock;
+
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::sync::OnceLock;
 
 /// Filename of the rustdoc-styled theme stylesheet that ships next
 /// to each schema-doc site. Auto-prepended to `--css` when
@@ -73,17 +72,16 @@ pub fn process_page(html: &str) -> String {
 /// The runtime handles three pieces of behaviour, all on the
 /// pre-existing widget markup this function injects:
 ///
-/// 1. Pre-paint application of `data-theme` / `data-pref-*` from
-///    `localStorage`.
-/// 2. Settings popover wiring (radios + checkboxes + click-outside +
-///    system colour-scheme listener) on `DOMContentLoaded`.
-/// 3. The in-page schema-def filter (sticky search above long def
-///    lists) — replaces the prior `inject_filter_script` pass.
+/// 1. Pre-paint application of `data-theme` / `data-pref-*` from `localStorage`.
+/// 2. Settings popover wiring (radios + checkboxes + click-outside + system colour-scheme listener)
+///    on `DOMContentLoaded`.
+/// 3. The in-page schema-def filter (sticky search above long def lists) — replaces the prior
+///    `inject_filter_script` pass.
 ///
 /// Settings widget shape:
 ///
-/// * Theme fieldset — 4 radios (Light / Dark / Ayu / System), keyed
-///   to `localStorage["schema-theme"]`.
+/// * Theme fieldset — 4 radios (Light / Dark / Ayu / System), keyed to
+///   `localStorage["schema-theme"]`.
 /// * Display fieldset — 1 checkbox:
 ///
 ///   | localStorage key   | `<html>` attribute  | CSS effect |
@@ -155,7 +153,6 @@ fn inject_experimental_banner(html: &str) -> String {
     .into_owned()
 }
 
-
 /// `\moduleabstract` produces `<ltx:para class="schema_module_narrative">`
 /// which LaTeXML's HTML output renders as a marked
 /// `<div class="ltx_para schema_module_narrative">` for the first
@@ -187,10 +184,7 @@ fn lift_module_narrative(html: &str) -> String {
   // the whole `<div …>…</div>` (class order is liberal — either
   // `ltx_para` or `schema_module_narrative` may come first).
   let narrative_open_re = NARRATIVE_OPEN_RE.get_or_init(|| {
-    Regex::new(
-      r#"(?s)<div [^>]*class="[^"]*schema_module_narrative[^"]*"[^>]*>.*?</div>"#,
-    )
-    .unwrap()
+    Regex::new(r#"(?s)<div [^>]*class="[^"]*schema_module_narrative[^"]*"[^>]*>.*?</div>"#).unwrap()
   });
   // Step 2: anchor-at-start regex that matches whitespace + one
   // additional `<div class="…schema_module_narrative…">…</div>`
@@ -201,16 +195,12 @@ fn lift_module_narrative(html: &str) -> String {
   // description list (which is `<div class="ltx_para">` itself in
   // some splits).
   let extra_para_re = EXTRA_PARA_RE.get_or_init(|| {
-    Regex::new(
-      r#"(?s)\A\s*<div [^>]*class="[^"]*schema_module_narrative[^"]*"[^>]*>.*?</div>"#,
-    )
-    .unwrap()
+    Regex::new(r#"(?s)\A\s*<div [^>]*class="[^"]*schema_module_narrative[^"]*"[^>]*>.*?</div>"#)
+      .unwrap()
   });
   // Step 3: pull every `<p class="ltx_p">…</p>` out of the combined
   // run — they're the paragraphs to splice into the aside.
-  let p_re = P_RE.get_or_init(|| {
-    Regex::new(r#"(?s)<p class="ltx_p[^"]*">.*?</p>"#).unwrap()
-  });
+  let p_re = P_RE.get_or_init(|| Regex::new(r#"(?s)<p class="ltx_p[^"]*">.*?</p>"#).unwrap());
   let heading_re = HEADING_RE.get_or_init(|| {
     Regex::new(r#"(?s)(<h1 class="ltx_title ltx_title_section">.*?</h1>)"#).unwrap()
   });
@@ -319,8 +309,15 @@ fn tokenize(s: &str) -> Option<Vec<Tok>> {
 
 #[derive(Debug)]
 enum Node {
-  Atom { html: String, quantifier: String },
-  Group { op: Option<&'static str>, items: Vec<Node>, quantifier: String },
+  Atom {
+    html:       String,
+    quantifier: String,
+  },
+  Group {
+    op:         Option<&'static str>,
+    items:      Vec<Node>,
+    quantifier: String,
+  },
 }
 
 fn parse(tokens: &[Tok], mut pos: usize) -> (Node, usize) {
@@ -328,7 +325,16 @@ fn parse(tokens: &[Tok], mut pos: usize) -> (Node, usize) {
   let mut op: Option<&'static str> = None;
   while pos < tokens.len() {
     match &tokens[pos] {
-      Tok::RParen => return (Node::Group { op, items, quantifier: String::new() }, pos),
+      Tok::RParen => {
+        return (
+          Node::Group {
+            op,
+            items,
+            quantifier: String::new(),
+          },
+          pos,
+        );
+      },
       Tok::LParen => {
         let (inner, np) = parse(tokens, pos + 1);
         pos = np;
@@ -336,16 +342,17 @@ fn parse(tokens: &[Tok], mut pos: usize) -> (Node, usize) {
         if pos < tokens.len() && matches!(tokens[pos], Tok::RParen) {
           pos += 1;
         }
-        if let (Node::Group { quantifier, .. }, Some(Tok::Sup(s))) =
-          (&mut group, tokens.get(pos))
-        {
+        if let (Node::Group { quantifier, .. }, Some(Tok::Sup(s))) = (&mut group, tokens.get(pos)) {
           *quantifier = s.clone();
           pos += 1;
         }
         items.push(group);
       },
       Tok::A(html) | Tok::SpanRef(html) | Tok::SpanTt(html) | Tok::SpanLit(html) => {
-        let mut atom = Node::Atom { html: html.clone(), quantifier: String::new() };
+        let mut atom = Node::Atom {
+          html:       html.clone(),
+          quantifier: String::new(),
+        };
         pos += 1;
         if let (Node::Atom { quantifier, .. }, Some(Tok::Sup(s))) = (&mut atom, tokens.get(pos)) {
           *quantifier = s.clone();
@@ -376,7 +383,14 @@ fn parse(tokens: &[Tok], mut pos: usize) -> (Node, usize) {
       },
     }
   }
-  (Node::Group { op, items, quantifier: String::new() }, pos)
+  (
+    Node::Group {
+      op,
+      items,
+      quantifier: String::new(),
+    },
+    pos,
+  )
 }
 
 fn op_html(op: &str) -> String {
@@ -421,7 +435,11 @@ fn render(node: &Node, indent: usize) -> String {
       let op_seg = op.map(op_html).unwrap_or_default();
       let mut lines = vec![String::from("(")];
       for (i, c) in items.iter().enumerate() {
-        let prefix = if i == 0 { String::from("  ") } else { format!("{} ", op_seg) };
+        let prefix = if i == 0 {
+          String::from("  ")
+        } else {
+          format!("{} ", op_seg)
+        };
         lines.push(format!("{}{}{}", inner_pad, prefix, render(c, indent + 1)));
       }
       lines.push(format!("{}){}", pad, quantifier));
@@ -459,7 +477,10 @@ fn render_content_models(html: &str) -> String {
       return caps[0].to_string();
     }
     let body = render(&ast, 0);
-    format!(r#"<p class="ltx_p"><code class="schema-content-model">{}</code></p>"#, body)
+    format!(
+      r#"<p class="ltx_p"><code class="schema-content-model">{}</code></p>"#,
+      body
+    )
   })
   .into_owned()
 }
@@ -499,8 +520,7 @@ fn decorate_definitions(html: &str) -> String {
   // already ensures the compile happens once across the program, but
   // putting it at function scope makes that explicit.
   static STRIP_ID_RE: OnceLock<Regex> = OnceLock::new();
-  let strip_id_re = STRIP_ID_RE
-    .get_or_init(|| Regex::new(r#" id="schema\.[^"]+""#).unwrap());
+  let strip_id_re = STRIP_ID_RE.get_or_init(|| Regex::new(r#" id="schema\.[^"]+""#).unwrap());
 
   // Match `<dt class="ltx_item">` with the kicker structure
   // `<bold-italic>KIND <sansserif>NAME</></></dt>` at any nesting depth
@@ -523,10 +543,7 @@ fn decorate_definitions(html: &str) -> String {
     .unwrap()
   });
   let anchor_re = ANCHOR_RE.get_or_init(|| {
-    Regex::new(
-      r#"<a name="(schema\.[^"]+)" id="schema\.[^"]+" class="ltx_anchor">"#,
-    )
-    .unwrap()
+    Regex::new(r#"<a name="(schema\.[^"]+)" id="schema\.[^"]+" class="ltx_anchor">"#).unwrap()
   });
 
   let kind_class = |kind: &str| -> Option<&'static str> {
@@ -566,7 +583,10 @@ fn decorate_definitions(html: &str) -> String {
 
   for (i, dt) in dts.iter().enumerate() {
     let dt_match = dt.get(0).unwrap();
-    let next_pos = dts.get(i + 1).map(|n| n.get(0).unwrap().start()).unwrap_or(html.len());
+    let next_pos = dts
+      .get(i + 1)
+      .map(|n| n.get(0).unwrap().start())
+      .unwrap_or(html.len());
     let raw_id = &dt[1];
     let kind = &dt[2];
     let name = &dt[3];
@@ -637,7 +657,7 @@ fn decorate_definitions(html: &str) -> String {
     }
   }
 
-  rewrites.sort_by_key(|(s, _, _)| std::cmp::Reverse(*s));
+  rewrites.sort_by_key(|(s, ..)| std::cmp::Reverse(*s));
   let mut out = html.to_string();
   for (s, e, replacement) in rewrites {
     out.replace_range(s..e, &replacement);
@@ -714,7 +734,11 @@ fn inject_sidebar_index(html: &str) -> String {
     if !seen.insert((kind.clone(), name.clone())) {
       continue;
     }
-    let bucket: &str = kinds_order.iter().find(|k| **k == kind.as_str()).copied().unwrap();
+    let bucket: &str = kinds_order
+      .iter()
+      .find(|k| **k == kind.as_str())
+      .copied()
+      .unwrap();
     let subkey = if bucket == "Pattern" {
       pattern_suffix(&name).unwrap_or("Other").to_string()
     } else {
@@ -738,7 +762,9 @@ fn inject_sidebar_index(html: &str) -> String {
 
   let mut fragment = String::from(r#"<section class="schema_module_index">"#);
   for kind in kinds_order {
-    let Some(subgroups) = by_kind.get_mut(kind) else { continue };
+    let Some(subgroups) = by_kind.get_mut(kind) else {
+      continue;
+    };
     // Sort subgroups for Patterns alphabetically by suffix, with
     // "Other" last; non-Pattern kinds keep insertion order (single
     // empty-key entry).
@@ -804,9 +830,7 @@ fn pattern_suffix(name: &str) -> Option<&str> {
 /// produced by LaTeXML lands on a non-existent `#schema.xhtml..foo`
 /// while the dt sits at `#schema.xhtml:foo`. Underscores survive as
 /// `_` in both forms; only `:` needs the substitution.
-fn clean_anchor_name(name: &str) -> String {
-  name.replace(':', "..")
-}
+fn clean_anchor_name(name: &str) -> String { name.replace(':', "..") }
 
 fn html_escape(s: &str) -> String {
   s.replace('&', "&amp;")
@@ -866,6 +890,10 @@ mod tests {
 </dl>"##;
     let out = decorate_definitions(html);
     let count = out.matches(r#"id="schema.xhtml..div""#).count();
-    assert_eq!(count, 1, "only the first nested dt should claim the id:\n{}", out);
+    assert_eq!(
+      count, 1,
+      "only the first nested dt should claim the id:\n{}",
+      out
+    );
   }
 }

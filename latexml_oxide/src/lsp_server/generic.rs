@@ -97,8 +97,14 @@ pub fn run(timeout_secs: u64, max_rss_kb: u64) -> Result<(), Box<dyn std::error:
       },
       "latexml/convert" => {
         if let (Some(uri), Some(text)) = (
-          request.get("params").and_then(|p| p.get("uri")).and_then(|u| u.as_str()),
-          request.get("params").and_then(|p| p.get("text")).and_then(|t| t.as_str()),
+          request
+            .get("params")
+            .and_then(|p| p.get("uri"))
+            .and_then(|u| u.as_str()),
+          request
+            .get("params")
+            .and_then(|p| p.get("text"))
+            .and_then(|t| t.as_str()),
         ) {
           let (_root_uri, out) = convert_root_blocking(&mut server, uri, text);
           send_message(&mut stdout, &response(id, out.to_result_object()))?;
@@ -106,7 +112,11 @@ pub fn run(timeout_secs: u64, max_rss_kb: u64) -> Result<(), Box<dyn std::error:
           // A request MUST be answered (see unix dispatch).
           send_message(
             &mut stdout,
-            &error_response(id, -32602.0, "latexml/convert: missing params.uri/params.text".to_string()),
+            &error_response(
+              id,
+              -32602.0,
+              "latexml/convert: missing params.uri/params.text".to_string(),
+            ),
           )?;
         }
       },
@@ -152,4 +162,3 @@ fn convert_root_blocking(server: &mut Server, uri: &str, text: &str) -> (String,
   out.root = Some(root_str);
   (root_uri, out)
 }
-

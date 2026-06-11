@@ -5,8 +5,10 @@
 
 use libxml::tree::Node;
 
-use crate::document::PostDocument;
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::PostDocument,
+  processor::{ProcessResult, Processor},
+};
 
 /// PictureImages post-processor.
 ///
@@ -69,7 +71,8 @@ impl Processor for PictureImages {
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     Info!(
-      "picture_images", "generate",
+      "picture_images",
+      "generate",
       "PictureImages: would generate {} picture images",
       nodes.len()
     );

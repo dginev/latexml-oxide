@@ -17,30 +17,24 @@
 //!
 //! ## Faithful-port notes
 //!
-//! - `parse_entry_type` / `parse_entry_name` / `parse_field_name`
-//!   character classes are byte-for-byte the Perl regex
-//!   `[BIBNAME_re ++ BIBNOISE_re]` (Perl L221-222). Entry-name
-//!   additionally allows `"#%&'()={` (Perl L233); field-name
-//!   additionally allows `&` (Perl L238). Entry-type and field-name
-//!   are lower-cased; entry-name preserves case at the parse layer
-//!   (the registry then normalises via `register_entry`).
+//! - `parse_entry_type` / `parse_entry_name` / `parse_field_name` character classes are
+//!   byte-for-byte the Perl regex `[BIBNAME_re ++ BIBNOISE_re]` (Perl L221-222). Entry-name
+//!   additionally allows `"#%&'()={` (Perl L233); field-name additionally allows `&` (Perl L238).
+//!   Entry-type and field-name are lower-cased; entry-name preserves case at the parse layer (the
+//!   registry then normalises via `register_entry`).
 //!
-//! - `parse_string` reads `"…"` (allowing balanced `{…}` inside that
-//!   defeat the closing quote) OR `{…}` (balanced braces, outer
-//!   braces stripped) — exact match for Perl L252-274.
+//! - `parse_string` reads `"…"` (allowing balanced `{…}` inside that defeat the closing quote) OR
+//!   `{…}` (balanced braces, outer braces stripped) — exact match for Perl L252-274.
 //!
-//! - `parse_value` concatenates simple values separated by `#`. A
-//!   simple value is either a delimited string or a name; a name
-//!   matching `^\d+$` is taken literally, otherwise looked up in the
-//!   macro table.
+//! - `parse_value` concatenates simple values separated by `#`. A simple value is either a
+//!   delimited string or a name; a name matching `^\d+$` is taken literally, otherwise looked up in
+//!   the macro table.
 //!
-//! - `skip_junk` is greedy: everything up to the next `@` is
-//!   discarded (Perl L335-346: "anything until @ as an implied
-//!   comment").
-
-use rustc_hash::FxHashMap as HashMap;
+//! - `skip_junk` is greedy: everything up to the next `@` is discarded (Perl L335-346: "anything
+//!   until @ as an implied comment").
 
 use latexml_core::s;
+use rustc_hash::FxHashMap as HashMap;
 
 use crate::bibtex::{BibEntry, register_entry};
 
@@ -67,7 +61,10 @@ fn default_macros() -> HashMap<String, String> {
     ("ibmsj", "IBM Systems Journal"),
     ("ieeese", "IEEE Transactions on Software Engineering"),
     ("ieeetc", "IEEE Transactions on Computers"),
-    ("ieeetcad", "IEEE Transactions on Computer-Aided Design of Integrated Circuits"),
+    (
+      "ieeetcad",
+      "IEEE Transactions on Computer-Aided Design of Integrated Circuits",
+    ),
     ("ipl", "Information Processing Letters"),
     ("jacm", "Journal of the ACM"),
     ("jcss", "Journal of Computer and System Sciences"),
@@ -78,7 +75,10 @@ fn default_macros() -> HashMap<String, String> {
     ("tog", "ACM Transactions on Graphics"),
     ("toms", "ACM Transactions on Mathematical Software"),
     ("toois", "ACM Transactions on Office Information Systems"),
-    ("toplas", "ACM Transactions on Programming Languages and Systems"),
+    (
+      "toplas",
+      "ACM Transactions on Programming Languages and Systems",
+    ),
     ("tcs", "Theoretical Computer Science"),
   ];
   pairs
@@ -114,15 +114,15 @@ type BibFieldList = Vec<(String, String)>;
 /// * `macros`    → `macros`
 /// * `parsed` flag → `parsed`
 pub struct PreBibTeX {
-  pub source:    Option<String>,
+  pub source:     Option<String>,
   pub file_label: String,
-  lines:         Vec<String>,
-  line:          String,
-  lineno:        usize,
-  pub preamble:  Vec<String>,
-  pub entries:   Vec<ParsedEntry>,
-  macros:        HashMap<String, String>,
-  parsed:        bool,
+  lines:          Vec<String>,
+  line:           String,
+  lineno:         usize,
+  pub preamble:   Vec<String>,
+  pub entries:    Vec<ParsedEntry>,
+  macros:         HashMap<String, String>,
+  parsed:         bool,
 }
 
 /// One parsed entry. Mirrors Perl `LaTeXML::Pre::BibTeX::Entry` (only
@@ -169,15 +169,15 @@ impl PreBibTeX {
       lines.remove(0)
     };
     Self {
-      source:      None,
-      file_label:  s!("<anonymous>"),
+      source: None,
+      file_label: s!("<anonymous>"),
       lines,
-      line:        first,
-      lineno:      1,
-      preamble:    Vec::new(),
-      entries:     Vec::new(),
-      macros:      default_macros(),
-      parsed:      false,
+      line: first,
+      lineno: 1,
+      preamble: Vec::new(),
+      entries: Vec::new(),
+      macros: default_macros(),
+      parsed: false,
     }
   }
 
@@ -231,14 +231,15 @@ impl PreBibTeX {
 
   /// Perl `toString` (L106-108).
   pub fn to_string_label(&self) -> String {
-    s!("Bibliography[{}]", self.source.as_deref().unwrap_or("<Unknown>"))
+    s!(
+      "Bibliography[{}]",
+      self.source.as_deref().unwrap_or("<Unknown>")
+    )
   }
 
   /// Perl `getLocator` (L125-129). We don't model the full
   /// `LaTeXML::Common::Locator` here; just `(source, lineno)`.
-  pub fn locator(&self) -> (Option<&str>, usize) {
-    (self.source.as_deref(), self.lineno)
-  }
+  pub fn locator(&self) -> (Option<&str>, usize) { (self.source.as_deref(), self.lineno) }
 
   // ---- top-level parse ------------------------------------------------------
 
@@ -381,18 +382,18 @@ impl PreBibTeX {
       });
     }
     let head = self.line.chars().next();
-    if let Some(c) = head {
-      if delims.contains(c) {
-        // pop the matched character (always ASCII single-byte here)
-        let mut new_line = String::with_capacity(self.line.len() - c.len_utf8());
-        let mut it = self.line.chars();
-        it.next();
-        for ch in it {
-          new_line.push(ch);
-        }
-        self.line = new_line;
-        return Ok(c);
+    if let Some(c) = head
+      && delims.contains(c)
+    {
+      // pop the matched character (always ASCII single-byte here)
+      let mut new_line = String::with_capacity(self.line.len() - c.len_utf8());
+      let mut it = self.line.chars();
+      it.next();
+      for ch in it {
+        new_line.push(ch);
       }
+      self.line = new_line;
+      return Ok(c);
     }
     Err(BibParseError::Expected {
       delims: delims.to_string(),
@@ -514,14 +515,10 @@ impl PreBibTeX {
         let resolved = if is_digits {
           name.clone()
         } else {
-          self
-            .macros
-            .get(&name)
-            .cloned()
-            .unwrap_or_else(|| {
-              // Perl recovery: leave the name as-is.
-              name.clone()
-            })
+          self.macros.get(&name).cloned().unwrap_or_else(|| {
+            // Perl recovery: leave the name as-is.
+            name.clone()
+          })
         };
         raw.push_str(&name);
         value.push_str(&resolved);
@@ -663,8 +660,26 @@ fn is_bib_name_or_noise(c: char) -> bool {
   // BIBNOISE: . + - * / ^ _ : ; @ ` ? ! ~ | < > $ [ ]
   matches!(
     c,
-    '.' | '+' | '-' | '*' | '/' | '^' | '_' | ':' | ';' | '@' | '`' | '?' | '!' | '~' | '|' |
-    '<' | '>' | '$' | '[' | ']'
+    '.'
+      | '+'
+      | '-'
+      | '*'
+      | '/'
+      | '^'
+      | '_'
+      | ':'
+      | ';'
+      | '@'
+      | '`'
+      | '?'
+      | '!'
+      | '~'
+      | '|'
+      | '<'
+      | '>'
+      | '$'
+      | '['
+      | ']'
   )
 }
 
@@ -728,14 +743,16 @@ mod tests {
 
   #[test]
   fn simple_article() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article{Smith2020,
   author = {John Smith},
   title  = {On Examples},
   journal = {JMP},
   year   = 2020
 }
-"#);
+"#,
+    );
     assert_eq!(p.entries.len(), 1);
     let e = &p.entries[0];
     assert_eq!(e.entry_type, "article");
@@ -755,22 +772,29 @@ mod tests {
 
   #[test]
   fn preamble_block() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @preamble{ "\newcommand{\noopsort}[1]{}" }
 @article{a,k={v}}
-"#);
+"#,
+    );
     assert_eq!(p.preamble, vec![r"\newcommand{\noopsort}[1]{}".to_string()]);
     assert_eq!(p.entries.len(), 1);
   }
 
   #[test]
   fn string_macro_then_use() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @string{tcs = "Theoretical CS"}
 @article{a, journal = tcs, year = 2024}
-"#);
+"#,
+    );
     let e = &p.entries[0];
-    assert_eq!(e.fields[0], ("journal".to_string(), "Theoretical CS".to_string()));
+    assert_eq!(
+      e.fields[0],
+      ("journal".to_string(), "Theoretical CS".to_string())
+    );
     assert_eq!(e.fields[1], ("year".to_string(), "2024".to_string()));
     // Raw side keeps the macro NAME, not the expansion.
     assert_eq!(e.raw_fields[0], ("journal".to_string(), "tcs".to_string()));
@@ -778,25 +802,31 @@ mod tests {
 
   #[test]
   fn default_macro_jan() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article{a, month = jan}
-"#);
+"#,
+    );
     assert_eq!(p.entries[0].fields[0].1, "January");
   }
 
   #[test]
   fn quoted_string_with_braces_inside() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article{a, title = "On {Theorems} and proofs"}
-"#);
+"#,
+    );
     assert_eq!(p.entries[0].fields[0].1, "On {Theorems} and proofs");
   }
 
   #[test]
   fn brace_string_with_nested_braces() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article{a, title = {On {Hot} {Topics}}}
-"#);
+"#,
+    );
     assert_eq!(p.entries[0].fields[0].1, "On {Hot} {Topics}");
   }
 
@@ -806,18 +836,22 @@ mod tests {
     // off each delimited string before storing. So `"Hello, "` is
     // saved as `"Hello,"` in the macro table, and the `#`-concat
     // produces `"Hello,world!"`. We mirror that behaviour.
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @string{first = "Hello, "}
 @article{a, title = first # "world!"}
-"#);
+"#,
+    );
     assert_eq!(p.entries[0].fields[0].1, "Hello,world!");
   }
 
   #[test]
   fn case_preservation_of_key_but_lowercase_field_and_type() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @Article{MyKey, Author = {X}, TITLE = {y}}
-"#);
+"#,
+    );
     let e = &p.entries[0];
     assert_eq!(e.entry_type, "article");
     assert_eq!(e.key, "MyKey");
@@ -838,18 +872,22 @@ even multi-line junk... @article{a, k = "v"}
 
   #[test]
   fn paren_delimited_entry() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article(a, k = "v")
-"#);
+"#,
+    );
     assert_eq!(p.entries.len(), 1);
     assert_eq!(p.entries[0].key, "a");
   }
 
   #[test]
   fn trailing_comma_after_last_field() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article{a, k1 = {v1}, k2 = {v2}, }
-"#);
+"#,
+    );
     let e = &p.entries[0];
     assert_eq!(e.fields.len(), 2);
     assert_eq!(e.fields[0], ("k1".to_string(), "v1".to_string()));
@@ -858,30 +896,36 @@ even multi-line junk... @article{a, k = "v"}
 
   #[test]
   fn multiline_brace_value() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @article{a, title = {Some
 multi-line
 value} }
-"#);
+"#,
+    );
     let v = &p.entries[0].fields[0].1;
     assert!(v.contains("multi-line"));
   }
 
   #[test]
   fn comment_entry_is_skipped() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @comment{this is ignored}
 @article{a, k = {v}}
-"#);
+"#,
+    );
     assert_eq!(p.entries.len(), 1);
   }
 
   #[test]
   fn multiple_string_definitions_in_one_block() {
-    let p = parse(r#"
+    let p = parse(
+      r#"
 @string{a = "X", b = "Y"}
 @article{e, f1 = a, f2 = b}
-"#);
+"#,
+    );
     let e = &p.entries[0];
     assert_eq!(e.fields, vec![
       ("f1".to_string(), "X".to_string()),

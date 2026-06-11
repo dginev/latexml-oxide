@@ -23,14 +23,22 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // ASME-specific frontmatter — preserve author content.
-  DefMacro!("\\setauthorname{}",
-    "\\@add@frontmatter{ltx:note}[role=authorname]{#1}");
-  DefMacro!("\\manuscriptnotenumber{}",
-    "\\@add@frontmatter{ltx:note}[role=manuscriptno]{#1}");
-  DefMacro!("\\confname{}",
-    "\\@add@frontmatter{ltx:note}[role=conference]{#1}");
-  DefMacro!("\\confyear{}",
-    "\\@add@frontmatter{ltx:note}[role=year]{#1}");
+  DefMacro!(
+    "\\setauthorname{}",
+    "\\@add@frontmatter{ltx:note}[role=authorname]{#1}"
+  );
+  DefMacro!(
+    "\\manuscriptnotenumber{}",
+    "\\@add@frontmatter{ltx:note}[role=manuscriptno]{#1}"
+  );
+  DefMacro!(
+    "\\confname{}",
+    "\\@add@frontmatter{ltx:note}[role=conference]{#1}"
+  );
+  DefMacro!(
+    "\\confyear{}",
+    "\\@add@frontmatter{ltx:note}[role=year]{#1}"
+  );
 
   // asme2ej.cls L1242-1245 defines its OWN trivlist `proof` environment.
   // Since we LoadClass("OmniBus") (not the real .cls), port it so asme2ej
@@ -39,8 +47,10 @@ LoadDefinitions!({
   // uses the documented `\let\proof\relax \let\endproof\relax` idiom first,
   // which clears this so its later `\usepackage{amsthm}` can install amsthm's
   // version (witness 2102.03856).
-  RawTeX!(r"\def\proof{\@ifnextchar[{\@optargproof}{\@proof}}
+  RawTeX!(
+    r"\def\proof{\@ifnextchar[{\@optargproof}{\@proof}}
 \def\@proof{\trivlist \item[\hskip \labelsep{\it Proof.}]}
 \def\@optargproof[#1]{\trivlist \item[\hskip \labelsep{\it #1.}]}
-\def\endproof{\endtrivlist}");
+\def\endproof{\endtrivlist}"
+  );
 });

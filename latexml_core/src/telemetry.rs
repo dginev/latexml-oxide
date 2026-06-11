@@ -10,8 +10,7 @@
 //! Thread-local state. Aggregate at end-of-process via `take()`.
 //! All times in microseconds; counts in their natural unit.
 
-use std::cell::RefCell;
-use std::time::Instant;
+use std::{cell::RefCell, time::Instant};
 
 /// Coarse phase enum. 17 values; bumping requires updating
 /// `Telemetry::write_json` and `tools/perf_phase_summary.py`.
@@ -441,9 +440,9 @@ impl Telemetry {
 
 #[cfg(test)]
 mod tests {
+  use std::{thread::sleep, time::Duration};
+
   use super::*;
-  use std::thread::sleep;
-  use std::time::Duration;
 
   #[test]
   fn bucket_boundaries() {

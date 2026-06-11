@@ -16,11 +16,11 @@ LoadDefinitions!({
   //   \TestForConflict{\@dropnext,\@ifnext,\@ifn,\@ifNextMacro,\@ifnMacro}
   // passes silently. After raw-load, semantic.sty will define its own
   // \@ifnext (which is the same shape as \@ifnextchar anyway).
-  state::assign_meaning(&T_CS!("\\@ifnext"), latexml_core::common::store::Stored::None, Some(Scope::Global));
-  state::assign_meaning(&T_CS!("\\@dropnext"), latexml_core::common::store::Stored::None, Some(Scope::Global));
-  state::assign_meaning(&T_CS!("\\@ifn"), latexml_core::common::store::Stored::None, Some(Scope::Global));
-  state::assign_meaning(&T_CS!("\\@ifNextMacro"), latexml_core::common::store::Stored::None, Some(Scope::Global));
-  state::assign_meaning(&T_CS!("\\@ifnMacro"), latexml_core::common::store::Stored::None, Some(Scope::Global));
+  assign_meaning(&T_CS!("\\@ifnext"), Stored::None, Some(Scope::Global));
+  assign_meaning(&T_CS!("\\@dropnext"), Stored::None, Some(Scope::Global));
+  assign_meaning(&T_CS!("\\@ifn"), Stored::None, Some(Scope::Global));
+  assign_meaning(&T_CS!("\\@ifNextMacro"), Stored::None, Some(Scope::Global));
+  assign_meaning(&T_CS!("\\@ifnMacro"), Stored::None, Some(Scope::Global));
 
   // Now let semantic.sty load raw.
   InputDefinitions!("semantic", extension => Some(Cow::Borrowed("sty")), noltxml => true);

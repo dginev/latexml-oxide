@@ -15,13 +15,13 @@ LoadDefinitions!({
   // `\lx@end@alignment` which provides the clean termination.
   // Regression path: paper 1112.6246 (`giersz_rv1.tex`, mn2e class)
   // cascades 10001 mode-leak errors if amsmath is loaded here.
-  if state::lookup_int("@usedcolumn") != 0 {
+  if lookup_int("@usedcolumn") != 0 {
     RequirePackage!("dcolumn");
   }
-  if state::lookup_int("@usenatbib") != 0 {
+  if lookup_int("@usenatbib") != 0 {
     RequirePackage!("natbib");
   }
-  if state::lookup_int("@usegraphicx") != 0 {
+  if lookup_int("@usegraphicx") != 0 {
     RequirePackage!("graphicx");
   }
 
@@ -135,7 +135,7 @@ LoadDefinitions!({
     "<ltx:XMApp role='POSTFIX'><ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/><ltx:XMTok>.</ltx:XMTok><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMApp>",
     mode => "math", bounded => true,
     properties => sub[_args] {
-      let script_level = state::lookup_int("script_level");
+      let script_level = lookup_int("script_level");
       Ok(stored_map!("scriptpos" => s!("mid{}", script_level)))
     });
   DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");

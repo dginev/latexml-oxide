@@ -212,7 +212,7 @@ LoadDefinitions!({
   DefPrimitive!("\\hfil", {
     enter_horizontal();
     Tbox::new(
-      arena::pin_static(" "),
+      pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\hfil")),
@@ -222,7 +222,7 @@ LoadDefinitions!({
   DefPrimitive!("\\hfill", {
     enter_horizontal();
     Tbox::new(
-      arena::pin_static(" "),
+      pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\hfill")),
@@ -251,7 +251,7 @@ LoadDefinitions!({
   // \lastskip         iq is 0.0 pt or the last glue or muglue on the current list.
 
   DefRegister!("\\lastskip", Dimension::new(0), readonly => true, getter => {
-    stomach::with_box_list(|stomach_box_list| {
+    with_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {

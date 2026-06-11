@@ -1,11 +1,13 @@
-use super::glue::{FillCode, glue_string, new_setup, spec_setup};
-use crate::Object;
-use crate::common::dimension::attribute_format;
-use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::RegisterType;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
 use std::fmt;
+
+use super::glue::{FillCode, glue_string, new_setup, spec_setup};
+use crate::{
+  Object,
+  common::{dimension::attribute_format, numeric_ops::NumericOps},
+  definition::register::RegisterType,
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub struct MuGlue {
@@ -120,33 +122,33 @@ impl MuGlue {
     // Mirrors Perl `Common/MuGlue::ptValue` flow.
     let pt_skip = mu_to_pt(self.skip);
     let mut string = attribute_format(pt_skip, Some("pt"));
-    if let Some(plus) = self.plus {
-      if plus != 0 {
-        string.push_str(" plus ");
-        let fill_u = if let Some(pfill) = self.pfill {
-          pfill.to_str()
-        } else {
-          "pt"
-        };
-        let plus_pt = if fill_u == "pt" { mu_to_pt(plus) } else { plus };
-        string.push_str(&attribute_format(plus_pt, Some(fill_u)));
-      }
+    if let Some(plus) = self.plus
+      && plus != 0
+    {
+      string.push_str(" plus ");
+      let fill_u = if let Some(pfill) = self.pfill {
+        pfill.to_str()
+      } else {
+        "pt"
+      };
+      let plus_pt = if fill_u == "pt" { mu_to_pt(plus) } else { plus };
+      string.push_str(&attribute_format(plus_pt, Some(fill_u)));
     }
-    if let Some(minus) = self.minus {
-      if minus != 0 {
-        string.push_str(" minus ");
-        let mfill_u = if let Some(mfill) = self.mfill {
-          mfill.to_str()
-        } else {
-          "pt"
-        };
-        let minus_pt = if mfill_u == "pt" {
-          mu_to_pt(minus)
-        } else {
-          minus
-        };
-        string.push_str(&attribute_format(minus_pt, Some(mfill_u)));
-      }
+    if let Some(minus) = self.minus
+      && minus != 0
+    {
+      string.push_str(" minus ");
+      let mfill_u = if let Some(mfill) = self.mfill {
+        mfill.to_str()
+      } else {
+        "pt"
+      };
+      let minus_pt = if mfill_u == "pt" {
+        mu_to_pt(minus)
+      } else {
+        minus
+      };
+      string.push_str(&attribute_format(minus_pt, Some(mfill_u)));
     }
     string
   }

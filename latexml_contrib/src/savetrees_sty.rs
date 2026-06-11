@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("ifluatex");
   // No effect from ifpdf.sty

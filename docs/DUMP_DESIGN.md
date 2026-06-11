@@ -1,10 +1,13 @@
 # Kernel Dump Precompilation Design
 
-> **Active design (refreshed 2026-04-30)**: aligned with the strict-Perl
-> dump-parity mission (see [`SYNC_STATUS.md`](SYNC_STATUS.md)). The
-> dump is a faithful translation of Perl's `make formats` output —
-> mutual-exclusivity in `LoadFormat`, unconditional apply in
-> `dump_reader.rs`, same-file definitions as Perl.
+> **Canonical design record (refreshed 2026-04-30)**: the strict-Perl
+> dump-parity mission this design backs is **complete** (see
+> [`SYNC_STATUS.md`](SYNC_STATUS.md) and the archived
+> [`archive/PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md));
+> this doc preserves the architecture rationale. The dump is a faithful
+> translation of Perl's `make formats` output — mutual-exclusivity in
+> `LoadFormat`, unconditional apply in `dump_reader.rs`, same-file
+> definitions as Perl.
 
 ## Problem
 

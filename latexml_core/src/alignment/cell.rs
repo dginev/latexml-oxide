@@ -1,9 +1,11 @@
-use super::template::{Align, BorderSpec, ColumnSpec};
-use crate::common::dimension::Dimension;
-use crate::common::glue::Glue;
-use crate::digested::Digested;
-use crate::tokens::Tokens;
 use libxml::tree::Node;
+
+use super::template::{Align, BorderSpec, ColumnSpec};
+use crate::{
+  common::{dimension::Dimension, glue::Glue},
+  digested::Digested,
+  tokens::Tokens,
+};
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct Cell {

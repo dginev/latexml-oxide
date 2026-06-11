@@ -2,9 +2,18 @@
 name = "latexml_post"
 version = "0.3.0"
 edition = "2024"
-license = "CC0"
+license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "Post-processing pipeline for latexml_oxide (Rust port of LaTeXML::Post)"
+
+[lints]
+workspace = true
+
+# `flate2` is a link-level dependency: zip 8's `deflate-flate2` feature requires
+# the consumer to declare flate2 explicitly (it is not `use`d directly here), so
+# cargo-machete cannot see the usage and reports a false positive.
+[package.metadata.cargo-machete]
+ignored = ["flate2"]
 
 [lib]
 name = "latexml_post"

@@ -189,66 +189,72 @@ pub(super) fn apply_opts<B: BindingBuilder>(
   ast: &Rc<AST>,
 ) -> Result<B> {
   for (key, val) in opts {
-    match val.clone().try_cast::<FnPtr>() { Some(fp) => {
-      // Closure option → typed builder setter (front-end builds the closure).
-      match key.as_str() {
-        "afterDigest" => {
-          builder = builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "afterDigestBegin" => {
-          builder =
-            builder.after_digest_begin(after_digest_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "properties" => {
-          builder = builder.properties(properties_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "beforeDigest" => {
-          builder =
-            builder.before_digest(before_digest_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "beforeDigestEnd" => {
-          builder =
-            builder.before_digest_end(before_digest_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "beforeConstruct" => {
-          builder =
-            builder.before_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "reversion" => {
-          builder = builder.reversion(Reversion::Closure(reversion_trampoline(
-            fp,
-            engine.clone(),
-            ast.clone(),
+    match val.clone().try_cast::<FnPtr>() {
+      Some(fp) => {
+        // Closure option → typed builder setter (front-end builds the closure).
+        match key.as_str() {
+          "afterDigest" => {
+            builder =
+              builder.after_digest(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "afterDigestBegin" => {
+            builder =
+              builder.after_digest_begin(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "properties" => {
+            builder = builder.properties(properties_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "beforeDigest" => {
+            builder =
+              builder.before_digest(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "beforeDigestEnd" => {
+            builder =
+              builder.before_digest_end(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "beforeConstruct" => {
+            builder =
+              builder.before_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "reversion" => {
+            builder = builder.reversion(Reversion::Closure(reversion_trampoline(
+              fp,
+              engine.clone(),
+              ast.clone(),
+            )));
+          },
+          "sizer" => {
+            builder = builder.sizer(sizer_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          "afterConstruct" => {
+            builder =
+              builder.after_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
+          },
+          // Unknown closure options are silently ignored (forgiving, like Perl
+          // %options; the builder's set_option does the same for scalars).
+          _ => {},
+        }
+      },
+      _ => {
+        if key.as_str() == "properties" && val.is_map() {
+          // Static property map (Perl's `properties => { key => value, … }`).
+          let map = val.cast::<Map>();
+          builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
+        } else if key.as_str() == "reversion" {
+          // String reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
+          builder = builder.reversion(Reversion::Tokens(mouth::tokenize_internal(
+            &dynamic_to_string(val),
           )));
-        },
-        "sizer" => {
-          builder = builder.sizer(sizer_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        "afterConstruct" => {
-          builder =
-            builder.after_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
-        },
-        // Unknown closure options are silently ignored (forgiving, like Perl
-        // %options; the builder's set_option does the same for scalars).
-        _ => {},
-      }
-    } _ => if key.as_str() == "properties" && val.is_map() {
-      // Static property map (Perl's `properties => { key => value, … }`).
-      let map = val.cast::<Map>();
-      builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
-    } else if key.as_str() == "reversion" {
-      // String reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
-      builder = builder.reversion(Reversion::Tokens(mouth::tokenize_internal(
-        &dynamic_to_string(val),
-      )));
-    } else if key.as_str() == "font" && val.is_map() {
-      // Partial-font directive (`font => { family => 'typewriter', … }`).
-      let font = font_from_rhai_map(val.cast::<Map>());
-      builder = builder.font(FontDirective::Asset(Rc::new(font)));
-    } else if let Some(ov) = dynamic_to_option_value(&val) {
-      // Scalar option → the builder's generic, single-source `set_option`.
-      builder = builder.set_option(key.as_str(), ov)?;
-    }}
+        } else if key.as_str() == "font" && val.is_map() {
+          // Partial-font directive (`font => { family => 'typewriter', … }`).
+          let font = font_from_rhai_map(val.cast::<Map>());
+          builder = builder.font(FontDirective::Asset(Rc::new(font)));
+        } else if let Some(ov) = dynamic_to_option_value(&val) {
+          // Scalar option → the builder's generic, single-source `set_option`.
+          builder = builder.set_option(key.as_str(), ov)?;
+        }
+      },
+    }
   }
   Ok(builder)
 }
@@ -602,21 +608,23 @@ pub(super) fn reversion_trampoline(
   engine: Rc<Engine>,
   ast: Rc<AST>,
 ) -> latexml_core::definition::DigestedReversionClosure {
-  Rc::new(move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
-    // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
-    let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-    let dyn_args: Vec<Dynamic> = args
-      .iter()
-      .map(|a| match a {
-        Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
-        None => Dynamic::UNIT,
-      })
-      .collect();
-    let ret = fp
-      .call::<Dynamic>(&engine, &ast, dyn_args)
-      .map_err(|e| Error::from(format!("script reversion: {e}")))?;
-    Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
-  })
+  Rc::new(
+    move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
+      // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
+      let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
+      let dyn_args: Vec<Dynamic> = args
+        .iter()
+        .map(|a| match a {
+          Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
+          None => Dynamic::UNIT,
+        })
+        .collect();
+      let ret = fp
+        .call::<Dynamic>(&engine, &ast, dyn_args)
+        .map_err(|e| Error::from(format!("script reversion: {e}")))?;
+      Ok(mouth::tokenize_internal(&dynamic_to_string(ret)))
+    },
+  )
 }
 
 /// Build a `sizer` trampoline: the body sees the read-only whatsit and returns
@@ -626,21 +634,23 @@ pub(super) fn sizer_trampoline(
   engine: Rc<Engine>,
   ast: Rc<AST>,
 ) -> latexml_core::definition::SizingClosure {
-  Rc::new(move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
-    // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
-    let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-    let ret = fp
-      .call::<Dynamic>(&engine, &ast, ())
-      .map_err(|e| Error::from(format!("script sizer: {e}")))?;
-    let spec = dynamic_to_string(ret);
-    let mut parts = spec.split(';');
-    let mut next_dim = || -> Result<Dimension> {
-      Ok(Dimension::new_f64(Dimension::spec_to_f64(
-        parts.next().unwrap_or("0pt").trim(),
-      )?))
-    };
-    Ok((next_dim()?, next_dim()?, next_dim()?))
-  })
+  Rc::new(
+    move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
+      // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
+      let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
+      let ret = fp
+        .call::<Dynamic>(&engine, &ast, ())
+        .map_err(|e| Error::from(format!("script sizer: {e}")))?;
+      let spec = dynamic_to_string(ret);
+      let mut parts = spec.split(';');
+      let mut next_dim = || -> Result<Dimension> {
+        Ok(Dimension::new_f64(Dimension::spec_to_f64(
+          parts.next().unwrap_or("0pt").trim(),
+        )?))
+      };
+      Ok((next_dim()?, next_dim()?, next_dim()?))
+    },
+  )
 }
 
 /// The `DefAccent!` lowering: register the combiner mapping and the protected
@@ -656,7 +666,11 @@ pub(super) fn def_accent_impl(
     .chars()
     .next()
     .ok_or_else(|| Error::from("DefAccent: empty combining char"))?;
-  let map = if below { "accent_combiner_below" } else { "accent_combiner_above" };
+  let map = if below {
+    "accent_combiner_below"
+  } else {
+    "accent_combiner_above"
+  };
   latexml_core::state::assign_mapping(map, standalone, Some(combining.to_string()));
   let plain_param = Some(Parameters::new(vec![
     Parameter {
@@ -678,7 +692,10 @@ pub(super) fn def_accent_impl(
       latexml_core::T_ARG!(1),
       latexml_core::T_END!()
     )),
-    Some(ExpandableOptions { protected: true, ..ExpandableOptions::default() }),
+    Some(ExpandableOptions {
+      protected: true,
+      ..ExpandableOptions::default()
+    }),
   )?;
   Ok(())
 }
@@ -701,8 +718,8 @@ pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map
   let chars: Vec<char> = pattern.chars().rev().collect();
   let ntomatch = chars.len();
   let replacement = replacement.to_string();
-  let matcher: Option<latexml_core::ligature::LigatureMatcher> =
-    Some(Rc::new(move |_document: &mut Document, node_opt: &mut libxml::tree::Node| {
+  let matcher: Option<latexml_core::ligature::LigatureMatcher> = Some(Rc::new(
+    move |_document: &mut Document, node_opt: &mut libxml::tree::Node| {
       let mut node: libxml::tree::Node;
       let mut node_mut = node_opt;
       for c in chars.iter() {
@@ -711,19 +728,23 @@ pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map
         {
           return Ok(None);
         }
-        match node_mut.get_prev_sibling() { Some(sibling) => {
-          node = sibling;
-          node_mut = &mut node;
-        } _ => {
-          return Ok(None);
-        }}
+        match node_mut.get_prev_sibling() {
+          Some(sibling) => {
+            node = sibling;
+            node_mut = &mut node;
+          },
+          _ => {
+            return Ok(None);
+          },
+        }
       }
       if ntomatch > 0 {
         Ok(Some((ntomatch, replacement.clone(), attr.clone())))
       } else {
         Ok(None)
       }
-    }));
+    },
+  ));
   latexml_core::state::unshift_value("MATH_LIGATURES", vec![Ligature {
     id: latexml_core::state::generate_ligature_id(),
     matcher,
@@ -742,7 +763,10 @@ pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map
 /// and a `select_count` default afterward.
 fn parse_rewrite_options(kind: &str, opts: Map) -> latexml_core::rewrite::RewriteOptions {
   use latexml_core::rewrite::RewriteOptions;
-  let mut o = RewriteOptions { is_math: kind == "math", ..RewriteOptions::default() };
+  let mut o = RewriteOptions {
+    is_math: kind == "math",
+    ..RewriteOptions::default()
+  };
   for (key, val) in opts {
     match key.as_str() {
       "label" => o.label = Some(dynamic_to_string(val)),
@@ -820,8 +844,10 @@ pub(super) fn wire_rewrite_replace(
   };
   o.replace = Some(Rc::new(
     move |document: &mut Document, nodes: Vec<&mut libxml::tree::Node>| -> Result<()> {
-      let arr: rhai::Array =
-        nodes.into_iter().map(|n| Dynamic::from(NodeProxy(n.clone()))).collect();
+      let arr: rhai::Array = nodes
+        .into_iter()
+        .map(|n| Dynamic::from(NodeProxy(n.clone())))
+        .collect();
       // RAII pop on every exit incl. panic (review M1).
       let _ctx_guard = CtorCtxGuard::new(CtorCtx {
         document,
@@ -848,8 +874,8 @@ pub(super) fn wire_math_ligature_matcher(
   use latexml_core::ligature::{Ligature, MathLigatureOptions};
   let engine = engine.clone();
   let ast = ast.clone();
-  let rust_matcher: latexml_core::ligature::LigatureMatcher =
-    Rc::new(move |_document: &mut Document, node: &mut libxml::tree::Node| {
+  let rust_matcher: latexml_core::ligature::LigatureMatcher = Rc::new(
+    move |_document: &mut Document, node: &mut libxml::tree::Node| {
       let ret: Dynamic = matcher
         .call::<Dynamic>(&engine, &ast, (Dynamic::from(NodeProxy(node.clone())),))
         .map_err(|e| Error::from(format!("script math-ligature matcher: {e}")))?;
@@ -858,8 +884,10 @@ pub(super) fn wire_math_ligature_matcher(
       }
       let m = ret.cast::<Map>();
       let n = m.get("n").and_then(|v| v.as_int().ok()).unwrap_or(0) as usize;
-      let replacement =
-        m.get("replacement").map(|v| dynamic_to_string(v.clone())).unwrap_or_default();
+      let replacement = m
+        .get("replacement")
+        .map(|v| dynamic_to_string(v.clone()))
+        .unwrap_or_default();
       if n == 0 {
         return Ok(None);
       }
@@ -869,7 +897,8 @@ pub(super) fn wire_math_ligature_matcher(
         meaning: m.get("meaning").map(|v| dynamic_to_string(v.clone())),
       };
       Ok(Some((n, replacement, attr)))
-    });
+    },
+  );
   latexml_core::state::unshift_value("MATH_LIGATURES", vec![Ligature {
     id:        latexml_core::state::generate_ligature_id(),
     matcher:   Some(rust_matcher),

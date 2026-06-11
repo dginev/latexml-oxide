@@ -19,8 +19,9 @@
 // expects `to_*` to consume `self`; that's the wrong shape here.
 #![allow(clippy::wrong_self_convention)]
 
-use rustc_hash::FxHashMap as HashMap;
 use std::collections::BTreeMap;
+
+use rustc_hash::FxHashMap as HashMap;
 
 use super::{CombineOp, DefCombiner, Pattern, Relaxng};
 
@@ -40,19 +41,23 @@ pub struct Options {
 
 impl Default for Options {
   fn default() -> Self {
-    Options { skip_svg: true, skip_aria: true, skip_xhtml: true }
+    Options {
+      skip_svg:   true,
+      skip_aria:  true,
+      skip_xhtml: true,
+    }
   }
 }
 
 /// Emission state — mutated as `document_modules` walks the AST.
 struct EmitState<'a> {
-  rng:               &'a Relaxng,
-  opts:              Options,
+  rng:                &'a Relaxng,
+  opts:               Options,
   /// Mirrors Perl's `$$self{defined_patterns}{$name}`.
   /// `1`  = at least one `\patterndef{name}` already emitted,
   /// `-1` = at least one `\patternadd{name}` emitted but no `\patterndef` yet.
   /// Final pass upgrades `\patternadd` → `\patterndefadd` for any -1.
-  defined_patterns: HashMap<String, i8>,
+  defined_patterns:   HashMap<String, i8>,
   /// Element tags claimed by more than one singleton-element define —
   /// see [`ambiguous_element_tags`].
   ambiguous_elements: rustc_hash::FxHashSet<String>,
@@ -81,23 +86,29 @@ struct EmitState<'a> {
 fn ambiguous_element_tags(rng: &Relaxng) -> rustc_hash::FxHashSet<String> {
   let mut hosts: HashMap<&str, rustc_hash::FxHashSet<&str>> = HashMap::default();
   for (qname, tag) in &rng.elementdefs {
-    hosts.entry(tag.as_str()).or_default().insert(qname.as_str());
+    hosts
+      .entry(tag.as_str())
+      .or_default()
+      .insert(qname.as_str());
   }
   for (qname, pat) in &rng.defs {
     if let Pattern::Element { name, .. } = pat {
-      hosts.entry(name.as_str()).or_default().insert(qname.as_str());
+      hosts
+        .entry(name.as_str())
+        .or_default()
+        .insert(qname.as_str());
     }
   }
   for uses in rng.uses_name.values() {
     for u in uses {
-      if let Some(rest) = u.strip_prefix("element:") {
-        if let Some((tag, host)) = rest.split_once('@') {
-          // Normalize to the bare define qname so the same define
-          // counted from `elementdefs`/`defs` (plain qname) and from
-          // the uses graph (`pattern:`-prefixed) stays one host.
-          let host = host.strip_prefix("pattern:").unwrap_or(host);
-          hosts.entry(tag).or_default().insert(host);
-        }
+      if let Some(rest) = u.strip_prefix("element:")
+        && let Some((tag, host)) = rest.split_once('@')
+      {
+        // Normalize to the bare define qname so the same define
+        // counted from `elementdefs`/`defs` (plain qname) and from
+        // the uses graph (`pattern:`-prefixed) stays one host.
+        let host = host.strip_prefix("pattern:").unwrap_or(host);
+        hosts.entry(tag).or_default().insert(host);
       }
     }
   }
@@ -266,7 +277,9 @@ fn clean_tex_name(s: &str, strip_prefixes: &[String]) -> String {
 }
 
 fn strip_urn_prefix(s: &str) -> String {
-  s.strip_prefix("urn:x-LaTeXML:RelaxNG:").unwrap_or(s).to_string()
+  s.strip_prefix("urn:x-LaTeXML:RelaxNG:")
+    .unwrap_or(s)
+    .to_string()
 }
 
 /// Replace each `<TEXT>` substring with `\texttt{TEXT}`.
@@ -275,15 +288,15 @@ fn wrap_angle_text(s: &str) -> String {
   let bytes = s.as_bytes();
   let mut i = 0;
   while i < bytes.len() {
-    if bytes[i] == b'<' {
-      if let Some(end) = s[i + 1..].find('>') {
-        let inner = &s[i + 1..i + 1 + end];
-        out.push_str("\\texttt{");
-        out.push_str(inner);
-        out.push('}');
-        i += 1 + end + 1;
-        continue;
-      }
+    if bytes[i] == b'<'
+      && let Some(end) = s[i + 1..].find('>')
+    {
+      let inner = &s[i + 1..i + 1 + end];
+      out.push_str("\\texttt{");
+      out.push_str(inner);
+      out.push('}');
+      i += 1 + end + 1;
+      continue;
     }
     out.push(bytes[i] as char);
     i += 1;
@@ -382,7 +395,10 @@ impl EmitState<'_> {
         }
       },
       Pattern::ParentRef { qname } => self.to_tex_ref(qname),
-      Pattern::ElementRef { qname } => format!("\\elementref{{{}}}", clean_tex_name(qname, &self.rng.display_strip_prefixes)),
+      Pattern::ElementRef { qname } => format!(
+        "\\elementref{{{}}}",
+        clean_tex_name(qname, &self.rng.display_strip_prefixes)
+      ),
       Pattern::Override { module, .. } => self.to_tex(module),
       Pattern::Text => clean_tex("#PCDATA"),
     }
@@ -402,19 +418,19 @@ impl EmitState<'_> {
         return format!("\\elementref{{{}}}", cleaned);
       }
     }
-    if name.ends_with("_attributes") || name.ends_with("_model") {
-      if let Some(def) = self.rng.defs.get(name) {
-        // Read-only recursion is fine here; we don't mutate state on
-        // the ref-expansion path (Perl doesn't either).
-        let cloned = def.clone();
-        let mut tmp = EmitState {
-          rng:                self.rng,
-          opts:               self.opts,
-          defined_patterns:   HashMap::default(),
-          ambiguous_elements: self.ambiguous_elements.clone(),
-        };
-        return tmp.to_tex(&cloned);
-      }
+    if (name.ends_with("_attributes") || name.ends_with("_model"))
+      && let Some(def) = self.rng.defs.get(name)
+    {
+      // Read-only recursion is fine here; we don't mutate state on
+      // the ref-expansion path (Perl doesn't either).
+      let cloned = def.clone();
+      let mut tmp = EmitState {
+        rng:                self.rng,
+        opts:               self.opts,
+        defined_patterns:   HashMap::default(),
+        ambiguous_elements: self.ambiguous_elements.clone(),
+      };
+      return tmp.to_tex(&cloned);
     }
     let stripped = strip_first_qualifier(name);
     if self.opts.skip_svg && stripped == "svg" {
@@ -433,12 +449,13 @@ impl EmitState<'_> {
     // fall through to the generic path, which emits a
     // `\patterndef{X}` card — the anchor that `\patternref{X}` links
     // from `to_tex_ref` need — with the element as a sibling card.
-    if combiner.is_empty() && self.rng.elementdefs.contains_key(qname) && data.len() == 1 {
-      if let Pattern::Element { name, body } = &data[0] {
-        if !self.ambiguous_elements.contains(name) {
-          return self.to_tex_element(name, body);
-        }
-      }
+    if combiner.is_empty()
+      && self.rng.elementdefs.contains_key(qname)
+      && data.len() == 1
+      && let Pattern::Element { name, body } = &data[0]
+      && !self.ambiguous_elements.contains(name)
+    {
+      return self.to_tex_element(name, body);
     }
     if self.opts.skip_aria && qname.contains("aria") {
       return String::new();
@@ -462,49 +479,52 @@ impl EmitState<'_> {
     // naming the rendered tag, then the element's own attribute /
     // content rows. The patterndef anchor is what `\patternref{X}`
     // links (`to_tex_ref` falls back to it for ambiguous tags).
-    if combiner.is_empty() && spec.len() == 1 {
-      if let Pattern::Element { name, body } = &spec[0] {
-        if self.ambiguous_elements.contains(name) && !is_wildcard_name(name) {
-          if matches!(self.defined_patterns.get(&cleaned_name), Some(v) if *v > 0) {
-            return String::new();
-          }
-          self.defined_patterns.insert(cleaned_name.clone(), 1);
-          let (el_docs, el_spec) = self.extract_docs(body);
-          let merged_docs = format!("{}{}", docs, el_docs);
-          let (attr, content) = self.to_tex_body(&el_spec);
-          let mut card = format!(
-            "\\item[\\textit{{Element}}:] \\texttt{{{}}}",
-            clean_tex_name(name, &self.rng.display_strip_prefixes)
-          );
-          card.push_str(&attr);
-          if !content.is_empty() {
-            card.push_str(&format!("\\item[\\textit{{Content}}:] {}", content));
-          }
-          if let Some(uses) = self.symbol_uses(qname) {
-            card.push_str(&format!("\\item[\\textit{{Used by}}:] {}", uses));
-          }
-          let mut out =
-            format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, merged_docs, card);
-          // Anonymous elements nested in the content render inline as
-          // `\elementref` links; give them their sibling cards so the
-          // links resolve on this page (same idiom as the generic
-          // patterndef path below).
-          for (el_name, el_body) in &collect_element_descendants(&el_spec) {
-            let cleaned_el = clean_tex_name(el_name, &self.rng.display_strip_prefixes);
-            let (el_attr, el_content) = self.to_tex_body(el_body);
-            let mut eb = el_attr;
-            if !el_content.is_empty() {
-              eb.push_str(&format!("\\item[\\textit{{Content}}:] {}", el_content));
-            }
-            eb.push_str(&format!(
-              "\\item[\\textit{{Used by}}:] \\patternref{{{}}}",
-              cleaned_name
-            ));
-            out.push_str(&format!("\\elementdef{{{}}}{{}}{{{}}}\n", cleaned_el, eb));
-          }
-          return out;
-        }
+    if combiner.is_empty()
+      && spec.len() == 1
+      && let Pattern::Element { name, body } = &spec[0]
+      && self.ambiguous_elements.contains(name)
+      && !is_wildcard_name(name)
+    {
+      if matches!(self.defined_patterns.get(&cleaned_name), Some(v) if *v > 0) {
+        return String::new();
       }
+      self.defined_patterns.insert(cleaned_name.clone(), 1);
+      let (el_docs, el_spec) = self.extract_docs(body);
+      let merged_docs = format!("{}{}", docs, el_docs);
+      let (attr, content) = self.to_tex_body(&el_spec);
+      let mut card = format!(
+        "\\item[\\textit{{Element}}:] \\texttt{{{}}}",
+        clean_tex_name(name, &self.rng.display_strip_prefixes)
+      );
+      card.push_str(&attr);
+      if !content.is_empty() {
+        card.push_str(&format!("\\item[\\textit{{Content}}:] {}", content));
+      }
+      if let Some(uses) = self.symbol_uses(qname) {
+        card.push_str(&format!("\\item[\\textit{{Used by}}:] {}", uses));
+      }
+      let mut out = format!(
+        "\\patterndef{{{}}}{{{}}}{{{}}}\n",
+        cleaned_name, merged_docs, card
+      );
+      // Anonymous elements nested in the content render inline as
+      // `\elementref` links; give them their sibling cards so the
+      // links resolve on this page (same idiom as the generic
+      // patterndef path below).
+      for (el_name, el_body) in &collect_element_descendants(&el_spec) {
+        let cleaned_el = clean_tex_name(el_name, &self.rng.display_strip_prefixes);
+        let (el_attr, el_content) = self.to_tex_body(el_body);
+        let mut eb = el_attr;
+        if !el_content.is_empty() {
+          eb.push_str(&format!("\\item[\\textit{{Content}}:] {}", el_content));
+        }
+        eb.push_str(&format!(
+          "\\item[\\textit{{Used by}}:] \\patternref{{{}}}",
+          cleaned_name
+        ));
+        out.push_str(&format!("\\elementdef{{{}}}{{}}{{{}}}\n", cleaned_el, eb));
+      }
+      return out;
     }
 
     // Compact rendering for `X = element a {B} | element b {B} | …`
@@ -514,20 +534,23 @@ impl EmitState<'_> {
     // around the cards once LaTeXML promotes each `\item` into a
     // sibling list. The compact form lists the names monospaced and
     // shows the shared body once.
-    if combiner.is_empty() {
-      if let Some((op, elements)) = self.detect_element_choice(&spec) {
-        let (pattern_body, element_defs) =
-          self.render_element_choice(qname, &cleaned_name, op, &elements);
-        if matches!(self.defined_patterns.get(&cleaned_name), Some(v) if *v > 0) {
-          return String::new();
-        }
-        self.defined_patterns.insert(cleaned_name.clone(), 1);
-        let mut out = format!("\\patterndef{{{}}}{{{}}}{{{}}}\n", cleaned_name, docs, pattern_body);
-        for ed in element_defs {
-          out.push_str(&ed);
-        }
-        return out;
+    if combiner.is_empty()
+      && let Some((op, elements)) = self.detect_element_choice(&spec)
+    {
+      let (pattern_body, element_defs) =
+        self.render_element_choice(qname, &cleaned_name, op, &elements);
+      if matches!(self.defined_patterns.get(&cleaned_name), Some(v) if *v > 0) {
+        return String::new();
       }
+      self.defined_patterns.insert(cleaned_name.clone(), 1);
+      let mut out = format!(
+        "\\patterndef{{{}}}{{{}}}{{{}}}\n",
+        cleaned_name, docs, pattern_body
+      );
+      for ed in element_defs {
+        out.push_str(&ed);
+      }
+      return out;
     }
 
     let (attr, content) = self.to_tex_body(&spec);
@@ -535,7 +558,11 @@ impl EmitState<'_> {
     if !combiner.is_empty() {
       let mut body = attr;
       if !content.is_empty() {
-        let sep = if combiner == "choice" { "\\textbar=" } else { "\\&=" };
+        let sep = if combiner == "choice" {
+          "\\textbar="
+        } else {
+          "\\&="
+        };
         body.push_str(&format!("\\item[{}] {}", sep, content));
       }
       self
@@ -559,20 +586,20 @@ impl EmitState<'_> {
       body.push_str(&format!("\\item[\\textit{{Content}}:] {}", content));
     }
     // Expansion line (when defs[qname] is content-shaped and differs).
-    if !cleaned_name.contains("\\_attributes") {
-      if let Some(stored) = self.rng.defs.get(qname) {
-        if self.is_content(stored) && !self.is_attributes(stored) {
-          let (xattr, xcontent) = self.to_tex_body(std::slice::from_ref(stored));
-          // Suppress when the stored form differs from `content` only by
-          // the outer `(...)` wrap that `to_tex_combination(Group)` adds:
-          // for patterns like `anyElement` the def-args path renders the
-          // body unwrapped while the stored-Combination path re-wraps it,
-          // and emitting both yields a near-duplicate Expansion block.
-          let unwrapped = strip_outer_parens(&xcontent);
-          if xattr.is_empty() && !xcontent.is_empty() && xcontent != content && unwrapped != content {
-            body.push_str(&format!("\\item[\\textit{{Expansion}}:] {}", xcontent));
-          }
-        }
+    if !cleaned_name.contains("\\_attributes")
+      && let Some(stored) = self.rng.defs.get(qname)
+      && self.is_content(stored)
+      && !self.is_attributes(stored)
+    {
+      let (xattr, xcontent) = self.to_tex_body(std::slice::from_ref(stored));
+      // Suppress when the stored form differs from `content` only by
+      // the outer `(...)` wrap that `to_tex_combination(Group)` adds:
+      // for patterns like `anyElement` the def-args path renders the
+      // body unwrapped while the stored-Combination path re-wraps it,
+      // and emitting both yields a near-duplicate Expansion block.
+      let unwrapped = strip_outer_parens(&xcontent);
+      if xattr.is_empty() && !xcontent.is_empty() && xcontent != content && unwrapped != content {
+        body.push_str(&format!("\\item[\\textit{{Expansion}}:] {}", xcontent));
       }
     }
     if let Some(uses) = self.symbol_uses(qname) {
@@ -630,10 +657,10 @@ impl EmitState<'_> {
     };
     let mut body = attr;
     body.push_str(&format!("\\item[\\textit{{Content}}:] {}", content));
-    if let Some(ename) = self.rng.element_reverse_defs.get(qname) {
-      if let Some(uses) = self.symbol_uses(ename) {
-        body.push_str(&format!("\\item[\\textit{{Used by}}:] {}", uses));
-      }
+    if let Some(ename) = self.rng.element_reverse_defs.get(qname)
+      && let Some(uses) = self.symbol_uses(ename)
+    {
+      body.push_str(&format!("\\item[\\textit{{Used by}}:] {}", uses));
     }
     format!("\\elementdef{{{}}}{{{}}}{{{}}}\n", cleaned, docs, body)
   }
@@ -641,7 +668,10 @@ impl EmitState<'_> {
   fn to_tex_attribute(&mut self, name: &str, data: &[Pattern]) -> String {
     let cleaned = clean_tex_name(name, &self.rng.display_strip_prefixes);
     if let Some(rest) = cleaned.strip_prefix('!') {
-      return format!("\\item[\\textit{{Excluding attribute }}]\\texttt{{{}}}", rest);
+      return format!(
+        "\\item[\\textit{{Excluding attribute }}]\\texttt{{{}}}",
+        rest
+      );
     }
     // Same wildcard-handling rationale as `to_tex_element`: render inline
     // so the parent pattern's body doesn't pick up a nested `\attrdef`
@@ -677,7 +707,10 @@ impl EmitState<'_> {
   /// model is at least visible somewhere.
   fn render_inline_element(&mut self, qname: &str, data: &[Pattern]) -> String {
     if !is_wildcard_name(qname) {
-      return format!("\\elementref{{{}}}", clean_tex_name(qname, &self.rng.display_strip_prefixes));
+      return format!(
+        "\\elementref{{{}}}",
+        clean_tex_name(qname, &self.rng.display_strip_prefixes)
+      );
     }
     let cleaned = clean_tex_name(qname, &self.rng.display_strip_prefixes);
     let (_docs, spec) = self.extract_docs(data);
@@ -707,10 +740,7 @@ impl EmitState<'_> {
   /// sibling `\elementdef` cards (one per unique name).
   ///
   /// Returns `(combiner, [(element_name, element_body)])`.
-  fn detect_element_choice<'a>(
-    &self,
-    spec: &'a [Pattern],
-  ) -> Option<ElementChoice<'a>> {
+  fn detect_element_choice<'a>(&self, spec: &'a [Pattern]) -> Option<ElementChoice<'a>> {
     if spec.len() != 1 {
       return None;
     }
@@ -726,7 +756,10 @@ impl EmitState<'_> {
     let Pattern::Combination { op, body } = &spec[0] else {
       return None;
     };
-    if !matches!(op, CombineOp::Choice | CombineOp::Group | CombineOp::Interleave) {
+    if !matches!(
+      op,
+      CombineOp::Choice | CombineOp::Group | CombineOp::Interleave
+    ) {
       return None;
     }
     if body.is_empty() {
@@ -747,16 +780,13 @@ impl EmitState<'_> {
 
   /// Render `detect_element_choice` output. Returns:
   ///
-  /// * the patterndef body — a single `Content` line whose value is
-  ///   an alphabetised expression `(name1 | name2 | …)` of
-  ///   `\elementref` links to the sibling cards. The post-pass's
-  ///   `render_content_models` then pretty-prints it with operator-
-  ///   leading layout. Plus the regular Used-by line.
-  /// * a list of `\elementdef{name}{}{…}` strings — one per unique
-  ///   element name (deduped, source-order kept). Each carries its
-  ///   own body (so distinct-bodied variants of the same name keep
-  ///   their first-seen body), plus a Used-by line citing the parent
-  ///   pattern.
+  /// * the patterndef body — a single `Content` line whose value is an alphabetised expression
+  ///   `(name1 | name2 | …)` of `\elementref` links to the sibling cards. The post-pass's
+  ///   `render_content_models` then pretty-prints it with operator- leading layout. Plus the
+  ///   regular Used-by line.
+  /// * a list of `\elementdef{name}{}{…}` strings — one per unique element name (deduped,
+  ///   source-order kept). Each carries its own body (so distinct-bodied variants of the same name
+  ///   keep their first-seen body), plus a Used-by line citing the parent pattern.
   fn render_element_choice(
     &mut self,
     qname: &str,
@@ -773,7 +803,12 @@ impl EmitState<'_> {
     sorted_names.dedup();
     let names_tex: Vec<String> = sorted_names
       .iter()
-      .map(|n| format!("\\elementref{{{}}}", clean_tex_name(n, &self.rng.display_strip_prefixes)))
+      .map(|n| {
+        format!(
+          "\\elementref{{{}}}",
+          clean_tex_name(n, &self.rng.display_strip_prefixes)
+        )
+      })
       .collect();
     let sep = match op {
       CombineOp::Choice => " ~\\textbar~ ",
@@ -878,7 +913,10 @@ impl EmitState<'_> {
         if inner.len() == 1 && matches!(data[0], Pattern::Attribute { .. }) {
           inner.into_iter().next().unwrap()
         } else {
-          format!("{}\\textsuperscript{{?}}", inner.first().cloned().unwrap_or_default())
+          format!(
+            "{}\\textsuperscript{{?}}",
+            inner.first().cloned().unwrap_or_default()
+          )
         }
       },
       CombineOp::ZeroOrMore | CombineOp::OneOrMore => {
@@ -942,11 +980,14 @@ impl EmitState<'_> {
     while let Some(item) = deque.pop_front() {
       match &item {
         Pattern::Attribute { name, body } => {
-          if let Some(t) = simple_attr_type(body) {
-            if !is_wildcard_name(name) {
-              grouped.entry(t).or_default().push(clean_tex_name(name, &self.rng.display_strip_prefixes));
-              continue;
-            }
+          if let Some(t) = simple_attr_type(body)
+            && !is_wildcard_name(name)
+          {
+            grouped
+              .entry(t)
+              .or_default()
+              .push(clean_tex_name(name, &self.rng.display_strip_prefixes));
+            continue;
           }
           attributes.push(self.to_tex(&item));
         },
@@ -988,8 +1029,7 @@ impl EmitState<'_> {
     // names visually separate.
     for (type_name, mut names) in grouped {
       names.sort();
-      let monospaced: Vec<String> =
-        names.iter().map(|n| format!("\\texttt{{{}}}", n)).collect();
+      let monospaced: Vec<String> = names.iter().map(|n| format!("\\texttt{{{}}}", n)).collect();
       attr_str.push_str(&format!(
         "\\item[\\textit{{{}}}:] {}",
         attr_group_label(&type_name),
@@ -1071,15 +1111,12 @@ impl EmitState<'_> {
     });
     // Use sites come in three shapes:
     //  * `pattern:G:NAME`               — a reference inside define NAME;
-    //  * `pattern:G:NAME_attributes` /
-    //    `pattern:G:NAME_model`         — LaTeXML's convention pairing
-    //    a `*_model` define with element NAME: report the element;
-    //  * `element:TAG@pattern:G:HOST`   — a reference inside `element
-    //    TAG {…}` hosted by define HOST (`@`-suffix recorded by the
-    //    simplifier; absent for elements outside any define). Report
-    //    the element when TAG names a unique definition; otherwise
-    //    the host pattern is the only identifying handle (HTML
-    //    profiles, where TAG is a generic `div`/`span`).
+    //  * `pattern:G:NAME_attributes` / `pattern:G:NAME_model`         — LaTeXML's convention
+    //    pairing a `*_model` define with element NAME: report the element;
+    //  * `element:TAG@pattern:G:HOST`   — a reference inside `element TAG {…}` hosted by define
+    //    HOST (`@`-suffix recorded by the simplifier; absent for elements outside any define).
+    //    Report the element when TAG names a unique definition; otherwise the host pattern is the
+    //    only identifying handle (HTML profiles, where TAG is a generic `div`/`span`).
     // Pattern links group before element links; each group keeps the
     // raw sort order. Dedup is needed because one definition may be
     // referenced under several (TAG, HOST) pairs that render the same
@@ -1112,14 +1149,12 @@ impl EmitState<'_> {
           Some((t, h)) => (t, Some(h)),
           None => (rest, None),
         };
-        if self.ambiguous_elements.contains(tag) {
-          if let Some(hrest) = host.and_then(|h| h.strip_prefix("pattern:")) {
-            if let Some(idx) = hrest.find(':') {
-              pattern_parts
-                .push(format!("\\patternref{{{}}}", clean_tex(&hrest[idx + 1..])));
-              continue;
-            }
-          }
+        if self.ambiguous_elements.contains(tag)
+          && let Some(hrest) = host.and_then(|h| h.strip_prefix("pattern:"))
+          && let Some(idx) = hrest.find(':')
+        {
+          pattern_parts.push(format!("\\patternref{{{}}}", clean_tex(&hrest[idx + 1..])));
+          continue;
         }
         element_parts.push(format!(
           "\\elementref{{{}}}",
@@ -1147,9 +1182,7 @@ impl EmitState<'_> {
 /// emits when expanding LaTeXML.rnc with the OASIS catalog (which
 /// strips the `urn:` prefix). LaTeXML's own modules don't start with
 /// `svg`, so the prefix match doesn't false-positive.
-fn is_svg_module(name: &str) -> bool {
-  name.contains(":svg:") || name.starts_with("svg")
-}
+fn is_svg_module(name: &str) -> bool { name.contains(":svg:") || name.starts_with("svg") }
 
 fn strip_first_qualifier(s: &str) -> String {
   // `s/^\w+://` — strip a leading prefix up to the first colon, IF
@@ -1174,9 +1207,7 @@ fn strip_first_qualifier(s: &str) -> String {
 /// `\elementdef` extraction: pattern bodies render Elements inline as
 /// `\elementref{name}` links, and the corresponding card sits as a
 /// sibling of the patterndef so the link resolves on the same page.
-fn collect_element_descendants(
-  spec: &[Pattern],
-) -> Vec<(String, &[Pattern])> {
+fn collect_element_descendants(spec: &[Pattern]) -> Vec<(String, &[Pattern])> {
   let mut out = Vec::new();
   let mut seen: rustc_hash::FxHashSet<String> = rustc_hash::FxHashSet::default();
   for p in spec {
@@ -1254,9 +1285,7 @@ fn attr_group_label(type_name: &str) -> String {
 /// (any local within a namespace). These names come from the scanner's
 /// expansion of `<anyName/>` / `<nsName/>` in `scan_name_class` and
 /// don't denote real definable element / attribute names.
-fn is_wildcard_name(name: &str) -> bool {
-  name == "*" || name == "*:*" || name.ends_with(":*")
-}
+fn is_wildcard_name(name: &str) -> bool { name == "*" || name == "*:*" || name.ends_with(":*") }
 
 /// True if `data` contains an adjacent `*` then `*:*` Element pair
 /// (or the same shape for Attribute). Used as a cheap pre-check so the
@@ -1413,15 +1442,14 @@ mod tests {
   fn combination_rendering() {
     let rng = Relaxng::default();
     let mut emit = EmitState {
-      rng: &rng,
-      opts: Options::default(),
-      defined_patterns: HashMap::default(),
+      rng:                &rng,
+      opts:               Options::default(),
+      defined_patterns:   HashMap::default(),
       ambiguous_elements: ambiguous_element_tags(&rng),
     };
-    let body = vec![
-      Pattern::Ref { qname: "g:A".into() },
-      Pattern::Ref { qname: "g:B".into() },
-    ];
+    let body = vec![Pattern::Ref { qname: "g:A".into() }, Pattern::Ref {
+      qname: "g:B".into(),
+    }];
     let group = emit.to_tex_combination(CombineOp::Group, &body);
     assert_eq!(group, "(\\patternref{A}, \\patternref{B})");
     let choice = emit.to_tex_combination(CombineOp::Choice, &body);
@@ -1434,9 +1462,9 @@ mod tests {
   fn singleton_group_collapses_in_combination() {
     let rng = Relaxng::default();
     let mut emit = EmitState {
-      rng: &rng,
-      opts: Options::default(),
-      defined_patterns: HashMap::default(),
+      rng:                &rng,
+      opts:               Options::default(),
+      defined_patterns:   HashMap::default(),
       ambiguous_elements: ambiguous_element_tags(&rng),
     };
     let body = vec![Pattern::Ref { qname: "g:Only".into() }];
@@ -1447,16 +1475,18 @@ mod tests {
   #[test]
   fn element_renders_with_content_and_used_by() {
     let mut rng = Relaxng::default();
-    rng.element_reverse_defs.insert("foo".into(), "g:Foo".into());
+    rng
+      .element_reverse_defs
+      .insert("foo".into(), "g:Foo".into());
     rng
       .uses_name
       .entry("g:Foo".into())
       .or_default()
       .insert("element:bar".into());
     let mut emit = EmitState {
-      rng: &rng,
-      opts: Options::default(),
-      defined_patterns: HashMap::default(),
+      rng:                &rng,
+      opts:               Options::default(),
+      defined_patterns:   HashMap::default(),
       ambiguous_elements: ambiguous_element_tags(&rng),
     };
     let out = emit.to_tex_element("foo", &[Pattern::Text]);
@@ -1469,9 +1499,9 @@ mod tests {
   fn def_emits_patterndef_then_skips_duplicates() {
     let rng = Relaxng::default();
     let mut emit = EmitState {
-      rng: &rng,
-      opts: Options::default(),
-      defined_patterns: HashMap::default(),
+      rng:                &rng,
+      opts:               Options::default(),
+      defined_patterns:   HashMap::default(),
       ambiguous_elements: ambiguous_element_tags(&rng),
     };
     let body = vec![Pattern::Text];
@@ -1485,9 +1515,9 @@ mod tests {
   fn def_combine_choice_emits_patternadd() {
     let rng = Relaxng::default();
     let mut emit = EmitState {
-      rng: &rng,
-      opts: Options::default(),
-      defined_patterns: HashMap::default(),
+      rng:                &rng,
+      opts:               Options::default(),
+      defined_patterns:   HashMap::default(),
       ambiguous_elements: ambiguous_element_tags(&rng),
     };
     let out = emit.to_tex_def("choice", "g:X", &[Pattern::Text]);
@@ -1560,9 +1590,21 @@ mod tests {
     let _ = crate::common::relaxng::simplify::simplify_top(&mut rng, wrapped);
     let out = document_modules(&rng, Options::default());
 
-    assert!(out.contains("\\item[\\textit{Text attributes}:] \\texttt{a}"), "{}", out);
-    assert!(out.contains("\\item[\\textit{String attributes}:] \\texttt{b}"), "{}", out);
-    assert!(out.contains("\\item[\\textit{Integer attributes}:] \\texttt{c}"), "{}", out);
+    assert!(
+      out.contains("\\item[\\textit{Text attributes}:] \\texttt{a}"),
+      "{}",
+      out
+    );
+    assert!(
+      out.contains("\\item[\\textit{String attributes}:] \\texttt{b}"),
+      "{}",
+      out
+    );
+    assert!(
+      out.contains("\\item[\\textit{Integer attributes}:] \\texttt{c}"),
+      "{}",
+      out
+    );
     // The enum-bodied attribute must keep its individual card.
     assert!(out.contains("\\attrdef{d}"), "{}", out);
   }
@@ -1642,8 +1684,14 @@ mod tests {
   #[test]
   fn dedupe_wildcard_pairs_collapses_adjacent() {
     let body = vec![
-      Pattern::Element { name: "*".into(), body: vec![Pattern::Text] },
-      Pattern::Element { name: "*:*".into(), body: vec![Pattern::Text] },
+      Pattern::Element {
+        name: "*".into(),
+        body: vec![Pattern::Text],
+      },
+      Pattern::Element {
+        name: "*:*".into(),
+        body: vec![Pattern::Text],
+      },
       Pattern::Ref { qname: "x".into() },
     ];
     let folded = dedupe_wildcard_pairs(&body);
@@ -1693,18 +1741,37 @@ mod tests {
     // joined by Choice operator, NO nested \elementdef cards.
     let patterndef = out
       .find("\\patterndef{X}")
-      .map(|i| &out[i..out[i..].find("\\elementdef").map(|j| i + j).unwrap_or(out.len())])
+      .map(|i| {
+        &out[i..out[i..]
+          .find("\\elementdef")
+          .map(|j| i + j)
+          .unwrap_or(out.len())]
+      })
       .expect("patterndef X present");
     assert!(
       patterndef.contains("\\item[\\textit{Content}:]"),
       "patterndef should expose Content line, got:\n{}",
       patterndef
     );
-    let pos_a = patterndef.find("\\elementref{namespace1:a}").expect("a present");
-    let pos_b = patterndef.find("\\elementref{namespace1:b}").expect("b present");
-    let pos_c = patterndef.find("\\elementref{namespace1:c}").expect("c present");
-    assert!(pos_a < pos_b && pos_b < pos_c, "expected alphabetised order: {}", patterndef);
-    assert!(patterndef.contains("\\textbar"), "expected | separator: {}", patterndef);
+    let pos_a = patterndef
+      .find("\\elementref{namespace1:a}")
+      .expect("a present");
+    let pos_b = patterndef
+      .find("\\elementref{namespace1:b}")
+      .expect("b present");
+    let pos_c = patterndef
+      .find("\\elementref{namespace1:c}")
+      .expect("c present");
+    assert!(
+      pos_a < pos_b && pos_b < pos_c,
+      "expected alphabetised order: {}",
+      patterndef
+    );
+    assert!(
+      patterndef.contains("\\textbar"),
+      "expected | separator: {}",
+      patterndef
+    );
     assert!(
       !patterndef.contains("\\elementdef{namespace1:"),
       "patterndef body should NOT carry nested elementdef cards:\n{}",
@@ -1752,7 +1819,12 @@ mod tests {
     // Pattern body lists 'a' and 'b' (deduped, alphabetised).
     let patterndef = out
       .find("\\patterndef{X}")
-      .map(|i| &out[i..out[i..].find("\\elementdef").map(|j| i + j).unwrap_or(out.len())])
+      .map(|i| {
+        &out[i..out[i..]
+          .find("\\elementdef")
+          .map(|j| i + j)
+          .unwrap_or(out.len())]
+      })
       .unwrap();
     assert_eq!(
       patterndef.matches("\\elementref{namespace1:a}").count(),
@@ -1761,8 +1833,18 @@ mod tests {
       patterndef
     );
     // One \elementdef per unique name (a, b).
-    assert_eq!(out.matches("\\elementdef{namespace1:a}").count(), 1, "{}", out);
-    assert_eq!(out.matches("\\elementdef{namespace1:b}").count(), 1, "{}", out);
+    assert_eq!(
+      out.matches("\\elementdef{namespace1:a}").count(),
+      1,
+      "{}",
+      out
+    );
+    assert_eq!(
+      out.matches("\\elementdef{namespace1:b}").count(),
+      1,
+      "{}",
+      out
+    );
   }
 
   #[test]

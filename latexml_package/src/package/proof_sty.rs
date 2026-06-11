@@ -1,6 +1,8 @@
-use crate::engine::base_utilities::split_tokens;
-use crate::prelude::*;
-use crate::xmath_helpers::{i_apply, i_arg, i_dual, i_symbol};
+use crate::{
+  engine::base_utilities::split_tokens,
+  prelude::*,
+  xmath_helpers::{i_apply, i_arg, i_dual, i_symbol},
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -34,16 +36,14 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       let top_w = whatsit.get_arg(1).and_then(|a| a.clone().get_width(None).ok().flatten());
       let bot_w = whatsit.get_arg(3).and_then(|a| a.clone().get_width(None).ok().flatten());
-      if let (Some(latexml_core::definition::register::RegisterValue::Dimension(tw)),
-              Some(latexml_core::definition::register::RegisterValue::Dimension(bw))) = (top_w, bot_w) {
-        if tw.value_of() > bw.value_of() {
-          if let Some(bot) = whatsit.get_arg_mut(3) {
+      if let (Some(RegisterValue::Dimension(tw)),
+              Some(RegisterValue::Dimension(bw))) = (top_w, bot_w)
+        && tw.value_of() > bw.value_of()
+          && let Some(bot) = whatsit.get_arg_mut(3) {
             bot.set_property("stretchto", Stored::from(
-              latexml_core::definition::register::RegisterValue::Dimension(tw)
+              RegisterValue::Dimension(tw)
             ));
           }
-        }
-      }
     });
 
   // Perl L52-57 emits `width='#stretchto'` on the XMWrap so the bars

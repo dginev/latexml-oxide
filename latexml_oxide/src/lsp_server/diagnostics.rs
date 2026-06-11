@@ -181,21 +181,21 @@ pub(crate) fn parse_log_diagnostics(log_str: &str) -> Vec<Diag> {
       continue;
     }
     // Continuation lines are tab-indented.
-    if let Some(rest) = line.strip_prefix('\t') {
-      if let Some(d) = current.as_mut() {
-        if rest.starts_with("In ") {
-          continue; // internal Rust location
-        }
-        if let Some(loc) = rest.strip_prefix("at ") {
-          fill_location(d, loc);
-          continue;
-        }
-        if !rest.trim().is_empty() {
-          d.message.push('\n');
-          d.message.push_str(rest);
-        }
+    if let Some(rest) = line.strip_prefix('\t')
+      && let Some(d) = current.as_mut()
+    {
+      if rest.starts_with("In ") {
+        continue; // internal Rust location
+      }
+      if let Some(loc) = rest.strip_prefix("at ") {
+        fill_location(d, loc);
         continue;
       }
+      if !rest.trim().is_empty() {
+        d.message.push('\n');
+        d.message.push_str(rest);
+      }
+      continue;
     }
     // Non-continuation, non-severity line: closes any open record.
     if let Some(d) = current.take() {
@@ -279,14 +279,16 @@ pub(crate) fn attribute_diag_files(
   }
 }
 
-
 #[cfg(test)]
 mod tests {
   use super::*;
 
   #[test]
   fn parse_line_col_variants() {
-    assert_eq!(parse_line_col("Error:foo:bar baz; line 12 col 7"), (Some(12), Some(7)));
+    assert_eq!(
+      parse_line_col("Error:foo:bar baz; line 12 col 7"),
+      (Some(12), Some(7))
+    );
     assert_eq!(parse_line_col("Warn:foo bar at line 3"), (Some(3), None));
     assert_eq!(parse_line_col("Info:foo no position here"), (None, None));
   }
@@ -344,7 +346,10 @@ mod tests {
       on_disk.to_str(),
       "disk candidate <dir>/<src>.tex"
     );
-    assert_eq!(diags[2].file, None, "unmatched stays None (edited-buffer uri)");
+    assert_eq!(
+      diags[2].file, None,
+      "unmatched stays None (edited-buffer uri)"
+    );
   }
 
   #[test]
@@ -365,6 +370,9 @@ mod tests {
     let from = norm.get("from").unwrap();
     assert_eq!(from.get("line"), Some(&jnum(5.0)));
     assert_eq!(from.get("column"), Some(&jnum(2.0)));
-    assert_eq!(norm.get("severity"), Some(&Value::String("error".to_string())));
+    assert_eq!(
+      norm.get("severity"),
+      Some(&Value::String("error".to_string()))
+    );
   }
 }

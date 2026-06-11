@@ -37,13 +37,11 @@ use crate::document::PostDocument;
 /// post-processed document to serialize and ship to the user.
 ///
 /// * [`Whatsout::Document`] — full document, no extraction (default).
-/// * [`Whatsout::Fragment`] — embeddable HTML snippet via
-///   [`get_embeddable`].
+/// * [`Whatsout::Fragment`] — embeddable HTML snippet via [`get_embeddable`].
 /// * [`Whatsout::Math`] — math subtree (or fallback) via [`get_math`].
-/// * [`Whatsout::Archive`] — full document, but bundled into a zip by
-///   [`crate::pack::pack_archive`] (Pack.pm L326-331 +
-///   `Pack/Zip.pm::get_archive`). Extraction is a no-op; the archiving
-///   happens in the binary's output stage.
+/// * [`Whatsout::Archive`] — full document, but bundled into a zip by [`crate::pack::pack_archive`]
+///   (Pack.pm L326-331 + `Pack/Zip.pm::get_archive`). Extraction is a no-op; the archiving happens
+///   in the binary's output stage.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum Whatsout {
   #[default]
@@ -127,11 +125,7 @@ const RDFA_ATTRS: &[&str] = &[
 fn is_unwrappable_div_class(class: &str) -> bool {
   matches!(
     class,
-    "ltx_page_main"
-      | "ltx_page_content"
-      | "ltx_document"
-      | "ltx_para"
-      | "ltx_header"
+    "ltx_page_main" | "ltx_page_content" | "ltx_document" | "ltx_para" | "ltx_header"
   )
 }
 
@@ -147,13 +141,11 @@ fn is_inline_child(name: &str) -> bool {
 /// Perl `LaTeXML::Util::Pack::get_math` (Pack.pm L247-280).
 ///
 /// * If exactly one `<math>` (or `<Math>`) is present, return it.
-/// * If multiple, return their **least common ancestor** by walking
-///   up from the first one until its descendant-count matches the
-///   document's total. Unwraps trailing `<tr>` / `<td>` so the LCA
+/// * If multiple, return their **least common ancestor** by walking up from the first one until its
+///   descendant-count matches the document's total. Unwraps trailing `<tr>` / `<td>` so the LCA
 ///   isn't a table cell.
-/// * If no math nodes at all, fall through to a math-image (`<img
-///   class="ltx_Math">`) XPath; if that's also empty, fall through
-///   to [`get_embeddable`] so callers get a useful node either way.
+/// * If no math nodes at all, fall through to a math-image (`<img class="ltx_Math">`) XPath; if
+///   that's also empty, fall through to [`get_embeddable`] so callers get a useful node either way.
 pub fn get_math(doc: &PostDocument) -> Option<Node> {
   let math_nodes = doc.findnodes(MATH_XPATH);
   let math_count = math_nodes.len();
@@ -205,25 +197,25 @@ pub fn get_math(doc: &PostDocument) -> Option<Node> {
 /// mirroring Perl `LaTeXML::Util::Pack::get_embeddable` (Pack.pm L282-313).
 ///
 /// * Find the first `<div class="ltx_document">`.
-/// * Unwrap as long as the current node is a `<div>` with exactly one
-///   child, an unwrappable wrapper class (`ltx_page_main`,
-///   `ltx_page_content`, `ltx_document`, `ltx_para`, `ltx_header`),
-///   and no inline `style` attribute.
-/// * If the resulting node is a `<p>` whose every child is inline-
-///   compatible (local-name contains `math` / `text` / `span`), rename
-///   it to `<span class="text">` so it stays inline-embeddable.
-/// * Copy RDFa attributes (`prefix`, `property`, `content`, `resource`,
-///   `about`, `typeof`, `rel`, `rev`, `datatype`) from the document
-///   root onto the extracted node so the snippet retains its semantic
-///   annotations.
-/// * Namespace declarations from the root are NOT propagated (libxml-rs
-///   gap — see module docs).
+/// * Unwrap as long as the current node is a `<div>` with exactly one child, an unwrappable wrapper
+///   class (`ltx_page_main`, `ltx_page_content`, `ltx_document`, `ltx_para`, `ltx_header`), and no
+///   inline `style` attribute.
+/// * If the resulting node is a `<p>` whose every child is inline- compatible (local-name contains
+///   `math` / `text` / `span`), rename it to `<span class="text">` so it stays inline-embeddable.
+/// * Copy RDFa attributes (`prefix`, `property`, `content`, `resource`, `about`, `typeof`, `rel`,
+///   `rev`, `datatype`) from the document root onto the extracted node so the snippet retains its
+///   semantic annotations.
+/// * Namespace declarations from the root are NOT propagated (libxml-rs gap — see module docs).
 ///
 /// If no `ltx_document` element is found, returns the document root,
 /// matching Perl's `return $embeddable || $doc`.
 pub fn get_embeddable(doc: &PostDocument) -> Option<Node> {
   let root = doc.get_document_element()?;
-  let mut embeddable = doc.findnodes(EMBEDDABLE_XPATH).into_iter().next().unwrap_or_else(|| root.clone());
+  let mut embeddable = doc
+    .findnodes(EMBEDDABLE_XPATH)
+    .into_iter()
+    .next()
+    .unwrap_or_else(|| root.clone());
 
   // Unwrap nested single-child div wrappers.
   loop {
@@ -266,9 +258,7 @@ pub fn get_embeddable(doc: &PostDocument) -> Option<Node> {
   Some(embeddable)
 }
 
-fn is_table_row_or_cell(name: &str) -> bool {
-  matches!(name, "tr" | "td" | "TR" | "TD")
-}
+fn is_table_row_or_cell(name: &str) -> bool { matches!(name, "tr" | "td" | "TR" | "TD") }
 
 #[cfg(test)]
 mod tests {
@@ -276,8 +266,7 @@ mod tests {
   use crate::document::PostDocumentOptions;
 
   fn doc(xml: &str) -> PostDocument {
-    PostDocument::new_from_string(xml, PostDocumentOptions::default())
-      .expect("parse test fixture")
+    PostDocument::new_from_string(xml, PostDocumentOptions::default()).expect("parse test fixture")
   }
 
   #[test]
@@ -309,7 +298,8 @@ mod tests {
   #[test]
   fn get_embeddable_stops_at_multi_child() {
     // ltx_document has TWO <p> children → unwrap halts; return it as-is.
-    let xml = r#"<html><body><div class="ltx_document"><p>first</p><p>second</p></div></body></html>"#;
+    let xml =
+      r#"<html><body><div class="ltx_document"><p>first</p><p>second</p></div></body></html>"#;
     let d = doc(xml);
     let node = get_embeddable(&d).expect("some node");
     assert_eq!(node.get_name(), "div");
@@ -430,7 +420,10 @@ mod tests {
     // Fragment unwraps ltx_document and promotes the lone-text <p>
     // to <span class="text"> — the result should NOT carry the
     // <html>/<body> wrapper.
-    assert!(!frag.contains("<html>"), "frag contains html wrapper: {frag}");
+    assert!(
+      !frag.contains("<html>"),
+      "frag contains html wrapper: {frag}"
+    );
     assert!(frag.contains("hi"));
   }
 
@@ -441,7 +434,10 @@ mod tests {
     let m = serialize_whatsout(&d, Whatsout::Math);
     assert!(m.contains("<mi>z</mi>"));
     assert!(!m.contains("<html>"), "math contains html wrapper: {m}");
-    assert!(!m.contains("<p>txt</p>"), "math contains unrelated text: {m}");
+    assert!(
+      !m.contains("<p>txt</p>"),
+      "math contains unrelated text: {m}"
+    );
   }
 
   #[test]

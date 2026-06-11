@@ -4,11 +4,15 @@
 //! (Scan → Bibliography → CrossRef → Graphics → Split → MathML → XSLT → HTML5 fixups).
 //! Used by both the `latexml_oxide` binary and the `cortex_worker` binary.
 
-use latexml_core::{Info, s};
-use latexml_core::telemetry::{self, Phase};
-use latexml_post::document::{PostDocument, PostDocumentOptions};
-use latexml_post::object_db::ObjectDB;
-use latexml_post::processor::Processor;
+use latexml_core::{
+  Info, s,
+  telemetry::{self, Phase},
+};
+use latexml_post::{
+  document::{PostDocument, PostDocumentOptions},
+  object_db::ObjectDB,
+  processor::Processor,
+};
 use once_cell::sync::Lazy;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
@@ -112,7 +116,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // serialization instead of failing the parse with a libxml "Got a Null
   // pointer" and echoing the empty input through (witness: cortex_worker
   // on any Fatal paper produced a 0-byte .html).
-  let xml = if xml.trim().is_empty() { "<document/>" } else { xml };
+  let xml = if xml.trim().is_empty() {
+    "<document/>"
+  } else {
+    xml
+  };
   let doc = match PostDocument::new_from_string(xml, doc_opts) {
     Ok(d) => d,
     Err(e) => {
@@ -316,14 +324,13 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   }
   if let Some(xsl_path) = stylesheet {
     let mut searchpaths = vec![".".to_string()];
-    if let Ok(exe) = std::env::current_exe() {
-      if let Some(project_root) = exe
+    if let Ok(exe) = std::env::current_exe()
+      && let Some(project_root) = exe
         .parent()
         .and_then(|p| p.parent())
         .and_then(|p| p.parent())
-      {
-        searchpaths.insert(0, project_root.display().to_string());
-      }
+    {
+      searchpaths.insert(0, project_root.display().to_string());
     }
     // Prepend the user's `--path` directories so `--css`/`--javascript`
     // resources are found there (and take priority over `.`/project root)
@@ -338,9 +345,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     // invocation. Idempotent: skipped if the user has already
     // listed the same basename via `--css` / `--javascript`.
     let prepend = |list: &[String], extra: &str| -> Vec<String> {
-      if list.iter().any(|p| {
-        std::path::Path::new(p).file_name().and_then(|s| s.to_str()) == Some(extra)
-      }) {
+      if list
+        .iter()
+        .any(|p| std::path::Path::new(p).file_name().and_then(|s| s.to_str()) == Some(extra))
+      {
         list.to_vec()
       } else {
         let mut out = Vec::with_capacity(list.len() + 1);
@@ -360,7 +368,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       js_files.to_vec()
     };
     if !css_effective.is_empty() {
-      xslt_params.insert("CSS".to_string(), format!("\"{}\"", css_effective.join("|")));
+      xslt_params.insert(
+        "CSS".to_string(),
+        format!("\"{}\"", css_effective.join("|")),
+      );
     }
     if !js_effective.is_empty() {
       xslt_params.insert(
@@ -443,10 +454,10 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     // is harmless and ensures the file is on disk even if a later libxml2
     // cleanup tripwire fires.
     if let Some(path) = dest.as_deref() {
-      if let Some(parent) = std::path::Path::new(path).parent() {
-        if !parent.as_os_str().is_empty() {
-          let _ = std::fs::create_dir_all(parent);
-        }
+      if let Some(parent) = std::path::Path::new(path).parent()
+        && !parent.as_os_str().is_empty()
+      {
+        let _ = std::fs::create_dir_all(parent);
       }
       if let Err(e) = std::fs::write(path, &output) {
         eprintln!("Post-processing: failed to write page {}: {}", path, e);
@@ -476,23 +487,27 @@ fn finalize_html5(output: String, svg_fragments: &[(String, String)]) -> String 
     ).unwrap()
   });
   static VOID_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(
-      r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>",
-    ).unwrap()
+    regex::Regex::new(r"</(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)>")
+      .unwrap()
   });
   static VOID_SELF_CLOSE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
     regex::Regex::new(
       r"<(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^>]*?)\s*/>",
-    ).unwrap()
+    )
+    .unwrap()
   });
 
   let _gp_html5 = telemetry::phase(Phase::Html5Fixups);
   // Strip <?xml version...?> prolog: HTML5 must NOT have an XML declaration.
   // libxml2's to_string() includes it by default; we strip it here.
   let output = XML_PROLOG_RE.replace(&output, "").to_string();
-  let output = NON_VOID_SELF_CLOSE_RE.replace_all(&output, "<$1$2></$1>").to_string();
+  let output = NON_VOID_SELF_CLOSE_RE
+    .replace_all(&output, "<$1$2></$1>")
+    .to_string();
   let output = VOID_CLOSE_RE.replace_all(&output, "").to_string();
-  let mut output = VOID_SELF_CLOSE_RE.replace_all(&output, "<$1$2>").to_string();
+  let mut output = VOID_SELF_CLOSE_RE
+    .replace_all(&output, "<$1$2>")
+    .to_string();
   if !svg_fragments.is_empty() {
     for (pic_id, svg_html) in svg_fragments {
       let pattern = format!(
@@ -531,9 +546,8 @@ fn extract_svg_fragments(xml: &str) -> Vec<(String, String)> {
   if !xml.contains("<picture") {
     return Vec::new();
   }
-  static PICTURE_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-    regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap()
-  });
+  static PICTURE_RE: LazyLock<regex::Regex> =
+    LazyLock::new(|| regex::Regex::new(r#"(?s)<picture([^>]*)>(.*?)</picture>"#).unwrap());
   static ID_RE: LazyLock<regex::Regex> =
     LazyLock::new(|| regex::Regex::new(r#"xml:id="([^"]+)""#).unwrap());
   static WIDTH_RE: LazyLock<regex::Regex> =

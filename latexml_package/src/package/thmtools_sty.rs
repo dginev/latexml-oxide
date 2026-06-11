@@ -1,5 +1,4 @@
-use crate::engine::latex_constructs::*;
-use crate::prelude::*;
+use crate::{engine::latex_constructs::*, prelude::*};
 
 #[rustfmt::skip]
 LoadDefinitions!({

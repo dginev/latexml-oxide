@@ -10,20 +10,18 @@ use crate::prelude::*;
 /// iopart_support_sty pattern.
 fn def_marvosym_icon(cs: &str, codepoint: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
-  let body_sym = arena::pin(codepoint);
+  let body_sym = pin(codepoint);
   let cs_for_closure = cs_tok;
-  let closure: PrimitiveBody = PrimitiveBody::Closure(std::rc::Rc::new(
-    move |_args: Vec<ArgWrap>| {
-      Tbox::new(
-        body_sym,
-        None,
-        None,
-        Tokens!(cs_for_closure),
-        SymHashMap::default(),
-      )
-      .into_digested_result()
-    },
-  ));
+  let closure: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args: Vec<ArgWrap>| {
+    Tbox::new(
+      body_sym,
+      None,
+      None,
+      Tokens!(cs_for_closure),
+      SymHashMap::default(),
+    )
+    .into_digested_result()
+  }));
   def_primitive(cs_tok, params, Some(closure), PrimitiveOptions::default())?;
   Ok(())
 }

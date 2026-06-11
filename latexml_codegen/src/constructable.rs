@@ -12,15 +12,14 @@
 //! output (same `Document` operations, same `savenode` discipline), so the
 //! generated native constructors are unchanged.
 
+use latexml_core::binding::def::replacement::{
+  AttrPair, AttrPart, AttrValue, FloatKind, FuncArg, ReplacementOp, Value, parse_replacement,
+  slashify,
+};
 use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use quote::quote;
 use syn::DeriveInput;
-
-use latexml_core::binding::def::replacement::{
-  parse_replacement, slashify, AttrPair, AttrPart, AttrValue, FloatKind, FuncArg, ReplacementOp,
-  Value,
-};
 
 pub fn compile_replacement(input: DeriveInput) -> TokenStream {
   let replacement = crate::attr_name_value_str(&input.attrs[0], "replacement");
@@ -65,9 +64,12 @@ fn emit_ops(ops: &[ReplacementOp]) -> Vec<TokenStream2> { ops.iter().map(emit_op
 
 fn emit_op(op: &ReplacementOp) -> TokenStream2 {
   match op {
-    ReplacementOp::OpenElement { qname, attrs, float, self_closing } => {
-      emit_open(qname, attrs, *float, *self_closing)
-    },
+    ReplacementOp::OpenElement {
+      qname,
+      attrs,
+      float,
+      self_closing,
+    } => emit_open(qname, attrs, *float, *self_closing),
     ReplacementOp::CloseElement { qname } => quote!(document.close_element(#qname)?;),
     ReplacementOp::ProcessingInstruction { qname, attrs } => emit_pi(qname, attrs),
     ReplacementOp::AbsorbValue { value } => emit_absorb(value),

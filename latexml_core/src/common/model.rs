@@ -1,21 +1,26 @@
+use std::{
+  cell::RefCell,
+  fs::File,
+  io::{BufRead, BufReader},
+};
+
+use libxml::tree::Node;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
-use std::cell::RefCell;
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
-
-use crate::common::arena::{self, SymStr};
-use crate::common::error::*;
-use crate::common::relaxng::Relaxng;
-use crate::common::xml::XML_NS;
-use crate::document::Document;
-use crate::util::pathname;
-use libxml::tree::Node;
 
 use super::arena::SymHashMap;
-use crate::pin;
+use crate::{
+  common::{
+    arena::{self, SymStr},
+    error::*,
+    relaxng::Relaxng,
+    xml::XML_NS,
+  },
+  document::Document,
+  pin,
+  util::pathname,
+};
 
 // use common::font::*;
 
@@ -852,11 +857,10 @@ pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
   is_in_schema_class(arena::pin(class_name), tag)
 }
 pub fn is_in_schema_class(class_name: SymStr, tag: SymStr) -> bool {
-  match model!().schema_class.get_sym(class_name) { Some(class) => {
-    class.contains(&tag)
-  } _ => {
-    false
-  }}
+  match model!().schema_class.get_sym(class_name) {
+    Some(class) => class.contains(&tag),
+    _ => false,
+  }
 }
 
 //**********************************************************************
@@ -926,10 +930,10 @@ pub(crate) fn compute_indirect_model_aux(
     // direct `text → #PCDATA` path was skipped, forcing the auto-open
     // path to pick `<ltx:picture>` instead of `<ltx:text>`.
     let prior = desc.entry_sym(kid).or_default().get_sym(start).copied();
-    if let Some(prior_d) = prior {
-      if prior_d >= desirability {
-        continue;
-      }
+    if let Some(prior_d) = prior
+      && prior_d >= desirability
+    {
+      continue;
     }
 
     if start != pin!("") {
@@ -939,14 +943,14 @@ pub(crate) fn compute_indirect_model_aux(
         .insert_sym(start, desirability);
     }
 
-    if kid != pin!("#PCDATA") {
-      if let Some(priority) = openability.get_sym(kid).copied() {
-        let inner = if start != pin!("") { start } else { kid };
-        // Perl Document.pm L220: `$desirability * $x`. We keep integer
-        // arithmetic (priorities scaled by 100), so this is a scaled multiply.
-        let next_desirability = desirability * (priority as usize) / 100;
-        compute_indirect_model_aux(kid, Some(inner), next_desirability, openability, desc);
-      }
+    if kid != pin!("#PCDATA")
+      && let Some(priority) = openability.get_sym(kid).copied()
+    {
+      let inner = if start != pin!("") { start } else { kid };
+      // Perl Document.pm L220: `$desirability * $x`. We keep integer
+      // arithmetic (priorities scaled by 100), so this is a scaled multiply.
+      let next_desirability = desirability * (priority as usize) / 100;
+      compute_indirect_model_aux(kid, Some(inner), next_desirability, openability, desc);
     }
   }
 }

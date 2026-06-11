@@ -14,24 +14,25 @@
 //!                       [--no-skip-svg] [--no-skip-aria] [--no-skip-xhtml]
 //! ```
 
+use std::{
+  path::{Path, PathBuf},
+  process,
+};
+
 use clap::Parser;
 use latexml_core::common::relaxng::{
+  Relaxng,
   scan::scan_external,
   simplify::simplify_top,
-  tex::{document_modules, Options as TexOptions},
-  Relaxng,
+  tex::{Options as TexOptions, document_modules},
 };
-use std::path::{Path, PathBuf};
-use std::process;
 
 /// Use mimalloc for parity with the other oxide binaries.
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(Parser, Debug)]
-#[command(
-  about = "Generate LaTeX manual.tex documentation from a RelaxNG schema."
-)]
+#[command(about = "Generate LaTeX manual.tex documentation from a RelaxNG schema.")]
 struct Cli {
   /// Path to the .rng entry-point. Resolved against `--path` if not
   /// found at the bare path.
@@ -47,10 +48,10 @@ struct Cli {
 
   /// Don't skip the SVG schema branch (default: skip).
   #[arg(long)]
-  no_skip_svg: bool,
+  no_skip_svg:   bool,
   /// Don't skip the ARIA schema branch (default: skip).
   #[arg(long)]
-  no_skip_aria: bool,
+  no_skip_aria:  bool,
   /// Don't skip the XHTML schema branch (default: skip).
   #[arg(long)]
   no_skip_xhtml: bool,
@@ -130,7 +131,10 @@ fn main() {
 
   let raw = match scan_external(
     &mut rng,
-    schema_path.file_name().and_then(|f| f.to_str()).unwrap_or(""),
+    schema_path
+      .file_name()
+      .and_then(|f| f.to_str())
+      .unwrap_or(""),
     None,
     &search_paths,
   ) {
@@ -235,10 +239,10 @@ fn hoist_document_abstract(tex: &str) -> String {
   let pdef_start = module_start + pdef_rel;
   // Don't reach into a later module: the patterndef must belong to
   // the driver module block.
-  if let Some(next_module_rel) = tex[module_start + 1..].find("\\begin{schemamodule}") {
-    if module_start + 1 + next_module_rel < pdef_start {
-      return tex.to_owned();
-    }
+  if let Some(next_module_rel) = tex[module_start + 1..].find("\\begin{schemamodule}")
+    && module_start + 1 + next_module_rel < pdef_start
+  {
+    return tex.to_owned();
   }
   let name_open = pdef_start + "\\patterndef".len();
   let Some((_name, doc_open)) = read_tex_group(tex, name_open) else {
@@ -327,16 +331,13 @@ fn lift_module_abstract(tex: &str) -> String {
     // rule:
     //
     // * 0 paragraphs: nothing to do.
-    // * 1 paragraph: leave it on the patterndef. A single `## doc`
-    //   on a `<define>` is per-pattern documentation (e.g.
-    //   "Combined model for inline content." annotates `Inline.model`
-    //   in LaTeXML.rnc) — lifting it would steal the per-pattern
-    //   commentary and present it as a module narrative.
-    // * ≥ 2 paragraphs: lift the FIRST as the module narrative, keep
-    //   the rest on the patterndef. The convention: a `## comment`
-    //   block at the top of a file (separated from the next block
-    //   by a blank line) is the module narrative; subsequent blocks
-    //   document the first define.
+    // * 1 paragraph: leave it on the patterndef. A single `## doc` on a `<define>` is per-pattern
+    //   documentation (e.g. "Combined model for inline content." annotates `Inline.model` in
+    //   LaTeXML.rnc) — lifting it would steal the per-pattern commentary and present it as a module
+    //   narrative.
+    // * ≥ 2 paragraphs: lift the FIRST as the module narrative, keep the rest on the patterndef.
+    //   The convention: a `## comment` block at the top of a file (separated from the next block by
+    //   a blank line) is the module narrative; subsequent blocks document the first define.
     let paragraphs: Vec<&str> = doc
       .split("\n\n")
       .map(str::trim)

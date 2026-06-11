@@ -7,7 +7,7 @@ LoadDefinitions!({
   // Set LABEL_MAPPING_HOOK: maps label to (refnum, id)
   // Perl: $label =~ /[\.^](\w+)$/; $last = $1 || $label;
   //       return ($last, $label);
-  state::set_label_mapping_hook(Rc::new(|label: &str, _ctr: &str, _norefnum: bool| {
+  set_label_mapping_hook(Rc::new(|label: &str, _ctr: &str, _norefnum: bool| {
     if label.is_empty() {
       return (None, None);
     }

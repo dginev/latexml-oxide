@@ -1,7 +1,7 @@
-use super::{Document, get_node_qname};
-use crate::common::error::*;
-use crate::common::xml::XML_NS;
 use libxml::tree::Node;
+
+use super::{Document, get_node_qname};
+use crate::common::{error::*, xml::XML_NS};
 
 /// In some cases we could have e.g. a \noindent followed by a {table},
 /// in which case we end up with an empty ltx:para which we can prune.
@@ -27,14 +27,12 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
         } else {
           format!("_ID_counter_{}_", prefix)
         };
-        if let Some(mut ancestor) = node.get_parent() {
-          if let Some(ctr_str) = ancestor.get_attribute(&ctrkey) {
-            if let Ok(ctr) = ctr_str.parse::<u32>() {
-              if ctr > 0 {
-                ancestor.set_attribute(&ctrkey, &(ctr - 1).to_string())?;
-              }
-            }
-          }
+        if let Some(mut ancestor) = node.get_parent()
+          && let Some(ctr_str) = ancestor.get_attribute(&ctrkey)
+          && let Ok(ctr) = ctr_str.parse::<u32>()
+          && ctr > 0
+        {
+          ancestor.set_attribute(&ctrkey, &(ctr - 1).to_string())?;
         }
       } else {
         // No dot — top-level id like "p7"
@@ -49,12 +47,11 @@ pub fn prune_empty_para(document: &mut Document, node: &mut Node) -> Result<()> 
         // Find the ancestor with the counter (root element)
         if let Some(root) = document.get_document().get_root_element() {
           let mut root = root;
-          if let Some(ctr_str) = root.get_attribute(&ctrkey) {
-            if let Ok(ctr) = ctr_str.parse::<u32>() {
-              if ctr > 0 {
-                root.set_attribute(&ctrkey, &(ctr - 1).to_string())?;
-              }
-            }
+          if let Some(ctr_str) = root.get_attribute(&ctrkey)
+            && let Ok(ctr) = ctr_str.parse::<u32>()
+            && ctr > 0
+          {
+            root.set_attribute(&ctrkey, &(ctr - 1).to_string())?;
           }
         }
       }

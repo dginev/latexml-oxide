@@ -6,7 +6,6 @@
 
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   def_macro_noop("\\fancyhead[]{}")?;
   def_macro_noop("\\fancyfoot[]{}")?;

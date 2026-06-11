@@ -1,14 +1,14 @@
 use std::borrow::Cow;
+
 // use std::fmt;
 use libxml::tree::Node;
 
-use crate::common::error::*;
-use crate::common::locator::Locator;
-use crate::common::object::Object;
-use crate::state::*;
-
-use crate::Digested;
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody};
+use crate::{
+  Digested,
+  common::{error::*, locator::Locator, object::Object},
+  definition::{BeforeDigestClosure, Definition, DigestionClosure, ExpansionBody},
+  state::*,
+};
 
 /// Returns true when `\protect` currently has no meaning, or is
 /// `\let`-equivalent to `\relax`. Used by the recursion guard in
@@ -27,11 +27,13 @@ pub(crate) fn protect_is_relax_or_undefined() -> bool {
     },
   }
 }
-use crate::document::Document;
-use crate::parameter::Parameters;
-use crate::token::*;
-use crate::tokens::{NO_TOKENS, Tokens};
-use crate::whatsit::Whatsit;
+use crate::{
+  document::Document,
+  parameter::Parameters,
+  token::*,
+  tokens::{NO_TOKENS, Tokens},
+  whatsit::Whatsit,
+};
 
 #[derive(Debug, Clone, Default)]
 pub struct ExpandableOptions {
@@ -203,9 +205,7 @@ impl Definition for Expandable {
                 // fired ~3 errors per language-style paper. Witness:
                 // math9903002, gr-qc9511021, alg-geom9611022,
                 // math9807030/.../math9810088 (8 papers).
-                t1 == &self.cs
-                  && t0 == &T_CS!("\\protect")
-                  && crate::definition::expandable::protect_is_relax_or_undefined()
+                t1 == &self.cs && t0 == &T_CS!("\\protect") && protect_is_relax_or_undefined()
               } else {
                 false
               }
@@ -279,21 +279,21 @@ impl Expandable {
     traits: Option<ExpandableOptions>,
   ) -> Result<Self> {
     let traits = traits.unwrap_or_default();
-    if !traits.nopack_parameters {
-      if let Some(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt {
-        // Perl: Fatal if expansion is unbalanced (mismatched {/})
-        if !expansion_tokens.is_balanced() {
-          Error!(
-            "misdefined",
-            cs,
-            s!("Expansion of '{}' has unbalanced {{}}", cs),
-            "skipping pack_parameters"
-          );
-          // Store as-is without packing
-          expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens));
-        } else {
-          expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens.pack_parameters()?));
-        }
+    if !traits.nopack_parameters
+      && let Some(ExpansionBody::Tokens(expansion_tokens)) = expansion_opt
+    {
+      // Perl: Fatal if expansion is unbalanced (mismatched {/})
+      if !expansion_tokens.is_balanced() {
+        Error!(
+          "misdefined",
+          cs,
+          s!("Expansion of '{}' has unbalanced {{}}", cs),
+          "skipping pack_parameters"
+        );
+        // Store as-is without packing
+        expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens));
+      } else {
+        expansion_opt = Some(ExpansionBody::Tokens(expansion_tokens.pack_parameters()?));
       }
     }
     let has_cc_arg = match expansion_opt {

@@ -1,7 +1,6 @@
 //! Stub for bmvc2k.cls (BMVC British Machine Vision Conference).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -19,8 +18,12 @@ LoadDefinitions!({
   DefMacro!("\\bmvaHangBox{}", "#1");
   // \addauthor{name}{email}{institution-id} — emit name as author,
   // email as ltx:note for preservation.
-  DefMacro!("\\addauthor{}{}{}",
-    "\\author{#1}\\@add@frontmatter{ltx:note}[role=email]{#2}");
-  DefMacro!("\\addinstitution{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}");
+  DefMacro!(
+    "\\addauthor{}{}{}",
+    "\\author{#1}\\@add@frontmatter{ltx:note}[role=email]{#2}"
+  );
+  DefMacro!(
+    "\\addinstitution{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
+  );
 });

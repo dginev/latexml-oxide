@@ -25,26 +25,28 @@ pub mod cell;
 mod normalize;
 pub mod template;
 
-use self::cell::Cell;
-use self::normalize::*;
-use self::template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, TemplateConfig};
-use crate::common::arena::SymHashMap;
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::digested::Digested;
-use crate::document::{Document, get_node_qname, with_node_qname};
-use crate::gullet::{self, ExpansionLevel};
-use crate::mouth::Mouth;
-use crate::state::*;
-use crate::stomach::*;
-use crate::token::Catcode;
-use crate::tokens::Tokens;
-use crate::{BoxOps, stomach};
-
 use libxml::tree::{Node, NodeType};
 use once_cell::sync::Lazy;
+
+use self::{
+  cell::Cell,
+  normalize::*,
+  template::{Align, Axis, BorderSpec, ColumnSpec, Row, Template, TemplateConfig},
+};
+use crate::{
+  BoxOps,
+  common::{
+    arena::SymHashMap, dimension::Dimension, error::*, numeric_ops::NumericOps, object::Object,
+  },
+  digested::Digested,
+  document::{Document, get_node_qname, with_node_qname},
+  gullet::{self, ExpansionLevel},
+  mouth::Mouth,
+  state::*,
+  stomach::*,
+  token::Catcode,
+  tokens::Tokens,
+};
 
 /// token-locators: source span of an alignment cell (its content's locator).
 /// `tabular`/`tr`/`td` are opened before their content's `box_to_absorb` is set,
@@ -68,12 +70,15 @@ fn row_span(row: &Row) -> Option<crate::common::locator::Locator> {
     .filter_map(cell_loc)
     .reduce(|a, b| crate::common::locator::Locator::new_range(a, b).unwrap_or(a))
 }
+use std::{
+  borrow::Cow,
+  collections::VecDeque,
+  fmt::{self, Debug, Display},
+  rc::Rc,
+};
+
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::collections::VecDeque;
-use std::fmt::{self, Debug, Display};
-use std::rc::Rc;
 
 //DebuggableFeature('alignment', "Debug guessing headers of alignments/tables");
 pub type OpenContainerFn =
@@ -294,10 +299,10 @@ impl Alignment {
 
   /// Set a property on the current row (for attributes like backgroundcolor from \rowcolor)
   pub fn set_row_property(&mut self, key: &str, value: String) {
-    if let Some(row_idx) = self.current_row {
-      if let Some(row) = self.rows.get_mut(row_idx) {
-        row.properties.insert(key.to_string(), Stored::from(value));
-      }
+    if let Some(row_idx) = self.current_row
+      && let Some(row) = self.rows.get_mut(row_idx)
+    {
+      row.properties.insert(key.to_string(), Stored::from(value));
     }
   }
 
@@ -324,18 +329,18 @@ impl Alignment {
 
   // Ugh... these take boxes; adding before/after columns takes tokens!
   pub fn add_before_row(&mut self, boxes: Vec<Digested>) {
-    if let Some(cw) = self.current_row {
-      if let Some(current_row) = self.rows.get_mut(cw) {
-        current_row.before.extend(boxes);
-      }
+    if let Some(cw) = self.current_row
+      && let Some(current_row) = self.rows.get_mut(cw)
+    {
+      current_row.before.extend(boxes);
     }
   }
 
   pub fn add_after_row(&mut self, boxes: Vec<Digested>) {
-    if let Some(cw) = self.current_row {
-      if let Some(current_row) = self.rows.get_mut(cw) {
-        current_row.after.extend(boxes);
-      }
+    if let Some(cw) = self.current_row
+      && let Some(current_row) = self.rows.get_mut(cw)
+    {
+      current_row.after.extend(boxes);
     }
   }
 
@@ -346,12 +351,11 @@ impl Alignment {
   }
 
   pub fn omit_next_column(&mut self) {
-    if let Some(cw) = self.current_row {
-      if let Some(row) = self.rows.get_mut(cw) {
-        if let Some(column) = row.get_column_mut(self.current_column + 1) {
-          column.omitted = true;
-        }
-      }
+    if let Some(cw) = self.current_row
+      && let Some(row) = self.rows.get_mut(cw)
+      && let Some(column) = row.get_column_mut(self.current_column + 1)
+    {
+      column.omitted = true;
     }
   }
 
@@ -405,7 +409,7 @@ impl Alignment {
       // and cannot re-borrow the alignment which is already mutably borrowed.
       let row_num = self.current_row_number();
       assign_value("alignmentRowNumber", row_num as i32, None);
-      let row_before = stomach::digest(T_CS!("\\lx@alignment@row@before"))?;
+      let row_before = digest(T_CS!("\\lx@alignment@row@before"))?;
       push_box_list(row_before);
     }
     self.in_row = true;
@@ -537,15 +541,11 @@ impl BoxOps for Alignment {
     }
 
     // Guard via the absorb limit to avoid infinite loops (Perl L478-483)
-    let absorb_limit = crate::state::lookup_int("absorb_limit");
+    let absorb_limit = lookup_int("absorb_limit");
     if absorb_limit > 0 {
-      let mut absorb_count = crate::state::lookup_int("absorb_count");
+      let mut absorb_count = lookup_int("absorb_count");
       absorb_count += 1;
-      crate::state::assign_value(
-        "absorb_count",
-        absorb_count,
-        Some(crate::state::Scope::Global),
-      );
+      assign_value("absorb_count", absorb_count, Some(Scope::Global));
       if absorb_count > absorb_limit {
         fatal!(
           Timeout,
@@ -802,7 +802,7 @@ impl BoxOps for Alignment {
           document.set_box_to_absorb(Some(box_ref.clone()));
           // Perl wraps cell content in XMArg for math alignments, but NOT for _Capture_ columns
           // (_Capture_ is not in the schema, so Perl's openElement validation prevents XMArg there)
-          let cur_qname = crate::document::get_node_qname(document.get_node());
+          let cur_qname = get_node_qname(document.get_node());
           let wrap_xmarg =
             ismath && !crate::common::arena::with(cur_qname, |s| s.ends_with("_Capture_"));
           if wrap_xmarg {
@@ -815,10 +815,11 @@ impl BoxOps for Alignment {
           }
           // In math mode, absorb lspaces as content (creates XMHint for \quad etc.)
           // This is needed for the math parser to convert XMHint → lpadding.
-          if ismath && pre_absorb.is_none() {
-            if let Some(ref lsp) = cell.lspaces {
-              document.absorb(lsp, None)?;
-            }
+          if ismath
+            && pre_absorb.is_none()
+            && let Some(ref lsp) = cell.lspaces
+          {
+            document.absorb(lsp, None)?;
           }
           document.absorb(box_ref, None)?;
           // Perl L367: absorb post-spacing (rspaces > 1.5em)
@@ -953,17 +954,24 @@ pub fn read_alignment_template() -> Result<Template> {
         break;
       }
       gullet::unread_one(last_op);
-    } else { match lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? { Some(defn) => {
-      let invoked = defn.invoke(true)?;
-      gullet::unread(invoked);
-    } _ => if cc == Catcode::BEGIN {
-      let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
-      if !balanced_arg.is_empty() {
-        gullet::unread(balanced_arg);
-      }
     } else {
-      Warn!("unexpected", op, s!("Unrecognized tabular template {op:?}"));
-    }}}
+      match lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? {
+        Some(defn) => {
+          let invoked = defn.invoke(true)?;
+          gullet::unread(invoked);
+        },
+        _ => {
+          if cc == Catcode::BEGIN {
+            let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+            if !balanced_arg.is_empty() {
+              gullet::unread(balanced_arg);
+            }
+          } else {
+            Warn!("unexpected", op, s!("Unrecognized tabular template {op:?}"));
+          }
+        },
+      }
+    }
     if nopens <= 0 {
       break;
     }
@@ -1392,17 +1400,17 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   for c in 0..ncols {
     alignment.rows[0].get_columns_mut()[c].border_top = Some(if h { 1 } else { 0 });
     if nrows > 1 {
-      if let Some(bt) = alignment.rows[1].get_columns_mut()[c].border_top {
-        if bt > 0 {
-          // only set if border is inked
-          alignment.rows[0].get_columns_mut()[c].border_bottom = Some(bt);
-        }
+      if let Some(bt) = alignment.rows[1].get_columns_mut()[c].border_top
+        && bt > 0
+      {
+        // only set if border is inked
+        alignment.rows[0].get_columns_mut()[c].border_bottom = Some(bt);
       }
-      if let Some(bb) = alignment.rows[nrows - 2].get_columns_mut()[c].border_bottom {
-        if bb > 0 {
-          // only set if border is inked
-          alignment.rows[nrows - 1].get_columns_mut()[c].border_top = Some(bb);
-        }
+      if let Some(bb) = alignment.rows[nrows - 2].get_columns_mut()[c].border_bottom
+        && bb > 0
+      {
+        // only set if border is inked
+        alignment.rows[nrows - 1].get_columns_mut()[c].border_top = Some(bb);
       }
     }
     alignment.rows[nrows - 1].get_columns_mut()[c].border_bottom = Some(if h { 1 } else { 0 });
@@ -1411,29 +1419,29 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   // But removing it breaks fonts_test (guessTableHeaders). Needs careful audit.
   for r in 1..nrows - 1 {
     for c in 1..ncols - 1 {
-      if let Some(bb) = alignment.rows[r - 1].get_columns_mut()[c].border_bottom {
-        if bb > 0 {
-          // only set if border is inked
-          alignment.rows[r].get_columns_mut()[c].border_top = Some(bb);
-        }
+      if let Some(bb) = alignment.rows[r - 1].get_columns_mut()[c].border_bottom
+        && bb > 0
+      {
+        // only set if border is inked
+        alignment.rows[r].get_columns_mut()[c].border_top = Some(bb);
       }
-      if let Some(bt) = alignment.rows[r + 1].get_columns_mut()[c].border_top {
-        if bt > 0 {
-          // only set if border is inked
-          alignment.rows[r].get_columns_mut()[c].border_bottom = Some(bt);
-        }
+      if let Some(bt) = alignment.rows[r + 1].get_columns_mut()[c].border_top
+        && bt > 0
+      {
+        // only set if border is inked
+        alignment.rows[r].get_columns_mut()[c].border_bottom = Some(bt);
       }
-      if let Some(br) = alignment.rows[r].get_columns_mut()[c - 1].border_right {
-        if br > 0 {
-          // only set if border is inked
-          alignment.rows[r].get_columns_mut()[c].border_left = Some(br);
-        }
+      if let Some(br) = alignment.rows[r].get_columns_mut()[c - 1].border_right
+        && br > 0
+      {
+        // only set if border is inked
+        alignment.rows[r].get_columns_mut()[c].border_left = Some(br);
       }
-      if let Some(bl) = alignment.rows[r].get_columns_mut()[c + 1].border_left {
-        if bl > 0 {
-          // only set if border is inked
-          alignment.rows[r].get_columns_mut()[c].border_right = Some(bl);
-        }
+      if let Some(bl) = alignment.rows[r].get_columns_mut()[c + 1].border_left
+        && bl > 0
+      {
+        // only set if border is inked
+        alignment.rows[r].get_columns_mut()[c].border_right = Some(bl);
       }
     }
   }
@@ -1571,19 +1579,19 @@ fn classify_alignment_cell(xcell: &Node) -> ColumnSpec {
     while let Some(c) = alt_peekable.next() {
       match c {
         ColumnSpec::Math | ColumnSpec::Integer => {
-          if let Some(peek) = alt_peekable.peek() {
-            if !matches!(peek, ColumnSpec::Text) {
-              is_alternating = false;
-              break;
-            }
+          if let Some(peek) = alt_peekable.peek()
+            && !matches!(peek, ColumnSpec::Text)
+          {
+            is_alternating = false;
+            break;
           }
         },
         ColumnSpec::Text => {
-          if let Some(peek) = alt_peekable.peek() {
-            if !matches!(peek, ColumnSpec::Math | ColumnSpec::Integer) {
-              is_alternating = false;
-              break;
-            }
+          if let Some(peek) = alt_peekable.peek()
+            && !matches!(peek, ColumnSpec::Math | ColumnSpec::Integer)
+          {
+            is_alternating = false;
+            break;
           }
         },
         _ => {
@@ -2027,10 +2035,11 @@ fn alignment_compare(
       };
       let border1_pedge = cell1.border_at(pedge);
       let border2_pedge = cell2.border_at(pedge);
-      if let Some(b1p) = border1_pedge {
-        if b1p > 0 && (border1_pedge != border2_pedge) {
-          diff += (b1p as i64 - border2_pedge.unwrap_or(0) as i64).abs() as f64;
-        }
+      if let Some(b1p) = border1_pedge
+        && b1p > 0
+        && (border1_pedge != border2_pedge)
+      {
+        diff += (b1p as i64 - border2_pedge.unwrap_or(0) as i64).abs() as f64;
       }
     } else {
       // Compare edges for rows from diff places for potential similarity

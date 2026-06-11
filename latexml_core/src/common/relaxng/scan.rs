@@ -17,10 +17,13 @@
 //! `$relaxop eq 'rng:foo'` cascade in Perl, so a reader who knows the
 //! original code finds the same shape here.
 
-use libxml::parser::Parser as XmlParser;
-use libxml::readonly::RoNode;
-use libxml::tree::{Document as XmlDocument, NodeType};
 use std::path::{Path, PathBuf};
+
+use libxml::{
+  parser::Parser as XmlParser,
+  readonly::RoNode,
+  tree::{Document as XmlDocument, NodeType},
+};
 
 use super::{CombineOp, DefCombiner, Pattern, Relaxng};
 
@@ -112,12 +115,11 @@ pub fn scan_external(
   // the schema's primary namespace. Recursive scan_external calls
   // (for `<externalRef>` etc.) don't overwrite this — they're
   // satellite modules whose ns may differ from the entry-point.
-  if rng.primary_namespace.is_none() {
-    if let Some(uri) = root.get_attribute("ns") {
-      if !uri.is_empty() {
-        rng.primary_namespace = Some(uri);
-      }
-    }
+  if rng.primary_namespace.is_none()
+    && let Some(uri) = root.get_attribute("ns")
+    && !uri.is_empty()
+  {
+    rng.primary_namespace = Some(uri);
   }
 
   let modname = strip_rng_ext(name);
@@ -246,7 +248,9 @@ fn scan_pattern(
   inherit_ns: Option<&str>,
   ctx: &mut ScanContext<'_>,
 ) -> Result<Vec<Pattern>, ScanError> {
-  let Some(op) = get_relax_op(node) else { return Ok(Vec::new()); };
+  let Some(op) = get_relax_op(node) else {
+    return Ok(Vec::new());
+  };
   let ns = node
     .get_attribute("ns")
     .or_else(|| inherit_ns.map(String::from));
@@ -258,7 +262,10 @@ fn scan_pattern(
     "rng:mixed" => {
       let mut body = vec![Pattern::Text];
       body.extend(scan_children(rng, ns_ref, get_elements(node), ctx)?);
-      Ok(vec![Pattern::Combination { op: CombineOp::Interleave, body }])
+      Ok(vec![Pattern::Combination {
+        op: CombineOp::Interleave,
+        body,
+      }])
     },
     "rng:ref" => Ok(vec![Pattern::Ref {
       qname: node.get_attribute("name").unwrap_or_default(),
@@ -269,7 +276,9 @@ fn scan_pattern(
     "rng:empty" | "rng:notAllowed" => Ok(Vec::new()),
     "rng:text" => Ok(vec![Pattern::Text]),
     "rng:value" => Ok(vec![Pattern::Value(node.get_content())]),
-    "rng:data" => Ok(vec![Pattern::Data(node.get_attribute("type").unwrap_or_default())]),
+    "rng:data" => Ok(vec![Pattern::Data(
+      node.get_attribute("type").unwrap_or_default(),
+    )]),
     "rng:externalRef" => {
       let href = node.get_attribute("href").unwrap_or_default();
       let paths: Vec<&Path> = ctx.search_paths.clone();
@@ -288,11 +297,11 @@ fn scan_pattern(
     other => {
       // Combiners (group/interleave/choice/optional/zeroOrMore/
       // oneOrMore/list).
-      if let Some(stripped) = other.strip_prefix("rng:") {
-        if let Some(cop) = combine_op_from_localname(stripped) {
-          let body = scan_children(rng, ns_ref, get_elements(node), ctx)?;
-          return Ok(vec![Pattern::Combination { op: cop, body }]);
-        }
+      if let Some(stripped) = other.strip_prefix("rng:")
+        && let Some(cop) = combine_op_from_localname(stripped)
+      {
+        let body = scan_children(rng, ns_ref, get_elements(node), ctx)?;
+        return Ok(vec![Pattern::Combination { op: cop, body }]);
       }
       // Unknown — Perl warns and returns empty; we do the same.
       Ok(Vec::new())
@@ -309,7 +318,10 @@ fn scan_pattern_element(
   let mut children = get_elements(node);
   if let Some(name) = node.get_attribute("name") {
     let body = scan_children(rng, ns, children, ctx)?;
-    Ok(vec![Pattern::Element { name: encode_qname(rng, ns, &name), body }])
+    Ok(vec![Pattern::Element {
+      name: encode_qname(rng, ns, &name),
+      body,
+    }])
   } else if !children.is_empty() {
     let name_node = children.remove(0);
     let names = scan_name_class(rng, name_node, false, ns);
@@ -317,7 +329,10 @@ fn scan_pattern_element(
     Ok(
       names
         .into_iter()
-        .map(|n| Pattern::Element { name: n, body: body_proto.clone() })
+        .map(|n| Pattern::Element {
+          name: n,
+          body: body_proto.clone(),
+        })
         .collect(),
     )
   } else {
@@ -336,7 +351,10 @@ fn scan_pattern_attribute(
   let mut children = get_elements(node);
   if let Some(name) = node.get_attribute("name") {
     let body = scan_children(rng, ns, children, ctx)?;
-    Ok(vec![Pattern::Attribute { name: encode_qname(rng, xns_ref, &name), body }])
+    Ok(vec![Pattern::Attribute {
+      name: encode_qname(rng, xns_ref, &name),
+      body,
+    }])
   } else if !children.is_empty() {
     let name_node = children.remove(0);
     let names = scan_name_class(rng, name_node, true, ns);
@@ -344,7 +362,10 @@ fn scan_pattern_attribute(
     Ok(
       names
         .into_iter()
-        .map(|n| Pattern::Attribute { name: n, body: body_proto.clone() })
+        .map(|n| Pattern::Attribute {
+          name: n,
+          body: body_proto.clone(),
+        })
         .collect(),
     )
   } else {
@@ -384,7 +405,9 @@ fn scan_grammar_item(
   inherit_ns: Option<&str>,
   ctx: &mut ScanContext<'_>,
 ) -> Result<Vec<Pattern>, ScanError> {
-  let Some(op) = get_relax_op(node) else { return Ok(Vec::new()); };
+  let Some(op) = get_relax_op(node) else {
+    return Ok(Vec::new());
+  };
   let children = get_elements(node);
   let ns = node
     .get_attribute("ns")
@@ -411,8 +434,7 @@ fn scan_grammar_item(
       let href = node.get_attribute("href").unwrap_or_default();
       let paths: Vec<&Path> = ctx.search_paths.clone();
       // Find + parse the included file.
-      let path = find_file(&href, &paths)
-        .ok_or_else(|| ScanError::FileNotFound(href.clone()))?;
+      let path = find_file(&href, &paths).ok_or_else(|| ScanError::FileNotFound(href.clone()))?;
       let parser = XmlParser::default();
       let xml_doc = parser
         .parse_file(path.to_str().unwrap_or(""))
@@ -470,7 +492,9 @@ fn scan_name_class(
   for_attr: bool,
   ns: Option<&str>,
 ) -> Vec<String> {
-  let Some(op) = get_relax_op(node) else { return Vec::new(); };
+  let Some(op) = get_relax_op(node) else {
+    return Vec::new();
+  };
   match op.as_str() {
     "rng:name" => {
       let raw = node.get_content();
@@ -546,7 +570,11 @@ fn filter_names(names: Vec<String>) -> Vec<String> {
       include.remove(&target);
     }
   }
-  include.keys().cloned().chain(exclude.keys().cloned()).collect()
+  include
+    .keys()
+    .cloned()
+    .chain(exclude.keys().cloned())
+    .collect()
 }
 
 /// Split a `prefix:local` token into `(ns_uri?, local)` using the
@@ -707,11 +735,19 @@ mod tests {
     };
     assert_eq!(body.len(), 2);
     match &body[0] {
-      Pattern::Def { combiner: DefCombiner::Group, name, .. } => assert_eq!(name, "X"),
+      Pattern::Def {
+        combiner: DefCombiner::Group,
+        name,
+        ..
+      } => assert_eq!(name, "X"),
       other => panic!("expected Def(Group), got {:?}", other),
     }
     match &body[1] {
-      Pattern::Def { combiner: DefCombiner::Choice, name, .. } => assert_eq!(name, "X"),
+      Pattern::Def {
+        combiner: DefCombiner::Choice,
+        name,
+        ..
+      } => assert_eq!(name, "X"),
       other => panic!("expected Def(Choice), got {:?}", other),
     }
   }

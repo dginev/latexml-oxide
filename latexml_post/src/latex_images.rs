@@ -18,8 +18,10 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::PostDocument;
-use crate::processor::{PostError, ProcessResult, Processor, find_documentclass_and_packages};
+use crate::{
+  document::PostDocument,
+  processor::{PostError, ProcessResult, Processor, find_documentclass_and_packages},
+};
 
 /// DVI-to-image conversion method.
 #[derive(Debug, Clone)]
@@ -186,7 +188,8 @@ impl LaTeXImages {
     }
 
     Info!(
-      "latex_images", "count",
+      "latex_images",
+      "count",
       "LaTeXImages: {} total, {} unique, {} pending",
       n_total,
       n_unique,
@@ -206,7 +209,8 @@ impl LaTeXImages {
       );
 
       Info!(
-        "latex_images", "generate",
+        "latex_images",
+        "generate",
         "LaTeXImages: generated LaTeX document ({} bytes)",
         tex_body.len()
       );
@@ -450,7 +454,8 @@ impl LaTeXImages {
       // Perl LaTeXImages.pm L134: Error('expected', $LATEXCMD, undef,
       //   "No latex command ($LATEXCMD) found; Skipping.", ...)
       Error!(
-        "expected", "latex",
+        "expected",
+        "latex",
         "No latex command found; image generation will be skipped"
       );
       return false;
@@ -469,7 +474,8 @@ impl LaTeXImages {
       // Perl LaTeXImages.pm dvi-converter check: Error('expected',
       //   $$self{dvicmd}, …) (parallel to the latex check at L134).
       Error!(
-        "expected", dvi_cmd,
+        "expected",
+        dvi_cmd,
         "No {} command found; image generation will be skipped",
         dvi_cmd
       );
@@ -492,10 +498,7 @@ impl LaTeXImages {
         // SVG: just copy
         if let Err(e) = std::fs::copy(src, dest) {
           // Perl LaTeXImages.pm I/O failure: Error('I/O', $dest, …)
-          Error!(
-            "I/O", dest,
-            "Failed to copy {} to {}: {}", src, dest, e
-          );
+          Error!("I/O", dest, "Failed to copy {} to {}: {}", src, dest, e);
           return None;
         }
         // SVG dimensions from file would need XML parsing
@@ -504,10 +507,7 @@ impl LaTeXImages {
       DviMethod::DviPng => {
         // PNG: already cropped by dvipng -T tight
         if let Err(e) = std::fs::copy(src, dest) {
-          Error!(
-            "I/O", dest,
-            "Failed to copy {} to {}: {}", src, dest, e
-          );
+          Error!("I/O", dest, "Failed to copy {} to {}: {}", src, dest, e);
           return None;
         }
         // Would read PNG dimensions from file header
@@ -516,7 +516,13 @@ impl LaTeXImages {
       DviMethod::Dvips => {
         // EPS: needs ImageMagick conversion
         // Would run: convert -density DPI -trim src dest
-        Info!("latex_images", "convert", "Would convert EPS {} to {} via ImageMagick", src, dest);
+        Info!(
+          "latex_images",
+          "convert",
+          "Would convert EPS {} to {} via ImageMagick",
+          src,
+          dest
+        );
         // Shave off clipping fudge + rule
         let fudge = (self.clipping_fudge as f64 + self.clipping_rule).round() as u32;
         log::debug!(target: "latex_images:shave", "  Shave: {}px from each edge", fudge);
@@ -537,7 +543,12 @@ impl Processor for LaTeXImages {
   fn resource_prefix(&self) -> Option<&str> { Some(&self.resource_prefix) }
 
   fn process(&mut self, doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
-    Info!("latex_images", "process", "LaTeXImages: {} nodes to process", nodes.len());
+    Info!(
+      "latex_images",
+      "process",
+      "LaTeXImages: {} nodes to process",
+      nodes.len()
+    );
     Ok(vec![doc])
   }
 }

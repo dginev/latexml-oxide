@@ -16,11 +16,11 @@ LoadDefinitions!({
   DefMacro!("\\endtabulary",
     "\\lx@end@alignment\\@end@tabulary",
     locked => true);
-  DefPrimitive!(T_CS!("\\@end@tabulary"), None, { stomach::egroup()?; });
+  DefPrimitive!(T_CS!("\\@end@tabulary"), None, { egroup()?; });
   DefConstructor!("\\@@tabulary{Dimension}[] Undigested DigestedBody",
     "#4",
     reversion => "\\begin{tabulary}{#1}[#2]{#3}#4\\end{tabulary}",
-    before_digest => { stomach::bgroup(); },
+    before_digest => { bgroup(); },
     mode => "restricted_horizontal");
 
   // Like l,c,r,j, but set like p w/o explicit width...
@@ -29,7 +29,7 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
         after: Some(Tokens!(T_END!())),
-        align: Some(latexml_core::alignment::template::Align::Left),
+        align: Some(Align::Left),
         ..Cell::default()
       })
     });
@@ -39,7 +39,7 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
         after: Some(Tokens!(T_END!())),
-        align: Some(latexml_core::alignment::template::Align::Center),
+        align: Some(Align::Center),
         ..Cell::default()
       })
     });
@@ -49,7 +49,7 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
         after: Some(Tokens!(T_END!())),
-        align: Some(latexml_core::alignment::template::Align::Right),
+        align: Some(Align::Right),
         ..Cell::default()
       })
     });
@@ -59,7 +59,7 @@ LoadDefinitions!({
       template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
         after: Some(Tokens!(T_END!())),
-        align: Some(latexml_core::alignment::template::Align::Justify),
+        align: Some(Align::Justify),
         ..Cell::default()
       })
     });

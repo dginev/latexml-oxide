@@ -1,12 +1,14 @@
+use std::borrow::Cow;
+
+use once_cell::sync::Lazy;
+use regex::Regex;
+use unicode_normalization::UnicodeNormalization;
+use unidecode::unidecode;
+
 use crate::binding::def::dialect::{
   DIRTY_ID_IDIOM_RE, LEADING_PROTOCOL_RE, NON_ID_CHARSET_RE, SPACES_RE, TILDE_NOISE_RE,
   TRAILING_SLASH_RE,
 };
-use once_cell::sync::Lazy;
-use regex::Regex;
-use std::borrow::Cow;
-use unicode_normalization::UnicodeNormalization;
-use unidecode::unidecode;
 
 static TRAILING_PUNCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[\.,;]+$").unwrap());
 static NON_ALNUM_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[^a-zA-Z0-9]").unwrap());

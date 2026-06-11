@@ -40,12 +40,18 @@ LoadDefinitions!({
   RequirePackage!("endnotes");
 
   // sagej frontmatter — preserve author content.
-  DefMacro!("\\corrauth{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
-  DefMacro!("\\affiliation{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}");
-  DefMacro!("\\runninghead{}",
-    "\\@add@frontmatter{ltx:note}[role=runninghead]{#1}");
+  DefMacro!(
+    "\\corrauth{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
+  );
+  DefMacro!(
+    "\\affiliation{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
+  );
+  DefMacro!(
+    "\\runninghead{}",
+    "\\@add@frontmatter{ltx:note}[role=runninghead]{#1}"
+  );
 
   // {acks}, {funding}, {dci} envs (sagej L456-470). Use
   // internal_vertical mode so block-level body (paragraphs, lists,

@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Perl: DefPrimitive('\SetupFloatingEnvironment OptionalKeyVals {}', sub { ... })
   DefPrimitive!("\\SetupFloatingEnvironment OptionalKeyVals {}", sub[(options, ftype)] {
@@ -50,7 +49,7 @@ LoadDefinitions!({
       .unwrap_or_else(|| s!("List of {ftype}s"));
 
     // Use shared float environment helper from float.sty
-    crate::package::float_sty::define_float_environment(&ftype, &inlist, &within)?;
+    float_sty::define_float_environment(&ftype, &inlist, &within)?;
 
     // Perl also defines the name macro
     let name_cs = s!("\\{ftype}name");

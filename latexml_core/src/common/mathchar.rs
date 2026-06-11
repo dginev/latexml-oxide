@@ -1,14 +1,18 @@
-use rustc_hash::FxHashMap as HashMap;
 use std::rc::Rc;
 
-use crate::common::arena::{self, SymHashMap};
-use crate::common::error::Result;
-use crate::common::store::Stored;
-use crate::digested::Digested;
-use crate::pin;
-use crate::state;
-use crate::tbox::Tbox;
-use crate::token::Token;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::{
+  common::{
+    arena::{self, SymHashMap},
+    error::Result,
+    store::Stored,
+  },
+  digested::Digested,
+  pin, state,
+  tbox::Tbox,
+  token::Token,
+};
 
 const MATH_CLASS_ROLE: [&str; 8] = ["", "BIGOP", "BINOP", "RELOP", "OPEN", "CLOSE", "PUNCT", ""];
 
@@ -873,16 +877,16 @@ pub fn decode_math_char(
       let shared_key = state::with_value(
         &crate::s!("font_shared_key_{}", ftok.with_str(ToString::to_string)),
         |v| match v {
-          Some(Stored::String(s)) => crate::common::arena::with(*s, |str| Some(str.to_string())),
+          Some(Stored::String(s)) => arena::with(*s, |str| Some(str.to_string())),
           _ => None,
         },
       );
       if let Some(sk) = shared_key {
         // shared_key is "fontinfo_<name>"; strip the "fontinfo_" prefix to get the font name
-        if let Some(name) = sk.strip_prefix("fontinfo_") {
-          if let Some(props) = crate::common::font::decode_fontname(name, None, None) {
-            encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
-          }
+        if let Some(name) = sk.strip_prefix("fontinfo_")
+          && let Some(props) = crate::common::font::decode_fontname(name, None, None)
+        {
+          encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
         }
       }
     }
@@ -916,13 +920,11 @@ pub fn decode_math_char(
     if state::with_value("LaTeX.pool_loaded", |v| v.is_some()) {
       wrap = false;
     }
-    if wrap {
-      if let Some(ftok) = fontdef_tok {
-        let mut new_rev = vec![crate::T_BEGIN!(), ftok];
-        new_rev.extend(rev.unlist());
-        new_rev.push(crate::T_END!());
-        final_reversion = Some(crate::tokens::Tokens::new(new_rev));
-      }
+    if wrap && let Some(ftok) = fontdef_tok {
+      let mut new_rev = vec![crate::T_BEGIN!(), ftok];
+      new_rev.extend(rev.unlist());
+      new_rev.push(crate::T_END!());
+      final_reversion = Some(crate::tokens::Tokens::new(new_rev));
     }
     props.reversion = final_reversion;
   }

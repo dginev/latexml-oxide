@@ -31,7 +31,7 @@ LoadDefinitions!({
   // generous backstop posture (runaways are cut much earlier by the cycle
   // guards / pushbacklimit / byte budget; the tokenlimit only bounds
   // aperiodic grind).
-  latexml_core::binding::content::pass_options("latexml", "sty", vec![
+  pass_options("latexml", "sty", vec![
     s!("ids"),
     s!("rawstyles"),
     s!("bibconfig=bbl,bib"),

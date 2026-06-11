@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::binding::content::convert_twoopt_args;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({

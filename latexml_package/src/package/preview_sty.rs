@@ -22,7 +22,7 @@ LoadDefinitions!({
   for option in ["displaymath", "textmath", "graphics", "floats", "sections", "footnotes"] {
     let opt = option;
     DeclareOption!(opt, {
-      let _ = state::push_value("preview_environments", Stored::from(opt));
+      let _ = push_value("preview_environments", Stored::from(opt));
     });
   }
   // Perl L43: `active` option digests `\Previewtrue` to flip the

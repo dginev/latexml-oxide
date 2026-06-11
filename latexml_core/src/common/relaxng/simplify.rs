@@ -4,15 +4,14 @@
 //! (the enclosing `<grammar>` name) and:
 //!
 //! * resolves `Ref` / `ParentRef` qnames against the binding/parent-binding,
-//! * records every reference site in [`Relaxng::uses_name`] (powers the
-//!   "Used by:" lists in the schema docs),
+//! * records every reference site in [`Relaxng::uses_name`] (powers the "Used by:" lists in the
+//!   schema docs),
 //! * registers `Element` body patterns under [`Relaxng::elements`],
-//! * combines `Def`s into a single canonical `Combination` per qname in
-//!   [`Relaxng::defs`] (with [`Relaxng::def_combiner`] tracking which
-//!   combiner won), tracking the singleton-element-def shortcut into
-//!   [`Relaxng::elementdefs`] / [`Relaxng::element_reverse_defs`],
-//! * resolves `Override`s by patching the wrapped module before
-//!   re-running simplify on the patched form,
+//! * combines `Def`s into a single canonical `Combination` per qname in [`Relaxng::defs`] (with
+//!   [`Relaxng::def_combiner`] tracking which combiner won), tracking the singleton-element-def
+//!   shortcut into [`Relaxng::elementdefs`] / [`Relaxng::element_reverse_defs`],
+//! * resolves `Override`s by patching the wrapped module before re-running simplify on the patched
+//!   form,
 //! * preserves document-order of [`Relaxng::modules`].
 //!
 //! The simplifier is shape-preserving in its return value: every input
@@ -60,7 +59,10 @@ pub fn simplify(
       // preserved (any nested modules surfaced during the body simplify
       // appear after this one).
       let idx = rng.modules.len();
-      rng.modules.push(Pattern::Module { name: name.clone(), body: Vec::new() });
+      rng.modules.push(Pattern::Module {
+        name: name.clone(),
+        body: Vec::new(),
+      });
       let new_body: Vec<Pattern> = body
         .into_iter()
         .flat_map(|p| simplify(rng, p, binding, parent, container))
@@ -194,14 +196,19 @@ fn simplify_def(
   // a `div`/`span`). For uniquely-named tags `tex::to_tex_def`
   // reproduces the folded `\elementdef` rendering, so XML-schema docs
   // are unchanged.
-  if combiner == DefCombiner::Group && args.len() == 1 {
-    if let Pattern::Element { name: el_name, .. } = &args[0] {
-      rng.elementdefs.insert(qname.clone(), el_name.clone());
-      rng
-        .element_reverse_defs
-        .insert(el_name.clone(), qname.clone());
-      return vec![Pattern::Def { combiner, name: qname, body: args }];
-    }
+  if combiner == DefCombiner::Group
+    && args.len() == 1
+    && let Pattern::Element { name: el_name, .. } = &args[0]
+  {
+    rng.elementdefs.insert(qname.clone(), el_name.clone());
+    rng
+      .element_reverse_defs
+      .insert(el_name.clone(), qname.clone());
+    return vec![Pattern::Def {
+      combiner,
+      name: qname,
+      body: args,
+    }];
   }
 
   // Combine with any prior definition under the same qname.
@@ -255,7 +262,11 @@ fn simplify_def(
 
   // Returned pattern keeps the original combiner (matches Perl: stored
   // op stays $op even when effective combiner shifts).
-  vec![Pattern::Def { combiner, name: qname, body: args }]
+  vec![Pattern::Def {
+    combiner,
+    name: qname,
+    body: args,
+  }]
 }
 
 /// Recursively flatten same-op `Group`/`Choice` nests and collapse a
@@ -372,7 +383,10 @@ mod tests {
   #[test]
   fn simplify_collapses_singleton_group() {
     let inner = Pattern::Element { name: "x".into(), body: vec![] };
-    let combo = Pattern::Combination { op: CombineOp::Group, body: vec![inner.clone()] };
+    let combo = Pattern::Combination {
+      op:   CombineOp::Group,
+      body: vec![inner.clone()],
+    };
     let result = simplify_combination(combo);
     assert!(matches!(result, Pattern::Element { ref name, .. } if name == "x"));
   }
@@ -388,7 +402,10 @@ mod tests {
     };
     let outer = Pattern::Combination {
       op:   CombineOp::Choice,
-      body: vec![inner_choice, Pattern::Element { name: "c".into(), body: vec![] }],
+      body: vec![inner_choice, Pattern::Element {
+        name: "c".into(),
+        body: vec![],
+      }],
     };
     let result = simplify_combination(outer);
     let body = match &result {
@@ -437,8 +454,14 @@ mod tests {
     "#;
     let (rng, _) = simplify_xml(xml);
     // Binding is the synthesized `grammar1`, so qname is `grammar1:MY`.
-    assert_eq!(rng.elementdefs.get("grammar1:MY"), Some(&"my-el".to_string()));
-    assert_eq!(rng.element_reverse_defs.get("my-el"), Some(&"grammar1:MY".to_string()));
+    assert_eq!(
+      rng.elementdefs.get("grammar1:MY"),
+      Some(&"my-el".to_string())
+    );
+    assert_eq!(
+      rng.element_reverse_defs.get("my-el"),
+      Some(&"grammar1:MY".to_string())
+    );
   }
 
   #[test]
@@ -485,9 +508,20 @@ mod tests {
         _ => None,
       })
       .collect();
-    assert!(qnames.contains(&"grammar1:A"), "A ref missing: {:?}", qnames);
-    assert!(qnames.contains(&"grammar1:B"), "B ref missing: {:?}", qnames);
-    assert_eq!(rng.def_combiner.get("grammar1:X").copied(), Some(DefCombiner::Choice));
+    assert!(
+      qnames.contains(&"grammar1:A"),
+      "A ref missing: {:?}",
+      qnames
+    );
+    assert!(
+      qnames.contains(&"grammar1:B"),
+      "B ref missing: {:?}",
+      qnames
+    );
+    assert_eq!(
+      rng.def_combiner.get("grammar1:X").copied(),
+      Some(DefCombiner::Choice)
+    );
   }
 
   #[test]
@@ -528,11 +562,17 @@ mod tests {
   #[test]
   fn simplify_extract_start_descends_grammar_and_module() {
     let inner = Pattern::Start {
-      body: vec![Pattern::Element { name: "root".into(), body: vec![] }],
+      body: vec![Pattern::Element {
+        name: "root".into(),
+        body: vec![],
+      }],
     };
     let nested = vec![Pattern::Module {
       name: "m".into(),
-      body: vec![Pattern::Grammar { name: "g".into(), body: vec![inner] }],
+      body: vec![Pattern::Grammar {
+        name: "g".into(),
+        body: vec![inner],
+      }],
     }];
     let starts = extract_start(&nested);
     assert_eq!(starts.len(), 1);

@@ -44,11 +44,11 @@ LoadDefinitions!({
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
     let pkg_owned = pkg.to_string();
     DeclareOption!(*pkg, {
-      state::assign_value(&s!("revtex_load_{}", pkg_owned), true, Some(Scope::Global));
+      assign_value(&s!("revtex_load_{}", pkg_owned), true, Some(Scope::Global));
     });
     let nopkg = s!("no{}", pkg);
     DeclareOption!(&nopkg, {
-      state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
+      assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
     });
   }
   // Perl L47-49: osajnl (Optical Society) sub-option also pushed graphics
@@ -56,7 +56,7 @@ LoadDefinitions!({
   // this (revtex4_cls.rs L37-39); the revtex4-1 port had dropped it,
   // which breaks OSA documents that rely on the \ocis classification.
   DeclareOption!("osajnl", {
-    state::assign_value("revtex_load_graphics", true, Some(Scope::Global));
+    assign_value("revtex_load_graphics", true, Some(Scope::Global));
     DefMacro!("\\ocis", "\\pacs");
   });
   DeclareOption!(None, {
@@ -73,11 +73,11 @@ LoadDefinitions!({
   // (witness 1508.02642, `\documentclass[…,amsmath,…]{revtex4-1}`) — would
   // otherwise hit it undefined. Rust previously loaded the `.rty` first.
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
-    if state::lookup_bool(&s!("revtex_load_{}", pkg)) {
+    if lookup_bool(&s!("revtex_load_{}", pkg)) {
       RequirePackage!(*pkg);
     }
   }
-  if state::lookup_bool("revtex_load_graphics") {
+  if lookup_bool("revtex_load_graphics") {
     RequirePackage!("graphics");
   }
 

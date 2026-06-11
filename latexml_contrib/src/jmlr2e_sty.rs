@@ -6,7 +6,6 @@
 //! `\author{\name Foo \email a@b.c \\ \addr Place}` parses cleanly.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("natbib");
   RequirePackage!("amsthm");
@@ -36,8 +35,10 @@ LoadDefinitions!({
   // preserve the author-typed text content (volume/page/etc. tuples
   // and running-head author+title pair) as ltx:note rather than
   // dropping silently.
-  DefMacro!("\\jmlrheading{}{}{}{}{}{}",
-    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4 #5 #6}");
+  DefMacro!(
+    "\\jmlrheading{}{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4 #5 #6}"
+  );
   // jmlr2e.sty L256: `\def\ewrlheading#1#2#3#4{…\def\ps@jmlrtps{…}…}` — the
   // EWRL-proceedings variant of `\jmlrheading`, setting the running-head page
   // style from {volume}{year}{date/location}{authors}. Our binding intercepts
@@ -46,19 +47,29 @@ LoadDefinitions!({
   // (HTML drops the running head, so the raw def would lose this content).
   // Witness 1802.03976 (`\ewrlheading{14}{2018}{October 2018, Lille, France}
   // {…authors…}`).
-  DefMacro!("\\ewrlheading{}{}{}{}",
-    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4}");
-  DefMacro!("\\ShortHeadings{}{}",
-    "\\@add@frontmatter{ltx:note}[role=shortheadings]{#1 / #2}");
-  DefMacro!("\\firstpageno{}",
-    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}");
+  DefMacro!(
+    "\\ewrlheading{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=heading]{#1 #2 #3 #4}"
+  );
+  DefMacro!(
+    "\\ShortHeadings{}{}",
+    "\\@add@frontmatter{ltx:note}[role=shortheadings]{#1 / #2}"
+  );
+  DefMacro!(
+    "\\firstpageno{}",
+    "\\@add@frontmatter{ltx:note}[role=firstpage]{#1}"
+  );
   // \editor / \editors carry author-supplied editor names — preserve as
   // ltx:note rather than dropping. JMLR papers cite the editor in the
   // header; this keeps the credit visible.
-  DefMacro!("\\editor{}",
-    "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
-  DefMacro!("\\editors{}",
-    "\\@add@frontmatter{ltx:note}[role=editor]{#1}");
+  DefMacro!(
+    "\\editor{}",
+    "\\@add@frontmatter{ltx:note}[role=editor]{#1}"
+  );
+  DefMacro!(
+    "\\editors{}",
+    "\\@add@frontmatter{ltx:note}[role=editor]{#1}"
+  );
   // jmlr2e.sty L194: `\def\address#1{\gdef\@address{#1}}` — the author's
   // institutional address, rendered in the title block (`\@name \\ \@address`,
   // L187). Our binding intercepts jmlr2e.sty (so the raw def never runs), and
@@ -66,14 +77,18 @@ LoadDefinitions!({
   // jmlr2e paper using `\address{…}` left it undefined where Perl (raw-loads
   // jmlr2e) is clean. Preserve the address content as an ltx:note, consistent
   // with the other jmlr2e frontmatter macros above. Witness 1711.01660.
-  DefMacro!("\\address{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
+  DefMacro!(
+    "\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}"
+  );
 
   // jmlr2e.sty L372: \acks{text} — acknowledgments section. Emit as
   // structural ltx:acknowledgements with the funding-disclosure label
   // (post-processors map to canonical role/styling).
-  DefConstructor!("\\acks{}",
-    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>");
+  DefConstructor!(
+    "\\acks{}",
+    "<ltx:acknowledgements name='acknowledgments-disclosure-of-funding'>#1</ltx:acknowledgements>"
+  );
 
   // jmlr2e.sty L33-36: the camera-ready toggle.
   //   \newif\ifnipsfinal \nipsfinalfalse

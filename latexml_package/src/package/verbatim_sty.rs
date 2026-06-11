@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   //======================================================================
   // Note that we CAN process the verbatim.sty file and that works,
@@ -92,14 +91,14 @@ LoadDefinitions!({
   //
   // NOTE: the part AFTER the \end{whatever}, should be lost (and message about it!)
   DefMacro!("\\verbatim@", {
-    let env = state::lookup_string_from_sym(pin!("current_environment"));
+    let env = lookup_string_from_sym(pin!("current_environment"));
     // Note: This should allow a regexp, since there can be spaces between \end and { !!!
     let mut lines = Vec::new();
     // TODO: UGH!!! Isn't there a better way to approximate
     // the Perl simplicity of writing an inline regex?
     // the escaping is very easy to get wrong!
     let env_re = Regex::new(&format!("^(.*)\\\\end\\s*\\{{{env}\\}}(.*)$")).unwrap();
-    while let Some(line) = gullet::read_raw_line() {
+    while let Some(line) = read_raw_line() {
       if let Some(caps) = env_re.captures(&line) {
         let pre = caps.get(1).map_or("", |m| m.as_str()).to_string();
         let post = caps.get(2).map_or("", |m| m.as_str()).to_string();
@@ -135,10 +134,10 @@ LoadDefinitions!({
   // // Read verbatim material from file.
   DefMacro!("\\verbatiminput {}", sub[(file)] {
     if let Some(path) = find_file(&file.to_string(), None) {
-      gullet::reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
+      reading_from_mouth(Mouth::create(&path, MouthOptions::default())?,
             || -> Result<Tokens> {
           let mut lines = Vec::new();
-          gullet::with_mouth_mut(|mouth_opt| if let Some(mouth) = mouth_opt {
+          with_mouth_mut(|mouth_opt| if let Some(mouth) = mouth_opt {
             while let Some(line) = mouth.read_raw_line(false) {
               lines.push(line);
             }

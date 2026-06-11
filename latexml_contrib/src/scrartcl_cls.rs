@@ -6,7 +6,6 @@
 //! trip undefined-macro errors. Same pattern as scrbook_cls.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -70,10 +69,16 @@ LoadDefinitions!({
   // \publishers{} — KOMA frontmatter pieces that DO carry author
   // content. Preserve as ltx:note frontmatter so the text reaches the
   // XML (rather than silently gobbling).
-  DefMacro!("\\subject{}",
-    "\\@add@frontmatter{ltx:note}[role=subject]{#1}");
-  DefMacro!("\\dictum[]{}",
-    "\\@add@frontmatter{ltx:note}[role=dictum]{#2}");
-  DefMacro!("\\publishers{}",
-    "\\@add@frontmatter{ltx:note}[role=publishers]{#1}");
+  DefMacro!(
+    "\\subject{}",
+    "\\@add@frontmatter{ltx:note}[role=subject]{#1}"
+  );
+  DefMacro!(
+    "\\dictum[]{}",
+    "\\@add@frontmatter{ltx:note}[role=dictum]{#2}"
+  );
+  DefMacro!(
+    "\\publishers{}",
+    "\\@add@frontmatter{ltx:note}[role=publishers]{#1}"
+  );
 });

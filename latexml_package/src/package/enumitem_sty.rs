@@ -1,8 +1,10 @@
+use latexml_core::{
+  common::arena::SymHashMap,
+  definition::{PropertiesClosure, argument::ArgWrap},
+  document::Document,
+};
+
 use crate::prelude::*;
-use latexml_core::common::arena::SymHashMap;
-use latexml_core::definition::PropertiesClosure;
-use latexml_core::definition::argument::ArgWrap;
-use latexml_core::document::Document;
 
 /// Perl: beginEnumItemize($type, $counter, $keys) — enumitem.sty.ltxml L80-112
 fn begin_enum_itemize(
@@ -26,17 +28,16 @@ fn begin_enum_itemize(
   // Deal with shortlabels — Perl L88-93
   if let Some(kv) = keys {
     let pairs: Vec<_> = kv.get_pairs().collect();
-    if let Some((first_key, first_val)) = pairs.first() {
-      if matches!(first_val, ArgWrap::None)
-        && has_value("enumitem@shortlabels")
-        && lookup_definition(&T_CS!(s!("\\KV@enumitem@{first_key}")))
-          .ok()
-          .flatten()
-          .is_none()
-      {
-        let toks = mouth::tokenize_internal(first_key);
-        set_enumeration_style(Some(&toks), Some(level as i32))?;
-      }
+    if let Some((first_key, first_val)) = pairs.first()
+      && matches!(first_val, ArgWrap::None)
+      && has_value("enumitem@shortlabels")
+      && lookup_definition(&T_CS!(s!("\\KV@enumitem@{first_key}")))
+        .ok()
+        .flatten()
+        .is_none()
+    {
+      let toks = mouth::tokenize_internal(first_key);
+      set_enumeration_style(Some(&toks), Some(level as i32))?;
     }
   }
 
@@ -82,7 +83,7 @@ fn begin_enum_itemize(
     // ref=\theenumi{}).
     let the_cs = s!("\\the{usecounter}");
     let rref = if rref.to_string().contains(&the_cs) {
-      latexml_core::gullet::do_expand(rref)?
+      do_expand(rref)?
     } else {
       rref
     };
@@ -146,16 +147,16 @@ fn replace_star(tokens: &Tokens, replacement: &Token) -> Tokens {
 fn end_enum_itemize(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
   if let Some(series) = whatsit.get_property("series") {
     let series_str = series.to_string();
-    if !series_str.is_empty() {
-      if let Some(counter) = whatsit.get_property("counter") {
-        let counter_str = counter.to_string();
-        if let Ok(val) = counter_value(&counter_str) {
-          state::assign_value(
-            &s!("enumitem_series_{series_str}_last"),
-            Stored::Number(val),
-            Some(Scope::Global),
-          );
-        }
+    if !series_str.is_empty()
+      && let Some(counter) = whatsit.get_property("counter")
+    {
+      let counter_str = counter.to_string();
+      if let Ok(val) = counter_value(&counter_str) {
+        assign_value(
+          &s!("enumitem_series_{series_str}_last"),
+          Stored::Number(val),
+          Some(Scope::Global),
+        );
       }
     }
   }
@@ -167,8 +168,8 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
   // Load existing keys directly inside the state/arena closure pair —
   // the intermediate keys_str String is avoided; we split the interned
   // &str and collect owned keys straight into the Vec.
-  let mut keys: Vec<String> = state::with_value(&s!("{name}@keys"), |v| match v {
-    Some(Stored::String(s)) => arena::with(*s, |ks| {
+  let mut keys: Vec<String> = with_value(&s!("{name}@keys"), |v| match v {
+    Some(Stored::String(s)) => with(*s, |ks| {
       ks.split(',')
         .filter(|k| !k.is_empty())
         .map(String::from)
@@ -181,15 +182,15 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
     let val_key = s!("{name}@{key}");
     match val {
       ArgWrap::Tokens(t) => {
-        state::assign_value(&val_key, Stored::Tokens(t.clone()), Some(Scope::Global));
+        assign_value(&val_key, Stored::Tokens(t.clone()), Some(Scope::Global));
       },
       ArgWrap::None => {
-        state::assign_value(&val_key, Stored::None, Some(Scope::Global));
+        assign_value(&val_key, Stored::None, Some(Scope::Global));
       },
       _ => {
-        state::assign_value(
+        assign_value(
           &val_key,
-          Stored::String(arena::pin(val.to_string())),
+          Stored::String(pin(val.to_string())),
           Some(Scope::Global),
         );
       },
@@ -198,9 +199,9 @@ fn store_enumitem_defaults(name: &str, kv: &KeyVals) {
       keys.push(key.clone());
     }
   }
-  state::assign_value(
+  assign_value(
     &s!("{name}@keys"),
-    Stored::String(arena::pin(keys.join(","))),
+    Stored::String(pin(keys.join(","))),
     Some(Scope::Global),
   );
 }
@@ -227,8 +228,8 @@ fn merged_enumitem_keyvals(
     // so the split happens on the interned &str and the owned
     // intermediary is smaller (Vec<String> of just the keys, not
     // the whole comma-separated string plus allocs).
-    let keys: Vec<String> = state::with_value(&s!("{def_name}@keys"), |v| match v {
-      Some(Stored::String(s)) => arena::with(*s, |ks| {
+    let keys: Vec<String> = with_value(&s!("{def_name}@keys"), |v| match v {
+      Some(Stored::String(s)) => with(*s, |ks| {
         ks.split(',')
           .filter(|k| !k.is_empty())
           .map(String::from)
@@ -242,12 +243,12 @@ fn merged_enumitem_keyvals(
     for key in &keys {
       if !key.is_empty() {
         let val_key = s!("{def_name}@{key}");
-        if let Some(val) = state::lookup_value(&val_key) {
+        if let Some(val) = lookup_value(&val_key) {
           let aw = match val {
             Stored::Tokens(t) => ArgWrap::Tokens(t),
             Stored::Number(n) => ArgWrap::Number(n),
             Stored::None => ArgWrap::None,
-            Stored::String(s) => ArgWrap::Tokens(arena::with(s, mouth::tokenize_internal)),
+            Stored::String(s) => ArgWrap::Tokens(with(s, mouth::tokenize_internal)),
             _ => ArgWrap::None,
           };
           hash.insert(key.clone(), aw);
@@ -301,7 +302,7 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
   } else {
     s!("\\{basetype}@item")
   };
-  state::let_i(
+  let_i(
     &T_CS!(s!("\\{listname}@item")),
     &T_CS!(item_source),
     Some(Scope::Global),
@@ -336,7 +337,7 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
   });
 
   let before_digest_end: BeforeDigestClosure = Rc::new(|| {
-    stomach::digest(Tokens!(T_CS!("\\par")))?;
+    digest(Tokens!(T_CS!("\\par")))?;
     Ok(Vec::new())
   });
 
@@ -434,7 +435,7 @@ LoadDefinitions!({
         begin_enum_itemize("itemize", "@item", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      before_digest_end => { stomach::digest(Tokens!(T_CS!("\\par")))?; },
+      before_digest_end => { digest(Tokens!(T_CS!("\\par")))?; },
       mode => "internal_vertical",
       locked => true
     );
@@ -445,7 +446,7 @@ LoadDefinitions!({
         begin_enum_itemize("enumerate", "enum", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      before_digest_end => { stomach::digest(Tokens!(T_CS!("\\par")))?; },
+      before_digest_end => { digest(Tokens!(T_CS!("\\par")))?; },
       mode => "internal_vertical",
       locked => true
     );
@@ -457,7 +458,7 @@ LoadDefinitions!({
         begin_enum_itemize("description", "@desc", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      before_digest_end => { stomach::digest(Tokens!(T_CS!("\\par")))?; },
+      before_digest_end => { digest(Tokens!(T_CS!("\\par")))?; },
       mode => "internal_vertical",
       locked => true
     );

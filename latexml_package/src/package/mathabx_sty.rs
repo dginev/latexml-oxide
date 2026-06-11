@@ -9,8 +9,12 @@ use crate::prelude::*;
 fn def_math_sym(cs: &str, present: &str, role: Option<&str>, meaning: Option<&str>) -> Result<()> {
   let (cs_tok, params) = parse_prototype(cs, true)?;
   let mut opts = MathPrimitiveOptions::default();
-  if let Some(r) = role { opts.role = Some(r.to_string()); }
-  if let Some(m) = meaning { opts.meaning = Some(m.to_string()); }
+  if let Some(r) = role {
+    opts.role = Some(r.to_string());
+  }
+  if let Some(m) = meaning {
+    opts.meaning = Some(m.to_string());
+  }
   def_math(cs_tok, params, present.to_string(), opts)?;
   Ok(())
 }

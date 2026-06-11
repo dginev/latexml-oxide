@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::keyvals::SkipMissing;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -40,9 +41,9 @@ LoadDefinitions!({
   // \setkeys[*][+][prefix]{keyset}[na]{keyvals}
   DefMacro!("\\setkeys OptionalMatch:* OptionalMatch:+ []{}[]", 
     sub[(star, plus, prefix_opt, keysets_tks, skip_opt)] {
-    let prefix = prefix_opt.map(|p| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
-    let keysets_str = gullet::do_expand(keysets_tks)?.to_string();
+    let keysets_str = do_expand(keysets_tks)?.to_string();
 
     let skip_str = skip_opt.map(|s| s.to_string());
     let skip: Vec<String> = skip_str.iter()
@@ -76,7 +77,7 @@ LoadDefinitions!({
   // \setrmkeys[*][prefix]{keyset}[na]
   DefMacro!("\\setrmkeys OptionalMatch:* []{}[]", sub[(star, prefix_opt, keysets_tks, na_opt)] {    
     // expand and delete the list of tokens we need to work on
-    let rm_tokens = gullet::do_expand(Tokens!(T_CS!("\\XKV@rm")))?;
+    let rm_tokens = do_expand(Tokens!(T_CS!("\\XKV@rm")))?;
     DefMacro!(T_CS!("\\XKV@rm"), None, Some(ExpansionBody::Tokens(Tokens!())));
 
     let mut tokens = Vec::new();
@@ -109,13 +110,13 @@ LoadDefinitions!({
 
   // \define@key[prefix]{keyset}{key}[default]{code}
   DefPrimitive!("\\define@key[]{}{}[]{}", sub[(prefix_opt, keyset_tks, key_tks, default_opt, code)] {
-    let prefix = prefix_opt.map(|p: Tokens| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p: Tokens| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
     let default = default_opt.map(|d: Tokens| d.to_string());
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
-    let key = gullet::do_expand(key_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
+    let key = do_expand(key_tks)?.to_string();
 
-    latexml_core::keyval::define(KeyvalConfig {
+    keyval::define(KeyvalConfig {
       prefix: prefix.as_deref().unwrap_or("KV"),
       keyset: &keyset,
       key: &key,
@@ -134,16 +135,16 @@ LoadDefinitions!({
   DefPrimitive!("\\define@cmdkey[]{}[]{}[]{}", sub[(
     prefix_opt, keyset_tks, macroprefix_opt, key_tks, default_opt, code
   )] {
-    let prefix = prefix_opt.map(|p: Tokens| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p: Tokens| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
     let macroprefix = macroprefix_opt
-      .map(|mp: Tokens| gullet::do_expand(mp).map(|t| t.to_string()))
+      .map(|mp: Tokens| do_expand(mp).map(|t| t.to_string()))
       .transpose()?;
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
-    let key = gullet::do_expand(key_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
+    let key = do_expand(key_tks)?.to_string();
     let default = default_opt.map(|d: Tokens| d.to_string());
 
-    latexml_core::keyval::define(KeyvalConfig {
+    keyval::define(KeyvalConfig {
       prefix: prefix.as_deref().unwrap_or("KV"),
       keyset: &keyset,
       key: &key,
@@ -160,11 +161,11 @@ LoadDefinitions!({
   DefPrimitive!("\\define@cmdkeys[]{}[]{}[]", sub[(
     prefix_opt, keyset_tks, macroprefix_opt, keys_tks, default_opt
   )] {
-    let prefix = prefix_opt.map(|p: Tokens| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p: Tokens| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
     let macroprefix = macroprefix_opt
-      .map(|mp: Tokens| gullet::do_expand(mp).map(|t| t.to_string()))
+      .map(|mp: Tokens| do_expand(mp).map(|t| t.to_string()))
       .transpose()?;
     let default = default_opt.map(|d: Tokens| d.to_string());
 
@@ -172,7 +173,7 @@ LoadDefinitions!({
     for key in keys_str.split(',') {
       let key = key.trim();
       if key.is_empty() { continue; }
-      latexml_core::keyval::define(KeyvalConfig {
+      keyval::define(KeyvalConfig {
         prefix: prefix.as_deref().unwrap_or("KV"),
         keyset: &keyset,
         key,
@@ -236,11 +237,11 @@ LoadDefinitions!({
   DefPrimitive!("\\ltx@define@choicekey@int OptionalMatch:* OptionalMatch:+ []{}{}[]{}[]{}{}", sub[(
     star, plus, prefix_opt, keyset_tks, key_tks, bin_opt, choices_tks, default_opt, code, mismatch
   )] {
-    let prefix = prefix_opt.map(|p: Tokens| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p: Tokens| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
     let default = default_opt.map(|d: Tokens| d.to_string());
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
-    let key = gullet::do_expand(key_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
+    let key = do_expand(key_tks)?.to_string();
     let choices_str = choices_tks.to_string();
     // Note: Perl uses Vec<&'static str> for choices. We can't do that easily.
     // The keyval::define function takes Vec<&'static str>, so we need to leak
@@ -258,7 +259,7 @@ LoadDefinitions!({
       None
     };
 
-    latexml_core::keyval::define(KeyvalConfig {
+    keyval::define(KeyvalConfig {
       prefix: prefix.as_deref().unwrap_or("KV"),
       keyset: &keyset,
       key: &key,
@@ -322,14 +323,14 @@ LoadDefinitions!({
     plus, prefix_opt, keyset_tks, macroprefix_opt, key_tks, default_opt, code, mismatch
   )] {
     let _ = plus;
-    let prefix = prefix_opt.map(|p: Tokens| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p: Tokens| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
     let macroprefix = macroprefix_opt
-      .map(|mp: Tokens| gullet::do_expand(mp).map(|t| t.to_string()))
+      .map(|mp: Tokens| do_expand(mp).map(|t| t.to_string()))
       .transpose()?;
     let default = default_opt.map(|d: Tokens| d.to_string());
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
-    let key = gullet::do_expand(key_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
+    let key = do_expand(key_tks)?.to_string();
 
     let mismatch_body = if !mismatch.is_empty() {
       Some(ExpansionBody::Tokens(mismatch))
@@ -337,7 +338,7 @@ LoadDefinitions!({
       None
     };
 
-    latexml_core::keyval::define(KeyvalConfig {
+    keyval::define(KeyvalConfig {
       prefix: prefix.as_deref().unwrap_or("KV"),
       keyset: &keyset,
       key: &key,
@@ -355,19 +356,19 @@ LoadDefinitions!({
   DefPrimitive!("\\define@boolkeys[]{}[]{}[]", sub[(
     prefix_opt, keyset_tks, macroprefix_opt, keys_tks, default_opt
   )] {
-    let prefix = prefix_opt.map(|p: Tokens| gullet::do_expand(p).map(|t| t.to_string()))
+    let prefix = prefix_opt.map(|p: Tokens| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
     let macroprefix = macroprefix_opt
-      .map(|mp: Tokens| gullet::do_expand(mp).map(|t| t.to_string()))
+      .map(|mp: Tokens| do_expand(mp).map(|t| t.to_string()))
       .transpose()?;
     let default = default_opt.map(|d: Tokens| d.to_string());
 
-    let keys_str = gullet::do_expand(keys_tks)?.to_string();
+    let keys_str = do_expand(keys_tks)?.to_string();
     for key in keys_str.split(',') {
       let key = key.trim();
       if key.is_empty() { continue; }
-      latexml_core::keyval::define(KeyvalConfig {
+      keyval::define(KeyvalConfig {
         prefix: prefix.as_deref().unwrap_or("KV"),
         keyset: &keyset,
         key,
@@ -389,18 +390,18 @@ LoadDefinitions!({
   DefMacro!("\\key@ifundefined[]{}{}{}{}",
     sub[(prefix_opt, keysets_tks, key_tks, undefined, defined)] {
     let sprefix = prefix_opt
-      .map(|p| gullet::do_expand(p).map(|t| t.to_string()))
+      .map(|p| do_expand(p).map(|t| t.to_string()))
       .transpose()?
       .unwrap_or_else(|| "KV".to_string());
-    let skeysets_str = gullet::do_expand(keysets_tks)?.to_string();
-    let skey = gullet::do_expand(key_tks)?.to_string();
+    let skeysets_str = do_expand(keysets_tks)?.to_string();
+    let skey = do_expand(key_tks)?.to_string();
 
     for skeyset in skeysets_str.split(',') {
       let skeyset = skeyset.trim();
       // Perl #2777 (2026-03-27): skip empty keyset names from leading,
       // trailing, or doubled commas.
       if skeyset.is_empty() { continue; }
-      if latexml_core::keyval::has_keyval(&sprefix, skeyset, &skey) {
+      if keyval::has_keyval(&sprefix, skeyset, &skey) {
         let keyset_owned = skeyset.to_string();
         DefMacro!(T_CS!("\\XKV@tfam"), None, {
           Ok(Tokens::new(Explode!(keyset_owned)))
@@ -418,16 +419,16 @@ LoadDefinitions!({
   // \disable@keys[prefix]{keyset}{keys}
   DefMacro!("\\disable@keys[]{}{}", sub[(prefix_opt, keyset_tks, keys_tks)] {
     let sprefix = prefix_opt
-      .map(|p| gullet::do_expand(p).map(|t| t.to_string()))
+      .map(|p| do_expand(p).map(|t| t.to_string()))
       .transpose()?
       .unwrap_or_else(|| "KV".to_string());
-    let skeyset = gullet::do_expand(keyset_tks)?.to_string();
-    let skeys = gullet::do_expand(keys_tks)?.to_string();
+    let skeyset = do_expand(keyset_tks)?.to_string();
+    let skeys = do_expand(keys_tks)?.to_string();
 
     for skey in skeys.split(',') {
       let skey = skey.trim();
       if !skey.is_empty() {
-        latexml_core::keyval::disable_keyval(&sprefix, &skeyset, skey)?;
+        keyval::disable_keyval(&sprefix, &skeyset, skey)?;
       }
     }
     Ok(Tokens!())
@@ -445,12 +446,12 @@ LoadDefinitions!({
   // Tokens-into-Option form used by DefConstructor, so assemble Parameter
   // manually and register via DefParameterTypeWO!.
   DefParameterTypeWO!(OptionalAngle, Parameter {
-    name: arena::pin_static("OptionalAngle"),
+    name: pin_static("OptionalAngle"),
     optional: true,
     reader: reader!(_inner, _extra, {
-      if gullet::if_next(T_OTHER!("<"))? {
-        gullet::read_token()?;
-        gullet::read_until_token(T_OTHER!(">"))
+      if if_next(T_OTHER!("<"))? {
+        read_token()?;
+        read_until_token(T_OTHER!(">"))
       } else {
         Ok(Tokens!())
       }
@@ -589,7 +590,7 @@ LoadDefinitions!({
 
     // expand options for this file
     let opt_cs = T_CS!(s!("\\opt@{file_name}"));
-    let options = gullet::do_expand(Tokens!(opt_cs))?.unlist();
+    let options = do_expand(Tokens!(opt_cs))?.unlist();
     // check if we are inside a class file and fall back (if applicable)
     let is_star = star.is_some() && !xkeyval_is_in_class_file();
 
@@ -612,7 +613,7 @@ LoadDefinitions!({
     if is_star {
       tokens.push(T_BEGIN!());
       tokens.extend(
-        gullet::do_expand(Tokens!(T_CS!("\\XKV@classoptionslist")))?.unlist()
+        do_expand(Tokens!(T_CS!("\\XKV@classoptionslist")))?.unlist()
       );
       tokens.push(T_END!());
     }
@@ -625,7 +626,7 @@ LoadDefinitions!({
   // \ProcessOptionsX@int [*] [prefix]{keysets}[na]
   DefMacro!("\\ProcessOptionsX@int OptionalMatch:* [] {} []", sub[(star, prefix_opt, keysets_tks, skip_opt)] {
     // store the missing macros if defined
-    let hook_missing = if star.is_some() && state::has_meaning(&T_CS!("\\XKV@doxs")) {
+    let hook_missing = if star.is_some() && has_meaning(&T_CS!("\\XKV@doxs")) {
       Some(T_CS!("\\XKV@doxs"))
     } else {
       None
@@ -635,7 +636,7 @@ LoadDefinitions!({
     let is_star = star.is_some() && !xkeyval_is_in_class_file();
 
     let prefix = prefix_opt
-      .map(|p| gullet::do_expand(p).map(|t| t.to_string()))
+      .map(|p| do_expand(p).map(|t| t.to_string()))
       .transpose()?;
     let skip: Vec<String> = skip_opt.map(|s| s.to_string())
       .iter()
@@ -821,10 +822,10 @@ LoadDefinitions!({
 
 // Helper: get the current filename from \@currname.\@currext
 fn xkeyval_get_file_name() -> String {
-  let name = gullet::do_expand(Tokens!(T_CS!("\\@currname")))
+  let name = do_expand(Tokens!(T_CS!("\\@currname")))
     .map(|t| t.to_string())
     .unwrap_or_default();
-  let ext = gullet::do_expand(Tokens!(T_CS!("\\@currext")))
+  let ext = do_expand(Tokens!(T_CS!("\\@currext")))
     .map(|t| t.to_string())
     .unwrap_or_default();
   s!("{name}.{ext}")
@@ -832,7 +833,7 @@ fn xkeyval_get_file_name() -> String {
 
 // Helper: check if we are inside a class file
 fn xkeyval_is_in_class_file() -> bool {
-  let document_class = gullet::do_expand(Tokens!(T_CS!("\\XKV@documentclass")))
+  let document_class = do_expand(Tokens!(T_CS!("\\XKV@documentclass")))
     .map(|t| t.to_string())
     .unwrap_or_default();
   let file_name = xkeyval_get_file_name();
@@ -841,10 +842,10 @@ fn xkeyval_is_in_class_file() -> bool {
 
 // Helper: Setup the XKV@documentclass and XKV@classoptionslist macros
 fn xkeyval_setup_document_class() {
-  let filelist = gullet::do_expand(Tokens!(T_CS!("\\@filelist")))
+  let filelist = do_expand(Tokens!(T_CS!("\\@filelist")))
     .map(|t| t.to_string())
     .unwrap_or_default();
-  let clsext = gullet::do_expand(Tokens!(T_CS!("\\@clsextension")))
+  let clsext = do_expand(Tokens!(T_CS!("\\@clsextension")))
     .map(|t| t.to_string())
     .unwrap_or_default();
 
@@ -858,7 +859,7 @@ fn xkeyval_setup_document_class() {
     // Perl xkeyval.sty.ltxml L254: `if ($ext eq $clsext)` — case-sensitive.
     if ext == clsext {
       let opt_cs = T_CS!(s!("\\opt@{file}"));
-      if state::lookup_meaning(&opt_cs).is_some() {
+      if lookup_meaning(&opt_cs).is_some() {
         let file_tks = Tokens::new(Explode!(file));
         let _ = def_macro(
           T_CS!("\\XKV@documentclass"),
@@ -866,7 +867,7 @@ fn xkeyval_setup_document_class() {
           Some(ExpansionBody::Tokens(file_tks)),
           None,
         );
-        state::let_i(
+        let_i(
           &T_CS!("\\XKV@classoptionslist"),
           &T_CS!("\\@classoptionslist"),
           None,
@@ -878,20 +879,20 @@ fn xkeyval_setup_document_class() {
   // Fallback: check if \@classoptionslist is defined (non-\relax) even without @filelist.
   // In Rust, compiled bindings don't call \@addtofilelist, so @filelist may be empty,
   // but \@classoptionslist is set by input_definitions when loading a .cls.
-  let classoptlist = gullet::do_expand(Tokens!(T_CS!("\\@classoptionslist")))
+  let classoptlist = do_expand(Tokens!(T_CS!("\\@classoptionslist")))
     .map(|t| t.to_string())
     .unwrap_or_default();
   if !classoptlist.is_empty() {
     // We have class options but couldn't find the class in @filelist.
     // Still set up XKV@classoptionslist from \@classoptionslist.
-    state::let_i(
+    let_i(
       &T_CS!("\\XKV@classoptionslist"),
       &T_CS!("\\@classoptionslist"),
       None,
     );
     // Determine document class name from stored value
-    let doc_class = match state::lookup_value("document_class_filename") {
-      Some(Stored::String(sym)) => arena::with(sym, |s| s.to_string()),
+    let doc_class = match lookup_value("document_class_filename") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
       _ => String::new(),
     };
     let _ = def_macro(

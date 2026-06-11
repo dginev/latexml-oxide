@@ -15,7 +15,7 @@ LoadDefinitions!({
   // Use a name without @ that the compile-time tokenizer handles correctly;
   // \let the @ version at runtime when @ has catcode letter.
   DefConditional!("\\iflxrowcolored", {
-    state::lookup_value("tabular_row_color").is_some()
+    lookup_value("tabular_row_color").is_some()
   });
   RawTeX!(r"\let\if@@rowcolored\iflxrowcolored");
 
@@ -25,7 +25,7 @@ LoadDefinitions!({
   //     AssignValue(tabular_row_color => undef, 'global'); });
   DefPrimitive!("\\lxclearrowcolor", sub [_args] {
     merge_font(Font { bg: None, ..Font::default() });
-    state::assign_value("tabular_row_color", Stored::None, Some(Scope::Global));
+    assign_value("tabular_row_color", Stored::None, Some(Scope::Global));
   });
   RawTeX!(r"\let\@clearrowcolor\lxclearrowcolor");
 
@@ -56,11 +56,10 @@ LoadDefinitions!({
   // (Stored has no Color variant). `\@setrowcolor` populates it; we merge
   // its bg into the current font, matching Perl's direct `MergeFont(background => $rc)`.
   DefPrimitive!("\\lxuserowcolor", sub [_args] {
-    if let Some(Stored::Font(rc_font)) = state::lookup_value("tabular_row_color") {
-      if let Some(bg) = rc_font.get_background().copied() {
+    if let Some(Stored::Font(rc_font)) = lookup_value("tabular_row_color")
+      && let Some(bg) = rc_font.get_background().copied() {
         merge_font(fontmap!(bg => bg));
       }
-    }
   });
   RawTeX!(r"\let\@userowcolor\lxuserowcolor");
 
@@ -133,7 +132,7 @@ LoadDefinitions!({
     sub[document, _args, props] {
       // Perl L66: if (my $bg = $props{background}) { ... }
       if let Some(Stored::String(bg_sym)) = props.get("background") {
-        let bg_str = arena::with(*bg_sym, |s| s.to_string());
+        let bg_str = with(*bg_sym, |s| s.to_string());
         let current = document.get_node().clone();
         if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
           document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
@@ -145,21 +144,20 @@ LoadDefinitions!({
     //     $_[1]->setProperty(background => $bg);
     //     AssignValue(tabular_row_color => $bg, 'global'); },
     after_digest => sub[whatsit] {
-      if let Some(font) = lookup_font() {
-        if let Some(bg) = font.get_background() {
+      if let Some(font) = lookup_font()
+        && let Some(bg) = font.get_background() {
           // Constructor body needs a hex string (DOM attribute value)
           let bg_hex = bg.to_attribute();
-          whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+          whatsit.set_property("background", Stored::String(pin(&bg_hex)));
           // Perl stores the Color object in tabular_row_color; Rust stashes it
           // as a Font carrying only the bg slot so \@userowcolor can merge it.
           let bg_font = Font { bg: Some(*bg), ..Font::default() };
-          state::assign_value(
+          assign_value(
             "tabular_row_color",
             Stored::Font(Rc::new(bg_font)),
             Some(Scope::Global),
           );
         }
-      }
       Ok(Vec::new())
     },
     // Perl L73-74: properties => { alignmentSkippable => 1 }, alias => ''.
@@ -180,14 +178,12 @@ LoadDefinitions!({
   DefConstructor!("\\lxsetcellcolor",
     sub[document, _args, props] {
       let current = document.get_node().clone();
-      if let Some(mut td_node) = document.findnode("ancestor-or-self::ltx:td", Some(&current)) {
-        if let Some(Stored::Font(font)) = props.get("font") {
-          if let Some(bg) = font.get_background() {
+      if let Some(mut td_node) = document.findnode("ancestor-or-self::ltx:td", Some(&current))
+        && let Some(Stored::Font(font)) = props.get("font")
+          && let Some(bg) = font.get_background() {
             let bg_hex = bg.to_attribute();
             document.set_attribute(&mut td_node, "backgroundcolor", &bg_hex)?;
           }
-        }
-      }
     },
     properties => { Ok(stored_map!("alignmentSkippable" => true)) },
     alias => "");

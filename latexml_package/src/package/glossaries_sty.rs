@@ -8,10 +8,12 @@
 //!
 //! This Rust file mirrors the Perl 1:1.
 
-use crate::engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element};
-use crate::prelude::*;
-use latexml_core::definition::argument::ArgWrap;
-use latexml_core::digested::DigestedData;
+use latexml_core::{definition::argument::ArgWrap, digested::DigestedData};
+
+use crate::{
+  engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -106,8 +108,8 @@ longplural=\\@glo@longpl\
       let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
       document.open_element("ltx:glossarydefinition",
         Some(string_map!("key" => key, "inlist" => list)), None)?;
-      if let Some(kv_digested) = args[2].as_ref() {
-        if let DigestedData::KeyVals(ref kvs) = *kv_digested.data() {
+      if let Some(kv_digested) = args[2].as_ref()
+        && let DigestedData::KeyVals(ref kvs) = *kv_digested.data() {
           // Sort by role (Perl: `sort keys %$hash`).
           let mut pairs: Vec<(String, ArgWrap)> = kvs.get_pairs()
             .map(|(k, v)| (k.clone(), v.clone())).collect();
@@ -122,7 +124,6 @@ longplural=\\@glo@longpl\
             document.close_element("ltx:glossaryphrase")?;
           }
         }
-      }
       document.close_element("ltx:glossarydefinition")?;
     }
   );
@@ -151,10 +152,10 @@ longplural=\\@glo@longpl\
         } else { None }
       }).unwrap_or_else(|| "main".to_string());
       let title_cs = s!("\\@glotype@{typ}@title");
-      let title = stomach::digest(T_CS!(&*title_cs))
+      let title = digest(T_CS!(&*title_cs))
         .map(|d| d.to_string()).unwrap_or_default();
-      let docid = state::lookup_value("thedocument@ID")
-        .and_then(|v| match v { Stored::String(s) => Some(arena::to_string(s)), _ => None })
+      let docid = lookup_value("thedocument@ID")
+        .and_then(|v| match v { Stored::String(s) => Some(to_string(s)), _ => None })
         .unwrap_or_default();
       let cleaned = typ.chars().filter(|c| c.is_alphanumeric()).collect::<String>();
       let id = if docid.is_empty() {

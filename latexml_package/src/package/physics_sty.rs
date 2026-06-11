@@ -2,8 +2,7 @@
 //! Perl: physics.sty.ltxml (729 lines)
 //!
 //! Faithful port using I_dual infrastructure for semantic markup (XMDual).
-use crate::prelude::*;
-use crate::xmath_helpers::*;
+use crate::{prelude::*, xmath_helpers::*};
 
 /// Perl: %physics_delimiters
 fn physics_delimiters(s: &str) -> Option<&'static str> {
@@ -20,23 +19,23 @@ fn physics_delimiters(s: &str) -> Option<&'static str> {
 fn phys_read_size() -> Result<(bool, Option<Token>)> {
   let mut no_stretch = false;
   let mut size_tok: Option<Token> = None;
-  let next = gullet::read_token()?;
+  let next = read_token()?;
   let mut pending = next;
-  if let Some(ref t) = pending {
-    if t.text == pin!("*") {
-      no_stretch = true;
-      pending = gullet::read_token()?;
-    }
+  if let Some(ref t) = pending
+    && t.text == pin!("*")
+  {
+    no_stretch = true;
+    pending = read_token()?;
   }
   if let Some(ref t) = pending {
     let s = t.to_string();
     if s.starts_with('\\') && (s == "\\big" || s == "\\Big" || s == "\\bigg" || s == "\\Bigg") {
       size_tok = Some(*t);
-      pending = gullet::read_token()?;
+      pending = read_token()?;
     }
   }
   if let Some(t) = pending {
-    gullet::unread_one(t);
+    unread_one(t);
   }
   Ok((no_stretch, size_tok))
 }
@@ -100,11 +99,11 @@ fn phys_read_arg(
   required: bool,
   delimiters: fn(&str) -> Option<&'static str>,
 ) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
-  let next = gullet::read_token()?;
+  let next = read_token()?;
   if let Some(ref t) = next {
     if t.get_catcode() == Catcode::BEGIN {
-      gullet::unread_one(*t);
-      let arg = gullet::read_arg(ExpansionLevel::Off)?;
+      unread_one(*t);
+      let arg = read_arg(ExpansionLevel::Off)?;
       return Ok((Some(arg), None, None));
     }
     let s = t.to_string();
@@ -114,7 +113,7 @@ fn phys_read_arg(
       let mut tokens = Vec::new();
       let mut level = 1i32;
       let mut _blevel = 0i32;
-      while let Some(tok) = gullet::read_token()? {
+      while let Some(tok) = read_token()? {
         let cc = tok.get_catcode();
         if cc == Catcode::END {
           _blevel -= 1;
@@ -137,7 +136,7 @@ fn phys_read_arg(
       }
       return Ok((Some(Tokens::new(tokens)), Some(open_tok), Some(close_tok)));
     }
-    gullet::unread_one(*t);
+    unread_one(*t);
   }
   if required {
     // Error: expected open delimiter
@@ -147,14 +146,14 @@ fn phys_read_arg(
 
 /// Perl: phys_readArg with no delimiters — just TeX {} arg
 fn phys_read_arg_tex() -> Result<Option<Tokens>> {
-  let next = gullet::read_token()?;
+  let next = read_token()?;
   if let Some(ref t) = next {
     if t.get_catcode() == Catcode::BEGIN {
-      gullet::unread_one(*t);
-      let arg = gullet::read_arg(ExpansionLevel::Off)?;
+      unread_one(*t);
+      let arg = read_arg(ExpansionLevel::Off)?;
       return Ok(Some(arg));
     }
-    gullet::unread_one(*t);
+    unread_one(*t);
   }
   Ok(None)
 }
@@ -255,7 +254,7 @@ LoadDefinitions!({
     let open_tks = open;
     let close_tks = close;
     let (no_stretch, size_tok) = phys_read_size()?;
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let arg1 = Tokens::new(vec![i_arg("1")]);
 
     // Reversion: \cs size {#1}
@@ -286,7 +285,7 @@ LoadDefinitions!({
       &[("reversion", reversion)],
       content, presentation, vec![arg],
     )?;
-    gullet::unread(result);
+    unread(result);
   });
 
   DefMacro!("\\pqty", "\\lx@physics@fenced{\\pqty}{}{}{(}{)}");
@@ -324,14 +323,14 @@ LoadDefinitions!({
     let mut lower: Option<Tokens> = None;
     let mut upper: Option<Tokens> = None;
     loop {
-      let next = gullet::read_token()?;
+      let next = read_token()?;
       if let Some(t) = next {
         if lower.is_none() && t.get_catcode() == Catcode::SUB {
-          lower = Some(gullet::read_arg(ExpansionLevel::Off)?);
+          lower = Some(read_arg(ExpansionLevel::Off)?);
         } else if upper.is_none() && t.get_catcode() == Catcode::SUPER {
-          upper = Some(gullet::read_arg(ExpansionLevel::Off)?);
+          upper = Some(read_arg(ExpansionLevel::Off)?);
         } else {
-          gullet::unread_one(t);
+          unread_one(t);
           break;
         }
       } else { break; }
@@ -398,8 +397,8 @@ LoadDefinitions!({
     let open_tks = open;
     let close_tks = close;
     let (no_stretch, size_tok) = phys_read_size()?;
-    let arg1_tok = gullet::read_arg(ExpansionLevel::Off)?;
-    let arg2_tok = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg1_tok = read_arg(ExpansionLevel::Off)?;
+    let arg2_tok = read_arg(ExpansionLevel::Off)?;
     let a1 = Tokens::new(vec![i_arg("1")]);
     let a2 = Tokens::new(vec![i_arg("2")]);
 
@@ -428,7 +427,7 @@ LoadDefinitions!({
       &[("reversion", reversion)],
       content, presentation, vec![arg1_tok, arg2_tok],
     )?;
-    gullet::unread(result);
+    unread(result);
   });
 
   DefMacro!("\\commutator", "\\lx@physics@fencedII{\\commutator}{commutator}{}{[}{]}");
@@ -543,7 +542,7 @@ LoadDefinitions!({
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
     let pfunc = function_tks;
     let (no_stretch, size_tok) = phys_read_size()?;
-    let power = gullet::read_optional(None)?;
+    let power = read_optional(None)?;
     let (arg, open, close) = phys_read_arg(false, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
@@ -711,13 +710,13 @@ LoadDefinitions!({
       let presentation = Tokens::new(pres);
 
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg_tks])?;
-      gullet::unread(result);
+      unread(result);
     } else {
       // Bare — just the operator symbol
       let result = i_dual(
         &[("role", Tokenize!("OPERATOR")), ("reversion", raw_tks)],
         cfunc, function_tks, vec![])?;
-      gullet::unread(result);
+      unread(result);
     }
   });
 
@@ -734,8 +733,8 @@ LoadDefinitions!({
   // Perl: OptionalMatch:* — * means no leading \quad
   // \mbox is used instead of \text for proper text mode handling
   DefPrimitive!("\\qqtext", {
-    let star = gullet::read_match(&[&Tokenize!("*")])?.is_some();
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let star = read_match(&[&Tokenize!("*")])?.is_some();
+    let arg = read_arg(ExpansionLevel::Off)?;
     let mut tks = Vec::new();
     if !star { tks.push(T_CS!("\\quad")); }
     tks.push(T_CS!("\\mbox"));
@@ -744,11 +743,11 @@ LoadDefinitions!({
     tks.push(T_END!());
     tks.push(T_CS!("\\quad"));
   // Intentional — WISDOM #44, see physics umbrella L178.
-    gullet::unread(Tokens::new(tks));
+    unread(Tokens::new(tks));
   });
   DefMacro!("\\qcomma", r",\quad");
   DefPrimitive!("\\qcc", {
-    let star = gullet::read_match(&[&Tokenize!("*")])?.is_some();
+    let star = read_match(&[&Tokenize!("*")])?.is_some();
     let mut tks = Vec::new();
     if !star { tks.push(T_CS!("\\quad")); }
     tks.push(T_CS!("\\mbox"));
@@ -756,7 +755,7 @@ LoadDefinitions!({
     tks.extend(Tokenize!("c.c.").unlist());
     tks.push(T_END!());
     tks.push(T_CS!("\\quad"));
-    gullet::unread(Tokens::new(tks));
+    unread(Tokens::new(tks));
   });
   Let!("\\qq", "\\qqtext");
   Let!("\\qc", "\\qcomma");
@@ -795,7 +794,7 @@ LoadDefinitions!({
     let diff_tks = diff;
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
-    let degree = gullet::read_optional(None)?;
+    let degree = read_optional(None)?;
     let (arg, open, close) = phys_read_arg(false, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
@@ -879,18 +878,18 @@ LoadDefinitions!({
     let cfunc = i_symbol(&[("meaning", Tokenize!(&semantic_str))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
 
-    let inline = gullet::read_match(&[&Tokenize!("*")])?.is_some();
-    let degree = gullet::read_optional(None)?;
-    let tmp1 = gullet::read_arg(ExpansionLevel::Off)?; // 1st required: var1 or expr
+    let inline = read_match(&[&Tokenize!("*")])?.is_some();
+    let degree = read_optional(None)?;
+    let tmp1 = read_arg(ExpansionLevel::Off)?; // 1st required: var1 or expr
     let (tmp2, open, close) = phys_read_arg(false, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
     // For partial derivatives: try to read a 3rd {} arg (2nd var)
     let mut tmp3: Option<Tokens> = None;
-    if semantic_str.starts_with("partial") {
-      if let Some(ref _t2) = tmp2 {
-        if open.is_none() {
+    if semantic_str.starts_with("partial")
+      && let Some(ref _t2) = tmp2
+        && open.is_none() {
           // tmp2 was a {} arg, try for 3rd
           let (t3, o3, _c3) = phys_read_arg(false, |s| {
             if s == "(" { Some(")") } else { None }
@@ -899,8 +898,6 @@ LoadDefinitions!({
             tmp3 = t3;
           }
         }
-      }
-    }
 
     // Determine expr, var, var2
     let (expr, var, var2) = if tmp3.is_some() {
@@ -963,7 +960,7 @@ LoadDefinitions!({
       let mut kv = vec![("reversion", reversion)];
       if !has_expr { kv.push(("role", Tokenize!("DIFFOP"))); }
       let result = i_dual(&kv, content, pres, args)?;
-      gullet::unread(result);
+      unread(result);
     } else {
       // Single-variable derivative
       let a1 = Tokens::new(vec![i_arg("1")]); // expr (or placeholder)
@@ -1047,7 +1044,7 @@ LoadDefinitions!({
       let mut kv = vec![("reversion", reversion)];
       if !has_expr { kv.push(("role", Tokenize!("DIFFOP"))); }
       let result = i_dual(&kv, content, presentation, all_args)?;
-      gullet::unread(result);
+      unread(result);
     }
   });
 
@@ -1066,7 +1063,7 @@ LoadDefinitions!({
   // Perl: \ket{} — |arg⟩ with meaning=ket
   DefPrimitive!("\\ket", {
     let (no_stretch, size_tok) = phys_read_size()?;
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let a1 = Tokens::new(vec![i_arg("1")]);
 
     let mut rev = vec![T_CS!("\\ket")];
@@ -1082,20 +1079,20 @@ LoadDefinitions!({
     let presentation = Tokens::new(pres);
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
-    gullet::unread(result);
+    unread(result);
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
   // Perl: \bra{} — ⟨arg| with meaning=bra, auto-joins to \braket
   DefPrimitive!("\\bra", {
-    let no_stretch = gullet::read_match(&[&Tokenize!("*")])?.is_some();
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let no_stretch = read_match(&[&Tokenize!("*")])?.is_some();
+    let arg = read_arg(ExpansionLevel::Off)?;
     let a1 = Tokens::new(vec![i_arg("1")]);
 
     // Check if followed by \ket → join to braket
-    if gullet::read_match(&[&Tokenize!("\\ket")])?.is_some() {
-      let no_stretch2 = gullet::read_match(&[&Tokenize!("*")])?.is_some();
-      let arg2 = gullet::read_arg(ExpansionLevel::Off)?;
+    if read_match(&[&Tokenize!("\\ket")])?.is_some() {
+      let no_stretch2 = read_match(&[&Tokenize!("*")])?.is_some();
+      let arg2 = read_arg(ExpansionLevel::Off)?;
       let a2 = Tokens::new(vec![i_arg("2")]);
       let final_stretch = !no_stretch && !no_stretch2;
 
@@ -1119,7 +1116,7 @@ LoadDefinitions!({
       let presentation = Tokens::new(pres);
 
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg, arg2])?;
-      gullet::unread(result);
+      unread(result);
     } else {
       // Plain bra
       let mut rev = vec![T_CS!("\\bra")];
@@ -1139,7 +1136,7 @@ LoadDefinitions!({
       let presentation = Tokens::new(pres);
 
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg])?;
-      gullet::unread(result);
+      unread(result);
     }
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
@@ -1151,8 +1148,8 @@ LoadDefinitions!({
     let open_tks = open;
     let middle_tks = middle;
     let close_tks = close;
-    let no_stretch = gullet::read_match(&[&Tokenize!("*")])?.is_some();
-    let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
+    let no_stretch = read_match(&[&Tokenize!("*")])?.is_some();
+    let arg0 = read_arg(ExpansionLevel::Off)?;
     let argx = phys_read_arg_tex()?;
     let arg1 = argx.unwrap_or_else(|| arg0.clone());
     let a1 = Tokens::new(vec![i_arg("1")]);
@@ -1180,7 +1177,7 @@ LoadDefinitions!({
     let presentation = Tokens::new(pres);
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0, arg1])?;
-    gullet::unread(result);
+    unread(result);
   });
 
   DefMacro!("\\innerproduct",
@@ -1193,14 +1190,14 @@ LoadDefinitions!({
   DefPrimitive!("\\expectationvalue", {
     let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
     // ** means stretchy (default), * means no stretch, plain means stretchy
-    let size = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
-      gullet::read_match(&[&Tokenize!("*")])?.is_some()
+    let size = if read_match(&[&Tokenize!("*")])?.is_some() {
+      read_match(&[&Tokenize!("*")])?.is_some()
     } else { true };
     let no_stretch = !size;
     let open_tks = phys_open(no_stretch, &None, Tokenize!("\\langle"));
     let middle_tks = phys_mid(no_stretch, &None, Tokenize!("\\vert"));
     let close_tks = phys_close(no_stretch, &None, Tokenize!("\\rangle"));
-    let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg0 = read_arg(ExpansionLevel::Off)?;
     let arg1 = phys_read_arg_tex()?;
     let a1 = Tokens::new(vec![i_arg("1")]);
 
@@ -1225,7 +1222,7 @@ LoadDefinitions!({
       let presentation = Tokens::new(pres);
       let result = i_dual(&[("reversion", reversion)], content, presentation,
         vec![arg0, arg1_tks.clone(), arg1_tks])?;
-      gullet::unread(result);
+      unread(result);
     } else {
       // Simple: ⟨arg0⟩
       let mut rev = vec![T_CS!("\\expectationvalue")];
@@ -1239,7 +1236,7 @@ LoadDefinitions!({
       pres.extend(close_tks.unlist());
       let presentation = Tokens::new(pres);
       let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0])?;
-      gullet::unread(result);
+      unread(result);
     }
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
@@ -1247,8 +1244,8 @@ LoadDefinitions!({
   // Perl: \matrixelement — ⟨arg1|arg2|arg3⟩
   DefPrimitive!("\\matrixelement", {
     let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
-    let no_stretch = if gullet::read_match(&[&Tokenize!("*")])?.is_some() {
-      gullet::read_match(&[&Tokenize!("*")])?.is_none()
+    let no_stretch = if read_match(&[&Tokenize!("*")])?.is_some() {
+      read_match(&[&Tokenize!("*")])?.is_none()
     } else { false };
     // Default (no `*`) is stretchy (`\left…\middle…\right`), matching Perl's
     // physics.sty.ltxml (all bra-ket delimiters default stretchy="true"). The
@@ -1264,9 +1261,9 @@ LoadDefinitions!({
     let open_tks = phys_open(no_stretch, &None, Tokenize!("\\langle"));
     let middle_tks = phys_mid(no_stretch, &None, Tokenize!("\\vert"));
     let close_tks = phys_close(no_stretch, &None, Tokenize!("\\rangle"));
-    let arg0 = gullet::read_arg(ExpansionLevel::Off)?;
-    let arg1 = gullet::read_arg(ExpansionLevel::Off)?;
-    let arg2 = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg0 = read_arg(ExpansionLevel::Off)?;
+    let arg1 = read_arg(ExpansionLevel::Off)?;
+    let arg2 = read_arg(ExpansionLevel::Off)?;
     let a1 = Tokens::new(vec![i_arg("1")]);
     let a2 = Tokens::new(vec![i_arg("2")]);
     let a3 = Tokens::new(vec![i_arg("3")]);
@@ -1290,7 +1287,7 @@ LoadDefinitions!({
     let presentation = Tokens::new(pres);
 
     let result = i_dual(&[("reversion", reversion)], content, presentation, vec![arg0, arg1, arg2])?;
-    gullet::unread(result);
+    unread(result);
   });
 
   Let!("\\braket", "\\innerproduct");
@@ -1318,7 +1315,7 @@ LoadDefinitions!({
         tks.push(T_OTHER!(if i == j { "1" } else { "0" }));
       }
     }
-    gullet::unread(Tokens::new(tks));
+    unread(Tokens::new(tks));
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
@@ -1335,7 +1332,7 @@ LoadDefinitions!({
         tks.extend_from_slice(item_tks.unlist_ref());
       }
     }
-    gullet::unread(Tokens::new(tks));
+    unread(Tokens::new(tks));
   });
 
   DefMacro!("\\zeromatrix{}{}", "\\xmatrix{0}{#1}{#2}");
@@ -1367,7 +1364,7 @@ LoadDefinitions!({
                    T_OTHER!("0"), T_ALIGN!(), T_OTHER!("-"), T_OTHER!("1")),
       _ => Tokens::default(),
     };
-    gullet::unread(tks);
+    unread(tks);
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
@@ -1381,7 +1378,7 @@ LoadDefinitions!({
   // converts it cleanly).
   DefPrimitive!("\\diagonalmatrix[]{}", sub[(z, diag)] {
     let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
-    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",").into()]);
+    let items = split_tokens(diag, vec![T_OTHER!(",").into()]);
     let n = items.len();
     let mut tks = Vec::new();
     for (i, item) in items.iter().enumerate() {
@@ -1395,7 +1392,7 @@ LoadDefinitions!({
         }
       }
     }
-    gullet::unread(Tokens::new(tks));
+    unread(Tokens::new(tks));
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
@@ -1403,7 +1400,7 @@ LoadDefinitions!({
   // L655-672). Same token-level split as \diagonalmatrix.
   DefPrimitive!("\\antidiagonalmatrix[]{}", sub[(z, diag)] {
     let z_tok = match z { Some(t) if !t.is_empty() => t.unlist(), _ => vec![T_SPACE!()] };
-    let items = crate::engine::base_utilities::split_tokens(diag, vec![T_OTHER!(",").into()]);
+    let items = split_tokens(diag, vec![T_OTHER!(",").into()]);
     let n = items.len();
     let mut tks = Vec::new();
     for i in 0..n {
@@ -1417,7 +1414,7 @@ LoadDefinitions!({
         }
       }
     }
-    gullet::unread(Tokens::new(tks));
+    unread(Tokens::new(tks));
   });
   // Intentional — WISDOM #44, see physics umbrella L178.
 
@@ -1442,7 +1439,7 @@ LoadDefinitions!({
     let env_str = env.to_string();
     let defopen_tks = defopen;
     let defclose_tks = defclose;
-    let _alt = gullet::read_match(&[&Tokenize!("*")])?.is_some();
+    let _alt = read_match(&[&Tokenize!("*")])?.is_some();
 
     let cfunc = semantic_opt.map(|s| i_symbol(&[("meaning", Tokenize!(s))], None));
 

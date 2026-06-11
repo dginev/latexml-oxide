@@ -42,7 +42,7 @@ LoadDefinitions!({
   };
   def_macro(T_CS!("\\unknownplatform"), None,
     Tokenize!(&unknown_name), None)?;
-  state::let_i(&T_CS!("\\platformname"), &T_CS!(platform_cs), None);
+  let_i(&T_CS!("\\platformname"), &T_CS!(platform_cs), None);
 
   // Perl L63-66: one conditional per OS, returning the same-named sub.
   DefConditional!("\\ifwindows", { is_windows });

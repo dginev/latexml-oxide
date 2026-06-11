@@ -1,25 +1,24 @@
-use libxml::tree::Node;
 use std::borrow::Cow;
 
-use crate::common::error::*;
-// use crate::common::font::Font;
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::state::Scope;
-
-use crate::Digested;
-use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
-  PrimitiveClosure, Reversion,
-};
-use crate::document::Document;
-use crate::parameter::Parameters;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
+use libxml::tree::Node;
 
 use super::SizingClosure;
+// use crate::common::font::Font;
+use crate::common::arena::SymHashMap as HashMap;
+use crate::{
+  Digested,
+  common::{error::*, object::Object, store::Stored},
+  definition::{
+    BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
+    PrimitiveClosure, Reversion,
+  },
+  document::Document,
+  parameter::Parameters,
+  state::Scope,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
+};
 
 // DefMath Define a Mathematical symbol or function.
 // There are two sets of cases:

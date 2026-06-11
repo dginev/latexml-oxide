@@ -7,31 +7,34 @@ pub mod math_primitive;
 pub mod primitive;
 pub mod register;
 
+use std::{borrow::Cow, fmt, rc::Rc};
+
 use libxml::tree::Node;
-use std::borrow::Cow;
-use std::fmt;
-use std::rc::Rc;
 
-use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::conditional::ConditionalType;
-
-use self::argument::ArgWrap;
-use self::register::{RegisterType, RegisterValue};
-
-use crate::Digested;
-use crate::document::Document;
-use crate::gullet::Gullet;
-use crate::mouth;
-use crate::parameter::Parameters;
-use crate::state::{Scope, expire_state_unlocked, local_state_unlocked};
-use crate::token::Token;
-use crate::tokens::{NO_TOKENS, Tokens};
-use crate::whatsit::Whatsit;
+use self::{
+  argument::ArgWrap,
+  register::{RegisterType, RegisterValue},
+};
+use crate::{
+  Digested,
+  common::{
+    arena::{self, SymHashMap, SymStr},
+    dimension::Dimension,
+    error::*,
+    font::Font,
+    object::Object,
+    store::Stored,
+  },
+  definition::conditional::ConditionalType,
+  document::Document,
+  gullet::Gullet,
+  mouth,
+  parameter::Parameters,
+  state::{Scope, expire_state_unlocked, local_state_unlocked},
+  token::Token,
+  tokens::{NO_TOKENS, Tokens},
+  whatsit::Whatsit,
+};
 
 pub type ExpansionClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<Tokens>>;
 pub type ConditionalClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Result<bool>>;
@@ -66,7 +69,7 @@ impl ExpansionBody {
   }
 }
 
-impl std::fmt::Debug for ExpansionBody {
+impl fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code)),

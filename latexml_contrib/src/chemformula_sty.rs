@@ -4,7 +4,6 @@
 //! HTML/XML output where the chemistry notation isn't fully styled.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("mhchem");
   // chemformula 4.x is an expl3 LaTeX3 package; the INCLUDE_STYLES

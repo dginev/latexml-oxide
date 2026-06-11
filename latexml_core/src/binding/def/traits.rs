@@ -2,24 +2,19 @@
 //! conversion toolchain
 use std::collections::VecDeque;
 
-use crate::common::arena;
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::color::Color;
-use crate::common::error::*;
-use crate::common::glue::Glue;
-use crate::common::mudimension::MuDimension;
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::store::Stored;
-use crate::definition::argument::ArgWrap;
-use crate::definition::register::*;
-use crate::definition::{Reversion, SizingClosure};
-use crate::keyvals::KeyVals;
-use crate::list::List;
-use crate::state::{Scope, lookup_font};
-use crate::token::*;
-use crate::whatsit::Whatsit;
-use crate::*;
+use crate::{
+  common::{
+    arena, arena::SymHashMap as HashMap, color::Color, error::*, glue::Glue,
+    mudimension::MuDimension, muglue::MuGlue, number::Number, store::Stored,
+  },
+  definition::{Reversion, SizingClosure, argument::ArgWrap, register::*},
+  keyvals::KeyVals,
+  list::List,
+  state::{Scope, lookup_font},
+  token::*,
+  whatsit::Whatsit,
+  *,
+};
 
 /// Build sizing options from a Whatsit's properties, matching Perl's computeSizeStore behavior.
 /// Perl (Box.pm L267-271) adds width, height, depth, vattach, layout from properties to options
@@ -188,11 +183,10 @@ impl IntoOption<Option<SizingClosure>> for &str {
             Dimension::default(),
           ))
         } else {
-          let font = match w.get_property("font").as_deref() { Some(Stored::Font(font)) => {
-            font.clone()
-          } _ => {
-            lookup_font().unwrap()
-          }};
+          let font = match w.get_property("font").as_deref() {
+            Some(Stored::Font(font)) => font.clone(),
+            _ => lookup_font().unwrap(),
+          };
           let options = sizer_options_from_whatsit(w);
           font.compute_boxes_size(&boxes, options)
         }
@@ -201,11 +195,10 @@ impl IntoOption<Option<SizingClosure>> for &str {
       // literal string, get its size with the current font?
       let sized_data = String::from(self);
       Some(Rc::new(move |w| {
-        let font = match *w.get_property("font").unwrap() { Stored::Font(ref font) => {
-          font.clone()
-        } _ => {
-          lookup_font().unwrap()
-        }};
+        let font = match *w.get_property("font").unwrap() {
+          Stored::Font(ref font) => font.clone(),
+          _ => lookup_font().unwrap(),
+        };
         let options = sizer_options_from_whatsit(w);
         font.compute_boxes_size(
           &[Digested::from(Tbox {
@@ -273,7 +266,7 @@ pub trait IntoResultArgWrap<T>: Sized {
   fn into_result_argwrap(self) -> Result<ArgWrap>;
 }
 
-impl IntoResultArgWrap<Result<ArgWrap>> for crate::common::error::Error {
+impl IntoResultArgWrap<Result<ArgWrap>> for Error {
   fn into_result_argwrap(self) -> Result<ArgWrap> { Err(self) }
 }
 
@@ -313,7 +306,7 @@ pub trait IntoDigestedResult<T>: Sized {
 impl IntoDigestedResult<Result<Vec<Digested>>> for () {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Ok(Vec::new()) }
 }
-impl IntoDigestedResult<Result<Vec<Digested>>> for crate::common::error::Error {
+impl IntoDigestedResult<Result<Vec<Digested>>> for Error {
   fn into_digested_result(self) -> Result<Vec<Digested>> { Err(self) }
 }
 impl IntoDigestedResult<Result<Vec<Digested>>> for Result<()> {

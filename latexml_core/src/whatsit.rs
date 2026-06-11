@@ -1,25 +1,26 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::VecDeque, fmt, rc::Rc};
+
 // use std::cell::RefCell;
 use libxml::tree::Node;
-use std::collections::VecDeque;
-use std::fmt;
-use std::rc::Rc;
 
-use crate::common::arena::{self, SymHashMap as HashMap};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::locator::Locator;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::expandable::Expandable;
-use crate::definition::{Definition, FontDirective, Reversion};
-use crate::document::Document;
-use crate::list::List;
-use crate::state::{get_dual_branch, lookup_font};
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
-use crate::{BoxOps, Digested, DigestedData, TexMode};
+use crate::{
+  BoxOps, Digested, DigestedData, TexMode,
+  common::{
+    arena::{self, SymHashMap as HashMap},
+    dimension::Dimension,
+    error::*,
+    font::Font,
+    locator::Locator,
+    object::Object,
+    store::Stored,
+  },
+  definition::{Definition, FontDirective, Reversion, expandable::Expandable},
+  document::Document,
+  list::List,
+  state::{get_dual_branch, lookup_font},
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 /// Represents a digested object that can generate arbitrary elements in the XML Document.
 #[derive(Clone)]
@@ -308,12 +309,11 @@ impl Object for Whatsit {
 
     let mut tokens = Vec::new();
     let defn = &self.definition;
-    if defn.get_reversion_spec().is_none() {
-      if let Some(Stored::Digested(digested)) = self.properties.get("alignment") {
-        if let DigestedData::Alignment(alignment) = digested.data() {
-          return alignment.borrow().revert();
-        }
-      }
+    if defn.get_reversion_spec().is_none()
+      && let Some(Stored::Digested(digested)) = self.properties.get("alignment")
+      && let DigestedData::Alignment(alignment) = digested.data()
+    {
+      return alignment.borrow().revert();
     }
     // Find the appropriate reversion spec;
     // content_reversion or presntation_reversion if on dual branch
@@ -360,12 +360,10 @@ impl Object for Whatsit {
       },
     };
 
-    if !is_closure {
-      if let Some(body) = self.get_body()? {
-        tokens.extend(body.revert()?.unlist());
-        if let Some(trailer) = self.get_trailer() {
-          tokens.extend(trailer.revert()?.unlist());
-        }
+    if !is_closure && let Some(body) = self.get_body()? {
+      tokens.extend(body.revert()?.unlist());
+      if let Some(trailer) = self.get_trailer() {
+        tokens.extend(trailer.revert()?.unlist());
       }
     }
 
@@ -436,57 +434,59 @@ impl BoxOps for Whatsit {
     mut options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
-    match defn.get_sizer() { Some(sizer) => {
-      sizer(self)
-    } _ => if self.has_property("cached_width") || self.has_property("cached_height") {
-      // Perl: when after_digest sets cached dimensions (e.g. image_graphicx_sizer),
-      // compute_size should return them instead of falling through to body/args sum.
-      let w = match self.get_property("cached_width").as_deref() {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      let h = match self.get_property("cached_height").as_deref() {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      let d = match self.get_property("cached_depth").as_deref() {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      Ok((w, h, d))
-    } else {
-      // Nothing specified? use #body if any, else sum all box args
-      // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
-      // which unlists it internally (Font.pm L650-651). We replicate by extracting
-      // properties from the body (mode, vattach, width) into options, then unlisting.
-      let mut boxes = Vec::new();
-      if let Some(body_stored) = self.get_property("body") {
-        if let Stored::Digested(ref body) = *body_stored {
-          // Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
-          for key in &["mode", "vattach", "width"] {
-            if options.get(key).is_none() {
-              if let Some(prop) = body.get_property(key) {
+    match defn.get_sizer() {
+      Some(sizer) => sizer(self),
+      _ => {
+        if self.has_property("cached_width") || self.has_property("cached_height") {
+          // Perl: when after_digest sets cached dimensions (e.g. image_graphicx_sizer),
+          // compute_size should return them instead of falling through to body/args sum.
+          let w = match self.get_property("cached_width").as_deref() {
+            Some(Stored::Dimension(d)) => *d,
+            _ => Dimension::default(),
+          };
+          let h = match self.get_property("cached_height").as_deref() {
+            Some(Stored::Dimension(d)) => *d,
+            _ => Dimension::default(),
+          };
+          let d = match self.get_property("cached_depth").as_deref() {
+            Some(Stored::Dimension(d)) => *d,
+            _ => Dimension::default(),
+          };
+          Ok((w, h, d))
+        } else {
+          // Nothing specified? use #body if any, else sum all box args
+          // Perl: Whatsit.pm L252-255 — if body exists, pass it to computeBoxesSize
+          // which unlists it internally (Font.pm L650-651). We replicate by extracting
+          // properties from the body (mode, vattach, width) into options, then unlisting.
+          let mut boxes = Vec::new();
+          if let Some(body_stored) = self.get_property("body")
+            && let Stored::Digested(ref body) = *body_stored
+          {
+            // Perl: computeBoxesSize reads mode/vattach/width from $boxes before unlisting
+            for key in &["mode", "vattach", "width"] {
+              if options.get(key).is_none()
+                && let Some(prop) = body.get_property(key)
+              {
                 options.insert(key, (*prop).clone());
               }
             }
+            let unlist_boxes = body.unlist();
+            boxes.extend(unlist_boxes);
           }
-          let unlist_boxes = body.unlist();
-          boxes.extend(unlist_boxes);
+          if boxes.is_empty() {
+            // no body
+            for arg in self.args.iter().flatten() {
+              boxes.extend(arg.unlist());
+            }
+          }
+          let font = match *self.get_property("font").unwrap() {
+            Stored::Font(ref sf) => sf.clone(),
+            _ => lookup_font().unwrap(),
+          };
+          font.compute_boxes_size(&boxes, options)
         }
-      }
-      if boxes.is_empty() {
-        // no body
-        for arg in self.args.iter().flatten() {
-          boxes.extend(arg.unlist());
-        }
-      }
-      let font = match *self.get_property("font").unwrap() { Stored::Font(ref sf) => {
-        sf.clone()
-      } _ => {
-        lookup_font().unwrap()
-      }};
-      font.compute_boxes_size(&boxes, options)
-    }}
+      },
+    }
   }
 }
 

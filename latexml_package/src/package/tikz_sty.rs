@@ -40,14 +40,14 @@ LoadDefinitions!({
         continue;
       }
       let loaded_cs = T_CS!(s!("\\tikz@library@{lib}@loaded"));
-      if state::lookup_definition(&loaded_cs)?.is_some() {
+      if lookup_definition(&loaded_cs)?.is_some() {
         continue; // already loaded
       }
       Info!("tikz", lib, &s!("TIKZ LIBRARY {lib}"));
       Let!(loaded_cs.clone(), T_CS!("\\pgfutil@empty"));
       // Save and set catcode for | to OTHER (Perl L42-50)
-      let bar_cc = state::lookup_catcode('|');
-      state::assign_catcode('|', Catcode::OTHER, None);
+      let bar_cc = lookup_catcode('|');
+      assign_catcode('|', Catcode::OTHER, None);
       // Try tikzlibrary*.code.tex first, then pgflibrary*.code.tex
       let tikz_name = s!("tikzlibrary{lib}.code");
       let pgf_name = s!("pgflibrary{lib}.code");
@@ -62,7 +62,7 @@ LoadDefinitions!({
         }
       // Restore catcode for |
       if let Some(cc) = bar_cc {
-        state::assign_catcode('|', cc, None);
+        assign_catcode('|', cc, None);
       }
     }
     Ok(Vec::new())

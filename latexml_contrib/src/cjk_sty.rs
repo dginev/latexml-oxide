@@ -7,11 +7,11 @@ LoadDefinitions!({
   // feed the line-wrapping / height-estimation code correctly instead of
   // accumulating inside an implicit horizontal list.
   DefEnvironment!("{CJK}{}{}", "#body",
-    before_digest => { stomach::leave_horizontal()?; },
+    before_digest => { leave_horizontal()?; },
     mode => "internal_vertical"
   );
   DefEnvironment!("{CJK*}{}{}", "#body",
-    before_digest => { stomach::leave_horizontal()?; },
+    before_digest => { leave_horizontal()?; },
     mode => "internal_vertical"
   );
   DefMacro!("\\CJKfamily{}", "#1");

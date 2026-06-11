@@ -86,7 +86,7 @@ $ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick libkp
 ```
 
 Example for macOS (arm64; the full test suite runs on macOS CI — see
-[docs/PORTABILITY_MACOS_PROBE_2026-06-07.md](docs/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
+[docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md](docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
 
 ```
 $ brew install libxml2 libxslt texlive

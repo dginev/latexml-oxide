@@ -1,9 +1,12 @@
+use std::{
+  borrow::Cow,
+  cell::{Cell, RefCell},
+  collections::VecDeque,
+  rc::Rc,
+  time::Instant,
+};
+
 use once_cell::sync::Lazy;
-use std::borrow::Cow;
-use std::cell::{Cell, RefCell};
-use std::collections::VecDeque;
-use std::rc::Rc;
-use std::time::Instant;
 
 use crate::digested::DigestedData;
 
@@ -54,8 +57,7 @@ pub fn check_timeout() -> Result<()> {
     .ok()
     .and_then(|mut s| s.pending_cycle_fatal.take());
   if let Some((category, msg)) = pending {
-    use crate::common::error::Error as LatexmlError;
-    use crate::common::error::ErrorTarget;
+    use crate::common::error::{Error as LatexmlError, ErrorTarget};
     return Err(LatexmlError {
       target: ErrorTarget::Stomach,
       category,
@@ -63,10 +65,10 @@ pub fn check_timeout() -> Result<()> {
     });
   }
   CONVERSION_DEADLINE.with(|d| {
-    if let Some(deadline) = d.get() {
-      if Instant::now() > deadline {
-        fatal!(Timeout, Convert, "Conversion timed out!");
-      }
+    if let Some(deadline) = d.get()
+      && Instant::now() > deadline
+    {
+      fatal!(Timeout, Convert, "Conversion timed out!");
     }
     Ok(())
   })?;
@@ -74,7 +76,7 @@ pub fn check_timeout() -> Result<()> {
   // 1024-call cadence keeps overhead negligible on the hot path
   // (each call reads /proc/self/statm — a single syscall).
   std::thread_local! {
-    static MEM_TICK: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static MEM_TICK: Cell<usize> = const { Cell::new(0) };
   }
   let tick = MEM_TICK.with(|t| {
     let v = t.get().wrapping_add(1);
@@ -132,7 +134,7 @@ pub fn check_timeout() -> Result<()> {
                   st.localized_box_list.iter().map(|v| v.len()).sum::<usize>(),
                 );
               }
-              if let Ok(g) = crate::gullet::GULLET.try_borrow() {
+              if let Ok(g) = gullet::GULLET.try_borrow() {
                 let pb = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
                 eprintln!("[membudget] gullet pushback={pb} progress={}", g.progress);
               }
@@ -156,23 +158,21 @@ pub fn check_timeout() -> Result<()> {
   Ok(())
 }
 
-use crate::comment::Comment;
-use crate::common::arena;
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::error::*;
-use crate::common::font;
-use crate::common::font::Font;
-use crate::definition::Definition;
-use crate::definition::constructor::Constructor;
-use crate::definition::expandable::Expandable;
-use crate::definition::register::RegisterValue;
-use crate::list::List;
-use crate::mouth::{Mouth, MouthOptions};
-use crate::state::*;
-use crate::tbox::*;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
-use crate::{BoxOps, Digested, TexMode, gullet};
+use crate::{
+  BoxOps, Digested, TexMode,
+  comment::Comment,
+  common::{arena, arena::SymHashMap as HashMap, error::*, font, font::Font},
+  definition::{
+    Definition, constructor::Constructor, expandable::Expandable, register::RegisterValue,
+  },
+  gullet,
+  list::List,
+  mouth::{Mouth, MouthOptions},
+  state::*,
+  tbox::*,
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 static MAXSTACK: usize = 200;
 
@@ -180,20 +180,20 @@ static MAXSTACK: usize = 200;
 #[derive(Default)]
 pub struct Stomach {
   /// currently invoked tokens
-  pub token_stack:    Vec<Token>,
+  pub token_stack:     Vec<Token>,
   /// tracks the tokens of boxing groups(?)
-  pub boxing:         Vec<Token>,
+  pub boxing:          Vec<Token>,
   /// localized box lists for stacked digestion calls
-  localized_box_list: Vec<Vec<Digested>>,
+  localized_box_list:  Vec<Vec<Digested>>,
   /// collects the intermediate boxes resulting from a `digest` call.
-  pub box_list:       Vec<Digested>,
+  pub box_list:        Vec<Digested>,
   /// Windowed cycle detector over the accumulated digest list — the stomach
   /// analog of the gullet's expansion-stream guard. Catches box-accumulation
   /// runaways (a recursive macro/path that digests the same boxes forever, e.g.
   /// pgf's `to [loop]` arc on a pathological picture, 2201.09268) that bypass
   /// the gullet read loop entirely. Engaged only once `box_list` has grown far
   /// past any flushed-document size. See [`crate::cycle_guard`].
-  cycle_guard:        crate::cycle_guard::CycleGuard,
+  cycle_guard:         crate::cycle_guard::CycleGuard,
   /// Set by the guarded box appenders when a stomach guard fires; consumed
   /// and turned into a `Fatal` by `check_timeout` (the next
   /// `Result`-returning checkpoint — `push_box_list` itself returns `()` and
@@ -201,7 +201,7 @@ pub struct Stomach {
   /// breaches report as `Stomach:MemoryBudget` while only genuine detected
   /// cycles report as `Stomach:Recursion` — canvas/telemetry clustering on
   /// `target:category` can tell them apart (PR #249 review P2-8).
-  pending_cycle_fatal: Option<(crate::common::error::ErrorCategory, String)>,
+  pending_cycle_fatal: Option<(ErrorCategory, String)>,
 }
 
 #[thread_local]
@@ -294,71 +294,71 @@ pub fn push_stack_frame(nobox: bool) {
 /// Execute tokens stored on beforeAfterGroup (if any); done before popping a stack frame.
 /// Perl: sub executeBeforeAfterGroup (Stomach.pm lines 286-295)
 pub fn execute_before_after_group() -> Result<()> {
-  if let Some(Stored::VecDequeStored(beforeafter)) = remove_value("beforeAfterGroup") {
-    if !beforeafter.is_empty() {
-      let mut result = Vec::with_capacity(beforeafter.len());
-      for beforeafter_frame in beforeafter.into_iter() {
-        match beforeafter_frame {
-          Stored::Tokens(frametoks) => result.push(frametoks.be_digested()?),
-          Stored::Token(frametok) => result.push(frametok.be_digested()?),
-          _ => {
-            // Unexpected value type in beforeAfterGroup — skip silently
-            // rather than panic (could occur with non-standard TeX constructs)
-          },
-        }
+  if let Some(Stored::VecDequeStored(beforeafter)) = remove_value("beforeAfterGroup")
+    && !beforeafter.is_empty()
+  {
+    let mut result = Vec::with_capacity(beforeafter.len());
+    for beforeafter_frame in beforeafter.into_iter() {
+      match beforeafter_frame {
+        Stored::Tokens(frametoks) => result.push(frametoks.be_digested()?),
+        Stored::Token(frametok) => result.push(frametok.be_digested()?),
+        _ => {
+          // Unexpected value type in beforeAfterGroup — skip silently
+          // rather than panic (could occur with non-standard TeX constructs)
+        },
       }
-      // Perl Stomach.pm:182-183 — every digested item must be Box-like
-      // (TBox / List / Whatsit / Alignment); anything else is a binding
-      // bug. Emit Error per offender; the Box-like items still flow
-      // through to box_list so partial output is preserved.
-      // Perl additionally calls `@result = (makeMisdefinedError(@result))`
-      // collapsing everything to a single error sentinel — we keep
-      // the partial-output behaviour (Rust-side divergence; surfacing
-      // *the* offending item via Error! is what the harness needs to
-      // report, while the rest of the box stream is still useful).
-      //
-      // Implementation note: walk the result list with an index loop
-      // rather than `retain(|d| {…})`. The Error! macro can `return
-      // Err(…)` on the max-errors / runaway-loop guards, and a closure
-      // returning `bool` can't propagate that out — only an explicit
-      // for-loop in the surrounding `Result<()>` body can.
-      let mut filtered = Vec::with_capacity(result.len());
-      for d in result {
-        let is_box = matches!(
-          d.data(),
-          DigestedData::TBox(_)
-            | DigestedData::List(_)
-            | DigestedData::Whatsit(_)
-            | DigestedData::Alignment(_)
-        );
-        if is_box {
-          filtered.push(d);
-        } else {
-          let kind_label = match d.data() {
-            DigestedData::Postponed(_) => "Postponed",
-            DigestedData::KeyVals(_) => "KeyVals",
-            DigestedData::RegisterValue(_) => "RegisterValue",
-            DigestedData::Comment(_) => "Comment",
-            _ => "non-Box",
-          };
-          Error!(
-            "misdefined",
-            "<beforeAfterGroup>",
-            format!(
-              "Expected a Box|List|Whatsit, but got '{}' — dropping",
-              kind_label
-            )
-          );
-        }
-      }
-      // Route the group's digested boxes through the GUARDED appender (not a
-      // raw `box_list.extend`) so the stomach's cycle / count / byte-budget
-      // runaway guards see them. This is the path a grouped drawing loop
-      // (`\@whiledim{…\hbox{…}…}`) flushes through, so bypassing it let a
-      // heavy-box runaway accumulate unguarded until only the Linux RSS cap
-      // caught it. Witness math0102053.
-      extend_box_list(filtered);
     }
+    // Perl Stomach.pm:182-183 — every digested item must be Box-like
+    // (TBox / List / Whatsit / Alignment); anything else is a binding
+    // bug. Emit Error per offender; the Box-like items still flow
+    // through to box_list so partial output is preserved.
+    // Perl additionally calls `@result = (makeMisdefinedError(@result))`
+    // collapsing everything to a single error sentinel — we keep
+    // the partial-output behaviour (Rust-side divergence; surfacing
+    // *the* offending item via Error! is what the harness needs to
+    // report, while the rest of the box stream is still useful).
+    //
+    // Implementation note: walk the result list with an index loop
+    // rather than `retain(|d| {…})`. The Error! macro can `return
+    // Err(…)` on the max-errors / runaway-loop guards, and a closure
+    // returning `bool` can't propagate that out — only an explicit
+    // for-loop in the surrounding `Result<()>` body can.
+    let mut filtered = Vec::with_capacity(result.len());
+    for d in result {
+      let is_box = matches!(
+        d.data(),
+        DigestedData::TBox(_)
+          | DigestedData::List(_)
+          | DigestedData::Whatsit(_)
+          | DigestedData::Alignment(_)
+      );
+      if is_box {
+        filtered.push(d);
+      } else {
+        let kind_label = match d.data() {
+          DigestedData::Postponed(_) => "Postponed",
+          DigestedData::KeyVals(_) => "KeyVals",
+          DigestedData::RegisterValue(_) => "RegisterValue",
+          DigestedData::Comment(_) => "Comment",
+          _ => "non-Box",
+        };
+        Error!(
+          "misdefined",
+          "<beforeAfterGroup>",
+          format!(
+            "Expected a Box|List|Whatsit, but got '{}' — dropping",
+            kind_label
+          )
+        );
+      }
+    }
+    // Route the group's digested boxes through the GUARDED appender (not a
+    // raw `box_list.extend`) so the stomach's cycle / count / byte-budget
+    // runaway guards see them. This is the path a grouped drawing loop
+    // (`\@whiledim{…\hbox{…}…}`) flushes through, so bypassing it let a
+    // heavy-box runaway accumulate unguarded until only the Linux RSS cap
+    // caught it. Witness math0102053.
+    extend_box_list(filtered);
   }
   Ok(())
 }
@@ -391,7 +391,7 @@ pub fn current_frame_message() -> String {
     // SET mode in CURRENT frame ?
     Cow::Owned(s!(
       "mode-switch to {}",
-      crate::state::lookup_string_from_sym(crate::pin!("MODE"))
+      lookup_string_from_sym(crate::pin!("MODE"))
     ))
   } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // Current frame is a non-boxing group?
@@ -408,7 +408,7 @@ pub fn current_frame_message() -> String {
   // Render the initiator's source locator as a readable "file; line N"
   // (the raw Stored Debug is redacted to `Stored::Locator[[...]]`, which is
   // useless for diagnosing where an unbalanced group opened).
-  let locator = match crate::state::lookup_value("groupInitiatorLocator") {
+  let locator = match lookup_value("groupInitiatorLocator") {
     Some(Stored::Locator(loc)) => s!("at {}", loc),
     Some(other) => other.to_string(),
     None => String::new(),
@@ -439,8 +439,8 @@ pub fn egroup() -> Result<()> {
   if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic for cluster investigation (project_explsyntax_midload.md).
     if *TRACE_BOUND_MODE {
-      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
       let cur_tok = get_current_token()
         .map(|t| t.to_string())
         .unwrap_or_default();
@@ -456,7 +456,7 @@ pub fn egroup() -> Result<()> {
       get_current_token().unwrap_or_else(|| T_CS!("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
-        crate::state::lookup_string_from_sym(crate::pin!("MODE")),
+        lookup_string_from_sym(crate::pin!("MODE")),
         current_frame_message()
       )
     );
@@ -477,7 +477,7 @@ pub fn egroup() -> Result<()> {
 /// Begin a new level of binding by pushing a new stack frame.
 pub fn begingroup() {
   if *TRACE_BOUND_MODE {
-    let depth = crate::state::get_frame_depth();
+    let depth = get_frame_depth();
     let loc = gullet::get_locator();
     eprintln!("[trace] begingroup pre-depth={depth} at {}", loc);
   }
@@ -487,7 +487,7 @@ pub fn begingroup() {
 /// undoing whatever bindings appeared there.
 pub fn endgroup() -> Result<()> {
   if *TRACE_BOUND_MODE {
-    let depth = crate::state::get_frame_depth();
+    let depth = get_frame_depth();
     let bound = is_value_bound("BOUND_MODE", Some(0));
     let loc = gullet::get_locator();
     let tok = get_current_token().unwrap_or_else(|| T_CS!("\\?"));
@@ -521,9 +521,9 @@ pub fn endgroup() -> Result<()> {
   if interpreting {
     // Diagnostic: capture band-aid suppression occurrences for analysis.
     if *TRACE_BOUND_MODE && is_value_bound("BOUND_MODE", Some(0)) {
-      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-      let frame_keys = crate::state::dump_top_frame_keys();
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let frame_keys = dump_top_frame_keys();
       eprintln!(
         "[trace] endgroup SUPPRESSED-ERR: BOUND_MODE={bound} MODE={mode} frame0_keys={frame_keys:?}",
       );
@@ -532,8 +532,8 @@ pub fn endgroup() -> Result<()> {
   } else if is_value_bound("BOUND_MODE", Some(0)) {
     // Diagnostic: dump BOUND_MODE binding context for cluster investigation.
     if *TRACE_BOUND_MODE {
-      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-      let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
+      let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
       eprintln!(
         "[trace] endgroup ERROR: BOUND_MODE={bound} MODE={mode}\n{}",
         std::backtrace::Backtrace::force_capture()
@@ -548,7 +548,7 @@ pub fn endgroup() -> Result<()> {
         .unwrap_or_else(|| String::from("\\?")),
       s!(
         "Attempt to close a group that switched to mode {}; {}",
-        crate::state::lookup_string_from_sym(crate::pin!("MODE")),
+        lookup_string_from_sym(crate::pin!("MODE")),
         current_frame_message()
       )
     );
@@ -579,7 +579,7 @@ pub fn endgroup() -> Result<()> {
 /// Useful for environments, where the group has already been established.
 /// (presumably, in the long run, modes & groups should be much less coupled)
 pub fn set_mode(mode: &str) -> Result<()> {
-  let prevmode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+  let prevmode = lookup_string_from_sym(crate::pin!("MODE"));
   let ismath = mode.ends_with("math");
   // Perl: beginMode maps to internal mode names, but set_mode stores as-is
   // We also set BOUND_MODE so end_mode can find it
@@ -720,13 +720,13 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     // versions of this file used a lax value-only check as a workaround
     // for the 1112.6246 halign frame-balance issue, since fixed in
     // d162803d2.)
-    let current_bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+    let current_bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
     let bound_on_top = is_value_bound("BOUND_MODE", Some(0));
     let make_mode_error = || {
       let message = s!(
         "Attempt to end mode `{}` in `{}`",
         mode,
-        crate::state::lookup_string_from_sym(crate::pin!("MODE"))
+        lookup_string_from_sym(crate::pin!("MODE"))
       );
       let category = match get_current_token() {
         Some(ref token) => token.to_string(),
@@ -743,7 +743,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
           .unwrap_or_default();
         eprintln!(
           "[trace] end_mode ERROR: mode={mode} cur_tok={cur_tok} bound_on_top={bound_on_top} current_bound={current_bound} depth={}\n  {}\n{}",
-          crate::state::get_frame_depth(),
+          get_frame_depth(),
           current_frame_message(),
           std::backtrace::Backtrace::force_capture()
         );
@@ -758,7 +758,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
       if noframe {
         // No pop, but at least do beforeAfterGroup
         execute_before_after_group()?;
-      } else if crate::state::current_frame_locked() {
+      } else if current_frame_locked() {
         // After `leave_horizontal_internal` the only frame left is the LOCKED
         // bottom frame — there is no mode-switch frame to pop, so
         // `pop_stack_frame` → `pop_frame` would FATAL ("pop last locked stack
@@ -787,7 +787,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
 /// Can only switch from vertical|internal_vertical to horizontal.
 /// Perl: sub enterHorizontal
 pub fn enter_horizontal() {
-  let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+  let mode = lookup_string_from_sym(crate::pin!("MODE"));
   if mode.ends_with("vertical") {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
   } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
@@ -804,8 +804,8 @@ pub fn enter_horizontal() {
 /// Resume vertical mode by executing \par, in TeX-like fashion.
 /// Perl: sub leaveHorizontal
 pub fn leave_horizontal() -> Result<()> {
-  let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-  let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
   if mode == "horizontal" && bound.ends_with("vertical") {
     // This needs to be an invisible, and slightly gentler, \par
     assign_value("INTERNAL_PAR", true, Some(Scope::Local));
@@ -820,8 +820,8 @@ pub fn leave_horizontal() -> Result<()> {
 /// Used within argument digestion, e.g. endMode for vertical modes.
 /// Perl: sub leaveHorizontal_internal
 pub fn leave_horizontal_internal() {
-  let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
-  let bound = crate::state::lookup_string_from_sym(crate::pin!("BOUND_MODE"));
+  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
   if mode == "horizontal" && bound.ends_with("vertical") {
     repack_horizontal();
     assign_value_inplace_sym(crate::pin!("MODE"), arena::pin(&bound));
@@ -908,7 +908,7 @@ pub fn new_local_box_list() {
     && stomach.pending_cycle_fatal.is_none()
   {
     stomach.pending_cycle_fatal = Some((
-      crate::common::error::ErrorCategory::MemoryBudget,
+      ErrorCategory::MemoryBudget,
       s!(
         "Boxing-stack runaway: box nesting depth exceeded {} \
          (unbounded \\hbox/\\setbox nesting)",
@@ -958,7 +958,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     // platform-independent `token_limit`.
     if st.box_list.len() > STOMACH_BOX_HARD_CAP {
       st.pending_cycle_fatal = Some((
-        crate::common::error::ErrorCategory::MemoryBudget,
+        ErrorCategory::MemoryBudget,
         s!(
           "Box-list runaway: {} accumulated boxes exceeded the hard cap of {} \
            (unbounded digestion with no detectable cycle)",
@@ -985,7 +985,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
       let est = estimate_box_list_bytes(&st.box_list);
       if est > STOMACH_BOX_BYTES_BUDGET {
         st.pending_cycle_fatal = Some((
-          crate::common::error::ErrorCategory::MemoryBudget,
+          ErrorCategory::MemoryBudget,
           s!(
             "Box-list memory runaway: ~{} MB estimated across {} boxes exceeded \
              the {} MB internal budget (unbounded accumulation)",
@@ -1000,7 +1000,7 @@ fn cycle_guard_record(st: &mut Stomach, d: &Digested) {
     let fp = d.cycle_fingerprint();
     if let Some(period) = st.cycle_guard.push(fp) {
       st.pending_cycle_fatal = Some((
-        crate::common::error::ErrorCategory::Recursion,
+        ErrorCategory::Recursion,
         s!(
           "Infinite digestion loop: a window of {} box(es) repeated {}+ times \
            while the box list grew past {}",
@@ -1141,7 +1141,7 @@ pub fn digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
   gullet::reading_from_mouth(Mouth::default(), || {
     gullet::unread(tokens);
     clear_prefixes(); // prefixes shouldn't apply here.
-    let mode = if crate::state::lookup_bool_sym(crate::pin!("IN_MATH")) {
+    let mode = if lookup_bool_sym(crate::pin!("IN_MATH")) {
       TexMode::Math
     } else {
       TexMode::Text
@@ -1226,26 +1226,26 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
     let invoked = invoke_token(&token)?;
     extend_box_list(invoked);
 
-    if let Some(ref terminal) = terminal_opt {
-      if &token == terminal {
-        found_terminal = true;
-        break;
-      }
+    if let Some(ref terminal) = terminal_opt
+      && &token == terminal
+    {
+      found_terminal = true;
+      break;
     }
     if init_depth > stomach!().boxing.len() {
       break;
     }
   }
 
-  if let Some(ref terminal) = terminal_opt {
-    if !found_terminal {
-      let message = s!(
-        "body should have ended with {:?}. current body started at {:?}",
-        terminal,
-        start_location
-      );
-      Warn!("expected", terminal, message);
-    }
+  if let Some(ref terminal) = terminal_opt
+    && !found_terminal
+  {
+    let message = s!(
+      "body should have ended with {:?}. current body started at {:?}",
+      terminal,
+      start_location
+    );
+    Warn!("expected", terminal, message);
   }
   // and add a Dummy `trailer' if none explicit.
   if !found_token {
@@ -1336,10 +1336,10 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
           }
         } else {
           // Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
-          if token.get_catcode() == Catcode::ALIGN {
-            if let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax")) {
-              assign_meaning(&token, relax_meaning, Some(Scope::Local));
-            }
+          if token.get_catcode() == Catcode::ALIGN
+            && let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax"))
+          {
+            assign_meaning(&token, relax_meaning, Some(Scope::Local));
           }
           let message = s!(
             "The token {:?} (catcode {:?}) should never reach Stomach!",
@@ -1394,10 +1394,10 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         // Osaki`) emit one Error per occurrence; Perl emits ONE total
         // because of the LOCAL `\relax` rebinding. Self-deactivate here
         // too so subsequent `&` invocations no-op.
-        if token.get_catcode() == Catcode::ALIGN {
-          if let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax")) {
-            assign_meaning(&token, relax_meaning, Some(Scope::Local));
-          }
+        if token.get_catcode() == Catcode::ALIGN
+          && let Some(relax_meaning) = lookup_meaning(&T_CS!("\\relax"))
+        {
+          assign_meaning(&token, relax_meaning, Some(Scope::Local));
         }
         result = meaning.invoke_primitive()?;
         if !meaning.is_prefix() {
@@ -1538,18 +1538,20 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
   // fallback for the origin-less case (`\today`). See SOURCE_PROVENANCE §3.1.3.
   #[cfg(feature = "token-locators")]
   let origin_loc: Option<crate::common::locator::Locator> =
-    crate::token::get_token_origin(meaning.loc).filter(|o| !o.inherited).map(|o| {
-      crate::common::arena::with(o.source, |s| {
-        crate::common::locator::Locator::new(s, o.line, o.col, o.line, o.col)
-      })
-    });
+    crate::token::get_token_origin(meaning.loc)
+      .filter(|o| !o.inherited)
+      .map(|o| {
+        crate::common::arena::with(o.source, |s| {
+          crate::common::locator::Locator::new(s, o.line, o.col, o.line, o.col)
+        })
+      });
   #[cfg(not(feature = "token-locators"))]
   let origin_loc: Option<crate::common::locator::Locator> = None;
   match cc {
     Catcode::SPACE => {
       clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
       // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
-      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
       if mode.ends_with("math") || mode.ends_with("vertical") {
         Ok(None)
       } else {
@@ -1586,10 +1588,10 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       // TODO: Use for chars where font-encoding glyph differs from input.
       // Perl L248-257: if IN_MATH && mathcode → decodeMathChar (math box)
       // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
-      if crate::state::lookup_bool_sym(crate::pin!("IN_MATH")) {
-        if let Some(mathcode) = lookup_mathcode_sym(meaning.get_sym()) {
-          return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
-        }
+      if lookup_bool_sym(crate::pin!("IN_MATH"))
+        && let Some(mathcode) = lookup_mathcode_sym(meaning.get_sym())
+      {
+        return crate::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
       }
       // Fallthrough: either not in math, or in math but no mathcode
       enter_horizontal();

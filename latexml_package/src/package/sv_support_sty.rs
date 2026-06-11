@@ -20,51 +20,88 @@ LoadDefinitions!({
   DefMacro!("\\mailname", "\\textit{Correspondence}");
 
   // Single \author containing multiple authors separated by \and  (Perl PR #2767)
-  DefMacro!("\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}");
+  DefMacro!(
+    "\\author{}",
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}"
+  );
   // Single \institute containing name \at institute \and ... repeating.
   // Note that the name corresponds to (but probably won't match exactly!) an author name
   // We'll want some kind of fuzzy matching of labels to attach institute to author
-  DefMacro!("\\institute{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@sv@institute}{\\and\\And}{#1}");
+  DefMacro!(
+    "\\institute{}",
+    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@sv@institute}{\\and\\And}{#1}"
+  );
   Let!("\\at", "\\relax");
   DefMacro!("\\lx@sv@institute{}", "\\lx@sv@institute@#1\\at\\done");
-  DefMacro!("\\lx@sv@institute@ Until:\\at Until:\\done",
-    "\\ifx.#2.\\lx@add@affiliation{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{#2}\\fi");
+  DefMacro!(
+    "\\lx@sv@institute@ Until:\\at Until:\\done",
+    "\\ifx.#2.\\lx@add@affiliation{#1}\\else\\lx@add@affiliation[label={fuzzy:#1}]{#2}\\fi"
+  );
   // for older versions?
-  DefMacro!("\\inst{}", "\\lx@request@frontmatter@annotation[affiliation]{#1}");
+  DefMacro!(
+    "\\inst{}",
+    "\\lx@request@frontmatter@annotation[affiliation]{#1}"
+  );
 
   // \email should be used within \institute, (but CAN be used anywhere; it only formats)
-  DefMacro!("\\email Semiverbatim", "\\lx@add@email[name={\\emailname: }]{#1}");
+  DefMacro!(
+    "\\email Semiverbatim",
+    "\\lx@add@email[name={\\emailname: }]{#1}"
+  );
 
   // Are these actually defined in svjour?
-  DefMacro!("\\address{}", "\\lx@add@contact[annotate=new,role=address]{#1}");
-  DefMacro!("\\affil OptionalSemiverbatim {}",
-    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}");
+  DefMacro!(
+    "\\address{}",
+    "\\lx@add@contact[annotate=new,role=address]{#1}"
+  );
+  DefMacro!(
+    "\\affil OptionalSemiverbatim {}",
+    "\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}"
+  );
   // These add contacts to most recent author
   // The optional arguments here are a sort of prefix to the footnote.
-  DefMacro!("\\mail {}",                 "\\lx@add@contact[role=address,name={\\mailname: }]{#1}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={\\ifx.#1.URL:~\\else#1\\fi}]{#2}");
-  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
-  DefMacro!("\\orcid[]{}",               "\\lx@add@contact[role=orcid,name={#1}]{#2}"); // ?
+  DefMacro!(
+    "\\mail {}",
+    "\\lx@add@contact[role=address,name={\\mailname: }]{#1}"
+  );
+  DefMacro!(
+    "\\homepage[] Semiverbatim",
+    "\\lx@add@contact[role=url,name={\\ifx.#1.URL:~\\else#1\\fi}]{#2}"
+  );
+  DefMacro!(
+    "\\thanks[]{}",
+    "\\lx@add@contact[role=thanks,name={#1}]{#2}"
+  );
+  DefMacro!("\\orcid[]{}", "\\lx@add@contact[role=orcid,name={#1}]{#2}"); // ?
 
   DefMacro!("\\keywordname", "\\textbf{Keywords}");
-  DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordname:~}]{#1}");
+  DefMacro!(
+    "\\keywords{}",
+    "\\lx@add@keywords[name={\\keywordname:~}]{#1}"
+  );
   DefMacro!(
     "\\subclassname",
     "\\textbf{Mathematics Subject Classification (2000)}"
   );
-  DefMacro!("\\subclass{}",
-    "\\lx@add@classification[scheme=MSC,name={\\subclassname: }]{#1}");
+  DefMacro!(
+    "\\subclass{}",
+    "\\lx@add@classification[scheme=MSC,name={\\subclassname: }]{#1}"
+  );
   DefMacro!("\\CRclassname", "\\textbf{CR Subject Classification}");
-  DefMacro!("\\CRclass{}",
-    "\\lx@add@classification[scheme=CR,name={\\CRclassname: }]{#1}");
+  DefMacro!(
+    "\\CRclass{}",
+    "\\lx@add@classification[scheme=CR,name={\\CRclassname: }]{#1}"
+  );
   DefMacro!("\\ESMname", "\\textbf{Electronic Supplementary Material}");
-  DefMacro!("\\ESM{}",
-    "\\lx@add@pubnote[role=supplemental,name={\\ESMname: }]{#1}");
+  DefMacro!(
+    "\\ESM{}",
+    "\\lx@add@pubnote[role=supplemental,name={\\ESMname: }]{#1}"
+  );
   DefMacro!("\\PACSname", "\\textbf{PACS}");
-  DefMacro!("\\PACS{}",
-    "\\lx@add@classification[scheme=pacs,name={\\PACSname: }]{#1}");
+  DefMacro!(
+    "\\PACS{}",
+    "\\lx@add@classification[scheme=pacs,name={\\PACSname: }]{#1}"
+  );
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role=node]{#1}");
   DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
   DefMacro!("\\offprints{}", "\\lx@add@pubnote[role=preprint]{#1}");
@@ -87,7 +124,7 @@ LoadDefinitions!({
   DefMacro!("\\abstract OptionalMatch:*", sub[(star)] {
     if star.is_some() {
       vec![T_CS!("\\lx@ignore@sv@abstract")]
-    } else if gullet::if_next(T_BEGIN!())? {
+    } else if if_next(T_BEGIN!())? {
       vec![T_CS!("\\@abstract@with@arg")]
     } else {
       vec![T_CS!("\\@orig@abstract")]
@@ -134,8 +171,10 @@ LoadDefinitions!({
   def_macro_noop("\\combirun")?;
   // \combirunning{text} — Springer running-head combination text.
   // Surpass Perl gobble: preserve as ltx:note.
-  DefMacro!("\\combirunning{}",
-    "\\lx@add@frontmatter{ltx:note}[role=combirunning]{#1}");
+  DefMacro!(
+    "\\combirunning{}",
+    "\\lx@add@frontmatter{ltx:note}[role=combirunning]{#1}"
+  );
 
   def_macro_noop("\\validfor")?;
   def_macro_noop("\\ClassInfoNoLine{}{}")?;
@@ -159,10 +198,10 @@ LoadDefinitions!({
 
   // Perl L122-123: theorem head swap toggles
   DefPrimitive!("\\normalthmheadings", {
-    state::assign_value("thm@swap", 0i64, Scope::Global);
+    assign_value("thm@swap", 0i64, Scope::Global);
   });
   DefPrimitive!("\\reversethmheadings", {
-    state::assign_value("thm@swap", 1i64, Scope::Global);
+    assign_value("thm@swap", 1i64, Scope::Global);
   });
 
   // \spnewtheorem*{env}[numberedlike]{caption}[within]{capfont}{bodyfont}
@@ -172,7 +211,7 @@ LoadDefinitions!({
   // through `\edef`/`\ifx`/`\expandafter` (verified 2026-04-23 across
   // LaTeXML/lib + ar5iv-bindings).
   DefPrimitive!("\\spnewtheorem OptionalMatch:* {}[]{}[] {}{}", sub[(flag, thmset, otherthmset, typ, reset, _capfont, _bodyfont)] {
-    crate::engine::latex_constructs::define_new_theorem(
+    engine::latex_constructs::define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
       otherthmset.filter(|t| !t.is_empty()),
@@ -305,7 +344,7 @@ LoadDefinitions!({
   DefMacro!("\\proofname", "Proof");
   // \spnewtheorem*{proof}{Proof}{\itshape}{\rmfamily}
   // starred (*) = unnumbered = flag=Some
-  crate::engine::latex_constructs::define_new_theorem(
+  engine::latex_constructs::define_new_theorem(
     Some(Tokens!(T_OTHER!("*"))), // starred
     Tokenize!("proof"),           // environment name
     None,                         // no shared counter

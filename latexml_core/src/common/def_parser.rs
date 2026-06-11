@@ -1,13 +1,16 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use crate::common::arena::{self};
-use crate::common::error::*;
-
-use crate::mouth;
-use crate::parameter::{Parameter, Parameters};
-use crate::token::*;
-use crate::tokens::Tokens;
+use crate::{
+  common::{
+    arena::{self},
+    error::*,
+  },
+  mouth,
+  parameter::{Parameter, Parameters},
+  token::*,
+  tokens::Tokens,
+};
 
 static CSNAME_MACRO_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\csname\s+(.*)\\endcsname").unwrap());
@@ -20,8 +23,7 @@ static CSNAME_MACRO_RE: Lazy<Regex> =
 // strings bypass the tokenizer, so this is purely a string-parsing
 // concern. Witness: l3draw_sty stubs would previously fail with
 // "Unrecognized parameter type with name '_begin', spec '_begin:'".
-static CS_RE: Lazy<Regex> =
-  Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@_]+(?::[a-zA-Z]*)?)").unwrap());
+static CS_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\[a-zA-Z@_]+(?::[a-zA-Z]*)?)").unwrap());
 static SINGLE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\\.)").unwrap());
 static ACTIVE_CHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(.)").unwrap());
 
@@ -86,24 +88,27 @@ pub fn parse_parameters(
   //         | word (":" extra)? \s*      (named type, extra |-split)   [nonempty]
   //         | any-single-char            (literal Token; spaces too — each
   //                                       space is its own Token, faithfully)
-  use winnow::combinator::{delimited, opt, preceded};
-  use winnow::prelude::*;
-  use winnow::token::{any, take_while};
+  use winnow::{
+    combinator::{delimited, opt, preceded},
+    prelude::*,
+    token::{any, take_while},
+  };
 
-  fn ws0(input: &mut &str) -> winnow::ModalResult<()> {
-    take_while(0.., |c: char| c.is_whitespace()).void().parse_next(input)
+  fn ws0(input: &mut &str) -> ModalResult<()> {
+    take_while(0.., |c: char| c.is_whitespace())
+      .void()
+      .parse_next(input)
   }
   /// `{inner}` / `[inner]` group: returns the inner slice; trailing \s* eaten.
-  fn group<'a>(open: char, close: char) -> impl FnMut(&mut &'a str) -> winnow::ModalResult<&'a str> {
+  fn group<'a>(open: char, close: char) -> impl FnMut(&mut &'a str) -> ModalResult<&'a str> {
     move |input: &mut &'a str| {
-      let inner = delimited(open, take_while(0.., move |c| c != close), close)
-        .parse_next(input)?;
+      let inner = delimited(open, take_while(0.., move |c| c != close), close).parse_next(input)?;
       ws0(input)?;
       Ok(inner)
     }
   }
   /// `word(:extra)?` with word ∈ \w+ or a bare nonempty `:extra`; \s* eaten.
-  fn paramspec<'a>(input: &mut &'a str) -> winnow::ModalResult<(&'a str, Option<&'a str>)> {
+  fn paramspec<'a>(input: &mut &'a str) -> ModalResult<(&'a str, Option<&'a str>)> {
     let word = take_while(0.., |c: char| c.is_alphanumeric() || c == '_').parse_next(input)?;
     let extra = opt(preceded(
       ':',
@@ -111,7 +116,9 @@ pub fn parse_parameters(
     ))
     .parse_next(input)?;
     if word.is_empty() && extra.is_none() {
-      return Err(winnow::error::ErrMode::Backtrack(winnow::error::ContextError::new()));
+      return Err(winnow::error::ErrMode::Backtrack(
+        winnow::error::ContextError::new(),
+      ));
     }
     ws0(input)?;
     Ok((word, extra))
@@ -125,80 +132,114 @@ pub fn parse_parameters(
     // (`delimited` advances past its opening token before failing otherwise —
     // e.g. a lone "{" from the non-nesting inner of "{{}}").
     let mut probe;
-    let mut p: Parameter = match {
+    let res = {
       probe = *input;
-      group('{', '}').parse_next(&mut probe).inspect(|_| *input = probe)
-    } { Ok(inner_spec) => {
-      // Plain (possibly typed-inner) braced group, spec keeps its braces.
-      let inner: Option<Parameters> = if inner_spec.is_empty() {
-        None
-      } else {
-        parse_parameters(inner_spec, cs, init_flag)?
-      };
-      Parameter {
-        name: arena::pin_static("Plain"),
-        spec: arena::pin(format!("{{{inner_spec}}}")),
-        inner: inner.map(|ps| ps.into()).unwrap_or_default(),
-        ..Parameter::default()
-      }
-    } _ => { match {
-      probe = *input;
-      group('[', ']').parse_next(&mut probe).inspect(|_| *input = probe)
-    } { Ok(inner_spec) => {
-      let spec = arena::pin(format!("[{inner_spec}]"));
-      if let Some(default_str) = inner_spec.strip_prefix("Default:") {
-        let extra = if default_str.is_empty() {
-          vec![]
+      group('{', '}')
+        .parse_next(&mut probe)
+        .inspect(|_| *input = probe)
+    };
+    let mut p: Parameter = match res {
+      Ok(inner_spec) => {
+        // Plain (possibly typed-inner) braced group, spec keeps its braces.
+        let inner: Option<Parameters> = if inner_spec.is_empty() {
+          None
         } else {
-          vec![crate::mouth::tokenize_internal(default_str)]
+          parse_parameters(inner_spec, cs, init_flag)?
         };
-        Parameter { name: arena::pin_static("Optional"), spec, extra, ..Parameter::default() }
-      } else if !inner_spec.is_empty() {
         Parameter {
-          name: arena::pin_static("Optional"),
-          spec,
-          inner: parse_parameters(inner_spec, cs, init_flag)?
-            .map(|ps| ps.into())
-            .unwrap_or_default(),
+          name: arena::pin_static("Plain"),
+          spec: arena::pin(format!("{{{inner_spec}}}")),
+          inner: inner.map(|ps| ps.into()).unwrap_or_default(),
           ..Parameter::default()
         }
-      } else {
-        Parameter { name: arena::pin_static("Optional"), spec, ..Parameter::default() }
-      }
-    } _ => { match {
-      probe = *input;
-      paramspec.parse_next(&mut probe).inspect(|_| *input = probe)
-    } { Ok((word, extra_opt)) => {
-      let spec_str = match extra_opt {
-        Some(extra) => format!("{word}:{extra}"),
-        None => word.to_string(),
-      };
-      let extra: Vec<Tokens> = match extra_opt {
-        None | Some("") => Vec::new(),
-        Some(extra_str) => extra_str
-          .split('|')
-          .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
-          .collect(),
-      };
-      Parameter {
-        name: arena::pin(word),
-        spec: arena::pin(&spec_str),
-        extra,
-        ..Parameter::default()
-      }
-    } _ => {
-      // Literal single char (incl. each whitespace char) as a Token parameter.
-      let ch = any.parse_next(input).map_err(|_: winnow::error::ErrMode<winnow::error::ContextError>| {
-        Error::from(s!("parse_parameters: unreadable prototype tail for {:?}", cs))
-      })?;
-      let ch_token = CharToken!(ch, Catcode::OTHER);
-      Parameter {
-        name: arena::pin_static("Token"),
-        spec: arena::pin_static("Token"),
-        extra: vec![Tokens::new(vec![ch_token])],
-        ..Parameter::default()
-      }
-    }}}}}};
+      },
+      _ => {
+        let res = {
+          probe = *input;
+          group('[', ']')
+            .parse_next(&mut probe)
+            .inspect(|_| *input = probe)
+        };
+        match res {
+          Ok(inner_spec) => {
+            let spec = arena::pin(format!("[{inner_spec}]"));
+            if let Some(default_str) = inner_spec.strip_prefix("Default:") {
+              let extra = if default_str.is_empty() {
+                vec![]
+              } else {
+                vec![mouth::tokenize_internal(default_str)]
+              };
+              Parameter {
+                name: arena::pin_static("Optional"),
+                spec,
+                extra,
+                ..Parameter::default()
+              }
+            } else if !inner_spec.is_empty() {
+              Parameter {
+                name: arena::pin_static("Optional"),
+                spec,
+                inner: parse_parameters(inner_spec, cs, init_flag)?
+                  .map(|ps| ps.into())
+                  .unwrap_or_default(),
+                ..Parameter::default()
+              }
+            } else {
+              Parameter {
+                name: arena::pin_static("Optional"),
+                spec,
+                ..Parameter::default()
+              }
+            }
+          },
+          _ => {
+            let res = {
+              probe = *input;
+              paramspec.parse_next(&mut probe).inspect(|_| *input = probe)
+            };
+            match res {
+              Ok((word, extra_opt)) => {
+                let spec_str = match extra_opt {
+                  Some(extra) => format!("{word}:{extra}"),
+                  None => word.to_string(),
+                };
+                let extra: Vec<Tokens> = match extra_opt {
+                  None | Some("") => Vec::new(),
+                  Some(extra_str) => extra_str
+                    .split('|')
+                    .map(|t| Tokens::new(mouth::tokenize_internal(t).unlist()))
+                    .collect(),
+                };
+                Parameter {
+                  name: arena::pin(word),
+                  spec: arena::pin(&spec_str),
+                  extra,
+                  ..Parameter::default()
+                }
+              },
+              _ => {
+                // Literal single char (incl. each whitespace char) as a Token parameter.
+                let ch = any.parse_next(input).map_err(
+                  |_: winnow::error::ErrMode<winnow::error::ContextError>| {
+                    Error::from(s!(
+                      "parse_parameters: unreadable prototype tail for {:?}",
+                      cs
+                    ))
+                  },
+                )?;
+                let ch_token = CharToken!(ch, Catcode::OTHER);
+                Parameter {
+                  name: arena::pin_static("Token"),
+                  spec: arena::pin_static("Token"),
+                  extra: vec![Tokens::new(vec![ch_token])],
+                  ..Parameter::default()
+                }
+              },
+            }
+          },
+        }
+      },
+    };
     if init_flag {
       p = p.init()?;
     }
@@ -210,7 +251,6 @@ pub fn parse_parameters(
     Ok(Some(Parameters::new(parameters)))
   }
 }
-
 
 #[cfg(test)]
 mod golden_tests {
@@ -227,7 +267,10 @@ mod golden_tests {
             crate::common::arena::with(p.name, |s| s.to_string()),
             crate::common::arena::with(p.spec, |s| s.to_string()),
             p.extra.len(),
-            p.inner.as_ref().map(|ps| ps.get_parameters().len()).unwrap_or(0)
+            p.inner
+              .as_ref()
+              .map(|ps| ps.get_parameters().len())
+              .unwrap_or(0)
           )
         })
         .collect::<Vec<_>>()
@@ -241,29 +284,52 @@ mod golden_tests {
   /// any divergence here is a semantics change, not a refactor.
   #[test]
   fn golden_prototype_corpus() {
-    crate::state::set_state(crate::state::State::new(crate::state::StateOptions::default()));
+    crate::state::set_state(crate::state::State::new(
+      crate::state::StateOptions::default(),
+    ));
     let golden: &[(&str, &str)] = &[
       ("{}", "Plain:{}/x0/i0"),
       ("{}{}", "Plain:{}/x0/i0 | Plain:{}/x0/i0"),
       ("[]", "Optional:[]/x0/i0"),
       ("[]{}", "Optional:[]/x0/i0 | Plain:{}/x0/i0"),
       ("{Number}", "Plain:{Number}/x0/i1"),
-      ("{Float}{Float} {}", "Plain:{Float}/x0/i1 | Plain:{Float}/x0/i1 | Plain:{}/x0/i0"),
+      (
+        "{Float}{Float} {}",
+        "Plain:{Float}/x0/i1 | Plain:{Float}/x0/i1 | Plain:{}/x0/i0",
+      ),
       (
         "OptionalMatch:* [][] Semiverbatim",
         "OptionalMatch:OptionalMatch:*/x1/i0 | Optional:[]/x0/i0 | Optional:[]/x0/i0 | \
          Semiverbatim:Semiverbatim/x0/i0",
       ),
-      ("OptionalKeyVals:LST", "OptionalKeyVals:OptionalKeyVals:LST/x1/i0"),
-      ("RequiredKeyVals:RH {}", "RequiredKeyVals:RequiredKeyVals:RH/x1/i0 | Plain:{}/x0/i0"),
+      (
+        "OptionalKeyVals:LST",
+        "OptionalKeyVals:OptionalKeyVals:LST/x1/i0",
+      ),
+      (
+        "RequiredKeyVals:RH {}",
+        "RequiredKeyVals:RequiredKeyVals:RH/x1/i0 | Plain:{}/x0/i0",
+      ),
       ("Until:\\end", "Until:Until:\\end/x1/i0"),
-      ("XUntil:\\fi {}", "XUntil:XUntil:\\fi/x1/i0 | Plain:{}/x0/i0"),
-      ("[Default:0]{}", "Optional:[Default:0]/x1/i0 | Plain:{}/x0/i0"),
+      (
+        "XUntil:\\fi {}",
+        "XUntil:XUntil:\\fi/x1/i0 | Plain:{}/x0/i0",
+      ),
+      (
+        "[Default:0]{}",
+        "Optional:[Default:0]/x1/i0 | Plain:{}/x0/i0",
+      ),
       ("Semiverbatim", "Semiverbatim:Semiverbatim/x0/i0"),
-      ("SkipSpaces {}", "SkipSpaces:SkipSpaces/x0/i0 | Plain:{}/x0/i0"),
+      (
+        "SkipSpaces {}",
+        "SkipSpaces:SkipSpaces/x0/i0 | Plain:{}/x0/i0",
+      ),
       ("Digested", "Digested:Digested/x0/i0"),
       ("DigestedBody", "DigestedBody:DigestedBody/x0/i0"),
-      ("(){}", "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{}/x0/i0"),
+      (
+        "(){}",
+        "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{}/x0/i0",
+      ),
       (
         "( {Float} , {Float} )",
         "Token:Token/x1/i0 | Token:Token/x1/i0 | Plain:{Float}/x0/i1 | Token:Token/x1/i0 | \
@@ -284,7 +350,10 @@ mod golden_tests {
     ];
     for (proto, expected) in golden {
       let expected = expected.split_whitespace().collect::<Vec<_>>().join(" ");
-      let actual = describe(proto).split_whitespace().collect::<Vec<_>>().join(" ");
+      let actual = describe(proto)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
       assert_eq!(actual, expected, "prototype grammar diverged on {proto:?}");
     }
   }

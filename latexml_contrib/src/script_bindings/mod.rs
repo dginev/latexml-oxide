@@ -35,45 +35,45 @@
 //! per registration — each capturing `Rc<Engine>`/`Rc<AST>` so a body stays
 //! callable for the whole conversion (a deferred `FnPtr::call` needs both alive).
 
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::rc::Rc;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use rhai::{AST, Dynamic, Engine, EvalAltResult, FnPtr, Map};
-
-use latexml_core::BoxOps;
-use latexml_core::binding::def::builder::{ConstructorBuilder, EnvironmentBuilder, OptionValue};
-use latexml_core::binding::def::dialect::{def_conditional, def_macro, def_primitive};
-use latexml_core::binding::def::replacement;
-use latexml_core::common::arena::{self, SymHashMap};
-use latexml_core::common::def_parser::parse_prototype;
-use latexml_core::common::dimension::Dimension;
-use latexml_core::common::error::{Error, Result};
-use latexml_core::common::number::Number;
-use latexml_core::common::numeric_ops::NumericOps;
-use latexml_core::common::object::Object;
-use latexml_core::common::store::Stored;
-use latexml_core::definition::ConditionalClosure;
-use latexml_core::definition::argument::ArgWrap;
-use latexml_core::definition::conditional::ConditionalOptions;
-use latexml_core::definition::expandable::ExpandableOptions;
-use latexml_core::definition::math_primitive::MathPrimitiveOptions;
-use latexml_core::definition::primitive::PrimitiveOptions;
-use latexml_core::definition::{
-  BeforeDigestClosure, ConstructionClosure, DigestionClosure, ExpansionBody, ExpansionClosure,
-  FontDirective, PrimitiveBody, PrimitiveClosure, PropertiesClosure, ReplacementClosure, Reversion,
+use latexml_core::{
+  BoxOps,
+  binding::def::{
+    builder::{ConstructorBuilder, EnvironmentBuilder, OptionValue},
+    dialect::{def_conditional, def_macro, def_primitive},
+    replacement,
+  },
+  common::{
+    arena::{self, SymHashMap},
+    def_parser::parse_prototype,
+    dimension::Dimension,
+    error::{Error, Result},
+    number::Number,
+    numeric_ops::NumericOps,
+    object::Object,
+    store::Stored,
+  },
+  definition::{
+    BeforeDigestClosure, ConditionalClosure, ConstructionClosure, DigestionClosure, ExpansionBody,
+    ExpansionClosure, FontDirective, PrimitiveBody, PrimitiveClosure, PropertiesClosure,
+    ReplacementClosure, Reversion, argument::ArgWrap, conditional::ConditionalOptions,
+    expandable::ExpandableOptions, math_primitive::MathPrimitiveOptions,
+    primitive::PrimitiveOptions,
+  },
+  digested::Digested,
+  document::Document,
+  mouth,
+  state::Scope,
+  token::{Catcode, Token},
+  tokens::Tokens,
+  whatsit::Whatsit,
 };
-use latexml_core::digested::Digested;
-use latexml_core::document::Document;
-use latexml_core::mouth;
-use latexml_core::state::Scope;
-use latexml_core::token::{Catcode, Token};
-use latexml_core::tokens::Tokens;
-use latexml_core::whatsit::Whatsit;
 // `Error!` expands a `Fatal!`/`fatal!` arm (too-many-errors escalation); the
 // whole macro chain must be in scope at the expansion site (non-hygienic).
 #[allow(unused_imports)]
 use latexml_core::{Fatal, fatal};
+use rhai::{AST, Dynamic, Engine, EvalAltResult, FnPtr, Map};
 
 // Sandbox limits (docs/script_bindings_plan.md §6).
 const MAX_OPERATIONS: u64 = 50_000_000;
@@ -372,17 +372,20 @@ fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
 fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   for (k, v) in map {
-    match v.clone().try_cast::<Digested>() { Some(d) => {
-      if k.as_str() == "font" {
-        if let Ok(Some(f)) = d.get_font() {
+    match v.clone().try_cast::<Digested>() {
+      Some(d) => {
+        if k.as_str() == "font"
+          && let Ok(Some(f)) = d.get_font()
+        {
           props.insert("font", Stored::Font(Rc::new(f.into_owned())));
           continue;
         }
-      }
-      props.insert(k.as_str(), Stored::Digested(d));
-    } _ => {
-      props.insert(k.as_str(), dynamic_to_string(v).into());
-    }}
+        props.insert(k.as_str(), Stored::Digested(d));
+      },
+      _ => {
+        props.insert(k.as_str(), dynamic_to_string(v).into());
+      },
+    }
   }
   props
 }

@@ -2,10 +2,9 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use crate::prelude::*;
-use crate::tex_character;
-use latexml_core::common::font::standard_metrics::STDMETRICS;
-use latexml_core::common::mathchar::decode_math_char;
+use latexml_core::common::{font::standard_metrics::STDMETRICS, mathchar::decode_math_char};
+
+use crate::{prelude::*, tex_character};
 
 /// Perl's mergeLimits (TeX_Math.pool.ltxml): walks backward through the
 /// digest list, extracts any existing script level from the previous
@@ -15,7 +14,7 @@ fn merge_limits(pos: &str) {
   // Compute script level before borrowing the box list mutably,
   // since get_script_level() also borrows the stomach.
   let default_level = get_script_level().to_string();
-  stomach::with_box_list_mut(|list| {
+  with_box_list_mut(|list| {
     for b in list.iter_mut().rev() {
       // Extract trailing level digits from existing scriptpos. Find the
       // first non-digit from the end, slice off the tail — skips the
@@ -191,8 +190,8 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
     extend_box_list(putback);
     MergeFont!(scripted => true);
     let mut stuff = Vec::new();
-    while let Some(tok) = gullet::read_x_token(Some(false), false, None)? {
-      stuff = stomach::invoke_token(&tok)?;
+    while let Some(tok) = read_x_token(Some(false), false, None)? {
+      stuff = invoke_token(&tok)?;
       if !stuff.is_empty() {
         break;
       }
@@ -224,17 +223,17 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       if let Some(pvs) = prevscript {
         properties.insert("prevscript", pvs.into());
       }
-      if let Some(Stored::Digested(b)) = properties.get("base") {
-        if let Some(bsp) = b.get_property("scriptpos") {
-          let bsp_str = bsp.to_string();
-          if !bsp_str.is_empty() {
-            let base_prefix: String = bsp_str
-              .chars()
-              .take_while(|c| !c.is_ascii_digit())
-              .collect();
-            let sl = get_script_level();
-            properties.insert("scriptpos", Stored::from(format!("{base_prefix}{sl}")));
-          }
+      if let Some(Stored::Digested(b)) = properties.get("base")
+        && let Some(bsp) = b.get_property("scriptpos")
+      {
+        let bsp_str = bsp.to_string();
+        if !bsp_str.is_empty() {
+          let base_prefix: String = bsp_str
+            .chars()
+            .take_while(|c| !c.is_ascii_digit())
+            .collect();
+          let sl = get_script_level();
+          properties.insert("scriptpos", Stored::from(format!("{base_prefix}{sl}")));
         }
       }
       if let Some(font) = script.get_font()? {
@@ -267,7 +266,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       T_SUB!()
     };
     Ok(vec![Digested::from(Tbox::new(
-      arena::pin_char(c),
+      pin_char(c),
       None,
       None,
       Tokens!(placeholder),
@@ -412,7 +411,7 @@ fn script_sizer(
     } else {
       0.0
     };
-    let scriptspace = state::lookup_register("\\scriptspace", Vec::new())
+    let scriptspace = lookup_register("\\scriptspace", Vec::new())
       .ok()
       .flatten()
       .map(|rv| match rv {
@@ -470,10 +469,10 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\lx@dollar@default"), None, {
     let mut op = "\\lx@begin@inline@math";
     {
-      let mode = state::lookup_string_from_sym(pin!("MODE"));
+      let mode = lookup_string_from_sym(pin!("MODE"));
       if mode == "display_math" {
-        if gullet::if_next(T_MATH!())? {
-          gullet::read_token()?;
+        if if_next(T_MATH!())? {
+          read_token()?;
           op = "\\lx@end@display@math";
         } else {
           Error!(
@@ -489,15 +488,15 @@ LoadDefinitions!({
         op = "\\lx@end@inline@math";
       } else {
         // Perl: only check for $$ when within a vertical bound mode
-        let bound = state::lookup_string_from_sym(pin!("BOUND_MODE"));
-        if bound.ends_with("vertical") && gullet::if_next(T_MATH!())? {
-          gullet::read_token()?;
+        let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
+        if bound.ends_with("vertical") && if_next(T_MATH!())? {
+          read_token()?;
           op = "\\lx@begin@display@math";
         }
       }
     }
     if !op.is_empty() {
-      Ok(stomach::invoke_token(&T_CS!(op))?)
+      Ok(invoke_token(&T_CS!(op))?)
     } else {
       Ok(Vec::new())
     }
@@ -527,24 +526,24 @@ LoadDefinitions!({
   // but then afterwards, morph them into math arrays?
   // This would be complicated by the need to hide these $ from untex.
   DefPrimitive!(T_CS!("\\lx@dollar@in@mathmode"), None, {
-    let level = stomach::get_boxing_level();
+    let level = get_boxing_level();
     if lookup_int("MATH_ALIGN_$_BEGUN") == (level as i64) {
       // If we're begun making _something_ with $.
-      let l = if state::lookup_bool_sym(pin!("IN_MATH")) {
+      let l = if lookup_bool_sym(pin!("IN_MATH")) {
         // But we're somehow in math?
-        stomach::invoke_token(&T_CS!("\\lx@end@inline@math"))
+        invoke_token(&T_CS!("\\lx@end@inline@math"))
       } else {
-        stomach::invoke_token(&T_CS!("\\lx@end@inmath@text"))
+        invoke_token(&T_CS!("\\lx@end@inmath@text"))
       };
       assign_value("MATH_ALIGN_$_BEGUN", 0, None); // Reset this AFTER finishing the something
       l
     } else {
       assign_value("MATH_ALIGN_$_BEGUN", level + 1, None); // Note that we've begun something
-      if state::lookup_bool_sym(pin!("IN_MATH")) {
+      if lookup_bool_sym(pin!("IN_MATH")) {
         // If we're "still" in math
-        stomach::invoke_token(&T_CS!("\\lx@begin@inmath@text"))
+        invoke_token(&T_CS!("\\lx@begin@inmath@text"))
       } else {
-        stomach::invoke_token(&T_CS!("\\lx@begin@inline@math"))
+        invoke_token(&T_CS!("\\lx@begin@inline@math"))
       }
     }
   });
@@ -555,11 +554,11 @@ LoadDefinitions!({
     // alias => T_MATH ? do we support that ?
     alias => "$",
     // Perl: beginMode('restricted_horizontal') — NOT 'text'
-    before_digest => sub { stomach::begin_mode("restricted_horizontal")?; },
+    before_digest => sub { begin_mode("restricted_horizontal")?; },
     capture_body => true
   );
   DefConstructor!("\\lx@end@inmath@text", "", alias => "$",
-    before_digest => sub { stomach::end_mode("restricted_horizontal")?; });
+    before_digest => sub { end_mode("restricted_horizontal")?; });
   //======================================================================
   // Effectively these are the math hooks, redefine these to do what you want with math?
   // Perl TeX_Math.pool.ltxml L124-137 — DefConstructorI baseline. NOTE: this is the
@@ -720,24 +719,24 @@ LoadDefinitions!({
     // Let w/o AfterAssignment
     let means_relax = lookup_meaning(&TOKEN_RELAX).unwrap();
     assign_meaning(&newcs, means_relax, None);
-    let value = gullet::read_number().unwrap_or_default();
+    let value = read_number().unwrap_or_default();
     let props = decode_math_char(value.value_of() as u16, None)?;
-    state::install_definition(
+    install_definition(
       Register::new_math_chardef(
         newcs,
         Some(value.into()),
         props.glyph,
-        props.role.as_deref().map(arena::pin),
+        props.role.as_deref().map(pin),
         CharDefProps {
-          meaning: props.meaning.as_deref().map(arena::pin),
+          meaning: props.meaning.as_deref().map(pin),
           // chardef_name: synthesized at invoke time from CS name
-          stretchy: props.stretchy.as_deref().map(arena::pin),
-          scriptpos: props.scriptpos.as_deref().map(arena::pin),
-          mathstyle: props.mathstyle.as_deref().map(arena::pin),
+          stretchy: props.stretchy.as_deref().map(pin),
+          scriptpos: props.scriptpos.as_deref().map(pin),
+          mathstyle: props.mathstyle.as_deref().map(pin),
           need_scriptpos: props.need_scriptpos,
           need_mathstyle: props.need_mathstyle }
       ), None);
-    state::after_assignment();
+    after_assignment();
   });
 
   // Perl: DefConstructor('\mathaccent Number Digested', ..., afterDigest => sub { ... })
@@ -758,7 +757,7 @@ LoadDefinitions!({
       let name = acc_props.map(|ap| ap.name);
       // Perl: $$acc_props{stretchy} || 'false'
       let stretchy = "false";
-      whatsit.set_property("glyph", arena::pin(&display_glyph));
+      whatsit.set_property("glyph", pin(&display_glyph));
       whatsit.set_property("font", lookup_font().unwrap().specialize(&display_glyph));
       whatsit.set_property("accrole", accrole);
       if let Some(n) = name {
@@ -806,7 +805,7 @@ LoadDefinitions!({
   // Int/Number cases (both Copy). Hot during math-mode font switches.
   DefRegister!("\\fam", Number!(-1),
   getter => {
-    let fam = state::with_value("fontfamily", |v| match v {
+    let fam = with_value("fontfamily", |v| match v {
       Some(Stored::Int(i)) => *i,
       Some(Stored::Number(n)) => n.0,
       _ => -1,
@@ -814,7 +813,7 @@ LoadDefinitions!({
     Some(RegisterValue::Number(Number::new(fam)))
   },
   setter => sub[value, scope, _args] {
-    state::assign_value("fontfamily", Stored::from(value.value_of()), scope);
+    assign_value("fontfamily", Stored::from(value.value_of()), scope);
   });
 
   //======================================================================
@@ -930,31 +929,31 @@ LoadDefinitions!({
     let delim_str = delim.to_string();
     if delim_str == "\\delimiter" {
       // \delimiter<Number>: read the number, shift, and decode to get the delimiter char
-      let n = gullet::read_number()?.value_of() >> 12;
+      let n = read_number()?.value_of() >> 12;
       let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
         let mut glyph_buf = [0u8; 4];
         let glyph_key = glyph.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
           // Found the delimiter — unread it as a token
-          let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
-          gullet::unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
+          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          unread(Tokens::new(vec![T_CS!("\\@left"), tok, T_CS!("\\lx@hidden@bgroup")]));
         } else {
           // Unknown glyph, use dot delimiter
-          gullet::unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+          unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
         }
       } else {
-        gullet::unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
+        unread(Tokens::new(vec![T_CS!("\\@left"), T_OTHER!("."), T_CS!("\\lx@hidden@bgroup")]));
       }
     } else {
-      gullet::unread(Tokens::new(vec![T_CS!("\\@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
+      unread(Tokens::new(vec![T_CS!("\\@left"), delim, T_CS!("\\lx@hidden@bgroup")]));
     }
   });
   // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
   DefConstructor!("\\lx@hidden@egroup@right", "",
     after_digest => {
       if is_value_bound("MODE", Some(0)) // Last stack frame was a mode switch!?!?!
-        || state::lookup_bool_sym(pin!("groupNonBoxing")) { // or group was opened with \begingroup
+        || lookup_bool_sym(pin!("groupNonBoxing")) { // or group was opened with \begingroup
         Error!("unexpected", "\\right", "Unbalanced \\right, no balancing \\left."); }
       else {
         egroup()?;
@@ -966,7 +965,7 @@ LoadDefinitions!({
   // in \numexpr contexts. It unreads \lx@hidden@egroup@right and \lx@right into the input stream.
   DefConstructor!("\\right", "",
     before_digest => {
-      gullet::unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
+      unread(Tokens::new(vec![T_CS!("\\lx@hidden@egroup@right"), T_CS!("\\lx@right")]));
     },
     // Empty reversion — \lx@right provides the actual \right reversion via alias
     reversion => Tokens!());
@@ -999,12 +998,11 @@ LoadDefinitions!({
         // Preserve meaning from DefMath (e.g. "/" has meaning="divide")
         // Look up math_token_attributes for the delimiter character.
         let char_str = entry.char.to_string();
-        state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
-          if let Some(Stored::HashString(attrs)) = val {
-            if let Some(meaning) = attrs.get("meaning") {
+        with_value(&format!("math_token_attributes_{}", char_str), |val| {
+          if let Some(Stored::HashString(attrs)) = val
+            && let Some(meaning) = attrs.get("meaning") {
               whatsit.set_property("meaning", meaning.clone());
             }
-          }
         });
         whatsit.set_property("stretchy", true);
         whatsit.set_font(Rc::new(
@@ -1050,12 +1048,11 @@ LoadDefinitions!({
         }
         // Preserve meaning from DefMath
         let char_str = entry.char.to_string();
-        state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
-          if let Some(Stored::HashString(attrs)) = val {
-            if let Some(meaning) = attrs.get("meaning") {
+        with_value(&format!("math_token_attributes_{}", char_str), |val| {
+          if let Some(Stored::HashString(attrs)) = val
+            && let Some(meaning) = attrs.get("meaning") {
               whatsit.set_property("meaning", meaning.clone());
             }
-          }
         });
         whatsit.set_property("stretchy", true);
         whatsit.set_font(Rc::new(
@@ -1122,7 +1119,7 @@ LoadDefinitions!({
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state::assign_value(&s!("textfont_{fam}"), font, scope);
+    assign_value(&s!("textfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptfont Number" => T_CS!("\\sevenrm"),
@@ -1132,7 +1129,7 @@ LoadDefinitions!({
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state::assign_value(&s!("scriptfont_{fam}"), font, scope);
+    assign_value(&s!("scriptfont_{fam}"), font, scope);
   });
 
   DefRegister!("\\scriptscriptfont Number" => T_CS!("\\fiverm"),
@@ -1142,7 +1139,7 @@ LoadDefinitions!({
   },
   setter => sub[font,scope,args] {
     let fam = args.remove(0).expect_number().value_of();
-    state::assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
+    assign_value(&s!("scriptscriptfont_{fam}"), font, scope);
   });
 
   //======================================================================
@@ -1301,22 +1298,22 @@ LoadDefinitions!({
   DefMacro!("\\lx@right XToken", sub[(delim)] {
     let delim_str = delim.to_string();
     if delim_str == "\\delimiter" {
-      let n = gullet::read_number()?.value_of() >> 12;
+      let n = read_number()?.value_of() >> 12;
       let props = decode_math_char(n as u16, None)?;
       if let Some(glyph) = props.glyph {
         let mut glyph_buf = [0u8; 4];
         let glyph_key = glyph.encode_utf8(&mut glyph_buf);
         if let Some(entry) = DELIMITER_MAP.get(glyph_key) {
-          let tok = Token { text: arena::pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
-          gullet::unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
+          let tok = Token { text: pin_char(entry.char), code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 };
+          unread(Tokens::new(vec![T_CS!("\\@right"), tok]));
         } else {
-          gullet::unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+          unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
         }
       } else {
-        gullet::unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
+        unread(Tokens::new(vec![T_CS!("\\@right"), T_OTHER!(".")]));
       }
     } else {
-      gullet::unread(Tokens::new(vec![T_CS!("\\@right"), delim]));
+      unread(Tokens::new(vec![T_CS!("\\@right"), delim]));
     }
   });
 
@@ -1344,7 +1341,7 @@ LoadDefinitions!({
          </ltx:XMWrap>\
        </ltx:XMDual>)()",
     after_digest => sub[whatsit] {
-      use latexml_core::stomach;
+
       use latexml_core::binding::content::merge_font;
       use latexml_core::common::font::Font;
       use latexml_core::list::List;
@@ -1394,10 +1391,10 @@ LoadDefinitions!({
                 new_tokens.push(*tok);
               }
             }
-            let d = stomach::digest(Tokens::new(new_tokens))?;
+            let d = digest(Tokens::new(new_tokens))?;
             whatsit.set_property(key, Stored::Digested(d));
           } else {
-            whatsit.set_property(key, Stored::String(arena::pin(val.to_string())));
+            whatsit.set_property(key, Stored::String(pin(val.to_string())));
           }
         }
       }
@@ -1420,7 +1417,7 @@ LoadDefinitions!({
       };
 
       // Grab the numerator (already digested content)
-      let top = stomach::regurgitate();
+      let top = regurgitate();
       // Perl: adjustMathstyle($style, {}, @top) — retroactively adjust font sizes
       adjust_mathstyle(&style, &top);
 
@@ -1428,7 +1425,7 @@ LoadDefinitions!({
       merge_font(Font { fraction: Some(true), ..Font::default() });
 
       // Digest the denominator
-      let mut bot = stomach::digest_next_body(None)?;
+      let mut bot = digest_next_body(None)?;
 
       // Pop the closing token (endmath, endgroup, etc.) — leave it for further processing
       let closing = bot.pop();
@@ -1467,19 +1464,17 @@ LoadDefinitions!({
       use latexml_core::state::Stored;
       // Perl: (Revert($whatsit->getProperty('top')), $whatsit->getArg(1)->unlist, Revert($whatsit->getProperty('bottom')))
       let mut result = Vec::new();
-      if let Some(top) = whatsit.get_property("top") {
-        if let Stored::Digested(ref d) = *top {
+      if let Some(top) = whatsit.get_property("top")
+        && let Stored::Digested(ref d) = *top {
           result.extend(d.revert()?.unlist());
         }
-      }
       if let Some(arg1) = whatsit.get_arg(1) {
         result.extend(arg1.revert()?.unlist());
       }
-      if let Some(bottom) = whatsit.get_property("bottom") {
-        if let Stored::Digested(ref d) = *bottom {
+      if let Some(bottom) = whatsit.get_property("bottom")
+        && let Stored::Digested(ref d) = *bottom {
           result.extend(d.revert()?.unlist());
         }
-      }
       Ok(Tokens::new(result))
     },
     // Perl fracSizer (TeX_Math.pool.ltxml L1054-1059): width is max of
@@ -1560,10 +1555,10 @@ LoadDefinitions!({
   // Perl: Box(' ', undef, undef, Invocation(...), width => $length, isSpace => 1)
   // Use regular space as content, matching Perl. Width is stored as MuGlue.
   DefPrimitive!("\\mkern MuGlue", sub[(length)] {
-    Tbox::new(arena::pin_static(" "), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
+    Tbox::new(pin_static(" "), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
   DefPrimitive!("\\mskip MuGlue", sub[(length)] {
-    Tbox::new(arena::pin_static(" "), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
+    Tbox::new(pin_static(" "), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
 
   // MuGlue registers; TeXBook p.274
@@ -1652,10 +1647,10 @@ LoadDefinitions!({
     let mut stuff = Vec::new();
     // This is risky!!!
 
-    while let Some(t) = gullet::read_x_token(Some(false), false, None)? {
+    while let Some(t) = read_x_token(Some(false), false, None)? {
       if t == T_BEGIN!() {
         stuff.push(t);
-        let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
+        let balanced_arg = read_balanced(ExpansionLevel::Off, false, false)?;
         if !balanced_arg.is_empty() {
           stuff.extend(balanced_arg.unlist());
         }
@@ -1797,7 +1792,7 @@ LoadDefinitions!({
       // 4. XMApp contains exactly one XMArg, whose grandchildren are all XMTok
       // If any check fails, re-attach the original `math` so the rewrite
       // engine's Replace removal is undone — this rule is opt-in by shape.
-      let restore = |document: &mut latexml_core::document::Document,
+      let restore = |document: &mut Document,
                      math: &mut Node|
        -> Result<()> {
         // The active insertion point is the parent (set via
@@ -1825,7 +1820,7 @@ LoadDefinitions!({
           let only_xmtok_grandchildren = xmarg_children.iter().all(|c| {
             c.get_child_nodes().into_iter()
               .filter(|n| n.get_type() == Some(NodeType::ElementNode))
-              .all(|gc| latexml_core::document::with_node_qname(&gc, |q| q == "ltx:XMTok"))
+              .all(|gc| document::with_node_qname(&gc, |q| q == "ltx:XMTok"))
           });
           if !only_xmtok_grandchildren { return restore(document, math); }
           if let Some(xmarg) = xmarg_children.first() {
@@ -2013,7 +2008,7 @@ fn adjust_math_role(
     // Filter out XMHint nodes
     let nodes: Vec<_> = element_nodes(&wrapper)
       .into_iter()
-      .filter(|n| document::get_node_qname(n) != arena::pin_static("ltx:XMHint"))
+      .filter(|n| document::get_node_qname(n) != pin_static("ltx:XMHint"))
       .collect();
 
     // Perl: %mathclass_subclass lookup
@@ -2180,10 +2175,10 @@ fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) ->
     // compute the adjusted style inside arena::with without allocating
     // an owned String for the interned mathstyle. The &'static str
     // escapes the closure cleanly.
-    let newstyle: &'static str = arena::with(*ms, |ms_str| mathstyle_adjust(outerstyle, ms_str));
+    let newstyle: &'static str = with(*ms, |ms_str| mathstyle_adjust(outerstyle, ms_str));
     whatsit
       .properties
-      .insert("mathstyle", Stored::String(arena::pin(newstyle)));
+      .insert("mathstyle", Stored::String(pin(newstyle)));
     Some(newstyle.to_string())
   } else {
     None

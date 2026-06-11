@@ -1,28 +1,23 @@
 //! Token List constructors.
-use crate::definition::argument::ArgWrap;
-use crate::fmt;
+use std::{borrow::Cow, collections::VecDeque, fmt::Display, rc::Rc};
+
 #[cfg(feature = "codegen")]
 use proc_macro2::{Ident, Punct, Spacing, Span, TokenStream};
 #[cfg(feature = "codegen")]
 use quote::{ToTokens, TokenStreamExt, quote};
 
-use std::borrow::Cow;
-use std::collections::VecDeque;
-use std::fmt::Display;
-use std::rc::Rc;
-
-use crate::Digested;
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::float::Float;
-use crate::common::glue::Glue;
-use crate::common::mudimension::MuDimension;
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-use crate::keyvals::KeyVals;
-use crate::stomach;
-use crate::token::*;
+use crate::{
+  Digested,
+  common::{
+    dimension::Dimension, error::*, float::Float, glue::Glue, mudimension::MuDimension,
+    muglue::MuGlue, number::Number, numeric_ops::NumericOps,
+  },
+  definition::argument::ArgWrap,
+  fmt,
+  keyvals::KeyVals,
+  stomach,
+  token::*,
+};
 
 /// If untex is requested to add line-breaks, this is the line length it will allow
 pub const UNTEX_LINELENGTH: usize = 78;
@@ -186,10 +181,10 @@ impl Tokens {
       if remaining.is_empty() {
         return true;
       }
-      if t.code == crate::token::Catcode::COMMENT {
+      if t.code == Catcode::COMMENT {
         continue;
       }
-      if t.code == crate::token::Catcode::ARG {
+      if t.code == Catcode::ARG {
         if !remaining.starts_with('#') {
           return false;
         }
@@ -234,10 +229,10 @@ impl Tokens {
   pub fn eq_text(&self, target: &str) -> bool {
     let mut remaining = target;
     for t in &self.0 {
-      if t.code == crate::token::Catcode::COMMENT {
+      if t.code == Catcode::COMMENT {
         continue;
       }
-      if t.code == crate::token::Catcode::ARG {
+      if t.code == Catcode::ARG {
         if !remaining.starts_with('#') {
           return false;
         }
@@ -414,14 +409,15 @@ impl Tokens {
         result.push(*token);
       } else {
         let idx = token.with_str(|ts| ts.parse::<usize>().unwrap_or(0));
-        if idx > 0 && idx <= args.len() {
-          if let Some(ref arg) = args[idx - 1] {
-            // `arg` is `Cow<Tokens>`; iterate via `unlist_ref` + copy
-            // (Tokens is a Vec<Token> of `Copy` tokens). Avoids the
-            // previous `clone().into_owned().unlist()` chain which
-            // double-cloned the Vec when `arg` was `Cow::Borrowed`.
-            result.extend(arg.as_ref().unlist_ref().iter().copied());
-          }
+        if idx > 0
+          && idx <= args.len()
+          && let Some(ref arg) = args[idx - 1]
+        {
+          // `arg` is `Cow<Tokens>`; iterate via `unlist_ref` + copy
+          // (Tokens is a Vec<Token> of `Copy` tokens). Avoids the
+          // previous `clone().into_owned().unlist()` chain which
+          // double-cloned the Vec when `arg` was `Cow::Borrowed`.
+          result.extend(arg.as_ref().unlist_ref().iter().copied());
         }
       }
     }
@@ -645,11 +641,12 @@ impl Tokens {
     // pairs is ordered innermost-first, so pop() gives outermost pair first.
     while layers > 0 {
       layers -= 1;
-      if let Some((j0, j1)) = pairs.pop() {
-        if j0 == i0 && j1 == i1 - 1 {
-          i0 += 1;
-          i1 -= 1;
-        }
+      if let Some((j0, j1)) = pairs.pop()
+        && j0 == i0
+        && j1 == i1 - 1
+      {
+        i0 += 1;
+        i1 -= 1;
       }
     }
 
@@ -744,7 +741,8 @@ mod tests {
     Token {
       text: arena::pin(s),
       code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   }
 
@@ -752,7 +750,8 @@ mod tests {
     Token {
       text: arena::pin(s),
       code: Catcode::COMMENT,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   }
 

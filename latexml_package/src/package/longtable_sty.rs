@@ -24,20 +24,20 @@ LoadDefinitions!({
     reversion => r"\begin{longtable}[#1]{#2}#3\end{longtable}",
     before_digest => {
       bgroup();
-      state::let_i(&T_CS!("\\pagebreak"), &T_CS!("\\@gobble@optional"), None);
+      let_i(&T_CS!("\\pagebreak"), &T_CS!("\\@gobble@optional"), None);
     },
     after_digest => sub[whatsit] {
       // Insert properties from LONGTABLE_PROPERTIES
       if let Some(Stored::HashStored(ref map)) = lookup_value("LONGTABLE_PROPERTIES") {
         for (k, v) in map.iter() {
-          arena::with(*k, |key| whatsit.set_property(key, v.clone()));
+          with(*k, |key| whatsit.set_property(key, v.clone()));
         }
       }
       // Insert head captions (from \endfirsthead or \endhead)
       let head_captions = lookup_value("LONGTABLE_HEAD_CAPTIONS")
         .or_else(|| lookup_value("LONGTABLE_CAPTIONS"));
-      if let Some(Stored::VecDigested(ref captions)) = head_captions {
-        if captions.len() >= 2 {
+      if let Some(Stored::VecDigested(ref captions)) = head_captions
+        && captions.len() >= 2 {
           if !captions[1].to_string().is_empty() {
             whatsit.set_property("headcaption", captions[1].clone());
           }
@@ -45,10 +45,9 @@ LoadDefinitions!({
             whatsit.set_property("headtoccaption", captions[0].clone());
           }
         }
-      }
       // Insert foot captions
-      if let Some(Stored::VecDigested(ref captions)) = lookup_value("LONGTABLE_FOOT_CAPTIONS") {
-        if captions.len() >= 2 {
+      if let Some(Stored::VecDigested(ref captions)) = lookup_value("LONGTABLE_FOOT_CAPTIONS")
+        && captions.len() >= 2 {
           if !captions[1].to_string().is_empty() {
             whatsit.set_property("footcaption", captions[1].clone());
           }
@@ -56,14 +55,13 @@ LoadDefinitions!({
             whatsit.set_property("foottoccaption", captions[0].clone());
           }
         }
-      }
       // Insert label
       if let Some(Stored::String(label)) = lookup_value("LONGTABLE_LABEL") {
-        whatsit.set_property("label", arena::to_string(label));
+        whatsit.set_property("label", to_string(label));
       }
       // Reinsert head/foot rows into alignment
-      if let Some(alignment) = lookup_alignment() {
-        if let Some(data) = alignment.alignment_cell() {
+      if let Some(alignment) = lookup_alignment()
+        && let Some(data) = alignment.alignment_cell() {
           let mut al = data.borrow_mut();
           let head = std::mem::take(&mut al.head_rows);
           let foot = std::mem::take(&mut al.foot_rows);
@@ -74,7 +72,6 @@ LoadDefinitions!({
             al.append_rows(foot);
           }
         }
-      }
       Ok(Vec::new())
     },
     mode => "restricted_horizontal");
@@ -105,8 +102,8 @@ LoadDefinitions!({
 
   DefPrimitive!("\\lx@longtable@grab{}", sub[(name_arg)] {
     let name = name_arg.to_string();
-    if let Some(alignment) = lookup_alignment() {
-      if let Some(data) = alignment.alignment_cell() {
+    if let Some(alignment) = lookup_alignment()
+      && let Some(data) = alignment.alignment_cell() {
         let mut al = data.borrow_mut();
         // Remove all preceding rows and mark columns as thead.
         let mut rows = Vec::new();
@@ -131,17 +128,15 @@ LoadDefinitions!({
           }
         }
       }
-    }
     Ok(())
   });
 
   DefConstructor!("\\lx@longtable@kill@marker", "", reversion => "\\kill",
     after_digest => sub[_args] {
-      if let Some(alignment) = lookup_alignment() {
-        if let Some(data) = alignment.alignment_cell() {
+      if let Some(alignment) = lookup_alignment()
+        && let Some(data) = alignment.alignment_cell() {
           data.borrow_mut().remove_row();
         }
-      }
       Ok(Vec::new())
     });
 
@@ -159,7 +154,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@longtable@label Semiverbatim", sub[(label)] {
     // Perl: AssignValue(LONGTABLE_LABEL => CleanLabel(ToString($label)), 'global')
     let label = clean_label(&label.to_string(), None).into_owned();
-    assign_value("LONGTABLE_LABEL", Stored::String(arena::pin(label)), Some(Scope::Global));
+    assign_value("LONGTABLE_LABEL", Stored::String(pin(label)), Some(Scope::Global));
     Ok(())
   });
 
@@ -173,7 +168,7 @@ LoadDefinitions!({
 \newcount\LT@cols
 \newcount\LT@rows
 ");
-  state::let_i(&T_CS!("\\c@LTchunksize"), &T_CS!("\\LTchunksize"), None);
+  let_i(&T_CS!("\\c@LTchunksize"), &T_CS!("\\LTchunksize"), None);
 
   TeX!(r"\newbox\LT@head
 \newbox\LT@firsthead
@@ -182,28 +177,28 @@ LoadDefinitions!({
 \newbox\LT@gbox
 ");
 
-  state::let_i(&T_CS!("\\setlongtables"), &T_CS!("\\relax"), None);
+  let_i(&T_CS!("\\setlongtables"), &T_CS!("\\relax"), None);
 });
 
 fn longtable_bindings(template: Template) -> Result<()> {
   let mut props = SymHashMap::default();
   props.insert("guess_headers", Stored::Bool(false));
   tabular_bindings(template, props, HashMap::default())?;
-  state::let_i(
+  let_i(
     &T_CS!("\\endfirsthead"),
     &T_CS!("\\lx@longtable@endfirsthead"),
     None,
   );
-  state::let_i(&T_CS!("\\endhead"), &T_CS!("\\lx@longtable@endhead"), None);
-  state::let_i(&T_CS!("\\endfoot"), &T_CS!("\\lx@longtable@endfoot"), None);
-  state::let_i(
+  let_i(&T_CS!("\\endhead"), &T_CS!("\\lx@longtable@endhead"), None);
+  let_i(&T_CS!("\\endfoot"), &T_CS!("\\lx@longtable@endfoot"), None);
+  let_i(
     &T_CS!("\\endlastfoot"),
     &T_CS!("\\lx@longtable@endlastfoot"),
     None,
   );
-  state::let_i(&T_CS!("\\caption"), &T_CS!("\\lx@longtable@caption"), None);
-  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@longtable@label"), None);
-  state::let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill"), None);
+  let_i(&T_CS!("\\caption"), &T_CS!("\\lx@longtable@caption"), None);
+  let_i(&T_CS!("\\label"), &T_CS!("\\lx@longtable@label"), None);
+  let_i(&T_CS!("\\kill"), &T_CS!("\\lx@longtable@kill"), None);
 
   assign_value("LONGTABLE_LABEL", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));

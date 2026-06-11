@@ -1,32 +1,33 @@
-use libxml::tree::Node;
-use std::borrow::Cow;
-use std::fmt;
-use std::rc::Rc;
+use std::{borrow::Cow, fmt, rc::Rc};
 
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font;
-use crate::common::glue::Glue;
-use crate::common::mudimension::MuDimension;
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use crate::document::Document;
-use crate::gullet;
-use crate::parameter::Parameters;
-use crate::state::{Scope, Stored};
-use crate::tbox::Tbox;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
-use crate::{Digested, Locator, state};
+use libxml::tree::Node;
 
 use super::argument::ArgWrap;
-use crate::pin;
+use crate::{
+  Digested, Locator,
+  common::{
+    arena::{self, SymHashMap as HashMap, SymStr},
+    dimension::Dimension,
+    error::*,
+    font,
+    glue::Glue,
+    mudimension::MuDimension,
+    muglue::MuGlue,
+    number::Number,
+    numeric_ops::NumericOps,
+    object::Object,
+  },
+  definition::{BeforeDigestClosure, Definition, DigestionClosure},
+  document::Document,
+  gullet,
+  parameter::Parameters,
+  pin, state,
+  state::{Scope, Stored},
+  tbox::Tbox,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
+};
 
 /// The values that can be read by, and stored in, a Register
 #[derive(Clone, PartialEq)]
@@ -925,8 +926,7 @@ mod tests {
 
   #[test]
   fn register_value_from_pair() {
-    use crate::common::float::Float;
-    use crate::common::pair::Pair;
+    use crate::common::{float::Float, pair::Pair};
     let p = Pair::new(Float(1.0), Float(2.0));
     let rv: RegisterValue = p.into();
     match rv {

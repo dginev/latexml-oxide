@@ -1,6 +1,6 @@
+use latexml_core::common::{dimension::attribute_format, numeric_ops::kround};
+
 use crate::prelude::*;
-use latexml_core::common::dimension::attribute_format;
-use latexml_core::common::numeric_ops::kround;
 
 /// Perl: graphics_scaledbox_props($box, $xscale, $yscale) in graphics.sty.ltxml L63-81
 /// Computes scaled dimensions and translation offsets for \scalebox.
@@ -90,7 +90,6 @@ pub fn rotated_properties(
   ])
 }
 
-
 LoadDefinitions!({
   // Perl: graphics.sty.ltxml — base graphics package
   // Package options: draft, final, hiderotate, hidescale, hiresbb
@@ -122,7 +121,7 @@ LoadDefinitions!({
     let yscale = whatsit.get_arg(2)
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(xscale)).unwrap_or(xscale);
     if let Some(body) = whatsit.get_arg(3) {
-      let scaled = crate::package::graphics_sty::scaled_properties(body.clone(), xscale, yscale);
+      let scaled = scaled_properties(body.clone(), xscale, yscale);
       if let Ok(props) = scaled {
         for (k, v) in props {
           whatsit.set_property(k, v);
@@ -150,11 +149,10 @@ LoadDefinitions!({
     let scale = if denom != 0.0 { num / denom } else { 1.0 };
     whatsit.set_property("xscale", Stored::from(s!("{}", scale)));
     whatsit.set_property("yscale", Stored::from(s!("{}", scale)));
-    if let Some(body) = whatsit.get_arg(3).cloned() {
-      if let Ok(props) = scaled_properties(body, scale, scale) {
+    if let Some(body) = whatsit.get_arg(3).cloned()
+      && let Ok(props) = scaled_properties(body, scale, scale) {
         for (k, v) in props { whatsit.set_property(k, v); }
       }
-    }
   });
 
   // \Gscale@box@dddd {xnum}{xdenom}{ynum}{ydenom}{body} — Perl L112-118.
@@ -174,27 +172,26 @@ LoadDefinitions!({
     let yscale = if yd != 0.0 { yn / yd } else { 1.0 };
     whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
     whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
-    if let Some(body) = whatsit.get_arg(5).cloned() {
-      if let Ok(props) = scaled_properties(body, xscale, yscale) {
+    if let Some(body) = whatsit.get_arg(5).cloned()
+      && let Ok(props) = scaled_properties(body, xscale, yscale) {
         for (k, v) in props { whatsit.set_property(k, v); }
       }
-    }
   });
 
   // Perl: DefParameterType('GraphixDimension', sub { skipSpaces, readXToken,
   //   if ! or undef → undef, else unread + readDimension }, optional => 1)
   DefParameterType!(GraphixDimension, sub[_inner, _extra] {
-    gullet::skip_spaces()?;
-    let next = gullet::read_x_token(Some(false), false, None)?;
+    skip_spaces()?;
+    let next = read_x_token(Some(false), false, None)?;
     if next.is_none() || next.as_ref().is_some_and(|t| t.text == pin!("!")) {
       // ! or end-of-input: "let other dimensions determine size"
       Ok(Tokens!())
     } else {
       // Unread and read a Dimension
       if let Some(tok) = next {
-        gullet::unread_one(tok);
+        unread_one(tok);
       }
-      let dim = gullet::read_dimension()?;
+      let dim = read_dimension()?;
       // Return the raw sp value as tokens for lossless round-trip.
       // to_attribute() rounds to 1 decimal pt, losing precision in scale calculations.
       Ok(Tokenize!(&dim.value_of().to_string()))
@@ -208,38 +205,37 @@ LoadDefinitions!({
   //   factor + unit (defaulting to bp). Returns a space-separated token
   //   sequence of the raw sp values.
   DefParameterType!(GraphixDimensions, sub[_inner, _extra] {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let mut dims: Vec<i64> = Vec::new();
     while dims.len() < 4 {
       if !dims.is_empty() {
         // Optionally consume a single comma between entries (Perl: if
         // the next token isn't T_OTHER(','), unread it).
-        if let Some(t) = gullet::read_token()? {
-          if t.text != pin!(",") {
-            gullet::unread_one(t);
+        if let Some(t) = read_token()?
+          && t.text != pin!(",") {
+            unread_one(t);
           }
-        }
       }
-      let is_negative = gullet::read_optional_signs()?;
+      let is_negative = read_optional_signs()?;
       // Try register value (Dimension) first, allowing coercion.
-      let register_dim = gullet::read_register_value_coerce(
-        latexml_core::definition::register::RegisterType::Dimension,
+      let register_dim = read_register_value_coerce(
+        RegisterType::Dimension,
         true,
       )?;
-      if let Some(latexml_core::definition::register::RegisterValue::Dimension(d)) = register_dim {
+      if let Some(RegisterValue::Dimension(d)) = register_dim {
         let v = d.value_of();
         dims.push(if is_negative { -v } else { v });
         continue;
       }
       // Otherwise try factor + unit. If the unit is missing, fall back
       // to `bp` (big points) per Perl L52-54.
-      if let Some(factor) = gullet::read_factor()? {
-        let unit = match gullet::read_unit()? {
+      if let Some(factor) = read_factor()? {
+        let unit = match read_unit()? {
           Some(u) => u,
-          None => state::convert_unit("bp"),
+          None => convert_unit("bp"),
         };
         let signed = if is_negative { -factor } else { factor };
-        let sp = latexml_core::common::numeric_ops::fixpoint(signed, Some(unit));
+        let sp = common::numeric_ops::fixpoint(signed, Some(unit));
         dims.push(sp);
       } else {
         break;
@@ -256,7 +252,7 @@ LoadDefinitions!({
       // `Util::Image` to_bp, reads the pt-suffixed value.
       let joined = dims
         .iter()
-        .map(|d| latexml_core::common::dimension::Dimension(*d).to_string())
+        .map(|d| Dimension(*d).to_string())
         .collect::<Vec<_>>()
         .join(" ");
       Ok(Tokenize!(&joined))
@@ -309,7 +305,7 @@ LoadDefinitions!({
       if th.is_some() && tw.is_none() { xscale = yscale; }
       whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
       whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
-      if let Ok(props) = crate::package::graphics_sty::scaled_properties(body, xscale, yscale) {
+      if let Ok(props) = scaled_properties(body, xscale, yscale) {
         for (k, v) in props {
           whatsit.set_property(k, v);
         }
@@ -344,13 +340,12 @@ LoadDefinitions!({
     let angle = whatsit.get_arg(1)
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0))
       .unwrap_or(0.0);
-    if let Ok(Some(body)) = whatsit.get_body() {
-      if let Ok(props) = crate::package::graphics_sty::rotated_properties(body, angle, false) {
+    if let Ok(Some(body)) = whatsit.get_body()
+      && let Ok(props) = rotated_properties(body, angle, false) {
         for (k, v) in props {
           whatsit.set_property(k, v);
         }
       }
-    }
   });
 
   // Now re-register the bare `\rotatebox` as a DefConstructor, overriding
@@ -365,7 +360,7 @@ LoadDefinitions!({
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0))
       .unwrap_or(0.0);
     if let Some(body) = whatsit.get_arg(3) {
-      let rotated = crate::package::graphics_sty::rotated_properties(body.clone(), angle, false);
+      let rotated = rotated_properties(body.clone(), angle, false);
       if let Ok(props) = rotated {
         for (k, v) in props {
           whatsit.set_property(k, v);
@@ -381,17 +376,15 @@ LoadDefinitions!({
   DefConstructor!("\\reflectbox{}", "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth'>#1</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
-    if let Some(mut body) = whatsit.get_arg(1).cloned() {
-      if let Ok((w, h, d, _, _, _)) = body.get_size(None) {
-        if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
+    if let Some(mut body) = whatsit.get_arg(1).cloned()
+      && let Ok((w, h, d, _, _, _)) = body.get_size(None)
+        && (w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0) {
           whatsit.set_property("width", Stored::from(w.to_attribute()));
           whatsit.set_property("height", Stored::from(h.to_attribute()));
           whatsit.set_property("depth", Stored::from(d.to_attribute()));
           whatsit.set_property("xscale", Stored::from("-1".to_string()));
           whatsit.set_property("yscale", Stored::from("1".to_string()));
         }
-      }
-    }
   });
 
   // == Graphics path and inclusion ==
@@ -405,7 +398,7 @@ LoadDefinitions!({
   DefConstructor!("\\graphicspath DirectoryList",
   sub[document, _args, props] {
     if let Some(Stored::String(paths_sym)) = props.get("paths") {
-      let paths = arena::with(*paths_sym, |s| s.to_string());
+      let paths = with(*paths_sym, |s| s.to_string());
       for path in paths.split('\x1e').filter(|p| !p.is_empty()) {
         let mut attrs = HashMap::default();
         attrs.insert(String::from("graphicspath"), path.to_string());
@@ -418,7 +411,7 @@ LoadDefinitions!({
       .and_then(|a| a.as_ref())
       .map(|a| a.to_string())
       .unwrap_or_default();
-    let root = state::with_value("SOURCEDIRECTORY",
+    let root = with_value("SOURCEDIRECTORY",
       |v| v.map(|s| s.to_string()).unwrap_or_default());
     let mut collected: Vec<String> = Vec::new();
     for dir in arg.split('}') {
@@ -431,8 +424,8 @@ LoadDefinitions!({
           s!("{}/{}", root, dir)
         };
         // Perl: PushValue(GRAPHICSPATHS => $path)
-        let _ = state::push_value("GRAPHICSPATHS",
-          Stored::String(arena::pin(&path)));
+        let _ = push_value("GRAPHICSPATHS",
+          Stored::String(pin(&path)));
         collected.push(path);
       }
     }
@@ -452,7 +445,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let path = args[3].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       let path = path.trim().to_string();
-      let candidates = latexml_core::util::image::image_candidates(&path);
+      let candidates = util::image::image_candidates(&path);
       Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
     },
     alias => "\\includegraphics");

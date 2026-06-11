@@ -1,22 +1,20 @@
 use core::slice::Iter;
+use std::{borrow::Cow, fmt};
+
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::fmt;
 
 use super::keyval::{has_keyval, keyval_get, keyval_qname};
-use crate::common::arena::SymHashMap;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::argument::ArgWrap;
-use crate::document::Document;
-use crate::gullet::{self, ExpansionLevel};
-use crate::state;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
-use crate::{BoxOps, Digested, NO_PROPERTIES};
+use crate::{
+  BoxOps, Digested, NO_PROPERTIES,
+  common::{arena::SymHashMap, error::*, font::Font, object::Object, store::Stored},
+  definition::argument::ArgWrap,
+  document::Document,
+  gullet::{self, ExpansionLevel},
+  state,
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 #[derive(Debug, Clone)]
 struct KVData {
@@ -116,16 +114,16 @@ impl Object for KeyVals {
         // avoid accidental repeats?
         let keytype_opt = keyval_get(&keyval_qname(&self.prefix, primary_keyset, key), "type");
         let v = if let Some(Stored::Parameter(keytype)) = keytype_opt {
-          match value.take() { Some(v) => {
-            keytype.digest(v, None)?
-          } _ => {
-            None
-          }}
-        } else { match value.take() { Some(v) => {
-          Some(v.be_digested()?)
-        } _ => {
-          None
-        }}};
+          match value.take() {
+            Some(v) => keytype.digest(v, None)?,
+            _ => None,
+          }
+        } else {
+          match value.take() {
+            Some(v) => Some(v.be_digested()?),
+            _ => None,
+          }
+        };
         tuple.digested_value = v;
       }
     }
@@ -452,12 +450,11 @@ impl KeyVals {
 
     // Read existing tokens from rmmacro (if defined and has meaning)
     let mut rmtokens: Vec<Token> = Vec::new();
-    if let Some(rm) = rmmacro {
-      if state::has_meaning(&rm) {
-        if let Ok(expanded) = gullet::do_expand(Tokens!(rm)) {
-          rmtokens = expanded.unlist();
-        }
-      }
+    if let Some(rm) = rmmacro
+      && state::has_meaning(&rm)
+      && let Ok(expanded) = gullet::do_expand(Tokens!(rm))
+    {
+      rmtokens = expanded.unlist();
     }
 
     let mut tokens: Vec<Token> = Vec::new();
@@ -497,27 +494,26 @@ impl KeyVals {
       // If no keysets resolved for this key
       if keysets.is_empty() {
         // Store in rmmacro if defined
-        if rmmacro.is_some() {
-          if let Ok(rev) = self.revert_keyval(
+        if rmmacro.is_some()
+          && let Ok(rev) = self.revert_keyval(
             key,
             primary_keyset,
             value.as_ref(),
             *use_default,
             rmtokens.is_empty(),
-          ) {
-            rmtokens.extend(rev);
-          }
+          )
+        {
+          rmtokens.extend(rev);
         }
         // Call hookMissing if defined
-        if let Some(hm) = hook_missing {
-          if let Ok(rev) =
+        if let Some(hm) = hook_missing
+          && let Ok(rev) =
             self.revert_keyval(key, primary_keyset, value.as_ref(), *use_default, true)
-          {
-            tokens.push(hm);
-            tokens.push(T_BEGIN!());
-            tokens.extend(rev);
-            tokens.push(T_END!());
-          }
+        {
+          tokens.push(hm);
+          tokens.push(T_BEGIN!());
+          tokens.extend(rev);
+          tokens.push(T_END!());
         }
         continue;
       }
@@ -570,10 +566,10 @@ impl KeyVals {
             // Call the macro with the value (or empty if bare key without default)
             tokens.push(T_CS!(s!("\\{qname}")));
             tokens.push(T_BEGIN!());
-            if let Some(v) = value {
-              if let Ok(reverted) = v.revert() {
-                tokens.extend(reverted.unlist());
-              }
+            if let Some(v) = value
+              && let Ok(reverted) = v.revert()
+            {
+              tokens.extend(reverted.unlist());
             }
             tokens.push(T_END!());
           }
@@ -670,22 +666,20 @@ impl KeyVals {
     }
     tokens.extend(Explode!(key));
     // write the default (if applicable)
-    if !use_default {
-      if let Some(value) = value_opt {
-        tokens.push(T_OTHER!("="));
-        let mut reverted_tokens = Vec::new();
-        if let Some(Stored::Parameter(keytype)) = keytype_stored {
-          // TODO: The types here are a little curious. The stored value must be cast back into
-          // Tokens if Parameter's revert works on Tokens. Or should that revert call work on
-          // ArgWrap?
-          if let Some(reverted) = keytype.revert(Some(value.revert()?))? {
-            reverted_tokens.extend(reverted.unlist());
-          }
-        } else {
-          reverted_tokens.extend(value.revert()?.unlist());
+    if !use_default && let Some(value) = value_opt {
+      tokens.push(T_OTHER!("="));
+      let mut reverted_tokens = Vec::new();
+      if let Some(Stored::Parameter(keytype)) = keytype_stored {
+        // TODO: The types here are a little curious. The stored value must be cast back into
+        // Tokens if Parameter's revert works on Tokens. Or should that revert call work on
+        // ArgWrap?
+        if let Some(reverted) = keytype.revert(Some(value.revert()?))? {
+          reverted_tokens.extend(reverted.unlist());
         }
-        tokens.extend(self.rebrace(Tokens::new(reverted_tokens)).unlist());
+      } else {
+        reverted_tokens.extend(value.revert()?.unlist());
       }
+      tokens.extend(self.rebrace(Tokens::new(reverted_tokens)).unlist());
     }
     Ok(tokens)
   }
@@ -804,10 +798,10 @@ impl KeyVals {
       } = tuple;
       // if we want to skip some values, we need to store new tuples
       let key_str = key.as_str();
-      if let Some(skip) = skip_opt {
-        if skip == key_str {
-          continue;
-        }
+      if let Some(skip) = skip_opt
+        && skip == key_str
+      {
+        continue;
       }
       if let Some(v) = value.as_ref() {
         // push key / value into the pair

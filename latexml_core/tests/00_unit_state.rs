@@ -1,12 +1,14 @@
-use latexml_core::common::arena;
-use latexml_core::common::arena::SymHashMap;
-use latexml_core::common::locator::Locator;
-use latexml_core::definition::expandable::Expandable;
-use latexml_core::state::*;
-use latexml_core::token::{Catcode, Token};
-use latexml_core::tokens::Tokens;
-use latexml_core::{CharToken, Explode, T_CS, T_SPACE, Token, s};
 use std::collections::VecDeque;
+
+use latexml_core::{
+  CharToken, Explode, T_CS, T_SPACE, Token,
+  common::{arena, arena::SymHashMap, locator::Locator},
+  definition::expandable::Expandable,
+  s,
+  state::*,
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 #[test]
 fn basic_state_init() {
@@ -151,15 +153,18 @@ fn assign_lookup_arrays() {
   }
 
   unshift_value("SEARCHPATHS", vec![Stored::String(arena::pin_static("d"))]);
-  match lookup_vecdeque("SEARCHPATHS") { Some(vdq) => {
-    let mut vdq_expected = VecDeque::new();
-    for entry in &["d", "a", "b", "c"] {
-      vdq_expected.push_back(Stored::String(arena::pin_static(entry)));
-    }
-    assert_eq!(vdq, vdq_expected, "shift/unshift existing key");
-  } _ => {
-    panic!("state.lookup_vecdeque returned None");
-  }}
+  match lookup_vecdeque("SEARCHPATHS") {
+    Some(vdq) => {
+      let mut vdq_expected = VecDeque::new();
+      for entry in &["d", "a", "b", "c"] {
+        vdq_expected.push_back(Stored::String(arena::pin_static(entry)));
+      }
+      assert_eq!(vdq, vdq_expected, "shift/unshift existing key");
+    },
+    _ => {
+      panic!("state.lookup_vecdeque returned None");
+    },
+  }
 
   assert_eq!(
     shift_value("SEARCHPATHS").unwrap(),
@@ -263,12 +268,15 @@ fn install_definition_and_meaning() {
 
   // Assign a Meaning
   assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
-  match lookup_meaning(&T_CS!("\\foobar")) { Some(Stored::Expandable(ref stored_meaning)) => {
-    assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
-  // definition for CS \jobname
-  } _ => {
-    panic!("Failed to lookup installed meaning!");
-  }}
+  match lookup_meaning(&T_CS!("\\foobar")) {
+    Some(Stored::Expandable(ref stored_meaning)) => {
+      assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
+      // definition for CS \jobname
+    },
+    _ => {
+      panic!("Failed to lookup installed meaning!");
+    },
+  }
 
   let looked_up_meaning = { lookup_meaning(&T_CS!("\\foobar")).unwrap() };
   {
@@ -344,14 +352,14 @@ fn push_pop_daemon_frames() {
   match lookup_value("daemon_mode") {
     None => panic!("Couldn't lookup daemon_mode value after assignment"),
     Some(Stored::Bool(b)) => assert!(b, "in daemon mode"),
-    Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
+    Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value"),
   };
 
   pop_daemon_frame().unwrap();
   match lookup_value("daemon_mode") {
     None => panic!("Couldn't lookup daemon_mode value after assignment"),
     Some(Stored::Bool(b)) => assert!(!b, "out of daemon mode"),
-    Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value")
+    Some(_) => panic!("Looked up value of daemon_mode didn't match assignment value"),
   };
 }
 

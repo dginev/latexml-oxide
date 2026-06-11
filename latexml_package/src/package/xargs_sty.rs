@@ -14,7 +14,7 @@ LoadDefinitions!({
     let no_tks = &NO_TOKENS;
     let default = extra.first().unwrap_or(no_tks);
     let usedefault = extra.get(1).unwrap_or(no_tks);
-    let value = gullet::read_optional(None)?.unwrap_or(Tokens!());
+    let value = read_optional(None)?.unwrap_or(Tokens!());
     if (!usedefault.is_empty() && value.to_string() == usedefault.to_string()) ||
         usedefault.is_empty() && value.to_string().is_empty() {
       default.clone()
@@ -151,10 +151,10 @@ fn get_xargs_is_global(star: Option<Tokens>, keyval_opt: Option<&KeyVals>) -> bo
     // defaults to \long for unstarred form
     prefix = String::from("\\long");
   }
-  if let Some(keyval) = keyval_opt {
-    if let Some(p) = keyval.get_value("addprefix") {
-      prefix.push_str(&p.to_string());
-    }
+  if let Some(keyval) = keyval_opt
+    && let Some(p) = keyval.get_value("addprefix")
+  {
+    prefix.push_str(&p.to_string());
   }
   // true if global in prefix
   prefix.contains("global")

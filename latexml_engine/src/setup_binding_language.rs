@@ -85,6 +85,7 @@ macro_rules! RequirePackage {
   }};
 }
 #[macro_export]
+#[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
 macro_rules! LoadClass {
   ($class:expr_2021) => {{ load_class($class, Vec::new(), Tokens!())? }};
   ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{ load_class($class, $options, $after)? }};
@@ -854,11 +855,10 @@ macro_rules! Input {
 /// as an "anonymous macro" containing parameter markers like `#1`, with the arguments
 /// substituted in (Perl `Invocation`, Package.pm).
 #[macro_export]
+#[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
 macro_rules! Invocation {
   ($csname:literal) => {{ Invocation!($csname, vec![None]) }};
-  ($csname:literal, $args:expr_2021) => {{
-    build_invocation_str($csname, $args.into_iter().map(Into::into).collect())?
-  }};
+  ($csname:literal, $args:expr_2021) => {{ build_invocation_str($csname, $args.into_iter().map(Into::into).collect())? }};
   ($token:expr_2021) => {
     Invocation!($token, vec![None])
   };
@@ -956,6 +956,7 @@ macro_rules! LookupTokens {
   ($name:expr_2021) => {{ state::lookup_tokens($name) }};
 }
 #[macro_export]
+#[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
 macro_rules! AssignValue {
   ($name:expr_2021 => $value:expr_2021) => {
     AssignValue!($name, $value)
@@ -989,6 +990,7 @@ macro_rules! LookupCatcode {
   ($c:expr_2021) => {{ state::lookup_catcode($c) }};
 }
 #[macro_export]
+#[rustfmt::skip] // arms carry edition-2024 `:expr_2021` markers that push past 100 cols
 macro_rules! AssignCatcode {
   ($name:expr_2021 => $value:expr_2021) => {
     AssignCatcode!($name, $value)

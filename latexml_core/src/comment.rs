@@ -1,19 +1,17 @@
-use libxml::tree::Node;
-use std::borrow::Cow;
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::register::RegisterValue;
-use crate::document::Document;
-use crate::tokens::NO_TOKENS;
-use crate::tokens::Tokens;
-use crate::{BoxOps, NO_PROPERTIES};
+use libxml::tree::Node;
+
+use crate::{
+  BoxOps, NO_PROPERTIES,
+  common::{
+    arena::SymHashMap as HashMap, dimension::Dimension, error::*, font::Font,
+    numeric_ops::NumericOps, object::Object, store::Stored,
+  },
+  definition::register::RegisterValue,
+  document::Document,
+  tokens::{NO_TOKENS, Tokens},
+};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Comment(pub String);

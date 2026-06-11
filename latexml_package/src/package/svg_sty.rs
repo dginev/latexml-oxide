@@ -36,16 +36,16 @@ LoadDefinitions!({
   // (`\usepackage[svgpath=X]{svg}` / `\RequirePackage[svgpath=X]{svg}`)
   // at load time so at least the common preamble-level case works.
   DefKeyVal!("Gin", "svgpath",  "");
-  if let Some(opts) = state::lookup_vecdeque("opt@svg.sty") {
+  if let Some(opts) = lookup_vecdeque("opt@svg.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
       if let Some(val) = opt_str.strip_prefix("svgpath=") {
-        let canonical = latexml_core::util::pathname::canonical(val.trim());
-        let absolute = latexml_core::util::pathname::absolute(&canonical);
+        let canonical = pathname::canonical(val.trim());
+        let absolute = pathname::absolute(&canonical);
         // PushValue appends to back of the VecDeque (Perl PushValue semantics).
-        let _ = state::push_value(
+        let _ = push_value(
           "GRAPHICSPATHS",
-          Stored::String(arena::pin(&absolute)),
+          Stored::String(pin(&absolute)),
         );
       }
     }

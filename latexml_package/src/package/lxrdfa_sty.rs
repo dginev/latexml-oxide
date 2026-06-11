@@ -19,21 +19,21 @@ fn rdf_attributes_from_digested(kv: &Digested) -> HashMap<String, String> {
         });
         if is_ref {
           // Extract label from \ref's second argument (the label text)
-          if let Some(ref d) = digested_opt {
-            if let DigestedData::Whatsit(ref w) = *d.data() {
-              let label = w
-                .borrow()
-                .get_arg(2)
-                .map(|a| s!("LABEL:{}", a.to_string()))
-                .unwrap_or_else(|| {
-                  w.borrow()
-                    .get_arg(1)
-                    .map(|a| s!("LABEL:{}", a.to_string()))
-                    .unwrap_or_default()
-                });
-              attrs.insert(s!("{}labelref", key), label);
-              continue;
-            }
+          if let Some(ref d) = digested_opt
+            && let DigestedData::Whatsit(ref w) = *d.data()
+          {
+            let label = w
+              .borrow()
+              .get_arg(2)
+              .map(|a| s!("LABEL:{}", a.to_string()))
+              .unwrap_or_else(|| {
+                w.borrow()
+                  .get_arg(1)
+                  .map(|a| s!("LABEL:{}", a.to_string()))
+                  .unwrap_or_default()
+              });
+            attrs.insert(s!("{}labelref", key), label);
+            continue;
           }
         }
         let val_str = val.to_string();
@@ -65,11 +65,10 @@ fn rdf_attributes_from_argwrap(arg: &ArgWrap) -> HashMap<String, String> {
     },
     _ => {
       // Try converting to Digested
-      match arg.clone().undigested() { Some(d) => {
-        rdf_attributes_from_digested(&d)
-      } _ => {
-        HashMap::default()
-      }}
+      match arg.clone().undigested() {
+        Some(d) => rdf_attributes_from_digested(&d),
+        _ => HashMap::default(),
+      }
     },
   }
 }
@@ -173,7 +172,7 @@ LoadDefinitions!({
     let p = do_expand(prefix)?.to_string();
     let u = do_expand(url)?.to_string();
     let entry = if p.is_empty() { u } else { s!("{}: {}", p, u) };
-    let _ = state::push_value("RDFa_prefixes", entry);
+    let _ = push_value("RDFa_prefixes", entry);
     Ok(Vec::new())
   });
 
@@ -219,8 +218,8 @@ LoadDefinitions!({
         let attrs = rdf_attributes_from_digested(kv);
         // Only set on ltx:text elements (the element we constructed), not auto-opened parents
         for node in document.get_constructed_nodes() {
-          let qname = latexml_core::document::get_node_qname(node);
-          if qname == arena::pin_static("ltx:text") {
+          let qname = document::get_node_qname(node);
+          if qname == pin_static("ltx:text") {
             let mut n = node.clone();
             set_rdf_attrs_on_node(&mut n, &attrs);
           }
@@ -239,17 +238,17 @@ LoadDefinitions!({
         attrs.insert(s!("about"), String::new());
       }
       // Store in frontmatter hash under "ltx:rdf" key, matching Perl
-      state::with_value_mut("frontmatter", |val_opt| {
+      with_value_mut("frontmatter", |val_opt| {
         let frontmatter = match val_opt {
           Some(&mut Stored::HashTagData(ref mut frnt)) => frnt,
-          _ => return Ok::<(), latexml_core::Error>(()),
+          _ => return Ok::<(), Error>(()),
         };
         let tag = s!("ltx:rdf");
         let empty_content = Digested::from(List::new(Vec::new()));
-        let entry = latexml_core::document::tag::TagData {
+        let entry = document::tag::TagData {
           tag: tag.clone(),
           attr: attrs,
-          content: vec![latexml_core::document::tag::TagContent::Box(empty_content)],
+          content: vec![document::tag::TagContent::Box(empty_content)],
         };
         let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
         f_entry.push(entry);
@@ -287,14 +286,14 @@ LoadDefinitions!({
   );
 
   Let!("\\lxRDF", "\\lxRDF@preamble");
-  let _ = state::push_value(
+  let _ = push_value(
     "@at@begin@document",
     Tokens!(T_CS!("\\let"), T_CS!("\\lxRDF"), T_CS!("\\lxRDF@body")),
   );
 
   // Add prefix= attribute when document opens
   Tag!("ltx:document", after_open => sub[_document, node] {
-    if let Some(Stored::VecDequeStored(prefixes)) = state::lookup_value("RDFa_prefixes") {
+    if let Some(Stored::VecDequeStored(prefixes)) = lookup_value("RDFa_prefixes") {
       let prefix_strs: Vec<String> = prefixes.iter().map(|s| s.to_string()).collect();
       if !prefix_strs.is_empty() {
         let _ = node.set_attribute("prefix", &prefix_strs.join(" "));

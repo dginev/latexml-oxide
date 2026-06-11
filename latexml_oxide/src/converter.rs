@@ -1,18 +1,18 @@
-use latexml_core::common::arena;
-use latexml_core::Note;
-use latexml_core::common::error::*;
-use latexml_core::common::object::Object;
-use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
-use latexml_core::digested::Digested;
-use latexml_core::document::Document;
-use latexml_core::list::List;
-use latexml_core::state::{
-  add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch, source_map_enabled,
-  source_table_snapshot,
-};
-use latexml_core::telemetry::{self, Phase};
-use latexml_core::{Core, CoreOptions, Error, Fatal, Info, report_mut, s};
 use std::rc::Rc;
+
+use latexml_core::{
+  Core, CoreOptions, Error, Fatal, Info, Note,
+  common::{Config, DataSize, DigestionMode, OutputFormat, arena, error::*, object::Object},
+  digested::Digested,
+  document::Document,
+  list::List,
+  report_mut, s,
+  state::{
+    add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch, source_map_enabled,
+    source_table_snapshot,
+  },
+  telemetry::{self, Phase},
+};
 
 use crate::core_interface::DigestionAPI;
 
@@ -146,8 +146,11 @@ impl Converter {
     // `resolve_amble`. (The previous inline code keyed the postamble on
     // `whatsout`, dropping `\end{document}` / `\ensuremathpreceeds` for
     // fragment/math inputs.)
-    let (current_preamble, current_postamble) =
-      resolve_amble(&self.opts.whatsin, &self.opts.preamble, &self.opts.postamble);
+    let (current_preamble, current_postamble) = resolve_amble(
+      &self.opts.whatsin,
+      &self.opts.preamble,
+      &self.opts.postamble,
+    );
     // TODO:
     // 1.3.3 Archives need to get unpacked in a sandbox (with sufficient bookkeeping)
     //   elsif ($$opts{whatsin} =~ /^archive/) {
@@ -267,7 +270,7 @@ impl Converter {
             // propagated out of math parsing, P1-4) must surface as the
             // standard `Fatal:` log line, not a generic document error;
             // otherwise the summary counts a fatal the log never shows.
-            if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) {
+            if matches!(e.target, ErrorTarget::Timeout) {
               e.log_fatal();
             } else {
               let message = s!("{:?}", e);
@@ -283,8 +286,8 @@ impl Converter {
       },
     };
 
-    self.runtime.status = latexml_core::common::error::get_status_message();
-    self.runtime.status_code = latexml_core::common::error::get_status_code();
+    self.runtime.status = get_status_message();
+    self.runtime.status_code = get_status_code();
     // alarm(0)
 
     // 2.2 Bookkeeping in case fatal errors occurred
@@ -390,7 +393,11 @@ impl Converter {
     // this note even when status_code == 3; fold in bin/latexml's verdict here so
     // a fatal run reports "failed", never the self-contradictory "complete: N fatal
     // error". Success cases (status_code < 3) stay byte-identical.
-    let verb = if self.runtime.status_code == 3 { "failed" } else { "complete" };
+    let verb = if self.runtime.status_code == 3 {
+      "failed"
+    } else {
+      "complete"
+    };
     Note!(s!("Conversion {}: {}", verb, self.runtime.status));
     let log = self.flush_log();
     // self->sanitize($log) if ($$runtime{status_code} == 3);
@@ -409,7 +416,11 @@ impl Converter {
   /// is *named*, so `--source-map` stamps its locators. Focused on the
   /// `Document`/HTML5 path the server uses — no amble wrapping, no TeX/Box
   /// output formats.
-  pub fn convert_content_with_provenance(mut self, name: &str, content: String) -> ConversionResponse {
+  pub fn convert_content_with_provenance(
+    mut self,
+    name: &str,
+    content: String,
+  ) -> ConversionResponse {
     // Load + digest through the shared top-level loader, so the source-context
     // setup is not duplicated here.
     let digested = match self.digest_content_with_provenance(name, content) {
@@ -433,8 +444,8 @@ impl Converter {
       },
     };
 
-    self.runtime.status = latexml_core::common::error::get_status_message();
-    self.runtime.status_code = latexml_core::common::error::get_status_code();
+    self.runtime.status = get_status_message();
+    self.runtime.status_code = get_status_code();
 
     let serialized = {
       let _g = telemetry::phase(Phase::Build);
@@ -448,7 +459,7 @@ impl Converter {
           // same way `convert` does so it composes in this `-> ConversionResponse` fn.
           // Timeout-target resource fatals get the standard `Fatal:` line
           // (see the sibling handler in `convert` — P1-4).
-          if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) {
+          if matches!(e.target, ErrorTarget::Timeout) {
             e.log_fatal();
           } else {
             let message = s!("{:?}", e);
@@ -500,7 +511,11 @@ impl Converter {
   /// `--source-map` needs (`stamp_source_locator` only stamps
   /// `.tex`/`.ltx`/`.bbl`/`.bib` user sources). Initializes the session if
   /// needed; does not finalize a document.
-  pub fn digest_content_with_provenance(&mut self, name: &str, content: String) -> Result<Digested> {
+  pub fn digest_content_with_provenance(
+    &mut self,
+    name: &str,
+    content: String,
+  ) -> Result<Digested> {
     if !self.ready {
       self.initialize_session()?;
     }
@@ -530,8 +545,10 @@ impl Converter {
 /// the *main* document load, go through [`Converter::digest_named`], which
 /// installs the document directory first.
 pub fn open_named_in_memory_mouth(name: &str, content: String) -> Result<()> {
-  use latexml_core::gullet;
-  use latexml_core::mouth::{Mouth, MouthOptions};
+  use latexml_core::{
+    gullet,
+    mouth::{Mouth, MouthOptions},
+  };
   let mouth = Mouth::create(name, MouthOptions {
     notes: true,
     content: Some(content),
@@ -545,10 +562,10 @@ pub fn open_named_in_memory_mouth(name: &str, content: String) -> Result<()> {
 /// the requested input chunk size. Faithful port of Perl `LaTeXML.pm`
 /// L165-172 — note both ambles key on **`whatsin`** (not `whatsout`):
 ///
-/// * `math` → `\begin{document}\ensuremathfollows` …
-///   `\ensuremathpreceeds\end{document}` (magic math-mode trigger).
-/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting
-///   to `standard_preamble.tex` / `standard_postamble.tex`.
+/// * `math` → `\begin{document}\ensuremathfollows` … `\ensuremathpreceeds\end{document}` (magic
+///   math-mode trigger).
+/// * `fragment` → the caller-supplied `preamble`/`postamble`, defaulting to `standard_preamble.tex`
+///   / `standard_postamble.tex`.
 /// * everything else (`document`, `archive`, …) → no wrapping.
 pub(crate) fn resolve_amble(
   whatsin: &DataSize,
@@ -561,8 +578,16 @@ pub(crate) fn resolve_amble(
       Some(s!("literal:\\ensuremathpreceeds\\end{{document}}")),
     ),
     DataSize::Fragment => (
-      Some(preamble.clone().unwrap_or_else(|| s!("standard_preamble.tex"))),
-      Some(postamble.clone().unwrap_or_else(|| s!("standard_postamble.tex"))),
+      Some(
+        preamble
+          .clone()
+          .unwrap_or_else(|| s!("standard_preamble.tex")),
+      ),
+      Some(
+        postamble
+          .clone()
+          .unwrap_or_else(|| s!("standard_postamble.tex")),
+      ),
     ),
     _ => (None, None),
   }
@@ -606,7 +631,13 @@ mod tests {
 
   #[test]
   fn amble_document_and_archive_have_no_wrapping() {
-    assert_eq!(resolve_amble(&DataSize::Document, &None, &None), (None, None));
-    assert_eq!(resolve_amble(&DataSize::Archive, &None, &None), (None, None));
+    assert_eq!(
+      resolve_amble(&DataSize::Document, &None, &None),
+      (None, None)
+    );
+    assert_eq!(
+      resolve_amble(&DataSize::Archive, &None, &None),
+      (None, None)
+    );
   }
 }

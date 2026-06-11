@@ -8,10 +8,10 @@ extern crate latexml_package;
 pub mod converter;
 pub mod core_interface;
 pub mod ini_tex;
+pub mod lsp_server;
 pub mod main_tex;
 pub mod post;
 pub mod util;
-pub mod lsp_server;
 
 /// Load the embedded LaTeXML schema (compile-time) into the runtime
 /// `MODEL`. Single home for the `load_model!("LaTeXML")` macro

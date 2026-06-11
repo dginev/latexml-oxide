@@ -2,8 +2,7 @@
 //! split, source-map decoder ring, post-processing to HTML5, engine
 //! `Config`, and the dependency snapshot keying the warm cache.
 
-use std::collections::BTreeSet;
-use std::rc::Rc;
+use std::{collections::BTreeSet, rc::Rc};
 
 use latexml_core::common::{Config, DataSize, OutputFormat};
 
@@ -22,14 +21,13 @@ pub(crate) fn get_file_path(uri: &str) -> String {
   let mut i = 0;
   while i < bytes.len() {
     if bytes[i] == b'%' {
-      if let Some(hex) = bytes.get(i + 1..i + 3) {
-        if hex.is_ascii() {
-          if let Ok(byte) = u8::from_str_radix(std::str::from_utf8(hex).unwrap_or(""), 16) {
-            decoded.push(byte);
-            i += 3;
-            continue;
-          }
-        }
+      if let Some(hex) = bytes.get(i + 1..i + 3)
+        && hex.is_ascii()
+        && let Ok(byte) = u8::from_str_radix(std::str::from_utf8(hex).unwrap_or(""), 16)
+      {
+        decoded.push(byte);
+        i += 3;
+        continue;
       }
       decoded.push(b'%');
       i += 1;
@@ -125,29 +123,29 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     .and_then(|p| p.to_str())
     .map(String::from);
   crate::post::run_post_processing(core_xml, &crate::post::PostOptions {
-    pmml: true,
-    cmml: false,
-    keep_xmath: false,
-    stylesheet: Some("resources/XSLT/LaTeXML-html5.xsl"),
-    destination: None,
-    source_directory: source_dir.as_deref(),
-    search_paths: &[],
+    pmml:                      true,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
+    destination:               None,
+    source_directory:          source_dir.as_deref(),
+    search_paths:              &[],
     // The server returns HTML as a string with no destination — it must never
     // write CSS/JS resource files to disk (would pollute the cwd). The client
     // supplies its own preview styling.
-    nodefaultresources: true,
-    css_files: &[],
-    js_files: &[],
-    noinvisibletimes: false,
-    mathtex: false,
-    navigationtoc: None,
-    schemadocs: false,
-    split: false,
-    split_xpath: None,
-    split_naming: None,
-    xslt_parameters: &[],
+    nodefaultresources:        true,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    mathtex:                   false,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
     graphics_svg_threshold_kb: 0,
-    whatsout: latexml_post::extract::Whatsout::Document,
+    whatsout:                  latexml_post::extract::Whatsout::Document,
   })
 }
 
@@ -155,40 +153,39 @@ pub(crate) fn make_config(uri: &str) -> Config {
   let file_path = get_file_path(uri);
   let dir_path = std::path::Path::new(&file_path).parent();
   let mut search_paths = Vec::new();
-  if let Some(parent) = dir_path {
-    if let Some(p_str) = parent.to_str() {
-      if !p_str.is_empty() {
-        search_paths.push(p_str.to_string());
-      }
-    }
+  if let Some(parent) = dir_path
+    && let Some(p_str) = parent.to_str()
+    && !p_str.is_empty()
+  {
+    search_paths.push(p_str.to_string());
   }
 
   Config {
-    verbosity: 0,
-    format: OutputFormat::HTML5,
-    whatsin: DataSize::Document,
-    whatsout: DataSize::Document,
-    preamble: None,
-    postamble: None,
-    mode: None,
-    bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+    verbosity:               0,
+    format:                  OutputFormat::HTML5,
+    whatsin:                 DataSize::Document,
+    whatsout:                DataSize::Document,
+    preamble:                None,
+    postamble:               None,
+    mode:                    None,
+    bindings_dispatch:       Some(Rc::new(latexml_package::dispatch)),
     extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
     // Preload ar5iv.sty: this server backs the ar5iv-editor, and ar5iv.sty
     // enables raw `.sty` handling so a paper's *local, binding-less* packages
     // (e.g. a bundled `mystyle.sty`) load instead of being skipped with a
     // missing-file warning. Mirrors the sandbox/ar5iv conversion workflow.
-    preload: Some(vec!["ar5iv.sty".to_string()]),
-    search_paths: if search_paths.is_empty() {
+    preload:                 Some(vec!["ar5iv.sty".to_string()]),
+    search_paths:            if search_paths.is_empty() {
       None
     } else {
       Some(search_paths)
     },
-    include_comments: None,
+    include_comments:        None,
     // Math parsing is always ON in the server: the parsed MathML (and its
     // source-mapped tokens) is one of the features this preview showcases, so
     // we deliberately do not expose a disable knob here.
-    nomathparse: None,
-    source_map: Some(true),
+    nomathparse:             None,
+    source_map:              Some(true),
   }
 }
 
@@ -206,35 +203,34 @@ pub(crate) fn make_config(uri: &str) -> Config {
 pub(crate) fn get_directory_dependencies(uri: &str) -> BTreeSet<String> {
   let mut deps = BTreeSet::new();
   let file_path = get_file_path(uri);
-  if let Some(parent) = std::path::Path::new(&file_path).parent() {
-    if let Ok(entries) = std::fs::read_dir(parent) {
-      for entry in entries.flatten() {
-        let path = entry.path();
-        if !entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
-          continue;
-        }
-        let is_dep = path
-          .extension()
-          .and_then(|e| e.to_str())
-          .map(|e| {
-            matches!(
-              e.to_lowercase().as_str(),
-              "sty" | "cls" | "tex" | "cfg" | "def" | "bib" | "clo"
-            )
-          })
-          .unwrap_or(false);
-        if !is_dep {
-          continue;
-        }
-        if let Some(path_str) = path.to_str() {
-          deps.insert(path_str.to_string());
-        }
+  if let Some(parent) = std::path::Path::new(&file_path).parent()
+    && let Ok(entries) = std::fs::read_dir(parent)
+  {
+    for entry in entries.flatten() {
+      let path = entry.path();
+      if !entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+        continue;
+      }
+      let is_dep = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| {
+          matches!(
+            e.to_lowercase().as_str(),
+            "sty" | "cls" | "tex" | "cfg" | "def" | "bib" | "clo"
+          )
+        })
+        .unwrap_or(false);
+      if !is_dep {
+        continue;
+      }
+      if let Some(path_str) = path.to_str() {
+        deps.insert(path_str.to_string());
       }
     }
   }
   deps
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -250,7 +246,10 @@ mod tests {
   fn file_path_percent_decodes_utf8() {
     // %C3%A9 = é (two UTF-8 bytes) — the old char-per-byte decode produced
     // "Ã©" mojibake and broke SOURCEDIRECTORY for non-ASCII paths.
-    assert_eq!(get_file_path("file:///home/u/caf%C3%A9/main.tex"), "/home/u/café/main.tex");
+    assert_eq!(
+      get_file_path("file:///home/u/caf%C3%A9/main.tex"),
+      "/home/u/café/main.tex"
+    );
     assert_eq!(get_file_path("file:///plain/path.tex"), "/plain/path.tex");
     // Malformed escapes pass through unmangled.
     assert_eq!(get_file_path("file:///x%2/y%"), "/x%2/y%");
@@ -264,7 +263,10 @@ mod tests {
     let text = "\\documentclass{article}\n% \\begin{document} not yet!\n\\begin{document}\nBody\n\\end{document}\n";
     let (start, end) = find_begin_document(&re, text).unwrap();
     assert_eq!(&text[start..end], "\\begin{document}");
-    assert!(text[..start].contains("not yet!"), "split is AFTER the commented line");
+    assert!(
+      text[..start].contains("not yet!"),
+      "split is AFTER the commented line"
+    );
     // An escaped \% does not start a comment.
     let text2 = "100\\% sure\\begin{document}x";
     let (s2, _) = find_begin_document(&re, text2).unwrap();

@@ -1,6 +1,9 @@
+use latexml_core::{
+  common::numeric_ops::{NumericOps, UNITY, kround},
+  definition::register::RegisterValue,
+};
+
 use crate::prelude::*;
-use latexml_core::common::numeric_ops::{NumericOps, UNITY, kround};
-use latexml_core::definition::register::RegisterValue;
 
 // calc.sty expression parser — ported from Perl calc.sty.ltxml
 // Grammar:
@@ -34,10 +37,10 @@ impl CalcValue {
 
 fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
   let reader_mouth = Mouth::new("", None)?;
-  gullet::reading_from_mouth(reader_mouth, move || {
-    gullet::unread(tokens);
+  reading_from_mouth(reader_mouth, move || {
+    unread(tokens);
     let mut result = read_term(expr_type)?;
-    while let Some(op) = gullet::read_keyword(&["+", "-"])? {
+    while let Some(op) = read_keyword(&["+", "-"])? {
       let term2 = read_term(expr_type)?;
       result = if op == "+" {
         result.add(term2)
@@ -50,9 +53,9 @@ fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
 }
 
 fn read_term(expr_type: &str) -> Result<RegisterValue> {
-  gullet::skip_spaces()?;
+  skip_spaces()?;
   let mut factor = read_value(expr_type)?.into_regval(expr_type);
-  while let Some(op) = gullet::read_keyword(&["*", "/"])? {
+  while let Some(op) = read_keyword(&["*", "/"])? {
     let factor2 = read_value("Number")?;
     factor = match factor2 {
       CalcValue::Flt(f) => apply_float_op(&factor, &op, f),
@@ -115,9 +118,9 @@ fn apply_float_op(val: &RegisterValue, op: &str, f: f64) -> RegisterValue {
 
 #[cfg(test)]
 mod tests {
+  use latexml_core::common::{glue::Glue, numeric_ops::NumericOps};
+
   use super::*;
-  use latexml_core::common::glue::Glue;
-  use latexml_core::common::numeric_ops::NumericOps;
 
   #[test]
   fn apply_float_op_number_multiply() {
@@ -231,8 +234,8 @@ mod tests {
 }
 
 fn read_value(expr_type: &str) -> Result<CalcValue> {
-  gullet::skip_spaces()?;
-  let peek = gullet::read_x_token(None, false, None)?;
+  skip_spaces()?;
+  let peek = read_x_token(None, false, None)?;
   let peek = match peek {
     Some(t) => t,
     None => {
@@ -245,7 +248,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   };
   // \widthof{...} — Perl calc.sty.ltxml L139-143
   if peek == T_CS!("\\widthof") {
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
     if expr_type == "Number" {
       Error!(
@@ -261,7 +264,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // \heightof{...} — Perl calc.sty.ltxml L144-148
   if peek == T_CS!("\\heightof") {
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
     if expr_type == "Number" {
       Error!(
@@ -277,7 +280,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // \depthof{...} — Perl calc.sty.ltxml L149-153
   if peek == T_CS!("\\depthof") {
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
     if expr_type == "Number" {
       Error!(
@@ -293,7 +296,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // \totalheightof{...} — Perl calc.sty.ltxml L154-158
   if peek == T_CS!("\\totalheightof") {
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let box_result = digest(arg)?;
     if expr_type == "Number" {
       Error!(
@@ -312,11 +315,11 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // \real{<decimal>} — returns a Float factor for multiplication
   if peek == T_CS!("\\real") {
-    let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg = read_arg(ExpansionLevel::Off)?;
     let reader_mouth = Mouth::new("", None)?;
-    let float = gullet::reading_from_mouth(reader_mouth, move || {
-      gullet::unread(arg);
-      let f = gullet::read_float()?;
+    let float = reading_from_mouth(reader_mouth, move || {
+      unread(arg);
+      let f = read_float()?;
       // Round as fixpoint, matching Perl calc.sty.ltxml line 164
       Ok(kround(f.value_f64() * UNITY as f64) as f64 / UNITY as f64)
     })?;
@@ -324,8 +327,8 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // \ratio{<dimen expr>}{<dimen expr>} — returns a Float factor
   if peek == T_CS!("\\ratio") {
-    let arg_x = gullet::read_arg(ExpansionLevel::Off)?;
-    let arg_y = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg_x = read_arg(ExpansionLevel::Off)?;
+    let arg_y = read_arg(ExpansionLevel::Off)?;
     let x = read_expression("Glue", arg_x)?;
     let y = read_expression("Glue", arg_y)?;
     let y_val = y.value_of() as f64;
@@ -334,36 +337,33 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   }
   // \minof{<expr>}{<expr>}
   if peek == T_CS!("\\minof") {
-    let arg_x = gullet::read_arg(ExpansionLevel::Off)?;
-    let arg_y = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg_x = read_arg(ExpansionLevel::Off)?;
+    let arg_y = read_arg(ExpansionLevel::Off)?;
     let x = read_expression(expr_type, arg_x)?;
     let y = read_expression(expr_type, arg_y)?;
     return Ok(CalcValue::Reg(x.smaller(y)));
   }
   // \maxof{<expr>}{<expr>}
   if peek == T_CS!("\\maxof") {
-    let arg_x = gullet::read_arg(ExpansionLevel::Off)?;
-    let arg_y = gullet::read_arg(ExpansionLevel::Off)?;
+    let arg_x = read_arg(ExpansionLevel::Off)?;
+    let arg_y = read_arg(ExpansionLevel::Off)?;
     let x = read_expression(expr_type, arg_x)?;
     let y = read_expression(expr_type, arg_y)?;
     return Ok(CalcValue::Reg(x.larger(y)));
   }
   // Parenthesized subexpression: ( <expression> )
   if peek == T_OTHER!("(") {
-    let inner = gullet::read_until(&Tokens!(T_OTHER!(")")));
+    let inner = read_until(&Tokens!(T_OTHER!(")")));
     return Ok(CalcValue::Reg(read_expression(expr_type, inner?)?));
   }
   // Else: literal value — put back token and read normally
-  gullet::unread_one(peek);
+  unread_one(peek);
   if expr_type == "Number" {
-    Ok(CalcValue::Reg(
-      RegisterValue::Number(gullet::read_number()?),
-    ))
+    Ok(CalcValue::Reg(RegisterValue::Number(read_number()?)))
   } else {
-    Ok(CalcValue::Reg(RegisterValue::Glue(gullet::read_glue()?)))
+    Ok(CalcValue::Reg(RegisterValue::Glue(read_glue()?)))
   }
 }
-
 
 LoadDefinitions!({
   // Stub primitives so they're defined but NOT expandable.

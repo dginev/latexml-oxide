@@ -34,9 +34,9 @@ pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
 // `\AtBeginDocument` macro (which expl3 redefines to route through the
 // L3 hook system).
 pub fn at_begin_document<T: Into<Stored>>(operations: T) -> Result<()> {
-  state::push_value("@at@begin@document", operations)
+  push_value("@at@begin@document", operations)
 }
 
 pub fn at_end_document<T: Into<Stored>>(operations: T) -> Result<()> {
-  state::push_value("@at@end@document", operations)
+  push_value("@at@end@document", operations)
 }

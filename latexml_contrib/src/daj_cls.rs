@@ -34,12 +34,18 @@ LoadDefinitions!({
   // \dajdetails / \dajAUTHORdetails / \dajEDITORdetails — argument
   // is a comma-separated key=val list (publication details, ORCID,
   // affiliation, etc.). Preserve as frontmatter note.
-  DefMacro!("\\dajdetails{}",
-    "\\@add@frontmatter{ltx:note}[role=daj-details]{#1}");
-  DefMacro!("\\dajAUTHORdetails{}",
-    "\\@add@frontmatter{ltx:note}[role=daj-author-details]{#1}");
-  DefMacro!("\\dajEDITORdetails{}",
-    "\\@add@frontmatter{ltx:note}[role=daj-editor-details]{#1}");
+  DefMacro!(
+    "\\dajdetails{}",
+    "\\@add@frontmatter{ltx:note}[role=daj-details]{#1}"
+  );
+  DefMacro!(
+    "\\dajAUTHORdetails{}",
+    "\\@add@frontmatter{ltx:note}[role=daj-author-details]{#1}"
+  );
+  DefMacro!(
+    "\\dajEDITORdetails{}",
+    "\\@add@frontmatter{ltx:note}[role=daj-editor-details]{#1}"
+  );
 
   // {dajauthors} environment wraps repeated `{authorinfo}[id]{body}` blocks.
   // The raw cls nests `\newenvironment{authorinfo}` inside `{dajauthors}`,

@@ -38,11 +38,17 @@ LoadDefinitions!({
 
   // Frontmatter — preserve author content.
   // \corrauthor[mark]{name}{email} — emit name as author + email note.
-  DefMacro!("\\corrauthor[]{}{}",
-    "\\author{#2}\\@add@frontmatter{ltx:note}[role=email]{#3}");
+  DefMacro!(
+    "\\corrauthor[]{}{}",
+    "\\author{#2}\\@add@frontmatter{ltx:note}[role=email]{#3}"
+  );
   // \authoraffiliation[mark]{name}{affil} — emit name + affil note.
-  DefMacro!("\\authoraffiliation[]{}{}",
-    "\\author{#2}\\@add@frontmatter{ltx:note}[role=affiliation]{#3}");
-  DefMacro!("\\affil[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!(
+    "\\authoraffiliation[]{}{}",
+    "\\author{#2}\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
+  );
+  DefMacro!(
+    "\\affil[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
+  );
 });

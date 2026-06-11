@@ -48,10 +48,14 @@
 //! Windows via `GetProcessMemoryInfo` — so every supported OS gets the same
 //! reliable time + RAM defenses. Tracked as a portability follow-up.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::{
+  sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+  },
+  thread,
+  time::{Duration, Instant},
+};
 
 /// Current resident set size of this process in KiB, or `None` if it can't be
 /// determined (non-Linux, or `/proc` unavailable). Reads `VmRSS` from
@@ -96,12 +100,11 @@ pub fn set_pre_exit_hook(hook: PreExitHook) {
 }
 
 fn run_pre_exit_hook() {
-  if let Some(cell) = PRE_EXIT_HOOK.get() {
-    if let Ok(mut guard) = cell.lock() {
-      if let Some(hook) = guard.take() {
-        hook();
-      }
-    }
+  if let Some(cell) = PRE_EXIT_HOOK.get()
+    && let Ok(mut guard) = cell.lock()
+    && let Some(hook) = guard.take()
+  {
+    hook();
   }
 }
 
@@ -141,47 +144,46 @@ impl Watchdog {
       if cancelled.load(Ordering::Relaxed) {
         return; // cancelled: graceful exit.
       }
-      if let Some(deadline) = deadline {
-        if Instant::now() >= deadline {
-          if cancelled.load(Ordering::Relaxed) {
-            return;
-          }
-          eprintln!(
-            "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
-          );
-          // Run the optional pre-exit hook (e.g. cortex_worker writing a
-          // structured Status:conversion:3 placeholder to its --output path)
-          // BEFORE exiting. The hook is invoked at most once per process.
-          run_pre_exit_hook();
-          // `std::process::exit(124)` instead of `abort()`: the watchdog must
-          // terminate the whole process (the worker thread is presumed wedged
-          // in a tight loop that won't observe a cooperative cancel), but
-          // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
-          // the shell. `exit(124)` (standard timeout exit code) runs atexit
-          // handlers, flushes stderr, and leaves a clean exit signal the
-          // parent harness can interpret as "paper timed out" without
-          // conflating it with a Rust panic / memory corruption. Witnesses:
-          // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
-          // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
-          // 2026-05-13 588-paper sweep.
-          std::process::exit(EXIT_TIMEOUT);
+      if let Some(deadline) = deadline
+        && Instant::now() >= deadline
+      {
+        if cancelled.load(Ordering::Relaxed) {
+          return;
         }
+        eprintln!(
+          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
+        );
+        // Run the optional pre-exit hook (e.g. cortex_worker writing a
+        // structured Status:conversion:3 placeholder to its --output path)
+        // BEFORE exiting. The hook is invoked at most once per process.
+        run_pre_exit_hook();
+        // `std::process::exit(124)` instead of `abort()`: the watchdog must
+        // terminate the whole process (the worker thread is presumed wedged
+        // in a tight loop that won't observe a cooperative cancel), but
+        // `abort()` produces a "Aborted (core dumped)" SIGABRT trace from
+        // the shell. `exit(124)` (standard timeout exit code) runs atexit
+        // handlers, flushes stderr, and leaves a clean exit signal the
+        // parent harness can interpret as "paper timed out" without
+        // conflating it with a Rust panic / memory corruption. Witnesses:
+        // 2602.11915, 2604.11500, 2604.13944, hep-ph9205242, q-alg9604005,
+        // q-alg9605003, q-alg9605028 — the 7 "Aborted" rows in the
+        // 2026-05-13 588-paper sweep.
+        std::process::exit(EXIT_TIMEOUT);
       }
-      if max_rss_kb > 0 {
-        if let Some(rss) = process_rss_kb() {
-          if rss > max_rss_kb {
-            if cancelled.load(Ordering::Relaxed) {
-              return;
-            }
-            eprintln!(
-              "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process",
-              rss / 1024,
-              max_rss_kb / 1024
-            );
-            run_pre_exit_hook();
-            std::process::exit(EXIT_OOM);
-          }
+      if max_rss_kb > 0
+        && let Some(rss) = process_rss_kb()
+        && rss > max_rss_kb
+      {
+        if cancelled.load(Ordering::Relaxed) {
+          return;
         }
+        eprintln!(
+          "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting process",
+          rss / 1024,
+          max_rss_kb / 1024
+        );
+        run_pre_exit_hook();
+        std::process::exit(EXIT_OOM);
       }
       thread::sleep(poll_interval);
     }

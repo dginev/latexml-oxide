@@ -2,9 +2,18 @@
 name = "latexml_contrib"
 version = "0.3.0"
 edition = "2024"
-license = "CC0"
+license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "User-contributed bindings for personal use"
+
+[lints]
+workspace = true
+
+# `log` is referenced only through the `Warn!`/`Error!` macro expansions in the
+# runtime-bindings Rhai engine, so it never appears as a literal `log` token in
+# this crate's source — cargo-machete therefore reports a false positive.
+[package.metadata.cargo-machete]
+ignored = ["log"]
 
 [lib]
 crate-type = ["lib"]
@@ -18,7 +27,7 @@ token-locators = ["latexml_core/token-locators"]
 # pure-Rust Rhai interpreter so users can contribute package/class bindings
 # at runtime (no toolchain, no recompile) at an interpreted-speed cost. The
 # ONLY place Rhai enters the workspace; core/engine/package untouched.
-runtime-bindings = ["dep:rhai"]
+runtime-bindings = ["dep:rhai", "dep:log"]
 # Back-compat alias for the original feature name.
 script-bindings = ["runtime-bindings"]
 
@@ -28,8 +37,12 @@ latexml_codegen = {path = "../latexml_codegen"}
 latexml_engine = {path = "../latexml_engine"}
 latexml_package = {path = "../latexml_package"}
 rustc-hash = "2.0.0"
-log = "0.4"
 libxml = "0.3.12"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }
 # Optional — only compiled under `script-bindings`. Pure Rust, no native deps.
 rhai = { version = "1", optional = true, features = ["no_module", "no_time"] }
+# Optional — only the runtime-bindings Rhai engine (`script_bindings/engine.rs`)
+# references `log`, via the `Warn!`/`Error!` macro expansions. Gated under
+# `runtime-bindings` so default builds don't pull it (it was previously an
+# always-on dependency that cargo-machete flagged as unused in default builds).
+log = { version = "0.4", optional = true }

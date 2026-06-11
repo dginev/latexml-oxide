@@ -4,21 +4,20 @@
 //! Used in conjunction with `KeyVals` to
 //!  fully implement KeyVal pairs.
 
-use std::borrow::Cow;
-use std::rc::Rc;
+use std::{borrow::Cow, rc::Rc};
 
-use crate::binding::def::dialect::{def_conditional, def_macro};
-use crate::common::def_parser::parse_parameters;
-use crate::common::error::*;
-use crate::common::store::Stored;
-use crate::definition::argument::ArgWrap;
-use crate::definition::conditional::ConditionalOptions;
-use crate::definition::{ExpansionBody, ExpansionClosure};
-use crate::mouth::tokenize;
-use crate::parameter::Parameter;
-use crate::state;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
+use crate::{
+  binding::def::dialect::{def_conditional, def_macro},
+  common::{def_parser::parse_parameters, error::*, store::Stored},
+  definition::{
+    ExpansionBody, ExpansionClosure, argument::ArgWrap, conditional::ConditionalOptions,
+  },
+  mouth::tokenize,
+  parameter::Parameter,
+  state,
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct KeyVal {
@@ -130,11 +129,10 @@ fn register_keyval(qname: &str) {
   let registry_key = "KEYVAL@registry";
   // Borrow the registry via `with_value` to skip the outer Stored::clone
   // (lookup_value clones the enum; we only need the inner Vec<SymStr>).
-  let mut registry: Vec<crate::common::arena::SymStr> =
-    state::with_value(registry_key, |v| match v {
-      Some(Stored::Strings(v)) => v.to_vec(),
-      _ => Vec::new(),
-    });
+  let mut registry: Vec<arena::SymStr> = state::with_value(registry_key, |v| match v {
+    Some(Stored::Strings(v)) => v.to_vec(),
+    _ => Vec::new(),
+  });
   let sym = arena::pin(qname);
   // avoid duplicates (re-definitions)
   if !registry.contains(&sym) {
@@ -610,11 +608,13 @@ mod tests {
 /// level of outer braces stripped from values, whitespace trimmed, empty
 /// keys dropped (keyval semantics).
 pub fn split_keyval_source(kv: &str) -> Vec<(String, String)> {
-  use winnow::combinator::{opt, separated};
-  use winnow::prelude::*;
+  use winnow::{
+    combinator::{opt, separated},
+    prelude::*,
+  };
 
   /// One item: everything up to a depth-0 comma (consumed by the separator).
-  fn item(input: &mut &str) -> winnow::ModalResult<(String, String)> {
+  fn item(input: &mut &str) -> ModalResult<(String, String)> {
     let mut depth = 0usize;
     let mut split = None; // byte offset of the depth-0 `=`, if any
     let mut end = input.len();
@@ -637,7 +637,10 @@ pub fn split_keyval_source(kv: &str) -> Vec<(String, String)> {
       None => (raw, ""),
     };
     let v = v.trim();
-    let v = v.strip_prefix('{').and_then(|s| s.strip_suffix('}')).unwrap_or(v);
+    let v = v
+      .strip_prefix('{')
+      .and_then(|s| s.strip_suffix('}'))
+      .unwrap_or(v);
     Ok((k.trim().to_string(), v.to_string()))
   }
 
@@ -678,5 +681,7 @@ mod keyval_source_tests {
   }
 
   #[test]
-  fn empty_input() { assert!(split_keyval_source("").is_empty()); }
+  fn empty_input() {
+    assert!(split_keyval_source("").is_empty());
+  }
 }

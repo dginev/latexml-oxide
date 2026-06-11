@@ -1,6 +1,7 @@
-use crate::engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element};
-use crate::prelude::*;
-
+use crate::{
+  engine::latex_constructs::{adjust_backmatter_element, note_backmatter_element},
+  prelude::*,
+};
 
 LoadDefinitions!({
   //======================================================================
@@ -26,7 +27,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@AC@used{}", sub[(id)] {
     let id_str = id.to_string();
     let key = s!("ACROUSED@{id_str}");
-    state::assign_value(&key, Stored::Number(Number::new(1)), Some(Scope::Global));
+    assign_value(&key, Stored::Number(Number::new(1)), Some(Scope::Global));
   });
   DefPrimitive!("\\AC@logged{}", sub[(_id)] {}); // no-op
 
@@ -37,10 +38,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@AC@if{}{}{}", sub[(id, short, long)] {
     let id_str = id.to_string();
     let key = s!("ACROUSED@{id_str}");
-    if state::with_value(&key, |v| v.is_some()) {
+    if with_value(&key, |v| v.is_some()) {
       Ok(short)
     } else {
-      state::assign_value(&key, Stored::Number(Number::new(1)), Some(Scope::Global));
+      assign_value(&key, Stored::Number(Number::new(1)), Some(Scope::Global));
       Ok(long)
     }
   });
@@ -147,13 +148,13 @@ LoadDefinitions!({
   // `\Ac` default at all (acronym papers using `\Ac` undefined just
   // error there); we provide it only as a deferred-default so the
   // common case still works without trampling user redefinitions.
-  stomach::raw_tex(
+  raw_tex(
     "\\AtBeginDocument{\
        \\@ifundefined{Ac}{\\let\\Ac\\ac}{}\
        \\@ifundefined{Acf}{\\let\\Acf\\acf}{}\
        \\@ifundefined{Acl}{\\let\\Acl\\acl}{}\
        \\@ifundefined{Acs}{\\let\\Acs\\acs}{}\
-       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}}"
+       \\@ifundefined{Acfi}{\\let\\Acfi\\acfi}{}}",
   )?;
 
   // Indefinite article form

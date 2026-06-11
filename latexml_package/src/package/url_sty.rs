@@ -2,7 +2,6 @@ use crate::prelude::*;
 
 pub static LEADING_BACKSLASH_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\\").unwrap());
 
-
 LoadDefinitions!({
   AssignValue!("BASE_URL", "");
 
@@ -42,12 +41,12 @@ LoadDefinitions!({
   DefMacro!("\\lx@url@url Token", sub[(cmd)] {
     let perc = vec!['%'];
    begin_semiverbatim(Some(&perc));
-    let mut open = gullet::read_token()?.unwrap();
+    let mut open = read_token()?.unwrap();
     let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");
       close = T_OTHER!("}");
-      gullet::read_balanced(ExpansionLevel::Off,false,false)?.unwrap_or_default()
+      read_balanced(ExpansionLevel::Off,false,false)?.unwrap_or_default()
     } else {
       // The ORIGINAL catcode of the delimiter token distinguishes two
       // very different `\url`/`\path` invocation shapes:
@@ -79,10 +78,10 @@ LoadDefinitions!({
       // (semiverbatim SPECIALS = ^_~&$#'). Witness 1503.07894 (bibitem
       // `{\url www.maths...pdf}`).
       if delim_is_explicit {
-        latexml_core::state::assign_catcode('{', Catcode::OTHER, Some(Scope::Local));
-        latexml_core::state::assign_catcode('}', Catcode::OTHER, Some(Scope::Local));
+        assign_catcode('{', Catcode::OTHER, Some(Scope::Local));
+        assign_catcode('}', Catcode::OTHER, Some(Scope::Local));
       }
-      gullet::read_until_token(close)?
+      read_until_token(close)?
     };
     end_semiverbatim()?;
     let toks : Vec<Token> = url.unlist().into_iter().filter(|t| t.get_catcode() != Catcode::SPACE)
@@ -113,7 +112,7 @@ LoadDefinitions!({
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(stored_map!(
-        "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None),
+        "href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None),
         // TODO: why was class realized in Perl as "sub" closure here?
         "class"=> ltx_cmd
       ))
@@ -138,8 +137,8 @@ LoadDefinitions!({
   // digested whatever followed in the input stream instead of the braced arg.
   DefPrimitive!("\\urldef{}{}", sub[(cmd, start)] {
     let cmd = cmd.to_string();
-    gullet::unread(start);
-    let expansion : Vec<Digested> = stomach::digest_next_body(Some(T_CS!("\\endgroup")))?;
+    unread(start);
+    let expansion : Vec<Digested> = digest_next_body(Some(T_CS!("\\endgroup")))?;
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])
   });

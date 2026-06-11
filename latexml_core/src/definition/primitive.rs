@@ -1,22 +1,22 @@
-use libxml::tree::Node;
 use std::borrow::Cow;
 
-use crate::Digested;
-use crate::common::arena::SymHashMap;
-use crate::common::error::*;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::{
-  BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
+use libxml::tree::Node;
+
+use crate::{
+  Digested,
+  common::{arena::SymHashMap, error::*, object::Object, store::Stored},
+  definition::{
+    BeforeDigestClosure, Definition, DigestionClosure, FontDirective, PrimitiveBody, Reversion,
+  },
+  document::Document,
+  parameter::Parameters,
+  pin,
+  state::Scope,
+  tbox::Tbox,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
 };
-use crate::document::Document;
-use crate::parameter::Parameters;
-use crate::pin;
-use crate::state::Scope;
-use crate::tbox::Tbox;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
 
 #[derive(Clone, Default)]
 pub struct PrimitiveOptions {

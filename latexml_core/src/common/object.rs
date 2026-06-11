@@ -1,11 +1,13 @@
-use crate::Digested;
-use crate::common::error::*;
-use crate::common::locator::Locator;
-use crate::tokens::Tokens;
 ///======================================================================
 /// Exported generic functions for dealing with `LaTeXML`'s objects
 ///======================================================================
 use std::fmt::Debug;
+
+use crate::{
+  Digested,
+  common::{error::*, locator::Locator},
+  tokens::Tokens,
+};
 
 /// Base object for all LaTeXML Objects.
 ///

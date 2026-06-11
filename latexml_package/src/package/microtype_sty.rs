@@ -2,7 +2,6 @@
 //! Perl: microtype.sty.ltxml
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("etoolbox");
 

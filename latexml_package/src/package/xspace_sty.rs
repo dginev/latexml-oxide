@@ -12,7 +12,7 @@ LoadDefinitions!({
   // expands at \edef time; Rust freezes the CS). Safe in practice because
   // `\xspace` call sites are post-expansion text-mode position.
   DefPrimitive!("\\xspace", {
-    let next = gullet::read_token()?;
+    let next = read_token()?;
     let is_no_space = next.as_ref().map(|t| {
       let cc = t.get_catcode();
       // T_BEGIN ({) and T_END (}) suppress space (Perl: @XSPACES includes T_BEGIN, T_END)
@@ -32,11 +32,11 @@ LoadDefinitions!({
       ))
     }).unwrap_or(false);
     if let Some(tok) = next {
-      gullet::unread(Tokens!(tok));
+      unread(Tokens!(tok));
     }
     if !is_no_space {
       // Insert a space token
-      gullet::unread(Tokens!(T_SPACE!()));
+      unread(Tokens!(T_SPACE!()));
     }
   });
 

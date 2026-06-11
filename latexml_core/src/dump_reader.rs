@@ -22,13 +22,13 @@
 
 use std::path::Path;
 
-use crate::common::arena;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::store::Stored;
-use crate::definition::expandable::{Expandable, ExpandableOptions};
-use crate::state::{self, Scope, TableName};
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
+use crate::{
+  common::{arena, numeric_ops::NumericOps, store::Stored},
+  definition::expandable::{Expandable, ExpandableOptions},
+  state::{self, Scope, TableName},
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 /// Load a Rust-native dump file into the current State.
 /// Returns the number of entries loaded.
@@ -59,7 +59,7 @@ pub fn load_from_str_plain(content: &str) -> Result<usize, String> {
 // internal location. Thread-local so concurrent loads (there are none
 // today, but the state is cooperative) don't clobber each other.
 thread_local! {
-  static CURRENT_LOAD_CTX: std::cell::Cell<Option<(crate::common::arena::SymStr, u32)>> =
+  static CURRENT_LOAD_CTX: std::cell::Cell<Option<(arena::SymStr, u32)>> =
     const { std::cell::Cell::new(None) };
   /// PA/MPA aliases whose target wasn't defined at dump-load time.
   /// Populated by `load_meaning`'s PA arm, drained by
@@ -88,17 +88,20 @@ pub fn flush_deferred_aliases() -> (usize, usize) {
     }
     // Perl `Lt()` parity: look up target's meaning, write it at
     // alias key via `assign_internal('meaning', ..., 'global')`.
-    match state::lookup_meaning(&target_tok) { Some(meaning) => {
-      state::assign_internal(
-        TableName::Meaning,
-        cs_tok.get_cs_name(),
-        meaning,
-        Some(Scope::Global),
-      );
-      applied += 1;
-    } _ => {
-      skipped += 1;
-    }}
+    match state::lookup_meaning(&target_tok) {
+      Some(meaning) => {
+        state::assign_internal(
+          TableName::Meaning,
+          cs_tok.get_cs_name(),
+          meaning,
+          Some(Scope::Global),
+        );
+        applied += 1;
+      },
+      _ => {
+        skipped += 1;
+      },
+    }
   }
   (applied, skipped)
 }
@@ -121,7 +124,7 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
   let mut count = 0;
   let mut skipped = 0;
   let mut errors = 0;
-  let source_sym = crate::common::arena::pin(source_name);
+  let source_sym = arena::pin(source_name);
 
   for (lineno, line) in content.lines().enumerate() {
     // Trim only CR (from CRLF line endings); `lines()` already strips LF.
@@ -142,11 +145,14 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
         errors += 1;
         if errors <= 10 {
           Warn!(
-            "dump_reader", "line",
-            s!("Line {}: {}: {}",
+            "dump_reader",
+            "line",
+            s!(
+              "Line {}: {}: {}",
               lineno + 1,
               e,
-              &line[..line.len().min(80)])
+              &line[..line.len().min(80)]
+            )
           );
         }
       },
@@ -154,12 +160,22 @@ fn load_from_str_internal(content: &str, source_name: &str) -> Result<usize, Str
   }
 
   if errors > 10 {
-    Warn!("dump_reader", "errors", s!("... and {} more errors", errors - 10));
+    Warn!(
+      "dump_reader",
+      "errors",
+      s!("... and {} more errors", errors - 10)
+    );
   }
   Info!(
-    "dump_reader", "loaded",
-    s!("Loaded {} entries from {} ({} skipped, {} errors)",
-      count, source_name, skipped, errors)
+    "dump_reader",
+    "loaded",
+    s!(
+      "Loaded {} entries from {} ({} skipped, {} errors)",
+      count,
+      source_name,
+      skipped,
+      errors
+    )
   );
 
   Ok(count)
@@ -349,8 +365,9 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
       // Format: F\tname=...\x1fsize=...\x1ffamily=...\x1f...
       // Each unit-separator-delimited segment is `key=urlencoded_value`.
       // Mirrors Perl `dump_font` (Core/Dumper.pm L281-284).
-      use crate::common::font::Font;
       use std::borrow::Cow;
+
+      use crate::common::font::Font;
       let mut font = Font::default();
       for kv in rest.split('\x1f') {
         if let Some((k, v)) = kv.split_once('=') {
@@ -436,9 +453,7 @@ fn load_intarray(key: &str, data: &str) -> Result<bool, String> {
   let mut it = data.splitn(2, '\t');
   let len_s = it.next().unwrap_or("");
   let rle = it.next().unwrap_or("");
-  let len: usize = len_s
-    .parse()
-    .map_err(|e| format!("Bad IA length: {}", e))?;
+  let len: usize = len_s.parse().map_err(|e| format!("Bad IA length: {}", e))?;
   let values = rle_decode_i64(rle)?;
   if values.len() != len {
     return Err(format!(
@@ -572,9 +587,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let nargs: usize = nargs_field.parse().unwrap_or(0);
       let flags = flags_field;
       let tok_data = tok_field;
-      let proto_opt = proto_field
-        .map(url_decode)
-        .filter(|s| !s.is_empty());
+      let proto_opt = proto_field.map(url_decode).filter(|s| !s.is_empty());
       let v3_opt = v3_field.filter(|s| !s.is_empty());
 
       let is_long = flags.contains('L');
@@ -690,15 +703,14 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // The fontinfo Stored::Font rides through the dump as a `V` entry with
       // `F\t...` payload (see Stored::Font arm in dump_writer + the `F` arm
       // in parse_value above).
-      use crate::definition::BeforeDigestClosure;
-      use crate::definition::primitive::Primitive;
+      use crate::definition::{BeforeDigestClosure, primitive::Primitive};
       let font_id_raw = url_decode(rest);
       let font_id_pin = arena::pin(&font_id_raw);
       let font_id_str = font_id_raw;
       let cs_for_fontdef = cs_tok;
       let merge_closure: BeforeDigestClosure = std::rc::Rc::new(move || {
-        crate::state::assign_value("current_FontDef", Stored::Token(cs_for_fontdef), None);
-        if let Some(Stored::Font(f)) = crate::state::lookup_value(&font_id_str) {
+        state::assign_value("current_FontDef", Stored::Token(cs_for_fontdef), None);
+        if let Some(Stored::Font(f)) = state::lookup_value(&font_id_str) {
           crate::binding::content::merge_font((*f).clone());
         }
         Ok(Vec::new())
@@ -788,9 +800,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         .filter(|s| !s.is_empty())
         .and_then(|s| s.parse::<u32>().ok())
         .and_then(char::from_u32);
-      let dump_address: Option<String> = r_addr_field
-        .filter(|s| !s.is_empty())
-        .map(url_decode);
+      let dump_address: Option<String> = r_addr_field.filter(|s| !s.is_empty()).map(url_decode);
       // For register-aliases (M-line key != register's internal cs), the
       // storage slot lives at the cs name, not the alias key. e.g.
       //   M  \tex_endlinechar:D  R  \endlinechar  N  0
@@ -810,8 +820,10 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         }
       });
 
-      use crate::common::number::Number;
-      use crate::definition::register::{Register, RegisterType, RegisterValue};
+      use crate::{
+        common::number::Number,
+        definition::register::{Register, RegisterType, RegisterValue},
+      };
 
       let (reg_type, reg_value) = match rtype {
         "N" | "CD" => {
@@ -894,34 +906,34 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
           #[cfg(feature = "token-locators")]
           loc: 0,
         };
-        if let Some(base_defn) = state::lookup_register_definition(&address_tok) {
-          if let Some(params) = base_defn.parameters.clone() {
-            reg.parameters = Some(params);
-          }
+        if let Some(base_defn) = state::lookup_register_definition(&address_tok)
+          && let Some(params) = base_defn.parameters.clone()
+        {
+          reg.parameters = Some(params);
         }
       }
-      if !matches!(reg_type, RegisterType::CharDef) {
-        if let Some(ref rv) = reg_value {
-          // Perl `R(...)` register dump-restore: the address slot
-          // gets the initial value via `assign_internal('value', ...,
-          // 'global')`. Mirror Perl `def_register` behavior: when the
-          // address is allocated (different from CS) AND already has a
-          // value (from an earlier V entry), DO NOT overwrite — the V
-          // entry holds the runtime value (e.g. `\m@ne`'s `\count22 =
-          // -1`), and the Register's `value` field is just the default
-          // (typically 0). Without this guard, the M entry resets
-          // `\count22` to 0, breaking `\settabs 20\columns` (loops
-          // because `\m@ne` reads as 0 instead of -1, so
-          // `\advance\count@\m@ne` doesn't decrement).
-          let should_assign = !has_explicit_address || !state::has_value(&reg.address);
-          if should_assign {
-            state::assign_internal(
-              TableName::Value,
-              arena::pin(&reg.address),
-              rv.clone(),
-              Some(Scope::Global),
-            );
-          }
+      if !matches!(reg_type, RegisterType::CharDef)
+        && let Some(ref rv) = reg_value
+      {
+        // Perl `R(...)` register dump-restore: the address slot
+        // gets the initial value via `assign_internal('value', ...,
+        // 'global')`. Mirror Perl `def_register` behavior: when the
+        // address is allocated (different from CS) AND already has a
+        // value (from an earlier V entry), DO NOT overwrite — the V
+        // entry holds the runtime value (e.g. `\m@ne`'s `\count22 =
+        // -1`), and the Register's `value` field is just the default
+        // (typically 0). Without this guard, the M entry resets
+        // `\count22` to 0, breaking `\settabs 20\columns` (loops
+        // because `\m@ne` reads as 0 instead of -1, so
+        // `\advance\count@\m@ne` doesn't decrement).
+        let should_assign = !has_explicit_address || !state::has_value(&reg.address);
+        if should_assign {
+          state::assign_internal(
+            TableName::Value,
+            arena::pin(&reg.address),
+            rv.clone(),
+            Some(Scope::Global),
+          );
         }
       }
       // Perl `I(...)` for the Register meaning entry — direct
@@ -949,7 +961,7 @@ fn decode_char_key(key: &str) -> Option<char> {
 
 /// Char-keyed table key: dump uses the single character as the key.
 /// `assign_internal` wants a SymStr — pin the single-char string.
-fn char_key(ch: char) -> crate::common::arena::SymStr {
+fn char_key(ch: char) -> arena::SymStr {
   let mut buf = [0u8; 4];
   arena::pin(ch.encode_utf8(&mut buf))
 }
@@ -1055,7 +1067,7 @@ fn load_delcode(key: &str, data: &str) -> Result<bool, String> {
   let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad delcode value: {}", e))?;
-  crate::state::assign_delcode(ch, val, Some(crate::state::Scope::Global));
+  state::assign_delcode(ch, val, Some(Scope::Global));
   Ok(true)
 }
 
@@ -1072,7 +1084,7 @@ fn load_mathcode(key: &str, data: &str) -> Result<bool, String> {
   let val: u16 = val_str
     .parse()
     .map_err(|e| format!("Bad mathcode value: {}", e))?;
-  crate::state::assign_mathcode(ch, val, Some(crate::state::Scope::Global));
+  state::assign_mathcode(ch, val, Some(Scope::Global));
   Ok(true)
 }
 
@@ -1150,7 +1162,7 @@ pub(crate) fn parse_parameters_v3(
     } else {
       extras_str
         .split('\x1d')
-        .map(|tok_list| parse_token_list(tok_list).map(crate::tokens::Tokens::new))
+        .map(|tok_list| parse_token_list(tok_list).map(Tokens::new))
         .collect::<Result<Vec<_>, _>>()?
     };
 
@@ -1234,8 +1246,7 @@ fn parse_glue(s: &str) -> Result<crate::common::glue::Glue, String> {
 
 /// Parse a serialized MuGlue value (same format as Glue)
 fn parse_muglue(s: &str) -> Result<crate::common::muglue::MuGlue, String> {
-  use crate::common::glue::FillCode;
-  use crate::common::muglue::MuGlue;
+  use crate::common::{glue::FillCode, muglue::MuGlue};
   let mut skip = 0i64;
   let mut plus = None;
   let mut pfill = None;
@@ -1323,10 +1334,9 @@ mod tests {
 
   #[test]
   fn rle_decode_mixed() {
-    assert_eq!(
-      rle_decode_i64("1,2x2,3x3,1").unwrap(),
-      vec![1, 2, 2, 3, 3, 3, 1]
-    );
+    assert_eq!(rle_decode_i64("1,2x2,3x3,1").unwrap(), vec![
+      1, 2, 2, 3, 3, 3, 1
+    ]);
   }
 
   #[test]
@@ -1359,9 +1369,10 @@ mod tests {
     let content = format!("IA\t{}\t3\t10,20x2\n", prefix);
     load_from_str(&content).unwrap();
 
-    use crate::common::dimension::Dimension;
-    use crate::common::store::Stored;
-    use crate::state;
+    use crate::{
+      common::{dimension::Dimension, store::Stored},
+      state,
+    };
 
     assert_eq!(
       state::lookup_value(&format!("{}_1", prefix)),
@@ -1397,15 +1408,13 @@ mod tests {
     // dump_reader must still accept these so older / partner-machine
     // dumps load correctly.
     let prefix = "v_backcompat_prefix";
-    let content = format!(
-      "V\t{}_1\tD\t111\nV\t{}_2\tD\t222\n",
-      prefix, prefix
-    );
+    let content = format!("V\t{}_1\tD\t111\nV\t{}_2\tD\t222\n", prefix, prefix);
     load_from_str(&content).unwrap();
 
-    use crate::common::dimension::Dimension;
-    use crate::common::store::Stored;
-    use crate::state;
+    use crate::{
+      common::{dimension::Dimension, store::Stored},
+      state,
+    };
 
     assert_eq!(
       state::lookup_value(&format!("{}_1", prefix)),

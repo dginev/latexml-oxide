@@ -16,7 +16,6 @@
 //! 2305.19985, 1607.04128 (graphicx).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -54,8 +53,10 @@ LoadDefinitions!({
   // LMCS publication metadata. Real macros assign internal counters
   // and set up running headers; for HTML rendering we just preserve
   // the args as named notes.
-  DefMacro!("\\lmcsdoi{}{}{}",
-    "\\@add@frontmatter{ltx:note}[role=lmcs-doi]{Volume #1, Issue #2, Paper #3}");
+  DefMacro!(
+    "\\lmcsdoi{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=lmcs-doi]{Volume #1, Issue #2, Paper #3}"
+  );
   // \lmcsheading{vol}{issue}{year}{pages}{subm}{publ}{rev}{spec_iss}{title}
   // The raw cls signature is 7-args but with optional/positional variations.
   // We don't reproduce the running-header layout — just discard, since the
@@ -63,8 +64,7 @@ LoadDefinitions!({
   def_macro_noop("\\lmcsheading{}{}{}{}")?;
   // \lmcsorcid{orcid-id} — render as a plain link rather than the
   // tikz/XeTeXLinkBox logo construction.
-  DefMacro!("\\lmcsorcid{}",
-    "\\href{https://orcid.org/#1}{ORCID:#1}");
+  DefMacro!("\\lmcsorcid{}", "\\href{https://orcid.org/#1}{ORCID:#1}");
 
   // Section-numbering and shortauthors/shorttitle helpers used by raw
   // cls header layout. Stub as no-op or pass-through.

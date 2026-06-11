@@ -1,8 +1,8 @@
-use crate::package::color_sty::lookup_color_obj;
-use crate::prelude::*;
 use latexml_core::common::color::{
   BLACK, Color, WHITE, color_from_model_spec, from_model_components,
 };
+
+use crate::{package::color_sty::lookup_color_obj, prelude::*};
 
 /// Perl: sub delta { my ($v, $n) = @_; ($v <= ($n+1)/2 ? $v/($n+1) : ($v+1)/($n+1)) }
 fn delta(v: f64, n: f64) -> f64 {
@@ -135,8 +135,8 @@ fn lookup_xcolor(name: &str) -> Color {
   }
   if name == "." {
     // Current color
-    return match state::lookup_value("color_.") {
-      Some(Stored::String(sym)) => arena::with(sym, Color::from_stored).unwrap_or(BLACK),
+    return match lookup_value("color_.") {
+      Some(Stored::String(sym)) => with(sym, Color::from_stored).unwrap_or(BLACK),
       _ => BLACK,
     };
   }
@@ -207,17 +207,16 @@ fn decode_color(expression: &str) -> Color {
   };
 
   // Apply blend from state
-  let full_mix = match state::lookup_value("color_blend") { Some(Stored::String(blend_sym)) => {
-    arena::with(blend_sym, |blend| {
+  let full_mix = match lookup_value("color_blend") {
+    Some(Stored::String(blend_sym)) => with(blend_sym, |blend| {
       if !blend.is_empty() {
         format!("{}{}", mix_part, blend)
       } else {
         mix_part.clone()
       }
-    })
-  } _ => {
-    mix_part
-  }};
+    }),
+    _ => mix_part,
+  };
 
   // Apply mix expressions: !pct!name...
   if !full_mix.is_empty() {
@@ -230,11 +229,12 @@ fn decode_color(expression: &str) -> Color {
   }
 
   // Handle postfix stepping: !!+ or !!++
-  if let Some(pf) = &postfix {
-    if pf.starts_with("!!") && pf.contains('+') {
-      let plus_count = pf.chars().filter(|c| *c == '+').count();
-      step_color_series(&name_part, plus_count);
-    }
+  if let Some(pf) = &postfix
+    && pf.starts_with("!!")
+    && pf.contains('+')
+  {
+    let plus_count = pf.chars().filter(|c| *c == '+').count();
+    step_color_series(&name_part, plus_count);
   }
 
   // Apply function expressions (>wheel, >twheel)
@@ -427,12 +427,11 @@ fn thsb_to_hsb(h: f64, h_range: f64) -> f64 {
 fn step_color_series(name: &str, n: usize) {
   let color_key = s!("color_{name}");
   let step_key = s!("color_series_{name}_step");
-  if let (Some(Stored::String(c_sym)), Some(Stored::String(s_sym))) = (
-    state::lookup_value(&color_key),
-    state::lookup_value(&step_key),
-  ) {
-    let color = Color::from_stored(&arena::to_string(c_sym)).unwrap_or(BLACK);
-    let step = Color::from_stored(&arena::to_string(s_sym)).unwrap_or(BLACK);
+  if let (Some(Stored::String(c_sym)), Some(Stored::String(s_sym))) =
+    (lookup_value(&color_key), lookup_value(&step_key))
+  {
+    let color = Color::from_stored(&to_string(c_sym)).unwrap_or(BLACK);
+    let step = Color::from_stored(&to_string(s_sym)).unwrap_or(BLACK);
     let comps = color.components();
     let step_comps = step.components();
     let new_comps: Vec<f64> = comps
@@ -449,23 +448,21 @@ fn step_color_series(name: &str, n: usize) {
 fn index_color_series(name: &str, p: usize) -> Color {
   let base_key = s!("color_series_{name}_base");
   let step_key = s!("color_series_{name}_step");
-  match (
-    state::lookup_value(&base_key),
-    state::lookup_value(&step_key),
-  ) { (Some(Stored::String(b_sym)), Some(Stored::String(s_sym))) => {
-    let base = Color::from_stored(&arena::to_string(b_sym)).unwrap_or(BLACK);
-    let step = Color::from_stored(&arena::to_string(s_sym)).unwrap_or(BLACK);
-    let comps = base.components();
-    let step_comps = step.components();
-    let new_comps: Vec<f64> = comps
-      .iter()
-      .zip(step_comps.iter())
-      .map(|(c, s)| range_reduction(c + p as f64 * s))
-      .collect();
-    from_model_components(base.model(), &new_comps)
-  } _ => {
-    BLACK
-  }}
+  match (lookup_value(&base_key), lookup_value(&step_key)) {
+    (Some(Stored::String(b_sym)), Some(Stored::String(s_sym))) => {
+      let base = Color::from_stored(&to_string(b_sym)).unwrap_or(BLACK);
+      let step = Color::from_stored(&to_string(s_sym)).unwrap_or(BLACK);
+      let comps = base.components();
+      let step_comps = step.components();
+      let new_comps: Vec<f64> = comps
+        .iter()
+        .zip(step_comps.iter())
+        .map(|(c, s)| range_reduction(c + p as f64 * s))
+        .collect();
+      from_model_components(base.model(), &new_comps)
+    },
+    _ => BLACK,
+  }
 }
 
 /// Perl xcolor.sty.ltxml L403-409: if the optional `[type]` argument
@@ -474,7 +471,7 @@ fn index_color_series(name: &str, p: usize) -> Color {
 /// "ful", ...) all pass through.
 fn check_no_postscript(type_opt: Option<Tokens>, macro_name: &str) -> Result<bool> {
   if let Some(t) = type_opt {
-    let s = gullet::do_expand(t)?.to_string();
+    let s = do_expand(t)?.to_string();
     if s == "ps" {
       Info!(
         "ignored",
@@ -621,7 +618,7 @@ LoadDefinitions!({
   // Current color
   {
     let black = BLACK;
-    assign_value("color_.", Stored::String(arena::pin(black.to_stored())), Some(Scope::Global));
+    assign_value("color_.", Stored::String(pin(black.to_stored())), Some(Scope::Global));
   }
 
   // Color model ranges
@@ -661,12 +658,12 @@ LoadDefinitions!({
     ];
     let is_color_cmd = token.with_str(|s| COLOR_CMDS.contains(&s));
     if is_color_cmd {
-      state::assign_value_sym(pin!("xglobal@"), true, Some(Scope::Local));
-      gullet::unread_one(token);
+      assign_value_sym(pin!("xglobal@"), true, Some(Scope::Local));
+      unread_one(token);
     } else {
       // Fallback: emit \global <token> (Perl: (T_CS('\global'), $token))
-      gullet::unread_one(token);
-      gullet::unread_one(T_CS!("\\global"));
+      unread_one(token);
+      unread_one(T_CS!("\\global"));
     }
     Ok(())
   });
@@ -682,9 +679,9 @@ LoadDefinitions!({
     let models_str = do_expand(models)?.to_string();
     let specs_str = do_expand(specs)?.to_string();
     let color = parse_xcolor(Some(&models_str), &specs_str, None);
-    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
-    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
+    assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -700,15 +697,15 @@ LoadDefinitions!({
     if !check_no_postscript(type_opt, "\\XC@providecolor")? { return Ok(Vec::new()); }
     let name_str = do_expand(name)?.to_string();
     let key = s!("color_{name_str}");
-    if state::with_value(&key, |v| v.is_some()) {
+    if with_value(&key, |v| v.is_some()) {
       return Ok(Vec::new()); // Already defined
     }
     let models_str = do_expand(models)?.to_string();
     let specs_str = do_expand(specs)?.to_string();
     let color = parse_xcolor(Some(&models_str), &specs_str, None);
-    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
-    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
+    assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -723,9 +720,9 @@ LoadDefinitions!({
     let colordesc_str = do_expand(colordesc)?.to_string();
     let tomodel_str = tomodel_opt.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
     let color = parse_xcolor(None, &colordesc_str, tomodel_str.as_deref());
-    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     def_color(&name_str, &color, scope)?;
-    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
+    assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -736,7 +733,7 @@ LoadDefinitions!({
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
     let specset_str = do_expand(specset)?.to_string();
-    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
       if let Some(comma_pos) = spec.find(',') {
@@ -747,7 +744,7 @@ LoadDefinitions!({
         def_color(&full_name, &color, scope)?;
       }
     }
-    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
+    assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -760,7 +757,7 @@ LoadDefinitions!({
     let head_str = do_expand(head)?.to_string();
     let tail_str = do_expand(tail)?.to_string();
     let specset_str = do_expand(specset)?.to_string();
-    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     for spec in specset_str.split(';') {
       let spec = spec.trim();
       if let Some(comma_pos) = spec.find(',') {
@@ -768,12 +765,12 @@ LoadDefinitions!({
         let specs = spec[comma_pos+1..].trim();
         let full_name = s!("{head_str}{name}{tail_str}");
         let key = s!("color_{full_name}");
-        if state::with_value(&key, |v| v.is_some()) { continue; }
+        if with_value(&key, |v| v.is_some()) { continue; }
         let color = parse_xcolor(Some(&models_str), specs, None);
         def_color(&full_name, &color, scope)?;
       }
     }
-    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
+    assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -856,8 +853,8 @@ LoadDefinitions!({
     let color = parse_xcolor(model_str.as_deref(), &spec_str, None);
     // Set current color
     def_color(".", &color, None)?;
-    if state::lookup_bool_sym(pin!("inPreamble")) {
-      assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
+    if lookup_bool_sym(pin!("inPreamble")) {
+      assign_value("preambleTextcolor", Stored::String(pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
 
@@ -878,19 +875,18 @@ LoadDefinitions!({
       vec![Some(Tokens::from(T_OTHER!("rgb"))),
            Some(Tokens::from(T_OTHER!(&*comps)))]);
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
-      reversion_tokens, arena::SymHashMap::default()))])
+      reversion_tokens, SymHashMap::default()))])
   });
 
   // \set@color
   DefPrimitive!("\\set@color", {
-    if let Some(Stored::String(sym)) = state::lookup_value("color_.") {
-      if let Some(color) = arena::with(sym, Color::from_stored) {
-        if state::lookup_bool_sym(pin!("inPreamble")) {
-          assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
+    if let Some(Stored::String(sym)) = lookup_value("color_.")
+      && let Some(color) = with(sym, Color::from_stored) {
+        if lookup_bool_sym(pin!("inPreamble")) {
+          assign_value("preambleTextcolor", Stored::String(pin(color.to_stored())), None);
         }
         merge_font(fontmap!(color => color));
       }
-    }
   });
 
   // \pagecolor[model]{spec}
@@ -904,7 +900,7 @@ LoadDefinitions!({
       vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
            Some(Tokens::from(T_OTHER!(&*spec_str)))]);
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
-      reversion_tokens, arena::SymHashMap::default()))])
+      reversion_tokens, SymHashMap::default()))])
   });
 
   // \boxframe{width}{height}{depth}
@@ -922,19 +918,19 @@ LoadDefinitions!({
   // \blendcolors and \blendcolors*
   DefPrimitive!("\\blendcolors OptionalMatch:* {}", sub[(star, mix)] {
     let mix_str = do_expand(mix)?.to_string();
-    let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
+    let scope = if lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     let new_blend = if star.is_some() {
       // Starred: append to existing blend
-      match state::lookup_value("color_blend") { Some(Stored::String(old_sym)) => {
-        arena::with(old_sym, |old| format!("{old}{mix_str}"))
+      match lookup_value("color_blend") { Some(Stored::String(old_sym)) => {
+        with(old_sym, |old| format!("{old}{mix_str}"))
       } _ => {
         mix_str
       }}
     } else {
       mix_str
     };
-    assign_value("color_blend", Stored::String(arena::pin(new_blend)), scope);
-    state::assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
+    assign_value("color_blend", Stored::String(pin(new_blend)), scope);
+    assign_value_sym(pin!("xglobal@"), false, Some(Scope::Local));
     Ok(Vec::new())
   });
 
@@ -976,11 +972,11 @@ LoadDefinitions!({
     };
 
     assign_value(&s!("color_series_{name_str}_base"),
-      Stored::String(arena::pin(base.to_stored())), Some(Scope::Global));
+      Stored::String(pin(base.to_stored())), Some(Scope::Global));
     assign_value(&s!("color_series_{name_str}_method"),
-      Stored::String(arena::pin(method_str)), Some(Scope::Global));
+      Stored::String(pin(method_str)), Some(Scope::Global));
     assign_value(&s!("color_series_{name_str}_delta"),
-      Stored::String(arena::pin(delta.to_stored())), Some(Scope::Global));
+      Stored::String(pin(delta.to_stored())), Some(Scope::Global));
     Ok(Vec::new())
   });
 
@@ -997,10 +993,10 @@ LoadDefinitions!({
     let method_key = s!("color_series_{name_str}_method");
 
     if let (Some(Stored::String(b_sym)), Some(Stored::String(m_sym))) =
-      (state::lookup_value(&base_key), state::lookup_value(&method_key))
+      (lookup_value(&base_key), lookup_value(&method_key))
     {
-      let base = arena::with(b_sym, Color::from_stored).unwrap_or(BLACK);
-      let method = arena::to_string(m_sym);
+      let base = with(b_sym, Color::from_stored).unwrap_or(BLACK);
+      let method = to_string(m_sym);
 
       // For "last" method, we need the delta color
       // The delta was stored when definecolorseries was called
@@ -1014,19 +1010,19 @@ LoadDefinitions!({
       let step = match method.as_str() {
         "step" => {
           // delta is the step itself
-          match state::lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
-            arena::with(d_sym, Color::from_stored).unwrap_or(BLACK)
+          match lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
+            with(d_sym, Color::from_stored).unwrap_or(BLACK)
           } _ => { BLACK }}
         },
         "grad" => {
-          match state::lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
-            arena::with(d_sym, Color::from_stored).unwrap_or(BLACK).scale(1.0 / div)
+          match lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
+            with(d_sym, Color::from_stored).unwrap_or(BLACK).scale(1.0 / div)
           } _ => { BLACK }}
         },
         "last" => {
           // For "last": step = (last - base) / div
-          match state::lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
-            let last = arena::with(d_sym, Color::from_stored).unwrap_or(BLACK);
+          match lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
+            let last = with(d_sym, Color::from_stored).unwrap_or(BLACK);
             let base_comps = base.components();
             let last_comps = last.components();
             let step_comps: Vec<f64> = base_comps.iter().zip(last_comps.iter())
@@ -1045,7 +1041,7 @@ LoadDefinitions!({
       def_color(&name_str, &base, Some(Scope::Global))?;
       // Store step
       assign_value(&s!("color_series_{name_str}_step"),
-        Stored::String(arena::pin(step.to_stored())), Some(Scope::Global));
+        Stored::String(pin(step.to_stored())), Some(Scope::Global));
     }
     Ok(Vec::new())
   });
@@ -1062,7 +1058,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lshift Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.multiply(Number::new(10)), None, defn_args);
@@ -1074,7 +1070,7 @@ LoadDefinitions!({
   DefPrimitive!("\\llshift Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.multiply(Number::new(100)), None, defn_args);
@@ -1087,7 +1083,7 @@ LoadDefinitions!({
     // Divide by 10 using integer truncation (TeX semantics)
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.divide(Number::new(10)), None, defn_args);
@@ -1099,7 +1095,7 @@ LoadDefinitions!({
   DefPrimitive!("\\rrshift Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.divide(Number::new(100)), None, defn_args);
@@ -1125,7 +1121,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lshiftset Variable {}", sub[(var, num)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      if let Some(defn) = lookup_register_definition(&varname) {
         let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
         // Perl: setValue((10 * num) . 'pt') — stores as dimension string
         let dim = Dimension::from_str(&s!("{}pt", 10.0 * n))?;
@@ -1138,7 +1134,7 @@ LoadDefinitions!({
   DefPrimitive!("\\llshiftset Variable {}", sub[(var, num)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      if let Some(defn) = lookup_register_definition(&varname) {
         let n: f64 = do_expand(num)?.to_string().parse().unwrap_or(0.0);
         // Perl: setValue((100 * num) . 'pt') — stores as dimension string
         let dim = Dimension::from_str(&s!("{}pt", 100.0 * n))?;
@@ -1165,7 +1161,7 @@ LoadDefinitions!({
       let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_xcolor(model_str.as_deref(), &fspec_str, None);
-      whatsit.set_property("framecolor", Stored::String(arena::pin(framecolor.to_attribute())));
+      whatsit.set_property("framecolor", Stored::String(pin(framecolor.to_attribute())));
 
       let bgcolor = parse_xcolor(model_str.as_deref(), &bspec_str, None);
       merge_font(fontmap!(bg => bgcolor));
@@ -1262,13 +1258,13 @@ LoadDefinitions!({
     // Must ALWAYS assign — empty colors clear previous values
     if !odd_str.is_empty() {
       let odd = parse_xcolor(None, &odd_str, None);
-      assign_value("tabular_row_color_odd", Stored::String(arena::pin(odd.to_stored())), None);
+      assign_value("tabular_row_color_odd", Stored::String(pin(odd.to_stored())), None);
     } else {
       assign_value("tabular_row_color_odd", Stored::None, None);
     }
     if !even_str.is_empty() {
       let even = parse_xcolor(None, &even_str, None);
-      assign_value("tabular_row_color_even", Stored::String(arena::pin(even.to_stored())), None);
+      assign_value("tabular_row_color_even", Stored::String(pin(even.to_stored())), None);
     } else {
       assign_value("tabular_row_color_even", Stored::None, None);
     }
@@ -1291,67 +1287,64 @@ LoadDefinitions!({
   DefConstructor!("\\lx@tabular@row@before@xcolor",
     sub[document, _args, props] {
       if let Some(Stored::String(bg_sym)) = props.get("background") {
-        let bg_str = arena::with(*bg_sym, |s| s.to_string());
+        let bg_str = with(*bg_sym, |s| s.to_string());
         if !bg_str.is_empty() {
           let current = document.get_node().clone();
-          if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current)) {
-            if !tr_node.has_attribute("backgroundcolor") {
+          if let Some(mut tr_node) = document.findnode("ancestor-or-self::ltx:tr", Some(&current))
+            && !tr_node.has_attribute("backgroundcolor") {
               document.set_attribute(&mut tr_node, "backgroundcolor", &bg_str)?;
             }
-          }
         }
       }
     },
     after_digest => sub[whatsit] {
-      if latexml_core::binding::content::if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
+      if if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
         // Read row number from state (set by start_row before digest) instead of
         // borrowing the alignment, which is already mutably borrowed during start_row.
-        let n = state::lookup_value("alignmentRowNumber")
+        let n = lookup_value("alignmentRowNumber")
           .and_then(|v| match v {
             Stored::Int(i) => Some(i as usize),
             Stored::Number(num) => Some(num.value_of() as usize),
             _ => None,
           })
           .unwrap_or(0);
-        let first = match state::lookup_value("tabular_row_color_first") {
+        let first = match lookup_value("tabular_row_color_first") {
           Some(Stored::Number(num)) => num.value_of() as usize,
           _ => 1,
         };
-        let odd = state::lookup_value("tabular_row_color_odd");
-        let even = state::lookup_value("tabular_row_color_even");
+        let odd = lookup_value("tabular_row_color_odd");
+        let even = lookup_value("tabular_row_color_even");
         if n >= first {
           // Perl: $n % 2 ? $odd : $even — Perl row numbers are 1-based
           // Row 1 is odd, row 2 is even, etc.
           let bg_stored = if n % 2 == 1 { &odd } else { &even };
           if let Some(Stored::String(sym)) = bg_stored {
-            let color_str = arena::with(*sym, |s| s.to_string());
-            if let Some(c) = latexml_core::common::color::Color::from_stored(&color_str) {
+            let color_str = with(*sym, |s| s.to_string());
+            if let Some(c) = Color::from_stored(&color_str) {
               merge_font(fontmap!(bg => c));
               let bg_hex = c.to_attribute();
-              whatsit.set_property("background", Stored::String(arena::pin(&bg_hex)));
+              whatsit.set_property("background", Stored::String(pin(&bg_hex)));
             }
           } else {
             // Color is None (from \rowcolors1{}{}) — clear any inherited bg
-            if let Some(font) = lookup_font() {
-              if font.get_background().is_some() {
+            if let Some(font) = lookup_font()
+              && font.get_background().is_some() {
                 let mut cleared = (*font).clone();
                 cleared.bg = None;
-                state::assign_value("font", Stored::from(cleared), None);
+                assign_value("font", Stored::from(cleared), None);
               }
-            }
           }
         }
       } else {
         // \hiderowcolors: clear any inherited background from prior \rowcolor.
         // The alignment scope may carry font bg that cycling rows override but
         // non-cycling rows inherit. Clear it at the current scope.
-        if let Some(font) = lookup_font() {
-          if font.get_background().is_some() {
+        if let Some(font) = lookup_font()
+          && font.get_background().is_some() {
             let mut cleared = (*font).clone();
             cleared.bg = None;
-            state::assign_value("font", Stored::from(cleared), None);
+            assign_value("font", Stored::from(cleared), None);
           }
-        }
       }
       Ok(Vec::new())
     },
@@ -1364,12 +1357,12 @@ LoadDefinitions!({
     T_CS!("\\rownum"),
     None,
     Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
-      match state::lookup_alignment() { Some(alignment) => {
+      match lookup_alignment() { Some(alignment) => {
         if let DigestedData::Alignment(cell) = alignment.data() {
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
           let toks: Vec<Token> = num_str.chars().map(|c| {
-            Token { text: arena::pin_char(c), code: Catcode::OTHER,
+            Token { text: pin_char(c), code: Catcode::OTHER,
       #[cfg(feature = "token-locators")] loc: 0
     }
           }).collect();
@@ -1556,12 +1549,12 @@ fn define_colors_impl(id_pairs: &str, if_undef: bool) -> Result<()> {
     };
     if if_undef {
       let key = s!("color_{name}");
-      if state::with_value(&key, |v| v.is_some()) {
+      if with_value(&key, |v| v.is_some()) {
         continue;
       }
     }
     let from_key = s!("color_{from}");
-    if let Some(stored) = state::lookup_value(&from_key) {
+    if let Some(stored) = lookup_value(&from_key) {
       assign_value(&s!("color_{name}"), stored, None);
       // Also copy the \color@name macro via Let
       let from_cs = T_CS!(s!("\\color@{from}"));

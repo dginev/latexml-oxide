@@ -13,7 +13,6 @@
 //! Witness 2503.14673 (pict2e error blocking 1 paper conversion).
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Intentionally empty: skip pict2e's raw load. LaTeX picture
   // environment is handled by latex_constructs.rs regardless of

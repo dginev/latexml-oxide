@@ -5,7 +5,6 @@
 //! load imsart.sty so most user macros become available.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -48,23 +47,22 @@ LoadDefinitions!({
     "<ltx:acknowledgements>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
   // IMS authors use \orcid for ORCID identifier. Preserve as ltx:note.
-  DefMacro!("\\orcid{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  DefMacro!("\\orcid{}", "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
   // IMS journal bibliography entry types — imsart.sty defines these as
   // \def commands but they're used as environments in some .bbl files.
   // Provide as no-op envs (the actual bibliography rendering is handled
   // by biblatex/natbib elsewhere). Witness 2406.15844 (+4 imsart papers).
   DefEnvironment!("{barticle}", "#body");
-  DefEnvironment!("{bbook}",    "#body");
+  DefEnvironment!("{bbook}", "#body");
   DefEnvironment!("{bbooklet}", "#body");
-  DefEnvironment!("{binbook}",  "#body");
+  DefEnvironment!("{binbook}", "#body");
   DefEnvironment!("{bincollection}", "#body");
-  DefEnvironment!("{bunpublished}",  "#body");
-  DefEnvironment!("{bmisc}",         "#body");
-  DefEnvironment!("{bproceedings}",  "#body");
-  DefEnvironment!("{bphdthesis}",    "#body");
+  DefEnvironment!("{bunpublished}", "#body");
+  DefEnvironment!("{bmisc}", "#body");
+  DefEnvironment!("{bproceedings}", "#body");
+  DefEnvironment!("{bphdthesis}", "#body");
   DefEnvironment!("{bmastersthesis}", "#body");
-  DefEnvironment!("{btechreport}",   "#body");
+  DefEnvironment!("{btechreport}", "#body");
 
   // IMS bibliography field-tagging macros — imsart.sty defines these
   // as NLM/JATS-style 1-arg setters inside `{barticle}` etc. envs:

@@ -1,15 +1,18 @@
 #![feature(alloc_error_hook)]
 
+use std::{
+  alloc::{Layout, set_alloc_error_hook},
+  error::Error,
+  fs::File,
+  io::prelude::*,
+  path::Path,
+  process,
+  rc::Rc,
+};
+
 use clap::Parser;
 use latexml::converter::Converter;
 use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
-use std::alloc::{Layout, set_alloc_error_hook};
-use std::error::Error;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
-use std::process;
-use std::rc::Rc;
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
 /// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
@@ -310,7 +313,7 @@ fn custom_alloc_error_hook(layout: Layout) {
     layout.size(),
     layout.align()
   );
-  std::process::exit(137);
+  process::exit(137);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -344,7 +347,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // first real consumer arrives. Disable with
   // `LATEXML_NO_KPATHSEA_PREWARM=1` for A/B benchmarking.
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
-    Some(std::thread::spawn(latexml_core::util::pathname::prewarm_kpathsea))
+    Some(std::thread::spawn(
+      latexml_core::util::pathname::prewarm_kpathsea,
+    ))
   } else {
     None
   };
@@ -466,7 +471,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // --whatsin=directory: auto-detect from trailing / or explicit flag
   let is_directory_mode = cli.whatsin.as_deref() == Some("directory") || source.ends_with('/');
   let source = if is_directory_mode {
-    let dir_path = std::path::Path::new(&source);
+    let dir_path = Path::new(&source);
     if let Ok(abs_source) = std::fs::canonicalize(dir_path) {
       path_flags.push(abs_source.to_string_lossy().to_string());
     } else {
@@ -488,8 +493,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // (e.g. 2301.04210.tex). Perl LaTeXML detects the `%PDF-` magic and bails
   // with a single Fatal; without this guard the binary catcode-tokenizes
   // the PDF stream and emits ~100 Error:undefined / Error:unexpected lines.
-  if std::path::Path::new(&source).is_file() && latexml::main_tex::is_pdf_magic(std::path::Path::new(&source)) {
-    eprintln!("Fatal:invalid:not_tex_source PDF magic detected in source file '{}'", source);
+  if Path::new(&source).is_file() && latexml::main_tex::is_pdf_magic(Path::new(&source)) {
+    eprintln!(
+      "Fatal:invalid:not_tex_source PDF magic detected in source file '{}'",
+      source
+    );
     process::exit(1);
   }
 
@@ -588,9 +596,9 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     // Set BIB_CONFIG to ['bbl'] — skip BibTeX, use pre-existing .bbl file
     latexml_core::state::assign_value(
       "BIB_CONFIG",
-      latexml_core::common::store::Stored::Strings(std::rc::Rc::new([
-        latexml_core::common::arena::pin("bbl"),
-      ])),
+      latexml_core::common::store::Stored::Strings(Rc::new([latexml_core::common::arena::pin(
+        "bbl",
+      )])),
       Some(latexml_core::state::Scope::Global),
     );
   }
@@ -665,27 +673,36 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     let _ = &source_for_post; // keep alive for post-processing
     if let Some(xml) = response.result {
       // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
-      let inferred_format: Option<String> = cli.format.clone().or_else(|| {
-        target.as_ref().and_then(|dest| {
-          Path::new(dest)
-            .extension()
-            .and_then(|ext| ext.to_str())
-            .map(|ext| {
-              match ext.to_lowercase().as_str() {
-                "html" | "htm" => "html5".to_string(), // Perl L435: html → html5
-                "xhtml" => "xhtml".to_string(),
-                "xml" => "xml".to_string(),
-                "zip" => "html5".to_string(), // Perl L431: zip → html5
-                "epub" | "mobi" => "epub".to_string(),
-                other => other.to_string(),
-              }
-            })
+      let inferred_format: Option<String> = cli
+        .format
+        .clone()
+        .or_else(|| {
+          target.as_ref().and_then(|dest| {
+            Path::new(dest)
+              .extension()
+              .and_then(|ext| ext.to_str())
+              .map(|ext| {
+                match ext.to_lowercase().as_str() {
+                  "html" | "htm" => "html5".to_string(), // Perl L435: html → html5
+                  "xhtml" => "xhtml".to_string(),
+                  "xml" => "xml".to_string(),
+                  "zip" => "html5".to_string(), // Perl L431: zip → html5
+                  "epub" | "mobi" => "epub".to_string(),
+                  other => other.to_string(),
+                }
+              })
+          })
         })
-      })
-      // `--whatsout=archive` with no `--dest`/`--format` still wants a
-      // web bundle — default it to html5, matching the `--dest *.zip`
-      // inference above (a `.zip` dest already maps to html5).
-      .or_else(|| if is_archive_out { Some("html5".to_string()) } else { None });
+        // `--whatsout=archive` with no `--dest`/`--format` still wants a
+        // web bundle — default it to html5, matching the `--dest *.zip`
+        // inference above (a `.zip` dest already maps to html5).
+        .or_else(|| {
+          if is_archive_out {
+            Some("html5".to_string())
+          } else {
+            None
+          }
+        });
 
       // Auto-select stylesheet from format (Perl Config.pm L543-551)
       let effective_stylesheet =
@@ -783,7 +800,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .and_then(|z| Path::new(z).file_stem())
             .and_then(|s| s.to_str())
             .unwrap_or("document");
-          Some(tmp.path().join(format!("{stem}.html")).to_string_lossy().to_string())
+          Some(
+            tmp
+              .path()
+              .join(format!("{stem}.html"))
+              .to_string_lossy()
+              .to_string(),
+          )
         } else {
           target.clone()
         };
@@ -832,14 +855,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             .ok()
             .and_then(|s| s.trim().parse::<u64>().ok());
           latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
-            zip_path:          &zip_dest,
-            html_filename:     &html_name,
-            html:              &output,
-            log_filename:      Some(&log_name),
-            log:               &response.log,
-            status:            &response.status,
+            zip_path: &zip_dest,
+            html_filename: &html_name,
+            html: &output,
+            log_filename: Some(&log_name),
+            log: &response.log,
+            status: &response.status,
             resource_dir,
-            telemetry_json:    None,
+            telemetry_json: None,
             source_date_epoch,
           })?;
           eprintln!("Output written to {}", zip_dest);
@@ -855,11 +878,11 @@ fn real_main() -> Result<(), Box<dyn Error>> {
 
     // --log: write conversion log to file (skip if already packed into
     // the ZIP by the archive output stage).
-    if let Some(ref log_path) = cli.log {
-      if !is_archive_out {
-        latexml_post::writer::write_output(&response.log, Some(log_path))?;
-        eprintln!("Log written to {}", log_path);
-      }
+    if let Some(ref log_path) = cli.log
+      && !is_archive_out
+    {
+      latexml_post::writer::write_output(&response.log, Some(log_path))?;
+      eprintln!("Log written to {}", log_path);
     }
   }
 
@@ -913,7 +936,7 @@ fn write_telemetry_record(
   // paper_id ≈ source basename without extension; cortex_worker
   // overrides this when it knows the arxiv id. Keep the binary's
   // best-effort default for direct CLI users.
-  let paper_id = std::path::Path::new(source)
+  let paper_id = Path::new(source)
     .file_stem()
     .and_then(|s| s.to_str())
     .unwrap_or("")
@@ -935,10 +958,10 @@ fn write_telemetry_record(
 
   let record = telemetry::take();
   let line = record.to_json_line();
-  if let Some(parent) = std::path::Path::new(&path).parent() {
-    if !parent.as_os_str().is_empty() {
-      let _ = std::fs::create_dir_all(parent);
-    }
+  if let Some(parent) = Path::new(&path).parent()
+    && !parent.as_os_str().is_empty()
+  {
+    let _ = std::fs::create_dir_all(parent);
   }
   if let Ok(mut fh) = File::create(&path) {
     let _ = writeln!(fh, "{line}");
@@ -1081,8 +1104,8 @@ fn unpack_archive(archive_path: &str) -> Result<(tempfile::TempDir, String), Box
 
   // Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
   // or one containing \documentclass)
-  let main_tex = latexml::main_tex::find_main_tex(dest)
-    .map_err(|e| -> Box<dyn Error> { e.into() })?;
+  let main_tex =
+    latexml::main_tex::find_main_tex(dest).map_err(|e| -> Box<dyn Error> { e.into() })?;
   Ok((tempdir, main_tex.to_string_lossy().to_string()))
 }
 

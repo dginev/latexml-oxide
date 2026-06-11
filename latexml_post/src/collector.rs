@@ -5,12 +5,15 @@
 //! and build derived content (indexes, bibliographies, etc.).
 //! Supports splitting collected content into sub-documents by initial letter.
 
-use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 
-use crate::document::{NodeData, PostDocument};
-use crate::processor::{ProcessResult, Processor};
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::{
+  document::{NodeData, PostDocument},
+  processor::{ProcessResult, Processor},
+};
 
 /// Abstract collector post-processor.
 ///
@@ -135,7 +138,8 @@ pub fn make_sub_collection_documents(
   // For subsequent sub-collections, we'd create new documents
   // This requires PostDocument::newDocument which needs more infrastructure
   Info!(
-    "collector", "subcollections",
+    "collector",
+    "subcollections",
     "Collector: {} sub-collections by initial: {:?}",
     initials.len(),
     initials
@@ -177,7 +181,8 @@ impl Processor for Collector {
     // but at Warn severity (Rust trait can't fatal here without changing the
     // signature). A concrete subtype reaching this branch is a misconfig.
     Warn!(
-      "misdefined", "Collector",
+      "misdefined",
+      "Collector",
       "Abstract Collector::process called — concrete subclass should override"
     );
     Ok(vec![doc])

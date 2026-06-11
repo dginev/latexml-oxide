@@ -1,8 +1,9 @@
 //! TeX Paragraph
 //!
 //! Core TeX Implementation for LaTeXML
-use crate::prelude::*;
 use latexml_core::document::helpers::prune_empty_para;
+
+use crate::prelude::*;
 
 /// Helper used by `\leftline`/`\rightline`/`\centerline` and friends.
 /// Perl `TeX_Paragraph.pool.ltxml:75` `sub alignLine`.
@@ -31,7 +32,6 @@ pub fn align_line(
   }
   Ok(())
 }
-
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,14 +64,14 @@ LoadDefinitions!({
   DefConstructor!("\\indent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
-      let para_tag = arena::pin_static("ltx:para");
+      let para_tag = pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
       } else if document::sym_can_contain_somehow(tag, para_tag).is_some() {
         // Perversely ignore indent on 1st para after sectioning titles (Perl parity)
         let prev_is_title = node.get_last_child().map(|prev| {
           let prev_qname = document::get_node_qname(&prev);
-          arena::with(prev_qname, |s| s == "ltx:title" || s == "ltx:toctitle")
+          with(prev_qname, |s| s == "ltx:title" || s == "ltx:toctitle")
         }).unwrap_or(false);
         if prev_is_title {
           document.open_element("ltx:para", None, None)?;
@@ -88,7 +88,7 @@ LoadDefinitions!({
   DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
-      let para_tag = arena::pin_static("ltx:para");
+      let para_tag = pin_static("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
       } else if document::sym_can_contain_somehow(tag, para_tag ).is_some() {
@@ -121,13 +121,13 @@ LoadDefinitions!({
         if let Some(mut node) = element {
           let qname = document::get_node_qname(&node);
           // Only set on the para about to close, if unknown!
-          if qname == arena::pin_static("ltx:para") && node.get_attribute("class").is_none() {
+          if qname == pin_static("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
             if class_sym != pin!("") {
-              let class_s = arena::with(class_sym, |s| s.to_string());
+              let class_s = with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
             }
-          } else if qname == arena::pin_static("ltx:figure") {
+          } else if qname == pin_static("ltx:figure") {
             // insert breaks in figures, for vertically separating subfigures
             document.insert_element("ltx:break",Vec::new(), None)?;
           }
@@ -139,18 +139,18 @@ LoadDefinitions!({
     },
     before_digest => {
       // Perl: combine any digested horizontal material into a horizontal List
-      let mode = state::lookup_string_from_sym(pin!("MODE"));
-      let bound = state::lookup_string_from_sym(pin!("BOUND_MODE"));
+      let mode = lookup_string_from_sym(pin!("MODE"));
+      let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
       if mode == "horizontal" && bound.ends_with("vertical") {
         // Perl: $stomach->repackHorizontal;
         repack_horizontal();
         assign_value_inplace_sym(pin!("MODE"), bound); // Resume vertical/internal_vertical
       }
-      state::assign_value("parshape", Stored::None, None);
-      state::assign_value("interlinepenalties", Stored::None, None);
+      assign_value("parshape", Stored::None, None);
+      assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      whatsit.set_property("mode", state::lookup_string_from_sym(pin!("MODE")));
+      whatsit.set_property("mode", lookup_string_from_sym(pin!("MODE")));
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);
@@ -164,18 +164,18 @@ LoadDefinitions!({
         if let Some(c) = lookup_value("next_para_class") {
           // Check if flags were set by prior \par:
           whatsit.set_property("class", c);
-          { state::assign_value("next_para_class", Stored::None, None); }
+          { assign_value("next_para_class", Stored::None, None); }
         }
         // Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
-        { state::assign_value("interlinepenalties", Stored::None, None); }
+        { assign_value("interlinepenalties", Stored::None, None); }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if state::lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
+        if lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
           // respect \parindent if no overrides are given
-          { state::assign_value("next_para_class", "ltx_noindent", None); }
+          { assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
-        match { state::remove_value("vAdjust") } { Some(Stored::Tokens(vadj)) => {
-          state::assign_value("vAdjust", Tokens!(), Some(Scope::Global));
+        match remove_value("vAdjust") { Some(Stored::Tokens(vadj)) => {
+          assign_value("vAdjust", Tokens!(), Some(Scope::Global));
           Ok(vec![ Digest!(vadj)? ])
         } _ => {
           Ok(Vec::new())
@@ -216,8 +216,8 @@ LoadDefinitions!({
       let n = if n_val < 0 { 0 } else { n_val } as usize;
       let mut shape = VecDeque::new();
       for _ in 0..n {
-        let indent = gullet::read_dimension().unwrap_or_default();
-        let length = gullet::read_dimension().unwrap_or_default();
+        let indent = read_dimension().unwrap_or_default();
+        let length = read_dimension().unwrap_or_default();
         shape.push_back(Stored::Dimension(indent));
         shape.push_back(Stored::Dimension(length));
       }

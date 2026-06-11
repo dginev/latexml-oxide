@@ -6,9 +6,10 @@ extern crate latexml_package;
 
 mod helpers;
 
+use std::rc::Rc;
+
 use latexml::util::test::*;
 use latexml_core::common::error::*;
-use std::rc::Rc;
 
 const DIR: &str = "tests/complex";
 

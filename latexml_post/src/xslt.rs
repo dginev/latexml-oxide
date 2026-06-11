@@ -4,18 +4,22 @@
 //! Applies an XSLT stylesheet to transform the document (e.g., LaTeXML XML → HTML5).
 //! Handles CSS/JS/icon resource copying.
 
+use std::{
+  cell::RefCell,
+  collections::HashSet,
+  fs,
+  path::{Path, PathBuf},
+  sync::LazyLock,
+};
+
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
-use std::cell::RefCell;
-use std::collections::HashSet;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
-
 use regex::Regex;
+use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::{PostDocument, PostDocumentOptions};
-use crate::processor::{PostError, ProcessResult, Processor};
+use crate::{
+  document::{PostDocument, PostDocumentOptions},
+  processor::{PostError, ProcessResult, Processor},
+};
 
 /// Set libxslt's global template-recursion cap to Perl's value (1000) exactly
 /// once per process. Mirrors `XML::LibXSLT->max_depth(1000)` in
@@ -111,10 +115,7 @@ impl XSLT {
     if stylesheet.is_empty() {
       // Perl XSLT.pm:36 — Error('expected', 'stylesheet', undef,
       //   "No stylesheet specified!")
-      Error!(
-        "expected", "stylesheet",
-        "No stylesheet specified!"
-      );
+      Error!("expected", "stylesheet", "No stylesheet specified!");
       return Err(PostError::Processing(
         "No stylesheet specified!".to_string(),
       ));
@@ -127,11 +128,13 @@ impl XSLT {
         // Perl XSLT.pm:42 — Error('missing-file', $stylesheet, undef,
         //   "No stylesheet '$stylesheet' found!")
         Error!(
-          "missing-file", stylesheet,
-          "No stylesheet '{}' found!", stylesheet
+          "missing-file",
+          stylesheet,
+          "No stylesheet '{}' found!",
+          stylesheet
         );
         return Err(e);
-      }
+      },
     };
 
     Ok(XSLT {
@@ -197,10 +200,7 @@ impl XSLT {
         if path != dest {
           ensure_parent(&dest);
           if let Err(e) = fs::copy(&path, &dest) {
-            Warn!(
-              "I/O", dest,
-              "Couldn't copy {} to {}: {}", path, dest, e
-            );
+            Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
           }
         }
       },
@@ -212,13 +212,18 @@ impl XSLT {
           ensure_parent(&dest);
           if let Err(e) = fs::write(&dest, bytes) {
             Warn!(
-              "I/O", dest,
-              "Couldn't write embedded resource {} to {}: {}", basename, dest, e
+              "I/O",
+              dest,
+              "Couldn't write embedded resource {} to {}: {}",
+              basename,
+              dest,
+              e
             );
           }
         } else {
           Warn!(
-            "missing_file", src,
+            "missing_file",
+            src,
             "Couldn't find resource file {} in paths {:?}",
             src,
             search_paths
@@ -312,12 +317,22 @@ impl XSLT {
           if let Some(bytes) = embedded_resources::lookup(basename) {
             ensure_parent();
             if let Err(e) = fs::write(&dest, bytes) {
-              Warn!("I/O", dest, "Couldn't write embedded resource {} to {}: {}", basename, dest, e);
+              Warn!(
+                "I/O",
+                dest,
+                "Couldn't write embedded resource {} to {}: {}",
+                basename,
+                dest,
+                e
+              );
             }
           } else {
             Warn!(
-              "missing_file", entry,
-              "Couldn't find resource file {} in paths {:?}", entry, search_paths
+              "missing_file",
+              entry,
+              "Couldn't find resource file {} in paths {:?}",
+              entry,
+              search_paths
             );
           }
         },
@@ -348,7 +363,10 @@ impl XSLT {
     }
     for key in ["CSS", "JAVASCRIPT", "ICON"] {
       if let Some(value) = out.get(key).cloned() {
-        out.insert(key.to_string(), relativize_quoted_pipe_list(&value, &prefix));
+        out.insert(
+          key.to_string(),
+          relativize_quoted_pipe_list(&value, &prefix),
+        );
       }
     }
     out
@@ -448,8 +466,11 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
     }
     if !import_src.is_file() {
       Warn!(
-        "missing_file", t,
-        "Couldn't find @import target {} referenced by {}", t, src.display()
+        "missing_file",
+        t,
+        "Couldn't find @import target {} referenced by {}",
+        t,
+        src.display()
       );
       continue;
     }
@@ -459,9 +480,12 @@ fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
       }
       if let Err(e) = fs::copy(&import_src, &import_dest) {
         Warn!(
-          "I/O", t,
+          "I/O",
+          t,
           "Couldn't copy @import {} to {}: {}",
-          import_src.display(), import_dest.display(), e
+          import_src.display(),
+          import_dest.display(),
+          e
         );
         continue;
       }
@@ -486,7 +510,12 @@ impl Processor for XSLT {
       None => return Ok(vec![doc]),
     };
 
-    Info!("xslt", "stylesheet", "Applying XSLT stylesheet: {}", stylesheet_path);
+    Info!(
+      "xslt",
+      "stylesheet",
+      "Applying XSLT stylesheet: {}",
+      stylesheet_path
+    );
 
     // Handle resource elements first (before transformation removes them)
     let resource_nodes = doc.findnodes("//ltx:resource[@src]");
@@ -638,7 +667,7 @@ fn cache_key(path: &str) -> String {
   // `/abs/.../resources/XSLT/foo.xsl` hit the same entry. Falls back
   // to the raw path on canonicalisation failure (the file might not
   // exist yet — let parse_file emit its own error in that case).
-  std::fs::canonicalize(path)
+  fs::canonicalize(path)
     .map(|p| p.to_string_lossy().into_owned())
     .unwrap_or_else(|_| path.to_string())
 }
@@ -653,9 +682,7 @@ thread_local! {
 /// nested calls (which the LaTeXML pipeline never makes) would
 /// `RefCell::borrow_mut`-panic — a deliberate single-borrow contract.
 fn with_cached_stylesheet<F, R>(path: &str, f: F) -> Result<R, PostError>
-where
-  F: FnOnce(&mut libxslt::stylesheet::Stylesheet) -> Result<R, PostError>,
-{
+where F: FnOnce(&mut libxslt::stylesheet::Stylesheet) -> Result<R, PostError> {
   let key = cache_key(path);
   STYLESHEET_CACHE.with(|cache| {
     let mut map = cache.borrow_mut();
@@ -919,12 +946,10 @@ fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, P
       return Ok(p);
     }
   }
-  // 3. Fallback: serve from the embedded table via the libxml2 input
-  //    callback. We return an `embed:///<basename>` URL sentinel that
-  //    `with_cached_stylesheet` routes through `libxslt::parser::
-  //    parse_bytes`; subsequent `xsl:import` references inside that
-  //    stylesheet compose against this base URI and re-enter our
-  //    callback, so the whole chain stays in memory.
+  // 3. Fallback: serve from the embedded table via the libxml2 input callback. We return an
+  //    `embed:///<basename>` URL sentinel that `with_cached_stylesheet` routes through
+  //    `libxslt::parser:: parse_bytes`; subsequent `xsl:import` references inside that stylesheet
+  //    compose against this base URI and re-enter our callback, so the whole chain stays in memory.
   let filename = Path::new(stylesheet)
     .file_name()
     .and_then(|f| f.to_str())

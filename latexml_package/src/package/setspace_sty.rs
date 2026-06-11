@@ -2,7 +2,6 @@
 //! Perl: setspace.sty.ltxml
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   def_macro_noop("\\singlespacing")?;
   def_macro_noop("\\onehalfspacing")?;
@@ -21,9 +20,9 @@ LoadDefinitions!({
   // to make `internal_vertical` explicit so paragraphs and display math
   // survive the wrap.
   DefEnvironment!("{spacing}{}", "#body", mode => "internal_vertical");
-  DefEnvironment!("{singlespace}",  "#body");
+  DefEnvironment!("{singlespace}", "#body");
   DefEnvironment!("{onehalfspace}", "#body");
-  DefEnvironment!("{doublespace}",  "#body");
+  DefEnvironment!("{doublespace}", "#body");
   // Standalone-switch overrides: some papers (witness 2310.08233 IEEEtran)
   // use `\singlespace` as a SWITCH inside an arg-grabbing context such as
   // `\title{\singlespace ...}`. DefEnvironment binds `\singlespace` to the

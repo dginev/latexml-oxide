@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("ifplatform");
   RequirePackage!("xcolor");
@@ -58,9 +57,9 @@ LoadDefinitions!({
       .and_then(|path| std::fs::read_to_string(&path).ok())
       .unwrap_or_default();
     bgroup();
-    state::assign_value(
+    assign_value(
       "current_environment",
-      Stored::String(arena::pin("lstlisting")),
+      Stored::String(pin("lstlisting")),
       None,
     );
     def_macro(
@@ -115,17 +114,17 @@ LoadDefinitions!({
   // expansion lets lstlisting swallow the rest of the file because
   // it never sees its own `\end{lstlisting}` marker (the user wrote
   // `\end{minted}`).
-  use latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
   use latexml_core::stomach::bgroup;
+  use latexml_package::package::listings_sty::{listings_read_raw_lines, lst_process_display};
   {
     let cs = T_CS!("\\begin{minted}");
     let params = parse_parameters("[]{}", &cs, true)?;
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |_args: Vec<ArgWrap>| {
         bgroup();
-        state::assign_value(
+        assign_value(
           "current_environment",
-          Stored::String(arena::pin("lstlisting")),
+          Stored::String(pin("lstlisting")),
           None,
         );
         def_macro(

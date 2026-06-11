@@ -68,8 +68,8 @@ LoadDefinitions!({
     after_digest => sub[_whatsit] {
       let endmark = "\\end{rawhtml}";
       let mut nlines = 0;
-      gullet::read_raw_line(); // skip first line (after \begin{rawhtml})
-      while let Some(line) = gullet::read_raw_line() {
+      read_raw_line(); // skip first line (after \begin{rawhtml})
+      while let Some(line) = read_raw_line() {
         if line.trim_end() == endmark { break; }
         nlines += 1;
       }
@@ -81,8 +81,8 @@ LoadDefinitions!({
     after_digest => sub[_whatsit] {
       let endmark = "\\end{htmlonly}";
       let mut nlines = 0;
-      gullet::read_raw_line(); // skip first line (after \begin{htmlonly})
-      while let Some(line) = gullet::read_raw_line() {
+      read_raw_line(); // skip first line (after \begin{htmlonly})
+      while let Some(line) = read_raw_line() {
         if line.trim_end() == endmark { break; }
         nlines += 1;
       }
@@ -96,9 +96,9 @@ LoadDefinitions!({
   // Plain \latexonly — dispatch on next token. Perl uses ifNext T_BEGIN:
   //   if `{` → \latexonly@onearg{...} ; else → \begin{latexonly}...\end{latexonly}
   DefMacro!("\\latexonly", sub[_args] {
-    let tok = gullet::read_token()?;
+    let tok = read_token()?;
     if let Some(t) = tok {
-      gullet::unread(Tokens!(t));
+      unread(Tokens!(t));
       if t.get_catcode() == Catcode::BEGIN {
         Ok(Tokens!(T_CS!("\\latexonly@onearg")))
       } else {

@@ -9,9 +9,10 @@ extern crate latexml_package;
 
 mod helpers;
 
+use std::rc::Rc;
+
 use latexml::tex_tests;
 use latexml_core::common::error::Result;
-use std::rc::Rc;
 
 fn grouping_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {

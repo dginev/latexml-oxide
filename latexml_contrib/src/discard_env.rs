@@ -21,8 +21,9 @@
 //!   return; }
 //! ```
 
-use latexml_package::prelude::*;
 use std::cell::RefCell;
+
+use latexml_package::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
 
 thread_local! {
@@ -34,7 +35,7 @@ thread_local! {
 /// Read and discard tokens up to and including a matching `\end{kind}`.
 /// Emits a one-time `Error("undefined", "{kind}", ...)` on the first
 /// invocation per `kind`.
-pub fn discard_env_body(kind: &str, source: &str) -> latexml_core::common::error::Result<()> {
+pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
   bgroup();
   let first_time = REPORTED.with(|cell| {
     let mut set = cell.borrow_mut();
@@ -55,14 +56,14 @@ pub fn discard_env_body(kind: &str, source: &str) -> latexml_core::common::error
   }
   let end_delim = Tokens!(T_CS!("\\end"));
   loop {
-    let _upto_end = gullet::read_until(&end_delim)?;
-    let _drop_open = gullet::read_token()?;
+    let _upto_end = read_until(&end_delim)?;
+    let _drop_open = read_token()?;
     // require_open=false because `_drop_open` just consumed the `{` —
     // read_balanced should read the inside, not a second `{`. Mirrors
     // Perl's argless `$gullet->readBalanced` which assumes the `{` is
     // already open. Driver: 2402.09676 + nicematrix stub cascaded
     // "Expected opening '{'" because of the spurious require_open.
-    let env = gullet::read_balanced(latexml_core::gullet::ExpansionLevel::Off, false, false)?;
+    let env = read_balanced(ExpansionLevel::Off, false, false)?;
     if env.to_string() == kind {
       break;
     }

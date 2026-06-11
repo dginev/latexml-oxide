@@ -1,7 +1,6 @@
 //! Stub for agujournal2019.cls (AGU journal template).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -22,10 +21,14 @@ LoadDefinitions!({
   def_macro_noop("\\drafttrue")?;
   DefConditional!("\\ifdraft");
   // Author-supplied metadata — preserve as ltx:note frontmatter.
-  DefMacro!("\\journalname{}",
-    "\\@add@frontmatter{ltx:note}[role=journal]{#1}");
-  DefMacro!("\\correspondingauthor{}{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1, #2}");
+  DefMacro!(
+    "\\journalname{}",
+    "\\@add@frontmatter{ltx:note}[role=journal]{#1}"
+  );
+  DefMacro!(
+    "\\correspondingauthor{}{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1, #2}"
+  );
 
   // {keypoints} env — AGU title-page key-points list.
   DefEnvironment!(

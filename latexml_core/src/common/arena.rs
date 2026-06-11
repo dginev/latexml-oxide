@@ -14,14 +14,14 @@
 //! borrow conflicts entirely. A RAII guard clears the pointer on scope exit
 //! (including panics), so the invariant holds through unwinds.
 
-use std::cell::{Cell, RefCell};
-
-use rustc_hash::FxHasher;
+use std::{
+  cell::{Cell, RefCell},
+  hash::BuildHasherDefault,
+};
 
 use once_cell::sync::Lazy;
-use std::hash::BuildHasherDefault;
-use string_interner::StringInterner;
-use string_interner::backend::BufferBackend;
+use rustc_hash::FxHasher;
+use string_interner::{StringInterner, backend::BufferBackend};
 
 pub mod data;
 pub use data::{SymHashMap, SymStr};
@@ -142,8 +142,7 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_
 /// (1.4% Ir per callgrind on siunitx-heavy fixtures). The fast path
 /// avoids `with_arena_mut` entirely for the common ASCII case.
 #[thread_local]
-static ASCII_CHAR_SYM: [std::cell::Cell<u32>; 128] =
-  [const { std::cell::Cell::new(u32::MAX) }; 128];
+static ASCII_CHAR_SYM: [Cell<u32>; 128] = [const { Cell::new(u32::MAX) }; 128];
 
 pub fn pin_char(c: char) -> SymStr {
   use string_interner::Symbol;
@@ -258,10 +257,8 @@ pub fn len() -> usize { with_arena_mut(|arena| arena.len()) }
 /// `latexml_core::reset_thread_engine`.
 pub fn reset() {
   with_arena_mut(|arena| {
-    *arena = StringInterner::with_capacity_and_hasher(
-      131_072,
-      BuildHasherDefault::<FxHasher>::default(),
-    );
+    *arena =
+      StringInterner::with_capacity_and_hasher(131_072, BuildHasherDefault::<FxHasher>::default());
   });
 }
 

@@ -1,44 +1,40 @@
-use once_cell::sync::Lazy;
-use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::rc::Rc;
+use std::{borrow::Cow, rc::Rc};
 
+use once_cell::sync::Lazy;
 use regex::Regex;
+use rustc_hash::FxHashMap as HashMap;
 
 // use crate::common::error::*;
 use crate::binding::content::{merge_font, merge_font_ref};
-use crate::binding::counter::dialect::step_counter;
-use crate::binding::def::traits::IntoDigestedResult;
-use crate::common::arena;
-use crate::common::arena::SymHashMap;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-use crate::definition::argument::ArgWrap;
-use crate::definition::conditional::{Conditional, ConditionalOptions, ConditionalType};
-use crate::definition::constructor::{Constructor, ConstructorOptions};
-use crate::definition::expandable::{Expandable, ExpandableOptions};
-use crate::definition::math_primitive::{MathPrimitive, MathPrimitiveOptions};
-use crate::definition::primitive::{Primitive, PrimitiveOptions};
-use crate::definition::register::{
-  Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
+use crate::{
+  BoxOps, Digested,
+  binding::{counter::dialect::step_counter, def::traits::IntoDigestedResult},
+  common::{
+    arena, arena::SymHashMap, error::*, font::Font, number::Number, numeric_ops::NumericOps,
+  },
+  definition::{
+    BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
+    ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
+    argument::ArgWrap,
+    conditional::{Conditional, ConditionalOptions, ConditionalType},
+    constructor::{Constructor, ConstructorOptions},
+    expandable::{Expandable, ExpandableOptions},
+    math_primitive::{MathPrimitive, MathPrimitiveOptions},
+    primitive::{Primitive, PrimitiveOptions},
+    register::{
+      Register, RegisterGetterClosure, RegisterSetterClosure, RegisterType, RegisterValue,
+    },
+  },
+  document::Document,
+  gullet, mouth,
+  parameter::{Parameter, Parameters},
+  state::*,
+  stomach::*,
+  tbox::Tbox,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
 };
-use crate::definition::{
-  BeforeDigestClosure, ConditionalClosure, ConstructionClosure, Definition, DigestionClosure,
-  ExpansionBody, FontDirective, PrimitiveBody, ReplacementClosure, Reversion, SizingClosure,
-};
-use crate::document::Document;
-use crate::gullet;
-use crate::mouth;
-use crate::parameter::{Parameter, Parameters};
-use crate::state::*;
-use crate::stomach::*;
-use crate::tbox::Tbox;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
-use crate::{BoxOps, Digested};
 
 const MATH_CONSTRUCTOR_ATTRIBUTES: &[&str] = &[
   "name",
@@ -1768,7 +1764,7 @@ pub fn allocate_register(rtype: &str) -> Result<Option<String>> {
       //   while ($STATE->isValueBound($loc)) { $next++; $loc = $type . $next; }
       let mut next = n.value_of() + 1;
       let mut loc = format!("{rtype}{next}");
-      while crate::state::is_value_bound(&loc, None) {
+      while is_value_bound(&loc, None) {
         next += 1;
         loc = format!("{rtype}{next}");
       }

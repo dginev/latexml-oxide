@@ -13,11 +13,10 @@ LoadDefinitions!({
     let char_str = hexcode.to_string();
     if char_str.chars().all(|c| c.is_ascii_hexdigit()) {
       if let Ok(cp) = u32::from_str_radix(&char_str, 16) {
-        if cp <= 0x10FFFF {
-          if let Some(ch) = char::from_u32(cp) {
+        if cp <= 0x10FFFF
+          && let Some(ch) = char::from_u32(cp) {
             return Ok(Tokens::new(vec![T_OTHER!(ch.to_string())]));
           }
-        }
         Error!("unexpected", &char_str,
           format!("{} too large for Unicode. Values between 0 and 10FFFF are permitted.",
                   char_str));

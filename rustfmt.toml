@@ -2,7 +2,13 @@
 max_width = 100
 comment_width = 100
 match_block_trailing_comma = true
-wrap_comments = true
+# wrap_comments is intentionally OFF (the rustfmt default). It is an unstable
+# nightly feature with known idempotency bugs: on long *trailing* comments it
+# oscillates between `// …` and `/* … */` forms across runs (so `fmt --check`
+# never converges), and on some trailing block comments it produced an
+# unterminated `/* …` (a syntax error). A non-converging formatter cannot back a
+# CI `fmt --check` gate, so we leave comment wrapping to the author.
+wrap_comments = false
 fn_single_line = true
 where_single_line = true
 tab_spaces = 2
@@ -10,6 +16,8 @@ error_on_line_overflow = true
 error_on_unformatted = false
 condense_wildcard_suffixes = true
 overflow_delimited_expr = true
+group_imports = "StdExternalCrate"
+imports_granularity = "Crate"
 struct_field_align_threshold = 30
 struct_lit_width = 30
 edition = "2024"

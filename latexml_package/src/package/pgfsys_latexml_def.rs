@@ -27,7 +27,7 @@ use crate::prelude::*;
 /// Helper: convert dimension to px value, rounded to 2 decimal places
 /// Perl: $dim->pxValue  =>  roundto(sp / UNITY * DPI / 72.27, 2)
 fn dim_to_px(d: Dimension) -> f64 {
-  let dpi = state::lookup_int("DPI");
+  let dpi = lookup_int("DPI");
   let dpi = if dpi > 0 { dpi as f64 } else { 100.0 };
   let raw = (d.value_of() as f64 / 65536.0) * (dpi / 72.27);
   // Perl roundto(n, 2): round to 2 decimal places
@@ -36,8 +36,8 @@ fn dim_to_px(d: Dimension) -> f64 {
 
 /// Perl: sub SVGNextObject — global counter for clip paths etc.
 fn svg_next_object() -> i64 {
-  let n = state::lookup_int("svg_objcount") + 1;
-  state::assign_value("svg_objcount", Stored::Int(n), Scope::Global);
+  let n = lookup_int("svg_objcount") + 1;
+  assign_value("svg_objcount", Stored::Int(n), Scope::Global);
   n
 }
 
@@ -52,22 +52,18 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
       .collect();
     format!("{} {}", operation, pts.join(" "))
   };
-  let current = state::lookup_string("pgf_SVGpath");
+  let current = lookup_string("pgf_SVGpath");
   let combined = if current.is_empty() {
     new_path
   } else {
     format!("{} {}", current, new_path)
   };
-  state::assign_value(
-    "pgf_SVGpath",
-    Stored::String(arena::pin(&combined)),
-    Scope::Global,
-  );
+  assign_value("pgf_SVGpath", Stored::String(pin(&combined)), Scope::Global);
 }
 
 /// Look up a pgf register as a Dimension
 fn pgf_reg_dim(name: &str) -> Dimension {
-  match state::lookup_register(name, Vec::new()) {
+  match lookup_register(name, Vec::new()) {
     Ok(Some(RegisterValue::Dimension(d))) => d,
     Ok(Some(RegisterValue::Number(n))) => Dimension::new(n.value_of()),
     _ => Dimension::new(0),
@@ -117,7 +113,7 @@ fn foreign_object_check(document: &Document) -> Option<Node> {
       ForeignObject,
       Other,
     }
-    let probe = arena::with(qname, |s| match s {
+    let probe = with(qname, |s| match s {
       "svg:svg" => Probe::Svg,
       "svg:foreignObject" => Probe::ForeignObject,
       _ => Probe::Other,
@@ -160,14 +156,17 @@ fn fmt_px(v: f64) -> String {
 /// Sets up an Alignment with SVG-specific callbacks (svg:g elements with transform matrices)
 /// instead of the standard tabular/tr/td elements used by alignmentBindings.
 fn tikz_alignment_bindings(
-  template: latexml_core::alignment::template::Template,
+  template: Template,
   xml_attributes: rustc_hash::FxHashMap<String, String>,
 ) {
-  use latexml_core::alignment::{Alignment, AlignmentConfig};
-  use latexml_core::common::arena::SymHashMap;
   use std::rc::Rc;
 
-  let mode = state::lookup_string_from_sym(pin!("MODE"));
+  use latexml_core::{
+    alignment::{Alignment, AlignmentConfig},
+    common::arena::SymHashMap,
+  };
+
+  let mode = lookup_string_from_sym(pin!("MODE"));
   let is_math = mode.ends_with("math");
 
   let mut properties = SymHashMap::default();
@@ -198,9 +197,7 @@ fn tikz_alignment_bindings(
         .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
       attrs.insert("_scopebegin".to_string(), "1".to_string());
-      document
-        .open_element("svg:g", Some(attrs), None)
-        .map(Option::Some)
+      document.open_element("svg:g", Some(attrs), None).map(Some)
     }),
     // Perl L971-973: closeTikzAlignmentElement
     close_container: Rc::new(|document| document.close_element("svg:g")),
@@ -275,9 +272,7 @@ fn tikz_alignment_bindings(
       attrs
         .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 {} 0)", fmt_px(x)));
-      document
-        .open_element("svg:g", Some(attrs), None)
-        .map(Option::Some)
+      document.open_element("svg:g", Some(attrs), None).map(Some)
     }),
     close_column: Rc::new(|document| document.close_element("svg:g")),
     is_math,
@@ -286,7 +281,7 @@ fn tikz_alignment_bindings(
   });
 
   assign_alignment(alignment, None);
-  state::let_i(
+  let_i(
     &T_MATH!(),
     &if is_math {
       T_CS!("\\lx@dollar@in@mathmode")
@@ -311,8 +306,8 @@ LoadDefinitions!({
 
   // Perl L59: \lxSVG@installcommands
   DefPrimitive!("\\lxSVG@installcommands", {
-    state::let_i(&T_CS!("\\halign"), &T_CS!("\\lxSVG@halign"), None);
-    state::let_i(&T_CS!("\\ignorespaces"), &T_CS!("\\lx@inpgf@ignorespaces"), None);
+    let_i(&T_CS!("\\halign"), &T_CS!("\\lxSVG@halign"), None);
+    let_i(&T_CS!("\\ignorespaces"), &T_CS!("\\lx@inpgf@ignorespaces"), None);
   });
 
   // Perl L63: redefine ignorespaces inside PGF context
@@ -388,7 +383,7 @@ LoadDefinitions!({
     sub[document, _args, props] {
       let current = document.get_node().clone();
       let current_qname = document::get_node_qname(&current);
-      let is_in_svg = arena::with(current_qname, |s| s.starts_with("svg:"));
+      let is_in_svg = with(current_qname, |s| s.starts_with("svg:"));
       if is_in_svg {
         // Already in SVG — just open a nested svg:g
         let minx = match props.get("minx") {
@@ -444,7 +439,7 @@ LoadDefinitions!({
         document.open_element("svg:svg", Some(svg_attrs), None)?;
         // Perl L89: style => $props{style} (baseline vertical-align)
         if let Some(Stored::String(style)) = props.get("style") {
-          arena::with(*style, |s| {
+          with(*style, |s| {
             if !s.is_empty() {
               let svg_node = document.get_node_mut();
               let _ = svg_node.set_attribute("style", s);
@@ -535,7 +530,7 @@ LoadDefinitions!({
       // Perl L132: style for vertical alignment
       if base != 0.0 {
         let style = format!("vertical-align:{}px", base);
-        whatsit.set_property("style", Stored::String(arena::pin(&style)));
+        whatsit.set_property("style", Stored::String(pin(&style)));
       }
       // Store raw dimensions for reversion (tex= attribute)
       whatsit.set_property("width_dim", Stored::Dimension(width));
@@ -577,7 +572,7 @@ LoadDefinitions!({
         .map(|a| a.to_string().parse::<i64>().unwrap_or(0))
         .unwrap_or(0);
       let boxname = format!("box{}", boxnum);
-      if let Some(bx) = state::lookup_value(&boxname) {
+      if let Some(bx) = lookup_value(&boxname) {
         // Perl: sizer propagates box dimensions to the whatsit
         if let Stored::Digested(ref digested) = bx {
           if let Some(RegisterValue::Dimension(w)) = digested.get_width(None).unwrap_or(None) {
@@ -600,10 +595,10 @@ LoadDefinitions!({
   //===================================================================
 
   DefPrimitive!("\\lxSVG@clearpath", {
-    state::assign_value("pgf_SVGpath", Stored::String(arena::pin("")), Scope::Global);
+    assign_value("pgf_SVGpath", Stored::String(pin("")), Scope::Global);
   });
   DefPrimitive!("\\lxSVG@clearclip", {
-    state::assign_value("pgf_clipnext", Stored::Int(0), None);
+    assign_value("pgf_clipnext", Stored::Int(0), None);
   });
 
   //============================================================
@@ -692,7 +687,7 @@ LoadDefinitions!({
   // pure-state-toggle CS with no XML emission. Same class as
   // psfrag_sty's \psfragscanon/off. Audit flags the single L678 entry.
   DefPrimitive!("\\pgfsys@clipnext", {
-    state::assign_value("pgf_clipnext", Stored::Int(1), None);
+    assign_value("pgf_clipnext", Stored::Int(1), None);
   });
 
   DefMacro!("\\pgfsys@stroke",     "\\lxSVG@stroke\\lxSVG@drawpath{fill:none}");
@@ -706,8 +701,8 @@ LoadDefinitions!({
   // Perl L321-334: \lxSVG@drawpath
   DefMacro!("\\lxSVG@drawpath{}", sub[(arg)] {
     let arg_str = arg.to_string();
-    let path = state::lookup_string("pgf_SVGpath");
-    let clip = state::lookup_int("pgf_clipnext") != 0;
+    let path = lookup_string("pgf_SVGpath");
+    let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@drawpath@clipped{{{}}}{{{}}}}}", path, arg_str);
       mouth::tokenize_internal(&clip_cmd).unlist()
@@ -735,8 +730,8 @@ LoadDefinitions!({
         {
           let mut n = document.get_node().clone();
           loop {
-            if let Some(f) = n.get_attribute("fill") { if inherited_fill.is_empty() { inherited_fill = f; } }
-            if let Some(s) = n.get_attribute("stroke") { if inherited_stroke.is_empty() { inherited_stroke = s; } }
+            if let Some(f) = n.get_attribute("fill") && inherited_fill.is_empty() { inherited_fill = f; }
+            if let Some(s) = n.get_attribute("stroke") && inherited_stroke.is_empty() { inherited_stroke = s; }
             if !inherited_fill.is_empty() && !inherited_stroke.is_empty() { break; }
             match n.get_parent() {
               Some(p) => n = p,
@@ -775,11 +770,11 @@ LoadDefinitions!({
     },
     properties => {
       // Capture colors from state during digestion, before scope is popped
-      let fc = state::lookup_value("pgf@svg@fillcolor").map(|v| v.to_string()).unwrap_or_default();
-      let sc = state::lookup_value("pgf@svg@strokecolor").map(|v| v.to_string()).unwrap_or_default();
+      let fc = lookup_value("pgf@svg@fillcolor").map(|v| v.to_string()).unwrap_or_default();
+      let sc = lookup_value("pgf@svg@strokecolor").map(|v| v.to_string()).unwrap_or_default();
       stored_map!(
-        "pgf_fillcolor" => Stored::String(arena::pin(&fc)),
-        "pgf_strokecolor" => Stored::String(arena::pin(&sc))
+        "pgf_fillcolor" => Stored::String(pin(&fc)),
+        "pgf_strokecolor" => Stored::String(pin(&sc))
       )
     }
   );
@@ -821,8 +816,8 @@ LoadDefinitions!({
   DefConstructor!("\\lxSVG@discardpath", "");
 
   DefMacro!("\\lxSVG@@discardpath", sub[_args] {
-    let path = state::lookup_string("pgf_SVGpath");
-    let clip = state::lookup_int("pgf_clipnext") != 0;
+    let path = lookup_string("pgf_SVGpath");
+    let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@discardpath@clipped{{{}}}}}", path);
       mouth::tokenize_internal(&clip_cmd).unlist()
@@ -865,7 +860,7 @@ LoadDefinitions!({
     sub[document, args, _props] {
       let current = document.get_node().clone();
       let qname = document::get_node_qname(&current);
-      let is_ltx = arena::with(qname, |s| s.starts_with("ltx:"));
+      let is_ltx = with(qname, |s| s.starts_with("ltx:"));
       if is_ltx {
         document.open_element("svg:svg", Some(string_map!(
           "_autoopened" => "1".to_string(),
@@ -946,7 +941,7 @@ LoadDefinitions!({
             if depth == 0 && !current.is_empty() {
               // Evaluate this dimension via pgfmathparse
               let toks = Tokens::new(Explode!(&current));
-              let expanded = gullet::do_expand(toks).unwrap_or_default();
+              let expanded = do_expand(toks).unwrap_or_default();
               let input = expanded.to_string();
               let (result_str, _units) = pgfmathparse_eval_with_units(&input);
               let value: f64 = result_str.parse().unwrap_or(0.0);
@@ -970,19 +965,19 @@ LoadDefinitions!({
     let offset_str = offset_str.trim().to_string();
     if !offset_str.is_empty() {
       let toks = Tokens::new(Explode!(&offset_str));
-      let expanded = gullet::do_expand(toks).unwrap_or_default();
+      let expanded = do_expand(toks).unwrap_or_default();
       let input = expanded.to_string();
       let (result_str, _units) = pgfmathparse_eval_with_units(&input);
       let value: f64 = result_str.parse().unwrap_or(0.0);
       let dim = Dimension((value * 65536.0).round() as i64);
-      state::assign_register("\\pgf@x", dim.into(), None, vec![])?;
+      assign_register("\\pgf@x", dim.into(), None, vec![])?;
     } else {
-      state::assign_register("\\pgf@x", Dimension(0).into(), None, vec![])?;
+      assign_register("\\pgf@x", Dimension(0).into(), None, vec![])?;
     }
 
     // Step 3: Build the dash pattern string and call \pgfsys@setdash
     let dash_csv = dash_parts.join(",");
-    let pgf_x_val = state::lookup_register("\\pgf@x", vec![])?
+    let pgf_x_val = lookup_register("\\pgf@x", vec![])?
       .map(|v| v.to_string()).unwrap_or_else(|| "0.0pt".to_string());
 
     // Emit: \pgfsys@setdash{<dash_csv>}{<offset>}\ignorespaces
@@ -994,7 +989,7 @@ LoadDefinitions!({
     result.extend(Explode!(&pgf_x_val));
     result.push(T_END!());
     result.push(T_CS!("\\ignorespaces"));
-    gullet::unread(Tokens::new(result));
+    unread(Tokens::new(result));
   }, locked => true);
   DefMacro!("\\pgfsys@eoruletrue",
     "\\lxSVG@eoruletrue\\lxSVG@begingroup{fill-rule=evenodd}");
@@ -1132,35 +1127,35 @@ LoadDefinitions!({
   // 8 DefConstructor → DefPrimitive flips (rgb/cmyk/cmy/gray × stroke/fill).
   DefPrimitive!("\\lxSVG@color@rgb@stroke{}{}{}", sub[args] {
     let hex = rgb_hex(&[&args[0], &args[1], &args[2]]);
-    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@rgb@fill{}{}{}", sub[args] {
     let hex = rgb_hex(&[&args[0], &args[1], &args[2]]);
-    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@cmyk@stroke{}{}{}{}", sub[args] {
     let hex = cmyk_hex(&[&args[0], &args[1], &args[2], &args[3]]);
-    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@cmyk@fill{}{}{}{}", sub[args] {
     let hex = cmyk_hex(&[&args[0], &args[1], &args[2], &args[3]]);
-    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@cmy@stroke{}{}{}", sub[args] {
     let hex = cmy_hex(&[&args[0], &args[1], &args[2]]);
-    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@cmy@fill{}{}{}", sub[args] {
     let hex = cmy_hex(&[&args[0], &args[1], &args[2]]);
-    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@gray@stroke{}", sub[args] {
     let hex = gray_hex(&[&args[0]]);
-    assign_value("pgf@svg@strokecolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
   });
   DefPrimitive!("\\lxSVG@color@gray@fill{}", sub[args] {
     let hex = gray_hex(&[&args[0]]);
-    assign_value("pgf@svg@fillcolor", Stored::String(arena::pin(hex)), None);
+    assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
   });
 
   //===================================================================
@@ -1388,11 +1383,11 @@ LoadDefinitions!({
   // template + afterDigest side-effect; Rust `DefPrimitive` with the
   // side-effect in the body.
   DefPrimitive!("\\lxSVG@beginscope", {
-    stomach::begingroup();
+    begingroup();
   });
 
   DefPrimitive!("\\lxSVG@endscope", {
-    let _ = stomach::endgroup();
+    let _ = endgroup();
   });
 
   //===================================================================
@@ -1485,7 +1480,7 @@ LoadDefinitions!({
   // Perl L632-639: \lxSVG@sh@create — expands shading ranges into interval calls
   DefMacro!("\\lxSVG@sh@create", sub[_args] {
     let mut toks = vec![T_CS!("\\lxSVG@sh@intervals")];
-    toks.extend(gullet::do_expand(T_CS!("\\pgf@sys@shading@ranges"))?.unlist());
+    toks.extend(do_expand(T_CS!("\\pgf@sys@shading@ranges"))?.unlist());
     toks.push(T_BEGIN!());
     toks.push(T_BEGIN!());
     toks.push(T_CS!("\\pgf@sys@shading@end@pos"));
@@ -1511,13 +1506,12 @@ LoadDefinitions!({
 
   // Perl L644-646: \lxSVG@sh@stashstop — digest arg and push to pgf_sh_stops list
   DefPrimitive!("\\lxSVG@sh@stashstop{}", sub[args] {
-    if let Some(arg) = args.into_iter().next() {
-      if arg.is_some() {
+    if let Some(arg) = args.into_iter().next()
+      && arg.is_some() {
         let tokens = arg.revert()?;
-        let digested = stomach::digest(tokens)?;
-        state::push_value("pgf_sh_stops", digested)?;
+        let digested = digest(tokens)?;
+        push_value("pgf_sh_stops", digested)?;
       }
-    }
   });
 
   // Perl L648-654: \lxSVG@sh@stop — creates <svg:stop> element
@@ -1555,9 +1549,9 @@ LoadDefinitions!({
 
   // Perl L659-664: \lxSVG@sh@intervals — recursive interval processing
   DefMacro!("\\lxSVG@sh@intervals{}", sub[args] {
-    if let Some(pt) = args.into_iter().next() {
-      if pt.is_some() {
-        let expanded = gullet::do_expand(pt.revert()?)?;
+    if let Some(pt) = args.into_iter().next()
+      && pt.is_some() {
+        let expanded = do_expand(pt.revert()?)?;
         let s = expanded.to_string();
         if s.trim().is_empty() {
           return Ok(Tokens::default());
@@ -1567,7 +1561,6 @@ LoadDefinitions!({
         toks.push(T_CS!("\\lxSVG@sh@intervals"));
         return Ok(Tokens::new(toks));
       }
-    }
     Ok(Tokens::default())
   });
 
@@ -1576,10 +1569,10 @@ LoadDefinitions!({
     let name = args.first().map(|a| a.to_string()).unwrap_or_default();
     let flag: i64 = args.get(1).map(|a| a.value_of()).unwrap_or(0);
     // Collect digested stops from state
-    let stops: Vec<Digested> = match state::lookup_value("pgf_sh_stops") { Some(Stored::VecDequeStored(vd)) => {
+    let stops: Vec<Digested> = match lookup_value("pgf_sh_stops") { Some(Stored::VecDequeStored(vd)) => {
       vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
     } _ => { vec![] }};
-    state::assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
+    assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
     let x = dim_to_px(read_dim_register("\\pgf@x"));
     let y = dim_to_px(read_dim_register("\\pgf@y"));
     let is_vertical = flag == 1;
@@ -1588,7 +1581,7 @@ LoadDefinitions!({
     let shading_cs = T_CS!(format!("\\@pgfshading{}!", name));
     let closure: PrimitiveBody = PrimitiveBody::Closure(Rc::new(move |_args| {
       let objcount = svg_next_object();
-      let zero_sizer: Option<latexml_core::definition::SizingClosure> = Some(Rc::new(|_| Ok((Dimension::default(), Dimension::default(), Dimension::default()))));
+      let zero_sizer: Option<definition::SizingClosure> = Some(Rc::new(|_| Ok((Dimension::default(), Dimension::default(), Dimension::default()))));
 
       // Define \lxSVG@sh@defs constructor — emits linearGradient with stops
       let stops_clone = stops.clone();
@@ -1629,24 +1622,24 @@ LoadDefinitions!({
       Ok(vec![Digested::default()])
     }));
     let lock_key = format!("\\@pgfshading{}!:locked", name);
-    state::install_definition(Primitive {
+    install_definition(Primitive {
       cs: shading_cs,
       replacement: Some(closure),
       ..Primitive::default()
     }, Some(Scope::Global));
-    state::assign_value(&lock_key, true, Scope::Global);
+    assign_value(&lock_key, true, Scope::Global);
   });
 
   // Perl L691-714: \lxSVG@sh@defcircles — creates radialGradient constructors
   DefPrimitive!("\\lxSVG@sh@defcircles{}", sub[args] {
     let name = args.first().map(|a| a.to_string().trim().to_string()).unwrap_or_default();
     // Collect digested stops from state
-    let stops: Vec<Digested> = match state::lookup_value("pgf_sh_stops") { Some(Stored::VecDequeStored(vd)) => {
+    let stops: Vec<Digested> = match lookup_value("pgf_sh_stops") { Some(Stored::VecDequeStored(vd)) => {
       vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
     } _ => { vec![] }};
-    state::assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
+    assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
     // Perl: Dimension(ToString(Expand(T_CS('\pgf@sys@shading@end@pos'))))->pxValue
-    let endpos_tokens = gullet::do_expand(T_CS!("\\pgf@sys@shading@end@pos"))?;
+    let endpos_tokens = do_expand(T_CS!("\\pgf@sys@shading@end@pos"))?;
     let endpos_str = endpos_tokens.to_string();
     let endpos_dim = endpos_str.trim().parse::<f64>().ok()
       .map(|pts| Dimension::new((pts * 65536.0) as i64))
@@ -1669,7 +1662,7 @@ LoadDefinitions!({
       let objcount = svg_next_object();
       let fx_c = fx_clone.clone();
       let fy_c = fy_clone.clone();
-      let zero_sizer: Option<latexml_core::definition::SizingClosure> = Some(Rc::new(|_| Ok((Dimension::default(), Dimension::default(), Dimension::default()))));
+      let zero_sizer: Option<definition::SizingClosure> = Some(Rc::new(|_| Ok((Dimension::default(), Dimension::default(), Dimension::default()))));
 
       // Define \lxSVG@sh@defs — radialGradient with stops
       let stops_clone = stops.clone();
@@ -1711,12 +1704,12 @@ LoadDefinitions!({
       Ok(vec![Digested::default()])
     }));
     let lock_key = format!("\\@pgfshading{}!:locked", name);
-    state::install_definition(Primitive {
+    install_definition(Primitive {
       cs: shading_cs,
       replacement: Some(closure),
       ..Primitive::default()
     }, Some(Scope::Global));
-    state::assign_value(&lock_key, true, Scope::Global);
+    assign_value(&lock_key, true, Scope::Global);
   });
 
   // Perl L716-724: \lxSVG@sh@insert — wraps content in translate group

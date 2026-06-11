@@ -13,20 +13,17 @@
 //!
 //! Marpa classifies glades for us; this callback only routes:
 //!
-//! 1. **Token glade** (`glade.is_token()`): a ByteScanner byte. Emits
-//!    one `XM::Lexeme("x")` for the byte value.
-//! 2. **Lexeme rule** (`builder.is_token(rule_id)`): RELOP / ADDOP /
-//!    NUMBER and friends — rule whose body is a byte sequence that
-//!    rolls up into a single lexeme name, then is `.specialize`d.
-//! 3. **Discard rule** (`builder.is_discard(rule_id)`): whitespace.
-//!    Emits one `None`.
-//! 4. **No-action rule**: either a grammar passthrough (`is_rule` →
-//!    forward the first child's alternatives) or an internal byte-
-//!    passthrough scaffolding piece (concatenate child bytes into a
-//!    Lexeme).
-//! 5. **Rule with action**: cartesian-product child alternatives
-//!    across RHS positions, dispatch `Actions::action_on` per combo,
-//!    accumulate the surviving results.
+//! 1. **Token glade** (`glade.is_token()`): a ByteScanner byte. Emits one `XM::Lexeme("x")` for the
+//!    byte value.
+//! 2. **Lexeme rule** (`builder.is_token(rule_id)`): RELOP / ADDOP / NUMBER and friends — rule
+//!    whose body is a byte sequence that rolls up into a single lexeme name, then is
+//!    `.specialize`d.
+//! 3. **Discard rule** (`builder.is_discard(rule_id)`): whitespace. Emits one `None`.
+//! 4. **No-action rule**: either a grammar passthrough (`is_rule` → forward the first child's
+//!    alternatives) or an internal byte- passthrough scaffolding piece (concatenate child bytes
+//!    into a Lexeme).
+//! 5. **Rule with action**: cartesian-product child alternatives across RHS positions, dispatch
+//!    `Actions::action_on` per combo, accumulate the surviving results.
 //!
 //! ## Pruning
 //!
@@ -37,19 +34,20 @@
 //! a glade is rejected, the glade's Vec becomes empty and the
 //! parent's cartesian product yields zero combos — pruning cascades.
 
-use std::cell::RefCell;
-use std::rc::Rc;
-
-use libxml::tree::Node;
-use marpa::asf::{Glade, Traverser};
-use marpa::result::Result as MarpaResult;
-use marpa::tree_builder::TreeBuilder;
+use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::document::Document;
+use libxml::tree::Node;
+use marpa::{
+  asf::{Glade, Traverser},
+  result::Result as MarpaResult,
+  tree_builder::TreeBuilder,
+};
 
-use crate::pragmatics::ValidationPragmatics;
-use crate::semantics::metadata::Meta;
-use crate::semantics::{ActionContext, Actions, XM};
+use crate::{
+  pragmatics::ValidationPragmatics,
+  semantics::{ActionContext, Actions, XM, metadata::Meta},
+};
 
 thread_local! {
   static ASCII_LEXEMES: RefCell<Vec<Rc<str>>> = RefCell::new(

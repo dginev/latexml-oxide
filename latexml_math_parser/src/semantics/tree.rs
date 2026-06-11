@@ -1,21 +1,22 @@
-use latexml_core::Info;
-use latexml_core::common::font::Font;
-use latexml_core::common::xml::element_nodes;
-use latexml_core::document::Document;
+use std::{borrow::Cow, cmp::Ordering, error::Error, fmt, fmt::Display, rc::Rc};
+
+use latexml_core::{
+  Info,
+  common::{font::Font, xml::element_nodes},
+  document::Document,
+};
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::cmp::Ordering;
-use std::error::Error;
-use std::fmt;
-use std::fmt::Display;
-use std::rc::Rc;
 
-use super::ActionContext;
-use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
-use super::metadata::Meta;
-use crate::parser::{p_get_value, realize_xmnode};
-use crate::pragmatics::ValidationPragmatics;
+use super::{
+  ActionContext,
+  curry::{CurryConstraint, CurryConstraints, CurryTerm},
+  metadata::Meta,
+};
+use crate::{
+  parser::{p_get_value, realize_xmnode},
+  pragmatics::ValidationPragmatics,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Operator(pub Box<XM>);
@@ -166,15 +167,13 @@ pub enum XM {
   /// Token-name lexeme (e.g. "RELOP:less-than:3", "letter:a",
   /// "delimited-open-paren"). The name is stored as `Rc<str>` so:
   ///
-  /// 1. **Byte-glade hot path** (asf_traverser case 1): each ASCII
-  ///    byte resolves to a cached `Rc<str>` via `byte_lexeme_rc(b)`.
-  ///    Clones are refcount bumps — no allocation per byte glade.
-  /// 2. **Marpa ASF cache clones** (`asf.rs:156, 208`): cloning a
-  ///    `ParseTree = Vec<Option<XM>>` no longer deep-clones the
-  ///    lexeme name. Refcount-bump per Lexeme in the Vec.
-  /// 3. **Read sites** (`name.starts_with(...)`, `name == "..."`,
-  ///    `name.split(...)`, `name.contains(...)`): unchanged — `Rc<str>`
-  ///    derefs to `&str`.
+  /// 1. **Byte-glade hot path** (asf_traverser case 1): each ASCII byte resolves to a cached
+  ///    `Rc<str>` via `byte_lexeme_rc(b)`. Clones are refcount bumps — no allocation per byte
+  ///    glade.
+  /// 2. **Marpa ASF cache clones** (`asf.rs:156, 208`): cloning a `ParseTree = Vec<Option<XM>>` no
+  ///    longer deep-clones the lexeme name. Refcount-bump per Lexeme in the Vec.
+  /// 3. **Read sites** (`name.starts_with(...)`, `name == "..."`, `name.split(...)`,
+  ///    `name.contains(...)`): unchanged — `Rc<str>` derefs to `&str`.
   ///
   /// Construction at runtime: `Rc::from(string)` / `Rc::from("…")`.
   Lexeme(Rc<str>, Meta),
@@ -251,10 +250,7 @@ impl Args {
       if peekable.peek().is_some() {
         maybe_arg
           .as_ref()
-          .unwrap_or(&XM::Lexeme(
-            Rc::from("missing_argument"),
-            Meta::default(),
-          ))
+          .unwrap_or(&XM::Lexeme(Rc::from("missing_argument"), Meta::default()))
           .fmt_indented(level, f)?;
       } else {
         let mut last_level: Vec<bool> = level.to_vec();
@@ -264,10 +260,7 @@ impl Args {
         }
         maybe_arg
           .as_ref()
-          .unwrap_or(&XM::Lexeme(
-            Rc::from("missing_argument"),
-            Meta::default(),
-          ))
+          .unwrap_or(&XM::Lexeme(Rc::from("missing_argument"), Meta::default()))
           .fmt_indented(&last_level, f)?;
       };
     }
@@ -538,12 +531,14 @@ impl XM {
           0
         }
       },
-      XM::Apply(op, args, ..) => op.0.count_absent() + args.trees().iter().map(|a| a.count_absent()).sum::<usize>(),
+      XM::Apply(op, args, ..) => {
+        op.0.count_absent() + args.trees().iter().map(|a| a.count_absent()).sum::<usize>()
+      },
       XM::Dual(c, p, ..) => c.count_absent() + p.count_absent(),
       XM::Wrap(items, ..) => items.iter().map(|i| i.count_absent()).sum(),
       XM::Choices(trees) => trees.iter().map(|t| t.count_absent()).sum(),
       XM::Arg(items) => items.iter().map(|i| i.count_absent()).sum(),
-      XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Lexeme(..) | XM::Ref(_) => 0,
     }
   }
 
@@ -558,19 +553,15 @@ impl XM {
   /// `differential-d@(x)` (2 nodes) beats `d*x` (3 nodes).
   ///
   /// **Counting conventions**:
-  /// * Each `XM::Apply` contributes ONE node — the operator is part
-  ///   of the Apply's identity, not a separate child. So `f@(x)`
-  ///   is 2 nodes (the Apply + x), not 3.
-  /// * `XM::Dual(content, presentation)` counts **only the content
-  ///   tree** — the presentation branch is a parallel rendering of
-  ///   the same semantics and contributes the same count, so
+  /// * Each `XM::Apply` contributes ONE node — the operator is part of the Apply's identity, not a
+  ///   separate child. So `f@(x)` is 2 nodes (the Apply + x), not 3.
+  /// * `XM::Dual(content, presentation)` counts **only the content tree** — the presentation branch
+  ///   is a parallel rendering of the same semantics and contributes the same count, so
   ///   double-counting would inflate purely-cosmetic siblings.
-  /// * `XM::Ref(props)` is resolved to its target via the
-  ///   presentation-branch index built at the Dual boundary —
-  ///   so a Ref pointing to a deep sub-tree contributes its full
-  ///   target's node count, not just 1. This keeps the ranking
-  ///   honest when one parse uses a single Ref to a complex node
-  ///   versus another that lays out multiple Refs to leaves.
+  /// * `XM::Ref(props)` is resolved to its target via the presentation-branch index built at the
+  ///   Dual boundary — so a Ref pointing to a deep sub-tree contributes its full target's node
+  ///   count, not just 1. This keeps the ranking honest when one parse uses a single Ref to a
+  ///   complex node versus another that lays out multiple Refs to leaves.
   pub fn count_nodes_for_parse_ranking(&self) -> usize {
     let mut index: HashMap<String, &XM> = HashMap::default();
     self.build_ref_index(&mut index);
@@ -581,7 +572,10 @@ impl XM {
   /// `Ref` might lookup. Refs key on `props.id` or `props.xmkey`.
   fn build_ref_index<'a>(&'a self, out: &mut HashMap<String, &'a XM>) {
     let take = |p: &'a XProps| -> Option<String> {
-      p.id.as_ref().map(|c| c.to_string()).or_else(|| p.xmkey.as_ref().map(|c| c.to_string()))
+      p.id
+        .as_ref()
+        .map(|c| c.to_string())
+        .or_else(|| p.xmkey.as_ref().map(|c| c.to_string()))
     };
     match self {
       XM::Token(props, _) => {
@@ -617,7 +611,7 @@ impl XM {
           it.build_ref_index(out);
         }
       },
-      XM::Lexeme(_, _) | XM::Ref(_) => {},
+      XM::Lexeme(..) | XM::Ref(_) => {},
     }
   }
 
@@ -625,16 +619,43 @@ impl XM {
   /// idref/xmkey strings currently being resolved — guards against
   /// cyclic references (defensive; idref graphs in valid XMath
   /// are acyclic).
-  fn count_nodes_with_index(&self, index: &HashMap<String, &XM>, visited: &mut Vec<String>) -> usize {
+  fn count_nodes_with_index(
+    &self,
+    index: &HashMap<String, &XM>,
+    visited: &mut Vec<String>,
+  ) -> usize {
     match self {
-      XM::Token(_, _) | XM::Lexeme(_, _) => 1,
-      XM::Apply(_op, args, ..) => 1 + args.trees().iter().map(|a| a.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Token(..) | XM::Lexeme(..) => 1,
+      XM::Apply(_op, args, ..) => {
+        1 + args
+          .trees()
+          .iter()
+          .map(|a| a.count_nodes_with_index(index, visited))
+          .sum::<usize>()
+      },
       XM::Dual(c, _p, ..) => c.count_nodes_with_index(index, visited),
-      XM::Wrap(items, ..) => 1 + items.iter().map(|i| i.count_nodes_with_index(index, visited)).sum::<usize>(),
-      XM::Choices(trees) => trees.iter().map(|t| t.count_nodes_with_index(index, visited)).sum(),
-      XM::Arg(items) => 1 + items.iter().map(|i| i.count_nodes_with_index(index, visited)).sum::<usize>(),
+      XM::Wrap(items, ..) => {
+        1 + items
+          .iter()
+          .map(|i| i.count_nodes_with_index(index, visited))
+          .sum::<usize>()
+      },
+      XM::Choices(trees) => trees
+        .iter()
+        .map(|t| t.count_nodes_with_index(index, visited))
+        .sum(),
+      XM::Arg(items) => {
+        1 + items
+          .iter()
+          .map(|i| i.count_nodes_with_index(index, visited))
+          .sum::<usize>()
+      },
       XM::Ref(props) => {
-        let key = props.idref.as_ref().map(|c| c.to_string()).or_else(|| props.xmkey.as_ref().map(|c| c.to_string()));
+        let key = props
+          .idref
+          .as_ref()
+          .map(|c| c.to_string())
+          .or_else(|| props.xmkey.as_ref().map(|c| c.to_string()));
         match key {
           Some(k) if !visited.contains(&k) => match index.get(&k) {
             Some(target) => {
@@ -666,7 +687,10 @@ impl XM {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
         let min = trees.iter().map(|t| t.count_absent()).min().unwrap_or(0);
-        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_absent() == min).collect();
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_absent() == min)
+          .collect();
         match kept.len() {
           0 => XM::Choices(Vec::new()),
           1 => kept.into_iter().next().unwrap(),
@@ -695,8 +719,15 @@ impl XM {
   pub fn prefer_smaller_tree(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let min = trees.iter().map(|t| t.count_nodes_for_parse_ranking()).min().unwrap_or(0);
-        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_nodes_for_parse_ranking() == min).collect();
+        let min = trees
+          .iter()
+          .map(|t| t.count_nodes_for_parse_ranking())
+          .min()
+          .unwrap_or(0);
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_nodes_for_parse_ranking() == min)
+          .collect();
         match kept.len() {
           0 => XM::Choices(Vec::new()),
           1 => kept.into_iter().next().unwrap(),
@@ -713,7 +744,7 @@ impl XM {
   /// pragma.
   fn root_dual_apply_meaning_is(&self, expected: &str, expected_arg_count: usize) -> bool {
     match self {
-      XM::Dual(content, _, _, _) => content.root_apply_meaning_is(expected, expected_arg_count),
+      XM::Dual(content, ..) => content.root_apply_meaning_is(expected, expected_arg_count),
       _ => false,
     }
   }
@@ -739,14 +770,17 @@ impl XM {
   /// Does the root of this parse match `Dual(?, Apply(op_meaning,
   /// [...]))` where the op meaning starts with `delimited-`?
   fn root_dual_apply_is_delimited_wrapper(&self) -> bool {
-    let XM::Dual(content, _, _, _) = self else {
+    let XM::Dual(content, ..) = self else {
       return false;
     };
-    let XM::Apply(Operator(op), _, _, _) = &**content else {
+    let XM::Apply(Operator(op), ..) = &**content else {
       return false;
     };
     match &**op {
-      XM::Token(props, _) => props.meaning.as_deref().is_some_and(|m| m.starts_with("delimited-")),
+      XM::Token(props, _) => props
+        .meaning
+        .as_deref()
+        .is_some_and(|m| m.starts_with("delimited-")),
       XM::Lexeme(name, _) => name.starts_with("delimited-"),
       _ => false,
     }
@@ -756,9 +790,13 @@ impl XM {
   /// [...]))` where the op meaning is one of the named-interval
   /// operators (open/closed/half-open intervals)?
   fn root_dual_apply_is_named_interval(&self) -> bool {
-    static NAMED_INTERVALS: &[&str] =
-      &["open-interval", "closed-interval", "open-closed-interval", "closed-open-interval"];
-    let XM::Dual(content, _, _, _) = self else {
+    static NAMED_INTERVALS: &[&str] = &[
+      "open-interval",
+      "closed-interval",
+      "open-closed-interval",
+      "closed-open-interval",
+    ];
+    let XM::Dual(content, ..) = self else {
       return false;
     };
     if let XM::Apply(Operator(op), args, ..) = &**content {
@@ -783,7 +821,7 @@ impl XM {
   /// when rendered — the outer content's Ref resolves to the inner
   /// Dual instead of to flat items.
   fn root_dual_has_redundant_inner_wrap(&self) -> bool {
-    let XM::Dual(content, presentation, _, _) = self else {
+    let XM::Dual(content, presentation, ..) = self else {
       return false;
     };
     let outer_meaning = match &**content {
@@ -794,8 +832,10 @@ impl XM {
       },
       _ => return false,
     };
-    let Some(outer_m) = outer_meaning else { return false };
-    let XM::Wrap(items, _, _) = &**presentation else {
+    let Some(outer_m) = outer_meaning else {
+      return false;
+    };
+    let XM::Wrap(items, ..) = &**presentation else {
       return false;
     };
     let is_delim = |x: &XM| match x {
@@ -839,17 +879,14 @@ impl XM {
   /// the same `op_meaning`? Used to detect redundant
   /// `set@(set@(...))` and similar self-wrapping shapes.
   fn root_dual_is_redundant_self_wrap(&self) -> bool {
-    let XM::Dual(content, _, _, _) = self else {
+    let XM::Dual(content, ..) = self else {
       return false;
     };
     let outer_meaning = match &**content {
-      XM::Apply(Operator(op), args, ..) if args.trees().len() == 1 => {
-        let m = match &**op {
-          XM::Token(props, _) => props.meaning.as_deref().map(String::from),
-          XM::Lexeme(name, _) => Some(name.to_string()),
-          _ => None,
-        };
-        m
+      XM::Apply(Operator(op), args, ..) if args.trees().len() == 1 => match &**op {
+        XM::Token(props, _) => props.meaning.as_deref().map(String::from),
+        XM::Lexeme(name, _) => Some(name.to_string()),
+        _ => None,
       },
       _ => return false,
     };
@@ -861,7 +898,7 @@ impl XM {
     // whole Dual.
     let mut index: HashMap<String, &XM> = HashMap::default();
     self.build_ref_index(&mut index);
-    if let XM::Apply(_, args, _, _) = &**content {
+    if let XM::Apply(_, args, ..) = &**content {
       let first_arg = args.trees().first().copied();
       let resolved = match first_arg {
         Some(XM::Ref(props)) => {
@@ -874,7 +911,7 @@ impl XM {
         },
         other => other,
       };
-      if let Some(XM::Apply(Operator(inner_op), _, _, _)) = resolved {
+      if let Some(XM::Apply(Operator(inner_op), ..)) = resolved {
         let inner_meaning = match &**inner_op {
           XM::Token(props, _) => props.meaning.as_deref(),
           XM::Lexeme(name, _) => Some(&**name),
@@ -900,7 +937,8 @@ impl XM {
   pub fn prefer_non_self_wrapping_root(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let is_redundant = |t: &XM| t.root_dual_is_redundant_self_wrap() || t.root_dual_has_redundant_inner_wrap();
+        let is_redundant =
+          |t: &XM| t.root_dual_is_redundant_self_wrap() || t.root_dual_has_redundant_inner_wrap();
         let has_non_wrapping = trees.iter().any(|t| !is_redundant(t));
         if !has_non_wrapping {
           return XM::Choices(trees);
@@ -933,7 +971,7 @@ impl XM {
   fn root_is_multirelation_with_interior_absent(&self) -> bool {
     let apply = match self {
       XM::Apply(..) => self,
-      XM::Dual(content, _, _, _) => &**content,
+      XM::Dual(content, ..) => &**content,
       _ => return false,
     };
     let XM::Apply(Operator(op), args, ..) = apply else {
@@ -953,7 +991,8 @@ impl XM {
     if trees.len() < 3 {
       return false;
     }
-    let is_absent = |a: &&XM| matches!(a, XM::Token(p, _) if p.meaning.as_deref() == Some("absent"));
+    let is_absent =
+      |a: &&XM| matches!(a, XM::Token(p, _) if p.meaning.as_deref() == Some("absent"));
     // Skip the first and last positions; only inspect interior.
     trees[1..trees.len() - 1].iter().any(is_absent)
   }
@@ -971,7 +1010,9 @@ impl XM {
   pub fn prefer_combined_relop_over_multirelation_with_absent(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let has_alternative = trees.iter().any(|t| !t.root_is_multirelation_with_interior_absent());
+        let has_alternative = trees
+          .iter()
+          .any(|t| !t.root_is_multirelation_with_interior_absent());
         if !has_alternative {
           return XM::Choices(trees);
         }
@@ -997,8 +1038,10 @@ impl XM {
   ///
   /// Rationale: for `(a, b)`, `[a, b]`, `(a, b]`, `[a, b)` — the
   /// math-parser grammar admits both:
-  ///   - `interval_term → open-interval@(_, _)` / `closed-interval@(_, _)` (the named-interval interpretation)
-  ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket interpretation)
+  ///   - `interval_term → open-interval@(_, _)` / `closed-interval@(_, _)` (the named-interval
+  ///     interpretation)
+  ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket
+  ///     interpretation)
   ///
   /// Math convention reads these as intervals. Tree-iteration order in
   /// legacy picks the interval; under ASF the Cartesian-product
@@ -1024,7 +1067,8 @@ impl XM {
             // `vector@(2)` and `delimited-XX@(...)` alternatives at
             // the root.
             t.root_dual_apply_is_named_interval()
-              || !(t.root_dual_apply_meaning_is("vector", 2) || t.root_dual_apply_is_delimited_wrapper())
+              || !(t.root_dual_apply_meaning_is("vector", 2)
+                || t.root_dual_apply_is_delimited_wrapper())
           })
           .collect();
         match kept.len() {
@@ -1054,10 +1098,15 @@ impl XM {
       }
     };
     match self {
-      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
       XM::Apply(op, args, ..) => {
         let here = usize::from(is_delim_op(&op.0));
-        here + args.trees().iter().map(|a| a.count_delimited_wrappers()).sum::<usize>()
+        here
+          + args
+            .trees()
+            .iter()
+            .map(|a| a.count_delimited_wrappers())
+            .sum::<usize>()
       },
       XM::Dual(c, p, ..) => c.count_delimited_wrappers() + p.count_delimited_wrappers(),
       XM::Wrap(items, ..) => items.iter().map(|i| i.count_delimited_wrappers()).sum(),
@@ -1072,12 +1121,10 @@ impl XM {
   /// a fence) AND another candidate has a strictly smaller count.
   ///
   /// **Resolves**:
-  /// * `2<x,y>=z` → `2 * delimited-<>@(list(x,y)) = z` instead of
-  ///   `formulae@(2 < x, y >= z)` (ambiguous_relations).
-  /// * `0<<a,b>>1` → multirelation around `delimited-<>` instead of
-  ///   `formulae@(0 << a, b >> 1)`.
-  /// * `<a|f|b>` style bra-kets — angle-fence reading wins over
-  ///   flat formula chain.
+  /// * `2<x,y>=z` → `2 * delimited-<>@(list(x,y)) = z` instead of `formulae@(2 < x, y >= z)`
+  ///   (ambiguous_relations).
+  /// * `0<<a,b>>1` → multirelation around `delimited-<>` instead of `formulae@(0 << a, b >> 1)`.
+  /// * `<a|f|b>` style bra-kets — angle-fence reading wins over flat formula chain.
   ///
   /// **Why this is sound**: the grammar admits `delimited-X` only
   /// when there's a balanced pair of fence tokens AND structured
@@ -1087,7 +1134,11 @@ impl XM {
   pub fn prefer_more_delimited_wrappers(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let max_delim = trees.iter().map(|t| t.count_delimited_wrappers()).max().unwrap_or(0);
+        let max_delim = trees
+          .iter()
+          .map(|t| t.count_delimited_wrappers())
+          .max()
+          .unwrap_or(0);
         if max_delim == 0 {
           return XM::Choices(trees);
         }
@@ -1136,7 +1187,7 @@ impl XM {
         }
       };
       match node {
-        XM::Apply(op, args, _, _) => {
+        XM::Apply(op, args, ..) => {
           let my_meaning = meaning_of(&op.0);
           let here = match (&my_meaning, &ancestor_fence) {
             (Some(m), Some(a)) if m == a && is_fence_meaning(m) => 1,
@@ -1149,15 +1200,20 @@ impl XM {
             Some(m) if is_fence_meaning(m) => Some(m.clone()),
             _ => ancestor_fence.clone(),
           };
-          here + args.trees().iter().map(|a| walk(a, new_anc.clone())).sum::<usize>()
+          here
+            + args
+              .trees()
+              .iter()
+              .map(|a| walk(a, new_anc.clone()))
+              .sum::<usize>()
         },
-        XM::Dual(c, p, _, _) => {
+        XM::Dual(c, p, ..) => {
           // If the Dual's content is a fence-Apply, propagate that
           // meaning when walking the presentation Wrap — because the
           // actual nested expression lives inside the Wrap, not
           // inside the Ref-pointing content.
           let dual_fence = match &**c {
-            XM::Apply(op_inner, _, _, _) => match &*op_inner.0 {
+            XM::Apply(op_inner, ..) => match &*op_inner.0 {
               XM::Token(p_inner, _) => p_inner
                 .meaning
                 .as_deref()
@@ -1170,10 +1226,10 @@ impl XM {
           let pres_anc = dual_fence.clone().or_else(|| ancestor_fence.clone());
           walk(c, ancestor_fence.clone()) + walk(p, pres_anc)
         },
-        XM::Wrap(items, _, _) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
+        XM::Wrap(items, ..) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
         XM::Choices(trees) => trees.iter().map(|t| walk(t, ancestor_fence.clone())).sum(),
         XM::Arg(items) => items.iter().map(|i| walk(i, ancestor_fence.clone())).sum(),
-        XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+        XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
       }
     }
     walk(self, None)
@@ -1192,13 +1248,23 @@ impl XM {
   pub fn prefer_fewer_nested_same_fences(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let min = trees.iter().map(|t| t.count_nested_same_fence()).min().unwrap_or(0);
-        let max = trees.iter().map(|t| t.count_nested_same_fence()).max().unwrap_or(0);
+        let min = trees
+          .iter()
+          .map(|t| t.count_nested_same_fence())
+          .min()
+          .unwrap_or(0);
+        let max = trees
+          .iter()
+          .map(|t| t.count_nested_same_fence())
+          .max()
+          .unwrap_or(0);
         if min == max {
           return XM::Choices(trees);
         }
-        let kept: Vec<XM> =
-          trees.into_iter().filter(|t| t.count_nested_same_fence() == min).collect();
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_nested_same_fence() == min)
+          .collect();
         match kept.len() {
           0 => XM::Choices(Vec::new()),
           1 => kept.into_iter().next().unwrap(),
@@ -1226,10 +1292,15 @@ impl XM {
       }
     };
     match self {
-      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
       XM::Apply(op, args, ..) => {
         let here = usize::from(is_qm_op(&op.0));
-        here + args.trees().iter().map(|a| a.count_qm_specific_semantics()).sum::<usize>()
+        here
+          + args
+            .trees()
+            .iter()
+            .map(|a| a.count_qm_specific_semantics())
+            .sum::<usize>()
       },
       XM::Dual(c, p, ..) => c.count_qm_specific_semantics() + p.count_qm_specific_semantics(),
       XM::Wrap(items, ..) => items.iter().map(|i| i.count_qm_specific_semantics()).sum(),
@@ -1250,7 +1321,11 @@ impl XM {
   pub fn prefer_qm_specific_semantics(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let max = trees.iter().map(|t| t.count_qm_specific_semantics()).max().unwrap_or(0);
+        let max = trees
+          .iter()
+          .map(|t| t.count_qm_specific_semantics())
+          .max()
+          .unwrap_or(0);
         if max == 0 {
           return XM::Choices(trees);
         }
@@ -1291,18 +1366,25 @@ impl XM {
       }
     }
     fn arg_is_vertbar_fenced(arg: &XM) -> bool {
-      let XM::Dual(_, presentation, _, _) = arg else {
+      let XM::Dual(_, presentation, ..) = arg else {
         return false;
       };
-      let XM::Wrap(ref items, _, _) = **presentation else {
+      let XM::Wrap(ref items, ..) = **presentation else {
         return false;
       };
       let is_vertbar = |x: Option<&XM>| -> bool {
         match x {
-          Some(XM::Token(p, _)) => p.content.as_deref() == Some("|") || p.content.as_deref() == Some("‖"),
-          Some(XM::Lexeme(name, _)) => name.starts_with("OPEN:|:") || name.starts_with("CLOSE:|:")
-            || name.starts_with("OPEN:‖:") || name.starts_with("CLOSE:‖:")
-            || &**name == "VERTBAR" || name.starts_with("VERTBAR:"),
+          Some(XM::Token(p, _)) => {
+            p.content.as_deref() == Some("|") || p.content.as_deref() == Some("‖")
+          },
+          Some(XM::Lexeme(name, _)) => {
+            name.starts_with("OPEN:|:")
+              || name.starts_with("CLOSE:|:")
+              || name.starts_with("OPEN:‖:")
+              || name.starts_with("CLOSE:‖:")
+              || &**name == "VERTBAR"
+              || name.starts_with("VERTBAR:")
+          },
           _ => false,
         }
       };
@@ -1334,9 +1416,14 @@ impl XM {
       };
       is_absent(trees.first()) && is_absent(trees.last())
     }
-    fn walk(node: &XM, inside_angle: bool, op_is_letter: &impl Fn(&XM) -> bool, arg_is_vertbar_fenced: &impl Fn(&XM) -> bool) -> usize {
+    fn walk(
+      node: &XM,
+      inside_angle: bool,
+      op_is_letter: &impl Fn(&XM) -> bool,
+      arg_is_vertbar_fenced: &impl Fn(&XM) -> bool,
+    ) -> usize {
       match node {
-        XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+        XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
         XM::Apply(op, args, ..) => {
           let trees = args.trees();
           let here = if inside_angle
@@ -1351,14 +1438,14 @@ impl XM {
           // Recurse with `inside_angle` set true if THIS Apply is
           // a delimited-⟨⟩ OR a QM-style multirelation (absent < … >
           // absent), both of which signal bra-ket context.
-          let child_inside = inside_angle
-            || is_delim_angle_op(&op.0)
-            || is_qm_multirelation_apply(&op.0, args);
-          here + args
-            .trees()
-            .iter()
-            .map(|a| walk(a, child_inside, op_is_letter, arg_is_vertbar_fenced))
-            .sum::<usize>()
+          let child_inside =
+            inside_angle || is_delim_angle_op(&op.0) || is_qm_multirelation_apply(&op.0, args);
+          here
+            + args
+              .trees()
+              .iter()
+              .map(|a| walk(a, child_inside, op_is_letter, arg_is_vertbar_fenced))
+              .sum::<usize>()
         },
         // Dual content/presentation: the Dual's content typically
         // holds the operator Apply (e.g. `Apply(delim-⟨⟩, [Ref])`)
@@ -1395,8 +1482,7 @@ impl XM {
   ///
   /// **Resolves** (the "Class C/H" cluster — function-app inside
   /// QM-style angle-bracket fence):
-  /// * `\langle B|sum_k f_k|C\rangle` → `B@(|sum|) * C` instead of
-  ///   `B * |sum| * C`.
+  /// * `\langle B|sum_k f_k|C\rangle` → `B@(|sum|) * C` instead of `B * |sum| * C`.
   /// * `<a|f|b>` → `a@(|f|) * b` instead of `a * |f| * b`.
   /// * `n|A|` patterns in physics_test.
   ///
@@ -1408,7 +1494,11 @@ impl XM {
   pub fn prefer_more_letter_at_vertbar(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let max = trees.iter().map(|t| t.count_letter_at_vertbar()).max().unwrap_or(0);
+        let max = trees
+          .iter()
+          .map(|t| t.count_letter_at_vertbar())
+          .max()
+          .unwrap_or(0);
         if max == 0 {
           return XM::Choices(trees);
         }
@@ -1439,10 +1529,15 @@ impl XM {
       }
     };
     match self {
-      XM::Token(_, _) | XM::Lexeme(_, _) | XM::Ref(_) => 0,
+      XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
       XM::Apply(op, args, ..) => {
         let here = usize::from(is_conditional_op(&op.0));
-        here + args.trees().iter().map(|a| a.count_conditionals()).sum::<usize>()
+        here
+          + args
+            .trees()
+            .iter()
+            .map(|a| a.count_conditionals())
+            .sum::<usize>()
       },
       XM::Dual(c, p, ..) => c.count_conditionals() + p.count_conditionals(),
       XM::Wrap(items, ..) => items.iter().map(|i| i.count_conditionals()).sum(),
@@ -1472,14 +1567,25 @@ impl XM {
   pub fn prefer_fewer_conditionals(self) -> Self {
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let min = trees.iter().map(|t| t.count_conditionals()).min().unwrap_or(0);
+        let min = trees
+          .iter()
+          .map(|t| t.count_conditionals())
+          .min()
+          .unwrap_or(0);
         // Only fire when at least one candidate has zero conditionals
         // AND another has more — otherwise leave alone.
-        let max = trees.iter().map(|t| t.count_conditionals()).max().unwrap_or(0);
+        let max = trees
+          .iter()
+          .map(|t| t.count_conditionals())
+          .max()
+          .unwrap_or(0);
         if min > 0 || min == max {
           return XM::Choices(trees);
         }
-        let kept: Vec<XM> = trees.into_iter().filter(|t| t.count_conditionals() == min).collect();
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_conditionals() == min)
+          .collect();
         match kept.len() {
           0 => XM::Choices(Vec::new()),
           1 => kept.into_iter().next().unwrap(),
@@ -1511,8 +1617,8 @@ impl XM {
       }
     };
     match self {
-      XM::Apply(op, _, _, _) => inspect(&op.0),
-      XM::Dual(c, _, _, _) => c.root_is_addition(),
+      XM::Apply(op, ..) => inspect(&op.0),
+      XM::Dual(c, ..) => c.root_is_addition(),
       _ => false,
     }
   }
@@ -1531,7 +1637,7 @@ impl XM {
   pub fn prefer_wider_addition_root(self) -> Self {
     fn args_count_if_addition_root(t: &XM) -> Option<usize> {
       match t {
-        XM::Apply(op, args, _, _) => match &*op.0 {
+        XM::Apply(op, args, ..) => match &*op.0 {
           XM::Token(p, _) => match p.meaning.as_deref() {
             Some("plus") | Some("minus") | Some("plus-or-minus") | Some("minus-or-plus") => {
               Some(args.trees().len())
@@ -1548,16 +1654,13 @@ impl XM {
           },
           _ => None,
         },
-        XM::Dual(c, _, _, _) => args_count_if_addition_root(c),
+        XM::Dual(c, ..) => args_count_if_addition_root(c),
         _ => None,
       }
     }
     match self {
       XM::Choices(trees) if trees.len() > 1 => {
-        let max = trees
-          .iter()
-          .filter_map(args_count_if_addition_root)
-          .max();
+        let max = trees.iter().filter_map(args_count_if_addition_root).max();
         let Some(max) = max else {
           return XM::Choices(trees);
         };
@@ -1567,7 +1670,9 @@ impl XM {
         let kept: Vec<XM> = trees
           .into_iter()
           .filter(|t| {
-            args_count_if_addition_root(t).map(|n| n == max).unwrap_or(false)
+            args_count_if_addition_root(t)
+              .map(|n| n == max)
+              .unwrap_or(false)
               || args_count_if_addition_root(t).is_none()
           })
           .collect();
@@ -1893,25 +1998,23 @@ impl XM {
         let has_explicit_font = props.font.is_some();
         let (content_opt, font, attrs) = props.into_attributes();
         let mut xmtok = document.open_element_at(owner, "ltx:XMTok", attrs, font)?;
-        if let Some(ref content) = content_opt {
-          if !content.is_empty() {
-            xmtok.set_content(content)?;
-          }
+        if let Some(ref content) = content_opt
+          && !content.is_empty()
+        {
+          xmtok.set_content(content)?;
         }
         // Perl: Font->specialize($content) — for parser-created tokens without
         // explicit font, the ambient _font is specialized based on content.
         // Operators get default font (no italic), letters get italic.
-        if !has_explicit_font {
-          if let Some(font_hash) = xmtok.get_attribute("_font") {
-            let content = content_opt.as_deref().unwrap_or("");
-            if content.is_empty() {
-              // Empty content: no font needed
-              let _ = xmtok.remove_attribute("_font");
-            } else if let Some(font) = document.decode_font(&font_hash) {
-              let specialized = font.specialize(content);
-              // Re-encode: store the specialized font and update _font hash
-              document.set_node_font(&mut xmtok, &specialized)?;
-            }
+        if !has_explicit_font && let Some(font_hash) = xmtok.get_attribute("_font") {
+          let content = content_opt.as_deref().unwrap_or("");
+          if content.is_empty() {
+            // Empty content: no font needed
+            let _ = xmtok.remove_attribute("_font");
+          } else if let Some(font) = document.decode_font(&font_hash) {
+            let specialized = font.specialize(content);
+            // Re-encode: store the specialized font and update _font hash
+            document.set_node_font(&mut xmtok, &specialized)?;
           }
         }
         document.close_element_at(&mut xmtok)?;

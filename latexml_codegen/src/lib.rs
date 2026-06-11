@@ -16,14 +16,10 @@ mod tokenizeable;
 /// pattern, which was removed in syn 2 (the NameValue arm now stores `value: Expr`
 /// instead of `lit: Lit`).
 pub(crate) fn attr_name_value_str(attr: &syn::Attribute, expected: &str) -> String {
-  if let syn::Meta::NameValue(nv) = &attr.meta {
-    if let syn::Expr::Lit(syn::ExprLit {
-      lit: syn::Lit::Str(s),
-      ..
-    }) = &nv.value
-    {
-      return s.value();
-    }
+  if let syn::Meta::NameValue(nv) = &attr.meta
+    && let syn::Expr::Lit(syn::ExprLit { lit: syn::Lit::Str(s), .. }) = &nv.value
+  {
+    return s.value();
   }
   panic!("only accepts #[{expected} = \"value\"] attribute syntax, mandatory double-quotes")
 }

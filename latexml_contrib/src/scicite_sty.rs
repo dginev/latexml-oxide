@@ -22,7 +22,6 @@
 
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // Inherit cite.sty's full citation-CS chain: `\citen` is a closure
   // (natbib-style multi-args), `\citenum` and `\citeonline` are Let to
@@ -34,10 +33,10 @@ LoadDefinitions!({
   // `[`/`]` (matching scicite) and `, ` (matching scicite) — keep these
   // explicit to make scicite-specific tuning at the post-XSLT layer
   // (per-journal style) discoverable here.
-  DefMacro!("\\citeleft",  "[");
+  DefMacro!("\\citeleft", "[");
   DefMacro!("\\citeright", "]");
-  DefMacro!("\\citedash",  "--");
-  DefMacro!("\\citemid",   ", ");
+  DefMacro!("\\citedash", "--");
+  DefMacro!("\\citemid", ", ");
   DefMacro!("\\citepunct", ", ");
   DefMacro!("\\citeform{}", "#1");
 

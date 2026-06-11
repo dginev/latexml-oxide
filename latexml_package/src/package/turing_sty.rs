@@ -106,7 +106,7 @@ LoadDefinitions!({
         .map(|a| a.to_string().is_empty())
         .unwrap_or(true);
       if arg_empty {
-        let hbox = stomach::digest(mouth::tokenize_internal("\\hbox{ }"))?;
+        let hbox = digest(mouth::tokenize_internal("\\hbox{ }"))?;
         whatsit.set_args(vec![Some(hbox)]);
       }
       Ok(Vec::new())
@@ -121,7 +121,7 @@ LoadDefinitions!({
         .map(|a| a.to_string().is_empty())
         .unwrap_or(true);
       if arg_empty {
-        let hbox = stomach::digest(mouth::tokenize_internal("\\hbox{ }"))?;
+        let hbox = digest(mouth::tokenize_internal("\\hbox{ }"))?;
         whatsit.set_args(vec![Some(hbox)]);
       }
       Ok(Vec::new())

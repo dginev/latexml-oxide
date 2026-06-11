@@ -1,5 +1,4 @@
-use crate::engine::latex_constructs::*;
-use crate::prelude::*;
+use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("amsgen");
@@ -28,22 +27,22 @@ LoadDefinitions!({
     let style = style_tok.to_string();
     let style_cs = T_CS!(s!("\\th@{style}"));
     if is_defined(&s!("\\th@{style}")) {
-      state::assign_register("\\thm@style",
+      assign_register("\\thm@style",
         RegisterValue::Tokens(mouth::tokenize(&style)),
         None, vec![])?;
-      stomach::digest(Tokens::new(vec![style_cs]))?;
+      digest(Tokens::new(vec![style_cs]))?;
     } else {
       Warn!("undefined", "theoremstyle",
         s!("Unknown theorem style '{style}', reverting to 'plain'."));
-      state::assign_register("\\thm@style",
+      assign_register("\\thm@style",
         RegisterValue::Tokens(mouth::tokenize("plain")),
         None, vec![])?;
-      stomach::digest(Tokens::new(vec![T_CS!("\\th@plain")]))?;
+      digest(Tokens::new(vec![T_CS!("\\th@plain")]))?;
     }
   });
 
   DefMacro!("\\swapnumbers", sub[_args] {
-    let cur = state::lookup_value("thm@swap")
+    let cur = lookup_value("thm@swap")
       .map(|v| match v {
         Stored::Int(n) => n != 0,
         Stored::Bool(b) => b,
@@ -123,7 +122,7 @@ LoadDefinitions!({
   //======================================================================
   // Proofs
 
-  AssignValue!("QED@stack" => Stored::VecDequeStored(std::collections::VecDeque::new()));
+  AssignValue!("QED@stack" => Stored::VecDequeStored(VecDeque::new()));
   DefMacro!("\\pushQED{}", sub[(qed)] {
     let _ = push_value("QED@stack", Stored::Tokens(qed));
     Ok(Tokens!())
@@ -163,9 +162,9 @@ LoadDefinitions!({
 
   DefMacro!("\\proofname", "Proof");
   DefPrimitive!("\\th@proof", {
-    state::assign_register("\\thm@headfont",
+    assign_register("\\thm@headfont",
       RegisterValue::Tokens(Tokens!(T_CS!("\\itshape"))), None, vec![])?;
-    state::assign_register("\\thm@bodyfont",
+    assign_register("\\thm@bodyfont",
       RegisterValue::Tokens(Tokens!(T_CS!("\\normalfont"))), None, vec![])?;
   });
 
@@ -173,11 +172,11 @@ LoadDefinitions!({
   DefConstructor!("\\@proof OptionalUndigested",
     "<ltx:proof class='#class'><ltx:title font='#titlefont' _force_font='true' class='#titleclass'>#title</ltx:title>#body",
     before_digest => {
-      stomach::digest(Tokens::new(vec![T_CS!("\\th@proof")]))?;
+      digest(Tokens::new(vec![T_CS!("\\th@proof")]))?;
     },
     after_digest => sub[whatsit] {
       let _ = push_value("QED@stack", Stored::Tokens(Tokens!(T_CS!("\\qed"))));
-      stomach::digest(mouth::tokenize_internal("\\the\\thm@bodyfont"))?;
+      digest(mouth::tokenize_internal("\\the\\thm@bodyfont"))?;
     },
     properties => sub[args] {
       let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\the"), T_CS!("\\thm@headfont")];
@@ -188,7 +187,7 @@ LoadDefinitions!({
       }
       title_tokens.push(T_OTHER!("."));
       title_tokens.push(T_END!());
-      let title = stomach::digest(Tokens::new(title_tokens))?;
+      let title = digest(Tokens::new(title_tokens))?;
       // Perl: [$title->unlist]->[1]->getFont — get font from first content box.
       // The template engine treats the `"font"` prop as the
       // element-font attribute (auto-binds to font= attr regardless of
@@ -208,11 +207,10 @@ LoadDefinitions!({
     document.maybe_close_element("ltx:proof")?;
   },
   before_digest => {
-    if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack") {
-      if !qed.is_empty() {
-        return Ok(vec![stomach::digest(qed)?]);
+    if let Ok(Some(Stored::Tokens(qed))) = pop_value("QED@stack")
+      && !qed.is_empty() {
+        return Ok(vec![digest(qed)?]);
       }
-    }
     Ok(vec![])
   });
 
@@ -224,11 +222,11 @@ LoadDefinitions!({
 
   // from older versions of amsthm.sty
   DefPrimitive!("\\theorembodyfont{}", sub[(font)] {
-    state::assign_register("\\thm@bodyfont",
+    assign_register("\\thm@bodyfont",
       RegisterValue::Tokens(font), None, vec![])?;
   });
   DefPrimitive!("\\theoremheaderfont{}", sub[(font)] {
-    state::assign_register("\\thm@headfont",
+    assign_register("\\thm@headfont",
       RegisterValue::Tokens(font), None, vec![])?;
   });
   DefRegister!("\\theorempreskipamount"  => Glue::new(0));

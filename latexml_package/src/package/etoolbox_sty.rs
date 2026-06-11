@@ -1345,7 +1345,7 @@ LoadDefinitions!({
       let replace_string = replace.untex();
       let patched = string.replace(&search_string, &replace_string);
       // New definition in local scope
-      state::install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),
+      install_definition(Expandable::new(cs, definition.unwrap().get_parameters().cloned(),
           Some(patched.into()), None)?, None);
       Ok(success)
     } else {
@@ -1759,7 +1759,7 @@ LoadDefinitions!({
   // \AfterEndPreamble
   // \AfterEndDocument
   DefMacro!("\\AfterPreamble{}", sub[(arg)] {
-  if state::lookup_bool_sym(pin!("inPreamble")) {
+  if lookup_bool_sym(pin!("inPreamble")) {
     push_value("@at@begin@document", arg.unlist())?;
     Tokens!()
   } else {

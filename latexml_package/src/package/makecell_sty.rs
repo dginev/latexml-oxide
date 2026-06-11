@@ -39,14 +39,12 @@ LoadDefinitions!({
   // WISDOM #44 verified 2026-04-23: zero `\edef`/`\ifx`/`\expandafter`
   // uses of `\lx@makecell@head` across LaTeXML/lib + ar5iv-bindings.
   DefPrimitive!("\\lx@makecell@head", sub[_args] {
-    if let Some(alignment) = lookup_alignment() {
-      if let Some(data) = alignment.alignment_cell() {
-        if let Some(col) = data.borrow_mut().current_column() {
+    if let Some(alignment) = lookup_alignment()
+      && let Some(data) = alignment.alignment_cell()
+        && let Some(col) = data.borrow_mut().current_column() {
           col.thead_in_column = true;
           col.thead_in_row = true;
         }
-      }
-    }
     Ok(())
   });
 
@@ -64,13 +62,12 @@ LoadDefinitions!({
     "<ltx:inline-block angle='#angle' width='#width' height='#height' depth='#depth' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#1</ltx:inline-block>",
     mode => "restricted_horizontal", enter_horizontal => true,
     after_digest => sub[whatsit] {
-      if let Some(body) = whatsit.get_arg(1) {
-        if let Ok(props) = crate::package::graphics_sty::rotated_properties(body.clone(), 90.0, false) {
+      if let Some(body) = whatsit.get_arg(1)
+        && let Ok(props) = graphics_sty::rotated_properties(body.clone(), 90.0, false) {
           for (k, v) in props {
             whatsit.set_property(k, v);
           }
         }
-      }
     });
 
   // \rothead and \rotcell: use raw TeX definitions from makecell.sty
@@ -102,7 +99,7 @@ LoadDefinitions!({
           let color_str = whatsit.get_property("color").map(|c| c.to_attribute()).unwrap_or_else(|| "#000000".to_string());
           // Create line node using raw libxml API
           let ns = picture.get_namespace();
-          let mut line_node = libxml::tree::Node::new("line", ns, document.get_document()).unwrap();
+          let mut line_node = Node::new("line", ns, document.get_document()).unwrap();
           let _ = line_node.set_attribute("points", &line_str);
           let _ = line_node.set_attribute("stroke", &color_str);
           let _ = line_node.set_attribute("stroke-width", "0.4");
@@ -149,16 +146,14 @@ LoadDefinitions!({
       let (mut bw, mut bh) = (0.0_f64, 0.0_f64);
       let mut ad_px = 0.0_f64;
       let mut bd_px = 0.0_f64;
-      if let Some(a) = whatsit.get_arg(4) {
-        if let Ok((w,h,d,_,_,_)) = a.clone().get_size(None) {
+      if let Some(a) = whatsit.get_arg(4)
+        && let Ok((w,h,d,_,_,_)) = a.clone().get_size(None) {
           aw = px(w); let a_h = px(h); ad_px = px(d); ah = a_h + ad_px;
         }
-      }
-      if let Some(b) = whatsit.get_arg(5) {
-        if let Ok((w,h,d,_,_,_)) = b.clone().get_size(None) {
+      if let Some(b) = whatsit.get_arg(5)
+        && let Ok((w,h,d,_,_,_)) = b.clone().get_size(None) {
           bw = px(w); let b_h = px(h); bd_px = px(d); bh = b_h + bd_px;
         }
-      }
       // Get width from space arg (#3)
       // Perl: $space->getWidth->pxValue
       let w = if let Some(sp) = whatsit.get_arg(3) {

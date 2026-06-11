@@ -9,11 +9,7 @@ LoadDefinitions!({
 
   // Enable xkvview metadata tracking for key definitions from this point on.
   // Only keys defined AFTER this flag is set will appear in \xkvview output.
-  state::assign_value(
-    "XKVVIEW_TRACKING",
-    true,
-    Some(latexml_core::state::Scope::Global),
-  );
+  assign_value("XKVVIEW_TRACKING", true, Some(Scope::Global));
 
   // Override \xkvview to build a table from registered keyval metadata.
   // The Perl xkvview.sty.ltxml intercepts \define@key etc. to store metadata,
@@ -23,9 +19,7 @@ LoadDefinitions!({
   // font system auto-wraps cell content in <text font="typewriter">.
   {
     let replacement: ReplacementClosure = Rc::new(
-      |document: &mut Document,
-       _args: &Vec<Option<Digested>>,
-       props: &arena::SymHashMap<Stored>| {
+      |document: &mut Document, _args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
         use latexml_core::keyval;
 
         let entries = keyval::enumerate_keyvals();
@@ -35,7 +29,7 @@ LoadDefinitions!({
 
         // Get id from counter (set in after_digest)
         let id_str = match props.get("id") {
-          Some(Stored::String(s)) => arena::to_string(*s),
+          Some(Stored::String(s)) => to_string(*s),
           _ => String::new(),
         };
 

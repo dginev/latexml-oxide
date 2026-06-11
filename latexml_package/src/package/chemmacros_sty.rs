@@ -14,7 +14,6 @@
 //! Witness 2407.06385, 2408.16742, 2408.16711 — and similar.
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Intentionally empty: chemmacros' expl3 chain doesn't survive
   // our raw-load. Skipping matches Perl LaTeXML's INCLUDE_STYLES=false

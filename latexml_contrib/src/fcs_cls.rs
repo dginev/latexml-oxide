@@ -9,7 +9,6 @@
 //! Witness: 2503.12978 (\\fcssetup, {acknowledgement} env).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -26,8 +25,10 @@ LoadDefinitions!({
   // \fcssetup{key=value, ...} — main metadata block. The keys
   // (title, author, address, abstract, keywords) are user-content;
   // routing the whole arg as a ltx:note is the simplest preservation.
-  DefMacro!("\\fcssetup{}",
-    "\\@add@frontmatter{ltx:note}[role=fcssetup]{#1}");
+  DefMacro!(
+    "\\fcssetup{}",
+    "\\@add@frontmatter{ltx:note}[role=fcssetup]{#1}"
+  );
 
   // {acknowledgement} env — render as acknowledgements with
   // internal_vertical mode so multi-paragraph body is accepted.

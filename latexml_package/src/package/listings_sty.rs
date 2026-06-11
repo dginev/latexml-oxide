@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use base64::Engine as _;
+
+use crate::prelude::*;
 
 /// Helper to build an invocation without requiring `?` context.
 fn invoke(cs: Token, args: Vec<Tokens>) -> Vec<Token> {
@@ -72,18 +73,18 @@ fn lst_rescan(tokens: Option<Tokens>) -> Option<Tokens> {
 /// Perl: listingsReadRawLines — read raw lines until \end{$environment}
 pub fn listings_read_raw_lines(environment: &str) -> String {
   let mut lines = Vec::new();
-  gullet::read_raw_line(); // Ignore 1st line (following \begin{...})
+  read_raw_line(); // Ignore 1st line (following \begin{...})
   let end_re = Regex::new(&format!(
     "^\\s*\\\\end\\{{{}\\}}(.*?)$",
     regex::escape(environment)
   ))
   .unwrap();
-  while let Some(line) = gullet::read_raw_line() {
+  while let Some(line) = read_raw_line() {
     if let Some(caps) = end_re.captures(&line) {
       let rest = caps.get(1).map_or("", |m| m.as_str()).to_string();
       if !rest.is_empty() {
-        gullet::unread(Tokenize!(&rest));
-        gullet::unread(Tokens::new(vec![T_CR!()]));
+        unread(Tokenize!(&rest));
+        unread(Tokens::new(vec![T_CR!()]));
       }
       break;
     }
@@ -125,7 +126,7 @@ fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
 
 /// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
-  let tokens = latexml_core::mouth::tokenize(text);
+  let tokens = mouth::tokenize(text);
   let mut toks: Vec<Token> = tokens.unlist();
   let mut level: i32 = 0;
   for t in &toks {
@@ -155,7 +156,7 @@ fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catc
   let mut inmath = false;
   let mut tokens: Vec<Token> = Vec::new();
 
-  while let Ok(Some(token)) = gullet::read_token() {
+  while let Ok(Some(token)) = read_token() {
     if let Some(until_tok) = until {
       // Perl `listings.sty.ltxml:291` matches by string only —
       // `last if $until and $token->getString eq $until->getString;`.
@@ -176,7 +177,7 @@ fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catc
       inmath = !inmath;
       for &(c, cc) in saved_catcodes {
         let target = if inmath { cc } else { Catcode::OTHER };
-        state::assign_catcode(c, target, Some(Scope::Local));
+        assign_catcode(c, target, Some(Scope::Local));
       }
       tokens.push(T_OTHER!("$"));
       continue;
@@ -185,7 +186,7 @@ fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catc
     if inmath && cc == Catcode::BEGIN {
       // In math mode with {, read balanced group and preserve
       tokens.push(T_BEGIN!());
-      if let Ok(balanced) = gullet::read_balanced(ExpansionLevel::Off, false, false) {
+      if let Ok(balanced) = read_balanced(ExpansionLevel::Off, false, false) {
         tokens.extend(balanced.unlist());
       }
       tokens.push(T_END!());
@@ -195,10 +196,11 @@ fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catc
       let name = token.to_string();
       for c in name.chars() {
         tokens.push(Token {
-          text: arena::pin_char(c),
+          text: pin_char(c),
           code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+          #[cfg(feature = "token-locators")]
+          loc: 0,
+        });
       }
     } else {
       tokens.push(token);
@@ -364,7 +366,7 @@ fn lst_split_delimiters(delims: &Tokens) -> (String, String) {
 /// Perl: lstGetLiteral — get string value from LST@key state.
 fn lst_get_literal(value: &str) -> String {
   let key = s!("LST@{value}");
-  let v = state::with_value(&key, |s| s.map(|s| s.to_string()).unwrap_or_default());
+  let v = with_value(&key, |s| s.map(|s| s.to_string()).unwrap_or_default());
   // Strip outer {} if present
   if v.starts_with('{') && v.ends_with('}') {
     v[1..v.len() - 1].to_string()
@@ -379,7 +381,7 @@ fn lst_get_boolean(value: &str) -> bool { lst_get_literal(value) == "true" }
 /// Perl: lstGetNumber — get numeric value from LST@key state.
 fn lst_get_number(value: &str) -> i64 {
   let key = s!("LST@{value}");
-  state::with_value(&key, |v| match v {
+  with_value(&key, |v| match v {
     Some(Stored::Number(n)) => n.value_of(),
     Some(Stored::Tokens(t)) => t.to_string().parse().unwrap_or(0),
     Some(v) => v.to_string().parse().unwrap_or(0),
@@ -390,7 +392,7 @@ fn lst_get_number(value: &str) -> i64 {
 /// Perl: lstGetTokens — get tokens from LST@key state.
 fn lst_get_tokens(value: &str) -> Tokens {
   let key = s!("LST@{value}");
-  match state::lookup_value(&key) {
+  match lookup_value(&key) {
     Some(Stored::Tokens(t)) => lst_un_group(Some(t)).unwrap_or(Tokens!()),
     _ => Tokens!(),
   }
@@ -410,13 +412,13 @@ fn lst_class_name(class: &str, n: Option<i64>) -> String {
 /// Perl: lstPushValueLocally — like PushValue but local (not global).
 fn lst_push_value_locally(list: &str, values: Vec<Token>) {
   let key = list;
-  let prev = match state::lookup_value(key) {
+  let prev = match lookup_value(key) {
     Some(Stored::Tokens(t)) => t.unlist(),
     _ => vec![],
   };
   let mut combined = prev;
   combined.extend(values);
-  state::assign_value(key, Stored::Tokens(Tokens::new(combined)), None);
+  assign_value(key, Stored::Tokens(Tokens::new(combined)), None);
 }
 
 /// Perl: lstSetClassStyle — define properties of a styling class.
@@ -436,27 +438,27 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
         .to_string();
       // remove explicit styling (begin)
       let begin_key = s!("{map_key}@{class}@begin");
-      state::assign_value(&begin_key, Stored::None, None);
+      assign_value(&begin_key, Stored::None, None);
       // add indirect to class
       let class_key = s!("{map_key}@{class}@class");
-      state::assign_value(&class_key, Stored::String(arena::pin(&classref)), None);
+      assign_value(&class_key, Stored::String(pin(&classref)), None);
     } else {
       // Otherwise, it's presumably TeX styling
       let class_key = s!("{map_key}@{class}@class");
-      state::assign_value(&class_key, Stored::None, None);
+      assign_value(&class_key, Stored::None, None);
       let begin_key = s!("{map_key}@{class}@begin");
-      state::assign_value(&begin_key, Stored::Tokens(style_toks.clone()), None);
+      assign_value(&begin_key, Stored::Tokens(style_toks.clone()), None);
     }
   }
   // Set cssclass based on class name
   let cssclass = class.strip_suffix('s').unwrap_or(class).to_string();
   let css_key = s!("{map_key}@{class}@cssclass");
-  state::assign_value(&css_key, Stored::String(arena::pin(&cssclass)), None);
+  assign_value(&css_key, Stored::String(pin(&cssclass)), None);
 
   // Apply extra properties
   for (k, v) in props {
     let prop_key = s!("{map_key}@{class}@{k}");
-    state::assign_value(&prop_key, Stored::String(arena::pin(v)), None);
+    assign_value(&prop_key, Stored::String(pin(v)), None);
   }
 }
 
@@ -476,13 +478,13 @@ fn lst_set_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>
 /// also matches 'keywords1', 'keywords2', …); lstSetClassWords uses only the
 /// exact-equals branch (digit_suffix=false).
 fn lst_clear_class_words(class: &str, digit_suffix: bool) {
-  let words: Vec<String> = match state::lookup_value("LST_WORD_LIST") {
-    Some(Stored::Strings(list)) => list.iter().map(|sym| arena::to_string(*sym)).collect(),
+  let words: Vec<String> = match lookup_value("LST_WORD_LIST") {
+    Some(Stored::Strings(list)) => list.iter().map(|sym| to_string(*sym)).collect(),
     _ => return,
   };
   for word in &words {
     let key = s!("LST_WORDS@{word}@class");
-    let assigned = state::with_value(&key, |v| v.map(|s| s.to_string()).unwrap_or_default());
+    let assigned = with_value(&key, |v| v.map(|s| s.to_string()).unwrap_or_default());
     let assigned_str = assigned.as_str();
     let matches = assigned_str == class
       || (digit_suffix
@@ -492,7 +494,7 @@ fn lst_clear_class_words(class: &str, digit_suffix: bool) {
           .next()
           .is_some_and(|c| c.is_ascii_digit()));
     if matches {
-      state::assign_value(&key, Stored::None, None);
+      assign_value(&key, Stored::None, None);
     }
   }
 }
@@ -506,16 +508,16 @@ fn lst_add_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&str>
     }
     let key = s!("LST_WORDS@{word}@class");
     // Only set if not already in a class
-    if state::with_value(&key, |v| v.is_none()) {
-      state::assign_value(&key, Stored::String(arena::pin(class)), None);
+    if with_value(&key, |v| v.is_none()) {
+      assign_value(&key, Stored::String(pin(class)), None);
       // Track the word in the word list for case-insensitive duplication
       let list_key = "LST_WORD_LIST";
-      let mut list = state::with_value(list_key, |v| match v {
+      let mut list = with_value(list_key, |v| match v {
         Some(Stored::Strings(v)) => v.to_vec(),
         _ => Vec::new(),
       });
-      list.push(arena::pin(&word));
-      state::assign_value(list_key, Stored::Strings(list.into()), None);
+      list.push(pin(&word));
+      assign_value(list_key, Stored::Strings(list.into()), None);
     }
   }
 }
@@ -528,9 +530,9 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
       word = format!("{pfx}{word}");
     }
     let key = s!("LST_WORDS@{word}@class");
-    let matches_class = state::with_value(&key, |v| v.map(|s| s.eq_text(class)).unwrap_or(false));
+    let matches_class = with_value(&key, |v| v.map(|s| s.eq_text(class)).unwrap_or(false));
     if matches_class {
-      state::assign_value(&key, Stored::None, None);
+      assign_value(&key, Stored::None, None);
     }
   }
 }
@@ -540,15 +542,13 @@ fn lst_delete_class_words(class: &str, words: &Option<Tokens>, prefix: Option<&s
 /// Without this `lstClearLanguage` (called on every `language=` switch) leaves
 /// prior keyword sets attached, so later listings highlight stale keywords from
 /// previously selected languages.
-fn lst_delete_class(class: &str) {
-  lst_clear_class_words(class, true);
-}
+fn lst_delete_class(class: &str) { lst_clear_class_words(class, true); }
 
 /// Perl L617-622: lstDeleteDelimiterKind — delete delimiters whose class starts with `kind`.
 fn lst_delete_delimiter_kind(kind: &str) {
   // Snapshot the keys-string via with_value so the subsequent per-key
   // class lookups don't race against the outer lookup holding a clone.
-  let keys_str = state::with_value("LST_DELIM_KEYS", |v| {
+  let keys_str = with_value("LST_DELIM_KEYS", |v| {
     v.map(|s| s.to_string()).unwrap_or_default()
   });
   if !keys_str.is_empty() {
@@ -558,20 +558,20 @@ fn lst_delete_delimiter_kind(kind: &str) {
         continue;
       }
       let class_key = s!("LST_DELIM@{}@class", open_key);
-      let class_starts = state::with_value(&class_key, |v| {
+      let class_starts = with_value(&class_key, |v| {
         v.map(|s| s.starts_with_text(kind)).unwrap_or(false)
       });
       if class_starts {
         // Remove delimiter entries
-        state::assign_value(&class_key, Stored::default(), None);
-        state::assign_value(&s!("LST_DELIM@{}@open", open_key), Stored::default(), None);
-        state::assign_value(&s!("LST_DELIM@{}@close", open_key), Stored::default(), None);
-        state::assign_value(
+        assign_value(&class_key, Stored::default(), None);
+        assign_value(&s!("LST_DELIM@{}@open", open_key), Stored::default(), None);
+        assign_value(&s!("LST_DELIM@{}@close", open_key), Stored::default(), None);
+        assign_value(
           &s!("LST_DELIM@{}@recursive", open_key),
           Stored::default(),
           None,
         );
-        state::assign_value(
+        assign_value(
           &s!("LST_DELIM@{}@invisible", open_key),
           Stored::default(),
           None,
@@ -725,25 +725,25 @@ fn lst_add_delimiter(
     let key_class = s!("LST_DELIM@{open_str}@class");
     let key_recursive = s!("LST_DELIM@{open_str}@recursive");
     let key_invisible = s!("LST_DELIM@{open_str}@invisible");
-    state::assign_value(
+    assign_value(
       &key_open,
-      Stored::String(arena::pin(regex::escape(&open_str))),
+      Stored::String(pin(regex::escape(&open_str))),
       None,
     );
-    state::assign_value(&key_close, Stored::String(arena::pin(&close_re)), None);
-    state::assign_value(&key_class, Stored::String(arena::pin(&class)), None);
-    state::assign_value(&key_recursive, Stored::Bool(recursive), None);
+    assign_value(&key_close, Stored::String(pin(&close_re)), None);
+    assign_value(&key_class, Stored::String(pin(&class)), None);
+    assign_value(&key_recursive, Stored::Bool(recursive), None);
     if invisible {
-      state::assign_value(&key_invisible, Stored::Bool(true), None);
+      assign_value(&key_invisible, Stored::Bool(true), None);
     }
     if type_clean == "n" {
       // Perl listings.sty.ltxml:583 sets `$keys{nested} = 1` for type='n'.
       let key_nested = s!("LST_DELIM@{open_str}@nested");
-      state::assign_value(&key_nested, Stored::Bool(true), None);
+      assign_value(&key_nested, Stored::Bool(true), None);
     }
     if !quoted.is_empty() {
       let key_quoted = s!("LST_DELIM@{open_str}@quoted");
-      state::assign_value(&key_quoted, Stored::String(arena::pin(&quoted)), None);
+      assign_value(&key_quoted, Stored::String(pin(&quoted)), None);
     }
     // Register this delimiter in the delimiter list
     lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
@@ -779,16 +779,16 @@ fn lst_add_delimiter(
 
     // Set parent class (Perl: class => $oldclass)
     let class_key = s!("LST_CLASSES@{class}@class");
-    state::assign_value(&class_key, Stored::String(arena::pin(&base_class)), None);
+    assign_value(&class_key, Stored::String(pin(&base_class)), None);
     // Don't set cssclass on artificial class — Perl's regex /^(\w+?)s?$/ won't match
     // class names containing delimiter chars like "comments{}". Let parent chain provide it.
     if !open_tex.is_empty() {
       let begin_key = s!("LST_CLASSES@{class}@begin");
-      state::assign_value(&begin_key, Stored::Tokens(open_tex), None);
+      assign_value(&begin_key, Stored::Tokens(open_tex), None);
     }
     if !close_tex.is_empty() {
       let end_key = s!("LST_CLASSES@{class}@end");
-      state::assign_value(&end_key, Stored::Tokens(close_tex), None);
+      assign_value(&end_key, Stored::Tokens(close_tex), None);
     }
   }
 }
@@ -800,17 +800,17 @@ fn lst_set_character_class(class: &str, chars: &Tokens) {
     // Remove from all classes, then add to target
     for cls in &["letter", "digit", "other"] {
       let key = s!("LST_CHAR@{cls}@{ch_re}");
-      state::assign_value(&key, Stored::None, None);
+      assign_value(&key, Stored::None, None);
     }
     let key = s!("LST_CHAR@{class}@{ch_re}");
-    state::assign_value(&key, Stored::Bool(true), None);
+    assign_value(&key, Stored::Bool(true), None);
   }
 }
 
 /// Build literate substitution entries from state.
 /// Returns (pattern_string, replacement_tokens, protected_flag) triples.
 fn build_literate_entries() -> Vec<(String, Tokens, bool)> {
-  let keys: Vec<String> = match state::lookup_value("LST_LITERATE_KEYS") {
+  let keys: Vec<String> = match lookup_value("LST_LITERATE_KEYS") {
     Some(Stored::Tokens(t)) => t.unlist_ref().iter().map(|tok| tok.to_string()).collect(),
     _ => return Vec::new(),
   };
@@ -818,8 +818,8 @@ fn build_literate_entries() -> Vec<(String, Tokens, bool)> {
   for pattern in &keys {
     let repl_key = s!("LST_LIT@{pattern}");
     let prot_key = s!("LST_LIT@{pattern}@protected");
-    if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
-      let protected = state::with_value(&prot_key, |v| matches!(v, Some(Stored::Bool(true))));
+    if let Some(Stored::Tokens(replacement)) = lookup_value(&repl_key) {
+      let protected = with_value(&prot_key, |v| matches!(v, Some(Stored::Bool(true))));
       entries.push((pattern.clone(), replacement, protected));
     }
   }
@@ -853,7 +853,7 @@ fn build_char_class(class: &str) -> String {
     let c = b as char;
     let escaped = regex::escape(&c.to_string());
     let key = s!("LST_CHAR@{class}@{escaped}");
-    if state::with_value(&key, |v| matches!(v, Some(Stored::Bool(true)))) {
+    if with_value(&key, |v| matches!(v, Some(Stored::Bool(true)))) {
       // Escape chars that are special inside regex character classes
       match c {
         ']' | '\\' | '^' | '-' => {
@@ -869,7 +869,7 @@ fn build_char_class(class: &str) -> String {
     if let Some(c) = char::from_u32(code) {
       let escaped = regex::escape(&c.to_string());
       let key = s!("LST_CHAR@{class}@{escaped}");
-      if state::with_value(&key, |v| matches!(v, Some(Stored::Bool(true)))) {
+      if with_value(&key, |v| matches!(v, Some(Stored::Bool(true)))) {
         result.push(c);
       }
     }
@@ -900,7 +900,7 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
   while let Some(ref cname) = current_class {
     // Look up cssclass
     let css_key = s!("LST_CLASSES@{cname}@cssclass");
-    if let Some(css) = state::lookup_value(&css_key) {
+    if let Some(css) = lookup_value(&css_key) {
       let css_str = css.to_string();
       if !css_str.is_empty() {
         css_classes.push(css_str);
@@ -908,20 +908,20 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
     }
     // Look up begin tokens
     let begin_key = s!("LST_CLASSES@{cname}@begin");
-    if let Some(Stored::Tokens(begin)) = state::lookup_value(&begin_key) {
-      if let Some(rescanned) = lst_rescan(Some(begin)) {
-        if is_leaf {
-          // Leaf class tokens are delimiter chars — emit before styling
-          delim_tokens.extend(rescanned.unlist());
-        } else {
-          // Parent class tokens are styling (e.g. \itshape) — scope in a group
-          style_tokens.extend(rescanned.unlist());
-        }
+    if let Some(Stored::Tokens(begin)) = lookup_value(&begin_key)
+      && let Some(rescanned) = lst_rescan(Some(begin))
+    {
+      if is_leaf {
+        // Leaf class tokens are delimiter chars — emit before styling
+        delim_tokens.extend(rescanned.unlist());
+      } else {
+        // Parent class tokens are styling (e.g. \itshape) — scope in a group
+        style_tokens.extend(rescanned.unlist());
       }
     }
     // Follow class chain
     let class_key = s!("LST_CLASSES@{cname}@class");
-    current_class = state::lookup_value(&class_key)
+    current_class = lookup_value(&class_key)
       .map(|v| v.to_string())
       .filter(|s| !s.is_empty());
     is_leaf = false;
@@ -956,15 +956,14 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
   let mut is_leaf = true;
   while let Some(ref cname) = current_class {
     let end_key = s!("LST_CLASSES@{cname}@end");
-    if let Some(Stored::Tokens(end)) = state::lookup_value(&end_key) {
-      if let Some(rescanned) = lst_rescan(Some(end)) {
-        if is_leaf {
-          delim_tokens.extend(rescanned.unlist());
-        }
-      }
+    if let Some(Stored::Tokens(end)) = lookup_value(&end_key)
+      && let Some(rescanned) = lst_rescan(Some(end))
+      && is_leaf
+    {
+      delim_tokens.extend(rescanned.unlist());
     }
     let class_key = s!("LST_CLASSES@{cname}@class");
-    current_class = state::lookup_value(&class_key)
+    current_class = lookup_value(&class_key)
       .map(|v| v.to_string())
       .filter(|s| !s.is_empty());
     is_leaf = false;
@@ -980,14 +979,14 @@ fn lst_class_end(classname: &str) -> Vec<Token> {
 /// Perl: lstClassProperty — recursive property lookup on class chain.
 fn lst_class_property(classname: &str, property: &str) -> Option<String> {
   let prop_key = s!("LST_CLASSES@{classname}@{property}");
-  if let Some(val) = state::lookup_value(&prop_key) {
+  if let Some(val) = lookup_value(&prop_key) {
     let s = val.to_string();
     if !s.is_empty() {
       return Some(s);
     }
   }
   let class_key = s!("LST_CLASSES@{classname}@class");
-  if let Some(parent) = state::lookup_value(&class_key) {
+  if let Some(parent) = lookup_value(&class_key) {
     let parent_str = parent.to_string();
     if !parent_str.is_empty() {
       return lst_class_property(&parent_str, property);
@@ -1041,14 +1040,14 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   // Establish line numbering parameters
   let firstnumber = lst_get_literal("firstnumber");
   let line0: i64 = match firstnumber.as_str() {
-    "last" => state::lookup_value("LISTINGS_LAST_NUMBER")
+    "last" => lookup_value("LISTINGS_LAST_NUMBER")
       .map(|v| v.to_string().parse().unwrap_or(1))
       .unwrap_or(1),
     "auto" => {
       let name = lst_get_literal("name");
       if !name.is_empty() {
         let key = s!("LISTINGS_LAST_NUMBER_{name}");
-        state::lookup_value(&key)
+        lookup_value(&key)
           .map(|v| v.to_string().parse().unwrap_or(1))
           .unwrap_or(1)
       } else {
@@ -1070,7 +1069,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   let letter_chars = build_char_class("letter");
   let digit_chars = build_char_class("digit");
   // Perl: LookupValue('LST@TEXCS') — set when texcs or moretexcs has been used
-  let has_texcs = matches!(state::lookup_value("LST@TEXCS"), Some(Stored::Bool(true)));
+  let has_texcs = matches!(lookup_value("LST@TEXCS"), Some(Stored::Bool(true)));
   let id_re = if letter_chars.is_empty() {
     None
   } else {
@@ -1083,16 +1082,16 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   };
 
   // Build delimiter regexes from LST_DELIM_KEYS (Perl: $LaTeXML::DELIM_RE, $LaTeXML::ESCAPE_RE)
-  let delim_keys: Vec<String> = match state::lookup_value("LST_DELIM_KEYS") {
+  let delim_keys: Vec<String> = match lookup_value("LST_DELIM_KEYS") {
     Some(Stored::Tokens(t)) => t.unlist_ref().iter().map(|tok| tok.to_string()).collect(),
     _ => vec![],
   };
   // Also check mathescape delimiter ($)
   let mut all_delim_keys = delim_keys;
-  if let Some(Stored::String(_)) = state::lookup_value("LST_DELIM@$@open") {
-    if !all_delim_keys.iter().any(|k| k == "$") {
-      all_delim_keys.push("$".to_string());
-    }
+  if let Some(Stored::String(_)) = lookup_value("LST_DELIM@$@open")
+    && !all_delim_keys.iter().any(|k| k == "$")
+  {
+    all_delim_keys.push("$".to_string());
   }
   // Perl listings.sty.ltxml:1283
   //   local $LaTeXML::DELIM_RE = join('|', map { $$delimiters{$_}{open} } sort keys %$delimiters);
@@ -1105,11 +1104,11 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   let mut escape_opens: Vec<String> = Vec::new();
   for key in &all_delim_keys {
     let open_key = s!("LST_DELIM@{key}@open");
-    if let Some(Stored::String(open_sym)) = state::lookup_value(&open_key) {
-      let open_re = arena::with(open_sym, |s| s.to_string());
+    if let Some(Stored::String(open_sym)) = lookup_value(&open_key) {
+      let open_re = with(open_sym, |s| s.to_string());
       delim_opens.push(open_re.clone());
       let escape_key = s!("LST_DELIM@{key}@escape");
-      if matches!(state::lookup_value(&escape_key), Some(Stored::Bool(true))) {
+      if matches!(lookup_value(&escape_key), Some(Stored::Bool(true))) {
         escape_opens.push(open_re);
       }
     }
@@ -1134,22 +1133,20 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   let case_sensitive = lst_get_boolean("sensitive");
   // Perl: if (!$CASE_SENSITIVE) { foreach word (keys %$words) { $$words{uc($word)} =
   // $$words{$word}; } }
-  if !case_sensitive {
-    if let Some(Stored::Strings(word_list)) = state::lookup_value("LST_WORD_LIST") {
-      for word_sym in word_list.iter() {
-        let word = arena::to_string(*word_sym);
-        let upper = word.to_uppercase();
-        if upper != word {
-          let src_class_key = s!("LST_WORDS@{word}@class");
-          let dst_class_key = s!("LST_WORDS@{upper}@class");
-          if let Some(class_val) = state::lookup_value(&src_class_key) {
-            state::assign_value(&dst_class_key, class_val, None);
-          }
-          let src_index_key = s!("LST_WORDS@{word}@index");
-          let dst_index_key = s!("LST_WORDS@{upper}@index");
-          if let Some(index_val) = state::lookup_value(&src_index_key) {
-            state::assign_value(&dst_index_key, index_val, None);
-          }
+  if !case_sensitive && let Some(Stored::Strings(word_list)) = lookup_value("LST_WORD_LIST") {
+    for word_sym in word_list.iter() {
+      let word = to_string(*word_sym);
+      let upper = word.to_uppercase();
+      if upper != word {
+        let src_class_key = s!("LST_WORDS@{word}@class");
+        let dst_class_key = s!("LST_WORDS@{upper}@class");
+        if let Some(class_val) = lookup_value(&src_class_key) {
+          assign_value(&dst_class_key, class_val, None);
+        }
+        let src_index_key = s!("LST_WORDS@{word}@index");
+        let dst_index_key = s!("LST_WORDS@{upper}@index");
+        if let Some(index_val) = lookup_value(&src_index_key) {
+          assign_value(&dst_index_key, index_val, None);
         }
       }
     }
@@ -1176,7 +1173,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   };
 
   // Add preamble tokens
-  if let Some(Stored::Tokens(preamble)) = state::lookup_value("LISTINGS_PREAMBLE") {
+  if let Some(Stored::Tokens(preamble)) = lookup_value("LISTINGS_PREAMBLE") {
     ctx.lsttokens.extend(preamble.unlist());
   }
   let basicstyle = lst_get_tokens("basicstyle");
@@ -1210,14 +1207,14 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
 
   // Save line number for later use
   let name = lst_get_literal("name");
-  state::assign_value(
+  assign_value(
     "LISTINGS_LAST_NUMBER",
     Stored::Int(ctx.linenum),
     Some(Scope::Global),
   );
   if !name.is_empty() {
     let key = s!("LISTINGS_LAST_NUMBER_{name}");
-    state::assign_value(&key, Stored::Int(ctx.linenum), Some(Scope::Global));
+    assign_value(&key, Stored::Int(ctx.linenum), Some(Scope::Global));
   }
 
   // Remove trailing empty lines
@@ -1261,13 +1258,13 @@ fn lst_process_end_line(ctx: &mut LstContext) {
 /// Perl: lstDoNumber — generate line number tokens.
 fn lst_do_number(ctx: &LstContext, is_empty: bool) -> Tokens {
   let stepnumber = lst_get_number("stepnumber");
-  let needs_number = state::lookup_value("LISTINGS_NEEDS_NUMBER")
+  let needs_number = lookup_value("LISTINGS_NEEDS_NUMBER")
     .map(|v| v.eq_text("true") || v.eq_text("1"))
     .unwrap_or(false);
 
   let number_blank = lst_get_boolean("numberblanklines");
   if (needs_number || ((ctx.linenum - 1) % stepnumber.max(1)) == 0) && (number_blank || !is_empty) {
-    state::assign_value("LISTINGS_NEEDS_NUMBER", Stored::Bool(false), None);
+    assign_value("LISTINGS_NEEDS_NUMBER", Stored::Bool(false), None);
     Tokens::new(invoke(T_CS!("\\lx@make@tags"), vec![Tokens!(T_OTHER!(
       "lstnumber"
     ))]))
@@ -1279,11 +1276,7 @@ fn lst_do_number(ctx: &LstContext, is_empty: bool) -> Tokens {
 /// Perl: lstProcess_internal — the recursive descent parser.
 /// Order matches Perl: end_re, literate, delimiters, identifiers, newline, formfeed, whitespace,
 /// quoted, default
-fn lst_process_internal(
-  ctx: &mut LstContext,
-  end_re: Option<&Regex>,
-  outer_class: Option<&str>,
-) {
+fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_class: Option<&str>) {
   // Perl listings.sty.ltxml:1411
   //   my $classname = ($outerclass ? undef : $$words{$lookup}{class} || 'identifiers');
   // When recursing inside a delimited class (string, tag, comment, …) inner
@@ -1328,15 +1321,15 @@ fn lst_process_internal(
         if close {
           break;
         }
-      } else if let Some(m) = re.find(&ctx.listing) {
-        if m.start() == 0 {
-          // Before closing, check if quoted_re matches (takes priority)
-          let is_quoted = ctx.quoted_re.find(&ctx.listing).is_some();
-          if !is_quoted {
-            ctx.colnum += m.len() as i64;
-            ctx.listing = ctx.listing[m.end()..].to_string();
-            break;
-          }
+      } else if let Some(m) = re.find(&ctx.listing)
+        && m.start() == 0
+      {
+        // Before closing, check if quoted_re matches (takes priority)
+        let is_quoted = ctx.quoted_re.find(&ctx.listing).is_some();
+        if !is_quoted {
+          ctx.colnum += m.len() as i64;
+          ctx.listing = ctx.listing[m.end()..].to_string();
+          break;
         }
       }
     }
@@ -1350,259 +1343,253 @@ fn lst_process_internal(
       } else {
         ctx.literate_re.clone()
       };
-      if let Some(ref re) = lit_re {
-        if let Some(m) = re.find(&ctx.listing) {
-          let matched = m.as_str().to_string();
-          ctx.listing = ctx.listing[m.end()..].to_string();
-          ctx.colnum += matched.len() as i64;
-          // Find the replacement tokens for this pattern
-          let repl_key = s!("LST_LIT@{matched}");
-          if let Some(Stored::Tokens(replacement)) = state::lookup_value(&repl_key) {
-            ctx.lsttokens.push(T_CS!("\\@listingLiterate"));
-            ctx.lsttokens.push(T_BEGIN!());
-            ctx.lsttokens.extend(replacement.unlist());
-            ctx.lsttokens.push(T_END!());
-          }
-          continue;
-        }
-      }
-    }
-
-    // 3. Delimiters — strings, comments, escapes, mathescape
-    if let Some(ref delim_re) = ctx.delim_re.clone() {
-      if let Some(m) = delim_re.find(&ctx.listing) {
-        let open = m.as_str().to_string();
+      if let Some(ref re) = lit_re
+        && let Some(m) = re.find(&ctx.listing)
+      {
+        let matched = m.as_str().to_string();
         ctx.listing = ctx.listing[m.end()..].to_string();
-        ctx.colnum += open.len() as i64;
-
-        // Look up delimiter info. The `invisible` flag is already applied
-        // at delimiter-registration time (lst_add_delimiter sets empty
-        // open_tex / close_tex when invisible, so lst_class_begin /
-        // lst_class_end never emit the delim chars). No runtime check
-        // needed here — Perl lstProcess_internal also has no separate
-        // gate at this point.
-        let class_key = s!("LST_DELIM@{open}@class");
-        let close_key = s!("LST_DELIM@{open}@close");
-        let classname = state::lookup_value(&class_key)
-          .map(|v| v.to_string())
-          .unwrap_or_default();
-        let close_re_str = state::lookup_value(&close_key)
-          .map(|v| v.to_string())
-          .unwrap_or_default();
-
-        // Perl: lstProcessPush(lstClassBegin($classname))
-        // Note: delimiter chars come from begin/end tokens in lstClassBegin/lstClassEnd
-        ctx.lsttokens.extend(lst_class_begin(&classname));
-
-        // Check if this is an 'eval' class (mathescape, texcl, escapechar)
-        let is_eval =
-          lst_class_property(&classname, "eval").is_some_and(|v| v == "true" || v == "1");
-
-        if is_eval {
-          // For eval classes: match until close, then tokenize the content as TeX
-          // Perl: TokenizeBalanced($string) — close delimiter is NOT separately emitted,
-          // because lstClassEnd already provides the closing tokens (e.g. $ for mathescape)
-          if close_re_str == "__NEWLINE__" {
-            // Sentinel: read until newline (for texcl line comments)
-            let content = if let Some(pos) = ctx.listing.find('\n') {
-              let c = ctx.listing[..pos].to_string();
-              ctx.listing = ctx.listing[pos..].to_string();
-              c
-            } else {
-              let c = ctx.listing.clone();
-              ctx.listing.clear();
-              c
-            };
-            let content_tokens = tokenize_balanced(&content);
-            ctx.lsttokens.extend(content_tokens);
-          } else { match Regex::new(&close_re_str) { Ok(close_re) => {
-            if let Some(cm) = close_re.find(&ctx.listing) {
-              let content = ctx.listing[..cm.start()].to_string();
-              ctx.listing = ctx.listing[cm.end()..].to_string();
-              // Tokenize the content as real TeX (not raw listing)
-              let content_tokens = tokenize_balanced(&content);
-              ctx.lsttokens.extend(content_tokens);
-              // Note: close delimiter is NOT pushed — lstClassEnd handles it
-            }
-          } _ => {}}}
-        } else {
-          // For non-eval classes (strings, comments): recurse with limited delimiters
-          let recursive_key = s!("LST_DELIM@{open}@recursive");
-          let is_recursive = matches!(
-            state::lookup_value(&recursive_key),
-            Some(Stored::Bool(true))
-          );
-          if !close_re_str.is_empty() {
-            // Sentinel close patterns (for zero-width assertions) use a dummy regex
-            // that contains the sentinel as a flag — the actual check happens in step 1.
-            let close_re_pattern = if close_re_str.starts_with("__") {
-              // Create a regex that will never match normal text but carries the sentinel
-              format!("^(__{}__SENTINEL)", close_re_str.trim_matches('_'))
-            } else {
-              format!("^({close_re_str})")
-            };
-            if let Ok(close_re) = Regex::new(&close_re_pattern) {
-              // Recurse with appropriate delimiter set
-              let saved_delim = ctx.delim_re.clone();
-              let saved_id = ctx.id_re.clone();
-              let saved_quoted = ctx.quoted_re.clone();
-              let saved_space = ctx.space_token;
-              // Perl: local $SPACE = visible when inside string class + showstringspaces
-              if classname.starts_with("string") && lst_get_boolean("showstringspaces") {
-                ctx.space_token = T_CS!("\\@lst@visible@space");
-              }
-              if !is_recursive {
-                // Perl listings.sty.ltxml:1396-1398
-                //   local $DELIM_RE = ($$delim{recursive}
-                //     ? $DELIM_RE
-                //     : join('|', grep { $_ } $ESCAPE_RE,
-                //                            $$delim{nested} && $$delim{open}));
-                // For type='n' nested delims we still allow the SAME opener to
-                // match recursively (so `{foo {bar} baz}`-style nesting works).
-                let nested_key = s!("LST_DELIM@{open}@nested");
-                let is_nested = matches!(
-                  state::lookup_value(&nested_key),
-                  Some(Stored::Bool(true))
-                );
-                let mut alternatives: Vec<String> = Vec::new();
-                if let Some(ref er) = ctx.escape_re {
-                  let s = er.as_str().trim_start_matches("^(").trim_end_matches(')');
-                  if !s.is_empty() {
-                    alternatives.push(s.to_string());
-                  }
-                }
-                if is_nested {
-                  let open_key = s!("LST_DELIM@{open}@open");
-                  if let Some(Stored::String(open_re_sym)) = state::lookup_value(&open_key) {
-                    let open_re = arena::with(open_re_sym, |s| s.to_string());
-                    if !open_re.is_empty() {
-                      alternatives.push(open_re);
-                    }
-                  }
-                }
-                ctx.delim_re = if alternatives.is_empty() {
-                  None
-                } else {
-                  Regex::new(&format!("^({})", alternatives.join("|"))).ok()
-                };
-                ctx.id_re = None;
-              }
-              // Perl: local $QUOTED_RE = join('|', grep { $_ } $QUOTED_RE, $$delim{quoted});
-              let quoted_key = s!("LST_DELIM@{open}@quoted");
-              if let Some(delim_quoted) = state::lookup_value(&quoted_key) {
-                let dq = delim_quoted.to_string();
-                if !dq.is_empty() {
-                  let new_quoted = format!(
-                    "^({}|{})",
-                    ctx
-                      .quoted_re
-                      .as_str()
-                      .trim_start_matches("^(")
-                      .trim_end_matches(')'),
-                    dq
-                  );
-                  if let Ok(re) = Regex::new(&new_quoted) {
-                    ctx.quoted_re = re;
-                  }
-                }
-              }
-              lst_process_internal(ctx, Some(&close_re), Some(&classname));
-              ctx.delim_re = saved_delim;
-              ctx.id_re = saved_id;
-              ctx.quoted_re = saved_quoted;
-              ctx.space_token = saved_space;
-            }
-          }
+        ctx.colnum += matched.len() as i64;
+        // Find the replacement tokens for this pattern
+        let repl_key = s!("LST_LIT@{matched}");
+        if let Some(Stored::Tokens(replacement)) = lookup_value(&repl_key) {
+          ctx.lsttokens.push(T_CS!("\\@listingLiterate"));
+          ctx.lsttokens.push(T_BEGIN!());
+          ctx.lsttokens.extend(replacement.unlist());
+          ctx.lsttokens.push(T_END!());
         }
-        // Perl: lstProcessPush(invisible ? () : split(//, $close), lstClassEnd($classname))
-        // For non-eval: close was consumed by end_re in recursive call; delimiter chars already
-        // handled
-        ctx.lsttokens.extend(lst_class_end(&classname));
         continue;
       }
     }
 
-    // 4. Identifier (word) matching
-    if let Some(ref id_re) = ctx.id_re {
-      if let Some(m) = id_re.find(&ctx.listing) {
-        if m.start() == 0 {
-          // eprintln!("DEBUG id_re matched: '{}' in '{}'", m.as_str(),
-          // &ctx.listing[..ctx.listing.len().min(40)]);
-          let word = m.as_str().to_string();
-          ctx.listing = ctx.listing[m.end()..].to_string();
-          ctx.colnum += word.len() as i64;
+    // 3. Delimiters — strings, comments, escapes, mathescape
+    if let Some(ref delim_re) = ctx.delim_re.clone()
+      && let Some(m) = delim_re.find(&ctx.listing)
+    {
+      let open = m.as_str().to_string();
+      ctx.listing = ctx.listing[m.end()..].to_string();
+      ctx.colnum += open.len() as i64;
 
-          let lookup = if ctx.case_sensitive {
-            word.clone()
+      // Look up delimiter info. The `invisible` flag is already applied
+      // at delimiter-registration time (lst_add_delimiter sets empty
+      // open_tex / close_tex when invisible, so lst_class_begin /
+      // lst_class_end never emit the delim chars). No runtime check
+      // needed here — Perl lstProcess_internal also has no separate
+      // gate at this point.
+      let class_key = s!("LST_DELIM@{open}@class");
+      let close_key = s!("LST_DELIM@{open}@close");
+      let classname = lookup_value(&class_key)
+        .map(|v| v.to_string())
+        .unwrap_or_default();
+      let close_re_str = lookup_value(&close_key)
+        .map(|v| v.to_string())
+        .unwrap_or_default();
+
+      // Perl: lstProcessPush(lstClassBegin($classname))
+      // Note: delimiter chars come from begin/end tokens in lstClassBegin/lstClassEnd
+      ctx.lsttokens.extend(lst_class_begin(&classname));
+
+      // Check if this is an 'eval' class (mathescape, texcl, escapechar)
+      let is_eval = lst_class_property(&classname, "eval").is_some_and(|v| v == "true" || v == "1");
+
+      if is_eval {
+        // For eval classes: match until close, then tokenize the content as TeX
+        // Perl: TokenizeBalanced($string) — close delimiter is NOT separately emitted,
+        // because lstClassEnd already provides the closing tokens (e.g. $ for mathescape)
+        if close_re_str == "__NEWLINE__" {
+          // Sentinel: read until newline (for texcl line comments)
+          let content = if let Some(pos) = ctx.listing.find('\n') {
+            let c = ctx.listing[..pos].to_string();
+            ctx.listing = ctx.listing[pos..].to_string();
+            c
           } else {
-            word.to_uppercase()
+            let c = ctx.listing.clone();
+            ctx.listing.clear();
+            c
           };
-
-          // Look up word class
-          // Perl listings.sty.ltxml:1411
-          //   my $classname = ($outerclass ? undef : $$words{$lookup}{class} || 'identifiers');
-          // Inside a recursive delim wrapper (e.g. the `tags<>` span), inner
-          // identifiers and keywords are emitted without their own class wrap.
-          let word_class_key = s!("LST_WORDS@{lookup}@class");
-          let raw_class = state::lookup_value(&word_class_key);
-          let classname: Option<String> = if outer_class.is_some() {
-            None
-          } else {
-            Some(
-              raw_class
-                .map(|v| v.to_string())
-                .filter(|s| !s.is_empty())
-                .unwrap_or_else(|| "identifiers".to_string()),
-            )
-          };
-
-          // Rescan word characters
-          let word_tokens: Vec<Token> = word
-            .chars()
-            .flat_map(|c| {
-              let s = c.to_string();
-              if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&s)]))) {
-                rescanned.unlist()
-              } else {
-                vec![T_OTHER!(&s)]
-              }
-            })
-            .collect();
-
-          // Check for index
-          let index_key = s!("LST_WORDS@{lookup}@index");
-          if let Some(_index_name) = state::lookup_value(&index_key) {
-            // Index generation (simplified)
+          let content_tokens = tokenize_balanced(&content);
+          ctx.lsttokens.extend(content_tokens);
+        } else {
+          if let Ok(close_re) = Regex::new(&close_re_str)
+            && let Some(cm) = close_re.find(&ctx.listing)
+          {
+            let content = ctx.listing[..cm.start()].to_string();
+            ctx.listing = ctx.listing[cm.end()..].to_string();
+            // Tokenize the content as real TeX (not raw listing)
+            let content_tokens = tokenize_balanced(&content);
+            ctx.lsttokens.extend(content_tokens);
+            // Note: close delimiter is NOT pushed — lstClassEnd handles it
           }
-
-          // Perl: if excludeslash, move the "\" outside of the styling
-          let mut pre_tokens: Vec<Token> = Vec::new();
-          let mut styled_tokens = word_tokens;
-          if let Some(ref cname) = classname {
-            let excludeslash_key = s!("LST_CLASSES@{cname}@excludeslash");
-            let has_excludeslash = match state::lookup_value(&excludeslash_key) {
-              Some(Stored::Bool(true)) => true,
-              Some(Stored::String(s)) => arena::with(s, |v| v == "true"),
-              _ => false,
-            };
-            if has_excludeslash && !styled_tokens.is_empty() {
-              pre_tokens.push(styled_tokens.remove(0));
+        }
+      } else {
+        // For non-eval classes (strings, comments): recurse with limited delimiters
+        let recursive_key = s!("LST_DELIM@{open}@recursive");
+        let is_recursive = matches!(lookup_value(&recursive_key), Some(Stored::Bool(true)));
+        if !close_re_str.is_empty() {
+          // Sentinel close patterns (for zero-width assertions) use a dummy regex
+          // that contains the sentinel as a flag — the actual check happens in step 1.
+          let close_re_pattern = if close_re_str.starts_with("__") {
+            // Create a regex that will never match normal text but carries the sentinel
+            format!("^(__{}__SENTINEL)", close_re_str.trim_matches('_'))
+          } else {
+            format!("^({close_re_str})")
+          };
+          if let Ok(close_re) = Regex::new(&close_re_pattern) {
+            // Recurse with appropriate delimiter set
+            let saved_delim = ctx.delim_re.clone();
+            let saved_id = ctx.id_re.clone();
+            let saved_quoted = ctx.quoted_re.clone();
+            let saved_space = ctx.space_token;
+            // Perl: local $SPACE = visible when inside string class + showstringspaces
+            if classname.starts_with("string") && lst_get_boolean("showstringspaces") {
+              ctx.space_token = T_CS!("\\@lst@visible@space");
             }
+            if !is_recursive {
+              // Perl listings.sty.ltxml:1396-1398
+              //   local $DELIM_RE = ($$delim{recursive}
+              //     ? $DELIM_RE
+              //     : join('|', grep { $_ } $ESCAPE_RE,
+              //                            $$delim{nested} && $$delim{open}));
+              // For type='n' nested delims we still allow the SAME opener to
+              // match recursively (so `{foo {bar} baz}`-style nesting works).
+              let nested_key = s!("LST_DELIM@{open}@nested");
+              let is_nested = matches!(lookup_value(&nested_key), Some(Stored::Bool(true)));
+              let mut alternatives: Vec<String> = Vec::new();
+              if let Some(ref er) = ctx.escape_re {
+                let s = er.as_str().trim_start_matches("^(").trim_end_matches(')');
+                if !s.is_empty() {
+                  alternatives.push(s.to_string());
+                }
+              }
+              if is_nested {
+                let open_key = s!("LST_DELIM@{open}@open");
+                if let Some(Stored::String(open_re_sym)) = lookup_value(&open_key) {
+                  let open_re = with(open_re_sym, |s| s.to_string());
+                  if !open_re.is_empty() {
+                    alternatives.push(open_re);
+                  }
+                }
+              }
+              ctx.delim_re = if alternatives.is_empty() {
+                None
+              } else {
+                Regex::new(&format!("^({})", alternatives.join("|"))).ok()
+              };
+              ctx.id_re = None;
+            }
+            // Perl: local $QUOTED_RE = join('|', grep { $_ } $QUOTED_RE, $$delim{quoted});
+            let quoted_key = s!("LST_DELIM@{open}@quoted");
+            if let Some(delim_quoted) = lookup_value(&quoted_key) {
+              let dq = delim_quoted.to_string();
+              if !dq.is_empty() {
+                let new_quoted = format!(
+                  "^({}|{})",
+                  ctx
+                    .quoted_re
+                    .as_str()
+                    .trim_start_matches("^(")
+                    .trim_end_matches(')'),
+                  dq
+                );
+                if let Ok(re) = Regex::new(&new_quoted) {
+                  ctx.quoted_re = re;
+                }
+              }
+            }
+            lst_process_internal(ctx, Some(&close_re), Some(&classname));
+            ctx.delim_re = saved_delim;
+            ctx.id_re = saved_id;
+            ctx.quoted_re = saved_quoted;
+            ctx.space_token = saved_space;
           }
-
-          ctx.lsttokens.extend(pre_tokens);
-          if let Some(cname) = classname {
-            ctx.lsttokens.extend(lst_class_begin(&cname));
-            ctx.lsttokens.extend(styled_tokens);
-            ctx.lsttokens.extend(lst_class_end(&cname));
-          } else {
-            // Perl: outerclass branch — emit identifier tokens without their own
-            // class wrap; they live inside the enclosing delim's wrapper.
-            ctx.lsttokens.extend(styled_tokens);
-          }
-          continue;
         }
       }
+      // Perl: lstProcessPush(invisible ? () : split(//, $close), lstClassEnd($classname))
+      // For non-eval: close was consumed by end_re in recursive call; delimiter chars already
+      // handled
+      ctx.lsttokens.extend(lst_class_end(&classname));
+      continue;
+    }
+
+    // 4. Identifier (word) matching
+    if let Some(ref id_re) = ctx.id_re
+      && let Some(m) = id_re.find(&ctx.listing)
+      && m.start() == 0
+    {
+      // eprintln!("DEBUG id_re matched: '{}' in '{}'", m.as_str(),
+      // &ctx.listing[..ctx.listing.len().min(40)]);
+      let word = m.as_str().to_string();
+      ctx.listing = ctx.listing[m.end()..].to_string();
+      ctx.colnum += word.len() as i64;
+
+      let lookup = if ctx.case_sensitive {
+        word.clone()
+      } else {
+        word.to_uppercase()
+      };
+
+      // Look up word class
+      // Perl listings.sty.ltxml:1411
+      //   my $classname = ($outerclass ? undef : $$words{$lookup}{class} || 'identifiers');
+      // Inside a recursive delim wrapper (e.g. the `tags<>` span), inner
+      // identifiers and keywords are emitted without their own class wrap.
+      let word_class_key = s!("LST_WORDS@{lookup}@class");
+      let raw_class = lookup_value(&word_class_key);
+      let classname: Option<String> = if outer_class.is_some() {
+        None
+      } else {
+        Some(
+          raw_class
+            .map(|v| v.to_string())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "identifiers".to_string()),
+        )
+      };
+
+      // Rescan word characters
+      let word_tokens: Vec<Token> = word
+        .chars()
+        .flat_map(|c| {
+          let s = c.to_string();
+          if let Some(rescanned) = lst_rescan(Some(Tokens::new(vec![T_OTHER!(&s)]))) {
+            rescanned.unlist()
+          } else {
+            vec![T_OTHER!(&s)]
+          }
+        })
+        .collect();
+
+      // Check for index
+      let index_key = s!("LST_WORDS@{lookup}@index");
+      if let Some(_index_name) = lookup_value(&index_key) {
+        // Index generation (simplified)
+      }
+
+      // Perl: if excludeslash, move the "\" outside of the styling
+      let mut pre_tokens: Vec<Token> = Vec::new();
+      let mut styled_tokens = word_tokens;
+      if let Some(ref cname) = classname {
+        let excludeslash_key = s!("LST_CLASSES@{cname}@excludeslash");
+        let has_excludeslash = match lookup_value(&excludeslash_key) {
+          Some(Stored::Bool(true)) => true,
+          Some(Stored::String(s)) => with(s, |v| v == "true"),
+          _ => false,
+        };
+        if has_excludeslash && !styled_tokens.is_empty() {
+          pre_tokens.push(styled_tokens.remove(0));
+        }
+      }
+
+      ctx.lsttokens.extend(pre_tokens);
+      if let Some(cname) = classname {
+        ctx.lsttokens.extend(lst_class_begin(&cname));
+        ctx.lsttokens.extend(styled_tokens);
+        ctx.lsttokens.extend(lst_class_end(&cname));
+      } else {
+        // Perl: outerclass branch — emit identifier tokens without their own
+        // class wrap; they live inside the enclosing delim's wrapper.
+        ctx.lsttokens.extend(styled_tokens);
+      }
+      continue;
     }
 
     // 5. Newline handling
@@ -1718,27 +1705,23 @@ fn lst_process_inline(text: &str) -> Vec<Token> {
 /// Perl: lstProcessBlock — wraps block listing, stores data.
 fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token>) {
   // Store listing data for base64 encoding
-  let c_val = state::lookup_value("LISTINGS_DATA_COUNTER")
+  let c_val = lookup_value("LISTINGS_DATA_COUNTER")
     .map(|v| v.to_string().parse::<i64>().unwrap_or(0))
     .unwrap_or(0)
     + 1;
-  state::assign_value(
+  assign_value(
     "LISTINGS_DATA_COUNTER",
     Stored::Int(c_val),
     Some(Scope::Global),
   );
   let data_key = s!("LISTINGS_DATA_{c_val}");
-  state::assign_value(
-    &data_key,
-    Stored::String(arena::pin(text)),
-    Some(Scope::Global),
-  );
+  assign_value(&data_key, Stored::String(pin(text)), Some(Scope::Global));
 
   let processed = lst_process("block", text);
 
   let mut body_tokens = Vec::new();
   // Add preamble_before
-  if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
+  if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
     body_tokens.extend(pre.unlist());
   }
   // Invocation of \@@listings@block{counter}{processed}{name}
@@ -1750,7 +1733,7 @@ fn lst_process_block(name: Option<Tokens>, text: &str) -> (Vec<Token>, Vec<Token
   ]));
 
   let mut trailer = Vec::new();
-  if let Some(Stored::Tokens(post)) = state::lookup_value("LISTINGS_POSTAMBLE") {
+  if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
     trailer.extend(post.unlist());
   }
   trailer.push(T_END!()); // balance bgroup from the caller
@@ -1763,10 +1746,10 @@ pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   let (mut body, trailer) = lst_process_block(name.clone(), text);
 
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
-  if let Some(ref n) = name {
-    if !n.is_empty() {
-      state::assign_value("LST@toctitle", Stored::from(n.clone()), None);
-    }
+  if let Some(ref n) = name
+    && !n.is_empty()
+  {
+    assign_value("LST@toctitle", Stored::from(n.clone()), None);
   }
 
   // Check for caption/title/toctitle — Perl lines 183-193
@@ -1831,14 +1814,14 @@ pub fn lst_process_display(name: Option<Tokens>, text: &str) -> Vec<Token> {
   result.push(T_BEGIN!());
 
   // \def\lstname{...}
-  if let Some(ref n) = name {
-    if !n.is_empty() {
-      result.push(T_CS!("\\def"));
-      result.push(T_CS!("\\lstname"));
-      result.push(T_BEGIN!());
-      result.extend_from_slice(n.unlist_ref());
-      result.push(T_END!());
-    }
+  if let Some(ref n) = name
+    && !n.is_empty()
+  {
+    result.push(T_CS!("\\def"));
+    result.push(T_CS!("\\lstname"));
+    result.push(T_BEGIN!());
+    result.extend_from_slice(n.unlist_ref());
+    result.push(T_END!());
   }
 
   let name_nonempty = name.as_ref().is_some_and(|n| !n.is_empty());
@@ -1861,7 +1844,7 @@ fn lst_extract_color(cmd: &Tokens) -> Option<String> {
     return None;
   }
   bgroup();
-  let _ = stomach::digest(cmd.clone());
+  let _ = digest(cmd.clone());
   // Use to_stored() format ("rgb r g b") for round-trip through state storage,
   // since \lst@@@set@background uses Color::from_stored() to reconstruct the color.
   let color = lookup_font().and_then(|f| f.color.as_ref().map(|c| c.to_stored()));
@@ -1950,10 +1933,10 @@ LoadDefinitions!({
   def_macro_noop("\\lst@EndWriteFile")?;
 
   // Initialize state values
-  state::assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
-  state::assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
-  state::assign_value("LISTINGS_POSTAMBLE", Stored::Tokens(Tokens!()), None);
-  state::assign_value("LISTINGS_DATA_COUNTER", Stored::Int(0), None);
+  assign_value("LISTINGS_PREAMBLE", Stored::Tokens(Tokens!()), None);
+  assign_value("LISTINGS_PREAMBLE_BEFORE", Stored::Tokens(Tokens!()), None);
+  assign_value("LISTINGS_POSTAMBLE", Stored::Tokens(Tokens!()), None);
+  assign_value("LISTINGS_DATA_COUNTER", Stored::Int(0), None);
 
   //======================================================================
   // Region 2: Top-level commands (Perl lines 35-153)
@@ -1973,7 +1956,7 @@ LoadDefinitions!({
     // BEGIN/END catcodes and the standard "closing brace" pairing works
     // for `\lstinline{a_word}`-style invocations. Perl reads `$init`
     // *before* the cattable swap (`listings.sty.ltxml:61` then `:289`).
-    let init = gullet::read_token()?;
+    let init = read_token()?;
     let until = init.as_ref().map(|t| {
       if t.get_catcode() == Catcode::BEGIN { T_END!() } else { *t }
     });
@@ -1998,20 +1981,20 @@ LoadDefinitions!({
     let verbatim_chars = ['%', '\\', '{', '}', '$', '&', '#', '^', '_', '~'];
     let saved_catcodes: Vec<(char, Catcode)> = verbatim_chars
       .iter()
-      .map(|&c| (c, state::lookup_catcode(c).unwrap_or(Catcode::OTHER)))
+      .map(|&c| (c, lookup_catcode(c).unwrap_or(Catcode::OTHER)))
       .collect();
-    state::push_frame();
+    push_frame();
     for c in verbatim_chars {
-      state::assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
+      assign_catcode(c, Catcode::OTHER, Some(Scope::Local));
     }
     let body = listings_read_raw_string(until.as_ref(), &saved_catcodes);
-    state::pop_frame()?;
+    pop_frame()?;
     let mut result = Vec::new();
-    if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
+    if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
       result.extend(pre.unlist());
     }
     result.extend(lst_process_inline(&body));
-    if let Some(Stored::Tokens(post)) = state::lookup_value("LISTINGS_POSTAMBLE") {
+    if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
       result.extend(post.unlist());
     }
     result.push(T_END!()); // balance bgroup
@@ -2036,13 +2019,13 @@ LoadDefinitions!({
     }
     let ch_first = ch.chars().next().unwrap();
     // Save original catcode so \lstDeleteShortInline can restore it exactly
-    let orig_cc = state::lookup_catcode(ch_first).unwrap_or(Catcode::OTHER);
+    let orig_cc = lookup_catcode(ch_first).unwrap_or(Catcode::OTHER);
     assign_mapping(
       "LST_SHORT_INLINE",
       &ch,
       Some(Stored::Catcode(orig_cc)),
     );
-    state::assign_catcode(ch_first, Catcode::ACTIVE, None);
+    assign_catcode(ch_first, Catcode::ACTIVE, None);
     let active_tok = T_ACTIVE!(ch_first);
     let mut expansion = vec![T_CS!("\\lstinline")];
     if let Some(kv_tok) = kv.as_ref().filter(|k| !k.is_empty()) {
@@ -2069,7 +2052,7 @@ LoadDefinitions!({
       // definition of this character doesn't linger as a stale macro.
       let active_tok = T_ACTIVE!(ch_first);
       assign_meaning(&active_tok, Stored::None, None);
-      state::assign_catcode(ch_first, saved_cc, None);
+      assign_catcode(ch_first, saved_cc, None);
     }
   });
 
@@ -2081,16 +2064,16 @@ LoadDefinitions!({
       move |args: Vec<ArgWrap>| {
         let kv = args.into_iter().next().unwrap_or_default();
         bgroup();
-        state::assign_value("current_environment", Stored::String(arena::pin("lstlisting")), None);
+        assign_value("current_environment", Stored::String(pin("lstlisting")), None);
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
         let text = listings_read_raw_lines("lstinline");
         let _ = &kv; // lstActivate placeholder
         let mut result = Vec::new();
-        if let Some(Stored::Tokens(pre)) = state::lookup_value("LISTINGS_PREAMBLE_BEFORE") {
+        if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
           result.extend(pre.unlist());
         }
         result.extend(lst_process_inline(&text));
-        if let Some(Stored::Tokens(post)) = state::lookup_value("LISTINGS_POSTAMBLE") {
+        if let Some(Stored::Tokens(post)) = lookup_value("LISTINGS_POSTAMBLE") {
           result.extend(post.unlist());
         }
         result.push(T_END!()); // balance bgroup
@@ -2108,7 +2091,7 @@ LoadDefinitions!({
       move |args: Vec<ArgWrap>| {
         let kv: Option<KeyVals> = args.into_iter().next().unwrap_or_default().into();
         bgroup();
-        state::assign_value("current_environment", Stored::String(arena::pin("lstlisting")), None);
+        assign_value("current_environment", Stored::String(pin("lstlisting")), None);
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
         // Activate key-value options (language, style, etc.)
         lst_activate(kv.as_ref());
@@ -2182,7 +2165,7 @@ LoadDefinitions!({
     let expansion: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |args: Vec<ArgWrap>| {
         bgroup();
-        state::assign_value("current_environment", Stored::String(arena::pin(&env_name)), None);
+        assign_value("current_environment", Stored::String(pin(&env_name)), None);
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!(&env_name)), None)?;
         // Convert expansion args to format for substitute_parameters
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
@@ -2202,7 +2185,7 @@ LoadDefinitions!({
         // This executes \lstset{...} which activates language, styles, etc.
         if !start_code.is_empty() {
           let start_subst = start_code.substitute_parameters(&sub_args);
-          let _digested = stomach::digest(start_subst)?;
+          let _digested = digest(start_subst)?;
         }
         let text = listings_read_raw_lines(&env_name);
         let name = lst_get_tokens("name");
@@ -2254,10 +2237,10 @@ LoadDefinitions!({
      </ltx:float>",
     mode => "internal_vertical",
     before_digest => {
-      crate::engine::latex_constructs::before_float("lstlisting", None);
+      engine::latex_constructs::before_float("lstlisting", None);
     },
     after_digest => sub[whatsit] {
-      crate::engine::latex_constructs::after_float(whatsit);
+      engine::latex_constructs::after_float(whatsit);
     });
 
   // Unnumbered float form (with caption)
@@ -2271,10 +2254,10 @@ LoadDefinitions!({
       RefStepID!("lstlisting")?
     },
     before_digest => {
-      crate::engine::latex_constructs::before_float("lstlisting", None);
+      engine::latex_constructs::before_float("lstlisting", None);
     },
     after_digest => sub[whatsit] {
-      crate::engine::latex_constructs::after_float(whatsit);
+      engine::latex_constructs::after_float(whatsit);
     });
 
   // Block listing constructor — holds the actual content + base64 data.
@@ -2302,13 +2285,13 @@ LoadDefinitions!({
         })
         .unwrap_or_default();
       let data_key = s!("LISTINGS_DATA_{c}");
-      let text = state::lookup_value(&data_key)
+      let text = lookup_value(&data_key)
         .map(|v| v.to_string())
         .unwrap_or_default();
       let encoded = base64::engine::general_purpose::STANDARD.encode(text.as_bytes());
-      Ok(stored_map!("lstdata" => Stored::String(arena::pin(&encoded)),
-        "lstmime" => Stored::String(arena::pin("text/plain")),
-        "lstenc" => Stored::String(arena::pin("base64"))))
+      Ok(stored_map!("lstdata" => Stored::String(pin(&encoded)),
+        "lstmime" => Stored::String(pin("text/plain")),
+        "lstenc" => Stored::String(pin("base64"))))
     });
 
   // List of listings
@@ -2504,7 +2487,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lstdefinestyle{} RequiredKeyVals:LST", sub[(style, kv)] {
     let style_name = style.to_string().to_uppercase().replace(char::is_whitespace, "");
     let key = s!("LST@STYLE@{style_name}");
-    state::assign_value(&key, Stored::from(kv), None);
+    assign_value(&key, Stored::from(kv), None);
   });
 
   // \lstdefinelanguage — define a language
@@ -2536,7 +2519,7 @@ LoadDefinitions!({
       let d = dialect_str.to_uppercase().replace(char::is_whitespace, "");
       name = s!("{name}${d}");
     }
-    state::assign_value(&name, Stored::from(kv), Some(Scope::Global));
+    assign_value(&name, Stored::from(kv), Some(Scope::Global));
   });
   DefMacro!("\\lstdefinelanguage []{}",
     "\\@ifnextchar[{\\@lstdefinelanguage[#1]{#2}}{\\@lstdefinelanguage[#1]{#2}[]{}}");
@@ -2573,11 +2556,10 @@ LoadDefinitions!({
     "<ltx:text class='#1'>#2",
     enter_horizontal => true,
     after_construct => sub[document, _whatsit] {
-      if let Some(node) = document.get_element() {
-        if latexml_core::document::get_node_qname(&node) == arena::pin_static("ltx:text") {
+      if let Some(node) = document.get_element()
+        && document::get_node_qname(&node) == pin_static("ltx:text") {
           document.close_element("ltx:text")?;
         }
-      }
     });
 
   //======================================================================
@@ -2589,10 +2571,10 @@ LoadDefinitions!({
   DefMacro!("\\lst@@style Until:\\end", sub [args] {
     let s = args[0].to_string().to_uppercase().replace(char::is_whitespace, "");
     let key = s!("LST@STYLE@{s}");
-    if let Some(stored) = state::lookup_value(&key) {
+    if let Some(stored) = lookup_value(&key) {
       match stored {
         Stored::KeyVals(kv) => lst_activate(Some(&kv)),
-        Stored::Tokens(kv_tokens) => { let _ = stomach::digest(kv_tokens); },
+        Stored::Tokens(kv_tokens) => { let _ = digest(kv_tokens); },
         _ => {},
       }
     }
@@ -2604,7 +2586,7 @@ LoadDefinitions!({
     // Perl: lstClearLanguage(); lstActivateLanguage($_[2], $_[1]);
     lst_clear_language();
     let lang = args[1].to_string().to_uppercase().replace(char::is_whitespace, "");
-    state::assign_value("LST@language", Stored::String(arena::pin(&lang)), None);
+    assign_value("LST@language", Stored::String(pin(&lang)), None);
     let dialect = args[0].clone().owned_tokens()
       .map(|t| t.to_string().trim().to_string())
       .filter(|s| !s.is_empty());
@@ -2630,7 +2612,7 @@ LoadDefinitions!({
     },
     properties => {
       let lang = lst_get_literal("language");
-      stored_map!("language" => Stored::String(arena::pin(&lang)))
+      stored_map!("language" => Stored::String(pin(&lang)))
     });
 
   DefMacro!("\\lst@@alsolanguage [] Until:\\end", sub [args] {
@@ -2643,7 +2625,7 @@ LoadDefinitions!({
     let lang = args[1].to_string().to_uppercase().replace(char::is_whitespace, "");
     let key = s!("LSTDD@{lang}");
     let dialect_tokens = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    state::assign_value(&key, Stored::Tokens(dialect_tokens), None);
+    assign_value(&key, Stored::Tokens(dialect_tokens), None);
     Tokens!()
   });
 
@@ -2728,13 +2710,13 @@ LoadDefinitions!({
 
   // TeX CS keywords
   DefMacro!("\\lst@@texcs [Number] Until:\\end", sub [args] {
-    state::assign_value("LST@TEXCS", Stored::Bool(true), None);
+    assign_value("LST@TEXCS", Stored::Bool(true), None);
     let words = args[1].clone().owned_tokens();
     lst_set_class_words("texcss", &words, Some("\\"));
     Tokens!()
   });
   DefMacro!("\\lst@@moretexcs [Number] Until:\\end", sub [args] {
-    state::assign_value("LST@TEXCS", Stored::Bool(true), None);
+    assign_value("LST@TEXCS", Stored::Bool(true), None);
     let words = args[1].clone().owned_tokens();
     lst_add_class_words("texcss", &words, Some("\\"));
     Tokens!()
@@ -2860,7 +2842,7 @@ LoadDefinitions!({
     },
     properties => {
       let position = lst_get_literal("numbers");
-      stored_map!("position" => Stored::String(arena::pin(&position)))
+      stored_map!("position" => Stored::String(pin(&position)))
     });
 
   // Frame handler
@@ -2877,9 +2859,9 @@ LoadDefinitions!({
       _ => None,
     };
     if let Some(f) = frame {
-      state::assign_value("LISTINGS_FRAME", Stored::String(arena::pin(f)), None);
+      assign_value("LISTINGS_FRAME", Stored::String(pin(f)), None);
     } else {
-      state::assign_value("LISTINGS_FRAME", Stored::None, None);
+      assign_value("LISTINGS_FRAME", Stored::None, None);
     }
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@frame")]);
   });
@@ -2891,8 +2873,8 @@ LoadDefinitions!({
       }
     },
     properties => {
-      let frame = state::lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default();
-      stored_map!("frame" => Stored::String(arena::pin(&frame)))
+      let frame = lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default();
+      stored_map!("frame" => Stored::String(pin(&frame)))
     });
 
   // Background color handler
@@ -2900,18 +2882,17 @@ LoadDefinitions!({
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
     let color = lst_extract_color(&cmd_toks);
     if let Some(c) = color {
-      state::assign_value("LISTINGS_BACKGROUND", Stored::String(arena::pin(&c)), Some(Scope::Global));
+      assign_value("LISTINGS_BACKGROUND", Stored::String(pin(&c)), Some(Scope::Global));
     }
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
   DefPrimitive!("\\lst@@@set@background", {
-    if let Some(Stored::String(bg)) = state::lookup_value("LISTINGS_BACKGROUND") {
-      if let Some(c) = arena::with(bg, latexml_core::common::color::Color::from_stored) {
+    if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
+      && let Some(c) = with(bg, common::color::Color::from_stored) {
         merge_font(Font { bg: Some(c), ..Font::default() });
       }
-    }
     // Clear after use so subsequent listings don't inherit
-    state::assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
+    assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
   });
 
   // Rule color handler
@@ -2919,7 +2900,7 @@ LoadDefinitions!({
     let cmd_toks = args[0].clone().owned_tokens().unwrap_or(Tokens!());
     let color = lst_extract_color(&cmd_toks);
     if let Some(c) = color {
-      state::assign_value("LISTINGS_RULECOLOR", Stored::String(arena::pin(&c)), None);
+      assign_value("LISTINGS_RULECOLOR", Stored::String(pin(&c)), None);
     }
     lst_push_value_locally("LISTINGS_PREAMBLE", vec![T_CS!("\\lst@@@set@rulecolor")]);
   });
@@ -2928,15 +2909,15 @@ LoadDefinitions!({
       let color_stored = props.get("color").map(|v| v.to_string()).unwrap_or_default();
       if !color_stored.is_empty() {
         // Convert from stored format ("rgb r g b") to attribute format ("#RRGGBB")
-        let color_hex = latexml_core::common::color::Color::from_stored(&color_stored)
+        let color_hex = common::color::Color::from_stored(&color_stored)
           .map(|c| c.to_attribute())
           .unwrap_or(color_stored);
         document.set_attribute(&mut document.get_element().unwrap(), "framecolor", &color_hex)?;
       }
     },
     properties => {
-      let color = state::lookup_value("LISTINGS_RULECOLOR").map(|v| v.to_string()).unwrap_or_default();
-      stored_map!("color" => Stored::String(arena::pin(&color)))
+      let color = lookup_value("LISTINGS_RULECOLOR").map(|v| v.to_string()).unwrap_or_default();
+      stored_map!("color" => Stored::String(pin(&color)))
     });
 
   // Extended chars handler — Perl: listings.sty.ltxml L836-845
@@ -2949,9 +2930,9 @@ LoadDefinitions!({
         let escaped = regex::escape(&ch.to_string());
         let key = s!("LST_CHAR@letter@{escaped}");
         if enable {
-          state::assign_value(&key, Stored::Bool(true), None);
+          assign_value(&key, Stored::Bool(true), None);
         } else {
-          state::assign_value(&key, Stored::None, None);
+          assign_value(&key, Stored::None, None);
         }
       }
     }
@@ -2961,7 +2942,7 @@ LoadDefinitions!({
   // texcl handler
   DefMacro!("\\lst@@texcl Until:\\end", sub [args] {
     if args[0].eq_text("true") {
-      state::assign_value("LST_CLASSES@comments@eval", Stored::Bool(true), None);
+      assign_value("LST_CLASSES@comments@eval", Stored::Bool(true), None);
     }
     Tokens!()
   });
@@ -2969,23 +2950,23 @@ LoadDefinitions!({
   // mathescape handler
   DefMacro!("\\lst@@mathescape Until:\\end", sub [args] {
     if args[0].eq_text("true") {
-      state::assign_value("LST_DELIM@$@open", Stored::String(arena::pin("\\$")), None);
-      state::assign_value("LST_DELIM@$@close", Stored::String(arena::pin("\\$")), None);
-      state::assign_value("LST_DELIM@$@class", Stored::String(arena::pin("mathescape")), None);
-      state::assign_value("LST_DELIM@$@escape", Stored::Bool(true), None);
-      state::assign_value("LST_CLASSES@mathescape@eval", Stored::Bool(true), None);
-      state::assign_value("LST_CLASSES@mathescape@begin",
+      assign_value("LST_DELIM@$@open", Stored::String(pin("\\$")), None);
+      assign_value("LST_DELIM@$@close", Stored::String(pin("\\$")), None);
+      assign_value("LST_DELIM@$@class", Stored::String(pin("mathescape")), None);
+      assign_value("LST_DELIM@$@escape", Stored::Bool(true), None);
+      assign_value("LST_CLASSES@mathescape@eval", Stored::Bool(true), None);
+      assign_value("LST_CLASSES@mathescape@begin",
         Stored::Tokens(Tokens::new(vec![T_MATH!()])), None);
-      state::assign_value("LST_CLASSES@mathescape@end",
+      assign_value("LST_CLASSES@mathescape@end",
         Stored::Tokens(Tokens::new(vec![T_MATH!()])), None);
       // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{'\$'}
-      state::assign_value("LST_CHAR@letter@\\$", Stored::None, None);
+      assign_value("LST_CHAR@letter@\\$", Stored::None, None);
     } else {
       // Perl: delete(LookupValue('LST_DELIMITERS')->{'$'})
-      state::assign_value("LST_DELIM@$@open", Stored::None, None);
-      state::assign_value("LST_DELIM@$@close", Stored::None, None);
-      state::assign_value("LST_DELIM@$@class", Stored::None, None);
-      state::assign_value("LST_DELIM@$@escape", Stored::None, None);
+      assign_value("LST_DELIM@$@open", Stored::None, None);
+      assign_value("LST_DELIM@$@close", Stored::None, None);
+      assign_value("LST_DELIM@$@class", Stored::None, None);
+      assign_value("LST_DELIM@$@escape", Stored::None, None);
     }
     Tokens!()
   });
@@ -2995,13 +2976,13 @@ LoadDefinitions!({
     let esc = lst_deslash(&args[0].to_string());
     if !esc.is_empty() {
       let esc_re = regex::escape(&esc);
-      state::assign_value(&s!("LST_DELIM@{esc}@open"), Stored::String(arena::pin(&esc_re)), None);
-      state::assign_value(&s!("LST_DELIM@{esc}@close"), Stored::String(arena::pin(&esc_re)), None);
-      state::assign_value(&s!("LST_DELIM@{esc}@class"), Stored::String(arena::pin("evaluate")), None);
-      state::assign_value(&s!("LST_DELIM@{esc}@escape"), Stored::Bool(true), None);
-      state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
+      assign_value(&s!("LST_DELIM@{esc}@open"), Stored::String(pin(&esc_re)), None);
+      assign_value(&s!("LST_DELIM@{esc}@close"), Stored::String(pin(&esc_re)), None);
+      assign_value(&s!("LST_DELIM@{esc}@class"), Stored::String(pin("evaluate")), None);
+      assign_value(&s!("LST_DELIM@{esc}@escape"), Stored::Bool(true), None);
+      assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
       // Perl: delete LookupValue('LST_CHARACTERS')->{letter}{$escapere}
-      state::assign_value(&s!("LST_CHAR@letter@{esc_re}"), Stored::None, None);
+      assign_value(&s!("LST_CHAR@letter@{esc_re}"), Stored::None, None);
       // Register in delimiter keys list
       lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&esc)]);
     }
@@ -3014,11 +2995,11 @@ LoadDefinitions!({
     let esc1 = lst_deslash(&args[0].to_string());
     let esc2 = lst_deslash(&args[1].to_string());
     if !esc1.is_empty() && !esc2.is_empty() {
-      state::assign_value(&s!("LST_DELIM@{esc1}@open"), Stored::String(arena::pin(regex::escape(&esc1))), None);
-      state::assign_value(&s!("LST_DELIM@{esc1}@close"), Stored::String(arena::pin(regex::escape(&esc2))), None);
-      state::assign_value(&s!("LST_DELIM@{esc1}@class"), Stored::String(arena::pin("evaluate")), None);
-      state::assign_value(&s!("LST_DELIM@{esc1}@escape"), Stored::Bool(true), None);
-      state::assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
+      assign_value(&s!("LST_DELIM@{esc1}@open"), Stored::String(pin(regex::escape(&esc1))), None);
+      assign_value(&s!("LST_DELIM@{esc1}@close"), Stored::String(pin(regex::escape(&esc2))), None);
+      assign_value(&s!("LST_DELIM@{esc1}@class"), Stored::String(pin("evaluate")), None);
+      assign_value(&s!("LST_DELIM@{esc1}@escape"), Stored::Bool(true), None);
+      assign_value("LST_CLASSES@evaluate@eval", Stored::Bool(true), None);
       // Register in delimiter keys so it's picked up by delimiter regex builder
       lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&esc1)]);
     }
@@ -3026,12 +3007,12 @@ LoadDefinitions!({
   });
   DefMacro!("\\lst@@escapebegin Until:\\end", sub [args] {
     let val = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    state::assign_value("LST_CLASSES@evaluate@begin", Stored::Tokens(val), None);
+    assign_value("LST_CLASSES@evaluate@begin", Stored::Tokens(val), None);
     Tokens!()
   });
   DefMacro!("\\lst@@escapeend Until:\\end", sub [args] {
     let val = args[0].clone().owned_tokens().unwrap_or(Tokens!());
-    state::assign_value("LST_CLASSES@evaluate@end", Stored::Tokens(val), None);
+    assign_value("LST_CLASSES@evaluate@end", Stored::Tokens(val), None);
     Tokens!()
   });
 
@@ -3077,9 +3058,9 @@ LoadDefinitions!({
       if !pattern_str.is_empty() {
         // Store as individual entries keyed by pattern
         let key = s!("LST_LIT@{pattern_str}");
-        state::assign_value(&key, Stored::from(replacement.clone()), None);
+        assign_value(&key, Stored::from(replacement.clone()), None);
         let prot_key = s!("LST_LIT@{pattern_str}@protected");
-        state::assign_value(&prot_key, Stored::Bool(protected), None);
+        assign_value(&prot_key, Stored::Bool(protected), None);
         // Add to pattern list
         lst_push_value_locally("LST_LITERATE_KEYS", vec![T_OTHER!(&pattern_str)]);
       }
@@ -3155,7 +3136,7 @@ LoadDefinitions!({
 }"##);
 
   // Load language configuration files
-  InputDefinitions!("listings", extension => Some(std::borrow::Cow::Borrowed("cfg")));
+  InputDefinitions!("listings", extension => Some(Cow::Borrowed("cfg")));
 
   // Internal macros used by sibling bindings (e.g. cleveref) AND by the
   // lang-file raw loads below (lstlang3.sty in particular calls
@@ -3169,7 +3150,7 @@ LoadDefinitions!({
   DefMacro!("\\@lst", "lst");
 
   // Load all language files eagerly
-  let lang_files_str = stomach::digest(T_CS!("\\lstlanguagefiles"))?.to_string();
+  let lang_files_str = digest(T_CS!("\\lstlanguagefiles"))?.to_string();
   let lang_files: Vec<String> = lang_files_str
     .replace(char::is_whitespace, "")
     .split(',')
@@ -3201,20 +3182,20 @@ fn lst_activate(kv: Option<&KeyVals>) {
     "LST_WORDS",
     "LST_DELIMITERS",
   ] {
-    if let Some(stored) = state::lookup_value(table) {
-      state::assign_value(table, stored, None);
+    if let Some(stored) = lookup_value(table) {
+      assign_value(table, stored, None);
     }
   }
   // Copy LST_LITERAL
-  if let Some(stored) = state::lookup_value("LST_LITERAL") {
-    state::assign_value("LST_LITERAL", stored, None);
+  if let Some(stored) = lookup_value("LST_LITERAL") {
+    assign_value("LST_LITERAL", stored, None);
   }
 
   // Iterate over key-value pairs, in order
   for (key, val) in kv.get_pairs() {
     let val_tokens = lst_un_group(val.clone().owned_tokens());
     let cs = T_CS!(s!("\\lst@@{key}"));
-    if state::has_meaning(&cs) {
+    if has_meaning(&cs) {
       // Defaults for bare keys are already resolved during KeyVals parsing (add_value with
       // use_default). Digest: \lst@@KEY <value> \end
       let mut digest_tokens = vec![cs];
@@ -3222,13 +3203,13 @@ fn lst_activate(kv: Option<&KeyVals>) {
         digest_tokens.extend(val_tks.unlist_ref().iter().cloned());
       }
       digest_tokens.push(T_CS!("\\end"));
-      let _ = stomach::digest(Tokens::new(digest_tokens));
+      let _ = digest(Tokens::new(digest_tokens));
     }
     // Store LST@KEY => value
     let state_key = s!("LST@{key}");
     match val_tokens {
-      Some(tks) => state::assign_value(&state_key, Stored::Tokens(tks), None),
-      None => state::assign_value(&state_key, Stored::Tokens(Tokens!()), None),
+      Some(tks) => assign_value(&state_key, Stored::Tokens(tks), None),
+      None => assign_value(&state_key, Stored::Tokens(Tokens!()), None),
     }
   }
 }
@@ -3246,7 +3227,7 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
     Some(d) if !d.is_empty() => d.to_uppercase().replace(char::is_whitespace, ""),
     _ => {
       let dd_key = s!("LSTDD@{lang}");
-      state::lookup_value(&dd_key)
+      lookup_value(&dd_key)
         .map(|v| {
           v.to_string()
             .to_uppercase()
@@ -3262,9 +3243,9 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
     s!("LST@LANGUAGE@{lang}${dialect_str}")
   };
   // Try to find the language definition, also try without dialect
-  let stored = state::lookup_value(&name).or_else(|| {
+  let stored = lookup_value(&name).or_else(|| {
     if !dialect_str.is_empty() {
-      state::lookup_value(&s!("LST@LANGUAGE@{lang}"))
+      lookup_value(&s!("LST@LANGUAGE@{lang}"))
     } else {
       None
     }
@@ -3277,7 +3258,7 @@ fn lst_activate_language(language: &str, dialect: Option<&str>) {
       },
       Stored::Tokens(kv_tokens) => {
         // Stored as tokens — wrap in \lstset{...} and digest
-        let _ = stomach::digest(Tokens::new(
+        let _ = digest(Tokens::new(
           vec![T_CS!("\\lstset")]
             .into_iter()
             .chain(std::iter::once(T_BEGIN!()))

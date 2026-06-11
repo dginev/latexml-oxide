@@ -124,13 +124,12 @@ LoadDefinitions!({
       let mut result: Vec<Token> = vec![T_CS!("\\@caption"), T_BEGIN!()];
       result.extend(Explode!("table"));
       result.push(T_END!());
-      if let Some(Stored::Tokens(ref tc)) = toccap {
-        if !tc.is_empty() {
+      if let Some(Stored::Tokens(ref tc)) = toccap
+        && !tc.is_empty() {
           result.push(T_OTHER!("["));
           result.extend_from_slice(tc.unlist_ref());
           result.push(T_OTHER!("]"));
         }
-      }
       result.push(T_BEGIN!());
       result.extend_from_slice(c.unlist_ref());
       result.push(T_END!());

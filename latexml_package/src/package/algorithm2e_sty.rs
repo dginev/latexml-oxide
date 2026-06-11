@@ -114,8 +114,8 @@ LoadDefinitions!({
   // didn't was outdated. The `didpar` prefix is set by `\lx@algo@setpar` and
   // auto-clears when the next non-prefix token is digested, so it suppresses
   // only CONSECUTIVE pars.
-  DefConditional!("\\if@lx@algo@par SkipSpaces", { state::get_prefix("didpar") });
-  DefPrimitive!("\\lx@algo@setpar", { state::set_prefix("didpar"); }, is_prefix => true);
+  DefConditional!("\\if@lx@algo@par SkipSpaces", { get_prefix("didpar") });
+  DefPrimitive!("\\lx@algo@setpar", { set_prefix("didpar"); }, is_prefix => true);
   DefMacro!("\\lx@algo@newpar{}{}",
     "\\if@lx@algo@par\\@marker{SKIP#1}\\else\\@marker{pre#1 }#2\\@marker{post#1}\\fi\\lx@algo@setpar");
 
@@ -131,7 +131,7 @@ LoadDefinitions!({
   // spurious line; the `\vspace` produces nothing). Explicit `\\`/`\par`
   // (INTERNAL_PAR unset) still take the full line machinery. Witness 1510.02728.
   DefConditional!("\\if@lx@algo@internalpar SkipSpaces",
-    { matches!(state::lookup_value("INTERNAL_PAR"), Some(Stored::Bool(true))) });
+    { matches!(lookup_value("INTERNAL_PAR"), Some(Stored::Bool(true))) });
   // Par management — Perl L113-116
   DefMacro!("\\lx@algo@par",
     "\\if@lx@algo@internalpar\\lx@normal@par\\else\\lx@algo@newpar{PAR}{\\lx@algo@endline\\lx@algo@startline}\\fi");
@@ -149,7 +149,7 @@ LoadDefinitions!({
 
   // Semicolon handling
   DefMacro!("\\algocf@endline", sub[_args] {
-    if state::lookup_bool("algorithm_dont_print_semicolon") {
+    if lookup_bool("algorithm_dont_print_semicolon") {
       Ok(Tokens!())
     } else {
       Ok(Tokens::new(vec![T_OTHER!(";")]))
@@ -158,11 +158,11 @@ LoadDefinitions!({
   DefMacro!("\\@endalgoln", "\\@endalgocfline");
   DefMacro!("\\@endalgocfline", "\\algocf@endline\\lx@algo@par");
   DefMacro!("\\PrintSemicolon", sub[_args] {
-    state::assign_value("algorithm_dont_print_semicolon", false, Some(Scope::Global));
+    assign_value("algorithm_dont_print_semicolon", false, Some(Scope::Global));
     Ok(Tokens!())
   }, locked => true);
   DefMacro!("\\DontPrintSemicolon", sub[_args] {
-    state::assign_value("algorithm_dont_print_semicolon", true, Some(Scope::Global));
+    assign_value("algorithm_dont_print_semicolon", true, Some(Scope::Global));
     Ok(Tokens!())
   }, locked => true);
 
@@ -182,7 +182,7 @@ LoadDefinitions!({
     if let RegisterValue::Tokens(toks) = reg {
       let mut toks_vec = toks.unlist();
       toks_vec.pop();
-      state::assign_register("\\lx@algo@indentation",
+      assign_register("\\lx@algo@indentation",
         RegisterValue::Tokens(Tokens::new(toks_vec)), None, vec![])?;
     }
     Ok(Tokens!())

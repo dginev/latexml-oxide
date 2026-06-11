@@ -41,7 +41,7 @@ LoadDefinitions!({
   load_class("article", Vec::new(), Tokens!())?;
 
   // Load the selected font package
-  let font_pkg = state::lookup_value("aipproc_font")
+  let font_pkg = lookup_value("aipproc_font")
     .map(|v| v.to_string())
     .unwrap_or_else(|| "mathptmx".to_string());
   if !font_pkg.is_empty() {
@@ -103,7 +103,7 @@ LoadDefinitions!({
     properties => sub[args] {
       unpack_opt_ref!(args => label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
+      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
     },
     enter_horizontal => true
   );

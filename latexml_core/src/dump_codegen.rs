@@ -10,8 +10,7 @@
 //!   3. Place in `latexml_package/src/engine/latex_dump.rs`
 //!   4. Load at runtime via `latex_dump::load_definitions()`
 
-use std::io::Write;
-use std::path::Path;
+use std::{io::Write, path::Path};
 
 /// Value entries to skip (runtime-specific or cause regressions).
 const SKIP_VALUES: &[&str] = &[
@@ -229,50 +228,50 @@ fn parse_dump(content: &str) -> DumpData {
       "M" => parse_meaning(&mut data, &key, rest),
       "C" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
-        if val_parts.len() >= 2 {
-          if let Ok(v) = val_parts[1].parse::<u8>() {
-            data.catcodes.push(CatcodeEntry { key, val: v });
-          }
+        if val_parts.len() >= 2
+          && let Ok(v) = val_parts[1].parse::<u8>()
+        {
+          data.catcodes.push(CatcodeEntry { key, val: v });
         }
       },
       "LC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
-        if val_parts.len() >= 2 {
-          if let Ok(v) = val_parts[1].parse::<u16>() {
-            data.lccodes.push(CharcodeEntry { key, val: v });
-          }
+        if val_parts.len() >= 2
+          && let Ok(v) = val_parts[1].parse::<u16>()
+        {
+          data.lccodes.push(CharcodeEntry { key, val: v });
         }
       },
       "UC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
-        if val_parts.len() >= 2 {
-          if let Ok(v) = val_parts[1].parse::<u16>() {
-            data.uccodes.push(CharcodeEntry { key, val: v });
-          }
+        if val_parts.len() >= 2
+          && let Ok(v) = val_parts[1].parse::<u16>()
+        {
+          data.uccodes.push(CharcodeEntry { key, val: v });
         }
       },
       "SC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
-        if val_parts.len() >= 2 {
-          if let Ok(v) = val_parts[1].parse::<u16>() {
-            data.sfcodes.push(CharcodeEntry { key, val: v });
-          }
+        if val_parts.len() >= 2
+          && let Ok(v) = val_parts[1].parse::<u16>()
+        {
+          data.sfcodes.push(CharcodeEntry { key, val: v });
         }
       },
       "DC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
-        if val_parts.len() >= 2 {
-          if let Ok(v) = val_parts[1].parse::<u16>() {
-            data.delcodes.push(CharcodeEntry { key, val: v });
-          }
+        if val_parts.len() >= 2
+          && let Ok(v) = val_parts[1].parse::<u16>()
+        {
+          data.delcodes.push(CharcodeEntry { key, val: v });
         }
       },
       "MC" => {
         let val_parts: Vec<&str> = rest.splitn(2, '\t').collect();
-        if val_parts.len() >= 2 {
-          if let Ok(v) = val_parts[1].parse::<u16>() {
-            data.mathcodes.push(CharcodeEntry { key, val: v });
-          }
+        if val_parts.len() >= 2
+          && let Ok(v) = val_parts[1].parse::<u16>()
+        {
+          data.mathcodes.push(CharcodeEntry { key, val: v });
         }
       },
       _ => {}, // Skip unknown tables
@@ -578,9 +577,13 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
   emit_load_fn(&mut out, &data)?;
 
   Info!(
-    "dump_codegen", "generated",
-    s!("Generated {} entries to {} (static data tables)",
-      total, output_path.display())
+    "dump_codegen",
+    "generated",
+    s!(
+      "Generated {} entries to {} (static data tables)",
+      total,
+      output_path.display()
+    )
   );
 
   Ok(total)

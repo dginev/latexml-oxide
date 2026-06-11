@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // These don't really apply in latexml, as our linebreak considerations are much softer than
   // PDF's.

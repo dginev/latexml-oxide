@@ -1339,7 +1339,7 @@ empty referent) are dropped before prefixing. Perl's `split`-drops-
 trailing-empties semantics is otherwise preserved exactly.
 
 **Witness:** none in the corpus (defensive); decided at plan time —
-`docs/frontmatter_api_refactor.md` decisions log #5.
+`docs/archive/frontmatter_api_refactor.md` decisions log #5.
 
 ---
 

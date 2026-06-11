@@ -11,21 +11,17 @@ use crate::prelude::*;
 /// (OmniBus.cls.ltxml `sub after_digest_keywords`). Avoids the
 /// raw_tex(`#body`) workaround that mistakenly tokenized `#` as PARAM
 /// and dumped the literal text "#body" into the output element.
-fn push_keyword_body_to_frontmatter(
-  whatsit: &mut latexml_core::whatsit::Whatsit,
-) -> latexml_core::Result<Vec<latexml_core::digested::Digested>> {
-  use latexml_core::BoxOps;
-  use latexml_core::common::store::Stored;
+fn push_keyword_body_to_frontmatter(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
+  use latexml_core::{BoxOps, common::store::Stored};
   if let Some(body) = whatsit.get_body()? {
-    let mut attrs: rustc_hash::FxHashMap<String, String> =
-      rustc_hash::FxHashMap::default();
+    let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
     attrs.insert("scheme".to_string(), "keywords".to_string());
-    let entry = latexml_core::document::tag::TagData {
-      tag: "ltx:classification".to_string(),
-      attr: attrs,
-      content: vec![latexml_core::document::tag::TagContent::Box(body)],
+    let entry = document::tag::TagData {
+      tag:     "ltx:classification".to_string(),
+      attr:    attrs,
+      content: vec![document::tag::TagContent::Box(body)],
     };
-    latexml_core::state::with_value_mut("frontmatter", |val_opt| {
+    with_value_mut("frontmatter", |val_opt| {
       if let Some(Stored::HashTagData(frnt)) = val_opt {
         frnt
           .entry("ltx:classification".to_string())
@@ -68,7 +64,7 @@ LoadDefinitions!({
       // GLOBALLY before re-emitting so the next lookup of cs_clone
       // finds natbib's binding-loaded def, not us. Task #260.
       def_macro(cs, None,
-        latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+        ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("natbib", RequireOptions::default())?;
           // After require_package, natbib's LoadDefinitions has overlaid
           // `\citep`/`\citet`/etc. at LOCAL scope on the current frame
@@ -322,9 +318,9 @@ LoadDefinitions!({
   // \keywords@onearg; otherwise hook a pending \endkeywords via the section-
   // start hook so `\keyword foo \section{bar}` auto-closes the keywords env.
   DefMacro!("\\keyword", sub[_args] {
-    let next = gullet::read_token()?;
+    let next = read_token()?;
     if let Some(ref t) = next {
-      gullet::unread(Tokens!(*t));
+      unread(Tokens!(*t));
       if t.get_catcode() == Catcode::BEGIN {
         return Ok(Tokens!(T_CS!("\\keywords@onearg")));
       }
@@ -337,9 +333,9 @@ LoadDefinitions!({
     ]))
   });
   DefMacro!("\\keywords", sub[_args] {
-    let next = gullet::read_token()?;
+    let next = read_token()?;
     if let Some(ref t) = next {
-      gullet::unread(Tokens!(*t));
+      unread(Tokens!(*t));
       if t.get_catcode() == Catcode::BEGIN {
         return Ok(Tokens!(T_CS!("\\keywords@onearg")));
       }
@@ -438,7 +434,7 @@ LoadDefinitions!({
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
     def_macro(cs, None,
-      latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+      ExpansionBody::Closure(Rc::new(move |_args| {
         require_package("amsthm", RequireOptions::default())?;
         let mut expanded = preload.clone();
         expanded.push_str(&beginenv_clone);
@@ -450,7 +446,7 @@ LoadDefinitions!({
     let cs = T_CS!(alias);
     if IsDefined!(&cs) { continue; }
     def_macro(cs, None,
-      latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+      ExpansionBody::Closure(Rc::new(move |_args| {
         require_package("amsthm", RequireOptions::default())?;
         Ok(Tokens!(T_CS!("\\newtheorem")))
       })), None)?;
@@ -460,7 +456,7 @@ LoadDefinitions!({
     let cs = T_CS!("\\theoremstyle");
     if !IsDefined!(&cs) {
       def_macro(cs, None,
-        latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+        ExpansionBody::Closure(Rc::new(move |_args| {
           require_package("amsthm", RequireOptions::default())?;
           Ok(Tokens!(T_CS!("\\theoremstyle")))
         })), None)?;
@@ -474,7 +470,7 @@ LoadDefinitions!({
   // Perl L226-235: acknowledgments
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => {
-      Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?))
+      Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?))
     });
   // \endacknowledgments — tolerant close. A common pattern is
   //   \begin{acknowledgments} ... \bibliography{...} \end{acknowledgments}
@@ -589,18 +585,18 @@ LoadDefinitions!({
       let trigger_str = trigger.to_string();
       let is_cls = ext == "cls";
       def_macro(cs, None,
-        latexml_core::definition::ExpansionBody::Closure(Rc::new(move |_args| {
+        ExpansionBody::Closure(Rc::new(move |_args| {
           // Mirrors Perl's DefAutoload → ClearAutoLoad in Package.pm:
           // clear this autoload CS before loading, then re-emit the trigger as
           // tokenized text. Re-tokenizing is important for `\begin{env}` triggers
           // — amsmath defines `\split` (not `\begin{split}`), so the raw single-CS
           // token would look undefined after clearing. Tokenizing expands into
           // `\begin` + `{env}` which the standard `\begin{}` dispatcher resolves.
-          latexml_core::state::assign_meaning(
-            &cs_clone, latexml_core::common::store::Stored::None,
+          assign_meaning(
+            &cs_clone, Stored::None,
             Some(Scope::Global));
           if is_cls {
-            latexml_core::binding::content::load_class(
+            load_class(
               &name_str, Vec::new(), Tokens::default())?;
           } else {
             require_package(&name_str, RequireOptions::default())?;

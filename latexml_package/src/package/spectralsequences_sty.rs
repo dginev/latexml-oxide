@@ -14,7 +14,6 @@
 //! Witness: 2503.01123, 2503.08789, 2503.01690, 2503.08930.
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Skip the expl3 raw-load entirely. Stub user-facing macros below.
 

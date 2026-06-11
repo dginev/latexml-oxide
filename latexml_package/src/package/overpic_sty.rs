@@ -14,7 +14,7 @@ LoadDefinitions!({
     after_digest_body => sub[whatsit] {
       // Set tex attribute from reversion of the full overpic content
       let tex_str = whatsit.revert().map(|t| t.to_string()).unwrap_or_default();
-      whatsit.set_property("tex", Stored::String(arena::pin(tex_str)));
+      whatsit.set_property("tex", Stored::String(pin(tex_str)));
     }
   );
 

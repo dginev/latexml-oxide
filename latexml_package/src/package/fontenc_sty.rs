@@ -229,7 +229,7 @@ LoadDefinitions!({
 
   DeclareOption!(None, {
     let current_option = Expand!(T_CS!("\\CurrentOption")).to_string();
-    push_value("font_encodings", Stored::String(arena::pin(current_option)))?;
+    push_value("font_encodings", Stored::String(pin(current_option)))?;
   });
 
   // WELL... Actually, some "encodings" map the normal 7bit (or 8)
@@ -238,40 +238,42 @@ LoadDefinitions!({
 
   ProcessOptions!();
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-  if let Some(font_encodings) = lookup_vecdeque("font_encodings") {
-    if !font_encodings.is_empty() {
-      setup_cyrillic()?;
-      for encoding_stored in font_encodings.into_iter() {
-        if let Stored::String(enc_sym) = encoding_stored {
-          let encoding = arena::to_string(enc_sym);
-          // Skip the synthetic "ASCII" encoding leaked by Semiverbatim scope
-          // (state.rs::begin_semiverbatim sets local font encoding to "ASCII"
-          // "to stay as ASCII as possible"). If a Semiverbatim-scoped option
-          // expansion of `\@defaultenc → \f@encoding` runs while that scope
-          // is live, the option vector picks up "ASCII", and the load loop
-          // tries `\InputDefinitions{asciienc}` — no such file exists in TL,
-          // and the runaway recovery branch then trips the 100M-token limit
-          // (witness 2402.02591: `\usepackage{tipa}` whose tipa.sty L55
-          // `\RequirePackage[T3,\@defaultenc]{fontenc}` is what triggers it).
-          // ASCII is not a real LaTeX font encoding — silently skip.
-          if encoding == "ASCII" { continue; }
-          DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)),
-            scope => Some(Scope::Global));
-          let encfile = encoding.to_lowercase() + "enc";
-          // Load fontmap BEFORE the enc def file, so \DeclareTextSymbol
-          // can look up glyph positions during def loading.
-          let has_fontmap = load_font_map(&encoding).is_some();
-          InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
-          if has_fontmap {
-            MergeFont!(encoding => encoding);
-          }
-        } else {
-          let message = s!(
-            "Only strings should be stored as font encoding names, at: {:?}",
-            encoding_stored
-          );
-          Error!("fontenc", "font_encodings", message);
+  if let Some(font_encodings) = lookup_vecdeque("font_encodings")
+    && !font_encodings.is_empty()
+  {
+    setup_cyrillic()?;
+    for encoding_stored in font_encodings.into_iter() {
+      if let Stored::String(enc_sym) = encoding_stored {
+        let encoding = to_string(enc_sym);
+        // Skip the synthetic "ASCII" encoding leaked by Semiverbatim scope
+        // (state.rs::begin_semiverbatim sets local font encoding to "ASCII"
+        // "to stay as ASCII as possible"). If a Semiverbatim-scoped option
+        // expansion of `\@defaultenc → \f@encoding` runs while that scope
+        // is live, the option vector picks up "ASCII", and the load loop
+        // tries `\InputDefinitions{asciienc}` — no such file exists in TL,
+        // and the runaway recovery branch then trips the 100M-token limit
+        // (witness 2402.02591: `\usepackage{tipa}` whose tipa.sty L55
+        // `\RequirePackage[T3,\@defaultenc]{fontenc}` is what triggers it).
+        // ASCII is not a real LaTeX font encoding — silently skip.
+        if encoding == "ASCII" {
+          continue;
         }
+        DefMacro!(T_CS!("\\encodingdefault"), None, Tokens!(Explode!(encoding)),
+            scope => Some(Scope::Global));
+        let encfile = encoding.to_lowercase() + "enc";
+        // Load fontmap BEFORE the enc def file, so \DeclareTextSymbol
+        // can look up glyph positions during def loading.
+        let has_fontmap = load_font_map(&encoding).is_some();
+        InputDefinitions!(&encfile, extension => Some(Cow::Borrowed("def")));
+        if has_fontmap {
+          MergeFont!(encoding => encoding);
+        }
+      } else {
+        let message = s!(
+          "Only strings should be stored as font encoding names, at: {:?}",
+          encoding_stored
+        );
+        Error!("fontenc", "font_encodings", message);
       }
     }
   }

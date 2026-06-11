@@ -1,5 +1,4 @@
-use crate::engine::latex_constructs::*;
-use crate::prelude::*;
+use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
   // This is close enough to amsthm to just use it.
@@ -17,9 +16,9 @@ LoadDefinitions!({
   def_macro_noop("\\FMithmInfo")?;
 
   DefMacro!("\\theoremheaderfont{}", sub[(font)] {
-    state::assign_register("\\thm@headfont",
+    assign_register("\\thm@headfont",
       RegisterValue::Tokens(font.clone()), None, vec![])?;
-    state::assign_register("\\thm@notefont",
+    assign_register("\\thm@notefont",
       RegisterValue::Tokens(font), None, vec![])?;
     Ok(Tokens!())
   });

@@ -21,7 +21,6 @@
 //!    captures the values raw `latex.ltx` installs; these are defensive overrides for the NODUMP
 //!    path.
 //! 4. Misc Rust-side stubs (`\@latexbug`, `\maybe@end@title`, `\thebibliography@ID` empty default).
-//!
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -180,12 +179,12 @@ LoadDefinitions!({
   DefPrimitive!("\\NewCommandCopy{}{}", sub[(new_arg, old_arg)] {
     let new_tok = new_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty new arg")?;
     let old_tok = old_arg.unlist().into_iter().next().ok_or("\\NewCommandCopy: empty old arg")?;
-    state::let_i(&new_tok, &old_tok, None);
+    let_i(&new_tok, &old_tok, None);
   });
   DefPrimitive!("\\DeclareCommandCopy{}{}", sub[(new_arg, old_arg)] {
     let new_tok = new_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty new arg")?;
     let old_tok = old_arg.unlist().into_iter().next().ok_or("\\DeclareCommandCopy: empty old arg")?;
-    state::let_i(&new_tok, &old_tok, None);
+    let_i(&new_tok, &old_tok, None);
   });
   def_macro_noop("\\ShowCommand Token")?;
 
@@ -319,7 +318,7 @@ LoadDefinitions!({
   // expanding this (needed for lx_change_case_tokens to preserve
   // \ensuremath{} content unchanged).
   DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
+    if lookup_bool_sym(pin!("IN_MATH")) {
       stuff.unlist()
     } else {
       let mut result = vec![T_MATH!()];
@@ -338,7 +337,7 @@ LoadDefinitions!({
   // the migration is self-contained.
   //======================================================================
   fn cache_filecontents(end_marker: &str, header_star: bool) -> Result<()> {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     // Real LaTeX `\filecontents` `\edef`s the filename argument, so
     // `\begin{filecontents}{\jobname-acro.tex}` writes — and a later
     // `\input`/`\loadglsentries` finds — the file under the EXPANDED name
@@ -349,7 +348,7 @@ LoadDefinitions!({
     // entries it defines (glossaries acronyms, etc.) undefined. Witness
     // 1905.05350 (`\begin{filecontents}{\jobname-acro.tex}` …
     // `\loadglsentries[\acronymtype]{\jobname-acro}`).
-    let filename_toks = gullet::read_arg(ExpansionLevel::Full)?;
+    let filename_toks = read_arg(ExpansionLevel::Full)?;
     let filename = filename_toks.to_string();
     // Perl latex_constructs L4316-4353: header comments match Perl's
     // three-line preamble. The \jobname line is synthesized as `\jobname`
@@ -367,10 +366,10 @@ LoadDefinitions!({
     ];
     if !header_star { lines.push("%%".to_string()); }
     // Discard remainder of \begin{filecontents} line
-    gullet::read_raw_line();
+    read_raw_line();
     // Read raw lines until end marker
     loop {
-      match gullet::read_raw_line() {
+      match read_raw_line() {
         Some(line) if !line.contains(end_marker) => lines.push(line),
         _ => break,
       }
@@ -378,7 +377,7 @@ LoadDefinitions!({
     let n = lines.len();
     let content = lines.join("\n");
     Info!("note", "filecontents", s!("Cached filecontents for {filename} ({n} lines)"));
-    state::assign_value(&s!("{filename}_contents"), Stored::from(content), Some(Scope::Global));
+    assign_value(&s!("{filename}_contents"), Stored::from(content), Some(Scope::Global));
     Ok(())
   }
   // The \filecontents primitive reads filename + raw lines until \end{filecontents}.
@@ -386,21 +385,21 @@ LoadDefinitions!({
   // close the group after caching, matching the \end that was consumed.
   DefPrimitive!("\\filecontents", {
     cache_filecontents("\\end{filecontents}", false)?;
-    stomach::endgroup()?;
+    endgroup()?;
   });
   DefPrimitive!("\\lx@filecontents@star", {
     cache_filecontents("\\end{filecontents*}", true)?;
-    stomach::endgroup()?;
+    endgroup()?;
   });
-  state::assign_meaning(
+  assign_meaning(
     &T_CS!("\\filecontents*"),
-    state::lookup_meaning(&T_CS!("\\lx@filecontents@star")).unwrap_or(Stored::None),
+    lookup_meaning(&T_CS!("\\lx@filecontents@star")).unwrap_or(Stored::None),
     Some(Scope::Global),
   );
   def_macro_noop("\\endfilecontents")?;
-  state::assign_meaning(
+  assign_meaning(
     &T_CS!("\\endfilecontents*"),
-    state::lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),
+    lookup_meaning(&T_CS!("\\endfilecontents")).unwrap_or(Stored::None),
     Some(Scope::Global),
   );
 });

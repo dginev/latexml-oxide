@@ -12,15 +12,17 @@
 //! The resulting dump can be loaded at runtime to skip re-processing
 //! the LaTeX kernel on every test run.
 
-use once_cell::sync::Lazy;
 use std::path::Path;
+
+use once_cell::sync::Lazy;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static INIT_DEBUG: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INIT_DEBUG").is_some());
 
-use latexml_core::binding::content::InputDefinitionOptions;
-use latexml_core::binding::content::input_definitions;
-use latexml_core::state;
+use latexml_core::{
+  binding::content::{InputDefinitionOptions, input_definitions},
+  state,
+};
 
 use crate::converter::Converter;
 
@@ -219,7 +221,11 @@ pub fn dump_format(
   // Step 4: Write the dump.
   // Default: write text dump to resources/dumps/<kind>.<YYYY>.dump.txt for
   // build.rs embedding. With --dest: write to the specified path.
-  let kind = if name.contains("latex") { "latex" } else { "plain" };
+  let kind = if name.contains("latex") {
+    "latex"
+  } else {
+    "plain"
+  };
   let ambient_year = latexml_engine::dump_paths::detect_ambient_texlive_year();
   let (dest, is_text_dump) = match destination {
     Some(d) if d.ends_with(".rs") => (d.to_string(), false),

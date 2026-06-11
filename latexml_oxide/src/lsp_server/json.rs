@@ -20,7 +20,9 @@ pub(crate) fn jstr(s: impl Into<String>) -> Value { Value::String(s.into()) }
 
 /// Build a JSON number from an `f64` (non-finite → `null`).
 pub(crate) fn jnum(n: f64) -> Value {
-  serde_json::Number::from_f64(n).map(Value::Number).unwrap_or(Value::Null)
+  serde_json::Number::from_f64(n)
+    .map(Value::Number)
+    .unwrap_or(Value::Null)
 }
 
 /// Build a JSON object from `(key, value)` pairs. `serde_json::Map` is a
@@ -32,7 +34,6 @@ pub(crate) fn jobj(pairs: Vec<(&str, Value)>) -> Value {
   }
   Value::Object(map)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -53,7 +54,10 @@ mod tests {
       ]))
     );
     // BTreeMap → deterministic, sorted key order on serialization.
-    assert_eq!(v.to_string(), r#"{"a":1,"b":[true,null,"x"],"c":{"d":-2.5}}"#);
+    assert_eq!(
+      v.to_string(),
+      r#"{"a":1,"b":[true,null,"x"],"c":{"d":-2.5}}"#
+    );
   }
 
   #[test]

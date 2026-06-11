@@ -1,11 +1,14 @@
-use once_cell::sync::Lazy;
-use regex::Regex;
 use std::fmt;
 
+use once_cell::sync::Lazy;
+use regex::Regex;
+
 use super::dimension::fixedformat;
-use crate::Object;
-use crate::common::numeric_ops::{NumericOps, UNITY_F64, fixpoint, kround};
-use crate::definition::register::RegisterType;
+use crate::{
+  Object,
+  common::numeric_ops::{NumericOps, UNITY_F64, fixpoint, kround},
+  definition::register::RegisterType,
+};
 
 static MUDIM_SPEC_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)mu$").unwrap());
 

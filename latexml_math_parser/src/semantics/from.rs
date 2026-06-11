@@ -1,6 +1,9 @@
-use super::metadata::Meta;
-use super::tree::{Args, Operator, XM, XProps};
 use libxml::tree::Node;
+
+use super::{
+  metadata::Meta,
+  tree::{Args, Operator, XM, XProps},
+};
 
 impl From<&str> for Operator {
   fn from(a: &str) -> Operator { Operator(Box::new(a.into())) }
@@ -94,9 +97,7 @@ impl From<(&str, [&str; 1])> for XM {
 }
 
 impl From<[&str; 1]> for Args {
-  fn from(args: [&str; 1]) -> Args {
-    Args(args.iter().map(|&x| x.into()).map(Option::Some).collect())
-  }
+  fn from(args: [&str; 1]) -> Args { Args(args.iter().map(|&x| x.into()).map(Some).collect()) }
 }
 impl<OP: ToString + Sized, LEFT: Into<XM>, RIGHT: Into<XM>> From<(OP, LEFT, RIGHT)> for XM {
   fn from(args: (OP, LEFT, RIGHT)) -> XM {
@@ -130,7 +131,7 @@ impl From<(&str, &str)> for Args {
       <[&str; 2]>::from(args)
         .iter()
         .map(|&x| x.into())
-        .map(Option::Some)
+        .map(Some)
         .collect(),
     )
   }
@@ -141,7 +142,7 @@ impl From<[&str; 2]> for Args {
       args
         .iter()
         .map(|s| XM::Lexeme(std::rc::Rc::from(*s), Meta::default()))
-        .map(Option::Some)
+        .map(Some)
         .collect(),
     )
   }
@@ -152,7 +153,7 @@ impl From<[&str; 3]> for Args {
       args
         .iter()
         .map(|s| XM::Lexeme(std::rc::Rc::from(*s), Meta::default()))
-        .map(Option::Some)
+        .map(Some)
         .collect(),
     )
   }

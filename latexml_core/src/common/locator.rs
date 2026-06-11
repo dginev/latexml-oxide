@@ -1,8 +1,12 @@
-use crate::common::arena::{self, SymStr};
-use crate::common::object::Object;
-use crate::util::pathname;
-use std::fmt;
-use std::fmt::Write as _;
+use std::{fmt, fmt::Write as _};
+
+use crate::{
+  common::{
+    arena::{self, SymStr},
+    object::Object,
+  },
+  util::pathname,
+};
 
 // TODO: This will require a large refactor, but
 // switching the source from an owned String to a &str reference

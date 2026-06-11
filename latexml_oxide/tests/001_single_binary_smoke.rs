@@ -4,10 +4,9 @@
 //! directory that has *no access* to the project's `resources/` tree,
 //! then asserts that:
 //!
-//! 1. Conversion succeeds and produces the HTML file at the requested
-//!    destination.
-//! 2. The bundled CSS files referenced in the HTML actually land in
-//!    the destination directory (via the embedded resource fallback).
+//! 1. Conversion succeeds and produces the HTML file at the requested destination.
+//! 2. The bundled CSS files referenced in the HTML actually land in the destination directory (via
+//!    the embedded resource fallback).
 //!
 //! Catches regressions where someone re-introduces a disk-only resource
 //! lookup path on the post-processing pipeline. Without the embedded
@@ -18,8 +17,7 @@
 //! env var, set automatically for integration tests that import a
 //! crate which produces a binary target.
 
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 const HELLO_TEX: &str = "\\documentclass{article}\n\
                          \\begin{document}\n\

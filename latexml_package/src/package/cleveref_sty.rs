@@ -12,8 +12,8 @@ LoadDefinitions!({
   // Pretend amsmath is loaded to avoid errors. Per OXIDIZED_DESIGN
   // #23, "amsmath is loaded" means EITHER `amsmath.sty_loaded` OR
   // `amsmath.sty_raw_loaded` is set.
-  let ams_loaded = state::with_value("amsmath.sty_loaded", |v| v.is_some())
-    || state::with_value("amsmath.sty_raw_loaded", |v| v.is_some());
+  let ams_loaded = with_value("amsmath.sty_loaded", |v| v.is_some())
+    || with_value("amsmath.sty_raw_loaded", |v| v.is_some());
   assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
   InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   if !ams_loaded {
@@ -153,10 +153,10 @@ LoadDefinitions!({
 /// Perl: crefType($type) — resolve type alias
 fn cref_type(ctype: &str) -> String {
   let alias_cs = s!("\\cref@{}@alias", ctype);
-  if has_meaning(&T_CS!(&alias_cs)) {
-    if let Ok(expanded) = gullet::do_expand(Tokens!(T_CS!(&alias_cs))) {
-      return expanded.to_string();
-    }
+  if has_meaning(&T_CS!(&alias_cs))
+    && let Ok(expanded) = do_expand(Tokens!(T_CS!(&alias_cs)))
+  {
+    return expanded.to_string();
   }
   ctype.to_string()
 }
@@ -166,10 +166,18 @@ fn cref_type(ctype: &str) -> String {
 /// Trim leading/trailing SPACE tokens from a label group.
 fn trim_space_tokens(tokens: Tokens) -> Tokens {
   let mut v = tokens.unlist();
-  while v.first().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
+  while v
+    .first()
+    .map(|t| t.get_catcode() == Catcode::SPACE)
+    .unwrap_or(false)
+  {
     v.remove(0);
   }
-  while v.last().map(|t| t.get_catcode() == Catcode::SPACE).unwrap_or(false) {
+  while v
+    .last()
+    .map(|t| t.get_catcode() == Catcode::SPACE)
+    .unwrap_or(false)
+  {
     v.pop();
   }
   Tokens::new(v)
@@ -235,7 +243,11 @@ fn cref_multi(
 
   if n < 2 {
     let show = if showtype {
-      if capitalized { "creftypecap\\lx@tilde refnum" } else { "creftype\\lx@tilde refnum" }
+      if capitalized {
+        "creftypecap\\lx@tilde refnum"
+      } else {
+        "creftype\\lx@tilde refnum"
+      }
     } else {
       "refnum"
     };

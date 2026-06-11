@@ -1,7 +1,6 @@
 //! Stub for sn-jnl.cls (Springer Nature journal class).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -47,8 +46,10 @@ LoadDefinitions!({
   // \sectiontitle{text} carries an author-typed section title used in
   // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather
   // than silently dropping the words. Content-preserving.
-  DefMacro!("\\sectiontitle{}",
-    "\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}");
+  DefMacro!(
+    "\\sectiontitle{}",
+    "\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}"
+  );
   // \headtype{...} / \extralength{...} are layout knobs (no author body).
   def_macro_noop("\\headtype{}")?;
   def_macro_noop("\\extralength{}")?;
@@ -74,15 +75,23 @@ LoadDefinitions!({
   // `OptionalMatch:*` so the star is optional, save the core `\author`
   // first, and forward to it with the full `[opt]{name}` shape so the
   // body never re-enters this stub.
-  state::let_i(&T_CS!("\\lx@sn@core@author"), &T_CS!("\\author"), None);
-  DefMacro!("\\author OptionalMatch:* []{}",
-    "\\lx@sn@core@author[#2]{#3}");
-  DefMacro!("\\affil OptionalMatch:* []{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#3}");
-  DefMacro!("\\equalcont{}",
-    "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}");
-  DefMacro!("\\presentaddress{}",
-    "\\@add@frontmatter{ltx:note}[role=present-address]{#1}");
+  let_i(&T_CS!("\\lx@sn@core@author"), &T_CS!("\\author"), None);
+  DefMacro!(
+    "\\author OptionalMatch:* []{}",
+    "\\lx@sn@core@author[#2]{#3}"
+  );
+  DefMacro!(
+    "\\affil OptionalMatch:* []{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#3}"
+  );
+  DefMacro!(
+    "\\equalcont{}",
+    "\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
+  );
+  DefMacro!(
+    "\\presentaddress{}",
+    "\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
+  );
   // sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
   // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
   // ORCID link showing the id (content-preserving: the id stays in the output,
@@ -107,14 +116,14 @@ LoadDefinitions!({
   // bind explicitly. Without these stubs, papers using the standard
   // sn-jnl `\affil*[1]{\orgdiv{...}, \orgname{...}, \orgaddress{...}}`
   // pattern report undefined CS cascade. Witness 2311.09249, 2311.08387.
-  DefMacro!("\\orgdiv{}",     "#1");
-  DefMacro!("\\orgname{}",    "#1");
+  DefMacro!("\\orgdiv{}", "#1");
+  DefMacro!("\\orgname{}", "#1");
   DefMacro!("\\orgaddress{}", "#1");
-  DefMacro!("\\street{}",     "#1");
-  DefMacro!("\\postcode{}",   "#1");
-  DefMacro!("\\city{}",       "#1");
-  DefMacro!("\\state{}",      "#1");
-  DefMacro!("\\country{}",    "#1");
+  DefMacro!("\\street{}", "#1");
+  DefMacro!("\\postcode{}", "#1");
+  DefMacro!("\\city{}", "#1");
+  DefMacro!("\\state{}", "#1");
+  DefMacro!("\\country{}", "#1");
   // sn-jnl.cls defines \botrule as a bottom-rule table separator
   // (similar shape to \toprule / \midrule from booktabs). Authors use
   // it inside \begin{tabular}...\end{tabular} for Springer-Nature
@@ -136,8 +145,7 @@ LoadDefinitions!({
   // cascade of `Error:malformed:ltx:* isn't allowed in <ltx:abstract>`.
   // Forward to the env so the body is wrapped *and* properly closed.
   // Witness 2306.11901.
-  DefMacro!("\\abstract{}",
-    "\\begin{abstract}#1\\end{abstract}");
+  DefMacro!("\\abstract{}", "\\begin{abstract}#1\\end{abstract}");
   DefEnvironment!("{declarations}", "<ltx:acknowledgements name='declarations'>#body</ltx:acknowledgements>",
     mode => "internal_vertical");
   DefEnvironment!("{appendices}", "<ltx:appendix>#body</ltx:appendix>",

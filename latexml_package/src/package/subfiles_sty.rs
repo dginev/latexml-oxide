@@ -19,7 +19,7 @@ LoadDefinitions!({
       "\\lx@subfiles@fake@enddocument",
       Scope::Global
     );
-    stomach::begin_mode("internal_vertical")?;
+    begin_mode("internal_vertical")?;
   });
 
   DefPrimitive!("\\lx@subfiles@fake@enddocument", {
@@ -33,12 +33,12 @@ LoadDefinitions!({
         Scope::Global
       );
     }
-    stomach::end_mode("internal_vertical")?;
+    end_mode("internal_vertical")?;
   });
 
   // AtBeginDocument: after the main document starts, redirect nested
   // \begin{document}/\end{document} to the fake versions
-  let _ = state::push_value("@at@begin@document", Tokens!(T_CS!("\\lx@subfiles@setup")));
+  let _ = push_value("@at@begin@document", Tokens!(T_CS!("\\lx@subfiles@setup")));
   DefPrimitive!("\\lx@subfiles@setup", {
     AssignValue!("subfiles_nesting" => 0i64, Some(Scope::Global));
     Let!(

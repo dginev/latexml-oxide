@@ -1,13 +1,11 @@
 use std::fmt;
 
-use crate::Digested;
-use crate::common::error::Result;
-use crate::common::float::Float;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::token::Catcode;
-use crate::token::Token;
-use crate::tokens::Tokens;
+use crate::{
+  Digested,
+  common::{error::Result, float::Float, numeric_ops::NumericOps, object::Object},
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 /// A pair of numerical values, typically (x,y) coordinates.
 /// Perl: LaTeXML::Core::Pair

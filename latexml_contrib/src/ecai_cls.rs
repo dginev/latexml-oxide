@@ -1,7 +1,6 @@
 //! Stub for ecai.cls (ECAI conference class).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -14,13 +13,14 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
 
   // ECAI frontmatter (ecai.cls L1290) — preserve paper ID as note.
-  DefMacro!("\\paperid{}",
-    "\\@add@frontmatter{ltx:note}[role=paperid]{#1}");
+  DefMacro!(
+    "\\paperid{}",
+    "\\@add@frontmatter{ltx:note}[role=paperid]{#1}"
+  );
   def_macro_noop("\\makepaperid")?;
   // ECAI authors use \orcid for ORCID identifier; preserve as note.
   // Witness 2501.02040 + 3 ecai papers.
-  DefMacro!("\\orcid{}",
-    "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
+  DefMacro!("\\orcid{}", "\\@add@frontmatter{ltx:note}[role=orcid]{#1}");
   // {ack} environment — acknowledgments block. Emit as structural
   // ltx:acknowledgements (vs flattening into a generic section).
   // Witness 2408.16081.

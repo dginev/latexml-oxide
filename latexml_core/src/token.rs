@@ -1,24 +1,25 @@
-use once_cell::sync::Lazy;
-use std::borrow::Cow;
-use std::fmt;
-use std::fmt::Display;
-use std::rc::Rc;
+use std::{borrow::Cow, fmt, fmt::Display, rc::Rc};
 
-use crate::Digested;
-use crate::common::arena::{self, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::float::Float;
-use crate::common::glue::Glue;
-use crate::common::mudimension::MuDimension;
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::store::Stored;
-use crate::definition::Definition;
-use crate::definition::register::Register;
-use crate::state;
-use crate::tokens::Tokens;
+use once_cell::sync::Lazy;
+
+use crate::{
+  Digested,
+  common::{
+    arena::{self, SymStr},
+    dimension::Dimension,
+    error::*,
+    float::Float,
+    glue::Glue,
+    mudimension::MuDimension,
+    muglue::MuGlue,
+    number::Number,
+    numeric_ops::NumericOps,
+    store::Stored,
+  },
+  definition::{Definition, register::Register},
+  state,
+  tokens::Tokens,
+};
 
 static CONTROLNAME: &[&str] = &[
   "NUL", "SOH", "STX", "ETX", "EOT", "ENQ", "ACK", "BEL", "BS", "HT", "LF", "VT", "FF", "CR", "SO",
@@ -142,7 +143,7 @@ impl Catcode {
   /// symbol via `pin!`. Used by `Token::get_cs_name` /
   /// `pin_cs_name` to avoid a per-call `pin_static` hash probe
   /// (fires on every primitive-token definition lookup).
-  pub fn name_sym(self) -> crate::common::arena::SymStr {
+  pub fn name_sym(self) -> SymStr {
     use crate::token::Catcode::*;
     match self {
       ESCAPE => crate::pin!("Escape"),
@@ -297,7 +298,7 @@ pub struct Token {
   /// meaning, not origin — see `impl PartialEq`). See docs/SOURCE_PROVENANCE.md
   /// §3.1.1.
   #[cfg(feature = "token-locators")]
-  pub loc: u32,
+  pub loc:  u32,
 }
 
 impl fmt::Debug for Token {
@@ -355,71 +356,81 @@ pub static TOKEN_END: Lazy<Token> = Lazy::new(|| Token {
 pub static TOKEN_MATH: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("$"),
   code: Catcode::MATH,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for an ALIGN "&" token
 #[thread_local]
 pub static TOKEN_ALIGN: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("&"),
   code: Catcode::ALIGN,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for a PARAM "#" token
 #[thread_local]
 pub static TOKEN_PARAM: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("#"),
   code: Catcode::PARAM,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for a SUPER "^" token
 #[thread_local]
 pub static TOKEN_SUPER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("^"),
   code: Catcode::SUPER,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for a SUB "_" token
 #[thread_local]
 pub static TOKEN_SUB: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("_"),
   code: Catcode::SUB,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for a SPACE " " token
 #[thread_local]
 pub static TOKEN_SPACE: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static(" "),
   code: Catcode::SPACE,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for a CR "\n" token
 #[thread_local]
 pub static TOKEN_CR: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\n"),
   code: Catcode::SPACE,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for T_CS("\relax")
 #[thread_local]
 pub static TOKEN_RELAX: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\relax"),
   code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for T_CS("\expandafter")
 #[thread_local]
 pub static TOKEN_EXPANDAFTER: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\expandafter"),
   code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 /// constant for T_CS("\endcsname")
 #[thread_local]
 pub static TOKEN_ENDCSNAME: Lazy<Token> = Lazy::new(|| Token {
   text: arena::pin_static("\\endcsname"),
   code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    });
+  #[cfg(feature = "token-locators")]
+  loc: 0,
+});
 
 /// Eagerly initialize this thread's pre-built `#[thread_local]` token
 /// constants. Each one's `Lazy` initializer interns its control-sequence
@@ -483,14 +494,16 @@ macro_rules! T_LETTER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
   ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -501,14 +514,16 @@ macro_rules! T_OTHER {
     Token {
       text: $crate::pin!($text),
       code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
   ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -519,7 +534,8 @@ macro_rules! T_OTHER_CHAR {
     Token {
       text: $crate::common::arena::pin_char($text),
       code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -532,7 +548,8 @@ macro_rules! T_ACTIVE {
     Token {
       text: $crate::common::arena::pin(s),
       code: Catcode::ACTIVE,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   }};
 }
@@ -543,7 +560,8 @@ macro_rules! T_COMMENT {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -554,14 +572,16 @@ macro_rules! T_CS {
     $crate::token::Token {
       text: $crate::pin!($text),
       code: $crate::token::Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
   ($text:expr_2021) => {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -577,7 +597,8 @@ macro_rules! T_MARKER {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -589,7 +610,8 @@ macro_rules! T_ARG {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -604,14 +626,16 @@ macro_rules! Token {
     Token {
       text: $crate::pin!($text),
       code: $cc,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
   ($text:expr_2021, $cc:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   };
 }
@@ -694,7 +718,8 @@ impl Default for Token {
     Token {
       text: arena::pin_static("EXPECTED_TOKEN"),
       code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   }
 }
@@ -704,7 +729,12 @@ impl Default for Token {
 impl Token {
   /// simple Token constructor, wrapping over text and catcode
   pub fn new<T: AsRef<str>>(text: T, code: Catcode) -> Self {
-    Token { text: arena::pin(text), code, #[cfg(feature = "token-locators")] loc: 0 }
+    Token {
+      text: arena::pin(text),
+      code,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
+    }
   }
 
   /// A cheap structural fingerprint for the cycle-detection guard
@@ -859,14 +889,16 @@ impl Token {
     Token {
       text: self.text,
       code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   }
   pub fn as_cs(&self) -> Token {
     Token {
       text: self.text,
       code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }
   }
 
@@ -960,12 +992,11 @@ impl Token {
           _ => None,
         })
       });
-      if let Some(letto) = letto_opt {
-        if (letto.get_catcode() == occ)
-          && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym())
-        {
-          return true;
-        }
+      if let Some(letto) = letto_opt
+        && (letto.get_catcode() == occ)
+        && ((occ == Catcode::SPACE) || letto.get_sym() == other.get_sym())
+      {
+        return true;
       }
     }
     false
@@ -1008,9 +1039,9 @@ impl From<&str> for Token {
 #[cfg(feature = "token-locators")]
 #[derive(Clone, Copy, Debug)]
 pub struct TokenStart {
-  pub source: SymStr,
-  pub line:   u32,
-  pub col:    u32,
+  pub source:    SymStr,
+  pub line:      u32,
+  pub col:       u32,
   /// `true` when this origin was *inherited* from a macro invocation rather
   /// than read directly from a mouth — i.e. the token is synthesized
   /// expansion output (`\today → "May 25, 2026"`) attributed to its `\today`
@@ -1024,7 +1055,8 @@ pub struct TokenStart {
 
 #[cfg(feature = "token-locators")]
 thread_local! {
-  static TOKEN_ORIGINS: std::cell::RefCell<Vec<TokenStart>> = const { std::cell::RefCell::new(Vec::new()) };
+  static TOKEN_ORIGINS: std::cell::RefCell<Vec<TokenStart>> =
+    const { std::cell::RefCell::new(Vec::new()) };
 }
 
 /// Append a token's source start, returning its 1-based handle (`0` is reserved
@@ -1033,7 +1065,12 @@ thread_local! {
 pub fn push_token_origin(source: SymStr, line: u32, col: u32) -> u32 {
   TOKEN_ORIGINS.with(|o| {
     let mut v = o.borrow_mut();
-    v.push(TokenStart { source, line, col, inherited: false });
+    v.push(TokenStart {
+      source,
+      line,
+      col,
+      inherited: false,
+    });
     v.len() as u32 // index + 1
   })
 }
@@ -1071,9 +1108,7 @@ pub fn get_token_origin(handle: u32) -> Option<TokenStart> {
 
 /// Reset the arena at the start of a conversion (handles are per-conversion).
 #[cfg(feature = "token-locators")]
-pub fn clear_token_origins() {
-  TOKEN_ORIGINS.with(|o| o.borrow_mut().clear());
-}
+pub fn clear_token_origins() { TOKEN_ORIGINS.with(|o| o.borrow_mut().clear()); }
 
 #[cfg(test)]
 mod tests {
@@ -1087,7 +1122,7 @@ mod tests {
   fn token_size_invariant() {
     #[cfg(not(feature = "token-locators"))]
     assert_eq!(
-      std::mem::size_of::<Token>(),
+      size_of::<Token>(),
       8,
       "default Token must stay 8 bytes (SymStr + Catcode)"
     );
@@ -1206,8 +1241,8 @@ mod tests {
     for cc in [MATH, ALIGN, PARAM, SUPER, SUB, ACTIVE] {
       assert!(cc.is_neutralizable(), "{cc:?}");
     }
-    assert!(!Catcode::CS.is_neutralizable());
-    assert!(!Catcode::LETTER.is_neutralizable());
+    assert!(!CS.is_neutralizable());
+    assert!(!LETTER.is_neutralizable());
   }
 
   #[test]
@@ -1226,8 +1261,8 @@ mod tests {
     assert!(OTHER.is_absorbable());
     assert!(COMMENT.is_absorbable());
     // All else not absorbable.
-    assert!(!Catcode::CS.is_absorbable());
-    assert!(!Catcode::BEGIN.is_absorbable());
+    assert!(!CS.is_absorbable());
+    assert!(!BEGIN.is_absorbable());
   }
 
   #[test]

@@ -8,8 +8,10 @@ pub mod epub;
 
 use libxml::tree::Node;
 
-use crate::document::PostDocument;
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::PostDocument,
+  processor::{ProcessResult, Processor},
+};
 
 /// Manifest format specifier.
 #[derive(Debug, Clone)]
@@ -42,11 +44,19 @@ impl Processor for Manifest {
   fn process(&mut self, doc: PostDocument, _nodes: Vec<Node>) -> ProcessResult {
     match &self.format {
       Some(ManifestFormat::Epub) => {
-        Info!("manifest", "epub", "EPUB manifest generation delegated to epub submodule");
+        Info!(
+          "manifest",
+          "epub",
+          "EPUB manifest generation delegated to epub submodule"
+        );
         Ok(vec![doc])
       },
       None => {
-        Warn!("manifest", "format", "No manifest format specified; skipping");
+        Warn!(
+          "manifest",
+          "format",
+          "No manifest format specified; skipping"
+        );
         Ok(vec![doc])
       },
     }

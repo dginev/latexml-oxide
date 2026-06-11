@@ -39,21 +39,31 @@ LoadDefinitions!({
   // mn2e_support's {proof} pattern; self-contained, no amsthm dep — avoids the
   // eager-amsthm hazard noted below). Witness 2309.12476 (autart, `\begin{pf}` in
   // \input'd subfiles).
-  DefEnvironment!("{pf}",
-    "<ltx:proof><ltx:title>PROOF.</ltx:title>#body</ltx:proof>");
-  DefEnvironment!("{pf*}{}",
-    "<ltx:proof><ltx:title>#1</ltx:title>#body</ltx:proof>");
+  DefEnvironment!(
+    "{pf}",
+    "<ltx:proof><ltx:title>PROOF.</ltx:title>#body</ltx:proof>"
+  );
+  DefEnvironment!(
+    "{pf*}{}",
+    "<ltx:proof><ltx:title>#1</ltx:title>#body</ltx:proof>"
+  );
 
   // Common elsart frontmatter macros (autart inherits elsart style) —
   // preserve author-supplied content as ltx:note frontmatter.
-  DefMacro!("\\address[]{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}");
+  DefMacro!(
+    "\\address[]{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
+  );
   DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
   DefMacro!("\\corauthref{}", "\\textsuperscript{*#1}");
-  DefMacro!("\\corauth{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}");
-  DefMacro!("\\thanks{}",
-    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
+  DefMacro!(
+    "\\corauth{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
+  );
+  DefMacro!(
+    "\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
+  );
 
   // autart.cls L516 defines `\qed` directly at class level (a `\Box` at the
   // end of a proof). Perl — which OmniBus-fallbacks autart and dep-scans
@@ -71,8 +81,8 @@ LoadDefinitions!({
     enter_horizontal => true,
     reversion => "\\qed"
   );
-  Let!("\\mathqed",    "\\qed");
+  Let!("\\mathqed", "\\qed");
   Let!("\\textsquare", "\\qed");
-  Let!("\\qedsymbol",  "\\qed");
-  Let!("\\openbox",    "\\qed");
+  Let!("\\qedsymbol", "\\qed");
+  Let!("\\openbox", "\\qed");
 });

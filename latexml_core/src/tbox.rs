@@ -1,23 +1,24 @@
-use libxml::tree::Node;
-use std::borrow::Cow;
-use std::fmt;
-use std::rc::Rc;
+use std::{borrow::Cow, fmt, rc::Rc};
 
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::locator::Locator;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::document::Document;
-use crate::gullet;
-use crate::pin;
-use crate::state::{lookup_font, with_value};
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
-use crate::{BoxOps, Digested};
+use libxml::tree::Node;
+
+use crate::{
+  BoxOps, Digested,
+  common::{
+    arena::{self, SymHashMap as HashMap, SymStr},
+    dimension::Dimension,
+    error::*,
+    font::Font,
+    locator::Locator,
+    object::Object,
+    store::Stored,
+  },
+  document::Document,
+  gullet, pin,
+  state::{lookup_font, with_value},
+  token::{Catcode, Token},
+  tokens::Tokens,
+};
 
 /// Box is a Rust keyword, so we use "Tbox" instead, as in "TeX Box"
 #[derive(Debug, Clone)]
@@ -85,7 +86,12 @@ impl Tbox {
     };
     let empty_sym = pin!("");
     let tokens = if text != empty_sym && tokens_opt.is_empty() {
-      Tokens!(Token { text, code: Catcode::OTHER, #[cfg(feature = "token-locators")] loc: 0 })
+      Tokens!(Token {
+        text,
+        code: Catcode::OTHER,
+        #[cfg(feature = "token-locators")]
+        loc: 0
+      })
     } else {
       tokens_opt
     };
@@ -283,15 +289,16 @@ impl BoxOps for Tbox {
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
 
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
-    match self.get_property("body") { Some(body_stored) => {
-      if let Stored::Digested(ref body) = *body_stored {
-        body.compute_size(options)
-      } else {
-        panic!("the stored 'body' property should always be a Stored::Digested enum case.");
-      }
-    } _ => {
-      Ok(self.font.compute_string_size(&self.get_string()?, options))
-    }}
+    match self.get_property("body") {
+      Some(body_stored) => {
+        if let Stored::Digested(ref body) = *body_stored {
+          body.compute_size(options)
+        } else {
+          panic!("the stored 'body' property should always be a Stored::Digested enum case.");
+        }
+      },
+      _ => Ok(self.font.compute_string_size(&self.get_string()?, options)),
+    }
   }
 }
 

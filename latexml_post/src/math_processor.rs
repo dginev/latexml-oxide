@@ -7,12 +7,15 @@
 //! - XMath node visibility and realization
 //! - XMText content conversion
 
-use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::sync::LazyLock;
 
-use crate::document::{NodeData, PostDocument};
-use crate::processor::{PostError, Processor};
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::{
+  document::{NodeData, PostDocument},
+  processor::{PostError, Processor},
+};
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
@@ -72,7 +75,8 @@ pub trait MathProcessor: Processor {
       // chain. Use class=`misdefined`, object=`combineParallel` per
       // the wider `Error('misdefined', …)` convention (Post.pm:177/434).
       Error!(
-        "misdefined", "combineParallel",
+        "misdefined",
+        "combineParallel",
         "Abstract combineParallel: dropping extra markup from: {}",
         secondaries
           .iter()
@@ -183,7 +187,8 @@ pub fn process_math(
   }
   if audit {
     Info!(
-      "audit", "math",
+      "audit",
+      "math",
       "{} math nodes in {}ms (max {}µs at index {})",
       n,
       total_ns / 1_000_000,
@@ -231,20 +236,25 @@ fn process_math_node(
     });
 
   // Apply outer wrapper if we got XML
-  match conversion.xml.take() { Some(xml) => {
-    conversion.xml = Some(processor.outer_wrapper(doc, &xmath, xml));
-  } _ => if let Some(ref string) = conversion.string {
-    // Wrap string in ltx:text
-    let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
-    conversion.xml = Some(NodeData::Element {
-      tag:        "ltx:text".to_string(),
-      attributes: Some(HashMap::from_iter([(
-        "class".to_string(),
-        format!("ltx_math_{}", mimetype),
-      )])),
-      children:   vec![NodeData::Text(string.clone())],
-    });
-  }}
+  match conversion.xml.take() {
+    Some(xml) => {
+      conversion.xml = Some(processor.outer_wrapper(doc, &xmath, xml));
+    },
+    _ => {
+      if let Some(ref string) = conversion.string {
+        // Wrap string in ltx:text
+        let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
+        conversion.xml = Some(NodeData::Element {
+          tag:        "ltx:text".to_string(),
+          attributes: Some(HashMap::from_iter([(
+            "class".to_string(),
+            format!("ltx_math_{}", mimetype),
+          )])),
+          children:   vec![NodeData::Text(string.clone())],
+        });
+      }
+    },
+  }
 
   if !keep_xmath {
     // Mark XMath IDs as reusable (it will be removed)

@@ -1,9 +1,10 @@
-use crate::package::url_sty::LEADING_BACKSLASH_RE;
-use crate::prelude::*;
-use latexml_core::document::{can_contain_qsym, get_node_qname, Document};
-use latexml_core::common::error::Result as CoreResult;
+use latexml_core::{
+  common::error::Result as CoreResult,
+  document::{Document, can_contain_qsym, get_node_qname},
+};
 use libxml::tree::NodeType;
 
+use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
 
 LoadDefinitions!({
   // Perl #2736: newer hyperref.sty depends on etoolbox.sty
@@ -213,9 +214,10 @@ LoadDefinitions!({
     // since Perl reads the raw value with `$` live). Register these with the
     // default value type (`""`) so `$…$` stays math; the key is still
     // registered, so the Warn-suppression still holds.
-    if matches!(option,
-      "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdflang")
-    {
+    if matches!(
+      option,
+      "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdflang"
+    ) {
       DefKeyVal!("Hyp", option, "");
     } else {
       DefKeyVal!("Hyp", option, "Semiverbatim");
@@ -232,12 +234,20 @@ LoadDefinitions!({
   // keys. Register them on the Rust side for the same Warn-suppression
   // rationale as the main option loop above.
   for key in [
-    "pdfauthortitle", "pdfcaptionwriter", "pdfcopyright",
-    "pdflicenseurl", "pdfmetalang",
+    "pdfauthortitle",
+    "pdfcaptionwriter",
+    "pdfcopyright",
+    "pdflicenseurl",
+    "pdfmetalang",
     // Other documented hyperref keys not in Perl's option list:
-    "pdfinfo", "pdfremotestartview", "pdfencoding",
-    "pdfescapeform", "psdextra",
-    "pdfa", "pdfua", "pdfsuffix",
+    "pdfinfo",
+    "pdfremotestartview",
+    "pdfencoding",
+    "pdfescapeform",
+    "psdextra",
+    "pdfa",
+    "pdfua",
+    "pdfsuffix",
   ] {
     // Same surpass-Perl rationale as the main option loop above.
     DefKeyVal!("Hyp", key, "Semiverbatim");
@@ -256,21 +266,19 @@ LoadDefinitions!({
       // restricted to plain text(?) — `hyperref_setoption($key, ToString($value))`.
       // (This actually needs some sort of "safe" digestion, recognizing
       // unicode, but no macros.)
-      state::assign_mapping("Hyperref_options", key, Some(value_str.clone()));
+      assign_mapping("Hyperref_options", key, Some(value_str.clone()));
       if key == "baseurl" {
         AssignValue!("BASE_URL" => value_str);
       }
     }
   });
 
-  state::push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
+  push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
 
   // \@add@PDF@RDFa@triples — emit <ltx:rdf> elements for PDF metadata
   {
     let replacement: ReplacementClosure = Rc::new(
-      |document: &mut Document,
-       _args: &Vec<Option<Digested>>,
-       _props: &arena::SymHashMap<Stored>| {
+      |document: &mut Document, _args: &Vec<Option<Digested>>, _props: &SymHashMap<Stored>| {
         // pdfkey -> (property, object_attr)
         let pdfkey_property: &[(&str, &str, &str)] = &[
           ("pdfauthor", "dcterms:creator", "content"),
@@ -287,24 +295,23 @@ LoadDefinitions!({
           None => return Ok(()),
         };
 
-        let mut keys = state::with_mapping_keys("Hyperref_options", |keys| {
-          keys.into_iter().map(arena::to_string).collect::<Vec<_>>()
+        let mut keys = with_mapping_keys("Hyperref_options", |keys| {
+          keys.into_iter().map(to_string).collect::<Vec<_>>()
         });
         keys.sort();
         for key_str in &keys {
           if let Some((_, property, object_attr)) =
             pdfkey_property.iter().find(|(k, ..)| k == key_str)
+            && let Some(value) = lookup_mapping("Hyperref_options", key_str)
           {
-            if let Some(value) = state::lookup_mapping("Hyperref_options", key_str) {
-              let value_str = value.to_string();
-              let mut attrs = HashMap::default();
-              attrs.insert("property".to_string(), property.to_string());
-              attrs.insert(object_attr.to_string(), value_str);
-              let mut node = document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
-              // Must set about="" directly — setAttribute omits empty attributes
-              node.set_attribute("about", "")?;
-              document.close_element_at(&mut node)?;
-            }
+            let value_str = value.to_string();
+            let mut attrs = HashMap::default();
+            attrs.insert("property".to_string(), property.to_string());
+            attrs.insert(object_attr.to_string(), value_str);
+            let mut node = document.open_element_at(&mut root, "ltx:rdf", Some(attrs), None)?;
+            // Must set about="" directly — setAttribute omits empty attributes
+            node.set_attribute("about", "")?;
+            document.close_element_at(&mut node)?;
           }
         }
         Ok(())
@@ -353,9 +360,9 @@ LoadDefinitions!({
   // It's slightly different in that it expands the argument
   // Redefine \@url to sanitize the argument less
   DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
-    let open = gullet::read_token()?.unwrap();
+    let open = read_token()?.unwrap();
     begin_semiverbatim(Some(&['%']));
-    state::let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
+    let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
     // URLs are verbatim: any character a shorthand package made ACTIVE must
     // appear literally, not expand. We read the arg with partial expansion
     // ("expand as we go", below) to allow `\macro`s in URLs, but that also
@@ -368,8 +375,8 @@ LoadDefinitions!({
     // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
     // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
     for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
-      if state::lookup_catcode(ch) == Some(Catcode::ACTIVE) {
-        state::assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
+      if lookup_catcode(ch) == Some(Catcode::ACTIVE) {
+        assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
       }
     }
     let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
@@ -412,7 +419,7 @@ LoadDefinitions!({
       unref!(args => cmd, _open, _close, url, _formattedurl);
       let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
       Ok(stored_map!(
-        "href" => compose_url(&state::lookup_string("BASE_URL"), &url.to_string(), None),
+        "href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None),
         "class"=> ltx_cmd
       ))
     },
@@ -450,7 +457,7 @@ LoadDefinitions!({
   "<ltx:ref href='#href'>#4</ltx:ref>",
   enter_horizontal => true,
   properties => sub[args] {
-    let base_url = state::lookup_string("BASE_URL");
+    let base_url = lookup_string("BASE_URL");
     let cat = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let name = args[2].as_ref().map(|a| a.to_string()).unwrap_or_default();
     let fragment = clean_id(&format!("{}.{}", cat, name));
@@ -785,7 +792,7 @@ LoadDefinitions!({
   // float into character tokens.
   DefMacro!("\\hypercalcbp {Dimension}", sub[(dimen)] {
     let sp = dimen.value_of() as f64;
-    let bp = sp / state::convert_unit("bp");
+    let bp = sp / convert_unit("bp");
     Ok(Tokens::new(Explode!(format!("{}", bp))))
   });
 
@@ -837,12 +844,12 @@ LoadDefinitions!({
   // until we come up with a nice, clean formal scheme, just hack through...
 
   // Process hyperref package options (keyval-style)
-  if let Some(Stored::VecDequeStored(vdq)) = state::lookup_value("opt@hyperref.sty") {
+  if let Some(Stored::VecDequeStored(vdq)) = lookup_value("opt@hyperref.sty") {
     for entry in vdq {
       // Each entry is Stored::Strings from PassOptionsToPackage/\usepackage
       let opt_strs: Vec<String> = match entry {
-        Stored::Strings(syms) => syms.iter().map(|s| arena::to_string(*s)).collect(),
-        Stored::String(sym) => vec![arena::to_string(sym)],
+        Stored::Strings(syms) => syms.iter().map(|s| to_string(*s)).collect(),
+        Stored::String(sym) => vec![to_string(sym)],
         other => vec![other.to_string()],
       };
       for option in &opt_strs {
@@ -851,7 +858,7 @@ LoadDefinitions!({
         } else if let Some(eq_pos) = option.find('=') {
           let key = option[..eq_pos].trim();
           let value = option[eq_pos + 1..].trim();
-          state::assign_mapping("Hyperref_options", key, Some(value.to_string()));
+          assign_mapping("Hyperref_options", key, Some(value.to_string()));
           if key == "baseurl" {
             AssignValue!("BASE_URL" => value.to_string());
           }
@@ -1099,8 +1106,8 @@ fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()
     Some(v) => v.to_string(),
     None => return Ok(()),
   };
-  let mut candidates: Vec<libxml::tree::Node> = vec![document.get_node().clone()];
-  let mut found: Option<libxml::tree::Node> = None;
+  let mut candidates: Vec<Node> = vec![document.get_node().clone()];
+  let mut found: Option<Node> = None;
   while let Some(candidate) = candidates.pop() {
     match candidate.get_type() {
       Some(NodeType::ElementNode) => {
@@ -1125,18 +1132,33 @@ fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()
     }
   }
   if let Some(target) = found {
-    match document.wrap_nodes("ltx:anchor", vec![target])? { Some(mut anchor) => {
-      document.set_attribute(&mut anchor, "xml:id", &id)?;
-      if document.is_open(&anchor) {
-        document.close_node(&anchor)?;
-      }
-    } _ => {
-      Warn!("malformed", "ltx:anchor",
-        &s!("No available insertion point for ltx:anchor, failing \\hypertarget to {}", id));
-    }}
+    match document.wrap_nodes("ltx:anchor", vec![target])? {
+      Some(mut anchor) => {
+        document.set_attribute(&mut anchor, "xml:id", &id)?;
+        if document.is_open(&anchor) {
+          document.close_node(&anchor)?;
+        }
+      },
+      _ => {
+        Warn!(
+          "malformed",
+          "ltx:anchor",
+          &s!(
+            "No available insertion point for ltx:anchor, failing \\hypertarget to {}",
+            id
+          )
+        );
+      },
+    }
   } else {
-    Warn!("malformed", "ltx:anchor",
-      &s!("No available insertion point for ltx:anchor, failing \\hypertarget to {}", id));
+    Warn!(
+      "malformed",
+      "ltx:anchor",
+      &s!(
+        "No available insertion point for ltx:anchor, failing \\hypertarget to {}",
+        id
+      )
+    );
   }
   Ok(())
 }

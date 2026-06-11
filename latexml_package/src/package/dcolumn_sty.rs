@@ -9,7 +9,7 @@ fn absorbed_string(todelim: &Tokens) -> String {
   toks.extend_from_slice(todelim.unlist_ref());
   toks.push(T_END!());
   // Digest and extract text from resulting boxes
-  match stomach::digest(Tokens::new(toks)) {
+  match digest(Tokens::new(toks)) {
     Ok(digested) => collect_text(&digested),
     Err(_) => todelim.to_string(),
   }
@@ -21,7 +21,7 @@ fn collect_text(digested: &Digested) -> String {
   match digested.data() {
     DigestedData::TBox(b) => {
       let tbox = b.borrow();
-      arena::with(tbox.text, |text| result.push_str(text));
+      with(tbox.text, |text| result.push_str(text));
     },
     DigestedData::List(l) => {
       let list = l.borrow();
@@ -56,7 +56,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@unactivate DefToken", sub[(delim_tok)] {
     let delim_str = delim_tok.to_string();
     if let Some(ch) = delim_str.chars().next() {
-      state::assign_mathcode(ch, 0u16, None);
+      assign_mathcode(ch, 0u16, None);
     }
   });
 
@@ -67,7 +67,7 @@ LoadDefinitions!({
     if delim_str != todelim_str {
       if let Some(ch) = delim_str.chars().next() {
         // Make the delimiter math-active (code 0x8000)
-        state::assign_mathcode(ch, 0x8000u16, None);
+        assign_mathcode(ch, 0x8000u16, None);
       }
       // Define the active character's expansion
       let expansion_body = s!(
@@ -79,22 +79,22 @@ LoadDefinitions!({
     }
     // Save and deactivate $
     Let!("\\DC@saved@dollar", "$");
-    state::let_i(&T_MATH!(), &T_CS!("\\relax"), None);
+    let_i(&T_MATH!(), &T_CS!("\\relax"), None);
     // Start inline math if not already in math
-    let in_math = state::lookup_bool_sym(pin!("IN_MATH"));
+    let in_math = lookup_bool_sym(pin!("IN_MATH"));
     if in_math {
-      state::assign_value("DC_started_math", Stored::Bool(false), None);
+      assign_value("DC_started_math", Stored::Bool(false), None);
       Ok(Tokens::default())
     } else {
-      state::assign_value("DC_started_math", Stored::Bool(true), None);
+      assign_value("DC_started_math", Stored::Bool(true), None);
       Ok(Tokens!(T_CS!("\\lx@begin@inline@math")))
     }
   });
 
   // Perl: \DC@end — restores $ and ends inline math (only if we started it)
   DefMacro!("\\DC@end", sub[_args] {
-    state::let_i(&T_MATH!(), &T_CS!("\\DC@saved@dollar"), None);
-    let started = state::lookup_value("DC_started_math")
+    let_i(&T_MATH!(), &T_CS!("\\DC@saved@dollar"), None);
+    let started = lookup_value("DC_started_math")
       .map(|v| matches!(v, Stored::Bool(true)))
       .unwrap_or(false);
     if started {

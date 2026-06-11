@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use std::collections::VecDeque;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -135,7 +136,7 @@ LoadDefinitions!({
     pi_tokens.extend(replacement_toks.unlist());
     pi_tokens.push(T_END!());
     pi_tokens.push(T_END!()); // end of Undigested arg
-    gullet::unread(Tokens::new(pi_tokens));
+    unread(Tokens::new(pi_tokens));
     // The gullet will read \lx@add@Preamble@PI{...} and the stomach will digest it
   });
 

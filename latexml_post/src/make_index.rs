@@ -10,9 +10,11 @@ use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::document::{NodeData, PostDocument};
-use crate::object_db::{ObjectDB, Value};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::{NodeData, PostDocument},
+  object_db::{ObjectDB, Value},
+  processor::{ProcessResult, Processor},
+};
 
 /// A see/see-also cross reference extracted from an `ltx:indexsee` node.
 #[derive(Debug)]
@@ -132,9 +134,9 @@ impl MakeIndex {
         if let Some(Value::List(phrase_nodes)) = entry.get_value("phrases") {
           for item in phrase_nodes {
             if let Value::Xml(node) = item {
-              let nkey = node.get_attribute("key").unwrap_or_else(|| {
-                get_index_content_key(&node.get_content())
-              });
+              let nkey = node
+                .get_attribute("key")
+                .unwrap_or_else(|| get_index_content_key(&node.get_content()));
               phrase_refs.push(PhraseRef {
                 key:  nkey,
                 text: get_index_content_key(&node.get_content()),
@@ -183,9 +185,21 @@ impl MakeIndex {
             st.phrase = Some(init);
             st
           });
-          add_tree_rec(subtree, &phrase_refs, &mut all_phrases, &mut used_ids, entry);
+          add_tree_rec(
+            subtree,
+            &phrase_refs,
+            &mut all_phrases,
+            &mut used_ids,
+            entry,
+          );
         } else {
-          add_tree_rec(&mut tree, &phrase_refs, &mut all_phrases, &mut used_ids, entry);
+          add_tree_rec(
+            &mut tree,
+            &phrase_refs,
+            &mut all_phrases,
+            &mut used_ids,
+            entry,
+          );
         }
       }
     }
@@ -304,34 +318,42 @@ impl MakeIndex {
           xml: vec![NodeData::Text(see.text.clone())],
         }],
       };
-      match seealso_search_rec(&parts, all_phrases, &see_context) { Some(see_links) => {
-        links.extend(see_links);
-      } _ => {
-        // Perl warns unless the see phrase already contains refs of
-        // its own, then falls back to the phrase's own markup.
-        let already_linked = see
-          .node
-          .as_ref()
-          .map(node_has_ref_descendant)
-          .unwrap_or(false);
-        if !already_linked {
-          Warn!(
-            "expected", &see.text,
-            "Missing index see-also term '{}' (seen under {})",
-            see.text,
-            tree.full_key.as_deref().unwrap_or("?")
-          );
-        }
-        let content: Vec<NodeData> = match see.node {
-          Some(ref n) => n.get_child_nodes().into_iter().map(NodeData::XmlNode).collect(),
-          None => vec![NodeData::Text(see.text.clone())],
-        };
-        links.push(NodeData::Element {
-          tag:        "ltx:text".to_string(),
-          attributes: None,
-          children:   content,
-        });
-      }}
+      match seealso_search_rec(&parts, all_phrases, &see_context) {
+        Some(see_links) => {
+          links.extend(see_links);
+        },
+        _ => {
+          // Perl warns unless the see phrase already contains refs of
+          // its own, then falls back to the phrase's own markup.
+          let already_linked = see
+            .node
+            .as_ref()
+            .map(node_has_ref_descendant)
+            .unwrap_or(false);
+          if !already_linked {
+            Warn!(
+              "expected",
+              &see.text,
+              "Missing index see-also term '{}' (seen under {})",
+              see.text,
+              tree.full_key.as_deref().unwrap_or("?")
+            );
+          }
+          let content: Vec<NodeData> = match see.node {
+            Some(ref n) => n
+              .get_child_nodes()
+              .into_iter()
+              .map(NodeData::XmlNode)
+              .collect(),
+            None => vec![NodeData::Text(see.text.clone())],
+          };
+          links.push(NodeData::Element {
+            tag:        "ltx:text".to_string(),
+            attributes: None,
+            children:   content,
+          });
+        },
+      }
     }
 
     if !links.is_empty() {
@@ -845,13 +867,16 @@ fn get_index_content_key(s: &str) -> String {
 /// text nodes at either end (whitespace INSIDE the sequence is kept).
 fn trimmed_child_nodes(node: &Node) -> Vec<NodeData> {
   let children = node.get_child_nodes();
-  let is_ws = |n: &Node| {
-    n.get_type() == Some(NodeType::TextNode) && n.get_content().trim().is_empty()
-  };
+  let is_ws =
+    |n: &Node| n.get_type() == Some(NodeType::TextNode) && n.get_content().trim().is_empty();
   let start = children.iter().position(|n| !is_ws(n));
   let end = children.iter().rposition(|n| !is_ws(n));
   match (start, end) {
-    (Some(s), Some(e)) => children[s..=e].iter().cloned().map(NodeData::XmlNode).collect(),
+    (Some(s), Some(e)) => children[s..=e]
+      .iter()
+      .cloned()
+      .map(NodeData::XmlNode)
+      .collect(),
     _ => vec![],
   }
 }
@@ -965,7 +990,11 @@ fn seealso_partition_aux(node: &Node) -> Vec<SeeChunk> {
               key: sub.key,
               xml: vec![NodeData::Element {
                 tag:        format!("ltx:{}", name),
-                attributes: if attrs.is_empty() { None } else { Some(attrs.clone()) },
+                attributes: if attrs.is_empty() {
+                  None
+                } else {
+                  Some(attrs.clone())
+                },
                 children:   sub.xml,
               }],
             });

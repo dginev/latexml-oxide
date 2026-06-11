@@ -9,24 +9,26 @@
 //!
 //! Two kinds of options, by how much can be shared:
 //! * **Scalar options** (`mode`, `bounded`, …) go through one generic
-//!   [`ConstructorBuilder::set_option`] — the key→field mapping lives in exactly
-//!   one place, so adding a scalar option updates both front-ends at once.
-//! * **Closure options** (`afterDigest`, …) have typed setters: the field and
-//!   `install` are shared, while the closure itself is produced by whichever
-//!   front-end (a macro `$body:block`, or a Rhai trampoline).
-
-use crate::common::def_parser::{parse_parameters, parse_prototype};
-use crate::common::error::{Error, Result};
-use crate::definition::constructor::ConstructorOptions;
-use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, DigestionClosure, FontDirective, PropertiesClosure,
-  ReplacementClosure, Reversion,
-};
-use crate::parameter::Parameters;
-use crate::token::Token;
-use crate::util::text::{extract_bracketed, Delimiter};
+//!   [`ConstructorBuilder::set_option`] — the key→field mapping lives in exactly one place, so
+//!   adding a scalar option updates both front-ends at once.
+//! * **Closure options** (`afterDigest`, …) have typed setters: the field and `install` are shared,
+//!   while the closure itself is produced by whichever front-end (a macro `$body:block`, or a Rhai
+//!   trampoline).
 
 use super::dialect::{def_constructor, def_environment};
+use crate::{
+  common::{
+    def_parser::{parse_parameters, parse_prototype},
+    error::{Error, Result},
+  },
+  definition::{
+    BeforeDigestClosure, ConstructionClosure, DigestionClosure, FontDirective, PropertiesClosure,
+    ReplacementClosure, Reversion, constructor::ConstructorOptions,
+  },
+  parameter::Parameters,
+  token::Token,
+  util::text::{Delimiter, extract_bracketed},
+};
 
 /// The typed (closure/structured) option setters shared verbatim by
 /// [`ConstructorBuilder`] and [`EnvironmentBuilder`] — one macro invocation per
@@ -131,17 +133,22 @@ impl OptionValue {
 
 /// Accumulates a constructor definition and installs it via [`def_constructor`].
 pub struct ConstructorBuilder {
-  cs: Token,
-  paramlist: Option<Parameters>,
+  cs:          Token,
+  paramlist:   Option<Parameters>,
   replacement: Option<ReplacementClosure>,
-  options: ConstructorOptions,
+  options:     ConstructorOptions,
 }
 
 impl ConstructorBuilder {
   /// Parse the prototype (shared with the macro path via `parse_prototype`).
   pub fn new(proto: &str) -> Result<Self> {
     let (cs, paramlist) = parse_prototype(proto, true)?;
-    Ok(Self { cs, paramlist, replacement: None, options: ConstructorOptions::default() })
+    Ok(Self {
+      cs,
+      paramlist,
+      replacement: None,
+      options: ConstructorOptions::default(),
+    })
   }
 
   /// Set the XML replacement (template- or closure-derived; built by the caller).
@@ -195,10 +202,10 @@ fn apply_scalar_option(
 /// option machinery. The prototype is the `DefEnvironment!` shape:
 /// `"{name}"` or `"{name}{}…"` (env name in braces, then the parameter list).
 pub struct EnvironmentBuilder {
-  name: String,
-  paramlist: Option<Parameters>,
+  name:        String,
+  paramlist:   Option<Parameters>,
   replacement: Option<ReplacementClosure>,
-  options: ConstructorOptions,
+  options:     ConstructorOptions,
 }
 
 impl EnvironmentBuilder {
@@ -207,8 +214,11 @@ impl EnvironmentBuilder {
   /// a synthetic `\name` control sequence).
   pub fn new(proto: &str) -> Result<Self> {
     let mut proto = proto.trim_start().to_string();
-    let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace))
-      .ok_or_else(|| Error::from(format!("DefEnvironment prototype must start with {{name}}: {proto:?}")))?;
+    let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).ok_or_else(|| {
+      Error::from(format!(
+        "DefEnvironment prototype must start with {{name}}: {proto:?}"
+      ))
+    })?;
     let paramlist_str = proto.trim_start().to_string();
     let paramlist = if paramlist_str.is_empty() {
       None
@@ -216,7 +226,12 @@ impl EnvironmentBuilder {
       let cs = crate::T_CS!(crate::s!("\\{}", &name));
       parse_parameters(&paramlist_str, &cs, true)?
     };
-    Ok(Self { name, paramlist, replacement: None, options: ConstructorOptions::default() })
+    Ok(Self {
+      name,
+      paramlist,
+      replacement: None,
+      options: ConstructorOptions::default(),
+    })
   }
 
   /// Set the XML replacement (typically referencing `#body`).

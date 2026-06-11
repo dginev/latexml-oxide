@@ -6,16 +6,13 @@
 //!
 //! * `document` (default) → full HTML page (has `<head>`).
 //! * `fragment` → embeddable snippet (no page chrome).
-//! * `archive` → a zip bundle (HTML + status), with a placeholder
-//!   `<source>.zip` destination when `--dest` is omitted (Perl
-//!   LaTeXML.pm:185-187).
+//! * `archive` → a zip bundle (HTML + status), with a placeholder `<source>.zip` destination when
+//!   `--dest` is omitted (Perl LaTeXML.pm:185-187).
 //!
 //! Run via the prebuilt-binary harness (`CARGO_BIN_EXE_latexml_oxide`),
 //! like `001_single_binary_smoke.rs`.
 
-use std::io::Read;
-use std::path::Path;
-use std::process::Command;
+use std::{io::Read, path::Path, process::Command};
 
 const HELLO_TEX: &str = "\\documentclass{article}\n\
                          \\begin{document}\n\
@@ -123,7 +120,10 @@ fn whatsout_archive_writes_zip_bundle() {
     .unwrap()
     .read_to_string(&mut html)
     .unwrap();
-  assert!(html.contains("Hello World"), "bundled HTML missing body:\n{html}");
+  assert!(
+    html.contains("Hello World"),
+    "bundled HTML missing body:\n{html}"
+  );
 }
 
 #[test]
@@ -162,5 +162,8 @@ fn whatsout_archive_defaults_destination_to_source_zip() {
     .unwrap()
     .read_to_string(&mut html)
     .unwrap();
-  assert!(html.contains("Hello World"), "bundled HTML missing body:\n{html}");
+  assert!(
+    html.contains("Hello World"),
+    "bundled HTML missing body:\n{html}"
+  );
 }

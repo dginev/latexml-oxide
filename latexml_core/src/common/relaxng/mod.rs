@@ -10,8 +10,7 @@
 //!
 //! * [`scan`]      — RNG XML → AST  (port of `scanPattern` etc., L100–390).
 //! * [`simplify`]  — AST normalization (port of `simplify*`, L438–525).
-//! * [`tex`]       — schema-doc TeX emission (port of `documentModules`,
-//!   `toTeX*`, L550–815).
+//! * [`tex`]       — schema-doc TeX emission (port of `documentModules`, `toTeX*`, L550–815).
 //!
 //! The shared state — definition tables, element index, "Used by" graph —
 //! lives on [`Relaxng`] and is populated by `scan` + `simplify`, then
@@ -19,10 +18,12 @@
 //! several methods at once; the Rust version threads `&mut self` the
 //! same way.
 
-use crate::common::model::LTX_NAMESPACE;
-use crate::common::xml::XML_NS;
-use crate::document::Document;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+
+use crate::{
+  common::{model::LTX_NAMESPACE, xml::XML_NS},
+  document::Document,
+};
 
 pub mod embedded;
 pub mod scan;
@@ -136,23 +137,20 @@ pub enum Pattern {
 /// The mutable fields beyond `name` and `modules` are populated during
 /// `simplify`:
 ///
-/// * [`elementdefs`]      — pattern qname → element tag, when a pattern
-///   resolves to a single element.
+/// * [`elementdefs`]      — pattern qname → element tag, when a pattern resolves to a single
+///   element.
 /// * [`element_reverse_defs`] — inverse of `elementdefs`.
-/// * [`elements`]         — element tag → list of body patterns,
-///   accumulating across overrides / re-definitions.
+/// * [`elements`]         — element tag → list of body patterns, accumulating across overrides /
+///   re-definitions.
 /// * [`defs`]             — pattern qname → its (combined) body pattern.
-/// * [`def_combiner`]     — pattern qname → the combiner that won the
-///   most recent definition.
-/// * [`uses_name`]        — pattern qname → set of containers that
-///   reference it: `pattern:QNAME` for refs at define scope,
-///   `element:TAG@pattern:HOST` for refs inside an `element TAG {…}`
-///   hosted by define HOST (bare `element:TAG` when the element sits
-///   outside any define). Drives the "Used by" lists in the schema
-///   docs; `tex::symbol_uses` reports the element or the host pattern,
-///   whichever identifies the definition uniquely.
-/// * [`internal_grammars`] — counter for naming embedded `<grammar>`
-///   blocks (`grammar1`, `grammar2`, …).
+/// * [`def_combiner`]     — pattern qname → the combiner that won the most recent definition.
+/// * [`uses_name`]        — pattern qname → set of containers that reference it: `pattern:QNAME`
+///   for refs at define scope, `element:TAG@pattern:HOST` for refs inside an `element TAG {…}`
+///   hosted by define HOST (bare `element:TAG` when the element sits outside any define). Drives
+///   the "Used by" lists in the schema docs; `tex::symbol_uses` reports the element or the host
+///   pattern, whichever identifies the definition uniquely.
+/// * [`internal_grammars`] — counter for naming embedded `<grammar>` blocks (`grammar1`,
+///   `grammar2`, …).
 #[derive(Debug)]
 pub struct Relaxng {
   /// Top-level schema name (typically the .rng filename without ext).
@@ -194,17 +192,17 @@ pub struct Relaxng {
 impl Default for Relaxng {
   fn default() -> Self {
     Relaxng {
-      name:                 String::from("LaTeXML"),
-      modules:              Vec::new(),
-      elementdefs:          HashMap::default(),
-      element_reverse_defs: HashMap::default(),
-      elements:             HashMap::default(),
-      defs:                 HashMap::default(),
-      def_combiner:         HashMap::default(),
-      uses_name:            HashMap::default(),
-      internal_grammars:    0,
-      document_namespaces:  HashMap::default(),
-      primary_namespace:    None,
+      name:                   String::from("LaTeXML"),
+      modules:                Vec::new(),
+      elementdefs:            HashMap::default(),
+      element_reverse_defs:   HashMap::default(),
+      elements:               HashMap::default(),
+      defs:                   HashMap::default(),
+      def_combiner:           HashMap::default(),
+      uses_name:              HashMap::default(),
+      internal_grammars:      0,
+      document_namespaces:    HashMap::default(),
+      primary_namespace:      None,
       display_strip_prefixes: Vec::new(),
     }
   }
@@ -214,7 +212,10 @@ impl Relaxng {
   /// Construct an empty schema state. Use [`Self::load_schema`] to
   /// populate from an RNG file.
   pub fn new(name: impl Into<String>) -> Self {
-    Relaxng { name: name.into(), ..Self::default() }
+    Relaxng {
+      name: name.into(),
+      ..Self::default()
+    }
   }
 
   /// Register a `prefix → URI` binding ahead of scanning. Mirrors
@@ -225,11 +226,7 @@ impl Relaxng {
   /// common case is a `.rnc` whose `default namespace = "..."` carries
   /// no prefix, so the URI is preserved on `<grammar ns="..."/>` but
   /// no `xmlns:` survives. Later calls overwrite earlier ones.
-  pub fn register_namespace(
-    &mut self,
-    prefix: impl Into<String>,
-    uri: impl Into<String>,
-  ) {
+  pub fn register_namespace(&mut self, prefix: impl Into<String>, uri: impl Into<String>) {
     self.document_namespaces.insert(prefix.into(), uri.into());
   }
 
@@ -271,7 +268,9 @@ impl Relaxng {
   /// between builds: `document_namespaces` is a `FxHashMap`, whose
   /// iteration order isn't a stable contract.
   pub fn auto_strip_primary_namespace(&mut self) {
-    let Some(uri) = self.primary_namespace.clone() else { return; };
+    let Some(uri) = self.primary_namespace.clone() else {
+      return;
+    };
     let mut candidates: Vec<&String> = self
       .document_namespaces
       .iter()

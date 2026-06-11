@@ -2,9 +2,9 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
+use unicode_normalization::{UnicodeNormalization, char::compose};
+
 use crate::prelude::*;
-use unicode_normalization::UnicodeNormalization;
-use unicode_normalization::char::compose;
 
 static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 
@@ -18,9 +18,7 @@ static SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\s").unwrap());
 /// with `char::from_u32`; only fall back to the 8-bit form for an out-of-range
 /// code (negative / surrogate / > U+10FFFF), where no valid `char` exists.
 #[inline]
-fn charcode_to_char(n: i64) -> char {
-  char::from_u32(n as u32).unwrap_or((n as u8) as char)
-}
+fn charcode_to_char(n: i64) -> char { char::from_u32(n as u32).unwrap_or((n as u8) as char) }
 
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -35,7 +33,7 @@ LoadDefinitions!({
   DefPrimitive!("\\ ", {
     enter_horizontal();
     Tbox::new(
-      arena::pin_static(" "),
+      pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\ ")),
@@ -107,11 +105,11 @@ LoadDefinitions!({
   DefPrimitive!("\\chardef Token SkipSpaces SkipMatch:=", sub[(newcs)] {
     // Let w/o AfterAssignment
     let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
-    state::assign_meaning(&newcs, relax_meaning, None);
-    let value = gullet::read_number()?;
-    state::install_definition(
+    assign_meaning(&newcs, relax_meaning, None);
+    let value = read_number()?;
+    install_definition(
       Register::new_chardef(newcs, Some(value.into()), None, None), None);
-    state::after_assignment();
+    after_assignment();
     Ok(Vec::new())
   });
 
@@ -124,13 +122,13 @@ LoadDefinitions!({
 
   // Note that these are NOT expandable, even though the "return" tokens!
   DefPrimitive!("\\uppercase GeneralText", sub[(tokens)] {
-    gullet::unread_vec(
+    unread_vec(
       tokens.unlist().into_iter()
         .map(uppercase_token)
         .collect());
   });
   DefPrimitive!("\\lowercase GeneralText", sub[(tokens)] {
-    gullet::unread_vec(
+    unread_vec(
       tokens.unlist().into_iter()
         .map(lowercase_token)
         .collect::<Vec<Token>>());
@@ -232,7 +230,7 @@ pub fn apply_accent(
   standalonechar: &str,
   reversion: Option<Tokens>,
 ) -> Result<Tbox> {
-  let letter_box = stomach::digest(letter)?;
+  let letter_box = digest(letter)?;
   let locator = letter_box.get_locator();
   let font = letter_box.get_font()?.map(|f| Rc::new((*f).clone()));
 
@@ -265,21 +263,21 @@ pub fn apply_accent(
     "\u{02C6}" => Some("^"), // MODIFIER CIRCUMFLEX → ^
     _ => None,
   };
-  if let Some(replacement) = typewriter_replacement {
-    if let Some(ref f) = font {
-      let is_typewriter = f
-        .get_family()
-        .is_some_and(|fam| fam.as_ref() == "typewriter");
-      let is_ascii = f.get_encoding().is_some_and(|enc| enc.as_ref() == "ASCII");
-      if is_typewriter || is_ascii {
-        return Ok(Tbox::new(
-          arena::pin(format!("{replacement}{string}")),
-          font,
-          locator,
-          reversion.unwrap_or(Tokens!()),
-          SymHashMap::default(),
-        ));
-      }
+  if let Some(replacement) = typewriter_replacement
+    && let Some(ref f) = font
+  {
+    let is_typewriter = f
+      .get_family()
+      .is_some_and(|fam| fam.as_ref() == "typewriter");
+    let is_ascii = f.get_encoding().is_some_and(|enc| enc.as_ref() == "ASCII");
+    if is_typewriter || is_ascii {
+      return Ok(Tbox::new(
+        pin(format!("{replacement}{string}")),
+        font,
+        locator,
+        reversion.unwrap_or(Tokens!()),
+        SymHashMap::default(),
+      ));
     }
   }
 
@@ -301,7 +299,7 @@ pub fn apply_accent(
     combined_str.nfc().collect::<String>()
   };
   Ok(Tbox::new(
-    arena::pin(text),
+    pin(text),
     font,
     locator,
     reversion.unwrap_or(Tokens!()),

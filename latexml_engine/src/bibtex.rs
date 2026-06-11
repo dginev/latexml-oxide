@@ -24,13 +24,13 @@
 //! - Bib entry-type constructors (`@article`, `@book`, ... ~L220-500)
 //! - Field handlers (`bib@field@*` family ~60 macros)
 //! - BibTeX special-character handling (~L800-956)
-//! - `bibAddToContainer` / `processBibNameList` (need Document API
-//!   integration)
+//! - `bibAddToContainer` / `processBibNameList` (need Document API integration)
+
+use std::{cell::RefCell, rc::Rc};
+
+use latexml_core::tokens::Tokens;
 
 use crate::prelude::*;
-use latexml_core::tokens::Tokens;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 // Note: do NOT add `use std::collections::HashMap` here. The
 // `DefConstructor!(... literal-template)` proc-macro expansion
@@ -58,7 +58,11 @@ pub struct BibEntry {
 
 impl BibEntry {
   pub fn new(key: impl Into<String>, entry_type: impl Into<String>) -> Self {
-    Self { key: key.into(), entry_type: entry_type.into(), ..Self::default() }
+    Self {
+      key: key.into(),
+      entry_type: entry_type.into(),
+      ..Self::default()
+    }
   }
 
   /// Perl: `$entry->getField($name)` — first match wins (Perl uses
@@ -176,9 +180,7 @@ pub fn set_current_entry(key: &str) -> bool {
 /// Clear the "current" pointer. Called at entry-complete time so a
 /// stray `currentBibEntry()` outside a `\bib{...}` block returns
 /// `None` instead of leaking the previous entry.
-pub fn clear_current_entry() {
-  CURRENT_ENTRY_KEY.with(|k| *k.borrow_mut() = None);
-}
+pub fn clear_current_entry() { CURRENT_ENTRY_KEY.with(|k| *k.borrow_mut() = None); }
 
 /// Perl: `currentBibEntry()` — return a handle to the entry being
 /// processed, or `None` if not inside a `\bib{...}` block.
@@ -202,9 +204,7 @@ pub fn current_entry() -> Option<Rc<RefCell<BibEntry>>> {
 /// to be revisited when Phase 4's `\bibentry@prepare` DefPrimitive
 /// ports the `$stomach->bgroup; AssignValue; ...; $stomach->egroup`
 /// dance from Perl L126-132.
-pub fn current_bib_key() -> Option<String> {
-  CURRENT_ENTRY_KEY.with(|k| k.borrow().clone())
-}
+pub fn current_bib_key() -> Option<String> { CURRENT_ENTRY_KEY.with(|k| k.borrow().clone()) }
 
 /// Look up a *registered* entry by raw (un-normalized) key. Perl
 /// equivalent: `LookupValue('BIBENTRY@'.NormalizeBibKey($k))`. Used
@@ -236,11 +236,20 @@ pub fn current_entry_raw_field(name: &str) -> Option<String> {
 /// parent does, copy the value over (processed and raw paths). The
 /// crossref field itself is read from `current_entry().get_field`.
 pub fn copy_crossref_fields(fields: &[&str]) {
-  let Some(current) = current_entry() else { return; };
+  let Some(current) = current_entry() else {
+    return;
+  };
   // Get the crossref target's raw key; if no crossref, nothing to do.
-  let xref_key = current.borrow().get_raw_field("crossref").map(str::to_string);
-  let Some(xref_key) = xref_key else { return; };
-  let Some(parent) = lookup_entry(&xref_key) else { return; };
+  let xref_key = current
+    .borrow()
+    .get_raw_field("crossref")
+    .map(str::to_string);
+  let Some(xref_key) = xref_key else {
+    return;
+  };
+  let Some(parent) = lookup_entry(&xref_key) else {
+    return;
+  };
   // Self-crossref is a paper bug; skip silently to avoid infinite
   // looping if a user writes `crossref={selfkey}`.
   if Rc::ptr_eq(&current, &parent) {
@@ -249,15 +258,15 @@ pub fn copy_crossref_fields(fields: &[&str]) {
   let parent_b = parent.borrow();
   let mut current_b = current.borrow_mut();
   for field in fields {
-    if current_b.get_field(field).is_none() {
-      if let Some(v) = parent_b.get_field(field) {
-        current_b.add_field(*field, v.clone());
-      }
+    if current_b.get_field(field).is_none()
+      && let Some(v) = parent_b.get_field(field)
+    {
+      current_b.add_field(*field, v.clone());
     }
-    if current_b.get_raw_field(field).is_none() {
-      if let Some(v) = parent_b.get_raw_field(field) {
-        current_b.add_raw_field(*field, v.to_string());
-      }
+    if current_b.get_raw_field(field).is_none()
+      && let Some(v) = parent_b.get_raw_field(field)
+    {
+      current_b.add_raw_field(*field, v.to_string());
     }
   }
 }
@@ -302,30 +311,33 @@ fn bib_container_xpath(tag: &str, attrs: &FxAttrMap) -> String {
 /// bib-related groups, e.g. all authors collected in one
 /// `<ltx:bib-related role='authors'>`).
 pub fn bib_add_to_container(
-  doc: &mut latexml_core::document::Document,
+  doc: &mut Document,
   tag: &str,
-  data: Option<&latexml_core::digested::Digested>,
+  data: Option<&Digested>,
   attrs: FxAttrMap,
-) -> latexml_core::common::error::Result<()> {
+) -> Result<()> {
   let current = doc.get_node().clone();
   let entry = doc.findnode(
     "ancestor-or-self::ltx:bibentry | ancestor-or-self::ltx:bib-related",
     Some(&current),
   );
   let xpath = bib_container_xpath(tag, &attrs);
-  match doc.findnode(&xpath, entry.as_ref()) { Some(rel) => {
-    doc.set_node(&rel);
-    if let Some(d) = data {
-      doc.absorb(d, None)?;
-    }
-    doc.set_node(&current);
-  } _ => {
-    let content: Vec<&latexml_core::digested::Digested> = match data {
-      Some(d) => vec![d],
-      None => vec![],
-    };
-    doc.insert_element(tag, content, Some(attrs))?;
-  }}
+  match doc.findnode(&xpath, entry.as_ref()) {
+    Some(rel) => {
+      doc.set_node(&rel);
+      if let Some(d) = data {
+        doc.absorb(d, None)?;
+      }
+      doc.set_node(&current);
+    },
+    _ => {
+      let content: Vec<&Digested> = match data {
+        Some(d) => vec![d],
+        None => vec![],
+      };
+      doc.insert_element(tag, content, Some(attrs))?;
+    },
+  }
   Ok(())
 }
 
@@ -379,9 +391,7 @@ fn split_words(input: &str) -> Vec<String> {
       // Either a leading comma we just consumed, or the whole run is
       // pure whitespace/tilde — collect the trailing whitespace.
       if had_comma {
-        while j < bytes.len()
-          && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~')
-        {
+        while j < bytes.len() && matches!(bytes[j], b' ' | b'\t' | b'\n' | b'\r' | b'~') {
           j += 1;
         }
       } else {
@@ -452,9 +462,8 @@ fn split_words(input: &str) -> Vec<String> {
 /// first). Returns the parsed names plus an `etal` flag.
 ///
 /// Name shapes recognised (BibTeX `bibtex.web` convention):
-///   - `First Last` — given before surname; the surname starts at
-///     the first lowercase word (e.g. `von`, `de la`) or, in the
-///     no-lowercase case, at the LAST word.
+///   - `First Last` — given before surname; the surname starts at the first lowercase word (e.g.
+///     `von`, `de la`) or, in the no-lowercase case, at the LAST word.
 ///   - `Last, First` — surname first; one comma.
 ///   - `Last, Jr., First` — surname + lineage + given; two commas.
 ///
@@ -561,10 +570,7 @@ fn starts_lowercase(word: &str) -> bool {
   };
   // Skip a leading `\` (control sequence) — peek at the next char.
   let stripped = stripped.strip_prefix('\\').unwrap_or(stripped);
-  stripped
-    .chars()
-    .next()
-    .is_some_and(|c| c.is_lowercase())
+  stripped.chars().next().is_some_and(|c| c.is_lowercase())
 }
 
 /// BibTeX title-case modes recognised by `recase_title`. Perl
@@ -619,9 +625,7 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
     // Whitespace run — copy verbatim, set word-beginning.
     if b == b' ' || b == b'\t' || b == b'\n' || b == b'\r' {
       let start = i;
-      while i < bytes.len()
-        && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r')
-      {
+      while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r') {
         i += 1;
       }
       out.push_str(&title[start..i]);
@@ -707,9 +711,7 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
         {
           word.to_lowercase()
         },
-        TitleCaseMode::Capitalize | TitleCaseMode::Capitalize1 => {
-          ucfirst(word)
-        },
+        TitleCaseMode::Capitalize | TitleCaseMode::Capitalize1 => ucfirst(word),
         _ => word.to_string(),
       };
       out.push_str(&recased);
@@ -737,9 +739,7 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
 /// trim leading and trailing whitespace from a stringified identifier.
 /// Used by the doi/isbn/issn/lccn/pii constructors to normalise raw
 /// Semiverbatim input before urlencoding or attribute-emitting.
-pub fn process_identifier(s: &str) -> String {
-  s.trim().to_string()
-}
+pub fn process_identifier(s: &str) -> String { s.trim().to_string() }
 
 /// Parse an amsrefs-style keyval string `"key = {value}, key = value, ..."`
 /// into a list of `(name, value)` pairs. Names are lowercased; values
@@ -756,12 +756,12 @@ pub fn parse_amsrefs_keyvals(s: &str) -> Vec<(String, String)> {
   let mut i = 0;
   while i < bytes.len() {
     // Skip whitespace + commas.
-    while i < bytes.len()
-      && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b',')
-    {
+    while i < bytes.len() && matches!(bytes[i], b' ' | b'\t' | b'\n' | b'\r' | b',') {
       i += 1;
     }
-    if i >= bytes.len() { break; }
+    if i >= bytes.len() {
+      break;
+    }
     // Read key up to `=` (or end / `,`).
     let key_start = i;
     while i < bytes.len() && !matches!(bytes[i], b'=' | b',') {
@@ -770,7 +770,9 @@ pub fn parse_amsrefs_keyvals(s: &str) -> Vec<(String, String)> {
     let key = s[key_start..i].trim().to_ascii_lowercase();
     if key.is_empty() {
       // Stray comma or trailing garbage; skip the separator and continue.
-      if i < bytes.len() { i += 1; }
+      if i < bytes.len() {
+        i += 1;
+      }
       continue;
     }
     if i >= bytes.len() || bytes[i] != b'=' {
@@ -795,11 +797,15 @@ pub fn parse_amsrefs_keyvals(s: &str) -> Vec<(String, String)> {
           b'}' => depth -= 1,
           _ => {},
         }
-        if depth == 0 { break; }
+        if depth == 0 {
+          break;
+        }
         i += 1;
       }
       value = s[start..i].to_string();
-      if i < bytes.len() { i += 1; } // skip closing `}`
+      if i < bytes.len() {
+        i += 1;
+      } // skip closing `}`
     } else {
       let start = i;
       while i < bytes.len() && bytes[i] != b',' {
@@ -828,7 +834,6 @@ fn ucfirst(s: &str) -> String {
   }
 }
 
-
 LoadDefinitions!({
   // Perl BibTeX.pool.ltxml L19: `LoadPool('LaTeX')` — BibTeX
   // pool is built on top of the full LaTeX format, since bib
@@ -843,23 +848,23 @@ LoadDefinitions!({
   // an OptionalKeyVals digested arg (or absent); content is the
   // already-digested body to absorb under the new element.
   DefConstructor!("\\bib@@field {} OptionalKeyVals Digested",
-    sub [document, args] {
-      let tag = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let attrs = if let Some(kv_d) = &args[1] {
-        if let latexml_core::digested::DigestedData::KeyVals(kv) = kv_d.data() {
-          kv.get_hash()
-        } else {
-          FxAttrMap::default()
-        }
+  sub [document, args] {
+    let tag = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let attrs = if let Some(kv_d) = &args[1] {
+      if let DigestedData::KeyVals(kv) = kv_d.data() {
+        kv.get_hash()
       } else {
         FxAttrMap::default()
-      };
-      let content: Vec<&latexml_core::digested::Digested> = match &args[2] {
-        Some(d) => vec![d],
-        None => vec![],
-      };
-      document.insert_element(&tag, content, Some(attrs))?;
-    });
+      }
+    } else {
+      FxAttrMap::default()
+    };
+    let content: Vec<&Digested> = match &args[2] {
+      Some(d) => vec![d],
+      None => vec![],
+    };
+    document.insert_element(&tag, content, Some(attrs))?;
+  });
 
   // \bib@addtype{}
   // Perl L235-240: emit `\bib@field@default@type{<type>}` only if
@@ -882,20 +887,22 @@ LoadDefinitions!({
   // sorted-xpath dedup so two `\bib@addto@related{book}{host}{...}`
   // calls accumulate into one bib-related node.
   DefConstructor!("\\bib@addto@related {}{} Digested",
-    sub [document, args] {
-      let type_s = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let role_s = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let mut attrs = FxAttrMap::default();
-      attrs.insert("type".to_string(), type_s);
-      attrs.insert("role".to_string(), role_s);
-      let data = args[2].as_ref();
-      bib_add_to_container(document, "ltx:bib-related", data, attrs)?;
-    });
+  sub [document, args] {
+    let type_s = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let role_s = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let mut attrs = FxAttrMap::default();
+    attrs.insert("type".to_string(), type_s);
+    attrs.insert("role".to_string(), role_s);
+    let data = args[2].as_ref();
+    bib_add_to_container(document, "ltx:bib-related", data, attrs)?;
+  });
 
   // \bib@@@name{}{} → emit `<ltx:bib-name role='#1'>#2</ltx:bib-name>`.
   // Perl L266-267.
-  DefConstructor!("\\bib@@@name{}{}",
-    "<ltx:bib-name role='#1'>#2</ltx:bib-name>");
+  DefConstructor!(
+    "\\bib@@@name{}{}",
+    "<ltx:bib-name role='#1'>#2</ltx:bib-name>"
+  );
 
   // \bib@@@names{} — wrapper that turns multi-name tokens into one
   // Whatsit. Perl L270.
@@ -967,7 +974,7 @@ LoadDefinitions!({
   // Name-component constructors. Perl L951-953. Schema nodes:
   // <ltx:surname>, <ltx:givenname>, <ltx:lineage>.
   DefConstructor!("\\bib@surname{}", "<ltx:surname>#1</ltx:surname>");
-  DefConstructor!("\\bib@given{}",   "<ltx:givenname>#1</ltx:givenname>");
+  DefConstructor!("\\bib@given{}", "<ltx:givenname>#1</ltx:givenname>");
   DefConstructor!("\\bib@lineage{}", "<ltx:lineage>#1</ltx:lineage>");
 
   // -------- Phase 3: title-case logic + default field handlers --------
@@ -980,9 +987,9 @@ LoadDefinitions!({
     let field_name = if args[0].is_some() { args[0].to_string() } else { String::new() };
     let tag_tokens = args[1].clone().owned_tokens().unwrap_or_default();
     // Perl: `LookupValue('BibTeX_title_case') || 'capitalize1'`.
-    let mode_str = state::lookup_value("BibTeX_title_case")
+    let mode_str = lookup_value("BibTeX_title_case")
       .and_then(|s| match s {
-        Stored::String(sym) => Some(latexml_core::common::arena::to_string(sym)),
+        Stored::String(sym) => Some(to_string(sym)),
         Stored::Tokens(t) => Some(t.to_string()),
         _ => None,
       })
@@ -1014,8 +1021,10 @@ LoadDefinitions!({
   // emits a `<ltx:bib-data role='<field>'>` with the raw value. The
   // second `Verbatim` arg is captured but the body discards it (Perl
   // L346 comment: "IGNORE the tokenized data.").
-  DefMacro!("\\bib@field@default@default Verbatim Verbatim",
-    "\\bib@field@unknownasdata{#1}");
+  DefMacro!(
+    "\\bib@field@default@default Verbatim Verbatim",
+    "\\bib@field@unknownasdata{#1}"
+  );
 
   // Emit `<ltx:bib-data role='<field>'>#rawdata</ltx:bib-data>` where
   // `#rawdata` is the current entry's PROCESSED (digested) field value.
@@ -1026,18 +1035,18 @@ LoadDefinitions!({
   // raw source only if the processed form is absent — handles fields
   // that were never digested.
   DefConstructor!("\\bib@field@unknownasdata Verbatim",
-    "<ltx:bib-data role='#1'>#rawdata</ltx:bib-data>",
-    after_digest => sub[whatsit] {
-      let field = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
-      let tks = current_entry_field(&field)
-        .unwrap_or_else(|| {
-          // Fallback: raw string exploded char-by-char. Same logic as
-          // a Perl `currentBibEntryRawField` then `Tokenize` round-trip.
-          let raw = current_entry_raw_field(&field).unwrap_or_default();
-          Tokens::new(Explode!(&raw))
-        });
-      whatsit.set_property("rawdata", Stored::Tokens(tks));
-    });
+  "<ltx:bib-data role='#1'>#rawdata</ltx:bib-data>",
+  after_digest => sub[whatsit] {
+    let field = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+    let tks = current_entry_field(&field)
+      .unwrap_or_else(|| {
+        // Fallback: raw string exploded char-by-char. Same logic as
+        // a Perl `currentBibEntryRawField` then `Tokenize` round-trip.
+        let raw = current_entry_raw_field(&field).unwrap_or_default();
+        Tokens::new(Explode!(&raw))
+      });
+    whatsit.set_property("rawdata", Stored::Tokens(tks));
+  });
 
   // -------- Phase 4: entry-type prepare/complete + field aliases --------
   // Perl `BibTeX.pool.ltxml:355-543` — every standard BibTeX entry
@@ -1059,16 +1068,20 @@ LoadDefinitions!({
   // (The synth macros themselves are Phase 5 — not yet ported. The
   // bindings will resolve to undefined CSes until then, but the
   // entry-complete macro itself must exist for Phase 4 dispatch.)
-  DefMacro!("\\bib@entry@default@complete",
-    "\\bib@synthesize@mr\\bib@synthesize@zbl\\bib@@origbibentry");
+  DefMacro!(
+    "\\bib@entry@default@complete",
+    "\\bib@synthesize@mr\\bib@synthesize@zbl\\bib@@origbibentry"
+  );
 
   // --- article (Perl L366-370) ---
   DefMacro!("\\bib@entry@article@prepare", sub[_args] {
     copy_crossref_fields(&["author", "title", "journal"]);
     Ok(Tokens!())
   });
-  DefMacro!("\\bib@field@article@journal",
-    "\\bib@addto@related{journal}{host}\\bib@@field{ltx:bib-title}");
+  DefMacro!(
+    "\\bib@field@article@journal",
+    "\\bib@addto@related{journal}{host}\\bib@@field{ltx:bib-title}"
+  );
 
   // --- book (Perl L377) ---
   DefMacro!("\\bib@entry@book@prepare", sub[_args] {
@@ -1090,72 +1103,126 @@ LoadDefinitions!({
     copy_crossref_fields(&["author", "editor", "title", "chapter", "pages", "publisher"]);
     Ok(Tokens!())
   });
-  DefMacro!("\\bib@field@inbook@booktitle",
-    "\\bib@addto@related{book}{host}\\bib@@booktitle{ltx:bib-title}");
-  DefMacro!("\\bib@field@inbook@editor",
-    "\\bib@addto@related{book}{host}\\bib@@names{editor}");
-  DefMacro!("\\bib@field@inbook@publisher",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-publisher}");
-  DefMacro!("\\bib@field@inbook@number",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=number]");
-  DefMacro!("\\bib@field@inbook@volume",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=volume]");
-  DefMacro!("\\bib@field@inbook@series",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=series]");
-  DefMacro!("\\bib@field@inbook@address",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}");
-  DefMacro!("\\bib@field@inbook@edition",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-edition}");
+  DefMacro!(
+    "\\bib@field@inbook@booktitle",
+    "\\bib@addto@related{book}{host}\\bib@@booktitle{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@editor",
+    "\\bib@addto@related{book}{host}\\bib@@names{editor}"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@publisher",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-publisher}"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@number",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=number]"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@volume",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=volume]"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@series",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=series]"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@address",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+  );
+  DefMacro!(
+    "\\bib@field@inbook@edition",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-edition}"
+  );
 
   // --- incollection (Perl L422-440) ---
   DefMacro!("\\bib@entry@incollection@prepare", sub[_args] {
     copy_crossref_fields(&["author", "title", "booktitle", "publisher"]);
     Ok(Tokens!())
   });
-  DefMacro!("\\bib@field@incollection@booktitle",
-    "\\bib@addto@related{book}{host}\\bib@@booktitle{ltx:bib-title}");
-  DefMacro!("\\bib@field@incollection@editor",
-    "\\bib@addto@related{book}{host}\\bib@@names{editor}");
-  DefMacro!("\\bib@field@incollection@publisher",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-publisher}");
-  DefMacro!("\\bib@field@incollection@number",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=number]");
-  DefMacro!("\\bib@field@incollection@volume",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=volume]");
-  DefMacro!("\\bib@field@incollection@series",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=series]");
-  DefMacro!("\\bib@field@incollection@address",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}");
-  DefMacro!("\\bib@field@incollection@edition",
-    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-edition}");
+  DefMacro!(
+    "\\bib@field@incollection@booktitle",
+    "\\bib@addto@related{book}{host}\\bib@@booktitle{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@editor",
+    "\\bib@addto@related{book}{host}\\bib@@names{editor}"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@publisher",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-publisher}"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@number",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=number]"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@volume",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=volume]"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@series",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-part}[role=series]"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@address",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+  );
+  DefMacro!(
+    "\\bib@field@incollection@edition",
+    "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-edition}"
+  );
 
   // --- inproceedings (Perl L449-474) ---
   DefMacro!("\\bib@entry@inproceedings@prepare", sub[_args] {
     copy_crossref_fields(&["author", "title", "booktitle", "publisher"]);
     Ok(Tokens!())
   });
-  DefMacro!("\\bib@field@inproceedings@booktitle",
-    "\\bib@addto@related{proceedings}{host}\\bib@@booktitle{ltx:bib-title}");
-  DefMacro!("\\bib@field@inproceedings@editor",
-    "\\bib@addto@related{proceedings}{host}\\bib@@names{editor}");
-  DefMacro!("\\bib@field@inproceedings@number",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-part}[role=number]");
-  DefMacro!("\\bib@field@inproceedings@volume",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-part}[role=volume]");
-  DefMacro!("\\bib@field@inproceedings@series",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-part}[role=series]");
-  DefMacro!("\\bib@field@inproceedings@organization",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-organization}");
-  DefMacro!("\\bib@field@inproceedings@publisher",
-    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-publisher}");
-  DefMacro!("\\bib@field@inproceedings@conference",
-    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-title}");
-  DefMacro!("\\bib@field@inproceedings@meeting",
-    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-title}");
-  DefMacro!("\\bib@field@inproceedings@location",
-    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-place}");
-  DefMacro!("\\bib@field@inproceedings@place",
-    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-place}");
+  DefMacro!(
+    "\\bib@field@inproceedings@booktitle",
+    "\\bib@addto@related{proceedings}{host}\\bib@@booktitle{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@editor",
+    "\\bib@addto@related{proceedings}{host}\\bib@@names{editor}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@number",
+    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-part}[role=number]"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@volume",
+    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-part}[role=volume]"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@series",
+    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-part}[role=series]"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@organization",
+    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-organization}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@publisher",
+    "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-publisher}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@conference",
+    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@meeting",
+    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@location",
+    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-place}"
+  );
+  DefMacro!(
+    "\\bib@field@inproceedings@place",
+    "\\bib@addto@related{conference}{event}\\bib@@field{ltx:bib-place}"
+  );
 
   // --- manual (Perl L481) ---
   DefMacro!("\\bib@entry@manual@prepare", sub[_args] {
@@ -1169,9 +1236,15 @@ LoadDefinitions!({
     Ok(Tokens!())
   });
   DefMacro!("\\bib@entry@mastersthesis@alias", "thesis");
-  DefMacro!("\\bib@entry@mastersthesis@complete", "\\bib@addtype{Master's Thesis}");
+  DefMacro!(
+    "\\bib@entry@mastersthesis@complete",
+    "\\bib@addtype{Master's Thesis}"
+  );
   DefMacro!("\\bib@entry@phdthesis@alias", "thesis");
-  DefMacro!("\\bib@entry@phdthesis@complete", "\\bib@addtype{Ph.D. Thesis}");
+  DefMacro!(
+    "\\bib@entry@phdthesis@complete",
+    "\\bib@addtype{Ph.D. Thesis}"
+  );
 
   // --- proceedings (Perl L512-520) ---
   DefMacro!("\\bib@entry@proceedings@prepare", sub[_args] {
@@ -1198,7 +1271,10 @@ LoadDefinitions!({
     copy_crossref_fields(&["author", "title", "institution"]);
     Ok(Tokens!())
   });
-  DefMacro!("\\bib@entry@techreport@complete", "\\bib@addtype{Technical report}");
+  DefMacro!(
+    "\\bib@entry@techreport@complete",
+    "\\bib@addtype{Technical report}"
+  );
 
   // --- unpublished (Perl L535) ---
   DefMacro!("\\bib@entry@unpublished@prepare", sub[_args] {
@@ -1217,31 +1293,47 @@ LoadDefinitions!({
   // to the right XML container/role.
 
   // Agents — name lists.
-  DefMacro!("\\bib@field@default@author",     "\\bib@@names{author}");
-  DefMacro!("\\bib@field@default@editor",     "\\bib@@names{editor}");
+  DefMacro!("\\bib@field@default@author", "\\bib@@names{author}");
+  DefMacro!("\\bib@field@default@editor", "\\bib@@names{editor}");
   DefMacro!("\\bib@field@default@translator", "\\bib@@names{translator}");
 
   // Titles.
-  DefMacro!("\\bib@field@default@title",    "\\bib@@title{title}{ltx:bib-title}");
-  DefMacro!("\\bib@field@default@subtitle", "\\bib@@field{ltx:bib-subtitle}");
+  DefMacro!(
+    "\\bib@field@default@title",
+    "\\bib@@title{title}{ltx:bib-title}"
+  );
+  DefMacro!(
+    "\\bib@field@default@subtitle",
+    "\\bib@@field{ltx:bib-subtitle}"
+  );
 
   // Origin info.
-  DefMacro!("\\bib@field@default@date",
-    "\\bib@@field{ltx:bib-date}[role=publication]");
-  DefMacro!("\\bib@field@default@edition",
-    "\\bib@@field{ltx:bib-edition}");
-  DefMacro!("\\bib@field@default@address",
-    "\\bib@@field{ltx:bib-place}");
-  DefMacro!("\\bib@field@default@publisher",
-    "\\bib@@field{ltx:bib-publisher}");
-  DefMacro!("\\bib@field@default@institution",
-    "\\bib@@field{ltx:bib-organization}");
-  DefMacro!("\\bib@field@default@organization",
-    "\\bib@@field{ltx:bib-organization}");
-  DefMacro!("\\bib@field@default@school",
-    "\\bib@@field{ltx:bib-organization}");
-  DefMacro!("\\bib@field@default@status",
-    "\\bib@@field{ltx:bib-status}");
+  DefMacro!(
+    "\\bib@field@default@date",
+    "\\bib@@field{ltx:bib-date}[role=publication]"
+  );
+  DefMacro!(
+    "\\bib@field@default@edition",
+    "\\bib@@field{ltx:bib-edition}"
+  );
+  DefMacro!("\\bib@field@default@address", "\\bib@@field{ltx:bib-place}");
+  DefMacro!(
+    "\\bib@field@default@publisher",
+    "\\bib@@field{ltx:bib-publisher}"
+  );
+  DefMacro!(
+    "\\bib@field@default@institution",
+    "\\bib@@field{ltx:bib-organization}"
+  );
+  DefMacro!(
+    "\\bib@field@default@organization",
+    "\\bib@@field{ltx:bib-organization}"
+  );
+  DefMacro!(
+    "\\bib@field@default@school",
+    "\\bib@@field{ltx:bib-organization}"
+  );
+  DefMacro!("\\bib@field@default@status", "\\bib@@field{ltx:bib-status}");
 
   // year — Perl L623-638: synthesize a date if no date field exists.
   // Take the raw year, optionally append `-<month>` (mapped from
@@ -1314,93 +1406,129 @@ LoadDefinitions!({
     Ok(Tokens::new(out_toks))
   });
 
-  DefMacro!("\\bib@field@default@howpublished",
-    "\\bib@@field{ltx:bib-note}[role=publication]");
+  DefMacro!(
+    "\\bib@field@default@howpublished",
+    "\\bib@@field{ltx:bib-note}[role=publication]"
+  );
 
   // Part info.
-  DefMacro!("\\bib@field@default@chapter",
-    "\\bib@@field{ltx:bib-part}[role=chapter]");
-  DefMacro!("\\bib@field@default@number",
-    "\\bib@@field{ltx:bib-part}[role=number]");
-  DefMacro!("\\bib@field@default@volume",
-    "\\bib@@field{ltx:bib-part}[role=volume]");
-  DefMacro!("\\bib@field@default@part",
-    "\\bib@@field{ltx:bib-part}[role=part]");
-  DefMacro!("\\bib@field@default@series",
-    "\\bib@@field{ltx:bib-part}[role=series]");
-  DefMacro!("\\bib@field@default@pages",
-    "\\bib@@field{ltx:bib-part}[role=pages]\\bib@@pages");
+  DefMacro!(
+    "\\bib@field@default@chapter",
+    "\\bib@@field{ltx:bib-part}[role=chapter]"
+  );
+  DefMacro!(
+    "\\bib@field@default@number",
+    "\\bib@@field{ltx:bib-part}[role=number]"
+  );
+  DefMacro!(
+    "\\bib@field@default@volume",
+    "\\bib@@field{ltx:bib-part}[role=volume]"
+  );
+  DefMacro!(
+    "\\bib@field@default@part",
+    "\\bib@@field{ltx:bib-part}[role=part]"
+  );
+  DefMacro!(
+    "\\bib@field@default@series",
+    "\\bib@@field{ltx:bib-part}[role=series]"
+  );
+  DefMacro!(
+    "\\bib@field@default@pages",
+    "\\bib@@field{ltx:bib-part}[role=pages]\\bib@@pages"
+  );
 
   // \bib@@pages — Perl L670-674: post-digestion fixup that takes the
   // raw `pages` field, normalises `-` runs to `--` (so the em-dash
   // ligature kicks in), and stuffs the result back into the
   // construction property.
   DefConstructor!("\\bib@@pages{}", "#pages",
-    after_digest => sub[whatsit] {
-      let raw = current_entry_raw_field("pages").unwrap_or_default();
-      // Collapse runs of `-` to `--` (matches Perl `s/-+/--/g`).
-      let mut normalised = String::with_capacity(raw.len() + 2);
-      let mut chars = raw.chars().peekable();
-      while let Some(c) = chars.next() {
-        if c == '-' {
-          while chars.peek() == Some(&'-') { chars.next(); }
-          normalised.push_str("--");
-        } else {
-          normalised.push(c);
-        }
+  after_digest => sub[whatsit] {
+    let raw = current_entry_raw_field("pages").unwrap_or_default();
+    // Collapse runs of `-` to `--` (matches Perl `s/-+/--/g`).
+    let mut normalised = String::with_capacity(raw.len() + 2);
+    let mut chars = raw.chars().peekable();
+    while let Some(c) = chars.next() {
+      if c == '-' {
+        while chars.peek() == Some(&'-') { chars.next(); }
+        normalised.push_str("--");
+      } else {
+        normalised.push(c);
       }
-      whatsit.set_property("pages", Stored::Tokens(Tokens::new(Explode!(&normalised))));
-    });
+    }
+    whatsit.set_property("pages", Stored::Tokens(Tokens::new(Explode!(&normalised))));
+  });
 
   // Standard BibTeX fields.
-  DefMacro!("\\bib@field@default@annote",
-    "\\bib@@field{ltx:bib-note}[role=annotation]");
+  DefMacro!(
+    "\\bib@field@default@annote",
+    "\\bib@@field{ltx:bib-note}[role=annotation]"
+  );
 
   // crossref — Perl L684-686: emit a `<ltx:bib-related role='host'
   // bibrefs='<key>'>` empty placeholder. Used by post-processing to
   // resolve the cross-reference into the actual bib-related XML.
   DefConstructor!("\\bib@field@default@crossref Semiverbatim",
-    sub [document, args] {
-      let raw_key = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let clean = latexml_core::common::cleaners::clean_bib_key(&raw_key);
-      let mut attrs = FxAttrMap::default();
-      attrs.insert("role".to_string(), "host".to_string());
-      attrs.insert("bibrefs".to_string(), clean);
-      bib_add_to_container(document, "ltx:bib-related", None, attrs)?;
-    });
+  sub [document, args] {
+    let raw_key = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let clean = clean_bib_key(&raw_key);
+    let mut attrs = FxAttrMap::default();
+    attrs.insert("role".to_string(), "host".to_string());
+    attrs.insert("bibrefs".to_string(), clean);
+    bib_add_to_container(document, "ltx:bib-related", None, attrs)?;
+  });
 
-  DefConstructor!("\\bib@field@default@key Digested",
-    "<ltx:bib-key>#1</ltx:bib-key>");
+  DefConstructor!(
+    "\\bib@field@default@key Digested",
+    "<ltx:bib-key>#1</ltx:bib-key>"
+  );
 
-  DefMacro!("\\bib@field@default@note",
-    "\\bib@@field{ltx:bib-note}[role=annotation]");
+  DefMacro!(
+    "\\bib@field@default@note",
+    "\\bib@@field{ltx:bib-note}[role=annotation]"
+  );
 
-  DefConstructor!("\\bib@field@default@type Digested",
-    "<ltx:bib-type>#1</ltx:bib-type>");
+  DefConstructor!(
+    "\\bib@field@default@type Digested",
+    "<ltx:bib-type>#1</ltx:bib-type>"
+  );
 
   // Non-standard fields.
-  DefMacro!("\\bib@field@default@abstract",
-    "\\bib@@field{ltx:bib-extract}[role=abstract]");
-  DefMacro!("\\bib@field@default@archive",
-    "\\bib@@field{ltx:bib-links}");
-  DefMacro!("\\bib@field@default@contents",
-    "\\bib@@field{ltx:bib-extract}[role=contents]");
-  DefMacro!("\\bib@field@default@copyright",
-    "\\bib@@field{ltx:bib-date}[role=copyright]");
-  DefMacro!("\\bib@field@default@eprint",
-    "\\bib@@field{ltx:bib-links}");
-  DefMacro!("\\bib@field@default@preprint",
-    "\\bib@@field{ltx:bib-links}");
-  DefMacro!("\\bib@field@default@keywords",
-    "\\bib@@field{ltx:bib-extract}[role=keywords]");
-  DefMacro!("\\bib@field@default@language",
-    "\\bib@@field{ltx:bib-language}");
+  DefMacro!(
+    "\\bib@field@default@abstract",
+    "\\bib@@field{ltx:bib-extract}[role=abstract]"
+  );
+  DefMacro!("\\bib@field@default@archive", "\\bib@@field{ltx:bib-links}");
+  DefMacro!(
+    "\\bib@field@default@contents",
+    "\\bib@@field{ltx:bib-extract}[role=contents]"
+  );
+  DefMacro!(
+    "\\bib@field@default@copyright",
+    "\\bib@@field{ltx:bib-date}[role=copyright]"
+  );
+  DefMacro!("\\bib@field@default@eprint", "\\bib@@field{ltx:bib-links}");
+  DefMacro!(
+    "\\bib@field@default@preprint",
+    "\\bib@@field{ltx:bib-links}"
+  );
+  DefMacro!(
+    "\\bib@field@default@keywords",
+    "\\bib@@field{ltx:bib-extract}[role=keywords]"
+  );
+  DefMacro!(
+    "\\bib@field@default@language",
+    "\\bib@@field{ltx:bib-language}"
+  );
 
-  DefConstructor!("\\bib@field@default@url Verbatim",
-    "<ltx:bib-url href='#1'>Link</ltx:bib-url>");
+  DefConstructor!(
+    "\\bib@field@default@url Verbatim",
+    "<ltx:bib-url href='#1'>Link</ltx:bib-url>"
+  );
 
-  DefMacro!("\\bib@field@default@enote",
-    "\\bib@@field{ltx:bib-note}[role=electronic-annotation]");
+  DefMacro!(
+    "\\bib@field@default@enote",
+    "\\bib@@field{ltx:bib-note}[role=electronic-annotation]"
+  );
 
   // Identifiers — doi/isbn/issn/lccn/pii. All take a Semiverbatim
   // value, run it through `process_identifier` (trim+sanitise), and
@@ -1408,56 +1536,58 @@ LoadDefinitions!({
   // builds an https://dx.doi.org/ href and percent-encodes any non
   // url-safe chars.
   DefConstructor!("\\bib@field@default@doi Semiverbatim",
-    "<ltx:bib-identifier scheme='doi' id='#id' href='#href'>Document</ltx:bib-identifier>",
-    properties => sub[args] {
-      let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let id = process_identifier(&raw);
-      // Percent-encode `[^0-9a-zA-Z./\-+]` chars for the URL.
-      let mut href = String::from("https://dx.doi.org/");
-      for c in id.chars() {
-        if c.is_ascii_alphanumeric() || matches!(c, '.' | '/' | '-' | '+') {
-          href.push(c);
-        } else {
-          let mut buf = [0u8; 4];
-          for &b in c.encode_utf8(&mut buf).as_bytes() {
-            href.push_str(&format!("%{:02X}", b));
-          }
+  "<ltx:bib-identifier scheme='doi' id='#id' href='#href'>Document</ltx:bib-identifier>",
+  properties => sub[args] {
+    let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let id = process_identifier(&raw);
+    // Percent-encode `[^0-9a-zA-Z./\-+]` chars for the URL.
+    let mut href = String::from("https://dx.doi.org/");
+    for c in id.chars() {
+      if c.is_ascii_alphanumeric() || matches!(c, '.' | '/' | '-' | '+') {
+        href.push(c);
+      } else {
+        let mut buf = [0u8; 4];
+        for &b in c.encode_utf8(&mut buf).as_bytes() {
+          href.push_str(&format!("%{:02X}", b));
         }
       }
-      Ok(stored_map!("id" => id, "href" => href))
-    });
+    }
+    Ok(stored_map!("id" => id, "href" => href))
+  });
 
   DefConstructor!("\\bib@field@default@isbn Semiverbatim",
-    "<ltx:bib-identifier scheme='isbn' id='#id'>ISBN #1</ltx:bib-identifier>",
-    properties => sub[args] {
-      let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => process_identifier(&raw)))
-    });
+  "<ltx:bib-identifier scheme='isbn' id='#id'>ISBN #1</ltx:bib-identifier>",
+  properties => sub[args] {
+    let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => process_identifier(&raw)))
+  });
 
   DefConstructor!("\\bib@field@default@issn Semiverbatim",
-    "<ltx:bib-identifier scheme='issn' id='#id'>ISSN #1</ltx:bib-identifier>",
-    properties => sub[args] {
-      let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => process_identifier(&raw)))
-    });
+  "<ltx:bib-identifier scheme='issn' id='#id'>ISSN #1</ltx:bib-identifier>",
+  properties => sub[args] {
+    let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => process_identifier(&raw)))
+  });
 
   DefConstructor!("\\bib@field@default@lccn Semiverbatim",
-    "<ltx:bib-identifier scheme='lccn' id='#id'>LCCN #1</ltx:bib-identifier>",
-    properties => sub[args] {
-      let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => process_identifier(&raw)))
-    });
+  "<ltx:bib-identifier scheme='lccn' id='#id'>LCCN #1</ltx:bib-identifier>",
+  properties => sub[args] {
+    let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => process_identifier(&raw)))
+  });
 
   DefConstructor!("\\bib@field@default@pii Semiverbatim",
-    "<ltx:bib-identifier scheme='pii' id='#id'>PII #1</ltx:bib-identifier>",
-    properties => sub[args] {
-      let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      Ok(stored_map!("id" => process_identifier(&raw)))
-    });
+  "<ltx:bib-identifier scheme='pii' id='#id'>PII #1</ltx:bib-identifier>",
+  properties => sub[args] {
+    let raw = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    Ok(stored_map!("id" => process_identifier(&raw)))
+  });
 
   // Review (Perl L794-795).
-  DefConstructor!("\\bib@field@default@review Digested",
-    "<ltx:bib-review>Review #1</ltx:bib-review>");
+  DefConstructor!(
+    "\\bib@field@default@review Digested",
+    "<ltx:bib-review>Review #1</ltx:bib-review>"
+  );
 
   // -------- Phase 5: MR / Zbl synthesis + origbibentry --------
   // Perl L803-860. Emits `<ltx:bib-review>` / `<ltx:bib-identifier>`
@@ -1490,33 +1620,33 @@ LoadDefinitions!({
   // any MR prefix and a trailing parenthesised note, and flag
   // isreview if a note appears.
   DefConstructor!("\\bib@@mr {}{}",
-    "?#isreview\
-     (?#reviewer\
-       (<ltx:bib-review scheme='mr' id='#id' href='#href'>MathReview (#reviewer)</ltx:bib-review>)\
-       (<ltx:bib-review scheme='mr' id='#id' href='#href'>MathReview</ltx:bib-review>))\
-     (<ltx:bib-identifier scheme='mr' id='#id' href='#href'>MathReview Entry</ltx:bib-identifier>)",
-    properties => sub[args] {
-      let raw_id = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let reviewer = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let mut id = raw_id.trim().to_string();
-      let mut isreview = !reviewer.is_empty();
-      // Perl regex: /^\s*(?:MR)?(\d+)\s+\(.*\)\s*$/ — strip optional
-      // MR prefix; if a trailing `(...)` note exists, flag isreview.
-      static RE: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
-      let re = RE.get_or_init(|| {
-        regex::Regex::new(r"^(?:MR)?(\d+)\s+\(.*\)$").unwrap()
-      });
-      if let Some(caps) = re.captures(&id) {
-        id = caps[1].to_string();
-        isreview = true;
-      }
-      let href = format!("https://www.ams.org/mathscinet-getitem?mr={}", id);
-      Ok(stored_map!(
-        "isreview" => isreview,
-        "id" => id,
-        "href" => href,
-        "reviewer" => reviewer))
+  "?#isreview\
+   (?#reviewer\
+     (<ltx:bib-review scheme='mr' id='#id' href='#href'>MathReview (#reviewer)</ltx:bib-review>)\
+     (<ltx:bib-review scheme='mr' id='#id' href='#href'>MathReview</ltx:bib-review>))\
+   (<ltx:bib-identifier scheme='mr' id='#id' href='#href'>MathReview Entry</ltx:bib-identifier>)",
+  properties => sub[args] {
+    let raw_id = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let reviewer = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let mut id = raw_id.trim().to_string();
+    let mut isreview = !reviewer.is_empty();
+    // Perl regex: /^\s*(?:MR)?(\d+)\s+\(.*\)\s*$/ — strip optional
+    // MR prefix; if a trailing `(...)` note exists, flag isreview.
+    static RE: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+    let re = RE.get_or_init(|| {
+      Regex::new(r"^(?:MR)?(\d+)\s+\(.*\)$").unwrap()
     });
+    if let Some(caps) = re.captures(&id) {
+      id = caps[1].to_string();
+      isreview = true;
+    }
+    let href = format!("https://www.ams.org/mathscinet-getitem?mr={}", id);
+    Ok(stored_map!(
+      "isreview" => isreview,
+      "id" => id,
+      "href" => href,
+      "reviewer" => reviewer))
+  });
 
   // \bib@synthesize@zbl — Perl L828-835. Same shape as mr but
   // unconditional `isreview` (no MR-style id stripping).
@@ -1538,34 +1668,36 @@ LoadDefinitions!({
   // \bib@@zbl {}{} — Perl L837-845. Simpler than MR; always emits
   // bib-review, but the suffix `(reviewer)` is conditional.
   DefConstructor!("\\bib@@zbl {}{}",
-    "?#reviewer\
-     (<ltx:bib-review scheme='zbl' id='#id' href='#href'>ZentralBlatt (#reviewer)</ltx:bib-review>)\
-     (<ltx:bib-review scheme='zbl' id='#id' href='#href'>ZentralBlatt</ltx:bib-review>)",
-    properties => sub[args] {
-      let id = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let reviewer = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let href = format!("https://zbmath.org/{}", id);
-      Ok(stored_map!(
-        "id" => id,
-        "href" => href,
-        "reviewer" => reviewer))
-    });
+  "?#reviewer\
+   (<ltx:bib-review scheme='zbl' id='#id' href='#href'>ZentralBlatt (#reviewer)</ltx:bib-review>)\
+   (<ltx:bib-review scheme='zbl' id='#id' href='#href'>ZentralBlatt</ltx:bib-review>)",
+  properties => sub[args] {
+    let id = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let reviewer = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let href = format!("https://zbmath.org/{}", id);
+    Ok(stored_map!(
+      "id" => id,
+      "href" => href,
+      "reviewer" => reviewer))
+  });
 
   // \bib@field@default@links — Perl L850-851.
-  DefConstructor!("\\bib@field@default@links Digested",
-    "<ltx:bib-links>#1</ltx:bib-links>");
+  DefConstructor!(
+    "\\bib@field@default@links Digested",
+    "<ltx:bib-links>#1</ltx:bib-links>"
+  );
 
   // \bib@@origbibentry — Perl L856-860. Embed the BibTeX-source
   // form of the current entry into the XML as `<ltx:bib-data
   // role='self' type='BibTeX'>`. Uses `BibEntry::pretty_print`.
   DefConstructor!("\\bib@@origbibentry",
-    "<ltx:bib-data role='self' type='BibTeX'>#bibentry</ltx:bib-data>",
-    after_digest => sub[whatsit] {
-      let pp = current_entry()
-        .map(|e| e.borrow().pretty_print())
-        .unwrap_or_default();
-      whatsit.set_property("bibentry", Stored::Tokens(Tokens::new(Explode!(&pp))));
-    });
+  "<ltx:bib-data role='self' type='BibTeX'>#bibentry</ltx:bib-data>",
+  after_digest => sub[whatsit] {
+    let pp = current_entry()
+      .map(|e| e.borrow().pretty_print())
+      .unwrap_or_default();
+    whatsit.set_property("bibentry", Stored::Tokens(Tokens::new(Explode!(&pp))));
+  });
 
   // -------- Phase 6: orchestration (Perl L111-190) --------
   // `\ProcessBibTeXEntry{key}` drives the per-entry pipeline:
@@ -1599,12 +1731,12 @@ LoadDefinitions!({
     // its expansion is the resolved type. Otherwise resolved == orig.
     let alias_cs_name = format!("\\bib@entry@{}@alias", origtype);
     let alias_tok = T_CS!(alias_cs_name.as_str());
-    let resolved_type = match latexml_core::state::lookup_definition(&alias_tok)? {
+    let resolved_type = match lookup_definition(&alias_tok)? {
       Some(_) => {
         // Expand the alias CS via the gullet to get the target type
         // name. Most aliases are pure-text DefMacros (e.g. "thesis"),
         // so a single do_expand is enough.
-        match latexml_core::gullet::do_expand(alias_tok) {
+        match do_expand(alias_tok) {
           Ok(toks) => toks.to_string(),
           Err(_) => origtype.clone(),
         }
@@ -1639,7 +1771,7 @@ LoadDefinitions!({
     for cs_name in &prepare_csnames {
       if cs_name.is_empty() { continue; }
       let tok = T_CS!(cs_name.as_str());
-      if latexml_core::state::lookup_definition(&tok)?.is_some() {
+      if lookup_definition(&tok)?.is_some() {
         out.push(tok);
       }
     }
@@ -1656,7 +1788,7 @@ LoadDefinitions!({
       for c in candidates.iter() {
         if c.is_empty() { continue; }
         let tok = T_CS!(c.as_str());
-        if latexml_core::state::lookup_definition(&tok)?.is_some() {
+        if lookup_definition(&tok)?.is_some() {
           handler = Some(c.as_str());
           break;
         }
@@ -1691,7 +1823,7 @@ LoadDefinitions!({
     for cs_name in &complete_csnames {
       if cs_name.is_empty() { continue; }
       let tok = T_CS!(cs_name.as_str());
-      if latexml_core::state::lookup_definition(&tok)?.is_some() {
+      if lookup_definition(&tok)?.is_some() {
         out.push(tok);
       }
     }
@@ -1712,15 +1844,15 @@ LoadDefinitions!({
   // see audit divergence B1 (Rust uses a thread-local already set by
   // `\ProcessBibTeXEntry`).
   DefEnvironment!("{bib@entry} Semiverbatim Semiverbatim",
-    "<ltx:bibentry type='#1' key='#key' xml:id='#id'>#body</ltx:bibentry>",
-    after_digest_begin => sub[whatsit] {
-      let key_arg = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
-      set_current_entry(&key_arg);
-      whatsit.set_property("key", Stored::String(latexml_core::common::arena::pin(&key_arg)));
-      // Merge in the {id, refnum, ...} from the @bibitem counter step.
-      let id_props = RefStepCounter!("@bibitem")?;
-      whatsit.set_properties(id_props);
-    });
+  "<ltx:bibentry type='#1' key='#key' xml:id='#id'>#body</ltx:bibentry>",
+  after_digest_begin => sub[whatsit] {
+    let key_arg = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
+    set_current_entry(&key_arg);
+    whatsit.set_property("key", Stored::String(pin(&key_arg)));
+    // Merge in the {id, refnum, ...} from the @bibitem counter step.
+    let id_props = RefStepCounter!("@bibitem")?;
+    whatsit.set_properties(id_props);
+  });
 
   // `{bibtex@bibliography}` environment — Perl
   // `BibTeX.pool.ltxml:175-183`. The outer wrapper for the entries
@@ -1730,26 +1862,24 @@ LoadDefinitions!({
   // `begin_bibliography` in `latex_constructs.rs`, which already
   // port the Perl helpers used by `\thebibliography`.
   DefEnvironment!("{bibtex@bibliography}",
-    "<ltx:bibliography xml:id='#id' \
-       bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
-       <ltx:title font='#titlefont' _force_font='1'>#title</ltx:title>\
-       <ltx:biblist>#body</ltx:biblist>\
-     </ltx:bibliography>",
-    before_digest => sub {
-      crate::latex_constructs::before_digest_bibliography()?;
-    },
-    after_digest_begin => sub[whatsit] {
-      crate::latex_constructs::begin_bibliography(whatsit)?;
-    });
+  "<ltx:bibliography xml:id='#id' \
+     bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+     <ltx:title font='#titlefont' _force_font='1'>#title</ltx:title>\
+     <ltx:biblist>#body</ltx:biblist>\
+   </ltx:bibliography>",
+  before_digest => sub {
+    crate::latex_constructs::before_digest_bibliography()?;
+  },
+  after_digest_begin => sub[whatsit] {
+    crate::latex_constructs::begin_bibliography(whatsit)?;
+  });
 });
 
 #[cfg(test)]
 mod tests {
   use super::*;
 
-  fn fresh() {
-    reset();
-  }
+  fn fresh() { reset(); }
 
   #[test]
   fn entry_round_trips_fields_and_raw_fields() {
@@ -2100,8 +2230,14 @@ mod tests {
     assert_eq!(TitleCaseMode::parse("asis"), TitleCaseMode::AsIs);
     assert_eq!(TitleCaseMode::parse("uppercase"), TitleCaseMode::Uppercase);
     assert_eq!(TitleCaseMode::parse("lowercase"), TitleCaseMode::Lowercase);
-    assert_eq!(TitleCaseMode::parse("capitalize"), TitleCaseMode::Capitalize);
-    assert_eq!(TitleCaseMode::parse("capitalize1"), TitleCaseMode::Capitalize1);
+    assert_eq!(
+      TitleCaseMode::parse("capitalize"),
+      TitleCaseMode::Capitalize
+    );
+    assert_eq!(
+      TitleCaseMode::parse("capitalize1"),
+      TitleCaseMode::Capitalize1
+    );
   }
 
   #[test]
@@ -2130,8 +2266,10 @@ mod tests {
     e.add_raw_field("year", "2020");
     let out = e.pretty_print();
     // The order matches insertion order (Vec<(String,String)>).
-    assert_eq!(out,
-      "@article{Smith2020,\n  author = {John Smith},\n  title = {On Examples},\n  year = {2020}\n}");
+    assert_eq!(
+      out,
+      "@article{Smith2020,\n  author = {John Smith},\n  title = {On Examples},\n  year = {2020}\n}"
+    );
   }
 
   #[test]

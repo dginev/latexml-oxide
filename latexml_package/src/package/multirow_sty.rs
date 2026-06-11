@@ -16,8 +16,8 @@ LoadDefinitions!({
   // \lx@multirow@setup: internal primitive that sets rowspan/vattach on current cell.
   // Separated from content so that content flows naturally through alignment cell boxes.
   DefPrimitive!("\\lx@multirow@setup{Float}[]{}", sub[(nrows, attachment, _width)] {
-    if let Some(alignment) = lookup_alignment() {
-      if let Some(data) = alignment.alignment_cell() {
+    if let Some(alignment) = lookup_alignment()
+      && let Some(data) = alignment.alignment_cell() {
         let mut data_lock = data.borrow_mut();
         if let Some(colspec) = data_lock.current_column() {
           let rowspan_f = nrows.value_f64();
@@ -42,7 +42,6 @@ LoadDefinitions!({
           }
         }
       }
-    }
     Ok(())
   });
   // \multirow[vpos]{nrows}[bigstruts]{width}[fixup]{content}

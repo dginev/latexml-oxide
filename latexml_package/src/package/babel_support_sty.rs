@@ -86,8 +86,8 @@ pub(crate) fn activate_french_active_punct() {
     ('?', "\\lx@french@punct@question"),
   ] {
     if let Some(defn) = lookup_meaning(&T_CS!(cs_name)) {
-      state::assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
-      state::assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
+      assign_catcode(ch, Catcode::ACTIVE, Some(Scope::Global));
+      assign_meaning(&T_ACTIVE!(ch), defn, Some(Scope::Global));
     }
   }
 }
@@ -168,7 +168,7 @@ LoadDefinitions!({
     if let Some(code) = iso {
       // Set cf@encoding to current encoding
       def_macro(T_CS!("\\cf@encoding"), None,
-        gullet::do_expand(T_CS!("\\f@encoding"))?, None)?;
+        do_expand(T_CS!("\\f@encoding"))?, None)?;
       // Merge language into font → produces xml:lang attribute
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
       // Perl: greek.ldf does \fontencoding{LGR}\selectfont in \extrasgreek
@@ -181,7 +181,7 @@ LoadDefinitions!({
         // (U+1FC0) for LGR ligature composition. In standard TeX, ~ produces
         // tie/nobreakspace, but in Greek mode it's the circumflex accent
         // combining character that triggers ligatures like ~a → ᾶ.
-        state::let_i(&T_CS!("\\ltx@save@greek@tilde"), &T_ACTIVE!('~'), None);
+        let_i(&T_CS!("\\ltx@save@greek@tilde"), &T_ACTIVE!('~'), None);
         def_macro(T_ACTIVE!('~'), None, TokenizeInternal!("\u{1FC0}"), None)?;
       } else {
         // Restore non-Greek encoding: check if we're coming from LGR
@@ -193,7 +193,7 @@ LoadDefinitions!({
           load_font_map("OT1");
           MergeFont!(encoding => "OT1");
           // Restore ~ to its pre-Greek meaning (tie/nobreakspace)
-          state::let_i(&T_ACTIVE!('~'), &T_CS!("\\ltx@save@greek@tilde"), None);
+          let_i(&T_ACTIVE!('~'), &T_CS!("\\ltx@save@greek@tilde"), None);
         }
       }
       // French active punctuation: Perl's frenchb.ldf `\extrasfrench`
@@ -222,12 +222,11 @@ LoadDefinitions!({
       // German: activate " as the shorthand dispatch for umlauts + opens
       // the \mdqon / \mdqoff toggle. Babel's germanb.ldf normally does this
       // via \initiate@active@char; we reproduce it with a direct meaning.
-      if code == "de" || code == "de-AT" {
-        if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
-          state::assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
-          state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+      if (code == "de" || code == "de-AT")
+        && let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
+          assign_catcode('"', Catcode::ACTIVE, Some(Scope::Global));
+          assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
         }
-      }
       // Leaving French/German does not automatically deactivate the
       // active-char meanings. The dispatch primitives (\lx@french@punct@*)
       // check \languagename themselves and fall back to bare punctuation in

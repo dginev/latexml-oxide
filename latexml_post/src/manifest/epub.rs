@@ -7,8 +7,7 @@
 //! - `OPS/content.opf` (spine + manifest)
 //! - Indexes all content files with correct media types
 
-use std::fs;
-use std::path::Path;
+use std::{fs, path::Path};
 
 /// EPUB 3.2 container.xml content.
 const CONTAINER_XML: &str = r#"<?xml version="1.0"?>

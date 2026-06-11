@@ -11,9 +11,7 @@
 use std::rc::Rc;
 
 use latexml::core_interface::DigestionAPI;
-use latexml_core::common::error::Result;
-use latexml_core::state;
-use latexml_core::{Core, CoreOptions};
+use latexml_core::{Core, CoreOptions, common::error::Result, state};
 
 /// A sample contrib binding, authored in Rhai (no Rust toolchain, no recompile).
 const SAMPLE: &str = r##"
@@ -280,7 +278,7 @@ fn script_binding_macro_and_constructor_convert() {
   // leave the template's `</…>` dangling). Uses the O(1) status counter
   // (`convert_file` reset it at conversion start), not a log-string scan —
   // order-independent and allocation-free.
-  use latexml_core::common::error::{get_status, LogStatus};
+  use latexml_core::common::error::{LogStatus, get_status};
   assert!(
     get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
     "conversion logged errors: {}",
@@ -289,7 +287,10 @@ fn script_binding_macro_and_constructor_convert() {
 
   // NB: the serializer emits the LaTeXML namespace as the default (no `ltx:`
   // prefix), so elements appear unprefixed.
-  assert!(xml.contains("abab"), "macro \\twicex did not expand; xml=\n{xml}");
+  assert!(
+    xml.contains("abab"),
+    "macro \\twicex did not expand; xml=\n{xml}"
+  );
   assert!(
     xml.contains("<emph>hi</emph>"),
     "imperative constructor \\myemph did not emit its element; xml=\n{xml}"
@@ -339,7 +340,10 @@ fn script_binding_macro_and_constructor_convert() {
     .split("<note")
     .skip(1)
     .any(|n| n.contains("Plain") && !n.split('>').next().unwrap_or("").contains("mark="));
-  assert!(unmarked, "footnote port: unmarked note should have no mark attribute; xml=\n{xml}");
+  assert!(
+    unmarked,
+    "footnote port: unmarked note should have no mark attribute; xml=\n{xml}"
+  );
   // properties-as-closure: #cls hole filled from the computed map.
   assert!(
     xml.contains("class=\"from-dyn\""),
@@ -386,11 +390,16 @@ fn script_binding_macro_and_constructor_convert() {
     "imperative environment ({{rbox}}) / absorbProperty failed; xml=\n{xml}"
   );
   // Wave C: \usepackage[draft] → DeclareOption body ran via ProcessOptions.
-  let opt = match latexml_core::state::lookup_value("rh:opt") {
-    Some(latexml_core::common::store::Stored::String(s)) => latexml_core::common::arena::to_string(s),
+  let opt = match state::lookup_value("rh:opt") {
+    Some(latexml_core::common::store::Stored::String(s)) => {
+      latexml_core::common::arena::to_string(s)
+    },
     _ => String::from("<unset>"),
   };
-  assert_eq!(opt, "draft-on", "DeclareOption+ProcessOptions did not fire for [draft]");
+  assert_eq!(
+    opt, "draft-on",
+    "DeclareOption+ProcessOptions did not fire for [draft]"
+  );
   // IEEEproof port: properties closure digests the title; #title/#font holes.
   assert!(
     xml.contains("<proof") && xml.contains("Proof:") && xml.contains("QED-body"),
@@ -457,9 +466,11 @@ fn script_binding_macro_and_constructor_convert() {
   );
 
   // Primitive seam: the digestion-time side-effect persisted into State.
-  let stored = latexml_core::state::lookup_value("script:x");
+  let stored = state::lookup_value("script:x");
   let val = match stored {
-    Some(latexml_core::common::store::Stored::String(s)) => Some(latexml_core::common::arena::to_string(s)),
+    Some(latexml_core::common::store::Stored::String(s)) => {
+      Some(latexml_core::common::arena::to_string(s))
+    },
     _ => None,
   };
   assert_eq!(
@@ -496,7 +507,10 @@ fn script_binding_discovered_from_file() {
   .expect("write tex");
 
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
-  let cfg = Config { format: OutputFormat::XML, ..Config::default() };
+  let cfg = Config {
+    format: OutputFormat::XML,
+    ..Config::default()
+  };
   let mut c = Converter::from_config(cfg);
   c.initialize_session().expect("initialize");
   let r = c.convert(tex.to_string_lossy().to_string());
@@ -507,4 +521,3 @@ fn script_binding_discovered_from_file() {
   );
   latexml_core::reset_thread_engine();
 }
-

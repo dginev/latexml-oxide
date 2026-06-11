@@ -13,16 +13,16 @@ LoadDefinitions!({
   DefConditional!("\\if@submission");
   DefConditional!("\\if@final");
   DeclareOption!("final", {
-    state::assign_value("neurips_final", Stored::from(1), Some(Scope::Global));
+    assign_value("neurips_final", Stored::from(1), Some(Scope::Global));
   });
   DeclareOption!("preprint", {
-    state::assign_value("neurips_preprint", Stored::from(1), Some(Scope::Global));
+    assign_value("neurips_preprint", Stored::from(1), Some(Scope::Global));
   });
   DeclareOption!("nonatbib", {
-    state::assign_value("neurips_nonatbib", Stored::from(1), Some(Scope::Global));
+    assign_value("neurips_nonatbib", Stored::from(1), Some(Scope::Global));
   });
   ProcessOptions!();
-  if state::with_value("neurips_nonatbib", |v| v.is_none()) {
+  if with_value("neurips_nonatbib", |v| v.is_none()) {
     RequirePackage!("natbib");
   }
   def_macro_noop("\\AND")?;
@@ -63,7 +63,7 @@ LoadDefinitions!({
   // unread, `\begin{ack}…\end{ack}` produces a bare body block with no
   // heading.
   DefEnvironment!("{ack}", "#body",
-    before_digest => { gullet::unread_one(T_CS!("\\acksection")); });
+    before_digest => { unread_one(T_CS!("\\acksection")); });
 
   // {hide} environment — Perl L59
   DefEnvironment!("{hide}", "");

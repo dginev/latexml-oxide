@@ -11,16 +11,15 @@
 //!   4. write_dump() — serialize the diff
 //!   5. At runtime: load_dump() restores the state
 
-use std::io::Write;
-use std::path::Path;
+use std::{io::Write, path::Path};
 
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::common::arena;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::store::Stored;
 use crate::definition::Definition; // trait for get_expansion(), get_cs(), etc.
-use crate::state::TableName;
+use crate::{
+  common::{arena, numeric_ops::NumericOps, store::Stored},
+  state::TableName,
+};
 
 /// Write a state diff to a dump file.
 /// Returns the number of entries successfully written.
@@ -44,7 +43,7 @@ use crate::state::TableName;
 /// until after regular entries).
 pub fn write_dump(
   path: &Path,
-  entries: &[(TableName, crate::common::arena::SymStr, Stored)],
+  entries: &[(TableName, arena::SymStr, Stored)],
 ) -> Result<usize, String> {
   let mut file =
     std::fs::File::create(path).map_err(|e| format!("Failed to create dump file: {}", e))?;
@@ -243,16 +242,15 @@ pub fn write_dump(
     }
 
     // Intarray slot consolidation — see fontdimen_groups comment above.
-    if matches!(*table, TableName::Value) {
-      if let Some((prefix, idx)) = parse_fontdimen_key(&key_str) {
-        if let Stored::Dimension(d) = value {
-          fontdimen_groups
-            .entry(prefix.to_string())
-            .or_default()
-            .push((idx, d.0));
-          continue;
-        }
-      }
+    if matches!(*table, TableName::Value)
+      && let Some((prefix, idx)) = parse_fontdimen_key(&key_str)
+      && let Stored::Dimension(d) = value
+    {
+      fontdimen_groups
+        .entry(prefix.to_string())
+        .or_default()
+        .push((idx, d.0));
+      continue;
     }
 
     let Some(serialized) = serialize_stored(value) else {
@@ -413,8 +411,8 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       //     brace-in-delimiter forms.
       //   - `v3_params` (v3, 6th field) — per-Parameter structured record carrying (name, spec,
       //     flags, extras). Modeled on Perl's `P(type, spec, extra=>[T(...)])`; see
-      //     `docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`. Bypasses `parse_parameters` at load time so
-      //     delimited params round-trip intact.
+      //     `docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`. Bypasses `parse_parameters` at load
+      //     time so delimited params round-trip intact.
       //
       // We emit both so older readers still work, and newer readers can
       // prefer v3 transparently.
@@ -599,7 +597,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
         crate::definition::register::RegisterType::MuGlue => "MG",
         crate::definition::register::RegisterType::Tokens => "TK",
         crate::definition::register::RegisterType::CharDef => "CD",
-        _ => return Option::None,
+        _ => return None,
       };
       let value_str = match &reg.value {
         Some(crate::definition::register::RegisterValue::Number(n)) => n.value_of().to_string(),
@@ -698,7 +696,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       Some(s)
     },
     Stored::VecDequeStored(vd) if vd.is_empty() => Some("VD\t".to_string()),
-    _ => Option::None,
+    _ => None,
   }
 }
 
@@ -842,9 +840,11 @@ fn rle_encode_i64(values: &[i64]) -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::parameter::{Parameter, Parameters};
-  use crate::token::{Catcode, Token};
-  use crate::tokens::Tokens;
+  use crate::{
+    parameter::{Parameter, Parameters},
+    token::{Catcode, Token},
+    tokens::Tokens,
+  };
 
   /// Construct a Parameter without calling `init()` — `init()` needs live
   /// state (PARAMETER_TYPES table), which we don't set up in unit tests.
@@ -881,22 +881,26 @@ mod tests {
       Token {
         text: arena::pin("\\end"),
         code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    },
+        #[cfg(feature = "token-locators")]
+        loc: 0,
+      },
       Token {
         text: arena::pin("{"),
         code: Catcode::BEGIN,
-        #[cfg(feature = "token-locators")] loc: 0,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
       },
       Token {
         text: arena::pin("verbatim"),
         code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
-    },
+        #[cfg(feature = "token-locators")]
+        loc: 0,
+      },
       Token {
         text: arena::pin("}"),
         code: Catcode::END,
-        #[cfg(feature = "token-locators")] loc: 0,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
       },
     ]);
     let ps = Parameters::new(vec![raw_param("Until", "Until:\\end{verbatim}", vec![
@@ -943,12 +947,14 @@ mod tests {
     let t1 = Tokens::new(vec![Token {
       text: arena::pin("a"),
       code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }]);
     let t2 = Tokens::new(vec![Token {
       text: arena::pin("b"),
       code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")] loc: 0
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     }]);
     let ps = Parameters::new(vec![raw_param("Match", "Match:ab", vec![t1, t2])]);
     let s = serialize_parameters_v3(&ps);
@@ -1034,12 +1040,18 @@ mod tests {
   #[test]
   fn fontdimen_key_non_numeric_tail() {
     // No trailing digits after last `_` ⇒ no index ⇒ no match.
-    assert_eq!(parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_abc"), None);
+    assert_eq!(
+      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_abc"),
+      None
+    );
   }
 
   #[test]
   fn fontdimen_key_empty_tail() {
     // Trailing underscore with no digits ⇒ no match.
-    assert_eq!(parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_"), None);
+    assert_eq!(
+      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_"),
+      None
+    );
   }
 }

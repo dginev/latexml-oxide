@@ -25,7 +25,7 @@ LoadDefinitions!({
   // in the libxml node management. Instead, we use absorb_string for inline text.
   {
     let replacement: ReplacementClosure = Rc::new(
-      |document: &mut Document, args: &Vec<Option<Digested>>, props: &arena::SymHashMap<Stored>| {
+      |document: &mut Document, args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
         document.open_element("ltx:text", None, None)?;
         // ?&GetKeyVal(#1,width)(Width: &GetKeyVal(#1,width))
         if let Some(width) = GetKeyVal(&args[0], "width") {

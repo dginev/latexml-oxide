@@ -1,32 +1,33 @@
-use once_cell::sync::Lazy;
-use regex::{Captures, Regex};
-use rustc_hash::FxHashMap as HashMap;
-use std::path::Path;
-use std::rc::Rc;
+use std::{path::Path, rc::Rc};
 
-use latexml_core::common::DigestionMode;
-use latexml_core::common::arena;
-use latexml_core::common::error::{self, Result, note_begin, note_end};
-use latexml_core::common::model;
-use latexml_core::common::store::Stored;
-use latexml_core::definition::expandable::Expandable;
-use latexml_core::digested::Digested;
-use latexml_core::document::Document;
-use latexml_core::gullet;
-use latexml_core::list::List;
-use latexml_core::rewrite::{Rewrite, RewriteOptions};
-use latexml_core::state::{self, Scope};
-use latexml_core::stomach;
-use latexml_core::token::{Catcode, Token};
-use latexml_core::tokens::Tokens;
-use latexml_core::util::pathname;
-use latexml_core::util::pathname::PathnameFindOptions;
 // Top-level re-exports + the `Token!` macro (distinct from
 // `latexml_core::token::Token` type imported above).
 use latexml_core::{
   CharToken, Core, Debug, Error, Explode, Fatal, T_CS, T_SPACE, Token, fatal, map, s,
 };
+use latexml_core::{
+  common::{
+    DigestionMode, arena,
+    error::{self, Result, note_begin, note_end},
+    model,
+    store::Stored,
+  },
+  definition::expandable::Expandable,
+  digested::Digested,
+  document::Document,
+  gullet,
+  list::List,
+  rewrite::{Rewrite, RewriteOptions},
+  state::{self, Scope},
+  stomach,
+  token::{Catcode, Token},
+  tokens::Tokens,
+  util::{pathname, pathname::PathnameFindOptions},
+};
 use latexml_math_parser::MathParser;
+use once_cell::sync::Lazy;
+use regex::{Captures, Regex};
+use rustc_hash::FxHashMap as HashMap;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static LATEXML_DUMP: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP").ok());
@@ -80,7 +81,7 @@ pub trait DigestionAPI {
     } else {
       preamble
     };
-    crate::core_interface::input_content(&content, InputOptions::default()).ok();
+    input_content(&content, InputOptions::default()).ok();
   }
   /// Load postamble content. Perl: Core.pm loadPostamble
   fn load_postamble(&mut self, postamble: String) {
@@ -89,7 +90,7 @@ pub trait DigestionAPI {
     } else {
       postamble
     };
-    crate::core_interface::input_content(&content, InputOptions::default()).ok();
+    input_content(&content, InputOptions::default()).ok();
   }
 }
 
@@ -163,7 +164,7 @@ impl DigestionAPI for Core {
 
     // Load kernel dump AFTER pools (provides TeX/LaTeX macros the pools skipped).
     if let Some(ref dump_path) = dump_path {
-      let path = std::path::Path::new(dump_path);
+      let path = Path::new(dump_path);
       if path.exists() {
         // Rust-native tab-separated format (from --init mode). The
         // Perl-format `dump_loader` was deleted 2026-04-18 (dead code —
@@ -425,77 +426,92 @@ impl DigestionAPI for Core {
       document.mark_xmnode_visibility()?;
       document.load_labels_for_rewrite()?;
       // TODO: What is the right way to do rewrites in a daemon-safe manner?
-      if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES") {
-        if let Some(root) = document.get_document().get_root_element() {
-          // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
-          // state. (TODO: obviously, this could be avoided if they never needed mutable
-          // state. When do they?)
-          let mut rewrites = Vec::new();
-          for rule in rules {
-            if let Stored::Rewrite(mut rewrite_rule) = rule {
-              rewrite_rule.compile_clauses(&mut document);
-              rewrites.push(rewrite_rule);
-            }
+      if let Some(Stored::VecDequeStored(rules)) = state::remove_value("DOCUMENT_REWRITE_RULES")
+        && let Some(root) = document.get_document().get_root_element()
+      {
+        // Step 1: copy the rules locally through Rc, to be able to invoke them with mutable
+        // state. (TODO: obviously, this could be avoided if they never needed mutable
+        // state. When do they?)
+        let mut rewrites = Vec::new();
+        for rule in rules {
+          if let Stored::Rewrite(mut rewrite_rule) = rule {
+            rewrite_rule.compile_clauses(&mut document);
+            rewrites.push(rewrite_rule);
           }
-          // 31 rules compiled for declare test; XPath matching issue prevents application
-          // Step 2: invoke the rewrite rules
-          // R35.D instrumentation: print per-rule timing if
-          // LATEXML_REWRITE_TIMING=1. Logs BEFORE the rule runs so we can
-          // identify the rule that hangs (the timeout watchdog kills
-          // mid-rule otherwise).
-          let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
-          let n_rules = rewrites.len();
-          for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
-            // Build a useful one-line hint from the rule's options. The
-            // Debug impl on RewriteOptions is `<RewriteOptions>` only,
-            // so reach into the fields directly.
-            let opts = &rewrite_rule.options;
-            let mut xpath_hint = format!(
-              "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
-              opts.select.as_deref().map(|s| s.chars().take(60).collect::<String>()),
-              opts.xpath.as_deref().map(|s| s.chars().take(60).collect::<String>()),
-              opts.regexp.as_deref().map(|s| s.chars().take(60).collect::<String>()),
-              opts.scope.as_ref().map(|_| "<scope>"),
-              opts.label.as_deref(),
-              rewrite_rule.clauses.len(),
+        }
+        // 31 rules compiled for declare test; XPath matching issue prevents application
+        // Step 2: invoke the rewrite rules
+        // R35.D instrumentation: print per-rule timing if
+        // LATEXML_REWRITE_TIMING=1. Logs BEFORE the rule runs so we can
+        // identify the rule that hangs (the timeout watchdog kills
+        // mid-rule otherwise).
+        let trace_all = std::env::var_os("LATEXML_REWRITE_TIMING").is_some();
+        let n_rules = rewrites.len();
+        for (idx, mut rewrite_rule) in rewrites.into_iter().enumerate() {
+          // Build a useful one-line hint from the rule's options. The
+          // Debug impl on RewriteOptions is `<RewriteOptions>` only,
+          // so reach into the fields directly.
+          let opts = &rewrite_rule.options;
+          let mut xpath_hint = format!(
+            "select={:?} xpath={:?} regexp={:?} scope={:?} label={:?} clauses={}",
+            opts
+              .select
+              .as_deref()
+              .map(|s| s.chars().take(60).collect::<String>()),
+            opts
+              .xpath
+              .as_deref()
+              .map(|s| s.chars().take(60).collect::<String>()),
+            opts
+              .regexp
+              .as_deref()
+              .map(|s| s.chars().take(60).collect::<String>()),
+            opts.scope.as_ref().map(|_| "<scope>"),
+            opts.label.as_deref(),
+            rewrite_rule.clauses.len(),
+          );
+          // Dump compiled clauses by op + pattern preview (helps when
+          // the options struct itself is empty after compile_clauses
+          // moved them into the clauses vec).
+          for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
+            use std::fmt::Write;
+            let _ = write!(
+              xpath_hint,
+              "\n    [{ci}] op={:?} pat={:?}",
+              c.op,
+              match &c.pattern {
+                latexml_core::rewrite::RewritePattern::String(s) =>
+                  format!("Str({})", s.chars().take(120).collect::<String>()),
+                latexml_core::rewrite::RewritePattern::Tokens(_) => "Tokens(..)".into(),
+                latexml_core::rewrite::RewritePattern::Closure(_) => "Closure(..)".into(),
+                latexml_core::rewrite::RewritePattern::NodeList(n) =>
+                  format!("NodeList({})", n.len()),
+                _ => "??".into(),
+              }
             );
-            // Dump compiled clauses by op + pattern preview (helps when
-            // the options struct itself is empty after compile_clauses
-            // moved them into the clauses vec).
-            for (ci, c) in rewrite_rule.clauses.iter().enumerate() {
-              use std::fmt::Write;
-              let _ = write!(
-                xpath_hint,
-                "\n    [{ci}] op={:?} pat={:?}",
-                c.op,
-                match &c.pattern {
-                  latexml_core::rewrite::RewritePattern::String(s) =>
-                    format!("Str({})", s.chars().take(120).collect::<String>()),
-                  latexml_core::rewrite::RewritePattern::Tokens(_) => "Tokens(..)".into(),
-                  latexml_core::rewrite::RewritePattern::Closure(_) => "Closure(..)".into(),
-                  latexml_core::rewrite::RewritePattern::NodeList(n) =>
-                    format!("NodeList({})", n.len()),
-                  _ => "??".into(),
-                }
-              );
-            }
-            if trace_all {
-              eprintln!("[rewrite-timing] rule #{}/{} START :: {}", idx, n_rules, xpath_hint);
-              // Flush stderr so it appears even if the rule hangs
-              use std::io::Write;
-              let _ = std::io::stderr().flush();
-            }
-            let started = std::time::Instant::now();
-            rewrite_rule.invoke(&mut document, &root)?;
-            let elapsed = started.elapsed();
-            if trace_all {
-              eprintln!("[rewrite-timing] rule #{}/{} END {:.2?}", idx, n_rules, elapsed);
-            } else if elapsed > std::time::Duration::from_secs(5) {
-              eprintln!(
-                "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
-                idx, n_rules, elapsed, xpath_hint
-              );
-            }
+          }
+          if trace_all {
+            eprintln!(
+              "[rewrite-timing] rule #{}/{} START :: {}",
+              idx, n_rules, xpath_hint
+            );
+            // Flush stderr so it appears even if the rule hangs
+            use std::io::Write;
+            let _ = std::io::stderr().flush();
+          }
+          let started = std::time::Instant::now();
+          rewrite_rule.invoke(&mut document, &root)?;
+          let elapsed = started.elapsed();
+          if trace_all {
+            eprintln!(
+              "[rewrite-timing] rule #{}/{} END {:.2?}",
+              idx, n_rules, elapsed
+            );
+          } else if elapsed > std::time::Duration::from_secs(5) {
+            eprintln!(
+              "[rewrite-timing] rule #{}/{} SLOW {:.2?} :: {}",
+              idx, n_rules, elapsed, xpath_hint
+            );
           }
         }
       }
@@ -669,10 +685,10 @@ impl DigestionAPI for Core {
         // directory` returns an empty string — which then gets pushed
         // onto SEARCHPATHS as a useless entry. Resolve to CWD in that
         // case so the paper-local Chapter/ etc. are reachable.
-        if dir.is_empty() {
-          if let Ok(cwd) = std::env::current_dir() {
-            dir = cwd.to_string_lossy().to_string();
-          }
+        if dir.is_empty()
+          && let Ok(cwd) = std::env::current_dir()
+        {
+          dir = cwd.to_string_lossy().to_string();
         }
       // ext = pathname::extension(&request);
       } else {
@@ -963,12 +979,13 @@ fn apply_lx_declarations(document: &mut Document) {
       if matches {
         // Check scope: if decl_id has a section prefix (e.g. "S1" from "S1.XMD1"),
         // only apply to tokens within that section
-        if !decl_id.is_empty() {
-          if let Some(section_prefix) = decl_id.split('.').next() {
-            if !section_prefix.is_empty() && !tok_scope.is_empty() && tok_scope != section_prefix {
-              continue; // Wrong section — skip this declaration
-            }
-          }
+        if !decl_id.is_empty()
+          && let Some(section_prefix) = decl_id.split('.').next()
+          && !section_prefix.is_empty()
+          && !tok_scope.is_empty()
+          && tok_scope != section_prefix
+        {
+          continue; // Wrong section — skip this declaration
         }
         if !role.is_empty() {
           let _ = tok.set_attribute("role", role);
@@ -1080,13 +1097,13 @@ fn renumber_math_ids(document: &mut Document) {
       // idstore if we interleave unrecord+record. Strip all first, then assign.
       let mut nodes_to_update: Vec<(libxml::tree::Node, String)> = Vec::new();
       for (mut node, old_id) in id_entries.drain(..) {
-        if let Some(new_id) = id_map.get(&old_id) {
-          if new_id != &old_id {
-            document.unrecord_id(&old_id);
-            let _ = node.remove_attribute("xml:id");
-            let _ = node.remove_attribute_ns("id", xml_ns);
-            nodes_to_update.push((node, new_id.clone()));
-          }
+        if let Some(new_id) = id_map.get(&old_id)
+          && new_id != &old_id
+        {
+          document.unrecord_id(&old_id);
+          let _ = node.remove_attribute("xml:id");
+          let _ = node.remove_attribute_ns("id", xml_ns);
+          nodes_to_update.push((node, new_id.clone()));
         }
       }
       for (mut node, new_id) in nodes_to_update {
@@ -1095,10 +1112,10 @@ fn renumber_math_ids(document: &mut Document) {
 
       // Update idrefs
       for (mut node, old_idref) in idref_entries.drain(..) {
-        if let Some(new_idref) = id_map.get(&old_idref) {
-          if new_idref != &old_idref {
-            let _ = node.set_attribute("idref", new_idref);
-          }
+        if let Some(new_idref) = id_map.get(&old_idref)
+          && new_idref != &old_idref
+        {
+          let _ = node.set_attribute("idref", new_idref);
         }
       }
 

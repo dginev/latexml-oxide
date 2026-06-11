@@ -48,10 +48,10 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
   let alignment = Alignment::new(AlignmentConfig {
     template:        Some(template),
     open_container:  Rc::new(move |document, mut props| {
-      if let Ok(id_props) = ref_step_id("@equationgroup") {
-        if let Some(id) = id_props.get("id") {
-          props.insert(String::from("xml:id"), id.to_string());
-        }
+      if let Ok(id_props) = ref_step_id("@equationgroup")
+        && let Some(id) = id_props.get("id")
+      {
+        props.insert(String::from("xml:id"), id.to_string());
       }
       // Perl: %attributes has class => 'ltx_eqn_numcases' which overrides
       // the openContainer's default class. Use 'ltx_eqn_numcases' directly.
@@ -60,14 +60,14 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
         .or_insert_with(|| String::from("ltx_eqn_numcases"));
       document
         .open_element("ltx:equationgroup", Some(props), None)
-        .map(Option::Some)
+        .map(Some)
     }),
     close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
     open_row:        Rc::new(|document, mut props| {
-      if let Some(Stored::HashStored(eq_props)) = state::remove_value("EQUATIONROW_PROPS") {
-        if let Some(id) = eq_props.get("id") {
-          props.insert(String::from("xml:id"), Stored::from(id.to_string()));
-        }
+      if let Some(Stored::HashStored(eq_props)) = remove_value("EQUATIONROW_PROPS")
+        && let Some(id) = eq_props.get("id")
+      {
+        props.insert(String::from("xml:id"), Stored::from(id.to_string()));
       }
       let tags_digested = props.remove("tags");
       let str_props: HashMap<String, String> =
@@ -82,7 +82,7 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     open_column:     Rc::new(|document, props| {
       document
         .open_element("ltx:_Capture_", Some(props), None)
-        .map(Option::Some)
+        .map(Some)
     }),
     close_column:    Rc::new(|document| document.close_element("ltx:_Capture_")),
     is_math:         true,
@@ -90,7 +90,7 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     xml_attributes:  attrs,
   });
   assign_alignment(alignment, None);
-  state::let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+  let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
   let mut lhs_expansion = lhs.unlist();
   lhs_expansion.push(T_ALIGN!());
   def_macro(
@@ -100,12 +100,12 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
     None,
   )?;
   Let!("\\\\", "\\@numcases@newline");
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@alignment@row@before"),
     &T_CS!("\\eqnarray@row@before"),
     None,
   );
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@alignment@row@after"),
     &T_CS!("\\eqnarray@row@after"),
     None,
@@ -144,16 +144,16 @@ LoadDefinitions!({
     // Step the equation counter and get properties (id, refnum)
     let eqn_props = ref_step_counter("equation", false)?;
     // Expand \theequation to get the parent equation number text (e.g. "3")
-    let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
+    let eqnum_toks = do_expand(T_CS!("\\theequation"))?;
     let eqnum_str = eqnum_toks.to_string();
     // Save current equation counter value
-    let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+    let saved = lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
       match rv {
         RegisterValue::Number(n) => n.0,
         _ => 0,
       }
     });
-    state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), Some(Scope::Global));
+    assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), Some(Scope::Global));
     // Reset equation counter to 0 for sub-lettering
     reset_counter(&T_OTHER!("equation"))?;
     // Redefine \theequation to parent_number + \alph{equation} (e.g. "3a", "3b")
@@ -161,7 +161,7 @@ LoadDefinitions!({
     def_macro(T_CS!("\\theequation"), None, mouth::tokenize_internal(&new_theequation), None)?;
     // Redefine \theequation@ID for xml:id generation (e.g. "S0.E3.\@equation@ID")
     let id_str = eqn_props.iter().find_map(|(k, v)| {
-      if arena::with(*k, |ks| ks == "id") { Some(v.to_string()) } else { None }
+      if with(*k, |ks| ks == "id") { Some(v.to_string()) } else { None }
     }).unwrap_or_default();
     if !id_str.is_empty() {
       let new_id_macro = format!("{}.\\@equation@ID", id_str);
@@ -170,8 +170,8 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\lx@numcases@subnumbering@end", sub[_args] {
     // Restore saved equation counter
-    if let Some(Stored::Number(n)) = state::lookup_value("SAVED_EQUATION_NUMBER") {
-      let _ = state::assign_register("\\c@equation", RegisterValue::Number(n), Some(Scope::Global), Vec::new());
+    if let Some(Stored::Number(n)) = lookup_value("SAVED_EQUATION_NUMBER") {
+      let _ = assign_register("\\c@equation", RegisterValue::Number(n), Some(Scope::Global), Vec::new());
     }
   });
 

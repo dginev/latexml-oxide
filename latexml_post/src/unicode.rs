@@ -5,8 +5,9 @@
 //! (U+1D400–U+1D7FF) based on mathvariant style. Also handles superscript/subscript
 //! mappings and font name normalization to MathML mathvariant values.
 
-use rustc_hash::FxHashMap as HashMap;
 use std::sync::LazyLock;
+
+use rustc_hash::FxHashMap as HashMap;
 
 /// Build a Plane 1 character mapping from base addresses.
 ///

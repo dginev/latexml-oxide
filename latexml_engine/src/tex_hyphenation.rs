@@ -64,19 +64,19 @@ LoadDefinitions!({
       // Resolve to canonical font identity via Primitive.font_id so
       // `\let`-aliased fonts share hyphenchar storage. Mirrors the
       // fontdimen indirection in tex_fonts.rs.
-      let canonical_cs = state::lookup_meaning(&font_token)
+      let canonical_cs = lookup_meaning(&font_token)
         .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
                       else { None })
         .map(|fid| {
-          let s = arena::with(fid, |x| x.to_string());
+          let s = with(fid, |x| x.to_string());
           s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
         })
         .unwrap_or_else(|| cs_str.clone());
-      let hc_key = state::with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
-        Some(Stored::String(s)) => arena::with(*s, |sk| s!("hyphenchar_{sk}")),
+      let hc_key = with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
+        Some(Stored::String(s)) => with(*s, |sk| s!("hyphenchar_{sk}")),
         _ => s!("hyphenchar_{canonical_cs}"),
       });
-      state::with_value(&hc_key, |v| match v {
+      with_value(&hc_key, |v| match v {
         Some(Stored::Number(n)) => *n,
         _ => Number::new(b'-' as i64),
       })
@@ -84,19 +84,19 @@ LoadDefinitions!({
     setter => sub[value, _scope, args] {
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();
-      let canonical_cs = state::lookup_meaning(&font_token)
+      let canonical_cs = lookup_meaning(&font_token)
         .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
                       else { None })
         .map(|fid| {
-          let s = arena::with(fid, |x| x.to_string());
+          let s = with(fid, |x| x.to_string());
           s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
         })
         .unwrap_or_else(|| cs_str.clone());
-      let hc_key = state::with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
-        Some(Stored::String(s)) => arena::with(*s, |sk| s!("hyphenchar_{sk}")),
+      let hc_key = with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
+        Some(Stored::String(s)) => with(*s, |sk| s!("hyphenchar_{sk}")),
         _ => s!("hyphenchar_{canonical_cs}"),
       });
-      state::assign_value(
+      assign_value(
         &hc_key,
         Stored::Number(value.into()),
         Some(Scope::Global),

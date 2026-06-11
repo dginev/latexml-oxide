@@ -1,10 +1,11 @@
-use libxml::tree::Node;
-use std::fmt;
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
-use crate::common::error::Result;
-use crate::common::font::Font;
-use crate::document::Document;
+use libxml::tree::Node;
+
+use crate::{
+  common::{error::Result, font::Font},
+  document::Document,
+};
 
 pub type LigatureClosure = Rc<dyn Fn(&str) -> String>;
 pub type FontTestClosure = Rc<dyn Fn(&Font) -> bool>;

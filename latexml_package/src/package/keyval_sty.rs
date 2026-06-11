@@ -8,11 +8,11 @@ LoadDefinitions!({
   // HOOK into define@key to make the latexml definitions as well
   // \define@key{keyset}{key}[default]{code}
   DefPrimitive!("\\define@key{}{}[]{}", sub[(keyset_tks, key_tks, default_opt, code)] {
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
-    let key = gullet::do_expand(key_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
+    let key = do_expand(key_tks)?.to_string();
     let default = default_opt.map(|d: Tokens| d.to_string());
 
-    latexml_core::keyval::define(KeyvalConfig {
+    keyval::define(KeyvalConfig {
       prefix: "KV",
       keyset: &keyset,
       key: &key,
@@ -25,7 +25,7 @@ LoadDefinitions!({
 
   // \setkeys{keyset}{keyvals}
   DefMacro!("\\setkeys{}", sub[(keyset_tks)] {
-    let keyset = gullet::do_expand(keyset_tks)?.to_string();
+    let keyset = do_expand(keyset_tks)?.to_string();
     let keysets: Vec<String> = keyset.split(',')
       .map(|s| s.trim().to_string())
       .filter(|s| !s.is_empty())
@@ -37,7 +37,7 @@ LoadDefinitions!({
       set_all: false,
       set_internals: true,
       skip: Vec::new(),
-      skip_missing: latexml_core::keyvals::SkipMissing::None,
+      skip_missing: keyvals::SkipMissing::None,
       hook_missing: None,
     });
     keyvals.read_from(T_END!(), false)?;

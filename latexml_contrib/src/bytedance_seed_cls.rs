@@ -8,7 +8,6 @@
 //! Witness: 2503.04598 (Seed-1.5 thinking paper).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -27,17 +26,25 @@ LoadDefinitions!({
   // \author[mark]{name} — emit name as author.
   DefMacro!("\\author[]{}", "\\author{#2}");
   // \affiliation[mark]{text} — emit affiliation note.
-  DefMacro!("\\affiliation[]{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}");
+  DefMacro!(
+    "\\affiliation[]{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
+  );
   // \contribution[mark]{text} — emit contribution note.
-  DefMacro!("\\contribution[]{}",
-    "\\@add@frontmatter{ltx:note}[role=contribution]{#2}");
+  DefMacro!(
+    "\\contribution[]{}",
+    "\\@add@frontmatter{ltx:note}[role=contribution]{#2}"
+  );
   // \checkdata[label]{value} — emit as keyed note (label: value).
-  DefMacro!("\\checkdata[]{}",
-    "\\@add@frontmatter{ltx:note}[role=#1]{#2}");
+  DefMacro!(
+    "\\checkdata[]{}",
+    "\\@add@frontmatter{ltx:note}[role=#1]{#2}"
+  );
   // \correspondence{text} — emit corresponding-author note.
-  DefMacro!("\\correspondence{}",
-    "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}");
+  DefMacro!(
+    "\\correspondence{}",
+    "\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
+  );
   // \beginappendix — bytedance uses this in place of \appendix.
   DefMacro!("\\beginappendix", "\\appendix");
   DefMacro!("\\seedblue{}", "{\\color[HTML]{2E5AA8}\\textbf{#1}}");

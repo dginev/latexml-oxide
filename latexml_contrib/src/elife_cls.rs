@@ -43,9 +43,13 @@ LoadDefinitions!({
   // elife.cls L202: \corr{email}{id} — corresponding-author marker.
   // Real def appends to internal `\@correspondence`; we just preserve
   // the email and optional id as a frontmatter note. Witness 2307.12956.
-  DefMacro!("\\corr{}{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{\\url{#1} (#2)}");
+  DefMacro!(
+    "\\corr{}{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{\\url{#1} (#2)}"
+  );
   // \contrib[id]{name} — contributing-author note. Same approach.
-  DefMacro!("\\contrib[]{}",
-    "\\@add@frontmatter{ltx:note}[role=contribution]{#1: #2}");
+  DefMacro!(
+    "\\contrib[]{}",
+    "\\@add@frontmatter{ltx:note}[role=contribution]{#1: #2}"
+  );
 });

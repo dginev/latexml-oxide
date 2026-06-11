@@ -21,5 +21,5 @@ LoadDefinitions!({
   // Witness arXiv:2003.12709 (`\usepackage{vntex}`, author name
   // "Nguy\~\ecircumflex n Th\d{i} B\'ich Th\h{u}y" → CONVERR_2 on
   // `\ecircumflex`/`\h`).
-  crate::package::t5enc_def::load_definitions()?;
+  t5enc_def::load_definitions()?;
 });

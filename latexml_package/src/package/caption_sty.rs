@@ -60,9 +60,9 @@ LoadDefinitions!({
   DefPrimitive!("\\captionsetup[] RequiredKeyVals:caption", sub[(_ignore, kv)] {
     for (key, value) in kv.get_pairs() {
       let state_key = s!("CAPTION_{key}");
-      state::assign_value(
+      assign_value(
         &state_key,
-        Stored::String(arena::pin(value.to_string())),
+        Stored::String(pin(value.to_string())),
         None,
       );
     }
@@ -229,8 +229,8 @@ LoadDefinitions!({
   // falls through to `\@@generic@caption`. Rust previously hardcoded the
   // fallback, silently dropping the captionsetup type.
   DefMacro!("\\maybe@@generic@caption", sub[_args] {
-    if let Some(Stored::String(t)) = state::lookup_value("CAPTION_type") {
-      let ty = arena::with(t, |s| s.to_string());
+    if let Some(Stored::String(t)) = lookup_value("CAPTION_type") {
+      let ty = with(t, |s| s.to_string());
       if !ty.is_empty() {
         let mut out = vec![T_CS!("\\@captionof"), T_BEGIN!()];
         out.extend(ExplodeText!(&ty));
@@ -281,7 +281,7 @@ LoadDefinitions!({
     let val = value.to_string();
     let truthy = matches!(val.trim(), "1" | "true" | "yes" | "on");
     let target_name = if truthy { "\\@firstoftwo" } else { "\\@secondoftwo" };
-    state::let_i(&cs, &T_CS!(target_name), None);
+    let_i(&cs, &T_CS!(target_name), None);
     Ok(Tokens!())
   });
   // \caption@setbool{name} — wraps caption@set@bool by building \caption@if<name>.

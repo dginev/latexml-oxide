@@ -2,18 +2,17 @@
 //! (Split out of the old monolithic `lsp_server.rs`; see `mod.rs`
 //! for the architecture overview.)
 
-use std::collections::VecDeque;
-use std::io::{Read, Write};
-use std::os::unix::io::FromRawFd;
+use std::{
+  collections::VecDeque,
+  io::{Read, Write},
+  os::unix::io::FromRawFd,
+};
 
+use latexml_core::BoxOps;
 use serde_json::Value;
 
-use crate::converter::Converter;
-
 use super::*;
-
-use crate::core_interface::DigestionAPI;
-use latexml_core::BoxOps;
+use crate::{converter::Converter, core_interface::DigestionAPI};
 
 /// Outcome of one warm-fork conversion attempt.
 enum WarmResult {
@@ -43,9 +42,7 @@ impl FdReader {
   fn fill(&mut self) -> std::io::Result<usize> {
     let mut tmp = [0u8; 8192];
     loop {
-      let n = unsafe {
-        libc::read(self.fd, tmp.as_mut_ptr() as *mut libc::c_void, tmp.len())
-      };
+      let n = unsafe { libc::read(self.fd, tmp.as_mut_ptr() as *mut libc::c_void, tmp.len()) };
       if n < 0 {
         let err = std::io::Error::last_os_error();
         if err.raw_os_error() == Some(libc::EINTR) {
@@ -123,19 +120,17 @@ fn task_count() -> usize {
 /// any thread spawned during a conversion (a future engine/post
 /// `thread::spawn` that outlives its scope) could hold the malloc lock at
 /// fork time and deadlock the child before its Watchdog arms.
-static BASELINE_THREADS: std::sync::atomic::AtomicUsize =
-  std::sync::atomic::AtomicUsize::new(0);
+static BASELINE_THREADS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
 
 fn parse_content_length(header: &[u8]) -> Option<usize> {
   let s = std::str::from_utf8(header).ok()?;
   for line in s.split("\r\n") {
     let l = line.trim();
-    if l.to_ascii_lowercase().starts_with("content-length:") {
-      if let Some(v) = l.split(':').nth(1) {
-        if let Ok(n) = v.trim().parse::<usize>() {
-          return Some(n);
-        }
-      }
+    if l.to_ascii_lowercase().starts_with("content-length:")
+      && let Some(v) = l.split(':').nth(1)
+      && let Ok(n) = v.trim().parse::<usize>()
+    {
+      return Some(n);
     }
   }
   None
@@ -168,7 +163,7 @@ fn reap(pid: i32) -> i32 {
 /// wasted compile.
 fn preempts(body: &str, current_root: &std::path::Path) -> bool {
   match parse_json(body) {
-    Ok(req) => super::message_doc_uri(&req)
+    Ok(req) => message_doc_uri(&req)
       .map(|uri| {
         let path = get_file_path(&uri);
         same_project(current_root, std::path::Path::new(&path))
@@ -206,10 +201,9 @@ fn wait_for_child(
   let mut pipe = unsafe { std::fs::File::from_raw_fd(read_fd) };
 
   loop {
-    // 1. Handle every COMPLETE stdin frame already buffered. We never block
-    //    waiting for the rest of a partial frame here — doing so (the old
-    //    `next_message()` call) ignored the child pipe while blocked, and a
-    //    client that stalls mid-frame while the child blocks writing a
+    // 1. Handle every COMPLETE stdin frame already buffered. We never block waiting for the rest of
+    //    a partial frame here — doing so (the old `next_message()` call) ignored the child pipe
+    //    while blocked, and a client that stalls mid-frame while the child blocks writing a
     //    > pipe-capacity payload would deadlock all three parties.
     while let Some(body) = reader.take_frame() {
       if body.is_empty() {
@@ -231,8 +225,16 @@ fn wait_for_child(
 
     // 2. Poll both fds.
     let mut fds = [
-      libc::pollfd { fd: 0, events: libc::POLLIN, revents: 0 },
-      libc::pollfd { fd: read_fd, events: libc::POLLIN, revents: 0 },
+      libc::pollfd {
+        fd:      0,
+        events:  libc::POLLIN,
+        revents: 0,
+      },
+      libc::pollfd {
+        fd:      read_fd,
+        events:  libc::POLLIN,
+        revents: 0,
+      },
     ];
     let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
     if rc < 0 {
@@ -256,8 +258,8 @@ fn wait_for_child(
       return finish(&bytes, code);
     }
     if (fds[0].revents & (libc::POLLIN | libc::POLLHUP)) != 0 {
-      // 3. One non-blocking-equivalent fill; complete frames are handled at
-      //    the top of the next iteration.
+      // 3. One non-blocking-equivalent fill; complete frames are handled at the top of the next
+      //    iteration.
       match reader.fill() {
         // stdin EOF mid-compile: client gone — kill the child and stop.
         Ok(0) => {
@@ -336,7 +338,10 @@ fn finish(bytes: &[u8], exit_code: i32) -> WarmResult {
         let combined_log = format!("{}{}", PREAMBLE_LOG.with(|c| c.borrow().clone()), body_log);
         let diags = parse_log_diagnostics(&combined_log);
         // Engine status/code reported by the child (0/1/2/3).
-        let status_code = payload.get("statusCode").and_then(|c| c.as_i64()).unwrap_or(0);
+        let status_code = payload
+          .get("statusCode")
+          .and_then(|c| c.as_i64())
+          .unwrap_or(0);
         let status = payload
           .get("status")
           .and_then(|s| s.as_str())
@@ -358,9 +363,11 @@ fn finish(bytes: &[u8], exit_code: i32) -> WarmResult {
     // crashed. Map the exit code to a fatal result.
     Err(e) => {
       let out = match exit_code {
-        EXIT_TIMEOUT => {
-          ConvertOutput::failed("timeout", 3, "conversion timed out (hard wall-clock limit)".to_string())
-        },
+        EXIT_TIMEOUT => ConvertOutput::failed(
+          "timeout",
+          3,
+          "conversion timed out (hard wall-clock limit)".to_string(),
+        ),
         EXIT_OOM => ConvertOutput::failed(
           "fatal",
           3,
@@ -377,7 +384,8 @@ fn finish(bytes: &[u8], exit_code: i32) -> WarmResult {
 thread_local! {
   /// Preamble (warmup) log for the conversion currently being assembled.
   /// Set in `run_warm` immediately before forking, read back in `finish`.
-  static PREAMBLE_LOG: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+  static PREAMBLE_LOG: std::cell::RefCell<String> =
+    const { std::cell::RefCell::new(String::new()) };
 }
 
 /// Fork a child that digests `body`, prepends the warm preamble's digested
@@ -716,12 +724,30 @@ fn dispatch(
     "initialized" => {},
     "textDocument/didOpen" => {
       if let Some((uri, text)) = did_open_params(&request) {
-        convert_trigger(server, reader, pending, &uri, &text, doc_version(&request), stdout, None)?;
+        convert_trigger(
+          server,
+          reader,
+          pending,
+          &uri,
+          &text,
+          doc_version(&request),
+          stdout,
+          None,
+        )?;
       }
     },
     "textDocument/didChange" => {
       if let Some((uri, text)) = did_change_params(&request) {
-        convert_trigger(server, reader, pending, &uri, &text, doc_version(&request), stdout, None)?;
+        convert_trigger(
+          server,
+          reader,
+          pending,
+          &uri,
+          &text,
+          doc_version(&request),
+          stdout,
+          None,
+        )?;
       }
     },
     "textDocument/didClose" => {
@@ -758,7 +784,11 @@ fn dispatch(
         // leaves the client awaiting the response forever.
         send_message(
           stdout,
-          &error_response(id, -32602.0, "latexml/convert: missing params.uri/params.text".to_string()),
+          &error_response(
+            id,
+            -32602.0,
+            "latexml/convert: missing params.uri/params.text".to_string(),
+          ),
         )?;
       }
     },
@@ -859,8 +889,6 @@ fn convert_trigger(
   Ok(())
 }
 
-
-
 #[cfg(test)]
 mod framing_tests {
   use super::*;
@@ -948,13 +976,18 @@ mod framing_tests {
   #[test]
   fn preempts_same_project_convert_and_didchange() {
     use std::path::Path;
-    let conv = r#"{"method":"latexml/convert","params":{"uri":"file:///proj/main.tex","text":"x"}}"#;
+    let conv =
+      r#"{"method":"latexml/convert","params":{"uri":"file:///proj/main.tex","text":"x"}}"#;
     let chg = r#"{"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///proj/sections/ch2.tex"},"contentChanges":[{"text":"y"}]}}"#;
-    let other = r#"{"method":"latexml/convert","params":{"uri":"file:///elsewhere/b.tex","text":"x"}}"#;
+    let other =
+      r#"{"method":"latexml/convert","params":{"uri":"file:///elsewhere/b.tex","text":"x"}}"#;
     let close = r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///proj/main.tex"}}}"#;
     let root = Path::new("/proj/main.tex");
     assert!(preempts(conv, root), "same-doc convert preempts");
-    assert!(preempts(chg, root), "didChange anywhere in the project preempts");
+    assert!(
+      preempts(chg, root),
+      "didChange anywhere in the project preempts"
+    );
     assert!(!preempts(other, root), "another project does not");
     assert!(!preempts(close, root), "didClose does not");
   }

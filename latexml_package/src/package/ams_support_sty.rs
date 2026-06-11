@@ -53,7 +53,7 @@ LoadDefinitions!({
   // use `\documentstyle[12pt,verbatim]{amsart}` and rely on the AmS-TeX
   // `\Sb` / `\Sp` substack environments which are only defined by the
   // amstex binding.
-  if state::lookup_bool("2.09_COMPATIBILITY") {
+  if lookup_bool("2.09_COMPATIBILITY") {
     RequirePackage!("amstex");
   }
   RequirePackage!("amsthm");
@@ -229,7 +229,7 @@ LoadDefinitions!({
   if lookup_bool("2.09_COMPATIBILITY") {
     DefMacro!("\\defaultfont", "\\normalfont");
     DefMacro!("\\rom", "\\textup");
-    stomach::raw_tex(
+    raw_tex(
       "\\newenvironment{pf}{\\begin{@proof}}{\\end{@proof}}\
        \\newenvironment{pf*}[1]{\\begin{@proof}[#1]}{\\end{@proof}}"
     )?;
@@ -314,7 +314,7 @@ LoadDefinitions!({
     "<ltx:ref href='#href'>#1</ltx:ref>",
     properties => sub[args] {
       let url_str = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
-      Ok(stored_map!("href" => common::cleaners::clean_url(&url_str)))
+      Ok(stored_map!("href" => clean_url(&url_str)))
     });
 
   DefMacro!("\\MR{}", "MR #1");

@@ -12,7 +12,7 @@ LoadDefinitions!({
   // Papers that pass the `amsthm` class option get amsthm's
   // \newtheorem{…} machinery; without it, elsart's theorem-like
   // environments fall through to the plain-stub defaults below.
-  if state::lookup_bool_sym(pin!("@amsthm")) {
+  if lookup_bool_sym(pin!("@amsthm")) {
     RequirePackage!("amsthm");
   }
 
