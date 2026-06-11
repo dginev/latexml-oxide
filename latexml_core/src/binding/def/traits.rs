@@ -188,11 +188,11 @@ impl IntoOption<Option<SizingClosure>> for &str {
             Dimension::default(),
           ))
         } else {
-          let font = if let Some(Stored::Font(ref font)) = w.get_property("font").as_deref() {
+          let font = match w.get_property("font").as_deref() { Some(Stored::Font(font)) => {
             font.clone()
-          } else {
+          } _ => {
             lookup_font().unwrap()
-          };
+          }};
           let options = sizer_options_from_whatsit(w);
           font.compute_boxes_size(&boxes, options)
         }
@@ -201,11 +201,11 @@ impl IntoOption<Option<SizingClosure>> for &str {
       // literal string, get its size with the current font?
       let sized_data = String::from(self);
       Some(Rc::new(move |w| {
-        let font = if let Stored::Font(ref font) = *w.get_property("font").unwrap() {
+        let font = match *w.get_property("font").unwrap() { Stored::Font(ref font) => {
           font.clone()
-        } else {
+        } _ => {
           lookup_font().unwrap()
-        };
+        }};
         let options = sizer_options_from_whatsit(w);
         font.compute_boxes_size(
           &[Digested::from(Tbox {

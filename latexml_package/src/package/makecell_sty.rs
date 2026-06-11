@@ -108,11 +108,11 @@ LoadDefinitions!({
           let _ = line_node.set_attribute("stroke-width", "0.4");
           // Insert as first child of picture
           let pic_children = picture.get_child_nodes();
-          if let Some(mut first_g) = pic_children.into_iter().find(|c| c.get_name() == "g") {
+          match pic_children.into_iter().find(|c| c.get_name() == "g") { Some(mut first_g) => {
             first_g.add_prev_sibling(&mut line_node)?;
-          } else {
+          } _ => {
             picture.add_child(&mut line_node)?;
-          }
+          }}
           // Set tex= attribute on <picture> from constructor reversion
           let tex_str = whatsit.revert()
             .map(|toks| toks.untex())
@@ -162,13 +162,13 @@ LoadDefinitions!({
       // Get width from space arg (#3)
       // Perl: $space->getWidth->pxValue
       let w = if let Some(sp) = whatsit.get_arg(3) {
-        if let Ok(Some(wd)) = sp.clone().get_width(None) {
+        match sp.clone().get_width(None) { Ok(Some(wd)) => {
           let dim: Dimension = wd.into();
           px(dim)
-        } else {
+        } _ => {
           let (wd,_,_,_,_,_) = sp.clone().get_size(None)?;
           px(wd)
-        }
+        }}
       } else { 0.0 };
       // Perl: $h = $w * abs($diagV / $diagH); — raw pxValue, no rounding
       let h = w * (dv / dh).abs();

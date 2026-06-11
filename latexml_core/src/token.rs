@@ -486,7 +486,7 @@ macro_rules! T_LETTER {
       #[cfg(feature = "token-locators")] loc: 0
     }
   };
-  ($text:expr) => {
+  ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::LETTER,
@@ -504,7 +504,7 @@ macro_rules! T_OTHER {
       #[cfg(feature = "token-locators")] loc: 0
     }
   };
-  ($text:expr) => {
+  ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::OTHER,
@@ -526,7 +526,7 @@ macro_rules! T_OTHER_CHAR {
 /// macro for an ACTIVE char token
 #[macro_export]
 macro_rules! T_ACTIVE {
-  ($c:expr) => {{
+  ($c:expr_2021) => {{
     let mut tmp = [0u8; 4];
     let s = $c.encode_utf8(&mut tmp);
     Token {
@@ -539,7 +539,7 @@ macro_rules! T_ACTIVE {
 /// macro for a COMMENT content token
 #[macro_export]
 macro_rules! T_COMMENT {
-  ($text:expr) => {
+  ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::COMMENT,
@@ -557,7 +557,7 @@ macro_rules! T_CS {
       #[cfg(feature = "token-locators")] loc: 0
     }
   };
-  ($text:expr) => {
+  ($text:expr_2021) => {
     $crate::token::Token {
       text: $crate::common::arena::pin($text),
       code: $crate::token::Catcode::CS,
@@ -573,7 +573,7 @@ macro_rules! T_RELAX(() => { $crate::token::TOKEN_RELAX.clone() });
 /// macro for a tracing MARKER token
 #[macro_export]
 macro_rules! T_MARKER {
-  ($text:expr) => {
+  ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: Catcode::MARKER,
@@ -585,7 +585,7 @@ macro_rules! T_MARKER {
 /// macro for a numbered ARG token
 #[macro_export]
 macro_rules! T_ARG {
-  ($text:expr) => {
+  ($text:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text.to_string()),
       code: Catcode::ARG,
@@ -597,17 +597,17 @@ macro_rules! T_ARG {
 /// Token constructor macro (defaults to OTHER code)
 #[macro_export]
 macro_rules! Token {
-  ($text:expr) => {
+  ($text:expr_2021) => {
     Token!($text, Catcode::OTHER)
   };
-  ($text:literal, $cc:expr) => {
+  ($text:literal, $cc:expr_2021) => {
     Token {
       text: $crate::pin!($text),
       code: $cc,
       #[cfg(feature = "token-locators")] loc: 0
     }
   };
-  ($text:expr, $cc:expr) => {
+  ($text:expr_2021, $cc:expr_2021) => {
     Token {
       text: $crate::common::arena::pin($text),
       code: $cc,
@@ -619,10 +619,10 @@ macro_rules! Token {
 /// Special case: a character needs swift string conversion, so let's use a dedicated macro
 #[macro_export]
 macro_rules! CharToken {
-  ($c:expr) => {
+  ($c:expr_2021) => {
     CharToken!($c, Catcode::OTHER)
   };
-  ($c:expr, $cc:expr) => {{
+  ($c:expr_2021, $cc:expr_2021) => {{
     let mut tmp = [0u8; 4];
     let s = $c.encode_utf8(&mut tmp);
     Token!(s, $cc)
@@ -634,7 +634,7 @@ macro_rules! CharToken {
 /// ^^J in TeX decodes to CC_OTHER by default; let the tokenizer handle catcode
 /// reassignment if needed.
 #[macro_export]
-macro_rules! Explode(($text:expr) => (
+macro_rules! Explode(($text:expr_2021) => (
   $text.to_string().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else {
@@ -644,7 +644,7 @@ macro_rules! Explode(($text:expr) => (
 ));
 
 #[macro_export]
-macro_rules! ExplodeChars(($text:expr) => (
+macro_rules! ExplodeChars(($text:expr_2021) => (
   $text.as_str().chars().map(|c|
     if c==' ' { T_SPACE!() }
     else {
@@ -658,7 +658,7 @@ macro_rules! ExplodeChars(($text:expr) => (
 /// Perl sync: newlines are OTHER, not SPACE (matches Perl #2700 revert of #2646).
 #[macro_export]
 macro_rules! ExplodeText(
-  ($text:expr) => ({
+  ($text:expr_2021) => ({
   use $crate::token::{Catcode,Token};
   $text.to_string().chars().map(|c|
     if c==' ' { T_SPACE!() }
@@ -673,7 +673,7 @@ macro_rules! ExplodeText(
 
 #[macro_export]
 macro_rules! SymExplodeText(
-  ($sym:expr) => ({
+  ($sym:expr_2021) => ({
   use $crate::token::{Catcode,Token};
   let chars : Vec<char> = arena::with($sym, |text| text.chars().collect());
   chars.into_iter().map(|c|
@@ -837,7 +837,7 @@ impl Token {
         }
       }
       let maybe_return = state::with_value("SPECIALS", |specials_opt| {
-        if let Some(Stored::Chars(ref specials_list)) = specials_opt {
+        if let Some(Stored::Chars(specials_list)) = specials_opt {
           for special in specials_list.iter() {
             if *special == ch {
               let mut tmp = [0u8; 4];

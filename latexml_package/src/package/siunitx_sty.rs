@@ -36,10 +36,10 @@ fn read_si_declare_cs() -> Result<Token> {
 /// The thin emit-only macro keeps the harness `Error:<class>:<object>`
 /// format contract while staying type-compatible.
 macro_rules! six_log_error {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }

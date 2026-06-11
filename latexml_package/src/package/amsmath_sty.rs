@@ -2314,7 +2314,7 @@ fn sideset_wrap_impl(
   document.remove_node(inner);
   // Perl: $document->insertElement('ltx:XMWrap', $script->getArg(1))
   document.open_element("ltx:XMWrap", None, None)?;
-  if let DigestedData::Whatsit(ref w) = script.data() {
+  if let DigestedData::Whatsit(w) = script.data() {
     if let Some(arg) = w.borrow().get_arg(1) {
       document.absorb(arg, None)?;
     }

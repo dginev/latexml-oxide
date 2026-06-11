@@ -129,11 +129,11 @@ LoadDefinitions!({
     Ok(Tokens!())
   });
   DefMacro!("\\popQED", sub[_args] {
-    if let Ok(Some(Stored::Tokens(t))) = pop_value("QED@stack") {
+    match pop_value("QED@stack") { Ok(Some(Stored::Tokens(t))) => {
       Ok(t)
-    } else {
+    } _ => {
       Ok(Tokens!())
-    }
+    }}
   });
 
   // QED symbol — Perl amsthm.sty.ltxml has `enterHorizontal => 1`.
@@ -181,7 +181,7 @@ LoadDefinitions!({
     },
     properties => sub[args] {
       let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\the"), T_CS!("\\thm@headfont")];
-      if let Some(Some(ref arg)) = args.first() {
+      if let Some(Some(arg)) = args.first() {
         title_tokens.extend(arg.revert()?.unlist());
       } else {
         title_tokens.push(T_CS!("\\proofname"));

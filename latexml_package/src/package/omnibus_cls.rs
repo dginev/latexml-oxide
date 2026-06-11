@@ -26,7 +26,7 @@ fn push_keyword_body_to_frontmatter(
       content: vec![latexml_core::document::tag::TagContent::Box(body)],
     };
     latexml_core::state::with_value_mut("frontmatter", |val_opt| {
-      if let Some(Stored::HashTagData(ref mut frnt)) = val_opt {
+      if let Some(Stored::HashTagData(frnt)) = val_opt {
         frnt
           .entry("ltx:classification".to_string())
           .or_insert_with(Vec::new)

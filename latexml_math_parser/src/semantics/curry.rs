@@ -183,7 +183,7 @@ impl CurryConstraint {
     let new_lhs;
     let mut new_cmp = *cmp;
     match rhs {
-      Literal(ref v) if *v > 0 => match lhs {
+      Literal(v) if *v > 0 => match lhs {
         Literal(lv) => {
           new_lhs = Literal(lv - v);
           new_rhs = Literal(0);

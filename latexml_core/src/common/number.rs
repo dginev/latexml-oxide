@@ -37,7 +37,7 @@ impl From<Number> for Option<Tokens> {
 
 #[macro_export]
 macro_rules! Number {
-  ($number:expr) => {{ ::latexml_core::common::number::Number::new($number as i64) }};
+  ($number:expr_2021) => {{ ::latexml_core::common::number::Number::new($number as i64) }};
 }
 
 impl From<String> for Number {

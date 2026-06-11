@@ -20,11 +20,11 @@ LoadDefinitions!({
     let toks = thing.unlist();
     // Must be a single token, with a definition that has exactly 1 parameter
     let is_accent = toks.len() == 1 && {
-      if let Some(defn) = state::lookup_definition(&toks[0])? {
+      match state::lookup_definition(&toks[0])? { Some(defn) => {
         defn.get_num_args() == 1
-      } else {
+      } _ => {
         false
-      }
+      }}
     };
     if is_accent {
       Ok(true_branch)

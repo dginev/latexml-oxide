@@ -43,7 +43,7 @@ fn phys_read_size() -> Result<(bool, Option<Token>)> {
 
 /// Perl: phys_revSize — reversion tokens for size
 fn phys_rev_size(no_stretch: bool, size_tok: &Option<Token>) -> Vec<Token> {
-  if let Some(ref sz) = size_tok {
+  if let Some(sz) = size_tok {
     vec![*sz]
   } else if no_stretch {
     vec![T_OTHER!("*")]

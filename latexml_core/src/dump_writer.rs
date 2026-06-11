@@ -199,7 +199,7 @@ pub fn write_dump(
     {
       // Confirm the loop pattern before dropping (don't suppress
       // valid hook contributions on engines with sound aliasing).
-      if let Stored::Tokens(ref tks) = value {
+      if let Stored::Tokens(tks) = value {
         let body = tks.unlist_ref();
         let needle_cs = key_str.clone();
         let has_self_the = body.iter().any(|t| t.with_str(|s| s == "\\the"))

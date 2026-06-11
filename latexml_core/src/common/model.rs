@@ -852,11 +852,11 @@ pub fn is_node_in_schema_class(class_name: &str, tag: &Node) -> bool {
   is_in_schema_class(arena::pin(class_name), tag)
 }
 pub fn is_in_schema_class(class_name: SymStr, tag: SymStr) -> bool {
-  if let Some(class) = model!().schema_class.get_sym(class_name) {
+  match model!().schema_class.get_sym(class_name) { Some(class) => {
     class.contains(&tag)
-  } else {
+  } _ => {
     false
-  }
+  }}
 }
 
 //**********************************************************************

@@ -89,7 +89,7 @@ LoadDefinitions!({
     let mut finished = false;
     //   close the mouth (if any) and clear the variable
     with_value(&file_key, |mouth_opt|
-      if let Some(Stored::Mouth(ref mouth)) = mouth_opt {
+      if let Some(Stored::Mouth(mouth)) = mouth_opt {
         mouth.borrow_mut().finish();
         finished = true;
       });
@@ -299,7 +299,7 @@ LoadDefinitions!({
       // Map psfile-style options to graphicx-style. Perl L282-311.
       let mut options_vec: Vec<String> = Vec::new();
       if let Some(ref kv_digested) = args[0] {
-        if let DigestedData::KeyVals(ref kv) = kv_digested.data() {
+        if let DigestedData::KeyVals(kv) = kv_digested.data() {
           let mut h_off: f64 = 0.0;
           let mut v_off: f64 = 0.0;
           for (key, value) in kv.get_pairs() {

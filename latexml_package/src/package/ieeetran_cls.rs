@@ -449,7 +449,7 @@ LoadDefinitions!({
   DefPrimitive!("\\IEEEnonumber OptionalMatch:*", sub[(star)] {
     let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
     with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(ref mut m)) = v {
+      if let Some(Stored::HashStored(m)) = v {
         m.insert("retract", Stored::Bool(true));
         m.remove("counter");
       }
@@ -459,7 +459,7 @@ LoadDefinitions!({
   DefPrimitive!("\\IEEEyesnumber OptionalMatch:*", sub[(star)] {
     // Perl: if EQUATION_NUMBERING.counter == 'subequation', step the equation counter
     let subeq = with_value("EQUATION_NUMBERING", |v| {
-      if let Some(Stored::HashStored(ref m)) = v {
+      if let Some(Stored::HashStored(m)) = v {
         matches!(m.get("counter"),
           Some(Stored::String(s)) if arena::to_string(*s) == "subequation")
       } else { false }
@@ -469,14 +469,14 @@ LoadDefinitions!({
     }
     if star.is_some() {
       with_value_mut("EQUATION_NUMBERING", |v| {
-        if let Some(Stored::HashStored(ref mut m)) = v {
+        if let Some(Stored::HashStored(m)) = v {
           m.insert("retract", Stored::Bool(false));
           m.remove("counter");
         }
       });
     } else {
       with_value_mut("EQUATIONROW_TAGS", |v| {
-        if let Some(Stored::HashStored(ref mut m)) = v {
+        if let Some(Stored::HashStored(m)) = v {
           m.insert("noretract", Stored::Bool(true));
           m.remove("counter");
         }
@@ -487,7 +487,7 @@ LoadDefinitions!({
   DefPrimitive!("\\IEEEyessubnumber OptionalMatch:*", sub[(star)] {
     let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
     with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(ref mut m)) = v {
+      if let Some(Stored::HashStored(m)) = v {
         m.insert("counter", Stored::String(pin!("subequation")));
       }
     });
@@ -504,7 +504,7 @@ LoadDefinitions!({
   DefPrimitive!("\\IEEEnosubnumber OptionalMatch:*", sub[(star)] {
     let key = if star.is_some() { "EQUATION_NUMBERING" } else { "EQUATIONROW_TAGS" };
     with_value_mut(key, |v| {
-      if let Some(Stored::HashStored(ref mut m)) = v {
+      if let Some(Stored::HashStored(m)) = v {
         m.insert("counter", Stored::String(pin!("equation")));
       }
     });

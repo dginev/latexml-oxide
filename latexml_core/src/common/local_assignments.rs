@@ -119,11 +119,11 @@ pub fn align_group_count() -> i32 {
     .unwrap_or_default()
 }
 pub fn set_align_group_count(v: i32) {
-  if let Some(gc) = locals_mut!().align_group_count.last_mut() {
+  match locals_mut!().align_group_count.last_mut() { Some(gc) => {
     *gc = v;
-  } else {
+  } _ => {
     locals_mut!().align_group_count.push(v);
-  }
+  }}
 }
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }

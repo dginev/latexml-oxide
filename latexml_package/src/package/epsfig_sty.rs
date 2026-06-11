@@ -37,7 +37,7 @@ LoadDefinitions!({
     properties => sub[args] {
       use DigestedData::*;
       let file = if let Some(kv_arg) = args[0].as_ref() {
-        if let KeyVals(ref kv) = kv_arg.data() {
+        if let KeyVals(kv) = kv_arg.data() {
           let raw = kv.get_value("file")
             .or_else(|| kv.get_value("figure"))
             .map(|v| v.to_string())
@@ -53,7 +53,7 @@ LoadDefinitions!({
         .unwrap_or(false);
       let mut opts = Vec::<String>::new();
       if let Some(kv_arg) = args[0].as_ref() {
-        if let KeyVals(ref kv) = kv_arg.data() {
+        if let KeyVals(kv) = kv_arg.data() {
           let mut saw_clip = false;
           for (k, v) in kv.get_pairs() {
             if k == "file" || k == "figure" { continue; }

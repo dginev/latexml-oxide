@@ -123,7 +123,7 @@ macro_rules! load_model {
 #[macro_export]
 /// Macro for compiling string literal tokens into their usual Tokens representation
 macro_rules! compile_tokenize {
-  ($var:ident, $literal:expr) => {{
+  ($var:ident, $literal:expr_2021) => {{
     #[derive(CompileTokens)]
     #[literal=$literal]
     struct _Dummy;
@@ -135,7 +135,7 @@ macro_rules! compile_tokenize {
 #[macro_export]
 /// Macro for compiling string literal tokens into their preamble Tokens representation
 macro_rules! compile_tokenize_internal {
-  ($var:ident, $literal:expr) => {{
+  ($var:ident, $literal:expr_2021) => {{
     #[derive(CompileTokensInternal)]
     #[literal=$literal]
     struct _Dummy;

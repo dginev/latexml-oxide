@@ -231,9 +231,9 @@ fn process_math_node(
     });
 
   // Apply outer wrapper if we got XML
-  if let Some(xml) = conversion.xml.take() {
+  match conversion.xml.take() { Some(xml) => {
     conversion.xml = Some(processor.outer_wrapper(doc, &xmath, xml));
-  } else if let Some(ref string) = conversion.string {
+  } _ => if let Some(ref string) = conversion.string {
     // Wrap string in ltx:text
     let mimetype = conversion.mimetype.as_deref().unwrap_or("unknown");
     conversion.xml = Some(NodeData::Element {
@@ -244,7 +244,7 @@ fn process_math_node(
       )])),
       children:   vec![NodeData::Text(string.clone())],
     });
-  }
+  }}
 
   if !keep_xmath {
     // Mark XMath IDs as reusable (it will be removed)

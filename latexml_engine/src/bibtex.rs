@@ -313,19 +313,19 @@ pub fn bib_add_to_container(
     Some(&current),
   );
   let xpath = bib_container_xpath(tag, &attrs);
-  if let Some(rel) = doc.findnode(&xpath, entry.as_ref()) {
+  match doc.findnode(&xpath, entry.as_ref()) { Some(rel) => {
     doc.set_node(&rel);
     if let Some(d) = data {
       doc.absorb(d, None)?;
     }
     doc.set_node(&current);
-  } else {
+  } _ => {
     let content: Vec<&latexml_core::digested::Digested> = match data {
       Some(d) => vec![d],
       None => vec![],
     };
     doc.insert_element(tag, content, Some(attrs))?;
-  }
+  }}
   Ok(())
 }
 
@@ -846,7 +846,7 @@ LoadDefinitions!({
     sub [document, args] {
       let tag = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
       let attrs = if let Some(kv_d) = &args[1] {
-        if let latexml_core::digested::DigestedData::KeyVals(ref kv) = kv_d.data() {
+        if let latexml_core::digested::DigestedData::KeyVals(kv) = kv_d.data() {
           kv.get_hash()
         } else {
           FxAttrMap::default()

@@ -88,7 +88,7 @@ pub fn flush_deferred_aliases() -> (usize, usize) {
     }
     // Perl `Lt()` parity: look up target's meaning, write it at
     // alias key via `assign_internal('meaning', ..., 'global')`.
-    if let Some(meaning) = state::lookup_meaning(&target_tok) {
+    match state::lookup_meaning(&target_tok) { Some(meaning) => {
       state::assign_internal(
         TableName::Meaning,
         cs_tok.get_cs_name(),
@@ -96,9 +96,9 @@ pub fn flush_deferred_aliases() -> (usize, usize) {
         Some(Scope::Global),
       );
       applied += 1;
-    } else {
+    } _ => {
       skipped += 1;
-    }
+    }}
   }
   (applied, skipped)
 }

@@ -707,7 +707,7 @@ fn exec_ops(
           *savenode = document.float_to_attribute(key);
           let mut node = document.get_node().clone();
           document.set_attribute(&mut node, key, &val_str)?;
-          if let Some(ref sn) = savenode {
+          if let &mut Some(ref sn) = savenode {
             document.set_node(sn);
           }
         } else {

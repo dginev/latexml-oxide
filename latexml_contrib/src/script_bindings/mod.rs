@@ -372,7 +372,7 @@ fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
 fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   for (k, v) in map {
-    if let Some(d) = v.clone().try_cast::<Digested>() {
+    match v.clone().try_cast::<Digested>() { Some(d) => {
       if k.as_str() == "font" {
         if let Ok(Some(f)) = d.get_font() {
           props.insert("font", Stored::Font(Rc::new(f.into_owned())));
@@ -380,9 +380,9 @@ fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
         }
       }
       props.insert(k.as_str(), Stored::Digested(d));
-    } else {
+    } _ => {
       props.insert(k.as_str(), dynamic_to_string(v).into());
-    }
+    }}
   }
   props
 }

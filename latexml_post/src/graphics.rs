@@ -2310,7 +2310,8 @@ mod tests {
   impl EnvGuard {
     fn set(key: &str, value: &str) -> Self {
       let old = std::env::var(key).ok();
-      std::env::set_var(key, value);
+      // FIXME: Audit that the environment access only happens in single-threaded code.
+      unsafe { std::env::set_var(key, value) };
       Self { key: key.to_string(), old }
     }
   }
@@ -2318,9 +2319,11 @@ mod tests {
   impl Drop for EnvGuard {
     fn drop(&mut self) {
       if let Some(old) = &self.old {
-        std::env::set_var(&self.key, old);
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var(&self.key, old) };
       } else {
-        std::env::remove_var(&self.key);
+        // FIXME: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::remove_var(&self.key) };
       }
     }
   }

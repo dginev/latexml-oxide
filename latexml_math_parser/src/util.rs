@@ -376,7 +376,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
   let mut refs = Vec::with_capacity(args.len());
   for arg in args {
     match arg {
-      XM::Token(ref mut props, _meta) => {
+      XM::Token(props, _meta) => {
         if let Some(id) = props.id.as_ref() {
           refs.push(XM::Ref(XProps {
             id: Some(id.clone()),
@@ -441,7 +441,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
           },
         }
       },
-      XM::Apply(_op, _args, ref mut props, _meta) => {
+      XM::Apply(_op, _args, props, _meta) => {
         if let Some(id) = props.id.as_ref() {
           refs.push(XM::Ref(XProps {
             id: Some(id.clone()),
@@ -474,7 +474,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
       XM::Ref(props) => {
         refs.push(XM::Ref(props.clone()));
       },
-      XM::Dual(_, _, ref mut props, _) | XM::Wrap(_, ref mut props, _) => {
+      XM::Dual(_, _, props, _) | XM::Wrap(_, props, _) => {
         if let Some(id) = props.id.as_ref() {
           refs.push(XM::Ref(XProps {
             id: Some(id.clone()),

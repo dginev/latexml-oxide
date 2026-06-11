@@ -390,11 +390,11 @@ pub trait BoxOps: Object {
       None => match self.get_property("cached_height") {
         Some(val) => (&*val).into(),
         None => {
-          if let Ok((_, h, _)) = self.compute_size(HashMap::default()) {
+          match self.compute_size(HashMap::default()) { Ok((_, h, _)) => {
             Some(RegisterValue::Dimension(h))
-          } else {
+          } _ => {
             Some(RegisterValue::Dimension(Dimension::default()))
-          }
+          }}
         },
       },
     }
@@ -409,11 +409,11 @@ pub trait BoxOps: Object {
       None => match self.get_property("cached_depth") {
         Some(val) => (&*val).into(),
         None => {
-          if let Ok((_, _, d)) = self.compute_size(HashMap::default()) {
+          match self.compute_size(HashMap::default()) { Ok((_, _, d)) => {
             Some(RegisterValue::Dimension(d))
-          } else {
+          } _ => {
             Some(RegisterValue::Dimension(Dimension::default()))
-          }
+          }}
         },
       },
     }

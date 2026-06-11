@@ -207,7 +207,7 @@ fn decode_color(expression: &str) -> Color {
   };
 
   // Apply blend from state
-  let full_mix = if let Some(Stored::String(blend_sym)) = state::lookup_value("color_blend") {
+  let full_mix = match state::lookup_value("color_blend") { Some(Stored::String(blend_sym)) => {
     arena::with(blend_sym, |blend| {
       if !blend.is_empty() {
         format!("{}{}", mix_part, blend)
@@ -215,9 +215,9 @@ fn decode_color(expression: &str) -> Color {
         mix_part.clone()
       }
     })
-  } else {
+  } _ => {
     mix_part
-  };
+  }};
 
   // Apply mix expressions: !pct!name...
   if !full_mix.is_empty() {
@@ -449,10 +449,10 @@ fn step_color_series(name: &str, n: usize) {
 fn index_color_series(name: &str, p: usize) -> Color {
   let base_key = s!("color_series_{name}_base");
   let step_key = s!("color_series_{name}_step");
-  if let (Some(Stored::String(b_sym)), Some(Stored::String(s_sym))) = (
+  match (
     state::lookup_value(&base_key),
     state::lookup_value(&step_key),
-  ) {
+  ) { (Some(Stored::String(b_sym)), Some(Stored::String(s_sym))) => {
     let base = Color::from_stored(&arena::to_string(b_sym)).unwrap_or(BLACK);
     let step = Color::from_stored(&arena::to_string(s_sym)).unwrap_or(BLACK);
     let comps = base.components();
@@ -463,9 +463,9 @@ fn index_color_series(name: &str, p: usize) -> Color {
       .map(|(c, s)| range_reduction(c + p as f64 * s))
       .collect();
     from_model_components(base.model(), &new_comps)
-  } else {
+  } _ => {
     BLACK
-  }
+  }}
 }
 
 /// Perl xcolor.sty.ltxml L403-409: if the optional `[type]` argument
@@ -925,11 +925,11 @@ LoadDefinitions!({
     let scope = if state::lookup_bool_sym(pin!("xglobal@")) { Some(Scope::Global) } else { None };
     let new_blend = if star.is_some() {
       // Starred: append to existing blend
-      if let Some(Stored::String(old_sym)) = state::lookup_value("color_blend") {
+      match state::lookup_value("color_blend") { Some(Stored::String(old_sym)) => {
         arena::with(old_sym, |old| format!("{old}{mix_str}"))
-      } else {
+      } _ => {
         mix_str
-      }
+      }}
     } else {
       mix_str
     };
@@ -1014,18 +1014,18 @@ LoadDefinitions!({
       let step = match method.as_str() {
         "step" => {
           // delta is the step itself
-          if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
+          match state::lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
             arena::with(d_sym, Color::from_stored).unwrap_or(BLACK)
-          } else { BLACK }
+          } _ => { BLACK }}
         },
         "grad" => {
-          if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
+          match state::lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
             arena::with(d_sym, Color::from_stored).unwrap_or(BLACK).scale(1.0 / div)
-          } else { BLACK }
+          } _ => { BLACK }}
         },
         "last" => {
           // For "last": step = (last - base) / div
-          if let Some(Stored::String(d_sym)) = state::lookup_value(&delta_key) {
+          match state::lookup_value(&delta_key) { Some(Stored::String(d_sym)) => {
             let last = arena::with(d_sym, Color::from_stored).unwrap_or(BLACK);
             let base_comps = base.components();
             let last_comps = last.components();
@@ -1033,7 +1033,7 @@ LoadDefinitions!({
               .map(|(b, l)| (l - b) / div)
               .collect();
             from_model_components(base.model(), &step_comps)
-          } else { BLACK }
+          } _ => { BLACK }}
         },
         other => {
           Warn!("unknown","xcolor_step",format!("the step '{other}' was not step/grad/last"));
@@ -1364,7 +1364,7 @@ LoadDefinitions!({
     T_CS!("\\rownum"),
     None,
     Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
-      if let Some(alignment) = state::lookup_alignment() {
+      match state::lookup_alignment() { Some(alignment) => {
         if let DigestedData::Alignment(cell) = alignment.data() {
           let row_num = cell.borrow().current_row_number();
           let num_str = row_num.to_string();
@@ -1377,9 +1377,9 @@ LoadDefinitions!({
         } else {
           Ok(Tokens!(T_OTHER!("0")))
         }
-      } else {
+      } _ => {
         Ok(Tokens!(T_OTHER!("0")))
-      }
+      }}
     }))),
     None,
   )?;

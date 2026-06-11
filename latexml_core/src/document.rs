@@ -236,11 +236,11 @@ impl Document {
     match node_opt {
       Some(node) => self.get_xpath().findvalues(xpath, Some(node)),
       None => {
-        if let Some(root) = self.document.get_root_element() {
+        match self.document.get_root_element() { Some(root) => {
           self.get_xpath().findvalues(xpath, Some(&root))
-        } else {
+        } _ => {
           Vec::new()
-        }
+        }}
       },
     }
   }
@@ -651,14 +651,14 @@ impl Document {
     let mut boxes = vec![Cow::Borrowed(object)];
     while let Some(front_box) = boxes.pop() {
       match front_box.data() {
-        List(ref list) => {
+        List(list) => {
           // Simply unwind Lists to avoid unneccessary recursion; This occurs quite frequently!
           for tbox in list.borrow().unlist().into_iter().rev() {
             boxes.push(Cow::Owned(tbox));
           }
         },
         // A Proper Box or Whatsit? Absorb it.
-        TBox(ref digested) => {
+        TBox(digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
@@ -666,25 +666,25 @@ impl Document {
           self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
-        Whatsit(ref digested) => {
+        Whatsit(digested) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           digested.borrow().be_absorbed(self)?;
           self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
-        Alignment(ref alignment) => {
+        Alignment(alignment) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
           alignment.borrow_mut().be_absorbed_mut(self)?;
           self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
-        Comment(ref comment) => {
+        Comment(comment) => {
           comment.be_absorbed(self)?;
         },
-        Postponed(ref tokens) => {
-          let text_font_opt = if let Some(Stored::Font(ref prop_font)) = props.get("font") {
+        Postponed(tokens) => {
+          let text_font_opt = if let Some(Stored::Font(prop_font)) = props.get("font") {
             Some(Rc::clone(prop_font))
           } else {
             match self.box_to_absorb {
@@ -699,7 +699,7 @@ impl Document {
             self.record_constructed_node(&new_text);
           }
         },
-        KeyVals(ref kv) => {
+        KeyVals(kv) => {
           // When KeyVals appear in body absorption (e.g. #1 for RequiredKeyVals),
           // convert them to text representation matching Perl's stringify behavior.
           let text = kv.to_string();
@@ -911,11 +911,11 @@ impl Document {
       // Perl: insertPI always places PIs before the root element.
       // Find the document root and insert before it.
       let doc_node = self.document.clone();
-      if let Some(mut root) = doc_node.get_root_element() {
+      match doc_node.get_root_element() { Some(mut root) => {
         root.add_prev_sibling(&mut pi_node)?;
-      } else {
+      } _ => {
         self.node.add_prev_sibling(&mut pi_node)?;
-      }
+      }}
     }
     Ok(())
   }
@@ -1151,12 +1151,12 @@ impl Document {
 
   // Close $qname, if it is closeable.
   pub fn maybe_close_element(&mut self, qname: &str) -> Result<Option<Node>> {
-    if let Some(node) = self.is_closeable(qname) {
+    match self.is_closeable(qname) { Some(node) => {
       self.close_node_internal(&node)?;
       Ok(Some(node))
-    } else {
+    } _ => {
       Ok(None)
-    }
+    }}
   }
 
   /// Closes all nodes until $node becomes the current point.
@@ -1171,12 +1171,12 @@ impl Document {
         cant_close.push(n.clone());
       }
       lastopen = Some(n.clone());
-      if let Some(p) = n.get_parent() {
+      match n.get_parent() { Some(p) => {
         n = p;
         n_type = n.get_type();
-      } else {
+      } _ => {
         break;
-      }
+      }}
     }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
@@ -1736,7 +1736,7 @@ impl Document {
         &comment_text,
         Placement_::AppendChild,
       );
-    } else if let Some(node) = self.get_element() {
+    } else { match self.get_element() { Some(node) => {
       // Get the nearest element node (Perl: getElement)
       let prev = node.get_last_child();
       let prevtype = prev.as_ref().and_then(|n| n.get_type());
@@ -1779,7 +1779,7 @@ impl Document {
           Placement_::AppendChild,
         );
       }
-    }
+    } _ => {}}}
     Ok(self.node.clone())
   }
 
@@ -2204,7 +2204,7 @@ impl Document {
           orig.data() as *const DigestedData,
         );
         let same_as_last = if !same_as_orig {
-          if let DigestedData::List(ref list) = orig.data() {
+          if let DigestedData::List(list) = orig.data() {
             list
               .borrow()
               .boxes
@@ -2363,14 +2363,14 @@ impl Document {
   pub fn filter_deletions(&self, nodes: Vec<Node>) -> Vec<Node> {
     // This test seems to successfully determine inclusion,
     // without requiring the (dangerous? & dubious?) unbindNode to be used.
-    if let Some(root) = self.document.get_root_element() {
+    match self.document.get_root_element() { Some(root) => {
       nodes
         .into_iter()
         .filter(|node| xml::is_descendant_or_self(node, &root))
         .collect()
-    } else {
+    } _ => {
       Vec::new()
-    }
+    }}
   }
 
   /// Given a list of nodes such as from ->absorb,
@@ -3571,11 +3571,11 @@ impl Document {
   }
 
   pub fn has_node_font(&self, node: &Node) -> bool {
-    if let Some(element) = xml::closest_element(node) {
+    match xml::closest_element(node) { Some(element) => {
       element.has_attribute("_font")
-    } else {
+    } _ => {
       false
-    }
+    }}
   }
 
   pub fn get_node_language(&self, node: &Node) -> String {
@@ -3607,12 +3607,12 @@ impl Document {
           }
         }
       }
-      if let Some(parent) = node_ref.get_parent() {
+      match node_ref.get_parent() { Some(parent) => {
         current = parent;
         node_ref = &current;
-      } else {
+      } _ => {
         break;
-      }
+      }}
     }
     String::from("en")
   }
@@ -4367,7 +4367,7 @@ impl Document {
       }
       candidates.pop_front();
     }
-    if let Some(n) = candidates.pop_front() {
+    match candidates.pop_front() { Some(n) => {
       if closeifpossible && closeable {
         self.close_to_node(&n, false)?;
       } else {
@@ -4377,14 +4377,14 @@ impl Document {
         //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
         return Ok(Some(savenode));
       }
-    } else if can_contain_node_somehow(&self.node, qname).is_none() {
+    } _ => if can_contain_node_somehow(&self.node, qname).is_none() {
       Warn!(
         "malformed",
         qname,
         s!("No open node can contain element '{}'", qname)
       );
       // self.get_insertion_context())
-    }
+    }}
     Ok(None)
   }
 
@@ -4581,7 +4581,7 @@ impl Document {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   pub fn replace_tree(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
-    if let Some(mut parent) = old.get_parent() {
+    match old.get_parent() { Some(mut parent) => {
       let mut following = VecDeque::new(); // Collect the matching and following nodes
       while let Some(mut sib) = parent.get_last_child() {
         if sib == old {
@@ -4603,9 +4603,9 @@ impl Document {
         parent.add_child(&mut child)?; // No need for clone
       }
       Ok(inserted)
-    } else {
+    } _ => {
       Ok(None)
-    }
+    }}
   }
 
   pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>) -> Result<()> {

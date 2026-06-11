@@ -59,7 +59,7 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
   // Sets: cached_width, cached_height, cached_depth, lpadding, rpadding (per cell) & empty
   for row in &mut alignment.rows {
     for cell in row.get_columns_mut() {
-      if let Some(ref mut boxes) = &mut cell.boxes {
+      if let Some(boxes) = &mut cell.boxes {
         let (w, mut h, mut d, cw, ch, cd) = boxes.get_size(Some(stored_map!(
             "align" => cell.align.as_ref().map(|a| a.char_code()), "width" => cell.width,
             "vattach" => cell.vattach.clone() )))?;
@@ -456,7 +456,7 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
 /// Rust doesn't populate lspaces from template, so we check tokens directly.
 fn cell_has_intercol(cell: &Cell) -> bool {
   fn has_intercol(tokens: &Option<Tokens>) -> bool {
-    if let Some(ref toks) = tokens {
+    if let Some(toks) = tokens {
       for tok in toks.unlist_ref() {
         let s = tok.to_string();
         if s == "\\lx@intercol" || s.contains("intercol") {
@@ -640,9 +640,9 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   // Uses cell's cached_width,cached_height,cached_depth
   // Computes net row & column sizes & positions
   let strut = match alignment.get_property("strut").as_deref() {
-    Some(Stored::Dimension(ref d)) => *d,
-    Some(Stored::Glue(ref g)) => Dimension::new(g.value_of()),
-    Some(Stored::MuGlue(ref g)) => Dimension::new(g.value_of()),
+    Some(Stored::Dimension(d)) => *d,
+    Some(Stored::Glue(g)) => Dimension::new(g.value_of()),
+    Some(Stored::MuGlue(g)) => Dimension::new(g.value_of()),
     _ => Dimension::new(0),
   };
   // Perl: Glue->new($pts * 0.7) uses kround (adds 0.5 before int), not plain truncation
@@ -806,7 +806,7 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
 
         with_value_sym(crate::pin!("font"), |v_opt| {
           v_opt.and_then(|v| {
-            if let Stored::Font(ref f) = v {
+            if let Stored::Font(f) = v {
               f.get_size().map(|s| (s * UNITY as f64) as i64 / 2)
             } else {
               None

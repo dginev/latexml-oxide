@@ -359,7 +359,7 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
 fn extract_keyvals(args: &[Option<Digested>]) -> Option<KeyVals> {
   args.first().and_then(|a| {
     a.as_ref().and_then(|d| {
-      if let DigestedData::KeyVals(ref kv) = d.data() {
+      if let DigestedData::KeyVals(kv) = d.data() {
         Some(kv.clone())
       } else {
         None

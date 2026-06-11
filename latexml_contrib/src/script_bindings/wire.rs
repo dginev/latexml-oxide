@@ -189,7 +189,7 @@ pub(super) fn apply_opts<B: BindingBuilder>(
   ast: &Rc<AST>,
 ) -> Result<B> {
   for (key, val) in opts {
-    if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+    match val.clone().try_cast::<FnPtr>() { Some(fp) => {
       // Closure option → typed builder setter (front-end builds the closure).
       match key.as_str() {
         "afterDigest" => {
@@ -232,7 +232,7 @@ pub(super) fn apply_opts<B: BindingBuilder>(
         // %options; the builder's set_option does the same for scalars).
         _ => {},
       }
-    } else if key.as_str() == "properties" && val.is_map() {
+    } _ => if key.as_str() == "properties" && val.is_map() {
       // Static property map (Perl's `properties => { key => value, … }`).
       let map = val.cast::<Map>();
       builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
@@ -248,7 +248,7 @@ pub(super) fn apply_opts<B: BindingBuilder>(
     } else if let Some(ov) = dynamic_to_option_value(&val) {
       // Scalar option → the builder's generic, single-source `set_option`.
       builder = builder.set_option(key.as_str(), ov)?;
-    }
+    }}
   }
   Ok(builder)
 }
@@ -711,12 +711,12 @@ pub(super) fn def_math_ligature_impl(pattern: &str, replacement: &str, opts: Map
         {
           return Ok(None);
         }
-        if let Some(sibling) = node_mut.get_prev_sibling() {
+        match node_mut.get_prev_sibling() { Some(sibling) => {
           node = sibling;
           node_mut = &mut node;
-        } else {
+        } _ => {
           return Ok(None);
-        }
+        }}
       }
       if ntomatch > 0 {
         Ok(Some((ntomatch, replacement.clone(), attr.clone())))

@@ -307,7 +307,7 @@ impl Conditional {
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
             let maybe_last = with_value("if_stack", |stack_opt| {
               if let Some(Stored::VecDequeStored(stack)) = stack_opt {
-                if let Some(Stored::IfFrame(ref stack_frame)) = stack.front() {
+                if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
                   if *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow() {
                     // No need to actually call elseHandler, but note that we've seen an \else!
                     stack_frame.borrow_mut().elses = true;
@@ -396,7 +396,7 @@ impl Conditional {
 
   fn invoke_fi(&self) -> Result<Tokens> {
     let stack_frame_opt: Option<Rc<RefCell<IfFrame>>> = with_value("if_stack", |stack_opt| {
-      if let Some(Stored::VecDequeStored(ref stack)) = stack_opt {
+      if let Some(Stored::VecDequeStored(stack)) = stack_opt {
         if let Some(Stored::IfFrame(frame)) = stack.front() {
           Some(Rc::clone(frame))
         } else {

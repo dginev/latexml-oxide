@@ -762,21 +762,21 @@ impl Font {
     let r0 = prevbox
       .get_property("role")
       .and_then(|s| {
-        if let Stored::String(sym) = s.into_owned() {
+        match s.into_owned() { Stored::String(sym) => {
           Some(arena::with(sym, |s| s.to_string()))
-        } else {
+        } _ => {
           None
-        }
+        }}
       })
       .unwrap_or_else(|| "ID".to_string());
     let r1 = thisbox
       .get_property("role")
       .and_then(|s| {
-        if let Stored::String(sym) = s.into_owned() {
+        match s.into_owned() { Stored::String(sym) => {
           Some(arena::with(sym, |s| s.to_string()))
-        } else {
+        } _ => {
           None
-        }
+        }}
       })
       .unwrap_or_else(|| "ID".to_string());
     let t0 = *MATH_ATOM_TYPE.get(r0.as_str()).unwrap_or(&0);
@@ -1904,7 +1904,7 @@ fn lookup_multichar_override(code: u8, encoding_opt: Option<&str>) -> Option<Str
   }
   let mapname = format!("{encoding}_fontmap_multichar");
   with_value(&mapname, |val_opt| {
-    if let Some(Stored::HashString(ref map)) = val_opt {
+    if let Some(Stored::HashString(map)) = val_opt {
       map.get(&code.to_string()).cloned()
     } else {
       None
@@ -2010,7 +2010,7 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
   let multichar_map: Option<HashMap<String, String>> = if !encoding.is_empty() {
     let mapname = format!("{encoding}_fontmap_multichar");
     with_value(&mapname, |val_opt| {
-      if let Some(Stored::HashString(ref m)) = val_opt {
+      if let Some(Stored::HashString(m)) = val_opt {
         Some(m.clone())
       } else {
         None

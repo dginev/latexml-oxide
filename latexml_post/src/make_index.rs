@@ -304,9 +304,9 @@ impl MakeIndex {
           xml: vec![NodeData::Text(see.text.clone())],
         }],
       };
-      if let Some(see_links) = seealso_search_rec(&parts, all_phrases, &see_context) {
+      match seealso_search_rec(&parts, all_phrases, &see_context) { Some(see_links) => {
         links.extend(see_links);
-      } else {
+      } _ => {
         // Perl warns unless the see phrase already contains refs of
         // its own, then falls back to the phrase's own markup.
         let already_linked = see
@@ -331,7 +331,7 @@ impl MakeIndex {
           attributes: None,
           children:   content,
         });
-      }
+      }}
     }
 
     if !links.is_empty() {

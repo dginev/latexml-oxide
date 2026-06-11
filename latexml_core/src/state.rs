@@ -874,7 +874,7 @@ impl State {
             Some(Scope::Global),
           );
         }
-        if let Some(Stored::Stash(ref mut stash)) =
+        if let Some(Stored::Stash(stash)) =
           self.stash.get_mut(&scope_name).as_mut().unwrap().get_mut(0)
         {
           stash.push((table_name, key, value.clone()));
@@ -941,11 +941,11 @@ impl State {
     }
   }
   pub fn lookup_font_info(&self, key: &Token) -> Result<Option<&Stored>> {
-    let key_str = if let Some(defn) = lookup_definition(key)? {
+    let key_str = match lookup_definition(key)? { Some(defn) => {
       s!("fontinfo_{}", defn.get_cs_name())
-    } else {
+    } _ => {
       s!("fontinfo_{key}")
-    };
+    }};
     Ok(self.lookup_value(&key_str))
   }
   /// manage a (global) hash of values
@@ -1398,7 +1398,7 @@ pub fn has_value(key: &str) -> bool {
 pub fn push_tokens(key: &str, value: Tokens) {
   let mut state = state_mut!();
   match state.lookup_value_mut(key) {
-    Some(Stored::Tokens(ref mut tks)) => tks.unlist_mut().extend(value.unlist()),
+    Some(Stored::Tokens(tks)) => tks.unlist_mut().extend(value.unlist()),
     None | Some(Stored::None) => state.assign_value(key, Stored::Tokens(value), None),
     Some(other) => panic!("Can only push_tokens into a Stored::Tokens, but got {other:?}"),
   }
@@ -1653,7 +1653,7 @@ pub fn lookup_register_token(
   cs: &Token,
   parameters: Vec<ArgWrap>,
 ) -> Result<Option<RegisterValue>> {
-  Ok(if let Some(defn) = lookup_definition(cs)? {
+  Ok(match lookup_definition(cs)? { Some(defn) => {
     if defn.is_register() {
       defn.value_of(parameters)
     } else {
@@ -1661,9 +1661,9 @@ pub fn lookup_register_token(
       Warn!("expected", "register", message);
       None
     }
-  } else {
+  } _ => {
     None
-  })
+  }})
 }
 
 pub fn lookup_expandable(
@@ -2187,7 +2187,7 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
     // Debug!("Found definition for: {:?}", lookupname);
     if let Some(entry) = entry_opt {
       if let Some(front) = entry.front() {
-        if let Stored::Token(ref t) = front {
+        if let Stored::Token(t) = front {
           if let Some(lookup_name) = t.get_executable_primitive_name() {
             let lookup_sym = arena::pin(lookup_name);
             if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {

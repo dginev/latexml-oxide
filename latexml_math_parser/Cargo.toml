@@ -2,7 +2,7 @@
 name = "latexml_math_parser"
 version = "0.3.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
-edition = "2021"
+edition = "2024"
 
 [lib]
 name = "latexml_math_parser"

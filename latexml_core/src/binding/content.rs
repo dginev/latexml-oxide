@@ -202,7 +202,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     with_vecdeque("@masquerading@as@class", |vdq_opt| {
       if let Some(vdq) = vdq_opt {
         if vdq.iter().any(|x| {
-          if let Stored::String(ref v) = x {
+          if let Stored::String(v) = x {
             arena::with(*v, |str| str == prevname)
           } else {
             false
@@ -2955,13 +2955,13 @@ pub fn build_invocation_str(spec: &str, args: Vec<Option<Tokens>>) -> Result<Tok
 
 fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tokens> {
   // Note: token may have been \let to another defn!
-  if let Some(defn) = lookup_definition(&token)? {
+  match lookup_definition(&token)? { Some(defn) => {
     let mut invoked_tokens = vec![token];
     if let Some(params) = defn.get_parameters() {
       invoked_tokens.extend(params.revert_arguments(args)?);
     }
     Ok(Tokens::new(invoked_tokens))
-  } else {
+  } _ => {
     let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
     token.with_cs_name(|csname| {
       Error!("undefined", csname, message);
@@ -2983,7 +2983,7 @@ fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tok
       .collect();
     invoked_tokens.extend(wrapped_args);
     Ok(Tokens::new(invoked_tokens))
-  }
+  }}
 }
 
 /// Convert a LaTeX-style argument spec to our Package form.

@@ -625,12 +625,12 @@ impl Stored {
   /// to circumvent the limitations of using trait objects with `Rc<Definition>`
   pub fn read_arguments(&self) -> Result<Vec<ArgWrap>> {
     match self {
-      Stored::Conditional(ref entry) => entry.read_arguments(),
-      Stored::Constructor(ref entry) => entry.read_arguments(),
-      Stored::Expandable(ref entry) => entry.read_arguments(),
-      Stored::MathPrimitive(ref entry) => entry.read_arguments(),
-      Stored::Primitive(ref entry) => entry.read_arguments(),
-      Stored::Register(ref entry) => entry.read_arguments(),
+      Stored::Conditional(entry) => entry.read_arguments(),
+      Stored::Constructor(entry) => entry.read_arguments(),
+      Stored::Expandable(entry) => entry.read_arguments(),
+      Stored::MathPrimitive(entry) => entry.read_arguments(),
+      Stored::Primitive(entry) => entry.read_arguments(),
+      Stored::Register(entry) => entry.read_arguments(),
       e => Err(s!(".read_arguments not defined for stored variant {:?}", e).into()),
     }
   }
@@ -638,11 +638,11 @@ impl Stored {
   /// `ToString::to_string`
   pub fn to_attribute(&self) -> String {
     match self {
-      Stored::Dimension(ref v) => v.to_attribute(),
-      Stored::Number(ref v) => v.to_attribute(),
-      Stored::MuDimension(ref v) => v.to_attribute(),
-      Stored::Glue(ref v) => v.to_attribute(),
-      Stored::MuGlue(ref v) => v.to_attribute(),
+      Stored::Dimension(v) => v.to_attribute(),
+      Stored::Number(v) => v.to_attribute(),
+      Stored::MuDimension(v) => v.to_attribute(),
+      Stored::Glue(v) => v.to_attribute(),
+      Stored::MuGlue(v) => v.to_attribute(),
       other => other.to_string(),
     }
   }
@@ -989,7 +989,7 @@ impl From<&Stored> for String {
 impl<'a> From<&'a Stored> for Option<&'a VecDeque<Stored>> {
   fn from(value: &'a Stored) -> Option<&'a VecDeque<Stored>> {
     match value {
-      Stored::VecDequeStored(ref v) => Some(v),
+      Stored::VecDequeStored(v) => Some(v),
       _ => None,
     }
   }
@@ -998,7 +998,7 @@ impl<'a> From<&'a Stored> for Option<&'a VecDeque<Stored>> {
 impl<'a> From<&'a Stored> for Option<Rc<Font>> {
   fn from(value: &'a Stored) -> Option<Rc<Font>> {
     match value {
-      Stored::Font(ref f) => Some(Rc::clone(f)),
+      Stored::Font(f) => Some(Rc::clone(f)),
       _ => None,
     }
   }
@@ -1007,11 +1007,11 @@ impl<'a> From<&'a Stored> for Option<Rc<Font>> {
 impl<'a> From<&'a Stored> for Option<Number> {
   fn from(value: &'a Stored) -> Option<Number> {
     match value {
-      Stored::Number(ref n) => Some(*n),
-      Stored::Dimension(ref n) => Some(Number::new(n.value_of())),
-      Stored::Glue(ref n) => Some(Number::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Number::new(n.value_of())),
-      Stored::MuGlue(ref n) => Some(Number::new(n.value_of())),
+      Stored::Number(n) => Some(*n),
+      Stored::Dimension(n) => Some(Number::new(n.value_of())),
+      Stored::Glue(n) => Some(Number::new(n.value_of())),
+      Stored::MuDimension(n) => Some(Number::new(n.value_of())),
+      Stored::MuGlue(n) => Some(Number::new(n.value_of())),
       other => {
         eprintln!("TODO: auto-cast of Stored to Number attempted on {other:?}");
         None
@@ -1043,11 +1043,11 @@ fn mu_to_pt_value(mu_val: i64) -> i64 {
 impl<'a> From<&'a Stored> for Option<Dimension> {
   fn from(value: &'a Stored) -> Option<Dimension> {
     match value {
-      Stored::Dimension(ref n) => Some(*n),
-      Stored::Number(ref n) => Some(Dimension::new(n.value_of())),
-      Stored::Glue(ref n) => Some(Dimension::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
-      Stored::MuGlue(ref n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
+      Stored::Dimension(n) => Some(*n),
+      Stored::Number(n) => Some(Dimension::new(n.value_of())),
+      Stored::Glue(n) => Some(Dimension::new(n.value_of())),
+      Stored::MuDimension(n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
+      Stored::MuGlue(n) => Some(Dimension::new(mu_to_pt_value(n.value_of()))),
       _ => None,
     }
   }
@@ -1056,11 +1056,11 @@ impl<'a> From<&'a Stored> for Option<Dimension> {
 impl<'a> From<&'a Stored> for Option<Glue> {
   fn from(value: &'a Stored) -> Option<Glue> {
     match value {
-      Stored::Dimension(ref n) => Some(Glue::new(n.value_of())),
-      Stored::Number(ref n) => Some(Glue::new(n.value_of())),
-      Stored::MuDimension(ref n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
-      Stored::MuGlue(ref n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
-      Stored::Glue(ref n) => Some(*n),
+      Stored::Dimension(n) => Some(Glue::new(n.value_of())),
+      Stored::Number(n) => Some(Glue::new(n.value_of())),
+      Stored::MuDimension(n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
+      Stored::MuGlue(n) => Some(Glue::new(mu_to_pt_value(n.value_of()))),
+      Stored::Glue(n) => Some(*n),
       _ => None,
     }
   }
@@ -1102,7 +1102,7 @@ impl From<Stored> for Option<Tokens> {
 impl<'a> From<&'a Stored> for Option<Rc<Register>> {
   fn from(value: &'a Stored) -> Option<Rc<Register>> {
     match value {
-      Stored::Register(ref reg) => Some(Rc::clone(reg)),
+      Stored::Register(reg) => Some(Rc::clone(reg)),
       _ => None,
     }
   }
@@ -1111,7 +1111,7 @@ impl<'a> From<&'a Stored> for Option<Rc<Register>> {
 impl<'a> From<&'a Stored> for Option<Catcode> {
   fn from(value: &'a Stored) -> Option<Catcode> {
     match value {
-      Stored::Catcode(ref cc) => Some(*cc),
+      Stored::Catcode(cc) => Some(*cc),
       _ => None,
     }
   }
@@ -1120,7 +1120,7 @@ impl<'a> From<&'a Stored> for Option<Catcode> {
 impl<'a> From<&'a Stored> for Option<&'a [char]> {
   fn from(value: &'a Stored) -> Option<&'a [char]> {
     match value {
-      Stored::Chars(ref cc) => Some(cc),
+      Stored::Chars(cc) => Some(cc),
       _ => None,
     }
   }
@@ -1129,7 +1129,7 @@ impl<'a> From<&'a Stored> for Option<&'a [char]> {
 impl From<&Stored> for Option<Rc<[Option<char>]>> {
   fn from(value: &Stored) -> Option<Rc<[Option<char>]>> {
     match value {
-      Stored::Fontmap(ref cc) => Some(Rc::clone(cc)),
+      Stored::Fontmap(cc) => Some(Rc::clone(cc)),
       _ => None,
     }
   }

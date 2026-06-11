@@ -21,7 +21,7 @@ fn xmath_copy_keyvals(whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
   // Use get_hash_digested() since after digestion values are in cached_hash_digested
   let pairs: Vec<(String, String)> = if let Some(arg1) = whatsit.get_arg(1) {
     match arg1.data() {
-      DigestedData::KeyVals(ref kv) => kv.get_hash_digested().into_iter().collect(),
+      DigestedData::KeyVals(kv) => kv.get_hash_digested().into_iter().collect(),
       _ => Vec::new(),
     }
   } else {
@@ -447,7 +447,7 @@ LoadDefinitions!({
       let arg = whatsit.get_arg(2);
       let reversion_key = s!("xref:{}@reversion", xmid);
       with_value_mut("PENDING_DUAL_XMARGS", |pending_opt|
-        if let Some(Stored::HashStored(ref mut pending)) = pending_opt  {
+        if let Some(Stored::HashStored(pending)) = pending_opt  {
           pending.insert(&xmid, arg.into());
         });
       // TODO: Must we store the (currently &mut) Whatsit?
@@ -673,12 +673,12 @@ LoadDefinitions!({
          }
          n+=1;
          text = node_text + &text;
-         if let Some(sibling) = node_mut.get_prev_sibling() {
+         match node_mut.get_prev_sibling() { Some(sibling) => {
            this_node = sibling;
            node_mut = &mut this_node;
-         } else {
+         } _ => {
            break;
-         }
+         }}
        }
        let has_leading_letter = match text.chars().next() {
          Some(fc) => fc.is_alphabetic(),
@@ -772,12 +772,12 @@ LoadDefinitions!({
       break;
     }
     n+=1;
-    if let Some(sibling) = node_ref.get_prev_sibling() {
+    match node_ref.get_prev_sibling() { Some(sibling) => {
       current = sibling;
       node_ref = &mut current;
-    } else {
+    } _ => {
       break;
-    }
+    }}
   }
   if n > 1 && (number.chars().any(|c| c.is_numeric())) {
     Ok(Some((n, combined, MathLigatureOptions {
@@ -960,7 +960,7 @@ LoadDefinitions!({
       // Pass all keyval pairs as properties
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(ref kv) = d.data() {
+        if let DigestedData::KeyVals(kv) = d.data() {
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
@@ -1000,7 +1000,7 @@ LoadDefinitions!({
       //   (T_CS('\\' . $name), T_BEGIN, $alignment->revert, T_END); }
       let mut name = String::new();
       if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(ref kv) = d.data() {
+        if let DigestedData::KeyVals(kv) = d.data() {
           name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
         }
       }
@@ -1009,8 +1009,8 @@ LoadDefinitions!({
         let prop = _whatsit.get_property("alignment");
         let mut rev = None;
         if let Some(cow) = prop.as_ref() {
-          if let Stored::Digested(ref alignment) = &**cow {
-            if let DigestedData::Alignment(ref al) = alignment.data() {
+          if let Stored::Digested(alignment) = &**cow {
+            if let DigestedData::Alignment(al) = alignment.data() {
               rev = Some(al.borrow().revert()?);
             }
           }
@@ -1043,7 +1043,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(ref kv) = d.data() {
+        if let DigestedData::KeyVals(kv) = d.data() {
           // Store left/right as Digested directly from digested keyvals.
           // Perl's absorb() handles Tokens natively; Rust constructor templates
           // only absorb Digested. Using get_value_digested avoids the revert->re-digest
@@ -1087,7 +1087,7 @@ LoadDefinitions!({
       let mut align = String::new();
       let mut alignment_required = false;
       if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(ref kv) = d.data() {
+        if let DigestedData::KeyVals(kv) = d.data() {
           name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
           align = kv.get_value("alignment").map(|v| v.to_string()).unwrap_or_default();
           alignment_required = kv.has_key("alignment-required");
@@ -1228,7 +1228,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(ref kv) = d.data() {
+        if let DigestedData::KeyVals(kv) = d.data() {
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1328,7 +1328,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let mut props = stored_map!();
       if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(ref kv) = d.data() {
+        if let DigestedData::KeyVals(kv) = d.data() {
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1740,19 +1740,19 @@ pub fn equationgroup_join_cols(
       continue;
     }
     if col.is_multiple_of(ncols) {
-      if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+      if let (Some(mf), Some(br)) = (&mut mainfork, &mut branch) {
         close_math_fork(document, equation, mf, br)?;
       }
       let (mf, br) = open_math_fork(document, equation)?;
       mainfork = Some(mf);
       branch = Some(br);
     }
-    if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+    if let (Some(mf), Some(br)) = (&mut mainfork, &mut branch) {
       add_column_to_math_fork(document, mf, br, &mut cell)?;
     }
     col += 1;
   }
-  if let (Some(ref mut mf), Some(ref mut br)) = (&mut mainfork, &mut branch) {
+  if let (Some(mf), Some(br)) = (&mut mainfork, &mut branch) {
     close_math_fork(document, equation, mf, br)?;
   }
   Ok(())

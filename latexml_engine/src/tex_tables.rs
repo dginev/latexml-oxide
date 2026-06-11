@@ -25,7 +25,7 @@ LoadDefinitions!({
   // when \begin{aligned} is nested inside \begin{align}.
   DefConstructor!("\\lx@begin@alignment", "#alignment",
     reversion => sub[whatsit,_args] {
-      if let Some(Stored::Digested(alignment)) = whatsit.get_property("alignment").as_deref() {
+      match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment)) => {
         if let DigestedData::Alignment(data) = alignment.data() {
           // Use try_borrow: nested array inside a delimited expression
           // (e.g. `\left( \begin{array}{ccc} ... \end{array} \right)`)
@@ -43,9 +43,9 @@ LoadDefinitions!({
         } else {
           Ok(Tokens!())
         }
-      } else {
+      } _ => {
         Ok(Tokens!())
-      }},
+      }}},
     sizer => "#alignment",
     after_digest => sub[whatsit] {
       bgroup();
@@ -263,12 +263,12 @@ LoadDefinitions!({
   bounded => true,
   leave_horizontal => true,
   sizer => sub[whatsit] {
-    if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+    match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {
       let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
       Ok((w, h, d))
-    } else {
+    } _ => {
       Ok((Dimension::default(), Dimension::default(), Dimension::default()))
-    }
+    }}
   },
   before_construct => sub[document, _whatsit] {
     document.maybe_close_element("ltx:p")?;
@@ -296,8 +296,8 @@ LoadDefinitions!({
     // variant; the inner Rc<Digested> + RefCell<Alignment> mutation
     // still works fine through the borrow.
     state::with_value("Alignment", |v| {
-      if let Some(Stored::Digested(ref d)) = v {
-        if let latexml_core::digested::DigestedData::Alignment(ref alignment) = d.data() {
+      if let Some(Stored::Digested(d)) = v {
+        if let latexml_core::digested::DigestedData::Alignment(alignment) = d.data() {
           alignment.borrow_mut().is_halign = true;
         }
       }
@@ -496,25 +496,25 @@ LoadDefinitions!({
   // Perl: DefRegisterI('\lx@alignment@ncolumns', undef, Dimension(0), getter => sub { ... })
   DefRegister!("\\lx@alignment@ncolumns", Number::new(0),
     getter => {
-      if let Some(alignment_stored) = lookup_alignment() {
+      match lookup_alignment() { Some(alignment_stored) => {
         let data = alignment_stored.alignment_cell().unwrap();
         let borrowed = data.borrow();
         Number::new(borrowed.get_template().get_columns().len() as i64)
-      } else {
+      } _ => {
         Number::new(0)
-      }
+      }}
     }
   );
   // Perl: DefRegisterI('\lx@alignment@column', undef, Dimension(0), getter => sub { ... })
   DefRegister!("\\lx@alignment@column", Number::new(0),
     getter => {
-      if let Some(alignment_stored) = lookup_alignment() {
+      match lookup_alignment() { Some(alignment_stored) => {
         let data = alignment_stored.alignment_cell().unwrap();
         let borrowed = data.borrow();
         Number::new(borrowed.current_column_number() as i64)
-      } else {
+      } _ => {
         Number::new(0)
-      }
+      }}
     }
   );
 
@@ -645,16 +645,16 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit) -> Result<()> {
   // Note that the body MUST end with a \cr, and that we've made Special Arrangments
   // with \alignment@cr to recognize the end of the \halign
   local_align_group_count(0);
-  let alignment_stored = if let Some(alignment) = lookup_alignment() {
+  let alignment_stored = match lookup_alignment() { Some(alignment) => {
     alignment
-  } else {
+  } _ => {
     Error!(
       "missing",
       "alignment",
       "There is no open alignment structure here"
     );
     return Ok(());
-  };
+  }};
   local_reading_alignment(&alignment_stored);
   whatsit.set_property("alignment", Stored::Digested(alignment_stored.clone()));
 

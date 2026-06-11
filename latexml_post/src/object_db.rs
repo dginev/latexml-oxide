@@ -195,7 +195,7 @@ impl Entry {
       .values
       .entry(attr.to_string())
       .or_insert_with(|| Value::List(Vec::new()));
-    if let Value::List(ref mut items) = list {
+    if let Value::List(items) = list {
       for v in values {
         items.push(v);
       }
@@ -210,7 +210,7 @@ impl Entry {
       .values
       .entry(attr.to_string())
       .or_insert_with(|| Value::List(Vec::new()));
-    if let Value::List(ref mut items) = list {
+    if let Value::List(items) = list {
       for v in values {
         let s = v.to_string();
         if !items.iter().any(|existing| existing.to_string() == s) {
@@ -242,7 +242,7 @@ impl Entry {
       .entry(first.to_string())
       .or_insert_with(|| Value::Hash(HashMap::default()));
 
-    if let Value::Hash(ref mut h) = hash {
+    if let Value::Hash(h) = hash {
       let mut current = h;
       for (i, &key) in rest.iter().enumerate() {
         if i == rest.len() - 1 {
@@ -253,7 +253,7 @@ impl Entry {
           let entry = current
             .entry(key.to_string())
             .or_insert_with(|| Value::Hash(HashMap::default()));
-          if let Value::Hash(ref mut inner) = entry {
+          if let Value::Hash(inner) = entry {
             current = inner;
           } else {
             break;

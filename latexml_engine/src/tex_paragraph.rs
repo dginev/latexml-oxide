@@ -174,12 +174,12 @@ LoadDefinitions!({
           { state::assign_value("next_para_class", "ltx_noindent", None); }
         }
         // Vertical adjustments
-        if let Some(Stored::Tokens(vadj)) = { state::remove_value("vAdjust") } {
+        match { state::remove_value("vAdjust") } { Some(Stored::Tokens(vadj)) => {
           state::assign_value("vAdjust", Tokens!(), Some(Scope::Global));
           Ok(vec![ Digest!(vadj)? ])
-        } else {
+        } _ => {
           Ok(Vec::new())
-        }
+        }}
       }
     },
     properties => skippable_props,

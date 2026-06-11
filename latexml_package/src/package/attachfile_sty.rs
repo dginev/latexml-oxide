@@ -24,7 +24,7 @@ fn attachfile_properties(
 ) -> latexml_core::common::arena::SymHashMap<Stored> {
   let icon_key = kv
     .and_then(|d| {
-      if let DigestedData::KeyVals(ref kvs) = d.data() {
+      if let DigestedData::KeyVals(kvs) = d.data() {
         kvs.get_value("icon")
       } else {
         None
@@ -34,7 +34,7 @@ fn attachfile_properties(
     .unwrap_or_else(|| "pushpin".to_string());
   let color = kv
     .and_then(|d| {
-      if let DigestedData::KeyVals(ref kvs) = d.data() {
+      if let DigestedData::KeyVals(kvs) = d.data() {
         kvs.get_value("color")
       } else {
         None

@@ -148,7 +148,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
         }
       }
       // ?#1(placement='#1') — placement from optional arg
-      if let Some(Some(ref arg1)) = args.first() {
+      if let Some(Some(arg1)) = args.first() {
         let placement = arg1.to_string();
         if !placement.is_empty() {
           av.insert("placement".into(), placement);
