@@ -121,7 +121,28 @@ jobs:
       # All cargo steps below run under the dedicated `ci` profile,
       # which has per-package codegen-units splits to keep peak RSS
       # under 16 GB even on the heaviest binding crates.
+      # The engine dumps capture kernel state from `--init=plain.tex` /
+      # `--init=latex.ltx` — the core + engine layers only. latexml_package is
+      # loaded per-document via \usepackage, NOT during init, so package bindings
+      # are NOT in the base dump and are deliberately EXCLUDED from the key —
+      # otherwise the common case (editing a package binding) would needlessly
+      # bust the cache. The dump is thus a deterministic function of
+      # latexml_{core,engine,codegen}/src + the TeX Live release, so most PRs
+      # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
+      # dump-generation step. Conservative within that set (over-regenerate,
+      # never stale; the test suite catches a bad dump). `runner.os` keeps
+      # Linux/macOS caches distinct. Bump `v1` if the dump format changes.
+      - name: TeX Live fingerprint (dump cache key)
+        id: tlfp
+        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+      - name: cache engine dumps
+        id: dumps
+        uses: actions/cache@v4
+        with:
+          path: resources/dumps
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
       - name: make formats
+        if: steps.dumps.outputs.cache-hit != 'true'
         env:
           PROFILE: ci
         run: tools/make_formats.sh
@@ -175,7 +196,28 @@ jobs:
         with:
           cache-on-failure: true
           key: macos
+      # The engine dumps capture kernel state from `--init=plain.tex` /
+      # `--init=latex.ltx` — the core + engine layers only. latexml_package is
+      # loaded per-document via \usepackage, NOT during init, so package bindings
+      # are NOT in the base dump and are deliberately EXCLUDED from the key —
+      # otherwise the common case (editing a package binding) would needlessly
+      # bust the cache. The dump is thus a deterministic function of
+      # latexml_{core,engine,codegen}/src + the TeX Live release, so most PRs
+      # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
+      # dump-generation step. Conservative within that set (over-regenerate,
+      # never stale; the test suite catches a bad dump). `runner.os` keeps
+      # Linux/macOS caches distinct. Bump `v1` if the dump format changes.
+      - name: TeX Live fingerprint (dump cache key)
+        id: tlfp
+        run: echo "year=$(pdflatex --version 2>/dev/null | sed -n 's:.*TeX Live \([0-9]\{4\}\).*:\1:p' | head -1)" >> "$GITHUB_OUTPUT"
+      - name: cache engine dumps
+        id: dumps
+        uses: actions/cache@v4
+        with:
+          path: resources/dumps
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
       - name: make formats
+        if: steps.dumps.outputs.cache-hit != 'true'
         env:
           PROFILE: ci
         run: tools/make_formats.sh
