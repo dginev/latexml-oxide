@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/counter/</div>dialect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! # Counters
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/counter/dialect.rs`."><title>dialect.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/counter/</div>dialect.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! # Counters
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! This is modelled on LaTeX's counter mechanisms, but since it also
 <a href=#4 id=4 data-nosnippet>4</a>//! provides support for ID's, even where there is no visible reference number,
@@ -8,370 +8,370 @@
 <a href=#8 id=8 data-nosnippet>8</a>//! document elements (eg from \section*); this requires an additional counter
 <a href=#9 id=9 data-nosnippet>9</a>//! (eg. UNsection) and  mechanisms to track it.
 <a href=#10 id=10 data-nosnippet>10</a>
-<a href=#11 id=11 data-nosnippet>11</a></span><span class="kw">use </span>std::collections::VecDeque;
-<a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>std::rc::Rc;
-<a href=#13 id=13 data-nosnippet>13</a>
-<a href=#14 id=14 data-nosnippet>14</a><span class="kw">use </span><span class="kw">crate</span>::binding::content::{build_invocation, digest_literal, digest_text};
-<a href=#15 id=15 data-nosnippet>15</a><span class="kw">use </span><span class="kw">crate</span>::binding::def::dialect::{RegisterOptions, def_macro, def_register, is_defined};
-<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use </span><span class="kw">crate</span>::common::arena::SymHashMap <span class="kw">as </span>HashMap;
-<a href=#17 id=17 data-nosnippet>17</a><span class="kw">use </span><span class="kw">crate</span>::common::arena::{<span class="self">self</span>, SymStr};
-<a href=#18 id=18 data-nosnippet>18</a><span class="kw">use </span><span class="kw">crate</span>::common::cleaners::{clean_id, clean_label, roman_aux};
-<a href=#19 id=19 data-nosnippet>19</a><span class="kw">use </span><span class="kw">crate</span>::common::error::<span class="kw-2">*</span>;
-<a href=#20 id=20 data-nosnippet>20</a><span class="kw">use </span><span class="kw">crate</span>::common::number::Number;
-<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a><span class="kw">use </span><span class="kw">crate</span>::BoxOps;
-<a href=#24 id=24 data-nosnippet>24</a><span class="kw">use </span><span class="kw">crate</span>::definition::expandable::ExpandableOptions;
-<a href=#25 id=25 data-nosnippet>25</a><span class="kw">use </span><span class="kw">crate</span>::definition::{Definition, ExpansionBody};
-<a href=#26 id=26 data-nosnippet>26</a><span class="kw">use </span><span class="kw">crate</span>::mouth;
-<a href=#27 id=27 data-nosnippet>27</a><span class="kw">use </span><span class="kw">crate</span>::state;
-<a href=#28 id=28 data-nosnippet>28</a><span class="kw">use </span><span class="kw">crate</span>::state::<span class="kw-2">*</span>;
-<a href=#29 id=29 data-nosnippet>29</a><span class="kw">use </span><span class="kw">crate</span>::stomach;
-<a href=#30 id=30 data-nosnippet>30</a><span class="kw">use </span><span class="kw">crate</span>::token::<span class="kw-2">*</span>;
-<a href=#31 id=31 data-nosnippet>31</a><span class="kw">use </span><span class="kw">crate</span>::tokens::Tokens;
-<a href=#32 id=32 data-nosnippet>32</a><span class="kw">use </span><span class="kw">crate</span>::whatsit::Whatsit;
-<a href=#33 id=33 data-nosnippet>33</a>
-<a href=#34 id=34 data-nosnippet>34</a><span class="doccomment">/// configuration for new_counter
-<a href=#35 id=35 data-nosnippet>35</a></span><span class="attr">#[derive(Default)]
-<a href=#36 id=36 data-nosnippet>36</a></span><span class="kw">pub struct </span>NewCounterOptions&lt;<span class="lifetime">'ct</span>&gt; {
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="doccomment">/// specifies a prefix to be used in formatting ID's for document structure elements
-<a href=#38 id=38 data-nosnippet>38</a>  /// counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
-<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="kw">pub </span>idprefix: <span class="kw-2">&amp;</span><span class="lifetime">'ct </span>str,
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="doccomment">/// specifies that the ID is composed from $idwithin's ID,, even though
-<a href=#41 id=41 data-nosnippet>41</a>  /// the counter isn't numbered within it.  (mainly to avoid duplicated ids)
-<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="kw">pub </span>idwithin: <span class="kw-2">&amp;</span><span class="lifetime">'ct </span>str,
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="doccomment">/// a list of counters that correspond to scopes which are "inside" this one.
-<a href=#44 id=44 data-nosnippet>44</a>  /// Whenever any definitions scoped to this counter are deactivated,
-<a href=#45 id=45 data-nosnippet>45</a>  /// the inner counter's scopes are also deactivated.
-<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="comment">// NOTE: I'm not sure this is even a sensible implementation,
-<a href=#47 id=47 data-nosnippet>47</a>  // or why inner should be different than the counters reset by incrementing this counter.
-<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="kw">pub </span>nested: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'ct </span>str&gt;,
-<a href=#49 id=49 data-nosnippet>49</a>}
-<a href=#50 id=50 data-nosnippet>50</a>
-<a href=#51 id=51 data-nosnippet>51</a><span class="doccomment">/// Defines a new counter named $ctr.
-<a href=#52 id=52 data-nosnippet>52</a>/// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
-<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">pub fn </span>new_counter(ctr: <span class="kw-2">&amp;</span>str, within: <span class="kw-2">&amp;</span>str, options_opt: <span class="prelude-ty">Option</span>&lt;NewCounterOptions&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="kw">let </span>unctr = <span class="macro">s!</span>(<span class="string">"UN{ctr}"</span>); <span class="comment">// UNctr is counter for generating ID's for UN-numbered items.
-<a href=#55 id=55 data-nosnippet>55</a>  </span><span class="kw">if </span>!within.is_empty()
-<a href=#56 id=56 data-nosnippet>56</a>    &amp;&amp; within != <span class="string">"document"
-<a href=#57 id=57 data-nosnippet>57</a>    </span>&amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{within}"</span>)))<span class="question-mark">?</span>.is_none()
-<a href=#58 id=58 data-nosnippet>58</a>  {
-<a href=#59 id=59 data-nosnippet>59</a>    new_counter(within, <span class="string">""</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#60 id=60 data-nosnippet>60</a>  }
-<a href=#61 id=61 data-nosnippet>61</a>  <span class="kw">let </span>cctr = <span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>);
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="kw">let </span>clctr = <span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>);
-<a href=#63 id=63 data-nosnippet>63</a>  <span class="kw">let </span>cunctr = <span class="macro">s!</span>(<span class="string">"\\c@{unctr}"</span>);
-<a href=#64 id=64 data-nosnippet>64</a>  <span class="kw">let </span>clunctr = <span class="macro">s!</span>(<span class="string">"\\cl@{unctr}"</span>);
-<a href=#65 id=65 data-nosnippet>65</a>  <span class="comment">// Perl Package.pm L660-672: Check if counter already defined. Skip register if already a
-<a href=#66 id=66 data-nosnippet>66</a>  // Register. Warn if previously defined as something other than \relax.
-<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="kw">let </span>cs_cctr = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cctr);
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="kw">let </span>prev_defn = lookup_definition(<span class="kw-2">&amp;</span>cs_cctr)<span class="question-mark">?</span>;
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>defn) = prev_defn {
-<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">if </span>defn.is_register() {
-<a href=#71 id=71 data-nosnippet>71</a>      <span class="comment">// Counter already exists as a register — fine, just continue (may change within/nesting)
-<a href=#72 id=72 data-nosnippet>72</a>    </span>} <span class="kw">else </span>{
-<a href=#73 id=73 data-nosnippet>73</a>      <span class="comment">// Warn unless the previous definition was \relax
-<a href=#74 id=74 data-nosnippet>74</a>      </span><span class="kw">let </span>relax_meaning = state::lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>());
-<a href=#75 id=75 data-nosnippet>75</a>      <span class="kw">let </span>prev_meaning = state::lookup_meaning(<span class="kw-2">&amp;</span>cs_cctr);
-<a href=#76 id=76 data-nosnippet>76</a>      <span class="kw">if </span>prev_meaning != relax_meaning {
-<a href=#77 id=77 data-nosnippet>77</a>        <span class="macro">Warn!</span>(
-<a href=#78 id=78 data-nosnippet>78</a>          <span class="string">"unexpected"</span>,
-<a href=#79 id=79 data-nosnippet>79</a>          <span class="kw-2">&amp;</span>cctr,
-<a href=#80 id=80 data-nosnippet>80</a>          <span class="macro">s!</span>(<span class="string">"Counter {} was already defined; redefining"</span>, cctr)
-<a href=#81 id=81 data-nosnippet>81</a>        );
-<a href=#82 id=82 data-nosnippet>82</a>      }
-<a href=#83 id=83 data-nosnippet>83</a>      def_register(
-<a href=#84 id=84 data-nosnippet>84</a>        cs_cctr,
-<a href=#85 id=85 data-nosnippet>85</a>        <span class="prelude-val">None</span>,
-<a href=#86 id=86 data-nosnippet>86</a>        Number::new(<span class="number">0</span>),
-<a href=#87 id=87 data-nosnippet>87</a>        <span class="prelude-val">Some</span>(RegisterOptions {
-<a href=#88 id=88 data-nosnippet>88</a>          allocate: <span class="prelude-val">Some</span>(String::from(<span class="string">"\\count"</span>)),
-<a href=#89 id=89 data-nosnippet>89</a>          ..RegisterOptions::default()
-<a href=#90 id=90 data-nosnippet>90</a>        }),
-<a href=#91 id=91 data-nosnippet>91</a>      )<span class="question-mark">?</span>;
-<a href=#92 id=92 data-nosnippet>92</a>    }
-<a href=#93 id=93 data-nosnippet>93</a>  } <span class="kw">else </span>{
-<a href=#94 id=94 data-nosnippet>94</a>    def_register(
-<a href=#95 id=95 data-nosnippet>95</a>      cs_cctr,
-<a href=#96 id=96 data-nosnippet>96</a>      <span class="prelude-val">None</span>,
-<a href=#97 id=97 data-nosnippet>97</a>      Number::new(<span class="number">0</span>),
-<a href=#98 id=98 data-nosnippet>98</a>      <span class="prelude-val">Some</span>(RegisterOptions {
-<a href=#99 id=99 data-nosnippet>99</a>        allocate: <span class="prelude-val">Some</span>(String::from(<span class="string">"\\count"</span>)),
-<a href=#100 id=100 data-nosnippet>100</a>        ..RegisterOptions::default()
-<a href=#101 id=101 data-nosnippet>101</a>      }),
-<a href=#102 id=102 data-nosnippet>102</a>    )<span class="question-mark">?</span>;
-<a href=#103 id=103 data-nosnippet>103</a>  }
-<a href=#104 id=104 data-nosnippet>104</a>  after_assignment();
-<a href=#105 id=105 data-nosnippet>105</a>  <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clctr) {
-<a href=#106 id=106 data-nosnippet>106</a>    state::assign_value(<span class="kw-2">&amp;</span>clctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#107 id=107 data-nosnippet>107</a>  }
-<a href=#108 id=108 data-nosnippet>108</a>  def_register(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cunctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#109 id=109 data-nosnippet>109</a>  <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clunctr) {
-<a href=#110 id=110 data-nosnippet>110</a>    state::assign_value(<span class="kw-2">&amp;</span>clunctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#111 id=111 data-nosnippet>111</a>  }
-<a href=#112 id=112 data-nosnippet>112</a>
-<a href=#113 id=113 data-nosnippet>113</a>  <span class="kw">if </span>!within.is_empty() {
-<a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">let </span>clwithin = <span class="macro">s!</span>(<span class="string">"\\cl@{within}"</span>);
-<a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">let </span>clunwithin = <span class="macro">s!</span>(<span class="string">"\\cl@UN{within}"</span>);
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">let </span>x = <span class="kw">if let </span><span class="prelude-val">Some</span>(cl) = state::lookup_tokens(<span class="kw-2">&amp;</span>clwithin) {
-<a href=#117 id=117 data-nosnippet>117</a>      cl.unlist()
-<a href=#118 id=118 data-nosnippet>118</a>    } <span class="kw">else </span>{
-<a href=#119 id=119 data-nosnippet>119</a>      Vec::new()
-<a href=#120 id=120 data-nosnippet>120</a>    };
-<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">let </span><span class="kw-2">mut </span>clwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(ctr), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>unctr)];
-<a href=#122 id=122 data-nosnippet>122</a>    clwithin_tokens.extend(x);
-<a href=#123 id=123 data-nosnippet>123</a>    state::assign_value(
-<a href=#124 id=124 data-nosnippet>124</a>      <span class="kw-2">&amp;</span>clwithin,
-<a href=#125 id=125 data-nosnippet>125</a>      Stored::Tokens(Tokens::new(clwithin_tokens)),
-<a href=#126 id=126 data-nosnippet>126</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#127 id=127 data-nosnippet>127</a>    );
-<a href=#128 id=128 data-nosnippet>128</a>
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="kw">let </span><span class="kw-2">mut </span>unx = <span class="kw">if let </span><span class="prelude-val">Some</span>(clun) = state::lookup_tokens(<span class="kw-2">&amp;</span>clunwithin) {
-<a href=#130 id=130 data-nosnippet>130</a>      clun.unlist()
-<a href=#131 id=131 data-nosnippet>131</a>    } <span class="kw">else </span>{
-<a href=#132 id=132 data-nosnippet>132</a>      Vec::new()
-<a href=#133 id=133 data-nosnippet>133</a>    };
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">let </span><span class="kw-2">mut </span>clunwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(unctr)];
-<a href=#135 id=135 data-nosnippet>135</a>    clunwithin_tokens.append(<span class="kw-2">&amp;mut </span>unx);
-<a href=#136 id=136 data-nosnippet>136</a>
-<a href=#137 id=137 data-nosnippet>137</a>    state::assign_value(
-<a href=#138 id=138 data-nosnippet>138</a>      <span class="kw-2">&amp;</span>clunwithin,
-<a href=#139 id=139 data-nosnippet>139</a>      Stored::Tokens(Tokens::new(clunwithin_tokens)),
-<a href=#140 id=140 data-nosnippet>140</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#141 id=141 data-nosnippet>141</a>    )
-<a href=#142 id=142 data-nosnippet>142</a>  }
-<a href=#143 id=143 data-nosnippet>143</a>
-<a href=#144 id=144 data-nosnippet>144</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>options) = options_opt {
-<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">if </span>!options.nested.is_empty() {
-<a href=#146 id=146 data-nosnippet>146</a>      state::assign_value(
-<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"nested_counters_{}"</span>, ctr),
-<a href=#148 id=148 data-nosnippet>148</a>        options.nested.clone(),
-<a href=#149 id=149 data-nosnippet>149</a>        <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#150 id=150 data-nosnippet>150</a>      )
-<a href=#151 id=151 data-nosnippet>151</a>    }
-<a href=#152 id=152 data-nosnippet>152</a>  }
-<a href=#153 id=153 data-nosnippet>153</a>
-<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
-<a href=#155 id=155 data-nosnippet>155</a>  </span><span class="kw">let </span>ctr_string = ctr.to_string();
-<a href=#156 id=156 data-nosnippet>156</a>  def_macro(
-<a href=#157 id=157 data-nosnippet>157</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{}"</span>, ctr)),
-<a href=#158 id=158 data-nosnippet>158</a>    <span class="prelude-val">None</span>,
-<a href=#159 id=159 data-nosnippet>159</a>    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#160 id=160 data-nosnippet>160</a>      <span class="kw">let </span>counter_value = counter_value(<span class="kw-2">&amp;</span>ctr_string)<span class="question-mark">?</span>.value_of();
-<a href=#161 id=161 data-nosnippet>161</a>      <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(counter_value)))
-<a href=#162 id=162 data-nosnippet>162</a>    }))),
-<a href=#163 id=163 data-nosnippet>163</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#164 id=164 data-nosnippet>164</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#165 id=165 data-nosnippet>165</a>      ..ExpandableOptions::default()
-<a href=#166 id=166 data-nosnippet>166</a>    }),
-<a href=#167 id=167 data-nosnippet>167</a>  )<span class="question-mark">?</span>;
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="kw">let </span>p_ctr_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\p@{}"</span>, ctr));
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>p_ctr_cs)<span class="question-mark">?</span>.is_none() {
-<a href=#170 id=170 data-nosnippet>170</a>    def_macro(
-<a href=#171 id=171 data-nosnippet>171</a>      p_ctr_cs,
-<a href=#172 id=172 data-nosnippet>172</a>      <span class="prelude-val">None</span>,
-<a href=#173 id=173 data-nosnippet>173</a>      Tokens::default(),
-<a href=#174 id=174 data-nosnippet>174</a>      <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#175 id=175 data-nosnippet>175</a>        scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#176 id=176 data-nosnippet>176</a>        ..ExpandableOptions::default()
-<a href=#177 id=177 data-nosnippet>177</a>      }),
-<a href=#178 id=178 data-nosnippet>178</a>    )<span class="question-mark">?</span>;
-<a href=#179 id=179 data-nosnippet>179</a>  }
-<a href=#180 id=180 data-nosnippet>180</a>
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="kw">let </span><span class="kw-2">mut </span>prefix = <span class="kw">match </span>options_opt {
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="prelude-val">None </span>=&gt; String::new(),
-<a href=#183 id=183 data-nosnippet>183</a>    <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>opt) =&gt; opt.idprefix.to_string(),
-<a href=#184 id=184 data-nosnippet>184</a>  };
-<a href=#185 id=185 data-nosnippet>185</a>  <span class="kw">if </span>!prefix.is_empty() {
-<a href=#186 id=186 data-nosnippet>186</a>    state::assign_value(
-<a href=#187 id=187 data-nosnippet>187</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"@ID@prefix@{}"</span>, ctr),
-<a href=#188 id=188 data-nosnippet>188</a>      prefix.clone(),
-<a href=#189 id=189 data-nosnippet>189</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#190 id=190 data-nosnippet>190</a>    );
-<a href=#191 id=191 data-nosnippet>191</a>  } <span class="kw">else </span>{
-<a href=#192 id=192 data-nosnippet>192</a>    prefix = state::lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"@ID@prefix@{}"</span>, ctr));
-<a href=#193 id=193 data-nosnippet>193</a>    <span class="kw">if </span>prefix.is_empty() {
-<a href=#194 id=194 data-nosnippet>194</a>      prefix = ctr.to_string();
-<a href=#195 id=195 data-nosnippet>195</a>    }
-<a href=#196 id=196 data-nosnippet>196</a>  }
-<a href=#197 id=197 data-nosnippet>197</a>  prefix = clean_id(<span class="kw-2">&amp;</span>prefix);
-<a href=#198 id=198 data-nosnippet>198</a>
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="kw">if </span>!prefix.is_empty() {
-<a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">let </span>idwithin = <span class="kw">match </span>options_opt {
-<a href=#201 id=201 data-nosnippet>201</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>opts) =&gt; {
-<a href=#202 id=202 data-nosnippet>202</a>        <span class="kw">if </span>opts.idwithin.is_empty() {
-<a href=#203 id=203 data-nosnippet>203</a>          within
-<a href=#204 id=204 data-nosnippet>204</a>        } <span class="kw">else </span>{
-<a href=#205 id=205 data-nosnippet>205</a>          opts.idwithin
-<a href=#206 id=206 data-nosnippet>206</a>        }
-<a href=#207 id=207 data-nosnippet>207</a>      },
-<a href=#208 id=208 data-nosnippet>208</a>      <span class="prelude-val">None </span>=&gt; within,
-<a href=#209 id=209 data-nosnippet>209</a>    }
-<a href=#210 id=210 data-nosnippet>210</a>    .to_string();
-<a href=#211 id=211 data-nosnippet>211</a>
-<a href=#212 id=212 data-nosnippet>212</a>    <span class="kw">let </span>ctr_string = ctr.to_string();
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">let </span>thectrid = <span class="macro">s!</span>(<span class="string">"\\the{}@ID"</span>, ctr);
-<a href=#214 id=214 data-nosnippet>214</a>    <span class="kw">if </span>!idwithin.is_empty() {
-<a href=#215 id=215 data-nosnippet>215</a>      def_macro(
-<a href=#216 id=216 data-nosnippet>216</a>        <span class="macro">T_CS!</span>(thectrid),
-<a href=#217 id=217 data-nosnippet>217</a>        <span class="prelude-val">None</span>,
-<a href=#218 id=218 data-nosnippet>218</a>        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#219 id=219 data-nosnippet>219</a>          <span class="comment">// Perl Package.pm L696 probes `\lx@empty`, NOT `\@empty` — and
-<a href=#220 id=220 data-nosnippet>220</a>          // deliberately so: `\@empty` is LaTeX-pool-only (latex_base.rs
-<a href=#221 id=221 data-nosnippet>221</a>          // aliases it to `\lx@empty`), while `\lx@empty` is engine-level
-<a href=#222 id=222 data-nosnippet>222</a>          // (base_schema.rs) and exists in PLAIN TeX documents too. With
-<a href=#223 id=223 data-nosnippet>223</a>          // `\@empty` here, a plain-TeX document's `\the&lt;ctr&gt;@ID` probe
-<a href=#224 id=224 data-nosnippet>224</a>          // compared `\thedocument@ID` (an alias of `\lx@empty`) against an
-<a href=#225 id=225 data-nosnippet>225</a>          // UNDEFINED `\@empty` → unequal → the \else branch re-expands the
-<a href=#226 id=226 data-nosnippet>226</a>          // parent's @ID formatter, spinning the gullet into a 4-token
-<a href=#227 id=227 data-nosnippet>227</a>          // expansion cycle (caught by the cycle guard as a phantom
-<a href=#228 id=228 data-nosnippet>228</a>          // `Fatal:Timeout:Recursion`, swallowed inside math-parser
-<a href=#229 id=229 data-nosnippet>229</a>          // semantics — `create_xmrefs`/`get_xmarg_id`). Witness
-<a href=#230 id=230 data-nosnippet>230</a>          // math0402448 (plain TeX + 3464 formulae): "Conversion failed:
-<a href=#231 id=231 data-nosnippet>231</a>          // 1 fatal error" with no Fatal: line in the log.
-<a href=#232 id=232 data-nosnippet>232</a>          </span><span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#233 id=233 data-nosnippet>233</a>            <span class="string">"\\expandafter\\ifx\\csname the{}@ID\\endcsname\\lx@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname"</span>,
-<a href=#234 id=234 data-nosnippet>234</a>            idwithin,
+<a href=#11 id=11 data-nosnippet>11</a></span><span class="kw">use </span>std::{collections::VecDeque, rc::Rc};
+<a href=#12 id=12 data-nosnippet>12</a>
+<a href=#13 id=13 data-nosnippet>13</a><span class="kw">use crate</span>::{
+<a href=#14 id=14 data-nosnippet>14</a>  BoxOps,
+<a href=#15 id=15 data-nosnippet>15</a>  binding::{
+<a href=#16 id=16 data-nosnippet>16</a>    content::{build_invocation, digest_literal, digest_text},
+<a href=#17 id=17 data-nosnippet>17</a>    def::dialect::{RegisterOptions, def_macro, def_register, is_defined},
+<a href=#18 id=18 data-nosnippet>18</a>  },
+<a href=#19 id=19 data-nosnippet>19</a>  common::{
+<a href=#20 id=20 data-nosnippet>20</a>    arena::{<span class="self">self</span>, SymHashMap <span class="kw">as </span>HashMap, SymStr},
+<a href=#21 id=21 data-nosnippet>21</a>    cleaners::{clean_id, clean_label, roman_aux},
+<a href=#22 id=22 data-nosnippet>22</a>    error::<span class="kw-2">*</span>,
+<a href=#23 id=23 data-nosnippet>23</a>    number::Number,
+<a href=#24 id=24 data-nosnippet>24</a>    numeric_ops::NumericOps,
+<a href=#25 id=25 data-nosnippet>25</a>  },
+<a href=#26 id=26 data-nosnippet>26</a>  definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
+<a href=#27 id=27 data-nosnippet>27</a>  mouth, state,
+<a href=#28 id=28 data-nosnippet>28</a>  state::<span class="kw-2">*</span>,
+<a href=#29 id=29 data-nosnippet>29</a>  stomach,
+<a href=#30 id=30 data-nosnippet>30</a>  token::<span class="kw-2">*</span>,
+<a href=#31 id=31 data-nosnippet>31</a>  tokens::Tokens,
+<a href=#32 id=32 data-nosnippet>32</a>  whatsit::Whatsit,
+<a href=#33 id=33 data-nosnippet>33</a>};
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="doccomment">/// configuration for new_counter
+<a href=#36 id=36 data-nosnippet>36</a></span><span class="attr">#[derive(Default)]
+<a href=#37 id=37 data-nosnippet>37</a></span><span class="kw">pub struct </span>NewCounterOptions&lt;<span class="lifetime">'ct</span>&gt; {
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="doccomment">/// specifies a prefix to be used in formatting ID's for document structure elements
+<a href=#39 id=39 data-nosnippet>39</a>  /// counted by this counter.  Ie. subsection 3 in section 2 might get: id="S2.SS3"
+<a href=#40 id=40 data-nosnippet>40</a>  </span><span class="kw">pub </span>idprefix: <span class="kw-2">&amp;</span><span class="lifetime">'ct </span>str,
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="doccomment">/// specifies that the ID is composed from $idwithin's ID,, even though
+<a href=#42 id=42 data-nosnippet>42</a>  /// the counter isn't numbered within it.  (mainly to avoid duplicated ids)
+<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="kw">pub </span>idwithin: <span class="kw-2">&amp;</span><span class="lifetime">'ct </span>str,
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="doccomment">/// a list of counters that correspond to scopes which are "inside" this one.
+<a href=#45 id=45 data-nosnippet>45</a>  /// Whenever any definitions scoped to this counter are deactivated,
+<a href=#46 id=46 data-nosnippet>46</a>  /// the inner counter's scopes are also deactivated.
+<a href=#47 id=47 data-nosnippet>47</a>  </span><span class="comment">// NOTE: I'm not sure this is even a sensible implementation,
+<a href=#48 id=48 data-nosnippet>48</a>  // or why inner should be different than the counters reset by incrementing this counter.
+<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="kw">pub </span>nested: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'ct </span>str&gt;,
+<a href=#50 id=50 data-nosnippet>50</a>}
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a><span class="doccomment">/// Defines a new counter named $ctr.
+<a href=#53 id=53 data-nosnippet>53</a>/// If `within` is defined, `ctr` will be reset whenever `within` is incremented.
+<a href=#54 id=54 data-nosnippet>54</a></span><span class="kw">pub fn </span>new_counter(ctr: <span class="kw-2">&amp;</span>str, within: <span class="kw-2">&amp;</span>str, options_opt: <span class="prelude-ty">Option</span>&lt;NewCounterOptions&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="kw">let </span>unctr = <span class="macro">s!</span>(<span class="string">"UN{ctr}"</span>); <span class="comment">// UNctr is counter for generating ID's for UN-numbered items.
+<a href=#56 id=56 data-nosnippet>56</a>  </span><span class="kw">if </span>!within.is_empty()
+<a href=#57 id=57 data-nosnippet>57</a>    &amp;&amp; within != <span class="string">"document"
+<a href=#58 id=58 data-nosnippet>58</a>    </span>&amp;&amp; lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{within}"</span>)))<span class="question-mark">?</span>.is_none()
+<a href=#59 id=59 data-nosnippet>59</a>  {
+<a href=#60 id=60 data-nosnippet>60</a>    new_counter(within, <span class="string">""</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#61 id=61 data-nosnippet>61</a>  }
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="kw">let </span>cctr = <span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="kw">let </span>clctr = <span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>);
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="kw">let </span>cunctr = <span class="macro">s!</span>(<span class="string">"\\c@{unctr}"</span>);
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="kw">let </span>clunctr = <span class="macro">s!</span>(<span class="string">"\\cl@{unctr}"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// Perl Package.pm L660-672: Check if counter already defined. Skip register if already a
+<a href=#67 id=67 data-nosnippet>67</a>  // Register. Warn if previously defined as something other than \relax.
+<a href=#68 id=68 data-nosnippet>68</a>  </span><span class="kw">let </span>cs_cctr = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cctr);
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">let </span>prev_defn = lookup_definition(<span class="kw-2">&amp;</span>cs_cctr)<span class="question-mark">?</span>;
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>defn) = prev_defn {
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">if </span>defn.is_register() {
+<a href=#72 id=72 data-nosnippet>72</a>      <span class="comment">// Counter already exists as a register — fine, just continue (may change within/nesting)
+<a href=#73 id=73 data-nosnippet>73</a>    </span>} <span class="kw">else </span>{
+<a href=#74 id=74 data-nosnippet>74</a>      <span class="comment">// Warn unless the previous definition was \relax
+<a href=#75 id=75 data-nosnippet>75</a>      </span><span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_RELAX!</span>());
+<a href=#76 id=76 data-nosnippet>76</a>      <span class="kw">let </span>prev_meaning = lookup_meaning(<span class="kw-2">&amp;</span>cs_cctr);
+<a href=#77 id=77 data-nosnippet>77</a>      <span class="kw">if </span>prev_meaning != relax_meaning {
+<a href=#78 id=78 data-nosnippet>78</a>        <span class="macro">Warn!</span>(
+<a href=#79 id=79 data-nosnippet>79</a>          <span class="string">"unexpected"</span>,
+<a href=#80 id=80 data-nosnippet>80</a>          <span class="kw-2">&amp;</span>cctr,
+<a href=#81 id=81 data-nosnippet>81</a>          <span class="macro">s!</span>(<span class="string">"Counter {} was already defined; redefining"</span>, cctr)
+<a href=#82 id=82 data-nosnippet>82</a>        );
+<a href=#83 id=83 data-nosnippet>83</a>      }
+<a href=#84 id=84 data-nosnippet>84</a>      def_register(
+<a href=#85 id=85 data-nosnippet>85</a>        cs_cctr,
+<a href=#86 id=86 data-nosnippet>86</a>        <span class="prelude-val">None</span>,
+<a href=#87 id=87 data-nosnippet>87</a>        Number::new(<span class="number">0</span>),
+<a href=#88 id=88 data-nosnippet>88</a>        <span class="prelude-val">Some</span>(RegisterOptions {
+<a href=#89 id=89 data-nosnippet>89</a>          allocate: <span class="prelude-val">Some</span>(String::from(<span class="string">"\\count"</span>)),
+<a href=#90 id=90 data-nosnippet>90</a>          ..RegisterOptions::default()
+<a href=#91 id=91 data-nosnippet>91</a>        }),
+<a href=#92 id=92 data-nosnippet>92</a>      )<span class="question-mark">?</span>;
+<a href=#93 id=93 data-nosnippet>93</a>    }
+<a href=#94 id=94 data-nosnippet>94</a>  } <span class="kw">else </span>{
+<a href=#95 id=95 data-nosnippet>95</a>    def_register(
+<a href=#96 id=96 data-nosnippet>96</a>      cs_cctr,
+<a href=#97 id=97 data-nosnippet>97</a>      <span class="prelude-val">None</span>,
+<a href=#98 id=98 data-nosnippet>98</a>      Number::new(<span class="number">0</span>),
+<a href=#99 id=99 data-nosnippet>99</a>      <span class="prelude-val">Some</span>(RegisterOptions {
+<a href=#100 id=100 data-nosnippet>100</a>        allocate: <span class="prelude-val">Some</span>(String::from(<span class="string">"\\count"</span>)),
+<a href=#101 id=101 data-nosnippet>101</a>        ..RegisterOptions::default()
+<a href=#102 id=102 data-nosnippet>102</a>      }),
+<a href=#103 id=103 data-nosnippet>103</a>    )<span class="question-mark">?</span>;
+<a href=#104 id=104 data-nosnippet>104</a>  }
+<a href=#105 id=105 data-nosnippet>105</a>  after_assignment();
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clctr) {
+<a href=#107 id=107 data-nosnippet>107</a>    assign_value(<span class="kw-2">&amp;</span>clctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#108 id=108 data-nosnippet>108</a>  }
+<a href=#109 id=109 data-nosnippet>109</a>  def_register(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cunctr), <span class="prelude-val">None</span>, Number::new(<span class="number">0</span>), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clunctr) {
+<a href=#111 id=111 data-nosnippet>111</a>    assign_value(<span class="kw-2">&amp;</span>clunctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#112 id=112 data-nosnippet>112</a>  }
+<a href=#113 id=113 data-nosnippet>113</a>
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="kw">if </span>!within.is_empty() {
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">let </span>clwithin = <span class="macro">s!</span>(<span class="string">"\\cl@{within}"</span>);
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">let </span>clunwithin = <span class="macro">s!</span>(<span class="string">"\\cl@UN{within}"</span>);
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span>x = <span class="kw">if let </span><span class="prelude-val">Some</span>(cl) = lookup_tokens(<span class="kw-2">&amp;</span>clwithin) {
+<a href=#118 id=118 data-nosnippet>118</a>      cl.unlist()
+<a href=#119 id=119 data-nosnippet>119</a>    } <span class="kw">else </span>{
+<a href=#120 id=120 data-nosnippet>120</a>      Vec::new()
+<a href=#121 id=121 data-nosnippet>121</a>    };
+<a href=#122 id=122 data-nosnippet>122</a>    <span class="kw">let </span><span class="kw-2">mut </span>clwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(ctr), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>unctr)];
+<a href=#123 id=123 data-nosnippet>123</a>    clwithin_tokens.extend(x);
+<a href=#124 id=124 data-nosnippet>124</a>    assign_value(
+<a href=#125 id=125 data-nosnippet>125</a>      <span class="kw-2">&amp;</span>clwithin,
+<a href=#126 id=126 data-nosnippet>126</a>      Stored::Tokens(Tokens::new(clwithin_tokens)),
+<a href=#127 id=127 data-nosnippet>127</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#128 id=128 data-nosnippet>128</a>    );
+<a href=#129 id=129 data-nosnippet>129</a>
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="kw">let </span><span class="kw-2">mut </span>unx = <span class="kw">if let </span><span class="prelude-val">Some</span>(clun) = lookup_tokens(<span class="kw-2">&amp;</span>clunwithin) {
+<a href=#131 id=131 data-nosnippet>131</a>      clun.unlist()
+<a href=#132 id=132 data-nosnippet>132</a>    } <span class="kw">else </span>{
+<a href=#133 id=133 data-nosnippet>133</a>      Vec::new()
+<a href=#134 id=134 data-nosnippet>134</a>    };
+<a href=#135 id=135 data-nosnippet>135</a>    <span class="kw">let </span><span class="kw-2">mut </span>clunwithin_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(unctr)];
+<a href=#136 id=136 data-nosnippet>136</a>    clunwithin_tokens.append(<span class="kw-2">&amp;mut </span>unx);
+<a href=#137 id=137 data-nosnippet>137</a>
+<a href=#138 id=138 data-nosnippet>138</a>    assign_value(
+<a href=#139 id=139 data-nosnippet>139</a>      <span class="kw-2">&amp;</span>clunwithin,
+<a href=#140 id=140 data-nosnippet>140</a>      Stored::Tokens(Tokens::new(clunwithin_tokens)),
+<a href=#141 id=141 data-nosnippet>141</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#142 id=142 data-nosnippet>142</a>    )
+<a href=#143 id=143 data-nosnippet>143</a>  }
+<a href=#144 id=144 data-nosnippet>144</a>
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>options) = options_opt
+<a href=#146 id=146 data-nosnippet>146</a>    &amp;&amp; !options.nested.is_empty()
+<a href=#147 id=147 data-nosnippet>147</a>  {
+<a href=#148 id=148 data-nosnippet>148</a>    assign_value(
+<a href=#149 id=149 data-nosnippet>149</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"nested_counters_{}"</span>, ctr),
+<a href=#150 id=150 data-nosnippet>150</a>      options.nested.clone(),
+<a href=#151 id=151 data-nosnippet>151</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#152 id=152 data-nosnippet>152</a>    )
+<a href=#153 id=153 data-nosnippet>153</a>  }
+<a href=#154 id=154 data-nosnippet>154</a>
+<a href=#155 id=155 data-nosnippet>155</a>  <span class="comment">// default is equivalent to \arabic{ctr}, but w/o using the LaTeX macro!
+<a href=#156 id=156 data-nosnippet>156</a>  </span><span class="kw">let </span>ctr_string = ctr.to_string();
+<a href=#157 id=157 data-nosnippet>157</a>  def_macro(
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{}"</span>, ctr)),
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="prelude-val">None</span>,
+<a href=#160 id=160 data-nosnippet>160</a>    <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#161 id=161 data-nosnippet>161</a>      <span class="kw">let </span>counter_value = counter_value(<span class="kw-2">&amp;</span>ctr_string)<span class="question-mark">?</span>.value_of();
+<a href=#162 id=162 data-nosnippet>162</a>      <span class="prelude-val">Ok</span>(Tokens::new(<span class="macro">ExplodeText!</span>(counter_value)))
+<a href=#163 id=163 data-nosnippet>163</a>    }))),
+<a href=#164 id=164 data-nosnippet>164</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#165 id=165 data-nosnippet>165</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#166 id=166 data-nosnippet>166</a>      ..ExpandableOptions::default()
+<a href=#167 id=167 data-nosnippet>167</a>    }),
+<a href=#168 id=168 data-nosnippet>168</a>  )<span class="question-mark">?</span>;
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="kw">let </span>p_ctr_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\p@{}"</span>, ctr));
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span>p_ctr_cs)<span class="question-mark">?</span>.is_none() {
+<a href=#171 id=171 data-nosnippet>171</a>    def_macro(
+<a href=#172 id=172 data-nosnippet>172</a>      p_ctr_cs,
+<a href=#173 id=173 data-nosnippet>173</a>      <span class="prelude-val">None</span>,
+<a href=#174 id=174 data-nosnippet>174</a>      Tokens::default(),
+<a href=#175 id=175 data-nosnippet>175</a>      <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#176 id=176 data-nosnippet>176</a>        scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#177 id=177 data-nosnippet>177</a>        ..ExpandableOptions::default()
+<a href=#178 id=178 data-nosnippet>178</a>      }),
+<a href=#179 id=179 data-nosnippet>179</a>    )<span class="question-mark">?</span>;
+<a href=#180 id=180 data-nosnippet>180</a>  }
+<a href=#181 id=181 data-nosnippet>181</a>
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="kw">let </span><span class="kw-2">mut </span>prefix = <span class="kw">match </span>options_opt {
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="prelude-val">None </span>=&gt; String::new(),
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>opt) =&gt; opt.idprefix.to_string(),
+<a href=#185 id=185 data-nosnippet>185</a>  };
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="kw">if </span>!prefix.is_empty() {
+<a href=#187 id=187 data-nosnippet>187</a>    assign_value(
+<a href=#188 id=188 data-nosnippet>188</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"@ID@prefix@{}"</span>, ctr),
+<a href=#189 id=189 data-nosnippet>189</a>      prefix.clone(),
+<a href=#190 id=190 data-nosnippet>190</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#191 id=191 data-nosnippet>191</a>    );
+<a href=#192 id=192 data-nosnippet>192</a>  } <span class="kw">else </span>{
+<a href=#193 id=193 data-nosnippet>193</a>    prefix = lookup_string(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"@ID@prefix@{}"</span>, ctr));
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="kw">if </span>prefix.is_empty() {
+<a href=#195 id=195 data-nosnippet>195</a>      prefix = ctr.to_string();
+<a href=#196 id=196 data-nosnippet>196</a>    }
+<a href=#197 id=197 data-nosnippet>197</a>  }
+<a href=#198 id=198 data-nosnippet>198</a>  prefix = clean_id(<span class="kw-2">&amp;</span>prefix);
+<a href=#199 id=199 data-nosnippet>199</a>
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="kw">if </span>!prefix.is_empty() {
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="kw">let </span>idwithin = <span class="kw">match </span>options_opt {
+<a href=#202 id=202 data-nosnippet>202</a>      <span class="prelude-val">Some</span>(<span class="kw-2">ref </span>opts) =&gt; {
+<a href=#203 id=203 data-nosnippet>203</a>        <span class="kw">if </span>opts.idwithin.is_empty() {
+<a href=#204 id=204 data-nosnippet>204</a>          within
+<a href=#205 id=205 data-nosnippet>205</a>        } <span class="kw">else </span>{
+<a href=#206 id=206 data-nosnippet>206</a>          opts.idwithin
+<a href=#207 id=207 data-nosnippet>207</a>        }
+<a href=#208 id=208 data-nosnippet>208</a>      },
+<a href=#209 id=209 data-nosnippet>209</a>      <span class="prelude-val">None </span>=&gt; within,
+<a href=#210 id=210 data-nosnippet>210</a>    }
+<a href=#211 id=211 data-nosnippet>211</a>    .to_string();
+<a href=#212 id=212 data-nosnippet>212</a>
+<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">let </span>ctr_string = ctr.to_string();
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="kw">let </span>thectrid = <span class="macro">s!</span>(<span class="string">"\\the{}@ID"</span>, ctr);
+<a href=#215 id=215 data-nosnippet>215</a>    <span class="kw">if </span>!idwithin.is_empty() {
+<a href=#216 id=216 data-nosnippet>216</a>      def_macro(
+<a href=#217 id=217 data-nosnippet>217</a>        <span class="macro">T_CS!</span>(thectrid),
+<a href=#218 id=218 data-nosnippet>218</a>        <span class="prelude-val">None</span>,
+<a href=#219 id=219 data-nosnippet>219</a>        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#220 id=220 data-nosnippet>220</a>          <span class="comment">// Perl Package.pm L696 probes `\lx@empty`, NOT `\@empty` — and
+<a href=#221 id=221 data-nosnippet>221</a>          // deliberately so: `\@empty` is LaTeX-pool-only (latex_base.rs
+<a href=#222 id=222 data-nosnippet>222</a>          // aliases it to `\lx@empty`), while `\lx@empty` is engine-level
+<a href=#223 id=223 data-nosnippet>223</a>          // (base_schema.rs) and exists in PLAIN TeX documents too. With
+<a href=#224 id=224 data-nosnippet>224</a>          // `\@empty` here, a plain-TeX document's `\the&lt;ctr&gt;@ID` probe
+<a href=#225 id=225 data-nosnippet>225</a>          // compared `\thedocument@ID` (an alias of `\lx@empty`) against an
+<a href=#226 id=226 data-nosnippet>226</a>          // UNDEFINED `\@empty` → unequal → the \else branch re-expands the
+<a href=#227 id=227 data-nosnippet>227</a>          // parent's @ID formatter, spinning the gullet into a 4-token
+<a href=#228 id=228 data-nosnippet>228</a>          // expansion cycle (caught by the cycle guard as a phantom
+<a href=#229 id=229 data-nosnippet>229</a>          // `Fatal:Timeout:Recursion`, swallowed inside math-parser
+<a href=#230 id=230 data-nosnippet>230</a>          // semantics — `create_xmrefs`/`get_xmarg_id`). Witness
+<a href=#231 id=231 data-nosnippet>231</a>          // math0402448 (plain TeX + 3464 formulae): "Conversion failed:
+<a href=#232 id=232 data-nosnippet>232</a>          // 1 fatal error" with no Fatal: line in the log.
+<a href=#233 id=233 data-nosnippet>233</a>          </span><span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#234 id=234 data-nosnippet>234</a>            <span class="string">"\\expandafter\\ifx\\csname the{}@ID\\endcsname\\lx@empty\\else\\csname the{}@ID\\endcsname.\\fi {}\\csname @{}@ID\\endcsname"</span>,
 <a href=#235 id=235 data-nosnippet>235</a>            idwithin,
-<a href=#236 id=236 data-nosnippet>236</a>            prefix,
-<a href=#237 id=237 data-nosnippet>237</a>            ctr_string
-<a href=#238 id=238 data-nosnippet>238</a>          )))
-<a href=#239 id=239 data-nosnippet>239</a>        }))),
-<a href=#240 id=240 data-nosnippet>240</a>        <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#241 id=241 data-nosnippet>241</a>          scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#242 id=242 data-nosnippet>242</a>          ..ExpandableOptions::default()
-<a href=#243 id=243 data-nosnippet>243</a>        }),
-<a href=#244 id=244 data-nosnippet>244</a>      )<span class="question-mark">?</span>;
-<a href=#245 id=245 data-nosnippet>245</a>    } <span class="kw">else </span>{
-<a href=#246 id=246 data-nosnippet>246</a>      def_macro(
-<a href=#247 id=247 data-nosnippet>247</a>        <span class="macro">T_CS!</span>(thectrid),
-<a href=#248 id=248 data-nosnippet>248</a>        <span class="prelude-val">None</span>,
-<a href=#249 id=249 data-nosnippet>249</a>        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
-<a href=#250 id=250 data-nosnippet>250</a>          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
-<a href=#251 id=251 data-nosnippet>251</a>            <span class="string">"{prefix}\\csname @{ctr_string}@ID\\endcsname"</span>,
-<a href=#252 id=252 data-nosnippet>252</a>          )))
-<a href=#253 id=253 data-nosnippet>253</a>        }))),
-<a href=#254 id=254 data-nosnippet>254</a>        <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#255 id=255 data-nosnippet>255</a>          scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#256 id=256 data-nosnippet>256</a>          ..ExpandableOptions::default()
-<a href=#257 id=257 data-nosnippet>257</a>        }),
-<a href=#258 id=258 data-nosnippet>258</a>      )<span class="question-mark">?</span>;
-<a href=#259 id=259 data-nosnippet>259</a>    }
-<a href=#260 id=260 data-nosnippet>260</a>    def_macro(
-<a href=#261 id=261 data-nosnippet>261</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{}@ID"</span>, ctr)),
-<a href=#262 id=262 data-nosnippet>262</a>      <span class="prelude-val">None</span>,
-<a href=#263 id=263 data-nosnippet>263</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)))),
-<a href=#264 id=264 data-nosnippet>264</a>      <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#265 id=265 data-nosnippet>265</a>        scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#266 id=266 data-nosnippet>266</a>        ..ExpandableOptions::default()
-<a href=#267 id=267 data-nosnippet>267</a>      }),
-<a href=#268 id=268 data-nosnippet>268</a>    )<span class="question-mark">?</span>;
-<a href=#269 id=269 data-nosnippet>269</a>  }
-<a href=#270 id=270 data-nosnippet>270</a>
-<a href=#271 id=271 data-nosnippet>271</a>  <span class="prelude-val">Ok</span>(())
-<a href=#272 id=272 data-nosnippet>272</a>}
-<a href=#273 id=273 data-nosnippet>273</a><span class="doccomment">/// Fetches the value associated with the counter C&lt;$ctr&gt;.
-<a href=#274 id=274 data-nosnippet>274</a></span><span class="kw">pub fn </span>counter_value(ctr: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Number&gt; {
-<a href=#275 id=275 data-nosnippet>275</a>  <span class="kw">match </span>state::lookup_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), Vec::new())<span class="question-mark">? </span>{
-<a href=#276 id=276 data-nosnippet>276</a>    <span class="prelude-val">None </span>=&gt; {
-<a href=#277 id=277 data-nosnippet>277</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Counter {} was not defined; assuming 0"</span>, ctr);
-<a href=#278 id=278 data-nosnippet>278</a>      <span class="macro">Warn!</span>(<span class="string">"undefined"</span>, ctr, message);
-<a href=#279 id=279 data-nosnippet>279</a>      <span class="prelude-val">Ok</span>(Number::new(<span class="number">0</span>))
-<a href=#280 id=280 data-nosnippet>280</a>    },
-<a href=#281 id=281 data-nosnippet>281</a>    <span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Ok</span>(Number::new(value.value_of())),
-<a href=#282 id=282 data-nosnippet>282</a>  }
-<a href=#283 id=283 data-nosnippet>283</a>}
-<a href=#284 id=284 data-nosnippet>284</a><span class="doccomment">/// increments a named counter by a `Number`
-<a href=#285 id=285 data-nosnippet>285</a></span><span class="kw">pub fn </span>add_to_counter(ctr: <span class="kw-2">&amp;</span>str, value: Number) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#286 id=286 data-nosnippet>286</a>  <span class="kw">let </span>v = counter_value(ctr)<span class="question-mark">?</span>.add(value);
-<a href=#287 id=287 data-nosnippet>287</a>  state::assign_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), v.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
-<a href=#288 id=288 data-nosnippet>288</a>  after_assignment();
-<a href=#289 id=289 data-nosnippet>289</a>  <span class="kw">let </span>id_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>));
-<a href=#290 id=290 data-nosnippet>290</a>  def_macro(
-<a href=#291 id=291 data-nosnippet>291</a>    id_cs,
-<a href=#292 id=292 data-nosnippet>292</a>    <span class="prelude-val">None</span>,
-<a href=#293 id=293 data-nosnippet>293</a>    Tokens::new(<span class="macro">Explode!</span>(v.value_of())),
-<a href=#294 id=294 data-nosnippet>294</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#295 id=295 data-nosnippet>295</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#296 id=296 data-nosnippet>296</a>      ..ExpandableOptions::default()
-<a href=#297 id=297 data-nosnippet>297</a>    }),
-<a href=#298 id=298 data-nosnippet>298</a>  )
-<a href=#299 id=299 data-nosnippet>299</a>}
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a><span class="doccomment">/// Analog of `\stepcounter`, steps the counter and returns the expansion of
-<a href=#302 id=302 data-nosnippet>302</a>/// `\the$ctr`  Usually you should use `ref_step_counter(ctr)` instead.
-<a href=#303 id=303 data-nosnippet>303</a></span><span class="kw">pub fn </span>step_counter(ctr: <span class="kw-2">&amp;</span>str, noreset: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">let </span>value = counter_value(ctr)<span class="question-mark">?</span>;
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">let </span>newvalue = value.add(Number::new(<span class="number">1</span>));
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="kw">let </span>c_ctr = <span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>);
-<a href=#307 id=307 data-nosnippet>307</a>  state::assign_register(<span class="kw-2">&amp;</span>c_ctr, newvalue.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
-<a href=#308 id=308 data-nosnippet>308</a>  state::after_assignment();
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(newvalue.value_of()));
-<a href=#310 id=310 data-nosnippet>310</a>  def_macro(
-<a href=#311 id=311 data-nosnippet>311</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)),
-<a href=#312 id=312 data-nosnippet>312</a>    <span class="prelude-val">None</span>,
-<a href=#313 id=313 data-nosnippet>313</a>    token_value,
-<a href=#314 id=314 data-nosnippet>314</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#315 id=315 data-nosnippet>315</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#316 id=316 data-nosnippet>316</a>      ..ExpandableOptions::default()
-<a href=#317 id=317 data-nosnippet>317</a>    }),
-<a href=#318 id=318 data-nosnippet>318</a>  )<span class="question-mark">?</span>;
-<a href=#319 id=319 data-nosnippet>319</a>
-<a href=#320 id=320 data-nosnippet>320</a>  <span class="comment">// and reset any within counters!
-<a href=#321 id=321 data-nosnippet>321</a>  </span><span class="kw">if </span>!noreset {
-<a href=#322 id=322 data-nosnippet>322</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(nested) = state::lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>)) {
-<a href=#323 id=323 data-nosnippet>323</a>      <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
-<a href=#324 id=324 data-nosnippet>324</a>        reset_counter(<span class="kw-2">&amp;</span>c)<span class="question-mark">?</span>;
-<a href=#325 id=325 data-nosnippet>325</a>      }
-<a href=#326 id=326 data-nosnippet>326</a>    }
-<a href=#327 id=327 data-nosnippet>327</a>  }
-<a href=#328 id=328 data-nosnippet>328</a>  <span class="prelude-val">Ok</span>(())
-<a href=#329 id=329 data-nosnippet>329</a>}
-<a href=#330 id=330 data-nosnippet>330</a>
-<a href=#331 id=331 data-nosnippet>331</a><span class="doccomment">/// Analog of `\refstepcounter`, steps the counter and returns a hash
-<a href=#332 id=332 data-nosnippet>332</a>/// containing the keys `refnum` and `id`.
-<a href=#333 id=333 data-nosnippet>333</a>///
-<a href=#334 id=334 data-nosnippet>334</a>/// This makes it
-<a href=#335 id=335 data-nosnippet>335</a>/// suitable for use in a `properties` option to constructors.
-<a href=#336 id=336 data-nosnippet>336</a>/// The `id` is generated in parallel with the reference number
-<a href=#337 id=337 data-nosnippet>337</a>/// to assist debugging.
-<a href=#338 id=338 data-nosnippet>338</a></span><span class="comment">// TODO: Maybe these should be specialized types in Rust, rather than hashmaps?
-<a href=#339 id=339 data-nosnippet>339</a></span><span class="kw">pub fn </span>ref_step_counter(ctype: <span class="kw-2">&amp;</span>str, noreset: bool) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;Stored&gt;&gt; {
-<a href=#340 id=340 data-nosnippet>340</a>  <span class="comment">// Defensive: under some upstream conditions the {} parameter reader pulls a
-<a href=#341 id=341 data-nosnippet>341</a>  // trailing `\par` (or similar trailing CS) into a counter-type identifier
-<a href=#342 id=342 data-nosnippet>342</a>  // before it reaches us (Cluster A: math0010095, hep-ph0204075). Strip it
-<a href=#343 id=343 data-nosnippet>343</a>  // here so the downstream `\csname @&lt;ctype&gt;...@ID\endcsname` and similar
-<a href=#344 id=344 data-nosnippet>344</a>  // constructions stay well-formed. We strip the same well-known sentinels
-<a href=#345 id=345 data-nosnippet>345</a>  // as latex_constructs::strip_trailing_cs.
-<a href=#346 id=346 data-nosnippet>346</a>  </span><span class="kw">let </span>ctype = {
-<a href=#347 id=347 data-nosnippet>347</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = ctype;
-<a href=#348 id=348 data-nosnippet>348</a>    <span class="kw">for </span>tail <span class="kw">in </span>[<span class="string">"\\par"</span>, <span class="string">"\\@startsection@hook"</span>, <span class="string">"\\relax"</span>] {
-<a href=#349 id=349 data-nosnippet>349</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(stripped) = s.strip_suffix(tail) {
-<a href=#350 id=350 data-nosnippet>350</a>        s = stripped;
-<a href=#351 id=351 data-nosnippet>351</a>        <span class="kw">break</span>;
-<a href=#352 id=352 data-nosnippet>352</a>      }
-<a href=#353 id=353 data-nosnippet>353</a>    }
-<a href=#354 id=354 data-nosnippet>354</a>    s
-<a href=#355 id=355 data-nosnippet>355</a>  };
-<a href=#356 id=356 data-nosnippet>356</a>  <span class="kw">let </span>ctr = with_mapping(<span class="string">"counter_for_type"</span>, ctype, |meaning| <span class="kw">match </span>meaning {
-<a href=#357 id=357 data-nosnippet>357</a>    <span class="prelude-val">Some</span>(Stored::String(ctr)) =&gt; arena::to_string(<span class="kw-2">*</span>ctr),
-<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">_ </span>=&gt; ctype.to_string(),
-<a href=#359 id=359 data-nosnippet>359</a>  });
-<a href=#360 id=360 data-nosnippet>360</a>  step_counter(<span class="kw-2">&amp;</span>ctr, noreset)<span class="question-mark">?</span>;
-<a href=#361 id=361 data-nosnippet>361</a>  maybe_preempt_refnum(<span class="kw-2">&amp;</span>ctr, <span class="bool-val">false</span>);
-<a href=#362 id=362 data-nosnippet>362</a>
-<a href=#363 id=363 data-nosnippet>363</a>  <span class="kw">let </span>the_ctr_id = <span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>);
-<a href=#364 id=364 data-nosnippet>364</a>  <span class="kw">let </span>the_ctr = <span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>);
-<a href=#365 id=365 data-nosnippet>365</a>
-<a href=#366 id=366 data-nosnippet>366</a>  <span class="kw">let </span>has_id: bool = <span class="kw">match </span>state::lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr_id))<span class="question-mark">? </span>{ <span class="prelude-val">Some</span>(iddef) =&gt; {
-<a href=#367 id=367 data-nosnippet>367</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = iddef.get_parameters() {
-<a href=#368 id=368 data-nosnippet>368</a>      params.get_num_args() == <span class="number">0
-<a href=#369 id=369 data-nosnippet>369</a>    </span>} <span class="kw">else </span>{
-<a href=#370 id=370 data-nosnippet>370</a>      <span class="bool-val">true
-<a href=#371 id=371 data-nosnippet>371</a>    </span>}
-<a href=#372 id=372 data-nosnippet>372</a>  } <span class="kw">_ </span>=&gt; {
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="bool-val">false
-<a href=#374 id=374 data-nosnippet>374</a>  </span>}};
+<a href=#236 id=236 data-nosnippet>236</a>            idwithin,
+<a href=#237 id=237 data-nosnippet>237</a>            prefix,
+<a href=#238 id=238 data-nosnippet>238</a>            ctr_string
+<a href=#239 id=239 data-nosnippet>239</a>          )))
+<a href=#240 id=240 data-nosnippet>240</a>        }))),
+<a href=#241 id=241 data-nosnippet>241</a>        <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#242 id=242 data-nosnippet>242</a>          scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#243 id=243 data-nosnippet>243</a>          ..ExpandableOptions::default()
+<a href=#244 id=244 data-nosnippet>244</a>        }),
+<a href=#245 id=245 data-nosnippet>245</a>      )<span class="question-mark">?</span>;
+<a href=#246 id=246 data-nosnippet>246</a>    } <span class="kw">else </span>{
+<a href=#247 id=247 data-nosnippet>247</a>      def_macro(
+<a href=#248 id=248 data-nosnippet>248</a>        <span class="macro">T_CS!</span>(thectrid),
+<a href=#249 id=249 data-nosnippet>249</a>        <span class="prelude-val">None</span>,
+<a href=#250 id=250 data-nosnippet>250</a>        <span class="prelude-val">Some</span>(ExpansionBody::Closure(Rc::new(<span class="kw">move </span>|_args| {
+<a href=#251 id=251 data-nosnippet>251</a>          <span class="prelude-val">Ok</span>(mouth::tokenize_internal(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#252 id=252 data-nosnippet>252</a>            <span class="string">"{prefix}\\csname @{ctr_string}@ID\\endcsname"</span>,
+<a href=#253 id=253 data-nosnippet>253</a>          )))
+<a href=#254 id=254 data-nosnippet>254</a>        }))),
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#256 id=256 data-nosnippet>256</a>          scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#257 id=257 data-nosnippet>257</a>          ..ExpandableOptions::default()
+<a href=#258 id=258 data-nosnippet>258</a>        }),
+<a href=#259 id=259 data-nosnippet>259</a>      )<span class="question-mark">?</span>;
+<a href=#260 id=260 data-nosnippet>260</a>    }
+<a href=#261 id=261 data-nosnippet>261</a>    def_macro(
+<a href=#262 id=262 data-nosnippet>262</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{}@ID"</span>, ctr)),
+<a href=#263 id=263 data-nosnippet>263</a>      <span class="prelude-val">None</span>,
+<a href=#264 id=264 data-nosnippet>264</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(<span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"0"</span>)))),
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#266 id=266 data-nosnippet>266</a>        scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#267 id=267 data-nosnippet>267</a>        ..ExpandableOptions::default()
+<a href=#268 id=268 data-nosnippet>268</a>      }),
+<a href=#269 id=269 data-nosnippet>269</a>    )<span class="question-mark">?</span>;
+<a href=#270 id=270 data-nosnippet>270</a>  }
+<a href=#271 id=271 data-nosnippet>271</a>
+<a href=#272 id=272 data-nosnippet>272</a>  <span class="prelude-val">Ok</span>(())
+<a href=#273 id=273 data-nosnippet>273</a>}
+<a href=#274 id=274 data-nosnippet>274</a><span class="doccomment">/// Fetches the value associated with the counter C&lt;$ctr&gt;.
+<a href=#275 id=275 data-nosnippet>275</a></span><span class="kw">pub fn </span>counter_value(ctr: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Number&gt; {
+<a href=#276 id=276 data-nosnippet>276</a>  <span class="kw">match </span>lookup_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), Vec::new())<span class="question-mark">? </span>{
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="prelude-val">None </span>=&gt; {
+<a href=#278 id=278 data-nosnippet>278</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"Counter {} was not defined; assuming 0"</span>, ctr);
+<a href=#279 id=279 data-nosnippet>279</a>      <span class="macro">Warn!</span>(<span class="string">"undefined"</span>, ctr, message);
+<a href=#280 id=280 data-nosnippet>280</a>      <span class="prelude-val">Ok</span>(Number::new(<span class="number">0</span>))
+<a href=#281 id=281 data-nosnippet>281</a>    },
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="prelude-val">Some</span>(value) =&gt; <span class="prelude-val">Ok</span>(Number::new(value.value_of())),
+<a href=#283 id=283 data-nosnippet>283</a>  }
+<a href=#284 id=284 data-nosnippet>284</a>}
+<a href=#285 id=285 data-nosnippet>285</a><span class="doccomment">/// increments a named counter by a `Number`
+<a href=#286 id=286 data-nosnippet>286</a></span><span class="kw">pub fn </span>add_to_counter(ctr: <span class="kw-2">&amp;</span>str, value: Number) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="kw">let </span>v = counter_value(ctr)<span class="question-mark">?</span>.add(value);
+<a href=#288 id=288 data-nosnippet>288</a>  assign_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), v.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
+<a href=#289 id=289 data-nosnippet>289</a>  after_assignment();
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="kw">let </span>id_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>));
+<a href=#291 id=291 data-nosnippet>291</a>  def_macro(
+<a href=#292 id=292 data-nosnippet>292</a>    id_cs,
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="prelude-val">None</span>,
+<a href=#294 id=294 data-nosnippet>294</a>    Tokens::new(<span class="macro">Explode!</span>(v.value_of())),
+<a href=#295 id=295 data-nosnippet>295</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#296 id=296 data-nosnippet>296</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#297 id=297 data-nosnippet>297</a>      ..ExpandableOptions::default()
+<a href=#298 id=298 data-nosnippet>298</a>    }),
+<a href=#299 id=299 data-nosnippet>299</a>  )
+<a href=#300 id=300 data-nosnippet>300</a>}
+<a href=#301 id=301 data-nosnippet>301</a>
+<a href=#302 id=302 data-nosnippet>302</a><span class="doccomment">/// Analog of `\stepcounter`, steps the counter and returns the expansion of
+<a href=#303 id=303 data-nosnippet>303</a>/// `\the$ctr`  Usually you should use `ref_step_counter(ctr)` instead.
+<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">pub fn </span>step_counter(ctr: <span class="kw-2">&amp;</span>str, noreset: bool) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">let </span>value = counter_value(ctr)<span class="question-mark">?</span>;
+<a href=#306 id=306 data-nosnippet>306</a>  <span class="kw">let </span>newvalue = value.add(Number::new(<span class="number">1</span>));
+<a href=#307 id=307 data-nosnippet>307</a>  <span class="kw">let </span>c_ctr = <span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>);
+<a href=#308 id=308 data-nosnippet>308</a>  assign_register(<span class="kw-2">&amp;</span>c_ctr, newvalue.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
+<a href=#309 id=309 data-nosnippet>309</a>  after_assignment();
+<a href=#310 id=310 data-nosnippet>310</a>  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(newvalue.value_of()));
+<a href=#311 id=311 data-nosnippet>311</a>  def_macro(
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)),
+<a href=#313 id=313 data-nosnippet>313</a>    <span class="prelude-val">None</span>,
+<a href=#314 id=314 data-nosnippet>314</a>    token_value,
+<a href=#315 id=315 data-nosnippet>315</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#316 id=316 data-nosnippet>316</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#317 id=317 data-nosnippet>317</a>      ..ExpandableOptions::default()
+<a href=#318 id=318 data-nosnippet>318</a>    }),
+<a href=#319 id=319 data-nosnippet>319</a>  )<span class="question-mark">?</span>;
+<a href=#320 id=320 data-nosnippet>320</a>
+<a href=#321 id=321 data-nosnippet>321</a>  <span class="comment">// and reset any within counters!
+<a href=#322 id=322 data-nosnippet>322</a>  </span><span class="kw">if </span>!noreset &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(nested) = lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>)) {
+<a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
+<a href=#324 id=324 data-nosnippet>324</a>      reset_counter(<span class="kw-2">&amp;</span>c)<span class="question-mark">?</span>;
+<a href=#325 id=325 data-nosnippet>325</a>    }
+<a href=#326 id=326 data-nosnippet>326</a>  }
+<a href=#327 id=327 data-nosnippet>327</a>  <span class="prelude-val">Ok</span>(())
+<a href=#328 id=328 data-nosnippet>328</a>}
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a><span class="doccomment">/// Analog of `\refstepcounter`, steps the counter and returns a hash
+<a href=#331 id=331 data-nosnippet>331</a>/// containing the keys `refnum` and `id`.
+<a href=#332 id=332 data-nosnippet>332</a>///
+<a href=#333 id=333 data-nosnippet>333</a>/// This makes it
+<a href=#334 id=334 data-nosnippet>334</a>/// suitable for use in a `properties` option to constructors.
+<a href=#335 id=335 data-nosnippet>335</a>/// The `id` is generated in parallel with the reference number
+<a href=#336 id=336 data-nosnippet>336</a>/// to assist debugging.
+<a href=#337 id=337 data-nosnippet>337</a></span><span class="comment">// TODO: Maybe these should be specialized types in Rust, rather than hashmaps?
+<a href=#338 id=338 data-nosnippet>338</a></span><span class="kw">pub fn </span>ref_step_counter(ctype: <span class="kw-2">&amp;</span>str, noreset: bool) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;Stored&gt;&gt; {
+<a href=#339 id=339 data-nosnippet>339</a>  <span class="comment">// Defensive: under some upstream conditions the {} parameter reader pulls a
+<a href=#340 id=340 data-nosnippet>340</a>  // trailing `\par` (or similar trailing CS) into a counter-type identifier
+<a href=#341 id=341 data-nosnippet>341</a>  // before it reaches us (Cluster A: math0010095, hep-ph0204075). Strip it
+<a href=#342 id=342 data-nosnippet>342</a>  // here so the downstream `\csname @&lt;ctype&gt;...@ID\endcsname` and similar
+<a href=#343 id=343 data-nosnippet>343</a>  // constructions stay well-formed. We strip the same well-known sentinels
+<a href=#344 id=344 data-nosnippet>344</a>  // as latex_constructs::strip_trailing_cs.
+<a href=#345 id=345 data-nosnippet>345</a>  </span><span class="kw">let </span>ctype = {
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="kw">let </span><span class="kw-2">mut </span>s = ctype;
+<a href=#347 id=347 data-nosnippet>347</a>    <span class="kw">for </span>tail <span class="kw">in </span>[<span class="string">"\\par"</span>, <span class="string">"\\@startsection@hook"</span>, <span class="string">"\\relax"</span>] {
+<a href=#348 id=348 data-nosnippet>348</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(stripped) = s.strip_suffix(tail) {
+<a href=#349 id=349 data-nosnippet>349</a>        s = stripped;
+<a href=#350 id=350 data-nosnippet>350</a>        <span class="kw">break</span>;
+<a href=#351 id=351 data-nosnippet>351</a>      }
+<a href=#352 id=352 data-nosnippet>352</a>    }
+<a href=#353 id=353 data-nosnippet>353</a>    s
+<a href=#354 id=354 data-nosnippet>354</a>  };
+<a href=#355 id=355 data-nosnippet>355</a>  <span class="kw">let </span>ctr = with_mapping(<span class="string">"counter_for_type"</span>, ctype, |meaning| <span class="kw">match </span>meaning {
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="prelude-val">Some</span>(Stored::String(ctr)) =&gt; arena::to_string(<span class="kw-2">*</span>ctr),
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="kw">_ </span>=&gt; ctype.to_string(),
+<a href=#358 id=358 data-nosnippet>358</a>  });
+<a href=#359 id=359 data-nosnippet>359</a>  step_counter(<span class="kw-2">&amp;</span>ctr, noreset)<span class="question-mark">?</span>;
+<a href=#360 id=360 data-nosnippet>360</a>  maybe_preempt_refnum(<span class="kw-2">&amp;</span>ctr, <span class="bool-val">false</span>);
+<a href=#361 id=361 data-nosnippet>361</a>
+<a href=#362 id=362 data-nosnippet>362</a>  <span class="kw">let </span>the_ctr_id = <span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>);
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="kw">let </span>the_ctr = <span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>);
+<a href=#364 id=364 data-nosnippet>364</a>
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="kw">let </span>has_id: bool = <span class="kw">match </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr_id))<span class="question-mark">? </span>{
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="prelude-val">Some</span>(iddef) =&gt; {
+<a href=#367 id=367 data-nosnippet>367</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(params) = iddef.get_parameters() {
+<a href=#368 id=368 data-nosnippet>368</a>        params.get_num_args() == <span class="number">0
+<a href=#369 id=369 data-nosnippet>369</a>      </span>} <span class="kw">else </span>{
+<a href=#370 id=370 data-nosnippet>370</a>        <span class="bool-val">true
+<a href=#371 id=371 data-nosnippet>371</a>      </span>}
+<a href=#372 id=372 data-nosnippet>372</a>    },
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#374 id=374 data-nosnippet>374</a>  };
 <a href=#375 id=375 data-nosnippet>375</a>
 <a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">let </span>the_ctr_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr);
 <a href=#377 id=377 data-nosnippet>377</a>  <span class="kw">let </span>the_ctr_id_cs = <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>the_ctr_id);
@@ -417,17 +417,17 @@
 <a href=#417 id=417 data-nosnippet>417</a>  </span>deactivate_counter_scope(arena::pin(<span class="kw-2">&amp;</span>ctr));
 <a href=#418 id=418 data-nosnippet>418</a>
 <a href=#419 id=419 data-nosnippet>419</a>  <span class="comment">// And install the scope (if any) for this reference number.
-<a href=#420 id=420 data-nosnippet>420</a>  </span>state::assign_value(<span class="string">"current_counter"</span>, ctr.clone(), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#420 id=420 data-nosnippet>420</a>  </span>assign_value(<span class="string">"current_counter"</span>, ctr.clone(), <span class="prelude-val">Some</span>(Scope::Local));
 <a href=#421 id=421 data-nosnippet>421</a>
 <a href=#422 id=422 data-nosnippet>422</a>  <span class="kw">let </span>scope = arena::pin(<span class="macro">format!</span>(<span class="string">"{ctr}:{refnum}"</span>));
 <a href=#423 id=423 data-nosnippet>423</a>  <span class="kw">let </span><span class="kw-2">mut </span>receiver = VecDeque::new();
 <a href=#424 id=424 data-nosnippet>424</a>  receiver.push_front(Stored::String(scope));
-<a href=#425 id=425 data-nosnippet>425</a>  state::assign_value(
+<a href=#425 id=425 data-nosnippet>425</a>  assign_value(
 <a href=#426 id=426 data-nosnippet>426</a>    <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"scopes_for_counter:{ctr}"</span>),
 <a href=#427 id=427 data-nosnippet>427</a>    receiver,
 <a href=#428 id=428 data-nosnippet>428</a>    <span class="prelude-val">Some</span>(Scope::Local),
 <a href=#429 id=429 data-nosnippet>429</a>  );
-<a href=#430 id=430 data-nosnippet>430</a>  state::activate_scope(scope);
+<a href=#430 id=430 data-nosnippet>430</a>  activate_scope(scope);
 <a href=#431 id=431 data-nosnippet>431</a>
 <a href=#432 id=432 data-nosnippet>432</a>  <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(
 <a href=#433 id=433 data-nosnippet>433</a>    <span class="string">"tags" </span>=&gt; Stored::Digested(tags),
@@ -444,39 +444,39 @@
 <a href=#444 id=444 data-nosnippet>444</a>/// Assign a sub to LABEL_MAPPING_HOOK: &amp;sub($label,$counter,$norefnum)
 <a href=#445 id=445 data-nosnippet>445</a>/// to return the desired refnum and id for a given object.
 <a href=#446 id=446 data-nosnippet>446</a></span><span class="kw">fn </span>maybe_preempt_refnum(ctr: <span class="kw-2">&amp;</span>str, norefnum: bool) {
-<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(mapper) = state::get_label_mapping_hook() {
+<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(mapper) = get_label_mapping_hook() {
 <a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>hj_refnum = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\_PREEMPTED_REFNUM_{ctr}"</span>));
 <a href=#449 id=449 data-nosnippet>449</a>    <span class="kw">let </span>hj_id = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\_PREEMPTED_ID_{ctr}"</span>));
 <a href=#450 id=450 data-nosnippet>450</a>    <span class="comment">// First, restore the \the&lt;ctr&gt; and \the&lt;ctr&gt;@ID macros to defaults
-<a href=#451 id=451 data-nosnippet>451</a>    </span><span class="kw">if </span>!norefnum &amp;&amp; state::has_meaning(<span class="kw-2">&amp;</span>hj_refnum) {
-<a href=#452 id=452 data-nosnippet>452</a>      state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>)), <span class="kw-2">&amp;</span>hj_refnum, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#451 id=451 data-nosnippet>451</a>    </span><span class="kw">if </span>!norefnum &amp;&amp; has_meaning(<span class="kw-2">&amp;</span>hj_refnum) {
+<a href=#452 id=452 data-nosnippet>452</a>      let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>)), <span class="kw-2">&amp;</span>hj_refnum, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#453 id=453 data-nosnippet>453</a>    }
-<a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">if </span>state::has_meaning(<span class="kw-2">&amp;</span>hj_id) {
-<a href=#455 id=455 data-nosnippet>455</a>      state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>)), <span class="kw-2">&amp;</span>hj_id, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">if </span>has_meaning(<span class="kw-2">&amp;</span>hj_id) {
+<a href=#455 id=455 data-nosnippet>455</a>      let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>)), <span class="kw-2">&amp;</span>hj_id, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#456 id=456 data-nosnippet>456</a>    }
-<a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">let </span>label = state::lookup_string(<span class="string">"PEEKED_LABEL"</span>);
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">let </span>label = lookup_string(<span class="string">"PEEKED_LABEL"</span>);
 <a href=#458 id=458 data-nosnippet>458</a>    <span class="kw">let </span>(fixedrefnum, fixedid) = mapper(<span class="kw-2">&amp;</span>label, ctr, norefnum);
-<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(refnum) = fixedrefnum {
-<a href=#460 id=460 data-nosnippet>460</a>      <span class="kw">if </span>!norefnum {
-<a href=#461 id=461 data-nosnippet>461</a>        <span class="kw">if </span>!state::has_meaning(<span class="kw-2">&amp;</span>hj_refnum) {
-<a href=#462 id=462 data-nosnippet>462</a>          <span class="comment">// Save for later
-<a href=#463 id=463 data-nosnippet>463</a>          </span>state::let_i(<span class="kw-2">&amp;</span>hj_refnum, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>)), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#464 id=464 data-nosnippet>464</a>        }
-<a href=#465 id=465 data-nosnippet>465</a>        <span class="kw">let _ </span>= def_macro(
-<a href=#466 id=466 data-nosnippet>466</a>          <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>)),
-<a href=#467 id=467 data-nosnippet>467</a>          <span class="prelude-val">None</span>,
-<a href=#468 id=468 data-nosnippet>468</a>          ExpansionBody::Tokens(Tokens::new(<span class="macro">Explode!</span>(<span class="kw-2">&amp;</span>refnum))),
-<a href=#469 id=469 data-nosnippet>469</a>          <span class="prelude-val">Some</span>(ExpandableOptions {
-<a href=#470 id=470 data-nosnippet>470</a>            scope: <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#471 id=471 data-nosnippet>471</a>            ..Default::default()
-<a href=#472 id=472 data-nosnippet>472</a>          }),
-<a href=#473 id=473 data-nosnippet>473</a>        );
-<a href=#474 id=474 data-nosnippet>474</a>      }
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(refnum) = fixedrefnum
+<a href=#460 id=460 data-nosnippet>460</a>      &amp;&amp; !norefnum
+<a href=#461 id=461 data-nosnippet>461</a>    {
+<a href=#462 id=462 data-nosnippet>462</a>      <span class="kw">if </span>!has_meaning(<span class="kw-2">&amp;</span>hj_refnum) {
+<a href=#463 id=463 data-nosnippet>463</a>        <span class="comment">// Save for later
+<a href=#464 id=464 data-nosnippet>464</a>        </span>let_i(<span class="kw-2">&amp;</span>hj_refnum, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>)), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#465 id=465 data-nosnippet>465</a>      }
+<a href=#466 id=466 data-nosnippet>466</a>      <span class="kw">let _ </span>= def_macro(
+<a href=#467 id=467 data-nosnippet>467</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}"</span>)),
+<a href=#468 id=468 data-nosnippet>468</a>        <span class="prelude-val">None</span>,
+<a href=#469 id=469 data-nosnippet>469</a>        ExpansionBody::Tokens(Tokens::new(<span class="macro">Explode!</span>(<span class="kw-2">&amp;</span>refnum))),
+<a href=#470 id=470 data-nosnippet>470</a>        <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#471 id=471 data-nosnippet>471</a>          scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#472 id=472 data-nosnippet>472</a>          ..Default::default()
+<a href=#473 id=473 data-nosnippet>473</a>        }),
+<a href=#474 id=474 data-nosnippet>474</a>      );
 <a href=#475 id=475 data-nosnippet>475</a>    }
 <a href=#476 id=476 data-nosnippet>476</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = fixedid {
-<a href=#477 id=477 data-nosnippet>477</a>      <span class="kw">if </span>!state::has_meaning(<span class="kw-2">&amp;</span>hj_id) {
+<a href=#477 id=477 data-nosnippet>477</a>      <span class="kw">if </span>!has_meaning(<span class="kw-2">&amp;</span>hj_id) {
 <a href=#478 id=478 data-nosnippet>478</a>        <span class="comment">// Save for later
-<a href=#479 id=479 data-nosnippet>479</a>        </span>state::let_i(<span class="kw-2">&amp;</span>hj_id, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>)), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#479 id=479 data-nosnippet>479</a>        </span>let_i(<span class="kw-2">&amp;</span>hj_id, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>)), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#480 id=480 data-nosnippet>480</a>      }
 <a href=#481 id=481 data-nosnippet>481</a>      <span class="kw">let _ </span>= def_macro(
 <a href=#482 id=482 data-nosnippet>482</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\the{ctr}@ID"</span>)),
@@ -488,8 +488,8 @@
 <a href=#488 id=488 data-nosnippet>488</a>        }),
 <a href=#489 id=489 data-nosnippet>489</a>      );
 <a href=#490 id=490 data-nosnippet>490</a>    }
-<a href=#491 id=491 data-nosnippet>491</a>    state::remove_value(<span class="string">"PEEKED_LABEL"</span>); <span class="comment">// CONSUME the label
-<a href=#492 id=492 data-nosnippet>492</a>    </span>state::assign_value(
+<a href=#491 id=491 data-nosnippet>491</a>    remove_value(<span class="string">"PEEKED_LABEL"</span>); <span class="comment">// CONSUME the label
+<a href=#492 id=492 data-nosnippet>492</a>    </span>assign_value(
 <a href=#493 id=493 data-nosnippet>493</a>      <span class="string">"PROCESSED_LABEL"</span>,
 <a href=#494 id=494 data-nosnippet>494</a>      Stored::String(arena::pin(label)),
 <a href=#495 id=495 data-nosnippet>495</a>      <span class="prelude-val">Some</span>(Scope::Global),
@@ -500,16 +500,16 @@
 <a href=#500 id=500 data-nosnippet>500</a><span class="doccomment">/// Use to peek for FOLLOWING \label{...} to support label-derived reference numbers
 <a href=#501 id=501 data-nosnippet>501</a>/// (Perl: MaybePeekLabel)
 <a href=#502 id=502 data-nosnippet>502</a></span><span class="kw">pub fn </span>maybe_peek_label() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#503 id=503 data-nosnippet>503</a>  <span class="kw">if </span>state::get_label_mapping_hook().is_some() {
+<a href=#503 id=503 data-nosnippet>503</a>  <span class="kw">if </span>get_label_mapping_hook().is_some() {
 <a href=#504 id=504 data-nosnippet>504</a>    <span class="kw">let </span>peek = <span class="kw">crate</span>::gullet::read_non_space()<span class="question-mark">?</span>;
 <a href=#505 id=505 data-nosnippet>505</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>token) = peek {
 <a href=#506 id=506 data-nosnippet>506</a>      <span class="kw">if </span>x_equals(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\label"</span>)) {
-<a href=#507 id=507 data-nosnippet>507</a>        state::begin_semiverbatim(<span class="prelude-val">None</span>);
+<a href=#507 id=507 data-nosnippet>507</a>        begin_semiverbatim(<span class="prelude-val">None</span>);
 <a href=#508 id=508 data-nosnippet>508</a>        <span class="kw">let </span>arg = <span class="kw">crate</span>::gullet::read_arg(<span class="kw">crate</span>::gullet::ExpansionLevel::Off)<span class="question-mark">?</span>;
-<a href=#509 id=509 data-nosnippet>509</a>        state::end_semiverbatim()<span class="question-mark">?</span>;
+<a href=#509 id=509 data-nosnippet>509</a>        end_semiverbatim()<span class="question-mark">?</span>;
 <a href=#510 id=510 data-nosnippet>510</a>        <span class="kw">let </span>arg_str = arg.to_string();
 <a href=#511 id=511 data-nosnippet>511</a>        <span class="kw">let </span>label = clean_label(<span class="kw-2">&amp;</span>arg_str, <span class="prelude-val">Some</span>(<span class="string">""</span>)).into_owned();
-<a href=#512 id=512 data-nosnippet>512</a>        state::assign_value(
+<a href=#512 id=512 data-nosnippet>512</a>        assign_value(
 <a href=#513 id=513 data-nosnippet>513</a>          <span class="string">"PEEKED_LABEL"</span>,
 <a href=#514 id=514 data-nosnippet>514</a>          Stored::String(arena::pin(<span class="kw-2">&amp;</span>label)),
 <a href=#515 id=515 data-nosnippet>515</a>          <span class="prelude-val">Some</span>(Scope::Global),
@@ -517,8 +517,8 @@
 <a href=#517 id=517 data-nosnippet>517</a>        <span class="comment">// Put back the arg wrapped in braces so \label can re-read it
 <a href=#518 id=518 data-nosnippet>518</a>        </span><span class="kw">crate</span>::gullet::unread(<span class="macro">Tokens!</span>(<span class="macro">T_BEGIN!</span>(), arg, <span class="macro">T_END!</span>()));
 <a href=#519 id=519 data-nosnippet>519</a>      } <span class="kw">else </span>{
-<a href=#520 id=520 data-nosnippet>520</a>        state::remove_value(<span class="string">"PROCESSED_LABEL"</span>);
-<a href=#521 id=521 data-nosnippet>521</a>        state::remove_value(<span class="string">"PEEKED_LABEL"</span>);
+<a href=#520 id=520 data-nosnippet>520</a>        remove_value(<span class="string">"PROCESSED_LABEL"</span>);
+<a href=#521 id=521 data-nosnippet>521</a>        remove_value(<span class="string">"PEEKED_LABEL"</span>);
 <a href=#522 id=522 data-nosnippet>522</a>      }
 <a href=#523 id=523 data-nosnippet>523</a>    }
 <a href=#524 id=524 data-nosnippet>524</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = peek {
@@ -532,13 +532,13 @@
 <a href=#532 id=532 data-nosnippet>532</a>/// Can by used by \label, among others. Note we only record the label
 <a href=#533 id=533 data-nosnippet>533</a>/// if it hasn't already been peeked, and consumed.
 <a href=#534 id=534 data-nosnippet>534</a></span><span class="kw">pub fn </span>maybe_note_label(label: <span class="kw-2">&amp;</span>str) {
-<a href=#535 id=535 data-nosnippet>535</a>  <span class="kw">if </span>state::get_label_mapping_hook().is_some() {
+<a href=#535 id=535 data-nosnippet>535</a>  <span class="kw">if </span>get_label_mapping_hook().is_some() {
 <a href=#536 id=536 data-nosnippet>536</a>    <span class="kw">let </span>label = clean_label(label, <span class="prelude-val">Some</span>(<span class="string">""</span>));
-<a href=#537 id=537 data-nosnippet>537</a>    <span class="kw">let </span>processed = state::lookup_string(<span class="string">"PROCESSED_LABEL"</span>);
+<a href=#537 id=537 data-nosnippet>537</a>    <span class="kw">let </span>processed = lookup_string(<span class="string">"PROCESSED_LABEL"</span>);
 <a href=#538 id=538 data-nosnippet>538</a>    <span class="kw">if </span>processed.is_empty() || processed != label {
 <a href=#539 id=539 data-nosnippet>539</a>      <span class="comment">// Only if not already processed
-<a href=#540 id=540 data-nosnippet>540</a>      </span>state::remove_value(<span class="string">"PROCESSED_LABEL"</span>);
-<a href=#541 id=541 data-nosnippet>541</a>      state::assign_value(
+<a href=#540 id=540 data-nosnippet>540</a>      </span>remove_value(<span class="string">"PROCESSED_LABEL"</span>);
+<a href=#541 id=541 data-nosnippet>541</a>      assign_value(
 <a href=#542 id=542 data-nosnippet>542</a>        <span class="string">"PEEKED_LABEL"</span>,
 <a href=#543 id=543 data-nosnippet>543</a>        Stored::String(arena::pin(label)),
 <a href=#544 id=544 data-nosnippet>544</a>        <span class="prelude-val">Some</span>(Scope::Global),
@@ -557,7 +557,7 @@
 <a href=#557 id=557 data-nosnippet>557</a>  <span class="comment">// with_value avoids the outer Stored::clone by reading through a
 <a href=#558 id=558 data-nosnippet>558</a>  // borrow; we still collect the scope SymStrs (Copy) or panic-pointers
 <a href=#559 id=559 data-nosnippet>559</a>  // into owned Vecs to outlive the borrow.
-<a href=#560 id=560 data-nosnippet>560</a>  </span><span class="kw">let </span>scope_syms: Vec&lt;SymStr&gt; = state::with_value(<span class="kw-2">&amp;</span>scopes_for_counter, |v| <span class="kw">match </span>v {
+<a href=#560 id=560 data-nosnippet>560</a>  </span><span class="kw">let </span>scope_syms: Vec&lt;SymStr&gt; = with_value(<span class="kw-2">&amp;</span>scopes_for_counter, |v| <span class="kw">match </span>v {
 <a href=#561 id=561 data-nosnippet>561</a>    <span class="prelude-val">Some</span>(Stored::VecDequeStored(stored_scopes)) =&gt; stored_scopes
 <a href=#562 id=562 data-nosnippet>562</a>      .iter()
 <a href=#563 id=563 data-nosnippet>563</a>      .map(|s| <span class="kw">match </span>s {
@@ -568,12 +568,12 @@
 <a href=#568 id=568 data-nosnippet>568</a>    <span class="kw">_ </span>=&gt; Vec::new(),
 <a href=#569 id=569 data-nosnippet>569</a>  });
 <a href=#570 id=570 data-nosnippet>570</a>  <span class="kw">for </span>scope <span class="kw">in </span>scope_syms {
-<a href=#571 id=571 data-nosnippet>571</a>    state::deactivate_scope(scope);
+<a href=#571 id=571 data-nosnippet>571</a>    deactivate_scope(scope);
 <a href=#572 id=572 data-nosnippet>572</a>  }
 <a href=#573 id=573 data-nosnippet>573</a>
 <a href=#574 id=574 data-nosnippet>574</a>  <span class="comment">// TODO: if we ever want to unshift from the nested_counters, we'll need to also use
 <a href=#575 id=575 data-nosnippet>575</a>  // Stored::VecDequeStored for them.
-<a href=#576 id=576 data-nosnippet>576</a>  </span><span class="kw">let </span>inner_ctrs: Vec&lt;SymStr&gt; = state::with_value(<span class="kw-2">&amp;</span>nested_counters, |v| <span class="kw">match </span>v {
+<a href=#576 id=576 data-nosnippet>576</a>  </span><span class="kw">let </span>inner_ctrs: Vec&lt;SymStr&gt; = with_value(<span class="kw-2">&amp;</span>nested_counters, |v| <span class="kw">match </span>v {
 <a href=#577 id=577 data-nosnippet>577</a>    <span class="prelude-val">Some</span>(Stored::Strings(stored_counters)) =&gt; stored_counters.iter().copied().collect(),
 <a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">_ </span>=&gt; Vec::new(),
 <a href=#579 id=579 data-nosnippet>579</a>  });
@@ -599,7 +599,7 @@
 <a href=#599 id=599 data-nosnippet>599</a>  // Let's to `\chapter*{}` even though amsart has no chapter counter) hit
 <a href=#600 id=600 data-nosnippet>600</a>  // Error:undefined:\thechapter@ID because the counter was never created.
 <a href=#601 id=601 data-nosnippet>601</a>  </span><span class="kw">let </span>unctr_cmd = <span class="macro">s!</span>(<span class="string">"\\c@{unctr}"</span>);
-<a href=#602 id=602 data-nosnippet>602</a>  <span class="kw">let </span>unctr_defined = state::lookup_register(<span class="kw-2">&amp;</span>unctr_cmd, Vec::new())
+<a href=#602 id=602 data-nosnippet>602</a>  <span class="kw">let </span>unctr_defined = lookup_register(<span class="kw-2">&amp;</span>unctr_cmd, Vec::new())
 <a href=#603 id=603 data-nosnippet>603</a>    .ok()
 <a href=#604 id=604 data-nosnippet>604</a>    .flatten()
 <a href=#605 id=605 data-nosnippet>605</a>    .is_some();
@@ -643,7 +643,7 @@
 <a href=#643 id=643 data-nosnippet>643</a></span><span class="kw">pub fn </span>reset_counter(ctr: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 <a href=#644 id=644 data-nosnippet>644</a>  <span class="kw">let </span>(c_ctr, c_un_ctr, ctr_id) =
 <a href=#645 id=645 data-nosnippet>645</a>    ctr.with_str(|ctr| (<span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), <span class="macro">s!</span>(<span class="string">"\\c@UN{ctr}"</span>), <span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)));
-<a href=#646 id=646 data-nosnippet>646</a>  state::assign_register(
+<a href=#646 id=646 data-nosnippet>646</a>  assign_register(
 <a href=#647 id=647 data-nosnippet>647</a>    <span class="kw-2">&amp;</span>c_ctr,
 <a href=#648 id=648 data-nosnippet>648</a>    Number::new(<span class="number">0</span>).into(),
 <a href=#649 id=649 data-nosnippet>649</a>    <span class="prelude-val">Some</span>(Scope::Global),
@@ -651,7 +651,7 @@
 <a href=#651 id=651 data-nosnippet>651</a>  )<span class="question-mark">?</span>;
 <a href=#652 id=652 data-nosnippet>652</a>  <span class="kw">if </span>!ctr.with_str(|cstr| cstr.starts_with(<span class="string">"UN"</span>)) {
 <a href=#653 id=653 data-nosnippet>653</a>    <span class="comment">// but not UN
-<a href=#654 id=654 data-nosnippet>654</a>    </span>state::assign_register(
+<a href=#654 id=654 data-nosnippet>654</a>    </span>assign_register(
 <a href=#655 id=655 data-nosnippet>655</a>      <span class="kw-2">&amp;</span>c_un_ctr,
 <a href=#656 id=656 data-nosnippet>656</a>      Number::new(<span class="number">0</span>).into(),
 <a href=#657 id=657 data-nosnippet>657</a>      <span class="prelude-val">Some</span>(Scope::Global),
@@ -668,7 +668,7 @@
 <a href=#668 id=668 data-nosnippet>668</a>    }),
 <a href=#669 id=669 data-nosnippet>669</a>  )<span class="question-mark">?</span>;
 <a href=#670 id=670 data-nosnippet>670</a>  <span class="comment">// and reset any within counters!
-<a href=#671 id=671 data-nosnippet>671</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(nested) = state::lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>)) {
+<a href=#671 id=671 data-nosnippet>671</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(nested) = lookup_tokens(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\cl@{ctr}"</span>)) {
 <a href=#672 id=672 data-nosnippet>672</a>    <span class="kw">for </span>c <span class="kw">in </span>nested.unlist() {
 <a href=#673 id=673 data-nosnippet>673</a>      reset_counter(<span class="kw-2">&amp;</span>c)<span class="question-mark">?</span>;
 <a href=#674 id=674 data-nosnippet>674</a>    }
@@ -678,16 +678,16 @@
 <a href=#678 id=678 data-nosnippet>678</a>
 <a href=#679 id=679 data-nosnippet>679</a><span class="doccomment">/// Create id, and tags for an itemize type \item
 <a href=#680 id=680 data-nosnippet>680</a></span><span class="kw">pub fn </span>ref_step_item_counter(tag_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Tokens&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;Stored&gt;&gt; {
-<a href=#681 id=681 data-nosnippet>681</a>  <span class="kw">let </span>counter = state::lookup_string(<span class="string">"itemcounter"</span>);
+<a href=#681 id=681 data-nosnippet>681</a>  <span class="kw">let </span>counter = lookup_string(<span class="string">"itemcounter"</span>);
 <a href=#682 id=682 data-nosnippet>682</a>  <span class="kw">let </span>n = lookup_int(<span class="string">"itemization_items"</span>);
-<a href=#683 id=683 data-nosnippet>683</a>  state::assign_value(<span class="string">"itemization_items"</span>, n + <span class="number">1</span>, <span class="prelude-val">None</span>);
+<a href=#683 id=683 data-nosnippet>683</a>  assign_value(<span class="string">"itemization_items"</span>, n + <span class="number">1</span>, <span class="prelude-val">None</span>);
 <a href=#684 id=684 data-nosnippet>684</a>  <span class="kw">let </span><span class="kw-2">mut </span>attr: HashMap&lt;Stored&gt; = HashMap::default();
-<a href=#685 id=685 data-nosnippet>685</a>  <span class="kw">if </span>n &gt; <span class="number">0 </span>{
-<a href=#686 id=686 data-nosnippet>686</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sep) = lookup_dimension(<span class="string">"\\itemsep"</span>) {
-<a href=#687 id=687 data-nosnippet>687</a>      <span class="kw">let </span>default_opt = lookup_dimension(<span class="string">"\\lx@default@itemsep"</span>);
-<a href=#688 id=688 data-nosnippet>688</a>      <span class="kw">if </span>default_opt.is_none() || sep.value_of() != default_opt.unwrap().value_of() {
-<a href=#689 id=689 data-nosnippet>689</a>        attr.insert(<span class="string">"itemsep"</span>, sep.into());
-<a href=#690 id=690 data-nosnippet>690</a>      }
+<a href=#685 id=685 data-nosnippet>685</a>  <span class="kw">if </span>n &gt; <span class="number">0
+<a href=#686 id=686 data-nosnippet>686</a>    </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(sep) = lookup_dimension(<span class="string">"\\itemsep"</span>)
+<a href=#687 id=687 data-nosnippet>687</a>  {
+<a href=#688 id=688 data-nosnippet>688</a>    <span class="kw">let </span>default_opt = lookup_dimension(<span class="string">"\\lx@default@itemsep"</span>);
+<a href=#689 id=689 data-nosnippet>689</a>    <span class="kw">if </span>default_opt.is_none() || sep.value_of() != default_opt.unwrap().value_of() {
+<a href=#690 id=690 data-nosnippet>690</a>      attr.insert(<span class="string">"itemsep"</span>, sep.into());
 <a href=#691 id=691 data-nosnippet>691</a>    }
 <a href=#692 id=692 data-nosnippet>692</a>  }
 <a href=#693 id=693 data-nosnippet>693</a>
@@ -779,7 +779,7 @@
 <a href=#779 id=779 data-nosnippet>779</a>  options: BeginItemizeOptions,
 <a href=#780 id=780 data-nosnippet>780</a>) -&gt; <span class="prelude-ty">Result</span>&lt;HashMap&lt;Stored&gt;&gt; {
 <a href=#781 id=781 data-nosnippet>781</a>  <span class="comment">// The list-type and level of the *containing* list (if any!)
-<a href=#782 id=782 data-nosnippet>782</a>  </span><span class="kw">let </span>outercounter = state::lookup_string(<span class="string">"itemcounter"</span>);
+<a href=#782 id=782 data-nosnippet>782</a>  </span><span class="kw">let </span>outercounter = lookup_string(<span class="string">"itemcounter"</span>);
 <a href=#783 id=783 data-nosnippet>783</a>  <span class="kw">let </span>outerlevel = <span class="kw">if </span>!outercounter.is_empty() {
 <a href=#784 id=784 data-nosnippet>784</a>    lookup_int(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{outercounter}level"</span>))
 <a href=#785 id=785 data-nosnippet>785</a>  } <span class="kw">else </span>{
@@ -795,9 +795,9 @@
 <a href=#795 id=795 data-nosnippet>795</a>      .unwrap_or_default()
 <a href=#796 id=796 data-nosnippet>796</a>      .into()
 <a href=#797 id=797 data-nosnippet>797</a>  );
-<a href=#798 id=798 data-nosnippet>798</a>  state::assign_value(<span class="string">"itemization_level"</span>, listlevel, <span class="prelude-val">None</span>);
-<a href=#799 id=799 data-nosnippet>799</a>  state::assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{counter}level"</span>), level, <span class="prelude-val">None</span>);
-<a href=#800 id=800 data-nosnippet>800</a>  state::assign_value(<span class="string">"itemization_items"</span>, <span class="number">0</span>, <span class="prelude-val">None</span>);
+<a href=#798 id=798 data-nosnippet>798</a>  assign_value(<span class="string">"itemization_level"</span>, listlevel, <span class="prelude-val">None</span>);
+<a href=#799 id=799 data-nosnippet>799</a>  assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{counter}level"</span>), level, <span class="prelude-val">None</span>);
+<a href=#800 id=800 data-nosnippet>800</a>  assign_value(<span class="string">"itemization_items"</span>, <span class="number">0</span>, <span class="prelude-val">None</span>);
 <a href=#801 id=801 data-nosnippet>801</a>  <span class="kw">let </span>listpostfix = <span class="macro">roman!</span>(listlevel).to_string();
 <a href=#802 id=802 data-nosnippet>802</a>  <span class="kw">let </span>postfix = <span class="macro">roman!</span>(level).to_string();
 <a href=#803 id=803 data-nosnippet>803</a>  <span class="kw">let </span><span class="kw-2">mut </span>usecounter = counter.to_string();
@@ -806,10 +806,10 @@
 <a href=#806 id=806 data-nosnippet>806</a>  }
 <a href=#807 id=807 data-nosnippet>807</a>  <span class="kw">if </span>!itype.is_empty() {
 <a href=#808 id=808 data-nosnippet>808</a>    <span class="kw">let </span>itype_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{itype}@item"</span>));
-<a href=#809 id=809 data-nosnippet>809</a>    state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\item"</span>), <span class="kw-2">&amp;</span>itype_cs, <span class="prelude-val">None</span>);
+<a href=#809 id=809 data-nosnippet>809</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\item"</span>), <span class="kw-2">&amp;</span>itype_cs, <span class="prelude-val">None</span>);
 <a href=#810 id=810 data-nosnippet>810</a>  }
 <a href=#811 id=811 data-nosnippet>811</a>  <span class="comment">// In case within odd environment.
-<a href=#812 id=812 data-nosnippet>812</a>  </span>state::let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\par"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@normal@par"</span>), <span class="prelude-val">None</span>);
+<a href=#812 id=812 data-nosnippet>812</a>  </span>let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\par"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@normal@par"</span>), <span class="prelude-val">None</span>);
 <a href=#813 id=813 data-nosnippet>813</a>  def_macro(
 <a href=#814 id=814 data-nosnippet>814</a>    <span class="macro">T_CS!</span>(<span class="string">"\\@listctr"</span>),
 <a href=#815 id=815 data-nosnippet>815</a>    <span class="prelude-val">None</span>,
@@ -818,7 +818,7 @@
 <a href=#818 id=818 data-nosnippet>818</a>  )<span class="question-mark">?</span>;
 <a href=#819 id=819 data-nosnippet>819</a>  <span class="comment">// Now arrange that this list's id's are relative to the current (outer) item (if any)
 <a href=#820 id=820 data-nosnippet>820</a>  // And that the items within this list's id's are relative to this (new) list.
-<a href=#821 id=821 data-nosnippet>821</a>  </span>state::assign_value(<span class="string">"itemcounter"</span>, Stored::String(arena::pin(<span class="kw-2">&amp;</span>usecounter)), <span class="prelude-val">None</span>);
+<a href=#821 id=821 data-nosnippet>821</a>  </span>assign_value(<span class="string">"itemcounter"</span>, Stored::String(arena::pin(<span class="kw-2">&amp;</span>usecounter)), <span class="prelude-val">None</span>);
 <a href=#822 id=822 data-nosnippet>822</a>  <span class="kw">let </span>listcounter = <span class="macro">s!</span>(<span class="string">"@itemize{listpostfix}"</span>);
 <a href=#823 id=823 data-nosnippet>823</a>  <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\c@{listcounter}"</span>)))<span class="question-mark">?</span>.is_none() {
 <a href=#824 id=824 data-nosnippet>824</a>    <span class="comment">//Create new list counters as needed
@@ -839,12 +839,12 @@
 <a href=#839 id=839 data-nosnippet>839</a>    <span class="comment">// AND reset this list's counter when the outer item is stepped
 <a href=#840 id=840 data-nosnippet>840</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>cl_toks = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>listcounter)];
 <a href=#841 id=841 data-nosnippet>841</a>    <span class="kw">let </span>cl_name = <span class="macro">s!</span>(<span class="string">"\\cl@{outerusecounter}"</span>);
-<a href=#842 id=842 data-nosnippet>842</a>    <span class="kw">let </span>existing = state::with_value(<span class="kw-2">&amp;</span>cl_name, |v| <span class="kw">match </span>v {
+<a href=#842 id=842 data-nosnippet>842</a>    <span class="kw">let </span>existing = with_value(<span class="kw-2">&amp;</span>cl_name, |v| <span class="kw">match </span>v {
 <a href=#843 id=843 data-nosnippet>843</a>      <span class="prelude-val">Some</span>(Stored::Tokens(tks)) =&gt; tks.clone().unlist(),
 <a href=#844 id=844 data-nosnippet>844</a>      <span class="kw">_ </span>=&gt; Vec::new(),
 <a href=#845 id=845 data-nosnippet>845</a>    });
 <a href=#846 id=846 data-nosnippet>846</a>    cl_toks.extend(existing);
-<a href=#847 id=847 data-nosnippet>847</a>    state::assign_value(
+<a href=#847 id=847 data-nosnippet>847</a>    assign_value(
 <a href=#848 id=848 data-nosnippet>848</a>      <span class="kw-2">&amp;</span>cl_name,
 <a href=#849 id=849 data-nosnippet>849</a>      Stored::Tokens(Tokens::new(cl_toks)),
 <a href=#850 id=850 data-nosnippet>850</a>      <span class="prelude-val">Some</span>(Scope::Global),
@@ -1025,15 +1025,15 @@
 <a href=#1025 id=1025 data-nosnippet>1025</a>/// Perl: RescueCaptionCounters (latex_constructs.pool.ltxml L3260-3271)
 <a href=#1026 id=1026 data-nosnippet>1026</a></span><span class="kw">pub fn </span>rescue_caption_counters(captype: <span class="kw-2">&amp;</span>str, whatsit: <span class="kw-2">&amp;mut </span>Whatsit) {
 <a href=#1027 id=1027 data-nosnippet>1027</a>  <span class="kw">let </span>tagskey = <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{captype}_tags"</span>);
-<a href=#1028 id=1028 data-nosnippet>1028</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tags) = state::remove_value(tagskey) {
+<a href=#1028 id=1028 data-nosnippet>1028</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(tags) = remove_value(tagskey) {
 <a href=#1029 id=1029 data-nosnippet>1029</a>    whatsit.set_property(<span class="string">"tags"</span>, tags);
 <a href=#1030 id=1030 data-nosnippet>1030</a>  }
 <a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="kw">let </span>idkey = <span class="macro">s!</span>(<span class="string">"{captype}_id"</span>);
-<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = state::remove_value(<span class="kw-2">&amp;</span>idkey) {
+<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(id) = remove_value(<span class="kw-2">&amp;</span>idkey) {
 <a href=#1033 id=1033 data-nosnippet>1033</a>    whatsit.set_property(<span class="string">"id"</span>, id);
 <a href=#1034 id=1034 data-nosnippet>1034</a>  }
 <a href=#1035 id=1035 data-nosnippet>1035</a>  <span class="kw">let </span>inlistkey = <span class="macro">s!</span>(<span class="string">"{captype}_inlist"</span>);
-<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(inlist) = state::remove_value(<span class="kw-2">&amp;</span>inlistkey) {
+<a href=#1036 id=1036 data-nosnippet>1036</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(inlist) = remove_value(<span class="kw-2">&amp;</span>inlistkey) {
 <a href=#1037 id=1037 data-nosnippet>1037</a>    whatsit.set_property(<span class="string">"inlist"</span>, inlist);
 <a href=#1038 id=1038 data-nosnippet>1038</a>  }
 <a href=#1039 id=1039 data-nosnippet>1039</a>}

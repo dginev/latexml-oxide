@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_file_io.rs`."><title>tex_file_io.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_file_io.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX File IO
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_file_io.rs`."><title>tex_file_io.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_file_io.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX File IO
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
@@ -140,10 +140,10 @@
 <a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// Note that TeX doesn't actually close the mouth;
 <a href=#141 id=141 data-nosnippet>141</a>  // it just flushes it so that it will close the next time it's read!
 <a href=#142 id=142 data-nosnippet>142</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\endinput"</span>), <span class="prelude-val">None</span>, {
-<a href=#143 id=143 data-nosnippet>143</a>    gullet::flush_mouth();
+<a href=#143 id=143 data-nosnippet>143</a>    flush_mouth();
 <a href=#144 id=144 data-nosnippet>144</a>  });
 <a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\inputlineno"</span>,<span class="macro">Number!</span>(<span class="number">0</span>), readonly =&gt; <span class="bool-val">true</span>, getter=&gt; {
-<a href=#146 id=146 data-nosnippet>146</a>    Number::new(gullet::get_locator().from_line <span class="kw">as </span>i64)
+<a href=#146 id=146 data-nosnippet>146</a>    Number::new(get_locator().from_line <span class="kw">as </span>i64)
 <a href=#147 id=147 data-nosnippet>147</a>  });
 <a href=#148 id=148 data-nosnippet>148</a>
 <a href=#149 id=149 data-nosnippet>149</a>  <span class="comment">//======================================================================
@@ -257,9 +257,9 @@
 <a href=#257 id=257 data-nosnippet>257</a>        kv = wrapped;
 <a href=#258 id=258 data-nosnippet>258</a>      }
 <a href=#259 id=259 data-nosnippet>259</a>
-<a href=#260 id=260 data-nosnippet>260</a>      gullet::unread_vec(<span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>(), <span class="macro">T_OTHER!</span>(graphic), <span class="macro">T_END!</span>()]);
-<a href=#261 id=261 data-nosnippet>261</a>      gullet::unread_vec(kv);
-<a href=#262 id=262 data-nosnippet>262</a>      gullet::unread_one(<span class="macro">T_CS!</span>(<span class="string">"\\lx@special@graphics"</span>));
+<a href=#260 id=260 data-nosnippet>260</a>      unread_vec(<span class="macro">vec!</span>[<span class="macro">T_BEGIN!</span>(), <span class="macro">T_OTHER!</span>(graphic), <span class="macro">T_END!</span>()]);
+<a href=#261 id=261 data-nosnippet>261</a>      unread_vec(kv);
+<a href=#262 id=262 data-nosnippet>262</a>      unread_one(<span class="macro">T_CS!</span>(<span class="string">"\\lx@special@graphics"</span>));
 <a href=#263 id=263 data-nosnippet>263</a>    } <span class="kw">else </span>{
 <a href=#264 id=264 data-nosnippet>264</a>      <span class="macro">Info!</span>(<span class="string">"ignored"</span>, <span class="string">"special"</span>, <span class="macro">s!</span>(<span class="string">"Unrecognized TeX Special: {arg}"</span>));
 <a href=#265 id=265 data-nosnippet>265</a>    }
@@ -295,11 +295,11 @@
 <a href=#295 id=295 data-nosnippet>295</a>      // of double-quotes around the value (`\special{psfile="fig.ps"}`
 <a href=#296 id=296 data-nosnippet>296</a>      // arrives with the quotes in the argument string).
 <a href=#297 id=297 data-nosnippet>297</a>      </span><span class="kw">let </span>path_trimmed = raw.trim().trim_matches(<span class="string">'"'</span>).to_string();
-<a href=#298 id=298 data-nosnippet>298</a>      <span class="kw">let </span>candidates = latexml_core::util::image::image_candidates(<span class="kw-2">&amp;</span>path_trimmed);
+<a href=#298 id=298 data-nosnippet>298</a>      <span class="kw">let </span>candidates = util::image::image_candidates(<span class="kw-2">&amp;</span>path_trimmed);
 <a href=#299 id=299 data-nosnippet>299</a>      <span class="comment">// Map psfile-style options to graphicx-style. Perl L282-311.
 <a href=#300 id=300 data-nosnippet>300</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>options_vec: Vec&lt;String&gt; = Vec::new();
-<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kv_digested) = args[<span class="number">0</span>] {
-<a href=#302 id=302 data-nosnippet>302</a>        <span class="kw">if let </span>DigestedData::KeyVals(kv) = kv_digested.data() {
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>kv_digested) = args[<span class="number">0</span>]
+<a href=#302 id=302 data-nosnippet>302</a>        &amp;&amp; <span class="kw">let </span>DigestedData::KeyVals(kv) = kv_digested.data() {
 <a href=#303 id=303 data-nosnippet>303</a>          <span class="kw">let </span><span class="kw-2">mut </span>h_off: f64 = <span class="number">0.0</span>;
 <a href=#304 id=304 data-nosnippet>304</a>          <span class="kw">let </span><span class="kw-2">mut </span>v_off: f64 = <span class="number">0.0</span>;
 <a href=#305 id=305 data-nosnippet>305</a>          <span class="kw">for </span>(key, value) <span class="kw">in </span>kv.get_pairs() {
@@ -324,68 +324,67 @@
 <a href=#324 id=324 data-nosnippet>324</a>            options_vec.push(<span class="string">"clip=true"</span>.to_string());
 <a href=#325 id=325 data-nosnippet>325</a>          }
 <a href=#326 id=326 data-nosnippet>326</a>        }
-<a href=#327 id=327 data-nosnippet>327</a>      }
-<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">let </span>options = options_vec.join(<span class="string">","</span>);
-<a href=#329 id=329 data-nosnippet>329</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"path" </span>=&gt; path_trimmed, <span class="string">"candidates" </span>=&gt; candidates, <span class="string">"options" </span>=&gt; options))
-<a href=#330 id=330 data-nosnippet>330</a>    },
-<a href=#331 id=331 data-nosnippet>331</a>    mode =&gt; <span class="string">"text"
-<a href=#332 id=332 data-nosnippet>332</a>  </span>);
-<a href=#333 id=333 data-nosnippet>333</a>  <span class="macro">Let!</span>(<span class="string">"\\ltx@special@graphics"</span>, <span class="string">"\\lx@special@graphics"</span>);
-<a href=#334 id=334 data-nosnippet>334</a>  <span class="comment">// Original Perl (more complete):
-<a href=#335 id=335 data-nosnippet>335</a>  // DefConstructor('\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim',
-<a href=#336 id=336 data-nosnippet>336</a>  //   "&lt;ltx:graphics graphic='#path' candidates='#candidates' options='#options'/&gt;",
-<a href=#337 id=337 data-nosnippet>337</a>  //   sizer      =&gt; \&amp;image_graphicx_sizer,
-<a href=#338 id=338 data-nosnippet>338</a>  //   properties =&gt; sub {
-<a href=#339 id=339 data-nosnippet>339</a>  //     my ($stomach, $kv, $path) = @_;
-<a href=#340 id=340 data-nosnippet>340</a>  //     $path = ToString($path); $path =~ s/^\s+//; $path =~ s/\s+$//;
-<a href=#341 id=341 data-nosnippet>341</a>  //     $path =~ s/("+)(.+)\g1/$2/;
-<a href=#342 id=342 data-nosnippet>342</a>  //     my $searchpaths = LookupValue('GRAPHICSPATHS');
-<a href=#343 id=343 data-nosnippet>343</a>  //     my @candidates  = pathname_findall($path, types =&gt; ['*'], paths =&gt; $searchpaths);
-<a href=#344 id=344 data-nosnippet>344</a>  //     if (my $base = LookupValue('SOURCEDIRECTORY')) {
-<a href=#345 id=345 data-nosnippet>345</a>  //       @candidates = map { pathname_relative($_, $base) } @candidates; }
-<a href=#346 id=346 data-nosnippet>346</a>  //     my $options = '';
-<a href=#347 id=347 data-nosnippet>347</a>  //     if ($kv) {    # remap psfile options to includegraphics options:
-<a href=#348 id=348 data-nosnippet>348</a>  //       if (my $hscale = $kv-&gt;getValue('hscale')) {
-<a href=#349 id=349 data-nosnippet>349</a>  //         $hscale = $hscale &amp;&amp; int(ToString($hscale)) / 100;
-<a href=#350 id=350 data-nosnippet>350</a>  //         $options .= ',' if $options;
-<a href=#351 id=351 data-nosnippet>351</a>  //         $options .= "xscale=$hscale"; }
-<a href=#352 id=352 data-nosnippet>352</a>  //       if (my $vscale = $kv-&gt;getValue('vscale')) {
-<a href=#353 id=353 data-nosnippet>353</a>  //         $vscale = $vscale &amp;&amp; int(ToString($vscale)) / 100;
-<a href=#354 id=354 data-nosnippet>354</a>  //         $options .= ',' if $options;
-<a href=#355 id=355 data-nosnippet>355</a>  //         $options .= "yscale=$vscale"; }
-<a href=#356 id=356 data-nosnippet>356</a>  //       if (my $hsize = $kv-&gt;getValue('hsize')) {
-<a href=#357 id=357 data-nosnippet>357</a>  //         $hsize = ToString($hsize);
-<a href=#358 id=358 data-nosnippet>358</a>  //         $options .= ',' if $options;
-<a href=#359 id=359 data-nosnippet>359</a>  //         $options .= "width=$hsize"; }
-<a href=#360 id=360 data-nosnippet>360</a>  //       if (my $vsize = $kv-&gt;getValue('vsize')) {
-<a href=#361 id=361 data-nosnippet>361</a>  //         $vsize = ToString($vsize);
-<a href=#362 id=362 data-nosnippet>362</a>  //         $options .= ',' if $options;
-<a href=#363 id=363 data-nosnippet>363</a>  //         $options .= "height=$vsize"; }
-<a href=#364 id=364 data-nosnippet>364</a>  //       if (my $angle = $kv-&gt;getValue('angle')) {
-<a href=#365 id=365 data-nosnippet>365</a>  //         $angle = ToString($angle);
-<a href=#366 id=366 data-nosnippet>366</a>  //         $options .= ',' if $options;
-<a href=#367 id=367 data-nosnippet>367</a>  //         $options .= "angle=$angle"; }
-<a href=#368 id=368 data-nosnippet>368</a>  //       my $voffset = $kv-&gt;getValue('voffset') || 0;
-<a href=#369 id=369 data-nosnippet>369</a>  //       $voffset = $voffset &amp;&amp; int(ToString($voffset));
-<a href=#370 id=370 data-nosnippet>370</a>  //       my $hoffset = $kv-&gt;getValue('hoffset') || 0;
-<a href=#371 id=371 data-nosnippet>371</a>  //       $hoffset = $hoffset &amp;&amp; int(ToString($hoffset));
-<a href=#372 id=372 data-nosnippet>372</a>  //       if ($voffset || $hoffset) {
-<a href=#373 id=373 data-nosnippet>373</a>  //         my $left   = -$hoffset;
-<a href=#374 id=374 data-nosnippet>374</a>  //         my $bottom = -$voffset;
-<a href=#375 id=375 data-nosnippet>375</a>  //         $options .= "," if $options;
-<a href=#376 id=376 data-nosnippet>376</a>  //         $options .= "trim=$left $bottom 0 0,clip=true"; } }
-<a href=#377 id=377 data-nosnippet>377</a>  //     (options =&gt; $options, path =&gt; $path, candidates =&gt; join(',', @candidates)); },
-<a href=#378 id=378 data-nosnippet>378</a>  //   mode =&gt; 'text');
-<a href=#379 id=379 data-nosnippet>379</a>  // Since these ultimately generate external resources, it can be useful to have a handle on them.
-<a href=#380 id=380 data-nosnippet>380</a>  </span><span class="macro">Tag!</span>(<span class="string">"ltx:graphics"</span>, after_open =&gt; sub[document, node] {
-<a href=#381 id=381 data-nosnippet>381</a>    document.generate_id(node, <span class="string">"g"</span>)<span class="question-mark">?</span>;
-<a href=#382 id=382 data-nosnippet>382</a>  });
-<a href=#383 id=383 data-nosnippet>383</a>
-<a href=#384 id=384 data-nosnippet>384</a>  <span class="comment">//======================================================================
-<a href=#385 id=385 data-nosnippet>385</a>  // output processing
-<a href=#386 id=386 data-nosnippet>386</a>  //----------------------------------------------------------------------
-<a href=#387 id=387 data-nosnippet>387</a>  // \shipout          c  sends the contents of a box to the dvi file.
-<a href=#388 id=388 data-nosnippet>388</a>  // \output           pt holds the token list used to typeset one page.
-<a href=#389 id=389 data-nosnippet>389</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\output"</span>, <span class="macro">Tokens!</span>());
-<a href=#390 id=390 data-nosnippet>390</a>});
+<a href=#327 id=327 data-nosnippet>327</a>      <span class="kw">let </span>options = options_vec.join(<span class="string">","</span>);
+<a href=#328 id=328 data-nosnippet>328</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"path" </span>=&gt; path_trimmed, <span class="string">"candidates" </span>=&gt; candidates, <span class="string">"options" </span>=&gt; options))
+<a href=#329 id=329 data-nosnippet>329</a>    },
+<a href=#330 id=330 data-nosnippet>330</a>    mode =&gt; <span class="string">"text"
+<a href=#331 id=331 data-nosnippet>331</a>  </span>);
+<a href=#332 id=332 data-nosnippet>332</a>  <span class="macro">Let!</span>(<span class="string">"\\ltx@special@graphics"</span>, <span class="string">"\\lx@special@graphics"</span>);
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="comment">// Original Perl (more complete):
+<a href=#334 id=334 data-nosnippet>334</a>  // DefConstructor('\ltx@special@graphics OptionalKeyVals:SpecialPS Semiverbatim',
+<a href=#335 id=335 data-nosnippet>335</a>  //   "&lt;ltx:graphics graphic='#path' candidates='#candidates' options='#options'/&gt;",
+<a href=#336 id=336 data-nosnippet>336</a>  //   sizer      =&gt; \&amp;image_graphicx_sizer,
+<a href=#337 id=337 data-nosnippet>337</a>  //   properties =&gt; sub {
+<a href=#338 id=338 data-nosnippet>338</a>  //     my ($stomach, $kv, $path) = @_;
+<a href=#339 id=339 data-nosnippet>339</a>  //     $path = ToString($path); $path =~ s/^\s+//; $path =~ s/\s+$//;
+<a href=#340 id=340 data-nosnippet>340</a>  //     $path =~ s/("+)(.+)\g1/$2/;
+<a href=#341 id=341 data-nosnippet>341</a>  //     my $searchpaths = LookupValue('GRAPHICSPATHS');
+<a href=#342 id=342 data-nosnippet>342</a>  //     my @candidates  = pathname_findall($path, types =&gt; ['*'], paths =&gt; $searchpaths);
+<a href=#343 id=343 data-nosnippet>343</a>  //     if (my $base = LookupValue('SOURCEDIRECTORY')) {
+<a href=#344 id=344 data-nosnippet>344</a>  //       @candidates = map { pathname_relative($_, $base) } @candidates; }
+<a href=#345 id=345 data-nosnippet>345</a>  //     my $options = '';
+<a href=#346 id=346 data-nosnippet>346</a>  //     if ($kv) {    # remap psfile options to includegraphics options:
+<a href=#347 id=347 data-nosnippet>347</a>  //       if (my $hscale = $kv-&gt;getValue('hscale')) {
+<a href=#348 id=348 data-nosnippet>348</a>  //         $hscale = $hscale &amp;&amp; int(ToString($hscale)) / 100;
+<a href=#349 id=349 data-nosnippet>349</a>  //         $options .= ',' if $options;
+<a href=#350 id=350 data-nosnippet>350</a>  //         $options .= "xscale=$hscale"; }
+<a href=#351 id=351 data-nosnippet>351</a>  //       if (my $vscale = $kv-&gt;getValue('vscale')) {
+<a href=#352 id=352 data-nosnippet>352</a>  //         $vscale = $vscale &amp;&amp; int(ToString($vscale)) / 100;
+<a href=#353 id=353 data-nosnippet>353</a>  //         $options .= ',' if $options;
+<a href=#354 id=354 data-nosnippet>354</a>  //         $options .= "yscale=$vscale"; }
+<a href=#355 id=355 data-nosnippet>355</a>  //       if (my $hsize = $kv-&gt;getValue('hsize')) {
+<a href=#356 id=356 data-nosnippet>356</a>  //         $hsize = ToString($hsize);
+<a href=#357 id=357 data-nosnippet>357</a>  //         $options .= ',' if $options;
+<a href=#358 id=358 data-nosnippet>358</a>  //         $options .= "width=$hsize"; }
+<a href=#359 id=359 data-nosnippet>359</a>  //       if (my $vsize = $kv-&gt;getValue('vsize')) {
+<a href=#360 id=360 data-nosnippet>360</a>  //         $vsize = ToString($vsize);
+<a href=#361 id=361 data-nosnippet>361</a>  //         $options .= ',' if $options;
+<a href=#362 id=362 data-nosnippet>362</a>  //         $options .= "height=$vsize"; }
+<a href=#363 id=363 data-nosnippet>363</a>  //       if (my $angle = $kv-&gt;getValue('angle')) {
+<a href=#364 id=364 data-nosnippet>364</a>  //         $angle = ToString($angle);
+<a href=#365 id=365 data-nosnippet>365</a>  //         $options .= ',' if $options;
+<a href=#366 id=366 data-nosnippet>366</a>  //         $options .= "angle=$angle"; }
+<a href=#367 id=367 data-nosnippet>367</a>  //       my $voffset = $kv-&gt;getValue('voffset') || 0;
+<a href=#368 id=368 data-nosnippet>368</a>  //       $voffset = $voffset &amp;&amp; int(ToString($voffset));
+<a href=#369 id=369 data-nosnippet>369</a>  //       my $hoffset = $kv-&gt;getValue('hoffset') || 0;
+<a href=#370 id=370 data-nosnippet>370</a>  //       $hoffset = $hoffset &amp;&amp; int(ToString($hoffset));
+<a href=#371 id=371 data-nosnippet>371</a>  //       if ($voffset || $hoffset) {
+<a href=#372 id=372 data-nosnippet>372</a>  //         my $left   = -$hoffset;
+<a href=#373 id=373 data-nosnippet>373</a>  //         my $bottom = -$voffset;
+<a href=#374 id=374 data-nosnippet>374</a>  //         $options .= "," if $options;
+<a href=#375 id=375 data-nosnippet>375</a>  //         $options .= "trim=$left $bottom 0 0,clip=true"; } }
+<a href=#376 id=376 data-nosnippet>376</a>  //     (options =&gt; $options, path =&gt; $path, candidates =&gt; join(',', @candidates)); },
+<a href=#377 id=377 data-nosnippet>377</a>  //   mode =&gt; 'text');
+<a href=#378 id=378 data-nosnippet>378</a>  // Since these ultimately generate external resources, it can be useful to have a handle on them.
+<a href=#379 id=379 data-nosnippet>379</a>  </span><span class="macro">Tag!</span>(<span class="string">"ltx:graphics"</span>, after_open =&gt; sub[document, node] {
+<a href=#380 id=380 data-nosnippet>380</a>    document.generate_id(node, <span class="string">"g"</span>)<span class="question-mark">?</span>;
+<a href=#381 id=381 data-nosnippet>381</a>  });
+<a href=#382 id=382 data-nosnippet>382</a>
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="comment">//======================================================================
+<a href=#384 id=384 data-nosnippet>384</a>  // output processing
+<a href=#385 id=385 data-nosnippet>385</a>  //----------------------------------------------------------------------
+<a href=#386 id=386 data-nosnippet>386</a>  // \shipout          c  sends the contents of a box to the dvi file.
+<a href=#387 id=387 data-nosnippet>387</a>  // \output           pt holds the token list used to typeset one page.
+<a href=#388 id=388 data-nosnippet>388</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\output"</span>, <span class="macro">Tokens!</span>());
+<a href=#389 id=389 data-nosnippet>389</a>});
 </code></pre></div></section></main></body></html>

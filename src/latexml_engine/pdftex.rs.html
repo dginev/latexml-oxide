@@ -1,6 +1,6 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/pdftex.rs`."><title>pdftex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>pdftex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span>std::cmp::Ordering;
-<a href=#3 id=3 data-nosnippet>3</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/pdftex.rs`."><title>pdftex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>pdftex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>std::cmp::Ordering;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#4 id=4 data-nosnippet>4</a>
 <a href=#5 id=5 data-nosnippet>5</a><span class="macro">LoadDefinitions!</span>({
 <a href=#6 id=6 data-nosnippet>6</a>  <span class="comment">// A rough initial draft of the extra commands &amp; registers defined in pdfTeX.
@@ -146,17 +146,17 @@
 <a href=#146 id=146 data-nosnippet>146</a>  // consume one balanced general-text arg. No PDF emission. Driver:
 <a href=#147 id=147 data-nosnippet>147</a>  // 2406.14142 (`\pdfximage{...}` in graphics-bbox-precompute path).
 <a href=#148 id=148 data-nosnippet>148</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pdfximage"</span>, sub[_args] {
-<a href=#149 id=149 data-nosnippet>149</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#150 id=150 data-nosnippet>150</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
+<a href=#149 id=149 data-nosnippet>149</a>    skip_spaces()<span class="question-mark">?</span>;
+<a href=#150 id=150 data-nosnippet>150</a>    <span class="kw">if </span>if_next(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>))<span class="question-mark">? </span>{
 <a href=#151 id=151 data-nosnippet>151</a>      <span class="comment">// discard up to matching `]`
-<a href=#152 id=152 data-nosnippet>152</a>      </span><span class="kw">while let </span><span class="prelude-val">Some</span>(t) = gullet::read_token()<span class="question-mark">? </span>{
+<a href=#152 id=152 data-nosnippet>152</a>      </span><span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_token()<span class="question-mark">? </span>{
 <a href=#153 id=153 data-nosnippet>153</a>        <span class="kw">if </span><span class="macro">matches!</span>(t.get_catcode(), Catcode::OTHER) &amp;&amp; t.to_string() == <span class="string">"]" </span>{
 <a href=#154 id=154 data-nosnippet>154</a>          <span class="kw">break</span>;
 <a href=#155 id=155 data-nosnippet>155</a>        }
 <a href=#156 id=156 data-nosnippet>156</a>      }
 <a href=#157 id=157 data-nosnippet>157</a>    }
-<a href=#158 id=158 data-nosnippet>158</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#159 id=159 data-nosnippet>159</a>    <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#158 id=158 data-nosnippet>158</a>    skip_spaces()<span class="question-mark">?</span>;
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="kw">let _ </span>= read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#160 id=160 data-nosnippet>160</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[])
 <a href=#161 id=161 data-nosnippet>161</a>  });
 <a href=#162 id=162 data-nosnippet>162</a>  <span class="comment">// \pdfrefximage object number (h, v, m) — discard the object number
@@ -184,10 +184,10 @@
 <a href=#184 id=184 data-nosnippet>184</a>
 <a href=#185 id=185 data-nosnippet>185</a>  <span class="comment">// Ugh, what a mess of ugly syntax....
 <a href=#186 id=186 data-nosnippet>186</a>  </span><span class="macro">DefParameterType!</span>(OpenActionSpecification, reader =&gt; <span class="macro">reader!</span>(_args, _extra, {
-<a href=#187 id=187 data-nosnippet>187</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(_key) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"openaction"</span>])<span class="question-mark">? </span>{
-<a href=#188 id=188 data-nosnippet>188</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(_action) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"user"</span>, <span class="string">"goto"</span>])<span class="question-mark">? </span>{
+<a href=#187 id=187 data-nosnippet>187</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(_key) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"openaction"</span>])<span class="question-mark">?
+<a href=#188 id=188 data-nosnippet>188</a>      </span>&amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(_action) = read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"user"</span>, <span class="string">"goto"</span>])<span class="question-mark">? </span>{
 <a href=#189 id=189 data-nosnippet>189</a>        <span class="comment">// etc....
-<a href=#190 id=190 data-nosnippet>190</a>      </span>} } }), optional =&gt; <span class="bool-val">true</span>);
+<a href=#190 id=190 data-nosnippet>190</a>      </span>} }), optional =&gt; <span class="bool-val">true</span>);
 <a href=#191 id=191 data-nosnippet>191</a>
 <a href=#192 id=192 data-nosnippet>192</a>  <span class="comment">// Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
 <a href=#193 id=193 data-nosnippet>193</a>  // Reads and discards the pdfTeX annotation-spec prefix:
@@ -197,14 +197,14 @@
 <a href=#197 id=197 data-nosnippet>197</a>    <span class="kw">if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"reserveobjnum"</span>])<span class="question-mark">?</span>.is_some() {
 <a href=#198 id=198 data-nosnippet>198</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(ArgWrap::None);
 <a href=#199 id=199 data-nosnippet>199</a>    } <span class="kw">else if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"useobjnum"</span>])<span class="question-mark">?</span>.is_some() {
-<a href=#200 id=200 data-nosnippet>200</a>      <span class="kw">let _ </span>= gullet::read_number()<span class="question-mark">?</span>;
+<a href=#200 id=200 data-nosnippet>200</a>      <span class="kw">let _ </span>= read_number()<span class="question-mark">?</span>;
 <a href=#201 id=201 data-nosnippet>201</a>    } <span class="kw">else if </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"stream"</span>])<span class="question-mark">?</span>.is_some()
 <a href=#202 id=202 data-nosnippet>202</a>      &amp;&amp; read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"attr"</span>])<span class="question-mark">?</span>.is_some() {
-<a href=#203 id=203 data-nosnippet>203</a>        gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#203 id=203 data-nosnippet>203</a>        skip_spaces()<span class="question-mark">?</span>;
+<a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">let _ </span>= read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#205 id=205 data-nosnippet>205</a>      }
-<a href=#206 id=206 data-nosnippet>206</a>    gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#206 id=206 data-nosnippet>206</a>    skip_spaces()<span class="question-mark">?</span>;
+<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">let _ </span>= read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#208 id=208 data-nosnippet>208</a>  }), optional =&gt; <span class="bool-val">true</span>);
 <a href=#209 id=209 data-nosnippet>209</a>
 <a href=#210 id=210 data-nosnippet>210</a>  <span class="comment">// \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
@@ -277,8 +277,8 @@
 <a href=#277 id=277 data-nosnippet>277</a>      <span class="comment">// If action was `pop`, there's no trailing general-text spec.
 <a href=#278 id=278 data-nosnippet>278</a>      // Otherwise read and discard the general-text argument.
 <a href=#279 id=279 data-nosnippet>279</a>      </span><span class="kw">if </span>pop.is_none() {
-<a href=#280 id=280 data-nosnippet>280</a>        gullet::skip_spaces()<span class="question-mark">?</span>;
-<a href=#281 id=281 data-nosnippet>281</a>        <span class="kw">let _ </span>= gullet::read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#280 id=280 data-nosnippet>280</a>        skip_spaces()<span class="question-mark">?</span>;
+<a href=#281 id=281 data-nosnippet>281</a>        <span class="kw">let _ </span>= read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
 <a href=#282 id=282 data-nosnippet>282</a>      }
 <a href=#283 id=283 data-nosnippet>283</a>    }
 <a href=#284 id=284 data-nosnippet>284</a>  );

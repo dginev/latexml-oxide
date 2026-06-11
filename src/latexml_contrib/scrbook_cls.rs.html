@@ -1,41 +1,40 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/scrbook_cls.rs`."><title>scrbook_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>scrbook_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/scrbook_cls.rs`."><title>scrbook_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>scrbook_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
-<a href=#3 id=3 data-nosnippet>3</a>
-<a href=#4 id=4 data-nosnippet>4</a><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="macro">Warn!</span>(
-<a href=#6 id=6 data-nosnippet>6</a>    <span class="string">"missing_file"</span>,
-<a href=#7 id=7 data-nosnippet>7</a>    <span class="string">"scrbook.cls"</span>,
-<a href=#8 id=8 data-nosnippet>8</a>    <span class="string">"scrbook.cls is only minimally stubbed and will not be interpreted raw."
-<a href=#9 id=9 data-nosnippet>9</a>  </span>);
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// Real scrbook.cls loads the KOMA dependency chain (scrkbase, tocbasic, …),
-<a href=#12 id=12 data-nosnippet>12</a>  // which transitively loads `iftex`, defining `\ifpdf`/`\ifpdftex`/… for
-<a href=#13 id=13 data-nosnippet>13</a>  // author engine/driver detection. Perl raw-loads the .cls and gets iftex
-<a href=#14 id=14 data-nosnippet>14</a>  // that way; our OmniBus stub intercepts it. Mirror the dependency (same
-<a href=#15 id=15 data-nosnippet>15</a>  // rationale as scrartcl_cls.rs, witness 1802.07175).
-<a href=#16 id=16 data-nosnippet>16</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"iftex"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="comment">// KOMA section-font hooks (`\sectfont` + empty `\size@&lt;unit&gt;` family) — see
-<a href=#18 id=18 data-nosnippet>18</a>  // scrartcl_cls.rs for the full rationale. tocloft expands these in
-<a href=#19 id=19 data-nosnippet>19</a>  // `\cfttoctitlefont` when a KOMA class is detected; as a chapter class
-<a href=#20 id=20 data-nosnippet>20</a>  // scrbook genuinely uses the `\size@chapter` form (tocloft.sty L169). Without
-<a href=#21 id=21 data-nosnippet>21</a>  // them, scrbook + tocloft + `\tableofcontents` hits undefined `\sectfont` /
-<a href=#22 id=22 data-nosnippet>22</a>  // `\size@chapter` where Perl (raw scrbook) is clean.
-<a href=#23 id=23 data-nosnippet>23</a>  </span>def_macro_noop(<span class="string">"\\maybesffamily"</span>)<span class="question-mark">?</span>;
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sectfont"</span>, <span class="string">"\\normalcolor\\maybesffamily\\bfseries"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  def_macro_noop(<span class="string">"\\size@part"</span>)<span class="question-mark">?</span>;
-<a href=#26 id=26 data-nosnippet>26</a>  def_macro_noop(<span class="string">"\\size@partnumber"</span>)<span class="question-mark">?</span>;
-<a href=#27 id=27 data-nosnippet>27</a>  def_macro_noop(<span class="string">"\\size@chapter"</span>)<span class="question-mark">?</span>;
-<a href=#28 id=28 data-nosnippet>28</a>  def_macro_noop(<span class="string">"\\size@section"</span>)<span class="question-mark">?</span>;
-<a href=#29 id=29 data-nosnippet>29</a>  def_macro_noop(<span class="string">"\\size@subsection"</span>)<span class="question-mark">?</span>;
-<a href=#30 id=30 data-nosnippet>30</a>  def_macro_noop(<span class="string">"\\size@subsubsection"</span>)<span class="question-mark">?</span>;
-<a href=#31 id=31 data-nosnippet>31</a>  def_macro_noop(<span class="string">"\\size@paragraph"</span>)<span class="question-mark">?</span>;
-<a href=#32 id=32 data-nosnippet>32</a>  def_macro_noop(<span class="string">"\\size@subparagraph"</span>)<span class="question-mark">?</span>;
-<a href=#33 id=33 data-nosnippet>33</a>  def_macro_noop(<span class="string">"\\setkomafont{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#34 id=34 data-nosnippet>34</a>  def_macro_noop(<span class="string">"\\setcapindent{}"</span>)<span class="question-mark">?</span>;
-<a href=#35 id=35 data-nosnippet>35</a>  def_macro_noop(<span class="string">"\\deffootnote[]{}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#36 id=36 data-nosnippet>36</a>  def_macro_noop(<span class="string">"\\deffootnotemark{}"</span>)<span class="question-mark">?</span>;
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// KOMA page-style marks — see scrartcl_cls.rs for rationale.
-<a href=#38 id=38 data-nosnippet>38</a>  </span>def_macro_noop(<span class="string">"\\headmark"</span>)<span class="question-mark">?</span>;
-<a href=#39 id=39 data-nosnippet>39</a>  def_macro_noop(<span class="string">"\\pagemark"</span>)<span class="question-mark">?</span>;
-<a href=#40 id=40 data-nosnippet>40</a>});
+<a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
+<a href=#4 id=4 data-nosnippet>4</a>  <span class="macro">Warn!</span>(
+<a href=#5 id=5 data-nosnippet>5</a>    <span class="string">"missing_file"</span>,
+<a href=#6 id=6 data-nosnippet>6</a>    <span class="string">"scrbook.cls"</span>,
+<a href=#7 id=7 data-nosnippet>7</a>    <span class="string">"scrbook.cls is only minimally stubbed and will not be interpreted raw."
+<a href=#8 id=8 data-nosnippet>8</a>  </span>);
+<a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// Real scrbook.cls loads the KOMA dependency chain (scrkbase, tocbasic, …),
+<a href=#11 id=11 data-nosnippet>11</a>  // which transitively loads `iftex`, defining `\ifpdf`/`\ifpdftex`/… for
+<a href=#12 id=12 data-nosnippet>12</a>  // author engine/driver detection. Perl raw-loads the .cls and gets iftex
+<a href=#13 id=13 data-nosnippet>13</a>  // that way; our OmniBus stub intercepts it. Mirror the dependency (same
+<a href=#14 id=14 data-nosnippet>14</a>  // rationale as scrartcl_cls.rs, witness 1802.07175).
+<a href=#15 id=15 data-nosnippet>15</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"iftex"</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// KOMA section-font hooks (`\sectfont` + empty `\size@&lt;unit&gt;` family) — see
+<a href=#17 id=17 data-nosnippet>17</a>  // scrartcl_cls.rs for the full rationale. tocloft expands these in
+<a href=#18 id=18 data-nosnippet>18</a>  // `\cfttoctitlefont` when a KOMA class is detected; as a chapter class
+<a href=#19 id=19 data-nosnippet>19</a>  // scrbook genuinely uses the `\size@chapter` form (tocloft.sty L169). Without
+<a href=#20 id=20 data-nosnippet>20</a>  // them, scrbook + tocloft + `\tableofcontents` hits undefined `\sectfont` /
+<a href=#21 id=21 data-nosnippet>21</a>  // `\size@chapter` where Perl (raw scrbook) is clean.
+<a href=#22 id=22 data-nosnippet>22</a>  </span>def_macro_noop(<span class="string">"\\maybesffamily"</span>)<span class="question-mark">?</span>;
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sectfont"</span>, <span class="string">"\\normalcolor\\maybesffamily\\bfseries"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  def_macro_noop(<span class="string">"\\size@part"</span>)<span class="question-mark">?</span>;
+<a href=#25 id=25 data-nosnippet>25</a>  def_macro_noop(<span class="string">"\\size@partnumber"</span>)<span class="question-mark">?</span>;
+<a href=#26 id=26 data-nosnippet>26</a>  def_macro_noop(<span class="string">"\\size@chapter"</span>)<span class="question-mark">?</span>;
+<a href=#27 id=27 data-nosnippet>27</a>  def_macro_noop(<span class="string">"\\size@section"</span>)<span class="question-mark">?</span>;
+<a href=#28 id=28 data-nosnippet>28</a>  def_macro_noop(<span class="string">"\\size@subsection"</span>)<span class="question-mark">?</span>;
+<a href=#29 id=29 data-nosnippet>29</a>  def_macro_noop(<span class="string">"\\size@subsubsection"</span>)<span class="question-mark">?</span>;
+<a href=#30 id=30 data-nosnippet>30</a>  def_macro_noop(<span class="string">"\\size@paragraph"</span>)<span class="question-mark">?</span>;
+<a href=#31 id=31 data-nosnippet>31</a>  def_macro_noop(<span class="string">"\\size@subparagraph"</span>)<span class="question-mark">?</span>;
+<a href=#32 id=32 data-nosnippet>32</a>  def_macro_noop(<span class="string">"\\setkomafont{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#33 id=33 data-nosnippet>33</a>  def_macro_noop(<span class="string">"\\setcapindent{}"</span>)<span class="question-mark">?</span>;
+<a href=#34 id=34 data-nosnippet>34</a>  def_macro_noop(<span class="string">"\\deffootnote[]{}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#35 id=35 data-nosnippet>35</a>  def_macro_noop(<span class="string">"\\deffootnotemark{}"</span>)<span class="question-mark">?</span>;
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// KOMA page-style marks — see scrartcl_cls.rs for rationale.
+<a href=#37 id=37 data-nosnippet>37</a>  </span>def_macro_noop(<span class="string">"\\headmark"</span>)<span class="question-mark">?</span>;
+<a href=#38 id=38 data-nosnippet>38</a>  def_macro_noop(<span class="string">"\\pagemark"</span>)<span class="question-mark">?</span>;
+<a href=#39 id=39 data-nosnippet>39</a>});
 </code></pre></div></section></main></body></html>

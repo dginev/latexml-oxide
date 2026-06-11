@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/xy_sty.rs`."><title>xy_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>xy_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/xy_sty.rs`."><title>xy_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>xy_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -14,7 +14,7 @@
 <a href=#14 id=14 data-nosnippet>14</a>  //   DefMacro('\xystycatcode', sub { Explode(LookupCatcode('@')); });
 <a href=#15 id=15 data-nosnippet>15</a>  // Dynamically expands to the digit chars of `@`'s current catcode.
 <a href=#16 id=16 data-nosnippet>16</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\xystycatcode"</span>, sub[_args] {
-<a href=#17 id=17 data-nosnippet>17</a>    <span class="kw">let </span>cc = state::lookup_catcode(<span class="string">'@'</span>)
+<a href=#17 id=17 data-nosnippet>17</a>    <span class="kw">let </span>cc = lookup_catcode(<span class="string">'@'</span>)
 <a href=#18 id=18 data-nosnippet>18</a>      .map(|cc| cc <span class="kw">as </span>u8).unwrap_or(<span class="number">12</span>);
 <a href=#19 id=19 data-nosnippet>19</a>    <span class="macro">Tokens!</span>(<span class="macro">Explode!</span>(<span class="macro">s!</span>(<span class="string">"{}"</span>, cc)))
 <a href=#20 id=20 data-nosnippet>20</a>  });
@@ -31,11 +31,11 @@
 <a href=#31 id=31 data-nosnippet>31</a>  // ends up restoring `@` to LETTER — but the .xyc compile body relies
 <a href=#32 id=32 data-nosnippet>32</a>  // on `\xycatcodes` having already set `@` = LETTER, and the local
 <a href=#33 id=33 data-nosnippet>33</a>  // group-pop expectation breaks.
-<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="kw">let </span>saved_at_cc_before_xy = state::lookup_catcode(<span class="string">'@'</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  state::assign_catcode(<span class="string">'@'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="kw">let </span>saved_at_cc_before_xy = lookup_catcode(<span class="string">'@'</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  assign_catcode(<span class="string">'@'</span>, Catcode::OTHER, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">InputDefinitions!</span>(<span class="string">"xy"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"tex"</span>)), at_letter =&gt; <span class="bool-val">false</span>);
 <a href=#37 id=37 data-nosnippet>37</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(cc) = saved_at_cc_before_xy {
-<a href=#38 id=38 data-nosnippet>38</a>    state::assign_catcode(<span class="string">'@'</span>, cc, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#38 id=38 data-nosnippet>38</a>    assign_catcode(<span class="string">'@'</span>, cc, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#39 id=39 data-nosnippet>39</a>  }
 <a href=#40 id=40 data-nosnippet>40</a>
 <a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">//======================================================================
@@ -78,14 +78,14 @@
 <a href=#78 id=78 data-nosnippet>78</a>        <span class="macro">s!</span>(<span class="string">"The xy extension/feature {} may not be supported"</span>, option_s));
 <a href=#79 id=79 data-nosnippet>79</a>    }
 <a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">let </span>cache_key = <span class="macro">s!</span>(<span class="string">"loaded_xyoption_{}"</span>, option_s);
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">if </span>state::lookup_bool(<span class="kw-2">&amp;</span>cache_key) {
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span>cache_key) {
 <a href=#82 id=82 data-nosnippet>82</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
 <a href=#83 id=83 data-nosnippet>83</a>    }
-<a href=#84 id=84 data-nosnippet>84</a>    state::assign_value(<span class="kw-2">&amp;</span>cache_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#84 id=84 data-nosnippet>84</a>    assign_value(<span class="kw-2">&amp;</span>cache_key, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#85 id=85 data-nosnippet>85</a>    <span class="comment">// Special case: "latexml" driver — load our Rust xylatexml overlay directly
 <a href=#86 id=86 data-nosnippet>86</a>    // since the file xylatexml.tex doesn't exist on disk (it's compiled into the binary).
 <a href=#87 id=87 data-nosnippet>87</a>    </span><span class="kw">if </span>option_s == <span class="string">"latexml" </span>{
-<a href=#88 id=88 data-nosnippet>88</a>      <span class="kw">crate</span>::package::xylatexml_tex::load_definitions()<span class="question-mark">?</span>;
+<a href=#88 id=88 data-nosnippet>88</a>      xylatexml_tex::load_definitions()<span class="question-mark">?</span>;
 <a href=#89 id=89 data-nosnippet>89</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
 <a href=#90 id=90 data-nosnippet>90</a>    }
 <a href=#91 id=91 data-nosnippet>91</a>    <span class="comment">// Special case: "all" — xyall.tex `\xyrequire`s every xy feature
@@ -198,7 +198,7 @@
 <a href=#198 id=198 data-nosnippet>198</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@xy@capturerange"</span>, {
 <a href=#199 id=199 data-nosnippet>199</a>    <span class="kw">let </span><span class="kw-2">mut </span>dims = String::new();
 <a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">for </span>reg <span class="kw">in </span>[<span class="string">"\\X@min"</span>, <span class="string">"\\Y@min"</span>, <span class="string">"\\X@max"</span>, <span class="string">"\\Y@max"</span>] {
-<a href=#201 id=201 data-nosnippet>201</a>      <span class="kw">match </span>state::lookup_register(reg, Vec::new()) { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(val)) =&gt; {
+<a href=#201 id=201 data-nosnippet>201</a>      <span class="kw">match </span>lookup_register(reg, Vec::new()) { <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(val)) =&gt; {
 <a href=#202 id=202 data-nosnippet>202</a>        <span class="kw">let </span>sp = <span class="kw">match </span>val {
 <a href=#203 id=203 data-nosnippet>203</a>          RegisterValue::Dimension(d) =&gt; d.value_of(),
 <a href=#204 id=204 data-nosnippet>204</a>          RegisterValue::Number(n) =&gt; n.value_of(),
@@ -211,7 +211,7 @@
 <a href=#211 id=211 data-nosnippet>211</a>        dims.push(<span class="string">'0'</span>);
 <a href=#212 id=212 data-nosnippet>212</a>      }}
 <a href=#213 id=213 data-nosnippet>213</a>    }
-<a href=#214 id=214 data-nosnippet>214</a>    state::assign_value(<span class="string">"saved_xy_range"</span>, Stored::String(arena::pin(<span class="kw-2">&amp;</span>dims)), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#214 id=214 data-nosnippet>214</a>    assign_value(<span class="string">"saved_xy_range"</span>, Stored::String(pin(<span class="kw-2">&amp;</span>dims)), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#215 id=215 data-nosnippet>215</a>  });
 <a href=#216 id=216 data-nosnippet>216</a>
 <a href=#217 id=217 data-nosnippet>217</a>  <span class="comment">// Helper: read saved_xy_range as pixel values
@@ -226,7 +226,7 @@
 <a href=#226 id=226 data-nosnippet>226</a>    sub[document, args, props] {
 <a href=#227 id=227 data-nosnippet>227</a>      <span class="comment">// All values pre-computed at digest time via properties callback
 <a href=#228 id=228 data-nosnippet>228</a>      </span><span class="kw">let </span>get_s = |k: <span class="kw-2">&amp;</span>str| -&gt; String {
-<a href=#229 id=229 data-nosnippet>229</a>        <span class="kw">match </span>props.get(k) { <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; arena::to_string(<span class="kw-2">*</span>s), <span class="kw">_ </span>=&gt; String::new() }
+<a href=#229 id=229 data-nosnippet>229</a>        <span class="kw">match </span>props.get(k) { <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; to_string(<span class="kw-2">*</span>s), <span class="kw">_ </span>=&gt; String::new() }
 <a href=#230 id=230 data-nosnippet>230</a>      };
 <a href=#231 id=231 data-nosnippet>231</a>      <span class="kw">let </span>pxwidth = get_s(<span class="string">"pxwidth"</span>);
 <a href=#232 id=232 data-nosnippet>232</a>      <span class="kw">let </span>pxheight = get_s(<span class="string">"pxheight"</span>);
@@ -254,8 +254,8 @@
 <a href=#254 id=254 data-nosnippet>254</a>    },
 <a href=#255 id=255 data-nosnippet>255</a>    <span class="comment">// Perl: properties =&gt; sub { ... } — capture AND compute all values at digest time
 <a href=#256 id=256 data-nosnippet>256</a>    </span>after_digest =&gt; sub[whatsit] {
-<a href=#257 id=257 data-nosnippet>257</a>      <span class="kw">let </span>range_str = state::lookup_string(<span class="string">"saved_xy_range"</span>);
-<a href=#258 id=258 data-nosnippet>258</a>      <span class="kw">let </span>dpi_val = state::lookup_int(<span class="string">"DPI"</span>);
+<a href=#257 id=257 data-nosnippet>257</a>      <span class="kw">let </span>range_str = lookup_string(<span class="string">"saved_xy_range"</span>);
+<a href=#258 id=258 data-nosnippet>258</a>      <span class="kw">let </span>dpi_val = lookup_int(<span class="string">"DPI"</span>);
 <a href=#259 id=259 data-nosnippet>259</a>      <span class="kw">let </span>dpi = <span class="kw">if </span>dpi_val &gt; <span class="number">0 </span>{ dpi_val <span class="kw">as </span>f64 } <span class="kw">else </span>{ <span class="number">100.0 </span>};
 <a href=#260 id=260 data-nosnippet>260</a>      <span class="kw">let </span>dims: Vec&lt;f64&gt; = range_str.split(<span class="string">','</span>)
 <a href=#261 id=261 data-nosnippet>261</a>        .filter_map(|s| s.trim().parse::&lt;i64&gt;().ok())
@@ -294,11 +294,11 @@
 <a href=#294 id=294 data-nosnippet>294</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@xy@svgnested Digested"</span>,
 <a href=#295 id=295 data-nosnippet>295</a>    sub[document, args, props] {
 <a href=#296 id=296 data-nosnippet>296</a>      <span class="kw">let </span>transform = <span class="kw">match </span>props.get(<span class="string">"transform"</span>) {
-<a href=#297 id=297 data-nosnippet>297</a>        <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; arena::to_string(<span class="kw-2">*</span>s),
+<a href=#297 id=297 data-nosnippet>297</a>        <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; to_string(<span class="kw-2">*</span>s),
 <a href=#298 id=298 data-nosnippet>298</a>        <span class="kw">_ </span>=&gt; String::from(<span class="string">"matrix(1 0 0 1 0 0)"</span>),
 <a href=#299 id=299 data-nosnippet>299</a>      };
 <a href=#300 id=300 data-nosnippet>300</a>      <span class="kw">let </span>g_attrs = <span class="macro">string_map!</span>(<span class="string">"transform" </span>=&gt; transform);
-<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if </span><span class="kw">crate</span>::package::xylatexml_tex::svg_insertion_hopeless(document, <span class="string">"svg:g"</span>) {
+<a href=#301 id=301 data-nosnippet>301</a>      <span class="kw">if </span>xylatexml_tex::svg_insertion_hopeless(document, <span class="string">"svg:g"</span>) {
 <a href=#302 id=302 data-nosnippet>302</a>        <span class="comment">// Orphaned nested xy picture (outer \xy wrapper aborted) — skip,
 <a href=#303 id=303 data-nosnippet>303</a>        // see xylatexml_tex::svg_empty_element for witness/rationale.
 <a href=#304 id=304 data-nosnippet>304</a>      </span>} <span class="kw">else </span>{
@@ -310,8 +310,8 @@
 <a href=#310 id=310 data-nosnippet>310</a>      }
 <a href=#311 id=311 data-nosnippet>311</a>    },
 <a href=#312 id=312 data-nosnippet>312</a>    after_digest =&gt; sub[whatsit] {
-<a href=#313 id=313 data-nosnippet>313</a>      <span class="kw">let </span>range_str = state::lookup_string(<span class="string">"saved_xy_range"</span>);
-<a href=#314 id=314 data-nosnippet>314</a>      <span class="kw">let </span>dpi_val = state::lookup_int(<span class="string">"DPI"</span>);
+<a href=#313 id=313 data-nosnippet>313</a>      <span class="kw">let </span>range_str = lookup_string(<span class="string">"saved_xy_range"</span>);
+<a href=#314 id=314 data-nosnippet>314</a>      <span class="kw">let </span>dpi_val = lookup_int(<span class="string">"DPI"</span>);
 <a href=#315 id=315 data-nosnippet>315</a>      <span class="kw">let </span>dpi = <span class="kw">if </span>dpi_val &gt; <span class="number">0 </span>{ dpi_val <span class="kw">as </span>f64 } <span class="kw">else </span>{ <span class="number">100.0 </span>};
 <a href=#316 id=316 data-nosnippet>316</a>      <span class="kw">let </span>dims: Vec&lt;f64&gt; = range_str.split(<span class="string">','</span>)
 <a href=#317 id=317 data-nosnippet>317</a>        .filter_map(|s| s.trim().parse::&lt;i64&gt;().ok())
@@ -325,7 +325,7 @@
 <a href=#325 id=325 data-nosnippet>325</a>      );
 <a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span>h = y1 - y0;
 <a href=#327 id=327 data-nosnippet>327</a>      <span class="kw">let </span>x_px = <span class="kw">if </span>x0 &gt; <span class="number">0.0 </span>{ x0 } <span class="kw">else </span>{ <span class="number">0.0 </span>};
-<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">let </span>in_math = state::lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
+<a href=#328 id=328 data-nosnippet>328</a>      <span class="kw">let </span>in_math = lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
 <a href=#329 id=329 data-nosnippet>329</a>      <span class="kw">let </span>y_px = <span class="kw">if </span>in_math { -(h / <span class="number">2.0</span>) } <span class="kw">else </span>{ <span class="number">0.0 </span>};
 <a href=#330 id=330 data-nosnippet>330</a>      whatsit.set_property(<span class="string">"transform"</span>, Stored::from(
 <a href=#331 id=331 data-nosnippet>331</a>        <span class="macro">s!</span>(<span class="string">"matrix(1 0 0 1 {} {})"</span>, x_px, y_px)));
@@ -394,8 +394,8 @@
 <a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// Catch-all: DeclareOption(undef, ...)
 <a href=#395 id=395 data-nosnippet>395</a>  // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
 <a href=#396 id=396 data-nosnippet>396</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>current_option = gullet::do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
-<a href=#398 id=398 data-nosnippet>398</a>    gullet::unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>current_option = do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\CurrentOption"</span>))<span class="question-mark">?</span>.to_string();
+<a href=#398 id=398 data-nosnippet>398</a>    unread(<span class="macro">Tokenize!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\xyoption{{{}}}"</span>, current_option)));
 <a href=#399 id=399 data-nosnippet>399</a>  });
 <a href=#400 id=400 data-nosnippet>400</a>
 <a href=#401 id=401 data-nosnippet>401</a>  <span class="comment">//======================================================================

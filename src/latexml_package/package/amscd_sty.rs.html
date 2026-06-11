@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/amscd_sty.rs`."><title>amscd_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>amscd_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/amscd_sty.rs`."><title>amscd_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>amscd_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
 <a href=#4 id=4 data-nosnippet>4</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsgen"</span>);
@@ -28,9 +28,9 @@
 <a href=#28 id=28 data-nosnippet>28</a>  //     (T_CS('@' . ToString($token))); });
 <a href=#29 id=29 data-nosnippet>29</a>  // Implemented as a primitive that reads a token and unreads the appropriate CS.
 <a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\cd@"</span>), <span class="prelude-val">None</span>, {
-<a href=#31 id=31 data-nosnippet>31</a>    <span class="kw">let </span>token = gullet::read_token()<span class="question-mark">?</span>.unwrap();
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="kw">let </span>token = read_token()<span class="question-mark">?</span>.unwrap();
 <a href=#32 id=32 data-nosnippet>32</a>    <span class="kw">let </span>cs_name = token.with_str(|s| <span class="macro">format!</span>(<span class="string">"@{s}"</span>));
-<a href=#33 id=33 data-nosnippet>33</a>    gullet::unread(Tokens::from(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;*</span>cs_name)));
+<a href=#33 id=33 data-nosnippet>33</a>    unread(Tokens::from(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;*</span>cs_name)));
 <a href=#34 id=34 data-nosnippet>34</a>  });
 <a href=#35 id=35 data-nosnippet>35</a>
 <a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// Horizontal connectors
@@ -97,8 +97,8 @@
 <a href=#97 id=97 data-nosnippet>97</a>      // Probe scriptpos in place — only resolve to an owned String
 <a href=#98 id=98 data-nosnippet>98</a>      // when the value is non-empty (most amscd cells have no override).
 <a href=#99 id=99 data-nosnippet>99</a>      </span><span class="kw">let </span>scriptpos_attr = props.get(<span class="string">"scriptpos"</span>).and_then(|v| <span class="kw">match </span>v {
-<a href=#100 id=100 data-nosnippet>100</a>        Stored::String(s) <span class="kw">if </span>!arena::with(<span class="kw-2">*</span>s, |p| p.is_empty()) =&gt; {
-<a href=#101 id=101 data-nosnippet>101</a>          <span class="prelude-val">Some</span>((<span class="string">"scriptpos"</span>.to_string(), arena::to_string(<span class="kw-2">*</span>s)))
+<a href=#100 id=100 data-nosnippet>100</a>        Stored::String(s) <span class="kw">if </span>!with(<span class="kw-2">*</span>s, |p| p.is_empty()) =&gt; {
+<a href=#101 id=101 data-nosnippet>101</a>          <span class="prelude-val">Some</span>((<span class="string">"scriptpos"</span>.to_string(), to_string(<span class="kw-2">*</span>s)))
 <a href=#102 id=102 data-nosnippet>102</a>        },
 <a href=#103 id=103 data-nosnippet>103</a>        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 <a href=#104 id=104 data-nosnippet>104</a>      });
@@ -182,100 +182,98 @@
 <a href=#182 id=182 data-nosnippet>182</a>      <span class="comment">// Make the left &amp; right parts width=0, so they don't affect centering
 <a href=#183 id=183 data-nosnippet>183</a>      </span>document.open_element(<span class="string">"ltx:XMWrap"</span>,
 <a href=#184 id=184 data-nosnippet>184</a>        <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>.to_string())), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#185 id=185 data-nosnippet>185</a>      <span class="kw">if </span>!left_empty {
-<a href=#186 id=186 data-nosnippet>186</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(left_val) = left {
+<a href=#185 id=185 data-nosnippet>185</a>      <span class="kw">if </span>!left_empty
+<a href=#186 id=186 data-nosnippet>186</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(left_val) = left {
 <a href=#187 id=187 data-nosnippet>187</a>          document.insert_element(<span class="string">"ltx:XMArg"</span>, <span class="macro">vec!</span>[left_val],
 <a href=#188 id=188 data-nosnippet>188</a>            <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"width" </span>=&gt; <span class="string">"0.0pt"</span>.to_string())))<span class="question-mark">?</span>;
 <a href=#189 id=189 data-nosnippet>189</a>        }
-<a href=#190 id=190 data-nosnippet>190</a>      }
-<a href=#191 id=191 data-nosnippet>191</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(op_val) = op {
-<a href=#192 id=192 data-nosnippet>192</a>        document.insert_element(<span class="string">"ltx:XMArg"</span>, <span class="macro">vec!</span>[op_val], <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#193 id=193 data-nosnippet>193</a>      }
-<a href=#194 id=194 data-nosnippet>194</a>      <span class="kw">if </span>!right_empty {
-<a href=#195 id=195 data-nosnippet>195</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(right_val) = right {
-<a href=#196 id=196 data-nosnippet>196</a>          document.insert_element(<span class="string">"ltx:XMArg"</span>, <span class="macro">vec!</span>[right_val],
-<a href=#197 id=197 data-nosnippet>197</a>            <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"width" </span>=&gt; <span class="string">"0.0pt"</span>.to_string())))<span class="question-mark">?</span>;
-<a href=#198 id=198 data-nosnippet>198</a>        }
-<a href=#199 id=199 data-nosnippet>199</a>      }
-<a href=#200 id=200 data-nosnippet>200</a>      document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
-<a href=#201 id=201 data-nosnippet>201</a>    },
-<a href=#202 id=202 data-nosnippet>202</a>    reversion =&gt; <span class="string">"@#1{#3}#1{#4}#1"
-<a href=#203 id=203 data-nosnippet>203</a>  </span>);
-<a href=#204 id=204 data-nosnippet>204</a>
-<a href=#205 id=205 data-nosnippet>205</a>  <span class="comment">// These, in case used...
-<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\leftarrowfill@ {}"</span>, <span class="string">"\\lx@amscd@leftarrow"</span>);
-<a href=#207 id=207 data-nosnippet>207</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\rightarrowfill@ {}"</span>, <span class="string">"\\lx@amscd@rightarrow"</span>);
-<a href=#208 id=208 data-nosnippet>208</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\leftrightarrowfill@ {}"</span>, <span class="string">"\\lx@amscd@leftrightarrow"</span>);
-<a href=#209 id=209 data-nosnippet>209</a>
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="comment">// These are stretchy, widened version; should be \minCDarrowwidth or \minaw@ wide
-<a href=#211 id=211 data-nosnippet>211</a>  // Perl: DefPrimitive('\lx@amscd@leftarrow', sub {
-<a href=#212 id=212 data-nosnippet>212</a>  //     Box("\x{2190}", undef, undef, T_CS('\leftarrow'),
-<a href=#213 id=213 data-nosnippet>213</a>  //       role =&gt; 'ARROW', stretchy =&gt; 'true', meaning =&gt; 'leftarrow',
-<a href=#214 id=214 data-nosnippet>214</a>  //       class=&gt;'ltx_horizontally_stretchy',  width =&gt; Dimension('30pt')); });
-<a href=#215 id=215 data-nosnippet>215</a>  </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@leftarrow"</span>), <span class="prelude-val">None</span>, {
-<a href=#216 id=216 data-nosnippet>216</a>    Tbox::new(
-<a href=#217 id=217 data-nosnippet>217</a>      arena::pin_static(<span class="string">"\u{2190}"</span>),
-<a href=#218 id=218 data-nosnippet>218</a>      <span class="prelude-val">None</span>,
-<a href=#219 id=219 data-nosnippet>219</a>      <span class="prelude-val">None</span>,
-<a href=#220 id=220 data-nosnippet>220</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\leftarrow"</span>)),
-<a href=#221 id=221 data-nosnippet>221</a>      <span class="macro">stored_map!</span>(
-<a href=#222 id=222 data-nosnippet>222</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
-<a href=#223 id=223 data-nosnippet>223</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
-<a href=#224 id=224 data-nosnippet>224</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"leftarrow"</span>,
-<a href=#225 id=225 data-nosnippet>225</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
-<a href=#226 id=226 data-nosnippet>226</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
-<a href=#227 id=227 data-nosnippet>227</a>      ),
-<a href=#228 id=228 data-nosnippet>228</a>    )
-<a href=#229 id=229 data-nosnippet>229</a>  });
-<a href=#230 id=230 data-nosnippet>230</a>
-<a href=#231 id=231 data-nosnippet>231</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@rightarrow"</span>), <span class="prelude-val">None</span>, {
-<a href=#232 id=232 data-nosnippet>232</a>    Tbox::new(
-<a href=#233 id=233 data-nosnippet>233</a>      arena::pin_static(<span class="string">"\u{2192}"</span>),
-<a href=#234 id=234 data-nosnippet>234</a>      <span class="prelude-val">None</span>,
-<a href=#235 id=235 data-nosnippet>235</a>      <span class="prelude-val">None</span>,
-<a href=#236 id=236 data-nosnippet>236</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\rightarrow"</span>)),
-<a href=#237 id=237 data-nosnippet>237</a>      <span class="macro">stored_map!</span>(
-<a href=#238 id=238 data-nosnippet>238</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
-<a href=#239 id=239 data-nosnippet>239</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
-<a href=#240 id=240 data-nosnippet>240</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"rightarrow"</span>,
-<a href=#241 id=241 data-nosnippet>241</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
-<a href=#242 id=242 data-nosnippet>242</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
-<a href=#243 id=243 data-nosnippet>243</a>      ),
-<a href=#244 id=244 data-nosnippet>244</a>    )
-<a href=#245 id=245 data-nosnippet>245</a>  });
-<a href=#246 id=246 data-nosnippet>246</a>
-<a href=#247 id=247 data-nosnippet>247</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@leftrightarrow"</span>), <span class="prelude-val">None</span>, {
-<a href=#248 id=248 data-nosnippet>248</a>    Tbox::new(
-<a href=#249 id=249 data-nosnippet>249</a>      arena::pin_static(<span class="string">"\u{2194}"</span>),
-<a href=#250 id=250 data-nosnippet>250</a>      <span class="prelude-val">None</span>,
-<a href=#251 id=251 data-nosnippet>251</a>      <span class="prelude-val">None</span>,
-<a href=#252 id=252 data-nosnippet>252</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\leftrightarrow"</span>)),
-<a href=#253 id=253 data-nosnippet>253</a>      <span class="macro">stored_map!</span>(
-<a href=#254 id=254 data-nosnippet>254</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
-<a href=#255 id=255 data-nosnippet>255</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
-<a href=#256 id=256 data-nosnippet>256</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"leftrightarrow"</span>,
-<a href=#257 id=257 data-nosnippet>257</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
-<a href=#258 id=258 data-nosnippet>258</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
-<a href=#259 id=259 data-nosnippet>259</a>      ),
-<a href=#260 id=260 data-nosnippet>260</a>    )
-<a href=#261 id=261 data-nosnippet>261</a>  });
-<a href=#262 id=262 data-nosnippet>262</a>
-<a href=#263 id=263 data-nosnippet>263</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@equals"</span>), <span class="prelude-val">None</span>, {
-<a href=#264 id=264 data-nosnippet>264</a>    Tbox::new(
-<a href=#265 id=265 data-nosnippet>265</a>      arena::pin_static(<span class="string">"="</span>),
-<a href=#266 id=266 data-nosnippet>266</a>      <span class="prelude-val">None</span>,
-<a href=#267 id=267 data-nosnippet>267</a>      <span class="prelude-val">None</span>,
-<a href=#268 id=268 data-nosnippet>268</a>      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"="</span>)),
-<a href=#269 id=269 data-nosnippet>269</a>      <span class="macro">stored_map!</span>(
-<a href=#270 id=270 data-nosnippet>270</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
-<a href=#271 id=271 data-nosnippet>271</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
-<a href=#272 id=272 data-nosnippet>272</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"equals"</span>,
-<a href=#273 id=273 data-nosnippet>273</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
-<a href=#274 id=274 data-nosnippet>274</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
-<a href=#275 id=275 data-nosnippet>275</a>      ),
-<a href=#276 id=276 data-nosnippet>276</a>    )
-<a href=#277 id=277 data-nosnippet>277</a>  });
-<a href=#278 id=278 data-nosnippet>278</a>
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\minCDarrowwidth" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"2.5pc"</span>));
-<a href=#280 id=280 data-nosnippet>280</a>});
+<a href=#190 id=190 data-nosnippet>190</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(op_val) = op {
+<a href=#191 id=191 data-nosnippet>191</a>        document.insert_element(<span class="string">"ltx:XMArg"</span>, <span class="macro">vec!</span>[op_val], <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#192 id=192 data-nosnippet>192</a>      }
+<a href=#193 id=193 data-nosnippet>193</a>      <span class="kw">if </span>!right_empty
+<a href=#194 id=194 data-nosnippet>194</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(right_val) = right {
+<a href=#195 id=195 data-nosnippet>195</a>          document.insert_element(<span class="string">"ltx:XMArg"</span>, <span class="macro">vec!</span>[right_val],
+<a href=#196 id=196 data-nosnippet>196</a>            <span class="prelude-val">Some</span>(<span class="macro">map!</span>(<span class="string">"width" </span>=&gt; <span class="string">"0.0pt"</span>.to_string())))<span class="question-mark">?</span>;
+<a href=#197 id=197 data-nosnippet>197</a>        }
+<a href=#198 id=198 data-nosnippet>198</a>      document.close_element(<span class="string">"ltx:XMWrap"</span>)<span class="question-mark">?</span>;
+<a href=#199 id=199 data-nosnippet>199</a>    },
+<a href=#200 id=200 data-nosnippet>200</a>    reversion =&gt; <span class="string">"@#1{#3}#1{#4}#1"
+<a href=#201 id=201 data-nosnippet>201</a>  </span>);
+<a href=#202 id=202 data-nosnippet>202</a>
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="comment">// These, in case used...
+<a href=#204 id=204 data-nosnippet>204</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\leftarrowfill@ {}"</span>, <span class="string">"\\lx@amscd@leftarrow"</span>);
+<a href=#205 id=205 data-nosnippet>205</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\rightarrowfill@ {}"</span>, <span class="string">"\\lx@amscd@rightarrow"</span>);
+<a href=#206 id=206 data-nosnippet>206</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\leftrightarrowfill@ {}"</span>, <span class="string">"\\lx@amscd@leftrightarrow"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>
+<a href=#208 id=208 data-nosnippet>208</a>  <span class="comment">// These are stretchy, widened version; should be \minCDarrowwidth or \minaw@ wide
+<a href=#209 id=209 data-nosnippet>209</a>  // Perl: DefPrimitive('\lx@amscd@leftarrow', sub {
+<a href=#210 id=210 data-nosnippet>210</a>  //     Box("\x{2190}", undef, undef, T_CS('\leftarrow'),
+<a href=#211 id=211 data-nosnippet>211</a>  //       role =&gt; 'ARROW', stretchy =&gt; 'true', meaning =&gt; 'leftarrow',
+<a href=#212 id=212 data-nosnippet>212</a>  //       class=&gt;'ltx_horizontally_stretchy',  width =&gt; Dimension('30pt')); });
+<a href=#213 id=213 data-nosnippet>213</a>  </span><span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@leftarrow"</span>), <span class="prelude-val">None</span>, {
+<a href=#214 id=214 data-nosnippet>214</a>    Tbox::new(
+<a href=#215 id=215 data-nosnippet>215</a>      pin_static(<span class="string">"\u{2190}"</span>),
+<a href=#216 id=216 data-nosnippet>216</a>      <span class="prelude-val">None</span>,
+<a href=#217 id=217 data-nosnippet>217</a>      <span class="prelude-val">None</span>,
+<a href=#218 id=218 data-nosnippet>218</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\leftarrow"</span>)),
+<a href=#219 id=219 data-nosnippet>219</a>      <span class="macro">stored_map!</span>(
+<a href=#220 id=220 data-nosnippet>220</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
+<a href=#221 id=221 data-nosnippet>221</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
+<a href=#222 id=222 data-nosnippet>222</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"leftarrow"</span>,
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
+<a href=#224 id=224 data-nosnippet>224</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
+<a href=#225 id=225 data-nosnippet>225</a>      ),
+<a href=#226 id=226 data-nosnippet>226</a>    )
+<a href=#227 id=227 data-nosnippet>227</a>  });
+<a href=#228 id=228 data-nosnippet>228</a>
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@rightarrow"</span>), <span class="prelude-val">None</span>, {
+<a href=#230 id=230 data-nosnippet>230</a>    Tbox::new(
+<a href=#231 id=231 data-nosnippet>231</a>      pin_static(<span class="string">"\u{2192}"</span>),
+<a href=#232 id=232 data-nosnippet>232</a>      <span class="prelude-val">None</span>,
+<a href=#233 id=233 data-nosnippet>233</a>      <span class="prelude-val">None</span>,
+<a href=#234 id=234 data-nosnippet>234</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\rightarrow"</span>)),
+<a href=#235 id=235 data-nosnippet>235</a>      <span class="macro">stored_map!</span>(
+<a href=#236 id=236 data-nosnippet>236</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
+<a href=#237 id=237 data-nosnippet>237</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
+<a href=#238 id=238 data-nosnippet>238</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"rightarrow"</span>,
+<a href=#239 id=239 data-nosnippet>239</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
+<a href=#240 id=240 data-nosnippet>240</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
+<a href=#241 id=241 data-nosnippet>241</a>      ),
+<a href=#242 id=242 data-nosnippet>242</a>    )
+<a href=#243 id=243 data-nosnippet>243</a>  });
+<a href=#244 id=244 data-nosnippet>244</a>
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@leftrightarrow"</span>), <span class="prelude-val">None</span>, {
+<a href=#246 id=246 data-nosnippet>246</a>    Tbox::new(
+<a href=#247 id=247 data-nosnippet>247</a>      pin_static(<span class="string">"\u{2194}"</span>),
+<a href=#248 id=248 data-nosnippet>248</a>      <span class="prelude-val">None</span>,
+<a href=#249 id=249 data-nosnippet>249</a>      <span class="prelude-val">None</span>,
+<a href=#250 id=250 data-nosnippet>250</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\leftrightarrow"</span>)),
+<a href=#251 id=251 data-nosnippet>251</a>      <span class="macro">stored_map!</span>(
+<a href=#252 id=252 data-nosnippet>252</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
+<a href=#253 id=253 data-nosnippet>253</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
+<a href=#254 id=254 data-nosnippet>254</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"leftrightarrow"</span>,
+<a href=#255 id=255 data-nosnippet>255</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
+<a href=#256 id=256 data-nosnippet>256</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
+<a href=#257 id=257 data-nosnippet>257</a>      ),
+<a href=#258 id=258 data-nosnippet>258</a>    )
+<a href=#259 id=259 data-nosnippet>259</a>  });
+<a href=#260 id=260 data-nosnippet>260</a>
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@amscd@equals"</span>), <span class="prelude-val">None</span>, {
+<a href=#262 id=262 data-nosnippet>262</a>    Tbox::new(
+<a href=#263 id=263 data-nosnippet>263</a>      pin_static(<span class="string">"="</span>),
+<a href=#264 id=264 data-nosnippet>264</a>      <span class="prelude-val">None</span>,
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="prelude-val">None</span>,
+<a href=#266 id=266 data-nosnippet>266</a>      <span class="macro">Tokens!</span>(<span class="macro">T_OTHER!</span>(<span class="string">"="</span>)),
+<a href=#267 id=267 data-nosnippet>267</a>      <span class="macro">stored_map!</span>(
+<a href=#268 id=268 data-nosnippet>268</a>        <span class="string">"role" </span>=&gt; <span class="string">"ARROW"</span>,
+<a href=#269 id=269 data-nosnippet>269</a>        <span class="string">"stretchy" </span>=&gt; <span class="string">"true"</span>,
+<a href=#270 id=270 data-nosnippet>270</a>        <span class="string">"meaning" </span>=&gt; <span class="string">"equals"</span>,
+<a href=#271 id=271 data-nosnippet>271</a>        <span class="string">"class" </span>=&gt; <span class="string">"ltx_horizontally_stretchy"</span>,
+<a href=#272 id=272 data-nosnippet>272</a>        <span class="string">"width" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"30pt"</span>)
+<a href=#273 id=273 data-nosnippet>273</a>      ),
+<a href=#274 id=274 data-nosnippet>274</a>    )
+<a href=#275 id=275 data-nosnippet>275</a>  });
+<a href=#276 id=276 data-nosnippet>276</a>
+<a href=#277 id=277 data-nosnippet>277</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\minCDarrowwidth" </span>=&gt; <span class="macro">Dimension!</span>(<span class="string">"2.5pc"</span>));
+<a href=#278 id=278 data-nosnippet>278</a>});
 </code></pre></div></section></main></body></html>

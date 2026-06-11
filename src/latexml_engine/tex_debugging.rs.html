@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_debugging.rs`."><title>tex_debugging.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_debugging.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Debugging
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_debugging.rs`."><title>tex_debugging.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_debugging.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Debugging
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">static </span>EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy&lt;Regex&gt; =
@@ -51,7 +51,7 @@
 <a href=#51 id=51 data-nosnippet>51</a>  // in the spirit of the B Book, "show_token_list" routine, in 292.
 <a href=#52 id=52 data-nosnippet>52</a>  // [This could be a $tokens-&gt;unpackParameters, but for the curious space treatment]
 <a href=#53 id=53 data-nosnippet>53</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\message{}"</span>, sub [(message)] {
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="kw">if </span>state::current_verbosity() &gt; -<span class="number">1 </span>{
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="kw">if </span>current_verbosity() &gt; -<span class="number">1 </span>{
 <a href=#55 id=55 data-nosnippet>55</a>      <span class="macro">Note!</span>(writable_tokens(<span class="kw-2">&amp;</span>do_expand(message)<span class="question-mark">?</span>));
 <a href=#56 id=56 data-nosnippet>56</a>    }
 <a href=#57 id=57 data-nosnippet>57</a>  });
@@ -86,14 +86,14 @@
 <a href=#86 id=86 data-nosnippet>86</a>        <span class="kw">let </span>key = <span class="macro">s!</span>(<span class="string">"fontinfo_{}"</span>, cs_str);
 <a href=#87 id=87 data-nosnippet>87</a>        <span class="comment">// with_value avoids the Stored envelope clone on the Font arm;
 <a href=#88 id=88 data-nosnippet>88</a>        // we only need the font's name string out.
-<a href=#89 id=89 data-nosnippet>89</a>        </span><span class="kw">let </span>name_opt = state::with_value(<span class="kw-2">&amp;</span>key, |v| <span class="kw">match </span>v {
+<a href=#89 id=89 data-nosnippet>89</a>        </span><span class="kw">let </span>name_opt = with_value(<span class="kw-2">&amp;</span>key, |v| <span class="kw">match </span>v {
 <a href=#90 id=90 data-nosnippet>90</a>          <span class="prelude-val">Some</span>(Stored::Font(f)) =&gt; f.name.as_ref().map(|n| n.to_string()),
 <a href=#91 id=91 data-nosnippet>91</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
 <a href=#92 id=92 data-nosnippet>92</a>        });
 <a href=#93 id=93 data-nosnippet>93</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(name) = name_opt {
 <a href=#94 id=94 data-nosnippet>94</a>          <span class="kw">let </span>at_key = <span class="macro">s!</span>(<span class="string">"fontinfo_at_{}"</span>, cs_str);
-<a href=#95 id=95 data-nosnippet>95</a>          <span class="kw">let </span>at_info = state::with_value(<span class="kw-2">&amp;</span>at_key, |v| <span class="kw">match </span>v {
-<a href=#96 id=96 data-nosnippet>96</a>            <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; arena::with(<span class="kw-2">*</span>s, |at| <span class="macro">format!</span>(<span class="string">" at {at}"</span>)),
+<a href=#95 id=95 data-nosnippet>95</a>          <span class="kw">let </span>at_info = with_value(<span class="kw-2">&amp;</span>at_key, |v| <span class="kw">match </span>v {
+<a href=#96 id=96 data-nosnippet>96</a>            <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; with(<span class="kw-2">*</span>s, |at| <span class="macro">format!</span>(<span class="string">" at {at}"</span>)),
 <a href=#97 id=97 data-nosnippet>97</a>            <span class="kw">_ </span>=&gt; String::new(),
 <a href=#98 id=98 data-nosnippet>98</a>          });
 <a href=#99 id=99 data-nosnippet>99</a>          meaning = <span class="macro">format!</span>(<span class="string">"select font {}{}"</span>, name, at_info);
@@ -149,29 +149,29 @@
 <a href=#149 id=149 data-nosnippet>149</a>            <span class="kw">let </span><span class="kw-2">mut </span>continue_flag = <span class="bool-val">false</span>;
 <a href=#150 id=150 data-nosnippet>150</a>            <span class="comment">// TODO: avoiding the allocation is quite painful here, since arena gets into mutability
 <a href=#151 id=151 data-nosnippet>151</a>            // locking
-<a href=#152 id=152 data-nosnippet>152</a>            </span><span class="kw">let </span>spec = arena::to_string(param.spec);
+<a href=#152 id=152 data-nosnippet>152</a>            </span><span class="kw">let </span>spec = to_string(param.spec);
 <a href=#153 id=153 data-nosnippet>153</a>            <span class="kw">match </span>spec.as_str() {
 <a href=#154 id=154 data-nosnippet>154</a>              <span class="string">"RequireBrace" </span>=&gt; {
 <a href=#155 id=155 data-nosnippet>155</a>                <span class="comment">// tex's \meaning prints out the required braces for "\def\a#{}" variants
 <a href=#156 id=156 data-nosnippet>156</a>                </span>p_trailer = <span class="string">"{"</span>;
-<a href=#157 id=157 data-nosnippet>157</a>                p_spec    = arena::pin_static(<span class="string">"{"</span>);
+<a href=#157 id=157 data-nosnippet>157</a>                p_spec    = pin_static(<span class="string">"{"</span>);
 <a href=#158 id=158 data-nosnippet>158</a>              },
 <a href=#159 id=159 data-nosnippet>159</a>              <span class="string">"UntilBrace" </span>=&gt; {
 <a href=#160 id=160 data-nosnippet>160</a>                p_trailer = <span class="string">"{"</span>;
 <a href=#161 id=161 data-nosnippet>161</a>                arg_index+=<span class="number">1</span>;
-<a href=#162 id=162 data-nosnippet>162</a>                p_spec = arena::pin(
-<a href=#163 id=163 data-nosnippet>163</a>                  arena::with(p_spec, |p_str| <span class="macro">format!</span>(<span class="string">"#{arg_index}{p_str}"</span>)));
+<a href=#162 id=162 data-nosnippet>162</a>                p_spec = pin(
+<a href=#163 id=163 data-nosnippet>163</a>                  with(p_spec, |p_str| <span class="macro">format!</span>(<span class="string">"#{arg_index}{p_str}"</span>)));
 <a href=#164 id=164 data-nosnippet>164</a>              }
 <a href=#165 id=165 data-nosnippet>165</a>              other <span class="kw">if </span>other.starts_with(<span class="string">"Match:"</span>) =&gt; {
 <a href=#166 id=166 data-nosnippet>166</a>                <span class="comment">// just match, don't increment arg index
-<a href=#167 id=167 data-nosnippet>167</a>                </span>p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,<span class="string">""</span>));
+<a href=#167 id=167 data-nosnippet>167</a>                </span>p_spec = pin(LEAD_W_COLON_RE.replace(other,<span class="string">""</span>));
 <a href=#168 id=168 data-nosnippet>168</a>              },
 <a href=#169 id=169 data-nosnippet>169</a>              other <span class="kw">if </span>UNTIL_SPEC.is_match(other) =&gt; {
 <a href=#170 id=170 data-nosnippet>170</a>                <span class="comment">// implied argument at this slot
-<a href=#171 id=171 data-nosnippet>171</a>                </span>p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,<span class="string">""</span>));
+<a href=#171 id=171 data-nosnippet>171</a>                </span>p_spec = pin(LEAD_W_COLON_RE.replace(other,<span class="string">""</span>));
 <a href=#172 id=172 data-nosnippet>172</a>                arg_index +=<span class="number">1 </span>;
-<a href=#173 id=173 data-nosnippet>173</a>                p_spec = arena::pin(
-<a href=#174 id=174 data-nosnippet>174</a>                  arena::with(p_spec, |p_str| <span class="macro">s!</span>(<span class="string">"#{arg_index}{p_str}"</span>)));
+<a href=#173 id=173 data-nosnippet>173</a>                p_spec = pin(
+<a href=#174 id=174 data-nosnippet>174</a>                  with(p_spec, |p_str| <span class="macro">s!</span>(<span class="string">"#{arg_index}{p_str}"</span>)));
 <a href=#175 id=175 data-nosnippet>175</a>              },
 <a href=#176 id=176 data-nosnippet>176</a>              _other =&gt; { <span class="comment">// regular parameter, increment
 <a href=#177 id=177 data-nosnippet>177</a>              // skip the latexml-only requirement params, but only here,
@@ -203,7 +203,7 @@
 <a href=#203 id=203 data-nosnippet>203</a>                  // undelimited, exactly as in Perl, so following optional
 <a href=#204 id=204 data-nosnippet>204</a>                  // args are untouched. Perl emits the same `CODE(...)`
 <a href=#205 id=205 data-nosnippet>205</a>                  // text and zero errors.
-<a href=#206 id=206 data-nosnippet>206</a>                  </span>p_spec = arena::pin(<span class="macro">s!</span>(<span class="string">"#{arg_index}"</span>));
+<a href=#206 id=206 data-nosnippet>206</a>                  </span>p_spec = pin(<span class="macro">s!</span>(<span class="string">"#{arg_index}"</span>));
 <a href=#207 id=207 data-nosnippet>207</a>                }
 <a href=#208 id=208 data-nosnippet>208</a>              }
 <a href=#209 id=209 data-nosnippet>209</a>            }
@@ -211,7 +211,7 @@
 <a href=#211 id=211 data-nosnippet>211</a>              spec_parts.push(p_spec);
 <a href=#212 id=212 data-nosnippet>212</a>            }
 <a href=#213 id=213 data-nosnippet>213</a>          }
-<a href=#214 id=214 data-nosnippet>214</a>          <span class="kw">let </span><span class="kw-2">mut </span>spec : String = arena::join(<span class="kw-2">&amp;</span>spec_parts,<span class="string">""</span>);
+<a href=#214 id=214 data-nosnippet>214</a>          <span class="kw">let </span><span class="kw-2">mut </span>spec : String = join(<span class="kw-2">&amp;</span>spec_parts,<span class="string">""</span>);
 <a href=#215 id=215 data-nosnippet>215</a>          spec = spec.replace(<span class="string">"{}"</span>,<span class="string">""</span>);
 <a href=#216 id=216 data-nosnippet>216</a>          spec = spec.replace(<span class="string">"Token"</span>,<span class="string">""</span>);
 <a href=#217 id=217 data-nosnippet>217</a>
@@ -263,7 +263,7 @@
 <a href=#263 id=263 data-nosnippet>263</a>    } <span class="kw">else </span>{ String::new() };
 <a href=#264 id=264 data-nosnippet>264</a>    <span class="kw">let </span>stuff = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\meaning"</span>), <span class="macro">vec!</span>[arg]);
 <a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">let </span>rhs = writable_tokens(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(stuff));
-<a href=#266 id=266 data-nosnippet>266</a>    <span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"&gt; {lhs}{rhs}\n{}"</span>, gullet::get_locator()));
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="macro">Note!</span>(<span class="macro">s!</span>(<span class="string">"&gt; {lhs}{rhs}\n{}"</span>, get_locator()));
 <a href=#267 id=267 data-nosnippet>267</a>  });
 <a href=#268 id=268 data-nosnippet>268</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\showbox Number"</span>, sub[(arg)] {
 <a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">let </span>n     = arg.value_of();

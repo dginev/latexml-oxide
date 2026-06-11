@@ -1,38 +1,39 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/mathenv_sty.rs`."><title>mathenv_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>mathenv_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! mathenv.sty — TWO different packages ship under this name; the binding
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/mathenv_sty.rs`."><title>mathenv_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>mathenv_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! mathenv.sty — TWO different packages ship under this name; the binding
 <a href=#2 id=2 data-nosnippet>2</a>//! raw-loads the self-contained one and no-ops the mdwtools one.
 <a href=#3 id=3 data-nosnippet>3</a>//!
-<a href=#4 id=4 data-nosnippet>4</a>//! * **Bosisio's "Extended math environments"** (Francesco Bosisio, 1997) —
-<a href=#5 id=5 data-nosnippet>5</a>//!   self-contained, defines `\newenvironment{EqSystem}`/`{Equation}` and an
-<a href=#6 id=6 data-nosnippet>6</a>//!   active-`&amp;` system-of-equations machinery. NOT in TeX Live (papers ship it
-<a href=#7 id=7 data-nosnippet>7</a>//!   locally). Perl LaTeXML has no `mathenv.sty.ltxml`, so under the ar5iv gate
-<a href=#8 id=8 data-nosnippet>8</a>//!   (`INCLUDE_STYLES=true`) it RAW-LOADS this file and converts cleanly
-<a href=#9 id=9 data-nosnippet>9</a>//!   (witness 1710.07800 → 92 errors here without the raw-load, 0 with it).
-<a href=#10 id=10 data-nosnippet>10</a>//!
-<a href=#11 id=11 data-nosnippet>11</a>//! * **Mark Wooding's mdwtools `mathenv`** — opens with `\RequirePackage{mdwtab}`
-<a href=#12 id=12 data-nosnippet>12</a>//!   (a full `tabular` rewrite). Our `mdwtab` stub can't supply its `\tab@*`
-<a href=#13 id=13 data-nosnippet>13</a>//!   internals, so raw-loading Wooding's mathenv cascades (`\tab@setstate` /
-<a href=#14 id=14 data-nosnippet>14</a>//!   `\tab@preamble` / … undefined → ~42 errors). A no-op stub avoids that
-<a href=#15 id=15 data-nosnippet>15</a>//!   (witness 0910.3293). The principled fix for THIS variant is a working
-<a href=#16 id=16 data-nosnippet>16</a>//!   `mdwtab` port; until then we keep the stub for it.
-<a href=#17 id=17 data-nosnippet>17</a>//!
-<a href=#18 id=18 data-nosnippet>18</a>//! Distinguish the two by the `mdwtab` requirement (Bosisio's file never
-<a href=#19 id=19 data-nosnippet>19</a>//! mentions it; Wooding's does `\RequirePackage{mdwtab}`): raw-load the
-<a href=#20 id=20 data-nosnippet>20</a>//! self-contained Bosisio variant like Perl, no-op the mdwtools one. Both then
-<a href=#21 id=21 data-nosnippet>21</a>//! match Perl. (Task #273 — prefer raw-load over stubs; here the stub is kept
-<a href=#22 id=22 data-nosnippet>22</a>//! ONLY for the variant whose dependency we can't yet raw-load.)
-<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a><span class="macro">LoadDefinitions!</span>({
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="kw">let </span>requires_mdwtab = find_file(
-<a href=#27 id=27 data-nosnippet>27</a>    <span class="string">"mathenv"</span>,
-<a href=#28 id=28 data-nosnippet>28</a>    <span class="prelude-val">Some</span>(FindFileOptions { ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)), ..Default::default() }),
-<a href=#29 id=29 data-nosnippet>29</a>  )
-<a href=#30 id=30 data-nosnippet>30</a>  .and_then(|p| std::fs::read_to_string(<span class="kw-2">&amp;</span>p).ok())
-<a href=#31 id=31 data-nosnippet>31</a>  .is_some_and(|content| content.contains(<span class="string">"mdwtab"</span>));
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="kw">if </span>!requires_mdwtab {
-<a href=#33 id=33 data-nosnippet>33</a>    <span class="comment">// Bosisio's self-contained mathenv → raw-load it, matching Perl.
-<a href=#34 id=34 data-nosnippet>34</a>    </span><span class="macro">InputDefinitions!</span>(<span class="string">"mathenv"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)));
-<a href=#35 id=35 data-nosnippet>35</a>  }
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// else: Wooding's mdwtools mathenv → no-op (avoid the broken-mdwtab cascade).
-<a href=#37 id=37 data-nosnippet>37</a></span>});
+<a href=#4 id=4 data-nosnippet>4</a>//! * **Bosisio's "Extended math environments"** (Francesco Bosisio, 1997) — self-contained, defines
+<a href=#5 id=5 data-nosnippet>5</a>//!   `\newenvironment{EqSystem}`/`{Equation}` and an active-`&amp;` system-of-equations machinery. NOT
+<a href=#6 id=6 data-nosnippet>6</a>//!   in TeX Live (papers ship it locally). Perl LaTeXML has no `mathenv.sty.ltxml`, so under the
+<a href=#7 id=7 data-nosnippet>7</a>//!   ar5iv gate (`INCLUDE_STYLES=true`) it RAW-LOADS this file and converts cleanly (witness
+<a href=#8 id=8 data-nosnippet>8</a>//!   1710.07800 → 92 errors here without the raw-load, 0 with it).
+<a href=#9 id=9 data-nosnippet>9</a>//!
+<a href=#10 id=10 data-nosnippet>10</a>//! * **Mark Wooding's mdwtools `mathenv`** — opens with `\RequirePackage{mdwtab}` (a full `tabular`
+<a href=#11 id=11 data-nosnippet>11</a>//!   rewrite). Our `mdwtab` stub can't supply its `\tab@*` internals, so raw-loading Wooding's
+<a href=#12 id=12 data-nosnippet>12</a>//!   mathenv cascades (`\tab@setstate` / `\tab@preamble` / … undefined → ~42 errors). A no-op stub
+<a href=#13 id=13 data-nosnippet>13</a>//!   avoids that (witness 0910.3293). The principled fix for THIS variant is a working `mdwtab`
+<a href=#14 id=14 data-nosnippet>14</a>//!   port; until then we keep the stub for it.
+<a href=#15 id=15 data-nosnippet>15</a>//!
+<a href=#16 id=16 data-nosnippet>16</a>//! Distinguish the two by the `mdwtab` requirement (Bosisio's file never
+<a href=#17 id=17 data-nosnippet>17</a>//! mentions it; Wooding's does `\RequirePackage{mdwtab}`): raw-load the
+<a href=#18 id=18 data-nosnippet>18</a>//! self-contained Bosisio variant like Perl, no-op the mdwtools one. Both then
+<a href=#19 id=19 data-nosnippet>19</a>//! match Perl. (Task #273 — prefer raw-load over stubs; here the stub is kept
+<a href=#20 id=20 data-nosnippet>20</a>//! ONLY for the variant whose dependency we can't yet raw-load.)
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="macro">LoadDefinitions!</span>({
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="kw">let </span>requires_mdwtab = find_file(
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="string">"mathenv"</span>,
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="prelude-val">Some</span>(FindFileOptions {
+<a href=#27 id=27 data-nosnippet>27</a>      ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)),
+<a href=#28 id=28 data-nosnippet>28</a>      ..Default::default()
+<a href=#29 id=29 data-nosnippet>29</a>    }),
+<a href=#30 id=30 data-nosnippet>30</a>  )
+<a href=#31 id=31 data-nosnippet>31</a>  .and_then(|p| std::fs::read_to_string(<span class="kw-2">&amp;</span>p).ok())
+<a href=#32 id=32 data-nosnippet>32</a>  .is_some_and(|content| content.contains(<span class="string">"mdwtab"</span>));
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="kw">if </span>!requires_mdwtab {
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="comment">// Bosisio's self-contained mathenv → raw-load it, matching Perl.
+<a href=#35 id=35 data-nosnippet>35</a>    </span><span class="macro">InputDefinitions!</span>(<span class="string">"mathenv"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)));
+<a href=#36 id=36 data-nosnippet>36</a>  }
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// else: Wooding's mdwtools mathenv → no-op (avoid the broken-mdwtab cascade).
+<a href=#38 id=38 data-nosnippet>38</a></span>});
 </code></pre></div></section></main></body></html>

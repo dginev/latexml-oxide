@@ -1,37 +1,37 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_paragraph.rs`."><title>tex_paragraph.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_paragraph.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Paragraph
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_paragraph.rs`."><title>tex_paragraph.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_paragraph.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Paragraph
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
-<a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#5 id=5 data-nosnippet>5</a><span class="kw">use </span>latexml_core::document::helpers::prune_empty_para;
-<a href=#6 id=6 data-nosnippet>6</a>
-<a href=#7 id=7 data-nosnippet>7</a><span class="doccomment">/// Helper used by `\leftline`/`\rightline`/`\centerline` and friends.
-<a href=#8 id=8 data-nosnippet>8</a>/// Perl `TeX_Paragraph.pool.ltxml:75` `sub alignLine`.
-<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">pub fn </span>align_line(
-<a href=#10 id=10 data-nosnippet>10</a>  document: <span class="kw-2">&amp;mut </span>Document,
-<a href=#11 id=11 data-nosnippet>11</a>  line: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;],
-<a href=#12 id=12 data-nosnippet>12</a>  alignment: <span class="kw-2">&amp;</span>str,
-<a href=#13 id=13 data-nosnippet>13</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="kw">if </span>document.is_openable(<span class="string">"ltx:p"</span>) {
-<a href=#15 id=15 data-nosnippet>15</a>    <span class="kw">let </span>line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-<a href=#16 id=16 data-nosnippet>16</a>    document.insert_element(
-<a href=#17 id=17 data-nosnippet>17</a>      <span class="string">"ltx:p"</span>,
-<a href=#18 id=18 data-nosnippet>18</a>      line_content,
-<a href=#19 id=19 data-nosnippet>19</a>      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))),
-<a href=#20 id=20 data-nosnippet>20</a>    )<span class="question-mark">?</span>;
-<a href=#21 id=21 data-nosnippet>21</a>  } <span class="kw">else if </span>document.is_openable(<span class="string">"ltx:text"</span>) {
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="kw">let </span>line_content = line.iter().filter_map(|c| c.as_ref()).collect();
-<a href=#23 id=23 data-nosnippet>23</a>    document.insert_element(
-<a href=#24 id=24 data-nosnippet>24</a>      <span class="string">"ltx:text"</span>,
-<a href=#25 id=25 data-nosnippet>25</a>      line_content,
-<a href=#26 id=26 data-nosnippet>26</a>      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))),
-<a href=#27 id=27 data-nosnippet>27</a>    )<span class="question-mark">?</span>;
-<a href=#28 id=28 data-nosnippet>28</a>    document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#29 id=29 data-nosnippet>29</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(line_content)) = line.first() {
-<a href=#30 id=30 data-nosnippet>30</a>    document.absorb(line_content, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#31 id=31 data-nosnippet>31</a>  }
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="prelude-val">Ok</span>(())
-<a href=#33 id=33 data-nosnippet>33</a>}
-<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use </span>latexml_core::document::helpers::prune_empty_para;
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a><span class="doccomment">/// Helper used by `\leftline`/`\rightline`/`\centerline` and friends.
+<a href=#9 id=9 data-nosnippet>9</a>/// Perl `TeX_Paragraph.pool.ltxml:75` `sub alignLine`.
+<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">pub fn </span>align_line(
+<a href=#11 id=11 data-nosnippet>11</a>  document: <span class="kw-2">&amp;mut </span>Document,
+<a href=#12 id=12 data-nosnippet>12</a>  line: <span class="kw-2">&amp;</span>[<span class="prelude-ty">Option</span>&lt;Digested&gt;],
+<a href=#13 id=13 data-nosnippet>13</a>  alignment: <span class="kw-2">&amp;</span>str,
+<a href=#14 id=14 data-nosnippet>14</a>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="kw">if </span>document.is_openable(<span class="string">"ltx:p"</span>) {
+<a href=#16 id=16 data-nosnippet>16</a>    <span class="kw">let </span>line_content = line.iter().filter_map(|c| c.as_ref()).collect();
+<a href=#17 id=17 data-nosnippet>17</a>    document.insert_element(
+<a href=#18 id=18 data-nosnippet>18</a>      <span class="string">"ltx:p"</span>,
+<a href=#19 id=19 data-nosnippet>19</a>      line_content,
+<a href=#20 id=20 data-nosnippet>20</a>      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))),
+<a href=#21 id=21 data-nosnippet>21</a>    )<span class="question-mark">?</span>;
+<a href=#22 id=22 data-nosnippet>22</a>  } <span class="kw">else if </span>document.is_openable(<span class="string">"ltx:text"</span>) {
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">let </span>line_content = line.iter().filter_map(|c| c.as_ref()).collect();
+<a href=#24 id=24 data-nosnippet>24</a>    document.insert_element(
+<a href=#25 id=25 data-nosnippet>25</a>      <span class="string">"ltx:text"</span>,
+<a href=#26 id=26 data-nosnippet>26</a>      line_content,
+<a href=#27 id=27 data-nosnippet>27</a>      <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="macro">s!</span>(<span class="string">"ltx_align_{alignment}"</span>))),
+<a href=#28 id=28 data-nosnippet>28</a>    )<span class="question-mark">?</span>;
+<a href=#29 id=29 data-nosnippet>29</a>    document.insert_element(<span class="string">"ltx:break"</span>, Vec::new(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#30 id=30 data-nosnippet>30</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(line_content)) = line.first() {
+<a href=#31 id=31 data-nosnippet>31</a>    document.absorb(line_content, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#32 id=32 data-nosnippet>32</a>  }
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="prelude-val">Ok</span>(())
+<a href=#34 id=34 data-nosnippet>34</a>}
 <a href=#35 id=35 data-nosnippet>35</a>
 <a href=#36 id=36 data-nosnippet>36</a><span class="macro">LoadDefinitions!</span>({
 <a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,14 +64,14 @@
 <a href=#64 id=64 data-nosnippet>64</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\indent"</span>, sub[document] {
 <a href=#65 id=65 data-nosnippet>65</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = document.get_element() {
 <a href=#66 id=66 data-nosnippet>66</a>      <span class="kw">let </span>tag = document::get_node_qname(<span class="kw-2">&amp;</span>node);
-<a href=#67 id=67 data-nosnippet>67</a>      <span class="kw">let </span>para_tag = arena::pin_static(<span class="string">"ltx:para"</span>);
+<a href=#67 id=67 data-nosnippet>67</a>      <span class="kw">let </span>para_tag = pin_static(<span class="string">"ltx:para"</span>);
 <a href=#68 id=68 data-nosnippet>68</a>      <span class="kw">if </span>tag == para_tag {
 <a href=#69 id=69 data-nosnippet>69</a>        node.set_attribute(<span class="string">"class"</span>,<span class="string">"ltx_indent"</span>)<span class="question-mark">?</span>;
 <a href=#70 id=70 data-nosnippet>70</a>      } <span class="kw">else if </span>document::sym_can_contain_somehow(tag, para_tag).is_some() {
 <a href=#71 id=71 data-nosnippet>71</a>        <span class="comment">// Perversely ignore indent on 1st para after sectioning titles (Perl parity)
 <a href=#72 id=72 data-nosnippet>72</a>        </span><span class="kw">let </span>prev_is_title = node.get_last_child().map(|prev| {
 <a href=#73 id=73 data-nosnippet>73</a>          <span class="kw">let </span>prev_qname = document::get_node_qname(<span class="kw-2">&amp;</span>prev);
-<a href=#74 id=74 data-nosnippet>74</a>          arena::with(prev_qname, |s| s == <span class="string">"ltx:title" </span>|| s == <span class="string">"ltx:toctitle"</span>)
+<a href=#74 id=74 data-nosnippet>74</a>          with(prev_qname, |s| s == <span class="string">"ltx:title" </span>|| s == <span class="string">"ltx:toctitle"</span>)
 <a href=#75 id=75 data-nosnippet>75</a>        }).unwrap_or(<span class="bool-val">false</span>);
 <a href=#76 id=76 data-nosnippet>76</a>        <span class="kw">if </span>prev_is_title {
 <a href=#77 id=77 data-nosnippet>77</a>          document.open_element(<span class="string">"ltx:para"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
@@ -88,7 +88,7 @@
 <a href=#88 id=88 data-nosnippet>88</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\noindent"</span>, sub[document] {
 <a href=#89 id=89 data-nosnippet>89</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = document.get_element() {
 <a href=#90 id=90 data-nosnippet>90</a>      <span class="kw">let </span>tag = document::get_node_qname(<span class="kw-2">&amp;</span>node);
-<a href=#91 id=91 data-nosnippet>91</a>      <span class="kw">let </span>para_tag = arena::pin_static(<span class="string">"ltx:para"</span>);
+<a href=#91 id=91 data-nosnippet>91</a>      <span class="kw">let </span>para_tag = pin_static(<span class="string">"ltx:para"</span>);
 <a href=#92 id=92 data-nosnippet>92</a>      <span class="kw">if </span>tag == para_tag {
 <a href=#93 id=93 data-nosnippet>93</a>        node.set_attribute(<span class="string">"class"</span>,<span class="string">"ltx_noindent"</span>)<span class="question-mark">?</span>;
 <a href=#94 id=94 data-nosnippet>94</a>      } <span class="kw">else if </span>document::sym_can_contain_somehow(tag, para_tag ).is_some() {
@@ -121,13 +121,13 @@
 <a href=#121 id=121 data-nosnippet>121</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>node) = element {
 <a href=#122 id=122 data-nosnippet>122</a>          <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>node);
 <a href=#123 id=123 data-nosnippet>123</a>          <span class="comment">// Only set on the para about to close, if unknown!
-<a href=#124 id=124 data-nosnippet>124</a>          </span><span class="kw">if </span>qname == arena::pin_static(<span class="string">"ltx:para"</span>) &amp;&amp; node.get_attribute(<span class="string">"class"</span>).is_none() {
+<a href=#124 id=124 data-nosnippet>124</a>          </span><span class="kw">if </span>qname == pin_static(<span class="string">"ltx:para"</span>) &amp;&amp; node.get_attribute(<span class="string">"class"</span>).is_none() {
 <a href=#125 id=125 data-nosnippet>125</a>            <span class="kw">let </span>class_sym = <span class="macro">prop_str!</span>(props,<span class="string">"class"</span>);
 <a href=#126 id=126 data-nosnippet>126</a>            <span class="kw">if </span>class_sym != <span class="macro">pin!</span>(<span class="string">""</span>) {
-<a href=#127 id=127 data-nosnippet>127</a>              <span class="kw">let </span>class_s = arena::with(class_sym, |s| s.to_string());
+<a href=#127 id=127 data-nosnippet>127</a>              <span class="kw">let </span>class_s = with(class_sym, |s| s.to_string());
 <a href=#128 id=128 data-nosnippet>128</a>              document.set_attribute(<span class="kw-2">&amp;mut </span>node, <span class="string">"class"</span>, <span class="kw-2">&amp;</span>class_s)<span class="question-mark">?</span>;
 <a href=#129 id=129 data-nosnippet>129</a>            }
-<a href=#130 id=130 data-nosnippet>130</a>          } <span class="kw">else if </span>qname == arena::pin_static(<span class="string">"ltx:figure"</span>) {
+<a href=#130 id=130 data-nosnippet>130</a>          } <span class="kw">else if </span>qname == pin_static(<span class="string">"ltx:figure"</span>) {
 <a href=#131 id=131 data-nosnippet>131</a>            <span class="comment">// insert breaks in figures, for vertically separating subfigures
 <a href=#132 id=132 data-nosnippet>132</a>            </span>document.insert_element(<span class="string">"ltx:break"</span>,Vec::new(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#133 id=133 data-nosnippet>133</a>          }
@@ -139,18 +139,18 @@
 <a href=#139 id=139 data-nosnippet>139</a>    },
 <a href=#140 id=140 data-nosnippet>140</a>    before_digest =&gt; {
 <a href=#141 id=141 data-nosnippet>141</a>      <span class="comment">// Perl: combine any digested horizontal material into a horizontal List
-<a href=#142 id=142 data-nosnippet>142</a>      </span><span class="kw">let </span>mode = state::lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
-<a href=#143 id=143 data-nosnippet>143</a>      <span class="kw">let </span>bound = state::lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"BOUND_MODE"</span>));
+<a href=#142 id=142 data-nosnippet>142</a>      </span><span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
+<a href=#143 id=143 data-nosnippet>143</a>      <span class="kw">let </span>bound = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"BOUND_MODE"</span>));
 <a href=#144 id=144 data-nosnippet>144</a>      <span class="kw">if </span>mode == <span class="string">"horizontal" </span>&amp;&amp; bound.ends_with(<span class="string">"vertical"</span>) {
 <a href=#145 id=145 data-nosnippet>145</a>        <span class="comment">// Perl: $stomach-&gt;repackHorizontal;
 <a href=#146 id=146 data-nosnippet>146</a>        </span>repack_horizontal();
 <a href=#147 id=147 data-nosnippet>147</a>        assign_value_inplace_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>), bound); <span class="comment">// Resume vertical/internal_vertical
 <a href=#148 id=148 data-nosnippet>148</a>      </span>}
-<a href=#149 id=149 data-nosnippet>149</a>      state::assign_value(<span class="string">"parshape"</span>, Stored::None, <span class="prelude-val">None</span>);
-<a href=#150 id=150 data-nosnippet>150</a>      state::assign_value(<span class="string">"interlinepenalties"</span>, Stored::None, <span class="prelude-val">None</span>);
+<a href=#149 id=149 data-nosnippet>149</a>      assign_value(<span class="string">"parshape"</span>, Stored::None, <span class="prelude-val">None</span>);
+<a href=#150 id=150 data-nosnippet>150</a>      assign_value(<span class="string">"interlinepenalties"</span>, Stored::None, <span class="prelude-val">None</span>);
 <a href=#151 id=151 data-nosnippet>151</a>    },
 <a href=#152 id=152 data-nosnippet>152</a>    after_digest =&gt; sub[whatsit] {
-<a href=#153 id=153 data-nosnippet>153</a>      whatsit.set_property(<span class="string">"mode"</span>, state::lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)));
+<a href=#153 id=153 data-nosnippet>153</a>      whatsit.set_property(<span class="string">"mode"</span>, lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)));
 <a href=#154 id=154 data-nosnippet>154</a>      <span class="comment">// When invoked by leave_horizontal: no reversion, don't close ltx:para
 <a href=#155 id=155 data-nosnippet>155</a>      </span><span class="kw">if </span><span class="macro">LookupBool!</span>(<span class="string">"INTERNAL_PAR"</span>) {
 <a href=#156 id=156 data-nosnippet>156</a>        whatsit.set_property(<span class="string">"internal_par"</span>, <span class="bool-val">true</span>);
@@ -164,18 +164,18 @@
 <a href=#164 id=164 data-nosnippet>164</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(c) = lookup_value(<span class="string">"next_para_class"</span>) {
 <a href=#165 id=165 data-nosnippet>165</a>          <span class="comment">// Check if flags were set by prior \par:
 <a href=#166 id=166 data-nosnippet>166</a>          </span>whatsit.set_property(<span class="string">"class"</span>, c);
-<a href=#167 id=167 data-nosnippet>167</a>          { state::assign_value(<span class="string">"next_para_class"</span>, Stored::None, <span class="prelude-val">None</span>); }
+<a href=#167 id=167 data-nosnippet>167</a>          { assign_value(<span class="string">"next_para_class"</span>, Stored::None, <span class="prelude-val">None</span>); }
 <a href=#168 id=168 data-nosnippet>168</a>        }
 <a href=#169 id=169 data-nosnippet>169</a>        <span class="comment">// Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
-<a href=#170 id=170 data-nosnippet>170</a>        </span>{ state::assign_value(<span class="string">"interlinepenalties"</span>, Stored::None, <span class="prelude-val">None</span>); }
+<a href=#170 id=170 data-nosnippet>170</a>        </span>{ assign_value(<span class="string">"interlinepenalties"</span>, Stored::None, <span class="prelude-val">None</span>); }
 <a href=#171 id=171 data-nosnippet>171</a>        <span class="comment">// Fish out flags for next ltx:para, to be used when the next \par closes:
-<a href=#172 id=172 data-nosnippet>172</a>        </span><span class="kw">if </span>state::lookup_register(<span class="string">"\\parindent"</span>,Vec::new())<span class="question-mark">?</span>.unwrap().value_of() == <span class="number">0 </span>{
+<a href=#172 id=172 data-nosnippet>172</a>        </span><span class="kw">if </span>lookup_register(<span class="string">"\\parindent"</span>,Vec::new())<span class="question-mark">?</span>.unwrap().value_of() == <span class="number">0 </span>{
 <a href=#173 id=173 data-nosnippet>173</a>          <span class="comment">// respect \parindent if no overrides are given
-<a href=#174 id=174 data-nosnippet>174</a>          </span>{ state::assign_value(<span class="string">"next_para_class"</span>, <span class="string">"ltx_noindent"</span>, <span class="prelude-val">None</span>); }
+<a href=#174 id=174 data-nosnippet>174</a>          </span>{ assign_value(<span class="string">"next_para_class"</span>, <span class="string">"ltx_noindent"</span>, <span class="prelude-val">None</span>); }
 <a href=#175 id=175 data-nosnippet>175</a>        }
 <a href=#176 id=176 data-nosnippet>176</a>        <span class="comment">// Vertical adjustments
-<a href=#177 id=177 data-nosnippet>177</a>        </span><span class="kw">match </span>{ state::remove_value(<span class="string">"vAdjust"</span>) } { <span class="prelude-val">Some</span>(Stored::Tokens(vadj)) =&gt; {
-<a href=#178 id=178 data-nosnippet>178</a>          state::assign_value(<span class="string">"vAdjust"</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#177 id=177 data-nosnippet>177</a>        </span><span class="kw">match </span>remove_value(<span class="string">"vAdjust"</span>) { <span class="prelude-val">Some</span>(Stored::Tokens(vadj)) =&gt; {
+<a href=#178 id=178 data-nosnippet>178</a>          assign_value(<span class="string">"vAdjust"</span>, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#179 id=179 data-nosnippet>179</a>          <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[ <span class="macro">Digest!</span>(vadj)<span class="question-mark">? </span>])
 <a href=#180 id=180 data-nosnippet>180</a>        } <span class="kw">_ </span>=&gt; {
 <a href=#181 id=181 data-nosnippet>181</a>          <span class="prelude-val">Ok</span>(Vec::new())
@@ -216,8 +216,8 @@
 <a href=#216 id=216 data-nosnippet>216</a>      <span class="kw">let </span>n = <span class="kw">if </span>n_val &lt; <span class="number">0 </span>{ <span class="number">0 </span>} <span class="kw">else </span>{ n_val } <span class="kw">as </span>usize;
 <a href=#217 id=217 data-nosnippet>217</a>      <span class="kw">let </span><span class="kw-2">mut </span>shape = VecDeque::new();
 <a href=#218 id=218 data-nosnippet>218</a>      <span class="kw">for _ in </span><span class="number">0</span>..n {
-<a href=#219 id=219 data-nosnippet>219</a>        <span class="kw">let </span>indent = gullet::read_dimension().unwrap_or_default();
-<a href=#220 id=220 data-nosnippet>220</a>        <span class="kw">let </span>length = gullet::read_dimension().unwrap_or_default();
+<a href=#219 id=219 data-nosnippet>219</a>        <span class="kw">let </span>indent = read_dimension().unwrap_or_default();
+<a href=#220 id=220 data-nosnippet>220</a>        <span class="kw">let </span>length = read_dimension().unwrap_or_default();
 <a href=#221 id=221 data-nosnippet>221</a>        shape.push_back(Stored::Dimension(indent));
 <a href=#222 id=222 data-nosnippet>222</a>        shape.push_back(Stored::Dimension(length));
 <a href=#223 id=223 data-nosnippet>223</a>      }

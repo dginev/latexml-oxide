@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/amstex.rs`."><title>amstex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>amstex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Perl: LaTeXML/lib/LaTeXML/Engine/AmSTeX.pool.ltxml
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/amstex.rs`."><title>amstex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>amstex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Perl: LaTeXML/lib/LaTeXML/Engine/AmSTeX.pool.ltxml
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! This is the `pool' for AmSTeX (_not_ AMS LaTeX). Loaded via
 <a href=#4 id=4 data-nosnippet>4</a>//! `LoadPool("AmSTeX")` (typically from `\input amstex` in TeX mode,
@@ -61,8 +61,8 @@
 <a href=#61 id=61 data-nosnippet>61</a>          ..RequireOptions::default()
 <a href=#62 id=62 data-nosnippet>62</a>        })<span class="question-mark">?</span>;
 <a href=#63 id=63 data-nosnippet>63</a>        <span class="kw">let </span>filename = <span class="macro">s!</span>(<span class="string">"{}.sty"</span>, style);
-<a href=#64 id=64 data-nosnippet>64</a>        state::lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_loaded"</span>, filename))
-<a href=#65 id=65 data-nosnippet>65</a>          || state::lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_raw_loaded"</span>, filename))
+<a href=#64 id=64 data-nosnippet>64</a>        lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_loaded"</span>, filename))
+<a href=#65 id=65 data-nosnippet>65</a>          || lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_raw_loaded"</span>, filename))
 <a href=#66 id=66 data-nosnippet>66</a>      };
 <a href=#67 id=67 data-nosnippet>67</a>      <span class="kw">if </span>!primary_ok {
 <a href=#68 id=68 data-nosnippet>68</a>        require_package(<span class="string">"amsppt"</span>, RequireOptions::default())<span class="question-mark">?</span>;
@@ -135,7 +135,7 @@
 <a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\enddocument"</span>, <span class="string">"&lt;/ltx:document&gt;"</span>,
 <a href=#136 id=136 data-nosnippet>136</a>    before_digest =&gt; {
 <a href=#137 id=137 data-nosnippet>137</a>      <span class="comment">// Perl L127: `$_[0]-&gt;getGullet-&gt;flush;` — discards remaining input.
-<a href=#138 id=138 data-nosnippet>138</a>      </span>gullet::flush();
+<a href=#138 id=138 data-nosnippet>138</a>      </span>flush();
 <a href=#139 id=139 data-nosnippet>139</a>    });
 <a href=#140 id=140 data-nosnippet>140</a>
 <a href=#141 id=141 data-nosnippet>141</a>  <span class="comment">//======================================================================
@@ -158,8 +158,8 @@
 <a href=#158 id=158 data-nosnippet>158</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\comment"</span>, sub[_args] {
 <a href=#159 id=159 data-nosnippet>159</a>    <span class="comment">// Perl: `$gullet-&gt;readRawLine; # IGNORE 1st line` — discards the
 <a href=#160 id=160 data-nosnippet>160</a>    // remainder of the line that contained the `\comment` invocation.
-<a href=#161 id=161 data-nosnippet>161</a>    </span>gullet::read_raw_line();
-<a href=#162 id=162 data-nosnippet>162</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(line) = gullet::read_raw_line() {
+<a href=#161 id=161 data-nosnippet>161</a>    </span>read_raw_line();
+<a href=#162 id=162 data-nosnippet>162</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(line) = read_raw_line() {
 <a href=#163 id=163 data-nosnippet>163</a>      <span class="kw">if </span>line == <span class="string">"\\endcomment" </span>{
 <a href=#164 id=164 data-nosnippet>164</a>        <span class="kw">break</span>;
 <a href=#165 id=165 data-nosnippet>165</a>      }
@@ -328,7 +328,7 @@
 <a href=#328 id=328 data-nosnippet>328</a>  // and emits `\genfrac{}{}{&lt;num&gt;}{}{a}{b}`); otherwise fall through
 <a href=#329 id=329 data-nosnippet>329</a>  // to `\frac`.
 <a href=#330 id=330 data-nosnippet>330</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thickfrac"</span>, sub[_args] {
-<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">if </span>gullet::if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">if </span>if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
 <a href=#332 id=332 data-nosnippet>332</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\@thickfrac"</span>)]
 <a href=#333 id=333 data-nosnippet>333</a>    } <span class="kw">else </span>{
 <a href=#334 id=334 data-nosnippet>334</a>      <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\frac"</span>)]
@@ -343,7 +343,7 @@
 <a href=#343 id=343 data-nosnippet>343</a>  // thickness branch dispatches to `\@thickfracwithdelims` which
 <a href=#344 id=344 data-nosnippet>344</a>  // expands to `\genfrac` with custom delimiters.
 <a href=#345 id=345 data-nosnippet>345</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thickfracwithdelims {}{}"</span>, sub[(d1, d2)] {
-<a href=#346 id=346 data-nosnippet>346</a>    <span class="kw">let </span>dispatch = <span class="kw">if </span>gullet::if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="kw">let </span>dispatch = <span class="kw">if </span>if_next(<span class="macro">T_CS!</span>(<span class="string">"\\thickness"</span>))<span class="question-mark">? </span>{
 <a href=#347 id=347 data-nosnippet>347</a>      <span class="macro">T_CS!</span>(<span class="string">"\\@thickfracwithdelims"</span>)
 <a href=#348 id=348 data-nosnippet>348</a>    } <span class="kw">else </span>{
 <a href=#349 id=349 data-nosnippet>349</a>      <span class="macro">T_CS!</span>(<span class="string">"\\frac"</span>)
@@ -497,12 +497,12 @@
 <a href=#497 id=497 data-nosnippet>497</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\cfrac"</span>, <span class="string">""</span>,
 <a href=#498 id=498 data-nosnippet>498</a>    after_digest =&gt; sub[_w] {
 <a href=#499 id=499 data-nosnippet>499</a>      <span class="comment">// Perl: $stomach-&gt;bgroup; Let(T_CS("\\\\"), T_CS('\lx@cfrac'));
-<a href=#500 id=500 data-nosnippet>500</a>      </span>stomach::bgroup();
+<a href=#500 id=500 data-nosnippet>500</a>      </span>bgroup();
 <a href=#501 id=501 data-nosnippet>501</a>      raw_tex(<span class="string">r"\let\\\lx@cfrac"</span>)<span class="question-mark">?</span>;
 <a href=#502 id=502 data-nosnippet>502</a>    });
 <a href=#503 id=503 data-nosnippet>503</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endcfrac"</span>, <span class="string">""</span>,
 <a href=#504 id=504 data-nosnippet>504</a>    after_digest =&gt; sub[_w] {
-<a href=#505 id=505 data-nosnippet>505</a>      stomach::egroup()<span class="question-mark">?</span>;
+<a href=#505 id=505 data-nosnippet>505</a>      egroup()<span class="question-mark">?</span>;
 <a href=#506 id=506 data-nosnippet>506</a>    });
 <a href=#507 id=507 data-nosnippet>507</a>  <span class="macro">Let!</span>(<span class="string">"\\lcfrac"</span>, <span class="string">"\\cfrac"</span>);
 <a href=#508 id=508 data-nosnippet>508</a>  <span class="macro">Let!</span>(<span class="string">"\\rcfrac"</span>, <span class="string">"\\cfrac"</span>);

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/ieeetran_cls.rs`."><title>ieeetran_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-74eb0058.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (beae78130 2026-06-09)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>ieeetran_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! IEEEtran.cls — IEEE Transactions document class
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/ieeetran_cls.rs`."><title>ieeetran_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1ed95124.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.98.0-nightly (485ec3fbc 2026-06-10)" data-channel="nightly" data-search-js="search-fd9372ac.js" data-stringdex-js="stringdex-2da4960a.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-fcd733ba.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-f7c3ffd8.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>ieeetran_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! IEEEtran.cls — IEEE Transactions document class
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: IEEEtran.cls.ltxml — 458 lines
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -288,13 +288,13 @@
 <a href=#288 id=288 data-nosnippet>288</a>      <span class="comment">// Perl digests \textbf{\textit{Proof:}} producing font="bold italic".
 <a href=#289 id=289 data-nosnippet>289</a>      // Build a bold-italic font via digestion so the title attribute matches.
 <a href=#290 id=290 data-nosnippet>290</a>      // Template engine auto-binds `"font"` prop to the element's font= attr.
-<a href=#291 id=291 data-nosnippet>291</a>      </span><span class="kw">let </span>title = stomach::digest(mouth::tokenize_internal(
+<a href=#291 id=291 data-nosnippet>291</a>      </span><span class="kw">let </span>title = digest(mouth::tokenize_internal(
 <a href=#292 id=292 data-nosnippet>292</a>        <span class="string">"{\\bfseries\\itshape Proof:}"
 <a href=#293 id=293 data-nosnippet>293</a>      </span>))<span class="question-mark">?</span>;
 <a href=#294 id=294 data-nosnippet>294</a>      <span class="kw">let </span>titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
 <a href=#295 id=295 data-nosnippet>295</a>      <span class="comment">// Digest `\qed` directly into a prop — the template references `#qed`
 <a href=#296 id=296 data-nosnippet>296</a>      // at body-end so the QED symbol lands inside &lt;ltx:proof&gt;.
-<a href=#297 id=297 data-nosnippet>297</a>      </span><span class="kw">let </span>qed = stomach::digest(mouth::tokenize_internal(<span class="string">"\\qed"</span>))<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>      </span><span class="kw">let </span>qed = digest(mouth::tokenize_internal(<span class="string">"\\qed"</span>))<span class="question-mark">?</span>;
 <a href=#298 id=298 data-nosnippet>298</a>      <span class="kw">let </span><span class="kw-2">mut </span>map = SymHashMap::default();
 <a href=#299 id=299 data-nosnippet>299</a>      map.insert(<span class="string">"title"</span>, title.into());
 <a href=#300 id=300 data-nosnippet>300</a>      map.insert(<span class="string">"qed"</span>, qed.into());
@@ -461,7 +461,7 @@
 <a href=#461 id=461 data-nosnippet>461</a>    </span><span class="kw">let </span>subeq = with_value(<span class="string">"EQUATION_NUMBERING"</span>, |v| {
 <a href=#462 id=462 data-nosnippet>462</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::HashStored(m)) = v {
 <a href=#463 id=463 data-nosnippet>463</a>        <span class="macro">matches!</span>(m.get(<span class="string">"counter"</span>),
-<a href=#464 id=464 data-nosnippet>464</a>          <span class="prelude-val">Some</span>(Stored::String(s)) <span class="kw">if </span>arena::to_string(<span class="kw-2">*</span>s) == <span class="string">"subequation"</span>)
+<a href=#464 id=464 data-nosnippet>464</a>          <span class="prelude-val">Some</span>(Stored::String(s)) <span class="kw">if </span>to_string(<span class="kw-2">*</span>s) == <span class="string">"subequation"</span>)
 <a href=#465 id=465 data-nosnippet>465</a>      } <span class="kw">else </span>{ <span class="bool-val">false </span>}
 <a href=#466 id=466 data-nosnippet>466</a>    });
 <a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">if </span>subeq {
@@ -522,26 +522,26 @@
 <a href=#522 id=522 data-nosnippet>522</a>  //   R  = before \hfil       (flush right)
 <a href=#523 id=523 data-nosnippet>523</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"L"</span>, {
 <a href=#524 id=524 data-nosnippet>524</a>    with_current_build_template(|template_opt| {
-<a href=#525 id=525 data-nosnippet>525</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+<a href=#525 id=525 data-nosnippet>525</a>      template_opt.unwrap().add_column(Cell {
 <a href=#526 id=526 data-nosnippet>526</a>        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
-<a href=#527 id=527 data-nosnippet>527</a>        ..latexml_core::alignment::cell::Cell::default()
+<a href=#527 id=527 data-nosnippet>527</a>        ..Cell::default()
 <a href=#528 id=528 data-nosnippet>528</a>      })
 <a href=#529 id=529 data-nosnippet>529</a>    });
 <a href=#530 id=530 data-nosnippet>530</a>  });
 <a href=#531 id=531 data-nosnippet>531</a>  <span class="macro">DefColumnType!</span>(<span class="string">"C"</span>, {
 <a href=#532 id=532 data-nosnippet>532</a>    with_current_build_template(|template_opt| {
-<a href=#533 id=533 data-nosnippet>533</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+<a href=#533 id=533 data-nosnippet>533</a>      template_opt.unwrap().add_column(Cell {
 <a href=#534 id=534 data-nosnippet>534</a>        before: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
 <a href=#535 id=535 data-nosnippet>535</a>        after:  <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
-<a href=#536 id=536 data-nosnippet>536</a>        ..latexml_core::alignment::cell::Cell::default()
+<a href=#536 id=536 data-nosnippet>536</a>        ..Cell::default()
 <a href=#537 id=537 data-nosnippet>537</a>      })
 <a href=#538 id=538 data-nosnippet>538</a>    });
 <a href=#539 id=539 data-nosnippet>539</a>  });
 <a href=#540 id=540 data-nosnippet>540</a>  <span class="macro">DefColumnType!</span>(<span class="string">"R"</span>, {
 <a href=#541 id=541 data-nosnippet>541</a>    with_current_build_template(|template_opt| {
-<a href=#542 id=542 data-nosnippet>542</a>      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+<a href=#542 id=542 data-nosnippet>542</a>      template_opt.unwrap().add_column(Cell {
 <a href=#543 id=543 data-nosnippet>543</a>        before: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>))),
-<a href=#544 id=544 data-nosnippet>544</a>        ..latexml_core::alignment::cell::Cell::default()
+<a href=#544 id=544 data-nosnippet>544</a>        ..Cell::default()
 <a href=#545 id=545 data-nosnippet>545</a>      })
 <a href=#546 id=546 data-nosnippet>546</a>    });
 <a href=#547 id=547 data-nosnippet>547</a>  });
@@ -640,9 +640,9 @@
 <a href=#640 id=640 data-nosnippet>640</a>  // Rust was hardcoding the env-start path, so braced `\keywords{foo}`
 <a href=#641 id=641 data-nosnippet>641</a>  // never reached the one-arg expansion.
 <a href=#642 id=642 data-nosnippet>642</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords"</span>, sub[_args] {
-<a href=#643 id=643 data-nosnippet>643</a>    <span class="kw">let </span>next = gullet::read_token()<span class="question-mark">?</span>;
+<a href=#643 id=643 data-nosnippet>643</a>    <span class="kw">let </span>next = read_token()<span class="question-mark">?</span>;
 <a href=#644 id=644 data-nosnippet>644</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = next {
-<a href=#645 id=645 data-nosnippet>645</a>      gullet::unread(<span class="macro">Tokens!</span>(t));
+<a href=#645 id=645 data-nosnippet>645</a>      unread(<span class="macro">Tokens!</span>(t));
 <a href=#646 id=646 data-nosnippet>646</a>      <span class="kw">if </span>t.get_catcode() == Catcode::BEGIN {
 <a href=#647 id=647 data-nosnippet>647</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\keywords@onearg"</span>)));
 <a href=#648 id=648 data-nosnippet>648</a>      }
