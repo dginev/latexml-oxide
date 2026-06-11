@@ -20,30 +20,30 @@
 
 #[macro_export]
 macro_rules! log_math_error {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
 #[macro_export]
 macro_rules! log_math_warn {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::warn!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::warn!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
 #[macro_export]
 macro_rules! log_math_info {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::info!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::info!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }

@@ -38,7 +38,7 @@
 
 #[macro_export]
 macro_rules! Note {
-  ($input:expr) => {{
+  ($input:expr_2021) => {{
     if log::max_level() >= log::LevelFilter::Info {
       eprintln!("{}", $input);
     }
@@ -47,43 +47,43 @@ macro_rules! Note {
 
 #[macro_export]
 macro_rules! Info {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::info!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::info!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
 #[macro_export]
 macro_rules! Warn {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::warn!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::warn!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
 #[macro_export]
 macro_rules! Error {
-  ($category:expr, $object:expr, $msg:expr) => {
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {
     log::error!(target: &format!("{}:{}", $category, $object), "{}", $msg)
   };
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {
     log::error!(target: &format!("{}:{}", $category, $object), $fmt, $($arg)+)
   };
 }
 
 #[macro_export]
 macro_rules! Fatal {
-  ($category:expr, $object:expr, $msg:expr) => {{
+  ($category:expr_2021, $object:expr_2021, $msg:expr_2021) => {{
     log::error!(target: &format!("Fatal:{}:{}", $category, $object), "{}", $msg);
     return Err($crate::processor::PostError::Processing(
       format!("{}:{}: {}", $category, $object, $msg)
     ));
   }};
-  ($category:expr, $object:expr, $fmt:expr, $($arg:tt)+) => {{
+  ($category:expr_2021, $object:expr_2021, $fmt:expr_2021, $($arg:tt)+) => {{
     let __m = format!($fmt, $($arg)+);
     log::error!(target: &format!("Fatal:{}:{}", $category, $object), "{}", __m);
     return Err($crate::processor::PostError::Processing(

@@ -397,7 +397,7 @@ impl MakeBibliography {
       seen.insert(bibkey.clone());
       let lc_key = bibkey.to_lowercase();
 
-      if let Some(mut entry) = entries.remove(&lc_key) {
+      match entries.remove(&lc_key) { Some(mut entry) => {
         // Extract metadata from bibentry XML node (if available)
         if let Some(ref bibentry) = entry.bibentry {
           let (sort_names, short_names, _full_names) = extract_names(doc, bibentry);
@@ -406,20 +406,19 @@ impl MakeBibliography {
 
           let names_for_sort = if sort_names.is_empty() {
             // Try bib-key or bib-title as fallback
-            if let Some(key_node) = PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
+            match PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
               .into_iter()
               .next()
-            {
+            { Some(key_node) => {
               key_node.get_content()
-            } else if let Some(title_node) =
-              PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+            } _ => { match PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
                 .into_iter()
                 .next()
-            {
+            { Some(title_node) => {
               title_node.get_content()
-            } else {
+            } _ => {
               bibkey.clone()
-            }
+            }}}}
           } else {
             sort_names
           };
@@ -518,10 +517,10 @@ impl MakeBibliography {
             missing_keys.push(bibkey);
           }
         }
-      } else {
+      } _ => {
         // Not found in entries map
         missing_keys.push(bibkey);
-      }
+      }}
     }
 
     if !missing_keys.is_empty() {

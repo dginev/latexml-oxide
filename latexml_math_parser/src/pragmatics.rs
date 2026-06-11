@@ -179,11 +179,11 @@ impl ValidationPragmatics {
           self.validate_recursive(arg_subtree)?;
         }
       },
-      XM::Dual(ref content, ref pres, ..) => {
+      XM::Dual(content, pres, ..) => {
         self.validate_recursive(content)?;
         self.validate_recursive(pres)?;
       },
-      XM::Wrap(ref items, ..) => {
+      XM::Wrap(items, ..) => {
         for item in items.iter() {
           self.validate_recursive(item)?;
         }
@@ -423,7 +423,7 @@ fn pragma_consistent_letter_case_flat_unstyled(tree: &XM) -> Result<(), Box<dyn 
 
 fn pragma_fenced_atoms_are_not_functions(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), ..) = tree {
-    if let XM::Lexeme(ref _lexeme, ref atom_meta) = &**op {
+    if let XM::Lexeme(_lexeme, atom_meta) = &**op {
       if let Some(ref fences) = atom_meta.fenced {
         if fences.as_str() == "parens" {
           return Err(
@@ -442,7 +442,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
   // ambiguous forest; this pragma chooses the mathematically-consistent one
   // unconditionally. MATHPARSER_SPECULATE has no role here — the decision is
   // a pragmatic preference, not a grammar switch.
-  let XM::Apply(Operator(op), ref args, ..) = tree else {
+  let XM::Apply(Operator(op), args, ..) = tree else {
     return Ok(());
   };
   if !is_invisible_times_op(op) {
@@ -531,7 +531,7 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
 /// `kind` is the fence-pair category for diagnostics:
 /// "parens" / "brackets" / "vertbars".
 fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str> {
-  let XM::Dual(_, ref presentation, ..) = top_rhs else {
+  let XM::Dual(_, presentation, ..) = top_rhs else {
     return None;
   };
   let XM::Wrap(ref items, ..) = **presentation else {
@@ -695,10 +695,10 @@ fn pragma_opfunctions_are_rarely_arguments(tree: &XM) -> Result<(), Box<dyn Erro
 /// Mostly since we can't enforce IDs to strictly have "curry=1", rather
 /// we need them with "curry >= 1", to stay a little more lenient.
 fn pragma_higher_order_ids_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(ref op, ref args, ..) = tree {
+  if let XM::Apply(op, args, ..) = tree {
     if args.0.len() == 1 {
       match &*op.0 {
-        XM::Lexeme(ref op_name, _) if op_name.starts_with("ID:") => match args.0[0] {
+        XM::Lexeme(op_name, _) if op_name.starts_with("ID:") => match args.0[0] {
           Some(XM::Lexeme(ref rhs_name, ref rhs_meta)) => {
             if rhs_name.starts_with("FUNCTION") && rhs_meta.fenced.is_none() {
               return Err("ID of a higher order than a FUNCTION is not allowed.".into());
@@ -724,7 +724,7 @@ fn pragma_higher_order_ids_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error
 /// A right-associative application h(f(x,y)) is instead.
 /// Prune it out if possible.
 fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  let XM::Apply(Operator(op), ref args, ..) = tree else {
+  let XM::Apply(Operator(op), args, ..) = tree else {
     return Ok(());
   };
   if !is_invisible_times_op(op) {
@@ -734,8 +734,8 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
   if trees.len() == 2 {
     let lhs = trees[0];
     let rhs = trees[1];
-    if let XM::Lexeme(ref lhs_name, _) = lhs.get_baseline() {
-      if let XM::Lexeme(ref rhs_name, _) = rhs.get_baseline() {
+    if let XM::Lexeme(lhs_name, _) = lhs.get_baseline() {
+      if let XM::Lexeme(rhs_name, _) = rhs.get_baseline() {
         if name_is_functional_or_id(lhs_name) && name_is_functional(rhs_name) {
           return Err(
             "Pruning higher order 'FUNCTION x FUNCTION' parse to give precedence to \
@@ -753,7 +753,7 @@ fn pragma_higher_order_invisible_ops_are_exceptions(tree: &XM) -> Result<(), Box
 /// that they are to be multiplied Prune such parses. We have special rules for some notations, such
 /// as "dlmf_range".
 fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>> {
-  let XM::Apply(Operator(op), ref args, ..) = tree else {
+  let XM::Apply(Operator(op), args, ..) = tree else {
     return Ok(());
   };
   if !is_invisible_times_op(op) {
@@ -778,10 +778,10 @@ fn pragma_adjacent_numbers_dont_use_invisible_times(tree: &XM) -> Result<(), Box
 /// The only case (that I currently know) of a standalone "d" is in the Lebnitz derivative notation.
 /// For which we have a special rule. So the generic fraction parse should be pruned.
 fn pragma_standalone_diffops_are_not_numerators(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if oplexeme.starts_with("MULOP") => {
-        if let Some(XM::Lexeme(ref numlexeme, _)) = args.trees().first() {
+        if let Some(XM::Lexeme(numlexeme, _)) = args.trees().first() {
           if numlexeme.starts_with("DIFFOP") {
             return Err("pruning standalone diffops are not numerators".into());
           }
@@ -797,7 +797,7 @@ fn pragma_standalone_diffops_are_not_numerators(tree: &XM) -> Result<(), Box<dyn
 /// function symbols say " f_i g_j ". This pragma prunes trees that applies two adjacent scripted
 /// constructs.
 fn pragma_adjacent_unfenced_scripts_dont_apply(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     if args.trees().len() == 1 {
       if let XM::Apply(Operator(ref op_op), _, _, ref op_meta) = **op {
         let op_base_name = op_op.base_operator_name();
@@ -845,7 +845,7 @@ fn pragma_adjacent_functions_dont_unify_into_op(tree: &XM) -> Result<(), Box<dyn
 }
 /// Postfix
 fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     let arg_trees = args.trees();
     if arg_trees.len() == 1 {
       if let Some(XM::Apply(Operator(arg_op), _, _, arg_meta)) = arg_trees.first() {
@@ -876,7 +876,7 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
 fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Detect any script-op Apply where the first arg (base) is "absent".
   // This pattern means a standalone floating script that should be a pre-script.
-  if let XM::Apply(Operator(ref op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     if let XM::Token(ref props, _) = **op {
       if props
         .role
@@ -884,7 +884,7 @@ fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
         .is_some_and(|r| r == "SUBSCRIPTOP" || r == "SUPERSCRIPTOP")
       {
         // Check if base (first arg) is "absent" — standalone script
-        if let Some(Some(XM::Token(ref base_props, _))) = args.0.first() {
+        if let Some(Some(XM::Token(base_props, _))) = args.0.first() {
           if base_props.meaning.as_deref() == Some("absent") {
             return Err(
               "Prune: standalone floating script (base=absent) should attach as pre-script.".into(),
@@ -903,13 +903,13 @@ fn pragma_maximize_script_attachment(tree: &XM) -> Result<(), Box<dyn Error>> {
 /// too tortured. This prunes `< a >` from being parsed as a bilateral relation chain,
 /// allowing QM expectation `<a>` to win instead.
 fn pragma_no_bilateral_absent(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(_, ref args, ..) = tree {
+  if let XM::Apply(_, args, ..) = tree {
     let trees = args.trees();
     if trees.len() >= 2 {
       let first_absent = matches!(trees.first(),
-        Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
+        Some(XM::Token(p, _)) if p.meaning.as_deref() == Some("absent"));
       let last_absent = matches!(trees.last(),
-        Some(XM::Token(ref p, _)) if p.meaning.as_deref() == Some("absent"));
+        Some(XM::Token(p, _)) if p.meaning.as_deref() == Some("absent"));
       if first_absent && last_absent {
         return Err(
           "Prune: bilateral absent (absent on both sides) is never valid notation.".into(),
@@ -929,12 +929,12 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
   // This forces the wider parse: function_app(f, narrow_arg * rhs)
   // Only fires when RHS is a simple factor (Lexeme/Token/Wrap), NOT another
   // function application — chained functions like sin(πx)*cos(2πy) should stay separate.
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     if is_invisible_times_op(op) {
       let trees = args.trees();
       if trees.len() == 2 {
         // LHS is a function application (Apply(function, arg))
-        if let XM::Apply(Operator(ref func_op), ref func_args, _, ref func_meta) = trees[0] {
+        if let XM::Apply(Operator(func_op), func_args, _, func_meta) = trees[0] {
           // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
           let func_name = func_op.base_operator_name();
           if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
@@ -946,11 +946,11 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
             let rhs = trees[1];
             let rhs_is_simple = match rhs {
               XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-              XM::Apply(Operator(ref rhs_op), ..) => {
+              XM::Apply(Operator(rhs_op), ..) => {
                 // Scripted factors (SUPERSCRIPTOP/SUBSCRIPTOP) are simple
                 let rhs_role = match &**rhs_op {
-                  XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
-                  XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
+                  XM::Token(props, _) => props.role.as_deref().unwrap_or(""),
+                  XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
                   _ => "",
                 };
                 rhs_role == "SUPERSCRIPTOP" || rhs_role == "SUBSCRIPTOP"
@@ -974,7 +974,7 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
   // positions. E.g. Apply(×, [f@(x), d, x]) where d is bare OPFUNCTION at index 1
   // (not the last). The competing parse Apply(×, [f@(x), d@(x)]) is preferred.
   // This covers the pattern: ∫ f(x) \diffd x → f@(x) * diffd@(x), not f@(x)*d*x.
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     if is_invisible_times_op(op) {
       let trees = args.trees();
       // Check non-terminal positions for bare OPFUNCTION/TRIGFUNCTION tokens.
@@ -986,11 +986,11 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
       if trees.len() >= 3 {
         for tree in trees.iter().take(trees.len() - 1) {
           let is_bare_absorbing_func = match tree {
-            XM::Token(ref props, _) => matches!(
+            XM::Token(props, _) => matches!(
               props.role.as_deref(),
               Some("OPFUNCTION") | Some("TRIGFUNCTION")
             ),
-            XM::Lexeme(ref lex, _) => {
+            XM::Lexeme(lex, _) => {
               lex.starts_with("OPFUNCTION:") || lex.starts_with("TRIGFUNCTION:")
             },
             _ => false,
@@ -1014,7 +1014,7 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
 /// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
 fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     let is_mulop = match **op {
       XM::Token(ref props, _) => props.role.as_deref() == Some("MULOP"),
       XM::Lexeme(ref lex, _) => lex.starts_with("MULOP") || lex.contains("invisible_operator"),
@@ -1024,7 +1024,7 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
       let trees = args.trees();
       if trees.len() == 2 {
         // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
-        if let XM::Apply(Operator(ref bigop_op), ..) = trees[0] {
+        if let XM::Apply(Operator(bigop_op), ..) = trees[0] {
           let bigop_name = bigop_op.base_operator_name();
           let is_bigop = bigop_name.starts_with("BIGOP")
             || bigop_name.starts_with("SUMOP")
@@ -1036,10 +1036,10 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
             let rhs = trees[1];
             let rhs_is_simple = match rhs {
               XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-              XM::Apply(Operator(ref rhs_op), ..) => {
+              XM::Apply(Operator(rhs_op), ..) => {
                 let rhs_role = match &**rhs_op {
-                  XM::Token(ref props, _) => props.role.as_deref().unwrap_or(""),
-                  XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap_or(""),
+                  XM::Token(props, _) => props.role.as_deref().unwrap_or(""),
+                  XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
                   _ => "",
                 };
                 // Scripted factors and invisible_times products are simple
@@ -1071,7 +1071,7 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
 /// For `a - b + c`, this rejects `a + (prefix(-,b+c))` in favor of `(a-b)+c`.
 fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Check: infix ADDOP application where one argument is itself a prefix ADDOP
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     let is_addop = match **op {
       XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
       XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
@@ -1096,7 +1096,7 @@ fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
 
 /// Check if a tree is a unary ADDOP prefix application (like -x or +x).
 fn is_unary_addop_prefix(tree: &XM) -> bool {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     let is_addop = match **op {
       XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
       XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
@@ -1110,7 +1110,7 @@ fn is_unary_addop_prefix(tree: &XM) -> bool {
 }
 
 fn pragma_restrict_numeral_fractions(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     match **op {
       XM::Lexeme(ref oplexeme, _) if &**oplexeme == "arith1.divide" => {
         let arg_trees = args.trees();
@@ -1277,7 +1277,7 @@ fn pragma_flatten_simple_invisible_times(tree: &XM) -> Result<(), Box<dyn Error>
 
 /// Recursively check all subtrees for right-associative invisible-times chains.
 fn check_invisible_times_recursive(tree: &XM) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     if is_invisible_times_op(op) {
       let trees = args.trees();
       if trees.len() == 2 {
@@ -1317,7 +1317,7 @@ fn all_simple_identifiers(tree: &XM) -> bool {
       meta.fenced.is_none()
         && (name.starts_with("UNKNOWN") || name.starts_with("ID") || name.starts_with("NUMBER"))
     },
-    XM::Apply(Operator(op), ref args, ..) => {
+    XM::Apply(Operator(op), args, ..) => {
       // For invisible-times applications (either operator shape),
       // check operator and all args
       if is_invisible_times_op(op) {
@@ -1335,7 +1335,7 @@ fn all_simple_identifiers(tree: &XM) -> bool {
       }
       false
     },
-    XM::Token(ref props, _) => {
+    XM::Token(props, _) => {
       // Token with UNKNOWN/ID/NUMBER role
       props
         .role
@@ -1355,7 +1355,7 @@ fn pragma_relops_are_outermost(tree: &XM) -> Result<(), Box<dyn Error>> {
 }
 
 fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), ref args, ..) = tree {
+  if let XM::Apply(Operator(op), args, ..) = tree {
     if let XM::Lexeme(ref name, _) = **op {
       let is_addop = name.starts_with("ADDOP");
       let is_mulop = name.starts_with("MULOP") || &**name == "x.invisible_operator";
@@ -1384,8 +1384,8 @@ fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), 
 /// Check if a tree represents a fenced (parenthesized) expression.
 fn is_fenced(tree: &XM) -> bool {
   match tree {
-    XM::Lexeme(_, ref meta) => meta.fenced.is_some(),
-    XM::Apply(_, _, _, ref meta) => meta.fenced.is_some(),
+    XM::Lexeme(_, meta) => meta.fenced.is_some(),
+    XM::Apply(_, _, _, meta) => meta.fenced.is_some(),
     _ => false,
   }
 }

@@ -18,7 +18,7 @@ LoadDefinitions!({
     "<ltx:resource src='#src' type='application/pdf'/>See #pages<ltx:ref href='#src'>#src</ltx:ref>",
     properties => sub[args] {
       let pages = args[0].as_ref().and_then(|d| {
-        if let DigestedData::KeyVals(ref kvs) = d.data() {
+        if let DigestedData::KeyVals(kvs) = d.data() {
           kvs.get_value("pages").map(|v| v.to_string())
         } else { None }
       });

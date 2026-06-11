@@ -413,7 +413,7 @@ impl Parameter {
       // Done for effect only.
       pre()?; // maybe pass extras?
     }
-    let digested_value = if let Some(ref closure) = &self.predigest {
+    let digested_value = if let Some(closure) = &self.predigest {
       closure(value_arg, &self.extra)?
     } else {
       // Note: we have an open question for the type interface.

@@ -5,7 +5,7 @@
 /// build a Font from key=>val pairs
 #[macro_export]
 macro_rules! Font {
-  ($($key:ident => $value:expr),*) => (
+  ($($key:ident => $value:expr_2021),*) => (
     Some(Font { $($key: $value.into_font_field(),)* .. Font::default() })
 )}
 
@@ -13,7 +13,7 @@ macro_rules! Font {
 /// (currently only FontDirective::Asset is supported in this macro)
 #[macro_export]
 macro_rules! FontDirective {
-  ($($key:ident => $value:expr),*) => (
+  ($($key:ident => $value:expr_2021),*) => (
     Some(FontDirective::Asset(Rc::new(
       Font { $($key: $value.into_font_field(),)* .. Font::default() }
     ))))
@@ -23,7 +23,7 @@ macro_rules! FontDirective {
 /// and complete the remaining entries via the Default instance
 #[macro_export]
 macro_rules! NewDefault {
-  ($name:ident, $($key:ident => $value:expr),*) => ($name {
+  ($name:ident, $($key:ident => $value:expr_2021),*) => ($name {
     $($key: $value,)*
     ..$name::default()
   })
@@ -32,7 +32,7 @@ macro_rules! NewDefault {
 /// Just like NewDefault, but adds a mandatory `.into_option()` to all values
 #[macro_export]
 macro_rules! NewDefaultV {
-  ($name:ident, $($key:ident => $value:expr),*) => ($name {
+  ($name:ident, $($key:ident => $value:expr_2021),*) => ($name {
     $($key: $value.into_option(),)*
     ..$name::default()
   })
@@ -172,7 +172,7 @@ macro_rules! properties {
       },
     )
   };
-  ($value:expr) => {
+  ($value:expr_2021) => {
     Rc::new(
       move |_args: &Vec<Option<Digested>>| -> Result<SymHashMap<Stored>> { Ok($value.clone()) },
     )
@@ -284,9 +284,9 @@ macro_rules! reversion_digested {
 
 #[macro_export]
 macro_rules! prop_digested {
-  ($props:ident, $key:expr) => {
+  ($props:ident, $key:expr_2021) => {
     match $props.get($key) {
-      Some(Stored::VecDigested(ref vd)) => vd.iter().collect::<Vec<&Digested>>(),
+      Some(Stored::VecDigested(vd)) => vd.iter().collect::<Vec<&Digested>>(),
       Some(Stored::Digested(d)) => vec![&*d],
       Some(Stored::String(s)) => panic!(
         "prop_digested! called on a string property {:?} with value {:?}.",
@@ -316,7 +316,7 @@ macro_rules! prop_digested {
 
 #[macro_export]
 macro_rules! prop_str {
-  ($props:ident, $key:expr) => {
+  ($props:ident, $key:expr_2021) => {
     match $props.get($key) {
       Some(&Stored::String(ref id)) => *id,
       _ => pin!(""),
@@ -326,7 +326,7 @@ macro_rules! prop_str {
 
 #[macro_export]
 macro_rules! prop_string {
-  ($props:ident, $key:expr) => {
+  ($props:ident, $key:expr_2021) => {
     match $props.get($key) {
       Some(&Stored::String(id)) => arena::to_string(id),
       _ => String::new(),
@@ -336,7 +336,7 @@ macro_rules! prop_string {
 
 #[macro_export]
 macro_rules! prop_whatsit {
-  ($props:ident, $key:expr) => {
+  ($props:ident, $key:expr_2021) => {
     match $props.get($key) {
       // Cloning here is OK now, as there is an Rc<> guard over the DigestedData
       Some(&Stored::Digested(ref rc)) => (**rc).clone(),
@@ -347,7 +347,7 @@ macro_rules! prop_whatsit {
 
 #[macro_export]
 macro_rules! prop_bool {
-  ($props:ident, $key:expr) => {
+  ($props:ident, $key:expr_2021) => {
     match $props.get($key) {
       Some(&Stored::Bool(v)) => v,
       _ => false,
@@ -365,10 +365,10 @@ macro_rules! unref {
 }
 #[macro_export]
 macro_rules! count_unpack_ref {
-  ($index:expr, $args:ident => $var:ident) => {
+  ($index:expr_2021, $args:ident => $var:ident) => {
     let $var = $args[$index].as_ref().unwrap();
   };
-  ($index:expr, $args:ident => $var:ident,$($tail:ident),*) => {
+  ($index:expr_2021, $args:ident => $var:ident,$($tail:ident),*) => {
     count_unpack_ref!($index,$args => $var);
     count_unpack_ref!(1usize+$index, $args => $($tail),*)
   };
@@ -417,21 +417,21 @@ macro_rules! unpack_opt_ref {
 /// Convert the number to lower case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! roman {
-  ($stuff:expr) => {
+  ($stuff:expr_2021) => {
     Tokens::new(ExplodeText!(roman_aux($stuff as i64)))
   };
 }
 /// Convert the number to upper case roman numerals, returning a list of LaTeXML::Core::Token
 #[macro_export]
 macro_rules! Roman {
-  ($stuff:expr) => {
+  ($stuff:expr_2021) => {
     Tokens::new(ExplodeText!(roman_aux($stuff as i64).to_ascii_uppercase()))
   };
 }
 
 #[macro_export]
 macro_rules! requireMath {
-  ($cs_name:expr) => {
+  ($cs_name:expr_2021) => {
     if !$crate::state::lookup_bool_sym($crate::pin!("IN_MATH")) {
       let message = s!("{} should only appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
@@ -440,7 +440,7 @@ macro_rules! requireMath {
 }
 #[macro_export]
 macro_rules! forbidMath {
-  ($cs_name:expr) => {
+  ($cs_name:expr_2021) => {
     if $crate::state::lookup_bool_sym($crate::pin!("IN_MATH")) {
       let message = s!("{} should not appear in math mode", $cs_name);
       Warn!("unexpected", "mode", message);
@@ -450,10 +450,10 @@ macro_rules! forbidMath {
 
 #[macro_export]
 macro_rules! AssignRegister {
-  ($cs:literal, $value:expr) => {
+  ($cs:literal, $value:expr_2021) => {
     AssignRegister!($cs, $value, Vec::new())
   };
-  ($cs:literal, $value:expr, $args:expr) => {
+  ($cs:literal, $value:expr_2021, $args:expr_2021) => {
     let value_ident = { $value };
     if let Some(defn) = state::lookup_register_definition(&T_CS!($cs)) {
       (*defn).set_value(value_ident, None, $args);
@@ -466,10 +466,10 @@ macro_rules! AssignRegister {
 
 #[macro_export]
 macro_rules! SetCounter {
-  ($ctr:expr => $value:expr) => {
+  ($ctr:expr_2021 => $value:expr_2021) => {
     SetCounter!($ctr, $value)
   };
-  ($ctr:expr, $value:expr) => {
+  ($ctr:expr_2021, $value:expr_2021) => {
     state::assign_register(
       &s!("\\c@{}", $ctr),
       $value.into(),

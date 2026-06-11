@@ -314,7 +314,7 @@ impl BoxOps for Digested {
       Alignment(w) => w.borrow_mut().be_absorbed_mut(document),
       KeyVals(kvs) => kvs.be_absorbed(document),
       Postponed(_) => Ok(Vec::new()), // Postponed items absorbed silently
-      RegisterValue(ref _rv) => Ok(Vec::new()), // Register values not absorbable
+      RegisterValue(_rv) => Ok(Vec::new()), // Register values not absorbable
     }
   }
 
@@ -739,17 +739,17 @@ impl Digested {
           || w.get_property_bool("alignmentSkippable")
         {
           true
-        } else if let Ok(Some(body)) = w.get_body() {
+        } else { match w.get_body() { Ok(Some(body)) => {
           body.is_skippable()
-        } else if let Some(ref prop) = w.get_property("content_box") {
+        } _ => { match w.get_property("content_box") { Some(ref prop) => {
           // Perl: $thing->getProperty('content_box') — for \hbox etc.
           match &**prop {
             Stored::Digested(cb) => cb.is_skippable(),
             _ => false,
           }
-        } else {
+        } _ => {
           false
-        }
+        }}}}}
       },
       Postponed(ref tks) => {
         // Perl checks token catcodes: letters, others, active, CS are NOT skippable

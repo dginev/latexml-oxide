@@ -517,14 +517,14 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           result.push(T_BEGIN!());
           result.extend(arg.unlist());
           result.push(T_END!());
-        } else if let Some(changed) = lookup_mapping(
+        } else { match lookup_mapping(
           if is_upper {
             "text_uppercase"
           } else {
             "text_lowercase"
           },
           &next_key_case,
-        ) {
+        ) { Some(changed) => {
           if let Stored::Token(changed_tok) = changed {
             result.push(changed_tok);
           } else {
@@ -534,7 +534,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           if req_case == "sentence" || req_case == "title" {
             is_upper = false;
           }
-        } else {
+        } _ => {
           // Fall-through: not in exclude list, not in case-mapping. Pass
           // both `\protect` and the munged CS through, but mark the CS
           // un-expandable via `\dont_expand` so the OUTER `\edef`'s
@@ -548,7 +548,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           result.push(tok);
           result.push(T_CS!("\\dont_expand"));
           result.push(next_tok);
-        }
+        }}}
       }
     } else {
       result.push(tok);
@@ -578,11 +578,11 @@ fn setup_aligning_context(doc: &mut Document) {
   if let Some(node) = doc.get_element() {
     // Save node and its current last child so we only apply to NEW children later
     state::assign_value("ALIGNING_NODE", Stored::Node(node.clone()), None);
-    if let Some(last) = node.get_last_child() {
+    match node.get_last_child() { Some(last) => {
       state::assign_value("ALIGNING_PREV_CHILD", Stored::Node(last), None);
-    } else {
+    } _ => {
       state::assign_value("ALIGNING_PREV_CHILD", Stored::None, None);
-    }
+    }}
   }
 }
 /// Perl: applyAligningContext — applies align/class to children added AFTER \centering.
@@ -731,7 +731,7 @@ pub fn before_equation() -> Result<()> {
   let mut is_numbered = false;
   maybe_peek_label()?;
   let ctr = with_value_mut("EQUATION_NUMBERING", |val_opt| {
-    if let Some(Stored::HashStored(ref mut numbering)) = val_opt {
+    if let Some(Stored::HashStored(numbering)) = val_opt {
       numbering.insert("in_equation", true.into());
       is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       has_preset = numbering.contains_key("preset");
@@ -787,11 +787,11 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   let mut is_numbered_for_postset = false;
   let mut ctr = String::from("equation");
   with_value("EQUATION_NUMBERING", |eq_num_opt| {
-    if let Some(Stored::HashStored(ref numbering)) = eq_num_opt {
+    if let Some(Stored::HashStored(numbering)) = eq_num_opt {
       is_aligned = matches!(numbering.get("aligned"), Some(&Stored::Bool(true)));
       is_numbered_for_postset = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       with_value("EQUATIONROW_TAGS", |tags_opt| {
-        if let Some(Stored::HashStored(ref tags)) = tags_opt {
+        if let Some(Stored::HashStored(tags)) = tags_opt {
           ctr = tags
             .get("counter")
             .map_or_else(|| numbering.get("counter"), Some)
@@ -840,7 +840,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
       ))])?;
       let stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)?);
       with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
-        if let Some(Stored::HashStored(ref mut tags)) = tags_opt {
+        if let Some(Stored::HashStored(tags)) = tags_opt {
           tags.insert("tags", stored_tags_update);
         }
       });
@@ -849,7 +849,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   }
   // Phase 3: Reset in_equation flag
   with_value_mut("EQUATION_NUMBERING", |eq_num_opt| {
-    if let Some(Stored::HashStored(ref mut numbering)) = eq_num_opt {
+    if let Some(Stored::HashStored(numbering)) = eq_num_opt {
       numbering.insert("in_equation", Stored::Bool(false));
     }
   });
@@ -1681,7 +1681,7 @@ pub fn define_new_theorem(
         T_CS!(&format_title_cs),
         T_BEGIN!(),
       ];
-      if let Some(Some(ref arg)) = args.first() {
+      if let Some(Some(arg)) = args.first() {
         title_tokens.extend(arg.revert()?.unlist());
       }
       title_tokens.push(T_END!());
@@ -2017,11 +2017,11 @@ pub fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
 
 pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
   let asif_opt =
-    if let Some(Stored::String(asif_sym)) = whatsit.get_property("backmatterelement").as_deref() {
+    match whatsit.get_property("backmatterelement").as_deref() { Some(Stored::String(asif_sym)) => {
       Some(arena::to_string(*asif_sym))
-    } else {
+    } _ => {
       None
-    };
+    }};
   // Note: We allocate a string here, since
   // it looks like arena::with can deadlock with find_insertion_point
   // we may need a find_insertion_point_sym to avoid that...
@@ -3094,15 +3094,15 @@ LoadDefinitions!({
   DefConstructor!(T_CS!("\\begin{document}"), None, sub[document, _args, props] {
     let id = prop_str!(props,"id");
     // Already (auto) created?
-    if let Some(mut docel) = document.findnode("/ltx:document", None) {
+    match document.findnode("/ltx:document", None) { Some(mut docel) => {
       if id != pin!("") {
         let id_s = arena::with(id, |s| s.to_string());
         document.set_attribute(&mut docel, "xml:id", &id_s)?;
       }
-    } else {
+    } _ => {
       let props = arena::with(id, |id_str| string_map!("xml:id" => id_str));
       document.open_element("ltx:document", Some(props), None)?;
-    }
+    }}
   },
   after_digest => sub[whatsit] {
     // Perl: beginMode('internal_vertical', 1) — noframe=1
@@ -5229,7 +5229,7 @@ LoadDefinitions!({
     // At least an empty tag! ?
     properties => sub[args] {
       if let Some(ref arg) = args[0] {
-        if let DigestedData::Postponed(ref tag_tokens) = arg.data() {
+        if let DigestedData::Postponed(tag_tokens) = arg.data() {
           let tag_expanded = Expand!(tag_tokens.clone());
           let tag = stomach::digest(tag_expanded)?;
           Ok(stored_map!("tag" => tag))
@@ -5531,7 +5531,7 @@ LoadDefinitions!({
     if in_equation {
       if defer_retract {
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
-          if let Some(Stored::HashStored(ref mut tags)) = tags_opt {
+          if let Some(Stored::HashStored(tags)) = tags_opt {
             tags.insert("retract", true.into());
           }
         });
@@ -5553,7 +5553,7 @@ LoadDefinitions!({
       // Perl uses Digested parameter type; we manually digest here
       let digested = stomach::digest(content)?;
       with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
-        if let Some(Stored::HashStored(ref mut tags)) = tags_opt {
+        if let Some(Stored::HashStored(tags)) = tags_opt {
           tags.insert("tags", Stored::Digested(digested));
         }
       });
@@ -5668,7 +5668,7 @@ LoadDefinitions!({
 
   // Perl: latex_constructs.pool.ltxml lines 2243-2247
   DefConditional!("\\if@in@firstcolumn", {
-    if let Some(alignment_digested) = lookup_alignment() {
+    match lookup_alignment() { Some(alignment_digested) => {
       if let Some(alignment_cell) = alignment_digested.alignment_cell() {
         let alignment = alignment_cell.borrow();
         !alignment.is_in_row()
@@ -5676,9 +5676,9 @@ LoadDefinitions!({
       } else {
         false
       }
-    } else {
+    } _ => {
       false
-    }
+    }}
   });
 
   // Perl: latex_constructs.pool.ltxml lines 2251-2254
@@ -6360,11 +6360,11 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[(cs, name)] {
     let fontkey = s!("fontdeclarations@{}", name.to_string());
-    let font : Option<Font> = if let Some(Stored::Font(value)) = lookup_value(&fontkey) {
+    let font : Option<Font> = match lookup_value(&fontkey) { Some(Stored::Font(value)) => {
       Some((*value).clone())
-    } else {
+    } _ => {
       None
-    };
+    }};
     DefPrimitive!(cs, None, None, font => font);
   });
 
@@ -7017,11 +7017,11 @@ LoadDefinitions!({
     // `\thefigure\par` undefined errors when captype was "figure\par".
     let captype = gullet::do_expand(T_CS!("\\@captype"))?.to_string();
     let prekey = s!("PREINCREMENTED_{captype}");
-    let props = if let Some(Stored::HashStored(pre)) = state::remove_value(&prekey) {
+    let props = match state::remove_value(&prekey) { Some(Stored::HashStored(pre)) => {
       pre
-    } else {
+    } _ => {
       ref_step_counter(&captype, false)?
-    };
+    }};
     let inlist  = stomach::digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
     state::assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
     state::assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
@@ -7255,20 +7255,20 @@ LoadDefinitions!({
   );
 
   DefMacro!("\\@tabbing@start@tabs", sub [_args] {
-    if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
+    match state::lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
       toks
-    } else {
+    } _ => {
       Tokens!()
-    }
+    }}
   });
 
   // \+ increments tab start by adding \> to tabbing_start_tabs
   DefPrimitive!("\\@tabbing@increment", sub [_args] {
-    let mut tabs = if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
+    let mut tabs = match state::lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
       toks.unlist()
-    } else {
+    } _ => {
       Vec::new()
-    };
+    }};
     tabs.push(T_CS!("\\>"));
     state::assign_value(
       "tabbing_start_tabs",
@@ -7279,15 +7279,15 @@ LoadDefinitions!({
 
   // \- decrements tab start by removing first element from tabbing_start_tabs
   DefPrimitive!("\\@tabbing@decrement", sub [_args] {
-    let tabs = if let Some(Stored::Tokens(toks)) = state::lookup_value("tabbing_start_tabs") {
+    let tabs = match state::lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
       let mut v = toks.unlist();
       if !v.is_empty() {
         v.remove(0);
       }
       v
-    } else {
+    } _ => {
       Vec::new()
-    };
+    }};
     state::assign_value(
       "tabbing_start_tabs",
       Stored::Tokens(Tokens::new(tabs)),
@@ -8277,9 +8277,9 @@ LoadDefinitions!({
     let current = document.get_node().clone();
     let current_name = arena::with(get_node_qname(&current), |s| s.to_string());
     let parent_name = if current_name == "#PCDATA" {
-      if let Some(p) = current.get_parent() {
+      match current.get_parent() { Some(p) => {
         arena::with(get_node_qname(&p), |s| s.to_string())
-      } else { current_name }
+      } _ => { current_name }}
     } else { current_name };
     let in_flow = parent_name.starts_with("ltx:p") || parent_name == "ltx:text";
     if in_flow {
@@ -8656,12 +8656,12 @@ LoadDefinitions!({
             whatsit.set_property("mathframe", true);
             // Extract inner body for the XMArg template
             // For \fbox{$...$}, get the math body from the inner whatsit
-            if let Ok(Some(body)) = a.get_body() {
+            match a.get_body() { Ok(Some(body)) => {
               whatsit.set_property("inner", body);
-            } else {
+            } _ => {
               // Fallback: use the entire arg
               whatsit.set_property("inner", a.clone());
-            }
+            }}
           }
         }
       }

@@ -29,7 +29,7 @@ fn hack_vbox_attachment(whatsit: &mut Whatsit, valign: &'static str) {
 /// Returns false if no \halign alignment was found.
 fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
   match digested.data() {
-    DigestedData::Whatsit(ref w) => {
+    DigestedData::Whatsit(w) => {
       let w_ref = w.borrow();
       if w_ref.get_property("alignment").is_some() {
         // Check if this whatsit's definition is \halign
@@ -37,7 +37,7 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
         let is_halign = *def.get_cs_name() == *"\\halign";
         if is_halign {
           // Get the alignment property value and set vattach on it
-          if let Some(Cow::Borrowed(Stored::Digested(ref alignment_dig))) =
+          if let Some(Cow::Borrowed(Stored::Digested(alignment_dig))) =
             w_ref.get_property("alignment")
           {
             if let DigestedData::Alignment(ref alignment_cell) = *alignment_dig.data() {
@@ -54,7 +54,7 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
       }
       false
     },
-    DigestedData::List(ref list_cell) => {
+    DigestedData::List(list_cell) => {
       // Walk children to find a \halign
       let children = list_cell.borrow().unlist();
       for child in children.iter() {
@@ -96,7 +96,7 @@ fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
     return dims;
   }
   // If zero dims: for Lists, sum children's dimensions
-  if let DigestedData::List(ref list_cell) = digested.data() {
+  if let DigestedData::List(list_cell) = digested.data() {
     if let Ok(list) = list_cell.try_borrow() {
       let mut total_w: i64 = 0;
       let mut max_h: i64 = 0;
@@ -344,9 +344,9 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     capture_body => true,
     reversion => sub[whatsit, _args] {
-      if let Some(body) = whatsit.get_body()? {
+      match whatsit.get_body()? { Some(body) => {
         body.revert()
-      } else { Ok(Tokens!()) }
+      } _ => { Ok(Tokens!()) }}
     }
   );
   DefConstructor!("\\lx@hidden@egroup", "",
@@ -361,9 +361,9 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     capture_body => true,
     reversion=> sub[whatsit,_args] {
-      if let Some(body) = whatsit.get_body()? {
+      match whatsit.get_body()? { Some(body) => {
         body.revert()
-      } else { Ok(Tokens!()) }
+      } _ => { Ok(Tokens!()) }}
     }
   );
   DefConstructor!("\\@hidden@egroup", "",
@@ -550,7 +550,7 @@ LoadDefinitions!({
     let newtag = if is_svg { "svg:g" }
       else if vmode { if inline { "ltx:inline-block" } else { "ltx:p" } }
       else { "ltx:text" };
-    let width : String = if let Some(Stored::Dimension(ref w)) = props.get("width") {
+    let width : String = if let Some(Stored::Dimension(w)) = props.get("width") {
       w.to_attribute()
     } else {
       String::new()
@@ -908,21 +908,21 @@ LoadDefinitions!({
   // Perl: \box does NOT call enterHorizontal (TeX_Box.pool.ltxml line 647)
   DefPrimitive!("\\box Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
+    match state::remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       Ok(vec![stuff])
-    } else {
+    } _ => {
       Ok(Vec::new())
-    }
+    }}
   });
 
   // Perl: \copy does NOT call enterHorizontal (TeX_Box.pool.ltxml line 653)
   DefPrimitive!("\\copy Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+    match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       Ok(vec![stuff])
-    } else {
+    } _ => {
       Ok(Vec::new())
-    }
+    }}
   });
 
   // \unhbox<8bit>, \unhcopy<8bit>
@@ -930,7 +930,7 @@ LoadDefinitions!({
   DefPrimitive!("\\unhbox Number", sub[(number)] {
     enter_horizontal();
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
+    match state::remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       // Only unlist if box is horizontal (mode ends with "horizontal")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
@@ -938,24 +938,24 @@ LoadDefinitions!({
       } else {
         Ok(vec![stuff])
       }
-    } else {
+    } _ => {
       Ok(Vec::new())
-    }
+    }}
   });
 
   DefPrimitive!("\\unhcopy Number", sub[(number)] {
     enter_horizontal();
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+    match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
         Ok(stuff.unlist())
       } else {
         Ok(vec![stuff])
       }
-    } else {
+    } _ => {
       Ok(Vec::new())
-    }
+    }}
   });
 
   // \unvbox<8bit>, \unvcopy<8bit>
@@ -963,7 +963,7 @@ LoadDefinitions!({
   DefPrimitive!("\\unvbox Number", sub[(number)] {
     leave_horizontal()?;
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = state::remove_value(&box_key) {
+    match state::remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       // Only unlist if box is vertical (mode ends with "vertical")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
@@ -971,25 +971,25 @@ LoadDefinitions!({
       } else {
         Ok(vec![stuff])
       }
-    } else {
+    } _ => {
       Ok(Vec::new())
-    }
+    }}
   });
 
   // Perl: $stomach->leaveHorizontal (TeX_Box.pool.ltxml line 693)
   DefPrimitive!("\\unvcopy Number", sub[(number)] {
     leave_horizontal()?;
     let box_key = s!("box{}", number.value_of());
-    if let Some(Stored::Digested(stuff)) = lookup_value(&box_key) {
+    match lookup_value(&box_key) { Some(Stored::Digested(stuff)) => {
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
         Ok(stuff.unlist())
       } else {
         Ok(vec![stuff])
       }
-    } else {
+    } _ => {
       Ok(Vec::new())
-    }
+    }}
   });
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1085,7 +1085,7 @@ LoadDefinitions!({
     let w_pt = width.map(|d| d.value_of() as f64 / 65536.0);
     let h_pt = height.map(|d| d.value_of() as f64 / 65536.0);
 
-    if let Some(_alignment) = lookup_alignment() {
+    match lookup_alignment() { Some(_alignment) => {
       // Perl: set isVerticalRule only if dimensions suggest a real rule
       let dominated_by_height = match (h_pt, w_pt) {
         (None, None) => true,
@@ -1096,9 +1096,9 @@ LoadDefinitions!({
       if dominated_by_height {
         whatsit.set_property("isVerticalRule", true);
       }
-    } else if w_pt == Some(0.0) {
+    } _ => if w_pt == Some(0.0) {
       whatsit.set_property("invisible", true);
-    }
+    }}
     // Set color from current font (Perl: only if NOT black)
     if let Some(font) = lookup_font() {
       if let Some(color) = font.color {
@@ -1195,13 +1195,13 @@ LoadDefinitions!({
     noautoclose_attrs.insert(String::from("_noautoclose"), String::from("1"));
     let mut container = document.open_element("ltx:text", Some(noautoclose_attrs), None)?;
 
-    if let Some(ref filler_d) = filler {
+    if let Some(filler_d) = filler {
       document.absorb(filler_d, None)?;
     }
 
     // Check if we should extend a rule to fill the requested width
     let mut unwrap = false;
-    if let (Some(_), Some(ref rw)) = (&cbox, &req_width) {
+    if let (Some(_), Some(rw)) = (&cbox, &req_width) {
       // Find the last child of the container — should be the absorbed rule
       if let Some(mut fnode) = container.get_last_child() {
         let qname = fnode.get_name();

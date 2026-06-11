@@ -134,7 +134,7 @@ LoadDefinitions!({
       // a graphics option.
       let mut alt_value: Option<String> = None;
       if let Some(ref kv_digested) = args[1] {
-        if let DigestedData::KeyVals(ref kv) = kv_digested.data() {
+        if let DigestedData::KeyVals(kv) = kv_digested.data() {
           for (key, value) in kv.get_pairs() {
             if key == "alt" {
               alt_value = Some(value.to_string());

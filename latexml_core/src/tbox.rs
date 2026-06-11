@@ -283,15 +283,15 @@ impl BoxOps for Tbox {
   fn get_font(&self) -> Result<Option<Cow<'_, Font>>> { Ok(Some(Cow::Borrowed(&self.font))) }
 
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
-    if let Some(body_stored) = self.get_property("body") {
+    match self.get_property("body") { Some(body_stored) => {
       if let Stored::Digested(ref body) = *body_stored {
         body.compute_size(options)
       } else {
         panic!("the stored 'body' property should always be a Stored::Digested enum case.");
       }
-    } else {
+    } _ => {
       Ok(self.font.compute_string_size(&self.get_string()?, options))
-    }
+    }}
   }
 }
 

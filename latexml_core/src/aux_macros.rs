@@ -3,7 +3,7 @@
 /// A flexary macro for constructing `HashMap<&'static str, &'static str>` maps
 #[macro_export]
 macro_rules! static_map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),*) => {{
     let mut map : HashMap<&'static str, &'static str> = HashMap::default();
     $( map.insert($key, $val); )*
     map
@@ -13,7 +13,7 @@ macro_rules! static_map {
 /// A flexary macro for constructing `HashMap<String, T>` maps, where `T` is generic.
 #[macro_export]
 macro_rules! map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),*) => {{
     let mut map = HashMap::default();
     $( map.insert($key.to_string(), $val); )*
     map
@@ -23,7 +23,7 @@ macro_rules! map {
 /// A flexary macro for constructing `SymHashMap<Stored>` maps
 #[macro_export]
 macro_rules! stored_map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),*) => {{
     let mut map : $crate::common::arena::SymHashMap<$crate::common::store::Stored> =
       $crate::common::arena::SymHashMap::default();
     $( map.insert($key, $val.into()); )*
@@ -34,7 +34,7 @@ macro_rules! stored_map {
 /// A flexary macro for constructing `SymHashMap<T>` maps
 #[macro_export]
 macro_rules! sym_map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),*) => {{
     let mut map = $crate::common::arena::SymHashMap::default();
     $( map.insert($key, $val); )*
     map
@@ -44,7 +44,7 @@ macro_rules! sym_map {
 /// A flexary macro for constructing `HashMap<String, T>` maps
 #[macro_export]
 macro_rules! string_keys_map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),*) => {{
     let mut map = HashMap::default();
     $( map.insert($key.to_string(), $val.into()); )*
     map
@@ -54,7 +54,7 @@ macro_rules! string_keys_map {
 /// A flexary macro for constructing `HashMap<String, String>` maps
 #[macro_export]
 macro_rules! string_map {
-  ($( $key:expr => $val:expr ),*) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),*) => {{
     let mut map = HashMap::default();
     $( map.insert($key.to_string(), $val.to_string()); )*
     map
@@ -65,7 +65,7 @@ macro_rules! string_map {
 /// (inferred at time of use)
 #[macro_export]
 macro_rules! raw_map {
-  ($( $key:expr => $val:expr ),* $(,)?) => {{
+  ($( $key:expr_2021 => $val:expr_2021 ),* $(,)?) => {{
     #[allow(unused_mut)]
     let mut map = HashMap::default();
     $( map.insert($key, $val); )*
@@ -76,7 +76,7 @@ macro_rules! raw_map {
 /// A flexary macro for constructing `HashMap<char, T>` maps, where `T` is generic
 #[macro_export]
 macro_rules! raw_char_map {
-  ($( $key:literal => $val:expr ),*) => {{
+  ($( $key:literal => $val:expr_2021 ),*) => {{
     let mut map : HashMap<char,_> = HashMap::default();
     $( map.insert($key, $val); )*
     map
@@ -92,7 +92,7 @@ macro_rules! s {
 /// The `some!` macro transforms data in type `S` to `Option<Into<T>>` (always wrapping with `Some`)
 #[macro_export]
 macro_rules! some {
-  ($arg:expr) => {
+  ($arg:expr_2021) => {
     Some($arg.into())
   };
 }
@@ -107,7 +107,7 @@ macro_rules! some {
 /// ```
 #[macro_export]
 macro_rules! mixvec {
-  ($( $val:expr ),*) => {{
+  ($( $val:expr_2021 ),*) => {{
     vec![ $($val.into()),*]
   }}
 }
@@ -122,7 +122,7 @@ macro_rules! mixvec {
 /// ```
 #[macro_export]
 macro_rules! mixrc {
-  ($( $val:expr ),*) => {{
+  ($( $val:expr_2021 ),*) => {{
     Rc::new([ $($val.into()),*])
   }}
 }
@@ -131,7 +131,7 @@ macro_rules! mixrc {
 /// The specification can be partial - missing fields are taken via the `Default` trait.
 #[macro_export]
 macro_rules! fontmap {
-  ($($key:ident => $value:expr),*) => (
+  ($($key:ident => $value:expr_2021),*) => (
     Font { $($key: Some($value.into()),)* .. Font::default() })
 }
 
@@ -139,7 +139,7 @@ macro_rules! fontmap {
 /// Source: <https://riptutorial.com/rust/example/4149/create-a-hashset-macro>
 #[macro_export]
 macro_rules! set {
-    ( $( $x:expr ),* ) => {  // Match zero or more comma delimited items
+    ( $( $x:expr_2021 ),* ) => {  // Match zero or more comma delimited items
         {
             // use rustc_hash::FxHashSet as HashSet;
             use rustc_hash::FxHashSet as HashSet;

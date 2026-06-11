@@ -736,7 +736,7 @@ pub fn get_xm_hint_spacing(width: &str) -> f64 {
 pub fn needs_mathstyle(node: &NodeData) -> bool {
   match node {
     NodeData::Element { attributes, children, .. } => {
-      if let Some(ref attrs) = attributes {
+      if let Some(attrs) = attributes {
         if attrs.contains_key("_largeop") {
           return true;
         }
@@ -1048,7 +1048,7 @@ pub fn pmml_row(items: Vec<NodeData>) -> NodeData {
     .into_iter()
     .filter(|item| match item {
       NodeData::Element { attributes, .. } => {
-        if let Some(ref attrs) = attributes {
+        if let Some(attrs) = attributes {
           !attrs.contains_key("_ignorable")
         } else {
           true
@@ -1186,11 +1186,11 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
       match tag.as_str() {
         "ltx:Math" => {
           // Nested math: convert XMath if present
-          if let Some(xmath) = doc.findnode_at("ltx:XMath", node) {
+          match doc.findnode_at("ltx:XMath", node) { Some(xmath) => {
             vec![presentation::convert_to_pmml(doc, &xmath)]
-          } else {
+          } _ => {
             vec![]
-          }
+          }}
         },
         "ltx:text" => {
           // Recurse on children

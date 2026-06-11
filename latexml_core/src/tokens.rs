@@ -48,7 +48,7 @@ impl PartialEq for Tokens {
 #[macro_export]
 macro_rules! Tokens(
   () => ( $crate::tokens::NO_TOKENS );
-  ($( $tokens:expr ),+) => ({
+  ($( $tokens:expr_2021 ),+) => ({
     let mut collected : Vec<$crate::token::Token> = Vec::new();
     $(
       let t_vec : Vec<$crate::token::Token> = $tokens.into();

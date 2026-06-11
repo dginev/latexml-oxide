@@ -99,14 +99,14 @@ impl Object for RegisterValue {
   fn revert(&self) -> Result<Tokens> {
     match self {
       // ExplodeText($self->toString);
-      RegisterValue::Number(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::Dimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::MuDimension(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::Glue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::MuGlue(ref value) => Ok(Tokens::new(ExplodeText!(value))),
-      RegisterValue::Token(ref value) => Ok(Tokens!(value.revert())),
-      RegisterValue::Tokens(ref value) => Ok(Tokens::new(value.clone().revert())), // clone?
-      RegisterValue::Pair(ref value) => value.revert(),
+      RegisterValue::Number(value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::Dimension(value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::MuDimension(value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::Glue(value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::MuGlue(value) => Ok(Tokens::new(ExplodeText!(value))),
+      RegisterValue::Token(value) => Ok(Tokens!(value.revert())),
+      RegisterValue::Tokens(value) => Ok(Tokens::new(value.clone().revert())), // clone?
+      RegisterValue::Pair(value) => value.revert(),
     }
   }
 }
@@ -732,7 +732,7 @@ impl Definition for Register {
     let params = &self.parameters;
     match params {
       None => Ok(Vec::new()),
-      Some(ref params) => params.read_arguments(Some(self)),
+      Some(params) => params.read_arguments(Some(self)),
     }
   }
 

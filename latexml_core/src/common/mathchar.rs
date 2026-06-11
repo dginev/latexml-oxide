@@ -809,7 +809,7 @@ pub fn decode_math_char(
       // current size comes from context (e.g. \big's font => { size => 12 }).
       let preserved_size = f.size;
       state::with_font_info(ftok, |fontinfo| {
-        if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
+        if let Some(Stored::Font(info)) = fontinfo.unwrap_or(None) {
           f = f.merge_ref(info);
         } else {
           // Perl: fallback to \lx@default@font if not found
@@ -819,7 +819,7 @@ pub fn decode_math_char(
           });
           if let Some(d_tok) = d_tok_opt {
             state::with_font_info(&d_tok, |d_info| {
-              if let Some(Stored::Font(ref d_f)) = d_info.unwrap_or(None) {
+              if let Some(Stored::Font(d_f)) = d_info.unwrap_or(None) {
                 f = f.merge_ref(d_f);
               }
             });
@@ -851,7 +851,7 @@ pub fn decode_math_char(
     // a State borrow while its closure runs — the reentrant mutation
     // panics with "RefCell already borrowed" (sandbox paper 0711.4787).
     let mut encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
-      if let Some(Stored::Font(ref info)) = fontinfo? {
+      if let Some(Stored::Font(info)) = fontinfo? {
         Ok::<Option<String>, crate::common::error::Error>(
           info.encoding.as_ref().map(|s| s.to_string()),
         )

@@ -13,7 +13,7 @@ macro_rules! LoadDefinitions {
 //======================================================================
 #[macro_export]
 macro_rules! DefParameterTypeWO {
-  ($name:ident, $param:expr) => {
+  ($name:ident, $param:expr_2021) => {
     assign_mapping(
       "PARAMETER_TYPES",
       stringify!($name),
@@ -24,7 +24,7 @@ macro_rules! DefParameterTypeWO {
 
 #[macro_export]
 macro_rules! LoadPool {
-  ($name:expr) => {{
+  ($name:expr_2021) => {{
     input_definitions($name, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("pool")),
       ..InputDefinitionOptions::default()
@@ -34,10 +34,10 @@ macro_rules! LoadPool {
 
 #[macro_export]
 macro_rules! InputDefinitions {
-  ($name:expr) => {{
+  ($name:expr_2021) => {{
     input_definitions($name, InputDefinitionOptions::default())?
   }};
-  ($name: expr, $($key:ident => $value:expr),*) => {
+  ($name: expr_2021, $($key:ident => $value:expr_2021),*) => {
     input_definitions($name, NewDefault!(InputDefinitionOptions, $($key => $value),*))?
   }
 }
@@ -73,31 +73,31 @@ macro_rules! InnerPool {
 
 #[macro_export]
 macro_rules! RequirePackage {
-  ($package:expr) => {{
+  ($package:expr_2021) => {{
     require_package($package, RequireOptions::default())?
   }};
-  ($package:expr, $options:expr) => {{
+  ($package:expr_2021, $options:expr_2021) => {{
     require_package($package, $options)?
   }};
-  ($package:expr, $($key:ident => $val:expr),*) => {{
+  ($package:expr_2021, $($key:ident => $val:expr_2021),*) => {{
     let require_package_options = NewDefault!(RequireOptions, $($key=>$val),*);
     require_package($package, require_package_options)?
   }};
 }
 #[macro_export]
 macro_rules! LoadClass {
-  ($class:expr) => {{ load_class($class, Vec::new(), Tokens!())? }};
-  ($class:expr, $options:expr, $after:expr) => {{ load_class($class, $options, $after)? }};
+  ($class:expr_2021) => {{ load_class($class, Vec::new(), Tokens!())? }};
+  ($class:expr_2021, $options:expr_2021, $after:expr_2021) => {{ load_class($class, $options, $after)? }};
 }
 
 #[macro_export]
 macro_rules! DeclareFontMap {
-  ($name:expr, $map:expr, $family:expr) => {{
+  ($name:expr_2021, $map:expr_2021, $family:expr_2021) => {{
     let mapname = s!("{}_{}_fontmap", $name, $family);
     let map: Rc<[Option<char>]> = $map;
     state::assign_value(&mapname, map, Some(Scope::Global));
   }};
-  ($name:expr, $map:expr) => {{
+  ($name:expr_2021, $map:expr_2021) => {{
     let mapname = s!("{}_fontmap", $name);
     let map: Rc<[Option<char>]> = $map;
     state::assign_value(&mapname, map, Some(Scope::Global));
@@ -108,7 +108,7 @@ macro_rules! DeclareFontMap {
 /// Usage: `DeclareFontMapMultichar!("T2B", { 0x80 => "\u{04F6}\u{0336}", 0x91 => "C\u{0337}" });`
 #[macro_export]
 macro_rules! DeclareFontMapMultichar {
-  ($name:expr, { $($pos:expr => $str:expr),* $(,)? }) => {{
+  ($name:expr_2021, { $($pos:expr_2021 => $str:expr_2021),* $(,)? }) => {{
     let mapname = s!("{}_fontmap_multichar", $name);
     let map: HashMap<String, String> = [
       $( ($pos.to_string(), $str.to_string()), )*
@@ -119,10 +119,10 @@ macro_rules! DeclareFontMapMultichar {
 
 #[macro_export]
 macro_rules! FindFile {
-  ($name:expr) => {
+  ($name:expr_2021) => {
     find_file($name, None)
   };
-  ($name:expr, type => $ext:literal) => {
+  ($name:expr_2021, type => $ext:literal) => {
     find_file(
       $name,
       Some(FindFileOptions {
@@ -137,7 +137,7 @@ macro_rules! FindFile {
 // Color
 #[macro_export]
 macro_rules! LookupColor {
-  ($name:expr) => {{
+  ($name:expr_2021) => {{
     if let Some(color) = LookupValue!(&s!("color_{}", $name)) {
       color.to_string()
     } else {
@@ -386,7 +386,7 @@ macro_rules! DefPrimitive {
       $body $($input)*)
   }};
   // Case: closure pattern replacement
-  ($proto:expr, sub[$args:ident]
+  ($proto:expr_2021, sub[$args:ident]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
@@ -397,7 +397,7 @@ macro_rules! DefPrimitive {
     def_primitive(cs, params, Some(closure), options)?;
   }};
   // Case: cs-noparams with closure pattern replacement
-  ($cs:expr, None, sub[$args:ident]
+  ($cs:expr_2021, None, sub[$args:ident]
     $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let closure = PrimitiveBody::Closure(Rc::new(
@@ -407,7 +407,7 @@ macro_rules! DefPrimitive {
     def_primitive($cs, None, Some(closure), options)?;
   }};
   // Case: cs-noparams with closure block
-  ($cs:expr, None, $body:block $($input:tt)*) => {{
+  ($cs:expr_2021, None, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let closure = PrimitiveBody::Closure(Rc::new(
       move |_args: Vec<ArgWrap>| {
@@ -416,7 +416,7 @@ macro_rules! DefPrimitive {
     def_primitive($cs, None, Some(closure), options)?;
   }};
   // Case: cs-noparams with replacement expr
-  ($cs:expr, None, $body:literal, $($input:tt)*) => {{
+  ($cs:expr_2021, None, $body:literal, $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let pbody = PrimitiveBody::String(arena::pin_static($body));
     def_primitive($cs, None, Some(pbody), options)?;
@@ -428,13 +428,13 @@ macro_rules! DefPrimitive {
     def_primitive(cs, params, None, options)?;
   }};
   // Case: no params, no replacement
-  ($cs:expr, None, None $($input:tt)*) => {{
+  ($cs:expr_2021, None, None $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     def_primitive($cs, None, None, options)?;
   }};
 
   // Case: closure block with implicit arguments
-  ($proto:expr, $body:block $($input:tt)*) => {{
+  ($proto:expr_2021, $body:block $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     let (cs, params) = parse_prototype!($proto);
     let closure = PrimitiveBody::Closure(Rc::new(
@@ -444,11 +444,11 @@ macro_rules! DefPrimitive {
     def_primitive(cs, params, Some(closure), options)?;
   }};
   // Case: direct closure provided (for reasons of reusing the same closure in several definitions)
-  ($proto:expr, $replacement_closure:expr, $($input:tt)*) => {{
+  ($proto:expr_2021, $replacement_closure:expr_2021, $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {PrimitiveOptions,});
     def_primitive($proto, $replacement_closure, options)?;
   }};
-  ($proto:expr, $replacement_closure:expr) => {{
+  ($proto:expr_2021, $replacement_closure:expr_2021) => {{
     let (cs, params) = parse_prototype!($proto);
     def_primitive(cs, params, $replacement_closure, PrimitiveOptions::default())?;
   }};
@@ -487,10 +487,10 @@ macro_rules! TypedPrimitive {
 
 #[macro_export]
 macro_rules! LookupRegister {
-  ($cs:expr) => {
+  ($cs:expr_2021) => {
     LookupRegister!($cs, Vec::new())
   };
-  ($cs:expr, $parameters:expr) => {{
+  ($cs:expr_2021, $parameters:expr_2021) => {{
     let params = { $parameters };
     let defn_opt = { state::lookup_register_definition(&T_CS!($cs)) };
     if let Some(defn) = defn_opt {
@@ -505,10 +505,10 @@ macro_rules! LookupRegister {
 
 #[macro_export]
 macro_rules! LookupRegisterOrDefault {
-  ($cs:expr) => {
+  ($cs:expr_2021) => {
     LookupRegisterOrDefault!($cs, Vec::new())
   };
-  ($cs:expr, $parameters:expr) => {
+  ($cs:expr_2021, $parameters:expr_2021) => {
     if let Some(defn) = { state::lookup_register_definition(&T_CS!($cs)) } {
       defn.value_of($parameters).unwrap_or_default()
     } else {
@@ -594,7 +594,7 @@ macro_rules! DefConstructor {
   }};
 
   // Literal replacement flavors
-  ($proto:expr, $replacement:literal) => {{
+  ($proto:expr_2021, $replacement:literal) => {{
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
@@ -602,41 +602,41 @@ macro_rules! DefConstructor {
   }};
   // Pre-parsed prototype flavors
   // Pre-parsed prototype; Closure replacement flavors
-  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident]
+  ($cs:expr_2021, $parameters:expr_2021, sub [ $document:ident, $args:ident, $props:ident]
     $body:block, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let compiled_replacement : Option<ReplacementClosure>= Some(Rc::new(
       replacement!($document, $args, $props, $body)));
     def_constructor($cs, $parameters, compiled_replacement, options);
   }};
-  ($cs:expr, $parameters:expr, sub [ $document:ident, $args:ident, $props:ident]
+  ($cs:expr_2021, $parameters:expr_2021, sub [ $document:ident, $args:ident, $props:ident]
     $body:block) => {{
     let compiled_replacement : Option<ReplacementClosure>= Some(Rc::new(
       replacement!($document, $args, $props, $body)));
     def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
   }};
   //  Pre-parsed prototype; Literal replacement flavors
-  ($cs:expr, $parameters:expr, $replacement:literal) => {{
+  ($cs:expr_2021, $parameters:expr_2021, $replacement:literal) => {{
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
     def_constructor($cs, $parameters, compiled_replacement, ConstructorOptions::default());
   }};
-  ($cs:expr, $parameters:expr, None) => {{
+  ($cs:expr_2021, $parameters:expr_2021, None) => {{
     def_constructor($cs, $parameters, $replacement, ConstructorOptions::default());
   }};
 
   // Optioned flavors come last due to :tt munching
-  ($cs:expr, $parameters:expr, $replacement:literal, $($input:tt)+) => {{
+  ($cs:expr_2021, $parameters:expr_2021, $replacement:literal, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let compiled_replacement;
     compile_replacement!(compiled_replacement, $replacement);
     def_constructor($cs, $parameters, compiled_replacement, options);
   }};
-  ($cs:expr, $parameters:expr, None, $($input:tt)+) => {{
+  ($cs:expr_2021, $parameters:expr_2021, None, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     def_constructor($cs, $parameters, None, options);
   }};
-  ($proto:expr, $replacement:literal, $($input:tt)+) => {{
+  ($proto:expr_2021, $replacement:literal, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     let (cs, params) = parse_prototype!($proto);
     let compiled_replacement;
@@ -666,13 +666,13 @@ macro_rules! parse_prototype(
     }
   }};
   // expressions get handled at runtime
-  ($proto:expr) => {{
+  ($proto:expr_2021) => {{
     latexml_core::common::def_parser::parse_prototype($proto, true)? }};
 );
 
 #[macro_export]
 macro_rules! DefEnvironmentWO (
-  ($proto_raw:expr, $replacement:expr, $options:expr) => ({
+  ($proto_raw:expr_2021, $replacement:expr_2021, $options:expr_2021) => ({
   use latexml_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
@@ -692,7 +692,7 @@ macro_rules! DefEnvironmentWO (
 
 #[macro_export]
 macro_rules! DefEnvironmentIWO (
-  ($proto_raw:expr, $compiled_replacement:expr, $options:expr) => ({
+  ($proto_raw:expr_2021, $compiled_replacement:expr_2021, $options:expr_2021) => ({
   use latexml_core::util::text::*;
   let mut proto = $proto_raw.to_string().trim_start().to_string();
   let name = extract_bracketed(&mut proto, Some(&Delimiter::Brace)).unwrap_or_default();
@@ -708,34 +708,34 @@ macro_rules! DefEnvironmentIWO (
 
 #[macro_export]
 macro_rules! RelaxNGSchema {
-  ($name:expr) => {{ select_relaxng_schema($name, None) }};
+  ($name:expr_2021) => {{ select_relaxng_schema($name, None) }};
 }
 
 #[macro_export]
 macro_rules! RegisterNamespace(
-  ($prefix:expr, $namespace:expr) => {
+  ($prefix:expr_2021, $namespace:expr_2021) => {
     model::register_namespace($prefix, Some($namespace));
   };
-  ($prefix:expr => $namespace:expr) => {
+  ($prefix:expr_2021 => $namespace:expr_2021) => {
     RegisterNamespace!($prefix, $namespace)
   };
 );
 #[macro_export]
 macro_rules! RegisterDocumentNamespace(
-  ($prefix:expr, $namespace:expr) => {
+  ($prefix:expr_2021, $namespace:expr_2021) => {
     model::register_document_namespace($prefix, Some($namespace))
   }
 );
 #[macro_export]
 macro_rules! RequireResource(
-  ($resource:expr) => {
+  ($resource:expr_2021) => {
     require_resource(Resource{name: $resource.to_string(), ..Resource::default()})
   }
 );
 
 #[macro_export]
 macro_rules! defi_math {
-  ($cstext:expr, $paramlist:expr, $presentation:expr, $options:expr) => {{
+  ($cstext:expr_2021, $paramlist:expr_2021, $presentation:expr_2021, $options:expr_2021) => {{
     let options = $options;
     let cs = T_CS!($cstext.to_string());
     let presentation = $presentation.to_string();
@@ -770,21 +770,21 @@ macro_rules! defi_math {
 
 #[macro_export]
 macro_rules! CounterValue {
-  ($ctr:expr) => {{ counter_value($ctr)? }};
-  ($ctr:expr) => {
+  ($ctr:expr_2021) => {{ counter_value($ctr)? }};
+  ($ctr:expr_2021) => {
     counter_value($ctr)?
   };
 }
 
 #[macro_export]
 macro_rules! AddToCounter {
-  ($ctr:expr, $value:expr) => {
+  ($ctr:expr_2021, $value:expr_2021) => {
     add_to_counter($ctr, $value.into())?
   };
 }
 #[macro_export]
 macro_rules! StepCounter {
-  ($ctr:expr, $noreset:expr) => {
+  ($ctr:expr_2021, $noreset:expr_2021) => {
     step_counter($ctr, $noreset)
   };
 }
@@ -792,10 +792,10 @@ macro_rules! StepCounter {
 /// convenience macro for `api::counter_dialect::ref_step_counter`
 #[macro_export]
 macro_rules! RefStepCounter {
-  ($ctr:expr) => {
+  ($ctr:expr_2021) => {
     ref_step_counter($ctr, false)
   };
-  ($ctr:expr, $noreset:expr) => {
+  ($ctr:expr_2021, $noreset:expr_2021) => {
     ref_step_counter($ctr, $noreset)
   };
 }
@@ -803,7 +803,7 @@ macro_rules! RefStepCounter {
 /// convenience macro for `api::counter_dialect::ref_step_id`
 #[macro_export]
 macro_rules! RefStepID {
-  ($ctr:expr) => {
+  ($ctr:expr_2021) => {
     ref_step_id($ctr)
   };
 }
@@ -812,15 +812,15 @@ macro_rules! RefStepID {
 /// ID-ed item got pruned and we want to reuse its identifier.
 #[macro_export]
 macro_rules! RefCurrentID {
-  ($ctr:expr) => {
+  ($ctr:expr_2021) => {
     ref_current_id($ctr)
   };
 }
 #[macro_export]
 macro_rules! ResetCounter {
   ($ctr:literal) => {{ reset_counter(&T_OTHER!($ctr))? }};
-  ($ctr:expr) => {{ reset_counter($ctr)? }};
-  ($ctr:expr) => {
+  ($ctr:expr_2021) => {{ reset_counter($ctr)? }};
+  ($ctr:expr_2021) => {
     reset_counter($ctr)?
   };
 }
@@ -828,14 +828,14 @@ macro_rules! ResetCounter {
 /// Return `tokens` with all tokens expanded
 #[macro_export]
 macro_rules! Expand {
-  ($tokens:expr) => {
+  ($tokens:expr_2021) => {
     do_expand($tokens)?
   };
 }
 
 #[macro_export]
 macro_rules! Input {
-  ($arg:expr) => {
+  ($arg:expr_2021) => {
     ::latexml_core::binding::content::input($arg, InputOptions::default())?
   };
 }
@@ -856,19 +856,19 @@ macro_rules! Input {
 #[macro_export]
 macro_rules! Invocation {
   ($csname:literal) => {{ Invocation!($csname, vec![None]) }};
-  ($csname:literal, $args:expr) => {{
+  ($csname:literal, $args:expr_2021) => {{
     build_invocation_str($csname, $args.into_iter().map(Into::into).collect())?
   }};
-  ($token:expr) => {
+  ($token:expr_2021) => {
     Invocation!($token, vec![None])
   };
-  ($token:expr, $args:expr) => {
+  ($token:expr_2021, $args:expr_2021) => {
     build_invocation($token, $args.into_iter().map(Into::into).collect())?
   };
 }
 #[macro_export]
 macro_rules! DefLigature {
-  ($regex:expr, $replacement:expr, fontTest => sub[$font:ident] $body:block) => {
+  ($regex:expr_2021, $replacement:expr_2021, fontTest => sub[$font:ident] $body:block) => {
     let regex_compiled = Regex::new($regex).unwrap();
     let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
     let new_ligature_id = generate_ligature_id();
@@ -882,7 +882,7 @@ macro_rules! DefLigature {
       matcher:   None,
     }]);
   };
-  ($regex:expr, $replacement:expr) => {
+  ($regex:expr_2021, $replacement:expr_2021) => {
     let regex_compiled = Regex::new($regex).unwrap();
     let new_ligature_id = generate_ligature_id();
     unshift_value("TEXT_LIGATURES", vec![Ligature {
@@ -901,13 +901,13 @@ macro_rules! DefLigature {
 // 1st char of the argument.  In cases where there is no argument, `standalonechar` is used.
 #[macro_export]
 macro_rules! DefAccent {
-  ($accent:literal, $combiningchar:expr, $standalonechar:expr) => {{
+  ($accent:literal, $combiningchar:expr_2021, $standalonechar:expr_2021) => {{
     DefAccent!($accent, $combiningchar, $standalonechar, HashMap::default())
   }};
-  ($accent:literal, $combiningchar:expr, $standalonechar:expr, below => true) => {{
+  ($accent:literal, $combiningchar:expr_2021, $standalonechar:expr_2021, below => true) => {{
     DefAccent!($accent, $combiningchar, $standalonechar, map!("below"=>Stored::Bool(true)))
   }};
-  ($accent:literal, $combiningchar:expr, $standalonechar:expr, $options:expr) => {{
+  ($accent:literal, $combiningchar:expr_2021, $standalonechar:expr_2021, $options:expr_2021) => {{
     let mut options : HashMap<String, Stored> = $options;
     if !options.contains_key("above") &&
       !options.get("below").map(|v| matches!(v, Stored::Bool(true))).unwrap_or(false) {
@@ -937,7 +937,7 @@ macro_rules! DefAccent {
 //
 #[macro_export]
 macro_rules! LookupBool {
-  ($name:expr) => {{ state::lookup_bool($name) }};
+  ($name:expr_2021) => {{ state::lookup_bool($name) }};
 }
 #[macro_export]
 macro_rules! LookupFont {
@@ -945,94 +945,94 @@ macro_rules! LookupFont {
 }
 #[macro_export]
 macro_rules! LookupString {
-  ($name:expr) => {{ state::lookup_string($name) }};
+  ($name:expr_2021) => {{ state::lookup_string($name) }};
 }
 #[macro_export]
 macro_rules! LookupNumber {
-  ($name:expr) => {{ state::lookup_number($name) }};
+  ($name:expr_2021) => {{ state::lookup_number($name) }};
 }
 #[macro_export]
 macro_rules! LookupTokens {
-  ($name:expr) => {{ state::lookup_tokens($name) }};
+  ($name:expr_2021) => {{ state::lookup_tokens($name) }};
 }
 #[macro_export]
 macro_rules! AssignValue {
-  ($name:expr => $value:expr) => {
+  ($name:expr_2021 => $value:expr_2021) => {
     AssignValue!($name, $value)
   };
-  ($name:expr => $value:expr, $scope:expr) => {
+  ($name:expr_2021 => $value:expr_2021, $scope:expr_2021) => {
     AssignValue!($name, $value, $scope)
   };
-  ($name:expr, $value:expr) => {{ state::assign_value($name, $value, None) }};
-  ($name:expr, $value:expr, $scope:expr) => {{ state::assign_value($name, $value, $scope) }};
-  ($name:expr, $value:expr, $scope:expr) => {
+  ($name:expr_2021, $value:expr_2021) => {{ state::assign_value($name, $value, None) }};
+  ($name:expr_2021, $value:expr_2021, $scope:expr_2021) => {{ state::assign_value($name, $value, $scope) }};
+  ($name:expr_2021, $value:expr_2021, $scope:expr_2021) => {
     state::assign_value($name, $value, $scope)
   };
 }
 
 #[macro_export]
 macro_rules! AssignMapping {
-  ($map:expr, $key:expr => $value:expr) => {
+  ($map:expr_2021, $key:expr_2021 => $value:expr_2021) => {
     assign_mapping($map, $key, $value.into())
   };
 }
 #[macro_export]
 macro_rules! AssignMeaning {
-  ($key:expr, $val:expr) => {
+  ($key:expr_2021, $val:expr_2021) => {
     AssignMeaning!($key, $val, None)
   };
-  ($key:expr, $val:expr, $scope: expr) => {{ assign_meaning($key, $val, $scope) }};
+  ($key:expr_2021, $val:expr_2021, $scope: expr_2021) => {{ assign_meaning($key, $val, $scope) }};
 }
 
 #[macro_export]
 macro_rules! LookupCatcode {
-  ($c:expr) => {{ state::lookup_catcode($c) }};
+  ($c:expr_2021) => {{ state::lookup_catcode($c) }};
 }
 #[macro_export]
 macro_rules! AssignCatcode {
-  ($name:expr => $value:expr) => {
+  ($name:expr_2021 => $value:expr_2021) => {
     AssignCatcode!($name, $value)
   };
-  ($c:expr, $catcode:expr) => {{ AssignCatcode!($c, $catcode, None) }};
-  ($c:expr, $catcode:expr, $scope:expr) => {{ assign_catcode($c, $catcode, $scope) }};
+  ($c:expr_2021, $catcode:expr_2021) => {{ AssignCatcode!($c, $catcode, None) }};
+  ($c:expr_2021, $catcode:expr_2021, $scope:expr_2021) => {{ assign_catcode($c, $catcode, $scope) }};
 }
 #[macro_export]
 macro_rules! LookupMeaning {
-  ($name:expr) => {
+  ($name:expr_2021) => {
     state::lookup_meaning($name)
   };
 }
 #[macro_export]
 macro_rules! LookupDefinition {
-  ($name:expr) => {
+  ($name:expr_2021) => {
     state::lookup_definition($name)?
   };
 }
 #[macro_export]
 macro_rules! InstallDefinition {
-  ($name:expr, $definition:expr, $scope:expr) => {
+  ($name:expr_2021, $definition:expr_2021, $scope:expr_2021) => {
     state::install_definition($name, $definition, $scope)
   };
 }
 #[macro_export]
 macro_rules! XEquals {
-  ($token1:expr, $token2:expr) => {
+  ($token1:expr_2021, $token2:expr_2021) => {
     state::x_equals($token1, $token2)
   };
 }
 #[macro_export]
 macro_rules! IsDefined {
-  ($name:expr) => {
+  ($name:expr_2021) => {
     is_defined_token($name)
   };
 }
 #[macro_export]
 macro_rules! IsDefinedToken {
-  ($name:expr) => {{ is_defined_token($name) }};
+  ($name:expr_2021) => {{ is_defined_token($name) }};
 }
 #[macro_export]
 macro_rules! IsDefinable {
-  ($token: expr) => {
+  ($token: expr_2021) => {
     is_definable($token)
   };
 }
@@ -1045,24 +1045,24 @@ macro_rules! Let {
   ($token1:literal, $token2:literal, None) => {
     state::let_i(&T_CS!($token1), &T_CS!($token2), None)
   };
-  ($token1:literal, $token2:literal, $scope:expr) => {
+  ($token1:literal, $token2:literal, $scope:expr_2021) => {
     state::let_i(&T_CS!($token1), &T_CS!($token2), Some($scope))
   };
   // half-packaged args
-  ($token1:literal, $token2:expr) => {
+  ($token1:literal, $token2:expr_2021) => {
     state::let_i(&T_CS!($token1), &$token2, None)
   };
-  ($token1:expr, $token2:literal) => {
+  ($token1:expr_2021, $token2:literal) => {
     state::let_i(&$token1, &T_CS!($token2), None)
   };
   // internal form, pre-packaged arguments
-  ($token1:expr, $token2:expr) => {
+  ($token1:expr_2021, $token2:expr_2021) => {
     state::let_i(&$token1, &$token2, None)
   };
-  ($token1:expr, $token2:expr, None) => {
+  ($token1:expr_2021, $token2:expr_2021, None) => {
     state::let_i(&$token1, &$token2, None)
   };
-  ($token1:expr, $token2:expr, $scope:expr) => {
+  ($token1:expr_2021, $token2:expr_2021, $scope:expr_2021) => {
     state::let_i(&$token1, &$token2, Some($scope))
   };
 }
@@ -1072,7 +1072,7 @@ macro_rules! DigestIf {
   ($token:literal) => {
     digest_if(T_CS!($token))
   };
-  ($token:expr) => {
+  ($token:expr_2021) => {
     digest_if($token)
   };
 }
@@ -1086,10 +1086,10 @@ macro_rules! DigestIf {
 ///   `MergeFont(family => 'math', shape => 'italic')`.
 #[macro_export]
 macro_rules! MergeFont {
-  ($kv:expr) => {
+  ($kv:expr_2021) => {
     merge_font($kv)
   };
-  ($($key:ident => $val:expr),+ $(,)?) => {
+  ($($key:ident => $val:expr_2021),+ $(,)?) => {
     merge_font(fontmap!($($key => $val),+))
   };
 }
@@ -1129,7 +1129,7 @@ macro_rules! DefMacro {
       $body $($input)*)
   };
   // closure, general form
-  ($proto:expr, sub [$args:ident]
+  ($proto:expr_2021, sub [$args:ident]
     $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
@@ -1137,7 +1137,7 @@ macro_rules! DefMacro {
       Rc::new(move |$args| $body.into_tokens_result())));
     def_macro(cs, params, expansion_closure, Some(options))?;
   };
-  ($proto:expr, $body:block $($input:tt)*) => {
+  ($proto:expr_2021, $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let (cs, params) = parse_prototype!($proto);
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
@@ -1155,7 +1155,7 @@ macro_rules! DefMacro {
     def_macro(cs, params, compiled_expansion, Some(options))?;
   };
   // Internal-level use
-  ($cs:expr, $parameters:literal, $expansion: literal) => {
+  ($cs:expr_2021, $parameters:literal, $expansion: literal) => {
     let cs = $cs;
     let params = parse_parameters($parameters, &cs, true)?;
     let compiled_expansion;
@@ -1169,7 +1169,7 @@ macro_rules! DefMacro {
   // plus a parameters string. We invoke `parse_parameters` at runtime to
   // build the Parameters from the literal — same shape as the
   // ($proto:literal, sub [$args] $body) arm.
-  ($cs:expr, $parameters:literal, sub [$args:ident]
+  ($cs:expr_2021, $parameters:literal, sub [$args:ident]
     $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let cs_expr = $cs;
@@ -1181,7 +1181,7 @@ macro_rules! DefMacro {
   };
   // Same as above, but with parenthesized named args:
   //   DefMacro!(T_CS!("\\__foo:nn"), "{}{}", sub[(case, cp)] { ... });
-  ($cs:expr, $parameters:literal, sub [( $($var:ident),* )]
+  ($cs:expr_2021, $parameters:literal, sub [( $($var:ident),* )]
     $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let cs_expr = $cs;
@@ -1195,7 +1195,7 @@ macro_rules! DefMacro {
     )));
     def_macro(cs_expr, parsed_params, expansion_closure, Some(options))?;
   };
-  ($cs:expr, $parameters:expr, sub [$args:ident]
+  ($cs:expr_2021, $parameters:expr_2021, sub [$args:ident]
     $body:block $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
@@ -1217,39 +1217,39 @@ macro_rules! DefMacro {
     compile_expansion!(compiled_expansion, $expansion);
     def_macro(T_CS!($cs), None, compiled_expansion, Some(options))?;
   };
-  ($cs:literal, None, $expansion:expr) => {
+  ($cs:literal, None, $expansion:expr_2021) => {
     def_macro(T_CS!($cs), None, $expansion, None)?;
   };
-  ($cs:expr, None, $expansion:literal) => {
+  ($cs:expr_2021, None, $expansion:literal) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     def_macro($cs, None, compiled_expansion, Some(ExpandableOptions {
       nopack_parameters: true, ..ExpandableOptions::default()
     }))?;
   };
-  ($cs:expr, None, $body:block) => {
+  ($cs:expr_2021, None, $body:block) => {
     let expansion_closure: Option<ExpansionBody> = Some(ExpansionBody::Closure(Rc::new(
       move |_args| $body.into_tokens_result()
     )));
     def_macro($cs, None, expansion_closure, None)?;
   };
-  ($cs:expr, None, $expansion:expr) => {
+  ($cs:expr_2021, None, $expansion:expr_2021) => {
     def_macro($cs, None, $expansion, None)?;
   };
-  ($cs:expr, None, $expansion:literal, $($input:tt)+) => {
+  ($cs:expr_2021, None, $expansion:literal, $($input:tt)+) => {
     let compiled_expansion;
     compile_expansion!(compiled_expansion, $expansion);
     let mut options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     options.nopack_parameters = true; // compile_expansion! already packs parameters
     def_macro($cs, None, compiled_expansion, Some(options))?;
   };
-  ($cs:expr, None, $expansion:expr, $($input:tt)+) => {
+  ($cs:expr_2021, None, $expansion:expr_2021, $($input:tt)+) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     def_macro($cs, None, $expansion, Some(options))?;
   };
   // the triple expr case should be near the end, as it matches too many cases.
   // It's an internal use of DefMacro e.g. with 3 variable name arguments
-  ($cs:expr, $parameters:expr, $expansion:expr) => {{
+  ($cs:expr_2021, $parameters:expr_2021, $expansion:expr_2021) => {{
     def_macro($cs, $parameters, $expansion, None)?;
   }};
   // The least-specified option-parsing cases come last due to the TT munchers accepting any inputs
@@ -1258,7 +1258,7 @@ macro_rules! DefMacro {
     let (cs, params) = parse_prototype!($proto);
     def_macro(cs, params, None, Some(options))?;
   };
-  ($cs:expr, $replacement:expr, $expansion:expr, $($input:tt)*) => {
+  ($cs:expr_2021, $replacement:expr_2021, $expansion:expr_2021, $($input:tt)*) => {
     let options = defi_opts!(@munch ($($input)*) -> {ExpandableOptions,});
     def_macro($cs, $replacement, $expansion, Some(options))?;
   };
@@ -1300,28 +1300,28 @@ macro_rules! TypedMacro {
 /// and also defines the control sequence for assignment.
 #[macro_export]
 macro_rules! DefRegister {
-  ($proto:expr => $value:expr) => {{
+  ($proto:expr_2021 => $value:expr_2021) => {{
     let (cs, params) = parse_prototype!($proto);
     defi_register!(cs, params, $value, None);
   }};
-  ($proto:expr, $value:expr) => {{
+  ($proto:expr_2021, $value:expr_2021) => {{
     let (cs, params) = parse_prototype!($proto);
     defi_register!(cs, params, $value, None);
   }};
-  ($cs:expr, None, $value:expr) => {{
+  ($cs:expr_2021, None, $value:expr_2021) => {{
     defi_register!($cs, None, $value, None);
   }};
   // Option parsers are more lenient, should be at the end of the list of patterns
-  ($cs:expr, None, $value:expr, $($input:tt)+) => {{
+  ($cs:expr_2021, None, $value:expr_2021, $($input:tt)+) => {{
     let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
     defi_register!($cs, None, $value, Some(options));
   }};
-  ($proto:expr, $value:expr, $($input:tt)+) => {{
+  ($proto:expr_2021, $value:expr_2021, $($input:tt)+) => {{
     let (cs, params) = parse_prototype!($proto);
     let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
     defi_register!(cs, params, $value, Some(options));
   }};
-  ($proto:expr => $value:expr, $($input:tt)+) => {{
+  ($proto:expr_2021 => $value:expr_2021, $($input:tt)+) => {{
     let (cs, params) = parse_prototype!($proto);
     let options = defi_opts!(@munch ($($input)*) -> {RegisterOptions,});
     defi_register!(cs, params, $value, Some(options));
@@ -1330,7 +1330,7 @@ macro_rules! DefRegister {
 
 #[macro_export]
 macro_rules! defi_register {
-  ($cs:expr, $paramlist:expr, $value:expr, $options:expr) => {{
+  ($cs:expr_2021, $paramlist:expr_2021, $value:expr_2021, $options:expr_2021) => {{
     let value = { $value };
     def_register($cs, $paramlist, value, $options)?
   }};
@@ -1338,9 +1338,9 @@ macro_rules! defi_register {
 
 #[macro_export]
 macro_rules! NewCounter {
-  ($ctr:expr) => (new_counter($ctr, "", None)?);
-  ($ctr:expr, $within:expr) => (new_counter($ctr, $within, None)?);
-  ($ctr:expr, $within:expr, $($key:ident => $val:expr),*) => (
+  ($ctr:expr_2021) => (new_counter($ctr, "", None)?);
+  ($ctr:expr_2021, $within:expr_2021) => (new_counter($ctr, $within, None)?);
+  ($ctr:expr_2021, $within:expr_2021, $($key:ident => $val:expr_2021),*) => (
     new_counter($ctr, $within, Some(NewDefault!(NewCounterOptions, $($key=>$val),*)))?);
 }
 
@@ -1368,10 +1368,10 @@ macro_rules! DefEnvironment {
       )),
       options);
   }};
-  ($proto:literal, $replacement:expr) => {
+  ($proto:literal, $replacement:expr_2021) => {
     DefEnvironmentWO!($proto, $replacement, ConstructorOptions::default());
   };
-  ($proto:literal, $replacement:expr, $($input:tt)* ) => {{
+  ($proto:literal, $replacement:expr_2021, $($input:tt)* ) => {{
     let options = defi_opts!(@munch ($($input)*) -> {ConstructorOptions,});
     //                              ^^^^^^^^^^^^    ^^^^^^^^^^^^^^^^^^^^
     //                                 input       output
@@ -1381,7 +1381,7 @@ macro_rules! DefEnvironment {
 
 #[macro_export]
 macro_rules! Tag {
-  ($tag:expr, $($input:tt)*) => {{
+  ($tag:expr_2021, $($input:tt)*) => {{
     let options = defi_opts!(@munch ($($input)*) -> {TagOptions,});
     install_tag($tag, options);
   }}
@@ -1399,9 +1399,9 @@ macro_rules! DefMath(
     let defmath_options = defi_opts!(@munch ($($input)*) -> {MathPrimitiveOptions,});
     defi_math!(cs,paramlist, $presentation, defmath_options);
   }};
-  ($text:expr,$paramlist:expr,$presentation:expr) => (
+  ($text:expr_2021,$paramlist:expr_2021,$presentation:expr_2021) => (
     defi_math!($text,$paramlist, $presentation, MathPrimitiveOptions::default()));
-  ($text:expr,$paramlist:expr,$presentation:expr, $($input:tt)*) => {{
+  ($text:expr_2021,$paramlist:expr_2021,$presentation:expr_2021, $($input:tt)*) => {{
     let defmath_options = defi_opts!(@munch ($($input)*) -> {MathPrimitiveOptions,});
     defi_math!($text,$paramlist, $presentation, defmath_options);
   }};
@@ -1409,7 +1409,7 @@ macro_rules! DefMath(
 
 #[macro_export]
 macro_rules! DefParameterType {
-  ($name:ident, $($key:ident => $value:expr),*)=>(
+  ($name:ident, $($key:ident => $value:expr_2021),*)=>(
     DefParameterTypeWO!($name, NewDefault!(Parameter, name => arena::pin_static(stringify!($name)),
     $($key=>$value),*)));
   // with reader as explicit sub
@@ -1505,12 +1505,12 @@ macro_rules! Revert {
   ($thing:literal) => {
     Explode!($thing)
   };
-  ($thing:expr) => {{ $thing.revert()?.unlist() }};
+  ($thing:expr_2021) => {{ $thing.revert()?.unlist() }};
 }
 
 #[macro_export]
 macro_rules! GetKeyVal {
-  ($keyval_opt:expr, $key:expr) => {
+  ($keyval_opt:expr_2021, $key:expr_2021) => {
     match $keyval_opt {
       Some(digested) => match digested.data() {
         DigestedData::KeyVals(keyval) => keyval.get_value($key),
@@ -1523,7 +1523,7 @@ macro_rules! GetKeyVal {
 
 #[macro_export]
 macro_rules! GetKeyVals {
-  ($keyval:expr) => {
+  ($keyval:expr_2021) => {
     match $keyval_opt {
       Some(Digested::KeyVals(keyval)) => keyval.get_key_vals(),
       _ => None,
@@ -1536,7 +1536,7 @@ macro_rules! GetKeyVals {
 /// For descriptions of further parameters, see `keyval::define`.
 #[macro_export]
 macro_rules! DefKeyVal {
-  ($keyset:expr, $key:expr, $vtype:expr) => {{
+  ($keyset:expr_2021, $key:expr_2021, $vtype:expr_2021) => {{
     ::latexml_core::keyval::define(KeyvalConfig {
       prefix: "KV",
       keyset: $keyset,
@@ -1546,7 +1546,7 @@ macro_rules! DefKeyVal {
       ..KeyvalConfig::default()
     })?;
   }};
-  ($keyset:expr, $key:expr, $vtype:expr, $default:expr) => {{
+  ($keyset:expr_2021, $key:expr_2021, $vtype:expr_2021, $default:expr_2021) => {{
     ::latexml_core::keyval::define(KeyvalConfig {
       prefix: "KV",
       keyset: $keyset,
@@ -1556,7 +1556,7 @@ macro_rules! DefKeyVal {
       ..KeyvalConfig::default()
     })?;
   }};
-  ($keyset:expr, $key:expr, $vtype:expr, $default:expr, $options:tt) => {{
+  ($keyset:expr_2021, $key:expr_2021, $vtype:expr_2021, $default:expr_2021, $options:tt) => {{
     // TODO: explicit $options with prefix logic — for now ignore options and use default prefix
     log::warn!(
       "DefKeyVal with explicit options not fully ported, ignoring options for {}/{}",
@@ -1582,12 +1582,12 @@ macro_rules! Digest {
     stomach::digest(tokenized)
   }};
 
-  ($tokens:expr) => {{ stomach::digest($tokens) }};
+  ($tokens:expr_2021) => {{ stomach::digest($tokens) }};
 }
 
 #[macro_export]
 macro_rules! DigestText {
-  ($tokens:expr) => {{ digest_text($tokens) }};
+  ($tokens:expr_2021) => {{ digest_text($tokens) }};
 }
 
 /// Tokenize($string); Tokenizes the string using the standard cattable, returning a
@@ -1599,7 +1599,7 @@ macro_rules! Tokenize {
     compile_tokenize!(tokenized, $string);
     tokenized
   }};
-  ($string:expr) => {
+  ($string:expr_2021) => {
     mouth::tokenize($string)
   };
 }
@@ -1613,14 +1613,14 @@ macro_rules! TokenizeInternal {
     compile_tokenize_internal!(tokenized, $string);
     tokenized
   }};
-  ($string:expr) => {
+  ($string:expr_2021) => {
     mouth::tokenize_internal($string)
   };
 }
 
 #[macro_export]
 macro_rules! RawTeX {
-  ($text:expr) => {
+  ($text:expr_2021) => {
     ::latexml_core::stomach::raw_tex($text)?;
   };
 }
@@ -1636,19 +1636,19 @@ macro_rules! TeX {
 
 #[macro_export]
 macro_rules! Dimension {
-  ($number:expr) => {
+  ($number:expr_2021) => {
     Dimension::new_f64(Dimension::spec_to_f64($number)?)
   };
 }
 
 #[macro_export]
 macro_rules! Glue {
-  ($spec:expr) => {{ Glue::new_spec($spec, None, None, None, None) }};
+  ($spec:expr_2021) => {{ Glue::new_spec($spec, None, None, None, None) }};
 }
 
 #[macro_export]
 macro_rules! MuGlue {
-  ($spec:expr) => {{ MuGlue::new_spec($spec, None, None, None, None) }};
+  ($spec:expr_2021) => {{ MuGlue::new_spec($spec, None, None, None, None) }};
 }
 
 /// Register document namespaces. Replaces the old `DocType!` macro (DTD not supported in Rust
@@ -1656,10 +1656,10 @@ macro_rules! MuGlue {
 /// ignored.
 #[macro_export]
 macro_rules! RegisterDocumentNamespaces {
-  ($rootelement:expr, $pubid:expr, $sysid:expr) => {
+  ($rootelement:expr_2021, $pubid:expr_2021, $sysid:expr_2021) => {
     // No-op: DTD schema type not supported. Arguments retained for documentation/compatibility.
   };
-  ($rootelement:expr, $pubid:expr, $sysid:expr, $namespaces:expr) => {{
+  ($rootelement:expr_2021, $pubid:expr_2021, $sysid:expr_2021, $namespaces:expr_2021) => {{
     for (prefix, value) in $namespaces.iter() {
       model::register_document_namespace(prefix, Some(value));
     }
@@ -1684,7 +1684,7 @@ macro_rules! DeclareOption {
       PrimitiveBody::Closure(Rc::new(move |_args| $body.into_digested_result()));
     def_primitive(T_CS!(cs), None, Some(code), PrimitiveOptions::default())?;
   };
-  ($option:expr, $tex:literal) => {
+  ($option:expr_2021, $tex:literal) => {
     let tokenized;
     compile_tokenize_internal!(tokenized, $tex);
     state::push_value("@declaredoptions", $option)?;
@@ -1692,13 +1692,13 @@ macro_rules! DeclareOption {
     // literal case, create a macro
     def_macro(T_CS!(cs), None, tokenized, None)?;
   };
-  ($option:expr, $tokenized:ident) => {
+  ($option:expr_2021, $tokenized:ident) => {
     state::push_value("@declaredoptions", $option.to_string())?;
     let cs = s!("\\ds@{}", $option);
     // literal case, create a macro
     def_macro(T_CS!(cs), None, $tokenized, None)?;
   };
-  ($option:expr, $(sub)? $body:block) => {
+  ($option:expr_2021, $(sub)? $body:block) => {
     state::push_value("@declaredoptions", $option)?;
     let cs = s!("\\ds@{}", $option);
     // block case, create a primitive
@@ -1720,7 +1720,7 @@ macro_rules! ProcessOptions {
   };
   // ProcessOptions!(keysets => ["LTXML"]) — Perl
   // ProcessOptions(inorder => 1, keysets => ['LTXML'])
-  (keysets => [$($keyset:expr),+ $(,)?]) => {
+  (keysets => [$($keyset:expr_2021),+ $(,)?]) => {
     process_options(true, &[$($keyset),+])?;
   };
 }
@@ -1807,7 +1807,7 @@ macro_rules! defi_opts {
   (@munch ($(,)?) -> {$kind:ident,}) => {
     $kind::default()
   };
-  (@munch ($(,)?) -> {$kind:ident, $([$id:ident @ $body:expr])+ } ) => {
+  (@munch ($(,)?) -> {$kind:ident, $([$id:ident @ $body:expr_2021])+ } ) => {
     $kind {
       $($id: $body),*,
       ..$kind::default()
@@ -1817,324 +1817,324 @@ macro_rules! defi_opts {
   // DG: this is currently problematic - we seem to have two kinds of reversions, one working after
   //     digestion, and one *not*
   (@munch ( $(,)? reversion $(:)?$(=>)? sub[$whatsit:ident, $args:ident] $body:block $($next:tt)*)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@reversion (sub[$whatsit,$args] $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? reversion $(:)?$(=>)?
     sub[$arg:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@reversion (sub[$arg,$inner,$extra] $body $($next)*) -> {$kind, $([ $key @ $val ])*})
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? $(sub)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@reversion (sub $body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // reversion => None means "empty reversion" (disable reversion entirely)
   // Perl: reversion => Tokens() — produces empty tex= attribute
   (@munch ( $(,)? reversion $(:)?$(=>)? None, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
   };
   (@munch ( $(,)? reversion $(:)?$(=>)? None)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()
       -> {$kind, $( [ $key @ $val ] )*
         [ reversion @ Some(Reversion::Tokens(Tokens!())) ] })
   };
-  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ reversion @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? reversion $(:)?$(=>)? $tokens:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ reversion @ $tokens.into_option() ] })
   };
 
   // sizer: Option<SizingClosure>
   (@munch ( $(,)? sizer $(:)?$(=>)? sub[$whatsit_arg:ident]
     $body:block $($next:tt)*) ->
-  {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [
       sizer @ Some(sizersub!($whatsit_arg, $body)) ]})
   };
   (@munch ( $(,)? sizer $(:)?$(=>)? $body:block $($next:tt)*) ->
-  {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [
       sizer @ Some(sizersub!(_whatsit_arg, $body)) ]})
   };
-  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ sizer @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? sizer $(:)?$(=>)? $tokens:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ sizer @ $tokens.into_option() ] })
   };
   // select: literal string
-  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ select @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? select $(:)?$(=>)? $tokens:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ select @ $tokens.into_option() ] })
   };
   // select_count: literal number
-  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ select_count @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? select_count $(:)?$(=>)? $tokens:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )*
       [ select_count @ $tokens.into_option() ] })
   };
   // replace: sub
   (@munch ( $(,)? replace $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@replace (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? replace $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@replace ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // xpath: literal string
-  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ xpath @ $tokens.into_option() ] })
   };
-  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? xpath $(:)?$(=>)? $tokens:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ xpath @ $tokens.into_option() ] })
   };
 
   // mode : Option<TexMode>
   (@munch ( $(,)? mode $(:)?$(=>)? $literal:literal $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ mode @ $literal.into_option() ] })
   };
   // alias : Option<String>
   (@munch ( $(,)? alias $(:)?$(=>)? $literal:literal $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ alias @ $literal.into_option() ] })
   };
   // scope: Option<Scope>
-  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scope @ $scope.into_option() ] })
   };
-  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? scope $(:)?$(=>)? $scope:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ scope @ $scope.into_option() ] })
   };
   // font: Font
   (@munch ( $(,)? font $(:)?$(=>)? sub [ $font_whatsit:ident]
-    $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)*) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ font @ Some(FontDirective::Closure(Rc::new(move |$font_whatsit| $body))) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? { $($fkey:ident => $fvalue:literal),* } $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ font @ FontDirective!($($fkey => $fvalue),*) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? $body:block $($next:tt)*) ->
-  {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ font @ Some(FontDirective::Closure(Rc::new(move |_font_whatsit| $body))) ] })
   };
   (@munch ( $(,)? font $(:)?$(=>)? $props:ident $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ font @ $props.map(|v| FontDirective::Asset(Rc::new(v))) ] })
   };
   // properties: PropertiesClosure
   (@munch ( $(,)? properties $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ properties @ properties!($body) ] })
   };
   (@munch ( $(,)? properties $(:)?$(=>)?
       sub[$args:ident] $body:block $($next:tt)*)
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ properties @ properties!($args, $body) ] })
   };
   (@munch ( $(,)? properties $(:)?$(=>)? $var:ident $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ properties @ properties!($var) ] })
   };
 
   // before_digest_end: Vec<BeforeDigestClosure>
   (@munch ( $(,)? before_digest_end $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@before_digest_end (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? before_digest_end $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@before_digest_end ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
 
   // before_digest: Vec<BeforeDigestClosure>
   (@munch ( $(,)? before_digest $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@before_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? before_digest $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@before_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest: Vec<DigestionClosure>
   (@munch ( $(,)? after_digest $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_digest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_digest $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_digest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest_begin: Vec<DigestionClosure>
   (@munch ( $(,)? after_digest_begin $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_digest_begin (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_digest_begin $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_digest_begin ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // after_digest_body: Vec<DigestionClosure>
   (@munch ( $(,)? after_digest_body $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_digest_body (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_digest_body $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_digest_body ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
   // before_construct: Vec<ConstructionClosure>
   (@munch ( $(,)? before_construct $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@before_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? before_construct $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@before_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
 
 
   // after_construct: Vec<ConstructionClosure>
   (@munch ( $(,)? after_construct $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_construct (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_construct $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_construct ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_construct $(:)?$(=>)? $var:ident $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [after_construct @ $var]})
   };
 
   // getter: RegisterGetterClosure
   (@munch ( $(,)? getter $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@getter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? getter $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@getter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // setter: RegisterSetterClosure
   (@munch ( $(,)? setter $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@setter (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? setter $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@setter ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_open: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_open $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_open (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_open $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_open ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_open_late: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_open_late $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_open_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_open_late $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_open_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_close: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_close $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_close (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_close $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_close ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // after_close_late: Option<Vec<TagConstructionClosure>>
   (@munch ( $(,)? after_close_late $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_close_late (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? after_close_late $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@after_close_late ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // auto_open: Option<bool>
   (@munch ( $(,)? auto_open $(:)?$(=>)? $auto:literal $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_open @ $auto.into() ]})
   };
   // auto_close: Option<bool>
   (@munch ( $(,)? auto_close $(:)?$(=>)? $auto:literal $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )* [ auto_close @ $auto.into() ]})
   };
 
   // DefParameterType options
   // predigest: Vec<ReaderPredigestClosure>
   (@munch ( $(,)? predigest $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@predigest (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@munch ( $(,)? predigest $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@predigest ($body $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   // digested_reversion: Option<DigestedReversionClosure>
   // Perl equivalent: the `reversion` option on DefParameterType, which receives the raw value.
   // Allows parameter types to control reversion formatting from the structured digested data.
   (@munch ( $(,)? digested_reversion $(:)?$(=>)? sub $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@digested_reversion (sub $($next)*) -> {$kind, $( [ $key @ $val ] )*})
   };
   (@digested_reversion (sub[$arg:ident] $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [digested_reversion @ Some(Rc::new({
         move |$arg: &Digested| -> Result<Tokens> { $body }
@@ -2143,135 +2143,135 @@ macro_rules! defi_opts {
   // reversion
 
   // semiverbatim
-  (@munch ( $(,)? semiverbatim $(:)?$(=>)? Some($value:expr))
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? semiverbatim $(:)?$(=>)? Some($value:expr_2021))
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch () -> {$kind, $( [ $key @ $val ] )*
       [ semiverbatim @ Some($value) ] })
   };
   (@munch ( $(,)? semiverbatim $(:)?$(=>)? None)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch () -> {$kind, $( [ $key @ $val ] )*
       [ semiverbatim @ None ] })
   };
-  (@munch ( $(,)? semiverbatim $(:)?$(=>)? $value:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? semiverbatim $(:)?$(=>)? $value:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $( [ $key @ $val ] )*
       [ semiverbatim @ $value ] })
 };
   // ligature options
   // role: literal string
   (@munch ( $(,)? role $(:)?$(=>)? $literal:literal, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ role @ Some($literal.to_string()) ] })
   };
   (@munch ( $(,)? role $(:)?$(=>)? $literal:literal)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ role @ Some($literal.to_string()) ] })
   };
   // meaning: literal string
   (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ meaning @ Some($literal.to_string()) ] })
   };
   (@munch ( $(,)? meaning $(:)?$(=>)? $literal:literal)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )*
       [ meaning @ Some($literal.to_string()) ] })
   };
   // name: literal string
   (@munch ( $(,)? name $(:)?$(=>)? $literal:literal, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ name @ Some($literal.to_string()) ] })
   };
   (@munch ( $(,)? name $(:)?$(=>)? $literal:literal)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($literal.to_string()) ] })
   };
   // for register
   // address: Option<String>
-  (@munch ( $(,)? address $(:)?$(=>)? $idval:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? address $(:)?$(=>)? $idval:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ address @ Some($idval.to_string()) ] })
   };
-  (@munch ( $(,)? address $(:)?$(=>)? $idval:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? address $(:)?$(=>)? $idval:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ name @ Some($idval.to_string()) ] })
   };
   // allocate: Option<String>
-  (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr_2021, $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
       [ allocate @ Some($idval.to_string()) ] })
   };
-  (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  (@munch ( $(,)? allocate $(:)?$(=>)? $idval:expr_2021)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [allocate @ Some($idval.to_string()) ]})
   };
   // for defmath
   // stretchy: bool
   (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
   };
   (@munch ( $(,)? stretchy $(:)?$(=>)? $flag:literal)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ stretchy @ Some($flag) ] })
   };
   // operator_role: string
   (@munch ( $(,)? operator_role $(:)?$(=>)? $flag:literal, $($next:tt)*)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
     [ operator_role @ Some($flag.to_string()) ] })
   };
   (@munch ( $(,)? operator_role $(:)?$(=>)? $flag:literal)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )*
     [ operator_role @ Some($flag.to_string()) ] })
   };
   // operator_stretchy: bool
   (@munch ( $(,)? operator_stretchy $(:)?$(=>)? $flag:literal, $($next:tt)*)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
     [ operator_stretchy @ Some($flag) ] })
   };
   (@munch ( $(,)? operator_stretchy $(:)?$(=>)? $flag:literal)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ operator_stretchy @ Some($flag) ] })
   };
   // scriptpos: string
   (@munch ( $(,)? scriptpos $(:)?$(=>)? $flag:literal, $($next:tt)*)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
     [ scriptpos @ Some($flag.to_string()) ] })
   };
   (@munch ( $(,)? scriptpos $(:)?$(=>)? $flag:literal)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ()  -> {$kind, $( [ $key @ $val ] )* [ scriptpos @ Some($flag.to_string()) ] })
   };
   // mathstyle: Option<String>
   (@munch ( $(,)? mathstyle $(:)?$(=>)? $literal:literal, $($next:tt)*)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ($($next)*)  -> {$kind, $( [ $key @ $val ] )*
     [ mathstyle @ Some($literal.to_string()) ] })
   };
   (@munch ( $(,)? mathstyle $(:)?$(=>)? $literal:literal)
-  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
   defi_opts!(@munch ()
     -> {$kind, $( [ $key @ $val ] )*
       [ mathstyle @ Some($literal.to_string()) ] })
   };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $lit]})
   };
   // misc ident with block value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $body:block $($next:tt)*)
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [$id @ $body]})
   };
 
@@ -2279,52 +2279,52 @@ macro_rules! defi_opts {
   // Closure parsers
 
   (@before_digest_end ($body:block $($next:tt)* )
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+                  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest_end @ before_digest!($body)]})
   };
   (@before_digest ($(sub)? $body:block $($next:tt)* )
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+                  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest @ before_digest!($body)]})
   };
   (@before_digest ($(sub)? $body:block $($next:tt)* ) -> {$kind:ident,
-    $([$key:ident @ $val:expr])*}) => {
+    $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_digest @ before_digest!($body)]})
   };
   (@after_digest (
     sub[$whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest @ after_digest!($whatsit, $body)]})
   };
   (@after_digest (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest @ after_digest!(_whatsit,$body)]})
   };
 
   (@after_digest_begin (
     sub[$whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest_begin @ after_digest!($whatsit, $body)]})
   };
   (@after_digest_begin (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest_begin @ after_digest!(_whatsit, $body)]})
   };
 
   (@after_digest_body (
     sub[$whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest_body @ after_digest!($whatsit, $body)]})
   };
   (@after_digest_body (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_digest_body @ after_digest!( whatsit, $body)]})
   };
@@ -2332,98 +2332,98 @@ macro_rules! defi_opts {
 
   (@before_construct (
     sub[$doc:ident, $whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_construct @ construct!($doc, $whatsit, $body)]})
   };
   (@before_construct (
     sub[$doc:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_construct @ construct!($doc, _whatsit, $body)]})
   };
   (@before_construct (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [before_construct @ construct!(_document, _whatsit, $body)]})
   };
 
   (@after_construct (
     sub[$doc:ident, $whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_construct @ construct!($doc, $whatsit, $body)]})
   };
   (@after_construct (
     sub[$doc:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_construct @ construct!($doc, _whatsit, $body)]})
   };
   (@after_construct (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_construct @ construct!(_document, _whatsit, $body)]})
   };
 
   (@getter (
     sub[$args:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [getter @ getter!($args, $body)]})
   };
   (@getter (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [getter @ getter!(_args,$body)]})
   };
 
   (@setter (
     sub[$value:ident, $scope:ident, $args:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [setter @ setter!($value, $scope, $args, $body)]})
   };
   (@setter (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [setter @ setter!(value, args, $body)]})
   };
   // 3-argument form: sub[document, node, whatsit] { ... }
   (@after_open (
     sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
   };
   // 2-argument form: sub[document, node] { ... }
   (@after_open (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open @ Some(tagsub!($document, $node, $body)) ]})
   };
   (@after_open (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open @ Some(tagsub!(document, node, $body)) ]})
   };
   // 3-argument form
   (@after_open_late (
     sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open_late @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
   };
   // 2-argument form
   (@after_open_late (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open_late @ Some(tagsub!($document, $node, $body)) ]})
   };
   (@after_open_late (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_open_late @ Some(tagsub!(document, node, $body)) ]})
   };
@@ -2431,82 +2431,82 @@ macro_rules! defi_opts {
   // Matches Perl's afterClose => sub { my ($document, $node, $whatsit) = @_; ... }
   (@after_close (
     sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
   };
   // 2-argument form: sub[document, node] { ... }
   (@after_close (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
-    -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close @ Some(tagsub!($document, $node, $body)) ]})
   };
   (@after_close (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close @ Some(tagsub!(document, node, $body)) ]})
   };
   // 3-argument form
   (@after_close_late (
     sub[$document:ident, $node:ident, $whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close_late @ Some(tagsub!($document, $node, $whatsit, $body)) ]})
   };
   // 2-argument form
   (@after_close_late (
     sub[$document:ident, $node:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close_late @ Some(tagsub!($document, $node, $body)) ]})
   };
   (@after_close_late (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [after_close_late @ Some(tagsub!(document, node, $body)) ]})
   };
 
   (@replace ($body:block $($next:tt)* )
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+                  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [replace @ rewrite_replace_sub!($body)]})
   };
   (@replace (sub [$document_arg:ident, $node_arg:ident]
     $body:block $($next:tt)* )
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+                  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [replace @
       rewrite_replace_sub!($document_arg, $node_arg, $body)]})
   };
   (@reversion (sub [$whatsit:ident, $args:ident] $body:block $($next:tt)* )
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+                  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [reversion @ reversion_digested!($whatsit, $args, $body)]})
   };
   (@reversion (sub [$args:ident, $inner:ident, $extra:ident] $body:block $($next:tt)*)
-                  -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+                  -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [reversion @ reversion!($args, $inner, $extra, $body)]})
   };
   (@reversion (sub $body:block $($next:tt)*)
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [reversion @ reversion!(_args, _inner, _extra, $body)]})
   };
   (@predigest (
     sub[$whatsit:ident, $extra:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [predigest @ predigest!($whatsit, $extra, $body)]})
   };
   (@predigest (
     sub[$whatsit:ident] $body:block $($next:tt)* )
-      -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+      -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [predigest @ predigest!($whatsit, $body)]})
   };
   (@predigest (
-    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr])*}) => {
+    $body:block $($next:tt)* ) -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
     defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])*
       [predigest @ predigest!( _whatsit,$body)]})
   };

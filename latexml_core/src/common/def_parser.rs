@@ -125,10 +125,10 @@ pub fn parse_parameters(
     // (`delimited` advances past its opening token before failing otherwise —
     // e.g. a lone "{" from the non-nesting inner of "{{}}").
     let mut probe;
-    let mut p: Parameter = if let Ok(inner_spec) = {
+    let mut p: Parameter = match {
       probe = *input;
       group('{', '}').parse_next(&mut probe).inspect(|_| *input = probe)
-    } {
+    } { Ok(inner_spec) => {
       // Plain (possibly typed-inner) braced group, spec keeps its braces.
       let inner: Option<Parameters> = if inner_spec.is_empty() {
         None
@@ -141,10 +141,10 @@ pub fn parse_parameters(
         inner: inner.map(|ps| ps.into()).unwrap_or_default(),
         ..Parameter::default()
       }
-    } else if let Ok(inner_spec) = {
+    } _ => { match {
       probe = *input;
       group('[', ']').parse_next(&mut probe).inspect(|_| *input = probe)
-    } {
+    } { Ok(inner_spec) => {
       let spec = arena::pin(format!("[{inner_spec}]"));
       if let Some(default_str) = inner_spec.strip_prefix("Default:") {
         let extra = if default_str.is_empty() {
@@ -165,10 +165,10 @@ pub fn parse_parameters(
       } else {
         Parameter { name: arena::pin_static("Optional"), spec, ..Parameter::default() }
       }
-    } else if let Ok((word, extra_opt)) = {
+    } _ => { match {
       probe = *input;
       paramspec.parse_next(&mut probe).inspect(|_| *input = probe)
-    } {
+    } { Ok((word, extra_opt)) => {
       let spec_str = match extra_opt {
         Some(extra) => format!("{word}:{extra}"),
         None => word.to_string(),
@@ -186,7 +186,7 @@ pub fn parse_parameters(
         extra,
         ..Parameter::default()
       }
-    } else {
+    } _ => {
       // Literal single char (incl. each whitespace char) as a Token parameter.
       let ch = any.parse_next(input).map_err(|_: winnow::error::ErrMode<winnow::error::ContextError>| {
         Error::from(s!("parse_parameters: unreadable prototype tail for {:?}", cs))
@@ -198,7 +198,7 @@ pub fn parse_parameters(
         extra: vec![Tokens::new(vec![ch_token])],
         ..Parameter::default()
       }
-    };
+    }}}}}};
     if init_flag {
       p = p.init()?;
     }

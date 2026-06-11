@@ -363,15 +363,15 @@ pub fn ref_step_counter(ctype: &str, noreset: bool) -> Result<HashMap<Stored>> {
   let the_ctr_id = s!("\\the{ctr}@ID");
   let the_ctr = s!("\\the{ctr}");
 
-  let has_id: bool = if let Some(iddef) = state::lookup_definition(&T_CS!(&the_ctr_id))? {
+  let has_id: bool = match state::lookup_definition(&T_CS!(&the_ctr_id))? { Some(iddef) => {
     if let Some(params) = iddef.get_parameters() {
       params.get_num_args() == 0
     } else {
       true
     }
-  } else {
+  } _ => {
     false
-  };
+  }};
 
   let the_ctr_cs = T_CS!(&the_ctr);
   let the_ctr_id_cs = T_CS!(&the_ctr_id);

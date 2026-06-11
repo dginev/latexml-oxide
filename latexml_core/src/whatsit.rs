@@ -168,7 +168,7 @@ impl Whatsit {
       // And copy any otherwise undefined properties from the trailer
       // Perl: copies properties from trailer (typically a Whatsit for \end{...})
       match digested.data() {
-        DigestedData::Whatsit(ref trailer) => {
+        DigestedData::Whatsit(trailer) => {
           let trailer_val = trailer.borrow();
           let props = trailer_val.get_properties();
           for (prop, value) in props {
@@ -178,7 +178,7 @@ impl Whatsit {
               .or_insert_with(|| value.clone());
           }
         },
-        DigestedData::TBox(ref tbox) => {
+        DigestedData::TBox(tbox) => {
           let tbox_val = tbox.borrow();
           let props = tbox_val.get_properties();
           for (prop, value) in props {
@@ -188,7 +188,7 @@ impl Whatsit {
               .or_insert_with(|| value.clone());
           }
         },
-        DigestedData::List(ref list) => {
+        DigestedData::List(list) => {
           let list_val = list.borrow();
           let props = list_val.get_properties();
           for (prop, value) in props {
@@ -422,8 +422,8 @@ impl BoxOps for Whatsit {
     match self.properties.get("font") {
       Some(Stored::Font(font)) => Ok(Some(Cow::Owned((**font).clone()))),
       Some(Stored::FontDirective(fd)) => match fd {
-        FontDirective::Closure(ref code) => Ok(Some(Cow::Owned(code(Some(self))?))),
-        FontDirective::Asset(ref asset) => Ok(Some(Cow::Borrowed(asset))),
+        FontDirective::Closure(code) => Ok(Some(Cow::Owned(code(Some(self))?))),
+        FontDirective::Asset(asset) => Ok(Some(Cow::Borrowed(asset))),
       },
       _ => Ok(None),
     }
@@ -436,9 +436,9 @@ impl BoxOps for Whatsit {
     mut options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     let defn = self.get_definition();
-    if let Some(sizer) = defn.get_sizer() {
+    match defn.get_sizer() { Some(sizer) => {
       sizer(self)
-    } else if self.has_property("cached_width") || self.has_property("cached_height") {
+    } _ => if self.has_property("cached_width") || self.has_property("cached_height") {
       // Perl: when after_digest sets cached dimensions (e.g. image_graphicx_sizer),
       // compute_size should return them instead of falling through to body/args sum.
       let w = match self.get_property("cached_width").as_deref() {
@@ -480,13 +480,13 @@ impl BoxOps for Whatsit {
           boxes.extend(arg.unlist());
         }
       }
-      let font = if let Stored::Font(ref sf) = *self.get_property("font").unwrap() {
+      let font = match *self.get_property("font").unwrap() { Stored::Font(ref sf) => {
         sf.clone()
-      } else {
+      } _ => {
         lookup_font().unwrap()
-      };
+      }};
       font.compute_boxes_size(&boxes, options)
-    }
+    }}
   }
 }
 

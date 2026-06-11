@@ -143,12 +143,12 @@ pub fn is_descendant_or_self(child: &Node, parent: &Node) -> bool {
     if p_node == parent {
       return true;
     }
-    if let Some(parent_node) = p_node.get_parent() {
+    match p_node.get_parent() { Some(parent_node) => {
       parent_opt = Some(parent_node);
       p = parent_opt.as_ref();
-    } else {
+    } _ => {
       break;
-    }
+    }}
   }
   false
 }

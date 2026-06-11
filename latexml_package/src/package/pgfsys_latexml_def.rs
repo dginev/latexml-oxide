@@ -325,12 +325,12 @@ LoadDefinitions!({
     "#alignment",
     bounded => true, leave_horizontal => true,
     sizer => sub[whatsit] {
-      if let Some(Stored::Digested(alignment_d)) = whatsit.get_property("alignment").as_deref() {
+      match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {
         let (w, h, d, _, _, _) = alignment_d.clone().get_size(None)?;
         Ok((w, h, d))
-      } else {
+      } _ => {
         Ok((Dimension::default(), Dimension::default(), Dimension::default()))
-      }
+      }}
     },
     after_digest => sub[whatsit] {
       use crate::engine::tex_tables::{
@@ -518,11 +518,11 @@ LoadDefinitions!({
       let shift_str = shift_tokens.to_string();
       let shift_str = shift_str.trim();
       let base = if !shift_str.is_empty() && shift_str != "0pt" {
-        if let Ok(shift_dim) = Dimension::from_str(shift_str) {
+        match Dimension::from_str(shift_str) { Ok(shift_dim) => {
           // Perl: $base = ($shift ? $miny->subtract(Dimension($shift))->pxValue : 0)
           let base_dim = Dimension::new(miny.value_of() - shift_dim.value_of());
           dim_to_px(base_dim)
-        } else { 0.0 }
+        } _ => { 0.0 }}
       } else { 0.0 };
 
       whatsit.set_property("minx", Stored::Float(Float::new_f64(0.0)));
@@ -875,7 +875,7 @@ LoadDefinitions!({
       let mut attrs = string_map!("_autoclose" => "1".to_string());
       if let Some(Some(kv_arg)) = args.first() {
         // Perl: $doc->openElement('svg:g', $kv->getHash, _autoclose => 1);
-        if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
+        if let DigestedData::KeyVals(kv) = kv_arg.data() {
           let hash = kv.get_hash();
           for (k, v) in hash {
             attrs.insert(k, v);
@@ -1576,9 +1576,9 @@ LoadDefinitions!({
     let name = args.first().map(|a| a.to_string()).unwrap_or_default();
     let flag: i64 = args.get(1).map(|a| a.value_of()).unwrap_or(0);
     // Collect digested stops from state
-    let stops: Vec<Digested> = if let Some(Stored::VecDequeStored(vd)) = state::lookup_value("pgf_sh_stops") {
+    let stops: Vec<Digested> = match state::lookup_value("pgf_sh_stops") { Some(Stored::VecDequeStored(vd)) => {
       vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
-    } else { vec![] };
+    } _ => { vec![] }};
     state::assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
     let x = dim_to_px(read_dim_register("\\pgf@x"));
     let y = dim_to_px(read_dim_register("\\pgf@y"));
@@ -1641,9 +1641,9 @@ LoadDefinitions!({
   DefPrimitive!("\\lxSVG@sh@defcircles{}", sub[args] {
     let name = args.first().map(|a| a.to_string().trim().to_string()).unwrap_or_default();
     // Collect digested stops from state
-    let stops: Vec<Digested> = if let Some(Stored::VecDequeStored(vd)) = state::lookup_value("pgf_sh_stops") {
+    let stops: Vec<Digested> = match state::lookup_value("pgf_sh_stops") { Some(Stored::VecDequeStored(vd)) => {
       vd.into_iter().filter_map(|s| if let Stored::Digested(d) = s { Some(d) } else { None }).collect()
-    } else { vec![] };
+    } _ => { vec![] }};
     state::assign_value("pgf_sh_stops", Stored::VecDequeStored(VecDeque::new()), Scope::Global);
     // Perl: Dimension(ToString(Expand(T_CS('\pgf@sys@shading@end@pos'))))->pxValue
     let endpos_tokens = gullet::do_expand(T_CS!("\\pgf@sys@shading@end@pos"))?;

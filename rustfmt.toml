@@ -12,5 +12,5 @@ condense_wildcard_suffixes = true
 overflow_delimited_expr = true
 struct_field_align_threshold = 30
 struct_lit_width = 30
-edition = "2021"
+edition = "2024"
 style_edition = "2024"

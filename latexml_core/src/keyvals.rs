@@ -116,16 +116,16 @@ impl Object for KeyVals {
         // avoid accidental repeats?
         let keytype_opt = keyval_get(&keyval_qname(&self.prefix, primary_keyset, key), "type");
         let v = if let Some(Stored::Parameter(keytype)) = keytype_opt {
-          if let Some(v) = value.take() {
+          match value.take() { Some(v) => {
             keytype.digest(v, None)?
-          } else {
+          } _ => {
             None
-          }
-        } else if let Some(v) = value.take() {
+          }}
+        } else { match value.take() { Some(v) => {
           Some(v.be_digested()?)
-        } else {
+        } _ => {
           None
-        };
+        }}};
         tuple.digested_value = v;
       }
     }

@@ -50,7 +50,7 @@ fn assign_lookup_value() {
     None => panic!("Couldn't lookup hashref_test value after assignment"),
     Some(Stored::HashStored(ref received_hash)) => match received_hash.get("a") {
       None => panic!("Assigned hash was missing key!"),
-      Some(Stored::Bool(ref b)) => assert!(b),
+      Some(Stored::Bool(b)) => assert!(b),
       Some(_) => panic!("Assigned hash had malformed key!"),
     },
     Some(_) => panic!("Looked up value of hashref_test didn't match assignment value"),
@@ -151,15 +151,15 @@ fn assign_lookup_arrays() {
   }
 
   unshift_value("SEARCHPATHS", vec![Stored::String(arena::pin_static("d"))]);
-  if let Some(vdq) = lookup_vecdeque("SEARCHPATHS") {
+  match lookup_vecdeque("SEARCHPATHS") { Some(vdq) => {
     let mut vdq_expected = VecDeque::new();
     for entry in &["d", "a", "b", "c"] {
       vdq_expected.push_back(Stored::String(arena::pin_static(entry)));
     }
     assert_eq!(vdq, vdq_expected, "shift/unshift existing key");
-  } else {
+  } _ => {
     panic!("state.lookup_vecdeque returned None");
-  }
+  }}
 
   assert_eq!(
     shift_value("SEARCHPATHS").unwrap(),
@@ -263,12 +263,12 @@ fn install_definition_and_meaning() {
 
   // Assign a Meaning
   assign_meaning(&T_CS!("\\foobar"), job_definition, Some(Scope::Local));
-  if let Some(Stored::Expandable(ref stored_meaning)) = lookup_meaning(&T_CS!("\\foobar")) {
+  match lookup_meaning(&T_CS!("\\foobar")) { Some(Stored::Expandable(ref stored_meaning)) => {
     assert_eq!(stored_meaning.cs, T_CS!("\\jobname")); // Note: meaning for \foobar still has
   // definition for CS \jobname
-  } else {
+  } _ => {
     panic!("Failed to lookup installed meaning!");
-  }
+  }}
 
   let looked_up_meaning = { lookup_meaning(&T_CS!("\\foobar")).unwrap() };
   {

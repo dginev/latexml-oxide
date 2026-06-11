@@ -287,11 +287,11 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
     },
     "ltx:XMText" => unimath_text(node),
     "ltx:XMRef" => {
-      if let Some(target) = realize(doc, node) {
+      match realize(doc, node) { Some(target) => {
         unimath_internal(doc, &target)
-      } else {
+      } _ => {
         unimath_error("Unresolved XMRef")
-      }
+      }}
     },
     "ltx:ERROR" => unimath_error(&node.get_content()),
     _ => unimath_text(node),

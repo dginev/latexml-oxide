@@ -953,17 +953,17 @@ pub fn read_alignment_template() -> Result<Template> {
         break;
       }
       gullet::unread_one(last_op);
-    } else if let Some(defn) = lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? {
+    } else { match lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? { Some(defn) => {
       let invoked = defn.invoke(true)?;
       gullet::unread(invoked);
-    } else if cc == Catcode::BEGIN {
+    } _ => if cc == Catcode::BEGIN {
       let balanced_arg = gullet::read_balanced(ExpansionLevel::Off, false, false)?;
       if !balanced_arg.is_empty() {
         gullet::unread(balanced_arg);
       }
     } else {
       Warn!("unexpected", op, s!("Unrecognized tabular template {op:?}"));
-    }
+    }}}
     if nopens <= 0 {
       break;
     }
@@ -1008,7 +1008,7 @@ pub fn matrix_template() -> Template {
 /// for lpad/rpad; now superseded by template_has_intercol for better @{} handling.
 #[allow(dead_code)]
 fn template_has_fill(tokens: &Option<Tokens>) -> bool {
-  if let Some(ref toks) = tokens {
+  if let Some(toks) = tokens {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
       if s == "\\hfil" || s == "\\hfill" || s == "\\hskip" {
@@ -1026,7 +1026,7 @@ fn template_has_fill(tokens: &Option<Tokens>) -> bool {
 /// For `\vrule\relax\lx@intercol\hfil`: reachable (vrule is skippable).
 /// For `@{1}\lx@intercol\hfil`: NOT reachable ("1" blocks the scan).
 fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
-  if let Some(ref toks) = tokens {
+  if let Some(toks) = tokens {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
       if s == "\\lx@intercol" || s.contains("intercol") {
@@ -1054,7 +1054,7 @@ fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
 /// \lx@intercol indicates actual intercolumn padding; \hfil is just centering.
 /// For @{}c@{} columns, \lx@intercol is disabled but \hfil remains.
 fn template_has_intercol(tokens: &Option<Tokens>) -> bool {
-  if let Some(ref toks) = tokens {
+  if let Some(toks) = tokens {
     for tok in toks.unlist_ref() {
       let s = tok.to_string();
       if s == "\\lx@intercol" || s.contains("intercol") {

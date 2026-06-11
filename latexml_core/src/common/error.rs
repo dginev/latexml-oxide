@@ -367,21 +367,21 @@ macro_rules! DebugFeature {
 
 #[macro_export]
 macro_rules! Debug {
-  ($category:expr, $object:expr, $message:expr) => {{
+  ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
       $crate::generate_message!($message))
   }};
- ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
+ ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
     debug!(target: &s!("{}:{}", $category, $object), "{}",
       $crate::generate_message!($message, $($details),*))
   }};
-  ($($simple:expr),*) => {{
+  ($($simple:expr_2021),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
@@ -392,21 +392,21 @@ macro_rules! Debug {
 
 #[macro_export]
 macro_rules! Info {
-  ($category:expr, $object:expr, $message:expr) => {{
+  ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!(target: &format!("{}:{}", $category, $object), "{}",
       $crate::generate_message!($message))
   }};
- ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
+ ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
   $crate::common::error::note_status(
     $crate::common::error::LogStatus::Info, None);
     use log::info;
     info!(target: &format!("{}:{}", $category, $object), "{}",
     $crate::generate_message!($message, $($details),*))
   }};
-  ($($simple:expr),*) => {{
+  ($($simple:expr_2021),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Info, None);
     use log::info;
@@ -417,7 +417,7 @@ macro_rules! Info {
 
 #[macro_export]
 macro_rules! Warn {
-  ($category:expr, $object:expr, $message:expr) => {{
+  ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -426,7 +426,7 @@ macro_rules! Warn {
         $crate::generate_message!($message))
     }
   }};
- ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
+ ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Warning, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -439,10 +439,10 @@ macro_rules! Warn {
 
 #[macro_export]
 macro_rules! Error {
-  ($category:expr, $object:expr, $message:expr) => {{
+  ($category:expr_2021, $object:expr_2021, $message:expr_2021) => {{
     $crate::Error!($category,$object,$message,"")
   }};
- ($category:expr, $object:expr, $message:expr, $($details:expr),*) => {{
+ ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Error, None);
     if !$crate::common::error::is_log_output_suppressed() {
@@ -490,7 +490,7 @@ macro_rules! Error {
 // TODO: flesh out the messages
 #[macro_export]
 macro_rules! Fatal {
-  ($target:expr, $category:expr, $message:expr) => {{
+  ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
     $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
     {
       use $crate::common::error::Error as LatexmlError;
@@ -512,7 +512,7 @@ macro_rules! Fatal {
 
 #[macro_export]
 macro_rules! fatal {
-  ($target:expr, $category:expr, $message:expr) => {{
+  ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
     use $crate::common::error::Error as LatexmlError;
     use $crate::common::error::ErrorCategory::*;
     use $crate::common::error::ErrorTarget::*;
@@ -526,7 +526,7 @@ macro_rules! fatal {
 
 #[macro_export]
 macro_rules! generate_message {
-  ($message:expr) => {
+  ($message:expr_2021) => {
     format!(
       "{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -536,7 +536,7 @@ macro_rules! generate_message {
       column!()
     )
   };
-  ($message:expr, $detail:expr) => {
+  ($message:expr_2021, $detail:expr_2021) => {
     format!(
       "{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -547,7 +547,7 @@ macro_rules! generate_message {
       column!()
     )
   };
-  ($message:expr, $detail:expr, $detail2:expr) => {
+  ($message:expr_2021, $detail:expr_2021, $detail2:expr_2021) => {
     format!(
       "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -559,7 +559,7 @@ macro_rules! generate_message {
       column!()
     )
   };
-  ($message:expr, $detail:expr, $detail2:expr) => {
+  ($message:expr_2021, $detail:expr_2021, $detail2:expr_2021) => {
     format!(
       "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -571,7 +571,7 @@ macro_rules! generate_message {
       column!()
     )
   };
-  ($message:expr, $detail:expr, $detail2:expr, $location:expr) => {
+  ($message:expr_2021, $detail:expr_2021, $detail2:expr_2021, $location:expr_2021) => {
     format!(
       "{}\n\t{}\n\t{}\n\t{}\n\tIn {}:{}:{}\n",
       $message,
@@ -587,7 +587,7 @@ macro_rules! generate_message {
 
 #[macro_export]
 macro_rules! Note {
-  ($input:expr) => {
+  ($input:expr_2021) => {
     if !$crate::common::error::is_log_output_suppressed()
       && log::max_level() >= log::LevelFilter::Info
     {
@@ -599,7 +599,7 @@ macro_rules! Note {
 
 #[macro_export]
 macro_rules! NoteLog {
-  ($input:expr) => {
+  ($input:expr_2021) => {
     if !$crate::common::error::is_log_output_suppressed()
       && log::max_level() >= log::LevelFilter::Debug
     {
@@ -682,7 +682,7 @@ impl fmt::Display for ErrorCategory {
     use ErrorCategory::*;
     match self {
       Init => write!(f, "Init"),
-      Io(ref err) => err.fmt(f),
+      Io(err) => err.fmt(f),
       NotFound => write!(f, "No matching cities with a population were found."),
       MissingFile => write!(f, "missing file"),
       Misdefined => write!(f, "misdefined"),
@@ -698,8 +698,8 @@ impl fmt::Display for ErrorCategory {
       Endgroup => write!(f, "<endgroup>"),
       FailedParse => write!(f, "failed to parse"),
       MaxLimit(num) => write!(f, "{}", num),
-      Generic(ref err) => err.fmt(f),
-      Filename(ref name) => write!(f, "file:{name}"),
+      Generic(err) => err.fmt(f),
+      Filename(name) => write!(f, "file:{name}"),
       TokenLimit => write!(f, "token_limit"),
       PushbackLimit => write!(f, "pushback_limit"),
       IfLimit => write!(f, "if_limit"),

@@ -69,7 +69,7 @@ pub fn init_logger() {
 // stack dump is far more useful than the bare `signal: 11` line cargo
 // reports today.
 #[used]
-#[cfg_attr(target_os = "linux", link_section = ".init_array")]
+#[cfg_attr(target_os = "linux", unsafe(link_section = ".init_array"))]
 static SIGSEGV_INSTALLER: extern "C" fn() = sigsegv_installer;
 
 extern "C" fn sigsegv_installer() {
@@ -90,7 +90,7 @@ extern "C" fn sigsegv_installer() {
 /// stack print is more useful than the bare `signal: 11` line cargo
 /// reports today.
 fn install_sigsegv_handler() {
-  extern "C" {
+  unsafe extern "C" {
     fn signal(sig: i32, handler: extern "C" fn(i32)) -> usize;
     fn raise(sig: i32) -> i32;
   }
@@ -479,7 +479,7 @@ macro_rules! tex_tests {
   ($dir:literal) => {
     tex_tests!($dir, None, None);
   };
-  ($dir:literal, $requires:expr, $dispatch:expr) => {
+  ($dir:literal, $requires:expr_2021, $dispatch:expr_2021) => {
     macro_rules! this_test_requires {
       () => {
         $requires

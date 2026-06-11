@@ -65,11 +65,11 @@ fn rdf_attributes_from_argwrap(arg: &ArgWrap) -> HashMap<String, String> {
     },
     _ => {
       // Try converting to Digested
-      if let Some(d) = arg.clone().undigested() {
+      match arg.clone().undigested() { Some(d) => {
         rdf_attributes_from_digested(&d)
-      } else {
+      } _ => {
         HashMap::default()
-      }
+      }}
     },
   }
 }

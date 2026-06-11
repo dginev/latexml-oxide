@@ -1125,15 +1125,15 @@ fn localized_anchor(document: &mut Document, whatsit: &Whatsit) -> CoreResult<()
     }
   }
   if let Some(target) = found {
-    if let Some(mut anchor) = document.wrap_nodes("ltx:anchor", vec![target])? {
+    match document.wrap_nodes("ltx:anchor", vec![target])? { Some(mut anchor) => {
       document.set_attribute(&mut anchor, "xml:id", &id)?;
       if document.is_open(&anchor) {
         document.close_node(&anchor)?;
       }
-    } else {
+    } _ => {
       Warn!("malformed", "ltx:anchor",
         &s!("No available insertion point for ltx:anchor, failing \\hypertarget to {}", id));
-    }
+    }}
   } else {
     Warn!("malformed", "ltx:anchor",
       &s!("No available insertion point for ltx:anchor, failing \\hypertarget to {}", id));

@@ -73,7 +73,7 @@ fn real_main() -> Result<()> {
 
   state::set_nomathparse_flag(false);
   let mut parser = MathParser::default();
-  if let Ok(Some(parse_tree)) = parser.parse_lexemes(lexemes, &lex_nodes, &mut doc) {
+  match parser.parse_lexemes(lexemes, &lex_nodes, &mut doc) { Ok(Some(parse_tree)) => {
     let mut xmath = xmath_opt.unwrap();
     for mut node in xmath.get_child_nodes() {
       node.unlink();
@@ -120,9 +120,9 @@ fn real_main() -> Result<()> {
         })
       );
     }
-  } else {
+  } _ => {
     Warn!("math", "parse", "Grammar did not recognize expression.");
     process::exit(1);
-  }
+  }}
   Ok(())
 }

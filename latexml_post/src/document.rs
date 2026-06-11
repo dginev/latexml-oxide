@@ -1409,16 +1409,16 @@ impl PostDocument {
       children:   vec![],
     };
 
-    if let Some(mut nav) = self.findnode("//ltx:navigation") {
+    match self.findnode("//ltx:navigation") { Some(mut nav) => {
       self.add_nodes(&mut nav, &[ref_node]);
-    } else if let Some(mut root) = self.get_document_element() {
+    } _ => { match self.get_document_element() { Some(mut root) => {
       let nav_node = NodeData::Element {
         tag:        "ltx:navigation".to_string(),
         attributes: None,
         children:   vec![ref_node],
       };
       self.add_nodes(&mut root, &[nav_node]);
-    }
+    } _ => {}}}}
   }
 
   // ======================================================================
@@ -1566,7 +1566,7 @@ pub fn element_children(node: &Node) -> Vec<Node> {
 /// Prefer this in hot paths that only need to read or filter children
 /// without materializing a Vec. Callers that need len() or random access
 /// still want the Vec version.
-pub fn element_children_iter(node: &Node) -> impl Iterator<Item = Node> {
+pub fn element_children_iter(node: &Node) -> impl Iterator<Item = Node> + use<> {
   let first = node.get_first_child();
   std::iter::successors(first, |c| c.get_next_sibling())
     .filter(|c| c.get_type() == Some(NodeType::ElementNode))

@@ -13,11 +13,11 @@ use latexml_core::common::glue::FillCode;
 /// current font. Perl: `$font = $STATE->lookupValue('font')->merge(%$fontinfo);`
 fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   // Resolve through definition to get actual CS name (e.g. \font -> \tenrm)
-  let key = if let Ok(Some(defn)) = lookup_definition(font_tok) {
+  let key = match lookup_definition(font_tok) { Ok(Some(defn)) => {
     s!("fontinfo_{}", defn.get_cs_name())
-  } else {
+  } _ => {
     s!("fontinfo_{}", font_tok)
-  };
+  }};
   with_value(&key, |v| {
     if let Some(Stored::Font(f)) = v {
       Some(Rc::clone(f))
@@ -414,14 +414,14 @@ LoadDefinitions!({
     });
     if let Some(mouth) = mouth_opt {
       let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
-      if let Some(eol) = lookup_definition(&T_CS!("\\endlinechar"))? {
+      match lookup_definition(&T_CS!("\\endlinechar"))? { Some(eol) => {
         let eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
         if (eolv > 0) && (eolv <= 255) {
           raw_line.push(eolv as u8 as char);
         }
-      } else {
+      } _ => {
         raw_line.push('\r');
-      }
+      }}
       DefMacro!(token, None, Tokens!(Explode!(raw_line)));
     }
   });

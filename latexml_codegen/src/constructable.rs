@@ -153,7 +153,7 @@ fn emit_pi(qname: &str, attrs: &[AttrPair]) -> TokenStream2 {
 fn emit_absorb(value: &Value) -> TokenStream2 {
   let to_absorb = emit_value(value, false);
   quote!(
-    if let Some(ref stored_digested) = #to_absorb {
+    if let Some(stored_digested) = #to_absorb {
       let digested_opt : Option<Digested> = stored_digested.into();
       if let Some(ref digested) = digested_opt {
         document.absorb(digested, None)?;
@@ -228,14 +228,14 @@ fn emit_attr_value(av: &AttrValue) -> TokenStream2 {
       },
       AttrPart::Value(v) => {
         let ve = emit_value(v, false);
-        quote!(match #ve { Some(ref val) => val.to_attribute(), None => String::new() })
+        quote!(match #ve { Some(val) => val.to_attribute(), None => String::new() })
       },
       AttrPart::Conditional { test, then_val, else_val } => {
         let cond = emit_bool(test);
         let tv = emit_value(then_val, false);
         let ev = emit_value(else_val, false);
         quote!(match (if #cond { #tv } else { #ev }) {
-          Some(ref val) => val.to_attribute(),
+          Some(val) => val.to_attribute(),
           None => String::new()
         })
       },
@@ -282,7 +282,7 @@ fn emit_bool(test: &Value) -> TokenStream2 {
   let tv = emit_value(test, true);
   quote!(match #tv {
     None => false,
-    Some(ref v) => {
+    Some(v) => {
       let v_str = v.to_string();
       !v_str.is_empty() && v_str != "false"
     }

@@ -603,7 +603,7 @@ LoadDefinitions!({
     let mut tag_text = String::new();
     let mut description_text = String::new();
     if let Some(kv_arg) = whatsit.get_arg(2) {
-      if let DigestedData::KeyVals(ref kv) = kv_arg.data() {
+      if let DigestedData::KeyVals(kv) = kv_arg.data() {
         let hash = kv.get_hash_digested();
         if let Some(v) = hash.get("role") { role = v.clone(); }
         if let Some(v) = hash.get("name") { name_val = v.clone(); }
@@ -673,7 +673,7 @@ LoadDefinitions!({
               // holds a State borrow while its closure runs (see
               // mathchar.rs fix for 0711.4787 RefCell panic pattern).
               let mut encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
-                if let Some(Stored::Font(ref info)) = fontinfo.unwrap_or(None) {
+                if let Some(Stored::Font(info)) = fontinfo.unwrap_or(None) {
                   info.encoding.as_ref().map(|s| s.to_string())
                 } else {
                   None

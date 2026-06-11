@@ -192,7 +192,7 @@ impl FontDirective {
   pub fn get_font(&self, whatsit: Option<&Whatsit>) -> Result<Rc<Font>> {
     match self {
       FontDirective::Closure(fc) => Ok(Rc::new((fc)(whatsit)?)),
-      FontDirective::Asset(ref font) => Ok(Rc::clone(font)),
+      FontDirective::Asset(font) => Ok(Rc::clone(font)),
     }
   }
   pub fn get_asset(&self) -> Option<Rc<Font>> {
@@ -364,8 +364,8 @@ impl fmt::Display for dyn Definition {
 impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Tokens(ref t) => write!(f, "{t}"),
-      ExpansionBody::Closure(ref code) => {
+      ExpansionBody::Tokens(t) => write!(f, "{t}"),
+      ExpansionBody::Closure(code) => {
         write!(f, "ExpansionBody::Closure({:p})", Rc::as_ptr(code))
       }, // what is the right way to serialize this, e.g. for the \meaning macro
     }

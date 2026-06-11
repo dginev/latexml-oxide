@@ -61,7 +61,7 @@ pub fn is_script(object: &Digested) -> Option<(String, Catcode)> {
     _ => Some(Cow::Borrowed(object)),
   };
   if let Some(boxobj) = box_opt {
-    if let DigestedData::Whatsit(ref obj) = boxobj.data() {
+    if let DigestedData::Whatsit(obj) = boxobj.data() {
       obj.borrow().get_definition().get_cs().with_cs_name(|name| {
         SCRIPT_NAME_RE.captures(name).map(|cap| {
           (
@@ -224,7 +224,7 @@ fn script_handler(cc: Catcode) -> Result<Vec<Digested>> {
       if let Some(pvs) = prevscript {
         properties.insert("prevscript", pvs.into());
       }
-      if let Some(Stored::Digested(ref b)) = properties.get("base") {
+      if let Some(Stored::Digested(b)) = properties.get("base") {
         if let Some(bsp) = b.get_property("scriptpos") {
           let bsp_str = bsp.to_string();
           if !bsp_str.is_empty() {
@@ -328,7 +328,7 @@ fn script_sizer(
     script_size.1.value_of() as f64,
     script_size.2.value_of() as f64,
   );
-  let (base_font_size, mathstyle) = if let Some(Stored::Digested(ref base)) = base_opt {
+  let (base_font_size, mathstyle) = if let Some(Stored::Digested(base)) = base_opt {
     let bfont = base.get_font()?.map(|f| f.into_owned());
     let fs = bfont.as_ref().and_then(|f| f.get_size()).unwrap_or(10.0);
     let ms = bfont
@@ -346,7 +346,7 @@ fn script_sizer(
       .unwrap_or_else(|| "text".to_string());
     (fs, ms)
   };
-  let (_wb, hb, db) = if let Some(Stored::Digested(ref base)) = base_opt {
+  let (_wb, hb, db) = if let Some(Stored::Digested(base)) = base_opt {
     let base_size = base.clone().get_size(None)?;
     (
       base_size.0.value_of() as f64,
@@ -378,7 +378,7 @@ fn script_sizer(
     lookup(&cmsy_name).or_else(|| lookup("cmsy")).unwrap_or(0.0) * base_font_size
   };
   let xheight = get_font_dimen(5);
-  let inferred_pos = if let Some(Stored::Digested(ref base)) = base_opt {
+  let inferred_pos = if let Some(Stored::Digested(base)) = base_opt {
     let base_pos = base
       .get_property("scriptpos")
       .map(|s| s.to_string())
@@ -407,7 +407,7 @@ fn script_sizer(
       d = db + hs + ds;
     }
   } else {
-    let wp = if let Some(Stored::Digested(ref prev)) = prev_opt {
+    let wp = if let Some(Stored::Digested(prev)) = prev_opt {
       prev.get_width(None)?.unwrap_or_default().value_of() as f64
     } else {
       0.0
@@ -603,8 +603,8 @@ LoadDefinitions!({
     if !node.has_attribute("tex") {
       // only do this once.
 
-      let tex_opt = if let Some(ref tbox) = document.get_node_box(node) {
-        if let Some(body) = tbox.get_body()? {
+      let tex_opt = match document.get_node_box(node) { Some(ref tbox) => {
+        match tbox.get_body()? { Some(body) => {
           set_dual_branch("presentation");
           let tex = body.untex()?;
           expire_dual_branch();
@@ -615,12 +615,12 @@ LoadDefinitions!({
             document.set_attribute(node, "content-tex", &ctex)?;
           }
           Some(tex)
-        } else {
+        } _ => {
           None
-        }
-      } else {
+        }}
+      } _ => {
         None
-      };
+      }};
       if let Some(tex_string) = tex_opt {
         document.set_attribute(node, "tex", &tex_string)?;
       }
@@ -1000,7 +1000,7 @@ LoadDefinitions!({
         // Look up math_token_attributes for the delimiter character.
         let char_str = entry.char.to_string();
         state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
-          if let Some(Stored::HashString(ref attrs)) = val {
+          if let Some(Stored::HashString(attrs)) = val {
             if let Some(meaning) = attrs.get("meaning") {
               whatsit.set_property("meaning", meaning.clone());
             }
@@ -1051,7 +1051,7 @@ LoadDefinitions!({
         // Preserve meaning from DefMath
         let char_str = entry.char.to_string();
         state::with_value(&format!("math_token_attributes_{}", char_str), |val| {
-          if let Some(Stored::HashString(ref attrs)) = val {
+          if let Some(Stored::HashString(attrs)) = val {
             if let Some(meaning) = attrs.get("meaning") {
               whatsit.set_property("meaning", meaning.clone());
             }
@@ -1381,7 +1381,7 @@ LoadDefinitions!({
       // semantics) with \@left/\@right (Constructors without grouping).
       for (key, val_opt) in [("left", &left_val), ("right", &right_val)] {
         if let Some(val) = val_opt {
-          if let ArgWrap::Tokens(ref ts) = val {
+          if let ArgWrap::Tokens(ts) = val {
             // Rewrite tokens: replace any left/right CS with \@left/\@right
             let mut new_tokens = Vec::new();
             for tok in ts.unlist_ref().iter() {
@@ -2160,7 +2160,7 @@ fn adjust_mathstyle_internal(outerstyle: &str, tbox: &mut Tbox) {
 
 /// Adjust a Whatsit's font mathstyle, returning the new style if it had a mathstyle property
 fn adjust_mathstyle_internal_whatsit(outerstyle: &str, whatsit: &mut Whatsit) -> Option<String> {
-  if let Some(Stored::Font(ref font)) = whatsit.properties.get("font") {
+  if let Some(Stored::Font(font)) = whatsit.properties.get("font") {
     let origstyle = font.mathstyle.as_deref().unwrap_or("display").to_string();
     let newstyle = mathstyle_adjust(outerstyle, &origstyle);
     if newstyle != origstyle {

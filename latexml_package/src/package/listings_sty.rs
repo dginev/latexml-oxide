@@ -1415,7 +1415,7 @@ fn lst_process_internal(
             };
             let content_tokens = tokenize_balanced(&content);
             ctx.lsttokens.extend(content_tokens);
-          } else if let Ok(close_re) = Regex::new(&close_re_str) {
+          } else { match Regex::new(&close_re_str) { Ok(close_re) => {
             if let Some(cm) = close_re.find(&ctx.listing) {
               let content = ctx.listing[..cm.start()].to_string();
               ctx.listing = ctx.listing[cm.end()..].to_string();
@@ -1424,7 +1424,7 @@ fn lst_process_internal(
               ctx.lsttokens.extend(content_tokens);
               // Note: close delimiter is NOT pushed — lstClassEnd handles it
             }
-          }
+          } _ => {}}}
         } else {
           // For non-eval classes (strings, comments): recurse with limited delimiters
           let recursive_key = s!("LST_DELIM@{open}@recursive");
@@ -2188,8 +2188,8 @@ LoadDefinitions!({
         let sub_args: Vec<Option<Cow<Tokens>>> = args.iter()
           .map(|a| match a {
             ArgWrap::None => None,
-            ArgWrap::Tokens(ref t) => Some(Cow::Borrowed(t)),
-            ArgWrap::Token(ref t) => Some(Cow::Owned(Tokens::new(vec![*t]))),
+            ArgWrap::Tokens(t) => Some(Cow::Borrowed(t)),
+            ArgWrap::Token(t) => Some(Cow::Owned(Tokens::new(vec![*t]))),
             other => Some(Cow::Owned(Tokens::new(ExplodeText!(other.to_string())))),
           })
           .collect();

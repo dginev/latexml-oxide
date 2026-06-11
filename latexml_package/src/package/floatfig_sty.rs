@@ -11,11 +11,11 @@ fn floatfig_float_direction(whatsit: &Whatsit) -> &'static str {
   let pos_arg = pos_arg.trim().to_string();
   let pos = if !pos_arg.is_empty() {
     pos_arg
-  } else if let Some(Stored::String(sym)) = state::lookup_value("floatfltpos") {
+  } else { match state::lookup_value("floatfltpos") { Some(Stored::String(sym)) => {
     arena::with(sym, |s| s.to_string())
-  } else {
+  } _ => {
     "v".to_string()
-  };
+  }}};
   if pos.starts_with('v') || pos.starts_with('r') {
     "right"
   } else {

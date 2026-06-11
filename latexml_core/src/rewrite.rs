@@ -530,11 +530,11 @@ impl Rewrite {
           let mut replaced = Vec::new();
           for _idx in 0..nmatched {
             // Remove the nodes to be replaced
-            if let Some(popped) = following.pop_front() {
+            match following.pop_front() { Some(popped) => {
               replaced.push(popped);
-            } else {
+            } _ => {
               break; // nmatched larger than available nodes — stop
-            }
+            }}
           }
           for rnode in replaced.iter() {
             document.unrecord_node_ids(rnode);
@@ -586,12 +586,12 @@ impl Rewrite {
               // Collect nmatched siblings
               let mut cur = tree.clone();
               for _ in 1..nmatched {
-                if let Some(sib) = cur.get_next_sibling() {
+                match cur.get_next_sibling() { Some(sib) => {
                   cur = sib.clone();
                   nodes.push(sib);
-                } else {
+                } _ => {
                   break;
-                }
+                }}
               }
               set_attributes_wild(document, attrs, nodes, nmatched)?;
             } else if nmatched > 1 {
@@ -1161,11 +1161,11 @@ pub fn set_attributes_wild(
   }
 
   // Insert content arm as first child (before presentation nodes)
-  if let Some(mut first_child) = dual_node.get_first_child() {
+  match dual_node.get_first_child() { Some(mut first_child) => {
     first_child.add_prev_sibling(&mut content_app)?;
-  } else {
+  } _ => {
     dual_node.add_child(&mut content_app)?;
-  }
+  }}
 
   // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
   // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have

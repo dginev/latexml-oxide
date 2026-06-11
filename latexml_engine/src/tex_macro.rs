@@ -168,14 +168,14 @@ LoadDefinitions!({
         Error!("expected", "expandafter", "\\expandafter wrongly used without 2 arguments.");
       }
     }
-    if let Some(defn) = lookup_expandable(&xtok, None)? {
+    match lookup_expandable(&xtok, None)? { Some(defn) => {
       state::local_current_token(xtok);
       let invoked = defn.invoke(true)?;
       if !invoked.is_empty() {
         skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
       }
       state::expire_current_token();
-    } else if !has_meaning(&xtok) {
+    } _ => if !has_meaning(&xtok) {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
@@ -183,7 +183,7 @@ LoadDefinitions!({
       skipped.push(xtok);
     } else {
       skipped.push(xtok);
-    };
+    }};
     Ok(Tokens::new(skipped))
   });
   // If next token is expandable, prefix it with the internal marker \dont_expand
@@ -243,7 +243,7 @@ LoadDefinitions!({
           _ => break,
         }
       }
-      if let Some(defn) = lookup_definition(&effective_token)? {
+      match lookup_definition(&effective_token)? { Some(defn) => {
         if defn.is_register() {
           // SOME kind of register is acceptable
           let args = if let Some(params) = defn.get_parameters() {
@@ -259,11 +259,11 @@ LoadDefinitions!({
           };
         } else if defn.get_cs_name() == "\\font" {
           // HACK to get the \fontcmd that would have selected the current font (see FontDef)
-          if let Some(Stored::Token(t)) = state::lookup_value("current_FontDef") {
+          match state::lookup_value("current_FontDef") { Some(Stored::Token(t)) => {
             return Ok(Tokens!(t));
-          } else {
+          } _ => {
             return Ok(Tokens!(T_CS!("\\lx@default@font")));
-          }
+          }}
         } else {
           // Perl: elsif ($defn->isFontDef) { return $defn->getCS; }
           // Check if this is a font CS defined by \font (has fontinfo in state)
@@ -272,7 +272,7 @@ LoadDefinitions!({
             return Ok(Tokens!(token));
           }
         }
-      } else {
+      } _ => {
         // the token is Undefined
         if token.get_catcode() == Catcode::CS {
           // but IS a cs \something
@@ -286,7 +286,7 @@ LoadDefinitions!({
           def_register(token, None, Number!(0), None)?; // Dimension, or what?
           return Ok(Tokens!(T_OTHER!("0")));
         }
-      }
+      }}
       // If we fall through to here, whatever $token is shouldn't have been used with \the
       let (the_t, msg) =
         token.with_str(|tstr| (s!("\\the{tstr}"), s!("You can't use {tstr} after \\the")));

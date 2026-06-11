@@ -332,7 +332,7 @@ impl Telemetry {
 
     let mut first = true;
     macro_rules! field {
-      ($name:literal, $val:expr) => {{
+      ($name:literal, $val:expr_2021) => {{
         if !first {
           s.push(',');
         }
@@ -344,7 +344,7 @@ impl Telemetry {
       }};
     }
     macro_rules! field_str {
-      ($name:literal, $val:expr) => {{
+      ($name:literal, $val:expr_2021) => {{
         if !first {
           s.push(',');
         }
@@ -356,7 +356,7 @@ impl Telemetry {
       }};
     }
     macro_rules! field_array_u64 {
-      ($name:literal, $arr:expr) => {{
+      ($name:literal, $arr:expr_2021) => {{
         if !first {
           s.push(',');
         }
@@ -374,7 +374,7 @@ impl Telemetry {
       }};
     }
     macro_rules! field_array_u32 {
-      ($name:literal, $arr:expr) => {{
+      ($name:literal, $arr:expr_2021) => {{
         field_array_u64!($name, $arr);
       }};
     }

@@ -310,22 +310,22 @@ impl From<Vec<XM>> for Args {
 impl XM {
   pub fn get_meta(&self) -> &Meta {
     match self {
-      XM::Lexeme(_, ref meta) => meta,
-      XM::Token(_, ref meta) => meta,
-      XM::Apply(_, _, _, ref meta) => meta,
-      XM::Dual(_, _, _, ref meta) => meta,
-      XM::Wrap(_, _, ref meta) => meta,
+      XM::Lexeme(_, meta) => meta,
+      XM::Token(_, meta) => meta,
+      XM::Apply(_, _, _, meta) => meta,
+      XM::Dual(_, _, _, meta) => meta,
+      XM::Wrap(_, _, meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
       XM::Ref(_) | XM::Arg(_) => todo!(),
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
     match self {
-      XM::Lexeme(_, ref mut meta) => meta,
-      XM::Token(_, ref mut meta) => meta,
-      XM::Apply(_, _, _, ref mut meta) => meta,
-      XM::Dual(_, _, _, ref mut meta) => meta,
-      XM::Wrap(_, _, ref mut meta) => meta,
+      XM::Lexeme(_, meta) => meta,
+      XM::Token(_, meta) => meta,
+      XM::Apply(_, _, _, meta) => meta,
+      XM::Dual(_, _, _, meta) => meta,
+      XM::Wrap(_, _, meta) => meta,
       XM::Choices(cs) => cs[0].get_meta_mut(), // Should we return a none type instead?
       XM::Ref(_) | XM::Arg(_) => todo!(),
     }
@@ -1291,7 +1291,7 @@ impl XM {
       }
     }
     fn arg_is_vertbar_fenced(arg: &XM) -> bool {
-      let XM::Dual(_, ref presentation, _, _) = arg else {
+      let XM::Dual(_, presentation, _, _) = arg else {
         return false;
       };
       let XM::Wrap(ref items, _, _) = **presentation else {
@@ -1638,7 +1638,7 @@ impl XM {
         let items_str: Vec<String> = items.iter().map(|i| i.text_summary()).collect();
         format!("Wrap({})", items_str.join(", "))
       },
-      XM::Choices(ref trees) => format!("Choices({})", trees.len()),
+      XM::Choices(trees) => format!("Choices({})", trees.len()),
       XM::Ref(idx) => format!("Ref({})", idx),
       XM::Arg(items) => {
         let items_str: Vec<String> = items.iter().map(|i| i.text_summary()).collect();
@@ -1649,14 +1649,14 @@ impl XM {
 
   pub fn base_operator_name(&self) -> String {
     match self {
-      XM::Lexeme(ref name, _) => name.to_string(),
-      XM::Apply(ref op, ref args, ..) => {
+      XM::Lexeme(name, _) => name.to_string(),
+      XM::Apply(op, args, ..) => {
         match &*op.0 {
-          XM::Lexeme(ref name, _) if &**name == "unknown.subscript" => {
+          XM::Lexeme(name, _) if &**name == "unknown.subscript" => {
             let arg_base = args.0.first().unwrap().as_ref().unwrap().clone();
             format!("sub__{}", arg_base.base_operator_name())
           },
-          XM::Lexeme(ref name, _) if &**name == "unknown.superscript" => {
+          XM::Lexeme(name, _) if &**name == "unknown.superscript" => {
             // TODO: Too much datastructure boilerplate with the unwrap incantation
             //       might be better to create some getter methods to explain the intent better
             //       this is meant to do "give me a clone of the first argument to this XM::Apply"
@@ -1678,7 +1678,7 @@ impl XM {
       XM::Lexeme(..) => self,
       XM::Token(..) => self,
       XM::Ref(_) => self,
-      XM::Apply(ref op, ref args, ..) => {
+      XM::Apply(op, args, ..) => {
         if let XM::Lexeme(name, _) = &*op.0 {
           if &**name == "unknown.subscript" || &**name == "unknown.superscript" {
             args.trees().first().unwrap().get_baseline()
@@ -1993,7 +1993,7 @@ impl XM {
           None => Ok(None),
         };
       },
-      XM::Apply(ref op, ..) => {
+      XM::Apply(op, ..) => {
         // Compound operator (e.g. composed_bigop): get meaning from the operator
         return op.0.get_token_meaning(nodes);
       },
@@ -2020,7 +2020,7 @@ impl XM {
         let lex_node = lookup_lex_node(lex, ctxt.nodes)?;
         Ok(Some(realize_xmnode(lex_node, ctxt.document).into_owned()))
       },
-      XM::Ref(ref refprops) => {
+      XM::Ref(refprops) => {
         if let Some(node) = ctxt.document.lookup_id(refprops.id.as_ref().unwrap()) {
           Ok(Some(node.clone()))
         } else {

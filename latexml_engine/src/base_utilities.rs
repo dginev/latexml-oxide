@@ -938,11 +938,11 @@ LoadDefinitions!({
     }
     let wrapper = if let Some(point) = point {
       Some(document.insert_element_before(&point, "ltx:_Capture_", None)?)
-    } else if let Some(mut document_element) = document.get_document().get_root_element() {
+    } else { match document.get_document().get_root_element() { Some(mut document_element) => {
       Some(document.open_element_at(&mut document_element, "ltx:_Capture_", None, None)?)
-    } else {
+    } _ => {
       None
-    };
+    }}};
     if let Some(wrapper) = wrapper {
       document.set_node(&wrapper);
       insert_frontmatter(document)?;
@@ -1301,11 +1301,11 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
     },
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
-      if let Some(Stored::Dimension(width)) = w.get_property("width").as_deref() {
+      match w.get_property("width").as_deref() { Some(Stored::Dimension(width)) => {
         out.push_str(&super::tex_glue::dimension_to_spaces(*width));
-      } else {
+      } _ => {
         out.push_str(&w.get_string()?);
-      }
+      }}
     },
     _ => out.push_str(&d.to_string()),
   }
@@ -2053,8 +2053,8 @@ pub fn do_def(globally: bool, cs: Token, params: Tokens, body: Tokens) -> Result
 pub fn classify_box(boxnum: Number) -> Result<&'static str> {
   with_value(&s!("box{}", boxnum.value_of()), |val_opt| {
     Ok(match val_opt {
-      Some(Stored::Digested(ref d)) => match d.data() {
-        DigestedData::Whatsit(ref w)
+      Some(Stored::Digested(d)) => match d.data() {
+        DigestedData::Whatsit(w)
           if w.borrow().definition == lookup_definition(&T_CS!("\\vbox"))?.unwrap() =>
         {
           "vbox"
@@ -2349,7 +2349,7 @@ fn simplify_vertical_list(item: Digested) -> Digested {
 /// Perl: revertSpec($whatsit, $keyword)
 /// If whatsit has property $keyword, return Explode($keyword) ++ Revert($value)
 pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
-  if let Some(value) = whatsit.get_property(keyword) {
+  match whatsit.get_property(keyword) { Some(value) => {
     // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
     // uses a stack-buffer encode_utf8 and skips the per-char
     // `c.to_string()` heap alloc the previous version did.
@@ -2370,9 +2370,9 @@ pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
       loc: 0,
     }));
     tokens
-  } else {
+  } _ => {
     Vec::new()
-  }
+  }}
 }
 
 pub fn p_revert<T>(arg: T) -> Result<Tokens>
@@ -3427,11 +3427,11 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
 }
 
 pub fn in_svg(document: &Document) -> bool {
-  if let Some(context) = document.get_element() {
+  match document.get_element() { Some(context) => {
     document::with_node_qname(&context, |qname| qname.starts_with("svg:"))
-  } else {
+  } _ => {
     false
-  }
+  }}
 }
 
 pub fn adjust_box_color(tbox: &Digested) -> Result<()> {

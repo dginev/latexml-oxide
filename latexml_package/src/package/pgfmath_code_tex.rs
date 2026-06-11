@@ -139,16 +139,16 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
     return v;
   }
   // If direct parse fails (e.g. unexpanded macro), expand and retry
-  if let Ok(expanded) = gullet::do_expand(arg.clone()) {
+  match gullet::do_expand(arg.clone()) { Ok(expanded) => {
     let s = expanded.to_string();
     let s = strip_leading_double_negation(s.trim());
     if s == "." {
       return 0.0;
     }
     s.parse::<f64>().unwrap_or(0.0)
-  } else {
+  } _ => {
     0.0
-  }
+  }}
 }
 
 // Perl #2711 uses `s/^\-\-//g`, which strips every leading `--` pair
@@ -245,16 +245,16 @@ fn pgfmath_convert(number: f64, unit: &str) -> f64 {
 /// Look up a TeX register value, return as points
 /// Perl: sub pgfmath_register (L487-493)
 fn pgfmath_register_lookup(cs: &str) -> f64 {
-  if let Ok(Some(reg)) = state::lookup_register(cs, vec![]) {
+  match state::lookup_register(cs, vec![]) { Ok(Some(reg)) => {
     match reg {
       RegisterValue::Number(n) => n.value_of() as f64,
       RegisterValue::Dimension(d) => d.value_of() as f64 / 65536.0,
       RegisterValue::Glue(g) => g.value_of() as f64 / 65536.0,
       _ => 0.0,
     }
-  } else {
+  } _ => {
     0.0
-  }
+  }}
 }
 
 // ==================== Built-in Function Application ====================
@@ -932,11 +932,11 @@ mod pgfmath_grammar {
       loop {
         sb(i);
         if eat(i, b',') {
-          if let Ok(arg) = formula(i) {
+          match formula(i) { Ok(arg) => {
             args.push(arg);
-          } else {
+          } _ => {
             break;
-          }
+          }}
         } else {
           break;
         }

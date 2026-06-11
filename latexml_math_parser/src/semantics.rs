@@ -185,7 +185,7 @@ pub fn infix_apply(
 /// Check if an XM node is an applied function (curry level 1 / ground term).
 /// Applied functions are Apply(function, args...) — the function has been applied to arguments.
 fn is_applied_function(xm: &Option<XM>) -> bool {
-  if let Some(XM::Apply(ref op, ref args, ..)) = xm {
+  if let Some(XM::Apply(op, args, ..)) = xm {
     // An Apply with a function/trigfunction/opfunction operator that has arguments
     // is a ground-level application, not a function value.
     if !args.0.is_empty() {
@@ -236,7 +236,7 @@ pub fn list_apply(
   if left_rel || right_rel {
     // Allow extension of existing list/formulae Duals (flat accumulation)
     let left_is_list_dual = left.as_ref().is_some_and(|l| {
-      if let XM::Dual(ref content, ..) = l {
+      if let XM::Dual(content, ..) = l {
         if let XM::Apply(ref op, ..) = **content {
           if let XM::Token(ref props, _) = *op.0 {
             return props.meaning.as_deref() == Some("list")
@@ -410,7 +410,7 @@ pub fn formula_list_apply(
     return Err("formula_list_apply: items contain relations, use statement-level list".into());
   }
   // Also check if the left side is already a list Dual containing relational items
-  if let Some(Some(XM::Dual(ref content, ..))) = args.first() {
+  if let Some(Some(XM::Dual(content, ..))) = args.first() {
     if let XM::Apply(ref op, ref op_args, ..) = **content {
       if let XM::Token(ref props, _) = *op.0 {
         if props.meaning.as_deref() == Some("list") {
@@ -431,16 +431,16 @@ pub fn formula_list_apply(
 /// Absent operands are valid at the top level (equation fragments like `= f(x)`)
 /// but should be pruned when inside inner rules (lists, fenced expressions, function args).
 fn has_absent_relop_operand(xm: &XM) -> bool {
-  if let XM::Apply(ref op, ref args, ..) = xm {
+  if let XM::Apply(op, args, ..) = xm {
     let is_rel = match &*op.0 {
-      XM::Token(ref props, _) => {
+      XM::Token(props, _) => {
         props.meaning.as_deref() == Some("multirelation")
           || props
             .role
             .as_deref()
             .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
       },
-      XM::Lexeme(ref lex, _) => lex
+      XM::Lexeme(lex, _) => lex
         .split(':')
         .next()
         .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW")),
@@ -448,7 +448,7 @@ fn has_absent_relop_operand(xm: &XM) -> bool {
     };
     if is_rel {
       for arg in &args.0 {
-        if let Some(XM::Token(ref props, _)) = arg {
+        if let Some(XM::Token(props, _)) = arg {
           if props.meaning.as_deref() == Some("absent") {
             return true;
           }
@@ -464,22 +464,22 @@ fn has_absent_relop_operand(xm: &XM) -> bool {
 /// from "list" (comma-separated plain expressions).
 fn is_relational_item(xm: &XM) -> bool {
   match xm {
-    XM::Apply(ref op, ..) => match &*op.0 {
-      XM::Token(ref props, _) => {
+    XM::Apply(op, ..) => match &*op.0 {
+      XM::Token(props, _) => {
         props.meaning.as_deref() == Some("multirelation")
           || props
             .role
             .as_deref()
             .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
       },
-      XM::Lexeme(ref lex, _) => lex
+      XM::Lexeme(lex, _) => lex
         .split(':')
         .next()
         .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW")),
       _ => false,
     },
     // A formulae XMDual is inherently relational (it wraps relational items)
-    XM::Dual(ref content, ..) => {
+    XM::Dual(content, ..) => {
       if let XM::Apply(ref op, ..) = **content {
         if let XM::Token(ref props, _) = *op.0 {
           return props.meaning.as_deref() == Some("formulae");
@@ -549,8 +549,8 @@ pub fn formulae_apply(
   // list grouping. This forces `a=b, c` via `formula relop formula_list`
   // (producing `a = list(b,c)`) but allows `a=b. c` to produce `formulae(a=b, c)`.
   let sep_is_period = match &sep {
-    XM::Lexeme(ref lex, _) => lex.starts_with("PERIOD:"),
-    XM::Token(ref props, _) => props.role.as_deref() == Some("PERIOD"),
+    XM::Lexeme(lex, _) => lex.starts_with("PERIOD:"),
+    XM::Token(props, _) => props.role.as_deref() == Some("PERIOD"),
     _ => false,
   };
   if left_rel && !right_rel && !sep_is_period {
@@ -619,17 +619,17 @@ fn list_or_formulae_create(
 pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
   // Recurse into children first (bottom-up)
   match xm {
-    XM::Apply(_, ref mut args, ..) => {
+    XM::Apply(_, args, ..) => {
       for arg in args.0.iter_mut().flatten() {
         restructure_formulae_right(arg)?;
       }
     },
-    XM::Wrap(ref mut items, ..) => {
+    XM::Wrap(items, ..) => {
       for item in items.iter_mut() {
         restructure_formulae_right(item)?;
       }
     },
-    XM::Dual(ref mut content, ref mut pres, ..) => {
+    XM::Dual(content, pres, ..) => {
       restructure_formulae_right(content)?;
       restructure_formulae_right(pres)?;
 
@@ -652,12 +652,12 @@ pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
         }
       }
     },
-    XM::Choices(ref mut choices) => {
+    XM::Choices(choices) => {
       for choice in choices.iter_mut() {
         restructure_formulae_right(choice)?;
       }
     },
-    XM::Arg(ref mut items) => {
+    XM::Arg(items) => {
       for item in items.iter_mut() {
         restructure_formulae_right(item)?;
       }
@@ -670,8 +670,8 @@ pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
 /// Check if an XM node is a \quad-type separator (XMHint PUNCT with name containing "uad").
 fn is_quad_separator(xm: &XM) -> bool {
   match xm {
-    XM::Token(ref props, _) => props.name.as_deref().is_some_and(|n| n.contains("uad")),
-    XM::Lexeme(ref lex, _) => lex.split(':').nth(1).is_some_and(|t| t.contains("uad")),
+    XM::Token(props, _) => props.name.as_deref().is_some_and(|n| n.contains("uad")),
+    XM::Lexeme(lex, _) => lex.split(':').nth(1).is_some_and(|t| t.contains("uad")),
     _ => false,
   }
 }
@@ -801,12 +801,12 @@ pub fn rename_fenced_lists(
   nodes: &[libxml::tree::Node],
 ) -> Result<(), Box<dyn Error>> {
   match xm {
-    XM::Apply(_, ref mut args, ..) => {
+    XM::Apply(_, args, ..) => {
       for arg in args.0.iter_mut().flatten() {
         rename_fenced_lists(arg, nodes)?;
       }
     },
-    XM::Wrap(ref mut items, ..) => {
+    XM::Wrap(items, ..) => {
       for item in items.iter_mut() {
         rename_fenced_lists(item, nodes)?;
       }
@@ -827,7 +827,7 @@ pub fn rename_fenced_lists(
           // Find and rename any list Dual among the inner items
           let len = items.len();
           for item in items[1..len - 1].iter_mut() {
-            if let XM::Dual(ref mut content, ..) = item {
+            if let XM::Dual(content, ..) = item {
               if let XM::Apply(ref mut op, ref args, ..) = **content {
                 if let XM::Token(ref mut props, _) = *op.0 {
                   if props.meaning.as_deref() == Some("list") {
@@ -852,11 +852,11 @@ pub fn rename_fenced_lists(
         }
       }
     },
-    XM::Dual(ref mut content, ref mut pres, ..) => {
+    XM::Dual(content, pres, ..) => {
       rename_fenced_lists(content, nodes)?;
       rename_fenced_lists(pres, nodes)?;
     },
-    XM::Choices(ref mut trees) => {
+    XM::Choices(trees) => {
       for tree in trees.iter_mut() {
         rename_fenced_lists(tree, nodes)?;
       }
@@ -873,17 +873,17 @@ pub fn rename_fenced_lists(
 /// and replaces them with combined `prime{N}` tokens.
 pub fn combine_supop_post(xm: &mut XM, nodes: &[libxml::tree::Node]) -> Result<(), Box<dyn Error>> {
   match xm {
-    XM::Apply(_, ref mut args, ..) => {
+    XM::Apply(_, args, ..) => {
       for arg in args.0.iter_mut().flatten() {
         combine_supop_post(arg, nodes)?;
       }
     },
-    XM::Wrap(ref mut items, ..) => {
+    XM::Wrap(items, ..) => {
       for item in items.iter_mut() {
         combine_supop_post(item, nodes)?;
       }
     },
-    XM::Dual(ref mut content, ref mut pres, ..) => {
+    XM::Dual(content, pres, ..) => {
       combine_supop_post(content, nodes)?;
       combine_supop_post(pres, nodes)?;
       // Check if content is Apply(list/times, args) where pres Wrap has all SUPOP items
@@ -932,7 +932,7 @@ pub fn combine_supop_post(xm: &mut XM, nodes: &[libxml::tree::Node]) -> Result<(
         }
       }
     },
-    XM::Choices(ref mut trees) => {
+    XM::Choices(trees) => {
       for tree in trees.iter_mut() {
         combine_supop_post(tree, nodes)?;
       }
@@ -997,7 +997,7 @@ pub fn infix_relation(
     // because list-Apply args are XMRefs after `create_xmrefs`; the
     // actual relation Applies live in the presentation branch.
     let (content_args, pres_items) = match xm {
-      XM::Apply(ref op, ref args, ..) => {
+      XM::Apply(op, args, ..) => {
         if let XM::Token(ref props, _) = *op.0 {
           if props.meaning.as_deref() == Some("list") {
             (Some(args), None)
@@ -1008,7 +1008,7 @@ pub fn infix_relation(
           (None, None)
         }
       },
-      XM::Dual(ref content, ref pres, ..) => {
+      XM::Dual(content, pres, ..) => {
         if let XM::Apply(ref op, ref args, ..) = **content {
           if let XM::Token(ref props, _) = *op.0 {
             if props.meaning.as_deref() == Some("list") {
@@ -1058,17 +1058,17 @@ pub fn infix_relation(
   if let Some(ref left_xm) = left {
     fn last_arg_is_list(xm: &XM) -> bool {
       match xm {
-        XM::Apply(ref op, ref args, ..) => {
+        XM::Apply(op, args, ..) => {
           // Check if this is a relational Apply (has RELOP/ARROW operator)
           let is_rel = match &*op.0 {
-            XM::Token(ref props, _) => {
+            XM::Token(props, _) => {
               props.meaning.as_deref() == Some("multirelation")
                 || props
                   .role
                   .as_deref()
                   .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW"))
             },
-            XM::Lexeme(ref lex, _) => lex
+            XM::Lexeme(lex, _) => lex
               .split(':')
               .next()
               .is_some_and(|r| r.contains("RELOP") || r.contains("ARROW")),
@@ -1076,7 +1076,7 @@ pub fn infix_relation(
           };
           if is_rel {
             // Check last argument
-            if let Some(Some(XM::Dual(ref content, ..))) = args.0.last() {
+            if let Some(Some(XM::Dual(content, ..))) = args.0.last() {
               if let XM::Apply(ref inner_op, ..) = **content {
                 if let XM::Token(ref props, _) = *inner_op.0 {
                   return props.meaning.as_deref() == Some("list");
@@ -1204,7 +1204,7 @@ pub fn infix_apply_nary(
         let rhs_unfenced = right.as_ref().map(|r| r.get_meta().fenced.is_none()).unwrap_or(false);
         let rhs_is_simple = match right.as_ref() {
           Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
-          Some(XM::Apply(Operator(ref rhs_op), ..)) => {
+          Some(XM::Apply(Operator(rhs_op), ..)) => {
             let r = match &**rhs_op {
               XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
               XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
@@ -1277,7 +1277,7 @@ pub fn infix_apply_nary(
   };
   if is_explicit_mulop {
     let right_is_invisible_times = match &right {
-      Some(XM::Apply(ref op, ref args, ..)) => {
+      Some(XM::Apply(op, args, ..)) => {
         let op_is_times = match &*op.0 {
           XM::Lexeme(lex, _) => lex.split(':').nth(1) == Some("times"),
           XM::Token(props, _) => props.meaning.as_deref() == Some("times"),
@@ -1890,12 +1890,12 @@ pub fn postfix_apply(
     Meta::default(),
   );
   // Check if arg is an n-ary Apply with the same operator as op
-  if let (Some(XM::Apply(ref app_op, ref app_args, ref app_props, ref app_meta)), Some(ref op_xm)) =
+  if let (Some(XM::Apply(app_op, app_args, app_props, app_meta)), Some(op_xm)) =
     (&arg, &op)
   {
     let same_op = match (app_op.0.as_ref(), op_xm) {
       // Compare Lexemes: both are lexeme strings like "ADDOP:plus:+"
-      (XM::Lexeme(ref a_lex, _), XM::Lexeme(ref o_lex, _)) => {
+      (XM::Lexeme(a_lex, _), XM::Lexeme(o_lex, _)) => {
         // Compare role:meaning prefix (ignoring the actual symbol after last :)
         let a_parts: Vec<_> = a_lex.splitn(3, ':').collect();
         let o_parts: Vec<_> = o_lex.splitn(3, ':').collect();
@@ -1905,7 +1905,7 @@ pub fn postfix_apply(
           && a_parts[1] == o_parts[1]
       },
       // Compare realized Tokens
-      (XM::Token(ref a_props, _), XM::Token(ref o_props, _)) => {
+      (XM::Token(a_props, _), XM::Token(o_props, _)) => {
         a_props.meaning == o_props.meaning && a_props.meaning.is_some()
       },
       _ => false,
@@ -2025,14 +2025,14 @@ pub fn fenced(
     // Check if arg is a multi-item list (XM::Dual from list_apply/formulae_apply).
     // If so, use interpret_delimited for per-item XMRefs (matching Perl's NewFenced).
     let is_multi_item = match &arg {
-      XM::Dual(ref content, ..) => matches!(&**content, XM::Apply(ref op_box, ref args, ..)
+      XM::Dual(content, ..) => matches!(&**content, XM::Apply(op_box, args, ..)
         if args.0.len() >= 2 && matches!(&*op_box.0,
-          XM::Token(ref p, _) if matches!(p.meaning.as_deref(),
+          XM::Token(p, _) if matches!(p.meaning.as_deref(),
             Some("vector") | Some("list") | Some("formulae")))),
-      XM::Apply(ref op_box, ref args, ..) => {
+      XM::Apply(op_box, args, ..) => {
         args.0.len() >= 2
           && matches!(&*op_box.0,
-        XM::Token(ref p, _) if matches!(p.meaning.as_deref(),
+        XM::Token(p, _) if matches!(p.meaning.as_deref(),
           Some("vector") | Some("list") | Some("formulae")))
       },
       _ => false,
@@ -2334,10 +2334,10 @@ pub fn fence(
   let mut stuff = stuff;
   for i in (2..stuff.len().saturating_sub(1)).step_by(2) {
     match &mut stuff[i] {
-      XM::Token(ref mut props, _) if props.role.as_deref() == Some("VERTBAR") => {
+      XM::Token(props, _) if props.role.as_deref() == Some("VERTBAR") => {
         props.role = Some(Cow::Borrowed("MIDDLE"));
       },
-      XM::Lexeme(ref lex, ref meta) if lex.starts_with("VERTBAR:") => {
+      &mut XM::Lexeme(ref lex, ref meta) if lex.starts_with("VERTBAR:") => {
         // For lexemes, change the role on the underlying DOM node
         if let Some(ref cv) = meta.curry_level {
           let cv_str = cv.to_string();
@@ -2670,7 +2670,7 @@ fn extract_base_scriptpos(
   ctxt: &ActionContext,
 ) -> (&'static str, u32, bool, u32) {
   match base {
-    Some(XM::Apply(ref op, _, _props, ref meta)) => {
+    Some(XM::Apply(op, _, _props, meta)) => {
       // Check if the operator is a SCRIPTOP
       if let XM::Token(ref op_props, _) = *op.0 {
         let role = op_props.role.as_deref().unwrap_or("");
@@ -2686,7 +2686,7 @@ fn extract_base_scriptpos(
     },
     // For Lexeme bases (e.g., \sum with scriptpos="mid"),
     // look up the XML node to get scriptpos
-    Some(XM::Lexeme(ref lex, _)) => {
+    Some(XM::Lexeme(lex, _)) => {
       if let Ok(node) = lookup_lex_node(lex, ctxt.nodes) {
         let sp = node.get_attribute("scriptpos").unwrap_or_default();
         if !sp.is_empty() {
@@ -2696,7 +2696,7 @@ fn extract_base_scriptpos(
       }
       ("post", 0, false, 0)
     },
-    Some(XM::Token(ref props, _)) => {
+    Some(XM::Token(props, _)) => {
       let sp = props.scriptpos.as_deref().unwrap_or("post");
       let (bx, bl) = parse_scriptpos(sp);
       (bx, bl, false, 0)
@@ -2720,7 +2720,7 @@ pub fn obtain_arg(tree: XM, n: usize, ctxt: ActionContext) -> Result<Option<XM>,
       // if ($nth && !$node->isSameNode($onode)) {
       //   return LaTeXML::Package::createXMRefs($LaTeXML::MathParser::DOCUMENT, $nth); }
     },
-    XM::Apply(_, ref args, ..) => match args.0.get(n) {
+    XM::Apply(_, args, ..) => match args.0.get(n) {
       Some(t) => Ok(t.clone()),
       None => Ok(None),
     },
@@ -2830,9 +2830,9 @@ pub fn apply_invisible_times(
       // where log has role OPFUNCTION — should still prefer prefix_apply.
       // Also for compound operators: \nabla\log → Apply(nabla, [log])
       // where nabla is OPERATOR — the compound result should absorb args.
-      XM::Apply(ref op, ref args, ..) => {
+      XM::Apply(op, args, ..) => {
         let op_role = match &*op.0 {
-          XM::Token(ref p, _) => p.role.as_deref().map(String::from),
+          XM::Token(p, _) => p.role.as_deref().map(String::from),
           XM::Lexeme(lex, _) => {
             // Extract role from lexeme string prefix: "OPERATOR:nabla:1" → "OPERATOR"
             lex.split(':').next().map(String::from)
@@ -2968,7 +2968,7 @@ pub fn apply_invisible_times(
         .unwrap_or(true);
       let rhs_is_simple = match right.as_ref() {
         Some(XM::Lexeme(..)) | Some(XM::Token(..)) | Some(XM::Wrap(..)) => true,
-        Some(XM::Apply(Operator(ref rhs_op), ..)) => {
+        Some(XM::Apply(Operator(rhs_op), ..)) => {
           let rhs_role = match &**rhs_op {
             XM::Token(p, _) => p.role.as_deref().unwrap_or(""),
             XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
@@ -3022,7 +3022,7 @@ pub fn apply_invisible_times(
   if let Some(ref l) = left {
     if let Some(ref r) = right {
       let is_scripted_function = is_scripted_function_head(l, ctxt.nodes);
-      let is_fenced_dual = matches!(r, XM::Dual(ref c, ref p, _, _)
+      let is_fenced_dual = matches!(r, XM::Dual(c, p, _, _)
         if matches!(**c, XM::Ref(_)) && matches!(**p, XM::Wrap(..)));
       if is_scripted_function && is_fenced_dual {
         // Lift the fenced XMDual: Apply(f^2, Dual(Ref, Wrap)) → Dual(Apply(Ref(f^2), Ref(arg)),
@@ -3067,8 +3067,8 @@ pub fn apply_invisible_times(
       if op_name.starts_with("TRIGFUNCTION") {
         if let Some(ref r) = right {
           let is_bare_factor = match r {
-            XM::Lexeme(_, ref rm) => rm.fenced.is_none(),
-            XM::Token(_, ref rm) => rm.fenced.is_none(),
+            XM::Lexeme(_, rm) => rm.fenced.is_none(),
+            XM::Token(_, rm) => rm.fenced.is_none(),
             _ => false,
           };
           if is_bare_factor {
@@ -3282,7 +3282,7 @@ fn morph_vertbar(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   let is_delimiter = matches!(role, "OPEN" | "CLOSE" | "MIDDLE");
   match xm {
     XM::Lexeme(lex, meta) => {
-      if let Ok(node) = lookup_lex_node(&lex, nodes) {
+      match lookup_lex_node(&lex, nodes) { Ok(node) => {
         let mut props = XProps::from(node);
         props.role = Some(Cow::Borrowed(role));
         if !is_delimiter {
@@ -3293,9 +3293,9 @@ fn morph_vertbar(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
           }
         }
         XM::Token(props, meta)
-      } else {
+      } _ => {
         XM::Lexeme(lex, meta)
-      }
+      }}
     },
     XM::Token(mut props, meta) => {
       props.role = Some(Cow::Borrowed(role));
@@ -3336,10 +3336,10 @@ fn maybe_mark_possible_function(left: &mut Option<XM>, right: &Option<XM>, nodes
 
 fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
   match xm {
-    Some(XM::Token(ref mut props, _)) if props.role.as_deref() == Some("UNKNOWN") => {
+    Some(XM::Token(props, _)) if props.role.as_deref() == Some("UNKNOWN") => {
       props.possible_function = Some(Cow::Borrowed("yes"));
     },
-    Some(XM::Lexeme(ref lex, _)) if lex.starts_with("UNKNOWN:") => {
+    &mut Some(XM::Lexeme(ref lex, _)) if lex.starts_with("UNKNOWN:") => {
       // Lexemes are "ROLE:content:id" references to XML nodes.
       // Set the attribute directly on the underlying XML node.
       if let Some(id_str) = lex.split(':').next_back() {
@@ -3351,7 +3351,7 @@ fn mark_inner_possible_function(xm: &mut Option<XM>, nodes: &[XMLNode]) {
         }
       }
     },
-    Some(XM::Apply(_, ref mut args, ..)) => {
+    Some(XM::Apply(_, args, ..)) => {
       if let Some(first) = args.0.first_mut() {
         mark_inner_possible_function(first, nodes);
       }
@@ -3387,8 +3387,8 @@ fn find_fracop_node<'a>(
 ) -> Option<&'a libxml::tree::Node> {
   // Try via Lexeme curry_level (node index)
   let meta = match xm {
-    Some(XM::Lexeme(_, ref m)) => Some(m),
-    Some(XM::Apply(_, _, _, ref m)) => Some(m),
+    Some(XM::Lexeme(_, m)) => Some(m),
+    Some(XM::Apply(_, _, _, m)) => Some(m),
     _ => None,
   };
   if let Some(meta) = meta {
@@ -3404,7 +3404,7 @@ fn find_fracop_node<'a>(
       }
     }
     // Try via Lexeme content: "ROLE:meaning:N" → index N-1
-    if let Some(XM::Lexeme(ref lex, _)) = xm {
+    if let Some(XM::Lexeme(lex, _)) = xm {
       if let Some(idx_str) = lex.rsplit(':').next() {
         if let Ok(lex_idx) = idx_str.parse::<usize>() {
           let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
@@ -3485,7 +3485,7 @@ fn is_bigop_or_scripted_bigop(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
         Some("INTOP") | Some("BIGOP") | Some("SUMOP") | Some("LIMITOP") | Some("DIFFOP")
       )
     },
-    XM::Apply(ref op, ref args, ..) => {
+    XM::Apply(op, args, ..) => {
       let op_role = get_operator_role(op, nodes);
       // Direct bigop application: Apply(INTOP, ...)
       if matches!(
@@ -3503,7 +3503,7 @@ fn is_bigop_or_scripted_bigop(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
           | Some("POSTSUBSCRIPT")
           | Some("POSTSUPERSCRIPT")
       ) {
-        if let Some(Some(ref base)) = args.0.first() {
+        if let Some(Some(base)) = args.0.first() {
           return is_bigop_or_scripted_bigop(base, nodes);
         }
       }
@@ -3519,7 +3519,7 @@ fn is_scripted_function_head(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
   match xm {
     // A bare function token is not "scripted" — handled by the earlier check
     XM::Token(..) | XM::Lexeme(..) => false,
-    XM::Apply(ref op, ref args, ..) => {
+    XM::Apply(op, args, ..) => {
       let op_role = get_operator_role(op, nodes);
       // Must be a script operator (SUBSCRIPTOP, SUPERSCRIPTOP, etc.)
       if matches!(
@@ -3530,7 +3530,7 @@ fn is_scripted_function_head(xm: &XM, nodes: &[libxml::tree::Node]) -> bool {
           | Some("POSTSUPERSCRIPT")
       ) {
         // Check the base (first arg) — is it a FUNCTION or another scripted function?
-        if let Some(Some(ref base)) = args.0.first() {
+        if let Some(Some(base)) = args.0.first() {
           return is_function_role_item(base, nodes) || is_scripted_function_head(base, nodes);
         }
       }
@@ -3634,8 +3634,8 @@ pub fn consecutive_relop_chain(
     }
     // If left is Apply(RELOP, a, b), convert to multirelation
     let is_relop = match &*op.0 {
-      XM::Lexeme(ref lex, _) => lex.split(':').next().unwrap().contains("RELOP"),
-      XM::Token(ref tok, _) => matches!(tok.role.as_deref(), Some("RELOP")),
+      XM::Lexeme(lex, _) => lex.split(':').next().unwrap().contains("RELOP"),
+      XM::Token(tok, _) => matches!(tok.role.as_deref(), Some("RELOP")),
       _ => false,
     };
     if is_relop {
@@ -3995,8 +3995,8 @@ pub fn eval_at(
     // faux_wrap returns Wrap([lexeme, content]) — extract the lexeme first.
     let s1_is_sub = s1.as_ref().is_none_or(|xm| {
       let lex = match xm {
-        XM::Lexeme(ref l, _) => Some(&**l),
-        XM::Wrap(ref items, ..) if !items.is_empty() => {
+        XM::Lexeme(l, _) => Some(&**l),
+        XM::Wrap(items, ..) if !items.is_empty() => {
           if let XM::Lexeme(ref l, _) = items[0] {
             Some(&**l)
           } else {
@@ -4103,13 +4103,13 @@ pub fn eval_at(
 fn get_script_child_xm(script_opt: &Option<XM>, nodes: &[XMLNode]) -> Option<XM> {
   let script = script_opt.as_ref()?;
   // New format: Wrap([lexeme, content]) — return the parsed content directly
-  if let XM::Wrap(ref items, ..) = script {
+  if let XM::Wrap(items, ..) = script {
     if items.len() == 2 {
       return Some(items[1].clone());
     }
   }
   // Old format: bare Lexeme — look up from DOM
-  if let XM::Lexeme(ref lex, _) = script {
+  if let XM::Lexeme(lex, _) = script {
     let node = lookup_lex_node(lex, nodes).ok()?;
     let children = node.get_child_elements();
     if let Some(first_child) = children.first() {
@@ -4296,11 +4296,11 @@ fn has_negative_rpadding(xm: &XM, nodes: &[XMLNode]) -> bool {
 fn merge_vertbar_triple(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   let mut props = match xm {
     XM::Lexeme(ref lex, _) => {
-      if let Ok(node) = lookup_lex_node(lex, nodes) {
+      match lookup_lex_node(lex, nodes) { Ok(node) => {
         XProps::from(node)
-      } else {
+      } _ => {
         XProps::default()
-      }
+      }}
     },
     XM::Token(ref p, _) => p.clone(),
     _ => XProps::default(),
@@ -4390,11 +4390,11 @@ pub fn stretchy_triple_norm_fenced(
 fn merge_vertbar_pair(xm: XM, role: &'static str, nodes: &[XMLNode]) -> XM {
   let mut props = match xm {
     XM::Lexeme(ref lex, _) => {
-      if let Ok(node) = lookup_lex_node(lex, nodes) {
+      match lookup_lex_node(lex, nodes) { Ok(node) => {
         XProps::from(node)
-      } else {
+      } _ => {
         XProps::default()
-      }
+      }}
     },
     XM::Token(ref p, _) => p.clone(),
     _ => XProps::default(),

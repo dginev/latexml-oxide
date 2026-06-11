@@ -198,7 +198,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@xy@capturerange", {
     let mut dims = String::new();
     for reg in ["\\X@min", "\\Y@min", "\\X@max", "\\Y@max"] {
-      if let Ok(Some(val)) = state::lookup_register(reg, Vec::new()) {
+      match state::lookup_register(reg, Vec::new()) { Ok(Some(val)) => {
         let sp = match val {
           RegisterValue::Dimension(d) => d.value_of(),
           RegisterValue::Number(n) => n.value_of(),
@@ -206,10 +206,10 @@ LoadDefinitions!({
         };
         if !dims.is_empty() { dims.push(','); }
         dims.push_str(&sp.to_string());
-      } else {
+      } _ => {
         if !dims.is_empty() { dims.push(','); }
         dims.push('0');
-      }
+      }}
     }
     state::assign_value("saved_xy_range", Stored::String(arena::pin(&dims)), Some(Scope::Global));
   });

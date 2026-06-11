@@ -650,7 +650,7 @@ impl Mouth {
         let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
         let read_mode = lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = if let Some(defn) = lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
+        let eolch = match lookup_definition(&T_CS!("\\endlinechar")).unwrap() { Some(defn) => {
           if defn.is_register() {
             if let Some(eol) = defn.value_of(Vec::new()) {
               let eol = eol.value_of() as i16;
@@ -666,9 +666,9 @@ impl Mouth {
           } else {
             None
           }
-        } else {
+        } _ => {
           Some('\r')
-        };
+        }};
         if line_opt.is_none() {
           // Exhausted the input.
           let eolcc = if let Some(ch) = eolch {

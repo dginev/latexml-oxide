@@ -121,15 +121,15 @@ LoadDefinitions!({
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      match state::lookup_register_definition(&varname) { Some(defn) => {
         let defn_args : Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.multiply(scale), None, defn_args);
-      } else {
+      } _ => {
         let message =
           s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", message);
-      }
+      }}
     } else {
       let message = s!("\\multiply expected a Variable argument, but got nothing.");
       Error!("expected","variable", message);
@@ -141,7 +141,7 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
-      if let Some(defn) = state::lookup_register_definition(&varname) {
+      match state::lookup_register_definition(&varname) { Some(defn) => {
         let defn_value = defn.value_of(inner).unwrap_or_default();
         let mut denominator = scale.value_f64();
         if denominator == 0.0 {
@@ -149,11 +149,11 @@ LoadDefinitions!({
           denominator = 1.0;
         }
         defn.set_value(defn_value.divide(Float::new_f64(denominator)), None, defn_args);
-      } else {
+      } _ => {
         let message =
           s!("\\divide expected a defined variable for {:?}, found no definition", varname);
         Error!("expected","definition", message);
-      }
+      }}
     } else {
       let message = s!("\\divide expected a Variable argument, but got nothing.");
       Error!("expected","variable", message);

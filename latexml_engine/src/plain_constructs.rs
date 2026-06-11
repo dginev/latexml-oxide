@@ -453,7 +453,7 @@ LoadDefinitions!({
         for item in matrix.unlist() {
           if let Some(prop) = item.get_property("alignment") {
             if let Stored::Digested(ref alignment_d) = *prop {
-              if let DigestedData::Alignment(ref alignment_rc) = alignment_d.data() {
+              if let DigestedData::Alignment(alignment_rc) = alignment_d.data() {
                 let alignment = alignment_rc.borrow();
                 // Use row_heights from normalization
                 let row_heights = alignment.get_row_heights();

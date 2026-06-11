@@ -1130,11 +1130,11 @@ pub fn read_balanced(
           // SHOULD count nesting of { }!!! when SCANNED (not digested)
           if has_reading_alignment() && align_group_count() == 0 {
             if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-              if let DigestedData::Alignment(data) = get_reading_alignment().unwrap().data() {
+              match get_reading_alignment().unwrap().data() { DigestedData::Alignment(data) => {
                 handle_template(data.borrow_mut(), token, atype, ahidden)?;
-              } else {
+              } _ => {
                 panic!("malformed alignmed was stored?");
-              }
+              }}
               continue;
             }
           }
@@ -1556,7 +1556,7 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
           if let Some(c) = standalone {
             c.with_str(|s| cs.push_str(s));
           }
-        } else if let Some(Stored::Token(letted)) = crate::state::lookup_meaning(&token) {
+        } else { match crate::state::lookup_meaning(&token) { Some(Stored::Token(letted)) => {
           // CS is \let-equivalent to a single token. If that token is
           // a character (LETTER/OTHER/SPACE), append its string repr
           // to the constructed csname — mirrors real TeX's behaviour
@@ -1581,7 +1581,7 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
             );
             Error!("unexpected", token, message);
           }
-        } else if !quiet {
+        } _ => if !quiet {
           if lookup_definition(&token)?.is_some() {
             let message = s!(
               "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
@@ -1593,7 +1593,7 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
             let message = s!("The token {:?} is not defined", token);
             Error!("undefined", token, message);
           }
-        }
+        }}}
         // In quiet mode (ifcsname), just skip the CS token
       },
       Catcode::SPACE => cs.push(' '), // Keep newlines from having \n!
@@ -1821,7 +1821,7 @@ pub fn read_register_value_coerce(
     None => Ok(None),
     Some(token) => {
       let _is_fontdimen = token.with_str(|s| s == "\\fontdimen");
-      if let Some(defn) = lookup_register_definition(&token) {
+      match lookup_register_definition(&token) { Some(defn) => {
         if let Some(mut register_type) = defn.register_type() {
           if register_type == RegisterType::CharDef {
             // CharDefs treated as numbers here
@@ -1846,10 +1846,10 @@ pub fn read_register_value_coerce(
           unread_one(token); // Unread
           Ok(None)
         }
-      } else {
+      } _ => {
         unread_one(token); // Unread
         Ok(None)
-      }
+      }}
     },
   }
 }
@@ -2358,7 +2358,7 @@ pub fn read_tokens_value() -> Result<Tokens> {
       // Perl: $$token[1] == CC_BEGIN — direct catcode check
       if token.get_catcode() == Catcode::BEGIN {
         Ok(read_balanced(ExpansionLevel::Off, false, false)?)
-      } else if let Some(defn) = lookup_register_definition(&token) {
+      } else { match lookup_register_definition(&token) { Some(defn) => {
         match defn.register_type() {
           Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
             // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
@@ -2372,7 +2372,7 @@ pub fn read_tokens_value() -> Result<Tokens> {
           },
           _ => Ok(Tokens!(token)),
         }
-      } else if let Some(defn) = lookup_definition(&token)? {
+      } _ => { match lookup_definition(&token)? { Some(defn) => {
         // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
         // way to circumvent? Is it slow in the first place?
         if defn.is_expandable() {
@@ -2384,9 +2384,9 @@ pub fn read_tokens_value() -> Result<Tokens> {
         } else {
           Ok(Tokens!(token))
         }
-      } else {
+      } _ => {
         Ok(Tokens!(token))
-      }
+      }}}}}
     },
   }
 }

@@ -997,7 +997,7 @@ impl MathParser {
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
     //     $LaTeXML::MathParser::IDREFS{$id} = $n; }
     let mut p = xnode.get_parent().unwrap();
-    if let Some(result) = self.parse_rec(xnode, "Anything,", document)? {
+    match self.parse_rec(xnode, "Anything,", document)? { Some(result) => {
       // Add text representation to the containing Math element.
 
       // This is a VERY screwy situation? How can the parent be a document fragment??
@@ -1036,12 +1036,12 @@ impl MathParser {
       // ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']", $p)) {
       // $document->setAttribute($n, idref => $repid); } } }
       p.set_attribute("text", &text_form(&result, document))?;
-    } else if let Some(text) = p
+    } _ => if let Some(text) = p
       .get_attribute("tex")
       .and_then(|tex| TEX_TEXT_FALLBACK.get(tex.as_str()))
     {
       p.set_attribute("text", text)?;
-    }
+    }}
     Ok(())
   }
 
@@ -1070,7 +1070,7 @@ impl MathParser {
     if rule == "kludge" {
       self.parse_kludge(&mut node, document);
       Ok(None)
-    } else if let Some(mut result) = self.parse_single(&mut node, document, &rule)? {
+    } else { match self.parse_single(&mut node, document, &rule)? { Some(mut result) => {
       *self.passed.entry_sym(tag).or_insert(0) += 1;
       if tag == pin!("ltx:XMath") {
         // Replace the content of XMath with parsed result
@@ -1150,7 +1150,7 @@ impl MathParser {
         }
       }
       Ok(Some(result))
-    } else {
+    } _ => {
       // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
       *self.failed.entry_sym(tag).or_insert(0) += 1;
       if tag == pin!("ltx:XMath") {
@@ -1159,7 +1159,7 @@ impl MathParser {
         // using failed_xmath_ids to find the failed nodes.
       }
       Ok(None)
-    }
+    }}}
   }
 
   // Depth first parsing of XMArg nodes.
@@ -1179,14 +1179,14 @@ impl MathParser {
           if saved_role.is_some() {
             c.remove_attribute("role").ok();
           }
-          if let Some(mut result) = self.parse_rec(child, "Anything", document)? {
+          match self.parse_rec(child, "Anything", document)? { Some(mut result) => {
             if let Some(ref role) = saved_role {
               result.set_attribute("role", role).ok();
             }
-          } else if let Some(ref role) = saved_role {
+          } _ => if let Some(ref role) = saved_role {
             // Parse failed — XMWrap still in DOM, restore role
             c.set_attribute("role", role).ok();
-          }
+          }}
         } else {
           self.parse_rec(child, "Anything", document)?;
         }
@@ -1574,7 +1574,7 @@ impl MathParser {
           #[allow(clippy::drop_non_drop)]
           drop(traverser);
           record_ambiguity_metric(1, input);
-          let tree_outcome = if let Some(val) = tree_iter.next() {
+          let tree_outcome = match tree_iter.next() { Some(val) => {
             match self.actions.get_tree(
               self.builder.clone(),
               val,
@@ -1585,9 +1585,9 @@ impl MathParser {
               Ok(None) => ParseOutcome::Empty,
               Err(prune_err) => ParseOutcome::Rejected(prune_err.to_string()),
             }
-          } else {
+          } _ => {
             ParseOutcome::Empty
-          };
+          }};
           debug_assert!(
             tree_iter.next().is_none(),
             "hybrid unambiguous branch should expose exactly one raw tree"
@@ -2644,11 +2644,11 @@ fn textrec_array(node: &Node, document: &Document) -> String {
       let cells: Vec<String> = element_nodes(&row)
         .into_iter()
         .map(|cell| {
-          if let Some(first_child) = cell.get_first_child() {
+          match cell.get_first_child() { Some(first_child) => {
             textrec(&first_child, None, None, document)
-          } else {
+          } _ => {
             String::new()
-          }
+          }}
         })
         .collect();
       format!("[{}]", cells.join(", "))

@@ -123,7 +123,7 @@ impl TagOptions {
       AfterCloseLate => &mut self.after_close_late,
     };
     match field {
-      Some(ref mut vec) => std::mem::take(vec),
+      Some(vec) => std::mem::take(vec),
       None => Vec::new(),
     }
   }

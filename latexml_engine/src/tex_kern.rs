@@ -89,8 +89,8 @@ LoadDefinitions!({
           if box_in_list.get_property_bool("isKern") {
             let width_stored = box_in_list.get_property("width").unwrap();
             match &*width_stored {
-              Stored::Dimension(ref width_d) => return *width_d,
-              Stored::Digested(ref d) => {
+              Stored::Dimension(width_d) => return *width_d,
+              Stored::Digested(d) => {
                 if let DigestedData::RegisterValue(RegisterValue::Dimension(dim)) = d.data() {
                   return *dim;
                 }

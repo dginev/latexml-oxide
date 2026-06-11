@@ -136,7 +136,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   // Phase 1: Split (only attributes time when --split is on)
   let mut docs: Vec<PostDocument> = if split {
     telemetry::phase_enter(Phase::Split);
-    let result = if let Some(ref xpath) = split_xpath {
+    let result = if let Some(xpath) = split_xpath {
       let naming = match split_naming {
         Some("id") | None => latexml_post::split::SplitNaming::Id,
         Some("idrelative") => latexml_post::split::SplitNaming::IdRelative,
