@@ -801,294 +801,295 @@
 <a href=#801 id=801 data-nosnippet>801</a>          stylesheet: effective_stylesheet.as_deref(),
 <a href=#802 id=802 data-nosnippet>802</a>          destination: dest_for_post.as_deref(),
 <a href=#803 id=803 data-nosnippet>803</a>          source_directory: <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>source_dir),
-<a href=#804 id=804 data-nosnippet>804</a>          nodefaultresources: cli.nodefaultresources,
-<a href=#805 id=805 data-nosnippet>805</a>          css_files: <span class="kw-2">&amp;</span>cli.css_files,
-<a href=#806 id=806 data-nosnippet>806</a>          js_files: <span class="kw-2">&amp;</span>cli.js_files,
-<a href=#807 id=807 data-nosnippet>807</a>          noinvisibletimes: cli.noinvisibletimes,
-<a href=#808 id=808 data-nosnippet>808</a>          mathtex: cli.mathtex,
-<a href=#809 id=809 data-nosnippet>809</a>          navigationtoc: cli.navigationtoc.as_deref(),
-<a href=#810 id=810 data-nosnippet>810</a>          schemadocs: cli.schemadocs,
-<a href=#811 id=811 data-nosnippet>811</a>          split: split_enabled,
-<a href=#812 id=812 data-nosnippet>812</a>          split_xpath,
-<a href=#813 id=813 data-nosnippet>813</a>          split_naming: cli.splitnaming.as_deref(),
-<a href=#814 id=814 data-nosnippet>814</a>          xslt_parameters: <span class="kw-2">&amp;</span>cli.xslt_parameters,
-<a href=#815 id=815 data-nosnippet>815</a>          graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
-<a href=#816 id=816 data-nosnippet>816</a>          whatsout: whatsout_mode,
-<a href=#817 id=817 data-nosnippet>817</a>        });
-<a href=#818 id=818 data-nosnippet>818</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(zip_dest) = zip_dest {
-<a href=#819 id=819 data-nosnippet>819</a>          <span class="comment">// whatsout=archive: pack the full document + resources into a ZIP.
-<a href=#820 id=820 data-nosnippet>820</a>          </span>latexml_post::writer::ensure_parent_dir(<span class="kw-2">&amp;</span>zip_dest)<span class="question-mark">?</span>;
-<a href=#821 id=821 data-nosnippet>821</a>          <span class="kw">let </span>resource_dir = resource_tempdir.as_ref().map(|t| t.path());
-<a href=#822 id=822 data-nosnippet>822</a>          <span class="kw">let </span>stem = Path::new(<span class="kw-2">&amp;</span>zip_dest)
-<a href=#823 id=823 data-nosnippet>823</a>            .file_stem()
-<a href=#824 id=824 data-nosnippet>824</a>            .and_then(|s| s.to_str())
-<a href=#825 id=825 data-nosnippet>825</a>            .unwrap_or(<span class="string">"document"</span>);
-<a href=#826 id=826 data-nosnippet>826</a>          <span class="kw">let </span>html_name = <span class="macro">format!</span>(<span class="string">"{stem}.html"</span>);
-<a href=#827 id=827 data-nosnippet>827</a>          <span class="kw">let </span>log_name = <span class="macro">format!</span>(<span class="string">"{stem}.log"</span>);
-<a href=#828 id=828 data-nosnippet>828</a>          <span class="comment">// Reproducible-build support: honour SOURCE_DATE_EPOCH for the
-<a href=#829 id=829 data-nosnippet>829</a>          // zip member timestamps (Perl Pack/Zip.pm L113-115).
-<a href=#830 id=830 data-nosnippet>830</a>          </span><span class="kw">let </span>source_date_epoch = std::env::var(<span class="string">"SOURCE_DATE_EPOCH"</span>)
-<a href=#831 id=831 data-nosnippet>831</a>            .ok()
-<a href=#832 id=832 data-nosnippet>832</a>            .and_then(|s| s.trim().parse::&lt;u64&gt;().ok());
-<a href=#833 id=833 data-nosnippet>833</a>          latexml_post::pack::pack_archive(<span class="kw-2">&amp;</span>latexml_post::pack::PackOptions {
-<a href=#834 id=834 data-nosnippet>834</a>            zip_path:          <span class="kw-2">&amp;</span>zip_dest,
-<a href=#835 id=835 data-nosnippet>835</a>            html_filename:     <span class="kw-2">&amp;</span>html_name,
-<a href=#836 id=836 data-nosnippet>836</a>            html:              <span class="kw-2">&amp;</span>output,
-<a href=#837 id=837 data-nosnippet>837</a>            log_filename:      <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>log_name),
-<a href=#838 id=838 data-nosnippet>838</a>            log:               <span class="kw-2">&amp;</span>response.log,
-<a href=#839 id=839 data-nosnippet>839</a>            status:            <span class="kw-2">&amp;</span>response.status,
-<a href=#840 id=840 data-nosnippet>840</a>            resource_dir,
-<a href=#841 id=841 data-nosnippet>841</a>            telemetry_json:    <span class="prelude-val">None</span>,
-<a href=#842 id=842 data-nosnippet>842</a>            source_date_epoch,
-<a href=#843 id=843 data-nosnippet>843</a>          })<span class="question-mark">?</span>;
-<a href=#844 id=844 data-nosnippet>844</a>          <span class="macro">eprintln!</span>(<span class="string">"Output written to {}"</span>, zip_dest);
-<a href=#845 id=845 data-nosnippet>845</a>        } <span class="kw">else </span>{
-<a href=#846 id=846 data-nosnippet>846</a>          latexml_post::writer::write_output(<span class="kw-2">&amp;</span>output, target.as_deref())<span class="question-mark">?</span>;
-<a href=#847 id=847 data-nosnippet>847</a>        }
-<a href=#848 id=848 data-nosnippet>848</a>        <span class="comment">// resource_tempdir is dropped here (after pack_archive has copied
-<a href=#849 id=849 data-nosnippet>849</a>        // every file in), cleaning up the converted-PNG staging directory.
-<a href=#850 id=850 data-nosnippet>850</a>      </span>} <span class="kw">else </span>{
-<a href=#851 id=851 data-nosnippet>851</a>        latexml_post::writer::write_output(<span class="kw-2">&amp;</span>xml, target.as_deref())<span class="question-mark">?</span>;
-<a href=#852 id=852 data-nosnippet>852</a>      }
-<a href=#853 id=853 data-nosnippet>853</a>    }
-<a href=#854 id=854 data-nosnippet>854</a>
-<a href=#855 id=855 data-nosnippet>855</a>    <span class="comment">// --log: write conversion log to file (skip if already packed into
-<a href=#856 id=856 data-nosnippet>856</a>    // the ZIP by the archive output stage).
-<a href=#857 id=857 data-nosnippet>857</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>log_path) = cli.log {
-<a href=#858 id=858 data-nosnippet>858</a>      <span class="kw">if </span>!is_archive_out {
-<a href=#859 id=859 data-nosnippet>859</a>        latexml_post::writer::write_output(<span class="kw-2">&amp;</span>response.log, <span class="prelude-val">Some</span>(log_path))<span class="question-mark">?</span>;
-<a href=#860 id=860 data-nosnippet>860</a>        <span class="macro">eprintln!</span>(<span class="string">"Log written to {}"</span>, log_path);
-<a href=#861 id=861 data-nosnippet>861</a>      }
-<a href=#862 id=862 data-nosnippet>862</a>    }
-<a href=#863 id=863 data-nosnippet>863</a>  }
-<a href=#864 id=864 data-nosnippet>864</a>
-<a href=#865 id=865 data-nosnippet>865</a>  <span class="comment">// Perl bin/latexml:151 — `if ($exit_message) { exit(1); }`: a Fatal
-<a href=#866 id=866 data-nosnippet>866</a>  // (status_code 3) conversion exits non-zero. cortex_worker already carries the
-<a href=#867 id=867 data-nosnippet>867</a>  // identical guard (`if final_status &gt;= 3 { process::exit(...) }`); the standalone
-<a href=#868 id=868 data-nosnippet>868</a>  // CLI was missing it, so a 0-byte "complete" run (e.g. the plain-TeX
-<a href=#869 id=869 data-nosnippet>869</a>  // `$\displaylines{...}$` runaway that trips the memory-budget Fatal — shared with
-<a href=#870 id=870 data-nosnippet>870</a>  // Perl, which terminates at the same line) exited 0 and masqueraded as success.
-<a href=#871 id=871 data-nosnippet>871</a>  // Read the global status (thread-local REPORT, as cortex_worker does) — `response`
-<a href=#872 id=872 data-nosnippet>872</a>  // is scoped to the conversion branch. Match bin/latexml's exit(1) exactly;
-<a href=#873 id=873 data-nosnippet>873</a>  // status_code 2 ("errors but recoverable") stays a 0 exit, as in Perl.
-<a href=#874 id=874 data-nosnippet>874</a>  </span><span class="kw">let </span>final_status_code = latexml_core::common::error::get_status_code();
-<a href=#875 id=875 data-nosnippet>875</a>  <span class="kw">if </span>final_status_code &gt;= <span class="number">3 </span>{
-<a href=#876 id=876 data-nosnippet>876</a>    write_telemetry_record(
-<a href=#877 id=877 data-nosnippet>877</a>      cli.telemetry_out.as_deref(),
-<a href=#878 id=878 data-nosnippet>878</a>      <span class="kw-2">&amp;</span>telemetry_source,
-<a href=#879 id=879 data-nosnippet>879</a>      wall_start,
-<a href=#880 id=880 data-nosnippet>880</a>      <span class="string">"fatal"</span>,
-<a href=#881 id=881 data-nosnippet>881</a>      final_status_code <span class="kw">as </span>i32,
-<a href=#882 id=882 data-nosnippet>882</a>    );
-<a href=#883 id=883 data-nosnippet>883</a>    process::exit(<span class="number">1</span>);
-<a href=#884 id=884 data-nosnippet>884</a>  }
-<a href=#885 id=885 data-nosnippet>885</a>  write_telemetry_record(
-<a href=#886 id=886 data-nosnippet>886</a>    cli.telemetry_out.as_deref(),
-<a href=#887 id=887 data-nosnippet>887</a>    <span class="kw-2">&amp;</span>telemetry_source,
-<a href=#888 id=888 data-nosnippet>888</a>    wall_start,
-<a href=#889 id=889 data-nosnippet>889</a>    <span class="string">"ok"</span>,
-<a href=#890 id=890 data-nosnippet>890</a>    <span class="number">0</span>,
-<a href=#891 id=891 data-nosnippet>891</a>  );
-<a href=#892 id=892 data-nosnippet>892</a>  process::exit(<span class="number">0</span>);
-<a href=#893 id=893 data-nosnippet>893</a>}
-<a href=#894 id=894 data-nosnippet>894</a>
-<a href=#895 id=895 data-nosnippet>895</a><span class="doccomment">/// Emit a single-line JSON telemetry record. No-op when neither
-<a href=#896 id=896 data-nosnippet>896</a>/// `--telemetry-out` nor `LATEXML_TELEMETRY_OUT` is set. Errors writing
-<a href=#897 id=897 data-nosnippet>897</a>/// the file are swallowed (the conversion already succeeded; logging
-<a href=#898 id=898 data-nosnippet>898</a>/// the failure on stderr would be noise for batch runs).
-<a href=#899 id=899 data-nosnippet>899</a></span><span class="kw">fn </span>write_telemetry_record(
-<a href=#900 id=900 data-nosnippet>900</a>  cli_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
-<a href=#901 id=901 data-nosnippet>901</a>  source: <span class="kw-2">&amp;</span>str,
-<a href=#902 id=902 data-nosnippet>902</a>  wall_start: std::time::Instant,
-<a href=#903 id=903 data-nosnippet>903</a>  category: <span class="kw-2">&amp;</span>str,
-<a href=#904 id=904 data-nosnippet>904</a>  exit_code: i32,
-<a href=#905 id=905 data-nosnippet>905</a>) {
-<a href=#906 id=906 data-nosnippet>906</a>  <span class="kw">use </span>latexml_core::telemetry;
-<a href=#907 id=907 data-nosnippet>907</a>  <span class="kw">let </span>path = cli_path
-<a href=#908 id=908 data-nosnippet>908</a>    .map(|s| s.to_string())
-<a href=#909 id=909 data-nosnippet>909</a>    .or_else(|| std::env::var(<span class="string">"LATEXML_TELEMETRY_OUT"</span>).ok());
-<a href=#910 id=910 data-nosnippet>910</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(path) = path <span class="kw">else </span>{ <span class="kw">return </span>};
-<a href=#911 id=911 data-nosnippet>911</a>
-<a href=#912 id=912 data-nosnippet>912</a>  <span class="comment">// paper_id ≈ source basename without extension; cortex_worker
-<a href=#913 id=913 data-nosnippet>913</a>  // overrides this when it knows the arxiv id. Keep the binary's
-<a href=#914 id=914 data-nosnippet>914</a>  // best-effort default for direct CLI users.
-<a href=#915 id=915 data-nosnippet>915</a>  </span><span class="kw">let </span>paper_id = std::path::Path::new(source)
-<a href=#916 id=916 data-nosnippet>916</a>    .file_stem()
-<a href=#917 id=917 data-nosnippet>917</a>    .and_then(|s| s.to_str())
-<a href=#918 id=918 data-nosnippet>918</a>    .unwrap_or(<span class="string">""</span>)
-<a href=#919 id=919 data-nosnippet>919</a>    .to_string();
-<a href=#920 id=920 data-nosnippet>920</a>  telemetry::set_paper_id(<span class="kw-2">&amp;</span>paper_id);
-<a href=#921 id=921 data-nosnippet>921</a>  telemetry::set_cmdline(<span class="kw-2">&amp;</span>std::env::args().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>));
-<a href=#922 id=922 data-nosnippet>922</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(host) = std::env::var(<span class="string">"HOSTNAME"</span>).or_else(|<span class="kw">_</span>| {
-<a href=#923 id=923 data-nosnippet>923</a>    <span class="comment">// Linux fallback: read /etc/hostname
-<a href=#924 id=924 data-nosnippet>924</a>    </span>std::fs::read_to_string(<span class="string">"/etc/hostname"</span>).map(|s| s.trim().to_string())
-<a href=#925 id=925 data-nosnippet>925</a>  }) {
-<a href=#926 id=926 data-nosnippet>926</a>    telemetry::set_host(<span class="kw-2">&amp;</span>host);
-<a href=#927 id=927 data-nosnippet>927</a>  }
-<a href=#928 id=928 data-nosnippet>928</a>  telemetry::set_wall_us(wall_start.elapsed().as_micros() <span class="kw">as </span>u64);
-<a href=#929 id=929 data-nosnippet>929</a>  telemetry::set_category(category);
-<a href=#930 id=930 data-nosnippet>930</a>  telemetry::set_exit_code(exit_code);
-<a href=#931 id=931 data-nosnippet>931</a>  telemetry::set_max_rss_kb(read_max_rss_kb());
-<a href=#932 id=932 data-nosnippet>932</a>  <span class="kw">let </span>(cu, cs) = read_child_rusage_us();
-<a href=#933 id=933 data-nosnippet>933</a>  telemetry::set_child_rusage_us(cu, cs);
-<a href=#934 id=934 data-nosnippet>934</a>
-<a href=#935 id=935 data-nosnippet>935</a>  <span class="kw">let </span>record = telemetry::take();
-<a href=#936 id=936 data-nosnippet>936</a>  <span class="kw">let </span>line = record.to_json_line();
-<a href=#937 id=937 data-nosnippet>937</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = std::path::Path::new(<span class="kw-2">&amp;</span>path).parent() {
-<a href=#938 id=938 data-nosnippet>938</a>    <span class="kw">if </span>!parent.as_os_str().is_empty() {
-<a href=#939 id=939 data-nosnippet>939</a>      <span class="kw">let _ </span>= std::fs::create_dir_all(parent);
-<a href=#940 id=940 data-nosnippet>940</a>    }
-<a href=#941 id=941 data-nosnippet>941</a>  }
-<a href=#942 id=942 data-nosnippet>942</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>fh) = File::create(<span class="kw-2">&amp;</span>path) {
-<a href=#943 id=943 data-nosnippet>943</a>    <span class="kw">let _ </span>= <span class="macro">writeln!</span>(fh, <span class="string">"{line}"</span>);
-<a href=#944 id=944 data-nosnippet>944</a>  }
-<a href=#945 id=945 data-nosnippet>945</a>}
-<a href=#946 id=946 data-nosnippet>946</a>
-<a href=#947 id=947 data-nosnippet>947</a><span class="doccomment">/// Read peak resident-set size from `/proc/self/status` (`VmHWM`).
-<a href=#948 id=948 data-nosnippet>948</a>/// Returns 0 on non-Linux or read failure.
-<a href=#949 id=949 data-nosnippet>949</a></span><span class="kw">fn </span>read_max_rss_kb() -&gt; u64 {
-<a href=#950 id=950 data-nosnippet>950</a>  std::fs::read_to_string(<span class="string">"/proc/self/status"</span>)
-<a href=#951 id=951 data-nosnippet>951</a>    .ok()
-<a href=#952 id=952 data-nosnippet>952</a>    .and_then(|content| {
-<a href=#953 id=953 data-nosnippet>953</a>      content
-<a href=#954 id=954 data-nosnippet>954</a>        .lines()
-<a href=#955 id=955 data-nosnippet>955</a>        .find(|l| l.starts_with(<span class="string">"VmHWM:"</span>))
-<a href=#956 id=956 data-nosnippet>956</a>        .and_then(|l| l.split_whitespace().nth(<span class="number">1</span>))
-<a href=#957 id=957 data-nosnippet>957</a>        .and_then(|n| n.parse::&lt;u64&gt;().ok())
-<a href=#958 id=958 data-nosnippet>958</a>    })
-<a href=#959 id=959 data-nosnippet>959</a>    .unwrap_or(<span class="number">0</span>)
-<a href=#960 id=960 data-nosnippet>960</a>}
-<a href=#961 id=961 data-nosnippet>961</a>
-<a href=#962 id=962 data-nosnippet>962</a><span class="doccomment">/// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
-<a href=#963 id=963 data-nosnippet>963</a>/// Returns (0, 0) on failure or non-unix.
-<a href=#964 id=964 data-nosnippet>964</a></span><span class="attr">#[cfg(unix)]
-<a href=#965 id=965 data-nosnippet>965</a></span><span class="kw">fn </span>read_child_rusage_us() -&gt; (u64, u64) {
-<a href=#966 id=966 data-nosnippet>966</a>  <span class="comment">// SAFETY: getrusage(RUSAGE_CHILDREN, &amp;ru) is async-signal-safe and
-<a href=#967 id=967 data-nosnippet>967</a>  // populates the struct unconditionally on success.
-<a href=#968 id=968 data-nosnippet>968</a>  </span><span class="kw">unsafe </span>{
-<a href=#969 id=969 data-nosnippet>969</a>    <span class="kw">let </span><span class="kw-2">mut </span>ru: libc::rusage = std::mem::zeroed();
-<a href=#970 id=970 data-nosnippet>970</a>    <span class="kw">if </span>libc::getrusage(libc::RUSAGE_CHILDREN, <span class="kw-2">&amp;mut </span>ru) == <span class="number">0 </span>{
-<a href=#971 id=971 data-nosnippet>971</a>      <span class="kw">let </span>user = (ru.ru_utime.tv_sec <span class="kw">as </span>u64) * <span class="number">1_000_000 </span>+ (ru.ru_utime.tv_usec <span class="kw">as </span>u64);
-<a href=#972 id=972 data-nosnippet>972</a>      <span class="kw">let </span>sys = (ru.ru_stime.tv_sec <span class="kw">as </span>u64) * <span class="number">1_000_000 </span>+ (ru.ru_stime.tv_usec <span class="kw">as </span>u64);
-<a href=#973 id=973 data-nosnippet>973</a>      (user, sys)
-<a href=#974 id=974 data-nosnippet>974</a>    } <span class="kw">else </span>{
-<a href=#975 id=975 data-nosnippet>975</a>      (<span class="number">0</span>, <span class="number">0</span>)
-<a href=#976 id=976 data-nosnippet>976</a>    }
-<a href=#977 id=977 data-nosnippet>977</a>  }
-<a href=#978 id=978 data-nosnippet>978</a>}
-<a href=#979 id=979 data-nosnippet>979</a>
-<a href=#980 id=980 data-nosnippet>980</a><span class="attr">#[cfg(not(unix))]
-<a href=#981 id=981 data-nosnippet>981</a></span><span class="kw">fn </span>read_child_rusage_us() -&gt; (u64, u64) { (<span class="number">0</span>, <span class="number">0</span>) }
-<a href=#982 id=982 data-nosnippet>982</a>
-<a href=#983 id=983 data-nosnippet>983</a><span class="kw">use </span>latexml::post::PostOptions;
-<a href=#984 id=984 data-nosnippet>984</a>
-<a href=#985 id=985 data-nosnippet>985</a><span class="doccomment">/// Delegate post-processing to the library API.
-<a href=#986 id=986 data-nosnippet>986</a></span><span class="kw">fn </span>run_post_processing(xml: <span class="kw-2">&amp;</span>str, opts: <span class="kw-2">&amp;</span>PostOptions) -&gt; String {
-<a href=#987 id=987 data-nosnippet>987</a>  <span class="comment">// Per-phase telemetry now lives inside latexml::post::run_post_processing
-<a href=#988 id=988 data-nosnippet>988</a>  // (PostXmlParse, PostScan, Bibliography, Crossref, Graphics, Split, Xslt).
-<a href=#989 id=989 data-nosnippet>989</a>  </span>latexml::post::run_post_processing(xml, opts)
-<a href=#990 id=990 data-nosnippet>990</a>}
-<a href=#991 id=991 data-nosnippet>991</a>
-<a href=#992 id=992 data-nosnippet>992</a><span class="comment">// `ensure_parent_dir` now lives in `latexml_post::writer` so all
-<a href=#993 id=993 data-nosnippet>993</a>// post-processing binaries share one implementation. Perl analog:
-<a href=#994 id=994 data-nosnippet>994</a>// `LaTeXML::Post::Writer`.
-<a href=#995 id=995 data-nosnippet>995</a>
-<a href=#996 id=996 data-nosnippet>996</a></span><span class="kw">fn </span>make_splitpaths(splitat: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#997 id=997 data-nosnippet>997</a>  <span class="kw">let </span>ancestors: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw">match </span>splitat {
-<a href=#998 id=998 data-nosnippet>998</a>    <span class="string">"part" </span>=&gt; <span class="kw-2">&amp;</span>[],
-<a href=#999 id=999 data-nosnippet>999</a>    <span class="string">"chapter" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>],
-<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="string">"section" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>],
-<a href=#1001 id=1001 data-nosnippet>1001</a>    <span class="string">"subsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>],
-<a href=#1002 id=1002 data-nosnippet>1002</a>    <span class="string">"subsubsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>, <span class="string">"subsection"</span>],
-<a href=#1003 id=1003 data-nosnippet>1003</a>    <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>],
-<a href=#1004 id=1004 data-nosnippet>1004</a>  };
-<a href=#1005 id=1005 data-nosnippet>1005</a>  <span class="kw">let </span>back = [<span class="string">"bibliography"</span>, <span class="string">"appendix"</span>, <span class="string">"index"</span>];
-<a href=#1006 id=1006 data-nosnippet>1006</a>  <span class="kw">let </span><span class="kw-2">mut </span>paths = Vec::new();
-<a href=#1007 id=1007 data-nosnippet>1007</a>  <span class="kw">let </span>all_units: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = std::iter::once(splitat)
-<a href=#1008 id=1008 data-nosnippet>1008</a>    .chain(ancestors.iter().copied())
-<a href=#1009 id=1009 data-nosnippet>1009</a>    .collect();
-<a href=#1010 id=1010 data-nosnippet>1010</a>  <span class="kw">for </span>unit <span class="kw">in </span><span class="kw-2">&amp;</span>all_units {
-<a href=#1011 id=1011 data-nosnippet>1011</a>    paths.push(<span class="macro">format!</span>(<span class="string">"//ltx:{}"</span>, unit));
-<a href=#1012 id=1012 data-nosnippet>1012</a>    <span class="kw">for </span>b <span class="kw">in </span><span class="kw-2">&amp;</span>back {
-<a href=#1013 id=1013 data-nosnippet>1013</a>      <span class="kw">let </span><span class="kw-2">mut </span>conditions = <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">"preceding-sibling::ltx:{}"</span>, unit)];
-<a href=#1014 id=1014 data-nosnippet>1014</a>      <span class="kw">let </span>unit_ancestors: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw">match </span><span class="kw-2">*</span>unit {
-<a href=#1015 id=1015 data-nosnippet>1015</a>        <span class="string">"part" </span>=&gt; <span class="kw-2">&amp;</span>[],
-<a href=#1016 id=1016 data-nosnippet>1016</a>        <span class="string">"chapter" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>],
-<a href=#1017 id=1017 data-nosnippet>1017</a>        <span class="string">"section" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>],
-<a href=#1018 id=1018 data-nosnippet>1018</a>        <span class="string">"subsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>],
-<a href=#1019 id=1019 data-nosnippet>1019</a>        <span class="string">"subsubsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>, <span class="string">"subsection"</span>],
-<a href=#1020 id=1020 data-nosnippet>1020</a>        <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span>[],
-<a href=#1021 id=1021 data-nosnippet>1021</a>      };
-<a href=#1022 id=1022 data-nosnippet>1022</a>      <span class="kw">for </span>anc <span class="kw">in </span>unit_ancestors {
-<a href=#1023 id=1023 data-nosnippet>1023</a>        conditions.push(<span class="macro">format!</span>(<span class="string">"parent::ltx:{}"</span>, anc));
-<a href=#1024 id=1024 data-nosnippet>1024</a>      }
-<a href=#1025 id=1025 data-nosnippet>1025</a>      paths.push(<span class="macro">format!</span>(<span class="string">"//ltx:{}[{}]"</span>, b, conditions.join(<span class="string">" or "</span>)));
-<a href=#1026 id=1026 data-nosnippet>1026</a>    }
-<a href=#1027 id=1027 data-nosnippet>1027</a>  }
-<a href=#1028 id=1028 data-nosnippet>1028</a>  paths.join(<span class="string">" | "</span>)
-<a href=#1029 id=1029 data-nosnippet>1029</a>}
-<a href=#1030 id=1030 data-nosnippet>1030</a>
-<a href=#1031 id=1031 data-nosnippet>1031</a><span class="doccomment">/// Unpack a ZIP (primary) or tar.gz archive into a temp directory.
-<a href=#1032 id=1032 data-nosnippet>1032</a>/// Returns (TempDir, main_tex_path).
-<a href=#1033 id=1033 data-nosnippet>1033</a>///
-<a href=#1034 id=1034 data-nosnippet>1034</a>/// Port of Perl LaTeXML::Util::Pack::unpack_source.
-<a href=#1035 id=1035 data-nosnippet>1035</a>/// Detect whether `source` is already-converted LaTeXML XML — i.e. a
-<a href=#1036 id=1036 data-nosnippet>1036</a>/// `.xml` file — so the TeX → XML converter front-end can be skipped
-<a href=#1037 id=1037 data-nosnippet>1037</a>/// and the file fed straight to post-processing. Matches what Perl
-<a href=#1038 id=1038 data-nosnippet>1038</a>/// `latexmlpost` accepts and replaces the separate (now retired)
-<a href=#1039 id=1039 data-nosnippet>1039</a>/// `latexmlpost_oxide` binary.
-<a href=#1040 id=1040 data-nosnippet>1040</a></span><span class="kw">fn </span>is_xml_input(source: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#1041 id=1041 data-nosnippet>1041</a>  Path::new(source)
-<a href=#1042 id=1042 data-nosnippet>1042</a>    .extension()
-<a href=#1043 id=1043 data-nosnippet>1043</a>    .and_then(|e| e.to_str())
-<a href=#1044 id=1044 data-nosnippet>1044</a>    .is_some_and(|ext| ext.eq_ignore_ascii_case(<span class="string">"xml"</span>))
-<a href=#1045 id=1045 data-nosnippet>1045</a>}
-<a href=#1046 id=1046 data-nosnippet>1046</a>
-<a href=#1047 id=1047 data-nosnippet>1047</a><span class="kw">fn </span>unpack_archive(archive_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(tempfile::TempDir, String), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
-<a href=#1048 id=1048 data-nosnippet>1048</a>  <span class="kw">let </span>tempdir = tempfile::tempdir()<span class="question-mark">?</span>;
-<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="kw">let </span>dest = tempdir.path();
-<a href=#1050 id=1050 data-nosnippet>1050</a>
-<a href=#1051 id=1051 data-nosnippet>1051</a>  <span class="kw">if </span>archive_path.ends_with(<span class="string">".zip"</span>) {
-<a href=#1052 id=1052 data-nosnippet>1052</a>    <span class="comment">// Primary format: ZIP
-<a href=#1053 id=1053 data-nosnippet>1053</a>    </span><span class="kw">let </span>file = File::open(archive_path)<span class="question-mark">?</span>;
-<a href=#1054 id=1054 data-nosnippet>1054</a>    <span class="kw">let </span><span class="kw-2">mut </span>archive = zip::ZipArchive::new(file)<span class="question-mark">?</span>;
-<a href=#1055 id=1055 data-nosnippet>1055</a>    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..archive.len() {
-<a href=#1056 id=1056 data-nosnippet>1056</a>      <span class="kw">let </span><span class="kw-2">mut </span>entry = archive.by_index(i)<span class="question-mark">?</span>;
-<a href=#1057 id=1057 data-nosnippet>1057</a>      <span class="kw">let </span>outpath = dest.join(entry.mangled_name());
-<a href=#1058 id=1058 data-nosnippet>1058</a>      <span class="kw">if </span>entry.is_dir() {
-<a href=#1059 id=1059 data-nosnippet>1059</a>        std::fs::create_dir_all(<span class="kw-2">&amp;</span>outpath)<span class="question-mark">?</span>;
-<a href=#1060 id=1060 data-nosnippet>1060</a>      } <span class="kw">else </span>{
-<a href=#1061 id=1061 data-nosnippet>1061</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = outpath.parent() {
-<a href=#1062 id=1062 data-nosnippet>1062</a>          std::fs::create_dir_all(parent)<span class="question-mark">?</span>;
-<a href=#1063 id=1063 data-nosnippet>1063</a>        }
-<a href=#1064 id=1064 data-nosnippet>1064</a>        <span class="kw">let </span><span class="kw-2">mut </span>outfile = File::create(<span class="kw-2">&amp;</span>outpath)<span class="question-mark">?</span>;
-<a href=#1065 id=1065 data-nosnippet>1065</a>        std::io::copy(<span class="kw-2">&amp;mut </span>entry, <span class="kw-2">&amp;mut </span>outfile)<span class="question-mark">?</span>;
-<a href=#1066 id=1066 data-nosnippet>1066</a>      }
-<a href=#1067 id=1067 data-nosnippet>1067</a>    }
-<a href=#1068 id=1068 data-nosnippet>1068</a>  } <span class="kw">else if </span>archive_path.ends_with(<span class="string">".tar.gz"</span>) || archive_path.ends_with(<span class="string">".tgz"</span>) {
-<a href=#1069 id=1069 data-nosnippet>1069</a>    <span class="kw">let </span>file = File::open(archive_path)<span class="question-mark">?</span>;
-<a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="kw">let </span>gz = flate2::read::GzDecoder::new(file);
-<a href=#1071 id=1071 data-nosnippet>1071</a>    <span class="kw">let </span><span class="kw-2">mut </span>archive = tar::Archive::new(gz);
-<a href=#1072 id=1072 data-nosnippet>1072</a>    archive.unpack(dest)<span class="question-mark">?</span>;
-<a href=#1073 id=1073 data-nosnippet>1073</a>  } <span class="kw">else if </span>archive_path.ends_with(<span class="string">".tar"</span>) {
-<a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="kw">let </span>file = File::open(archive_path)<span class="question-mark">?</span>;
-<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="kw">let </span><span class="kw-2">mut </span>archive = tar::Archive::new(file);
-<a href=#1076 id=1076 data-nosnippet>1076</a>    archive.unpack(dest)<span class="question-mark">?</span>;
-<a href=#1077 id=1077 data-nosnippet>1077</a>  } <span class="kw">else </span>{
-<a href=#1078 id=1078 data-nosnippet>1078</a>    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Unsupported archive format: {}"</span>, archive_path).into());
-<a href=#1079 id=1079 data-nosnippet>1079</a>  }
-<a href=#1080 id=1080 data-nosnippet>1080</a>
-<a href=#1081 id=1081 data-nosnippet>1081</a>  <span class="comment">// Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
-<a href=#1082 id=1082 data-nosnippet>1082</a>  // or one containing \documentclass)
-<a href=#1083 id=1083 data-nosnippet>1083</a>  </span><span class="kw">let </span>main_tex = latexml::main_tex::find_main_tex(dest)
-<a href=#1084 id=1084 data-nosnippet>1084</a>    .map_err(|e| -&gt; Box&lt;<span class="kw">dyn </span>Error&gt; { e.into() })<span class="question-mark">?</span>;
-<a href=#1085 id=1085 data-nosnippet>1085</a>  <span class="prelude-val">Ok</span>((tempdir, main_tex.to_string_lossy().to_string()))
-<a href=#1086 id=1086 data-nosnippet>1086</a>}
-<a href=#1087 id=1087 data-nosnippet>1087</a>
-<a href=#1088 id=1088 data-nosnippet>1088</a><span class="comment">// Output-zip packing moved to `latexml_post::pack::pack_archive`
-<a href=#1089 id=1089 data-nosnippet>1089</a>// (2026-05-18, audit follow-up for the latexml_oxide --post image-
-<a href=#1090 id=1090 data-nosnippet>1090</a>// bundling fix). The previous inline `pack_output_zip` +
-<a href=#1091 id=1091 data-nosnippet>1091</a>// `add_dir_to_zip` here and the parallel pair in `cortex_worker.rs`
-<a href=#1092 id=1092 data-nosnippet>1092</a>// have been replaced by a single shared implementation — mirrors
-<a href=#1093 id=1093 data-nosnippet>1093</a>// Perl `LaTeXML::Post::Pack`.
+<a href=#804 id=804 data-nosnippet>804</a>          search_paths: <span class="kw-2">&amp;</span>cli.search_paths,
+<a href=#805 id=805 data-nosnippet>805</a>          nodefaultresources: cli.nodefaultresources,
+<a href=#806 id=806 data-nosnippet>806</a>          css_files: <span class="kw-2">&amp;</span>cli.css_files,
+<a href=#807 id=807 data-nosnippet>807</a>          js_files: <span class="kw-2">&amp;</span>cli.js_files,
+<a href=#808 id=808 data-nosnippet>808</a>          noinvisibletimes: cli.noinvisibletimes,
+<a href=#809 id=809 data-nosnippet>809</a>          mathtex: cli.mathtex,
+<a href=#810 id=810 data-nosnippet>810</a>          navigationtoc: cli.navigationtoc.as_deref(),
+<a href=#811 id=811 data-nosnippet>811</a>          schemadocs: cli.schemadocs,
+<a href=#812 id=812 data-nosnippet>812</a>          split: split_enabled,
+<a href=#813 id=813 data-nosnippet>813</a>          split_xpath,
+<a href=#814 id=814 data-nosnippet>814</a>          split_naming: cli.splitnaming.as_deref(),
+<a href=#815 id=815 data-nosnippet>815</a>          xslt_parameters: <span class="kw-2">&amp;</span>cli.xslt_parameters,
+<a href=#816 id=816 data-nosnippet>816</a>          graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
+<a href=#817 id=817 data-nosnippet>817</a>          whatsout: whatsout_mode,
+<a href=#818 id=818 data-nosnippet>818</a>        });
+<a href=#819 id=819 data-nosnippet>819</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(zip_dest) = zip_dest {
+<a href=#820 id=820 data-nosnippet>820</a>          <span class="comment">// whatsout=archive: pack the full document + resources into a ZIP.
+<a href=#821 id=821 data-nosnippet>821</a>          </span>latexml_post::writer::ensure_parent_dir(<span class="kw-2">&amp;</span>zip_dest)<span class="question-mark">?</span>;
+<a href=#822 id=822 data-nosnippet>822</a>          <span class="kw">let </span>resource_dir = resource_tempdir.as_ref().map(|t| t.path());
+<a href=#823 id=823 data-nosnippet>823</a>          <span class="kw">let </span>stem = Path::new(<span class="kw-2">&amp;</span>zip_dest)
+<a href=#824 id=824 data-nosnippet>824</a>            .file_stem()
+<a href=#825 id=825 data-nosnippet>825</a>            .and_then(|s| s.to_str())
+<a href=#826 id=826 data-nosnippet>826</a>            .unwrap_or(<span class="string">"document"</span>);
+<a href=#827 id=827 data-nosnippet>827</a>          <span class="kw">let </span>html_name = <span class="macro">format!</span>(<span class="string">"{stem}.html"</span>);
+<a href=#828 id=828 data-nosnippet>828</a>          <span class="kw">let </span>log_name = <span class="macro">format!</span>(<span class="string">"{stem}.log"</span>);
+<a href=#829 id=829 data-nosnippet>829</a>          <span class="comment">// Reproducible-build support: honour SOURCE_DATE_EPOCH for the
+<a href=#830 id=830 data-nosnippet>830</a>          // zip member timestamps (Perl Pack/Zip.pm L113-115).
+<a href=#831 id=831 data-nosnippet>831</a>          </span><span class="kw">let </span>source_date_epoch = std::env::var(<span class="string">"SOURCE_DATE_EPOCH"</span>)
+<a href=#832 id=832 data-nosnippet>832</a>            .ok()
+<a href=#833 id=833 data-nosnippet>833</a>            .and_then(|s| s.trim().parse::&lt;u64&gt;().ok());
+<a href=#834 id=834 data-nosnippet>834</a>          latexml_post::pack::pack_archive(<span class="kw-2">&amp;</span>latexml_post::pack::PackOptions {
+<a href=#835 id=835 data-nosnippet>835</a>            zip_path:          <span class="kw-2">&amp;</span>zip_dest,
+<a href=#836 id=836 data-nosnippet>836</a>            html_filename:     <span class="kw-2">&amp;</span>html_name,
+<a href=#837 id=837 data-nosnippet>837</a>            html:              <span class="kw-2">&amp;</span>output,
+<a href=#838 id=838 data-nosnippet>838</a>            log_filename:      <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>log_name),
+<a href=#839 id=839 data-nosnippet>839</a>            log:               <span class="kw-2">&amp;</span>response.log,
+<a href=#840 id=840 data-nosnippet>840</a>            status:            <span class="kw-2">&amp;</span>response.status,
+<a href=#841 id=841 data-nosnippet>841</a>            resource_dir,
+<a href=#842 id=842 data-nosnippet>842</a>            telemetry_json:    <span class="prelude-val">None</span>,
+<a href=#843 id=843 data-nosnippet>843</a>            source_date_epoch,
+<a href=#844 id=844 data-nosnippet>844</a>          })<span class="question-mark">?</span>;
+<a href=#845 id=845 data-nosnippet>845</a>          <span class="macro">eprintln!</span>(<span class="string">"Output written to {}"</span>, zip_dest);
+<a href=#846 id=846 data-nosnippet>846</a>        } <span class="kw">else </span>{
+<a href=#847 id=847 data-nosnippet>847</a>          latexml_post::writer::write_output(<span class="kw-2">&amp;</span>output, target.as_deref())<span class="question-mark">?</span>;
+<a href=#848 id=848 data-nosnippet>848</a>        }
+<a href=#849 id=849 data-nosnippet>849</a>        <span class="comment">// resource_tempdir is dropped here (after pack_archive has copied
+<a href=#850 id=850 data-nosnippet>850</a>        // every file in), cleaning up the converted-PNG staging directory.
+<a href=#851 id=851 data-nosnippet>851</a>      </span>} <span class="kw">else </span>{
+<a href=#852 id=852 data-nosnippet>852</a>        latexml_post::writer::write_output(<span class="kw-2">&amp;</span>xml, target.as_deref())<span class="question-mark">?</span>;
+<a href=#853 id=853 data-nosnippet>853</a>      }
+<a href=#854 id=854 data-nosnippet>854</a>    }
+<a href=#855 id=855 data-nosnippet>855</a>
+<a href=#856 id=856 data-nosnippet>856</a>    <span class="comment">// --log: write conversion log to file (skip if already packed into
+<a href=#857 id=857 data-nosnippet>857</a>    // the ZIP by the archive output stage).
+<a href=#858 id=858 data-nosnippet>858</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>log_path) = cli.log {
+<a href=#859 id=859 data-nosnippet>859</a>      <span class="kw">if </span>!is_archive_out {
+<a href=#860 id=860 data-nosnippet>860</a>        latexml_post::writer::write_output(<span class="kw-2">&amp;</span>response.log, <span class="prelude-val">Some</span>(log_path))<span class="question-mark">?</span>;
+<a href=#861 id=861 data-nosnippet>861</a>        <span class="macro">eprintln!</span>(<span class="string">"Log written to {}"</span>, log_path);
+<a href=#862 id=862 data-nosnippet>862</a>      }
+<a href=#863 id=863 data-nosnippet>863</a>    }
+<a href=#864 id=864 data-nosnippet>864</a>  }
+<a href=#865 id=865 data-nosnippet>865</a>
+<a href=#866 id=866 data-nosnippet>866</a>  <span class="comment">// Perl bin/latexml:151 — `if ($exit_message) { exit(1); }`: a Fatal
+<a href=#867 id=867 data-nosnippet>867</a>  // (status_code 3) conversion exits non-zero. cortex_worker already carries the
+<a href=#868 id=868 data-nosnippet>868</a>  // identical guard (`if final_status &gt;= 3 { process::exit(...) }`); the standalone
+<a href=#869 id=869 data-nosnippet>869</a>  // CLI was missing it, so a 0-byte "complete" run (e.g. the plain-TeX
+<a href=#870 id=870 data-nosnippet>870</a>  // `$\displaylines{...}$` runaway that trips the memory-budget Fatal — shared with
+<a href=#871 id=871 data-nosnippet>871</a>  // Perl, which terminates at the same line) exited 0 and masqueraded as success.
+<a href=#872 id=872 data-nosnippet>872</a>  // Read the global status (thread-local REPORT, as cortex_worker does) — `response`
+<a href=#873 id=873 data-nosnippet>873</a>  // is scoped to the conversion branch. Match bin/latexml's exit(1) exactly;
+<a href=#874 id=874 data-nosnippet>874</a>  // status_code 2 ("errors but recoverable") stays a 0 exit, as in Perl.
+<a href=#875 id=875 data-nosnippet>875</a>  </span><span class="kw">let </span>final_status_code = latexml_core::common::error::get_status_code();
+<a href=#876 id=876 data-nosnippet>876</a>  <span class="kw">if </span>final_status_code &gt;= <span class="number">3 </span>{
+<a href=#877 id=877 data-nosnippet>877</a>    write_telemetry_record(
+<a href=#878 id=878 data-nosnippet>878</a>      cli.telemetry_out.as_deref(),
+<a href=#879 id=879 data-nosnippet>879</a>      <span class="kw-2">&amp;</span>telemetry_source,
+<a href=#880 id=880 data-nosnippet>880</a>      wall_start,
+<a href=#881 id=881 data-nosnippet>881</a>      <span class="string">"fatal"</span>,
+<a href=#882 id=882 data-nosnippet>882</a>      final_status_code <span class="kw">as </span>i32,
+<a href=#883 id=883 data-nosnippet>883</a>    );
+<a href=#884 id=884 data-nosnippet>884</a>    process::exit(<span class="number">1</span>);
+<a href=#885 id=885 data-nosnippet>885</a>  }
+<a href=#886 id=886 data-nosnippet>886</a>  write_telemetry_record(
+<a href=#887 id=887 data-nosnippet>887</a>    cli.telemetry_out.as_deref(),
+<a href=#888 id=888 data-nosnippet>888</a>    <span class="kw-2">&amp;</span>telemetry_source,
+<a href=#889 id=889 data-nosnippet>889</a>    wall_start,
+<a href=#890 id=890 data-nosnippet>890</a>    <span class="string">"ok"</span>,
+<a href=#891 id=891 data-nosnippet>891</a>    <span class="number">0</span>,
+<a href=#892 id=892 data-nosnippet>892</a>  );
+<a href=#893 id=893 data-nosnippet>893</a>  process::exit(<span class="number">0</span>);
+<a href=#894 id=894 data-nosnippet>894</a>}
+<a href=#895 id=895 data-nosnippet>895</a>
+<a href=#896 id=896 data-nosnippet>896</a><span class="doccomment">/// Emit a single-line JSON telemetry record. No-op when neither
+<a href=#897 id=897 data-nosnippet>897</a>/// `--telemetry-out` nor `LATEXML_TELEMETRY_OUT` is set. Errors writing
+<a href=#898 id=898 data-nosnippet>898</a>/// the file are swallowed (the conversion already succeeded; logging
+<a href=#899 id=899 data-nosnippet>899</a>/// the failure on stderr would be noise for batch runs).
+<a href=#900 id=900 data-nosnippet>900</a></span><span class="kw">fn </span>write_telemetry_record(
+<a href=#901 id=901 data-nosnippet>901</a>  cli_path: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+<a href=#902 id=902 data-nosnippet>902</a>  source: <span class="kw-2">&amp;</span>str,
+<a href=#903 id=903 data-nosnippet>903</a>  wall_start: std::time::Instant,
+<a href=#904 id=904 data-nosnippet>904</a>  category: <span class="kw-2">&amp;</span>str,
+<a href=#905 id=905 data-nosnippet>905</a>  exit_code: i32,
+<a href=#906 id=906 data-nosnippet>906</a>) {
+<a href=#907 id=907 data-nosnippet>907</a>  <span class="kw">use </span>latexml_core::telemetry;
+<a href=#908 id=908 data-nosnippet>908</a>  <span class="kw">let </span>path = cli_path
+<a href=#909 id=909 data-nosnippet>909</a>    .map(|s| s.to_string())
+<a href=#910 id=910 data-nosnippet>910</a>    .or_else(|| std::env::var(<span class="string">"LATEXML_TELEMETRY_OUT"</span>).ok());
+<a href=#911 id=911 data-nosnippet>911</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(path) = path <span class="kw">else </span>{ <span class="kw">return </span>};
+<a href=#912 id=912 data-nosnippet>912</a>
+<a href=#913 id=913 data-nosnippet>913</a>  <span class="comment">// paper_id ≈ source basename without extension; cortex_worker
+<a href=#914 id=914 data-nosnippet>914</a>  // overrides this when it knows the arxiv id. Keep the binary's
+<a href=#915 id=915 data-nosnippet>915</a>  // best-effort default for direct CLI users.
+<a href=#916 id=916 data-nosnippet>916</a>  </span><span class="kw">let </span>paper_id = std::path::Path::new(source)
+<a href=#917 id=917 data-nosnippet>917</a>    .file_stem()
+<a href=#918 id=918 data-nosnippet>918</a>    .and_then(|s| s.to_str())
+<a href=#919 id=919 data-nosnippet>919</a>    .unwrap_or(<span class="string">""</span>)
+<a href=#920 id=920 data-nosnippet>920</a>    .to_string();
+<a href=#921 id=921 data-nosnippet>921</a>  telemetry::set_paper_id(<span class="kw-2">&amp;</span>paper_id);
+<a href=#922 id=922 data-nosnippet>922</a>  telemetry::set_cmdline(<span class="kw-2">&amp;</span>std::env::args().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;().join(<span class="string">" "</span>));
+<a href=#923 id=923 data-nosnippet>923</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(host) = std::env::var(<span class="string">"HOSTNAME"</span>).or_else(|<span class="kw">_</span>| {
+<a href=#924 id=924 data-nosnippet>924</a>    <span class="comment">// Linux fallback: read /etc/hostname
+<a href=#925 id=925 data-nosnippet>925</a>    </span>std::fs::read_to_string(<span class="string">"/etc/hostname"</span>).map(|s| s.trim().to_string())
+<a href=#926 id=926 data-nosnippet>926</a>  }) {
+<a href=#927 id=927 data-nosnippet>927</a>    telemetry::set_host(<span class="kw-2">&amp;</span>host);
+<a href=#928 id=928 data-nosnippet>928</a>  }
+<a href=#929 id=929 data-nosnippet>929</a>  telemetry::set_wall_us(wall_start.elapsed().as_micros() <span class="kw">as </span>u64);
+<a href=#930 id=930 data-nosnippet>930</a>  telemetry::set_category(category);
+<a href=#931 id=931 data-nosnippet>931</a>  telemetry::set_exit_code(exit_code);
+<a href=#932 id=932 data-nosnippet>932</a>  telemetry::set_max_rss_kb(read_max_rss_kb());
+<a href=#933 id=933 data-nosnippet>933</a>  <span class="kw">let </span>(cu, cs) = read_child_rusage_us();
+<a href=#934 id=934 data-nosnippet>934</a>  telemetry::set_child_rusage_us(cu, cs);
+<a href=#935 id=935 data-nosnippet>935</a>
+<a href=#936 id=936 data-nosnippet>936</a>  <span class="kw">let </span>record = telemetry::take();
+<a href=#937 id=937 data-nosnippet>937</a>  <span class="kw">let </span>line = record.to_json_line();
+<a href=#938 id=938 data-nosnippet>938</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = std::path::Path::new(<span class="kw-2">&amp;</span>path).parent() {
+<a href=#939 id=939 data-nosnippet>939</a>    <span class="kw">if </span>!parent.as_os_str().is_empty() {
+<a href=#940 id=940 data-nosnippet>940</a>      <span class="kw">let _ </span>= std::fs::create_dir_all(parent);
+<a href=#941 id=941 data-nosnippet>941</a>    }
+<a href=#942 id=942 data-nosnippet>942</a>  }
+<a href=#943 id=943 data-nosnippet>943</a>  <span class="kw">if let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>fh) = File::create(<span class="kw-2">&amp;</span>path) {
+<a href=#944 id=944 data-nosnippet>944</a>    <span class="kw">let _ </span>= <span class="macro">writeln!</span>(fh, <span class="string">"{line}"</span>);
+<a href=#945 id=945 data-nosnippet>945</a>  }
+<a href=#946 id=946 data-nosnippet>946</a>}
+<a href=#947 id=947 data-nosnippet>947</a>
+<a href=#948 id=948 data-nosnippet>948</a><span class="doccomment">/// Read peak resident-set size from `/proc/self/status` (`VmHWM`).
+<a href=#949 id=949 data-nosnippet>949</a>/// Returns 0 on non-Linux or read failure.
+<a href=#950 id=950 data-nosnippet>950</a></span><span class="kw">fn </span>read_max_rss_kb() -&gt; u64 {
+<a href=#951 id=951 data-nosnippet>951</a>  std::fs::read_to_string(<span class="string">"/proc/self/status"</span>)
+<a href=#952 id=952 data-nosnippet>952</a>    .ok()
+<a href=#953 id=953 data-nosnippet>953</a>    .and_then(|content| {
+<a href=#954 id=954 data-nosnippet>954</a>      content
+<a href=#955 id=955 data-nosnippet>955</a>        .lines()
+<a href=#956 id=956 data-nosnippet>956</a>        .find(|l| l.starts_with(<span class="string">"VmHWM:"</span>))
+<a href=#957 id=957 data-nosnippet>957</a>        .and_then(|l| l.split_whitespace().nth(<span class="number">1</span>))
+<a href=#958 id=958 data-nosnippet>958</a>        .and_then(|n| n.parse::&lt;u64&gt;().ok())
+<a href=#959 id=959 data-nosnippet>959</a>    })
+<a href=#960 id=960 data-nosnippet>960</a>    .unwrap_or(<span class="number">0</span>)
+<a href=#961 id=961 data-nosnippet>961</a>}
+<a href=#962 id=962 data-nosnippet>962</a>
+<a href=#963 id=963 data-nosnippet>963</a><span class="doccomment">/// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
+<a href=#964 id=964 data-nosnippet>964</a>/// Returns (0, 0) on failure or non-unix.
+<a href=#965 id=965 data-nosnippet>965</a></span><span class="attr">#[cfg(unix)]
+<a href=#966 id=966 data-nosnippet>966</a></span><span class="kw">fn </span>read_child_rusage_us() -&gt; (u64, u64) {
+<a href=#967 id=967 data-nosnippet>967</a>  <span class="comment">// SAFETY: getrusage(RUSAGE_CHILDREN, &amp;ru) is async-signal-safe and
+<a href=#968 id=968 data-nosnippet>968</a>  // populates the struct unconditionally on success.
+<a href=#969 id=969 data-nosnippet>969</a>  </span><span class="kw">unsafe </span>{
+<a href=#970 id=970 data-nosnippet>970</a>    <span class="kw">let </span><span class="kw-2">mut </span>ru: libc::rusage = std::mem::zeroed();
+<a href=#971 id=971 data-nosnippet>971</a>    <span class="kw">if </span>libc::getrusage(libc::RUSAGE_CHILDREN, <span class="kw-2">&amp;mut </span>ru) == <span class="number">0 </span>{
+<a href=#972 id=972 data-nosnippet>972</a>      <span class="kw">let </span>user = (ru.ru_utime.tv_sec <span class="kw">as </span>u64) * <span class="number">1_000_000 </span>+ (ru.ru_utime.tv_usec <span class="kw">as </span>u64);
+<a href=#973 id=973 data-nosnippet>973</a>      <span class="kw">let </span>sys = (ru.ru_stime.tv_sec <span class="kw">as </span>u64) * <span class="number">1_000_000 </span>+ (ru.ru_stime.tv_usec <span class="kw">as </span>u64);
+<a href=#974 id=974 data-nosnippet>974</a>      (user, sys)
+<a href=#975 id=975 data-nosnippet>975</a>    } <span class="kw">else </span>{
+<a href=#976 id=976 data-nosnippet>976</a>      (<span class="number">0</span>, <span class="number">0</span>)
+<a href=#977 id=977 data-nosnippet>977</a>    }
+<a href=#978 id=978 data-nosnippet>978</a>  }
+<a href=#979 id=979 data-nosnippet>979</a>}
+<a href=#980 id=980 data-nosnippet>980</a>
+<a href=#981 id=981 data-nosnippet>981</a><span class="attr">#[cfg(not(unix))]
+<a href=#982 id=982 data-nosnippet>982</a></span><span class="kw">fn </span>read_child_rusage_us() -&gt; (u64, u64) { (<span class="number">0</span>, <span class="number">0</span>) }
+<a href=#983 id=983 data-nosnippet>983</a>
+<a href=#984 id=984 data-nosnippet>984</a><span class="kw">use </span>latexml::post::PostOptions;
+<a href=#985 id=985 data-nosnippet>985</a>
+<a href=#986 id=986 data-nosnippet>986</a><span class="doccomment">/// Delegate post-processing to the library API.
+<a href=#987 id=987 data-nosnippet>987</a></span><span class="kw">fn </span>run_post_processing(xml: <span class="kw-2">&amp;</span>str, opts: <span class="kw-2">&amp;</span>PostOptions) -&gt; String {
+<a href=#988 id=988 data-nosnippet>988</a>  <span class="comment">// Per-phase telemetry now lives inside latexml::post::run_post_processing
+<a href=#989 id=989 data-nosnippet>989</a>  // (PostXmlParse, PostScan, Bibliography, Crossref, Graphics, Split, Xslt).
+<a href=#990 id=990 data-nosnippet>990</a>  </span>latexml::post::run_post_processing(xml, opts)
+<a href=#991 id=991 data-nosnippet>991</a>}
+<a href=#992 id=992 data-nosnippet>992</a>
+<a href=#993 id=993 data-nosnippet>993</a><span class="comment">// `ensure_parent_dir` now lives in `latexml_post::writer` so all
+<a href=#994 id=994 data-nosnippet>994</a>// post-processing binaries share one implementation. Perl analog:
+<a href=#995 id=995 data-nosnippet>995</a>// `LaTeXML::Post::Writer`.
+<a href=#996 id=996 data-nosnippet>996</a>
+<a href=#997 id=997 data-nosnippet>997</a></span><span class="kw">fn </span>make_splitpaths(splitat: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#998 id=998 data-nosnippet>998</a>  <span class="kw">let </span>ancestors: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw">match </span>splitat {
+<a href=#999 id=999 data-nosnippet>999</a>    <span class="string">"part" </span>=&gt; <span class="kw-2">&amp;</span>[],
+<a href=#1000 id=1000 data-nosnippet>1000</a>    <span class="string">"chapter" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>],
+<a href=#1001 id=1001 data-nosnippet>1001</a>    <span class="string">"section" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>],
+<a href=#1002 id=1002 data-nosnippet>1002</a>    <span class="string">"subsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>],
+<a href=#1003 id=1003 data-nosnippet>1003</a>    <span class="string">"subsubsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>, <span class="string">"subsection"</span>],
+<a href=#1004 id=1004 data-nosnippet>1004</a>    <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>],
+<a href=#1005 id=1005 data-nosnippet>1005</a>  };
+<a href=#1006 id=1006 data-nosnippet>1006</a>  <span class="kw">let </span>back = [<span class="string">"bibliography"</span>, <span class="string">"appendix"</span>, <span class="string">"index"</span>];
+<a href=#1007 id=1007 data-nosnippet>1007</a>  <span class="kw">let </span><span class="kw-2">mut </span>paths = Vec::new();
+<a href=#1008 id=1008 data-nosnippet>1008</a>  <span class="kw">let </span>all_units: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = std::iter::once(splitat)
+<a href=#1009 id=1009 data-nosnippet>1009</a>    .chain(ancestors.iter().copied())
+<a href=#1010 id=1010 data-nosnippet>1010</a>    .collect();
+<a href=#1011 id=1011 data-nosnippet>1011</a>  <span class="kw">for </span>unit <span class="kw">in </span><span class="kw-2">&amp;</span>all_units {
+<a href=#1012 id=1012 data-nosnippet>1012</a>    paths.push(<span class="macro">format!</span>(<span class="string">"//ltx:{}"</span>, unit));
+<a href=#1013 id=1013 data-nosnippet>1013</a>    <span class="kw">for </span>b <span class="kw">in </span><span class="kw-2">&amp;</span>back {
+<a href=#1014 id=1014 data-nosnippet>1014</a>      <span class="kw">let </span><span class="kw-2">mut </span>conditions = <span class="macro">vec!</span>[<span class="macro">format!</span>(<span class="string">"preceding-sibling::ltx:{}"</span>, unit)];
+<a href=#1015 id=1015 data-nosnippet>1015</a>      <span class="kw">let </span>unit_ancestors: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw">match </span><span class="kw-2">*</span>unit {
+<a href=#1016 id=1016 data-nosnippet>1016</a>        <span class="string">"part" </span>=&gt; <span class="kw-2">&amp;</span>[],
+<a href=#1017 id=1017 data-nosnippet>1017</a>        <span class="string">"chapter" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>],
+<a href=#1018 id=1018 data-nosnippet>1018</a>        <span class="string">"section" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>],
+<a href=#1019 id=1019 data-nosnippet>1019</a>        <span class="string">"subsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>],
+<a href=#1020 id=1020 data-nosnippet>1020</a>        <span class="string">"subsubsection" </span>=&gt; <span class="kw-2">&amp;</span>[<span class="string">"part"</span>, <span class="string">"chapter"</span>, <span class="string">"section"</span>, <span class="string">"subsection"</span>],
+<a href=#1021 id=1021 data-nosnippet>1021</a>        <span class="kw">_ </span>=&gt; <span class="kw-2">&amp;</span>[],
+<a href=#1022 id=1022 data-nosnippet>1022</a>      };
+<a href=#1023 id=1023 data-nosnippet>1023</a>      <span class="kw">for </span>anc <span class="kw">in </span>unit_ancestors {
+<a href=#1024 id=1024 data-nosnippet>1024</a>        conditions.push(<span class="macro">format!</span>(<span class="string">"parent::ltx:{}"</span>, anc));
+<a href=#1025 id=1025 data-nosnippet>1025</a>      }
+<a href=#1026 id=1026 data-nosnippet>1026</a>      paths.push(<span class="macro">format!</span>(<span class="string">"//ltx:{}[{}]"</span>, b, conditions.join(<span class="string">" or "</span>)));
+<a href=#1027 id=1027 data-nosnippet>1027</a>    }
+<a href=#1028 id=1028 data-nosnippet>1028</a>  }
+<a href=#1029 id=1029 data-nosnippet>1029</a>  paths.join(<span class="string">" | "</span>)
+<a href=#1030 id=1030 data-nosnippet>1030</a>}
+<a href=#1031 id=1031 data-nosnippet>1031</a>
+<a href=#1032 id=1032 data-nosnippet>1032</a><span class="doccomment">/// Unpack a ZIP (primary) or tar.gz archive into a temp directory.
+<a href=#1033 id=1033 data-nosnippet>1033</a>/// Returns (TempDir, main_tex_path).
+<a href=#1034 id=1034 data-nosnippet>1034</a>///
+<a href=#1035 id=1035 data-nosnippet>1035</a>/// Port of Perl LaTeXML::Util::Pack::unpack_source.
+<a href=#1036 id=1036 data-nosnippet>1036</a>/// Detect whether `source` is already-converted LaTeXML XML — i.e. a
+<a href=#1037 id=1037 data-nosnippet>1037</a>/// `.xml` file — so the TeX → XML converter front-end can be skipped
+<a href=#1038 id=1038 data-nosnippet>1038</a>/// and the file fed straight to post-processing. Matches what Perl
+<a href=#1039 id=1039 data-nosnippet>1039</a>/// `latexmlpost` accepts and replaces the separate (now retired)
+<a href=#1040 id=1040 data-nosnippet>1040</a>/// `latexmlpost_oxide` binary.
+<a href=#1041 id=1041 data-nosnippet>1041</a></span><span class="kw">fn </span>is_xml_input(source: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#1042 id=1042 data-nosnippet>1042</a>  Path::new(source)
+<a href=#1043 id=1043 data-nosnippet>1043</a>    .extension()
+<a href=#1044 id=1044 data-nosnippet>1044</a>    .and_then(|e| e.to_str())
+<a href=#1045 id=1045 data-nosnippet>1045</a>    .is_some_and(|ext| ext.eq_ignore_ascii_case(<span class="string">"xml"</span>))
+<a href=#1046 id=1046 data-nosnippet>1046</a>}
+<a href=#1047 id=1047 data-nosnippet>1047</a>
+<a href=#1048 id=1048 data-nosnippet>1048</a><span class="kw">fn </span>unpack_archive(archive_path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(tempfile::TempDir, String), Box&lt;<span class="kw">dyn </span>Error&gt;&gt; {
+<a href=#1049 id=1049 data-nosnippet>1049</a>  <span class="kw">let </span>tempdir = tempfile::tempdir()<span class="question-mark">?</span>;
+<a href=#1050 id=1050 data-nosnippet>1050</a>  <span class="kw">let </span>dest = tempdir.path();
+<a href=#1051 id=1051 data-nosnippet>1051</a>
+<a href=#1052 id=1052 data-nosnippet>1052</a>  <span class="kw">if </span>archive_path.ends_with(<span class="string">".zip"</span>) {
+<a href=#1053 id=1053 data-nosnippet>1053</a>    <span class="comment">// Primary format: ZIP
+<a href=#1054 id=1054 data-nosnippet>1054</a>    </span><span class="kw">let </span>file = File::open(archive_path)<span class="question-mark">?</span>;
+<a href=#1055 id=1055 data-nosnippet>1055</a>    <span class="kw">let </span><span class="kw-2">mut </span>archive = zip::ZipArchive::new(file)<span class="question-mark">?</span>;
+<a href=#1056 id=1056 data-nosnippet>1056</a>    <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..archive.len() {
+<a href=#1057 id=1057 data-nosnippet>1057</a>      <span class="kw">let </span><span class="kw-2">mut </span>entry = archive.by_index(i)<span class="question-mark">?</span>;
+<a href=#1058 id=1058 data-nosnippet>1058</a>      <span class="kw">let </span>outpath = dest.join(entry.mangled_name());
+<a href=#1059 id=1059 data-nosnippet>1059</a>      <span class="kw">if </span>entry.is_dir() {
+<a href=#1060 id=1060 data-nosnippet>1060</a>        std::fs::create_dir_all(<span class="kw-2">&amp;</span>outpath)<span class="question-mark">?</span>;
+<a href=#1061 id=1061 data-nosnippet>1061</a>      } <span class="kw">else </span>{
+<a href=#1062 id=1062 data-nosnippet>1062</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = outpath.parent() {
+<a href=#1063 id=1063 data-nosnippet>1063</a>          std::fs::create_dir_all(parent)<span class="question-mark">?</span>;
+<a href=#1064 id=1064 data-nosnippet>1064</a>        }
+<a href=#1065 id=1065 data-nosnippet>1065</a>        <span class="kw">let </span><span class="kw-2">mut </span>outfile = File::create(<span class="kw-2">&amp;</span>outpath)<span class="question-mark">?</span>;
+<a href=#1066 id=1066 data-nosnippet>1066</a>        std::io::copy(<span class="kw-2">&amp;mut </span>entry, <span class="kw-2">&amp;mut </span>outfile)<span class="question-mark">?</span>;
+<a href=#1067 id=1067 data-nosnippet>1067</a>      }
+<a href=#1068 id=1068 data-nosnippet>1068</a>    }
+<a href=#1069 id=1069 data-nosnippet>1069</a>  } <span class="kw">else if </span>archive_path.ends_with(<span class="string">".tar.gz"</span>) || archive_path.ends_with(<span class="string">".tgz"</span>) {
+<a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="kw">let </span>file = File::open(archive_path)<span class="question-mark">?</span>;
+<a href=#1071 id=1071 data-nosnippet>1071</a>    <span class="kw">let </span>gz = flate2::read::GzDecoder::new(file);
+<a href=#1072 id=1072 data-nosnippet>1072</a>    <span class="kw">let </span><span class="kw-2">mut </span>archive = tar::Archive::new(gz);
+<a href=#1073 id=1073 data-nosnippet>1073</a>    archive.unpack(dest)<span class="question-mark">?</span>;
+<a href=#1074 id=1074 data-nosnippet>1074</a>  } <span class="kw">else if </span>archive_path.ends_with(<span class="string">".tar"</span>) {
+<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="kw">let </span>file = File::open(archive_path)<span class="question-mark">?</span>;
+<a href=#1076 id=1076 data-nosnippet>1076</a>    <span class="kw">let </span><span class="kw-2">mut </span>archive = tar::Archive::new(file);
+<a href=#1077 id=1077 data-nosnippet>1077</a>    archive.unpack(dest)<span class="question-mark">?</span>;
+<a href=#1078 id=1078 data-nosnippet>1078</a>  } <span class="kw">else </span>{
+<a href=#1079 id=1079 data-nosnippet>1079</a>    <span class="kw">return </span><span class="prelude-val">Err</span>(<span class="macro">format!</span>(<span class="string">"Unsupported archive format: {}"</span>, archive_path).into());
+<a href=#1080 id=1080 data-nosnippet>1080</a>  }
+<a href=#1081 id=1081 data-nosnippet>1081</a>
+<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="comment">// Find main .tex file (Perl: LaTeXML::Util::Pack looks for the largest .tex file
+<a href=#1083 id=1083 data-nosnippet>1083</a>  // or one containing \documentclass)
+<a href=#1084 id=1084 data-nosnippet>1084</a>  </span><span class="kw">let </span>main_tex = latexml::main_tex::find_main_tex(dest)
+<a href=#1085 id=1085 data-nosnippet>1085</a>    .map_err(|e| -&gt; Box&lt;<span class="kw">dyn </span>Error&gt; { e.into() })<span class="question-mark">?</span>;
+<a href=#1086 id=1086 data-nosnippet>1086</a>  <span class="prelude-val">Ok</span>((tempdir, main_tex.to_string_lossy().to_string()))
+<a href=#1087 id=1087 data-nosnippet>1087</a>}
+<a href=#1088 id=1088 data-nosnippet>1088</a>
+<a href=#1089 id=1089 data-nosnippet>1089</a><span class="comment">// Output-zip packing moved to `latexml_post::pack::pack_archive`
+<a href=#1090 id=1090 data-nosnippet>1090</a>// (2026-05-18, audit follow-up for the latexml_oxide --post image-
+<a href=#1091 id=1091 data-nosnippet>1091</a>// bundling fix). The previous inline `pack_output_zip` +
+<a href=#1092 id=1092 data-nosnippet>1092</a>// `add_dir_to_zip` here and the parallel pair in `cortex_worker.rs`
+<a href=#1093 id=1093 data-nosnippet>1093</a>// have been replaced by a single shared implementation — mirrors
+<a href=#1094 id=1094 data-nosnippet>1094</a>// Perl `LaTeXML::Post::Pack`.
 </span></code></pre></div></section></main></body></html>
