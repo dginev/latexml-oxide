@@ -55,9 +55,11 @@ jobs:
 
       # libxml2 + libxslt are keg-only on Homebrew; install them and surface
       # their pkgconfig dirs so the libxml/libxslt build scripts find them.
-      # kpathsea is NOT linked here: the distributed binary uses the
-      # subprocess-`kpsewhich` backend (decoupled from libkpathsea ABI;
-      # mandatory on MacTeX, which ships no libkpathsea).
+      # libkpathsea is built from source and STATICALLY linked (see the
+      # build-static-kpathsea step below): Homebrew ships no static `.a`, and a
+      # static link makes the binary self-contained — in-process lookups with NO
+      # runtime libkpathsea dependency, so it launches on MacTeX (which ships no
+      # libkpathsea) and degrades to empty lookups where no TeX is present.
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
@@ -90,6 +92,11 @@ jobs:
               fi
             done
           done
+
+      # Static, self-contained libkpathsea (in-process lookups, no runtime dep).
+      # Sets KPATHSEA_LIB_DIR + KPATHSEA_STATIC for the build below.
+      - name: build static libkpathsea from source
+        run: bash tools/build_static_kpathsea.sh
 
       - name: build macOS release tarball
         run: bash tools/make_release.sh
@@ -171,6 +178,14 @@ jobs:
               fi
             done
           done
+
+      # Static, self-contained libkpathsea (in-process lookups, no runtime
+      # libkpathsea6 dependency — dropping it from the .deb's $auto deps).
+      # Built from source with --with-pic: the system libkpathsea-dev .a is
+      # non-PIC and is rejected when our proc-macro cdylib links kpathsea.
+      # Sets KPATHSEA_LIB_DIR + KPATHSEA_STATIC for the build below.
+      - name: build static libkpathsea from source
+        run: bash tools/build_static_kpathsea.sh
 
       - name: build release artifacts
         run: bash tools/make_release.sh
