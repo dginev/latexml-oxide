@@ -131,6 +131,7 @@ pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
     stylesheet: Some("resources/XSLT/LaTeXML-html5.xsl"),
     destination: None,
     source_directory: source_dir.as_deref(),
+    search_paths: &[],
     // The server returns HTML as a string with no destination — it must never
     // write CSS/JS resource files to disk (would pollute the cwd). The client
     // supplies its own preview styling.

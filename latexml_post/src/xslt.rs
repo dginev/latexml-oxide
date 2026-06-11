@@ -7,8 +7,12 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 use std::cell::RefCell;
+use std::collections::HashSet;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+
+use regex::Regex;
 
 use crate::document::{PostDocument, PostDocumentOptions};
 use crate::processor::{PostError, ProcessResult, Processor};
@@ -232,6 +236,95 @@ impl XSLT {
     }
   }
 
+  /// Copy each resource named in a `"a|b|c"` quoted pipe-list stylesheet
+  /// parameter (`CSS`, `JAVASCRIPT`, `ICON`) to the destination so the
+  /// `<link>`/`<script>` the stylesheet emits actually resolve.
+  ///
+  /// Port of `XSLT::process` L71-78 (the param-resource copy, distinct from the
+  /// embedded `<ltx:resource>` handling): every `--css` / `--javascript` /
+  /// icon entry is searched on the path (then the embedded table), copied, and
+  /// a missing entry warns `missing_file`. This runs **regardless of
+  /// `no_resources`** — `--nodefaultresources` only governs embedded
+  /// `<ltx:resource>` nodes, not CLI-specified resources (Perl L62-78: the CSS/
+  /// JAVASCRIPT/ICON copies sit *outside* the `noresources` guard).
+  ///
+  /// The copy targets the **site directory** (the root the relativized links in
+  /// [`relativize_resource_params`] point at, via `../` for split sub-pages),
+  /// falling back to the destination directory when no site dir is set. Link
+  /// relativization itself stays in `relativize_resource_params`; this method
+  /// only performs the copy, so split/`--splitat` link paths are unchanged.
+  fn copy_param_resources(&self, doc: &PostDocument, value: &str, info: Option<&ResourceInfo>) {
+    let dest_root = match doc
+      .get_site_directory()
+      .or_else(|| doc.get_destination_directory())
+    {
+      Some(d) => d.to_string(),
+      None => return,
+    };
+    let search_paths: Vec<&str> = doc
+      .get_search_paths()
+      .iter()
+      .chain(self.searchpaths.iter())
+      .map(String::as_str)
+      .collect();
+    // Only CSS recurses into its `@import`-ed sub-resources (below).
+    let is_css = info.is_some_and(|i| i.extension == "css");
+    // Cycle/dedup guard shared across every entry's @import graph.
+    let mut seen: HashSet<PathBuf> = HashSet::new();
+    for entry in value.trim_matches('"').split('|') {
+      let entry = entry.trim();
+      // Skip empties and URLs (nothing to copy — same guard as copy_resource).
+      if entry.is_empty()
+        || entry.starts_with("http://")
+        || entry.starts_with("https://")
+        || entry.starts_with("//")
+      {
+        continue;
+      }
+      let basename = Path::new(entry)
+        .file_name()
+        .and_then(|f| f.to_str())
+        .unwrap_or(entry);
+      let dest = format!("{}/{}", dest_root, basename);
+      let ensure_parent = || {
+        if let Some(parent) = Path::new(&dest).parent() {
+          let _ = fs::create_dir_all(parent);
+        }
+      };
+      match find_resource_file(entry, info, &search_paths) {
+        Some(path) => {
+          if path != dest {
+            ensure_parent();
+            if let Err(e) = fs::copy(&path, &dest) {
+              Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
+            }
+          }
+          // Beyond Perl: follow the copied CSS's local @import chain so split
+          // stylesheets (e.g. ar5iv.css -> ./ar5iv/*.css layer files) bring
+          // their sub-files along. Gated to CSS; no-op for JS/icon.
+          if is_css {
+            copy_css_imports(Path::new(&path), Path::new(&dest), &mut seen);
+          }
+        },
+        None => {
+          // Not on the path — try the binary's embedded resource table
+          // (same fallback as copy_resource, so bundled CSS/JS still land).
+          if let Some(bytes) = embedded_resources::lookup(basename) {
+            ensure_parent();
+            if let Err(e) = fs::write(&dest, bytes) {
+              Warn!("I/O", dest, "Couldn't write embedded resource {} to {}: {}", basename, dest, e);
+            }
+          } else {
+            Warn!(
+              "missing_file", entry,
+              "Couldn't find resource file {} in paths {:?}", entry, search_paths
+            );
+          }
+        },
+      }
+    }
+  }
+
   /// Build a per-doc parameter map with `CSS`, `JAVASCRIPT`, and `ICON`
   /// relativized so each split sub-page references the resource at the
   /// correct relative path.
@@ -297,6 +390,93 @@ fn relativize_quoted_pipe_list(value: &str, prefix: &str) -> String {
   format!("\"{}\"", parts.join("|"))
 }
 
+/// Extract the targets of CSS `@import` rules from stylesheet source.
+///
+/// Block comments are stripped first (so a commented-out `@import` is ignored),
+/// then the common forms are matched: `@import "x.css";`, `@import url("x");`,
+/// `@import url('x');`, and bare `@import url(x);`, each with an optional
+/// trailing `layer(...)` / media / `supports(...)` tail (only the URL token is
+/// captured). One target per `@import` (CSS allows a single URL per rule).
+fn parse_css_imports(css: &str) -> Vec<String> {
+  static COMMENT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?s)/\*.*?\*/").unwrap());
+  static IMPORT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)@import\s+(?:url\(\s*)?["']?([^"')\s;]+)"#).unwrap());
+  let stripped = COMMENT.replace_all(css, "");
+  IMPORT
+    .captures_iter(&stripped)
+    .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
+    .collect()
+}
+
+/// After a CSS file is copied from `src` to `dest`, recursively copy the LOCAL
+/// resources it `@import`s, preserving each import's relative subpath so the
+/// cascade still resolves at the destination.
+///
+/// BEYOND PERL: `copyResource` copies only the named file. ar5iv-style
+/// stylesheets split themselves across `@import url("./layer/part.css")`
+/// sub-files; without following those, the copied top-level CSS renders
+/// unstyled. Each target is resolved relative to the importing file — for both
+/// the on-disk source and the destination, so the same relative path is
+/// recreated under the destination — copied, and (if itself a `.css`) recursed
+/// into. Remote (`http(s)://`, `//`, `data:`, any `scheme://`) and absolute
+/// (`/…`) targets are left untouched. `seen` (keyed on the absolute source
+/// path) guards against import cycles and redundant copies.
+fn copy_css_imports(src: &Path, dest: &Path, seen: &mut HashSet<PathBuf>) {
+  let content = match fs::read_to_string(src) {
+    Ok(c) => c,
+    Err(_) => return,
+  };
+  let (Some(src_dir), Some(dest_dir)) = (src.parent(), dest.parent()) else {
+    return;
+  };
+  for target in parse_css_imports(&content) {
+    let t = target.trim();
+    // Skip remote / non-copyable targets — only local relative paths are ours.
+    if t.is_empty()
+      || t.starts_with('/')
+      || t.starts_with("//")
+      || t.starts_with("data:")
+      || t.contains("://")
+    {
+      continue;
+    }
+    let import_src = src_dir.join(t);
+    let import_dest = dest_dir.join(t);
+    // Skip if already handled (shared import or cycle).
+    if !seen.insert(import_src.clone()) {
+      continue;
+    }
+    if !import_src.is_file() {
+      Warn!(
+        "missing_file", t,
+        "Couldn't find @import target {} referenced by {}", t, src.display()
+      );
+      continue;
+    }
+    if import_src != import_dest {
+      if let Some(parent) = import_dest.parent() {
+        let _ = fs::create_dir_all(parent);
+      }
+      if let Err(e) = fs::copy(&import_src, &import_dest) {
+        Warn!(
+          "I/O", t,
+          "Couldn't copy @import {} to {}: {}",
+          import_src.display(), import_dest.display(), e
+        );
+        continue;
+      }
+    }
+    // Recurse into nested CSS imports only (not imported fonts/images).
+    if import_src
+      .extension()
+      .and_then(|e| e.to_str())
+      .is_some_and(|e| e.eq_ignore_ascii_case("css"))
+    {
+      copy_css_imports(&import_src, &import_dest, seen);
+    }
+  }
+}
+
 impl Processor for XSLT {
   fn get_name(&self) -> &str { &self.name }
 
@@ -322,6 +502,23 @@ impl Processor for XSLT {
           let _path = self.copy_resource(&doc, &src, resource_type.as_deref());
         }
       }
+    }
+
+    // Copy CLI-specified --css/--javascript/icon resources to the destination
+    // and warn on any that can't be found. Port of XSLT::process L71-78 — the
+    // param-resource copy that the binary's `--css`/`--javascript` flow needs
+    // (those flags only set the CSS/JAVASCRIPT stylesheet params; without this
+    // the link is emitted but the file is never searched on --path or copied).
+    // Deliberately OUTSIDE the `no_resources` guard above: --nodefaultresources
+    // suppresses only the bundled defaults' <ltx:resource> nodes, not these.
+    if let Some(css) = self.parameters.get("CSS") {
+      self.copy_param_resources(&doc, css, Some(&RESOURCE_CSS));
+    }
+    if let Some(js) = self.parameters.get("JAVASCRIPT") {
+      self.copy_param_resources(&doc, js, Some(&RESOURCE_JS));
+    }
+    if let Some(icon) = self.parameters.get("ICON") {
+      self.copy_param_resources(&doc, icon, None);
     }
 
     // Register EXSLT extension functions (str:tokenize, math:*, etc.)

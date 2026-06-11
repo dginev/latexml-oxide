@@ -22,6 +22,11 @@ pub struct PostOptions<'a> {
   pub stylesheet:                Option<&'a str>,
   pub destination:               Option<&'a str>,
   pub source_directory:          Option<&'a str>,
+  /// Extra resource search paths (the `--path` flag): directories searched
+  /// for `--css`/`--javascript` files (and other post resources) to copy into
+  /// the destination, in addition to the document's own paths, the current
+  /// directory, and the binary's embedded resource table.
+  pub search_paths:              &'a [String],
   pub nodefaultresources:        bool,
   pub css_files:                 &'a [String],
   pub js_files:                  &'a [String],
@@ -57,6 +62,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
     stylesheet,
     destination,
     source_directory,
+    search_paths,
     nodefaultresources,
     css_files,
     js_files,
@@ -318,6 +324,12 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       {
         searchpaths.insert(0, project_root.display().to_string());
       }
+    }
+    // Prepend the user's `--path` directories so `--css`/`--javascript`
+    // resources are found there (and take priority over `.`/project root)
+    // when copy_param_resources searches for them.
+    for p in search_paths.iter().rev() {
+      searchpaths.insert(0, p.clone());
     }
     let mut xslt_params = rustc_hash::FxHashMap::default();
 

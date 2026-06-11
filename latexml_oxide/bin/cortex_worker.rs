@@ -283,6 +283,7 @@ impl LatexmlWorker {
       stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
       destination:               Some(&dest_html_str),
       source_directory:          Some(&source_dir),
+      search_paths:              &[],
       nodefaultresources:        self.profile.nodefaultresources,
       css_files:                 &[],
       js_files:                  &[],

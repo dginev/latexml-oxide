@@ -801,6 +801,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           stylesheet: effective_stylesheet.as_deref(),
           destination: dest_for_post.as_deref(),
           source_directory: Some(&source_dir),
+          search_paths: &cli.search_paths,
           nodefaultresources: cli.nodefaultresources,
           css_files: &cli.css_files,
           js_files: &cli.js_files,
