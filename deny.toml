@@ -18,21 +18,11 @@ version = 2
 # crates are denied by default under advisories schema v2.
 yanked = "deny"
 # Add `"RUSTSEC-YYYY-NNNN"` here (with a comment justifying it) only when an
-# advisory is reviewed and accepted as not-applicable.
-#
-# The three below are ALL transitive through the `pericortex` git dependency
-# (github.com/dginev/cortex-peripherals), which is gated behind the off-by-
-# default `cortex` feature — benchmark/sandbox worker tooling only. The
-# distributed binary builds `--no-default-features` (RELEASE_CRITERIA.md), so
-# none of these crates ever ship to users; they surface here only because the
-# CI action audits with `--all-features`. Proper fix is upstream in
-# cortex-peripherals (drop tempdir/ansi_term); accepted as not-applicable to
-# the shipped artifact until then.
-ignore = [
-  "RUSTSEC-2018-0017", # tempdir deprecated → pericortex (cortex-only tooling)
-  "RUSTSEC-2023-0018", # remove_dir_all 0.5 TOCTOU → tempdir → pericortex
-  "RUSTSEC-2021-0139", # ansi_term unmaintained → pericortex (cortex-only)
-]
+# advisory is reviewed and accepted as not-applicable. Currently none:
+# the `cortex`-only `pericortex` dep used to drag in tempdir/ansi_term (three
+# advisories), but that was fixed at the source (cortex-peripherals 60bec10:
+# tempdir→tempfile, ansi_term→inline ANSI), so the graph is clean outright.
+ignore = []
 
 [licenses]
 version = 2
