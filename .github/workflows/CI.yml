@@ -46,6 +46,9 @@ jobs:
       - name: clippy (deny warnings, whole workspace + all targets)
         run: cargo +nightly clippy --workspace --all-targets --profile ci -- -D warnings
       - name: cargo-deny (advisories + licenses + bans + sources)
+        # The action's default arguments inject `--all-features`, so this audits
+        # feature-gated trees too (e.g. the off-by-default `cortex` worker deps).
+        # Reproduce locally with: cargo deny --all-features check
         uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check

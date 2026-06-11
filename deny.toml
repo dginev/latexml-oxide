@@ -1,8 +1,11 @@
 # cargo-deny configuration — dependency security + license discipline.
 # https://embarkstudios.github.io/cargo-deny/
 #
-# Run locally:  cargo deny check
-# CI runs the same in the `lint` job (see .github/workflows/CI.yml).
+# Run locally:  cargo deny --all-features check
+# CI's `lint` job runs the EmbarkStudios/cargo-deny-action, which injects
+# `--all-features` — so a bare `cargo deny check` (default features only) will
+# MISS advisories in feature-gated trees (e.g. the `cortex` worker tooling).
+# Always pass `--all-features` locally to match CI.
 #
 # Rationale: latexml-oxide ships a self-contained, redistributable binary
 # (docs/RELEASE_CRITERIA.md §license audit), so every transitive dependency's
@@ -16,7 +19,20 @@ version = 2
 yanked = "deny"
 # Add `"RUSTSEC-YYYY-NNNN"` here (with a comment justifying it) only when an
 # advisory is reviewed and accepted as not-applicable.
-ignore = []
+#
+# The three below are ALL transitive through the `pericortex` git dependency
+# (github.com/dginev/cortex-peripherals), which is gated behind the off-by-
+# default `cortex` feature — benchmark/sandbox worker tooling only. The
+# distributed binary builds `--no-default-features` (RELEASE_CRITERIA.md), so
+# none of these crates ever ship to users; they surface here only because the
+# CI action audits with `--all-features`. Proper fix is upstream in
+# cortex-peripherals (drop tempdir/ansi_term); accepted as not-applicable to
+# the shipped artifact until then.
+ignore = [
+  "RUSTSEC-2018-0017", # tempdir deprecated → pericortex (cortex-only tooling)
+  "RUSTSEC-2023-0018", # remove_dir_all 0.5 TOCTOU → tempdir → pericortex
+  "RUSTSEC-2021-0139", # ansi_term unmaintained → pericortex (cortex-only)
+]
 
 [licenses]
 version = 2
