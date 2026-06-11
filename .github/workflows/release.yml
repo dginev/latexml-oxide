@@ -198,6 +198,11 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body_path: target/release-artifacts/RELEASE_BODY.md
+          # Append GitHub's auto-generated "What's Changed" — every merged PR
+          # since the previous tag — below our curated RELEASE_BODY summary
+          # (softprops pre-pends `body` to the generated notes). Brief, high-level
+          # highlights up top + the full per-PR list underneath.
+          generate_release_notes: true
           files: |
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
             target/release-artifacts/latexml-oxide-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz.sha256
