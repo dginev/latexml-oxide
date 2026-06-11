@@ -241,6 +241,21 @@ jobs:
             echo "::error::release binary dynamically links a library that must be static"; exit 1
           fi
           echo "OK: glibc-only (no dynamic libxml2/libxslt/kpathsea)"
+          # Functional gate (complements the structural ldd above): our static
+          # libxml2/libxslt are built with a deliberately minimal feature set, so a
+          # mis-trimmed config could drop something LaTeXML needs — that would LINK
+          # fine but fail at conversion. Convert a real document (exercises the
+          # RelaxNG / XPath / XSLT paths) and assert zero Error/Fatal. TeX Live is
+          # installed on this leg.
+          out="$(mktemp -d)"
+          "$bin" --destination="$out/hello.html" latexml_oxide/tests/hello/hello.tex 2>"$out/log" \
+            || { echo "::error::release binary failed to run a conversion"; cat "$out/log"; exit 1; }
+          errs=$(sed 's/\x1b\[[0-9;]*m//g' "$out/log" | grep -acE '^(Error|Fatal):' || true)
+          if [ "$errs" != "0" ] || [ ! -s "$out/hello.html" ]; then
+            echo "::error::conversion smoke: $errs Error/Fatal, $(wc -c <"$out/hello.html" 2>/dev/null || echo 0) bytes out"
+            sed 's/\x1b\[[0-9;]*m//g' "$out/log" | grep -E '^(Error|Fatal):' | head; exit 1
+          fi
+          echo "OK: hello.tex converts clean ($(wc -c <"$out/hello.html") bytes, 0 errors)"
 
       # Pull the macOS tarball (+ sidecar) built by the build-macos job into
       # the staging dir so they publish alongside the Linux artifacts.

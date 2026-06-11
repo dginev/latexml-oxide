@@ -20,8 +20,29 @@
 #     default, so `--with-pic` is a harmless no-op there.
 #   * Into a NON-system prefix so pkg-config's static guard permits a static link
 #     (it refuses `static=` for libs under /usr/lib); the crates then probe with
-#     `.statik(true)` and pick up transitive deps (-lz, -lm, -lgcrypt) from the
-#     installed .pc Libs.private — those stay DYNAMIC (stable SONAMEs, no churn).
+#     `.statik(true)`.
+#
+# Build-configuration policy — a DETERMINISTIC, MINIMAL dependency closure:
+#   The purpose of static linking is host-independence. `configure` undermines that
+#   by AUTO-DETECTING optional external libraries from whatever dev headers happen
+#   to sit on the build host — so the same script yields a DIFFERENT dependency
+#   surface per runner. (That is exactly how the macOS leg pulled libgcrypt/
+#   libgpg-error via Homebrew while Linux did not, breaking the link with
+#   unresolved __gpg_* symbols.) A point-patch for crypto would leave the next
+#   environment-specific lib to bite. So the rule is: every OPTIONAL,
+#   EXTERNAL-DEPENDENCY feature is disabled EXPLICITLY here; nothing is inherited
+#   from the host. We keep exactly two things:
+#     1. the core API LaTeXML exercises (XPath, RelaxNG/schemas, c14n, output,
+#        XInclude, reader/writer, …) — these carry no external deps; and
+#     2. iconv — the lone external dep that is a guaranteed, stable system library
+#        on every target (glibc on Linux, libiconv on macOS), so it may stay
+#        dynamic under the same rule that lets libc/libm/libgcc_s/CoreFoundation
+#        stay dynamic. (Disabling it would only trade a stable dep for an encoding-
+#        coverage risk.)
+#   Everything else optional+external is OFF: python, zlib, lzma, icu (libxml2;
+#   icu's SONAME churns), crypto (libxslt). Net closure: -lm (+ -liconv on macOS),
+#   reproducibly, regardless of build host. Any NEW optional dep must be opted into
+#   here CONSCIOUSLY, never auto-detected.
 #
 # Build parallelism is capped (JOBS, default 4): the dev box hard-freezes under a
 # full -j load. CI runners can raise it (JOBS=$(nproc)).
@@ -54,13 +75,16 @@ tar xf "libxslt-${LIBXSLT_VER}.tar.xz"
 # --- libxml2 (built first; libxslt links against it) ----------------------------
 echo "[build_static_libxml] configure libxml2 ${LIBXML2_VER} (static, PIC)"
 cd "${WORK}/libxml2-${LIBXML2_VER}"
+# --without-{python,zlib,lzma,icu}: disable every optional external-dependency
+# feature per the configuration policy above (icu in particular — libicu's SONAME
+# churns hard). The core API LaTeXML uses carries no external deps and stays on.
 # Explicit CFLAGS=-fPIC: libtool's --with-pic alone does NOT force PIC objects for
 # a --disable-shared (static-only) build here — it yields absolute R_X86_64_32
 # relocations that a shared object (our proc-macro cdylib) rejects. -fPIC on every
 # compile guarantees a PIC archive that links into both the cdylib and the binary.
 ./configure --prefix="$PREFIX" \
   --enable-static --disable-shared --with-pic \
-  --without-python \
+  --without-python --without-zlib --without-lzma --without-icu \
   --disable-dependency-tracking \
   CFLAGS="-fPIC -O2" >/dev/null
 echo "[build_static_libxml] make libxml2 -j${JOBS}"
@@ -70,9 +94,15 @@ make install >/dev/null
 # --- libxslt + libexslt (against our static libxml2) ----------------------------
 echo "[build_static_libxml] configure libxslt ${LIBXSLT_VER} (static, PIC)"
 cd "${WORK}/libxslt-${LIBXSLT_VER}"
+# --without-crypto: the libxslt arm of the same policy. The EXSLT crypto module
+# (md5/sha1/...) pulls in libgcrypt + libgpg-error, which configure auto-detected
+# on the macOS runner (Homebrew) but not on Linux, leaving libexslt.a with
+# unresolved __gpg_* symbols at the final link. LaTeXML never uses crypto:*, so the
+# module is off on every platform.
 PKG_CONFIG_PATH="${PREFIX}/lib/pkgconfig" ./configure --prefix="$PREFIX" \
   --enable-static --disable-shared --with-pic \
   --without-python \
+  --without-crypto \
   --with-libxml-prefix="$PREFIX" \
   --disable-dependency-tracking \
   CFLAGS="-fPIC -O2" >/dev/null
