@@ -77,7 +77,9 @@ fn cluster_amsppt_vspace() { convert_clean("tests/cluster_regressions/amsppt_vsp
 /// before reading the float. Witnesses: arXiv:hep-th9610147,
 /// hep-th9703142.
 #[test]
-fn cluster_multiput_braced_pair() { convert_clean("tests/cluster_regressions/multiput_braced_pair.tex"); }
+fn cluster_multiput_braced_pair() {
+  convert_clean("tests/cluster_regressions/multiput_braced_pair.tex");
+}
 
 /// `\thechapter` autoload from `omnibus_cls.rs` must autoload the
 /// `book.cls` BINDING, not `book.sty`. The obsolete `book.sty` shim

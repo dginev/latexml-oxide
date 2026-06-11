@@ -8,9 +8,11 @@
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::PostDocument;
-use crate::object_db::{ObjectDB, Value};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::PostDocument,
+  object_db::{ObjectDB, Value},
+  processor::{ProcessResult, Processor},
+};
 
 /// Scan post-processor: collects structural information into ObjectDB.
 ///

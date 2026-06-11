@@ -14,14 +14,17 @@
 //! 6. Format each entry into ltx:bibitem with ltx:tags + ltx:bibblock sections
 //! 7. Optionally split by initial letter
 
-use libxml::tree::Node;
-use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::path::Path;
 
-use crate::document::{NodeData, PostDocument, PostDocumentOptions};
-use crate::object_db::ObjectDB;
-use crate::processor::{ProcessResult, Processor};
-use crate::radix::radix_alpha;
+use libxml::tree::Node;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
+
+use crate::{
+  document::{NodeData, PostDocument, PostDocumentOptions},
+  object_db::ObjectDB,
+  processor::{ProcessResult, Processor},
+  radix::radix_alpha,
+};
 
 /// Citation style.
 #[derive(Debug, Clone, PartialEq)]
@@ -164,10 +167,7 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => Warn!(
-              "I/O", bib,
-              "Failed to load bibliography '{}': {}", bib, e
-            ),
+            Err(e) => Warn!("I/O", bib, "Failed to load bibliography '{}': {}", bib, e),
           }
         }
       }
@@ -193,10 +193,7 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => Warn!(
-              "I/O", path,
-              "Failed to load bibliography '{}': {}", path, e
-            ),
+            Err(e) => Warn!("I/O", path, "Failed to load bibliography '{}': {}", path, e),
           }
         }
       }
@@ -214,17 +211,33 @@ impl MakeBibliography {
               bibs.push(bibdoc);
               loaded = true;
             },
-            Err(e) => Warn!("bibliography", "convert", "Failed to convert bibliography '{}': {}", bib_path, e),
+            Err(e) => Warn!(
+              "bibliography",
+              "convert",
+              "Failed to convert bibliography '{}': {}",
+              bib_path,
+              e
+            ),
           }
         }
       }
 
       if !loaded {
-        Info!("bibliography", "missing", "Couldn't find usable bibliography for '{}'", bib);
+        Info!(
+          "bibliography",
+          "missing",
+          "Couldn't find usable bibliography for '{}'",
+          bib
+        );
       }
     }
 
-    Info!("bibliography", "using", "MakeBibliography: using {} bibliographies", bibs.len());
+    Info!(
+      "bibliography",
+      "using",
+      "MakeBibliography: using {} bibliographies",
+      bibs.len()
+    );
     bibs
   }
 
@@ -341,7 +354,13 @@ impl MakeBibliography {
                 if let Some(existing) = entries.get(&lc_key) {
                   if let Some(ref prev_key) = existing.cited_key {
                     if prev_key != bibkey {
-                      Warn!("bibliography", "case_mismatch", "Case mismatch in bib key '{}' vs '{}'", prev_key, bibkey);
+                      Warn!(
+                        "bibliography",
+                        "case_mismatch",
+                        "Case mismatch in bib key '{}' vs '{}'",
+                        prev_key,
+                        bibkey
+                      );
                     }
                   }
                 }
@@ -397,134 +416,146 @@ impl MakeBibliography {
       seen.insert(bibkey.clone());
       let lc_key = bibkey.to_lowercase();
 
-      match entries.remove(&lc_key) { Some(mut entry) => {
-        // Extract metadata from bibentry XML node (if available)
-        if let Some(ref bibentry) = entry.bibentry {
-          let (sort_names, short_names, _full_names) = extract_names(doc, bibentry);
-          entry.sort_names = sort_names.clone();
-          entry.authors_short = short_names;
+      match entries.remove(&lc_key) {
+        Some(mut entry) => {
+          // Extract metadata from bibentry XML node (if available)
+          if let Some(ref bibentry) = entry.bibentry {
+            let (sort_names, short_names, _full_names) = extract_names(doc, bibentry);
+            entry.sort_names = sort_names.clone();
+            entry.authors_short = short_names;
 
-          let names_for_sort = if sort_names.is_empty() {
-            // Try bib-key or bib-title as fallback
-            match PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
-              .into_iter()
-              .next()
-            { Some(key_node) => {
-              key_node.get_content()
-            } _ => { match PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+            let names_for_sort = if sort_names.is_empty() {
+              // Try bib-key or bib-title as fallback
+              match PostDocument::findnodes_foreign("ltx:bib-key", bibentry)
                 .into_iter()
                 .next()
-            { Some(title_node) => {
-              title_node.get_content()
-            } _ => {
-              bibkey.clone()
-            }}}}
-          } else {
-            sort_names
-          };
+              {
+                Some(key_node) => key_node.get_content(),
+                _ => {
+                  match PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
+                    .into_iter()
+                    .next()
+                  {
+                    Some(title_node) => title_node.get_content(),
+                    _ => bibkey.clone(),
+                  }
+                },
+              }
+            } else {
+              sort_names
+            };
 
-          // Year
-          let date_content =
-            PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry)
+            // Year
+            let date_content =
+              PostDocument::findnodes_foreign("ltx:bib-date[@role='publication']", bibentry)
+                .into_iter()
+                .next()
+                .map(|n| n.get_content())
+                .unwrap_or_default();
+            let year = extract_four_digit_year(&date_content);
+            entry.year = year.clone();
+
+            // Title
+            let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
               .into_iter()
               .next()
               .map(|n| n.get_content())
               .unwrap_or_default();
-          let year = extract_four_digit_year(&date_content);
-          entry.year = year.clone();
+            entry.title = title.clone();
 
-          // Title
-          let title = PostDocument::findnodes_foreign("ltx:bib-title", bibentry)
-            .into_iter()
-            .next()
-            .map(|n| n.get_content())
-            .unwrap_or_default();
-          entry.title = title.clone();
-
-          // Type
-          let entry_type = bibentry
-            .get_attribute("type")
-            .unwrap_or_else(|| "misc".to_string());
-          entry.entry_type = entry_type;
-
-          // Author+year for suffix detection
-          entry.author_year = format!("{}.{}", names_for_sort, year);
-          entry.initial = PostDocument::initial(&names_for_sort, true);
-
-          // Sort key
-          let sort_key = format!("{}.{}.{}.{}", names_for_sort, year, title, bibkey).to_lowercase();
-          entry.sort_key = sort_key.clone();
-
-          // Enqueue transitive citations
-          let citations = entry.citations.clone();
-          for c in &citations {
-            queue.push(c.clone());
-          }
-          included.insert(sort_key, entry);
-        } else {
-          // No bibentry XML — use ObjectDB metadata
-          let id = self.find_bib_id(&bibkey, &lists);
-          if let Some(id) = id {
-            let id_key = format!("ID:{}", id);
-            let authors = self
-              .db
-              .lookup(&id_key)
-              .and_then(|e| e.get_value("authors").map(|v| v.to_string()))
-              .unwrap_or_default();
-            let full_authors = self
-              .db
-              .lookup(&id_key)
-              .and_then(|e| e.get_value("fullauthors").map(|v| v.to_string()))
-              .unwrap_or_else(|| authors.clone());
-            let year = self
-              .db
-              .lookup(&id_key)
-              .and_then(|e| e.get_value("year").map(|v| v.to_string()))
-              .unwrap_or_default();
-            let title = self
-              .db
-              .lookup(&id_key)
-              .and_then(|e| e.get_value("title").map(|v| v.to_string()))
-              .unwrap_or_default();
-            let entry_type = self
-              .db
-              .lookup(&id_key)
-              .and_then(|e| e.get_value("type").map(|v| v.to_string()))
+            // Type
+            let entry_type = bibentry
+              .get_attribute("type")
               .unwrap_or_else(|| "misc".to_string());
-
-            let year_short = extract_four_digit_year(&year);
-            let names = if authors.is_empty() {
-              bibkey.clone()
-            } else {
-              authors.clone()
-            };
-            let author_year = format!("{}.{}", names, year_short);
-            let initial = PostDocument::initial(&names, true);
-            let sort_key = format!("{}.{}.{}.{}", names, year_short, title, bibkey).to_lowercase();
-
-            entry.authors_short = authors;
-            entry.authors_full = full_authors;
-            entry.sort_names = names;
-            entry.year = year_short;
-            entry.title = title;
             entry.entry_type = entry_type;
-            entry.author_year = author_year;
-            entry.initial = initial;
+
+            // Author+year for suffix detection
+            entry.author_year = format!("{}.{}", names_for_sort, year);
+            entry.initial = PostDocument::initial(&names_for_sort, true);
+
+            // Sort key
+            let sort_key =
+              format!("{}.{}.{}.{}", names_for_sort, year, title, bibkey).to_lowercase();
             entry.sort_key = sort_key.clone();
 
+            // Enqueue transitive citations
+            let citations = entry.citations.clone();
+            for c in &citations {
+              queue.push(c.clone());
+            }
             included.insert(sort_key, entry);
           } else {
-            missing_keys.push(bibkey);
+            // No bibentry XML — use ObjectDB metadata
+            let id = self.find_bib_id(&bibkey, &lists);
+            if let Some(id) = id {
+              let id_key = format!("ID:{}", id);
+              let authors = self
+                .db
+                .lookup(&id_key)
+                .and_then(|e| e.get_value("authors").map(|v| v.to_string()))
+                .unwrap_or_default();
+              let full_authors = self
+                .db
+                .lookup(&id_key)
+                .and_then(|e| e.get_value("fullauthors").map(|v| v.to_string()))
+                .unwrap_or_else(|| authors.clone());
+              let year = self
+                .db
+                .lookup(&id_key)
+                .and_then(|e| e.get_value("year").map(|v| v.to_string()))
+                .unwrap_or_default();
+              let title = self
+                .db
+                .lookup(&id_key)
+                .and_then(|e| e.get_value("title").map(|v| v.to_string()))
+                .unwrap_or_default();
+              let entry_type = self
+                .db
+                .lookup(&id_key)
+                .and_then(|e| e.get_value("type").map(|v| v.to_string()))
+                .unwrap_or_else(|| "misc".to_string());
+
+              let year_short = extract_four_digit_year(&year);
+              let names = if authors.is_empty() {
+                bibkey.clone()
+              } else {
+                authors.clone()
+              };
+              let author_year = format!("{}.{}", names, year_short);
+              let initial = PostDocument::initial(&names, true);
+              let sort_key =
+                format!("{}.{}.{}.{}", names, year_short, title, bibkey).to_lowercase();
+
+              entry.authors_short = authors;
+              entry.authors_full = full_authors;
+              entry.sort_names = names;
+              entry.year = year_short;
+              entry.title = title;
+              entry.entry_type = entry_type;
+              entry.author_year = author_year;
+              entry.initial = initial;
+              entry.sort_key = sort_key.clone();
+
+              included.insert(sort_key, entry);
+            } else {
+              missing_keys.push(bibkey);
+            }
           }
-        }
-      } _ => {
-        // Not found in entries map
-        missing_keys.push(bibkey);
-      }}
+        },
+        _ => {
+          // Not found in entries map
+          missing_keys.push(bibkey);
+        },
+      }
     }
 
     if !missing_keys.is_empty() {
-      Warn!("bibliography", "missing_keys", "Missing bibkeys: {}", missing_keys.join(", "));
+      Warn!(
+        "bibliography",
+        "missing_keys",
+        "Missing bibkeys: {}",
+        missing_keys.join(", ")
+      );
     }
 
     // Step 4: Note bibreferrers — for each included entry's citations,
@@ -546,7 +577,8 @@ impl MakeBibliography {
     }
 
     Info!(
-      "bibliography", "count",
+      "bibliography",
+      "count",
       "MakeBibliography: {} bibentries, {} cited",
       entries.len() + included.len(),
       included.len()
@@ -1252,7 +1284,11 @@ impl Processor for MakeBibliography {
       // bib_docs must be kept alive as long as entries (bibentry Nodes reference them)
       let (entries, _bib_docs) = self.get_bib_entries(&doc, bib);
       if entries.is_empty() {
-        Info!("bibliography", "empty", "MakeBibliography: no entries to process");
+        Info!(
+          "bibliography",
+          "empty",
+          "MakeBibliography: no entries to process"
+        );
         continue;
       }
 
@@ -1292,7 +1328,12 @@ impl Processor for MakeBibliography {
         doc.add_nodes(&mut bib_mut, &[biblist]);
       }
 
-      Info!("bibliography", "formatted", "MakeBibliography: formatted {} entries", entries.len());
+      Info!(
+        "bibliography",
+        "formatted",
+        "MakeBibliography: formatted {} entries",
+        entries.len()
+      );
 
       // Register formatted bibitems in ObjectDB so CrossRef can resolve citations.
       // Port of Perl's approach where bibitems are registered during Scan,
@@ -2996,7 +3037,8 @@ fn convert_bib_file_to_xml(bib_path: &str) -> Result<PostDocument, String> {
 
   let entries = parse_bibtex(&content);
   Info!(
-    "bibtex", "parse",
+    "bibtex",
+    "parse",
     "Parsed {} BibTeX entries from '{}'",
     entries.len(),
     bib_path

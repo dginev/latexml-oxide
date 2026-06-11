@@ -9,12 +9,15 @@
 //! with y increasing upward; SVG uses top-left with y increasing downward.
 //! The top-level picture gets `transform="translate(0,h) scale(1,-1)"`.
 
-use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::f64::consts::PI;
 
-use crate::document::{NodeData, PostDocument, element_children_iter};
-use crate::processor::{ProcessResult, Processor};
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::{
+  document::{NodeData, PostDocument, element_children_iter},
+  processor::{ProcessResult, Processor},
+};
 
 const SVG_URI: &str = "http://www.w3.org/2000/svg";
 const DPI: f64 = 96.0;

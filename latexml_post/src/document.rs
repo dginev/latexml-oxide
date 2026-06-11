@@ -8,12 +8,15 @@
 //! - Node manipulation (addNodes, removeNodes, cloneNode, etc.)
 //! - Persistent cache (key-value store)
 
-use libxml::parser::Parser as XmlParser;
-use libxml::tree::{Document, Namespace, Node, NodeType, set_node_rc_guard};
-use libxml::xpath::Context as XPathContext;
+use std::path::Path;
+
+use libxml::{
+  parser::Parser as XmlParser,
+  tree::{Document, Namespace, Node, NodeType, set_node_rc_guard},
+  xpath::Context as XPathContext,
+};
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
-use std::path::Path;
 use unicode_normalization::UnicodeNormalization;
 
 use crate::radix::radix_alpha;
@@ -291,17 +294,13 @@ impl PostDocument {
     // KWARC/rust-libxml `clone-document` branch). The earlier
     // `import_node` route had two pitfalls that made it unusable for
     // the Split.process_pages loop:
-    //   1. `import_node` gates on `Node::is_unlinked()`, a wrapper-
-    //      side flag with no public setter; the gate leaks `false`
-    //      across iterations because the previous call's set_linked()
-    //      mutated the wrapper Rc, forcing every page after the
-    //      first to Err.
-    //   2. Direct `xmlDocCopyNode(src, dst, 1)` returns NULL on the
-    //      second sibling page — the first recursive copy dirties
-    //      dict/ns state on the source doc such that subsequent
-    //      recursive copies fail their child-copy phase (verified:
-    //      extended=2 still works, isolating the failure to
-    //      recursive descent).
+    //   1. `import_node` gates on `Node::is_unlinked()`, a wrapper- side flag with no public
+    //      setter; the gate leaks `false` across iterations because the previous call's
+    //      set_linked() mutated the wrapper Rc, forcing every page after the first to Err.
+    //   2. Direct `xmlDocCopyNode(src, dst, 1)` returns NULL on the second sibling page — the first
+    //      recursive copy dirties dict/ns state on the source doc such that subsequent recursive
+    //      copies fail their child-copy phase (verified: extended=2 still works, isolating the
+    //      failure to recursive descent).
     // dup_node_into_new_doc avoids both: it does
     // `xmlCopyNode(node, 1)` (orphan deep copy, no source-doc state
     // mutation), plants the copy into a freshly created xmlDoc, fixes
@@ -860,10 +859,7 @@ impl PostDocument {
           } else if let Some((prefix, localname)) = tag.split_once(':') {
             let nsuri = self.namespaces.get(prefix).cloned();
             if nsuri.is_none() {
-              Warn!(
-                "malformed", "namespace",
-                "No namespace on '{}'", tag
-              );
+              Warn!("malformed", "namespace", "No namespace on '{}'", tag);
             }
             // Find or create namespace for this prefix.
             // Prefer the default namespace (empty prefix) if it matches the target URI,
@@ -925,8 +921,10 @@ impl PostDocument {
             }
           } else {
             Warn!(
-              "malformed", "namespace",
-              "Tag '{}' has no namespace prefix", tag
+              "malformed",
+              "namespace",
+              "Tag '{}' has no namespace prefix",
+              tag
             );
           }
         },
@@ -1046,9 +1044,7 @@ impl PostDocument {
   /// processor's `mark_xm_node_visibility` walks stale `XMRef`
   /// targets, emitting `Error:expected:id Cannot find a node with
   /// xml:id=…`.
-  pub fn defer_xmath_unlink(&mut self, node: Node) {
-    self.pending_xmath_unlinks.push(node);
-  }
+  pub fn defer_xmath_unlink(&mut self, node: Node) { self.pending_xmath_unlinks.push(node); }
 
   /// Drain the deferred XMath unlinks: actually detach each subtree
   /// from the document. Idempotent against multiple processors
@@ -1260,8 +1256,10 @@ impl PostDocument {
           // Perl Post.pm:1444 — Error('expected', 'id', undef,
           //   "Cannot find a node with xml:id='$id'")
           Error!(
-            "expected", "id",
-            "Cannot find a node with xml:id='{}'", idref
+            "expected",
+            "id",
+            "Cannot find a node with xml:id='{}'",
+            idref
           );
         }
       }
@@ -1283,8 +1281,10 @@ impl PostDocument {
         // Perl Post.pm:1456 — Error('expected', 'id', undef,
         //   "Cannot find a node with xml:id='$id'")
         Error!(
-          "expected", "id",
-          "Cannot find a node with xml:id='{}'", idref
+          "expected",
+          "id",
+          "Cannot find a node with xml:id='{}'",
+          idref
         );
       }
       realized
@@ -1409,16 +1409,21 @@ impl PostDocument {
       children:   vec![],
     };
 
-    match self.findnode("//ltx:navigation") { Some(mut nav) => {
-      self.add_nodes(&mut nav, &[ref_node]);
-    } _ => { match self.get_document_element() { Some(mut root) => {
-      let nav_node = NodeData::Element {
-        tag:        "ltx:navigation".to_string(),
-        attributes: None,
-        children:   vec![ref_node],
-      };
-      self.add_nodes(&mut root, &[nav_node]);
-    } _ => {}}}}
+    match self.findnode("//ltx:navigation") {
+      Some(mut nav) => {
+        self.add_nodes(&mut nav, &[ref_node]);
+      },
+      _ => {
+        if let Some(mut root) = self.get_document_element() {
+          let nav_node = NodeData::Element {
+            tag:        "ltx:navigation".to_string(),
+            attributes: None,
+            children:   vec![ref_node],
+          };
+          self.add_nodes(&mut root, &[nav_node]);
+        }
+      },
+    }
   }
 
   // ======================================================================
@@ -1432,7 +1437,12 @@ impl PostDocument {
     for pi_text in &self.processing_instructions {
       if let Some(cap) = rng_re.captures(pi_text) {
         let schema = &cap[1];
-        Info!("validate", "schema", "Would validate against RelaxNG schema: {}", schema);
+        Info!(
+          "validate",
+          "schema",
+          "Would validate against RelaxNG schema: {}",
+          schema
+        );
         return Ok(());
       }
     }
@@ -1441,7 +1451,8 @@ impl PostDocument {
     //   even have a path. Reporting at warn (no schema = nothing to
     //   validate, often a benign config) with the structured target.
     Warn!(
-      "missing_file", "schema",
+      "missing_file",
+      "schema",
       "No schema found for document validation"
     );
     Ok(())
@@ -1472,7 +1483,8 @@ impl PostDocument {
 
     if !dups.is_empty() {
       Warn!(
-        "malformed", "id",
+        "malformed",
+        "id",
         "Duplicate IDs for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
         dups.join(", ")
@@ -1480,7 +1492,8 @@ impl PostDocument {
     }
     if !missing.is_empty() {
       Warn!(
-        "expected", "id",
+        "expected",
+        "id",
         "Cached IDs not in document for {}: {}",
         self.site_relative_destination().unwrap_or_default(),
         missing.join(", ")

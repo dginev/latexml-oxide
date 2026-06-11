@@ -4,12 +4,15 @@
 //! Splits a document into multiple pages based on an XPath expression
 //! that identifies section-level elements to extract as separate documents.
 
-use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::path::Path;
 
-use crate::document::{NodeData, PostDocument, get_xml_id};
-use crate::processor::{ProcessResult, Processor};
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::{
+  document::{NodeData, PostDocument, get_xml_id},
+  processor::{ProcessResult, Processor},
+};
 
 /// Page naming strategy for split documents.
 #[derive(Debug, Clone)]
@@ -349,7 +352,8 @@ impl Split {
       if attr == "labels" {
         if let Some(id) = get_xml_id(page) {
           Info!(
-            "split", "pathname",
+            "split",
+            "pathname",
             "Using '{}' to create page pathname, instead of missing '{}'",
             id,
             attr
@@ -358,7 +362,8 @@ impl Split {
         } else {
           name = self.generate_unnamed_page_name();
           Info!(
-            "split", "pathname",
+            "split",
+            "pathname",
             "Using '{}' to create page pathname, instead of missing '{}'",
             name,
             attr
@@ -367,7 +372,8 @@ impl Split {
       } else {
         name = self.generate_unnamed_page_name();
         Info!(
-          "split", "pathname",
+          "split",
+          "pathname",
           "Using '{}' to create page pathname, instead of missing '{}'",
           name,
           attr
@@ -508,7 +514,8 @@ impl Processor for Split {
 
     let n = docs.len();
     Info!(
-      "split", "result",
+      "split",
+      "result",
       "{}",
       if n > 1 {
         format!(" [Split into {} pages]", n)

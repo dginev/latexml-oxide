@@ -174,23 +174,18 @@ pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData {
 // loops via XMRef) drives `cmml` into unbounded descent. Two failure
 // modes seen on the second-500K canvas (stage_53/54):
 //
-// 1. Plain stack overflow on linearly-deep XMath — witnesses
-//    arXiv:1505.06709, 1505.06978 (both emitted `Info:malformed:id
-//    Duplicated attribute xml:id` then overflowed during
-//    MathML[Content]). Cap at `CMML_MAX_DEPTH` (256, well above any
-//    legitimate XMApp nesting we've measured).
+// 1. Plain stack overflow on linearly-deep XMath — witnesses arXiv:1505.06709, 1505.06978 (both
+//    emitted `Info:malformed:id Duplicated attribute xml:id` then overflowed during
+//    MathML[Content]). Cap at `CMML_MAX_DEPTH` (256, well above any legitimate XMApp nesting we've
+//    measured).
 //
-// 2. Cyclic XMRef chains: an `ltx:XMRef` whose `find_node_by_id`
-//    target's subtree contains another XMRef back into an ancestor
-//    of the current cmml frame. Linear depth cap alone is not
-//    enough — each cycle iteration doubles the generated
-//    NodeData::Element subtree, exhausting the 6 GB worker
-//    memory budget long before the depth limit fires. Witness:
-//    arXiv:1508.06324 (stage_54) — 440 maths, OOMs with 5-byte
-//    alloc failure mid-CMML. Track a `CMML_PATH` set of node
-//    pointers along the current recursion path; if we visit a
-//    node already on the path, return `cmml_error("cycle")` and
-//    unwind.
+// 2. Cyclic XMRef chains: an `ltx:XMRef` whose `find_node_by_id` target's subtree contains another
+//    XMRef back into an ancestor of the current cmml frame. Linear depth cap alone is not enough —
+//    each cycle iteration doubles the generated NodeData::Element subtree, exhausting the 6 GB
+//    worker memory budget long before the depth limit fires. Witness: arXiv:1508.06324 (stage_54) —
+//    440 maths, OOMs with 5-byte alloc failure mid-CMML. Track a `CMML_PATH` set of node pointers
+//    along the current recursion path; if we visit a node already on the path, return
+//    `cmml_error("cycle")` and unwind.
 const CMML_MAX_DEPTH: u32 = 256;
 thread_local! {
   static CMML_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
@@ -384,7 +379,10 @@ fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           NodeData::Element {
             tag:        "m:interval".to_string(),
-            attributes: Some(HashMap::from_iter([("closure".to_string(), "open".to_string())])),
+            attributes: Some(HashMap::from_iter([(
+              "closure".to_string(),
+              "open".to_string(),
+            )])),
             children:   items,
           }
         },
@@ -514,7 +512,10 @@ fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
           let items: Vec<NodeData> = args.iter().map(|a| cmml(doc, a)).collect();
           let mut children = vec![NodeData::Element {
             tag:        "m:csymbol".to_string(),
-            attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
+            attributes: Some(HashMap::from_iter([(
+              "cd".to_string(),
+              "ambiguous".to_string(),
+            )])),
             children:   vec![NodeData::Text("formulae-sequence".to_string())],
           }];
           children.extend(items);
@@ -582,7 +583,10 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
       };
       return NodeData::Element {
         tag:        "m:cn".to_string(),
-        attributes: Some(HashMap::from_iter([("type".to_string(), cn_type.to_string())])),
+        attributes: Some(HashMap::from_iter([(
+          "type".to_string(),
+          cn_type.to_string(),
+        )])),
         children:   vec![NodeData::Text(m.clone())],
       };
     }
@@ -590,7 +594,10 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
     // Default: csymbol with latexml cd
     return NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from_iter([("cd".to_string(), "latexml".to_string())])),
+      attributes: Some(HashMap::from_iter([(
+        "cd".to_string(),
+        "latexml".to_string(),
+      )])),
       children:   vec![NodeData::Text(m.clone())],
     };
   }
@@ -606,18 +613,27 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
       };
       NodeData::Element {
         tag:        "m:cn".to_string(),
-        attributes: Some(HashMap::from_iter([("type".to_string(), cn_type.to_string())])),
+        attributes: Some(HashMap::from_iter([(
+          "type".to_string(),
+          cn_type.to_string(),
+        )])),
         children:   vec![NodeData::Text(content)],
       }
     },
     "SUPERSCRIPTOP" => NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
+      attributes: Some(HashMap::from_iter([(
+        "cd".to_string(),
+        "ambiguous".to_string(),
+      )])),
       children:   vec![NodeData::Text("superscript".to_string())],
     },
     "SUBSCRIPTOP" => NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
+      attributes: Some(HashMap::from_iter([(
+        "cd".to_string(),
+        "ambiguous".to_string(),
+      )])),
       children:   vec![NodeData::Text("subscript".to_string())],
     },
     _ => {
@@ -649,7 +665,10 @@ fn cmml_token_by_meaning(meaning: &str, _node: &Node) -> NodeData {
   } else {
     NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from_iter([("cd".to_string(), "latexml".to_string())])),
+      attributes: Some(HashMap::from_iter([(
+        "cd".to_string(),
+        "latexml".to_string(),
+      )])),
       children:   vec![NodeData::Text(meaning.to_string())],
     }
   }
@@ -737,7 +756,10 @@ fn cmml_array(doc: &PostDocument, node: &Node) -> NodeData {
 fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
   let mut results = vec![NodeData::Element {
     tag:        "m:csymbol".to_string(),
-    attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
+    attributes: Some(HashMap::from_iter([(
+      "cd".to_string(),
+      "ambiguous".to_string(),
+    )])),
     children:   vec![NodeData::Text("fragments".to_string())],
   }];
 
@@ -746,7 +768,10 @@ fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
     if tag == "ltx:XMTok" && node.get_attribute("role").as_deref() == Some("UNKNOWN") {
       results.push(NodeData::Element {
         tag:        "m:csymbol".to_string(),
-        attributes: Some(HashMap::from_iter([("cd".to_string(), "unknown".to_string())])),
+        attributes: Some(HashMap::from_iter([(
+          "cd".to_string(),
+          "unknown".to_string(),
+        )])),
         children:   vec![NodeData::Text(node.get_content())],
       });
     } else {
@@ -768,7 +793,10 @@ fn cmml_error(symbol: &str) -> NodeData {
     attributes: None,
     children:   vec![NodeData::Element {
       tag:        "m:csymbol".to_string(),
-      attributes: Some(HashMap::from_iter([("cd".to_string(), "ambiguous".to_string())])),
+      attributes: Some(HashMap::from_iter([(
+        "cd".to_string(),
+        "ambiguous".to_string(),
+      )])),
       children:   vec![NodeData::Text(symbol.to_string())],
     }],
   }

@@ -1,17 +1,14 @@
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
+use std::{
+  fs::File,
+  io::{BufRead, BufReader},
+};
 
+use latexml_core::{common::error::*, fatal, s, util::pathname};
 use once_cell::sync::Lazy;
-use regex::Regex;
-
 use proc_macro::TokenStream;
 use quote::quote;
+use regex::Regex;
 use syn::DeriveInput;
-
-use latexml_core::common::error::*;
-use latexml_core::util::pathname;
-use latexml_core::{fatal, s};
 
 static TAG_MODEL_LINE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^([^\{]+)\{(.*?)\}\((.*?)\)$").unwrap());

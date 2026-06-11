@@ -38,8 +38,12 @@ LoadDefinitions!({
   // Language definitions (no-op; we don't render the back-ref
   // section). These are the language hooks backref normally fills.
   for cs in &[
-    "\\backrefenglish", "\\backrefgerman", "\\backreffrench",
-    "\\backrefspanish", "\\backrefbrazil", "\\backrefafrikaans",
+    "\\backrefenglish",
+    "\\backrefgerman",
+    "\\backreffrench",
+    "\\backrefspanish",
+    "\\backrefbrazil",
+    "\\backrefafrikaans",
     "\\backrefitalian",
   ] {
     def_macro_noop(cs)?;

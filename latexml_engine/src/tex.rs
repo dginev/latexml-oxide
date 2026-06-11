@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use once_cell::sync::Lazy;
+
+use crate::prelude::*;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 static INI_MODE: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_INI_MODE").is_some());
@@ -30,8 +31,7 @@ static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_s
 /// covers the same re-entry-during-package-load case AND the
 /// autoload-from-inside-a-group case.
 fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
-  use latexml_core::common::store::Stored;
-  use latexml_core::definition::ExpansionBody;
+  use latexml_core::{common::store::Stored, definition::ExpansionBody};
   let cs_tok = T_CS!(cs_name);
   // Don't overwrite if already defined
   if IsDefined!(&cs_tok) {
@@ -57,13 +57,12 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // already-loaded package installed.
       let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
       let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
-      if latexml_core::state::lookup_bool(&pkg_loaded_key)
-        || latexml_core::state::lookup_bool(&pkg_raw_key) {
+      if lookup_bool(&pkg_loaded_key) || lookup_bool(&pkg_raw_key) {
         return Ok(Tokens::new(vec![cs_for_closure]));
       }
       // Perl `ClearAutoLoad` — assign_internal('meaning', $trigger => undef,
       // 'global'). Removes the autoload trigger globally.
-      state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
+      assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
       // Snapshot the calling frame's MEANING keys before the package load.
       // Anything new the package installs at the calling frame is then
       // hoisted to GLOBAL so it survives `\end{X}`'s pop_frame.
@@ -80,9 +79,9 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // earlier round-17 fix is subsumed by the delta-hoist (since the
       // trigger CS is itself a meaning-key newly-installed by the package
       // load). (1711.11576: cleanly converts post-fix.)
-      let pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
+      let pre_keys = snapshot_top_frame_meaning_keys();
       require_package(&pkg_name, RequireOptions::default())?;
-      latexml_core::state::hoist_top_frame_meaning_delta(&pre_keys);
+      hoist_top_frame_meaning_delta(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
@@ -106,9 +105,9 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   // returned "undefined" (the stale flag masked the real `\align`), breaking
   // extract.sty's `\begin ` env-existence probe → 90-error cascade on
   // 1611.02736. `.pool` triggers keep the bool form (no `<pkg>.sty_loaded`).
-  state::assign_value(
+  assign_value(
     &s!("{cs_name}:autoload"),
-    Stored::String(latexml_core::common::arena::pin(package)),
+    Stored::String(pin(package)),
     Some(Scope::Global),
   );
   Ok(())
@@ -119,8 +118,7 @@ fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
 /// `DefAutoload($trigger, '<Pool>.pool.ltxml')` form used by TeX.pool
 /// to lazy-load AmSTeX.pool on amstex-style triggers.
 fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
-  use latexml_core::common::store::Stored;
-  use latexml_core::definition::ExpansionBody;
+  use latexml_core::{common::store::Stored, definition::ExpansionBody};
   let cs_tok = T_CS!(cs_name);
   if IsDefined!(&cs_tok) {
     return Ok(());
@@ -131,18 +129,18 @@ fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
     cs_tok,
     None,
     ExpansionBody::Closure(Rc::new(move |_args| {
-      state::assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
-      let pre_keys = latexml_core::state::snapshot_top_frame_meaning_keys();
+      assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
+      let pre_keys = snapshot_top_frame_meaning_keys();
       input_definitions(&pool_name, InputDefinitionOptions {
         extension: Some(Cow::Borrowed("pool")),
         ..InputDefinitionOptions::default()
       })?;
-      latexml_core::state::hoist_top_frame_meaning_delta(&pre_keys);
+      hoist_top_frame_meaning_delta(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),
     None,
   )?;
-  state::assign_value(
+  assign_value(
     &s!("{cs_name}:autoload"),
     Stored::Bool(true),
     Some(Scope::Global),
@@ -154,10 +152,7 @@ fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
 /// Delegates to [`crate::plain_dump::plain_dump_available`], which
 /// consults env overrides, the exe-relative install layout, the
 /// dev-tree path, and the embedded fallback.
-fn plain_dump_available() -> bool {
-  crate::plain_dump::plain_dump_available()
-}
-
+fn plain_dump_available() -> bool { crate::plain_dump::plain_dump_available() }
 
 LoadDefinitions!({
   // port of TeX.pool.ltxml
@@ -281,17 +276,30 @@ LoadDefinitions!({
   // `Error:undefined:\NoBlackBoxes` because the AmSTeX pool hadn't
   // been loaded yet.
   for amstrigger in [
-    "\\BlackBoxes",     "\\NoBlackBoxes",
-    "\\TagsAsMath",     "\\TagsAsText",
-    "\\TagsOnLeft",     "\\TagsOnRight",
-    "\\CenteredTagsOnSplits", "\\TopOrBottomTagsOnSplits",
-    "\\LimitsOnInts",   "\\NoLimitsOnInts",
-    "\\LimitsOnNames",  "\\NoLimitsOnNames",
-    "\\LimitsOnSums",   "\\NoLimitsOnSums",
-    "\\loadbold",       "\\loadeufb", "\\loadeufm",
-    "\\loadeurb",       "\\loadeurm",
-    "\\loadeusb",       "\\loadeusm",
-    "\\loadmathfont",   "\\loadmsam", "\\loadmsbm",
+    "\\BlackBoxes",
+    "\\NoBlackBoxes",
+    "\\TagsAsMath",
+    "\\TagsAsText",
+    "\\TagsOnLeft",
+    "\\TagsOnRight",
+    "\\CenteredTagsOnSplits",
+    "\\TopOrBottomTagsOnSplits",
+    "\\LimitsOnInts",
+    "\\NoLimitsOnInts",
+    "\\LimitsOnNames",
+    "\\NoLimitsOnNames",
+    "\\LimitsOnSums",
+    "\\NoLimitsOnSums",
+    "\\loadbold",
+    "\\loadeufb",
+    "\\loadeufm",
+    "\\loadeurb",
+    "\\loadeurm",
+    "\\loadeusb",
+    "\\loadeusm",
+    "\\loadmathfont",
+    "\\loadmsam",
+    "\\loadmsbm",
   ] {
     def_autoload_pool(amstrigger, "AmSTeX")?;
   }
@@ -363,10 +371,11 @@ LoadDefinitions!({
     // Symmetric with latex.rs: any PA/MPA let-aliases whose target wasn't
     // defined at dump-load time were queued; flush them now that
     // plain_constructs has run.
-    let (applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+    let (applied, skipped) = dump_reader::flush_deferred_aliases();
     if applied + skipped > 0 {
       Info!(
-        "plain_dump", "deferred",
+        "plain_dump",
+        "deferred",
         s!("deferred aliases: {} applied, {} skipped", applied, skipped)
       );
     }

@@ -66,7 +66,7 @@ LoadDefinitions!({
   // and our opener+auto-close already wrapped the body).
   Tag!("ltx:acknowledgements", auto_close => true);
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
-    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?)) });
+    properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
   DefConstructor!("\\endacknowledgments", sub[document, _whatsit, _props] {
     let cur = document.get_node().clone();
     let has_open = document.findnode("ancestor-or-self::ltx:acknowledgements", Some(&cur)).is_some();

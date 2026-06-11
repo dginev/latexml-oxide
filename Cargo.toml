@@ -11,6 +11,21 @@ members = [
 ]
 resolver = "2"
 
+# Workspace-wide lint policy. Each member crate opts in with `[lints]
+# workspace = true`. The default `clippy::all` group (correctness + suspicious +
+# style + complexity + perf) is denied in CI and the pre-push hook via
+# `-D warnings`; the entries below layer a few curated, high-signal lints on top.
+[workspace.lints.clippy]
+dbg_macro = "deny"      # no stray `dbg!()` debug output in shipped code
+todo = "warn"           # flag `todo!()` stubs (allowed in the WIP math parser)
+unimplemented = "warn"  # flag `unimplemented!()` stubs
+
+[workspace.lints.rust]
+# Conservative rustc hardening — redundant path qualifications only. Broader
+# idiom groups (rust_2018_idioms, unreachable_pub) were measured as too noisy
+# for this tree and deliberately left out.
+unused_qualifications = "warn"
+
 # marpa-rs (parser engine) lives at https://github.com/dginev/marpa.
 # Crates track the default `master` branch — master carries the ASF
 # + hybrid-dispatch baseline (PR #3) plus the allocation-trim +

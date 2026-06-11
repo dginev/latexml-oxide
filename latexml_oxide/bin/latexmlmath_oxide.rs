@@ -1,16 +1,15 @@
 #[macro_use]
 extern crate latexml_core;
+use std::{env, process};
+
 use libxml::tree::SaveOptions;
-use std::env;
-use std::process;
 
 /// Use mimalloc to avoid glibc arena contention in multi-process workloads.
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 use latexml::util::preset::{lex_single_tex_formula, new_test_engine};
-use latexml_core::common::error::Result;
-use latexml_core::state;
+use latexml_core::{common::error::Result, state};
 use latexml_math_parser::*;
 
 fn main() -> Result<()> {
@@ -73,56 +72,61 @@ fn real_main() -> Result<()> {
 
   state::set_nomathparse_flag(false);
   let mut parser = MathParser::default();
-  match parser.parse_lexemes(lexemes, &lex_nodes, &mut doc) { Ok(Some(parse_tree)) => {
-    let mut xmath = xmath_opt.unwrap();
-    for mut node in xmath.get_child_nodes() {
-      node.unlink();
-    }
-    let xml_tree = parse_tree.into_xmath(&mut xmath, &mut lex_nodes, &mut doc)?;
-    xmath
-      .get_parent()
-      .unwrap()
-      .set_attribute("text", &text_form(&xml_tree, &doc))
-      .unwrap();
+  match parser.parse_lexemes(lexemes, &lex_nodes, &mut doc) {
+    Ok(Some(parse_tree)) => {
+      let mut xmath = xmath_opt.unwrap();
+      for mut node in xmath.get_child_nodes() {
+        node.unlink();
+      }
+      let xml_tree = parse_tree.into_xmath(&mut xmath, &mut lex_nodes, &mut doc)?;
+      xmath
+        .get_parent()
+        .unwrap()
+        .set_attribute("text", &text_form(&xml_tree, &doc))
+        .unwrap();
 
-    if pmml_flag || cmml_flag {
-      // Post-process with MathML
-      let xml_str = doc.get_document().to_string_with_options(SaveOptions {
-        format: true,
-        ..SaveOptions::default()
-      });
-      use latexml_post::document::{PostDocument, PostDocumentOptions};
-      use latexml_post::processor::Processor;
-      let post_doc = PostDocument::new_from_string(&xml_str, PostDocumentOptions::default())
-        .expect("parse XML for MathML post-processing");
-      let mut post = latexml_post::Post::new();
-      let mut processors: Vec<Box<dyn Processor>> = Vec::new();
-      if pmml_flag {
-        processors.push(Box::new(latexml_post::mathml::MathML::new_presentation()));
-      }
-      if cmml_flag {
-        processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
-      }
-      match post.process_chain(vec![post_doc], &mut processors) {
-        Ok(results) => println!("{}", results[0].to_xml_string()),
-        Err(e) => {
-          eprintln!("MathML post-processing failed: {}", e);
-          process::exit(1);
-        },
-      }
-    } else {
-      // Raw XML output
-      println!(
-        "{}",
-        doc.get_document().to_string_with_options(SaveOptions {
+      if pmml_flag || cmml_flag {
+        // Post-process with MathML
+        let xml_str = doc.get_document().to_string_with_options(SaveOptions {
           format: true,
           ..SaveOptions::default()
-        })
-      );
-    }
-  } _ => {
-    Warn!("math", "parse", "Grammar did not recognize expression.");
-    process::exit(1);
-  }}
+        });
+        use latexml_post::{
+          document::{PostDocument, PostDocumentOptions},
+          processor::Processor,
+        };
+        let post_doc = PostDocument::new_from_string(&xml_str, PostDocumentOptions::default())
+          .expect("parse XML for MathML post-processing");
+        let mut post = latexml_post::Post::new();
+        let mut processors: Vec<Box<dyn Processor>> = Vec::new();
+        if pmml_flag {
+          processors.push(Box::new(latexml_post::mathml::MathML::new_presentation()));
+        }
+        if cmml_flag {
+          processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
+        }
+        match post.process_chain(vec![post_doc], &mut processors) {
+          Ok(results) => println!("{}", results[0].to_xml_string()),
+          Err(e) => {
+            eprintln!("MathML post-processing failed: {}", e);
+            process::exit(1);
+          },
+        }
+      } else {
+        // Raw XML output
+        println!(
+          "{}",
+          doc.get_document().to_string_with_options(SaveOptions {
+            format: true,
+            ..SaveOptions::default()
+          })
+        );
+      }
+    },
+    _ => {
+      Warn!("math", "parse", "Grammar did not recognize expression.");
+      process::exit(1);
+    },
+  }
   Ok(())
 }

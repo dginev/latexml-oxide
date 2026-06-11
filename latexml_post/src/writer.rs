@@ -2,28 +2,30 @@
 //!
 //! Two related concerns live here:
 //!
-//! 1. The [`Writer`] post-processor (last in the chain) that
-//!    serializes a `PostDocument` to its `destination`, handling
-//!    DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup, and HTML vs
-//!    XML serialization.
-//! 2. Free-standing helpers ([`write_output`], [`ensure_parent_dir`])
-//!    used by binary main()s that already have the serialized string
-//!    in hand (post-processing returns a `String`) and need to route
-//!    it to a destination path or stdout. Replaces the duplicated
-//!    `File::create + write! + ensure_parent_dir` boilerplate that
-//!    used to live in `latexml_oxide.rs` (and the now-retired
+//! 1. The [`Writer`] post-processor (last in the chain) that serializes a `PostDocument` to its
+//!    `destination`, handling DOCTYPE removal, TEMPORARY_DOCUMENT_ID cleanup, and HTML vs XML
+//!    serialization.
+//! 2. Free-standing helpers ([`write_output`], [`ensure_parent_dir`]) used by binary main()s that
+//!    already have the serialized string in hand (post-processing returns a `String`) and need to
+//!    route it to a destination path or stdout. Replaces the duplicated `File::create + write! +
+//!    ensure_parent_dir` boilerplate that used to live in `latexml_oxide.rs` (and the now-retired
 //!    `latexmlpost_oxide.rs`).
 //!
 //! Companion module: [`crate::pack`] (the `LaTeXML::Post::Pack` analog)
 //! handles archive bundling when the destination is a zip.
 
-use libxml::tree::{Node, SaveOptions};
-use std::fs;
-use std::io::{self, Write};
-use std::path::Path;
+use std::{
+  fs,
+  io::{self, Write},
+  path::Path,
+};
 
-use crate::document::PostDocument;
-use crate::processor::{PostError, ProcessResult, Processor};
+use libxml::tree::{Node, SaveOptions};
+
+use crate::{
+  document::PostDocument,
+  processor::{PostError, ProcessResult, Processor},
+};
 
 /// Write the serialized output `content` to `dest` if `Some`, else to
 /// stdout. Creates parent directories as needed.
@@ -36,7 +38,13 @@ pub fn write_output(content: &str, dest: Option<&str>) -> io::Result<()> {
     Some(path) => {
       ensure_parent_dir(path)?;
       fs::write(path, content)?;
-      Info!("writer", "wrote", "Wrote '{}' ({} bytes)", path, content.len());
+      Info!(
+        "writer",
+        "wrote",
+        "Wrote '{}' ({} bytes)",
+        path,
+        content.len()
+      );
       Ok(())
     },
     None => io::stdout().write_all(content.as_bytes()),
@@ -132,19 +140,25 @@ impl Processor for Writer {
       // Create destination directory if needed
       if let Some(destdir) = doc.get_destination_directory() {
         fs::create_dir_all(destdir).map_err(|e| {
-          PostError::Io(std::io::Error::new(
+          PostError::Io(io::Error::new(
             e.kind(),
             format!("Couldn't create directory '{}': {}", destdir, e),
           ))
         })?;
       }
       fs::write(destination, &serialized).map_err(|e| {
-        PostError::Io(std::io::Error::new(
+        PostError::Io(io::Error::new(
           e.kind(),
           format!("Couldn't write '{}': {}", destination, e),
         ))
       })?;
-      Info!("writer", "wrote", "Wrote '{}' ({})", destination, serialized.len());
+      Info!(
+        "writer",
+        "wrote",
+        "Wrote '{}' ({})",
+        destination,
+        serialized.len()
+      );
     } else {
       print!("{}", serialized);
     }
@@ -216,7 +230,9 @@ mod tests {
       .expect("parse test fixture");
 
     // omit_doctype=true → DOCTYPE stripped after Writer::process.
-    let mut writer = Writer::new(None, /*omit_doctype=*/ true, /*is_html=*/ false);
+    let mut writer = Writer::new(
+      None, /* omit_doctype= */ true, /* is_html= */ false,
+    );
     let to_process = writer.to_process(&doc);
     let result = writer.process(doc, to_process).expect("process");
     let after = result
@@ -244,7 +260,9 @@ mod tests {
     let doc = PostDocument::new_from_string(xml, PostDocumentOptions::default())
       .expect("parse test fixture");
 
-    let mut writer = Writer::new(None, /*omit_doctype=*/ false, /*is_html=*/ false);
+    let mut writer = Writer::new(
+      None, /* omit_doctype= */ false, /* is_html= */ false,
+    );
     let to_process = writer.to_process(&doc);
     let result = writer.process(doc, to_process).expect("process");
     let after = result

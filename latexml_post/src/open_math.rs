@@ -7,9 +7,11 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::{NodeData, PostDocument, element_children};
-use crate::math_processor::{MathConversion, MathProcessor, math_is_parsed};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::{NodeData, PostDocument, element_children},
+  math_processor::{MathConversion, MathProcessor, math_is_parsed},
+  processor::{ProcessResult, Processor},
+};
 
 const OM_URI: &str = "http://www.openmath.org/OpenMath";
 const OM_MIMETYPE: &str = "application/openmath+xml";

@@ -3,13 +3,18 @@
 //! Core TeX Implementation for LaTeXML.
 //! Also contains shared Rust helper functions (Perl: LaTeXML::Package.pm utilities).
 
-use latexml_core::common::arena::SymHashMap;
-use latexml_core::common::cleaners::clean_label;
-use latexml_core::common::xml::{content_nodes, element_nodes};
-use latexml_core::document::tag::{RawFrontmatter, TagAttrs, TagContent, TagData};
+use std::char::{REPLACEMENT_CHARACTER, decode_utf16};
+
+use latexml_core::{
+  common::{
+    arena::SymHashMap,
+    cleaners::clean_label,
+    xml::{content_nodes, element_nodes},
+  },
+  document::tag::{RawFrontmatter, TagAttrs, TagContent, TagData},
+};
 use libxml::tree::NodeType;
 use rustc_hash::FxHashSet as HashSet;
-use std::char::{REPLACEMENT_CHARACTER, decode_utf16};
 const FRONTMATTER_ELEMENTS: &[&str] = &[
   "ltx:title",
   "ltx:toctitle",
@@ -54,11 +59,11 @@ LoadDefinitions!({
     // (fixes `\@ifundefined{align}` after `\usepackage{amsmath}`). `.pool`
     // triggers keep the legacy Bool form and stay "undefined until used".
     let is_autoload = cs.with_cs_name(|cs_name| {
-      match state::lookup_value(&s!("{cs_name}:autoload")) {
+      match lookup_value(&s!("{cs_name}:autoload")) {
         Some(Stored::String(pkg_sym)) => {
-          let pkg = arena::with(pkg_sym, |s| s.to_string());
-          !state::lookup_bool(&s!("{pkg}.sty_loaded"))
-            && !state::lookup_bool(&s!("{pkg}.sty_raw_loaded"))
+          let pkg = with(pkg_sym, |s| s.to_string());
+          !lookup_bool(&s!("{pkg}.sty_loaded"))
+            && !lookup_bool(&s!("{pkg}.sty_raw_loaded"))
         },
         Some(Stored::Bool(b)) => b,
         _ => false,
@@ -68,7 +73,7 @@ LoadDefinitions!({
       Ok(else_token)
     } else {
       if !is_autoload {
-        state::assign_meaning(&cs, state::lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
+        assign_meaning(&cs, lookup_meaning(&TOKEN_RELAX), None);  // Let w/o AfterAssign
       }
       Ok(if_token)
     }
@@ -84,7 +89,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L44-45
   DefPrimitive!("\\lx@endash", {
     Tbox::new(
-      arena::pin_static("\u{2013}"),
+      pin_static("\u{2013}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@endash")),
@@ -94,7 +99,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L46-47
   DefPrimitive!("\\lx@emdash", {
     Tbox::new(
-      arena::pin_static("\u{2014}"),
+      pin_static("\u{2014}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@emdash")),
@@ -104,7 +109,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L50-52: stand-in for T_ACTIVE('~').
   DefPrimitive!("\\lx@NBSP", {
     Tbox::new(
-      arena::pin_static("\u{00A0}"),
+      pin_static("\u{00A0}"),
       None,
       None,
       Tokens!(T_ACTIVE!('~')),
@@ -114,7 +119,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L53-55
   DefPrimitive!("\\lx@nobreakspace", {
     Tbox::new(
-      arena::pin_static("\u{00A0}"),
+      pin_static("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@nobreakspace")),
@@ -125,8 +130,8 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L57-65
   DefPrimitive!("\\lx@ignorehardspaces", {
     let mut boxes = Vec::new();
-    while let Some(token) = gullet::read_x_token(None, false, None)? {
-      boxes = stomach::invoke_token(&token)?;
+    while let Some(token) = read_x_token(None, false, None)? {
+      boxes = invoke_token(&token)?;
       if boxes.is_empty() {
         break;
       }
@@ -198,7 +203,7 @@ LoadDefinitions!({
   // (ie. frontmatter for each sectional unit)
 
   // Perl: DebuggableFeature('frontmatter'); enable with `--debug frontmatter`.
-  latexml_core::common::error::debuggable_feature("frontmatter");
+  debuggable_feature("frontmatter");
 
   // Perl Base_Utility.pool.ltxml (PR #2767): moved here from latex_constructs
   // (was \@personname); `mode => "text"` + `bounded` carried over from the
@@ -232,8 +237,8 @@ LoadDefinitions!({
           first.set_content(&new_text)?;
         }
       }
-      if let Some(mut last) = node.get_last_child() {
-        if last.get_type() == Some(NodeType::TextNode) {
+      if let Some(mut last) = node.get_last_child()
+        && last.get_type() == Some(NodeType::TextNode) {
           let last_text = last.get_content();
           let mut last_text_iter  = last_text.chars().rev().peekable();
           while let Some(peeked) = last_text_iter.peek() {
@@ -248,7 +253,6 @@ LoadDefinitions!({
             last.set_content(&new_text)?;
           }
         }
-      }
     }
   });
 
@@ -261,9 +265,7 @@ LoadDefinitions!({
   );
 
   // Perl Base_Utility.pool.ltxml L163
-  DefConditional!("\\if@in@preamble", {
-    state::lookup_bool_sym(pin!("inPreamble"))
-  });
+  DefConditional!("\\if@in@preamble", { lookup_bool_sym(pin!("inPreamble")) });
 
   DefKeyVal!("Frontmatter", "role", "Semiverbatim");
   DefKeyVal!("Frontmatter", "class", "Semiverbatim");
@@ -288,7 +290,10 @@ LoadDefinitions!({
   });
 
   // Remove all creators with given role (default author)
-  DefMacro!("\\lx@clear@creators []", "\\lx@clear@frontmatter{ltx:creator}[#1]");
+  DefMacro!(
+    "\\lx@clear@creators []",
+    "\\lx@clear@frontmatter{ltx:creator}[#1]"
+  );
 
   // The various \lx@add@<frontmatter> commands
   //  (1) queue the command (appending @now) in the frontmatter_raw state variable
@@ -427,7 +432,7 @@ LoadDefinitions!({
       content: vec![TagContent::PlaceKeeper], // (in case embedded)
     };
     let index = frontmatter_push(&tag, entry);
-    let body = stomach::digest_next_body(Some(end))?;
+    let body = digest_next_body(Some(end))?;
     let digested = Digested::from(List::new(body));
     DebugFeature!("frontmatter", "FRONT Add (until) {} for: {}", tag, digested);
     frontmatter_set_first_content(&tag, index, TagContent::Box(digested));
@@ -481,15 +486,14 @@ LoadDefinitions!({
     let tag = tag_tks.to_string();
     let preformatted = tag == "preformatted"; // Obsolete API? $content is constructor!
     let mut options = TagAttrs::default();
-    if let Some(kv) = kv {
-      if let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
+    if let Some(kv) = kv
+      && let DigestedData::KeyVals(dkv) = kv.be_digested()?.data() {
         for key in dkv.get_keyvals().keys() {
           if let Some(v) = dkv.get_value_digested(key) {
             options.insert(key.clone(), v.to_string());
           }
         }
       }
-    }
     // Perl: $role = $options{role} = ToString($options{role}) — digested value here
     let role = options.get("role").cloned().unwrap_or_default();
     options.insert("role".to_string(), role.clone());
@@ -498,11 +502,10 @@ LoadDefinitions!({
     if !role.is_empty() {
       let n = lookup_mapping_int(&s!("num_{tag}"), &role) + 1;
       assign_mapping(&s!("num_{tag}"), &role, Some(Stored::Int(n)));
-      if let Some(labelseq) = options.get("labelseq") {
-        if !labelseq.is_empty() {
+      if let Some(labelseq) = options.get("labelseq")
+        && !labelseq.is_empty() {
           labels.push(clean_label(&n.to_string(), Some(labelseq)).into_owned());
         }
-      }
     }
     match get_frontmatter_name(options.get("name"), &tag, &role)? {
       Some(name) => { options.insert("name".to_string(), name); },
@@ -513,7 +516,7 @@ LoadDefinitions!({
     // Snapshot the parent entries (those not role=pending), inherit labels
     // from an enclosing pending entry, and push a tentative stub entry —
     // in case digestion changes labels!
-    let (parent_indices, stub_idx) = state::with_value_mut("frontmatter", |val_opt| {
+    let (parent_indices, stub_idx) = with_value_mut("frontmatter", |val_opt| {
       if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
         let list = frnt.entry(parenttag.clone()).or_insert_with(Vec::new);
         let parent_indices: Vec<usize> = list.iter().enumerate()
@@ -522,14 +525,13 @@ LoadDefinitions!({
           .collect();
         // IF this item encountered WITHIN another frontmatter
         // we inherit that frontmatter's labels (even override!)
-        if let Some(last) = list.last() {
-          if last.attr.get("role").map(String::as_str) == Some("pending")
+        if let Some(last) = list.last()
+          && last.attr.get("role").map(String::as_str) == Some("pending")
             && matches!(last.content.first(), Some(TagContent::PlaceKeeper))
           {
             let inherited = last.attr.get("_annotations").cloned().unwrap_or_default();
             options.insert("_label".to_string(), inherited);
           }
-        }
         let mut stub_attr = TagAttrs::default();
         stub_attr.insert("role".to_string(), "pending".to_string());
         stub_attr.insert("_annotations".to_string(),
@@ -550,7 +552,7 @@ LoadDefinitions!({
     let nparents = parent_indices.len();
     let xcontent = digest_frontmatter_item(&tag, content)?;
     // Reset if changed (eg. by \lx@set@frontmatter@label during digestion)!
-    let stub_label = state::with_value("frontmatter", |v| {
+    let stub_label = with_value("frontmatter", |v| {
       if let Some(Stored::HashTagData(frnt)) = v {
         frnt.get(&parenttag)
           .and_then(|l| l.get(stub_idx))
@@ -590,9 +592,9 @@ LoadDefinitions!({
       };
       DebugFeature!("frontmatter", "...adding to {nprev} previous{}",
         if newonly { " new" } else { "" });
-      state::with_value_mut("frontmatter", |val_opt| {
-        if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
-          if let Some(list) = frnt.get_mut(&parenttag) {
+      with_value_mut("frontmatter", |val_opt| {
+        if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+          && let Some(list) = frnt.get_mut(&parenttag) {
             // Remove unneeded (stub) entry.
             if list.get(stub_idx)
               .map(|e| e.attr.get("role").map(String::as_str) == Some("pending"))
@@ -611,21 +613,18 @@ LoadDefinitions!({
                 parent.content.push(datum.clone());
                 if !role.is_empty() {
                   parent.attr.insert(has_role_key.clone(), "1".to_string());
-                  if newonly {
-                    if let Some(&next_pi) = indices.last() {
-                      if list.get(next_pi)
+                  if newonly
+                    && let Some(&next_pi) = indices.last()
+                      && list.get(next_pi)
                         .map(|p| p.attr.contains_key(&has_role_key))
                         .unwrap_or(false)
                       {
                         break;
                       }
-                    }
-                  }
                 }
               }
             }
           }
-        }
       });
     }
   });
@@ -674,85 +673,140 @@ LoadDefinitions!({
   //======================================================================
   // Some shorthands?
 
-  DefMacro!("\\lx@add@title[]{}",
-    "\\lx@clear@frontmatter{ltx:title}\\lx@add@frontmatter{ltx:title}[#1]{#2}");
-  DefMacro!("\\lx@add@toctitle[]{}",
-    "\\lx@clear@frontmatter{ltx:toctitle}\\lx@add@frontmatter{ltx:toctitle}[#1]{#2}");
-  DefMacro!("\\lx@add@subtitle[]{}",
-    "\\lx@clear@frontmatter{ltx:subtitle}\\lx@add@frontmatter{ltx:subtitle}[#1]{#2}");
+  DefMacro!(
+    "\\lx@add@title[]{}",
+    "\\lx@clear@frontmatter{ltx:title}\\lx@add@frontmatter{ltx:title}[#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@toctitle[]{}",
+    "\\lx@clear@frontmatter{ltx:toctitle}\\lx@add@frontmatter{ltx:toctitle}[#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@subtitle[]{}",
+    "\\lx@clear@frontmatter{ltx:subtitle}\\lx@add@frontmatter{ltx:subtitle}[#1]{#2}"
+  );
 
   // careful: the "name", #2, can contain much more than just the name!
-  DefMacro!("\\lx@add@creator [] {}",
-    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}");
-  DefMacro!("\\lx@add@author[]{}",
-    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}");
-  DefMacro!("\\lx@add@editor[]{}",
-    "\\lx@add@frontmatter{ltx:creator}[role=editor,#1]{\\lx@personname{#2}}");
-  DefMacro!("\\lx@add@translator[]{}",
-    "\\lx@add@frontmatter{ltx:creator}[role=translator,#1]{\\lx@personname{#2}}");
+  DefMacro!(
+    "\\lx@add@creator [] {}",
+    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}"
+  );
+  DefMacro!(
+    "\\lx@add@author[]{}",
+    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{#2}}"
+  );
+  DefMacro!(
+    "\\lx@add@editor[]{}",
+    "\\lx@add@frontmatter{ltx:creator}[role=editor,#1]{\\lx@personname{#2}}"
+  );
+  DefMacro!(
+    "\\lx@add@translator[]{}",
+    "\\lx@add@frontmatter{ltx:creator}[role=translator,#1]{\\lx@personname{#2}}"
+  );
 
-  DefMacro!("\\lx@add@date[]{}",
-    "\\lx@clear@frontmatter{ltx:date}[role=created,#1]\\lx@add@frontmatter{ltx:date}[role=created,#1]{#2}"); // no duplicates w/same role
+  DefMacro!(
+    "\\lx@add@date[]{}",
+    "\\lx@clear@frontmatter{ltx:date}[role=created,#1]\\lx@add@frontmatter{ltx:date}[role=created,#1]{#2}"
+  ); // no duplicates w/same role
   DefMacro!("\\lx@copyright@holder", "");
   DefMacro!("\\lx@copyright@date", "");
-  DefMacro!("\\lx@add@copyright{}",
-    "\\lx@add@date[role=copyright]{#1}");
+  DefMacro!("\\lx@add@copyright{}", "\\lx@add@date[role=copyright]{#1}");
   // Next two are for when copyright holder & year are given by 2 separate macros
-  DefMacro!("\\lx@add@copyrightholder{}",
-    "\\gdef\\lx@copyright@holder{#1}\\lx@add@copyright{\\lx@copyright@holder\\ \\lx@copyright@date}");
-  DefMacro!("\\lx@add@copyrightyear{}",
-    "\\gdef\\lx@copyright@date{#1}\\lx@add@copyright{\\ifx.\\lx@copyright@holder.\\else\\lx@copyright@holder, \\fi\\lx@copyright@date}");
+  DefMacro!(
+    "\\lx@add@copyrightholder{}",
+    "\\gdef\\lx@copyright@holder{#1}\\lx@add@copyright{\\lx@copyright@holder\\ \\lx@copyright@date}"
+  );
+  DefMacro!(
+    "\\lx@add@copyrightyear{}",
+    "\\gdef\\lx@copyright@date{#1}\\lx@add@copyright{\\ifx.\\lx@copyright@holder.\\else\\lx@copyright@holder, \\fi\\lx@copyright@date}"
+  );
 
-  DefMacro!("\\lx@add@abstract[]{}",
-    "\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter{ltx:abstract}[#1]{#2}");
-  DefMacro!("\\lx@add@keywords[]{}",
-    "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter{ltx:keywords}[#1]{#2}");
-  DefMacro!("\\lx@add@classification[]{}",
-    "\\lx@add@frontmatter{ltx:classification}[#1]{#2}");
+  DefMacro!(
+    "\\lx@add@abstract[]{}",
+    "\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter{ltx:abstract}[#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@keywords[]{}",
+    "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter{ltx:keywords}[#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@classification[]{}",
+    "\\lx@add@frontmatter{ltx:classification}[#1]{#2}"
+  );
   // To handle the above as environments
-  DefMacro!("\\lx@begin@abstract[]",
-    "\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter@until{ltx:abstract}[#1]{\\lx@end@abstract}");
+  DefMacro!(
+    "\\lx@begin@abstract[]",
+    "\\lx@clear@frontmatter{ltx:abstract}\\lx@add@frontmatter@until{ltx:abstract}[#1]{\\lx@end@abstract}"
+  );
 
   // Like \let \relax, but \relax not def yet!
   DefPrimitive!("\\lx@end@abstract", None);
 
-  DefMacro!("\\lx@begin@keywords[]",
-    "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter@until{ltx:keywords}[#1]{\\lx@end@keywords}");
+  DefMacro!(
+    "\\lx@begin@keywords[]",
+    "\\lx@clear@frontmatter{ltx:keywords}\\lx@add@frontmatter@until{ltx:keywords}[#1]{\\lx@end@keywords}"
+  );
 
   DefPrimitive!("\\lx@end@keywords", None);
 
   // Add random notes about the document itself
-  DefMacro!("\\lx@add@pubnote[]{}",
-    "\\lx@add@frontmatter{ltx:pubnote}[#1]{#2}");
-  DefMacro!("\\lx@add@pubnote@thanks[]{}",
-    "\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}");
+  DefMacro!(
+    "\\lx@add@pubnote[]{}",
+    "\\lx@add@frontmatter{ltx:pubnote}[#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@pubnote@thanks[]{}",
+    "\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"
+  );
 
   // Other kinds of notes?
 
   // The following add various forms of contact information to a creator
-  DefMacro!("\\lx@add@contact []{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[#1]{#2}");
+  DefMacro!(
+    "\\lx@add@contact []{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[#1]{#2}"
+  );
 
-  DefMacro!("\\lx@add@affiliation[]{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{#2}");
-  DefMacro!("\\lx@add@altaffiliation[]{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaffiliation,#1]{#2}");
-  DefMacro!("\\lx@add@address[]{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=address,#1]{#2}");
-  DefMacro!("\\lx@add@altaddress[]{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaddress,#1]{#2}");
-  DefMacro!("\\lx@add@currentaddress[]{}",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=currentaddress,#1]{#2}");
-  DefMacro!("\\lx@add@email [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}");
-  DefMacro!("\\lx@add@url [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}");
-  DefMacro!("\\lx@add@orcid [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{#2}");
-  DefMacro!("\\lx@add@thanks [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}");
-  DefMacro!("\\lx@add@note [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=note,#1]{#2}");
+  DefMacro!(
+    "\\lx@add@affiliation[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@altaffiliation[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaffiliation,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@address[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=address,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@altaddress[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaddress,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@currentaddress[]{}",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=currentaddress,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@email [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@url [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@orcid [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@thanks [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=thanks,#1]{#2}"
+  );
+  DefMacro!(
+    "\\lx@add@note [] Semiverbatim",
+    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=note,#1]{#2}"
+  );
 
   // This corresponds to standard LaTeX,
   // The command replaces any previous authors/creators;
@@ -838,10 +892,14 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   });
 
-  DefMacro!("\\lx@author@withsup{}",
-    "\\bgroup\\let^\\lx@request@frontmatter@annotation\\let\\textsuperscript\\lx@request@frontmatter@annotation#1\\egroup");
-  DefMacro!("\\lx@affiliation@withsup{}",
-    "\\bgroup\\let^\\lx@set@frontmatter@label\\let\\textsuperscript\\lx@set@frontmatter@label#1\\egroup");
+  DefMacro!(
+    "\\lx@author@withsup{}",
+    "\\bgroup\\let^\\lx@request@frontmatter@annotation\\let\\textsuperscript\\lx@request@frontmatter@annotation#1\\egroup"
+  );
+  DefMacro!(
+    "\\lx@affiliation@withsup{}",
+    "\\bgroup\\let^\\lx@set@frontmatter@label\\let\\textsuperscript\\lx@set@frontmatter@label#1\\egroup"
+  );
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
     let mut calls: Vec<Token> = Vec::new();
@@ -886,7 +944,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@classification@name", "Classification:~");
 
   DefMacro!("\\lx@contact@affiliation@name", "Affiliation:~");
-  DefMacro!("\\lx@contact@altaffiliation@name", "Alternate Affiliation:~");
+  DefMacro!(
+    "\\lx@contact@altaffiliation@name",
+    "Alternate Affiliation:~"
+  );
   DefMacro!("\\lx@contact@address@name", "Address:~");
   DefMacro!("\\lx@contact@email@name", "Email:~");
   DefMacro!("\\lx@contact@url@name", "URL:~");
@@ -922,7 +983,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@frontmatterhere", sub[doc,_args] { insert_frontmatter(doc)? },
   after_digest => {
     digest_front_matter()?;
-    state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+    assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
   // Same, but put it at the beginning of document, but after any ltx:resources
@@ -952,13 +1013,13 @@ LoadDefinitions!({
   },
   after_digest => {
     digest_front_matter()?;
-    state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+    assign_value("frontmatter_deferred", true, Some(Scope::Global));
   });
 
   // Maintain a list of classes that apply to the document root.
   // This might involve global style options, like leqno.
   Tag!("ltx:document", after_open_late => sub[document, root] {
-    let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| arena::join(&keys," "));
+    let classes = with_mapping_keys("DOCUMENT_CLASSES", |keys| join(&keys," "));
     if !classes.is_empty()  {
       document.add_class(root, &classes)?;
     }
@@ -990,12 +1051,12 @@ LoadDefinitions!({
     // Pull the (role -> formatter) pairs out of HashStored via with_value
     // so we don't clone the whole hashmap envelope; the per-role tokens
     // are Copy and the per-role String arm just dereferences a SymStr.
-    let role_formatters: Vec<(String, Option<Token>)> = state::with_value(
+    let role_formatters: Vec<(String, Option<Token>)> = with_value(
       "type_tag_formatter",
       |v| match v {
         Some(Stored::HashStored(formatters)) => {
           let keys_sym: Vec<_> = formatters.keys().copied().collect();
-          let mut sorted_keys: Vec<String> = arena::with_many(&keys_sym, |keys| {
+          let mut sorted_keys: Vec<String> = with_many(&keys_sym, |keys| {
             keys.into_iter().map(str::to_owned).collect()
           });
           sorted_keys.sort();
@@ -1255,11 +1316,7 @@ pub fn join_tokens(conjunction: &Tokens, things: Vec<Tokens>) -> Tokens {
 
 /// Perl: showFrontmatter($entry) — debug formatter for a frontmatter entry.
 fn show_frontmatter(entry: &TagData) -> String {
-  let mut attrs: Vec<String> = entry
-    .attr
-    .iter()
-    .map(|(k, v)| s!("{k}={v}"))
-    .collect();
+  let mut attrs: Vec<String> = entry.attr.iter().map(|(k, v)| s!("{k}={v}")).collect();
   attrs.sort();
   let content: String = entry
     .content
@@ -1275,7 +1332,7 @@ fn show_frontmatter(entry: &TagData) -> String {
 
 /// Perl: LookupMapping returning a number (0 when absent).
 fn lookup_mapping_int(map: &str, key: &str) -> i64 {
-  match state::lookup_mapping(map, key) {
+  match lookup_mapping(map, key) {
     Some(Stored::Int(n)) => n,
     Some(Stored::Number(n)) => n.0,
     _ => 0,
@@ -1301,11 +1358,14 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
     },
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
-      match w.get_property("width").as_deref() { Some(Stored::Dimension(width)) => {
-        out.push_str(&super::tex_glue::dimension_to_spaces(*width));
-      } _ => {
-        out.push_str(&w.get_string()?);
-      }}
+      match w.get_property("width").as_deref() {
+        Some(Stored::Dimension(width)) => {
+          out.push_str(&super::tex_glue::dimension_to_spaces(*width));
+        },
+        _ => {
+          out.push_str(&w.get_string()?);
+        },
+      }
     },
     _ => out.push_str(&d.to_string()),
   }
@@ -1330,18 +1390,22 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       }
     }
   }
-  DebugFeature!("frontmatter", "FRONT Queuing {tag} [{:?}] {command}", attr_hash);
-  let missing = state::with_value("frontmatter_raw", |v| {
+  DebugFeature!(
+    "frontmatter",
+    "FRONT Queuing {tag} [{:?}] {command}",
+    attr_hash
+  );
+  let missing = with_value("frontmatter_raw", |v| {
     !matches!(v, Some(Stored::FrontmatterRaw(_)))
   });
   if missing {
-    state::assign_value(
+    assign_value(
       "frontmatter_raw",
       Stored::FrontmatterRaw(Vec::new()),
       Some(Scope::Global),
     );
   }
-  state::with_value_mut("frontmatter_raw", |val_opt| {
+  with_value_mut("frontmatter_raw", |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.push((tag.to_string(), attr_hash, command));
     }
@@ -1352,7 +1416,7 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
 /// It matches the tag and any stored attributes in `attr`.
 /// Perl: dequeueFrontMatter($tag, %attr).
 pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
-  state::with_value_mut("frontmatter_raw", |val_opt| {
+  with_value_mut("frontmatter_raw", |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.retain(|entry| {
         let keep = entry.0 != tag
@@ -1373,13 +1437,13 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
 /// See clean_trailing_break for cleanup of misused \\.
 /// Perl: digestFrontmatterItem($stomach, $tag, $item).
 fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
-  stomach::bgroup();
-  state::let_i(
+  bgroup();
+  let_i(
     &T_CS!("\\label"),
     &T_CS!("\\lx@set@frontmatter@label"),
     None,
   );
-  state::let_i(
+  let_i(
     &T_CS!("\\footnote"),
     &(if tag == "ltx:creator" {
       T_CS!("\\lx@add@note")
@@ -1388,7 +1452,7 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     }),
     None,
   );
-  state::let_i(
+  let_i(
     &T_CS!("\\thanks"),
     &(if tag == "ltx:creator" {
       T_CS!("\\lx@add@thanks")
@@ -1398,7 +1462,7 @@ fn digest_frontmatter_item(tag: &str, item: Tokens) -> Result<Digested> {
     None,
   );
   let digested = digest_text(item);
-  stomach::egroup()?;
+  egroup()?;
   digested
 }
 
@@ -1408,7 +1472,9 @@ fn clean_trailing_break(document: &mut Document, node: &mut Node) -> Result<()> 
   while let Some(last) = node.get_last_child() {
     let is_ws_text = last.get_type() == Some(NodeType::TextNode)
       && last.get_content().chars().all(char::is_whitespace);
-    let is_break = arena::with(document::get_node_qname(&last), |qname| qname == "ltx:break");
+    let is_break = with(document::get_node_qname(&last), |qname| {
+      qname == "ltx:break"
+    });
     if !(is_ws_text || is_break) {
       break;
     }
@@ -1461,19 +1527,19 @@ fn clean_frontmatter_labels(labels: &str, prefix: &str) -> Vec<String> {
 /// Perl: getFrontmatterName($name, $tag, $role).
 fn get_frontmatter_name(name: Option<&String>, tag: &str, role: &str) -> Result<Option<String>> {
   let stag = tag.strip_prefix("ltx:").unwrap_or(tag);
-  if let Some(name) = name {
-    if !name.is_empty() {
-      return Ok(Some(name.clone()));
-    }
+  if let Some(name) = name
+    && !name.is_empty()
+  {
+    return Ok(Some(name.clone()));
   }
   if !role.is_empty() {
     let cs = T_CS!(s!("\\lx@{stag}@{role}@name"));
-    if state::lookup_definition(&cs)?.is_some() {
+    if lookup_definition(&cs)?.is_some() {
       return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
     }
   }
   let cs = T_CS!(s!("\\lx@{stag}@name"));
-  if state::lookup_definition(&cs)?.is_some() {
+  if lookup_definition(&cs)?.is_some() {
     return Ok(Some(digest_text(Tokens!(cs))?.to_string()));
   }
   Ok(None)
@@ -1482,7 +1548,7 @@ fn get_frontmatter_name(name: Option<&String>, tag: &str, role: &str) -> Result<
 /// Push an entry to frontmatter{tag}, returning its index
 /// (Perl holds a direct entry ref instead).
 fn frontmatter_push(tag: &str, entry: TagData) -> usize {
-  state::with_value_mut("frontmatter", |val_opt| {
+  with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
       let list = frnt.entry(tag.to_string()).or_insert_with(Vec::new);
       list.push(entry);
@@ -1496,14 +1562,14 @@ fn frontmatter_push(tag: &str, entry: TagData) -> usize {
 /// Replace the first content item (the 'place_keeper') of the entry at
 /// (tag, index). Perl: `$$entry[2] = ...` on the held entry ref.
 fn frontmatter_set_first_content(tag: &str, index: usize, content: TagContent) {
-  state::with_value_mut("frontmatter", |val_opt| {
-    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
-      if let Some(entry) = frnt.get_mut(tag).and_then(|l| l.get_mut(index)) {
-        if let Some(first) = entry.content.first_mut() {
-          *first = content;
-        } else {
-          entry.content.push(content);
-        }
+  with_value_mut("frontmatter", |val_opt| {
+    if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+      && let Some(entry) = frnt.get_mut(tag).and_then(|l| l.get_mut(index))
+    {
+      if let Some(first) = entry.content.first_mut() {
+        *first = content;
+      } else {
+        entry.content.push(content);
       }
     }
   });
@@ -1513,16 +1579,16 @@ fn frontmatter_set_first_content(tag: &str, index: usize, content: TagContent) {
 /// HOPEFULLY, there's only one pending entry ?????????
 /// Perl: fetchPendingEntry().
 fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
-  state::with_value_mut("frontmatter", |val_opt| {
+  with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
       let mut tags: Vec<String> = frnt.keys().cloned().collect();
       tags.sort();
       for tag in tags {
-        if let Some(last) = frnt.get_mut(&tag).and_then(|entries| entries.last_mut()) {
-          if matches!(last.content.first(), Some(TagContent::PlaceKeeper)) {
-            f(&mut last.attr);
-            return;
-          }
+        if let Some(last) = frnt.get_mut(&tag).and_then(|entries| entries.last_mut())
+          && matches!(last.content.first(), Some(TagContent::PlaceKeeper))
+        {
+          f(&mut last.attr);
+          return;
         }
       }
     }
@@ -1532,7 +1598,7 @@ fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
-  stomach::bgroup();
+  bgroup();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
   // from the live queue and wipes it after the loop — but when a queued
@@ -1548,23 +1614,27 @@ pub fn digest_front_matter() -> Result<()> {
   // else — deferred timing, digestion order, late re-let/\def fidelity —
   // is exactly the PR's. Newly-queued entries during this digest are
   // processed by the next invocation (or the end-of-document fallback).
-  let commands: Vec<RawFrontmatter> = match state::remove_value("frontmatter_raw") {
+  let commands: Vec<RawFrontmatter> = match remove_value("frontmatter_raw") {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),
   };
   if !commands.is_empty() {
-    state::let_i(
+    let_i(
       &T_CS!("\\lx@add@frontmatter"),
       &T_CS!("\\lx@add@frontmatter@now"),
       None,
     );
-    state::let_i(
+    let_i(
       &T_CS!("\\lx@annotate@frontmatter"),
       &T_CS!("\\lx@annotate@frontmatter@now"),
       None,
     );
     for (tag, attr, command) in commands {
-      DebugFeature!("frontmatter", "FRONT Digesting {tag} [{:?}] {command}", attr);
+      DebugFeature!(
+        "frontmatter",
+        "FRONT Digesting {tag} [{:?}] {command}",
+        attr
+      );
       // Perl parity (review 2026-06-04, replacing the master-era
       // fatal-swallow from witness arXiv:1903.01633): a Fatal raised
       // while digesting deferred frontmatter propagates and aborts
@@ -1574,25 +1644,25 @@ pub fn digest_front_matter() -> Result<()> {
       // `report.fatal=true` with no log line); propagation fixes the
       // silence without diverging from Perl. Non-fatal Error!s inside
       // the digest log-and-continue in both engines as before.
-      stomach::digest(command)?;
+      digest(command)?;
     }
   }
   // Add punctuation to all ltx:creators, now that we know how many of each role.
   let mut updates: Vec<(usize, bool)> = Vec::new(); // (index, use_conjunction)
-  state::with_value("frontmatter", |v| {
-    if let Some(Stored::HashTagData(frnt)) = v {
-      if let Some(list) = frnt.get("ltx:creator") {
-        for (i, item) in list.iter().enumerate() {
-          let role = item.attr.get("role").map(String::as_str).unwrap_or("");
-          let num: i64 = item
-            .attr
-            .get("_num")
-            .and_then(|n| n.parse().ok())
-            .unwrap_or(0);
-          if !role.is_empty() && num > 1 {
-            let n = lookup_mapping_int("num_ltx:creator", role);
-            updates.push((i, num >= n));
-          }
+  with_value("frontmatter", |v| {
+    if let Some(Stored::HashTagData(frnt)) = v
+      && let Some(list) = frnt.get("ltx:creator")
+    {
+      for (i, item) in list.iter().enumerate() {
+        let role = item.attr.get("role").map(String::as_str).unwrap_or("");
+        let num: i64 = item
+          .attr
+          .get("_num")
+          .and_then(|n| n.parse().ok())
+          .unwrap_or(0);
+        if !role.is_empty() && num > 1 {
+          let n = lookup_mapping_int("num_ltx:creator", role);
+          updates.push((i, num >= n));
         }
       }
     }
@@ -1606,15 +1676,15 @@ pub fn digest_front_matter() -> Result<()> {
     // `\lx@author@conj` may digest to \hskip Whatsits (\qquad) — extract
     // text-or-spaces (see \lx@author@prefix note in the previous port).
     let text = digested_to_text(&separator)?;
-    state::with_value_mut("frontmatter", |val_opt| {
-      if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
-        if let Some(entry) = frnt.get_mut("ltx:creator").and_then(|l| l.get_mut(index)) {
-          entry.attr.insert("before".to_string(), text.clone());
-        }
+    with_value_mut("frontmatter", |val_opt| {
+      if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
+        && let Some(entry) = frnt.get_mut("ltx:creator").and_then(|l| l.get_mut(index))
+      {
+        entry.attr.insert("before".to_string(), text.clone());
       }
     });
   }
-  stomach::egroup()?;
+  egroup()?;
   Ok(())
 }
 
@@ -1635,7 +1705,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   // to call .keys().cloned().collect(). The hash itself is consumed a
   // few lines below via remove_value, so no iteration on the borrow
   // survives past this closure.
-  let set_keys: Vec<String> = state::with_value("frontmatter", |v| match v {
+  let set_keys: Vec<String> = with_value("frontmatter", |v| match v {
     Some(Stored::HashTagData(frnt)) => frnt.keys().cloned().collect(),
     _ => Vec::new(),
   });
@@ -1645,19 +1715,19 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 
   // If doc ONLY has abstract as frontmatter, defer until abstract's document location
   if set_keys.len() == 1 && set_keys[0] == "ltx:abstract" && !lookup_bool("frontmatter_deferred") {
-    state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+    assign_value("frontmatter_deferred", true, Some(Scope::Global));
     return Ok(());
   }
 
   // OK, we're placing FrontMatter here, now.
-  state::assign_value("frontmatter_done", true, Some(Scope::Global));
+  assign_value("frontmatter_done", true, Some(Scope::Global));
 
   // Remove frontmatter and replace with empty
-  let mut frontmatter = match state::remove_value("frontmatter") {
+  let mut frontmatter = match remove_value("frontmatter") {
     Some(Stored::HashTagData(frnt)) => frnt,
     _ => return Ok(()),
   };
-  state::assign_value(
+  assign_value(
     "frontmatter",
     Stored::HashTagData(HashMap::default()),
     Some(Scope::Global),
@@ -1709,23 +1779,20 @@ fn insert_frontmatter_entry(document: &mut Document, entry: &TagData) -> Result<
   // stamp them with no/last locator (→ the whole-document fallback in clients).
   // Recover the deferred content's span and stamp the element with it.
   #[cfg(feature = "token-locators")]
-  if let Some(TagContent::Box(stuff)) = content
-    .iter()
-    .find(|c| matches!(c, TagContent::Box(_)))
-  {
+  if let Some(TagContent::Box(stuff)) = content.iter().find(|c| matches!(c, TagContent::Box(_))) {
     document.set_current_box_locator(latexml_core::definition::constructor::child_span(stuff));
   }
   // Perl: font => $stuff[0]->getFont, _force_font => 'true' when the tag
   // can have a font attribute and there is content.
   let mut attributes: HashMap<String, String> = attr.clone();
   let mut font: Option<Font> = None;
-  if !content.is_empty() && document::can_have_attribute(tag, "font") {
-    if let Some(TagContent::Box(first)) = content.first() {
-      if let Ok(Some(f)) = first.get_font() {
-        font = Some(f.into_owned());
-        attributes.insert("_force_font".to_string(), "true".to_string());
-      }
-    }
+  if !content.is_empty()
+    && document::can_have_attribute(tag, "font")
+    && let Some(TagContent::Box(first)) = content.first()
+    && let Ok(Some(f)) = first.get_font()
+  {
+    font = Some(f.into_owned());
+    attributes.insert("_force_font".to_string(), "true".to_string());
   }
   document.open_element(tag, Some(attributes), font.as_ref())?;
   for item in content {
@@ -1857,7 +1924,7 @@ pub fn reenter_text_mode(vertical_mode: bool) {
   for binding in bindings {
     if let Stored::Tokens(tks) = binding {
       let vec = tks.unlist_ref();
-      state::let_i(&vec[0], &vec[1], None);
+      let_i(&vec[0], &vec[1], None);
     }
   }
   if let Some(value) = mode_bindings {
@@ -1903,7 +1970,7 @@ pub fn today() -> Result<String> {
   // die on `Can't call method "valueOf" on undef` — keeps the
   // conversion alive when something has clobbered the value table.
   let read = |key: &str, default: i32| -> i32 {
-    match state::lookup_value(key) {
+    match lookup_value(key) {
       Some(Stored::Int(n)) => n as i32,
       Some(Stored::Number(n)) => n.value_of() as i32,
       _ => default,
@@ -1982,8 +2049,8 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
         let extra = Tokens::new(delim);
         params.push(
           Parameter {
-            name: arena::pin_static("Until"),
-            spec: arena::pin(format!("Until:{extra}")),
+            name: pin_static("Until"),
+            spec: pin(format!("Until:{extra}")),
             extra: vec![extra],
             ..Parameter::default()
           }
@@ -2010,8 +2077,8 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
       let expected = Tokens::new(lit);
       params.push(
         Parameter {
-          name: arena::pin_static("Match"),
-          spec: arena::pin(s!("Match:{expected}")),
+          name: pin_static("Match"),
+          spec: pin(s!("Match:{expected}")),
           extra: vec![expected],
           novalue: true,
           ..Parameter::default()
@@ -2031,7 +2098,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
 pub fn do_def(globally: bool, cs: Token, params: Tokens, body: Tokens) -> Result<()> {
   let paramlist = parse_def_parameters(&cs, params)?;
   let scope = if globally { Some(Scope::Global) } else { None };
-  state::install_definition(
+  install_definition(
     Expandable::new(
       cs,
       paramlist,
@@ -2081,7 +2148,7 @@ pub fn predigest_box_contents(tokens: ArgWrap) -> Result<Option<Digested>> {
   // that aren't \vbox/\vtop/\hbox-flavored). For VBoxContents / HBoxContents,
   // call predigest_box_contents_in_mode("internal_vertical" / "restricted_horizontal")
   // explicitly so we mirror Perl's `readBoxContents(..., $mode)` (TeX_Box.pool.ltxml L133).
-  let mode = state::lookup_string_from_sym(pin!("MODE"));
+  let mode = lookup_string_from_sym(pin!("MODE"));
   predigest_box_contents_in_mode(tokens, &mode)
 }
 
@@ -2098,10 +2165,7 @@ pub fn predigest_box_contents(tokens: ArgWrap) -> Result<Option<Digested>> {
 /// inherited the surrounding horizontal mode and emitted `\vtop`
 /// errors; Perl uses 'internal_vertical' here regardless of where the
 /// `\vtop` was invoked.
-pub fn predigest_box_contents_in_mode(
-  _tokens: ArgWrap,
-  mode: &str,
-) -> Result<Option<Digested>> {
+pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Option<Digested>> {
   // Perl: readBoxContents calls beginMode($mode) / endMode($mode) around the body reading.
   // This creates a scoped frame where enterHorizontal can change MODE inplace.
   // When endMode is called, leaveHorizontal_internal detects MODE='horizontal' with
@@ -2113,13 +2177,13 @@ pub fn predigest_box_contents_in_mode(
   // invoke_token handles it via the standard group-closing mechanism.
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
   if mode.ends_with("vertical") || mode.ends_with("horizontal") {
-    stomach::begin_mode(mode)?;
+    begin_mode(mode)?;
   }
-  let mut contents = stomach::invoke_token(&T_BEGIN!())?;
+  let mut contents = invoke_token(&T_BEGIN!())?;
   if contents.is_empty() {
     // Perl: $stomach->endMode($mode)
     if mode.ends_with("vertical") || mode.ends_with("horizontal") {
-      stomach::end_mode(mode)?;
+      end_mode(mode)?;
     }
     Ok(None)
   } else {
@@ -2127,23 +2191,23 @@ pub fn predigest_box_contents_in_mode(
     // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
     // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
     // Check the condition BEFORE endMode pops the frame.
-    let post_mode = state::lookup_string_from_sym(pin!("MODE"));
-    let bound_mode = state::lookup_string_from_sym(pin!("BOUND_MODE"));
+    let post_mode = lookup_string_from_sym(pin!("MODE"));
+    let bound_mode = lookup_string_from_sym(pin!("BOUND_MODE"));
     if post_mode == "horizontal"
       && bound_mode.ends_with("vertical")
       && has_only_simple_horizontal_content(&item)
     {
       repack_horizontal_in_list(&mut item);
       // Restore MODE like leave_horizontal_internal does
-      state::assign_value_inplace_sym(pin!("MODE"), arena::pin(&bound_mode));
+      assign_value_inplace_sym(pin!("MODE"), pin(&bound_mode));
     }
     // Perl: $stomach->endMode($mode) — pop the frame
     if mode.ends_with("vertical") || mode.ends_with("horizontal") {
-      stomach::end_mode(mode)?;
+      end_mode(mode)?;
     }
     // Set the mode property on the resulting item (matching Perl's List(@boxes, mode => $mode))
     if !mode.is_empty() {
-      item.set_property("mode", Stored::String(arena::pin(mode)));
+      item.set_property("mode", Stored::String(pin(mode)));
     }
     // Apply Perl's List() single-item simplification for vertical modes.
     // In Perl, List(@boxes, mode=>'internal_vertical') returns the single box
@@ -2230,8 +2294,14 @@ fn repack_horizontal_in_list(item: &mut Digested) {
       // Empty-string mode means "implicit hbox" — produced by inline
       // brace-groups `{...}` in horizontal context. Treat as horizontal
       // so the surrounding running text doesn't get fragmented.
-      let effective_mode = if child_mode.is_empty() { "horizontal" } else { child_mode.as_str() };
-      if effective_mode == "horizontal" || effective_mode == "restricted_horizontal" || effective_mode == "math"
+      let effective_mode = if child_mode.is_empty() {
+        "horizontal"
+      } else {
+        child_mode.as_str()
+      };
+      if effective_mode == "horizontal"
+        || effective_mode == "restricted_horizontal"
+        || effective_mode == "math"
       {
         // Perl: $keep = 1 if ($mode ne 'horizontal') || !$item->getProperty('isSpace');
         if effective_mode != "horizontal" || !child.get_property_bool("isSpace") {
@@ -2267,8 +2337,8 @@ fn repack_horizontal_in_list(item: &mut Digested) {
 fn make_horizontal_list(para: Vec<Digested>) -> List {
   let mut list = List::new(para);
   list.mode = Some(TexMode::Text);
-  list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
-  if let Some(hsize) = state::lookup_dimension("\\hsize") {
+  list.set_property("mode", Stored::String(pin_static("horizontal")));
+  if let Some(hsize) = lookup_dimension("\\hsize") {
     list.set_property("width", Stored::Dimension(hsize));
   }
   list
@@ -2349,30 +2419,31 @@ fn simplify_vertical_list(item: Digested) -> Digested {
 /// Perl: revertSpec($whatsit, $keyword)
 /// If whatsit has property $keyword, return Explode($keyword) ++ Revert($value)
 pub fn revert_spec(whatsit: &Whatsit, keyword: &str) -> Vec<Token> {
-  match whatsit.get_property(keyword) { Some(value) => {
-    // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
-    // uses a stack-buffer encode_utf8 and skips the per-char
-    // `c.to_string()` heap alloc the previous version did.
-    let mut tokens: Vec<Token> = keyword
-      .chars()
-      .map(|c| Token {
-        text: arena::pin_char(c),
+  match whatsit.get_property(keyword) {
+    Some(value) => {
+      // Explode the keyword + value strings into T_OTHER tokens. `pin_char`
+      // uses a stack-buffer encode_utf8 and skips the per-char
+      // `c.to_string()` heap alloc the previous version did.
+      let mut tokens: Vec<Token> = keyword
+        .chars()
+        .map(|c| Token {
+          text: pin_char(c),
+          code: Catcode::OTHER,
+          #[cfg(feature = "token-locators")]
+          loc: 0,
+        })
+        .collect();
+      let val_str = value.to_attribute();
+      tokens.extend(val_str.chars().map(|c| Token {
+        text: pin_char(c),
         code: Catcode::OTHER,
         #[cfg(feature = "token-locators")]
         loc: 0,
-      })
-      .collect();
-    let val_str = value.to_attribute();
-    tokens.extend(val_str.chars().map(|c| Token {
-      text: arena::pin_char(c),
-      code: Catcode::OTHER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }));
-    tokens
-  } _ => {
-    Vec::new()
-  }}
+      }));
+      tokens
+    },
+    _ => Vec::new(),
+  }
 }
 
 pub fn p_revert<T>(arg: T) -> Result<Tokens>
@@ -2435,7 +2506,7 @@ pub fn insert_block(
   let mut context = context_opt.unwrap();
   let mut context_tag = document::get_node_qname(&context);
   // svg is slightly tricky
-  let (is_svg, is_xmath, is_xmtext) = arena::with(context_tag, |tag| {
+  let (is_svg, is_xmath, is_xmtext) = with(context_tag, |tag| {
     (
       tag.starts_with("svg:"),
       tag.starts_with("ltx:XM"),
@@ -2444,24 +2515,22 @@ pub fn insert_block(
   });
   // Perl L420-421: in SVG context, convert width from Dimension (pt) to em units
   let mut block_attr = block_attr;
-  if is_svg {
-    if let Some(width_str) = block_attr.get("width").cloned() {
-      if let Some(pt_val) = width_str
-        .strip_suffix("pt")
-        .and_then(|s| s.parse::<f64>().ok())
-      {
-        // Convert pt to em using content's font em width
-        let em_width = contents
-          .get_font()
-          .ok()
-          .flatten()
-          .map(|f| f.get_em_width())
-          .unwrap_or((10.0 * 65536.0) as i64);
-        let em_val = (pt_val * 65536.0) / em_width as f64;
-        let em_rounded = latexml_core::common::numeric_ops::round_to(em_val, None);
-        block_attr.insert("width".to_string(), format!("{}em", em_rounded));
-      }
-    }
+  if is_svg
+    && let Some(width_str) = block_attr.get("width").cloned()
+    && let Some(pt_val) = width_str
+      .strip_suffix("pt")
+      .and_then(|s| s.parse::<f64>().ok())
+  {
+    // Convert pt to em using content's font em width
+    let em_width = contents
+      .get_font()
+      .ok()
+      .flatten()
+      .map(|f| f.get_em_width())
+      .unwrap_or((10.0 * 65536.0) as i64);
+    let em_val = (pt_val * 65536.0) / em_width as f64;
+    let em_rounded = common::numeric_ops::round_to(em_val, None);
+    block_attr.insert("width".to_string(), format!("{}em", em_rounded));
   }
   let ignorable_attr = is_svg || block_attr.is_empty(); // if we do not REQUIRE the attributes
   if is_xmath && !is_xmtext {
@@ -2511,7 +2580,7 @@ pub fn insert_block(
       && (ignorable_attr
         || block_attr
           .keys()
-          .all(|key| document::sym_can_have_attribute(node_tags[0], arena::pin(key))))
+          .all(|key| document::sym_can_have_attribute(node_tags[0], pin(key))))
     {
       // IF: Single node, allowed in context & accepts attributes
       // THEN: Add attributes and unwrap the single node
@@ -2521,20 +2590,17 @@ pub fn insert_block(
       document.unwrap_nodes(container)?;
       return Ok(nodes);
     } else if let Some(newcontainer) = document::sym_can_contain_somehow(context_tag, node_tags[0])
-    {
-      if ignorable_attr
+      && (ignorable_attr
         || block_attr.keys().all(|key| {
           newcontainer
-            .map(|nc| document::sym_can_have_attribute(nc, arena::pin(key)))
+            .map(|nc| document::sym_can_have_attribute(nc, pin(key)))
             .unwrap_or(false)
-        })
-      {
-        if let Some(nc) = newcontainer {
-          // rename the capture to that container
-          document.rename_node_qsym(container, nc, true)?;
-          return Ok(nodes);
-        }
-      }
+        }))
+      && let Some(nc) = newcontainer
+    {
+      // rename the capture to that container
+      document.rename_node_qsym(container, nc, true)?;
+      return Ok(nodes);
     }
   }
   // This jagged conditional is a "code smell", due to the difficulty of refactoring
@@ -2545,7 +2611,7 @@ pub fn insert_block(
   if is_svg
     && node_tags
       .iter()
-      .any(|tag| arena::with(*tag, |tag_str| tag_str.starts_with("ltx:")))
+      .any(|tag| with(*tag, |tag_str| tag_str.starts_with("ltx:")))
   {
     context = document
       .wrap_nodes("svg:foreignObject", vec![container.clone()])?
@@ -2558,7 +2624,7 @@ pub fn insert_block(
       "ltx:inline-logical-block",
       "ltx:inline-sectional-block",
     ]
-    .map(arena::pin_static)
+    .map(pin_static)
     .to_vec()
   } else {
     [
@@ -2567,7 +2633,7 @@ pub fn insert_block(
       "ltx:sectional-block",
       "ltx:figure",
     ]
-    .map(arena::pin_static)
+    .map(pin_static)
     .to_vec()
   };
   let filtered_candidates = candidates
@@ -2592,10 +2658,10 @@ pub fn insert_block(
     // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
     // where Symbol tickets and &str are equally intuitive to use without runtime panics from
     // arena mutability exceptions.
-    document.rename_node(container, &arena::to_string(*final_tag), true)?;
+    document.rename_node(container, &to_string(*final_tag), true)?;
   } else {
     // we didn't know what to do?
-    let message = arena::with(context_tag, |ctxt_str| {
+    let message = with(context_tag, |ctxt_str| {
       s!(
         "Did not find a block-like candidate in {} (with attributes ({})",
         ctxt_str,
@@ -2649,9 +2715,7 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
             if base_dim_str.ends_with("mu") {
               let mu_str = base_dim_str.trim_end_matches("mu").trim();
               mu_str.parse::<f64>().ok().map(|mu_val| {
-                let fs = state::lookup_font()
-                  .and_then(|f| f.get_size())
-                  .unwrap_or(10.0);
+                let fs = lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
                 Dimension::from_str(&format!("{}pt", mu_val * fs / 18.0)).unwrap_or_default()
               })
             } else {
@@ -2660,10 +2724,10 @@ pub fn cleanup_math(document: &mut Document, mathnode: Node) -> Result<()> {
           });
           if let Some(dim) = dim_opt {
             let spaces = super::tex_glue::dimension_to_spaces(dim);
-            if !spaces.is_empty() {
-              if let Ok(text_node) = Node::new_text(&spaces, &document.document) {
-                texts.push(text_node);
-              }
+            if !spaces.is_empty()
+              && let Ok(text_node) = Node::new_text(&spaces, &document.document)
+            {
+              texts.push(text_node);
             }
           }
         }
@@ -2893,8 +2957,8 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
             // meaning, so \AND (let to \and) matches \and as delimiter.
             if *d == t
               || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
-                let meaning_t = state::lookup_definition(&t).ok().flatten();
-                let meaning_d = state::lookup_definition(d).ok().flatten();
+                let meaning_t = lookup_definition(&t).ok().flatten();
+                let meaning_d = lookup_definition(d).ok().flatten();
                 meaning_t.is_some() && meaning_t == meaning_d
               })
             {
@@ -3004,7 +3068,7 @@ pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
 // This is " and " without the spaces stripped.
 fn literal_and() -> SplitDelim {
   let mut tks = vec![T_SPACE!()];
-  tks.extend(latexml_core::mouth::tokenize_internal("and").unlist());
+  tks.extend(mouth::tokenize_internal("and").unlist());
   tks.push(T_SPACE!());
   SplitDelim::Tokens(Tokens::new(tks))
 }
@@ -3053,7 +3117,7 @@ pub fn writable_tokens(tokens: &Tokens) -> String {
         wv.push(*t);
         // Perl: add space after CS unless it's a single non-alpha char CS (like \{, \\, \#)
         // i.e. skip space only for "\X" where X is exactly one non-[a-zA-Z] character
-        let is_single_nonalpha_cs = arena::with(t.text, |s| {
+        let is_single_nonalpha_cs = with(t.text, |s| {
           s.starts_with('\\') && {
             let rest = &s[1..];
             rest.chars().count() == 1 && !rest.chars().next().unwrap_or(' ').is_ascii_alphabetic()
@@ -3252,12 +3316,12 @@ pub fn set_align_or_class(
   class: &str,
 ) -> Result<()> {
   let qname = model::get_node_qname(node);
-  if qname == arena::pin_static("ltx:tag") {
+  if qname == pin_static("ltx:tag") {
   }
   // HACK
-  else if !align.is_empty() && model::can_have_attribute(qname, arena::pin_static("align")) {
+  else if !align.is_empty() && model::can_have_attribute(qname, pin_static("align")) {
     node.set_attribute("align", align)?;
-  } else if !class.is_empty() && model::can_have_attribute(qname, arena::pin_static("class")) {
+  } else if !class.is_empty() && model::can_have_attribute(qname, pin_static("class")) {
     document.add_class(node, class)?;
   }
   Ok(())
@@ -3265,8 +3329,8 @@ pub fn set_align_or_class(
 
 pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<()> {
   bgroup();
-  state::let_i(&T_CS!("\\protect"), &T_CS!("\\string"), None);
-  state::let_i(
+  let_i(&T_CS!("\\protect"), &T_CS!("\\string"), None);
+  let_i(
     &T_CS!("\\MessageBreak"),
     &T_CS!("\\ltx@hard@MessageBreak"),
     None,
@@ -3427,21 +3491,20 @@ pub fn translate_attachment<T: ToString>(pos: T) -> &'static str {
 }
 
 pub fn in_svg(document: &Document) -> bool {
-  match document.get_element() { Some(context) => {
-    document::with_node_qname(&context, |qname| qname.starts_with("svg:"))
-  } _ => {
-    false
-  }}
+  match document.get_element() {
+    Some(context) => document::with_node_qname(&context, |qname| qname.starts_with("svg:")),
+    _ => false,
+  }
 }
 
 pub fn adjust_box_color(tbox: &Digested) -> Result<()> {
   use latexml_core::common::color;
   let color_opt = lookup_font().and_then(|f| f.get_color().cloned());
-  if let Some(color) = color_opt {
-    if color != color::BLACK {
-      let hex = color.to_attribute();
-      adjust_box_color_rec(&hex, HashMap::default(), tbox);
-    }
+  if let Some(color) = color_opt
+    && color != color::BLACK
+  {
+    let hex = color.to_attribute();
+    adjust_box_color_rec(&hex, HashMap::default(), tbox);
   }
   Ok(())
 }
@@ -3453,7 +3516,7 @@ fn adjust_box_color_rec(_color: &str, _props: HashMap<String, String>, _tbox: &D
 
 // Hmm... I wonder, should getString itself be dealing with escapechar?
 pub fn escapechar() -> String {
-  let code: i64 = match state::lookup_register("\\escapechar", Vec::new()).unwrap() {
+  let code: i64 = match lookup_register("\\escapechar", Vec::new()).unwrap() {
     Some(RegisterValue::Number(v)) => v.value_of(),
     _ => -1,
   };

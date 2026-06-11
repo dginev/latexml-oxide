@@ -20,12 +20,13 @@
 //!                               (cortex_worker canvas runs).
 //! ```
 
-use std::fs::File;
-use std::io::{self, BufWriter, Write};
-use std::path::Path;
+use std::{
+  fs::File,
+  io::{self, BufWriter, Write},
+  path::Path,
+};
 
-use zip::write::SimpleFileOptions;
-use zip::{CompressionMethod, ZipWriter};
+use zip::{CompressionMethod, ZipWriter, write::SimpleFileOptions};
 
 /// Write-buffer size for the zip output. 64 KiB matches the typical
 /// compressed-block size from miniz_oxide/flate2 on HTML+image
@@ -38,27 +39,27 @@ const ZIP_WRITE_BUF: usize = 64 * 1024;
 /// Options for [`pack_archive`].
 pub struct PackOptions<'a> {
   /// Destination zip path.
-  pub zip_path:       &'a str,
+  pub zip_path:          &'a str,
   /// Name to use for the HTML entry inside the zip (e.g. `paper.html`).
   /// Conventionally `<stem>.html` where `stem` is the source TeX name.
-  pub html_filename:  &'a str,
+  pub html_filename:     &'a str,
   /// Post-processed HTML content.
-  pub html:           &'a str,
+  pub html:              &'a str,
   /// Name for the log entry; pass `None` to skip writing a log entry.
-  pub log_filename:   Option<&'a str>,
+  pub log_filename:      Option<&'a str>,
   /// Log content. Skipped if empty even when `log_filename` is set.
-  pub log:            &'a str,
+  pub log:               &'a str,
   /// Single-line status string. Always written as `status`.
-  pub status:         &'a str,
+  pub status:            &'a str,
   /// Resource staging directory (typically a `TempDir`). Every
   /// non-`.html` file under it is bundled, preserving subdirectories.
   /// Pass `None` to skip resource bundling.
-  pub resource_dir:   Option<&'a Path>,
+  pub resource_dir:      Option<&'a Path>,
   /// Optional per-job telemetry JSON line. When `Some`, written as
   /// `telemetry.json` inside the zip. Used by `cortex_worker` canvas
   /// runs; `benchmark_canvas.sh` extracts this member and appends to
   /// `<output_dir>/telemetry.jsonl`. See `docs/TELEMETRY.md`.
-  pub telemetry_json: Option<&'a str>,
+  pub telemetry_json:    Option<&'a str>,
   /// `SOURCE_DATE_EPOCH` (Unix seconds, UTC). When `Some`, every zip
   /// member's last-modified time is pinned to it for reproducible
   /// archives — Perl `Pack/Zip.pm` L113-115
@@ -135,13 +136,11 @@ pub fn pack_archive(opts: &PackOptions) -> io::Result<()> {
 /// directory structure relative to `base`.
 ///
 /// Two skip rules apply:
-///  * `.html` files — the post-processed HTML is added separately by
-///    [`pack_archive`] (and the staging dir may hold a stray copy
-///    written there for the Graphics processor's relative paths).
-///  * [`is_excluded_archive_entry`] — Perl `Pack/Zip.pm`'s
-///    `ARCHIVE_EXT_EXCLUDE` (source `.tex`/`.bib`, nested archives,
-///    dotfiles, editor backups). Applied per-basename, matching Perl's
-///    `addTree` filter `sub { !/$ext_exclude/ }`.
+///  * `.html` files — the post-processed HTML is added separately by [`pack_archive`] (and the
+///    staging dir may hold a stray copy written there for the Graphics processor's relative paths).
+///  * [`is_excluded_archive_entry`] — Perl `Pack/Zip.pm`'s `ARCHIVE_EXT_EXCLUDE` (source
+///    `.tex`/`.bib`, nested archives, dotfiles, editor backups). Applied per-basename, matching
+///    Perl's `addTree` filter `sub { !/$ext_exclude/ }`.
 ///
 /// Each source file is wrapped in a 64 KiB `BufReader` to amortise
 /// `read()` syscalls on the input side (the `io::copy` 8 KiB default
@@ -170,7 +169,7 @@ fn add_dir_to_zip<W: Write + io::Seek>(
       zip.start_file(&name, *options).map_err(io_err)?;
       let f = File::open(&path)?;
       let mut buf_reader = io::BufReader::with_capacity(ZIP_WRITE_BUF, f);
-      std::io::copy(&mut buf_reader, zip)?;
+      io::copy(&mut buf_reader, zip)?;
     }
   }
   Ok(())
@@ -182,8 +181,8 @@ fn add_dir_to_zip<W: Write + io::Seek>(
 /// applied to the file's basename:
 ///  * hidden dotfiles (`^\.`),
 ///  * editor backups (`~$`),
-///  * nested archives / source / cache files
-///    (`.zip`, `.gz`, `.epub`, `.tex`, `.bib`, `.mobi`, `.cache`).
+///  * nested archives / source / cache files (`.zip`, `.gz`, `.epub`, `.tex`, `.bib`, `.mobi`,
+///    `.cache`).
 fn is_excluded_archive_entry(basename: &str) -> bool {
   if basename.starts_with('.') || basename.ends_with('~') {
     return true;
@@ -242,8 +241,9 @@ fn io_err(e: zip::result::ZipError) -> io::Error {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use std::io::Read;
+
+  use super::*;
 
   /// Read back the set of entry names from a zip on disk.
   fn zip_entry_names(zip_path: &Path) -> Vec<String> {
@@ -298,14 +298,14 @@ mod tests {
     let zip_path_str = zip_path.to_string_lossy().to_string();
 
     pack_archive(&PackOptions {
-      zip_path:         &zip_path_str,
-      html_filename:    "doc.html",
-      html:             "<html>real document</html>",
-      log_filename:     Some("doc.log"),
-      log:              "log line",
-      status:           "Status:conversion:0",
-      resource_dir:     Some(p),
-      telemetry_json:   None,
+      zip_path:          &zip_path_str,
+      html_filename:     "doc.html",
+      html:              "<html>real document</html>",
+      log_filename:      Some("doc.log"),
+      log:               "log line",
+      status:            "Status:conversion:0",
+      resource_dir:      Some(p),
+      telemetry_json:    None,
       source_date_epoch: None,
     })
     .expect("pack archive");
@@ -323,7 +323,13 @@ mod tests {
     assert!(names.iter().any(|n| n == "doc.log"));
     assert!(names.iter().any(|n| n == "status"));
     // Excluded resources absent.
-    for forbidden in ["paper.tex", "refs.bib", "LaTeXML.cache", ".hidden", "backup~"] {
+    for forbidden in [
+      "paper.tex",
+      "refs.bib",
+      "LaTeXML.cache",
+      ".hidden",
+      "backup~",
+    ] {
       assert!(
         !names.iter().any(|n| n == forbidden),
         "{forbidden} must be excluded; names: {names:?}"

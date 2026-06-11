@@ -13,12 +13,10 @@
 //
 // Invariants pinned here:
 //   * OFF (default): no source-locator attribute in core XML or HTML.
-//   * ON: core XML carries `data:sourcepos` on user-source (`.tex`) elements
-//     only (synthetic-default + foreign `.cls`/`.sty` sources skipped); math
-//     internals (`ltx:XM*`) stay opaque; and it converts through to HTML
-//     `data-sourcepos`.
-use latexml::converter::Converter;
-use latexml::post::PostOptions;
+//   * ON: core XML carries `data:sourcepos` on user-source (`.tex`) elements only
+//     (synthetic-default + foreign `.cls`/`.sty` sources skipped); math internals (`ltx:XM*`) stay
+//     opaque; and it converts through to HTML `data-sourcepos`.
+use latexml::{converter::Converter, post::PostOptions};
 use latexml_core::common::{Config, OutputFormat};
 
 const ARTICLE: &str = "tests/structure/article.tex";
@@ -101,7 +99,10 @@ fn source_map_on_emits_data_sourcepos_in_core_xml() {
   );
   // Value shape: at least one `tag:line:col` triple.
   let shape = regex::Regex::new(r#"data:sourcepos="\d+:\d+:\d+"#).unwrap();
-  assert!(shape.is_match(&on), "value must be tag:line:col(-tag:line:col)");
+  assert!(
+    shape.is_match(&on),
+    "value must be tag:line:col(-tag:line:col)"
+  );
 
   // Eyeball: count, a sample of values, and the tag→file table.
   let val_re = regex::Regex::new(r#"data:sourcepos="([^"]+)""#).unwrap();
@@ -113,16 +114,22 @@ fn source_map_on_emits_data_sourcepos_in_core_xml() {
   for v in vals.iter().take(12) {
     eprintln!("  sample: {v}");
   }
-  for (i, s) in latexml_core::state::source_table_snapshot().iter().enumerate() {
-    eprintln!("  tag {i} = {:?}", latexml_core::common::arena::to_string(*s));
+  for (i, s) in latexml_core::state::source_table_snapshot()
+    .iter()
+    .enumerate()
+  {
+    eprintln!(
+      "  tag {i} = {:?}",
+      latexml_core::common::arena::to_string(*s)
+    );
   }
 
   // Math opacity (§7 A.3 / §3.1.3). Elements serialize under the default `ltx`
   // namespace (no prefix), so match the unprefixed XMath-family names.
   // - feature-OFF: math is fully opaque — no XMath-family element carries a locator.
-  // - token-locators: the leaf `XMTok` (operators/identifiers/numbers) carry
-  //   per-token source provenance and survive the Marpa parse; the structural
-  //   XM* (XMApp/XMArg/XMDual/…) stay opaque.
+  // - token-locators: the leaf `XMTok` (operators/identifiers/numbers) carry per-token source
+  //   provenance and survive the Marpa parse; the structural XM* (XMApp/XMArg/XMDual/…) stay
+  //   opaque.
   #[cfg(not(feature = "token-locators"))]
   {
     let xm = regex::Regex::new(r#"<XM[A-Za-z]*\b[^>]*\bdata:sourcepos="#).unwrap();
@@ -161,18 +168,17 @@ fn source_map_pins_key_structural_locators() {
   // (element tag, exact data:sourcepos) — the FIRST occurrence of each tag,
   // cross-checked against tests/structure/article.tex line numbers.
   let golden: &[(&str, &str)] = &[
-    ("section", "0:12:1-0:12:24"),        // \section{First Section}  (line 12)
-    ("equation", "0:14:1-0:14:17"),       // \begin{equation}         (line 14)
-    ("itemize", "0:40:1-0:40:16"),        // \begin{itemize}          (line 40)
-    ("item", "0:41:9-0:41:9"),            // \item one                (line 41)
-    ("enumerate", "0:49:1-0:49:18"),      // \begin{enumerate}        (line 49)
-    ("description", "0:58:1-0:58:20"),    // \begin{description}      (line 58)
-    ("subsection", "0:65:1-0:65:26"),     // \subsection{A Subsection}(line 65)
-    ("subsubsection", "0:70:1-0:70:32"),  // \subsubsection{...}      (line 70)
+    ("section", "0:12:1-0:12:24"),     // \section{First Section}  (line 12)
+    ("equation", "0:14:1-0:14:17"),    // \begin{equation}         (line 14)
+    ("itemize", "0:40:1-0:40:16"),     // \begin{itemize}          (line 40)
+    ("item", "0:41:9-0:41:9"),         // \item one                (line 41)
+    ("enumerate", "0:49:1-0:49:18"),   // \begin{enumerate}        (line 49)
+    ("description", "0:58:1-0:58:20"), // \begin{description}      (line 58)
+    ("subsection", "0:65:1-0:65:26"),  // \subsection{A Subsection}(line 65)
+    ("subsubsection", "0:70:1-0:70:32"), // \subsubsection{...}      (line 70)
   ];
   for (tag, expected) in golden {
-    let re =
-      regex::Regex::new(&format!(r#"<{}\b[^>]*?\bdata:sourcepos="([^"]+)""#, tag)).unwrap();
+    let re = regex::Regex::new(&format!(r#"<{}\b[^>]*?\bdata:sourcepos="([^"]+)""#, tag)).unwrap();
     let actual = re.captures(&on).and_then(|c| c.get(1)).map(|m| m.as_str());
     assert_eq!(
       actual,
@@ -249,10 +255,19 @@ fn source_map_table_goes_to_log_not_output() {
 /// Convert an arbitrary fixture to core ltx XML with source-map on.
 #[cfg(feature = "token-locators")]
 fn convert_path_xml(path: &str) -> String {
-  let config = Config { format: OutputFormat::XML, source_map: Some(true), ..Config::default() };
+  let config = Config {
+    format: OutputFormat::XML,
+    source_map: Some(true),
+    ..Config::default()
+  };
   let mut converter = Converter::from_config(config);
-  converter.initialize_session().expect("can initialize session");
-  converter.convert(path.to_string()).result.expect("conversion produced XML output")
+  converter
+    .initialize_session()
+    .expect("can initialize session");
+  converter
+    .convert(path.to_string())
+    .result
+    .expect("conversion produced XML output")
 }
 
 /// token-locators precision build: content-exact spans through reprocessing
@@ -271,7 +286,10 @@ fn source_map_token_locators_content_exact() {
   // so the title spans command->content rather than just the "Intro" arg. This
   // is the accepted design — see docs/SOURCE_PROVENANCE.md §3.1.3.)
   let sec = regex::Regex::new(r#"<section\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
-  let sec_val = sec.captures(&xml).and_then(|c| c.get(1)).map(|m| m.as_str());
+  let sec_val = sec
+    .captures(&xml)
+    .and_then(|c| c.get(1))
+    .map(|m| m.as_str());
   assert_eq!(
     sec_val,
     Some("0:3:1-0:3:14"),
@@ -282,7 +300,10 @@ fn source_map_token_locators_content_exact() {
   // float machinery doesn't widen it. Line 6 (the \caption line), NOT line 7
   // (\end{figure}); "Cap" is cols 10-12.
   let cap = regex::Regex::new(r#"<caption\b[^>]*\bdata:sourcepos="([^"]+)""#).unwrap();
-  let cap_val = cap.captures(&xml).and_then(|c| c.get(1)).map(|m| m.as_str());
+  let cap_val = cap
+    .captures(&xml)
+    .and_then(|c| c.get(1))
+    .map(|m| m.as_str());
   assert_eq!(
     cap_val,
     Some("0:6:10-0:6:12"),
@@ -292,7 +313,10 @@ fn source_map_token_locators_content_exact() {
   // carry data:sourcepos on line 9 (the math-cell row).
   for tag in ["tabular", "tr", "td"] {
     let re = regex::Regex::new(&format!(r#"<{tag}\b[^>]*\bdata:sourcepos="0:9:"#)).unwrap();
-    assert!(re.is_match(&xml), "<{tag}> must carry a line-9 data:sourcepos, got:\n{xml}");
+    assert!(
+      re.is_match(&xml),
+      "<{tag}> must carry a line-9 data:sourcepos, got:\n{xml}"
+    );
   }
 }
 
@@ -313,7 +337,10 @@ fn source_map_frontmatter_title_located() {
   );
   // And that span must be on the title element, not some other line-2 artifact.
   let re = regex::Regex::new(r#"<title\b[^>]*\bdata:sourcepos="0:2:8-0:2:21""#).unwrap();
-  assert!(re.is_match(&xml), "the line-2 span must be on <title>, got:\n{xml}");
+  assert!(
+    re.is_match(&xml),
+    "the line-2 span must be on <title>, got:\n{xml}"
+  );
 }
 
 /// token-locators: a macro that *synthesizes* its output — `\today` → the
@@ -353,7 +380,10 @@ fn source_map_dates_div_carries_locator_through_xslt() {
   let xml = convert_path_xml("tests/structure/locators_date.tex");
   let html = html_from(&xml);
   let re = regex::Regex::new(r#"<div class="ltx_dates" data-sourcepos="([^"]+)""#).unwrap();
-  let div_val = re.captures(&html).and_then(|c| c.get(1)).map(|m| m.as_str());
+  let div_val = re
+    .captures(&html)
+    .and_then(|c| c.get(1))
+    .map(|m| m.as_str());
   assert_eq!(
     div_val,
     Some("0:4:7-0:4:7"),

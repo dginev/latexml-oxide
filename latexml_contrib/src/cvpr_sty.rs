@@ -7,7 +7,6 @@
 //! supplementary frontmatter.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // Eager dependency loads — cvpr2025.sty L30-37 lists these as
   // RequirePackage. The raw-load of cvpr*.sty doesn't always execute
@@ -58,16 +57,16 @@ LoadDefinitions!({
   // NOT there (the paper bundles it under `iccv_template/`). So \etal etc
   // stay undefined unless we stub them here. Witness 2305.13460: was 5
   // errors (\etal/\ie/\etc/\wrt/\vs), now 0.
-  DefMacro!("\\onedot",  "\\@onedot");
-  DefMacro!("\\@onedot", ".\\@");  // approximates the spacing trick
-  DefMacro!("\\etal",    "\\emph{et al}\\onedot");
-  DefMacro!("\\ie",      "\\emph{i.e}\\onedot");
-  DefMacro!("\\eg",      "\\emph{e.g}\\onedot");
-  DefMacro!("\\cf",      "\\emph{c.f}\\onedot");
-  DefMacro!("\\etc",     "\\emph{etc}\\onedot");
-  DefMacro!("\\vs",      "\\emph{vs}\\onedot");
-  DefMacro!("\\wrt",     "\\emph{w.r.t}\\onedot");
-  DefMacro!("\\dof",     "d.o.f\\onedot");
+  DefMacro!("\\onedot", "\\@onedot");
+  DefMacro!("\\@onedot", ".\\@"); // approximates the spacing trick
+  DefMacro!("\\etal", "\\emph{et al}\\onedot");
+  DefMacro!("\\ie", "\\emph{i.e}\\onedot");
+  DefMacro!("\\eg", "\\emph{e.g}\\onedot");
+  DefMacro!("\\cf", "\\emph{c.f}\\onedot");
+  DefMacro!("\\etc", "\\emph{etc}\\onedot");
+  DefMacro!("\\vs", "\\emph{vs}\\onedot");
+  DefMacro!("\\wrt", "\\emph{w.r.t}\\onedot");
+  DefMacro!("\\dof", "d.o.f\\onedot");
 
   // Raw-load whichever cvpr*.sty the user actually `\usepackage`d. The
   // binding registry routes cvpr / cvpr2023 / cvpr2024 / cvpr2025 ALL to
@@ -82,8 +81,12 @@ LoadDefinitions!({
   // \@currname expands to the actual package name being processed (e.g.
   // "cvpr2024_conference"). Use it so the raw-load targets the user's
   // own file. Fall back to "cvpr" if \@currname is somehow empty.
-  let currname = gullet::do_expand(T_CS!("\\@currname"))?.to_string();
-  let raw_name = if currname.is_empty() { "cvpr".to_string() } else { currname };
+  let currname = do_expand(T_CS!("\\@currname"))?.to_string();
+  let raw_name = if currname.is_empty() {
+    "cvpr".to_string()
+  } else {
+    currname
+  };
   let _ = input_definitions(&raw_name, InputDefinitionOptions {
     extension: Some(Cow::Borrowed("sty")),
     noltxml: true,

@@ -1,6 +1,6 @@
-use crate::prelude::*;
 use latexml_core::document::Document;
 
+use crate::prelude::*;
 
 LoadDefinitions!({
   // Choose the current float style (plain, plaintop, boxed, ruled)
@@ -42,7 +42,7 @@ LoadDefinitions!({
     }
 
     // Get current float style for format@title
-    let style = stomach::digest(T_CS!("\\float@style"))
+    let style = digest(T_CS!("\\float@style"))
       .map(|d| d.to_string())
       .unwrap_or_else(|_| "plain".to_string());
     let isplain = style.starts_with("plain");
@@ -74,7 +74,7 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
   // `undefined:\float@style` error when newfloat is loaded alone, probe
   // the definition first and fall back to "plain" silently when absent.
   let style = if lookup_definition(&T_CS!("\\float@style"))?.is_some() {
-    stomach::digest(T_CS!("\\float@style"))
+    digest(T_CS!("\\float@style"))
       .map(|d| d.to_string())
       .unwrap_or_else(|_| "plain".to_string())
   } else {
@@ -134,9 +134,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   let style_str = style.to_string();
 
   let replacement: ReplacementClosure = Rc::new(
-    move |document: &mut Document,
-          args: &Vec<Option<Digested>>,
-          props: &arena::SymHashMap<Stored>| {
+    move |document: &mut Document, args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
       let mut av: HashMap<String, String> = HashMap::default();
       if let Some(stored) = props.get("id") {
         av.insert("xml:id".into(), stored.to_string());
@@ -172,7 +170,8 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
       }
       document.close_element("ltx:float")?;
       Ok(())
-    });
+    },
+  );
 
   let env_cs = T_CS!(s!("\\begin{{{name}}}"));
   let paramlist = parse_parameters("[]", &env_cs, true)?;
@@ -214,8 +213,8 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
 
 /// Perl: addFloatFrames (float.sty.ltxml L76-85)
 pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
-  let caption_qname = arena::pin_static("ltx:caption");
-  let toccaption_qname = arena::pin_static("ltx:toccaption");
+  let caption_qname = pin_static("ltx:caption");
+  let toccaption_qname = pin_static("ltx:toccaption");
   let node = document.get_node();
   if let Some(float_node) = node.get_last_child() {
     match style {
@@ -224,7 +223,7 @@ pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
         document.set_attribute(&mut float_mut, "framed", "top")?;
         // inner frame: topbottom on first non-caption child
         for child in float_node.get_child_elements() {
-          let qname = latexml_core::document::get_node_qname(&child);
+          let qname = document::get_node_qname(&child);
           if qname != caption_qname && qname != toccaption_qname {
             let mut child_mut = child;
             document.set_attribute(&mut child_mut, "framed", "topbottom")?;
@@ -235,7 +234,7 @@ pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
       "boxed" => {
         // inner frame: rectangle on first non-caption child
         for child in float_node.get_child_elements() {
-          let qname = latexml_core::document::get_node_qname(&child);
+          let qname = document::get_node_qname(&child);
           if qname != caption_qname && qname != toccaption_qname {
             let mut child_mut = child;
             document.set_attribute(&mut child_mut, "framed", "rectangle")?;

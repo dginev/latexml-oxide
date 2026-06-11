@@ -9,27 +9,27 @@
 
 #![feature(alloc_error_hook)]
 
-use std::alloc::{Layout, set_alloc_error_hook};
-use std::borrow::Cow;
-use std::error::Error;
-use std::ffi::OsString;
-use std::fs::{self, File};
-use std::io::{Read, Write};
-use std::path::{Path, PathBuf};
+use std::{
+  alloc::{Layout, set_alloc_error_hook},
+  borrow::Cow,
+  error::Error,
+  ffi::OsString,
+  fs::{self, File},
+  io::{Read, Write},
+  path::{Path, PathBuf},
+};
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
 /// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-use std::process;
-use std::rc::Rc;
+use std::{process, rc::Rc};
 
 use clap::Parser;
-use pericortex::worker::Worker;
-use tempfile::TempDir;
-
 use latexml::converter::Converter;
 use latexml_core::common::{Config, DataSize, OutputFormat};
+use pericortex::worker::Worker;
+use tempfile::TempDir;
 
 /// CorTeX worker for LaTeXML-Oxide: distributed TeX-to-HTML conversion
 #[derive(Parser, Debug)]
@@ -320,8 +320,10 @@ impl LatexmlWorker {
     // 7. Finalize per-job telemetry. Phase counters were populated by the converter/post guards;
     //    here we fill in identifiers, wall, and resource peaks before serializing.
     let telemetry_json = {
-      use latexml_core::common::error::{LogStatus, get_status};
-      use latexml_core::telemetry;
+      use latexml_core::{
+        common::error::{LogStatus, get_status},
+        telemetry,
+      };
       telemetry::set_paper_id(&arxiv_id);
       telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
       telemetry::set_category(match response.status_code {
@@ -750,10 +752,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
       //
       // File-pick: prefer the dirname-matching file (arxiv convention is
       // `<id>/<id>.tex`); else the first listed file.
-      let dir_name = dir
-        .file_name()
-        .and_then(|s| s.to_str())
-        .unwrap_or_default();
+      let dir_name = dir.file_name().and_then(|s| s.to_str()).unwrap_or_default();
       let auto_ignore_main = tex_files
         .iter()
         .find(|p| {
@@ -923,8 +922,8 @@ fn write_timeout_placeholder_zip(
 ) -> Result<(), Box<dyn Error>> {
   let file = File::create(output_path)?;
   let mut zip = zip::ZipWriter::new(file);
-  let options = zip::write::SimpleFileOptions::default()
-    .compression_method(zip::CompressionMethod::Stored);
+  let options =
+    zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
   zip.start_file("status", options)?;
   zip.write_all(b"Status:conversion:3")?;
   zip.start_file("cortex.log", options)?;
@@ -1054,9 +1053,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   latexml_core::util::logger::init(log_level).ok();
 
   let profile = match cli.profile.as_str() {
-    "ar5iv" => {
-      ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.max_rss_mb, cli.no_pmml, cli.no_mathtex)
-    },
+    "ar5iv" => ConversionProfile::ar5iv(
+      &cli.preload,
+      cli.timeout,
+      cli.max_rss_mb,
+      cli.no_pmml,
+      cli.no_mathtex,
+    ),
     "generic" => ConversionProfile::generic(
       &cli.preload,
       cli.timeout,
@@ -1066,7 +1069,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     ),
     other => {
       eprintln!("Unknown profile '{}', using ar5iv", other);
-      ConversionProfile::ar5iv(&cli.preload, cli.timeout, cli.max_rss_mb, cli.no_pmml, cli.no_mathtex)
+      ConversionProfile::ar5iv(
+        &cli.preload,
+        cli.timeout,
+        cli.max_rss_mb,
+        cli.no_pmml,
+        cli.no_mathtex,
+      )
     },
   };
 

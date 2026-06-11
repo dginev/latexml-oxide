@@ -1,5 +1,7 @@
-use crate::engine::latex_constructs::{after_float, before_float};
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{after_float, before_float},
+  prelude::*,
+};
 
 // wrapfig.sty — wrapping figures/tables around text
 LoadDefinitions!({
@@ -17,7 +19,7 @@ LoadDefinitions!({
         _ => "",
       };
       if !float_val.is_empty() {
-        whatsit.set_property("float", Stored::String(arena::pin(float_val)));
+        whatsit.set_property("float", Stored::String(pin(float_val)));
       }
       // INTENTIONAL DIVERGENCE from Perl wrapfig.sty.ltxml (which captures the
       // mandatory {Dimension} wrap width as arg 4 but then DISCARDS it): emit it
@@ -45,7 +47,7 @@ LoadDefinitions!({
         _ => "",
       };
       if !float_val.is_empty() {
-        whatsit.set_property("float", Stored::String(arena::pin(float_val)));
+        whatsit.set_property("float", Stored::String(pin(float_val)));
       }
       // Same intentional divergence as {wrapfigure}: cap the float to the
       // declared wrap width (Perl discards it). See OXIDIZED_DESIGN.

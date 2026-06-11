@@ -102,7 +102,7 @@ LoadDefinitions!({
   //   properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))); });
   Tag!("ltx:acknowledgements", auto_close => true);
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
-    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\acknowledgmentsname"))?)) });
+    properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
   // Tolerant close — see omnibus_cls.rs commentary on the
   // \begin{acknowledgments} ... \bibliography ... \end{acknowledgments}
   // pattern that auto-closes the env via \bibliography opening
@@ -144,13 +144,13 @@ LoadDefinitions!({
     mode => "internal_vertical",
     before_digest => { neutralize_font(); },
     properties => sub[args] {
-      crate::engine::latex_constructs::make_note_tags("endnote", args[0].as_ref(), None)
+      make_note_tags("endnote", args[0].as_ref(), None)
     });
   DefConstructor!("\\endnotemark[]", "<ltx:note role='endnotemark' mark='#mark' xml:id='#id'>#tags</ltx:note>",
     mode => "restricted_horizontal", enter_horizontal => true,
     before_digest => { neutralize_font(); },
     properties => sub[args] {
-      crate::engine::latex_constructs::make_note_tags("endnote", args[0].as_ref(), None)
+      make_note_tags("endnote", args[0].as_ref(), None)
     });
   DefConstructor!("\\endnotetext[]{}", "<ltx:note role='endnotetext' mark='#mark' xml:id='#id'>#2</ltx:note>",
     mode => "internal_vertical",
@@ -160,7 +160,7 @@ LoadDefinitions!({
       let arg1 = args[0].as_ref();
       let mark = match arg1 {
         Some(m) => m.clone(),
-        None => stomach::digest(T_CS!("\\theendnote"))?,
+        None => digest(T_CS!("\\theendnote"))?,
       };
       Ok(stored_map!("mark" => mark))
     });
@@ -224,10 +224,10 @@ LoadDefinitions!({
        <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>\
        <ltx:biblist>",
     before_digest => {
-      crate::engine::latex_constructs::before_digest_bibliography()
+      engine::latex_constructs::before_digest_bibliography()
     },
     after_digest => sub[whatsit] {
-      crate::engine::latex_constructs::begin_bibliography(whatsit)?;
+      engine::latex_constructs::begin_bibliography(whatsit)?;
     },
     locked => true
   );

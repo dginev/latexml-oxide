@@ -17,10 +17,12 @@ pub mod presentation;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::{NodeData, PostDocument};
-use crate::math_processor::{MathConversion, MathProcessor, math_is_parsed, process_math};
-use crate::processor::{ProcessResult, Processor};
-use crate::unicode;
+use crate::{
+  document::{NodeData, PostDocument},
+  math_processor::{MathConversion, MathProcessor, math_is_parsed, process_math},
+  processor::{ProcessResult, Processor},
+  unicode,
+};
 
 const MML_URI: &str = "http://www.w3.org/1998/Math/MathML";
 const MML_MIMETYPE: &str = "application/mathml-presentation+xml";
@@ -1186,11 +1188,14 @@ pub fn pmml_text_aux(doc: &PostDocument, node: &Node) -> Vec<NodeData> {
       match tag.as_str() {
         "ltx:Math" => {
           // Nested math: convert XMath if present
-          match doc.findnode_at("ltx:XMath", node) { Some(xmath) => {
-            vec![presentation::convert_to_pmml(doc, &xmath)]
-          } _ => {
-            vec![]
-          }}
+          match doc.findnode_at("ltx:XMath", node) {
+            Some(xmath) => {
+              vec![presentation::convert_to_pmml(doc, &xmath)]
+            },
+            _ => {
+              vec![]
+            },
+          }
         },
         "ltx:text" => {
           // Recurse on children

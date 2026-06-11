@@ -61,9 +61,9 @@ LoadDefinitions!({
   // Everything else (captions activation, active-char shorthands, port
   // dispatching) is handled end-to-end by babel's own chain.
   DefPrimitive!("\\lx@babel@activate@mainlang", {
-    let main = gullet::do_expand(T_CS!("\\bbl@main@language"))
+    let main = do_expand(T_CS!("\\bbl@main@language"))
       .map(|t| t.to_string()).unwrap_or_default();
-    let opt_babel = gullet::do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
+    let opt_babel = do_expand(Tokenize!(r"\csname opt@babel.sty\endcsname"))
       .map(|t| t.to_string()).unwrap_or_default();
     // Modern babel accepts `main=<lang>` to pin the document main language
     // (driver: 2109.00402 \usepackage[main=english]{babel}). Two cases:
@@ -127,9 +127,9 @@ LoadDefinitions!({
     // french_ldf binding doesn't update main, but user wants french).
     let same_alias_class = !main.is_empty() && !pkg_last.is_empty()
       && main != pkg_last
-      && crate::package::babel_support_sty::babel_language_to_iso(&main)
-         == crate::package::babel_support_sty::babel_language_to_iso(&pkg_last)
-      && crate::package::babel_support_sty::babel_language_to_iso(&main).is_some();
+      && babel_support_sty::babel_language_to_iso(&main)
+         == babel_support_sty::babel_language_to_iso(&pkg_last)
+      && babel_support_sty::babel_language_to_iso(&main).is_some();
     let lang = if let Some(m) = main_kv {
       m
     } else if same_alias_class {
@@ -142,9 +142,9 @@ LoadDefinitions!({
     } else {
       return Ok(vec![]);
     };
-    let iso = crate::package::babel_support_sty::babel_language_to_iso(&lang);
+    let iso = babel_support_sty::babel_language_to_iso(&lang);
     if let Some(code) = iso {
-      state::assign_value("DOCUMENT_LANGUAGE",
+      assign_value("DOCUMENT_LANGUAGE",
         Stored::from(code.to_string()), Some(Scope::Global));
       merge_font(Font { language: Some(Cow::Owned(code.to_string())), ..Font::default() });
     }
@@ -230,7 +230,7 @@ LoadDefinitions!({
         }
       });
       if let Some(c) = single {
-        state::assign_catcode(c, cc, Some(Scope::Local));
+        assign_catcode(c, cc, Some(Scope::Local));
       }
     }
   }

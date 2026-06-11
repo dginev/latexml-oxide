@@ -3,8 +3,7 @@
 //!
 //! Full semantic port: number parsing, formatting with XMDual semantics,
 //! unit parsing/formatting, options system, table columns.
-use crate::prelude::*;
-use crate::xmath_helpers::*;
+use crate::{prelude::*, xmath_helpers::*};
 
 /// Read the control-sequence argument of a siunitx `\Declare…` primitive,
 /// handling BOTH the bare form `\DeclareSIPrefix \yocto {…}{…}` AND the
@@ -16,7 +15,7 @@ use crate::xmath_helpers::*;
 /// `\SI{185}{\million rays/s}`). `read_arg` strips the optional braces and
 /// yields the single cs token in both cases.
 fn read_si_declare_cs() -> Result<Token> {
-  let toks = gullet::read_arg(ExpansionLevel::Off)?;
+  let toks = read_arg(ExpansionLevel::Off)?;
   Ok(
     toks
       .unlist_ref()
@@ -144,13 +143,13 @@ macro_rules! six_pin {
 
 /// SymStr-keyed six_get: skip the per-call `format!` + `arena::pin`
 /// that the `&str` variant pays.
-fn six_get_sym(key: SymStr) -> Option<Stored> { state::with_value_sym(key, |v| v.cloned()) }
+fn six_get_sym(key: SymStr) -> Option<Stored> { with_value_sym(key, |v| v.cloned()) }
 
 fn six_get_tokens_sym(key: SymStr) -> Tokens {
   match six_get_sym(key) {
     Some(Stored::Tokens(t)) => t,
     Some(Stored::String(s)) => {
-      let txt = arena::with(s, |t| t.to_string());
+      let txt = with(s, |t| t.to_string());
       Tokenize!(&txt)
     },
     _ => Tokens::default(),
@@ -159,7 +158,7 @@ fn six_get_tokens_sym(key: SymStr) -> Tokens {
 
 fn six_get_bool_sym(key: SymStr) -> bool {
   match six_get_sym(key) {
-    Some(Stored::String(s)) => arena::with(s, |txt| txt.trim() == "true"),
+    Some(Stored::String(s)) => with(s, |txt| txt.trim() == "true"),
     Some(Stored::Tokens(t)) => t.to_string().trim() == "true",
     Some(Stored::Bool(b)) => b,
     _ => false,
@@ -168,7 +167,7 @@ fn six_get_bool_sym(key: SymStr) -> bool {
 
 fn six_get_choice_sym(key: SymStr) -> String {
   match six_get_sym(key) {
-    Some(Stored::String(s)) => arena::with(s, |txt| txt.trim().to_string()),
+    Some(Stored::String(s)) => with(s, |txt| txt.trim().to_string()),
     Some(Stored::Tokens(t)) => t.to_string().trim().to_string(),
     Some(v) => v.to_string().trim().to_string(),
     None => String::new(),
@@ -218,13 +217,13 @@ fn six_setup(kv: &KeyVals) {
       ArgWrap::Tokens(t) => {
         if t.is_empty() {
           // Bare flag (e.g., "parse-numbers" without "= true") → set "true"
-          state::assign_value(&format!("SIX_{key_str}"), Stored::from("true"), None);
+          assign_value(&format!("SIX_{key_str}"), Stored::from("true"), None);
         } else {
-          state::assign_value(&format!("SIX_{key_str}"), Stored::Tokens(t.clone()), None);
+          assign_value(&format!("SIX_{key_str}"), Stored::Tokens(t.clone()), None);
         }
       },
       ArgWrap::KV(_) => {
-        state::assign_value(
+        assign_value(
           &format!("SIX_{key_str}"),
           Stored::from(value.to_string()),
           None,
@@ -234,9 +233,9 @@ fn six_setup(kv: &KeyVals) {
         // Empty value (boolean flag) or other
         let s = value.to_string();
         if s.is_empty() {
-          state::assign_value(&format!("SIX_{key_str}"), Stored::from("true"), None);
+          assign_value(&format!("SIX_{key_str}"), Stored::from("true"), None);
         } else {
-          state::assign_value(&format!("SIX_{key_str}"), Stored::from(s), None);
+          assign_value(&format!("SIX_{key_str}"), Stored::from(s), None);
         }
       },
     }
@@ -245,7 +244,7 @@ fn six_setup(kv: &KeyVals) {
 
 /// Perl: six_begin_processing — bgroup + apply keyvals + redefine input-protect-tokens
 fn six_begin_processing(kv: Option<&KeyVals>) {
-  stomach::bgroup();
+  bgroup();
   if let Some(kv) = kv {
     six_setup(kv);
   }
@@ -271,14 +270,14 @@ fn six_begin_processing(kv: Option<&KeyVals>) {
       if token.get_catcode().is_active_or_cs() {
         let name = token.to_string();
         let other_name = name.trim_start_matches('\\');
-        state::assign_meaning(&token, Stored::Token(T_OTHER!(other_name)), None);
+        assign_meaning(&token, Stored::Token(T_OTHER!(other_name)), None);
       }
     }
   }
 }
 
 /// Perl: six_end_processing — egroup
-fn six_end_processing() { let _ = stomach::egroup(); }
+fn six_end_processing() { let _ = egroup(); }
 
 //======================================================================
 // Number parsing — six_match_* functions
@@ -395,10 +394,10 @@ fn six_match_keys(tokens: &mut Vec<Token>, keys: &[SymStr]) -> Option<Tokens> {
 /// or surrounding formatting material — which is peeled into `pre`).
 fn six_token_matches_keys(tok: &Token, keys: &[SymStr]) -> bool {
   for key in keys {
-    if let Some(Stored::Tokens(toks)) = six_get_sym(*key) {
-      if toks.unlist().iter().any(|m| tok == m) {
-        return true;
-      }
+    if let Some(Stored::Tokens(toks)) = six_get_sym(*key)
+      && toks.unlist().iter().any(|m| tok == m)
+    {
+      return true;
     }
   }
   false
@@ -554,17 +553,11 @@ fn six_match_complexnumber(tokens: &mut Vec<Token>) -> Option<SixNumber> {
       // Imaginary part matched but no `input-complex-roots` key — incomplete
       // complex form. Perl siunitx.sty.ltxml:266 — Error('unexpected',
       // 'sign', undef, "expected to find complex number")
-      six_log_error!(
-        "unexpected", "sign",
-        "expected to find complex number"
-      );
+      six_log_error!("unexpected", "sign", "expected to find complex number");
     } else {
       // Perl siunitx.sty.ltxml:266 — same Error site (no imaginary part
       // followed the matched sign).
-      six_log_error!(
-        "unexpected", "sign",
-        "expected to find complex number"
-      );
+      six_log_error!("unexpected", "sign", "expected to find complex number");
     }
   }
 
@@ -733,12 +726,11 @@ fn six_postprocess_aux(mut number: SixNumber) -> SixNumber {
       if six_get_bool_sym(six_pin!("add-integer-zero")) && decimal.is_some() && integer.is_none() {
         *integer = Some(Tokens::new(vec![T_OTHER!("0")]));
       }
-      if sign.is_none() {
-        if let Some(Stored::Tokens(s)) = six_get_sym(six_pin!("explicit-sign")) {
-          if !s.is_empty() {
-            *sign = Some(s);
-          }
-        }
+      if sign.is_none()
+        && let Some(Stored::Tokens(s)) = six_get_sym(six_pin!("explicit-sign"))
+        && !s.is_empty()
+      {
+        *sign = Some(s);
       }
     },
   }
@@ -761,7 +753,7 @@ enum SixParseResult {
 
 fn six_parse_number(expr: &Tokens) -> SixParseResult {
   if six_get_bool_sym(six_pin!("parse-numbers")) {
-    let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
+    let expanded = do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let result = six_postprocess(six_match_number(&mut tokens));
     if !tokens.is_empty() {
@@ -770,8 +762,10 @@ fn six_parse_number(expr: &Tokens) -> SixParseResult {
       let leftover = Tokens::new(tokens.clone()).to_string();
       let first_obj = tokens.first().map(|t| t.to_string()).unwrap_or_default();
       six_log_error!(
-        "unexpected", first_obj,
-        "Not matched in \\num: {}", leftover
+        "unexpected",
+        first_obj,
+        "Not matched in \\num: {}",
+        leftover
       );
       return SixParseResult::Raw(expr.clone());
     }
@@ -786,7 +780,7 @@ fn six_parse_number(expr: &Tokens) -> SixParseResult {
 
 fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
   if six_get_bool_sym(six_pin!("parse-numbers")) {
-    let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
+    let expanded = do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
     let mut tokens = six_apply_mathligatures(expanded.unlist());
     let mut results = Vec::new();
     loop {
@@ -814,8 +808,10 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
       let leftover = Tokens::new(tokens.clone()).to_string();
       let first_obj = tokens.first().map(|t| t.to_string()).unwrap_or_default();
       six_log_error!(
-        "unexpected", first_obj,
-        "Not matched in \\num: {}", leftover
+        "unexpected",
+        first_obj,
+        "Not matched in \\num: {}",
+        leftover
       );
       return vec![SixParseResult::Raw(expr.clone())];
     }
@@ -1030,13 +1026,11 @@ fn six_format_simplenumber(number: &SixNumber) -> Tokens {
     let has_decimal = decimal.is_some();
     let has_fraction = fraction.is_some();
     if six_get_bool_sym(six_pin!("copy-decimal-marker")) {
-      if has_decimal {
-        if let Some(d) = decimal {
-          if !d.is_empty() {
-            tokens.extend_from_slice(d.unlist_ref());
-          } else {
-            tokens.extend(six_get_tokens_sym(six_pin!("output-decimal-marker")).unlist());
-          }
+      if has_decimal && let Some(d) = decimal {
+        if !d.is_empty() {
+          tokens.extend_from_slice(d.unlist_ref());
+        } else {
+          tokens.extend(six_get_tokens_sym(six_pin!("output-decimal-marker")).unlist());
         }
       }
     } else if has_fraction || has_decimal {
@@ -1313,8 +1307,10 @@ fn six_format_number_inner(number: &SixNumber, bracket: i32) -> Tokens {
         // Perl siunitx.sty.ltxml:642 — Error('unexpected', $op, undef,
         //   "Unrecognized operator $op in siunitx number")
         six_log_error!(
-          "unexpected", other,
-          "Unrecognized operator {} in siunitx number", other
+          "unexpected",
+          other,
+          "Unrecognized operator {} in siunitx number",
+          other
         );
         Tokens::default()
       },
@@ -1425,21 +1421,21 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
 /// RUST 6 vs PERL 174).
 fn add_si_column(kv: Option<Tokens>, parse_cs: &str) {
   let mut before: Vec<Token> = vec![T_BEGIN!(), T_CS!("\\lx@si@column@prep")];
-  if let Some(kv) = kv {
-    if !kv.is_empty() {
-      before.push(T_OTHER!("["));
-      before.extend(kv.unlist());
-      before.push(T_OTHER!("]"));
-    }
+  if let Some(kv) = kv
+    && !kv.is_empty()
+  {
+    before.push(T_OTHER!("["));
+    before.extend(kv.unlist());
+    before.push(T_OTHER!("]"));
   }
   before.push(T_CS!(parse_cs));
   let after = Tokens!(T_CS!("\\lx@si@column@end"), T_END!());
   with_current_build_template(|template_opt| {
     if let Some(t) = template_opt {
-      t.add_column(latexml_core::alignment::cell::Cell {
+      t.add_column(Cell {
         before: Some(Tokens::new(before.clone())),
         after: Some(after.clone()),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       });
     }
   });
@@ -1714,7 +1710,11 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
     let is_display = lookup_font()
       .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.as_ref() == "display"))
       .unwrap_or(false);
-    if is_display { "fraction".to_string() } else { "symbol".to_string() }
+    if is_display {
+      "fraction".to_string()
+    } else {
+      "symbol".to_string()
+    }
   } else {
     permode
   };
@@ -1766,12 +1766,18 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
     // `numer / (d1·d2)`. Witness 1812.05943 (elsarticle,
     // `\sisetup{per-mode=repeated-symbol}`).
     let per_sym = six_get_op_sym(
-      &[("role", Tokenize!("MULOP")), ("meaning", Tokenize!("divide"))],
+      &[
+        ("role", Tokenize!("MULOP")),
+        ("meaning", Tokenize!("divide")),
+      ],
       six_pin!("per-symbol"),
     );
     let mut result = six_format_unitproduct(false, &numer_units);
     for d in &denom_units {
-      result = six_format_infix(per_sym.clone(), None, None, vec![result, six_format_1unit(d)]);
+      result = six_format_infix(per_sym.clone(), None, None, vec![
+        result,
+        six_format_1unit(d),
+      ]);
     }
     result
   } else if permode == "symbol" {
@@ -1794,8 +1800,10 @@ fn six_format_units(units: &[SixUnit]) -> Tokens {
     // In Rust we still emit the structured error; defaulting back to
     // a flat unit product mirrors the Perl caller's recovery path.
     six_log_error!(
-      "unexpected", permode,
-      "Unknown siunitx per-mode {}", permode
+      "unexpected",
+      permode,
+      "Unknown siunitx per-mode {}",
+      permode
     );
     six_format_unitproduct(false, units)
   }
@@ -1880,12 +1888,12 @@ fn six_parse_literalunits(expr: &Tokens) -> Tokens {
 /// to their \mathrm{presentation} BEFORE falling to literalunits, while the
 /// siunitx_macros mapping is still active.
 fn six_process_units(expr: &Tokens) -> Tokens {
-  let expanded = gullet::do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
-  if let Some(defns) = six_convert_units_from_tokens(&expanded) {
-    if !defns.is_empty() {
-      let units = six_parse_units(defns);
-      return six_format_units(&units);
-    }
+  let expanded = do_expand_partially(expr.clone()).unwrap_or_else(|_| expr.clone());
+  if let Some(defns) = six_convert_units_from_tokens(&expanded)
+    && !defns.is_empty()
+  {
+    let units = six_parse_units(defns);
+    return six_format_units(&units);
   }
   // Fallback: resolve any \lx@six@unitobject tokens to their presentation
   // while the siunitx_macros mapping is still active, then parse as literal.
@@ -1907,9 +1915,7 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
   while let Some(t) = iter.next() {
     if t.text == unitobject_sym {
       if let Some(name) = read_brace_group_str(&mut iter) {
-        if let Some(Stored::String(encoded)) =
-          state::lookup_mapping_sym(pin!("siunitx_macros"), &name)
-        {
+        if let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), &name) {
           // Decode directly from the arena-borrowed &str — was
           // cloning via `.to_string()` into a temporary String.
           if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
@@ -1936,27 +1942,23 @@ fn six_resolve_unit_objects(tokens: &Tokens) -> Tokens {
         had_substitution = true;
       }
     } else if t.text == unitobject_arg_sym {
-      if let Some(name) = read_brace_group_str(&mut iter) {
-        if let Some(arg) = read_brace_group_str(&mut iter) {
-          if let Some(Stored::String(encoded)) =
-            state::lookup_mapping_sym(pin!("siunitx_macros"), &name)
-          {
-            if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
-              let pres = defn.presentation;
-              if !pres.is_empty() {
-                // Perl L1223: `Tokens($pres, T_BEGIN, $data, T_END)` — the
-                // presentation here takes the data as its argument (e.g.
-                // `\tothe{2}` → `^{2}`). The presentation already supplies
-                // its own grouping so we don't add a `\mathrm{...}` wrapper.
-                result.extend(pres.unlist());
-                result.push(T_BEGIN!());
-                result.extend(ExplodeText!(&arg));
-                result.push(T_END!());
-                had_substitution = true;
-                continue;
-              }
-            }
-          }
+      if let Some(name) = read_brace_group_str(&mut iter)
+        && let Some(arg) = read_brace_group_str(&mut iter)
+        && let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), &name)
+        && let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded)
+      {
+        let pres = defn.presentation;
+        if !pres.is_empty() {
+          // Perl L1223: `Tokens($pres, T_BEGIN, $data, T_END)` — the
+          // presentation here takes the data as its argument (e.g.
+          // `\tothe{2}` → `^{2}`). The presentation already supplies
+          // its own grouping so we don't add a `\mathrm{...}` wrapper.
+          result.extend(pres.unlist());
+          result.push(T_BEGIN!());
+          result.extend(ExplodeText!(&arg));
+          result.push(T_END!());
+          had_substitution = true;
+          continue;
         }
       }
     } else {
@@ -1988,32 +1990,26 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
       // Read {name} group
       if let Some(name) = read_brace_group_str(&mut iter) {
         // Look up in siunitx_macros mapping
-        if let Some(Stored::String(encoded)) =
-          state::lookup_mapping_sym(pin!("siunitx_macros"), &name)
+        if let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), &name)
+          && let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded)
         {
-          if let Some(defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
-            defns.push(defn);
-          }
+          defns.push(defn);
         }
       }
     } else if t.text == unitobject_arg_sym {
       iter.next();
-      if let Some(name) = read_brace_group_str(&mut iter) {
-        if let Some(arg) = read_brace_group_str(&mut iter) {
-          if let Some(Stored::String(encoded)) =
-            state::lookup_mapping_sym(pin!("siunitx_macros"), &name)
-          {
-            if let Some(mut defn) = decode_unit_defn_from_encoded_sym(&name, encoded) {
-              // Apply arg to the appropriate field
-              if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
-                defn.power = Some(Tokenize!(&arg));
-              } else if defn.unit_type == "qualifier" {
-                defn.presentation = Tokenize!(&arg);
-              }
-              defns.push(defn);
-            }
-          }
+      if let Some(name) = read_brace_group_str(&mut iter)
+        && let Some(arg) = read_brace_group_str(&mut iter)
+        && let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), &name)
+        && let Some(mut defn) = decode_unit_defn_from_encoded_sym(&name, encoded)
+      {
+        // Apply arg to the appropriate field
+        if defn.unit_type == "postpower" || defn.unit_type == "prepower" {
+          defn.power = Some(Tokenize!(&arg));
+        } else if defn.unit_type == "qualifier" {
+          defn.presentation = Tokenize!(&arg);
         }
+        defns.push(defn);
       }
     } else if t.get_catcode() == Catcode::SPACE || t.text == dot_sym {
       iter.next(); // skip spaces and dots (unit product separators)
@@ -2034,26 +2030,26 @@ fn six_convert_units_from_tokens(tokens: &Tokens) -> Option<Vec<SixUnitDefn>> {
 fn read_brace_group_str<I: Iterator<Item = Token>>(
   iter: &mut std::iter::Peekable<I>,
 ) -> Option<String> {
-  if let Some(t) = iter.peek() {
-    if t.get_catcode() == Catcode::BEGIN {
-      iter.next();
-      let mut result = String::new();
-      let mut level = 1;
-      for t in iter.by_ref() {
-        if t.get_catcode() == Catcode::END {
-          level -= 1;
-          if level == 0 {
-            break;
-          }
-        } else if t.get_catcode() == Catcode::BEGIN {
-          level += 1;
+  if let Some(t) = iter.peek()
+    && t.get_catcode() == Catcode::BEGIN
+  {
+    iter.next();
+    let mut result = String::new();
+    let mut level = 1;
+    for t in iter.by_ref() {
+      if t.get_catcode() == Catcode::END {
+        level -= 1;
+        if level == 0 {
+          break;
         }
-        // `.with_str` borrows the arena entry directly — no per-token
-        // String alloc (the prior `&t.to_string()` was ~30 ns/token).
-        t.with_str(|s| result.push_str(s));
+      } else if t.get_catcode() == Catcode::BEGIN {
+        level += 1;
       }
-      return Some(result);
+      // `.with_str` borrows the arena entry directly — no per-token
+      // String alloc (the prior `&t.to_string()` was ~30 ns/token).
+      t.with_str(|s| result.push_str(s));
     }
+    return Some(result);
   }
   None
 }
@@ -2117,8 +2113,8 @@ fn decode_unit_defn_from_encoded_sym(
 pub(crate) fn six_enable_unit_macros(overwrite: bool) {
   // with_value avoids the Stored::String envelope clone; we only need
   // the inner SymStr stringified for iteration.
-  let names_str = state::with_value("siunitx_macro_names", |v| match v {
-    Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
+  let names_str = with_value("siunitx_macro_names", |v| match v {
+    Some(Stored::String(s)) => with(*s, |s| s.to_string()),
     _ => String::new(),
   });
   for name in names_str.split(',') {
@@ -2127,15 +2123,15 @@ pub(crate) fn six_enable_unit_macros(overwrite: bool) {
     }
     let cs = T_CS!(&format!("\\{name}"));
     let impl_cs = T_CS!(&format!("\\lx@six@{name}"));
-    if overwrite || !state::has_meaning(&cs) {
-      state::let_i(&cs, &impl_cs, None);
+    if overwrite || !has_meaning(&cs) {
+      let_i(&cs, &impl_cs, None);
     }
   }
 }
 
 /// Register a unit macro name for six_enableUnitMacros
 fn register_unit_macro_name(name: &str) {
-  let existing = state::with_value("siunitx_macro_names", |v| {
+  let existing = with_value("siunitx_macro_names", |v| {
     v.map(|s| s.to_string()).unwrap_or_default()
   });
   let new = if existing.is_empty() {
@@ -2143,13 +2139,13 @@ fn register_unit_macro_name(name: &str) {
   } else {
     format!("{existing},{name}")
   };
-  state::assign_value("siunitx_macro_names", Stored::from(new), None);
+  assign_value("siunitx_macro_names", Stored::from(new), None);
 }
 
 /// Define a macro dynamically (CS, no params, expansion tokens)
 fn define_macro_simple(cs: Token, expansion: Tokens) -> Result<()> {
   let def = Expandable::new(cs, None, Some(ExpansionBody::Tokens(expansion)), None)?;
-  state::install_definition(def, None);
+  install_definition(def, None);
   Ok(())
 }
 
@@ -2163,10 +2159,8 @@ fn resolve_unit_presentation(pres: &Tokens) -> String {
       let cs_name = tok.to_string();
       let unit_name = cs_name.trim_start_matches('\\');
       // Look up in siunitx_macros mapping
-      if let Some(Stored::String(encoded)) =
-        state::lookup_mapping_sym(pin!("siunitx_macros"), unit_name)
-      {
-        let encoded_str = arena::with(encoded, |s| s.to_string());
+      if let Some(Stored::String(encoded)) = lookup_mapping_sym(pin!("siunitx_macros"), unit_name) {
+        let encoded_str = with(encoded, |s| s.to_string());
         let parts: Vec<&str> = encoded_str.splitn(4, '|').collect();
         if parts.len() >= 2 {
           let pres = parts[1];
@@ -2355,12 +2349,12 @@ LoadDefinitions!({
     //   my $pkgoptions = LookupValue('opt@siunitx.sty');
     //   my $setup = $pkgoptions && Tokenize('\sisetup{' . join(',', @$pkgoptions) . '}');
     //   Digest($setup) if $setup;
-    let pkg_opts: Vec<String> = match state::lookup_value("opt@siunitx.sty") {
+    let pkg_opts: Vec<String> = match lookup_value("opt@siunitx.sty") {
       Some(Stored::VecDequeStored(vdq)) => vdq.iter().filter_map(|item| match item {
-        Stored::String(s) => Some(arena::with(*s, |s| s.to_string())),
+        Stored::String(s) => Some(with(*s, |s| s.to_string())),
         _ => None,
       }).collect(),
-      Some(Stored::Strings(rc)) => rc.iter().map(|s| arena::with(*s, |s| s.to_string())).collect(),
+      Some(Stored::Strings(rc)) => rc.iter().map(|s| with(*s, |s| s.to_string())).collect(),
       _ => Vec::new(),
     };
     if !pkg_opts.is_empty() {
@@ -2409,7 +2403,7 @@ LoadDefinitions!({
     let data_toks = args[1].clone().owned_tokens().unwrap_or_default();
     // Fully expand the presentation data (not just partially)
     // This resolves the chain: \meter → \lx@six@meter → collapsible{meter}{m} → unitobject{meter}
-    let expanded = gullet::do_expand(data_toks)?;
+    let expanded = do_expand(data_toks)?;
     let toks = expanded.unlist();
     let mut result: Vec<Token> = Vec::new();
     let mut i = 0;
@@ -2475,7 +2469,7 @@ LoadDefinitions!({
     // Store in mapping as a simple string encoding (raw presentation)
     let pres_str = presentation.to_string();
     let encoded = format!("unit|{}", pres_str);
-    state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     // Define \lx@six@<name> → expands to \lx@six@unitobject@collapsible{name}{presentation}
@@ -2483,108 +2477,108 @@ LoadDefinitions!({
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
 
     // Let \cs = \relax if not yet defined
-    if !state::has_meaning(&cs) {
-      state::let_i(&cs, &T_CS!("\\relax"), None);
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
 
   // \DeclareSIPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareSIPrefix[]", {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let cs = read_si_declare_cs()?;
-    gullet::skip_spaces()?;
-    let presentation = gullet::read_arg(ExpansionLevel::Off)?;
-    let power = gullet::read_arg(ExpansionLevel::Off)?;
+    skip_spaces()?;
+    let presentation = read_arg(ExpansionLevel::Off)?;
+    let power = read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
     let pres_str = presentation.to_string();
     let encoded = format!("prefix|{}|{}|10", pres_str, power);
-    state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     // Perl L1264: Uses collapsible form for prefix declarations
     define_macro_simple(T_CS!(&newcs_name), make_collapsible_expansion(&name, &presentation))?;
-    if !state::has_meaning(&cs) {
-      state::let_i(&cs, &T_CS!("\\relax"), None);
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
 
   // \DeclareSIPrePower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPrePower[]", {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let cs = read_si_declare_cs()?;
-    gullet::skip_spaces()?;
-    let power = gullet::read_arg(ExpansionLevel::Off)?;
+    skip_spaces()?;
+    let power = read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
     let encoded = format!("prepower|^{{{}}}|{}", power, power);
-    state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !state::has_meaning(&cs) {
-      state::let_i(&cs, &T_CS!("\\relax"), None);
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
 
   // \DeclareSIPostPower [kv] \cs {power}
   DefPrimitive!("\\DeclareSIPostPower[]", {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let cs = read_si_declare_cs()?;
-    gullet::skip_spaces()?;
-    let power = gullet::read_arg(ExpansionLevel::Off)?;
+    skip_spaces()?;
+    let power = read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
     let encoded = format!("postpower|^{{{}}}|{}", power, power);
-    state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
     // Let \cs = \relax if not yet defined (prevents "undefined" errors)
-    if !state::has_meaning(&cs) {
-      state::let_i(&cs, &T_CS!("\\relax"), None);
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
 
   // \DeclareSIQualifier [kv] \cs {qualifier}
   DefPrimitive!("\\DeclareSIQualifier[]", {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let cs = read_si_declare_cs()?;
-    gullet::skip_spaces()?;
-    let qualifier = gullet::read_arg(ExpansionLevel::Off)?;
+    skip_spaces()?;
+    let qualifier = read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
     let encoded = format!("qualifier|{}", qualifier);
-    state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !state::has_meaning(&cs) {
-      state::let_i(&cs, &T_CS!("\\relax"), None);
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
 
   // \DeclareBinaryPrefix [kv] \cs {presentation} {power}
   DefPrimitive!("\\DeclareBinaryPrefix[]", {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let cs = read_si_declare_cs()?;
-    gullet::skip_spaces()?;
-    let presentation = gullet::read_arg(ExpansionLevel::Off)?;
-    let power = gullet::read_arg(ExpansionLevel::Off)?;
+    skip_spaces()?;
+    let presentation = read_arg(ExpansionLevel::Off)?;
+    let power = read_arg(ExpansionLevel::Off)?;
     let name = cs.to_string().trim_start_matches('\\').to_string();
     let newcs_name = format!("\\lx@six@{name}");
 
     let encoded = format!("prefix|{}|{}|2", presentation, power);
-    state::assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
+    assign_mapping("siunitx_macros", &name, Some(Stored::from(encoded)));
     register_unit_macro_name(&name);
 
     define_macro_simple(T_CS!(&newcs_name), make_unitobject_expansion(&name))?;
-    if !state::has_meaning(&cs) {
-      state::let_i(&cs, &T_CS!("\\relax"), None);
+    if !has_meaning(&cs) {
+      let_i(&cs, &T_CS!("\\relax"), None);
     }
   });
 
@@ -2610,7 +2604,7 @@ LoadDefinitions!({
       ("of", "qualifier|\\mathrm"),
     ];
     for (name, encoded) in &builtins {
-      state::assign_mapping("siunitx_macros", name, Some(Stored::from(encoded.to_string())));
+      assign_mapping("siunitx_macros", name, Some(Stored::from(encoded.to_string())));
       register_unit_macro_name(name);
     }
   });
@@ -2717,8 +2711,8 @@ LoadDefinitions!({
     // to non-empty (`if ($fdegrees && $fdegrees->unlist)`). An `Empty`
     // component (e.g. the `;;` of `\ang{;;1.0}`) contributes no symbol.
     let push_part = |parts: &mut Vec<Tokens>, item: Option<&SixParseResult>, symbol: &str, mulop: &Tokens| {
-      if let Some(c) = item {
-        if !matches!(c, SixParseResult::Empty) {
+      if let Some(c) = item
+        && !matches!(c, SixParseResult::Empty) {
           let f = six_format_number(c, 0);
           if !f.is_empty() {
             parts.push(six_format_infix(
@@ -2727,7 +2721,6 @@ LoadDefinitions!({
             ));
           }
         }
-      }
     };
     push_part(&mut parts, items.first(), "\\SIUnitSymbolDegree", &mulop);
     push_part(&mut parts, items.get(1), "\\SIUnitSymbolArcminute", &mulop);
@@ -3377,5 +3370,5 @@ LoadDefinitions!({
   // sensitive: babel-before-siunitx was already fine. `~` is not part of the
   // expl3 LETTER set (unlike `_`/`:`), so this restore does not touch the
   // glossary-sensitive codepoint path.
-  state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+  assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
 });

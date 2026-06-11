@@ -1,18 +1,18 @@
 //! Two compile-time tasks:
 //!
-//! 1. Bake the current git SHA into `LATEXML_GIT_SHA` so the telemetry
-//!    module can include it in every per-job record. See
-//!    `docs/TELEMETRY.md` §4 Step 5.
+//! 1. Bake the current git SHA into `LATEXML_GIT_SHA` so the telemetry module can include it in
+//!    every per-job record. See `docs/TELEMETRY.md` §4 Step 5.
 //!
-//! 2. Walk `resources/RelaxNG/` and emit an `embedded_relaxng.rs`
-//!    manifest in `OUT_DIR` that lists every schema file (.rng/.rnc/
-//!    .model + the svg/ subtree) as `(relative_path, include_str!(absolute_path))`
-//!    pairs. The runtime extracts these to a temp dir on first use so
-//!    a single-binary distribution can run `--validate` and load
-//!    compiled `.model` files without a `resources/` tree on disk.
+//! 2. Walk `resources/RelaxNG/` and emit an `embedded_relaxng.rs` manifest in `OUT_DIR` that lists
+//!    every schema file (.rng/.rnc/ .model + the svg/ subtree) as `(relative_path,
+//!    include_str!(absolute_path))` pairs. The runtime extracts these to a temp dir on first use so
+//!    a single-binary distribution can run `--validate` and load compiled `.model` files without a
+//!    `resources/` tree on disk.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+  path::{Path, PathBuf},
+  process::Command,
+};
 
 fn main() {
   // Re-run when the git ref moves (commit, checkout, etc.)
@@ -64,10 +64,7 @@ fn emit_embedded_relaxng() {
   // Tell cargo to re-run this build script when any RelaxNG file
   // changes. Granular per-file is overkill; the directory hint is
   // enough — cargo invalidates whenever any descendant is touched.
-  println!(
-    "cargo:rerun-if-changed={}",
-    resource_root.display()
-  );
+  println!("cargo:rerun-if-changed={}", resource_root.display());
 
   let mut files: Vec<(String, PathBuf)> = Vec::new();
   collect_files(&resource_root, &resource_root, &mut files);
@@ -88,8 +85,7 @@ fn emit_embedded_relaxng() {
   out.push_str("];\n");
 
   let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
-  std::fs::write(out_dir.join("embedded_relaxng.rs"), out)
-    .expect("write embedded_relaxng.rs");
+  std::fs::write(out_dir.join("embedded_relaxng.rs"), out).expect("write embedded_relaxng.rs");
 }
 
 fn collect_files(root: &Path, dir: &Path, out: &mut Vec<(String, PathBuf)>) {

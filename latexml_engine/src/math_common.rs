@@ -18,8 +18,12 @@ use crate::prelude::*;
 fn def_math_atom(cs: &str, present: &str, role: Option<&str>, meaning: Option<&str>) -> Result<()> {
   let cs_tok = T_CS!(cs);
   let mut opts = MathPrimitiveOptions::default();
-  if let Some(r) = role { opts.role = Some(r.to_string()); }
-  if let Some(m) = meaning { opts.meaning = Some(m.to_string()); }
+  if let Some(r) = role {
+    opts.role = Some(r.to_string());
+  }
+  if let Some(m) = meaning {
+    opts.meaning = Some(m.to_string());
+  }
   def_math(cs_tok, None, present.to_string(), opts)?;
   Ok(())
 }
@@ -148,10 +152,10 @@ fn augment_delimiter_properties(document: &mut Document, role: &str) -> Result<(
         let _ = delim.remove_attribute("meaning");
       }
       // Handle char replacement (e.g. < → ⟨)
-      if let Some(replacement) = entry.replace_char {
-        if let Some(mut first_child) = delim.get_first_child() {
-          let _ = first_child.set_content(&replacement.to_string());
-        }
+      if let Some(replacement) = entry.replace_char
+        && let Some(mut first_child) = delim.get_first_child()
+      {
+        let _ = first_child.set_content(&replacement.to_string());
       }
     } else if !role.is_empty() {
       // No map entry — just set role if explicitly requested
@@ -236,13 +240,13 @@ LoadDefinitions!({
     let mut last_token: Option<Token> = None;
     let mut last_defn: Option<Rc<dyn Definition>> = None;
     loop {
-      let token_opt = gullet::read_x_non_space()?;
+      let token_opt = read_x_non_space()?;
       let token = match token_opt {
         Some(t) => t,
         None => { break; }
       };
       let defn = if token.get_catcode().is_active_or_cs() {
-        state::lookup_definition(&token)?.map(|d| d as Rc<dyn Definition>)
+        lookup_definition(&token)?.map(|d| d as Rc<dyn Definition>)
       } else {
         None
       };
@@ -256,7 +260,7 @@ LoadDefinitions!({
           // Check isFontDef: lookupValue("fontinfo_<cs>")
           let cs_str = token.to_string();
           let fontinfo_key = s!("fontinfo_{}", cs_str);
-          if state::with_value(&fontinfo_key, |v| v.is_some()) {
+          if with_value(&fontinfo_key, |v| v.is_some()) {
             true
           } else {
             // Check \def, \edef, \gdef, \xdef
@@ -272,7 +276,7 @@ LoadDefinitions!({
         break;
       }
       // Process the assignment: invoke the token
-      let digested = stomach::invoke_token(&token)?;
+      let digested = invoke_token(&token)?;
       assignments.extend(digested);
     }
 
@@ -284,11 +288,11 @@ LoadDefinitions!({
              matches!(d.register_type(), Some(RegisterType::CharDef))) {
         Tokens!(t)
       } else if t == T_CS!("\\char") {
-        Tokens!(t, ExplodeText!(&gullet::read_number()?.to_string()))
+        Tokens!(t, ExplodeText!(&read_number()?.to_string()))
       } else if t == T_CS!("\\noboundary") {
         Tokens!() // Treat as empty
       } else {
-        gullet::unread_one(t);
+        unread_one(t);
         Tokens!()
       }
     } else {
@@ -318,7 +322,7 @@ LoadDefinitions!({
           letter, T_END!(), T_BEGIN!(),
           ExplodeText!(&glyph_s), T_END!()
         );
-        vec![stomach::digest(overlay_toks)?]
+        vec![digest(overlay_toks)?]
       }
     } else {
       // No glyph found: produce empty or just the letter
@@ -327,7 +331,7 @@ LoadDefinitions!({
       } else {
         letter.untex()
       };
-      let tbox = Tbox::new(arena::pin(text), None, None, Tokens!(), SymHashMap::default());
+      let tbox = Tbox::new(pin(text), None, None, Tokens!(), SymHashMap::default());
       vec![tbox.into()]
     };
 
@@ -396,16 +400,16 @@ LoadDefinitions!({
     // Collect up all ', convering to \prime
     let prime_token = T_OTHER!("\'");
 
-    while gullet::if_next(prime_token)? {
-      gullet::read_token()?;
+    while if_next(prime_token)? {
+      read_token()?;
       sup.push(T_CS!("\\prime"));
     }
     // Combine with any following superscript!
     // However, this is semantically screwed up!
     // We really need to set up separate superscripts, but at same level!
-    if gullet::if_next(T_SUPER!())? {
-      gullet::read_token()?;
-      let arg = gullet::read_arg(ExpansionLevel::Off)?;
+    if if_next(T_SUPER!())? {
+      read_token()?;
+      let arg = read_arg(ExpansionLevel::Off)?;
       let arg_tks = arg.unlist();
       sup.extend(arg_tks);
     }
@@ -672,7 +676,7 @@ LoadDefinitions!({
   // \joinrel is \mathrel{\mkern-3\mu} — but the effect is to join two
   // "relations" into one. Perl math_common L368-386.
   DefPrimitive!("\\joinrel", {
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let Some(left) = pop_box_list() else {
       // Nothing there? no-op
       return Ok(Vec::new());
@@ -681,8 +685,8 @@ LoadDefinitions!({
     // digested list. That list's first item is the "right" operand;
     // anything after becomes trailing content.
     let mut stuff: Vec<Digested> = Vec::new();
-    while let Some(tok) = gullet::read_x_token(None, false, None)? {
-      stuff = stomach::invoke_token(&tok)?;
+    while let Some(tok) = read_x_token(None, false, None)? {
+      stuff = invoke_token(&tok)?;
       if !stuff.is_empty() {
         break;
       }
@@ -699,7 +703,7 @@ LoadDefinitions!({
       definition: lookup_definition(&T_CS!("\\@@joinrel"))?.unwrap(),
       args: vec![Some(left), Some(right)],
       properties,
-      locator: Some(gullet::get_locator()),
+      locator: Some(get_locator()),
       ..Whatsit::default()
     };
     stuff.push(Digested::from(whatsit));
@@ -720,7 +724,7 @@ LoadDefinitions!({
     let parent = document.get_node().clone();
     let kids = parent.get_child_elements();
     if kids.len() >= 2 {
-      let xmtok_sym = arena::pin_static("ltx:XMTok");
+      let xmtok_sym = pin_static("ltx:XMTok");
       let n1 = kids[kids.len() - 2].clone();
       let n2 = kids[kids.len() - 1].clone();
       let qn1 = document::get_node_qname(&n1);
@@ -806,7 +810,7 @@ LoadDefinitions!({
     "\\vdots",
     "?#isMath(<ltx:XMTok name='vdots' font='#font' role='ID'>\u{22EE}</ltx:XMTok>)(\u{22EE})",
     properties => {
-      if state::lookup_bool_sym(pin!("IN_MATH")) {
+      if lookup_bool_sym(pin!("IN_MATH")) {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
             .specialize("\u{22EE}"))))
@@ -828,7 +832,7 @@ LoadDefinitions!({
     "?#isMath(<ltx:XMTok name='dots' font='#font' role='ID'>\u{2026}</ltx:XMTok>)(\u{2026})",
     sizer      => "\u{2026}",
     properties => {
-      if state::lookup_bool_sym(pin!("IN_MATH")) {
+      if lookup_bool_sym(pin!("IN_MATH")) {
         Ok(stored_map!("font" => lookup_font().unwrap().merge(
           fontmap!(family => "serif", series => "medium", shape => "upright")
             .specialize("\u{2026}"))))
@@ -1097,7 +1101,7 @@ LoadDefinitions!({
   );
 
   DefParameterType!(ScriptStyleUntil, sub[_inner,until] {
-    gullet::read_until(&until[0]) },
+    read_until(&until[0]) },
   before_digest => {
     bgroup();
     MergeFont!(mathstyle => "script");

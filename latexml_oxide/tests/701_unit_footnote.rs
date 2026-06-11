@@ -1,5 +1,4 @@
-use latexml::core_interface::DigestionAPI;
-use latexml::util::test::new_test_engine;
+use latexml::{core_interface::DigestionAPI, util::test::new_test_engine};
 
 #[test]
 fn footnotetext_with_matching_nested_mark_does_not_self_relocate() {

@@ -1,11 +1,14 @@
-use crate::common::arena::SymHashMap;
+use std::{
+  cell::RefCell,
+  error::Error as ErrorTrait,
+  fmt, io,
+  num::{ParseFloatError, ParseIntError},
+  result,
+};
+
 use once_cell::sync::Lazy;
-use std::cell::RefCell;
-use std::error::Error as ErrorTrait;
-use std::fmt;
-use std::io;
-use std::num::{ParseFloatError, ParseIntError};
-use std::result;
+
+use crate::common::arena::SymHashMap;
 
 #[derive(Debug, Clone, Default)]
 pub struct LogState {
@@ -493,9 +496,7 @@ macro_rules! Fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
     $crate::common::error::note_status($crate::common::error::LogStatus::Fatal, None);
     {
-      use $crate::common::error::Error as LatexmlError;
-      use $crate::common::error::ErrorCategory::*;
-      use $crate::common::error::ErrorTarget::*;
+      use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
       let __fatal_err = LatexmlError {
         target:   $target,
         category: $category,
@@ -513,9 +514,7 @@ macro_rules! Fatal {
 #[macro_export]
 macro_rules! fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
-    use $crate::common::error::Error as LatexmlError;
-    use $crate::common::error::ErrorCategory::*;
-    use $crate::common::error::ErrorTarget::*;
+    use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
     return Err(LatexmlError {
       target:   $target,
       category: $category,
@@ -906,7 +905,11 @@ mod tests {
     // (marpa semantics) can recover the structured identity (P1-4).
     initialize_report();
     fn raise() -> Result<()> {
-      Fatal!(Timeout, TokenLimit, "Token limit of 5 exceeded, infinite loop?");
+      Fatal!(
+        Timeout,
+        TokenLimit,
+        "Token limit of 5 exceeded, infinite loop?"
+      );
     }
     let err = raise().unwrap_err();
     assert!(matches!(err.target, ErrorTarget::Timeout));

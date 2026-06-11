@@ -24,8 +24,8 @@ pub mod script_bindings;
 pub mod apackage_sty;
 pub mod discard_env;
 pub mod filelistclass_cls;
-pub mod myclass_cls;
 pub mod keysetopt_sty;
+pub mod myclass_cls;
 pub mod mykeyval_sty;
 pub mod mytemplate_sty;
 pub mod myxkeyval_sty;
@@ -38,193 +38,193 @@ pub mod xkvdop6_cls;
 pub mod xkvview_sty;
 
 // ar5iv-bindings ports
+pub mod aamas_cls;
+pub mod achemso_cls;
+pub mod agujournal2019_cls;
 pub mod aistats2026_sty;
 pub mod aliascnt_sty;
+pub mod aomart_cls;
+pub mod apacite_sty;
 pub mod ar5iv_sty;
-pub mod autofe_sty;
 pub mod arxbj_cls;
 pub mod arydshln_sty;
 pub mod ascmac_sty;
+pub mod asme2ej_cls;
 pub mod atableau_sty;
+pub mod autart_cls;
+pub mod autofe_sty;
 pub mod axessibility_sty;
+pub mod backref_sty;
 pub mod biblatex_sty;
+pub mod bmvc2k_cls;
 pub mod breqn_sty;
 pub mod bussproofs_sty;
+pub mod bytedance_seed_cls;
 pub mod capt_of_sty;
+pub mod cas_dc_cls;
 pub mod catchfile_sty;
+pub mod ccaption_sty;
+pub mod ceurart_cls;
 pub mod changepage_sty;
 pub mod changes_sty;
+pub mod chemformula_sty;
+pub mod chemnum_sty;
 pub mod chngpage_sty;
+pub mod cimart_cls;
 pub mod cjk_sty;
 pub mod cjkutf8_sty;
 pub mod cmcal_sty;
+pub mod colm2025_conference_sty;
 pub mod colt2024_cls;
+pub mod combine_cls;
 pub mod commath_sty;
 pub mod crckapb_sty;
 pub mod currfile_sty;
+pub mod curve2e_sty;
+pub mod cvpr_sty;
 pub mod czjphys_cls;
 pub mod daj_cls;
-pub mod dmtcs_episciences_cls;
-pub mod getfiledate_sty;
 pub mod datetime2_sty;
 pub mod datetime_sty;
 pub mod dblfloatfix_sty;
 pub mod deluxe_sty;
 pub mod diagrams_sty;
 pub mod diagrams_tex;
+pub mod dmtcs_episciences_cls;
+pub mod doclicense_sty;
+pub mod ecai_cls;
 pub mod ed_sty;
+pub mod egpubl_cls;
+pub mod ejpecp_cls;
+pub mod elife_cls;
 pub mod emlines_sty;
+pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
+pub mod fcs_cls;
+pub mod figcaps_sty;
 pub mod fontawesome5_sty;
 pub mod fontawesome_sty;
 pub mod forest_sty;
 pub mod fp_sty;
 pub mod fullname_sty;
+pub mod getfiledate_sty;
 pub mod glyphtounicode_tex;
+pub mod gretsi_cls;
 pub mod harvmac_tex;
 pub mod hepnames_sty;
 pub mod hepparticles_sty;
 pub mod hobby_code_tex;
 pub mod hyphenat_sty;
+pub mod iccv_sty;
+pub mod ieeeaccess_cls;
+pub mod ieeeaerospace_cls;
+pub mod ieeecolor_cls;
+pub mod ieeeoj_cls;
+pub mod ieeeojcsys_cls;
+pub mod ieeetaes_cls;
+pub mod ifacconf_cls;
 pub mod ifdraft_sty;
+pub mod imsart_cls;
+pub mod informs_cls;
+pub mod interact_cls;
+pub mod interspeech_cls;
+pub mod jabbrv_sty;
+pub mod jair_sty;
+pub mod jfm_cls;
+pub mod jgcc_cls;
+pub mod jmlr2e_sty;
+pub mod jmlr_cls;
 pub mod jpc_sty;
 pub mod kotexutf_sty;
 pub mod l3draw_sty;
 pub mod lanlmac_tex;
 pub mod latexmlman_sty;
+pub mod latexrelease_sty;
 pub mod letltxmacro_sty;
 pub mod lettrine_sty;
 pub mod libertine_sty;
+pub mod lipics_cls;
+pub mod lmcs_cls;
 pub mod ltablex_sty;
-pub mod backref_sty;
-pub mod ccaption_sty;
-pub mod curve2e_sty;
 pub mod ltluatex_tex;
 pub mod luatexbase_sty;
 pub mod mathpartir_sty;
 pub mod mciteplus_sty;
-pub mod nag_sty;
-pub mod oldlfont_sty;
-pub mod titleref_sty;
 pub mod mdframed_sty;
+pub mod mdpi_cls;
 pub mod memoir_cls;
 pub mod mhchem_sty;
 pub mod minted_sty;
-pub mod morefloats_sty;
 pub mod mnsymbol_sty;
+pub mod morefloats_sty;
 pub mod mssymb_tex;
+pub mod nag_sty;
+pub mod nature_pre_cls;
 pub mod needspace_sty;
+pub mod newpxmath_sty;
 pub mod nicematrix_sty;
 pub mod oldgerm_sty;
+pub mod oldlfont_sty;
+pub mod optica_article_cls;
+pub mod oup_authoring_template_cls;
+pub mod pax_sty;
 pub mod pb_diagram_sty;
 pub mod phyzzx_plus;
 pub mod phyzzx_tex;
 pub mod pinlabel_sty;
 pub mod program_sty;
-pub mod rotfloat_sty;
-pub mod tabls_sty;
-pub mod chemnum_sty;
-pub mod pax_sty;
-pub mod figcaps_sty;
-pub mod refstyle_sty;
-pub mod envmath_sty;
 pub mod pst_all_sty;
 pub mod pst_plot_sty;
+pub mod ptephy_cls;
+pub mod refstyle_sty;
+pub mod rotfloat_sty;
+pub mod sagej_cls;
 pub mod savetrees_sty;
 pub mod scicite_sty;
 pub mod scrartcl_cls;
 pub mod scrbook_cls;
-pub mod typearea_sty;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
-pub mod aamas_cls;
-pub mod achemso_cls;
-pub mod agujournal2019_cls;
-pub mod aomart_cls;
-pub mod apacite_sty;
-pub mod asme2ej_cls;
-pub mod autart_cls;
-pub mod bmvc2k_cls;
-pub mod bytedance_seed_cls;
-pub mod cas_dc_cls;
-pub mod ceurart_cls;
-pub mod chemformula_sty;
-pub mod doclicense_sty;
-pub mod cimart_cls;
-pub mod colm2025_conference_sty;
-pub mod combine_cls;
+pub mod tabls_sty;
 pub mod tac_cls;
-pub mod cvpr_sty;
-pub mod ecai_cls;
-pub mod egpubl_cls;
-pub mod ejpecp_cls;
-pub mod elife_cls;
-pub mod fcs_cls;
-pub mod gretsi_cls;
-pub mod iccv_sty;
-pub mod ieeeaccess_cls;
-pub mod ieeeaerospace_cls;
-pub mod interspeech_cls;
-pub mod ieeecolor_cls;
-pub mod ieeeoj_cls;
-pub mod ieeeojcsys_cls;
-pub mod ifacconf_cls;
-pub mod ieeetaes_cls;
-pub mod imsart_cls;
-pub mod informs_cls;
-pub mod interact_cls;
-pub mod jabbrv_sty;
-pub mod jair_sty;
-pub mod jgcc_cls;
-pub mod jfm_cls;
-pub mod jmlr2e_sty;
-pub mod jmlr_cls;
-pub mod latexrelease_sty;
-pub mod lipics_cls;
-pub mod lmcs_cls;
-pub mod mdpi_cls;
-pub mod nature_pre_cls;
-pub mod newpxmath_sty;
-pub mod optica_article_cls;
-pub mod oup_authoring_template_cls;
-pub mod ptephy_cls;
-pub mod sagej_cls;
+pub mod titleref_sty;
+pub mod typearea_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
 // Perl (no binding). See the registration site below. Task #273.
-pub mod scis2024_cls;
+pub mod catoptions_sty;
 pub mod pnas_new_cls;
-pub mod siamart_cls;
+pub mod scis2024_cls;
+pub mod scrlayer_scrpage_sty;
 pub mod semantic_sty;
+pub mod siamart_cls;
+pub mod siamltex_cls;
 pub mod sigma_cls;
 pub mod smc_ieeeconf_cls;
 pub mod sn_jnl_cls;
 pub mod spie_cls;
-pub mod svproc_cls;
-pub mod uai2025_cls;
-pub mod wileymsp_template_cls;
-pub mod wileynjd_cls;
-pub mod wlpeerj_cls;
-pub mod siamltex_cls;
 pub mod stix2_sty;
 pub mod stix_sty;
 pub mod svg_extract_sty;
 pub mod svn_multi_sty;
 pub mod svninfo_sty;
+pub mod svproc_cls;
 pub mod tabu_sty;
 pub mod tabularray_sty;
 pub mod tipa_sty;
 pub mod tlp_cls;
+pub mod uai2025_cls;
 pub mod ucs_sty;
 pub mod ut_thesis_cls;
 pub mod widetext_sty;
+pub mod wileymsp_template_cls;
+pub mod wileynjd_cls;
+pub mod wlpeerj_cls;
 pub mod ws_journal_cls;
-pub mod xwatermark_sty;
-pub mod catoptions_sty;
-pub mod scrlayer_scrpage_sty;
 pub mod ws_p8_50x6_00_cls;
 pub mod xltabular_sty;
 pub mod xr_sty;
+pub mod xwatermark_sty;
 
 /// Type of a binding loader fn — matches the return type of every
 /// `*::load_definitions` in this crate.
@@ -283,7 +283,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("colt2024", "cls", colt2024_cls::load_definitions),
   ("czjphys", "cls", czjphys_cls::load_definitions),
   ("daj", "cls", daj_cls::load_definitions),
-  ("dmtcs-episciences", "cls", dmtcs_episciences_cls::load_definitions),
+  (
+    "dmtcs-episciences",
+    "cls",
+    dmtcs_episciences_cls::load_definitions,
+  ),
   ("dblfloatfix", "sty", dblfloatfix_sty::load_definitions),
   ("deluxe", "sty", deluxe_sty::load_definitions),
   ("diagrams", "sty", diagrams_sty::load_definitions),
@@ -369,7 +373,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("widetext", "sty", widetext_sty::load_definitions),
   ("xwatermark", "sty", xwatermark_sty::load_definitions),
   ("catoptions", "sty", catoptions_sty::load_definitions),
-  ("scrlayer-scrpage", "sty", scrlayer_scrpage_sty::load_definitions),
+  (
+    "scrlayer-scrpage",
+    "sty",
+    scrlayer_scrpage_sty::load_definitions,
+  ),
   ("scrlayer", "sty", scrlayer_scrpage_sty::load_definitions),
   ("typearea", "sty", typearea_sty::load_definitions),
   ("xltabular", "sty", xltabular_sty::load_definitions),
@@ -403,21 +411,33 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("pb-diagram", "sty", pb_diagram_sty::load_definitions),
   ("aamas", "cls", aamas_cls::load_definitions),
   ("achemso", "cls", achemso_cls::load_definitions),
-  ("agujournal2019", "cls", agujournal2019_cls::load_definitions),
+  (
+    "agujournal2019",
+    "cls",
+    agujournal2019_cls::load_definitions,
+  ),
   ("agutexSI2019", "cls", agujournal2019_cls::load_definitions),
   ("aomart", "cls", aomart_cls::load_definitions),
   ("apacite", "sty", apacite_sty::load_definitions),
   ("asme2ej", "cls", asme2ej_cls::load_definitions),
   ("autart", "cls", autart_cls::load_definitions),
   ("bmvc2k", "cls", bmvc2k_cls::load_definitions),
-  ("bytedance_seed", "cls", bytedance_seed_cls::load_definitions),
+  (
+    "bytedance_seed",
+    "cls",
+    bytedance_seed_cls::load_definitions,
+  ),
   ("cas-dc", "cls", cas_dc_cls::load_definitions),
   ("cas-sc", "cls", cas_dc_cls::load_definitions),
   ("ceurart", "cls", ceurart_cls::load_definitions),
   ("chemformula", "sty", chemformula_sty::load_definitions),
   ("doclicense", "sty", doclicense_sty::load_definitions),
   ("cimart", "cls", cimart_cls::load_definitions),
-  ("colm2025_conference", "sty", colm2025_conference_sty::load_definitions),
+  (
+    "colm2025_conference",
+    "sty",
+    colm2025_conference_sty::load_definitions,
+  ),
   ("cvpr", "sty", cvpr_sty::load_definitions),
   ("cvpr2023", "sty", cvpr_sty::load_definitions),
   ("cvpr2024", "sty", cvpr_sty::load_definitions),
@@ -441,7 +461,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("iccv", "sty", iccv_sty::load_definitions),
   ("iccvw", "sty", iccv_sty::load_definitions),
   ("ieeeaccess", "cls", ieeeaccess_cls::load_definitions),
-  ("IEEEAerospaceCLS", "cls", ieeeaerospace_cls::load_definitions),
+  (
+    "IEEEAerospaceCLS",
+    "cls",
+    ieeeaerospace_cls::load_definitions,
+  ),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
@@ -466,9 +490,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("nature-pre", "cls", nature_pre_cls::load_definitions),
   ("nature_mod", "cls", nature_pre_cls::load_definitions),
   ("newpxmath", "sty", newpxmath_sty::load_definitions),
-  ("optica-article", "cls", optica_article_cls::load_definitions),
-  ("oup-authoring-template", "cls",
-   oup_authoring_template_cls::load_definitions),
+  (
+    "optica-article",
+    "cls",
+    optica_article_cls::load_definitions,
+  ),
+  (
+    "oup-authoring-template",
+    "cls",
+    oup_authoring_template_cls::load_definitions,
+  ),
   ("ptephy_v1", "cls", ptephy_cls::load_definitions),
   ("ptephy_v2", "cls", ptephy_cls::load_definitions),
   ("ptephy", "cls", ptephy_cls::load_definitions),
@@ -495,7 +526,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("svproc", "cls", svproc_cls::load_definitions),
   ("uai2025", "cls", uai2025_cls::load_definitions),
   ("WileyASNA-v1", "cls", wileynjd_cls::load_definitions),
-  ("WileyMSP-template", "cls", wileymsp_template_cls::load_definitions),
+  (
+    "WileyMSP-template",
+    "cls",
+    wileymsp_template_cls::load_definitions,
+  ),
   ("WileyNJD-v1", "cls", wileynjd_cls::load_definitions),
   ("WileyNJD-v2", "cls", wileynjd_cls::load_definitions),
   ("WileyNJDv5", "cls", wileynjd_cls::load_definitions),

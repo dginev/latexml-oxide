@@ -19,44 +19,65 @@ LoadDefinitions!({
 
   // tac.cls L339: \amsclass{<codes>} — preamble AMS subject classification.
   // L341: \let\subjclass\amsclass. Witness 2312.12356.
-  DefMacro!("\\amsclass{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}");
+  DefMacro!(
+    "\\amsclass{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}"
+  );
   Let!("\\subjclass", "\\amsclass");
   // tac.cls custom frontmatter helpers — preserve author content as
   // ltx:note where possible, no-op otherwise.
-  DefMacro!("\\keywords{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
-  DefMacro!("\\runninghead{}",
-    "\\@add@frontmatter{ltx:note}[role=runninghead]{#1}");
-  DefMacro!("\\volyear{}",
-    "\\@add@frontmatter{ltx:note}[role=volume-year]{#1}");
-  DefMacro!("\\volnum{}",
-    "\\@add@frontmatter{ltx:note}[role=volume-number]{#1}");
+  DefMacro!(
+    "\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+  );
+  DefMacro!(
+    "\\runninghead{}",
+    "\\@add@frontmatter{ltx:note}[role=runninghead]{#1}"
+  );
+  DefMacro!(
+    "\\volyear{}",
+    "\\@add@frontmatter{ltx:note}[role=volume-year]{#1}"
+  );
+  DefMacro!(
+    "\\volnum{}",
+    "\\@add@frontmatter{ltx:note}[role=volume-number]{#1}"
+  );
   // tac.cls L317: \address{...} — author postal address note.
-  DefMacro!("\\address{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
+  DefMacro!(
+    "\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}"
+  );
   // tac.cls L322: \eaddress{...} — email/electronic address note.
-  DefMacro!("\\eaddress{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  DefMacro!(
+    "\\eaddress{}",
+    "\\@add@frontmatter{ltx:note}[role=email]{#1}"
+  );
   // tac.cls L337: \copyrightyear{...} — journal frontmatter copyright year.
-  DefMacro!("\\copyrightyear{}",
-    "\\@add@frontmatter{ltx:note}[role=copyright-year]{#1}");
+  DefMacro!(
+    "\\copyrightyear{}",
+    "\\@add@frontmatter{ltx:note}[role=copyright-year]{#1}"
+  );
   // tac.cls dedicatedto / submitted / received / revised — frontmatter
   // pubdate annotations.
-  DefMacro!("\\dedicatedto{}",
-    "\\@add@frontmatter{ltx:note}[role=dedication]{#1}");
-  DefMacro!("\\submitted{}",
-    "\\@add@frontmatter{ltx:note}[role=submitted]{#1}");
-  DefMacro!("\\received{}",
-    "\\@add@frontmatter{ltx:note}[role=received]{#1}");
-  DefMacro!("\\revised{}",
-    "\\@add@frontmatter{ltx:note}[role=revised]{#1}");
-  DefMacro!("\\Vol{}",
-    "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
-  DefMacro!("\\No{}",
-    "\\@add@frontmatter{ltx:note}[role=number]{#1}");
-  DefMacro!("\\pages{}",
-    "\\@add@frontmatter{ltx:note}[role=pages]{#1}");
+  DefMacro!(
+    "\\dedicatedto{}",
+    "\\@add@frontmatter{ltx:note}[role=dedication]{#1}"
+  );
+  DefMacro!(
+    "\\submitted{}",
+    "\\@add@frontmatter{ltx:note}[role=submitted]{#1}"
+  );
+  DefMacro!(
+    "\\received{}",
+    "\\@add@frontmatter{ltx:note}[role=received]{#1}"
+  );
+  DefMacro!(
+    "\\revised{}",
+    "\\@add@frontmatter{ltx:note}[role=revised]{#1}"
+  );
+  DefMacro!("\\Vol{}", "\\@add@frontmatter{ltx:note}[role=volume]{#1}");
+  DefMacro!("\\No{}", "\\@add@frontmatter{ltx:note}[role=number]{#1}");
+  DefMacro!("\\pages{}", "\\@add@frontmatter{ltx:note}[role=pages]{#1}");
 
   // tac.cls L315: \def\CR{\\\phantom{\rm Email: }} — line-break helper
   // in author block. Use a no-op \\ since phantom is layout-only.

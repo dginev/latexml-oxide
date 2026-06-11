@@ -1,44 +1,47 @@
+use std::{
+  borrow::Cow,
+  cell::RefCell,
+  collections::VecDeque,
+  fmt::{self, Display},
+  rc::Rc,
+};
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::collections::VecDeque;
-use std::fmt::{self, Display};
-use std::rc::Rc;
-
-use crate::alignment::Alignment;
-use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::glue::Glue;
-use crate::common::model::{self, compute_indirect_model_aux};
-use crate::common::model::{IndirectModel, Model};
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::numeric_ops::NumericOps;
-pub use crate::common::store::Stored; // reexport for convenience
-use crate::common::{BindingDispatcher, LabelMappingHook};
-use crate::definition::Definition;
-use crate::definition::argument::ArgWrap;
-use crate::definition::conditional::ConditionalType;
-use crate::definition::constructor::Constructor;
-use crate::definition::expandable::{self, Expandable};
-use crate::definition::register::{Register, RegisterValue};
-use crate::definition::ExpansionBody;
-use crate::document::resource::Resource;
-use crate::document::tag::TagOptions;
-use crate::gullet;
-use crate::mouth;
-use crate::pin;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
-use crate::util::pathname;
-use crate::{Digested, DigestedData};
 
 // expose Perl-style local assignments from state
 pub use crate::common::local_assignments::*;
+pub use crate::common::store::Stored; // reexport for convenience
+use crate::{
+  Digested, DigestedData,
+  alignment::Alignment,
+  common::{
+    BindingDispatcher, LabelMappingHook,
+    arena::{self, SymHashMap, SymStr},
+    dimension::Dimension,
+    error::*,
+    font::Font,
+    glue::Glue,
+    model::{self, IndirectModel, Model, compute_indirect_model_aux},
+    muglue::MuGlue,
+    number::Number,
+    numeric_ops::NumericOps,
+  },
+  definition::{
+    Definition, ExpansionBody,
+    argument::ArgWrap,
+    conditional::ConditionalType,
+    constructor::Constructor,
+    expandable::{self, Expandable},
+    register::{Register, RegisterValue},
+  },
+  document::{resource::Resource, tag::TagOptions},
+  gullet, mouth, pin,
+  token::{Catcode, Token},
+  tokens::Tokens,
+  util::pathname,
+};
 
 static CODE_TEX_EXT: &str = ".code.tex";
 
@@ -772,20 +775,19 @@ impl State {
     // on group exit, leaving `\pgfplots@curlegend`/`@curplotlist` undefined
     // and looping `\pgfplots@createlegend` at the digest wall-clock cap.
     let preserve = matches!(scope_opt, Some(Scope::Named(_)));
-    if !preserve {
-      if let Some(globaldefs) = self.value.get(&pin!("\\globaldefs")) {
-        if let Some(global_value) = globaldefs.front() {
-          let int_value: i64 = match *global_value {
-            Stored::Int(v) => v,
-            Stored::Number(n) => n.0,
-            _ => 0,
-          };
-          if int_value > 0 {
-            scope_opt = Some(Scope::Global);
-          } else if int_value < 0 {
-            scope_opt = Some(Scope::Local);
-          }
-        }
+    if !preserve
+      && let Some(globaldefs) = self.value.get(&pin!("\\globaldefs"))
+      && let Some(global_value) = globaldefs.front()
+    {
+      let int_value: i64 = match *global_value {
+        Stored::Int(v) => v,
+        Stored::Number(n) => n.0,
+        _ => 0,
+      };
+      if int_value > 0 {
+        scope_opt = Some(Scope::Global);
+      } else if int_value < 0 {
+        scope_opt = Some(Scope::Local);
       }
     }
     // TRACE: watch for cleanup:w
@@ -941,11 +943,14 @@ impl State {
     }
   }
   pub fn lookup_font_info(&self, key: &Token) -> Result<Option<&Stored>> {
-    let key_str = match lookup_definition(key)? { Some(defn) => {
-      s!("fontinfo_{}", defn.get_cs_name())
-    } _ => {
-      s!("fontinfo_{key}")
-    }};
+    let key_str = match lookup_definition(key)? {
+      Some(defn) => {
+        s!("fontinfo_{}", defn.get_cs_name())
+      },
+      _ => {
+        s!("fontinfo_{key}")
+      },
+    };
     Ok(self.lookup_value(&key_str))
   }
   /// manage a (global) hash of values
@@ -1253,11 +1258,11 @@ pub fn assign_value_inplace_sym(key_sym: SymStr, value: impl Into<Stored>) {
   let value = value.into();
   let state = &mut *state_mut!();
   let table = &mut state.value;
-  if let Some(vvec) = table.get_mut(&key_sym) {
-    if let Some(front) = vvec.front_mut() {
-      *front = value;
-      return;
-    }
+  if let Some(vvec) = table.get_mut(&key_sym)
+    && let Some(front) = vvec.front_mut()
+  {
+    *front = value;
+    return;
   }
   // If the value was never assigned, push globally (matching Perl behavior)
   let vvec = table.entry(key_sym).or_default();
@@ -1284,7 +1289,7 @@ pub fn remove_value(key: &str) -> Option<Stored> {
   match state_mut!().value.get_mut(&key_sym) {
     None => None,
     Some(vvec) => match vvec.front_mut() {
-      None | Some(&mut Stored::None) => Option::None,
+      None | Some(&mut Stored::None) => None,
       Some(found) => Some(std::mem::take(found)),
     },
   }
@@ -1631,11 +1636,11 @@ pub fn assign_register_token(
   parameters: Vec<ArgWrap>,
 ) -> Result<()> {
   let defn_opt = lookup_definition(cs)?;
-  if let Some(defn) = defn_opt {
-    if defn.is_register() {
-      defn.set_value(value, scope, parameters);
-      return Ok(());
-    }
+  if let Some(defn) = defn_opt
+    && defn.is_register()
+  {
+    defn.set_value(value, scope, parameters);
+    return Ok(());
   }
   Warn!(
     "expected",
@@ -1653,17 +1658,18 @@ pub fn lookup_register_token(
   cs: &Token,
   parameters: Vec<ArgWrap>,
 ) -> Result<Option<RegisterValue>> {
-  Ok(match lookup_definition(cs)? { Some(defn) => {
-    if defn.is_register() {
-      defn.value_of(parameters)
-    } else {
-      let message = s!("The control sequence '{}' is not a register", cs);
-      Warn!("expected", "register", message);
-      None
-    }
-  } _ => {
-    None
-  }})
+  Ok(match lookup_definition(cs)? {
+    Some(defn) => {
+      if defn.is_register() {
+        defn.value_of(parameters)
+      } else {
+        let message = s!("The control sequence '{}' is not a register", cs);
+        Warn!("expected", "register", message);
+        None
+      }
+    },
+    _ => None,
+  })
 }
 
 pub fn lookup_expandable(
@@ -2047,10 +2053,10 @@ where FnR: FnOnce(Option<&VecDeque<Stored>>) -> R {
 pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<Scope>) {
   let mut meaning = meaning.into();
   // short-circuit guard to avoid e.g. T_MATH let to itself
-  if let Stored::Token(ref mt) = meaning {
-    if token == mt {
-      return;
-    }
+  if let Stored::Token(ref mt) = meaning
+    && token == mt
+  {
+    return;
   }
   // For \let chains: if the target token has an expandable/primitive definition,
   // store that definition directly instead of the Token indirection.
@@ -2185,50 +2191,48 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
   let entry_opt = state.meaning.get(&lookup_sym);
   if lookup_sym != pin!("") && entry_opt.is_some() && !entry_opt.as_ref().unwrap().is_empty() {
     // Debug!("Found definition for: {:?}", lookupname);
-    if let Some(entry) = entry_opt {
-      if let Some(front) = entry.front() {
-        if let Stored::Token(t) = front {
-          if let Some(lookup_name) = t.get_executable_primitive_name() {
-            let lookup_sym = arena::pin(lookup_name);
-            if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {
-              // special case,
-              // If a cs has been let to an executable token, lookup ITS defn.
-              return retry_entry.front().cloned();
-            }
-          }
-          // Also follow \let chains for CS tokens: if \foo is \let to \bar,
-          // resolve \bar's definition. This handles expl3 aliases like
-          // \tex_long:D → \long, \tex_gdef:D → \gdef.
-          if t.get_catcode() == Catcode::CS {
-            if let Some(target_entry) = state.meaning.get(&t.text) {
-              if let Some(target_front) = target_entry.front() {
-                if !matches!(target_front, Stored::Token(_) | Stored::None) {
-                  return Some(target_front.clone());
-                }
-              }
-            }
+    if let Some(entry) = entry_opt
+      && let Some(front) = entry.front()
+    {
+      if let Stored::Token(t) = front {
+        if let Some(lookup_name) = t.get_executable_primitive_name() {
+          let lookup_sym = arena::pin(lookup_name);
+          if let Some(retry_entry) = state!().meaning.get(&lookup_sym) {
+            // special case,
+            // If a cs has been let to an executable token, lookup ITS defn.
+            return retry_entry.front().cloned();
           }
         }
-        // Perl State.pm:474 lookupDigestableDefinition: the guard
-        // `($defn = $$entry[0])` is FALSE when the entry's value is undef, so
-        // execution falls through to `return $token` (self-inserting) for a
-        // LETTER/OTHER token and to `return undef` for an active/CS one. A
-        // math-active LETTER/OTHER character whose active meaning was `\let`
-        // to an undefined CS hits exactly this case — e.g. braket-style
-        // `\Pr{A|B}`: the macro body does `\mathcode`\|=32768 \let|\SetVert`
-        // with `\SetVert` itself undefined (neither our nor Perl's braket
-        // binding defines it), leaving `|`'s meaning an explicit
-        // `Stored::None`. Returning `Some(Stored::None)` here routed the `|`
-        // to generateErrorStub ("The token T_OTHER[|] is not defined"); Perl
-        // instead self-inserts the literal char. Mirror Perl: a None-valued
-        // entry for a non-active/CS (math-active) char self-inserts; active/CS
-        // tokens still fall to the `None` return below. Witness 1602.01342.
-        if matches!(front, Stored::None) && !is_active_or_cs {
-          return Some(token.into());
+        // Also follow \let chains for CS tokens: if \foo is \let to \bar,
+        // resolve \bar's definition. This handles expl3 aliases like
+        // \tex_long:D → \long, \tex_gdef:D → \gdef.
+        if t.get_catcode() == Catcode::CS
+          && let Some(target_entry) = state.meaning.get(&t.text)
+          && let Some(target_front) = target_entry.front()
+          && !matches!(target_front, Stored::Token(_) | Stored::None)
+        {
+          return Some(target_front.clone());
         }
-        // if a regular definition, just return.
-        return Some(front.clone());
       }
+      // Perl State.pm:474 lookupDigestableDefinition: the guard
+      // `($defn = $$entry[0])` is FALSE when the entry's value is undef, so
+      // execution falls through to `return $token` (self-inserting) for a
+      // LETTER/OTHER token and to `return undef` for an active/CS one. A
+      // math-active LETTER/OTHER character whose active meaning was `\let`
+      // to an undefined CS hits exactly this case — e.g. braket-style
+      // `\Pr{A|B}`: the macro body does `\mathcode`\|=32768 \let|\SetVert`
+      // with `\SetVert` itself undefined (neither our nor Perl's braket
+      // binding defines it), leaving `|`'s meaning an explicit
+      // `Stored::None`. Returning `Some(Stored::None)` here routed the `|`
+      // to generateErrorStub ("The token T_OTHER[|] is not defined"); Perl
+      // instead self-inserts the literal char. Mirror Perl: a None-valued
+      // entry for a non-active/CS (math-active) char self-inserts; active/CS
+      // tokens still fall to the `None` return below. Witness 1602.01342.
+      if matches!(front, Stored::None) && !is_active_or_cs {
+        return Some(token.into());
+      }
+      // if a regular definition, just return.
+      return Some(front.clone());
     }
   } else if is_active_or_cs {
     return None;
@@ -2366,9 +2370,7 @@ pub fn get_frame_depth() -> usize { state!().undo.iter().filter(|frame| !frame.l
 
 /// `true` when the CURRENT (front) stack frame is the locked bottom frame —
 /// i.e. there is no openable group/mode frame to pop. Popping it would FATAL.
-pub fn current_frame_locked() -> bool {
-  state!().undo.front().map(|f| f.locked).unwrap_or(true)
-}
+pub fn current_frame_locked() -> bool { state!().undo.front().map(|f| f.locked).unwrap_or(true) }
 /// begins a semiverbatim frame, neutralizing the usual + requested characters
 pub fn begin_semiverbatim(extraspecials: Option<&[char]>) {
   // Is this a good/safe enough shorthand, or should we really be doing beginMode?
@@ -2465,10 +2467,10 @@ pub fn clear_prefixes() { state_mut!().prefixes = HashMap::default(); }
 pub fn activate_scope(scope: SymStr) {
   let mut state = state_mut!();
   // do not re-activate if already active.
-  if let Some(stash_active_entry) = state.stash_active.get(&scope) {
-    if !stash_active_entry.is_empty() {
-      return;
-    }
+  if let Some(stash_active_entry) = state.stash_active.get(&scope)
+    && !stash_active_entry.is_empty()
+  {
+    return;
   }
 
   state.assign_internal(
@@ -2679,14 +2681,14 @@ pub fn compute_indirect_model() -> IndirectModel {
   }
   let picture_sym = pin!("ltx:picture");
   for tag in &all_tags {
-    if let Some(x) = state!().tag_properties.get(tag) {
-      if let Some(true) = x.auto_open {
-        // Perl: Tag('ltx:picture', autoOpen => 0.5). All other autoOpen
-        // sites in the LaTeXML tree use `autoOpen => 1`, so a simple
-        // `tag == ltx:picture` check reproduces the fraction faithfully.
-        let priority = if *tag == picture_sym { 50u32 } else { 100u32 };
-        openability.insert_sym(*tag, priority);
-      }
+    if let Some(x) = state!().tag_properties.get(tag)
+      && let Some(true) = x.auto_open
+    {
+      // Perl: Tag('ltx:picture', autoOpen => 0.5). All other autoOpen
+      // sites in the LaTeXML tree use `autoOpen => 1`, so a simple
+      // `tag == ltx:picture` check reproduces the fraction faithfully.
+      let priority = if *tag == picture_sym { 50u32 } else { 100u32 };
+      openability.insert_sym(*tag, priority);
     }
   }
 
@@ -2710,10 +2712,7 @@ pub fn compute_indirect_model() -> IndirectModel {
             *kid_entry.entry_sym(start).or_insert(0)
           };
           if start_entry > best {
-            imodel
-              .entry_sym(tag)
-              .or_default()
-              .insert_sym(kid, start);
+            imodel.entry_sym(tag).or_default().insert_sym(kid, start);
             {
               best = start_entry;
             }
@@ -2768,42 +2767,39 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // Recognize the robust-wrapper expansion `\protect \<name><space>`
   // by shape: a 2-token Expandable body matching exactly those tokens
   // where the second token's CS name equals `<token2-name><space>`.
-  if let Stored::Expandable(ref defn) = meaning {
-    if let Some(ExpansionBody::Tokens(ref tks)) = defn.expansion {
-      let body = tks.unlist_ref();
-      if body.len() == 2 && body[0].with_str(|s| s == "\\protect") {
-        let expected_body_name = token2.with_str(|s| s!("{s} "));
-        if body[1].with_str(|s| s == expected_body_name) {
-          // (1) Copy `\<token2><space>` body to `\<token1><space>`
-          // so the two CSes have independent body slots.
-          let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
-          let token2_space = crate::T_CS!(expected_body_name);
-          let body_meaning = lookup_meaning(&token2_space).unwrap_or(Stored::None);
-          let body_csname_sym = token1_space.pin_cs_name();
-          state_mut!().assign_internal(TableName::Meaning, body_csname_sym, body_meaning, scope);
-          // (2) Install `\<token1>` as a NEW robust wrapper that
-          // points to `\<token1><space>` (rather than reusing
-          // `\<token2>`'s wrapper, which still hardcodes
-          // `\<token2><space>` in its body and would silently
-          // re-track any later `\DeclareRobustCommand\<token2>{...}`).
-          let new_wrapper_body = crate::Tokens::new(vec![
-            crate::T_CS!("\\protect"),
-            token1_space,
-          ]);
-          let new_wrapper = Expandable::new(
-            *token1,
-            None,
-            Some(ExpansionBody::Tokens(new_wrapper_body)),
-            Some(expandable::ExpandableOptions {
-              robust: true,
-              ..expandable::ExpandableOptions::default()
-            }),
-          );
-          if let Ok(wrapper) = new_wrapper {
-            install_definition(wrapper, scope);
-            after_assignment();
-            return;
-          }
+  if let Stored::Expandable(ref defn) = meaning
+    && let Some(ExpansionBody::Tokens(ref tks)) = defn.expansion
+  {
+    let body = tks.unlist_ref();
+    if body.len() == 2 && body[0].with_str(|s| s == "\\protect") {
+      let expected_body_name = token2.with_str(|s| s!("{s} "));
+      if body[1].with_str(|s| s == expected_body_name) {
+        // (1) Copy `\<token2><space>` body to `\<token1><space>`
+        // so the two CSes have independent body slots.
+        let token1_space = crate::T_CS!(token1.with_str(|s| s!("{s} ")));
+        let token2_space = crate::T_CS!(expected_body_name);
+        let body_meaning = lookup_meaning(&token2_space).unwrap_or(Stored::None);
+        let body_csname_sym = token1_space.pin_cs_name();
+        state_mut!().assign_internal(TableName::Meaning, body_csname_sym, body_meaning, scope);
+        // (2) Install `\<token1>` as a NEW robust wrapper that
+        // points to `\<token1><space>` (rather than reusing
+        // `\<token2>`'s wrapper, which still hardcodes
+        // `\<token2><space>` in its body and would silently
+        // re-track any later `\DeclareRobustCommand\<token2>{...}`).
+        let new_wrapper_body = Tokens::new(vec![crate::T_CS!("\\protect"), token1_space]);
+        let new_wrapper = Expandable::new(
+          *token1,
+          None,
+          Some(ExpansionBody::Tokens(new_wrapper_body)),
+          Some(expandable::ExpandableOptions {
+            robust: true,
+            ..expandable::ExpandableOptions::default()
+          }),
+        );
+        if let Ok(wrapper) = new_wrapper {
+          install_definition(wrapper, scope);
+          after_assignment();
+          return;
         }
       }
     }
@@ -3216,9 +3212,7 @@ pub fn is_serializable(stored: &Stored) -> bool {
 }
 
 /// Take a snapshot of the current State (for dump diff).
-pub fn take_snapshot() -> rustc_hash::FxHashMap<(TableName, SymStr), Stored> {
-  state!().snapshot()
-}
+pub fn take_snapshot() -> rustc_hash::FxHashMap<(TableName, SymStr), Stored> { state!().snapshot() }
 
 /// Compute diff from snapshot and return changed serializable entries.
 pub fn diff_snapshot(
@@ -3239,8 +3233,8 @@ type StateSnapshot = rustc_hash::FxHashMap<(TableName, SymStr), Stored>;
 type StagedSnapshotMap = rustc_hash::FxHashMap<&'static str, StateSnapshot>;
 
 thread_local! {
-  static STAGED_SNAPSHOTS: std::cell::RefCell<StagedSnapshotMap> =
-    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+  static STAGED_SNAPSHOTS: RefCell<StagedSnapshotMap> =
+    RefCell::new(rustc_hash::FxHashMap::default());
 }
 
 /// Take a snapshot now and store it under a named key for later retrieval.

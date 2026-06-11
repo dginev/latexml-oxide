@@ -7364,7 +7364,7 @@ under pure-expand; the 12-paper spot-check below contained no elsart
 paper. Re-verify in the next sandbox sweep; if any re-breaks, fix the
 root cause (`\href` self-marker re-expansion, `\edef`/`\let` reversion
 lossiness) rather than re-adding XUntil branches
-(`docs/frontmatter_api_refactor.md` Appendix A.4). Witnesses
+(`docs/archive/frontmatter_api_refactor.md` Appendix A.4). Witnesses
 astro-ph9903386 / math0610119 are *fixed* by pure-expand.
 Base_Deprecated grew the `\@personname` / `\@add@frontmatter` /
 `\@add@to@frontmatter` / `\@ADDCLASS` shims; non-PR bindings still
@@ -8296,7 +8296,7 @@ first non-empty return that doesn't match the expected expansion.
 | Gate | Current (2026-05-22) | Target |
 |---|---|---|
 | `cargo test --tests` | **1359/0/0** | +25 (eTeX getter + font fixes; canvas-3 batch 3) |
-| `cargo clippy --workspace --all-targets` | 14 warnings (all in `latexml_math_parser`, post-ASF cleanup — collaborator's lane) | 0 warnings |
+| `cargo clippy --workspace --all-targets -- -D warnings` | **0 warnings** (clean; edition-2024 let-chain `collapsible_if` fallout cleared, policy in `[workspace.lints]`, CI `lint` job + pre-push gated) | 0 warnings |
 | `latexml_oxide --init=plain.tex` | 0 errors (dump + `LATEXML_NODUMP=1`) | 0 errors |
 | `latexml_oxide --init=latex.ltx` | 0 errors (dump + `LATEXML_NODUMP=1`) | 0 errors |
 | 1910.01256 mini-benchmark vs pdflatex×2 | **0.71 s** (release, full post-proc); pdflatex idle ~1.11 s | beat 2× pdflatex (met) |

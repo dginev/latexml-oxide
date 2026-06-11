@@ -2,8 +2,9 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use crate::prelude::*;
 use latexml_core::common::numeric_ops::round_to;
+
+use crate::prelude::*;
 
 /// Perl: hackVBoxAttachment($box, $valign)
 /// Sets vattach on the box, with special handling for \halign alignment objects.
@@ -16,11 +17,11 @@ use latexml_core::common::numeric_ops::round_to;
 /// so $box->getProperty('alignment') finds the alignment directly. In Rust,
 /// Lists are not simplified, so we must walk into children to find it.
 fn hack_vbox_attachment(whatsit: &mut Whatsit, valign: &'static str) {
-  if let Some(content_box) = whatsit.get_arg_mut(2) {
-    if !set_halign_vattach(content_box, valign) {
-      // No \halign alignment found — set vattach as property on the box
-      content_box.set_property("vattach", valign);
-    }
+  if let Some(content_box) = whatsit.get_arg_mut(2)
+    && !set_halign_vattach(content_box, valign)
+  {
+    // No \halign alignment found — set vattach as property on the box
+    content_box.set_property("vattach", valign);
   }
 }
 
@@ -39,14 +40,13 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
           // Get the alignment property value and set vattach on it
           if let Some(Cow::Borrowed(Stored::Digested(alignment_dig))) =
             w_ref.get_property("alignment")
+            && let DigestedData::Alignment(ref alignment_cell) = *alignment_dig.data()
           {
-            if let DigestedData::Alignment(ref alignment_cell) = *alignment_dig.data() {
-              alignment_cell
-                .borrow_mut()
-                .get_xml_attributes_mut()
-                .insert(String::from("vattach"), String::from(valign));
-              return true;
-            }
+            alignment_cell
+              .borrow_mut()
+              .get_xml_attributes_mut()
+              .insert(String::from("vattach"), String::from(valign));
+            return true;
           }
         }
         // Has alignment but not \halign (e.g. tabular) — don't set vattach
@@ -96,23 +96,23 @@ fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
     return dims;
   }
   // If zero dims: for Lists, sum children's dimensions
-  if let DigestedData::List(list_cell) = digested.data() {
-    if let Ok(list) = list_cell.try_borrow() {
-      let mut total_w: i64 = 0;
-      let mut max_h: i64 = 0;
-      let mut max_d: i64 = 0;
-      for child in &list.boxes {
-        let (cw, ch, cd) = fobj_get_size(child);
-        total_w += cw.value_of();
-        max_h = max_h.max(ch.value_of());
-        max_d = max_d.max(cd.value_of());
-      }
-      return (
-        Dimension::new(total_w),
-        Dimension::new(max_h),
-        Dimension::new(max_d),
-      );
+  if let DigestedData::List(list_cell) = digested.data()
+    && let Ok(list) = list_cell.try_borrow()
+  {
+    let mut total_w: i64 = 0;
+    let mut max_h: i64 = 0;
+    let mut max_d: i64 = 0;
+    for child in &list.boxes {
+      let (cw, ch, cd) = fobj_get_size(child);
+      total_w += cw.value_of();
+      max_h = max_h.max(ch.value_of());
+      max_d = max_d.max(cd.value_of());
     }
+    return (
+      Dimension::new(total_w),
+      Dimension::new(max_h),
+      Dimension::new(max_d),
+    );
   }
   dims
 }
@@ -287,12 +287,12 @@ LoadDefinitions!({
       Tokens!(T_BEGIN!()),
       stored_map!("isEmpty" => true),
     );
-    let mode = Some(if state::lookup_bool_sym(pin!("IN_MATH")) {
+    let mode = Some(if lookup_bool_sym(pin!("IN_MATH")) {
       TexMode::Math
     } else {
       TexMode::Text
     });
-    let body = stomach::digest_next_body(None)?;
+    let body = digest_next_body(None)?;
     let mut boxes = vec![Digested::from(open)];
     boxes.extend(body);
     let mut font = None;
@@ -307,15 +307,16 @@ LoadDefinitions!({
     // Only set for vertical modes to enable vertical stacking in compute_size.
     // Not set for horizontal modes to avoid interfering with repack_horizontal's
     // mode detection logic which defaults to "horizontal" when mode property is None.
-    let mode_str = state::lookup_string_from_sym(pin!("MODE"));
+    let mode_str = lookup_string_from_sym(pin!("MODE"));
     if mode_str.ends_with("vertical") {
-      properties.insert("mode", Stored::String(arena::pin(&mode_str)));
+      properties.insert("mode", Stored::String(pin(&mode_str)));
     }
     // Perl: List() sets width => \hsize when mode eq 'horizontal' (NOT restricted_horizontal)
-    if matches!(mode, Some(TexMode::Text)) && mode_str == "horizontal" {
-      if let Some(hsize) = state::lookup_dimension("\\hsize") {
-        properties.insert("width", Stored::Dimension(hsize));
-      }
+    if matches!(mode, Some(TexMode::Text))
+      && mode_str == "horizontal"
+      && let Some(hsize) = lookup_dimension("\\hsize")
+    {
+      properties.insert("width", Stored::Dimension(hsize));
     }
     List {
       boxes,
@@ -447,7 +448,7 @@ LoadDefinitions!({
   // ======================================================================
 
   DefParameterType!(BoxSpecification, sub[_inner, _extra] {
-    if let Some(key) = gullet::read_keyword(&["to", "spread"])? {
+    if let Some(key) = read_keyword(&["to", "spread"])? {
       Ok(Tokens!(T_OTHER!(key)))
     } else {
       Ok(Tokens!())
@@ -462,7 +463,7 @@ LoadDefinitions!({
     if !key.is_empty() {
       let mut keyvals = KeyVals::new(
         KeyvalsConfig{skip_missing: keyvals::SkipMissing::All, ..KeyvalsConfig::default()});
-      let dim = gullet::read_dimension()?;
+      let dim = read_dimension()?;
       keyvals.set_value(&key.owned_tokens().unwrap().to_string(), dim.into(), false)?;
       keyvals.into()
     } else {
@@ -499,11 +500,11 @@ LoadDefinitions!({
   // hardcoded to 'restricted_horizontal' / 'internal_vertical'
   // respectively — independent of the current mode at invocation time.
   DefParameterType!(HBoxContents, sub[_inner, _extra] {
-      read_box_contents(state::lookup_tokens("\\everyhbox")) },
+      read_box_contents(lookup_tokens("\\everyhbox")) },
     predigest => sub[arg] {
       predigest_box_contents_in_mode(arg, "restricted_horizontal") });
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
-      read_box_contents(state::lookup_tokens("\\everyvbox")) },
+      read_box_contents(lookup_tokens("\\everyvbox")) },
     predigest => sub[arg] {
       predigest_box_contents_in_mode(arg, "internal_vertical") });
 
@@ -625,7 +626,7 @@ LoadDefinitions!({
       // Perl L349-362: Single <p/> cleanup
       if children.len() == 1 {
         let child_qname = document::get_node_qname(&children[0]);
-        if arena::with(child_qname, |s| s == "ltx:p") {
+        if with(child_qname, |s| s == "ltx:p") {
           let p_children = element_nodes(&children[0]);
           if p_children.is_empty() {
             let n = node.clone();
@@ -634,11 +635,11 @@ LoadDefinitions!({
           }
           if p_children.len() == 1 {
             let inner_qname = document::get_node_qname(&p_children[0]);
-            if arena::with(inner_qname, |s| s == "ltx:picture" || s == "ltx:text") {
+            if with(inner_qname, |s| s == "ltx:picture" || s == "ltx:text") {
               let pic_children = element_nodes(&p_children[0]);
               if pic_children.len() == 1 {
                 let svg_qname = document::get_node_qname(&pic_children[0]);
-                if arena::with(svg_qname, |s| s == "svg:svg") {
+                if with(svg_qname, |s| s == "svg:svg") {
                   let replacement = pic_children[0].clone();
                   document.replace_tree(replacement, node.clone())?;
                   return Ok(());
@@ -664,10 +665,10 @@ LoadDefinitions!({
         if w.value_of() != 0 {
           for child_el in &children {
             let child_qname = document::get_node_qname(child_el);
-            let is_block = arena::with(child_qname, |s|
+            let is_block = with(child_qname, |s|
               s == "ltx:inline-block" || s == "ltx:_CaptureBlock_");
-            if is_block {
-              if let Some(width_attr) = child_el.get_attribute("width") {
+            if is_block
+              && let Some(width_attr) = child_el.get_attribute("width") {
                 // Parse width from attribute (e.g. "28.5pt", "2.85em")
                 let trimmed = width_attr.trim();
                 if let Some(pt_str) = trimmed.strip_suffix("pt") {
@@ -675,8 +676,8 @@ LoadDefinitions!({
                     w = Dimension::new((val * 65536.0) as i64);
                     break;
                   }
-                } else if let Some(em_str) = trimmed.strip_suffix("em") {
-                  if let Ok(val) = em_str.parse::<f64>() {
+                } else if let Some(em_str) = trimmed.strip_suffix("em")
+                  && let Ok(val) = em_str.parse::<f64>() {
                     // 1em = 10pt at default font size
                     let font_size = wh.get_font().ok().flatten()
                       .map(|f| f.get_em_width())
@@ -684,9 +685,7 @@ LoadDefinitions!({
                     w = Dimension::new((val * font_size as f64) as i64);
                     break;
                   }
-                }
               }
-            }
           }
         }
         if w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0 {
@@ -798,8 +797,8 @@ LoadDefinitions!({
 
   DefPrimitive!("\\setbox Number SkipMatch:=", sub[(number)] {
     // If there is any afterAssignment tokens, move them over so BoxContents parameter will use them
-    if let Some(after_token) = state::remove_value("afterAssignment") {
-      state::assign_value("BeforeNextBox", after_token, None);
+    if let Some(after_token) = remove_value("afterAssignment") {
+      assign_value("BeforeNextBox", after_token, None);
     }
     // Save global flag, since we're digesting to get the box content, which resets the flag!
     // Should afterDigest be responsible for resetting flags?
@@ -809,15 +808,15 @@ LoadDefinitions!({
       None
     };
     clear_prefixes(); // before invoke, below; we've saved the only relevant one (global)
-    let mut rest = if let Some(xtoken) = gullet::read_x_token(None, false, None)? {
-        stomach::invoke_token(&xtoken)?
+    let mut rest = if let Some(xtoken) = read_x_token(None, false, None)? {
+        invoke_token(&xtoken)?
     } else { Vec::new() };
     let stuff = if !rest.is_empty() {
       Stored::Digested(rest.remove(0))
     } else {
       Stored::None
     };
-    state::assign_value(&format!("box{}", number.value_of()), stuff, scope);
+    assign_value(&format!("box{}", number.value_of()), stuff, scope);
     rest
   });
 
@@ -908,7 +907,7 @@ LoadDefinitions!({
   // Perl: \box does NOT call enterHorizontal (TeX_Box.pool.ltxml line 647)
   DefPrimitive!("\\box Number", sub[(number)] {
     let box_key = s!("box{}", number.value_of());
-    match state::remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
+    match remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       Ok(vec![stuff])
     } _ => {
       Ok(Vec::new())
@@ -930,7 +929,7 @@ LoadDefinitions!({
   DefPrimitive!("\\unhbox Number", sub[(number)] {
     enter_horizontal();
     let box_key = s!("box{}", number.value_of());
-    match state::remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
+    match remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       // Only unlist if box is horizontal (mode ends with "horizontal")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("horizontal") {
@@ -963,7 +962,7 @@ LoadDefinitions!({
   DefPrimitive!("\\unvbox Number", sub[(number)] {
     leave_horizontal()?;
     let box_key = s!("box{}", number.value_of());
-    match state::remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
+    match remove_value(&box_key) { Some(Stored::Digested(stuff)) => {
       // Only unlist if box is vertical (mode ends with "vertical")
       let mode = stuff.get_property_string("mode");
       if mode.ends_with("vertical") {
@@ -1026,8 +1025,8 @@ LoadDefinitions!({
   DefParameterType!(RuleSpecification, sub[_inner, _extra] {
     let mut keyvals = KeyVals::new(
       KeyvalsConfig{ skip_missing: keyvals::SkipMissing::All, .. KeyvalsConfig::default()});
-    while let Some(key) = gullet::read_keyword(&["width", "height", "depth"])? {
-      keyvals.set_value(&key, ArgWrap::Dimension(gullet::read_dimension()?), false)?;
+    while let Some(key) = read_keyword(&["width", "height", "depth"])? {
+      keyvals.set_value(&key, ArgWrap::Dimension(read_dimension()?), false)?;
     }
     keyvals
   },
@@ -1100,13 +1099,11 @@ LoadDefinitions!({
       whatsit.set_property("invisible", true);
     }}
     // Set color from current font (Perl: only if NOT black)
-    if let Some(font) = lookup_font() {
-      if let Some(color) = font.color {
-        if color != latexml_core::common::color::BLACK {
+    if let Some(font) = lookup_font()
+      && let Some(color) = font.color
+        && color != common::color::BLACK {
           whatsit.set_property("color", color.to_attribute());
         }
-      }
-    }
     Ok(Vec::new())
   });
 
@@ -1142,7 +1139,7 @@ LoadDefinitions!({
     whatsit.set_property("rheight", height.map(|h| h.to_attribute()).unwrap_or_else(|| "1px".to_string()));
     if let Some(d) = depth { whatsit.set_property("rdepth", d.to_attribute()); }
     // Set computed sizes for alignment cell sizing
-    let cheight = height.unwrap_or_else(|| "1px".parse::<latexml_core::common::dimension::Dimension>().unwrap_or_default());
+    let cheight = height.unwrap_or_else(|| "1px".parse::<Dimension>().unwrap_or_default());
     let cdepth = depth.unwrap_or_default();
     whatsit.set_property("cached_height", cheight);
     whatsit.set_property("cached_depth", cdepth);
@@ -1164,13 +1161,11 @@ LoadDefinitions!({
     }
     // Outside alignment: isHorizontalRule is NOT set, so template outputs <ltx:rule>
     // Set color from current font (Perl: only if NOT black)
-    if let Some(font) = lookup_font() {
-      if let Some(color) = font.color {
-        if color != latexml_core::common::color::BLACK {
+    if let Some(font) = lookup_font()
+      && let Some(color) = font.color
+        && color != common::color::BLACK {
           whatsit.set_property("color", color.to_attribute());
         }
-      }
-    }
     Ok(Vec::new())
   });
 
@@ -1226,12 +1221,12 @@ LoadDefinitions!({
     before_digest => sub {
       // Hide alignment so that \hrule inside \leaders doesn't add border="t"
       // Perl: $STATE->assignValue(Alignment => undef);
-      state::assign_value("Alignment", Stored::None, None);
+      assign_value("Alignment", Stored::None, None);
     }
   );
 
-  state::let_i(&T_CS!("\\cleaders"), &T_CS!("\\leaders"), None);
-  state::let_i(&T_CS!("\\xleaders"), &T_CS!("\\leaders"), None);
+  let_i(&T_CS!("\\cleaders"), &T_CS!("\\leaders"), None);
+  let_i(&T_CS!("\\xleaders"), &T_CS!("\\leaders"), None);
 
   // \lx@overlay was here in the old Rust order; moved to its
   // Perl-mirrored position (TeX_Box.pool.ltxml L69) right after
@@ -1241,7 +1236,7 @@ LoadDefinitions!({
 // Risky: I think this needs to be digested as a body to work like TeX (?)
 // but parameter think's it's just parsing from gullet...
 pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
-  while let Some(t) = gullet::read_token()? {
+  while let Some(t) = read_token()? {
     // Perl: $t->defined_as(T_BEGIN) — checks meaning, not catcode.
     // This catches both { (catcode BEGIN) and \bgroup (\let to T_BEGIN).
     if t.defined_as(&T_BEGIN!()) {
@@ -1249,15 +1244,15 @@ pub fn read_box_contents(everybox_opt: Option<Tokens>) -> Result<Tokens> {
     } // Skip till { or \bgroup
   }
   // Now, insert some extra tokens, if any, possibly from \afterassignment
-  match state::remove_value("BeforeNextBox") {
-    Some(Stored::Tokens(tokens)) => gullet::unread(tokens),
-    Some(Stored::Token(token)) => gullet::unread_one(token),
+  match remove_value("BeforeNextBox") {
+    Some(Stored::Tokens(tokens)) => unread(tokens),
+    Some(Stored::Token(token)) => unread_one(token),
     None | Some(Stored::None) => {},
     Some(other) => log::warn!("afterAssignment should be a token, got: {}", other),
   };
   // AND, insert any extra tokens passed in, due to everyhbox or everyvbox
   if let Some(everybox) = everybox_opt {
-    gullet::unread(everybox);
+    unread(everybox);
   }
   Ok(Tokens!())
 }

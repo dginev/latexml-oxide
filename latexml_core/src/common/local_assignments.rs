@@ -23,14 +23,13 @@
 //! The explicit `set_*/expire_*` pairs still exist for cases where
 //! RAII doesn't fit (e.g., cross-function push/pop with different lifetimes).
 
-use once_cell::sync::Lazy;
-use std::cell::RefCell;
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
-use crate::Digested;
-use crate::alignment::template::Template;
-use crate::definition::conditional::IfFrame;
-use crate::token::Token;
+use once_cell::sync::Lazy;
+
+use crate::{
+  Digested, alignment::template::Template, definition::conditional::IfFrame, token::Token,
+};
 
 /// These are fields realized via Perl's "local" mechanism in LaTeXML,
 /// but (for now) require explicit "expire" calls in Rust.
@@ -119,11 +118,14 @@ pub fn align_group_count() -> i32 {
     .unwrap_or_default()
 }
 pub fn set_align_group_count(v: i32) {
-  match locals_mut!().align_group_count.last_mut() { Some(gc) => {
-    *gc = v;
-  } _ => {
-    locals_mut!().align_group_count.push(v);
-  }}
+  match locals_mut!().align_group_count.last_mut() {
+    Some(gc) => {
+      *gc = v;
+    },
+    _ => {
+      locals_mut!().align_group_count.push(v);
+    },
+  }
 }
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }

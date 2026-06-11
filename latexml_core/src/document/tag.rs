@@ -1,10 +1,9 @@
-use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
 use std::rc::Rc;
 
-use crate::Digested;
-use crate::common::error::*;
-use crate::document::Document;
+use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::{Digested, common::error::*, document::Document};
 
 /// Perl's Tag afterOpen/afterClose closures receive ($document, $node, $box).
 /// The $box is the Digested (whatsit) associated with the node, retrieved via getNodeBox.

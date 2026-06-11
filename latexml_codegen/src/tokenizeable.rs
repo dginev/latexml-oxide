@@ -1,9 +1,7 @@
+use latexml_core::{mouth, tokens::Tokens};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
-
-use latexml_core::mouth;
-use latexml_core::tokens::Tokens;
 
 // Very similar tokenization procedures, enabled at compile-time
 // definitely possible to clean this up further...

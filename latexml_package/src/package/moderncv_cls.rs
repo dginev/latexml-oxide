@@ -84,23 +84,21 @@ LoadDefinitions!({
       let mut props = RefStepID!(&stype_str)?;
 
       let title_digested = if let Postponed(tokens) = title.data() {
-        stomach::digest(
+        digest(
           Tokens!(T_CS!("\\lx@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?
       } else {
         title.clone()
       };
       props.insert("title", title_digested.into());
 
-      if let Some(toctitle) = toctitle_arg {
-        if let Postponed(toctokens) = toctitle.data() {
-          if !toctokens.is_empty() {
-            let toctitle_digested = stomach::digest(
+      if let Some(toctitle) = toctitle_arg
+        && let Postponed(toctokens) = toctitle.data()
+          && !toctokens.is_empty() {
+            let toctitle_digested = digest(
               Tokens!(T_CS!("\\lx@hidden@bgroup"),
                 toctokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?;
             props.insert("toctitle", toctitle_digested.into());
           }
-        }
-      }
       Ok(props)
     },
     locked => true

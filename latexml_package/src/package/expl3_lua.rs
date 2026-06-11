@@ -1,10 +1,12 @@
+use std::cell::RefCell;
+
+use rustc_hash::FxHashMap as HashMap;
+
 /// Translation of expl3.lua.ltxml — native intarray operations for expl3
 ///
 /// Provides efficient Rust-native implementations of intarray operations that
 /// bypass the TeX-based fontdimen intarray code in expl3-code.tex.
 use crate::prelude::*;
-use std::cell::RefCell;
-use rustc_hash::FxHashMap as HashMap;
 
 thread_local! {
   static INTARRAYS: RefCell<HashMap<String, Vec<i64>>> = RefCell::new(HashMap::default());
@@ -14,13 +16,13 @@ fn intarray_key(token: &Token, index: i64) -> String { s!("__intarray_{}_{}", to
 
 /// Read an intarray identifier: \__intarray:w <Number>
 fn read_intarray_key() -> Result<String> {
-  let tok = gullet::read_x_token(Some(false), false, None)?;
+  let tok = read_x_token(Some(false), false, None)?;
   if let Some(ref t) = tok {
     if t.defined_as(&T_CS!("\\__intarray:w")) {
-      let n = gullet::read_number()?;
+      let n = read_number()?;
       return Ok(intarray_key(t, n.value_of()));
     } else {
-      gullet::unread_one(*t);
+      unread_one(*t);
     }
   }
   Error!(
@@ -205,6 +207,4 @@ LoadDefinitions!({
 
 // Silence dead-code warning on `with_intarray` while bindings are commented out.
 #[allow(dead_code)]
-fn _unused_with_intarray(key: &str) -> usize {
-  with_intarray(key, |arr| arr.len())
-}
+fn _unused_with_intarray(key: &str) -> usize { with_intarray(key, |arr| arr.len()) }

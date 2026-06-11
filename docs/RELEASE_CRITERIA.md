@@ -60,7 +60,7 @@ dependency check:
 2. aarch64 Linux.
 3. Container image (reproducible TeX Live + graphics).
 4. macOS (#217) — **DONE 2026-06-08**
-   ([`PORTABILITY_MACOS_PROBE_2026-06-07.md`](PORTABILITY_MACOS_PROBE_2026-06-07.md)):
+   ([`archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](archive/PORTABILITY_MACOS_PROBE_2026-06-07.md)):
    the full `cargo test --tests --workspace` suite is **green on `macos-15`
    arm64** (brew-texlive gating leg: 1390 passed / 0 failed / 0 crashes,
    43 binaries). MacTeX ships NO libkpathsea → covered by **kpathsea 0.3.0

@@ -9,15 +9,15 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
     match *key {
       // Perl L384: AssignValue(CITE_STYLE => 'authoryear');
       "authoryear" => {
-        assign_value("CITE_STYLE", arena::pin("authoryear"), None);
+        assign_value("CITE_STYLE", pin("authoryear"), None);
       },
       // Perl L385:
       "numbers" => {
-        assign_value("CITE_STYLE", arena::pin("numbers"), None);
+        assign_value("CITE_STYLE", pin("numbers"), None);
       },
       // Perl L386:
       "super" => {
-        assign_value("CITE_STYLE", arena::pin("super"), None);
+        assign_value("CITE_STYLE", pin("super"), None);
       },
       // Perl L387-388: AssignValue(CITE_OPEN=>T_OTHER('(')); AssignValue(CITE_CLOSE=>T_OTHER(')'));
       "round" => {
@@ -79,7 +79,7 @@ fn set_citation_style(pairs: &[(&str, Option<Tokens>)]) {
       },
       // Perl L402-404: fall-through — warn & default to authoryear.
       _ => {
-        assign_value("CITE_STYLE", arena::pin("authoryear"), None);
+        assign_value("CITE_STYLE", pin("authoryear"), None);
         Info!(
           "unexpected",
           key,
@@ -98,12 +98,12 @@ fn is_some_and_nonempty(opt: &Option<Tokens>) -> bool {
 }
 
 // Helper: get CITE_STYLE as string
-fn cite_style() -> String { state::lookup_string("CITE_STYLE") }
+fn cite_style() -> String { lookup_string("CITE_STYLE") }
 
-fn cite_open() -> Tokens { state::lookup_tokens("CITE_OPEN").unwrap_or(NO_TOKENS) }
-fn cite_close() -> Tokens { state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS) }
-fn cite_ns() -> Tokens { state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS) }
-fn cite_ay() -> Tokens { state::lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS) }
+fn cite_open() -> Tokens { lookup_tokens("CITE_OPEN").unwrap_or(NO_TOKENS) }
+fn cite_close() -> Tokens { lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS) }
+fn cite_ns() -> Tokens { lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS) }
+fn cite_ay() -> Tokens { lookup_tokens("CITE_AY_SEPARATOR").unwrap_or(NO_TOKENS) }
 
 // Helper: handle the [pre][post] optional arg swap (if !post { pre,post = undef,pre })
 fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, Option<Tokens>) {
@@ -116,7 +116,6 @@ fn swap_pre_post(pre: Option<Tokens>, post: Option<Tokens>) -> (Option<Tokens>, 
     )
   }
 }
-
 
 LoadDefinitions!({
   //======================================================================
@@ -684,7 +683,7 @@ LoadDefinitions!({
       let cite_style = if style_str == "n" { "numbers" }
         else if style_str == "s" { "super" }
         else { "authoryear" };
-      assign_value("CITE_STYLE", arena::pin(cite_style), None);
+      assign_value("CITE_STYLE", pin(cite_style), None);
     }
     if let Some(ay) = aysep_arg {
       assign_value("CITE_AY_SEPARATOR", Stored::Tokens(ay), None);
@@ -842,7 +841,7 @@ LoadDefinitions!({
       // check. Inner `\@@cite`-style mode pushes can leak a BOUND_MODE
       // binding into our frame, but we want to recover (matching Perl
       // behavior on the same input).
-      latexml_core::stomach::pop_stack_frame(false)?;
+      pop_stack_frame(false)?;
       Ok(Vec::new())
     }
   );

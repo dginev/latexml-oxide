@@ -3,11 +3,13 @@
 //! These tests exercise the full post-processing chain on realistic
 //! LaTeXML XML documents.
 
-use latexml_post::Post;
-use latexml_post::document::{PostDocument, PostDocumentOptions};
-use latexml_post::object_db::ObjectDB;
-use latexml_post::processor::Processor;
-use latexml_post::scan::Scan;
+use latexml_post::{
+  Post,
+  document::{PostDocument, PostDocumentOptions},
+  object_db::ObjectDB,
+  processor::Processor,
+  scan::Scan,
+};
 
 const SIMPLE_DOC: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <?latexml class="article" options="onecolumn"?>
@@ -344,9 +346,9 @@ fn test_xslt_cache_reuse_produces_identical_output() {
     return;
   };
 
-  use latexml_post::processor::Processor;
-  use latexml_post::xslt::XSLT;
   use std::time::Instant;
+
+  use latexml_post::{processor::Processor, xslt::XSLT};
 
   const SMALL_DOC: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
@@ -358,11 +360,8 @@ fn test_xslt_cache_reuse_produces_identical_output() {
   let mut elapsed_ms: Vec<u128> = Vec::new();
 
   for _ in 0..3 {
-    let doc = latexml_post::document::PostDocument::new_from_string(
-      SMALL_DOC,
-      latexml_post::document::PostDocumentOptions::default(),
-    )
-    .expect("parse small doc");
+    let doc = PostDocument::new_from_string(SMALL_DOC, PostDocumentOptions::default())
+      .expect("parse small doc");
     let mut xslt = XSLT::new(
       stylesheet,
       rustc_hash::FxHashMap::default(),

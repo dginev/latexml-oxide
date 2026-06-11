@@ -20,8 +20,8 @@ LoadDefinitions!({
     let (glyph, font) = font_decode(code_val as i32, Some(&font_name), None);
     // Perl: Box($glyph, $font, ...) — undef glyph produces empty box
     let sym = match glyph {
-      Some(ch) => arena::pin(ch.to_string()),
-      None => arena::pin_static(""),
+      Some(ch) => pin(ch.to_string()),
+      None => pin_static(""),
     };
     Ok(Digested::from(Tbox::new(
       sym,
@@ -44,8 +44,8 @@ LoadDefinitions!({
     let (glyph, font) = font_decode(code as i32, Some(&font_name), None);
     // Perl: Box($glyph, $font, ...) — undef glyph produces empty box
     let sym = match glyph {
-      Some(ch) => arena::pin(ch.to_string()),
-      None => arena::pin_static(""),
+      Some(ch) => pin(ch.to_string()),
+      None => pin_static(""),
     };
     Ok(Digested::from(Tbox::new(
       sym,
@@ -67,12 +67,12 @@ LoadDefinitions!({
     let postfix = roman_aux(level);
     // DefMacroI for \theenumX, \p@enumX, \labelenumX
     let the_body = s!("\\lx@Picountersymbol{{{font_str}}}{{enum{postfix}}}{{{base_str}}}");
-    let the_tokens = latexml_core::mouth::tokenize_internal(&the_body);
+    let the_tokens = mouth::tokenize_internal(&the_body);
     def_macro(T_CS!(s!("\\theenum{postfix}")), None, the_tokens, None)?;
     let empty_tokens = Tokens::new(vec![]);
     def_macro(T_CS!(s!("\\p@enum{postfix}")), None, empty_tokens, None)?;
     let label_body = s!("\\theenum{postfix}");
-    let label_tokens = latexml_core::mouth::tokenize_internal(&label_body);
+    let label_tokens = mouth::tokenize_internal(&label_body);
     def_macro(T_CS!(s!("\\labelenum{postfix}")), None, label_tokens, None)?;
     Ok(Tokens::new(vec![]))
   });

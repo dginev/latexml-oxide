@@ -3,12 +3,21 @@ name = "latexml"
 version = "0.6.2"
 edition = "2024"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
-license = "CC0"
+license = "CC0-1.0"
 homepage = "https://github.com/dginev/latexml-oxide"
 repository = "https://github.com/dginev/latexml-oxide"
 readme = "README.md"
 description = "A TeX to XML/HTML/ePub converster: a LaTeXML reimplementation in Rust"
 default-run = "latexml_oxide"
+
+[lints]
+workspace = true
+
+# indexmap is declared here only to pin a single workspace-wide version
+# (DEP-06 #234); this crate uses it transitively, not directly, so cargo-machete
+# reports a false positive.
+[package.metadata.cargo-machete]
+ignored = ["indexmap"]
 
 [[bin]]
 name = "latexml_oxide"

@@ -10,12 +10,16 @@
 //! parameters unvalidated — validation requires a running State which these
 //! unit tests don't set up.
 
-use latexml_core::T_CS;
-use latexml_core::common::arena;
-use latexml_core::common::def_parser::{parse_parameters, parse_prototype};
-use latexml_core::state::{State, StateOptions, set_state};
+use latexml_core::{
+  T_CS,
+  common::{
+    arena,
+    def_parser::{parse_parameters, parse_prototype},
+  },
+  state::{State, StateOptions, set_state},
+};
 
-fn sym_str(s: latexml_core::common::arena::SymStr) -> String { arena::to_string(s) }
+fn sym_str(s: arena::SymStr) -> String { arena::to_string(s) }
 
 fn setup() {
   // parse_prototype / parse_parameters use mouth::tokenize_internal

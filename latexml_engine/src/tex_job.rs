@@ -2,9 +2,10 @@
 //!
 //! Core TeX Implementation for LaTeXML
 
-use crate::prelude::*;
 use chrono::prelude::*;
 use once_cell::sync::Lazy;
+
+use crate::prelude::*;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static SOURCE_DATE_EPOCH: Lazy<Option<String>> =
@@ -65,9 +66,9 @@ LoadDefinitions!({
     // When called during package/definition loading (e.g., expl3's error handler
     // calls \tex_end:D via \msg_fatal), ignore it. Package errors should not
     // terminate the entire document processing.
-    if !state::lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
+    if !lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
       leave_horizontal()?;
-      gullet::flush();
+      flush();
     }
     // else: silently ignore during definition loading
   });
@@ -133,7 +134,9 @@ LoadDefinitions!({
   // at the end of `\@load@latex@pool` so we restore our impl after
   // every LaTeX pool load.
   DefMacro!("\\lx@documentstyle@impl[]{}", sub[(options_opt, class_tks)] {
-    use latexml_core::binding::content::{find_file, find_file_fallback_exists, FindFileOptions, load_class};
+    use latexml_core::binding::content::{
+      find_file, find_file_fallback_exists, FindFileOptions, load_class,
+    };
     // Perl latex_constructs.pool.ltxml:79 — `$class =~ s/\s+//g;`. Strip ALL
     // whitespace (not just leading/trailing as a bare `.trim()` would), so a
     // multi-line `\documentstyle[...]{<newline>article}` — whose post-`{`
@@ -153,7 +156,7 @@ LoadDefinitions!({
       ..InputDefinitionOptions::default()
     })?;
 
-    state::assign_value("2.09_COMPATIBILITY", true, Some(Scope::Global));
+    assign_value("2.09_COMPATIBILITY", true, Some(Scope::Global));
 
     // Perl TeX.pool.ltxml:60-65 — when the class triggers the AmSTeX pool
     // (only `amsppt` today), Perl LoadPool's AmSTeX and *re-emits*
@@ -180,9 +183,9 @@ LoadDefinitions!({
     // Perl L132-135 `compatDefinitions` — pre-bind LaTeX 2.09 dimensions.
     // Perl helper redefines `\@maxsep` and `\@dblmaxsep`; if these come
     // from another file and are already defined, redef is harmless.
-    let zero_dim = Stored::Number(latexml_core::common::number::Number::new(0));
-    state::assign_value("\\@maxsep", zero_dim.clone(), Some(Scope::Global));
-    state::assign_value("\\@dblmaxsep", zero_dim, Some(Scope::Global));
+    let zero_dim = Stored::Number(Number::new(0));
+    assign_value("\\@maxsep", zero_dim.clone(), Some(Scope::Global));
+    assign_value("\\@dblmaxsep", zero_dim, Some(Scope::Global));
 
     // Now that LaTeX pool is loaded, undefine `\magnification` so babel
     // detects "running under LaTeX" correctly. The latex_constructs
@@ -191,8 +194,8 @@ LoadDefinitions!({
     // line is often `\magnification=\magstep1`) functional under the
     // cortex_worker's eager LaTeX.pool preload. See sibling change in
     // latex_constructs.rs `\documentclass` after_digest.
-    if let Some(undef_meaning) = state::lookup_meaning(&T_CS!("\\@undefined")) {
-      state::assign_meaning(&T_CS!("\\magnification"), undef_meaning, Some(Scope::Global));
+    if let Some(undef_meaning) = lookup_meaning(&T_CS!("\\@undefined")) {
+      assign_meaning(&T_CS!("\\magnification"), undef_meaning, Some(Scope::Global));
     }
 
     // Comma-list to Vec<String>. Whitespace-strip per Perl
@@ -208,7 +211,7 @@ LoadDefinitions!({
     // Perl uses `notex => !LookupValue('INCLUDE_CLASSES')` which defaults to
     // `notex = true` — FindFile consults the @ltxml_paths binding registry
     // as well as the filesystem.
-    let notex = !state::lookup_bool("INCLUDE_CLASSES");
+    let notex = !lookup_bool("INCLUDE_CLASSES");
     // Probe `.sty` then `.cls`, AND fall back to version-stripping
     // (`find_file_fallback`) so e.g. `\documentstyle{aipproc2}` resolves
     // to aipproc.sty.ltxml — matching Perl's `FindFile` which consults

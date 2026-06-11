@@ -22,8 +22,7 @@
 //! `Mouth::create`-level read-log), each pinned as `Overlay(version)`
 //! or `Disk(mtime)`.
 
-use std::path::Path;
-use std::time::SystemTime;
+use std::{path::Path, time::SystemTime};
 
 use latexml_core::state;
 use rustc_hash::FxHashMap;
@@ -40,19 +39,17 @@ pub(crate) struct Buffer {
 fn buffer_keys(path: &str, project_dir: &Path, ambiguous_base: bool) -> Vec<String> {
   let p = Path::new(path);
   let mut keys = vec![path.to_string()];
-  if let Ok(rel) = p.strip_prefix(project_dir) {
-    if let Some(rel_str) = rel.to_str() {
-      if rel_str != path {
-        keys.push(rel_str.to_string());
-      }
-    }
+  if let Ok(rel) = p.strip_prefix(project_dir)
+    && let Some(rel_str) = rel.to_str()
+    && rel_str != path
+  {
+    keys.push(rel_str.to_string());
   }
-  if !ambiguous_base {
-    if let Some(base) = p.file_name().and_then(|s| s.to_str()) {
-      if !keys.iter().any(|k| k == base) {
-        keys.push(base.to_string());
-      }
-    }
+  if !ambiguous_base
+    && let Some(base) = p.file_name().and_then(|s| s.to_str())
+    && !keys.iter().any(|k| k == base)
+  {
+    keys.push(base.to_string());
   }
   // Extension-less variants: `\input{sections/ch2}` probes the literal
   // name before any extension is appended.
@@ -141,10 +138,10 @@ fn dep_state(source: &str, buffers: &FxHashMap<String, Buffer>) -> DepState {
     }
   }
   let p = Path::new(source);
-  if p.is_absolute() || p.exists() {
-    if let Ok(meta) = std::fs::metadata(p) {
-      return DepState::Disk(meta.modified().ok());
-    }
+  if (p.is_absolute() || p.exists())
+    && let Ok(meta) = std::fs::metadata(p)
+  {
+    return DepState::Disk(meta.modified().ok());
   }
   DepState::Ephemeral
 }
@@ -189,7 +186,9 @@ pub(crate) fn deps_still_current(
   snapshot: &[(String, DepState)],
   buffers: &FxHashMap<String, Buffer>,
 ) -> bool {
-  snapshot.iter().all(|(name, pinned)| dep_state(name, buffers) == *pinned)
+  snapshot
+    .iter()
+    .all(|(name, pinned)| dep_state(name, buffers) == *pinned)
 }
 
 #[cfg(test)]
@@ -219,7 +218,10 @@ mod tests {
       "sections/ch2",
       "ch2",
     ] {
-      assert!(keys.iter().any(|k| k == expected), "missing key {expected}: {keys:?}");
+      assert!(
+        keys.iter().any(|k| k == expected),
+        "missing key {expected}: {keys:?}"
+      );
     }
   }
 
@@ -253,17 +255,20 @@ mod tests {
   #[test]
   fn warmup_snapshot_uses_read_log_and_excludes_root() {
     use latexml_core::common::arena;
-    latexml_core::state::reset_thread_state();
-    latexml_core::state::record_opened_source(arena::pin("/proj/main.tex"));
-    latexml_core::state::record_opened_source(arena::pin("/proj/defs.tex"));
-    latexml_core::state::record_opened_source(arena::pin("/proj/defs.tex")); // deduped
+    state::reset_thread_state();
+    state::record_opened_source(arena::pin("/proj/main.tex"));
+    state::record_opened_source(arena::pin("/proj/defs.tex"));
+    state::record_opened_source(arena::pin("/proj/defs.tex")); // deduped
     let bufs = buffers(&[("/proj/main.tex", 3, "root"), ("/proj/defs.tex", 5, "defs")]);
     let snap = warmup_dep_snapshot(&bufs, Path::new("/proj/main.tex"));
     assert!(
       snap.iter().all(|(n, _)| n != "/proj/main.tex"),
       "the root must not be pinned (body edits bump its version): {snap:?}"
     );
-    assert_eq!(snap, vec![("/proj/defs.tex".to_string(), DepState::Overlay(5))]);
+    assert_eq!(snap, vec![(
+      "/proj/defs.tex".to_string(),
+      DepState::Overlay(5)
+    )]);
     // Bumping the ROOT's version must not invalidate (preamble equality is
     // its key); bumping the preamble-consumed dep's version must.
     let mut bufs2 = bufs.clone();
@@ -299,7 +304,7 @@ mod tests {
     // current (UNIX_EPOCH) and verify it reads as stale.
     let stale = vec![(
       sty.to_str().unwrap().to_string(),
-      DepState::Disk(Some(std::time::SystemTime::UNIX_EPOCH)),
+      DepState::Disk(Some(SystemTime::UNIX_EPOCH)),
     )];
     assert!(!deps_still_current(&stale, &bufs));
   }

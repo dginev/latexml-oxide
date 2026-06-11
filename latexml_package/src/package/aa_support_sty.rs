@@ -78,8 +78,8 @@ LoadDefinitions!({
   // document body, reordering the frontmatter/body (arxiv 1209.2771:
   // abstract paragraphs showed up BEFORE <title> and no <abstract> emitted).
   DefMacro!("\\abstract{}", sub[(arg1)] {
-    gullet::skip_spaces()?;
-    let next_is_begin = gullet::if_next(T_BEGIN!())?;
+    skip_spaces()?;
+    let next_is_begin = if_next(T_BEGIN!())?;
     let target = if next_is_begin { "\\abstract@new" } else { "\\abstract@old" };
     let mut out = vec![T_CS!(target), T_BEGIN!()];
     out.extend(arg1.unlist());
@@ -136,7 +136,7 @@ LoadDefinitions!({
   // surfaces a `@name` attribute would miss the heading.
   DefConstructor!("\\acknowledgements", "<ltx:acknowledgements name='#name'>",
     properties => sub[_args] {
-      let name = stomach::digest(T_CS!("\\acknowledgmentsname"))
+      let name = digest(T_CS!("\\acknowledgmentsname"))
         .map(|d| d.to_string()).unwrap_or_default();
       Ok(stored_map!("name" => name))
     });
@@ -325,7 +325,7 @@ LoadDefinitions!({
     "<ltx:XMApp role='POSTFIX'><ltx:XMTok role='SUPERSCRIPTOP' scriptpos='#scriptpos'/><ltx:XMTok>.</ltx:XMTok><ltx:XMWrap>#1</ltx:XMWrap></ltx:XMApp>",
     mode => "math", bounded => true,
     properties => sub[_args] {
-      let script_level = state::lookup_int("script_level");
+      let script_level = lookup_int("script_level");
       Ok(stored_map!("scriptpos" => s!("mid{}", script_level)))
     });
   DefMacro!("\\aas@fstack{}", "\\ensuremath{\\aas@@fstack{#1}}");

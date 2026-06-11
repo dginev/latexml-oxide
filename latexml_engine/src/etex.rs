@@ -6,18 +6,22 @@
 //!
 //! Section numbering in comments below references that manual.
 
-use crate::prelude::*;
 use latexml_core::common::glue::FillCode;
+
+use crate::prelude::*;
 
 /// Resolve a FontDef token to an Rc<Font>: look up fontinfo via definition CS name, fall back to
 /// current font. Perl: `$font = $STATE->lookupValue('font')->merge(%$fontinfo);`
 fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   // Resolve through definition to get actual CS name (e.g. \font -> \tenrm)
-  let key = match lookup_definition(font_tok) { Ok(Some(defn)) => {
-    s!("fontinfo_{}", defn.get_cs_name())
-  } _ => {
-    s!("fontinfo_{}", font_tok)
-  }};
+  let key = match lookup_definition(font_tok) {
+    Ok(Some(defn)) => {
+      s!("fontinfo_{}", defn.get_cs_name())
+    },
+    _ => {
+      s!("fontinfo_{}", font_tok)
+    },
+  };
   with_value(&key, |v| {
     if let Some(Stored::Font(f)) = v {
       Some(Rc::clone(f))
@@ -27,7 +31,6 @@ fn fontchar_lookup_font(font_tok: &Token) -> Option<Rc<Font>> {
   })
   .or_else(lookup_font)
 }
-
 
 LoadDefinitions!({
   // Helpers used by definitions below. Defined first so all defs can refer.
@@ -40,16 +43,16 @@ LoadDefinitions!({
     if token.get_catcode() != Catcode::CS {
       return false;
     }
-    matches!(state::lookup_meaning(token),
+    matches!(lookup_meaning(token),
       Some(Stored::Primitive(ref p)) if *p.get_cs() == *TOKEN_RELAX)
   }
 
   fn etex_readexpr(rtype: RegisterType) -> Result<RegisterValue> {
     let value = etex_readexpr_i(rtype, 0)?;
-    if let Some(token) = gullet::read_token()? {
+    if let Some(token) = read_token()? {
       // Skip \relax or token with \relax meaning (\__int_eval_end: etc.)
       if !is_relax_meaning(&token) {
-        gullet::unread_one(token);
+        unread_one(token);
       }
     }
     // eTeX fixes the result type by the command (\dimexpr→Dimension, etc.), not
@@ -61,13 +64,13 @@ LoadDefinitions!({
   }
 
   fn etex_readexpr_i(rtype: RegisterType, prec: usize) -> Result<RegisterValue> {
-    let token = match gullet::read_x_non_space()? {
+    let token = match read_x_non_space()? {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
     };
     let mut value = if token == T_OTHER!("(") {
       let i_value = etex_readexpr_i(rtype, 0)?;
-      let close = gullet::read_x_token(None, false, None)?;
+      let close = read_x_token(None, false, None)?;
       if close.is_none() || close != Some(T_OTHER!(")")) {
         let got = close
           .map(|t| t.stringify())
@@ -77,13 +80,13 @@ LoadDefinitions!({
       }
       i_value
     } else {
-      gullet::unread_one(token);
-      gullet::read_value(rtype)?
+      unread_one(token);
+      read_value(rtype)?
     };
 
-    while let Some(next) = gullet::read_x_non_space()? {
+    while let Some(next) = read_x_non_space()? {
       if next == *TOKEN_RELAX {
-        gullet::unread_one(next);
+        unread_one(next);
         break;
       } else if next == T_OTHER!("+") && prec < 1 {
         value = value.add(etex_readexpr_i(rtype, 1)?);
@@ -94,7 +97,7 @@ LoadDefinitions!({
       } else if next == T_OTHER!("/") && prec < 2 {
         value = value.divideround(etex_readexpr_i(RegisterType::Number, 2)?);
       } else {
-        gullet::unread_one(next);
+        unread_one(next);
         break;
       }
     }
@@ -103,7 +106,7 @@ LoadDefinitions!({
 
   // Perl L275-288: eTeXPenaltiesGetter / eTeXPenaltiesSetter
   fn etex_penalties_getter(name: &str) -> Option<RegisterValue> {
-    let n = gullet::read_number().unwrap_or_default().value_of();
+    let n = read_number().unwrap_or_default().value_of();
     let n = if n < 0 { 0i64 } else { n } as usize;
     if n == 0 {
       return Some(RegisterValue::Number(Number::new(0)));
@@ -133,7 +136,7 @@ LoadDefinitions!({
     let n = if n < 0 { 0i64 } else { n } as usize;
     let mut penalties = VecDeque::new();
     for _ in 0..n {
-      let p = gullet::read_number().unwrap_or_default();
+      let p = read_number().unwrap_or_default();
       penalties.push_back(Stored::Number(p));
     }
     assign_value(
@@ -183,7 +186,7 @@ LoadDefinitions!({
 
   // \fontcharht / \fontcharwd / \fontchardp / \fontcharic — Perl L86-113
   DefParameterType!(FontDef, sub[_inner, _extra] {
-    gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"))
+    read_token()?.unwrap_or_else(|| T_CS!("\\relax"))
   });
   DefRegister!("\\fontcharht FontDef Number", Dimension::new(0),
   readonly => true,
@@ -191,14 +194,13 @@ LoadDefinitions!({
     let font_tok = args.remove(0).expected_token();
     let code = args.remove(0).expect_number().value_of();
     let font_rc = fontchar_lookup_font(&font_tok);
-    if let Some(font) = font_rc {
-      if let Some(ch) = char::from_u32(code as u32) {
+    if let Some(font) = font_rc
+      && let Some(ch) = char::from_u32(code as u32) {
         let mut buf = [0u8; 4];
         let key = ch.encode_utf8(&mut buf);
         let (_, h, _) = font.compute_string_size(key, SymHashMap::default());
         return Some(RegisterValue::Dimension(h));
       }
-    }
     Some(RegisterValue::Dimension(Dimension::new(0)))
   });
   DefRegister!("\\fontcharwd FontDef Number", Dimension::new(0),
@@ -207,14 +209,13 @@ LoadDefinitions!({
     let font_tok = args.remove(0).expected_token();
     let code = args.remove(0).expect_number().value_of();
     let font_rc = fontchar_lookup_font(&font_tok);
-    if let Some(font) = font_rc {
-      if let Some(ch) = char::from_u32(code as u32) {
+    if let Some(font) = font_rc
+      && let Some(ch) = char::from_u32(code as u32) {
         let mut buf = [0u8; 4];
         let key = ch.encode_utf8(&mut buf);
         let (w, _, _) = font.compute_string_size(key, SymHashMap::default());
         return Some(RegisterValue::Dimension(w));
       }
-    }
     Some(RegisterValue::Dimension(Dimension::new(0)))
   });
   DefRegister!("\\fontchardp FontDef Number", Dimension::new(0),
@@ -223,14 +224,13 @@ LoadDefinitions!({
     let font_tok = args.remove(0).expected_token();
     let code = args.remove(0).expect_number().value_of();
     let font_rc = fontchar_lookup_font(&font_tok);
-    if let Some(font) = font_rc {
-      if let Some(ch) = char::from_u32(code as u32) {
+    if let Some(font) = font_rc
+      && let Some(ch) = char::from_u32(code as u32) {
         let mut buf = [0u8; 4];
         let key = ch.encode_utf8(&mut buf);
         let (_, _, d) = font.compute_string_size(key, SymHashMap::default());
         return Some(RegisterValue::Dimension(d));
       }
-    }
     Some(RegisterValue::Dimension(Dimension::new(0)))
   });
   // Perl notes "Not actually computed here (yet)"
@@ -427,7 +427,7 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\scantokens GeneralText", sub[(tokens)] {
-    gullet::open_mouth(
+    open_mouth(
       Mouth::new(&writable_tokens(&tokens), None)?, true);
     Tokens!()
   });
@@ -507,14 +507,12 @@ LoadDefinitions!({
   DefConditional!("\\ifincsname", { false });
 
   DefConditional!("\\unless Token", sub[(if_token)] {
-    if let Some(Stored::Conditional(defn)) = lookup_definition_stored(&if_token)? {
-      if defn.conditional_type == ConditionalType::If {
-        if let Some(ref test) = defn.test {
+    if let Some(Stored::Conditional(defn)) = lookup_definition_stored(&if_token)?
+      && defn.conditional_type == ConditionalType::If
+        && let Some(ref test) = defn.test {
           let args = defn.read_arguments()?;
           return Ok(!(test(args)?));
         }
-      }
-    }
     let msg = s!("\\unless should not be followed by {}", if_token.stringify());
     Error!("unexpected", if_token, msg);
     false
@@ -564,18 +562,18 @@ LoadDefinitions!({
   // Witness: arXiv:2506.16610 / .16657 / .20642 (papers via etex.sty
   // raw-load + linegoal.sty / etextools / similar). Rust 2 → 0
   // expected, beating Perl=3.
-  DefMacro!("\\globcount",  "\\newcount");
-  DefMacro!("\\loccount",   "\\newcount");
-  DefMacro!("\\globdimen",  "\\newdimen");
-  DefMacro!("\\locdimen",   "\\newdimen");
-  DefMacro!("\\globskip",   "\\newskip");
-  DefMacro!("\\locskip",    "\\newskip");
+  DefMacro!("\\globcount", "\\newcount");
+  DefMacro!("\\loccount", "\\newcount");
+  DefMacro!("\\globdimen", "\\newdimen");
+  DefMacro!("\\locdimen", "\\newdimen");
+  DefMacro!("\\globskip", "\\newskip");
+  DefMacro!("\\locskip", "\\newskip");
   DefMacro!("\\globmuskip", "\\newmuskip");
-  DefMacro!("\\locmuskip",  "\\newmuskip");
-  DefMacro!("\\globbox",    "\\newbox");
-  DefMacro!("\\locbox",     "\\newbox");
-  DefMacro!("\\globtoks",   "\\newtoks");
-  DefMacro!("\\loctoks",    "\\newtoks");
-  DefMacro!("\\globmarks",  "\\newmarks");
-  DefMacro!("\\locmarks",   "\\newmarks");
+  DefMacro!("\\locmuskip", "\\newmuskip");
+  DefMacro!("\\globbox", "\\newbox");
+  DefMacro!("\\locbox", "\\newbox");
+  DefMacro!("\\globtoks", "\\newtoks");
+  DefMacro!("\\loctoks", "\\newtoks");
+  DefMacro!("\\globmarks", "\\newmarks");
+  DefMacro!("\\locmarks", "\\newmarks");
 });

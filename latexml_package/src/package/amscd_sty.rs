@@ -28,9 +28,9 @@ LoadDefinitions!({
   //     (T_CS('@' . ToString($token))); });
   // Implemented as a primitive that reads a token and unreads the appropriate CS.
   DefPrimitive!(T_CS!("\\cd@"), None, {
-    let token = gullet::read_token()?.unwrap();
+    let token = read_token()?.unwrap();
     let cs_name = token.with_str(|s| format!("@{s}"));
-    gullet::unread(Tokens::from(T_CS!(&*cs_name)));
+    unread(Tokens::from(T_CS!(&*cs_name)));
   });
 
   // Horizontal connectors
@@ -97,8 +97,8 @@ LoadDefinitions!({
       // Probe scriptpos in place — only resolve to an owned String
       // when the value is non-empty (most amscd cells have no override).
       let scriptpos_attr = props.get("scriptpos").and_then(|v| match v {
-        Stored::String(s) if !arena::with(*s, |p| p.is_empty()) => {
-          Some(("scriptpos".to_string(), arena::to_string(*s)))
+        Stored::String(s) if !with(*s, |p| p.is_empty()) => {
+          Some(("scriptpos".to_string(), to_string(*s)))
         },
         _ => None,
       });
@@ -182,21 +182,19 @@ LoadDefinitions!({
       // Make the left & right parts width=0, so they don't affect centering
       document.open_element("ltx:XMWrap",
         Some(map!("role" => "ARROW".to_string())), None)?;
-      if !left_empty {
-        if let Some(left_val) = left {
+      if !left_empty
+        && let Some(left_val) = left {
           document.insert_element("ltx:XMArg", vec![left_val],
             Some(map!("width" => "0.0pt".to_string())))?;
         }
-      }
       if let Some(op_val) = op {
         document.insert_element("ltx:XMArg", vec![op_val], None)?;
       }
-      if !right_empty {
-        if let Some(right_val) = right {
+      if !right_empty
+        && let Some(right_val) = right {
           document.insert_element("ltx:XMArg", vec![right_val],
             Some(map!("width" => "0.0pt".to_string())))?;
         }
-      }
       document.close_element("ltx:XMWrap")?;
     },
     reversion => "@#1{#3}#1{#4}#1"
@@ -214,7 +212,7 @@ LoadDefinitions!({
   //       class=>'ltx_horizontally_stretchy',  width => Dimension('30pt')); });
   DefPrimitive!(T_CS!("\\lx@amscd@leftarrow"), None, {
     Tbox::new(
-      arena::pin_static("\u{2190}"),
+      pin_static("\u{2190}"),
       None,
       None,
       Tokens!(T_CS!("\\leftarrow")),
@@ -230,7 +228,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@rightarrow"), None, {
     Tbox::new(
-      arena::pin_static("\u{2192}"),
+      pin_static("\u{2192}"),
       None,
       None,
       Tokens!(T_CS!("\\rightarrow")),
@@ -246,7 +244,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@leftrightarrow"), None, {
     Tbox::new(
-      arena::pin_static("\u{2194}"),
+      pin_static("\u{2194}"),
       None,
       None,
       Tokens!(T_CS!("\\leftrightarrow")),
@@ -262,7 +260,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@equals"), None, {
     Tbox::new(
-      arena::pin_static("="),
+      pin_static("="),
       None,
       None,
       Tokens!(T_OTHER!("=")),

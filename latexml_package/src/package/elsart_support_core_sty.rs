@@ -220,7 +220,7 @@ LoadDefinitions!({
     let mut skipped: Vec<Token> = Vec::new();
     let mut depth: i32 = 0;
     let mut count: usize = 0;
-    while let Some(tok) = gullet::read_token()? {
+    while let Some(tok) = read_token()? {
       count += 1;
       if count > 4096 {
         skipped.push(tok); // safety cap: restore everything, gobble nothing
@@ -246,7 +246,7 @@ LoadDefinitions!({
     // Re-inject everything we buffered, in order. The only token ever removed
     // is the stray `}` (which is never pushed onto `skipped`).
     for tok in skipped.into_iter().rev() {
-      gullet::unread_one(tok);
+      unread_one(tok);
     }
   });
   DefMacro!("\\keyword{}", "\\@keyword #1 \\@keyword@cut\\lx@elsart@gobble@optbrace");
@@ -272,7 +272,7 @@ LoadDefinitions!({
   // Per-section equation numbering — Perl L161-163.
   // Emit `\@addtoreset{equation}{section}` + per-section
   // `\theequation` when the `seceqn` class option is active.
-  if state::lookup_bool("@seceqn") {
+  if lookup_bool("@seceqn") {
     RawTeX!(r"\@addtoreset{equation}{section}");
     DefMacro!("\\theequation", "\\thesection.\\arabic{equation}");
   }
@@ -287,7 +287,7 @@ LoadDefinitions!({
   // The base `\newtheorem{thm}` declaration was missing in the prior
   // Rust port — every `\begin{thm}` in elsart papers reported
   // `{thm} undefined`. Driver paper: math0611842 (3 errors → 0).
-  if state::lookup_bool("@seceqn") {
+  if lookup_bool("@seceqn") {
     RawTeX!(r"\newtheorem{thm}{Theorem}[section]\@addtoreset{thm}{section}");
   } else {
     RawTeX!(r"\newtheorem{thm}{Theorem}");

@@ -27,8 +27,7 @@ LoadDefinitions!({
   DefMacro!("\\backsectionname", "Acknowledgements");
   // Optional title arg (always supplied in practice, e.g. [Acknowledgements] /
   // [Declaration of interests] / [Data availability statement]); empty default.
-  DefMacro!("\\backsection[]{}",
-    "\\par\\noindent\\textbf{#1.} #2\\par");
+  DefMacro!("\\backsection[]{}", "\\par\\noindent\\textbf{#1.} #2\\par");
   // jfm.cls L?: \def\aff#1{\ignorespaces\textsuperscript{#1}} — affil
   // marker as superscript.
   DefMacro!("\\aff{}", "\\textsuperscript{#1}");
@@ -36,9 +35,10 @@ LoadDefinitions!({
   // text routed via \thanks.
   DefMacro!("\\corresp{}", "\\thanks{#1}");
   // \affiliation{...} — institution list, preserve as ltx:note.
-  DefMacro!("\\affiliation{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}");
+  DefMacro!(
+    "\\affiliation{}",
+    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
+  );
   // \keywords{...} — JFM has its own keywords macro.
-  DefMacro!("\\keywords{}",
-    "\\@add@frontmatter{ltx:keywords}{#1}");
+  DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 });

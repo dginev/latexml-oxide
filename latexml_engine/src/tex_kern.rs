@@ -82,7 +82,7 @@ LoadDefinitions!({
   // Get kern, if last on LIST
   DefRegister!("\\lastkern" => Dimension::new(0), readonly => true,
   getter => {
-    stomach::with_box_list(|stomach_box_list| {
+    with_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
         if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
@@ -127,7 +127,7 @@ LoadDefinitions!({
       let mut attrs = string_map!("_noautoclose" => "1");
       let node = if svg {
         let transform = match props.get("transform") {
-          Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+          Some(Stored::String(s)) => to_string(*s), _ => String::new()
         };
         if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
         document.open_element("svg:g", Some(attrs), None)?
@@ -174,7 +174,7 @@ LoadDefinitions!({
     let mut attrs = string_map!("_noautoclose" => "1");
     let node = if svg {
       let transform = match props.get("transform") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+        Some(Stored::String(s)) => to_string(*s), _ => String::new()
       };
       if !transform.is_empty() { attrs.insert(String::from("transform"), transform); }
       document.open_element("svg:g", Some(attrs), None)?

@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   TeX!(
     r#"""
@@ -26,7 +25,7 @@ LoadDefinitions!({
     </ltx:quote>",
     bounded => true,
     before_digest => {
-      stomach::digest(Tokens!(T_CS!("\\epigraphsize")))?;
+      digest(Tokens!(T_CS!("\\epigraphsize")))?;
     },
     after_digest => sub[whatsit] {
       let rule = LookupRegisterOrDefault!("\\epigraphrule");
@@ -39,9 +38,9 @@ LoadDefinitions!({
         RegisterValue::Dimension(d) => d.pt_value(None),
         _ => 0.0,
       };
-      let qa = gullet::do_expand(T_CS!("\\epigraphflush"))?.to_string();
-      let ta = gullet::do_expand(T_CS!("\\textflush"))?.to_string();
-      let sa = gullet::do_expand(T_CS!("\\sourceflush"))?.to_string();
+      let qa = do_expand(T_CS!("\\epigraphflush"))?.to_string();
+      let ta = do_expand(T_CS!("\\textflush"))?.to_string();
+      let sa = do_expand(T_CS!("\\sourceflush"))?.to_string();
 
       let qalign = match qa.as_str() {
         "center" => "margin-right:auto; margin-left:auto;",

@@ -1,6 +1,6 @@
-use log::max_level;
-use log::{Level, LevelFilter, Metadata, Record, SetLoggerError};
 use std::cell::RefCell;
+
+use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
 
 // ANSI SGR escape sequences (drop-in replacement for the
 // unmaintained `ansi_term` crate; bytes match `ansi_term::Colour::*.paint(...)`).
@@ -23,8 +23,7 @@ fn paint(color: &str, text: &str) -> String { format!("{color}{text}{ANSI_RESET}
 /// mid-process. Note the captured LOG_BUFFER (`.latexml.log`) is already
 /// ANSI-stripped independently; this makes the *redirected stderr* match it.
 fn stderr_use_color() -> bool {
-  use std::io::IsTerminal;
-  use std::sync::OnceLock;
+  use std::{io::IsTerminal, sync::OnceLock};
   static USE_COLOR: OnceLock<bool> = OnceLock::new();
   *USE_COLOR
     .get_or_init(|| std::io::stderr().is_terminal() && std::env::var_os("NO_COLOR").is_none())
@@ -131,11 +130,11 @@ impl log::Log for LatexmlLogger {
       } + &details.to_string();
 
       // Capture to log buffer if active (strip ANSI for clean log text)
-      if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut() {
-        if let Some(ref mut log) = *buf {
-          log.push_str(&strip_ansi(&painted_message));
-          log.push('\n');
-        }
+      if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+        && let Some(ref mut log) = *buf
+      {
+        log.push_str(&strip_ansi(&painted_message));
+        log.push('\n');
       }
 
       // Use `\n` (not `\r`) to guarantee each log line starts on a fresh

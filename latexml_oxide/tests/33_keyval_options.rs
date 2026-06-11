@@ -3,8 +3,7 @@
 use std::rc::Rc;
 
 use latexml::tex_tests;
-use latexml_core::common::error::Result;
-use latexml_core::state;
+use latexml_core::{common::error::Result, state};
 
 pub fn keyval_options_dispatch(filename: &str) -> Option<Result<()>> {
   // Enable raw TeX loading so test-local .sty/.cls files are found

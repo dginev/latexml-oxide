@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Perl: algorithmicx.sty.ltxml
   // Was algorithmic.sty loaded? If so: BAIL immediately. (deeply incompatible)
@@ -31,8 +30,8 @@ LoadDefinitions!({
     def_macro_noop("\\algnewlanguage{}")?;
     def_macro_noop("\\algdeflanguage{}")?;
     def_macro_noop("\\alglanguage{}")?;
-    DefMacro!("\\algnewcommand",                  "\\newcommand");
-    DefMacro!("\\algrenewcommand",                "\\renewcommand");
+    DefMacro!("\\algnewcommand", "\\newcommand");
+    DefMacro!("\\algrenewcommand", "\\renewcommand");
     def_macro_noop("\\algdefaulttext[]{}")?;
     return Ok(());
   }
@@ -40,7 +39,7 @@ LoadDefinitions!({
   // Load core, make a few redefinitions
   InputDefinitions!("algorithmicx", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@orig@algorithmic"),
     &T_CS!("\\algorithmic"),
     None,
@@ -53,18 +52,18 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@setup@algorithmicx", sub [_args] {
     ResetCounter!("ALG@line");
     // If we are not within an algorithm environment, step the counter for its id's
-    let in_algorithm = state::with_stacked_values_sym(pin!("current_environment"), |vals| {
+    let in_algorithm = with_stacked_values_sym(pin!("current_environment"), |vals| {
       vals.iter().any(|v| {
-        matches!(v, Stored::String(s) if arena::with(*s, |v| v == "algorithm"))
+        matches!(v, Stored::String(s) if with(*s, |v| v == "algorithm"))
       })
     });
     if !in_algorithm {
       ref_step_id("algorithm")?;
     }
-    state::let_i(&T_CS!("\\list"), &T_CS!("\\lx@algorithmicx@beginlist"), None);
-    state::let_i(&T_CS!("\\endlist"), &T_CS!("\\lx@algorithmicx@endlist"), None);
-    state::let_i(&T_CS!("\\item"), &T_CS!("\\lx@algorithmicx@item"), None);
-    state::let_i(&T_CS!("\\hfill"), &T_CS!("\\lx@algorithmicx@hfill"), None);
+    let_i(&T_CS!("\\list"), &T_CS!("\\lx@algorithmicx@beginlist"), None);
+    let_i(&T_CS!("\\endlist"), &T_CS!("\\lx@algorithmicx@endlist"), None);
+    let_i(&T_CS!("\\item"), &T_CS!("\\lx@algorithmicx@item"), None);
+    let_i(&T_CS!("\\hfill"), &T_CS!("\\lx@algorithmicx@hfill"), None);
   });
 
   // IGNORE \list 1st arg (we'll handle counter stepping in \item)

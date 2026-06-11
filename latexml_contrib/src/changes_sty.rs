@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // Preserve change-marked content (author body) as ltx:text with a
   // semantic class. The pre-content-preserving stub gobbled `\deleted`
@@ -22,7 +21,7 @@ LoadDefinitions!({
   // and the }-token tries to close it. Pass-through preserves content;
   // semantic class is lost in HTML output. Witness 2404.13783,
   // 2110.12098 (aastex63 with `\added{\section{Model Limitations}...}`).
-  DefMacro!("\\added[]{}",    "#2");
+  DefMacro!("\\added[]{}", "#2");
   // `\deleted[author]{text}` → gobble to nothing, matching Perl's
   // changes.sty.ltxml L25 `DefMacro('\deleted[]{}',Tokens())`. The
   // `changes` package's `final` option (and Perl's always-final stub)
@@ -36,10 +35,10 @@ LoadDefinitions!({
   // citations that lack natbib's `\citep`) → `undefined:\citep` + a
   // `malformed:ltx:para` cascade where Perl is clean. `\added`/`\replaced`
   // stay content-preserving (`#2`), exactly as Perl does. RUST 2 → 0.
-  DefMacro!("\\deleted[]{}",  "");
+  DefMacro!("\\deleted[]{}", "");
   DefMacro!("\\replaced[]{}{}", "#2");
   DefMacro!("\\highlight[]{}", "#2");
-  DefMacro!("\\comment[]{}",   "#2");
+  DefMacro!("\\comment[]{}", "#2");
   def_macro_noop("\\ChangesListline{}{}{}{}")?;
   DefMacro!("\\listofchangesname", "List of changes");
   DefMacro!("\\summaryofchangesname", "Changes");

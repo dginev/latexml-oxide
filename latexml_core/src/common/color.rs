@@ -1,5 +1,7 @@
-use std::fmt;
-use std::hash::{Hash, Hasher};
+use std::{
+  fmt,
+  hash::{Hash, Hasher},
+};
 
 /// Color in a specific color model, matching Perl's LaTeXML::Common::Color hierarchy.
 ///

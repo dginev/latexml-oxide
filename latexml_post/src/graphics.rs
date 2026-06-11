@@ -5,13 +5,18 @@
 //! graphic file, applies transformations (scaling, cropping, format conversion),
 //! and sets the `imagesrc`, `imagewidth`, `imageheight` attributes.
 
+use std::{
+  path::{Path, PathBuf},
+  sync::LazyLock,
+};
+
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
-use std::path::{Path, PathBuf};
-use std::sync::LazyLock;
 
-use crate::document::PostDocument;
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::PostDocument,
+  processor::{ProcessResult, Processor},
+};
 
 // Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
@@ -385,9 +390,8 @@ impl Graphics {
     // for every figure, even though the source files are present.
     // Driver: astro-ph0002170 (8 .ps figures in the zip, all "not found").
     use std::sync::LazyLock;
-    static GRAPHICSPATH_RE: LazyLock<regex::Regex> = LazyLock::new(|| {
-      regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
-    });
+    static GRAPHICSPATH_RE: LazyLock<regex::Regex> =
+      LazyLock::new(|| regex::Regex::new(r#"^\s*graphicspath\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap());
     let mut paths = Vec::new();
     for pi in doc.findnodes(".//processing-instruction('latexml')") {
       let text = pi.get_content();
@@ -515,8 +519,7 @@ impl Graphics {
     //   * scale=S         — both dims × S
     //   * width=W only    — preserve aspect: height auto-scales by W/raw_w
     //   * height=H only   — preserve aspect: width auto-scales by H/raw_h
-    //   * width=W height=H (no keepaspectratio)
-    //                     — stretch independently
+    //   * width=W height=H (no keepaspectratio) — stretch independently
     //   * +keepaspectratio — use the more constraining dimension
     //
     // Earlier Rust port did `th = target_height.unwrap_or(h / dppt)` in the
@@ -579,8 +582,7 @@ impl Graphics {
   /// tags then reference the first-seen filename's stem — saves both
   /// conversion time AND output-bundle disk space.
   fn hash_file_content(path: &str) -> Option<u64> {
-    use std::hash::Hasher;
-    use std::io::Read;
+    use std::{hash::Hasher, io::Read};
     let mut file = std::fs::File::open(path).ok()?;
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     let mut buf = [0u8; 65536];
@@ -596,8 +598,8 @@ impl Graphics {
 
   fn rotate_image_inplace(dest: &str, angle_deg: f64) -> bool {
     // Sibling temp file to avoid IM's flaky in-place rewrite semantics.
-    let dest_path = std::path::Path::new(dest);
-    let parent = dest_path.parent().unwrap_or_else(|| std::path::Path::new("."));
+    let dest_path = Path::new(dest);
+    let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
       .file_name()
       .and_then(|s| s.to_str())
@@ -700,13 +702,12 @@ impl Graphics {
     // the caller falls back to raster.
     //
     // Order (subprocess; library license doesn't propagate):
-    //   1. mutool (MuPDF CLI) — fastest, plus ~4× more
-    //      gzip-compressible SVG output than pdftocairo (1.5 MB vs
-    //      6.0 MB gz on matplotlib scatter).
-    //   2. pdftocairo (poppler) — universally available with TeX Live.
-    //      20-40× faster than inkscape on benign vector PDFs.
-    //   3. inkscape — last vector resort. Some PDFs that fail
-    //      poppler still render via inkscape (but it can time out).
+    //   1. mutool (MuPDF CLI) — fastest, plus ~4× more gzip-compressible SVG output than pdftocairo
+    //      (1.5 MB vs 6.0 MB gz on matplotlib scatter).
+    //   2. pdftocairo (poppler) — universally available with TeX Live. 20-40× faster than inkscape
+    //      on benign vector PDFs.
+    //   3. inkscape — last vector resort. Some PDFs that fail poppler still render via inkscape
+    //      (but it can time out).
     if Self::convert_image_svg_mutool(source, dest, page) {
       return true;
     }
@@ -740,7 +741,8 @@ impl Graphics {
         // Subprocess wall-clock timeout; class=`shell` mirrors Perl
         // LaTeXImages.pm:293 `Error('shell', $cmd, …)`.
         Warn!(
-          "shell", "inkscape",
+          "shell",
+          "inkscape",
           "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
           source,
           timeout.as_secs()
@@ -791,10 +793,7 @@ impl Graphics {
     let tmp_pattern = parent.join(format!(".{}.{}.mutool_svg%d.svg", stem, unique));
     let tmp_pattern_str = tmp_pattern.to_string_lossy().to_string();
     let p1 = page.map(|p| p.max(1)).unwrap_or(1);
-    let tmp_actual = parent.join(format!(
-      ".{}.{}.mutool_svg{}.svg",
-      stem, unique, p1
-    ));
+    let tmp_actual = parent.join(format!(".{}.{}.mutool_svg{}.svg", stem, unique, p1));
     let cleanup = || {
       let _ = std::fs::remove_file(&tmp_actual);
     };
@@ -1042,18 +1041,14 @@ impl Graphics {
   ///
   /// Two modes, in priority order:
   ///
-  /// 1. **Explicit threshold** (`threshold_kb > 0`): legacy
-  ///    `--graphics-svg-threshold-kb N` behaviour — try SVG for PDFs at
-  ///    most `N` KB, regardless of content. Preserved for back-compat
-  ///    and as the manual override on canvases where the auto-detector
-  ///    misclassifies.
-  /// 2. **Auto-detect default** (`threshold_kb == 0`): scan the PDF
-  ///    header for `/Subtype /Image` and `/Subtype/Image` (the two
-  ///    typical formattings of an image XObject declaration). If
-  ///    NONE is present in the first 256 KB and the file size is at
-  ///    most 500 KB → try SVG. This is the per-paper relief case
-  ///    documented in PERFORMANCE.md (130× speedup on the 41 KB
-  ///    pgfplots fixture).
+  /// 1. **Explicit threshold** (`threshold_kb > 0`): legacy `--graphics-svg-threshold-kb N`
+  ///    behaviour — try SVG for PDFs at most `N` KB, regardless of content. Preserved for
+  ///    back-compat and as the manual override on canvases where the auto-detector misclassifies.
+  /// 2. **Auto-detect default** (`threshold_kb == 0`): scan the PDF header for `/Subtype /Image`
+  ///    and `/Subtype/Image` (the two typical formattings of an image XObject declaration). If NONE
+  ///    is present in the first 256 KB and the file size is at most 500 KB → try SVG. This is the
+  ///    per-paper relief case documented in PERFORMANCE.md (130× speedup on the 41 KB pgfplots
+  ///    fixture).
   ///
   /// Both modes can be globally disabled via
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` (auto-detect only — leaves
@@ -1222,9 +1217,7 @@ impl Graphics {
   /// ImageMagick-via-Ghostscript and produces a clean PNG, where the
   /// inkscape SVG path explodes to >100 MB and `convert`/`gs` runs into
   /// tens of seconds on a single page.
-  fn should_try_pdf_cairo_path(source: &str) -> bool {
-    source.to_lowercase().ends_with(".pdf")
-  }
+  fn should_try_pdf_cairo_path(source: &str) -> bool { source.to_lowercase().ends_with(".pdf") }
 
   /// Rasterize a PDF via the `mutool draw` subprocess (MuPDF CLI).
   /// ~1.7× faster than `pdftocairo` on vector-heavy matplotlib /
@@ -1291,7 +1284,10 @@ impl Graphics {
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
   fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    eprintln!("DBG convert_pdf_via_pdftocairo: src={} dest={}", source, dest);
+    eprintln!(
+      "DBG convert_pdf_via_pdftocairo: src={} dest={}",
+      source, dest
+    );
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
@@ -1579,9 +1575,7 @@ impl Graphics {
       || src_lc.ends_with(".epsf")
       || src_lc.ends_with(".ps");
     if is_postscript && page.is_none() {
-      if Self::postscript_is_landscape(source)
-        && Self::convert_eps_via_pdf(source, dest, density)
-      {
+      if Self::postscript_is_landscape(source) && Self::convert_eps_via_pdf(source, dest, density) {
         return true;
       }
       if Self::convert_eps_via_gs(source, dest, density) {
@@ -1594,10 +1588,9 @@ impl Graphics {
     // In-process Rust crates were evaluated 2026-05-12 and rejected
     // (mupdf-rs AGPL, poppler-rs GPL, pdfium-render single-threaded).
     //
-    //   1. mutool (MuPDF CLI) — ~1.7× faster than pdftocairo on the
-    //      canvas slow-tail (matplotlib/pgfplots scatter PDFs).
-    //   2. pdftocairo (poppler) — universally available with TeX Live;
-    //      25× faster than convert/gs.
+    //   1. mutool (MuPDF CLI) — ~1.7× faster than pdftocairo on the canvas slow-tail
+    //      (matplotlib/pgfplots scatter PDFs).
+    //   2. pdftocairo (poppler) — universally available with TeX Live; 25× faster than convert/gs.
     //   3. convert/gs — last-resort, hard-timeout-bounded.
     if Self::should_try_pdf_cairo_path(source) && dest.to_lowercase().ends_with(".png") {
       if Self::convert_pdf_via_mutool(source, dest, density, page) {
@@ -1634,7 +1627,8 @@ impl Graphics {
       Some(status) => status.success(),
       None => {
         Warn!(
-          "shell", "convert",
+          "shell",
+          "convert",
           "Graphics: convert/gs for {} exceeded {} s — killed",
           source,
           timeout.as_secs()
@@ -1694,10 +1688,9 @@ fn ext_from_path(path: &str) -> &'static str {
 ///
 /// Handles three DSC variants:
 ///  1. `%%BoundingBox: x0 y0 x1 y1` in the header (most files).
-///  2. `%%BoundingBox: (atend)` in the header, real values in the
-///     Trailer at end-of-file (some HIGZ, PAW, certain pswrite output).
-///  3. `%%HiResBoundingBox: x0.x y0.y x1.x y1.y` — used when literal
-///     `%%BoundingBox:` is missing.
+///  2. `%%BoundingBox: (atend)` in the header, real values in the Trailer at end-of-file (some
+///     HIGZ, PAW, certain pswrite output).
+///  3. `%%HiResBoundingBox: x0.x y0.y x1.x y1.y` — used when literal `%%BoundingBox:` is missing.
 fn read_postscript_bounding_box_full(source: &str) -> Option<(f64, f64, f64, f64)> {
   let content = std::fs::read_to_string(source).ok()?;
   let mut header_lines = content.lines().take(80);
@@ -2052,122 +2045,132 @@ impl Processor for Graphics {
             std::thread::Builder::new()
               .stack_size(2 * 1024 * 1024)
               .spawn_scoped(s, || {
-              let mut local = Vec::<ConvertOutcome>::new();
-              loop {
-              let i = next.fetch_add(1, Ordering::Relaxed);
-              if i >= jobs.len() {
-                break;
-              }
-              let ConvertJob {
-                job_id,
-                source,
-                page,
-                rel_dest,
-                abs_dest_str,
-                svg_paths,
-              } = jobs[i];
-              // Try vector-SVG path first if requested for this source.
-              // The cache layer (graphics_cache) hardlinks/copies a
-              // matching cached output before any subprocess fires and
-              // round-trips the dimensions through a .dims sidecar so
-              // hits skip the `read_*_dimensions` re-measure too.
-              // Misses fall through to the real conversion + measure
-              // and write back on success. Disable via
-              // LATEXML_GRAPHICS_CACHE_OFF=1.
-              let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
-                let svg_key = crate::graphics_cache::RenderKey {
-                  page:    *page,
-                  density: 0,
-                  ext:     "svg",
-                };
-                let svg_res = crate::graphics_cache::with_cache_dims(
-                  source,
-                  abs_svg,
-                  svg_key,
-                  || {
-                    subproc_ref.fetch_add(1, Ordering::Relaxed);
-                    Self::convert_image_svg(source, abs_svg, *page)
-                  },
-                  || Self::read_svg_dimensions(abs_svg)
-                    .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h }),
-                );
-                match svg_res {
-                  crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
-                    job_id: *job_id,
-                    imagesrc: Some(rel_svg.clone()),
-                    raw_dims: dims.map(|d| (d.width, d.height)),
-                  }),
-                  crate::graphics_cache::ConvertResult::Failed => {
-                    Warn!(
-                      "shell", "inkscape",
-                      "Graphics: inkscape SVG path failed for {}, falling back to convert",
-                      source
+                let mut local = Vec::<ConvertOutcome>::new();
+                loop {
+                  let i = next.fetch_add(1, Ordering::Relaxed);
+                  if i >= jobs.len() {
+                    break;
+                  }
+                  let ConvertJob {
+                    job_id,
+                    source,
+                    page,
+                    rel_dest,
+                    abs_dest_str,
+                    svg_paths,
+                  } = jobs[i];
+                  // Try vector-SVG path first if requested for this source.
+                  // The cache layer (graphics_cache) hardlinks/copies a
+                  // matching cached output before any subprocess fires and
+                  // round-trips the dimensions through a .dims sidecar so
+                  // hits skip the `read_*_dimensions` re-measure too.
+                  // Misses fall through to the real conversion + measure
+                  // and write back on success. Disable via
+                  // LATEXML_GRAPHICS_CACHE_OFF=1.
+                  let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
+                    let svg_key = crate::graphics_cache::RenderKey {
+                      page:    *page,
+                      density: 0,
+                      ext:     "svg",
+                    };
+                    let svg_res = crate::graphics_cache::with_cache_dims(
+                      source,
+                      abs_svg,
+                      svg_key,
+                      || {
+                        subproc_ref.fetch_add(1, Ordering::Relaxed);
+                        Self::convert_image_svg(source, abs_svg, *page)
+                      },
+                      || {
+                        Self::read_svg_dimensions(abs_svg)
+                          .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h })
+                      },
                     );
+                    match svg_res {
+                      crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: Some(rel_svg.clone()),
+                        raw_dims: dims.map(|d| (d.width, d.height)),
+                      }),
+                      crate::graphics_cache::ConvertResult::Failed => {
+                        Warn!(
+                          "shell",
+                          "inkscape",
+                          "Graphics: inkscape SVG path failed for {}, falling back to convert",
+                          source
+                        );
+                        None
+                      },
+                    }
+                  } else {
                     None
-                  },
+                  };
+                  let raster_res = if svg_outcome.is_none() {
+                    let raster_key = crate::graphics_cache::RenderKey {
+                      page:    *page,
+                      density: Self::raster_density_for_source(source),
+                      ext:     ext_from_path(abs_dest_str),
+                    };
+                    crate::graphics_cache::with_cache_dims(
+                      source,
+                      abs_dest_str,
+                      raster_key,
+                      || {
+                        subproc_ref.fetch_add(1, Ordering::Relaxed);
+                        Self::convert_image(source, abs_dest_str, dpi, *page)
+                      },
+                      || {
+                        Self::read_image_dimensions(abs_dest_str)
+                          .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h })
+                      },
+                    )
+                  } else {
+                    crate::graphics_cache::ConvertResult::Failed
+                  };
+                  let outcome = if let Some(o) = svg_outcome {
+                    o
+                  } else if raster_res.is_ok() {
+                    ConvertOutcome {
+                      job_id:   *job_id,
+                      imagesrc: Some(rel_dest.clone()),
+                      raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
+                    }
+                  } else {
+                    // Final-failure: every conversion path exhausted. Promoted
+                    // from warn → Error 2026-05-08 because we want all
+                    // images to convert successfully, and a silent warning
+                    // hides regressions in the rasterizer chain.
+                    // Error class/object mirror Perl Graphics.pm:274
+                    // `Error('imageprocessing', $source, …)` so the
+                    // harness aggregates with engine/package emissions.
+                    Error!(
+                      "imageprocessing",
+                      source,
+                      "Graphics: Failed to convert {} to {}",
+                      source,
+                      abs_dest_str
+                    );
+                    if let Some(rel) =
+                      Self::copy_to_destination(source, source_dir_ref, dest_dir_ref)
+                    {
+                      ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: Some(rel),
+                        raw_dims: Self::read_image_dimensions(source),
+                      }
+                    } else {
+                      ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: None,
+                        raw_dims: None,
+                      }
+                    }
+                  };
+                  local.push(outcome);
                 }
-              } else {
-                None
-              };
-              let raster_res = if svg_outcome.is_none() {
-                let raster_key = crate::graphics_cache::RenderKey {
-                  page:    *page,
-                  density: Self::raster_density_for_source(source),
-                  ext:     ext_from_path(abs_dest_str),
-                };
-                crate::graphics_cache::with_cache_dims(
-                  source,
-                  abs_dest_str,
-                  raster_key,
-                  || {
-                    subproc_ref.fetch_add(1, Ordering::Relaxed);
-                    Self::convert_image(source, abs_dest_str, dpi, *page)
-                  },
-                  || Self::read_image_dimensions(abs_dest_str)
-                    .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h }),
-                )
-              } else {
-                crate::graphics_cache::ConvertResult::Failed
-              };
-              let outcome = if let Some(o) = svg_outcome {
-                o
-              } else if raster_res.is_ok() {
-                ConvertOutcome {
-                  job_id:   *job_id,
-                  imagesrc: Some(rel_dest.clone()),
-                  raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
-                }
-              } else {
-                // Final-failure: every conversion path exhausted. Promoted
-                // from warn → Error 2026-05-08 because we want all
-                // images to convert successfully, and a silent warning
-                // hides regressions in the rasterizer chain.
-                // Error class/object mirror Perl Graphics.pm:274
-                // `Error('imageprocessing', $source, …)` so the
-                // harness aggregates with engine/package emissions.
-                Error!(
-                  "imageprocessing", source,
-                  "Graphics: Failed to convert {} to {}", source, abs_dest_str
-                );
-                if let Some(rel) = Self::copy_to_destination(source, source_dir_ref, dest_dir_ref) {
-                  ConvertOutcome {
-                    job_id:   *job_id,
-                    imagesrc: Some(rel),
-                    raw_dims: Self::read_image_dimensions(source),
-                  }
-                } else {
-                  ConvertOutcome {
-                    job_id:   *job_id,
-                    imagesrc: None,
-                    raw_dims: None,
-                  }
-                }
-              };
-              local.push(outcome);
-            }
-              local
-            })
-            .ok()
+                local
+              })
+              .ok()
           })
           .collect();
         // Note: if EVERY spawn failed (extreme memory pressure), no
@@ -2212,8 +2215,10 @@ impl Processor for Graphics {
           // references a non-existent file — exactly the case Perl
           // emits at Warn level. Restore Perl-faithful Warn.
           Warn!(
-            "expected", "source",
-            "No graphic source found; skipping (source was '{}')", graphic
+            "expected",
+            "source",
+            "No graphic source found; skipping (source was '{}')",
+            graphic
           );
           let mut node_mut = nodes[*idx].clone();
           node_mut.set_attribute("imagesrc", graphic).ok();
@@ -2289,7 +2294,8 @@ impl Processor for Graphics {
     }
 
     Info!(
-      "graphics", "process",
+      "graphics",
+      "process",
       "Graphics {} {} to process",
       doc.get_destination().unwrap_or("?"),
       n_to_process
@@ -2405,7 +2411,7 @@ mod tests {
   /// `raster_with_image.pdf`) under `latexml_post/tests/fixtures/`.
   #[test]
   fn should_try_svg_path_auto_detect() {
-    let fixtures = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
+    let fixtures = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     let cifar = fixtures.join("cifar10_vector.pdf");
     let pathological = fixtures.join("pathological_vector.pdf");
     let raster = fixtures.join("raster_with_image.pdf");
@@ -2538,8 +2544,9 @@ endobj
   #[test]
   #[cfg(unix)]
   fn process_coalesces_only_matching_conversion_options() {
-    use crate::document::{PostDocument, PostDocumentOptions};
     use std::os::unix::fs::PermissionsExt;
+
+    use crate::document::{PostDocument, PostDocumentOptions};
 
     let tmp = std::env::temp_dir().join(format!("latexml_graphics_dedupe_{}", std::process::id()));
     std::fs::create_dir_all(&tmp).unwrap();

@@ -1,18 +1,21 @@
+use std::{borrow::Cow, fmt};
+
 use libxml::tree::Node;
-use std::borrow::Cow;
-use std::fmt;
 
-use crate::common::arena::{self, SymHashMap as HashMap};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::locator::Locator;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::document::Document;
-
-use crate::tokens::Tokens;
-use crate::{BoxOps, Digested, TexMode};
+use crate::{
+  BoxOps, Digested, TexMode,
+  common::{
+    arena::{self, SymHashMap as HashMap},
+    dimension::Dimension,
+    error::*,
+    font::Font,
+    locator::Locator,
+    object::Object,
+    store::Stored,
+  },
+  document::Document,
+  tokens::Tokens,
+};
 
 /// Lists can contain any Digested items, such as boxes, whatsits or other lists
 #[derive(Clone, Default)]
@@ -125,10 +128,10 @@ impl BoxOps for List {
     if let Some(Stored::String(s)) = self.properties.get("vattach") {
       options.insert("vattach", Stored::String(*s));
     }
-    if let Some(width) = self.properties.get("width") {
-      if options.get("width").is_none() {
-        options.insert("width", width.clone());
-      }
+    if let Some(width) = self.properties.get("width")
+      && options.get("width").is_none()
+    {
+      options.insert("width", width.clone());
     }
     font.compute_boxes_size(&self.boxes, options)
   }

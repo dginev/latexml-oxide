@@ -1,14 +1,13 @@
 //! Support for tabular/array environments
-use super::cell::Cell;
-use crate::Digested;
-use crate::common::dimension::Dimension;
-use crate::state::Stored;
-use crate::token::Token;
-use crate::tokens::Tokens;
+use std::{
+  collections::VecDeque,
+  fmt::{self, Debug, Display},
+};
+
 use rustc_hash::FxHashMap as HashMap;
 
-use std::collections::VecDeque;
-use std::fmt::{self, Debug, Display};
+use super::cell::Cell;
+use crate::{Digested, common::dimension::Dimension, state::Stored, token::Token, tokens::Tokens};
 
 // ??
 pub type Row = Template;
@@ -286,16 +285,16 @@ impl Template {
     } else {
       self.columns.last_mut()
     };
-    if let Some(prev) = last {
-      if !self.disabled_intercolumn {
-        // `take()` moves out the current Option<Tokens> (replacing with
-        // None) — we immediately re-assign, so the clone in the old
-        // `.clone().unwrap_or_default().unlist()` was redundant.
-        let mut after = prev.after.take().unwrap_or_default().unlist();
-        after.push(T_CS!("\\lx@intercol"));
-        prev.after = Some(Tokens::new(after));
-        prev.has_intercol_after = true;
-      }
+    if let Some(prev) = last
+      && !self.disabled_intercolumn
+    {
+      // `take()` moves out the current Option<Tokens> (replacing with
+      // None) — we immediately re-assign, so the clone in the old
+      // `.clone().unwrap_or_default().unlist()` was redundant.
+      let mut after = prev.after.take().unwrap_or_default().unlist();
+      after.push(T_CS!("\\lx@intercol"));
+      prev.after = Some(Tokens::new(after));
+      prev.has_intercol_after = true;
     }
   }
 
@@ -338,13 +337,12 @@ impl Template {
       self.repeated.last_mut()
     } else {
       self.columns.last_mut()
-    } {
-      if !self.disabled_intercolumn {
-        let mut after = prev.after.take().unwrap_or_default().unlist();
-        after.push(T_CS!("\\lx@intercol"));
-        prev.after = Some(Tokens::new(after));
-        prev.has_intercol_after = true;
-      }
+    } && !self.disabled_intercolumn
+    {
+      let mut after = prev.after.take().unwrap_or_default().unlist();
+      after.push(T_CS!("\\lx@intercol"));
+      prev.after = Some(Tokens::new(after));
+      prev.has_intercol_after = true;
     }
     // Perl L88-95: build before from save_between + \lx@intercol + properties before + save_before
     let mut before = Vec::new();

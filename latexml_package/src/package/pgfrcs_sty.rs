@@ -15,6 +15,6 @@ LoadDefinitions!({
   // so the assignment had never fired. pgfrcs is the earliest-loaded
   // pgf-stack binding, so pre-set here.
   DefMacro!("\\pgfsysdriver", "pgfsys-latexml.def");
-  state::assign_value("pgfsys-latexml.def_binding_available", true, Some(Scope::Global));
+  assign_value("pgfsys-latexml.def_binding_available", true, Some(Scope::Global));
   Let!("\\pgfutil@IfFileExists", "\\IfFileExists");
 });

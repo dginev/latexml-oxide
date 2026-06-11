@@ -1,8 +1,8 @@
-use crate::prelude::*;
 // Perl: `use LaTeXML::Util::Image;` (graphicx.sty.ltxml L17).
 // image_candidates / image_graphicx_sizer now live in latexml_core::util::image.
 pub use latexml_core::util::image::{image_candidates, image_graphicx_sizer};
 
+use crate::prelude::*;
 
 LoadDefinitions!({
   // graphicx.sty provides alternative argument syntax for graphics inclusion.
@@ -80,11 +80,26 @@ LoadDefinitions!({
   // Documented in graphicx.dtx; commonly used: `bb=0 0 612 792`,
   // `hiresbb`, `natwidth`, page selection, etc.
   for key in [
-    "bb", "bbllx", "bblly", "bburx", "bbury",
-    "natwidth", "natheight", "hiresbb",
-    "pagebox", "page", "interpolate",
-    "decodearray", "command", "quiet",
-    "draft", "final", "type", "ext", "read", "origin",
+    "bb",
+    "bbllx",
+    "bblly",
+    "bburx",
+    "bbury",
+    "natwidth",
+    "natheight",
+    "hiresbb",
+    "pagebox",
+    "page",
+    "interpolate",
+    "decodearray",
+    "command",
+    "quiet",
+    "draft",
+    "final",
+    "type",
+    "ext",
+    "read",
+    "origin",
   ] {
     DefKeyVal!("Gin", key, "");
   }
@@ -133,8 +148,8 @@ LoadDefinitions!({
       // becomes the `description` attribute via afterConstruct, not
       // a graphics option.
       let mut alt_value: Option<String> = None;
-      if let Some(ref kv_digested) = args[1] {
-        if let DigestedData::KeyVals(kv) = kv_digested.data() {
+      if let Some(ref kv_digested) = args[1]
+        && let DigestedData::KeyVals(kv) = kv_digested.data() {
           for (key, value) in kv.get_pairs() {
             if key == "alt" {
               alt_value = Some(value.to_string());
@@ -148,7 +163,6 @@ LoadDefinitions!({
             options_vec.push(format!("{key}={val_str}"));
           }
         }
-      }
       // Auto-add keepaspectratio if only width or height (not both) specified
       if (saw_w ^ saw_h) && !has_keepaspectratio {
         options_vec.push(s!("keepaspectratio=true"));

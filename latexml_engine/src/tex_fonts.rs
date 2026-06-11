@@ -23,7 +23,7 @@ LoadDefinitions!({
   // Perl: FontDef param type — for \textfont/\scriptfont/\scriptscriptfont, reads family
   // number and looks up the stored font CS token.  For \font, returns current_FontDef.
   DefParameterType!(FontToken, sub[_inner, _extra] {
-    let token = gullet::read_token()?.unwrap();
+    let token = read_token()?.unwrap();
     if let Some(font_type) = token.with_str(|ts| {
       if ts.starts_with("\\textfont") && ts == "\\textfont" { Some("textfont") }
       else if ts.starts_with("\\scriptscriptfont") && ts == "\\scriptscriptfont" { Some("scriptscriptfont") }
@@ -32,15 +32,15 @@ LoadDefinitions!({
     }) {
       // Perl: $token = LookupValue($type . 'font_' . $fam->valueOf).
       // with_value avoids the Stored envelope clone; Token is Copy.
-      let fam = gullet::read_number()?.value_of();
+      let fam = read_number()?.value_of();
       let key = s!("{font_type}_{fam}");
-      state::with_value(&key, |v| match v {
+      with_value(&key, |v| match v {
         Some(Stored::Token(t)) => *t,
         _ => token,
       })
     } else if token.with_str(|ts| ts == "\\font") {
       // Perl: $token = LookupValue('current_FontDef') || T_CS('\lx@default@font')
-      state::with_value("current_FontDef", |v| match v {
+      with_value("current_FontDef", |v| match v {
         Some(Stored::Token(t)) => *t,
         _ => T_CS!("\\lx@default@font"),
       })
@@ -70,12 +70,12 @@ LoadDefinitions!({
     let mut at_pt = None;
     let mut at_sp = None;  // raw sp value, needed for shared-key precision
     let mut scaled = None;
-    if gullet::read_keyword(&["at"])?.is_some() {
-      let d = gullet::read_dimension()?;
+    if read_keyword(&["at"])?.is_some() {
+      let d = read_dimension()?;
       at_sp = Some(d.value_of());            // exact sp count, lossless
       at_pt = Some(d.pt_value(None));        // ≈2-decimal pt for display
-    } else if gullet::read_keyword(&["scaled"])?.is_some() {
-      scaled = Some(gullet::read_number()?.value_of() as f64 / 1000.0);
+    } else if read_keyword(&["scaled"])?.is_some() {
+      scaled = Some(read_number()?.value_of() as f64 / 1000.0);
     }
     let props_opt = if let Some(mut props) = font::decode_fontname(&name, at_pt, scaled) {
       props.name = Some(Cow::Owned(name.clone()));
@@ -86,7 +86,7 @@ LoadDefinitions!({
       Info!("unexpected", name, message);
       None
     };
-    gullet::skip_spaces()?;
+    skip_spaces()?;
     let cs_str = cs.to_string();
     if let Some(ref props) = props_opt {
       AssignValue!(&s!("fontinfo_{cs_str}"), props.clone());
@@ -96,11 +96,10 @@ LoadDefinitions!({
     // (e.g. `at 5pt` vs `scaled 500` of cmr10) share the same shared
     // key — without this, hyphenchar/fontdimen writes through one are
     // invisible from the other. plainfonts_test L42 catches this.
-    if at_sp.is_none() {
-      if let Some(sz_pt) = props_opt.as_ref().and_then(|p| p.size) {
+    if at_sp.is_none()
+      && let Some(sz_pt) = props_opt.as_ref().and_then(|p| p.size) {
         at_sp = Some((sz_pt * 65536.0).round() as i64);
       }
-    }
     // Perl: $key = 'fontinfo_' . $name; $key .= " at " . ToString($at) if $at;
     // Shared font key: fonts with same name+size share hyphenchar/skewchar.
     // Precision matters here — expl3's intarray font-hack creates a
@@ -133,31 +132,31 @@ LoadDefinitions!({
       s!("fontinfo_{name}")
     };
     // Store CS → shared key mapping
-    state::assign_value(
+    assign_value(
       &s!("font_shared_key_{cs_str}"),
-      Stored::String(arena::pin(&shared_key)),
+      Stored::String(pin(&shared_key)),
       None,
     );
     // Store explicit "at" value for \meaning (Perl: $$fontinfo{at} = ToString($at))
     if let Some(ref at_str) = at_str_opt {
-      state::assign_value(
+      assign_value(
         &s!("fontinfo_at_{cs_str}"),
-        Stored::String(arena::pin(at_str)),
+        Stored::String(pin(at_str)),
         None,
       );
     }
     // Perl: only initialize hyphenchar/skewchar if this font key hasn't been seen before
     // (shared fontinfo means second \font with same name+size reuses existing values)
     let hc_key = s!("hyphenchar_{shared_key}");
-    if !state::has_value(&hc_key) {
+    if !has_value(&hc_key) {
       let default_hyphen = lookup_int("\\defaulthyphenchar");
-      state::assign_value(
+      assign_value(
         &hc_key,
         Stored::Number(Number::new(default_hyphen as i64)),
         Some(Scope::Global),
       );
       let default_skew = lookup_int("\\defaultskewchar");
-      state::assign_value(
+      assign_value(
         &s!("skewchar_{shared_key}"),
         Stored::Number(Number::new(default_skew as i64)),
         Some(Scope::Global),
@@ -169,9 +168,9 @@ LoadDefinitions!({
     // defaults to local-with-\global-prefix-promotion (State.pm L152).
     // Rust DefPrimitive! defaults match. TODO (SYNC_STATUS): rewrite this
     // primitive to a strict Perl-faithful translation — see Work Plan.
-    let is_global = state::get_prefix("global");
+    let is_global = get_prefix("global");
     let cs_for_fontdef = cs;
-    let font_id_key = arena::pin(s!("fontinfo_{cs_str}").as_str());
+    let font_id_key = pin(s!("fontinfo_{cs_str}").as_str());
     // SYNC_STATUS Cluster C: do NOT bypass the lock here. If the target CS
     // is locked (e.g. `\abstract`, `\title`), `\font\<cs>=<file>` is a
     // documented no-op — state::install_definition emits an
@@ -195,17 +194,16 @@ LoadDefinitions!({
     // L383-389) instead of the generic Primitive serialization. Without the
     // tag, the writer falls into the `PA\t<self_cs>` self-alias path which
     // dump_reader skips, leaving the CS undefined post-dump.
-    if let Some(Stored::Primitive(p)) = state::lookup_meaning(&cs) {
-      let mut p_owned: latexml_core::definition::primitive::Primitive = (*p).clone();
+    if let Some(Stored::Primitive(p)) = lookup_meaning(&cs) {
+      let mut p_owned: Primitive = (*p).clone();
       p_owned.font_id = Some(font_id_key);
-      state::assign_meaning(&cs, Stored::Primitive(std::rc::Rc::new(p_owned)),
+      assign_meaning(&cs, Stored::Primitive(Rc::new(p_owned)),
         if is_global { Some(Scope::Global) } else { None });
     }
-    if is_global {
-      if let Some(meaning) = state::lookup_meaning(&cs) {
-        state::assign_meaning(&cs, meaning, Some(Scope::Global));
+    if is_global
+      && let Some(meaning) = lookup_meaning(&cs) {
+        assign_meaning(&cs, meaning, Some(Scope::Global));
       }
-    }
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
@@ -218,7 +216,7 @@ LoadDefinitions!({
     let lookup_cs = if cs_str == "\\font" {
       // Current font — look up current_FontDef, fallback to \lx@default@font.
       // with_value avoids the Stored envelope clone; Token is Copy.
-      state::with_value("current_FontDef", |v| match v {
+      with_value("current_FontDef", |v| match v {
         Some(Stored::Token(t)) => t.to_string(),
         _ => s!("\\lx@default@font"),
       })
@@ -228,7 +226,7 @@ LoadDefinitions!({
     let key = s!("fontinfo_{}", lookup_cs);
     // Same pattern for the font-name read — we only need the owned name
     // String, never the Rc<Font>.
-    let name = state::with_value(&key, |v| match v {
+    let name = with_value(&key, |v| match v {
       Some(Stored::Font(f)) => f.name.as_ref().map(|n| n.to_string()),
       _ => None,
     });
@@ -251,19 +249,19 @@ LoadDefinitions!({
       // needs expl3's `c__codepoint_uppercase_index_intarray` populated,
       // and the c__ alias is created via `\cs_gset_eq:cc { c__... }
       // { g__... }` (=`\let`).
-      let canonical_cs = state::lookup_meaning(&font_token)
+      let canonical_cs = lookup_meaning(&font_token)
         .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
                       else { None })
         .map(|fid| {
-          let s = arena::with(fid, |x| x.to_string());
+          let s = with(fid, |x| x.to_string());
           s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
         })
         .unwrap_or_else(|| cs_str.clone());
-      let fd_key = state::with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
-        Some(Stored::String(s)) => arena::with(*s, |sk| s!("fontdimen_{sk}_{p}")),
+      let fd_key = with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
+        Some(Stored::String(s)) => with(*s, |sk| s!("fontdimen_{sk}_{p}")),
         _ => s!("fontdimen_{canonical_cs}_{p}"),
       });
-      let stored_val = state::with_value(&fd_key, |v| match v {
+      let stored_val = with_value(&fd_key, |v| match v {
         Some(Stored::Dimension(d)) => Some(*d),
         Some(Stored::Number(n)) => Some(Dimension::new(n.value_of())),
         _ => None,
@@ -291,19 +289,19 @@ LoadDefinitions!({
       let cs_str = font_token.to_string();
       // Resolve to canonical font identity via Primitive.font_id —
       // matches the getter so `\let`-aliased fonts share storage.
-      let canonical_cs = state::lookup_meaning(&font_token)
+      let canonical_cs = lookup_meaning(&font_token)
         .and_then(|m| if let Stored::Primitive(p) = m { p.font_id }
                       else { None })
         .map(|fid| {
-          let s = arena::with(fid, |x| x.to_string());
+          let s = with(fid, |x| x.to_string());
           s.strip_prefix("fontinfo_").unwrap_or(&s).to_string()
         })
         .unwrap_or_else(|| cs_str.clone());
-      let fd_key = state::with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
-        Some(Stored::String(s)) => arena::with(*s, |sk| s!("fontdimen_{sk}_{p}")),
+      let fd_key = with_value(&s!("font_shared_key_{canonical_cs}"), |v| match v {
+        Some(Stored::String(s)) => with(*s, |sk| s!("fontdimen_{sk}_{p}")),
         _ => s!("fontdimen_{canonical_cs}_{p}"),
       });
-      state::assign_value(
+      assign_value(
         &fd_key,
         Stored::Dimension(value.into()),
         Some(Scope::Global),
@@ -486,13 +484,13 @@ LoadDefinitions!({
   );
 
   let cal_font = Font {
-    family: Some(std::borrow::Cow::Borrowed("caligraphic")),
+    family: Some(Cow::Borrowed("caligraphic")),
     ..Default::default()
   };
-  latexml_core::state::assign_value(
+  assign_value(
     "OMS_uppercase_mathstyle",
-    latexml_core::state::Stored::Font(std::rc::Rc::new(cal_font)),
-    Some(latexml_core::state::Scope::Global),
+    Stored::Font(Rc::new(cal_font)),
+    Some(Scope::Global),
   );
 
   #[rustfmt::skip]
@@ -542,7 +540,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\@@endash", {
     Tbox::new(
-      arena::pin_static("\u{2013}"),
+      pin_static("\u{2013}"),
       None,
       None,
       Tokens!(T_CS!("\\@@endash")),
@@ -551,7 +549,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\@@emdash", {
     Tbox::new(
-      arena::pin_static("\u{2014}"),
+      pin_static("\u{2014}"),
       None,
       None,
       Tokens!(T_CS!("\\@@emdash")),

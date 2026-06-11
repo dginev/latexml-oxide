@@ -49,7 +49,7 @@ LoadDefinitions!({
   // \initiate@active@char machinery does work in our engine now — verified
   // 2026-04-17) and drop this custom primitive.
   DefPrimitive!("\\lx@german@dq@dispatch", {
-    let tok = gullet::read_token()?;
+    let tok = read_token()?;
     let ch = tok.as_ref().map(|t| t.with_str(|s| s.to_string())).unwrap_or_default();
     let expansion: &str = match ch.as_str() {
       "a" => "\u{00E4}", "o" => "\u{00F6}", "u" => "\u{00FC}",
@@ -65,13 +65,12 @@ LoadDefinitions!({
       _ => "",
     };
     if !expansion.is_empty() {
-      gullet::unread(Tokenize!(expansion));
-    } else if !ch.is_empty() {
-      if let Some(t) = tok { gullet::unread(Tokens!(t)); }
-    }
+      unread(Tokenize!(expansion));
+    } else if !ch.is_empty()
+      && let Some(t) = tok { unread(Tokens!(t)); }
   });
-  DefPrimitive!("\\mdqon", { state::assign_catcode('"', Catcode::ACTIVE, None); });
-  DefPrimitive!("\\mdqoff", { state::assign_catcode('"', Catcode::OTHER, None); });
+  DefPrimitive!("\\mdqon", { assign_catcode('"', Catcode::ACTIVE, None); });
+  DefPrimitive!("\\mdqoff", { assign_catcode('"', Catcode::OTHER, None); });
   // Faithful to babel germanb.ldf's `\initiate@active@char{"}`, which binds
   // the active-`"` MEANING when german is LOADED — independent of catcode and
   // of which language is the document main. Bind it here too, so that if ANY
@@ -83,7 +82,7 @@ LoadDefinitions!({
   // `\selectlanguage{german}` hook (babel_support_sty.rs) still (re)binds
   // catcode+meaning together when german is actually selected.
   if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
-    state::assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
+    assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
   }
   // germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
   RawTeX!(r"\providecommand\bbl@allowhyphens{}");

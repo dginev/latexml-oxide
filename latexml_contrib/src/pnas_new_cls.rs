@@ -47,27 +47,36 @@ LoadDefinitions!({
 
   // pnas-new.cls L272: \newcommand{\leadauthor}[1]{\def\@leadauthor{#1}}
   // Preserve as frontmatter author-list note.
-  DefMacro!("\\leadauthor{}",
-    "\\@add@frontmatter{ltx:note}[role=lead-author]{#1}");
+  DefMacro!(
+    "\\leadauthor{}",
+    "\\@add@frontmatter{ltx:note}[role=lead-author]{#1}"
+  );
   // pnas-new.cls L275: \newcommand{\authorcontributions}[1]{\def\@authorcontributions{#1}}
-  DefMacro!("\\authorcontributions{}",
-    "\\@add@frontmatter{ltx:note}[role=author-contributions]{#1}");
+  DefMacro!(
+    "\\authorcontributions{}",
+    "\\@add@frontmatter{ltx:note}[role=author-contributions]{#1}"
+  );
   // pnas-new.cls L276: \newcommand{\authordeclaration}[1]{\def\@authordeclaration{#1}}
-  DefMacro!("\\authordeclaration{}",
-    "\\@add@frontmatter{ltx:note}[role=author-declaration]{#1}");
+  DefMacro!(
+    "\\authordeclaration{}",
+    "\\@add@frontmatter{ltx:note}[role=author-declaration]{#1}"
+  );
   // pnas-new.cls L278: \newcommand{\correspondingauthor}[1]{\def\@correspondingauthor{#1}}
   // Email content may contain `_` — Semiverbatim neutralizes catcode-8
   // chars so the note renders cleanly in horizontal mode.
-  DefMacro!("\\correspondingauthor Semiverbatim",
-    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#1}");
+  DefMacro!(
+    "\\correspondingauthor Semiverbatim",
+    "\\@add@frontmatter{ltx:note}[role=corresponding-author]{#1}"
+  );
   // pnas-new.cls L279: \newcommand{\significancestatement}[1]{\def\@significancestatement{#1}}
-  DefMacro!("\\significancestatement{}",
-    "\\@add@frontmatter{ltx:abstract}[role=significance]{#1}");
+  DefMacro!(
+    "\\significancestatement{}",
+    "\\@add@frontmatter{ltx:abstract}[role=significance]{#1}"
+  );
   // pnas-new.cls: \templatetype{pkg} → \RequirePackage{pkg}. Defer to
   // \RequirePackage so per-article style packages (pnasresearcharticle.sty,
   // pnasperspective.sty etc.) load correctly.
-  DefMacro!("\\templatetype{}",
-    "\\RequirePackage{#1}");
+  DefMacro!("\\templatetype{}", "\\RequirePackage{#1}");
   // pnas-new.cls uses \newif\ifshortarticle for layout switching. Provide
   // the conditional so authors can call \shortarticletrue/\shortarticlefalse.
   DefConditional!("\\ifshortarticle");

@@ -61,7 +61,12 @@ impl std::fmt::Debug for CycleGuard {
 
 impl CycleGuard {
   pub fn new() -> Self {
-    CycleGuard { buf: Box::new([0u64; CAP]), head: 0, len: 0, since: 0 }
+    CycleGuard {
+      buf:   Box::new([0u64; CAP]),
+      head:  0,
+      len:   0,
+      since: 0,
+    }
   }
 
   /// Drop all recorded history (call at the start of each conversion).
@@ -76,7 +81,11 @@ impl CycleGuard {
   #[inline]
   pub fn push(&mut self, fp: u64) -> Option<usize> {
     self.buf[self.head] = fp;
-    self.head = if self.head + 1 == CAP { 0 } else { self.head + 1 };
+    self.head = if self.head + 1 == CAP {
+      0
+    } else {
+      self.head + 1
+    };
     if self.len < CAP {
       self.len += 1;
     }

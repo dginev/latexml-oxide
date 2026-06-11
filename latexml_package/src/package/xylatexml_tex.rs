@@ -7,14 +7,14 @@ use crate::prelude::*;
 /// Helper: convert dimension to px value
 /// Perl: $dim->pxValue  =>  (sp / 65536) * (DPI / 72.27)
 fn dim_to_px(d: Dimension) -> f64 {
-  let dpi = state::lookup_int("DPI");
+  let dpi = lookup_int("DPI");
   let dpi = if dpi > 0 { dpi as f64 } else { 100.0 };
   (d.value_of() as f64 / 65536.0) * (dpi / 72.27)
 }
 
 /// Helper: read an xy register as dimension
 fn xy_reg_dim(name: &str) -> Dimension {
-  match state::lookup_register(name, Vec::new()) {
+  match lookup_register(name, Vec::new()) {
     Ok(Some(RegisterValue::Dimension(d))) => d,
     Ok(Some(RegisterValue::Number(n))) => Dimension::new(n.value_of()),
     _ => Dimension::new(0),
@@ -23,7 +23,7 @@ fn xy_reg_dim(name: &str) -> Dimension {
 
 /// Helper: read an xy register as number
 fn xy_reg_num(name: &str) -> i64 {
-  match state::lookup_register(name, Vec::new()) {
+  match lookup_register(name, Vec::new()) {
     Ok(Some(RegisterValue::Number(n))) => n.value_of(),
     _ => 0,
   }
@@ -31,7 +31,7 @@ fn xy_reg_num(name: &str) -> i64 {
 
 /// Helper: read a macro's expansion as a string
 fn macro_string(cs: &str) -> String {
-  gullet::do_expand(T_CS!(cs))
+  do_expand(T_CS!(cs))
     .map(|t| t.to_string())
     .unwrap_or_default()
 }
@@ -43,7 +43,7 @@ fn macro_string(cs: &str) -> String {
 /// that must not be re-invoked: expanding them while deciphering the curve style
 /// re-enters the curve pipeline and loops without bound.
 fn macro_body(cs: &str) -> String {
-  let Ok(Some(defn)) = state::lookup_definition(&T_CS!(cs)) else {
+  let Ok(Some(defn)) = lookup_definition(&T_CS!(cs)) else {
     return String::new();
   };
   match defn.get_expansion() {
@@ -62,10 +62,10 @@ fn xy_get_orientation() -> (f64, f64) {
 /// Helper: get stroke color from font
 fn xy_stroke_color() -> String {
   // Read font color from state (Perl: LookupValue('font')->getColor)
-  if let Some(font) = state::lookup_font() {
-    if let Some(color) = font.get_color() {
-      return color.to_attribute();
-    }
+  if let Some(font) = lookup_font()
+    && let Some(color) = font.get_color()
+  {
+    return color.to_attribute();
   }
   String::from("#000000")
 }
@@ -73,12 +73,12 @@ fn xy_stroke_color() -> String {
 /// Helper: get stroke/fill attributes from state
 fn xy_fill_stroke() -> (String, String) {
   let color = xy_stroke_color();
-  let stroke = if state::lookup_bool("xy_stroke") {
+  let stroke = if lookup_bool("xy_stroke") {
     color.clone()
   } else {
     String::from("none")
   };
-  let fill = if state::lookup_bool("xy_fill") {
+  let fill = if lookup_bool("xy_fill") {
     color
   } else {
     String::from("none")
@@ -118,9 +118,7 @@ fn svg_empty_element(
   attrs: HashMap<String, String>,
 ) -> Result<()> {
   let savenode = document.float_to_element(tag, false)?;
-  if savenode.is_none()
-    && latexml_core::document::can_contain_node_somehow(document.get_node(), tag).is_none()
-  {
+  if savenode.is_none() && document::can_contain_node_somehow(document.get_node(), tag).is_none() {
     // Hopeless insertion point: float_to_element found no ancestor that
     // can host `tag` — not even via auto-open — and already issued the
     // "No open node can contain element" Warn. This state is reached by
@@ -150,75 +148,69 @@ fn svg_empty_element(
 /// SVG-internal content are orphaned drawing ops (same witness/rationale as
 /// `svg_empty_element`) and the caller should skip emission entirely.
 pub(crate) fn svg_insertion_hopeless(document: &Document, tag: &str) -> bool {
-  latexml_core::document::can_contain_node_somehow(document.get_node(), tag).is_none()
+  document::can_contain_node_somehow(document.get_node(), tag).is_none()
 }
 
 /// Helper: capture common xy SVG element properties at digest time.
 /// Returns (stroke, fill, dashes) for use in after_digest handlers.
 fn xy_capture_stroke_fill() -> (String, String, String) {
   let (stroke, fill) = xy_fill_stroke();
-  let dashes = state::lookup_string("xy_linepattern");
+  let dashes = lookup_string("xy_linepattern");
   (stroke, fill, dashes)
 }
 
 /// Helper: read SVG path attributes from props at construction time and emit element.
-fn xy_emit_path(
-  document: &mut Document,
-  props: &latexml_core::common::arena::SymHashMap<Stored>,
-) -> Result<()> {
+fn xy_emit_path(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
   let path = match props.get("xy_path") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => return Ok(()), // no path → skip
   };
   let stroke = match props.get("xy_stroke") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("#000000"),
   };
   let fill = match props.get("xy_fill") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("none"),
   };
   let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
   if let Some(Stored::String(d)) = props.get("xy_dashes") {
     // Avoid allocating the owned dashes string when it's empty (the
     // common "no dash pattern" case, fires on every solid xy line).
-    if !arena::with(*d, |s| s.is_empty()) {
-      attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+    if !with(*d, |s| s.is_empty()) {
+      attrs.insert(String::from("stroke-dasharray"), to_string(*d));
     }
   }
   svg_empty_element(document, "svg:path", attrs)
 }
 
 /// Helper: emit SVG circle from props.
-fn xy_emit_circle(
-  document: &mut Document,
-  props: &latexml_core::common::arena::SymHashMap<Stored>,
-) -> Result<()> {
+fn xy_emit_circle(document: &mut Document, props: &SymHashMap<Stored>) -> Result<()> {
   let cx = match props.get("xy_cx") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("0"),
   };
   let cy = match props.get("xy_cy") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("0"),
   };
   let r = match props.get("xy_r") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("0"),
   };
   let stroke = match props.get("xy_stroke") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("#000000"),
   };
   let fill = match props.get("xy_fill") {
-    Some(Stored::String(s)) => arena::to_string(*s),
+    Some(Stored::String(s)) => to_string(*s),
     _ => String::from("none"),
   };
   let mut attrs = string_map!("cx" => cx, "cy" => cy, "r" => r, "stroke" => stroke, "fill" => fill);
-  if let Some(Stored::String(d)) = props.get("xy_dashes") {
-    if !arena::with(*d, |s| s.is_empty()) {
-      attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
-    }
+  if let Some(Stored::String(d)) = props.get("xy_dashes")
+    && !with(*d, |s| s.is_empty())
+  {
+    attrs.insert(String::from("stroke-dasharray"), to_string(*d));
   }
   svg_empty_element(document, "svg:circle", attrs)
 }
@@ -413,19 +405,19 @@ LoadDefinitions!({
 
 
   // Line pattern management (Perl L82-90)
-  DefPrimitive!("\\lx@xy@solidpat", { state::assign_value("xy_linepattern", Stored::None, None); });
-  DefPrimitive!("\\lx@xy@dashpat", { state::assign_value("xy_linepattern", Stored::String(arena::pin("5")), None); });
-  DefPrimitive!("\\lx@xy@dotpat", { state::assign_value("xy_linepattern", Stored::String(arena::pin("1 2")), None); });
-  DefPrimitive!("\\lx@xy@cldashpat", { state::assign_value("xy_linepattern", Stored::String(arena::pin("5")), None); });
-  DefPrimitive!("\\lx@xy@cldotpat", { state::assign_value("xy_linepattern", Stored::String(arena::pin("1 2")), None); });
+  DefPrimitive!("\\lx@xy@solidpat", { assign_value("xy_linepattern", Stored::None, None); });
+  DefPrimitive!("\\lx@xy@dashpat", { assign_value("xy_linepattern", Stored::String(pin("5")), None); });
+  DefPrimitive!("\\lx@xy@dotpat", { assign_value("xy_linepattern", Stored::String(pin("1 2")), None); });
+  DefPrimitive!("\\lx@xy@cldashpat", { assign_value("xy_linepattern", Stored::String(pin("5")), None); });
+  DefPrimitive!("\\lx@xy@cldotpat", { assign_value("xy_linepattern", Stored::String(pin("1 2")), None); });
 
   // Stroke/fill state (Perl L92-97)
-  state::assign_value("xy_fill", false, None);
-  state::assign_value("xy_stroke", true, None);
-  DefPrimitive!("\\lx@xy@stroke@on", { state::assign_value("xy_stroke", true, None); });
-  DefPrimitive!("\\lx@xy@stroke@off", { state::assign_value("xy_stroke", false, None); });
-  DefPrimitive!("\\lx@xy@fill@on", { state::assign_value("xy_fill", true, None); });
-  DefPrimitive!("\\lx@xy@fill@off", { state::assign_value("xy_fill", false, None); });
+  assign_value("xy_fill", false, None);
+  assign_value("xy_stroke", true, None);
+  DefPrimitive!("\\lx@xy@stroke@on", { assign_value("xy_stroke", true, None); });
+  DefPrimitive!("\\lx@xy@stroke@off", { assign_value("xy_stroke", false, None); });
+  DefPrimitive!("\\lx@xy@fill@on", { assign_value("xy_fill", true, None); });
+  DefPrimitive!("\\lx@xy@fill@off", { assign_value("xy_fill", false, None); });
 
   // Color support (Perl L101-109)
   def_macro_noop("\\xycolor@ {}")?;
@@ -435,13 +427,13 @@ LoadDefinitions!({
     let model_str = model.to_string();
     let spec_str = spec.to_string();
     let model_opt = if model_str.trim().is_empty() { None } else { Some(model_str.trim()) };
-    let color = crate::package::color_sty::parse_color(model_opt, spec_str.trim());
+    let color = color_sty::parse_color(model_opt, spec_str.trim());
     MergeFont!(color => color);
   });
 
   // Direction calculation (Perl L175-179)
   DefPrimitive!("\\lx@xy@calculate@direction", {
-    let direction = match state::lookup_register("\\Direction", Vec::new()) {
+    let direction = match lookup_register("\\Direction", Vec::new()) {
       Ok(Some(RegisterValue::Number(n))) => n.value_of(),
       _ => 0,
     };
@@ -631,9 +623,9 @@ LoadDefinitions!({
       // Apply tip style factors (Perl %xy_tips_factors). Probe the state
       // value in place — no need to allocate an owned String for a
       // 2-3 char comparison against a small literal set.
-      let (lf, wf): (f64, f64) = state::with_value("xy_tips_style", |v| {
+      let (lf, wf): (f64, f64) = with_value("xy_tips_style", |v| {
         match v {
-          Some(Stored::String(s)) => arena::with(*s, |style| match style {
+          Some(Stored::String(s)) => with(*s, |style| match style {
             "cm" => (0.5, 1.7),
             "eu" => (0.5, 1.5),
             "lu" => (0.5, 0.5),
@@ -749,9 +741,9 @@ LoadDefinitions!({
       // boolean (the full-circle path) and a parsed i64 (the arc path).
       // Compute both from the interned SymStr without allocating an
       // owned String.
-      let (cd_empty_or_zero, cd_val): (bool, i64) = state::with_value("xy_circle_dir", |v| {
+      let (cd_empty_or_zero, cd_val): (bool, i64) = with_value("xy_circle_dir", |v| {
         match v {
-          Some(Stored::String(s)) => arena::with(*s, |cd| {
+          Some(Stored::String(s)) => with(*s, |cd| {
             let empty_or_zero = cd.is_empty() || cd == "0";
             let val: i64 = cd.parse().unwrap_or(0);
             (empty_or_zero, val)
@@ -798,7 +790,7 @@ LoadDefinitions!({
     }
   );
   DefPrimitive!("\\lx@xy@circdir {}", sub[(dir)] {
-    state::assign_value("xy_circle_dir", Stored::String(arena::pin(dir.to_string())), None);
+    assign_value("xy_circle_dir", Stored::String(pin(dir.to_string())), None);
   });
   // Perl L510-515: CIR macros
   ::latexml_core::stomach::raw_tex(concat!(
@@ -819,8 +811,8 @@ LoadDefinitions!({
       let x1 = xy_reg_dim("\\X@c"); let y1 = xy_reg_dim("\\Y@c");
       let lc = xy_reg_dim("\\L@c"); let uc = xy_reg_dim("\\U@c");
       let rc = xy_reg_dim("\\R@c"); let dc = xy_reg_dim("\\D@c");
-      let mult: i32 = state::with_value("xy_multiplicity", |v| match v {
-        Some(Stored::String(s)) => arena::with(*s, |m| m.parse().unwrap_or(1)),
+      let mult: i32 = with_value("xy_multiplicity", |v| match v {
+        Some(Stored::String(s)) => with(*s, |m| m.parse().unwrap_or(1)),
         _ => 1,
       });
       let mut path = String::new();
@@ -900,14 +892,14 @@ LoadDefinitions!({
       let new_dc = yp + abb * yu + b * (aab * yv + yw * b * a);
       let new_xc = xp + b * (3.0 * xu + (3.0 * xv + xw * b) * b);
       let new_yc = yp + b * (3.0 * yu + (3.0 * yv + yw * b) * b);
-      state::assign_register("\\X@p", RegisterValue::Dimension(Dimension::new(new_xp as i64)), None, Vec::new())?;
-      state::assign_register("\\Y@p", RegisterValue::Dimension(Dimension::new(new_yp as i64)), None, Vec::new())?;
-      state::assign_register("\\L@c", RegisterValue::Dimension(Dimension::new(new_lc as i64)), None, Vec::new())?;
-      state::assign_register("\\U@c", RegisterValue::Dimension(Dimension::new(new_uc as i64)), None, Vec::new())?;
-      state::assign_register("\\R@c", RegisterValue::Dimension(Dimension::new(new_rc as i64)), None, Vec::new())?;
-      state::assign_register("\\D@c", RegisterValue::Dimension(Dimension::new(new_dc as i64)), None, Vec::new())?;
-      state::assign_register("\\X@c", RegisterValue::Dimension(Dimension::new(new_xc as i64)), None, Vec::new())?;
-      state::assign_register("\\Y@c", RegisterValue::Dimension(Dimension::new(new_yc as i64)), None, Vec::new())?;
+      assign_register("\\X@p", RegisterValue::Dimension(Dimension::new(new_xp as i64)), None, Vec::new())?;
+      assign_register("\\Y@p", RegisterValue::Dimension(Dimension::new(new_yp as i64)), None, Vec::new())?;
+      assign_register("\\L@c", RegisterValue::Dimension(Dimension::new(new_lc as i64)), None, Vec::new())?;
+      assign_register("\\U@c", RegisterValue::Dimension(Dimension::new(new_uc as i64)), None, Vec::new())?;
+      assign_register("\\R@c", RegisterValue::Dimension(Dimension::new(new_rc as i64)), None, Vec::new())?;
+      assign_register("\\D@c", RegisterValue::Dimension(Dimension::new(new_dc as i64)), None, Vec::new())?;
+      assign_register("\\X@c", RegisterValue::Dimension(Dimension::new(new_xc as i64)), None, Vec::new())?;
+      assign_register("\\Y@c", RegisterValue::Dimension(Dimension::new(new_yc as i64)), None, Vec::new())?;
     }
   });
 
@@ -926,17 +918,16 @@ LoadDefinitions!({
           let spacing_str = rest[..end_angle].trim();
           // Parse spacing as dimension string like "5pt", "3.5pt"
           // Perl: Dimension($s)->pxValue
-          if let Some(num_part) = spacing_str.strip_suffix("pt") {
-            if let Ok(val) = num_part.parse::<f64>() {
+          if let Some(num_part) = spacing_str.strip_suffix("pt")
+            && let Ok(val) = num_part.parse::<f64>() {
               let sp_dim = Dimension::new((val * 65536.0) as i64);
               let sp_px = dim_to_px(sp_dim) as i32;
               let pattern = s!("1 {sp_px}");
-              state::assign_value("xy_linepattern", Stored::String(arena::pin(&pattern)), None);
+              assign_value("xy_linepattern", Stored::String(pin(&pattern)), None);
             }
-          }
         }
       } else if drop.contains("\\zerodot") {
-        state::assign_value("xy_linepattern", Stored::String(arena::pin("1 2")), None);
+        assign_value("xy_linepattern", Stored::String(pin("1 2")), None);
       }
     }
     if !conn.is_empty() {
@@ -956,22 +947,21 @@ LoadDefinitions!({
           (None, after_dir)
         };
         // Extract {type}
-        if let Some(brace_start) = rest.find('{') {
-          if let Some(brace_end) = rest.find('}') {
+        if let Some(brace_start) = rest.find('{')
+          && let Some(brace_end) = rest.find('}') {
             let mut t = rest[brace_start + 1..brace_end].to_string();
             let mut n = n_opt.unwrap_or(1);
             if t == ":" { n = 2; t = String::from("."); }
             if t == "=" { n = 2; t = String::from("-"); }
             if n > 1 {
-              state::assign_value("xy_multiplicity", Stored::String(arena::pin(n.to_string())), None);
+              assign_value("xy_multiplicity", Stored::String(pin(n.to_string())), None);
             }
             match t.as_str() {
-              "--" => { state::assign_value("xy_linepattern", Stored::String(arena::pin("5")), None); },
-              "." => { state::assign_value("xy_linepattern", Stored::String(arena::pin("1 2")), None); },
+              "--" => { assign_value("xy_linepattern", Stored::String(pin("5")), None); },
+              "." => { assign_value("xy_linepattern", Stored::String(pin("1 2")), None); },
               _ => {}, // "-" or empty = solid
             }
           }
-        }
       }
     }
   });
@@ -979,18 +969,17 @@ LoadDefinitions!({
   // \lx@xy@buildcircle@ — ellipse from \R@ and \L@ (Perl L722-741)
   DefConstructor!("\\lx@xy@buildcircle@",
     sub[document, _args, props] {
-      let cx = match props.get("xy_cx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let cy = match props.get("xy_cy") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let rx = match props.get("xy_rx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let ry = match props.get("xy_ry") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
-      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
+      let cx = match props.get("xy_cx") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let cy = match props.get("xy_cy") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let rx = match props.get("xy_rx") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let ry = match props.get("xy_ry") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => to_string(*s), _ => String::from("#000000") };
+      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => to_string(*s), _ => String::from("none") };
       let mut attrs = string_map!("cx" => cx, "cy" => cy, "rx" => rx, "ry" => ry, "stroke" => stroke, "fill" => fill);
-      if let Some(Stored::String(d)) = props.get("xy_dashes") {
-        if !arena::with(*d, |s| s.is_empty()) {
-          attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+      if let Some(Stored::String(d)) = props.get("xy_dashes")
+        && !with(*d, |s| s.is_empty()) {
+          attrs.insert(String::from("stroke-dasharray"), to_string(*d));
         }
-      }
       svg_empty_element(document, "svg:ellipse", attrs)?;
     },
     properties => {
@@ -1065,18 +1054,17 @@ LoadDefinitions!({
   // \ellipsed@ — ellipse frame (Perl L831-848)
   DefConstructor!("\\ellipsed@ {Dimension}{Dimension}",
     sub[document, _args, props] {
-      let cx = match props.get("xy_cx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let cy = match props.get("xy_cy") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let rx = match props.get("xy_rx") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let ry = match props.get("xy_ry") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
-      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none") };
+      let cx = match props.get("xy_cx") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let cy = match props.get("xy_cy") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let rx = match props.get("xy_rx") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let ry = match props.get("xy_ry") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => to_string(*s), _ => String::from("#000000") };
+      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => to_string(*s), _ => String::from("none") };
       let mut attrs = string_map!("cx" => cx, "cy" => cy, "rx" => rx, "ry" => ry, "stroke" => stroke, "fill" => fill);
-      if let Some(Stored::String(d)) = props.get("xy_dashes") {
-        if !arena::with(*d, |s| s.is_empty()) {
-          attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+      if let Some(Stored::String(d)) = props.get("xy_dashes")
+        && !with(*d, |s| s.is_empty()) {
+          attrs.insert(String::from("stroke-dasharray"), to_string(*d));
         }
-      }
       svg_empty_element(document, "svg:ellipse", attrs)?;
     },
     properties => sub[args] {
@@ -1130,13 +1118,13 @@ LoadDefinitions!({
   DefConstructor!("\\lx@xy@bracketed {}{}",
     sub[document, args, props] {
       let stroke = match props.get("xy_stroke") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000")
+        Some(Stored::String(s)) => to_string(*s), _ => String::from("#000000")
       };
-      let x = match props.get("xy_x") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let y = match props.get("xy_y") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let angle = match props.get("xy_angle") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let xscale = match props.get("xy_xscale") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("1") };
-      let yscale = match props.get("xy_yscale") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("1") };
+      let x = match props.get("xy_x") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let y = match props.get("xy_y") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let angle = match props.get("xy_angle") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let xscale = match props.get("xy_xscale") { Some(Stored::String(s)) => to_string(*s), _ => String::from("1") };
+      let yscale = match props.get("xy_yscale") { Some(Stored::String(s)) => to_string(*s), _ => String::from("1") };
       let transform = s!("translate({},{}) rotate({}) scale({},{})", x, y, angle, xscale, yscale);
       let attrs = string_map!("transform" => transform, "stroke" => stroke);
       let savenode = document.float_to_element("svg:text", false)?;
@@ -1183,12 +1171,12 @@ LoadDefinitions!({
   // \blacked@@ — filled black rect (Perl L918-929)
   DefConstructor!("\\blacked@@",
     sub[document, _args, props] {
-      let x = match props.get("xy_x") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let y = match props.get("xy_y") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let w = match props.get("xy_w") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let h = match props.get("xy_h") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("0") };
-      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
-      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000") };
+      let x = match props.get("xy_x") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let y = match props.get("xy_y") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let w = match props.get("xy_w") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let h = match props.get("xy_h") { Some(Stored::String(s)) => to_string(*s), _ => String::from("0") };
+      let stroke = match props.get("xy_stroke") { Some(Stored::String(s)) => to_string(*s), _ => String::from("#000000") };
+      let fill = match props.get("xy_fill") { Some(Stored::String(s)) => to_string(*s), _ => String::from("#000000") };
       let attrs = string_map!("x" => x, "y" => y, "width" => w, "height" => h,
         "stroke" => stroke, "fill" => fill);
       svg_empty_element(document, "svg:rect", attrs)?;
@@ -1212,7 +1200,7 @@ LoadDefinitions!({
   DefConstructor!("\\xyscale@@ {}{}",
     sub[document, _args, props] {
       let transform = match props.get("xy_transform") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+        Some(Stored::String(s)) => to_string(*s), _ => String::new()
       };
       let attrs = string_map!("transform" => transform);
       let savenode = document.float_to_element("svg:g", false)?;
@@ -1238,8 +1226,8 @@ LoadDefinitions!({
       let t2x = -t1x; let t2y = -t1y;
       let transform = s!("translate({},{}) scale({},{}) translate({},{})",
         fmt2(t1x), fmt2(t1y), xscale, yscale, fmt2(t2x), fmt2(t2y));
-      let box_val = state::lookup_value("box0").unwrap_or(Stored::None);
-      state::assign_value("box0", Stored::None, None);
+      let box_val = lookup_value("box0").unwrap_or(Stored::None);
+      assign_value("box0", Stored::None, None);
       Ok(stored_map!("xy_transform" => transform, "xy_box" => box_val))
     }
   );
@@ -1248,7 +1236,7 @@ LoadDefinitions!({
   DefConstructor!("\\xyRotate@@ {}",
     sub[document, _args, props] {
       let transform = match props.get("xy_transform") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+        Some(Stored::String(s)) => to_string(*s), _ => String::new()
       };
       let attrs = string_map!("transform" => transform);
       let savenode = document.float_to_element("svg:g", false)?;
@@ -1283,8 +1271,8 @@ LoadDefinitions!({
       let angle = (dy * norm).atan2(dx * norm) * 180.0 / std::f64::consts::PI;
       let transform = s!("translate({},{}) rotate({}) translate({},{})",
         fmt2(t1x), fmt2(t1y), angle as i32, fmt2(t2x), fmt2(t2y));
-      let box_val = state::lookup_value("box0").unwrap_or(Stored::None);
-      state::assign_value("box0", Stored::None, None);
+      let box_val = lookup_value("box0").unwrap_or(Stored::None);
+      assign_value("box0", Stored::None, None);
       Ok(stored_map!("xy_transform" => transform, "xy_box" => box_val))
     }
   );
@@ -1293,7 +1281,7 @@ LoadDefinitions!({
   DefConstructor!("\\doSpecialRotate@@ Until:@@",
     sub[document, _args, props] {
       let transform = match props.get("xy_transform") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::new()
+        Some(Stored::String(s)) => to_string(*s), _ => String::new()
       };
       let attrs = string_map!("transform" => transform);
       let savenode = document.float_to_element("svg:g", false)?;
@@ -1317,8 +1305,8 @@ LoadDefinitions!({
       let angle = s.atan2(c) * 180.0 / std::f64::consts::PI;
       let transform = s!("translate({},{}) rotate({}) translate({},{})",
         fmt2(t1x), fmt2(t1y), fmt2(angle), fmt2(t2x), fmt2(t2y));
-      let box_val = state::lookup_value("box0").unwrap_or(Stored::None);
-      state::assign_value("box0", Stored::None, None);
+      let box_val = lookup_value("box0").unwrap_or(Stored::None);
+      assign_value("box0", Stored::None, None);
       Ok(stored_map!("xy_transform" => transform, "xy_box" => box_val))
     }
   );
@@ -1371,12 +1359,12 @@ LoadDefinitions!({
   // Records the current Alignment object globally so \xymatrix@measureit can access
   // it after the \halign is finished. Sets preserve_structure to prevent pruning.
   DefPrimitive!("\\lx@xy@notealignment", {
-    if let Some(alignment_d) = state::lookup_alignment() {
+    if let Some(alignment_d) = lookup_alignment() {
       if let Some(alignment) = alignment_d.alignment_cell() {
         alignment.borrow_mut().set_property("preserve_structure", Stored::Bool(true));
       }
       // Save globally so we can access it in \xymatrix@measureit
-      state::assign_value("xymatrix_alignment", Stored::Digested(alignment_d), Some(Scope::Global));
+      assign_value("xymatrix_alignment", Stored::Digested(alignment_d), Some(Scope::Global));
     }
   });
 
@@ -1385,10 +1373,10 @@ LoadDefinitions!({
   // Instead, read the saved alignment's computed row heights and column widths,
   // and define \Hrow@N, \Wcol@N, \H@max, \W@max macros for xy-pic.
   DefPrimitive!("\\xymatrix@measureit", {
-    let alignment_d = state::lookup_value("xymatrix_alignment")
+    let alignment_d = lookup_value("xymatrix_alignment")
       .and_then(|v| if let Stored::Digested(d) = v { Some(d) } else { None });
-    if let Some(ref alignment_d) = alignment_d {
-      if let Some(alignment) = alignment_d.alignment_cell() {
+    if let Some(ref alignment_d) = alignment_d
+      && let Some(alignment) = alignment_d.alignment_cell() {
         // Normalize to compute row/column dimensions
         alignment.borrow_mut().normalize()?;
         let row_heights = alignment.borrow().get_row_heights().to_vec();
@@ -1423,30 +1411,29 @@ LoadDefinitions!({
         assign_register("\\Row", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;
         assign_register("\\count@@", RegisterValue::Number(Number::new(0)), Some(Scope::Global), Vec::new())?;
       }
-    }
   });
 
   // Tips style management (Perl L934-943)
-  state::assign_value("xy_tips_style", Stored::String(arena::pin("xy")), None);
-  state::assign_value("xy_tips_pending_style", Stored::String(arena::pin("xy")), None);
+  assign_value("xy_tips_style", Stored::String(pin("xy")), None);
+  assign_value("xy_tips_pending_style", Stored::String(pin("xy")), None);
   DefPrimitive!("\\SelectTips {}{}", sub[(style, _size)] {
     let style_s = style.to_string();
     if matches!(style_s.as_str(), "xy" | "cm" | "eu" | "lu") {
-      state::assign_value("xy_tips_pending_style", Stored::String(arena::pin(&style_s)), None);
-      state::assign_value("xy_tips_style", Stored::String(arena::pin(&style_s)), None);
+      assign_value("xy_tips_pending_style", Stored::String(pin(&style_s)), None);
+      assign_value("xy_tips_style", Stored::String(pin(&style_s)), None);
     }
   });
   DefPrimitive!("\\UseTips", {
     // Probe xy_tips_pending_style in place and just re-pin the SymStr
     // on xy_tips_style when present — no owned String needed.
-    let sym = state::with_value("xy_tips_pending_style", |v| match v {
-      Some(Stored::String(s)) if !arena::with(*s, |p| p.is_empty()) => *s,
-      _ => arena::pin("xy"),
+    let sym = with_value("xy_tips_pending_style", |v| match v {
+      Some(Stored::String(s)) if !with(*s, |p| p.is_empty()) => *s,
+      _ => pin("xy"),
     });
-    state::assign_value("xy_tips_style", Stored::String(sym), None);
+    assign_value("xy_tips_style", Stored::String(sym), None);
   });
   DefPrimitive!("\\NoTips", {
-    state::assign_value("xy_tips_style", Stored::String(arena::pin("xy")), None);
+    assign_value("xy_tips_style", Stored::String(pin("xy")), None);
   });
 
   // \lx@xy@poly — polyline with stroke styling (Perl L962-983)
@@ -1456,36 +1443,35 @@ LoadDefinitions!({
   DefConstructor!("\\lx@xy@poly {}",
     sub[document, _args, props] {
       let path = match props.get("xy_path") {
-        Some(Stored::String(s)) => arena::to_string(*s),
+        Some(Stored::String(s)) => to_string(*s),
         _ => return Ok(()),
       };
       let stroke = match props.get("xy_stroke") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("#000000"),
+        Some(Stored::String(s)) => to_string(*s), _ => String::from("#000000"),
       };
       let fill = match props.get("xy_fill") {
-        Some(Stored::String(s)) => arena::to_string(*s), _ => String::from("none"),
+        Some(Stored::String(s)) => to_string(*s), _ => String::from("none"),
       };
       let mut attrs = string_map!("d" => path, "stroke" => stroke, "fill" => fill);
-      if let Some(Stored::String(d)) = props.get("xy_dashes") {
-        if !arena::with(*d, |s| s.is_empty()) {
-          attrs.insert(String::from("stroke-dasharray"), arena::to_string(*d));
+      if let Some(Stored::String(d)) = props.get("xy_dashes")
+        && !with(*d, |s| s.is_empty()) {
+          attrs.insert(String::from("stroke-dasharray"), to_string(*d));
         }
-      }
       // Stroke styling attributes (Perl L963-964)
       if let Some(Stored::String(s)) = props.get("xy_thickness") {
-        let th = arena::to_string(*s);
+        let th = to_string(*s);
         if !th.is_empty() && th != "0" { attrs.insert(String::from("stroke-width"), th); }
       }
       if let Some(Stored::String(s)) = props.get("xy_cap") {
-        let cap = arena::to_string(*s);
+        let cap = to_string(*s);
         if !cap.is_empty() { attrs.insert(String::from("stroke-linecap"), cap); }
       }
       if let Some(Stored::String(s)) = props.get("xy_join") {
-        let join = arena::to_string(*s);
+        let join = to_string(*s);
         if !join.is_empty() { attrs.insert(String::from("stroke-linejoin"), join); }
       }
       if let Some(Stored::String(s)) = props.get("xy_miter") {
-        let miter = arena::to_string(*s);
+        let miter = to_string(*s);
         if !miter.is_empty() { attrs.insert(String::from("stroke-miterlimit"), miter); }
       }
       svg_empty_element(document, "svg:path", attrs)?;
@@ -1494,7 +1480,7 @@ LoadDefinitions!({
       let (stroke, fill, dashes) = xy_capture_stroke_fill();
       let points_str = args.first().and_then(|a| a.as_ref())
         .map(|t| t.to_string()).unwrap_or_default();
-      let dpi = state::lookup_int("DPI");
+      let dpi = lookup_int("DPI");
       let dpi = if dpi > 0 { dpi as f64 } else { 100.0 };
       let pt_px = dpi / 72.27;
       let points: Vec<f64> = points_str.split_whitespace()

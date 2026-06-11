@@ -1,8 +1,12 @@
-use crate::common::error::Result;
-use libxml::tree::{Document, Node, NodeType};
-use libxml::xpath::Context;
-use rustc_hash::FxHashMap as HashMap;
 use std::borrow::Cow;
+
+use libxml::{
+  tree::{Document, Node, NodeType},
+  xpath::Context,
+};
+use rustc_hash::FxHashMap as HashMap;
+
+use crate::common::error::Result;
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -143,20 +147,24 @@ pub fn is_descendant_or_self(child: &Node, parent: &Node) -> bool {
     if p_node == parent {
       return true;
     }
-    match p_node.get_parent() { Some(parent_node) => {
-      parent_opt = Some(parent_node);
-      p = parent_opt.as_ref();
-    } _ => {
-      break;
-    }}
+    match p_node.get_parent() {
+      Some(parent_node) => {
+        parent_opt = Some(parent_node);
+        p = parent_opt.as_ref();
+      },
+      _ => {
+        break;
+      },
+    }
   }
   false
 }
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use libxml::tree::Document;
+
+  use super::*;
 
   #[test]
   fn namespace_constants() {

@@ -7,8 +7,10 @@
 //! 3. The hand-written JSON serializer produces valid JSON.
 
 use latexml::converter::Converter;
-use latexml_core::common::{Config, OutputFormat};
-use latexml_core::telemetry::{self, Phase};
+use latexml_core::{
+  common::{Config, OutputFormat},
+  telemetry::{self, Phase},
+};
 
 #[test]
 fn telemetry_populates_on_hello_conversion() {
@@ -57,7 +59,10 @@ fn telemetry_populates_on_hello_conversion() {
   // Production phase-coverage (≥0.92) is measured out-of-process on real
   // papers; see docs/TELEMETRY.md §6.5.
   let sum_phase: u64 = phase_us.iter().sum();
-  assert!(sum_phase > 0, "no phase time recorded; phase_us = {phase_us:?}");
+  assert!(
+    sum_phase > 0,
+    "no phase time recorded; phase_us = {phase_us:?}"
+  );
   let _ = wall_us; // measured for context; not asserted (preemption-sensitive)
 }
 

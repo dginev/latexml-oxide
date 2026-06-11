@@ -4,8 +4,7 @@
 // In Perl, this file provides LaTeXML-specific semantic overrides for plain TeX.
 // It loads AFTER the plain dump and BEFORE LaTeX constructs.
 // It ends by loading math_common (common math definitions).
-use crate::prelude::*;
-use crate::tex_paragraph::align_line;
+use crate::{prelude::*, tex_paragraph::align_line};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -45,9 +44,9 @@ LoadDefinitions!({
   // preserving rendering (and avoiding the dump CharDef's dropped-`#` in math).
   // Witness 1811.00200 (llncs + algochl.sty). WISDOM #44.
   DefPrimitive!("\\#", {
-    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@hash") } else { T_CS!("\\lx@text@hash") };
-    stomach::digest(Tokens!(target))?
+    digest(Tokens!(target))?
   });
   // Same single-primitive treatment for the rest of the family (see `\#` above):
   // non-expandable + `\ifx`-stable, dispatching to the existing math/text
@@ -56,24 +55,24 @@ LoadDefinitions!({
   // rather than injecting a catcode-4 `&` — the breakage the prior override
   // guarded against.)
   DefPrimitive!("\\&", {
-    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@amp") } else { T_CS!("\\lx@text@amp") };
-    stomach::digest(Tokens!(target))?
+    digest(Tokens!(target))?
   });
   DefPrimitive!("\\%", {
-    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@percent") } else { T_CS!("\\lx@text@percent") };
-    stomach::digest(Tokens!(target))?
+    digest(Tokens!(target))?
   });
   DefPrimitive!("\\$", {
-    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@dollar") } else { T_CS!("\\lx@text@dollar") };
-    stomach::digest(Tokens!(target))?
+    digest(Tokens!(target))?
   });
   DefPrimitive!("\\_", {
-    let target = if state::lookup_bool_sym(pin!("IN_MATH")) {
+    let target = if lookup_bool_sym(pin!("IN_MATH")) {
       T_CS!("\\lx@math@underscore") } else { T_CS!("\\lx@text@underscore") };
-    stomach::digest(Tokens!(target))?
+    digest(Tokens!(target))?
   });
   DefPrimitive!(T_CS!("\\lx@text@hash"), None, "#",  alias => "\\#");
   DefPrimitive!(T_CS!("\\lx@text@amp"), None, "&",  alias => "\\&");
@@ -347,17 +346,17 @@ LoadDefinitions!({
   // Perl: plain_constructs.pool.ltxml L190-212
   DefPrimitive!("\\lx@thinmuskip", {
     Tbox::new(
-      arena::pin_static(" "),
+      pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\,")),
       stored_map!("name"  => "thinspace", "isSpace" => true,
-      "width" => state::lookup_register("\\thinmuskip", Vec::new())?),
+      "width" => lookup_register("\\thinmuskip", Vec::new())?),
     )
   });
   DefPrimitive!("\\lx@thinspace", {
     Tbox::new(
-      arena::pin_static("\u{2009}"),
+      pin_static("\u{2009}"),
       None,
       None,
       Tokens!(T_CS!("\\,")),
@@ -373,7 +372,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\!", {
     Tbox::new(
-      arena::pin_static("\u{200B}"),
+      pin_static("\u{200B}"),
       None,
       None,
       Tokens!(T_CS!("\\!")), // zero width space
@@ -384,22 +383,22 @@ LoadDefinitions!({
   // Perl: \> and \; in math mode => Box(' ', ..., width => medmuskip/thickmuskip)
   DefPrimitive!("\\>", {
     Tbox::new(
-      arena::pin_static(" "),
+      pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\>")),
       stored_map!("name"  => "medspace", "isSpace" => true,
-      "width" => state::lookup_register("\\medmuskip", Vec::new())?),
+      "width" => lookup_register("\\medmuskip", Vec::new())?),
     )
   });
   DefPrimitive!("\\;", {
     Tbox::new(
-      arena::pin_static(" "),
+      pin_static(" "),
       None,
       None,
       Tokens!(T_CS!("\\;")),
       stored_map!("name"  => "thickspace", "isSpace" => true,
-      "width" => state::lookup_register("\\thickmuskip", Vec::new())?),
+      "width" => lookup_register("\\thickmuskip", Vec::new())?),
     )
   });
 
@@ -409,7 +408,7 @@ LoadDefinitions!({
   //======================================================================
   // Perl: plain_constructs.pool.ltxml L217-218 — underscore
   DefPrimitive!("\\_", {
-    Tbox::new(arena::pin_static("_"), None, None, Tokens!(T_CS!("\\_")), SymHashMap::default())
+    Tbox::new(pin_static("_"), None, None, Tokens!(T_CS!("\\_")), SymHashMap::default())
   });
 
   // Perl: plain_constructs.pool.ltxml L220 — active `~` → `\lx@NBSP`.
@@ -451,9 +450,9 @@ LoadDefinitions!({
         let em = lookup_font().map(|f| f.get_em_width()).unwrap_or(655360); // 10pt default
         let mut found = (em, em, em); // default: all 1em
         for item in matrix.unlist() {
-          if let Some(prop) = item.get_property("alignment") {
-            if let Stored::Digested(ref alignment_d) = *prop {
-              if let DigestedData::Alignment(alignment_rc) = alignment_d.data() {
+          if let Some(prop) = item.get_property("alignment")
+            && let Stored::Digested(ref alignment_d) = *prop
+              && let DigestedData::Alignment(alignment_rc) = alignment_d.data() {
                 let alignment = alignment_rc.borrow();
                 // Use row_heights from normalization
                 let row_heights = alignment.get_row_heights();
@@ -471,8 +470,6 @@ LoadDefinitions!({
                   }
                 }
               }
-            }
-          }
         }
         found
       };
@@ -639,11 +636,11 @@ LoadDefinitions!({
   //     MergeFont(family=>'caligraphic', series=>'medium', shape=>'upright', encoding=>'OMS');
   //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
   DefPrimitive!("\\cal", {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
+    if lookup_bool_sym(pin!("IN_MATH")) {
       MergeFont!(family => "caligraphic", series => "medium",
         shape => "upright", encoding => "OMS");
     }
-    Tbox::new(arena::pin_static(""), None, None, Tokens::from(T_CS!("\\cal")),
+    Tbox::new(pin_static(""), None, None, Tokens::from(T_CS!("\\cal")),
       SymHashMap::default())
   });
   DefPrimitive!("\\allowbreak", None);
@@ -660,16 +657,16 @@ LoadDefinitions!({
   // `\nobreakspace → \lx@nobreakspace` pattern).
   DefPrimitive!("\\boldmath", None,
     before_digest => {
-      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
       let merged = mf.merge(Font { forcebold: Some(true), ..Font::default() });
-      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+      assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
     },
     forbid_math => true);
   DefPrimitive!("\\unboldmath", None,
     before_digest => {
-      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
       let merged = mf.merge(Font { forcebold: Some(false), ..Font::default() });
-      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+      assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
     },
     forbid_math => true);
 

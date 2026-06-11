@@ -93,15 +93,14 @@ LoadDefinitions!({
     out.extend(conc.unlist());
     out.push(T_END!());
     out.push(T_END!());
-    if let Some(lab) = label {
-      if !lab.is_empty() {
+    if let Some(lab) = label
+      && !lab.is_empty() {
         out.push(T_CS!("\\quad"));
         out.push(T_CS!("\\textsc"));
         out.push(T_BEGIN!());
         out.extend(lab.unlist());
         out.push(T_END!());
       }
-    }
     Ok(Tokens::new(out))
   });
   // `\infer` is a deprecated alias — install it ONLY when `\infer` is not

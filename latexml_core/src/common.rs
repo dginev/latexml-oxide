@@ -23,9 +23,9 @@ pub mod relaxng;
 pub mod store;
 pub mod xml;
 
-use crate::common::error::*;
-use crate::fmt;
 use std::rc::Rc;
+
+use crate::{common::error::*, fmt};
 
 #[derive(Clone, Debug)]
 pub enum InputFormat {

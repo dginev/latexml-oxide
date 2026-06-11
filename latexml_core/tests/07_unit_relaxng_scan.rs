@@ -12,12 +12,13 @@
 //! repositories against the same scanner via `latexml_core` as a
 //! dependency.
 
-use latexml_core::common::relaxng::{
-  simplify::simplify_top,
-  tex::{document_modules, Options as TexOptions},
-  Pattern, Relaxng,
-};
 use std::path::{Path, PathBuf};
+
+use latexml_core::common::relaxng::{
+  Pattern, Relaxng,
+  simplify::simplify_top,
+  tex::{Options as TexOptions, document_modules},
+};
 
 fn count_recursive(pat: &Pattern, predicate: &mut dyn FnMut(&Pattern) -> bool) -> usize {
   let mut n = if predicate(pat) { 1 } else { 0 };
@@ -45,7 +46,10 @@ fn count_recursive(pat: &Pattern, predicate: &mut dyn FnMut(&Pattern) -> bool) -
 }
 
 fn count_kind(patterns: &[Pattern], mut predicate: impl FnMut(&Pattern) -> bool) -> usize {
-  patterns.iter().map(|p| count_recursive(p, &mut predicate)).sum()
+  patterns
+    .iter()
+    .map(|p| count_recursive(p, &mut predicate))
+    .sum()
 }
 
 fn first_existing(candidates: &[&str]) -> Option<PathBuf> {
@@ -88,7 +92,10 @@ fn scan_latexml_rng_smokes() {
 
   // LaTeXML.rng wraps a top-level <grammar>, so the first child of the
   // module body is a Grammar.
-  assert!(matches!(body[0], Pattern::Grammar { .. }), "first item is Grammar");
+  assert!(
+    matches!(body[0], Pattern::Grammar { .. }),
+    "first item is Grammar"
+  );
 
   // The schema should pull in includes; we should see at least a few
   // Module patterns at deeper levels.
@@ -151,7 +158,10 @@ fn simplify_latexml_rng_populates_state() {
   );
   // Every recorded module should be a Module variant (sanity).
   assert!(
-    rng.modules.iter().all(|m| matches!(m, Pattern::Module { .. })),
+    rng
+      .modules
+      .iter()
+      .all(|m| matches!(m, Pattern::Module { .. })),
     "non-Module entry in rng.modules"
   );
   // Singleton element-defs populate elementdefs / element_reverse_defs.
@@ -207,8 +217,14 @@ fn document_modules_emits_full_pipeline_for_latexml_rng() {
 
   // Schemamodule wrappers: one per non-svg module, each in its own
   // \begin{schemamodule}{name}.
-  assert!(docs.contains("\\begin{schemamodule}"), "missing schemamodule");
-  assert!(docs.contains("\\end{schemamodule}"), "missing schemamodule close");
+  assert!(
+    docs.contains("\\begin{schemamodule}"),
+    "missing schemamodule"
+  );
+  assert!(
+    docs.contains("\\end{schemamodule}"),
+    "missing schemamodule close"
+  );
 
   // Should emit at least a few \patterndef{} lines (the bulk of schema docs).
   let patterndef_count = docs.matches("\\patterndef{").count();
@@ -257,22 +273,19 @@ fn document_modules_emits_full_pipeline_for_latexml_rng() {
 /// Foreign-schema smoke test: MathML 4 Core, a non-LaTeXML RelaxNG
 /// schema. Exercises the dynamic-namespace path:
 ///
-/// * No `with_latexml_defaults()` — the harness shouldn't need to know
-///   anything about MathML up front.
-/// * Pre-registers `m` via the public `register_namespace` API. trang
-///   inlines `default namespace m = "..."` as `<grammar ns="..."/>`
-///   without an `xmlns:m` declaration, so without registration the
-///   scanner would fall back to `namespace1:foo`. Registering `m`
-///   makes the well-known MathML prefix surface in the AST.
+/// * No `with_latexml_defaults()` — the harness shouldn't need to know anything about MathML up
+///   front.
+/// * Pre-registers `m` via the public `register_namespace` API. trang inlines `default namespace m
+///   = "..."` as `<grammar ns="..."/>` without an `xmlns:m` declaration, so without registration
+///   the scanner would fall back to `namespace1:foo`. Registering `m` makes the well-known MathML
+///   prefix surface in the AST.
 ///
 /// Verifies the same scan → simplify → document_modules pipeline that
 /// the LaTeXML.rng tests exercise, plus that the registered prefix
 /// reaches the emitted TeX (`\elementdef{m:math}` etc.).
 #[test]
 fn document_modules_emits_full_pipeline_for_mathml_core_rng() {
-  let candidates = [
-    "/home/deyan/git/mathml-schema/rng/mathml4-core.rng",
-  ];
+  let candidates = ["/home/deyan/git/mathml-schema/rng/mathml4-core.rng"];
   let Some(rng_path) = first_existing(&candidates) else {
     eprintln!("[skip] mathml4-core.rng not available on this host");
     return;
@@ -324,8 +337,7 @@ fn document_modules_emits_full_pipeline_for_mathml_core_rng() {
     "missing schemamodule open"
   );
   assert!(
-    docs.contains("\\elementdef{m:math}")
-      || docs.contains("\\elementref{m:math}"),
+    docs.contains("\\elementdef{m:math}") || docs.contains("\\elementref{m:math}"),
     "expected `m:math` to surface in TeX output"
   );
   // No synthetic prefixes leaked into the printed TeX.

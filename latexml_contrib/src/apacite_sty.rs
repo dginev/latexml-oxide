@@ -5,7 +5,6 @@
 //! content-bearing args (authors, titles) and gobble the rest.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("natbib");
   // apacite-generated .bbl entries routinely contain `\url{...}` and
@@ -124,10 +123,10 @@ LoadDefinitions!({
   DefMacro!("\\BED", "Ed.");
   DefMacro!("\\BIn", "In");
   // apacite.sty technical-report citation short forms. Witness 2205.05718.
-  DefMacro!("\\BTR",     "Tech.\\ Rep.");
-  DefMacro!("\\BNUM",    "No.");
-  DefMacro!("\\BNUMS",   "Nos.");
-  DefMacro!("\\BTRANS",  "Trans.");
+  DefMacro!("\\BTR", "Tech.\\ Rep.");
+  DefMacro!("\\BNUM", "No.");
+  DefMacro!("\\BNUMS", "Nos.");
+  DefMacro!("\\BTRANS", "Trans.");
   DefMacro!("\\BTRANSS", "Trans.");
   DefMacro!("\\BTRANSL", "trans.");
   // \BPG = singular page (vs \BPGS = pages). Witness 2205.09172 (cogsci
@@ -142,10 +141,10 @@ LoadDefinitions!({
   // originals is a no-op spacing hack we drop). NB `\BEd` (lowercase, "ed.")
   // is DISTINCT from the already-defined `\BED` ("Ed.", editor). Witness
   // 2106.02003 (`\PrintOrdinal{3}\ \BEd` in an apacite `main.bbl`).
-  DefMacro!("\\BEd", "ed.");           // edition (apacite L2037)
-  DefMacro!("\\BVOLS", "Vols.");       // volumes
-  DefMacro!("\\BCHAP", "chap.");       // chapter
-  DefMacro!("\\BCHAPS", "chap.");      // chapters
+  DefMacro!("\\BEd", "ed."); // edition (apacite L2037)
+  DefMacro!("\\BVOLS", "Vols."); // volumes
+  DefMacro!("\\BCHAP", "chap."); // chapter
+  DefMacro!("\\BCHAPS", "chap."); // chapters
   DefMacro!("\\BCHAIR", "Chair");
   DefMacro!("\\BCHAIRS", "Chairs");
   DefMacro!("\\BIP", "in press");
@@ -161,13 +160,14 @@ LoadDefinitions!({
   DefMacro!("\\BRetrievedFrom", "Retrieved from\\ ");
   DefMacro!("\\BMsgPostedTo", "Message posted to\\ ");
   DefMacro!("\\BRetrieved{}", "Retrieved #1");
-  DefMacro!("\\BBOP", "(");            // bibliography open paren
-  DefMacro!("\\BBCP", ")");            // bibliography close paren
+  DefMacro!("\\BBOP", "("); // bibliography open paren
+  DefMacro!("\\BBCP", ")"); // bibliography close paren
   // \PrintOrdinal{N} → "Nth" ordinal (1st/2nd/3rd/4th…11th/12th/13th/Nth).
   // Ported verbatim from apacite.sty L2098-2138 (pure TeX; uses \count@,
   // \afterassignment, \ifcase, last-digit recursion). Used in `.bbl` edition
   // fields, e.g. `\PrintOrdinal{3}` → "3rd".
-  RawTeX!(r"%
+  RawTeX!(
+    r"%
 \let\@xp\expandafter
 \newcommand{\PrintOrdinal}[1]{%
     \afterassignment\print@ordinal
@@ -185,12 +185,16 @@ LoadDefinitions!({
         \ifcase#1th\or st\or nd\or rd\else th\fi
     \fi}
 \def\keep@last@digit#1#2{%
-    \ifx\relax#2\@xp\@gobbletwo \else #1=#2\relax \fi \keep@last@digit#1}");
+    \ifx\relax#2\@xp\@gobbletwo \else #1=#2\relax \fi \keep@last@digit#1}"
+  );
   // \shortciteA[pre][post]{key} — author-only short cite (apacite
   // citation form). Delegate to natbib's \citet (author-name cite).
   DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
   // \shortciteauthor[pre][post]{key} — short form of \citeauthor.
-  DefMacro!("\\shortciteauthor[][] Semiverbatim", "\\citeauthor[#1][#2]{#3}");
+  DefMacro!(
+    "\\shortciteauthor[][] Semiverbatim",
+    "\\citeauthor[#1][#2]{#3}"
+  );
   // apacite.sty L1448-1452 allocates \bibleftmargin et al via
   // `\newskip{\bibleftmargin}` and friends, then main.tex bodies use
   // `\setlength{\bibleftmargin}{...}` and `\setlength{\bibindent}{-\bibleftmargin}`.

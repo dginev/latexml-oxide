@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   Warn!(
     "missing_file",

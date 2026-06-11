@@ -1,7 +1,6 @@
+use marpa::{grammar::Grammar as MarpaGrammar, result::Result, tree_builder::TreeBuilder};
+
 use crate::semantics::*;
-use marpa::grammar::Grammar as MarpaGrammar;
-use marpa::result::Result;
-use marpa::tree_builder::TreeBuilder;
 
 // Marpa SLIF-style grammar DSL inside `grammar!()` / `production!()`
 // macros. A handful of long alternation lists (`qm_bracket`,

@@ -18,7 +18,7 @@ LoadDefinitions!({
   DefPrimitive!("\\pgfmathsetmacro{}{}", sub[(cs, expression)] {
     let expr_str = do_expand(expression)?.to_string();
     bgroup();
-    let result = crate::package::pgfmath_code_tex::pgfmathparse_eval(&expr_str);
+    let result = pgfmath_code_tex::pgfmathparse_eval(&expr_str);
     egroup()?;
     let result_tokens = mouth::tokenize_internal(&result);
     def_macro(

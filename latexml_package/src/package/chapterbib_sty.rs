@@ -3,7 +3,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   DeclareOption!("rootbib", {
-    state::assign_value("CITE_UNIT_GLOBAL", Stored::from(1), None);
+    assign_value("CITE_UNIT_GLOBAL", Stored::from(1), None);
   });
   // Perl L20-21: the `sectionbib` option maps back-matter bibliography
   // to a section-level container so chapterbib-generated bibs render as
@@ -31,7 +31,7 @@ LoadDefinitions!({
   // single global unit.
   DefPrimitive!("\\include{}", sub[(path)] {
     let path_str = Expand!(path).to_string();
-    let table = state::lookup_value("including@only");
+    let table = lookup_value("including@only");
     let should_include = match &table {
       None => true,
       Some(Stored::HashString(map)) => map.contains_key(&path_str),
@@ -43,14 +43,14 @@ LoadDefinitions!({
         .and_then(|s| s.to_str())
         .unwrap_or(&path_str)
         .to_string();
-      let cite_unit = if state::lookup_value("CITE_UNIT_GLOBAL").is_some() {
+      let cite_unit = if lookup_value("CITE_UNIT_GLOBAL").is_some() {
         format!("bibliography {}", name)
       } else {
         name.clone()
       };
       AssignValue!("CHAPTERBIB_UNIT" => Stored::from(name), Some(Scope::Global));
       AssignValue!("CITE_UNIT"       => Stored::from(cite_unit), Some(Scope::Global));
-      gullet::unread_one(T_CS!("\\lx@cb@reset"));
+      unread_one(T_CS!("\\lx@cb@reset"));
       Input!(&path_str);
     }
   });
@@ -75,7 +75,7 @@ LoadDefinitions!({
       // once the unit name is placed (via `\lx@bibliography`'s `[unit]` list
       // tag) into the text-mode bibliography. `Explode!` keeps `_` as
       // catcode-12 OTHER, exactly like Perl. Witness 1611.05798.
-      gullet::unread_vec(Explode!(unit));
+      unread_vec(Explode!(unit));
     }
   });
   DefMacro!("\\lx@cb@unitname", "\\lx@cb@do@unitname");

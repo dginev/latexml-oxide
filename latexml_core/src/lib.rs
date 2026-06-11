@@ -76,11 +76,10 @@ pub mod watchdog;
 /// A TeX-like digested Whatsit
 pub mod whatsit;
 
+use std::{borrow::Cow, fmt, rc::Rc};
+
 use libxml::tree::Node;
 use once_cell::sync::Lazy;
-use std::borrow::Cow;
-use std::fmt;
-use std::rc::Rc;
 /// Initialize libxml2 for thread safety. Must be called before any libxml2
 /// operations that don't go through `libxml::parser::Parser`. Delegates to
 /// the safe wrapper in rust-libxml, which uses its own `std::sync::Once` to
@@ -127,26 +126,24 @@ pub fn ensure_libxml_init() { libxml::init_parser(); }
 /// dictionaries) — that residual (~24 MB/test) is left as-is rather than
 /// risk the global `xmlCleanupParser`.
 pub fn reset_thread_engine() {
-  crate::state::reset_thread_state();
-  crate::common::arena::reset();
+  state::reset_thread_state();
+  common::arena::reset();
 }
 
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::dimension::Dimension;
 pub use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::locator::Locator;
-use crate::common::model::Model;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::register::RegisterValue;
-use crate::digested::{Digested, DigestedData};
-use crate::document::Document;
-use crate::state::{State, StateOptions, set_state};
-use crate::stomach::Stomach;
-use crate::tbox::Tbox;
-use crate::tokens::Tokens;
+use crate::{
+  common::{
+    arena::SymHashMap as HashMap, dimension::Dimension, font::Font, locator::Locator, model::Model,
+    numeric_ops::NumericOps, object::Object, store::Stored,
+  },
+  definition::register::RegisterValue,
+  digested::{Digested, DigestedData},
+  document::Document,
+  state::{State, StateOptions, set_state},
+  stomach::Stomach,
+  tbox::Tbox,
+  tokens::Tokens,
+};
 
 pub static NO_PROPERTIES: Lazy<HashMap<Stored>> = Lazy::new(HashMap::default);
 
@@ -208,11 +205,11 @@ impl Core {
     // just ARENA+MODEL cut the failures 4→1; this completes the set. No
     // behavioral change on Linux (these all initialize during any
     // conversion anyway — this only fixes the ORDER).
-    crate::common::arena::force_init(); // leaf
-    crate::token::force_init(); // token constants -> arena
-    crate::common::model::force_init(); // Model::new -> arena
-    crate::gullet::force_init(); // DEFERRED_COMMANDS / COLUMN_ENDS / GULLET -> arena
-    crate::state::force_init(); // STD_STATE / STY_STATE templates -> arena
+    common::arena::force_init(); // leaf
+    token::force_init(); // token constants -> arena
+    common::model::force_init(); // Model::new -> arena
+    gullet::force_init(); // DEFERRED_COMMANDS / COLUMN_ENDS / GULLET -> arena
+    state::force_init(); // STD_STATE / STY_STATE templates -> arena
     let preload = options.preload.unwrap_or_default();
     // pass on the state::options, defaults are handled in state::new
     let state_options = StateOptions {
@@ -350,24 +347,20 @@ pub trait BoxOps: Object {
     fn coerce_mu(val: &Stored) -> Option<RegisterValue> {
       match val {
         Stored::MuGlue(g) => {
-          let fs = crate::state::lookup_font()
+          let fs = state::lookup_font()
             .and_then(|f| f.get_size())
             .unwrap_or(10.0);
-          let muwidth = (fs * crate::common::numeric_ops::UNITY_F64 / 18.0) as i64;
+          let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
           let pt_scaled =
-            (g.value_of() as f64 * muwidth as f64 / crate::common::numeric_ops::UNITY_F64).trunc();
-          Some(RegisterValue::Dimension(
-            crate::common::dimension::Dimension::new(pt_scaled as i64),
-          ))
+            (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
+          Some(RegisterValue::Dimension(Dimension::new(pt_scaled as i64)))
         },
         Stored::MuDimension(d) => {
-          let fs = crate::state::lookup_font()
+          let fs = state::lookup_font()
             .and_then(|f| f.get_size())
             .unwrap_or(10.0);
           let pt_scaled = (d.value_of() / 18) as f64 * fs;
-          Some(RegisterValue::Dimension(
-            crate::common::dimension::Dimension::new(pt_scaled as i64),
-          ))
+          Some(RegisterValue::Dimension(Dimension::new(pt_scaled as i64)))
         },
         _ => val.into(),
       }
@@ -389,12 +382,9 @@ pub trait BoxOps: Object {
       Some(val) => (&*val).into(),
       None => match self.get_property("cached_height") {
         Some(val) => (&*val).into(),
-        None => {
-          match self.compute_size(HashMap::default()) { Ok((_, h, _)) => {
-            Some(RegisterValue::Dimension(h))
-          } _ => {
-            Some(RegisterValue::Dimension(Dimension::default()))
-          }}
+        None => match self.compute_size(HashMap::default()) {
+          Ok((_, h, _)) => Some(RegisterValue::Dimension(h)),
+          _ => Some(RegisterValue::Dimension(Dimension::default())),
         },
       },
     }
@@ -408,12 +398,9 @@ pub trait BoxOps: Object {
       Some(val) => (&*val).into(),
       None => match self.get_property("cached_depth") {
         Some(val) => (&*val).into(),
-        None => {
-          match self.compute_size(HashMap::default()) { Ok((_, _, d)) => {
-            Some(RegisterValue::Dimension(d))
-          } _ => {
-            Some(RegisterValue::Dimension(Dimension::default()))
-          }}
+        None => match self.compute_size(HashMap::default()) {
+          Ok((_, _, d)) => Some(RegisterValue::Dimension(d)),
+          _ => Some(RegisterValue::Dimension(Dimension::default())),
         },
       },
     }
@@ -467,17 +454,16 @@ pub trait BoxOps: Object {
           Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
           Some(Stored::MuGlue(g)) => {
             // Convert mu to pt: 1mu = font_size / 18
-            let fs = crate::state::lookup_font()
+            let fs = state::lookup_font()
               .and_then(|f| f.get_size())
               .unwrap_or(10.0);
-            let muwidth = (fs * crate::common::numeric_ops::UNITY_F64 / 18.0) as i64;
-            let pt_scaled = (g.value_of() as f64 * muwidth as f64
-              / crate::common::numeric_ops::UNITY_F64)
-              .trunc();
+            let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
+            let pt_scaled =
+              (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
             Some(Dimension::new(pt_scaled as i64))
           },
           Some(Stored::MuDimension(d)) => {
-            let fs = crate::state::lookup_font()
+            let fs = state::lookup_font()
               .and_then(|f| f.get_size())
               .unwrap_or(10.0);
             let mu_val = d.value_of() as f64;

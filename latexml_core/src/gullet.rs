@@ -1,33 +1,41 @@
+use std::{
+  cell::{RefCell, RefMut},
+  collections::VecDeque,
+};
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
-use std::cell::{RefCell, RefMut};
-use std::collections::VecDeque;
+
 // use std::mem;
 // use std::rc::Rc;
-
 use crate::alignment::Alignment;
-use crate::common::arena::{self, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::float::Float;
-use crate::common::glue::{FillCode, Glue};
-use crate::common::locator::Locator;
-use crate::common::mudimension::MuDimension;
-use crate::common::muglue::MuGlue;
-use crate::common::number::Number;
-use crate::common::numeric_ops::{NumericOps, UNITY, fixpoint};
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::state::*;
-use crate::{DigestedData, state};
-
-use crate::definition::Definition;
-use crate::definition::conditional::ConditionalType;
-use crate::definition::register::{Register, RegisterType, RegisterValue};
-use crate::mouth::Mouth;
-use crate::token::{Catcode, TOKEN_ENDCSNAME, TOKEN_RELAX, Token};
-use crate::tokens::Tokens;
+use crate::{
+  DigestedData,
+  common::{
+    arena::{self, SymStr},
+    dimension::Dimension,
+    error::*,
+    float::Float,
+    glue::{FillCode, Glue},
+    locator::Locator,
+    mudimension::MuDimension,
+    muglue::MuGlue,
+    number::Number,
+    numeric_ops::{NumericOps, UNITY, fixpoint},
+    object::Object,
+    store::Stored,
+  },
+  definition::{
+    Definition,
+    conditional::ConditionalType,
+    register::{Register, RegisterType, RegisterValue},
+  },
+  mouth::Mouth,
+  state::*,
+  token::{Catcode, TOKEN_ENDCSNAME, TOKEN_RELAX, Token},
+  tokens::Tokens,
+};
 
 static DIGIT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9]").unwrap());
 static OCT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-7]").unwrap());
@@ -46,8 +54,9 @@ pub static TRACE_GROUP_END: Lazy<bool> =
 
 // Perl smuggles the unexpanded token inside \special_relax's slot [2].
 // Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
-use crate::pin;
 use std::cell::Cell;
+
+use crate::pin;
 #[thread_local]
 static SPECIAL_RELAX_SMUGGLED: Cell<Option<Token>> = Cell::new(None);
 
@@ -139,14 +148,13 @@ thread_local! {
   /// dumped when the gullet cycle guard trips so the repeating window is
   /// identifiable from logs (this is how the math0402448 xymatrix
   /// false-positive was diagnosed).
-  static DEBUG_RECENT_TOKENS: RefCell<std::collections::VecDeque<String>> =
-    RefCell::new(std::collections::VecDeque::with_capacity(512));
+  static DEBUG_RECENT_TOKENS: RefCell<VecDeque<String>> =
+    RefCell::new(VecDeque::with_capacity(512));
 }
 
 /// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics (shared seam in
 /// `common::error`; read once so the per-token hot path pays one bool test).
-static DEBUG_FATAL: Lazy<bool> =
-  Lazy::new(crate::common::error::debug_fatal_enabled);
+static DEBUG_FATAL: Lazy<bool> = Lazy::new(debug_fatal_enabled);
 
 #[thread_local]
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
@@ -311,10 +319,10 @@ pub fn get_location() -> String {
 
 pub fn mouth_is_open(mouth: &Mouth) -> bool {
   let gullet = gullet!();
-  if let Some(ref runtime) = gullet.runtime {
-    if mouth == &runtime.mouth {
-      return true;
-    }
+  if let Some(ref runtime) = gullet.runtime
+    && mouth == &runtime.mouth
+  {
+    return true;
   }
   gullet
     .mouthstack
@@ -393,10 +401,11 @@ pub fn open_mouth(mouth: Mouth, autoclose: bool) {
 pub fn close_mouth(forced: bool) -> Result<()> {
   let mut shift_from_mouthstack = false;
   let mut error_has_more_input = false;
-  if let Some(ref mut runtime) = runtime!() {
-    if !forced && (!runtime.pushback.is_empty() || runtime.mouth.has_more_input()) {
-      error_has_more_input = true
-    }
+  if let Some(ref mut runtime) = runtime!()
+    && !forced
+    && (!runtime.pushback.is_empty() || runtime.mouth.has_more_input())
+  {
+    error_has_more_input = true
   }
   if error_has_more_input {
     let next = match read_token()? {
@@ -562,24 +571,26 @@ fn read_resource_checkpoint() -> Result<Option<bool>> {
   // let a big document through is when the loop guard matters most.
   // (PR #249 review P2-5.) Only the limit COMPARISON stays conditional.
   g.progress += 1;
-  if let Some(limit) = g.token_limit {
-    if g.progress > limit {
-      let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
-      drop(g);
-      Fatal!(Timeout, TokenLimit, msg);
-    }
+  if let Some(limit) = g.token_limit
+    && g.progress > limit
+  {
+    let msg = s!("Token limit of {} exceeded, infinite loop?", limit);
+    drop(g);
+    Fatal!(Timeout, TokenLimit, msg);
   }
   if let Some(limit) = g.pushback_limit {
     let pb_len = g.runtime.as_ref().map(|r| r.pushback.len()).unwrap_or(0);
     if pb_len > limit {
       // Diagnostic: the looping token window is right here in the
       // pushback — dump its head so the cycle is identifiable from logs.
-      if *DEBUG_FATAL {
-        if let Some(rt) = g.runtime.as_ref() {
-          let head: Vec<String> =
-            rt.pushback.iter().take(48).map(|t| format!("{t:?}")).collect();
-          eprintln!("[debug-fatal] pushback head: {}", head.join(" "));
-        }
+      if *DEBUG_FATAL && let Some(rt) = g.runtime.as_ref() {
+        let head: Vec<String> = rt
+          .pushback
+          .iter()
+          .take(48)
+          .map(|t| format!("{t:?}"))
+          .collect();
+        eprintln!("[debug-fatal] pushback head: {}", head.join(" "));
       }
       let msg = s!("Pushback limit of {} exceeded, infinite loop?", limit);
       drop(g);
@@ -620,8 +631,7 @@ fn cycle_guard_checkpoint(active: bool, nextt: &Token) -> Result<()> {
     // scoping cycle detection to ONE expansion context without destroying
     // the outer context's history. The multiplier spreads the serial across
     // the hash bits (splitmix64's odd constant).
-    let fp =
-      nextt.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    let fp = nextt.cycle_fingerprint() ^ g.ctx_serial.wrapping_mul(0x9E37_79B9_7F4A_7C15);
     if let Some(period) = g.cycle_guard.push(fp) {
       drop(g);
       let msg = s!(
@@ -665,16 +675,17 @@ pub fn read_token() -> Result<Option<Token>> {
       // READ (before alignment/\dont_expand special-casing), so the cycle
       // guard sees the same stream regardless of which loop reads it.
       cycle_guard_checkpoint(guard_active, nextt)?;
-      if (align_group_count() == 0) && has_reading_alignment() {
-        if let Some((atoken, atype, ahidden)) = is_column_end(nextt) {
-          let reading_alignment = get_reading_alignment().unwrap();
-          if let DigestedData::Alignment(data) = reading_alignment.data() {
-            handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
-          } else {
-            return Err("reading_alignment should always contain DigestedData::Alignment".into());
-          }
-          continue; // Perl: handleTemplate then continue while(1) loop
+      if (align_group_count() == 0)
+        && has_reading_alignment()
+        && let Some((atoken, atype, ahidden)) = is_column_end(nextt)
+      {
+        let reading_alignment = get_reading_alignment().unwrap();
+        if let DigestedData::Alignment(data) = reading_alignment.data() {
+          handle_template(data.borrow_mut(), atoken, atype, ahidden)?;
+        } else {
+          return Err("reading_alignment should always contain DigestedData::Alignment".into());
         }
+        continue; // Perl: handleTemplate then continue while(1) loop
       }
       if nextt.code == Catcode::CS && nextt.text == pin!("\\dont_expand") {
         let unexpanded = read_token()?;
@@ -823,9 +834,9 @@ pub fn read_x_token(
         LetTo(Token),
         Undefined,
         NonExpandable,
-        Invoke(std::rc::Rc<dyn crate::definition::Definition>),
+        Invoke(std::rc::Rc<dyn Definition>),
       }
-      let outcome = state::with_meaning(&token, |defn_opt| match defn_opt {
+      let outcome = with_meaning(&token, |defn_opt| match defn_opt {
         Some(Stored::Token(t)) => Outcome::LetTo(*t),
         Some(Stored::None) | None => Outcome::Undefined,
         Some(other) => match other.to_definition() {
@@ -1031,7 +1042,7 @@ pub fn read_balanced(
       None => false,
       Some(token) => {
         token.get_catcode() == Catcode::BEGIN
-          || state::with_meaning(
+          || with_meaning(
             &token,
             |m| matches!(m, Some(Stored::Token(t)) if *t == T_BEGIN!()),
           )
@@ -1128,15 +1139,19 @@ pub fn read_balanced(
           // Wow!!!!! See TeX the Program \S 309
           // Not sure if this code still applies within scan_toks???
           // SHOULD count nesting of { }!!! when SCANNED (not digested)
-          if has_reading_alignment() && align_group_count() == 0 {
-            if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-              match get_reading_alignment().unwrap().data() { DigestedData::Alignment(data) => {
+          if has_reading_alignment()
+            && align_group_count() == 0
+            && let Some((_atoken, atype, ahidden)) = is_column_end(&token)
+          {
+            match get_reading_alignment().unwrap().data() {
+              DigestedData::Alignment(data) => {
                 handle_template(data.borrow_mut(), token, atype, ahidden)?;
-              } _ => {
+              },
+              _ => {
                 panic!("malformed alignmed was stored?");
-              }}
-              continue;
+              },
             }
+            continue;
           }
           // Note: use general-purpose lookup, since we may reexamine $defn below
           if expansion_level != Off && cc.is_active_or_cs() {
@@ -1146,7 +1161,7 @@ pub fn read_balanced(
             // below) and (b) the Rc<dyn Definition> if it's a proper
             // definition — both are cheap (bool + Rc-clone).
             let (has_meaning, defn_opt) =
-              state::with_meaning(&token, |m| (m.is_some(), m.and_then(|s| s.to_definition())));
+              with_meaning(&token, |m| (m.is_some(), m.and_then(|s| s.to_definition())));
             if let Some(defn) = defn_opt {
               if defn.is_expandable() && (!defn.is_protected() || expansion_level == Full) {
                 local_current_token(token);
@@ -1436,20 +1451,15 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         // documented Rust-port divergence from Knuth TeX.
         //
         // Real-TeX semantics (cited from background/):
-        //   - tex.web @<Manufacture a control...@> L7745-7758: the
-        //     \csname loop calls `get_x_token`; if `cur_cs != 0`
-        //     (i.e. the expanded token is *any* CS — including
-        //     `\let`-to-char "implicit characters"), the loop EXITS,
-        //     and unless that CS is `\endcsname` an error fires:
-        //     "Missing \endcsname inserted; the control sequence
-        //     marked <to be read again> should not appear between
-        //     \csname and \endcsname."
-        //   - texbook.tex p.~277 (line 3001-3002): "after
-        //     `\let\lq=` the control sequence token `\lq` will not
-        //     expand into a character token, nor *is* it a
-        //     character token!". `\let`-to-char produces an
-        //     *implicit character* that real TeX still treats as a
-        //     CS for csname purposes.
+        //   - tex.web @<Manufacture a control...@> L7745-7758: the \csname loop calls
+        //     `get_x_token`; if `cur_cs != 0` (i.e. the expanded token is *any* CS — including
+        //     `\let`-to-char "implicit characters"), the loop EXITS, and unless that CS is
+        //     `\endcsname` an error fires: "Missing \endcsname inserted; the control sequence
+        //     marked <to be read again> should not appear between \csname and \endcsname."
+        //   - texbook.tex p.~277 (line 3001-3002): "after `\let\lq=` the control sequence token
+        //     `\lq` will not expand into a character token, nor *is* it a character token!".
+        //     `\let`-to-char produces an *implicit character* that real TeX still treats as a CS
+        //     for csname purposes.
         //
         // Why diverge: our Rust port's expansion pipeline produces
         // a swath of Stored::Token CSes (PA-aliased single-char
@@ -1463,12 +1473,10 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         // so the constructed name is what the author meant.
         //
         // Witnesses:
-        //   - `\lx@NBSP` (round-19 CLUSTER-NBSP, 18 papers): `~`
-        //     active char defined as `\lx@NBSP` (Stored::Token of
-        //     U+00A0) surfacing in `\csname r@LABEL\endcsname`.
-        //   - `\exp_stop_f:` (mhchem raw-load 2026-05-12, 92→77
-        //     errors): expl3 frozen-space token reaching csname
-        //     stream during raw mhchem.sty load.
+        //   - `\lx@NBSP` (round-19 CLUSTER-NBSP, 18 papers): `~` active char defined as `\lx@NBSP`
+        //     (Stored::Token of U+00A0) surfacing in `\csname r@LABEL\endcsname`.
+        //   - `\exp_stop_f:` (mhchem raw-load 2026-05-12, 92→77 errors): expl3 frozen-space token
+        //     reaching csname stream during raw mhchem.sty load.
         //
         // Hardcoded carve-out for `\lx@NBSP` etc. stays for
         // historical clarity; the general `Stored::Token` case
@@ -1538,62 +1546,66 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
           let standalone = read_x_token(Some(true), false, None)?;
           // The 4th arg is a brace group `{<letter>}` — consume the
           // T_BEGIN, then read tokens until matching T_END.
-          if let Some(t) = read_x_token(Some(true), false, None)? {
-            if t.get_catcode() == Catcode::BEGIN {
-              let mut depth: i32 = 1;
-              while depth > 0 {
-                match read_x_token(Some(true), false, None)? {
-                  Some(t2) => match t2.get_catcode() {
-                    Catcode::BEGIN => depth += 1,
-                    Catcode::END => depth -= 1,
-                    _ => {},
-                  },
-                  None => break,
-                }
+          if let Some(t) = read_x_token(Some(true), false, None)?
+            && t.get_catcode() == Catcode::BEGIN
+          {
+            let mut depth: i32 = 1;
+            while depth > 0 {
+              match read_x_token(Some(true), false, None)? {
+                Some(t2) => match t2.get_catcode() {
+                  Catcode::BEGIN => depth += 1,
+                  Catcode::END => depth -= 1,
+                  _ => {},
+                },
+                None => break,
               }
             }
           }
           if let Some(c) = standalone {
             c.with_str(|s| cs.push_str(s));
           }
-        } else { match crate::state::lookup_meaning(&token) { Some(Stored::Token(letted)) => {
-          // CS is \let-equivalent to a single token. If that token is
-          // a character (LETTER/OTHER/SPACE), append its string repr
-          // to the constructed csname — mirrors real TeX's behaviour
-          // of substituting the let-target into the csname stream.
-          // Non-character lets (Catcode::CS, MATH, etc.) fall through
-          // to the error branches below.
-          let target_cc = letted.get_catcode();
-          if matches!(
-            target_cc,
-            Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
-          ) {
-            if target_cc == Catcode::SPACE {
-              cs.push(' ');
-            } else {
-              letted.with_str(|s| cs.push_str(s));
-            }
-          } else if !quiet {
-            let message = s!(
-              "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
-              token,
-              cs
-            );
-            Error!("unexpected", token, message);
+        } else {
+          match lookup_meaning(&token) {
+            Some(Stored::Token(letted)) => {
+              // CS is \let-equivalent to a single token. If that token is
+              // a character (LETTER/OTHER/SPACE), append its string repr
+              // to the constructed csname — mirrors real TeX's behaviour
+              // of substituting the let-target into the csname stream.
+              // Non-character lets (Catcode::CS, MATH, etc.) fall through
+              // to the error branches below.
+              let target_cc = letted.get_catcode();
+              if matches!(target_cc, Catcode::LETTER | Catcode::OTHER | Catcode::SPACE) {
+                if target_cc == Catcode::SPACE {
+                  cs.push(' ');
+                } else {
+                  letted.with_str(|s| cs.push_str(s));
+                }
+              } else if !quiet {
+                let message = s!(
+                  "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
+                  token,
+                  cs
+                );
+                Error!("unexpected", token, message);
+              }
+            },
+            _ => {
+              if !quiet {
+                if lookup_definition(&token)?.is_some() {
+                  let message = s!(
+                    "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
+                    token,
+                    cs
+                  );
+                  Error!("unexpected", token, message);
+                } else {
+                  let message = s!("The token {:?} is not defined", token);
+                  Error!("undefined", token, message);
+                }
+              }
+            },
           }
-        } _ => if !quiet {
-          if lookup_definition(&token)?.is_some() {
-            let message = s!(
-              "The control sequence {:?} should not appear between \\csname and \\endcsname (partial cs so far: {:?})",
-              token,
-              cs
-            );
-            Error!("unexpected", token, message);
-          } else {
-            let message = s!("The token {:?} is not defined", token);
-            Error!("undefined", token, message);
-          }
-        }}}
+        }
         // In quiet mode (ifcsname), just skip the CS token
       },
       Catcode::SPACE => cs.push(' '), // Keep newlines from having \n!
@@ -1641,10 +1653,10 @@ pub fn read_next_conditional() -> Result<Option<(Token, ConditionalType)>> {
           Catcode::END => decrement_align_group_count(),
           _ => {},
         }
-        if cc.is_active_or_cs() {
-          if let Some(cond_type) = lookup_conditional(&token) {
-            return Ok(Some((token, cond_type)));
-          }
+        if cc.is_active_or_cs()
+          && let Some(cond_type) = lookup_conditional(&token)
+        {
+          return Ok(Some((token, cond_type)));
         }
       },
       None => {
@@ -1821,35 +1833,38 @@ pub fn read_register_value_coerce(
     None => Ok(None),
     Some(token) => {
       let _is_fontdimen = token.with_str(|s| s == "\\fontdimen");
-      match lookup_register_definition(&token) { Some(defn) => {
-        if let Some(mut register_type) = defn.register_type() {
-          if register_type == RegisterType::CharDef {
-            // CharDefs treated as numbers here
-            register_type = RegisterType::Number;
-          }
-          if register_type == value_type {
-            let args = defn.read_arguments()?;
-            Ok(defn.value_of(args))
-          } else if coerce {
-            // Try type coercion per Perl's %RegisterCoercionTypes
-            if let Some(coerced) = coerce_register(value_type, register_type, &defn)? {
-              Ok(Some(coerced))
+      match lookup_register_definition(&token) {
+        Some(defn) => {
+          if let Some(mut register_type) = defn.register_type() {
+            if register_type == RegisterType::CharDef {
+              // CharDefs treated as numbers here
+              register_type = RegisterType::Number;
+            }
+            if register_type == value_type {
+              let args = defn.read_arguments()?;
+              Ok(defn.value_of(args))
+            } else if coerce {
+              // Try type coercion per Perl's %RegisterCoercionTypes
+              if let Some(coerced) = coerce_register(value_type, register_type, &defn)? {
+                Ok(Some(coerced))
+              } else {
+                unread_one(token);
+                Ok(None)
+              }
             } else {
-              unread_one(token);
+              unread_one(token); // Unread
               Ok(None)
             }
           } else {
             unread_one(token); // Unread
             Ok(None)
           }
-        } else {
+        },
+        _ => {
           unread_one(token); // Unread
           Ok(None)
-        }
-      } _ => {
-        unread_one(token); // Unread
-        Ok(None)
-      }}
+        },
+      }
     },
   }
 }
@@ -2076,10 +2091,10 @@ pub fn read_float() -> Result<Float> {
     token = read_x_token(None, false, None)?;
   }
   let n_opt: Option<f64> = if !string.is_empty() {
-    if let Some(t) = token {
-      if t.get_catcode() != Catcode::SPACE {
-        unread_one(t);
-      }
+    if let Some(t) = token
+      && t.get_catcode() != Catcode::SPACE
+    {
+      unread_one(t);
     }
     // Same rationale as read_normal_integer above: malformed float
     // literals (e.g. very long digit runs, "1e" without exponent)
@@ -2358,35 +2373,43 @@ pub fn read_tokens_value() -> Result<Tokens> {
       // Perl: $$token[1] == CC_BEGIN — direct catcode check
       if token.get_catcode() == Catcode::BEGIN {
         Ok(read_balanced(ExpansionLevel::Off, false, false)?)
-      } else { match lookup_register_definition(&token) { Some(defn) => {
-        match defn.register_type() {
-          Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
-            // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
-            // value_of feels incorrect       but in which direction should it be
-            // resolved?
-            let args = defn.read_arguments()?;
-            match defn.value_of(args) {
-              None => Ok(Tokens!()),
-              Some(v) => Ok(v.into()),
+      } else {
+        match lookup_register_definition(&token) {
+          Some(defn) => {
+            match defn.register_type() {
+              Some(RegisterType::Tokens) | Some(RegisterType::Token) => {
+                // TODO: The mismatch between Vec<Tokens> for read_arguments and Vec<Token> for
+                // value_of feels incorrect       but in which direction should it be
+                // resolved?
+                let args = defn.read_arguments()?;
+                match defn.value_of(args) {
+                  None => Ok(Tokens!()),
+                  Some(v) => Ok(v.into()),
+                }
+              },
+              _ => Ok(Tokens!(token)),
             }
           },
-          _ => Ok(Tokens!(token)),
+          _ => {
+            match lookup_definition(&token)? {
+              Some(defn) => {
+                // TODO: we are doing two lookups to avoid the type restriction of .read_arguments,
+                // any way to circumvent? Is it slow in the first place?
+                if defn.is_expandable() {
+                  let x = defn.invoke(false)?;
+                  if !x.is_empty() {
+                    unread(x);
+                  }
+                  read_tokens_value()
+                } else {
+                  Ok(Tokens!(token))
+                }
+              },
+              _ => Ok(Tokens!(token)),
+            }
+          },
         }
-      } _ => { match lookup_definition(&token)? { Some(defn) => {
-        // TODO: we are doing two lookups to avoid the type restriction of .read_arguments, any
-        // way to circumvent? Is it slow in the first place?
-        if defn.is_expandable() {
-          let x = defn.invoke(false)?;
-          if !x.is_empty() {
-            unread(x);
-          }
-          read_tokens_value()
-        } else {
-          Ok(Tokens!(token))
-        }
-      } _ => {
-        Ok(Tokens!(token))
-      }}}}}
+      }
     },
   }
 }
@@ -2407,7 +2430,7 @@ fn is_space_or_implicit_space(token: &Token) -> bool {
   }
   // Check for implicit space: CS/ACTIVE let to a space token
   if token.get_catcode() == Catcode::CS || token.get_catcode() == Catcode::ACTIVE {
-    return state::with_meaning(
+    return with_meaning(
       token,
       |m| matches!(m, Some(Stored::Token(t)) if t.get_catcode() == Catcode::SPACE),
     );
@@ -2424,10 +2447,10 @@ pub fn skip_one_space(expanded: bool) -> Result<()> {
   } else {
     read_token()?
   };
-  if let Some(t) = token {
-    if !is_space_or_implicit_space(&t) {
-      unread_one(t);
-    }
+  if let Some(t) = token
+    && !is_space_or_implicit_space(&t)
+  {
+    unread_one(t);
   }
   Ok(())
 }
@@ -2492,10 +2515,10 @@ pub fn read_factor() -> Result<Option<f64>> {
   // Note: zero is an edge case with the unwrap_or fallback, handle it
   if !factor.is_empty() {
     let factor_f64: f64 = factor.parse::<f64>().unwrap_or(0.0);
-    if let Some(token) = token_opt {
-      if token.get_catcode() != Catcode::SPACE {
-        unread_one(token);
-      }
+    if let Some(token) = token_opt
+      && token.get_catcode() != Catcode::SPACE
+    {
+      unread_one(token);
     }
     Ok(Some(factor_f64))
   } else {
@@ -2540,10 +2563,10 @@ pub fn is_column_end(token: &Token) -> Option<(Token, &'static str, bool)> {
       // Embedded version of Equals, knowing both are tokens
       let defn = lookup_meaning(token).unwrap_or_else(|| Stored::Token(*token));
       // Perl Gullet.pm L273: if meaning is a Token with CC_ALIGN, treat as alignment tab
-      if let Stored::Token(t) = &defn {
-        if t.get_catcode() == Catcode::ALIGN {
-          return Some((*token, "align", false));
-        }
+      if let Stored::Token(t) = &defn
+        && t.get_catcode() == Catcode::ALIGN
+      {
+        return Some((*token, "align", false));
       }
       for end in *COLUMN_ENDS {
         let e = &end.0;
@@ -2637,7 +2660,7 @@ where FnR: FnOnce() -> Result<R> {
   // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
   // the mouth stack" signal instead of filling the log with identical messages.
   thread_local! {
-    static MOUTH_CLOSED_ERRORS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    static MOUTH_CLOSED_ERRORS: Cell<usize> = const { Cell::new(0) };
   }
   fn record_mouth_closed_error() { MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1))); }
   fn should_emit_mouth_closed() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10) }

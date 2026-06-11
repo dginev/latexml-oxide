@@ -7,9 +7,14 @@
 Strict Perl parity at the format/dump and package-loading boundary is
 the current top priority, followed by sandbox long-tail cleanup.
 Current local verification in `docs/SYNC_STATUS.md`: `cargo test
---tests` is **1411/0/0** and `cargo clippy --workspace --all-targets`
-is **14 warnings (all in `latexml_math_parser`, residual clippy
-cleanup of post-ASF-migration code — collaborator's lane; 0 elsewhere)**. The latest sandbox result for
+--tests` is **1454/0/0** and `cargo clippy --workspace --all-targets
+-- -D warnings` is **clean (0 warnings)** — the edition-2024 migration's
+let-chain `collapsible_if` fallout was cleared (652 collapses), formatting was
+reapplied tree-wide under `style_edition = "2024"` + import grouping, and the
+lint policy now lives in `[workspace.lints]` (curated `dbg_macro`/`todo`/
+`unimplemented` + `unused_qualifications` hardening), gated by CI's `lint` job
+and the auto-installed pre-push hook (`latexml_oxide/build.rs` sets
+`core.hooksPath`). The latest sandbox result for
 the 100k `next_warning_papers` corpus is ~99.4% OK; the latest 10k
 stage v3 ranges 97.4–99.5%. Working docs:
 [`docs/SYNC_STATUS.md`](docs/SYNC_STATUS.md),
@@ -135,7 +140,7 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 - **[`docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md`](docs/MATH_GRAMMAR_FIRST_PRINCIPLES.md)** — Design rationale for the Marpa grammar.
 
 **Dump / precompilation:**
-- **[`docs/DUMP_DESIGN.md`](docs/DUMP_DESIGN.md)** — Active design for kernel dump precompilation (strict-Perl LoadFormat mutual exclusivity, unconditional apply).
+- **[`docs/DUMP_DESIGN.md`](docs/DUMP_DESIGN.md)** — Canonical design record for the (now complete) kernel dump precompilation mission (strict-Perl LoadFormat mutual exclusivity, unconditional apply).
 
 **Release & operations:**
 - **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; what ships in a release; the self-contained-binary requirement.
@@ -147,10 +152,9 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 **Dated diagnostic snapshots** (point-in-time studies — see naming rule):
 - **[`docs/MEMORY_GUARD_HARDENING_2026-06-09.md`](docs/MEMORY_GUARD_HARDENING_2026-06-09.md)** — Root-cause analysis of the canvas_3 OOM cluster + the layered runaway-guard architecture (cycle guards, byte budget, boxing-depth cap); resolved, kept as the guard-design record.
 - **[`docs/PGF_ARC_BISECTION_2201.09268_2026-06-09.md`](docs/PGF_ARC_BISECTION_2201.09268_2026-06-09.md)** — pgf line–arc bisection non-termination root cause (1e-5 trig drift); mitigated by guards, bit-exact fix deferred.
-- **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — Phase-0 study + design scoping for the `expected:id` dangling-XMRef cluster (no code landed yet).
+- **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: Phase-0 trace complete and the container-id (xml:id accessor) half landed; content-branch/MathFork reconciliation still pending.
 - **[`docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md`](docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md)** — xml:id accessor-discipline audit feeding the expected:id design.
-- **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study (largely superseded by the missing-dump finding; see SYNC_STATUS).
-- **[`docs/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/PORTABILITY_MACOS_PROBE_2026-06-07.md)** — macOS native-dependency probe for issue #217 (BasicTeX vs brew texlive; the kpathsea dichotomy → subprocess-`kpsewhich` Phase 1 spec).
+- **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted, plus the separate sibling missing-dump codepoint-data root cause. (Issue #217's macOS probe is resolved and archived at [`docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md).)
 - **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.
 - **[`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md)** — Math-parser ambiguity sweep; patterns 1/3/4 closed, pattern 2 (VERTBAR-modulus) open. (Code in `latexml_math_parser/*` points here for the open pattern.)
 - **[`docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)** — Close reading of Perl `Core/Dumper.pm` on-disk record format.

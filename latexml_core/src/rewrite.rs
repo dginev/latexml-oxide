@@ -1,13 +1,14 @@
-use crate::common::arena;
-use crate::common::error::*;
-use crate::document::{Document, get_node_qname};
-use crate::state::Scope;
-use crate::tokens::Tokens;
+use std::{collections::VecDeque, fmt, rc::Rc};
+
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
-use std::collections::VecDeque;
-use std::fmt;
-use std::rc::Rc;
+
+use crate::{
+  common::{arena, error::*},
+  document::{Document, get_node_qname},
+  state::Scope,
+  tokens::Tokens,
+};
 
 pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
 /// Test closure: Perl signature is ($document, $node) → $nnodes (0/undef = skip).
@@ -97,8 +98,8 @@ impl fmt::Debug for RewritePattern {
 }
 #[derive(Debug, Clone)]
 pub struct RewriteClause {
-  compiled:   bool,
-  pub op:     RewriteOperator,
+  compiled:    bool,
+  pub op:      RewriteOperator,
   pub pattern: RewritePattern,
 }
 impl RewriteClause {
@@ -184,19 +185,19 @@ impl Rewrite {
     }
     // If attributes string is set but attributes_map is not, parse string into map.
     // Perl format: "role='ID'" or "role='ID', meaning='foo'"
-    if options.attributes_map.is_none() {
-      if let Some(ref attrs_str) = options.attributes {
-        let mut map = HashMap::default();
-        for part in attrs_str.split(',') {
-          let part = part.trim();
-          if let Some((key, val)) = part.split_once('=') {
-            let val = val.trim().trim_matches('\'').trim_matches('"');
-            map.insert(key.trim().to_string(), val.to_string());
-          }
+    if options.attributes_map.is_none()
+      && let Some(ref attrs_str) = options.attributes
+    {
+      let mut map = HashMap::default();
+      for part in attrs_str.split(',') {
+        let part = part.trim();
+        if let Some((key, val)) = part.split_once('=') {
+          let val = val.trim().trim_matches('\'').trim_matches('"');
+          map.insert(key.trim().to_string(), val.to_string());
         }
-        if !map.is_empty() {
-          options.attributes_map = Some(map);
-        }
+      }
+      if !map.is_empty() {
+        options.attributes_map = Some(map);
       }
     }
     if options.attributes_map.is_some() {
@@ -242,75 +243,75 @@ impl Rewrite {
     }
     // scope => 'label:...' compiles to select with xpath via label ID resolution
     // Perl: $op = 'select'; $pattern = ["descendant-or-self::*[@xml:id='<id>']", 1];
-    if op == RewriteOperator::Scope {
-      if let RewritePattern::String(scope_str) = &pattern {
-        if let Some(label_part) = scope_str.strip_prefix("label:") {
-          if let Some(id) = document.rewrite_labels.get(label_part).cloned() {
-            if self.options.select_count.is_none() {
-              self.options.select_count = Some(1);
-            }
-            let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
-            return RewriteClause {
-              compiled: true,
-              op:       RewriteOperator::Select,
-              pattern:  RewritePattern::String(xpath),
-            };
-          }
-          // Try with LABEL: prefix (clean_label adds it)
-          let clean_key = format!("LABEL:{}", label_part);
-          if let Some(id) = document.rewrite_labels.get(&clean_key).cloned() {
-            if self.options.select_count.is_none() {
-              self.options.select_count = Some(1);
-            }
-            let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
-            return RewriteClause {
-              compiled: true,
-              op:       RewriteOperator::Select,
-              pattern:  RewritePattern::String(xpath),
-            };
-          }
-          // Label not found — ignore this clause
-          return RewriteClause {
-            compiled: true,
-            op:       RewriteOperator::Ignore,
-            pattern:  RewritePattern::String(String::new()),
-          };
-        } else if let Some(id_part) = scope_str.strip_prefix("id:") {
+    if op == RewriteOperator::Scope
+      && let RewritePattern::String(scope_str) = &pattern
+    {
+      if let Some(label_part) = scope_str.strip_prefix("label:") {
+        if let Some(id) = document.rewrite_labels.get(label_part).cloned() {
           if self.options.select_count.is_none() {
             self.options.select_count = Some(1);
           }
-          // Use get_property("id") for xml:id lookup (L2 workaround)
-          // findnodes with @xml:id='...' fails in rust-libxml
-          let target_id = id_part.to_string();
-          let scope_nodes: Vec<Node> = document
-            .findnodes("descendant-or-self::*", None)
-            .into_iter()
-            .filter(|n| {
-              n.get_property("id").as_deref() == Some(&target_id)
-                || n.get_attribute("xml:id").as_deref() == Some(&target_id)
-            })
-            .collect();
-          if !scope_nodes.is_empty() {
-            // Found the scoped element — use it as the tree root for subsequent clauses
-            return RewriteClause {
-              compiled: true,
-              op:       RewriteOperator::Select,
-              pattern:  RewritePattern::NodeList(scope_nodes),
-            };
-          }
-          // Scope not found — ignore this rule
+          let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
           return RewriteClause {
             compiled: true,
-            op:       RewriteOperator::Ignore,
-            pattern:  RewritePattern::String(String::new()),
+            op:       RewriteOperator::Select,
+            pattern:  RewritePattern::String(xpath),
           };
         }
+        // Try with LABEL: prefix (clean_label adds it)
+        let clean_key = format!("LABEL:{}", label_part);
+        if let Some(id) = document.rewrite_labels.get(&clean_key).cloned() {
+          if self.options.select_count.is_none() {
+            self.options.select_count = Some(1);
+          }
+          let xpath = format!("descendant-or-self::*[@xml:id='{}']", id);
+          return RewriteClause {
+            compiled: true,
+            op:       RewriteOperator::Select,
+            pattern:  RewritePattern::String(xpath),
+          };
+        }
+        // Label not found — ignore this clause
+        return RewriteClause {
+          compiled: true,
+          op:       RewriteOperator::Ignore,
+          pattern:  RewritePattern::String(String::new()),
+        };
+      } else if let Some(id_part) = scope_str.strip_prefix("id:") {
+        if self.options.select_count.is_none() {
+          self.options.select_count = Some(1);
+        }
+        // Use get_property("id") for xml:id lookup (L2 workaround)
+        // findnodes with @xml:id='...' fails in rust-libxml
+        let target_id = id_part.to_string();
+        let scope_nodes: Vec<Node> = document
+          .findnodes("descendant-or-self::*", None)
+          .into_iter()
+          .filter(|n| {
+            n.get_property("id").as_deref() == Some(&target_id)
+              || n.get_attribute("xml:id").as_deref() == Some(&target_id)
+          })
+          .collect();
+        if !scope_nodes.is_empty() {
+          // Found the scoped element — use it as the tree root for subsequent clauses
+          return RewriteClause {
+            compiled: true,
+            op:       RewriteOperator::Select,
+            pattern:  RewritePattern::NodeList(scope_nodes),
+          };
+        }
+        // Scope not found — ignore this rule
         return RewriteClause {
           compiled: true,
           op:       RewriteOperator::Ignore,
           pattern:  RewritePattern::String(String::new()),
         };
       }
+      return RewriteClause {
+        compiled: true,
+        op:       RewriteOperator::Ignore,
+        pattern:  RewritePattern::String(String::new()),
+      };
     }
     // Match compilation:
     // Perl: match => $code → op='test', pattern=$code (closure returns $nnodes)
@@ -530,11 +531,14 @@ impl Rewrite {
           let mut replaced = Vec::new();
           for _idx in 0..nmatched {
             // Remove the nodes to be replaced
-            match following.pop_front() { Some(popped) => {
-              replaced.push(popped);
-            } _ => {
-              break; // nmatched larger than available nodes — stop
-            }}
+            match following.pop_front() {
+              Some(popped) => {
+                replaced.push(popped);
+              },
+              _ => {
+                break; // nmatched larger than available nodes — stop
+              },
+            }
           }
           for rnode in replaced.iter() {
             document.unrecord_node_ids(rnode);
@@ -586,12 +590,15 @@ impl Rewrite {
               // Collect nmatched siblings
               let mut cur = tree.clone();
               for _ in 1..nmatched {
-                match cur.get_next_sibling() { Some(sib) => {
-                  cur = sib.clone();
-                  nodes.push(sib);
-                } _ => {
-                  break;
-                }}
+                match cur.get_next_sibling() {
+                  Some(sib) => {
+                    cur = sib.clone();
+                    nodes.push(sib);
+                  },
+                  _ => {
+                    break;
+                  },
+                }
               }
               set_attributes_wild(document, attrs, nodes, nmatched)?;
             } else if nmatched > 1 {
@@ -608,15 +615,15 @@ impl Rewrite {
                 }
               }
               // Perl: skip if ALL nodes already matched
-              if nodes.iter().any(|n| !n.has_attribute("_matched")) {
-                if let Ok(Some(mut wrapper)) = document.wrap_nodes("ltx:XMWrap", nodes) {
-                  for (key, value) in attrs {
-                    if !key.starts_with('_') {
-                      let _ = wrapper.set_attribute(key, value);
-                    }
+              if nodes.iter().any(|n| !n.has_attribute("_matched"))
+                && let Ok(Some(mut wrapper)) = document.wrap_nodes("ltx:XMWrap", nodes)
+              {
+                for (key, value) in attrs {
+                  if !key.starts_with('_') {
+                    let _ = wrapper.set_attribute(key, value);
                   }
-                  let _ = wrapper.set_attribute("_rewrite", "1");
                 }
+                let _ = wrapper.set_attribute("_rewrite", "1");
               }
             } else if !tree.has_attribute("_matched") {
               // Single node: set attributes directly
@@ -818,21 +825,20 @@ fn dom_to_xpath_rec(
       }
     }
     // XMRef pointing to a _WildCard_ is also a wildcard
-    if qname == "ltx:XMRef" {
-      if let Some(idref) = node.get_property("idref") {
-        if let Some(target) = document.lookup_id(&idref).cloned() {
-          let tqname = arena::with(get_node_qname(&target), |s| s.to_string());
-          // Check if target is XMArg/XMWrap with single WildCard child
-          let is_wild = if tqname.ends_with("XMArg") || tqname.ends_with("XMWrap") {
-            let tc = target.get_child_nodes();
-            tc.len() == 1 && arena::with(get_node_qname(&tc[0]), |s| s == "_WildCard_")
-          } else {
-            tqname == "_WildCard_"
-          };
-          if is_wild {
-            return (format!("{axis}::*"), 1, 1, vec![]);
-          }
-        }
+    if qname == "ltx:XMRef"
+      && let Some(idref) = node.get_property("idref")
+      && let Some(target) = document.lookup_id(&idref).cloned()
+    {
+      let tqname = arena::with(get_node_qname(&target), |s| s.to_string());
+      // Check if target is XMArg/XMWrap with single WildCard child
+      let is_wild = if tqname.ends_with("XMArg") || tqname.ends_with("XMWrap") {
+        let tc = target.get_child_nodes();
+        tc.len() == 1 && arena::with(get_node_qname(&tc[0]), |s| s == "_WildCard_")
+      } else {
+        tqname == "_WildCard_"
+      };
+      if is_wild {
+        return (format!("{axis}::*"), 1, 1, vec![]);
       }
     }
     // XMArg/XMWrap with single _WildCard_ child
@@ -1020,12 +1026,12 @@ pub fn mark_wildcards(node: &Node, wilds: &[WildPath]) -> Vec<Node> {
         nth_child(current.as_ref().unwrap(), idx)
       };
     }
-    if let Some(ref c) = current {
-      if c.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-        let mut mc = c.clone();
-        let _ = mc.set_attribute("_wildcard", "1");
-        marked.push(mc);
-      }
+    if let Some(ref c) = current
+      && c.get_type() == Some(libxml::tree::NodeType::ElementNode)
+    {
+      let mut mc = c.clone();
+      let _ = mc.set_attribute("_wildcard", "1");
+      marked.push(mc);
     }
   }
   marked
@@ -1161,11 +1167,14 @@ pub fn set_attributes_wild(
   }
 
   // Insert content arm as first child (before presentation nodes)
-  match dual_node.get_first_child() { Some(mut first_child) => {
-    first_child.add_prev_sibling(&mut content_app)?;
-  } _ => {
-    dual_node.add_child(&mut content_app)?;
-  }}
+  match dual_node.get_first_child() {
+    Some(mut first_child) => {
+      first_child.add_prev_sibling(&mut content_app)?;
+    },
+    _ => {
+      dual_node.add_child(&mut content_app)?;
+    },
+  }
 
   // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
   // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have
@@ -1184,10 +1193,7 @@ pub fn set_attributes_wild(
 ///
 /// This matches Perl where the math parser's kludge_scripts processes
 /// the XMWrap presentation arm and restructures scripts.
-fn restructure_scripts_in_dual(
-  dual: &Node,
-  document: &mut crate::document::Document,
-) -> Result<()> {
+fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<()> {
   // Clone the XmlDoc handle (Rc-cheap) so the &mut Document isn't
   // borrowed across Node::new(…, &doc) calls — we need the mut borrow
   // live at `document.safe_unlink(script_node)` below.
@@ -1252,10 +1258,10 @@ fn restructure_scripts_in_dual(
             if xmarg_children.len() == 1 {
               let mut inner = xmarg_children[0].clone();
               inner.unlink();
-              if let Some(ref id) = xmarg_id {
-                if !inner.has_attribute("xml:id") {
-                  let _ = inner.set_attribute("xml:id", id);
-                }
+              if let Some(ref id) = xmarg_id
+                && !inner.has_attribute("xml:id")
+              {
+                let _ = inner.set_attribute("xml:id", id);
               }
               new_app.add_child(&mut inner)?;
             } else {
@@ -1400,10 +1406,10 @@ fn declare_node_matches(
         }
       }
       // Check base content text if specified
-      if let Some(base) = base_text {
-        if !declare_base_matches(&children[1], base) {
-          return false;
-        }
+      if let Some(base) = base_text
+        && !declare_base_matches(&children[1], base)
+      {
+        return false;
       }
       true
     },
@@ -1412,10 +1418,10 @@ fn declare_node_matches(
       // non-default fonts (bold, caligraphic, typewriter).
       // Perl: font_match_xpaths generates XPath predicates from _font attribute.
       let font = document.get_node_font(node);
-      if let Some(series) = font.get_series() {
-        if series.as_ref() == "bold" {
-          return false;
-        }
+      if let Some(series) = font.get_series()
+        && series.as_ref() == "bold"
+      {
+        return false;
       }
       if let Some(family) = font.get_family() {
         let fam = family.as_ref();

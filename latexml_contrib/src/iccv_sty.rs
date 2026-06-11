@@ -3,7 +3,6 @@
 //! Same \thetitle pattern as cvpr.sty.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   def_macro_noop("\\thetitle")?;
   def_macro_noop("\\maketitlesupplementary")?;
@@ -23,16 +22,16 @@ LoadDefinitions!({
   // on disk (bundled under a subdir), so \etal/\ie/\eg/\etc/\vs/\wrt/\dof
   // stay undefined. Stub them directly. Witness 2305.20091 (iccv2023
   // AuthorKit paper): 3 errors (\ie/\eg/\etal) → 0.
-  DefMacro!("\\onedot",  "\\@onedot");
+  DefMacro!("\\onedot", "\\@onedot");
   DefMacro!("\\@onedot", ".\\@");
-  DefMacro!("\\etal",    "\\emph{et al}\\onedot");
-  DefMacro!("\\ie",      "\\emph{i.e}\\onedot");
-  DefMacro!("\\eg",      "\\emph{e.g}\\onedot");
-  DefMacro!("\\cf",      "\\emph{c.f}\\onedot");
-  DefMacro!("\\etc",     "\\emph{etc}\\onedot");
-  DefMacro!("\\vs",      "\\emph{vs}\\onedot");
-  DefMacro!("\\wrt",     "\\emph{w.r.t}\\onedot");
-  DefMacro!("\\dof",     "d.o.f\\onedot");
+  DefMacro!("\\etal", "\\emph{et al}\\onedot");
+  DefMacro!("\\ie", "\\emph{i.e}\\onedot");
+  DefMacro!("\\eg", "\\emph{e.g}\\onedot");
+  DefMacro!("\\cf", "\\emph{c.f}\\onedot");
+  DefMacro!("\\etc", "\\emph{etc}\\onedot");
+  DefMacro!("\\vs", "\\emph{vs}\\onedot");
+  DefMacro!("\\wrt", "\\emph{w.r.t}\\onedot");
+  DefMacro!("\\dof", "d.o.f\\onedot");
 
   InputDefinitions!("iccv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 });

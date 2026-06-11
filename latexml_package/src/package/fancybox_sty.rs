@@ -29,12 +29,12 @@ LoadDefinitions!({
   DefEnvironment!("{Sbox}", "",
     after_digest_body => sub[whatsit] {
       if let Ok(Some(body)) = whatsit.get_body() {
-        state::assign_value("Sbox", Stored::Digested(body), Some(Scope::Global));
+        assign_value("Sbox", Stored::Digested(body), Some(Scope::Global));
       }
     });
   DefPrimitive!("\\TheSbox", {
-    let stashed = state::lookup_value("Sbox");
-    state::assign_value("Sbox", Stored::None, Some(Scope::Global));
+    let stashed = lookup_value("Sbox");
+    assign_value("Sbox", Stored::None, Some(Scope::Global));
     if let Some(Stored::Digested(body)) = stashed {
       return Ok(vec![body]);
     }

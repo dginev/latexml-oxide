@@ -15,16 +15,14 @@
 //!
 //! Two-layer cache:
 //!
-//! 1. **Per-thread** `thread_local!(RefCell<HashMap<(year, kind), &'static str>>)`
-//!    populated via `Box::leak`. Avoids re-decompressing or even
-//!    re-reading the disk file when the same `embedded_*_dump` is
-//!    called twice (e.g. probe-then-load: `*_embedded_available()`
-//!    followed by the actual loader). Matches the project's
-//!    thread-local-state idiom — no `Mutex` on the hot path.
-//! 2. **Cross-process** disk cache at `$TMPDIR/latexml-oxide-dumps-<hash>/`.
-//!    First process per machine-boot decompresses and atomically writes
-//!    the plain-text dump; every subsequent process reads the file
-//!    directly (~1 ms on tmpfs) instead of gunzipping again.
+//! 1. **Per-thread** `thread_local!(RefCell<HashMap<(year, kind), &'static str>>)` populated via
+//!    `Box::leak`. Avoids re-decompressing or even re-reading the disk file when the same
+//!    `embedded_*_dump` is called twice (e.g. probe-then-load: `*_embedded_available()` followed by
+//!    the actual loader). Matches the project's thread-local-state idiom — no `Mutex` on the hot
+//!    path.
+//! 2. **Cross-process** disk cache at `$TMPDIR/latexml-oxide-dumps-<hash>/`. First process per
+//!    machine-boot decompresses and atomically writes the plain-text dump; every subsequent process
+//!    reads the file directly (~1 ms on tmpfs) instead of gunzipping again.
 //!
 //! Skipped entirely under `LATEXML_NO_EMBEDDED_DUMP=1` (no embedded
 //! fallback fires) or when an ambient-year disk dump is found earlier
@@ -32,10 +30,10 @@
 //!
 //! Selection at runtime:
 //!
-//! 1. If [`crate::dump_paths::detect_ambient_texlive_year`] returns a
-//!    year that is bundled, use that exact year.
-//! 2. Otherwise (no ambient TeXLive, or ambient year not bundled), fall
-//!    back to the most-recent bundled year.
+//! 1. If [`crate::dump_paths::detect_ambient_texlive_year`] returns a year that is bundled, use
+//!    that exact year.
+//! 2. Otherwise (no ambient TeXLive, or ambient year not bundled), fall back to the most-recent
+//!    bundled year.
 //! 3. If nothing is bundled at all, return `None`.
 //!
 //! Opt out of the embedded fallback altogether with
@@ -43,9 +41,11 @@
 //! want the binary to surface "no dump available" instead of silently
 //! using a stale embedded snapshot.
 
-use std::cell::RefCell;
-use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::{
+  cell::RefCell,
+  io::{Read, Write},
+  path::PathBuf,
+};
 
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
@@ -71,12 +71,14 @@ thread_local! {
 /// `$TMPDIR` on macOS, `%TEMP%`/`%TMP%` on Windows). Properties:
 /// * Always writable (no `$HOME` / CI / read-only-mount issues),
 /// * Usually tmpfs on Linux — RAM-speed reads, faster than gunzip,
-/// * Cleared at the OS's discretion (reboot on Linux/macOS, possibly
-///   never on Windows) — natural cache invalidation when stale, with
-///   the per-build content hash giving stable cross-process reuse for
-///   the same binary version.
+/// * Cleared at the OS's discretion (reboot on Linux/macOS, possibly never on Windows) — natural
+///   cache invalidation when stale, with the per-build content hash giving stable cross-process
+///   reuse for the same binary version.
 static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
-  std::env::temp_dir().join(format!("latexml-oxide-dumps-{}", EMBEDDED_DUMPS_CONTENT_HASH))
+  std::env::temp_dir().join(format!(
+    "latexml-oxide-dumps-{}",
+    EMBEDDED_DUMPS_CONTENT_HASH
+  ))
 });
 
 /// Pick the embedded entry that best matches `prefer` (typically the
@@ -89,10 +91,10 @@ pub(crate) fn select_embedded(prefer: Option<u32>) -> Option<(&'static EmbeddedD
   if entries.is_empty() {
     return None;
   }
-  if let Some(year) = prefer {
-    if let Some(e) = entries.iter().find(|e| e.year == year) {
-      return Some((e, true));
-    }
+  if let Some(year) = prefer
+    && let Some(e) = entries.iter().find(|e| e.year == year)
+  {
+    return Some((e, true));
   }
   // EMBEDDED_DUMPS is sorted descending by build.rs, so first non-empty is
   // the most-recent year.
@@ -108,16 +110,14 @@ fn non_empty_entries() -> Vec<&'static EmbeddedDumpYear> {
 
 /// Resolve the cached-decompressed dump for `(year, kind)`. Tiered lookup:
 ///
-/// 0. **In-process cache** — `Mutex<HashMap>` keyed by `(year, kind)`.
-///    Avoids re-allocating on repeated calls within one process (e.g.
-///    `*_embedded_available()` probe followed by the actual loader).
-/// 1. **Disk cache** at `$TMPDIR/latexml-oxide-dumps-<hash>/<kind>.<year>.dump.txt`
-///    (set up on a prior invocation in this boot cycle). Plain
-///    `read_to_string` — typically <1 ms on tmpfs.
-/// 2. **Decompress + persist**: gunzip the bundled blob (~6.5 ms for
-///    latex, ~0.1 ms for plain), then atomically write the result to
-///    the cache dir so the next process can take path #1. Best-effort
-///    write — disk-full / EROFS does not fail the conversion.
+/// 0. **In-process cache** — `Mutex<HashMap>` keyed by `(year, kind)`. Avoids re-allocating on
+///    repeated calls within one process (e.g. `*_embedded_available()` probe followed by the actual
+///    loader).
+/// 1. **Disk cache** at `$TMPDIR/latexml-oxide-dumps-<hash>/<kind>.<year>.dump.txt` (set up on a
+///    prior invocation in this boot cycle). Plain `read_to_string` — typically <1 ms on tmpfs.
+/// 2. **Decompress + persist**: gunzip the bundled blob (~6.5 ms for latex, ~0.1 ms for plain),
+///    then atomically write the result to the cache dir so the next process can take path #1.
+///    Best-effort write — disk-full / EROFS does not fail the conversion.
 ///
 /// Returns `None` for empty embedded blobs (build.rs stub when no
 /// dumps were available at compile time) or for unrecoverable gunzip
@@ -240,10 +240,6 @@ pub fn embedded_year(prefer: Option<u32>) -> Option<u32> {
 
 /// Whether at least one embedded plain+latex pair is bundled and the
 /// opt-out env var isn't set.
-pub fn plain_embedded_available() -> bool {
-  embedded_plain_dump(None).is_some()
-}
+pub fn plain_embedded_available() -> bool { embedded_plain_dump(None).is_some() }
 
-pub fn latex_embedded_available() -> bool {
-  embedded_latex_dump(None).is_some()
-}
+pub fn latex_embedded_available() -> bool { embedded_latex_dump(None).is_some() }

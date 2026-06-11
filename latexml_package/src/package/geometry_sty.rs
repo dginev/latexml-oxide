@@ -2,7 +2,6 @@
 //! Perl: geometry.sty.ltxml
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Dependencies — Perl L22-25
   RequirePackage!("keyval");

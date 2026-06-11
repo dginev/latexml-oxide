@@ -27,9 +27,8 @@ use std::path::{Path, PathBuf};
 /// is installed (or detection fails for some other reason).
 ///
 /// Strategy:
-///   1. `kpsewhich -var-value=SELFAUTOPARENT` → e.g. `/usr/local/texlive/2025`.
-///      Last path component, if it parses as a 4-digit year (2000..=2099),
-///      wins.
+///   1. `kpsewhich -var-value=SELFAUTOPARENT` → e.g. `/usr/local/texlive/2025`. Last path
+///      component, if it parses as a 4-digit year (2000..=2099), wins.
 ///   2. `pdflatex --version` → first line typically contains `(TeX Live YYYY)`.
 pub fn detect_ambient_texlive_year() -> Option<u32> {
   if let Some(year) = year_from_kpsewhich_selfautoparent() {
@@ -91,9 +90,7 @@ fn parse_year_str(s: &str) -> Option<u32> {
 
 /// Versioned filename for a kernel dump, e.g.
 /// `dump_filename("plain", 2025) == "plain.2025.dump.txt"`.
-pub fn dump_filename(kind: &str, year: u32) -> String {
-  format!("{}.{}.dump.txt", kind, year)
-}
+pub fn dump_filename(kind: &str, year: u32) -> String { format!("{}.{}.dump.txt", kind, year) }
 
 /// One-shot stderr banner emitted by the `LoadFormat` branches in
 /// `tex.rs` / `latex.rs` when NO precompiled kernel dump is available
@@ -131,9 +128,7 @@ pub fn warn_degraded_no_dump() {
 
 /// Versioned filename for the texlive stamp, e.g.
 /// `version_filename(2025) == "texlive.2025.version"`.
-pub fn version_filename(year: u32) -> String {
-  format!("texlive.{}.version", year)
-}
+pub fn version_filename(year: u32) -> String { format!("texlive.{}.version", year) }
 
 /// Reverse of [`dump_filename`]: extract the year tag from a versioned
 /// dump filename. Returns `None` for un-versioned legacy names.
@@ -170,7 +165,11 @@ pub fn available_years_in_dir(dir: &Path, kind: &str) -> Vec<u32> {
 ///   - if `prefer` is `Some(y)` and `<kind>.y.dump.txt` exists, use it;
 ///   - else use the most-recent year present;
 ///   - else `None`.
-pub fn resolve_versioned_in_dir(dir: &Path, kind: &str, prefer: Option<u32>) -> Option<(PathBuf, u32)> {
+pub fn resolve_versioned_in_dir(
+  dir: &Path,
+  kind: &str,
+  prefer: Option<u32>,
+) -> Option<(PathBuf, u32)> {
   if let Some(y) = prefer {
     let p = dir.join(dump_filename(kind, y));
     if p.is_file() {

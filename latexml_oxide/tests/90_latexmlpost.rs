@@ -4,10 +4,12 @@
 //! For each test `$name` there should be `$name.xml` (input) and
 //! `$name-post.xml` (expected output from `latexmlpost --keepXMath --pmml`).
 
-use latexml_post::Post;
-use latexml_post::document::{PostDocument, PostDocumentOptions};
-use latexml_post::mathml::MathML;
-use latexml_post::processor::Processor;
+use latexml_post::{
+  Post,
+  document::{PostDocument, PostDocumentOptions},
+  mathml::MathML,
+  processor::Processor,
+};
 
 const DIR: &str = "tests/post";
 

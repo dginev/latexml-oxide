@@ -10,14 +10,14 @@ use latexml_package::prelude::*;
 // the accumulated variant in `\thebibliography{count}…\endthebibliography`.
 
 fn bib_entry_get() -> SymHashMap<Stored> {
-  match state::lookup_value("biblatex_entry") {
+  match lookup_value("biblatex_entry") {
     Some(Stored::HashStored(map)) => map,
     _ => SymHashMap::default(),
   }
 }
 
 fn bib_entry_save(map: SymHashMap<Stored>) {
-  state::assign_value(
+  assign_value(
     "biblatex_entry",
     Stored::HashStored(map),
     Some(Scope::Global),
@@ -38,23 +38,23 @@ fn bib_entry_get_tokens(map: &SymHashMap<Stored>, name: &str) -> Option<Tokens> 
 }
 
 fn bib_state_int(key: &str) -> i64 {
-  match state::lookup_value(key) {
+  match lookup_value(key) {
     Some(Stored::Int(n)) => n,
     _ => 0,
   }
 }
 
 fn bib_state_set_int(key: &str, value: i64) {
-  state::assign_value(key, Stored::Int(value), Some(Scope::Global));
+  assign_value(key, Stored::Int(value), Some(Scope::Global));
 }
 
 fn bib_variant_push(toks: Vec<Token>) {
-  let mut acc: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
+  let mut acc: Vec<Token> = match lookup_value("rebuilt_bibtex_variant") {
     Some(Stored::Tokens(t)) => t.unlist(),
     _ => Vec::new(),
   };
   acc.extend(toks);
-  state::assign_value(
+  assign_value(
     "rebuilt_bibtex_variant",
     Stored::Tokens(Tokens::new(acc)),
     Some(Scope::Global),
@@ -62,7 +62,7 @@ fn bib_variant_push(toks: Vec<Token>) {
 }
 
 fn bib_as_thebibliography() -> Tokens {
-  let variant: Vec<Token> = match state::lookup_value("rebuilt_bibtex_variant") {
+  let variant: Vec<Token> = match lookup_value("rebuilt_bibtex_variant") {
     Some(Stored::Tokens(t)) => t.unlist(),
     _ => return Tokens::default(),
   };
@@ -71,14 +71,14 @@ fn bib_as_thebibliography() -> Tokens {
   }
   // Reset variant and entry-count so re-invocation is idempotent (matches
   // Perl L113-115).
-  state::assign_value(
+  assign_value(
     "rebuilt_bibtex_variant",
     Stored::Tokens(Tokens::default()),
     Some(Scope::Global),
   );
   let count = bib_state_int("biblatex_entry_count");
   bib_state_set_int("biblatex_entry_count", 0);
-  let preamble: Vec<Token> = match state::lookup_value("biblatex_preamble") {
+  let preamble: Vec<Token> = match lookup_value("biblatex_preamble") {
     Some(Stored::Tokens(t)) => t.unlist(),
     _ => Vec::new(),
   };
@@ -103,8 +103,14 @@ fn bib_clean_name(s: &str) -> String {
   let mut chars = s.chars().peekable();
   while let Some(ch) = chars.next() {
     if ch == '\\' {
-      if chars.peek().is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_') {
-        while chars.peek().is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_') {
+      if chars
+        .peek()
+        .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_')
+      {
+        while chars
+          .peek()
+          .is_some_and(|c| c.is_ascii_alphanumeric() || *c == '_')
+        {
           chars.next();
         }
       } else {
@@ -145,9 +151,18 @@ fn parse_name_keyvals(s: &str) -> Vec<(String, String)> {
   };
   for ch in s.chars() {
     match ch {
-      '{' => { depth += 1; cur.push(ch); }
-      '}' => { depth -= 1; cur.push(ch); }
-      ',' if depth == 0 => { flush(&cur, &mut pairs); cur.clear(); }
+      '{' => {
+        depth += 1;
+        cur.push(ch);
+      },
+      '}' => {
+        depth -= 1;
+        cur.push(ch);
+      },
+      ',' if depth == 0 => {
+        flush(&cur, &mut pairs);
+        cur.clear();
+      },
       _ => cur.push(ch),
     }
   }
@@ -164,12 +179,20 @@ fn bib_trim_url_tokens(toks: Tokens) -> Vec<Token> {
   let mut start = 0usize;
   while start < v.len() {
     let t = &v[start];
-    if t.code == Catcode::SPACE || t.with_str(|s| s == "{") { start += 1; } else { break; }
+    if t.code == Catcode::SPACE || t.with_str(|s| s == "{") {
+      start += 1;
+    } else {
+      break;
+    }
   }
   let mut end = v.len();
   while end > start {
     let t = &v[end - 1];
-    if t.code == Catcode::SPACE || t.with_str(|s| s == "}") { end -= 1; } else { break; }
+    if t.code == Catcode::SPACE || t.with_str(|s| s == "}") {
+      end -= 1;
+    } else {
+      break;
+    }
   }
   v.truncate(end);
   v.drain(..start);
@@ -323,12 +346,12 @@ LoadDefinitions!({
   // flag globally — Perl's `\name` closure (Cycle 9) reads it to choose
   // 3-arg vs 4-arg / keyval-vs-positional dispatch.
   DefMacro!("\\datalist[]{}", sub[_args] {
-    state::assign_value("biblatex_with_keyvals", Stored::from(1),
+    assign_value("biblatex_with_keyvals", Stored::from(1),
       Some(Scope::Global));
     Ok(Tokens::new(vec![]))
   });
   DefMacro!("\\sortlist[]{}", sub[_args] {
-    state::assign_value("biblatex_with_keyvals", Stored::from(1),
+    assign_value("biblatex_with_keyvals", Stored::from(1),
       Some(Scope::Global));
     Ok(Tokens::new(vec![]))
   });
@@ -396,7 +419,7 @@ LoadDefinitions!({
   // form) are emitted comma-joined.
   DefMacro!("\\endentry", sub[_args] {
     let entry = bib_entry_get();
-    state::assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
+    assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
 
     // label: Perl L137-162 — labelalpha if present, else label; strip CSes +
     // braces; if empty fall back to an incrementing counter; else ensure
@@ -411,7 +434,7 @@ LoadDefinitions!({
           // Perl L148-162: collision-avoidance suffixing, tracked globally in
           // `biblatex_author_labels`. The `z`-wraparound (append another base
           // 'a' and restart) is faithfully ported — see arXiv:1212.4446.
-          let mut labels: SymHashMap<Stored> = match state::lookup_value("biblatex_author_labels") {
+          let mut labels: SymHashMap<Stored> = match lookup_value("biblatex_author_labels") {
             Some(Stored::HashStored(m)) => m,
             _ => SymHashMap::default(),
           };
@@ -427,7 +450,7 @@ LoadDefinitions!({
             label
           };
           labels.insert(&final_label, Stored::from(1));
-          state::assign_value("biblatex_author_labels",
+          assign_value("biblatex_author_labels",
             Stored::HashStored(labels), Some(Scope::Global));
           final_label
         },
@@ -458,16 +481,15 @@ LoadDefinitions!({
     // .bbl files give us pre-formatted author tokens.
     let authors_toks = bib_entry_get_tokens(&entry, "authors_str");
     let mut have_authors = false;
-    if let Some(toks) = authors_toks {
-      if !toks.is_empty() {
+    if let Some(toks) = authors_toks
+      && !toks.is_empty() {
         variant.extend(toks.unlist());
         have_authors = true;
       }
-    }
 
     // Title
-    if let Some(title) = bib_entry_get_tokens(&entry, "title") {
-      if !title.is_empty() {
+    if let Some(title) = bib_entry_get_tokens(&entry, "title")
+      && !title.is_empty() {
         if have_authors {
           variant.push(T_CS!("\\newblock"));
         }
@@ -477,20 +499,18 @@ LoadDefinitions!({
         variant.push(T_OTHER!("'"));
         variant.push(T_OTHER!("'"));
       }
-    }
     // Note
-    if let Some(note) = bib_entry_get_tokens(&entry, "note") {
-      if !note.is_empty() {
+    if let Some(note) = bib_entry_get_tokens(&entry, "note")
+      && !note.is_empty() {
         variant.push(T_SPACE!());
         variant.extend(note.unlist());
       }
-    }
     // Journal / booktitle
     let journal = bib_entry_get_tokens(&entry, "booktitle")
       .or_else(|| bib_entry_get_tokens(&entry, "journaltitle"))
       .or_else(|| bib_entry_get_tokens(&entry, "journal"));
-    if let Some(j) = journal.as_ref() {
-      if !j.is_empty() {
+    if let Some(j) = journal.as_ref()
+      && !j.is_empty() {
         variant.push(T_CS!("\\newblock"));
         variant.extend(ExplodeText!("In "));
         variant.push(T_CS!("\\emph"));
@@ -498,88 +518,76 @@ LoadDefinitions!({
         variant.extend(j.clone().unlist());
         variant.push(T_END!());
       }
-    }
     // Volume + (number) — Perl L217-219: gated on a booktitle/journaltitle/series.
     let series = bib_entry_get_tokens(&entry, "series");
     let has_volume = bib_entry_get_tokens(&entry, "volume")
       .map(|v| !v.is_empty()).unwrap_or(false);
-    if let Some(volume) = bib_entry_get_tokens(&entry, "volume") {
-      if !volume.is_empty() && (journal.is_some() || series.is_some()) {
+    if let Some(volume) = bib_entry_get_tokens(&entry, "volume")
+      && !volume.is_empty() && (journal.is_some() || series.is_some()) {
         variant.push(T_SPACE!());
         variant.push(T_CS!("\\textbf"));
         variant.push(T_BEGIN!());
         variant.extend(volume.unlist());
-        if let Some(num) = bib_entry_get_tokens(&entry, "number") {
-          if !num.is_empty() {
+        if let Some(num) = bib_entry_get_tokens(&entry, "number")
+          && !num.is_empty() {
             variant.push(T_OTHER!("."));
             variant.extend(num.unlist());
           }
-        }
         variant.push(T_END!());
       }
-    }
     // Series — Perl L220-222. Trailing number only when there is no volume.
-    if let Some(series) = series.as_ref() {
-      if !series.is_empty() {
+    if let Some(series) = series.as_ref()
+      && !series.is_empty() {
         variant.push(T_OTHER!(","));
         variant.push(T_SPACE!());
         variant.extend(series.clone().unlist());
-        if !has_volume {
-          if let Some(num) = bib_entry_get_tokens(&entry, "number") {
-            if !num.is_empty() {
+        if !has_volume
+          && let Some(num) = bib_entry_get_tokens(&entry, "number")
+            && !num.is_empty() {
               variant.push(T_SPACE!());
               variant.extend(num.unlist());
             }
-          }
-        }
       }
-    }
     // Publisher / location
-    if let Some(publisher) = bib_entry_get_tokens(&entry, "publisher") {
-      if !publisher.is_empty() {
+    if let Some(publisher) = bib_entry_get_tokens(&entry, "publisher")
+      && !publisher.is_empty() {
         variant.push(T_CS!("\\newblock"));
-        if let Some(loc) = bib_entry_get_tokens(&entry, "location") {
-          if !loc.is_empty() {
+        if let Some(loc) = bib_entry_get_tokens(&entry, "location")
+          && !loc.is_empty() {
             variant.extend(loc.unlist());
             variant.push(T_OTHER!(":"));
             variant.push(T_SPACE!());
           }
-        }
         variant.extend(publisher.unlist());
       }
-    }
     // howpublished — Perl L227.
-    if let Some(howpub) = bib_entry_get_tokens(&entry, "howpublished") {
-      if !howpub.is_empty() {
+    if let Some(howpub) = bib_entry_get_tokens(&entry, "howpublished")
+      && !howpub.is_empty() {
         variant.push(T_OTHER!(","));
         variant.push(T_SPACE!());
         variant.extend(howpub.unlist());
       }
-    }
     // Year
-    if let Some(year) = bib_entry_get_tokens(&entry, "year") {
-      if !year.is_empty() {
+    if let Some(year) = bib_entry_get_tokens(&entry, "year")
+      && !year.is_empty() {
         variant.push(T_OTHER!(","));
         variant.push(T_SPACE!());
         variant.extend(year.unlist());
       }
-    }
     // Pages
-    if let Some(pages) = bib_entry_get_tokens(&entry, "pages") {
-      if !pages.is_empty() {
+    if let Some(pages) = bib_entry_get_tokens(&entry, "pages")
+      && !pages.is_empty() {
         variant.push(T_OTHER!(","));
         variant.push(T_SPACE!());
         variant.extend(ExplodeText!("pp. "));
         variant.extend(pages.unlist());
       }
-    }
     // organization — Perl L230.
-    if let Some(org) = bib_entry_get_tokens(&entry, "organization") {
-      if !org.is_empty() {
+    if let Some(org) = bib_entry_get_tokens(&entry, "organization")
+      && !org.is_empty() {
         variant.push(T_CS!("\\newblock"));
         variant.extend(org.unlist());
       }
-    }
     // DOI / URL / eprint — Perl L231-260.
     if let Some(doi) = bib_entry_get_tokens(&entry, "doi").filter(|t| !t.is_empty()) {
       // Perl L232-237: trim leading/trailing space + braces for a clean URI.
@@ -832,7 +840,7 @@ LoadDefinitions!({
   // for the rebuilder (Cycle 7) and *also* re-emits the arg (Perl returns
   // $_[1]) so the preamble is digested in the current context too.
   DefMacro!("\\preamble{}", sub[(arg)] {
-    state::assign_value("biblatex_preamble",
+    assign_value("biblatex_preamble",
       Stored::Tokens(arg.clone()), Some(Scope::Global));
     Ok(arg)
   });
@@ -948,7 +956,7 @@ LoadDefinitions!({
     for part in raw.split(',') {
       let file = part.trim();
       if !file.is_empty() {
-        push_value("biblatex_resources", Stored::String(arena::pin(file)))?;
+        push_value("biblatex_resources", Stored::String(pin(file)))?;
       }
     }
   });
@@ -961,7 +969,7 @@ LoadDefinitions!({
     "\\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\\biblatex@printbibliography");
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
     let mut resources = Vec::new();
-    while let Some(res) = state::pop_value("biblatex_resources")? {
+    while let Some(res) = pop_value("biblatex_resources")? {
       if !resources.is_empty() {
         resources.push(T_OTHER!(","));
         resources.push(T_SPACE!());

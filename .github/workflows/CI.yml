@@ -13,6 +13,49 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Fast-failing quality gate, mirroring the local pre-push hook
+  # (.githooks/pre-push). No TeX Live: the engine compiles without on-disk
+  # dumps (self-contained / embedded-fallback invariant), so clippy only needs
+  # the C library headers, not a texmf tree. Runs in parallel with `test`.
+  lint:
+    name: lint (fmt + clippy + deny)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_BUILD_JOBS: "2"
+      CARGO_INCREMENTAL: "0"
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=mold"
+      RUST_BACKTRACE: "1"
+    steps:
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 mold
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: lint
+      - name: rustfmt (check)
+        run: cargo +nightly fmt --all --check
+      - name: clippy (deny warnings, whole workspace + all targets)
+        run: cargo +nightly clippy --workspace --all-targets --profile ci -- -D warnings
+      - name: cargo-deny (advisories + licenses + bans + sources)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+      - name: install cargo-machete
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-machete
+      - name: cargo-machete (unused dependencies)
+        run: cargo machete
+
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest

@@ -2,25 +2,23 @@
 //! These represent the control sequences for conditionals, as well as
 //! `\else`, `\or` and `\fi`.
 
-use libxml::tree::Node;
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::fmt;
-use std::rc::Rc;
+use std::{borrow::Cow, cell::RefCell, fmt, rc::Rc};
 
-use crate::common::error::*;
-use crate::common::locator::Locator;
-use crate::common::object::Object;
+use libxml::tree::Node;
+
 // use crate::common::numeric_ops::NumericOps;
 use crate::Digested;
-use crate::definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure};
-use crate::document::Document;
-use crate::parameter::Parameters;
-use crate::state::*;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
-use crate::{gullet, state};
+use crate::{
+  common::{error::*, locator::Locator, object::Object},
+  definition::{BeforeDigestClosure, ConditionalClosure, Definition, DigestionClosure},
+  document::Document,
+  gullet,
+  parameter::Parameters,
+  state::*,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
+};
 
 // Conditional control sequences; Expandable
 //   Expand enough to determine true/false, then maybe skip
@@ -177,11 +175,11 @@ pub struct IfFrame {
 
 impl Conditional {
   fn invoke_conditional(&self) -> Result<Tokens> {
-    let mut ifid = state::lookup_int("if_count");
+    let mut ifid = lookup_int("if_count");
     ifid += 1;
-    state::assign_value("if_count", ifid, Some(Scope::Global));
+    assign_value("if_count", ifid, Some(Scope::Global));
     // Perl: if ($LaTeXML::IF_LIMIT and $ifid > $LaTeXML::IF_LIMIT) { Fatal(...) }
-    let if_limit = state::lookup_int("if_limit");
+    let if_limit = lookup_int("if_limit");
     if if_limit > 0 && ifid > if_limit {
       Fatal!(
         Timeout,
@@ -196,11 +194,11 @@ impl Conditional {
       elses: false,
       ifid,
     }));
-    state::set_ifframe(Some(Rc::clone(&if_frame)));
-    state::unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
+    set_ifframe(Some(Rc::clone(&if_frame)));
+    unshift_value("if_stack", vec![Rc::clone(&if_frame)]);
     let args = self.read_arguments()?;
 
-    state::get_ifframe().unwrap().borrow_mut().parsing = false;
+    get_ifframe().unwrap().borrow_mut().parsing = false;
     // `tracingcommands` is normally unset; defer the state probe to
     // the path that would actually read it. Conditional::invoke fires
     // on every \if/\ifx/\ifnum/…, so avoiding a mandatory state
@@ -210,7 +208,7 @@ impl Conditional {
         // true branch: do nothing, tokens follow naturally
       } else {
         let to = self.skip_conditional_body(-1);
-        if state::lookup_bool("tracingcommands") {
+        if lookup_bool("tracingcommands") {
           Debug!("{{false}} [skipped to {:?}]\n", to);
         }
       }
@@ -224,7 +222,7 @@ impl Conditional {
         //       print STDERR "{$num} [skipped to " . ToString($to) . "]\n" if $tracing;
       }
     }
-    state::expire_ifframe();
+    expire_ifframe();
     Ok(Tokens!())
   }
 
@@ -270,20 +268,20 @@ impl Conditional {
           // Found a \fi
           let local_frame = get_ifframe();
           let maybe_last = with_value_mut("if_stack", |value_opt| {
-            if let Some(Stored::VecDequeStored(stack)) = value_opt {
-              if let Some(Stored::IfFrame(stack_frame)) = stack.pop_front() {
-                if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
-                  // But is it for a condition nested in the test clause?
-                  // then DO pop that conditional's frame; it's DONE!
+            if let Some(Stored::VecDequeStored(stack)) = value_opt
+              && let Some(Stored::IfFrame(stack_frame)) = stack.pop_front()
+            {
+              if *stack_frame.borrow() != *local_frame.as_ref().unwrap().borrow() {
+                // But is it for a condition nested in the test clause?
+                // then DO pop that conditional's frame; it's DONE!
+              } else {
+                level -= 1;
+                if level == 0 {
+                  // otherwise, if no more nesting, we're done.
+                  // Done with this frame, keep it removed
+                  return Some(t); // AND Return the finishing token.
                 } else {
-                  level -= 1;
-                  if level == 0 {
-                    // otherwise, if no more nesting, we're done.
-                    // Done with this frame, keep it removed
-                    return Some(t); // AND Return the finishing token.
-                  } else {
-                    stack.push_front(stack_frame.into());
-                  }
+                  stack.push_front(stack_frame.into());
                 }
               }
             }
@@ -306,14 +304,13 @@ impl Conditional {
             let local_frame = get_ifframe();
             // Make sure this \else is NOT for a nested \if that is part of the test clause!
             let maybe_last = with_value("if_stack", |stack_opt| {
-              if let Some(Stored::VecDequeStored(stack)) = stack_opt {
-                if let Some(Stored::IfFrame(stack_frame)) = stack.front() {
-                  if *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow() {
-                    // No need to actually call elseHandler, but note that we've seen an \else!
-                    stack_frame.borrow_mut().elses = true;
-                    return Some(t);
-                  }
-                }
+              if let Some(Stored::VecDequeStored(stack)) = stack_opt
+                && let Some(Stored::IfFrame(stack_frame)) = stack.front()
+                && *stack_frame.borrow() == *local_frame.as_ref().unwrap().borrow()
+              {
+                // No need to actually call elseHandler, but note that we've seen an \else!
+                stack_frame.borrow_mut().elses = true;
+                return Some(t);
               }
               None
             });
@@ -350,7 +347,7 @@ impl Conditional {
     });
     let local_token = get_current_token().unwrap();
     if local_token.with_str(|s| s == "\\else") && stack_frame_opt.is_none() {
-      let stack_len = state::with_value("if_stack", |v| match v {
+      let stack_len = with_value("if_stack", |v| match v {
         Some(Stored::VecDequeStored(s)) => s.len(),
         _ => 0,
       });
@@ -373,13 +370,13 @@ impl Conditional {
         Error!("unexpected", local_token_str, message);
         Ok(Tokens!())
       } else {
-        state::set_ifframe(Some(Rc::clone(&stack_frame)));
+        set_ifframe(Some(Rc::clone(&stack_frame)));
         let _t = self.skip_conditional_body(0);
         //     print STDERR '{' . ToString($LaTeXML::CURRENT_TOKEN) . '}'
         //       . " [for " . ToString($$LaTeXML::IFFRAME{token}) . " #" .
         // $$LaTeXML::IFFRAME{ifid}       . " skipping to " . ToString($t) . "]\n"
         //       if $state->lookupValue('tracingcommands');
-        state::expire_ifframe();
+        expire_ifframe();
         Ok(Tokens!())
       }
     } else {

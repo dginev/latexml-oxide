@@ -5,9 +5,11 @@
 
 use libxml::tree::Node;
 
-use crate::document::PostDocument;
-use crate::math_processor::{MathConversion, MathProcessor};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::PostDocument,
+  math_processor::{MathConversion, MathProcessor},
+  processor::{ProcessResult, Processor},
+};
 
 const MIME_TYPES: &[(&str, &str)] = &[
   ("gif", "image/gif"),
@@ -104,8 +106,10 @@ impl MathProcessor for MathImages {
     }
 
     Warn!(
-      "missing_file", "math_images",
-      "MathImages: no cached image for '{}'", key
+      "missing_file",
+      "math_images",
+      "MathImages: no cached image for '{}'",
+      key
     );
     Some(MathConversion {
       processor_name: self.name.clone(),
@@ -124,6 +128,11 @@ impl MathProcessor for MathImages {
   fn is_secondary(&self) -> bool { self.is_secondary }
 
   fn preprocess(&self, _doc: &PostDocument, nodes: &[Node]) {
-    Info!("math_images", "generate", "MathImages: would generate {} images", nodes.len());
+    Info!(
+      "math_images",
+      "generate",
+      "MathImages: would generate {} images",
+      nodes.len()
+    );
   }
 }

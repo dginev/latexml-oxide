@@ -1,19 +1,19 @@
-use super::Alignment;
-use super::cell::Cell;
-use super::template::Align;
-use crate::BoxOps;
-use crate::Tokens;
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::store::Stored;
-use crate::digested::Digested;
-use crate::list::List;
-use std::collections::VecDeque;
+use std::{collections::VecDeque, str::FromStr};
 
-use crate::common::float::Float;
-use crate::common::numeric_ops::{NumericOps, UNITY};
-use crate::common::object::Object;
-use std::str::FromStr;
+use super::{Alignment, cell::Cell, template::Align};
+use crate::{
+  BoxOps, Tokens,
+  common::{
+    dimension::Dimension,
+    error::*,
+    float::Float,
+    numeric_ops::{NumericOps, UNITY},
+    object::Object,
+    store::Stored,
+  },
+  digested::Digested,
+  list::List,
+};
 
 /// Normalize an alignment before construction
 ///
@@ -353,16 +353,15 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
           pruned = pruned.max(cd.value_of());
         }
         // Perl L765-766: decrement rowspan of spanning column
-        if !rows[i].is_pseudo() {
-          if let Some(rowspanned_idx) = col.rowspanned {
-            // Find the spanning row in filtered rows and decrement its rowspan
-            if let Some(spanning_col) = rows[rowspanned_idx].get_columns_mut().get_mut(j) {
-              if let Some(ref mut rs) = spanning_col.rowspan {
-                if *rs > 1 {
-                  *rs -= 1;
-                }
-              }
-            }
+        if !rows[i].is_pseudo()
+          && let Some(rowspanned_idx) = col.rowspanned
+        {
+          // Find the spanning row in filtered rows and decrement its rowspan
+          if let Some(spanning_col) = rows[rowspanned_idx].get_columns_mut().get_mut(j)
+            && let Some(ref mut rs) = spanning_col.rowspan
+            && *rs > 1
+          {
+            *rs -= 1;
           }
         }
         // Perl L767-771: mask all but top & bottom border, convert to top
@@ -396,16 +395,13 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
           pruned = pruned.max(cd.value_of());
         }
         // Perl L784-785: decrement rowspan
-        if !rows[i].is_pseudo() {
-          if let Some(rowspanned_idx) = col.rowspanned {
-            if let Some(spanning_col) = rows[rowspanned_idx].get_columns_mut().get_mut(j) {
-              if let Some(ref mut rs) = spanning_col.rowspan {
-                if *rs > 1 {
-                  *rs -= 1;
-                }
-              }
-            }
-          }
+        if !rows[i].is_pseudo()
+          && let Some(rowspanned_idx) = col.rowspanned
+          && let Some(spanning_col) = rows[rowspanned_idx].get_columns_mut().get_mut(j)
+          && let Some(ref mut rs) = spanning_col.rowspan
+          && *rs > 1
+        {
+          *rs -= 1;
         }
         // Perl L787-789: mask all but top border, convert to bottom
         let mut converted_border = String::new();
@@ -531,14 +527,12 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
         }
 
         // Perl L816-817: decrement colspan of spanning column
-        if let Some(col_spanned) = colspanned {
-          if let Some(spanning_col) = row.get_columns_mut().get_mut(col_spanned) {
-            if let Some(ref mut colspan) = spanning_col.colspan {
-              if *colspan > 1 {
-                *colspan -= 1;
-              }
-            }
-          }
+        if let Some(col_spanned) = colspanned
+          && let Some(spanning_col) = row.get_columns_mut().get_mut(col_spanned)
+          && let Some(ref mut colspan) = spanning_col.colspan
+          && *colspan > 1
+        {
+          *colspan -= 1;
         }
 
         // Now, remove the column
@@ -570,10 +564,10 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
                 ls
               };
               // Compute rpadding from combined rspaces
-              if let Ok((rw, ..)) = new_rspaces.clone().get_size(None) {
-                if rw.value_of() != 0 {
-                  prev.right_padding = Some(rw.value_of() as usize);
-                }
+              if let Ok((rw, ..)) = new_rspaces.clone().get_size(None)
+                && rw.value_of() != 0
+              {
+                prev.right_padding = Some(rw.value_of() as usize);
               }
               prev.rspaces = Some(new_rspaces);
             }

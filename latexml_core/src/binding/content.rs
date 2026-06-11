@@ -1,33 +1,35 @@
+use std::{borrow::Cow, collections::VecDeque, path::Path, rc::Rc};
+
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::borrow::Cow;
-use std::collections::VecDeque;
-use std::path::Path;
-use std::rc::Rc;
 
-use crate::common::arena;
-use crate::common::arena::SymStr;
-use crate::common::error::*;
-use crate::common::font::{Font, Fontmap};
-use crate::common::model;
-use crate::document::resource::*;
-use crate::document::tag::{TagOptionName, TagOptions};
-use crate::gullet;
-use crate::gullet::do_expand;
-use crate::mouth::{Mouth, MouthOptions};
-use crate::parameter::{Parameter, Parameters};
-use crate::state::let_i;
-use crate::state::*;
-use crate::stomach::*;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::util::pathname::{self, PathnameFindOptions};
 // use crate::util::pathname::PathnameFindOptions;
 use crate::Digested;
-
-use crate::binding::def::dialect::def_macro;
-use crate::definition::expandable::ExpandableOptions;
+use crate::{
+  binding::def::dialect::def_macro,
+  common::{
+    arena,
+    arena::SymStr,
+    error::*,
+    font::{Font, Fontmap},
+    model,
+  },
+  definition::expandable::ExpandableOptions,
+  document::{
+    resource::*,
+    tag::{TagOptionName, TagOptions},
+  },
+  gullet,
+  gullet::do_expand,
+  mouth::{Mouth, MouthOptions},
+  parameter::{Parameter, Parameters},
+  state::{let_i, *},
+  stomach::*,
+  token::*,
+  tokens::Tokens,
+  util::pathname::{self, PathnameFindOptions},
+};
 
 static QUOTE_WRAPPED: Lazy<Regex> = Lazy::new(|| Regex::new("^\"(.+)\"$").unwrap());
 
@@ -144,7 +146,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   impl Drop for SearchPathGuard {
     fn drop(&mut self) {
       if let Some(sp) = self.0.take() {
-        crate::state::set_search_paths(sp);
+        set_search_paths(sp);
       }
     }
   }
@@ -158,18 +160,20 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         .as_deref()
         .unwrap_or(if options.as_class { "cls" } else { "sty" })
         .to_string();
-      if let Some(full) = find_file(name, Some(FindFileOptions {
-        forbid_ltxml:      true,
-        notex:             false,
-        ext_type:          Some(Cow::Owned(ext)),
-        search_paths_only: false,
-      })) {
-        if let Some(parent) = std::path::Path::new(&full).parent() {
-          let pd = parent.to_string_lossy().to_string();
-          if !pd.is_empty() && !get_search_paths().iter().any(|p| p == &pd) {
-            restore = Some(get_search_paths());
-            search_paths_push_front(pd);
-          }
+      if let Some(full) = find_file(
+        name,
+        Some(FindFileOptions {
+          forbid_ltxml:      true,
+          notex:             false,
+          ext_type:          Some(Cow::Owned(ext)),
+          search_paths_only: false,
+        }),
+      ) && let Some(parent) = Path::new(&full).parent()
+      {
+        let pd = parent.to_string_lossy().to_string();
+        if !pd.is_empty() && !get_search_paths().iter().any(|p| p == &pd) {
+          restore = Some(get_search_paths());
+          search_paths_push_front(pd);
         }
       }
     }
@@ -186,12 +190,12 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // semantics; Perl L2580 likewise only mutates them inside its
   // handleoptions=true branch).
   let prevname = if options.handleoptions && lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-    gullet::do_expand(T_CS!("\\@currname"))?.to_string()
+    do_expand(T_CS!("\\@currname"))?.to_string()
   } else {
     String::new()
   };
   let prevext = if options.handleoptions && lookup_definition(&T_CS!("\\@currext"))?.is_some() {
-    gullet::do_expand(T_CS!("\\@currext"))?.to_string()
+    do_expand(T_CS!("\\@currext"))?.to_string()
   } else {
     String::new()
   };
@@ -200,16 +204,16 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // OR if it is loaded by such a class, and has withoptions true!!! (yikes)
   if options.handleoptions && options.withoptions.is_some() {
     with_vecdeque("@masquerading@as@class", |vdq_opt| {
-      if let Some(vdq) = vdq_opt {
-        if vdq.iter().any(|x| {
+      if let Some(vdq) = vdq_opt
+        && vdq.iter().any(|x| {
           if let Stored::String(v) = x {
             arena::with(*v, |str| str == prevname)
           } else {
             false
           }
-        }) {
-          options.as_class = true;
-        }
+        })
+      {
+        options.as_class = true;
       }
     });
   }
@@ -277,18 +281,17 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     );
   }
   let current_options = options.options.join(",");
-  if !current_options.is_empty() {
-    if let Some(Stored::String(prevoptions)) = lookup_value(&s!("{filename}_loaded_with_options")) {
-      if arena::with(prevoptions, |prev_str| current_options != prev_str) {
-        let message = s!(
-          "Option clash for file {} with options {:?}, previously loaded with {:?}",
-          filename,
-          current_options,
-          prevoptions
-        );
-        Info!("unexpected", "options", message);
-      }
-    }
+  if !current_options.is_empty()
+    && let Some(Stored::String(prevoptions)) = lookup_value(&s!("{filename}_loaded_with_options"))
+    && arena::with(prevoptions, |prev_str| current_options != prev_str)
+  {
+    let message = s!(
+      "Option clash for file {} with options {:?}, previously loaded with {:?}",
+      filename,
+      current_options,
+      prevoptions
+    );
+    Info!("unexpected", "options", message);
   }
 
   // TODO: This needs reorganization, bindings are not found as "files" in rust,
@@ -342,10 +345,10 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // "babel.sty" definitions...` trace. Now only the outermost frame
   // announces — tracked per-filename via a state-value marker.
   let banner_key = s!("__loading_banner__{filename}");
-  let this_frame_announces = crate::state::with_value(&banner_key, |v| v.is_none());
+  let this_frame_announces = with_value(&banner_key, |v| v.is_none());
   if this_frame_announces {
     note_begin(&s!("Loading {:?} definitions", filename));
-    crate::state::assign_value(&banner_key, true, Some(crate::state::Scope::Global));
+    assign_value(&banner_key, true, Some(Scope::Global));
   }
 
   // Snapshot options.after / options.options BEFORE handleoptions consumes
@@ -429,11 +432,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   if !options.reloadable && already_handled(&filename) {
     if this_frame_announces {
       note_end(&s!("Loading {:?} definitions", filename));
-      crate::state::assign_value(
-        &banner_key,
-        crate::common::store::Stored::None,
-        Some(crate::state::Scope::Global),
-      );
+      assign_value(&banner_key, Stored::None, Some(Scope::Global));
     }
     return Ok(());
   }
@@ -527,7 +526,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     // re-enters the in-progress xparse binding (short-circuited) and the
     // rollback file is never loaded (`\NewDocumentCommand` undefined →
     // xparse/l3 cascade; canvas witness 2309.17288, tests xparse/regex_match).
-    let interpretable = crate::state::lookup_mapping("INTERPRETABLE_SOURCES", &filename).is_some();
+    let interpretable = lookup_mapping("INTERPRETABLE_SOURCES", &filename).is_some();
 
     // Step 2: If we're interpreting raw TeX definitions (or this file is
     // explicitly INTERPRETABLE), look for the file directly.
@@ -683,11 +682,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // InputDefinitions which returns undef on not-found even with noerror=>1.
         if this_frame_announces {
           note_end(&s!("Loading {:?} definitions", filename));
-          crate::state::assign_value(
-            &banner_key,
-            crate::common::store::Stored::None,
-            Some(crate::state::Scope::Global),
-          );
+          assign_value(&banner_key, Stored::None, Some(Scope::Global));
         }
         return Err(s!("File not found: {}", filename).into());
       }
@@ -804,11 +799,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // \@currname/\@currext on that path (matching Perl).
   if this_frame_announces {
     note_end(&s!("Loading {:?} definitions", filename));
-    crate::state::assign_value(
-      &banner_key,
-      crate::common::store::Stored::None,
-      Some(crate::state::Scope::Global),
-    );
+    assign_value(&banner_key, Stored::None, Some(Scope::Global));
   }
   Ok(())
 }
@@ -868,7 +859,7 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
       // Perl `Package.pm:loadLTXML L2318` wraps the binding-load body in
       // `local $UNLOCKED = 1`, allowing bindings to override prior
       // (locked) definitions. The guard auto-pops on drop.
-      let _unlock_guard = crate::common::local_assignments::local_state_unlocked_guard(true);
+      let _unlock_guard = local_state_unlocked_guard(true);
       // Mark in-progress for the duration of this dispatcher call.
       IN_PROGRESS.with(|s| {
         s.borrow_mut().insert(request_key.clone());
@@ -952,28 +943,29 @@ fn before_input_handle_options(
   }
 
   // For \RequirePackageWithOptions, pass the options from the outer class/style to the inner one.
-  if let Some(with_options_to_pass) = options.withoptions.take() {
-    if !prevname.is_empty() && has_value(&s!("opt@{}.{}", prevname, prevext)) {
-      // Only pass those class options that are declared by the package!
-      let mut topass = Vec::new();
-      with_vecdeque("@declaredoptions", |vdq_opt| {
-        if let Some(declared_options) = vdq_opt {
-          for op in with_options_to_pass.into_iter() {
-            if declared_options.iter().any(|x| {
-              if let Stored::String(val) = x {
-                arena::with(*val, |str| str == op)
-              } else {
-                false
-              }
-            }) {
-              topass.push(op)
+  if let Some(with_options_to_pass) = options.withoptions.take()
+    && !prevname.is_empty()
+    && has_value(&s!("opt@{}.{}", prevname, prevext))
+  {
+    // Only pass those class options that are declared by the package!
+    let mut topass = Vec::new();
+    with_vecdeque("@declaredoptions", |vdq_opt| {
+      if let Some(declared_options) = vdq_opt {
+        for op in with_options_to_pass.into_iter() {
+          if declared_options.iter().any(|x| {
+            if let Stored::String(val) = x {
+              arena::with(*val, |str| str == op)
+            } else {
+              false
             }
+          }) {
+            topass.push(op)
           }
         }
-      });
-      if !topass.is_empty() {
-        pass_options(name, as_type, topass)?;
       }
+    });
+    if !topass.is_empty() {
+      pass_options(name, as_type, topass)?;
     }
   }
   // Use letter-catcode (`ExplodeText`) for `\@currext` / `\@currname` so
@@ -1128,15 +1120,14 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     // earlier Rust port dropped the extension and the fallback never
     // resolved.
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
-    if !has_dir {
-      if let Some((stem, ext)) = clean_req.rsplit_once('.') {
-        if crate::state::is_binding_extension(ext) {
-          return input_definitions(stem, InputDefinitionOptions {
-            extension: Some(Cow::Owned(ext.to_string())),
-            ..InputDefinitionOptions::default()
-          });
-        }
-      }
+    if !has_dir
+      && let Some((stem, ext)) = clean_req.rsplit_once('.')
+      && is_binding_extension(ext)
+    {
+      return input_definitions(stem, InputDefinitionOptions {
+        extension: Some(Cow::Owned(ext.to_string())),
+        ..InputDefinitionOptions::default()
+      });
     }
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
@@ -1185,7 +1176,7 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
           s!("{}.tex", clean_req)
         };
         load_binding(&tex_name)? || load_external_binding(&tex_name)?
-      } else if crate::state::is_binding_extension(ext) {
+      } else if is_binding_extension(ext) {
         // Route through input_definitions for fallback-aware dispatch.
         // The `name` arg expects no extension, so split it off.
         let name = clean_req
@@ -1267,7 +1258,7 @@ fn load_tex_definitions(
   // horizontal mode while bound to vertical (e.g. after \par-less inline
   // text), repack and flip MODE in-place. No-op in the common case but
   // matches Perl's pre-load state hygiene.
-  crate::stomach::leave_horizontal_internal();
+  leave_horizontal_internal();
 
   // Snapshot expl3-state at load entry. The cleanup hook below should
   // only restore catcodes if THIS load activated expl3; if the calling
@@ -1629,7 +1620,7 @@ fn reset_options() -> Result<()> {
     Stored::VecDequeStored(VecDeque::new()),
     None,
   );
-  let opt_unused_cs = if gullet::do_expand(T_CS!("\\@currext"))?.eq_text("cls") {
+  let opt_unused_cs = if do_expand(T_CS!("\\@currext"))?.eq_text("cls") {
     "\\OptionNotUsed"
   } else {
     "\\@unknownoptionerror"
@@ -1920,12 +1911,12 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // and MUST still be picked up. (Perl never force-loads the deferred ones: for
   // a normally raw-loaded file it doesn't dep-scan at all, and the bundled deps
   // it wants in the binding-bypass case run at load.) Witnesses:
-  //   - 1506.06200 — categorytheory.sty `\newcommand{\usediagrams}{\usepackage
-  //     {diagrams}}` (never invoked) must be SKIPPED (else the `diagrams` stub's
-  //     `locked` `\begin{diagram}` shadows the paper's tikz `{diagram}`).
-  //   - 1703.03673 — iau.cls `\IfFileExists{amssymb.sty}{…\usepackage{amssymb}…}`
-  //     must be KEPT (else `\bigstar` is undefined). An earlier brace-DEPTH
-  //     filter wrongly skipped this conditional; the def-body check is precise.
+  //   - 1506.06200 — categorytheory.sty `\newcommand{\usediagrams}{\usepackage {diagrams}}` (never
+  //     invoked) must be SKIPPED (else the `diagrams` stub's `locked` `\begin{diagram}` shadows the
+  //     paper's tikz `{diagram}`).
+  //   - 1703.03673 — iau.cls `\IfFileExists{amssymb.sty}{…\usepackage{amssymb}…}` must be KEPT
+  //     (else `\bigstar` is undefined). An earlier brace-DEPTH filter wrongly skipped this
+  //     conditional; the def-body check is precise.
   // A `\usepackage` is deferred iff ANY enclosing `{…}` group is opened directly
   // by a `\newcommand`/`\def` definition header.
   // Is `\<name>` INVOKED (not merely defined) somewhere in the file? A bare
@@ -1987,7 +1978,10 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     })
   };
   let top_level = |cap: &regex::Captures| -> bool {
-    cap.get(0).map(|m| !in_macro_def_body(m.start())).unwrap_or(true)
+    cap
+      .get(0)
+      .map(|m| !in_macro_def_body(m.start()))
+      .unwrap_or(true)
   };
 
   // NOTE — a former Rust-only "conflicting option sets" heuristic was REMOVED
@@ -2263,7 +2257,7 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
     // latexml_contrib + any future extensions) so contrib classes like
     // `memoir`, `siamltex`, `scrbook` are eligible alternates too.
     let alternate = {
-      let mut sorted: Vec<&str> = crate::state::get_class_binding_names()
+      let mut sorted: Vec<&str> = get_class_binding_names()
         .into_iter()
         .filter(|n| *n != "OmniBus" && *n != name)
         .collect();
@@ -2397,8 +2391,9 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
 /// option-pass-through machinery had a chance to enqueue `epsfig` into
 /// `opt@article.cls`).
 pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
-  use crate::state::binding_exists;
   use regex::Regex;
+
+  use crate::state::binding_exists;
   // Mirror find_file_fallback's regex set exactly.
   let suffix_rx = match Regex::new(
     r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$",
@@ -2521,12 +2516,10 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
       suffix_stripped = true;
       continue;
     }
-    if !dir_stripped {
-      if let Some(m) = prefix_rx.find(&base) {
-        base = base[m.end()..].to_string();
-        suffix_stripped = true;
-        continue;
-      }
+    if !dir_stripped && let Some(m) = prefix_rx.find(&base) {
+      base = base[m.end()..].to_string();
+      suffix_stripped = true;
+      continue;
     }
     break;
   }
@@ -2633,11 +2626,11 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
         // fallback (mirrors the dispatcher's lookup). Without this, requests
         // like `find_file("jhep.cls", notex=true)` would miss `("JHEP","cls")`
         // entries that derive from Perl's `JHEP.cls.ltxml` filename.
-        let exact = crate::state::get_binding_names()
+        let exact = get_binding_names()
           .iter()
           .any(|slice| slice.iter().any(|(n, e)| *n == base && *e == ext));
         let nocase = exact
-          || crate::state::get_binding_names().iter().any(|slice| {
+          || get_binding_names().iter().any(|slice| {
             slice
               .iter()
               .any(|(n, e)| n.eq_ignore_ascii_case(base) && e.eq_ignore_ascii_case(ext))
@@ -2668,13 +2661,13 @@ fn find_file_aux(file: &str, options: &FindFileOptions) -> Option<String> {
     // paths=>$paths)` — search local paths for raw TeX.
     // (Rust does not yet honour `INTERPRETING_DEFINITIONS` — minor TODO,
     //  acknowledged in the audit.)
-    if !options.notex {
-      if let Some(path) = pathname::find(file, PathnameFindOptions {
+    if !options.notex
+      && let Some(path) = pathname::find(file, PathnameFindOptions {
         paths: Some(paths),
         ..PathnameFindOptions::default()
-      }) {
-        return Some(path);
-      }
+      })
+    {
+      return Some(path);
     }
     // Perl L2131-2136: build kpsewhich candidate list:
     //   @candidates = ( "$file.ltxml" if !noltxml && !nopaths,
@@ -2802,7 +2795,7 @@ pub fn def_color(
     T_CS!(s!("\\\\color@{name}")),
     None,
     crate::mouth::tokenize_internal(&model_spec),
-    Some(crate::definition::expandable::ExpandableOptions {
+    Some(ExpandableOptions {
       scope: effective_scope,
       ..Default::default()
     }),
@@ -2838,7 +2831,7 @@ pub fn digest_literal<T: Into<Tokens>>(stuff: T) -> Result<Digested> {
   // digestion) when the state's "font" slot hasn't been initialised. Matches
   // the same fallback `assign_value("font", Font::text_default(), …)` that
   // stomach::init uses at startup.
-  let font = lookup_font().unwrap_or_else(|| Rc::new(crate::common::font::Font::text_default()));
+  let font = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
   assign_font(
     Rc::new(font.merge(fontmap!(encoding => "ASCII"))),
     Some(Scope::Local),
@@ -2865,17 +2858,16 @@ pub fn digest_if(token: Token) -> Result<Option<Digested>> {
 /// Looks up the conditional's test closure and invokes it.
 pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
   use crate::definition::conditional::ConditionalType;
-  if let Some(defn) = lookup_definition(if_token)? {
-    if defn.get_conditional_type() == Some(ConditionalType::If) {
-      if let Some(test) = defn.get_test() {
-        // Read arguments for the conditional test
-        let args = match defn.get_parameters() {
-          Some(params) => params.read_arguments(Some(defn.as_ref()))?,
-          None => Vec::new(),
-        };
-        return Ok(Some(test(args)?));
-      }
-    }
+  if let Some(defn) = lookup_definition(if_token)?
+    && defn.get_conditional_type() == Some(ConditionalType::If)
+    && let Some(test) = defn.get_test()
+  {
+    // Read arguments for the conditional test
+    let args = match defn.get_parameters() {
+      Some(params) => params.read_arguments(Some(defn.as_ref()))?,
+      None => Vec::new(),
+    };
+    return Ok(Some(test(args)?));
   }
   if x_equals(if_token, &T_CS!("\\iftrue")) {
     return Ok(Some(true));
@@ -2894,16 +2886,16 @@ pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
 /// Set the boolean value of a `\newif`-type conditional (Perl: SetCondition).
 /// This is only for simple conditionals taking no arguments.
 pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
-  if let Ok(Some(defn)) = lookup_definition(if_token) {
-    if defn.get_parameters().is_none() {
-      let target = if value {
-        T_CS!("\\iftrue")
-      } else {
-        T_CS!("\\iffalse")
-      };
-      let_i(if_token, &target, scope);
-      return;
-    }
+  if let Ok(Some(defn)) = lookup_definition(if_token)
+    && defn.get_parameters().is_none()
+  {
+    let target = if value {
+      T_CS!("\\iftrue")
+    } else {
+      T_CS!("\\iffalse")
+    };
+    let_i(if_token, &target, scope);
+    return;
   }
   log::error!(
     "Expected a conditional defined by \\newif, got '{}'",
@@ -2955,35 +2947,38 @@ pub fn build_invocation_str(spec: &str, args: Vec<Option<Tokens>>) -> Result<Tok
 
 fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tokens> {
   // Note: token may have been \let to another defn!
-  match lookup_definition(&token)? { Some(defn) => {
-    let mut invoked_tokens = vec![token];
-    if let Some(params) = defn.get_parameters() {
-      invoked_tokens.extend(params.revert_arguments(args)?);
-    }
-    Ok(Tokens::new(invoked_tokens))
-  } _ => {
-    let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
-    token.with_cs_name(|csname| {
-      Error!("undefined", csname, message);
-      Ok(())
-    })?;
-    let mut invoked_tokens = vec![token];
-    // DefConstructor!(token, convert_latex_args(args.len(), 0),
-    // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
-    let wrapped_args: Vec<Token> = args
-      .into_iter()
-      .flat_map(|arg_opt| {
-        let mut wrapped = vec![T_BEGIN!()];
-        if let Some(arg) = arg_opt {
-          wrapped.extend(arg.unlist());
-        }
-        wrapped.push(T_END!());
-        wrapped
-      })
-      .collect();
-    invoked_tokens.extend(wrapped_args);
-    Ok(Tokens::new(invoked_tokens))
-  }}
+  match lookup_definition(&token)? {
+    Some(defn) => {
+      let mut invoked_tokens = vec![token];
+      if let Some(params) = defn.get_parameters() {
+        invoked_tokens.extend(params.revert_arguments(args)?);
+      }
+      Ok(Tokens::new(invoked_tokens))
+    },
+    _ => {
+      let message = s!("Can't invoke {:?}; it is undefined", token.stringify());
+      token.with_cs_name(|csname| {
+        Error!("undefined", csname, message);
+        Ok(())
+      })?;
+      let mut invoked_tokens = vec![token];
+      // DefConstructor!(token, convert_latex_args(args.len(), 0),
+      // sub { LaTeXML::Core::Stomach::makeError($_[0], 'undefined', token); });
+      let wrapped_args: Vec<Token> = args
+        .into_iter()
+        .flat_map(|arg_opt| {
+          let mut wrapped = vec![T_BEGIN!()];
+          if let Some(arg) = arg_opt {
+            wrapped.extend(arg.unlist());
+          }
+          wrapped.push(T_END!());
+          wrapped
+        })
+        .collect();
+      invoked_tokens.extend(wrapped_args);
+      Ok(Tokens::new(invoked_tokens))
+    },
+  }
 }
 
 /// Convert a LaTeX-style argument spec to our Package form.
@@ -3157,10 +3152,10 @@ pub fn font_decode_string(string: &str, encoding_opt: Option<&str>, implicit: bo
       } else {
         result.push(ch);
       }
-    } else if let Some(ref m) = effective_map {
-      if let Some(Some(glyph)) = m.get(code) {
-        result.push(*glyph);
-      }
+    } else if let Some(ref m) = effective_map
+      && let Some(Some(glyph)) = m.get(code)
+    {
+      result.push(*glyph);
     }
   }
   result

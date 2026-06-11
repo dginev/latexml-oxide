@@ -1,5 +1,4 @@
-use latexml_core::common::arena;
-use latexml_core::common::def_parser::parse_prototype;
+use latexml_core::common::{arena, def_parser::parse_prototype};
 use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use syn::DeriveInput;

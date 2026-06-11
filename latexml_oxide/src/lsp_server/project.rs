@@ -3,21 +3,19 @@
 //!
 //! Resolution order (first hit wins):
 //!  1. client override (`initializationOptions.rootDocument`),
-//!  2. `% !TEX root = <path>` magic comment in the buffer (texlab /
-//!     LaTeX-Workshop convention),
-//!  3. buffer carries an un-commented `\documentclass`/`\documentstyle`
-//!     → the buffer IS a root (fast path; v1-identical for the common
-//!     single-file case, no directory scan),
-//!  4. directory detection via [`crate::main_tex::find_main_tex`] — the
-//!     `--whatsin=directory` arXiv heuristic (00README.json/XXX,
-//!     Pack.pm likelihood scoring with `\input` vetoes) — walking up at
-//!     most [`WALKUP_MAX`] parents. A candidate ≠ the buffer is only
-//!     trusted when it (textually) *references* the buffer, so a
-//!     directory of unrelated documents can never hijack a fragment,
+//!  2. `% !TEX root = <path>` magic comment in the buffer (texlab / LaTeX-Workshop convention),
+//!  3. buffer carries an un-commented `\documentclass`/`\documentstyle` → the buffer IS a root
+//!     (fast path; v1-identical for the common single-file case, no directory scan),
+//!  4. directory detection via [`crate::main_tex::find_main_tex`] — the `--whatsin=directory` arXiv
+//!     heuristic (00README.json/XXX, Pack.pm likelihood scoring with `\input` vetoes) — walking up
+//!     at most [`WALKUP_MAX`] parents. A candidate ≠ the buffer is only trusted when it (textually)
+//!     *references* the buffer, so a directory of unrelated documents can never hijack a fragment,
 //!  5. the buffer itself (safe degradation).
 
-use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::{
+  path::{Path, PathBuf},
+  time::SystemTime,
+};
 
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -182,18 +180,20 @@ impl RootCache {
   /// `find_main_tex(dir)`, cached on the directory's mtime.
   fn detect_dir(&mut self, dir: &Path) -> Option<PathBuf> {
     let mtime = dir_mtime(dir);
-    if let Some(cached) = self.map.get(dir) {
-      if cached.dir_mtime == mtime {
-        return cached.root.clone();
-      }
+    if let Some(cached) = self.map.get(dir)
+      && cached.dir_mtime == mtime
+    {
+      return cached.root.clone();
     }
     let root = if dir_has_tex(dir) {
-      crate::main_tex::find_main_tex(dir).ok().map(|p| normalize_path(&p))
+      crate::main_tex::find_main_tex(dir)
+        .ok()
+        .map(|p| normalize_path(&p))
     } else {
       None
     };
     self.map.insert(dir.to_path_buf(), CachedRoot {
-      root: root.clone(),
+      root:      root.clone(),
       dir_mtime: mtime,
     });
     root
@@ -215,7 +215,10 @@ pub(crate) fn resolve_root(
     if ov.exists() || ov == buffer_path {
       return ov;
     }
-    log::warn!("rootDocument override {} does not exist; ignoring", ov.display());
+    log::warn!(
+      "rootDocument override {} does not exist; ignoring",
+      ov.display()
+    );
   }
   if let Some(t) = text {
     if let Some(magic) = magic_root(t, &buffer_path) {
@@ -232,14 +235,14 @@ pub(crate) fn resolve_root(
   let mut dir = buffer_path.parent().map(Path::to_path_buf);
   for _ in 0..=WALKUP_MAX {
     let Some(d) = dir else { break };
-    if let Some(candidate) = cache.detect_dir(&d) {
-      if candidate != buffer_path {
-        let references = std::fs::read_to_string(&candidate)
-          .map(|t| references_buffer(&t, &buffer_path))
-          .unwrap_or(false);
-        if references {
-          return candidate;
-        }
+    if let Some(candidate) = cache.detect_dir(&d)
+      && candidate != buffer_path
+    {
+      let references = std::fs::read_to_string(&candidate)
+        .map(|t| references_buffer(&t, &buffer_path))
+        .unwrap_or(false);
+      if references {
+        return candidate;
       }
     }
     dir = d.parent().map(Path::to_path_buf);
@@ -249,8 +252,9 @@ pub(crate) fn resolve_root(
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use std::fs;
+
+  use super::*;
 
   fn write(dir: &Path, rel: &str, content: &str) -> PathBuf {
     let p = dir.join(rel);
@@ -378,8 +382,14 @@ mod tests {
     let buf = Path::new("/p/sections/ch2.tex");
     assert!(references_buffer("\\input{sections/ch2}", buf));
     assert!(references_buffer("\\include{ch2}", buf));
-    assert!(!references_buffer("\\input{ch20}", buf), "ch2 must not match ch20");
-    assert!(!references_buffer("% \\input{ch2}", buf), "commented include ignored");
+    assert!(
+      !references_buffer("\\input{ch20}", buf),
+      "ch2 must not match ch20"
+    );
+    assert!(
+      !references_buffer("% \\input{ch2}", buf),
+      "commented include ignored"
+    );
     assert!(!references_buffer("plain ch2 mention without input", buf));
   }
 }

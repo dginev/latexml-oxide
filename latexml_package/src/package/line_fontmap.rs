@@ -76,7 +76,6 @@ pub const LINE_SLOTS: [Option<char>; 128] = [
   Some('\u{2198}'), Some('\u{2198}'), Some('\u{2198}'), None,
 ];
 
-
 LoadDefinitions!({
   #[rustfmt::skip]
   DeclareFontMap!("line", Rc::from(&LINE_SLOTS[..]));
@@ -84,15 +83,19 @@ LoadDefinitions!({
 
 #[cfg(test)]
 mod tests {
+  use std::process::Command;
+
   use super::LINE_SLOTS;
   use crate::package::lcircle_fontmap::LCIRCLE_SLOTS;
-  use std::process::Command;
 
   /// The TFM-populated slots of a picture font, parsed from `tftopl` output
   /// (lines like `(CHARACTER O 27` / `(CHARACTER C a`). Returns None when the
   /// host TeX tree lacks the font or `tftopl` (test self-skips).
   fn tfm_slots(font: &str) -> Option<Vec<usize>> {
-    let tfm = Command::new("kpsewhich").arg(format!("{font}.tfm")).output().ok()?;
+    let tfm = Command::new("kpsewhich")
+      .arg(format!("{font}.tfm"))
+      .output()
+      .ok()?;
     if !tfm.status.success() {
       return None;
     }

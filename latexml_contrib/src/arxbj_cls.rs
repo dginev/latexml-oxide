@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("elsart_support");

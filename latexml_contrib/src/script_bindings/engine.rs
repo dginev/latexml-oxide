@@ -16,9 +16,7 @@ macro_rules! doc_qname_method {
       $rhai,
       |_d: &mut DocProxy, qname: &str| -> std::result::Result<(), Box<EvalAltResult>> {
         with_doc(|doc, _props| {
-          doc
-            .$rust(qname)
-            .map_err(rhai_err)?;
+          doc.$rust(qname).map_err(rhai_err)?;
           Ok(())
         })
       },
@@ -467,7 +465,10 @@ pub(super) fn make_engine() -> Engine {
   // macro (mirrors the DefAccent! lowering; below=true for under-accents).
   engine.register_fn(
     "DefAccent",
-    |accent: &str, combining: &str, standalone: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |accent: &str,
+     combining: &str,
+     standalone: &str|
+     -> std::result::Result<(), Box<EvalAltResult>> {
       def_accent_impl(accent, combining, standalone, false).map_err(rhai_err)
     },
   );
@@ -487,7 +488,9 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("qname", |n: &mut NodeProxy| -> String {
     latexml_core::common::model::with_node_qname(&n.0, |q| q.to_string())
   });
-  engine.register_fn("content", |n: &mut NodeProxy| -> String { n.0.get_content() });
+  engine.register_fn("content", |n: &mut NodeProxy| -> String {
+    n.0.get_content()
+  });
   engine.register_fn("getAttribute", |n: &mut NodeProxy, k: &str| -> String {
     n.0.get_attribute(k).unwrap_or_default()
   });
@@ -514,7 +517,9 @@ pub(super) fn make_engine() -> Engine {
       n.0.set_content(v).map(|_| ()).map_err(rhai_err)
     },
   );
-  engine.register_fn("unlink", |n: &mut NodeProxy| { n.0.unlink(); });
+  engine.register_fn("unlink", |n: &mut NodeProxy| {
+    n.0.unlink();
+  });
   engine.register_fn("parent", |n: &mut NodeProxy| -> Dynamic {
     match n.0.get_parent() {
       Some(p) => Dynamic::from(NodeProxy(p)),
@@ -534,9 +539,12 @@ pub(super) fn make_engine() -> Engine {
 
   // DefRewrite/DefMathRewrite (data forms: xpath/select/attributes/regexp/
   // attributes-map/on_match; the `replace` closure form stays native-only).
-  engine.register_fn("DefRewrite", |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
-    def_rewrite_impl("text", opts).map_err(rhai_err)
-  });
+  engine.register_fn(
+    "DefRewrite",
+    |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      def_rewrite_impl("text", opts).map_err(rhai_err)
+    },
+  );
   // replace-closure form: xpath/select picks nodes, the Rhai body receives
   // them as an array of Node proxies and mutates in place.
   engine.register_fn(
@@ -560,20 +568,29 @@ pub(super) fn make_engine() -> Engine {
 
   // DefMathLigature: pattern/replacement/attrs are plain data — the XMTok
   // prev-sibling matcher is built natively (same lowering as the macro).
-  engine.register_fn("DefMathLigature", |pattern: &str, replacement: &str, opts: Map| {
-    def_math_ligature_impl(pattern, replacement, opts);
-  });
+  engine.register_fn(
+    "DefMathLigature",
+    |pattern: &str, replacement: &str, opts: Map| {
+      def_math_ligature_impl(pattern, replacement, opts);
+    },
+  );
 
   // ── gullet seams (Perl `$gullet->…` reads from inside macro bodies) ──
-  engine.register_fn("SkipSpaces", || -> std::result::Result<(), Box<EvalAltResult>> {
-    latexml_core::gullet::skip_spaces().map_err(rhai_err)
-  });
+  engine.register_fn(
+    "SkipSpaces",
+    || -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::gullet::skip_spaces().map_err(rhai_err)
+    },
+  );
   // ReadArg: one balanced argument off the stream (unexpanded), as TeX source.
-  engine.register_fn("ReadArg", || -> std::result::Result<String, Box<EvalAltResult>> {
-    latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off)
-      .map(|t| t.untex())
-      .map_err(rhai_err)
-  });
+  engine.register_fn(
+    "ReadArg",
+    || -> std::result::Result<String, Box<EvalAltResult>> {
+      latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off)
+        .map(|t| t.untex())
+        .map_err(rhai_err)
+    },
+  );
   // ReadUntil(delim): tokens up to (and consuming) the delimiter TeX string.
   engine.register_fn(
     "ReadUntil",
@@ -584,11 +601,14 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   // ReadOptional: a bracketed [..] optional ("" when absent).
-  engine.register_fn("ReadOptional", || -> std::result::Result<String, Box<EvalAltResult>> {
-    latexml_core::gullet::read_optional(None)
-      .map(|t| t.map(|tt| tt.untex()).unwrap_or_default())
-      .map_err(rhai_err)
-  });
+  engine.register_fn(
+    "ReadOptional",
+    || -> std::result::Result<String, Box<EvalAltResult>> {
+      latexml_core::gullet::read_optional(None)
+        .map(|t| t.map(|tt| tt.untex()).unwrap_or_default())
+        .map_err(rhai_err)
+    },
+  );
 
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
   engine.register_fn(
@@ -782,9 +802,7 @@ pub(super) fn make_engine() -> Engine {
     "openElement",
     |_d: &mut DocProxy, tag: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       with_doc(|doc, _props| {
-        doc
-          .open_element(tag, None, None)
-          .map_err(rhai_err)?;
+        doc.open_element(tag, None, None).map_err(rhai_err)?;
         Ok(())
       })
     },
@@ -794,9 +812,7 @@ pub(super) fn make_engine() -> Engine {
     |_d: &mut DocProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       with_doc(|doc, _props| {
         let mut node = doc.get_node().clone();
-        doc
-          .set_attribute(&mut node, key, val)
-          .map_err(rhai_err)?;
+        doc.set_attribute(&mut node, key, val).map_err(rhai_err)?;
         Ok(())
       })
     },
@@ -805,9 +821,7 @@ pub(super) fn make_engine() -> Engine {
     "absorbString",
     |_d: &mut DocProxy, s: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       with_doc(|doc, props| {
-        doc
-          .absorb_string(s, props)
-          .map_err(rhai_err)?;
+        doc.absorb_string(s, props).map_err(rhai_err)?;
         Ok(())
       })
     },
@@ -816,9 +830,7 @@ pub(super) fn make_engine() -> Engine {
     "absorb",
     |_d: &mut DocProxy, arg: Digested| -> std::result::Result<(), Box<EvalAltResult>> {
       with_doc(|doc, _props| {
-        doc
-          .absorb(&arg, None)
-          .map_err(rhai_err)?;
+        doc.absorb(&arg, None).map_err(rhai_err)?;
         Ok(())
       })
     },
@@ -834,9 +846,7 @@ pub(super) fn make_engine() -> Engine {
         if let Some(stored) = props.get(name) {
           let dig: Option<Digested> = stored.into();
           if let Some(ref d) = dig {
-            doc
-              .absorb(d, None)
-              .map_err(rhai_err)?;
+            doc.absorb(d, None).map_err(rhai_err)?;
           }
         }
         Ok(())
@@ -853,9 +863,7 @@ pub(super) fn make_engine() -> Engine {
     |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<String, Box<EvalAltResult>> {
       let w = unsafe { &*current_whatsit()? };
       match w.get_arg(n as usize) {
-        Some(d) => d
-          .untex()
-          .map_err(rhai_err),
+        Some(d) => d.untex().map_err(rhai_err),
         None => Ok(String::new()),
       }
     },

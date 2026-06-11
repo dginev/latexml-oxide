@@ -23,12 +23,13 @@
 //! interleaved with mhsetup's load via the digest auto-pop
 //! upstream of this binding, which is a separate issue.
 
-use crate::prelude::*;
 use latexml_core::token::Catcode;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
   InputDefinitions!("mhsetup", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  latexml_core::state::assign_catcode(':', Catcode::OTHER, Some(latexml_core::state::Scope::Global));
-  latexml_core::state::assign_catcode('_', Catcode::SUB, Some(latexml_core::state::Scope::Global));
+  assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+  assign_catcode('_', Catcode::SUB, Some(Scope::Global));
 });

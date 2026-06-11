@@ -22,12 +22,12 @@ LoadDefinitions!({
     before_digest => {
       prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
       before_equation()?;
-      gullet::unread_one(T_CS!("\\@start@alignment"));
+      unread_one(T_CS!("\\@start@alignment"));
       Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
     },
     after_digest_body => sub[whatsit] {
       after_equation(Some(whatsit))?;
-      gullet::unread_one(T_CS!("\\@finish@alignment"));
+      unread_one(T_CS!("\\@finish@alignment"));
     },
     locked => true
   );
@@ -40,12 +40,12 @@ LoadDefinitions!({
     mode => "display_math",
     before_digest => {
       before_equation()?;
-      gullet::unread_one(T_CS!("\\@start@alignment"));
+      unread_one(T_CS!("\\@start@alignment"));
       Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
     },
     after_digest_body => sub[whatsit] {
       after_equation(Some(whatsit))?;
-      gullet::unread_one(T_CS!("\\@finish@alignment"));
+      unread_one(T_CS!("\\@finish@alignment"));
     },
     locked => true
   );

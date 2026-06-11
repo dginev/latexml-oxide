@@ -13,7 +13,6 @@ use std::rc::Rc;
 
 use latexml::tex_tests;
 use latexml_core::common::error::Result;
-
 use phf::phf_map;
 static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
 "meaning" => "t1enc.def",

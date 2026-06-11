@@ -6,13 +6,13 @@
 //! ties to the harness machinery — they just construct a minimal
 //! `Core` and tokenize a single inline formula.
 
-use libxml::tree::Node;
 use std::rc::Rc;
 
-use crate::core_interface::DigestionAPI;
-use latexml_core::document::Document;
-use latexml_core::{Core, CoreOptions, state};
+use latexml_core::{Core, CoreOptions, document::Document, state};
 use latexml_math_parser::node_to_grammar_lexemes;
+use libxml::tree::Node;
+
+use crate::core_interface::DigestionAPI;
 
 /// Provide a default `Core` engine preloaded with `article.cls`
 /// and `amsmath.sty` — the minimum needed to digest most formulae.

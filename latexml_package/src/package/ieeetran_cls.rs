@@ -288,13 +288,13 @@ LoadDefinitions!({
       // Perl digests \textbf{\textit{Proof:}} producing font="bold italic".
       // Build a bold-italic font via digestion so the title attribute matches.
       // Template engine auto-binds `"font"` prop to the element's font= attr.
-      let title = stomach::digest(mouth::tokenize_internal(
+      let title = digest(mouth::tokenize_internal(
         "{\\bfseries\\itshape Proof:}"
       ))?;
       let titlefont = title.get_font().ok().flatten().map(|f| f.into_owned());
       // Digest `\qed` directly into a prop — the template references `#qed`
       // at body-end so the QED symbol lands inside <ltx:proof>.
-      let qed = stomach::digest(mouth::tokenize_internal("\\qed"))?;
+      let qed = digest(mouth::tokenize_internal("\\qed"))?;
       let mut map = SymHashMap::default();
       map.insert("title", title.into());
       map.insert("qed", qed.into());
@@ -461,7 +461,7 @@ LoadDefinitions!({
     let subeq = with_value("EQUATION_NUMBERING", |v| {
       if let Some(Stored::HashStored(m)) = v {
         matches!(m.get("counter"),
-          Some(Stored::String(s)) if arena::to_string(*s) == "subequation")
+          Some(Stored::String(s)) if to_string(*s) == "subequation")
       } else { false }
     });
     if subeq {
@@ -522,26 +522,26 @@ LoadDefinitions!({
   //   R  = before \hfil       (flush right)
   DefColumnType!("L", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
   DefColumnType!("C", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after:  Some(Tokens!(T_CS!("\\hfil"))),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
   DefColumnType!("R", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
@@ -640,9 +640,9 @@ LoadDefinitions!({
   // Rust was hardcoding the env-start path, so braced `\keywords{foo}`
   // never reached the one-arg expansion.
   DefMacro!("\\keywords", sub[_args] {
-    let next = gullet::read_token()?;
+    let next = read_token()?;
     if let Some(t) = next {
-      gullet::unread(Tokens!(t));
+      unread(Tokens!(t));
       if t.get_catcode() == Catcode::BEGIN {
         return Ok(Tokens!(T_CS!("\\keywords@onearg")));
       }

@@ -4,7 +4,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Bail if algorithmicx already defined \algorithmic (deeply incompatible)
-  if state::lookup_definition(&T_CS!("\\algorithmic"))?.is_some() {
+  if lookup_definition(&T_CS!("\\algorithmic"))?.is_some() {
     Warn!("unexpected", "\\algorithmic",
       "Another package has already defined \\algorithmic, will not load algorithmic.sty");
     return Ok(());
@@ -19,7 +19,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@setup@algorithmic", {
     ResetCounter!("ALC@line");
     // If not within an algorithm environment, step the counter for its id's
-    let in_algorithm = state::with_stacked_values_sym(pin!("current_environment"), |vals| {
+    let in_algorithm = with_stacked_values_sym(pin!("current_environment"), |vals| {
       vals.iter().any(|s| s.eq_text("algorithm"))
     });
     if !in_algorithm {
@@ -37,12 +37,12 @@ LoadDefinitions!({
     },
     after_digest => sub[_whatsit] {
       Let!("\\list", "\\lx@algorithmic@beginlist@inner");
-      stomach::begin_mode("internal_vertical")?;
+      begin_mode("internal_vertical")?;
     });
 
   DefConstructor!("\\lx@algorithmic@endlist", "</ltx:listing>",
     before_digest => {
-      stomach::end_mode("internal_vertical")?;
+      end_mode("internal_vertical")?;
     },
     before_construct => sub[document] {
       document.maybe_close_element("ltx:listingline")?;

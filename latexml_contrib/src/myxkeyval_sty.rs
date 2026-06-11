@@ -44,9 +44,7 @@ LoadDefinitions!({
   // \scenario RequiredKeyVals:myxkeyval|scenario
   {
     let replacement: ReplacementClosure = Rc::new(
-      |document: &mut Document,
-       args: &Vec<Option<Digested>>,
-       _props: &arena::SymHashMap<Stored>| {
+      |document: &mut Document, args: &Vec<Option<Digested>>, _props: &SymHashMap<Stored>| {
         let mut para_attrs = HashMap::default();
         para_attrs.insert("class".to_string(), "scenario".to_string());
         document.open_element("ltx:para", Some(para_attrs), None)?;
@@ -59,7 +57,7 @@ LoadDefinitions!({
         a.insert("class".to_string(), "role".to_string());
         document.open_element("ltx:text", Some(a), None)?;
         if let Some(val) = get_kv("cross") {
-          document.absorb_string(&val, &arena::SymHashMap::default())?;
+          document.absorb_string(&val, &SymHashMap::default())?;
         }
         document.close_element("ltx:text")?;
 
@@ -67,7 +65,7 @@ LoadDefinitions!({
         a.insert("class".to_string(), "country".to_string());
         document.open_element("ltx:text", Some(a), None)?;
         if let Some(val) = get_kv("country") {
-          document.absorb_string(&val, &arena::SymHashMap::default())?;
+          document.absorb_string(&val, &SymHashMap::default())?;
         }
         document.close_element("ltx:text")?;
 
@@ -75,7 +73,7 @@ LoadDefinitions!({
         a.insert("class".to_string(), "color".to_string());
         document.open_element("ltx:text", Some(a), None)?;
         if let Some(val) = get_kv("color") {
-          document.absorb_string(&val, &arena::SymHashMap::default())?;
+          document.absorb_string(&val, &SymHashMap::default())?;
         }
         document.close_element("ltx:text")?;
 
@@ -83,7 +81,7 @@ LoadDefinitions!({
         a.insert("class".to_string(), "cross".to_string());
         document.open_element("ltx:text", Some(a), None)?;
         if let Some(val) = get_kv("cross") {
-          document.absorb_string(&val, &arena::SymHashMap::default())?;
+          document.absorb_string(&val, &SymHashMap::default())?;
         }
         document.close_element("ltx:text")?;
 

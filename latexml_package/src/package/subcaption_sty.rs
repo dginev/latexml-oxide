@@ -1,5 +1,7 @@
-use crate::engine::latex_constructs::{after_float, before_float, before_float_ex};
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{after_float, before_float, before_float_ex},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -42,8 +44,8 @@ LoadDefinitions!({
   // sub-prefixed) locally, then delegate to \caption.
   DefMacro!("\\subcaption OptionalMatch:* []{}", sub[(_star, opt, caption)] {
     let mut tokens = Vec::new();
-    if state::has_meaning(&T_CS!("\\@captype")) {
-      let ctype = gullet::do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
+    if has_meaning(&T_CS!("\\@captype")) {
+      let ctype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
       let ctype = ctype.trim().to_string();
       if !ctype.is_empty() && !ctype.starts_with("sub") {
         // Local redefinition via \def\@captype{sub<ctype>} tokens.

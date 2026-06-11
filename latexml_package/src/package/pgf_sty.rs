@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::common::color::Color;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -8,7 +9,7 @@ LoadDefinitions!({
   // Pre-announce the driver binding so find_file discovers it.
   // Perl's FindFile finds pgfsys-latexml.def.ltxml on disk; in Rust, the binding
   // exists only in the dispatcher, so we flag it for find_file.
-  state::assign_value("pgfsys-latexml.def_binding_available", true, Some(Scope::Global));
+  assign_value("pgfsys-latexml.def_binding_available", true, Some(Scope::Global));
   // IMPORTANT: Let pgfutil@IfFileExists BEFORE loading raw pgf.
   // Raw TeX pgfutil-common.tex defines \pgfutil@IfFileExists using \openin (disk only).
   // Perl overrides it with \IfFileExists which uses FindFile (checks bindings too).
@@ -21,8 +22,8 @@ LoadDefinitions!({
   DefMacro!("\\pgfsetcolor{}", "\\pgfsetcolor@orig{#1}\\lxSVG@set@color");
   DefPrimitive!("\\lxSVG@set@color", {
     // Perl: MergeFont(color => LookupValue('color_pgfstrokecolor'));
-    if let Some(Stored::String(color_str)) = state::lookup_value("color_pgfstrokecolor") {
-      let cs = arena::to_string(color_str);
+    if let Some(Stored::String(color_str)) = lookup_value("color_pgfstrokecolor") {
+      let cs = to_string(color_str);
       if let Some(color) = Color::from_stored(&cs) {
         MergeFont!(color => color);
       }

@@ -10,9 +10,11 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::{NodeData, PostDocument, element_children_iter};
-use crate::math_processor::{MathConversion, MathProcessor};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::{NodeData, PostDocument, element_children_iter},
+  math_processor::{MathConversion, MathProcessor},
+  processor::{ProcessResult, Processor},
+};
 
 const XMATH_MIMETYPE: &str = "application/x-latexml";
 
@@ -57,7 +59,10 @@ impl MathProcessor for XMath {
         .collect();
       Some(NodeData::Element {
         tag: "ltx:XMath".to_string(),
-        attributes: Some(HashMap::from_iter([("_sourced".to_string(), "1".to_string())])),
+        attributes: Some(HashMap::from_iter([(
+          "_sourced".to_string(),
+          "1".to_string(),
+        )])),
         children,
       })
     } else {

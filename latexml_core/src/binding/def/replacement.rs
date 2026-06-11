@@ -10,8 +10,7 @@
 //! This module is the single source of truth: one [`winnow`] parser produces one
 //! [`ReplacementOp`] AST, consumed by **both** front-ends —
 //! * the compile-time codegen walks `&[ReplacementOp]` and emits `quote!`,
-//! * the runtime interpreter [`apply_ops`] walks the same AST against a live
-//!   `Document`.
+//! * the runtime interpreter [`apply_ops`] walks the same AST against a live `Document`.
 //!
 //! The semantics mirror the Perl `LaTeXML::Core::Definition::Constructor::Compiler`
 //! (`Compiler.pm`) faithfully — the existing `constructable.rs` is the ground
@@ -33,21 +32,26 @@
 
 use std::borrow::Cow;
 
-use rustc_hash::FxHashMap as HashMap;
-use winnow::combinator::{alt, opt, peek, repeat};
-use winnow::error::{ContextError, ErrMode};
-use winnow::prelude::*;
-use winnow::token::{literal, one_of, take_while};
-
 use libxml::tree::Node;
+use rustc_hash::FxHashMap as HashMap;
+use winnow::{
+  combinator::{alt, opt, peek, repeat},
+  error::{ContextError, ErrMode},
+  prelude::*,
+  token::{literal, one_of, take_while},
+};
 
-use crate::common::arena::SymHashMap;
-use crate::common::error::{Error, Result};
-use crate::common::font::Font;
-use crate::common::store::Stored;
-use crate::definition::FontDirective;
-use crate::digested::Digested;
-use crate::document::Document;
+use crate::{
+  common::{
+    arena::SymHashMap,
+    error::{Error, Result},
+    font::Font,
+    store::Stored,
+  },
+  definition::FontDirective,
+  digested::Digested,
+  document::Document,
+};
 
 // ────────────────────────────── AST ──────────────────────────────
 
@@ -97,15 +101,26 @@ pub enum AttrPart {
   Value(Value),
   /// `?test(ifval)(elseval)` inside a quoted attribute string — branches are
   /// single values (Perl `translate_string`).
-  Conditional { test: Value, then_val: Value, else_val: Value },
+  Conditional {
+    test:     Value,
+    then_val: Value,
+    else_val: Value,
+  },
 }
 
 /// An attribute-list entry inside a `<tag …>` or `<?pi …?>` — a key/value pair or
 /// a conditional set of pairs (Perl `translate_avpairs`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AttrPair {
-  KeyValue { key: String, value: AttrValue },
-  Conditional { test: Value, then_attrs: Vec<AttrPair>, else_attrs: Vec<AttrPair> },
+  KeyValue {
+    key:   String,
+    value: AttrValue,
+  },
+  Conditional {
+    test:       Value,
+    then_attrs: Vec<AttrPair>,
+    else_attrs: Vec<AttrPair>,
+  },
 }
 
 /// One operation in a compiled replacement template.
@@ -114,9 +129,9 @@ pub enum ReplacementOp {
   /// `<q a='v' …>` (or `<q … />` when `self_closing`). `float` set when a `^`/`^^`
   /// prefix attaches here.
   OpenElement {
-    qname: String,
-    attrs: Vec<AttrPair>,
-    float: Option<FloatKind>,
+    qname:        String,
+    attrs:        Vec<AttrPair>,
+    float:        Option<FloatKind>,
     self_closing: bool,
   },
   /// `</q>`.
@@ -127,11 +142,19 @@ pub enum ReplacementOp {
   AbsorbValue { value: Value },
   /// `key='v'` at content position — set the attribute on the current node.
   /// `float` set when a `^` prefix attaches here.
-  SetAttribute { key: String, value: AttrValue, float: bool },
+  SetAttribute {
+    key:   String,
+    value: AttrValue,
+    float: bool,
+  },
   /// Literal text to absorb.
   Text { text: String },
   /// `?test(if)(else)` — branches are op-lists.
-  Conditional { test: Value, then_ops: Vec<ReplacementOp>, else_ops: Vec<ReplacementOp> },
+  Conditional {
+    test:     Value,
+    then_ops: Vec<ReplacementOp>,
+    else_ops: Vec<ReplacementOp>,
+  },
 }
 
 // ───────────────────────────── parser ─────────────────────────────
@@ -179,7 +202,11 @@ fn attach_float(ops: &mut [ReplacementOp], fk: FloatKind) {
 fn float_prefix(input: &mut &str) -> ModalResult<FloatKind> {
   let carets = take_while(1.., '^').parse_next(input)?;
   ws(input)?;
-  Ok(if carets.chars().count() >= 2 { FloatKind::Double } else { FloatKind::Single })
+  Ok(if carets.chars().count() >= 2 {
+    FloatKind::Double
+  } else {
+    FloatKind::Single
+  })
 }
 
 /// One top-level operation. Branch order mirrors `compile_replacement_tokens`'s
@@ -224,7 +251,12 @@ fn open_tag_op(input: &mut &str) -> ModalResult<ReplacementOp> {
   let attrs = avpairs(input)?;
   let self_closing = opt(literal("/")).parse_next(input)?.is_some();
   cut_err_lit(">", input)?;
-  Ok(ReplacementOp::OpenElement { qname: name, attrs, float: None, self_closing })
+  Ok(ReplacementOp::OpenElement {
+    qname: name,
+    attrs,
+    float: None,
+    self_closing,
+  })
 }
 
 fn close_tag_op(input: &mut &str) -> ModalResult<ReplacementOp> {
@@ -347,7 +379,9 @@ fn full_value(input: &mut &str, exclude: &str) -> ModalResult<Value> {
 fn arg_value(input: &mut &str) -> ModalResult<Value> {
   literal("#").parse_next(input)?;
   let digits = take_while(1.., |c: char| c.is_ascii_digit()).parse_next(input)?;
-  let n: usize = digits.parse().map_err(|_| ErrMode::Backtrack(ContextError::new()))?;
+  let n: usize = digits
+    .parse()
+    .map_err(|_| ErrMode::Backtrack(ContextError::new()))?;
   if !(1..=9).contains(&n) {
     return Err(ErrMode::Cut(ContextError::new()));
   }
@@ -413,7 +447,10 @@ fn attr_string(input: &mut &str) -> ModalResult<AttrValue> {
       *input = &input[quote.len_utf8()..];
       break;
     }
-    if probe(|i| (literal("?"), one_of(['#', '&'])).void().parse_next(i), input) {
+    if probe(
+      |i| (literal("?"), one_of(['#', '&'])).void().parse_next(i),
+      input,
+    ) {
       let (test, if_s, else_s) = parse_conditional_raw(input)?;
       let then_val = parse_single_value(&if_s)?;
       let else_val = parse_single_value(&else_s)?;
@@ -482,7 +519,9 @@ fn parse_single_value(s: &str) -> ModalResult<Value> {
 /// Re-parse a conditional op-branch as a full op-list (strict: must consume all,
 /// mirroring `compile_replacement_tokens` looping to empty).
 fn reparse_ops(s: &str) -> ModalResult<Vec<ReplacementOp>> {
-  ops_with_float.parse(s).map_err(|_| ErrMode::Cut(ContextError::new()))
+  ops_with_float
+    .parse(s)
+    .map_err(|_| ErrMode::Cut(ContextError::new()))
 }
 
 /// Re-parse a conditional avpair-branch as an attribute list (lenient: trailing
@@ -502,9 +541,7 @@ fn qname(input: &mut &str) -> ModalResult<String> {
 }
 
 fn is_qname_start(c: char) -> bool { c.is_alphabetic() || c == '_' || c == ':' }
-fn is_qname_continue(c: char) -> bool {
-  c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-')
-}
+fn is_qname_continue(c: char) -> bool { c.is_alphanumeric() || matches!(c, '_' | ':' | '.' | '-') }
 
 /// Consume optional whitespace, discarding it.
 fn ws(input: &mut &str) -> ModalResult<()> {
@@ -533,10 +570,7 @@ fn cut_err_lit(lit: &'static str, input: &mut &str) -> ModalResult<()> {
 }
 
 /// Run a parser, converting a `Backtrack` into a `Cut` (committed position).
-fn cut_err_<O>(
-  mut p: impl FnMut(&mut &str) -> ModalResult<O>,
-  input: &mut &str,
-) -> ModalResult<O> {
+fn cut_err_<O>(mut p: impl FnMut(&mut &str) -> ModalResult<O>, input: &mut &str) -> ModalResult<O> {
   match p(input) {
     Ok(o) => Ok(o),
     Err(ErrMode::Backtrack(e)) => Err(ErrMode::Cut(e)),
@@ -608,13 +642,12 @@ pub fn unquote(text: &str) -> String {
   while i < text.len() {
     let rest = &text[i..];
     let c = rest.chars().next().unwrap();
-    if c == '\\' {
-      if let Some(nc) = rest[1..].chars().next() {
-        if ESCAPED.contains(&nc) {
-          i += 1 + nc.len_utf8(); // drop the whole `\X`
-          continue;
-        }
-      }
+    if c == '\\'
+      && let Some(nc) = rest[1..].chars().next()
+      && ESCAPED.contains(&nc)
+    {
+      i += 1 + nc.len_utf8(); // drop the whole `\X`
+      continue;
     }
     out.push(c);
     i += c.len_utf8();
@@ -653,7 +686,12 @@ fn exec_ops(
 ) -> Result<()> {
   for op in ops {
     match op {
-      ReplacementOp::OpenElement { qname, attrs, float, self_closing } => {
+      ReplacementOp::OpenElement {
+        qname,
+        attrs,
+        float,
+        self_closing,
+      } => {
         if let Some(fk) = float {
           *savenode = document.float_to_element(qname, matches!(fk, FloatKind::Double))?;
         }
@@ -747,7 +785,11 @@ fn eval_avpairs(
         out.push((key.clone(), eval_attr_value(value, args, props)?));
       },
       AttrPair::Conditional { test, then_attrs, else_attrs } => {
-        let branch = if eval_bool(test, args, props)? { then_attrs } else { else_attrs };
+        let branch = if eval_bool(test, args, props)? {
+          then_attrs
+        } else {
+          else_attrs
+        };
         out.extend(eval_avpairs(branch, args, props)?);
       },
     }
@@ -766,7 +808,11 @@ fn eval_attr_value(
       AttrPart::Literal(lit) => s.push_str(lit),
       AttrPart::Value(val) => s.push_str(&value_to_attribute(val, args, props)?),
       AttrPart::Conditional { test, then_val, else_val } => {
-        let chosen = if eval_bool(test, args, props)? { then_val } else { else_val };
+        let chosen = if eval_bool(test, args, props)? {
+          then_val
+        } else {
+          else_val
+        };
         s.push_str(&value_to_attribute(chosen, args, props)?);
       },
     }
@@ -831,11 +877,7 @@ fn absorb_value(
 
 /// The truth test of a conditional (codegen's
 /// `!v.to_string().is_empty() && v.to_string() != "false"`).
-fn eval_bool(
-  v: &Value,
-  args: &[Option<Digested>],
-  props: &SymHashMap<Stored>,
-) -> Result<bool> {
+fn eval_bool(v: &Value, args: &[Option<Digested>], props: &SymHashMap<Stored>) -> Result<bool> {
   Ok(match v {
     Value::Arg(n) => match args.get(n - 1) {
       Some(Some(d)) => is_truthy(&d.to_string()),
@@ -884,64 +926,71 @@ fn call_func(
 mod tests {
   use super::*;
 
-  fn lit(s: &str) -> AttrValue { AttrValue { parts: vec![AttrPart::Literal(s.to_string())] } }
-  fn argval(n: usize) -> AttrValue { AttrValue { parts: vec![AttrPart::Value(Value::Arg(n))] } }
+  fn lit(s: &str) -> AttrValue {
+    AttrValue {
+      parts: vec![AttrPart::Literal(s.to_string())],
+    }
+  }
+  fn argval(n: usize) -> AttrValue {
+    AttrValue {
+      parts: vec![AttrPart::Value(Value::Arg(n))],
+    }
+  }
 
   #[test]
   fn plain_element_with_arg() {
     let ops = parse_replacement("<ltx:emph>#1</ltx:emph>").unwrap();
-    assert_eq!(
-      ops,
-      vec![
-        ReplacementOp::OpenElement {
-          qname: "ltx:emph".into(),
-          attrs: vec![],
-          float: None,
-          self_closing: false,
-        },
-        ReplacementOp::AbsorbValue { value: Value::Arg(1) },
-        ReplacementOp::CloseElement { qname: "ltx:emph".into() },
-      ]
-    );
+    assert_eq!(ops, vec![
+      ReplacementOp::OpenElement {
+        qname:        "ltx:emph".into(),
+        attrs:        vec![],
+        float:        None,
+        self_closing: false,
+      },
+      ReplacementOp::AbsorbValue { value: Value::Arg(1) },
+      ReplacementOp::CloseElement { qname: "ltx:emph".into() },
+    ]);
   }
 
   #[test]
   fn element_with_literal_attribute_and_arg() {
     let ops = parse_replacement("<ltx:text class='ok'>#1</ltx:text>").unwrap();
-    assert_eq!(
-      ops,
-      vec![
-        ReplacementOp::OpenElement {
-          qname: "ltx:text".into(),
-          attrs: vec![AttrPair::KeyValue { key: "class".into(), value: lit("ok") }],
-          float: None,
-          self_closing: false,
-        },
-        ReplacementOp::AbsorbValue { value: Value::Arg(1) },
-        ReplacementOp::CloseElement { qname: "ltx:text".into() },
-      ]
-    );
+    assert_eq!(ops, vec![
+      ReplacementOp::OpenElement {
+        qname:        "ltx:text".into(),
+        attrs:        vec![AttrPair::KeyValue {
+          key:   "class".into(),
+          value: lit("ok"),
+        }],
+        float:        None,
+        self_closing: false,
+      },
+      ReplacementOp::AbsorbValue { value: Value::Arg(1) },
+      ReplacementOp::CloseElement { qname: "ltx:text".into() },
+    ]);
   }
 
   #[test]
   fn attribute_value_interpolates_arg() {
     let ops = parse_replacement("<ltx:ref class='#2'>#1</ltx:ref>").unwrap();
-    let ReplacementOp::OpenElement { attrs, .. } = &ops[0] else { panic!() };
-    assert_eq!(attrs, &vec![AttrPair::KeyValue { key: "class".into(), value: argval(2) }]);
+    let ReplacementOp::OpenElement { attrs, .. } = &ops[0] else {
+      panic!()
+    };
+    assert_eq!(attrs, &vec![AttrPair::KeyValue {
+      key:   "class".into(),
+      value: argval(2),
+    }]);
   }
 
   #[test]
   fn self_closing_element() {
     let ops = parse_replacement("<ltx:break/>").unwrap();
-    assert_eq!(
-      ops,
-      vec![ReplacementOp::OpenElement {
-        qname: "ltx:break".into(),
-        attrs: vec![],
-        float: None,
-        self_closing: true,
-      }]
-    );
+    assert_eq!(ops, vec![ReplacementOp::OpenElement {
+      qname:        "ltx:break".into(),
+      attrs:        vec![],
+      float:        None,
+      self_closing: true,
+    }]);
   }
 
   #[test]
@@ -949,135 +998,147 @@ mod tests {
     // Leading ws before an open tag is eaten by the tag (Perl `^\s*<`); a close
     // tag has no leading-ws rule so the ws becomes text.
     let ops = parse_replacement("<a>\n  <b></b>\n  </a>").unwrap();
-    assert_eq!(
-      ops,
-      vec![
-        ReplacementOp::OpenElement { qname: "a".into(), attrs: vec![], float: None, self_closing: false },
-        ReplacementOp::OpenElement { qname: "b".into(), attrs: vec![], float: None, self_closing: false },
-        ReplacementOp::CloseElement { qname: "b".into() },
-        ReplacementOp::Text { text: "\n  ".into() },
-        ReplacementOp::CloseElement { qname: "a".into() },
-      ]
-    );
+    assert_eq!(ops, vec![
+      ReplacementOp::OpenElement {
+        qname:        "a".into(),
+        attrs:        vec![],
+        float:        None,
+        self_closing: false,
+      },
+      ReplacementOp::OpenElement {
+        qname:        "b".into(),
+        attrs:        vec![],
+        float:        None,
+        self_closing: false,
+      },
+      ReplacementOp::CloseElement { qname: "b".into() },
+      ReplacementOp::Text { text: "\n  ".into() },
+      ReplacementOp::CloseElement { qname: "a".into() },
+    ]);
   }
 
   #[test]
   fn footnote_corpus_specimen() {
     // plain_constructs.rs:293 — the richest active template.
-    let ops =
-      parse_replacement("^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>")
-        .unwrap();
-    assert_eq!(
-      ops,
-      vec![
-        ReplacementOp::OpenElement {
-          qname: "ltx:note".into(),
-          attrs: vec![
-            AttrPair::KeyValue { key: "role".into(), value: lit("footnote") },
-            AttrPair::Conditional {
-              test: Value::Prop("mark".into()),
-              then_attrs: vec![AttrPair::KeyValue {
-                key: "mark".into(),
-                value: AttrValue { parts: vec![AttrPart::Value(Value::Prop("mark".into()))] },
-              }],
-              else_attrs: vec![],
-            },
-          ],
-          float: Some(FloatKind::Single),
-          self_closing: false,
-        },
-        ReplacementOp::Conditional {
-          test: Value::Prop("prenote".into()),
-          then_ops: vec![
-            ReplacementOp::AbsorbValue { value: Value::Prop("prenote".into()) },
-            ReplacementOp::Text { text: " ".into() },
-          ],
-          else_ops: vec![],
-        },
-        ReplacementOp::AbsorbValue { value: Value::Arg(2) },
-        ReplacementOp::CloseElement { qname: "ltx:note".into() },
-      ]
-    );
+    let ops = parse_replacement(
+      "^<ltx:note role='footnote' ?#mark(mark='#mark')()>?#prenote(#prenote )()#2</ltx:note>",
+    )
+    .unwrap();
+    assert_eq!(ops, vec![
+      ReplacementOp::OpenElement {
+        qname:        "ltx:note".into(),
+        attrs:        vec![
+          AttrPair::KeyValue {
+            key:   "role".into(),
+            value: lit("footnote"),
+          },
+          AttrPair::Conditional {
+            test:       Value::Prop("mark".into()),
+            then_attrs: vec![AttrPair::KeyValue {
+              key:   "mark".into(),
+              value: AttrValue {
+                parts: vec![AttrPart::Value(Value::Prop("mark".into()))],
+              },
+            }],
+            else_attrs: vec![],
+          },
+        ],
+        float:        Some(FloatKind::Single),
+        self_closing: false,
+      },
+      ReplacementOp::Conditional {
+        test:     Value::Prop("prenote".into()),
+        then_ops: vec![
+          ReplacementOp::AbsorbValue {
+            value: Value::Prop("prenote".into()),
+          },
+          ReplacementOp::Text { text: " ".into() },
+        ],
+        else_ops: vec![],
+      },
+      ReplacementOp::AbsorbValue { value: Value::Arg(2) },
+      ReplacementOp::CloseElement { qname: "ltx:note".into() },
+    ]);
   }
 
   #[test]
   fn pi_corpus_specimen() {
     // latex_constructs.rs:2702 / :4088 — PI with inline conditional.
     let ops = parse_replacement("<?latexml class='#2' ?#1(options='#1')?>").unwrap();
-    assert_eq!(
-      ops,
-      vec![ReplacementOp::ProcessingInstruction {
-        qname: "latexml".into(),
-        attrs: vec![
-          AttrPair::KeyValue { key: "class".into(), value: argval(2) },
-          AttrPair::Conditional {
-            test: Value::Arg(1),
-            then_attrs: vec![AttrPair::KeyValue { key: "options".into(), value: argval(1) }],
-            else_attrs: vec![],
-          },
-        ],
-      }]
-    );
+    assert_eq!(ops, vec![ReplacementOp::ProcessingInstruction {
+      qname: "latexml".into(),
+      attrs: vec![
+        AttrPair::KeyValue {
+          key:   "class".into(),
+          value: argval(2),
+        },
+        AttrPair::Conditional {
+          test:       Value::Arg(1),
+          then_attrs: vec![AttrPair::KeyValue {
+            key:   "options".into(),
+            value: argval(1),
+          }],
+          else_attrs: vec![],
+        },
+      ],
+    }]);
   }
 
   #[test]
   fn float_double_caret() {
     let ops = parse_replacement("^^<ltx:x/>").unwrap();
-    let ReplacementOp::OpenElement { float, .. } = &ops[0] else { panic!() };
+    let ReplacementOp::OpenElement { float, .. } = &ops[0] else {
+      panic!()
+    };
     assert_eq!(float, &Some(FloatKind::Double));
   }
 
   #[test]
   fn top_level_conditional_with_else() {
     let ops = parse_replacement("?#1(<a/>)(<b/>)").unwrap();
-    assert_eq!(
-      ops,
-      vec![ReplacementOp::Conditional {
-        test: Value::Arg(1),
-        then_ops: vec![ReplacementOp::OpenElement {
-          qname: "a".into(),
-          attrs: vec![],
-          float: None,
-          self_closing: true,
-        }],
-        else_ops: vec![ReplacementOp::OpenElement {
-          qname: "b".into(),
-          attrs: vec![],
-          float: None,
-          self_closing: true,
-        }],
-      }]
-    );
+    assert_eq!(ops, vec![ReplacementOp::Conditional {
+      test:     Value::Arg(1),
+      then_ops: vec![ReplacementOp::OpenElement {
+        qname:        "a".into(),
+        attrs:        vec![],
+        float:        None,
+        self_closing: true,
+      }],
+      else_ops: vec![ReplacementOp::OpenElement {
+        qname:        "b".into(),
+        attrs:        vec![],
+        float:        None,
+        self_closing: true,
+      }],
+    }]);
   }
 
   #[test]
   fn prop_hole_at_content_and_arg_distinguished() {
     let ops = parse_replacement("#mark#2").unwrap();
-    assert_eq!(
-      ops,
-      vec![
-        ReplacementOp::AbsorbValue { value: Value::Prop("mark".into()) },
-        ReplacementOp::AbsorbValue { value: Value::Arg(2) },
-      ]
-    );
+    assert_eq!(ops, vec![
+      ReplacementOp::AbsorbValue {
+        value: Value::Prop("mark".into()),
+      },
+      ReplacementOp::AbsorbValue { value: Value::Arg(2) },
+    ]);
   }
 
   #[test]
   fn func_value_parses() {
     let ops = parse_replacement("<a x='&ToString(#1)'/>").unwrap();
-    let ReplacementOp::OpenElement { attrs, .. } = &ops[0] else { panic!() };
-    assert_eq!(
-      attrs,
-      &vec![AttrPair::KeyValue {
-        key: "x".into(),
-        value: AttrValue {
-          parts: vec![AttrPart::Value(Value::Func {
-            name: "ToString".into(),
-            args: vec![FuncArg::Value(Value::Arg(1))],
-          })],
-        },
-      }]
-    );
+    let ReplacementOp::OpenElement { attrs, .. } = &ops[0] else {
+      panic!()
+    };
+    assert_eq!(attrs, &vec![AttrPair::KeyValue {
+      key:   "x".into(),
+      value: AttrValue {
+        parts: vec![AttrPart::Value(Value::Func {
+          name: "ToString".into(),
+          args: vec![FuncArg::Value(Value::Arg(1))],
+        })],
+      },
+    }]);
   }
 
   #[test]
@@ -1133,7 +1194,10 @@ mod tests {
     // role literal + conditional mark attr (mark prop present ⇒ branch taken),
     // and the mark value is rendered via the Stored's `to_attribute()`.
     let mk = Stored::String(arena::pin("MK")).to_attribute();
-    assert_eq!(av, vec![("role".to_string(), "footnote".to_string()), ("mark".to_string(), mk)]);
+    assert_eq!(av, vec![
+      ("role".to_string(), "footnote".to_string()),
+      ("mark".to_string(), mk)
+    ]);
   }
 
   #[test]
@@ -1146,16 +1210,32 @@ mod tests {
   #[test]
   fn footnote_prenote_condition_truth_test() {
     // `?#prenote(...)` truth test mirrors codegen: present non-"false" ⇒ true.
-    assert!(eval_bool(&Value::Prop("prenote".into()), &[], &props_with(&[("prenote", "P")])).unwrap());
+    assert!(
+      eval_bool(
+        &Value::Prop("prenote".into()),
+        &[],
+        &props_with(&[("prenote", "P")])
+      )
+      .unwrap()
+    );
     assert!(!eval_bool(&Value::Prop("prenote".into()), &[], &SymHashMap::default()).unwrap());
-    assert!(!eval_bool(&Value::Prop("x".into()), &[], &props_with(&[("x", "false")])).unwrap());
+    assert!(
+      !eval_bool(
+        &Value::Prop("x".into()),
+        &[],
+        &props_with(&[("x", "false")])
+      )
+      .unwrap()
+    );
     assert!(!eval_bool(&Value::Prop("x".into()), &[], &props_with(&[("x", "")])).unwrap());
   }
 
   #[test]
   fn pi_attr_interpolation_uses_to_attribute_and_conditional() {
     let ops = parse_replacement("<?latexml class='#2' ?#1(options='#1')?>").unwrap();
-    let ReplacementOp::ProcessingInstruction { attrs, .. } = &ops[0] else { panic!() };
+    let ReplacementOp::ProcessingInstruction { attrs, .. } = &ops[0] else {
+      panic!()
+    };
 
     let a1 = dig("opts");
     let a2 = dig("article");
@@ -1163,13 +1243,10 @@ mod tests {
     let av = eval_avpairs(attrs, &args, &SymHashMap::default()).unwrap();
     // Both `#1` and `#2` render via Digested::to_attribute (the codegen rule),
     // and the `?#1(...)` conditional fires because arg 1 is present.
-    assert_eq!(
-      av,
-      vec![
-        ("class".to_string(), a2.to_attribute()),
-        ("options".to_string(), a1.to_attribute()),
-      ]
-    );
+    assert_eq!(av, vec![
+      ("class".to_string(), a2.to_attribute()),
+      ("options".to_string(), a1.to_attribute()),
+    ]);
 
     // arg 1 absent ⇒ the conditional avpair drops out; class (arg 2) stays.
     let av2 = eval_avpairs(attrs, &[None, Some(a2.clone())], &SymHashMap::default()).unwrap();
@@ -1181,16 +1258,17 @@ mod tests {
     // Codegen drops a literal `font=` attribute (the open font comes from
     // props["font"] instead). The interpreter must too.
     let ops = parse_replacement("<ltx:x font='ignored' class='keep'/>").unwrap();
-    let ReplacementOp::OpenElement { attrs, .. } = &ops[0] else { panic!() };
+    let ReplacementOp::OpenElement { attrs, .. } = &ops[0] else {
+      panic!()
+    };
     let av = eval_avpairs(attrs, &[], &SymHashMap::default()).unwrap();
     assert_eq!(av, vec![("class".to_string(), "keep".to_string())]);
   }
 
   #[test]
   fn plain_text_only() {
-    assert_eq!(
-      parse_replacement("hello world").unwrap(),
-      vec![ReplacementOp::Text { text: "hello world".into() }]
-    );
+    assert_eq!(parse_replacement("hello world").unwrap(), vec![
+      ReplacementOp::Text { text: "hello world".into() }
+    ]);
   }
 }

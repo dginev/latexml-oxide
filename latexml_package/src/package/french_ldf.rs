@@ -247,22 +247,22 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@french@punct@colon", {
     enter_horizontal();
     let s = if in_french() { " :" } else { ":" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+    Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@semi", {
     enter_horizontal();
     let s = if in_french() { "\u{2006};" } else { ";" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+    Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@exclam", {
     enter_horizontal();
     let s = if in_french() { "\u{2006}!" } else { "!" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+    Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
   DefPrimitive!("\\lx@french@punct@question", {
     enter_horizontal();
     let s = if in_french() { "\u{2006}?" } else { "?" };
-    Tbox::new(arena::pin_static(s), None, None, Tokens!(), stored_map!())
+    Tbox::new(pin_static(s), None, None, Tokens!(), stored_map!())
   });
 
   // babel.def `\initiate@active@char{?}` (TL `babel/babel.def` L1372)

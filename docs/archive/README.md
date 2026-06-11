@@ -4,6 +4,17 @@ Snapshot audits and one-shot worksheets preserved for forensic context.
 Do not drive current planning from these files without revalidating on
 current `HEAD` — class/file layout, definitions, and counts have shifted.
 
+## Completed missions & resolved diagnostics (archived 2026-06-10)
+
+- `frontmatter_api_refactor.md` — design + decisions log for the upstream
+  LaTeXML PR #2767 frontmatter-API port. Implemented and landed (commit
+  `da495dd335`); kept as the historical design record.
+- `PORTABILITY_MACOS_PROBE_2026-06-07.md` — Phase-0 macOS native-dependency
+  probe for issue #217 (the kpathsea dichotomy → subprocess-`kpsewhich`
+  spec). Issue RESOLVED 2026-06-08: full suite green on `macos-15` arm64,
+  `kpathsea` 0.3.0 on crates.io, and the libxml2 merged-text-node
+  use-after-free fixed (WISDOM #58); macOS is now a gating CI job.
+
 ## Pre-Round-25 archive
 
 - `BABEL_TIMEOUT_BISECT.md` — 2026-04-26 babel/dump timeout bisection.

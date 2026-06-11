@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   DefRegister!("\\@bibunitauxcnt", Number::new(0));
   DefMacro!("\\bu@unitname", None, "bu\\the\\@bibunitauxcnt");
@@ -30,7 +29,7 @@ LoadDefinitions!({
   after_digest => {
     if !lookup_bool("CITE_UNIT_GLOBAL") {
       let unit = Digest!("\\bu@unitname")?.to_string();
-      assign_value("CITE_UNIT", arena::pin(s!("bibliography {unit}")), None);
+      assign_value("CITE_UNIT", pin(s!("bibliography {unit}")), None);
     }
   });
   // Perl: sets CITE_UNIT to "buN" if not global
@@ -38,7 +37,7 @@ LoadDefinitions!({
   after_digest => {
     if !lookup_bool("CITE_UNIT_GLOBAL") {
       let unit = Digest!("\\bu@unitname")?.to_string();
-      assign_value("CITE_UNIT", arena::pin(&unit), None);
+      assign_value("CITE_UNIT", pin(&unit), None);
     }
   });
 
@@ -86,7 +85,7 @@ LoadDefinitions!({
     } else {
       unit
     };
-    assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
+    assign_value("CITE_UNIT", pin(&cite_unit), None);
   });
 
   // Perl bibunits.sty.ltxml L72-76: {bibunit}[] env has afterDigestBegin
@@ -102,10 +101,10 @@ LoadDefinitions!({
     let style = if !arg_style.is_empty() {
       arg_style
     } else {
-      gullet::do_expand(T_CS!("\\bu@bibstyle")).map(|t| t.to_string()).unwrap_or_default()
+      do_expand(T_CS!("\\bu@bibstyle")).map(|t| t.to_string()).unwrap_or_default()
     };
     if !style.is_empty() {
-      crate::engine::latex_constructs::set_bibstyle(&style);
+      engine::latex_constructs::set_bibstyle(&style);
     }
     // startBibunit() equivalent: step counter + set CITE_UNIT.
     Digest!("\\global\\advance\\@bibunitauxcnt1")?;
@@ -115,7 +114,7 @@ LoadDefinitions!({
     } else {
       unit
     };
-    assign_value("CITE_UNIT", arena::pin(&cite_unit), None);
+    assign_value("CITE_UNIT", pin(&cite_unit), None);
   });
 
   DefMacro!(
@@ -126,14 +125,14 @@ LoadDefinitions!({
   // Perl: make \bibliography reset the backmatter element
   Let!("\\bu@orig@bibliography", "\\bibliography");
   // Store original backmatter element for bibliography
-  if let Some(orig) = state::lookup_mapping("BACKMATTER_ELEMENT", "ltx:bibliography") {
+  if let Some(orig) = lookup_mapping("BACKMATTER_ELEMENT", "ltx:bibliography") {
     assign_value("ORIG_BIBUNIT", orig, None);
   }
   DefMacro!("\\bibliography", "\\lx@reset@bibunit\\bu@orig@bibliography");
   DefPrimitive!("\\lx@reset@bibunit", None,
   after_digest => {
     if let Some(orig) = lookup_value("ORIG_BIBUNIT") {
-      state::assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(orig));
+      assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(orig));
     }
   });
 });

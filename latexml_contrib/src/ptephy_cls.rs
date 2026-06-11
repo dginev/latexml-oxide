@@ -18,10 +18,14 @@ LoadDefinitions!({
   // Both args carry author-typed data: a preprint identifier and a
   // PTEP subject-area code (used for indexing). Silent gobble would
   // lose both.
-  DefMacro!("\\preprintnumber[]{}",
-    "\\@add@frontmatter{ltx:note}[role=preprintnumber]{#2}");
-  DefMacro!("\\subjectindex{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=PTEP-subject]{#1}");
+  DefMacro!(
+    "\\preprintnumber[]{}",
+    "\\@add@frontmatter{ltx:note}[role=preprintnumber]{#2}"
+  );
+  DefMacro!(
+    "\\subjectindex{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=PTEP-subject]{#1}"
+  );
 
   // \ack — Acknowledgements section opener (used in OUP / PTEP class).
   // Used as `\ack <paragraph>` (no body) — keep as starred section to
@@ -29,6 +33,8 @@ LoadDefinitions!({
   DefMacro!("\\ack", "\\section*{Acknowledgements}");
   // \acknow{body} — bracketed form. Emit as structural
   // ltx:acknowledgements (post-processors map to canonical role/styling).
-  DefConstructor!("\\acknow{}",
-    "<ltx:acknowledgements>#1</ltx:acknowledgements>");
+  DefConstructor!(
+    "\\acknow{}",
+    "<ltx:acknowledgements>#1</ltx:acknowledgements>"
+  );
 });

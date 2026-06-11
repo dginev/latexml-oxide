@@ -1,7 +1,10 @@
-use crate::common::glue::Glue;
-use crate::definition::register::RegisterType;
-use crate::token::{Catcode, Token};
 use std::fmt::Display;
+
+use crate::{
+  common::glue::Glue,
+  definition::register::RegisterType,
+  token::{Catcode, Token},
+};
 
 pub const UNITY: i64 = 65536;
 pub const UNITY_F64: f64 = 65536.0;

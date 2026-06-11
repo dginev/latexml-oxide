@@ -3,8 +3,8 @@
 //! titleref provides `\titleref{label}` to cross-reference the TITLE
 //! of a section/caption (rather than its number, like `\ref{label}`).
 //! Implementation details:
-//!  * Redefines `\label` to wrap `\@currentlabel` in a
-//!    `\TR@TitleReference{<number>}{<title>}` capture during `\edef`.
+//!  * Redefines `\label` to wrap `\@currentlabel` in a `\TR@TitleReference{<number>}{<title>}`
+//!    capture during `\edef`.
 //!  * Redefines `\@caption`, `\@sect`, etc. to also stash the title.
 //!
 //! Raw-loading titleref.sty into our engine is fragile: titleref's
@@ -16,13 +16,10 @@
 //! cascades that swamp `\caption` (driver: 1103.2227).
 //!
 //! Provide a minimal stub that:
-//!  * Defines `\titleref` as a thin alias for `\ref` (the next-best
-//!    behavior for HTML output — we lose the actual section-title text
-//!    but produce a working cross-reference).
-//!  * Stubs `\theTitleReference`, `\currenttitle`, and the package
-//!    options as harmless no-ops.
-//!  * Does NOT redefine `\label`, `\@caption`, or any kernel
-//!    sectioning command.
+//!  * Defines `\titleref` as a thin alias for `\ref` (the next-best behavior for HTML output — we
+//!    lose the actual section-title text but produce a working cross-reference).
+//!  * Stubs `\theTitleReference`, `\currenttitle`, and the package options as harmless no-ops.
+//!  * Does NOT redefine `\label`, `\@caption`, or any kernel sectioning command.
 //!
 //! Matches Perl's effective behavior: Perl LaTeXML also has no
 //! titleref binding; with the default `INCLUDE_STYLES=false` Perl

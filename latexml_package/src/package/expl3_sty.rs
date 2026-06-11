@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use regex::Regex;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -54,11 +55,11 @@ LoadDefinitions!({
   // expl3-code.tex. On the dump path the guard short-circuits the
   // re-load and the dump already provides the right state.
   if raw_load_will_run {
-    state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
-    state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
+    assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
+    assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
     raw_tex(r"\protected\gdef\__kernel_msg_info:nnxx#1#2#3#4{}")?;
-    state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-    state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+    assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+    assign_catcode('_', Catcode::SUB, Some(Scope::Global));
   }
 
   // expl3 case-folding override.
@@ -174,15 +175,15 @@ LoadDefinitions!({
   // Verified: 2406.14142: 21 errors → 0 (was last historical
   // REAL_REGRESSION). Min-repro `\regex_match:nnTF{\d+}{abc}{T}{F}`
   // now correctly returns F (matches Perl LaTeXML behaviour).
-  state::assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
+  assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
+  assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
 
   // \regex_const:Nn \cs {pattern} — store pattern keyed by CS name.
   DefMacro!(T_CS!("\\regex_const:Nn"), "DefToken {}", sub[(cs, pattern)] {
     let cs_name = cs.to_string();
     let pattern_str = pattern.to_string();
-    state::assign_value(&format!("regex_pattern:{}", cs_name),
-                        Stored::String(arena::pin(&pattern_str)),
+    assign_value(&format!("regex_pattern:{}", cs_name),
+                        Stored::String(pin(&pattern_str)),
                         Some(Scope::Global));
   });
 
@@ -192,8 +193,8 @@ LoadDefinitions!({
     let cs_name = cs.to_string();
     let target_str = target.to_string();
     let key = format!("regex_pattern:{}", cs_name);
-    let pattern = state::with_value(&key, |v| match v {
-      Some(Stored::String(s)) => arena::to_string(*s),
+    let pattern = with_value(&key, |v| match v {
+      Some(Stored::String(s)) => to_string(*s),
       _ => String::new(),
     });
     let matches = !pattern.is_empty() && match Regex::new(&expl3_to_rust_regex(&pattern)) {
@@ -207,8 +208,8 @@ LoadDefinitions!({
     let cs_name = cs.to_string();
     let target_str = target.to_string();
     let key = format!("regex_pattern:{}", cs_name);
-    let pattern = state::with_value(&key, |v| match v {
-      Some(Stored::String(s)) => arena::to_string(*s),
+    let pattern = with_value(&key, |v| match v {
+      Some(Stored::String(s)) => to_string(*s),
       _ => String::new(),
     });
     let matches = !pattern.is_empty() && match Regex::new(&expl3_to_rust_regex(&pattern)) {
@@ -222,8 +223,8 @@ LoadDefinitions!({
     let cs_name = cs.to_string();
     let target_str = target.to_string();
     let key = format!("regex_pattern:{}", cs_name);
-    let pattern = state::with_value(&key, |v| match v {
-      Some(Stored::String(s)) => arena::to_string(*s),
+    let pattern = with_value(&key, |v| match v {
+      Some(Stored::String(s)) => to_string(*s),
       _ => String::new(),
     });
     let matches = !pattern.is_empty() && match Regex::new(&expl3_to_rust_regex(&pattern)) {
@@ -265,8 +266,8 @@ LoadDefinitions!({
     if matches { Vec::new() } else { f_toks.unlist() }
   });
 
-  state::assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
-  state::assign_catcode('_', Catcode::SUB, Some(Scope::Global));
+  assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
+  assign_catcode('_', Catcode::SUB, Some(Scope::Global));
   // Also restore `~` to ACTIVE (13). `\usepackage{expl3}` in real LaTeX
   // leaves expl3 syntax OFF — `~` back to its document catcode (13/active),
   // not the expl3 `~`=10 (SPACE). Our raw expl3-code.tex load leaves `~` at
@@ -277,7 +278,7 @@ LoadDefinitions!({
   // repro `\usepackage{expl3}\usepackage[english]{babel}` (2 errors → 0).
   // `~` is not an expl3 LETTER char (unlike `:`/`_`), so this is glossary-safe.
   // Complements the per-package restore in xparse_sty.rs / siunitx_sty.rs.
-  state::assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
+  assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
 });
 
 /// Translate an expl3 regex pattern string into a Rust regex.

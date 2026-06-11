@@ -57,7 +57,7 @@ LoadDefinitions!({
              "\\normalfont", "\\rmfamily", "\\sffamily", "\\ttfamily",
              "\\mdseries", "\\bfseries", "\\upshape", "\\itshape",
              "\\slshape", "\\scshape"] {
-    if !state::has_meaning(&T_CS!(sz)) {
+    if !has_meaning(&T_CS!(sz)) {
       def_macro(T_CS!(sz), None, None, None)?;
     }
   }
@@ -111,9 +111,9 @@ LoadDefinitions!({
 
   // Perl amsppt.sty.ltxml L133-141: \subheading dispatches on next token.
   DefMacro!("\\subheading", sub[_args] {
-    let next = gullet::read_token()?;
+    let next = read_token()?;
     if let Some(t) = next {
-      gullet::unread(Tokens!(t));
+      unread(Tokens!(t));
       if t.get_catcode() == Catcode::BEGIN {
         return Ok(Tokens!(T_CS!("\\subheading@onearg")));
       }
@@ -196,7 +196,7 @@ LoadDefinitions!({
     "<ltx:enumerate>#body</ltx:enumerate>",
     bounded => true,
     properties => sub[_args] { RefStepID!("roster") },
-    before_digest => { state::let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(state::Scope::Local)); });
+    before_digest => { let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(Scope::Local)); });
   DefConstructor!("\\roster@item",
     "<ltx:item xml:id='#id'>?#1(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)",
     properties => sub[_args] { RefStepID!("rosteritem") });
@@ -348,7 +348,7 @@ LoadDefinitions!({
       let id_str = digest_text(Tokens!(T_CS!("\\the@lx@bibliography@ID")))?
         .to_string();
       let mut props = SymHashMap::default();
-      props.insert("id", Stored::String(arena::pin(&id_str)));
+      props.insert("id", Stored::String(pin(&id_str)));
       Ok(props)
     });
   DefConstructor!("\\end@Refs", "</ltx:bibliography>");
@@ -376,7 +376,7 @@ LoadDefinitions!({
     }
     if !tk_vec.is_empty() {
       let key = format!("amsbibitem@{}", field);
-      state::assign_value(&key, Stored::Tokens(Tokens::new(tk_vec)), None);
+      assign_value(&key, Stored::Tokens(Tokens::new(tk_vec)), None);
     }
     Ok(Tokens!())
   });
@@ -389,7 +389,7 @@ LoadDefinitions!({
       let field_name = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
       let class_str = format!("ltx_bib_{}", field_name);
       let mut props = SymHashMap::default();
-      props.insert("class", Stored::String(arena::pin(&class_str)));
+      props.insert("class", Stored::String(pin(&class_str)));
       Ok(props)
     });
   // Perl L445.
@@ -404,7 +404,7 @@ LoadDefinitions!({
     let mut body: Vec<Token> = Vec::new();
 
     fn lookup_field(field: &str) -> Option<Tokens> {
-      match state::lookup_value(&format!("amsbibitem@{}", field)) {
+      match lookup_value(&format!("amsbibitem@{}", field)) {
         Some(Stored::Tokens(t)) => Some(t),
         _ => None,
       }
@@ -457,18 +457,17 @@ LoadDefinitions!({
       body.push(T_END!());
     }
     // Authors / editors fallback (Perl L387-389).
-    if lookup_field("authors").is_none() {
-      if let Some(eds) = lookup_field("editors") {
+    if lookup_field("authors").is_none()
+      && let Some(eds) = lookup_field("editors") {
         let mut combined: Vec<Token> = eds.unlist();
         // `\space(\edtext)` suffix.
         combined.push(T_CS!("\\space"));
         combined.push(T_OTHER!("("));
         combined.push(T_CS!("\\edtext"));
         combined.push(T_OTHER!(")"));
-        state::assign_value("amsbibitem@authors",
+        assign_value("amsbibitem@authors",
           Stored::Tokens(Tokens::new(combined)), None);
       }
-    }
     pp(&mut body, None, None, "authors", None);
 
     if lookup_field("book").is_some() {

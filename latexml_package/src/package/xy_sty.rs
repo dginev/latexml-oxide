@@ -14,7 +14,7 @@ LoadDefinitions!({
   //   DefMacro('\xystycatcode', sub { Explode(LookupCatcode('@')); });
   // Dynamically expands to the digit chars of `@`'s current catcode.
   DefMacro!("\\xystycatcode", sub[_args] {
-    let cc = state::lookup_catcode('@')
+    let cc = lookup_catcode('@')
       .map(|cc| cc as u8).unwrap_or(12);
     Tokens!(Explode!(s!("{}", cc)))
   });
@@ -31,11 +31,11 @@ LoadDefinitions!({
   // ends up restoring `@` to LETTER — but the .xyc compile body relies
   // on `\xycatcodes` having already set `@` = LETTER, and the local
   // group-pop expectation breaks.
-  let saved_at_cc_before_xy = state::lookup_catcode('@');
-  state::assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
+  let saved_at_cc_before_xy = lookup_catcode('@');
+  assign_catcode('@', Catcode::OTHER, Some(Scope::Global));
   InputDefinitions!("xy", noltxml => true, extension => Some(Cow::Borrowed("tex")), at_letter => false);
   if let Some(cc) = saved_at_cc_before_xy {
-    state::assign_catcode('@', cc, Some(Scope::Global));
+    assign_catcode('@', cc, Some(Scope::Global));
   }
 
   //======================================================================
@@ -78,14 +78,14 @@ LoadDefinitions!({
         s!("The xy extension/feature {} may not be supported", option_s));
     }
     let cache_key = s!("loaded_xyoption_{}", option_s);
-    if state::lookup_bool(&cache_key) {
+    if lookup_bool(&cache_key) {
       return Ok(Tokens!());
     }
-    state::assign_value(&cache_key, true, Some(Scope::Global));
+    assign_value(&cache_key, true, Some(Scope::Global));
     // Special case: "latexml" driver — load our Rust xylatexml overlay directly
     // since the file xylatexml.tex doesn't exist on disk (it's compiled into the binary).
     if option_s == "latexml" {
-      crate::package::xylatexml_tex::load_definitions()?;
+      xylatexml_tex::load_definitions()?;
       return Ok(Tokens!());
     }
     // Special case: "all" — xyall.tex `\xyrequire`s every xy feature
@@ -198,7 +198,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@xy@capturerange", {
     let mut dims = String::new();
     for reg in ["\\X@min", "\\Y@min", "\\X@max", "\\Y@max"] {
-      match state::lookup_register(reg, Vec::new()) { Ok(Some(val)) => {
+      match lookup_register(reg, Vec::new()) { Ok(Some(val)) => {
         let sp = match val {
           RegisterValue::Dimension(d) => d.value_of(),
           RegisterValue::Number(n) => n.value_of(),
@@ -211,7 +211,7 @@ LoadDefinitions!({
         dims.push('0');
       }}
     }
-    state::assign_value("saved_xy_range", Stored::String(arena::pin(&dims)), Some(Scope::Global));
+    assign_value("saved_xy_range", Stored::String(pin(&dims)), Some(Scope::Global));
   });
 
   // Helper: read saved_xy_range as pixel values
@@ -226,7 +226,7 @@ LoadDefinitions!({
     sub[document, args, props] {
       // All values pre-computed at digest time via properties callback
       let get_s = |k: &str| -> String {
-        match props.get(k) { Some(Stored::String(s)) => arena::to_string(*s), _ => String::new() }
+        match props.get(k) { Some(Stored::String(s)) => to_string(*s), _ => String::new() }
       };
       let pxwidth = get_s("pxwidth");
       let pxheight = get_s("pxheight");
@@ -254,8 +254,8 @@ LoadDefinitions!({
     },
     // Perl: properties => sub { ... } — capture AND compute all values at digest time
     after_digest => sub[whatsit] {
-      let range_str = state::lookup_string("saved_xy_range");
-      let dpi_val = state::lookup_int("DPI");
+      let range_str = lookup_string("saved_xy_range");
+      let dpi_val = lookup_int("DPI");
       let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
       let dims: Vec<f64> = range_str.split(',')
         .filter_map(|s| s.trim().parse::<i64>().ok())
@@ -294,11 +294,11 @@ LoadDefinitions!({
   DefConstructor!("\\lx@xy@svgnested Digested",
     sub[document, args, props] {
       let transform = match props.get("transform") {
-        Some(Stored::String(s)) => arena::to_string(*s),
+        Some(Stored::String(s)) => to_string(*s),
         _ => String::from("matrix(1 0 0 1 0 0)"),
       };
       let g_attrs = string_map!("transform" => transform);
-      if crate::package::xylatexml_tex::svg_insertion_hopeless(document, "svg:g") {
+      if xylatexml_tex::svg_insertion_hopeless(document, "svg:g") {
         // Orphaned nested xy picture (outer \xy wrapper aborted) — skip,
         // see xylatexml_tex::svg_empty_element for witness/rationale.
       } else {
@@ -310,8 +310,8 @@ LoadDefinitions!({
       }
     },
     after_digest => sub[whatsit] {
-      let range_str = state::lookup_string("saved_xy_range");
-      let dpi_val = state::lookup_int("DPI");
+      let range_str = lookup_string("saved_xy_range");
+      let dpi_val = lookup_int("DPI");
       let dpi = if dpi_val > 0 { dpi_val as f64 } else { 100.0 };
       let dims: Vec<f64> = range_str.split(',')
         .filter_map(|s| s.trim().parse::<i64>().ok())
@@ -325,7 +325,7 @@ LoadDefinitions!({
       );
       let h = y1 - y0;
       let x_px = if x0 > 0.0 { x0 } else { 0.0 };
-      let in_math = state::lookup_bool_sym(pin!("IN_MATH"));
+      let in_math = lookup_bool_sym(pin!("IN_MATH"));
       let y_px = if in_math { -(h / 2.0) } else { 0.0 };
       whatsit.set_property("transform", Stored::from(
         s!("matrix(1 0 0 1 {} {})", x_px, y_px)));
@@ -394,8 +394,8 @@ LoadDefinitions!({
   // Catch-all: DeclareOption(undef, ...)
   // Perl: DeclareOption(undef, '\edef\next{\noexpand\xyoption{\CurrentOption}}\next');
   DeclareOption!(None, {
-    let current_option = gullet::do_expand(T_CS!("\\CurrentOption"))?.to_string();
-    gullet::unread(Tokenize!(&s!("\\xyoption{{{}}}", current_option)));
+    let current_option = do_expand(T_CS!("\\CurrentOption"))?.to_string();
+    unread(Tokenize!(&s!("\\xyoption{{{}}}", current_option)));
   });
 
   //======================================================================

@@ -1,29 +1,30 @@
 //! Interface layer for the full range of digested objects
-use libxml::tree::Node;
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::fmt;
-use std::rc::Rc;
+use std::{borrow::Cow, cell::RefCell, fmt, rc::Rc};
 
-use crate::alignment::Alignment;
-use crate::comment::Comment;
-use crate::common::arena::SymHashMap as HashMap;
-use crate::common::arena::{self, SymStr};
-use crate::common::dimension::Dimension;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::locator::Locator;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::definition::register::RegisterValue;
-use crate::document::Document;
-use crate::keyvals::KeyVals;
-use crate::list::List;
-use crate::tbox::Tbox;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
-use crate::{BoxOps, NO_PROPERTIES};
+use libxml::tree::Node;
+
+use crate::{
+  BoxOps, NO_PROPERTIES,
+  alignment::Alignment,
+  comment::Comment,
+  common::{
+    arena::{self, SymHashMap as HashMap, SymStr},
+    dimension::Dimension,
+    error::*,
+    font::Font,
+    locator::Locator,
+    numeric_ops::NumericOps,
+    object::Object,
+    store::Stored,
+  },
+  definition::register::RegisterValue,
+  document::Document,
+  keyvals::KeyVals,
+  list::List,
+  tbox::Tbox,
+  tokens::Tokens,
+  whatsit::Whatsit,
+};
 
 /// An `Rc`-guarded abstraction for any object encountered at the "digested" phase of processing
 // Each variant is wrapped in an `Rc`, for cheap(er) cloning when passing around
@@ -201,8 +202,8 @@ impl From<Comment> for Digested {
   fn from(value: Comment) -> Digested { Digested(Rc::new(DigestedData::Comment(value))) }
 }
 
-impl<'a> From<&'a Digested> for Option<crate::Digested> {
-  fn from(value: &'a Digested) -> Option<crate::Digested> { Some(value.clone()) }
+impl<'a> From<&'a Digested> for Option<Digested> {
+  fn from(value: &'a Digested) -> Option<Digested> { Some(value.clone()) }
 }
 
 // impl<'a> From<&'a Digested> for Tokens {
@@ -590,9 +591,7 @@ impl Digested {
     // `map_bytes`: a `SymHashMap` (hashbrown) allocates a control-byte table +
     // key/value slots at ~7/8 load; ~96 B per live entry plus the base table
     // covers control bytes, the `Stored` value enum, and growth slack.
-    fn map_bytes(n: usize) -> usize {
-      if n == 0 { 0 } else { 64 + n * 96 }
-    }
+    fn map_bytes(n: usize) -> usize { if n == 0 { 0 } else { 64 + n * 96 } }
     match self.data() {
       DigestedData::TBox(b) => {
         let mut bytes = NODE + 48;
@@ -634,9 +633,9 @@ impl Digested {
       },
       DigestedData::Postponed(_) => NODE + 32,
       DigestedData::Comment(_) => NODE + 16,
-      DigestedData::Alignment(_)
-      | DigestedData::KeyVals(_)
-      | DigestedData::RegisterValue(_) => NODE,
+      DigestedData::Alignment(_) | DigestedData::KeyVals(_) | DigestedData::RegisterValue(_) => {
+        NODE
+      },
     }
   }
 
@@ -739,17 +738,23 @@ impl Digested {
           || w.get_property_bool("alignmentSkippable")
         {
           true
-        } else { match w.get_body() { Ok(Some(body)) => {
-          body.is_skippable()
-        } _ => { match w.get_property("content_box") { Some(ref prop) => {
-          // Perl: $thing->getProperty('content_box') — for \hbox etc.
-          match &**prop {
-            Stored::Digested(cb) => cb.is_skippable(),
-            _ => false,
+        } else {
+          match w.get_body() {
+            Ok(Some(body)) => body.is_skippable(),
+            _ => {
+              match w.get_property("content_box") {
+                Some(ref prop) => {
+                  // Perl: $thing->getProperty('content_box') — for \hbox etc.
+                  match &**prop {
+                    Stored::Digested(cb) => cb.is_skippable(),
+                    _ => false,
+                  }
+                },
+                _ => false,
+              }
+            },
           }
-        } _ => {
-          false
-        }}}}}
+        }
       },
       Postponed(ref tks) => {
         // Perl checks token catcodes: letters, others, active, CS are NOT skippable
@@ -882,7 +887,11 @@ mod tests {
   }
 
   fn tbox_with(text: &str) -> Digested {
-    Tbox { text: arena::pin(text), ..Default::default() }.into()
+    Tbox {
+      text: arena::pin(text),
+      ..Default::default()
+    }
+    .into()
   }
   fn list_of(items: Vec<Digested>) -> Digested {
     List {

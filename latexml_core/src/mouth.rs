@@ -1,27 +1,26 @@
-use std::collections::VecDeque;
-use std::fmt;
-use std::fs::File;
-use std::io;
-use std::io::BufReader;
-use std::io::prelude::*;
-use std::str;
-
 use core::ops::RangeBounds;
+use std::{
+  collections::VecDeque,
+  fmt,
+  fs::File,
+  io,
+  io::{BufReader, prelude::*},
+  str,
+};
+
 // TODO:
 // use encoding::all::ISO_8859_1;
 // use encoding::{EncoderTrap, Encoding};
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use crate::common::error::*;
-use crate::common::locator::Locator;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::state;
-use crate::state::*;
-use crate::token::*;
-use crate::tokens::{NO_TOKENS, Tokens};
-use crate::util::pathname;
+use crate::{
+  common::{error::*, locator::Locator, numeric_ops::NumericOps, object::Object},
+  state::*,
+  token::*,
+  tokens::{NO_TOKENS, Tokens},
+  util::pathname,
+};
 
 static TRAILING_SPACE_CHARS: Lazy<Regex> = Lazy::new(|| Regex::new("(?s) +$").unwrap());
 
@@ -188,7 +187,7 @@ impl Mouth {
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
       // Read-log: a named cached-content open (filecontents / LSP overlay).
-      state::record_opened_source(crate::common::arena::pin(source));
+      record_opened_source(crate::common::arena::pin(source));
       Mouth::new(&content, Some(options))
     } else if source.starts_with("literal:") {
       let source = source.replacen("literal:", "", 1);
@@ -212,7 +211,7 @@ impl Mouth {
       // Read-log: a named file open (recorded even when the open then
       // fails — a pinned-but-missing path that later APPEARS must read
       // as a dependency change).
-      state::record_opened_source(crate::common::arena::pin(source));
+      record_opened_source(crate::common::arena::pin(source));
       Mouth::new(source, Some(options))
     }
   }
@@ -278,30 +277,30 @@ impl Mouth {
         Ok(meta) => {
           // Check for binary file (non-empty and appears binary)
           // Perl's -B heuristic: check first block for high proportion of non-text bytes
-          if meta.len() > 0 {
-            if let Ok(mut f) = File::open(pathname) {
-              let mut buf = [0u8; 512];
-              if let Ok(n) = f.read(&mut buf) {
-                if n > 0 {
-                  let non_text = buf[..n]
-                    .iter()
-                    .filter(|&&b| {
-                      b == 0 || (b < 0x20 && b != b'\n' && b != b'\r' && b != b'\t' && b != 0x1b)
-                    })
-                    .count();
-                  if non_text * 3 > n {
-                    // High ratio of non-text bytes — likely binary
-                    Error!(
-                      "invalid",
-                      "binary",
-                      s!("Input file {} appears to be binary. Ignoring.", pathname),
-                      "",
-                      "",
-                      self.get_location()
-                    );
-                    return Ok(());
-                  }
-                }
+          if meta.len() > 0
+            && let Ok(mut f) = File::open(pathname)
+          {
+            let mut buf = [0u8; 512];
+            if let Ok(n) = f.read(&mut buf)
+              && n > 0
+            {
+              let non_text = buf[..n]
+                .iter()
+                .filter(|&&b| {
+                  b == 0 || (b < 0x20 && b != b'\n' && b != b'\r' && b != b'\t' && b != 0x1b)
+                })
+                .count();
+              if non_text * 3 > n {
+                // High ratio of non-text bytes — likely binary
+                Error!(
+                  "invalid",
+                  "binary",
+                  s!("Input file {} appears to be binary. Ignoring.", pathname),
+                  "",
+                  "",
+                  self.get_location()
+                );
+                return Ok(());
               }
             }
           }
@@ -406,10 +405,10 @@ impl Mouth {
     if let Some(sic) = self.saved_include_comments.take() {
       assign_value("INCLUDE_COMMENTS", sic, Some(Scope::Local))
     }
-    if self.notes {
-      if let Some(ref msg) = self.note_message {
-        note_end(msg);
-      }
+    if self.notes
+      && let Some(ref msg) = self.note_message
+    {
+      note_end(msg);
     }
   }
   // Auxiliaries
@@ -419,10 +418,10 @@ impl Mouth {
   /// Note that TeX considers newlines to be \r, ie CR, ie ^^M
   fn split_lines(lines: &str) -> VecDeque<String> {
     let mut lines: VecDeque<String> = LINEBREAK_REGEX.split(lines).map(str::to_owned).collect();
-    if let Some(last_line) = lines.back() {
-      if last_line.is_empty() {
-        lines.pop_back();
-      }
+    if let Some(last_line) = lines.back()
+      && last_line.is_empty()
+    {
+      lines.pop_back();
     }
     lines
   }
@@ -536,28 +535,28 @@ impl Mouth {
         self.buffer.push_back(decoded);
       }
     }
-    if self.buffer.is_empty() {
-      if let Some(ref mut reader) = self.reader {
-        // file mouth case — read all bytes, split into raw lines, decode lazily
-        let mut file_bytes = Vec::new();
-        let _num_bytes = match reader.read_to_end(&mut file_bytes) {
-          Ok(count) => count,
-          Err(e) => {
-            let message = s!("BufReader::read_to_end returned an error: {:?}", e);
-            Warn!("mouth", "io", message, "", "", self.get_location());
-            0
-          },
-        };
-        // remove the now exhausted reader
-        self.reader.take();
-        // Split raw bytes into lines without decoding (preserving raw bytes).
-        // Each line is decoded lazily via decode_bytes() using the CURRENT encoding.
-        self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
-        // Decode the first line now
-        if let Some(raw_line) = self.raw_buffer.pop_front() {
-          let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
-          self.buffer.push_back(decoded);
-        }
+    if self.buffer.is_empty()
+      && let Some(ref mut reader) = self.reader
+    {
+      // file mouth case — read all bytes, split into raw lines, decode lazily
+      let mut file_bytes = Vec::new();
+      let _num_bytes = match reader.read_to_end(&mut file_bytes) {
+        Ok(count) => count,
+        Err(e) => {
+          let message = s!("BufReader::read_to_end returned an error: {:?}", e);
+          Warn!("mouth", "io", message, "", "", self.get_location());
+          0
+        },
+      };
+      // remove the now exhausted reader
+      self.reader.take();
+      // Split raw bytes into lines without decoding (preserving raw bytes).
+      // Each line is decoded lazily via decode_bytes() using the CURRENT encoding.
+      self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
+      // Decode the first line now
+      if let Some(raw_line) = self.raw_buffer.pop_front() {
+        let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+        self.buffer.push_back(decoded);
       }
     }
     self.buffer.pop_front()
@@ -586,20 +585,20 @@ impl Mouth {
         let c2_opt = self.chars.get(self.colno + 2);
         let mut two_hex = false;
         // ^^ followed by TWO LOWERCASE Hex digits???
-        if let Some(c1) = c1_opt {
-          if let Some(c2) = c2_opt {
-            // Perf: avoid per-char String alloc + regex match by using
-            // direct ASCII class check. LOWERHEX_REGEX = ^[0-9a-f]$, i.e.
-            // lowercase hex digits only.
-            let is_lowerhex = |c: char| -> bool { matches!(c, '0'..='9' | 'a'..='f') };
-            if (self.colno + 2 < self.nchars) && is_lowerhex(*c1) && is_lowerhex(*c2) {
-              // TODO: Maybe Result type warranted here?
-              let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap();
-              ch = hex as char;
-              self.splice(self.colno - 1..self.colno + 3, &[ch]);
-              self.nchars -= 3;
-              two_hex = true;
-            }
+        if let Some(c1) = c1_opt
+          && let Some(c2) = c2_opt
+        {
+          // Perf: avoid per-char String alloc + regex match by using
+          // direct ASCII class check. LOWERHEX_REGEX = ^[0-9a-f]$, i.e.
+          // lowercase hex digits only.
+          let is_lowerhex = |c: char| -> bool { matches!(c, '0'..='9' | 'a'..='f') };
+          if (self.colno + 2 < self.nchars) && is_lowerhex(*c1) && is_lowerhex(*c2) {
+            // TODO: Maybe Result type warranted here?
+            let hex = u8::from_str_radix(&s!("{}{}", c1, c2), 16).unwrap();
+            ch = hex as char;
+            self.splice(self.colno - 1..self.colno + 3, &[ch]);
+            self.nchars -= 3;
+            two_hex = true;
           }
         }
         if !two_hex {
@@ -650,25 +649,26 @@ impl Mouth {
         let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
         let read_mode = lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = match lookup_definition(&T_CS!("\\endlinechar")).unwrap() { Some(defn) => {
-          if defn.is_register() {
-            if let Some(eol) = defn.value_of(Vec::new()) {
-              let eol = eol.value_of() as i16;
-              if eol > 0 && eol <= 255 {
-                let mch = (eol as u8) as char;
-                Some(mch)
+        let eolch = match lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
+          Some(defn) => {
+            if defn.is_register() {
+              if let Some(eol) = defn.value_of(Vec::new()) {
+                let eol = eol.value_of() as i16;
+                if eol > 0 && eol <= 255 {
+                  let mch = (eol as u8) as char;
+                  Some(mch)
+                } else {
+                  None
+                }
               } else {
                 None
               }
             } else {
               None
             }
-          } else {
-            None
-          }
-        } _ => {
-          Some('\r')
-        }};
+          },
+          _ => Some('\r'),
+        };
         if line_opt.is_none() {
           // Exhausted the input.
           let eolcc = if let Some(ch) = eolch {
@@ -904,12 +904,12 @@ impl Mouth {
         }
       }, // T_SUB
       SPACE => self.handle_space(),
-      LETTER => Some(CharToken!(ch, Catcode::LETTER)),
-      OTHER => Some(CharToken!(ch, Catcode::OTHER)),
+      LETTER => Some(CharToken!(ch, LETTER)),
+      OTHER => Some(CharToken!(ch, OTHER)),
       ACTIVE => Some(T_ACTIVE!(ch)),
       COMMENT => self.handle_comment(),
-      INVALID => Some(CharToken!(ch, Catcode::OTHER)), // T_INVALID (we could get unicode!)
-      _ => None,                                       // IGNORE, others
+      INVALID => Some(CharToken!(ch, OTHER)), // T_INVALID (we could get unicode!)
+      _ => None,                              // IGNORE, others
     }
   }
 
@@ -1056,9 +1056,9 @@ pub fn tokenize(text: &str) -> Tokens {
   if text.is_empty() {
     return NO_TOKENS;
   }
-  state::use_std_state();
+  use_std_state();
   let result = Mouth::new(text, None).unwrap().read_tokens();
-  state::use_main_state();
+  use_main_state();
   result
 }
 pub fn tokenize_internal(text: &str) -> Tokens {
@@ -1066,8 +1066,8 @@ pub fn tokenize_internal(text: &str) -> Tokens {
   if text.is_empty() {
     return NO_TOKENS;
   }
-  state::use_sty_state();
+  use_sty_state();
   let result = Mouth::new(text, None).unwrap().read_tokens();
-  state::use_main_state();
+  use_main_state();
   result
 }

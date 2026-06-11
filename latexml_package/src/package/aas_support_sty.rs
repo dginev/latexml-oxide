@@ -1,5 +1,7 @@
-use crate::engine::latex_constructs::{after_float, before_float_ex};
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{after_float, before_float_ex},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -218,10 +220,10 @@ LoadDefinitions!({
   DefMacro!("\\fig Semiverbatim Token", sub[(arg, test)] {
     // Push back the args in correct order so the dispatched CS reads them.
     // Push order is reversed for stack semantics: last unread is first read.
-    gullet::unread_one(test);
-    gullet::unread_one(T_END!());
-    gullet::unread_vec(arg.unlist());
-    gullet::unread_one(T_BEGIN!());
+    unread_one(test);
+    unread_one(T_END!());
+    unread_vec(arg.unlist());
+    unread_one(T_BEGIN!());
     if test.get_catcode() == Catcode::BEGIN {
       Ok(Tokens!(T_CS!("\\aas@fig")))
     } else {
@@ -320,7 +322,7 @@ LoadDefinitions!({
     "\\references",
     "<ltx:bibliography xml:id='#id'><ltx:biblist>",
     after_digest => sub[whatsit] {
-      crate::engine::latex_constructs::begin_bibliography(whatsit)?;
+      engine::latex_constructs::begin_bibliography(whatsit)?;
     }
   );
   DefConstructor!(
@@ -353,7 +355,7 @@ LoadDefinitions!({
   // If yes → \caption; if no → \@figcaption (wraps in figure env).
   DefMacro!("\\@figcaption {}", "\\begin{figure}#1\\end{figure}");
   DefMacro!("\\figcaption OptionalSemiverbatim", sub[(opt_arg)] {
-    let env = state::lookup_string_from_sym(pin!("current_environment"));
+    let env = lookup_string_from_sym(pin!("current_environment"));
     if env.contains("figure") {
       // Inside figure: act as \caption
       if let Some(opt) = opt_arg {
@@ -375,8 +377,8 @@ LoadDefinitions!({
   // Perl: aas_support.sty.ltxml L380-383
   Let!("\\splitdeluxetable", "\\deluxetable");
   Let!("\\endsplitdeluxetable", "\\enddeluxetable");
-  state::let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
-  state::let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
+  let_i(&T_CS!("\\splitdeluxetable*"), &T_CS!("\\deluxetable*"), None);
+  let_i(&T_CS!("\\endsplitdeluxetable*"), &T_CS!("\\enddeluxetable*"), None);
 
   // aastex631.cls L4780-4781:
   //   \newif\ifstartlongtable
@@ -390,7 +392,7 @@ LoadDefinitions!({
   // used by aas deluxetable tokenizes literal `$` from the template, so
   // the package stashes an active math-shift token into `\savedollar`
   // for later re-insertion. Port via state::let_i with T_MATH!().
-  state::let_i(&T_CS!("\\savedollar"), &T_MATH!(), None);
+  let_i(&T_CS!("\\savedollar"), &T_MATH!(), None);
 
   // Decimal table conditionals — Perl L338-345
   DefConditional!("\\ifcolnumberson");
@@ -417,19 +419,19 @@ LoadDefinitions!({
   // conversion gap, so the snapshot-regression risk is measurable.
   DefColumnType!("h", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
         after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
   DefColumnType!("B", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_BEGIN!(), T_CS!("\\eatone"))),
         after:  Some(Tokens!(T_CS!("\\endeatone"), T_END!())),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
@@ -446,26 +448,26 @@ LoadDefinitions!({
   // c/l/r (the savedollar dance is unnecessary for our text-mode cells).
   DefColumnType!("C", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
         after:  Some(Tokens!(T_CS!("\\hfil"))),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
   DefColumnType!("L", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         after: Some(Tokens!(T_CS!("\\hfil"))),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
   DefColumnType!("R", {
     with_current_build_template(|template_opt| {
-      template_opt.unwrap().add_column(latexml_core::alignment::cell::Cell {
+      template_opt.unwrap().add_column(Cell {
         before: Some(Tokens!(T_CS!("\\hfil"))),
-        ..latexml_core::alignment::cell::Cell::default()
+        ..Cell::default()
       })
     });
   });
@@ -564,7 +566,7 @@ LoadDefinitions!({
     reversion => "#1",
     sizer => "#2",
     properties => sub[_args] {
-      Ok(stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())))
+      Ok(stored_map!("scriptpos" => s!("mid{}", get_script_level())))
     }
   );
 

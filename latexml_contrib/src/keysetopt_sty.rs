@@ -10,7 +10,7 @@ LoadDefinitions!({
 
   ProcessOptions!(keysets => ["KSO"]);
 
-  let captured = state::lookup_value("KV@KSO@value")
+  let captured = lookup_value("KV@KSO@value")
     .map(|v| v.to_string())
     .unwrap_or_else(|| "unset".to_string());
   def_macro(

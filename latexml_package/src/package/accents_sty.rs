@@ -20,7 +20,7 @@ LoadDefinitions!({
     let toks = thing.unlist();
     // Must be a single token, with a definition that has exactly 1 parameter
     let is_accent = toks.len() == 1 && {
-      match state::lookup_definition(&toks[0])? { Some(defn) => {
+      match lookup_definition(&toks[0])? { Some(defn) => {
         defn.get_num_args() == 1
       } _ => {
         false

@@ -5,7 +5,6 @@
 //! \headers, \dedicatory) on top of OmniBus's article-like behaviour.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // siamart220329.cls L58: \RequirePackage[leqno]{amsmath}.
@@ -55,12 +54,18 @@ LoadDefinitions!({
   // frontmatter notes (the funding text is often a real funding
   // statement worth keeping). \headers{left}{right} → running-head
   // text, preserve as ltx:note.
-  DefMacro!("\\headers{}{}",
-    "\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}");
-  DefMacro!("\\dedicatory{}",
-    "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}");
-  DefMacro!("\\fundingsource{}",
-    "\\@add@frontmatter{ltx:note}[role=funding-source]{#1}");
+  DefMacro!(
+    "\\headers{}{}",
+    "\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}"
+  );
+  DefMacro!(
+    "\\dedicatory{}",
+    "\\@add@frontmatter{ltx:note}[role=dedicatory]{#1}"
+  );
+  DefMacro!(
+    "\\fundingsource{}",
+    "\\@add@frontmatter{ltx:note}[role=funding-source]{#1}"
+  );
   // siamart papers often \externaldocument supplement/article before
   // loading xr — pre-stub. siamart loads xr-hyper (not xr), which
   // supports `\externaldocument[prefix][nocite]{file}` (two optional
@@ -77,8 +82,10 @@ LoadDefinitions!({
   // DefConstructor of ltx:acknowledgements there fires
   // Error:malformed:ltx:acknowledgements isn't allowed in <ltx:note>.
   // Witness 2311.08549.
-  DefMacro!("\\funding{}",
-    "\\@add@frontmatter{ltx:acknowledgements}[name=Funding]{#1}");
+  DefMacro!(
+    "\\funding{}",
+    "\\@add@frontmatter{ltx:acknowledgements}[name=Funding]{#1}"
+  );
   // {MSCcodes} env — siamart220329 L743 wraps content in an "@abssec"
   // (frontmatter section). Mirror as keywords-like classification block.
   DefEnvironment!(

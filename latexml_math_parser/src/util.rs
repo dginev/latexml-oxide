@@ -1,12 +1,15 @@
-use crate::data::{get_grammatical_role, get_token_meaning};
-use crate::semantics::ActionContext;
-use crate::semantics::XProps;
-use crate::semantics::tree::XM;
-use crate::semantics::tree::lookup_lex_node;
+use std::{borrow::Cow, error::Error};
+
 use latexml_core::binding::def::dialect::get_xmarg_id;
 use libxml::tree::{Node, NodeType};
-use std::borrow::Cow;
-use std::error::Error;
+
+use crate::{
+  data::{get_grammatical_role, get_token_meaning},
+  semantics::{
+    ActionContext, XProps,
+    tree::{XM, lookup_lex_node},
+  },
+};
 
 /// Generate a textual token for each node; The parser operates on this encoded
 /// string.
@@ -161,7 +164,8 @@ fn node_to_grammar_lexemes_ctx(
         format!("XDIFFUNK:{text}:{idx}")
       } else if role == "ID" && text == "d" {
         format!("XDIFFID:{text}:{idx}")
-      } else if role == "VERTBAR" && text == "|"
+      } else if role == "VERTBAR"
+        && text == "|"
         && node.get_attribute("stretchy").as_deref() == Some("true")
       {
         // `\left|...\right|` produces a balanced pair of VERTBAR tokens
@@ -412,8 +416,10 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
             // We don't always have an idref string at this layer; the
             // lookup error itself carries enough context.
             log_math_error!(
-              "expected", "id",
-              "create_xmrefs: skipping lexeme with invalid node lookup: {}", e
+              "expected",
+              "id",
+              "create_xmrefs: skipping lexeme with invalid node lookup: {}",
+              e
             );
             continue;
           },

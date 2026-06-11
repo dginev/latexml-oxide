@@ -44,7 +44,7 @@ LoadDefinitions!({
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => sub[_args] {
       Ok(stored_map!("name" =>
-        stomach::digest(T_CS!("\\acknowledgmentsname"))?))
+        digest(T_CS!("\\acknowledgmentsname"))?))
     });
   DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
   Tag!("ltx:acknowledgements", auto_close => true);

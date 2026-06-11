@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // Perl: apackage.sty.ltxml
   def_macro_noop("\\my@package@stuff")?;

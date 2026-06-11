@@ -2,40 +2,41 @@ pub mod helpers;
 pub mod resource;
 pub mod tag;
 
-use libxml::tree::Document as XmlDoc;
-use libxml::tree::set_node_rc_guard;
-use libxml::tree::{Namespace, Node, NodeType};
+use std::{
+  backtrace::Backtrace,
+  borrow::Cow,
+  collections::{BTreeSet, VecDeque},
+  fmt::Write as _,
+  rc::Rc,
+};
+
+use libxml::tree::{Document as XmlDoc, Namespace, Node, NodeType, set_node_rc_guard};
 use once_cell::sync::Lazy;
 use regex::Regex;
-use rustc_hash::FxHashMap as HashMap;
-use rustc_hash::FxHashSet as HashSet;
-use std::backtrace::Backtrace;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
-use std::borrow::Cow;
-use std::collections::{BTreeSet, VecDeque};
-use std::fmt::Write as _;
-use std::rc::Rc;
-
-use crate::TexMode;
-use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::common::error::*;
-use crate::common::font::{FONT_TEXT_DEFAULT, Font};
-use crate::common::locator::Locator;
-use crate::common::model;
-use crate::common::object::Object;
-use crate::common::store::Stored;
-use crate::common::xml::{self, XML_NS, XPath};
-use crate::definition::FontDirective;
-use crate::ligature::Ligature;
-use crate::list::List;
-use crate::pin;
-use crate::state;
-use crate::util::radix::radix_alpha;
-
-use crate::Tbox;
-use crate::document::resource::Resource;
-use crate::document::tag::{TagConstructionClosure, TagOptionName};
-use crate::{BoxOps, Digested, DigestedData};
+use crate::{
+  BoxOps, Digested, DigestedData, Tbox, TexMode,
+  common::{
+    arena::{self, SymHashMap, SymStr},
+    error::*,
+    font::{FONT_TEXT_DEFAULT, Font},
+    locator::Locator,
+    model,
+    object::Object,
+    store::Stored,
+    xml::{self, XML_NS, XPath},
+  },
+  definition::FontDirective,
+  document::{
+    resource::Resource,
+    tag::{TagConstructionClosure, TagOptionName},
+  },
+  ligature::Ligature,
+  list::List,
+  pin, state,
+  util::radix::radix_alpha,
+};
 
 static HAS_NONSPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\S").unwrap());
 static ONLY_SPACE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\s+$").unwrap());
@@ -118,7 +119,9 @@ impl Default for Document {
 }
 impl Object for Document {
   fn get_locator(&self) -> Option<Locator> {
-    self.get_node_box(&self.node).and_then(|tbox| tbox.get_locator())
+    self
+      .get_node_box(&self.node)
+      .and_then(|tbox| tbox.get_locator())
   }
 }
 
@@ -235,12 +238,9 @@ impl Document {
   pub fn findvalues(&mut self, xpath: &str, node_opt: Option<&Node>) -> Vec<String> {
     match node_opt {
       Some(node) => self.get_xpath().findvalues(xpath, Some(node)),
-      None => {
-        match self.document.get_root_element() { Some(root) => {
-          self.get_xpath().findvalues(xpath, Some(&root))
-        } _ => {
-          Vec::new()
-        }}
+      None => match self.document.get_root_element() {
+        Some(root) => self.get_xpath().findvalues(xpath, Some(&root)),
+        _ => Vec::new(),
       },
     }
   }
@@ -369,13 +369,13 @@ impl Document {
     let xml_ns = "http://www.w3.org/XML/1998/namespace";
     let toks = self.findnodes("descendant-or-self::ltx:XMTok[@xml:id]", None);
     for mut tok in toks {
-      if let Some(id) = tok.get_attribute_ns("id", xml_ns) {
-        if !referenced_ids.contains(&id) {
-          self.unrecord_id(&id);
-          // Remove both the prefixed attribute and the ns attribute
-          let _ = tok.remove_attribute("xml:id");
-          let _ = tok.remove_attribute_ns("id", xml_ns);
-        }
+      if let Some(id) = tok.get_attribute_ns("id", xml_ns)
+        && !referenced_ids.contains(&id)
+      {
+        self.unrecord_id(&id);
+        // Remove both the prefixed attribute and the ns attribute
+        let _ = tok.remove_attribute("xml:id");
+        let _ = tok.remove_attribute_ns("id", xml_ns);
       }
     }
   }
@@ -533,14 +533,15 @@ impl Document {
               for key in text_keys_to_remove {
                 pending_declaration.remove(&key);
               }
-              if can_contain(&current, FONT_ELEMENT_NAME) && !pending_declaration.is_empty() {
-                if let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])? {
-                  for (key, (value, _properties)) in pending_declaration.iter() {
-                    self.set_attribute(&mut text, key, value)?;
-                  }
-                  // Text wrapper finalization is shallow (only text content), push to stack
-                  child_work.push(Work::Enter(text));
+              if can_contain(&current, FONT_ELEMENT_NAME)
+                && !pending_declaration.is_empty()
+                && let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])?
+              {
+                for (key, (value, _properties)) in pending_declaration.iter() {
+                  self.set_attribute(&mut text, key, value)?;
                 }
+                // Text wrapper finalization is shallow (only text content), push to stack
+                child_work.push(Work::Enter(text));
               }
             }
           }
@@ -911,11 +912,14 @@ impl Document {
       // Perl: insertPI always places PIs before the root element.
       // Find the document root and insert before it.
       let doc_node = self.document.clone();
-      match doc_node.get_root_element() { Some(mut root) => {
-        root.add_prev_sibling(&mut pi_node)?;
-      } _ => {
-        self.node.add_prev_sibling(&mut pi_node)?;
-      }}
+      match doc_node.get_root_element() {
+        Some(mut root) => {
+          root.add_prev_sibling(&mut pi_node)?;
+        },
+        _ => {
+          self.node.add_prev_sibling(&mut pi_node)?;
+        },
+      }
     }
     Ok(())
   }
@@ -1140,10 +1144,10 @@ impl Document {
         }
         node_opt = node.get_parent();
       }
-      if !tags.is_empty() {
-        if let Some(node) = node_opt {
-          node_opt = node.get_parent();
-        }
+      if !tags.is_empty()
+        && let Some(node) = node_opt
+      {
+        node_opt = node.get_parent();
       }
     }
     node_opt
@@ -1151,12 +1155,13 @@ impl Document {
 
   // Close $qname, if it is closeable.
   pub fn maybe_close_element(&mut self, qname: &str) -> Result<Option<Node>> {
-    match self.is_closeable(qname) { Some(node) => {
-      self.close_node_internal(&node)?;
-      Ok(Some(node))
-    } _ => {
-      Ok(None)
-    }}
+    match self.is_closeable(qname) {
+      Some(node) => {
+        self.close_node_internal(&node)?;
+        Ok(Some(node))
+      },
+      _ => Ok(None),
+    }
   }
 
   /// Closes all nodes until $node becomes the current point.
@@ -1171,12 +1176,15 @@ impl Document {
         cant_close.push(n.clone());
       }
       lastopen = Some(n.clone());
-      match n.get_parent() { Some(p) => {
-        n = p;
-        n_type = n.get_type();
-      } _ => {
-        break;
-      }}
+      match n.get_parent() {
+        Some(p) => {
+          n = p;
+          n_type = n.get_type();
+        },
+        _ => {
+          break;
+        },
+      }
     }
     if n_type == Some(NodeType::DocumentNode) {
       // Didn't find $node at all!!
@@ -1617,15 +1625,15 @@ impl Document {
       }
     }
 
-    if !used_prefixes.is_empty() {
-      if let Some(mut root) = self.document.get_root_element() {
-        let prefix_str = used_prefixes
-          .iter()
-          .map(|p| format!("{}: {}", p, prefix_map[p]))
-          .collect::<Vec<_>>()
-          .join(" ");
-        let _ = root.set_attribute("prefix", &prefix_str);
-      }
+    if !used_prefixes.is_empty()
+      && let Some(mut root) = self.document.get_root_element()
+    {
+      let prefix_str = used_prefixes
+        .iter()
+        .map(|p| format!("{}: {}", p, prefix_map[p]))
+        .collect::<Vec<_>>()
+        .join(" ");
+      let _ = root.set_attribute("prefix", &prefix_str);
     }
   }
 
@@ -1736,50 +1744,52 @@ impl Document {
         &comment_text,
         Placement_::AppendChild,
       );
-    } else { match self.get_element() { Some(node) => {
-      // Get the nearest element node (Perl: getElement)
-      let prev = node.get_last_child();
-      let prevtype = prev.as_ref().and_then(|n| n.get_type());
+    } else {
+      if let Some(node) = self.get_element() {
+        // Get the nearest element node (Perl: getElement)
+        let prev = node.get_last_child();
+        let prevtype = prev.as_ref().and_then(|n| n.get_type());
 
-      if prevtype == Some(NodeType::CommentNode) {
-        // Merge with previous comment
-        if let Some(mut prev_comment) = prev {
-          let existing = prev_comment.get_content();
-          let merged = s!("{}\n     {} ", existing, clean);
-          prev_comment.set_content(&merged).ok();
-        }
-      } else if prevtype == Some(NodeType::TextNode) {
-        let prev_node = prev.unwrap();
-        // If the node before the text is already a comment, just append new comment
-        // Otherwise, insert before the text to avoid splitting text runs
-        let before_text = prev_node.get_prev_sibling();
-        let before_is_comment =
-          before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
+        if prevtype == Some(NodeType::CommentNode) {
+          // Merge with previous comment
+          if let Some(mut prev_comment) = prev {
+            let existing = prev_comment.get_content();
+            let merged = s!("{}\n     {} ", existing, clean);
+            prev_comment.set_content(&merged).ok();
+          }
+        } else if prevtype == Some(NodeType::TextNode) {
+          let prev_node = prev.unwrap();
+          // If the node before the text is already a comment, just append new comment
+          // Otherwise, insert before the text to avoid splitting text runs
+          let before_text = prev_node.get_prev_sibling();
+          let before_is_comment =
+            before_text.as_ref().and_then(|n| n.get_type()) == Some(NodeType::CommentNode);
 
-        if before_is_comment {
+          if before_is_comment {
+            Self::add_comment(
+              &self.document,
+              &node,
+              &comment_text,
+              Placement_::AppendChild,
+            );
+          } else {
+            Self::add_comment(
+              &self.document,
+              &prev_node,
+              &comment_text,
+              Placement_::PrevSibling,
+            );
+          }
+        } else {
           Self::add_comment(
             &self.document,
             &node,
             &comment_text,
             Placement_::AppendChild,
           );
-        } else {
-          Self::add_comment(
-            &self.document,
-            &prev_node,
-            &comment_text,
-            Placement_::PrevSibling,
-          );
         }
-      } else {
-        Self::add_comment(
-          &self.document,
-          &node,
-          &comment_text,
-          Placement_::AppendChild,
-        );
       }
-    } _ => {}}}
+    }
     Ok(self.node.clone())
   }
 
@@ -1848,8 +1858,7 @@ impl Document {
     } else {
       false
     };
-    if node_type != Some(NodeType::DocumentNode) && !text_same_font
-    {
+    if node_type != Some(NodeType::DocumentNode) && !text_same_font {
       // then we'll need to do some open/close to get fonts matched.
       let node = self.close_text_internal()?; // Close text node, if any.
       let mut bestdiff = 99;
@@ -1917,10 +1926,10 @@ impl Document {
         if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
           for stored_ligature in ligatures.iter() {
             if let Stored::Ligature(ligature) = stored_ligature {
-              if let Some(ref font_test) = ligature.font_test {
-                if !(font_test)(font) {
-                  continue; // if the font test fails, skip the ligature
-                }
+              if let Some(ref font_test) = ligature.font_test
+                && !(font_test)(font)
+              {
+                continue; // if the font test fails, skip the ligature
               }
               content = Cow::Owned((ligature.code.as_ref().unwrap())(&content));
             }
@@ -2161,30 +2170,28 @@ impl Document {
     if self.node.get_type() != Some(NodeType::ElementNode) {
       return Ok(false);
     }
-    if let Some(last_child) = self.node.get_last_child() {
-      if last_child.get_type() == Some(NodeType::CommentNode) {
-        if let Some(mut prev_text) = last_child.get_prev_sibling() {
-          if prev_text.get_type() == Some(NodeType::TextNode) {
-            // Swap: move text node after comment node
-            let mut comment_node = last_child;
-            comment_node.add_next_sibling(&mut prev_text)?;
-            // Set current node to the moved text node and recurse. Use
-            // pointer-identity, not the `prev_text` handle directly:
-            // `add_next_sibling` of a text node can MERGE it into an adjacent
-            // text sibling and FREE it (the same libxml2 hazard fixed in
-            // open_text_internal — benign on glibc, a use-after-free on macOS
-            // libmalloc, issue #217). The moved/merged text is `comment_node`'s
-            // next sibling either way; if that is still `prev_text` it survived,
-            // otherwise `prev_text` was freed — fall back to the live sibling.
-            match comment_node.get_next_sibling() {
-              Some(moved) => self.set_node(&moved),
-              None => self.set_node(&prev_text),
-            }
-            self.open_text_internal(text)?;
-            return Ok(true);
-          }
-        }
+    if let Some(last_child) = self.node.get_last_child()
+      && last_child.get_type() == Some(NodeType::CommentNode)
+      && let Some(mut prev_text) = last_child.get_prev_sibling()
+      && prev_text.get_type() == Some(NodeType::TextNode)
+    {
+      // Swap: move text node after comment node
+      let mut comment_node = last_child;
+      comment_node.add_next_sibling(&mut prev_text)?;
+      // Set current node to the moved text node and recurse. Use
+      // pointer-identity, not the `prev_text` handle directly:
+      // `add_next_sibling` of a text node can MERGE it into an adjacent
+      // text sibling and FREE it (the same libxml2 hazard fixed in
+      // open_text_internal — benign on glibc, a use-after-free on macOS
+      // libmalloc, issue #217). The moved/merged text is `comment_node`'s
+      // next sibling either way; if that is still `prev_text` it survived,
+      // otherwise `prev_text` was freed — fall back to the live sibling.
+      match comment_node.get_next_sibling() {
+        Some(moved) => self.set_node(&moved),
+        None => self.set_node(&prev_text),
       }
+      self.open_text_internal(text)?;
+      return Ok(true);
     }
     Ok(false)
   }
@@ -2363,14 +2370,13 @@ impl Document {
   pub fn filter_deletions(&self, nodes: Vec<Node>) -> Vec<Node> {
     // This test seems to successfully determine inclusion,
     // without requiring the (dangerous? & dubious?) unbindNode to be used.
-    match self.document.get_root_element() { Some(root) => {
-      nodes
+    match self.document.get_root_element() {
+      Some(root) => nodes
         .into_iter()
         .filter(|node| xml::is_descendant_or_self(node, &root))
-        .collect()
-    } _ => {
-      Vec::new()
-    }}
+        .collect(),
+      _ => Vec::new(),
+    }
   }
 
   /// Given a list of nodes such as from ->absorb,
@@ -2493,26 +2499,27 @@ impl Document {
       return Ok(self.node.clone());
     // Else, if we can create an intermediate node that accepts $qname, we'll do
     // that.
-    } else if let Some(inter) = can_contain_indirect(cur_qname, qsym) {
-      if (inter != qsym) && (inter != cur_qname) {
-        // TODO: can we avoid the clone here? there is a mutability conflict...
-        let node_font = self.get_node_font(&self.node).clone();
-        // TODO: avoid this clone?
-        let inter_string = arena::to_string(inter);
-        self.open_element(
-          &inter_string,
-          Some(string_map!("_autoopened" => "true")),
-          Some(&node_font),
-        )?;
-        // And retry insertion (should work now).
-        return self.find_insertion_point_qsym(qsym, Some(inter));
-      }
+    } else if let Some(inter) = can_contain_indirect(cur_qname, qsym)
+      && (inter != qsym)
+      && (inter != cur_qname)
+    {
+      // TODO: can we avoid the clone here? there is a mutability conflict...
+      let node_font = self.get_node_font(&self.node).clone();
+      // TODO: avoid this clone?
+      let inter_string = arena::to_string(inter);
+      self.open_element(
+        &inter_string,
+        Some(string_map!("_autoopened" => "true")),
+        Some(&node_font),
+      )?;
+      // And retry insertion (should work now).
+      return self.find_insertion_point_qsym(qsym, Some(inter));
     }
     if let Some(has_opened) = has_opened_opt {
       // out of options if already inside an auto-open chain
       let message: String =
         arena::with2(has_opened, cur_qname, |has_opened_str, cur_qname_str| {
-          Ok::<String, crate::common::error::Error>(format!(
+          Ok::<String, Error>(format!(
             "failed auto-open through <{}> at inadmissible <{}>. Currently in {}",
             has_opened_str,
             cur_qname_str,
@@ -2580,8 +2587,7 @@ impl Document {
         // build-leniency for the narrow sectioning-into-frontmatter case so
         // we don't out-strict Perl. Same `return self.node` "insert anyway"
         // mechanism as the math-leaf cascade above.
-        let is_sectioning_unit =
-          qsym_str == "ltx:paragraph" || qsym_str == "ltx:subparagraph";
+        let is_sectioning_unit = qsym_str == "ltx:paragraph" || qsym_str == "ltx:subparagraph";
         // Container is either a frontmatter block (abstract/acknowledgements,
         // Block.model — no sectioning units) OR another sectioning unit that
         // can't hold it (a 2nd `\paragraph` nests inside the 1st when the
@@ -3040,10 +3046,10 @@ impl Document {
     }
     if !rename.is_empty() {
       for mut xmref in self.findnodes("descendant-or-self::*[@idref]", Some(node)) {
-        if let Some(idref) = xmref.get_attribute("idref") {
-          if let Some(new) = rename.get(&idref) {
-            xmref.set_attribute("idref", new)?;
-          }
+        if let Some(idref) = xmref.get_attribute("idref")
+          && let Some(new) = rename.get(&idref)
+        {
+          xmref.set_attribute("idref", new)?;
         }
       }
     }
@@ -3276,8 +3282,7 @@ impl Document {
     // not Ex<digit>) so declare_test's renamed-id case
     // (`S1.Ex1.m1.1` → `.1a`) stays untouched. canvas papers using
     // `\begin{equation}` produce `E1`/`E2`/... ids.
-    static RE_MATH_ID: once_cell::sync::Lazy<regex::Regex> =
-      once_cell::sync::Lazy::new(|| regex::Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
+    static RE_MATH_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
     let xmrefs2 = self.findnodes("//ltx:XMRef[@idref]", None);
     for xmref in xmrefs2 {
       // Skip if already pruned via _split_ref sweep above.
@@ -3315,8 +3320,12 @@ impl Document {
       // collapse) can yield <2. Skip rather than panic.
       // Witness 2110.10033 (panicked at document.rs:3120, post-fix
       // continuation of earlier guard at document.rs:2993).
-      let Some(presentation) = dual_children.pop() else { continue };
-      let Some(content) = dual_children.pop() else { continue };
+      let Some(presentation) = dual_children.pop() else {
+        continue;
+      };
+      let Some(content) = dual_children.pop() else {
+        continue;
+      };
       if self
         .findnode("descendant-or-self::*[@_pvis or @_cvis]", Some(&content))
         .is_none()
@@ -3368,11 +3377,12 @@ impl Document {
       self.merge_attributes(&dual, &mut pres, Some(&DUAL_TRANSFER))?;
       // If presentation didn't originally have an xml:id and the dual doesn't either,
       // remove the content's xml:id that leaked through merge_attributes
-      if !pres_had_id && !dual.has_attribute("xml:id") {
-        if let Some(id) = pres.get_attribute("xml:id") {
-          self.unrecord_id(&id);
-          let _ = pres.remove_attribute("xml:id");
-        }
+      if !pres_had_id
+        && !dual.has_attribute("xml:id")
+        && let Some(id) = pres.get_attribute("xml:id")
+      {
+        self.unrecord_id(&id);
+        let _ = pres.remove_attribute("xml:id");
       }
       // Unlink presentation from dual before replacing, since presentation is a child of dual
       pres.unlink();
@@ -3398,17 +3408,17 @@ impl Document {
     }
     let mut new_args: Vec<NewArg> = Vec::with_capacity(n_args);
     for (c_arg, p_arg) in content_args.into_iter().zip(pres_args) {
-      if let Some(c_idref) = c_arg.get_attribute("idref") {
-        if c_idref == p_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
-          new_args.push(NewArg::Single(p_arg));
-          continue;
-        }
+      if let Some(c_idref) = c_arg.get_attribute("idref")
+        && c_idref == p_arg.get_attribute_ns("id", XML_NS).unwrap_or_default()
+      {
+        new_args.push(NewArg::Single(p_arg));
+        continue;
       }
-      if let Some(p_idref) = p_arg.get_attribute("idref") {
-        if p_idref == c_arg.get_attribute_ns("id", XML_NS).unwrap_or_default() {
-          new_args.push(NewArg::Single(c_arg));
-          continue;
-        }
+      if let Some(p_idref) = p_arg.get_attribute("idref")
+        && p_idref == c_arg.get_attribute_ns("id", XML_NS).unwrap_or_default()
+      {
+        new_args.push(NewArg::Single(c_arg));
+        continue;
       }
       // We can handle content-side XMToks to any XM* presentation subtree
       let c_arg_name = with_node_qname(&c_arg, |n| n.to_string());
@@ -3535,11 +3545,11 @@ impl Document {
   }
 
   pub fn set_box_font(&mut self, node: &mut Node) -> Result<()> {
-    if let Some(ref thisbox) = self.box_to_absorb {
-      if let Some(font) = thisbox.get_font()? {
-        let todo_font_clone = font.into_owned();
-        self.set_node_font(node, &todo_font_clone)?;
-      }
+    if let Some(ref thisbox) = self.box_to_absorb
+      && let Some(font) = thisbox.get_font()?
+    {
+      let todo_font_clone = font.into_owned();
+      self.set_node_font(node, &todo_font_clone)?;
     }
     Ok(())
   }
@@ -3552,10 +3562,10 @@ impl Document {
         // a corrupted property propagates across reversion (driver:
         // 2304.07380 panicked at parse::<u64>().unwrap()). Fall through
         // to the default font instead of aborting the run.
-        if let Ok(id) = fontid.parse::<u64>() {
-          if let Some(fnt) = self.node_fonts.get(&id) {
-            return fnt;
-          }
+        if let Ok(id) = fontid.parse::<u64>()
+          && let Some(fnt) = self.node_fonts.get(&id)
+        {
+          return fnt;
         }
       }
     }
@@ -3571,11 +3581,10 @@ impl Document {
   }
 
   pub fn has_node_font(&self, node: &Node) -> bool {
-    match xml::closest_element(node) { Some(element) => {
-      element.has_attribute("_font")
-    } _ => {
-      false
-    }}
+    match xml::closest_element(node) {
+      Some(element) => element.has_attribute("_font"),
+      _ => false,
+    }
   }
 
   pub fn get_node_language(&self, node: &Node) -> String {
@@ -3596,23 +3605,24 @@ impl Document {
       // not the original node — use `node_ref`, not `node`. Be robust against a
       // missing/foreign _font property (Perl PR #2767): never panic on a
       // non-numeric font id.
-      if let Some(fontid) = node_ref.get_attribute("_font") {
-        if let Some(font) = fontid
+      if let Some(fontid) = node_ref.get_attribute("_font")
+        && let Some(font) = fontid
           .parse::<u64>()
           .ok()
           .and_then(|id| self.node_fonts.get(&id))
-        {
-          if let Some(lang) = font.get_language() {
-            return lang.to_string();
-          }
-        }
+        && let Some(lang) = font.get_language()
+      {
+        return lang.to_string();
       }
-      match node_ref.get_parent() { Some(parent) => {
-        current = parent;
-        node_ref = &current;
-      } _ => {
-        break;
-      }}
+      match node_ref.get_parent() {
+        Some(parent) => {
+          current = parent;
+          node_ref = &current;
+        },
+        _ => {
+          break;
+        },
+      }
     }
     String::from("en")
   }
@@ -3626,7 +3636,7 @@ impl Document {
     let mut chopped: bool = self.node == node; // Note if we're removing insertion point
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
-      if let Some(id) = node.get_attribute_ns("id", xml::XML_NS) {
+      if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
       for child in node.get_child_nodes() {
@@ -3646,7 +3656,7 @@ impl Document {
     let mut chopped = self.node == node;
     if node.get_type() == Some(NodeType::ElementNode) {
       // If an element, do ID bookkeeping.
-      if let Some(id) = node.get_attribute_ns("id", xml::XML_NS) {
+      if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
       for child in node.get_child_nodes() {
@@ -3693,24 +3703,22 @@ impl Document {
     // 3. box_to_absorb.get_font() — the font of the current box being absorbed (Perl:
     //    $attributes{_box} = $LaTeXML::BOX; $font = $attributes{_box}->getFont)
     // 4. Insertion point's font (final fallback, handled later)
-    if font_opt.is_none() {
-      if let Some(ref attrs) = attributes {
-        if let Some(fontid) = attrs.get("_font") {
-          // Tolerate non-numeric `_font` attributes — see get_node_font
-          // for the same defensive read; same panic site, different
-          // call. Driver: 2406.14188.
-          if let Ok(id) = fontid.parse::<u64>() {
-            font_opt = self.node_fonts.get(&id).cloned();
-          }
-        }
+    if font_opt.is_none()
+      && let Some(ref attrs) = attributes
+      && let Some(fontid) = attrs.get("_font")
+    {
+      // Tolerate non-numeric `_font` attributes — see get_node_font
+      // for the same defensive read; same panic site, different
+      // call. Driver: 2406.14188.
+      if let Ok(id) = fontid.parse::<u64>() {
+        font_opt = self.node_fonts.get(&id).cloned();
       }
     }
-    if font_opt.is_none() {
-      if let Some(ref digested) = self.box_to_absorb {
-        if let Ok(Some(font)) = digested.get_font() {
-          font_opt = Some(font.into_owned());
-        }
-      }
+    if font_opt.is_none()
+      && let Some(ref digested) = self.box_to_absorb
+      && let Ok(Some(font)) = digested.get_font()
+    {
+      font_opt = Some(font.into_owned());
     }
     let (decoded_ns, tag) = model::decode_qname(qname)?;
     let mut newnode;
@@ -3736,14 +3744,14 @@ impl Document {
         // namespaces in setAttributeNS.
         let prefix_opt = model::get_document_namespace_prefix(&ns, false, false);
         let attprefix_opt = model::get_document_namespace_prefix(&ns, true, true);
-        if prefix_opt.is_none() {
-          if let Some(attprefix_sym) = attprefix_opt {
-            let attr_ns_node = arena::with(attprefix_sym, |attprefix| {
-              Namespace::new(attprefix, &ns, &mut newnode)
-            })
-            .unwrap();
-            newnode.set_namespace(&attr_ns_node)?;
-          }
+        if prefix_opt.is_none()
+          && let Some(attprefix_sym) = attprefix_opt
+        {
+          let attr_ns_node = arena::with(attprefix_sym, |attprefix| {
+            Namespace::new(attprefix, &ns, &mut newnode)
+          })
+          .unwrap();
+          newnode.set_namespace(&attr_ns_node)?;
         }
         // TODO: Figure out a better way to achieve the "activate" effect in
         // XML:LibXML::Element it seems just creating the namespace without
@@ -4273,10 +4281,10 @@ impl Document {
     // `record_id_with_node` (idstore registration + dedup) and sets the
     // correctly-namespaced `xml:id` attribute. Only set it when the new qname
     // can carry an id (mirrors the per-attribute `can_have_attribute` gate).
-    if let Some(id) = id {
-      if model::can_have_attribute(newname, arena::pin("xml:id")) {
-        self.set_attribute(&mut new, "xml:id", &id)?;
-      }
+    if let Some(id) = id
+      && model::can_have_attribute(newname, arena::pin("xml:id"))
+    {
+      self.set_attribute(&mut new, "xml:id", &id)?;
     }
 
     Ok(new)
@@ -4367,24 +4375,29 @@ impl Document {
       }
       candidates.pop_front();
     }
-    match candidates.pop_front() { Some(n) => {
-      if closeifpossible && closeable {
-        self.close_to_node(&n, false)?;
-      } else {
-        let savenode = self.node.clone();
-        self.set_node(&n);
-        // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for $qname")
-        //   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
-        return Ok(Some(savenode));
-      }
-    } _ => if can_contain_node_somehow(&self.node, qname).is_none() {
-      Warn!(
-        "malformed",
-        qname,
-        s!("No open node can contain element '{}'", qname)
-      );
-      // self.get_insertion_context())
-    }}
+    match candidates.pop_front() {
+      Some(n) => {
+        if closeifpossible && closeable {
+          self.close_to_node(&n, false)?;
+        } else {
+          let savenode = self.node.clone();
+          self.set_node(&n);
+          // Debug!("Floating from " . Stringify($savenode) . " to " . Stringify($n) . " for
+          // $qname")   if ($$savenode ne $$n) && $LaTeXML::DEBUG{document};
+          return Ok(Some(savenode));
+        }
+      },
+      _ => {
+        if can_contain_node_somehow(&self.node, qname).is_none() {
+          Warn!(
+            "malformed",
+            qname,
+            s!("No open node can contain element '{}'", qname)
+          );
+          // self.get_insertion_context())
+        }
+      },
+    }
     Ok(None)
   }
 
@@ -4411,7 +4424,7 @@ impl Document {
     // Should we only accept a node that already has an id, or should we create an id?
     let mut node_opt: Option<Cow<Node>> = None;
     while let Some(candidate) = candidates.pop_front() {
-      if can_node_have_attribute(candidate, key) && candidate.has_attribute_ns("id", xml::XML_NS) {
+      if can_node_have_attribute(candidate, key) && candidate.has_attribute_ns("id", XML_NS) {
         node_opt = Some(Cow::Borrowed(candidate));
         break;
       }
@@ -4424,7 +4437,7 @@ impl Document {
         None => None,
       };
       if let Some(sibling) = sib {
-        if can_node_have_attribute(&sibling, key) && sibling.has_attribute_ns("id", xml::XML_NS) {
+        if can_node_have_attribute(&sibling, key) && sibling.has_attribute_ns("id", XML_NS) {
           node_opt = Some(Cow::Owned(sibling));
         } else if !ancestors.is_empty() {
           // just take root element?
@@ -4449,7 +4462,9 @@ impl Document {
 
   pub fn set_box_to_absorb(&mut self, arg: Option<Digested>) {
     self.localized_boxes.push(self.box_to_absorb.take());
-    self.localized_box_locators.push(self.current_box_locator.take());
+    self
+      .localized_box_locators
+      .push(self.current_box_locator.take());
     self.box_to_absorb = arg;
     // Capture the locator now, while the box's RefCell is unborrowed — the
     // source-map stamping (`open_element`) reads this Copy value instead of
@@ -4500,9 +4515,7 @@ impl Document {
         };
         if let Some(id) = id {
           for label in labels.split_whitespace() {
-            self
-              .rewrite_labels
-              .insert(label.to_string(), id.clone());
+            self.rewrite_labels.insert(label.to_string(), id.clone());
           }
         }
         // If generate_id still couldn't assign one (a node the model forbids
@@ -4581,31 +4594,32 @@ impl Document {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
   pub fn replace_tree(&mut self, new: Node, old: Node) -> Result<Option<Node>> {
-    match old.get_parent() { Some(mut parent) => {
-      let mut following = VecDeque::new(); // Collect the matching and following nodes
-      while let Some(mut sib) = parent.get_last_child() {
-        if sib == old {
-          break;
+    match old.get_parent() {
+      Some(mut parent) => {
+        let mut following = VecDeque::new(); // Collect the matching and following nodes
+        while let Some(mut sib) = parent.get_last_child() {
+          if sib == old {
+            break;
+          }
+          // parent.remove_child(sib); // We're putting these back, in a moment!
+          sib.unlink();
+          following.push_front(sib);
         }
-        // parent.remove_child(sib); // We're putting these back, in a moment!
-        sib.unlink();
-        following.push_front(sib);
-      }
-      // NOTE: remove_node calls old.unlink() which sets unlinked=true and detaches
-      // the node from the DOM. The document's node cache holds another Rc reference,
-      // so _Node::drop (and xmlFreeNode) doesn't run until the Document itself drops.
-      // By that time, any children reused by `new` have been moved at the C level,
-      // so xmlFreeNode on old only frees the shell.
-      self.remove_node(old);
-      self.append_tree(&mut parent, vec![new])?;
-      let inserted = parent.get_last_child();
-      for mut child in following {
-        parent.add_child(&mut child)?; // No need for clone
-      }
-      Ok(inserted)
-    } _ => {
-      Ok(None)
-    }}
+        // NOTE: remove_node calls old.unlink() which sets unlinked=true and detaches
+        // the node from the DOM. The document's node cache holds another Rc reference,
+        // so _Node::drop (and xmlFreeNode) doesn't run until the Document itself drops.
+        // By that time, any children reused by `new` have been moved at the C level,
+        // so xmlFreeNode on old only frees the shell.
+        self.remove_node(old);
+        self.append_tree(&mut parent, vec![new])?;
+        let inserted = parent.get_last_child();
+        for mut child in following {
+          parent.add_child(&mut child)?; // No need for clone
+        }
+        Ok(inserted)
+      },
+      _ => Ok(None),
+    }
   }
 
   pub fn append_tree(&mut self, node: &mut Node, data: Vec<Node>) -> Result<()> {

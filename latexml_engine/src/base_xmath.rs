@@ -1,8 +1,9 @@
 //! Base XMath
 //!
 //! Core TeX Implementation for LaTeXML
-use crate::prelude::*;
 use std::collections::hash_map::Entry;
+
+use crate::prelude::*;
 
 static NAMED_SPACE_CHARS: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
   static_map!("negthinspace" => "", "thinspace" => "\u{2009}",
@@ -84,11 +85,10 @@ LoadDefinitions!({
     reversion => "#2",
     after_digest => sub[whatsit] {
       // Copy font from arg 2 to whatsit
-      if let Some(arg2) = whatsit.get_arg(2) {
-        if let Ok(Some(font)) = arg2.get_font() {
+      if let Some(arg2) = whatsit.get_arg(2)
+        && let Ok(Some(font)) = arg2.get_font() {
           whatsit.set_font(Rc::new(font.into_owned()));
         }
-      }
       xmath_copy_keyvals(whatsit) });
 
   // Wrap the contents in an ltx:XMWrap, to stand as a single subtree & providing attributes
@@ -129,7 +129,7 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     xmath_copy_keyvals(whatsit)?;
     // Compute scriptpos = "post" + script_level
-    let scriptpos = s!("post{}", stomach::get_script_level());
+    let scriptpos = s!("post{}", get_script_level());
     whatsit.set_property("scriptpos", Stored::from(scriptpos));
     Ok(Vec::new()) },
   reversion => sub[_whatsit, args] {
@@ -157,7 +157,7 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     xmath_copy_keyvals(whatsit)?;
     // Compute scriptpos = "post" + script_level
-    let scriptpos = s!("post{}", stomach::get_script_level());
+    let scriptpos = s!("post{}", get_script_level());
     whatsit.set_property("scriptpos", Stored::from(scriptpos));
     Ok(Vec::new()) },
   reversion => sub[_whatsit, args] {
@@ -230,10 +230,8 @@ LoadDefinitions!({
         _ => None,
       };
       if let Some(mu) = mu_val {
-        let fs = state::lookup_font()
-          .and_then(|f| f.get_size())
-          .unwrap_or(10.0);
-        let unity = latexml_core::common::numeric_ops::UNITY_F64;
+        let fs = lookup_font().and_then(|f| f.get_size()).unwrap_or(10.0);
+        let unity = UNITY_F64;
         let muwidth = (fs * unity / 18.0) as i64;
         let pt_scaled = (mu as f64 * muwidth as f64 / unity).trunc() as i64;
         return Dimension::new(pt_scaled).to_string();
@@ -247,11 +245,10 @@ LoadDefinitions!({
       let node = document.get_node();
       if let Some(mut last) = node.get_last_child() {
         // If last child is XMDual, use its second child (presentation)
-        if document::with_node_qname(&last, |qn| qn == "ltx:XMDual") {
-          if let Some(ch2) = last.get_child_nodes().into_iter().nth(1) {
+        if document::with_node_qname(&last, |qn| qn == "ltx:XMDual")
+          && let Some(ch2) = last.get_child_nodes().into_iter().nth(1) {
             last = ch2;
           }
-        }
         if let Some(lpad) = whatsit.get_arg(0) {
           let val = mudimension_to_pt_attr(lpad);
           if !val.is_empty() {
@@ -321,13 +318,12 @@ LoadDefinitions!({
     // Perl: whatsit.set_properties($kv->getPairs) if $kv;
     // Extract key-value pairs from the OptionalKeyVals argument and set as properties.
     // This makes #role, #name, #meaning etc. available in the constructor template.
-    if let Some(kv_arg) = whatsit.get_arg(1) {
-      if let DigestedData::KeyVals(kv) = kv_arg.data() {
+    if let Some(kv_arg) = whatsit.get_arg(1)
+      && let DigestedData::KeyVals(kv) = kv_arg.data() {
         for (k, v) in kv.get_hash() {
           whatsit.set_property(&k, Stored::from(v));
         }
       }
-    }
     // Pop reversion from state if set by i_dual (preserves ARG catcodes)
     if let Some(Stored::Tokens(rev_tks)) = pop_value("PENDING_DUAL_REVERSION")? {
       whatsit.set_property("reversion", Stored::Tokens(rev_tks));
@@ -398,7 +394,7 @@ LoadDefinitions!({
             // is "presentation", otherwise use content. with_value avoids
             // the Stored::clone + full to_string we previously paid just
             // to compare against a single literal.
-            let is_presentation = state::with_value("DUAL_BRANCH", |v| {
+            let is_presentation = with_value("DUAL_BRANCH", |v| {
               v.map(|s| s.eq_text("presentation")).unwrap_or(false)
             });
             if is_presentation {
@@ -452,7 +448,7 @@ LoadDefinitions!({
         });
       // TODO: Must we store the (currently &mut) Whatsit?
       // let whatsit_stored = Stored::Digested(whatsit.into());
-      state::assign_value(&reversion_key, Stored::Tokens(whatsit.revert()?),
+      assign_value(&reversion_key, Stored::Tokens(whatsit.revert()?),
         Some(Scope::Global));
       // state::assign_value(&s!("xref:{}@size", xmid),
       //   whatsit.get_size(None), Some(Scope::Global));
@@ -462,7 +458,7 @@ LoadDefinitions!({
     // TODO: Must we store and lookup the Whatsit?
     reversion => sub[_whatsit,args] {
       let xmid = args[0].as_ref().unwrap().to_string();
-      Ok( state::lookup_tokens(&s!("xref:{xmid}@reversion")).unwrap_or_default() )}
+      Ok( lookup_tokens(&s!("xref:{xmid}@reversion")).unwrap_or_default() )}
     // sizer => sub { LookupValue('xref:' . ToString($_[0]->getArg(1)))->getSize; }
   );
 
@@ -476,8 +472,8 @@ LoadDefinitions!({
   Tag!("ltx:*", after_open_late => sub[document,node] {
     if node.has_attribute("_xmkey") {
       let qname = document::get_node_qname(node);
-      if (qname != arena::pin_static("ltx:XMRef")) &&
-        arena::with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
+      if (qname != pin_static("ltx:XMRef")) &&
+        with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
         document.generate_id(node, "")?;
       }
     }
@@ -591,7 +587,7 @@ LoadDefinitions!({
   sizer      => "\u{2026}",
   reversion  => "\\ldots",
   properties => {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
+    if lookup_bool_sym(pin!("IN_MATH")) {
       Ok(stored_map!("font" => lookup_font().unwrap().merge(
         fontmap!(family => "serif", series => "medium", shape => "upright")
           .specialize("\u{2026}"))))
@@ -732,7 +728,7 @@ LoadDefinitions!({
   let mut current;
   loop {
     let qn = model::get_node_qname(node_ref);
-    if qn == arena::pin_static("ltx:XMTok") || qn == arena::pin_static("ltx:XMWrap") {
+    if qn == pin_static("ltx:XMTok") || qn == pin_static("ltx:XMWrap") {
       let r = node_ref.get_attribute("role").unwrap_or_default();
       let f    = document.get_node_font(node_ref);
       let text = node_ref.get_content();
@@ -758,7 +754,7 @@ LoadDefinitions!({
         break;
       }
     // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
-    } else if qn == arena::pin_static("ltx:XMHint") {
+    } else if qn == pin_static("ltx:XMHint") {
       if let Some(s_name) = node_ref.get_attribute("name") {
         if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
           combined = s_char.to_string() + &combined;
@@ -922,11 +918,11 @@ LoadDefinitions!({
 
     let properties = SymHashMap::default();
     alignment_bindings(template, String::from("math"), properties, xml_attributes);
-    state::let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
-    state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
+    let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
+    let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
     // Disable special row treatment (eg. numbering) unless requested
-    state::let_i(&T_CS!("\\lx@alignment@row@before"), &T_CS!("\\lx@empty"), None);
-    state::let_i(&T_CS!("\\lx@alignment@row@after"), &T_CS!("\\lx@empty"), None);
+    let_i(&T_CS!("\\lx@alignment@row@before"), &T_CS!("\\lx@empty"), None);
+    let_i(&T_CS!("\\lx@alignment@row@after"), &T_CS!("\\lx@empty"), None);
   });
 
   DefPrimitive!("\\lx@end@gen@matrix", {
@@ -959,8 +955,8 @@ LoadDefinitions!({
       // Perl: properties => sub { %{ $_[1]->getKeyVals }; }
       // Pass all keyval pairs as properties
       let mut props = stored_map!();
-      if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(kv) = d.data() {
+      if let Some(d) = &args[0]
+        && let DigestedData::KeyVals(kv) = d.data() {
           // Store left/right as Digested directly from digested keyvals.
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
@@ -969,11 +965,10 @@ LoadDefinitions!({
           }
           for (k, v) in kv.get_pairs() {
             if k != "left" && k != "right" {
-              props.insert(k, Stored::String(arena::pin(v.to_string())));
+              props.insert(k, Stored::String(pin(v.to_string())));
             }
           }
         }
-      }
       Ok(props)
     },
     after_digest => sub[whatsit] {
@@ -988,7 +983,7 @@ LoadDefinitions!({
         whatsit.set_property("xmkey", get_xmarg_id()?);
       }
       // Perl: $whatsit->setProperties(alignment => LookupValue('Alignment'));
-      if let Some(alignment) = state::lookup_alignment() {
+      if let Some(alignment) = lookup_alignment() {
         whatsit.set_property("alignment", Stored::Digested(alignment));
       }
       Ok(Vec::new())
@@ -999,22 +994,19 @@ LoadDefinitions!({
       //   my $alignment = $whatsit->getProperty('alignment');
       //   (T_CS('\\' . $name), T_BEGIN, $alignment->revert, T_END); }
       let mut name = String::new();
-      if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(kv) = d.data() {
+      if let Some(d) = &args[0]
+        && let DigestedData::KeyVals(kv) = d.data() {
           name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
         }
-      }
       // Get alignment reversion from the whatsit property
       let alignment_rev = {
         let prop = _whatsit.get_property("alignment");
         let mut rev = None;
-        if let Some(cow) = prop.as_ref() {
-          if let Stored::Digested(alignment) = &**cow {
-            if let DigestedData::Alignment(al) = alignment.data() {
+        if let Some(cow) = prop.as_ref()
+          && let Stored::Digested(alignment) = &**cow
+            && let DigestedData::Alignment(al) = alignment.data() {
               rev = Some(al.borrow().revert()?);
             }
-          }
-        }
         rev.unwrap_or(match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() })
       };
       let cs_name = format!("\\{}", name);
@@ -1042,8 +1034,8 @@ LoadDefinitions!({
      )",
     properties => sub[args] {
       let mut props = stored_map!();
-      if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(kv) = d.data() {
+      if let Some(d) = &args[0]
+        && let DigestedData::KeyVals(kv) = d.data() {
           // Store left/right as Digested directly from digested keyvals.
           // Perl's absorb() handles Tokens natively; Rust constructor templates
           // only absorb Digested. Using get_value_digested avoids the revert->re-digest
@@ -1055,11 +1047,10 @@ LoadDefinitions!({
           }
           for (k, v) in kv.get_pairs() {
             if k != "left" && k != "right" {
-              props.insert(k, Stored::String(arena::pin(v.to_string())));
+              props.insert(k, Stored::String(pin(v.to_string())));
             }
           }
         }
-      }
       Ok(props)
     },
     after_digest => sub[whatsit] {
@@ -1086,13 +1077,12 @@ LoadDefinitions!({
       let mut name = String::new();
       let mut align = String::new();
       let mut alignment_required = false;
-      if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(kv) = d.data() {
+      if let Some(d) = &args[0]
+        && let DigestedData::KeyVals(kv) = d.data() {
           name = kv.get_value("name").map(|v| v.to_string()).unwrap_or_default();
           align = kv.get_value("alignment").map(|v| v.to_string()).unwrap_or_default();
           alignment_required = kv.has_key("alignment-required");
         }
-      }
       let body_rev = match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() };
       let mut tks = Vec::new();
       if !name.is_empty() {
@@ -1202,8 +1192,8 @@ LoadDefinitions!({
 
     let properties = SymHashMap::default();
     alignment_bindings(template, String::from("math"), properties, HashMap::default());
-    state::let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
-    state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
+    let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
+    let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
     def_macro(T_CS!("\\lx@alignment@row@before"), None, Tokens!(), None)?;
     def_macro(T_CS!("\\lx@alignment@row@after"), None, Tokens!(), None)?;
   });
@@ -1227,8 +1217,8 @@ LoadDefinitions!({
     reversion => "\\cases{#2}",
     properties => sub[args] {
       let mut props = stored_map!();
-      if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(kv) = d.data() {
+      if let Some(d) = &args[0]
+        && let DigestedData::KeyVals(kv) = d.data() {
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1236,18 +1226,17 @@ LoadDefinitions!({
           }
           for (k, v) in kv.get_pairs() {
             if k != "left" && k != "right" {
-              props.insert(k, Stored::String(arena::pin(v.to_string())));
+              props.insert(k, Stored::String(pin(v.to_string())));
             }
           }
         }
-      }
       Ok(props)
     },
     after_construct => sub[document, _whatsit] {
       // Perl afterConstruct: wrap in XMDual with meaning='cases'
       // Get the XMWrap we just created (last child of current element)
-      if let Some(current) = document.get_element() {
-        if let Some(mut point) = current.get_last_element_child() {
+      if let Some(current) = document.get_element()
+        && let Some(mut point) = current.get_last_element_child() {
           let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
           // Strip "align" from empty/whitespace-only cells
           // (Perl doesn't set align on empty condition cells in \cases)
@@ -1315,7 +1304,6 @@ LoadDefinitions!({
             }
           }
         }
-      }
     }
   );
 
@@ -1327,8 +1315,8 @@ LoadDefinitions!({
     reversion => "\\begin{cases}#2\\end{cases}",
     properties => sub[args] {
       let mut props = stored_map!();
-      if let Some(d) = &args[0] {
-        if let DigestedData::KeyVals(kv) = d.data() {
+      if let Some(d) = &args[0]
+        && let DigestedData::KeyVals(kv) = d.data() {
           for prop_key in &["left", "right"] {
             if let Some(digested) = kv.get_value_digested(prop_key) {
               props.insert(prop_key, Stored::Digested(digested.clone()));
@@ -1336,17 +1324,16 @@ LoadDefinitions!({
           }
           for (k, v) in kv.get_pairs() {
             if k != "left" && k != "right" {
-              props.insert(k, Stored::String(arena::pin(v.to_string())));
+              props.insert(k, Stored::String(pin(v.to_string())));
             }
           }
         }
-      }
       Ok(props)
     },
     after_construct => sub[document, _whatsit] {
       // Same as \lx@gen@plain@cases@ — wrap in XMDual with meaning='cases'
-      if let Some(current) = document.get_element() {
-        if let Some(mut point) = current.get_last_element_child() {
+      if let Some(current) = document.get_element()
+        && let Some(mut point) = current.get_last_element_child() {
           let cells = document.findnodes("ltx:XMArray/ltx:XMRow/ltx:XMCell", Some(&point));
           if !cells.is_empty() {
             let mut ref_ids: Vec<Option<String>> = Vec::new();
@@ -1394,7 +1381,6 @@ LoadDefinitions!({
             }
           }
         }
-      }
     }
   );
 });
@@ -1567,9 +1553,9 @@ pub fn add_column_to_math_fork(
   cell.unlink_node();
   // Process each child of _Capture_
   let children: Vec<Node> = cell.get_child_nodes();
-  let math_qname = arena::pin_static("ltx:Math");
-  let text_qname = arena::pin_static("ltx:text");
-  let p_qname = arena::pin_static("ltx:p");
+  let math_qname = pin_static("ltx:Math");
+  let text_qname = pin_static("ltx:text");
+  let p_qname = pin_static("ltx:p");
   for node in children {
     let qname = document::get_node_qname(&node);
     if qname == math_qname {
@@ -1577,7 +1563,7 @@ pub fn add_column_to_math_fork(
       if let Some(xmath) = first_child_element(&node) {
         let xmath_children: Vec<Node> = xmath.get_child_elements();
         if !xmath_children.is_empty() {
-          state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+          assign_value("ID_SUFFIX", Stored::String(pin_static(".mf")), None);
           if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
             document.append_clone(&mut mainfork_xmath, xmath_children)?;
             // Mark all freshly-cloned XMRefs with `_mf_ref="1"` so the
@@ -1586,44 +1572,46 @@ pub fn add_column_to_math_fork(
             // declare_test's XMDual-renamed-id case where the safety
             // gate `lookup_id().is_none()` would also fire but the ref
             // semantically belongs to a renamed target.
-            for mut xmref in document.findnodes("descendant::ltx:XMRef[@idref]", Some(&mainfork_xmath)) {
+            for mut xmref in
+              document.findnodes("descendant::ltx:XMRef[@idref]", Some(&mainfork_xmath))
+            {
               if !xmref.has_attribute("_mf_ref") && !xmref.has_attribute("_split_ref") {
                 let _ = document.set_attribute(&mut xmref, "_mf_ref", "1");
               }
             }
           }
-          state::assign_value("ID_SUFFIX", Stored::None, None);
+          assign_value("ID_SUFFIX", Stored::None, None);
         }
       }
     } else if qname == text_qname || qname == p_qname {
       let text_content = node.get_content();
-      if !text_content.is_empty() {
-        if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
-          state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
-          let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
-          document.append_clone(&mut txt, vec![node.clone()])?;
-          document.close_element_at(&mut txt)?;
-          state::assign_value("ID_SUFFIX", Stored::None, None);
-        }
-      }
-    } else if node.get_type() == Some(libxml::tree::NodeType::TextNode) {
-      let string = node.get_content();
-      if !string.trim().is_empty() {
-        if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
-          let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
-          let _ = txt.set_content(&string);
-          document.close_element_at(&mut txt)?;
-        }
-      }
-    } else if node.get_type() == Some(libxml::tree::NodeType::CommentNode) {
-      // Skip comments
-    } else {
-      if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
-        state::assign_value("ID_SUFFIX", Stored::String(arena::pin_static(".mf")), None);
+      if !text_content.is_empty()
+        && let Some(mut mainfork_xmath) = first_child_element(mainfork)
+      {
+        assign_value("ID_SUFFIX", Stored::String(pin_static(".mf")), None);
         let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
         document.append_clone(&mut txt, vec![node.clone()])?;
         document.close_element_at(&mut txt)?;
-        state::assign_value("ID_SUFFIX", Stored::None, None);
+        assign_value("ID_SUFFIX", Stored::None, None);
+      }
+    } else if node.get_type() == Some(NodeType::TextNode) {
+      let string = node.get_content();
+      if !string.trim().is_empty()
+        && let Some(mut mainfork_xmath) = first_child_element(mainfork)
+      {
+        let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+        let _ = txt.set_content(&string);
+        document.close_element_at(&mut txt)?;
+      }
+    } else if node.get_type() == Some(NodeType::CommentNode) {
+      // Skip comments
+    } else {
+      if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
+        assign_value("ID_SUFFIX", Stored::String(pin_static(".mf")), None);
+        let mut txt = document.open_element_at(&mut mainfork_xmath, "ltx:XMText", None, None)?;
+        document.append_clone(&mut txt, vec![node.clone()])?;
+        document.close_element_at(&mut txt)?;
+        assign_value("ID_SUFFIX", Stored::None, None);
       }
     }
     // Move the original node to the td (presentation side)
@@ -1652,7 +1640,7 @@ fn collect_xml_ids(node: &Node, ids: &mut Vec<String>) {
     ids.push(id);
   }
   for child in node.get_child_nodes() {
-    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+    if child.get_type() == Some(NodeType::ElementNode) {
       collect_xml_ids(&child, ids);
     }
   }
@@ -1664,7 +1652,7 @@ fn collect_xmrefs(node: &Node, refs: &mut Vec<Node>) {
     refs.push(node.clone());
   }
   for child in node.get_child_nodes() {
-    if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+    if child.get_type() == Some(NodeType::ElementNode) {
       collect_xmrefs(&child, refs);
     }
   }
@@ -1693,7 +1681,7 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
-  let trailing_num_re = regex::Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
+  let trailing_num_re = Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
   let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {
     if let Some(caps) = trailing_num_re.captures(id) {
@@ -1736,7 +1724,7 @@ pub fn equationgroup_join_cols(
   let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(equation));
   for mut cell in cells {
     let qname_sym = document::get_node_qname(&cell);
-    if !arena::with(qname_sym, |s| s.ends_with("_Capture_")) {
+    if !with(qname_sym, |s| s.ends_with("_Capture_")) {
       continue;
     }
     if col.is_multiple_of(ncols) {
@@ -1887,9 +1875,9 @@ pub fn add_meaning_rec(document: &mut Document, mut node: Node, meaning: &str) -
     return Ok(());
   }
   let qname = document::get_node_qname(&node);
-  if qname == arena::pin_static("ltx:XMArg") {
+  if qname == pin_static("ltx:XMArg") {
     // DON'T cross through into arguments
-  } else if qname == arena::pin_static("ltx:XMTok") {
+  } else if qname == pin_static("ltx:XMTok") {
     let role = node.get_attribute("role").unwrap_or_default();
     if (role.is_empty() || role == "UNKNOWN") && !node.has_attribute("meaning") {
       document.set_attribute(&mut node, "meaning", meaning)?;
@@ -1904,8 +1892,9 @@ pub fn add_meaning_rec(document: &mut Document, mut node: Node, meaning: &str) -
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use libxml::parser::Parser as XmlParser;
+
+  use super::*;
 
   // See wisdom_libxml_node_doc_lifetime.md — keep the Document alive.
   fn parse(xml: &str) -> libxml::tree::Document {

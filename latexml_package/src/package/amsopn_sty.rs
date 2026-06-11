@@ -32,7 +32,7 @@ LoadDefinitions!({
       font: Some(fontmap!(family => "serif", series => "medium", shape => "upright").into()),
       scriptpos: if has_star { None } else { Some("post".to_string()) },
       dynamic_scriptpos: has_star,
-      revert_as: Some(std::borrow::Cow::Borrowed("context")),
+      revert_as: Some(Cow::Borrowed("context")),
       ..Default::default()};
     def_math(cs, None, text_str, opts)?;
   });

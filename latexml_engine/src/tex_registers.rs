@@ -65,11 +65,11 @@ LoadDefinitions!({
         s!("0")
       }
     } else {
-      let xnext = state::lookup_number(&tracker_str).unwrap_or_else(|| Number::new(0));
+      let xnext = lookup_number(&tracker_str).unwrap_or_else(|| Number::new(0));
       let next = xnext.value_of() + 1;
       next.to_string()
     };
-    state::assign_value(&tracker_str,
+    assign_value(&tracker_str,
       Number::new(next.parse::<i64>().unwrap_or(0)), Some(Scope::Global));
     let mut result: Vec<Token> = vec![T_CS!("\\allocationnumber")];
     result.extend(Explode!(next));
@@ -100,10 +100,10 @@ LoadDefinitions!({
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
-        let defn_opt = state::lookup_register_definition(&defn_token);
+        let defn_opt = lookup_register_definition(&defn_token);
         local_current_token(defn_token);
         if let Some(defn) = defn_opt {
-          let summand = gullet::read_value(defn.register_type().unwrap())?;
+          let summand = read_value(defn.register_type().unwrap())?;
           let defn_args : Vec<ArgWrap> = inner.clone();
           let defn_value = defn.value_of(inner).unwrap_or_default();
           defn.set_value(defn_value.add(summand), None, defn_args);
@@ -121,7 +121,7 @@ LoadDefinitions!({
     if let ArgWrap::RegisterDefinition(dbox) = var {
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
-      match state::lookup_register_definition(&varname) { Some(defn) => {
+      match lookup_register_definition(&varname) { Some(defn) => {
         let defn_args : Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
         defn.set_value(defn_value.multiply(scale), None, defn_args);
@@ -141,7 +141,7 @@ LoadDefinitions!({
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
       let defn_args : Vec<ArgWrap> = inner.clone();
-      match state::lookup_register_definition(&varname) { Some(defn) => {
+      match lookup_register_definition(&varname) { Some(defn) => {
         let defn_value = defn.value_of(inner).unwrap_or_default();
         let mut denominator = scale.value_f64();
         if denominator == 0.0 {
@@ -167,7 +167,7 @@ pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Resu
   let relax_meaning = lookup_meaning(&TOKEN_RELAX).unwrap();
   assign_meaning(&cs, relax_meaning, None);
   // define
-  let num = gullet::read_number()?;
+  let num = read_number()?;
   let address = s!("{address_type}{}", num.value_of());
   let options = Some(RegisterOptions {
     address: Some(address),

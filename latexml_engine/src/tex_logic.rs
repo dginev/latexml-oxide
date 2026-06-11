@@ -28,7 +28,7 @@ LoadDefinitions!({
   // \ifx              c  tests if two tokens are the same.
   // \ifcat            c  tests if two tokens have the same category codes (i.e., values 0-16).
   DefParameterType!(ExpandedIfToken, sub[_inner, _extra] {
-    let token_opt = gullet::read_x_token(Some(false), true, None)?;
+    let token_opt = read_x_token(Some(false), true, None)?;
     match token_opt {
       Some(t) => t,
       None => {
@@ -90,15 +90,15 @@ LoadDefinitions!({
   // \ifvmode          c  is true if TeX is in vertical or internal vertical mode.
 
   DefConditional!("\\ifvmode", {
-    let mode = state::lookup_string_from_sym(pin!("MODE"));
+    let mode = lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("vertical")
   });
   DefConditional!("\\ifhmode", {
-    let mode = state::lookup_string_from_sym(pin!("MODE"));
+    let mode = lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("horizontal")
   });
   DefConditional!("\\ifinner", {
-    let mode = state::lookup_string_from_sym(pin!("MODE"));
+    let mode = lookup_string_from_sym(pin!("MODE"));
     matches!(
       mode.as_str(),
       "restricted_horizontal" | "internal_vertical" | "math"
@@ -106,7 +106,7 @@ LoadDefinitions!({
   });
   // Perl: LookupValue('MODE') =~ /math$/
   DefConditional!("\\ifmmode", {
-    let mode = state::lookup_string_from_sym(pin!("MODE"));
+    let mode = lookup_string_from_sym(pin!("MODE"));
     mode.ends_with("math")
   });
 

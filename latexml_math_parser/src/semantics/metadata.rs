@@ -1,7 +1,4 @@
-use std::cmp::Ordering;
-use std::error::Error;
-use std::fmt;
-use std::fmt::Display;
+use std::{cmp::Ordering, error::Error, fmt, fmt::Display};
 
 use super::curry::{CurryConstraint, CurryConstraints, CurryTerm};
 use crate::util::distill_lexeme;
@@ -196,14 +193,14 @@ impl Meta {
     //   CurryTerm::Literal(0),
     // )));
 
-    if let Some(ref level) = into.curry_level {
-      if &curry_var != level {
-        into.curry_constraints.insert(CurryConstraint((
-          curry_var.clone(),
-          Ordering::Equal,
-          level.clone(),
-        )));
-      }
+    if let Some(ref level) = into.curry_level
+      && &curry_var != level
+    {
+      into.curry_constraints.insert(CurryConstraint((
+        curry_var.clone(),
+        Ordering::Equal,
+        level.clone(),
+      )));
     }
     into.curry_level = Some(curry_var);
     self.with(into)

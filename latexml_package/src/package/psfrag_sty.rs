@@ -11,7 +11,7 @@ LoadDefinitions!({
   // psfrag_scan starts off. No reader consumes these in Rust yet, but
   // setting them at load time keeps state shape consistent with Perl
   // so the future \includegraphics hook can LookupValue them directly.
-  AssignValue!("psfrag_scan_all" => state::lookup_bool("2.09_COMPATIBILITY"));
+  AssignValue!("psfrag_scan_all" => lookup_bool("2.09_COMPATIBILITY"));
   AssignValue!("psfrag_scan"     => 0i32);
 
   // Options — Perl L28-32. Each declared option toggles psfrag_scan_all:

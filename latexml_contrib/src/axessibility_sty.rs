@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // This package targets Tagged PDF and is largely a no-op from a LaTeXML standpoint.
   DeclareOption!("accsupp", "");

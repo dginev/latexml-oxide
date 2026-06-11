@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::keyval::{self, KeyvalConfig};
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({

@@ -11,7 +11,6 @@
 //! visually even without explicit role markup).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // \name <text> — author-name marker (no arg in JAIR).
   def_macro_noop("\\name")?;
@@ -26,8 +25,10 @@ LoadDefinitions!({
 
   // jair.sty L244: \jairheading{vol}{year}{pages}{submitted}{published}
   // 5-arg metadata setter for running header. Preserve as frontmatter note.
-  DefMacro!("\\jairheading{}{}{}{}{}",
-    "\\@add@frontmatter{ltx:note}[role=jair-heading]{Vol. #1 (#2), #3 — sub: #4, pub: #5}");
+  DefMacro!(
+    "\\jairheading{}{}{}{}{}",
+    "\\@add@frontmatter{ltx:note}[role=jair-heading]{Vol. #1 (#2), #3 — sub: #4, pub: #5}"
+  );
   // jair.sty L260: \ShortHeadings{title}{authors} — running-page short forms.
   def_macro_noop("\\ShortHeadings{}{}")?;
   // jair.sty L256: \firstpageno{N} — page counter setter; no-op for HTML.

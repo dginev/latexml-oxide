@@ -18,10 +18,7 @@ fn attachfile_icon(name: &str) -> &'static str {
 /// `icon`, `color`, and `file` values from the keyvals (+ optional file
 /// arg) and packs them into a stored-map for the constructor XML to
 /// reference. `file` is None for the noattach / notextattach variants.
-fn attachfile_properties(
-  kv: Option<&Digested>,
-  file_arg: Option<&Digested>,
-) -> latexml_core::common::arena::SymHashMap<Stored> {
+fn attachfile_properties(kv: Option<&Digested>, file_arg: Option<&Digested>) -> SymHashMap<Stored> {
   let icon_key = kv
     .and_then(|d| {
       if let DigestedData::KeyVals(kvs) = d.data() {

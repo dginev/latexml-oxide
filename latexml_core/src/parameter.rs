@@ -1,26 +1,30 @@
+use std::{fmt, rc::Rc};
+
 use once_cell::sync::Lazy;
 #[cfg(feature = "codegen")]
 use proc_macro2::TokenStream;
 #[cfg(feature = "codegen")]
 use quote::{ToTokens, quote};
 use regex::Regex;
-use std::fmt;
-use std::rc::Rc;
 
-use crate::Digested;
-use crate::common::arena::{self, SymStr};
-use crate::common::error::*;
-use crate::common::object::Object;
-use crate::definition::argument::ArgWrap;
-use crate::definition::constructor::Constructor;
-use crate::definition::{BeforeDigestClosure, Definition, DigestionClosure};
-use crate::gullet;
-use crate::mouth::Mouth;
-use crate::pin;
-use crate::state::*;
-use crate::token::{Catcode, Token};
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
+use crate::{
+  Digested,
+  common::{
+    arena::{self, SymStr},
+    error::*,
+    object::Object,
+  },
+  definition::{
+    BeforeDigestClosure, Definition, DigestionClosure, argument::ArgWrap, constructor::Constructor,
+  },
+  gullet,
+  mouth::Mouth,
+  pin,
+  state::*,
+  token::{Catcode, Token},
+  tokens::Tokens,
+  whatsit::Whatsit,
+};
 
 pub type ReaderFn = dyn Fn(Option<&Parameters>, &[Tokens]) -> Result<ArgWrap>;
 pub type ReaderPredigestFn = dyn Fn(ArgWrap, &[Tokens]) -> Result<Option<Digested>>;
@@ -379,7 +383,7 @@ impl Parameter {
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
     // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
-    let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+    let mode = lookup_string_from_sym(crate::pin!("MODE"));
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       self.setup_catcodes();
@@ -440,7 +444,7 @@ impl Parameter {
     self.revert_catcodes()?;
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
-    let newmode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+    let newmode = lookup_string_from_sym(crate::pin!("MODE"));
     if mode != newmode && mode != "horizontal" {
       crate::stomach::leave_horizontal_internal();
     }
@@ -541,10 +545,10 @@ impl Parameters {
   pub fn revert_arguments(&self, args: Vec<Option<Tokens>>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
     for (parameter, arg) in self.0.iter().zip(args) {
-      if !parameter.novalue {
-        if let Some(reverted_tks) = parameter.revert(arg)? {
-          tokens.extend(reverted_tks.unlist());
-        }
+      if !parameter.novalue
+        && let Some(reverted_tks) = parameter.revert(arg)?
+      {
+        tokens.extend(reverted_tks.unlist());
       }
     }
     Ok(tokens)

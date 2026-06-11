@@ -45,6 +45,7 @@ pub mod radix;
 // Concrete post-processors (alphabetical)
 pub mod collector;
 pub mod crossref;
+pub mod extract;
 pub mod graphics;
 pub mod graphics_cache; // Content-addressed cache for graphics phase subprocs.
 pub mod latex_images;
@@ -54,7 +55,6 @@ pub mod make_index;
 pub mod manifest;
 pub mod math_images;
 pub mod mathml;
-pub mod extract;
 pub mod open_math;
 pub mod pack;
 pub mod picture_images;
@@ -69,9 +69,10 @@ pub mod writer;
 pub mod xmath;
 pub mod xslt;
 
+use std::sync::LazyLock;
+
 use document::PostDocument;
 use processor::{PostError, Processor};
-use std::sync::LazyLock;
 
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static POST_AUDIT: LazyLock<bool> = LazyLock::new(|| std::env::var("LATEXML_POST_AUDIT").is_ok());
@@ -202,13 +203,15 @@ impl Default for Post {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::document::PostDocumentOptions;
-  use crate::writer::{OutputFormat, Writer};
+  use crate::{
+    document::PostDocumentOptions,
+    writer::{OutputFormat, Writer},
+  };
 
   #[test]
   fn test_empty_pipeline() {
     let mut post = Post::new();
-    let doc = document::PostDocument::new_from_string(
+    let doc = PostDocument::new_from_string(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'/>",
       PostDocumentOptions::default(),
     )
@@ -223,7 +226,7 @@ mod tests {
   #[test]
   fn test_writer_pipeline() {
     let mut post = Post::new();
-    let doc = document::PostDocument::new_from_string(
+    let doc = PostDocument::new_from_string(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'><title>Test</title></document>",
       PostDocumentOptions::default(),
     )
@@ -239,7 +242,7 @@ mod tests {
   #[test]
   fn test_pmml_pipeline() {
     let mut post = Post::new();
-    let doc = document::PostDocument::new_from_string(
+    let doc = PostDocument::new_from_string(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
          <para xml:id='p1'><p>Inline <Math mode='inline' tex='a+b' text='a + b' xml:id='p1.m1'>\
            <XMath><XMApp>\
@@ -252,7 +255,7 @@ mod tests {
     )
     .unwrap();
 
-    let pmml = crate::mathml::MathML::new_presentation().with_keep_xmath(true);
+    let pmml = mathml::MathML::new_presentation().with_keep_xmath(true);
     let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(pmml)];
     let result = post.process_chain(vec![doc], &mut processors);
     assert!(result.is_ok());
@@ -275,7 +278,7 @@ mod tests {
   #[test]
   fn test_scan_pipeline() {
     let mut post = Post::new();
-    let doc = document::PostDocument::new_from_string(
+    let doc = PostDocument::new_from_string(
       "<document xmlns='http://dlmf.nist.gov/LaTeXML' xml:id='doc'>\
          <section xml:id='s1'><title>First</title></section>\
          <section xml:id='s2'><title>Second</title></section>\

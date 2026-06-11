@@ -73,27 +73,27 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     };
   }
   // Braced wildcard subscripts: x_{\WildCard}, x_{\WildCard,\WildCard}
-  if body_text.contains("_{\\WildCard") {
-    if let Some(idx) = body_text.find("_{") {
-      let base = body_text[..idx].trim().to_string();
-      let base_pred = base_text_predicate(&base);
-      let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
-      let nwilds = brace_content.matches("\\WildCard").count();
-      let wpaths = if nwilds <= 1 {
-        vec![vec![2, 1]] // child 1 of sibling 2 (POSTSUBSCRIPT content)
-      } else {
-        (1..=nwilds).map(|i| vec![2, 1, i]).collect()
-      };
-      return DeclarePattern {
-        xpath:          format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
-        pattern_type:   "subscript",
-        base_text:      Some(base),
-        sub_text:       None,
-        accent_name:    None,
-        has_wildcard:   true,
-        wildcard_paths: Some(wpaths),
-      };
-    }
+  if body_text.contains("_{\\WildCard")
+    && let Some(idx) = body_text.find("_{")
+  {
+    let base = body_text[..idx].trim().to_string();
+    let base_pred = base_text_predicate(&base);
+    let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
+    let nwilds = brace_content.matches("\\WildCard").count();
+    let wpaths = if nwilds <= 1 {
+      vec![vec![2, 1]] // child 1 of sibling 2 (POSTSUBSCRIPT content)
+    } else {
+      (1..=nwilds).map(|i| vec![2, 1, i]).collect()
+    };
+    return DeclarePattern {
+      xpath:          format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
+      pattern_type:   "subscript",
+      base_text:      Some(base),
+      sub_text:       None,
+      accent_name:    None,
+      has_wildcard:   true,
+      wildcard_paths: Some(wpaths),
+    };
   }
   // Literal subscript: x_1, x_{1}, x_{2n-1}
   // Pre-parsed: XMTok[x] + XMApp[POSTSUBSCRIPT, XMTok[1]]
@@ -134,20 +134,19 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   for accent in &[
     "hat", "widehat", "tilde", "bar", "vec", "dot", "ddot", "check", "breve",
   ] {
-    if let Some(rest) = body_text.strip_prefix(&format!("\\{accent}{{")) {
-      if let Some(inner) = rest.strip_suffix('}') {
-        if !inner.contains("WildCard") {
-          return DeclarePattern {
-            xpath:          "descendant-or-self::*[local-name()='XMApp']".to_string(),
-            pattern_type:   "accent",
-            base_text:      Some(inner.to_string()),
-            sub_text:       None,
-            accent_name:    Some(accent.to_string()),
-            has_wildcard:   false,
-            wildcard_paths: None,
-          };
-        }
-      }
+    if let Some(rest) = body_text.strip_prefix(&format!("\\{accent}{{"))
+      && let Some(inner) = rest.strip_suffix('}')
+      && !inner.contains("WildCard")
+    {
+      return DeclarePattern {
+        xpath:          "descendant-or-self::*[local-name()='XMApp']".to_string(),
+        pattern_type:   "accent",
+        base_text:      Some(inner.to_string()),
+        sub_text:       None,
+        accent_name:    Some(accent.to_string()),
+        has_wildcard:   false,
+        wildcard_paths: None,
+      };
     }
   }
 
@@ -239,7 +238,6 @@ fn parse_subscript_literal(body_text: &str) -> Option<(String, String)> {
   Some((base, sub.to_string()))
 }
 
-
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
   // two well-known boolean knobs to the document author. Both state keys
@@ -264,14 +262,14 @@ LoadDefinitions!({
   DeclareOption!("bibtex", {
     AssignValue!(
       "BIB_CONFIG",
-      Stored::Strings(Rc::new([arena::pin("bib"), arena::pin("bbl")])),
+      Stored::Strings(Rc::new([pin("bib"), pin("bbl")])),
       Scope::Global
     );
   });
   DeclareOption!("nobibtex", {
     AssignValue!(
       "BIB_CONFIG",
-      Stored::Strings(Rc::new([arena::pin("bbl")])),
+      Stored::Strings(Rc::new([pin("bbl")])),
       Scope::Global
     );
   });
@@ -323,11 +321,19 @@ LoadDefinitions!({
 
   // Styling options (Perl PR #2767)
   DeclareOption!("authorsoneline", {
-    assign_mapping("DOCUMENT_CLASSES", "ltx_authors_1line", Some(Stored::Bool(true)));
+    assign_mapping(
+      "DOCUMENT_CLASSES",
+      "ltx_authors_1line",
+      Some(Stored::Bool(true)),
+    );
     assign_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline", None::<Stored>);
   });
   DeclareOption!("authorsmultiline", {
-    assign_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline", Some(Stored::Bool(true)));
+    assign_mapping(
+      "DOCUMENT_CLASSES",
+      "ltx_authors_multiline",
+      Some(Stored::Bool(true)),
+    );
     assign_mapping("DOCUMENT_CLASSES", "ltx_authors_1line", None::<Stored>);
   });
 
@@ -384,13 +390,13 @@ LoadDefinitions!({
   // Perl handles this via \setkeys{LTXML}{...} in the default option handler.
   // ProcessOptions with the LTXML keyset now stores package keyvals here;
   // keep the legacy extraction as a fallback for older call paths.
-  if let Some(opts) = state::lookup_vecdeque("opt@latexml.sty") {
+  if let Some(opts) = lookup_vecdeque("opt@latexml.sty") {
     for opt in opts.iter() {
       let opt_str = opt.to_string();
       if let Some(val) = opt_str.strip_prefix("bibconfig=") {
-        state::assign_value(
+        assign_value(
           "KV@LTXML@bibconfig",
-          Stored::String(arena::pin(val.trim())),
+          Stored::String(pin(val.trim())),
           Some(Scope::Global),
         );
       }
@@ -399,14 +405,11 @@ LoadDefinitions!({
 
   // Apply bibconfig from keyvals (Perl L57-59: code closure)
   // bibconfig=bbl,bib means try bbl first, fall back to bib
-  if let Some(v) = state::lookup_value("KV@LTXML@bibconfig") {
+  if let Some(v) = lookup_value("KV@LTXML@bibconfig") {
     let config_str = v.to_string();
-    let configs: Vec<_> = config_str
-      .split(',')
-      .map(|s| arena::pin(s.trim()))
-      .collect();
+    let configs: Vec<_> = config_str.split(',').map(|s| pin(s.trim())).collect();
     if !configs.is_empty() {
-      state::assign_value(
+      assign_value(
         "BIB_CONFIG",
         Stored::Strings(Rc::from(configs)),
         Some(Scope::Global),
@@ -415,32 +418,32 @@ LoadDefinitions!({
   }
 
   // Apply limit options from keyvals (Perl L87-98)
-  if let Some(v) = state::lookup_value("KV@LTXML@tokenlimit") {
+  if let Some(v) = lookup_value("KV@LTXML@tokenlimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      gullet::set_token_limit(Some(limit));
+      set_token_limit(Some(limit));
     }
   }
-  if let Some(v) = state::lookup_value("KV@LTXML@iflimit") {
+  if let Some(v) = lookup_value("KV@LTXML@iflimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      state::assign_value("if_limit", Stored::from(limit as i64), Some(Scope::Global));
+      assign_value("if_limit", Stored::from(limit as i64), Some(Scope::Global));
     }
   }
-  if let Some(v) = state::lookup_value("KV@LTXML@absorblimit") {
+  if let Some(v) = lookup_value("KV@LTXML@absorblimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      state::assign_value(
+      assign_value(
         "absorb_limit",
         Stored::from(limit as i64),
         Some(Scope::Global),
       );
     }
   }
-  if let Some(v) = state::lookup_value("KV@LTXML@pushbacklimit") {
+  if let Some(v) = lookup_value("KV@LTXML@pushbacklimit") {
     let limit = v.to_string().trim().parse::<usize>().unwrap_or(0);
     if limit > 0 {
-      gullet::set_pushback_limit(Some(limit));
+      set_pushback_limit(Some(limit));
     }
   }
 
@@ -456,12 +459,12 @@ LoadDefinitions!({
     ("zoomout", "zoomout"),
   ] {
     let key = s!("KV@LTXML@{}", kv_name);
-    if let Some(v) = state::lookup_value(&key) {
+    if let Some(v) = lookup_value(&key) {
       let val = v.to_string().trim().to_string();
       if !val.is_empty() {
-        state::assign_value(
+        assign_value(
           &s!("PI@latexml@{}", pi_name),
-          Stored::String(arena::pin(&val)),
+          Stored::String(pin(&val)),
           Some(Scope::Global),
         );
       }
@@ -501,7 +504,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lxRegisterNamespace {} Semiverbatim", sub[(prefix, uri)] {
     let prefix_str = prefix.to_string();
     let uri_str = uri.to_string();
-    latexml_core::common::model::register_namespace(&prefix_str, Some(&uri_str));
+    model::register_namespace(&prefix_str, Some(&uri_str));
     Ok(Vec::new())
   });
 
@@ -521,8 +524,8 @@ LoadDefinitions!({
       .and_then(|k| k.get_value("media"))
       .map(|v| v.to_string())
       .unwrap_or_default();
-    latexml_core::binding::content::require_resource(
-      latexml_core::document::resource::Resource {
+    require_resource(
+      Resource {
         name, mimetype, media, content: String::new(),
       });
     Ok(Vec::new())
@@ -530,10 +533,7 @@ LoadDefinitions!({
 
   // Perl latexml.sty.ltxml (PR #2767): \lxKeywords{text} — add keywords to
   // the frontmatter.
-  DefMacro!(
-    "\\lxKeywords{}",
-    "\\lx@add@keywords[name={keywords}]{#1}"
-  );
+  DefMacro!("\\lxKeywords{}", "\\lx@add@keywords[name={keywords}]{#1}");
 
   // Perl latexml.sty.ltxml L249-250: \lxContextTOC — emits a TOC element
   // with format='context'. The matching ltx:TOC schema element already
@@ -602,8 +602,8 @@ LoadDefinitions!({
     let mut has_description = false;
     let mut tag_text = String::new();
     let mut description_text = String::new();
-    if let Some(kv_arg) = whatsit.get_arg(2) {
-      if let DigestedData::KeyVals(kv) = kv_arg.data() {
+    if let Some(kv_arg) = whatsit.get_arg(2)
+      && let DigestedData::KeyVals(kv) = kv_arg.data() {
         let hash = kv.get_hash_digested();
         if let Some(v) = hash.get("role") { role = v.clone(); }
         if let Some(v) = hash.get("name") { name_val = v.clone(); }
@@ -615,7 +615,6 @@ LoadDefinitions!({
           whatsit.set_property("scope_opt", Stored::from(v.clone()));
         }
       }
-    }
     // Extract body text from arg 3 (the {} body)
     let body_text = whatsit.get_arg(3)
       .map(|a| { let s = a.to_string(); s.trim_matches('$').trim().to_string() })
@@ -629,10 +628,10 @@ LoadDefinitions!({
       step_counter("@XMDECL", false)?;
       // Perl: DefMacroI(\@@XMDECL@ID, ..., LookupRegister(\c@@XMDECL)->valueOf)
       // then: ToString(Expand(\the@XMDECL@ID))
-      let id = gullet::do_expand(T_CS!("\\the@XMDECL@ID"))
+
+      do_expand(T_CS!("\\the@XMDECL@ID"))
         .ok().map(|t| t.to_string().trim().to_string())
-        .unwrap_or_default();
-      id
+        .unwrap_or_default()
     } else {
       String::new()
     };
@@ -653,7 +652,7 @@ LoadDefinitions!({
       let key = "LATEXML_DECLARATIONS";
       let mut decls: Vec<String> = match lookup_value(key) {
         Some(Stored::String(s)) => {
-          let s_str = arena::with(s, |r| r.to_string());
+          let s_str = with(s, |r| r.to_string());
           if s_str.is_empty() { Vec::new() } else { s_str.split('\n').map(String::from).collect() }
         },
         _ => Vec::new(),
@@ -662,17 +661,17 @@ LoadDefinitions!({
       // Mathcode decoding for single-char bodies
       if body_text.chars().count() == 1 {
         let ch = body_text.chars().next().unwrap();
-        if let Some(mathcode) = state::lookup_mathcode(&ch.to_string()) {
-          if mathcode > 0 {
+        if let Some(mathcode) = lookup_mathcode(&ch.to_string())
+          && mathcode > 0 {
             let decoded_pos = (mathcode % 256) as u8;
             let decoded_fam = (mathcode / 256) % 16;
             let font_key = format!("textfont_{decoded_fam}");
-            if let Some(Stored::Token(ref ftok)) = state::lookup_value(&font_key) {
+            if let Some(Stored::Token(ref ftok)) = lookup_value(&font_key) {
               // Extract encoding before calling font::decode — decode may
               // trigger preload_font_map → assign_value, and with_font_info
               // holds a State borrow while its closure runs (see
               // mathchar.rs fix for 0711.4787 RefCell panic pattern).
-              let mut encoding_opt: Option<String> = state::with_font_info(ftok, |fontinfo| {
+              let mut encoding_opt: Option<String> = with_font_info(ftok, |fontinfo| {
                 if let Some(Stored::Font(info)) = fontinfo.unwrap_or(None) {
                   info.encoding.as_ref().map(|s| s.to_string())
                 } else {
@@ -686,25 +685,24 @@ LoadDefinitions!({
               // \lxDeclare doesn't add the alternate codepoint pattern (e.g.
               // `*` → `∗`) and overrides on \ast etc. silently fail.
               if encoding_opt.is_none() {
-                let shared_key = state::with_value(
+                let shared_key = with_value(
                   &format!("font_shared_key_{}", ftok.with_str(ToString::to_string)),
                   |v| match v {
-                    Some(Stored::String(s)) => arena::with(*s, |str| Some(str.to_string())),
+                    Some(Stored::String(s)) => with(*s, |str| Some(str.to_string())),
                     _ => None,
                   },
                 );
-                if let Some(sk) = shared_key {
-                  if let Some(name) = sk.strip_prefix("fontinfo_") {
-                    let props = latexml_core::common::font::decode_fontname(name, None, None);
+                if let Some(sk) = shared_key
+                  && let Some(name) = sk.strip_prefix("fontinfo_") {
+                    let props = font::decode_fontname(name, None, None);
                     if let Some(props) = props {
                       encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
                     }
                   }
-                }
               }
               if let Some(encoding) = encoding_opt {
                 let decoded =
-                  latexml_core::common::font::decode(decoded_pos, Some(encoding), false);
+                  font::decode(decoded_pos, Some(encoding), false);
                 if let Some(dc) = decoded {
                   let ds = dc.to_string();
                   if ds != body_text {
@@ -714,9 +712,8 @@ LoadDefinitions!({
               }
             }
           }
-        }
       }
-      assign_value(key, Stored::String(arena::pin(decls.join("\n"))), Some(Scope::Global));
+      assign_value(key, Stored::String(pin(decls.join("\n"))), Some(Scope::Global));
     }
   },
   after_construct => sub[document, whatsit] {
@@ -780,7 +777,7 @@ LoadDefinitions!({
           sid
         };
         if !section_id.is_empty() {
-          Some(Scope::Named(arena::pin(format!("id:{section_id}"))))
+          Some(Scope::Named(pin(format!("id:{section_id}"))))
         } else { None }
       } else { None };
       let mut attrs = FxHashMap::default();
@@ -861,12 +858,11 @@ LoadDefinitions!({
     T_CS!("\\lxTableColumnHead"),
     None,
     Some(PrimitiveBody::Closure(Rc::new(|_args| {
-      if let Some(alignment) = lookup_alignment() {
-        if let Some(data) = alignment.alignment_cell() {
-          if let Some(col) = data.borrow_mut().current_column() {
-            col.thead_in_column = true;
-          }
-        }
+      if let Some(alignment) = lookup_alignment()
+        && let Some(data) = alignment.alignment_cell()
+        && let Some(col) = data.borrow_mut().current_column()
+      {
+        col.thead_in_column = true;
       }
       Ok(Vec::new())
     }))),
@@ -880,12 +876,11 @@ LoadDefinitions!({
     T_CS!("\\lxTableRowHead"),
     None,
     Some(PrimitiveBody::Closure(Rc::new(|_args| {
-      if let Some(alignment) = lookup_alignment() {
-        if let Some(data) = alignment.alignment_cell() {
-          if let Some(col) = data.borrow_mut().current_column() {
-            col.thead_in_row = true;
-          }
-        }
+      if let Some(alignment) = lookup_alignment()
+        && let Some(data) = alignment.alignment_cell()
+        && let Some(col) = data.borrow_mut().current_column()
+      {
+        col.thead_in_row = true;
       }
       Ok(Vec::new())
     }))),
@@ -902,7 +897,7 @@ LoadDefinitions!({
     // emits the user-defined CS rather than expanding the presentation
     // template (matches the convention for user-defined math macros).
     let mut opts = MathPrimitiveOptions {
-      revert_as: Some(std::borrow::Cow::Borrowed("context")),
+      revert_as: Some(Cow::Borrowed("context")),
       ..Default::default()
     };
     if let Some(kv) = params_opt.as_ref() {
@@ -994,7 +989,7 @@ LoadDefinitions!({
     properties => sub[args] {
       unpack_opt_ref!(args => label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
+      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
     }
   );
 

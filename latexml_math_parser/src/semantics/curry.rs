@@ -1,9 +1,12 @@
 // use crate::argument::Argument;
 // use minilp::{ComparisonOp, Variable};
 // use quote::ToTokens;
+use std::{
+  cmp::Ordering,
+  fmt::{self, Display},
+};
+
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
-use std::cmp::Ordering;
-use std::fmt::{self, Display};
 
 /// A CurryConstraint is a simple linear constraint between named variables and literals
 /// e.g. "x-y == 1", "x>=0", "y>=1", and so forth
@@ -112,15 +115,15 @@ impl CurryTerm {
         if rhs == Literal(0) {
           simpler = Some(lhs.clone());
         }
-        if let Sub(ref slhs, ref srhs) = lhs {
-          if **srhs == rhs {
-            simpler = Some(*slhs.clone());
-          }
+        if let Sub(ref slhs, ref srhs) = lhs
+          && **srhs == rhs
+        {
+          simpler = Some(*slhs.clone());
         }
-        if let Sub(ref slhs, ref srhs) = rhs {
-          if **srhs == lhs {
-            simpler = Some(*slhs.clone());
-          }
+        if let Sub(ref slhs, ref srhs) = rhs
+          && **srhs == lhs
+        {
+          simpler = Some(*slhs.clone());
         }
         match simpler {
           Some(new) => new,

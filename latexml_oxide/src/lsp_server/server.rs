@@ -2,14 +2,12 @@
 //! fallback conversion. The unix warm-fork pipeline (`unix.rs`)
 //! adds `run_warm` in its own `impl Server` block.
 
-use std::collections::BTreeSet;
-use std::path::PathBuf;
+use std::{collections::BTreeSet, path::PathBuf};
 
 use rustc_hash::FxHashMap;
 
-use crate::converter::Converter;
-
 use super::*;
+use crate::converter::Converter;
 
 // ======================================================================
 // Server — warm preamble cache + in-process fallback conversion.
@@ -75,9 +73,15 @@ impl Server {
   /// version + 1 (so the dep snapshot still observes the change).
   pub(crate) fn upsert_buffer(&mut self, path: String, text: String, version: Option<i64>) {
     let next = version.unwrap_or_else(|| {
-      self.open_buffers.get(&path).map(|b| b.version + 1).unwrap_or(1)
+      self
+        .open_buffers
+        .get(&path)
+        .map(|b| b.version + 1)
+        .unwrap_or(1)
     });
-    self.open_buffers.insert(path, Buffer { version: next, text });
+    self
+      .open_buffers
+      .insert(path, Buffer { version: next, text });
   }
 
   /// Re-apply the overlay for the project rooted at `root` onto the engine's
@@ -176,7 +180,10 @@ pub(crate) fn publish_grouped_diagnostics(
     send_message(writer, &publish_diagnostics_notification(uri, diags))?;
   }
   // Clear files that had diagnostics last round but none now.
-  if let Some(previous) = server.last_published.insert(root_uri.to_string(), published.clone()) {
+  if let Some(previous) = server
+    .last_published
+    .insert(root_uri.to_string(), published.clone())
+  {
     for stale in previous {
       if !published.contains(&stale) {
         send_message(writer, &publish_diagnostics_notification(&stale, &[]))?;

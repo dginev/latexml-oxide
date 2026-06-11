@@ -90,7 +90,7 @@ LoadDefinitions!({
      <ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math>\
      </ltx:equation>",
     before_digest => {
-      stomach::begin_mode("display_math")?;
+      begin_mode("display_math")?;
       Let!(T_MATH!(), "\\lx@dollar@in@oldrevtex");
     },
     properties => { ref_step_id("equation") },

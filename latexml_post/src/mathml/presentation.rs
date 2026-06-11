@@ -10,8 +10,9 @@
 //! - Scripts (sub/sup/under/over) handle pre/mid/post positioning
 //! - Style context tracks display/text/script/scriptscript levels
 
-use libxml::tree::Node;
 use std::cell::Cell;
+
+use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
 use super::operator_dictionary;
@@ -288,7 +289,10 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       }
       NodeData::Element {
         tag:        "m:mover".to_string(),
-        attributes: Some(HashMap::from_iter([("accent".to_string(), "true".to_string())])),
+        attributes: Some(HashMap::from_iter([(
+          "accent".to_string(),
+          "true".to_string(),
+        )])),
         children:   vec![pmml(doc, base), pmml(doc, op)],
       }
     },
@@ -799,15 +803,12 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   // announce a blank/empty group, indexers see a spurious atom).
   //
   // The shape decision depends on WHICH operand is absent:
-  //   - absent left, real right (`Apply(=, absent, RHS)`) → prefix:
-  //         <mrow><mo>=</mo><RHS></mrow>
-  //         (continuation row `& = RHS` whose LHS is inherited from
-  //         the previous row — see prefix_relop_apply in semantics.rs)
-  //   - real left, absent right (`Apply(=, LHS, absent)`) → postfix:
-  //         <mrow><LHS><mo>=</mo></mrow>
-  //         (trailing relop — see postfix_relop in semantics.rs)
-  //   - real left, real right (normal case) → infix:
-  //         <mrow><LHS><mo>=</mo><RHS></mrow>
+  //   - absent left, real right (`Apply(=, absent, RHS)`) → prefix: <mrow><mo>=</mo><RHS></mrow>
+  //     (continuation row `& = RHS` whose LHS is inherited from the previous row — see
+  //     prefix_relop_apply in semantics.rs)
+  //   - real left, absent right (`Apply(=, LHS, absent)`) → postfix: <mrow><LHS><mo>=</mo></mrow>
+  //     (trailing relop — see postfix_relop in semantics.rs)
+  //   - real left, real right (normal case) → infix: <mrow><LHS><mo>=</mo><RHS></mrow>
   //   - both absent → just the operator.
   //
   // For the chained case (n≥3 args), drop only absents that are
@@ -818,7 +819,11 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   let leading_absent = is_absent_operand(&args[0]);
   let trailing_absent = args.len() >= 2 && is_absent_operand(&args[args.len() - 1]);
   let slice_start = if leading_absent { 1 } else { 0 };
-  let slice_end = if trailing_absent { args.len() - 1 } else { args.len() };
+  let slice_end = if trailing_absent {
+    args.len() - 1
+  } else {
+    args.len()
+  };
   let live_args = &args[slice_start..slice_end];
 
   if live_args.is_empty() {
@@ -1568,8 +1573,9 @@ pub fn clean_internal_attrs(node: &mut NodeData) {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use rustc_hash::FxHashMap as HashMap;
+
+  use super::*;
 
   #[test]
   fn math_style_step_down_monotone_saturates_at_scriptscript() {
@@ -1690,7 +1696,10 @@ mod tests {
       attributes: None,
       children:   vec![NodeData::Element {
         tag:        "mi".to_string(),
-        attributes: Some(HashMap::from_iter([("_rspace".to_string(), "1".to_string())])),
+        attributes: Some(HashMap::from_iter([(
+          "_rspace".to_string(),
+          "1".to_string(),
+        )])),
         children:   vec![],
       }],
     };

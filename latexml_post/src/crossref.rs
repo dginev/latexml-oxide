@@ -8,9 +8,11 @@
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::document::{get_xml_id, NodeData, PostDocument};
-use crate::object_db::{ObjectDB, Value};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::{NodeData, PostDocument, get_xml_id},
+  object_db::{ObjectDB, Value},
+  processor::{ProcessResult, Processor},
+};
 
 /// Sectional element types that appear in TOCs.
 const NORMAL_TOC_TYPES: &[&str] = &[
@@ -247,11 +249,7 @@ impl CrossRef {
     // Try to generate from the document's root ID. Use `get_xml_id` so we
     // pick up ids stored in the xml namespace (Scan's default placement)
     // as well as the bare "xml:id" attribute form.
-    if let Some(docid) = doc
-      .get_document_element()
-      .as_ref()
-      .and_then(get_xml_id)
-    {
+    if let Some(docid) = doc.get_document_element().as_ref().and_then(get_xml_id) {
       let title = self.generate_title(doc, &docid, "toctitle");
       if title.as_ref().map(|t| !t.is_empty()).unwrap_or(false) {
         return title;
@@ -426,7 +424,10 @@ impl CrossRef {
               let text = val.to_string();
               stuff.push(NodeData::Element {
                 tag:        "ltx:text".to_string(),
-                attributes: Some(HashMap::from_iter([("class".to_string(), class.to_string())])),
+                attributes: Some(HashMap::from_iter([(
+                  "class".to_string(),
+                  class.to_string(),
+                )])),
                 children:   vec![NodeData::Text(text)],
               });
               break;
@@ -836,14 +837,12 @@ impl CrossRef {
 
   fn fill_in_glossaryrefs(&mut self, doc: &mut PostDocument) {
     // Mirrors Perl CrossRef.pm L454-481 fill_in_glossaryrefs:
-    //   - resolve `<ltx:glossaryref key=… inlist=…>` against the
-    //     GLOSSARY:list:key DB entry registered by Scan + MakeIndex,
-    //   - copy the entry's id into `idref` so a later fill_in_refs
-    //     pass converts it to `href`,
-    //   - copy `phrase:description` into `title` so the XSLT inline
-    //     template renders a tooltip,
-    //   - fall back to the bare key + `ltx_missing` class when the
-    //     entry is not in the DB or has no displayable content.
+    //   - resolve `<ltx:glossaryref key=… inlist=…>` against the GLOSSARY:list:key DB entry
+    //     registered by Scan + MakeIndex,
+    //   - copy the entry's id into `idref` so a later fill_in_refs pass converts it to `href`,
+    //   - copy `phrase:description` into `title` so the XSLT inline template renders a tooltip,
+    //   - fall back to the bare key + `ltx_missing` class when the entry is not in the DB or has no
+    //     displayable content.
     for ref_node in &doc.findnodes("descendant::ltx:glossaryref") {
       let mut ref_mut = ref_node.clone();
       let key = ref_node.get_attribute("key").unwrap_or_default();

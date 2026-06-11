@@ -140,10 +140,10 @@ LoadDefinitions!({
   // Note that TeX doesn't actually close the mouth;
   // it just flushes it so that it will close the next time it's read!
   DefMacro!(T_CS!("\\endinput"), None, {
-    gullet::flush_mouth();
+    flush_mouth();
   });
   DefRegister!("\\inputlineno",Number!(0), readonly => true, getter=> {
-    Number::new(gullet::get_locator().from_line as i64)
+    Number::new(get_locator().from_line as i64)
   });
 
   //======================================================================
@@ -257,9 +257,9 @@ LoadDefinitions!({
         kv = wrapped;
       }
 
-      gullet::unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
-      gullet::unread_vec(kv);
-      gullet::unread_one(T_CS!("\\lx@special@graphics"));
+      unread_vec(vec![T_BEGIN!(), T_OTHER!(graphic), T_END!()]);
+      unread_vec(kv);
+      unread_one(T_CS!("\\lx@special@graphics"));
     } else {
       Info!("ignored", "special", s!("Unrecognized TeX Special: {arg}"));
     }
@@ -295,11 +295,11 @@ LoadDefinitions!({
       // of double-quotes around the value (`\special{psfile="fig.ps"}`
       // arrives with the quotes in the argument string).
       let path_trimmed = raw.trim().trim_matches('"').to_string();
-      let candidates = latexml_core::util::image::image_candidates(&path_trimmed);
+      let candidates = util::image::image_candidates(&path_trimmed);
       // Map psfile-style options to graphicx-style. Perl L282-311.
       let mut options_vec: Vec<String> = Vec::new();
-      if let Some(ref kv_digested) = args[0] {
-        if let DigestedData::KeyVals(kv) = kv_digested.data() {
+      if let Some(ref kv_digested) = args[0]
+        && let DigestedData::KeyVals(kv) = kv_digested.data() {
           let mut h_off: f64 = 0.0;
           let mut v_off: f64 = 0.0;
           for (key, value) in kv.get_pairs() {
@@ -324,7 +324,6 @@ LoadDefinitions!({
             options_vec.push("clip=true".to_string());
           }
         }
-      }
       let options = options_vec.join(",");
       Ok(stored_map!("path" => path_trimmed, "candidates" => candidates, "options" => options))
     },

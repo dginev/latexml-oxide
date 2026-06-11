@@ -1,13 +1,14 @@
-use crate::Object;
-use crate::common::error::*;
-use crate::common::numeric_ops::NumericOps;
-use crate::definition::register::RegisterType;
-use crate::definition::register::RegisterValue;
-use crate::digested::Digested;
-use crate::mouth;
-use crate::token::Catcode;
-use crate::tokens::Tokens;
 use std::fmt;
+
+use crate::{
+  Object,
+  common::{error::*, numeric_ops::NumericOps},
+  definition::register::{RegisterType, RegisterValue},
+  digested::Digested,
+  mouth,
+  token::Catcode,
+  tokens::Tokens,
+};
 
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq)]
 pub struct Number(pub i64);

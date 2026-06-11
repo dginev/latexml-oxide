@@ -9,7 +9,7 @@ LoadDefinitions!({
 
   // Perl L21-23: DefPrimitiveI \@standalone@start@input — sets inPreamble = 0.
   DefPrimitive!("\\@standalone@start@input", {
-    state::assign_value("inPreamble", false, None);
+    assign_value("inPreamble", false, None);
   });
 
   // Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
@@ -19,7 +19,7 @@ LoadDefinitions!({
   // bounded scope inside the outer document.
   DefPrimitive!("\\@standalone@documentclass[]{}", sub[(_opts, packages_tks)] {
     bgroup();
-    state::assign_value("inPreamble", true, None);
+    assign_value("inPreamble", true, None);
     let packages_str = packages_tks.to_string();
     for pkg in packages_str.split(',') {
       let pkg = pkg.trim();

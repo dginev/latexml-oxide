@@ -1,26 +1,22 @@
+use std::{borrow::Cow, fmt, rc::Rc};
+
 use libxml::tree::Node;
-use std::borrow::Cow;
-use std::fmt;
-use std::rc::Rc;
 
-use crate::common::arena::SymHashMap;
-use crate::common::error::*;
-use crate::common::font::Font;
-use crate::common::object::Object;
-use crate::state::*;
-
-use crate::definition::{
-  BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
-  PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
+use crate::{
+  BoxOps, Digested,
+  common::{arena::SymHashMap, error::*, font::Font, locator::Locator, object::Object},
+  definition::{
+    BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
+    PropertiesClosure, ReplacementClosure, Reversion, SizingClosure,
+  },
+  document::Document,
+  parameter::Parameters,
+  state::*,
+  stomach::digest_next_body,
+  token::*,
+  tokens::Tokens,
+  whatsit::Whatsit,
 };
-use crate::common::locator::Locator;
-use crate::document::Document;
-use crate::parameter::Parameters;
-use crate::stomach::digest_next_body;
-use crate::token::*;
-use crate::tokens::Tokens;
-use crate::whatsit::Whatsit;
-use crate::{BoxOps, Digested};
 
 /// A `--source-map` construct's source extent: the union (first `from` → last
 /// `to`) of its children's spans, or `None` if none carries a position (the
@@ -298,7 +294,7 @@ impl Definition for Constructor {
     // info!("{" + $self->tracingCSName . "}\n" if $tracing;
     // Get some info before we process arguments...
     let state_font = lookup_font();
-    let ismath = crate::state::lookup_bool_sym(crate::pin!("IN_MATH"));
+    let ismath = lookup_bool_sym(crate::pin!("IN_MATH"));
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
@@ -330,7 +326,7 @@ impl Definition for Constructor {
     // Perl: $mode = $properties{mode} || $state->lookupValue('MODE') || 'restricted_horizontal';
     // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
     properties.entry("mode").or_insert_with(|| {
-      let mode = crate::state::lookup_string_from_sym(crate::pin!("MODE"));
+      let mode = lookup_string_from_sym(crate::pin!("MODE"));
       Stored::String(crate::common::arena::pin(if mode.is_empty() {
         "restricted_horizontal"
       } else {
@@ -356,7 +352,7 @@ impl Definition for Constructor {
     // constructor-built elements carry `Locator::default()` (source =
     // `locator.rs`) and the source-map user-source filter drops them
     // (~53/265 → 128/… `article.tex` elements stamped once captured).
-    if crate::state::source_map_enabled() {
+    if source_map_enabled() {
       // --source-map: the construct's source extent is the union of its
       // children's spans (fixes the post-expansion eating-disorder, Experiment 2),
       // falling back to the gullet locator when no child carries a position.
@@ -379,8 +375,10 @@ impl Definition for Constructor {
       // arg span, so the wrapper (e.g. `ltx:Math`) spans its content. §3.1.3.
       #[cfg(feature = "token-locators")]
       if crate::state::source_map_enabled() {
-        if let Some(body_span) =
-          post.iter().filter_map(child_span).reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
+        if let Some(body_span) = post
+          .iter()
+          .filter_map(child_span)
+          .reduce(|a, b| Locator::new_range(a, b).unwrap_or(a))
         {
           whatsit.locator = Some(match whatsit.locator {
             Some(prev) if prev.from_line != 0 => {

@@ -139,16 +139,17 @@ fn parse_pgf_number(arg: &Tokens) -> f64 {
     return v;
   }
   // If direct parse fails (e.g. unexpanded macro), expand and retry
-  match gullet::do_expand(arg.clone()) { Ok(expanded) => {
-    let s = expanded.to_string();
-    let s = strip_leading_double_negation(s.trim());
-    if s == "." {
-      return 0.0;
-    }
-    s.parse::<f64>().unwrap_or(0.0)
-  } _ => {
-    0.0
-  }}
+  match do_expand(arg.clone()) {
+    Ok(expanded) => {
+      let s = expanded.to_string();
+      let s = strip_leading_double_negation(s.trim());
+      if s == "." {
+        return 0.0;
+      }
+      s.parse::<f64>().unwrap_or(0.0)
+    },
+    _ => 0.0,
+  }
 }
 
 // Perl #2711 uses `s/^\-\-//g`, which strips every leading `--` pair
@@ -221,10 +222,10 @@ fn try_simple_number(input: &str) -> Option<String> {
         result = format!("{}.0", result);
       }
       // Overflow check for negative
-      if let Ok(numval) = result.parse::<f64>() {
-        if numval < -MAX_PGF_NUMBER {
-          result = format!("{}", -MAX_PGF_NUMBER);
-        }
+      if let Ok(numval) = result.parse::<f64>()
+        && numval < -MAX_PGF_NUMBER
+      {
+        result = format!("{}", -MAX_PGF_NUMBER);
       }
     }
   }
@@ -236,7 +237,7 @@ fn try_simple_number(input: &str) -> Option<String> {
 /// Convert number with unit to points
 /// Perl: sub pgfmath_convert (L476-485)
 fn pgfmath_convert(number: f64, unit: &str) -> f64 {
-  let sp = state::convert_unit(unit);
+  let sp = convert_unit(unit);
   number * sp / 65536.0
 }
 
@@ -245,16 +246,15 @@ fn pgfmath_convert(number: f64, unit: &str) -> f64 {
 /// Look up a TeX register value, return as points
 /// Perl: sub pgfmath_register (L487-493)
 fn pgfmath_register_lookup(cs: &str) -> f64 {
-  match state::lookup_register(cs, vec![]) { Ok(Some(reg)) => {
-    match reg {
+  match lookup_register(cs, vec![]) {
+    Ok(Some(reg)) => match reg {
       RegisterValue::Number(n) => n.value_of() as f64,
       RegisterValue::Dimension(d) => d.value_of() as f64 / 65536.0,
       RegisterValue::Glue(g) => g.value_of() as f64 / 65536.0,
       _ => 0.0,
-    }
-  } _ => {
-    0.0
-  }}
+    },
+    _ => 0.0,
+  }
 }
 
 // ==================== Built-in Function Application ====================
@@ -533,12 +533,13 @@ fn pgfmath_apply_fn(name: &str, args: &[f64]) -> f64 {
 fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   let cs_name = format!("\\pgfmath{}@", name);
   let cs_tok = Token {
-    text: arena::pin(&cs_name),
+    text: pin(&cs_name),
     code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    };
+    #[cfg(feature = "token-locators")]
+    loc: 0,
+  };
   // Check if the function is defined
-  state::lookup_definition(&cs_tok).ok()?.as_ref()?;
+  lookup_definition(&cs_tok).ok()?.as_ref()?;
   // Build invocation tokens: \pgfmath{name}@{arg1}{arg2}...
   let mut tokens: Vec<Token> = vec![cs_tok];
   for arg in args {
@@ -558,11 +559,11 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
   // Perl, where `\ifpgfmathunitsdeclared` is a persistent global threaded
   // through nested evaluations. Fixes `bar shift={\pgfplotbarwidth}` under
   // `symbolic x coords` (2110.14597).
-  let _ = stomach::digest(Tokens::from(vec![T_CS!("\\pgfmathunitsdeclaredfalse")]));
+  let _ = digest(Tokens::from(vec![T_CS!("\\pgfmathunitsdeclaredfalse")]));
   // Digest the invocation (sets \pgfmathresult)
-  let _ = stomach::digest(Tokens::from(tokens));
+  let _ = digest(Tokens::from(tokens));
   // Read back \pgfmathresult via expansion
-  let result_tokens = gullet::do_expand(Tokens::from(vec![T_CS!("\\pgfmathresult")])).ok()?;
+  let result_tokens = do_expand(Tokens::from(vec![T_CS!("\\pgfmathresult")])).ok()?;
   let s = result_tokens.to_string();
   s.trim().parse::<f64>().ok()
 }
@@ -572,26 +573,28 @@ fn pgfmath_apply_user(name: &str, args: &[f64]) -> Option<f64> {
 fn is_user_constant(name: &str) -> bool {
   let cs = format!("\\pgfmath@function@{}", name);
   let tok = Token {
-    text: arena::pin(&cs),
+    text: pin(&cs),
     code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    };
-  if state::lookup_definition(&tok).ok().flatten().is_none() {
+    #[cfg(feature = "token-locators")]
+    loc: 0,
+  };
+  if lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
   // Check arity — must be 0 for constant
   let arity_cs = format!("\\pgfmath@operation@{}@arity", name);
   let arity_tok = Token {
-    text: arena::pin(&arity_cs),
+    text: pin(&arity_cs),
     code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    };
-  if let Ok(Some(_)) = state::lookup_definition(&arity_tok) {
-    if let Ok(expanded) = gullet::do_expand(Tokens::from(vec![arity_tok])) {
-      let s = expanded.to_string();
-      let arity: usize = s.trim().parse().unwrap_or(0);
-      return arity == 0;
-    }
+    #[cfg(feature = "token-locators")]
+    loc: 0,
+  };
+  if let Ok(Some(_)) = lookup_definition(&arity_tok)
+    && let Ok(expanded) = do_expand(Tokens::from(vec![arity_tok]))
+  {
+    let s = expanded.to_string();
+    let arity: usize = s.trim().parse().unwrap_or(0);
+    return arity == 0;
   }
   // No arity defined — treat as constant
   true
@@ -602,25 +605,27 @@ fn is_user_constant(name: &str) -> bool {
 fn is_user_function(name: &str) -> bool {
   let cs = format!("\\pgfmath@function@{}", name);
   let tok = Token {
-    text: arena::pin(&cs),
+    text: pin(&cs),
     code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    };
-  if state::lookup_definition(&tok).ok().flatten().is_none() {
+    #[cfg(feature = "token-locators")]
+    loc: 0,
+  };
+  if lookup_definition(&tok).ok().flatten().is_none() {
     return false;
   }
   let arity_cs = format!("\\pgfmath@operation@{}@arity", name);
   let arity_tok = Token {
-    text: arena::pin(&arity_cs),
+    text: pin(&arity_cs),
     code: Catcode::CS,
-      #[cfg(feature = "token-locators")] loc: 0
-    };
-  if let Ok(Some(_)) = state::lookup_definition(&arity_tok) {
-    if let Ok(expanded) = gullet::do_expand(Tokens::from(vec![arity_tok])) {
-      let s = expanded.to_string();
-      let arity: usize = s.trim().parse().unwrap_or(0);
-      return arity > 0;
-    }
+    #[cfg(feature = "token-locators")]
+    loc: 0,
+  };
+  if let Ok(Some(_)) = lookup_definition(&arity_tok)
+    && let Ok(expanded) = do_expand(Tokens::from(vec![arity_tok]))
+  {
+    let s = expanded.to_string();
+    let arity: usize = s.trim().parse().unwrap_or(0);
+    return arity > 0;
   }
   false
 }
@@ -657,12 +662,17 @@ fn pgfmath_units_declared_global() -> bool {
 // State (`units_declared`) rides the winnow `Stateful` input and is NOT
 // rolled back on backtrack, matching the original's flag semantics.
 mod pgfmath_grammar {
-  use super::{pgfmath_apply_fn, pgfmath_cmp_op, pgfmath_convert, pgfmath_divisor,
-              pgfmath_factorial, pgfmath_register_lookup, is_builtin_constant,
-              is_builtin_function, is_user_constant, is_user_function, PGF_UNITS};
-  use winnow::error::{ContextError, ErrMode};
-  use winnow::prelude::*;
-  use winnow::stream::Stream;
+  use winnow::{
+    error::{ContextError, ErrMode},
+    prelude::*,
+    stream::Stream,
+  };
+
+  use super::{
+    PGF_UNITS, is_builtin_constant, is_builtin_function, is_user_constant, is_user_function,
+    pgfmath_apply_fn, pgfmath_cmp_op, pgfmath_convert, pgfmath_divisor, pgfmath_factorial,
+    pgfmath_register_lookup,
+  };
 
   pub(super) type In<'a> = winnow::Stateful<&'a str, Flags>;
 
@@ -719,12 +729,12 @@ mod pgfmath_grammar {
   fn cmp_op(i: &mut In) -> Option<String> {
     sb(i);
     let b = i.input.as_bytes();
-    if b.len() >= 2 {
-      if let two @ (b"==" | b"!=" | b">=" | b"<=" | b"&&" | b"||") = &[b[0], b[1]] {
-        let op = std::str::from_utf8(two.as_slice()).unwrap().to_string();
-        bump(i, 2);
-        return Some(op);
-      }
+    if b.len() >= 2
+      && let two @ (b"==" | b"!=" | b">=" | b"<=" | b"&&" | b"||") = &[b[0], b[1]]
+    {
+      let op = std::str::from_utf8(two.as_slice()).unwrap().to_string();
+      bump(i, 2);
+      return Some(op);
     }
     match b.first() {
       Some(c @ (b'>' | b'<')) => {
@@ -850,18 +860,18 @@ mod pgfmath_grammar {
       return Ok(num);
     }
 
-    if first(i) == Some(b'\\') {
-      if let Some(reg) = try_cs_register(i) {
-        sb(i);
-        if first(i) == Some(b'\\') {
-          let cp = i.checkpoint();
-          if let Some(reg2) = try_cs_register(i) {
-            return Ok(reg * reg2);
-          }
-          i.reset(&cp);
+    if first(i) == Some(b'\\')
+      && let Some(reg) = try_cs_register(i)
+    {
+      sb(i);
+      if first(i) == Some(b'\\') {
+        let cp = i.checkpoint();
+        if let Some(reg2) = try_cs_register(i) {
+          return Ok(reg * reg2);
         }
-        return Ok(reg);
+        i.reset(&cp);
       }
+      return Ok(reg);
     }
 
     if first(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
@@ -932,11 +942,14 @@ mod pgfmath_grammar {
       loop {
         sb(i);
         if eat(i, b',') {
-          match formula(i) { Ok(arg) => {
-            args.push(arg);
-          } _ => {
-            break;
-          }}
+          match formula(i) {
+            Ok(arg) => {
+              args.push(arg);
+            },
+            _ => {
+              break;
+            },
+          }
         } else {
           break;
         }
@@ -967,7 +980,10 @@ mod pgfmath_grammar {
       return Some(v);
     }
     if b.len() >= 2 && b[0] == b'0' && b[1] == b'b' {
-      let n = b[2..].iter().take_while(|c| matches!(c, b'0' | b'1')).count();
+      let n = b[2..]
+        .iter()
+        .take_while(|c| matches!(c, b'0' | b'1'))
+        .count();
       if n == 0 {
         return None;
       }
@@ -1019,7 +1035,12 @@ mod pgfmath_grammar {
     for &unit in PGF_UNITS {
       if let Some(rest) = i.input.strip_prefix(unit) {
         // not a unit if a letter follows ("ptx" is not "pt")
-        if rest.as_bytes().first().map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
+        if rest
+          .as_bytes()
+          .first()
+          .map(|c| c.is_ascii_alphabetic())
+          .unwrap_or(false)
+        {
           continue;
         }
         bump(i, unit.len());
@@ -1037,7 +1058,10 @@ mod pgfmath_grammar {
     if b.first() != Some(&b'\\') {
       return None;
     }
-    let n = b[1..].iter().take_while(|c| c.is_ascii_alphabetic() || **c == b'@').count();
+    let n = b[1..]
+      .iter()
+      .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+      .count();
     if n == 0 {
       return None;
     }
@@ -1146,16 +1170,16 @@ fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
     .iter()
     .map(|(cs, _)| {
       let t = T_CS!(*cs);
-      let m = state::lookup_meaning(&t).unwrap_or(Stored::None);
+      let m = lookup_meaning(&t).unwrap_or(Stored::None);
       (t, m)
     })
     .collect();
   for (cs, helper) in PAIRS.iter() {
-    state::let_i(&T_CS!(*cs), &T_CS!(*helper), None);
+    let_i(&T_CS!(*cs), &T_CS!(*helper), None);
   }
-  let expanded = gullet::do_expand(tokens).unwrap_or_default();
+  let expanded = do_expand(tokens).unwrap_or_default();
   for (t, m) in saved {
-    state::assign_meaning(&t, m, None);
+    assign_meaning(&t, m, None);
   }
   expanded
 }
@@ -1168,14 +1192,12 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   let input: String = raw_input.split_whitespace().collect::<Vec<_>>().join(" ");
   let input = input.trim();
 
-  // 0. String-valued ternary / ifthenelse — Perl pgfmath uses untyped
-  //    scalars so the `?:` operator and `ifthenelse(...)` can return
-  //    string values like `"black"` or `"pgreen!50"` for color names.
-  //    Our parser is f64-only, so detect the pattern
-  //      <test> ? "a" : "b"     OR     ifthenelse(<test>, "a", "b")
-  //    early, evaluate the test as a number, and return the chosen
-  //    string literal. Drivers: 2601.14798 (color jitter heatmap),
-  //    Stage-20 v6 ~1579 errors from \pgfmathsetmacro{\clr}{...}.
+  // 0. String-valued ternary / ifthenelse — Perl pgfmath uses untyped scalars so the `?:` operator
+  //    and `ifthenelse(...)` can return string values like `"black"` or `"pgreen!50"` for color
+  //    names. Our parser is f64-only, so detect the pattern <test> ? "a" : "b"     OR
+  //    ifthenelse(<test>, "a", "b") early, evaluate the test as a number, and return the chosen
+  //    string literal. Drivers: 2601.14798 (color jitter heatmap), Stage-20 v6 ~1579 errors from
+  //    \pgfmathsetmacro{\clr}{...}.
   if let Some(result) = try_string_ternary(input) {
     return (result, false);
   }
@@ -1188,11 +1210,17 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   // 2. Unit expression check (Perl L352-354): /^([+-]?[\d\.]+)(UNIT)$/ Handled by the parser below,
   //    since it's a subset of the grammar.
 
-  // 3. Parse with the winnow grammar (replaces both Perl eval and RecDescent;
-  //    partial parses still return what was read, as before).
-  let mut stream = winnow::Stateful { input, state: pgfmath_grammar::Flags::default() };
+  // 3. Parse with the winnow grammar (replaces both Perl eval and RecDescent; partial parses still
+  //    return what was read, as before).
+  let mut stream = winnow::Stateful {
+    input,
+    state: pgfmath_grammar::Flags::default(),
+  };
   if let Ok(result) = pgfmath_grammar::formula(&mut stream) {
-    return (format_parse_result(result, input), stream.state.units_declared);
+    return (
+      format_parse_result(result, input),
+      stream.state.units_declared,
+    );
   }
 
   // 4. Fallback
@@ -1211,8 +1239,15 @@ fn try_string_ternary(input: &str) -> Option<String> {
     let body = rest.strip_suffix(')')?;
     // Re-shape as ternary: split on top-level commas (depth 0 of nested parens/quotes)
     let parts = split_top_commas(body)?;
-    if parts.len() != 3 { return None; }
-    format!("{} ? {} : {}", parts[0].trim(), parts[1].trim(), parts[2].trim())
+    if parts.len() != 3 {
+      return None;
+    }
+    format!(
+      "{} ? {} : {}",
+      parts[0].trim(),
+      parts[1].trim(),
+      parts[2].trim()
+    )
   } else {
     input.to_string()
   };
@@ -1225,14 +1260,20 @@ fn try_string_ternary(input: &str) -> Option<String> {
     return None;
   }
   // Evaluate the test as a number via the regular f64 grammar
-  let mut stream =
-    winnow::Stateful { input: cond.trim(), state: pgfmath_grammar::Flags::default() };
+  let mut stream = winnow::Stateful {
+    input: cond.trim(),
+    state: pgfmath_grammar::Flags::default(),
+  };
   let test_val = pgfmath_grammar::formula(&mut stream).ok()?;
-  let chosen = if test_val != 0.0 { then_part } else { else_part };
+  let chosen = if test_val != 0.0 {
+    then_part
+  } else {
+    else_part
+  };
   // Strip outer quotes if present; otherwise return as-is
   let trimmed = chosen.trim();
   let unq = if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
-    &trimmed[1..trimmed.len()-1]
+    &trimmed[1..trimmed.len() - 1]
   } else {
     trimmed
   };
@@ -1275,7 +1316,10 @@ fn split_ternary(s: &str) -> Option<(&str, &str, &str)> {
       b'"' => in_quote = !in_quote,
       b'(' | b'[' | b'{' if !in_quote => depth += 1,
       b')' | b']' | b'}' if !in_quote => depth -= 1,
-      b'?' if !in_quote && depth == 0 => { q_pos = Some(i); break; },
+      b'?' if !in_quote && depth == 0 => {
+        q_pos = Some(i);
+        break;
+      },
       _ => {},
     }
   }
@@ -1289,7 +1333,7 @@ fn split_ternary(s: &str) -> Option<(&str, &str, &str)> {
       b'(' | b'[' | b'{' if !in_quote => depth += 1,
       b')' | b']' | b'}' if !in_quote => depth -= 1,
       b':' if !in_quote && depth == 0 => {
-        return Some((&s[..qp], &s[qp+1..j], &s[j+1..]));
+        return Some((&s[..qp], &s[qp + 1..j], &s[j + 1..]));
       },
       _ => {},
     }
@@ -1518,14 +1562,14 @@ LoadDefinitions!({
     if toks.first().is_some_and(|t| t.text == pin!("+")) {
       // Starts with '+' → treat as plain glue
       // Unread the tokens and read as glue
-      gullet::unread(Tokens::new(toks));
-      let glue = gullet::read_glue()?;
+      unread(Tokens::new(toks));
+      let glue = read_glue()?;
       let cs = register.to_string();
-      state::assign_register(&cs, glue.into(), None, vec![])?;
+      assign_register(&cs, glue.into(), None, vec![])?;
     } else {
       // Evaluate via pgfmathparse
       let tok_str = Tokens::new(toks);
-      let expanded = gullet::do_expand(tok_str).unwrap_or_default();
+      let expanded = do_expand(tok_str).unwrap_or_default();
       let input = expanded.to_string();
       let (result_str, _units) = pgfmathparse_eval_with_units(&input);
       let value: f64 = result_str.parse().unwrap_or(0.0);
@@ -1535,13 +1579,13 @@ LoadDefinitions!({
       let is_mu = if_condition(&T_CS!("\\ifpgfmathmathunitsdeclared"))
         .unwrap_or(None) == Some(true);
       if is_mu {
-        let mu_sp = state::convert_unit("mu");
+        let mu_sp = convert_unit("mu");
         let mu_dim = Dimension((value * mu_sp as f64).round() as i64);
-        state::assign_register(&cs, mu_dim.into(), None, vec![])?;
+        assign_register(&cs, mu_dim.into(), None, vec![])?;
       } else {
         // Convert pgfmath result (in pt) to sp (× 65536), round to nearest
         let dim = Dimension((value * 65536.0).round() as i64);
-        state::assign_register(&cs, dim.into(), None, vec![])?;
+        assign_register(&cs, dim.into(), None, vec![])?;
       }
     }
   });
@@ -1567,14 +1611,12 @@ LoadDefinitions!({
       .cloned();
     let mut smuggle = false;
     let mut first_cs = T_CS!("\\relax"); // placeholder
-    if let Some(first) = first_tok {
-      if let Ok(Some(defn)) = state::lookup_definition(&first) {
-        if defn.is_expandable() {
+    if let Some(first) = first_tok
+      && let Ok(Some(defn)) = lookup_definition(&first)
+        && defn.is_expandable() {
           smuggle = true;
           first_cs = first;
         }
-      }
-    }
     if smuggle {
       // Texlive 2020 definition: smuggle by expanding before endgroup
       vec![

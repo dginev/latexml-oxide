@@ -1,7 +1,9 @@
 //! acmart.cls — ACM article class
 //! Perl: acmart.cls.ltxml (259 lines)
-use crate::engine::latex_constructs::{after_float, before_float};
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{after_float, before_float},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({

@@ -1,13 +1,14 @@
-use once_cell::sync::Lazy;
-use regex::Regex;
 use std::fmt;
 
-use crate::common::error::Result;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::object::Object;
-use crate::definition::register::RegisterType;
-use crate::mouth;
-use crate::tokens::Tokens;
+use once_cell::sync::Lazy;
+use regex::Regex;
+
+use crate::{
+  common::{error::Result, numeric_ops::NumericOps, object::Object},
+  definition::register::RegisterType,
+  mouth,
+  tokens::Tokens,
+};
 
 static TRAILING_ZEROS: Lazy<Regex> = Lazy::new(|| Regex::new(r"0+$").unwrap());
 

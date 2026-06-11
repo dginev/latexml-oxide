@@ -16,15 +16,15 @@ use super::*;
 /// into either a `latexml/convert` result object or a `publishDiagnostics`
 /// notification.
 pub(crate) struct ConvertOutput {
-  pub(crate) html:    String,
-  pub(crate) log:     String,
-  pub(crate) diags:   Vec<Diag>,
-  pub(crate) sources: Vec<String>,
+  pub(crate) html:        String,
+  pub(crate) log:         String,
+  pub(crate) diags:       Vec<Diag>,
+  pub(crate) sources:     Vec<String>,
   /// Absolute path of the project root that was actually converted
   /// (multi-file model — may differ from the request's uri).
-  pub(crate) root:    Option<String>,
+  pub(crate) root:        Option<String>,
   /// Human-facing status label (the engine's status message, or `"timeout"`).
-  pub(crate) status:  String,
+  pub(crate) status:      String,
   /// Engine status code: 0 = no problem, 1 = warning, 2 = error, 3 = fatal.
   pub(crate) status_code: i64,
 }
@@ -136,7 +136,6 @@ pub(crate) fn send_message(writer: &mut impl std::io::Write, val: &Value) -> std
   Ok(())
 }
 
-
 /// The document uri of a *conversion-triggering* message — `latexml/convert`
 /// (`params.uri`) or `textDocument/didOpen`/`didChange`
 /// (`params.textDocument.uri`). `None` for every other method. Used both for
@@ -201,7 +200,6 @@ pub(crate) fn did_change_params(request: &Value) -> Option<(String, String)> {
   Some((uri, text))
 }
 
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -209,7 +207,10 @@ mod tests {
   #[test]
   fn cancelled_object_shape() {
     let v = cancelled_result_object();
-    assert_eq!(v.get("status"), Some(&Value::String("cancelled".to_string())));
+    assert_eq!(
+      v.get("status"),
+      Some(&Value::String("cancelled".to_string()))
+    );
     assert_eq!(v.get("html"), Some(&Value::String(String::new())));
     // Integer statusCode, consistent with every other result object.
     assert_eq!(v.get("statusCode").and_then(Value::as_i64), Some(0));
@@ -219,7 +220,8 @@ mod tests {
   fn message_doc_uri_extraction_and_coalescing() {
     let conv = r#"{"method":"latexml/convert","params":{"uri":"file:///a.tex","text":"x"}}"#;
     let chg = r#"{"method":"textDocument/didChange","params":{"textDocument":{"uri":"file:///a.tex"},"contentChanges":[{"text":"y"}]}}"#;
-    let close = r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///a.tex"}}}"#;
+    let close =
+      r#"{"method":"textDocument/didClose","params":{"textDocument":{"uri":"file:///a.tex"}}}"#;
     assert_eq!(
       message_doc_uri(&parse_json(conv).unwrap()).as_deref(),
       Some("file:///a.tex")
@@ -234,9 +236,18 @@ mod tests {
     let root_a = std::path::Path::new("/a.tex");
     let root_other = std::path::Path::new("/other/b.tex");
     pending.push_back(close.to_string());
-    assert!(!superseded_in_pending(&pending, root_a), "didClose does not supersede");
+    assert!(
+      !superseded_in_pending(&pending, root_a),
+      "didClose does not supersede"
+    );
     pending.push_back(chg.to_string());
-    assert!(superseded_in_pending(&pending, root_a), "queued didChange supersedes");
-    assert!(!superseded_in_pending(&pending, root_other), "other projects unaffected");
+    assert!(
+      superseded_in_pending(&pending, root_a),
+      "queued didChange supersedes"
+    );
+    assert!(
+      !superseded_in_pending(&pending, root_other),
+      "other projects unaffected"
+    );
   }
 }

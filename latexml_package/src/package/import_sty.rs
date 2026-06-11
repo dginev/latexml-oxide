@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::util::pathname;
+
+use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -13,19 +14,19 @@ LoadDefinitions!({
   // concat Chapter/ onto Chapter/ from the first call).
 
   DefPrimitive!("\\lx@save@paths", {
-    let paths = state::get_search_paths();
-    state::push_value("lx@searchpaths@stack",
-      latexml_core::common::store::Stored::Strings(
-        std::rc::Rc::from(paths.iter().map(latexml_core::common::arena::pin).collect::<Vec<_>>())))?;
+    let paths = get_search_paths();
+    push_value("lx@searchpaths@stack",
+      Stored::Strings(
+        Rc::from(paths.iter().map(pin).collect::<Vec<_>>())))?;
   });
 
   DefPrimitive!("\\lx@restore@paths", {
-    if let Ok(Some(latexml_core::common::store::Stored::Strings(syms))) =
-      state::pop_value("lx@searchpaths@stack") {
+    if let Ok(Some(Stored::Strings(syms))) =
+      pop_value("lx@searchpaths@stack") {
       let paths: Vec<String> = syms.iter()
-        .map(|s| latexml_core::common::arena::with(*s, |t| t.to_string()))
+        .map(|s| with(*s, |t| t.to_string()))
         .collect();
-      state::set_search_paths(paths);
+      set_search_paths(paths);
     }
   });
 
@@ -38,18 +39,18 @@ LoadDefinitions!({
     let mut path = raw.trim().to_string();
     if path.is_empty() { return Ok(Vec::new()); }
     if !pathname::is_absolute(&path) {
-      let source_dir = state::lookup_string("SOURCEDIRECTORY");
+      let source_dir = lookup_string("SOURCEDIRECTORY");
       if !source_dir.is_empty() {
         path = pathname::concat(&source_dir, &path);
       }
     }
     let canonical = pathname::canonical(&path);
     if star.is_some() {
-      state::set_search_paths(vec![canonical]);
+      set_search_paths(vec![canonical]);
     } else {
       let mut new_paths = vec![canonical];
-      new_paths.extend(state::get_search_paths());
-      state::set_search_paths(new_paths);
+      new_paths.extend(get_search_paths());
+      set_search_paths(new_paths);
     }
   });
 
@@ -61,16 +62,16 @@ LoadDefinitions!({
     let raw = Expand!(path_tks).to_string();
     let path = raw.trim().to_string();
     if path.is_empty() { return Ok(Vec::new()); }
-    let mut paths = state::get_search_paths();
+    let mut paths = get_search_paths();
     if paths.is_empty() { return Ok(Vec::new()); }
     let lead = paths.remove(0);
     let new_lead = pathname::concat(&lead, &path);
     if star.is_some() {
-      state::set_search_paths(vec![new_lead]);
+      set_search_paths(vec![new_lead]);
     } else {
       let mut new_paths = vec![new_lead];
       new_paths.extend(paths);
-      state::set_search_paths(new_paths);
+      set_search_paths(new_paths);
     }
   });
 

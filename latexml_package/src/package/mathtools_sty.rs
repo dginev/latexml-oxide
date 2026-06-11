@@ -79,15 +79,15 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       if let Ok(Some(RegisterValue::Dimension(w))) = whatsit.get_width(None) {
         let neg = w.negate();
-        whatsit.set_property("xoffset", Stored::String(arena::pin(neg.to_attribute())));
+        whatsit.set_property("xoffset", Stored::String(pin(neg.to_attribute())));
       }
-      whatsit.set_width(Stored::String(arena::pin_static("0pt")));
+      whatsit.set_width(Stored::String(pin_static("0pt")));
     });
   // \mathrlap — zero-width math overlap (right): no xoffset needed
   DefConstructor!("\\mathrlap[]{}",
     "<ltx:XMArg width='0pt' ?#xoffset(xoffset='#xoffset')>#2</ltx:XMArg>",
     after_digest => sub[whatsit] {
-      whatsit.set_width(Stored::String(arena::pin_static("0pt")));
+      whatsit.set_width(Stored::String(pin_static("0pt")));
     });
   // \mathclap — zero-width math overlap (center): xoffset = -0.5 * width
   DefConstructor!("\\mathclap[]{}",
@@ -95,9 +95,9 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       if let Ok(Some(RegisterValue::Dimension(w))) = whatsit.get_width(None) {
         let half_neg = w.multiply(Float::new_f64(-0.5));
-        whatsit.set_property("xoffset", Stored::String(arena::pin(half_neg.to_attribute())));
+        whatsit.set_property("xoffset", Stored::String(pin(half_neg.to_attribute())));
       }
-      whatsit.set_width(Stored::String(arena::pin_static("0pt")));
+      whatsit.set_width(Stored::String(pin_static("0pt")));
     });
 
   DefConstructor!("\\clap{}", "#1");
@@ -585,8 +585,8 @@ LoadDefinitions!({
     },
     after_construct => sub[document, whatsit] {
       if let Some(last) = document.get_node().get_last_child() {
-        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
-        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+        let align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+        amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
       }
     },
     reversion => "\\begin{multlined}#1\\end{multlined}"
@@ -968,8 +968,8 @@ LoadDefinitions!({
     reversion => "\\begin{lgathered}#1\\end{lgathered}",
     after_construct => sub[document, whatsit] {
       if let Some(last) = document.get_node().get_last_child() {
-        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
-        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+        let align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+        amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
       }
     });
   DefConstructor!("\\@@rgathered DigestedBody", "#1",
@@ -980,8 +980,8 @@ LoadDefinitions!({
     reversion => "\\begin{rgathered}#1\\end{rgathered}",
     after_construct => sub[document, whatsit] {
       if let Some(last) = document.get_node().get_last_child() {
-        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
-        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+        let align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+        amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
       }
     });
 
@@ -1029,8 +1029,8 @@ LoadDefinitions!({
     reversion => "\\begin{gathered}#1\\end{gathered}",
     after_construct => sub[document, whatsit] {
       if let Some(last) = document.get_node().get_last_child() {
-        let align_rule = crate::package::amsmath_sty::get_multirow_alignment_rule(whatsit);
-        crate::package::amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
+        let align_rule = amsmath_sty::get_multirow_alignment_rule(whatsit);
+        amsmath_sty::rearrange_ams_multirow(document, last, &align_rule)?;
       }
     }
   );

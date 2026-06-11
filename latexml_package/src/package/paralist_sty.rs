@@ -1,6 +1,5 @@
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Package options via TeX conditionals
   TeX!(

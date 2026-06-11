@@ -3,7 +3,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   RequirePackage!("graphicx");
-  state::assign_value("epsfclip", Stored::from(0), None);
+  assign_value("epsfclip", Stored::from(0), None);
   DefKeyVal!("epsGin", "width",           "Dimension");
   DefKeyVal!("epsGin", "height",          "Dimension");
   DefKeyVal!("epsGin", "keepaspectratio", "", "true");
@@ -45,15 +45,15 @@ LoadDefinitions!({
           raw.trim().to_string()
         } else { String::new() }
       } else { String::new() };
-      let candidates = latexml_core::util::image::image_candidates(&file);
+      let candidates = util::image::image_candidates(&file);
       // Serialize remaining keyvals as "k=v,k=v" (skip file/figure,
       // inject clip=true if epsfclip was toggled on).
-      let clip_on = state::lookup_value("epsfclip")
+      let clip_on = lookup_value("epsfclip")
         .map(|v| v.to_string() != "0" && !v.to_string().is_empty())
         .unwrap_or(false);
       let mut opts = Vec::<String>::new();
-      if let Some(kv_arg) = args[0].as_ref() {
-        if let KeyVals(kv) = kv_arg.data() {
+      if let Some(kv_arg) = args[0].as_ref()
+        && let KeyVals(kv) = kv_arg.data() {
           let mut saw_clip = false;
           for (k, v) in kv.get_pairs() {
             if k == "file" || k == "figure" { continue; }
@@ -64,7 +64,6 @@ LoadDefinitions!({
           }
           if clip_on && !saw_clip { opts.push("clip=true".into()); }
         }
-      }
       let options = opts.join(",");
       Ok(stored_map!("graphic" => file, "candidates" => candidates, "options" => options))
     });
@@ -79,10 +78,10 @@ LoadDefinitions!({
   def_primitive_noop("\\epsfbox[]{}")?;
   Let!("\\epsffile", "\\epsfbox");
   DefPrimitive!("\\epsfclipon", {
-    state::assign_value("epsfclip", Stored::from(1), None);
+    assign_value("epsfclip", Stored::from(1), None);
   });
   DefPrimitive!("\\epsfclipoff", {
-    state::assign_value("epsfclip", Stored::from(0), None);
+    assign_value("epsfclip", Stored::from(0), None);
   });
   def_primitive_noop("\\epsfverbosetrue")?;
   def_primitive_noop("\\epsfverbosefalse")?;

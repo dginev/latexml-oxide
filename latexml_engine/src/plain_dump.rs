@@ -11,8 +11,7 @@
 //! Resolution order (matches `latex_dump_loader.rs`):
 //!   0. `$LATEXML_NODUMP` → skip (Perl `Package.pm` `LoadFormat` parity)
 //!   1. `$LATEXML_PLAIN_DUMP_PATH` (explicit full path)
-//!   2. `$LATEXML_DUMP_DIR/plain.YYYY.dump.txt` (best year-match in dir;
-//!      else most-recent)
+//!   2. `$LATEXML_DUMP_DIR/plain.YYYY.dump.txt` (best year-match in dir; else most-recent)
 //!   3. `<exe_dir>/../resources/dumps/plain.YYYY.dump.txt` (installed layout)
 //!   4. Sibling-of-exe `plain.YYYY.dump.txt`
 //!   5. Dev-tree `$CARGO_MANIFEST_DIR/../resources/dumps/plain.YYYY.dump.txt`
@@ -22,9 +21,11 @@
 //! [`crate::dump_paths::detect_ambient_texlive_year`]); fall back to the
 //! most-recent year present at each step.
 
-use crate::prelude::*;
-use once_cell::sync::Lazy;
 use std::path::{Path, PathBuf};
+
+use once_cell::sync::Lazy;
+
+use crate::prelude::*;
 
 const DEV_DUMPS_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps");
 
@@ -37,10 +38,11 @@ static PLAIN_DUMP_PATH: Lazy<Option<String>> =
   Lazy::new(|| std::env::var("LATEXML_PLAIN_DUMP_PATH").ok());
 static DUMP_DIR: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_DIR").ok());
 
-pub fn load_definitions() -> latexml_core::common::error::Result<()> {
+pub fn load_definitions() -> Result<()> {
   if *NODUMP {
     Info!(
-      "plain_dump", "nodump",
+      "plain_dump",
+      "nodump",
       "LATEXML_NODUMP set — skipping dump, engine will reconstruct \
        plain.tex state from _base pool (slower, Perl-parity)"
     );
@@ -51,29 +53,39 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {
     match std::fs::read_to_string(&path) {
       Ok(c) => (c, path.display().to_string()),
       Err(e) => {
-        Warn!("plain_dump", "read", s!("failed to read {}: {}", path.display(), e));
+        Warn!(
+          "plain_dump",
+          "read",
+          s!("failed to read {}: {}", path.display(), e)
+        );
         return Ok(());
       },
     }
   } else if let Some(embedded) = crate::embedded_dumps::embedded_plain_dump(prefer) {
     let year = crate::embedded_dumps::embedded_year(prefer).unwrap_or(0);
     Info!(
-      "plain_dump", "embedded",
+      "plain_dump",
+      "embedded",
       s!("using embedded TL{} dump — no on-disk dump found", year)
     );
     (embedded.to_string(), format!("<embedded TL{}>", year))
   } else {
     Info!(
-      "plain_dump", "missing",
+      "plain_dump",
+      "missing",
       "no dump found (checked $LATEXML_PLAIN_DUMP_PATH, $LATEXML_DUMP_DIR, \
        exe-relative, dev-tree path, and embedded fallback); \
        run `latexml_oxide --init=plain.tex` to generate"
     );
     return Ok(());
   };
-  let count = latexml_core::dump_reader::load_from_str_plain(&content)
-    .map_err(|e: String| -> latexml_core::common::error::Error { e.into() })?;
-  Info!("plain_dump", "loaded", s!("loaded {} entries from {}", count, source_label));
+  let count =
+    dump_reader::load_from_str_plain(&content).map_err(|e: String| -> Error { e.into() })?;
+  Info!(
+    "plain_dump",
+    "loaded",
+    s!("loaded {} entries from {}", count, source_label)
+  );
   Ok(())
 }
 
@@ -91,31 +103,31 @@ fn resolve_dump_path(prefer: Option<u32>) -> Option<(PathBuf, u32)> {
     }
   }
   // 2. Directory override — pick versioned dump in that directory.
-  if let Some(dir) = DUMP_DIR.as_deref() {
-    if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "plain", prefer)
-    {
-      return Some(found);
-    }
+  if let Some(dir) = DUMP_DIR.as_deref()
+    && let Some(found) =
+      crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "plain", prefer)
+  {
+    return Some(found);
   }
   // 3. Installed layout: <exe_dir>/../resources/dumps/.
-  if let Ok(exe) = std::env::current_exe() {
-    if let Some(exe_dir) = exe.parent() {
-      let installed = exe_dir.join("../resources/dumps");
-      if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(&installed, "plain", prefer) {
-        return Some(found);
-      }
-      // Sibling-of-exe (test binaries at target/<profile>/deps/).
-      if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(exe_dir, "plain", prefer) {
-        return Some(found);
-      }
+  if let Ok(exe) = std::env::current_exe()
+    && let Some(exe_dir) = exe.parent()
+  {
+    let installed = exe_dir.join("../resources/dumps");
+    if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(&installed, "plain", prefer) {
+      return Some(found);
+    }
+    // Sibling-of-exe (test binaries at target/<profile>/deps/).
+    if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(exe_dir, "plain", prefer) {
+      return Some(found);
     }
   }
   // 4. Dev-tree path baked in at compile time.
   let dev = Path::new(DEV_DUMPS_DIR);
-  if dev.is_dir() {
-    if let Some(found) = crate::dump_paths::resolve_versioned_in_dir(dev, "plain", prefer) {
-      return Some(found);
-    }
+  if dev.is_dir()
+    && let Some(found) = crate::dump_paths::resolve_versioned_in_dir(dev, "plain", prefer)
+  {
+    return Some(found);
   }
   None
 }

@@ -3,13 +3,17 @@ use std::fmt;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
-use crate::common::error::*;
-use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint, kround, round_to};
-use crate::common::object::Object;
-use crate::definition::register::RegisterType;
-use crate::state::*;
-use crate::tokens::Tokens;
-use crate::{Digested, RegisterValue};
+use crate::{
+  Digested, RegisterValue,
+  common::{
+    error::*,
+    numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint, kround, round_to},
+    object::Object,
+  },
+  definition::register::RegisterType,
+  state::*,
+  tokens::Tokens,
+};
 
 static SPEC_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^(-?\d*\.?\d*)([a-zA-Z][a-zA-Z])$").unwrap());
@@ -82,7 +86,7 @@ impl Dimension {
 }
 
 impl std::str::FromStr for Dimension {
-  type Err = crate::common::Error;
+  type Err = Error;
   fn from_str(spec: &str) -> Result<Dimension> {
     Ok(Dimension::new_f64(Dimension::spec_to_f64(spec)?))
   }

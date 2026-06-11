@@ -38,8 +38,9 @@
 //! Doc or the caller owns the C allocation. Without that, every
 //! detach-and-drop path in LaTeXML Post needs this wrapper.
 
-use libxml::tree::Node;
 use std::mem::ManuallyDrop;
+
+use libxml::tree::Node;
 
 /// A handle to a libxml `Node` that has been detached from its parent
 /// but whose storage is still owned by the enclosing `Document`.
@@ -76,8 +77,9 @@ impl Drop for DocOwnedNode {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use libxml::parser::Parser;
+
+  use super::*;
 
   #[test]
   fn detached_node_drop_is_noop() {

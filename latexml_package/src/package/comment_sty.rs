@@ -11,12 +11,12 @@ LoadDefinitions!({
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
       let mut nlines = 0;
-      gullet::read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
+      read_raw_line();    // IGNORE 1st line (after the \begin{$name} !!!
       // Perl comment.sty.ltxml L30 matches `/^\s*\Q$endmark\E\s*$/` —
       // the end line may carry leading/trailing whitespace. Strict
       // equality missed indented `  \end{comment}  `, stranding the
       // excluded block consumption.
-      while let Some(line) = gullet::read_raw_line() {
+      while let Some(line) = read_raw_line() {
         if line.trim() == end_mark {
           break;
         }
@@ -51,7 +51,7 @@ LoadDefinitions!({
     // Note that we define the `magic' environment control sequences,
     // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
     DefMacro!(T_CS!(s!("\\begin{{{name}}}")), None, {
-      gullet::read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
+      read_raw_line(); // IGNORE 1st line (after the \begin{$name} !!!
       before_tokens.clone()
     });
     DefMacro!(

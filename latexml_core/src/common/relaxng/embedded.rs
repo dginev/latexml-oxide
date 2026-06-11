@@ -9,11 +9,10 @@
 //! tree-relative path and feed the returned `&'static str` straight
 //! into whatever parser needs it:
 //!
-//! * `.model` files (compiled tag/attr/content schema) → fed to
-//!   `Model::load_compiled_schema_str` as text.
-//! * `.rng` files → fed to `libxml::parser::Parser::parse_string` in
-//!   `super::scan::scan_external`, where `<rng:include>` recursion is
-//!   handled at the Rust scanner level (each include re-enters
+//! * `.model` files (compiled tag/attr/content schema) → fed to `Model::load_compiled_schema_str`
+//!   as text.
+//! * `.rng` files → fed to `libxml::parser::Parser::parse_string` in `super::scan::scan_external`,
+//!   where `<rng:include>` recursion is handled at the Rust scanner level (each include re-enters
 //!   `scan_external` and re-hits the lookup table).
 //!
 //! Nothing is materialised to disk — the prebuilt binary runs every

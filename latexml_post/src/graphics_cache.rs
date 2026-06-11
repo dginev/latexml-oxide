@@ -18,16 +18,14 @@
 //! listed below.
 //!
 //! - **Disable flag** (Perl: `nocache`) → env `LATEXML_GRAPHICS_CACHE_OFF`.
-//! - **Re-use across runs** (Perl: one .cache per dest dir) → global
-//!   XDG cache, shared across all conversions on the host. This is a
-//!   strict superset of the Perl behaviour: cross-paper sharing,
+//! - **Re-use across runs** (Perl: one .cache per dest dir) → global XDG cache, shared across all
+//!   conversions on the host. This is a strict superset of the Perl behaviour: cross-paper sharing,
 //!   plus reproducible content-keying instead of path-keying.
-//! - **Source-staleness check** (Perl compared source mtime to cached
-//!   output mtime) → unnecessary here: the cache key is SHA-256 of the
-//!   source *bytes*, so any source edit produces a different key.
-//! - **Cached dimensions** (Perl: width/height in the cached value) →
-//!   sidecar `<hash>.<ext>.dims` file containing `width\nheight\n`.
-//!   Lookup returns `(success, dims)`; callers skip the
+//! - **Source-staleness check** (Perl compared source mtime to cached output mtime) → unnecessary
+//!   here: the cache key is SHA-256 of the source *bytes*, so any source edit produces a different
+//!   key.
+//! - **Cached dimensions** (Perl: width/height in the cached value) → sidecar `<hash>.<ext>.dims`
+//!   file containing `width\nheight\n`. Lookup returns `(success, dims)`; callers skip the
 //!   `read_image_dimensions` syscall on hits.
 //!
 //! Beyond Perl: content-hash keying gives stricter staleness; XDG
@@ -61,29 +59,22 @@
 //! The cache is designed to be shared by parallel `cortex_worker`
 //! processes within a canvas sweep. Concurrency guarantees:
 //!
-//! 1. **Concurrent writes to the same key**: each writer renders to a
-//!    private `<final>.tmp.<pid>.<nanos>` sidecar then issues a single
-//!    `rename(2)` into the final path. `rename` is atomic on the same
-//!    filesystem; if two writers race, the last `rename` wins, and
-//!    because both sources are byte-equivalent the outcome is correct.
-//!    `link_or_copy` retries once on `EEXIST` for the same reason.
-//! 2. **Concurrent reads + writes**: a reader hardlinks the cached
-//!    file into the destination. POSIX `link(2)` either succeeds
-//!    (returning a new directory entry that survives any subsequent
-//!    `unlink` of the source) or fails cleanly. If the cache file is
-//!    unlinked between hash computation and link, the reader gets a
-//!    miss and falls through — no data corruption.
-//! 3. **Concurrent prunes**: prune holds `flock(LOCK_EX | LOCK_NB)` on
-//!    `.prune.lock`. If another process already holds the lock, this
-//!    one skips its prune attempt. Only one prune runs at a time per
-//!    machine. The prune itself walks the dir, sorts by mtime, deletes
-//!    oldest until under cap — and tolerates `ENOENT` (another writer
-//!    could have re-used the entry concurrently).
-//! 4. **Hardlinked dest ↔ cache**: when `link_or_copy` hardlinks the
-//!    cache file into the destination, that hardlink is independent of
-//!    the cache lifecycle. Even if a prune deletes the cache entry
-//!    afterwards, the destination's hardlink keeps the data alive on
-//!    the filesystem.
+//! 1. **Concurrent writes to the same key**: each writer renders to a private
+//!    `<final>.tmp.<pid>.<nanos>` sidecar then issues a single `rename(2)` into the final path.
+//!    `rename` is atomic on the same filesystem; if two writers race, the last `rename` wins, and
+//!    because both sources are byte-equivalent the outcome is correct. `link_or_copy` retries once
+//!    on `EEXIST` for the same reason.
+//! 2. **Concurrent reads + writes**: a reader hardlinks the cached file into the destination. POSIX
+//!    `link(2)` either succeeds (returning a new directory entry that survives any subsequent
+//!    `unlink` of the source) or fails cleanly. If the cache file is unlinked between hash
+//!    computation and link, the reader gets a miss and falls through — no data corruption.
+//! 3. **Concurrent prunes**: prune holds `flock(LOCK_EX | LOCK_NB)` on `.prune.lock`. If another
+//!    process already holds the lock, this one skips its prune attempt. Only one prune runs at a
+//!    time per machine. The prune itself walks the dir, sorts by mtime, deletes oldest until under
+//!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently).
+//! 4. **Hardlinked dest ↔ cache**: when `link_or_copy` hardlinks the cache file into the
+//!    destination, that hardlink is independent of the cache lifecycle. Even if a prune deletes the
+//!    cache entry afterwards, the destination's hardlink keeps the data alive on the filesystem.
 //!
 //! These guarantees hold on any POSIX filesystem. On Windows (which
 //! lacks robust `flock`), the prune lock is a best-effort `OpenOptions`
@@ -91,31 +82,34 @@
 //!
 //! ## Lifecycle
 //!
-//! * **Hit**: hardlink the cache file into the destination (zero-copy
-//!   on the same filesystem). If hardlink fails (cross-filesystem,
-//!   EXDEV), fall back to a regular file copy. Read the `.dims`
+//! * **Hit**: hardlink the cache file into the destination (zero-copy on the same filesystem). If
+//!   hardlink fails (cross-filesystem, EXDEV), fall back to a regular file copy. Read the `.dims`
 //!   sidecar if present.
-//! * **Miss-then-success**: copy the produced destination back into the
-//!   cache. Write the `.dims` sidecar alongside.
-//! * **LRU prune**: each insertion checks the on-disk total against
-//!   the cap (`LATEXML_GRAPHICS_CACHE_MAX_MB`, default 2048 = 2 GB).
-//!   When over cap, holds the prune lock, sorts entries by mtime
-//!   ascending, deletes until under cap. File access on read also
-//!   refreshes the mtime so frequently-hit entries survive.
+//! * **Miss-then-success**: copy the produced destination back into the cache. Write the `.dims`
+//!   sidecar alongside.
+//! * **LRU prune**: each insertion checks the on-disk total against the cap
+//!   (`LATEXML_GRAPHICS_CACHE_MAX_MB`, default 2048 = 2 GB). When over cap, holds the prune lock,
+//!   sorts entries by mtime ascending, deletes until under cap. File access on read also refreshes
+//!   the mtime so frequently-hit entries survive.
 //!
 //! ## Disable / tune
 //!
-//! * `LATEXML_GRAPHICS_CACHE_OFF=1` — bypass entirely (read+write
-//!   both skipped). The wrapper devolves to the bare conversion call.
+//! * `LATEXML_GRAPHICS_CACHE_OFF=1` — bypass entirely (read+write both skipped). The wrapper
+//!   devolves to the bare conversion call.
 //! * `LATEXML_GRAPHICS_CACHE_DIR=/path` — override the cache directory.
 //! * `LATEXML_GRAPHICS_CACHE_MAX_MB=N` — cache size cap.
 
+use std::{
+  fs,
+  io::Read,
+  path::{Path, PathBuf},
+  sync::{
+    OnceLock,
+    atomic::{AtomicU32, Ordering},
+  },
+};
+
 use sha2::{Digest, Sha256};
-use std::fs;
-use std::io::Read;
-use std::path::{Path, PathBuf};
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 const DEFAULT_MAX_MB: u64 = 2048;
 
@@ -177,9 +171,7 @@ static MISSES: AtomicU32 = AtomicU32::new(0);
 
 /// Return `(hits, misses)` since process start. Useful for telemetry
 /// and the post-run summary log line.
-pub fn stats() -> (u32, u32) {
-  (HITS.load(Ordering::Relaxed), MISSES.load(Ordering::Relaxed))
-}
+pub fn stats() -> (u32, u32) { (HITS.load(Ordering::Relaxed), MISSES.load(Ordering::Relaxed)) }
 
 /// Reset stats (test-only).
 #[cfg(test)]
@@ -361,7 +353,9 @@ pub fn store(source: &str, dest: &str, key: RenderKey, dims: Option<CachedDims>)
     return;
   }
   let Some(root) = cache_root() else { return };
-  let Some(hash) = hash_key(Path::new(source), key) else { return };
+  let Some(hash) = hash_key(Path::new(source), key) else {
+    return;
+  };
   let cached = cache_path(&root, &hash, key.ext);
   // Atomic install: write to .tmp.<pid>.<nanos>, rename into place.
   // Concurrent writers each get a private tmp and race the rename —
@@ -579,9 +573,7 @@ where
 /// dimensions cached (e.g. SVG path where viewBox dims are cheap to
 /// re-read from disk). Returns `true` on success.
 pub fn with_cache<F>(source: &str, dest: &str, key: RenderKey, convert: F) -> bool
-where
-  F: FnOnce() -> bool,
-{
+where F: FnOnce() -> bool {
   if lookup(source, dest, key).is_some() {
     return true;
   }
@@ -594,8 +586,9 @@ where
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use std::sync::atomic::{AtomicU32, Ordering};
+
+  use super::*;
 
   fn temp_dir(label: &str) -> PathBuf {
     let nanos = std::time::SystemTime::now()
@@ -618,7 +611,7 @@ mod tests {
   // isolate per-test directories we'd need to reset the OnceLock,
   // which the public API doesn't support. Instead, share one cache
   // directory across tests and use unique source bytes per test.
-  static SHARED_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+  static SHARED_DIR: OnceLock<PathBuf> = OnceLock::new();
   fn shared_cache_dir() -> &'static Path {
     SHARED_DIR.get_or_init(|| {
       let dir = temp_dir("shared");
@@ -643,32 +636,23 @@ mod tests {
     let dir = temp_dir("hash");
     let src = dir.join("a.bin");
     write_bytes(&src, b"hello");
-    let h_png = hash_key(
-      &src,
-      RenderKey {
-        page:    Some(1),
-        density: 90,
-        ext:     "png",
-      },
-    )
+    let h_png = hash_key(&src, RenderKey {
+      page:    Some(1),
+      density: 90,
+      ext:     "png",
+    })
     .unwrap();
-    let h_svg = hash_key(
-      &src,
-      RenderKey {
-        page:    Some(1),
-        density: 0,
-        ext:     "svg",
-      },
-    )
+    let h_svg = hash_key(&src, RenderKey {
+      page:    Some(1),
+      density: 0,
+      ext:     "svg",
+    })
     .unwrap();
-    let h_page2 = hash_key(
-      &src,
-      RenderKey {
-        page:    Some(2),
-        density: 90,
-        ext:     "png",
-      },
-    )
+    let h_page2 = hash_key(&src, RenderKey {
+      page:    Some(2),
+      density: 90,
+      ext:     "png",
+    })
     .unwrap();
     assert_ne!(h_png, h_svg);
     assert_ne!(h_png, h_page2);
@@ -690,28 +674,18 @@ mod tests {
       ext:     "png",
     };
     let mut spawn_calls = 0u32;
-    let ok1 = with_cache(
-      src.to_str().unwrap(),
-      dest1.to_str().unwrap(),
-      key,
-      || {
-        spawn_calls += 1;
-        fs::write(&dest1, b"converted-output").unwrap();
-        true
-      },
-    );
+    let ok1 = with_cache(src.to_str().unwrap(), dest1.to_str().unwrap(), key, || {
+      spawn_calls += 1;
+      fs::write(&dest1, b"converted-output").unwrap();
+      true
+    });
     assert!(ok1);
     assert_eq!(spawn_calls, 1, "first call must spawn");
 
-    let ok2 = with_cache(
-      src.to_str().unwrap(),
-      dest2.to_str().unwrap(),
-      key,
-      || {
-        spawn_calls += 1;
-        true
-      },
-    );
+    let ok2 = with_cache(src.to_str().unwrap(), dest2.to_str().unwrap(), key, || {
+      spawn_calls += 1;
+      true
+    });
     assert!(ok2);
     assert_eq!(spawn_calls, 1, "second call must NOT spawn");
     assert_eq!(
@@ -750,10 +724,9 @@ mod tests {
         Some(CachedDims { width: 640, height: 480 })
       },
     );
-    assert!(matches!(
-      dims1,
-      ConvertResult::Ok { dims: Some(CachedDims { width: 640, height: 480 }) }
-    ));
+    assert!(matches!(dims1, ConvertResult::Ok {
+      dims: Some(CachedDims { width: 640, height: 480 }),
+    }));
     assert_eq!(measure_calls, 1, "miss measures dims");
 
     // Second call: hit → sidecar replay, NO spawn, NO measure.
@@ -769,10 +742,9 @@ mod tests {
         Some(CachedDims { width: 999, height: 999 })
       },
     );
-    assert!(matches!(
-      dims2,
-      ConvertResult::Ok { dims: Some(CachedDims { width: 640, height: 480 }) }
-    ));
+    assert!(matches!(dims2, ConvertResult::Ok {
+      dims: Some(CachedDims { width: 640, height: 480 }),
+    }));
     assert_eq!(measure_calls, 1, "hit replays sidecar dims, no re-measure");
   }
 
@@ -893,7 +865,10 @@ mod tests {
     // Step 3: a fresh lookup must return None — no panic, no error log.
     // (The function returns Option, so we just check the variant.)
     let hit = lookup(src.to_str().unwrap(), dest2.to_str().unwrap(), key);
-    assert!(hit.is_none(), "lookup must report a miss when disk file is gone");
+    assert!(
+      hit.is_none(),
+      "lookup must report a miss when disk file is gone"
+    );
 
     // Step 4: with_cache must regenerate quietly. The closure should fire,
     // producing fresh output bytes. After this, the cache should hold the
@@ -904,7 +879,10 @@ mod tests {
       true
     });
     assert!(ok2);
-    assert_eq!(calls, 2, "regeneration must run the conversion closure exactly once");
+    assert_eq!(
+      calls, 2,
+      "regeneration must run the conversion closure exactly once"
+    );
     assert_eq!(
       fs::read(&dest2).unwrap(),
       b"v2-bytes-regenerated",
@@ -962,10 +940,9 @@ mod tests {
       },
       || Some(CachedDims { width: 100, height: 200 }),
     );
-    assert!(matches!(
-      result,
-      ConvertResult::Ok { dims: Some(CachedDims { width: 100, height: 200 }) }
-    ));
+    assert!(matches!(result, ConvertResult::Ok {
+      dims: Some(CachedDims { width: 100, height: 200 }),
+    }));
     // The .dims sidecar should now contain the FRESH dims, not the stale.
     let after = read_dims_sidecar(&sidecar).unwrap();
     assert_eq!(after, CachedDims { width: 100, height: 200 });
@@ -1011,18 +988,20 @@ mod tests {
     let root = shared_cache_dir();
     let hash = hash_key(&src, key).unwrap();
     let cached = cache_path(root, &hash, key.ext);
-    assert!(cached.exists(), "cache entry must exist after concurrent writes");
+    assert!(
+      cached.exists(),
+      "cache entry must exist after concurrent writes"
+    );
     let shard_dir = cached.parent().unwrap();
     let tmp_count = fs::read_dir(shard_dir)
       .unwrap()
       .filter_map(Result::ok)
-      .filter(|e| {
-        e.file_name()
-          .to_string_lossy()
-          .contains(".tmp.")
-      })
+      .filter(|e| e.file_name().to_string_lossy().contains(".tmp."))
       .count();
-    assert_eq!(tmp_count, 0, "no leftover tmp sidecars after concurrent writes");
+    assert_eq!(
+      tmp_count, 0,
+      "no leftover tmp sidecars after concurrent writes"
+    );
 
     // A fresh hit must still succeed and deliver the correct bytes.
     let dest_check = dir.join("dest_check.png");

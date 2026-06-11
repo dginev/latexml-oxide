@@ -38,26 +38,26 @@ LoadDefinitions!({
   DefMacro!("\\multido@@initvars@@{}", sub[(variables)] {
     let reader_mouth = Mouth::new("", None)?;
     let read_result : Result<Vec<Token>> =
-    gullet::reading_from_mouth(reader_mouth, || {
+    reading_from_mouth(reader_mouth, || {
 
-      gullet::unread(variables);
+      unread(variables);
       let mut inits : Vec<Token> = Vec::new();
       let mut steps = Vec::new();
-      gullet::skip_spaces()?;
-      while let Some(var) = gullet::read_token()? {
+      skip_spaces()?;
+      while let Some(var) = read_token()? {
         // TODO: this defeats the point of the performance optimization
         // but it is so much *simpler* to allocate...
         let csname = var.with_cs_name(ToString::to_string);
         if let Some(cap) = DNIR_REX.captures(&csname) {
           let vtype = cap.get(1).map_or(String::new(), |m| m.as_str().to_lowercase());
-          if gullet::read_keyword(&["="])?.is_none() {
+          if read_keyword(&["="])?.is_none() {
             Error!("expected", "=", "Missing = in multido variables");
           }
           let init = match vtype.as_str() {
-            "d" => Tokens!(Explode!(s!("{}sp", gullet::read_dimension()?.value_of()))),
-            "n" => gullet::read_float()?.revert()?,
-            "i" => gullet::read_number()?.revert()?,
-            "r" => gullet::read_float()?.revert()?,
+            "d" => Tokens!(Explode!(s!("{}sp", read_dimension()?.value_of()))),
+            "n" => read_float()?.revert()?,
+            "i" => read_number()?.revert()?,
+            "r" => read_float()?.revert()?,
             _ => panic!("This voids the regex condition (d|n|i|r).")
           };
           inits.push(T_CS!("\\def"));
@@ -65,28 +65,28 @@ LoadDefinitions!({
           inits.push(T_BEGIN!());
           inits.extend(init.unlist());
           inits.push(T_END!());
-          if gullet::read_keyword(&["+"])?.is_none() {
+          if read_keyword(&["+"])?.is_none() {
             Error!("expected", "+", "Missing + in multido variables");
           }
           let needs_negate = lookup_int("\\multido@count") < 0;
           let step = match vtype.as_str() {
             "d" => {
-              let mut stepv = gullet::read_dimension()?;
+              let mut stepv = read_dimension()?;
               if needs_negate { stepv = stepv.negate(); }
               stepv.revert()?
             },
             "n" => {
-              let mut stepv = gullet::read_float()?;
+              let mut stepv = read_float()?;
               if needs_negate { stepv = stepv.negate(); }
               stepv.revert()?
             },
             "i" => {
-              let mut stepv = gullet::read_number()?;
+              let mut stepv = read_number()?;
               if needs_negate { stepv = stepv.negate(); }
               stepv.revert()?
             },
             "r" => {
-              let mut stepv = gullet::read_float()?;
+              let mut stepv = read_float()?;
               if needs_negate { stepv = stepv.negate(); }
               stepv.revert()?
             },
@@ -97,13 +97,13 @@ LoadDefinitions!({
           steps.push(T_BEGIN!());
           steps.extend(step.unlist());
           steps.push(T_END!());
-          if gullet::read_keyword(&[","])?.is_none() {
+          if read_keyword(&[","])?.is_none() {
             break;
           }
         }  else {
           Error!("unexpected", var, format!("Wrong format for multido variable {var:?}"));
         }
-        gullet::skip_spaces()?;
+        skip_spaces()?;
       }
       DefMacro!(T_CS!("\\multido@stepvar"), None, Tokens::new(steps));
       // Return the tokens to initialize the vars

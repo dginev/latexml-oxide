@@ -1,6 +1,6 @@
-use crate::prelude::*;
 use std::cmp::Ordering;
 
+use crate::prelude::*;
 
 LoadDefinitions!({
   // A rough initial draft of the extra commands & registers defined in pdfTeX.
@@ -146,17 +146,17 @@ LoadDefinitions!({
   // consume one balanced general-text arg. No PDF emission. Driver:
   // 2406.14142 (`\pdfximage{...}` in graphics-bbox-precompute path).
   DefPrimitive!("\\pdfximage", sub[_args] {
-    gullet::skip_spaces()?;
-    if gullet::if_next(T_OTHER!("["))? {
+    skip_spaces()?;
+    if if_next(T_OTHER!("["))? {
       // discard up to matching `]`
-      while let Some(t) = gullet::read_token()? {
+      while let Some(t) = read_token()? {
         if matches!(t.get_catcode(), Catcode::OTHER) && t.to_string() == "]" {
           break;
         }
       }
     }
-    gullet::skip_spaces()?;
-    let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
     Ok(vec![])
   });
   // \pdfrefximage object number (h, v, m) — discard the object number
@@ -184,10 +184,10 @@ LoadDefinitions!({
 
   // Ugh, what a mess of ugly syntax....
   DefParameterType!(OpenActionSpecification, reader => reader!(_args, _extra, {
-    if let Some(_key) = read_keyword(&["openaction"])? {
-      if let Some(_action) = read_keyword(&["user", "goto"])? {
+    if let Some(_key) = read_keyword(&["openaction"])?
+      && let Some(_action) = read_keyword(&["user", "goto"])? {
         // etc....
-      } } }), optional => true);
+      } }), optional => true);
 
   // Perl: DefParameterType('OpenAnnotSpecification', sub { ... }, optional, undigested).
   // Reads and discards the pdfTeX annotation-spec prefix:
@@ -197,14 +197,14 @@ LoadDefinitions!({
     if read_keyword(&["reserveobjnum"])?.is_some() {
       return Ok(ArgWrap::None);
     } else if read_keyword(&["useobjnum"])?.is_some() {
-      let _ = gullet::read_number()?;
+      let _ = read_number()?;
     } else if read_keyword(&["stream"])?.is_some()
       && read_keyword(&["attr"])?.is_some() {
-        gullet::skip_spaces()?;
-        let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+        skip_spaces()?;
+        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
       }
-    gullet::skip_spaces()?;
-    let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+    skip_spaces()?;
+    let _ = read_balanced(ExpansionLevel::Off, false, true)?;
   }), optional => true);
 
   // \pdfannot — read annotation spec and discard. Perl pdfTeX.pool L173.
@@ -277,8 +277,8 @@ LoadDefinitions!({
       // If action was `pop`, there's no trailing general-text spec.
       // Otherwise read and discard the general-text argument.
       if pop.is_none() {
-        gullet::skip_spaces()?;
-        let _ = gullet::read_balanced(ExpansionLevel::Off, false, true)?;
+        skip_spaces()?;
+        let _ = read_balanced(ExpansionLevel::Off, false, true)?;
       }
     }
   );

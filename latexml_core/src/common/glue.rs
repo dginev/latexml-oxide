@@ -1,17 +1,20 @@
-use crate::common::error::Result;
+use std::{cmp::Ordering, fmt};
+
 use once_cell::sync::Lazy;
 use regex::Regex;
-use std::cmp::Ordering;
-use std::fmt;
-
-use crate::Object;
-use crate::common::dimension::attribute_format;
-use crate::common::numeric_ops::{EPSILON, NumericOps, fixpoint, kround};
-use crate::definition::register::{RegisterType, RegisterValue};
-use crate::digested::Digested;
-use crate::state::*;
 
 use super::dimension::fixedformat;
+use crate::{
+  Object,
+  common::{
+    dimension::attribute_format,
+    error::Result,
+    numeric_ops::{EPSILON, NumericOps, fixpoint, kround},
+  },
+  definition::register::{RegisterType, RegisterValue},
+  digested::Digested,
+  state::*,
+};
 
 /// Positively silly enum, but it solves all kinds of issues with the Glue struct
 /// most importantly allows us to keep deriving the Copy trait, and avoids storing
@@ -238,27 +241,27 @@ pub fn glue_string(
   // ??? TODO: There seems to be some messy confusion about the types of the
   // pieces of glue/dimensions -- are we consistently using i64 or f64?
   let mut string = fixedformat(skip, Some(unit));
-  if let Some(plus) = plus_opt {
-    if plus != 0 {
-      string.push_str(" plus ");
-      let p_fill = if let Some(fill) = pfill_opt {
-        fill.to_str()
-      } else {
-        unit
-      };
-      string.push_str(&fixedformat(plus, Some(p_fill)))
-    }
+  if let Some(plus) = plus_opt
+    && plus != 0
+  {
+    string.push_str(" plus ");
+    let p_fill = if let Some(fill) = pfill_opt {
+      fill.to_str()
+    } else {
+      unit
+    };
+    string.push_str(&fixedformat(plus, Some(p_fill)))
   }
-  if let Some(minus) = minus_opt {
-    if minus != 0 {
-      string.push_str(" minus ");
-      let p_fill = if let Some(fill) = mfill_opt {
-        fill.to_str()
-      } else {
-        unit
-      };
-      string.push_str(&fixedformat(minus, Some(p_fill)))
-    }
+  if let Some(minus) = minus_opt
+    && minus != 0
+  {
+    string.push_str(" minus ");
+    let p_fill = if let Some(fill) = mfill_opt {
+      fill.to_str()
+    } else {
+      unit
+    };
+    string.push_str(&fixedformat(minus, Some(p_fill)))
   }
   string
 }
@@ -518,27 +521,27 @@ impl Glue {
   pub fn to_attribute(&self) -> String {
     let u = "pt";
     let mut string = attribute_format(self.skip, Some(u));
-    if let Some(plus) = self.plus {
-      if plus != 0 {
-        string.push_str(" plus ");
-        let fill_u = if let Some(pfill) = self.pfill {
-          pfill.to_str()
-        } else {
-          u
-        };
-        string.push_str(&attribute_format(plus, Some(fill_u)));
-      }
+    if let Some(plus) = self.plus
+      && plus != 0
+    {
+      string.push_str(" plus ");
+      let fill_u = if let Some(pfill) = self.pfill {
+        pfill.to_str()
+      } else {
+        u
+      };
+      string.push_str(&attribute_format(plus, Some(fill_u)));
     }
-    if let Some(minus) = self.minus {
-      if minus != 0 {
-        string.push_str(" minus ");
-        let mfill_u = if let Some(mfill) = self.mfill {
-          mfill.to_str()
-        } else {
-          u
-        };
-        string.push_str(&attribute_format(minus, Some(mfill_u)));
-      }
+    if let Some(minus) = self.minus
+      && minus != 0
+    {
+      string.push_str(" minus ");
+      let mfill_u = if let Some(mfill) = self.mfill {
+        mfill.to_str()
+      } else {
+        u
+      };
+      string.push_str(&attribute_format(minus, Some(mfill_u)));
     }
     string
   }

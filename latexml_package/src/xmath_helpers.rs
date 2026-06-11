@@ -23,14 +23,14 @@ pub fn get_xm_arg_id() -> Result<String> {
   // Pass the Token straight to the register ops so they don't have to
   // re-pin the `&str` key.
   let cs = T_CS!("\\c@@lx@xmarg");
-  let current = state::lookup_register_token(&cs, Vec::new())?
+  let current = lookup_register_token(&cs, Vec::new())?
     .map(|rv| rv.value_of())
     .unwrap_or(0);
   let next = current + 1;
-  state::assign_register_token(
+  assign_register_token(
     &cs,
-    latexml_core::common::number::Number::new(next).into(),
-    Some(state::Scope::Global),
+    Number::new(next).into(),
+    Some(Scope::Global),
     Vec::new(),
   )?;
   Ok(next.to_string())
@@ -146,7 +146,7 @@ pub fn i_dual(
 
   // Push reversion via state (bypasses keyval string conversion)
   if let Some(rev) = reversion_tokens {
-    state::push_value("PENDING_DUAL_REVERSION", Stored::Tokens(rev))?;
+    push_value("PENDING_DUAL_REVERSION", Stored::Tokens(rev))?;
   }
 
   // Build content with xmrefs substituted

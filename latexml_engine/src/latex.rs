@@ -1,3 +1,7 @@
+use std::path::Path;
+
+use once_cell::sync::Lazy;
+
 ///**********************************************************************
 /// Organized following
 ///  "`LaTeX`: A Document Preparation System"
@@ -9,8 +13,6 @@
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
 use crate::prelude::*;
-use once_cell::sync::Lazy;
-use std::path::Path;
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 static DUMP_PATH: Lazy<Option<String>> = Lazy::new(|| std::env::var("LATEXML_DUMP_PATH").ok());
@@ -29,32 +31,30 @@ fn latex_dump_available() -> bool {
   if *NODUMP {
     return false;
   }
-  if let Some(p) = DUMP_PATH.as_deref() {
-    if Path::new(p).is_file() {
-      return true;
-    }
+  if let Some(p) = DUMP_PATH.as_deref()
+    && Path::new(p).is_file()
+  {
+    return true;
   }
   let prefer = crate::dump_paths::detect_ambient_texlive_year();
-  if let Some(dir) = DUMP_DIR.as_deref() {
-    if crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "latex", prefer).is_some() {
+  if let Some(dir) = DUMP_DIR.as_deref()
+    && crate::dump_paths::resolve_versioned_in_dir(Path::new(dir), "latex", prefer).is_some()
+  {
+    return true;
+  }
+  if let Ok(exe) = std::env::current_exe()
+    && let Some(exe_dir) = exe.parent()
+  {
+    let installed = exe_dir.join("../resources/dumps");
+    if crate::dump_paths::resolve_versioned_in_dir(&installed, "latex", prefer).is_some() {
       return true;
     }
-  }
-  if let Ok(exe) = std::env::current_exe() {
-    if let Some(exe_dir) = exe.parent() {
-      let installed = exe_dir.join("../resources/dumps");
-      if crate::dump_paths::resolve_versioned_in_dir(&installed, "latex", prefer).is_some() {
-        return true;
-      }
-      if crate::dump_paths::resolve_versioned_in_dir(exe_dir, "latex", prefer).is_some() {
-        return true;
-      }
+    if crate::dump_paths::resolve_versioned_in_dir(exe_dir, "latex", prefer).is_some() {
+      return true;
     }
   }
   let dev = Path::new(DEV_DUMPS_DIR);
-  if dev.is_dir()
-    && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some()
-  {
+  if dev.is_dir() && crate::dump_paths::resolve_versioned_in_dir(dev, "latex", prefer).is_some() {
     return true;
   }
   crate::embedded_dumps::embedded_latex_dump(prefer).is_some()
@@ -128,10 +128,11 @@ LoadDefinitions!({
   // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`
   // itself is defined in latex_constructs (which loads after the
   // dump), so the alias has to wait until now.
-  let (applied, skipped) = latexml_core::dump_reader::flush_deferred_aliases();
+  let (applied, skipped) = dump_reader::flush_deferred_aliases();
   if applied + skipped > 0 {
     Info!(
-      "latex_dump", "deferred",
+      "latex_dump",
+      "deferred",
       s!("deferred aliases: {} applied, {} skipped", applied, skipped)
     );
   }

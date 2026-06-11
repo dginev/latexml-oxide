@@ -1,3 +1,9 @@
+use std::collections::VecDeque;
+
+use latexml_core::{
+  alignment::template::TemplateConfig, common::xml::is_descendant_or_self, digested::DigestedData,
+};
+
 ///**********************************************************************
 /// Rust port of LaTeXML's `latex_constructs.pool.ltxml`.
 ///
@@ -11,12 +17,7 @@
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
 use crate::base_utilities::insert_frontmatter;
-use crate::prelude::*;
-use crate::tex_tables::alignment_bindings;
-use latexml_core::alignment::template::TemplateConfig;
-use latexml_core::common::xml::is_descendant_or_self;
-use latexml_core::digested::DigestedData;
-use std::collections::VecDeque;
+use crate::{prelude::*, tex_tables::alignment_bindings};
 
 // digested_to_text moved to base_utilities.rs (PR #2767: needed by
 // digest_front_matter for the creator before-separators).
@@ -87,7 +88,7 @@ fn is_plain_definition_source(locator: Locator) -> bool {
   if locator.get_short_source("").starts_with("plain") {
     return true;
   }
-  arena::with(locator.get_source(), |s| s == "<embedded:plain>")
+  with(locator.get_source(), |s| s == "<embedded:plain>")
 }
 
 /// Mirror of Perl `isDefinableLaTeX` (latex_constructs.pool.ltxml:2569-2574).
@@ -128,23 +129,23 @@ pub fn begin_appendices(counter: &str) {
   let the_ctr = s!("\\the{counter}");
   let the_ctr_id = s!("\\the{counter}@ID");
   let cs_ctr = T_CS!(s!("\\{counter}"));
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@save@theappendex"),
     &T_CS!(&the_ctr),
     Some(Scope::Global),
   );
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@save@theappendex@ID"),
     &T_CS!(&the_ctr_id),
     Some(Scope::Global),
   );
-  state::let_i(&T_CS!("\\lx@save@appendix"), &cs_ctr, Some(Scope::Global));
-  state::let_i(
+  let_i(&T_CS!("\\lx@save@appendix"), &cs_ctr, Some(Scope::Global));
+  let_i(
     &T_CS!("\\lx@save@@appendix"),
     &T_CS!("\\@appendix"),
     Some(Scope::Global),
   );
-  state::assign_mapping(
+  assign_mapping(
     "BACKMATTER_ELEMENT",
     "ltx:appendix",
     Some(s!("ltx:{counter}")),
@@ -180,15 +181,15 @@ pub fn begin_appendices(counter: &str) {
       Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))),
     );
   }
-  let _ = state::assign_register(
+  let _ = assign_register(
     &s!("\\c@{counter}"),
     RegisterValue::Number(Number::new(0)),
     None,
     Vec::new(),
   );
-  state::assign_mapping("counter_for_type", "appendix", Some(counter.to_string()));
-  state::let_i(&cs_ctr, &T_CS!("\\@@appendix"), Some(Scope::Global));
-  state::let_i(
+  assign_mapping("counter_for_type", "appendix", Some(counter.to_string()));
+  let_i(&cs_ctr, &T_CS!("\\@@appendix"), Some(Scope::Global));
+  let_i(
     &T_CS!("\\@appendix"),
     &T_CS!("\\relax"),
     Some(Scope::Global),
@@ -196,27 +197,27 @@ pub fn begin_appendices(counter: &str) {
 }
 
 pub fn end_appendices() {
-  if let Some(counter_stored) = state::lookup_mapping("BACKMATTER_ELEMENT", "ltx:appendix") {
+  if let Some(counter_stored) = lookup_mapping("BACKMATTER_ELEMENT", "ltx:appendix") {
     let counter_full = counter_stored.to_string();
     let counter = counter_full.strip_prefix("ltx:").unwrap_or(&counter_full);
     let the_ctr = s!("\\the{counter}");
     let the_ctr_id = s!("\\the{counter}@ID");
-    state::let_i(
+    let_i(
       &T_CS!(the_ctr),
       &T_CS!("\\lx@save@theappendex"),
       Some(Scope::Global),
     );
-    state::let_i(
+    let_i(
       &T_CS!(the_ctr_id),
       &T_CS!("\\lx@save@theappendex@ID"),
       Some(Scope::Global),
     );
-    state::let_i(
+    let_i(
       &T_CS!(s!("\\{counter}")),
       &T_CS!("\\lx@save@appendix"),
       Some(Scope::Global),
     );
-    state::let_i(
+    let_i(
       &T_CS!("\\@appendix"),
       &T_CS!("\\lx@save@@appendix"),
       Some(Scope::Global),
@@ -244,7 +245,7 @@ pub fn make_note_tags(
     props.insert("mark", mark.into());
     props.insert(
       "tags",
-      stomach::digest(Tokens!(
+      digest(Tokens!(
         T_BEGIN!(),
         T_CS!("\\def"),
         T_CS!(s!("\\the{counter}")),
@@ -327,7 +328,7 @@ fn relocate_footnote_aux(
 }
 
 pub fn only_preamble(cs: &str) -> Result<()> {
-  if !state::lookup_bool_sym(pin!("inPreamble")) {
+  if !lookup_bool_sym(pin!("inPreamble")) {
     Error!(
       "unexpected",
       cs,
@@ -343,53 +344,49 @@ pub fn tabular_bindings(
   mut xml_attributes: HashMap<String, String>,
 ) -> Result<()> {
   for col in template.get_columns_mut() {
-    if let Some(ref after) = col.after {
-      if after
+    if let Some(ref after) = col.after
+      && after
         .unlist_ref()
         .iter()
         .any(|t| t.with_str(|s| s.contains("intercol")))
-      {
-        col.has_intercol_after = true;
-      }
+    {
+      col.has_intercol_after = true;
     }
   }
   for col in template.get_repeated_mut() {
-    if let Some(ref after) = col.after {
-      if after
+    if let Some(ref after) = col.after
+      && after
         .unlist_ref()
         .iter()
         .any(|t| t.with_str(|s| s.contains("intercol")))
-      {
-        col.has_intercol_after = true;
-      }
+    {
+      col.has_intercol_after = true;
     }
   }
-  if !properties.contains_key("guess_headers") {
-    if let Some(v) = lookup_value("GUESS_TABULAR_HEADERS") {
-      properties.insert("guess_headers", v);
-    }
+  if !properties.contains_key("guess_headers")
+    && let Some(v) = lookup_value("GUESS_TABULAR_HEADERS")
+  {
+    properties.insert("guess_headers", v);
   }
   if !xml_attributes.contains_key("colsep") {
     let sep_opt = lookup_dimension("\\tabcolsep");
-    if let Some(sep) = sep_opt {
-      if sep.value_of()
+    if let Some(sep) = sep_opt
+      && sep.value_of()
         != lookup_dimension("\\lx@default@tabcolsep")
           .unwrap()
           .value_of()
-      {
-        xml_attributes.insert(String::from("colsep"), sep.to_attribute());
-      }
+    {
+      xml_attributes.insert(String::from("colsep"), sep.to_attribute());
     }
   }
   if !xml_attributes.contains_key("rowsep") {
-    let astr = gullet::do_expand(T_CS!("\\arraystretch"))?.to_string();
-    if astr != "1" {
-      if let Ok(astr_f) = astr.parse::<f64>() {
-        if astr_f != 1.0 {
-          let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
-          xml_attributes.insert(String::from("rowsep"), rowsep.to_attribute());
-        }
-      }
+    let astr = do_expand(T_CS!("\\arraystretch"))?.to_string();
+    if astr != "1"
+      && let Ok(astr_f) = astr.parse::<f64>()
+      && astr_f != 1.0
+    {
+      let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
+      xml_attributes.insert(String::from("rowsep"), rowsep.to_attribute());
     }
   }
   if !properties.contains_key("strut") {
@@ -399,9 +396,9 @@ pub fn tabular_bindings(
     }
   }
   alignment_bindings(template, String::from("text"), properties, xml_attributes);
-  state::let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
-  state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@text@intercol"), None);
-  state::let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);
+  let_i(&T_CS!("\\\\"), &T_CS!("\\@tabularcr"), None);
+  let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@text@intercol"), None);
+  let_i(&T_CS!("\\tabularnewline"), &T_CS!("\\\\"), None);
   for name in [
     "@row@before",
     "@row@after",
@@ -423,10 +420,10 @@ pub fn tabular_bindings(
 /// Handles \protect + excluded CS tokens (text_case_exclude mapping).
 fn lx_change_case_tokens(req_case: &str, tokens: &Tokens) -> Result<Vec<Token>> {
   let mouth = Mouth::new("", None)?;
-  gullet::open_mouth(mouth, false);
-  gullet::unread(tokens.clone());
+  open_mouth(mouth, false);
+  unread(tokens.clone());
   let result = lx_read_and_change_case(req_case)?;
-  gullet::close_mouth(true)?;
+  close_mouth(true)?;
   Ok(result)
 }
 
@@ -435,7 +432,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
   let mut in_math = false;
   let mut is_upper = req_case == "upper" || req_case == "sentence" || req_case == "title";
   loop {
-    let tok = match gullet::read_x_token(Some(false), false, None)? {
+    let tok = match read_x_token(Some(false), false, None)? {
       None => break,
       Some(t) => t,
     };
@@ -460,7 +457,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
       // `\edef` via `\noexpand`. Plain math symbols (`\alpha`, …) are not
       // `\protect`-prefixed, so normal math is unaffected.
       if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
-        if let Some(next) = gullet::read_token()? {
+        if let Some(next) = read_token()? {
           result.push(tok);
           result.push(T_CS!("\\dont_expand"));
           result.push(next);
@@ -494,7 +491,7 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
         is_upper = true;
       }
     } else if cc == Catcode::CS && tok.with_str(|s| s == "\\protect") {
-      if let Some(next_tok) = gullet::read_token()? {
+      if let Some(next_tok) = read_token()? {
         // Perl: $cs->getString (full CS name). Munged-robust CSes carry a
         // trailing space — canonicalise to NO trailing space for the
         // exclude lookup (matches \AddToNoCaseChangeList storage format),
@@ -504,8 +501,8 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
         let next_key_bare = next_tok.with_str(|s| s.trim_end().to_string());
         let next_key_case = format!("{} ", next_key_bare);
         if lookup_mapping("text_case_exclude", &next_key_bare).is_some() {
-          let opt = gullet::read_optional(None)?;
-          let arg = gullet::read_arg(ExpansionLevel::Off)?;
+          let opt = read_optional(None)?;
+          let arg = read_arg(ExpansionLevel::Off)?;
           result.push(tok);
           result.push(next_tok);
           if let Some(opt_tokens) = opt {
@@ -517,38 +514,43 @@ fn lx_read_and_change_case(req_case: &str) -> Result<Vec<Token>> {
           result.push(T_BEGIN!());
           result.extend(arg.unlist());
           result.push(T_END!());
-        } else { match lookup_mapping(
-          if is_upper {
-            "text_uppercase"
-          } else {
-            "text_lowercase"
-          },
-          &next_key_case,
-        ) { Some(changed) => {
-          if let Stored::Token(changed_tok) = changed {
-            result.push(changed_tok);
-          } else {
-            result.push(tok);
-            result.push(next_tok);
+        } else {
+          match lookup_mapping(
+            if is_upper {
+              "text_uppercase"
+            } else {
+              "text_lowercase"
+            },
+            &next_key_case,
+          ) {
+            Some(changed) => {
+              if let Stored::Token(changed_tok) = changed {
+                result.push(changed_tok);
+              } else {
+                result.push(tok);
+                result.push(next_tok);
+              }
+              if req_case == "sentence" || req_case == "title" {
+                is_upper = false;
+              }
+            },
+            _ => {
+              // Fall-through: not in exclude list, not in case-mapping. Pass
+              // both `\protect` and the munged CS through, but mark the CS
+              // un-expandable via `\dont_expand` so the OUTER `\edef`'s
+              // `Partial` body-reader doesn't re-invoke it. Without
+              // `\dont_expand`, the captured tokens go through `\edef` body
+              // expansion which would re-trigger the robust macro (whose
+              // body contains another `\edef\reserved@a{...}`), mangling
+              // the saved tokens and dropping content during the outer
+              // `\reserved@a` invocation. Driver: nested
+              // `\MakeLowercase{\MakeUppercase{...}}`.
+              result.push(tok);
+              result.push(T_CS!("\\dont_expand"));
+              result.push(next_tok);
+            },
           }
-          if req_case == "sentence" || req_case == "title" {
-            is_upper = false;
-          }
-        } _ => {
-          // Fall-through: not in exclude list, not in case-mapping. Pass
-          // both `\protect` and the munged CS through, but mark the CS
-          // un-expandable via `\dont_expand` so the OUTER `\edef`'s
-          // `Partial` body-reader doesn't re-invoke it. Without
-          // `\dont_expand`, the captured tokens go through `\edef` body
-          // expansion which would re-trigger the robust macro (whose
-          // body contains another `\edef\reserved@a{...}`), mangling
-          // the saved tokens and dropping content during the outer
-          // `\reserved@a` invocation. Driver: nested
-          // `\MakeLowercase{\MakeUppercase{...}}`.
-          result.push(tok);
-          result.push(T_CS!("\\dont_expand"));
-          result.push(next_tok);
-        }}}
+        }
       }
     } else {
       result.push(tok);
@@ -577,24 +579,27 @@ const FNSYMBOLS: &[&str] = &[
 fn setup_aligning_context(doc: &mut Document) {
   if let Some(node) = doc.get_element() {
     // Save node and its current last child so we only apply to NEW children later
-    state::assign_value("ALIGNING_NODE", Stored::Node(node.clone()), None);
-    match node.get_last_child() { Some(last) => {
-      state::assign_value("ALIGNING_PREV_CHILD", Stored::Node(last), None);
-    } _ => {
-      state::assign_value("ALIGNING_PREV_CHILD", Stored::None, None);
-    }}
+    assign_value("ALIGNING_NODE", Stored::Node(node.clone()), None);
+    match node.get_last_child() {
+      Some(last) => {
+        assign_value("ALIGNING_PREV_CHILD", Stored::Node(last), None);
+      },
+      _ => {
+        assign_value("ALIGNING_PREV_CHILD", Stored::None, None);
+      },
+    }
   }
 }
 /// Perl: applyAligningContext — applies align/class to children added AFTER \centering.
 fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> Result<()> {
   // with_value avoids two Stored envelope clones; Node is Rc-backed so we
   // still pay a Rc::clone inside the closure but skip the enum match work.
-  let node_opt = state::with_value("ALIGNING_NODE", |v| match v {
+  let node_opt = with_value("ALIGNING_NODE", |v| match v {
     Some(Stored::Node(node)) => Some(node.clone()),
     _ => None,
   });
   if let Some(node) = node_opt {
-    let previous_opt = state::with_value("ALIGNING_PREV_CHILD", |v| match v {
+    let previous_opt = with_value("ALIGNING_PREV_CHILD", |v| match v {
       Some(Stored::Node(prev)) => Some(prev.clone()),
       _ => None,
     });
@@ -602,15 +607,15 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
     let mut past_previous = previous_opt.is_none(); // if no previous, apply to all
     for mut child in children {
       if !past_previous {
-        if let Some(ref prev) = previous_opt {
-          if child == *prev {
-            past_previous = true;
-          }
+        if let Some(ref prev) = previous_opt
+          && child == *prev
+        {
+          past_previous = true;
         }
         continue;
       }
-      if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-        crate::base_utilities::set_align_or_class(document, &mut child, align, class)?;
+      if child.get_type() == Some(NodeType::ElementNode) {
+        set_align_or_class(document, &mut child, align, class)?;
       }
     }
   }
@@ -620,8 +625,8 @@ fn apply_aligning_context(document: &mut Document, align: &str, class: &str) -> 
 fn before_digest_verbatim() -> Result<Vec<Digested>> {
   bgroup();
   let mut stuff = Vec::new();
-  if let Some(b) = state::lookup_tokens("@environment@verbatim@atbegin") {
-    stuff.push(stomach::digest(b.unlist())?);
+  if let Some(b) = lookup_tokens("@environment@verbatim@atbegin") {
+    stuff.push(digest(b.unlist())?);
   }
   AssignValue!("current_environment", "verbatim");
   DefMacro!("\\@currenvir", "verbatim");
@@ -639,13 +644,13 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     ("\\end{verbatim}", ' ')
   };
   let mut lines: Vec<_> = Vec::new();
-  while let Some(next_line) = gullet::read_raw_line() {
+  while let Some(next_line) = read_raw_line() {
     let mut line = next_line.as_str();
     let mut exiting = false;
     if let Some((final_line, remaining)) = line.split_once(end) {
       line = final_line;
-      gullet::unread_one(T_CR!());
-      gullet::unread(Tokenize!(remaining));
+      unread_one(T_CR!());
+      unread(Tokenize!(remaining));
       exiting = true;
     }
     // The raw chars will still have to be decoded (but not space!!)
@@ -654,27 +659,27 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
       if c == ' ' {
         decoded_line.push(space);
       } else {
-        let decoded_c = font::decode_string(arena::pin_char(c), Some("OT1_typewriter"), true);
-        arena::with(decoded_c, |c_str| decoded_line.push_str(c_str));
+        let decoded_c = font::decode_string(pin_char(c), Some("OT1_typewriter"), true);
+        with(decoded_c, |c_str| decoded_line.push_str(c_str));
       }
     }
     decoded_line.push('\n');
-    lines.push(arena::pin(decoded_line));
+    lines.push(pin(decoded_line));
     if exiting {
       break;
     }
   }
-  if let Some(last_line) = lines.last() {
-    if *last_line == arena::pin_static("\n") {
-      lines.pop();
-    }
+  if let Some(last_line) = lines.last()
+    && *last_line == pin_static("\n")
+  {
+    lines.pop();
   }
   // Note last line ends up as Whatsit's "trailer"
-  if let Some(b) = state::lookup_tokens("@environment@verbatim@atend") {
-    lines.push(arena::pin(stomach::digest(b)?.to_string()));
+  if let Some(b) = lookup_tokens("@environment@verbatim@atend") {
+    lines.push(pin(digest(b)?.to_string()));
   }
   egroup()?;
-  lines.push(arena::pin_static(end));
+  lines.push(pin_static(end));
   let boxes = lines
     .into_iter()
     .map(|line| {
@@ -720,7 +725,7 @@ pub fn prepare_equation_counter(options: SymHashMap<Stored>) {
       Some(NewDefault!(NewCounterOptions, idprefix => "E")),
     );
   }
-  state::assign_value(
+  assign_value(
     "EQUATION_NUMBERING",
     Stored::HashStored(options),
     Some(Scope::Global),
@@ -736,7 +741,7 @@ pub fn before_equation() -> Result<()> {
       is_numbered = matches!(numbering.get("numbered"), Some(&Stored::Bool(true)));
       has_preset = numbering.contains_key("preset");
       match numbering.get("counter") {
-        Some(Stored::String(v)) => arena::to_string(*v),
+        Some(Stored::String(v)) => to_string(*v),
         Some(other) => {
           log::warn!("eq counter should be stored as string, was instead: {other:?}");
           String::from("equation")
@@ -754,20 +759,20 @@ pub fn before_equation() -> Result<()> {
       ref_step_id(&ctr)?
     };
     tags.insert("preset", true.into());
-    state::assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
+    assign_value("EQUATIONROW_TAGS", tags, Some(Scope::Global));
   } else {
-    state::assign_value(
+    assign_value(
       "EQUATIONROW_TAGS",
       Stored::HashStored(SymHashMap::default()),
       Some(Scope::Global),
     );
   }
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@end@display@math"),
     &T_CS!("\\lx@eDM@in@equation"),
     None,
   );
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@begin@display@math"),
     &T_CS!("\\lx@bDM@in@equation"),
     None,
@@ -828,7 +833,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
       } else {
         ref_step_id(&ctr)?
       };
-      state::assign_value(
+      assign_value(
         "EQUATIONROW_TAGS",
         Stored::HashStored(new_tags),
         Some(Scope::Global),
@@ -838,7 +843,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
       let invoked_tags = build_invocation(T_CS!("\\lx@make@tags"), vec![Some(Tokens::new(
         Explode!(ctr),
       ))])?;
-      let stored_tags_update = Stored::Digested(stomach::digest(invoked_tags)?);
+      let stored_tags_update = Stored::Digested(digest(invoked_tags)?);
       with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
         if let Some(Stored::HashStored(tags)) = tags_opt {
           tags.insert("tags", stored_tags_update);
@@ -855,7 +860,7 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
   });
   // Phase 4: Install tags in $whatsit or current Row, as appropriate.
   #[allow(clippy::manual_unwrap_or_default)]
-  let props = match state::remove_value("EQUATIONROW_TAGS") {
+  let props = match remove_value("EQUATIONROW_TAGS") {
     Some(Stored::HashStored(hs)) => hs,
     _ => SymHashMap::default(),
   };
@@ -863,13 +868,13 @@ pub fn after_equation(whatsit: Option<&mut Whatsit>) -> Result<()> {
     // Perl: propagate id/tags to current alignment row.
     // In Perl, these get stored as $$row{id}, $$row{tags} on the row object.
     // Store on the current alignment row so each row retains its own props.
-    if let Some(alignment_digested) = lookup_alignment() {
-      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
-        let mut alignment = alignment_cell.borrow_mut();
-        if let Some(row) = alignment.current_row_mut() {
-          for (key, val) in &props {
-            row.properties.insert(arena::to_string(*key), val.clone());
-          }
+    if let Some(alignment_digested) = lookup_alignment()
+      && let Some(alignment_cell) = alignment_digested.alignment_cell()
+    {
+      let mut alignment = alignment_cell.borrow_mut();
+      if let Some(row) = alignment.current_row_mut() {
+        for (key, val) in &props {
+          row.properties.insert(to_string(*key), val.clone());
         }
       }
     }
@@ -913,7 +918,7 @@ fn retract_equation() {
   }
   if let Ok(mut new_tags) = ref_step_id(&ctr) {
     new_tags.insert("reset", true.into());
-    state::assign_value(
+    assign_value(
       "EQUATIONROW_TAGS",
       Stored::HashStored(new_tags),
       Some(Scope::Global),
@@ -963,7 +968,7 @@ pub fn eqnarray_bindings() -> Result<()> {
   let mut xml_attrs = HashMap::default();
   xml_attrs.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
   // Perl: colsep => LookupDimension('\arraycolsep')->multiply(2)
-  if let Ok(Some(acol)) = state::lookup_register("\\arraycolsep", Vec::new()) {
+  if let Ok(Some(acol)) = lookup_register("\\arraycolsep", Vec::new()) {
     let colsep = acol.pt_value(None) * 2.0;
     if colsep > 0.0 {
       xml_attrs.insert(String::from("colsep"), s!("{}pt", colsep));
@@ -976,15 +981,15 @@ pub fn eqnarray_bindings() -> Result<()> {
     template: Some(template),
     open_container: Rc::new(|document, mut props| {
       // Perl: my %attr = RefStepID('@equationgroup');
-      if let Ok(id_props) = ref_step_id("@equationgroup") {
-        if let Some(id) = id_props.get("id") {
-          props.insert(String::from("xml:id"), id.to_string());
-        }
+      if let Ok(id_props) = ref_step_id("@equationgroup")
+        && let Some(id) = id_props.get("id")
+      {
+        props.insert(String::from("xml:id"), id.to_string());
       }
       props.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
       document
         .open_element("ltx:equationgroup", Some(props), None)
-        .map(Option::Some)
+        .map(Some)
     }),
     close_container: Rc::new(|document| document.close_element("ltx:equationgroup")),
     open_row: Rc::new(|document, mut props| {
@@ -1008,7 +1013,7 @@ pub fn eqnarray_bindings() -> Result<()> {
     open_column: Rc::new(|document, props| {
       document
         .open_element("ltx:_Capture_", Some(props), None)
-        .map(Option::Some)
+        .map(Some)
     }),
     close_column: Rc::new(|document| document.close_element("ltx:_Capture_")),
     is_math: true,
@@ -1019,14 +1024,14 @@ pub fn eqnarray_bindings() -> Result<()> {
   // NOTE: Perl's eqnarrayBindings does NOT set Let(T_MATH, '\lx@dollar@in@mathmode').
   // eqnarray creates the alignment directly (not through alignmentBindings),
   // so the $ tokens in its template use \lx@dollar@default — same as amsRearrangeableBindings.
-  state::let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
-  state::let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
-  state::let_i(
+  let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
+  let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
+  let_i(
     &T_CS!("\\lx@alignment@row@before"),
     &T_CS!("\\eqnarray@row@before"),
     None,
   );
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@alignment@row@after"),
     &T_CS!("\\eqnarray@row@after"),
     None,
@@ -1039,14 +1044,14 @@ pub fn eqnarray_bindings() -> Result<()> {
   // (immutable canonical) rather than \label avoids the self-recursion when
   // this binding re-runs while \label is already \lx@eqnarray@label (nested
   // align/gather, 2008.13358).
-  state::let_i(
+  let_i(
     &T_CS!("\\lx@eqnarray@save@label"),
     &T_CS!("\\lx@label"),
     Some(Scope::Global),
   );
   // Perl: Let('\label', '\lx@eqnarray@label');
   // Redirect \label to the noalign version so it runs at the equation (row) level
-  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
+  let_i(&T_CS!("\\label"), &T_CS!("\\lx@eqnarray@label"), None);
   Ok(())
 }
 
@@ -1206,7 +1211,7 @@ fn stored_string_list(keys: &[&str]) -> Stored {
 }
 
 fn init_savable_theorem_parameters(keys: Vec<&str>) {
-  state::assign_value(
+  assign_value(
     "SAVABLE_THEOREM_PARAMETERS",
     stored_string_list(&keys),
     Some(Scope::Global),
@@ -1214,7 +1219,7 @@ fn init_savable_theorem_parameters(keys: Vec<&str>) {
 }
 
 pub fn get_savable_keys() -> Vec<String> {
-  match state::lookup_value("SAVABLE_THEOREM_PARAMETERS") {
+  match lookup_value("SAVABLE_THEOREM_PARAMETERS") {
     Some(Stored::VecDequeStored(keys)) => keys.iter().map(|k| k.to_string()).collect(),
     _ => vec![
       "\\thm@bodyfont".into(),
@@ -1227,7 +1232,7 @@ pub fn get_savable_keys() -> Vec<String> {
 }
 
 pub fn set_savable_theorem_parameters(keys: Vec<&str>) {
-  state::assign_value(
+  assign_value(
     "SAVABLE_THEOREM_PARAMETERS",
     stored_string_list(&keys),
     Some(Scope::Global),
@@ -1240,13 +1245,13 @@ pub fn save_theorem_style(name: &str, saved: Vec<(String, Stored)>) {
     .into_iter()
     .flat_map(|(k, v)| vec![Stored::from(k), v])
     .collect();
-  state::assign_value(&key, Stored::VecDequeStored(deque), Some(Scope::Global));
+  assign_value(&key, Stored::VecDequeStored(deque), Some(Scope::Global));
 }
 
 pub fn use_theorem_style(name: &str) {
   let savable_keys = get_savable_keys();
   let params_key = s!("THEOREM_{name}_PARAMETERS");
-  if let Some(Stored::VecDequeStored(params)) = state::lookup_value(&params_key) {
+  if let Some(Stored::VecDequeStored(params)) = lookup_value(&params_key) {
     let params_vec: Vec<Stored> = params.into_iter().collect();
     let mut i = 0;
     while i + 1 < params_vec.len() {
@@ -1265,9 +1270,9 @@ pub fn use_theorem_style(name: &str) {
             // any `\lx@…` names re-tokenize as single CS (not `\lx`+`@…`).
             _ => mouth::tokenize_internal(&val.to_string()),
           };
-          let _ = state::assign_register(&key, RegisterValue::Tokens(tokens), None, vec![]);
+          let _ = assign_register(&key, RegisterValue::Tokens(tokens), None, vec![]);
         } else {
-          state::assign_value(&key, val, None);
+          assign_value(&key, val, None);
         }
       }
       i += 2;
@@ -1368,7 +1373,7 @@ pub fn define_new_theorem(
       };
       saved_params.push((key.clone(), Stored::Tokens(tokens)));
     } else {
-      let val = state::lookup_value(key).unwrap_or(Stored::None);
+      let val = lookup_value(key).unwrap_or(Stored::None);
       saved_params.push((key.clone(), val));
     }
   }
@@ -1394,7 +1399,7 @@ pub fn define_new_theorem(
   }
 
   // Read swap value
-  let swap = state::lookup_value("thm@swap")
+  let swap = lookup_value("thm@swap")
     .map(|v| match v {
       Stored::Int(n) => n != 0,
       Stored::Bool(b) => b,
@@ -1601,7 +1606,7 @@ pub fn define_new_theorem(
   // before_digest
   let before_digest_closure: BeforeDigestClosure = Rc::new(move || {
     use_theorem_style(&thmset_for_before);
-    let digested = stomach::digest(mouth::tokenize_internal("\\normalfont\\the\\thm@prework"))?;
+    let digested = digest(mouth::tokenize_internal("\\normalfont\\the\\thm@prework"))?;
     Ok(vec![digested])
   });
   options.before_digest.push(before_digest_closure);
@@ -1613,14 +1618,14 @@ pub fn define_new_theorem(
       .map(|n| n.revert().map(|t| t.to_string()).unwrap_or_default())
       .unwrap_or_default();
     let digest_str = s!("\\the\\thm@bodyfont\\the\\thm@styling\\def\\lx@thistheorem{{{name_str}}}");
-    let digested = stomach::digest(mouth::tokenize_internal(&digest_str))?;
+    let digested = digest(mouth::tokenize_internal(&digest_str))?;
     Ok(vec![digested])
   });
   options.after_digest_begin.push(after_digest_begin_closure);
 
   // before_digest_end
   let before_digest_end_closure: BeforeDigestClosure = Rc::new(move || {
-    let digested = stomach::digest(mouth::tokenize_internal(
+    let digested = digest(mouth::tokenize_internal(
       "\\thm@doendmark\\the\\thm@postwork",
     ))?;
     Ok(vec![digested])
@@ -1661,7 +1666,7 @@ pub fn define_new_theorem(
             full_toks.extend(mouth::tokenize_internal(&thmset_for_tags).unlist());
             full_toks.push(T_END!());
             full_toks.push(T_END!());
-            let tags = stomach::digest(Tokens::new(full_toks))?;
+            let tags = digest(Tokens::new(full_toks))?;
             props.insert("tags", tags.into());
           }
         } else {
@@ -1733,47 +1738,48 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
   } else {
     "\\columnwidth"
   };
-  let dim_val = state::lookup_dimension(dim_name).unwrap_or_default();
-  state::assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+  let dim_val = lookup_dimension(dim_name).unwrap_or_default();
+  assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
   // Perl: if (my $main = $options{preincrement}) {
   //   if (($type ne (LookupValue('LAST_FLOATTYPE') || ''))
   //     && !IfCondition('\iflx@donecaption')) {
   //     AssignValue('PREINCREMENTED_' . $main => { RefStepCounter($main) }, 'global'); } }
   if let Some(main_counter) = preincrement {
-    let last_type = state::lookup_value("LAST_FLOATTYPE")
+    let last_type = lookup_value("LAST_FLOATTYPE")
       .map(|s| s.to_string())
       .unwrap_or_default();
     let done_caption = if_condition(&T_CS!("\\iflx@donecaption"))
       .unwrap_or(None)
       .unwrap_or(false);
-    if float_type != last_type && !done_caption {
-      if let Ok(props) = ref_step_counter(main_counter, false) {
-        let prekey = s!("PREINCREMENTED_{main_counter}");
-        state::assign_value(&prekey, props, Some(Scope::Global));
-      }
+    if float_type != last_type
+      && !done_caption
+      && let Ok(props) = ref_step_counter(main_counter, false)
+    {
+      let prekey = s!("PREINCREMENTED_{main_counter}");
+      assign_value(&prekey, props, Some(Scope::Global));
     }
   }
 }
 /// Perl: afterFloat (latex_constructs.pool.ltxml L3440-3448)
 /// Rescues caption counters into the whatsit properties.
 pub fn after_float(whatsit: &mut Whatsit) {
-  let captype = stomach::digest(T_CS!("\\@captype"))
+  let captype = digest(T_CS!("\\@captype"))
     .map(|d| d.to_string())
     .unwrap_or_default();
   // Perl: AssignValue('PREINCREMENTED_' . $type => undef, 'global');
   let prekey = s!("PREINCREMENTED_{captype}");
-  state::remove_value(&prekey);
+  remove_value(&prekey);
   rescue_caption_counters(&captype, whatsit);
-  state::assign_value(
+  assign_value(
     "LAST_FLOATTYPE",
-    Stored::String(arena::pin(&captype)),
+    Stored::String(pin(&captype)),
     Some(Scope::Global),
   );
 }
 /// Simplified version of Perl's arrange_panels_and_breaks().
 /// When a figure/table/float has 2+ child figure/table/float elements (panels),
 /// add the ltx_figure_panel class to each panel.
-fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Result<()> {
+fn arrange_panels(document: &mut Document, node: &mut Node) -> Result<()> {
   // Perl: arrange_panels_and_breaks (latex_constructs L3286-3406)
   // Simplified: we mark panel children with ltx_figure_panel class
   // but skip the full break-insertion / width-based row-splitting logic.
@@ -1782,8 +1788,8 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
   // Includes: ltx:break, Caption class (caption, toccaption),
   // SectionalFrontMatter class (title, toctitle, subtitle, creator, contact, date,
   // tags, classification, acknowledgements), Meta class (resource, navigation, etc.)
-  let is_panel_break = |qname: arena::SymStr| -> bool {
-    arena::with(qname, |name| {
+  let is_panel_break = |qname: SymStr| -> bool {
+    with(qname, |name| {
       matches!(
         name,
         "ltx:break"
@@ -1803,13 +1809,13 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
       )
     })
   };
-  let note_qname = arena::pin_static("ltx:note");
-  let caption_qname = arena::pin_static("ltx:caption");
-  let mut panels: Vec<libxml::tree::Node> = Vec::new();
-  let mut notes: Vec<libxml::tree::Node> = Vec::new();
-  let mut caption: Option<libxml::tree::Node> = None;
+  let note_qname = pin_static("ltx:note");
+  let caption_qname = pin_static("ltx:caption");
+  let mut panels: Vec<Node> = Vec::new();
+  let mut notes: Vec<Node> = Vec::new();
+  let mut caption: Option<Node> = None;
   for child in node.get_child_elements() {
-    let qname = latexml_core::document::get_node_qname(&child);
+    let qname = document::get_node_qname(&child);
     if qname == note_qname {
       notes.push(child);
     } else if is_panel_break(qname) {
@@ -1836,9 +1842,9 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
     // we use a simpler heuristic: insert break after each "standalone" panel
     // (p, listing, equation, equationgroup, itemize, enumerate, quote, theorem,
     // proof, description, verbatim, math) when there are multiple panels.
-    let is_standalone = |p: &libxml::tree::Node| -> bool {
-      let qname = latexml_core::document::get_node_qname(p);
-      arena::with(qname, |name| {
+    let is_standalone = |p: &Node| -> bool {
+      let qname = document::get_node_qname(p);
+      with(qname, |name| {
         matches!(
           name,
           "ltx:p"
@@ -1866,7 +1872,7 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
     for i in 0..panels.len().saturating_sub(1) {
       if is_standalone(&panels[i]) || is_standalone(&panels[i + 1]) {
         let ns = panels[i].get_namespace();
-        let mut break_node = libxml::tree::Node::new("break", ns, document.get_document()).unwrap();
+        let mut break_node = Node::new("break", ns, document.get_document()).unwrap();
         let _ = break_node.set_attribute("class", "ltx_break");
         panels[i].add_next_sibling(&mut break_node)?;
       }
@@ -1877,15 +1883,15 @@ fn arrange_panels(document: &mut Document, node: &mut libxml::tree::Node) -> Res
 /// Perl: collapseFloat (latex_constructs.pool.ltxml L3493-3520)
 /// If a figure/table/float contains exactly one inner float child,
 /// and they don't BOTH have captions, collapse the inner into the outer.
-fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Result<()> {
-  let caption_qname = arena::pin_static("ltx:caption");
-  let figure_qname = arena::pin_static("ltx:figure");
-  let table_qname = arena::pin_static("ltx:table");
-  let float_qname = arena::pin_static("ltx:float");
+fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
+  let caption_qname = pin_static("ltx:caption");
+  let figure_qname = pin_static("ltx:figure");
+  let table_qname = pin_static("ltx:table");
+  let float_qname = pin_static("ltx:float");
   // Find inner float/figure/table children
-  let mut inners: Vec<libxml::tree::Node> = Vec::new();
+  let mut inners: Vec<Node> = Vec::new();
   for child in float.get_child_elements() {
-    let qname = latexml_core::document::get_node_qname(&child);
+    let qname = document::get_node_qname(&child);
     if qname == figure_qname || qname == table_qname || qname == float_qname {
       inners.push(child);
     }
@@ -1898,11 +1904,11 @@ fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Re
   let outer_has_caption = float
     .get_child_elements()
     .iter()
-    .any(|c| latexml_core::document::get_node_qname(c) == caption_qname);
+    .any(|c| document::get_node_qname(c) == caption_qname);
   let inner_has_caption = inner
     .get_child_elements()
     .iter()
-    .any(|c| latexml_core::document::get_node_qname(c) == caption_qname);
+    .any(|c| document::get_node_qname(c) == caption_qname);
   if outer_has_caption && inner_has_caption {
     return Ok(());
   }
@@ -1930,7 +1936,7 @@ fn collapse_float(document: &mut Document, float: &mut libxml::tree::Node) -> Re
     }
   }
   // Replace inner element with its children (unwrap inner)
-  let children: Vec<libxml::tree::Node> = inner.get_child_nodes();
+  let children: Vec<Node> = inner.get_child_nodes();
   for mut child in children {
     child.unlink_node();
     float.add_child(&mut child).ok();
@@ -1964,7 +1970,7 @@ fn tabbing_bindings() -> Result<()> {
     open_container:  Rc::new(|document, props| {
       document
         .open_element("ltx:tabular", Some(props), None)
-        .map(Option::Some)
+        .map(Some)
     }),
     close_container: Rc::new(|document| document.close_element("ltx:tabular")),
     open_row:        Rc::new(|document, props| {
@@ -1976,9 +1982,7 @@ fn tabbing_bindings() -> Result<()> {
     }),
     close_row:       Rc::new(|document| document.close_element("ltx:tr")),
     open_column:     Rc::new(|document, props| {
-      document
-        .open_element("ltx:td", Some(props), None)
-        .map(Option::Some)
+      document.open_element("ltx:td", Some(props), None).map(Some)
     }),
     close_column:    Rc::new(|document| document.close_element("ltx:td")),
     is_math:         false,
@@ -1989,39 +1993,37 @@ fn tabbing_bindings() -> Result<()> {
 
   // Rebind control characters within tabbing
   // Perl: Let("\\=", '\@tabbing@tabset') etc.
-  state::let_i(&T_CS!("\\="), &T_CS!("\\@tabbing@tabset"), None);
-  state::let_i(&T_CS!("\\>"), &T_CS!("\\@tabbing@nexttab"), None);
-  state::let_i(&T_CS!("\\\\"), &T_CS!("\\@tabbing@newline"), None);
-  state::let_i(&T_CS!("\\kill"), &T_CS!("\\@tabbing@kill"), None);
-  state::let_i(&T_CS!("\\+"), &T_CS!("\\@tabbing@increment"), None);
-  state::let_i(&T_CS!("\\-"), &T_CS!("\\@tabbing@decrement"), None);
-  state::let_i(&T_CS!("\\<"), &T_CS!("\\@tabbing@untab"), None);
+  let_i(&T_CS!("\\="), &T_CS!("\\@tabbing@tabset"), None);
+  let_i(&T_CS!("\\>"), &T_CS!("\\@tabbing@nexttab"), None);
+  let_i(&T_CS!("\\\\"), &T_CS!("\\@tabbing@newline"), None);
+  let_i(&T_CS!("\\kill"), &T_CS!("\\@tabbing@kill"), None);
+  let_i(&T_CS!("\\+"), &T_CS!("\\@tabbing@increment"), None);
+  let_i(&T_CS!("\\-"), &T_CS!("\\@tabbing@decrement"), None);
+  let_i(&T_CS!("\\<"), &T_CS!("\\@tabbing@untab"), None);
   // Save accent definitions before rebinding \' and \`
-  state::let_i(&T_CS!("\\@tabbing@'"), &T_CS!("\\'"), None);
-  state::let_i(&T_CS!("\\@tabbing@`"), &T_CS!("\\`"), None);
-  state::let_i(&T_CS!("\\a"), &T_CS!("\\@tabbing@accent"), None);
+  let_i(&T_CS!("\\@tabbing@'"), &T_CS!("\\'"), None);
+  let_i(&T_CS!("\\@tabbing@`"), &T_CS!("\\`"), None);
+  let_i(&T_CS!("\\a"), &T_CS!("\\@tabbing@accent"), None);
   // Rebind \' and \` to tabbing-specific (flush right / hfil)
-  state::let_i(&T_CS!("\\'"), &T_CS!("\\@tabbing@flushright"), None);
-  state::let_i(&T_CS!("\\`"), &T_CS!("\\@tabbing@hfil"), None);
-  state::let_i(&T_CS!("\\pushtabs"), &T_CS!("\\@tabbing@pushtabs"), None);
-  state::let_i(&T_CS!("\\poptabs"), &T_CS!("\\@tabbing@poptabs"), None);
+  let_i(&T_CS!("\\'"), &T_CS!("\\@tabbing@flushright"), None);
+  let_i(&T_CS!("\\`"), &T_CS!("\\@tabbing@hfil"), None);
+  let_i(&T_CS!("\\pushtabs"), &T_CS!("\\@tabbing@pushtabs"), None);
+  let_i(&T_CS!("\\poptabs"), &T_CS!("\\@tabbing@poptabs"), None);
 
   Ok(())
 }
 
 pub fn note_backmatter_element(whatsit: &mut Whatsit, backelement: &str) {
-  if let Some(val) = state::lookup_mapping("BACKMATTER_ELEMENT", backelement) {
+  if let Some(val) = lookup_mapping("BACKMATTER_ELEMENT", backelement) {
     whatsit.set_property("backmatterelement", val);
   }
 }
 
 pub fn adjust_backmatter_element(document: &mut Document, whatsit: &Whatsit) -> Result<()> {
-  let asif_opt =
-    match whatsit.get_property("backmatterelement").as_deref() { Some(Stored::String(asif_sym)) => {
-      Some(arena::to_string(*asif_sym))
-    } _ => {
-      None
-    }};
+  let asif_opt = match whatsit.get_property("backmatterelement").as_deref() {
+    Some(Stored::String(asif_sym)) => Some(to_string(*asif_sym)),
+    _ => None,
+  };
   // Note: We allocate a string here, since
   // it looks like arena::with can deadlock with find_insertion_point
   // we may need a find_insertion_point_sym to avoid that...
@@ -2063,10 +2065,10 @@ fn setup_pseudo_bibitem() -> Result<()> {
   // And protect from redefinitions.
   Let!("\\newblock", "\\lx@bibnewblock");
   // Risky, but when bibliography immediatesly starts with text (no implied \par)
-  if let Some(token) = gullet::read_non_space()? {
-    gullet::unread_one(token);
+  if let Some(token) = read_non_space()? {
+    unread_one(token);
     if !token.is_executable() {
-      gullet::unread_one(T_CS!("\\par"));
+      unread_one(T_CS!("\\par"));
     }
   }
   Ok(())
@@ -2084,71 +2086,66 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // Expecting something like \section*{sometext}
   // Perl: beginBibliography_clean in latex_constructs.pool.ltxml
   let mut bibtitle: Option<Tokens> = None;
-  if let Some(bs) = lookup_definition(&T_CS!("\\bibsection"))? {
-    if bs.is_expandable() {
-      if let Some(ExpansionBody::Tokens(expansion_toks)) = bs.get_expansion() {
-        let mut tokens = expansion_toks.clone().unlist();
+  if let Some(bs) = lookup_definition(&T_CS!("\\bibsection"))?
+    && bs.is_expandable()
+    && let Some(ExpansionBody::Tokens(expansion_toks)) = bs.get_expansion()
+  {
+    let mut tokens = expansion_toks.clone().unlist();
+    if !tokens.is_empty() {
+      let bibunitmap: &[(&str, &str)] = &[
+        ("\\part", "ltx:part"),
+        ("\\chapter", "ltx:chapter"),
+        ("\\section", "ltx:section"),
+        ("\\subsection", "ltx:subsection"),
+        ("\\subsubsection", "ltx:subsubsection"),
+        ("\\paragraph", "ltx:paragraph"),
+        ("\\subparagraph", "ltx:subparagraph"),
+      ];
+      let first_cs = tokens.remove(0).to_string();
+      if let Some((_, unit)) = bibunitmap.iter().find(|(cs, _)| *cs == first_cs) {
+        assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(pin(unit)));
+        // Strip * if present
+        if !tokens.is_empty() && tokens[0].text == pin!("*") {
+          tokens.remove(0);
+        }
         if !tokens.is_empty() {
-          let bibunitmap: &[(&str, &str)] = &[
-            ("\\part", "ltx:part"),
-            ("\\chapter", "ltx:chapter"),
-            ("\\section", "ltx:section"),
-            ("\\subsection", "ltx:subsection"),
-            ("\\subsubsection", "ltx:subsubsection"),
-            ("\\paragraph", "ltx:paragraph"),
-            ("\\subparagraph", "ltx:subparagraph"),
-          ];
-          let first_cs = tokens.remove(0).to_string();
-          if let Some((_, unit)) = bibunitmap.iter().find(|(cs, _)| *cs == first_cs) {
-            state::assign_mapping(
-              "BACKMATTER_ELEMENT",
-              "ltx:bibliography",
-              Some(arena::pin(unit)),
-            );
-            // Strip * if present
-            if !tokens.is_empty() && tokens[0].text == pin!("*") {
-              tokens.remove(0);
-            }
-            if !tokens.is_empty() {
-              // Perl L4052 flags a TODO right here: "Check for balanced? or
-              // just take balanced begining?" — i.e. the bib-section title is
-              // the sectional unit's *argument* (the leading brace group), not
-              // every trailing token. Perl nonetheless takes all of @t, which
-              // is fine until \bibsection is a parameterized renewal such as
-              //   \renewcommand\bibsection[1]{\section*{\refname}\small #1}
-              // (witness 1702.01165). After the unit+star strip that leaves
-              // `{\refname}\small #1`; digesting all of it pushes the page/font
-              // directive `\small` AND the bare parameter token `#1` — an
-              // ARG-catcode token that errors "should never reach Stomach!".
-              // Take only the leading balanced {...} group as the title (the
-              // unit argument); fall back to all tokens when there is no
-              // leading group (Perl's behavior for un-braced titles). This
-              // realizes the Perl author's own "take balanced beginning" note
-              // and drops trailing page/font junk LaTeXML never renders. See
-              // docs/OXIDIZED_DESIGN.md (bib-section title = leading group).
-              let title_toks = if tokens[0].get_catcode() == Catcode::BEGIN {
-                let mut depth = 0i32;
-                let mut end = tokens.len();
-                for (i, t) in tokens.iter().enumerate() {
-                  match t.get_catcode() {
-                    Catcode::BEGIN => depth += 1,
-                    Catcode::END => {
-                      depth -= 1;
-                      if depth == 0 {
-                        end = i + 1;
-                        break;
-                      }
-                    },
-                    _ => {},
+          // Perl L4052 flags a TODO right here: "Check for balanced? or
+          // just take balanced begining?" — i.e. the bib-section title is
+          // the sectional unit's *argument* (the leading brace group), not
+          // every trailing token. Perl nonetheless takes all of @t, which
+          // is fine until \bibsection is a parameterized renewal such as
+          //   \renewcommand\bibsection[1]{\section*{\refname}\small #1}
+          // (witness 1702.01165). After the unit+star strip that leaves
+          // `{\refname}\small #1`; digesting all of it pushes the page/font
+          // directive `\small` AND the bare parameter token `#1` — an
+          // ARG-catcode token that errors "should never reach Stomach!".
+          // Take only the leading balanced {...} group as the title (the
+          // unit argument); fall back to all tokens when there is no
+          // leading group (Perl's behavior for un-braced titles). This
+          // realizes the Perl author's own "take balanced beginning" note
+          // and drops trailing page/font junk LaTeXML never renders. See
+          // docs/OXIDIZED_DESIGN.md (bib-section title = leading group).
+          let title_toks = if tokens[0].get_catcode() == Catcode::BEGIN {
+            let mut depth = 0i32;
+            let mut end = tokens.len();
+            for (i, t) in tokens.iter().enumerate() {
+              match t.get_catcode() {
+                Catcode::BEGIN => depth += 1,
+                Catcode::END => {
+                  depth -= 1;
+                  if depth == 0 {
+                    end = i + 1;
+                    break;
                   }
-                }
-                tokens[..end].to_vec()
-              } else {
-                tokens
-              };
-              bibtitle = Some(Tokens::new(title_toks));
+                },
+                _ => {},
+              }
             }
-          }
+            tokens[..end].to_vec()
+          } else {
+            tokens
+          };
+          bibtitle = Some(Tokens::new(title_toks));
         }
       }
     }
@@ -2213,10 +2210,10 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
 
 // Perl: setBibstyle($style) — set BIBSTYLE, CITE_STYLE, CITE_SORT
 pub fn set_bibstyle(style: &str) {
-  assign_value("BIBSTYLE", arena::pin(style), None);
+  assign_value("BIBSTYLE", pin(style), None);
   if let Some((cs, so)) = lookup_bibstyle_params(style) {
-    assign_value("CITE_STYLE", arena::pin(cs), None);
-    assign_value("CITE_SORT", arena::pin(so), None);
+    assign_value("CITE_STYLE", pin(cs), None);
+    assign_value("CITE_SORT", pin(so), None);
   }
 }
 
@@ -2240,7 +2237,7 @@ fn do_index_item(document: &mut Document, level: i64) -> Result<()> {
   if document.is_closeable("ltx:indexphrase").is_some() {
     document.close_element("ltx:indexphrase")?;
   }
-  let current_level = state::lookup_int("INDEXLEVEL");
+  let current_level = lookup_int("INDEXLEVEL");
   let mut l = current_level;
   while l < level {
     document.open_element("ltx:indexlist", None, None)?;
@@ -2250,7 +2247,7 @@ fn do_index_item(document: &mut Document, level: i64) -> Result<()> {
     document.close_element("ltx:indexlist")?;
     l -= 1;
   }
-  state::assign_value("INDEXLEVEL", Stored::Int(l), Some(Scope::Local));
+  assign_value("INDEXLEVEL", Stored::Int(l), Some(Scope::Local));
   if level > 0 {
     document.open_element("ltx:indexentry", None, None)?;
     document.open_element("ltx:indexphrase", None, None)?;
@@ -2388,12 +2385,12 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
   }
   // Wrap in \@index[style]{...}
   let mut result = vec![T_BEGIN!(), T_CS!("\\normalfont"), T_CS!("\\@index")];
-  if let Some(ref sty) = style {
-    if !sty.is_empty() {
-      result.push(T_OTHER!("["));
-      result.extend(Explode!(sty));
-      result.push(T_OTHER!("]"));
-    }
+  if let Some(ref sty) = style
+    && !sty.is_empty()
+  {
+    result.push(T_OTHER!("["));
+    result.extend(Explode!(sty));
+    result.push(T_OTHER!("]"));
   }
   result.push(T_BEGIN!());
   result.extend(expansion);
@@ -2406,7 +2403,7 @@ fn process_index_phrases(tokens: Tokens) -> Result<Tokens> {
 /// Perl: $$self[0] / 65536 * DPI / 72.27
 fn px_value(pt: f64) -> f64 {
   // DPI default is 100 in LaTeXML (state::lookupValue('DPI') || 100)
-  let dpi = state::lookup_value("DPI")
+  let dpi = lookup_value("DPI")
     .and_then(|v| {
       if let Stored::Number(n) = v {
         Some(n.0 as f64)
@@ -2535,15 +2532,15 @@ LoadDefinitions!({
   // intervening defs are positioned later in this file (or in
   // `plain_constructs.rs`) and are agnostic to whether `math_common`
   // is reloaded before or after them.
-  state::assign_value(
+  assign_value(
     "plain_constructs.pool_loaded",
-    latexml_core::common::store::Stored::None,
-    Some(latexml_core::state::Scope::Global),
+    Stored::None,
+    Some(Scope::Global),
   );
-  state::assign_value(
+  assign_value(
     "math_common.pool_loaded",
-    latexml_core::common::store::Stored::None,
-    Some(latexml_core::state::Scope::Global),
+    Stored::None,
+    Some(Scope::Global),
   );
   // The reloads MUST run with state unlocked. By the time we get here,
   // the first plain-format pass has already locked common math CSes
@@ -2554,10 +2551,10 @@ LoadDefinitions!({
   // place — which renders as digit `0` (char 0x30 in fam 2) instead
   // of U+2032 ′. Mirror Perl's LoadPool flow which reloads via the
   // top-level binding scope where re-locks are allowed.
-  latexml_core::state::local_state_unlocked(true);
+  local_state_unlocked(true);
   InnerPool!(plain_constructs);
   InnerPool!(math_common);
-  latexml_core::state::expire_state_unlocked();
+  expire_state_unlocked();
 
   // Perl latex_constructs.pool.ltxml:36 — `Let('\par', '\lx@normal@par')`.
   // After the dump load (which installs `\par` as the heavy expl3 chain
@@ -2586,12 +2583,12 @@ LoadDefinitions!({
   // Perl latex_constructs.pool.ltxml L25-26 — restore default fonts after
   // dump load. Without this, dump-time font residue (CJK shimming etc.)
   // leaks into document body. Mirror Perl `assignValue('font' => textDefault, 'global')`.
-  state::assign_value(
+  assign_value(
     "font",
     Stored::Font(Rc::new(Font::text_default())),
     Some(Scope::Global),
   );
-  state::assign_value(
+  assign_value(
     "mathfont",
     Stored::Font(Rc::new(Font::math_default())),
     Some(Scope::Global),
@@ -2710,17 +2707,16 @@ LoadDefinitions!({
 
   AssignValue!("@unusedoptionlist", Stored::Strings(Rc::new([])));
   DefPrimitive!("\\warn@unusedclassoptions", {
-    if let Some(Stored::Strings(unused)) = lookup_value("@unusedoptionlist") {
-      if !unused.is_empty() {
+    if let Some(Stored::Strings(unused)) = lookup_value("@unusedoptionlist")
+      && !unused.is_empty() {
         Info!(
           "unexpected",
           "options",
           "Unused global options: {}",
-          arena::with_many(&unused, |u| u.join(","))
+          with_many(&unused, |u| u.join(","))
         );
-        state::assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
+        assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
       }
-    }
   });
 
   // Perl latex_constructs.pool.ltxml:137-154:
@@ -2749,18 +2745,18 @@ LoadDefinitions!({
   // class-unconsumed options after `\ProcessOptions`.
   DefPrimitive!("\\compat@loadpackages", {
     use latexml_core::binding::content::{find_file, find_file_fallback};
-    let unused_list: Vec<String> = match state::lookup_value("@unusedoptionlist") {
+    let unused_list: Vec<String> = match lookup_value("@unusedoptionlist") {
       // `\OptionNotUsed` uses `state::push_value` which converts `Strings`
       // → `VecDequeStored` on first push. Either form may be live here.
       Some(Stored::Strings(rc)) => {
         rc.iter()
-          .map(|s| latexml_core::common::arena::with(*s, |s| s.to_string()))
+          .map(|s| with(*s, |s| s.to_string()))
           .collect()
       },
       Some(Stored::VecDequeStored(vdq)) => {
         vdq.iter()
           .filter_map(|item| match item {
-            Stored::String(s) => Some(latexml_core::common::arena::with(*s, |s| s.to_string())),
+            Stored::String(s) => Some(with(*s, |s| s.to_string())),
             _ => None,
           })
           .collect()
@@ -2807,13 +2803,13 @@ LoadDefinitions!({
         Info!("unexpected", opt, "Unexpected option '{}' passed via \\documentstyle", opt);
       }
     }
-    if had_missing && !state::lookup_bool("OmniBus.cls_loaded") {
+    if had_missing && !lookup_bool("OmniBus.cls_loaded") {
       Info!("note", "OmniBus", "Loading OmniBus class to attempt to cover missing options");
       load_class("OmniBus", Vec::new(), Tokens!())?;
     }
-    state::assign_value(
+    assign_value(
       "@unusedoptionlist",
-      Stored::Strings(std::rc::Rc::new([])),
+      Stored::Strings(Rc::new([])),
       Some(Scope::Global),
     );
   });
@@ -2859,8 +2855,8 @@ LoadDefinitions!({
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
-    let before_opt = state::lookup_tokens(&format!("@environment@{name}@beforebegin"));
-    let after_opt  = state::lookup_tokens(&format!("@environment@{name}@atbegin"));
+    let before_opt = lookup_tokens(&format!("@environment@{name}@beforebegin"));
+    let after_opt  = lookup_tokens(&format!("@environment@{name}@atbegin"));
 
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
@@ -2900,8 +2896,8 @@ LoadDefinitions!({
 
   DefMacro!("\\end {}", sub[(env)]{
     let name = Expand!(env).to_string();
-    let before = state::lookup_tokens(&s!("@environment@{name}@atend"));
-    let after = state::lookup_tokens(&s!("@environment@{name}@afterend"));
+    let before = lookup_tokens(&s!("@environment@{name}@atend"));
+    let after = lookup_tokens(&s!("@environment@{name}@afterend"));
     let mut t = T_CS!(s!("\\end{{{name}}}"));
     let mut out_tokens = Vec::new();
     if is_defined_token(&t) {
@@ -3009,15 +3005,15 @@ LoadDefinitions!({
   //   - ltx:p with parent _CaptureBlock_: maybeCloseElement('ltx:p')
   //   - can contain ltx:break: insert <ltx:break/>
   DefConstructor!("\\lx@newline OptionalMatch:* [Glue]", sub[document] {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
+    if lookup_bool_sym(pin!("IN_MATH")) {
       document.insert_element("ltx:XMHint", Vec::new(), Some(map!("name" => s!("newline"))))?;
     } else {
       if let Some(context) = document.get_element() {
         let tag = document::get_node_qname(&context);
-        let capture_block = arena::pin_static("ltx:_CaptureBlock_");
+        let capture_block = pin_static("ltx:_CaptureBlock_");
         if tag == capture_block {
           // skip, if in insertBlock
-        } else if tag == arena::pin_static("ltx:p") {
+        } else if tag == pin_static("ltx:p") {
           // Close <p> if parent is _CaptureBlock_
           if let Some(parent) = context.get_parent() {
             if document::get_node_qname(&parent) == capture_block {
@@ -3082,10 +3078,10 @@ LoadDefinitions!({
   // overrides this with its own version that routes through \hook_gput_code:nnn.
   // Perl 93f875a6: support optional [label] from modern LaTeX hooks system
   DefMacro!("\\AtBeginDocument[]{}", sub[(_label, rules)] {
-    state::push_value("@at@begin@document", rules)
+    push_value("@at@begin@document", rules)
   });
   DefMacro!("\\AtEndDocument[]{}", sub[(_label, rules)] {
-    state::push_value("@at@end@document", rules)
+    push_value("@at@end@document", rules)
   });
 
   // Like  "<ltx:document xml:id='#id'>#body</ltx:document>",
@@ -3096,11 +3092,11 @@ LoadDefinitions!({
     // Already (auto) created?
     match document.findnode("/ltx:document", None) { Some(mut docel) => {
       if id != pin!("") {
-        let id_s = arena::with(id, |s| s.to_string());
+        let id_s = with(id, |s| s.to_string());
         document.set_attribute(&mut docel, "xml:id", &id_s)?;
       }
     } _ => {
-      let props = arena::with(id, |id_str| string_map!("xml:id" => id_str));
+      let props = with(id, |id_str| string_map!("xml:id" => id_str));
       document.open_element("ltx:document", Some(props), None)?;
     }}
   },
@@ -3110,18 +3106,18 @@ LoadDefinitions!({
     begin_mode_opt("internal_vertical", true)?;
     // we need to re-bind in order to nest calls to the binding macro machinery
     DefMacro!("\\@currenvir", "document");
-    state::assign_value("current_environment", "document", None);
+    assign_value("current_environment", "document", None);
     let expanded_id = Expand!(T_CS!("\\thedocument@ID"));
     whatsit.set_property("id", expanded_id);
     Let!("\\@nodocument", "\\relax", Scope::Global);
     // Clear \everypar at document start (Perl parity)
-    state::assign_value("\\everypar", Tokens!(), Some(Scope::Global));
+    assign_value("\\everypar", Tokens!(), Some(Scope::Global));
     let mut boxes = Vec::new();
-    if let Some(ops) = state::lookup_tokens("@document@preamble@atend") {
-      boxes.push(stomach::digest(ops)?);
+    if let Some(ops) = lookup_tokens("@document@preamble@atend") {
+      boxes.push(digest(ops)?);
     }
-    if let Some(ops) = state::lookup_tokens("@at@begin@document") {
-      boxes.push(stomach::digest(ops)?);
+    if let Some(ops) = lookup_tokens("@at@begin@document") {
+      boxes.push(digest(ops)?);
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
@@ -3144,7 +3140,7 @@ LoadDefinitions!({
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
     if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      boxes.push(stomach::digest(Tokens!(
+      boxes.push(digest(Tokens!(
         T_CS!("\\hook_use:n"),
         T_BEGIN!(),
         T_LETTER!("b"),
@@ -3175,7 +3171,7 @@ LoadDefinitions!({
       // catcode regime where `:` is OTHER (not LETTER), which would
       // truncate the CS to `\hook_use` and emit `:n` as plain text.
       // That leaks `_use:n` + arg-text into the document body.
-      boxes.push(stomach::digest(Tokens!(
+      boxes.push(digest(Tokens!(
         T_CS!("\\hook_use:n"),
         T_BEGIN!(),
         T_LETTER!("b"),
@@ -3202,20 +3198,20 @@ LoadDefinitions!({
     // this scheduled cleanup to restore catcodes before the document body.
     // Without this, `\sum_{...}` tokenizes as the CS `\sum_` (letter `_`)
     // rather than `\sum` + `_` + `{...}`.
-    if state::lookup_catcode('_') == Some(Catcode::LETTER)
+    if lookup_catcode('_') == Some(Catcode::LETTER)
       && lookup_definition(&T_CS!("\\ExplSyntaxOff"))?.is_some()
     {
-      boxes.push(stomach::digest(Tokens!(T_CS!("\\ExplSyntaxOff")))?);
+      boxes.push(digest(Tokens!(T_CS!("\\ExplSyntaxOff")))?);
     }
     // Fire babel language activation AFTER all hooks (including babel's own
     // \selectlanguage call). This runs even if babel's hook code has errors.
     // Use T_CS! directly since @ is OTHER catcode at \begin{document} time.
     if lookup_definition(&T_CS!("\\lx@babel@activate@mainlang"))?.is_some() {
-      boxes.push(stomach::digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
+      boxes.push(digest(Tokens!(T_CS!("\\lx@babel@activate@mainlang")))?);
     }
-    state::assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
-    if let Some(ops) = state::lookup_tokens("@document@preamble@afterend") {
-      boxes.push(stomach::digest(ops)?);
+    assign_value("inPreamble", false, None); // atbegin is still (sorta) preamble
+    if let Some(ops) = lookup_tokens("@document@preamble@afterend") {
+      boxes.push(digest(ops)?);
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     leave_horizontal_internal();
@@ -3230,11 +3226,11 @@ LoadDefinitions!({
     },
     before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
-      if let Some(ops) = state::lookup_tokens("@at@end@document") {
-        boxes.push(stomach::digest(ops)?);
+      if let Some(ops) = lookup_tokens("@at@end@document") {
+        boxes.push(digest(ops)?);
       }
       // Should we try to indent the last paragraph? If so, it goes like this:
-      boxes.push(stomach::digest(T_CS!("\\lx@normal@par"))?);
+      boxes.push(digest(T_CS!("\\lx@normal@par"))?);
       // Pop unclosed groups and environments back to the document frame
       // so endMode's strict BOUND_MODE check sees the right frame at the
       // top. Mirrors Perl latex_constructs.pool.ltxml L350-374. Without
@@ -3245,23 +3241,23 @@ LoadDefinitions!({
       // because the top frame is the dangling group, not the document.
       // Note: Rust port omits Perl's if_stack handling — Rust's gullet
       // does not maintain an explicit if_stack value.
-      let top_is_document = state::is_value_bound("current_environment", Some(0))
-        && state::lookup_string("current_environment") == "document";
+      let top_is_document = is_value_bound("current_environment", Some(0))
+        && lookup_string("current_environment") == "document";
       if !top_is_document {
         let mut popped_lines: Vec<String> = Vec::new();
-        while !(state::is_value_bound("current_environment", Some(0))
-          && state::lookup_string("current_environment") == "document")
+        while !(is_value_bound("current_environment", Some(0))
+          && lookup_string("current_environment") == "document")
           && get_frame_depth() > 0
         {
-          let initiator = state::lookup_string("groupInitiator");
+          let initiator = lookup_string("groupInitiator");
           let initiator = if initiator.is_empty() {
             "<unknown>".to_string()
           } else {
             initiator
           };
-          let env_bound = state::is_value_bound("current_environment", Some(0));
+          let env_bound = is_value_bound("current_environment", Some(0));
           let env_name = if env_bound {
-            state::lookup_string("current_environment")
+            lookup_string("current_environment")
           } else {
             String::new()
           };
@@ -3270,7 +3266,7 @@ LoadDefinitions!({
           } else {
             popped_lines.push(s!("Group opened by {initiator}"));
           }
-          state::pop_frame()?;
+          pop_frame()?;
         }
         let detail = if popped_lines.is_empty() {
           String::new()
@@ -3295,12 +3291,12 @@ LoadDefinitions!({
       // current_environment is bound-on-top with value "document". Without
       // this guard, AmsTeX papers fail with `Attempt to end mode
       // 'internal_vertical' in 'vertical'` at the very last token.
-      let in_document_env = state::is_value_bound("current_environment", Some(0))
-        && state::lookup_string("current_environment") == "document";
+      let in_document_env = is_value_bound("current_environment", Some(0))
+        && lookup_string("current_environment") == "document";
       if in_document_env {
         end_mode_opt("internal_vertical", true)?;
       }
-      gullet::flush();
+      flush();
       boxes
   });
 
@@ -3491,7 +3487,7 @@ LoadDefinitions!({
     let note_type = strip_trailing_cs(&arg2.as_ref().map(ToString::to_string).unwrap_or_default());
     let arg3_ready = if let Some(v) = arg3 { Cow::Borrowed(v) } else {
       Cow::Owned(
-        stomach::digest(T_CS!(s!("\\the{note_type}")))?
+        digest(T_CS!(s!("\\the{note_type}")))?
       )
     };
     let mut props = make_note_tags(&note_type, arg1, Some(arg3_ready))?;
@@ -3602,12 +3598,12 @@ LoadDefinitions!({
     sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {
       // Aside: Guard mode
       // Never start sections in math mode -- this is a good recovery point for broken documents
-      if state::lookup_bool_sym(pin!("IN_MATH")) {
-        let mode = state::lookup_string_from_sym(pin!("MODE"));
+      if lookup_bool_sym(pin!("IN_MATH")) {
+        let mode = lookup_string_from_sym(pin!("MODE"));
         if mode.contains("math") { // double-check we're really in math
           end_mode(&mode)?;
         } else { // otherwise, just unset the flag?
-          state::assign_value("IN_MATH", false, Some(Scope::Global));
+          assign_value("IN_MATH", false, Some(Scope::Global));
         }
       }
       // Main logic — Perl's `$level > ...` coerces non-numeric to 0 via
@@ -3733,11 +3729,10 @@ LoadDefinitions!({
       let stype_str = strip_trailing_cs(&stype.to_string());
       let mut props = ref_step_counter(&stype_str, false)?;
       // For appendix, look up the backmatter element mapping
-      if stype_str == "appendix" {
-        if let Some(bme) = state::lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
+      if stype_str == "appendix"
+        && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
           props.insert("backmatterelement", bme);
         }
-      }
       let toctitle = match toctitle_arg {
         Some(v) => if !v.to_string().is_empty() {
           args[2].as_ref().unwrap()
@@ -3752,10 +3747,10 @@ LoadDefinitions!({
       let title_tokens = title.revert()?;
       let invoked_title =
         Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_clean_tokens.clone(), title_tokens]);
-      let xtitle    = stomach::digest(invoked_title)?;
+      let xtitle    = digest(invoked_title)?;
       let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
           vec![stype_clean_tokens, toctitle.revert()?]);
-      let xtoctitle = stomach::digest(invoked_toctitle)?;
+      let xtoctitle = digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
         props.insert("toctitle", xtoctitle.into());
@@ -3820,32 +3815,29 @@ LoadDefinitions!({
       let stype_str = strip_trailing_cs(&stype.to_string());
       let mut props = RefStepID!(&stype_str)?;
       // For appendix, look up the backmatter element mapping
-      if stype_str == "appendix" {
-        if let Some(bme) = state::lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
+      if stype_str == "appendix"
+        && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
           props.insert("backmatterelement", bme);
         }
-      }
       let title_digested = if let Postponed(tokens) = title.data() {
         // TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
-        stomach::digest(
+        digest(
           Tokens!(T_CS!("\\lx@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?
       } else {
         title.clone()
       };
       props.insert("title", title_digested.into());
 
-      if let Some(toctitle) = toctitle_arg {
-        if let Postponed(toctokens) = toctitle.data() {
-          if !toctokens.is_empty() {
-            let toctitle_digested = stomach::digest(
+      if let Some(toctitle) = toctitle_arg
+        && let Postponed(toctokens) = toctitle.data()
+          && !toctokens.is_empty() {
+            let toctitle_digested = digest(
               Tokens!(T_CS!("\\lx@hidden@bgroup"),
                 toctokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?;
             props.insert("toctitle", toctitle_digested.into());
           }
-        }
-      }
       Ok(props)
     }
   );
@@ -3927,11 +3919,11 @@ LoadDefinitions!({
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
   DefConstructor!("\\listoffigures",
     "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listfigurename"))?)) });
+    properties => { Ok(stored_map!("name" => digest(T_CS!("\\listfigurename"))?)) });
 
   DefConstructor!("\\listoftables",
     "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { Ok(stored_map!("name" => stomach::digest(T_CS!("\\listtablename"))?)) });
+    properties => { Ok(stored_map!("name" => digest(T_CS!("\\listtablename"))?)) });
 
   def_primitive_noop("\\numberline{}{}")?;
   def_primitive_noop("\\addtocontents{}{}")?;
@@ -4019,7 +4011,7 @@ LoadDefinitions!({
         // from one inside a false `\if…\fi` the raw-load skipped). Set only
         // here in the constructor — NOT in require_package — so the dep-scan's
         // own programmatic require_package loads don't self-populate the set.
-        state::assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
+        assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
         require_package(&package, RequireOptions {
           options: options_list.clone(),
           ..RequireOptions::default()
@@ -4050,7 +4042,7 @@ LoadDefinitions!({
     for package in package_list {
       // See \usepackage above — record the executed source-level require for
       // the dep-scan's executed-set gate.
-      state::assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
+      assign_value(&s!("{package}.usepackage_executed"), true, Some(Scope::Global));
       require_package(&package, RequireOptions {
         options: options_list.clone(),
         ..RequireOptions::default()
@@ -4141,14 +4133,14 @@ LoadDefinitions!({
     let name_str = Expand!(name).to_string().replace(' ', "");
     let opts_str = Expand!(options).to_string();
     let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-    state::push_value(&s!("opt@{}.sty", name_str), opts)?;
+    push_value(&s!("opt@{}.sty", name_str), opts)?;
   });
 
   DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
     let opts_str = Expand!(options).to_string();
     let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
-    state::push_value(&s!("opt@{}.cls", name_str), opts)?;
+    push_value(&s!("opt@{}.cls", name_str), opts)?;
   });
 
   // Perl `latex_constructs.pool.ltxml`:
@@ -4174,7 +4166,7 @@ LoadDefinitions!({
   after_digest => sub[whatsit] {
     let pkg_arg: Option<&Digested> = whatsit.get_arg(1);
     let pkg = pkg_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
-    latexml_core::binding::content::require_package_with_options(&pkg)?;
+    require_package_with_options(&pkg)?;
   }
   );
 
@@ -4235,7 +4227,7 @@ LoadDefinitions!({
     if !option.is_empty() {
       let ext = Expand!(T_CS!("\\@currext")).to_string();
       if ext == "cls" {
-        state::push_value("@unusedoptionlist", option)?;
+        push_value("@unusedoptionlist", option)?;
       }
     }
   });
@@ -4571,12 +4563,12 @@ LoadDefinitions!({
     locked => true);
 
   DefPrimitive!("\\lx@authors@oneline", {
-    if state::lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline").is_none() {
+    if lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_multiline").is_none() {
       AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_1line" => true);
     }
   });
   DefPrimitive!("\\lx@authors@multiline", {
-    if state::lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_1line").is_none() {
+    if lookup_mapping("DOCUMENT_CLASSES", "ltx_authors_1line").is_none() {
       AssignMapping!("DOCUMENT_CLASSES", "ltx_authors_multiline" => true);
     }
   });
@@ -4618,7 +4610,7 @@ LoadDefinitions!({
   // In case \maketitle isn't used in the document, let's check for it.
   AddToMacro!("\\@startsection@hook", "\\lx@frontmatter@fallback");
   // in cases such as titlepage, the document end is the last fallback.
-  let _ = state::push_value("@at@end@document",
+  let _ = push_value("@at@end@document",
     Tokens!(T_CS!("\\lx@frontmatter@fallback")));
 
   DefMacro!("\\@thanks", "\\@empty");
@@ -4646,7 +4638,7 @@ LoadDefinitions!({
   // OR \abstract text \endabstract
   // OR even \abstract text... \somethingelse  (section? \par ?)
   DefMacro!("\\abstract", {
-    if gullet::if_next(T_BEGIN!())? {
+    if if_next(T_BEGIN!())? {
       Tokens!(T_CS!("\\lx@add@abstract"))
     } else {
       // When \abstract is used without braces (e.g. \abstract ... \section{...}),
@@ -4690,7 +4682,7 @@ LoadDefinitions!({
   DefEnvironment!("{titlepage}", "<ltx:titlepage>#body",
     before_digest => {
       Let!("\\centering", "\\relax");
-      state::assign_value("frontmatter_deferred", true, Some(Scope::Global));
+      assign_value("frontmatter_deferred", true, Some(Scope::Global));
       AddToMacro!("\\maketitle", "\\unwind@titlepage");
       // In titlepage, abstract is simpler: direct body. The
       // surrounding titlepage is internal_vertical, but if we leave
@@ -4710,7 +4702,7 @@ LoadDefinitions!({
       DefConstructor!("\\abstract{}", "<ltx:abstract>#1</ltx:abstract>");
     },
     before_digest_end => {
-      stomach::digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?
+      digest(Tokens!(T_CS!("\\maybe@end@titlepage")))?
     },
     after_construct => sub[doc, _whatsit] {
       insert_frontmatter(doc)?;
@@ -4921,10 +4913,10 @@ LoadDefinitions!({
     // open ("ltx:itemize ... isn't open"). The guard keeps the itemize open so
     // the item nests correctly. Witness 2004.07710 ({proofof} trivlist inside
     // an itemize).
-    let in_preamble = state::lookup_bool_sym(pin!("inPreamble"));
+    let in_preamble = lookup_bool_sym(pin!("inPreamble"));
     let cur_is_itemize = document
       .get_element()
-      .map(|e| document::get_node_qname(&e) == arena::pin_static("ltx:itemize"))
+      .map(|e| document::get_node_qname(&e) == pin_static("ltx:itemize"))
       .unwrap_or(false);
     if !in_preamble && !cur_is_itemize {
       let _ = document.maybe_close_element("ltx:p");
@@ -5231,7 +5223,7 @@ LoadDefinitions!({
       if let Some(ref arg) = args[0] {
         if let DigestedData::Postponed(tag_tokens) = arg.data() {
           let tag_expanded = Expand!(tag_tokens.clone());
-          let tag = stomach::digest(tag_expanded)?;
+          let tag = digest(tag_expanded)?;
           Ok(stored_map!("tag" => tag))
         } else {
           Ok(SymHashMap::default())
@@ -5348,8 +5340,8 @@ LoadDefinitions!({
     let mut skipped_space = false;
     // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
     // but if we do skip spaces, * can be the delimiter
-    let space_sym = arena::pin_static(" ");
-    while let Some(maybe_init) = gullet::read_token()? {
+    let space_sym = pin_static(" ");
+    while let Some(maybe_init) = read_token()? {
       if maybe_init.get_sym() == space_sym {
         skipped_space = true;
       } else {
@@ -5358,22 +5350,21 @@ LoadDefinitions!({
       }
     }
     let mut starred = false;
-    if let Some(ref init_token) = init {
-      if *init_token == T_OTHER!("*") && !skipped_space {
+    if let Some(ref init_token) = init
+      && *init_token == T_OTHER!("*") && !skipped_space {
         starred = true;
-        while let Some(maybe_init) =  gullet::read_token()? {
+        while let Some(maybe_init) =  read_token()? {
           if maybe_init.get_sym() != space_sym {
             init = Some(maybe_init);
             break;
           }
         }
       }
-    }
     if let Some(init_token) = init {
       let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
       assign_catcode(init_ch, Catcode::ACTIVE, None);
       let delim = Tokens!(T_ACTIVE!(init_ch));
-      let body = gullet::read_until(&delim)?;
+      let body = read_until(&delim)?;
       end_semiverbatim()?;
 
       let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
@@ -5551,7 +5542,7 @@ LoadDefinitions!({
     "\\lx@equation@settag@ {}",
     sub[(content)] {
       // Perl uses Digested parameter type; we manually digest here
-      let digested = stomach::digest(content)?;
+      let digested = digest(content)?;
       with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
         if let Some(Stored::HashStored(tags)) = tags_opt {
           tags.insert("tags", Stored::Digested(digested));
@@ -5716,18 +5707,18 @@ LoadDefinitions!({
       // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
       // L1134) — token-level, no string round-trip. Witness 2005.06712
       // (subequation tags `(S15a)` → `(\rmS15a)`).
-      let eqnum_toks = gullet::do_expand(T_CS!("\\theequation"))?;
+      let eqnum_toks = do_expand(T_CS!("\\theequation"))?;
       // Save current equation counter value
-      let saved = state::lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+      let saved = lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
         match rv {
           RegisterValue::Number(n) => n.0,
           _ => 0,
         }
       });
-      state::assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
+      assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
       // Set properties on the whatsit
       for (k, v) in eqn_props {
-        arena::with(k, |ks| whatsit.set_property(ks, v));
+        with(k, |ks| whatsit.set_property(ks, v));
       }
       // Reset equation counter to 0
       reset_counter(&T_OTHER!("equation"))?;
@@ -5748,7 +5739,7 @@ LoadDefinitions!({
       // Redefine \theequation@ID for xml:id generation
       if let Some(id_val) = whatsit.get_property("id") {
         let id_str = match &*id_val {
-          Stored::String(s) => arena::to_string(*s),
+          Stored::String(s) => to_string(*s),
           other => other.to_string(),
         };
         let new_id_macro = format!("{}.\\@equation@ID", id_str);
@@ -5762,15 +5753,15 @@ LoadDefinitions!({
     },
     after_digest => {
       // Restore the saved equation counter
-      if let Some(saved) = state::lookup_value("SAVED_EQUATION_NUMBER") {
+      if let Some(saved) = lookup_value("SAVED_EQUATION_NUMBER") {
         let n = match saved {
           Stored::Number(n) => n.0,
           _ => 0,
         };
-        state::assign_register(
+        assign_register(
           "\\c@equation",
           Number::new(n).into(),
-          Some(state::Scope::Global),
+          Some(Scope::Global),
           Vec::new(),
         )?;
       }
@@ -5798,7 +5789,7 @@ LoadDefinitions!({
       <ltx:XMArg>#1</ltx:XMArg>\
     </ltx:XMApp>",
     reversion => "\\stackrel{#1}{#2}",
-    properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_script_level())) }
+    properties => { stored_map!("scriptpos" => s!("mid{}", get_script_level())) }
   );
 
   //======================================================================
@@ -5811,7 +5802,7 @@ LoadDefinitions!({
   DefConstructor!("\\thinspace",
     "?#isMath(<ltx:XMHint name='thinspace' width='#width'/>)(\u{2009})",
     properties => { Ok(stored_map!("isSpace" => true,
-      "width" => state::lookup_register("\\thinmuskip", Vec::new())?)) },
+      "width" => lookup_register("\\thinmuskip", Vec::new())?)) },
     enter_horizontal => true);
   DefConstructor!("\\negthinspace",
     "?#isMath(<ltx:XMHint name='negthinspace' width='#width'/>)()",
@@ -5821,7 +5812,7 @@ LoadDefinitions!({
   DefConstructor!("\\medspace",
     "?#isMath(<ltx:XMHint name='medspace' width='#width'/>)()",
     properties => { Ok(stored_map!("isSpace" => true,
-      "width" => state::lookup_register("\\medmuskip", Vec::new())?)) },
+      "width" => lookup_register("\\medmuskip", Vec::new())?)) },
     enter_horizontal => true);
   DefConstructor!("\\negmedspace",
     "?#isMath(<ltx:XMHint name='negmedspace' width='#width'/>)()",
@@ -5831,7 +5822,7 @@ LoadDefinitions!({
   DefConstructor!("\\thickspace",
     "?#isMath(<ltx:XMHint name='thickspace' width='#width'/>)(\u{2004})",
     properties => { Ok(stored_map!("isSpace" => true,
-      "width" => state::lookup_register("\\thickmuskip", Vec::new())?)) },
+      "width" => lookup_register("\\thickmuskip", Vec::new())?)) },
     enter_horizontal => true);
   DefConstructor!("\\negthickspace",
     "?#isMath(<ltx:XMHint name='negthickspace' width='#width'/>)(\u{2004})",
@@ -5932,7 +5923,7 @@ LoadDefinitions!({
   // Guard: only Let `\a` if it's not already user-defined. The
   // dump E record was rejected, so `\a` would be undefined here
   // unless the user defined it.
-  if !state::has_meaning(&T_CS!("\\a")) {
+  if !has_meaning(&T_CS!("\\a")) {
     Let!("\\a", "\\@tabacckludge");
   }
 
@@ -5953,7 +5944,7 @@ LoadDefinitions!({
     // lock state is restored even if `DefMacro!` errors. No-op when
     // the CS was previously undefined.
     let _unlock = plain_origin.then(
-      || latexml_core::state::local_state_unlocked_guard(true));
+      || local_state_unlocked_guard(true));
     DefMacro!(cs_token, macro_args, body);
   });
 
@@ -5980,7 +5971,7 @@ LoadDefinitions!({
     let nargs_str = nargs_toks.to_string();
     let nargs: usize = nargs_str.trim().parse().unwrap_or(0);
     let has_optional = type_tok.with_str(|s| s.contains('2'))
-      || state::x_equals(&type_tok, &T_CS!("\\tw@"));
+      || x_equals(&type_tok, &T_CS!("\\tw@"));
     let opt = if has_optional { Some(Tokens!()) } else { None };
     let macro_args = convert_latex_args(nargs, opt)?;
     DefMacro!(cs, macro_args, body);
@@ -6249,7 +6240,7 @@ LoadDefinitions!({
     let preamble_toks = build_invocation(
       T_CS!("\\lx@add@Preamble@PI"),
       vec![Some(Tokens::new(Explode!(preamble_text)))])?;
-    let digested = stomach::digest(preamble_toks)?;
+    let digested = digest(preamble_toks)?;
     Ok(vec![digested])
   });
 
@@ -6260,11 +6251,10 @@ LoadDefinitions!({
   DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
   sub[(cs, sym_type, fontkind, code)] {
     let mut encoding = fontkind.to_string();
-    if let Some(Stored::Font(ref decl)) = lookup_value(&s!("fontdeclaration@{}", encoding)) {
-      if let Some(enc) = decl.get_encoding() {
+    if let Some(Stored::Font(ref decl)) = lookup_value(&s!("fontdeclaration@{}", encoding))
+      && let Some(enc) = decl.get_encoding() {
         encoding = enc.to_string();
       }
-    }
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
     let role = match sym_type.to_string().as_str() {
       "\\mathord"  => Some("ID"),
@@ -6474,7 +6464,7 @@ LoadDefinitions!({
     // the .dfu — only inputenc.sty does. Witness: arXiv:2509.22585
     // (revtex4-2 + `\UseRawInputEncoding` + `\usepackage[T1]{fontenc}`).
     use latexml_core::binding::content::{find_file, input_definitions, FindFileOptions, InputDefinitionOptions};
-    let duc_defined = state::has_meaning(&T_CS!("\\DeclareUnicodeCharacter"));
+    let duc_defined = has_meaning(&T_CS!("\\DeclareUnicodeCharacter"));
     let enc_str = e.to_string();
     if duc_defined && !enc_str.is_empty() {
       let dfu_name = format!("{}enc", enc_str.to_lowercase());
@@ -6652,9 +6642,9 @@ LoadDefinitions!({
   DefRegister!("\\thm@numbering"     => Tokens!(T_CS!("\\arabic")));
 
   DefPrimitive!("\\th@plain", {
-    state::assign_register("\\thm@bodyfont",
+    assign_register("\\thm@bodyfont",
       RegisterValue::Tokens(Tokens!(T_CS!("\\itshape"))), None, vec![])?;
-    state::assign_register("\\thm@headstyling",
+    assign_register("\\thm@headstyling",
       RegisterValue::Tokens(Tokens!(T_CS!("\\lx@makerunin"))), None, vec![])?;
   });
 
@@ -6685,9 +6675,9 @@ LoadDefinitions!({
       reset.filter(|t| !t.is_empty()),
     )?;
     // Reset these!
-    state::assign_register("\\thm@prework",
+    assign_register("\\thm@prework",
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
-    state::assign_register("\\thm@postwork",
+    assign_register("\\thm@postwork",
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
   });
 
@@ -6728,10 +6718,10 @@ LoadDefinitions!({
     let unctr = s!("UN{}", ctr_str);
     let reg = s!("\\cl@{}", within_str);
     // Prepend ctr and UNctr to the counter reset list for 'within'
-    let prev = state::lookup_tokens(&reg).unwrap_or_default();
+    let prev = lookup_tokens(&reg).unwrap_or_default();
     let mut toks = vec![T_CS!(ctr_str), T_CS!(unctr)];
     toks.extend(prev.unlist());
-    state::assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
+    assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
   });
 
   // Perl: latex_constructs.pool.ltxml \@removefromreset
@@ -6739,13 +6729,13 @@ LoadDefinitions!({
     let ctr_str = Expand!(ctr).to_string();
     let within_str = Expand!(within).to_string();
     let reg = s!("\\cl@{}", within_str);
-    if let Some(prev) = state::lookup_tokens(&reg) {
+    if let Some(prev) = lookup_tokens(&reg) {
       let unctr_cs = T_CS!(s!("UN{}", ctr_str));
       let ctr_cs = T_CS!(ctr_str);
       let filtered: Vec<Token> = prev.unlist().into_iter()
         .filter(|t| *t != ctr_cs && *t != unctr_cs)
         .collect();
-      state::assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
+      assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
     }
   });
 
@@ -6756,10 +6746,10 @@ LoadDefinitions!({
     // Add ctr to reset list of within
     let unctr = s!("UN{}", ctr_str);
     let reg = s!("\\cl@{}", within_str);
-    let prev = state::lookup_tokens(&reg).unwrap_or_default();
+    let prev = lookup_tokens(&reg).unwrap_or_default();
     let mut toks = vec![T_CS!(ctr_str.clone()), T_CS!(unctr)];
     toks.extend(prev.unlist());
-    state::assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
+    assign_value(&reg, Stored::Tokens(Tokens::new(toks)), None);
     if star.is_none() {
       // Redefine \thectr to include \thewithin prefix
       let the_ctr = T_CS!(s!("\\the{}", ctr_str));
@@ -6768,7 +6758,7 @@ LoadDefinitions!({
         Some(ExpansionBody::from(expansion)),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
       // defCounterID with within
-      let prefix = state::lookup_string(&s!("@ID@prefix@{}", ctr_str));
+      let prefix = lookup_string(&s!("@ID@prefix@{}", ctr_str));
       let clean_prefix = if prefix.is_empty() { ctr_str.clone() } else { prefix };
       let ctr_for_id = ctr_str.clone();
       let within_for_id = within_str;
@@ -6790,13 +6780,13 @@ LoadDefinitions!({
     let within_str = Expand!(within).to_string();
     // Remove ctr from reset list of within
     let reg = s!("\\cl@{}", within_str);
-    if let Some(prev) = state::lookup_tokens(&reg) {
+    if let Some(prev) = lookup_tokens(&reg) {
       let ctr_cs = T_CS!(ctr_str.clone());
       let unctr_cs = T_CS!(s!("UN{}", ctr_str));
       let filtered: Vec<Token> = prev.unlist().into_iter()
         .filter(|t| *t != ctr_cs && *t != unctr_cs)
         .collect();
-      state::assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
+      assign_value(&reg, Stored::Tokens(Tokens::new(filtered)), None);
     }
     if star.is_none() {
       // Redefine \thectr without prefix
@@ -6806,7 +6796,7 @@ LoadDefinitions!({
         Some(ExpansionBody::from(expansion)),
         Some(NewDefault!(ExpandableOptions, scope => Some(Scope::Global))));
       // defCounterID without within — redefine \thectr@ID
-      let prefix = state::lookup_string(&s!("@ID@prefix@{}", ctr_str));
+      let prefix = lookup_string(&s!("@ID@prefix@{}", ctr_str));
       let clean_prefix = if prefix.is_empty() { ctr_str.clone() } else { prefix };
       let ctr_for_id = ctr_str.clone();
       let thectrid = s!("\\the{}@ID", ctr_str);
@@ -6829,8 +6819,8 @@ LoadDefinitions!({
     // `\value{lemma}` would expand to the undefined `\c@lemma`. Resolve
     // through the mapping first. Driver: 2101.03928
     // `\setcounter{lemmathreesets}{\value{lemma}}` (llncs paper).
-    let resolved = match state::lookup_mapping("counter_for_type", &name) {
-      Some(Stored::String(s)) => arena::with(s, |s| s.to_string()),
+    let resolved = match lookup_mapping("counter_for_type", &name) {
+      Some(Stored::String(s)) => with(s, |s| s.to_string()),
       _ => name,
     };
     T_CS!(s!("\\c@{resolved}"))
@@ -7015,17 +7005,17 @@ LoadDefinitions!({
     // of the captype's body without invoking stomach digestion.
     // Witness: math0010095 BoxedEPS+figure+caption produced
     // `\thefigure\par` undefined errors when captype was "figure\par".
-    let captype = gullet::do_expand(T_CS!("\\@captype"))?.to_string();
+    let captype = do_expand(T_CS!("\\@captype"))?.to_string();
     let prekey = s!("PREINCREMENTED_{captype}");
-    let props = match state::remove_value(&prekey) { Some(Stored::HashStored(pre)) => {
+    let props = match remove_value(&prekey) { Some(Stored::HashStored(pre)) => {
       pre
     } _ => {
       ref_step_counter(&captype, false)?
     }};
-    let inlist  = stomach::digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
-    state::assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
-    state::assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
-    state::assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
+    let inlist  = digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
+    assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
+    assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
+    assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
@@ -7238,24 +7228,23 @@ LoadDefinitions!({
     reversion => "\\kill",
     after_digest => sub [_whatsit] {
       // Perl: LookupValue('Alignment')->removeRow
-      if let Some(alignment_stored) = lookup_alignment() {
-        if let Some(alignment_cell) = alignment_stored.alignment_cell() {
+      if let Some(alignment_stored) = lookup_alignment()
+        && let Some(alignment_cell) = alignment_stored.alignment_cell() {
           alignment_cell.borrow_mut().remove_row();
         }
-      }
     },
     properties => { Ok(stored_map!("alignmentSkippable" => true)) }
   );
 
   // Tab tracking
-  state::assign_value(
+  assign_value(
     "tabbing_start_tabs",
     Stored::Tokens(Tokens!()),
     Some(Scope::Global),
   );
 
   DefMacro!("\\@tabbing@start@tabs", sub [_args] {
-    match state::lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
+    match lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
       toks
     } _ => {
       Tokens!()
@@ -7264,13 +7253,13 @@ LoadDefinitions!({
 
   // \+ increments tab start by adding \> to tabbing_start_tabs
   DefPrimitive!("\\@tabbing@increment", sub [_args] {
-    let mut tabs = match state::lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
+    let mut tabs = match lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
       toks.unlist()
     } _ => {
       Vec::new()
     }};
     tabs.push(T_CS!("\\>"));
-    state::assign_value(
+    assign_value(
       "tabbing_start_tabs",
       Stored::Tokens(Tokens::new(tabs)),
       Some(Scope::Global),
@@ -7279,7 +7268,7 @@ LoadDefinitions!({
 
   // \- decrements tab start by removing first element from tabbing_start_tabs
   DefPrimitive!("\\@tabbing@decrement", sub [_args] {
-    let tabs = match state::lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
+    let tabs = match lookup_value("tabbing_start_tabs") { Some(Stored::Tokens(toks)) => {
       let mut v = toks.unlist();
       if !v.is_empty() {
         v.remove(0);
@@ -7288,7 +7277,7 @@ LoadDefinitions!({
     } _ => {
       Vec::new()
     }};
-    state::assign_value(
+    assign_value(
       "tabbing_start_tabs",
       Stored::Tokens(Tokens::new(tabs)),
       Some(Scope::Global),
@@ -7381,15 +7370,14 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     sizer        => "#3",
     after_digest  => sub[whatsit] {
-      if let Some(alignment) = lookup_alignment() {
-        if let DigestedData::Alignment(data) = alignment.data() {
+      if let Some(alignment) = lookup_alignment()
+        && let DigestedData::Alignment(data) = alignment.data() {
           let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }
           else { translate_attachment(String::new()) };
           let mut data_lock = data.borrow_mut();
           let attributes = data_lock.get_xml_attributes_mut();
           attributes.insert(String::from("vattach"), attachment.to_string());
         }
-      }
     },
     locked => true,
     mode   => "text",
@@ -7499,27 +7487,24 @@ LoadDefinitions!({
     attrs.insert(String::from("role"), String::from("ARRAY"));
     // Determine column and row separations, if non default
     let colsep = lookup_dimension("\\arraycolsep");
-    if let Some(sep) = colsep {
-      if sep.value_of()
+    if let Some(sep) = colsep
+      && sep.value_of()
         != lookup_dimension("\\lx@default@arraycolsep")
           .unwrap_or_default()
           .value_of()
       {
         attrs.insert(String::from("colsep"), sep.to_attribute());
       }
-    }
-    let astr = gullet::do_expand(T_CS!("\\arraystretch"))?.to_string();
-    if astr != "1" {
-      if let Ok(astr_f) = astr.parse::<f64>() {
-        if astr_f != 1.0 {
+    let astr = do_expand(T_CS!("\\arraystretch"))?.to_string();
+    if astr != "1"
+      && let Ok(astr_f) = astr.parse::<f64>()
+        && astr_f != 1.0 {
           let rowsep = Dimension::from_str(&s!("{}em", astr_f - 1.0))?;
           attrs.insert(String::from("rowsep"), rowsep.to_attribute());
         }
-      }
-    }
     alignment_bindings(template, String::from("math"), SymHashMap::default(), attrs);
     // Perl: if display math, switch to text mathstyle
-    if state::lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+    if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
       MergeFont!(mathstyle => "text");
     }
     Let!("\\\\", "\\lx@alignment@newline");
@@ -7601,12 +7586,12 @@ LoadDefinitions!({
       .map(|ctr| s!("scopes_for_counter:{}", ctr)));
     if let Some(ctr_key) = ctr_key_opt {
       // TODO: we should probably improve the ergonomics here to avoid the vec![]
-      state::unshift_value(&ctr_key, vec![scope.clone()]);
-      state::activate_scope(arena::pin(scope));
-      stomach::begin_mode("text")?;
-      let current_label = stomach::digest(Tokens!(T_CS!("\\@currentlabel")))?;
-      state::assign_value(&label_key, current_label, Some(Scope::Global));
-      stomach::end_mode("text")?;
+      unshift_value(&ctr_key, vec![scope.clone()]);
+      activate_scope(pin(scope));
+      begin_mode("text")?;
+      let current_label = digest(Tokens!(T_CS!("\\@currentlabel")))?;
+      assign_value(&label_key, current_label, Some(Scope::Global));
+      end_mode("text")?;
     }
   }
   );
@@ -7614,7 +7599,7 @@ LoadDefinitions!({
   // \lx@label; \label is an alias. Saving \lx@label (not the mutable \label)
   // in eqnarray/ams rearrangeable bindings prevents an infinite
   // \lx@eqnarray@save@label recursion under nested align/gather (2008.13358).
-  state::let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
+  let_i(&T_CS!("\\label"), &T_CS!("\\lx@label"), Some(Scope::Global));
 
   // If a node has been labeled, but still hasn't yet got an id by afterClose:late,
   // we'd better generate an id for it.
@@ -7636,7 +7621,7 @@ LoadDefinitions!({
     properties => sub[args] {
       unpack_opt_ref!(args => _star, label_opt);
       let label = label_opt.as_ref().unwrap().to_string();
-      Ok(stored_map!("label" => Stored::String(arena::pin(clean_label(&label, None)))))
+      Ok(stored_map!("label" => Stored::String(pin(clean_label(&label, None)))))
   });
 
   // "page" does not make sense in xml.  If the user really wants, they will need:
@@ -7676,7 +7661,7 @@ LoadDefinitions!({
     let bbl_path = FindFile!(&jobname, type => "bbl");
     // BIB_CONFIG is a list of phases; with bibconfig=bbl,bib: try bbl first, fall back to bib.
     // Default (bibtex option) is ['bib', 'bbl']; nobibtex sets ['bbl'].
-    let default_bib_config: Rc<[SymStr]> = Rc::new([arena::pin("bib"), arena::pin("bbl")]);
+    let default_bib_config: Rc<[SymStr]> = Rc::new([pin("bib"), pin("bbl")]);
     let bib_config = match lookup_value("BIB_CONFIG") {
       Some(Stored::Strings(v)) => v,
       _ => default_bib_config,
@@ -7695,7 +7680,7 @@ LoadDefinitions!({
     // `.bbl` processed as content. Witness 2107.03065 (refs.bbl, not
     // <jobname>.bbl): Perl emits 1 bibliography, the old Rust 2. Mirror Perl:
     // branch on the first phase only.
-    let first_is_bbl = arena::with(bib_config[0], |s| s == "bbl");
+    let first_is_bbl = with(bib_config[0], |s| s == "bbl");
     if first_is_bbl {
       if bbl_path.is_none() {
         Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
@@ -7729,9 +7714,9 @@ LoadDefinitions!({
   DefConstructor!("\\lx@bibliography [] Semiverbatim",
     "<ltx:bibliography files='#2' xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort' lists='#1'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title></ltx:bibliography>",
     after_digest => sub[whatsit] {
-      stomach::bgroup();
+      bgroup();
       begin_bibliography(whatsit)?;
-      let _ = stomach::egroup();
+      let _ = egroup();
     },
     before_construct => sub[doc,whatsit] {
       adjust_backmatter_element(doc, whatsit)?;
@@ -7743,22 +7728,22 @@ LoadDefinitions!({
     set_bibstyle(&style);
     if let Some(mut bib) = document.findnode("//ltx:bibliography", None) {
       if let Some(Stored::String(bs)) = lookup_value("BIBSTYLE") {
-        arena::with(bs, |s| document.set_attribute(&mut bib, "bibstyle", s))?;
+        with(bs, |s| document.set_attribute(&mut bib, "bibstyle", s))?;
       }
       if let Some(Stored::String(cs)) = lookup_value("CITE_STYLE") {
-        arena::with(cs, |s| document.set_attribute(&mut bib, "citestyle", s))?;
+        with(cs, |s| document.set_attribute(&mut bib, "citestyle", s))?;
       }
       if let Some(Stored::String(so)) = lookup_value("CITE_SORT") {
-        arena::with(so, |s| document.set_attribute(&mut bib, "sort", s))?;
+        with(so, |s| document.set_attribute(&mut bib, "sort", s))?;
       }
     }
   },
     after_digest => sub[whatsit] {
       let style = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
-      assign_value("BIBSTYLE", arena::pin(&style), Some(Scope::Global));
+      assign_value("BIBSTYLE", pin(&style), Some(Scope::Global));
       if let Some((cs, so)) = lookup_bibstyle_params(&style) {
-        assign_value("CITE_STYLE", arena::pin(cs), None);
-        assign_value("CITE_SORT", arena::pin(so), None);
+        assign_value("CITE_STYLE", pin(cs), None);
+        assign_value("CITE_SORT", pin(so), None);
       } else {
         Info!("unexpected", style, s!("Unknown bibstyle '{style}', it will be ignored"));
       }
@@ -7766,7 +7751,7 @@ LoadDefinitions!({
     properties => sub[args] {
       unpack_opt_ref!(args => style_opt);
       let style = style_opt.as_ref().map_or(String::new(), |s| s.to_string());
-      Ok(stored_map!("style" => Stored::String(arena::pin(&style))))
+      Ok(stored_map!("style" => Stored::String(pin(&style))))
     }
   );
 
@@ -7782,9 +7767,9 @@ LoadDefinitions!({
       // NOTE that in some perverse situations (revtex?)
       // it seems to be allowable to omit the argument
       // It's ignorable for latexml anyway, so we'll just read it if its there.
-      gullet::skip_spaces()?;
-      if gullet::if_next(T_BEGIN!())? {
-        gullet::read_arg(ExpansionLevel::Off)?;
+      skip_spaces()?;
+      if if_next(T_BEGIN!())? {
+        read_arg(ExpansionLevel::Off)?;
       }
       begin_bibliography(whatsit)?;
     },
@@ -7805,15 +7790,15 @@ LoadDefinitions!({
   Tag!("ltx:bibliography", auto_close => true);
 
   DefMacro!("\\par@in@bibliography", {
-    gullet::skip_spaces()?;
-    if let Some(tok) = gullet::read_token()? {
+    skip_spaces()?;
+    if let Some(tok) = read_token()? {
       // If next token is another \par, or a REAL \bibitem,
       // then this \par expands into what followed
       // Else, put it back, and start a bibitem.
       if tok == T_CS!("\\par") || tok == T_CS!("\\bibitem") {
         Ok(Tokens!(tok))
       } else {
-        gullet::unread_one(tok);
+        unread_one(tok);
         Ok(Tokens!(T_CS!("\\save@bibitem"), T_BEGIN!(), T_END!()))
       }
     } else {
@@ -7852,9 +7837,9 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl #2409: prune previous \lx@bibitem whatsit if it was auto-opened
       // with no tag/key body, and reuse its ID (avoids empty bibitem elements).
-      let pruned_prev = stomach::with_box_list(|list| {
-        if let Some(prev) = list.last() {
-          if let DigestedData::Whatsit(prev_ws_cell) = prev.data() {
+      let pruned_prev = with_box_list(|list| {
+        if let Some(prev) = list.last()
+          && let DigestedData::Whatsit(prev_ws_cell) = prev.data() {
             let prev_ws = prev_ws_cell.borrow();
             let defn = prev_ws.get_definition();
             let cs_str = defn.get_cs().to_string();
@@ -7865,11 +7850,10 @@ LoadDefinitions!({
               return true;
             }
           }
-        }
         false
       });
       if pruned_prev {
-        stomach::with_box_list_mut_vec(|list| { list.pop(); });
+        with_box_list_mut_vec(|list| { list.pop(); });
         Info!("empty", "bibitem",
           "Encountered an empty \\bibitem, likely auto-opened without need. Pruning and reusing its id.");
       }
@@ -7892,7 +7876,7 @@ LoadDefinitions!({
           Invocation!(T_CS!("\\lx@make@tags"), vec![T_OTHER!("@bibitem")]).unlist());
         tag_tokens.push(T_END!());
         properties.insert("tags",
-          stomach::digest(tag_tokens)?.into());
+          digest(tag_tokens)?.into());
         whatsit.set_properties(properties);
       } else {
         let mut properties = RefStepCounter!("@bibitem")?;
@@ -7929,7 +7913,7 @@ LoadDefinitions!({
   DefConstructor!("\\lx@mung@bibliography@pre", sub[document] {
     let parent     = document.get_node();
     let tag_sym    = model::get_node_qname(parent);
-    arena::with(tag_sym, |tag|
+    with(tag_sym, |tag|
       if tag == "ltx:itemize" || tag == "ltx:enumerate" || tag == "ltx:description" {
         document.maybe_close_element(tag)
       } else { Ok(None) }
@@ -8022,14 +8006,14 @@ LoadDefinitions!({
     properties => sub[args] {
       unref!(args => _show, keys, _phrase1, _phrase2);
       Ok(stored_map!("bibrefs" => clean_bib_key(&keys.to_string()),
-        "separator" => match state::lookup_tokens("CITE_SEPARATOR") {
-          Some(sep) => stomach::digest(sep)?.to_string(),
+        "separator" => match lookup_tokens("CITE_SEPARATOR") {
+          Some(sep) => digest(sep)?.to_string(),
           None => String::new() },
-        "yyseparator" => match state::lookup_tokens("CITE_YY_SEPARATOR") {
-          Some(yysep) => stomach::digest(yysep)?.to_string(),
+        "yyseparator" => match lookup_tokens("CITE_YY_SEPARATOR") {
+          Some(yysep) => digest(yysep)?.to_string(),
           None => String::new() },
-        "bibunit" => match state::lookup_value("CITE_UNIT") {
-          Some(Stored::String(s)) => arena::to_string(s),
+        "bibunit" => match lookup_value("CITE_UNIT") {
+          Some(Stored::String(s)) => to_string(s),
           _ => String::new() }
       ))
     }
@@ -8042,15 +8026,15 @@ LoadDefinitions!({
 
   DefMacro!("\\cite[] Semiverbatim", sub[(post_opt, keys)] {
     // let style = state::lookup_tokens("CITE_STYLE").unwrap_or(NO_TOKENS);
-    let open = state::lookup_tokens("CITE_OPEN");
+    let open = lookup_tokens("CITE_OPEN");
     let open = open.unwrap_or(NO_TOKENS);
-    let close = state::lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS);
+    let close = lookup_tokens("CITE_CLOSE").unwrap_or(NO_TOKENS);
     let mut post_tokens = match post_opt {
       Some(tks) => tks.unlist(),
       None => Vec::new()
     };
     if !post_tokens.is_empty() {
-      let ns = state::lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS);
+      let ns = lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or(NO_TOKENS);
       let mut post_wrapped = ns.unlist();
       post_wrapped.push(T_SPACE!());
       post_wrapped.extend(post_tokens);
@@ -8073,7 +8057,7 @@ LoadDefinitions!({
     let mut toks = vec![T_CS!("\\lx@mark@nocite"), T_BEGIN!()];
     toks.extend(key.unlist());
     toks.push(T_END!());
-    let _ = state::push_value("@at@end@document", Stored::Tokens(Tokens::new(toks)));
+    let _ = push_value("@at@end@document", Stored::Tokens(Tokens::new(toks)));
     Ok(Tokens!())
   });
   DefConstructor!(
@@ -8083,7 +8067,7 @@ LoadDefinitions!({
       let key = args[0].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       // Perl CleanBibKey: trim + remove internal spaces
       let bibrefs: String = key.chars().filter(|c| !c.is_whitespace()).collect();
-      let bibunit = state::lookup_value("CITE_UNIT")
+      let bibunit = lookup_value("CITE_UNIT")
         .map(|v| v.to_string()).unwrap_or_default();
       Ok(stored_map!("bibrefs" => bibrefs, "bibunit" => bibunit))
     }
@@ -8126,7 +8110,7 @@ LoadDefinitions!({
   DefPrimitive!("\\include{}", sub[(path)] {
     let path_str = Expand!(path).to_string();
     // Check if \includeonly restricts inclusion
-    let table = state::lookup_value("including@only");
+    let table = lookup_value("including@only");
     let should_include = match table {
       None => true, // no \includeonly — include everything
       Some(Stored::HashString(map)) => map.contains_key(&path_str),
@@ -8147,7 +8131,7 @@ LoadDefinitions!({
         map.insert(trimmed, "1".to_string());
       }
     }
-    state::assign_value("including@only", Stored::HashString(map), Scope::Global);
+    assign_value("including@only", Stored::HashString(map), Scope::Global);
   });
 
   // {filecontents}/{filecontents*} environments + cache_filecontents
@@ -8236,7 +8220,7 @@ LoadDefinitions!({
       Let!("\\subitem", "\\index@subitem");
       Let!("\\subsubitem", "\\index@subsubitem");
     },
-    before_digest_end => { stomach::digest(Tokens!(T_CS!("\\index@done")))?; },
+    before_digest_end => { digest(Tokens!(T_CS!("\\index@done")))?; },
     after_digest_begin => sub[whatsit] {
       note_backmatter_element(whatsit, "ltx:index");
       let docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
@@ -8275,10 +8259,10 @@ LoadDefinitions!({
   DefConstructor!("\\glossary{}", sub[document, args, props] {
     use latexml_core::document::get_node_qname;
     let current = document.get_node().clone();
-    let current_name = arena::with(get_node_qname(&current), |s| s.to_string());
+    let current_name = with(get_node_qname(&current), |s| s.to_string());
     let parent_name = if current_name == "#PCDATA" {
       match current.get_parent() { Some(p) => {
-        arena::with(get_node_qname(&p), |s| s.to_string())
+        with(get_node_qname(&p), |s| s.to_string())
       } _ => { current_name }}
     } else { current_name };
     let in_flow = parent_name.starts_with("ltx:p") || parent_name == "ltx:text";
@@ -8290,7 +8274,7 @@ LoadDefinitions!({
       let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
       attrs.insert("role".to_string(), "glossary".to_string());
       attrs.insert("key".to_string(), key);
-      let body: Vec<&latexml_core::digested::Digested> = match args.first().and_then(|a| a.as_ref()) {
+      let body: Vec<&Digested> = match args.first().and_then(|a| a.as_ref()) {
         Some(d) => vec![d],
         None => Vec::new(),
       };
@@ -8368,7 +8352,7 @@ LoadDefinitions!({
   // C.11.6 Terminal Input and Output
   //======================================================================
   DefPrimitive!("\\typeout{}", sub[(stuff)] {
-    if state::current_verbosity() > -1 {
+    if current_verbosity() > -1 {
       let content = Expand!(stuff);
       Note!(s!("{content}"));
     }
@@ -8492,7 +8476,7 @@ LoadDefinitions!({
     let s = dimension_to_spaces(length);
     let length_tokens = length.revert()?;
     let tokens = Invocation!(T_CS!("\\hskip"), vec![length_tokens]);
-    Tbox::new(arena::pin(&s), None, None, tokens,
+    Tbox::new(pin(&s), None, None, tokens,
       stored_map!("width" => length, "isSpace" => true))
   });
 
@@ -8548,12 +8532,11 @@ LoadDefinitions!({
     properties   => sub[args] {
       // Perl: (($_[2] ? (align => $makebox_alignment{...}) : ()), ($_[1] ? (width => $_[1]) : ()))
       let mut props = stored_map!();
-      if let Some(ref dim_d) = args[0] {
-        if let DigestedData::RegisterValue(v) = dim_d.data() {
+      if let Some(ref dim_d) = args[0]
+        && let DigestedData::RegisterValue(v) = dim_d.data() {
           let dim: Dimension = v.into();
           props.insert("width", Stored::from(dim));
         }
-      }
       if let Some(ref align_d) = args[1] {
         let align_str = align_d.to_string();
         let align = match align_str.as_str() {
@@ -8605,9 +8588,9 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $wasmath = LookupValue('IN_MATH') — uses boolean value, not key existence.
       // IN_MATH is initialized to false at startup, so is_some() would always be true.
-      let wasmath = state::lookup_bool_sym(pin!("IN_MATH"));
-      stomach::begin_mode("restricted_horizontal")?;
-      state::assign_value("FRAME_IN_MATH", wasmath, None); },
+      let wasmath = lookup_bool_sym(pin!("IN_MATH"));
+      begin_mode("restricted_horizontal")?;
+      assign_value("FRAME_IN_MATH", wasmath, None); },
     properties => sub[args] {
       // Perl: framecolor => LookupValue('font')->getColor
       let framecolor = lookup_font()
@@ -8626,27 +8609,27 @@ LoadDefinitions!({
           _ => None, // 'c' or empty → default center, not emitted
         };
         if let Some(m) = mapped {
-          props.insert("align", Stored::String(arena::pin_static(m)));
+          props.insert("align", Stored::String(pin_static(m)));
         }
       }
       if let Some(width_val) = args[0].as_ref() {
-        props.insert("width", Stored::String(arena::pin(width_val.to_attribute())));
+        props.insert("width", Stored::String(pin(width_val.to_attribute())));
       }
       // Perl: ($sep ne '3.0pt' ? (cssstyle => 'padding:' . $sep) : ())
       if let Some(sep) = lookup_dimension("\\fboxsep") {
         let sep_str = sep.to_attribute();
         if sep_str != "3.0pt" {
-          props.insert("cssstyle", Stored::String(arena::pin(s!("padding:{sep_str}"))));
+          props.insert("cssstyle", Stored::String(pin(s!("padding:{sep_str}"))));
         }
       }
       Ok(props)
     },
     after_digest => sub[whatsit] {
-      let wasmath = state::lookup_bool("FRAME_IN_MATH");
+      let wasmath = lookup_bool("FRAME_IN_MATH");
       let arg = whatsit.get_arg(3).cloned();
-      stomach::end_mode("restricted_horizontal")?;
-      if wasmath {
-        if let Some(ref a) = arg {
+      end_mode("restricted_horizontal")?;
+      if wasmath
+        && let Some(ref a) = arg {
           // Perl: $arg->isMath checks mode property =~ /math$/
           // For \fbox{$...$}, the body is a List in restricted_horizontal mode
           // containing a math whatsit. Check if any child has isMath.
@@ -8664,14 +8647,13 @@ LoadDefinitions!({
             }}
           }
         }
-      }
     },
     after_construct => sub[document, _whatsit] {
       // Perl afterConstruct: if the <ltx:text> has a single non-text child
       // that can have 'framed', unwrap the text and copy attributes to the child.
       let current = document.get_node().clone();
       if let Some(node) = current.get_last_child() {
-        if document::get_node_qname(&node) != arena::pin_static("ltx:text") {
+        if document::get_node_qname(&node) != pin_static("ltx:text") {
           return Ok(());
         }
         // Filter to non-whitespace children
@@ -8792,7 +8774,7 @@ LoadDefinitions!({
             // Paragraph wrapping: estimate number of lines
             let num_lines = ((total_w as f64) / (w_val as f64)).ceil() as i64;
             // Use \baselineskip (typically 12pt = 786432 sp) for line height
-            let baseline_skip = state::lookup_dimension("\\baselineskip")
+            let baseline_skip = lookup_dimension("\\baselineskip")
               .unwrap_or_else(|| Dimension::new(786432)); // 12pt default
             let line_h = baseline_skip.value_of();
             let total_h = num_lines * line_h;
@@ -8872,7 +8854,7 @@ LoadDefinitions!({
     },
     mode => "internal_vertical",
     before_digest => {
-      stomach::digest(Tokens!(T_CS!("\\@minipagetrue")))?;
+      digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },
     after_digest_begin => sub[whatsit] {
       // Perl: afterDigestBegin sets \hsize, \textwidth, \columnwidth from width arg
@@ -8883,9 +8865,9 @@ LoadDefinitions!({
         let width_val = width_arg.value_of();
         let dim = Dimension::new(width_val);
         let rv: RegisterValue = dim.into();
-        state::assign_register("\\hsize", rv.clone(), None, Vec::new())?;
-        state::assign_register("\\textwidth", rv.clone(), None, Vec::new())?;
-        state::assign_register("\\columnwidth", rv, None, Vec::new())?;
+        assign_register("\\hsize", rv.clone(), None, Vec::new())?;
+        assign_register("\\textwidth", rv.clone(), None, Vec::new())?;
+        assign_register("\\columnwidth", rv, None, Vec::new())?;
         whatsit.set_property("width", Stored::Dimension(dim));
       }
       whatsit.set_property("vattach", Stored::from(vattach.to_string()));
@@ -8893,12 +8875,11 @@ LoadDefinitions!({
     },
     after_digest_body => sub[whatsit] {
       // Perl: afterDigestBody copies vattach from whatsit to body
-      if let Some(vattach) = whatsit.get_property("vattach").map(|v| v.into_owned()) {
-        if let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
+      if let Some(vattach) = whatsit.get_property("vattach").map(|v| v.into_owned())
+        && let Some(Stored::Digested(body)) = whatsit.properties.get("body").cloned() {
           let mut body = body;
           body.set_property("vattach", vattach);
         }
-      }
     }
   );
 
@@ -8986,17 +8967,17 @@ LoadDefinitions!({
   // Perl L4928-4929: DefPrimitiveI — assigns \@wholewidth register directly at
   // stomach level (not via TeX-level expansion). Faithful port.
   DefPrimitive!("\\thinlines", {
-    state::assign_register(
+    assign_register(
       "\\@wholewidth",
-      latexml_core::definition::register::RegisterValue::Dimension(Dimension!("0.4pt")),
+      RegisterValue::Dimension(Dimension!("0.4pt")),
       None,
       vec![],
     )?;
   });
   DefPrimitive!("\\thicklines", {
-    state::assign_register(
+    assign_register(
       "\\@wholewidth",
-      latexml_core::definition::register::RegisterValue::Dimension(Dimension!("0.8pt")),
+      RegisterValue::Dimension(Dimension!("0.8pt")),
       None,
       vec![],
     )?;
@@ -9006,7 +8987,7 @@ LoadDefinitions!({
   // Stores the dimension under state key `arrowlength` for later lookup
   // by the picture drawing routines (see Perl L4978-4979).
   DefPrimitive!("\\arrowlength {Dimension}", sub[(length)] {
-    state::assign_value("arrowlength", Stored::Dimension(length), None);
+    assign_value("arrowlength", Stored::Dimension(length), None);
   });
   DefMacro!("\\qbeziermax", "500");
   // Perl: \bezier — LaTeX 2.09 compat alias for \qbezier with different syntax
@@ -9043,7 +9024,7 @@ LoadDefinitions!({
       Let!("\\raisebox", "\\pic@raisebox");
     },
     properties => sub[args] {
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
@@ -9059,24 +9040,23 @@ LoadDefinitions!({
         if v == v.round() { format!("{v:.1}pt") } else { format!("{v}pt") }
       };
       let mut map = stored_map!(
-        "width"      => Stored::String(arena::pin(fmt_pt(w))),
-        "height"     => Stored::String(arena::pin(fmt_pt(h))),
-        "unitlength" => Stored::String(arena::pin(fmt_pt(unit)))
+        "width"      => Stored::String(pin(fmt_pt(w))),
+        "height"     => Stored::String(pin(fmt_pt(h))),
+        "unitlength" => Stored::String(pin(fmt_pt(unit)))
       );
       // Origin from OptionalPair — Perl: origin-x, origin-y, transform
-      if let Some(d) = args[1].as_ref() {
-        if let DigestedData::RegisterValue(RegisterValue::Pair(p)) = d.data() {
+      if let Some(d) = args[1].as_ref()
+        && let DigestedData::RegisterValue(RegisterValue::Pair(p)) = d.data() {
           let ox = p.x.0 * unit;
           let oy = p.y.0 * unit;
-          map.insert("origin-x", Stored::String(arena::pin(fmt_pt(ox))));
-          map.insert("origin-y", Stored::String(arena::pin(fmt_pt(oy))));
+          map.insert("origin-x", Stored::String(pin(fmt_pt(ox))));
+          map.insert("origin-y", Stored::String(pin(fmt_pt(oy))));
           // Perl: translate(negate(origin).pxValue)
           let tx = px_value(-ox);
           let ty = px_value(-oy);
-          map.insert("transform", Stored::String(arena::pin(
+          map.insert("transform", Stored::String(pin(
             format!("translate({},{})", fmt_px(tx), fmt_px(ty)))));
         }
-      }
       Ok(map)
     }
   );
@@ -9098,7 +9078,7 @@ LoadDefinitions!({
         },
         None => (0.0, 0.0),
       };
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
@@ -9115,7 +9095,7 @@ LoadDefinitions!({
         (None, None, None)
       };
       let mut map = stored_map!(
-        "transform" => Stored::String(arena::pin(&transform_str))
+        "transform" => Stored::String(pin(&transform_str))
       );
       if let Some(w) = iw { map.insert("innerwidth", Stored::Dimension(w)); }
       if let Some(h) = ih { map.insert("innerheight", Stored::Dimension(h)); }
@@ -9162,7 +9142,7 @@ LoadDefinitions!({
   // from plain_base.rs) so a surrounding dimension reader can consume
   // `\line` as a length without errors.
   DefMacro!("\\line", sub[_args] {
-    if gullet::if_next(T_OTHER!("("))? {
+    if if_next(T_OTHER!("("))? {
       Ok(Tokens!(T_CS!("\\lx@pic@line@dispatch")))
     } else {
       Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
@@ -9178,11 +9158,11 @@ LoadDefinitions!({
       let mx: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
       let my: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
       let xlength: f64 = args[2].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
@@ -9195,8 +9175,8 @@ LoadDefinitions!({
         px_value(xlength * unit * my / mx.abs())
       };
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
-        "thick"  => Stored::String(arena::pin(format!("{thick}"))),
+        "points" => Stored::String(pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
         "color"  => "#000000"
       ))
     }
@@ -9211,11 +9191,11 @@ LoadDefinitions!({
       let mx: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
       let my: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
       let xlength: f64 = args[2].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
@@ -9227,8 +9207,8 @@ LoadDefinitions!({
         px_value(xlength * unit * my / mx.abs())
       };
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
-        "thick"  => Stored::String(arena::pin(format!("{thick}"))),
+        "points" => Stored::String(pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
         "color"  => "#000000"
       ))
     }
@@ -9241,11 +9221,11 @@ LoadDefinitions!({
     properties => sub[args] {
       let filled = args[0].is_some(); // OptionalMatch:* → Some if * present
       let dia: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
@@ -9256,10 +9236,10 @@ LoadDefinitions!({
         ("none", "#000000")
       };
       Ok(stored_map!(
-        "radius" => Stored::String(arena::pin(fmt_px(radius))),
+        "radius" => Stored::String(pin(fmt_px(radius))),
         "fill"   => fill,
         "stroke" => stroke,
-        "thick"  => Stored::String(arena::pin(format!("{thick}")))
+        "thick"  => Stored::String(pin(format!("{thick}")))
       ))
     }
   );
@@ -9271,11 +9251,11 @@ LoadDefinitions!({
       stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
     alias => "\\oval",
     properties => sub[args] {
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
@@ -9295,12 +9275,12 @@ LoadDefinitions!({
       // Perl: $r = $r->smaller($halfsize->getX->absolute)->smaller($halfsize->getY->absolute)
       let r = r_requested.min(hx.abs()).min(hy.abs());
       Ok(stored_map!(
-        "ox"      => Stored::String(arena::pin(fmt_px(px_value(-hx)))),
-        "oy"      => Stored::String(arena::pin(fmt_px(px_value(-hy)))),
-        "owidth"  => Stored::String(arena::pin(fmt_px(px_value(sx)))),
-        "oheight" => Stored::String(arena::pin(fmt_px(px_value(sy)))),
-        "radius"  => Stored::String(arena::pin(fmt_px(px_value(r)))),
-        "thick"   => Stored::String(arena::pin(s!("{thick}"))),
+        "ox"      => Stored::String(pin(fmt_px(px_value(-hx)))),
+        "oy"      => Stored::String(pin(fmt_px(px_value(-hy)))),
+        "owidth"  => Stored::String(pin(fmt_px(px_value(sx)))),
+        "oheight" => Stored::String(pin(fmt_px(px_value(sy)))),
+        "radius"  => Stored::String(pin(fmt_px(px_value(r)))),
+        "thick"   => Stored::String(pin(s!("{thick}"))),
         "color"   => "#000000"
       ))
     }
@@ -9352,11 +9332,11 @@ LoadDefinitions!({
     "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\qbezier",
     properties => sub[args] {
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
@@ -9368,9 +9348,9 @@ LoadDefinitions!({
       let (x2, y2) = (px_value(parse_f(3) * unit), px_value(parse_f(4) * unit));
       let (x3, y3) = (px_value(parse_f(5) * unit), px_value(parse_f(6) * unit));
       Ok(stored_map!(
-        "points" => Stored::String(arena::pin(format!("{},{} {},{} {},{}",
+        "points" => Stored::String(pin(format!("{},{} {},{} {},{}",
           fmt_px(x1), fmt_px(y1), fmt_px(x2), fmt_px(y2), fmt_px(x3), fmt_px(y3)))),
-        "thick"  => Stored::String(arena::pin(format!("{thick}"))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
         "color"  => "#000000"
       ))
     }
@@ -9433,7 +9413,7 @@ LoadDefinitions!({
       let framed = props.get("framed").is_some();
       // \@wholewidth captured at digest time in properties callback
       let thick = match props.get("thick") {
-        Some(Stored::String(s)) => arena::with(*s, |v| v.parse::<f64>().unwrap_or(0.4)),
+        Some(Stored::String(s)) => with(*s, |v| v.parse::<f64>().unwrap_or(0.4)),
         _ => 0.4,
       };
       // Frame rect (only when framed=true)
@@ -9471,12 +9451,12 @@ LoadDefinitions!({
       document.close_element("ltx:g")?;
     },
     properties => sub[args] {
-      let unit = match state::lookup_register("\\unitlength", Vec::new())? {
+      let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
       };
       // Capture \@wholewidth at digest time for frame stroke-width
-      let thick = match state::lookup_register("\\@wholewidth", Vec::new())? {
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 0.4,
       };
@@ -9542,8 +9522,8 @@ LoadDefinitions!({
         "innerdepth" => Stored::Dimension(d),
         "fwidth" => Stored::Dimension(fw),
         "fheight" => Stored::Dimension(fh),
-        "xshift" => Stored::String(arena::pin(fmt_px(xs_px))),
-        "yshift" => Stored::String(arena::pin(fmt_px(ys_px)))
+        "xshift" => Stored::String(pin(fmt_px(xs_px))),
+        "yshift" => Stored::String(pin(fmt_px(ys_px)))
       );
       if kv_str.contains("framed") {
         map.insert("framed", Stored::Bool(true));
@@ -9551,10 +9531,10 @@ LoadDefinitions!({
       if let Some(dash_start) = kv_str.find("dash={") {
         let rest = &kv_str[dash_start + 6..];
         if let Some(end) = rest.find('}') {
-          map.insert("dash", Stored::String(arena::pin(&rest[..end])));
+          map.insert("dash", Stored::String(pin(&rest[..end])));
         }
       }
-      map.insert("thick", Stored::String(arena::pin(s!("{thick}"))));
+      map.insert("thick", Stored::String(pin(s!("{thick}"))));
       Ok(map)
     },
     mode => "text"
@@ -9639,7 +9619,7 @@ LoadDefinitions!({
   // invocation sites `\mdseries`/`\bfseries` which expand it inline).
   def_macro_noop("\\not@math@alphabet{}{}")?;
   DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
+    if lookup_bool_sym(pin!("IN_MATH")) {
       let c = c.to_string();
       let message = s!("Command {:?} invalid in math mode", c);
       Warn!("unexpected", c, message);
@@ -9793,7 +9773,7 @@ LoadDefinitions!({
     // Move `font` and `mathcmd` directly into the closure capture —
     // they're not used outside. Saves two Tokens clones at setup time.
     DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
-      if state::lookup_bool_sym(pin!("IN_MATH")) {
+      if lookup_bool_sym(pin!("IN_MATH")) {
         Ok(mathcmd.clone())
       } else {
         Ok(font.clone())
@@ -9886,14 +9866,14 @@ LoadDefinitions!({
     let text = arg.to_string();
     let content = unicode_enclosed_alphanumeric(&text)
       .unwrap_or_else(|| format!("{}\u{20DD}", text));
-    let in_math = state::lookup_bool_sym(pin!("IN_MATH"));
+    let in_math = lookup_bool_sym(pin!("IN_MATH"));
     let is_number = !text.is_empty() && text.chars().all(|c| c.is_ascii_digit());
     let mut props = stored_map!();
     if in_math {
       props.insert("role", Stored::from(if is_number { "NUMBER" } else { "UNKNOWN" }));
       props.insert("meaning", Stored::from(format!("circled-{}", text)));
     }
-    Tbox::new(arena::pin(&content), None, None,
+    Tbox::new(pin(&content), None, None,
       Invocation!(T_CS!("\\textcircled"), vec![arg]),
       props)
   });
@@ -10006,7 +9986,7 @@ LoadDefinitions!({
     // and mis-registering the case mapping.
     let pairs: Vec<Token> = match lookup_definition_stored(&T_CS!("\\@uclclist"))? {
       Some(Stored::Expandable(exp)) => match exp.get_expansion() {
-        Some(latexml_core::definition::ExpansionBody::Tokens(tks)) => {
+        Some(ExpansionBody::Tokens(tks)) => {
           tks.clone().unlist()
         },
         _ => Vec::new(),
@@ -10106,7 +10086,7 @@ LoadDefinitions!({
     let mut toks = VecDeque::from(tokens.unlist());
     let mut read = Vec::new();
 
-    while let Some(t) = gullet::read_token()? {
+    while let Some(t) = read_token()? {
       // Stop as soon as we've matched the full token sequence —
       // otherwise the `toks[0]` index panics on the next iteration
       // (arxiv 1608.08252 hit this with a matching prefix followed
@@ -10133,7 +10113,7 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
-    let next_opt = gullet::read_non_space()?;
+    let next_opt = read_non_space()?;
     if next_opt == Some(T_OTHER!("*")) {
       Ok(if_toks)
     } else {
@@ -10149,7 +10129,7 @@ LoadDefinitions!({
   DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
 
   DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
-    if gullet::if_next(T_OTHER!("["))? {
+    if if_next(T_OTHER!("["))? {
       Ok(cmd)
     } else {
       Ok(Tokens!(cmd.unlist(), T_OTHER!("["), option.unlist(), T_OTHER!("]")))
@@ -10192,7 +10172,7 @@ LoadDefinitions!({
       // pgf bails with "Driver file ... not found", and the entire
       // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
       // pgf-using papers).
-      || find_file(&file_string, Some(latexml_core::binding::content::FindFileOptions {
+      || find_file(&file_string, Some(FindFileOptions {
           notex: true, ..Default::default()
         })).is_some();
     if found {
@@ -10220,7 +10200,7 @@ LoadDefinitions!({
     // missing-on-disk babel-language packages (italian/spanish/
     // portuges/brazil/...).
     let found = find_file(&file_string, None).is_some()
-      || find_file(&file_string, Some(latexml_core::binding::content::FindFileOptions {
+      || find_file(&file_string, Some(FindFileOptions {
           notex: true, ..Default::default()
         })).is_some();
     if found {
@@ -10314,7 +10294,7 @@ LoadDefinitions!({
       + c.to_string().trim().parse::<i32>().unwrap_or(0);
     let (glyph, _font) = font_decode(n, None, None);
     if let Some(ch) = glyph {
-      vec![Tbox::new(arena::pin_char(ch), None, None, Tokens!(), SymHashMap::default()).into()]
+      vec![Tbox::new(pin_char(ch), None, None, Tokens!(), SymHashMap::default()).into()]
     } else {
       Vec::new()
     }
@@ -10387,8 +10367,8 @@ LoadDefinitions!({
 
   // \@@end — saved TeX \end primitive
   DefPrimitive!("\\@@end", {
-    if !state::lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
-      gullet::flush();
+    if !lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
+      flush();
     }
   });
 
@@ -10477,7 +10457,7 @@ LoadDefinitions!({
   // Perl L5687-5695 — \@ifnextchar + siblings (closure-backed).
   // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
   DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
-    let next = gullet::read_non_space()?;
+    let next = read_non_space()?;
     let next_test = match next {
       Some(ref n) => XEquals!(&token, n),
       None => XEquals!(&token, &*TOKEN_END)

@@ -25,6 +25,5 @@ LoadDefinitions!({
   // double-f spelling) is a journal-specific proof env distinct
   // from amsthm's `\proof`. Used as `\begin{prooff}` ... `\end{prooff}`
   // in IEEE-LCSYS papers. Witness 2403.10384.
-  DefEnvironment!("{prooff}",
-    "<ltx:proof>#body</ltx:proof>");
+  DefEnvironment!("{prooff}", "<ltx:proof>#body</ltx:proof>");
 });

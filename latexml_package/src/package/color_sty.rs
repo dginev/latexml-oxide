@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::common::color::{self, Color, color_from_model_spec};
+
+use crate::prelude::*;
 
 /// Parse a color from an optional model name and a spec string.
 /// If model is given, constructs the Color directly.
@@ -23,7 +24,7 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
       // Perl reaches the same end-state (it loads dvipsnam for this paper);
       // witness 2005.01533 (revtex4-2 → hyperref preloads color →
       // `\definecolor{red}{named}{Red}` → `named_Red` undefined).
-      if state::lookup_value(&format!("color_{key}")).is_none() {
+      if lookup_value(&format!("color_{key}")).is_none() {
         let _ = input_definitions("dvipsnam", InputDefinitionOptions {
           extension: Some(Cow::Borrowed("def")),
           noerror: true,
@@ -59,15 +60,15 @@ fn try_color_algebra(name: &str) -> Option<Color> {
     let pct_str = parts[i];
     let pct: f64 = pct_str.parse().ok()?;
     let pct_frac = (pct / 100.0).clamp(0.0, 1.0);
-    let other = if i + 1 < parts.len() && !parts[i + 1].is_empty()
-      && parts[i + 1].parse::<f64>().is_err() {
-      let o = lookup_color_obj_no_algebra(parts[i + 1]);
-      i += 2;
-      o
-    } else {
-      i += 1;
-      color::WHITE
-    };
+    let other =
+      if i + 1 < parts.len() && !parts[i + 1].is_empty() && parts[i + 1].parse::<f64>().is_err() {
+        let o = lookup_color_obj_no_algebra(parts[i + 1]);
+        i += 2;
+        o
+      } else {
+        i += 1;
+        color::WHITE
+      };
     // xcolor `c!p!c2`: mix c at p% with c2. mix(self, other, fraction)
     // expects fraction = weight of `other`; xcolor's `p` is weight of `self`.
     current = current.mix(&other, 1.0 - pct_frac);
@@ -85,9 +86,9 @@ fn lookup_color_obj_no_algebra(name: &str) -> Color {
     return color::BLACK;
   }
   let key = s!("color_{name}");
-  match state::lookup_value(&key) {
+  match lookup_value(&key) {
     Some(Stored::String(sym)) => {
-      let stored_str = arena::with(sym, |s| s.to_string());
+      let stored_str = with(sym, |s| s.to_string());
       Color::from_stored(&stored_str).unwrap_or(color::BLACK)
     },
     _ => color::BLACK,
@@ -110,9 +111,9 @@ pub fn lookup_color_obj(name: &str) -> Color {
     return mixed;
   }
   let key = s!("color_{name}");
-  match state::lookup_value(&key) {
+  match lookup_value(&key) {
     Some(Stored::String(sym)) => {
-      let stored_str = arena::with(sym, |s| s.to_string());
+      let stored_str = with(sym, |s| s.to_string());
       Color::from_stored(&stored_str).unwrap_or_else(|| {
         Info!("undefined", name, &s!("color '{}' is undefined...", name));
         color::BLACK
@@ -131,21 +132,21 @@ pub fn lookup_color_obj(name: &str) -> Color {
       // wins. Witness 1705.06183 (revtex4-1 + hyperref + `\lstset{…\color{Blue}}`).
       // The `named`-model path (parse_color above) already does the analogous
       // lazy-load; this covers the plain `\color{Blue}` (no model) path.
-      if !state::lookup_bool("color_dvipsnam_lazy_loaded") {
-        state::assign_value("color_dvipsnam_lazy_loaded", true, Some(Scope::Global));
-        state::assign_value("color_usenames_active", true, Some(Scope::Global));
+      if !lookup_bool("color_dvipsnam_lazy_loaded") {
+        assign_value("color_dvipsnam_lazy_loaded", true, Some(Scope::Global));
+        assign_value("color_usenames_active", true, Some(Scope::Global));
         // Force the 68 dvips colors GLOBAL: we are inside a grouped digestion
         // (e.g. `\textcolor{Blue}{…}`), so without this they'd be local and
         // revert before the next color is looked up (see `def_color`).
-        state::assign_value("color_force_global", true, Some(Scope::Global));
+        assign_value("color_force_global", true, Some(Scope::Global));
         let _ = input_definitions("dvipsnam", InputDefinitionOptions {
           extension: Some(Cow::Borrowed("def")),
           noerror: true,
           ..InputDefinitionOptions::default()
         });
-        state::assign_value("color_force_global", false, Some(Scope::Global));
-        if let Some(Stored::String(sym)) = state::lookup_value(&key) {
-          let stored_str = arena::with(sym, |s| s.to_string());
+        assign_value("color_force_global", false, Some(Scope::Global));
+        if let Some(Stored::String(sym)) = lookup_value(&key) {
+          let stored_str = with(sym, |s| s.to_string());
           if let Some(c) = Color::from_stored(&stored_str) {
             return c;
           }
@@ -162,11 +163,11 @@ pub fn lookup_color_obj(name: &str) -> Color {
       // `lookup_color_obj` returns `Color`, not `Result<Color>`.
       assign_value(
         &s!("color_{name}"),
-        Stored::String(arena::pin(color::BLACK.to_stored())),
+        Stored::String(pin(color::BLACK.to_stored())),
         None,
       );
-      latexml_core::common::error::note_status(latexml_core::common::error::LogStatus::Error, None);
-      if !latexml_core::common::error::is_log_output_suppressed() {
+      note_status(LogStatus::Error, None);
+      if !is_log_output_suppressed() {
         log::error!(
           target: &format!("unexpected:{}", name),
           "Can't find color named '{}'; assuming Black",
@@ -220,7 +221,7 @@ LoadDefinitions!({
   // fix). Driver: 1205.2217 (`\lstset{keywordstyle=...\color{Blue}}`
   // 16 × `unexpected:Blue` → 0 errors).
   DeclareOption!("usenames", {
-    state::assign_value("color_usenames_active", true, Some(Scope::Global));
+    assign_value("color_usenames_active", true, Some(Scope::Global));
   });
   // Options that want the dvipsnam definitions
   for option in &["dvips", "xdvi", "oztex", "dvipsnames"] {
@@ -251,7 +252,7 @@ LoadDefinitions!({
     let reversion_tokens = Invocation!("\\definecolor",
       vec![Some(name_expanded), Some(model_expanded), Some(spec_expanded)]);
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
-      reversion_tokens, arena::SymHashMap::default()))])
+      reversion_tokens, SymHashMap::default()))])
   });
 
   // \DefineNamedColor{dmodel}{name}{model}{spec}
@@ -275,7 +276,7 @@ LoadDefinitions!({
     // `usenames` package option, ALSO expose the plain name so
     // `\color{Blue}` works after `\DefineNamedColor{named}{Blue}...`.
     // Driver: 1205.2217 dvipsnam.def's 68 named colors used directly.
-    if state::lookup_bool("color_usenames_active") {
+    if lookup_bool("color_usenames_active") {
       def_color(&name_str, &color, None)?;
     }
     // Perl L73: Box with reversion Invocation preserving all four args.
@@ -283,7 +284,7 @@ LoadDefinitions!({
       vec![Some(dmodel_expanded), Some(name_expanded),
            Some(model_expanded), Some(spec_expanded)]);
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
-      reversion_tokens, arena::SymHashMap::default()))])
+      reversion_tokens, SymHashMap::default()))])
   });
 
   // \color[model]{spec} or \color{name}
@@ -294,8 +295,8 @@ LoadDefinitions!({
     let color = parse_color(model_str.as_deref(), &spec_str);
 
     // If in preamble, store for \normalcolor
-    if state::lookup_bool_sym(pin!("inPreamble")) {
-      assign_value("preambleTextcolor", Stored::String(arena::pin(color.to_stored())), None);
+    if lookup_bool_sym(pin!("inPreamble")) {
+      assign_value("preambleTextcolor", Stored::String(pin(color.to_stored())), None);
     }
     merge_font(fontmap!(color => color));
 
@@ -312,7 +313,7 @@ LoadDefinitions!({
       vec![Some(Tokens::from(T_OTHER!("rgb"))),
            Some(Tokens::from(T_OTHER!(&*comps)))]);
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
-      reversion_tokens, arena::SymHashMap::default()))])
+      reversion_tokens, SymHashMap::default()))])
   });
 
   // \pagecolor[model]{spec}
@@ -328,14 +329,14 @@ LoadDefinitions!({
       vec![model_str.as_deref().map(|s| Tokens::from(T_OTHER!(s))),
            Some(Tokens::from(T_OTHER!(&*spec_str)))]);
     Ok(vec![Digested::from(Tbox::new(pin!(""), None, None,
-      reversion_tokens, arena::SymHashMap::default()))])
+      reversion_tokens, SymHashMap::default()))])
   });
 
   // \normalcolor — restores color from preamble
   DefPrimitive!("\\normalcolor", {
-    let color = match state::lookup_value("preambleTextcolor") {
+    let color = match lookup_value("preambleTextcolor") {
       Some(Stored::String(sym)) => {
-        let stored_str = arena::with(sym, |s| s.to_string());
+        let stored_str = with(sym, |s| s.to_string());
         Color::from_stored(&stored_str).unwrap_or(color::BLACK)
       },
       _ => color::BLACK,
@@ -366,7 +367,7 @@ LoadDefinitions!({
       let text_tokens = whatsit.get_arg(4).map(|t| t.revert()).transpose()?;
 
       let framecolor = parse_color(model_str.as_deref(), &fspec_str);
-      whatsit.set_property("framecolor", Stored::String(arena::pin(framecolor.to_attribute())));
+      whatsit.set_property("framecolor", Stored::String(pin(framecolor.to_attribute())));
 
       let bgcolor = parse_color(model_str.as_deref(), &bspec_str);
       merge_font(fontmap!(bg => bgcolor));

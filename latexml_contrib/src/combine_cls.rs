@@ -33,15 +33,21 @@ LoadDefinitions!({
   // Use a flag toggled at env begin/end; redefine the kernel CS
   // to a conditional no-op only while `\ifc@lpapers` is true.
   RawTeX!(r"\newif\ifc@lpapers");
-  DefMacro!(T_CS!("\\begin{papers}"), None,
+  DefMacro!(
+    T_CS!("\\begin{papers}"),
+    None,
     "\\c@lpaperstrue\\let\\c@l@orig@docclass\\documentclass\
      \\let\\c@l@orig@usepackage\\usepackage\
      \\def\\documentclass{\\c@lpapers@gobble@docclass}%
-     \\def\\usepackage{\\c@lpapers@gobble@usepackage}");
-  DefMacro!(T_CS!("\\end{papers}"), None,
+     \\def\\usepackage{\\c@lpapers@gobble@usepackage}"
+  );
+  DefMacro!(
+    T_CS!("\\end{papers}"),
+    None,
     "\\let\\documentclass\\c@l@orig@docclass\
      \\let\\usepackage\\c@l@orig@usepackage\
-     \\c@lpapersfalse");
+     \\c@lpapersfalse"
+  );
   // Helpers gobble optional + mandatory args.
   DefMacro!("\\c@lpapers@gobble@docclass [] {}", None);
   DefMacro!("\\c@lpapers@gobble@usepackage [] {}", None);
@@ -52,15 +58,15 @@ LoadDefinitions!({
   // below to also gobble inner \documentclass / \usepackage.)
   // \pretitle / \posttitle / \preauthor / \postauthor / \predate /
   // \postdate — combine.cls hooks for sub-document title pages.
-  DefMacro!("\\pretitle{}",  None);
+  DefMacro!("\\pretitle{}", None);
   DefMacro!("\\posttitle{}", None);
   DefMacro!("\\preauthor{}", None);
   DefMacro!("\\postauthor{}", None);
-  DefMacro!("\\predate{}",   None);
-  DefMacro!("\\postdate{}",  None);
+  DefMacro!("\\predate{}", None);
+  DefMacro!("\\postdate{}", None);
   // `\c@l...` family — combine.cls internal hooks. No-ops since we
   // don't combine multiple sub-documents.
   DefMacro!("\\c@lbusepackage[]{}", None);
-  DefMacro!("\\c@lbLoadClass",      None);
+  DefMacro!("\\c@lbLoadClass", None);
   DefMacro!("\\c@lbdocumentclass[]{}", None);
 });

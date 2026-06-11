@@ -42,18 +42,18 @@ LoadDefinitions!({
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
     let pkg_owned = pkg.to_string();
     DeclareOption!(*pkg, {
-      state::assign_value(&s!("revtex_load_{}", pkg_owned), true, Some(Scope::Global));
+      assign_value(&s!("revtex_load_{}", pkg_owned), true, Some(Scope::Global));
     });
     let nopkg = s!("no{}", pkg);
     DeclareOption!(&nopkg, {
-      state::assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
+      assign_value(&s!("revtex_load_{}", pkg), false, Some(Scope::Global));
     });
   }
 
   // Perl L47-49: osajnl also pushes `graphics` onto @revtex_toload (deferred
   // load) and DefMacros \ocis -> \pacs. Defer graphics like the AMS bundle.
   DeclareOption!("osajnl", {
-    state::assign_value("revtex_load_graphics", true, Some(Scope::Global));
+    assign_value("revtex_load_graphics", true, Some(Scope::Global));
     DefMacro!("\\ocis", "\\pacs");
   });
 
@@ -73,11 +73,11 @@ LoadDefinitions!({
   // `\DeclareMathOperator`) finds it defined. Faithful order (sister fix to
   // revtex4_1_cls.rs, witness 1508.02642).
   for pkg in ["amsfonts", "amssymb", "amsmath"].iter() {
-    if state::lookup_bool(&s!("revtex_load_{}", pkg)) {
+    if lookup_bool(&s!("revtex_load_{}", pkg)) {
       RequirePackage!(*pkg);
     }
   }
-  if state::lookup_bool("revtex_load_graphics") {
+  if lookup_bool("revtex_load_graphics") {
     RequirePackage!("graphics");
   }
 

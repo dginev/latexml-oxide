@@ -15,10 +15,10 @@
 //! intentionally excluded — those are validated end-to-end via the
 //! 100k canvas sweep, not the in-tree test suite.
 
+use std::{rc::Rc, sync::Once};
+
 use latexml::converter::Converter;
 use latexml_core::common::{Config, OutputFormat};
-use std::rc::Rc;
-use std::sync::Once;
 
 static LOGGER_INIT: Once = Once::new();
 

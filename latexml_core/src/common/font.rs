@@ -1,11 +1,11 @@
-use crate::binding::content::{load_font_map, preload_font_map};
-use crate::common::arena::{self, SymHashMap, SymStr};
-use crate::common::color::{self, Color};
-use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::{NumericOps, UNITY, UNITY_F64, kround};
-use crate::common::store::Stored;
-use crate::state::*;
-use crate::{BoxOps, Digested, DigestedData, Result};
+use std::{
+  borrow::Cow,
+  cmp::max,
+  fmt,
+  hash::{Hash, Hasher},
+  rc::Rc,
+};
+
 use once_cell::sync::Lazy;
 /// Note that this has evolved way beynond just "font",
 /// but covers text properties (or even display properties) in general
@@ -15,15 +15,24 @@ use once_cell::sync::Lazy;
 /// NOTE: This is now in Common that it may evolve to be useful in Post processing...
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
-use std::borrow::Cow;
-use std::cmp::max;
-use std::fmt;
-use std::hash::{Hash, Hasher};
-use std::rc::Rc;
+
+use crate::{
+  BoxOps, Digested, DigestedData, Result,
+  binding::content::{load_font_map, preload_font_map},
+  common::{
+    arena::{self, SymHashMap, SymStr},
+    color::{self, Color},
+    dimension::Dimension,
+    numeric_ops::{NumericOps, UNITY, UNITY_F64, kround},
+    store::Stored,
+  },
+  state::*,
+};
 
 pub mod standard_metrics;
-use crate::pin;
 use standard_metrics::{MetricData, STDMETRICS};
+
+use crate::pin;
 
 pub type Fontmap = Rc<[Option<char>]>;
 
@@ -332,10 +341,10 @@ pub fn get_metric_for_name(name: &str) -> &'static MetricData {
     buf[..base_bytes.len()].copy_from_slice(base_bytes);
     buf[base_bytes.len()] = b'1';
     buf[base_bytes.len() + 1] = b'0';
-    if let Ok(s) = std::str::from_utf8(&buf[..base_bytes.len() + 2]) {
-      if let Some(m) = STDMETRICS.get(s) {
-        return m;
-      }
+    if let Ok(s) = std::str::from_utf8(&buf[..base_bytes.len() + 2])
+      && let Some(m) = STDMETRICS.get(s)
+    {
+      return m;
     }
   }
   // Ultimate fallback to "cmr"
@@ -623,35 +632,35 @@ impl Font {
       .as_deref()
       .map(|f| if f == "math" { "serif" } else { f });
     let mut parts: Vec<&str> = Vec::new();
-    if let Some(f) = fam {
-      if f != DEFFAMILY {
-        parts.push(f);
-      }
+    if let Some(f) = fam
+      && f != DEFFAMILY
+    {
+      parts.push(f);
     }
-    if let Some(ref ser) = self.series {
-      if ser.as_ref() != DEFSERIES {
-        parts.push(ser);
-      }
+    if let Some(ref ser) = self.series
+      && ser.as_ref() != DEFSERIES
+    {
+      parts.push(ser);
     }
-    if let Some(ref shp) = self.shape {
-      if shp.as_ref() != DEFSHAPE {
-        parts.push(shp);
-      }
+    if let Some(ref shp) = self.shape
+      && shp.as_ref() != DEFSHAPE
+    {
+      parts.push(shp);
     }
     // Size: use temporary string for formatting
     let size_str;
-    if let Some(siz) = self.size {
-      if (siz - defsize()).abs() > 0.001 {
-        size_str = siz.to_string();
-        parts.push(&size_str);
-      }
+    if let Some(siz) = self.size
+      && (siz - defsize()).abs() > 0.001
+    {
+      size_str = siz.to_string();
+      parts.push(&size_str);
     }
     let color_str;
-    if let Some(ref col) = self.color {
-      if *col != DEFCOLOR {
-        color_str = col.to_attribute();
-        parts.push(&color_str);
-      }
+    if let Some(ref col) = self.color
+      && *col != DEFCOLOR
+    {
+      color_str = col.to_attribute();
+      parts.push(&color_str);
     }
     let bg_str;
     if let Some(ref bkg) = self.bg {
@@ -659,20 +668,20 @@ impl Font {
       bg_str = bkg.to_attribute();
       parts.push(&bg_str);
     }
-    if let Some(ref opa) = self.opacity {
-      if opa.as_ref() != DEFOPACITY {
-        parts.push(opa);
-      }
+    if let Some(ref opa) = self.opacity
+      && opa.as_ref() != DEFOPACITY
+    {
+      parts.push(opa);
     }
     if let Some(ref ms) = self.mathstyle {
       parts.push(ms);
     }
     let flags_str;
-    if let Some(flags) = self.flags {
-      if flags != 0 {
-        flags_str = flags.to_string();
-        parts.push(&flags_str);
-      }
+    if let Some(flags) = self.flags
+      && flags != 0
+    {
+      flags_str = flags.to_string();
+      parts.push(&flags_str);
     }
     format!("Font[{}]", parts.join(","))
   }
@@ -731,10 +740,10 @@ impl Font {
   /// Perl: mergePurestyle
   pub fn merge_purestyle(&self, changes: &Font) -> Self {
     let mut new = self.clone();
-    if let Some(scale) = changes.scale {
-      if let Some(ref mut sz) = new.size {
-        *sz *= scale;
-      }
+    if let Some(scale) = changes.scale
+      && let Some(ref mut sz) = new.size
+    {
+      *sz *= scale;
     }
     if changes.color.is_some() {
       new.color.clone_from(&changes.color);
@@ -747,10 +756,10 @@ impl Font {
     }
     if let Some(step) = changes.mathstylestep {
       let cur_style: &str = new.mathstyle.as_deref().unwrap_or("display");
-      if let Some(step_map) = STEP_MATH_STYLE.get(cur_style) {
-        if let Some(new_style) = step_map.get(&step) {
-          new.mathstyle = Some(Cow::Borrowed(new_style));
-        }
+      if let Some(step_map) = STEP_MATH_STYLE.get(cur_style)
+        && let Some(new_style) = step_map.get(&step)
+      {
+        new.mathstyle = Some(Cow::Borrowed(new_style));
       }
     }
     new
@@ -761,22 +770,16 @@ impl Font {
   pub fn math_bearing(&self, thisbox: &Digested, prevbox: &Digested) -> f64 {
     let r0 = prevbox
       .get_property("role")
-      .and_then(|s| {
-        match s.into_owned() { Stored::String(sym) => {
-          Some(arena::with(sym, |s| s.to_string()))
-        } _ => {
-          None
-        }}
+      .and_then(|s| match s.into_owned() {
+        Stored::String(sym) => Some(arena::with(sym, |s| s.to_string())),
+        _ => None,
       })
       .unwrap_or_else(|| "ID".to_string());
     let r1 = thisbox
       .get_property("role")
-      .and_then(|s| {
-        match s.into_owned() { Stored::String(sym) => {
-          Some(arena::with(sym, |s| s.to_string()))
-        } _ => {
-          None
-        }}
+      .and_then(|s| match s.into_owned() {
+        Stored::String(sym) => Some(arena::with(sym, |s| s.to_string())),
+        _ => None,
       })
       .unwrap_or_else(|| "ID".to_string());
     let t0 = *MATH_ATOM_TYPE.get(r0.as_str()).unwrap_or(&0);
@@ -796,16 +799,16 @@ impl Font {
       3 => T_CS!("\\thickmuskip"),
       _ => return 0.0,
     };
-    if let Ok(Some(def)) = lookup_definition(&reg_cs) {
-      if let Some(val) = def.value_of(Vec::new()) {
-        // Perl: $STATE->lookupDefinition(...)->valueOf->spValue
-        // MuGlue->spValue = fixpoint($skip/UNITY, font->getMUWidth)
-        //                 = kround((skip/UNITY) * MUWidth)
-        // The raw skip is in mu*UNITY units; convert to sp via MUWidth.
-        let skip = val.value_of();
-        let mu_width = self.get_mu_width() as f64;
-        return (skip as f64 / UNITY_F64 * mu_width).trunc();
-      }
+    if let Ok(Some(def)) = lookup_definition(&reg_cs)
+      && let Some(val) = def.value_of(Vec::new())
+    {
+      // Perl: $STATE->lookupDefinition(...)->valueOf->spValue
+      // MuGlue->spValue = fixpoint($skip/UNITY, font->getMUWidth)
+      //                 = kround((skip/UNITY) * MUWidth)
+      // The raw skip is in mu*UNITY units; convert to sp via MUWidth.
+      let skip = val.value_of();
+      let mu_width = self.get_mu_width() as f64;
+      return (skip as f64 / UNITY_F64 * mu_width).trunc();
     }
     0.0
   }
@@ -895,10 +898,10 @@ impl Font {
     flags |= self.flags.unwrap_or(0);
 
     // Dynamic adjustment directives
-    if let Some(scale) = other.scale {
-      if let Some(ref mut sz) = size {
-        *sz *= scale;
-      }
+    if let Some(scale) = other.scale
+      && let Some(ref mut sz) = size
+    {
+      *sz *= scale;
     }
 
     // Scale factor for mathstyle-based sizing
@@ -1121,15 +1124,15 @@ impl Font {
         parts.push(f.to_string());
       }
     }
-    if let Some(ref ser) = self.series {
-      if ser.as_ref() != DEFSERIES {
-        parts.push(ser.to_string());
-      }
+    if let Some(ref ser) = self.series
+      && ser.as_ref() != DEFSERIES
+    {
+      parts.push(ser.to_string());
     }
-    if let Some(ref shp) = self.shape {
-      if shp.as_ref() != DEFSHAPE {
-        parts.push(shp.to_string());
-      }
+    if let Some(ref shp) = self.shape
+      && shp.as_ref() != DEFSHAPE
+    {
+      parts.push(shp.to_string());
     }
     parts.join(" ")
   }
@@ -1277,12 +1280,12 @@ impl Font {
       changes.color = Some(othercolor.copied().unwrap_or(DEFCOLOR));
     }
 
-    if let Some(ms) = mathstyle {
-      if let Some(os) = othermathstyle {
-        let ms_str: &str = ms;
-        let os_str: &str = os;
-        changes.mathstylestep = Some(*MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
-      }
+    if let Some(ms) = mathstyle
+      && let Some(os) = othermathstyle
+    {
+      let ms_str: &str = ms;
+      let os_str: &str = os;
+      changes.mathstylestep = Some(*MATH_STYLE_STEP.get(ms_str).unwrap().get(os_str).unwrap());
     }
     changes
   }
@@ -1303,10 +1306,10 @@ impl Font {
     let ch_key = c_opt.map(|c| c.encode_utf8(&mut ch_buf) as &str);
     if let Some(name) = lookup_metric_name(family, series, shape) {
       let fullname = format!("{name}{size}");
-      if let Some(metric) = STDMETRICS.get(fullname.as_str()) {
-        if ch_key.is_none_or(|k| metric.sizes.contains_key(k)) {
-          return metric;
-        }
+      if let Some(metric) = STDMETRICS.get(fullname.as_str())
+        && ch_key.is_none_or(|k| metric.sizes.contains_key(k))
+      {
+        return metric;
       }
       // Try base name fallback
       let metric = get_metric_for_name(name);
@@ -1464,15 +1467,14 @@ impl Font {
     };
     // Perl L643-648: wrapwidth for paragraph layout
     let wrapwidth = if layout == "paragraph" {
-      let ww = match options.get("width") {
+      match options.get("width") {
         Some(Stored::Dimension(d)) => Some(d.value_of()),
         Some(Stored::Int(i)) => Some(*i),
         _ => match lookup_definition(&T_CS!("\\hsize"))? {
           Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
           None => None,
         },
-      };
-      ww
+      }
     } else {
       None
     };
@@ -1588,27 +1590,26 @@ impl Font {
         ht = max(ht, h);
         dp = max(dp, d);
         // Perl L734-741: Kern HACK for lists of individual Box's
-        if let Some(pb) = prevbox {
-          if matches!(pb.data(), DigestedData::TBox(_))
-            && matches!(bx.data(), DigestedData::TBox(_))
+        if let Some(pb) = prevbox
+          && matches!(pb.data(), DigestedData::TBox(_))
+          && matches!(bx.data(), DigestedData::TBox(_))
+        {
+          let prevchar = pb.get_string()?.chars().last();
+          let curchar = bx.get_string()?.chars().next();
+          let metric = self.get_metric(curchar);
+          // Perl L738-739: math bearing
+          if let Some(family) = self.get_family()
+            && family == "math"
           {
-            let prevchar = pb.get_string()?.chars().last();
-            let curchar = bx.get_string()?.chars().next();
-            let metric = self.get_metric(curchar);
-            // Perl L738-739: math bearing
-            if let Some(family) = self.get_family() {
-              if family == "math" {
-                wd += self.math_bearing(bx, pb);
-              }
-            }
-            // Perl L740-741: kerning
-            if let Some(prevc) = prevchar {
-              if let Some(curc) = curchar {
-                let kern_key = String::from(prevc) + &String::from(curc);
-                if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
-                  wd += size as f64 * kern;
-                }
-              }
+            wd += self.math_bearing(bx, pb);
+          }
+          // Perl L740-741: kerning
+          if let Some(prevc) = prevchar
+            && let Some(curc) = curchar
+          {
+            let kern_key = String::from(prevc) + &String::from(curc);
+            if let Some(kern) = metric.kerns.get(kern_key.as_str()) {
+              wd += size as f64 * kern;
             }
           }
         }
@@ -1935,14 +1936,14 @@ pub fn decode(code: u8, encoding_opt: Option<String>, implicit: bool) -> Option<
     if let Some(encmap) = load_font_map(&encoding) {
       // OK got some map.
       map = Some(encmap);
-      if let Some(ref font) = font {
-        if let Some(family) = (*font).get_family() {
-          with_value(&s!("{encoding}_{family}_fontmap"), |fmap_opt| {
-            if let Some(fmap) = fmap_opt {
-              map = fmap.into(); // Use the family specific map, if any.
-            }
-          });
-        }
+      if let Some(ref font) = font
+        && let Some(family) = (*font).get_family()
+      {
+        with_value(&s!("{encoding}_{family}_fontmap"), |fmap_opt| {
+          if let Some(fmap) = fmap_opt {
+            map = fmap.into(); // Use the family specific map, if any.
+          }
+        });
       }
     }
   }
@@ -1994,14 +1995,14 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
     if let Some(encmap) = load_font_map(encoding) {
       // OK got some map.
       map = Some(encmap);
-      if let Some(ref font) = font {
-        if let Some(family) = (*font).get_family() {
-          with_value(&s!("{}_{}_fontmap", encoding, family), |fmap_opt| {
-            if let Some(fmap) = fmap_opt {
-              map = fmap.into(); // Use the family specific map, if any.
-            }
-          });
-        }
+      if let Some(ref font) = font
+        && let Some(family) = (*font).get_family()
+      {
+        with_value(&s!("{}_{}_fontmap", encoding, family), |fmap_opt| {
+          if let Some(fmap) = fmap_opt {
+            map = fmap.into(); // Use the family specific map, if any.
+          }
+        });
       }
     }
   }
@@ -2028,11 +2029,11 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
           let code = c as u16; // u16, so that Unicode chars get cast correctly
           if code < 128 {
             // Check multi-char override first
-            if let Some(ref mc) = multichar_map {
-              if let Some(mc_str) = mc.get(&(code as u8).to_string()) {
-                result_string.push_str(mc_str);
-                continue;
-              }
+            if let Some(ref mc) = multichar_map
+              && let Some(mc_str) = mc.get(&(code as u8).to_string())
+            {
+              result_string.push_str(mc_str);
+              continue;
             }
             if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
               push_fontmap_char(&mut result_string, *mapc_val, code as u8);
@@ -2046,11 +2047,11 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
       } else if let Some(ref map_ref) = map {
         let code = c as u8;
         // Check multi-char override first
-        if let Some(ref mc) = multichar_map {
-          if let Some(mc_str) = mc.get(&code.to_string()) {
-            result_string.push_str(mc_str);
-            continue;
-          }
+        if let Some(ref mc) = multichar_map
+          && let Some(mc_str) = mc.get(&code.to_string())
+        {
+          result_string.push_str(mc_str);
+          continue;
         }
         if let Some(Some(mapc_val)) = map_ref.get(code as usize) {
           push_fontmap_char(&mut result_string, *mapc_val, code);

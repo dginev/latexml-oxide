@@ -14,8 +14,7 @@
 //! Faithful to Perl `LaTeXML::Post::XSLT::process` L71-78 (the CSS/JAVASCRIPT
 //! param copy, which sits OUTSIDE the `noresources` guard).
 
-use std::path::Path;
-use std::process::Command;
+use std::{path::Path, process::Command};
 
 const HELLO_TEX: &str = "\\documentclass{article}\n\
                          \\begin{document}\n\

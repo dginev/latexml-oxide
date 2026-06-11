@@ -10,20 +10,19 @@ use latexml_package::prelude::*;
 /// `<ltx:classification>` is a content-model violation
 /// ("ltx:classification isn't allowed in ltx:abstract"). Witness 2009.00379.
 fn push_classification_to_frontmatter(
-  whatsit: &mut latexml_core::whatsit::Whatsit,
+  whatsit: &mut Whatsit,
   scheme: &str,
-) -> latexml_core::Result<Vec<latexml_core::digested::Digested>> {
-  use latexml_core::BoxOps;
-  use latexml_core::common::store::Stored;
+) -> Result<Vec<Digested>> {
+  use latexml_core::{BoxOps, common::store::Stored};
   if let Some(body) = whatsit.get_body()? {
     let mut attrs: rustc_hash::FxHashMap<String, String> = rustc_hash::FxHashMap::default();
     attrs.insert("scheme".to_string(), scheme.to_string());
-    let entry = latexml_core::document::tag::TagData {
-      tag: "ltx:classification".to_string(),
-      attr: attrs,
-      content: vec![latexml_core::document::tag::TagContent::Box(body)],
+    let entry = document::tag::TagData {
+      tag:     "ltx:classification".to_string(),
+      attr:    attrs,
+      content: vec![document::tag::TagContent::Box(body)],
     };
-    latexml_core::state::with_value_mut("frontmatter", |val_opt| {
+    with_value_mut("frontmatter", |val_opt| {
       if let Some(Stored::HashTagData(frnt)) = val_opt {
         frnt
           .entry("ltx:classification".to_string())

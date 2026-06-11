@@ -3,10 +3,11 @@
 //! Port of `LaTeXML::Post::Processor`.
 //! All post-processors implement the [`Processor`] trait.
 
+use std::path::PathBuf;
+
 use libxml::tree::Node;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
-use std::path::PathBuf;
 
 use crate::document::PostDocument;
 
@@ -171,7 +172,8 @@ pub fn find_documentclass_and_packages(doc: &PostDocument) -> (ClassInfo, Vec<Pa
     // Perl Post.pm:226 — Warn('expected', 'class', undef,
     //   "No document class found; using article")
     Warn!(
-      "expected", "class",
+      "expected",
+      "class",
       "No document class found; using article"
     );
   }

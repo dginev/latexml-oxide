@@ -7,7 +7,6 @@
 //! Witness 2409.08589, 2409.08711.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -30,14 +29,21 @@ LoadDefinitions!({
   def_macro_noop("\\ninept")?;
   // \name carries the author name in Interspeech templates.
   DefMacro!("\\name{}", "\\author{#1}");
-  DefMacro!("\\address{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#1}");
-  DefMacro!("\\email{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#1}");
-  DefMacro!("\\thanks{}",
-    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
-  DefMacro!("\\keywords{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}");
-  DefMacro!("\\copyrightnotice{}",
-    "\\@add@frontmatter{ltx:note}[role=copyright]{#1}");
+  DefMacro!(
+    "\\address{}",
+    "\\@add@frontmatter{ltx:note}[role=address]{#1}"
+  );
+  DefMacro!("\\email{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  DefMacro!(
+    "\\thanks{}",
+    "\\@add@frontmatter{ltx:note}[role=thanks]{#1}"
+  );
+  DefMacro!(
+    "\\keywords{}",
+    "\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+  );
+  DefMacro!(
+    "\\copyrightnotice{}",
+    "\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
+  );
 });

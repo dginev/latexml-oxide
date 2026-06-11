@@ -61,7 +61,7 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\endcsname", {
-    if !state::lookup_bool("SUPPRESS_UNEXPECTED_ERRORS") {
+    if !lookup_bool("SUPPRESS_UNEXPECTED_ERRORS") {
       Error!("unexpected", "\\endcsname", "Extra \\endcsname");
     }
   });
@@ -75,9 +75,9 @@ LoadDefinitions!({
   // used. \globaldefs    pi if positive, all assignments are global; if negative, \global is
   // ignored.
 
-  DefPrimitive!("\\global",{ state::set_prefix("global"); }, is_prefix => true);
-  DefPrimitive!("\\long",  { state::set_prefix("long");   }, is_prefix => true);
-  DefPrimitive!("\\outer", { state::set_prefix("outer");  }, is_prefix => true);
+  DefPrimitive!("\\global",{ set_prefix("global"); }, is_prefix => true);
+  DefPrimitive!("\\long",  { set_prefix("long");   }, is_prefix => true);
+  DefPrimitive!("\\outer", { set_prefix("outer");  }, is_prefix => true);
 
   DefRegister!("\\globaldefs", Number!(0));
   //======================================================================
@@ -129,23 +129,23 @@ LoadDefinitions!({
   // independent of whether `=` was consumed.
   DefPrimitive!("\\let SkipSpaces Token", sub[(token1)] {
     // <equals> = optional-spaces ['=']
-    gullet::skip_spaces()?;
-    if let Some(t) = gullet::read_token()? {
+    skip_spaces()?;
+    if let Some(t) = read_token()? {
       let is_eq =
-        t.get_catcode() == latexml_core::token::Catcode::OTHER && t.text == pin!("=");
+        t.get_catcode() == Catcode::OTHER && t.text == pin!("=");
       if !is_eq {
-        gullet::unread_one(t);
+        unread_one(t);
       }
     }
     // <one optional space>
-    gullet::skip_one_space(false)?;
+    skip_one_space(false)?;
     // <token>
-    let token2 = gullet::read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
+    let token2 = read_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     Let!(token1, token2);
   });
   DefPrimitive!("\\futurelet Token Token Token", sub[(cs, token1, token2)] {
     // NOT expandable, but puts tokens back
-    gullet::unread(Tokens!(token1,token2));
+    unread(Tokens!(token1,token2));
     Let!(cs, token2);
   });
   //======================================================================
@@ -157,9 +157,9 @@ LoadDefinitions!({
     let mut xtok = xtok;
     let mut skipped : Vec<Token> = vec![tok];
     while xtok.defined_as(&TOKEN_EXPANDAFTER) {
-      if let Some(ntok) = gullet::read_token()? {
+      if let Some(ntok) = read_token()? {
         skipped.push(ntok);
-        if let Some(nxtok) = gullet::read_token()? {
+        if let Some(nxtok) = read_token()? {
           xtok = nxtok;
         } else {
           Error!("expected","expandafter", "\\expandafter wrongly used without 2 arguments.");
@@ -169,17 +169,17 @@ LoadDefinitions!({
       }
     }
     match lookup_expandable(&xtok, None)? { Some(defn) => {
-      state::local_current_token(xtok);
+      local_current_token(xtok);
       let invoked = defn.invoke(true)?;
       if !invoked.is_empty() {
         skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
       }
-      state::expire_current_token();
+      expire_current_token();
     } _ => if !has_meaning(&xtok) {
       // Undefined token is an error, as expansion is expected.
       // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
       // since probably in a real TeX run it would have been defined.
-      state::generate_error_stub(&xtok)?;
+      generate_error_stub(&xtok)?;
       skipped.push(xtok);
     } else {
       skipped.push(xtok);
@@ -196,9 +196,9 @@ LoadDefinitions!({
   // (Gullet rewrites `\dont_expand X` into `\special_relax` with `X`
   // smuggled in slot[2]; that asymmetry is the whole point).
   DefMacro!(T_CS!("\\noexpand"), None, {
-    if let Some(token) = gullet::read_token()? {
+    if let Some(token) = read_token()? {
       let cc = token.get_catcode();
-      if matches!(cc, Catcode::CS | Catcode::ACTIVE) && state::is_dont_expandable(&token) {
+      if matches!(cc, Catcode::CS | Catcode::ACTIVE) && is_dont_expandable(&token) {
         vec![T_CS!("\\dont_expand"), token]
       } else {
         vec![token]
@@ -235,7 +235,7 @@ LoadDefinitions!({
       // Driver: 2406.14142 expl3 regex VM (`\the \__int_eval:w ... \__int_eval_end:`).
       let mut effective_token = token;
       for _ in 0..16 {
-        match state::with_meaning(&effective_token, |m| match m {
+        match with_meaning(&effective_token, |m| match m {
           Some(Stored::Token(t)) => Some(*t),
           _ => None,
         }) {
@@ -243,50 +243,56 @@ LoadDefinitions!({
           _ => break,
         }
       }
-      match lookup_definition(&effective_token)? { Some(defn) => {
-        if defn.is_register() {
-          // SOME kind of register is acceptable
-          let args = if let Some(params) = defn.get_parameters() {
-            params.read_arguments(None)?
+      match lookup_definition(&effective_token)? {
+        Some(defn) => {
+          if defn.is_register() {
+            // SOME kind of register is acceptable
+            let args = if let Some(params) = defn.get_parameters() {
+              params.read_arguments(None)?
+            } else {
+              Vec::new()
+            };
+            return match defn.value_of(args) {
+              Some(RegisterValue::Token(t)) => Ok(Tokens!(t)),
+              Some(RegisterValue::Tokens(ts)) => Ok(ts),
+              Some(other) => Ok(Tokens!(Explode!(other.to_string()))),
+              None => Ok(Tokens!()),
+            };
+          } else if defn.get_cs_name() == "\\font" {
+            // HACK to get the \fontcmd that would have selected the current font (see FontDef)
+            match lookup_value("current_FontDef") {
+              Some(Stored::Token(t)) => {
+                return Ok(Tokens!(t));
+              },
+              _ => {
+                return Ok(Tokens!(T_CS!("\\lx@default@font")));
+              },
+            }
           } else {
-            Vec::new()
-          };
-          return match defn.value_of(args) {
-            Some(RegisterValue::Token(t)) => Ok(Tokens!(t)),
-            Some(RegisterValue::Tokens(ts)) => Ok(ts),
-            Some(other) => Ok(Tokens!(Explode!(other.to_string()))),
-            None => Ok(Tokens!()),
-          };
-        } else if defn.get_cs_name() == "\\font" {
-          // HACK to get the \fontcmd that would have selected the current font (see FontDef)
-          match state::lookup_value("current_FontDef") { Some(Stored::Token(t)) => {
-            return Ok(Tokens!(t));
-          } _ => {
-            return Ok(Tokens!(T_CS!("\\lx@default@font")));
-          }}
-        } else {
-          // Perl: elsif ($defn->isFontDef) { return $defn->getCS; }
-          // Check if this is a font CS defined by \font (has fontinfo in state)
-          let cs_str = token.to_string();
-          if let Some(Stored::Font(_)) = state::lookup_value(&s!("fontinfo_{cs_str}")) {
-            return Ok(Tokens!(token));
+            // Perl: elsif ($defn->isFontDef) { return $defn->getCS; }
+            // Check if this is a font CS defined by \font (has fontinfo in state)
+            let cs_str = token.to_string();
+            if let Some(Stored::Font(_)) = lookup_value(&s!("fontinfo_{cs_str}")) {
+              return Ok(Tokens!(token));
+            }
           }
-        }
-      } _ => {
-        // the token is Undefined
-        if token.get_catcode() == Catcode::CS {
-          // but IS a cs \something
-          Error!(
-            "expected",
-            "<register>",
-            "A <register> was supposed to be here",
-            s!("Got {} Defining it now.", token)
-          );
-          // Hackery: to avoid potential repeated errors, define it now as a number register
-          def_register(token, None, Number!(0), None)?; // Dimension, or what?
-          return Ok(Tokens!(T_OTHER!("0")));
-        }
-      }}
+        },
+        _ => {
+          // the token is Undefined
+          if token.get_catcode() == Catcode::CS {
+            // but IS a cs \something
+            Error!(
+              "expected",
+              "<register>",
+              "A <register> was supposed to be here",
+              s!("Got {} Defining it now.", token)
+            );
+            // Hackery: to avoid potential repeated errors, define it now as a number register
+            def_register(token, None, Number!(0), None)?; // Dimension, or what?
+            return Ok(Tokens!(T_OTHER!("0")));
+          }
+        },
+      }
       // If we fall through to here, whatever $token is shouldn't have been used with \the
       let (the_t, msg) =
         token.with_str(|tstr| (s!("\\the{tstr}"), s!("You can't use {tstr} after \\the")));

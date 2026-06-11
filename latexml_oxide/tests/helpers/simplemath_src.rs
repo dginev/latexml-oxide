@@ -23,19 +23,17 @@ fn add_math_rewrite_scoped_first(match_char: &str, role: &str, scope: &str) -> R
   );
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), role.to_string());
-  let options = latexml_core::rewrite::RewriteOptions {
+  let options = RewriteOptions {
     xpath: Some(xpath),
-    scope: Some(latexml_core::state::Scope::Named(
-      latexml_core::common::arena::pin(scope),
-    )),
+    scope: Some(Scope::Named(pin(scope))),
     attributes_map: Some(attrs_map),
     is_math: true,
     select_count: Some(1),
     ..Default::default()
   };
-  state::unshift_value("DOCUMENT_REWRITE_RULES", vec![
-    latexml_core::rewrite::Rewrite::new("math", options),
-  ]);
+  unshift_value("DOCUMENT_REWRITE_RULES", vec![Rewrite::new(
+    "math", options,
+  )]);
   Ok(())
 }
 
@@ -47,18 +45,15 @@ fn add_math_rewrite_scoped(match_char: &str, role: &str, scope: Option<&str>) ->
   );
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), role.to_string());
-  let options = latexml_core::rewrite::RewriteOptions {
+  let options = RewriteOptions {
     xpath: Some(xpath),
-    scope: scope.map(|s| latexml_core::state::Scope::Named(latexml_core::common::arena::pin(s))),
+    scope: scope.map(|s| Scope::Named(pin(s))),
     attributes_map: Some(attrs_map),
     is_math: true,
     select_count: Some(1),
     ..Default::default()
   };
-  state::push_value(
-    "DOCUMENT_REWRITE_RULES",
-    latexml_core::rewrite::Rewrite::new("math", options),
-  )
+  push_value("DOCUMENT_REWRITE_RULES", Rewrite::new("math", options))
 }
 
 /// \hat{f} → ID: accented f treated as identifier, not function.
@@ -73,17 +68,14 @@ fn add_accent_f_rewrite() -> Result<()> {
     .to_string();
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), "ID".to_string());
-  let options = latexml_core::rewrite::RewriteOptions {
+  let options = RewriteOptions {
     xpath: Some(xpath),
     attributes_map: Some(attrs_map),
     is_math: true,
     select_count: Some(1),
     ..Default::default()
   };
-  state::push_value(
-    "DOCUMENT_REWRITE_RULES",
-    latexml_core::rewrite::Rewrite::new("math", options),
-  )
+  push_value("DOCUMENT_REWRITE_RULES", Rewrite::new("math", options))
 }
 
 /// f_D → DIFFOP: f subscripted by D is a differential operator.
@@ -98,17 +90,14 @@ fn add_f_d_diffop_rewrite() -> Result<()> {
     .to_string();
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), "DIFFOP".to_string());
-  let options = latexml_core::rewrite::RewriteOptions {
+  let options = RewriteOptions {
     xpath: Some(xpath),
     attributes_map: Some(attrs_map),
     is_math: true,
     select_count: Some(2),
     ..Default::default()
   };
-  state::push_value(
-    "DOCUMENT_REWRITE_RULES",
-    latexml_core::rewrite::Rewrite::new("math", options),
-  )
+  push_value("DOCUMENT_REWRITE_RULES", Rewrite::new("math", options))
 }
 
 /// f_* → ID: f with any subscript (except D, handled above) is an identifier.
@@ -124,7 +113,7 @@ fn add_f_wildcard_rewrite() -> Result<()> {
     .to_string();
   let mut attrs_map = rustc_hash::FxHashMap::default();
   attrs_map.insert("role".to_string(), "ID".to_string());
-  let options = latexml_core::rewrite::RewriteOptions {
+  let options = RewriteOptions {
     xpath: Some(xpath),
     attributes_map: Some(attrs_map),
     // Wildcard = child 1 of sibling 2 (subscript content in POSTSUBSCRIPT XMApp)
@@ -133,10 +122,7 @@ fn add_f_wildcard_rewrite() -> Result<()> {
     select_count: Some(2),
     ..Default::default()
   };
-  state::push_value(
-    "DOCUMENT_REWRITE_RULES",
-    latexml_core::rewrite::Rewrite::new("math", options),
-  )
+  push_value("DOCUMENT_REWRITE_RULES", Rewrite::new("math", options))
 }
 
 #[rustfmt::skip]

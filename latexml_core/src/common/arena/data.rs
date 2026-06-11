@@ -1,12 +1,13 @@
-use rustc_hash::FxHashMap as HashMap;
-use std::collections::hash_map::{Entry, IntoIter, Iter, IterMut, Keys};
-use std::fmt;
-use std::iter::IntoIterator;
-use std::ops::Index;
+use std::{
+  any::type_name,
+  collections::hash_map::{Entry, IntoIter, Iter, IterMut, Keys},
+  fmt,
+  iter::IntoIterator,
+  ops::Index,
+};
 
-use std::any::type_name;
-use string_interner::Symbol;
-use string_interner::symbol::SymbolU32;
+use rustc_hash::FxHashMap as HashMap;
+use string_interner::{Symbol, symbol::SymbolU32};
 
 use crate::common::arena;
 

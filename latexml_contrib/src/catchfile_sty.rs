@@ -1,5 +1,5 @@
-use latexml_package::prelude::*;
 use latexml_core::binding::content::find_file;
+use latexml_package::prelude::*;
 
 LoadDefinitions!({
   // Perl: ar5iv-bindings/catchfile.sty.ltxml — DefMacro with Perl closure

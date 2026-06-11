@@ -61,8 +61,8 @@ LoadDefinitions!({
           ..RequireOptions::default()
         })?;
         let filename = s!("{}.sty", style);
-        state::lookup_bool(&s!("{}_loaded", filename))
-          || state::lookup_bool(&s!("{}_raw_loaded", filename))
+        lookup_bool(&s!("{}_loaded", filename))
+          || lookup_bool(&s!("{}_raw_loaded", filename))
       };
       if !primary_ok {
         require_package("amsppt", RequireOptions::default())?;
@@ -135,7 +135,7 @@ LoadDefinitions!({
   DefConstructor!("\\enddocument", "</ltx:document>",
     before_digest => {
       // Perl L127: `$_[0]->getGullet->flush;` — discards remaining input.
-      gullet::flush();
+      flush();
     });
 
   //======================================================================
@@ -158,8 +158,8 @@ LoadDefinitions!({
   DefPrimitive!("\\comment", sub[_args] {
     // Perl: `$gullet->readRawLine; # IGNORE 1st line` — discards the
     // remainder of the line that contained the `\comment` invocation.
-    gullet::read_raw_line();
-    while let Some(line) = gullet::read_raw_line() {
+    read_raw_line();
+    while let Some(line) = read_raw_line() {
       if line == "\\endcomment" {
         break;
       }
@@ -328,7 +328,7 @@ LoadDefinitions!({
   // and emits `\genfrac{}{}{<num>}{}{a}{b}`); otherwise fall through
   // to `\frac`.
   DefMacro!("\\thickfrac", sub[_args] {
-    if gullet::if_next(T_CS!("\\thickness"))? {
+    if if_next(T_CS!("\\thickness"))? {
       vec![T_CS!("\\@thickfrac")]
     } else {
       vec![T_CS!("\\frac")]
@@ -343,7 +343,7 @@ LoadDefinitions!({
   // thickness branch dispatches to `\@thickfracwithdelims` which
   // expands to `\genfrac` with custom delimiters.
   DefMacro!("\\thickfracwithdelims {}{}", sub[(d1, d2)] {
-    let dispatch = if gullet::if_next(T_CS!("\\thickness"))? {
+    let dispatch = if if_next(T_CS!("\\thickness"))? {
       T_CS!("\\@thickfracwithdelims")
     } else {
       T_CS!("\\frac")
@@ -497,12 +497,12 @@ LoadDefinitions!({
   DefConstructor!("\\cfrac", "",
     after_digest => sub[_w] {
       // Perl: $stomach->bgroup; Let(T_CS("\\\\"), T_CS('\lx@cfrac'));
-      stomach::bgroup();
+      bgroup();
       raw_tex(r"\let\\\lx@cfrac")?;
     });
   DefConstructor!("\\endcfrac", "",
     after_digest => sub[_w] {
-      stomach::egroup()?;
+      egroup()?;
     });
   Let!("\\lcfrac", "\\cfrac");
   Let!("\\rcfrac", "\\cfrac");

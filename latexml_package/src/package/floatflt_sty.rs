@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::definition::register::RegisterValue;
+
+use crate::prelude::*;
 
 /// Perl floatflt.sty.ltxml L40-42: float direction from optional arg or
 /// `floatfltpos` state: `v` / `r` prefix → right, else left. Prior Rust
@@ -13,11 +14,12 @@ fn floatflt_float_direction(whatsit: &Whatsit) -> &'static str {
   let pos_arg = pos_arg.trim().to_string();
   let pos = if !pos_arg.is_empty() {
     pos_arg
-  } else { match state::lookup_value("floatfltpos") { Some(Stored::String(sym)) => {
-    arena::with(sym, |s| s.to_string())
-  } _ => {
-    "v".to_string()
-  }}};
+  } else {
+    match lookup_value("floatfltpos") {
+      Some(Stored::String(sym)) => with(sym, |s| s.to_string()),
+      _ => "v".to_string(),
+    }
+  };
   if pos.starts_with('v') || pos.starts_with('r') {
     "right"
   } else {
@@ -35,7 +37,7 @@ fn floatflt_pct_width(whatsit: &Whatsit) -> String {
   let Ok(dim) = Dimension::from_str(&dim_arg) else {
     return String::new();
   };
-  let tw = match state::lookup_register("\\textwidth", Vec::new()) {
+  let tw = match lookup_register("\\textwidth", Vec::new()) {
     Ok(Some(RegisterValue::Dimension(d))) => d.value_of(),
     _ => return String::new(),
   };
@@ -48,11 +50,11 @@ fn floatflt_pct_width(whatsit: &Whatsit) -> String {
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  state::assign_value("floatfltpos", Stored::from("v"), None);
-  DeclareOption!("rflt", { state::assign_value("floatfltpos", Stored::from("r"), None); });
-  DeclareOption!("lflt", { state::assign_value("floatfltpos", Stored::from("l"), None); });
-  DeclareOption!("pflt", { state::assign_value("floatfltpos", Stored::from("p"), None); });
-  DeclareOption!("vflt", { state::assign_value("floatfltpos", Stored::from("v"), None); });
+  assign_value("floatfltpos", Stored::from("v"), None);
+  DeclareOption!("rflt", { assign_value("floatfltpos", Stored::from("r"), None); });
+  DeclareOption!("lflt", { assign_value("floatfltpos", Stored::from("l"), None); });
+  DeclareOption!("pflt", { assign_value("floatfltpos", Stored::from("p"), None); });
+  DeclareOption!("vflt", { assign_value("floatfltpos", Stored::from("v"), None); });
   // Use `after_digest` (runs while env frame is still active), NOT
   // `after_digest_body` which runs after the frame pops — `\@captype` set
   // by `before_float` via local-scope def_macro is gone by that point,
@@ -62,22 +64,22 @@ LoadDefinitions!({
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
     before_digest => {
-      crate::engine::latex_constructs::before_float("figure", None);
+      engine::latex_constructs::before_float("figure", None);
     },
     after_digest => sub[whatsit] {
       whatsit.set_property("float", floatflt_float_direction(whatsit));
       whatsit.set_property("pctwidth", Stored::from(floatflt_pct_width(whatsit)));
-      crate::engine::latex_constructs::after_float(whatsit);
+      engine::latex_constructs::after_float(whatsit);
     });
   DefEnvironment!("{floatingtable}[]{Dimension}",
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:table>",
     before_digest => {
-      crate::engine::latex_constructs::before_float("table", None);
+      engine::latex_constructs::before_float("table", None);
     },
     after_digest => sub[whatsit] {
       whatsit.set_property("float", floatflt_float_direction(whatsit));
       whatsit.set_property("pctwidth", Stored::from(floatflt_pct_width(whatsit)));
-      crate::engine::latex_constructs::after_float(whatsit);
+      engine::latex_constructs::after_float(whatsit);
     });
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");
   DefMacro!("\\fltditem[]{}{}",  "\\item[#2] {#3}");

@@ -6,7 +6,7 @@ use crate::prelude::*;
 fn cancel_color_properties(whatsit: &mut Whatsit) -> Result<()> {
   let inner_font = lookup_font().unwrap();
   // Always set forcefont — Perl always sets this (Digest returns truthy object)
-  whatsit.set_property("forcefont", Stored::String(arena::pin("1")));
+  whatsit.set_property("forcefont", Stored::String(pin("1")));
 
   // Digest \CancelColor in a temp group to get the cancel font
   bgroup();
@@ -18,17 +18,15 @@ fn cancel_color_properties(whatsit: &mut Whatsit) -> Result<()> {
     if let Some(ref cancel_color) = cancel_font.color {
       whatsit.set_property(
         "cancelcolor",
-        Stored::String(arena::pin(cancel_color.to_attribute())),
+        Stored::String(pin(cancel_color.to_attribute())),
       );
     }
     // Set inner color for text mode (so content stays in original color)
     // None color = inherited default (DEFCOLOR = black)
-    let inner_color = inner_font
-      .color
-      .unwrap_or(latexml_core::common::color::BLACK);
+    let inner_color = inner_font.color.unwrap_or(common::color::BLACK);
     whatsit.set_property(
       "innercolor",
-      Stored::String(arena::pin(inner_color.to_attribute())),
+      Stored::String(pin(inner_color.to_attribute())),
     );
   }
   egroup()?;

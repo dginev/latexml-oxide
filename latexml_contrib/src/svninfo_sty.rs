@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("ifthen");
   RequirePackage!("eso-pic");

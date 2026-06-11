@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   Warn!(
     "missing_file",
@@ -21,10 +20,14 @@ LoadDefinitions!({
   // `{name} is not defined`). Faithfully porting the real definer makes
   // the custom env work. Witness arXiv:2002.06879
   // (`\newmdenv[...]{mdfigure}` then `\begin{mdfigure}`).
-  DefMacro!("\\newmdenv[]{}",
-    "\\newenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}");
-  DefMacro!("\\renewmdenv[]{}",
-    "\\renewenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}");
+  DefMacro!(
+    "\\newmdenv[]{}",
+    "\\newenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}"
+  );
+  DefMacro!(
+    "\\renewmdenv[]{}",
+    "\\renewenvironment{#2}{\\mdfsetup{#1}\\begin{mdframed}}{\\end{mdframed}}"
+  );
   def_macro_noop("\\surroundwithmdframed[]{}")?;
   def_macro_noop("\\mdfsubtitle[]{}")?;
   def_macro_noop("\\mdfapptodefinestyle{}{}")?;
@@ -37,16 +40,15 @@ LoadDefinitions!({
   // the three placements an `mdframed` must support (verified against
   // resources/RelaxNG: float_model ⊇ Block.model = Block.class|Misc.class|
   // Meta.class; Para.model = Para.class|Meta.class):
-  //   * `inline-block`        (Misc.class, body=Block.model): in-float ✓, nests ✓
-  //       (Block.model ⊇ Misc.class), theorem ✗ (Block.model ⊉ Para.class).
-  //       This is what Perl ar5iv-bindings/mdframed.sty.ltxml L31-34 uses, so
-  //       Perl ITSELF errors `malformed:ltx:theorem` on a theorem-in-mdframed.
-  //   * `inline-logical-block`(Misc.class, body=Para.model): in-float ✓
-  //       (Misc.class ⊂ Block.model ⊂ float_model), theorem ✓ (Para.model ⊇
-  //       Para.class), nests ✗ — a directly-nested inner `inline-logical-block`
-  //       (Misc.class) isn't in the outer's Para.model.
-  //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓
-  //       (Para.class ∈ Para.model), in-float ✗ — Para.class ⊄ float_model.
+  //   * `inline-block`        (Misc.class, body=Block.model): in-float ✓, nests ✓ (Block.model ⊇
+  //     Misc.class), theorem ✗ (Block.model ⊉ Para.class). This is what Perl
+  //     ar5iv-bindings/mdframed.sty.ltxml L31-34 uses, so Perl ITSELF errors
+  //     `malformed:ltx:theorem` on a theorem-in-mdframed.
+  //   * `inline-logical-block`(Misc.class, body=Para.model): in-float ✓ (Misc.class ⊂ Block.model ⊂
+  //     float_model), theorem ✓ (Para.model ⊇ Para.class), nests ✗ — a directly-nested inner
+  //     `inline-logical-block` (Misc.class) isn't in the outer's Para.model.
+  //   * `logical-block`       (Para.class, body=Para.model): theorem ✓, nests ✓ (Para.class ∈
+  //     Para.model), in-float ✗ — Para.class ⊄ float_model.
   //
   // No single element does all three, and the missing auto-open bridge
   // (inline-logical-block → para → inline-logical-block, which para_model =
@@ -78,12 +80,11 @@ LoadDefinitions!({
     "{mdframed}[]",
     "<ltx:inline-logical-block framed='rectangle' ?#framecolor(framecolor='#framecolor') _noautoclose='1'>#body</ltx:inline-logical-block>",
     properties => sub[_args] {
-      let mut props = arena::SymHashMap::default();
-      if let Some(font) = latexml_core::state::lookup_font() {
-        if let Some(color) = font.get_color() {
+      let mut props = SymHashMap::default();
+      if let Some(font) = lookup_font()
+        && let Some(color) = font.get_color() {
           props.insert("framecolor", Stored::from(color.to_attribute()));
         }
-      }
       Ok(props)
     },
     // mdframed bodies routinely contain multi-paragraph content

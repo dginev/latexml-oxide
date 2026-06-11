@@ -6,7 +6,6 @@
 //! frontmatter macros.
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -48,40 +47,66 @@ LoadDefinitions!({
   // Without these, the unrecognized column letters trigger one
   // "Extra alignment tab '&'" per & cell. Define matching short-hand
   // raggedright/etc. column types.
-  RawTeX!(r"\newcolumntype{L}{@{\extracolsep{\fill}}l}\newcolumntype{R}{@{\extracolsep{\fill}}r}\newcolumntype{C}{@{\extracolsep{\fill}}c}");
+  RawTeX!(
+    r"\newcolumntype{L}{@{\extracolsep{\fill}}l}\newcolumntype{R}{@{\extracolsep{\fill}}r}\newcolumntype{C}{@{\extracolsep{\fill}}c}"
+  );
 
   // cas-common frontmatter — gobble cleanly.
   // Title-note text — author prose. Preserve as ltx:note frontmatter.
-  DefMacro!("\\tnotetext[]{}",
-    "\\@add@frontmatter{ltx:note}[role=titlenote]{#2}");
-  def_macro_noop("\\tnotemark[]")?;  // mark only, no body
-  DefMacro!("\\tnoteref[]{}",
-    "\\@add@frontmatter{ltx:note}[role=titlenote-ref]{#2}");
+  DefMacro!(
+    "\\tnotetext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=titlenote]{#2}"
+  );
+  def_macro_noop("\\tnotemark[]")?; // mark only, no body
+  DefMacro!(
+    "\\tnoteref[]{}",
+    "\\@add@frontmatter{ltx:note}[role=titlenote-ref]{#2}"
+  );
   def_macro_noop("\\fnmark[]")?;
-  DefMacro!("\\fnref[]{}",
-    "\\@add@frontmatter{ltx:note}[role=footnote-ref]{#2}");
+  DefMacro!(
+    "\\fnref[]{}",
+    "\\@add@frontmatter{ltx:note}[role=footnote-ref]{#2}"
+  );
   // Footnote / author-note text — preserve as ltx:note rather than
   // gobble (content-preserving). `\fntext` / `\nonumnote` carry the
   // actual note prose, `\cortext` is the corresponding-author byline.
-  DefMacro!("\\fntext[]{}",
-    "\\@add@frontmatter{ltx:note}[role=footnote]{#2}");
-  DefMacro!("\\nonumnote{}",
-    "\\@add@frontmatter{ltx:note}[role=note]{#1}");
-  DefMacro!("\\nonumtnotetext{}",
-    "\\@add@frontmatter{ltx:note}[role=note]{#1}");
-  DefMacro!("\\cortext[]{}",
-    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}");
-  def_macro_noop("\\cormark[]")?;  // mark only, no body
+  DefMacro!(
+    "\\fntext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=footnote]{#2}"
+  );
+  DefMacro!(
+    "\\nonumnote{}",
+    "\\@add@frontmatter{ltx:note}[role=note]{#1}"
+  );
+  DefMacro!(
+    "\\nonumtnotetext{}",
+    "\\@add@frontmatter{ltx:note}[role=note]{#1}"
+  );
+  DefMacro!(
+    "\\cortext[]{}",
+    "\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
+  );
+  def_macro_noop("\\cormark[]")?; // mark only, no body
   def_macro_noop("\\corref[]")?;
   // \affiliation[id]{text} — affiliation string author typed.
-  DefMacro!("\\affiliation[]{}",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}");
+  DefMacro!(
+    "\\affiliation[]{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}"
+  );
   // \ead[type]{address} — author email/url, preserve as contact.
-  DefMacro!("\\ead[]{}",
-    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}");
+  DefMacro!(
+    "\\ead[]{}",
+    "\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}"
+  );
   // ltx:contact stubs (mirror elsart_support_core@@@affiliation form)
-  DefConstructor!("\\@@@affiliation{}", "^ <ltx:contact role='affiliation'>#1</ltx:contact>");
-  DefConstructor!("\\@@@email{}{}", "^ <ltx:contact role='#1'>#2</ltx:contact>");
+  DefConstructor!(
+    "\\@@@affiliation{}",
+    "^ <ltx:contact role='affiliation'>#1</ltx:contact>"
+  );
+  DefConstructor!(
+    "\\@@@email{}{}",
+    "^ <ltx:contact role='#1'>#2</ltx:contact>"
+  );
 
   // \sep — author/affil separator that cas-common defines.
   DefMacro!("\\sep", ",");
@@ -92,8 +117,10 @@ LoadDefinitions!({
   // preserve the role text as a frontmatter note so the CRediT
   // taxonomy is retained for downstream JATS conversion. Witness
   // 2405.20972.
-  DefMacro!("\\credit{}",
-    "\\@add@frontmatter{ltx:note}[role=credit]{#1}");
+  DefMacro!(
+    "\\credit{}",
+    "\\@add@frontmatter{ltx:note}[role=credit]{#1}"
+  );
   def_macro_noop("\\printcredits")?;
 
   // Elsevier highlights / biography environments (cas-common.sty).
@@ -116,6 +143,8 @@ LoadDefinitions!({
   // \newproof{env}{display-name} — cas-common's environment factory
   // for proof-like environments. Define a basic environment that
   // wraps content in ltx:proof.
-  DefMacro!("\\newproof{}{}",
-    "\\newenvironment{#1}{\\par\\noindent\\textbf{#2.}\\hspace{0.5em}}{\\par}");
+  DefMacro!(
+    "\\newproof{}{}",
+    "\\newenvironment{#1}{\\par\\noindent\\textbf{#2.}\\hspace{0.5em}}{\\par}"
+  );
 });

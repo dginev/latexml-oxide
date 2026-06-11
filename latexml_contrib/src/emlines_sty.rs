@@ -1,6 +1,5 @@
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   // Source: https://arxiv.org/macros/emlines.sty
   DefMacro!(

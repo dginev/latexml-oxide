@@ -2,9 +2,12 @@
 name = "latexml_core"
 version = "0.4.0"
 edition = "2024"
-license = "CC0"
+license = "CC0-1.0"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 description = "Core conversion capabilities of latexml_oxide"
+
+[lints]
+workspace = true
 
 [lib]
 name = "latexml_core"

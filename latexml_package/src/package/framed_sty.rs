@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use latexml_core::common::color::{self, Color};
+
+use crate::prelude::*;
 
 /// Get the current font's background color as a hex attribute string.
 fn current_background_hex() -> String {
@@ -12,9 +13,9 @@ fn current_background_hex() -> String {
 fn lookup_color_hex(name: &str) -> String {
   let key = s!("color_{name}");
   // with_value avoids cloning the Stored envelope on the String arm.
-  state::with_value(&key, |v| match v {
+  with_value(&key, |v| match v {
     Some(Stored::String(sym)) => {
-      let stored_str = arena::with(*sym, |s| s.to_string());
+      let stored_str = with(*sym, |s| s.to_string());
       Color::from_stored(&stored_str)
         .map(|c| c.to_attribute())
         .unwrap_or_else(|| color::BLACK.to_attribute())
@@ -22,7 +23,6 @@ fn lookup_color_hex(name: &str) -> String {
     _ => color::BLACK.to_attribute(),
   })
 }
-
 
 LoadDefinitions!({
   // Intentional divergence (WISDOM #44 class: structural-adaptation, applies
@@ -269,7 +269,7 @@ LoadDefinitions!({
         let mut inv = vec![T_CS!("\\@titledframe@title"), T_BEGIN!()];
         inv.extend(title_tokens.unlist());
         inv.push(T_END!());
-        gullet::unread(Tokens::new(inv));
+        unread(Tokens::new(inv));
       }
     },
     properties => sub[_args] {

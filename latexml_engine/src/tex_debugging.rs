@@ -51,7 +51,7 @@ LoadDefinitions!({
   // in the spirit of the B Book, "show_token_list" routine, in 292.
   // [This could be a $tokens->unpackParameters, but for the curious space treatment]
   DefPrimitive!("\\message{}", sub [(message)] {
-    if state::current_verbosity() > -1 {
+    if current_verbosity() > -1 {
       Note!(writable_tokens(&do_expand(message)?));
     }
   });
@@ -86,14 +86,14 @@ LoadDefinitions!({
         let key = s!("fontinfo_{}", cs_str);
         // with_value avoids the Stored envelope clone on the Font arm;
         // we only need the font's name string out.
-        let name_opt = state::with_value(&key, |v| match v {
+        let name_opt = with_value(&key, |v| match v {
           Some(Stored::Font(f)) => f.name.as_ref().map(|n| n.to_string()),
           _ => None,
         });
         if let Some(name) = name_opt {
           let at_key = s!("fontinfo_at_{}", cs_str);
-          let at_info = state::with_value(&at_key, |v| match v {
-            Some(Stored::String(s)) => arena::with(*s, |at| format!(" at {at}")),
+          let at_info = with_value(&at_key, |v| match v {
+            Some(Stored::String(s)) => with(*s, |at| format!(" at {at}")),
             _ => String::new(),
           });
           meaning = format!("select font {}{}", name, at_info);
@@ -149,29 +149,29 @@ LoadDefinitions!({
             let mut continue_flag = false;
             // TODO: avoiding the allocation is quite painful here, since arena gets into mutability
             // locking
-            let spec = arena::to_string(param.spec);
+            let spec = to_string(param.spec);
             match spec.as_str() {
               "RequireBrace" => {
                 // tex's \meaning prints out the required braces for "\def\a#{}" variants
                 p_trailer = "{";
-                p_spec    = arena::pin_static("{");
+                p_spec    = pin_static("{");
               },
               "UntilBrace" => {
                 p_trailer = "{";
                 arg_index+=1;
-                p_spec = arena::pin(
-                  arena::with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
+                p_spec = pin(
+                  with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
               }
               other if other.starts_with("Match:") => {
                 // just match, don't increment arg index
-                p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,""));
+                p_spec = pin(LEAD_W_COLON_RE.replace(other,""));
               },
               other if UNTIL_SPEC.is_match(other) => {
                 // implied argument at this slot
-                p_spec = arena::pin(LEAD_W_COLON_RE.replace(other,""));
+                p_spec = pin(LEAD_W_COLON_RE.replace(other,""));
                 arg_index +=1 ;
-                p_spec = arena::pin(
-                  arena::with(p_spec, |p_str| s!("#{arg_index}{p_str}")));
+                p_spec = pin(
+                  with(p_spec, |p_str| s!("#{arg_index}{p_str}")));
               },
               _other => { // regular parameter, increment
               // skip the latexml-only requirement params, but only here,
@@ -203,7 +203,7 @@ LoadDefinitions!({
                   // undelimited, exactly as in Perl, so following optional
                   // args are untouched. Perl emits the same `CODE(...)`
                   // text and zero errors.
-                  p_spec = arena::pin(s!("#{arg_index}"));
+                  p_spec = pin(s!("#{arg_index}"));
                 }
               }
             }
@@ -211,7 +211,7 @@ LoadDefinitions!({
               spec_parts.push(p_spec);
             }
           }
-          let mut spec : String = arena::join(&spec_parts,"");
+          let mut spec : String = join(&spec_parts,"");
           spec = spec.replace("{}","");
           spec = spec.replace("Token","");
 
@@ -263,7 +263,7 @@ LoadDefinitions!({
     } else { String::new() };
     let stuff = Invocation!(T_CS!("\\meaning"), vec![arg]);
     let rhs = writable_tokens(&Expand!(stuff));
-    Note!(s!("> {lhs}{rhs}\n{}", gullet::get_locator()));
+    Note!(s!("> {lhs}{rhs}\n{}", get_locator()));
   });
   DefPrimitive!("\\showbox Number", sub[(arg)] {
     let n     = arg.value_of();

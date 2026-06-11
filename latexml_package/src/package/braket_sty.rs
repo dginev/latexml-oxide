@@ -104,7 +104,7 @@ fn split_braket_arg(arg: Tokens, mut maxbars: usize) -> (String, Vec<Tokens>) {
   let mut parts: Vec<Tokens> = Vec::new();
   let mut current: Vec<Token> = Vec::new();
   let mut depth: i32 = 0;
-  let mut tokens: std::collections::VecDeque<Token> = arg.unlist().into();
+  let mut tokens: VecDeque<Token> = arg.unlist().into();
   while let Some(t) = tokens.pop_front() {
     if t.get_catcode() == Catcode::BEGIN {
       depth += 1;
@@ -152,8 +152,9 @@ fn build_invocation(cs: impl AsRef<str>, args: &[Tokens]) -> Tokens {
 
 #[cfg(test)]
 mod tests {
-  use super::*;
   use latexml_core::state::{State, StateOptions, set_state};
+
+  use super::*;
 
   fn setup() { set_state(State::new(StateOptions::default())); }
 

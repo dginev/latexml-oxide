@@ -8,11 +8,10 @@
 //! found".
 //!
 //! Each stub here:
-//!   - registers via `lib.rs` as `<lang>.ldf` so find_file resolves
-//!     to our binding rather than the missing file;
-//!   - allocates `\l@<lang>` and defines empty `\captions<lang>` /
-//!     `\extras<lang>` / `\noextras<lang>` / `\date<lang>` hooks so
-//!     babel's `\selectlanguage` chain runs cleanly.
+//!   - registers via `lib.rs` as `<lang>.ldf` so find_file resolves to our binding rather than the
+//!     missing file;
+//!   - allocates `\l@<lang>` and defines empty `\captions<lang>` / `\extras<lang>` /
+//!     `\noextras<lang>` / `\date<lang>` hooks so babel's `\selectlanguage` chain runs cleanly.
 //!
 //! The actual ISO-639 → xml:lang mapping happens at
 //! `\selectlanguage` time via
@@ -54,11 +53,11 @@ fn install_lang_stub(lang: &str) -> Result<()> {
     \providecommand\date{lang}{{}}",
     lang = lang
   );
-  latexml_core::stomach::raw_tex(&body)?;
+  raw_tex(&body)?;
   Ok(())
 }
 
-pub fn load_italian() -> Result<()>    { install_lang_stub("italian") }
+pub fn load_italian() -> Result<()> { install_lang_stub("italian") }
 // English-family stubs. babel-english.ldf uses `\@namedef{captions
 // \CurrentOption}` etc., so each variant gets its own
 // `\captions<variant>` / `\date<variant>`. When babel dispatches a
@@ -74,24 +73,39 @@ pub fn load_italian() -> Result<()>    { install_lang_stub("italian") }
 // already the project's default. Witness:
 // arXiv:1502.05791 (`\usepackage[british,american]{babel}`)
 // CONVERR_2 → expected OK.
-pub fn load_english() -> Result<()>    { install_lang_stub("english") }
-pub fn load_american() -> Result<()>   {
+pub fn load_english() -> Result<()> { install_lang_stub("english") }
+pub fn load_american() -> Result<()> {
   install_lang_stub("american")?;
   install_lang_stub("USenglish")?;
   install_lang_stub("english") // fallback chain
 }
-pub fn load_british() -> Result<()>    {
+pub fn load_british() -> Result<()> {
   install_lang_stub("british")?;
   install_lang_stub("UKenglish")?;
   install_lang_stub("english")
 }
-pub fn load_usenglish() -> Result<()>  { install_lang_stub("USenglish")?; install_lang_stub("english") }
-pub fn load_ukenglish() -> Result<()>  { install_lang_stub("UKenglish")?; install_lang_stub("english") }
-pub fn load_canadian() -> Result<()>   { install_lang_stub("canadian")?; install_lang_stub("english") }
-pub fn load_australian() -> Result<()> { install_lang_stub("australian")?; install_lang_stub("english") }
-pub fn load_newzealand() -> Result<()> { install_lang_stub("newzealand")?; install_lang_stub("english") }
+pub fn load_usenglish() -> Result<()> {
+  install_lang_stub("USenglish")?;
+  install_lang_stub("english")
+}
+pub fn load_ukenglish() -> Result<()> {
+  install_lang_stub("UKenglish")?;
+  install_lang_stub("english")
+}
+pub fn load_canadian() -> Result<()> {
+  install_lang_stub("canadian")?;
+  install_lang_stub("english")
+}
+pub fn load_australian() -> Result<()> {
+  install_lang_stub("australian")?;
+  install_lang_stub("english")
+}
+pub fn load_newzealand() -> Result<()> {
+  install_lang_stub("newzealand")?;
+  install_lang_stub("english")
+}
 
-pub fn load_spanish() -> Result<()>    {
+pub fn load_spanish() -> Result<()> {
   install_lang_stub("spanish")?;
   // babel-spanish-specific `\decimalpoint` — switches decimal separator
   // from `,` (Spanish default) to `.`. We don't render locale-aware
@@ -108,7 +122,7 @@ pub fn load_spanish() -> Result<()>    {
   // outcome for our XML output and avoids the hook-timing complexity.
   // Witness: arXiv:1909.12119 — `Error:undefined:\sen` /
   // `\cotg` / `\tg` / `\arcsen` cluster on `\usepackage[spanish]{babel}`.
-  latexml_core::stomach::raw_tex(
+  raw_tex(
     r"\providecommand\decimalpoint{}\providecommand\decimalcomma{}
     \providecommand\sen{\mathop{\mathrm{sen}}\nolimits}
     \providecommand\tg{\mathop{\mathrm{tg}}\nolimits}
@@ -116,19 +130,19 @@ pub fn load_spanish() -> Result<()>    {
     \providecommand\cosec{\mathop{\mathrm{cosec}}\nolimits}
     \providecommand\arcsen{\mathop{\mathrm{arc\,sen}}\nolimits}
     \providecommand\arctg{\mathop{\mathrm{arc\,tg}}\nolimits}
-    \providecommand\arccotg{\mathop{\mathrm{arc\,cotg}}\nolimits}"
+    \providecommand\arccotg{\mathop{\mathrm{arc\,cotg}}\nolimits}",
   )?;
   Ok(())
 }
-pub fn load_portuges() -> Result<()>   { install_lang_stub("portuges") }
+pub fn load_portuges() -> Result<()> { install_lang_stub("portuges") }
 pub fn load_portuguese() -> Result<()> { install_lang_stub("portuguese") }
-pub fn load_brazil() -> Result<()>     { install_lang_stub("brazil") }
-pub fn load_brazilian() -> Result<()>  { install_lang_stub("brazilian") }
-pub fn load_czech() -> Result<()>      { install_lang_stub("czech") }
-pub fn load_polish() -> Result<()>     { install_lang_stub("polish") }
-pub fn load_romanian() -> Result<()>   { install_lang_stub("romanian") }
-pub fn load_slovene() -> Result<()>    { install_lang_stub("slovene") }
-pub fn load_turkish() -> Result<()>    { install_lang_stub("turkish") }
+pub fn load_brazil() -> Result<()> { install_lang_stub("brazil") }
+pub fn load_brazilian() -> Result<()> { install_lang_stub("brazilian") }
+pub fn load_czech() -> Result<()> { install_lang_stub("czech") }
+pub fn load_polish() -> Result<()> { install_lang_stub("polish") }
+pub fn load_romanian() -> Result<()> { install_lang_stub("romanian") }
+pub fn load_slovene() -> Result<()> { install_lang_stub("slovene") }
+pub fn load_turkish() -> Result<()> { install_lang_stub("turkish") }
 pub fn load_vietnamese() -> Result<()> {
   install_lang_stub("vietnamese")?;
   // babel-vietnamese (vietnam.ldf) selects T5 font encoding and defines
@@ -142,13 +156,13 @@ pub fn load_vietnamese() -> Result<()> {
   // same set vntex.sty pulls in. Witness 2003.07696
   // (`\usepackage[english,vietnamese]{babel}`, author
   // "Nguy\~\ecircumflex n Th\d{i} B\'ich Th\h{u}y").
-  crate::package::t5enc_def::load_definitions()?;
+  t5enc_def::load_definitions()?;
   Ok(())
 }
-pub fn load_icelandic() -> Result<()>  { install_lang_stub("icelandic") }
-pub fn load_arabic() -> Result<()>     { install_lang_stub("arabic") }
-pub fn load_dutch() -> Result<()>      { install_lang_stub("dutch") }
-pub fn load_farsi() -> Result<()>      { install_lang_stub("farsi") }
-pub fn load_hindi() -> Result<()>      { install_lang_stub("hindi") }
-pub fn load_latin() -> Result<()>      { install_lang_stub("latin") }
-pub fn load_croatian() -> Result<()>   { install_lang_stub("croatian") }
+pub fn load_icelandic() -> Result<()> { install_lang_stub("icelandic") }
+pub fn load_arabic() -> Result<()> { install_lang_stub("arabic") }
+pub fn load_dutch() -> Result<()> { install_lang_stub("dutch") }
+pub fn load_farsi() -> Result<()> { install_lang_stub("farsi") }
+pub fn load_hindi() -> Result<()> { install_lang_stub("hindi") }
+pub fn load_latin() -> Result<()> { install_lang_stub("latin") }
+pub fn load_croatian() -> Result<()> { install_lang_stub("croatian") }

@@ -18,13 +18,13 @@ LoadDefinitions!({
     RequirePackage!("txfonts");
   });
   // Perl L30-32: flags for later conditional behaviour
-  DeclareOption!("seceqn", { state::assign_value("@seceqn", 1i64, Scope::Global); });
-  DeclareOption!("secthm", { state::assign_value("@secthm", 1i64, Scope::Global); });
-  DeclareOption!("amsthm", { state::assign_value("@amsthm", 1i64, Scope::Global); });
+  DeclareOption!("seceqn", { assign_value("@seceqn", 1i64, Scope::Global); });
+  DeclareOption!("secthm", { assign_value("@secthm", 1i64, Scope::Global); });
+  DeclareOption!("amsthm", { assign_value("@amsthm", 1i64, Scope::Global); });
   // Perl L33-35: natbib defaults
-  DeclareOption!("authoryear", { state::assign_value("@biboptions", Stored::from("round,authoryear"), Scope::Global); });
-  DeclareOption!("number", { state::assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
-  DeclareOption!("numbers", { state::assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
+  DeclareOption!("authoryear", { assign_value("@biboptions", Stored::from("round,authoryear"), Scope::Global); });
+  DeclareOption!("number", { assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
+  DeclareOption!("numbers", { assign_value("@biboptions", Stored::from("numbers"), Scope::Global); });
   // Pass other options to article
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{article}")?;
@@ -44,9 +44,9 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("pifont");
   // natbib with biboptions
-  let natbib_opts_stored = state::lookup_value("@biboptions");
+  let natbib_opts_stored = lookup_value("@biboptions");
   let natbib_opts = match &natbib_opts_stored {
-    Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
+    Some(Stored::String(s)) => with(*s, |s| s.to_string()),
     _ => "numbers".to_string(),
   };
   let natbib_opt_vec: Vec<String> = natbib_opts.split(',').map(|s| s.trim().to_string()).collect();

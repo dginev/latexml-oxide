@@ -1,7 +1,6 @@
 //! Stub for colm2025_conference.sty (COLM 2025 conference template).
 use latexml_package::prelude::*;
 
-
 LoadDefinitions!({
   RequirePackage!("natbib");
   // Some COLM 2025 templates author-edit the .sty to add `\definecolor`

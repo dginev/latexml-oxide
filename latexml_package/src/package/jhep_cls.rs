@@ -1,7 +1,9 @@
 //! JHEP.cls — Journal of High Energy Physics document class
 //! Perl: JHEP.cls.ltxml — 314 lines (mostly journal abbreviation macros)
-use crate::engine::latex_constructs::{after_float, before_float};
-use crate::prelude::*;
+use crate::{
+  engine::latex_constructs::{after_float, before_float},
+  prelude::*,
+};
 
 /// DEP-NEW (2026-05-19): data-drive helper for the ~94 `\<cs>{}{}{}`
 /// journal-abbreviation macros that all expand to
@@ -168,7 +170,7 @@ LoadDefinitions!({
     enter_horizontal => true,
     properties => sub[args] {
       let url = args.first().and_then(|a| a.as_ref()).map(|t| t.to_string()).unwrap_or_default();
-      let href = compose_url(&state::lookup_string("BASE_URL"), &url, None);
+      let href = compose_url(&lookup_string("BASE_URL"), &url, None);
       Ok(stored_map!("href" => href))
     });
 

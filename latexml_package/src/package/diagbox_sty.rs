@@ -65,10 +65,10 @@ LoadDefinitions!({
     let a_arg: Tokens = it.next().unwrap().into();
     let b_arg: Tokens = it.next().unwrap().into();
 
-    let has_third = gullet::if_next(T_BEGIN!())?;
+    let has_third = if_next(T_BEGIN!())?;
     let (a_content, m_content, b_content) = if has_third {
       // Perl: $gullet->readArg — reads without expansion
-      let third = gullet::read_arg(ExpansionLevel::Off)?;
+      let third = read_arg(ExpansionLevel::Off)?;
       (a_arg, Some(b_arg), third)
     } else {
       (a_arg, None, b_arg)
@@ -136,7 +136,7 @@ LoadDefinitions!({
             if !s.is_empty() {
               let color = whatsit.get_property("linecolor").map(|c| c.to_string()).unwrap_or_else(|| "#000000".to_string());
               let lw = whatsit.get_property("linewidth").map(|c| c.to_string()).unwrap_or_else(|| "0.4".to_string());
-              let mut line_node = libxml::tree::Node::new("line", ns.clone(), doc_ptr).unwrap();
+              let mut line_node = Node::new("line", ns.clone(), doc_ptr).unwrap();
               let _ = line_node.set_attribute("points", &s);
               let _ = line_node.set_attribute("stroke", &color);
               let _ = line_node.set_attribute("stroke-width", &lw);

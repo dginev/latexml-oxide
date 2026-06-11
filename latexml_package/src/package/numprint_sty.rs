@@ -213,7 +213,7 @@ LoadDefinitions!({
     while let Some(mut node) = cursor {
       cursor = node.get_next_sibling();
       // XML_ELEMENT_NODE only — text/comment nodes skip.
-      if node.get_type() != Some(libxml::tree::NodeType::ElementNode) {
+      if node.get_type() != Some(NodeType::ElementNode) {
         continue;
       }
       // Tag XMTok-like elements with role missing/None or in the

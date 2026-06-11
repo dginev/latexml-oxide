@@ -95,10 +95,10 @@ macro_rules! compile_expansion {
 #[macro_export]
 macro_rules! load_model {
   ($name:literal) => {{
-    use latexml_core::common::model;
-    use latexml_core::common::relaxng::Relaxng;
-    use rustc_hash::FxHashSet as HashSet;
     use std::iter::FromIterator;
+
+    use latexml_core::common::{model, relaxng::Relaxng};
+    use rustc_hash::FxHashSet as HashSet;
     // use latexml_core::common::model::IndirectModel;
     #[derive(LoadModel)]
     #[name=$name]

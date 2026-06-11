@@ -3,7 +3,6 @@
 //! Core plain TeX definitions (Appendix B of The TeXbook)
 use crate::prelude::*;
 
-
 LoadDefinitions!({
   // Perl: plain_base.pool.ltxml — definitions only (no LoadPool calls)
   // bootstrap/dump/constructs are loaded by tex.rs (= LoadFormat('plain'))
@@ -141,7 +140,7 @@ LoadDefinitions!({
     let node = nodes.pop().unwrap();
     let content = node.get_content();
     let doc = document.get_document();
-    let mut replacement = libxml::tree::Node::new("XMTok", None, doc)?;
+    let mut replacement = Node::new("XMTok", None, doc)?;
     for (k, v) in node.get_attributes() {
       replacement.set_attribute(&k, &v)?;
     }
@@ -206,7 +205,7 @@ LoadDefinitions!({
     <ltx:XMArg>#1</ltx:XMArg>\
     </ltx:XMApp>",
     // Perl: properties => { scriptpos => sub { "mid" . $_[0]->getBoxingLevel; } }
-    properties => { stored_map!("scriptpos" => s!("mid{}", stomach::get_boxing_level())) }
+    properties => { stored_map!("scriptpos" => s!("mid{}", get_boxing_level())) }
   );
   def_macro_noop("\\hidewidth")?;
 
@@ -405,7 +404,7 @@ LoadDefinitions!({
   // Rust simplification: use closure + guarded MergeFont, but we still need
   // require_math => true to match Perl's "error when used outside math" check.
   DefPrimitive!("\\mit", {
-    if state::lookup_bool_sym(pin!("IN_MATH")) {
+    if lookup_bool_sym(pin!("IN_MATH")) {
       MergeFont!(family => "math", shape => "italic");
     }
   }, require_math => true);
@@ -463,7 +462,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\enskip", {
     Tbox::new(
-      arena::pin_static("\u{2002}"),
+      pin_static("\u{2002}"),
       None,
       None,
       Tokens!(T_CS!("\\enskip")),
@@ -474,7 +473,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\enspace", {
     Tbox::new(
-      arena::pin_static("\u{2002}"),
+      pin_static("\u{2002}"),
       None,
       None,
       Tokens!(T_CS!("\\enspace")),
@@ -485,7 +484,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\quad", {
     Tbox::new(
-      arena::pin_static("\u{2003}"),
+      pin_static("\u{2003}"),
       None,
       None,
       Tokens!(T_CS!("\\quad")),
@@ -497,7 +496,7 @@ LoadDefinitions!({
   // Conceivably should be treated as punctuation! (but maybe even \quad should !?!)
   DefPrimitive!("\\qquad", {
     Tbox::new(
-      arena::pin_static("\u{2003}\u{2003}"),
+      pin_static("\u{2003}\u{2003}"),
       None,
       None,
       Tokens!(T_CS!("\\qquad")),
@@ -508,7 +507,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\thinspace", {
     Tbox::new(
-      arena::pin_static("\u{2009}"),
+      pin_static("\u{2009}"),
       None,
       None,
       Tokens!(T_CS!("\\thinspace")),
@@ -537,7 +536,7 @@ LoadDefinitions!({
   DefPrimitive!("\\hglue Glue", sub[(length)] {
     let s = dimension_to_spaces(length);
     if s.is_empty() { return Ok(Vec::new()); }
-    Tbox::new(arena::pin(&s), None, None,
+    Tbox::new(pin(&s), None, None,
       Invocation!(T_CS!("\\hglue"), vec![length.revert()?]),
       stored_map!("name" => "hglue", "width" => length, "isSpace" => true))
   });
@@ -663,7 +662,7 @@ LoadDefinitions!({
   // 1em-wide NBSP Box. Perl: DefPrimitiveI("\\\t", undef, sub { Box(UTF(0xA0), ...) });
   DefPrimitive!("\\\t", {
     Tbox::new(
-      arena::pin_static("\u{00A0}"),
+      pin_static("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\\t")),
@@ -748,17 +747,17 @@ LoadDefinitions!({
   // Perl: AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 1), 'local')
   DefPrimitive!("\\boldmath", None,
     before_digest => {
-      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
       let merged = mf.merge(Font { forcebold: Some(true), ..Font::default() });
-      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+      assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
     },
     forbid_math => true);
   // Perl: AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold => 0), 'local')
   DefPrimitive!("\\unboldmath", None,
     before_digest => {
-      let mf = state::lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
       let merged = mf.merge(Font { forcebold: Some(false), ..Font::default() });
-      state::assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+      assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
     },
     forbid_math => true);
 });

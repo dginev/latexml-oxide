@@ -54,7 +54,6 @@ pub const LCIRCLE_SLOTS: [Option<char>; 128] = [
   Some('\u{2B24}'), Some('\u{2B24}'), Some('\u{2B24}'), None,
 ];
 
-
 LoadDefinitions!({
   #[rustfmt::skip]
   DeclareFontMap!("lcircle", Rc::from(&LCIRCLE_SLOTS[..]));

@@ -7,9 +7,11 @@
 
 use libxml::tree::Node;
 
-use crate::document::PostDocument;
-use crate::math_processor::{MathConversion, MathProcessor};
-use crate::processor::{ProcessResult, Processor};
+use crate::{
+  document::PostDocument,
+  math_processor::{MathConversion, MathProcessor},
+  processor::{ProcessResult, Processor},
+};
 
 const LEX_MIMETYPE: &str = "application/x-llamapun";
 

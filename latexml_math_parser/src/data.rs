@@ -1,6 +1,7 @@
+use std::cell::RefCell;
+
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap;
-use std::cell::RefCell;
 
 // Thread-local idstore for XMRef resolution during math parsing.
 // Set by the parser before parsing, cleared after.
@@ -65,32 +66,30 @@ pub fn take_lost_nodes() -> FxHashMap<String, String> {
 
 /// Reset LOSTNODES (called at the start of each new math parse to ensure
 /// per-document isolation when the same thread processes multiple docs).
-pub fn clear_lost_nodes() {
-  LOST_NODES.with(|cell| cell.borrow_mut().clear());
-}
+pub fn clear_lost_nodes() { LOST_NODES.with(|cell| cell.borrow_mut().clear()); }
 
 /// Resolve an XMRef node to its target using the idstore (matching Perl's lookupID).
 /// Falls back to DOM traversal if idstore is not set.
 fn resolve_xmref(node: &Node) -> Option<Node> {
-  if node.get_name() == "XMRef" {
-    if let Some(idref) = node.get_attribute("idref") {
-      // Use idstore first (fast and reliable, matching Perl's $doc->lookupID)
-      let store_result = MATH_IDSTORE.with(|cell| {
-        cell
-          .borrow()
-          .as_ref()
-          .and_then(|store| store.get(&idref).cloned())
-      });
-      if store_result.is_some() {
-        return store_result;
-      }
-      // Fallback: walk DOM to document root, then search by xml:id
-      let mut ancestor = node.clone();
-      while let Some(parent) = ancestor.get_parent() {
-        ancestor = parent;
-      }
-      return find_by_xml_id(&ancestor, &idref);
+  if node.get_name() == "XMRef"
+    && let Some(idref) = node.get_attribute("idref")
+  {
+    // Use idstore first (fast and reliable, matching Perl's $doc->lookupID)
+    let store_result = MATH_IDSTORE.with(|cell| {
+      cell
+        .borrow()
+        .as_ref()
+        .and_then(|store| store.get(&idref).cloned())
+    });
+    if store_result.is_some() {
+      return store_result;
     }
+    // Fallback: walk DOM to document root, then search by xml:id
+    let mut ancestor = node.clone();
+    while let Some(parent) = ancestor.get_parent() {
+      ancestor = parent;
+    }
+    return find_by_xml_id(&ancestor, &idref);
   }
   None
 }
@@ -174,9 +173,9 @@ fn p_get_attribute(item: &Node, key: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+  use libxml::{parser::Parser as XmlParser, tree::Document};
+
   use super::*;
-  use libxml::parser::Parser as XmlParser;
-  use libxml::tree::Document;
 
   fn parse(xml: &str) -> Document { XmlParser::default().parse_string(xml).expect("parse xml") }
 

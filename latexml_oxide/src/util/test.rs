@@ -1,13 +1,10 @@
+use std::{path::PathBuf, rc::Rc, sync::Once};
+
 use glob::glob;
+use latexml_core::{Core, CoreOptions, common::BindingDispatcher, document::Document, s, state};
 use once_cell::sync::Lazy;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::Once;
 
 use crate::core_interface::DigestionAPI;
-use latexml_core::common::BindingDispatcher;
-use latexml_core::document::Document;
-use latexml_core::{Core, CoreOptions, s, state};
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 // Sampled at static init; subsequent reads are atomic loads.
@@ -203,15 +200,16 @@ const ERROR_DEBT: &[(&str, &str)] = &[
 /// line is atomic up to PIPE_BUF, so concurrent test threads don't interleave.
 #[cfg(unix)]
 fn note_uncaptured(line: &str) {
-  use std::io::Write;
-  use std::os::unix::io::FromRawFd;
+  use std::{io::Write, os::unix::io::FromRawFd};
   // SAFETY: fd 2 is the process stderr, valid for the whole run. `ManuallyDrop`
   // stops the `File`'s Drop from `close()`-ing the shared descriptor.
   let mut f = std::mem::ManuallyDrop::new(unsafe { std::fs::File::from_raw_fd(2) });
   let _ = f.write_all(format!("{line}\n").as_bytes());
 }
 #[cfg(not(unix))]
-fn note_uncaptured(line: &str) { eprintln!("{line}"); }
+fn note_uncaptured(line: &str) {
+  eprintln!("{line}");
+}
 
 pub fn latexml_test_single(
   tex_file_str: &str,
@@ -226,7 +224,7 @@ pub fn latexml_test_single(
   }
   // Suppress log output for any test expected to emit errors (both categories)
   // so single-test runs stay readable; the gate still counts + classifies them.
-  let suppress = INTENTIONALLY_FAILING.iter().any(|(n, _, _)| *n == name)
+  let suppress = INTENTIONALLY_FAILING.iter().any(|(n, ..)| *n == name)
     || ERROR_DEBT.iter().any(|(n, _)| *n == name);
   if suppress {
     latexml_core::common::error::set_suppress_log_output(true);
@@ -350,14 +348,17 @@ fn process_texfile(
   // lookups; messages build only on the cold panic path. `convert_file` reset
   // the report at conversion start, so this count is exactly this conversion's.
   // Read BEFORE `reset_thread_engine`.
-  use latexml_core::common::error::{get_status, LogStatus};
+  use latexml_core::common::error::{LogStatus, get_status};
   let n_soft = get_status(LogStatus::Error);
   let n_fatal = get_status(LogStatus::Fatal);
   let n_err = n_soft + n_fatal;
-  let intentional = INTENTIONALLY_FAILING.iter().find(|(n, _, _)| *n == name).copied();
+  let intentional = INTENTIONALLY_FAILING
+    .iter()
+    .find(|(n, ..)| *n == name)
+    .copied();
   let debt = ERROR_DEBT.iter().find(|(n, _)| *n == name).copied();
   // Decide the verdict (and any cold-path message) before tearing down.
-  let verdict: std::result::Result<(), String> = match (intentional, debt) {
+  let verdict: Result<(), String> = match (intentional, debt) {
     // Permanent contract: exact SOFT-error count, and NEVER fatal — the point is
     // graceful recovery. Drift fails both ways; a Fatal is always a regression.
     (Some((_, expect, reason)), _) => {
@@ -392,8 +393,10 @@ fn process_texfile(
     // entry is clean EVERYWHERE (the `[error-debt] … 0 errors` log flags it).
     (None, Some((_, reason))) => {
       if n_err == 0 {
-        note_uncaptured(&format!("[error-debt] {name}: 0 errors HERE — clean in this \
-          environment; review for removal once clean everywhere — {reason}"));
+        note_uncaptured(&format!(
+          "[error-debt] {name}: 0 errors HERE — clean in this \
+          environment; review for removal once clean everywhere — {reason}"
+        ));
       } else {
         note_uncaptured(&format!("[error-debt] {name}: {n_err} errors — {reason}"));
       }
@@ -524,10 +527,7 @@ pub fn error_count(log: &str) -> usize {
 /// engine's own dump-name convention so a filename-scheme change cannot make
 /// the tests silently self-skip forever.
 pub fn dump_available() -> bool {
-  let dir = std::path::Path::new(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/../resources/dumps"
-  ));
+  let dir = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps"));
   !latexml_engine::dump_paths::available_years_in_dir(dir, "latex").is_empty()
 }
 
@@ -556,8 +556,9 @@ pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
 
 #[cfg(test)]
 mod exemption_audit {
-  use super::{ERROR_DEBT, INTENTIONALLY_FAILING};
   use std::path::{Path, PathBuf};
+
+  use super::{ERROR_DEBT, INTENTIONALLY_FAILING};
 
   /// Review m1: the exemption tables match on the bare `file_stem`, which is
   /// NOT unique across the suite's globbed test dirs. A future `glossary.tex`
@@ -570,25 +571,30 @@ mod exemption_audit {
   #[test]
   fn exemption_keys_have_unique_stems() {
     fn collect(dir: &Path, out: &mut Vec<(String, PathBuf)>) {
-      let Ok(rd) = std::fs::read_dir(dir) else { return };
+      let Ok(rd) = std::fs::read_dir(dir) else {
+        return;
+      };
       for ent in rd.flatten() {
         let p = ent.path();
         if p.is_dir() {
           collect(&p, out);
-        } else if p.extension().and_then(|e| e.to_str()) == Some("tex") {
-          if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
-            out.push((stem.to_string(), p.clone()));
-          }
+        } else if p.extension().and_then(|e| e.to_str()) == Some("tex")
+          && let Some(stem) = p.file_stem().and_then(|s| s.to_str())
+        {
+          out.push((stem.to_string(), p.clone()));
         }
       }
     }
     let mut all = Vec::new();
     collect(Path::new("tests"), &mut all);
-    assert!(!all.is_empty(), "no .tex fixtures found under tests/ — wrong CWD?");
+    assert!(
+      !all.is_empty(),
+      "no .tex fixtures found under tests/ — wrong CWD?"
+    );
 
     let keys = INTENTIONALLY_FAILING
       .iter()
-      .map(|(n, _, _)| *n)
+      .map(|(n, ..)| *n)
       .chain(ERROR_DEBT.iter().map(|(n, _)| *n));
     for key in keys {
       let hits: Vec<&PathBuf> = all

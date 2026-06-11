@@ -1,10 +1,12 @@
+use std::{
+  env,
+  path::{Path, PathBuf},
+  sync::Mutex,
+};
+
 use kpathsea::Kpaths;
 use once_cell::sync::Lazy;
 use regex::Regex;
-
-use std::env;
-use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 /// configuration for filesystem search.
 /// Mirrors Perl `LaTeXML::Util::Pathname::pathname_find`'s named-arg options;
@@ -24,7 +26,7 @@ pub struct PathnameFindOptions {
 
 static LITERAL_PROTOCOL: &str = "literal:";
 static HOME_TILDE: &str = "~";
-static HOME_PATH: Lazy<String> = Lazy::new(|| match std::env::var_os("HOME") {
+static HOME_PATH: Lazy<String> = Lazy::new(|| match env::var_os("HOME") {
   Some(val) => val.to_string_lossy().into_owned(),
   _ => s!("~"),
 });
@@ -192,8 +194,7 @@ pub fn absolute(path: &str) -> String {
   let joined: PathBuf = if p.is_absolute() {
     p.to_path_buf()
   } else {
-    let cwd = std::env::current_dir()
-      .expect("cannot make path absolute: current_dir() failed");
+    let cwd = env::current_dir().expect("cannot make path absolute: current_dir() failed");
     cwd.join(p)
   };
   canonical(&joined.to_string_lossy())
@@ -483,10 +484,10 @@ pub fn find(pathname: &str, options: PathnameFindOptions) -> Option<String> {
       Err(_) => continue,
     };
     for entry in entries.flatten() {
-      if let Some(name) = entry.file_name().to_str() {
-        if name.eq_ignore_ascii_case(target) {
-          return entry.path().to_str().map(String::from);
-        }
+      if let Some(name) = entry.file_name().to_str()
+        && name.eq_ignore_ascii_case(target)
+      {
+        return entry.path().to_str().map(String::from);
       }
     }
   }
@@ -550,11 +551,11 @@ pub fn make(dir: Option<&str>, name: Option<&str>, ext: Option<&str>) -> String 
     }
     result.push_str(n);
   }
-  if let Some(t) = ext {
-    if !t.is_empty() {
-      result.push('.');
-      result.push_str(t);
-    }
+  if let Some(t) = ext
+    && !t.is_empty()
+  {
+    result.push('.');
+    result.push_str(t);
   }
   canonical(&result)
 }
@@ -633,7 +634,9 @@ mod tests {
     // the old `^\w+://…` matched `myers_http://…` via its leading `\w+`,
     // wrongly resolving a JabRef `\bibAnnoteFile` key as an existing URL
     // (witness 1509.01434, "Script _").
-    assert!(!is_url("myers_http://www.mscs.dal.ca/myers/welcome.html_2014"));
+    assert!(!is_url(
+      "myers_http://www.mscs.dal.ca/myers/welcome.html_2014"
+    ));
     assert!(!is_url("foo_ftp://bar/baz"));
   }
 

@@ -11,12 +11,12 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::BoxOps;
-use crate::common::dimension::Dimension;
-use crate::common::numeric_ops::NumericOps;
-use crate::common::store::Stored;
-use crate::state;
-use crate::whatsit::Whatsit;
+use crate::{
+  BoxOps,
+  common::{dimension::Dimension, numeric_ops::NumericOps, store::Stored},
+  state,
+  whatsit::Whatsit,
+};
 
 /// Perl: `image_candidates($path)` (Util::Image L43-57).
 ///
@@ -72,19 +72,19 @@ pub fn image_candidates(path: &str) -> String {
       if let Ok(entries) = std::fs::read_dir(parent) {
         for entry in entries.flatten() {
           let fname = entry.file_name().to_string_lossy().to_string();
-          if let Some(dot_pos) = fname.find('.') {
-            if fname[..dot_pos] == stem {
-              let full = entry.path();
-              let rel = match &source_path {
-                Some(sp) => full
-                  .strip_prefix(sp)
-                  .unwrap_or(&full)
-                  .to_string_lossy()
-                  .to_string(),
-                None => full.to_string_lossy().to_string(),
-              };
-              candidates.push(rel);
-            }
+          if let Some(dot_pos) = fname.find('.')
+            && fname[..dot_pos] == stem
+          {
+            let full = entry.path();
+            let rel = match &source_path {
+              Some(sp) => full
+                .strip_prefix(sp)
+                .unwrap_or(&full)
+                .to_string_lossy()
+                .to_string(),
+              None => full.to_string_lossy().to_string(),
+            };
+            candidates.push(rel);
           }
         }
       }
@@ -265,7 +265,7 @@ pub fn image_graphicx_sizer(whatsit: &mut Whatsit) {
 /// `image_size` at Util::Image L86-97). Only a few formats are needed
 /// for typical arXiv graphics inclusions — anything else returns `None`
 /// so the caller skips sizing (mirroring Perl's `return unless $w`).
-pub fn read_image_dimensions(path: &std::path::Path) -> Option<(u32, u32)> {
+pub fn read_image_dimensions(path: &Path) -> Option<(u32, u32)> {
   use std::io::Read;
   let mut file = std::fs::File::open(path).ok()?;
   let mut header = [0u8; 32];
