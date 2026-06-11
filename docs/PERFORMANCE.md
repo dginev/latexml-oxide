@@ -192,9 +192,12 @@ closed):
 * `clippy::manual_string_new` + `single_char_pattern` — 10 sites
   (`ae192d3c6c`).
 
-After all of the above, `cargo clippy --workspace --all-targets` is
-back to its 14-warning baseline (all in `latexml_math_parser` ASF
-lane, collaborator's track). Tests 1328/0/0 throughout.
+After all of the above, `cargo clippy --workspace --all-targets` was
+back to a 14-warning baseline (all in the `latexml_math_parser` ASF
+lane). That residual was later cleared by #252 (edition-2024 migration
++ centralized lint enforcement): the workspace is now
+`clippy -D warnings`-clean. Tests were 1328/0/0 at the time of this
+round (1454/0/0 as of #252).
 
 **Witnesses retained** for any future digest-perf re-examination:
 `2305.06773` (ACM-class), `2103.00971` (tikz-heavy, 8.8s digest),
@@ -240,6 +243,127 @@ profile shows them on the hot path. The 2026-05-19 perf sweep
 confirmed the current state.meaning HashMap traffic is the floor;
 do not chase further internal allocations without evidence they're
 above the SwissTable probe band.
+
+---
+
+## Build-pipeline optimization roadmap (binary perf + size)
+
+The key release deliverable is a **maximally-performant, smallest**
+`latexml_oxide` binary (`maxperf`: opt-3, fat-LTO, codegen-units=1,
+panic=abort, stripped, `--no-default-features --features runtime-bindings`).
+Beyond the source-level principles above, these are *build-time* levers.
+**Prerequisite for all of them:** pin the nightly toolchain
+(`rust-toolchain.toml`) so PGO / `-Z build-std` / codegen are reproducible
+and not at the mercy of nightly churn (we hit a live example: the
+`build-std-features=panic_immediate_abort` flag was renamed to a real
+`-Cpanic=immediate-abort` strategy on a 2026-06 nightly).
+
+### Binary size composition (measured 2026-06-11)
+
+Where the 46.7 MB maxperf binary's bytes actually are — measured with
+`cargo bloat` on a symbol-preserving **no-LTO** build (per-crate numbers are
+"where code *originates*"; fat-LTO then redistributes/shrinks, so treat these as
+proportions, not exact final bytes).
+
+**Per-crate `.text`:**
+
+| Component | `.text` | What |
+|---|---:|---|
+| `latexml_package` | 9.2 MiB | LaTeX package/class binding pool — largest single component |
+| `[Unknown]` | 13.3 MiB | static C libs (libmarpa, mimalloc, compression) + untagged compiler/std |
+| `latexml_engine` | 3.6 MiB | TeX/LaTeX engine binding pool |
+| `latexml_contrib` | 2.6 MiB | contributed bindings (+ rhai monomorphizations under LTO) |
+| `latexml_core` | 1.6 MiB | core engine |
+| `rhai` | 0.7 MiB (true cost +2.23 MB — see below) | embedded script engine |
+| `latexml_post` / `latexml_math_parser` / `latexml` (cli) | ~0.5 MiB each | |
+| regex stack, `clap`, `marpa`, `kpathsea`/`libxml`/`libxslt` wrappers, `zip` | <0.4 MiB each | deps |
+
+**Per-function:** `[59740 Others] = 26.4 MiB (79% of `.text`)`. The binary is
+**~60,000 small functions — one per `\def`/construct — NOT a few fat generics.**
+The named large functions are all per-package `load_definitions` registration
+shells: `latex_constructs` 1.0 MiB, `amsmath_sty` 313 KiB, `mathtools_sty`
+271 KiB, `pgfsys` 253 KiB, … plus two non-binding items: `STDMETRICS`
+(807 KiB of font-metric **data**) and `__ModelLoader::build_model` (543 KiB,
+RelaxNG schema construction).
+
+**Conclusion — the size is structural, not waste.** It is the cost of porting
+LaTeXML's entire macro surface to native code: `package + engine + contrib +
+core ≈ 17 MiB` of attributable binding code over ~60k functions. There is **no
+single fat generic to de-monomorphize → no cheap size lever.** The only knobs
+both fight the project's goals:
+
+1. **Coverage ↔ size** — drop rarely-used package/class ports. Measurable (each
+   `*_sty::load_definitions` + its bindings is attributable) but every drop is
+   lost compatibility. Not quantified; feature-completeness is the current
+   priority, so this is moot unless size becomes a hard requirement.
+2. **Data-table binding encoding** — re-represent bindings as runtime-interpreted
+   data instead of compiled code. Could cut `.text` dramatically but is a major
+   refactor that swaps inlined code for an interpreter — opposes the
+   highest-performance goal.
+
+**Decision (2026-06-11): accept the size.** 47 MB is the cost of feature-complete
+LaTeX coverage; spend the optimization budget on PGO (real perf headroom on the
+full-corpus run) rather than shrinking `.text`. Confirms the long-standing
+attribution: the binary is `.text`/binding-pool, **not** dumps (those gzip to
+~870 KB).
+
+Reproduce (symbol-preserving, no-LTO so code stays attributed to its origin crate):
+
+```
+CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=1 \
+CARGO_PROFILE_RELEASE_LTO=off \
+cargo bloat --release --no-default-features --features runtime-bindings \
+  --bin latexml_oxide --crates       # drop --crates, add -n 30 for per-function
+```
+
+### High-effort (tracked tasks — not yet attempted)
+
+> **Measurement venue.** PGO, BOLT and the `target-cpu` decision all need
+> full-scale empirical measurement and belong on the **new hardware running the
+> entire arXiv corpus** (expected ~mid-June 2026), not the dev box. Schedule
+> them there; this dev box is freeze-prone under heavy builds and unrepresentative
+> for perf numbers.
+
+- **[ ] PGO (Profile-Guided Optimization)** — the single largest perf lever
+  for this CPU-bound tool; typically 10–20% on hot paths. We have the ideal
+  training set: the arXiv sandbox corpus. Two-stage build:
+  `RUSTFLAGS=-Cprofile-generate=/tmp/pgo` → run a representative corpus slice
+  (`tools/run_perf_corpus.sh` / `benchmark_canvas.sh`) → `llvm-profdata merge`
+  → rebuild with `-Cprofile-use`. Wire into `release.yml` as a two-pass build.
+  Acceptance: standing-corpus wall before/after per the checklist below.
+- **[ ] BOLT (post-link binary optimization)** — stacks on PGO for a further
+  few % by reordering hot/cold code in the linked binary (`llvm-bolt` + a
+  profiling run on the final executable). Attempt only after PGO lands.
+
+### Lower-effort levers (measure / decide)
+
+- **`build-std` (panic_abort) — MEASURED, PARKED (2026-06-11).** Hypothesis: a
+  std rebuilt with panic=abort would strip the ~1.4 MB of `.eh_frame` unwind
+  tables the binary still carries. **The data refuted it:** 46.69 → 46.58 MB
+  (−0.11 MB, ~0.2%), with `.eh_frame` **unchanged** (1.240 MB → 1.240 MB). Those
+  tables come from the static **C deps** (mimalloc, libmarpa, zstd/bzip2), which
+  `-Z build-std` does not touch — NOT from Rust std. Cross-std LTO inlining also
+  gave ~nothing (.text 39.75 → 39.64 MB). Not worth the cost (std recompiled
+  every build; explicit `--target`; nightly fragility — the
+  `panic_immediate_abort` feature was renamed to `-Cpanic=immediate-abort`
+  mid-evaluation) for 0.2%. Revisit only if the C-dep `.eh_frame` is addressed
+  separately. (Aside: panic=abort already no-ops the `catch_unwind` backstops in
+  `pathname.rs` — an accepted CLI trade, unrelated to build-std.)
+- **[ ] `target-cpu` baseline (decision) — DEFERRED to the full-corpus run.**
+  Release builds for the conservative default `x86-64` (no SSE4/AVX).
+  `-Ctarget-cpu=x86-64-v2` (SSE4.2, ~2009+) or `v3` (AVX2, ~2013+) can speed hot
+  loops at the cost of older CPUs — a deliberate **portability call**, not a free
+  win. macOS arm64 is already a fixed Apple-Silicon baseline. Examine this on the
+  **new hardware running the entire arXiv corpus** (expected ~mid-June 2026, a
+  few days after 2026-06-11), NOT on this dev box — the speedup is only
+  meaningful measured at full-corpus scale on representative hardware.
+- **runtime-bindings (rhai) size cost — MEASURED (2026-06-11): +2.23 MB
+  (~4.8%).** maxperf with `runtime-bindings` 46.69 MB vs without 44.46 MB
+  (`.text` 39.75 vs 37.84 MB → ~1.91 MB of rhai engine code). Shipping it is the
+  current decision (customize contributed bindings without recompiling; runtime
+  opt-in, so default conversions are unaffected). If the 2.23 MB becomes a
+  concern, the clean resolution is two artifacts: a lean default + a `+bindings`
+  variant.
 
 ---
 

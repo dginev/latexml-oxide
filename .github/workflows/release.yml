@@ -127,6 +127,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
+            dpkg-dev \
             texlive texlive-latex-extra texlive-science \
             texlive-bibtex-extra texlive-publishers \
             poppler-utils

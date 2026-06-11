@@ -1,0 +1,16 @@
+# Pinned nightly for reproducible builds.
+#
+# The release's key deliverable is a maximally-performant, smallest binary, and
+# the build-time levers that get us there — PGO and `-Z build-std` — are
+# nightly-feature-sensitive. We hit a live example while evaluating them: the
+# `build-std-features = panic_immediate_abort` flag was renamed to a real
+# `-Cpanic=immediate-abort` strategy on a 2026-06 nightly. A floating nightly
+# would let release-day churn break the build or silently change codegen/perf.
+#
+# Pinned to the toolchain CI is already green on (does not change today's
+# toolchain — only freezes it). Bump deliberately: after a green CI run AND a
+# release dry-run on the new date. See docs/PERFORMANCE.md "Build-pipeline
+# optimization roadmap". (The project requires nightly — see CLAUDE.md.)
+[toolchain]
+channel = "nightly-2026-06-10"
+components = ["rustfmt", "clippy", "rust-src"]

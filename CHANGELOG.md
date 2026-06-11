@@ -1,5 +1,41 @@
 # Change Log
 
+## [0.7.0] (single-binary release: portability, runtime bindings, edition 2024)
+
+  - **Self-contained, redistributable binary** (#236). Engine dumps, the
+    RelaxNG schema, and XSLT/CSS/JS are embedded and served from memory; the
+    `maxperf` binary runs with no `resources/` tree. A tag-driven release
+    workflow builds the publish-grade artifact and attaches a portable tarball
+    + Debian `.deb` (each with a SHA-256 sidecar) as GitHub Release assets.
+  - **macOS (Apple Silicon) support** (#245). Full test suite green on arm64;
+    the distributed binary uses the subprocess-`kpsewhich` backend (no
+    libkpathsea ABI dependency, works on MacTeX). The release ships an
+    `aarch64-apple-darwin` tarball alongside the Linux artifacts.
+  - **Runtime (Rhai) script bindings** shipped in the release artifact
+    (#171, #248). A shared winnow template AST backs both the compile-time
+    native binding front-end and an optional runtime contributed-bindings
+    front-end embedded via Rhai — customize bindings without recompiling.
+    Runtime opt-in, so default conversions are unaffected.
+  - **Frontmatter refactor**: faithful port of upstream LaTeXML PR #2767
+    (#241), with a `--debug NAME` CLI and a deep-recursion pre-clear guard
+    that surpasses the Perl original on pathological inputs.
+  - **Persistent server mode** `latexml_oxide --server` (#243) for
+    editor/preview integration, plus opt-in source locators (`--source-map`)
+    and `token-locators` precision (#237) toward live source↔preview.
+  - **Post-processing**: faithful MakeIndex port — see/seeonly, styles,
+    anchors, placement (#244); CLI `--css`/`--javascript` resources copied and
+    followed (#250); html_feedback regression fixes (#240).
+  - **Engine parity at scale**: error-free conversion sweeps over the arXiv
+    "warning" corpus scaled to 1.5M → 2M articles (#238, #242) and a third
+    500K canvas at ≥99.0% success (#249). `ProcessOptions` keysets (#235).
+  - **Toolchain & quality**: migrated the workspace to Rust edition 2024 and
+    centralized lint enforcement (#252) — clean `clippy -D warnings`,
+    tree-wide `style_edition = "2024"` formatting, a `[workspace.lints]`
+    policy, and a CI `lint` gate (rustfmt + clippy + cargo-deny advisories/
+    licenses + cargo-machete) plus an auto-installed pre-push hook. Three
+    unmaintained/vulnerable transitive dependencies (tempdir, ansi_term) were
+    dropped at the source, so the dependency audit is clean.
+
 ## [0.4.3] (round-19 — 100k canvas REAL-regression-free)
 
   - **100k canvas mission accomplished**. Staged 10 × 10k validation

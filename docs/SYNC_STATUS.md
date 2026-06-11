@@ -123,6 +123,41 @@ remaining work is the optional architectural fix above.
 
 ---
 
+## Release-prep for 0.7.0 — LANDED (release-prep PR, 2026-06-11)
+
+Shipped on the `release-prep` branch (separate from #252):
+- **Version 0.6.2 → 0.7.0** in `latexml_oxide/Cargo.toml` only — the
+  release-tracking crate; sub-crates keep independent versions (convention).
+- **`runtime-bindings` enabled in the release artifact** (`make_release.sh`:
+  `--no-default-features --features runtime-bindings --profile maxperf`) — ship
+  the Rhai capability without recompiling; runtime opt-in. test-utils /
+  token-locators / cortex stay excluded. Measured rhai cost **+2.23 MB** —
+  accepted.
+- **`.deb` deps** (`[package.metadata.deb]`): `Depends` → `$auto`
+  (dpkg-shlibdeps versioned linked libs) + `imagemagick` + `mupdf-tools`
+  (primary graphics processors, promoted to hard deps) + texlive; `Recommends`
+  poppler-utils/ghostscript/dvipng; `Suggests` inkscape. `dpkg-dev` added to
+  `release.yml` so `$auto` has `dpkg-shlibdeps` in CI.
+- **CLAUDE.md** distribution command reconciled; **`## [0.7.0]` CHANGELOG**
+  section (feeds the release-body slice); **README** Ubuntu + macOS install
+  recipes + outdated-language drain.
+- **`rust-toolchain.toml`** pins `nightly-2026-06-10` (reproducible release).
+- **`docs/PERFORMANCE.md`**: build-pipeline optimization roadmap + the measured
+  **binary size composition** (44 MB `.text` ≈ ~60k binding functions,
+  structural → accept the size); build-std parked (+0.11 MB, measured).
+
+Decisions (2026-06-11): only `latexml_oxide` ships (latexmlmath/post deferred);
+**no RC prerelease rehearsal** (private project — fix-and-re-tag is cheap);
+**PGO/BOLT/target-cpu deferred to the new-hardware full-arXiv-corpus run**
+(~mid-June 2026). Local `make_release.sh` dry-run green (0.7.0
+tarball + `.deb` + sidecars + RELEASE_BODY; binary converts `hello.tex` 0-error).
+
+**Remaining:** merge the PR, then tag `0.7.0` on master → `release.yml` runs the
+full pipeline (TL-window `dumps` + macOS arm64 leg + publish). The `dumps` job,
+macOS leg, and publish are first-exercised on that tag.
+
+---
+
 ## Active mission (Round-37, opened 2026-05-26): 1,000,000 error-free conversions on the arXiv "warning" corpus
 
 > **✅ PARITY-TRACK Rust-only pool DRAINED across the sampled corpus (capstone, 2026-06-01).**

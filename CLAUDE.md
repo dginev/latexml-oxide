@@ -188,7 +188,7 @@ We follow Rust best practice with four named profiles in `Cargo.toml`:
 
 **Publish-grade measurement** (matching against Perl LaTeXML, baseline updates in `docs/PERFORMANCE.md`): use `--release`. The CI profile is for the GitHub runner only.
 
-**Distribution build** (shipping the binary to users): use `--profile maxperf --no-default-features` for the smallest, fastest artifact. Example: `cargo build --no-default-features --profile maxperf --bin latexml_oxide`. The `--no-default-features` flag drops the `test-utils` feature, removing `phf` + `glob` (and 4 transitive crates) from the binary. The `maxperf` profile uses `panic = "abort"` — production-only since canvas sweeps depend on `catch_unwind` for per-paper panic isolation.
+**Distribution build** (shipping the binary to users): use `--profile maxperf --no-default-features --features runtime-bindings` for the smallest, fastest artifact that still ships the Rhai script-bindings capability. Example: `cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide`. The `--no-default-features` flag drops the `test-utils` feature (removing `phf` + `glob` and 4 transitive crates), while `--features runtime-bindings` keeps the runtime contributed-bindings front-end — runtime opt-in, so default conversions are unaffected (this is the recipe `tools/make_release.sh` uses). The `maxperf` profile uses `panic = "abort"` — production-only since canvas sweeps depend on `catch_unwind` for per-paper panic isolation.
 
 ```bash
 # Run all tests (default test profile)
@@ -207,8 +207,8 @@ tools/triage_failure.sh <arxiv_id>
 cargo build --release --bin latexml_oxide
 
 # Distribution build — smallest, fastest artifact (slow build, fat LTO,
-# panic=abort, no test-utils feature)
-cargo build --no-default-features --profile maxperf --bin latexml_oxide
+# panic=abort, no test-utils; keeps runtime-bindings)
+cargo build --no-default-features --features runtime-bindings --profile maxperf --bin latexml_oxide
 
 # Generate docs
 cargo doc --workspace --no-deps --open

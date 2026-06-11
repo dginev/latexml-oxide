@@ -1,6 +1,6 @@
 [package]
 name = "latexml"
-version = "0.6.2"
+version = "0.7.0"
 edition = "2024"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0-1.0"
@@ -132,8 +132,25 @@ A Rust port of LaTeXML — converts LaTeX documents to accessible web
 formats (HTML5, XHTML, EPUB3, JATS). Drop-in replacement for the
 upstream Perl tool with significant throughput improvements on the
 arXiv corpus."""
-depends = "libc6, libxml2, libxslt1.1, libkpathsea6, texlive-latex-base, texlive-latex-extra, texlive-science"
-recommends = "imagemagick, poppler-utils, mupdf-tools"
+# `$auto` runs dpkg-shlibdeps on the packaged binary, deriving the exact,
+# versioned linked-library deps (libc6, libgcc-s1, zlib1g, libxml2 (>= the
+# SONAME we link), libxslt1.1, libgcrypt20, libgpg-error0, libkpathsea6, …) so
+# the list never drifts from what we actually link. The remaining entries are
+# appended manually — they are runtime data/tools, not linked libraries:
+#   * imagemagick — our PRIMARY graphics processor (`convert`, the most-invoked
+#     graphics tool).
+#   * mupdf-tools — `mutool`, our PDF graphics processor.
+#     Both are promoted to hard Depends so graphics handling works out of the
+#     box rather than silently degrading.
+#   * texlive-* — the texmf trees kpsewhich resolves against.
+depends = "$auto, imagemagick, mupdf-tools, texlive-latex-base, texlive-latex-extra, texlive-science"
+# Secondary graphics/PDF helpers are SHELLED OUT at runtime (not linked) and only
+# needed for specific source content, so they stay in Recommends: pdftocairo
+# (poppler-utils), gs/ps2pdf (ghostscript), dvipng.
+recommends = "poppler-utils, ghostscript, dvipng"
+# inkscape (SVG conversion) is optional and pulls a large GTK stack — keep it a
+# soft suggestion rather than a recommend.
+suggests = "inkscape"
 section = "tex"
 priority = "optional"
 assets = [
