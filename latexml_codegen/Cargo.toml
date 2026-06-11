@@ -30,4 +30,10 @@ glob = "0.3"
 # splice runtime values into generated code). Audit DEP-14 (2026-05-18):
 # resolver v2 keeps proc-macro features isolated, so the runtime
 # `latexml_core` does NOT inherit this feature.
-latexml_core = { path = "../latexml_core", features = ["codegen"] }
+#
+# `default-features = false` drops the runtime kpathsea backend (and its
+# static-link / PIC constraints) from this host-side proc-macro cdylib — the
+# codegen path uses only the binding AST and never resolves TeX files. The
+# runtime `latexml_core` (linked into the binary) keeps kpathsea via its
+# default feature; resolver v2 keeps the two builds separate.
+latexml_core = { path = "../latexml_core", default-features = false, features = ["codegen"] }

@@ -1,9 +1,11 @@
+#[cfg(feature = "kpathsea")]
+use std::sync::Mutex;
 use std::{
   env,
   path::{Path, PathBuf},
-  sync::Mutex,
 };
 
+#[cfg(feature = "kpathsea")]
 use kpathsea::Kpaths;
 use once_cell::sync::Lazy;
 use regex::Regex;
@@ -68,6 +70,7 @@ static URL_PREFIX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(?:https|http|ftp
 /// `latexml_core::watchdog::PRE_EXIT_HOOK`. See
 /// `feedback_no_mutex_use_thread_local` in user memory for the
 /// general rule.
+#[cfg(feature = "kpathsea")]
 static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new().ok()));
 
 /// Force-initialize the kpathsea global state and warm up the per-
@@ -94,6 +97,7 @@ static KPSE: Lazy<Mutex<Option<Kpaths>>> = Lazy::new(|| Mutex::new(Kpaths::new()
 /// digest reaches its first package resolution, by which point the
 /// prewarm is usually finished. Idempotent: re-entry while in flight
 /// is a no-op (lock contention only).
+#[cfg(feature = "kpathsea")]
 pub fn prewarm_kpathsea() {
   let kpse_guard = KPSE.lock().unwrap();
   let Some(ref kpse) = *kpse_guard else {
@@ -125,6 +129,12 @@ pub fn prewarm_kpathsea() {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| kpse.find_file(sentinel)));
   }
 }
+
+/// No-op when built without the `kpathsea` feature (e.g. the host-side
+/// proc-macro build, which never resolves TeX files).
+#[cfg(not(feature = "kpathsea"))]
+pub fn prewarm_kpathsea() {}
+
 // Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
 static CANONICAL_URL_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^((?:https|http|ftp)://[^/]*)").unwrap());
@@ -584,6 +594,7 @@ pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
 
 /// search for a list of candidate names via the external `kpsewhich` utility
 /// returning the first path that is found
+#[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   if let Some(ref kpse) = *KPSE.lock().unwrap() {
     for candidate in candidates {
@@ -609,6 +620,12 @@ pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   }
   None
 }
+
+/// Without the `kpathsea` feature, file resolution is unavailable — every lookup
+/// returns `None` (graceful degradation). The host-side proc-macro codegen build
+/// takes this path; it never resolves TeX files at compile time.
+#[cfg(not(feature = "kpathsea"))]
+pub fn kpsewhich(_candidates: &[&str]) -> Option<String> { None }
 
 /// check if pathname contains dangerous pieces
 pub fn is_nasty(file: &str) -> bool { PATHNAME_IS_NASTY_RE.is_match(file) }
