@@ -2,21 +2,84 @@ use std::rc::Rc;
 
 use latexml_core::{
   Core, CoreOptions, Error, Fatal, Info, Note,
-  common::{Config, DataSize, DigestionMode, OutputFormat, arena, error::*, object::Object},
+  common::{
+    BindingDispatcher, Config, DataSize, DigestionMode, OutputFormat, arena, error::*,
+    object::Object,
+  },
   digested::Digested,
   document::Document,
   list::List,
   report_mut, s,
-  state::{
-    add_binding_names, set_bindings_dispatch, set_extra_bindings_dispatch, source_map_enabled,
-    source_table_snapshot,
-  },
+  state::{add_binding_names, set_bindings_dispatch, source_map_enabled, source_table_snapshot},
   telemetry::{self, Phase},
 };
 
 use crate::core_interface::DigestionAPI;
 
 const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.5.0)";
+
+/// Resolve a runtime `<request>.rhai` binding from the local search paths
+/// (source directory + `--path`) and load it if present. Local-only — never
+/// consults kpsewhich, since `.rhai` files are user-supplied customizations,
+/// not TeX-tree resources (and probing kpsewhich for a non-existent `.rhai`
+/// on every package load would be wasteful). Returns `None` when no such file
+/// exists, so the caller falls through to the compiled dispatchers.
+/// See `docs/script_bindings_plan.md` §7.
+#[cfg(feature = "runtime-bindings")]
+fn rhai_dispatch(request: &str) -> Option<Result<()>> {
+  use latexml_core::binding::content::{FindFileOptions, find_file};
+  let path = find_file(
+    request,
+    Some(FindFileOptions {
+      // Append `.rhai` (so `foo.sty` resolves `foo.sty.rhai`) and search the
+      // local paths only.
+      ext_type: Some("rhai".into()),
+      search_paths_only: true,
+      ..FindFileOptions::default()
+    }),
+  )?;
+  Some(latexml_contrib::script_bindings::load_file(&path).map(|_| ()))
+}
+
+/// Install the binding-resolution **priority chain** as the single dispatcher
+/// and register the `latexml_package` binding-name registry.
+///
+/// This is the one definition of binding-resolution policy, shared by
+/// [`Converter::initialize_session`] and the integration-test harness
+/// (`util::test::process_texfile`) — so a test exercises the *same* chain a real
+/// conversion does, and local `.rhai` fixtures are discovered identically.
+///
+/// Priority, highest first (installed in ONE slot, so call-site ordering can't
+/// reshuffle it):
+///   1. a local `<request>.rhai` in the search paths — lets a user (or a test
+///      fixture next to its `.tex`) OVERRIDE any compiled binding of the same
+///      name (e.g. `article.cls.rhai` shadows `article_cls`). `runtime-bindings`
+///      only.
+///   2. the `extra` dispatcher (`latexml_contrib` for our binaries) — consulted
+///      before `latexml_package` to preserve the prior external-before-internal
+///      order; the two registries are disjoint, so the order is immaterial.
+///   3. `latexml_package` — core compiled engine bindings.
+pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
+  set_bindings_dispatch(Rc::new(move |request: &str| {
+    #[cfg(feature = "runtime-bindings")]
+    if let Some(result) = rhai_dispatch(request) {
+      return Some(result);
+    }
+    if let Some(extra) = extra.as_ref()
+      && let Some(result) = extra(request)
+    {
+      return Some(result);
+    }
+    latexml_package::dispatch(request)
+  }));
+  // Register every (name, ext) binding pair so `find_file(notex=true)` can
+  // resolve compile-time bindings across all extensions
+  // (.cls/.sty/.def/.pool/code.tex/...). This also feeds `load_class`'s
+  // Perl-parity prefix-match fallback (Package.pm L2702-2706) via the
+  // class-filtered `state::get_class_binding_names()` view. Source of
+  // truth: `latexml_package::BINDINGS`.
+  add_binding_names(latexml_package::binding_names());
+}
 
 pub struct ConversionResponse {
   pub result:      Option<String>,
@@ -57,32 +120,10 @@ impl Converter {
     }
   }
   pub fn initialize_session(&mut self) -> Result<()> {
-    // Add default package bindings.
-    set_bindings_dispatch(Rc::new(latexml_package::dispatch));
-    // Register every (name, ext) binding pair so `find_file(notex=true)`
-    // can resolve compile-time bindings across all extensions
-    // (.cls/.sty/.def/.pool/code.tex/...). This also feeds `load_class`'s
-    // Perl-parity prefix-match fallback (Package.pm L2702-2706) via the
-    // class-filtered `state::get_class_binding_names()` view. Source of
-    // truth: `latexml_package::BINDINGS`.
-    add_binding_names(latexml_package::binding_names());
-    // Add additional binding definitions if any
-    if let Some(closure) = &self.opts.extra_bindings_dispatch {
-      set_extra_bindings_dispatch(closure.clone());
-    }
-    // Default runtime-binding discovery (docs/script_bindings_plan.md §7):
-    // when no embedder-supplied dispatcher exists, resolve `<name>.<ext>.rhai`
-    // (e.g. `mypkg.sty.rhai`) through the same searchpath machinery as raw
-    // TeX sources and load it — downstream users of the single-file binary
-    // drop a .rhai next to their document to customize without recompiling.
-    #[cfg(feature = "runtime-bindings")]
-    if self.opts.extra_bindings_dispatch.is_none() {
-      set_extra_bindings_dispatch(Rc::new(|request: &str| {
-        let candidate = format!("{request}.rhai");
-        latexml_core::binding::content::find_file(&candidate, None)
-          .map(|path| latexml_contrib::script_bindings::load_file(&path).map(|_| ()))
-      }));
-    }
+    // Install the binding-resolution priority chain (rhai > contrib > package)
+    // — the single source of resolution policy, shared with the integration-test
+    // harness via `install_binding_dispatch`.
+    install_binding_dispatch(self.opts.extra_bindings_dispatch.clone());
     // Also expose contrib's bindings (memoir / siamltex / scrbook / etc.)
     // so they participate in the same resolution pool. We unconditionally
     // register latexml_contrib here because the canonical setup for both

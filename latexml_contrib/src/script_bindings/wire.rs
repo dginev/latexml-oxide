@@ -28,6 +28,35 @@ pub(super) fn wire_macro(
   Ok(())
 }
 
+/// Install one string-body `DefMacro('\proto', 'replacement')`. The body is TeX
+/// source that becomes the macro's token expansion directly — Perl's most
+/// common `DefMacro($proto, $string)` form, where `$string` is `TokenizeInternal`d
+/// into the replacement (NOT a Rhai closure, so no per-expansion engine call).
+pub(super) fn wire_macro_string(proto: &str, body: &str) -> Result<()> {
+  let (cs, paramlist) = parse_prototype(proto, true)?;
+  def_macro(
+    cs,
+    paramlist,
+    ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+    None,
+  )?;
+  Ok(())
+}
+
+/// String-body `DefMacro` with a trailing option bag (`DefMacro($proto, $string,
+/// %opts)`). Same token expansion as [`wire_macro_string`], plus the scalar
+/// `ExpandableOptions` from the map.
+pub(super) fn wire_macro_string_opts(proto: &str, body: &str, opts: Map) -> Result<()> {
+  let (cs, paramlist) = parse_prototype(proto, true)?;
+  def_macro(
+    cs,
+    paramlist,
+    ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+    Some(expandable_options_from_map(opts)),
+  )?;
+  Ok(())
+}
+
 /// The imperative-body replacement closure: publishes the active context, calls
 /// the body as `|document, arg1, …|`, pops the context. Shared by every
 /// constructor form that uses a closure body.
@@ -589,6 +618,123 @@ pub(super) fn wire_option(
   latexml_core::state::push_value("@declaredoptions", opt.to_string())?;
   let cs_proto = format!("\\ds@{opt}");
   wire_primitive(engine, ast, &cs_proto, body, PrimitiveOptions::default())
+}
+
+/// `DeclareOption('opt', '\tex...')` — string-body form. Mirrors the
+/// `DeclareOption!($option, $tex:literal)` macro arm: push the name onto
+/// `@declaredoptions` and define `\ds@<opt>` as a plain token-expansion macro
+/// (NOT a Rhai closure).
+pub(super) fn wire_option_string(opt: &str, body: &str) -> Result<()> {
+  latexml_core::state::push_value("@declaredoptions", opt.to_string())?;
+  def_macro(
+    latexml_core::T_CS!(format!("\\ds@{opt}")),
+    None,
+    ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+    None,
+  )?;
+  Ok(())
+}
+
+/// `DeclareOption(sub {...})` with no option name — the default (Perl `undef`)
+/// option handler. Mirrors the `DeclareOption!(None, $body:block)` macro arm:
+/// define `\default@ds` as a primitive whose body trampolines into Rhai. NOT
+/// pushed onto `@declaredoptions` (it is the catch-all, not a declared option).
+pub(super) fn wire_option_default(engine: &Rc<Engine>, ast: &Rc<AST>, body: FnPtr) -> Result<()> {
+  wire_primitive(
+    engine,
+    ast,
+    "\\default@ds",
+    body,
+    PrimitiveOptions::default(),
+  )
+}
+
+/// Map a Rhai option bag onto an `InputDefinitionOptions` (the `InputDefinitions`
+/// side-effect call — raw-load a `.sty`/`.cls`, mirroring Perl's `type=>`,
+/// `noltxml=>`, `withoptions=>`, `handleoptions=>`, `reloadable=>`). Starts from
+/// `InputDefinitionOptions::default()` (so `at_letter` stays `true`).
+pub(super) fn input_def_options_from_map(
+  opts: Map,
+) -> latexml_core::binding::content::InputDefinitionOptions {
+  use std::borrow::Cow;
+
+  use latexml_core::binding::content::InputDefinitionOptions;
+  let mut o = InputDefinitionOptions::default();
+  for (key, val) in opts {
+    match key.as_str() {
+      "type" | "extension" => o.extension = Some(Cow::Owned(dynamic_to_string(val))),
+      "noltxml" => o.noltxml = dynamic_to_bool(&val),
+      "notex" => o.notex = dynamic_to_bool(&val),
+      "noerror" => o.noerror = dynamic_to_bool(&val),
+      "handleoptions" => o.handleoptions = dynamic_to_bool(&val),
+      "as_class" => o.as_class = dynamic_to_bool(&val),
+      "reloadable" => o.reloadable = dynamic_to_bool(&val),
+      "raw" => o.raw = dynamic_to_bool(&val),
+      "at_letter" => o.at_letter = dynamic_to_bool(&val),
+      "searchpaths_only" => o.searchpaths_only = dynamic_to_bool(&val),
+      // Perl `withoptions => 1` = "forward the caller's options"; we model the
+      // boolean form by enabling option pass-through with an (initially empty)
+      // list — the engine fills it from the current `opt@…` mapping.
+      "withoptions" if dynamic_to_bool(&val) => o.withoptions = Some(Vec::new()),
+      _ => {},
+    }
+  }
+  o
+}
+
+/// `DefKeyVal(keyset, key, vtype, default, #{prefix, kind, macroprefix,
+/// choices})` — the option-bag form (xkeyval-style keys with a prefix and a
+/// kind). The 3-/4-arg forms (plain `KV`-prefixed keys) are registered inline in
+/// `engine.rs`; this covers the richer xkeyval declarations (`myxkeyval`'s
+/// `prefix`/`kind`/`choices`). An empty `default` maps to Perl `undef`.
+/// `mismatch` (a warning closure) is intentionally unsupported — the fixtures
+/// that set it never exercise it, matching the prior compiled binding.
+pub(super) fn keyval_define_from_map(
+  keyset: &str,
+  key: &str,
+  vtype: &str,
+  default: &str,
+  opts: Map,
+) -> Result<()> {
+  use latexml_core::keyval::{self, KeyvalConfig};
+  let mut prefix = String::from("KV");
+  let mut kind: Option<String> = None;
+  let mut macroprefix: Option<String> = None;
+  // `choices` requires `Vec<&'static str>`; key definitions persist for the
+  // program lifetime, so leaking the split entries is acceptable (mirrors the
+  // prior `xkvview_sty`/`myxkeyval_sty` compiled bindings).
+  let mut choices: Vec<&'static str> = Vec::new();
+  for (k, v) in opts {
+    match k.as_str() {
+      "prefix" => prefix = dynamic_to_string(v),
+      "kind" => kind = Some(dynamic_to_string(v)),
+      "macroprefix" => macroprefix = Some(dynamic_to_string(v)),
+      "choices" => {
+        if let Some(arr) = v.try_cast::<rhai::Array>() {
+          choices = arr
+            .into_iter()
+            .map(|d| &*Box::leak(dynamic_to_string(d).into_boxed_str()))
+            .collect();
+        }
+      },
+      _ => {},
+    }
+  }
+  keyval::define(KeyvalConfig {
+    prefix: &prefix,
+    keyset,
+    key,
+    vtype,
+    default: if default.is_empty() {
+      None
+    } else {
+      Some(default)
+    },
+    kind: kind.as_deref(),
+    macroprefix: macroprefix.as_deref(),
+    choices,
+    ..KeyvalConfig::default()
+  })
 }
 
 /// Install a string-template `DefConstructor` as a native constructor. The

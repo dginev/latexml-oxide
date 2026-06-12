@@ -1,5 +1,13 @@
-// Keyval options tests -- depend on xkeyval package and test-local .sty packages.
-// Test-local packages are loaded via latexml_contrib dispatcher (noltxml passthrough).
+// Keyval-options tests. The `xkvdop{1-6}` packages are test-local fixtures: a
+// local `xkvdop*.{sty,cls}.rhai` next to each `.tex` raw-loads the bundled
+// `.sty`/`.cls` (faithful to the Perl `t/keyval_options/xkvdop*.ltxml`, which
+// `InputDefinitions(... noltxml => 1)`). Discovery rides the shared
+// binding-resolution chain (rhai > contrib > package) via the source-dir search
+// path — so this whole group requires the `runtime-bindings` feature and is
+// skipped when it is disabled. (`keysetopt` still resolves through the
+// `latexml_contrib` dispatcher passed as tier 2.)
+#![cfg(feature = "runtime-bindings")]
+
 use std::rc::Rc;
 
 use latexml::tex_tests;

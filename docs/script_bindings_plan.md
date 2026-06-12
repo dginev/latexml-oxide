@@ -166,6 +166,27 @@ Components:
   user-named location — squarely in-scope (like reading `.sty` from texmf), not
   a read of latexml-oxide's *own* embedded resources.
 
+> **Landed 2026-06-12 (simpler than the bespoke dirs above).** Discovery rides
+> the *standard* file-search paths instead of a dedicated `--contrib-dir`/env
+> var: the source document's directory (auto-prepended to `SEARCHPATHS` in
+> `core_interface.rs::digest_file`) plus every `--path <dir>`. The hook is a
+> single binding-resolution **priority chain** installed by
+> `converter.rs::initialize_session` (one dispatcher, so call-site ordering
+> can't reshuffle it):
+>   1. `<request>.rhai` in the local search paths (`rhai_dispatch` →
+>      `find_file(ext_type="rhai", search_paths_only=true)`, so **no kpsewhich**
+>      probe per package load);
+>   2. the embedder-supplied extra dispatcher (`latexml_contrib`);
+>   3. `latexml_package` (core compiled bindings).
+>
+> Because the `.rhai` tier is checked **first**, a user-supplied
+> `<name>.<ext>.rhai` *overrides any compiled binding of the same name* — e.g.
+> `article.cls.rhai` shadows the built-in `article_cls`. (`latexml_package`
+> and `latexml_contrib` are disjoint, so their relative order is immaterial.)
+> The most common Perl form — `DefMacro('\foo', 'bar')` with a **string** body
+> (not a closure) — is now a registered Rhai overload, wiring the same native
+> `ExpansionBody::Tokens` expandable as the compile-time `DefMacro!`.
+
 ## 8. API shim surface (prioritized)
 
 Same prioritization as the Perl plan (driven by `.ltxml` corpus frequency),
@@ -184,6 +205,35 @@ registered as Rhai functions / custom types:
 Unimplemented API names should be registered to **error with telemetry**
 (fail-safe + a data-driven worklist of what to add next), mirroring the Perl
 plan's coverage-sweep idea.
+
+> **Landed 2026-06-12 — test fixtures as `.rhai` (the first real coverage).**
+> The local-`.ltxml` test fixtures (Perl `t/{keyval,keyval_options,structure}`)
+> are now local `.rhai` next to their Rust `.tex`, replacing the compiled
+> `latexml_contrib` stand-ins they had been ported to. The migrated fixtures —
+> `xkvdop{1-6}`, `mykeyval`, `myxkeyval`, `apackage`, `filelistclass`,
+> `lxtestclass` (the Perl `myclass.cls` fixture) — drove these surface additions:
+> `InputDefinitions(name, #{type, noltxml, withoptions, handleoptions, …})`;
+> `T_CS`; `DeclareOption(opt, "\tex")` (string body) and `DeclareOption(sub)` (the
+> default/`undef` handler → `\default@ds`); `DefKeyVal(keyset, key, vtype,
+> default, #{prefix, kind, choices, macroprefix})`; `Digest` now returns the
+> digested handle (so `ToString(Digest(T_CS("\\CurrentOption")))` works); and
+> `GetKeyVal` accepts a digested `KeyVals`/unit argument (not just a source
+> string), plus `&GetKeyVal(#1,key)` is whitelisted in the runtime
+> `replacement.rs` template path. The fixture tests live in
+> `tests/{keyval_rhai,structure_rhai,daemon_rhai}` and the (whole-dir-fixture)
+> `tests/keyval_options`, each `#![cfg(feature = "runtime-bindings")]`-gated so
+> they are skipped when the feature is off. The harness reaches them through the
+> *same* `install_binding_dispatch` chain a real conversion uses (DRY, in
+> `converter.rs`).
+>
+> This now covers **every** Perl `t/*` local-`.ltxml` fixture. The full Perl set
+> was 14 files: the 11 above, plus `testlocks`/`testlocks-b` (a daemon-mode
+> `locked`-semantics test, newly ported to `tests/daemon_rhai` with
+> `\usepackage{testlocks}` standing in for the Perl `.spec` preload — body
+> identical, only the `class`/`package` PI order differs), and `any.sty`, which
+> is **not** an executable binding at all: the `alignment/listing` test
+> `\lstinputlisting{any.sty.ltxml}`s it as Perl source to typeset, so its
+> `.ltxml` stays as listing *data* and needs no `.rhai`.
 
 ## 9. Graduation path
 
