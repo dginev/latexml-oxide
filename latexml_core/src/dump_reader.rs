@@ -39,10 +39,13 @@ pub fn load_native_dump(path: &Path) -> Result<usize, String> {
   Ok(count)
 }
 
-/// Load dump data from a string (used by embedded dump modules).
+/// Load dump data from a string (used by the embedded LaTeX kernel dump
+/// module — `latexml_engine/src/latex_dump.rs`).
 /// Returns the number of entries loaded.
 pub fn load_from_str(content: &str) -> Result<usize, String> {
-  load_from_str_internal(content, "<embedded>")
+  // Labelled `<embedded:latex>` (mirroring `<embedded:plain>`) so the
+  // "Loaded N entries from ..." info line names which dump was loaded.
+  load_from_str_internal(content, "<embedded:latex>")
 }
 
 /// Backwards-compat alias kept until call sites are migrated. Both

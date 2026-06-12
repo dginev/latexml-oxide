@@ -5,11 +5,12 @@
 // One #[test] fn per `tests/graphics/*.tex+.xml` pair, generated at
 // compile time by `tex_tests!`.
 //
-// One test (`keyval`) needs the `latexml_contrib` dispatcher to find
-// test-local .sty files via the noltxml raw-TeX passthrough. The
-// other 8 don't, but `latexml_contrib::dispatch` is a strict no-op
-// for files it doesn't recognise, so applying it directory-wide is
-// safe.
+// (The former `keyval` test here was a byte-identical duplicate of
+// `keyval_rhai/keyvalstyle`, which now exercises the same conversion via a local
+// `mykeyval.sty.rhai` fixture; it was removed rather than duplicated into a
+// second gated dir.) `latexml_contrib::dispatch` is still passed directory-wide
+// — a strict no-op for files it doesn't recognise — to stay consistent with the
+// other suites.
 //
 // A previous hand-written version registered a REQUIRES map gating
 // `colors` / `xcolors` on the presence of `dvipsnam.def`. The

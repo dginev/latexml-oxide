@@ -1,270 +1,163 @@
-use latexml_core::keyval::{self, KeyvalConfig};
-
 use crate::prelude::*;
 
-#[rustfmt::skip]
+// Perl: LaTeXML/lib/LaTeXML/Package/xkvview.sty.ltxml
+//
+// Consolidation note (was duplicated in latexml_contrib until the
+// package/contrib dedup — the .ltxml lives under Perl `Package/`, so the
+// canonical home is latexml_package). The Perl original raw-loads the real
+// `xkvview.sty` and shadows `\define@key` / `\define@cmdkey` / … so each key
+// definition also records keyset/key metadata in LaTeXML's keyval store; the
+// raw `xkvview.sty` then renders the collected metadata as a `longtable`.
+//
+// That mechanism does not translate 1:1 to Rust:
+//   * Our `xkeyval` binding's `\define@…` already populate `keyval::define`
+//     (the Rust keyval store), so re-shadowing them here would double-register
+//     every key — duplicated table rows.
+//   * The raw `xkvview.sty`'s `\xkvview` renderer drives `\XKVV@`-internal data
+//     structures the Rust keyval system never sets, so it cannot run.
+// So we keep Perl's OUTPUT (the longtable of registered keys) but produce it
+// directly: enable `XKVVIEW_TRACKING` so `keyval::define` records metadata, and
+// implement `\xkvview` as a constructor that emits the table. This is the
+// version that matches the `keyval/xkeyvalview` regression fixture.
 LoadDefinitions!({
-  // Perl xkvview.sty.ltxml L21-25: load both xkeyval + xkvview raw .sty.
-  InputDefinitions!("xkeyval", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  InputDefinitions!("xkvview", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // Load xkeyval first (provides key definition infrastructure)
+  RequirePackage!("xkeyval");
+  // Note: we do NOT load the raw xkvview.sty — its TeX macros require
+  // internal \XKVV@ variables that our Rust keyval system doesn't set.
+  // Instead we implement \xkvview directly as a constructor below.
 
-  // Perl L33-47: shadow \define@key so each invocation also registers
-  // the keyset/key metadata in LaTeXML's keyval store. The body then
-  // re-invokes the saved \ltx@orig@define@key with all original args so
-  // xkeyval's own bookkeeping still runs.
-  Let!("\\ltx@orig@define@key", "\\define@key");
-  DefMacro!("\\define@key []{}{}[]{}", sub[(prefix, keyset, key, default, code)] {
-    let sprefix = prefix.as_ref().map(|p| p.to_string());
-    let skeyset = keyset.to_string();
-    let skey = key.to_string();
-    let sdefault = default.as_ref().map(|d| d.to_string());
-    let _ = keyval::define(KeyvalConfig {
-      prefix: "KV",
-      keyset: &skeyset,
-      key: &skey,
-      vtype: "",
-      default: sdefault.as_deref(),
-      macroprefix: sprefix.as_deref(),
-      ..KeyvalConfig::default()
-    });
-    // Re-assemble the invocation of the saved original.
-    let mut out: Vec<Token> = vec![T_CS!("\\ltx@orig@define@key")];
-    if let Some(p) = prefix {
-      out.push(T_OTHER!("["));
-      out.extend(p.unlist());
-      out.push(T_OTHER!("]"));
-    }
-    out.push(T_BEGIN!());
-    out.extend(keyset.unlist());
-    out.push(T_END!());
-    out.push(T_BEGIN!());
-    out.extend(key.unlist());
-    out.push(T_END!());
-    if let Some(d) = default {
-      out.push(T_OTHER!("["));
-      out.extend(d.unlist());
-      out.push(T_OTHER!("]"));
-    }
-    out.push(T_BEGIN!());
-    out.extend(code.unlist());
-    out.push(T_END!());
-    Ok(Tokens::new(out))
-  });
+  // Enable xkvview metadata tracking for key definitions from this point on.
+  // Only keys defined AFTER this flag is set will appear in \xkvview output.
+  assign_value("XKVVIEW_TRACKING", true, Some(Scope::Global));
 
-  // Perl L74-94: \define@cmdkeys [prefix]{keyset}[macroprefix]{keys}[default]
-  // — same as cmdkey but #4 is a comma-separated key list, no code arg.
-  Let!("\\ltx@orig@define@cmdkeys", "\\define@cmdkeys");
-  DefMacro!("\\define@cmdkeys []{}[]{}[]",
-    sub[(prefix, keyset, macroprefix, keys, default)] {
-      let sprefix = prefix.as_ref().map(|p| p.to_string());
-      let skeyset = keyset.to_string();
-      let smacroprefix = macroprefix.as_ref().map(|m| m.to_string());
-      let sdefault = default.as_ref().map(|d| d.to_string());
-      let keys_str = keys.to_string();
-      for key in keys_str.split(',') {
-        let key = key.trim();
-        if !key.is_empty() {
-          let _ = keyval::define(KeyvalConfig {
-            prefix: "KV",
-            keyset: &skeyset,
-            key,
-            vtype: "",
-            default: sdefault.as_deref(),
-            kind: Some("command"),
-            macroprefix: smacroprefix.as_deref().or(sprefix.as_deref()),
-            ..KeyvalConfig::default()
-          });
+  // Override \xkvview to build a table from registered keyval metadata.
+  // The Perl xkvview.sty.ltxml intercepts \define@key etc. to store metadata,
+  // then the raw TeX xkvview.sty generates a longtable wrapped in \ttfamily.
+  // In Rust, we have already stored metadata in keyval::define(), so we generate
+  // the XML directly, passing a typewriter Font to absorb_string so the document's
+  // font system auto-wraps cell content in <text font="typewriter">.
+  {
+    let replacement: ReplacementClosure = Rc::new(
+      |document: &mut Document, _args: &Vec<Option<Digested>>, props: &SymHashMap<Stored>| {
+        use latexml_core::keyval;
+
+        let entries = keyval::enumerate_keyvals();
+        if entries.is_empty() {
+          return Ok(());
         }
-      }
-      let mut out: Vec<Token> = vec![T_CS!("\\ltx@orig@define@cmdkeys")];
-      if let Some(p) = prefix {
-        out.push(T_OTHER!("[")); out.extend(p.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(keyset.unlist()); out.push(T_END!());
-      if let Some(m) = macroprefix {
-        out.push(T_OTHER!("[")); out.extend(m.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(keys.unlist()); out.push(T_END!());
-      if let Some(d) = default {
-        out.push(T_OTHER!("[")); out.extend(d.unlist()); out.push(T_OTHER!("]"));
-      }
-      Ok(Tokens::new(out))
-    }
-  );
 
-  // Perl L100-124: \define@choicekey ...
-  Let!("\\ltx@orig@define@choicekey", "\\define@choicekey");
-  DefMacro!(
-    "\\define@choicekey OptionalMatch:* OptionalMatch:+ []{}{}[]{}[]{}",
-    sub[(star, plus, prefix, keyset, key, bin, choices, default, code)] {
-      let sprefix = prefix.as_ref().map(|p| p.to_string());
-      let skeyset = keyset.to_string();
-      let skey = key.to_string();
-      let sdefault = default.as_ref().map(|d| d.to_string());
-      // KeyvalConfig.choices requires Vec<&'static str>. Leak the
-      // comma-split entries — key definitions persist for the program
-      // lifetime (matches xkeyval_sty.rs:222-224 pattern).
-      let choices_str = choices.to_string();
-      let choices_vec: Vec<&'static str> = choices_str
-        .split(',')
-        .map(|s| &*Box::leak(s.trim().to_string().into_boxed_str()))
-        .collect();
-      let bin_tokens = bin.clone();
-      let _ = keyval::define(KeyvalConfig {
-        prefix: "KV",
-        keyset: &skeyset,
-        key: &skey,
-        vtype: "",
-        default: sdefault.as_deref(),
-        kind: Some("choice"),
-        normalize: Some(star.is_some()),
-        choices: choices_vec,
-        bin: bin_tokens,
-        macroprefix: sprefix.as_deref(),
-        ..KeyvalConfig::default()
-      });
-      let mut out: Vec<Token> = vec![T_CS!("\\ltx@orig@define@choicekey")];
-      if let Some(s) = star { out.extend(s.unlist()); }
-      if let Some(p) = plus { out.extend(p.unlist()); }
-      if let Some(p) = prefix {
-        out.push(T_OTHER!("[")); out.extend(p.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(keyset.unlist()); out.push(T_END!());
-      out.push(T_BEGIN!()); out.extend(key.unlist()); out.push(T_END!());
-      if let Some(b) = bin {
-        out.push(T_OTHER!("[")); out.extend(b.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(choices.unlist()); out.push(T_END!());
-      if let Some(d) = default {
-        out.push(T_OTHER!("[")); out.extend(d.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(code.unlist()); out.push(T_END!());
-      Ok(Tokens::new(out))
-    }
-  );
+        // Get id from counter (set in after_digest)
+        let id_str = match props.get("id") {
+          Some(Stored::String(s)) => to_string(*s),
+          _ => String::new(),
+        };
 
-  // Perl L130-149: \define@boolkey OptionalMatch:+ []{}[]{}[]{}
-  Let!("\\ltx@orig@define@boolkey", "\\define@boolkey");
-  DefMacro!("\\define@boolkey OptionalMatch:+ []{}[]{}[]{}",
-    sub[(plus, prefix, keyset, macroprefix, key, default, code)] {
-      let sprefix = prefix.as_ref().map(|p| p.to_string());
-      let skeyset = keyset.to_string();
-      let skey = key.to_string();
-      let smacroprefix = macroprefix.as_ref().map(|m| m.to_string());
-      let sdefault = default.as_ref().map(|d| d.to_string());
-      let _ = keyval::define(KeyvalConfig {
-        prefix: "KV",
-        keyset: &skeyset,
-        key: &skey,
-        vtype: "",
-        default: sdefault.as_deref(),
-        kind: Some("boolean"),
-        macroprefix: smacroprefix.as_deref().or(sprefix.as_deref()),
-        ..KeyvalConfig::default()
-      });
-      let mut out: Vec<Token> = vec![T_CS!("\\ltx@orig@define@boolkey")];
-      if let Some(p) = plus { out.extend(p.unlist()); }
-      if let Some(p) = prefix {
-        out.push(T_OTHER!("[")); out.extend(p.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(keyset.unlist()); out.push(T_END!());
-      if let Some(m) = macroprefix {
-        out.push(T_OTHER!("[")); out.extend(m.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(key.unlist()); out.push(T_END!());
-      if let Some(d) = default {
-        out.push(T_OTHER!("[")); out.extend(d.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(code.unlist()); out.push(T_END!());
-      Ok(Tokens::new(out))
-    }
-  );
-
-  // Perl L151-171: \define@boolkeys []{}[]{}[]
-  Let!("\\ltx@orig@define@boolkeys", "\\define@boolkeys");
-  DefMacro!("\\define@boolkeys []{}[]{}[]",
-    sub[(prefix, keyset, macroprefix, keys, default)] {
-      let sprefix = prefix.as_ref().map(|p| p.to_string());
-      let skeyset = keyset.to_string();
-      let smacroprefix = macroprefix.as_ref().map(|m| m.to_string());
-      let sdefault = default.as_ref().map(|d| d.to_string());
-      let keys_str = keys.to_string();
-      for key in keys_str.split(',') {
-        let key = key.trim();
-        if !key.is_empty() {
-          let _ = keyval::define(KeyvalConfig {
-            prefix: "KV",
-            keyset: &skeyset,
-            key,
-            vtype: "",
-            default: sdefault.as_deref(),
-            kind: Some("boolean"),
-            macroprefix: smacroprefix.as_deref().or(sprefix.as_deref()),
-            ..KeyvalConfig::default()
-          });
+        // Open <table inlist="lot" xml:id="S0.T1">
+        let mut table_attrs = HashMap::default();
+        table_attrs.insert("inlist".to_string(), "lot".to_string());
+        if !id_str.is_empty() {
+          table_attrs.insert("xml:id".to_string(), id_str);
         }
-      }
-      let mut out: Vec<Token> = vec![T_CS!("\\ltx@orig@define@boolkeys")];
-      if let Some(p) = prefix {
-        out.push(T_OTHER!("[")); out.extend(p.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(keyset.unlist()); out.push(T_END!());
-      if let Some(m) = macroprefix {
-        out.push(T_OTHER!("[")); out.extend(m.unlist()); out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!()); out.extend(keys.unlist()); out.push(T_END!());
-      if let Some(d) = default {
-        out.push(T_OTHER!("[")); out.extend(d.unlist()); out.push(T_OTHER!("]"));
-      }
-      Ok(Tokens::new(out))
-    }
-  );
+        document.open_element("ltx:table", Some(table_attrs), None)?;
 
-  // Perl L53-72: command keys — `kind => "command"` + macroprefix.
-  Let!("\\ltx@orig@define@cmdkey", "\\define@cmdkey");
-  DefMacro!("\\define@cmdkey []{}[]{}[]{}",
-    sub[(prefix, keyset, macroprefix, key, default, code)] {
-      let sprefix = prefix.as_ref().map(|p| p.to_string());
-      let skeyset = keyset.to_string();
-      let skey = key.to_string();
-      let smacroprefix = macroprefix.as_ref().map(|m| m.to_string());
-      let sdefault = default.as_ref().map(|d| d.to_string());
-      let _ = keyval::define(KeyvalConfig {
-        prefix: "KV",
-        keyset: &skeyset,
-        key: &skey,
-        vtype: "",
-        default: sdefault.as_deref(),
-        kind: Some("command"),
-        macroprefix: smacroprefix.as_deref().or(sprefix.as_deref()),
-        ..KeyvalConfig::default()
-      });
-      let mut out: Vec<Token> = vec![T_CS!("\\ltx@orig@define@cmdkey")];
-      if let Some(p) = prefix {
-        out.push(T_OTHER!("["));
-        out.extend(p.unlist());
-        out.push(T_OTHER!("]"));
+        // Absorb tags (from ref_step_counter, set in after_digest)
+        if let Some(Stored::Digested(tags)) = props.get("tags") {
+          document.absorb(tags, None)?;
+        }
+
+        // Create typewriter font for text wrapping.
+        // The document's open_text() compares this against the parent's serif font
+        // and auto-opens <text font="typewriter"> elements.
+        let tt_font = Font {
+          family: Some(Cow::Borrowed("typewriter")),
+          ..Font::text_default()
+        };
+        let tt_props = stored_map!(
+          "font" => Stored::Font(Rc::new(tt_font))
+        );
+
+        // Open <tabular>
+        document.open_element("ltx:tabular", None, None)?;
+
+        // Header row
+        document.open_element("ltx:thead", None, None)?;
+        document.open_element("ltx:tr", None, None)?;
+        for header in &["Key", "Prefix", "Family", "Type", "Default"] {
+          let mut td_attrs = HashMap::default();
+          td_attrs.insert("align".to_string(), "left".to_string());
+          td_attrs.insert("thead".to_string(), "column".to_string());
+          document.open_element("ltx:td", Some(td_attrs), None)?;
+          document.absorb_string(header, &tt_props)?;
+          document.close_element("ltx:td")?;
+        }
+        document.close_element("ltx:tr")?;
+        document.close_element("ltx:thead")?;
+
+        // Body rows
+        document.open_element("ltx:tbody", None, None)?;
+        let num_entries = entries.len();
+        for (i, entry) in entries.iter().enumerate() {
+          document.open_element("ltx:tr", None, None)?;
+          let border = if i == 0 {
+            Some("t")
+          } else if i == num_entries - 1 {
+            Some("b")
+          } else {
+            None
+          };
+          let values = [
+            &entry.key,
+            &entry.prefix,
+            &entry.keyset,
+            &entry.kind,
+            &entry.default,
+          ];
+          for val in &values {
+            let mut td_attrs = HashMap::default();
+            td_attrs.insert("align".to_string(), "left".to_string());
+            if let Some(b) = border {
+              td_attrs.insert("border".to_string(), b.to_string());
+            }
+            document.open_element("ltx:td", Some(td_attrs), None)?;
+            document.absorb_string(val, &tt_props)?;
+            document.close_element("ltx:td")?;
+          }
+          document.close_element("ltx:tr")?;
+        }
+        document.close_element("ltx:tbody")?;
+
+        // Close tabular and table
+        document.close_element("ltx:tabular")?;
+        document.close_element("ltx:table")?;
+
+        Ok(())
+      },
+    );
+    let cs = T_CS!("\\xkvview");
+    let paramlist = parse_parameters("{}", &cs, true)?;
+
+    let mut opts = ConstructorOptions::default();
+    // Step the table counter during digestion to generate xml:id and <tags>.
+    // Mirrors Perl: the raw TeX xkvview.sty wraps content in a longtable
+    // environment which implicitly steps the table counter via \caption.
+    opts.after_digest.push(Rc::new(|whatsit: &mut Whatsit| {
+      let counter_props = ref_step_counter("table", false)?;
+      if let Some(tags) = counter_props.get("tags") {
+        whatsit.set_property("tags", tags.clone());
       }
-      out.push(T_BEGIN!());
-      out.extend(keyset.unlist());
-      out.push(T_END!());
-      if let Some(m) = macroprefix {
-        out.push(T_OTHER!("["));
-        out.extend(m.unlist());
-        out.push(T_OTHER!("]"));
+      if let Some(id) = counter_props.get("id") {
+        whatsit.set_property("id", id.clone());
       }
-      out.push(T_BEGIN!());
-      out.extend(key.unlist());
-      out.push(T_END!());
-      if let Some(d) = default {
-        out.push(T_OTHER!("["));
-        out.extend(d.unlist());
-        out.push(T_OTHER!("]"));
-      }
-      out.push(T_BEGIN!());
-      out.extend(code.unlist());
-      out.push(T_END!());
-      Ok(Tokens::new(out))
-    }
-  );
+      Ok(Vec::new())
+    }));
+
+    def_constructor(cs, paramlist, Some(replacement), opts);
+  }
+
+  // Override \define@key to also store xkvview metadata.
+  // The Perl xkvview.sty.ltxml saves the original and wraps it.
+  // In Rust, keyval::define() already stores metadata (kind, prefix, keyset, key)
+  // so we just need to make sure the raw TeX xkvview.sty doesn't break things.
+  // The key definitions go through xkeyval_sty.rs → keyval::define() which now
+  // stores all metadata automatically. No additional overrides needed.
 });

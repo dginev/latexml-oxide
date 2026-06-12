@@ -21,21 +21,16 @@ pub mod script_bindings;
 // =======================
 //
 // I. Add your custom binding definition as a module delcaration here
-pub mod apackage_sty;
+// apackage_sty / filelistclass_cls / myclass_cls: test-local structure fixtures,
+// now local `.rhai` next to tests/structure_rhai (Perl t/structure/*.ltxml).
 pub mod discard_env;
-pub mod filelistclass_cls;
 pub mod keysetopt_sty;
-pub mod myclass_cls;
-pub mod mykeyval_sty;
+// mykeyval_sty / myxkeyval_sty: test-local keyval fixtures, now local `.rhai`
+// next to tests/keyval_rhai (Perl t/keyval/{mykeyval,myxkeyval}.sty.ltxml).
 pub mod mytemplate_sty;
-pub mod myxkeyval_sty;
-pub mod xkvdop1_sty;
-pub mod xkvdop2_sty;
-pub mod xkvdop3_sty;
-pub mod xkvdop4_sty;
-pub mod xkvdop5_cls;
-pub mod xkvdop6_cls;
-pub mod xkvview_sty;
+// xkvdop1-6: test-local fixtures, now local `.rhai` next to the keyval_options
+// tests (Perl t/keyval_options/xkvdop*.{sty,cls}.ltxml).
+// xkvview_sty: consolidated into latexml_package (Perl Package/xkvview.sty.ltxml)
 
 // ar5iv-bindings ports
 pub mod aamas_cls;
@@ -93,7 +88,7 @@ pub mod diagrams_tex;
 pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
-pub mod ed_sty;
+// ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod egpubl_cls;
 pub mod ejpecp_cls;
 pub mod elife_cls;
@@ -124,7 +119,7 @@ pub mod ieeeoj_cls;
 pub mod ieeeojcsys_cls;
 pub mod ieeetaes_cls;
 pub mod ifacconf_cls;
-pub mod ifdraft_sty;
+// ifdraft_sty: consolidated into latexml_package (Perl Package/ifdraft.sty.ltxml)
 pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;
@@ -239,20 +234,11 @@ pub type BindingLoader = fn() -> Result<()>;
 /// II. Connect the filename to the `load_definitions` function of your
 ///     `.rs` binding by adding a new row here.
 pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
-  ("apackage", "sty", apackage_sty::load_definitions),
-  ("filelistclass", "cls", filelistclass_cls::load_definitions),
-  // Test-only options fixture. Registered under a deliberately unique name
-  // ("lxtestclass", not "myclass") so it does NOT intercept real arXiv papers
-  // that bundle their OWN `myclass.cls` (a common tutorial/template name).
-  // Perl has no `myclass` binding — such papers fall back to OmniBus +
-  // dep-scan of the bundled .cls (loading e.g. amsmath, so
-  // `\DeclareMathOperator` is defined). A globally-registered `myclass`
-  // binding broke that (witness 1710.04325 / 1802.01751: bundled myclass.cls
-  // `\usepackage{amsmath}` not loaded → `\DeclareMathOperator` undefined →
-  // 101-error FATAL). Used by tests/structure/options.tex.
-  ("lxtestclass", "cls", myclass_cls::load_definitions),
+  // `apackage`/`filelistclass`/`lxtestclass` (the Perl `myclass.cls` fixture,
+  // renamed so it never intercepts a real paper's bundled `myclass.cls`) were
+  // test-local fixtures; they now live as local `.rhai` next to
+  // tests/structure_rhai (gated to `runtime-bindings`).
   ("keysetopt", "sty", keysetopt_sty::load_definitions),
-  ("mykeyval", "sty", mykeyval_sty::load_definitions),
   // Test-only fixture (defines `\hw`), registered under a deliberately
   // unique name `lxtesttemplate` (not `mytemplate`) so it does NOT intercept
   // real arXiv papers that bundle their OWN `mytemplate.sty`. Such papers
@@ -261,15 +247,6 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // 1810.07512: bundled mytemplate.sty defines \F/\eps/\sig/… → all
   // undefined under the fixture). Used by tests/contrib/hw.tex.
   ("lxtesttemplate", "sty", mytemplate_sty::load_definitions),
-  ("myxkeyval", "sty", myxkeyval_sty::load_definitions),
-  // xkeyval test packages — passthrough to raw TeX (noltxml)
-  ("xkvdop1", "sty", xkvdop1_sty::load_definitions),
-  ("xkvdop2", "sty", xkvdop2_sty::load_definitions),
-  ("xkvdop3", "sty", xkvdop3_sty::load_definitions),
-  ("xkvdop4", "sty", xkvdop4_sty::load_definitions),
-  ("xkvdop5", "cls", xkvdop5_cls::load_definitions),
-  ("xkvdop6", "cls", xkvdop6_cls::load_definitions),
-  ("xkvview", "sty", xkvview_sty::load_definitions),
   // ar5iv-bindings ports
   ("aistats2026", "sty", aistats2026_sty::load_definitions),
   ("aliascnt", "sty", aliascnt_sty::load_definitions),
@@ -331,11 +308,9 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("cmcal", "sty", cmcal_sty::load_definitions),
   ("datetime2", "sty", datetime2_sty::load_definitions),
   ("datetime", "sty", datetime_sty::load_definitions),
-  ("ed", "sty", ed_sty::load_definitions),
   ("emlines", "sty", emlines_sty::load_definitions),
   ("hobby", "code.tex", hobby_code_tex::load_definitions),
   ("hyphenat", "sty", hyphenat_sty::load_definitions),
-  ("ifdraft", "sty", ifdraft_sty::load_definitions),
   ("l3draw", "sty", l3draw_sty::load_definitions),
   ("lettrine", "sty", lettrine_sty::load_definitions),
   ("libertine", "sty", libertine_sty::load_definitions),

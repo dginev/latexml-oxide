@@ -1,7 +1,7 @@
-use std::{path::PathBuf, rc::Rc, sync::Once};
+use std::{path::PathBuf, sync::Once};
 
 use glob::glob;
-use latexml_core::{Core, CoreOptions, common::BindingDispatcher, document::Document, s, state};
+use latexml_core::{Core, CoreOptions, common::BindingDispatcher, document::Document, s};
 use once_cell::sync::Lazy;
 
 use crate::core_interface::DigestionAPI;
@@ -314,14 +314,14 @@ fn process_texfile(
     include_comments: Some(false),
     ..CoreOptions::default()
   });
-  // Add the package bindings
-  state::set_bindings_dispatch(Rc::new(latexml_package::dispatch));
-  state::add_binding_names(latexml_package::binding_names());
-  // If we want to test the latexml_contrib bindings, we need to pass in the additional binding
-  // dispatcher, which makes the contrib bindings visible
-  if let Some(dispatcher) = extra_bindings_dispatcher {
-    state::set_extra_bindings_dispatch(dispatcher);
-  }
+  // Install the SAME binding-resolution priority chain a real conversion uses
+  // (rhai > extra/contrib > package), via the shared helper. This is what lets a
+  // test resolve a local `<pkg>.<ext>.rhai` fixture sitting next to its `.tex`
+  // (found through the source-dir search path) — exactly as the Perl suite
+  // resolves a local `<pkg>.<ext>.ltxml`. The `extra` dispatcher (passed by test
+  // groups that still rely on compiled `latexml_contrib` fixtures) is folded in
+  // as tier 2.
+  crate::converter::install_binding_dispatch(extra_bindings_dispatcher);
   let r = match latexml.convert_file(tex_path.to_owned()) {
     Err(e) => panic!("{:?}: Couldn't convert {:?}; {:?}", name, tex_path, e),
     Ok(doc) => process_ltx_doc(doc, name),

@@ -914,6 +914,21 @@ fn call_func(
   }
   match name {
     "ToString" => Ok(argv.join("")),
+    // `&GetKeyVal(#1, key)` — extract a value from a keyval argument rendered to
+    // its `k=v,…` source form. Mirrors the compile-time prelude `GetKeyVal`
+    // (which reads the digested KeyVals directly) for the scalar values these
+    // templates use; missing key → "".
+    "GetKeyVal" => {
+      let kv = argv.first().map(String::as_str).unwrap_or("");
+      let key = argv.get(1).map(String::as_str).unwrap_or("");
+      Ok(
+        crate::keyval::split_keyval_source(kv)
+          .into_iter()
+          .find(|(k, _)| k == key)
+          .map(|(_, v)| v)
+          .unwrap_or_default(),
+      )
+    },
     _ => Err(Error::from(format!(
       "runtime template: function &{name}(…) is not in the whitelist"
     ))),

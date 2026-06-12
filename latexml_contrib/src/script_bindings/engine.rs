@@ -38,12 +38,30 @@ pub(super) fn make_engine() -> Engine {
       wire_now(|e, a| wire_macro(e, a, proto, body))
     },
   );
+  // String-body form — Perl's most common `DefMacro('\foo', 'bar')`, where the
+  // body is TeX source that becomes the expansion directly (no Rhai closure).
+  // Wires the same native expandable as the compile-time `DefMacro!` string
+  // form, so a `.rhai` binding reads like the `.ltxml` original. The wiring
+  // ignores the script handles, hence the throwaway `|_, _|`.
+  engine.register_fn(
+    "DefMacro",
+    |proto: &str, body: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|_, _| wire_macro_string(proto, body))
+    },
+  );
   // Option-bag form (Perl's trailing `key => value`s): scalars onto
-  // `ExpandableOptions` via the shared mapper.
+  // `ExpandableOptions` via the shared mapper. Both the closure-body and the
+  // string-body variants accept it.
   engine.register_fn(
     "DefMacro",
     |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
       wire_now(|e, a| wire_macro_opts(e, a, proto, body, opts))
+    },
+  );
+  engine.register_fn(
+    "DefMacro",
+    |proto: &str, body: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|_, _| wire_macro_string_opts(proto, body, opts))
     },
   );
   engine.register_fn(
@@ -68,6 +86,23 @@ pub(super) fn make_engine() -> Engine {
       wire_now(|e, a| wire_option(e, a, opt, body))
     },
   );
+  // String-body form: `DeclareOption('opt', '\xdef...')` — the body is TeX,
+  // installed as a token-expansion macro (Perl's `DeclareOption($o, $string)`).
+  engine.register_fn(
+    "DeclareOption",
+    |opt: &str, body: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|_, _| wire_option_string(opt, body))
+    },
+  );
+  // Default-option handler: `DeclareOption(sub {...})` with no name — Perl's
+  // `DeclareOption(undef, sub {...})`, defining `\default@ds` for any option not
+  // otherwise declared.
+  engine.register_fn(
+    "DeclareOption",
+    |body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_option_default(e, a, body))
+    },
+  );
 
   // ── free-function helpers (prelude names) over core datatypes ──
   // `Tokens` is registered as an opaque pass-through handle (Tier-2): a script
@@ -77,13 +112,21 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("TokenizeInternal", |s: &str| -> Tokens {
     mouth::tokenize_internal(s)
   });
+  // `Digest` returns the digested handle (Perl returns the digested box), so a
+  // script can `ToString(Digest(...))` — e.g. a default-option handler reading
+  // `\CurrentOption`. Callers that ignore the return (the common side-effect
+  // use) are unaffected.
   engine.register_fn(
     "Digest",
-    |t: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
-      latexml_core::stomach::digest(t).map_err(rhai_err)?;
-      Ok(())
+    |t: Tokens| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::stomach::digest(t).map_err(rhai_err)
     },
   );
+  // `T_CS('\foo')` — a single control-sequence token (wrapped as `Tokens` so it
+  // composes with `Digest`/`Expand`). The dominant token-constructor use.
+  engine.register_fn("T_CS", |name: &str| -> Tokens {
+    Tokens::new(vec![latexml_core::T_CS!(name)])
+  });
 
   // ── state API (for primitive side-effects / value-reading macros) ──
   // `assign_value` is group-local (TeX default); `assign_global` persists past
@@ -301,15 +344,31 @@ pub(super) fn make_engine() -> Engine {
     })
   });
 
-  // GetKeyVal / GetKeyVals over the keyval dict's TeX-source form (how an
-  // `OptionalKeyVals:` argument reaches a script body): "k=v,k2={v2}" → value
-  // by key / a Rhai map of all pairs. Brace-aware at depth 0, like keyval.
-  engine.register_fn("GetKeyVal", |kv: &str, key: &str| -> String {
-    latexml_core::keyval::split_keyval_source(kv)
-      .into_iter()
-      .find(|(k, _)| k == key)
-      .map(|(_, v)| v)
-      .unwrap_or_default()
+  // GetKeyVal / GetKeyVals over a keyval argument. A `KeyVals`/`OptionalKeyVals`
+  // argument reaches a constructor *closure* body as a digested `KeyVals` handle
+  // (or unit `()` when an optional set was omitted); it reaches other contexts
+  // as its TeX-source string ("k=v,k2={v2}"). `GetKeyVal` accepts both — plus
+  // unit — so a script body can `GetKeyVal(#1, "width")` uniformly. Missing key
+  // (or unit) → "".
+  engine.register_fn("GetKeyVal", |kv: Dynamic, key: &str| -> String {
+    if let Some(d) = kv.clone().try_cast::<Digested>() {
+      return match d.data() {
+        latexml_core::digested::DigestedData::KeyVals(keyval) => keyval
+          .get_value_digested(key)
+          .map(|v| v.to_string())
+          .unwrap_or_default(),
+        _ => String::new(),
+      };
+    }
+    if kv.is_string() {
+      let s = kv.into_string().unwrap_or_default();
+      return latexml_core::keyval::split_keyval_source(&s)
+        .into_iter()
+        .find(|(k, _)| k == key)
+        .map(|(_, v)| v)
+        .unwrap_or_default();
+    }
+    String::new()
   });
   engine.register_fn("GetKeyVals", |kv: &str| -> Map {
     let mut m = Map::new();
@@ -396,6 +455,20 @@ pub(super) fn make_engine() -> Engine {
         ..latexml_core::keyval::KeyvalConfig::default()
       })
       .map_err(rhai_err)
+    },
+  );
+  // Option-bag form: `DefKeyVal(keyset, key, vtype, default, #{prefix, kind,
+  // macroprefix, choices})` — the xkeyval-style declaration (a `prefix`, a
+  // `kind` of ordinary/command/choice/boolean, and `choices` for choice keys).
+  engine.register_fn(
+    "DefKeyVal",
+    |keyset: &str,
+     key: &str,
+     vtype: &str,
+     default: &str,
+     opts: Map|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      keyval_define_from_map(keyset, key, vtype, default, opts).map_err(rhai_err)
     },
   );
   engine.register_fn(
@@ -680,6 +753,26 @@ pub(super) fn make_engine() -> Engine {
         name,
         ext,
         options.into_iter().map(dynamic_to_string).collect(),
+      )
+      .map_err(rhai_err)
+    },
+  );
+  // `InputDefinitions('name', #{type, noltxml, withoptions, handleoptions,
+  // reloadable, ...})` — raw-load a `.sty`/`.cls` (the wrapper form many local
+  // test fixtures use). The opts map mirrors Perl's `key => value` tail.
+  engine.register_fn(
+    "InputDefinitions",
+    |name: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::input_definitions(name, input_def_options_from_map(opts))
+        .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "InputDefinitions",
+    |name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::binding::content::input_definitions(
+        name,
+        latexml_core::binding::content::InputDefinitionOptions::default(),
       )
       .map_err(rhai_err)
     },
