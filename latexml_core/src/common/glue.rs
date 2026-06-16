@@ -9,7 +9,7 @@ use crate::{
   common::{
     dimension::attribute_format,
     error::Result,
-    numeric_ops::{EPSILON, NumericOps, fixpoint, kround},
+    numeric_ops::{EPSILON, NumericOps, fixpoint, fixpoint_unit, kround},
   },
   definition::register::{RegisterType, RegisterValue},
   digested::Digested,
@@ -352,7 +352,10 @@ pub fn spec_setup(
         }
         fixpoint(f, None) // in mu
       } else {
-        fixpoint(f, Some(convert_unit(unit)))
+        {
+          let (num, den) = convert_unit_ratio(unit);
+          fixpoint_unit(f, num, den)
+        }
       };
 
       let mut plus = if punit.is_empty() {
@@ -369,7 +372,10 @@ pub fn spec_setup(
         Some(fixpoint(p, None))
       } else {
         pfill = None; // ? 0
-        Some(fixpoint(p, Some(convert_unit(punit))))
+        Some({
+          let (num, den) = convert_unit_ratio(punit);
+          fixpoint_unit(p, num, den)
+        })
       };
 
       let mut minus = if munit.is_empty() {
@@ -386,7 +392,10 @@ pub fn spec_setup(
         Some(fixpoint(m, None))
       } else {
         mfill = None; // 0
-        Some(fixpoint(m, Some(convert_unit(munit))))
+        Some({
+          let (num, den) = convert_unit_ratio(munit);
+          fixpoint_unit(m, num, den)
+        })
       };
 
       if punit.is_empty() {
@@ -394,7 +403,10 @@ pub fn spec_setup(
         plus = Some(fixpoint(p, None));
         pfill = Some(pfcode);
       } else {
-        plus = Some(fixpoint(p, Some(convert_unit(punit))));
+        plus = Some({
+          let (num, den) = convert_unit_ratio(punit);
+          fixpoint_unit(p, num, den)
+        });
         pfill = None;
       }
       if munit.is_empty() {
@@ -402,7 +414,10 @@ pub fn spec_setup(
         minus = Some(fixpoint(m, None));
         mfill = Some(mfcode);
       } else {
-        minus = Some(fixpoint(m, Some(convert_unit(munit))));
+        minus = Some({
+          let (num, den) = convert_unit_ratio(munit);
+          fixpoint_unit(m, num, den)
+        });
         mfill = None;
       }
       (skip, plus, pfill, minus, mfill)

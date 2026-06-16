@@ -58,6 +58,28 @@ pub fn fixpoint(float: f64, unit_opt: Option<f64>) -> i64 {
   }
 }
 
+/// Exact TeX fixed-point unit conversion: `floor(round(float·65536)·num/den)`,
+/// computed in integer (i128) arithmetic.
+///
+/// This is tex.web §458 `scan_dimen` — `cur_val := xn_over_d(cur_val,num,denom);
+/// f := (num*f + 65536*remainder) div denom; cur_val += f div 65536` — which
+/// algebraically collapses to `floor(fix·num/den)` for `fix = cur_val·65536 + f`
+/// (proof: `xn_over_d(x,n,d) = floor(x·n/d)` with `remainder = x·n mod d`, so the
+/// integer-part and fraction-carry terms recombine to `num·fix/den`). The
+/// per-unit `(num,den)` come from [`crate::state::convert_unit_ratio`] (physical
+/// units use TeX's `set_conversion` fractions, tex.web 9020-9032; font-relative
+/// units use `(metric_sp, 65536)`, the `nx_plus_y`/`xn_over_d` path of §8983).
+///
+/// The legacy float [`fixpoint`] computes `trunc(fix·(65536·num/den)/65536)` and
+/// drifts ±1 sp on rounding boundaries (verified against pdftex on `cm`/`bp`/`mm`/
+/// `cc`; issue #127). Integer math is bit-faithful to TeX/pdfTeX. Sign matches
+/// TeX: it tracks sign separately and floors the magnitude, i.e. truncation
+/// toward zero — exactly Rust's integer `/`.
+pub fn fixpoint_unit(float: f64, num: i64, den: i64) -> i64 {
+  let fix = kround(float * UNITY_F64) as i128;
+  (fix * num as i128 / den as i128) as i64
+}
+
 pub trait NumericOps {
   fn new(num: i64) -> Self
   where Self: Sized;
@@ -226,5 +248,50 @@ mod tests {
   fn constants_unity_matches_f64() {
     // The integer UNITY and f64 UNITY_F64 must agree numerically.
     assert_eq!(UNITY as f64, UNITY_F64);
+  }
+
+  #[test]
+  fn fixpoint_unit_matches_pdftex() {
+    // Ground-truth scaled-point values captured from pdftex (TeX Live 2025):
+    //   `\dimen0=<value><unit> \showthe\dimen0`. These are the cases where the
+    //   legacy float multiply drifts ±1 sp; the integer path is bit-exact.
+    //   See issue #127. (num, den) are tex.web §458 set_conversion fractions.
+    let cases: &[(f64, i64, i64, i64)] = &[
+      // value, num, den, expected sp
+      (1.0, 7227, 100, 4736286),         // 1in   = 72.26999pt
+      (1.0, 7227, 254, 1864679),         // 1cm   = 28.45274pt
+      (1.0, 7227, 2540, 186467),         // 1mm   = 2.84526pt
+      (1.0, 7227, 7200, 65781),          // 1bp   = 1.00374pt
+      (1.0, 1238, 1157, 70124),          // 1dd   = 1.07pt
+      (1.0, 14856, 1157, 841489),        // 1cc   = 12.8401pt
+      (76.24341, 7227, 254, 142169544),  // cm: float gave 142169543 (off by 1)
+      (400.43946, 7227, 7200, 26341612), // bp: float gave 26341611
+      (188.33008, 7227, 7200, 12388684), // bp: float gave 12388683
+      (75.77057, 7227, 2540, 14128785),  // mm: float gave 14128784
+      (76.40832, 14856, 1157, 64296768), // cc: float gave 64296767
+    ];
+    for &(value, num, den, expected) in cases {
+      assert_eq!(
+        fixpoint_unit(value, num, den),
+        expected,
+        "fixpoint_unit({value}, {num}, {den}) should match pdftex"
+      );
+    }
+  }
+
+  #[test]
+  fn fixpoint_unit_is_exact_floor() {
+    // fixpoint_unit must equal floor(fix·num/den), the integer collapse of
+    // tex.web scan_dimen — no float drift. Cross-check against an independent
+    // i128 floor over a deterministic sweep.
+    let units: &[(i64, i64)] = &[(7227, 100), (7227, 254), (7227, 2540), (7227, 7200)];
+    for &(num, den) in units {
+      for k in 0..2000 {
+        let value = k as f64 * 0.13759 + 0.0007; // varied non-round decimals
+        let fix = kround(value * UNITY_F64) as i128;
+        let expected = (fix * num as i128 / den as i128) as i64;
+        assert_eq!(fixpoint_unit(value, num, den), expected);
+      }
+    }
   }
 }

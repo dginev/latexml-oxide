@@ -26,7 +26,7 @@ use crate::{
     model::{self, IndirectModel, Model, compute_indirect_model_aux},
     muglue::MuGlue,
     number::Number,
-    numeric_ops::NumericOps,
+    numeric_ops::{NumericOps, UNITY},
   },
   definition::{
     Definition, ExpansionBody,
@@ -47,7 +47,13 @@ static CODE_TEX_EXT: &str = ".code.tex";
 
 /// regex for *.tex and *.bib
 static TEX_OR_BIB_EXT_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\.(tex|bib)$").unwrap());
-/// Used in conversion to scaled points
+/// Used in conversion to scaled points.
+///
+/// These are the float `sp`-per-unit ratios, kept for *display / scaling*
+/// consumers (pgf/graphics/hyperref divide by them). For dimension
+/// **construction** use [`convert_unit_ratio`] + `numeric_ops::fixpoint_unit`
+/// instead — exact integer arithmetic, bit-faithful to TeX (issue #127). Each
+/// value here equals `65536·num/den` of the matching `convert_unit_ratio` entry.
 pub static UNITS: Lazy<HashMap<String, f64>> = Lazy::new(|| {
   map!(
     "pt" => 65536.0,
@@ -2608,6 +2614,45 @@ pub fn convert_unit(unit_arg: &str) -> f64 {
         Warn!("expected", "<unit>", message);
         *UNITS.get("pt").unwrap()
       },
+    },
+  }
+}
+
+/// Convert a unit name into the exact TeX `(num, den)` fraction such that a
+/// dimension of `value` units is `floor(round(value·65536)·num/den)` scaled
+/// points (see `numeric_ops::fixpoint_unit`).
+///
+/// Physical units use TeX's `set_conversion(num)(denom)` fractions verbatim
+/// (tex.web §458, lines 9020-9032): `in=7227/100, pc=12/1, cm=7227/254,
+/// mm=7227/2540, bp=7227/7200, dd=1238/1157, cc=14856/1157`, plus `pt=1/1` and
+/// `sp=1/65536`. `px` follows LaTeXML in aliasing `bp`. Font-relative units
+/// (`em`/`ex`/`mu`) return `(metric_sp, 65536)`, matching tex.web §8983's
+/// `nx_plus_y(_, v, xn_over_d(v, f, 65536))` for internal units. This is the
+/// exact-integer counterpart of [`convert_unit`]; each physical entry satisfies
+/// `convert_unit(u) == 65536·num/den`.
+pub fn convert_unit_ratio(unit_arg: &str) -> (i64, i64) {
+  let unit = unit_arg.to_lowercase();
+  let font_metric =
+    |getter: fn(&Font) -> i64| -> i64 { lookup_font().map(|f| getter(&f)).unwrap_or(0) };
+  // UNITY == 65536 sp per pt; font-relative and `sp` units convert via the
+  // `floor(fix·v/UNITY)` path (tex.web §8983 nx_plus_y/xn_over_d).
+  match unit.as_str() {
+    "em" => (font_metric(|f| f.get_em_width()), UNITY),
+    "ex" => (font_metric(|f| f.get_ex_height()), UNITY),
+    "mu" => (font_metric(|f| f.get_mu_width()), UNITY),
+    "pt" => (1, 1),
+    "pc" => (12, 1),
+    "in" => (7227, 100),
+    "bp" | "px" => (7227, 7200),
+    "cm" => (7227, 254),
+    "mm" => (7227, 2540),
+    "dd" => (1238, 1157),
+    "cc" => (14856, 1157),
+    "sp" => (1, UNITY),
+    u => {
+      let message = s!("Illegal unit of measure {:?}, assuming pt.", u);
+      Warn!("expected", "<unit>", message);
+      (1, 1)
     },
   }
 }
