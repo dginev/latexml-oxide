@@ -230,12 +230,12 @@ LoadDefinitions!({
       // Otherwise try factor + unit. If the unit is missing, fall back
       // to `bp` (big points) per Perl L52-54.
       if let Some(factor) = read_factor()? {
-        let unit = match read_unit()? {
-          Some(u) => u,
-          None => convert_unit("bp"),
+        let (num, den) = match read_unit()? {
+          Some(ratio) => ratio,
+          None => convert_unit_ratio("bp"),
         };
         let signed = if is_negative { -factor } else { factor };
-        let sp = common::numeric_ops::fixpoint(signed, Some(unit));
+        let sp = common::numeric_ops::fixpoint_unit(signed, num, den);
         dims.push(sp);
       } else {
         break;

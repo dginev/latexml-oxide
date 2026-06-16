@@ -22,7 +22,7 @@ use crate::{
     mudimension::MuDimension,
     muglue::MuGlue,
     number::Number,
-    numeric_ops::{NumericOps, UNITY, fixpoint},
+    numeric_ops::{NumericOps, UNITY, fixpoint, fixpoint_unit},
     object::Object,
     store::Stored,
   },
@@ -2152,19 +2152,19 @@ pub fn read_dimension() -> Result<Dimension> {
       d.value_of()
     }))
   } else if let Some(d) = read_factor()? {
-    let unit = match read_unit()? {
-      Some(u) => u,
+    let (num, den) = match read_unit()? {
+      Some(ratio) => ratio,
       None => {
         Warn!(
           "expected",
           "<unit>",
           "Illegal unit of measure (pt inserted)."
         );
-        65536.0
+        (1, 1)
       },
     };
     let d_signed = if is_negative { -d } else { d };
-    Ok(Dimension::new(fixpoint(d_signed, Some(unit))))
+    Ok(Dimension::new(fixpoint_unit(d_signed, num, den)))
   } else {
     let cur = get_current_token()
       .map(|t| format!("{t:?}"))
@@ -2183,22 +2183,25 @@ pub fn read_dimension() -> Result<Dimension> {
 // <physical unit> = pt | pc | in | bp | cm | mm | dd | cc | sp
 // ```
 
-/// Read a unit, returning the equivalent number of scaled points,
-pub fn read_unit() -> Result<Option<f64>> {
+/// Read a unit, returning the exact TeX `(num, den)` conversion fraction (see
+/// [`convert_unit_ratio`] / `numeric_ops::fixpoint_unit`). Internal/coerced units
+/// (`\wd0`, `\dimen`, glue) yield `(value_sp, 65536)` — the `floor(fix·v/65536)`
+/// path of tex.web §8983, exact in integer arithmetic.
+pub fn read_unit() -> Result<Option<(i64, i64)>> {
   let unit_opt = if let Some(u) = read_keyword(&["ex", "em"])? {
     skip_one_space(true)?;
-    Some(convert_unit(&u))
+    Some(convert_unit_ratio(&u))
   } else if let Some(u) = read_internal_integer()? {
-    Some(u.value_of() as f64) // These are coerced to number=>sp
+    Some((u.value_of(), UNITY)) // These are coerced to number=>sp
   } else if let Some(u) = read_internal_dimension()? {
-    Some(u.value_of() as f64)
+    Some((u.value_of(), UNITY))
   } else if let Some(u) = read_internal_glue()? {
-    Some(u.value_of() as f64)
+    Some((u.value_of(), UNITY))
   } else {
     read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
     if let Some(u) = read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"])? {
       skip_one_space(true)?;
-      Some(convert_unit(&u))
+      Some(convert_unit_ratio(&u))
     } else {
       None
     }
@@ -2255,7 +2258,7 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
     Some(f) => match read_keyword(&["filll", "fill", "fil"])? {
       Some(fil) => Ok((Some(fixpoint(s as f64 * f, None)), FillCode::from(&fil))),
       None => {
-        let u = if mu {
+        let ratio = if mu {
           match read_mu_unit()? {
             None => {
               Warn!(
@@ -2265,7 +2268,7 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
               );
               None
             },
-            Some(v) => Some(v as f64),
+            some => some,
           }
         } else {
           match read_unit()? {
@@ -2277,10 +2280,15 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
               );
               None
             },
-            Some(v) => Some(v),
+            some => some,
           }
         };
-        Ok((Some(fixpoint(s as f64 * f, u)), None))
+        let val = s as f64 * f;
+        let sp = match ratio {
+          Some((num, den)) => fixpoint_unit(val, num, den),
+          None => fixpoint(val, None),
+        };
+        Ok((Some(sp), None))
       },
     },
   }
@@ -2337,7 +2345,11 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
     if is_negative {
       m *= -1.0;
     }
-    Ok(MuDimension::new(fixpoint(m, munit.map(|v| v as f64))))
+    let sp = match munit {
+      Some((num, den)) => fixpoint_unit(m, num, den),
+      None => fixpoint(m, None),
+    };
+    Ok(MuDimension::new(sp))
   } else if let Some(mglue) = read_internal_mu_glue()? {
     let m = if is_negative { mglue.negate() } else { mglue };
     Ok(MuDimension::new(m.value_of()))
@@ -2347,12 +2359,12 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
   }
 }
 
-pub fn read_mu_unit() -> Result<Option<i64>> {
+pub fn read_mu_unit() -> Result<Option<(i64, i64)>> {
   if read_keyword(&["mu"])?.is_some() {
     skip_one_space(true)?;
-    Ok(Some(UNITY)) // effectively, scaled mu
+    Ok(Some((UNITY, UNITY))) // effectively, scaled mu
   } else if let Some(m) = read_internal_mu_glue()? {
-    Ok(Some(m.value_of()))
+    Ok(Some((m.value_of(), UNITY)))
   } else {
     Ok(None)
   }

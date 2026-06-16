@@ -7,7 +7,7 @@ use crate::{
   Digested, RegisterValue,
   common::{
     error::*,
-    numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint, kround, round_to},
+    numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint_unit, kround, round_to},
     object::Object,
   },
   definition::register::RegisterType,
@@ -69,8 +69,8 @@ impl Dimension {
       let num_str = cap.get(1).map_or("", |m| m.as_str());
       let num: f64 = num_str.parse::<f64>().unwrap_or(0.0);
       let unit = cap.get(2).map_or("", |m| m.as_str());
-      let converted_unit = convert_unit(unit);
-      Ok(fixpoint(num, Some(converted_unit)) as f64)
+      let (conv_num, conv_den) = convert_unit_ratio(unit);
+      Ok(fixpoint_unit(num, conv_num, conv_den) as f64)
     } else {
       // When scaled points passed in (typically the result of Perl calculations on other
       // Dimensions), you might think truncation (int) is more TeX-like.
