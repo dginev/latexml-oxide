@@ -43,6 +43,11 @@ default = ["test-utils", "runtime-bindings"]
 # rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
 # for the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide binaries.
 cortex = ["dep:pericortex", "dep:hostname"]
+# Use jemalloc instead of mimalloc as the global allocator in `cortex_worker`.
+# jemalloc returns freed memory to the OS via background decay, keeping a
+# long-lived worker's RSS bounded to the current paper (see the `tikv-jemallocator`
+# dep note). Intended to pair with `cortex`: `--features cortex,jemalloc`.
+jemalloc = ["dep:tikv-jemallocator"]
 # Compile the integration-test harness in `src/util/test.rs`. On by default
 # so `cargo test` and `cargo build` (no flags) work as expected. Distribution
 # builds should pass `--no-default-features` (or `--no-default-features
@@ -115,6 +120,13 @@ hostname = { version = "0.4", optional = true }
 # for multi-process workloads like cortex_worker (arena contention via futex).
 # mimalloc gives each thread a private heap with lock-free fast paths.
 mimalloc = { version = "0.1", default-features = false }
+# Alternative allocator for the persistent `cortex_worker` fleet (enable with
+# `--features jemalloc`). jemalloc's decay-based purging returns freed pages to
+# the OS automatically (a background thread, tunable via `*_decay_ms`), so a
+# long-lived worker's RSS tracks the CURRENT paper instead of mimalloc's
+# retain-the-high-water default — the property a persistent conversion worker
+# needs. Used for the mimalloc-vs-jemalloc A/B and the recommended harness build.
+tikv-jemallocator = { version = "0.6", optional = true }
 
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.

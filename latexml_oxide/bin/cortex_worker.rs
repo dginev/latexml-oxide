@@ -12,7 +12,7 @@
 use std::{
   alloc::{Layout, set_alloc_error_hook},
   borrow::Cow,
-  cell::Cell,
+  cell::{Cell, RefCell},
   error::Error,
   ffi::OsString,
   fs::{self, File},
@@ -22,10 +22,19 @@ use std::{
   sync::atomic::{AtomicU64, Ordering},
 };
 
-/// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
-/// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
+/// Per-process allocator. Default is **mimalloc** (lock-free per-thread heaps,
+/// avoids glibc's arena-mutex contention). Building with `--features jemalloc`
+/// swaps in **jemalloc**, whose decay-based background purging returns freed
+/// pages to the OS so a long-lived worker's RSS tracks the *current* paper
+/// rather than retaining the high-water of the heaviest paper it has processed —
+/// the disposition a persistent one-conversion-per-process worker needs (tune
+/// the decay via `_RJEM_MALLOC_CONF`, set on children by `run_harness`).
+#[cfg(not(feature = "jemalloc"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+#[cfg(feature = "jemalloc")]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 use std::{process, rc::Rc};
 
 use clap::Parser;
@@ -470,6 +479,43 @@ thread_local! {
   /// Consecutive caught-panic counter for *this* worker thread (each pool
   /// thread keeps its own engine state, hence its own streak).
   static PANIC_STREAK: Cell<u32> = const { Cell::new(0) };
+
+  /// Detail of the most recent panic on this thread — the panic **location**
+  /// (`file:line:col`) plus message — stashed by the panic hook
+  /// ([`install_panic_hook`]) at unwind time, then consumed by [`Worker::convert`]
+  /// for the failure artifact. `catch_unwind` only hands back the payload (the
+  /// bare message, e.g. "called `Option::unwrap()` on a `None` value"), which has
+  /// no location; capturing it in the hook is the only way to record *where* a
+  /// conversion panicked. The full backtrace is emitted to stderr by the hook.
+  static LAST_PANIC_DETAIL: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Install a process-wide panic hook that records, for every panic, the panic
+/// **location** + message (into [`LAST_PANIC_DETAIL`] for the failing task's
+/// artifact) and prints the **full backtrace** to stderr (captured in the
+/// worker/harness log) so a caught conversion panic is debuggable. Uses
+/// `Backtrace::force_capture`, so a backtrace is taken regardless of
+/// `RUST_BACKTRACE`; the panic location is present even in a stripped release
+/// build (panic-location strings survive `strip`), while symbolicated frames
+/// need a build with debug info.
+fn install_panic_hook() {
+  std::panic::set_hook(Box::new(|info| {
+    let loc = info
+      .location()
+      .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+      .unwrap_or_else(|| "<unknown location>".to_string());
+    let payload = info.payload();
+    let msg = payload
+      .downcast_ref::<&str>()
+      .map(|s| (*s).to_string())
+      .or_else(|| payload.downcast_ref::<String>().cloned())
+      .unwrap_or_else(|| "<non-string panic payload>".to_string());
+    let bt = std::backtrace::Backtrace::force_capture();
+    // Full backtrace → stderr (captured in the worker/harness log) for debugging.
+    eprintln!("Fatal:panic:backtrace panicked at {loc}: {msg}\n{bt}");
+    // Bounded location+message → the per-task failure artifact (parser-safe).
+    LAST_PANIC_DETAIL.with(|p| *p.borrow_mut() = Some(format!("panicked at {loc}: {msg}")));
+  }));
 }
 
 impl Worker for LatexmlWorker {
@@ -515,7 +561,11 @@ impl Worker for LatexmlWorker {
         write_failure_zip(&arxiv_id, "conversion", &e.to_string())?
       },
       Err(panic) => {
-        let msg = panic_message(&*panic);
+        // Prefer the panic hook's captured detail (location + message); fall back
+        // to the bare payload if the hook didn't run for some reason.
+        let msg = LAST_PANIC_DETAIL
+          .with(|p| p.borrow_mut().take())
+          .unwrap_or_else(|| panic_message(&*panic));
         let streak = PANIC_STREAK.with(|s| {
           let n = s.get() + 1;
           s.set(n);
@@ -541,6 +591,14 @@ impl Worker for LatexmlWorker {
     let file = File::open(&output_path)?;
     // Clean up temp file after opening (the open fd keeps the bytes readable).
     let _ = fs::remove_file(&output_path);
+    // NB: do NOT reset the thread engine here. The persistent worker relies on
+    // the dump definitions (loaded once) PERSISTING across papers — `prepare_session`
+    // re-initialises only the ephemeral per-conversion state. Returning memory to
+    // the OS between papers is the **allocator's** job (jemalloc decay under
+    // `--features jemalloc`), not an explicit engine reset: an earlier attempt to
+    // call `reset_thread_engine()` here wiped the persisted definitions and made
+    // every subsequent conversion panic (`unwrap() on None`). See the harness
+    // validation, 2026-06-17.
     Ok(file)
   }
 
@@ -1193,6 +1251,10 @@ fn custom_alloc_error_hook(layout: Layout) {
 
 fn main() -> Result<(), Box<dyn Error>> {
   set_alloc_error_hook(custom_alloc_error_hook);
+  // Capture panic location + full backtrace for every panic (the conversion
+  // catch_unwind only sees the bare payload otherwise). Process-wide, so it also
+  // covers the harness supervisor.
+  install_panic_hook();
 
   // R35.A: install a default gullet pushback limit so runaway
   // macro expansion (witnessed on plain-TeX `\displaylines{ …
@@ -1305,6 +1367,35 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
 
   supervise(&config, move |_index| {
     let mut cmd = process::Command::new(&exe);
+    // jemalloc tuning for children (read at allocator init, so it must be set by
+    // us before exec — too late from inside the child). Enable the background
+    // purge thread and a short dirty-page decay so a worker returns freed memory
+    // to the OS promptly between papers, keeping per-process RSS tracking the
+    // current paper. Harmless for a mimalloc-built binary (ignores these). Both
+    // the jemalloc-prefixed and unprefixed names are set for build-config safety.
+    cmd
+      .env(
+        "_RJEM_MALLOC_CONF",
+        "background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0",
+      )
+      .env(
+        "MALLOC_CONF",
+        "background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0",
+      );
+    // Align the engine's in-process RSS fuse (`stomach::check_timeout`, default
+    // 4.5 GB) with this fleet's actual per-child ceiling. That default is a
+    // one-conversion-per-process leftover: in a long-lived worker the working set
+    // creeps across papers and trips the 4.5 GB fuse on otherwise-fine papers,
+    // producing a false `Fatal:Timeout:MemoryBudget RSS … > cap` cascade (observed
+    // 2026-06-17). Raise it to the polled `--max-rss-mb` watchdog value so the
+    // cooperative fuse fires only for a genuine single-paper runaway (just before
+    // the watchdog), and the fleet governor handles aggregate pressure.
+    if child_max_rss_mb > 0 {
+      cmd.env(
+        "LATEXML_RSS_CAP_BYTES",
+        child_max_rss_mb.saturating_mul(1024 * 1024).to_string(),
+      );
+    }
     cmd
       .arg("--pool-size")
       .arg("1")
