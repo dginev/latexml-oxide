@@ -144,6 +144,7 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 
 **Release & operations:**
 - **[`docs/RELEASING.md`](docs/RELEASING.md)** — Tag-driven release procedure; what ships in a release; the self-contained-binary requirement.
+- **[`docs/CORTEX_WORKER_HARNESS.md`](docs/CORTEX_WORKER_HARNESS.md)** — `cortex_worker --harness` fleet orchestration: the self-supervising one-conversion-per-process model (drives `pericortex::harness`) with **deliberate over-commit**, the five-layer memory guards (stomach byte budget → polled RSS → alloc hook → per-child `RLIMIT_AS` → fleet memory-pressure governor that sheds the largest worker under aggregate pressure), crash-loop backoff / SIGCHLD respawn / `PR_SET_PDEATHSIG`, the address-space-vs-RSS caveat with mimalloc, and the production deployment recommendation. Companion to pericortex's `docs/HARNESS.md` (mechanism) and CorTeX `MANUAL.md` §7 (operator how-to).
 - **[`docs/SAFETY.md`](docs/SAFETY.md)** — Threat model and `unsafe` inventory (local-CLI posture; distribution posture is tracked in `RELEASE_CRITERIA.md` §6).
 - **[`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)** — Average-wall performance bands and Perl-parity baselines.
 - **[`docs/STABILITY_WITNESSES.md`](docs/STABILITY_WITNESSES.md)** — Living worklist of reliability/performance witness papers (timeout/OOM/peak-RSS/hang), with current-binary + Perl baselines and root-cause notes. Distinct from `SYNC_STATUS.md` (correctness errors).
