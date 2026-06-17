@@ -186,6 +186,19 @@ struct Cli {
   /// outer cgroup `memory.max` for a hard backstop.
   #[arg(long)]
   mem_pressure_floor_mb: Option<u64>,
+
+  /// Per-worker memory-based **recycle** threshold in MiB (0 disables). After each
+  /// conversion — with the result already returned to the dispatcher, so nothing is
+  /// lost — if the worker's RSS exceeds this, it exits cleanly and the harness forks
+  /// a fresh one. This reclaims the engine's accumulated interner/arena (a
+  /// thread-local that is never reset mid-process — it assumes a short-lived,
+  /// one-conversion-per-process model) by process replacement, without failing a
+  /// paper, while keeping startup amortized for the common case of light papers. In
+  /// harness mode it auto-sets to **50% of `--child-mem-limit-mb`** (the rule: a
+  /// fresh worker keeps the *full* ceiling for any single — even aberrant — paper,
+  /// then retires once it has consumed half of it). A standalone worker leaves it 0.
+  #[arg(long, default_value = "0")]
+  allocation_limit_mb: u64,
 }
 
 /// Conversion profile presets
@@ -260,6 +273,9 @@ struct LatexmlWorker {
   verbosity:      i32,
   /// Extra --path search dirs from CLI, prepended to per-job source_dir.
   search_paths:   Vec<String>,
+  /// Recycle the worker after a conversion once RSS exceeds this many MiB (0 =
+  /// never). See `--allocation-limit-mb` and `Worker::recycle_after_task`.
+  alloc_limit_mb: u64,
 }
 
 impl LatexmlWorker {
@@ -615,6 +631,17 @@ impl Worker for LatexmlWorker {
   fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
   fn get_identity(&self) -> &str { &self.identity }
+
+  /// Recycle this worker (clean exit → fresh respawn) once its resident memory has
+  /// grown past `--allocation-limit-mb`. Called by `start_single` AFTER the result is
+  /// returned, so no paper is lost. Reads current `VmRSS` (one cheap `/proc` read);
+  /// `0` disables. Bounds the engine's never-reset thread-local interner/arena by
+  /// process replacement rather than a fragile mid-life reset.
+  fn recycle_after_task(&self) -> bool {
+    self.alloc_limit_mb > 0
+      && latexml_core::watchdog::process_rss_kb()
+        .is_some_and(|rss_kb| rss_kb / 1024 > self.alloc_limit_mb)
+  }
 }
 
 // --- Helper functions (shared with latexml_oxide.rs) ---
@@ -1334,6 +1361,20 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     cli.max_rss_mb
   };
 
+  // Memory-based recycle threshold: 50% of the per-child ceiling. After a clean
+  // conversion, a worker whose RSS has passed this exits and is re-forked fresh,
+  // reclaiming the engine's never-reset interner/arena by process replacement
+  // (the common case of light papers never trips it). A fresh worker keeps the
+  // full ceiling for any single (even aberrant) paper, then retires once it has
+  // consumed half of it. `--allocation-limit-mb` overrides; 0 disables.
+  let child_alloc_limit_mb = if cli.allocation_limit_mb > 0 {
+    cli.allocation_limit_mb
+  } else if cli.child_mem_limit_mb > 0 {
+    cli.child_mem_limit_mb / 2
+  } else {
+    cli.max_rss_mb / 2
+  };
+
   let exe = std::env::current_exe()?;
   let governor = match mem_pressure_floor_bytes {
     Some(b) => format!("shed below {} MiB MemAvailable", b / MIB),
@@ -1341,8 +1382,9 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   };
   eprintln!(
     "Starting CorTeX harness: {workers} single-conversion worker process(es), \
-     service '{}', RLIMIT_AS {} MiB/child (soft RSS guard {} MiB), mem-governor: {governor}",
-    cli.service, cli.child_mem_limit_mb, child_max_rss_mb
+     service '{}', RLIMIT_AS {} MiB/child (soft RSS guard {} MiB, recycle @ {} MiB RSS), \
+     mem-governor: {governor}",
+    cli.service, cli.child_mem_limit_mb, child_max_rss_mb, child_alloc_limit_mb
   );
 
   // Owned clones for the build closure: `supervise` calls it once per spawn
@@ -1411,6 +1453,8 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
       .arg(timeout.to_string())
       .arg("--max-rss-mb")
       .arg(child_max_rss_mb.to_string())
+      .arg("--allocation-limit-mb")
+      .arg(child_alloc_limit_mb.to_string())
       .arg("--message-size")
       .arg(message_size.to_string());
     // Forwarding `--limit` recycles each child after N tasks (the harness
@@ -1520,6 +1564,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     profile,
     verbosity,
     search_paths: cli.search_paths.clone(),
+    alloc_limit_mb: cli.allocation_limit_mb,
   };
 
   if cli.standalone {
