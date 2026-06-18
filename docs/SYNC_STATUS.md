@@ -65,6 +65,49 @@ cross-check with `pdflatex`: if real TeX errors too, the input is intrinsic
 
 ---
 
+## Open task (HIGH-VALUE, opened 2026-06-18): Profile-Guided Optimization (PGO) of the release build
+
+The single largest remaining **performance** lever for the latexml-oxide-in-CorTeX
+run — promoted from a one-line deferral (see "Release-prep 0.7.0" below) to a
+standalone task because it is now **due** (the gating new-hardware full-corpus run
+has arrived) and high-promise (~10–20% wall).
+
+**Why it's high-leverage here.** latexml-oxide is CPU-bound and intensely
+branch-heavy — catcode dispatch (mouth), macro lookup+expansion (gullet),
+digestion (stomach), the Marpa-style math grammar. That is exactly the code shape
+PGO helps most: the compiler cannot statically predict which catcode arm, macro
+body, or grammar rule is hot, but a runtime profile can — feeding LLVM's inliner,
+hot/cold branch layout, hot-function clustering (i-cache), and cold-path
+outlining. Interpreter/parser workloads typically gain ~10–20%, a proportional
+fleet tasks/s increase (production is convert-bound, so this is the dominant
+throughput lever — confirmed by the 2026-06-18 cortex dispatcher per-phase audit:
+dispatcher CPU is ~116 µs/task, negligible vs the conversion itself).
+
+**Plan (two-pass, release-time only):**
+1. **Instrument:** `RUSTFLAGS="-Cprofile-generate=…"` + a `maxperf`/release build.
+2. **Train:** run the instrumented binary over a *diverse* arXiv sandbox slice
+   (math-heavy / TikZ / plain / expl3 — not one paper, or it optimizes the wrong
+   hot paths). The arXiv sandbox is the named training set.
+3. **Merge:** `llvm-profdata merge` (from `llvm-tools-preview`).
+4. **Optimize:** `RUSTFLAGS="-Cprofile-use=…"` + the `maxperf` build — PGO stacks
+   with fat-LTO/CGU-1 (it informs LTO inlining). Land as
+   `tools/make_release_pgo.sh` + a `release.yml` job (release-only; the two-pass +
+   training run is too slow for ordinary CI).
+
+**Prerequisite — MET:** the pinned `nightly-2026-06-10` toolchain
+(`rust-toolchain.toml`; both passes must use the identical toolchain) + `llvm-tools-preview`.
+
+**Caveats:** the profile is workload+code-specific → re-train at release when the
+engine changes meaningfully (not set-and-forget); compatible with `maxperf`
+`panic="abort"`; no runtime artifacts (self-contained-binary guarantee intact).
+**BOLT** (post-link reordering, +a few %) stacks on top — attempt after PGO lands;
+`target-cpu=v2/v3` (SIMD baseline) is an orthogonal, separately-deferred lever.
+
+**Status:** OPEN, not started; 0 references in `release.yml`. Design home:
+`docs/PERFORMANCE.md` → "Build-pipeline optimization roadmap → High-effort".
+
+---
+
 ## PR #248 critical-review findings — HANDOFF (opened 2026-06-10, paused)
 
 Critical review of `feature/winnow-rhai` (shared winnow AST #171 + Rhai
@@ -148,8 +191,9 @@ Shipped on the `release-prep` branch (separate from #252):
 
 Decisions (2026-06-11): only `latexml_oxide` ships (latexmlmath/post deferred);
 **no RC prerelease rehearsal** (private project — fix-and-re-tag is cheap);
-**PGO/BOLT/target-cpu deferred to the new-hardware full-arXiv-corpus run**
-(~mid-June 2026). Local `make_release.sh` dry-run green (0.7.0
+**BOLT/target-cpu deferred to the new-hardware full-arXiv-corpus run**
+(~mid-June 2026); **PGO is now its own top-priority task — now due — see
+"Open task: Profile-Guided Optimization (PGO)" near the top of this file.** Local `make_release.sh` dry-run green (0.7.0
 tarball + `.deb` + sidecars + RELEASE_BODY; binary converts `hello.tex` 0-error).
 
 **Remaining:** merge the PR, then tag `0.7.0` on master → `release.yml` runs the
