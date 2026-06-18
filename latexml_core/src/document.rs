@@ -3597,7 +3597,7 @@ impl Document {
       // `xml:lang` is stored namespaced (local name "lang"); the string
       // accessor `get_attribute("xml:lang")` always returns None — read it via
       // the XML namespace. (Same libxml footgun as xml:id; see
-      // docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.)
+      // docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md.)
       if let Some(lang) = node_ref.get_attribute_ns("lang", XML_NS) {
         return lang;
       }

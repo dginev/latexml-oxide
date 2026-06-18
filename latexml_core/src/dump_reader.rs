@@ -1132,7 +1132,7 @@ fn parse_token_list(s: &str) -> Result<Vec<Token>, String> {
 
 /// Decode the v3 structured Parameters encoding emitted by
 /// `dump_writer::serialize_parameters_v3` (see that function's docstring
-/// and `docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md` for the layout).
+/// and `docs/archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md` for the layout).
 ///
 /// Returns `Ok(None)` for an empty record (no parameters); `Ok(Some(ps))`
 /// on success; `Err` if any record is malformed. Each Parameter is

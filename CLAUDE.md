@@ -151,14 +151,15 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 - **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
 
 **Dated diagnostic snapshots** (point-in-time studies — see naming rule):
-- **[`docs/MEMORY_GUARD_HARDENING_2026-06-09.md`](docs/MEMORY_GUARD_HARDENING_2026-06-09.md)** — Root-cause analysis of the canvas_3 OOM cluster + the layered runaway-guard architecture (cycle guards, byte budget, boxing-depth cap); resolved, kept as the guard-design record.
-- **[`docs/PGF_ARC_BISECTION_2201.09268_2026-06-09.md`](docs/PGF_ARC_BISECTION_2201.09268_2026-06-09.md)** — pgf line–arc bisection non-termination root cause (1e-5 trig drift); mitigated by guards, bit-exact fix deferred.
 - **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: Phase-0 trace complete and the container-id (xml:id accessor) half landed; content-branch/MathFork reconciliation still pending.
-- **[`docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md`](docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md)** — xml:id accessor-discipline audit feeding the expected:id design.
 - **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted, plus the separate sibling missing-dump codepoint-data root cause. (Issue #217's macOS probe is resolved and archived at [`docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md).)
 - **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.
 - **[`docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](docs/MATH_AMBIGUITY_AUDIT_2026-05-21.md)** — Math-parser ambiguity sweep; patterns 1/3/4 closed, pattern 2 (VERTBAR-modulus) open. (Code in `latexml_math_parser/*` points here for the open pattern.)
-- **[`docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)** — Close reading of Perl `Core/Dumper.pm` on-disk record format.
+
+  (Resolved/superseded snapshots have moved to `docs/archive/`: the canvas_3
+  OOM-guard hardening, the pgf line–arc bisection study, the `xml:id`
+  accessor-discipline audit, and the Perl `Dumper.pm` on-disk-format reading —
+  see [`docs/archive/README.md`](docs/archive/README.md).)
 
 Completed/historical audits live in `docs/archive/` (see `docs/archive/README.md`). Single-paper reproducers/out-of-scope cases live in `docs/reproducers/`, `docs/out-of-scope/`, `docs/known_crashes/`.
 

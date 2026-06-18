@@ -303,7 +303,7 @@ macOS leg, and publish are first-exercised on that tag.
 >   2.5 s** (period-2 box cycle). Box-memory note: ~626 B per lightweight
 >   Digested ⇒ ~7M boxes under the 4.5 GB cap; the 50k stomach activation is
 >   ~30 MB (<1% of the ceiling). 7 unit tests + suite 1398/0 (no false
->   positives). **Root cause now nailed (`PGF_ARC_BISECTION_2201.09268_2026-06-09.md`):**
+>   positives). **Root cause now nailed (`archive/PGF_ARC_BISECTION_2201.09268_2026-06-09.md`):**
 >   pgf's `\pgfmathpointintersectionoflineandarc` (curved-node-boundary
 >   intersection) runs an UNBOUNDED bisection whose only exit is the exact
 >   `\ifdim\x pt=\q pt`; a rare last-digit (1e-5) drift in the composed

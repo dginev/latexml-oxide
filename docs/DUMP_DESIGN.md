@@ -101,7 +101,7 @@ LC|UC|SC|C|MC|DC\t<key>\t…               # Code tables
 Reader / writer share `parse_token` / `parse_token_list` so catcoded
 delimiter tokens round-trip cleanly. Parameter sub-lines (indented
 with `\t`) carry structured `(name, spec, extra)` triples — see
-[`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
+[`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) for
 the v3 design and Perl correspondence.
 
 `IA` records (commit `81176ba689`, 2026-05-15) collapse expl3's
@@ -187,86 +187,27 @@ reads of dumps gone on the default path too, promote the embedded copy ahead
 of the installed-layout/dev-tree steps (keeping the explicit env-var
 overrides first).
 
-## Multi-TL dump acquisition (out of scope for this PR)
+## Multi-TL dump acquisition (RESOLVED — see `release-dumps.yml`)
 
-The infra above only embeds whatever years are physically present in
-`resources/dumps/` at build time. Today that's just TL2025 — the
-ambient install. Acquiring `*.YYYY.dump.txt` for additional years
-(TL2022 … TL2026) is a separate problem with a few options.
+> **Superseded 2026-06-07.** The acquisition/storage options once weighed here
+> (local multi-TL install, per-year Docker, CI matrix, CTAN vendoring ×
+> commit / orphan-branch / Release-artifact / LFS storage) are settled: dumps
+> are **generated at release time, never stored in the repo.**
 
-### What determines a dump's bytes
-A dump is a function of two axes:
-1. **TeXLive-year kernel inputs** — the raw `plain.tex`, `latex.ltx`,
-   `expl3-code.tex`, kernel `.sty/.cls` shipped with that TL release.
-2. **latexml-oxide revision** — the engine bindings + dump-writer
-   serialization format.
-
-So adding a TL year produces a new `*.YYYY.dump.txt` once; a Rust
-change to the dump-writer or kernel bindings invalidates **all**
-years' dumps simultaneously.
-
-### Acquisition strategies
-
-**A. Multi-TL local install (developer-driven, simplest).** Install
-TL2022..TL2026 in `/usr/local/texlive/YYYY/` from TUG historic
-ISOs. `tools/make_formats.sh` already detects the year via
-`kpsewhich -var-value=SELFAUTOPARENT`; loop:
-```
-for yr in 2022 2023 2024 2025; do
-  PATH=/usr/local/texlive/$yr/bin/x86_64-linux:$PATH \
-    tools/make_formats.sh
-done
-```
-Pros: no extra infra. Cons: ~5GB per TL year on the host.
-
-**B. Docker per year.** Use TUG's `texlive/texlive:TLYYYY-historic`
-images. Either install Rust inside the container, or build
-`latexml_oxide` outside and bind-mount the binary in for the dump
-step. Pros: clean reproducibility. Cons: large image pulls.
-
-**C. CI matrix (canonical "official" path).** GitHub Actions
-workflow with `matrix.tl_year: [2022, 2023, 2024, 2025]`; each job
-runs `install-tl --no-interaction --scheme=basic` from TUG historic
-+ `make_formats.sh`, then uploads the year's dump as an artifact. A
-collect-job assembles them into a PR or pushes to a `dumps-baseline`
-orphan branch. Pros: hands-off, automated. Cons: install-tl per
-year is slow (~10–30 min), needs runner caching.
-
-**D. CTAN kernel-source vendoring.** Vendor only the raw kernel
-inputs (`plain.tex`, `latex.ltx`, `expl3-code.tex`, …) per year into
-`resources/tl-kernel/YYYY/`; teach the dumper to read from that dir
-instead of via `kpsewhich`. Pros: no TL install needed for dumping.
-Cons: must enumerate the full transitive dependency set
-(graphics, hyperref, etc.) and re-vendor as latexml-oxide expands
-its raw-load coverage.
-
-### Storage of the resulting dumps
-Currently `resources/dumps/` is gitignored. Shipping multi-year
-embedded dumps requires the files to actually be present at build
-time. Options:
-1. **Commit them.** ~1 MB latex × 5 years ≈ 5 MB. Workable but
-   diffs are noisy and they re-churn whenever the dump-writer
-   changes.
-2. **Orphan branch / git submodule** holding the dumps. Build
-   tooling does a sparse checkout into `resources/dumps/`.
-3. **GitHub Release artifacts.** A `dumps-vN` tag publishes the
-   tarball; `build.rs` downloads-if-missing — adds a compile-time
-   network dep, generally an anti-pattern for cargo crates.
-4. **Git LFS.** Out-of-band; works for git tooling but breaks
-   `cargo publish` consumers who don't have LFS configured.
-
-### Recommended phasing
-1. **Now (this PR)**: versioned-filename infra + TL2025 only.
-2. **Short term**: add `tools/regen_all_dumps.sh` for strategy A
-   (locally-installed multi-TL), document in this file +
-   `tools/make_formats.sh` header.
-3. **Medium term**: pick a storage option (orphan branch is
-   probably best — keeps `master` history clean while letting
-   `build.rs` pull on demand) and land actual TL2022..TL2024 dump
-   triples.
-4. **Long term**: CI matrix that regenerates all years whenever
-   the dump-writer or engine bindings change, opening an automated
-   PR with the refreshed dumps.
+A dump is a function of two axes — (1) the **TeXLive-year kernel inputs**
+(`plain.tex`, `latex.ltx`, `expl3-code.tex`, and the kernel `.sty/.cls` of that
+TL release) and (2) the **latexml-oxide revision** (engine bindings + dump-writer
+format) — so a writer/bindings change invalidates *all* years' dumps at once.
+Axis (2) is why the dumps cannot be a static committed baseline; they are
+regenerated per release. `.github/workflows/release-dumps.yml` (called from
+`release.yml` on a tag, dispatchable standalone) builds one kpathsea-UNLINKED
+dumper (subprocess-`kpsewhich` backend) and runs it inside each pinned
+`texlive-docker:YYYY` container across a 5-year moving window (currently
+2022–2026), gating each `--init` on a strict zero-`Error:`/`Fatal:` check
+(`LATEXML_INIT_DEBUG=1`); the maxperf build then embeds the window via
+`build.rs`. Dev/CI generate just the ambient year with `tools/make_formats.sh`,
+and `resources/dumps/` stays gitignored. Full operational detail: `../RELEASING.md`
+and CLAUDE.md ("Distribution model").
 
 ## Why text format, not compiled Rust
 
@@ -308,5 +249,5 @@ filename match. The stamp check remains useful for the in-year case
 
 * [`PERL_LOADFORMAT_AUDIT.md`](archive/PERL_LOADFORMAT_AUDIT.md) —
   file-by-file Rust-vs-Perl divergence audit.
-* [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) —
+* [`DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`](archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md) —
   on-disk record format and Perl `Dumper.pm` correspondence.

@@ -821,7 +821,7 @@ type "verbatim". Tests still pass because:
 - the v3 structured Parameter sub-line encoding (commit `3e1f89eb2`)
   carries `(name, spec, extra)` per Parameter, bypassing
   `parse_parameters` for catcoded delimiters. See
-  `DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`.
+  `archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`.
 - the v2 reader falls back gracefully when v3 sub-lines are absent.
 
 **Key insight:** `Parameters::stringify` is NOT a true inverse of
@@ -1996,3 +1996,35 @@ or `//` are unaffected.
 after the `ltx:resource` block; caught by `20_digestion::rebox_test`.
 Fixed in `base_utilities.rs` by using
 `/ltx:document/ltx:resource[last()]`.
+
+## #60 libxml string accessors silently fail on namespaced `xml:id`/`xml:lang` — and a *masked* broken accessor is not automatically a bug
+
+`xml:id` is stored by libxml2 NAMESPACED — local name `"id"` in the XML
+namespace (`http://www.w3.org/XML/1998/namespace`), NOT a literal attribute
+named `"xml:id"`. rust-libxml's string-keyed API matches the *literal* local
+name, so the whole `*_attribute("xml:id")` family silently misfires:
+`get_attribute("xml:id")` → always `None`, `has_attribute("xml:id")` → always
+`false`, `remove_attribute("xml:id")` → silent no-op. **Writes and
+serialization are fine** (`set_attribute("xml:id", …)` namespaces correctly);
+only string-keyed reads/checks/removes break. Correct form:
+`get_attribute_ns("id", XML_NS)` / `has_attribute_ns` / `remove_attribute_ns`
+(`XML_NS = latexml_core::common::xml::XML_NS`, in the engine prelude). The same
+footgun hits `xml:lang` (local `"lang"`) — and no other prefixed attribute in
+the workspace.
+
+**The non-obvious half:** most of the ~53 broken sites are *masked* — paired
+with a working `_ns` call, guarded by another always-false check that never
+lets the dead block run, or carrying an `.or_else(get_property("id"))`
+fallback. **Do NOT blanket-"correct" them.** At least one mask is load-bearing:
+`rewrite.rs:1242` (XMArg→inner-id transfer) is a no-op, and swapping in the
+`_ns` accessor makes wildcard `1`/`n` tokens acquire `xml:id`s **Perl does not
+emit**, regressing `simplemath`/`declare`. Only migrate a site when a
+*confirmed* Perl divergence is traced to it. New code uses the ns-aware form
+from day one; `tools/lint_xmlid_accessor.sh` (+ `xmlid_lint_baseline.txt`,
+wired into pre-push + CI) ratchets against NEW string-keyed `xml:` accessors.
+
+**Witnesses (all fixed 2026-06-08):** `rename_node_internal` dropped `xml:id`
+across the equation→equationgroup rename (2311.01600 dangling `\Pr` refs);
+`rearrange_lone_ams_aligned` read empty `eq_id`; `get_node_language` read
+`xml:lang` as `None` → non-English math used `.`/`,` English conventions. Full
+analysis: `archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md`.

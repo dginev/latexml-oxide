@@ -68,7 +68,7 @@ own Phase 0 before assuming it is.
 > `"id"`), so `rename_node_internal`'s `key == "xml:id"` capture never matched
 > (id lost across the equation→equationgroup rename) and
 > `rearrange_lone_ams_aligned`'s `get_attribute("xml:id")` always read empty.
-> Both fixed (see [`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
+> Both fixed (see [`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
 > Result: the equationgroup now keeps its refnum id and the inner equation gets
 > the Perl `{id}X` suffix — **`split.tex` is now full Perl parity** (re-blessed),
 > and 2311.01600's containers are correct (`A1.E66`/`A1.E66X`, the
@@ -101,7 +101,7 @@ own Phase 0 before assuming it is.
 > `rearrange_lone_ams_aligned` (a structural rebuild, high fixture-churn risk —
 > validate every `equationgroup`/MathFork fixture vs Perl). **Deferred as a
 > dedicated effort**, not a drive-by — same discipline as the `rewrite.rs:1242`
-> lesson ([`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
+> lesson ([`XMLID_ACCESSOR_AUDIT_2026-06-08.md`](archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md)).
 
 **This is not a math-parser bug at all.** The source is the classic
 lone-aligned equation:

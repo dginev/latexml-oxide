@@ -6,7 +6,7 @@
 # fail: `get_attribute("xml:id")` -> always None, `has_attribute("xml:id")` ->
 # always false, `remove_attribute("xml:id")` -> silent no-op. The correct form is
 # the namespace-aware `*_ns("id", XML_NS)` (or, for reads, `get_attribute("id")`).
-# Full analysis: docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
+# Full analysis: docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md.
 #
 # This lint FAILS when a NEW `*_{attribute,property}("xml:...")` read/has/remove
 # accessor appears (one not in the checked-in baseline). The 53 pre-existing
@@ -64,7 +64,7 @@ if [[ -n "$added" ]]; then
   echo "    node.has_attribute_ns(\"id\", XML_NS)" >&2
   echo "    node.remove_attribute_ns(\"id\", XML_NS)" >&2
   echo "(XML_NS = latexml_core::common::xml::XML_NS, re-exported via the engine prelude.)" >&2
-  echo "See docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md." >&2
+  echo "See docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md." >&2
   echo "If this is intentional, run: tools/lint_xmlid_accessor.sh --bless" >&2
   echo "================================================================" >&2
   exit 1
