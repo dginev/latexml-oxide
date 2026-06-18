@@ -91,24 +91,31 @@ pub fn check_timeout() -> Result<()> {
       {
         if let Some(rss_kb) = crate::watchdog::process_rss_kb() {
           let rss_bytes = rss_kb * 1024;
-          // R35.A safety cap: 4.5 GB RSS. Worker ulimit is 6 GB
-          // virtual; RSS at 4.5 GB means we still have headroom for
-          // post-processing (XSLT, MathML chain) but are clearly
-          // already in pathological territory. Real documents in
-          // the wp5 / canvas3 corpus stay below 1 GB peak RSS.
+          // R35.A safety cap: 9 GB RSS. Real documents in the wp5 /
+          // canvas3 corpus stay below 1 GB peak RSS, so this is well
+          // into pathological territory while leaving headroom for
+          // post-processing (XSLT, MathML chain).
           // Override via LATEXML_RSS_CAP_BYTES env.
           //
-          // This is a *per-process* fuse for the single-conversion
-          // binary (one paper per process under the sandbox ulimit).
-          // The multi-conversion test harness used to trip it by
-          // *accumulating* ~110 MB/test in undropped `#[thread_local]`
-          // engine state; it now calls `reset_thread_engine()` between
-          // conversions (peak fell 4.9 GB → ~2.9 GB at -j20), so the
-          // cap stays at its production value.
+          // This is a *per-process* fuse. In production it is a
+          // single-conversion binary (one paper per process), and the
+          // `cortex_worker` fleet OVERRIDES this env to its own
+          // per-child ceiling (`--child-mem-limit-mb`), so this default
+          // only governs the standalone CLI and the multi-conversion
+          // *test harness*. The harness runs N conversions concurrently
+          // in ONE process (libtest spawns a thread per test), so the
+          // process-wide RSS is the *sum* over all in-flight
+          // conversions — at `cargo test`'s default parallelism on a
+          // many-core box (e.g. -j128) that easily clears the old
+          // 4.5 GB cap (validated only at -j20) and tripped a false
+          // `MemoryBudget` cascade on otherwise-fine basic documents
+          // (article/book/report). Doubled to 9 GB so the shared-process
+          // test runner has headroom at high `-j` while a genuine
+          // single-paper runaway still trips well below a 32 GB box.
           let cap = std::env::var("LATEXML_RSS_CAP_BYTES")
             .ok()
             .and_then(|v| v.parse::<u64>().ok())
-            .unwrap_or(4_500_000_000);
+            .unwrap_or(9_000_000_000);
           if rss_bytes > cap {
             // R35.A debug: when LATEXML_DEBUG_MEMBUDGET=1 is set, dump
             // a stack backtrace before exiting so we can identify the
