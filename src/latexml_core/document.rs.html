@@ -274,7 +274,7 @@
 <a href=#274 id=274 data-nosnippet>274</a>    // amsmath::rearrange_ams_split (tagged with `_split_ref="1"`).
 <a href=#275 id=275 data-nosnippet>275</a>    // The math parser later absorbs some XMArray cells (inserted
 <a href=#276 id=276 data-nosnippet>276</a>    // MULOPs, etc.) and the parallel XMWrap refs end up pointing
-<a href=#277 id=277 data-nosnippet>277</a>    // at vanished targets, cascading through Warn:expected:node
+<a href=#277 id=277 data-nosnippet>277</a>    // at vanished targets, cascading through Warning:expected:node
 <a href=#278 id=278 data-nosnippet>278</a>    // (here) and Error:expected:id (post-process) for ~1500 wp3
 <a href=#279 id=279 data-nosnippet>279</a>    // canvas papers. Restricting the sweep to `_split_ref` avoids
 <a href=#280 id=280 data-nosnippet>280</a>    // breaking declare_test's renamed-id case (XMRefs pointing to
@@ -2978,7 +2978,7 @@
 <a href=#2978 id=2978 data-nosnippet>2978</a>      // the in-tree test fixture tests/math/declare.xml itself bakes
 <a href=#2979 id=2979 data-nosnippet>2979</a>      // in the `xml:id="S1.Ex1.m1.2a"` dedup result, confirming
 <a href=#2980 id=2980 data-nosnippet>2980</a>      // Perl produces the same behavior. Downstream broken XMRefs
-<a href=#2981 id=2981 data-nosnippet>2981</a>      // (post-dedup) emit Warn:expected:node "No node found with
+<a href=#2981 id=2981 data-nosnippet>2981</a>      // (post-dedup) emit Warning:expected:node "No node found with
 <a href=#2982 id=2982 data-nosnippet>2982</a>      // id=…" which already surfaces the consequence at the appro-
 <a href=#2983 id=2983 data-nosnippet>2983</a>      // priate severity. Math-parser hygiene fix (preventing the
 <a href=#2984 id=2984 data-nosnippet>2984</a>      // collision in the first place) is tracked separately.
@@ -3597,7 +3597,7 @@
 <a href=#3597 id=3597 data-nosnippet>3597</a>      <span class="comment">// `xml:lang` is stored namespaced (local name "lang"); the string
 <a href=#3598 id=3598 data-nosnippet>3598</a>      // accessor `get_attribute("xml:lang")` always returns None — read it via
 <a href=#3599 id=3599 data-nosnippet>3599</a>      // the XML namespace. (Same libxml footgun as xml:id; see
-<a href=#3600 id=3600 data-nosnippet>3600</a>      // docs/XMLID_ACCESSOR_AUDIT_2026-06-08.md.)
+<a href=#3600 id=3600 data-nosnippet>3600</a>      // docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md.)
 <a href=#3601 id=3601 data-nosnippet>3601</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(lang) = node_ref.get_attribute_ns(<span class="string">"lang"</span>, XML_NS) {
 <a href=#3602 id=3602 data-nosnippet>3602</a>        <span class="kw">return </span>lang;
 <a href=#3603 id=3603 data-nosnippet>3603</a>      }

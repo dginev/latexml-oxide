@@ -41,7 +41,7 @@
 <a href=#41 id=41 data-nosnippet>41</a>  // where `||` checks the BOOLEAN success of InputDefinitions. The
 <a href=#42 id=42 data-nosnippet>42</a>  // Rust port previously used `is_ok()` on `require_package`, but
 <a href=#43 id=43 data-nosnippet>43</a>  // `require_package` returns `Ok(())` even when nothing loaded
-<a href=#44 id=44 data-nosnippet>44</a>  // (the miss-handler fires `Warn:missing_file` and returns OK), so
+<a href=#44 id=44 data-nosnippet>44</a>  // (the miss-handler fires `Warning:missing_file` and returns OK), so
 <a href=#45 id=45 data-nosnippet>45</a>  // the fallback to `amsppt` never ran. Mirror Perl's semantics by
 <a href=#46 id=46 data-nosnippet>46</a>  // probing the `&lt;style&gt;.sty_loaded` flag (or the raw equivalent)
 <a href=#47 id=47 data-nosnippet>47</a>  // AFTER the call. Witness: arXiv:gr-qc/9507042 — paper has
