@@ -91,20 +91,31 @@ pub fn check_timeout() -> Result<()> {
       {
         if let Some(rss_kb) = crate::watchdog::process_rss_kb() {
           let rss_bytes = rss_kb * 1024;
-          // R35.A safety cap: 4.5 GB RSS. Worker ulimit is 6 GB
-          // virtual; RSS at 4.5 GB means we still have headroom for
-          // post-processing (XSLT, MathML chain) but are clearly
-          // already in pathological territory. Real documents in
-          // the wp5 / canvas3 corpus stay below 1 GB peak RSS.
+          // R35.A safety cap: 4.5 GB RSS. Real documents in the wp5 /
+          // canvas3 corpus stay below 1 GB peak RSS, so this is well
+          // into pathological territory while leaving headroom for
+          // post-processing (XSLT, MathML chain).
           // Override via LATEXML_RSS_CAP_BYTES env.
           //
-          // This is a *per-process* fuse for the single-conversion
-          // binary (one paper per process under the sandbox ulimit).
-          // The multi-conversion test harness used to trip it by
-          // *accumulating* ~110 MB/test in undropped `#[thread_local]`
-          // engine state; it now calls `reset_thread_engine()` between
-          // conversions (peak fell 4.9 GB → ~2.9 GB at -j20), so the
-          // cap stays at its production value.
+          // This is a *per-process* fuse, deliberately kept LOW. It must
+          // bound ONE conversion: in production the binary is
+          // single-conversion (one paper per process), and a massively
+          // parallel fleet runs many such processes at once — so the
+          // aggregate host RSS is `N_processes × this_cap`. Raising the
+          // default would let a busy fleet OOM the machine. The
+          // `cortex_worker` fleet OVERRIDES this env to its own per-child
+          // ceiling (`--child-mem-limit-mb`).
+          //
+          // The ONE multi-conversion-in-one-process case is the test
+          // harness: libtest spawns a thread per test, so at `cargo
+          // test`'s default parallelism on a many-core box (e.g. -j128)
+          // the process-wide RSS is the *sum* over all in-flight
+          // conversions and trips this single-conversion cap on
+          // otherwise-fine documents. That is handled NOT by raising this
+          // default but by the harness setting LATEXML_RSS_CAP_BYTES at
+          // test setup (latexml_oxide `util::test::init_test_rss_cap`).
+          // Any other single-process-many-conversion driver should do the
+          // same.
           let cap = std::env::var("LATEXML_RSS_CAP_BYTES")
             .ok()
             .and_then(|v| v.parse::<u64>().ok())

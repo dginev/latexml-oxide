@@ -8,7 +8,7 @@ fleet of conversion workers, and the layered memory guards that bound each one.
 * **Operator deployment** (bring the fleet up against a running dispatcher):
   CorTeX `MANUAL.md` §7.
 * **In-process runaway guards** (the byte budget / cycle guards *inside* one
-  conversion): `docs/MEMORY_GUARD_HARDENING_2026-06-09.md`.
+  conversion): `docs/archive/MEMORY_GUARD_HARDENING_2026-06-09.md`.
 
 ## The two modes of `cortex_worker`
 
@@ -84,7 +84,7 @@ Guards 1–4 bound a **single conversion** (per-process); guard 5 bounds the
 1. **Gullet/stomach cycle guards + stomach byte budget** (`STOMACH_BOX_BYTES_BUDGET`,
    ~3.2 GB of estimate) — detect a runaway *during* digestion and `Fatal` with a
    structured `Stomach:MemoryBudget`/`Stomach:Recursion`. Portable, fires before
-   any RSS ceiling. See `docs/MEMORY_GUARD_HARDENING_2026-06-09.md`.
+   any RSS ceiling. See `docs/archive/MEMORY_GUARD_HARDENING_2026-06-09.md`.
 2. **Polled RSS soft guard** (`--max-rss-mb`, the shared `Watchdog`) — samples
    `/proc/self/status` `VmRSS` and exits `137` with a `Fatal:oom:rss` log line
    and a `Status:conversion:3` artifact. Linux-only (reads `/proc`).

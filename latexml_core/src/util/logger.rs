@@ -103,13 +103,18 @@ impl log::Log for LatexmlLogger {
       } else {
         record_target
       };
-      // Following the reporting syntax at: http://dlmf.nist.gov/LaTeXML/manual/errorcodes/
+      // Following the reporting syntax at: https://math.nist.gov/~BMiller/LaTeXML/manual/errorcodes/
+      // The severity word is the FULL Perl LaTeXML token (Info/Warning/Error/Fatal) — consumers
+      // (CorTeX's log parser, the --server LSP) key on it, so it must match Perl exactly. In
+      // particular WARN must serialize as `Warning` (not the abbreviated `Warn`): CorTeX maps an
+      // unrecognized severity to Info, so `Warn:` silently misfiled every warning (see
+      // LaTeXML/lib/LaTeXML/Common/Error.pm: `"Warning:" . $category . …`).
       let severity = if category_object.starts_with("Fatal:") {
         ""
       } else {
         match record.level() {
           Level::Info => "Info",
-          Level::Warn => "Warn",
+          Level::Warn => "Warning",
           Level::Error => "Error",
           Level::Debug => "Debug",
           Level::Trace => "Trace",

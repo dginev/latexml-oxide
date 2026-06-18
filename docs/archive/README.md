@@ -4,6 +4,35 @@ Snapshot audits and one-shot worksheets preserved for forensic context.
 Do not drive current planning from these files without revalidating on
 current `HEAD` — class/file layout, definitions, and counts have shifted.
 
+## Resolved diagnostics & completed references (archived 2026-06-18)
+
+- `MEMORY_GUARD_HARDENING_2026-06-09.md` — canvas_3 OOM-cluster root cause +
+  the layered runaway-guard architecture (gullet/stomach cycle guards, the
+  block-sampled byte budget, the boxing-depth cap). RESOLVED: the guards landed
+  AND the witness cluster was root-cause-fixed (shipping `line`/`lcircle`
+  fontmaps so the LaTeX-2.09 line-drawing loops terminate). Kept as the
+  guard-design record / defense-in-depth reference. Cited by
+  `../CORTEX_WORKER_HARNESS.md`.
+- `PGF_ARC_BISECTION_2201.09268_2026-06-09.md` — pgf line–arc bisection
+  non-termination (a 1e-5 last-place drift in the composed
+  `\pgfmathanglebetweenpoints` makes pgf's exact-match loop exit miss in Rust).
+  Root-caused; mitigated by the stomach cycle guard (clean `Fatal` instead of a
+  4.5 GB OOM); the bit-exact-trig fix is deferred as deep/high-risk for one
+  paper. Cited by `../SYNC_STATUS.md`.
+- `XMLID_ACCESSOR_AUDIT_2026-06-08.md` — the libxml `xml:id`/`xml:lang`
+  string-accessor footgun (stored namespaced as local `id`/`lang`, so the
+  string-keyed `get/has/remove_attribute("xml:…")` silently fail). The three
+  confirmed active bugs were fixed; a ratchet lint
+  (`tools/lint_xmlid_accessor.sh` + baseline) and WISDOM #60 prevent new sites;
+  the broad migration is deliberately NOT done (the masked sites are
+  load-bearing — see the audit). Cited by `../EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`,
+  `rewrite.rs`, `document.rs`, `dump`-adjacent comments.
+- `DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md` — close reading of Perl
+  `Core/Dumper.pm` and the on-disk record format. All implementation steps
+  landed; the v3 structured-Parameter encoding it specifies is the stable live
+  dump format (summarized in the living `../DUMP_DESIGN.md`, which links here).
+  Cited by `dump_reader.rs` / `dump_writer.rs` / `../WISDOM.md`.
+
 ## Completed missions & resolved diagnostics (archived 2026-06-10)
 
 - `frontmatter_api_refactor.md` — design + decisions log for the upstream

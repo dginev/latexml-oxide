@@ -55,6 +55,35 @@ pub fn init_logger() {
   });
 }
 
+static INIT_TEST_RSS_CAP: Once = Once::new();
+/// Raise the per-process RSS fuse for the multi-conversion test harness.
+///
+/// `latexml_core::stomach`'s memory budget defaults to **4.5 GB**, sized to
+/// bound a *single* conversion — that low default is load-bearing in production,
+/// where a massively parallel fleet runs many one-paper processes at once and
+/// the aggregate host RSS is `N × cap` (raising it would OOM the machine).
+///
+/// `cargo test` is the one place that runs many conversions in ONE process:
+/// libtest spawns a thread per test, so at high parallelism (e.g. `-j128` on a
+/// many-core box) the process-wide RSS is the *sum* of all in-flight
+/// conversions and trips the single-conversion fuse on otherwise-fine
+/// documents (a false `MemoryBudget` cascade on article/book/report …). So the
+/// harness — not the production default — raises the cap, once, here. An
+/// explicit `LATEXML_RSS_CAP_BYTES` (or `--test-threads=N`) still wins.
+fn init_test_rss_cap() {
+  INIT_TEST_RSS_CAP.call_once(|| {
+    if std::env::var_os("LATEXML_RSS_CAP_BYTES").is_none() {
+      // SAFETY: set exactly once under `Once`, at the very top of every
+      // generated test (before any conversion thread reads the env in
+      // `stomach::check_timeout`). `Once`'s release/acquire ordering
+      // happens-before all those reads, so there is no setenv/getenv race.
+      unsafe {
+        std::env::set_var("LATEXML_RSS_CAP_BYTES", "9000000000");
+      }
+    }
+  });
+}
+
 // Linker-section trick: register a SIGSEGV handler via `.init_array` so
 // it runs BEFORE `main()` (and therefore before any thread the test
 // harness spawns can crash). `init_logger` was too late — by the time
@@ -219,6 +248,7 @@ pub fn latexml_test_single(
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
   init_logger();
+  init_test_rss_cap();
   if !validate_requirements(dirpath, requires) {
     return; // test group only if required files are found.
   }
@@ -544,6 +574,7 @@ pub fn kpse_has(file: &str) -> bool {
 /// response (result/log/status). The shared boilerplate for the standalone
 /// regression tests.
 pub fn convert_fixture(source: &str) -> crate::converter::ConversionResponse {
+  init_test_rss_cap();
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = latexml_core::common::Config {
     format: latexml_core::common::OutputFormat::HTML5,

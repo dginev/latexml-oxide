@@ -70,7 +70,7 @@ pub fn write_dump(
   .ok();
   writeln!(
     file,
-    "#            delimiter tokens round-trip (see docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)."
+    "#            delimiter tokens round-trip (see docs/archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md)."
   )
   .ok();
   writeln!(
@@ -411,7 +411,7 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       //     brace-in-delimiter forms.
       //   - `v3_params` (v3, 6th field) — per-Parameter structured record carrying (name, spec,
       //     flags, extras). Modeled on Perl's `P(type, spec, extra=>[T(...)])`; see
-      //     `docs/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`. Bypasses `parse_parameters` at load
+      //     `docs/archive/DUMP_FORMAT_PERL_ANALYSIS_2026-04-30.md`. Bypasses `parse_parameters` at load
       //     time so delimited params round-trip intact.
       //
       // We emit both so older readers still work, and newer readers can
