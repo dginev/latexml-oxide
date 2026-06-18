@@ -41,7 +41,7 @@ LoadDefinitions!({
   // where `||` checks the BOOLEAN success of InputDefinitions. The
   // Rust port previously used `is_ok()` on `require_package`, but
   // `require_package` returns `Ok(())` even when nothing loaded
-  // (the miss-handler fires `Warn:missing_file` and returns OK), so
+  // (the miss-handler fires `Warning:missing_file` and returns OK), so
   // the fallback to `amsppt` never ran. Mirror Perl's semantics by
   // probing the `<style>.sty_loaded` flag (or the raw equivalent)
   // AFTER the call. Witness: arXiv:gr-qc/9507042 — paper has

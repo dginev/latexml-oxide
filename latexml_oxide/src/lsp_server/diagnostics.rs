@@ -159,7 +159,9 @@ pub(crate) fn parse_log_diagnostics(log_str: &str) -> Vec<Diag> {
   for line in log_str.lines() {
     let severity = if line.starts_with("Error:") {
       Some(Severity::Error)
-    } else if line.starts_with("Warn:") {
+    } else if line.starts_with("Warning:") || line.starts_with("Warn:") {
+      // `Warning:` is the canonical Perl-LaTeXML token (what the logger now emits); `Warn:` is
+      // tolerated for backward-compat with older logs.
       Some(Severity::Warning)
     } else if line.starts_with("Fatal:") {
       Some(Severity::Fatal)

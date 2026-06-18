@@ -274,7 +274,7 @@ impl Document {
     // amsmath::rearrange_ams_split (tagged with `_split_ref="1"`).
     // The math parser later absorbs some XMArray cells (inserted
     // MULOPs, etc.) and the parallel XMWrap refs end up pointing
-    // at vanished targets, cascading through Warn:expected:node
+    // at vanished targets, cascading through Warning:expected:node
     // (here) and Error:expected:id (post-process) for ~1500 wp3
     // canvas papers. Restricting the sweep to `_split_ref` avoids
     // breaking declare_test's renamed-id case (XMRefs pointing to
@@ -2978,7 +2978,7 @@ impl Document {
       // the in-tree test fixture tests/math/declare.xml itself bakes
       // in the `xml:id="S1.Ex1.m1.2a"` dedup result, confirming
       // Perl produces the same behavior. Downstream broken XMRefs
-      // (post-dedup) emit Warn:expected:node "No node found with
+      // (post-dedup) emit Warning:expected:node "No node found with
       // id=…" which already surfaces the consequence at the appro-
       // priate severity. Math-parser hygiene fix (preventing the
       // collision in the first place) is tracked separately.
