@@ -230,12 +230,12 @@
 <a href=#230 id=230 data-nosnippet>230</a>      <span class="comment">// Otherwise try factor + unit. If the unit is missing, fall back
 <a href=#231 id=231 data-nosnippet>231</a>      // to `bp` (big points) per Perl L52-54.
 <a href=#232 id=232 data-nosnippet>232</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(factor) = read_factor()<span class="question-mark">? </span>{
-<a href=#233 id=233 data-nosnippet>233</a>        <span class="kw">let </span>unit = <span class="kw">match </span>read_unit()<span class="question-mark">? </span>{
-<a href=#234 id=234 data-nosnippet>234</a>          <span class="prelude-val">Some</span>(u) =&gt; u,
-<a href=#235 id=235 data-nosnippet>235</a>          <span class="prelude-val">None </span>=&gt; convert_unit(<span class="string">"bp"</span>),
+<a href=#233 id=233 data-nosnippet>233</a>        <span class="kw">let </span>(num, den) = <span class="kw">match </span>read_unit()<span class="question-mark">? </span>{
+<a href=#234 id=234 data-nosnippet>234</a>          <span class="prelude-val">Some</span>(ratio) =&gt; ratio,
+<a href=#235 id=235 data-nosnippet>235</a>          <span class="prelude-val">None </span>=&gt; convert_unit_ratio(<span class="string">"bp"</span>),
 <a href=#236 id=236 data-nosnippet>236</a>        };
 <a href=#237 id=237 data-nosnippet>237</a>        <span class="kw">let </span>signed = <span class="kw">if </span>is_negative { -factor } <span class="kw">else </span>{ factor };
-<a href=#238 id=238 data-nosnippet>238</a>        <span class="kw">let </span>sp = common::numeric_ops::fixpoint(signed, <span class="prelude-val">Some</span>(unit));
+<a href=#238 id=238 data-nosnippet>238</a>        <span class="kw">let </span>sp = common::numeric_ops::fixpoint_unit(signed, num, den);
 <a href=#239 id=239 data-nosnippet>239</a>        dims.push(sp);
 <a href=#240 id=240 data-nosnippet>240</a>      } <span class="kw">else </span>{
 <a href=#241 id=241 data-nosnippet>241</a>        <span class="kw">break</span>;

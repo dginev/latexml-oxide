@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a>  Digested, RegisterValue,
 <a href=#8 id=8 data-nosnippet>8</a>  common::{
 <a href=#9 id=9 data-nosnippet>9</a>    error::<span class="kw-2">*</span>,
-<a href=#10 id=10 data-nosnippet>10</a>    numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint, kround, round_to},
+<a href=#10 id=10 data-nosnippet>10</a>    numeric_ops::{NumericOps, UNITY, UNITY_F64, fixpoint_unit, kround, round_to},
 <a href=#11 id=11 data-nosnippet>11</a>    object::Object,
 <a href=#12 id=12 data-nosnippet>12</a>  },
 <a href=#13 id=13 data-nosnippet>13</a>  definition::register::RegisterType,
@@ -69,8 +69,8 @@
 <a href=#69 id=69 data-nosnippet>69</a>      </span><span class="kw">let </span>num_str = cap.get(<span class="number">1</span>).map_or(<span class="string">""</span>, |m| m.as_str());
 <a href=#70 id=70 data-nosnippet>70</a>      <span class="kw">let </span>num: f64 = num_str.parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>);
 <a href=#71 id=71 data-nosnippet>71</a>      <span class="kw">let </span>unit = cap.get(<span class="number">2</span>).map_or(<span class="string">""</span>, |m| m.as_str());
-<a href=#72 id=72 data-nosnippet>72</a>      <span class="kw">let </span>converted_unit = convert_unit(unit);
-<a href=#73 id=73 data-nosnippet>73</a>      <span class="prelude-val">Ok</span>(fixpoint(num, <span class="prelude-val">Some</span>(converted_unit)) <span class="kw">as </span>f64)
+<a href=#72 id=72 data-nosnippet>72</a>      <span class="kw">let </span>(conv_num, conv_den) = convert_unit_ratio(unit);
+<a href=#73 id=73 data-nosnippet>73</a>      <span class="prelude-val">Ok</span>(fixpoint_unit(num, conv_num, conv_den) <span class="kw">as </span>f64)
 <a href=#74 id=74 data-nosnippet>74</a>    } <span class="kw">else </span>{
 <a href=#75 id=75 data-nosnippet>75</a>      <span class="comment">// When scaled points passed in (typically the result of Perl calculations on other
 <a href=#76 id=76 data-nosnippet>76</a>      // Dimensions), you might think truncation (int) is more TeX-like.
