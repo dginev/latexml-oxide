@@ -22,12 +22,24 @@ use crate::document::{NodeData, PostDocument, element_children, element_children
 // When false, U+2062 is replaced with U+200B (zero-width space).
 thread_local! {
   static INVISIBLE_TIMES: Cell<bool> = const { Cell::new(true) };
+  /// Current math style context, tracking Perl's `$LaTeXML::MathML::STYLE` /
+  /// `$LaTeXML::MathML::SIZE`. Stepped down inside sub/superscripts (`pmml_scriptsize`)
+  /// and fraction parts (`pmml_smaller`); its `size_percent()` is the contextual size a
+  /// token's `fontsize` is compared against, so a token only emits an explicit
+  /// `mathsize` when it *differs* from what the surrounding script/fraction structure
+  /// already implies (Perl `stylizeContent` L777). Reset to `Display` at each
+  /// `convert_to_pmml` entry.
+  static CURRENT_STYLE: Cell<MathStyle> = const { Cell::new(MathStyle::Display) };
 }
 
 /// Set whether to emit invisible times (called by MathML processor before rendering).
 pub fn set_invisible_times(emit: bool) { INVISIBLE_TIMES.with(|f| f.set(emit)); }
 
 fn get_invisible_times() -> bool { INVISIBLE_TIMES.with(|f| f.get()) }
+
+/// The contextual font size (e.g. "100%", "70%", "50%") implied by the current math style.
+/// A token whose own `fontsize` equals this needs no explicit `mathsize` attribute.
+fn current_context_size() -> &'static str { CURRENT_STYLE.with(|s| s.get().size_percent()) }
 
 /// Math style levels.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -108,6 +120,9 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
 /// Entry point for Presentation MathML conversion.
 /// Port of `MathML::Presentation::convertNode` + `pmml_top`.
 pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
+  // Reset the math-style context for each formula (display/inline are both 100% size, so
+  // Display is the right baseline; nested scripts/fractions step it down from here).
+  CURRENT_STYLE.with(|s| s.set(MathStyle::Display));
   let children = element_children(xmath);
   let results: Vec<NodeData> = children.iter().map(|c| pmml(doc, c)).collect();
   let mut result = if results.len() == 1 {
@@ -585,9 +600,13 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     // Check the XMTok's stretchy attribute
     let stretchy_attr = node.get_attribute("stretchy");
 
-    // Handle size attribute
+    // Handle size attribute. Port of Perl `stylizeContent` L777: emit `mathsize` only when
+    // the token's own size differs from the current contextual size. Inside a sub/superscript
+    // the context is already scriptsize (70%/50%), so an operator at that size — e.g. the `-`
+    // in `10^{-21}` or the `*` in `x^{\ast}` — must NOT get a spurious `mathsize="70%"` (the
+    // <msup>/<msub> structure already shrinks it; the redundant attribute double-shrinks it).
     if let Some(size) = node.get_attribute("fontsize") {
-      if size != "100%" {
+      if size != current_context_size() {
         attrs.insert("mathsize".to_string(), size);
       }
     }
@@ -782,11 +801,32 @@ fn pmml_script_simple(doc: &PostDocument, tag: &str, base: &Node, script: &Node)
   }
 }
 
-/// Convert node at script size.
-fn pmml_scriptsize(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
+/// Convert node at script size (sub/superscripts). Port of Perl `pmml_scriptsize`:
+/// steps the style to scriptstyle (→ scriptscript when already in a script) for the
+/// duration of the recursion, so contained tokens compare against the smaller size.
+fn pmml_scriptsize(doc: &PostDocument, node: &Node) -> NodeData {
+  let old = CURRENT_STYLE.with(|s| {
+    let o = s.get();
+    s.set(o.script_step());
+    o
+  });
+  let r = pmml(doc, node);
+  CURRENT_STYLE.with(|s| s.set(old));
+  r
+}
 
-/// Convert node at smaller size (for fractions).
-fn pmml_smaller(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
+/// Convert node at smaller size (fraction numerator/denominator). Port of Perl
+/// `pmml_smaller`: steps the style down one level for the duration of the recursion.
+fn pmml_smaller(doc: &PostDocument, node: &Node) -> NodeData {
+  let old = CURRENT_STYLE.with(|s| {
+    let o = s.get();
+    s.set(o.step_down());
+    o
+  });
+  let r = pmml(doc, node);
+  CURRENT_STYLE.with(|s| s.set(old));
+  r
+}
 
 /// Infix operator: arg1 op arg2 op arg3 ...
 ///
@@ -831,12 +871,16 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   }
   if live_args.len() == 1 {
     let arg_mml = pmml(doc, &live_args[0]);
-    return if leading_absent {
-      // Continuation-row prefix: `<mo>op</mo> <arg>`
-      pmml_row(vec![op_mml, arg_mml])
-    } else {
-      // Trailing-relop postfix: `<arg> <mo>op</mo>`
+    return if trailing_absent {
+      // Trailing-relop postfix: `<arg> <mo>op</mo>` (real left, absent right — e.g. a
+      // trailing relop `LHS =` continued on the next alignment row).
       pmml_row(vec![arg_mml, op_mml])
+    } else {
+      // Single operand is rendered PREFIX. Port of Perl `pmml_infix` L632:
+      // "Infix with 1 arg is presumably Prefix! (aka Operator)". Covers genuine unary
+      // operators (`-21`, `+x`) AND the leading-absent continuation row (`& = RHS`,
+      // whose LHS is inherited from the previous row): `<mo>op</mo> <arg>`.
+      pmml_row(vec![op_mml, arg_mml])
     };
   }
   let mut items = vec![pmml(doc, &live_args[0])];
