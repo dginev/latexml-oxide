@@ -12,17 +12,29 @@
 use std::{
   alloc::{Layout, set_alloc_error_hook},
   borrow::Cow,
+  cell::{Cell, RefCell},
   error::Error,
   ffi::OsString,
   fs::{self, File},
   io::{Read, Write},
+  panic::AssertUnwindSafe,
   path::{Path, PathBuf},
+  sync::atomic::{AtomicU64, Ordering},
 };
 
-/// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
-/// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
+/// Per-process allocator. Default is **mimalloc** (lock-free per-thread heaps,
+/// avoids glibc's arena-mutex contention). Building with `--features jemalloc`
+/// swaps in **jemalloc**, whose decay-based background purging returns freed
+/// pages to the OS so a long-lived worker's RSS tracks the *current* paper
+/// rather than retaining the high-water of the heaviest paper it has processed —
+/// the disposition a persistent one-conversion-per-process worker needs (tune
+/// the decay via `_RJEM_MALLOC_CONF`, set on children by `run_harness`).
+#[cfg(not(feature = "jemalloc"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+#[cfg(feature = "jemalloc")]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 use std::{process, rc::Rc};
 
 use clap::Parser;
@@ -43,8 +55,13 @@ struct Cli {
   #[arg(long, default_value = "tcp://localhost:51696")]
   sink_address: String,
 
-  /// Service name as registered in CorTeX
-  #[arg(long, default_value = "oxidized_tex_to_html")]
+  /// Service name as registered in CorTeX. Must match the service's `name`
+  /// **exactly**: the dispatcher's ventilator leases tasks for this name, and
+  /// the sink re-validates each returned result's service name against the
+  /// task's service id (`src/dispatcher/sink.rs`) — a mismatch silently
+  /// discards the result. The CorTeX preview registers this service as
+  /// `oxidized-tex-to-html` (hyphenated), so that is the default.
+  #[arg(long, default_value = "oxidized-tex-to-html")]
   service: String,
 
   /// Number of parallel worker threads
@@ -125,6 +142,63 @@ struct Cli {
   /// Quiet output
   #[arg(short, long)]
   quiet: bool,
+
+  /// Run as a process-supervising **harness**: spawn and keep alive a fleet of
+  /// single-conversion (`--pool-size 1`) worker child processes — respawning
+  /// any that exit — instead of converting in this process. This is the robust
+  /// deployment model: one conversion per process gives each paper its own RAM
+  /// ceiling and wall-clock timeout, so a timeout / OOM / panic / segfault
+  /// kills only that one worker (the dispatcher's lease reaper recovers its
+  /// task) and the harness respawns a fresh process. A single `--pool-size N`
+  /// process would instead share one RAM ceiling across N concurrent
+  /// conversions, false-positiving the memory guards on every paper.
+  #[arg(long)]
+  harness: bool,
+
+  /// Harness mode: number of worker child processes to keep alive. Default:
+  /// CPU-derived, reserving 1–4 logical cores for the OS + dispatcher.
+  #[arg(long)]
+  workers: Option<usize>,
+
+  /// Harness mode: per-child **address-space** ceiling in MiB, enforced via
+  /// `setrlimit(RLIMIT_AS)` before each child execs (0 disables). Default 8192
+  /// (8 GiB) — sized so a *legitimate* heavy paper (≈6 GB RSS observed) reliably
+  /// completes with headroom. NB: this bounds address space (VSZ), and with
+  /// mimalloc VSZ runs ~1–1.5 GiB above true RSS; at 8 GiB the soft `--max-rss-mb`
+  /// guard sits at 7936 MiB RSS (1.75 GiB above 6 GB) and the VSZ cap clears a
+  /// 6 GB job's ~7–7.5 GiB address space, so the effective resident ceiling is
+  /// ~6.5–7 GB RSS. This cap contains a **single** runaway job; the fleet-wide
+  /// `--mem-pressure-floor-mb` governor contains the **aggregate** (a cluster of
+  /// concurrently-heavy jobs). A breach makes the child's next allocation fail
+  /// with `ENOMEM`, which `custom_alloc_error_hook` turns into a clean
+  /// `Fatal:oom` + exit 137, and the harness respawns it.
+  #[arg(long, default_value = "8192")]
+  child_mem_limit_mb: u64,
+
+  /// Harness mode: fleet **memory-pressure governor** floor in MiB. Omit for
+  /// auto (`max(one per-child cap, 10% of RAM)`); `0` disables the governor;
+  /// a positive value sets an explicit floor. While system `MemAvailable` is
+  /// below the floor, the harness sheds its **largest-RSS** worker (its task is
+  /// re-leased) and pauses respawns until memory recovers past 1.5× the floor —
+  /// so the fleet may safely over-commit (the common case runs the full worker
+  /// count) yet survives a rare cluster of heavy jobs with a deliberate,
+  /// attributable shed instead of an uncontrolled kernel OOM-kill. Pair with an
+  /// outer cgroup `memory.max` for a hard backstop.
+  #[arg(long)]
+  mem_pressure_floor_mb: Option<u64>,
+
+  /// Per-worker memory-based **recycle** threshold in MiB (0 disables). After each
+  /// conversion — with the result already returned to the dispatcher, so nothing is
+  /// lost — if the worker's RSS exceeds this, it exits cleanly and the harness forks
+  /// a fresh one. This reclaims the engine's accumulated interner/arena (a
+  /// thread-local that is never reset mid-process — it assumes a short-lived,
+  /// one-conversion-per-process model) by process replacement, without failing a
+  /// paper, while keeping startup amortized for the common case of light papers. In
+  /// harness mode it auto-sets to **50% of `--child-mem-limit-mb`** (the rule: a
+  /// fresh worker keeps the *full* ceiling for any single — even aberrant — paper,
+  /// then retires once it has consumed half of it). A standalone worker leaves it 0.
+  #[arg(long, default_value = "0")]
+  allocation_limit_mb: u64,
 }
 
 /// Conversion profile presets
@@ -199,6 +273,9 @@ struct LatexmlWorker {
   verbosity:      i32,
   /// Extra --path search dirs from CLI, prepended to per-job source_dir.
   search_paths:   Vec<String>,
+  /// Recycle the worker after a conversion once RSS exceeds this many MiB (0 =
+  /// never). See `--allocation-limit-mb` and `Worker::recycle_after_task`.
+  alloc_limit_mb: u64,
 }
 
 impl LatexmlWorker {
@@ -349,9 +426,13 @@ impl LatexmlWorker {
       telemetry::take().to_json_line()
     };
 
-    // 8. Pack output ZIP: HTML (named after source) + images + log + status + telemetry
-    let output_path =
-      std::env::temp_dir().join(format!("cortex_output_{}.zip", std::process::id()));
+    // 8. Pack output ZIP: HTML (named after source) + images + log + status + telemetry.
+    //    The path must be UNIQUE per task, not just per process: with `--pool-size N`
+    //    (N worker threads sharing one PID) a PID-only name would have every thread
+    //    write the same `/tmp/cortex_output_<pid>.zip` concurrently — interleaved
+    //    writes corrupt the archive and threads stream each other's bytes back. A
+    //    process-wide atomic sequence makes it collision-free across threads + papers.
+    let output_path = unique_output_path();
     latexml_post::pack::pack_archive(&latexml_post::pack::PackOptions {
       zip_path:          &output_path.to_string_lossy(),
       html_filename:     &html_filename,
@@ -372,7 +453,7 @@ impl LatexmlWorker {
 
 /// Read peak RSS in KB from /proc/self/status's VmHWM. 0 on failure.
 fn read_max_rss_kb_proc() -> u64 {
-  std::fs::read_to_string("/proc/self/status")
+  fs::read_to_string("/proc/self/status")
     .ok()
     .and_then(|content| {
       content
@@ -402,12 +483,138 @@ fn read_child_rusage_us_proc() -> (u64, u64) {
 #[cfg(not(unix))]
 fn read_child_rusage_us_proc() -> (u64, u64) { (0, 0) }
 
+/// Maximum number of *consecutive* caught panics before the worker process
+/// exits for a clean supervisor restart. A single poison paper among healthy
+/// ones never trips this (the streak resets on the next success); a sustained
+/// run of panics means the thread-local engine state is likely corrupted
+/// (an unwind left a lock/`RefCell` mid-mutation), so a fresh process is safer
+/// than risking silently-wrong output on subsequent papers.
+const MAX_CONSECUTIVE_PANICS: u32 = 5;
+
+thread_local! {
+  /// Consecutive caught-panic counter for *this* worker thread (each pool
+  /// thread keeps its own engine state, hence its own streak).
+  static PANIC_STREAK: Cell<u32> = const { Cell::new(0) };
+
+  /// Detail of the most recent panic on this thread — the panic **location**
+  /// (`file:line:col`) plus message — stashed by the panic hook
+  /// ([`install_panic_hook`]) at unwind time, then consumed by [`Worker::convert`]
+  /// for the failure artifact. `catch_unwind` only hands back the payload (the
+  /// bare message, e.g. "called `Option::unwrap()` on a `None` value"), which has
+  /// no location; capturing it in the hook is the only way to record *where* a
+  /// conversion panicked. The full backtrace is emitted to stderr by the hook.
+  static LAST_PANIC_DETAIL: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+/// Install a process-wide panic hook that records, for every panic, the panic
+/// **location** + message (into [`LAST_PANIC_DETAIL`] for the failing task's
+/// artifact) and prints the **full backtrace** to stderr (captured in the
+/// worker/harness log) so a caught conversion panic is debuggable. Uses
+/// `Backtrace::force_capture`, so a backtrace is taken regardless of
+/// `RUST_BACKTRACE`; the panic location is present even in a stripped release
+/// build (panic-location strings survive `strip`), while symbolicated frames
+/// need a build with debug info.
+fn install_panic_hook() {
+  std::panic::set_hook(Box::new(|info| {
+    let loc = info
+      .location()
+      .map(|l| format!("{}:{}:{}", l.file(), l.line(), l.column()))
+      .unwrap_or_else(|| "<unknown location>".to_string());
+    let payload = info.payload();
+    let msg = payload
+      .downcast_ref::<&str>()
+      .map(|s| (*s).to_string())
+      .or_else(|| payload.downcast_ref::<String>().cloned())
+      .unwrap_or_else(|| "<non-string panic payload>".to_string());
+    let bt = std::backtrace::Backtrace::force_capture();
+    // Full backtrace → stderr (captured in the worker/harness log) for debugging.
+    eprintln!("Fatal:panic:backtrace panicked at {loc}: {msg}\n{bt}");
+    // Bounded location+message → the per-task failure artifact (parser-safe).
+    LAST_PANIC_DETAIL.with(|p| *p.borrow_mut() = Some(format!("panicked at {loc}: {msg}")));
+  }));
+}
+
 impl Worker for LatexmlWorker {
+  /// Convert one task archive, **isolating every failure mode of the
+  /// latexml-oxide conversion call** so a single paper can never take the
+  /// worker down (the "anything that can go wrong will go wrong" contract):
+  ///
+  /// * A returned `Err` (unpack failure, disk-write failure, …) → a structured
+  ///   `Status:conversion:3` archive carrying a `Fatal:conversion:*` log line.
+  /// * A **panic** inside digestion/post-processing (the most dangerous case:
+  ///   it would otherwise unwind through `pericortex`'s loop and kill the
+  ///   process) → caught here (release builds use `panic = "unwind"`), turned
+  ///   into a `Fatal:panic:*` archive, and counted toward [`MAX_CONSECUTIVE_PANICS`].
+  ///
+  /// Either way the dispatcher receives an attributable result for the paper
+  /// instead of losing the task (and the worker), and the next paper proceeds.
+  /// Timeouts / OOM are handled out-of-band by the `Watchdog` + alloc hook
+  /// (they exit the process; the dispatcher's lease reaper recovers the task).
   fn convert(&self, path: &Path) -> Result<File, Box<dyn Error>> {
-    let output_path = self.convert_archive(path)?;
+    let arxiv_id = path
+      .file_stem()
+      .and_then(|s| s.to_str())
+      .unwrap_or("document")
+      .to_string();
+
+    // `AssertUnwindSafe`: the engine state is a thread-local singleton rebuilt
+    // per paper (`prepare_session`), so a caught unwind does not hand a logically
+    // half-updated value across the boundary — the next paper re-initialises it.
+    let outcome = std::panic::catch_unwind(AssertUnwindSafe(|| self.convert_archive(path)));
+
+    let output_path = match outcome {
+      Ok(Ok(path)) => {
+        PANIC_STREAK.with(|s| s.set(0));
+        path
+      },
+      Ok(Err(e)) => {
+        // The conversion failed cleanly (returned `Err`). Not a panic, so don't
+        // touch the streak — produce an attributable Fatal result and continue.
+        log::warn!(
+          target: "cortex_worker",
+          "conversion of {arxiv_id} failed: {e}; returning a Fatal result archive"
+        );
+        write_failure_zip(&arxiv_id, "conversion", &e.to_string())?
+      },
+      Err(panic) => {
+        // Prefer the panic hook's captured detail (location + message); fall back
+        // to the bare payload if the hook didn't run for some reason.
+        let msg = LAST_PANIC_DETAIL
+          .with(|p| p.borrow_mut().take())
+          .unwrap_or_else(|| panic_message(&*panic));
+        let streak = PANIC_STREAK.with(|s| {
+          let n = s.get() + 1;
+          s.set(n);
+          n
+        });
+        log::error!(
+          target: "cortex_worker",
+          "PANIC caught converting {arxiv_id} (consecutive: {streak}/{MAX_CONSECUTIVE_PANICS}): {msg}"
+        );
+        if streak >= MAX_CONSECUTIVE_PANICS {
+          log::error!(
+            target: "cortex_worker",
+            "{MAX_CONSECUTIVE_PANICS} consecutive panics — engine state is likely corrupted; \
+             exiting (code 70) for a clean supervisor restart. The dispatcher's lease reaper \
+             re-leases the in-flight task to another worker."
+          );
+          process::exit(70);
+        }
+        write_failure_zip(&arxiv_id, "panic", &msg)?
+      },
+    };
+
     let file = File::open(&output_path)?;
-    // Clean up temp file after opening
+    // Clean up temp file after opening (the open fd keeps the bytes readable).
     let _ = fs::remove_file(&output_path);
+    // NB: do NOT reset the thread engine here. The persistent worker relies on
+    // the dump definitions (loaded once) PERSISTING across papers — `prepare_session`
+    // re-initialises only the ephemeral per-conversion state. Returning memory to
+    // the OS between papers is the **allocator's** job (jemalloc decay under
+    // `--features jemalloc`), not an explicit engine reset: an earlier attempt to
+    // call `reset_thread_engine()` here wiped the persisted definitions and made
+    // every subsequent conversion panic (`unwrap() on None`). See the harness
+    // validation, 2026-06-17.
     Ok(file)
   }
 
@@ -424,6 +631,17 @@ impl Worker for LatexmlWorker {
   fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
   fn get_identity(&self) -> &str { &self.identity }
+
+  /// Recycle this worker (clean exit → fresh respawn) once its resident memory has
+  /// grown past `--allocation-limit-mb`. Called by `start_single` AFTER the result is
+  /// returned, so no paper is lost. Reads current `VmRSS` (one cheap `/proc` read);
+  /// `0` disables. Bounds the engine's never-reset thread-local interner/arena by
+  /// process replacement rather than a fragile mid-life reset.
+  fn recycle_after_task(&self) -> bool {
+    self.alloc_limit_mb > 0
+      && latexml_core::watchdog::process_rss_kb()
+        .is_some_and(|rss_kb| rss_kb / 1024 > self.alloc_limit_mb)
+  }
 }
 
 // --- Helper functions (shared with latexml_oxide.rs) ---
@@ -470,15 +688,15 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
 
   // Phase I.1.2: Check 00README.XXX (legacy arXiv format)
   let readme_xxx = dir.join("00README.XXX");
-  if readme_xxx.exists() {
-    if let Ok(content) = fs::read_to_string(&readme_xxx) {
-      for line in content.lines() {
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        if parts.len() >= 2 && parts[1] == "toplevelfile" {
-          let main_path = dir.join(parts[0]);
-          if main_path.exists() {
-            return Ok(main_path.to_string_lossy().to_string());
-          }
+  if readme_xxx.exists()
+    && let Ok(content) = fs::read_to_string(&readme_xxx)
+  {
+    for line in content.lines() {
+      let parts: Vec<&str> = line.split_whitespace().collect();
+      if parts.len() >= 2 && parts[1] == "toplevelfile" {
+        let main_path = dir.join(parts[0]);
+        if main_path.exists() {
+          return Ok(main_path.to_string_lossy().to_string());
         }
       }
     }
@@ -524,7 +742,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   // `Fatal:invalid:not_tex_source` (status 3) and bail.
   fn is_pdf_magic(path: &Path) -> bool {
     let mut buf = [0u8; 5];
-    if let Ok(mut f) = fs::File::open(path) {
+    if let Ok(mut f) = File::open(path) {
       use std::io::Read;
       if f.read(&mut buf).is_ok_and(|n| n == 5) {
         return &buf == b"%PDF-";
@@ -626,22 +844,22 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         determined = true;
         break;
       }
-      if lineno1 <= 12 {
-        if let Some(cap) = RE_FORMAT_HINT.captures(raw_line) {
-          let fmt = &cap[1];
-          if fmt == "latex209" || fmt == "biglatex" || fmt == "latex" || fmt == "LaTeX" {
-            likelihood.insert(tex_file.clone(), 3.0);
-          } else {
-            likelihood.insert(tex_file.clone(), 1.0);
-          }
-          determined = true;
-          break;
+      if lineno1 <= 12
+        && let Some(cap) = RE_FORMAT_HINT.captures(raw_line)
+      {
+        let fmt = &cap[1];
+        if fmt == "latex209" || fmt == "biglatex" || fmt == "latex" || fmt == "LaTeX" {
+          likelihood.insert(tex_file.clone(), 3.0);
+        } else {
+          likelihood.insert(tex_file.clone(), 1.0);
         }
+        determined = true;
+        break;
       }
       // Perl L128: strip ONE `%`-comment up to the next `\r`. `\r`-aware
       // so bare-`\r` line-ended files (read as one big "line" in Perl
       // because `$/=\n`) preserve subsequent `\r\documentclass` chunks.
-      let stripped: std::borrow::Cow<str> = RE_STRIP_COMMENT.replacen(raw_line, 1, "");
+      let stripped: Cow<str> = RE_STRIP_COMMENT.replacen(raw_line, 1, "");
       let line: &str = &stripped;
 
       if RE_DOCCLASS.is_match(line) {
@@ -907,6 +1125,76 @@ fn parse_readme_json(dir: &Path) -> Option<String> {
   None
 }
 
+/// A process-unique temp path for a packed result archive. Combines the PID
+/// (distinguishes concurrent worker *processes* on a shared `/tmp`) with a
+/// monotonic per-process counter (distinguishes pool *threads* and successive
+/// papers within one process), so no two in-flight conversions ever target the
+/// same file. Replaces the former PID-only name that pooled threads raced on.
+fn unique_output_path() -> PathBuf {
+  static OUTPUT_SEQ: AtomicU64 = AtomicU64::new(0);
+  let seq = OUTPUT_SEQ.fetch_add(1, Ordering::Relaxed);
+  std::env::temp_dir().join(format!("cortex_output_{}_{}.zip", process::id(), seq))
+}
+
+/// Extract a human-readable message from a caught-panic payload — the usual
+/// `&str` / `String` cases, else a generic label.
+fn panic_message(panic: &(dyn std::any::Any + Send)) -> String {
+  if let Some(s) = panic.downcast_ref::<&str>() {
+    (*s).to_string()
+  } else if let Some(s) = panic.downcast_ref::<String>() {
+    s.clone()
+  } else {
+    "<non-string panic payload>".to_string()
+  }
+}
+
+/// Build a minimal, **attributable** failure archive at a unique temp path and
+/// return that path. Carries exactly what the dispatcher needs to record a hard
+/// failure for a paper whose conversion `Err`'d or panicked: a `status` member
+/// (`Status:conversion:3`), a `cortex.log` with one `Fatal:<category>:caught …`
+/// line (so the dispatcher's log parse + telemetry count it as a fatal, never a
+/// silent "0 errors"), and a minimal `telemetry.json`. Mirrors the member shape
+/// of [`write_timeout_placeholder_zip`] so the same parser handles both.
+fn write_failure_zip(
+  arxiv_id: &str,
+  category: &str,
+  message: &str,
+) -> Result<PathBuf, Box<dyn Error>> {
+  let output_path = unique_output_path();
+  // Single-line + length-bounded so a giant or newline-laden panic payload can
+  // neither bloat the archive nor smuggle a fake `Status:`/`Fatal:` line into
+  // the log parser.
+  let sanitized: String = message
+    .replace(['\n', '\r'], " ")
+    .chars()
+    .take(2000)
+    .collect();
+  let log = format!(
+    "Fatal:{category}:caught latexml-oxide failed to convert {arxiv_id}: {sanitized}\n\
+     Status:conversion:3\n"
+  );
+  // `serde_json` so a hostile filename can't break the JSON (robustness).
+  let telemetry = serde_json::json!({
+    "paper_id": arxiv_id,
+    "category": "conversion_fatal",
+    "exit_code": 3,
+  })
+  .to_string();
+
+  let file = File::create(&output_path)?;
+  let mut zip = zip::ZipWriter::new(file);
+  let options =
+    zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored);
+  zip.start_file("status", options)?;
+  zip.write_all(b"Status:conversion:3")?;
+  zip.start_file("cortex.log", options)?;
+  zip.write_all(log.as_bytes())?;
+  zip.start_file("telemetry.json", options)?;
+  zip.write_all(telemetry.as_bytes())?;
+  zip.finish()?;
+  Ok(output_path)
+}
+
 /// Minimal "we timed out" placeholder zip. Written only from the
 /// watchdog's pre-exit hook (`set_pre_exit_hook` in `latexml_core::
 /// watchdog`), so the happy-path overhead is zero. Contains just
@@ -985,11 +1273,15 @@ fn custom_alloc_error_hook(layout: Layout) {
     let bt = std::backtrace::Backtrace::force_capture();
     eprintln!("{bt}");
   }
-  std::process::exit(137);
+  process::exit(137);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
   set_alloc_error_hook(custom_alloc_error_hook);
+  // Capture panic location + full backtrace for every panic (the conversion
+  // catch_unwind only sees the bare payload otherwise). Process-wide, so it also
+  // covers the harness supervisor.
+  install_panic_hook();
 
   // R35.A: install a default gullet pushback limit so runaway
   // macro expansion (witnessed on plain-TeX `\displaylines{ …
@@ -1024,13 +1316,184 @@ fn main() -> Result<(), Box<dyn Error>> {
     .map_err(|s| s.into())
 }
 
+/// Run the process-supervising harness (`--harness`): keep a fleet of
+/// single-conversion (`--pool-size 1`) worker child processes alive, each
+/// capped at `--child-mem-limit-mb` of address space via `setrlimit(RLIMIT_AS)`
+/// (applied by `pericortex::harness` in the forked child before `exec`), and
+/// respawn any that die — until SIGTERM/SIGINT tears the fleet down cleanly.
+///
+/// Children are this same binary re-invoked with the dispatcher/profile flags
+/// forwarded, `--pool-size 1`, and **without** `--harness` (so no fork bomb).
+/// Each child's polled `--max-rss-mb` soft guard is set ~256 MiB under the hard
+/// `RLIMIT_AS` cap so the watchdog emits an attributable `Status:conversion:3`
+/// just before the hard `ENOMEM` kill.
+fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
+  use pericortex::harness::{HarnessConfig, default_worker_count, supervise, total_ram_bytes};
+
+  const MIB: u64 = 1024 * 1024;
+
+  let mem_limit_bytes =
+    (cli.child_mem_limit_mb > 0).then(|| cli.child_mem_limit_mb.saturating_mul(MIB));
+
+  // Worker count: CPU-derived by default — a deliberate over-commit. Most jobs
+  // use a small fraction of the per-child cap (observed: median a few hundred
+  // MB), so sizing the fleet to the worst-case cap would idle most of the box.
+  // The fleet memory-pressure governor below is what makes the over-commit safe
+  // against the rare cluster of concurrently-heavy jobs. An explicit `--workers`
+  // overrides.
+  let workers = cli.workers.unwrap_or_else(default_worker_count);
+
+  // Memory-pressure governor floor. Omitted → auto = max(one per-child cap, 10%
+  // of RAM): enough free headroom for one heavy job to keep growing before the
+  // governor steps in. `--mem-pressure-floor-mb 0` disables it (rely on the
+  // per-child cap + any outer cgroup); an explicit value sets the MiB floor.
+  let mem_pressure_floor_bytes = match cli.mem_pressure_floor_mb {
+    Some(0) => None,
+    Some(mb) => Some(mb.saturating_mul(MIB)),
+    None => total_ram_bytes().map(|total| mem_limit_bytes.unwrap_or(0).max(total / 10)),
+  };
+
+  // Soft RSS guard ~256 MiB under the hard cap (or the user's value if no hard
+  // cap), so the in-process watchdog fires an attributable Fatal before ENOMEM.
+  let child_max_rss_mb = if cli.child_mem_limit_mb > 0 {
+    cli.child_mem_limit_mb.saturating_sub(256)
+  } else {
+    cli.max_rss_mb
+  };
+
+  // Memory-based recycle threshold: 50% of the per-child ceiling. After a clean
+  // conversion, a worker whose RSS has passed this exits and is re-forked fresh,
+  // reclaiming the engine's never-reset interner/arena by process replacement
+  // (the common case of light papers never trips it). A fresh worker keeps the
+  // full ceiling for any single (even aberrant) paper, then retires once it has
+  // consumed half of it. `--allocation-limit-mb` overrides; 0 disables.
+  let child_alloc_limit_mb = if cli.allocation_limit_mb > 0 {
+    cli.allocation_limit_mb
+  } else if cli.child_mem_limit_mb > 0 {
+    cli.child_mem_limit_mb / 2
+  } else {
+    cli.max_rss_mb / 2
+  };
+
+  let exe = std::env::current_exe()?;
+  let governor = match mem_pressure_floor_bytes {
+    Some(b) => format!("shed below {} MiB MemAvailable", b / MIB),
+    None => "off".to_string(),
+  };
+  eprintln!(
+    "Starting CorTeX harness: {workers} single-conversion worker process(es), \
+     service '{}', RLIMIT_AS {} MiB/child (soft RSS guard {} MiB, recycle @ {} MiB RSS), \
+     mem-governor: {governor}",
+    cli.service, cli.child_mem_limit_mb, child_max_rss_mb, child_alloc_limit_mb
+  );
+
+  // Owned clones for the build closure: `supervise` calls it once per spawn
+  // (including every respawn), so it must outlive `cli`'s borrow and be `Fn`.
+  let source_address = cli.source_address.clone();
+  let sink_address = cli.sink_address.clone();
+  let service = cli.service.clone();
+  let profile = cli.profile.clone();
+  let timeout = cli.timeout;
+  let message_size = cli.message_size;
+  let limit = cli.limit;
+  let preload = cli.preload.clone();
+  let search_paths = cli.search_paths.clone();
+  let (no_pmml, no_mathtex, verbose, quiet) = (cli.no_pmml, cli.no_mathtex, cli.verbose, cli.quiet);
+
+  let config = HarnessConfig {
+    workers,
+    mem_limit_bytes,
+    mem_pressure_floor_bytes,
+    ..Default::default()
+  };
+
+  supervise(&config, move |_index| {
+    let mut cmd = process::Command::new(&exe);
+    // jemalloc tuning for children (read at allocator init, so it must be set by
+    // us before exec — too late from inside the child). Enable the background
+    // purge thread and a short dirty-page decay so a worker returns freed memory
+    // to the OS promptly between papers, keeping per-process RSS tracking the
+    // current paper. Harmless for a mimalloc-built binary (ignores these). Both
+    // the jemalloc-prefixed and unprefixed names are set for build-config safety.
+    cmd
+      .env(
+        "_RJEM_MALLOC_CONF",
+        "background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0",
+      )
+      .env(
+        "MALLOC_CONF",
+        "background_thread:true,dirty_decay_ms:500,muzzy_decay_ms:0",
+      );
+    // Align the engine's in-process RSS fuse (`stomach::check_timeout`, default
+    // 4.5 GB) with this fleet's actual per-child ceiling. That default is a
+    // one-conversion-per-process leftover: in a long-lived worker the working set
+    // creeps across papers and trips the 4.5 GB fuse on otherwise-fine papers,
+    // producing a false `Fatal:Timeout:MemoryBudget RSS … > cap` cascade (observed
+    // 2026-06-17). Raise it to the polled `--max-rss-mb` watchdog value so the
+    // cooperative fuse fires only for a genuine single-paper runaway (just before
+    // the watchdog), and the fleet governor handles aggregate pressure.
+    if child_max_rss_mb > 0 {
+      cmd.env(
+        "LATEXML_RSS_CAP_BYTES",
+        child_max_rss_mb.saturating_mul(1024 * 1024).to_string(),
+      );
+    }
+    cmd
+      .arg("--pool-size")
+      .arg("1")
+      .arg("--source-address")
+      .arg(&source_address)
+      .arg("--sink-address")
+      .arg(&sink_address)
+      .arg("--service")
+      .arg(&service)
+      .arg("--profile")
+      .arg(&profile)
+      .arg("--timeout")
+      .arg(timeout.to_string())
+      .arg("--max-rss-mb")
+      .arg(child_max_rss_mb.to_string())
+      .arg("--allocation-limit-mb")
+      .arg(child_alloc_limit_mb.to_string())
+      .arg("--message-size")
+      .arg(message_size.to_string());
+    // Forwarding `--limit` recycles each child after N tasks (the harness
+    // respawns it), bounding any slow per-process memory creep.
+    if let Some(l) = limit {
+      cmd.arg("--limit").arg(l.to_string());
+    }
+    for p in &preload {
+      cmd.arg("--preload").arg(p);
+    }
+    for p in &search_paths {
+      cmd.arg("--path").arg(p);
+    }
+    if no_pmml {
+      cmd.arg("--no-pmml");
+    }
+    if no_mathtex {
+      cmd.arg("--no-mathtex");
+    }
+    if verbose {
+      cmd.arg("--verbose");
+    }
+    if quiet {
+      cmd.arg("--quiet");
+    }
+    cmd
+  })
+}
+
 fn real_main() -> Result<(), Box<dyn Error>> {
   let cli = Cli::parse();
 
   // Spawn kpathsea pre-init in a background thread (overlaps the
   // ~30-40 ms `kpathsea_init_db` cost with arg parse + dump load).
-  // See `latexml_core::util::pathname::prewarm_kpathsea`.
-  let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
+  // See `latexml_core::util::pathname::prewarm_kpathsea`. Skipped in harness
+  // mode — the supervisor never converts, so it would only waste a thread; each
+  // spawned child prewarms its own.
+  let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() && !cli.harness
+  {
     Some(std::thread::spawn(
       latexml_core::util::pathname::prewarm_kpathsea,
     ))
@@ -1051,6 +1514,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     _ => log::LevelFilter::Debug,
   };
   latexml_core::util::logger::init(log_level).ok();
+
+  // Harness mode: become a process supervisor for a fleet of single-conversion
+  // child workers, each `RLIMIT_AS`-capped. The supervisor itself does no
+  // conversion, so we branch out before building any engine state.
+  if cli.harness {
+    return run_harness(&cli);
+  }
 
   let profile = match cli.profile.as_str() {
     "ar5iv" => ConversionProfile::ar5iv(
@@ -1094,6 +1564,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     profile,
     verbosity,
     search_paths: cli.search_paths.clone(),
+    alloc_limit_mb: cli.allocation_limit_mb,
   };
 
   if cli.standalone {
