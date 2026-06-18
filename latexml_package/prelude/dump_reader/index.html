@@ -20,7 +20,8 @@ MC\tCHAR\tCH\tVALUE            — mathcode assignment</p>
 </div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.flush_deferred_aliases.html" title="fn latexml_package::prelude::dump_reader::flush_deferred_aliases">flush_<wbr>deferred_<wbr>aliases</a></dt><dd>Replay any PA/MPA aliases that were deferred during dump load
 because their target was not yet defined. Call once after the
 post-dump definition pass (<code>_constructs</code>) has loaded.
-Returns <code>(applied, skipped)</code>.</dd><dt><a class="fn" href="fn.load_from_str.html" title="fn latexml_package::prelude::dump_reader::load_from_str">load_<wbr>from_<wbr>str</a></dt><dd>Load dump data from a string (used by embedded dump modules).
+Returns <code>(applied, skipped)</code>.</dd><dt><a class="fn" href="fn.load_from_str.html" title="fn latexml_package::prelude::dump_reader::load_from_str">load_<wbr>from_<wbr>str</a></dt><dd>Load dump data from a string (used by the embedded LaTeX kernel dump
+module — <code>latexml_engine/src/latex_dump.rs</code>).
 Returns the number of entries loaded.</dd><dt><a class="fn" href="fn.load_from_str_plain.html" title="fn latexml_package::prelude::dump_reader::load_from_str_plain">load_<wbr>from_<wbr>str_<wbr>plain</a></dt><dd>Backwards-compat alias kept until call sites are migrated. Both
 entry points now load unconditionally, mirroring Perl <code>I(...)</code> /
 <code>V(...)</code> (Core/Dumper.pm) which call <code>assign_internal('global')</code>
