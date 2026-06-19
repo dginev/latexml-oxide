@@ -662,74 +662,82 @@
 <a href=#662 id=662 data-nosnippet>662</a>  // `XUntil:\@endIEEEkeywords` reading past EOF).
 <a href=#663 id=663 data-nosnippet>663</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{keywords}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\@IEEEkeywords"</span>);
 <a href=#664 id=664 data-nosnippet>664</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{keywords}"</span>),   <span class="prelude-val">None</span>, <span class="string">"\\@endIEEEkeywords"</span>);
-<a href=#665 id=665 data-nosnippet>665</a>
-<a href=#666 id=666 data-nosnippet>666</a>  <span class="comment">// Legacy IED list aliases — Perl IEEEtran.cls.ltxml L417-423
-<a href=#667 id=667 data-nosnippet>667</a>  </span><span class="macro">Let!</span>(<span class="string">"\\labelindent"</span>, <span class="string">"\\IEEElabelindent"</span>);
-<a href=#668 id=668 data-nosnippet>668</a>  <span class="macro">Let!</span>(<span class="string">"\\calcleftmargin"</span>, <span class="string">"\\IEEEcalcleftmargin"</span>);
-<a href=#669 id=669 data-nosnippet>669</a>  <span class="macro">Let!</span>(<span class="string">"\\setlabelwidth"</span>, <span class="string">"\\IEEEsetlabelwidth"</span>);
-<a href=#670 id=670 data-nosnippet>670</a>  <span class="macro">Let!</span>(<span class="string">"\\usemathlabelsep"</span>, <span class="string">"\\IEEEusemathlabelsep"</span>);
-<a href=#671 id=671 data-nosnippet>671</a>  <span class="macro">Let!</span>(<span class="string">"\\iedlabeljustifyc"</span>, <span class="string">"\\IEEEiedlabeljustifyc"</span>);
-<a href=#672 id=672 data-nosnippet>672</a>  <span class="macro">Let!</span>(<span class="string">"\\iedlabeljustifyl"</span>, <span class="string">"\\IEEEiedlabeljustifyl"</span>);
-<a href=#673 id=673 data-nosnippet>673</a>  <span class="macro">Let!</span>(<span class="string">"\\iedlabeljustifyr"</span>, <span class="string">"\\IEEEiedlabeljustifyr"</span>);
-<a href=#674 id=674 data-nosnippet>674</a>
-<a href=#675 id=675 data-nosnippet>675</a>  <span class="comment">// QED/proof aliases
-<a href=#676 id=676 data-nosnippet>676</a>  </span><span class="macro">Let!</span>(<span class="string">"\\QED"</span>, <span class="string">"\\IEEEQED"</span>);
-<a href=#677 id=677 data-nosnippet>677</a>  <span class="macro">Let!</span>(<span class="string">"\\QEDclosed"</span>, <span class="string">"\\IEEEQEDclosed"</span>);
-<a href=#678 id=678 data-nosnippet>678</a>  <span class="macro">Let!</span>(<span class="string">"\\QEDopen"</span>, <span class="string">"\\IEEEQEDopen"</span>);
-<a href=#679 id=679 data-nosnippet>679</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\qed"</span>, <span class="string">"\\ltx@qed"</span>);
-<a href=#680 id=680 data-nosnippet>680</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@qed"</span>,
-<a href=#681 id=681 data-nosnippet>681</a>    <span class="string">"?#isMath(&lt;ltx:XMTok role='PUNCT'&gt;\u{220E}&lt;/ltx:XMTok&gt;)(\u{220E})"</span>,
-<a href=#682 id=682 data-nosnippet>682</a>    enter_horizontal =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"\\qed"</span>);
-<a href=#683 id=683 data-nosnippet>683</a>  <span class="macro">Let!</span>(<span class="string">"\\proof"</span>, <span class="string">"\\IEEEproof"</span>);
-<a href=#684 id=684 data-nosnippet>684</a>  <span class="macro">Let!</span>(<span class="string">"\\endproof"</span>, <span class="string">"\\endIEEEproof"</span>);
-<a href=#685 id=685 data-nosnippet>685</a>  <span class="comment">// IEEEtran proofs route through amsthm's `\@proof` / `\end@proof`
-<a href=#686 id=686 data-nosnippet>686</a>  // machinery (the magic `\begin{proof}` CS from amsthm_sty.rs:220 —
-<a href=#687 id=687 data-nosnippet>687</a>  // `\begin{proof}` → `\begin{@proof}`). We re-override `\th@proof`
-<a href=#688 id=688 data-nosnippet>688</a>  // here so the amsthm header-font is bold-italic (Perl ships
-<a href=#689 id=689 data-nosnippet>689</a>  // `\textbf{\textit{Proof:}}` under IEEEtran, producing
-<a href=#690 id=690 data-nosnippet>690</a>  // font="bold italic"). Keeping amsthm's env path also gives us the
-<a href=#691 id=691 data-nosnippet>691</a>  // QED symbol emission at proof-end for free — it's already wired
-<a href=#692 id=692 data-nosnippet>692</a>  // through amsthm's `\end@proof` before_digest stack-pop.
-<a href=#693 id=693 data-nosnippet>693</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\th@proof{\def\thm@headfont{\bfseries\itshape}\def\thm@bodyfont{\normalfont}}"</span>);
-<a href=#694 id=694 data-nosnippet>694</a>
-<a href=#695 id=695 data-nosnippet>695</a>  <span class="comment">// Biography aliases
-<a href=#696 id=696 data-nosnippet>696</a>  </span><span class="macro">Let!</span>(<span class="string">"\\biography"</span>, <span class="string">"\\IEEEbiography"</span>);
-<a href=#697 id=697 data-nosnippet>697</a>  <span class="macro">Let!</span>(<span class="string">"\\biographynophoto"</span>, <span class="string">"\\IEEEbiographynophoto"</span>);
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="macro">Let!</span>(<span class="string">"\\endbiography"</span>, <span class="string">"\\endIEEEbiography"</span>);
-<a href=#699 id=699 data-nosnippet>699</a>  <span class="macro">Let!</span>(<span class="string">"\\endbiographynophoto"</span>, <span class="string">"\\endIEEEbiographynophoto"</span>);
-<a href=#700 id=700 data-nosnippet>700</a>
-<a href=#701 id=701 data-nosnippet>701</a>  <span class="comment">// bstctlcite stub (Perl L445)
-<a href=#702 id=702 data-nosnippet>702</a>  </span>def_macro_noop(<span class="string">"\\bstctlcite[]{}"</span>)<span class="question-mark">?</span>;
-<a href=#703 id=703 data-nosnippet>703</a>
-<a href=#704 id=704 data-nosnippet>704</a>  <span class="comment">// Disable internal alignment env (Perl L453-454)
-<a href=#705 id=705 data-nosnippet>705</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@IEEEauthorhalign"</span>, <span class="string">"\\relax"</span>);
-<a href=#706 id=706 data-nosnippet>706</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\end@IEEEauthorhalign"</span>, <span class="string">"\\relax"</span>);
-<a href=#707 id=707 data-nosnippet>707</a>
-<a href=#708 id=708 data-nosnippet>708</a>  <span class="comment">// \linebreakand — IEEEtran tip-jar macro that papers redefine to break
-<a href=#709 id=709 data-nosnippet>709</a>  // a multi-row author halign across visual lines. The canonical
-<a href=#710 id=710 data-nosnippet>710</a>  // tex.stackexchange recipe is:
-<a href=#711 id=711 data-nosnippet>711</a>  //   \newcommand{\linebreakand}{
-<a href=#712 id=712 data-nosnippet>712</a>  //     \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill
-<a href=#713 id=713 data-nosnippet>713</a>  //     \begin{@IEEEauthorhalign}}
-<a href=#714 id=714 data-nosnippet>714</a>  // The unbalanced `\end{...}\begin{...}` pair pops + pushes a frame
-<a href=#715 id=715 data-nosnippet>715</a>  // on the live stack, which is fine in real IEEEtran (where the
-<a href=#716 id=716 data-nosnippet>716</a>  // \author{...} body is wrapped in `\begin{@IEEEauthorhalign}...\end{@IEEEauthorhalign}`)
-<a href=#717 id=717 data-nosnippet>717</a>  // but breaks our `\@personname`-wrapped frontmatter digest where
-<a href=#718 id=718 data-nosnippet>718</a>  // there's no matching outer halign frame. Pre-define `\linebreakand`
-<a href=#719 id=719 data-nosnippet>719</a>  // as a paragraph break so user `\newcommand{\linebreakand}{...}`
-<a href=#720 id=720 data-nosnippet>720</a>  // can't override (it's already-defined → silently ignored), matching
-<a href=#721 id=721 data-nosnippet>721</a>  // Perl's behavior where the user redefinition triggers
-<a href=#722 id=722 data-nosnippet>722</a>  // ``\linebreakand:locked`` and gets dropped on the floor. Driver
-<a href=#723 id=723 data-nosnippet>723</a>  // cluster: 2211.12981, 2403.11083, 2405.03537, 2405.04387 (IEEEtran
-<a href=#724 id=724 data-nosnippet>724</a>  // multi-author papers using the linebreakand recipe).
-<a href=#725 id=725 data-nosnippet>725</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\linebreakand"</span>, <span class="string">"\\par"</span>);
-<a href=#726 id=726 data-nosnippet>726</a>  <span class="comment">// \newlineauthors — sibling-recipe of \linebreakand commonly defined
-<a href=#727 id=727 data-nosnippet>727</a>  // in IEEE conference-template papers (driver cluster: 2601.15292,
-<a href=#728 id=728 data-nosnippet>728</a>  // 2601.16670, 2602.05977). User \newcommand body is the same
-<a href=#729 id=729 data-nosnippet>729</a>  // \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}
-<a href=#730 id=730 data-nosnippet>730</a>  // pattern that breaks our frontmatter digest. Pre-define so the
-<a href=#731 id=731 data-nosnippet>731</a>  // \newcommand is silently ignored (Perl-parity: already-defined →
-<a href=#732 id=732 data-nosnippet>732</a>  // dropped on the floor).
-<a href=#733 id=733 data-nosnippet>733</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newlineauthors"</span>, <span class="string">"\\par"</span>);
-<a href=#734 id=734 data-nosnippet>734</a>});
+<a href=#665 id=665 data-nosnippet>665</a>  <span class="comment">// The `\@`-prefixed internal indirection the routing above targets. It is deliberately separate
+<a href=#666 id=666 data-nosnippet>666</a>  // from `\IEEEkeywords`/`\endIEEEkeywords` so a user `\def\keywords`/`\def\endkeywords` can't break
+<a href=#667 id=667 data-nosnippet>667</a>  // env routing — but it was REFERENCED above (L654-676) and never DEFINED, so every legacy
+<a href=#668 id=668 data-nosnippet>668</a>  // `\begin{keywords}` / `\keywords` bounced as `Error:undefined:\@IEEEkeywords` (the 27-doc cluster;
+<a href=#669 id=669 data-nosnippet>669</a>  // witness 0712.0271). Point the internals at the real begin/end keywords macros (Perl
+<a href=#670 id=670 data-nosnippet>670</a>  // IEEEtran.cls.ltxml L147-148: `\IEEEkeywords → \lx@begin@keywords`, `\endIEEEkeywords → \lx@end@keywords`).
+<a href=#671 id=671 data-nosnippet>671</a>  </span><span class="macro">Let!</span>(<span class="string">"\\@IEEEkeywords"</span>, <span class="string">"\\IEEEkeywords"</span>);
+<a href=#672 id=672 data-nosnippet>672</a>  <span class="macro">Let!</span>(<span class="string">"\\@endIEEEkeywords"</span>, <span class="string">"\\endIEEEkeywords"</span>);
+<a href=#673 id=673 data-nosnippet>673</a>
+<a href=#674 id=674 data-nosnippet>674</a>  <span class="comment">// Legacy IED list aliases — Perl IEEEtran.cls.ltxml L417-423
+<a href=#675 id=675 data-nosnippet>675</a>  </span><span class="macro">Let!</span>(<span class="string">"\\labelindent"</span>, <span class="string">"\\IEEElabelindent"</span>);
+<a href=#676 id=676 data-nosnippet>676</a>  <span class="macro">Let!</span>(<span class="string">"\\calcleftmargin"</span>, <span class="string">"\\IEEEcalcleftmargin"</span>);
+<a href=#677 id=677 data-nosnippet>677</a>  <span class="macro">Let!</span>(<span class="string">"\\setlabelwidth"</span>, <span class="string">"\\IEEEsetlabelwidth"</span>);
+<a href=#678 id=678 data-nosnippet>678</a>  <span class="macro">Let!</span>(<span class="string">"\\usemathlabelsep"</span>, <span class="string">"\\IEEEusemathlabelsep"</span>);
+<a href=#679 id=679 data-nosnippet>679</a>  <span class="macro">Let!</span>(<span class="string">"\\iedlabeljustifyc"</span>, <span class="string">"\\IEEEiedlabeljustifyc"</span>);
+<a href=#680 id=680 data-nosnippet>680</a>  <span class="macro">Let!</span>(<span class="string">"\\iedlabeljustifyl"</span>, <span class="string">"\\IEEEiedlabeljustifyl"</span>);
+<a href=#681 id=681 data-nosnippet>681</a>  <span class="macro">Let!</span>(<span class="string">"\\iedlabeljustifyr"</span>, <span class="string">"\\IEEEiedlabeljustifyr"</span>);
+<a href=#682 id=682 data-nosnippet>682</a>
+<a href=#683 id=683 data-nosnippet>683</a>  <span class="comment">// QED/proof aliases
+<a href=#684 id=684 data-nosnippet>684</a>  </span><span class="macro">Let!</span>(<span class="string">"\\QED"</span>, <span class="string">"\\IEEEQED"</span>);
+<a href=#685 id=685 data-nosnippet>685</a>  <span class="macro">Let!</span>(<span class="string">"\\QEDclosed"</span>, <span class="string">"\\IEEEQEDclosed"</span>);
+<a href=#686 id=686 data-nosnippet>686</a>  <span class="macro">Let!</span>(<span class="string">"\\QEDopen"</span>, <span class="string">"\\IEEEQEDopen"</span>);
+<a href=#687 id=687 data-nosnippet>687</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\qed"</span>, <span class="string">"\\ltx@qed"</span>);
+<a href=#688 id=688 data-nosnippet>688</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\ltx@qed"</span>,
+<a href=#689 id=689 data-nosnippet>689</a>    <span class="string">"?#isMath(&lt;ltx:XMTok role='PUNCT'&gt;\u{220E}&lt;/ltx:XMTok&gt;)(\u{220E})"</span>,
+<a href=#690 id=690 data-nosnippet>690</a>    enter_horizontal =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">"\\qed"</span>);
+<a href=#691 id=691 data-nosnippet>691</a>  <span class="macro">Let!</span>(<span class="string">"\\proof"</span>, <span class="string">"\\IEEEproof"</span>);
+<a href=#692 id=692 data-nosnippet>692</a>  <span class="macro">Let!</span>(<span class="string">"\\endproof"</span>, <span class="string">"\\endIEEEproof"</span>);
+<a href=#693 id=693 data-nosnippet>693</a>  <span class="comment">// IEEEtran proofs route through amsthm's `\@proof` / `\end@proof`
+<a href=#694 id=694 data-nosnippet>694</a>  // machinery (the magic `\begin{proof}` CS from amsthm_sty.rs:220 —
+<a href=#695 id=695 data-nosnippet>695</a>  // `\begin{proof}` → `\begin{@proof}`). We re-override `\th@proof`
+<a href=#696 id=696 data-nosnippet>696</a>  // here so the amsthm header-font is bold-italic (Perl ships
+<a href=#697 id=697 data-nosnippet>697</a>  // `\textbf{\textit{Proof:}}` under IEEEtran, producing
+<a href=#698 id=698 data-nosnippet>698</a>  // font="bold italic"). Keeping amsthm's env path also gives us the
+<a href=#699 id=699 data-nosnippet>699</a>  // QED symbol emission at proof-end for free — it's already wired
+<a href=#700 id=700 data-nosnippet>700</a>  // through amsthm's `\end@proof` before_digest stack-pop.
+<a href=#701 id=701 data-nosnippet>701</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\th@proof{\def\thm@headfont{\bfseries\itshape}\def\thm@bodyfont{\normalfont}}"</span>);
+<a href=#702 id=702 data-nosnippet>702</a>
+<a href=#703 id=703 data-nosnippet>703</a>  <span class="comment">// Biography aliases
+<a href=#704 id=704 data-nosnippet>704</a>  </span><span class="macro">Let!</span>(<span class="string">"\\biography"</span>, <span class="string">"\\IEEEbiography"</span>);
+<a href=#705 id=705 data-nosnippet>705</a>  <span class="macro">Let!</span>(<span class="string">"\\biographynophoto"</span>, <span class="string">"\\IEEEbiographynophoto"</span>);
+<a href=#706 id=706 data-nosnippet>706</a>  <span class="macro">Let!</span>(<span class="string">"\\endbiography"</span>, <span class="string">"\\endIEEEbiography"</span>);
+<a href=#707 id=707 data-nosnippet>707</a>  <span class="macro">Let!</span>(<span class="string">"\\endbiographynophoto"</span>, <span class="string">"\\endIEEEbiographynophoto"</span>);
+<a href=#708 id=708 data-nosnippet>708</a>
+<a href=#709 id=709 data-nosnippet>709</a>  <span class="comment">// bstctlcite stub (Perl L445)
+<a href=#710 id=710 data-nosnippet>710</a>  </span>def_macro_noop(<span class="string">"\\bstctlcite[]{}"</span>)<span class="question-mark">?</span>;
+<a href=#711 id=711 data-nosnippet>711</a>
+<a href=#712 id=712 data-nosnippet>712</a>  <span class="comment">// Disable internal alignment env (Perl L453-454)
+<a href=#713 id=713 data-nosnippet>713</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@IEEEauthorhalign"</span>, <span class="string">"\\relax"</span>);
+<a href=#714 id=714 data-nosnippet>714</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\end@IEEEauthorhalign"</span>, <span class="string">"\\relax"</span>);
+<a href=#715 id=715 data-nosnippet>715</a>
+<a href=#716 id=716 data-nosnippet>716</a>  <span class="comment">// \linebreakand — IEEEtran tip-jar macro that papers redefine to break
+<a href=#717 id=717 data-nosnippet>717</a>  // a multi-row author halign across visual lines. The canonical
+<a href=#718 id=718 data-nosnippet>718</a>  // tex.stackexchange recipe is:
+<a href=#719 id=719 data-nosnippet>719</a>  //   \newcommand{\linebreakand}{
+<a href=#720 id=720 data-nosnippet>720</a>  //     \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill
+<a href=#721 id=721 data-nosnippet>721</a>  //     \begin{@IEEEauthorhalign}}
+<a href=#722 id=722 data-nosnippet>722</a>  // The unbalanced `\end{...}\begin{...}` pair pops + pushes a frame
+<a href=#723 id=723 data-nosnippet>723</a>  // on the live stack, which is fine in real IEEEtran (where the
+<a href=#724 id=724 data-nosnippet>724</a>  // \author{...} body is wrapped in `\begin{@IEEEauthorhalign}...\end{@IEEEauthorhalign}`)
+<a href=#725 id=725 data-nosnippet>725</a>  // but breaks our `\@personname`-wrapped frontmatter digest where
+<a href=#726 id=726 data-nosnippet>726</a>  // there's no matching outer halign frame. Pre-define `\linebreakand`
+<a href=#727 id=727 data-nosnippet>727</a>  // as a paragraph break so user `\newcommand{\linebreakand}{...}`
+<a href=#728 id=728 data-nosnippet>728</a>  // can't override (it's already-defined → silently ignored), matching
+<a href=#729 id=729 data-nosnippet>729</a>  // Perl's behavior where the user redefinition triggers
+<a href=#730 id=730 data-nosnippet>730</a>  // ``\linebreakand:locked`` and gets dropped on the floor. Driver
+<a href=#731 id=731 data-nosnippet>731</a>  // cluster: 2211.12981, 2403.11083, 2405.03537, 2405.04387 (IEEEtran
+<a href=#732 id=732 data-nosnippet>732</a>  // multi-author papers using the linebreakand recipe).
+<a href=#733 id=733 data-nosnippet>733</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\linebreakand"</span>, <span class="string">"\\par"</span>);
+<a href=#734 id=734 data-nosnippet>734</a>  <span class="comment">// \newlineauthors — sibling-recipe of \linebreakand commonly defined
+<a href=#735 id=735 data-nosnippet>735</a>  // in IEEE conference-template papers (driver cluster: 2601.15292,
+<a href=#736 id=736 data-nosnippet>736</a>  // 2601.16670, 2602.05977). User \newcommand body is the same
+<a href=#737 id=737 data-nosnippet>737</a>  // \end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}
+<a href=#738 id=738 data-nosnippet>738</a>  // pattern that breaks our frontmatter digest. Pre-define so the
+<a href=#739 id=739 data-nosnippet>739</a>  // \newcommand is silently ignored (Perl-parity: already-defined →
+<a href=#740 id=740 data-nosnippet>740</a>  // dropped on the floor).
+<a href=#741 id=741 data-nosnippet>741</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\newlineauthors"</span>, <span class="string">"\\par"</span>);
+<a href=#742 id=742 data-nosnippet>742</a>});
 </code></pre></div></section></main></body></html>
