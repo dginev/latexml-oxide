@@ -103,20 +103,28 @@ struct Cli {
   #[arg(long = "path")]
   search_paths: Vec<String>,
 
-  /// Per-document timeout in seconds. Default 120s.
+  /// Per-document timeout in seconds. Default 180s.
   ///
   /// **Canvas/benchmark runs MUST use a `--release` (or `maxperf`) build.**
   /// In release, even the xy-pic / pgfplots-heavy long-tail (witness
   /// 2308.16841: 3 large xymatrix diagrams) completes in <10s; the
-  /// 120s budget then catches genuine infinite loops promptly.
-  /// Debug builds are ~12× slower (61s for the same paper) and will
-  /// approach this budget — that is a tooling/profile issue, not a
-  /// reason to widen the timeout.
+  /// budget then catches genuine infinite loops. Debug builds are ~12×
+  /// slower (61s for the same paper) and will approach it — that is a
+  /// tooling/profile issue, not a reason to widen the timeout.
   ///
-  /// Witnesses for prior 60s→120s bump (8-way contention slowdown
-  /// pushed 21-48s standalone runs past 60s): 2306.16591, 2307.05570,
-  /// 2312.13092, 2404.17751, 2311.03376, 2307.10800.
-  #[arg(long, default_value = "120")]
+  /// **Coupled to the dispatcher lease** (`cortex.toml lease_timeout_seconds`):
+  /// the lease MUST stay above this with margin, so a lease expiry reliably
+  /// means a *dead* worker (not a slow-but-live one) — otherwise the reaper
+  /// double-leases a paper still being converted. At 180s here the lease is
+  /// 240s (60s margin). Move the two together.
+  ///
+  /// History: 60s→120s (8-way contention pushed 21-48s standalone runs past
+  /// 60s: 2306.16591, 2307.05570, 2312.13092, 2404.17751, 2311.03376,
+  /// 2307.10800). 120s→180s (2026-06-18: genuine 120-180s *converging* papers
+  /// — e.g. 1810.05740 @131s produces valid output — were lost to the 120s
+  /// wall; the deeper >180s tail goes to the quarantine lane, not a wider
+  /// global budget).
+  #[arg(long, default_value = "180")]
   timeout: u64,
 
   /// Per-document resident-memory ceiling in MiB (0 disables). The shared
@@ -194,9 +202,12 @@ struct Cli {
   /// thread-local that is never reset mid-process — it assumes a short-lived,
   /// one-conversion-per-process model) by process replacement, without failing a
   /// paper, while keeping startup amortized for the common case of light papers. In
-  /// harness mode it auto-sets to **50% of `--child-mem-limit-mb`** (the rule: a
-  /// fresh worker keeps the *full* ceiling for any single — even aberrant — paper,
-  /// then retires once it has consumed half of it). A standalone worker leaves it 0.
+  /// harness mode it auto-sets to **25% of `--child-mem-limit-mb`** (= 2048 MiB at the
+  /// 8 GiB default — the validated value: a fresh worker keeps the *full* ceiling for any
+  /// single — even aberrant — paper, then retires once it has consumed a quarter of it). This
+  /// keeps the fleet's aggregate RSS clear of the mem-pressure governor floor on a full-corpus
+  /// sweep (~125 GB vs ~188 GB at 50%), so the governor does not shed workers and produce
+  /// transient `never_completed_with_retries` Fatals. A standalone worker leaves it 0.
   #[arg(long, default_value = "0")]
   allocation_limit_mb: u64,
 }
@@ -1361,18 +1372,26 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     cli.max_rss_mb
   };
 
-  // Memory-based recycle threshold: 50% of the per-child ceiling. After a clean
-  // conversion, a worker whose RSS has passed this exits and is re-forked fresh,
-  // reclaiming the engine's never-reset interner/arena by process replacement
-  // (the common case of light papers never trips it). A fresh worker keeps the
-  // full ceiling for any single (even aberrant) paper, then retires once it has
-  // consumed half of it. `--allocation-limit-mb` overrides; 0 disables.
+  // Memory-based recycle threshold: 25% of the per-child ceiling (validated default). After a
+  // clean conversion, a worker whose RSS has passed this exits and is re-forked fresh, reclaiming
+  // the engine's never-reset interner/arena by process replacement (the common case of light
+  // papers never trips it). A fresh worker keeps the full ceiling for any single (even aberrant)
+  // paper, then retires once it has consumed a quarter of it. `--allocation-limit-mb` overrides;
+  // 0 disables.
+  //
+  // Why 25% (=2048 MiB at the default 8 GiB ceiling) and not 50%: a full-corpus 10k sweep at the
+  // CPU-optimal 72 workers (see docs/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
+  // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
+  // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
+  // their retry budget and surface as `cortex:never_completed_with_retries` Fatals. 25% recycles
+  // ~2× more often (cheap: fork + dump-load) but stays clear of the floor → 0 sheds, and is
+  // *faster* in the fleet because it avoids the shed/pressure stall. (Measured 2026-06-18.)
   let child_alloc_limit_mb = if cli.allocation_limit_mb > 0 {
     cli.allocation_limit_mb
   } else if cli.child_mem_limit_mb > 0 {
-    cli.child_mem_limit_mb / 2
+    cli.child_mem_limit_mb / 4
   } else {
-    cli.max_rss_mb / 2
+    cli.max_rss_mb / 4
   };
 
   let exe = std::env::current_exe()?;
