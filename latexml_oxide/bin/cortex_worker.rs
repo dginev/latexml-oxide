@@ -176,18 +176,24 @@ struct Cli {
   workers: Option<usize>,
 
   /// Harness mode: per-child **address-space** ceiling in MiB, enforced via
-  /// `setrlimit(RLIMIT_AS)` before each child execs (0 disables). Default 8192
-  /// (8 GiB) — sized so a *legitimate* heavy paper (≈6 GB RSS observed) reliably
-  /// completes with headroom. NB: this bounds address space (VSZ), and with
-  /// mimalloc VSZ runs ~1–1.5 GiB above true RSS; at 8 GiB the soft `--max-rss-mb`
-  /// guard sits at 7936 MiB RSS (1.75 GiB above 6 GB) and the VSZ cap clears a
-  /// 6 GB job's ~7–7.5 GiB address space, so the effective resident ceiling is
-  /// ~6.5–7 GB RSS. This cap contains a **single** runaway job; the fleet-wide
-  /// `--mem-pressure-floor-mb` governor contains the **aggregate** (a cluster of
-  /// concurrently-heavy jobs). A breach makes the child's next allocation fail
-  /// with `ENOMEM`, which `custom_alloc_error_hook` turns into a clean
-  /// `Fatal:oom` + exit 137, and the harness respawns it.
-  #[arg(long, default_value = "8192")]
+  /// `setrlimit(RLIMIT_AS)` before each child execs (0 disables). Default 5632
+  /// (5.5 GiB) — chosen for a **per-worker ~4 GB RSS ceiling**: this bounds
+  /// address space (VSZ), and with mimalloc VSZ runs ~1–1.5 GiB above true RSS,
+  /// so a 5632 MiB VSZ cap clears a ~4 GB-RSS job and trips at ~4 GB resident.
+  /// The derived soft RSS guard sits at 5376 MiB (`child_mem_limit_mb - 256`) and
+  /// the recycle threshold at 1408 MiB (25%). This cap contains a **single**
+  /// runaway job; the fleet-wide `--mem-pressure-floor-mb` governor contains the
+  /// **aggregate** (a cluster of concurrently-heavy jobs). A breach makes the
+  /// child's next allocation fail with `ENOMEM`, which `custom_alloc_error_hook`
+  /// turns into a clean `Fatal:oom` + exit 137, and the harness respawns it.
+  ///
+  /// History: was 8192 (8 GiB, ~6.5–7 GB RSS) until a 72-worker tikz-cd/xy sweep
+  /// let workers reach ~6 GB and the aggregate spiked to 207 GB, tripping the
+  /// kernel global OOM-killer (it sacrificed an expendable browser tab; the fleet
+  /// survived). The tighter 4 GB-RSS cap keeps the worst-case aggregate well under
+  /// box RAM. A genuinely 4–6 GB paper now fails with `Fatal:oom` rather than
+  /// risking the box — the deliberate trade behind the lower default.
+  #[arg(long, default_value = "5632")]
   child_mem_limit_mb: u64,
 
   /// Harness mode: fleet **memory-pressure governor** floor in MiB. Omit for
