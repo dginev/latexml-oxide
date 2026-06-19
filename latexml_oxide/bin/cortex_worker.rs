@@ -581,11 +581,26 @@ impl Worker for LatexmlWorker {
       Ok(Err(e)) => {
         // The conversion failed cleanly (returned `Err`). Not a panic, so don't
         // touch the streak — produce an attributable Fatal result and continue.
+        //
+        // An *unprocessable input* (no convertible TeX source) is sentinel-prefixed
+        // `invalid:<what>: <message>` (find_main_tex / PDF-magic / binary). Route it to
+        // the `invalid` category — Perl emits `Fatal('invalid', …)` for the same cases,
+        // and the dispatcher maps a fatal/`invalid`-category message to the **Invalid**
+        // status (its own report row, discounted from the total) rather than a plain
+        // Fatal. Anything else is a genuine conversion failure: `conversion:caught`.
+        let es = e.to_string();
+        let (category, what, message) = match es.strip_prefix("invalid:") {
+          Some(rest) => {
+            let (what, msg) = rest.split_once(": ").unwrap_or((rest, ""));
+            ("invalid", what, msg)
+          },
+          None => ("conversion", "caught", es.as_str()),
+        };
         log::warn!(
           target: "cortex_worker",
-          "conversion of {arxiv_id} failed: {e}; returning a Fatal result archive"
+          "conversion of {arxiv_id} failed ({category}:{what}): {message}; returning a Fatal result archive"
         );
-        write_failure_zip(&arxiv_id, "conversion", &e.to_string())?
+        write_failure_zip(&arxiv_id, category, what, message)?
       },
       Err(panic) => {
         // Prefer the panic hook's captured detail (location + message); fall back
@@ -611,7 +626,7 @@ impl Worker for LatexmlWorker {
           );
           process::exit(70);
         }
-        write_failure_zip(&arxiv_id, "panic", &msg)?
+        write_failure_zip(&arxiv_id, "panic", "caught", &msg)?
       },
     };
 
@@ -767,14 +782,17 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   let candidates_before_pdf_filter = tex_files.len();
   tex_files.retain(|p| !is_pdf_magic(p));
   if tex_files.is_empty() && candidates_before_pdf_filter > 0 {
-    return Err("Fatal:invalid:not_tex_source PDF magic detected in source file (no TeX-format files in archive)".into());
+    return Err(
+      "invalid:not_tex_source: PDF magic detected in source file (no TeX-format files in archive)"
+        .into(),
+    );
   }
   if tex_files.is_empty() {
     collect_tex_files(dir, &mut tex_files, true);
     tex_files.retain(|p| !is_pdf_magic(p));
   }
   if tex_files.is_empty() {
-    return Err("No .tex files found in archive".into());
+    return Err("invalid:no_tex_source: no .tex files found in archive".into());
   }
 
   // Regexes for content-based detection (Perl Pack.pm L116-166)
@@ -995,7 +1013,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         return Ok(p.to_string_lossy().to_string());
       }
     }
-    return Err("No viable .tex files found in archive".into());
+    return Err("invalid:no_viable_tex: .tex file(s) present but none is convertible LaTeX (PostScript/binary/encrypted source)".into());
   }
 
   // Keep only max-scoring candidates
@@ -1162,13 +1180,18 @@ fn panic_message(panic: &(dyn std::any::Any + Send)) -> String {
 /// Build a minimal, **attributable** failure archive at a unique temp path and
 /// return that path. Carries exactly what the dispatcher needs to record a hard
 /// failure for a paper whose conversion `Err`'d or panicked: a `status` member
-/// (`Status:conversion:3`), a `cortex.log` with one `Fatal:<category>:caught …`
+/// (`Status:conversion:3`), a `cortex.log` with one `Fatal:<category>:<what> …`
 /// line (so the dispatcher's log parse + telemetry count it as a fatal, never a
 /// silent "0 errors"), and a minimal `telemetry.json`. Mirrors the member shape
-/// of [`write_timeout_placeholder_zip`] so the same parser handles both.
+/// of [`write_timeout_placeholder_zip`] so the same parser handles both. For an
+/// unprocessable input (no convertible TeX source) the caller passes
+/// `category = "invalid"` with a specific `what` (e.g. `no_tex_source`), mirroring
+/// Perl's `Fatal('invalid', …)` — the dispatcher maps a fatal/`invalid`-category
+/// message to the **Invalid** status (own report row, discounted from the total).
 fn write_failure_zip(
   arxiv_id: &str,
   category: &str,
+  what: &str,
   message: &str,
 ) -> Result<PathBuf, Box<dyn Error>> {
   let output_path = unique_output_path();
@@ -1181,7 +1204,7 @@ fn write_failure_zip(
     .take(2000)
     .collect();
   let log = format!(
-    "Fatal:{category}:caught latexml-oxide failed to convert {arxiv_id}: {sanitized}\n\
+    "Fatal:{category}:{what} latexml-oxide failed to convert {arxiv_id}: {sanitized}\n\
      Status:conversion:3\n"
   );
   // `serde_json` so a hostile filename can't break the JSON (robustness).
