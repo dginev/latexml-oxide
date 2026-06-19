@@ -68,6 +68,13 @@ struct Cli {
   #[arg(long, default_value = "1")]
   pool_size: usize,
 
+  /// Stable harness slot index, set internally by `--harness` on each child it spawns. When present
+  /// it replaces the PID in the worker's ZMQ identity, so a slot keeps the SAME `worker_metadata`
+  /// name across respawns and runs (the harness keeps exactly one live process per slot, so it can't
+  /// collide under `router_handover`). Not for manual use.
+  #[arg(long, hide = true)]
+  worker_slot: Option<u32>,
+
   /// ZMQ message frame size in bytes
   #[arg(long, default_value = "100000")]
   message_size: usize,
@@ -287,6 +294,13 @@ struct LatexmlWorker {
   /// Recycle the worker after a conversion once RSS exceeds this many MiB (0 =
   /// never). See `--allocation-limit-mb` and `Worker::recycle_after_task`.
   alloc_limit_mb: u64,
+  /// Stable harness slot index (`--worker-slot`), if launched by the `--harness`
+  /// supervisor. When set, it replaces the PID in the ZMQ identity so a slot keeps
+  /// the SAME `worker_metadata` name across respawns and runs (the harness keeps one
+  /// live process per slot, so it can't collide under `router_handover`). `None` for
+  /// a standalone/pooled worker → the globally-unique PID is used. See
+  /// `Worker::stable_identity_suffix`.
+  worker_slot:    Option<u32>,
 }
 
 impl LatexmlWorker {
@@ -657,6 +671,14 @@ impl Worker for LatexmlWorker {
   fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
   fn get_identity(&self) -> &str { &self.identity }
+
+  /// A harness child (`--worker-slot N`) reports its stable slot so pericortex uses
+  /// `<host>:<service>:<slot>` instead of the PID — the slot's `worker_metadata` row is then reused
+  /// across respawns/runs. Safe because the harness keeps one live process per slot (no concurrent
+  /// `router_handover` collision). A standalone/pooled worker returns `None` → PID (globally unique).
+  fn stable_identity_suffix(&self) -> Option<String> {
+    self.worker_slot.map(|slot| format!("{slot:02}"))
+  }
 
   /// Recycle this worker (clean exit → fresh respawn) once its resident memory has
   /// grown past `--allocation-limit-mb`. Called by `start_single` AFTER the result is
@@ -1449,7 +1471,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     ..Default::default()
   };
 
-  supervise(&config, move |_index| {
+  supervise(&config, move |index| {
     let mut cmd = process::Command::new(&exe);
     // jemalloc tuning for children (read at allocator init, so it must be set by
     // us before exec — too late from inside the child). Enable the background
@@ -1498,7 +1520,13 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
       .arg("--allocation-limit-mb")
       .arg(child_alloc_limit_mb.to_string())
       .arg("--message-size")
-      .arg(message_size.to_string());
+      .arg(message_size.to_string())
+      // Stable per-slot identity: the harness reuses `index` for a given slot across respawns, so
+      // this child reports the SAME `worker_metadata` name as its predecessors in the slot (one row
+      // per slot, returning-worker continuity) instead of a fresh PID each time. Safe because the
+      // harness keeps exactly one live process per slot (no `router_handover` collision).
+      .arg("--worker-slot")
+      .arg(index.to_string());
     // Forwarding `--limit` recycles each child after N tasks (the harness
     // respawns it), bounding any slow per-process memory creep.
     if let Some(l) = limit {
@@ -1607,6 +1635,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     verbosity,
     search_paths: cli.search_paths.clone(),
     alloc_limit_mb: cli.allocation_limit_mb,
+    worker_slot: cli.worker_slot,
   };
 
   if cli.standalone {
