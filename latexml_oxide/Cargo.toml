@@ -126,7 +126,7 @@ mimalloc = { version = "0.1", default-features = false }
 # long-lived worker's RSS tracks the CURRENT paper instead of mimalloc's
 # retain-the-high-water default — the property a persistent conversion worker
 # needs. Used for the mimalloc-vs-jemalloc A/B and the recommended harness build.
-tikv-jemallocator = { version = "0.6", optional = true }
+tikv-jemallocator = { version = "0.7", optional = true }
 
 # Metadata for `cargo deb` (https://github.com/kornelski/cargo-deb).
 # Drives `tools/make_release.sh` step 6: `cargo deb --no-build --profile maxperf -p latexml`.
