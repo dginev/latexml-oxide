@@ -662,6 +662,14 @@ LoadDefinitions!({
   // `XUntil:\@endIEEEkeywords` reading past EOF).
   DefMacro!(T_CS!("\\begin{keywords}"), None, "\\@IEEEkeywords");
   DefMacro!(T_CS!("\\end{keywords}"),   None, "\\@endIEEEkeywords");
+  // The `\@`-prefixed internal indirection the routing above targets. It is deliberately separate
+  // from `\IEEEkeywords`/`\endIEEEkeywords` so a user `\def\keywords`/`\def\endkeywords` can't break
+  // env routing — but it was REFERENCED above (L654-676) and never DEFINED, so every legacy
+  // `\begin{keywords}` / `\keywords` bounced as `Error:undefined:\@IEEEkeywords` (the 27-doc cluster;
+  // witness 0712.0271). Point the internals at the real begin/end keywords macros (Perl
+  // IEEEtran.cls.ltxml L147-148: `\IEEEkeywords → \lx@begin@keywords`, `\endIEEEkeywords → \lx@end@keywords`).
+  Let!("\\@IEEEkeywords", "\\IEEEkeywords");
+  Let!("\\@endIEEEkeywords", "\\endIEEEkeywords");
 
   // Legacy IED list aliases — Perl IEEEtran.cls.ltxml L417-423
   Let!("\\labelindent", "\\IEEElabelindent");

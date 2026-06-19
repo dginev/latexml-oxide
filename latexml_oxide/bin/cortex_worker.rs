@@ -68,6 +68,13 @@ struct Cli {
   #[arg(long, default_value = "1")]
   pool_size: usize,
 
+  /// Stable harness slot index, set internally by `--harness` on each child it spawns. When present
+  /// it replaces the PID in the worker's ZMQ identity, so a slot keeps the SAME `worker_metadata`
+  /// name across respawns and runs (the harness keeps exactly one live process per slot, so it can't
+  /// collide under `router_handover`). Not for manual use.
+  #[arg(long, hide = true)]
+  worker_slot: Option<u32>,
+
   /// ZMQ message frame size in bytes
   #[arg(long, default_value = "100000")]
   message_size: usize,
@@ -103,20 +110,28 @@ struct Cli {
   #[arg(long = "path")]
   search_paths: Vec<String>,
 
-  /// Per-document timeout in seconds. Default 120s.
+  /// Per-document timeout in seconds. Default 180s.
   ///
   /// **Canvas/benchmark runs MUST use a `--release` (or `maxperf`) build.**
   /// In release, even the xy-pic / pgfplots-heavy long-tail (witness
   /// 2308.16841: 3 large xymatrix diagrams) completes in <10s; the
-  /// 120s budget then catches genuine infinite loops promptly.
-  /// Debug builds are ~12× slower (61s for the same paper) and will
-  /// approach this budget — that is a tooling/profile issue, not a
-  /// reason to widen the timeout.
+  /// budget then catches genuine infinite loops. Debug builds are ~12×
+  /// slower (61s for the same paper) and will approach it — that is a
+  /// tooling/profile issue, not a reason to widen the timeout.
   ///
-  /// Witnesses for prior 60s→120s bump (8-way contention slowdown
-  /// pushed 21-48s standalone runs past 60s): 2306.16591, 2307.05570,
-  /// 2312.13092, 2404.17751, 2311.03376, 2307.10800.
-  #[arg(long, default_value = "120")]
+  /// **Coupled to the dispatcher lease** (`cortex.toml lease_timeout_seconds`):
+  /// the lease MUST stay above this with margin, so a lease expiry reliably
+  /// means a *dead* worker (not a slow-but-live one) — otherwise the reaper
+  /// double-leases a paper still being converted. At 180s here the lease is
+  /// 240s (60s margin). Move the two together.
+  ///
+  /// History: 60s→120s (8-way contention pushed 21-48s standalone runs past
+  /// 60s: 2306.16591, 2307.05570, 2312.13092, 2404.17751, 2311.03376,
+  /// 2307.10800). 120s→180s (2026-06-18: genuine 120-180s *converging* papers
+  /// — e.g. 1810.05740 @131s produces valid output — were lost to the 120s
+  /// wall; the deeper >180s tail goes to the quarantine lane, not a wider
+  /// global budget).
+  #[arg(long, default_value = "180")]
   timeout: u64,
 
   /// Per-document resident-memory ceiling in MiB (0 disables). The shared
@@ -194,9 +209,12 @@ struct Cli {
   /// thread-local that is never reset mid-process — it assumes a short-lived,
   /// one-conversion-per-process model) by process replacement, without failing a
   /// paper, while keeping startup amortized for the common case of light papers. In
-  /// harness mode it auto-sets to **50% of `--child-mem-limit-mb`** (the rule: a
-  /// fresh worker keeps the *full* ceiling for any single — even aberrant — paper,
-  /// then retires once it has consumed half of it). A standalone worker leaves it 0.
+  /// harness mode it auto-sets to **25% of `--child-mem-limit-mb`** (= 2048 MiB at the
+  /// 8 GiB default — the validated value: a fresh worker keeps the *full* ceiling for any
+  /// single — even aberrant — paper, then retires once it has consumed a quarter of it). This
+  /// keeps the fleet's aggregate RSS clear of the mem-pressure governor floor on a full-corpus
+  /// sweep (~125 GB vs ~188 GB at 50%), so the governor does not shed workers and produce
+  /// transient `never_completed_with_retries` Fatals. A standalone worker leaves it 0.
   #[arg(long, default_value = "0")]
   allocation_limit_mb: u64,
 }
@@ -276,6 +294,13 @@ struct LatexmlWorker {
   /// Recycle the worker after a conversion once RSS exceeds this many MiB (0 =
   /// never). See `--allocation-limit-mb` and `Worker::recycle_after_task`.
   alloc_limit_mb: u64,
+  /// Stable harness slot index (`--worker-slot`), if launched by the `--harness`
+  /// supervisor. When set, it replaces the PID in the ZMQ identity so a slot keeps
+  /// the SAME `worker_metadata` name across respawns and runs (the harness keeps one
+  /// live process per slot, so it can't collide under `router_handover`). `None` for
+  /// a standalone/pooled worker → the globally-unique PID is used. See
+  /// `Worker::stable_identity_suffix`.
+  worker_slot:    Option<u32>,
 }
 
 impl LatexmlWorker {
@@ -570,11 +595,26 @@ impl Worker for LatexmlWorker {
       Ok(Err(e)) => {
         // The conversion failed cleanly (returned `Err`). Not a panic, so don't
         // touch the streak — produce an attributable Fatal result and continue.
+        //
+        // An *unprocessable input* (no convertible TeX source) is sentinel-prefixed
+        // `invalid:<what>: <message>` (find_main_tex / PDF-magic / binary). Route it to
+        // the `invalid` category — Perl emits `Fatal('invalid', …)` for the same cases,
+        // and the dispatcher maps a fatal/`invalid`-category message to the **Invalid**
+        // status (its own report row, discounted from the total) rather than a plain
+        // Fatal. Anything else is a genuine conversion failure: `conversion:caught`.
+        let es = e.to_string();
+        let (category, what, message) = match es.strip_prefix("invalid:") {
+          Some(rest) => {
+            let (what, msg) = rest.split_once(": ").unwrap_or((rest, ""));
+            ("invalid", what, msg)
+          },
+          None => ("conversion", "caught", es.as_str()),
+        };
         log::warn!(
           target: "cortex_worker",
-          "conversion of {arxiv_id} failed: {e}; returning a Fatal result archive"
+          "conversion of {arxiv_id} failed ({category}:{what}): {message}; returning a Fatal result archive"
         );
-        write_failure_zip(&arxiv_id, "conversion", &e.to_string())?
+        write_failure_zip(&arxiv_id, category, what, message)?
       },
       Err(panic) => {
         // Prefer the panic hook's captured detail (location + message); fall back
@@ -600,7 +640,7 @@ impl Worker for LatexmlWorker {
           );
           process::exit(70);
         }
-        write_failure_zip(&arxiv_id, "panic", &msg)?
+        write_failure_zip(&arxiv_id, "panic", "caught", &msg)?
       },
     };
 
@@ -631,6 +671,14 @@ impl Worker for LatexmlWorker {
   fn set_identity(&mut self, identity: String) { self.identity = identity; }
 
   fn get_identity(&self) -> &str { &self.identity }
+
+  /// A harness child (`--worker-slot N`) reports its stable slot so pericortex uses
+  /// `<host>:<service>:<slot>` instead of the PID — the slot's `worker_metadata` row is then reused
+  /// across respawns/runs. Safe because the harness keeps one live process per slot (no concurrent
+  /// `router_handover` collision). A standalone/pooled worker returns `None` → PID (globally unique).
+  fn stable_identity_suffix(&self) -> Option<String> {
+    self.worker_slot.map(|slot| format!("{slot:02}"))
+  }
 
   /// Recycle this worker (clean exit → fresh respawn) once its resident memory has
   /// grown past `--allocation-limit-mb`. Called by `start_single` AFTER the result is
@@ -756,14 +804,17 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
   let candidates_before_pdf_filter = tex_files.len();
   tex_files.retain(|p| !is_pdf_magic(p));
   if tex_files.is_empty() && candidates_before_pdf_filter > 0 {
-    return Err("Fatal:invalid:not_tex_source PDF magic detected in source file (no TeX-format files in archive)".into());
+    return Err(
+      "invalid:not_tex_source: PDF magic detected in source file (no TeX-format files in archive)"
+        .into(),
+    );
   }
   if tex_files.is_empty() {
     collect_tex_files(dir, &mut tex_files, true);
     tex_files.retain(|p| !is_pdf_magic(p));
   }
   if tex_files.is_empty() {
-    return Err("No .tex files found in archive".into());
+    return Err("invalid:no_tex_source: no .tex files found in archive".into());
   }
 
   // Regexes for content-based detection (Perl Pack.pm L116-166)
@@ -984,7 +1035,7 @@ fn find_main_tex(dir: &Path) -> Result<String, Box<dyn Error>> {
         return Ok(p.to_string_lossy().to_string());
       }
     }
-    return Err("No viable .tex files found in archive".into());
+    return Err("invalid:no_viable_tex: .tex file(s) present but none is convertible LaTeX (PostScript/binary/encrypted source)".into());
   }
 
   // Keep only max-scoring candidates
@@ -1151,13 +1202,18 @@ fn panic_message(panic: &(dyn std::any::Any + Send)) -> String {
 /// Build a minimal, **attributable** failure archive at a unique temp path and
 /// return that path. Carries exactly what the dispatcher needs to record a hard
 /// failure for a paper whose conversion `Err`'d or panicked: a `status` member
-/// (`Status:conversion:3`), a `cortex.log` with one `Fatal:<category>:caught …`
+/// (`Status:conversion:3`), a `cortex.log` with one `Fatal:<category>:<what> …`
 /// line (so the dispatcher's log parse + telemetry count it as a fatal, never a
 /// silent "0 errors"), and a minimal `telemetry.json`. Mirrors the member shape
-/// of [`write_timeout_placeholder_zip`] so the same parser handles both.
+/// of [`write_timeout_placeholder_zip`] so the same parser handles both. For an
+/// unprocessable input (no convertible TeX source) the caller passes
+/// `category = "invalid"` with a specific `what` (e.g. `no_tex_source`), mirroring
+/// Perl's `Fatal('invalid', …)` — the dispatcher maps a fatal/`invalid`-category
+/// message to the **Invalid** status (own report row, discounted from the total).
 fn write_failure_zip(
   arxiv_id: &str,
   category: &str,
+  what: &str,
   message: &str,
 ) -> Result<PathBuf, Box<dyn Error>> {
   let output_path = unique_output_path();
@@ -1170,7 +1226,7 @@ fn write_failure_zip(
     .take(2000)
     .collect();
   let log = format!(
-    "Fatal:{category}:caught latexml-oxide failed to convert {arxiv_id}: {sanitized}\n\
+    "Fatal:{category}:{what} latexml-oxide failed to convert {arxiv_id}: {sanitized}\n\
      Status:conversion:3\n"
   );
   // `serde_json` so a hostile filename can't break the JSON (robustness).
@@ -1361,18 +1417,26 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     cli.max_rss_mb
   };
 
-  // Memory-based recycle threshold: 50% of the per-child ceiling. After a clean
-  // conversion, a worker whose RSS has passed this exits and is re-forked fresh,
-  // reclaiming the engine's never-reset interner/arena by process replacement
-  // (the common case of light papers never trips it). A fresh worker keeps the
-  // full ceiling for any single (even aberrant) paper, then retires once it has
-  // consumed half of it. `--allocation-limit-mb` overrides; 0 disables.
+  // Memory-based recycle threshold: 25% of the per-child ceiling (validated default). After a
+  // clean conversion, a worker whose RSS has passed this exits and is re-forked fresh, reclaiming
+  // the engine's never-reset interner/arena by process replacement (the common case of light
+  // papers never trips it). A fresh worker keeps the full ceiling for any single (even aberrant)
+  // paper, then retires once it has consumed a quarter of it. `--allocation-limit-mb` overrides;
+  // 0 disables.
+  //
+  // Why 25% (=2048 MiB at the default 8 GiB ceiling) and not 50%: a full-corpus 10k sweep at the
+  // CPU-optimal 72 workers (see docs/CORTEX_WORKER_HARNESS.md) peaks ~125 GB aggregate RSS at 25%
+  // vs ~188 GB at 50% on a 247 GiB box — and the 50% peak drops MemAvailable below the
+  // mem-pressure governor's floor, triggering ~25 worker sheds whose re-leased tasks can exhaust
+  // their retry budget and surface as `cortex:never_completed_with_retries` Fatals. 25% recycles
+  // ~2× more often (cheap: fork + dump-load) but stays clear of the floor → 0 sheds, and is
+  // *faster* in the fleet because it avoids the shed/pressure stall. (Measured 2026-06-18.)
   let child_alloc_limit_mb = if cli.allocation_limit_mb > 0 {
     cli.allocation_limit_mb
   } else if cli.child_mem_limit_mb > 0 {
-    cli.child_mem_limit_mb / 2
+    cli.child_mem_limit_mb / 4
   } else {
-    cli.max_rss_mb / 2
+    cli.max_rss_mb / 4
   };
 
   let exe = std::env::current_exe()?;
@@ -1407,7 +1471,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     ..Default::default()
   };
 
-  supervise(&config, move |_index| {
+  supervise(&config, move |index| {
     let mut cmd = process::Command::new(&exe);
     // jemalloc tuning for children (read at allocator init, so it must be set by
     // us before exec — too late from inside the child). Enable the background
@@ -1456,7 +1520,13 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
       .arg("--allocation-limit-mb")
       .arg(child_alloc_limit_mb.to_string())
       .arg("--message-size")
-      .arg(message_size.to_string());
+      .arg(message_size.to_string())
+      // Stable per-slot identity: the harness reuses `index` for a given slot across respawns, so
+      // this child reports the SAME `worker_metadata` name as its predecessors in the slot (one row
+      // per slot, returning-worker continuity) instead of a fresh PID each time. Safe because the
+      // harness keeps exactly one live process per slot (no `router_handover` collision).
+      .arg("--worker-slot")
+      .arg(index.to_string());
     // Forwarding `--limit` recycles each child after N tasks (the harness
     // respawns it), bounding any slow per-process memory creep.
     if let Some(l) = limit {
@@ -1565,6 +1635,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     verbosity,
     search_paths: cli.search_paths.clone(),
     alloc_limit_mb: cli.allocation_limit_mb,
+    worker_slot: cli.worker_slot,
   };
 
   if cli.standalone {

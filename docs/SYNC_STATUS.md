@@ -2473,6 +2473,23 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-19): IEEEtran legacy `keywords` env FIXED — `\@IEEEkeywords`/`\@endIEEEkeywords` defined
+
+`ieeetran_cls.rs` routed the legacy `keywords` environment (`\begin{keywords}`,
+`\keywords`, `\keywords@onearg`, `\endkeywords`) through stable `\@`-prefixed
+internal macros `\@IEEEkeywords`/`\@endIEEEkeywords` (an indirection so a user
+`\def\keywords`/`\def\endkeywords` can't break env routing — Perl
+`IEEEtran.cls.ltxml` L399-407 idiom) **but never defined those two internals**,
+so every legacy `\begin{keywords}` bounced as `Error:undefined:\@IEEEkeywords` +
+`\@endIEEEkeywords`. The real `IEEEtran.cls` leaves the legacy stub *commented*
+(L6318), so latexml must re-provide it. **Fix:** `Let!` the two internals to the
+real begin/end keywords macros (`\IEEEkeywords → \lx@begin@keywords`,
+`\endIEEEkeywords → \lx@end@keywords`; Perl L147-148). Witness **0712.0271**
+(`\begin{keywords}`): **2 errors → 0**, keywords render, element-tag histogram
+identical to Perl. Cleared a **27-doc** sandbox cluster; the full
+`sandbox-arxiv-10k-shuffle` reconversion delta-gated **+24 improved / −0
+regressed** (no_problem 64.86%→65.0%, error 12.61%→12.4%). Rust-only (Perl=0).
+
 ### stage_R15 batch triage (2026-05-28) — 2 Rust-only DEEP candidates isolated
 
 Re-tested stage_R15 CONVERR_1 + Perl-gated (Perl as ground truth). Recovered
