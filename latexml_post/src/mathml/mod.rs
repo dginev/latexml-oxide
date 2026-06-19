@@ -54,6 +54,14 @@ pub struct MathML {
   /// Whether to add intent=":literal" on all <math> elements.
   /// ar5iv.sty.ltxml monkey-patches outerWrapper to add this.
   intent_literal:  bool,
+  /// Parallel-markup secondaries (e.g. a Content-MathML processor under a
+  /// Presentation-MathML primary). Held by the primary rather than registered
+  /// as independent chain passes: during the primary's `process_math_node`,
+  /// each secondary's `convert_node` runs against the still-live XMath and the
+  /// results are folded into one `<m:semantics>` via [`combine_parallel`].
+  /// Port of Perl `MathProcessor`'s primary→secondary parallel model
+  /// (`$$self{parallel}` / `combineParallel`). Empty for a standalone format.
+  secondaries:     Vec<Box<dyn MathProcessor>>,
 }
 
 impl MathML {
@@ -70,6 +78,7 @@ impl MathML {
       invisible_times: true,
       mathtex:         false,
       intent_literal:  false,
+      secondaries:     Vec::new(),
     }
   }
 
@@ -86,6 +95,7 @@ impl MathML {
       invisible_times: true,
       mathtex:         false,
       intent_literal:  false,
+      secondaries:     Vec::new(),
     }
   }
 
@@ -120,6 +130,24 @@ impl MathML {
   /// Enable TeX source annotation in MathML output (--mathtex).
   pub fn with_mathtex(mut self, enable: bool) -> Self {
     self.mathtex = enable;
+    self
+  }
+
+  /// Mark this processor as a parallel-markup secondary (e.g. the Content-MathML
+  /// format under a Presentation primary). Secondaries get their format-specific
+  /// `id_suffix` and are folded into the primary's `<m:semantics>` rather than
+  /// emitted as a standalone `<m:math>`. Port of `MathProcessor`'s secondary role.
+  pub fn secondary(mut self) -> Self {
+    self.is_secondary = true;
+    self
+  }
+
+  /// Attach parallel-markup secondaries to this (primary) processor. Their
+  /// conversions are merged into one `<m:semantics>` by [`combine_parallel`]
+  /// during the primary's pass. Mirrors Perl `MathProcessor`'s primary holding
+  /// its parallel secondaries.
+  pub fn with_secondaries(mut self, secondaries: Vec<Box<dyn MathProcessor>>) -> Self {
+    self.secondaries = secondaries;
     self
   }
 }
@@ -158,8 +186,11 @@ impl MathProcessor for MathML {
       MML_MIMETYPE
     };
 
-    // If mathtex is enabled, wrap in <m:semantics> with TeX annotation
-    let final_xml = if self.mathtex {
+    // If mathtex is enabled, wrap in <m:semantics> with TeX annotation.
+    // Skip when this primary carries parallel secondaries: `combine_parallel`
+    // then builds the single `<m:semantics>` (primary + content annotation-xml
+    // + the x-tex annotation), so wrapping here would double-nest semantics.
+    let final_xml = if self.mathtex && self.secondaries.is_empty() {
       let tex_str = xmath
         .get_parent()
         .and_then(|p| p.get_attribute("tex"))
@@ -199,7 +230,7 @@ impl MathProcessor for MathML {
   fn combine_parallel(
     &self,
     _doc: &PostDocument,
-    _xmath: &Node,
+    xmath: &Node,
     primary: MathConversion,
     secondaries: Vec<MathConversion>,
   ) -> MathConversion {
@@ -215,23 +246,41 @@ impl MathProcessor for MathML {
 
     for secondary in &secondaries {
       let mimetype = secondary.mimetype.as_deref().unwrap_or("unknown");
+      // Parallel markup names the format via the canonical encoding label
+      // (e.g. `MathML-Content`), not the raw internal mimetype. Port of
+      // `%ENCODINGS` / `encoding_for_mimetype`.
+      let encoding = encoding_for_mimetype(mimetype).to_string();
       if let Some(ref xml) = secondary.xml {
         children.push(NodeData::Element {
           tag:        "m:annotation-xml".to_string(),
-          attributes: Some(HashMap::from_iter([(
-            "encoding".to_string(),
-            mimetype.to_string(),
-          )])),
+          attributes: Some(HashMap::from_iter([("encoding".to_string(), encoding)])),
           children:   vec![xml.clone()],
         });
       } else if let Some(ref string) = secondary.string {
         children.push(NodeData::Element {
           tag:        "m:annotation".to_string(),
+          attributes: Some(HashMap::from_iter([("encoding".to_string(), encoding)])),
+          children:   vec![NodeData::Text(string.clone())],
+        });
+      }
+    }
+
+    // TeX source annotation. In the standalone (no-secondary) path this is added
+    // by `convert_node`; in the parallel path that wrap is skipped, so the
+    // single combined `<m:semantics>` carries the x-tex annotation here.
+    if self.mathtex {
+      let tex_str = xmath
+        .get_parent()
+        .and_then(|p| p.get_attribute("tex"))
+        .unwrap_or_default();
+      if !tex_str.is_empty() {
+        children.push(NodeData::Element {
+          tag:        "m:annotation".to_string(),
           attributes: Some(HashMap::from_iter([(
             "encoding".to_string(),
-            mimetype.to_string(),
+            "application/x-tex".to_string(),
           )])),
-          children:   vec![NodeData::Text(string.clone())],
+          children:   vec![NodeData::Text(tex_str)],
         });
       }
     }
@@ -306,6 +355,8 @@ impl MathProcessor for MathML {
       true
     }
   }
+
+  fn parallel_secondaries(&self) -> &[Box<dyn MathProcessor>] { &self.secondaries }
 
   fn preprocess(&self, _doc: &PostDocument, _nodes: &[Node]) {
     // Register MathML namespace

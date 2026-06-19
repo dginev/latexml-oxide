@@ -97,6 +97,13 @@ pub trait MathProcessor: Processor {
   /// Whether this processor is a secondary (parallel) processor.
   fn is_secondary(&self) -> bool { false }
 
+  /// Parallel-markup secondaries held by this (primary) processor. During the
+  /// primary's `process_math_node`, each secondary's `convert_node` runs against
+  /// the still-live XMath and the results are folded into one `<m:semantics>`
+  /// via [`combine_parallel`]. Empty by default (standalone, single-format).
+  /// Port of Perl `MathProcessor`'s primary→secondary parallel model.
+  fn parallel_secondaries(&self) -> &[Box<dyn MathProcessor>] { &[] }
+
   /// ID suffix: empty for primary, raw_id_suffix for secondary.
   ///
   /// Port of `MathProcessor::IDSuffix`.
@@ -234,6 +241,21 @@ fn process_math_node(
       height:         None,
       depth:          None,
     });
+
+  // Parallel markup: convert each secondary against the still-live XMath and
+  // fold the results into the primary via `combine_parallel` (→ a single
+  // `<m:semantics>` with the primary plus `<m:annotation-xml>` per secondary).
+  // Mirrors Perl `MathProcessor::process`, which runs the primary then its
+  // parallel secondaries and combines — rather than emitting each format as an
+  // independent sibling of the math element. Empty for single-format processors.
+  let secondaries: Vec<MathConversion> = processor
+    .parallel_secondaries()
+    .iter()
+    .filter_map(|sec| sec.convert_node(doc, &xmath))
+    .collect();
+  if !secondaries.is_empty() {
+    conversion = processor.combine_parallel(doc, &xmath, conversion, secondaries);
+  }
 
   // Apply outer wrapper if we got XML
   match conversion.xml.take() {

@@ -306,16 +306,29 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
 
   let intent_literal = xml.contains("package=\"ar5iv");
 
+  // Parallel P+C markup: when both formats are requested, the Content-MathML
+  // processor is a *secondary* of the Presentation primary, folded into one
+  // `<m:semantics>`/`<m:annotation-xml>` by `combine_parallel` — NOT a second
+  // independent pass (which left the content tree as an orphan `<apply>` sibling
+  // of `<m:semantics>`, rendered as stray text by browsers). Mirrors Perl
+  // `MathProcessor`'s primary→secondary parallel model.
   if pmml {
-    processors.push(Box::new(
-      latexml_post::mathml::MathML::new_presentation()
-        .with_keep_xmath(keep_xmath)
-        .with_invisible_times(!noinvisibletimes)
-        .with_mathtex(mathtex)
-        .with_intent_literal(intent_literal),
-    ));
-  }
-  if cmml {
+    let mut presentation = latexml_post::mathml::MathML::new_presentation()
+      .with_keep_xmath(keep_xmath)
+      .with_invisible_times(!noinvisibletimes)
+      .with_mathtex(mathtex)
+      .with_intent_literal(intent_literal);
+    if cmml {
+      presentation = presentation.with_secondaries(vec![Box::new(
+        latexml_post::mathml::MathML::new_content()
+          .with_keep_xmath(keep_xmath)
+          .with_invisible_times(!noinvisibletimes)
+          .secondary(),
+      )]);
+    }
+    processors.push(Box::new(presentation));
+  } else if cmml {
+    // Content-only output (no presentation primary).
     processors.push(Box::new(
       latexml_post::mathml::MathML::new_content()
         .with_keep_xmath(keep_xmath)

@@ -275,6 +275,68 @@ mod tests {
     assert!(output.contains("m:mo"), "m:mo element should be present");
   }
 
+  /// Parallel Presentation+Content markup must merge into ONE `<m:semantics>`
+  /// with the content tree wrapped in `<m:annotation-xml encoding="MathML-Content">`
+  /// — never left as an orphan `<m:apply>` sibling of `<m:semantics>` (which
+  /// browsers render as stray text after the formula). Exercises
+  /// `MathProcessor::combine_parallel` via the primary→secondary chain that
+  /// `latexml_oxide::post` builds when both `pmml` and `cmml` are requested.
+  /// Regression guard for the cortex-preview "broken MathML" bug.
+  #[test]
+  fn test_parallel_pmml_cmml_combine_parallel() {
+    let mut post = Post::new();
+    let doc = PostDocument::new_from_string(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <para xml:id='p1'><p>Inline <Math mode='inline' tex='a+b' text='a + b' xml:id='p1.m1'>\
+           <XMath><XMApp>\
+             <XMTok meaning='plus' role='ADDOP'>+</XMTok>\
+             <XMTok font='italic' role='ID'>a</XMTok>\
+             <XMTok font='italic' role='ID'>b</XMTok>\
+           </XMApp></XMath></Math></p></para>\
+       </document>",
+      PostDocumentOptions::default(),
+    )
+    .unwrap();
+
+    // Presentation primary holding a Content secondary — the same parallel-markup
+    // shape `latexml_oxide::post` builds for `pmml && cmml`.
+    let content = mathml::MathML::new_content().secondary();
+    let pmml = mathml::MathML::new_presentation()
+      .with_mathtex(true)
+      .with_secondaries(vec![Box::new(content)]);
+    let mut processors: Vec<Box<dyn Processor>> = vec![Box::new(pmml)];
+    let result = post.process_chain(vec![doc], &mut processors);
+    assert!(result.is_ok());
+    let docs = result.unwrap();
+    let output = docs[0].to_xml_string();
+    eprintln!("parallel P+C output:\n{output}");
+
+    // Single semantics holding presentation + content + tex source.
+    assert!(
+      output.contains("m:semantics"),
+      "m:semantics wrapper missing"
+    );
+    assert!(
+      output.contains("m:apply"),
+      "content m:apply should be generated"
+    );
+    assert!(
+      output.contains(r#"m:annotation-xml encoding="MathML-Content""#),
+      "content must be folded into <m:annotation-xml encoding=\"MathML-Content\">"
+    );
+    assert!(
+      output.contains(r#"encoding="application/x-tex""#),
+      "x-tex source annotation should be present in the parallel semantics"
+    );
+    // THE regression assertion: no content markup may appear AFTER the
+    // semantics closes (i.e. as an orphan sibling under <m:math>).
+    let after_semantics = output.rsplit("</m:semantics>").next().unwrap_or("");
+    assert!(
+      !after_semantics.contains("m:apply") && !after_semantics.contains("m:ci"),
+      "orphan Content MathML found after </m:semantics> — combine_parallel not applied:\n{output}"
+    );
+  }
+
   #[test]
   fn test_scan_pipeline() {
     let mut post = Post::new();

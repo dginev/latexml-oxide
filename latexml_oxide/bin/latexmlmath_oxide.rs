@@ -99,10 +99,19 @@ fn real_main() -> Result<()> {
           .expect("parse XML for MathML post-processing");
         let mut post = latexml_post::Post::new();
         let mut processors: Vec<Box<dyn Processor>> = Vec::new();
+        // Parallel P+C: the Content processor is a parallel *secondary* of the
+        // Presentation primary, merged into one <m:semantics>/<m:annotation-xml>
+        // by combine_parallel — not an independent pass (which left content as
+        // an orphan <apply> sibling of <m:semantics>). Mirrors latexml_oxide::post.
         if pmml_flag {
-          processors.push(Box::new(latexml_post::mathml::MathML::new_presentation()));
-        }
-        if cmml_flag {
+          let mut presentation = latexml_post::mathml::MathML::new_presentation();
+          if cmml_flag {
+            presentation = presentation.with_secondaries(vec![Box::new(
+              latexml_post::mathml::MathML::new_content().secondary(),
+            )]);
+          }
+          processors.push(Box::new(presentation));
+        } else if cmml_flag {
           processors.push(Box::new(latexml_post::mathml::MathML::new_content()));
         }
         match post.process_chain(vec![post_doc], &mut processors) {

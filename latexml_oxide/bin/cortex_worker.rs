@@ -380,7 +380,15 @@ impl LatexmlWorker {
     // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
     let html = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
       pmml:                      self.profile.pmml,
-      cmml:                      true, // CorTeX produces both pmml and cmml
+      // Presentation MathML only — matches Perl LaTeXML's CorTeX `tex_to_html`
+      // (whose output carries zero Content MathML) and the ar5iv profile, whose
+      // sole math tweak is ar5iv.sty's `intent=":literal"` on the presentation
+      // tree. Emitting Content MathML here was wrong on two counts: (1) it is
+      // not part of this profile, and (2) the pmml+cmml two-pass chain never
+      // folds the content tree into `<m:annotation-xml>` (combine_parallel is
+      // unwired in latexml_post), so it leaked as an orphan `<apply>` sibling of
+      // `<m:semantics>` that browsers render as stray text after every formula.
+      cmml:                      false,
       keep_xmath:                false,
       stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
       destination:               Some(&dest_html_str),
