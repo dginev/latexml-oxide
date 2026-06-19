@@ -306,442 +306,455 @@
 <a href=#306 id=306 data-nosnippet>306</a>
 <a href=#307 id=307 data-nosnippet>307</a>  <span class="kw">let </span>intent_literal = xml.contains(<span class="string">"package=\"ar5iv"</span>);
 <a href=#308 id=308 data-nosnippet>308</a>
-<a href=#309 id=309 data-nosnippet>309</a>  <span class="kw">if </span>pmml {
-<a href=#310 id=310 data-nosnippet>310</a>    processors.push(Box::new(
-<a href=#311 id=311 data-nosnippet>311</a>      latexml_post::mathml::MathML::new_presentation()
-<a href=#312 id=312 data-nosnippet>312</a>        .with_keep_xmath(keep_xmath)
-<a href=#313 id=313 data-nosnippet>313</a>        .with_invisible_times(!noinvisibletimes)
-<a href=#314 id=314 data-nosnippet>314</a>        .with_mathtex(mathtex)
-<a href=#315 id=315 data-nosnippet>315</a>        .with_intent_literal(intent_literal),
-<a href=#316 id=316 data-nosnippet>316</a>    ));
-<a href=#317 id=317 data-nosnippet>317</a>  }
-<a href=#318 id=318 data-nosnippet>318</a>  <span class="kw">if </span>cmml {
-<a href=#319 id=319 data-nosnippet>319</a>    processors.push(Box::new(
-<a href=#320 id=320 data-nosnippet>320</a>      latexml_post::mathml::MathML::new_content()
-<a href=#321 id=321 data-nosnippet>321</a>        .with_keep_xmath(keep_xmath)
-<a href=#322 id=322 data-nosnippet>322</a>        .with_invisible_times(!noinvisibletimes),
-<a href=#323 id=323 data-nosnippet>323</a>    ));
-<a href=#324 id=324 data-nosnippet>324</a>  }
-<a href=#325 id=325 data-nosnippet>325</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(xsl_path) = stylesheet {
-<a href=#326 id=326 data-nosnippet>326</a>    <span class="kw">let </span><span class="kw-2">mut </span>searchpaths = <span class="macro">vec!</span>[<span class="string">"."</span>.to_string()];
-<a href=#327 id=327 data-nosnippet>327</a>    <span class="kw">if let </span><span class="prelude-val">Ok</span>(exe) = std::env::current_exe()
-<a href=#328 id=328 data-nosnippet>328</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(project_root) = exe
-<a href=#329 id=329 data-nosnippet>329</a>        .parent()
-<a href=#330 id=330 data-nosnippet>330</a>        .and_then(|p| p.parent())
-<a href=#331 id=331 data-nosnippet>331</a>        .and_then(|p| p.parent())
-<a href=#332 id=332 data-nosnippet>332</a>    {
-<a href=#333 id=333 data-nosnippet>333</a>      searchpaths.insert(<span class="number">0</span>, project_root.display().to_string());
-<a href=#334 id=334 data-nosnippet>334</a>    }
-<a href=#335 id=335 data-nosnippet>335</a>    <span class="comment">// Prepend the user's `--path` directories so `--css`/`--javascript`
-<a href=#336 id=336 data-nosnippet>336</a>    // resources are found there (and take priority over `.`/project root)
-<a href=#337 id=337 data-nosnippet>337</a>    // when copy_param_resources searches for them.
-<a href=#338 id=338 data-nosnippet>338</a>    </span><span class="kw">for </span>p <span class="kw">in </span>search_paths.iter().rev() {
-<a href=#339 id=339 data-nosnippet>339</a>      searchpaths.insert(<span class="number">0</span>, p.clone());
-<a href=#340 id=340 data-nosnippet>340</a>    }
-<a href=#341 id=341 data-nosnippet>341</a>    <span class="kw">let </span><span class="kw-2">mut </span>xslt_params = rustc_hash::FxHashMap::default();
-<a href=#342 id=342 data-nosnippet>342</a>
-<a href=#343 id=343 data-nosnippet>343</a>    <span class="comment">// When `--schemadocs` is on, auto-prepend the rustdoc-styled
-<a href=#344 id=344 data-nosnippet>344</a>    // theme assets so callers don't need to repeat them on every
-<a href=#345 id=345 data-nosnippet>345</a>    // invocation. Idempotent: skipped if the user has already
-<a href=#346 id=346 data-nosnippet>346</a>    // listed the same basename via `--css` / `--javascript`.
-<a href=#347 id=347 data-nosnippet>347</a>    </span><span class="kw">let </span>prepend = |list: <span class="kw-2">&amp;</span>[String], extra: <span class="kw-2">&amp;</span>str| -&gt; Vec&lt;String&gt; {
-<a href=#348 id=348 data-nosnippet>348</a>      <span class="kw">if </span>list
-<a href=#349 id=349 data-nosnippet>349</a>        .iter()
-<a href=#350 id=350 data-nosnippet>350</a>        .any(|p| std::path::Path::new(p).file_name().and_then(|s| s.to_str()) == <span class="prelude-val">Some</span>(extra))
-<a href=#351 id=351 data-nosnippet>351</a>      {
-<a href=#352 id=352 data-nosnippet>352</a>        list.to_vec()
-<a href=#353 id=353 data-nosnippet>353</a>      } <span class="kw">else </span>{
-<a href=#354 id=354 data-nosnippet>354</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(list.len() + <span class="number">1</span>);
-<a href=#355 id=355 data-nosnippet>355</a>        out.push(extra.to_string());
-<a href=#356 id=356 data-nosnippet>356</a>        out.extend_from_slice(list);
-<a href=#357 id=357 data-nosnippet>357</a>        out
-<a href=#358 id=358 data-nosnippet>358</a>      }
-<a href=#359 id=359 data-nosnippet>359</a>    };
-<a href=#360 id=360 data-nosnippet>360</a>    <span class="kw">let </span>css_effective: Vec&lt;String&gt; = <span class="kw">if </span>schemadocs {
-<a href=#361 id=361 data-nosnippet>361</a>      prepend(css_files, latexml_post::schema_docs::THEME_CSS_BASENAME)
-<a href=#362 id=362 data-nosnippet>362</a>    } <span class="kw">else </span>{
-<a href=#363 id=363 data-nosnippet>363</a>      css_files.to_vec()
-<a href=#364 id=364 data-nosnippet>364</a>    };
-<a href=#365 id=365 data-nosnippet>365</a>    <span class="kw">let </span>js_effective: Vec&lt;String&gt; = <span class="kw">if </span>schemadocs {
-<a href=#366 id=366 data-nosnippet>366</a>      prepend(js_files, latexml_post::schema_docs::THEME_JS_BASENAME)
-<a href=#367 id=367 data-nosnippet>367</a>    } <span class="kw">else </span>{
-<a href=#368 id=368 data-nosnippet>368</a>      js_files.to_vec()
-<a href=#369 id=369 data-nosnippet>369</a>    };
-<a href=#370 id=370 data-nosnippet>370</a>    <span class="kw">if </span>!css_effective.is_empty() {
-<a href=#371 id=371 data-nosnippet>371</a>      xslt_params.insert(
-<a href=#372 id=372 data-nosnippet>372</a>        <span class="string">"CSS"</span>.to_string(),
-<a href=#373 id=373 data-nosnippet>373</a>        <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, css_effective.join(<span class="string">"|"</span>)),
-<a href=#374 id=374 data-nosnippet>374</a>      );
-<a href=#375 id=375 data-nosnippet>375</a>    }
-<a href=#376 id=376 data-nosnippet>376</a>    <span class="kw">if </span>!js_effective.is_empty() {
-<a href=#377 id=377 data-nosnippet>377</a>      xslt_params.insert(
-<a href=#378 id=378 data-nosnippet>378</a>        <span class="string">"JAVASCRIPT"</span>.to_string(),
-<a href=#379 id=379 data-nosnippet>379</a>        <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, js_effective.join(<span class="string">"|"</span>)),
-<a href=#380 id=380 data-nosnippet>380</a>      );
-<a href=#381 id=381 data-nosnippet>381</a>    }
-<a href=#382 id=382 data-nosnippet>382</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(navtoc) = navigationtoc {
-<a href=#383 id=383 data-nosnippet>383</a>      xslt_params.insert(<span class="string">"NAVIGATIONTOC"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, navtoc));
-<a href=#384 id=384 data-nosnippet>384</a>    }
-<a href=#385 id=385 data-nosnippet>385</a>    <span class="kw">for </span>param <span class="kw">in </span>xslt_parameters {
-<a href=#386 id=386 data-nosnippet>386</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>((key, value)) = param.split_once(<span class="string">'='</span>) {
-<a href=#387 id=387 data-nosnippet>387</a>        xslt_params.insert(key.to_string(), <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, value));
-<a href=#388 id=388 data-nosnippet>388</a>      }
-<a href=#389 id=389 data-nosnippet>389</a>    }
-<a href=#390 id=390 data-nosnippet>390</a>    <span class="kw">match </span>latexml_post::xslt::XSLT::new(
-<a href=#391 id=391 data-nosnippet>391</a>      xsl_path,
-<a href=#392 id=392 data-nosnippet>392</a>      xslt_params,
-<a href=#393 id=393 data-nosnippet>393</a>      nodefaultresources,
-<a href=#394 id=394 data-nosnippet>394</a>      <span class="prelude-val">None</span>,
-<a href=#395 id=395 data-nosnippet>395</a>      searchpaths,
-<a href=#396 id=396 data-nosnippet>396</a>    ) {
-<a href=#397 id=397 data-nosnippet>397</a>      <span class="prelude-val">Ok</span>(xslt) =&gt; processors.push(Box::new(xslt)),
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">eprintln!</span>(<span class="string">"Post-processing: XSLT error: {}"</span>, e),
-<a href=#399 id=399 data-nosnippet>399</a>    }
-<a href=#400 id=400 data-nosnippet>400</a>  }
-<a href=#401 id=401 data-nosnippet>401</a>
-<a href=#402 id=402 data-nosnippet>402</a>  <span class="comment">// process_chain attributes per-processor inside latexml_post::Post::
-<a href=#403 id=403 data-nosnippet>403</a>  // process_chain (MathmlPres / MathmlCont / Xslt). No outer phase wrap
-<a href=#404 id=404 data-nosnippet>404</a>  // needed; the inner per-processor guards cover their own time.
-<a href=#405 id=405 data-nosnippet>405</a>  //
-<a href=#406 id=406 data-nosnippet>406</a>  // Perl-faithful: pass ALL split docs to ProcessChain at once. Perl's
-<a href=#407 id=407 data-nosnippet>407</a>  // `Post::ProcessChain_internal` (Post.pm L41-67) seeds `@docs = ($doc)`
-<a href=#408 id=408 data-nosnippet>408</a>  // and lets each processor return a (possibly multi-element) list which
-<a href=#409 id=409 data-nosnippet>409</a>  // becomes the input to the next processor. We've already produced the
-<a href=#410 id=410 data-nosnippet>410</a>  // post-Split list above; ProcessChain just needs to fan MathML/XSLT
-<a href=#411 id=411 data-nosnippet>411</a>  // across it.
-<a href=#412 id=412 data-nosnippet>412</a>  </span><span class="kw">let </span>is_html_out = stylesheet.is_some_and(|s| s.contains(<span class="string">"html"</span>));
-<a href=#413 id=413 data-nosnippet>413</a>  <span class="kw">let </span>t_chain = audit_start(<span class="string">"process_chain"</span>);
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">let </span>chain_result = post.process_chain(docs, <span class="kw-2">&amp;mut </span>processors);
-<a href=#415 id=415 data-nosnippet>415</a>  audit_end(t_chain);
-<a href=#416 id=416 data-nosnippet>416</a>  <span class="kw">let </span>results = <span class="kw">match </span>chain_result {
-<a href=#417 id=417 data-nosnippet>417</a>    <span class="prelude-val">Ok</span>(r) =&gt; r,
-<a href=#418 id=418 data-nosnippet>418</a>    <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#419 id=419 data-nosnippet>419</a>      <span class="macro">eprintln!</span>(<span class="string">"Post-processing failed: {}"</span>, e);
-<a href=#420 id=420 data-nosnippet>420</a>      <span class="kw">return </span>xml.to_string();
-<a href=#421 id=421 data-nosnippet>421</a>    },
-<a href=#422 id=422 data-nosnippet>422</a>  };
-<a href=#423 id=423 data-nosnippet>423</a>
-<a href=#424 id=424 data-nosnippet>424</a>  <span class="comment">// Serialize + write each doc IMMEDIATELY in the loop (rather than
-<a href=#425 id=425 data-nosnippet>425</a>  // collecting first then writing). Multi-doc PostDocument cleanup has
-<a href=#426 id=426 data-nosnippet>426</a>  // a known libxml2 idcache use-after-free at process exit (see the
-<a href=#427 id=427 data-nosnippet>427</a>  // SVG-processor note above this block) that can intermittently SIGSEGV
-<a href=#428 id=428 data-nosnippet>428</a>  // after the last doc has been serialized. Writing eagerly inside the
-<a href=#429 id=429 data-nosnippet>429</a>  // iteration means even if cleanup later trips, every page that finished
-<a href=#430 id=430 data-nosnippet>430</a>  // post-processing is already on disk. The first doc's content is
-<a href=#431 id=431 data-nosnippet>431</a>  // returned so the caller can also write it to --dest in non-split mode.
-<a href=#432 id=432 data-nosnippet>432</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>main_output: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
-<a href=#433 id=433 data-nosnippet>433</a>  <span class="kw">let </span>n = results.len();
-<a href=#434 id=434 data-nosnippet>434</a>  <span class="kw">for </span>doc <span class="kw">in </span>results.into_iter() {
-<a href=#435 id=435 data-nosnippet>435</a>    <span class="kw">let </span>dest = doc.get_destination().map(String::from);
-<a href=#436 id=436 data-nosnippet>436</a>    <span class="kw">let </span>t_serialize = audit_start(<span class="string">"to_xml_string"</span>);
-<a href=#437 id=437 data-nosnippet>437</a>    <span class="comment">// `serialize_whatsout` is a no-op (returns full doc) for the
-<a href=#438 id=438 data-nosnippet>438</a>    // default `Whatsout::Document`; for Fragment / Math it returns
-<a href=#439 id=439 data-nosnippet>439</a>    // the extracted subtree serialized via libxml `node_to_string`.
-<a href=#440 id=440 data-nosnippet>440</a>    </span><span class="kw">let </span>output = latexml_post::extract::serialize_whatsout(<span class="kw-2">&amp;</span>doc, whatsout);
-<a href=#441 id=441 data-nosnippet>441</a>    audit_end(t_serialize);
-<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">let </span>output = <span class="kw">if </span>is_html_out {
-<a href=#443 id=443 data-nosnippet>443</a>      finalize_html5(output, <span class="kw-2">&amp;</span>svg_fragments)
-<a href=#444 id=444 data-nosnippet>444</a>    } <span class="kw">else </span>{
-<a href=#445 id=445 data-nosnippet>445</a>      output
-<a href=#446 id=446 data-nosnippet>446</a>    };
-<a href=#447 id=447 data-nosnippet>447</a>    <span class="kw">let </span>output = <span class="kw">if </span>schemadocs &amp;&amp; is_html_out {
-<a href=#448 id=448 data-nosnippet>448</a>      latexml_post::schema_docs::process_page(<span class="kw-2">&amp;</span>output)
-<a href=#449 id=449 data-nosnippet>449</a>    } <span class="kw">else </span>{
-<a href=#450 id=450 data-nosnippet>450</a>      output
-<a href=#451 id=451 data-nosnippet>451</a>    };
-<a href=#452 id=452 data-nosnippet>452</a>    <span class="comment">// Write each doc to disk inside the loop. The single-file caller
-<a href=#453 id=453 data-nosnippet>453</a>    // also writes the first doc's content to --dest; the redundant write
-<a href=#454 id=454 data-nosnippet>454</a>    // is harmless and ensures the file is on disk even if a later libxml2
-<a href=#455 id=455 data-nosnippet>455</a>    // cleanup tripwire fires.
-<a href=#456 id=456 data-nosnippet>456</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(path) = dest.as_deref() {
-<a href=#457 id=457 data-nosnippet>457</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = std::path::Path::new(path).parent()
-<a href=#458 id=458 data-nosnippet>458</a>        &amp;&amp; !parent.as_os_str().is_empty()
-<a href=#459 id=459 data-nosnippet>459</a>      {
-<a href=#460 id=460 data-nosnippet>460</a>        <span class="kw">let _ </span>= std::fs::create_dir_all(parent);
-<a href=#461 id=461 data-nosnippet>461</a>      }
-<a href=#462 id=462 data-nosnippet>462</a>      <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = std::fs::write(path, <span class="kw-2">&amp;</span>output) {
-<a href=#463 id=463 data-nosnippet>463</a>        <span class="macro">eprintln!</span>(<span class="string">"Post-processing: failed to write page {}: {}"</span>, path, e);
-<a href=#464 id=464 data-nosnippet>464</a>      }
-<a href=#465 id=465 data-nosnippet>465</a>    }
-<a href=#466 id=466 data-nosnippet>466</a>    <span class="kw">if </span>main_output.is_none() {
-<a href=#467 id=467 data-nosnippet>467</a>      main_output = <span class="prelude-val">Some</span>(output);
-<a href=#468 id=468 data-nosnippet>468</a>    }
-<a href=#469 id=469 data-nosnippet>469</a>    <span class="kw">let _ </span>= n;
-<a href=#470 id=470 data-nosnippet>470</a>  }
-<a href=#471 id=471 data-nosnippet>471</a>
-<a href=#472 id=472 data-nosnippet>472</a>  main_output.unwrap_or_else(|| xml.to_string())
-<a href=#473 id=473 data-nosnippet>473</a>}
-<a href=#474 id=474 data-nosnippet>474</a>
-<a href=#475 id=475 data-nosnippet>475</a><span class="doccomment">/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) and inject SVG
-<a href=#476 id=476 data-nosnippet>476</a>/// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
-<a href=#477 id=477 data-nosnippet>477</a>/// so it can run on every split sub-document, not just the first.
-<a href=#478 id=478 data-nosnippet>478</a></span><span class="kw">fn </span>finalize_html5(output: String, svg_fragments: <span class="kw-2">&amp;</span>[(String, String)]) -&gt; String {
-<a href=#479 id=479 data-nosnippet>479</a>  <span class="kw">use </span>std::sync::LazyLock;
-<a href=#480 id=480 data-nosnippet>480</a>  <span class="comment">// Cached at first call — regex compile is the slow part of `Regex::new`,
-<a href=#481 id=481 data-nosnippet>481</a>  // and finalize_html5 runs on every (sub-)document in the post-pipeline.
-<a href=#482 id=482 data-nosnippet>482</a>  </span><span class="kw">static </span>XML_PROLOG_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#483 id=483 data-nosnippet>483</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r"^&lt;\?xml[^?]*\?&gt;\s*"</span>).unwrap());
-<a href=#484 id=484 data-nosnippet>484</a>  <span class="kw">static </span>NON_VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
-<a href=#485 id=485 data-nosnippet>485</a>    regex::Regex::new(
-<a href=#486 id=486 data-nosnippet>486</a>      <span class="string">r"&lt;(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^&gt;]*)?/&gt;"</span>,
-<a href=#487 id=487 data-nosnippet>487</a>    ).unwrap()
-<a href=#488 id=488 data-nosnippet>488</a>  });
-<a href=#489 id=489 data-nosnippet>489</a>  <span class="kw">static </span>VOID_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
-<a href=#490 id=490 data-nosnippet>490</a>    regex::Regex::new(<span class="string">r"&lt;/(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)&gt;"</span>)
-<a href=#491 id=491 data-nosnippet>491</a>      .unwrap()
-<a href=#492 id=492 data-nosnippet>492</a>  });
-<a href=#493 id=493 data-nosnippet>493</a>  <span class="kw">static </span>VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
-<a href=#494 id=494 data-nosnippet>494</a>    regex::Regex::new(
-<a href=#495 id=495 data-nosnippet>495</a>      <span class="string">r"&lt;(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^&gt;]*?)\s*/&gt;"</span>,
-<a href=#496 id=496 data-nosnippet>496</a>    )
-<a href=#497 id=497 data-nosnippet>497</a>    .unwrap()
-<a href=#498 id=498 data-nosnippet>498</a>  });
-<a href=#499 id=499 data-nosnippet>499</a>
-<a href=#500 id=500 data-nosnippet>500</a>  <span class="kw">let </span>_gp_html5 = telemetry::phase(Phase::Html5Fixups);
-<a href=#501 id=501 data-nosnippet>501</a>  <span class="comment">// Strip &lt;?xml version...?&gt; prolog: HTML5 must NOT have an XML declaration.
-<a href=#502 id=502 data-nosnippet>502</a>  // libxml2's to_string() includes it by default; we strip it here.
-<a href=#503 id=503 data-nosnippet>503</a>  </span><span class="kw">let </span>output = XML_PROLOG_RE.replace(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
-<a href=#504 id=504 data-nosnippet>504</a>  <span class="kw">let </span>output = NON_VOID_SELF_CLOSE_RE
-<a href=#505 id=505 data-nosnippet>505</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;&lt;/$1&gt;"</span>)
-<a href=#506 id=506 data-nosnippet>506</a>    .to_string();
-<a href=#507 id=507 data-nosnippet>507</a>  <span class="kw">let </span>output = VOID_CLOSE_RE.replace_all(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
-<a href=#508 id=508 data-nosnippet>508</a>  <span class="kw">let </span><span class="kw-2">mut </span>output = VOID_SELF_CLOSE_RE
-<a href=#509 id=509 data-nosnippet>509</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;"</span>)
-<a href=#510 id=510 data-nosnippet>510</a>    .to_string();
-<a href=#511 id=511 data-nosnippet>511</a>  <span class="kw">if </span>!svg_fragments.is_empty() {
-<a href=#512 id=512 data-nosnippet>512</a>    <span class="kw">for </span>(pic_id, svg_html) <span class="kw">in </span>svg_fragments {
-<a href=#513 id=513 data-nosnippet>513</a>      <span class="kw">let </span>pattern = <span class="macro">format!</span>(
-<a href=#514 id=514 data-nosnippet>514</a>        <span class="string">r#"&lt;span id="{}" class="ltx_picture"([^&gt;]*)&gt;&lt;/span&gt;"#</span>,
-<a href=#515 id=515 data-nosnippet>515</a>        regex::escape(pic_id)
-<a href=#516 id=516 data-nosnippet>516</a>      );
-<a href=#517 id=517 data-nosnippet>517</a>      <span class="kw">if let </span><span class="prelude-val">Ok</span>(re) = regex::Regex::new(<span class="kw-2">&amp;</span>pattern) {
-<a href=#518 id=518 data-nosnippet>518</a>        output = re
-<a href=#519 id=519 data-nosnippet>519</a>          .replace(<span class="kw-2">&amp;</span>output, |caps: <span class="kw-2">&amp;</span>regex::Captures| {
-<a href=#520 id=520 data-nosnippet>520</a>            <span class="macro">format!</span>(
-<a href=#521 id=521 data-nosnippet>521</a>              <span class="string">r#"&lt;span id="{}" class="ltx_picture"{}&gt;{}&lt;/span&gt;"#</span>,
-<a href=#522 id=522 data-nosnippet>522</a>              pic_id, <span class="kw-2">&amp;</span>caps[<span class="number">1</span>], svg_html
-<a href=#523 id=523 data-nosnippet>523</a>            )
-<a href=#524 id=524 data-nosnippet>524</a>          })
-<a href=#525 id=525 data-nosnippet>525</a>          .to_string();
-<a href=#526 id=526 data-nosnippet>526</a>      }
-<a href=#527 id=527 data-nosnippet>527</a>    }
-<a href=#528 id=528 data-nosnippet>528</a>  }
-<a href=#529 id=529 data-nosnippet>529</a>  output
-<a href=#530 id=530 data-nosnippet>530</a>}
-<a href=#531 id=531 data-nosnippet>531</a>
-<a href=#532 id=532 data-nosnippet>532</a><span class="doccomment">/// Extract SVG fragments from intermediate LaTeXML XML.
-<a href=#533 id=533 data-nosnippet>533</a>///
-<a href=#534 id=534 data-nosnippet>534</a>/// Finds `&lt;picture&gt;` elements, converts their children to inline SVG HTML.
-<a href=#535 id=535 data-nosnippet>535</a>/// Uses a lightweight regex+string approach (no libxml2) to avoid the
-<a href=#536 id=536 data-nosnippet>536</a>/// use-after-free crash in PostDocument cleanup.
-<a href=#537 id=537 data-nosnippet>537</a>///
-<a href=#538 id=538 data-nosnippet>538</a>/// Returns (picture_id, svg_html) pairs for post-XSLT injection.
-<a href=#539 id=539 data-nosnippet>539</a></span><span class="kw">fn </span>extract_svg_fragments(xml: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;(String, String)&gt; {
-<a href=#540 id=540 data-nosnippet>540</a>  <span class="kw">use </span>std::sync::LazyLock;
-<a href=#541 id=541 data-nosnippet>541</a>  <span class="comment">// Fast-fail: most documents have no `&lt;picture&gt;` elements (tikz / pgf
-<a href=#542 id=542 data-nosnippet>542</a>  // is uncommon in the canvas). Skip the backtracking lazy-match
-<a href=#543 id=543 data-nosnippet>543</a>  // regex (`(?s)...(.*?)`) when `&lt;picture` doesn't appear as a literal
-<a href=#544 id=544 data-nosnippet>544</a>  // substring. `str::contains` is a SIMD-accelerated byte search and
-<a href=#545 id=545 data-nosnippet>545</a>  // takes microseconds even on ~MB inputs.
-<a href=#546 id=546 data-nosnippet>546</a>  </span><span class="kw">if </span>!xml.contains(<span class="string">"&lt;picture"</span>) {
-<a href=#547 id=547 data-nosnippet>547</a>    <span class="kw">return </span>Vec::new();
-<a href=#548 id=548 data-nosnippet>548</a>  }
-<a href=#549 id=549 data-nosnippet>549</a>  <span class="kw">static </span>PICTURE_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#550 id=550 data-nosnippet>550</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"(?s)&lt;picture([^&gt;]*)&gt;(.*?)&lt;/picture&gt;"#</span>).unwrap());
-<a href=#551 id=551 data-nosnippet>551</a>  <span class="kw">static </span>ID_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#552 id=552 data-nosnippet>552</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"xml:id="([^"]+)""#</span>).unwrap());
-<a href=#553 id=553 data-nosnippet>553</a>  <span class="kw">static </span>WIDTH_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#554 id=554 data-nosnippet>554</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"width="([^"]+)""#</span>).unwrap());
-<a href=#555 id=555 data-nosnippet>555</a>  <span class="kw">static </span>HEIGHT_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#556 id=556 data-nosnippet>556</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"height="([^"]+)""#</span>).unwrap());
-<a href=#557 id=557 data-nosnippet>557</a>  <span class="kw">let </span><span class="kw-2">mut </span>fragments = Vec::new();
-<a href=#558 id=558 data-nosnippet>558</a>  <span class="kw">let </span>picture_re = <span class="kw-2">&amp;*</span>PICTURE_RE;
-<a href=#559 id=559 data-nosnippet>559</a>  <span class="kw">let </span>id_re = <span class="kw-2">&amp;*</span>ID_RE;
-<a href=#560 id=560 data-nosnippet>560</a>  <span class="kw">let </span>width_re = <span class="kw-2">&amp;*</span>WIDTH_RE;
-<a href=#561 id=561 data-nosnippet>561</a>  <span class="kw">let </span>height_re = <span class="kw-2">&amp;*</span>HEIGHT_RE;
-<a href=#562 id=562 data-nosnippet>562</a>
-<a href=#563 id=563 data-nosnippet>563</a>  <span class="kw">for </span>pic_caps <span class="kw">in </span>picture_re.captures_iter(xml) {
-<a href=#564 id=564 data-nosnippet>564</a>    <span class="kw">let </span>attrs = <span class="kw-2">&amp;</span>pic_caps[<span class="number">1</span>];
-<a href=#565 id=565 data-nosnippet>565</a>    <span class="kw">let </span>content = <span class="kw-2">&amp;</span>pic_caps[<span class="number">2</span>];
-<a href=#566 id=566 data-nosnippet>566</a>    <span class="kw">let </span>id = id_re
-<a href=#567 id=567 data-nosnippet>567</a>      .captures(attrs)
-<a href=#568 id=568 data-nosnippet>568</a>      .map(|c| c[<span class="number">1</span>].to_string())
-<a href=#569 id=569 data-nosnippet>569</a>      .unwrap_or_default();
-<a href=#570 id=570 data-nosnippet>570</a>    <span class="kw">let </span>width = width_re.captures(attrs).and_then(|c| parse_tex_dim(<span class="kw-2">&amp;</span>c[<span class="number">1</span>]));
-<a href=#571 id=571 data-nosnippet>571</a>    <span class="kw">let </span>height = height_re.captures(attrs).and_then(|c| parse_tex_dim(<span class="kw-2">&amp;</span>c[<span class="number">1</span>]));
-<a href=#572 id=572 data-nosnippet>572</a>
-<a href=#573 id=573 data-nosnippet>573</a>    <span class="kw">if </span>id.is_empty() || content.trim().is_empty() {
-<a href=#574 id=574 data-nosnippet>574</a>      <span class="kw">continue</span>;
-<a href=#575 id=575 data-nosnippet>575</a>    }
-<a href=#576 id=576 data-nosnippet>576</a>
-<a href=#577 id=577 data-nosnippet>577</a>    <span class="kw">let </span>w = width.unwrap_or(<span class="number">100.0</span>);
-<a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">let </span>h = height.unwrap_or(<span class="number">100.0</span>);
-<a href=#579 id=579 data-nosnippet>579</a>
-<a href=#580 id=580 data-nosnippet>580</a>    <span class="comment">// Build inline SVG: coordinate system has y-flip (TeX origin bottom-left, SVG top-left)
-<a href=#581 id=581 data-nosnippet>581</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>svg_content = <span class="macro">format!</span>(
-<a href=#582 id=582 data-nosnippet>582</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{w:.2}" height="{h:.2}" overflow="visible"&gt;"#</span>,
-<a href=#583 id=583 data-nosnippet>583</a>    );
-<a href=#584 id=584 data-nosnippet>584</a>    svg_content.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-<a href=#585 id=585 data-nosnippet>585</a>      <span class="string">r#"&lt;g transform="translate(0,{h:.2}) scale(1,-1)"&gt;"#</span>,
-<a href=#586 id=586 data-nosnippet>586</a>    ));
-<a href=#587 id=587 data-nosnippet>587</a>
-<a href=#588 id=588 data-nosnippet>588</a>    <span class="comment">// Convert ltx picture children to SVG elements
-<a href=#589 id=589 data-nosnippet>589</a>    </span>svg_content.push_str(<span class="kw-2">&amp;</span>convert_picture_children_to_svg(content));
-<a href=#590 id=590 data-nosnippet>590</a>
-<a href=#591 id=591 data-nosnippet>591</a>    svg_content.push_str(<span class="string">"&lt;/g&gt;&lt;/svg&gt;"</span>);
-<a href=#592 id=592 data-nosnippet>592</a>    fragments.push((id, svg_content));
-<a href=#593 id=593 data-nosnippet>593</a>  }
-<a href=#594 id=594 data-nosnippet>594</a>  fragments
-<a href=#595 id=595 data-nosnippet>595</a>}
-<a href=#596 id=596 data-nosnippet>596</a>
-<a href=#597 id=597 data-nosnippet>597</a><span class="doccomment">/// Convert LaTeXML picture children (g, line, text, circle, etc.) to SVG elements.
-<a href=#598 id=598 data-nosnippet>598</a></span><span class="kw">fn </span>convert_picture_children_to_svg(content: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#599 id=599 data-nosnippet>599</a>  <span class="kw">use </span>std::sync::LazyLock;
-<a href=#600 id=600 data-nosnippet>600</a>  <span class="kw">static </span>G_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#601 id=601 data-nosnippet>601</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"(?s)&lt;g([^&gt;]*)&gt;(.*?)&lt;/g&gt;"#</span>).unwrap());
-<a href=#602 id=602 data-nosnippet>602</a>  <span class="kw">static </span>TRANSFORM_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#603 id=603 data-nosnippet>603</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"transform="([^"]+)""#</span>).unwrap());
-<a href=#604 id=604 data-nosnippet>604</a>  <span class="kw">static </span>LINE_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#605 id=605 data-nosnippet>605</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;line\s+points="([^"]+)"([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#606 id=606 data-nosnippet>606</a>  <span class="kw">static </span>CIRCLE_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#607 id=607 data-nosnippet>607</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;circle([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#608 id=608 data-nosnippet>608</a>  <span class="kw">static </span>ELLIPSE_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#609 id=609 data-nosnippet>609</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;ellipse([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#610 id=610 data-nosnippet>610</a>  <span class="kw">static </span>RECT_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#611 id=611 data-nosnippet>611</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;rect([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#612 id=612 data-nosnippet>612</a>  <span class="kw">static </span>POLYGON_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#613 id=613 data-nosnippet>613</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;polygon([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#614 id=614 data-nosnippet>614</a>  <span class="kw">static </span>PATH_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#615 id=615 data-nosnippet>615</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;path([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#616 id=616 data-nosnippet>616</a>  <span class="kw">static </span>BEZIER_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#617 id=617 data-nosnippet>617</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;bezier\s+points="([^"]+)"([^/]*)/?&gt;"#</span>).unwrap());
-<a href=#618 id=618 data-nosnippet>618</a>  <span class="kw">static </span>TEXT_RE: LazyLock&lt;regex::Regex&gt; =
-<a href=#619 id=619 data-nosnippet>619</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"(?s)&lt;text([^&gt;]*)&gt;(.*?)&lt;/text&gt;"#</span>).unwrap());
-<a href=#620 id=620 data-nosnippet>620</a>
-<a href=#621 id=621 data-nosnippet>621</a>  <span class="kw">let </span><span class="kw-2">mut </span>svg = String::new();
-<a href=#622 id=622 data-nosnippet>622</a>
-<a href=#623 id=623 data-nosnippet>623</a>  <span class="kw">for </span>g_caps <span class="kw">in </span>G_RE.captures_iter(content) {
-<a href=#624 id=624 data-nosnippet>624</a>    <span class="kw">let </span>g_attrs = <span class="kw-2">&amp;</span>g_caps[<span class="number">1</span>];
-<a href=#625 id=625 data-nosnippet>625</a>    <span class="kw">let </span>g_content = <span class="kw-2">&amp;</span>g_caps[<span class="number">2</span>];
-<a href=#626 id=626 data-nosnippet>626</a>
-<a href=#627 id=627 data-nosnippet>627</a>    <span class="comment">// Extract transform
-<a href=#628 id=628 data-nosnippet>628</a>    </span><span class="kw">let </span>transform = TRANSFORM_RE.captures(g_attrs).map(|c| c[<span class="number">1</span>].to_string());
-<a href=#629 id=629 data-nosnippet>629</a>
-<a href=#630 id=630 data-nosnippet>630</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = <span class="kw-2">&amp;</span>transform {
-<a href=#631 id=631 data-nosnippet>631</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;g transform="{t}"&gt;"#</span>));
-<a href=#632 id=632 data-nosnippet>632</a>    } <span class="kw">else </span>{
-<a href=#633 id=633 data-nosnippet>633</a>      svg.push_str(<span class="string">"&lt;g&gt;"</span>);
-<a href=#634 id=634 data-nosnippet>634</a>    }
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="comment">// Parallel P+C markup: when both formats are requested, the Content-MathML
+<a href=#310 id=310 data-nosnippet>310</a>  // processor is a *secondary* of the Presentation primary, folded into one
+<a href=#311 id=311 data-nosnippet>311</a>  // `&lt;m:semantics&gt;`/`&lt;m:annotation-xml&gt;` by `combine_parallel` — NOT a second
+<a href=#312 id=312 data-nosnippet>312</a>  // independent pass (which left the content tree as an orphan `&lt;apply&gt;` sibling
+<a href=#313 id=313 data-nosnippet>313</a>  // of `&lt;m:semantics&gt;`, rendered as stray text by browsers). Mirrors Perl
+<a href=#314 id=314 data-nosnippet>314</a>  // `MathProcessor`'s primary→secondary parallel model.
+<a href=#315 id=315 data-nosnippet>315</a>  </span><span class="kw">if </span>pmml {
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">let </span><span class="kw-2">mut </span>presentation = latexml_post::mathml::MathML::new_presentation()
+<a href=#317 id=317 data-nosnippet>317</a>      .with_keep_xmath(keep_xmath)
+<a href=#318 id=318 data-nosnippet>318</a>      .with_invisible_times(!noinvisibletimes)
+<a href=#319 id=319 data-nosnippet>319</a>      .with_mathtex(mathtex)
+<a href=#320 id=320 data-nosnippet>320</a>      .with_intent_literal(intent_literal);
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="kw">if </span>cmml {
+<a href=#322 id=322 data-nosnippet>322</a>      presentation = presentation.with_secondaries(<span class="macro">vec!</span>[Box::new(
+<a href=#323 id=323 data-nosnippet>323</a>        latexml_post::mathml::MathML::new_content()
+<a href=#324 id=324 data-nosnippet>324</a>          .with_keep_xmath(keep_xmath)
+<a href=#325 id=325 data-nosnippet>325</a>          .with_invisible_times(!noinvisibletimes)
+<a href=#326 id=326 data-nosnippet>326</a>          .secondary(),
+<a href=#327 id=327 data-nosnippet>327</a>      )]);
+<a href=#328 id=328 data-nosnippet>328</a>    }
+<a href=#329 id=329 data-nosnippet>329</a>    processors.push(Box::new(presentation));
+<a href=#330 id=330 data-nosnippet>330</a>  } <span class="kw">else if </span>cmml {
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="comment">// Content-only output (no presentation primary).
+<a href=#332 id=332 data-nosnippet>332</a>    </span>processors.push(Box::new(
+<a href=#333 id=333 data-nosnippet>333</a>      latexml_post::mathml::MathML::new_content()
+<a href=#334 id=334 data-nosnippet>334</a>        .with_keep_xmath(keep_xmath)
+<a href=#335 id=335 data-nosnippet>335</a>        .with_invisible_times(!noinvisibletimes),
+<a href=#336 id=336 data-nosnippet>336</a>    ));
+<a href=#337 id=337 data-nosnippet>337</a>  }
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(xsl_path) = stylesheet {
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="kw">let </span><span class="kw-2">mut </span>searchpaths = <span class="macro">vec!</span>[<span class="string">"."</span>.to_string()];
+<a href=#340 id=340 data-nosnippet>340</a>    <span class="kw">if let </span><span class="prelude-val">Ok</span>(exe) = std::env::current_exe()
+<a href=#341 id=341 data-nosnippet>341</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(project_root) = exe
+<a href=#342 id=342 data-nosnippet>342</a>        .parent()
+<a href=#343 id=343 data-nosnippet>343</a>        .and_then(|p| p.parent())
+<a href=#344 id=344 data-nosnippet>344</a>        .and_then(|p| p.parent())
+<a href=#345 id=345 data-nosnippet>345</a>    {
+<a href=#346 id=346 data-nosnippet>346</a>      searchpaths.insert(<span class="number">0</span>, project_root.display().to_string());
+<a href=#347 id=347 data-nosnippet>347</a>    }
+<a href=#348 id=348 data-nosnippet>348</a>    <span class="comment">// Prepend the user's `--path` directories so `--css`/`--javascript`
+<a href=#349 id=349 data-nosnippet>349</a>    // resources are found there (and take priority over `.`/project root)
+<a href=#350 id=350 data-nosnippet>350</a>    // when copy_param_resources searches for them.
+<a href=#351 id=351 data-nosnippet>351</a>    </span><span class="kw">for </span>p <span class="kw">in </span>search_paths.iter().rev() {
+<a href=#352 id=352 data-nosnippet>352</a>      searchpaths.insert(<span class="number">0</span>, p.clone());
+<a href=#353 id=353 data-nosnippet>353</a>    }
+<a href=#354 id=354 data-nosnippet>354</a>    <span class="kw">let </span><span class="kw-2">mut </span>xslt_params = rustc_hash::FxHashMap::default();
+<a href=#355 id=355 data-nosnippet>355</a>
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="comment">// When `--schemadocs` is on, auto-prepend the rustdoc-styled
+<a href=#357 id=357 data-nosnippet>357</a>    // theme assets so callers don't need to repeat them on every
+<a href=#358 id=358 data-nosnippet>358</a>    // invocation. Idempotent: skipped if the user has already
+<a href=#359 id=359 data-nosnippet>359</a>    // listed the same basename via `--css` / `--javascript`.
+<a href=#360 id=360 data-nosnippet>360</a>    </span><span class="kw">let </span>prepend = |list: <span class="kw-2">&amp;</span>[String], extra: <span class="kw-2">&amp;</span>str| -&gt; Vec&lt;String&gt; {
+<a href=#361 id=361 data-nosnippet>361</a>      <span class="kw">if </span>list
+<a href=#362 id=362 data-nosnippet>362</a>        .iter()
+<a href=#363 id=363 data-nosnippet>363</a>        .any(|p| std::path::Path::new(p).file_name().and_then(|s| s.to_str()) == <span class="prelude-val">Some</span>(extra))
+<a href=#364 id=364 data-nosnippet>364</a>      {
+<a href=#365 id=365 data-nosnippet>365</a>        list.to_vec()
+<a href=#366 id=366 data-nosnippet>366</a>      } <span class="kw">else </span>{
+<a href=#367 id=367 data-nosnippet>367</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(list.len() + <span class="number">1</span>);
+<a href=#368 id=368 data-nosnippet>368</a>        out.push(extra.to_string());
+<a href=#369 id=369 data-nosnippet>369</a>        out.extend_from_slice(list);
+<a href=#370 id=370 data-nosnippet>370</a>        out
+<a href=#371 id=371 data-nosnippet>371</a>      }
+<a href=#372 id=372 data-nosnippet>372</a>    };
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">let </span>css_effective: Vec&lt;String&gt; = <span class="kw">if </span>schemadocs {
+<a href=#374 id=374 data-nosnippet>374</a>      prepend(css_files, latexml_post::schema_docs::THEME_CSS_BASENAME)
+<a href=#375 id=375 data-nosnippet>375</a>    } <span class="kw">else </span>{
+<a href=#376 id=376 data-nosnippet>376</a>      css_files.to_vec()
+<a href=#377 id=377 data-nosnippet>377</a>    };
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="kw">let </span>js_effective: Vec&lt;String&gt; = <span class="kw">if </span>schemadocs {
+<a href=#379 id=379 data-nosnippet>379</a>      prepend(js_files, latexml_post::schema_docs::THEME_JS_BASENAME)
+<a href=#380 id=380 data-nosnippet>380</a>    } <span class="kw">else </span>{
+<a href=#381 id=381 data-nosnippet>381</a>      js_files.to_vec()
+<a href=#382 id=382 data-nosnippet>382</a>    };
+<a href=#383 id=383 data-nosnippet>383</a>    <span class="kw">if </span>!css_effective.is_empty() {
+<a href=#384 id=384 data-nosnippet>384</a>      xslt_params.insert(
+<a href=#385 id=385 data-nosnippet>385</a>        <span class="string">"CSS"</span>.to_string(),
+<a href=#386 id=386 data-nosnippet>386</a>        <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, css_effective.join(<span class="string">"|"</span>)),
+<a href=#387 id=387 data-nosnippet>387</a>      );
+<a href=#388 id=388 data-nosnippet>388</a>    }
+<a href=#389 id=389 data-nosnippet>389</a>    <span class="kw">if </span>!js_effective.is_empty() {
+<a href=#390 id=390 data-nosnippet>390</a>      xslt_params.insert(
+<a href=#391 id=391 data-nosnippet>391</a>        <span class="string">"JAVASCRIPT"</span>.to_string(),
+<a href=#392 id=392 data-nosnippet>392</a>        <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, js_effective.join(<span class="string">"|"</span>)),
+<a href=#393 id=393 data-nosnippet>393</a>      );
+<a href=#394 id=394 data-nosnippet>394</a>    }
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(navtoc) = navigationtoc {
+<a href=#396 id=396 data-nosnippet>396</a>      xslt_params.insert(<span class="string">"NAVIGATIONTOC"</span>.to_string(), <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, navtoc));
+<a href=#397 id=397 data-nosnippet>397</a>    }
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">for </span>param <span class="kw">in </span>xslt_parameters {
+<a href=#399 id=399 data-nosnippet>399</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>((key, value)) = param.split_once(<span class="string">'='</span>) {
+<a href=#400 id=400 data-nosnippet>400</a>        xslt_params.insert(key.to_string(), <span class="macro">format!</span>(<span class="string">"\"{}\""</span>, value));
+<a href=#401 id=401 data-nosnippet>401</a>      }
+<a href=#402 id=402 data-nosnippet>402</a>    }
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">match </span>latexml_post::xslt::XSLT::new(
+<a href=#404 id=404 data-nosnippet>404</a>      xsl_path,
+<a href=#405 id=405 data-nosnippet>405</a>      xslt_params,
+<a href=#406 id=406 data-nosnippet>406</a>      nodefaultresources,
+<a href=#407 id=407 data-nosnippet>407</a>      <span class="prelude-val">None</span>,
+<a href=#408 id=408 data-nosnippet>408</a>      searchpaths,
+<a href=#409 id=409 data-nosnippet>409</a>    ) {
+<a href=#410 id=410 data-nosnippet>410</a>      <span class="prelude-val">Ok</span>(xslt) =&gt; processors.push(Box::new(xslt)),
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="prelude-val">Err</span>(e) =&gt; <span class="macro">eprintln!</span>(<span class="string">"Post-processing: XSLT error: {}"</span>, e),
+<a href=#412 id=412 data-nosnippet>412</a>    }
+<a href=#413 id=413 data-nosnippet>413</a>  }
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="comment">// process_chain attributes per-processor inside latexml_post::Post::
+<a href=#416 id=416 data-nosnippet>416</a>  // process_chain (MathmlPres / MathmlCont / Xslt). No outer phase wrap
+<a href=#417 id=417 data-nosnippet>417</a>  // needed; the inner per-processor guards cover their own time.
+<a href=#418 id=418 data-nosnippet>418</a>  //
+<a href=#419 id=419 data-nosnippet>419</a>  // Perl-faithful: pass ALL split docs to ProcessChain at once. Perl's
+<a href=#420 id=420 data-nosnippet>420</a>  // `Post::ProcessChain_internal` (Post.pm L41-67) seeds `@docs = ($doc)`
+<a href=#421 id=421 data-nosnippet>421</a>  // and lets each processor return a (possibly multi-element) list which
+<a href=#422 id=422 data-nosnippet>422</a>  // becomes the input to the next processor. We've already produced the
+<a href=#423 id=423 data-nosnippet>423</a>  // post-Split list above; ProcessChain just needs to fan MathML/XSLT
+<a href=#424 id=424 data-nosnippet>424</a>  // across it.
+<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="kw">let </span>is_html_out = stylesheet.is_some_and(|s| s.contains(<span class="string">"html"</span>));
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="kw">let </span>t_chain = audit_start(<span class="string">"process_chain"</span>);
+<a href=#427 id=427 data-nosnippet>427</a>  <span class="kw">let </span>chain_result = post.process_chain(docs, <span class="kw-2">&amp;mut </span>processors);
+<a href=#428 id=428 data-nosnippet>428</a>  audit_end(t_chain);
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="kw">let </span>results = <span class="kw">match </span>chain_result {
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="prelude-val">Ok</span>(r) =&gt; r,
+<a href=#431 id=431 data-nosnippet>431</a>    <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#432 id=432 data-nosnippet>432</a>      <span class="macro">eprintln!</span>(<span class="string">"Post-processing failed: {}"</span>, e);
+<a href=#433 id=433 data-nosnippet>433</a>      <span class="kw">return </span>xml.to_string();
+<a href=#434 id=434 data-nosnippet>434</a>    },
+<a href=#435 id=435 data-nosnippet>435</a>  };
+<a href=#436 id=436 data-nosnippet>436</a>
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="comment">// Serialize + write each doc IMMEDIATELY in the loop (rather than
+<a href=#438 id=438 data-nosnippet>438</a>  // collecting first then writing). Multi-doc PostDocument cleanup has
+<a href=#439 id=439 data-nosnippet>439</a>  // a known libxml2 idcache use-after-free at process exit (see the
+<a href=#440 id=440 data-nosnippet>440</a>  // SVG-processor note above this block) that can intermittently SIGSEGV
+<a href=#441 id=441 data-nosnippet>441</a>  // after the last doc has been serialized. Writing eagerly inside the
+<a href=#442 id=442 data-nosnippet>442</a>  // iteration means even if cleanup later trips, every page that finished
+<a href=#443 id=443 data-nosnippet>443</a>  // post-processing is already on disk. The first doc's content is
+<a href=#444 id=444 data-nosnippet>444</a>  // returned so the caller can also write it to --dest in non-split mode.
+<a href=#445 id=445 data-nosnippet>445</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>main_output: <span class="prelude-ty">Option</span>&lt;String&gt; = <span class="prelude-val">None</span>;
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="kw">let </span>n = results.len();
+<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">for </span>doc <span class="kw">in </span>results.into_iter() {
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>dest = doc.get_destination().map(String::from);
+<a href=#449 id=449 data-nosnippet>449</a>    <span class="kw">let </span>t_serialize = audit_start(<span class="string">"to_xml_string"</span>);
+<a href=#450 id=450 data-nosnippet>450</a>    <span class="comment">// `serialize_whatsout` is a no-op (returns full doc) for the
+<a href=#451 id=451 data-nosnippet>451</a>    // default `Whatsout::Document`; for Fragment / Math it returns
+<a href=#452 id=452 data-nosnippet>452</a>    // the extracted subtree serialized via libxml `node_to_string`.
+<a href=#453 id=453 data-nosnippet>453</a>    </span><span class="kw">let </span>output = latexml_post::extract::serialize_whatsout(<span class="kw-2">&amp;</span>doc, whatsout);
+<a href=#454 id=454 data-nosnippet>454</a>    audit_end(t_serialize);
+<a href=#455 id=455 data-nosnippet>455</a>    <span class="kw">let </span>output = <span class="kw">if </span>is_html_out {
+<a href=#456 id=456 data-nosnippet>456</a>      finalize_html5(output, <span class="kw-2">&amp;</span>svg_fragments)
+<a href=#457 id=457 data-nosnippet>457</a>    } <span class="kw">else </span>{
+<a href=#458 id=458 data-nosnippet>458</a>      output
+<a href=#459 id=459 data-nosnippet>459</a>    };
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">let </span>output = <span class="kw">if </span>schemadocs &amp;&amp; is_html_out {
+<a href=#461 id=461 data-nosnippet>461</a>      latexml_post::schema_docs::process_page(<span class="kw-2">&amp;</span>output)
+<a href=#462 id=462 data-nosnippet>462</a>    } <span class="kw">else </span>{
+<a href=#463 id=463 data-nosnippet>463</a>      output
+<a href=#464 id=464 data-nosnippet>464</a>    };
+<a href=#465 id=465 data-nosnippet>465</a>    <span class="comment">// Write each doc to disk inside the loop. The single-file caller
+<a href=#466 id=466 data-nosnippet>466</a>    // also writes the first doc's content to --dest; the redundant write
+<a href=#467 id=467 data-nosnippet>467</a>    // is harmless and ensures the file is on disk even if a later libxml2
+<a href=#468 id=468 data-nosnippet>468</a>    // cleanup tripwire fires.
+<a href=#469 id=469 data-nosnippet>469</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(path) = dest.as_deref() {
+<a href=#470 id=470 data-nosnippet>470</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(parent) = std::path::Path::new(path).parent()
+<a href=#471 id=471 data-nosnippet>471</a>        &amp;&amp; !parent.as_os_str().is_empty()
+<a href=#472 id=472 data-nosnippet>472</a>      {
+<a href=#473 id=473 data-nosnippet>473</a>        <span class="kw">let _ </span>= std::fs::create_dir_all(parent);
+<a href=#474 id=474 data-nosnippet>474</a>      }
+<a href=#475 id=475 data-nosnippet>475</a>      <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = std::fs::write(path, <span class="kw-2">&amp;</span>output) {
+<a href=#476 id=476 data-nosnippet>476</a>        <span class="macro">eprintln!</span>(<span class="string">"Post-processing: failed to write page {}: {}"</span>, path, e);
+<a href=#477 id=477 data-nosnippet>477</a>      }
+<a href=#478 id=478 data-nosnippet>478</a>    }
+<a href=#479 id=479 data-nosnippet>479</a>    <span class="kw">if </span>main_output.is_none() {
+<a href=#480 id=480 data-nosnippet>480</a>      main_output = <span class="prelude-val">Some</span>(output);
+<a href=#481 id=481 data-nosnippet>481</a>    }
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="kw">let _ </span>= n;
+<a href=#483 id=483 data-nosnippet>483</a>  }
+<a href=#484 id=484 data-nosnippet>484</a>
+<a href=#485 id=485 data-nosnippet>485</a>  main_output.unwrap_or_else(|| xml.to_string())
+<a href=#486 id=486 data-nosnippet>486</a>}
+<a href=#487 id=487 data-nosnippet>487</a>
+<a href=#488 id=488 data-nosnippet>488</a><span class="doccomment">/// Apply HTML5 cleanup (XML prolog strip, void-element fixes) and inject SVG
+<a href=#489 id=489 data-nosnippet>489</a>/// fragments into empty `ltx_picture` spans. Pulled out of `run_post_processing`
+<a href=#490 id=490 data-nosnippet>490</a>/// so it can run on every split sub-document, not just the first.
+<a href=#491 id=491 data-nosnippet>491</a></span><span class="kw">fn </span>finalize_html5(output: String, svg_fragments: <span class="kw-2">&amp;</span>[(String, String)]) -&gt; String {
+<a href=#492 id=492 data-nosnippet>492</a>  <span class="kw">use </span>std::sync::LazyLock;
+<a href=#493 id=493 data-nosnippet>493</a>  <span class="comment">// Cached at first call — regex compile is the slow part of `Regex::new`,
+<a href=#494 id=494 data-nosnippet>494</a>  // and finalize_html5 runs on every (sub-)document in the post-pipeline.
+<a href=#495 id=495 data-nosnippet>495</a>  </span><span class="kw">static </span>XML_PROLOG_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#496 id=496 data-nosnippet>496</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r"^&lt;\?xml[^?]*\?&gt;\s*"</span>).unwrap());
+<a href=#497 id=497 data-nosnippet>497</a>  <span class="kw">static </span>NON_VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
+<a href=#498 id=498 data-nosnippet>498</a>    regex::Regex::new(
+<a href=#499 id=499 data-nosnippet>499</a>      <span class="string">r"&lt;(span|div|p|a|td|th|tr|section|article|figure|figcaption|pre|code|em|strong|b|i|u|sub|sup|small|cite)(\s[^&gt;]*)?/&gt;"</span>,
+<a href=#500 id=500 data-nosnippet>500</a>    ).unwrap()
+<a href=#501 id=501 data-nosnippet>501</a>  });
+<a href=#502 id=502 data-nosnippet>502</a>  <span class="kw">static </span>VOID_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
+<a href=#503 id=503 data-nosnippet>503</a>    regex::Regex::new(<span class="string">r"&lt;/(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)&gt;"</span>)
+<a href=#504 id=504 data-nosnippet>504</a>      .unwrap()
+<a href=#505 id=505 data-nosnippet>505</a>  });
+<a href=#506 id=506 data-nosnippet>506</a>  <span class="kw">static </span>VOID_SELF_CLOSE_RE: LazyLock&lt;regex::Regex&gt; = LazyLock::new(|| {
+<a href=#507 id=507 data-nosnippet>507</a>    regex::Regex::new(
+<a href=#508 id=508 data-nosnippet>508</a>      <span class="string">r"&lt;(br|img|hr|input|meta|link|col|area|base|source|track|wbr|embed|param)(\s[^&gt;]*?)\s*/&gt;"</span>,
+<a href=#509 id=509 data-nosnippet>509</a>    )
+<a href=#510 id=510 data-nosnippet>510</a>    .unwrap()
+<a href=#511 id=511 data-nosnippet>511</a>  });
+<a href=#512 id=512 data-nosnippet>512</a>
+<a href=#513 id=513 data-nosnippet>513</a>  <span class="kw">let </span>_gp_html5 = telemetry::phase(Phase::Html5Fixups);
+<a href=#514 id=514 data-nosnippet>514</a>  <span class="comment">// Strip &lt;?xml version...?&gt; prolog: HTML5 must NOT have an XML declaration.
+<a href=#515 id=515 data-nosnippet>515</a>  // libxml2's to_string() includes it by default; we strip it here.
+<a href=#516 id=516 data-nosnippet>516</a>  </span><span class="kw">let </span>output = XML_PROLOG_RE.replace(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
+<a href=#517 id=517 data-nosnippet>517</a>  <span class="kw">let </span>output = NON_VOID_SELF_CLOSE_RE
+<a href=#518 id=518 data-nosnippet>518</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;&lt;/$1&gt;"</span>)
+<a href=#519 id=519 data-nosnippet>519</a>    .to_string();
+<a href=#520 id=520 data-nosnippet>520</a>  <span class="kw">let </span>output = VOID_CLOSE_RE.replace_all(<span class="kw-2">&amp;</span>output, <span class="string">""</span>).to_string();
+<a href=#521 id=521 data-nosnippet>521</a>  <span class="kw">let </span><span class="kw-2">mut </span>output = VOID_SELF_CLOSE_RE
+<a href=#522 id=522 data-nosnippet>522</a>    .replace_all(<span class="kw-2">&amp;</span>output, <span class="string">"&lt;$1$2&gt;"</span>)
+<a href=#523 id=523 data-nosnippet>523</a>    .to_string();
+<a href=#524 id=524 data-nosnippet>524</a>  <span class="kw">if </span>!svg_fragments.is_empty() {
+<a href=#525 id=525 data-nosnippet>525</a>    <span class="kw">for </span>(pic_id, svg_html) <span class="kw">in </span>svg_fragments {
+<a href=#526 id=526 data-nosnippet>526</a>      <span class="kw">let </span>pattern = <span class="macro">format!</span>(
+<a href=#527 id=527 data-nosnippet>527</a>        <span class="string">r#"&lt;span id="{}" class="ltx_picture"([^&gt;]*)&gt;&lt;/span&gt;"#</span>,
+<a href=#528 id=528 data-nosnippet>528</a>        regex::escape(pic_id)
+<a href=#529 id=529 data-nosnippet>529</a>      );
+<a href=#530 id=530 data-nosnippet>530</a>      <span class="kw">if let </span><span class="prelude-val">Ok</span>(re) = regex::Regex::new(<span class="kw-2">&amp;</span>pattern) {
+<a href=#531 id=531 data-nosnippet>531</a>        output = re
+<a href=#532 id=532 data-nosnippet>532</a>          .replace(<span class="kw-2">&amp;</span>output, |caps: <span class="kw-2">&amp;</span>regex::Captures| {
+<a href=#533 id=533 data-nosnippet>533</a>            <span class="macro">format!</span>(
+<a href=#534 id=534 data-nosnippet>534</a>              <span class="string">r#"&lt;span id="{}" class="ltx_picture"{}&gt;{}&lt;/span&gt;"#</span>,
+<a href=#535 id=535 data-nosnippet>535</a>              pic_id, <span class="kw-2">&amp;</span>caps[<span class="number">1</span>], svg_html
+<a href=#536 id=536 data-nosnippet>536</a>            )
+<a href=#537 id=537 data-nosnippet>537</a>          })
+<a href=#538 id=538 data-nosnippet>538</a>          .to_string();
+<a href=#539 id=539 data-nosnippet>539</a>      }
+<a href=#540 id=540 data-nosnippet>540</a>    }
+<a href=#541 id=541 data-nosnippet>541</a>  }
+<a href=#542 id=542 data-nosnippet>542</a>  output
+<a href=#543 id=543 data-nosnippet>543</a>}
+<a href=#544 id=544 data-nosnippet>544</a>
+<a href=#545 id=545 data-nosnippet>545</a><span class="doccomment">/// Extract SVG fragments from intermediate LaTeXML XML.
+<a href=#546 id=546 data-nosnippet>546</a>///
+<a href=#547 id=547 data-nosnippet>547</a>/// Finds `&lt;picture&gt;` elements, converts their children to inline SVG HTML.
+<a href=#548 id=548 data-nosnippet>548</a>/// Uses a lightweight regex+string approach (no libxml2) to avoid the
+<a href=#549 id=549 data-nosnippet>549</a>/// use-after-free crash in PostDocument cleanup.
+<a href=#550 id=550 data-nosnippet>550</a>///
+<a href=#551 id=551 data-nosnippet>551</a>/// Returns (picture_id, svg_html) pairs for post-XSLT injection.
+<a href=#552 id=552 data-nosnippet>552</a></span><span class="kw">fn </span>extract_svg_fragments(xml: <span class="kw-2">&amp;</span>str) -&gt; Vec&lt;(String, String)&gt; {
+<a href=#553 id=553 data-nosnippet>553</a>  <span class="kw">use </span>std::sync::LazyLock;
+<a href=#554 id=554 data-nosnippet>554</a>  <span class="comment">// Fast-fail: most documents have no `&lt;picture&gt;` elements (tikz / pgf
+<a href=#555 id=555 data-nosnippet>555</a>  // is uncommon in the canvas). Skip the backtracking lazy-match
+<a href=#556 id=556 data-nosnippet>556</a>  // regex (`(?s)...(.*?)`) when `&lt;picture` doesn't appear as a literal
+<a href=#557 id=557 data-nosnippet>557</a>  // substring. `str::contains` is a SIMD-accelerated byte search and
+<a href=#558 id=558 data-nosnippet>558</a>  // takes microseconds even on ~MB inputs.
+<a href=#559 id=559 data-nosnippet>559</a>  </span><span class="kw">if </span>!xml.contains(<span class="string">"&lt;picture"</span>) {
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="kw">return </span>Vec::new();
+<a href=#561 id=561 data-nosnippet>561</a>  }
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="kw">static </span>PICTURE_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#563 id=563 data-nosnippet>563</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"(?s)&lt;picture([^&gt;]*)&gt;(.*?)&lt;/picture&gt;"#</span>).unwrap());
+<a href=#564 id=564 data-nosnippet>564</a>  <span class="kw">static </span>ID_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#565 id=565 data-nosnippet>565</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"xml:id="([^"]+)""#</span>).unwrap());
+<a href=#566 id=566 data-nosnippet>566</a>  <span class="kw">static </span>WIDTH_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#567 id=567 data-nosnippet>567</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"width="([^"]+)""#</span>).unwrap());
+<a href=#568 id=568 data-nosnippet>568</a>  <span class="kw">static </span>HEIGHT_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#569 id=569 data-nosnippet>569</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"height="([^"]+)""#</span>).unwrap());
+<a href=#570 id=570 data-nosnippet>570</a>  <span class="kw">let </span><span class="kw-2">mut </span>fragments = Vec::new();
+<a href=#571 id=571 data-nosnippet>571</a>  <span class="kw">let </span>picture_re = <span class="kw-2">&amp;*</span>PICTURE_RE;
+<a href=#572 id=572 data-nosnippet>572</a>  <span class="kw">let </span>id_re = <span class="kw-2">&amp;*</span>ID_RE;
+<a href=#573 id=573 data-nosnippet>573</a>  <span class="kw">let </span>width_re = <span class="kw-2">&amp;*</span>WIDTH_RE;
+<a href=#574 id=574 data-nosnippet>574</a>  <span class="kw">let </span>height_re = <span class="kw-2">&amp;*</span>HEIGHT_RE;
+<a href=#575 id=575 data-nosnippet>575</a>
+<a href=#576 id=576 data-nosnippet>576</a>  <span class="kw">for </span>pic_caps <span class="kw">in </span>picture_re.captures_iter(xml) {
+<a href=#577 id=577 data-nosnippet>577</a>    <span class="kw">let </span>attrs = <span class="kw-2">&amp;</span>pic_caps[<span class="number">1</span>];
+<a href=#578 id=578 data-nosnippet>578</a>    <span class="kw">let </span>content = <span class="kw-2">&amp;</span>pic_caps[<span class="number">2</span>];
+<a href=#579 id=579 data-nosnippet>579</a>    <span class="kw">let </span>id = id_re
+<a href=#580 id=580 data-nosnippet>580</a>      .captures(attrs)
+<a href=#581 id=581 data-nosnippet>581</a>      .map(|c| c[<span class="number">1</span>].to_string())
+<a href=#582 id=582 data-nosnippet>582</a>      .unwrap_or_default();
+<a href=#583 id=583 data-nosnippet>583</a>    <span class="kw">let </span>width = width_re.captures(attrs).and_then(|c| parse_tex_dim(<span class="kw-2">&amp;</span>c[<span class="number">1</span>]));
+<a href=#584 id=584 data-nosnippet>584</a>    <span class="kw">let </span>height = height_re.captures(attrs).and_then(|c| parse_tex_dim(<span class="kw-2">&amp;</span>c[<span class="number">1</span>]));
+<a href=#585 id=585 data-nosnippet>585</a>
+<a href=#586 id=586 data-nosnippet>586</a>    <span class="kw">if </span>id.is_empty() || content.trim().is_empty() {
+<a href=#587 id=587 data-nosnippet>587</a>      <span class="kw">continue</span>;
+<a href=#588 id=588 data-nosnippet>588</a>    }
+<a href=#589 id=589 data-nosnippet>589</a>
+<a href=#590 id=590 data-nosnippet>590</a>    <span class="kw">let </span>w = width.unwrap_or(<span class="number">100.0</span>);
+<a href=#591 id=591 data-nosnippet>591</a>    <span class="kw">let </span>h = height.unwrap_or(<span class="number">100.0</span>);
+<a href=#592 id=592 data-nosnippet>592</a>
+<a href=#593 id=593 data-nosnippet>593</a>    <span class="comment">// Build inline SVG: coordinate system has y-flip (TeX origin bottom-left, SVG top-left)
+<a href=#594 id=594 data-nosnippet>594</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>svg_content = <span class="macro">format!</span>(
+<a href=#595 id=595 data-nosnippet>595</a>      <span class="string">r#"&lt;svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="{w:.2}" height="{h:.2}" overflow="visible"&gt;"#</span>,
+<a href=#596 id=596 data-nosnippet>596</a>    );
+<a href=#597 id=597 data-nosnippet>597</a>    svg_content.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+<a href=#598 id=598 data-nosnippet>598</a>      <span class="string">r#"&lt;g transform="translate(0,{h:.2}) scale(1,-1)"&gt;"#</span>,
+<a href=#599 id=599 data-nosnippet>599</a>    ));
+<a href=#600 id=600 data-nosnippet>600</a>
+<a href=#601 id=601 data-nosnippet>601</a>    <span class="comment">// Convert ltx picture children to SVG elements
+<a href=#602 id=602 data-nosnippet>602</a>    </span>svg_content.push_str(<span class="kw-2">&amp;</span>convert_picture_children_to_svg(content));
+<a href=#603 id=603 data-nosnippet>603</a>
+<a href=#604 id=604 data-nosnippet>604</a>    svg_content.push_str(<span class="string">"&lt;/g&gt;&lt;/svg&gt;"</span>);
+<a href=#605 id=605 data-nosnippet>605</a>    fragments.push((id, svg_content));
+<a href=#606 id=606 data-nosnippet>606</a>  }
+<a href=#607 id=607 data-nosnippet>607</a>  fragments
+<a href=#608 id=608 data-nosnippet>608</a>}
+<a href=#609 id=609 data-nosnippet>609</a>
+<a href=#610 id=610 data-nosnippet>610</a><span class="doccomment">/// Convert LaTeXML picture children (g, line, text, circle, etc.) to SVG elements.
+<a href=#611 id=611 data-nosnippet>611</a></span><span class="kw">fn </span>convert_picture_children_to_svg(content: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#612 id=612 data-nosnippet>612</a>  <span class="kw">use </span>std::sync::LazyLock;
+<a href=#613 id=613 data-nosnippet>613</a>  <span class="kw">static </span>G_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#614 id=614 data-nosnippet>614</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"(?s)&lt;g([^&gt;]*)&gt;(.*?)&lt;/g&gt;"#</span>).unwrap());
+<a href=#615 id=615 data-nosnippet>615</a>  <span class="kw">static </span>TRANSFORM_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#616 id=616 data-nosnippet>616</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"transform="([^"]+)""#</span>).unwrap());
+<a href=#617 id=617 data-nosnippet>617</a>  <span class="kw">static </span>LINE_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#618 id=618 data-nosnippet>618</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;line\s+points="([^"]+)"([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#619 id=619 data-nosnippet>619</a>  <span class="kw">static </span>CIRCLE_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#620 id=620 data-nosnippet>620</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;circle([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#621 id=621 data-nosnippet>621</a>  <span class="kw">static </span>ELLIPSE_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#622 id=622 data-nosnippet>622</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;ellipse([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#623 id=623 data-nosnippet>623</a>  <span class="kw">static </span>RECT_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#624 id=624 data-nosnippet>624</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;rect([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#625 id=625 data-nosnippet>625</a>  <span class="kw">static </span>POLYGON_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#626 id=626 data-nosnippet>626</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;polygon([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="kw">static </span>PATH_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#628 id=628 data-nosnippet>628</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;path([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#629 id=629 data-nosnippet>629</a>  <span class="kw">static </span>BEZIER_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#630 id=630 data-nosnippet>630</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"&lt;bezier\s+points="([^"]+)"([^/]*)/?&gt;"#</span>).unwrap());
+<a href=#631 id=631 data-nosnippet>631</a>  <span class="kw">static </span>TEXT_RE: LazyLock&lt;regex::Regex&gt; =
+<a href=#632 id=632 data-nosnippet>632</a>    LazyLock::new(|| regex::Regex::new(<span class="string">r#"(?s)&lt;text([^&gt;]*)&gt;(.*?)&lt;/text&gt;"#</span>).unwrap());
+<a href=#633 id=633 data-nosnippet>633</a>
+<a href=#634 id=634 data-nosnippet>634</a>  <span class="kw">let </span><span class="kw-2">mut </span>svg = String::new();
 <a href=#635 id=635 data-nosnippet>635</a>
-<a href=#636 id=636 data-nosnippet>636</a>    <span class="comment">// &lt;line points="x1,y1 x2,y2" stroke="..." stroke-width="..."/&gt;
-<a href=#637 id=637 data-nosnippet>637</a>    </span><span class="kw">for </span>line_caps <span class="kw">in </span>LINE_RE.captures_iter(g_content) {
-<a href=#638 id=638 data-nosnippet>638</a>      <span class="kw">let </span>points = <span class="kw-2">&amp;</span>line_caps[<span class="number">1</span>];
-<a href=#639 id=639 data-nosnippet>639</a>      <span class="kw">let </span>rest_attrs = <span class="kw-2">&amp;</span>line_caps[<span class="number">2</span>];
-<a href=#640 id=640 data-nosnippet>640</a>      <span class="kw">let </span>coords: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = points.split_whitespace().collect();
-<a href=#641 id=641 data-nosnippet>641</a>      <span class="kw">if </span>coords.len() &gt;= <span class="number">2 </span>{
-<a href=#642 id=642 data-nosnippet>642</a>        <span class="kw">let </span>p1: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = coords[<span class="number">0</span>].split(<span class="string">','</span>).collect();
-<a href=#643 id=643 data-nosnippet>643</a>        <span class="kw">let </span>p2: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = coords[<span class="number">1</span>].split(<span class="string">','</span>).collect();
-<a href=#644 id=644 data-nosnippet>644</a>        <span class="kw">if </span>p1.len() == <span class="number">2 </span>&amp;&amp; p2.len() == <span class="number">2 </span>{
-<a href=#645 id=645 data-nosnippet>645</a>          svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-<a href=#646 id=646 data-nosnippet>646</a>            <span class="string">r#"&lt;line x1="{}" y1="{}" x2="{}" y2="{}"{}/&gt;"#</span>,
-<a href=#647 id=647 data-nosnippet>647</a>            p1[<span class="number">0</span>], p1[<span class="number">1</span>], p2[<span class="number">0</span>], p2[<span class="number">1</span>], rest_attrs
-<a href=#648 id=648 data-nosnippet>648</a>          ));
-<a href=#649 id=649 data-nosnippet>649</a>        }
-<a href=#650 id=650 data-nosnippet>650</a>      }
-<a href=#651 id=651 data-nosnippet>651</a>    }
-<a href=#652 id=652 data-nosnippet>652</a>
-<a href=#653 id=653 data-nosnippet>653</a>    <span class="comment">// &lt;circle cx="..." cy="..." r="..." .../&gt;
-<a href=#654 id=654 data-nosnippet>654</a>    </span><span class="kw">for </span>circle_caps <span class="kw">in </span>CIRCLE_RE.captures_iter(g_content) {
-<a href=#655 id=655 data-nosnippet>655</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;circle{}/&gt;"</span>, <span class="kw-2">&amp;</span>circle_caps[<span class="number">1</span>]));
-<a href=#656 id=656 data-nosnippet>656</a>    }
-<a href=#657 id=657 data-nosnippet>657</a>
-<a href=#658 id=658 data-nosnippet>658</a>    <span class="comment">// &lt;ellipse cx="..." cy="..." rx="..." ry="..." .../&gt;
-<a href=#659 id=659 data-nosnippet>659</a>    </span><span class="kw">for </span>ellipse_caps <span class="kw">in </span>ELLIPSE_RE.captures_iter(g_content) {
-<a href=#660 id=660 data-nosnippet>660</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;ellipse{}/&gt;"</span>, <span class="kw-2">&amp;</span>ellipse_caps[<span class="number">1</span>]));
-<a href=#661 id=661 data-nosnippet>661</a>    }
-<a href=#662 id=662 data-nosnippet>662</a>
-<a href=#663 id=663 data-nosnippet>663</a>    <span class="comment">// &lt;rect x="..." y="..." width="..." height="..." .../&gt;
-<a href=#664 id=664 data-nosnippet>664</a>    </span><span class="kw">for </span>rect_caps <span class="kw">in </span>RECT_RE.captures_iter(g_content) {
-<a href=#665 id=665 data-nosnippet>665</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;rect{}/&gt;"</span>, <span class="kw-2">&amp;</span>rect_caps[<span class="number">1</span>]));
-<a href=#666 id=666 data-nosnippet>666</a>    }
-<a href=#667 id=667 data-nosnippet>667</a>
-<a href=#668 id=668 data-nosnippet>668</a>    <span class="comment">// &lt;polygon points="..." .../&gt;
-<a href=#669 id=669 data-nosnippet>669</a>    </span><span class="kw">for </span>polygon_caps <span class="kw">in </span>POLYGON_RE.captures_iter(g_content) {
-<a href=#670 id=670 data-nosnippet>670</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;polygon{}/&gt;"</span>, <span class="kw-2">&amp;</span>polygon_caps[<span class="number">1</span>]));
-<a href=#671 id=671 data-nosnippet>671</a>    }
-<a href=#672 id=672 data-nosnippet>672</a>
-<a href=#673 id=673 data-nosnippet>673</a>    <span class="comment">// &lt;path d="..." .../&gt;
-<a href=#674 id=674 data-nosnippet>674</a>    </span><span class="kw">for </span>path_caps <span class="kw">in </span>PATH_RE.captures_iter(g_content) {
-<a href=#675 id=675 data-nosnippet>675</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;path{}/&gt;"</span>, <span class="kw-2">&amp;</span>path_caps[<span class="number">1</span>]));
-<a href=#676 id=676 data-nosnippet>676</a>    }
-<a href=#677 id=677 data-nosnippet>677</a>
-<a href=#678 id=678 data-nosnippet>678</a>    <span class="comment">// &lt;bezier points="x1,y1 x2,y2 x3,y3 x4,y4" .../&gt;
-<a href=#679 id=679 data-nosnippet>679</a>    // Convert to SVG cubic bezier path
-<a href=#680 id=680 data-nosnippet>680</a>    </span><span class="kw">for </span>bez_caps <span class="kw">in </span>BEZIER_RE.captures_iter(g_content) {
-<a href=#681 id=681 data-nosnippet>681</a>      <span class="kw">let </span>points = <span class="kw-2">&amp;</span>bez_caps[<span class="number">1</span>];
-<a href=#682 id=682 data-nosnippet>682</a>      <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>bez_caps[<span class="number">2</span>];
-<a href=#683 id=683 data-nosnippet>683</a>      <span class="kw">let </span>coords: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = points.split_whitespace().collect();
-<a href=#684 id=684 data-nosnippet>684</a>      <span class="kw">if </span>coords.len() &gt;= <span class="number">4 </span>{
-<a href=#685 id=685 data-nosnippet>685</a>        <span class="comment">// SVG cubic bezier: M x0,y0 C x1,y1 x2,y2 x3,y3
-<a href=#686 id=686 data-nosnippet>686</a>        </span><span class="kw">let </span>d = <span class="macro">format!</span>(
-<a href=#687 id=687 data-nosnippet>687</a>          <span class="string">"M {} C {} {} {}"</span>,
-<a href=#688 id=688 data-nosnippet>688</a>          coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>], coords[<span class="number">3</span>]
-<a href=#689 id=689 data-nosnippet>689</a>        );
-<a href=#690 id=690 data-nosnippet>690</a>        svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
-<a href=#691 id=691 data-nosnippet>691</a>      } <span class="kw">else if </span>coords.len() &gt;= <span class="number">3 </span>{
-<a href=#692 id=692 data-nosnippet>692</a>        <span class="comment">// Quadratic bezier: M x0,y0 Q x1,y1 x2,y2
-<a href=#693 id=693 data-nosnippet>693</a>        </span><span class="kw">let </span>d = <span class="macro">format!</span>(<span class="string">"M {} Q {} {}"</span>, coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>]);
-<a href=#694 id=694 data-nosnippet>694</a>        svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
-<a href=#695 id=695 data-nosnippet>695</a>      }
-<a href=#696 id=696 data-nosnippet>696</a>    }
-<a href=#697 id=697 data-nosnippet>697</a>
-<a href=#698 id=698 data-nosnippet>698</a>    <span class="comment">// &lt;arc .../&gt; — arc segments (rarely used, stub for now)
-<a href=#699 id=699 data-nosnippet>699</a>    // &lt;wedge .../&gt; — filled wedges (rarely used, stub for now)
-<a href=#700 id=700 data-nosnippet>700</a>
-<a href=#701 id=701 data-nosnippet>701</a>    // &lt;text&gt;...&lt;/text&gt; — wrap in SVG text with y-flip correction
-<a href=#702 id=702 data-nosnippet>702</a>    </span><span class="kw">for </span>text_caps <span class="kw">in </span>TEXT_RE.captures_iter(g_content) {
-<a href=#703 id=703 data-nosnippet>703</a>      <span class="kw">let </span>text_attrs = <span class="kw-2">&amp;</span>text_caps[<span class="number">1</span>];
-<a href=#704 id=704 data-nosnippet>704</a>      <span class="kw">let </span>text_content = <span class="kw-2">&amp;</span>text_caps[<span class="number">2</span>];
-<a href=#705 id=705 data-nosnippet>705</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
-<a href=#706 id=706 data-nosnippet>706</a>        <span class="string">r#"&lt;g transform="scale(1,-1)"&gt;&lt;text{text_attrs}&gt;{text_content}&lt;/text&gt;&lt;/g&gt;"#</span>,
-<a href=#707 id=707 data-nosnippet>707</a>      ));
-<a href=#708 id=708 data-nosnippet>708</a>    }
-<a href=#709 id=709 data-nosnippet>709</a>
-<a href=#710 id=710 data-nosnippet>710</a>    svg.push_str(<span class="string">"&lt;/g&gt;"</span>);
-<a href=#711 id=711 data-nosnippet>711</a>  }
-<a href=#712 id=712 data-nosnippet>712</a>
-<a href=#713 id=713 data-nosnippet>713</a>  <span class="comment">// Also handle direct children not inside &lt;g&gt; (e.g. top-level &lt;bezier&gt;, &lt;line&gt;)
-<a href=#714 id=714 data-nosnippet>714</a>  // These appear directly inside &lt;picture&gt; without a &lt;g&gt; wrapper
-<a href=#715 id=715 data-nosnippet>715</a>  </span><span class="kw">let </span>direct_bezier_re =
-<a href=#716 id=716 data-nosnippet>716</a>    regex::Regex::new(<span class="string">r#"(?m)^\s*&lt;bezier\s+points="([^"]+)"([^/]*)/?&gt;"#</span>).unwrap();
-<a href=#717 id=717 data-nosnippet>717</a>  <span class="kw">for </span>bez_caps <span class="kw">in </span>direct_bezier_re.captures_iter(content) {
-<a href=#718 id=718 data-nosnippet>718</a>    <span class="kw">let </span>points = <span class="kw-2">&amp;</span>bez_caps[<span class="number">1</span>];
-<a href=#719 id=719 data-nosnippet>719</a>    <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>bez_caps[<span class="number">2</span>];
-<a href=#720 id=720 data-nosnippet>720</a>    <span class="kw">let </span>coords: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = points.split_whitespace().collect();
-<a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">if </span>coords.len() &gt;= <span class="number">4 </span>{
-<a href=#722 id=722 data-nosnippet>722</a>      <span class="kw">let </span>d = <span class="macro">format!</span>(
-<a href=#723 id=723 data-nosnippet>723</a>        <span class="string">"M {} C {} {} {}"</span>,
-<a href=#724 id=724 data-nosnippet>724</a>        coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>], coords[<span class="number">3</span>]
-<a href=#725 id=725 data-nosnippet>725</a>      );
-<a href=#726 id=726 data-nosnippet>726</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
-<a href=#727 id=727 data-nosnippet>727</a>    } <span class="kw">else if </span>coords.len() &gt;= <span class="number">3 </span>{
-<a href=#728 id=728 data-nosnippet>728</a>      <span class="kw">let </span>d = <span class="macro">format!</span>(<span class="string">"M {} Q {} {}"</span>, coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>]);
-<a href=#729 id=729 data-nosnippet>729</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
-<a href=#730 id=730 data-nosnippet>730</a>    }
-<a href=#731 id=731 data-nosnippet>731</a>  }
-<a href=#732 id=732 data-nosnippet>732</a>
-<a href=#733 id=733 data-nosnippet>733</a>  svg
-<a href=#734 id=734 data-nosnippet>734</a>}
-<a href=#735 id=735 data-nosnippet>735</a>
-<a href=#736 id=736 data-nosnippet>736</a><span class="doccomment">/// Parse a TeX dimension string (e.g. "100.0pt") to pixels.
-<a href=#737 id=737 data-nosnippet>737</a></span><span class="kw">fn </span>parse_tex_dim(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt; {
-<a href=#738 id=738 data-nosnippet>738</a>  <span class="kw">let </span>s = s.trim();
-<a href=#739 id=739 data-nosnippet>739</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = s.strip_suffix(<span class="string">"pt"</span>) {
-<a href=#740 id=740 data-nosnippet>740</a>    rest.parse::&lt;f64&gt;().ok().map(|v| v * <span class="number">96.0 </span>/ <span class="number">72.27</span>)
-<a href=#741 id=741 data-nosnippet>741</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(rest) = s.strip_suffix(<span class="string">"px"</span>) {
-<a href=#742 id=742 data-nosnippet>742</a>    rest.parse::&lt;f64&gt;().ok()
-<a href=#743 id=743 data-nosnippet>743</a>  } <span class="kw">else </span>{
-<a href=#744 id=744 data-nosnippet>744</a>    s.parse::&lt;f64&gt;().ok()
-<a href=#745 id=745 data-nosnippet>745</a>  }
-<a href=#746 id=746 data-nosnippet>746</a>}
+<a href=#636 id=636 data-nosnippet>636</a>  <span class="kw">for </span>g_caps <span class="kw">in </span>G_RE.captures_iter(content) {
+<a href=#637 id=637 data-nosnippet>637</a>    <span class="kw">let </span>g_attrs = <span class="kw-2">&amp;</span>g_caps[<span class="number">1</span>];
+<a href=#638 id=638 data-nosnippet>638</a>    <span class="kw">let </span>g_content = <span class="kw-2">&amp;</span>g_caps[<span class="number">2</span>];
+<a href=#639 id=639 data-nosnippet>639</a>
+<a href=#640 id=640 data-nosnippet>640</a>    <span class="comment">// Extract transform
+<a href=#641 id=641 data-nosnippet>641</a>    </span><span class="kw">let </span>transform = TRANSFORM_RE.captures(g_attrs).map(|c| c[<span class="number">1</span>].to_string());
+<a href=#642 id=642 data-nosnippet>642</a>
+<a href=#643 id=643 data-nosnippet>643</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(t) = <span class="kw-2">&amp;</span>transform {
+<a href=#644 id=644 data-nosnippet>644</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;g transform="{t}"&gt;"#</span>));
+<a href=#645 id=645 data-nosnippet>645</a>    } <span class="kw">else </span>{
+<a href=#646 id=646 data-nosnippet>646</a>      svg.push_str(<span class="string">"&lt;g&gt;"</span>);
+<a href=#647 id=647 data-nosnippet>647</a>    }
+<a href=#648 id=648 data-nosnippet>648</a>
+<a href=#649 id=649 data-nosnippet>649</a>    <span class="comment">// &lt;line points="x1,y1 x2,y2" stroke="..." stroke-width="..."/&gt;
+<a href=#650 id=650 data-nosnippet>650</a>    </span><span class="kw">for </span>line_caps <span class="kw">in </span>LINE_RE.captures_iter(g_content) {
+<a href=#651 id=651 data-nosnippet>651</a>      <span class="kw">let </span>points = <span class="kw-2">&amp;</span>line_caps[<span class="number">1</span>];
+<a href=#652 id=652 data-nosnippet>652</a>      <span class="kw">let </span>rest_attrs = <span class="kw-2">&amp;</span>line_caps[<span class="number">2</span>];
+<a href=#653 id=653 data-nosnippet>653</a>      <span class="kw">let </span>coords: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = points.split_whitespace().collect();
+<a href=#654 id=654 data-nosnippet>654</a>      <span class="kw">if </span>coords.len() &gt;= <span class="number">2 </span>{
+<a href=#655 id=655 data-nosnippet>655</a>        <span class="kw">let </span>p1: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = coords[<span class="number">0</span>].split(<span class="string">','</span>).collect();
+<a href=#656 id=656 data-nosnippet>656</a>        <span class="kw">let </span>p2: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = coords[<span class="number">1</span>].split(<span class="string">','</span>).collect();
+<a href=#657 id=657 data-nosnippet>657</a>        <span class="kw">if </span>p1.len() == <span class="number">2 </span>&amp;&amp; p2.len() == <span class="number">2 </span>{
+<a href=#658 id=658 data-nosnippet>658</a>          svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+<a href=#659 id=659 data-nosnippet>659</a>            <span class="string">r#"&lt;line x1="{}" y1="{}" x2="{}" y2="{}"{}/&gt;"#</span>,
+<a href=#660 id=660 data-nosnippet>660</a>            p1[<span class="number">0</span>], p1[<span class="number">1</span>], p2[<span class="number">0</span>], p2[<span class="number">1</span>], rest_attrs
+<a href=#661 id=661 data-nosnippet>661</a>          ));
+<a href=#662 id=662 data-nosnippet>662</a>        }
+<a href=#663 id=663 data-nosnippet>663</a>      }
+<a href=#664 id=664 data-nosnippet>664</a>    }
+<a href=#665 id=665 data-nosnippet>665</a>
+<a href=#666 id=666 data-nosnippet>666</a>    <span class="comment">// &lt;circle cx="..." cy="..." r="..." .../&gt;
+<a href=#667 id=667 data-nosnippet>667</a>    </span><span class="kw">for </span>circle_caps <span class="kw">in </span>CIRCLE_RE.captures_iter(g_content) {
+<a href=#668 id=668 data-nosnippet>668</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;circle{}/&gt;"</span>, <span class="kw-2">&amp;</span>circle_caps[<span class="number">1</span>]));
+<a href=#669 id=669 data-nosnippet>669</a>    }
+<a href=#670 id=670 data-nosnippet>670</a>
+<a href=#671 id=671 data-nosnippet>671</a>    <span class="comment">// &lt;ellipse cx="..." cy="..." rx="..." ry="..." .../&gt;
+<a href=#672 id=672 data-nosnippet>672</a>    </span><span class="kw">for </span>ellipse_caps <span class="kw">in </span>ELLIPSE_RE.captures_iter(g_content) {
+<a href=#673 id=673 data-nosnippet>673</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;ellipse{}/&gt;"</span>, <span class="kw-2">&amp;</span>ellipse_caps[<span class="number">1</span>]));
+<a href=#674 id=674 data-nosnippet>674</a>    }
+<a href=#675 id=675 data-nosnippet>675</a>
+<a href=#676 id=676 data-nosnippet>676</a>    <span class="comment">// &lt;rect x="..." y="..." width="..." height="..." .../&gt;
+<a href=#677 id=677 data-nosnippet>677</a>    </span><span class="kw">for </span>rect_caps <span class="kw">in </span>RECT_RE.captures_iter(g_content) {
+<a href=#678 id=678 data-nosnippet>678</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;rect{}/&gt;"</span>, <span class="kw-2">&amp;</span>rect_caps[<span class="number">1</span>]));
+<a href=#679 id=679 data-nosnippet>679</a>    }
+<a href=#680 id=680 data-nosnippet>680</a>
+<a href=#681 id=681 data-nosnippet>681</a>    <span class="comment">// &lt;polygon points="..." .../&gt;
+<a href=#682 id=682 data-nosnippet>682</a>    </span><span class="kw">for </span>polygon_caps <span class="kw">in </span>POLYGON_RE.captures_iter(g_content) {
+<a href=#683 id=683 data-nosnippet>683</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;polygon{}/&gt;"</span>, <span class="kw-2">&amp;</span>polygon_caps[<span class="number">1</span>]));
+<a href=#684 id=684 data-nosnippet>684</a>    }
+<a href=#685 id=685 data-nosnippet>685</a>
+<a href=#686 id=686 data-nosnippet>686</a>    <span class="comment">// &lt;path d="..." .../&gt;
+<a href=#687 id=687 data-nosnippet>687</a>    </span><span class="kw">for </span>path_caps <span class="kw">in </span>PATH_RE.captures_iter(g_content) {
+<a href=#688 id=688 data-nosnippet>688</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"&lt;path{}/&gt;"</span>, <span class="kw-2">&amp;</span>path_caps[<span class="number">1</span>]));
+<a href=#689 id=689 data-nosnippet>689</a>    }
+<a href=#690 id=690 data-nosnippet>690</a>
+<a href=#691 id=691 data-nosnippet>691</a>    <span class="comment">// &lt;bezier points="x1,y1 x2,y2 x3,y3 x4,y4" .../&gt;
+<a href=#692 id=692 data-nosnippet>692</a>    // Convert to SVG cubic bezier path
+<a href=#693 id=693 data-nosnippet>693</a>    </span><span class="kw">for </span>bez_caps <span class="kw">in </span>BEZIER_RE.captures_iter(g_content) {
+<a href=#694 id=694 data-nosnippet>694</a>      <span class="kw">let </span>points = <span class="kw-2">&amp;</span>bez_caps[<span class="number">1</span>];
+<a href=#695 id=695 data-nosnippet>695</a>      <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>bez_caps[<span class="number">2</span>];
+<a href=#696 id=696 data-nosnippet>696</a>      <span class="kw">let </span>coords: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = points.split_whitespace().collect();
+<a href=#697 id=697 data-nosnippet>697</a>      <span class="kw">if </span>coords.len() &gt;= <span class="number">4 </span>{
+<a href=#698 id=698 data-nosnippet>698</a>        <span class="comment">// SVG cubic bezier: M x0,y0 C x1,y1 x2,y2 x3,y3
+<a href=#699 id=699 data-nosnippet>699</a>        </span><span class="kw">let </span>d = <span class="macro">format!</span>(
+<a href=#700 id=700 data-nosnippet>700</a>          <span class="string">"M {} C {} {} {}"</span>,
+<a href=#701 id=701 data-nosnippet>701</a>          coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>], coords[<span class="number">3</span>]
+<a href=#702 id=702 data-nosnippet>702</a>        );
+<a href=#703 id=703 data-nosnippet>703</a>        svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
+<a href=#704 id=704 data-nosnippet>704</a>      } <span class="kw">else if </span>coords.len() &gt;= <span class="number">3 </span>{
+<a href=#705 id=705 data-nosnippet>705</a>        <span class="comment">// Quadratic bezier: M x0,y0 Q x1,y1 x2,y2
+<a href=#706 id=706 data-nosnippet>706</a>        </span><span class="kw">let </span>d = <span class="macro">format!</span>(<span class="string">"M {} Q {} {}"</span>, coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>]);
+<a href=#707 id=707 data-nosnippet>707</a>        svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
+<a href=#708 id=708 data-nosnippet>708</a>      }
+<a href=#709 id=709 data-nosnippet>709</a>    }
+<a href=#710 id=710 data-nosnippet>710</a>
+<a href=#711 id=711 data-nosnippet>711</a>    <span class="comment">// &lt;arc .../&gt; — arc segments (rarely used, stub for now)
+<a href=#712 id=712 data-nosnippet>712</a>    // &lt;wedge .../&gt; — filled wedges (rarely used, stub for now)
+<a href=#713 id=713 data-nosnippet>713</a>
+<a href=#714 id=714 data-nosnippet>714</a>    // &lt;text&gt;...&lt;/text&gt; — wrap in SVG text with y-flip correction
+<a href=#715 id=715 data-nosnippet>715</a>    </span><span class="kw">for </span>text_caps <span class="kw">in </span>TEXT_RE.captures_iter(g_content) {
+<a href=#716 id=716 data-nosnippet>716</a>      <span class="kw">let </span>text_attrs = <span class="kw-2">&amp;</span>text_caps[<span class="number">1</span>];
+<a href=#717 id=717 data-nosnippet>717</a>      <span class="kw">let </span>text_content = <span class="kw-2">&amp;</span>text_caps[<span class="number">2</span>];
+<a href=#718 id=718 data-nosnippet>718</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(
+<a href=#719 id=719 data-nosnippet>719</a>        <span class="string">r#"&lt;g transform="scale(1,-1)"&gt;&lt;text{text_attrs}&gt;{text_content}&lt;/text&gt;&lt;/g&gt;"#</span>,
+<a href=#720 id=720 data-nosnippet>720</a>      ));
+<a href=#721 id=721 data-nosnippet>721</a>    }
+<a href=#722 id=722 data-nosnippet>722</a>
+<a href=#723 id=723 data-nosnippet>723</a>    svg.push_str(<span class="string">"&lt;/g&gt;"</span>);
+<a href=#724 id=724 data-nosnippet>724</a>  }
+<a href=#725 id=725 data-nosnippet>725</a>
+<a href=#726 id=726 data-nosnippet>726</a>  <span class="comment">// Also handle direct children not inside &lt;g&gt; (e.g. top-level &lt;bezier&gt;, &lt;line&gt;)
+<a href=#727 id=727 data-nosnippet>727</a>  // These appear directly inside &lt;picture&gt; without a &lt;g&gt; wrapper
+<a href=#728 id=728 data-nosnippet>728</a>  </span><span class="kw">let </span>direct_bezier_re =
+<a href=#729 id=729 data-nosnippet>729</a>    regex::Regex::new(<span class="string">r#"(?m)^\s*&lt;bezier\s+points="([^"]+)"([^/]*)/?&gt;"#</span>).unwrap();
+<a href=#730 id=730 data-nosnippet>730</a>  <span class="kw">for </span>bez_caps <span class="kw">in </span>direct_bezier_re.captures_iter(content) {
+<a href=#731 id=731 data-nosnippet>731</a>    <span class="kw">let </span>points = <span class="kw-2">&amp;</span>bez_caps[<span class="number">1</span>];
+<a href=#732 id=732 data-nosnippet>732</a>    <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>bez_caps[<span class="number">2</span>];
+<a href=#733 id=733 data-nosnippet>733</a>    <span class="kw">let </span>coords: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = points.split_whitespace().collect();
+<a href=#734 id=734 data-nosnippet>734</a>    <span class="kw">if </span>coords.len() &gt;= <span class="number">4 </span>{
+<a href=#735 id=735 data-nosnippet>735</a>      <span class="kw">let </span>d = <span class="macro">format!</span>(
+<a href=#736 id=736 data-nosnippet>736</a>        <span class="string">"M {} C {} {} {}"</span>,
+<a href=#737 id=737 data-nosnippet>737</a>        coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>], coords[<span class="number">3</span>]
+<a href=#738 id=738 data-nosnippet>738</a>      );
+<a href=#739 id=739 data-nosnippet>739</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
+<a href=#740 id=740 data-nosnippet>740</a>    } <span class="kw">else if </span>coords.len() &gt;= <span class="number">3 </span>{
+<a href=#741 id=741 data-nosnippet>741</a>      <span class="kw">let </span>d = <span class="macro">format!</span>(<span class="string">"M {} Q {} {}"</span>, coords[<span class="number">0</span>], coords[<span class="number">1</span>], coords[<span class="number">2</span>]);
+<a href=#742 id=742 data-nosnippet>742</a>      svg.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r#"&lt;path d="{d}"{rest} fill="none"/&gt;"#</span>));
+<a href=#743 id=743 data-nosnippet>743</a>    }
+<a href=#744 id=744 data-nosnippet>744</a>  }
+<a href=#745 id=745 data-nosnippet>745</a>
+<a href=#746 id=746 data-nosnippet>746</a>  svg
+<a href=#747 id=747 data-nosnippet>747</a>}
+<a href=#748 id=748 data-nosnippet>748</a>
+<a href=#749 id=749 data-nosnippet>749</a><span class="doccomment">/// Parse a TeX dimension string (e.g. "100.0pt") to pixels.
+<a href=#750 id=750 data-nosnippet>750</a></span><span class="kw">fn </span>parse_tex_dim(s: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;f64&gt; {
+<a href=#751 id=751 data-nosnippet>751</a>  <span class="kw">let </span>s = s.trim();
+<a href=#752 id=752 data-nosnippet>752</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = s.strip_suffix(<span class="string">"pt"</span>) {
+<a href=#753 id=753 data-nosnippet>753</a>    rest.parse::&lt;f64&gt;().ok().map(|v| v * <span class="number">96.0 </span>/ <span class="number">72.27</span>)
+<a href=#754 id=754 data-nosnippet>754</a>  } <span class="kw">else if let </span><span class="prelude-val">Some</span>(rest) = s.strip_suffix(<span class="string">"px"</span>) {
+<a href=#755 id=755 data-nosnippet>755</a>    rest.parse::&lt;f64&gt;().ok()
+<a href=#756 id=756 data-nosnippet>756</a>  } <span class="kw">else </span>{
+<a href=#757 id=757 data-nosnippet>757</a>    s.parse::&lt;f64&gt;().ok()
+<a href=#758 id=758 data-nosnippet>758</a>  }
+<a href=#759 id=759 data-nosnippet>759</a>}
 </code></pre></div></section></main></body></html>
