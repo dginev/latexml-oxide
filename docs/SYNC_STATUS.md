@@ -30,19 +30,23 @@ prefer the cortex DB cross-join (svc4 Rust ≫ svc3 Perl, see
 
 ## Open tasks (actionable)
 
-### 1. `ERROR_DEBT` test-gate drain (the two regression tests still erroring)
+### 1. `ERROR_DEBT` test-gate drain (the remaining regression test still erroring)
 The harness error-gate (`latexml_oxide/src/util/test.rs`) fails a test at zero
 debt to force removal once fixed. Drive each to clean via a real core fix:
-- **`glossary`** — Rust-only (Perl 0): ~50 undefined `datatool`/expl3 macros
-  (`\xDTLinitials`, `\l_datatool_other_regex`, `\__datatool_word:n`, …). **Root
-  RE-DIAGNOSED 2026-06-20: NOT l3regex.** The real expl3 l3regex VM runs
-  correctly now (the old Rust-`regex` shim was removed — see below); the
-  remaining failure is that **datatool-base.sty is not raw-loaded** in the
-  default profile, so its name-parsing macros are never defined. Fix = either
-  raw-load datatool (it now works, since l3regex+seqs do) or port its
-  initials/word-parsing into the glossaries binding.
 - **`figure_mixed_content`** — `ltx:theorem` not allowed in `ltx:figure` (Perl
   also errors 1). True fix = **schema expansion** (theorems/mdframed in figures).
+
+  (**`glossary` — ✅ CLOSED 2026-06-20.** Root cause was NOT a datatool/expl3
+  gap but a core `\ifodd` bug: Rust's truncated `%` made `\ifodd` report every
+  *negative odd* integer as even (`-23 % 2 == -1`, gated on `== 1`). expl3
+  l3regex stores its cs-mode-in-class compile state as the negative odd int
+  `-23`, and `\__regex_if_in_class:` is `\if_int_odd:w \l__regex_mode_int`, so
+  `\c{[...]}` patterns (datatool-base.sty word/initials parsing) lost their
+  char-class → an unclosed `\if_false:{\fi:}` brace-trick → `readBalanced` ran
+  off the end → ~50 undefined `\__datatool_*` cascade. Fix: `\ifodd` tests
+  `% 2 != 0` (`tex_logic.rs`), matching Perl `valueOf % 2`-as-boolean and TeX's
+  sign-independent oddness. datatool-base raw-loads at 0 errors; entry removed
+  from `ERROR_DEBT`.)
 
 ### 2. PGO of the release build — tooling LANDED, measurement pending
 `tools/make_release_pgo.sh` (instrument → train → merge) + `make_release.sh`
@@ -87,9 +91,10 @@ TL-window `dumps` + macOS arm64 leg + publish (each first-exercised on that tag)
   `\if_int_compare:w` timing stall. So the Rust-`regex`-crate **shim in
   `expl3_sty.rs` was REMOVED** (faithful + complete). Verified: original cascade
   witness 2406.14142 (21 errors → 0), full suite 1459/0, new
-  `expl3/regex_native` test. **datatool** remains: its name-parsing isn't loaded
-  (it's not raw-loaded by default — see the `glossary` ERROR_DEBT above); the
-  regex layer it needs now works.
+  `expl3/regex_native` test. **datatool — ✅ now raw-loads cleanly** after the
+  `\ifodd` negative-odd fix (2026-06-20) that unblocked `\c{[...]}` regex
+  compilation (see closed `glossary` item under Open tasks §1); its
+  word/initials name-parsing defines without errors.
 - **1610.00974 step-3** — port the *global* `p{}` column to the Perl VBox form
   (`\lx@tabular@p`/VBoxContents). The narrow `\multicolumn{}{p{}}` case is already
   fixed; the global port exposes a `\cr`-mid-VBoxContents-predigest interleaving +

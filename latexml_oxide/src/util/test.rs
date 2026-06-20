@@ -205,20 +205,12 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// entry's `[error-debt] … 0 errors` shows up EVERYWHERE, remove it by review.
 /// Each note records Perl's current behavior (verify with `latexml --verbose`
 /// — `--quiet` HIDES Perl errors). Tracked in `docs/SYNC_STATUS.md`.
-const ERROR_DEBT: &[(&str, &str)] = &[
-  (
-    "figure_mixed_content",
-    "complex figures should convert clean; today: ltx:theorem not allowed in \
+const ERROR_DEBT: &[(&str, &str)] = &[(
+  "figure_mixed_content",
+  "complex figures should convert clean; today: ltx:theorem not allowed in \
      ltx:figure (Perl also: 1). True fix = schema expansion (theorems in \
      figures) — tracked as a separate issue.",
-  ),
-  (
-    "glossary",
-    "~50 undefined datatool/expl3 macros (\\__datatool_*, \\DTLinitials, …); \
-     Rust-only (Perl: 0 errors). Root cause: l3regex gap (datatool word/initials \
-     parsing uses \\regex_new:N + capture groups). Large — own effort.",
-  ),
-];
+)];
 
 /// Emit a line to the process's REAL stderr, SURVIVING libtest's per-test
 /// output capture. libtest only intercepts the `print!`/`eprint!` macros and

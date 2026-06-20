@@ -56,8 +56,18 @@ LoadDefinitions!({
   DefConditional!("\\ifnum Number Relation Number", sub[(u,rel,v)] {
     compare(u.value_of(), rel, v.value_of())
   });
+  // Perl TeX_Logic.pool.ltxml:83 `sub { $_[1]->valueOf % 2; }` — Perl's `%`
+  // returns a result with the divisor's sign, so a negative odd value yields
+  // `1` (true). Rust's `%` is truncated (`-23 % 2 == -1`), so the faithful
+  // translation must test `!= 0`, NOT `== 1` — matching TeX's sign-independent
+  // oddness (LSB set). The `== 1` form wrongly classified every negative odd
+  // integer as even, which broke expl3 l3regex: `\__regex_if_in_class:` is
+  // `\if_int_odd:w \l__regex_mode_int`, and the cs-mode class state is the
+  // negative odd int `-23` (cs-mode `-2` with a `3` digit appended on entering
+  // a `[...]` class) — so `\c{[...]}` patterns (e.g. datatool-base.sty) lost
+  // their class, leaving an unclosed `\if_false:{\fi:}` brace trick.
   DefConditional!("\\ifodd Number", sub[(u)] {
-    u.value_of() % 2 == 1
+    u.value_of() % 2 != 0
   });
   DefConditional!("\\ifcase Number");
 

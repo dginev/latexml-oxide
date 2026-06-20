@@ -1,0 +1,25 @@
+% Regression for the `\ifodd`-negative-integer bug (tex_logic.rs) that broke
+% expl3 l3regex `\c{[...]}` compilation. Rust's truncated `%` made `\ifodd`
+% report negative odd ints as even (`-23 % 2 == -1`, gated on `== 1`); expl3
+% stores its cs-mode-in-class compile state as the negative odd int -23, and
+% `\__regex_if_in_class:` is `\if_int_odd:w \l__regex_mode_int`, so a char-class
+% inside `\c{...}` lost its class → unclosed `\if_false:{\fi:}` brace-trick →
+% readBalanced ran off the end (datatool-base.sty `\c{[[:alpha:]]+}` cascade).
+% Direct probe: \ifodd of negative odd/even; plus the exact regex_set/regex_new
+% repro that used to leave \regex_new:N undefined. Expected:
+%   on=Y oe=N pn=Y  csm=Y csm2=N.
+\documentclass{article}
+\ExplSyntaxOn
+\regex_new:N \l_p_regex
+\regex_set:Nn \l_p_regex { \c{[a-z]+} }   % cs-class-in-class: the failing case
+\regex_new:N \l_q_regex                   % must stay defined (no brace runaway)
+\ExplSyntaxOff
+\begin{document}
+on=\ifodd-3 Y\else N\fi{}
+oe=\ifodd-2 Y\else N\fi{}
+pn=\ifodd 7 Y\else N\fi
+
+% \c{[a-z]+} matches a control sequence whose csname is all lowercase letters.
+csm=\ExplSyntaxOn\regex_match:NnTF\l_p_regex{\foo}{Y}{N}\ExplSyntaxOff{}
+csm2=\ExplSyntaxOn\regex_match:NnTF\l_p_regex{\Bar9}{Y}{N}\ExplSyntaxOff
+\end{document}
