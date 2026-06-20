@@ -374,6 +374,17 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("latin", "ldf", package::babel_lang_stubs::load_latin),
   ("croatian", "ldf", package::babel_lang_stubs::load_croatian),
   ("frenchb", "ldf", package::french_ldf::load_definitions),
+  // `francais` is the historical (pre-2014) French option/alias. Modern babel
+  // (v26, TL2025) RETIRED it as a babel option — `\usepackage[francais]{babel}`
+  // errors "Unknown option 'francais'" in pdflatex AND Perl LaTeXML (which
+  // raw-loads the same babel.sty); it survives only as the deprecated
+  // `\usepackage{francais}` package, whose `francais.sty` does
+  // `\def\CurrentOption{french}\input french.ldf`. We restore that francais→french
+  // mapping at the option level (absent on disk → register to our French binding,
+  // which also defines the `francais`-suffixed babel hooks). Surpass-Perl: older
+  // arXiv papers using `[francais]{babel}` then convert cleanly with proper French
+  // captions. Witness: elsart_keyword_brace_form.
+  ("francais", "ldf", package::french_ldf::load_definitions),
   ("nil", "ldf", package::nil_ldf::load_definitions),
   ("gensymb", "sty", package::gensymb_sty::load_definitions),
   ("geometry", "sty", package::geometry_sty::load_definitions),

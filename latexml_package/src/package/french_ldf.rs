@@ -334,6 +334,26 @@ LoadDefinitions!({
     \expandafter\let\csname datefrenchb\expandafter\endcsname
                     \csname datefrench\endcsname
     %
+    % `francais` — the historical (pre-2014) French name. babel v26 retired it as
+    % an OPTION (pdflatex + Perl both error Unknown-option francais), but the
+    % deprecated `francais.sty` still maps francais to french via
+    % `\def\CurrentOption{french}\input french.ldf`. We honour that mapping: the
+    % option loads our French binding (lib.rs), and `\selectlanguage{francais}`
+    % needs the `francais`-suffixed language slot + hooks — alias them to `french`
+    % (parallels the `frenchb` shim above). Witness: elsart_keyword_brace_form
+    % (`\usepackage[english,francais]{babel}` + `\selectlanguage{francais}`).
+    \expandafter\ifx\csname l@francais\endcsname\relax
+      \chardef\l@francais=\l@french
+    \fi
+    \expandafter\let\csname captionsfrancais\expandafter\endcsname
+                    \csname captionsfrench\endcsname
+    \expandafter\let\csname extrasfrancais\expandafter\endcsname
+                    \csname extrasfrench\endcsname
+    \expandafter\let\csname noextrasfrancais\expandafter\endcsname
+                    \csname noextrasfrench\endcsname
+    \expandafter\let\csname datefrancais\expandafter\endcsname
+                    \csname datefrench\endcsname
+    %
     % french.ldf L88-92: `acadian` and `canadien` are dialects of
     % `french` (`\adddialect\l@acadian\l@french` / `\l@canadien`), and its
     % `\StartBabelCommands*{\BabelLanguages}{captions|date}` defines the

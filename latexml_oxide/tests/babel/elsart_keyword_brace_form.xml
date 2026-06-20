@@ -10,7 +10,7 @@
     <personname>A</personname>
     <contact name="Address: " role="address">X</contact>
   </creator>
-  <abstract name="Abstract"/>
+  <abstract name="Résumé"/>
   <keywords xml:lang="en" name="Keywords: ">Higgs; Boson; Symmetry </keywords>
   <para xml:id="p1">
     <p><text xml:lang="en">After.</text></p>
