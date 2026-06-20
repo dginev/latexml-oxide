@@ -3371,7 +3371,13 @@ LoadDefinitions!({
   // change the parity-relevant behavior.
   DefConstructor!("\\emph{}",
     "?#isMath(<ltx:text _force_font='1'>#1)(<ltx:emph _force_font='1'>#1)",
-    mode => "text",
+    // NB: no `mode => "text"` — Perl's \emph (latex_constructs.pool.ltxml:411) uses
+    // only `enterHorizontal => 1, bounded => 1`. Adding `mode => "text"` digested
+    // the argument in restricted_horizontal mode, so BOUND_MODE was not "vertical"
+    // and the `$$` display-math probe in \lx@dollar@default was skipped — `$$…$$`
+    // inside \emph{…} (common in theorem bodies) degraded to two empty inline `$`
+    // and its sub/superscripts errored "Script _/^ can only appear in math mode"
+    // (witness 2203.05327: 34 spurious errors; Perl 0).
     bounded        => true,
     enter_horizontal => true,
     font=> { emph => true },

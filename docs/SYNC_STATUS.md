@@ -2569,6 +2569,35 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-20): ✅ FIXED — `$$…$$` (or scripts) inside `\emph{}` → "Script _/^ can only appear in math mode" (2203.05327: 34 → 0)
+
+Large-error re-triage win (branch `june-sync-status`). **2203.05327** (commutative
+algebra; theorem/definition bodies wrapped in `\emph{…}` containing display math):
+Rust **34** errors vs Perl **0** (`--verbose`). All 34 were `Script _/^ can only
+appear in math mode` — Rust lost math mode for `$$…$$` inside `\emph`.
+
+**Root cause (a Rust-only divergence from Perl):** Rust's `\emph` constructor
+(`latex_constructs.rs`) had `mode => "text"`, which digests the argument in
+`restricted_horizontal` mode → `BOUND_MODE` there is not `…vertical`. The `$$`
+display-math probe in `\lx@dollar@default` only fires `when BOUND_MODE =~
+/vertical$/` (faithful to Perl `TeX_Math.pool` L64-67), so inside `\emph` the `$$`
+was NOT recognized: the first `$` opened inline math, the second closed it (empty),
+and the display content fell into TEXT mode → every sub/superscript errored.
+**Perl's `\emph`** (`latex_constructs.pool.ltxml:405-415`) uses only
+`enterHorizontal => 1, bounded => 1` — **no `mode`** — so its arg stays in the
+paragraph's horizontal mode (BOUND_MODE `vertical`) and `$$` is detected. (Plain
+`$$…$$` at top level already worked in both; the bug was specific to `\emph`'s
+restricted-mode arg. The sibling `\textbf`/`\textit`/`\textrm`/… were already
+correct — they're `\ifmmode…\else{\bfseries #1}\fi` font-switch *groups*, not
+`mode=>"text"` constructors.)
+
+**Fix:** remove `mode => "text"` from the `\emph` constructor (keep
+`bounded`+`enter_horizontal`), matching Perl. Witness 2203.05327 **34 → 0**;
+minimal repro (`\emph{… $$x_1^t$$ …}`) 3 → 0; full suite **1459/0**; likely clears
+a cluster (math papers wrap theorem statements in `\emph`). Methodology: found via
+large-error re-triage + bisection; verified Perl ground truth with `--verbose`
+(NOT `--quiet`, which hid Perl's identical error on the SHARED `\Cb`-in-text decoy).
+
 ### Round-37 (2026-06-20): NEW confirmed Rust-only gap — `\gls`/`\acrshort` in MATH mode → `XMTok` in `<glossaryref>` (1705.10306, 293 errors; Perl 1)
 
 Re-tested a large-error witness (the single-error tail was "exhausted", but the
@@ -2866,8 +2895,11 @@ scantokens, P1 fixes; `cortex_worker --standalone`). **37 convert clean (0 err)*
   *surpass* Perl but touches the deep BOUND_MODE egroup machinery
   (regression-prone, cf. 1610.00974 step-3) — beyond-parity R&D, NOT a parity fix.
 - **SHARED, not Rust gaps:** `\sep` (1810.06908) — Perl *times out* (exit 124).
-- **Large/known:** 2203.05327 (443), 1705.10306 (357), 1804.01117 (305, fatal),
-  `\NiceTabular` (2212.09528, nicematrix stub). Perl-parity unverified.
+- **Large/known:** ~~2203.05327 (443)~~ **✅ FIXED 2026-06-20 → 0** (was 34 on the
+  current binary; `\emph` `mode=>"text"` divergence — see the dated entry above),
+  1705.10306 (357 → glossaryref-in-math, see below), 1804.01117 (305, fatal →
+  xint, reclassified SHARED+crash above), `\NiceTabular` (2212.09528, nicematrix
+  stub). The 1705.10306 `\gls`-in-math gap remains open (deferred).
 
 **METHODOLOGY LESSON (re-learned the hard way 2026-06-20):** every Perl-parity
 check MUST use `latexml --verbose` (or read `.latexml.log`), NEVER `latexml
