@@ -84,6 +84,13 @@ LoadDefinitions!({
   if let Some(defn) = lookup_meaning(&T_CS!("\\lx@german@dq@dispatch")) {
     assign_meaning(&T_ACTIVE!('"'), defn, Some(Scope::Global));
   }
+  // germanb.ldf L173: `\def\dq{"}` — `\dq` yields a literal double-quote (the
+  // saved catcode-12 `"`, since `"` itself becomes the active shorthand). Map to
+  // `\textquotedbl`, LaTeXML's literal double-quote. (An earlier note recorded
+  // `\dq` as "actively undefined after this binding runs" — that was while the
+  // binding truncated past L57, before `\bbl@allowhyphens` below was added; the
+  // truncation is resolved, so this now sticks.)
+  RawTeX!(r"\providecommand\dq{\textquotedbl}");
   // germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
   RawTeX!(r"\providecommand\bbl@allowhyphens{}");
   RawTeX!(r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}");

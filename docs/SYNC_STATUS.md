@@ -2555,10 +2555,12 @@ PERL=0):**
 | 1901.08716 | err | 0/14w | pgfplots per-axis state leak (pair) |
 | 1503.07894 | err | 0 | url brace space-form `{\url www…}` |
 
-**Still failing (3):** 1501.03690 (11 err — deep xy-pic shifted-arrows `svg:path`
-in `ltx:text`), 1602.07073 + 1804.06196 (1 err each — `\dq` cluster). The dated
-DEFERRED entries below are kept as historical record; this note is the current
-truth. The `\dq` cluster (1 err) and 1501.03690 remain genuinely open.
+**Still failing after the sweep:** initially 3 — but the `\dq` cluster
+(1602.07073 + 1804.06196, 1 err each) was then **FIXED this session** (see the
+`\dq` cluster entry below: `\providecommand\dq{\textquotedbl}` in german_sty.rs +
+ngerman_sty.rs). So only **1501.03690** remains open (11 err — deep xy-pic
+shifted-arrows `svg:path` in `ltx:text`). The dated DEFERRED entries below are
+kept as historical record; this note is the current truth.
 
 ### Round-37 (2026-06-19): IEEEtran legacy `keywords` env FIXED — `\@IEEEkeywords`/`\@endIEEEkeywords` defined
 
@@ -2905,20 +2907,17 @@ byte-identical to Perl `auto_keywords`).
 * **DEFERRED 2026-05-29 — lstlisting cumulative-state `^`/`_` math-mode leak (1810.11979; Rust-only, elusive).** Paper (article + 14 `[language=why3]` + 2 `[language=Coq]` lstlistings, no `\lstdefinelanguage`) fails with one `^ Script ^ can only appear in math mode` (RUST 1 / PERL 0). Bisected to the L802-810 `\begin{small}\begin{lstlisting}[language=Coq] … #|V| … \end{lstlisting}` block — but that block (with/without `small`, with the `#|V|`) converts CLEANLY in isolation, and a 2-block why3→Coq sequence is clean too. So it's CUMULATIVE state from the preceding 14 why3 lstlistings (a listings catcode/counter not fully restored across blocks) breaking the later block's verbatim-ization. Not minimally reproducible (same shape as the `\rowcolors` revtex4-1 case). The math-mode `_`/`^` cluster is otherwise dominated by SHARED genuine text-mode underscores (88/88, 5/5). Needs full-paper-context listings-state debugging — deferred. LESSON: when every minimal subset passes but the full paper fails, it's cumulative state — defer fast rather than over-bisecting.
 * **DEFERRED 2026-05-29 — `\rowcolors` in revtex4-1 multi-package (1809.04023; Rust-only, elusive).** revtex4-1 paper with `\PassOptionsToPackage{table}{xcolor}` + `\usepackage{color}` + `\rowcolors{1}{}{c}`. Confirmed genuine Rust-only (RUST 1 with AND without ar5iv; PERL-standalone 0). Perl loads xcolor (which defines `\rowcolors`; Rust HAS `\rowcolors` in xcolor_sty.rs L1251) but the trigger is un-isolatable: minimal article+color, revtex4-1-alone, `\PassOptionsToPackage`, soul, and each of soul/placeins/float/esint/graphicx/array + color all FAIL in Perl too — only the FULL revtex4-1 + multi-package combination loads xcolor. Emergent multi-package interaction; needs the exact xcolor-load path traced. NOTE: the cortex_worker sweep runs `--standalone` (NO `--preload=ar5iv.sty`); gate sweep candidates with a matched no-ar5iv Perl run (this one is Rust-only under both profiles).
 * **DEFERRED 2026-05-29 — xy-pic `\xymatrix @!` mode-leak (2006.01470; confirmed Rust-only, deep).** Rust 27 err/2.5 MB vs Perl 0/5.0 MB. Trigger isolated to the `@!` uniform-entry-size modifier in display math (NOT equations/theorem-env/`@R=`/`@C=`); needs full preamble for the matrix feature to load (bare `\usepackage[all]{xy}`+`\xymatrix` is matrix-undefined in BOTH — separate SHARED issue). Mechanism (`LX_DBG_MODE` trace): the 4 matrix-cell `\hbox` opens have their END tokens deferred via xy's `\queue@`/`\xy@@` (the `@!`→`\xymatrix@measureit@@`/`\the\queue@` path) and replayed at `\end{document}` after the display `internal_vertical` closed → 4× "end mode restricted_horizontal in internal_vertical". Our alignment-based `\xymatrix@measureit` override (xylatexml_tex.rs L1339) is locked but `measureit@@` still resolves to the raw queue-replay. Deep xy queue/box-deferral vs mode-frame ordering; high regression risk. Repro: full preamble (head -55 of 2006.01470) + `$$\xymatrix @!0 { A & B \\ C & D }$$`.
-* **DEFERRED — `\dq` cluster (2 papers: 1602.07073, 1804.06196;
-  babel-german double-quote).** `\usepackage[german,english]{babel}` +
-  `\dq` → undefined. germanb.ldf L173 `\def\dq{"}`. german_sty.rs ports
-  germanb but omits `\dq`. ROOT MYSTERY: adding `\dq` to german_sty.rs
-  (any form — DefMacro, early `\gdef\dq{ZZQUOTE}`) does NOT make it stick —
-  `\dq` is **actively undefined** after german_sty.rs runs (verified:
-  `\captionsgerman`/`\mdqon` survive but a global `\gdef\dq` does not, and
-  `\bbl@allowhyphens` (L60, late) is also UNDEF → the load also truncates
-  somewhere past L57). Nothing in babel-german.tex/babel.sty/babel_support
-  explicitly `\let\dq\@undefined`s it, so the clearer is elsewhere in the
-  modern-babel `.ini` activation / `[german,english]` main-lang switch.
-  Note 1602.07073 ALSO has 2 Perl errors (`\printbibliography`/biblatex),
-  so it's only marginally Rust-only. Deferred — modern-babel state
-  management.
+* **FIXED 2026-06-20 — `\dq` cluster (1602.07073, 1804.06196; babel-german
+  double-quote).** `\dq` → undefined (germanb.ldf/ngermanb.ldf L173
+  `\def\dq{"}`; the bindings omitted it). The old "ROOT MYSTERY" (adding `\dq`
+  to german_sty.rs "doesn't stick"; `\bbl@allowhyphens` also UNDEF → "load
+  truncates past L57") was a **stale** symptom of an earlier binding truncation:
+  `\bbl@allowhyphens` is now defined (german_sty.rs L88), so the truncation is
+  resolved and `\dq` now sticks. Faithful fix: `\providecommand\dq{\textquotedbl}`
+  (literal double-quote) in **both** `german_sty.rs` (`[german,…]`) and
+  `ngerman_sty.rs` (`[ngerman,…]` — the path 1804.06196 takes). Both papers now
+  exit 0 / 0 errors. (1602.07073's residual biblatex `\printbibliography` is
+  SHARED with Perl.)
 * **DEFERRED — `\autrun` cluster (4 papers, ar5iv-specific, elusive).**
   1509.01533/1509.04088/1602.03020/1804.10461 redefine `\author` to set
   `\autrun` as a side-effect (`\def\author#1{\gdef\autrun{...}...}`), then

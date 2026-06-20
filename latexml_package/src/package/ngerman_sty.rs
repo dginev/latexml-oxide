@@ -33,4 +33,8 @@ LoadDefinitions!({
     \def\pagename{Seite}\def\seename{siehe}%
     \def\alsoname{siehe auch}\def\proofname{Beweis}}");
   RawTeX!(r"\providecommand\datengerman{}");
+  // ngermanb.ldf: `\def\dq{"}` — `\dq` yields a literal double-quote (see the
+  // matching note in german_sty.rs). [ngerman,english] babel loads this path
+  // (not german_sty.rs), so define it here too. Witness 1804.06196.
+  RawTeX!(r"\providecommand\dq{\textquotedbl}");
 });
