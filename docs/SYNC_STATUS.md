@@ -2569,6 +2569,21 @@ single-macro wins from this sweep family are exhausted. Next exploratory value i
 likely the **cortex_worker-vs-latexml_oxide standalone discrepancy** (a harness
 probe), not more engine single-macro hunts.
 
+**ar5iv-aware follow-up sweep (2026-06-20, iteration 15): 100 more 2106 papers,
+ar5iv profile; ~84% clean; failures all SHARED/deep — REV@lesssim was the lone
+clean ar5iv win.** Verified the tractable candidates against `latexml
+--preload=ar5iv.sty` (matched context): `\preccurlyeq` (2106.00095, amssymb not
+loaded) — Perl ar5iv **times out** (SHARED-difficult); `\newsymbol` (2106.00165,
+amssymb-legacy) — Perl ar5iv **also 2 errors** (SHARED; neither engine defines
+`\newsymbol`); `\citen` (2106.00113, jpsj3 without `cite`) — Perl ar5iv **also 2
+errors** (SHARED); `\Checkmark`/`\acmConference`/`\EuroVisSTARPresEditors`/
+`\import`/`\cmdGR@vertex@style` (tkz-graph) etc. — class/package not loaded or
+deep. **No new clean Rust-only gap.** Conclusion: with REV@lesssim fixed, the
+ar5iv profile is also in good shape; remaining ar5iv failures are overwhelmingly
+SHARED author-errors (papers using macros without loading the providing package —
+which Perl ALSO surfaces) or deep/custom-class. The exploratory single-macro vein
+is exhausted across plain AND ar5iv contexts.
+
 ### Round-37 (2026-06-20): parity buckets REFINED (timeout artifacts removed) + 2110.11931 isolated to a 7-line repro
 
 **Timeout-artifact correction to the buckets below.** The parity harness counted a
