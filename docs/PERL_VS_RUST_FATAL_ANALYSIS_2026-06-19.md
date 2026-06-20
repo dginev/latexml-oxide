@@ -139,6 +139,25 @@ Following up the §6 recommendation with the now-installed Perl reference:
 *not* a parity gap (surpass-Perl R&D only); the one real parity gap (babel
 `\scantokens` mouth-nesting) is now fixed at the engine core.
 
+### Remaining on-disk divergences (deferred — deep pgf, resist isolation)
+
+All re-checked with the fixed binary (2026-06-19); none reduce to a small repro
+(basic tikz `\matrix` / tikzcd / pgfplots all convert cleanly in both engines —
+the failures are cumulative document-state effects):
+
+| paper | Perl | class | character |
+|---|---|---|---|
+| 1709.07916 | ok | MemoryBudget | **pgfplots** axis — RSS runaway >4.5 GB |
+| 1912.13052 | warn | MemoryBudget | pgf/tikz RSS runaway |
+| 2004.14791 | warn | MemoryBudget | pgf/tikz RSS runaway |
+| 1312.6499 | warn | MemoryBudget | pgf/tikz RSS runaway |
+| 1610.00974 | ok | MaxLimit(500) | pgf `\matrix` "Single ampersand used with wrong catcode" ×500 — the matrix `&` not routed through `\pgfmatrixnextcell` (`\ifpgf@matrix@correct@call` false); cumulative, basic `\matrix` is fine |
+
+These are surpass-Perl performance/engine work in the pgfmath/coordinate +
+alignment layers — high effort, regression-prone, not quick core-bug fixes like
+`\scantokens`. (Supersedes `HANDOFF.md`, now removed; its cortex/harness items
+live in memory `sandbox-3corpus-run-2026-06-19`.)
+
 ## Repro
 
 ```bash
