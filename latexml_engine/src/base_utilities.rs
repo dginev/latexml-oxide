@@ -205,11 +205,15 @@ LoadDefinitions!({
   // Perl: DebuggableFeature('frontmatter'); enable with `--debug frontmatter`.
   debuggable_feature("frontmatter");
 
-  // Perl Base_Utility.pool.ltxml (PR #2767): moved here from latex_constructs
-  // (was \@personname); `mode => "text"` + `bounded` carried over from the
-  // earlier Rust port of \@personname.
+  // Perl Base_Utility.pool.ltxml L219-222 (PR #2767): moved here from
+  // latex_constructs (was \@personname). Perl's beforeDigest rebinds
+  // `\thanks` → `\lx@add@thanks` so an author's `\thanks{...}` becomes a
+  // role=thanks contact via \lx@annotate@frontmatter@now (which applies the
+  // `\lx@contact@thanks@name` default, "Thanks: "). The earlier Rust port
+  // mis-bound it to the now-removed `\person@thanks` constructor, which built
+  // a bare <contact role=thanks> with no name; faithful binding restored.
   DefConstructor!("\\lx@personname{}", "<ltx:personname>#1</ltx:personname>",
-    before_digest => { Let!("\\thanks", "\\person@thanks"); },
+    before_digest => { Let!("\\thanks", "\\lx@add@thanks"); },
     bounded => true,
     mode => "text",
     enter_horizontal => true

@@ -4508,10 +4508,13 @@ LoadDefinitions!({
   // \documentclass{article} with \usepackage{aaai22} don't trigger it.
   def_macro_noop("\\equalcontrib")?;
   def_macro_noop("\\equalcont")?;
-  // Perl latex_constructs.pool.ltxml L1062-1064: DefConstructor('\person@thanks{}', ...,
-  //   alias => '\thanks', mode => 'restricted_horizontal', enterHorizontal => 1).
-  DefConstructor!("\\person@thanks{}", "^ <ltx:contact role='thanks'>#1</ltx:contact>",
-    alias => "\\thanks", mode => "text", enter_horizontal => true);
+  // NOTE: a `\person@thanks` constructor used to live here (a port of a since-
+  // removed Perl construct). Current Perl handles an author's `\thanks` via
+  // \lx@personname's beforeDigest (Let \thanks → \lx@add@thanks; see
+  // base_utilities.rs), which routes to \lx@annotate@frontmatter@now and
+  // applies the `\lx@contact@thanks@name` default ("Thanks: "). The stale
+  // constructor produced a bare <contact role=thanks> with no name and is
+  // removed.
 
   // `\thanksref{key}` — common in author-block / affiliation styles
   // (revtex, ifacconf, elsart, etc.). Each class typically defines a
