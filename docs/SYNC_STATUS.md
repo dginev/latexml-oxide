@@ -269,6 +269,18 @@ downgrading):**
 ### Engine file open gaps (MINOR, demand-driven)
 - `tex_box.rs` box-dimension edge cases; `tex_fonts.rs` `\fontdimen` array +
   per-font `\hyphenchar`; `tex_tables.rs` padding CSS (XSLT concern).
+- **`\fcolorbox` inline paragraph-grouping** (found 2026-06-20 via feature
+  comparison): an inline `\fcolorbox{}{}{}` mid-paragraph — Perl breaks the
+  paragraph (its `internal_vertical` block ends the `<p>`), Rust keeps it inline
+  (one `<p>`). SAME flags on both (`enter_horizontal + internal_vertical`), so
+  the divergence is in the core document-builder paragraph auto-close on a
+  block-mode construct encountered mid-flow — broad/risky to change, and Rust's
+  inline reading arguably matches real LaTeX's `\mbox`-based `\fcolorbox` better.
+  Edge case (inline fcolorbox + same-paragraph text); defer to a focused
+  document-builder session. (`\colorbox` matches — 1 `<p>` both.)
+- **p-column (`p{}`) `td align` + width placement** — Rust `align="justify"` +
+  width on `<p>`; Perl `align="left"` + width on `<inline-block>`. Part of the
+  deferred 1610.00974 step-3 p-column VBox port (see Deep deferred families).
 - **~72-CS Perl-only long tail** (from the archived LoadFormat audit): misc
   atomics (`\@charlb`, point-size CSes, `\batchmode`, …) Perl defines and Rust
   does not. Investigate a CS only when a real paper witnesses it. Refresh the
