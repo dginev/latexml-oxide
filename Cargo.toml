@@ -42,23 +42,6 @@ unused_qualifications = "warn"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
-# `pericortex` (the CorTeX worker runtime, used only by the optional
-# `cortex_worker` binary under `--features cortex`) tracks its default branch
-# via the git dep in `latexml_oxide/Cargo.toml`. Same local-development
-# shortcut as marpa above: clone `cortex-peripherals` to
-# `~/git/cortex-peripherals` and *uncomment* the [patch] block below to build
-# `cortex_worker` against in-flight local worker-runtime edits without a
-# push/cargo-update round trip. Re-comment (and `cargo update -p pericortex`
-# to the published commit) before committing a workspace change, so the repo
-# state always references upstream — a path patch would break the
-# `--features cortex` docker build (which only `COPY`s this repo).
-#
-# INACTIVE (committed state references upstream master). To resume local
-# co-development of the worker runtime, uncomment the two lines below, then
-# re-comment + `cargo update -p pericortex` before committing a workspace change.
-# [patch."https://github.com/dginev/cortex-peripherals.git"]
-# pericortex = { path = "/home/deyan/git/cortex-peripherals" }
-
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
