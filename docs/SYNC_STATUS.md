@@ -194,6 +194,20 @@ cross-check (NOT a quick cron fix). Single-arg `f(x)` and the
 undeclared-letter `f(x)`/`P(...)` apply-vs-multiply ambiguity are SEPARATE and
 out of scope here.
 
+**SEPARATE deferred item — single-arg apply-vs-multiply `f(x)` (the most
+PERVASIVE remaining divergence; content-MathML, defer to the dedicated
+session).** For an UNKNOWN/undeclared symbol immediately followed by a
+parenthesized single arg, Rust reads function *application* where Perl reads
+*multiplication*. Consistent on both sides in isolation — witnesses (2026-06-20):
+`\Gamma(s)` → Rust `Gamma@(s)` vs Perl `Gamma * s`; likewise `\zeta(s)`,
+`\Omega(n)`, `\Phi(x)`, `f(x)`, `P(x,y)`. Surfaces constantly in the `text=`
+sweep (e.g. inside `\Gamma(s)\zeta(s)`, `f(x)=\begin{cases}…`, braket operands
+`\psi(t)`). Same family as the multi-arg `f(a,b)` above; both come from the
+grammar treating `<UNKNOWN> ( … )` as `prefix_apply` rather than juxtaposition.
+A real fix must respect Perl's "only declared FUNCTION/known-operator names
+apply; bare letters multiply" rule and is heavily pruning-sensitive — exactly
+why it's parked for the focused content-MathML session.
+
 **SEPARATE pre-existing divergence (NOT a parse gap — surfaced while fixing
 `\nabla^2`):** Rust inserts `⁡` (U+2061 FUNCTION APPLICATION) in *presentation*
 MathML for OPERATOR applications where Perl uses bare juxtaposition — e.g. even
