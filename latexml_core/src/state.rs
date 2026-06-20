@@ -1368,9 +1368,9 @@ pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
         **field = Stored::VecDequeStored(new_vdq);
         None
       },
-      other => {
-        Some(s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}"))
-      },
+      other => Some(s!(
+        "BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}"
+      )),
     }
   };
   if let Some(message) = bug {
