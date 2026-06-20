@@ -131,6 +131,37 @@ LoadDefinitions!({
       ..Cell::default()}));
   });
 
+  // Perl TeX_Tables L76-80: the paragraph cell as a *VBox* (a real, `\\`-capable
+  // paragraph) emitting `width=` on an `<ltx:inline-block>`.
+  //
+  // NOTE: the global `p{Dimension}` column type above is a pre-existing Rust
+  // divergence — it wraps cells in `\vtop{\hbox to <w>..}` (an `\hbox`, hence
+  // single-line, no embedded `\\`, and no `width=` attribute). Porting that
+  // globally to this VBox form (faithful to Perl) is the correct end state but
+  // exposes a latent alignment span/sizing bug when a `\multicolumn` spans *over*
+  // p-columns (witness: graphics/graphrot's `\multicolumn{10}{|l}` over `p{1in}`
+  // columns); see SYNC_STATUS "1610.00974". Until that span/sizing bug is fixed,
+  // we keep the global `\vtop\hbox` form and use this Perl-faithful VBox form ONLY
+  // for `\multicolumn{}{p{}}{}` cells (see `\lx@alignment@multicolumn`), where an
+  // embedded `\\` MUST be a line break rather than the alignment row terminator.
+  // This fixes the #1 corpus fatal (1610.00974) with no fixture regression.
+  DefMacro!("\\lx@tabular@p{}{}", "\\hsize=#2\\relax\\lx@tabular@p@{#1}{#2}");
+  DefConstructor!("\\lx@tabular@p@{}{Dimension} VBoxContents",
+    sub[document, args, props] {
+      let body = args[2].as_ref().unwrap();
+      if body.is_empty()? { return Ok(()); }
+      let mut attr = string_map!();
+      if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_string()); }
+      if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
+      insert_block(document, body, attr)?;
+    },
+    sizer => "#3", reversion => "#3",
+    properties => sub[args] {
+      let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let width = args[1].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
+      Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
+    });
+
   DefColumnType!("*{Number}{}", sub[(n,pattern)] {
     let mut tks = Vec::new();
     for _ in 1 ..= n.value_of() {
@@ -535,18 +566,74 @@ LoadDefinitions!({
       tks.push(T_CS!("\\span"));
       tks.push(T_CS!("\\omit"));
     }
-    // Next part: put the template in-line, since it's only used once.
-    // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
-    if let Some(col) = column
-      && let Some(before) = &col.before {
-        tks.extend(before_cell_unlist(before.unlist_ref().clone()));
+    // A paragraph (p/m/b) multicolumn cell must render as a *VBox* via
+    // `\lx@tabular@p` (Perl-faithful, see above), so that an embedded `\\` is a
+    // paragraph line break rather than the alignment row terminator. The global
+    // `p{}` column type wraps in `\vtop{\hbox to..}` (an `\hbox` that cannot hold
+    // `\\`), so we substitute the VBox form here and rebind top-level `\\` to
+    // `\lx@newline` in the body. Fixes 1610.00974 (the #1 corpus fatal); a normal
+    // `\\`-less p-cell, and every non-paragraph column, are unaffected.
+    let is_pcol = column.map(|c| c.align == Some(Align::Justify)).unwrap_or(false);
+    if is_pcol {
+      // The `p{}` column's `before` is `[<border prefix>] \vtop { \hbox to <width>
+      // \relax {` and its `after` is `} } [<border suffix>]`. We splice out the
+      // `\vtop{\hbox to..{ … }}` middle, replacing it with the Perl-faithful VBox
+      // form `\lx@tabular@p t {<width>} { … }` (one open / one close brace),
+      // preserving the surrounding borders so `|p{}|` keeps its rules.
+      let before_toks: Vec<Token> =
+        column.and_then(|c| c.before.as_ref()).map(|b| b.unlist_ref().clone()).unwrap_or_default();
+      let after_toks: Vec<Token> =
+        column.and_then(|c| c.after.as_ref()).map(|a| a.unlist_ref().clone()).unwrap_or_default();
+      let width = extract_pcol_width(&before_toks);
+      let vtop_idx = before_toks.iter().position(|t| *t == T_CS!("\\vtop")).unwrap_or(before_toks.len());
+      // `after` is `[<inner> } } <border suffix>]` — the two consecutive `}` close
+      // `\hbox`/\vtop`; `<inner>` (e.g. `\lx@column@trimright`) belongs *inside* the
+      // box and `<border suffix>` after it. Locate that `} }` pair.
+      let close_pair = (0..after_toks.len().saturating_sub(1)).find(|&i| {
+        after_toks[i].get_catcode() == Catcode::END && after_toks[i + 1].get_catcode() == Catcode::END
+      });
+      let (inner_after, border_suffix): (&[Token], &[Token]) = match close_pair {
+        Some(i) => (&after_toks[..i], &after_toks[i + 2..]),
+        None => (&after_toks[..], &[]),
+      };
+      // Border prefix (everything before `\vtop`), unchanged.
+      tks.extend(before_toks[..vtop_idx].iter().copied());
+      // VBox cell: \lx@tabular@p t {<width>} {
+      tks.push(T_CS!("\\lx@tabular@p"));
+      tks.extend(ExplodeText!("t"));
+      tks.push(T_BEGIN!());
+      tks.extend(width);
+      tks.push(T_END!());
+      tks.push(T_BEGIN!());
+      // Rebind only top-level `\\` (depth 0); nested groups keep their meaning.
+      let dbl = T_CS!("\\\\");
+      let nl = T_CS!("\\lx@newline");
+      let mut depth = 0i32;
+      for t in body.unlist_ref().iter() {
+        match t.get_catcode() {
+          Catcode::BEGIN => { depth += 1; tks.push(*t); }
+          Catcode::END => { depth -= 1; tks.push(*t); }
+          _ if depth == 0 && *t == dbl => tks.push(nl),
+          _ => tks.push(*t),
+        }
       }
-    tks.extend(body.unlist_ref().iter().copied());
-    // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
-    if let Some(col) = column
-      && let Some(after) = &col.after {
-        tks.extend(after_cell_unlist(after.unlist_ref().clone()));
-      }
+      tks.extend(inner_after.iter().copied()); // e.g. \lx@column@trimright, inside the box
+      tks.push(T_END!()); // close the VBoxContents
+      tks.extend(border_suffix.iter().copied()); // trailing border / intercolumn
+    } else {
+      // Next part: put the template in-line, since it's only used once.
+      // beforeCellUnlist: reorder $ and \hfil (move \hfil before $)
+      if let Some(col) = column
+        && let Some(before) = &col.before {
+          tks.extend(before_cell_unlist(before.unlist_ref().clone()));
+        }
+      tks.extend(body.unlist_ref().iter().copied());
+      // afterCellUnlist: reorder $ and \hfil (move \hfil after $)
+      if let Some(col) = column
+        && let Some(after) = &col.after {
+          tks.extend(after_cell_unlist(after.unlist_ref().clone()));
+        }
+    }
     Ok(Tokens::new(tks))
   });
 
@@ -1352,6 +1439,25 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
     })
   };
   Ok(template)
+}
+
+/// Recover the `<width>` token slice from a `p{Dimension}` column's `before`
+/// list, which `DefColumnType("p{Dimension}")` builds as
+/// `\vtop { \hbox to <width> \relax {`. Returns the tokens strictly between
+/// `\hbox to` and `\relax` (empty if the shape is unexpected). Used by
+/// `\lx@alignment@multicolumn` to drive the Perl-faithful VBox cell form for
+/// paragraph multicolumns without re-parsing the dimension.
+fn extract_pcol_width(before: &[Token]) -> Vec<Token> {
+  // `before` may carry an intercolumn/border prefix (`\vrule \relax \lx@intercol`)
+  // from a `|`, so locate the `\relax` that follows `\hbox to`, not the border's.
+  let Some(h) = before.iter().position(|t| *t == T_CS!("\\hbox")) else {
+    return Vec::new();
+  };
+  match before[h..].iter().position(|t| *t == T_CS!("\\relax")) {
+    // skip `\hbox`, `t`, `o` (the "to") → width runs up to the next `\relax`
+    Some(off) if off > 3 => before[h + 3..h + off].to_vec(),
+    _ => Vec::new(),
+  }
 }
 
 // Perl TeX_Tables L735-745: beforeCellUnlist

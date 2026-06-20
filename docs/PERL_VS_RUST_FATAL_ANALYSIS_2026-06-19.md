@@ -158,7 +158,22 @@ pgfmath/coordinate layers — high effort, regression-prone. (Supersedes
 `HANDOFF.md`, now removed; its cortex/harness items live in memory
 `sandbox-3corpus-run-2026-06-19`.)
 
-#### 1610.00974 — ROOT-CAUSED 2026-06-20 (the #1 corpus error class)
+#### 1610.00974 — ✅ RESOLVED 2026-06-20 (the #1 corpus error class)
+
+> **LANDED (narrow fix, suite green, no fixture re-bless).** `\lx@alignment@multicolumn`
+> (`latexml_engine/src/tex_tables.rs`) now renders a *paragraph* multicolumn cell via
+> the Perl-faithful `\lx@tabular@p`/`VBoxContents` VBox form (Perl TeX_Tables L76-80),
+> where `\\` is a legal paragraph line break, and rebinds top-level `\\`→`\lx@newline`
+> in the cell body; borders/intercolumn from the cell `before`/`after` are preserved by
+> splicing only the `\vtop{\hbox..}` middle. Witness **502 err → 0 err/0 fatal**; output
+> matches Perl exactly (`colspan="2"`, `<inline-block vattach="top" width="28.5pt">`,
+> two `<p align="center">` lines, borders `l r t`). **Scoped to `\multicolumn{}{p{}}`
+> only** — the global `p{}` column type keeps its `\vtop\hbox` form, so no fixture
+> re-bless (none of array/tabular/cells/colortbls/graphrot has a multicolumn-over-
+> p-column). The original full-global-VBox-port attempt (below) is retained as the
+> record of why the *global* port is deferred (it exposes a deeper alignment span/sizing
+> bug on `\multicolumn` spanning *over* p-columns — graphrot — now tracked as
+> surpass-Perl R&D, lifted out of the rerun gate).
 
 Not a cumulative/pgf bug after all. **Reduced to a 15-line self-contained
 reproducer** (`docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`):

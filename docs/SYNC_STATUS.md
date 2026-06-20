@@ -129,25 +129,32 @@ while Perl reaches ≤ warn**.
 
 **Remaining (UNSOLVED — must clear before rerun), all §"Remaining on-disk
 divergences" of the analysis doc:**
-- [ ] **1610.00974** (Perl ok) — #1 corpus error class. **ROOT-CAUSED 2026-06-20
-  (fix pending):** NOT a pgf bug. A `\\` inside a `\multicolumn` *paragraph*-cell
-  (`p{}`/`m{}`/`b{}`), e.g. `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`, leaves
-  an unbalanced `\hbox` mode-switch; the later pgfplots legend `\matrix` then runs
-  its group-scoped `\catcode`\&=13` at the wrong level → cell `&` stays catcode-4
-  → pgf "Single ampersand used with wrong catcode" ×500 → MaxLimit fatal. A normal
-  `p{}` column handles the same `\\` fine; only `\multicolumn{}{p{}}{}` doesn't.
-  15-line self-contained repro `docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`
-  (Rust 502 err / Perl 0). **Fix path narrowed 2026-06-20:** the `p{Dimension}`
-  column type (`tex_tables.rs:117`) wraps the cell in `\vtop{\hbox to..{…}}` (an
-  `\hbox` that can't hold `\\`); current Perl uses `\lx@tabular@p`/`VBoxContents`
-  (a VBox, where `\\` is valid). Porting it (attempted + reverted) eliminates the
-  cascade (fatal→exit 0) AND fixes a latent `width=` divergence (Perl emits it on
-  p-cell inline-blocks; Rust omits it), but isn't landable yet: (1) 7 residual
-  recoverable mode-errors remain — the alignment `\cr`/`\\` handler must unwind a
-  nested cell-box `internal_vertical` mode (the deep part, `alignment.rs`); (2) 5
-  p-cell fixtures (array/tabular/cells/colortbls/graphrot) need re-blessing to the
-  Perl-matching `width=` form. Full detail in
-  `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` §1610.00974.
+- [x] **1610.00974** (Perl ok) — #1 corpus error class. **RESOLVED 2026-06-20
+  (`tex_tables.rs`, narrow fix, suite green, no re-bless).** A `\\` inside a
+  `\multicolumn` *paragraph*-cell (`p{}`/`m{}`/`b{}`), e.g.
+  `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`, left an unbalanced `\hbox`
+  mode-switch (the `p{}` column wraps cells in `\vtop{\hbox to..{…}}`, an `\hbox`
+  that can't hold `\\`); the later pgfplots legend `\matrix` then ran its
+  group-scoped `\catcode`\&=13` at the wrong level → cell `&` stayed catcode-4 →
+  pgf "Single ampersand used with wrong catcode" ×500 → MaxLimit fatal.
+  **Fix:** `\lx@alignment@multicolumn` now renders a *paragraph* multicolumn cell
+  via the Perl-faithful `\lx@tabular@p`/`VBoxContents` VBox form (ported from Perl
+  TeX_Tables L76-80) — where `\\` is a legal paragraph line break — and rebinds
+  top-level `\\`→`\lx@newline` in the cell body. Borders/intercolumn tokens from
+  the cell `before`/`after` are preserved by splicing only the `\vtop{\hbox..}`
+  middle. Witness 502 err → **0 err/0 fatal**, output matches Perl exactly
+  (`colspan="2"`, `<inline-block vattach="top" width="28.5pt">`, `\\`→two
+  `<p align="center">` lines, borders `l r t`). Scoped to the `\multicolumn{}{p{}}`
+  path only — the global `p{}` column type keeps its existing `\vtop\hbox` form, so
+  **no fixture re-bless** (array/tabular/cells/colortbls/graphrot all green; none
+  contain a multicolumn-over-p-column). Repro
+  `docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`. **Deferred follow-up
+  (NOT gating):** porting the *global* `p{}` column type to the VBox form (matching
+  Perl, which would also fix a latent `width=` divergence on normal p-cells) exposes
+  a deeper alignment span/sizing bug when a `\multicolumn` spans *over* p-columns
+  (graphrot `\multicolumn{10}{|l}` over `p{1in}`: colspan cell breaks, width 143→810
+  vs Perl 214). Tracked separately as surpass-Perl R&D; lifted out of this gate.
+  Full detail in `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` §1610.00974.
 - [ ] **1709.07916** (Perl ok) — pgfplots axis RSS runaway >4.5 GB → MemoryBudget.
 - [ ] **1912.13052** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
 - [ ] **2004.14791** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
