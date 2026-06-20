@@ -355,10 +355,15 @@ downgrading):**
 - **`\resizebox` panel scale-VALUE divergence** (found 2026-06-20; the %.15g
   scale *formatting* is now Perl-faithful, `551c5286ba`): in
   `complex/figure_mixed_content` two figure panels get `xscale=1.1312…` in Rust
-  vs `0.8819…` in Perl — a different computed scale, i.e. a *natural-width*
-  divergence for the panel content (the resize target is the same; the measured
-  box width differs). Box-metric, not graphics-binding; investigate with the
-  `tex_box.rs` box-dimension edge cases above.
+  vs `0.8819…` in Perl — a different computed natural width for the panel.
+  NARROWED 2026-06-20: the construct in ISOLATION matches exactly —
+  `\resizebox{5cm}{!}{\includegraphics{none.png}}` (the real 100×100 test image)
+  → xscale=1.9685 in BOTH engines. The divergence only appears inside the
+  paper's `\footnotesize` + `table*` + `\subfloat` panel context, so it's a
+  font-size/box-context interaction (image natural width carried through a
+  scaled-font panel), NOT image-dimension reading or the graphics binding.
+  Deep, context-specific box-metric; for the focused box session.
+  (Missing-image candidates handling itself is now Perl-faithful — `64dd30b284`.)
 - **~72-CS Perl-only long tail** (from the archived LoadFormat audit): misc
   atomics (`\@charlb`, point-size CSes, `\batchmode`, …) Perl defines and Rust
   does not. Investigate a CS only when a real paper witnesses it. Refresh the
