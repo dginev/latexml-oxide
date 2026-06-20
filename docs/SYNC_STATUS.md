@@ -2530,7 +2530,44 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
-### Round-37 (2026-06-20): Perl-`--verbose` parity buckets for the sweep failures → all genuine Rust-only gaps map to KNOWN deep families
+### Round-37 (2026-06-20): parity buckets REFINED (timeout artifacts removed) + 2110.11931 isolated to a 7-line repro
+
+**Timeout-artifact correction to the buckets below.** The parity harness counted a
+Perl `--verbose` run that hit the 90 s wall (`exit 124`) as `perl=0`, inflating the
+"Rust-only" list. Re-checked with explicit timeout detection: **1611.04940,
+2007.01660, 1810.06908, 1901.03862 are Perl-TIMEOUTS** (SHARED-difficult, not
+clean Rust-only), and **1809.00236** is the multi-`\documentclass` main-file
+artifact. After removing those, the **genuine Rust-only (Perl completes clean)**
+gaps are: 1504.05963 (**FIXED**, dep-scan), **2110.11931** (10 err), **1804.01117**
+(305 err, multi-package xint/pgffor/tikz cascade).
+
+**2110.11931 — isolated 2026-06-20 to a 7-line repro (fix pending, deep).** mnras
+paper; 10 errors all from one `\begin{equation}` processed in *horizontal* mode
+(`_`/`^` "can only appear in math mode" + `\end{equation}` mode mismatch). Bisected
+the trigger to **`\robustify{\cite}`** (etoolbox) before the equation:
+```
+\documentclass{article}
+\usepackage{natbib}\usepackage{etoolbox}
+\robustify{\cite}
+\begin{document}
+Given by \cite{x},
+\begin{equation} a=b^2 \end{equation}
+\end{document}
+```
+Rust: equation breaks; Perl: clean. `\citep` is unaffected (only `\cite` was
+robustified). `\robustify` of a *simple* user macro works fine — the bug is
+specific to robustifying **natbib's native `\cite`**: `\robustify` →
+`\etb@robustify` reconstructs the macro from its `\meaning` via
+`\etb@patchcmd@scantoks` (a `\scantokens` rebuild), and that reconstruction of
+natbib `\cite` yields a broken `\cite` that corrupts the following equation's
+math-mode entry. Likely root: etoolbox's `\ifdefmacro`/`\ifscanable` classifying
+Rust's native `\cite` as a scannable TeX macro and mangling it. Perl ports the
+identical etoolbox `\etb@robustify`, so the divergence is in `\meaning`/
+`\scantokens` fidelity for a native binding — deep, dedicated session.
+
+---
+
+(Original buckets, with the timeout caveat above applied:)
 
 Properly re-compared the 21 sweep failures to Perl with `--verbose` (the prior
 pass used `--quiet` → wrong; see retraction below). Buckets:
