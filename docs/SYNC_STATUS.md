@@ -132,13 +132,18 @@ script-node padding transfer for `x^2\,dx` (NewScript L1624-1643, `005716ff66`);
 scripted relations (`\stackrel{?}{=}`, `\overset`/`\underset` over a relation)
 now lex as atomic RELOP terminals like decorated arrows, so they parse as
 standalone list items (`a \quad \stackrel{?}{=} \quad b` was `ltx_math_unparsed`,
-`4a5ebf29f7`). Also landed via Rust-vs-Perl XML structural comparison (non-math):
+`4a5ebf29f7`); Dirac braket with a stretchy `\middle|` divider
+(`\left\langle a \middle| b \right\rangle`) — the qm_braket/qm_bracket rules now
+also accept `MIDDLE:|`, not just `VERTBAR:|`, so the ubiquitous physics braket
+parses to inner-product / quantum-operator-product like the bare `|` form
+(`88391a07a6`). Also landed via Rust-vs-Perl XML structural comparison (non-math):
 author `\thanks` → `<contact name="Thanks: ">` (frontmatter, `33a29ccf2f`); table
 header-guessing over a `\multicolumn` data row — colspan border move must be
 in-place (Perl `collect_alignment_rows`), the deferred port broke the
 read-after-write chain so `guess_alignment_headers` saw no hump (`3b17005458`);
 `<graphics candidates=...>` omitted for a missing image file, matching Perl's
-empty `@candidates` (`be41cc8c54`).
+empty `@candidates` (`be41cc8c54`); text-mode `\>`/`\:`/`\;` now use the real
+space glyphs U+2005/U+2004 (not ASCII space), like `\,`→U+2009 (`47f77f00ab`).
 **Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
 - **relation with a list RHS containing a scripted relop**:
   `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >= ^ ?, c)`,
