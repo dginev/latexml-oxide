@@ -3163,10 +3163,9 @@ impl Document {
     // child fan-out. Deep grammar-ambiguous papers (sandbox 0711.4787
     // et al, #17) hit Rust's 8 MB main-thread stack here during the
     // `Finalizing...` phase (via prune_xmduals → mark_xmnode_visibility).
-    // Grow the stack on demand instead of overflowing.
-    stacker::maybe_grow(64 * 1024, 4 * 1024 * 1024, move || {
-      self.mark_xmnode_visibility_aux_inner(node, cvis, pvis)
-    })
+    // Grow the stack on demand instead of overflowing (guard params are
+    // configurable in `crate::stack_guard`).
+    crate::stack_guard::maybe_grow(move || self.mark_xmnode_visibility_aux_inner(node, cvis, pvis))
   }
 
   fn mark_xmnode_visibility_aux_inner(

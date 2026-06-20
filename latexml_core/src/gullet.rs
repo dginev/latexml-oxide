@@ -917,11 +917,11 @@ pub fn read_x_token(
           // ~10 frames (≪ the red zone), so growing here keeps the native stack
           // ahead of the recursion: finite-deep recursion now completes, and a
           // genuine runaway grows until the existing RSS cap fires a graceful
-          // `Fatal` instead of crashing. Same `stacker::maybe_grow` idiom as
-          // the recursive tree walks in `document.rs` / the math parser.
+          // `Fatal` instead of crashing. Same growth idiom as the recursive tree
+          // walks in `document.rs` / the math parser; guard params are
+          // configurable in `crate::stack_guard`.
           #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
-          let mut invoked =
-            stacker::maybe_grow(256 * 1024, 8 * 1024 * 1024, || defn.invoke(false))?;
+          let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
           // token-locators: fill-only origin inheritance. A macro that
           // expands into synthesized tokens with no origin — e.g.
           // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —

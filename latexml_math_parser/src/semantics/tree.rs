@@ -1942,12 +1942,11 @@ impl XM {
     // on grammar-ambiguous papers (sandbox 0711.4787, 0903.3289,
     // hep-th0101151, math0505371, math9204211, hep-ph9210253,
     // hep-ph9512208, astro-ph0612758 — 8 papers, SIGABRT with
-    // `thread 'main' has overflowed its stack`). stacker::maybe_grow
-    // allocates a new stack chunk on a separate thread when the
-    // current frame's remaining space drops below the red zone.
-    stacker::maybe_grow(64 * 1024, 4 * 1024 * 1024, || {
-      self.into_xmath_inner(owner, nodes, document)
-    })
+    // `thread 'main' has overflowed its stack`). The growth guard
+    // allocates a new stack chunk when the current frame's remaining
+    // space drops below the red zone; its params are configurable in
+    // `latexml_core::stack_guard`.
+    latexml_core::stack_guard::maybe_grow(|| self.into_xmath_inner(owner, nodes, document))
   }
 
   fn into_xmath_inner(

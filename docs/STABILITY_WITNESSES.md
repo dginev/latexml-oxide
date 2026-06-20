@@ -237,10 +237,14 @@ single decoration-automaton non-termination bug.
 ## Cluster F — xint raw-load runaway native recursion → stack-overflow SIGABRT (✅ FIXED 2026-06-20 — no longer crashes)
 
 > **FIXED 2026-06-20 (`gullet.rs`, `read_x_token` `Outcome::Invoke`).** Wrapped the
-> per-expansion `defn.invoke(false)` call in `stacker::maybe_grow(256 KiB, 8 MiB, …)`
-> — the same idiom as the recursive tree walks in `document.rs` / the math parser.
-> Every deep gullet-recursion cycle passes through this point (~every ≤10 frames,
-> ≪ the 256 KiB red zone), so the native stack grows ahead of the recursion. The
+> per-expansion `defn.invoke(false)` call in the stack-growth guard (default
+> 256 KiB red zone, 8 MiB segment) — the same idiom as the recursive tree walks in
+> `document.rs` / the math parser. All three sites now go through the single
+> configurable `latexml_core::stack_guard::maybe_grow` (params tunable via
+> `LATEXML_STACK_RED_ZONE_BYTES` / `LATEXML_STACK_SEGMENT_BYTES`, or
+> `stack_guard::set_*` for a future CLI flag). Every deep gullet-recursion cycle
+> passes through this point (~every ≤10 frames, ≪ the red zone), so the native
+> stack grows ahead of the recursion. The
 > SIGABRT is **gone**: 1804.01117 now exits **124 (graceful wall-clock timeout)**
 > instead of **134 (SIGABRT)** — it degrades gracefully like Perl (which fails-soft
 > to an empty doc) rather than crashing the process. `maybe_grow` is *transparent*
