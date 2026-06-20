@@ -2,6 +2,48 @@ use latexml_core::common::{dimension::attribute_format, numeric_ops::kround};
 
 use crate::prelude::*;
 
+/// Format a float the way Perl stringifies a non-integer NV — its default
+/// `%.15g`: up to 15 significant digits, trailing zeros stripped, no trailing
+/// '.'. Used for the COMPUTED `\resizebox` scale factors (`num/denom`), which
+/// Perl serializes via this default stringification. Rust's `{}` instead emits
+/// the shortest round-trip form (often one digit more, e.g. `4.267906543111354`
+/// vs Perl's `4.26790654311135`), so we match Perl explicitly here. (`\scalebox`
+/// takes a Float arg formatted separately and is unaffected.)
+pub(crate) fn perl_g15(v: f64) -> String {
+  if v == 0.0 {
+    return "0".to_string();
+  }
+  if !v.is_finite() {
+    return s!("{v}");
+  }
+  const PREC: i32 = 15;
+  let exp = v.abs().log10().floor() as i32;
+  // %g uses %e when exp < -4 or exp >= PREC, else %f. For box scale factors the
+  // value is always in the %f range; the %e branch is a faithful fallback.
+  if !(-4..PREC).contains(&exp) {
+    let s = s!("{:.*e}", (PREC - 1) as usize, v);
+    match s.split_once('e') {
+      Some((mant, ex)) => {
+        let mant = if mant.contains('.') {
+          mant.trim_end_matches('0').trim_end_matches('.')
+        } else {
+          mant
+        };
+        s!("{mant}e{ex}")
+      },
+      None => s,
+    }
+  } else {
+    let decimals = (PREC - 1 - exp).max(0) as usize;
+    let s = s!("{:.*}", decimals, v);
+    if s.contains('.') {
+      s.trim_end_matches('0').trim_end_matches('.').to_string()
+    } else {
+      s
+    }
+  }
+}
+
 /// Perl: graphics_scaledbox_props($box, $xscale, $yscale) in graphics.sty.ltxml L63-81
 /// Computes scaled dimensions and translation offsets for \scalebox.
 pub fn scaled_properties(
@@ -147,8 +189,8 @@ LoadDefinitions!({
     let num = parse_pt(whatsit.get_arg(1));
     let denom = parse_pt(whatsit.get_arg(2));
     let scale = if denom != 0.0 { num / denom } else { 1.0 };
-    whatsit.set_property("xscale", Stored::from(s!("{}", scale)));
-    whatsit.set_property("yscale", Stored::from(s!("{}", scale)));
+    whatsit.set_property("xscale", Stored::from(perl_g15(scale)));
+    whatsit.set_property("yscale", Stored::from(perl_g15(scale)));
     if let Some(body) = whatsit.get_arg(3).cloned()
       && let Ok(props) = scaled_properties(body, scale, scale) {
         for (k, v) in props { whatsit.set_property(k, v); }
@@ -170,8 +212,8 @@ LoadDefinitions!({
     let yd = parse_pt(whatsit.get_arg(4));
     let xscale = if xd != 0.0 { xn / xd } else { 1.0 };
     let yscale = if yd != 0.0 { yn / yd } else { 1.0 };
-    whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
-    whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
+    whatsit.set_property("xscale", Stored::from(perl_g15(xscale)));
+    whatsit.set_property("yscale", Stored::from(perl_g15(yscale)));
     if let Some(body) = whatsit.get_arg(5).cloned()
       && let Ok(props) = scaled_properties(body, xscale, yscale) {
         for (k, v) in props { whatsit.set_property(k, v); }
@@ -303,8 +345,8 @@ LoadDefinitions!({
       if let Some(th_val) = th { yscale = th_val / (if h != 0.0 { h } else { 1.0 }); }
       if tw.is_some() && th.is_none() { yscale = xscale; }
       if th.is_some() && tw.is_none() { xscale = yscale; }
-      whatsit.set_property("xscale", Stored::from(s!("{}", xscale)));
-      whatsit.set_property("yscale", Stored::from(s!("{}", yscale)));
+      whatsit.set_property("xscale", Stored::from(perl_g15(xscale)));
+      whatsit.set_property("yscale", Stored::from(perl_g15(yscale)));
       if let Ok(props) = scaled_properties(body, xscale, yscale) {
         for (k, v) in props {
           whatsit.set_property(k, v);
