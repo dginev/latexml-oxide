@@ -1,0 +1,17 @@
+% Regression: a scripted OPERATOR applied to an operand (`\nabla^2 \phi`,
+% Laplacian; `\nabla_x f`) was unparsed (→ ltx_math_unparsed). `\nabla f`
+% (unscripted) and `\partial^2 f` (DIFFOP, has its own scripted path) parsed,
+% but a plain OPERATOR carrying a script had no application rule. Added
+% `scripted_operator` + `scripted_operator factor => prefix_apply` mirroring
+% the unscripted `operator factor => prefix_apply` and the scripted_opfunction
+% pattern. Matches Perl's `text=`: `(nabla ^ 2)@(phi)`, etc.
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+\[ \nabla^2 \phi = 0 \]
+\[ \nabla_x f \]
+\[ \nabla^2(g) \]
+\[ \nabla^2 \]
+
+\end{document}

@@ -831,6 +831,21 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // `scripted_opfunction lparen formula rparen => apply_delimited` below (preferred XMDual).
       applied_func += scripted_opfunction lparen formula rparen => apply_delimited;
 
+      // Scripted OPERATOR applied to an operand: `\nabla^2 \phi` (Laplacian),
+      // `\nabla_x f`, `\nabla^2(f)`. Mirrors the unscripted `operator factor =>
+      // prefix_apply` (tight_term, line ~201) plus the scripted_opfunction
+      // pattern above. Without it, a superscripted/subscripted OPERATOR applied
+      // to an argument was unparsed (→ ltx_math_unparsed); Perl parses
+      // `\nabla^2 \phi` to `(nabla ^ 2)@(phi)`. (`\partial^2 f` already worked —
+      // `\partial` is a DIFFOP/any_bigop with its own scripted path.)
+      scripted_operator = operator postsuperarg => postfix_script
+        | operator postsubarg => postfix_script
+        | operator postsubarg postsuperarg => postfix_script
+        | operator postsuperarg postsubarg => postfix_script;
+      applied_func += scripted_operator factor => prefix_apply;
+      applied_func += scripted_operator lparen formula rparen => apply_delimited;
+      factor += scripted_operator;
+
       // Scripted TRIGFUNCTION: \sin^2 x, \cos_n x
       scripted_trigfunction = trigfunction postsuperarg => postfix_script
         | trigfunction postsubarg => postfix_script
