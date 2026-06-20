@@ -268,6 +268,18 @@ validation. (Iterations 1–2 already prototyped step 2 and measured its effects
    be the genuine `\cr` mode-unwind in the alignment engine, NOT a `\\` rebind —
    that lets the multicolumn `\\` end the row cleanly from `internal_vertical`
    while a normal p-column's row-`\\` still terminates the row.
+   **EXACT location (pinned 2026-06-20, iteration 19):** the error fires in
+   `egroup()` (`latexml_core/src/stomach.rs:449`) — when the alignment's
+   `end_row`/`end_column` (`latexml_core/src/alignment.rs:420`/`449`, both call
+   `egroup()` for the row/cell group) closes a cell group whose last frame still
+   has `BOUND_MODE` bound (the p-cell VBox's `internal_vertical` mode-switch,
+   left open because the multicolumn `\\` fired `\cr` *mid-cell*, before the
+   VBoxContents box closed). Fix: in `end_column`/`end_row`, unwind any pending
+   cell-box mode-switch (end_mode for the bound `BOUND_MODE`) BEFORE `egroup()`,
+   so the cell group closes cleanly. ⚠️ `egroup`/the mode-stack is load-bearing
+   for *all* alignments AND boxes — gate on the full table+box test suites; guard
+   the unwind tightly (only when a cell-box mode-switch is genuinely pending) so
+   it does not mask real unbalanced-group errors.
    *(Confirmed this iteration: the VBox port (step 1) makes the witness 510→
    recoverable AND its p-cell output — width on `<inline-block>`, `class` on
    `<p>` — matches `latexml --verbose` exactly; the 5 fixture "regressions" are
