@@ -158,6 +158,20 @@ turned out physics.xml was a STALE divergence and Perl matched the new output,
 so it was a parity *fix*; always cross-check the affected fixture against Perl
 before assuming a regression).
 
+## Primitive-layer faithfulness — AUDITED & VERIFIED (2026-06-20)
+
+Probe-based Rust-vs-Perl audit of the core primitive layer found it **faithful**
+(byte-identical `\the`/output), so don't re-audit without a witnessing paper:
+integer arithmetic (`\numexpr`, `\advance`/`\multiply`/`\divide`, signs),
+dimensions (`\dimexpr`, scaling, `\maxdimen`), glue/skip arithmetic + display,
+conditionals (`\ifnum`/`\ifdim`/`\ifx`/`\if`/`\ifcat`/`\ifcsname`/`\ifdefined`,
+negatives), string/token (`\string`/`\detokenize`/`\meaning`/`\csname`),
+`\number`/`\romannumeral` edges, case tables (`\uppercase`/`\lowercase`). The
+ONE bug this class surfaced was `\ifodd` of negative odds (`% 2 == 1` →
+`% 2 != 0`, `5787070020`). Shared-with-Perl quirks confirmed (NOT Rust bugs):
+`\numexpr` divideround round-half-toward-+∞ (KNOWN_PERL_ERRORS #33); `\the\skip`
+drops stretch/shrink to bare pt.
+
 ## Open tasks (actionable)
 
 ### 1. `ERROR_DEBT` test-gate drain (the remaining regression test still erroring)
