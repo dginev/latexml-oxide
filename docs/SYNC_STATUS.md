@@ -70,6 +70,32 @@ theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
 
 ---
 
+## Math-parser Rust-only gaps (found by Rust-vs-Perl `text=` comparison)
+
+**Method (high-yield, repeatable):** math-parse failures are SILENT
+(`ltx_math_unparsed` fallback, no `Error:`) so the cortex error cross-join never
+surfaces them — instead convert a diverse formula batch with both engines and
+diff the core-XML `text=` (`/usr/local/bin/latexml --quiet`). The math parser is
+a full rewrite (Marpa vs RecDescent), so it's the richest seam for Rust-only
+divergences. Landed via this method: `\mid`-in-fences (`439630485a`), `\|x\|`/
+`\Vert` norm (`6aa90dd13d`). **Still open (both reproduce as `ltx_math_unparsed`
+in Rust, parse in Perl):**
+- **`\nabla^2 \phi`** (Laplacian) → Perl `(nabla ^ 2)@(phi)`. `\nabla` is role
+  OPERATOR; `\nabla f` and `\partial^2 f` (DIFFOP) both parse, but a *scripted
+  OPERATOR applied to an operand* has no grammar rule. Likely a
+  `scripted-operator factor => apply` rule (cf. the existing DIFFOP/trigfunction
+  scripted-application rules in `grammar/builder.rs`).
+- **`[a \mid b]` / `[a|b]`** (bracket-conditional) → Perl
+  `delimited-[]@(conditional@(a,b))`. Paren `(a|b)` and brace `{a|b}` conditional
+  rules exist (builder.rs ~549/557) but bracket does not; bare `a|b` parses
+  inside `[...]` differently. Needs the `[...]`-delimiter + inner-conditional
+  path (NOT a simple new fence rule — Perl wraps it in `delimited-[]`).
+CAUTION (from the norm fix): new VERTBAR/fence grammar rules can collide with
+package-built structures (the norm rule initially regressed `physics_test` —
+turned out physics.xml was a STALE divergence and Perl matched the new output,
+so it was a parity *fix*; always cross-check the affected fixture against Perl
+before assuming a regression).
+
 ## Open tasks (actionable)
 
 ### 1. `ERROR_DEBT` test-gate drain (the remaining regression test still erroring)
