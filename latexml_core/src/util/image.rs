@@ -105,11 +105,14 @@ pub fn image_candidates(path: &str) -> String {
   let mut seen = rustc_hash::FxHashSet::default();
   candidates.retain(|c| seen.insert(c.clone()));
 
-  if candidates.is_empty() {
-    path.to_string()
-  } else {
-    candidates.join(",")
-  }
+  // Perl image_candidates (Util/Image.pm) returns ($path, @candidates) where
+  // @candidates holds only files actually found (pathname_findall + kpsewhich);
+  // graphicx.sty sets `candidates => join(',', @candidates)`, so a missing file
+  // yields an EMPTY candidates string (the attribute is then omitted) while the
+  // `graphic` attribute still carries the raw path. The earlier Rust port fell
+  // back to the raw path here, emitting `candidates="missing.png"` where Perl
+  // emits no candidates at all. Return empty to match.
+  candidates.join(",")
 }
 
 /// Perl: `image_graphicx_sizer($whatsit)` (Util::Image L259-272).
