@@ -544,6 +544,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | langle_open expression singlevertbar expression rangle_close => qm_braket
              // Bracket: ⟨a|f|b⟩ → quantum-operator-product@(a, f, b)
              | langle_open expression singlevertbar expression singlevertbar expression rangle_close => qm_bracket
+             // Same Dirac shapes when the divider is a stretchy `\middle|`
+             // (`MIDDLE:|`) — the ubiquitous physics form
+             // `\left\langle a \middle| b \right\rangle`. Perl matches `|` and
+             // `\middle|` with one terminal (MathGrammar L10084); here we add the
+             // MIDDLE:| variants explicitly. (Mixed |/\middle| dividers are not
+             // attempted — authors are consistent within a braket.)
+             | langle_open expression middle_bar expression rangle_close => qm_braket
+             | langle_open expression middle_bar expression middle_bar expression rangle_close => qm_bracket
              // Same Dirac shapes with plain ASCII `<` `>` (langle_rel/rangle_rel
              // — RELOP-classed angles) — physicists commonly write `<a|f|b>` even
              // outside `\langle/\rangle` macros. Semantics match the
