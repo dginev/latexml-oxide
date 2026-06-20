@@ -2581,6 +2581,15 @@ fix (surpass BOTH): make `\robustify`/`\patchcmd` a **no-op on native
 closure-bindings** (they're already robust; their `\meaning` body isn't
 reconstructable). Deep + beyond-Perl + touches all etoolbox patching — dedicated
 session; not pursued in the loop. Net: 2110.11931 is NOT a parity gap.
+**Refined target for that session (2026-06-20):** `\etb@ifscanable\cite` already
+returns *NOT-SCANABLE* (correct), yet robustify still rewrites `\cite` with **no
+"Failed to robustify" error** — so it is NOT taking the ifscanable-fail branch.
+The mangling is in the `\ifdefparam`-false → `\protected\edef#1{\expandonce
+\etb@resrvda}` path (etoolbox `\robustify` L1250): `\expandonce` of the native
+closure-`\cite` yields the `CODE(<ptr>)` meaning-text body. Fix point: make that
+`\protected\edef` (or a `\robustify` wrapper) no-op on native closure-bindings
+(meaning contains `CODE(`), which are already robust. mnras ships
+`\robustify{\cite}` in its template, so this is a real (astro) cluster.
 
 ---
 
