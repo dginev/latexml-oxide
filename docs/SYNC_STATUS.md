@@ -2542,8 +2542,12 @@ were 1504.05963 (**FIXED**, dep-scan), 2110.11931 (10 err), 1804.01117 (305 err)
 **But `perl=0 errors` ≠ Perl-correct:** 2110.11931 turned out **SHARED-root** —
 `\robustify{\cite}` mangles natbib's native `\cite` in *both* engines; Perl just
 emits garbage (`CODE(0x…)`) silently while Rust errors (see below). So the only
-firmly-Rust-only-AND-Perl-correct gap that got FIXED this session is 1504.05963;
-1804.01117 (305) still needs its own Perl-output (not just error-count) check.
+firmly-Rust-only-AND-Perl-correct gap that got FIXED this session is 1504.05963.
+**1804.01117 (305) is CONFIRMED genuine** (Perl output checked: 817 KB, 0 error
+markers, 0 `CODE(0x…)` garbage — Perl converts it correctly), so it is a real
+Rust-only target — but a deep multi-package cascade (xinttrig `\begingroup` group
+imbalance at line 350 → 82× `\pgffor@values expands into itself` + 40 tikz uses),
+dedicated-session work, not a loop fix.
 
 **2110.11931 — isolated 2026-06-20 to a 7-line repro (fix pending, deep).** mnras
 paper; 10 errors all from one `\begin{equation}` processed in *horizontal* mode
