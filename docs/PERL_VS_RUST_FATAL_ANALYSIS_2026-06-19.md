@@ -113,22 +113,31 @@ Following up the §6 recommendation with the now-installed Perl reference:
   improving tikzcd-matrix here is a *surpass-Perl quality* play on papers Perl
   cannot do either, not a regression fix — large, open-ended pgf-engine work.
 
-- **One genuine babel parity gap, narrow + deep.** Witness 1906.03240
+- **One genuine babel parity gap — ROOT-CAUSED + FIXED.** Witness 1906.03240
   (Perl-warn, Rust-fatal). **Minimal repro:** a custom `.sty` containing
-  `\usepackage[ngerman,english]{babel}` then `\selectlanguage{english}` —
-  Rust **silently truncates the rest of the `.sty`** (every macro defined after
-  `\selectlanguage` is undefined → cascade → MaxLimit fatal), while Perl loads
-  the `.sty` fully. Root cause: `\selectlanguage` → real-babel `\select@language`
-  loads `<lang>.ldf`, and that nested `.ldf` load does not resume the enclosing
-  `.sty` input stream. Nested `\usepackage` inside a `.sty` does *not* truncate
-  (only the `.ldf`-via-`\selectlanguage` path does). Impact is narrow (this
-  `\selectlanguage`-inside-a-custom-`.sty`-preamble pattern is rare); the fix is
-  in the InputDefinitions/mouth-nesting core (regression-prone). Deferred.
+  `\usepackage[ngerman,english]{babel}` then `\selectlanguage{english}` — Rust
+  **silently truncated the rest of the `.sty`** (every macro defined after
+  `\selectlanguage` undefined → cascade → MaxLimit fatal), while Perl loaded the
+  `.sty` fully. **Root cause (a real core engine bug, not babel-specific):**
+  babel's `\select@language` runs `\scantokens`, which opens an *autoclose* mouth
+  (`etex.rs` / Perl eTeX.pool.ltxml L251). `read_x_token`'s end-of-mouth test
+  tied autoclose-draining to `toplevel` (`autoclose = toplevel`), a faithful port
+  of Perl `Gullet.pm` L376 — which itself comments "Potentially, these should
+  have distinct controls?". Since `InputDefinitions` reads at `toplevel=false`
+  (Perl Package.pm L2376 / Rust `content.rs`), the exhausted `\scantokens` mouth
+  made the reader return end-of-input, dropping the rest of the file. Plain
+  `\input`, `\InputIfFileExists`, `\endinput`, and nested `\usepackage` were all
+  fine — only autoclose injections (`\scantokens`, raw_tex) hit it. **Perl never
+  trips it only because its babel is a hand-written `.ltxml` that avoids
+  `\scantokens`; Rust raw-loads the real `babel.sty`.** **Fix:** drain autoclose
+  mouths regardless of `toplevel` (the "distinct controls" the Perl comment asks
+  for) — `gullet.rs::read_x_token`. 1906.03240 now converts **0 errors / 72
+  warnings** (was MaxLimit-fatal). Broadly beneficial: any `\scantokens`
+  mid-`.sty`-load (etoolbox, babel) was affected.
 
-**Net:** across the corpus Rust is at or above Perl; there is no high-impact,
-tractable, *safe* parity fix left in tikz-cd/pgf/babel. Remaining gains are
-either surpass-Perl R&D (tikzcd matrices) or narrow + risky (babel `.ldf`
-nesting).
+**Net:** across the corpus Rust is at or above Perl. The tikzcd-matrix volume is
+*not* a parity gap (surpass-Perl R&D only); the one real parity gap (babel
+`\scantokens` mouth-nesting) is now fixed at the engine core.
 
 ## Repro
 

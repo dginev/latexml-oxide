@@ -752,7 +752,6 @@ pub fn read_x_token(
 ) -> Result<Option<Token>> {
   // toplevel should be true by default
   let toplevel = toplevel_opt.unwrap_or(true);
-  let autoclose = toplevel;
   let fully_expand = fully_expand_opt.unwrap_or(toplevel);
   loop {
     // Resource + cycle checkpoints: this loop reads via the low-level
@@ -771,18 +770,57 @@ pub fn read_x_token(
     if next_token.is_none() {
       {
         let gullet = gullet!();
-        if !autoclose
-          || !gullet
-            .runtime
-            .as_ref()
-            .map(|r| r.autoclose)
-            .unwrap_or(false)
-          || gullet.mouthstack.is_empty()
-        {
+        let current_is_autoclose = gullet
+          .runtime
+          .as_ref()
+          .map(|r| r.autoclose)
+          .unwrap_or(false);
+        // Advance to the enclosing mouth when the exhausted one is a
+        // *transparent autoclose injection* (\scantokens, raw_tex). These are
+        // part of the current logical input stream, so even a BOUNDED reader
+        // (`toplevel == false`, e.g. the InputDefinitions file loop) must drain
+        // them and resume the parent mouth.
+        //
+        // GROUNDING IN KNUTH'S TeX (background/tex.web `get_next`, §362-365):
+        // exhausting ANY input level resumes the enclosing one —
+        //   `end_token_list; goto restart;   {resume previous level}`  (L7500)
+        //   `end_file_reading; goto restart;  {resume previous level}`  (L7534)
+        // There is no "stop at this level" in TeX's input stack; `get_next`
+        // always pops and continues. `\scantokens` (e-TeX) is a *pseudo-file*
+        // input level — its `\everyeof`/EOF behaves exactly like `\input`, so on
+        // exhaustion the enclosing input resumes. Draining the autoclose mouth
+        // here is the faithful implementation of that; the old toplevel-gated
+        // behavior diverged from tex.web.
+        //
+        // DELIBERATE DIVERGENCE FROM PERL (beneficial). Perl `Gullet.pm`
+        // readXToken L376 sets `my $autoclose = $toplevel;` and its
+        // end-of-mouth test (L393) is
+        //   `return unless $autoclose && $$self{autoclose} && @{$$self{mouthstack}};`
+        // i.e. it advances ONLY when reading at toplevel — and the source even
+        // carries the comment "Potentially, these should have distinct
+        // controls?" flagging the conflation as suspect. The old Rust faithfully
+        // ported that (`autoclose = toplevel`). Both `\scantokens`
+        // (eTeX.pool.ltxml L251 / etex.rs) open an autoclose mouth, and
+        // `InputDefinitions` reads at `readXToken(0)` (toplevel=false, Package.pm
+        // L2376 / content.rs:input_definitions), so the conflated test returns at
+        // the FIRST exhausted mouth — TRUNCATING the rest of a `.sty` whenever a
+        // `\scantokens` runs mid-load. Perl never trips this only because its
+        // babel is a hand-written `.ltxml` whose `\select@language` avoids
+        // `\scantokens`; Rust raw-loads the real `babel.sty`, whose
+        // `\select@language` runs `\scantokens`, so `\selectlanguage` in a custom
+        // package preamble dropped every later definition (witness 1906.03240:
+        // `mijnpackages.sty` → `\GL`/`\bP`/… undefined → MaxLimit-fatal cascade;
+        // Perl loads it fully). We take the "distinct controls" the Perl comment
+        // asks for: autoclose injections are drained regardless of `toplevel`.
+        //
+        // A non-autoclose boundary (a real input stream / the reading context
+        // mouth itself) is still left to its owner (return None), so toplevel
+        // Stomach reading and `\input` handling are unchanged.
+        if !current_is_autoclose || gullet.mouthstack.is_empty() {
           return Ok(None);
         }
       }
-      close_mouth(false)?; // Next input stream.
+      close_mouth(false)?; // Drain the autoclose injection; resume the parent.
       continue;
     }
     // we got a token

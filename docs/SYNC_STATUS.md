@@ -5740,7 +5740,29 @@ papers, eccv/lineno conditional ~thousands [**now FIXED 2026-06-07** via the
 parameterless-`alignat` fix — surpasses Perl], most `_`/`^`); true Rust-only rate is
 far below 1%. Triage in `~/data/large_scale_canvas_3_third/{TARGET_SET,PROGRESS}.md`.
 
-**Rust Error Fixes (this batch):**
+**Rust Error Fixes (branch `fix/tikz-cd-pgf-robustness`, 2026-06-19):**
+- **`read_x_token` autoclose-mouth draining** (`latexml_core/src/gullet.rs`) — a
+  `\scantokens` (or any autoclose injection) inside a `.sty`/`.ldf` raw-load
+  TRUNCATED the rest of the file: the bounded InputDefinitions reader
+  (`read_x_token(toplevel=false)`) returned end-of-input at the exhausted
+  `\scantokens` mouth instead of resuming the parent. babel's `\select@language`
+  runs `\scantokens`, so `\selectlanguage` in a custom package preamble dropped
+  every later definition → undefined-macro cascade → MaxLimit fatal. Witness
+  1906.03240 (`mijnpackages.sty`): `Fatal:MaxLimit(100)` → **0 errors / 72
+  warnings**. Root: the old code (and Perl `Gullet.pm` L376, which carries the
+  comment "Potentially, these should have distinct controls?") tied autoclose
+  draining to `toplevel`. Fix drains autoclose mouths regardless of `toplevel` —
+  matching Knuth's `get_next` "resume previous level" on input-level exhaustion
+  (`background/tex.web` L7500/7534). Beneficial divergence from Perl (which only
+  dodges the bug via its hand-written babel `.ltxml`). Broadly helps any
+  `\scantokens` mid-load (etoolbox, babel).
+- **`c47d37f416`** — 4 tikz-cd-corpus panic sites (P1): `state.rs` RefCell
+  ("already mutably borrowed" — `Error!` raised inside a `state_mut()` scope;
+  added `try_lookup_int` + push/pop borrow hygiene; witness 2001.08973);
+  `\fontdimen` getter/setter empty-args guard (pgfmath bare register lookup —
+  same class as `3a1c2c3a61`; witnesses 1908.10358, 1910.04182 → 0 errors);
+  alignment `\lx@alignment@newline@markertall` `current_row_mut().unwrap()` guard
+  (1905.02617). All 5 `caught`-class fatal papers now exit-0.
 - **`3a1c2c3a61`** — eTeX `\dimexpr`/`\numexpr`/`\glueexpr`/`\muexpr` getters made
   total. FATAL_101 (~8 papers: 2302.02182, 2308.14409, 2501.11779, 2504.15265,
   2509.15275, 2603.17645, 2604.02289…): `\dimexpr` inside a pgf-calc coordinate —
