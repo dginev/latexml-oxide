@@ -99,6 +99,37 @@ deliberately. The error-cap/`If`/`Token` fuses firing *fatal* where Perl limps
 to output (the 101 "Perl-error, Rust-fatal" set) is a secondary
 graceful-degradation lever, but the bindings are the real root.
 
+## 7. Deeper P2 investigation (the "lever" is mostly NOT a parity gap)
+
+Following up the §6 recommendation with the now-installed Perl reference:
+
+- **`\tikzcdmatrixname` is NOT a Perl-parity gap.** Of the 378 papers with this
+  Rust error, **377 are also Perl-FATAL** (1 Perl-error). The trigger is
+  `\begin{tikzcd}[ampersand replacement=\&]` heavy diagrams, and it is a
+  *cumulative document-state* effect — the same tikzcd block converts cleanly in
+  isolation (even with the full witness preamble) but fails at line 3358 of the
+  full 2106.16186; it does not reduce to a small construct. Basic and
+  `ampersand replacement` tikzcd both work in Rust and Perl. **Conclusion:**
+  improving tikzcd-matrix here is a *surpass-Perl quality* play on papers Perl
+  cannot do either, not a regression fix — large, open-ended pgf-engine work.
+
+- **One genuine babel parity gap, narrow + deep.** Witness 1906.03240
+  (Perl-warn, Rust-fatal). **Minimal repro:** a custom `.sty` containing
+  `\usepackage[ngerman,english]{babel}` then `\selectlanguage{english}` —
+  Rust **silently truncates the rest of the `.sty`** (every macro defined after
+  `\selectlanguage` is undefined → cascade → MaxLimit fatal), while Perl loads
+  the `.sty` fully. Root cause: `\selectlanguage` → real-babel `\select@language`
+  loads `<lang>.ldf`, and that nested `.ldf` load does not resume the enclosing
+  `.sty` input stream. Nested `\usepackage` inside a `.sty` does *not* truncate
+  (only the `.ldf`-via-`\selectlanguage` path does). Impact is narrow (this
+  `\selectlanguage`-inside-a-custom-`.sty`-preamble pattern is rare); the fix is
+  in the InputDefinitions/mouth-nesting core (regression-prone). Deferred.
+
+**Net:** across the corpus Rust is at or above Perl; there is no high-impact,
+tractable, *safe* parity fix left in tikz-cd/pgf/babel. Remaining gains are
+either surpass-Perl R&D (tikzcd matrices) or narrow + risky (babel `.ldf`
+nesting).
+
 ## Repro
 
 ```bash
