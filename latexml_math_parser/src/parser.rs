@@ -205,6 +205,36 @@ static MAX_GRAMMAR_LEXEMES: Lazy<Option<usize>> =
 // inside `parse_marpa` distinguishes hybrid vs ASF-only further.
 static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
 
+/// Token-source adapter that counts how many tokens were actually pulled.
+///
+/// marpa's `Parser::read` (marpa fork, `parser/mod.rs`) breaks the read loop the
+/// instant `recce.is_exhausted()` becomes true, leaving any remaining tokens
+/// UNREAD; `Bocage::new` then builds a parse at that earlier earleme with no
+/// full-coverage check. When the grammar exhausts mid-input (e.g. the start rule
+/// `anyop anyop` completes after 2 lexemes and nothing can follow a completed
+/// start), the recognizer accepts that PREFIX and the tail is silently dropped
+/// (witness `+ - a` → `list@(+, -)`, the `a` lost — where Perl marks the whole
+/// formula unparsed). Counting pulled tokens lets `parse_marpa` detect this:
+/// a genuine full parse always consumes every token, so `consumed < total`
+/// uniquely identifies an exhausted-early prefix parse, which we then reject so
+/// the caller falls to the token-preserving kludge / `ltx_math_unparsed`.
+struct CountingTokens<I> {
+  inner: I,
+  count: std::rc::Rc<std::cell::Cell<usize>>,
+}
+
+impl<I: Iterator> Iterator for CountingTokens<I> {
+  type Item = I::Item;
+  #[inline]
+  fn next(&mut self) -> Option<I::Item> {
+    let next = self.inner.next();
+    if next.is_some() {
+      self.count.set(self.count.get() + 1);
+    }
+    next
+  }
+}
+
 #[derive(Default)]
 struct AmbiguityAuditCounts {
   total:       usize,
@@ -1574,14 +1604,35 @@ impl MathParser {
         document,
         pruned_count: 0,
       };
+      let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let hybrid_result = self.engine.parse_hybrid_with_and_node_limit(
-        ByteScanner::new(Cursor::new(input)),
+        CountingTokens {
+          inner: ByteScanner::new(Cursor::new(input)),
+          count: consumed.clone(),
+        },
         (),
         &mut traverser,
         *HYBRID_AND_NODE_LIMIT,
       );
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
+      }
+      // Coverage guard (see CountingTokens): if the recognizer exhausted before
+      // consuming every input lexeme, the parse covers only a prefix and the
+      // tail would be silently dropped. Reject it (a genuine full parse always
+      // consumes all tokens) so the caller falls to the token-preserving kludge
+      // / ltx_math_unparsed, matching Perl's no-silent-loss behaviour.
+      // Coverage guard (see CountingTokens): the ByteScanner yields per-byte
+      // tokens, so a FULL parse consumes at least every non-trailing-whitespace
+      // byte of `input` (it may also read the single trailing space the caller
+      // appends, or stop exactly at the last real byte when the start symbol
+      // completes-and-exhausts there, as a legitimate `+ -` does). If the
+      // recognizer exhausted BEFORE the last real byte, the parse covers only a
+      // prefix and its tail would be silently dropped — reject so the caller
+      // falls to the token-preserving kludge / ltx_math_unparsed, matching
+      // Perl's no-silent-loss behaviour (witness `+ - a` → was `list@(+, -)`).
+      if consumed.get() < input.trim_end().len() {
+        return Err("Failed to find a parse spanning all input tokens".into());
       }
       match hybrid_result {
         Ok(HybridParseResult::Unambiguous(mut tree_iter)) => {
@@ -1763,13 +1814,22 @@ impl MathParser {
         document,
         pruned_count: 0,
       };
+      let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
-        ByteScanner::new(Cursor::new(input)),
+        CountingTokens {
+          inner: ByteScanner::new(Cursor::new(input)),
+          count: consumed.clone(),
+        },
         (),
         &mut traverser,
       );
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
+      }
+      // Coverage guard (see CountingTokens / the hybrid path above): reject an
+      // exhausted-early prefix parse so the tail isn't silently dropped.
+      if consumed.get() < input.trim_end().len() {
+        return Err("Failed to find a parse spanning all input tokens".into());
       }
       match asf_result {
         Ok((alts, _state)) => {
