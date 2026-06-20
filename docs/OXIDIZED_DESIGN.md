@@ -169,6 +169,20 @@ reversion/tex attributes, but it carries no information for downstream consumers
 **Impact:** 146 occurrences of `%&#10;` removed from 26 test XML files. When copying
 test XMLs from Perl, strip `%&#10;`.
 
+**Related — source comments off by default (`INCLUDE_COMMENTS`):** Perl LaTeXML
+defaults `INCLUDE_COMMENTS` to *true* (Core.pm L143), so it preserves source `%`
+comments in the output as XML comments AND sneaks a `%**** <file> Line N ****`
+progress marker into the stream every 25 lines (Mouth.pm:334). The Rust binary
+defaults it to *false* (`converter.rs`: `include_comments.or(Some(false))`; the
+test harness/presets pass `Some(false)`), so neither real `%` comments nor the
+`****` line markers appear by default. This is deliberate: those comments are
+source-debugging noise with no semantic content for downstream consumers, and
+suppressing them keeps the XML clean. The machinery is fully ported (mouth.rs
+emits both when `INCLUDE_COMMENTS` is on), so `--comments` restores Perl's
+behavior; a handful of fixtures generated with comments enabled (e.g.
+`hello/hello_new.xml`) exercise that path. When diffing against Perl, run Perl
+with `--nocomments` (or ignore `<!-- … -->` / `%**** … ****` lines).
+
 ### 3. `\cdots` Role: ELIDEOP Instead of ID
 
 **Decision:** `\cdots` uses `role="ELIDEOP"` (Perl uses `role="ID"`).
