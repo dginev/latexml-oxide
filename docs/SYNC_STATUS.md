@@ -2537,9 +2537,13 @@ Perl `--verbose` run that hit the 90 s wall (`exit 124`) as `perl=0`, inflating 
 "Rust-only" list. Re-checked with explicit timeout detection: **1611.04940,
 2007.01660, 1810.06908, 1901.03862 are Perl-TIMEOUTS** (SHARED-difficult, not
 clean Rust-only), and **1809.00236** is the multi-`\documentclass` main-file
-artifact. After removing those, the **genuine Rust-only (Perl completes clean)**
-gaps are: 1504.05963 (**FIXED**, dep-scan), **2110.11931** (10 err), **1804.01117**
-(305 err, multi-package xint/pgffor/tikz cascade).
+artifact. After removing those, the apparent **Rust-only (Perl 0 errors)** gaps
+were 1504.05963 (**FIXED**, dep-scan), 2110.11931 (10 err), 1804.01117 (305 err).
+**But `perl=0 errors` ≠ Perl-correct:** 2110.11931 turned out **SHARED-root** —
+`\robustify{\cite}` mangles natbib's native `\cite` in *both* engines; Perl just
+emits garbage (`CODE(0x…)`) silently while Rust errors (see below). So the only
+firmly-Rust-only-AND-Perl-correct gap that got FIXED this session is 1504.05963;
+1804.01117 (305) still needs its own Perl-output (not just error-count) check.
 
 **2110.11931 — isolated 2026-06-20 to a 7-line repro (fix pending, deep).** mnras
 paper; 10 errors all from one `\begin{equation}` processed in *horizontal* mode
@@ -2554,16 +2558,25 @@ Given by \cite{x},
 \begin{equation} a=b^2 \end{equation}
 \end{document}
 ```
-Rust: equation breaks; Perl: clean. `\citep` is unaffected (only `\cite` was
-robustified). `\robustify` of a *simple* user macro works fine — the bug is
-specific to robustifying **natbib's native `\cite`**: `\robustify` →
-`\etb@robustify` reconstructs the macro from its `\meaning` via
-`\etb@patchcmd@scantoks` (a `\scantokens` rebuild), and that reconstruction of
-natbib `\cite` yields a broken `\cite` that corrupts the following equation's
-math-mode entry. Likely root: etoolbox's `\ifdefmacro`/`\ifscanable` classifying
-Rust's native `\cite` as a scannable TeX macro and mangling it. Perl ports the
-identical etoolbox `\etb@robustify`, so the divergence is in `\meaning`/
-`\scantokens` fidelity for a native binding — deep, dedicated session.
+**RECLASSIFIED 2026-06-20: SHARED-root, NOT a clean Rust-only gap** (`perl=0
+errors` ≠ Perl-correct). `\robustify` of a *simple* user macro works fine; the
+issue is robustifying **natbib's native (closure-bodied) `\cite`**. Instrumented
+`\meaning\cite` in BOTH engines — they are **identical**: before
+`macro:#1#2#3#4->CODE(<ptr>)`, after `\protected macro:#1#2#3#4->CODE(<ptr>)`.
+etoolbox's `\etb@robustify` reconstructs `\cite` from that `\meaning` string into
+a `\protected\def\cite#1#2#3#4{…}` — a **4-mandatory-param** macro whose body is
+the literal `CODE(<ptr>)` text — losing the closure's real optional-arg
+(`[opt]{keys}`) parsing. So after `\robustify{\cite}`, `\cite{x} AFTERWORD end.`
+yields in **Perl**: `Start CODE(0x…)ERWORD end.` (grabs "AFT" as args, emits the
+pointer string) — i.e. **Perl is ALSO broken, it just doesn't emit an `Error:`**.
+In Rust the same 4-arg grab swallows the following `\begin{equation}` →
+`Can't close environment equation` + `^ in horizontal mode`. So Rust's only
+"divergence" is **surfacing** the breakage as errors where Perl silently emits
+garbage. Matching Perl's 0-errors would mean hiding it (worse signal). The real
+fix (surpass BOTH): make `\robustify`/`\patchcmd` a **no-op on native
+closure-bindings** (they're already robust; their `\meaning` body isn't
+reconstructable). Deep + beyond-Perl + touches all etoolbox patching — dedicated
+session; not pursued in the loop. Net: 2110.11931 is NOT a parity gap.
 
 ---
 
