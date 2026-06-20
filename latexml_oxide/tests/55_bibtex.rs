@@ -59,4 +59,15 @@ fn bibtex_mode_emits_bibentries() {
     "expected @string macro `tcs` to expand to 'Theoretical Computer Science', got:\n{}",
     s
   );
+  // Regression: an UNKNOWN field (no dedicated handler) routes to
+  // `\bib@field@unknownasdata`, which must emit its value as the content of
+  // `<ltx:bib-data role='zzcustomfield'>`. The old code set the value via a
+  // `Stored::Tokens` property in `after_digest` — too late AND the wrong Stored
+  // type for `#prop` content-insertion — so the element came out EMPTY and the
+  // value was dropped. It must now appear.
+  assert!(
+    s.contains("unknown-field marker value"),
+    "expected unknown bib field value to be emitted (not dropped), got:\n{}",
+    s
+  );
 }

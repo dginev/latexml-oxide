@@ -18,7 +18,11 @@
           <bib-title>JMP</bib-title>
         </bib-related>
         <bib-date role="publication">2020</bib-date>
-        <bib-data role="self" type="BibTeX"/>
+        <bib-data role="self" type="BibTeX">@article{Smith2020,
+    author = {John Smith},
+     title = {On Examples},
+   journal = {JMP},
+      year = {2020}}</bib-data>
       </bibentry>
       <bibentry key="Doe1999" type="book" xml:id="bib.bib2">
         <bib-name role="author">
@@ -28,7 +32,11 @@
         <bib-title>A book</bib-title>
         <bib-publisher>Pub</bib-publisher>
         <bib-date role="publication">1999</bib-date>
-        <bib-data role="self" type="BibTeX"/>
+        <bib-data role="self" type="BibTeX">@book{Doe1999,
+    author = {Jane Doe},
+     title = {A Book},
+ publisher = {Pub},
+      year = {1999}}</bib-data>
       </bibentry>
     </biblist>
   </bibliography>

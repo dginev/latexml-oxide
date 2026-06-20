@@ -124,13 +124,19 @@ impl BibEntry {
       if k.starts_with('_') {
         continue;
       }
-      out.push_str(",\n  ");
+      // Match Perl's source reconstruction: each field on its own line,
+      // the name right-justified so the `=` aligns — `max(1, 10 - len)`
+      // leading spaces (≥1 space even for names ≥10 chars). The entry's
+      // closing `}` follows the last value directly (no newline before it).
+      let lead = 10usize.saturating_sub(k.len()).max(1);
+      out.push_str(",\n");
+      out.push_str(&" ".repeat(lead));
       out.push_str(k);
       out.push_str(" = {");
       out.push_str(v);
       out.push('}');
     }
-    out.push_str("\n}");
+    out.push('}');
     out
   }
 }
@@ -1036,16 +1042,24 @@ LoadDefinitions!({
   // that were never digested.
   DefConstructor!("\\bib@field@unknownasdata Verbatim",
   "<ltx:bib-data role='#1'>#rawdata</ltx:bib-data>",
-  after_digest => sub[whatsit] {
-    let field = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
-    let tks = current_entry_field(&field)
-      .unwrap_or_else(|| {
-        // Fallback: raw string exploded char-by-char. Same logic as
-        // a Perl `currentBibEntryRawField` then `Tokenize` round-trip.
-        let raw = current_entry_raw_field(&field).unwrap_or_default();
-        Tokens::new(Explode!(&raw))
-      });
-    whatsit.set_property("rawdata", Stored::Tokens(tks));
+  // The `#rawdata` content must be set in `properties` (evaluated at
+  // construction, BEFORE the body), NOT `after_digest` (which runs after the
+  // body is already built — the previous code set the property too late, so
+  // every unknown bib field came out as an EMPTY `<ltx:bib-data role=.../>`,
+  // dropping its value entirely; Perl emits the value). `args[0]` is the field
+  // name (#1). Prefer the DIGESTED field tokens (Perl `currentBibEntryField`),
+  // falling back to the raw source exploded char-by-char.
+  properties => sub[args] {
+    let field = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    // Prefer the DIGESTED field (Perl `currentBibEntryField`), falling back to
+    // the raw source — but as a STRING, not Tokens: the constructor's `#prop`
+    // content-insertion handles `Stored::String` and silently drops
+    // `Stored::Tokens` (the old `after_digest` + `Stored::Tokens(...)` produced
+    // an EMPTY `<ltx:bib-data role=.../>`, dropping every unknown field's value).
+    let s = current_entry_field(&field).map(|t| t.to_string())
+      .or_else(|| current_entry_raw_field(&field))
+      .unwrap_or_default();
+    Ok(stored_map!("rawdata" => Stored::String(pin(&s))))
   });
 
   // -------- Phase 4: entry-type prepare/complete + field aliases --------
@@ -1692,11 +1706,15 @@ LoadDefinitions!({
   // role='self' type='BibTeX'>`. Uses `BibEntry::pretty_print`.
   DefConstructor!("\\bib@@origbibentry",
   "<ltx:bib-data role='self' type='BibTeX'>#bibentry</ltx:bib-data>",
-  after_digest => sub[whatsit] {
+  // Set `#bibentry` in `properties` (before the body) as a `Stored::String` —
+  // same fix as `\bib@field@unknownasdata`: the constructor's `#prop`
+  // content-insertion drops `Stored::Tokens`, so the old `after_digest` +
+  // `Stored::Tokens(...)` left the embedded BibTeX source EMPTY.
+  properties => sub[_args] {
     let pp = current_entry()
       .map(|e| e.borrow().pretty_print())
       .unwrap_or_default();
-    whatsit.set_property("bibentry", Stored::Tokens(Tokens::new(Explode!(&pp))));
+    Ok(stored_map!("bibentry" => Stored::String(pin(&pp))))
   });
 
   // -------- Phase 6: orchestration (Perl L111-190) --------
@@ -2265,10 +2283,12 @@ mod tests {
     e.add_raw_field("title", "On Examples");
     e.add_raw_field("year", "2020");
     let out = e.pretty_print();
-    // The order matches insertion order (Vec<(String,String)>).
+    // Order matches insertion order (Vec<(String,String)>). Field names are
+    // right-justified to width 10 so the `=` aligns (Perl source-reconstruction
+    // shape): author→4sp, title→5sp, year→6sp; entry `}` follows the last value.
     assert_eq!(
       out,
-      "@article{Smith2020,\n  author = {John Smith},\n  title = {On Examples},\n  year = {2020}\n}"
+      "@article{Smith2020,\n    author = {John Smith},\n     title = {On Examples},\n      year = {2020}}"
     );
   }
 
