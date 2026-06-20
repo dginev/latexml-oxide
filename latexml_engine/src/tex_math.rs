@@ -1233,14 +1233,20 @@ LoadDefinitions!({
     operator_stretchy => true, name => "overline", alias => "\\overline");
   DefConstructor!(
     "\\lx@text@overline{}",
-    "<ltx:text framed='overline' _noautoclose='true'>#1</ltx:text>",
+    // Perl TeX_Math.pool.ltxml:957-958 uses `class='ltx_overline'`, NOT
+    // `framed='overline'` (the latter is what soul.sty `\ul` / turing `\spec`
+    // emit). Text-mode `\overline{x}` → `<ltx:text class='ltx_overline'>`.
+    "<ltx:text class='ltx_overline' _noautoclose='true'>#1</ltx:text>",
     enter_horizontal => true
   );
   DefMath!("\\lx@math@underline{}", "\u{00AF}", operator_role => "UNDERACCENT",
     operator_stretchy => true, name => "underline", alias => "\\underline");
   DefConstructor!(
     "\\lx@text@underline{}",
-    "<ltx:text framed='underline' _noautoclose='true'>#1</ltx:text>",
+    // Perl TeX_Math.pool.ltxml:964-965 uses `class='ltx_underline'`, NOT
+    // `framed='underline'`. Text-mode `\underline{x}` →
+    // `<ltx:text class='ltx_underline'>`.
+    "<ltx:text class='ltx_underline' _noautoclose='true'>#1</ltx:text>",
     enter_horizontal => true
   );
   DefMath!("\\lx@math@overrightarrow{}", "\u{2192}", operator_role => "OVERACCENT",
