@@ -8621,12 +8621,20 @@ LoadDefinitions!({
       if let Some(width_val) = args[0].as_ref() {
         props.insert("width", Stored::String(pin(width_val.to_attribute())));
       }
-      // Perl: ($sep ne '3.0pt' ? (cssstyle => 'padding:' . $sep) : ())
+      // Perl: `($sep ne '3.0pt' ? (cssstyle => 'padding:' . $sep_pts) : ())`.
+      // Subtle: `$sep` is the `\fboxsep` Dimension OBJECT, and `ne` forces a
+      // STRING compare — the object stringifies to its internal form (e.g.
+      // "Dimension[196608]"), NEVER the literal "3.0pt", so the guard is ALWAYS
+      // true and Perl ALWAYS emits the padding cssstyle, even at the default
+      // 3pt. (The author clearly INTENDED `$sep->toAttribute ne '3.0pt'`, i.e.
+      // skip the default — an upstream Perl bug; see KNOWN_PERL_ERRORS.) The
+      // previous Rust port compared the attribute string (`sep_str != "3.0pt"`),
+      // which faithfully implemented the *intent* but DIVERGED from Perl's
+      // actual output (Rust dropped `cssstyle="padding:3.0pt"` on every default
+      // \fbox/\framebox). Match Perl's behavior: always emit.
       if let Some(sep) = lookup_dimension("\\fboxsep") {
         let sep_str = sep.to_attribute();
-        if sep_str != "3.0pt" {
-          props.insert("cssstyle", Stored::String(pin(s!("padding:{sep_str}"))));
-        }
+        props.insert("cssstyle", Stored::String(pin(s!("padding:{sep_str}"))));
       }
       Ok(props)
     },

@@ -1423,3 +1423,42 @@ parameter — `DefMacro!("\\endpage{}", "\\pageref{LastPage}{#1}")`
 (`revtex4_support_sty.rs`), mirroring `\startpage{}` and real revtex4 (where
 `\endpage` takes the page number). Unambiguously correct; the same
 fix-and-document pattern as #1.
+
+---
+
+## 35. `\fbox`/`\framebox` always emit `cssstyle='padding:3.0pt'` (Dimension-vs-string compare)
+
+**Perl source:** `LaTeXML/Engine/latex_constructs.pool.ltxml:4702`
+```perl
+properties => sub {
+  my $sep     = LookupRegister('\fboxsep');     # a Dimension OBJECT
+  my $sep_pts = $sep->toAttribute;              # e.g. "3.0pt"
+  ...
+  ($sep ne '3.0pt' ? (cssstyle => 'padding:' . $sep_pts) : ()), ... }
+```
+
+**Symptom:** Every `\fbox{…}` / `\framebox{…}` carries
+`cssstyle='padding:3.0pt'` even at the DEFAULT `\fboxsep` (3pt) — including
+inside `\fcolorbox`, enumerate custom labels, etc.
+
+**Root cause:** the guard compares `$sep` — the `\fboxsep` **Dimension object** —
+to the string `'3.0pt'` with `ne`, forcing a string compare of the object's
+stringification (its internal sp form, never the literal `"3.0pt"`). So the
+guard is **always true** and the padding cssstyle is **always** added. The
+author plainly intended `$sep->toAttribute ne '3.0pt'` (skip the default).
+
+**Minimal example:** `\fbox{x}` → `<ltx:text cssstyle='padding:3.0pt'
+framecolor='#000000' framed='rectangle'>x</ltx:text>` (the padding appears even
+though `\fboxsep` is the default 3pt).
+
+**Perl status:** present and unchanged.
+
+**Rust status (FIXED 2026-06-20, faithful):** an earlier Rust port translated
+the guard as `sep_str != "3.0pt"` (comparing the *attribute* string), which
+implemented the *intent* but DIVERGED from Perl's actual output — Rust dropped
+`cssstyle='padding:3.0pt'` on every default `\fbox`/`\framebox`. Restored Perl's
+behavior (`latex_constructs.rs` `\@framebox` properties): always emit
+`cssstyle='padding:<fboxsep>'`. This is a faithful-translation fix (Perl's
+condition is unconditionally true), not a beneficial divergence — verified
+byte-for-byte against `/usr/local/bin/latexml` (e.g. enum.tex: 6/6 framed boxes
+gain the cssstyle in both engines).
