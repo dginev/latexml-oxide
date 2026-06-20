@@ -106,6 +106,18 @@ theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
 >   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path — thin
 >   spaces (`\,`, <10pt) collapse to lpadding/rpadding and are now Perl-faithful
 >   incl. the script-node transfer (NewScript, `005716ff66`).
+> - **`\DeclareMathOperator` cluster** (found 2026-06-20 via feature comparison;
+>   `text=` semantics already MATCH, so deferred): (a) Perl splits the Math
+>   attrs — `tex="\operatorname{Tr}(A)+…"` (presentation reversion) vs
+>   `content-tex="\Tr(A)+…"` (content reversion, via `revert_as=>'context'`);
+>   Rust keeps the user CS `\Tr` in `tex` and emits no `content-tex` (its tex ==
+>   content-tex). (b) Rust drops the `name="Tr"` on the OPFUNCTION token that
+>   Perl infers from the CS. (c) `\DeclareMathOperator*`/`\operatorname*` limit
+>   operators: Perl's base carries `scriptpos="mid"` so `\argmax_x` puts the
+>   subscript BELOW (`SUBSCRIPTOP scriptpos="mid1"`); Rust wraps the base in an
+>   XMDual that loses the scriptpos, so the subscript defaults to `post1` (to the
+>   right) — a real limits-placement presentation bug, but entangled with the
+>   XMDual content-arm structure, so it belongs with the content-MathML work.
 
 ## Math-parser Rust-only gaps (parked — found by Rust-vs-Perl `text=` comparison)
 
