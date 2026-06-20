@@ -145,22 +145,25 @@ LoadDefinitions!({
   // for `\multicolumn{}{p{}}{}` cells (see `\lx@alignment@multicolumn`), where an
   // embedded `\\` MUST be a line break rather than the alignment row terminator.
   // This fixes the #1 corpus fatal (1610.00974) with no fixture regression.
-  DefMacro!("\\lx@tabular@p{}{}", "\\hsize=#2\\relax\\lx@tabular@p@{#1}{#2}");
+  DefMacro!(
+    "\\lx@tabular@p{}{}",
+    "\\hsize=#2\\relax\\lx@tabular@p@{#1}{#2}"
+  );
   DefConstructor!("\\lx@tabular@p@{}{Dimension} VBoxContents",
-    sub[document, args, props] {
-      let body = args[2].as_ref().unwrap();
-      if body.is_empty()? { return Ok(()); }
-      let mut attr = string_map!();
-      if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_string()); }
-      if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
-      insert_block(document, body, attr)?;
-    },
-    sizer => "#3", reversion => "#3",
-    properties => sub[args] {
-      let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let width = args[1].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
-      Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
-    });
+  sub[document, args, props] {
+    let body = args[2].as_ref().unwrap();
+    if body.is_empty()? { return Ok(()); }
+    let mut attr = string_map!();
+    if let Some(w) = props.get("width") { attr.insert("width".to_string(), w.to_string()); }
+    if let Some(v) = props.get("vattach") { attr.insert("vattach".to_string(), v.to_string()); }
+    insert_block(document, body, attr)?;
+  },
+  sizer => "#3", reversion => "#3",
+  properties => sub[args] {
+    let attachment = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+    let width = args[1].as_ref().map(|w| w.to_attribute()).unwrap_or_default();
+    Ok(stored_map!("width" => width, "vattach" => translate_attachment(&attachment)))
+  });
 
   DefColumnType!("*{Number}{}", sub[(n,pattern)] {
     let mut tks = Vec::new();
@@ -589,9 +592,9 @@ LoadDefinitions!({
       // `after` is `[<inner> } } <border suffix>]` — the two consecutive `}` close
       // `\hbox`/\vtop`; `<inner>` (e.g. `\lx@column@trimright`) belongs *inside* the
       // box and `<border suffix>` after it. Locate that `} }` pair.
-      let close_pair = (0..after_toks.len().saturating_sub(1)).find(|&i| {
-        after_toks[i].get_catcode() == Catcode::END && after_toks[i + 1].get_catcode() == Catcode::END
-      });
+      let is_end = |t: &Token| t.get_catcode() == Catcode::END;
+      let close_pair = (0..after_toks.len().saturating_sub(1))
+        .find(|&i| is_end(&after_toks[i]) && is_end(&after_toks[i + 1]));
       let (inner_after, border_suffix): (&[Token], &[Token]) = match close_pair {
         Some(i) => (&after_toks[..i], &after_toks[i + 2..]),
         None => (&after_toks[..], &[]),
