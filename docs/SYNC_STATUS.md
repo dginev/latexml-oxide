@@ -83,19 +83,29 @@ fleet tasks/s increase (production is convert-bound, so this is the dominant
 throughput lever — confirmed by the 2026-06-18 cortex dispatcher per-phase audit:
 dispatcher CPU is ~116 µs/task, negligible vs the conversion itself).
 
-**Plan (two-pass, release-time only):**
+**Plan (two-pass, release-time only):** — **passes 1–3 + 4-hook LANDED 2026-06-20.**
 1. **Instrument:** `RUSTFLAGS="-Cprofile-generate=…"` + a `maxperf`/release build.
+   ✅ `tools/make_release_pgo.sh` (defaults to the faster `release` instrument
+   profile; profiles are function-keyed so the shape need not match maxperf).
 2. **Train:** run the instrumented binary over a *diverse* arXiv sandbox slice
    (math-heavy / TikZ / plain / expl3 — not one paper, or it optimizes the wrong
-   hot paths). The arXiv sandbox is the named training set.
-3. **Merge:** `llvm-profdata merge` (from `llvm-tools-preview`).
+   hot paths). The arXiv sandbox is the named training set. ✅ `PGO_TRAIN_DIR`
+   overrides the default (a curated diverse in-repo `tests/*.tex` slice, so the
+   script is portable/CI-runnable with no external data).
+3. **Merge:** `llvm-profdata merge` (from `llvm-tools-preview`). ✅ The script
+   resolves `llvm-profdata` from the active toolchain **sysroot** (version must
+   match rustc) and **discards the build-time `.profraw`** emitted by instrumented
+   proc-macros/`build.rs` before merging — those profile *different* executables
+   and are pure noise (left in, they bloated the merged profile from ~MB to 81 MB).
 4. **Optimize:** `RUSTFLAGS="-Cprofile-use=…"` + the `maxperf` build — PGO stacks
-   with fat-LTO/CGU-1 (it informs LTO inlining). Land as
-   `tools/make_release_pgo.sh` + a `release.yml` job (release-only; the two-pass +
-   training run is too slow for ordinary CI).
+   with fat-LTO/CGU-1 (it informs LTO inlining). ✅ `make_release.sh` now honors
+   `PGO_PROFILE=<merged.profdata>` (adds `-Cprofile-use` + `-pgo-warn-missing-function`
+   to its existing maxperf build). Remaining: a `release.yml` two-pass job
+   (release-only; the two-pass + training run is too slow for ordinary CI).
 
-**Prerequisite — MET:** the pinned `nightly-2026-06-10` toolchain
-(`rust-toolchain.toml`; both passes must use the identical toolchain) + `llvm-tools-preview`.
+**Prerequisite — MET (installed 2026-06-20):** the pinned `nightly-2026-06-10`
+toolchain (`rust-toolchain.toml`; both passes must use the identical toolchain) +
+`llvm-tools-preview` (`rustup component add llvm-tools-preview`).
 
 **Caveats:** the profile is workload+code-specific → re-train at release when the
 engine changes meaningfully (not set-and-forget); compatible with `maxperf`
@@ -103,8 +113,13 @@ engine changes meaningfully (not set-and-forget); compatible with `maxperf`
 **BOLT** (post-link reordering, +a few %) stacks on top — attempt after PGO lands;
 `target-cpu=v2/v3` (SIMD baseline) is an orthogonal, separately-deferred lever.
 
-**Status:** OPEN, not started; 0 references in `release.yml`. Design home:
-`docs/PERFORMANCE.md` → "Build-pipeline optimization roadmap → High-effort".
+**Status:** TOOLING LANDED 2026-06-20 (`tools/make_release_pgo.sh` + the
+`make_release.sh` `PGO_PROFILE` hook); pipeline mechanics validated end-to-end at
+the `dev` profile (instrument→train→merge→profile-use→run, clean conversion). NOT
+yet wired into `release.yml`; the **maxperf perf measurement** is reserved for the
+full-corpus hardware (the dev box is freeze-prone/unrepresentative — see
+`PERFORMANCE.md` venue note). Design home: `docs/PERFORMANCE.md` →
+"Build-pipeline optimization roadmap → High-effort".
 
 ---
 

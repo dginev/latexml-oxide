@@ -324,13 +324,26 @@ cargo bloat --release --no-default-features --features runtime-bindings \
 > them there; this dev box is freeze-prone under heavy builds and unrepresentative
 > for perf numbers.
 
-- **[ ] PGO (Profile-Guided Optimization)** — the single largest perf lever
-  for this CPU-bound tool; typically 10–20% on hot paths. We have the ideal
-  training set: the arXiv sandbox corpus. Two-stage build:
-  `RUSTFLAGS=-Cprofile-generate=/tmp/pgo` → run a representative corpus slice
-  (`tools/run_perf_corpus.sh` / `benchmark_canvas.sh`) → `llvm-profdata merge`
-  → rebuild with `-Cprofile-use`. Wire into `release.yml` as a two-pass build.
-  Acceptance: standing-corpus wall before/after per the checklist below.
+- **[~] PGO (Profile-Guided Optimization) — TOOLING LANDED 2026-06-20, measurement
+  pending.** The single largest perf lever for this CPU-bound tool; typically
+  10–20% on hot paths. We have the ideal training set: the arXiv sandbox corpus.
+  **`tools/make_release_pgo.sh`** implements passes 1–3 (instrument with
+  `-Cprofile-generate` → train over a diverse `*.tex` slice → `llvm-profdata
+  merge` into `target/pgo/merged.profdata`); **pass 4 is `make_release.sh`**,
+  which now honors `PGO_PROFILE=<merged.profdata>` and feeds `-Cprofile-use`
+  (+`-pgo-warn-missing-function`, since the profile is function-keyed and stacks
+  over the faster `release` instrument profile) into its existing maxperf
+  (fat-LTO/CGU-1) build — PGO stacks with LTO because the profile informs LTO
+  inlining. Operator recipe:
+  `PGO_TRAIN_DIR=/data/arxiv/2106 bash tools/make_release_pgo.sh` then
+  `PGO_PROFILE=target/pgo/merged.profdata bash tools/make_release.sh`. Pipeline
+  mechanics validated end-to-end at the `dev` profile (instrument→train→merge→
+  profile-use→run); the **maxperf measurement** is reserved for the full-corpus
+  hardware (see the venue note above). Prereq: `rustup component add
+  llvm-tools-preview` (the script resolves `llvm-profdata` from the active
+  toolchain sysroot, so its version matches rustc). Remaining: a `release.yml`
+  two-pass job (release-only; the train run is too slow for ordinary CI) and the
+  standing-corpus wall before/after per the checklist below.
 - **[ ] BOLT (post-link binary optimization)** — stacks on PGO for a further
   few % by reordering hot/cold code in the linked binary (`llvm-bolt` + a
   profiling run on the final executable). Attempt only after PGO lands.
