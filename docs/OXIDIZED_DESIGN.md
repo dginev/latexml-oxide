@@ -1374,8 +1374,12 @@ wrapped to no-op on natives and delegate to the original for token macros.
 
 **Witness:** 2110.11931 (mnras — its template ships `\robustify{\cite}`):
 10 errors → 0, with correct citation output. User-macro robustify
-(`\robustify{\foo}`) is unaffected. (The `\patchcmd`/`\apptocmd`/
-`\pretocmd` siblings share the latent issue; not yet wrapped.)
+(`\robustify{\foo}`) is unaffected. (The `\patchcmd`/`\apptocmd`/`\pretocmd`
+siblings were checked and do NOT need wrapping: on a native binding they hit
+etoolbox's `\etb@ifscanable`-FALSE branch and **fail gracefully** via the
+caller's `{fail}` callback, leaving the binding intact — verified
+`\patchcmd{\cite}…`/`\apptocmd{\cite}…` → graceful fail, 0 errors, no garbage.
+Only `\robustify`'s `\ifdefparam`-false → `\protected\edef` path was broken.)
 
 ---
 
