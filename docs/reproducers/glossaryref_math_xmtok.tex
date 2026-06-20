@@ -1,0 +1,42 @@
+% Reproducer: \gls / \acrshort used in MATH mode emits an <ltx:glossaryref>
+% wrapping a bare <ltx:XMTok>, which the RelaxNG schema forbids — Rust emits
+% "Error:malformed:ltx:XMTok 'ltx:XMTok' isn't allowed in <ltx:glossaryref>".
+%
+% Rust-only. Witness 1705.10306 (an ICLR ML paper): Rust 358 errors, of which
+% 293 are exactly this glossaryref-XMTok error (the rest ~10 datatool/l3regex +
+% a few expl3-quark recursion); Perl converts with 1 error (an unrelated
+% \iclrfinalcopy). So the 293-error cluster is a single structural root × 293
+% math-mode glossary uses.
+%
+% Trigger: a glossary command in math mode. Two forms in the witness:
+%   - direct:  $\gls{KL}$ , \gls{SSM} inside an equation
+%   - via amsmath: \DeclareMathOperator{\ELBO}{\acrshort{ELBO}} then $...\ELBO...$
+%     (\operatorname{\acrshort{ELBO}} runs the acronym display IN math).
+%
+% Root: glossaries' \@gls@link is wrapped by \lx@glossaries@gls@link, a
+% DefConstructor with enter_horizontal => true (glossaries_sty.rs, mirrors
+% Perl's enterHorizontal => 1). But enter_horizontal() is a NO-OP in math mode
+% (stomach.rs — faithfully matching Perl L420-422), so in math the constructor's
+% content #3 ("elbo") is digested as MATH → bare <XMTok> children, which the
+% glossaryref content model (#PCDATA, ltx:Math, ...; NOT ltx:XMTok) rejects.
+% Perl produces clean output (mechanism to verify against full-paper Perl
+% output: glossaryref content should be text/PCDATA — or wrapped — not raw
+% XMTok). The document-builder indirect auto-open model is transitive, but
+% neither ltx:Math nor ltx:XMath is auto-openable (only ltx:XMText is), so
+% there is no auto-open path glossaryref → Math → XMath → XMTok. The faithful
+% fix is a dedicated-session document-builder change (math-in-text handling for
+% content absorbed into a text-mode constructor); see docs/SYNC_STATUS.md.
+%
+% NB: minimal Perl reproduction is finicky (glossaries \makeglossaries setup);
+% the canonical witness is the full 1705.10306 paper.
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage[acronym]{glossaries}
+\newacronym{ELBO}{elbo}{evidence lower bound}
+\DeclareMathOperator{\ELBO}{\acrshort{ELBO}}
+\makeglossaries
+\begin{document}
+Text use is fine: \gls{ELBO}.
+
+Math use triggers it: $\gls{ELBO}$, $x = \ELBO$, and $\acrshort{ELBO}$.
+\end{document}

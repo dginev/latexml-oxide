@@ -2569,6 +2569,40 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-20): NEW confirmed Rust-only gap — `\gls`/`\acrshort` in MATH mode → `XMTok` in `<glossaryref>` (1705.10306, 293 errors; Perl 1)
+
+Re-tested a large-error witness (the single-error tail was "exhausted", but the
+*large*-error papers were never re-triaged). **1705.10306** (ICLR ML paper,
+`glossaries`): Rust **358** errors vs Perl **1** — a genuine, significant
+Rust-only gap. **293 of the 358** are a single structural root:
+`Error:malformed:ltx:XMTok "ltx:XMTok" isn't allowed in <ltx:glossaryref>`. (The
+rest: ~10 datatool/l3regex undefineds — the separate `glossary` ERROR_DEBT item
+below — plus a few `\q_recursion_*` expl3-quark recursions.)
+
+**Root:** a glossary command used in MATH mode (direct `$\gls{KL}$`, `\gls{SSM}`;
+or via amsmath `\DeclareMathOperator{\ELBO}{\acrshort{ELBO}}` →
+`\operatorname{\acrshort{ELBO}}`). glossaries' `\@gls@link` is wrapped by the
+`\lx@glossaries@gls@link` DefConstructor (`glossaries_sty.rs`), which has
+`enter_horizontal => true` — faithfully mirroring Perl's `enterHorizontal => 1`,
+BUT `enter_horizontal()` is a **no-op in math mode** (stomach.rs, matching Perl
+L420-422). So in math the constructor's content #3 ("elbo") digests as MATH →
+bare `<XMTok>` children, which the `glossaryref` content model (`#PCDATA`,
+`ltx:Math`, …; **not** `ltx:XMTok`) rejects. The document-builder indirect
+auto-open model IS transitive, but neither `ltx:Math` nor `ltx:XMath` is
+auto-openable (only `ltx:XMText` is), so there is no auto-open path
+`glossaryref → Math → XMath → XMTok`. **Perl converts clean** (1 err), so its
+math-mode glossaryref content is text/wrapped, not bare XMTok.
+
+**Status: confirmed Rust-only, DEFERRED to a dedicated session** (core
+document-builder math-in-text handling — must first pin Perl's exact target
+structure from the full-paper Perl output, then decide between forcing the
+glossaryref content to text mode vs auto-wrapping math content; then full-suite +
+arXiv-slice validate). Likely a **cluster** (any ML/math paper using `\gls` in
+equations or `\DeclareMathOperator{...}{\acrshort{...}}`). Repro:
+`docs/reproducers/glossaryref_math_xmtok.tex` (reproduces in Rust; minimal Perl
+repro is finicky due to `\makeglossaries` setup — use the full 1705.10306 paper).
+This is distinct from the `glossary`/datatool l3regex ERROR_DEBT item.
+
 ### Round-37 (2026-06-20): fresh exploratory sweep (2106 slice, 80 papers) — engine solid; surfaced a cortex_worker-vs-latexml_oxide harness discrepancy
 
 After exhausting the tikz-cd/xy/tcolorbox sweep, ran a fresh sweep of 80 untested
