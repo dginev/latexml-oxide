@@ -393,6 +393,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       // So standalone bigops can form statements (needed for list expressions like \int \quad \int)
       statement = formula
         | statement metarelop formula => infix_relation
+        // A METARELOP (e.g. `:`) whose RHS is a `\quad`-separated list, mirroring
+        // the RELOP rule `formula relop formula_list` (line ~375): `a : b \quad c`
+        // → `a colon list@(b, c)`. Without it, only the bare RELOP form parsed
+        // (`a = b \quad c` worked, `a : b \quad c` fell to ltx_math_unparsed) —
+        // common in `\forall x : P \quad Q`-style notation.
+        | statement metarelop formula_list => infix_relation
         | metarelop formula => prefix_metarelop_apply
         | any_bigop | composed_bigop
         | operator | compound_operator
