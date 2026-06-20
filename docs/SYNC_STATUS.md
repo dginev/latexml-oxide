@@ -2530,6 +2530,42 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-20): Perl-`--verbose` parity buckets for the sweep failures → all genuine Rust-only gaps map to KNOWN deep families
+
+Properly re-compared the 21 sweep failures to Perl with `--verbose` (the prior
+pass used `--quiet` → wrong; see retraction below). Buckets:
+
+- **SHARED (Perl also errors — NOT Rust gaps):** 1404.6225 (1/1), 1605.04883
+  (1/1), 1701.08966 (1/2), 1702.02037 (1/1), 1702.06692 (1/1), 1705.10306
+  (Rust 357 / **Perl 1** — Rust *much* worse but the input is pathological in
+  both), plus the Perl-timeout papers 1901.03862 / 2203.05327 / 1810.06908.
+- **Genuine Rust-only (Perl 0) — but each maps to a KNOWN DEEP family, no new
+  quick win:**
+  - **1504.05963** (rust 1) — dep-scan loads `inputenc` with `ascii.def` from a
+    `\RequirePackage[ascii]{inputenc}` *inside* a `\DeclareOption{ascii}{…}` block
+    in `myaa.cls` (a conditional require the empty-options doc never selects), so
+    a UTF-8 `ç` ("François") in the bib → `undefined in inputencoding ascii`. Perl
+    doesn't load ascii-inputenc. = **dep-scan over-anticipation** family (cf.
+    deferred 1804.09301).
+  - **1611.04940** (rust 1) — `\newtheorem{step}[steps]{Step}` is used as a
+    standalone `\step` (one-line step marker) with no `\end{step}`; the unclosed
+    theorem env's group leaks to `\end{proof}`'s `\endgroup`. Perl auto-closes it.
+    = **mode-frame auto-close** family.
+  - **1804.01117** (rust 305, fatal) — xinttrig group imbalance (`\begingroup` at
+    line 350) → cascade incl. 82× `\pgffor@values expands into itself` + tikz. =
+    **multi-package cascade** (xint / pgffor / tikz), deep.
+- **CAVEAT — multi-`\documentclass` main-file confound:** the parity harness picks
+  the main file via `grep -rl documentclass | head -1`, which can DIFFER from
+  cortex's choice. 1809.00236 looked "rust 1 / perl 0" only because Perl ran
+  `paper.tex` (no `\qed`) while cortex ran `supplement.tex` (uses `\qed`); on the
+  SAME file both error → SHARED. Treat multi-`\documentclass` "Rust-only" results
+  as suspect until re-run on the identical file.
+
+**Bottom line:** the safe, single-macro quick wins are exhausted (the `\dq` fix was
+the last of them). Every remaining genuine Rust-only gap is a known deep family
+(dep-scan over-anticipation, mode-frame auto-close, box/mode-frame balance per
+1610.00974, multi-package cascades) — dedicated-session work, not loop iterations.
+
 ### Round-37 (2026-06-20): broad deferred/open re-sweep (58 papers); OmniBus "lever" RETRACTED (it was a `--quiet` artifact)
 
 Widened the stale-sweep: re-ran 58 deferred/open papers (branch binary w/ `\dq`,
