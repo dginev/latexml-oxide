@@ -153,20 +153,27 @@ A simple list-valued relation RHS now parses for BOTH a RELOP and a METARELOP
 the METARELOP `formula_list` rule added `50dbf352aa` — common in
 `\forall x : P \quad Q` notation).
 **Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
-- **space-separated bare-operator list ≥3 → truncated to 2 with SILENT token
-  loss** (found 2026-06-20; CONTENT-LOSS, not just structure): `\[ + - \times
-  \div \]` → Rust `list@(+, -)` (the `\times`/`\div` XMToks are DROPPED from the
-  tree, and `ltx_math_unparsed` is NOT set), Perl `list@(+, -, *, /)`. Same for
-  bare relations `\leq \geq \neq \approx` (a notation-line pattern). NARROWED:
-  only plain-space (or `\ `) separators ≥3 items hit it — `\quad`-separated
-  (WIDE_PUNCT) and comma-separated (`+, -, \times, \div`) lists are N-ary and
-  MATCH Perl. The grammar lists 2 juxtaposed bare ops (no PUNCT lexeme between
-  them) but has no N-ary juxtaposition rule, and the recovery accepts the
-  2-token prefix parse instead of falling to the token-preserving kludge — so
-  the tail is silently lost. Unlike the relation cases below, this drops content
-  rather than marking unparsed, so it's the higher-priority half. Needs a
-  focused grammar/recovery session (ambiguity-sensitive). Perl chains bare ops
-  via its Formula-juxtaposition rules.
+- **two leading operators + tail → SILENT prefix parse dropping the tail**
+  (found 2026-06-20; ROOT-CAUSED 2026-06-20; CONTENT-LOSS): the start rule
+  `anything` has a binary alternative `anyop anyop => compound_operator_2`
+  (builder.rs:1042). The hybrid engine accepts this 2-lexeme parse as a PREFIX
+  of a longer input and the tree extraction keeps only those 2, silently
+  dropping every later lexeme WITHOUT setting `ltx_math_unparsed`. Witnesses:
+  `\[ + - \times \div \]` → Rust `list@(+, -)` (×/÷ XMToks gone) vs Perl
+  `list@(+, -, *, /)`; bare relations `\leq \geq \neq \approx`; and the
+  broader/clearer `+ - a` → Rust `list@(+, -)` (the `a` dropped) where **Perl
+  marks the whole thing unparsed** (no text). So it's NOT just bare-operator
+  lists — it's any input whose first two lexemes are operators and whose tail
+  doesn't reduce. `\quad`-separated (WIDE_PUNCT) and comma-separated lists are
+  N-ary and DO match Perl (they go through the punct list rules, not the
+  prefix-accepting `anyop anyop`). FIX DIRECTION for the focused session: the
+  hybrid parser must require the accepted parse to span ALL input lexemes (a
+  prefix parse should fall to the token-preserving kludge / `ltx_math_unparsed`,
+  matching Perl), and/or `anyop anyop` should be made N-ary (`compound_operator_2`
+  → recursive list) — both ambiguity-sensitive, needs full-suite + Perl
+  cross-check, NOT a safe cron change. (The trigger — two LEADING bare operators
+  — is itself uncommon in real math, but the silent content loss is why it's the
+  higher-priority half here.)
 - **relation with a list RHS that ITSELF contains a scripted relop**:
   `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >= ^ ?, c)`,
   Rust unparsed. Distinct from the simple list-RHS above (which works): here the
