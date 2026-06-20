@@ -257,6 +257,22 @@ validation. (Iterations 1–2 already prototyped step 2 and measured its effects
    the row (Perl unwinds it). This is the regression-prone core change — gate on
    the full table-test suite.
 
+   **DO NOT use a blanket `\let\\=\lx@newline` in the p-column `before` (tried
+   2026-06-20, iteration 18 — REVERTED).** It *does* make the witness 0-error
+   (multicolumn p-cell `\\` becomes an in-cell `<break/>`), but it is too broad:
+   in a NORMAL p-column the `\\` is the **row terminator** (e.g.
+   `\begin{array}{cp{4.5cm}} 4 & $x_1$\newline $x_2$ \\`), and the rebind's scope
+   leaks onto it → a spurious trailing `<break/>` and the row not ending
+   (regresses `tests/math/array_newline_math`). The rebind cannot distinguish
+   in-cell `\\` (multicolumn braced arg) from the row-ending `\\`. So step 3 must
+   be the genuine `\cr` mode-unwind in the alignment engine, NOT a `\\` rebind —
+   that lets the multicolumn `\\` end the row cleanly from `internal_vertical`
+   while a normal p-column's row-`\\` still terminates the row.
+   *(Confirmed this iteration: the VBox port (step 1) makes the witness 510→
+   recoverable AND its p-cell output — width on `<inline-block>`, `class` on
+   `<p>` — matches `latexml --verbose` exactly; the 5 fixture "regressions" are
+   genuine width-placement re-blesses to the Perl form. Only step 3 remains.)*
+
 Net after all three: 1610.00974 (and the broader pgf-matrix-`&` cascade class)
 → 0 errors with Perl-matching tables.
 
