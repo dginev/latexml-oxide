@@ -2636,22 +2636,51 @@ were 1504.05963 (**FIXED**, dep-scan), 2110.11931 (10 err), 1804.01117 (305 err)
 `\robustify{\cite}` mangles natbib's native `\cite` in *both* engines; Perl just
 emits garbage (`CODE(0x…)`) silently while Rust errors (see below). So the only
 firmly-Rust-only-AND-Perl-correct gap that got FIXED this session is 1504.05963.
-**1804.01117 (305) is CONFIRMED genuine** (Perl output checked: 817 KB, 0 error
-markers, 0 `CODE(0x…)` garbage — Perl converts it correctly), so it is a real
-Rust-only target — but a deep multi-package cascade (xinttrig `\begingroup` group
-imbalance at line 350 → 82× `\pgffor@values expands into itself` + 40 tikz uses),
-dedicated-session work, not a loop fix. **Investigated 2026-06-20 (iteration 12):
-the cascade origin is the RAW-LOAD OF THE xint ENGINE** — `\usepackage{xintexpr}`
-pulls in xintfrac→xint→xintcore→xintkernel→xinttrig, and it breaks at
-`xinttrig.sty:350` `\xintdeffloatfunc @sin_series(x) := x * @sin_aux(sqr(x))` —
-xint's float-function-definition DSL, which uses `\romannumeral`&&@`-style catcode
-tricks and `@func(x):=` parsing. This is NOT localizable to a single root (it's
-the whole xint expression engine); `\xintdeffloatfunc` is unbound in Rust and the
-raw-load mishandles xint's `&&@` expansion-catcode machinery. (Aside: a bare
-minimal `\usepackage{xintexpr}` from the repo CWD *fails to find* xintexpr.sty on
-disk — "No raw file found" — so it stubs to nothing/0-errors; the full paper finds
-& raw-loads it. The disk-find discrepancy is a separate minor quirk.) Deep xint
-emulation — a major dedicated effort, parked.
+**1804.01117 — RECLASSIFIED 2026-06-20 (iteration, matched-config retest): NOT a
+genuine Rust-only gap. The prior "CONFIRMED genuine, Perl 817 KB clean" was a
+CONFIG-ASYMMETRY artifact** (Perl was run WITHOUT `--includestyles` → it *stubs*
+xint and degrades gracefully; Rust was run under the ar5iv/`INCLUDE_STYLES=true`
+profile → it *raw-loads* xint and dies). Verified Rust-vs-Perl in **matched**
+configs (the decisive test is Perl's `--includestyles` ⇔ Rust's
+`--preload=ar5iv.sty`):
+- **Plain mode (default, `INCLUDE_STYLES=false`): PERFECT PARITY.** Both engines
+  stub xint (neither's raw-load search pulls `tex/generic/`), emitting the
+  *byte-identical* "1 warning; 1 error; 1 undefined macro[\xinttheiexpr]" on a
+  minimal `\usepackage{xintexpr}\xinttheiexpr 2+3` repro.
+- **includestyles/ar5iv mode: SHARED raw-load failure** — Perl `--includestyles`
+  ALSO raw-loads xint (Processing definitions xintexpr/xintfrac/xint/xintcore/
+  xintkernel/xinttools/xintbinhex) and ALSO errors heavily (`\XINT_zapsp_b Missing
+  argument` ×many). So the xint-engine raw-load breakage is **shared**, not
+  Rust-only. (This obsoletes the stale `xinttrig.sty:350 \xintdeffloatfunc` /
+  `\begingroup` "cascade origin" theory above and the earlier `readBalanced ran
+  out of input` symptom — both were pre-`\scantokens`-fix artifacts.)
+- **Neither engine actually converts the paper — the ONLY divergence is the
+  FAILURE MODE (Perl fails-soft, Rust fails-hard/CRASH).** On the *full*
+  1804.01117, Perl `--includestyles` "completes (exit 0, 39 errors, 2.74s)" — BUT
+  its output is a **39-byte EMPTY document** (just the XML declaration, no
+  `<document>`; confirmed, cf. the older "1804.01117 is SHARED" note further
+  below). It degrades gracefully via its `$MAXSTACK=200` recursion guard
+  (`Core/Stomach.pm:169-178` `invokeToken` "Excessive recursion(?)"). Rust
+  instead **stack-overflows → SIGABRT (exit 134)**, overflowing the conversion
+  thread's **256 MB** stack (`latexml_oxide.rs:327`) — genuine *runaway native
+  recursion* in an xint-triggered gullet expansion (repeated `read_number`/`\the`
+  over `\XINT_expr_var_!` error tokens at xinttrig lines ~9253-9259, then `stack
+  overflow, aborting`). (Note: this is a NEWER symptom than the older note's
+  "FATAL at the 100-error cap" / pgffor self-ref cascade — intervening engine
+  changes shifted the failure from a bounded error-cap to an unbounded native
+  recursion.) Not reproducible from the minimal `\usepackage{xintexpr}` ar5iv
+  repro (that completes, 8 errors) — needs the full-paper tikz+xint cumulative
+  context. See `STABILITY_WITNESSES.md`.
+- **Action (robustness, lower priority — the paper converts in NEITHER engine).**
+  Since fixing the crash would only make Rust fail-soft (empty doc) like Perl, not
+  actually convert the paper, this is a *reliability hardening* item, not a parity
+  win. The faithful fix is a Perl-style recursion-depth guard in the gullet
+  expansion that converts runaway recursion into a recoverable error before the
+  256 MB overflow (mirrors Perl `$MAXSTACK`). Dedicated session: bisect a minimal
+  crasher, get a gdb backtrace of the recursion cycle, add the guard + full-suite
+  validate (tune the limit so legitimate deep recursion is unaffected). Deep xint
+  *emulation* (defining `\xinttheiexpr` etc.) remains separately parked and is NOT
+  needed for parity — plain-mode parity is already exact.
 
 **2110.11931 — isolated 2026-06-20 to a 7-line repro (fix pending, deep).** mnras
 paper; 10 errors all from one `\begin{equation}` processed in *horizontal* mode
@@ -2739,9 +2768,11 @@ pass used `--quiet` → wrong; see retraction below). Buckets:
     times out on the full paper). Minimal repro confirms both engines emit the
     same `\endgroup …mode horizontal` error. See the `\endgroup`/mode-horizontal
     cluster entry below (full Perl-parity verification + root cause).
-  - **1804.01117** (rust 305, fatal) — xinttrig group imbalance (`\begingroup` at
-    line 350) → cascade incl. 82× `\pgffor@values expands into itself` + tikz. =
-    **multi-package cascade** (xint / pgffor / tikz), deep.
+  - **1804.01117** — **RECLASSIFIED SHARED 2026-06-20** (matched-config retest):
+    NOT Rust-only. Plain mode = exact parity (both stub xint); includestyles mode
+    = both raw-load xint and fail (Perl → 39-byte empty doc; Rust → 256 MB
+    stack-overflow SIGABRT). Only divergence is fail-soft vs crash. Full detail in
+    the "parity buckets REFINED" section above.
 - **CAVEAT — multi-`\documentclass` main-file confound:** the parity harness picks
   the main file via `grep -rl documentclass | head -1`, which can DIFFER from
   cortex's choice. 1809.00236 looked "rust 1 / perl 0" only because Perl ran

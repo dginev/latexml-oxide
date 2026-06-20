@@ -234,6 +234,38 @@ top of this cluster (the `\pgfmathsetlength` expand-before-`+` fix); all four no
 without `MemoryBudget`. The earlier "deep pgf allocation vs Perl" hypothesis was wrong: it was a
 single decoration-automaton non-termination bug.
 
+## Cluster F — xint raw-load runaway native recursion → stack-overflow SIGABRT (OPEN, robustness)
+
+**Witness:** `1804.01117` (under the ar5iv profile / `INCLUDE_STYLES=true`, the
+cortex path).
+
+**Differential (2026-06-20, matched configs — Perl `--includestyles` ⇔ Rust
+`--preload=ar5iv.sty`):** **neither engine converts the paper** — both raw-load
+the xint engine (`xintexpr`→…→`xinttrig`) and fail. Perl **fails soft**: 39
+errors via its `$MAXSTACK=200` recursion guard (`Core/Stomach.pm:169-178`
+`invokeToken` "Excessive recursion(?)"), exits 0 with a **39-byte EMPTY**
+`<document/>`. Rust **fails hard**: **stack overflow → SIGABRT (exit 134)**,
+overflowing the conversion thread's **256 MB** stack (`latexml_oxide.rs:327`) — so
+the recursion is genuinely *runaway* (Perl finishes the same work in 2.74s). The
+overflow is in an xint-triggered gullet expansion: repeated
+`read_number`/`\the` over `\XINT_expr_var_!` error tokens (xinttrig lines
+~9253-9259) then `fatal runtime error: stack overflow, aborting`.
+
+**Not** reproducible from a minimal `\usepackage{xintexpr}` ar5iv repro (that
+completes with 8 errors); needs the full-paper tikz+xint cumulative context. NB
+this is a *newer* symptom than the prior SYNC_STATUS record (bounded "FATAL at the
+100-error cap" + pgffor self-ref) — intervening engine changes shifted it from a
+bounded error-cap to an unbounded native recursion.
+
+**Priority: low (reliability hardening, not a parity win)** — fixing the crash
+would only make Rust fail-soft (empty doc) like Perl, NOT actually convert the
+paper. **Faithful fix:** a Perl-style recursion-depth guard in the gullet
+expansion (mirrors `$MAXSTACK`) that raises a recoverable error before the 256 MB
+overflow. Dedicated session: bisect a minimal crasher → gdb backtrace of the
+recursion cycle → add the guard + full-suite validate (tune the limit so
+legitimate deep recursion is unaffected). Distinct from Cluster A's *memory*
+(RSS-cap) blowups: this is *stack* (recursion-depth) exhaustion.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
