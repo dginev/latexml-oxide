@@ -43,6 +43,9 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(rangle =[rangle_rel rangle_close]);
   token!(vertbar ~ "VERTBAR");
   token!(singlevertbar = "VERTBAR:|");
+  // `\|` and `\Vert` lex to a single doubled-bar token `VERTBAR:||` (vs four
+  // single `VERTBAR:|` for `||x||`). Used by the `\|x\|` norm rule below.
+  token!(doublevertbar = "VERTBAR:||");
   // `\left|...\right|` produces VERTBAR tokens tagged `stretchy="true"`.
   // The lexer (util.rs) further distinguishes those emitted by `\@left`
   // from those emitted by `\@right` via the `lx@side` property set in
@@ -484,6 +487,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              // Perl MathGrammar L294: || exp || → norm (must be before |exp| → abs-val)
              // CatSymbols merges two | into ‖; singlevertbar = VERTBAR:|
              | singlevertbar singlevertbar expression singlevertbar singlevertbar => norm_fenced
+             // `\|x\|` / `\Vert x\Vert`: the doubled bar arrives as a single
+             // `VERTBAR:||` token (not two `|`), so it forms `|| expr ||` —
+             // the standard norm notation. Without this it was unparsed; Perl
+             // parses it to norm@(x). (Subscripted `\|x\|_p` then parses via
+             // fenced_factor + POSTSUBSCRIPT.)
+             | doublevertbar expression doublevertbar => double_norm_fenced
              | singlevertbar expression singlevertbar => fenced
              // Kerned-stack norm / operator-norm from `\left|\kern\left|...`
              // (community idioms: \vertii, \vertiii, \Vert, \tnorm, …).

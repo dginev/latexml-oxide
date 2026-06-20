@@ -4278,6 +4278,32 @@ pub fn norm_fenced(
   interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
 }
 
+/// Norm with the *double-bar* token: `\|x\|` and `\Vert x\Vert` each lex to a
+/// single `VERTBAR:||` token (the doubled bar ‖), so they form
+/// `||₁ expression ||₂` (3 args) — distinct from the four-single-bar `||x||`
+/// form handled by [`norm_fenced`]. Without this rule the standard norm
+/// notation `\|x\|` / `\Vert x\Vert` (ubiquitous in analysis / ML: `\|x\|_2`,
+/// operator norms) failed to parse → `ltx_math_unparsed`, whereas Perl parses
+/// it to `norm@(x)`. `merge_vertbar_pair` morphs each bar to an OPEN/CLOSE ‖
+/// delimiter (it doesn't actually require a pair — it normalizes one XM).
+pub fn double_norm_fenced(
+  _rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  _: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // Args: ||1 expression ||2
+  unp!(args => open_opt, arg_opt, close_opt);
+  let arg = arg_opt.unwrap();
+  let open = merge_vertbar_pair(open_opt.unwrap(), "OPEN", ctxt.nodes);
+  let close = merge_vertbar_pair(close_opt.unwrap(), "CLOSE", ctxt.nodes);
+  let op = XProps {
+    meaning: Some(Cow::Borrowed("norm")),
+    ..XProps::default()
+  };
+  interpret_delimited(op.into(), vec![open, arg, close], ctxt).map(Some)
+}
+
 /// True iff the XM points to a token whose underlying DOM node carries
 /// a negative `rpadding` attribute — the prefiltered signal that an
 /// `<XMHint width="-X.Xpt"/>` (negative `\kern`) immediately followed

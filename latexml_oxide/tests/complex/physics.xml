@@ -308,9 +308,9 @@
                       <XMRef idref="S1.Ex4.m1.10"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok fontsize="160%" name="||" role="VERTBAR">∥</XMTok>
+                      <XMTok fontsize="160%" name="||" role="OPEN">‖</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex4.m1.10">a</XMTok>
-                      <XMTok fontsize="160%" name="||" role="VERTBAR">∥</XMTok>
+                      <XMTok fontsize="160%" name="||" role="CLOSE">‖</XMTok>
                     </XMWrap>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
@@ -320,13 +320,13 @@
                       <XMRef idref="S1.Ex4.m1.12"/>
                     </XMApp>
                     <XMWrap>
-                      <XMTok name="||" role="VERTBAR">∥</XMTok>
+                      <XMTok name="||" role="OPEN">‖</XMTok>
                       <XMApp xml:id="S1.Ex4.m1.12">
                         <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                         <XMTok font="italic" role="UNKNOWN">X</XMTok>
                         <XMTok font="italic" role="UNKNOWN">Y</XMTok>
                       </XMApp>
-                      <XMTok name="||" role="VERTBAR">∥</XMTok>
+                      <XMTok name="||" role="CLOSE">‖</XMTok>
                     </XMWrap>
                   </XMDual>
                 </XMWrap>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <equation xml:id="S0.Ex1">
+      <Math mode="display" tex="\|x\|" text="norm@(x)" xml:id="S0.Ex1.m1">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="norm"/>
+              <XMRef idref="S0.Ex1.m1.1"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok name="||" role="OPEN">‖</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex1.m1.1">x</XMTok>
+              <XMTok name="||" role="CLOSE">‖</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex2">
+      <Math mode="display" tex="\|v\|" text="norm@(v)" xml:id="S0.Ex2.m1">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="norm"/>
+              <XMRef idref="S0.Ex2.m1.1"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok name="||" role="OPEN">‖</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex2.m1.1">v</XMTok>
+              <XMTok name="||" role="CLOSE">‖</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex3">
+      <Math mode="display" tex="\|x\|_{2}\leq\|x\|_{1}" text="(norm@(x)) _ 2 &lt;= (norm@(x)) _ 1" xml:id="S0.Ex3.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="norm"/>
+                  <XMRef idref="S0.Ex3.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="||" role="OPEN">‖</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.1">x</XMTok>
+                  <XMTok name="||" role="CLOSE">‖</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="norm"/>
+                  <XMRef idref="S0.Ex3.m1.2"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok name="||" role="OPEN">‖</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.2">x</XMTok>
+                  <XMTok name="||" role="CLOSE">‖</XMTok>
+                </XMWrap>
+              </XMDual>
+              <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex4">
+      <Math mode="display" tex="\|Ax\|^{2}" text="(norm@(A * x)) ^ 2" xml:id="S0.Ex4.m1">
+        <XMath>
+          <XMApp>
+            <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="norm"/>
+                <XMRef idref="S0.Ex4.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok name="||" role="OPEN">‖</XMTok>
+                <XMApp xml:id="S0.Ex4.m1.1">
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">A</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">x</XMTok>
+                </XMApp>
+                <XMTok name="||" role="CLOSE">‖</XMTok>
+              </XMWrap>
+            </XMDual>
+            <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <equation xml:id="S0.Ex5">
+      <Math mode="display" tex="||y||" text="norm@(y)" xml:id="S0.Ex5.m1">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="norm"/>
+              <XMRef idref="S0.Ex5.m1.1"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok role="OPEN">‖</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.1">y</XMTok>
+              <XMTok role="CLOSE">‖</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>
+    </equation>
+  </para>
+</document>

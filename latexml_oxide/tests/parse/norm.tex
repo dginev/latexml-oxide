@@ -1,0 +1,18 @@
+% Regression: the `\|x\|` / `\Vert x\Vert` norm notation lexes the doubled bar
+% as a single VERTBAR:|| token (not two |), so it needs its own
+% `doublevertbar expression doublevertbar => double_norm_fenced` rule — distinct
+% from the four-single-bar `||x||` form. Without it these were unparsed
+% (ltx_math_unparsed) even though they are THE standard norm notation
+% (analysis / ML: `\|x\|_2`, operator norms). Perl parses all to norm@(...) with
+% OPEN/CLOSE ‖ delimiters; this matches. (Also guards the four-pipe `||x||`.)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+
+\[ \|x\| \]
+\[ \Vert v \Vert \]
+\[ \|x\|_2 \le \|x\|_1 \]
+\[ \|A x\|^2 \]
+\[ ||y|| \]
+
+\end{document}
