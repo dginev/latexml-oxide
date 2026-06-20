@@ -151,6 +151,7 @@ current when adding, renaming, merging, or archiving a doc. Grouped by role:
 - **[`docs/TELEMETRY.md`](docs/TELEMETRY.md)** — Per-job structured telemetry schema for `cortex_worker` benchmark runs.
 
 **Dated diagnostic snapshots** (point-in-time studies — see naming rule):
+- **[`docs/PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md`](docs/PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md)** — tikz-cd/xy/tcolorbox sandbox: Rust beats Perl ~3.5× on fatals (861 vs 3,011); 743/861 Rust-fatals are *also* Perl-fatal (parity); only ~14 genuine Rust-worse divergences, all tracing to deep tikz-cd/pgf/babel binding gaps. Identifies the top future lever.
 - **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: Phase-0 trace complete and the container-id (xml:id accessor) half landed; content-branch/MathFork reconciliation still pending.
 - **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted, plus the separate sibling missing-dump codepoint-data root cause. (Issue #217's macOS probe is resolved and archived at [`docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md`](docs/archive/PORTABILITY_MACOS_PROBE_2026-06-07.md).)
 - **[`docs/SANDBOX_TRIAGE_2026-05-21.md`](docs/SANDBOX_TRIAGE_2026-05-21.md)** — 10k sandbox triage workflow reference and failure-cluster classes.

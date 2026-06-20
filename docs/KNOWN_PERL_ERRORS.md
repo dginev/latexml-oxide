@@ -1285,3 +1285,53 @@ glyphs — every populated slot gets a nonzero-width glyph, so the loops
 terminate. All six witness papers now convert error-free with full-size
 documents (math0102053: 4.5 GB OOM → 3.2 s, 0 errors). No control-flow
 divergence: Perl given the same fontmap would behave identically.
+
+---
+
+## 32. `\item[\refstepcounter{<itemcounter>}…]` infinite recursion (shared Perl/Rust)
+
+**Perl source:** `LaTeXML/Engine/latex_constructs.pool.ltxml` `sub RefStepItemCounter`
+(L1362-1393); Rust port `latexml_core/src/binding/counter/dialect.rs::ref_step_item_counter`.
+
+**Symptom:** A list item whose *optional argument* (custom label) contains
+`\refstepcounter{<C>}` where `<C>` is the **same counter the list itself uses**
+(`enumi` at enumerate level 1) recurses without bound. Rust trips the
+`Fatal:Stomach:Recursion` fuse; Perl trips its own runtime
+`Fatal:perl:deep_recursion` (`Deep recursion on subroutine
+"LaTeXML::Core::Gullet::readingFromMouth"`). **Both implementations fail with a
+conversion-fatal** (`Status:conversion:3`).
+
+**Minimal trigger:**
+```tex
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item[\refstepcounter{enumi}Stage] Hello
+\end{enumerate}
+\end{document}
+```
+(Independent of `enumitem`/`hyperref` — reproduced with each removed.)
+
+**Root cause:** `RefStepItemCounter`/`ref_step_item_counter` embeds the optarg
+into `\def\fnum@<itemcounter>{\makelabel{<optarg>}}` and then digests
+`\lx@make@tags{<itemcounter>}`. The default ("") tag formatter `\lx@fnum@@`
+expands `\fnum@<itemcounter>` → digests the optarg → runs
+`\refstepcounter{<itemcounter>}` → `ref_step_counter` → `\lx@make@tags{<itemcounter>}`
+→ reads `\fnum@<itemcounter>` (still the optarg) → `\refstepcounter` → … The
+optarg's counter and the item counter being identical (`enumi == enumi`) closes
+the loop. The stack is the repeating unit
+`\lx@tags → \lx@tag@intags → { → \refstepcounter → \lx@tags → …`.
+
+**Witnesses:** tikz-cd 2009.08640 (`stab_map.tex:28`,
+`\item[\refstepcounter{enumi}\scshape Stage $0$]`). Perl reference
+(`tex_to_html.zip`) on the same paper: `Status:conversion:3`,
+`deep_recursion`.
+
+**Status:** Shared upstream/Rust limitation — **parity preserved** (both fatal).
+The real-LaTeX semantics (step the counter once as a side effect of typesetting
+the label) differ from LaTeXML's tag-machinery model, which re-executes the
+label each time the tag is formatted. **Kept as-is**: a fix would have to break
+the re-entrancy inside the core item/tag path that every list relies on — high
+regression risk for a pathological input that Perl also rejects. Rust's outcome
+(`Fatal:Stomach:Recursion`, caught by the engine fuse) is arguably cleaner than
+Perl's (a Perl-runtime deep-recursion warning).
