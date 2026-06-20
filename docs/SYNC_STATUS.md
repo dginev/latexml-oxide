@@ -116,13 +116,29 @@ diff the core-XML `text=` (`/usr/local/bin/latexml --quiet`). The math parser is
 a full rewrite (Marpa vs RecDescent), so it's the richest seam for Rust-only
 divergences. Landed via this method: `\mid`-in-fences (`439630485a`), `\|x\|`/
 `\Vert` norm (`6aa90dd13d`), `\nabla^2 \phi` scripted-operator (`35525e6f38`),
-script-node padding transfer for `x^2\,dx` (NewScript L1624-1643, `005716ff66`).
-Also landed via Rust-vs-Perl XML structural comparison (non-math): author
-`\thanks` → `<contact name="Thanks: ">` (frontmatter, `33a29ccf2f`); table
+script-node padding transfer for `x^2\,dx` (NewScript L1624-1643, `005716ff66`);
+scripted relations (`\stackrel{?}{=}`, `\overset`/`\underset` over a relation)
+now lex as atomic RELOP terminals like decorated arrows, so they parse as
+standalone list items (`a \quad \stackrel{?}{=} \quad b` was `ltx_math_unparsed`,
+`4a5ebf29f7`). Also landed via Rust-vs-Perl XML structural comparison (non-math):
+author `\thanks` → `<contact name="Thanks: ">` (frontmatter, `33a29ccf2f`); table
 header-guessing over a `\multicolumn` data row — colspan border move must be
 in-place (Perl `collect_alignment_rows`), the deferred port broke the
-read-after-write chain so `guess_alignment_headers` saw no hump (`3b17005458`).
+read-after-write chain so `guess_alignment_headers` saw no hump (`3b17005458`);
+`<graphics candidates=...>` omitted for a missing image file, matching Perl's
+empty `@candidates` (`be41cc8c54`).
 **Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
+- **relation with a list RHS containing a scripted relop**:
+  `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >= ^ ?, c)`,
+  Rust unparsed. The scripted-relop atomic fix (`4a5ebf29f7`) cleared the simple
+  standalone-item cases but not this one: `\le` binds `b` then the `\quad`-list
+  `b, >=^?, c` must become the relation's RHS. Niche; deeper relation/list
+  precedence interaction.
+- **`\underset`/`\overset` over an ARROW with a multi-token script**:
+  `x \underset{n\to\infty}{\to} y` parses but the under-script `n\to\infty`
+  reads as `n@to@infinity` (apply) where Perl groups `(n to infinity)` — the
+  same ARROW-as-applied-function reading family as the `f(a,b)` divergence
+  above, not the scripting itself.
 - **`[a \mid b]` / `[a|b]`** (bracket-conditional) → Perl
   `delimited-[]@(conditional@(a,b))`. Paren `(a|b)` and brace `{a|b}` conditional
   rules exist (builder.rs ~549/557) but bracket does not; bare `a|b` parses
