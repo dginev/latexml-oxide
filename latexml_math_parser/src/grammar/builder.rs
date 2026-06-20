@@ -378,6 +378,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)
         | formula relop relop => consecutive_relop_chain
         | formula arrow expression => infix_relation
+        // A trailing ARROW with no RHS (e.g. `a \to`, `x \mapsto`) — postfix
+        // relation with an absent right operand, like `formula relop =>
+        // postfix_relop`. Perl yields `a to absent`; without this it fell to
+        // ltx_math_unparsed.
+        | formula arrow => postfix_relop
         | arrow expression => prefix_arrow_apply
         // Arrow-wrapped content (from amscd XMWrap role="ARROW"):
         // Parsed as a prefix arrow application on the enclosed content.
@@ -399,6 +404,11 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // (`a = b \quad c` worked, `a : b \quad c` fell to ltx_math_unparsed) —
         // common in `\forall x : P \quad Q`-style notation.
         | statement metarelop formula_list => infix_relation
+        // A trailing METARELOP with no RHS (e.g. `x \mapsto`) — postfix relation
+        // with an absent right operand, mirroring `formula relop => postfix_relop`
+        // for plain relops. Perl yields `x maps-to absent`; without this the
+        // formula fell to ltx_math_unparsed.
+        | statement metarelop => postfix_relop
         | metarelop formula => prefix_metarelop_apply
         | any_bigop | composed_bigop
         | operator | compound_operator
