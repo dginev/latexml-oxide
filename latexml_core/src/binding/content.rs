@@ -347,7 +347,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   let banner_key = s!("__loading_banner__{filename}");
   let this_frame_announces = with_value(&banner_key, |v| v.is_none());
   if this_frame_announces {
-    note_begin(&s!("Loading {:?} definitions", filename));
+    note_begin(&s!("Loading {filename}"));
     assign_value(&banner_key, true, Some(Scope::Global));
   }
 
@@ -431,7 +431,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // load its same-named raw counterpart via `noltxml=>1`.
   if !options.reloadable && already_handled(&filename) {
     if this_frame_announces {
-      note_end(&s!("Loading {:?} definitions", filename));
+      note_end(&s!("Loading {filename}"));
       assign_value(&banner_key, Stored::None, Some(Scope::Global));
     }
     return Ok(());
@@ -681,7 +681,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
         // InputDefinitions which returns undef on not-found even with noerror=>1.
         if this_frame_announces {
-          note_end(&s!("Loading {:?} definitions", filename));
+          note_end(&s!("Loading {filename}"));
           assign_value(&banner_key, Stored::None, Some(Scope::Global));
         }
         return Err(s!("File not found: {}", filename).into());
@@ -798,7 +798,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // No handleoptions=false cleanup needed: we never mutated
   // \@currname/\@currext on that path (matching Perl).
   if this_frame_announces {
-    note_end(&s!("Loading {:?} definitions", filename));
+    note_end(&s!("Loading {filename}"));
     assign_value(&banner_key, Stored::None, Some(Scope::Global));
   }
   Ok(())

@@ -215,10 +215,12 @@ pub fn load_definitions() -> latexml_core::common::error::Result<()> {{
       compare_stamp_to_ambient(stamp);
     }}
   }}
-  let count = latexml_core::dump_reader::load_from_str(&content)
+  // Single load message: `dump_reader:loaded` names the real `source_label`
+  // (disk path in dev, `<embedded TLyyyy>` in the shipped binary) plus the
+  // skipped/errors detail — so we no longer emit a second, redundant
+  // `latex_dump:loaded` line for the same load.
+  let _count = latexml_core::dump_reader::load_from_str_labeled(&content, &source_label)
     .map_err(|e: String| -> latexml_core::common::error::Error {{ e.into() }})?;
-  latexml_core::Info!("latex_dump", "loaded",
-    latexml_core::s!("loaded {{}} entries from {{}}", count, source_label));
   Ok(())
 }}
 

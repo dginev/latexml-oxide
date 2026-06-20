@@ -79,13 +79,12 @@ pub fn load_definitions() -> Result<()> {
     );
     return Ok(());
   };
-  let count =
-    dump_reader::load_from_str_plain(&content).map_err(|e: String| -> Error { e.into() })?;
-  Info!(
-    "plain_dump",
-    "loaded",
-    s!("loaded {} entries from {}", count, source_label)
-  );
+  // Single load message: `dump_reader:loaded` now names the real `source_label`
+  // (disk path in dev, `<embedded TLyyyy>` in the shipped binary) and carries the
+  // skipped/errors detail — so we no longer emit a second, redundant
+  // `plain_dump:loaded` line for the same load.
+  let _count = dump_reader::load_from_str_labeled(&content, &source_label)
+    .map_err(|e: String| -> Error { e.into() })?;
   Ok(())
 }
 

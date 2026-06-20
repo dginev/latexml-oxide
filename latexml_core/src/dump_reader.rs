@@ -56,6 +56,15 @@ pub fn load_from_str_plain(content: &str) -> Result<usize, String> {
   load_from_str_internal(content, "<embedded:plain>")
 }
 
+/// Load a dump, naming `source` (a real path or an `<embedded TLyyyy>` label) in
+/// the single `dump_reader:loaded` Info line. The dump wrappers
+/// (`plain_dump`/`latex_dump`) use this so there is exactly ONE "loaded N
+/// entries from <source>" message per dump — they no longer emit a second,
+/// redundant `*_dump:loaded` line of their own.
+pub fn load_from_str_labeled(content: &str, source: &str) -> Result<usize, String> {
+  load_from_str_internal(content, source)
+}
+
 // Per-load context used to attach a nominal Locator to dump-installed
 // Expandables. Matches Perl #aaacdba2 (2026): dump-loaded definitions
 // should be traceable to the dump file + line, not report the arena's
