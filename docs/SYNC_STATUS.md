@@ -46,6 +46,28 @@ high Rc strong-count on `text`/`creator`) reads as Rust-only in the API but is
 **already fixed** — all sampled papers show 0 such errors locally now. Trigger a
 fresh Rust rerun (needs `X-Cortex-Token`) for accurate cross-join counts.
 
+**10k easy-parity seam MINED OUT (verified 2026-06-20).** A full local-verified
+sweep of the 10k Rust error categories (`undefined`, `unexpected` `_`/`^`/`$`/`\fi`,
+`malformed`, `misdefined`, `document`, `invalid`) found every remaining apparent
+"Rust-only" cluster traces to a SHARED cause — confirm before chasing:
+- **Third-party class/pkg neither engine binds** → identical errors: imsart via
+  `\documentclass{arximspdf}` (ships `arximspdf.cls` but `\RequirePackage{imsart}`
+  and **imsart.sty is host-missing**) → `\bauthor`/`\b*` undefined in BOTH;
+  `jpconf` (`jpconf.cls` not in texmf) → `\ack` undefined in BOTH; `feynmf`/`fmf*`
+  (Rust already beats Perl); `changes`/`\setremarkmarkup` (`#` leaks in both).
+- **Author errors**: `\DeclareCaptionFormat` used without `\usepackage{caption}`
+  (1608.07271); minimal repro WITH caption is clean in both.
+- **Stale cortex run** (predates fixes): `document/convert` shared-Node cluster.
+The genuine Rust-only wins were the harvested one-offs (`\ifodd`→glossary,
+`\notetoeditor`, `\endpage`). Further 10k cross-join needs a rerun built FROM
+this branch; otherwise pivot to the beyond-parity long-tail below.
+
+**Beyond-parity long-tail coverage candidates (#2 track, surpass-Perl —
+defer while strict-parity is #1):** add `arximspdf`/`imsart` support (16+ IMS
+papers: aop/aos; needs a bundled/stubbed imsart.sty equivalent since the host
+lacks it); `jpconf` class → map to iopart_support (18+ IOP-conf papers);
+theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
+
 ---
 
 ## Open tasks (actionable)
