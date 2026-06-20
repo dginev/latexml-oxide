@@ -136,7 +136,11 @@ standalone list items (`a \quad \stackrel{?}{=} \quad b` was `ltx_math_unparsed`
 (`\left\langle a \middle| b \right\rangle`) — the qm_braket/qm_bracket rules now
 also accept `MIDDLE:|`, not just `VERTBAR:|`, so the ubiquitous physics braket
 parses to inner-product / quantum-operator-product like the bare `|` form
-(`88391a07a6`). Also landed via Rust-vs-Perl XML structural comparison (non-math):
+(`88391a07a6`); physics-package `\dv`/`\pdv` single-variable derivatives —
+dropped a spurious `absent` order arg (`\dv{f}{x}` → `derivative@(x)` not
+`derivative@(x, absent)`) and kept the variable at dual arg 2 for the bare
+`\dv{x}` form (`derivative@(x)` not `derivative@(absent)`), matching
+physics.sty.ltxml L438/L455 (`c042e0f86a`). Also landed via Rust-vs-Perl XML structural comparison (non-math):
 author `\thanks` → `<contact name="Thanks: ">` (frontmatter, `33a29ccf2f`); table
 header-guessing over a `\multicolumn` data row — colspan border move must be
 in-place (Perl `collect_alignment_rows`), the deferred port broke the
