@@ -1,0 +1,33 @@
+% Regression test for the NATIVE expl3 l3regex VM (the Rust-`regex`-crate shim
+% in expl3_sty.rs was removed 2026-06-20 once the real VM ran correctly under the
+% gullet). Exercises the ops the shim used to bypass — match (inline + compiled
+% var), count, replace_all, and extract_once into a seq — all via the real
+% expl3-code.tex VM. Witness of the original shim-motivating cascade: 2406.14142
+% (21 errors -> 0). Expected: minl=N minl2=Y  varm=Y varm2=N  cnt=3
+% rep=hell0 w0rld  ext=Y exc=123.
+\documentclass{article}
+\ExplSyntaxOn
+\regex_const:Nn \c_demo_regex { \d+ }
+\int_new:N \l_demo_int
+\regex_count:nnN { \d } { a1b2c3 } \l_demo_int
+\tl_new:N \l_demo_tl
+\tl_set:Nn \l_demo_tl { hello~world }
+\regex_replace_all:nnN { o } { 0 } \l_demo_tl
+\seq_new:N \l_demo_seq
+\regex_extract_once:nnNTF { (\d+) } { abc123def } \l_demo_seq
+  { \tl_gset:Nn \g_demo_ext_tl { Y } } { \tl_gset:Nn \g_demo_ext_tl { N } }
+\ExplSyntaxOff
+\begin{document}
+minl=\ExplSyntaxOn\regex_match:nnTF{[a-z]+}{ABC}{Y}{N}\ExplSyntaxOff{}
+minl2=\ExplSyntaxOn\regex_match:nnTF{[a-z]+}{abc}{Y}{N}\ExplSyntaxOff
+
+varm=\ExplSyntaxOn\regex_match:NnTF\c_demo_regex{x9}{Y}{N}\ExplSyntaxOff{}
+varm2=\ExplSyntaxOn\regex_match:NnTF\c_demo_regex{xy}{Y}{N}\ExplSyntaxOff
+
+cnt=\ExplSyntaxOn\int_use:N\l_demo_int\ExplSyntaxOff
+
+rep=\ExplSyntaxOn\tl_use:N\l_demo_tl\ExplSyntaxOff
+
+ext=\ExplSyntaxOn\tl_use:N\g_demo_ext_tl\ExplSyntaxOff{}
+exc=\ExplSyntaxOn\seq_item:Nn\l_demo_seq{1}\ExplSyntaxOff
+\end{document}

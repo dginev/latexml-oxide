@@ -34,8 +34,13 @@ prefer the cortex DB cross-join (svc4 Rust ≫ svc3 Perl, see
 The harness error-gate (`latexml_oxide/src/util/test.rs`) fails a test at zero
 debt to force removal once fixed. Drive each to clean via a real core fix:
 - **`glossary`** — Rust-only (Perl 0): ~50 undefined `datatool`/expl3 macros
-  (`\xDTLinitials`, `\l_datatool_other_regex`, `\__datatool_word:n`, …). Root =
-  **l3regex gap** (see Deep gap #A). Large.
+  (`\xDTLinitials`, `\l_datatool_other_regex`, `\__datatool_word:n`, …). **Root
+  RE-DIAGNOSED 2026-06-20: NOT l3regex.** The real expl3 l3regex VM runs
+  correctly now (the old Rust-`regex` shim was removed — see below); the
+  remaining failure is that **datatool-base.sty is not raw-loaded** in the
+  default profile, so its name-parsing macros are never defined. Fix = either
+  raw-load datatool (it now works, since l3regex+seqs do) or port its
+  initials/word-parsing into the glossaries binding.
 - **`figure_mixed_content`** — `ltx:theorem` not allowed in `ltx:figure` (Perl
   also errors 1). True fix = **schema expansion** (theorems/mdframed in figures).
 
@@ -74,12 +79,17 @@ TL-window `dumps` + macOS arm64 leg + publish (each first-exercised on that tag)
 
 ## Deep deferred families (parked — large or shared; tackle in dedicated sessions)
 
-- **#A l3regex / datatool** — the **highest-impact lever**: a full LaTeX3 regex
-  engine (datatool uses `regex_split`/`regex_replace`/`regex_match` for CSV
-  delimiters, escaping, and name/initials parsing). Unblocks the `glossary`
-  ERROR_DEBT + a cluster of glossaries papers. Pragmatic approach: a string-level
-  engine backed by Rust's `regex` crate with a *conservative fallback* (error,
-  as today, on patterns it can't handle safely → net non-negative). Multi-session.
+- **#A l3regex — ✅ RESOLVED 2026-06-20: the real expl3 VM works natively.** The
+  feasibility probe (per user direction, consulting `expl3-code.tex:26422+`)
+  showed `\regex_match` (inline + compiled-var), `\regex_count`,
+  `\regex_replace_all`, `\regex_extract_once` and the `\seq_*` results all run
+  correctly via the real VM — intervening gullet fixes cleared the old
+  `\if_int_compare:w` timing stall. So the Rust-`regex`-crate **shim in
+  `expl3_sty.rs` was REMOVED** (faithful + complete). Verified: original cascade
+  witness 2406.14142 (21 errors → 0), full suite 1459/0, new
+  `expl3/regex_native` test. **datatool** remains: its name-parsing isn't loaded
+  (it's not raw-loaded by default — see the `glossary` ERROR_DEBT above); the
+  regex layer it needs now works.
 - **1610.00974 step-3** — port the *global* `p{}` column to the Perl VBox form
   (`\lx@tabular@p`/VBoxContents). The narrow `\multicolumn{}{p{}}` case is already
   fixed; the global port exposes a `\cr`-mid-VBoxContents-predigest interleaving +

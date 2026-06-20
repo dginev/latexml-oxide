@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>minl=N
+minl2=Y</p>
+  </para>
+  <para xml:id="p2">
+    <p>varm=Y
+varm2=N</p>
+  </para>
+  <para xml:id="p3">
+    <p>cnt=3</p>
+  </para>
+  <para xml:id="p4">
+    <p>rep=hell0 w0rld</p>
+  </para>
+  <para xml:id="p5">
+    <p>ext=Y
+exc=123</p>
+  </para>
+</document>

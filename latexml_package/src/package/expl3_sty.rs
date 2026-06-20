@@ -1,5 +1,3 @@
-use regex::Regex;
-
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -141,130 +139,15 @@ LoadDefinitions!({
     \edef\c_sys_shell_escape_int{0}%
   ");
 
-  // expl3 regex matching is implemented via a deeply intertwined chain of
-  // `\__regex_compile:n`, `\__regex_match:n`, `\__regex_if_match:nn`, etc.
-  // All of those routines drive `\if_int_compare:w` against
-  // `\l__regex_*_int` expl3 registers in ways that exercise gullet-level
-  // macro expansion timing very precisely. Our Rust port doesn't faithfully
-  // reproduce the timing, so when packages like `duckuments.sty` invoke
-  // `\regex_match:NnTF` against `\c_duckuments_example_regex` (a compiled
-  // regex constant), the expansion stalls and emits a 21-error cascade of
-  // `Error:expected:<relationaltoken>` + `Error:unexpected:fi:` at end of
-  // document.
-  //
-  // Native Rust implementation of expl3 regex matching.
-  //
-  // Background: expl3's `\regex_match:NnTF` (and friends) is built atop a
-  // VM-style regex engine (`\__regex_compile:n`, `\__regex_match:n`, etc.)
-  // whose macros drive `\if_int_compare:w` against `\l__regex_*_int`
-  // registers in a way that exercises gullet expansion timing very
-  // precisely. Our Rust port doesn't faithfully reproduce that timing,
-  // so when packages like duckuments.sty invoke `\regex_match:NnTF`
-  // against a `\regex_const:Nn`-compiled regex, the expansion stalls and
-  // emits a 21-error cascade at end-of-document. Driver: 2406.14142.
-  //
-  // We bypass the expl3 VM entirely: store the raw pattern string at
-  // `\regex_const:Nn` time keyed by CS name, and compile + match using
-  // Rust's `regex` crate at `\regex_match:NnTF` time. The expl3 regex
-  // syntax is largely PCRE-compatible (`\d`, `[:class:]`, `(?:...)`,
-  // alternation, quantifiers) — Rust's regex crate handles these without
-  // translation. Patterns that use expl3-specific extensions (e.g.
-  // `\c{cs_name}` for control-sequence literals) will fail to compile
-  // and silently take the FALSE branch.
-  //
-  // Verified: 2406.14142: 21 errors → 0 (was last historical
-  // REAL_REGRESSION). Min-repro `\regex_match:nnTF{\d+}{abc}{T}{F}`
-  // now correctly returns F (matches Perl LaTeXML behaviour).
-  assign_catcode(':', Catcode::LETTER, Some(Scope::Global));
-  assign_catcode('_', Catcode::LETTER, Some(Scope::Global));
-
-  // \regex_const:Nn \cs {pattern} — store pattern keyed by CS name.
-  DefMacro!(T_CS!("\\regex_const:Nn"), "DefToken {}", sub[(cs, pattern)] {
-    let cs_name = cs.to_string();
-    let pattern_str = pattern.to_string();
-    assign_value(&format!("regex_pattern:{}", cs_name),
-                        Stored::String(pin(&pattern_str)),
-                        Some(Scope::Global));
-  });
-
-  // \regex_match:NnTF \cs {target} {T} {F}
-  DefMacro!(T_CS!("\\regex_match:NnTF"), "DefToken {}{}{}",
-    sub[(cs, target, t_toks, f_toks)] {
-    let cs_name = cs.to_string();
-    let target_str = target.to_string();
-    let key = format!("regex_pattern:{}", cs_name);
-    let pattern = with_value(&key, |v| match v {
-      Some(Stored::String(s)) => to_string(*s),
-      _ => String::new(),
-    });
-    let matches = !pattern.is_empty() && match Regex::new(&expl3_to_rust_regex(&pattern)) {
-      Ok(re) => re.is_match(&target_str),
-      Err(_) => false,
-    };
-    if matches { t_toks.unlist() } else { f_toks.unlist() }
-  });
-  DefMacro!(T_CS!("\\regex_match:NnT"), "DefToken {}{}",
-    sub[(cs, target, t_toks)] {
-    let cs_name = cs.to_string();
-    let target_str = target.to_string();
-    let key = format!("regex_pattern:{}", cs_name);
-    let pattern = with_value(&key, |v| match v {
-      Some(Stored::String(s)) => to_string(*s),
-      _ => String::new(),
-    });
-    let matches = !pattern.is_empty() && match Regex::new(&expl3_to_rust_regex(&pattern)) {
-      Ok(re) => re.is_match(&target_str),
-      Err(_) => false,
-    };
-    if matches { t_toks.unlist() } else { Vec::new() }
-  });
-  DefMacro!(T_CS!("\\regex_match:NnF"), "DefToken {}{}",
-    sub[(cs, target, f_toks)] {
-    let cs_name = cs.to_string();
-    let target_str = target.to_string();
-    let key = format!("regex_pattern:{}", cs_name);
-    let pattern = with_value(&key, |v| match v {
-      Some(Stored::String(s)) => to_string(*s),
-      _ => String::new(),
-    });
-    let matches = !pattern.is_empty() && match Regex::new(&expl3_to_rust_regex(&pattern)) {
-      Ok(re) => re.is_match(&target_str),
-      Err(_) => false,
-    };
-    if matches { Vec::new() } else { f_toks.unlist() }
-  });
-
-  // \regex_match:nnTF {pattern} {target} {T} {F} — pattern inline.
-  DefMacro!(T_CS!("\\regex_match:nnTF"), "{}{}{}{}",
-    sub[(pattern, target, t_toks, f_toks)] {
-    let pattern_str = pattern.to_string();
-    let target_str = target.to_string();
-    let matches = match Regex::new(&expl3_to_rust_regex(&pattern_str)) {
-      Ok(re) => re.is_match(&target_str),
-      Err(_) => false,
-    };
-    if matches { t_toks.unlist() } else { f_toks.unlist() }
-  });
-  DefMacro!(T_CS!("\\regex_match:nnT"), "{}{}{}",
-    sub[(pattern, target, t_toks)] {
-    let pattern_str = pattern.to_string();
-    let target_str = target.to_string();
-    let matches = match Regex::new(&expl3_to_rust_regex(&pattern_str)) {
-      Ok(re) => re.is_match(&target_str),
-      Err(_) => false,
-    };
-    if matches { t_toks.unlist() } else { Vec::new() }
-  });
-  DefMacro!(T_CS!("\\regex_match:nnF"), "{}{}{}",
-    sub[(pattern, target, f_toks)] {
-    let pattern_str = pattern.to_string();
-    let target_str = target.to_string();
-    let matches = match Regex::new(&expl3_to_rust_regex(&pattern_str)) {
-      Ok(re) => re.is_match(&target_str),
-      Err(_) => false,
-    };
-    if matches { Vec::new() } else { f_toks.unlist() }
-  });
+  // expl3 l3regex is handled NATIVELY by the real expl3 VM (loaded from
+  // expl3-code.tex: \__regex_compile:n / \__regex_build:n / \__regex_match:n,
+  // etc.), which now runs correctly under our gullet — so \regex_match,
+  // \regex_count, \regex_replace_all, \regex_extract_once and their \seq_*
+  // results all work faithfully. A former Rust-`regex`-crate SHIM bypassed the
+  // VM (its \if_int_compare:w-driven expansion used to stall); it was REMOVED
+  // 2026-06-20 after intervening gullet fixes made the real VM pass — verified
+  // on its original cascade witness 2406.14142 (21 errors -> 0) and the
+  // expl3/regex_match + expl3/regex_native test fixtures. (Shim in git history.)
 
   assign_catcode(':', Catcode::OTHER, Some(Scope::Global));
   assign_catcode('_', Catcode::SUB, Some(Scope::Global));
@@ -280,25 +163,3 @@ LoadDefinitions!({
   // Complements the per-package restore in xparse_sty.rs / siunitx_sty.rs.
   assign_catcode('~', Catcode::ACTIVE, Some(Scope::Global));
 });
-
-/// Translate an expl3 regex pattern string into a Rust regex.
-///
-/// expl3 syntax is PCRE-style. Rust's `regex` crate handles most of
-/// the common cases (`\d`, `\w`, `[abc]`, `(?:...)`, `|`, `*`, `+`,
-/// `?`, `{n,m}`) directly. expl3 patterns spread across multiple
-/// lines (as in `\regex_const:Nn` brace-delimited bodies) include
-/// significant whitespace; expl3's lexer ignores horizontal whitespace
-/// inside the pattern by default, so we mirror that by stripping
-/// newlines + leading/trailing whitespace from each line.
-///
-/// Patterns using expl3-specific extensions (`\c{...}`, `\u{...}`)
-/// pass through; the regex crate will likely return Err on those, and
-/// the caller falls through to the FALSE branch.
-fn expl3_to_rust_regex(pattern: &str) -> String {
-  pattern
-    .lines()
-    .map(str::trim)
-    .filter(|l| !l.is_empty())
-    .collect::<Vec<&str>>()
-    .join("")
-}
