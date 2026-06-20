@@ -94,8 +94,19 @@ impl log::Log for LatexmlLogger {
       let record_target = record.target();
       let details = record.args();
       if record_target == "note" {
-        // simple print here
-        print_stderr!("{}", details.to_string());
+        let note = details.to_string();
+        // A note (e.g. `(Loading foo.sty… )`) is a live stderr progress indicator — but when a
+        // capture buffer is active it must ALSO land there (on its own line), so it reaches the
+        // flushed `cortex.log` and CorTeX's `loaded_file` parser, which anchors on `^(Loading …`.
+        // Its own line both lets that `^`-anchored regex match and keeps the note from gluing onto a
+        // following `Info:/Warning:` line (which would break that line's own anchor).
+        if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+          && let Some(ref mut log) = *buf
+        {
+          log.push_str(&strip_ansi(&note));
+          log.push('\n');
+        }
+        print_stderr!("{}", note);
         return;
       }
       let category_object = if record_target.is_empty() {
