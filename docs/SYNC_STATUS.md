@@ -2541,12 +2541,19 @@ pass used `--quiet` → wrong; see retraction below). Buckets:
   both), plus the Perl-timeout papers 1901.03862 / 2203.05327 / 1810.06908.
 - **Genuine Rust-only (Perl 0) — but each maps to a KNOWN DEEP family, no new
   quick win:**
-  - **1504.05963** (rust 1) — dep-scan loads `inputenc` with `ascii.def` from a
-    `\RequirePackage[ascii]{inputenc}` *inside* a `\DeclareOption{ascii}{…}` block
-    in `myaa.cls` (a conditional require the empty-options doc never selects), so
-    a UTF-8 `ç` ("François") in the bib → `undefined in inputencoding ascii`. Perl
-    doesn't load ascii-inputenc. = **dep-scan over-anticipation** family (cf.
-    deferred 1804.09301).
+  - ~~**1504.05963**~~ — **FIXED 2026-06-20.** dep-scan loaded `inputenc` with
+    `ascii.def` from a `\RequirePackage[ascii]{inputenc}` *inside* a
+    `\DeclareOption{ascii}{…}` block in `myaa.cls` (a conditional require the
+    empty-options doc never selects — the class defaults to utf8 via
+    `\ExecuteOptions{…,utf8,…}`), so a UTF-8 `ç` ("François") in the bib →
+    `undefined in inputencoding ascii`. The dep-scan's `is_invoked` rule
+    un-deferred the FIRST (ascii) arm because the single `\aa@inputenc` call is
+    invoked. **Fix:** `binding/content.rs` now defers `\RequirePackage`/
+    `\usepackage` inside a `\DeclareOption` code-arm (conditional, resolved by
+    `\ProcessOptions`) — matching Perl, which loads no inputenc here. 1504.05963
+    → 0 err (parity); full suite green; def-body invariant preserved (1911.03415
+    still loads amsmath). Likely clears a cluster (classes with conditional
+    `\DeclareOption` inputenc/package requires + accented chars).
   - **1611.04940** (rust 1) — `\newtheorem{step}[steps]{Step}` is used as a
     standalone `\step` (one-line step marker) with no `\end{step}`; the unclosed
     theorem env's group leaks to `\end{proof}`'s `\endgroup`. Perl auto-closes it.

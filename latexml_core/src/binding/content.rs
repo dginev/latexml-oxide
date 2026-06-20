@@ -1856,6 +1856,14 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
   // so DOES load P (witness ijnam.cls → amsmath → `{aligned}`, 1911.03415).
   static DEF_NAME_RE: Lazy<Regex> =
     Lazy::new(|| Regex::new(r"(?s)\\[egx]?def\s*\\([A-Za-z@]+)[^{}]*$").unwrap());
+  // A require inside a `\DeclareOption{<opt>}{…}` (or `\DeclareOption*{…}`)
+  // code-arm is CONDITIONAL on the option being selected (resolved later by
+  // `\ProcessOptions`), so the dep-scan must not eagerly load it. Matches when a
+  // group's preceding window ends at `…\DeclareOption{<opt>}` / `…\DeclareOption*`
+  // — i.e. the `{` it precedes opens the option's code arm. (Does NOT match
+  // `\DeclareOptionX`/`\ExecuteOptions`/`\ProcessOptions`.)
+  static DECLARE_OPTION_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\DeclareOption\*?\s*(?:\{[^{}]*\})?\s*$").unwrap());
 
   // Perl L2761: `FindFile($file, type => $type, noltxml => 1)`. `$file`
   // is BARE — `FindFile` glues on `.$type` itself per L2073-2076.
@@ -1967,6 +1975,19 @@ fn maybe_require_dependencies(file: &str, ext_type: &str) {
     stack.iter().any(|&ob| {
       let lo = ob.saturating_sub(400);
       let window = code.get(lo..ob).unwrap_or(&code[..ob]);
+      // A require inside a `\DeclareOption` code-arm is conditional (only the
+      // option-selected arm runs, via `\ProcessOptions`) → defer it, even when
+      // the arm `\def`s an INVOKED macro: aa/myaa.cls have
+      //   \DeclareOption{ascii}{\def\aa@inputenc{\RequirePackage[ascii]{inputenc}}}
+      //   …\DeclareOption{utf8}{…[utf8]…}  …  \aa@inputenc
+      // where the single `\aa@inputenc` call would otherwise un-defer the FIRST
+      // (ascii) arm via the `is_invoked` rule below and wrongly force
+      // inputenc[ascii] (→ UTF-8 `ç` rejected). Perl defers all such (loads no
+      // inputenc; the actual `utf8` default is the right answer and `ç` passes
+      // through either way). Witness 1504.05963 (Perl 0 / Rust 1, now parity).
+      if DECLARE_OPTION_RE.is_match(window) {
+        return true;
+      }
       // A `\def\<m>{…}` body only defers if `\<m>` is never invoked; an invoked
       // scratch macro (`\@tempa`) runs its body at load, so its require loads.
       if let Some(caps) = DEF_NAME_RE.captures(window) {
