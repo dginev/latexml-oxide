@@ -187,15 +187,44 @@ p-cell `\\` upstream + any pgf `\matrix` downstream) shows the cascade. `&`'s
 catcode is NOT globally corrupted (a plain tabular after the bad table is fine);
 the damage is the dangling `\hbox` group.
 
-**Fix locus:** `\lx@alignment@multicolumn` (`latexml_engine/src/tex_tables.rs`
-:529) + the p-column before/after token generation
-(`latexml_core/src/alignment/template.rs`). The multicolumn paragraph-cell must
-rebind `\\` to an in-cell line-break and balance the `\hbox` mode-switch exactly
-as a normal `p{}` column does — faithful to Perl `TeX_Tables.pool.ltxml`
-`\lx@alignment@multicolumn` (L693-702), which inlines the parsed column's
-`beforeCellUnlist`/`afterCellUnlist`. **Next:** trace Perl's p-column `before`
-(the `\\`-rebinding) and mirror it on the multicolumn path; validate against the
-full 1458-test suite (table-heavy — regression-sensitive) before landing.
+**Fix locus:** the `p{Dimension}` column type (`latexml_engine/src/tex_tables.rs`
+:117). The current Rust wraps the cell in `\vtop{\hbox to <dim>\relax{...}}` — an
+**`\hbox`** (restricted_horizontal) that cannot hold `\\`. The Rust comment there
+admits it mirrors an **older** Perl; the **current** Perl
+(`TeX_Tables.pool.ltxml` L69-80) uses `\lx@tabular@p t {<dim>} {…}` whose
+`\lx@tabular@p@ … VBoxContents` reads the cell as a **VBox** (internal_vertical),
+where `\\` is valid.
+
+**Attempted port (2026-06-20, iteration 2) — reverted, two pieces still needed:**
+Porting the current Perl p-column verbatim (`\lx@tabular@p` + `\lx@tabular@p@`
+reading `VBoxContents`, with `width='#2'` + `vattach`) did:
+- ✅ **Eliminate the pgf-`&` cascade** — 1610.00974 / the 15-line repro went
+  **MaxLimit-fatal → exit 0 (recovered)**.
+- ✅ **Match Perl on the inline-block `width=` attribute** — verified Perl emits
+  `<inline-block vattach="top" width="30.0pt">` etc. on p-cells; the current Rust
+  **omits `width=`** (a latent divergence). The port adds it, matching Perl.
+
+But it is **not yet landable**, for two reasons:
+1. **5 fixtures churn** (`array`/`tabular`/`cells`/`colortbls` in `53_alignment`,
+   `graphrot` in `65_graphics`) — all purely the `width=` addition, i.e. they
+   become *more* Perl-faithful, but each must be re-blessed and re-verified vs
+   Perl (the fixture format is the harness's extracted-string lines, not raw XML).
+2. **7 residual recoverable mode-errors remain** on the multicolumn-`\\` case
+   (Perl: 0). Reduced repro: `\multicolumn{2}{|p{1cm}|}{A\\ B}` in a tabular,
+   *no pgf needed* (`docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`
+   minus the picture). The `\\` inside the p-cell VBox fires the alignment
+   `\cr`/row-terminator from `internal_vertical` mode, but the alignment close
+   (`\lx@begin@alignment`/`\@end@tabular`) expects `horizontal` → *"Attempt to
+   close a group that switched to mode internal_vertical … due to
+   T_CS[\lx@tabular@p@]"*. Perl's alignment unwinds the nested box mode cleanly;
+   the Rust alignment `\\`/`\cr` handler does not.
+
+**To land:** (a) make the alignment `\cr`/`\\` handler unwind a nested cell-box
+mode (the deep part — `latexml_core/src/alignment.rs` row/cell digestion +
+`digest_alignment_body`); then (b) port the p-column to `\lx@tabular@p`/
+VBoxContents and re-bless the 5 p-cell fixtures against Perl; validate the full
+1458-test suite. The width-attribute parity is an independent latent win bundled
+with the same port.
 
 ## Repro
 

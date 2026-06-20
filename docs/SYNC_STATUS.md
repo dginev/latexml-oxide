@@ -137,9 +137,17 @@ divergences" of the analysis doc:**
   → pgf "Single ampersand used with wrong catcode" ×500 → MaxLimit fatal. A normal
   `p{}` column handles the same `\\` fine; only `\multicolumn{}{p{}}{}` doesn't.
   15-line self-contained repro `docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`
-  (Rust 502 err / Perl 0). Fix locus: `\lx@alignment@multicolumn`
-  (`tex_tables.rs:529`) + p-column before/after (`alignment/template.rs`). Full
-  detail in `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` §1610.00974.
+  (Rust 502 err / Perl 0). **Fix path narrowed 2026-06-20:** the `p{Dimension}`
+  column type (`tex_tables.rs:117`) wraps the cell in `\vtop{\hbox to..{…}}` (an
+  `\hbox` that can't hold `\\`); current Perl uses `\lx@tabular@p`/`VBoxContents`
+  (a VBox, where `\\` is valid). Porting it (attempted + reverted) eliminates the
+  cascade (fatal→exit 0) AND fixes a latent `width=` divergence (Perl emits it on
+  p-cell inline-blocks; Rust omits it), but isn't landable yet: (1) 7 residual
+  recoverable mode-errors remain — the alignment `\cr`/`\\` handler must unwind a
+  nested cell-box `internal_vertical` mode (the deep part, `alignment.rs`); (2) 5
+  p-cell fixtures (array/tabular/cells/colortbls/graphrot) need re-blessing to the
+  Perl-matching `width=` form. Full detail in
+  `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` §1610.00974.
 - [ ] **1709.07916** (Perl ok) — pgfplots axis RSS runaway >4.5 GB → MemoryBudget.
 - [ ] **1912.13052** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
 - [ ] **2004.14791** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
