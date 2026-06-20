@@ -2530,6 +2530,36 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-20): broad deferred/open re-sweep (58 papers) + OmniBus disk-`.cls` lever
+
+Widened the stale-sweep: re-ran 58 deferred/open papers (branch binary w/ `\dq`,
+scantokens, P1 fixes; `cortex_worker --standalone`). **37 convert clean (0 err)**;
+21 still fail. The single-error tail breaks down as:
+
+- **OmniBus disk-`.cls`-body NOT raw-loaded (HIGH-VALUE lever).** `\qed` +
+  `\newproof` (1809.00236, `ectj.cls`), `\except` (1911.02137, `CCRpaper`),
+  `\abntnextkey` (1910.04251) etc. trace to ONE root: when a paper ships an
+  unknown class **on disk** (e.g. `ectj.cls`, which defines `\newcommand*{\qed}…`
+  at L597), Rust hits the OmniBus fallback (`tex_job.rs` Branch 3) and only
+  **dep-scans** the `.cls` (`\RequirePackage` extraction) — it never raw-loads the
+  class **body**, so the class's own macros are undefined. **Perl raw-loads the
+  real `.cls`** (verified: 1809.00236 Perl=0 err, `\qed` works; only `ectj.cls`
+  defines `\qed`). This is a class-loading divergence affecting many custom-class
+  papers — a high-value but core-risk lever (arbitrary `.cls` TeX), and it brushes
+  the deliberately-"tolerated" OmniBus shortcut (task #273). Dedicated session.
+- **`\endgroup`/mode-horizontal cluster** (2009.05630, 1702.06692, 1702.02037,
+  1611.04940 — 1-2 err each): "Attempt to close a group that switched to mode
+  horizontal" — the same box/mode-frame machinery as the 1610.00974 alignment
+  blocker. Deep.
+- **SHARED, not Rust gaps:** `\sep` (1810.06908) — Perl *times out* (exit 124),
+  so not a clean parity target.
+- **Large/known:** 2203.05327 (443), 1705.10306 (357), 1804.01117 (305, fatal),
+  `\NiceTabular` (2212.09528, nicematrix stub).
+
+Method note: the broad grep over "DEFERRED|Rust-only" is noisy (catches IDs in
+FIXED entries too), so each candidate was re-tested individually; the 37 clean are
+confirmed-resolved. The actionable cluster is the OmniBus disk-`.cls` lever above.
+
 ### Round-37 (2026-06-20): stale-DEFERRED re-test sweep — 12 of 15 now convert with 0 errors
 
 Re-ran the long-standing DEFERRED Rust-only sandbox papers against the current
