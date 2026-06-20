@@ -380,10 +380,16 @@ LoadDefinitions!({
       "width" => lookup_dimension("\\thinmuskip").unwrap().negate()),
     )
   });
-  // Perl: \> and \; in math mode => Box(' ', ..., width => medmuskip/thickmuskip)
+  // Perl plain_constructs.pool.ltxml L203-211: the box content is the actual
+  // space glyph — U+2005 FOUR-PER-EM (medspace) for `\>`, U+2004 THREE-PER-EM
+  // (thickspace) for `\;` — NOT a plain ASCII space. The earlier Rust port used
+  // " ", so `\:`/`\>`/`\;` in TEXT mode collapsed to a regular space instead of
+  // the wider Unicode space (matching `\,`→U+2009 and `\!`→U+200B above). In
+  // MATH mode the content is irrelevant (isSpace+width → XMHint), so this only
+  // corrects text-mode rendering.
   DefPrimitive!("\\>", {
     Tbox::new(
-      pin_static(" "),
+      pin_static("\u{2005}"),
       None,
       None,
       Tokens!(T_CS!("\\>")),
@@ -393,7 +399,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\;", {
     Tbox::new(
-      pin_static(" "),
+      pin_static("\u{2004}"),
       None,
       None,
       Tokens!(T_CS!("\\;")),

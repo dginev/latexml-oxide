@@ -5963,7 +5963,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
             </Math><break/><Math mode="inline" tex="2.67\text{\;}\mathrm{F}" text="2.67 * farad" xml:id="S2.SS2.SSS2.p1.m5">
               <XMath>
                 <XMApp>
-                  <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS2.p1.m5.1"> </XMText>
+                  <XMText meaning="times" role="MULOP" xml:id="S2.SS2.SSS2.p1.m5.1"> </XMText>
                   <XMTok meaning="2.67" role="NUMBER">2.67</XMTok>
                   <XMTok class="ltx_unit" meaning="farad" role="ID">F</XMTok>
                 </XMApp>
