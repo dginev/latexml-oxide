@@ -2608,6 +2608,26 @@ fn new_script_inner(
       if !sx.is_empty() { sx } else { "post" }
     };
 
+    // Perl NewScript L1624-1643: a pre-script donates its lpadding to the new
+    // combined app, a post/mid script its rpadding. Capture now (owned), before
+    // `script_lex` is consumed below, so a thinspace folded onto the script
+    // marker by filter_hints (e.g. `\,` in `x^2\,dx`) rides onto the rebuilt app.
+    let (lpad_xfer, rpad_xfer): (Option<String>, Option<String>) = if x == "pre" {
+      (
+        script_wrap
+          .get_attribute("lpadding")
+          .filter(|s| !s.is_empty()),
+        None,
+      )
+    } else {
+      (
+        None,
+        script_wrap
+          .get_attribute("rpadding")
+          .filter(|s| !s.is_empty()),
+      )
+    };
+
     let mut l = if sl > 0 {
       sl
     } else if bl > 0 {
@@ -2654,10 +2674,15 @@ fn new_script_inner(
         Meta::default(),
       ))
     });
+    let app_props = XProps {
+      lpadding: lpad_xfer.map(Cow::Owned),
+      rpadding: rpad_xfer.map(Cow::Owned),
+      ..XProps::default()
+    };
     Ok(Some(XM::Apply(
       op.into(),
       Args(vec![base_arg, script_arg]),
-      XProps::default(),
+      app_props,
       meta,
     )))
   } else {

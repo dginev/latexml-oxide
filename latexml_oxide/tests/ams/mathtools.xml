@@ -2587,7 +2587,7 @@ Then a switch of tag forms.</p>
                             <XMApp>
                               <XMTok meaning="times" role="MULOP">×</XMTok>
                               <XMTok meaning="3.00" role="NUMBER">3.00</XMTok>
-                              <XMApp>
+                              <XMApp rpadding="1.7pt">
                                 <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
                                 <XMTok meaning="10" role="NUMBER">10</XMTok>
                                 <XMTok fontsize="70%" meaning="8" role="NUMBER">8</XMTok>
@@ -3003,7 +3003,7 @@ Then a switch of tag forms.</p>
                           <XMTok mathstyle="display" meaning="integral" name="int" role="INTOP">∫</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMApp>
+                            <XMApp rpadding="1.7pt">
                               <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
                               <XMTok font="italic" role="UNKNOWN">x</XMTok>
                               <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>
@@ -3058,7 +3058,7 @@ Then a switch of tag forms.</p>
                           <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
                           <XMApp>
                             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                            <XMApp>
+                            <XMApp rpadding="1.7pt">
                               <XMTok role="SUPERSCRIPTOP" scriptpos="post5"/>
                               <XMTok name="Omega" role="UNKNOWN">Ω</XMTok>
                               <XMTok fontsize="70%" name="Xi" role="UNKNOWN">Ξ</XMTok>
@@ -3724,7 +3724,7 @@ Then a switch of tag forms.</p>
                         <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>
                       </XMApp>
-                      <XMApp>
+                      <XMApp rpadding="1.7pt">
                         <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" role="UNKNOWN">f</XMTok>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">k</XMTok>

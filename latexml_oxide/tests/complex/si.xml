@@ -107,7 +107,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMApp>
+            <XMApp rpadding="1.7pt">
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
               <XMTok role="UNKNOWN">m</XMTok>
               <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>

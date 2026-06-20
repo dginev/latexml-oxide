@@ -2364,6 +2364,25 @@ fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Docu
     content.unlink_node();
     app_node.add_child(&mut content).ok();
   }
+  // Perl NewScript L1624-1643: carry the script node's padding onto the new
+  // combined XMApp. A pre-script donates its lpadding; a post/mid script its
+  // rpadding. Without this, a thinspace after a script (e.g. `x^2\,dx`) — which
+  // filter_hints collapses onto the POSTSUPERSCRIPT marker node — is lost when
+  // kludge_scripts rebuilds the `x^2` XMApp. Only set if the script carries it
+  // and the app doesn't already (matching Perl's `&& !$$app[1]{...}`).
+  if x == "pre" {
+    if let Some(lpad) = script_node.get_attribute("lpadding")
+      && !lpad.is_empty()
+      && app_node.get_attribute("lpadding").is_none()
+    {
+      app_node.set_attribute("lpadding", &lpad).ok();
+    }
+  } else if let Some(rpad) = script_node.get_attribute("rpadding")
+    && !rpad.is_empty()
+    && app_node.get_attribute("rpadding").is_none()
+  {
+    app_node.set_attribute("rpadding", &rpad).ok();
+  }
   app_node
 }
 

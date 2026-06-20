@@ -168,7 +168,7 @@
         <XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
-            <XMApp>
+            <XMApp rpadding="1.7pt">
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
               <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
