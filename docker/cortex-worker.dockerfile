@@ -22,29 +22,39 @@
 # Advanced — pass cortex_worker flags straight through (e.g. a one-off standalone conversion):
 #   docker run -v /data:/data cortex-worker --standalone --input /data/paper.zip --output /data/result.zip
 
-# --- Stage 1: build the cortex_worker binary (nightly pinned by rust-toolchain.toml) ---
-FROM rust:1.83-slim-bookworm AS builder
+# --- Stage 1: build cortex_worker (+ latexml_oxide for dump-gen) ---
+# Same base OS as the legacy Perl image AND the runtime stage, so the binary links the exact runtime
+# .so versions and the baked dumps match the runtime TeX Live (TL2023) — making a Perl-vs-Rust
+# difference the engine, not the texmf tree.
+FROM ubuntu:24.04 AS builder
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Build deps: libxml2/libxslt/kpathsea (runtime-bindings), system ZeroMQ for the `cortex`
-# feature's pericortex→zmq, pkg-config, and git+TLS for the pericortex git dependency.
+# Build deps: mold (the linker pinned by .cargo/config.toml's `-Clink-arg=-fuse-ld=mold`),
+# libxml2/libxslt/kpathsea for the engine, system ZeroMQ for the `cortex` feature's pericortex→zmq,
+# pkg-config, and curl+git+TLS for rustup and the pericortex git dependency.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential pkg-config git ca-certificates \
+      curl build-essential pkg-config git ca-certificates mold \
       libxml2-dev libxslt1-dev libkpathsea-dev libzmq3-dev \
     && rm -rf /var/lib/apt/lists/*
+
+# Rust via rustup (no official Ubuntu rust image). rust-toolchain.toml (copied below) pins the
+# nightly, which rustup auto-installs on the first cargo invocation.
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain none
+ENV PATH="/root/.cargo/bin:${PATH}"
 
 WORKDIR /build
 COPY . .
 
 # cortex_worker carries `required-features = ["cortex"]`, so the feature set is MANDATORY — a plain
-# `cargo build --bin cortex_worker` refuses to build it. This matches the host build recipe
-# (tools/ + docs/CORTEX_WORKER_HARNESS.md). Also build latexml_oxide: its `--init` generates the
+# `cargo build --bin cortex_worker` refuses to build it. The worker uses compiled-in bindings, so
+# `runtime-bindings` is NOT enabled (unused). Also build latexml_oxide: its `--init` generates the
 # kernel dumps baked into the runtime stage below (cortex_worker has no --init of its own).
-RUN cargo build --release --no-default-features --features cortex,runtime-bindings \
+RUN cargo build --release --no-default-features --features cortex \
       --bin cortex_worker --bin latexml_oxide
 
-# --- Stage 2: slim runtime with the full arXiv-capable TeX Live ---
-FROM debian:bookworm-slim
-ENV TZ=America/New_York
+# --- Stage 2: runtime — same ubuntu:24.04, full arXiv-capable TeX Live ---
+FROM ubuntu:24.04
+ENV TZ=America/New_York DEBIAN_FRONTEND=noninteractive
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 ARG HOSTTIME
