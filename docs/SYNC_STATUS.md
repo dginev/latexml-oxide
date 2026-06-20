@@ -108,6 +108,48 @@ engine changes meaningfully (not set-and-forget); compatible with `maxperf`
 
 ---
 
+## Open task (opened 2026-06-19): resolve ALL divergences in `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md`
+
+Gate before the next large-scale impact check (a cortex sandbox corpus rerun on
+corpora 7/8/12): **every genuine Rust-worse divergence catalogued in
+[`docs/PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md`](PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md)
+must be resolved (or explicitly, durably classified as surpass-Perl R&D) before
+we re-run.** The 3-sandbox reconversion established Rust already beats Perl ~3.5×
+on fatals (861 vs 3,011) and that 743/861 Rust-fatals are *also* Perl-fatal
+(parity, not bugs). What remains is the short list of papers where **Rust fatals
+while Perl reaches ≤ warn**.
+
+**Resolved this session (branch `fix/tikz-cd-pgf-robustness`):**
+- **P1 panic cluster** (`c47d37f416`) — all 5 `caught`-class papers now exit 0
+  (`state.rs` RefCell `try_lookup_int`; `\fontdimen` empty-args; alignment
+  `current_row_mut` guard; math-parser already fixed).
+- **core `\scantokens` truncation** (`168b835fcc`) — autoclose mouths now drain
+  regardless of `toplevel`; the one genuine babel parity gap (1906.03240:
+  Fatal → 0 err/72 warn). Beneficial to any `\scantokens` mid-`.sty`-load.
+
+**Remaining (UNSOLVED — must clear before rerun), all §"Remaining on-disk
+divergences" of the analysis doc:**
+- [ ] **1610.00974** (Perl ok) — pgf `\matrix` "Single ampersand used with wrong
+  catcode" ×500 → MaxLimit(500) fatal. The matrix `&` is not routed through
+  `\pgfmatrixnextcell` (`\ifpgf@matrix@correct@call` false in
+  `pgfmodulematrix.code.tex`). #1 corpus error class (pgf `\GenericError`).
+- [ ] **1709.07916** (Perl ok) — pgfplots axis RSS runaway >4.5 GB → MemoryBudget.
+- [ ] **1912.13052** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
+- [ ] **2004.14791** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
+- [ ] **1312.6499** (Perl warn) — pgf/tikz runaway (TokenLimit→MemoryBudget).
+
+These are deep pgf/pgfplots (pgfmath/coordinate + alignment layers): cumulative
+document-state effects that do **not** reduce to small repros (basic `\matrix` /
+tikzcd / pgfplots all convert cleanly in both engines), high-effort and
+regression-prone — unlike the clean `\scantokens` core fix. Each must be either
+fixed or, with explicit justification, reclassified as surpass-Perl performance
+R&D and lifted out of this gate. **Do not run the corpus rerun until this list
+is clear.** Companion memory: `sandbox-3corpus-run-2026-06-19` (also tracks two
+separate cortex/harness items, NOT latexml-oxide: `/api/status`
+`workers_in_flight` over-count; harness one-worker-per-poll shedding).
+
+---
+
 ## PR #248 critical-review findings — HANDOFF (opened 2026-06-10, paused)
 
 Critical review of `feature/winnow-rhai` (shared winnow AST #171 + Rhai
