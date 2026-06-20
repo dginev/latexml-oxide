@@ -5,4 +5,9 @@
 % TODO: catalog parenthetical should be RDFa metadata instead
 Expected ``$\theta$ Her (catalog HD 163770)'': \thetaher
 
+% Regression guard: \notetoeditor must GOBBLE its free-form arg (faithful to
+% Perl aas_support.sty.ltxml — the constructor is commented out there). A bare
+% `_` in editorial prose (e.g. a filename) must NOT error as a text-mode script.
+\notetoeditor{see tab2_online.tex for the machine-readable table}
+
 \end{document}

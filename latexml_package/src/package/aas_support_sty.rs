@@ -155,13 +155,18 @@ LoadDefinitions!({
     "\\lx@add@keywords[name={\\@ifundefined{keywordsname}{}{\\keywordsname}}]{#1}");
   Let!("\\subjectheadings", "\\keywords");
 
-  // 2.6 Comments to Editors — preserve the note text as ltx:note
-  // (review content, not metadata). Content-preserving per
-  // [[feedback-content-preserving]].
-  DefConstructor!("\\notetoeditor{}",
-    "<ltx:note role='editor-note'>#1</ltx:note>");
-  NewCounter!("editornote");
-  DefMacro!("\\theeditornote", "E\\arabic{editornote}");
+  // 2.6 Comments to Editors. Faithful to Perl aas_support.sty.ltxml L162-163:
+  //   # DefConstructor('\notetoeditor{}',"<ltx:note role='toeditor'>#1</ltx:note>");
+  //   DefMacro('\notetoeditor{}', '');
+  // Perl COMMENTS OUT the constructor and gobbles the argument to nothing —
+  // an editor note is editorial metadata directed at the journal, never
+  // reader-facing published content. A prior Rust divergence used the
+  // commented-out constructor, which DIGESTS the free-form note prose in text
+  // mode and so errors on any special char it contains — e.g. a bare `_` in a
+  // filename like `tab2_online.tex` → "Script _ can only appear in math mode"
+  // (witness aastex paper 0805.1040: Rust 1 error, Perl clean). Match Perl:
+  // gobble it, like the sibling \placetable/\placefigure/\placeplate below.
+  def_macro_noop("\\notetoeditor{}")?;
 
   // 2.8 Figure and Table Placement
   def_macro_noop("\\placetable{}")?;
