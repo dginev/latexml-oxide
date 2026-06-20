@@ -4771,14 +4771,19 @@ LoadDefinitions!({
   // HOWEVER, define a plain \center to act like \centering (?)
   DefMacro!("\\center", "\\centering");
   def_macro_noop("\\endcenter")?;
+  // Perl latex_constructs.pool.ltxml L1208-1213: flushleft → aligningEnvironment(
+  // 'left', 'ltx_align_left'); flushright → ('right', 'ltx_align_right'). The
+  // earlier Rust port passed "center" as the align value for BOTH (a copy-paste
+  // from {center} above), so flushleft/flushright produced `align="center"`
+  // instead of `align="left"`/`align="right"`.
   DefEnvironment!("{flushleft}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
-    aligning_environment("center", "ltx_align_left", document, props)?;
+    aligning_environment("left", "ltx_align_left", document, props)?;
     Ok(())
   }, mode => "internal_vertical");
   DefEnvironment!("{flushright}", sub[document, _args, props] {
     document.maybe_close_element("ltx:p")?; // this starts a new vertical block
-    aligning_environment("center", "ltx_align_right", document, props)?;
+    aligning_environment("right", "ltx_align_right", document, props)?;
     Ok(())
   }, mode => "internal_vertical");
   // Perl latex_constructs.pool.ltxml L1316-1318: "Redefine these so they work
