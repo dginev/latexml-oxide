@@ -71,24 +71,48 @@
         </XMath>
       </Math>
     </equation>
+    <equation xml:id="S0.Ex4">
+      <Math mode="display" tex="\{a\mid a\in b\}" text="conditional-set@(a, a element-of b)" xml:id="S0.Ex4.m1">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="conditional-set"/>
+              <XMRef idref="S0.Ex4.m1.1"/>
+              <XMRef idref="S0.Ex4.m1.2"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">{</XMTok>
+              <XMTok font="italic" role="ID" xml:id="S0.Ex4.m1.1">a</XMTok>
+              <XMTok name="mid" role="MIDDLE">∣</XMTok>
+              <XMApp xml:id="S0.Ex4.m1.2">
+                <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
+                <XMTok font="italic" role="ID">a</XMTok>
+                <XMTok font="italic" role="ID">b</XMTok>
+              </XMApp>
+              <XMTok role="CLOSE" stretchy="false">}</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math>
+    </equation>
   </para>
   <para xml:id="p2">
-    <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="\{a|a\in b\}_{c=0}" text="(conditional-set@(a, a element-of b)) _ (c = 0)" xml:id="S0.Ex4.m1">
+    <equation xml:id="S0.Ex5">
+      <Math mode="display" tex="\{a|a\in b\}_{c=0}" text="(conditional-set@(a, a element-of b)) _ (c = 0)" xml:id="S0.Ex5.m1">
         <XMath>
           <XMApp>
             <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
             <XMDual>
               <XMApp>
                 <XMTok meaning="conditional-set"/>
-                <XMRef idref="S0.Ex4.m1.1"/>
-                <XMRef idref="S0.Ex4.m1.2"/>
+                <XMRef idref="S0.Ex5.m1.1"/>
+                <XMRef idref="S0.Ex5.m1.2"/>
               </XMApp>
               <XMWrap>
                 <XMTok role="OPEN" stretchy="false">{</XMTok>
-                <XMTok font="italic" role="ID" xml:id="S0.Ex4.m1.1">a</XMTok>
+                <XMTok font="italic" role="ID" xml:id="S0.Ex5.m1.1">a</XMTok>
                 <XMTok role="MIDDLE" stretchy="false">|</XMTok>
-                <XMApp xml:id="S0.Ex4.m1.2">
+                <XMApp xml:id="S0.Ex5.m1.2">
                   <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
                   <XMTok font="italic" role="ID">a</XMTok>
                   <XMTok font="italic" role="ID">b</XMTok>
@@ -107,33 +131,33 @@
     </equation>
   </para>
   <para xml:id="p3">
-    <equation xml:id="S0.Ex5">
-      <Math mode="display" tex="\{x|x\not\in\{y|y&gt;0\}\}" text="conditional-set@(x, x not-element-of conditional-set@(y, y &gt; 0))" xml:id="S0.Ex5.m1">
+    <equation xml:id="S0.Ex6">
+      <Math mode="display" tex="\{x|x\not\in\{y|y&gt;0\}\}" text="conditional-set@(x, x not-element-of conditional-set@(y, y &gt; 0))" xml:id="S0.Ex6.m1">
         <XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="conditional-set"/>
-              <XMRef idref="S0.Ex5.m1.1"/>
-              <XMRef idref="S0.Ex5.m1.2"/>
+              <XMRef idref="S0.Ex6.m1.1"/>
+              <XMRef idref="S0.Ex6.m1.2"/>
             </XMApp>
             <XMWrap>
               <XMTok role="OPEN" stretchy="false">{</XMTok>
-              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.1">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.1">x</XMTok>
               <XMTok role="MIDDLE" stretchy="false">|</XMTok>
-              <XMApp xml:id="S0.Ex5.m1.2">
+              <XMApp xml:id="S0.Ex6.m1.2">
                 <XMTok meaning="not-element-of" name="not-in" role="RELOP">∉</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 <XMDual>
                   <XMApp>
                     <XMTok meaning="conditional-set"/>
-                    <XMRef idref="S0.Ex5.m1.3"/>
-                    <XMRef idref="S0.Ex5.m1.4"/>
+                    <XMRef idref="S0.Ex6.m1.3"/>
+                    <XMRef idref="S0.Ex6.m1.4"/>
                   </XMApp>
                   <XMWrap>
                     <XMTok role="OPEN" stretchy="false">{</XMTok>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex5.m1.3">y</XMTok>
+                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.3">y</XMTok>
                     <XMTok role="MIDDLE" stretchy="false">|</XMTok>
-                    <XMApp xml:id="S0.Ex5.m1.4">
+                    <XMApp xml:id="S0.Ex6.m1.4">
                       <XMTok meaning="greater-than" role="RELOP">&gt;</XMTok>
                       <XMTok font="italic" role="UNKNOWN">y</XMTok>
                       <XMTok meaning="0" role="NUMBER">0</XMTok>
@@ -150,20 +174,20 @@
     </equation>
   </para>
   <para xml:id="p4">
-    <equation xml:id="S0.Ex6">
-      <Math mode="display" tex="\left\{x\middle|x\in S\right\}" text="conditional-set@(x, x element-of S)" xml:id="S0.Ex6.m1">
+    <equation xml:id="S0.Ex7">
+      <Math mode="display" tex="\left\{x\middle|x\in S\right\}" text="conditional-set@(x, x element-of S)" xml:id="S0.Ex7.m1">
         <XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="conditional-set"/>
-              <XMRef idref="S0.Ex6.m1.1"/>
-              <XMRef idref="S0.Ex6.m1.2"/>
+              <XMRef idref="S0.Ex7.m1.1"/>
+              <XMRef idref="S0.Ex7.m1.2"/>
             </XMApp>
             <XMWrap>
               <XMTok role="OPEN" stretchy="true">{</XMTok>
-              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.1">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex7.m1.1">x</XMTok>
               <XMTok role="MIDDLE" role_side="middle" stretchy="true">|</XMTok>
-              <XMApp xml:id="S0.Ex6.m1.2">
+              <XMApp xml:id="S0.Ex7.m1.2">
                 <XMTok meaning="element-of" name="in" role="RELOP">∈</XMTok>
                 <XMTok font="italic" role="UNKNOWN">x</XMTok>
                 <XMTok font="italic" role="UNKNOWN">S</XMTok>

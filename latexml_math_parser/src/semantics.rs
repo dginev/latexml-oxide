@@ -2286,6 +2286,19 @@ pub fn fence(
     None
   };
   let p_str = p.as_deref().unwrap_or(",");
+  // Canonicalize the single "such-that / divides / given" bar. `\mid` reaches
+  // here as ∣ (U+2223) or the CS-name "mid" (def_math infers a name from the
+  // CS, unlike Perl's `DefMathI('\mid', undef, …)`), whereas bare `|`/`\vert`
+  // reach here as "|". They are the same separator for the conditional /
+  // conditional-set readings — Perl's VERTBAR terminal is content-agnostic
+  // (MathGrammar:797) — so without this, `\{x\mid P\}` / `(a\mid b)` fell to
+  // `list` instead of `conditional-set` / `conditional`. Mirror the lexeme-side
+  // canonicalization in util.rs (VERTBAR:mid → VERTBAR:|).
+  let p_str = if matches!(p_str, "\u{2223}" | "mid") {
+    "|"
+  } else {
+    p_str
+  };
 
   // Perl's enclose tables: determine operator meaning from delimiters + punctuation
   let op_meaning = match n {

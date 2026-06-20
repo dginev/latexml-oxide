@@ -191,6 +191,31 @@ fn node_to_grammar_lexemes_ctx(
           Some("right") => format!("RIGHT_STRETCHY_VERTBAR:|:{idx}"),
           _ => format!("STRETCHY_VERTBAR:|:{idx}"),
         }
+      } else if role == "VERTBAR" && (text == "mid" || text == "\u{2223}") {
+        // Canonicalize the single "divides / such-that / given" bar to one
+        // grammar token. `\mid` (∣ U+2223), bare `|` (U+007C) and `\vert`
+        // (`\Let` to `|`) are all the SAME bar grammatically, but they reach
+        // the lexer with different content: `|`/`\vert` carry "|" while `\mid`
+        // carries either the glyph ∣ or the CS name "mid" — the latter because
+        // `def_math` infers a name from the CS (`binding/def/dialect.rs`)
+        // whereas Perl's `DefMathI('\mid', undef, "\x{2223}", role=>'VERTBAR')`
+        // (math_common.pool.ltxml:290) leaves the name undef. Either way the
+        // lexeme came out as `VERTBAR:mid` / `VERTBAR:∣`, NOT `VERTBAR:|`.
+        // Every divides-bar grammar rule (modulus `|x|`, conditional `(a|b)`,
+        // set-builder `{x|P}`, Dirac bra/ket/braket) keys on the exact
+        // `singlevertbar = VERTBAR:|` terminal, so `\mid` inside any fence
+        // failed to parse (→ ltx_math_unparsed) even though `|` did — breaking
+        // ubiquitous notation: conditional probability `P(A\mid B)`,
+        // set-builder `\{x\mid x>0\}`, Dirac `\langle a\mid b\rangle`.
+        // Perl's grammar terminal is content-agnostic (`/VERTBAR:\S*:\d+/`,
+        // MathGrammar:797), so Perl parses all of these; Rust's is
+        // glyph-specific, so we canonicalize here instead. The rendered glyph
+        // is unaffected — the XMTok node keeps its ∣ content; the lexeme is a
+        // parallel grammar-only view looked up by idx. (Doubled bars
+        // `\|`/`\Vert` → `VERTBAR:||` and `\parallel` → `VERTBAR:parallel-to`
+        // are NOT single divides bars; they keep their content for the
+        // norm / parallel rules.)
+        format!("VERTBAR:|:{idx}")
       } else if role == "PUNCT" && punct_followed_by_wide_space(&node) {
         // PUNCT followed by `\quad` / `\qquad` etc. carries an `rpadding`
         // attribute. This wide spacing is a strong arXiv idiom for
