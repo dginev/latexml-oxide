@@ -1299,80 +1299,76 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
       }
     }
   }
-  // DG: cache assignments, and execute in post-loop, so that we can avoid indexing arithmetic
-  let mut outer_border_right_assignments = Vec::new();
-  let mut outer_border_bottom_assignments = Vec::new();
-  // Perl: copy characterizations (align/content_class/content_length) from rowspan/colspan cells
-  // to the cells they span over. Deferred to avoid borrow conflicts across rows.
-  #[allow(clippy::type_complexity)]
-  let mut rowspan_propagation: Vec<(
-    usize,
-    usize,
-    Option<Align>,
-    Option<ColumnSpec>,
-    Option<usize>,
-  )> = Vec::new();
-  // copy the characterizations to spanned cells
-  for r in 0..alignment.rows.len() {
-    let row = &mut alignment.rows[r];
-    let cols = row.get_columns_mut();
-    for c in 0..cols.len() {
-      let rs = cols[c].rowspan.unwrap_or(1);
-      let cs = cols[c].colspan.unwrap_or(1);
-      let ca = cols[c].align.clone();
-      let cc = cols[c].content_class;
-      let cl = cols[c].content_length;
-      let rb = cols[c].border_right;
-
-      cols[c].border_right = Some(0);
-      let bb = cols[c].border_bottom;
-      cols[c].border_bottom = Some(0);
-      for row_reach in cols.iter_mut().take(c + cs).skip(c + 1) {
-        row_reach.align = ca.clone();
-        row_reach.content_class = cc;
-        row_reach.content_length = cl;
-      }
-      // Perl L1073-1077: copy characterizations to rowspan-covered cells
-      for sr in 1..rs {
-        for sc in 0..cs {
-          rowspan_propagation.push((r + sr, c + sc, ca.clone(), cc, cl));
+  // Copy the characterizations to spanned cells, and move the outer borders of
+  // span-origin cells onto their last spanned column/row.
+  // Perl: collect_alignment_rows (Alignment.pm L1070-1093). This MUST run
+  // in-place and sequentially: Perl mutates the shared row array as it scans,
+  // so when it reaches a colspan-covered cell it reads the right border that
+  // the spanning cell just wrote (and writes it back), keeping the bar on the
+  // span boundary. An earlier Rust port DEFERRED these assignments (collected
+  // them, applied after the loop) to sidestep cross-row borrow conflicts —
+  // which broke that read-after-write chain: a `\multicolumn` lost the vertical
+  // bar on its spanned-over neighbor, and the following cell lost the matching
+  // left border. That inflated the row-difference score in alignment_compare
+  // and defeated guess_alignment_headers on the common "header row over a
+  // \multicolumn data row" table. Index-based single-cell access keeps each
+  // &mut borrow scoped to one statement, so we can update in place faithfully.
+  // Out-of-bounds spans (malformed rowspan/colspan past the table edge) are
+  // skipped rather than auto-vivified as Perl would.
+  let nrows_pre = alignment.rows.len();
+  for r in 0..nrows_pre {
+    let row_len = alignment.rows[r].get_columns().len();
+    for c in 0..row_len {
+      let (rs, cs, ca, cc, cl, rb, bb) = {
+        let cell = &mut alignment.rows[r].get_columns_mut()[c];
+        let rs = cell.rowspan.unwrap_or(1);
+        let cs = cell.colspan.unwrap_or(1);
+        let ca = cell.align.clone();
+        let cc = cell.content_class;
+        let cl = cell.content_length;
+        let rb = cell.border_right;
+        cell.border_right = Some(0);
+        let bb = cell.border_bottom;
+        cell.border_bottom = Some(0);
+        (rs, cs, ca, cc, cl, rb, bb)
+      };
+      // colspan: copy characterizations to spanned-over cells in this row
+      for sc in 1..cs {
+        if let Some(cell) = alignment.rows[r].get_columns_mut().get_mut(c + sc) {
+          cell.align = ca.clone();
+          cell.content_class = cc;
+          cell.content_length = cl;
         }
       }
-
-      // move the outer borders
+      // rowspan: copy characterizations to cells covered in the rows below
+      for sr in 1..rs {
+        if r + sr >= nrows_pre {
+          break;
+        }
+        for sc in 0..cs {
+          if let Some(cell) = alignment.rows[r + sr].get_columns_mut().get_mut(c + sc) {
+            cell.align = ca.clone();
+            cell.content_class = cc;
+            cell.content_length = cl;
+          }
+        }
+      }
+      // move the outer right border onto the last spanned column (every spanned row)
       for sr in 0..rs {
-        outer_border_right_assignments.push((r + sr, c + cs - 1, rb));
+        if r + sr >= nrows_pre {
+          break;
+        }
+        if let Some(cell) = alignment.rows[r + sr].get_columns_mut().get_mut(c + cs - 1) {
+          cell.border_right = rb;
+        }
       }
-      for sc in 0..cs {
-        outer_border_bottom_assignments.push((r + rs - 1, c + sc, bb));
-      }
-    }
-  }
-  // Apply the collected rowspan propagation assignments
-  for (row_idx, col_idx, align, content_class, content_length) in rowspan_propagation.into_iter() {
-    if row_idx < alignment.rows.len() {
-      let cols = alignment.rows[row_idx].get_columns_mut();
-      if col_idx < cols.len() {
-        cols[col_idx].align = align;
-        cols[col_idx].content_class = content_class;
-        cols[col_idx].content_length = content_length;
-      }
-    }
-  }
-  // Apply the collected outer border assignments
-  for (row_idx, col_idx, value) in outer_border_right_assignments.into_iter() {
-    if let Some(row) = alignment.rows.get_mut(row_idx) {
-      let cols = row.get_columns_mut();
-      if col_idx < cols.len() {
-        cols[col_idx].border_right = value;
-      }
-    }
-  }
-  for (row_idx, col_idx, value) in outer_border_bottom_assignments.into_iter() {
-    if let Some(row) = alignment.rows.get_mut(row_idx) {
-      let cols = row.get_columns_mut();
-      if col_idx < cols.len() {
-        cols[col_idx].border_bottom = value;
+      // move the outer bottom border onto the last spanned row (every spanned column)
+      if r + rs - 1 < nrows_pre {
+        for sc in 0..cs {
+          if let Some(cell) = alignment.rows[r + rs - 1].get_columns_mut().get_mut(c + sc) {
+            cell.border_bottom = bb;
+          }
+        }
       }
     }
   }
@@ -1415,8 +1411,10 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
     }
     alignment.rows[nrows - 1].get_columns_mut()[c].border_bottom = Some(if h { 1 } else { 0 });
   }
-  // Note: This propagation doesn't exist in Perl's Alignment.pm.
-  // But removing it breaks fonts_test (guessTableHeaders). Needs careful audit.
+  // Perl Alignment.pm L1106-1112: propagate inked interior borders between
+  // adjacent interior cells (top←above.bottom, bottom←below.top,
+  // left←left.right, right←right.left). Edge rows/cols are excluded (loop
+  // bounds 1..n-1), matching Perl; their outer borders were handled above.
   for r in 1..nrows - 1 {
     for c in 1..ncols - 1 {
       if let Some(bb) = alignment.rows[r - 1].get_columns_mut()[c].border_bottom
@@ -1451,7 +1449,7 @@ fn classify_alignment_rows(alignment: &mut Alignment) {
   //   for (col_index, cell) in row.get_columns().iter().enumerate() {
   //     eprintln!("[{row_index},{col_index}]=>{}{}{} {} {} => {}{}{}{}",
   //       cell.cell_type.as_ref().unwrap_or(&'?'),
-  //       cell.align.map(|a| a.char_code()).unwrap_or(' '),
+  //       cell.align.as_ref().map(|a| a.char_code()).unwrap_or(' '),
   //       cell.content_class.map(|a| a.to_string()).unwrap_or_else(|| String::from("?")),
   //       cell.content_length.unwrap_or(0),
   //       cell.border,
