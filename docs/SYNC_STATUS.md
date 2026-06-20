@@ -97,6 +97,15 @@ theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
 >   with role, so presentation emits `⁡` (U+2061) where Perl juxtaposes — even
 >   unscripted `\nabla \phi` (`∇⁡ϕ` vs `∇ϕ`). Fix = make the walk selective like
 >   Perl's `addOpDecoration` (drop OPERATOR/DIFFOP from the blanket list).
+> - **wide-space PUNCT XMDual content-arm XMRef ordering** (found 2026-06-20 via
+>   feature comparison): `x^2\quad y` — the `\quad` (≥10pt) becomes a virtual
+>   PUNCT routed through `formulae_apply`, producing an XMDual whose content-arm
+>   XMRef siblings are emitted in a different order than Perl (one XMRef one slot
+>   off). Cosmetically tiny, but it's the same MathFork/split content-arm xml:id
+>   reconciliation family as the live `expected:id` tail (see
+>   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path — thin
+>   spaces (`\,`, <10pt) collapse to lpadding/rpadding and are now Perl-faithful
+>   incl. the script-node transfer (NewScript, `005716ff66`).
 
 ## Math-parser Rust-only gaps (parked — found by Rust-vs-Perl `text=` comparison)
 
@@ -106,7 +115,13 @@ surfaces them — instead convert a diverse formula batch with both engines and
 diff the core-XML `text=` (`/usr/local/bin/latexml --quiet`). The math parser is
 a full rewrite (Marpa vs RecDescent), so it's the richest seam for Rust-only
 divergences. Landed via this method: `\mid`-in-fences (`439630485a`), `\|x\|`/
-`\Vert` norm (`6aa90dd13d`), `\nabla^2 \phi` scripted-operator (`35525e6f38`).
+`\Vert` norm (`6aa90dd13d`), `\nabla^2 \phi` scripted-operator (`35525e6f38`),
+script-node padding transfer for `x^2\,dx` (NewScript L1624-1643, `005716ff66`).
+Also landed via Rust-vs-Perl XML structural comparison (non-math): author
+`\thanks` → `<contact name="Thanks: ">` (frontmatter, `33a29ccf2f`); table
+header-guessing over a `\multicolumn` data row — colspan border move must be
+in-place (Perl `collect_alignment_rows`), the deferred port broke the
+read-after-write chain so `guess_alignment_headers` saw no hump (`3b17005458`).
 **Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
 - **`[a \mid b]` / `[a|b]`** (bracket-conditional) → Perl
   `delimited-[]@(conditional@(a,b))`. Paren `(a|b)` and brace `{a|b}` conditional
