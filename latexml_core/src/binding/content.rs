@@ -334,22 +334,18 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
     return Ok(());
   }
 
-  // Mark as loaded, then process the definitions.
-  //
-  // Suppress the "Loading X definitions" banner when we're inside a
-  // nested input_definitions call for the SAME file — that's the
-  // pattern where an .ltxml binding (e.g. babel_sty.rs) immediately
-  // calls `input_definitions(name, noltxml=true)` to raw-load the
-  // texlive .sty. Both frames used to print, producing the confusing
-  // duplicate `(Loading "babel.sty" definitions... (Loading
-  // "babel.sty" definitions...` trace. Now only the outermost frame
-  // announces — tracked per-filename via a state-value marker.
-  let banner_key = s!("__loading_banner__{filename}");
-  let this_frame_announces = with_value(&banner_key, |v| v.is_none());
-  if this_frame_announces {
-    note_begin(&s!("Loading {filename}"));
-    assign_value(&banner_key, true, Some(Scope::Global));
-  }
+  // The per-file load note is emitted ONLY when a load truly happens, so
+  // CorTeX's `loaded_file` extraction (which parses the log) counts genuine
+  // loads and nothing else:
+  //   * a NATIVE BINDING load announces `(Loading <name>…)` at its success
+  //     point below (Perl loadLTXML "(Loading <path>…)" analog);
+  //   * a RAW .sty/.cls/.def load is announced by its Mouth's
+  //     `(Processing definitions <path>…)` (fires only on a real read);
+  //   * the early-return paths — already-loaded skip and missing-file — reach
+  //     NEITHER, so they emit no note (matching Perl, whose loadLTXML returns
+  //     before its note when the binding was already loaded).
+  // (Previously a `(Loading …)` banner was emitted unconditionally here,
+  // before those early-returns — over-reporting already-loaded/missing files.)
 
   // Snapshot options.after / options.options BEFORE handleoptions consumes
   // them so the fallback-binding recursive call (Step 3 below) can forward
@@ -430,10 +426,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   // path-aware logic as the early-skip above. Allows a binding to
   // load its same-named raw counterpart via `noltxml=>1`.
   if !options.reloadable && already_handled(&filename) {
-    if this_frame_announces {
-      note_end(&s!("Loading {filename}"));
-      assign_value(&banner_key, Stored::None, Some(Scope::Global));
-    }
+    // Already-loaded early return: emit no load note (nothing was loaded).
     return Ok(());
   }
 
@@ -464,6 +457,11 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   };
   let mut is_found_raw = false;
   if is_binding {
+    // A native binding was truly loaded: announce it (Perl loadLTXML
+    // "(Loading <path>…)" analog) so CorTeX's `loaded_file` log-parser counts
+    // it. Self-contained begin+end note (timing is currently disabled).
+    note_begin(&s!("Loading {filename}"));
+    note_end("");
     // We found and loaded a binding successfully, mark it as such.
     // Perl Package.pm::loadLTXML L2315-2316 sets TWO flags: `$request`_loaded
     // (e.g. `color.sty_loaded`) AND `$ltxname`_loaded (`color.sty.ltxml_loaded`),
@@ -680,10 +678,7 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
         // InputDefinitions which returns undef on not-found even with noerror=>1.
-        if this_frame_announces {
-          note_end(&s!("Loading {filename}"));
-          assign_value(&banner_key, Stored::None, Some(Scope::Global));
-        }
+        // Nothing loaded → emit no load note.
         return Err(s!("File not found: {}", filename).into());
       }
       // Perl Package.pm L2679 / L2715: maybeRequireDependencies($name, $type)
@@ -797,10 +792,6 @@ pub fn input_definitions(raw_file: &str, mut options: InputDefinitionOptions) ->
   }
   // No handleoptions=false cleanup needed: we never mutated
   // \@currname/\@currext on that path (matching Perl).
-  if this_frame_announces {
-    note_end(&s!("Loading {filename}"));
-    assign_value(&banner_key, Stored::None, Some(Scope::Global));
-  }
   Ok(())
 }
 
