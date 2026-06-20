@@ -2870,18 +2870,17 @@ LoadDefinitions!({
         let message = s!("The environment {} is not defined.", undef);
         Error!("undefined", &undef, message);
         note_status(LogStatus::Undefined, Some(&undef));
-        // Perl latex_constructs.pool.ltxml L207-208: install a dummy
-        // constructor for `\<name>` so the env-trigger token has SOME
-        // definition. Otherwise it would re-fire as a separate
-        // "Error:undefined:\<name>" when the digester evaluates the
-        // pushed env-trigger below — doubling the error count for any
-        // unknown env. We can't directly mirror Perl's
-        //   `Stomach::makeError(undefined, $undef)`
-        // (which logs an Info, not an Error), so use a no-op DefMacro
-        // — the env-undefined Error above is already logged. Witness:
-        // 0810.4249 (\begin{lemma} on undefined `lemma` env: was Rust=2,
-        // Perl=1; now Rust=Perl=1).
-        def_macro(token, None, Tokens!(), None)?;
+        // Perl latex_constructs.pool.ltxml L207-208 installs a dummy
+        // Constructor for `\<name>` whose body is `makeError('undefined',
+        // $undef)` — emitting `<ltx:ERROR class='undefined'>{name}</ltx:ERROR>`
+        // as a visible marker (and NOT a counted Error — the env-undefined
+        // Error above is already logged). The earlier Rust port used a no-op
+        // DefMacro instead, which kept the error COUNT right but silently
+        // dropped the ERROR element from the output (Perl emits it). Mirror
+        // Perl faithfully via the same make_error constructor that
+        // `generate_error_stub` installs for undefined commands — count stays
+        // 1 (witness 0810.4249: still Rust=Perl=1), output now has the marker.
+        install_undefined_error_constructor(token, &undef);
       }
       let mut out_tokens = before_opt.map(Tokens::unlist).unwrap_or_default();
       out_tokens.push(T_CS!("\\begingroup"));

@@ -1,0 +1,11 @@
+% Regression: an UNDEFINED environment must (a) emit exactly ONE soft error and
+% (b) leave a visible `<ltx:ERROR class="undefined">{name}</ltx:ERROR>` marker in
+% the output — matching Perl's `makeError` (latex_constructs.pool.ltxml:207-208).
+% The earlier Rust port used a no-op for the undefined env trigger (count was
+% right, but the ERROR element was silently dropped). Genuinely erroneous input
+% (author forgot the defining package), so erroring + graceful recovery is the
+% correct, permanent contract.
+\documentclass{article}
+\begin{document}
+Before \begin{undefinedenv}inside body\end{undefinedenv} after.
+\end{document}

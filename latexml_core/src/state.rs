@@ -1225,6 +1225,27 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
   Ok(*token)
 }
 
+/// Install a `Constructor` for `token` whose sole effect at digestion time is to
+/// emit `<ltx:ERROR class='undefined'>content</ltx:ERROR>` (the Rust equivalent
+/// of Perl `Document::makeError`). It logs NOTHING — the caller is responsible
+/// for the `Error!`/`note_status`. Mirrors the make_error constructor that
+/// `generate_error_stub` installs for undefined *commands*, so undefined
+/// *environments* (`\begin{undefinedenv}`) leave the same visible
+/// `<ltx:ERROR>` marker as Perl instead of silently vanishing from the output.
+pub fn install_undefined_error_constructor(token: Token, content: &str) {
+  let content = content.to_string();
+  install_definition(
+    Constructor {
+      cs: token,
+      replacement: Some(Rc::new(move |document, _args, _props| {
+        document.make_error("undefined", &content)
+      })),
+      ..Constructor::default()
+    },
+    Some(Scope::Global),
+  );
+}
+
 // SAFETY
 // any method which does not return a borrowed piece of data should be package-level
 // so that the global singleton State can get locked+unlocked during the same call

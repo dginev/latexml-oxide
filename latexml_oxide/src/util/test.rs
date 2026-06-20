@@ -193,6 +193,16 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
      (`! Too many }'s, silently discards }`); Perl+Rust both emit 2 soft errors. \
      Verified 2026-06-10.",
   ),
+  (
+    "undefined_env",
+    1,
+    "undefined environment `\\begin{undefinedenv}`: genuinely erroneous (missing \
+     defining package). Both Perl+Rust emit 1 SOFT error AND a visible \
+     `<ltx:ERROR class='undefined'>{undefinedenv}</ltx:ERROR>` marker (Perl \
+     `makeError`, latex_constructs.pool.ltxml:207-208). Guards the fix where Rust \
+     formerly dropped the ERROR element (no-op trigger). Verified vs \
+     /usr/local/bin/latexml.",
+  ),
 ];
 
 /// **Error debt** — valid input we INTEND to convert cleanly (a desired,
