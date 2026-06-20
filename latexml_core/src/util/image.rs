@@ -18,6 +18,31 @@ use crate::{
   whatsit::Whatsit,
 };
 
+/// Lexical relative path from `base` to `target`, with `..` for divergent base
+/// components — matching Perl's `File::Spec->abs2rel` (used by
+/// `pathname_relative`). Component-based, no symlink resolution. Falls back to
+/// the target's string form if either side isn't absolute or has no common root.
+fn abs2rel(target: &Path, base: &Path) -> String {
+  use std::path::Component;
+  if !target.is_absolute() || !base.is_absolute() {
+    return target.to_string_lossy().to_string();
+  }
+  let t: Vec<Component> = target.components().collect();
+  let b: Vec<Component> = base.components().collect();
+  let common = t.iter().zip(b.iter()).take_while(|(a, c)| a == c).count();
+  if common == 0 {
+    return target.to_string_lossy().to_string();
+  }
+  let mut result = PathBuf::new();
+  for _ in 0..(b.len() - common) {
+    result.push("..");
+  }
+  for comp in &t[common..] {
+    result.push(comp.as_os_str());
+  }
+  result.to_string_lossy().to_string()
+}
+
 /// Perl: `image_candidates($path)` (Util::Image L43-57).
 ///
 /// Returns comma-separated list of candidate paths for `path`, searching
@@ -91,13 +116,28 @@ pub fn image_candidates(path: &str) -> String {
     }
   }
 
-  // If no candidates found and path has no extension, try common image extensions
-  // (matching Perl's pathname_findall with types => ['*'] which tries all known types)
+  // Perl image_candidates (Util/Image.pm L49-53): when the search-dir lookup
+  // finds nothing AND the name is extensionless, consult kpsewhich for
+  // `<path>.png` / `<path>.pdf` — this resolves TeX Live system images such as
+  // `example-image-a` (whose real file is a .pdf). Crucially, kpsewhich returns
+  // ONLY files that actually exist, so a missing image yields no candidate. The
+  // earlier Rust port instead SYNTHESIZED `<path>.png` unconditionally, so a
+  // missing extensionless image got a bogus `candidates="missing.png"` (Perl
+  // emits none) and `example-image-a` got the wrong `.png` instead of its `.pdf`.
   if candidates.is_empty() && !has_extension {
-    // Perl typically returns just the first match (png)
-    if let Some(ext) = ["png", "jpg", "jpeg", "gif", "pdf", "eps", "svg"].first() {
-      let with_ext = format!("{path}.{ext}");
-      candidates.push(with_ext);
+    let png = format!("{path}.png");
+    let pdf = format!("{path}.pdf");
+    if let Some(found) = crate::util::pathname::kpsewhich(&[&png, &pdf]) {
+      // Perl relativizes every candidate to SOURCEDIRECTORY via pathname_relative,
+      // which yields a `../…`-style path for a kpsewhich hit in the texmf tree
+      // (e.g. `../usr/share/texlive/…/example-image-a.png`) — NOT an absolute
+      // machine path. `pathname::relative`/`strip_prefix` only handle the
+      // descendant case, so use a lexical abs2rel for the non-descendant tree.
+      let rel = match &source_path {
+        Some(sp) => abs2rel(Path::new(&found), sp),
+        None => found,
+      };
+      candidates.push(rel);
     }
   }
 
