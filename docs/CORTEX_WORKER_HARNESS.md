@@ -38,7 +38,7 @@ from two layers — not competing options.
 | --- | --- | --- |
 | `--harness` | off | Run as the supervising harness instead of converting. |
 | `--workers N` | CPU-derived¹ | Number of single-conversion child processes to keep alive. A **deliberate over-commit** (see below) — explicit override. |
-| `--child-mem-limit-mb MB` | `8192` | Per-child **address-space** ceiling, enforced via `setrlimit(RLIMIT_AS)` before each child execs (`0` disables). Contains a *single* runaway job. |
+| `--child-mem-limit-mb MB` | `5632` | Per-child **address-space** ceiling, enforced via `setrlimit(RLIMIT_AS)` before each child execs (`0` disables). Contains a *single* runaway job. (Was `8192` until a 72-worker sweep let the aggregate hit 207 GB → kernel OOM; now a ~4 GB-RSS cap. The binary's `--help` is the authoritative default.) |
 | `--mem-pressure-floor-mb MB` | auto³ | Fleet **memory-pressure governor** floor. Contains the *aggregate* (a heavy cluster). Omit = auto; `0` = disable. |
 | `--max-rss-mb MB` | auto² | Per-child polled **RSS** soft guard (forwarded to children). |
 
@@ -49,10 +49,10 @@ sizing the fleet to the cap would idle most of the box; the governor (below)
 makes the over-commit safe against the rare heavy cluster.
 ² In harness mode the child's `--max-rss-mb` is auto-set to
 `--child-mem-limit-mb − 256` so the soft guard fires just before the hard cap.
-With the 8192 default the soft guard sits at 7936 MiB RSS (1.75 GiB above 6 GB)
-and the VSZ cap clears a 6 GB job's ~7–7.5 GiB address space, so the effective
-resident ceiling is ~6.5–7 GB RSS — a legitimate ~6 GB paper completes with
-headroom.
+With the 5632 default the soft guard sits at 5376 MiB RSS, and mimalloc reserves
+~1–1.5 GiB of VSZ above RSS, so the cap trips at a ~4 GB *resident* ceiling — a
+legitimate ~4 GB paper completes and a runaway is killed early (the deliberate
+trade behind lowering it from 8192, which once OOMed the box at 207 GB aggregate).
 ³ Auto = `max(one per-child cap, 10% of physical RAM)`: shed when free RAM
 drops below that, resume past 1.5×. Set explicitly to tune; `0` disables the
 governor (then rely on the per-child cap + an external cgroup).
@@ -61,13 +61,14 @@ Example (one command brings up the whole fleet):
 
 ```bash
 cortex_worker --harness \
-  --child-mem-limit-mb 8192 \
   --service oxidized-tex-to-html \
   --source-address tcp://dispatcher:51695 \
   --sink-address   tcp://dispatcher:51696 \
   --profile ar5iv
 # --workers defaults to the CPU-derived over-commit; --mem-pressure-floor-mb
-# defaults to max(8192, 10% of RAM). Add either flag only to override.
+# defaults to max(per-child cap, 10% of RAM). Add either flag only to override.
+# Production: prefer CorTeX's canonical launcher (scripts/run_worker.sh +
+# cortex-worker.service) — it pins --workers and leaves these guards at the validated defaults.
 ```
 
 The dispatcher/profile flags (`--source-address`, `--sink-address`, `--service`,
