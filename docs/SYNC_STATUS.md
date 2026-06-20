@@ -333,6 +333,13 @@ downgrading):**
 - **p-column (`p{}`) `td align` + width placement** — Rust `align="justify"` +
   width on `<p>`; Perl `align="left"` + width on `<inline-block>`. Part of the
   deferred 1610.00974 step-3 p-column VBox port (see Deep deferred families).
+- **`\resizebox` panel scale-VALUE divergence** (found 2026-06-20; the %.15g
+  scale *formatting* is now Perl-faithful, `551c5286ba`): in
+  `complex/figure_mixed_content` two figure panels get `xscale=1.1312…` in Rust
+  vs `0.8819…` in Perl — a different computed scale, i.e. a *natural-width*
+  divergence for the panel content (the resize target is the same; the measured
+  box width differs). Box-metric, not graphics-binding; investigate with the
+  `tex_box.rs` box-dimension edge cases above.
 - **~72-CS Perl-only long tail** (from the archived LoadFormat audit): misc
   atomics (`\@charlb`, point-size CSes, `\batchmode`, …) Perl defines and Rust
   does not. Investigate a CS only when a real paper witnesses it. Refresh the
