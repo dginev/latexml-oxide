@@ -1343,6 +1343,42 @@ trailing-empties semantics is otherwise preserved exactly.
 
 ---
 
+### 35. etoolbox `\robustify` is a no-op on native (closure) bindings
+
+**Decision:** `\robustify` (and the etoolbox patching family it shares
+machinery with) leaves a **native, Rust-closure-bodied** binding
+unchanged, instead of reconstructing it from its `\meaning`.
+
+**Rationale:** etoolbox's `\robustify` makes a *fragile* macro robust by
+reading its `\meaning` (`macro:<params>->...body...`), then
+re-`\def`-ing it (via `\scantokens`) wrapped in `\protected`. That round
+trip only works when the body is real tokens. Many LaTeXML commands are
+realized as native closures whose `\meaning` renders as
+`...->CODE(0x<ptr>)`; reconstructing from that produces a broken macro
+whose param text (`#1#2#3#4`) is taken literally and whose body is the
+literal text `CODE(0x…)` — so e.g. a robustified natbib `\cite` grabs the
+wrong number of arguments and can swallow a following `\begin{equation}`.
+Native bindings are *already* robust (no `\protect` fragility), so the
+faithful-to-intent behavior is to leave them alone.
+
+**Perl behavior:** Perl LaTeXML ports the identical etoolbox
+`\etb@robustify` and has the **same** bug — its robustified native `\cite`
+emits the literal pointer text (`Start CODE(0x…)…`) — it simply does not
+raise an `Error:`. So this is a **surpass-Perl** correction, not a Perl
+parity match: Rust both avoids the error *and* keeps `\cite` working.
+
+**Implementation:** `\lx@ifnativecmd` in
+`latexml_package/src/package/etoolbox_sty.rs` mirrors etoolbox's own
+`\ifdefmacro` `\meaning`-split idiom (sentinel `CODE(`); `\robustify` is
+wrapped to no-op on natives and delegate to the original for token macros.
+
+**Witness:** 2110.11931 (mnras — its template ships `\robustify{\cite}`):
+10 errors → 0, with correct citation output. User-macro robustify
+(`\robustify{\foo}`) is unaffected. (The `\patchcmd`/`\apptocmd`/
+`\pretocmd` siblings share the latent issue; not yet wrapped.)
+
+---
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML

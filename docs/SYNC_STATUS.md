@@ -2579,8 +2579,18 @@ In Rust the same 4-arg grab swallows the following `\begin{equation}` →
 garbage. Matching Perl's 0-errors would mean hiding it (worse signal). The real
 fix (surpass BOTH): make `\robustify`/`\patchcmd` a **no-op on native
 closure-bindings** (they're already robust; their `\meaning` body isn't
-reconstructable). Deep + beyond-Perl + touches all etoolbox patching — dedicated
-session; not pursued in the loop. Net: 2110.11931 is NOT a parity gap.
+reconstructable).
+
+**✅ FIXED 2026-06-20 (surpass-Perl).** Implemented exactly that for `\robustify`:
+`etoolbox_sty.rs` now defines `\lx@ifnativecmd` (mirrors etoolbox's own
+`\ifdefmacro` `\meaning`-split idiom, sentinel `CODE(`) and wraps `\robustify` to
+no-op on native closure-bindings, delegating to the original for token macros.
+2110.11931: **10 → 0 errors AND correct output** (cite parsed, `AFTERWORD`
+survives, no `CODE(0x…)` garbage) — surpasses Perl, which still emits the pointer
+text. User-macro robustify preserved (`\foo{x}`→`[x]`). Full suite green (64 ok
+suites; only the known-pre-existing `elsart` fail). Marked as an intentional
+divergence in `OXIDIZED_DESIGN.md`. (`\patchcmd`/`\apptocmd`/`\pretocmd` of
+natives have the same latent issue — not yet wrapped; follow-up if witnessed.)
 **Refined target for that session (2026-06-20):** `\etb@ifscanable\cite` already
 returns *NOT-SCANABLE* (correct), yet robustify still rewrites `\cite` with **no
 "Failed to robustify" error** — so it is NOT taking the ifscanable-fail branch.

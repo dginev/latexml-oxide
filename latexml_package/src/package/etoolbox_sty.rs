@@ -1792,4 +1792,29 @@ LoadDefinitions!({
   // stub as a no-op so callers don't crash on undefined CS.
   // Witnesses: 2405.19979, 2405.19935 (both tkz-euclide).
   def_macro_noop("\\PatchFailed")?;
+
+  // LaTeXML-only: \robustify must NO-OP on a NATIVE (closure-bodied) binding.
+  // Many LaTeXML commands (e.g. natbib's \cite) are realized as Rust closures,
+  // whose \meaning renders as "...->CODE(0x...)". etoolbox's \robustify
+  // reconstructs a macro from its \meaning via \scantokens; for a native binding
+  // that yields a broken text-bodied "CODE(0x...)" macro that grabs the wrong
+  // number of args (Perl has the SAME bug — it silently emits the pointer text;
+  // we surfaced it as errors when the mangled \cite swallowed a following
+  // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
+  // Native bindings are already robust, so the faithful behavior is to leave them
+  // untouched. `\lx@ifnativecmd` mirrors etoolbox's own \ifdefmacro \meaning-split
+  // idiom, using "CODE(" as the sentinel.
+  RawTeX!(
+    r"
+\newcommand{\lx@ifnativecmd}{}
+\long\edef\lx@ifnativecmd#1{%
+  \noexpand\expandafter\noexpand\lx@etb@ifnativecmd
+  \noexpand\meaning#1\detokenize{CODE(}&}
+\edef\lx@etb@ifnativecmd{%
+  \def\noexpand\lx@etb@ifnativecmd##1\detokenize{CODE(}##2&}
+\lx@etb@ifnativecmd{\notblank{#2}}
+\let\lx@saved@robustify\robustify
+\protected\def\robustify#1{\lx@ifnativecmd{#1}{}{\lx@saved@robustify{#1}}}
+"
+  );
 });
