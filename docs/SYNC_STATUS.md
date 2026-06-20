@@ -78,18 +78,29 @@ surfaces them — instead convert a diverse formula batch with both engines and
 diff the core-XML `text=` (`/usr/local/bin/latexml --quiet`). The math parser is
 a full rewrite (Marpa vs RecDescent), so it's the richest seam for Rust-only
 divergences. Landed via this method: `\mid`-in-fences (`439630485a`), `\|x\|`/
-`\Vert` norm (`6aa90dd13d`). **Still open (both reproduce as `ltx_math_unparsed`
-in Rust, parse in Perl):**
-- **`\nabla^2 \phi`** (Laplacian) → Perl `(nabla ^ 2)@(phi)`. `\nabla` is role
-  OPERATOR; `\nabla f` and `\partial^2 f` (DIFFOP) both parse, but a *scripted
-  OPERATOR applied to an operand* has no grammar rule. Likely a
-  `scripted-operator factor => apply` rule (cf. the existing DIFFOP/trigfunction
-  scripted-application rules in `grammar/builder.rs`).
+`\Vert` norm (`6aa90dd13d`), `\nabla^2 \phi` scripted-operator (`35525e6f38`).
+**Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
 - **`[a \mid b]` / `[a|b]`** (bracket-conditional) → Perl
   `delimited-[]@(conditional@(a,b))`. Paren `(a|b)` and brace `{a|b}` conditional
   rules exist (builder.rs ~549/557) but bracket does not; bare `a|b` parses
   inside `[...]` differently. Needs the `[...]`-delimiter + inner-conditional
   path (NOT a simple new fence rule — Perl wraps it in `delimited-[]`).
+
+**SEPARATE pre-existing divergence (NOT a parse gap — surfaced while fixing
+`\nabla^2`):** Rust inserts `⁡` (U+2061 FUNCTION APPLICATION) in *presentation*
+MathML for OPERATOR applications where Perl uses bare juxtaposition — e.g. even
+unscripted `\nabla \phi` is `∇⁡ϕ` (Rust) vs `∇ϕ` (Perl). Traced to
+`parser.rs:711-743` `DecorateOperator`: Perl calls it SELECTIVELY from the
+grammar's `addOpDecoration` (MathGrammar:697, additive-op-chain context), but
+Rust applies it as a BLANKET post-parse DOM walk over every SCRIPTOP `XMApp`
+whose base role ∈ {MULOP,ADDOP,…,OPERATOR,DIFFOP}, so it over-decorates
+operator applications; the `role="OPERATOR"` then makes the presentation
+post-processor emit `⁡`. Broad (all `\nabla`/operator applications), invisible
+glyph, content `text=` already matches — so low-priority, but it's the next
+operator-presentation parity item. Fix = make the walk match Perl's selective
+call sites (likely drop OPERATOR/DIFFOP from the blanket list, verify nothing
+that NEEDS infix decoration regresses).
+
 CAUTION (from the norm fix): new VERTBAR/fence grammar rules can collide with
 package-built structures (the norm rule initially regressed `physics_test` —
 turned out physics.xml was a STALE divergence and Perl matched the new output,
