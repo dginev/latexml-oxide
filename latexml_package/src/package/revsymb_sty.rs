@@ -48,6 +48,20 @@ LoadDefinitions!({
   DefMath!("\\triangleq", "\u{225C}", role => "RELOP");
   Let!("\\corresponds", "\\triangleq");
 
+  // revsymb4-2.sty defines `\REV@<sym>` fallbacks (L57-68) and installs them via
+  // `\@ifxundefined\<sym>{\let\<sym>\REV@<sym>}` (L156-163) — for documents that
+  // don't load amssymb. This binding already defines the symbols directly, but
+  // in `rawstyles`/ar5iv mode (INCLUDE_STYLES, cortex_worker `--standalone`'s
+  // ar5iv profile) the raw revsymb4-2.sty fallback can still fire and reference
+  // an undefined `\REV@lesssim` (witness 2106.00028: `\lesssim` without amssymb →
+  // `undefined:\REV@lesssim`). Alias the `\REV@*` names to our symbols so the
+  // fallback resolves. (Perl LaTeXML's `latexml --preload=ar5iv.sty` is clean
+  // here; this restores ar5iv-profile parity.)
+  Let!("\\REV@lesssim", "\\lesssim");
+  Let!("\\REV@gtrsim", "\\gtrsim");
+  Let!("\\REV@triangleq", "\\triangleq");
+  Let!("\\REV@dddot", "\\dddot");
+
   DefMath!("\\loarrow{}", "\u{20D6}", operator_role => "OVERACCENT");
   DefMath!("\\roarrow{}", "\u{20D7}", operator_role => "OVERACCENT");
   DefConstructor!("\\openone", "1",

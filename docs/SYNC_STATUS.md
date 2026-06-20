@@ -2538,16 +2538,26 @@ general-arXiv papers (`/data/arxiv/2106`, branch binary w/ all 4 session fixes):
 this session hold up. The 6 failures yielded NO new clean single-macro win:
 
 - `\justify` (2106.00022) — **SHARED** (Perl `--verbose` also 2 errors; not a gap).
-- `\REV@lesssim` (2106.00028, revtex4-2 + `\lesssim` without amssymb) — **a
-  harness discrepancy, not an engine binding gap.** `cortex_worker --standalone`
-  errors (1: undefined `\REV@lesssim`), but `latexml_oxide` on the same extracted
-  main.tex is **0 errors**. BOTH load the identical bindings (revtex4-2 binding,
-  revtex4_support, revsymb binding — which defines `\lesssim` directly); neither
-  raw-loads revsymb4-2.sty. So the divergence is in the `--standalone` *loading
-  context* (CWD/kpathsea/options), not the engine. **Meta-implication: cortex_worker
-  `--standalone` can report errors latexml_oxide does not for the same paper** —
-  relevant to sweep-error-count reliability and worth a separate harness probe.
-  (cortex_worker is the production path, so its error is what production sees.)
+- ~~`\REV@lesssim`~~ (2106.00028, revtex4-2 + `\lesssim` without amssymb) —
+  **✅ FIXED 2026-06-20 (iteration 14), AND root-caused the harness discrepancy.**
+  The divergence was real: `cortex_worker --standalone` defaults to the **ar5iv
+  profile** (preloads `ar5iv.sty` → `INCLUDE_STYLES`/rawstyles), while plain
+  `latexml_oxide` does not. In rawstyles mode, revsymb4-2.sty's
+  `\@ifxundefined\lesssim{\let\lesssim\REV@lesssim}` fallback (L156-163) fires, but
+  the Rust `revsymb` binding defined `\lesssim`/`\gtrsim`/`\triangleq`/`\dddot`
+  *without* the `\REV@*` fallback names → `undefined:\REV@lesssim`. **Fix:** aliased
+  `\REV@lesssim`/`\REV@gtrsim`/`\REV@triangleq`/`\REV@dddot` to the symbols in
+  `revsymb_sty.rs`. 2106.00028 with `--preload=ar5iv.sty` (the production path):
+  1 → 0 errors; full suite green. Restores ar5iv-profile parity (Perl
+  `--preload=ar5iv.sty` is clean here).
+  **⚠️ METHODOLOGY META-FINDING:** cortex_worker `--standalone` runs with the
+  **ar5iv profile** (rawstyles) — so sweep error counts reflect that context, and
+  Perl-parity checks must use `latexml --preload=ar5iv.sty` to match (a refinement
+  alongside `--verbose`-not-`--quiet`). This CORRECTS the stale deferred-note claim
+  that "the cortex_worker sweep runs --standalone (NO --preload=ar5iv.sty)" — it
+  does preload ar5iv now. (Engine-level fixes this session apply in both contexts,
+  so they're unaffected; but plain-latexml_oxide verifications can UNDER-count
+  ar5iv-only errors like this one.)
 - The rest are deep/known: biblatex `maxnames`/`\AtNextCite` (2106.00001),
   `ltx:title`/`ltx:creator` in `_CaptureBlock_` frontmatter (2106.00074), an
   `_`/`\fi` conditional-cascade (2106.00077), custom-class `\studentlab`/
