@@ -86,6 +86,29 @@ divergences. Landed via this method: `\mid`-in-fences (`439630485a`), `\|x\|`/
   inside `[...]` differently. Needs the `[...]`-delimiter + inner-conditional
   path (NOT a simple new fence rule — Perl wraps it in `delimited-[]`).
 
+**HIGH-VALUE STRUCTURAL divergence — multi-arg function application
+`f(a,b)` (found 2026-06-20, NOT yet fixed; central/risky — wants a focused
+session or a steer):** every function/opfunction applied to a parenthesized
+comma-list wraps the list as a single `vector@` arg, where Perl flattens to
+multi-arg. Affects `f(a,b)`, `\max(a,b)`, `\min(x,y,z)`, `\gcd(a,b)`,
+`\deg(f,g)`, … (ubiquitous; impacts content-MathML for ALL multivariate calls):
+- `\max(a,b)` → Rust `maximum@(vector@(a, b))` vs Perl `maximum@(a, b)`.
+- `f(a,b)` (declared FUNCTION) → Rust `f@(vector@(a, b))` vs Perl `f@(a, b)`.
+Perl's `ApplyDelimited`/`extract_separators` (MathParser.pm) drops the commas
+and puts the items DIRECTLY as the operator's args (flat). Rust path:
+`(a,b)` → `lparen formula_list rparen => fenced` (vector), then
+`function fenced_factor => prefix_apply` (wrap). Note the comment at
+builder.rs:699-704 — intervals were pulled out of `fenced_factor` SO `f(x,y)`
+uses the "list interpretation", but that interpretation WRAPS (vector) rather
+than FLATTENS like Perl. Fix = add `function/opfunction/trigfunction lparen
+formula_list rparen => apply_delimited`-FLATTEN rules (apply_delimited extracts
+the comma-list items as the content-branch args, presentation keeps `(a,b)`),
+with pruning to prefer the flattened apply over the vector-wrap prefix_apply.
+Central + pruning-sensitive → must be done carefully with full-suite + Perl
+cross-check (NOT a quick cron fix). Single-arg `f(x)` and the
+undeclared-letter `f(x)`/`P(...)` apply-vs-multiply ambiguity are SEPARATE and
+out of scope here.
+
 **SEPARATE pre-existing divergence (NOT a parse gap — surfaced while fixing
 `\nabla^2`):** Rust inserts `⁡` (U+2061 FUNCTION APPLICATION) in *presentation*
 MathML for OPERATOR applications where Perl uses bare juxtaposition — e.g. even
