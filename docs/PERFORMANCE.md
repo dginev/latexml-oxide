@@ -341,9 +341,12 @@ cargo bloat --release --no-default-features --features runtime-bindings \
   profile-use→run); the **maxperf measurement** is reserved for the full-corpus
   hardware (see the venue note above). Prereq: `rustup component add
   llvm-tools-preview` (the script resolves `llvm-profdata` from the active
-  toolchain sysroot, so its version matches rustc). Remaining: a `release.yml`
-  two-pass job (release-only; the train run is too slow for ordinary CI) and the
-  standing-corpus wall before/after per the checklist below.
+  toolchain sysroot, so its version matches rustc). Operator procedure:
+  `docs/RELEASING.md` step 3b — an on-machine release step with a real
+  `PGO_TRAIN_DIR=/data/arxiv/…` slice, **not** a GitHub-Actions job (a runner has
+  no arXiv corpus; toy-corpus training would optimize the wrong hot paths).
+  Remaining: the standing-corpus wall before/after per the checklist below, on
+  the full-corpus hardware.
 - **[ ] BOLT (post-link binary optimization)** — stacks on PGO for a further
   few % by reordering hot/cold code in the linked binary (`llvm-bolt` + a
   profiling run on the final executable). Attempt only after PGO lands.

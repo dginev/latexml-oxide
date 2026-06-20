@@ -100,8 +100,12 @@ dispatcher CPU is ~116 µs/task, negligible vs the conversion itself).
 4. **Optimize:** `RUSTFLAGS="-Cprofile-use=…"` + the `maxperf` build — PGO stacks
    with fat-LTO/CGU-1 (it informs LTO inlining). ✅ `make_release.sh` now honors
    `PGO_PROFILE=<merged.profdata>` (adds `-Cprofile-use` + `-pgo-warn-missing-function`
-   to its existing maxperf build). Remaining: a `release.yml` two-pass job
-   (release-only; the two-pass + training run is too slow for ordinary CI).
+   to its existing maxperf build). ✅ Operator procedure documented in
+   `docs/RELEASING.md` step 3b. **Deliberately NOT a GitHub-Actions CI job:** a
+   runner has no arXiv corpus, and training on the toy in-repo tests would
+   optimize the wrong hot paths — PGO is an operator step on the release machine
+   with a real `PGO_TRAIN_DIR=/data/arxiv/…` slice. Only remaining piece is the
+   actual maxperf perf measurement (reserved for the full-corpus hardware).
 
 **Prerequisite — MET (installed 2026-06-20):** the pinned `nightly-2026-06-10`
 toolchain (`rust-toolchain.toml`; both passes must use the identical toolchain) +
@@ -115,11 +119,13 @@ engine changes meaningfully (not set-and-forget); compatible with `maxperf`
 
 **Status:** TOOLING LANDED 2026-06-20 (`tools/make_release_pgo.sh` + the
 `make_release.sh` `PGO_PROFILE` hook); pipeline mechanics validated end-to-end at
-the `dev` profile (instrument→train→merge→profile-use→run, clean conversion). NOT
-yet wired into `release.yml`; the **maxperf perf measurement** is reserved for the
-full-corpus hardware (the dev box is freeze-prone/unrepresentative — see
-`PERFORMANCE.md` venue note). Design home: `docs/PERFORMANCE.md` →
-"Build-pipeline optimization roadmap → High-effort".
+the `dev` profile (instrument→train→merge→profile-use→run, clean conversion).
+Operator procedure in `docs/RELEASING.md` step 3b; deliberately NOT a CI job (a
+runner has no arXiv corpus — toy-corpus training would mis-optimize). The only
+remaining piece is the **maxperf perf measurement**, reserved for the full-corpus
+hardware (the dev box is freeze-prone/unrepresentative — see `PERFORMANCE.md`
+venue note). Design home: `docs/PERFORMANCE.md` → "Build-pipeline optimization
+roadmap → High-effort".
 
 ---
 
@@ -2727,8 +2733,12 @@ pass used `--quiet` → wrong; see retraction below). Buckets:
     `\DeclareOption` inputenc/package requires + accented chars).
   - **1611.04940** (rust 1) — `\newtheorem{step}[steps]{Step}` is used as a
     standalone `\step` (one-line step marker) with no `\end{step}`; the unclosed
-    theorem env's group leaks to `\end{proof}`'s `\endgroup`. Perl auto-closes it.
-    = **mode-frame auto-close** family.
+    theorem env's mode-switch frame leaks to `\end{proof}`'s `\endgroup`.
+    **CORRECTED 2026-06-20: SHARED, NOT Rust-only — Perl errors identically**
+    (the old "Perl auto-closes it" was a `--quiet`/timeout artifact; Perl also
+    times out on the full paper). Minimal repro confirms both engines emit the
+    same `\endgroup …mode horizontal` error. See the `\endgroup`/mode-horizontal
+    cluster entry below (full Perl-parity verification + root cause).
   - **1804.01117** (rust 305, fatal) — xinttrig group imbalance (`\begingroup` at
     line 350) → cascade incl. 82× `\pgffor@values expands into itself` + tikz. =
     **multi-package cascade** (xint / pgffor / tikz), deep.
@@ -2769,7 +2779,22 @@ scantokens, P1 fixes; `cortex_worker --standalone`). **37 convert clean (0 err)*
 - **`\endgroup`/mode-horizontal cluster** (2009.05630, 1702.06692, 1702.02037,
   1611.04940 — 1-2 err each): "Attempt to close a group that switched to mode
   horizontal" — the same box/mode-frame machinery as the 1610.00974 alignment
-  blocker. Deep; Perl-parity not yet checked (use `--verbose`).
+  blocker. **✅ Perl-parity CHECKED 2026-06-20 (`--verbose`, identical files):
+  the whole cluster is SHARED, not a Rust-only gap.** Root pattern: a theorem
+  environment is opened via its *bare begin-command* (`\step` from
+  `\newtheorem{step}`, `\case` from `\newtheorem{case}`) with NO matching
+  `\endstep`/`\endcase`; the unclosed mode-switch (horizontal) frame leaks to the
+  enclosing `\end{proof}`'s `\endgroup`, and Perl's `egroup`/`endgroup`
+  (`Core/Stomach.pm` L343-376) errors identically when `BOUND_MODE` is bound in
+  the frame being closed. Verified: a 12-line minimal repro (`\step`×2 inside
+  `\begin{proof}`) → BOTH engines 1 `Error:unexpected:\endgroup …mode horizontal`;
+  2009.05630 → BOTH 1 identical error (trigger `\case`, lines 1029/1036).
+  (Perl *additionally* emits recoverable `\endstep body should have ended`
+  warnings — it attempts the body auto-close — but still hits the same endgroup
+  error, so it does NOT recover cleanly either.) Matching Perl satisfies parity;
+  a graceful auto-close of the orphaned environment at `\endgroup` would
+  *surpass* Perl but touches the deep BOUND_MODE egroup machinery
+  (regression-prone, cf. 1610.00974 step-3) — beyond-parity R&D, NOT a parity fix.
 - **SHARED, not Rust gaps:** `\sep` (1810.06908) — Perl *times out* (exit 124).
 - **Large/known:** 2203.05327 (443), 1705.10306 (357), 1804.01117 (305, fatal),
   `\NiceTabular` (2212.09528, nicematrix stub). Perl-parity unverified.

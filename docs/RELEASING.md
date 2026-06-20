@@ -162,6 +162,30 @@ bundled on any platform.
     RELEASE_TARGET=aarch64-apple-darwin bash tools/make_release.sh
     ```
 
+3b. **(Optional, recommended for perf releases) PGO-optimize the binary.**
+   Profile-Guided Optimization typically buys ~10–20% on this CPU-bound,
+   branch-heavy engine (see `docs/PERFORMANCE.md`). It is an **operator step on
+   the release machine**, NOT a CI job — the profile must be trained on a
+   *diverse real corpus* (a GitHub Actions runner has no arXiv slice, and
+   training on the toy in-repo tests would optimize the wrong hot paths). The
+   tooling is two passes:
+
+    ```bash
+    # one-time: the LLVM profile merger
+    rustup component add llvm-tools-preview
+    # pass 1-3: instrument → train on a diverse arXiv slice → merge
+    PGO_TRAIN_DIR=/data/arxiv/2106 bash tools/make_release_pgo.sh
+    # pass 4: the normal release build, now PGO-informed (stacks with fat-LTO)
+    PGO_PROFILE=target/pgo/merged.profdata bash tools/make_release.sh
+    ```
+
+   `make_release_pgo.sh` defaults to a curated in-repo training slice if
+   `PGO_TRAIN_DIR` is unset (portable, but a real arXiv slice is strongly
+   preferred for a shipped artifact). Re-train per release — the profile is
+   workload+code-specific. Produces no runtime artifacts (self-contained-binary
+   guarantee intact). Skip this step for a plain (non-PGO) release; the result
+   is identical to step 3's output.
+
 4. **Commit, tag, push.** Tag format is bare `X.Y.Z` — no `v` prefix —
    matching the existing tag history.
 
