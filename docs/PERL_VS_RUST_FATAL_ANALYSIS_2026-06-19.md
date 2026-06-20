@@ -226,6 +226,40 @@ VBoxContents and re-bless the 5 p-cell fixtures against Perl; validate the full
 1458-test suite. The width-attribute parity is an independent latent win bundled
 with the same port.
 
+#### Implementation plan for a dedicated session (consolidated 2026-06-20)
+
+Three ordered, separately-verifiable steps; ~half a day with full table-test
+validation. (Iterations 1–2 already prototyped step 2 and measured its effects.)
+
+1. **Port the p-column to current Perl (`\lx@tabular@p` + VBoxContents).** In
+   `latexml_engine/src/tex_tables.rs` replace the `DefColumnType!("p{Dimension}")`
+   `\vtop{\hbox to <dim>\relax{…}}` body (an `\hbox`, restricted_horizontal,
+   can't hold `\\`) with Perl's `TeX_Tables.pool.ltxml` L69-80 form:
+   `before = \lx@tabular@p t {<dim>} {`, `after = }`, plus
+   `\lx@tabular@p{}{}` → `\hsize=#2\relax\lx@tabular@p@{#1}{#2}` and a
+   `\lx@tabular@p@{}{Dimension} VBoxContents` constructor emitting
+   `<ltx:inline-block vattach='#vattach' width='#2'>#3</ltx:inline-block>`.
+   *Measured in iter-2:* eliminates the pgf-`&` cascade (502→ small) and makes the
+   p-cell `width=` attribute match Perl. Prototype is in this session's git history
+   (reverted commit lineage on `fix/tikz-cd-pgf-robustness`).
+2. **Re-bless the 5 p-cell fixtures** (`53_alignment`: array/tabular/cells/
+   colortbls; `65_graphics`: graphrot). The ONLY diff is the added
+   `width="…pt"` on `<inline-block>` — VERIFY each against
+   `latexml --verbose` (Perl emits the identical `width`, confirmed iter-7/2):
+   re-bless only if the new output equals Perl's, never just the new Rust output.
+3. **The deep part — alignment `\cr`/`\\` nested-mode unwind.** After step 1 the
+   `\\`-inside-multicolumn-p-cell witness still emits ~7 recoverable mode errors
+   (`\lx@tabular@p@ Attempt to end mode internal_vertical in horizontal`): the
+   VBoxContents `\\` fires the alignment `\cr` from `internal_vertical`, but the
+   row-end logic in `digest_alignment_body` (`tex_tables.rs:645`) /
+   `Alignment::end_row`/`end_column` (`latexml_core/src/alignment.rs`) assumes
+   `horizontal`. Make `\cr`/`\\` pop any nested cell-box mode-frame before closing
+   the row (Perl unwinds it). This is the regression-prone core change — gate on
+   the full table-test suite.
+
+Net after all three: 1610.00974 (and the broader pgf-matrix-`&` cascade class)
+→ 0 errors with Perl-matching tables.
+
 ## Repro
 
 ```bash
