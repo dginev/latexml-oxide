@@ -70,7 +70,35 @@ theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
 
 ---
 
-## Math-parser Rust-only gaps (found by Rust-vs-Perl `text=` comparison)
+## Math-parser / content-MathML gaps — DEFERRED to a dedicated session
+
+> **User directive 2026-06-20: defer ALL content-MathML-related items to a
+> dedicated session; keep notes on each (below).** The math parser is a full
+> rewrite (Marpa vs RecDescent) and these touch its parse-tree / content-MathML
+> structure — best tackled together with focused regression budget, not piecemeal
+> in the general worklist. **LANDED already** (clean parse-gap fixes, keep):
+> `\mid`-in-fences (`439630485a`), `\|x\|`/`\Vert` norm (`6aa90dd13d`), `\nabla^2`
+> scripted-operator (`35525e6f38`). **The open items below are PARKED** until the
+> dedicated session:
+> - **`f(a,b)` multi-arg flattening** (HIGH value, central/risky): every
+>   function/opfunction applied to a paren comma-list wraps it as `vector@`
+>   (`\max(a,b)`→`maximum@(vector@(a,b))`) vs Perl flat `maximum@(a,b)`. Fix =
+>   flatten the comma-list into the apply's content-branch args + pruning
+>   preference; touches core function application. Full diagnosis below.
+> - **`[a|b]` bracket-conditional** (additive-safe, niche): unparsed in Rust;
+>   Perl `delimited-[]@(conditional@(a,b))` (e.g. `E[X|Y]`). Rust HAS both pieces
+>   (`a|b`→`conditional@`, `[x]`→`delimited-[]@`) — they don't compose inside
+>   `[...]` because the bare-vertbar conditional sits at `statements` level, not
+>   `expression` (which `lbracket expression rbracket => fenced` needs). Fix =
+>   a surgical `lbracket … singlevertbar … rbracket` rule producing the two-level
+>   structure, OR lift the vertbar-conditional to `expression`.
+> - **`⁡` DecorateOperator over-insertion** (presentation MathML): Rust's blanket
+>   `parser.rs:711-743` post-walk decorates ALL operator-base SCRIPTOP applies
+>   with role, so presentation emits `⁡` (U+2061) where Perl juxtaposes — even
+>   unscripted `\nabla \phi` (`∇⁡ϕ` vs `∇ϕ`). Fix = make the walk selective like
+>   Perl's `addOpDecoration` (drop OPERATOR/DIFFOP from the blanket list).
+
+## Math-parser Rust-only gaps (parked — found by Rust-vs-Perl `text=` comparison)
 
 **Method (high-yield, repeatable):** math-parse failures are SILENT
 (`ltx_math_unparsed` fallback, no `Error:`) so the cortex error cross-join never
