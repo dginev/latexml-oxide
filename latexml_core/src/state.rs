@@ -1331,66 +1331,88 @@ pub fn checkin_value(key: &str, value: Stored) {
 pub fn push_value<T: Into<Stored>>(key: &str, value: T) -> Result<()> {
   let key_sym = arena::pin(key);
   let value = value.into();
-  let mut state = state_mut!();
-  if !state.value.contains_key(&key_sym) {
-    state.assign_internal(
-      TableName::Value,
-      key_sym,
-      Stored::VecDequeStored(VecDeque::new()),
-      Some(Scope::Global),
-    );
-  }
-  match state.value.get_mut(&key_sym).unwrap().front_mut() {
-    Some(&mut Stored::VecDequeStored(ref mut front)) => front.push_back(value),
-    // auto-vivify, if None
-    Some(ref mut field) if matches!(field, Stored::None) => {
-      let mut new_vdq = VecDeque::new();
-      new_vdq.push_back(value);
-      **field = Stored::VecDequeStored(new_vdq);
-    },
-    // Convert Strings (immutable array) to VecDequeStored for push — matches Perl auto-vivification
-    Some(ref mut field) if matches!(field, Stored::Strings(_)) => {
-      let existing: VecDeque<Stored> = if let Stored::Strings(strings) = &**field {
-        strings.iter().map(|s| Stored::String(*s)).collect()
-      } else {
-        VecDeque::new()
-      };
-      let mut new_vdq = existing;
-      new_vdq.push_back(value);
-      **field = Stored::VecDequeStored(new_vdq);
-    },
-    other => {
-      let message =
-        s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}");
-      // Lowercase category for consistency with engine convention.
-      Error!("state", "Stored", message);
-    },
+  // Capture any BUG-path message, but raise the Error! *after* the state_mut!()
+  // borrow is dropped — Error! reads MAX_ERRORS, and a live mutable borrow there
+  // panics "RefCell already mutably borrowed" (tikz-cd 2001.08973).
+  let bug: Option<String> = {
+    let mut state = state_mut!();
+    if !state.value.contains_key(&key_sym) {
+      state.assign_internal(
+        TableName::Value,
+        key_sym,
+        Stored::VecDequeStored(VecDeque::new()),
+        Some(Scope::Global),
+      );
+    }
+    match state.value.get_mut(&key_sym).unwrap().front_mut() {
+      Some(&mut Stored::VecDequeStored(ref mut front)) => {
+        front.push_back(value);
+        None
+      },
+      // auto-vivify, if None
+      Some(ref mut field) if matches!(field, Stored::None) => {
+        let mut new_vdq = VecDeque::new();
+        new_vdq.push_back(value);
+        **field = Stored::VecDequeStored(new_vdq);
+        None
+      },
+      // Convert Strings (immutable array) to VecDequeStored for push — matches Perl auto-vivification
+      Some(ref mut field) if matches!(field, Stored::Strings(_)) => {
+        let existing: VecDeque<Stored> = if let Stored::Strings(strings) = &**field {
+          strings.iter().map(|s| Stored::String(*s)).collect()
+        } else {
+          VecDeque::new()
+        };
+        let mut new_vdq = existing;
+        new_vdq.push_back(value);
+        **field = Stored::VecDequeStored(new_vdq);
+        None
+      },
+      other => {
+        Some(s!("BUG: Tried to push_value into an unsupported Stored field! Field was: {other:?}"))
+      },
+    }
+  };
+  if let Some(message) = bug {
+    // Lowercase category for consistency with engine convention.
+    Error!("state", "Stored", message);
   }
   Ok(())
 }
 /// pops the last value in a named `Stored::VecDequeStored` queue, if any
 pub fn pop_value(key: &str) -> Result<Option<Stored>> {
   let key_sym = arena::pin(key);
-  let mut state = state_mut!();
-  if !state.value.contains_key(&key_sym) {
-    state.assign_internal(
-      TableName::Value,
-      key_sym,
-      Stored::VecDequeStored(VecDeque::new()),
-      Some(Scope::Global),
-    );
-  }
-  if let Some(&mut Stored::VecDequeStored(ref mut front)) =
-    state.value.get_mut(&key_sym).unwrap().front_mut()
-  {
-    Ok(front.pop_back())
-  } else {
-    Error!(
-      "State",
-      "Stored",
-      "BUG: Tried to pop_value from a non-vecdeque value key!"
-    );
-    Ok(None)
+  // Compute the pop result under the borrow, then raise the BUG Error! *after*
+  // dropping it — Error! reads MAX_ERRORS, which panics under a live mutable
+  // borrow (mirrors push_value; tikz-cd 2001.08973).
+  let popped: std::result::Result<Option<Stored>, ()> = {
+    let mut state = state_mut!();
+    if !state.value.contains_key(&key_sym) {
+      state.assign_internal(
+        TableName::Value,
+        key_sym,
+        Stored::VecDequeStored(VecDeque::new()),
+        Some(Scope::Global),
+      );
+    }
+    if let Some(&mut Stored::VecDequeStored(ref mut front)) =
+      state.value.get_mut(&key_sym).unwrap().front_mut()
+    {
+      Ok(front.pop_back())
+    } else {
+      Err(())
+    }
+  };
+  match popped {
+    Ok(v) => Ok(v),
+    Err(()) => {
+      Error!(
+        "State",
+        "Stored",
+        "BUG: Tried to pop_value from a non-vecdeque value key!"
+      );
+      Ok(None)
+    },
   }
 }
 /// Check if the Value table contains a given key
@@ -1485,6 +1507,28 @@ pub fn lookup_int(key: &str) -> i64 {
     Some(Stored::Number(n)) => n.value_of(),
     _ => 0,
   }
+}
+/// `lookup_int` variant that never panics on a live mutable borrow.
+///
+/// Returns `None` when STATE is currently mutably borrowed (contention),
+/// `Some(0)` when the key is absent/non-integer (matching `lookup_int`'s
+/// default), else `Some(value)`.
+///
+/// This exists for the `Error!`/`Warn!` reporting path: an error can legitimately
+/// be raised from inside a `state_mut()` scope (e.g. `push_value`'s BUG branch,
+/// or any constructor `after_digest` holding the borrow). A plain `borrow()` there
+/// panics "RefCell already mutably borrowed", aborting the whole conversion
+/// (FATAL_panic; crashed tikz-cd 2001.08973 via `push_value("QED@stack", …)`).
+/// The error reporter must be re-entrancy-safe regardless of what borrows are
+/// held — degrade to "unknown" on contention rather than crash.
+pub fn try_lookup_int(key: &str) -> Option<i64> {
+  let state = (*STATE).try_borrow().ok()?;
+  Some(match state.lookup_value(key) {
+    Some(Stored::Int(i)) => *i,
+    Some(Stored::Bool(true)) => 1,
+    Some(Stored::Number(n)) => n.value_of(),
+    _ => 0,
+  })
 }
 
 pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
@@ -3309,4 +3353,37 @@ pub fn get_staged_snapshot(
   name: &str,
 ) -> Option<rustc_hash::FxHashMap<(TableName, SymStr), Stored>> {
   STAGED_SNAPSHOTS.with(|m| m.borrow().get(name).cloned())
+}
+
+#[cfg(test)]
+mod reentrancy_tests {
+  use super::*;
+
+  /// `try_lookup_int` must degrade to `None` under a live mutable borrow
+  /// (contention) instead of panicking, while behaving like `lookup_int`
+  /// otherwise. This is the load-bearing primitive of the `Error!`-during-
+  /// `state_mut()` fix (tikz-cd 2001.08973).
+  #[test]
+  fn try_lookup_int_degrades_on_contention() {
+    // Absent key, no contention → Some(0), matching lookup_int's default.
+    assert_eq!(try_lookup_int("p1a_absent_key_xyz"), Some(0));
+    // A live mutable borrow → None (cannot read), no panic.
+    let _guard = (*STATE).borrow_mut();
+    assert_eq!(try_lookup_int("MAX_ERRORS"), None);
+  }
+
+  /// Reproduces tikz-cd 2001.08973: `push_value` into a non-VecDeque field
+  /// hits the BUG-path `Error!`, which reads `MAX_ERRORS`. Before the fix,
+  /// `push_value` held `state_mut!()` across that `Error!`, panicking
+  /// "RefCell already mutably borrowed". It must now report the BUG and
+  /// return Ok without panicking.
+  #[test]
+  fn push_value_bug_path_is_borrow_safe() {
+    assign_value("p1a_bug_key", Stored::Int(7), Some(Scope::Global));
+    let r = push_value("p1a_bug_key", Stored::Int(1));
+    assert!(r.is_ok());
+    // Same guarantee for the pop side.
+    let r2 = pop_value("p1a_bug_key");
+    assert!(r2.is_ok());
+  }
 }

@@ -371,15 +371,21 @@ LoadDefinitions!({
   // AND add the spacing to the alignment!!!
   DefConstructor!("\\lx@alignment@newline@markertall {Dimension}", "",
   after_digest => sub[whatsit] {
-  if let Some(alignment) = lookup_alignment() {
-    let mut alignment_mut = alignment.alignment_cell().unwrap().borrow_mut();
-    let current_row = alignment_mut.current_row_mut().unwrap();
-    let padding = if let Some(arg) = whatsit.get_arg(1) {
-      if let DigestedData::RegisterValue(RegisterValue::Dimension(v)) = arg.data() {
-        *v
-      } else { Dimension::new(0) }
-    }  else { Dimension::new(0) };
-    current_row.set_padding(padding);
+  if let Some(alignment) = lookup_alignment()
+    && let Some(cell) = alignment.alignment_cell()
+  {
+    let mut alignment_mut = cell.borrow_mut();
+    // No current row to attach the `\\[dim]` spacing to (the marker fired
+    // before any row started, or after the rows were finalized). Skip rather
+    // than panic on `current_row_mut().unwrap()` (tikz-cd 1905.02617).
+    if let Some(current_row) = alignment_mut.current_row_mut() {
+      let padding = if let Some(arg) = whatsit.get_arg(1) {
+        if let DigestedData::RegisterValue(RegisterValue::Dimension(v)) = arg.data() {
+          *v
+        } else { Dimension::new(0) }
+      } else { Dimension::new(0) };
+      current_row.set_padding(padding);
+    }
   }},
   reversion => sub[whatsit,_args] {
     let arg_reverted = whatsit.get_arg(1)

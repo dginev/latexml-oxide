@@ -234,6 +234,14 @@ LoadDefinitions!({
   });
   DefRegister!("\\fontdimen Number FontToken", Dimension::new(0),
     getter => sub[args] {
+      // `\fontdimen` is a parametrized register (Number FontToken). A bare
+      // register lookup with no args — e.g. pgfmath's `pgfmath_register_lookup`
+      // (tikz-cd 1908.10358, 1910.04182) — supplies none. Degrade to the 0pt
+      // default instead of panicking on `args.remove(0)` (pgfmath maps both
+      // None and 0pt to 0.0 anyway).
+      if args.len() < 2 {
+        return Some(Dimension::new(0).into());
+      }
       let p = args.remove(0).expect_number().value_of();
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();
@@ -284,6 +292,11 @@ LoadDefinitions!({
       }
     },
     setter => sub[value, _scope, args] {
+      // Same parametrized-register guard as the getter: skip a no-arg write
+      // rather than panic on `args.remove(0)`.
+      if args.len() < 2 {
+        return;
+      }
       let p = args.remove(0).expect_number().value_of();
       let font_token = args.remove(0).expected_token();
       let cs_str = font_token.to_string();

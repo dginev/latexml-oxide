@@ -453,16 +453,23 @@ macro_rules! Error {
       error!(target: &format!("{}:{}", $category, $object), "{}",
         $crate::generate_message!($message, $($details),*));
     }
-    let max_from_state = $crate::state::lookup_int("MAX_ERRORS");
+    // Borrow-safe read: an Error! can be raised from inside a `state_mut()`
+    // scope (e.g. push_value's BUG branch, a constructor's after_digest),
+    // where a plain `lookup_int` would panic "RefCell already mutably
+    // borrowed" and abort the conversion (tikz-cd 2001.08973).
+    let max_from_state = $crate::state::try_lookup_int("MAX_ERRORS");
     // Match Perl LaTeXML default of 100 errors before Fatal('too_many_errors').
     // Past 100 errors a paper has already failed comprehension; continuing
     // produces noise without information. Override via state for tests
     // or specific bindings (e.g. tikz_sty raises to 1000, dump-build raises
     // to 1_000_000).
-    let maxerrors = if max_from_state > 0 {
-      max_from_state as usize
-    } else {
-      100
+    let maxerrors = match max_from_state {
+      // STATE contended: we cannot read the (possibly raised) cap, so skip the
+      // too-many-errors check for *this* error rather than risk a spurious
+      // Fatal from a stale default. The next uncontended error re-applies it.
+      None => usize::MAX,
+      Some(v) if v > 0 => v as usize,
+      Some(_) => 100,
     };
     if $crate::common::error::get_status($crate::common::error::LogStatus::Error) > maxerrors {
       Fatal!(TooManyErrors, MaxLimit(maxerrors), format!("Too many errors (> {maxerrors})!"));
