@@ -1381,3 +1381,45 @@ negatives but the Rust `% 2 == 1` did not — that was a genuine Rust bug, fixed
 to `% 2 != 0` (see git `5787070020`). The discriminator: faithful-to-Perl is the
 target; only fix Rust where it diverges *from Perl*, not where Perl diverges
 from TeX.
+
+---
+
+## 34. `revtex4_support.sty.ltxml` `\endpage` missing `{}` parameter text → `#1` leaks
+
+**Perl source:** `LaTeXML/Package/revtex4_support.sty.ltxml:317-318`
+```perl
+DefMacro('\startpage{}',    '\pageref{FirstPage}{#1}');   # correct: declares {}
+DefMacro('\endpage',        '\pageref{LastPage}{#1}');    # BUG: no {} but body uses #1
+```
+
+**Symptom:** A revtex4 paper that calls `\endpage{<n>}` (standard front matter,
+typeset by `\maketitle`) emits:
+```
+Error:misdefined:#1 The token #1 (catcode ARG) should never reach Stomach!
+```
+The `\endpage` definition declares **no** parameter text, so the literal `#1` in
+its body is never bound to an argument; the unmatched `T_ARG[#1]` survives
+expansion and reaches the digester. The adjacent `\startpage{}` is correct.
+
+**Minimal example:**
+```tex
+\documentclass[prl,byrevtex,twocolumn]{revtex4}
+\begin{document}\title{T}\author{A}
+\endpage{ }
+\maketitle
+\end{document}
+```
+
+**Impact:** one spurious error per affected revtex4 paper (witness arXiv
+`0804.1404`: 1 error → 0 after the fix). Sibling of #15 (the same file's
+`\eqnum` references `#2` with one parameter).
+
+**Perl status:** present and unchanged — Perl errors identically (verified on
+`/usr/local/bin/latexml` v0.8.8: `Error:misdefined:#1 … should never reach
+Stomach!`).
+
+**Rust status (FIXED 2026-06-20, beneficial divergence):** declare the missing
+parameter — `DefMacro!("\\endpage{}", "\\pageref{LastPage}{#1}")`
+(`revtex4_support_sty.rs`), mirroring `\startpage{}` and real revtex4 (where
+`\endpage` takes the page number). Unambiguously correct; the same
+fix-and-document pattern as #1.

@@ -318,7 +318,14 @@ LoadDefinitions!({
   DefMacro!("\\eprint{}", "eprint #1");
   def_macro_identity("\\eid{}")?;
   DefMacro!("\\startpage{}", "\\pageref{FirstPage}{#1}");
-  DefMacro!("\\endpage", "\\pageref{LastPage}{#1}");
+  // Beneficial divergence from Perl revtex4_support.sty.ltxml:318, which has a
+  // typo — `DefMacro('\endpage', '\pageref{LastPage}{#1}')` declares NO `{}`
+  // parameter text yet the body references `#1`, so the unbound `#1` (catcode
+  // ARG) leaks to the Stomach: "The token #1 should never reach Stomach!" (Perl
+  // errors identically — verified on revtex4 + `\endpage{ }` + `\maketitle`).
+  // Real revtex4's `\endpage` takes the page number, exactly like the adjacent
+  // `\startpage{}` above; restore the missing `{}`. See KNOWN_PERL_ERRORS #34.
+  DefMacro!("\\endpage{}", "\\pageref{LastPage}{#1}");
 
   // Extra stubs — Perl L319-323
   def_macro_noop("\\flushing")?;

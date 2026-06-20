@@ -1,0 +1,15 @@
+% Regression for KNOWN_PERL_ERRORS #34: revtex4's \endpage must declare its `{}`
+% parameter. Perl revtex4_support.sty.ltxml:318 has a typo — `\endpage` (no {})
+% with a `#1` body — so the unbound `#1` leaks: "The token #1 (catcode ARG)
+% should never reach Stomach!". The adjacent \startpage{} is correct. The Rust
+% binding restores the missing {} (beneficial divergence), so a revtex4 paper
+% with \endpage{...} in its front matter converts without the spurious error.
+\documentclass[prl,byrevtex,twocolumn]{revtex4}
+\begin{document}
+\title{Title}
+\author{Author}
+\startpage{1}
+\endpage{9}
+\maketitle
+Body text.
+\end{document}
