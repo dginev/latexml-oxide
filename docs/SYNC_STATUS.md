@@ -2547,7 +2547,18 @@ firmly-Rust-only-AND-Perl-correct gap that got FIXED this session is 1504.05963.
 markers, 0 `CODE(0x…)` garbage — Perl converts it correctly), so it is a real
 Rust-only target — but a deep multi-package cascade (xinttrig `\begingroup` group
 imbalance at line 350 → 82× `\pgffor@values expands into itself` + 40 tikz uses),
-dedicated-session work, not a loop fix.
+dedicated-session work, not a loop fix. **Investigated 2026-06-20 (iteration 12):
+the cascade origin is the RAW-LOAD OF THE xint ENGINE** — `\usepackage{xintexpr}`
+pulls in xintfrac→xint→xintcore→xintkernel→xinttrig, and it breaks at
+`xinttrig.sty:350` `\xintdeffloatfunc @sin_series(x) := x * @sin_aux(sqr(x))` —
+xint's float-function-definition DSL, which uses `\romannumeral`&&@`-style catcode
+tricks and `@func(x):=` parsing. This is NOT localizable to a single root (it's
+the whole xint expression engine); `\xintdeffloatfunc` is unbound in Rust and the
+raw-load mishandles xint's `&&@` expansion-catcode machinery. (Aside: a bare
+minimal `\usepackage{xintexpr}` from the repo CWD *fails to find* xintexpr.sty on
+disk — "No raw file found" — so it stubs to nothing/0-errors; the full paper finds
+& raw-loads it. The disk-find discrepancy is a separate minor quirk.) Deep xint
+emulation — a major dedicated effort, parked.
 
 **2110.11931 — isolated 2026-06-20 to a 7-line repro (fix pending, deep).** mnras
 paper; 10 errors all from one `\begin{equation}` processed in *horizontal* mode
