@@ -257,14 +257,41 @@ this is a *newer* symptom than the prior SYNC_STATUS record (bounded "FATAL at t
 100-error cap" + pgffor self-ref) — intervening engine changes shifted it from a
 bounded error-cap to an unbounded native recursion.
 
+**Exact recursion cycle (gdb backtrace at SIGSEGV, 2026-06-20).** Period ~10
+frames, driven by *number-argument reading* — NOT direct self-reference (so the
+existing `expandable.rs` self-ref guard correctly does not fire):
+
+```
+read_number (gullet.rs:2018) → read_normal_integer (2062) → read_digits (2529)
+  → read_x_token (908) → Expandable::invoke (expandable.rs:139)   [a tex_macro]
+    → Parameters::read_arguments (parameter.rs:602) → Parameter::read (328)
+      → base_parameter_types Number-reader (base_parameter_types.rs:169)
+        → read_number ↺   (also via etex: etex_readexpr etex.rs:51/67/84
+                            → read_value gullet.rs:1834 → read_x_token ↺)
+```
+
+i.e. an xint number-argument macro whose Number argument is read by expanding the
+next number-argument macro, ~25 000 levels deep (×~10 KB/cycle ⇒ ~256 MB). Perl
+survives because its `$MAXSTACK=200` `invokeToken` guard fires, Fatals, and is
+caught → the 39-byte empty doc; Rust has no equivalent guard on this gullet path.
+
 **Priority: low (reliability hardening, not a parity win)** — fixing the crash
 would only make Rust fail-soft (empty doc) like Perl, NOT actually convert the
-paper. **Faithful fix:** a Perl-style recursion-depth guard in the gullet
-expansion (mirrors `$MAXSTACK`) that raises a recoverable error before the 256 MB
-overflow. Dedicated session: bisect a minimal crasher → gdb backtrace of the
-recursion cycle → add the guard + full-suite validate (tune the limit so
-legitimate deep recursion is unaffected). Distinct from Cluster A's *memory*
-(RSS-cap) blowups: this is *stack* (recursion-depth) exhaustion.
+paper. **Faithful fix:** a Perl-style recursion-depth guard at the
+`read_x_token`/`Expandable::invoke` chokepoint (a cheap thread-local depth counter
+with an RAII dec — this path is hot, ~350k invokes in si.tex, so keep it a single
+`usize` compare) that raises a Fatal-style recoverable error (propagated via the
+existing `?`/Result chain, like `stomach::check_timeout`) before the 256 MB
+overflow. **The threshold MUST be calibrated corpus-wide, not guessed:** between
+the legitimate max expansion-nesting depth across real arXiv (normally ≪ a few
+hundred) and the ~25 000 overflow — too low silently false-positive-Fatals a
+legitimately deep paper (a coverage regression the 1459-test suite alone won't
+catch); too high never prevents the crash (~5–10k is the plausible window). So a
+dedicated session should first *measure* the depth distribution over a corpus
+slice, then pick the limit, add the guard, and validate against the full suite
+**plus** an arXiv slice. The cycle + chokepoint above make the implementation
+straightforward; only the calibration is open work. Distinct from Cluster A's
+*memory* (RSS-cap) blowups: this is *stack* (recursion-depth) exhaustion.
 
 ## Method notes
 

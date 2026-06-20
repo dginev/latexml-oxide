@@ -1,5 +1,18 @@
 # Known Rust-side crashes reproducible with small/medium .tex inputs
 
+## OPEN: 1804.01117 — xint raw-load stack overflow (SIGABRT), ar5iv profile (2026-06-20)
+
+Runaway native recursion (number-arg-macro chain, ~25 000 deep) overflows the
+256 MB conversion-thread stack under `--preload=ar5iv.sty`/`INCLUDE_STYLES=true`.
+Perl matched-config (`--includestyles`) fails-soft (39-byte empty doc) via its
+`$MAXSTACK` guard. LOW priority (paper fails in both engines; the fix only makes
+Rust fail-soft too). Full gdb backtrace + faithful-fix design:
+[`1804.01117_xint_stack_overflow_2026-06-20.md`](1804.01117_xint_stack_overflow_2026-06-20.md);
+analysis in `docs/STABILITY_WITNESSES.md` Cluster F. NB needs the full paper — a
+minimal `\usepackage{xintexpr}` does NOT crash.
+
+---
+
 ## RESOLVED: 0705.0790 — SIGSEGV **fixed in cycle 236** (commit `18c9640ee`, RAII wrapper in `9a5aa401c`)
 
 **Resolution:** `DocOwnedNode` RAII wrapper (`latexml_post/src/doc_owned_node.rs`)
