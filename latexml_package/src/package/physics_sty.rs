@@ -992,8 +992,16 @@ LoadDefinitions!({
       }
       let reversion = Tokens::new(rev);
 
-      let op = i_apply(&[], cfunc, vec![a2.clone(),
-        if degree.is_some() { Tokens::new(vec![i_arg("3")]) } else { Tokens::default() }]);
+      // Perl physics.sty.ltxml L438: I_apply({}, $cfunc, I_arg(2), ($degree ? I_arg(3) : ()))
+      // — the order argument is included ONLY when a degree was given. The earlier
+      // Rust port always passed a second arg (an empty Tokens when no degree),
+      // which content output rendered as a spurious `absent` (e.g. `\dv{f}{x}` →
+      // derivative@(x, absent) instead of Perl's derivative@(x)).
+      let op = i_apply(&[], cfunc, if degree.is_some() {
+        vec![a2.clone(), Tokens::new(vec![i_arg("3")])]
+      } else {
+        vec![a2.clone()]
+      });
 
       let content = if expr.is_some() {
         i_apply(&[], op, vec![a1])
@@ -1033,9 +1041,15 @@ LoadDefinitions!({
         pres_tks.extend(phys_close(false, &None, close.map(|t| Tokenize!(&t.to_string())).unwrap_or_default()).unlist());
       }
       let presentation = Tokens::new(pres_tks);
-      if let Some(e) = expr {
-        all_args.push(e);
-      }
+      // Perl passes (expr, var, degree) to I_dual unconditionally (physics.sty
+      // L455: `$expr, $var, $degree`), so the variable is ALWAYS dual arg #2 and
+      // the content's I_arg(2) resolves to it. Always emit an arg-1 slot (empty
+      // when there is no expr) so a bare `\dv{x}` keeps the variable at arg 2
+      // (else it slid to arg 1 and the op's I_arg(2) rendered as `absent`:
+      // `\dv{x}` → derivative@(absent) instead of derivative@(x)). The empty
+      // arg-1 is unreferenced when there's no expr (content is `op`, not
+      // `apply(op, arg1)`), matching Perl's undef expr.
+      all_args.push(expr.unwrap_or_default());
       all_args.push(var);
       if let Some(deg) = degree {
         all_args.push(deg);

@@ -2469,70 +2469,81 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex24">
-          <Math mode="display" tex="\derivative{}\qquad\derivative{}f\qquad\derivative{f}{x}\qquad\derivative[n]{f}{x}\qquad\derivative{x}(\grande)\qquad\derivative*{f}{x}" text="list@(derivative@(absent, absent), (derivative@(absent, absent))@(f), (derivative@(x, absent))@(f), (derivative@(x, n))@(f), (derivative@(x, absent))@(X / Y), (derivative@(x, absent))@(f))" xml:id="S1.Ex24.m1">
+          <Math mode="display" tex="\derivative{x}\qquad\derivative{x}f\qquad\derivative{f}{x}\qquad\derivative[n]{f}{x}\qquad\derivative{x}(\grande)\qquad\derivative*{f}{x}" text="list@(derivative@(x), (derivative@(x))@(f), (derivative@(x))@(f), (derivative@(x, n))@(f), (derivative@(x))@(X / Y), (derivative@(x))@(f))" xml:id="S1.Ex24.m1">
             <XMath>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="list"/>
                   <XMRef idref="S1.Ex24.m1.1"/>
-                  <XMRef idref="S1.Ex24.m1.2"/>
                   <XMRef idref="S1.Ex24.m1.3"/>
-                  <XMRef idref="S1.Ex24.m1.6"/>
-                  <XMRef idref="S1.Ex24.m1.10"/>
-                  <XMRef idref="S1.Ex24.m1.13"/>
+                  <XMRef idref="S1.Ex24.m1.5"/>
+                  <XMRef idref="S1.Ex24.m1.8"/>
+                  <XMRef idref="S1.Ex24.m1.12"/>
+                  <XMRef idref="S1.Ex24.m1.15"/>
                 </XMApp>
                 <XMWrap>
-                  <XMApp role="DIFFOP" xml:id="S1.Ex24.m1.1">
-                    <XMTok mathstyle="display" meaning="derivative" role="FRACOP"/>
-                    <XMTok meaning="absent" role="DIFFOP">d</XMTok>
-                    <XMApp meaning="absent">
-                      <XMTok role="DIFFOP">d</XMTok>
-                      <XMTok meaning="absent"/>
+                  <XMDual role="DIFFOP" xml:id="S1.Ex24.m1.1">
+                    <XMApp>
+                      <XMTok meaning="derivative"/>
+                      <XMRef idref="S1.Ex24.m1.2"/>
                     </XMApp>
-                  </XMApp>
-                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex24.m1.2">
-                    <XMApp role="DIFFOP">
-                      <XMTok mathstyle="display" meaning="derivative" role="FRACOP"/>
-                      <XMTok meaning="absent" role="DIFFOP">d</XMTok>
-                      <XMApp meaning="absent">
+                    <XMApp>
+                      <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                      <XMTok role="DIFFOP">d</XMTok>
+                      <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok meaning="absent"/>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.2">x</XMTok>
                       </XMApp>
                     </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex24.m1.3">
+                    <XMDual role="DIFFOP">
+                      <XMApp>
+                        <XMTok meaning="derivative"/>
+                        <XMRef idref="S1.Ex24.m1.4"/>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok role="DIFFOP">d</XMTok>
+                        <XMApp>
+                          <XMTok role="DIFFOP">d</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.4">x</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMDual>
                     <XMTok font="italic" role="UNKNOWN">f</XMTok>
                   </XMApp>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex24.m1.3">
+                  <XMDual xml:id="S1.Ex24.m1.5">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="derivative"/>
-                        <XMRef idref="S1.Ex24.m1.5"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex24.m1.7"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex24.m1.4"/>
+                      <XMRef idref="S1.Ex24.m1.6"/>
                     </XMApp>
                     <XMApp>
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.4">f</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.6">f</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.5">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.7">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex24.m1.6">
+                  <XMDual xml:id="S1.Ex24.m1.8">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="derivative"/>
+                        <XMRef idref="S1.Ex24.m1.11"/>
                         <XMRef idref="S1.Ex24.m1.9"/>
-                        <XMRef idref="S1.Ex24.m1.7"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex24.m1.8"/>
+                      <XMRef idref="S1.Ex24.m1.10"/>
                     </XMApp>
                     <XMApp>
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
@@ -2540,29 +2551,28 @@
                         <XMApp role="DIFFOP">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex24.m1.7">n</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex24.m1.9">n</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.8">f</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.10">f</XMTok>
                       </XMArg>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.9">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.11">x</XMTok>
                         </XMApp>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex24.m1.10">
+                  <XMDual xml:id="S1.Ex24.m1.12">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="derivative"/>
-                        <XMRef idref="S1.Ex24.m1.11"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex24.m1.13"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex24.m1.12"/>
+                      <XMRef idref="S1.Ex24.m1.14"/>
                     </XMApp>
                     <XMApp>
                       <XMApp>
@@ -2570,12 +2580,12 @@
                         <XMTok role="DIFFOP">d</XMTok>
                         <XMApp>
                           <XMTok role="DIFFOP">d</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.11">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.13">x</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMApp xml:id="S1.Ex24.m1.12">
+                        <XMApp xml:id="S1.Ex24.m1.14">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMTok font="italic" role="UNKNOWN">X</XMTok>
                           <XMTok font="italic" role="UNKNOWN">Y</XMTok>
@@ -2585,22 +2595,21 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex24.m1.13">
+                  <XMDual xml:id="S1.Ex24.m1.15">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="derivative"/>
-                        <XMRef idref="S1.Ex24.m1.15"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex24.m1.17"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex24.m1.14"/>
+                      <XMRef idref="S1.Ex24.m1.16"/>
                     </XMApp>
                     <XMApp>
                       <XMTok font="italic" meaning="divide" role="MULOP">∕</XMTok>
                       <XMTok role="DIFFOP">d</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.14">f</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.16">f</XMTok>
                       <XMApp>
                         <XMTok role="DIFFOP">d</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.15">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex24.m1.17">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2610,65 +2619,61 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex25">
-          <Math mode="display" tex="\partialderivative{}\qquad\partialderivative{}f\qquad\partialderivative{}\qquad\partialderivative{f}{x}\qquad\partialderivative[n]{f}{x}\qquad\partialderivative{x}(\grande)\qquad\partialderivative*{f}{x}" text="list@(partial-derivative@(absent, absent), (partial-derivative@(absent, absent))@(f), partial-derivative@(absent, absent), (partial-derivative@(x, absent))@(f), (partial-derivative@(x, n))@(f), (partial-derivative@(x, absent))@(X / Y), (partial-derivative@(x, absent))@(f))" xml:id="S1.Ex25.m1">
+          <Math mode="display" tex="\partialderivative{x}\qquad\partialderivative{x}f\qquad\partialderivative{x}\qquad\partialderivative{f}{x}\qquad\partialderivative[n]{f}{x}\qquad\partialderivative{x}(\grande)\qquad\partialderivative*{f}{x}" text="list@(partial-derivative@(x), (partial-derivative@(x))@(f), partial-derivative@(x), (partial-derivative@(x))@(f), (partial-derivative@(x, n))@(f), (partial-derivative@(x))@(X / Y), (partial-derivative@(x))@(f))" xml:id="S1.Ex25.m1">
             <XMath>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="list"/>
                   <XMRef idref="S1.Ex25.m1.1"/>
-                  <XMRef idref="S1.Ex25.m1.2"/>
                   <XMRef idref="S1.Ex25.m1.3"/>
-                  <XMRef idref="S1.Ex25.m1.4"/>
+                  <XMRef idref="S1.Ex25.m1.5"/>
                   <XMRef idref="S1.Ex25.m1.7"/>
-                  <XMRef idref="S1.Ex25.m1.11"/>
+                  <XMRef idref="S1.Ex25.m1.10"/>
                   <XMRef idref="S1.Ex25.m1.14"/>
+                  <XMRef idref="S1.Ex25.m1.17"/>
                 </XMApp>
                 <XMWrap>
-                  <XMApp role="DIFFOP" xml:id="S1.Ex25.m1.1">
-                    <XMTok mathstyle="display" meaning="partial-derivative" role="FRACOP"/>
-                    <XMTok meaning="absent" name="partial" role="DIFFOP">∂</XMTok>
-                    <XMApp meaning="absent">
-                      <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                      <XMTok meaning="absent"/>
-                    </XMApp>
-                  </XMApp>
-                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp xml:id="S1.Ex25.m1.2">
-                    <XMApp role="DIFFOP">
-                      <XMTok mathstyle="display" meaning="partial-derivative" role="FRACOP"/>
-                      <XMTok meaning="absent" name="partial" role="DIFFOP">∂</XMTok>
-                      <XMApp meaning="absent">
-                        <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok meaning="absent"/>
-                      </XMApp>
-                    </XMApp>
-                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                  </XMApp>
-                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp role="DIFFOP" xml:id="S1.Ex25.m1.3">
-                    <XMTok mathstyle="display" meaning="partial-derivative" role="FRACOP"/>
-                    <XMTok meaning="absent" name="partial" role="DIFFOP">∂</XMTok>
-                    <XMApp meaning="absent">
-                      <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                      <XMTok meaning="absent"/>
-                    </XMApp>
-                  </XMApp>
-                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex25.m1.4">
+                  <XMDual role="DIFFOP" xml:id="S1.Ex25.m1.1">
                     <XMApp>
-                      <XMApp>
-                        <XMTok meaning="partial-derivative"/>
-                        <XMRef idref="S1.Ex25.m1.6"/>
-                        <XMTok meaning="absent"/>
-                      </XMApp>
-                      <XMRef idref="S1.Ex25.m1.5"/>
+                      <XMTok meaning="partial-derivative"/>
+                      <XMRef idref="S1.Ex25.m1.2"/>
                     </XMApp>
                     <XMApp>
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                      <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.5">f</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.2">x</XMTok>
                       </XMApp>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMApp xml:id="S1.Ex25.m1.3">
+                    <XMDual role="DIFFOP">
+                      <XMApp>
+                        <XMTok meaning="partial-derivative"/>
+                        <XMRef idref="S1.Ex25.m1.4"/>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                        <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                        <XMApp>
+                          <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.4">x</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMDual>
+                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  </XMApp>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual role="DIFFOP" xml:id="S1.Ex25.m1.5">
+                    <XMApp>
+                      <XMTok meaning="partial-derivative"/>
+                      <XMRef idref="S1.Ex25.m1.6"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                      <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                         <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.6">x</XMTok>
@@ -2680,10 +2685,31 @@
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="partial-derivative"/>
-                        <XMRef idref="S1.Ex25.m1.10"/>
-                        <XMRef idref="S1.Ex25.m1.8"/>
+                        <XMRef idref="S1.Ex25.m1.9"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex25.m1.9"/>
+                      <XMRef idref="S1.Ex25.m1.8"/>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                      <XMApp>
+                        <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.8">f</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.9">x</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMDual>
+                  <XMHint name="qquad" role="PUNCT" width="20pt"/>
+                  <XMDual xml:id="S1.Ex25.m1.10">
+                    <XMApp>
+                      <XMApp>
+                        <XMTok meaning="partial-derivative"/>
+                        <XMRef idref="S1.Ex25.m1.13"/>
+                        <XMRef idref="S1.Ex25.m1.11"/>
+                      </XMApp>
+                      <XMRef idref="S1.Ex25.m1.12"/>
                     </XMApp>
                     <XMApp>
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
@@ -2691,29 +2717,28 @@
                         <XMApp role="DIFFOP">
                           <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex25.m1.8">n</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN" xml:id="S1.Ex25.m1.11">n</XMTok>
                         </XMApp>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.9">f</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.12">f</XMTok>
                       </XMArg>
                       <XMApp>
                         <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.10">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.13">x</XMTok>
                         </XMApp>
                         <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex25.m1.11">
+                  <XMDual xml:id="S1.Ex25.m1.14">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="partial-derivative"/>
-                        <XMRef idref="S1.Ex25.m1.12"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex25.m1.15"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex25.m1.13"/>
+                      <XMRef idref="S1.Ex25.m1.16"/>
                     </XMApp>
                     <XMApp>
                       <XMApp>
@@ -2721,12 +2746,12 @@
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
                         <XMApp>
                           <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.12">x</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.15">x</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMApp xml:id="S1.Ex25.m1.13">
+                        <XMApp xml:id="S1.Ex25.m1.16">
                           <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                           <XMTok font="italic" role="UNKNOWN">X</XMTok>
                           <XMTok font="italic" role="UNKNOWN">Y</XMTok>
@@ -2736,22 +2761,21 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex25.m1.14">
+                  <XMDual xml:id="S1.Ex25.m1.17">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="partial-derivative"/>
-                        <XMRef idref="S1.Ex25.m1.16"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex25.m1.19"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex25.m1.15"/>
+                      <XMRef idref="S1.Ex25.m1.18"/>
                     </XMApp>
                     <XMApp>
                       <XMTok font="italic" meaning="divide" role="MULOP">∕</XMTok>
                       <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.15">f</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.18">f</XMTok>
                       <XMApp>
                         <XMTok meaning="partial-differential" name="partial" role="DIFFOP">∂</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.16">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex25.m1.19">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2761,7 +2785,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex26">
-          <Math mode="display" tex="\variation{F[g(x)]}\qquad\variation(E-TS)\qquad\functionalderivative{}\qquad\functionalderivative{F}{g}\qquad\functionalderivative{V}(E-TS)\qquad\functionalderivative*{F}{x}" text="list@(variation@(F@(delimited-[]@(g@(x)))), variation@(E - T * S), functional-derivative@(absent, absent), (functional-derivative@(g, absent))@(F), (functional-derivative@(V, absent))@(E - T * S), (functional-derivative@(x, absent))@(F))" xml:id="S1.Ex26.m1">
+          <Math mode="display" tex="\variation{F[g(x)]}\qquad\variation(E-TS)\qquad\functionalderivative{g}\qquad\functionalderivative{F}{g}\qquad\functionalderivative{V}(E-TS)\qquad\functionalderivative*{F}{x}" text="list@(variation@(F@(delimited-[]@(g@(x)))), variation@(E - T * S), functional-derivative@(g), (functional-derivative@(g))@(F), (functional-derivative@(V))@(E - T * S), (functional-derivative@(x))@(F))" xml:id="S1.Ex26.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -2769,9 +2793,9 @@
                   <XMRef idref="S1.Ex26.m1.1"/>
                   <XMRef idref="S1.Ex26.m1.5"/>
                   <XMRef idref="S1.Ex26.m1.7"/>
-                  <XMRef idref="S1.Ex26.m1.8"/>
-                  <XMRef idref="S1.Ex26.m1.11"/>
-                  <XMRef idref="S1.Ex26.m1.14"/>
+                  <XMRef idref="S1.Ex26.m1.9"/>
+                  <XMRef idref="S1.Ex26.m1.12"/>
+                  <XMRef idref="S1.Ex26.m1.15"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S1.Ex26.m1.1">
@@ -2825,45 +2849,49 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMApp role="DIFFOP" xml:id="S1.Ex26.m1.7">
-                    <XMTok mathstyle="display" meaning="functional-derivative" role="FRACOP"/>
-                    <XMTok font="italic" meaning="absent" name="delta" role="DIFFOP">δ</XMTok>
-                    <XMApp meaning="absent">
-                      <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                      <XMTok meaning="absent"/>
+                  <XMDual role="DIFFOP" xml:id="S1.Ex26.m1.7">
+                    <XMApp>
+                      <XMTok meaning="functional-derivative"/>
+                      <XMRef idref="S1.Ex26.m1.8"/>
                     </XMApp>
-                  </XMApp>
+                    <XMApp>
+                      <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
+                      <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
+                      <XMApp>
+                        <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.8">g</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex26.m1.8">
+                  <XMDual xml:id="S1.Ex26.m1.9">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="functional-derivative"/>
-                        <XMRef idref="S1.Ex26.m1.10"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex26.m1.11"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex26.m1.9"/>
+                      <XMRef idref="S1.Ex26.m1.10"/>
                     </XMApp>
                     <XMApp>
                       <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.9">F</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.10">F</XMTok>
                       </XMApp>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.10">g</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.11">g</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex26.m1.11">
+                  <XMDual xml:id="S1.Ex26.m1.12">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="functional-derivative"/>
-                        <XMRef idref="S1.Ex26.m1.12"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex26.m1.13"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex26.m1.13"/>
+                      <XMRef idref="S1.Ex26.m1.14"/>
                     </XMApp>
                     <XMApp>
                       <XMApp>
@@ -2871,12 +2899,12 @@
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
                         <XMApp>
                           <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.12">V</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.13">V</XMTok>
                         </XMApp>
                       </XMApp>
                       <XMWrap>
                         <XMTok role="OPEN" stretchy="true">(</XMTok>
-                        <XMApp xml:id="S1.Ex26.m1.13">
+                        <XMApp xml:id="S1.Ex26.m1.14">
                           <XMTok meaning="minus" role="ADDOP">-</XMTok>
                           <XMTok font="italic" role="UNKNOWN">E</XMTok>
                           <XMApp>
@@ -2890,22 +2918,21 @@
                     </XMApp>
                   </XMDual>
                   <XMHint name="qquad" role="PUNCT" width="20pt"/>
-                  <XMDual xml:id="S1.Ex26.m1.14">
+                  <XMDual xml:id="S1.Ex26.m1.15">
                     <XMApp>
                       <XMApp>
                         <XMTok meaning="functional-derivative"/>
-                        <XMRef idref="S1.Ex26.m1.16"/>
-                        <XMTok meaning="absent"/>
+                        <XMRef idref="S1.Ex26.m1.17"/>
                       </XMApp>
-                      <XMRef idref="S1.Ex26.m1.15"/>
+                      <XMRef idref="S1.Ex26.m1.16"/>
                     </XMApp>
                     <XMApp>
                       <XMTok font="italic" meaning="divide" role="MULOP">∕</XMTok>
                       <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.15">F</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.16">F</XMTok>
                       <XMApp>
                         <XMTok font="italic" name="delta" role="DIFFOP">δ</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.16">x</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S1.Ex26.m1.17">x</XMTok>
                       </XMApp>
                     </XMApp>
                   </XMDual>
@@ -2945,7 +2972,7 @@
         </equation>
         <p>And multiple derivatives, sorta; But only for partial:</p>
         <equation xml:id="S1.Ex28">
-          <Math mode="display" tex="\partialderivative{f}{x}{y}\qquad\partialderivative{f}{x}{y}{z}\qquad\partialderivative{f}{x}{y}{z}\qquad\partialderivative{x}{y}" text="list@((partial-derivative@(x, 1, y, 1))@(f), (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(y, absent))@(x))" xml:id="S1.Ex28.m1">
+          <Math mode="display" tex="\partialderivative{f}{x}{y}\qquad\partialderivative{f}{x}{y}{z}\qquad\partialderivative{f}{x}{y}{z}\qquad\partialderivative{x}{y}" text="list@((partial-derivative@(x, 1, y, 1))@(f), (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(x, 1, y, 1))@(f) * z, (partial-derivative@(y))@(x))" xml:id="S1.Ex28.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3074,7 +3101,6 @@
                       <XMApp>
                         <XMTok meaning="partial-derivative"/>
                         <XMRef idref="S1.Ex28.m1.15"/>
-                        <XMTok meaning="absent"/>
                       </XMApp>
                       <XMRef idref="S1.Ex28.m1.14"/>
                     </XMApp>
@@ -3096,7 +3122,7 @@
           </Math>
         </equation>
         <equation xml:id="S1.Ex29">
-          <Math mode="display" tex="\qquad\derivative{f}{x}{y}\qquad\functionalderivative{F}{f}{g}" text="list@((derivative@(x, absent))@(f) * y, (functional-derivative@(f, absent))@(F) * g)" xml:id="S1.Ex29.m1">
+          <Math mode="display" tex="\qquad\derivative{f}{x}{y}\qquad\functionalderivative{F}{f}{g}" text="list@((derivative@(x))@(f) * y, (functional-derivative@(f))@(F) * g)" xml:id="S1.Ex29.m1">
             <XMath>
               <XMDual>
                 <XMApp>
@@ -3112,7 +3138,6 @@
                         <XMApp>
                           <XMTok meaning="derivative"/>
                           <XMRef idref="S1.Ex29.m1.3"/>
-                          <XMTok meaning="absent"/>
                         </XMApp>
                         <XMRef idref="S1.Ex29.m1.2"/>
                       </XMApp>
@@ -3138,7 +3163,6 @@
                         <XMApp>
                           <XMTok meaning="functional-derivative"/>
                           <XMRef idref="S1.Ex29.m1.6"/>
-                          <XMTok meaning="absent"/>
                         </XMApp>
                         <XMRef idref="S1.Ex29.m1.5"/>
                       </XMApp>
