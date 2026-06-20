@@ -2530,6 +2530,35 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-20): fresh exploratory sweep (2106 slice, 80 papers) — engine solid; surfaced a cortex_worker-vs-latexml_oxide harness discrepancy
+
+After exhausting the tikz-cd/xy/tcolorbox sweep, ran a fresh sweep of 80 untested
+general-arXiv papers (`/data/arxiv/2106`, branch binary w/ all 4 session fixes):
+**74/80 clean (92.5%)** — the engine is in good shape on general arXiv; the 4 fixes
+this session hold up. The 6 failures yielded NO new clean single-macro win:
+
+- `\justify` (2106.00022) — **SHARED** (Perl `--verbose` also 2 errors; not a gap).
+- `\REV@lesssim` (2106.00028, revtex4-2 + `\lesssim` without amssymb) — **a
+  harness discrepancy, not an engine binding gap.** `cortex_worker --standalone`
+  errors (1: undefined `\REV@lesssim`), but `latexml_oxide` on the same extracted
+  main.tex is **0 errors**. BOTH load the identical bindings (revtex4-2 binding,
+  revtex4_support, revsymb binding — which defines `\lesssim` directly); neither
+  raw-loads revsymb4-2.sty. So the divergence is in the `--standalone` *loading
+  context* (CWD/kpathsea/options), not the engine. **Meta-implication: cortex_worker
+  `--standalone` can report errors latexml_oxide does not for the same paper** —
+  relevant to sweep-error-count reliability and worth a separate harness probe.
+  (cortex_worker is the production path, so its error is what production sees.)
+- The rest are deep/known: biblatex `maxnames`/`\AtNextCite` (2106.00001),
+  `ltx:title`/`ltx:creator` in `_CaptureBlock_` frontmatter (2106.00074), an
+  `_`/`\fi` conditional-cascade (2106.00077), custom-class `\studentlab`/
+  `<variable>` (2106.00041).
+
+**Takeaway:** general-arXiv coverage is strong (92.5% on a fresh slice); the
+remaining failures are SHARED, deep, or harness-context — the loop-sized
+single-macro wins from this sweep family are exhausted. Next exploratory value is
+likely the **cortex_worker-vs-latexml_oxide standalone discrepancy** (a harness
+probe), not more engine single-macro hunts.
+
 ### Round-37 (2026-06-20): parity buckets REFINED (timeout artifacts removed) + 2110.11931 isolated to a 7-line repro
 
 **Timeout-artifact correction to the buckets below.** The parity harness counted a
