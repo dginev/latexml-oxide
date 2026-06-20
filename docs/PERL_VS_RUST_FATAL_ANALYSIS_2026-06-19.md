@@ -280,6 +280,24 @@ validation. (Iterations 1–2 already prototyped step 2 and measured its effects
    for *all* alignments AND boxes — gate on the full table+box test suites; guard
    the unwind tightly (only when a cell-box mode-switch is genuinely pending) so
    it does not mask real unbalanced-group errors.
+   **UPDATE (iteration 20): the `end_column` unwind alone is INSUFFICIENT
+   (tried + reverted).** Adding a guarded `while is_value_bound("BOUND_MODE")
+   { end_mode(..) }` before `egroup()` in `Alignment::end_column` correctly
+   no-ops on normal cells (array_newline_math stayed clean) but did NOT fix the
+   witness (still 7 errors). Reason — the *interleaving*: the `\\`→`\cr` fires
+   **mid-`\lx@tabular@p@`-digestion**, i.e. during the VBoxContents *predigest*
+   (`predigest_box_contents_in_mode(arg,"internal_vertical")`, `tex_box.rs:508`),
+   AFTER the constructor's begin_mode but BEFORE its end_mode. So the row-end (and
+   any end_column unwind) happens *inside* the still-open constructor; then
+   `\lx@tabular@p@`'s own end_mode runs and finds MODE already `horizontal`
+   (changed by the cr) → "`\lx@tabular@p@` Attempt to end mode internal_vertical
+   in horizontal". **The genuine fix is at the VBoxContents/`\cr` boundary**: the
+   p-cell VBox must be read as a balanced token list and the alignment `\cr`
+   recognized at the cell/row level (closing the box with content-so-far, like
+   Perl's clean row-split) — NOT predigested inline where the cr interleaves with
+   the constructor's mode frames. This is the true depth of step 3; it is a
+   VBoxContents-predigest / alignment-cr core change, not a localized end_column
+   tweak.
    *(Confirmed this iteration: the VBox port (step 1) makes the witness 510→
    recoverable AND its p-cell output — width on `<inline-block>`, `class` on
    `<p>` — matches `latexml --verbose` exactly; the 5 fixture "regressions" are
