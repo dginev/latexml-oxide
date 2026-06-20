@@ -23,8 +23,22 @@
 Methodology that's working (2026-06): **re-triage LARGE-error papers** (the
 single-error tail is exhausted) → bisect the doc to the trigger line → verify
 Perl with `--verbose` → fix the Perl divergence. Random sweeps are low-yield;
-prefer the cortex DB cross-join (svc4 Rust ≫ svc3 Perl, see
-`memory/perl-latexml-reference-comparison`) for a precise Rust-only worklist.
+prefer the cortex cross-join (svc Rust `oxidized-tex-to-html` vs Perl
+`tex_to_html`) for a precise Rust-only worklist.
+
+**Cortex agentic API (preferred over psql, reads are open — no token):**
+`http://127.0.0.1:8000/api` lists 49 endpoints. Worklist recipe:
+`GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categories;
+`…/<severity>/<category>` → the per-`what` breakdown; `…/<category>/<what>` →
+the paper list. Then `GET /api/corpus/<corpus>/tex_to_html/document/<id>` for the
+Perl status — a Rust-only win is one where **Perl=no_problem/warning but
+Rust=error/fatal**. Corpus `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`,
+`^`→`%5E`. **Empirical 2026-06-20 cross-join of the 10k Rust errors: failures
+are overwhelmingly SHARED** — the `\bauthor`/imsart bib cluster (16 papers),
+the Timeout/fatal papers (14/15 also Perl-fatal), and the `ltx:XMApp` malformed
+cluster are all shared; the structural-malformed scan found ZERO Perl-clean
+cases. Rust-only wins are rare one-offs (e.g. `0805.1040` `\notetoeditor`,
+fixed). Conclusion: the aggregate error tail is mostly shared upstream gaps.
 
 ---
 
