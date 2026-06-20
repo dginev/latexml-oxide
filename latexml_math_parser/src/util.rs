@@ -66,16 +66,32 @@ fn node_to_grammar_lexemes_ctx(
 
     if node.get_name() == "XMApp" && node.get_attribute("role").is_some() {
       let role = node.get_attribute("role").unwrap();
-      // ARROW/METARELOP-role XMApps (decorated arrows like \xrightarrow{over},
-      // \xleftrightarrow[under]{over}) should be atomic terminals.
-      // Extract the meaning from the inner ARROW/METARELOP child token.
-      if role == "ARROW" || role == "METARELOP" {
-        let arrow_meaning = node
+      // A complete operator that has been decorated or scripted is still a
+      // single grammatical operator and must lex as ONE atomic terminal:
+      //   - ARROW/METARELOP: decorated arrows (\xrightarrow{over},
+      //     \xleftrightarrow[under]{over}).
+      //   - RELOP: a scripted relation (\stackrel{?}{=}, \overset/\underset over
+      //     a relation) — `=^?` is an `<XMApp role=RELOP>` whose recursion would
+      //     emit `start_RELOP SUPERSCRIPTOP RELOP:= UNKNOWN:? end_RELOP`, a
+      //     sequence no grammar rule consumes, so the relation failed to parse as
+      //     a standalone item (e.g. `a \quad \stackrel{?}{=} \quad b` →
+      //     ltx_math_unparsed). Perl recurses with start_/end_ markers its Marpa
+      //     grammar handles; the Rust grammar treats decorated operators as
+      //     atomic terminals instead (the whole node is preserved as the
+      //     terminal's value, so rendering still shows the script). The lexeme
+      //     keys on the inner base operator's meaning, so `=^?` lexes like `=`.
+      if role == "ARROW" || role == "METARELOP" || role == "RELOP" {
+        let op_meaning = node
           .get_child_elements()
           .into_iter()
           .find(|ch| {
             let cr = ch.get_attribute("role");
-            cr.as_deref() == Some("ARROW") || cr.as_deref() == Some("METARELOP")
+            match role.as_str() {
+              // A scripted relation's base is a RELOP leaf.
+              "RELOP" => cr.as_deref() == Some("RELOP"),
+              // Decorated arrows may carry either an ARROW or METARELOP base.
+              _ => cr.as_deref() == Some("ARROW") || cr.as_deref() == Some("METARELOP"),
+            }
           })
           .and_then(|ch| {
             ch.get_attribute("meaning")
@@ -84,7 +100,7 @@ fn node_to_grammar_lexemes_ctx(
           })
           .unwrap_or_else(|| role.to_string());
         *idx += 1;
-        let lexeme = format!("{role}:{arrow_meaning}:{idx}").replace(' ', "");
+        let lexeme = format!("{role}:{op_meaning}:{idx}").replace(' ', "");
         lexemes.push(lexeme);
         nodes.push(node);
       } else if node.has_attribute("_rewrite") {
