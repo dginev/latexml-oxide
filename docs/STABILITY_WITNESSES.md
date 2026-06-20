@@ -176,7 +176,31 @@ is the right floor.
 `hep-ph0012156` (12,778 maths) → graceful OOM-abort under 6 GB ulimit, Cluster A
 inherent-large-math. No genuine Rust-only defect in the batch.)
 
-## Cluster E — tikz/pgf path-processing memory blowup (RUST-ONLY, DEFERRED)
+## Cluster E — tikz/pgf path-processing memory blowup (✅ FIXED 2026-06-20)
+
+> **ROOT-CAUSED + FIXED 2026-06-20 (`pgfmath_code_tex.rs`, `\pgfmathsetlength`).**
+> The blowup is a **non-terminating pgf decoration automaton** (`decorations.text`
+> / `text along path`), not "pgf allocates more than Perl". The automaton walks the
+> path consuming `width=+.5\wd\pgf@lib@dec@text@box` per state and terminates when a
+> state's width exceeds the remaining distance (`switch if … to final`); the
+> end-of-text trick sets the box to `\wd=16383pt` for a huge final advance. The move
+> is applied via `\pgfmathsetlength\pgf@decorate@distancetomove{\pgf@decorate@width}`
+> — where `\pgf@decorate@width` is a **macro** expanding to `+.5\wd\box`. Rust's
+> native `\pgfmathsetlength` tested the **raw** first token for the `+` glue/native
+> fast-path (which alone can read `\wd<box>`; pgfmath's expression parser returns 0
+> for box registers, same as Perl & pdflatex). The raw token was the macro, not `+`,
+> so it fell to pgfmath → `\wd`→0 → **move 0 → remaining-distance never decreased →
+> infinite loop placing boxes → RSS runaway**. Fix: **expand the argument before the
+> `+` test**, so the macro-delivered `+.5\wd\box` takes the native path (pdflatex
+> ground truth: `\pgfmathsetlength\d{+.5\wd0}` = 3.75pt = .5×7.5pt). Confirmed
+> against all four gate witnesses (no more `MemoryBudget`):
+> 1709.07916 8.2s/272MB · 1912.13052 5.4s/759MB · 2004.14791 3.1s/490MB · 1312.6499
+> 2.7s/304MB clean · 2110.08101 0.5s/171MB. Suite 1459/0, clippy clean. Minimal
+> repros + diagnostic trace tooling in `~/scratch/{rss_1709,pgfmath_box}`. The
+> residual per-paper errors (`\smartdiagramset`, `\thref`, `\weight`, …) are
+> unrelated missing-macro issues, not the RSS cluster.
+
+The diagnostic record below is retained for context.
 
 **Witness:** `2110.08101` (third-batch canvas, `Fatal:Timeout:MemoryBudget RSS 4500 MB`).
 **Differential (2026-06-08, current binary + release):** Perl **completes** (1 error) on the
@@ -189,6 +213,26 @@ cap). Only ~4 of ~37 `MemoryBudget` fatals are tikz-related (the rest are divers
 `.tex`" blowups, sampled mostly SHARED), so this is a minority cluster. DEFERRED — deep pgf/tikz
 internals; needs a focused profile of pgf path-op allocation vs Perl. Sibling of the pgfplots
 `symbolic x coords` Rust-only case (SYNC_STATUS.md differential-sweep note).
+
+**More witnesses (2026-06-20, from the 3-sandbox `PERL_VS_RUST_FATAL_ANALYSIS` gate — moved
+here from the SYNC_STATUS correctness gate, as these are perf/RSS not correctness):**
+
+| Paper | Perl | Rust | peak RSS | locus (from cortex.log) |
+|---|---|---|---|---|
+| 1709.07916 | ok   | Fatal MemoryBudget | 4500 MB (cap) | `tikzpicture` in a `figure`, pgfplots `compat` mode |
+| 1912.13052 | warn | Fatal MemoryBudget | 4500 MB (cap) | pgf/tikz digestion |
+| 2004.14791 | warn | Fatal MemoryBudget | 4500 MB (cap) | pgf/tikz digestion |
+| 1312.6499  | warn | Fatal MemoryBudget | 4500 MB (cap) | pgf/tikz (was TokenLimit→MemoryBudget) |
+
+All four hit the **deliberate 4500 MB per-worker RSS fuse** (a fleet-safety mechanism Perl
+*lacks* — Perl uses unbounded RAM, so "Perl ok" partly reflects the absence of a cap, not lower
+usage). Diagnostic tell on 1709.07916: `gullet:progress 7784` (LOW) with 4.4 GB RSS ⇒ **not** a
+token-loop explosion but memory-heavy per-op pgfplots allocation (coordinate/path/plot data),
+matching the 2110.08101 path-op profile above. They do **not** reduce to small repros (basic
+pgfplots/tikz convert cleanly in both engines). **FIXED 2026-06-20** — see the banner at the
+top of this cluster (the `\pgfmathsetlength` expand-before-`+` fix); all four now convert
+without `MemoryBudget`. The earlier "deep pgf allocation vs Perl" hypothesis was wrong: it was a
+single decoration-automaton non-termination bug.
 
 ## Method notes
 

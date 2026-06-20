@@ -155,20 +155,31 @@ divergences" of the analysis doc:**
   (graphrot `\multicolumn{10}{|l}` over `p{1in}`: colspan cell breaks, width 143→810
   vs Perl 214). Tracked separately as surpass-Perl R&D; lifted out of this gate.
   Full detail in `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` §1610.00974.
-- [ ] **1709.07916** (Perl ok) — pgfplots axis RSS runaway >4.5 GB → MemoryBudget.
-- [ ] **1912.13052** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
-- [ ] **2004.14791** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
-- [ ] **1312.6499** (Perl warn) — pgf/tikz runaway (TokenLimit→MemoryBudget).
+- [x] **1709.07916 / 1912.13052 / 2004.14791 / 1312.6499** (all pgf/tikz RSS
+  runaways → MemoryBudget) — **RESOLVED 2026-06-20 (`pgfmath_code_tex.rs`).** All
+  four traced to a **single** core bug: a non-terminating pgf decoration automaton
+  (`decorations.text` / `text along path`). The automaton advances along the path
+  by `width=+.5\wd\pgf@lib@dec@text@box` per state, delivered via the macro
+  `\pgf@decorate@width`; Rust's native `\pgfmathsetlength` tested the **raw** first
+  token for the `+` glue/native fast-path (the only path that can read `\wd<box>`),
+  saw the macro instead of `+`, fell to pgfmath (which returns 0 for `\wd`, same as
+  Perl/pdflatex), so the move was 0 → remaining distance never decreased → infinite
+  loop placing boxes → RSS runaway. **Fix:** expand the argument before the `+`
+  test. pdflatex ground truth confirms (`\pgfmathsetlength\d{+.5\wd0}`=3.75pt). All
+  four now convert with **0 fatals / no MemoryBudget** (1709 8.2s/272MB; 1912
+  5.4s/759MB; 2004 3.1s/490MB; 1312 2.7s/304MB clean), residual errors being
+  unrelated missing macros. Suite 1459/0, clippy clean. Detail +
+  the obsoleted "deep pgf allocation" hypothesis in `STABILITY_WITNESSES.md`
+  Cluster E.
 
-These are deep pgf/pgfplots (pgfmath/coordinate + alignment layers): cumulative
-document-state effects that do **not** reduce to small repros (basic `\matrix` /
-tikzcd / pgfplots all convert cleanly in both engines), high-effort and
-regression-prone — unlike the clean `\scantokens` core fix. Each must be either
-fixed or, with explicit justification, reclassified as surpass-Perl performance
-R&D and lifted out of this gate. **Do not run the corpus rerun until this list
-is clear.** Companion memory: `sandbox-3corpus-run-2026-06-19` (also tracks two
-separate cortex/harness items, NOT latexml-oxide: `/api/status`
-`workers_in_flight` over-count; harness one-worker-per-poll shedding).
+**Gate CLEARED 2026-06-20:** every genuine Rust-worse divergence catalogued in
+`PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` is resolved (1610.00974 multicolumn
+p-cell `\\`; the four pgf/tikz RSS runaways above; the P1 panics and `\scantokens`
+landed earlier). **The cortex sandbox corpus rerun (corpora 7/8/12) may now
+proceed** to measure cumulative impact. Companion memory:
+`sandbox-3corpus-run-2026-06-19` (also tracks two separate cortex/harness items,
+NOT latexml-oxide: `/api/status` `workers_in_flight` over-count; harness
+one-worker-per-poll shedding).
 
 ---
 

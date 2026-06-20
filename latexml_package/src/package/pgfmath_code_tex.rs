@@ -1554,10 +1554,27 @@ LoadDefinitions!({
   //   3. Otherwise, evaluates via pgfmathparse and converts to Dimension
   //   4. Assigns the result to register #1
   DefPrimitive!("\\pgfmathsetlength DefToken {}", sub[(register, tokens)] {
-    let toks: Vec<Token> = tokens.unlist_ref().iter()
-      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
-      .cloned()
-      .collect();
+    // EXPAND before testing the leading-'+' fast-path. pgf fast-paths a
+    // '+'-prefixed (relative/glue) value through native glue reading, which CAN
+    // read box dimension registers like `\wd<box>` that the pgfmath expression
+    // parser cannot (pgfmath returns 0 for `\wd`/`\ht`/`\dp`). The value is very
+    // often delivered via a MACRO — e.g. the pgf decoration automaton calls
+    // `\pgfmathsetlength\pgf@decorate@distancetomove{\pgf@decorate@width}` where
+    // `\pgf@decorate@width` expands to `+.5\wd\pgf@lib@dec@text@box`. Testing the
+    // *raw* first token sees the macro (not '+'), so we fell to pgfmathparse,
+    // `\wd<box>` → 0, the decoration never advanced along the path, and
+    // `text along path` (decorations.text) looped forever placing boxes → RSS
+    // runaway. Expanding first lets the '+' surface (pdflatex ground truth:
+    // `\pgfmathsetlength\d{+.5\wd0}` = 3.75pt). Witnesses: arXiv 1709.07916 /
+    // 1912.13052 / 2004.14791 / 1312.6499 (STABILITY_WITNESSES Cluster E).
+    let toks: Vec<Token> =
+      do_expand(Tokens::new(tokens.unlist_ref().clone()))
+        .unwrap_or_default()
+        .unlist_ref()
+        .iter()
+        .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+        .cloned()
+        .collect();
 
     if toks.first().is_some_and(|t| t.text == pin!("+")) {
       // Starts with '+' → treat as plain glue
@@ -1567,10 +1584,8 @@ LoadDefinitions!({
       let cs = register.to_string();
       assign_register(&cs, glue.into(), None, vec![])?;
     } else {
-      // Evaluate via pgfmathparse
-      let tok_str = Tokens::new(toks);
-      let expanded = do_expand(tok_str).unwrap_or_default();
-      let input = expanded.to_string();
+      // Evaluate via pgfmathparse (tokens already expanded above)
+      let input = Tokens::new(toks).to_string();
       let (result_str, _units) = pgfmathparse_eval_with_units(&input);
       let value: f64 = result_str.parse().unwrap_or(0.0);
 

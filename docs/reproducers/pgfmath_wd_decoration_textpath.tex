@@ -1,0 +1,25 @@
+% Reproducer: pgf `text along path` (decorations.text) infinite loop / RSS runaway.
+%
+% Before the 2026-06-20 fix, this hung indefinitely (RSS climbing to the
+% MemoryBudget cap) because the decoration automaton advances along the path by
+% `width=+.5\wd\pgf@lib@dec@text@box` per state, delivered through the macro
+% `\pgf@decorate@width`. Rust's native `\pgfmathsetlength` tested the *raw* first
+% token for the `+` glue/native fast-path (the only path that reads `\wd<box>` —
+% pgfmath's expression parser returns 0 for box registers, same as Perl/pdflatex).
+% The raw token was the macro, not `+`, so the move evaluated to 0, the remaining
+% path distance never decreased, and the automaton looped forever placing boxes.
+%
+% Fix (`latexml_package/src/package/pgfmath_code_tex.rs`, `\pgfmathsetlength`):
+% expand the argument BEFORE testing for the leading `+`. pdflatex ground truth:
+% `\pgfmathsetlength\dimen0{+.5\wd0}` = 3.75pt (= .5 x 7.5pt). After the fix this
+% file converts in ~2s; full witnesses 1709.07916 / 1912.13052 / 2004.14791 /
+% 1312.6499 no longer hit MemoryBudget. See docs/STABILITY_WITNESSES.md Cluster E.
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{decorations.text}
+\begin{document}
+\begin{tikzpicture}
+\draw[gray, thick] [decoration={text along path,
+    text={along the path},text align={center}},decorate] (0,0) -- (4,0);
+\end{tikzpicture}
+\end{document}
