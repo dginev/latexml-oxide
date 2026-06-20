@@ -1335,3 +1335,49 @@ the re-entrancy inside the core item/tag path that every list relies on — high
 regression risk for a pathological input that Perl also rejects. Rust's outcome
 (`Fatal:Stomach:Recursion`, caught by the engine fuse) is arguably cleaner than
 Perl's (a Perl-runtime deep-recursion warning).
+
+---
+
+## 33. `\numexpr` division (`divideround`) rounds half toward +∞, not away from zero
+
+**Perl source:** `LaTeXML/Common/Number.pm:117-119`
+```perl
+sub divideround {
+  my ($self, $other) = @_;
+  return (ref $self)->new(int(0.5 + $self->valueOf / (... || $EPSILON))); }
+```
+used by `eTeX.pool.ltxml:189` for the `/` operator of `\numexpr`/`\dimexpr`.
+
+**Symptom:** `\numexpr a/b\relax` disagrees with real (e)TeX whenever the exact
+quotient is negative or a negative half-tie. TeX's `\numexpr` rounds the
+quotient to the nearest integer with **ties away from zero**; Perl computes
+`int(0.5 + a/b)`, which is round-half-toward-**positive infinity** (`int()`
+truncates toward zero, so the `+0.5` only rounds up — never down for negatives).
+
+**Minimal example & divergence (real TeX → Perl/Rust):**
+```tex
+\the\numexpr -7/2\relax   % real TeX: -4   Perl/Rust: -3
+\the\numexpr -7/3\relax   % real TeX: -2   Perl/Rust: -1
+\the\numexpr -1/2\relax   % real TeX: -1   Perl/Rust:  0
+```
+Positive operands are correct in all three (`7/2 → 4`, `7/3 → 2`, `1/2 → 1`).
+
+**Impact:** Subtle off-by-one in `\numexpr`-based arithmetic (calc, etoolbox,
+pgfmath, expl3's `\int_div_round:nn`/`\int_mod:nn`, …) when a sub-expression
+divides to a negative or negative-half value. Rare in practice — most package
+arithmetic divides positive lengths/counts.
+
+**Perl status:** present and unchanged upstream.
+
+**Rust status: KEPT FAITHFUL (verified parity).** `divideround`
+(`latexml_core/src/common/numeric_ops.rs:149`) is `(0.5 + a/b).trunc()`, where
+Rust's `f64::trunc` truncates toward zero exactly like Perl's `int()` — so Rust
+reproduces Perl bit-for-bit (confirmed: `\numexpr` probe gives identical
+`a..j` on `/usr/local/bin/latexml` v0.8.8 and the Rust binary). Under the
+strict-Perl-parity priority this is **deliberately NOT changed** — a true-TeX
+round-half-away-from-zero would diverge from every Perl-derived reference XML.
+Contrast `\ifodd` (TeX_Logic), where Perl's `valueOf % 2` *does* match TeX for
+negatives but the Rust `% 2 == 1` did not — that was a genuine Rust bug, fixed
+to `% 2 != 0` (see git `5787070020`). The discriminator: faithful-to-Perl is the
+target; only fix Rust where it diverges *from Perl*, not where Perl diverges
+from TeX.
