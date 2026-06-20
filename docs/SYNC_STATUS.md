@@ -148,13 +148,18 @@ read-after-write chain so `guess_alignment_headers` saw no hump (`3b17005458`);
 `<graphics candidates=...>` omitted for a missing image file, matching Perl's
 empty `@candidates` (`be41cc8c54`); text-mode `\>`/`\:`/`\;` now use the real
 space glyphs U+2005/U+2004 (not ASCII space), like `\,`→U+2009 (`47f77f00ab`).
+A simple list-valued relation RHS now parses for BOTH a RELOP and a METARELOP
+(`a = b \quad c` → `a = list@(b, c)`; `a : b \quad c` → `a colon list@(b, c)`,
+the METARELOP `formula_list` rule added `50dbf352aa` — common in
+`\forall x : P \quad Q` notation).
 **Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
-- **relation with a list RHS containing a scripted relop**:
+- **relation with a list RHS that ITSELF contains a scripted relop**:
   `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >= ^ ?, c)`,
-  Rust unparsed. The scripted-relop atomic fix (`4a5ebf29f7`) cleared the simple
-  standalone-item cases but not this one: `\le` binds `b` then the `\quad`-list
-  `b, >=^?, c` must become the relation's RHS. Niche; deeper relation/list
-  precedence interaction.
+  Rust unparsed. Distinct from the simple list-RHS above (which works): here the
+  `\quad`-list `b, >=^?, c` that becomes the RHS itself contains a relop item
+  (`>=^?`). The scripted-relop atomic fix (`4a5ebf29f7`) cleared standalone
+  list items but not a relop-item-inside-a-relation's-list-RHS. Niche; deeper
+  formula_list/relation precedence interaction.
 - **`\underset`/`\overset` over an ARROW with a multi-token script**:
   `x \underset{n\to\infty}{\to} y` parses but the under-script `n\to\infty`
   reads as `n@to@infinity` (apply) where Perl groups `(n to infinity)` — the
