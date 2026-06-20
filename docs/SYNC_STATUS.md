@@ -174,6 +174,22 @@ the METARELOP `formula_list` rule added `50dbf352aa` — common in
   cross-check, NOT a safe cron change. (The trigger — two LEADING bare operators
   — is itself uncommon in real math, but the silent content loss is why it's the
   higher-priority half here.)
+  - **EXACT ROOT CAUSE (traced 2026-06-20):** the marpa fork's `Parser::read`
+    (`marpa/src/parser/mod.rs:130`) does `if r.is_exhausted() { break; }` — it
+    stops reading the instant the recognizer exhausts, leaving the remaining
+    tokens UNREAD; `Bocage::new` then builds the parse at that earlier earleme
+    with NO full-coverage check. When the grammar exhausts mid-input (here
+    `anyop anyop` completes the start symbol `anything` after 2 lexemes and
+    nothing can follow a completed start), the tail is silently dropped. Inputs
+    that DON'T exhaust early (e.g. `a \le b \quad …`, where `statements` can
+    still extend via `statements wide_punct statement`) read all tokens, find no
+    complete `anything` at the final earleme, and correctly fail →
+    `ltx_math_unparsed`. Two fixes: (1) [cleanest] in the dginev/marpa fork,
+    don't treat an exhausted-early parse as complete unless the token source is
+    also exhausted (cross-repo); (2) [in-repo] in `parse_single`, after the
+    engine returns, verify the result consumed ALL input lexemes (walk the XM
+    tree's `:idx` references vs `lexemes.len()`) and otherwise fall to the
+    token-preserving kludge. Both need full-suite + Perl cross-check.
 - **relation with a list RHS that ITSELF contains a scripted relop**:
   `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >= ^ ?, c)`,
   Rust unparsed. Distinct from the simple list-RHS above (which works): here the
