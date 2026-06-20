@@ -2530,6 +2530,36 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
+### Round-37 (2026-06-20): stale-DEFERRED re-test sweep — 12 of 15 now convert with 0 errors
+
+Re-ran the long-standing DEFERRED Rust-only sandbox papers against the current
+binary (`cortex_worker --standalone`, `--timeout 150 --max-rss-mb 8192`; ANSI-
+stripped `^(Error|Fatal):` count + `Status:conversion:N`; each verified to process
+its **main** file with substantial HTML, not a decoy). Intervening engine fixes
+have cleared most — they were never re-tested, exactly the "re-test before triage"
+trap the log warns about. **12 RESOLVED (0 errors, parity with the documented
+PERL=0):**
+
+| paper | was | now | old DEFERRED reason |
+|---|---|---|---|
+| 2004.07608 | 30 err | 0/58w | `\parbox`-in-elsarticle-`keyword` frontmatter mode cluster |
+| 1907.01596 | err | 0/343w | mdframed `logical-block` not allowed in `figure` |
+| 1910.10674 | err | 0/26w | physics `\mqty(…)` paren in amsmath alignment |
+| 2006.01470 | 27 err | 0 | xy-pic `\xymatrix @!` mode-leak |
+| 1809.04023 | 1 err | 0 | `\rowcolors` in revtex4-1 multi-package |
+| 1608.00275 | 1 err | 0 | revtex4 context-dependent `unexpected:_` |
+| 1810.11979 | 1 err | 0 | lstlisting cumulative-state `^`/`_` math leak |
+| 1902.11165 | err | 0 | `\halign` (Young tableau) in a TikZ node |
+| 1804.09301 | err | 0 | `\cellcolor` dep-scan conditional limit |
+| 1908.10041 | err | 0/3w | pgfplots per-axis state leak |
+| 1901.08716 | err | 0/14w | pgfplots per-axis state leak (pair) |
+| 1503.07894 | err | 0 | url brace space-form `{\url www…}` |
+
+**Still failing (3):** 1501.03690 (11 err — deep xy-pic shifted-arrows `svg:path`
+in `ltx:text`), 1602.07073 + 1804.06196 (1 err each — `\dq` cluster). The dated
+DEFERRED entries below are kept as historical record; this note is the current
+truth. The `\dq` cluster (1 err) and 1501.03690 remain genuinely open.
+
 ### Round-37 (2026-06-19): IEEEtran legacy `keywords` env FIXED — `\@IEEEkeywords`/`\@endIEEEkeywords` defined
 
 `ieeetran_cls.rs` routed the legacy `keywords` environment (`\begin{keywords}`,
