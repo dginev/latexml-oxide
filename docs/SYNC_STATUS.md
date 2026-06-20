@@ -39,6 +39,12 @@ the Timeout/fatal papers (14/15 also Perl-fatal), and the `ltx:XMApp` malformed
 cluster are all shared; the structural-malformed scan found ZERO Perl-clean
 cases. Rust-only wins are rare one-offs (e.g. `0805.1040` `\notetoeditor`,
 fixed). Conclusion: the aggregate error tail is mostly shared upstream gaps.
+**STALENESS CAVEAT:** the 10k Rust run predates recent fixes — always re-confirm
+a flagged paper on the CURRENT binary before chasing it. E.g. the whole
+`document/convert` "Can not mutably reference a shared Node" cluster (16 papers,
+high Rc strong-count on `text`/`creator`) reads as Rust-only in the API but is
+**already fixed** — all sampled papers show 0 such errors locally now. Trigger a
+fresh Rust rerun (needs `X-Cortex-Token`) for accurate cross-join counts.
 
 ---
 
