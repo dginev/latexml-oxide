@@ -2671,16 +2671,21 @@ configs (the decisive test is Perl's `--includestyles` ⇔ Rust's
   recursion.) Not reproducible from the minimal `\usepackage{xintexpr}` ar5iv
   repro (that completes, 8 errors) — needs the full-paper tikz+xint cumulative
   context. See `STABILITY_WITNESSES.md`.
-- **Action (robustness, lower priority — the paper converts in NEITHER engine).**
-  Since fixing the crash would only make Rust fail-soft (empty doc) like Perl, not
-  actually convert the paper, this is a *reliability hardening* item, not a parity
-  win. The faithful fix is a Perl-style recursion-depth guard in the gullet
-  expansion that converts runaway recursion into a recoverable error before the
-  256 MB overflow (mirrors Perl `$MAXSTACK`). Dedicated session: bisect a minimal
-  crasher, get a gdb backtrace of the recursion cycle, add the guard + full-suite
-  validate (tune the limit so legitimate deep recursion is unaffected). Deep xint
-  *emulation* (defining `\xinttheiexpr` etc.) remains separately parked and is NOT
-  needed for parity — plain-mode parity is already exact.
+- **✅ CRASH FIXED 2026-06-20 (`gullet.rs`).** Wrapped the per-expansion
+  `defn.invoke(false)` in `read_x_token` (`Outcome::Invoke`) with
+  `stacker::maybe_grow(256 KiB, 8 MiB, …)` — the existing `document.rs`/math-parser
+  idiom. Every deep gullet-recursion cycle passes through this point (≤10 frames ≪
+  the red zone), so the native stack grows ahead of the recursion. 1804.01117 now
+  exits **124 (graceful wall-clock timeout)** instead of **134 (SIGABRT)** — it
+  degrades gracefully like Perl rather than crashing the process. `maybe_grow` is
+  transparent (provides stack, never changes results): full suite **1459/0**,
+  perf unchanged. **This is a robustness win, NOT a coverage one** — the paper
+  still doesn't convert (times out, as Perl fails-soft to an empty doc). A faster
+  fail-soft (a Perl-`$MAXSTACK`-style depth guard that *bails* instead of growing)
+  is a possible future refinement; the crash — the actual defect — is resolved.
+  See `STABILITY_WITNESSES.md` Cluster F. Deep xint *emulation* (defining
+  `\xinttheiexpr` etc.) remains separately parked and is NOT needed for parity —
+  plain-mode parity is already exact.
 
 **2110.11931 — isolated 2026-06-20 to a 7-line repro (fix pending, deep).** mnras
 paper; 10 errors all from one `\begin{equation}` processed in *horizontal* mode

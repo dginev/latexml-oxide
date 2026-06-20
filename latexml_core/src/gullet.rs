@@ -904,8 +904,24 @@ pub fn read_x_token(
         },
         Outcome::Invoke(defn) => {
           local_current_token(token);
+          // Stack-overflow guard for deeply-recursive expansion. Some inputs
+          // recurse through the gullet far deeper than a normal document:
+          // e.g. a number-argument macro whose argument is read by expanding
+          // the next number-argument macro (xint's `\XINT_…` chains under a
+          // raw `\usepackage{xintexpr}`), nesting tens of thousands deep —
+          // `read_number → read_x_token → invoke → read_arguments → read_number
+          // → …`. Without a guard this overflows even the conversion thread's
+          // 256 MB stack and the process ABORTS (SIGABRT), where Perl degrades
+          // gracefully via its `$MAXSTACK` guard (Core/Stomach.pm). This is the
+          // single point every such cycle passes through, hit roughly every
+          // ~10 frames (≪ the red zone), so growing here keeps the native stack
+          // ahead of the recursion: finite-deep recursion now completes, and a
+          // genuine runaway grows until the existing RSS cap fires a graceful
+          // `Fatal` instead of crashing. Same `stacker::maybe_grow` idiom as
+          // the recursive tree walks in `document.rs` / the math parser.
           #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
-          let mut invoked = defn.invoke(false)?;
+          let mut invoked =
+            stacker::maybe_grow(256 * 1024, 8 * 1024 * 1024, || defn.invoke(false))?;
           // token-locators: fill-only origin inheritance. A macro that
           // expands into synthesized tokens with no origin — e.g.
           // `\today → ExplodeText!(Today!())` yielding "May 25, 2026" —

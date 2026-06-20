@@ -234,7 +234,25 @@ top of this cluster (the `\pgfmathsetlength` expand-before-`+` fix); all four no
 without `MemoryBudget`. The earlier "deep pgf allocation vs Perl" hypothesis was wrong: it was a
 single decoration-automaton non-termination bug.
 
-## Cluster F — xint raw-load runaway native recursion → stack-overflow SIGABRT (OPEN, robustness)
+## Cluster F — xint raw-load runaway native recursion → stack-overflow SIGABRT (✅ FIXED 2026-06-20 — no longer crashes)
+
+> **FIXED 2026-06-20 (`gullet.rs`, `read_x_token` `Outcome::Invoke`).** Wrapped the
+> per-expansion `defn.invoke(false)` call in `stacker::maybe_grow(256 KiB, 8 MiB, …)`
+> — the same idiom as the recursive tree walks in `document.rs` / the math parser.
+> Every deep gullet-recursion cycle passes through this point (~every ≤10 frames,
+> ≪ the 256 KiB red zone), so the native stack grows ahead of the recursion. The
+> SIGABRT is **gone**: 1804.01117 now exits **124 (graceful wall-clock timeout)**
+> instead of **134 (SIGABRT)** — it degrades gracefully like Perl (which fails-soft
+> to an empty doc) rather than crashing the process. `maybe_grow` is *transparent*
+> (it only provides more stack; it never changes results), so the full suite stays
+> **1459/0** and a math-heavy perf spot-check is unchanged (calculus.tex 0.57s,
+> aastex631_deluxetable.tex 0.69s). This is a *robustness* win, not a coverage one
+> — the paper still doesn't convert (times out, as it does in Perl). A faster
+> fail-soft (a Perl-`$MAXSTACK`-style depth-guard that *bails* instead of growing,
+> so it doesn't spend the full timeout window) remains a possible future
+> refinement, but the crash — the actual defect — is resolved.
+
+The diagnostic record below is retained for context.
 
 **Witness:** `1804.01117` (under the ar5iv profile / `INCLUDE_STYLES=true`, the
 cortex path).
