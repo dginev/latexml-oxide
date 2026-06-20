@@ -129,10 +129,17 @@ while Perl reaches ≤ warn**.
 
 **Remaining (UNSOLVED — must clear before rerun), all §"Remaining on-disk
 divergences" of the analysis doc:**
-- [ ] **1610.00974** (Perl ok) — pgf `\matrix` "Single ampersand used with wrong
-  catcode" ×500 → MaxLimit(500) fatal. The matrix `&` is not routed through
-  `\pgfmatrixnextcell` (`\ifpgf@matrix@correct@call` false in
-  `pgfmodulematrix.code.tex`). #1 corpus error class (pgf `\GenericError`).
+- [ ] **1610.00974** (Perl ok) — #1 corpus error class. **ROOT-CAUSED 2026-06-20
+  (fix pending):** NOT a pgf bug. A `\\` inside a `\multicolumn` *paragraph*-cell
+  (`p{}`/`m{}`/`b{}`), e.g. `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`, leaves
+  an unbalanced `\hbox` mode-switch; the later pgfplots legend `\matrix` then runs
+  its group-scoped `\catcode`\&=13` at the wrong level → cell `&` stays catcode-4
+  → pgf "Single ampersand used with wrong catcode" ×500 → MaxLimit fatal. A normal
+  `p{}` column handles the same `\\` fine; only `\multicolumn{}{p{}}{}` doesn't.
+  15-line self-contained repro `docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`
+  (Rust 502 err / Perl 0). Fix locus: `\lx@alignment@multicolumn`
+  (`tex_tables.rs:529`) + p-column before/after (`alignment/template.rs`). Full
+  detail in `PERL_VS_RUST_FATAL_ANALYSIS_2026-06-19.md` §1610.00974.
 - [ ] **1709.07916** (Perl ok) — pgfplots axis RSS runaway >4.5 GB → MemoryBudget.
 - [ ] **1912.13052** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.
 - [ ] **2004.14791** (Perl warn) — pgf/tikz RSS runaway → MemoryBudget.

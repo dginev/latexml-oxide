@@ -1,0 +1,52 @@
+% Minimal, self-contained reproducer for sandbox paper 1610.00974 (corpus 7,
+% sandbox-arxiv-tikz-cd). Isolated 2026-06-20.
+%
+% SYMPTOM (full paper): 502× "Package pgf Error: Single ampersand used with
+% wrong catcode" → Fatal TooManyErrors:MaxLimit(500). The paper has NO \matrix;
+% the cascade fires at \end{axis} of a *pgfplots* figure (legends are rendered
+% via a tikz \matrix), and the source has only \node-based pictures + tabulars.
+%
+% ROOT CAUSE (Rust-only divergence — Perl converts the full paper cleanly):
+%   A `\\` inside a \multicolumn cell whose column spec is a paragraph column
+%   (p{}/m{}/b{}) leaves an UNBALANCED \hbox mode-switch (restricted_horizontal)
+%   on the group/mode stack — see the Rust errors:
+%     "Attempt to close a group that switched to mode restricted_horizontal
+%      ... due to T_CS[\hbox]"
+%   A NORMAL p{} column handles the same `\\` correctly (no leak); only the
+%   \multicolumn{}{p{}}{} path does not. The leftover open group means pgf's
+%   later legend \matrix runs at the wrong group level, so its group-scoped
+%   `\catcode`\&=13 \let&=\pgfmatrixnextcell` does not cover the matrix body →
+%   the cell `&` is still catcode-4 (ALIGN) → pgf reports "wrong catcode", once
+%   per legend `&`, until MaxLimit(500) fatals.
+%
+% BASELINE:
+%   Perl LaTeXML 0.8.8:  exit 0, 0 errors (the parity target).
+%   latexml-oxide:       exit 1, 502 "Single ampersand" errors + MaxLimit fatal.
+%
+% FIX LOCUS: \lx@alignment@multicolumn (latexml_engine/src/tex_tables.rs:529)
+%   and the p-column before/after token generation
+%   (latexml_core/src/alignment/template.rs) — the multicolumn p-cell must
+%   rebind `\\` to an in-cell line-break (and balance the \hbox mode-switch)
+%   exactly as a normal p{} column does. Faithful to Perl
+%   TeX_Tables.pool.ltxml \lx@alignment@multicolumn (L693-702) emitting the
+%   column's beforeCellUnlist/afterCellUnlist.
+%
+% The tikzpicture below is only the DETECTOR; the bug is the unbalanced \hbox
+% from the table. Remove the picture and the leak is silent (no \matrix to trip).
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\begin{document}
+\begin{tabular}{|c|c|}
+\hline
+\multicolumn{2}{|p{1cm}|}{\centering A\\ B} \\ \hline
+y & z \\ \hline
+\end{tabular}
+
+\begin{tikzpicture}
+\begin{axis}
+\addplot coordinates {(0,0)(1,1)};
+\legend{foo}
+\end{axis}
+\end{tikzpicture}
+\end{document}

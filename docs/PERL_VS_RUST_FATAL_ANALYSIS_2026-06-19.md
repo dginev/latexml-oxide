@@ -151,12 +151,51 @@ the failures are cumulative document-state effects):
 | 1912.13052 | warn | MemoryBudget | pgf/tikz RSS runaway |
 | 2004.14791 | warn | MemoryBudget | pgf/tikz RSS runaway |
 | 1312.6499 | warn | MemoryBudget | pgf/tikz RSS runaway |
-| 1610.00974 | ok | MaxLimit(500) | pgf `\matrix` "Single ampersand used with wrong catcode" ×500 — the matrix `&` not routed through `\pgfmatrixnextcell` (`\ifpgf@matrix@correct@call` false); cumulative, basic `\matrix` is fine |
+| ~~1610.00974~~ | ok | MaxLimit(500) | **ISOLATED + root-caused 2026-06-20 (see below)** — NOT a pgf bug; an alignment `\multicolumn` p-cell `\\` leak |
 
-These are surpass-Perl performance/engine work in the pgfmath/coordinate +
-alignment layers — high effort, regression-prone, not quick core-bug fixes like
-`\scantokens`. (Supersedes `HANDOFF.md`, now removed; its cortex/harness items
-live in memory `sandbox-3corpus-run-2026-06-19`.)
+The four MemoryBudget runaways remain surpass-Perl performance/engine work in the
+pgfmath/coordinate layers — high effort, regression-prone. (Supersedes
+`HANDOFF.md`, now removed; its cortex/harness items live in memory
+`sandbox-3corpus-run-2026-06-19`.)
+
+#### 1610.00974 — ROOT-CAUSED 2026-06-20 (the #1 corpus error class)
+
+Not a cumulative/pgf bug after all. **Reduced to a 15-line self-contained
+reproducer** (`docs/reproducers/1610.00974_multicolumn_pcell_newline.tex`):
+Rust emits 502 "Single ampersand used with wrong catcode" + MaxLimit(500) fatal;
+**Perl LaTeXML 0.8.8 converts it with 0 errors** (clean parity target).
+
+Chain:
+1. The trigger is a `\\` **inside a `\multicolumn` cell whose column spec is a
+   paragraph column** (`p{}`/`m{}`/`b{}`), e.g.
+   `\multicolumn{2}{|p{1cm}|}{\centering A\\ B}`. A *normal* `p{}` column handles
+   the identical `\\` correctly — only the `\multicolumn{}{p{}}{}` path does not.
+2. That `\\` leaves an **unbalanced `\hbox` mode-switch** (restricted_horizontal)
+   on the group/mode stack — witnessed by the Rust errors *"Attempt to close a
+   group that switched to mode restricted_horizontal … due to T_CS[\hbox]"* and
+   *"Attempt to end mode restricted_horizontal in restricted_horizontal"*.
+3. The leftover open group shifts the group nesting for everything after. A later
+   **pgfplots legend** (rendered via a tikz `\matrix` at `\end{axis}`) then runs
+   its group-scoped `\catcode`\&=13 \let&=\pgfmatrixnextcell` at the wrong level,
+   so the matrix-body `&` is still catcode-4 (ALIGN) → pgf's `\ifpgf@matrix@
+   correct@call` is false → "Single ampersand used with wrong catcode", once per
+   legend `&`, cascading to the MaxLimit(500) fuse.
+
+This explains the earlier "cumulative document-state" appearance: the table and
+the figure are far apart and individually clean — only their *combination* (a bad
+p-cell `\\` upstream + any pgf `\matrix` downstream) shows the cascade. `&`'s
+catcode is NOT globally corrupted (a plain tabular after the bad table is fine);
+the damage is the dangling `\hbox` group.
+
+**Fix locus:** `\lx@alignment@multicolumn` (`latexml_engine/src/tex_tables.rs`
+:529) + the p-column before/after token generation
+(`latexml_core/src/alignment/template.rs`). The multicolumn paragraph-cell must
+rebind `\\` to an in-cell line-break and balance the `\hbox` mode-switch exactly
+as a normal `p{}` column does — faithful to Perl `TeX_Tables.pool.ltxml`
+`\lx@alignment@multicolumn` (L693-702), which inlines the parsed column's
+`beforeCellUnlist`/`afterCellUnlist`. **Next:** trace Perl's p-column `before`
+(the `\\`-rebinding) and mirror it on the multicolumn path; validate against the
+full 1458-test suite (table-heavy — regression-sensitive) before landing.
 
 ## Repro
 
