@@ -1554,207 +1554,222 @@
 <a href=#1554 id=1554 data-nosnippet>1554</a>  //   3. Otherwise, evaluates via pgfmathparse and converts to Dimension
 <a href=#1555 id=1555 data-nosnippet>1555</a>  //   4. Assigns the result to register #1
 <a href=#1556 id=1556 data-nosnippet>1556</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pgfmathsetlength DefToken {}"</span>, sub[(register, tokens)] {
-<a href=#1557 id=1557 data-nosnippet>1557</a>    <span class="kw">let </span>toks: Vec&lt;Token&gt; = tokens.unlist_ref().iter()
-<a href=#1558 id=1558 data-nosnippet>1558</a>      .skip_while(|t| t.get_catcode() == Catcode::SPACE)
-<a href=#1559 id=1559 data-nosnippet>1559</a>      .cloned()
-<a href=#1560 id=1560 data-nosnippet>1560</a>      .collect();
-<a href=#1561 id=1561 data-nosnippet>1561</a>
-<a href=#1562 id=1562 data-nosnippet>1562</a>    <span class="kw">if </span>toks.first().is_some_and(|t| t.text == <span class="macro">pin!</span>(<span class="string">"+"</span>)) {
-<a href=#1563 id=1563 data-nosnippet>1563</a>      <span class="comment">// Starts with '+' → treat as plain glue
-<a href=#1564 id=1564 data-nosnippet>1564</a>      // Unread the tokens and read as glue
-<a href=#1565 id=1565 data-nosnippet>1565</a>      </span>unread(Tokens::new(toks));
-<a href=#1566 id=1566 data-nosnippet>1566</a>      <span class="kw">let </span>glue = read_glue()<span class="question-mark">?</span>;
-<a href=#1567 id=1567 data-nosnippet>1567</a>      <span class="kw">let </span>cs = register.to_string();
-<a href=#1568 id=1568 data-nosnippet>1568</a>      assign_register(<span class="kw-2">&amp;</span>cs, glue.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-<a href=#1569 id=1569 data-nosnippet>1569</a>    } <span class="kw">else </span>{
-<a href=#1570 id=1570 data-nosnippet>1570</a>      <span class="comment">// Evaluate via pgfmathparse
-<a href=#1571 id=1571 data-nosnippet>1571</a>      </span><span class="kw">let </span>tok_str = Tokens::new(toks);
-<a href=#1572 id=1572 data-nosnippet>1572</a>      <span class="kw">let </span>expanded = do_expand(tok_str).unwrap_or_default();
-<a href=#1573 id=1573 data-nosnippet>1573</a>      <span class="kw">let </span>input = expanded.to_string();
-<a href=#1574 id=1574 data-nosnippet>1574</a>      <span class="kw">let </span>(result_str, _units) = pgfmathparse_eval_with_units(<span class="kw-2">&amp;</span>input);
-<a href=#1575 id=1575 data-nosnippet>1575</a>      <span class="kw">let </span>value: f64 = result_str.parse().unwrap_or(<span class="number">0.0</span>);
-<a href=#1576 id=1576 data-nosnippet>1576</a>
-<a href=#1577 id=1577 data-nosnippet>1577</a>      <span class="comment">// Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
-<a href=#1578 id=1578 data-nosnippet>1578</a>      </span><span class="kw">let </span>cs = register.to_string();
-<a href=#1579 id=1579 data-nosnippet>1579</a>      <span class="kw">let </span>is_mu = if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\ifpgfmathmathunitsdeclared"</span>))
-<a href=#1580 id=1580 data-nosnippet>1580</a>        .unwrap_or(<span class="prelude-val">None</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
-<a href=#1581 id=1581 data-nosnippet>1581</a>      <span class="kw">if </span>is_mu {
-<a href=#1582 id=1582 data-nosnippet>1582</a>        <span class="kw">let </span>mu_sp = convert_unit(<span class="string">"mu"</span>);
-<a href=#1583 id=1583 data-nosnippet>1583</a>        <span class="kw">let </span>mu_dim = Dimension((value * mu_sp <span class="kw">as </span>f64).round() <span class="kw">as </span>i64);
-<a href=#1584 id=1584 data-nosnippet>1584</a>        assign_register(<span class="kw-2">&amp;</span>cs, mu_dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-<a href=#1585 id=1585 data-nosnippet>1585</a>      } <span class="kw">else </span>{
-<a href=#1586 id=1586 data-nosnippet>1586</a>        <span class="comment">// Convert pgfmath result (in pt) to sp (× 65536), round to nearest
-<a href=#1587 id=1587 data-nosnippet>1587</a>        </span><span class="kw">let </span>dim = Dimension((value * <span class="number">65536.0</span>).round() <span class="kw">as </span>i64);
-<a href=#1588 id=1588 data-nosnippet>1588</a>        assign_register(<span class="kw-2">&amp;</span>cs, dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
-<a href=#1589 id=1589 data-nosnippet>1589</a>      }
-<a href=#1590 id=1590 data-nosnippet>1590</a>    }
-<a href=#1591 id=1591 data-nosnippet>1591</a>  });
-<a href=#1592 id=1592 data-nosnippet>1592</a>
-<a href=#1593 id=1593 data-nosnippet>1593</a>  <span class="comment">// Also override \pgfmathsetlengthmacro (Perl L426 area — uses same approach
-<a href=#1594 id=1594 data-nosnippet>1594</a>  // but assigns to a macro instead of a register; we approximate by just doing
-<a href=#1595 id=1595 data-nosnippet>1595</a>  // pgfmathparse and \def-ing the result)
-<a href=#1596 id=1596 data-nosnippet>1596</a>
-<a href=#1597 id=1597 data-nosnippet>1597</a>  // ==================== \pgfmath@smuggleone ====================
-<a href=#1598 id=1598 data-nosnippet>1598</a>  // Perl L285-299: DefMacro('\pgfmath@smuggleone Until:\endgroup', sub { ... })
-<a href=#1599 id=1599 data-nosnippet>1599</a>  //
-<a href=#1600 id=1600 data-nosnippet>1600</a>  // The raw TeX definition is: \def\pgfmath@smuggleone#1\endgroup{...}
-<a href=#1601 id=1601 data-nosnippet>1601</a>  // It "smuggles" a definition out of a group by expanding before \endgroup.
-<a href=#1602 id=1602 data-nosnippet>1602</a>  // Perl overrides: for expandables, emit the expansion chain; for primitives,
-<a href=#1603 id=1603 data-nosnippet>1603</a>  // just emit \endgroup (bindings are already global, no smuggling needed).
-<a href=#1604 id=1604 data-nosnippet>1604</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@smuggleone Until:\\endgroup"</span>, sub[(arg)] {
-<a href=#1605 id=1605 data-nosnippet>1605</a>    <span class="comment">// The arg is everything up to \endgroup. Extract the first meaningful token.
-<a href=#1606 id=1606 data-nosnippet>1606</a>    </span><span class="kw">let </span>first_tok = arg.unlist_ref().iter()
-<a href=#1607 id=1607 data-nosnippet>1607</a>      .find(|t| {
-<a href=#1608 id=1608 data-nosnippet>1608</a>        <span class="kw">let </span>cc = t.get_catcode();
-<a href=#1609 id=1609 data-nosnippet>1609</a>        cc != Catcode::SPACE &amp;&amp; cc != Catcode::COMMENT &amp;&amp; cc != Catcode::MARKER
-<a href=#1610 id=1610 data-nosnippet>1610</a>      })
-<a href=#1611 id=1611 data-nosnippet>1611</a>      .cloned();
-<a href=#1612 id=1612 data-nosnippet>1612</a>    <span class="kw">let </span><span class="kw-2">mut </span>smuggle = <span class="bool-val">false</span>;
-<a href=#1613 id=1613 data-nosnippet>1613</a>    <span class="kw">let </span><span class="kw-2">mut </span>first_cs = <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>); <span class="comment">// placeholder
-<a href=#1614 id=1614 data-nosnippet>1614</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(first) = first_tok
-<a href=#1615 id=1615 data-nosnippet>1615</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(defn)) = lookup_definition(<span class="kw-2">&amp;</span>first)
-<a href=#1616 id=1616 data-nosnippet>1616</a>        &amp;&amp; defn.is_expandable() {
-<a href=#1617 id=1617 data-nosnippet>1617</a>          smuggle = <span class="bool-val">true</span>;
-<a href=#1618 id=1618 data-nosnippet>1618</a>          first_cs = first;
-<a href=#1619 id=1619 data-nosnippet>1619</a>        }
-<a href=#1620 id=1620 data-nosnippet>1620</a>    <span class="kw">if </span>smuggle {
-<a href=#1621 id=1621 data-nosnippet>1621</a>      <span class="comment">// Texlive 2020 definition: smuggle by expanding before endgroup
-<a href=#1622 id=1622 data-nosnippet>1622</a>      </span><span class="macro">vec!</span>[
-<a href=#1623 id=1623 data-nosnippet>1623</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>),
-<a href=#1624 id=1624 data-nosnippet>1624</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
-<a href=#1625 id=1625 data-nosnippet>1625</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), first_cs,
-<a href=#1626 id=1626 data-nosnippet>1626</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_BEGIN!</span>(),
-<a href=#1627 id=1627 data-nosnippet>1627</a>        first_cs,
-<a href=#1628 id=1628 data-nosnippet>1628</a>        <span class="macro">T_END!</span>(),
-<a href=#1629 id=1629 data-nosnippet>1629</a>      ]
-<a href=#1630 id=1630 data-nosnippet>1630</a>    } <span class="kw">else </span>{
-<a href=#1631 id=1631 data-nosnippet>1631</a>      <span class="comment">// For primitives/bindings: already global, just close the group
-<a href=#1632 id=1632 data-nosnippet>1632</a>      </span><span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>)]
-<a href=#1633 id=1633 data-nosnippet>1633</a>    }
-<a href=#1634 id=1634 data-nosnippet>1634</a>  });
-<a href=#1635 id=1635 data-nosnippet>1635</a>
-<a href=#1636 id=1636 data-nosnippet>1636</a>});
-<a href=#1637 id=1637 data-nosnippet>1637</a>
-<a href=#1638 id=1638 data-nosnippet>1638</a><span class="attr">#[cfg(test)]
-<a href=#1639 id=1639 data-nosnippet>1639</a></span><span class="kw">mod </span>pgfmath_golden_tests {
-<a href=#1640 id=1640 data-nosnippet>1640</a>  <span class="kw">fn </span>describe(expr: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#1641 id=1641 data-nosnippet>1641</a>    <span class="kw">let </span>(result, units) = <span class="kw">super</span>::pgfmathparse_eval_with_units(expr);
-<a href=#1642 id=1642 data-nosnippet>1642</a>    <span class="macro">format!</span>(<span class="string">"{result}@{}"</span>, <span class="kw">if </span>units { <span class="string">"u" </span>} <span class="kw">else </span>{ <span class="string">"-" </span>})
-<a href=#1643 id=1643 data-nosnippet>1643</a>  }
-<a href=#1644 id=1644 data-nosnippet>1644</a>
-<a href=#1645 id=1645 data-nosnippet>1645</a>  <span class="doccomment">/// Golden corpus pinning the battle-tested recdescent's behavior
-<a href=#1646 id=1646 data-nosnippet>1646</a>  /// (captured 2026-06-10) — incl. its deliberate quirks (ternary dropped
-<a href=#1647 id=1647 data-nosnippet>1647</a>  /// after a comparison parse, pass-through formatting of "+3"/"3.").
-<a href=#1648 id=1648 data-nosnippet>1648</a>  /// The gate for the winnow grammar: divergence = regression.
-<a href=#1649 id=1649 data-nosnippet>1649</a>  </span><span class="attr">#[test]
-<a href=#1650 id=1650 data-nosnippet>1650</a>  </span><span class="kw">fn </span>golden_pgfmath_corpus() {
-<a href=#1651 id=1651 data-nosnippet>1651</a>    latexml_core::state::set_state(latexml_core::state::State::new(
-<a href=#1652 id=1652 data-nosnippet>1652</a>      latexml_core::state::StateOptions::default(),
-<a href=#1653 id=1653 data-nosnippet>1653</a>    ));
-<a href=#1654 id=1654 data-nosnippet>1654</a>    <span class="kw">let </span>golden: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)] = <span class="kw-2">&amp;</span>[
-<a href=#1655 id=1655 data-nosnippet>1655</a>      (<span class="string">"1+1"</span>, <span class="string">"2.0@-"</span>),
-<a href=#1656 id=1656 data-nosnippet>1656</a>      (<span class="string">"2+3*4"</span>, <span class="string">"14.0@-"</span>),
-<a href=#1657 id=1657 data-nosnippet>1657</a>      (<span class="string">"2*3+4"</span>, <span class="string">"10.0@-"</span>),
-<a href=#1658 id=1658 data-nosnippet>1658</a>      (<span class="string">"10/4"</span>, <span class="string">"2.5@-"</span>),
-<a href=#1659 id=1659 data-nosnippet>1659</a>      (<span class="string">"2^10"</span>, <span class="string">"1024.0@-"</span>),
-<a href=#1660 id=1660 data-nosnippet>1660</a>      (<span class="string">"(1+2)*3"</span>, <span class="string">"9.0@-"</span>),
-<a href=#1661 id=1661 data-nosnippet>1661</a>      (<span class="string">"-5+2"</span>, <span class="string">"-3.0@-"</span>),
-<a href=#1662 id=1662 data-nosnippet>1662</a>      (<span class="string">"+3"</span>, <span class="string">"3@-"</span>),
-<a href=#1663 id=1663 data-nosnippet>1663</a>      (<span class="string">"--2"</span>, <span class="string">"2.0@-"</span>),
-<a href=#1664 id=1664 data-nosnippet>1664</a>      (<span class="string">"3!"</span>, <span class="string">"6.0@-"</span>),
-<a href=#1665 id=1665 data-nosnippet>1665</a>      (<span class="string">"1.5^2"</span>, <span class="string">"2.25@-"</span>),
-<a href=#1666 id=1666 data-nosnippet>1666</a>      (<span class="string">"7/2"</span>, <span class="string">"3.5@-"</span>),
-<a href=#1667 id=1667 data-nosnippet>1667</a>      (<span class="string">"1/3"</span>, <span class="string">"0.33333@-"</span>),
-<a href=#1668 id=1668 data-nosnippet>1668</a>      (<span class="string">"57.29577951r"</span>, <span class="string">"3282.80635@-"</span>),
-<a href=#1669 id=1669 data-nosnippet>1669</a>      (<span class="string">"0x1F"</span>, <span class="string">"31.0@-"</span>),
-<a href=#1670 id=1670 data-nosnippet>1670</a>      (<span class="string">"0b101"</span>, <span class="string">"5.0@-"</span>),
-<a href=#1671 id=1671 data-nosnippet>1671</a>      (<span class="string">".5"</span>, <span class="string">"0.5@-"</span>),
-<a href=#1672 id=1672 data-nosnippet>1672</a>      (<span class="string">"3."</span>, <span class="string">"3.@-"</span>),
-<a href=#1673 id=1673 data-nosnippet>1673</a>      (<span class="string">"1.2e3"</span>, <span class="string">"1200.0@-"</span>),
-<a href=#1674 id=1674 data-nosnippet>1674</a>      (<span class="string">"1e-2"</span>, <span class="string">"0.01@-"</span>),
-<a href=#1675 id=1675 data-nosnippet>1675</a>      (<span class="string">"2.5E+2"</span>, <span class="string">"250.0@-"</span>),
-<a href=#1676 id=1676 data-nosnippet>1676</a>      (<span class="string">"."</span>, <span class="string">"0.0@-"</span>),
-<a href=#1677 id=1677 data-nosnippet>1677</a>      (<span class="string">"2pt"</span>, <span class="string">"2.0@u"</span>),
-<a href=#1678 id=1678 data-nosnippet>1678</a>      (<span class="string">"1cm"</span>, <span class="string">"28.45276@u"</span>),
-<a href=#1679 id=1679 data-nosnippet>1679</a>      (<span class="string">"10mm"</span>, <span class="string">"28.45276@u"</span>),
-<a href=#1680 id=1680 data-nosnippet>1680</a>      (<span class="string">"1in"</span>, <span class="string">"72.27@u"</span>),
-<a href=#1681 id=1681 data-nosnippet>1681</a>      (<span class="string">"3bp"</span>, <span class="string">"3.01125@u"</span>),
-<a href=#1682 id=1682 data-nosnippet>1682</a>      (<span class="string">"1dd"</span>, <span class="string">"1.07001@u"</span>),
-<a href=#1683 id=1683 data-nosnippet>1683</a>      (<span class="string">"1cc"</span>, <span class="string">"12.8401@u"</span>),
-<a href=#1684 id=1684 data-nosnippet>1684</a>      (<span class="string">"100sp"</span>, <span class="string">"0.00153@u"</span>),
-<a href=#1685 id=1685 data-nosnippet>1685</a>      (<span class="string">"3&gt;2"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1686 id=1686 data-nosnippet>1686</a>      (<span class="string">"2&gt;=3"</span>, <span class="string">"0.0@-"</span>),
-<a href=#1687 id=1687 data-nosnippet>1687</a>      (<span class="string">"1==1"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1688 id=1688 data-nosnippet>1688</a>      (<span class="string">"1!=2"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1689 id=1689 data-nosnippet>1689</a>      (<span class="string">"1&amp;&amp;0"</span>, <span class="string">"0.0@-"</span>),
-<a href=#1690 id=1690 data-nosnippet>1690</a>      (<span class="string">"0||1"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1691 id=1691 data-nosnippet>1691</a>      (<span class="string">"3&gt;2 ? 10 : 20"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1692 id=1692 data-nosnippet>1692</a>      (<span class="string">"(1&lt;2)&amp;&amp;(3&lt;4)"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1693 id=1693 data-nosnippet>1693</a>      (<span class="string">"!1"</span>, <span class="string">"0.0@-"</span>),
-<a href=#1694 id=1694 data-nosnippet>1694</a>      (<span class="string">"!0"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1695 id=1695 data-nosnippet>1695</a>      (<span class="string">"sin(30)"</span>, <span class="string">"0.5@-"</span>),
-<a href=#1696 id=1696 data-nosnippet>1696</a>      (<span class="string">"cos(60)"</span>, <span class="string">"0.5@-"</span>),
-<a href=#1697 id=1697 data-nosnippet>1697</a>      (<span class="string">"tan(45)"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1698 id=1698 data-nosnippet>1698</a>      (<span class="string">"min(3,5)"</span>, <span class="string">"3.0@-"</span>),
-<a href=#1699 id=1699 data-nosnippet>1699</a>      (<span class="string">"max(3,5)"</span>, <span class="string">"5.0@-"</span>),
-<a href=#1700 id=1700 data-nosnippet>1700</a>      (<span class="string">"mod(7,3)"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1701 id=1701 data-nosnippet>1701</a>      (<span class="string">"abs(-4)"</span>, <span class="string">"4.0@-"</span>),
-<a href=#1702 id=1702 data-nosnippet>1702</a>      (<span class="string">"sqrt(16)"</span>, <span class="string">"4.0@-"</span>),
-<a href=#1703 id=1703 data-nosnippet>1703</a>      (<span class="string">"floor(1.7)"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1704 id=1704 data-nosnippet>1704</a>      (<span class="string">"ceil(1.2)"</span>, <span class="string">"2.0@-"</span>),
-<a href=#1705 id=1705 data-nosnippet>1705</a>      (<span class="string">"round(2.5)"</span>, <span class="string">"3.0@-"</span>),
-<a href=#1706 id=1706 data-nosnippet>1706</a>      (<span class="string">"int(3.9)"</span>, <span class="string">"3@-"</span>),
-<a href=#1707 id=1707 data-nosnippet>1707</a>      (<span class="string">"exp(1)"</span>, <span class="string">"2.71828@-"</span>),
-<a href=#1708 id=1708 data-nosnippet>1708</a>      (<span class="string">"ln(2.718281828)"</span>, <span class="string">"1.0@-"</span>),
-<a href=#1709 id=1709 data-nosnippet>1709</a>      (<span class="string">"pow(2,8)"</span>, <span class="string">"256.0@-"</span>),
-<a href=#1710 id=1710 data-nosnippet>1710</a>      (<span class="string">"veclen(3,4)"</span>, <span class="string">"5.0@-"</span>),
-<a href=#1711 id=1711 data-nosnippet>1711</a>      (<span class="string">"atan(1)"</span>, <span class="string">"45.0@-"</span>),
-<a href=#1712 id=1712 data-nosnippet>1712</a>      (<span class="string">"pi"</span>, <span class="string">"3.14159@-"</span>),
-<a href=#1713 id=1713 data-nosnippet>1713</a>      (<span class="string">"e"</span>, <span class="string">"2.71828@-"</span>),
-<a href=#1714 id=1714 data-nosnippet>1714</a>      (<span class="string">"pi*2"</span>, <span class="string">"6.28319@-"</span>),
-<a href=#1715 id=1715 data-nosnippet>1715</a>      (<span class="string">"sin 30"</span>, <span class="string">"0.5@-"</span>),
-<a href=#1716 id=1716 data-nosnippet>1716</a>      (<span class="string">"{1}+{2}"</span>, <span class="string">"3.0@-"</span>),
-<a href=#1717 id=1717 data-nosnippet>1717</a>      (<span class="string">" 1 + { 2 } "</span>, <span class="string">"3.0@-"</span>),
-<a href=#1718 id=1718 data-nosnippet>1718</a>      (<span class="string">"2*3pt"</span>, <span class="string">"6.0@u"</span>),
-<a href=#1719 id=1719 data-nosnippet>1719</a>    ];
-<a href=#1720 id=1720 data-nosnippet>1720</a>    <span class="kw">for </span>(expr, expected) <span class="kw">in </span>golden {
-<a href=#1721 id=1721 data-nosnippet>1721</a>      <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>describe(expr), expected, <span class="string">"pgfmath diverged on {expr:?}"</span>);
-<a href=#1722 id=1722 data-nosnippet>1722</a>    }
-<a href=#1723 id=1723 data-nosnippet>1723</a>  }
-<a href=#1724 id=1724 data-nosnippet>1724</a>
-<a href=#1725 id=1725 data-nosnippet>1725</a>  <span class="doccomment">/// Review B2: a huge factorial argument must NOT spin the product loop.
-<a href=#1726 id=1726 data-nosnippet>1726</a>  /// `1e20!` saturates `n` to ~9.2e18; the pre-fix code looped that many
-<a href=#1727 id=1727 data-nosnippet>1727</a>  /// times (hang/DoS reachable from `\pgfmathparse{1e20!}`). It must now
-<a href=#1728 id=1728 data-nosnippet>1728</a>  /// return promptly with the Perl overflow value (0). The test itself
-<a href=#1729 id=1729 data-nosnippet>1729</a>  /// completing IS the DoS assertion.
-<a href=#1730 id=1730 data-nosnippet>1730</a>  </span><span class="attr">#[test]
-<a href=#1731 id=1731 data-nosnippet>1731</a>  </span><span class="kw">fn </span>factorial_overflow_is_bounded() {
-<a href=#1732 id=1732 data-nosnippet>1732</a>    latexml_core::state::set_state(latexml_core::state::State::new(
-<a href=#1733 id=1733 data-nosnippet>1733</a>      latexml_core::state::StateOptions::default(),
-<a href=#1734 id=1734 data-nosnippet>1734</a>    ));
-<a href=#1735 id=1735 data-nosnippet>1735</a>    <span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"1e20!"</span>), <span class="string">"0.0"</span>);
-<a href=#1736 id=1736 data-nosnippet>1736</a>    <span class="comment">// A few more saturating / large arguments — all overflow → 0, no spin.
-<a href=#1737 id=1737 data-nosnippet>1737</a>    </span><span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"1000000!"</span>), <span class="string">"0.0"</span>);
-<a href=#1738 id=1738 data-nosnippet>1738</a>    <span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"100!"</span>), <span class="string">"0.0"</span>);
-<a href=#1739 id=1739 data-nosnippet>1739</a>    <span class="comment">// Small factorials still compute (table path).
-<a href=#1740 id=1740 data-nosnippet>1740</a>    </span><span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"5!"</span>), <span class="string">"120.0"</span>);
-<a href=#1741 id=1741 data-nosnippet>1741</a>  }
-<a href=#1742 id=1742 data-nosnippet>1742</a>
-<a href=#1743 id=1743 data-nosnippet>1743</a>  <span class="doccomment">/// Review M4: an invalid op yields NaN; the PUBLIC parse path must degrade
-<a href=#1744 id=1744 data-nosnippet>1744</a>  /// it to "0.0", never serialize the literal "NaN" (which would poison a
-<a href=#1745 id=1745 data-nosnippet>1745</a>  /// downstream `\pgfmathresult` dimension read).
-<a href=#1746 id=1746 data-nosnippet>1746</a>  </span><span class="attr">#[test]
-<a href=#1747 id=1747 data-nosnippet>1747</a>  </span><span class="kw">fn </span>nan_results_format_as_zero() {
-<a href=#1748 id=1748 data-nosnippet>1748</a>    latexml_core::state::set_state(latexml_core::state::State::new(
-<a href=#1749 id=1749 data-nosnippet>1749</a>      latexml_core::state::StateOptions::default(),
-<a href=#1750 id=1750 data-nosnippet>1750</a>    ));
-<a href=#1751 id=1751 data-nosnippet>1751</a>    <span class="kw">for </span>expr <span class="kw">in </span>[<span class="string">"sqrt(-1)"</span>, <span class="string">"ln(-1)"</span>, <span class="string">"asin(5)"</span>, <span class="string">"acos(-5)"</span>] {
-<a href=#1752 id=1752 data-nosnippet>1752</a>      <span class="macro">assert_eq!</span>(
-<a href=#1753 id=1753 data-nosnippet>1753</a>        <span class="kw">super</span>::pgfmathparse_eval(expr),
-<a href=#1754 id=1754 data-nosnippet>1754</a>        <span class="string">"0.0"</span>,
-<a href=#1755 id=1755 data-nosnippet>1755</a>        <span class="string">"non-finite {expr} must format as 0.0, not the literal NaN/inf"
-<a href=#1756 id=1756 data-nosnippet>1756</a>      </span>);
-<a href=#1757 id=1757 data-nosnippet>1757</a>    }
-<a href=#1758 id=1758 data-nosnippet>1758</a>  }
-<a href=#1759 id=1759 data-nosnippet>1759</a>}
+<a href=#1557 id=1557 data-nosnippet>1557</a>    <span class="comment">// EXPAND before testing the leading-'+' fast-path. pgf fast-paths a
+<a href=#1558 id=1558 data-nosnippet>1558</a>    // '+'-prefixed (relative/glue) value through native glue reading, which CAN
+<a href=#1559 id=1559 data-nosnippet>1559</a>    // read box dimension registers like `\wd&lt;box&gt;` that the pgfmath expression
+<a href=#1560 id=1560 data-nosnippet>1560</a>    // parser cannot (pgfmath returns 0 for `\wd`/`\ht`/`\dp`). The value is very
+<a href=#1561 id=1561 data-nosnippet>1561</a>    // often delivered via a MACRO — e.g. the pgf decoration automaton calls
+<a href=#1562 id=1562 data-nosnippet>1562</a>    // `\pgfmathsetlength\pgf@decorate@distancetomove{\pgf@decorate@width}` where
+<a href=#1563 id=1563 data-nosnippet>1563</a>    // `\pgf@decorate@width` expands to `+.5\wd\pgf@lib@dec@text@box`. Testing the
+<a href=#1564 id=1564 data-nosnippet>1564</a>    // *raw* first token sees the macro (not '+'), so we fell to pgfmathparse,
+<a href=#1565 id=1565 data-nosnippet>1565</a>    // `\wd&lt;box&gt;` → 0, the decoration never advanced along the path, and
+<a href=#1566 id=1566 data-nosnippet>1566</a>    // `text along path` (decorations.text) looped forever placing boxes → RSS
+<a href=#1567 id=1567 data-nosnippet>1567</a>    // runaway. Expanding first lets the '+' surface (pdflatex ground truth:
+<a href=#1568 id=1568 data-nosnippet>1568</a>    // `\pgfmathsetlength\d{+.5\wd0}` = 3.75pt). Witnesses: arXiv 1709.07916 /
+<a href=#1569 id=1569 data-nosnippet>1569</a>    // 1912.13052 / 2004.14791 / 1312.6499 (STABILITY_WITNESSES Cluster E).
+<a href=#1570 id=1570 data-nosnippet>1570</a>    </span><span class="kw">let </span>toks: Vec&lt;Token&gt; =
+<a href=#1571 id=1571 data-nosnippet>1571</a>      do_expand(Tokens::new(tokens.unlist_ref().clone()))
+<a href=#1572 id=1572 data-nosnippet>1572</a>        .unwrap_or_default()
+<a href=#1573 id=1573 data-nosnippet>1573</a>        .unlist_ref()
+<a href=#1574 id=1574 data-nosnippet>1574</a>        .iter()
+<a href=#1575 id=1575 data-nosnippet>1575</a>        .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#1576 id=1576 data-nosnippet>1576</a>        .cloned()
+<a href=#1577 id=1577 data-nosnippet>1577</a>        .collect();
+<a href=#1578 id=1578 data-nosnippet>1578</a>
+<a href=#1579 id=1579 data-nosnippet>1579</a>    <span class="kw">if </span>toks.first().is_some_and(|t| t.text == <span class="macro">pin!</span>(<span class="string">"+"</span>)) {
+<a href=#1580 id=1580 data-nosnippet>1580</a>      <span class="comment">// Starts with '+' → treat as plain glue
+<a href=#1581 id=1581 data-nosnippet>1581</a>      // Unread the tokens and read as glue
+<a href=#1582 id=1582 data-nosnippet>1582</a>      </span>unread(Tokens::new(toks));
+<a href=#1583 id=1583 data-nosnippet>1583</a>      <span class="kw">let </span>glue = read_glue()<span class="question-mark">?</span>;
+<a href=#1584 id=1584 data-nosnippet>1584</a>      <span class="kw">let </span>cs = register.to_string();
+<a href=#1585 id=1585 data-nosnippet>1585</a>      assign_register(<span class="kw-2">&amp;</span>cs, glue.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+<a href=#1586 id=1586 data-nosnippet>1586</a>    } <span class="kw">else </span>{
+<a href=#1587 id=1587 data-nosnippet>1587</a>      <span class="comment">// Evaluate via pgfmathparse (tokens already expanded above)
+<a href=#1588 id=1588 data-nosnippet>1588</a>      </span><span class="kw">let </span>input = Tokens::new(toks).to_string();
+<a href=#1589 id=1589 data-nosnippet>1589</a>      <span class="kw">let </span>(result_str, _units) = pgfmathparse_eval_with_units(<span class="kw-2">&amp;</span>input);
+<a href=#1590 id=1590 data-nosnippet>1590</a>      <span class="kw">let </span>value: f64 = result_str.parse().unwrap_or(<span class="number">0.0</span>);
+<a href=#1591 id=1591 data-nosnippet>1591</a>
+<a href=#1592 id=1592 data-nosnippet>1592</a>      <span class="comment">// Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
+<a href=#1593 id=1593 data-nosnippet>1593</a>      </span><span class="kw">let </span>cs = register.to_string();
+<a href=#1594 id=1594 data-nosnippet>1594</a>      <span class="kw">let </span>is_mu = if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\ifpgfmathmathunitsdeclared"</span>))
+<a href=#1595 id=1595 data-nosnippet>1595</a>        .unwrap_or(<span class="prelude-val">None</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
+<a href=#1596 id=1596 data-nosnippet>1596</a>      <span class="kw">if </span>is_mu {
+<a href=#1597 id=1597 data-nosnippet>1597</a>        <span class="kw">let </span>mu_sp = convert_unit(<span class="string">"mu"</span>);
+<a href=#1598 id=1598 data-nosnippet>1598</a>        <span class="kw">let </span>mu_dim = Dimension((value * mu_sp <span class="kw">as </span>f64).round() <span class="kw">as </span>i64);
+<a href=#1599 id=1599 data-nosnippet>1599</a>        assign_register(<span class="kw-2">&amp;</span>cs, mu_dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+<a href=#1600 id=1600 data-nosnippet>1600</a>      } <span class="kw">else </span>{
+<a href=#1601 id=1601 data-nosnippet>1601</a>        <span class="comment">// Convert pgfmath result (in pt) to sp (× 65536), round to nearest
+<a href=#1602 id=1602 data-nosnippet>1602</a>        </span><span class="kw">let </span>dim = Dimension((value * <span class="number">65536.0</span>).round() <span class="kw">as </span>i64);
+<a href=#1603 id=1603 data-nosnippet>1603</a>        assign_register(<span class="kw-2">&amp;</span>cs, dim.into(), <span class="prelude-val">None</span>, <span class="macro">vec!</span>[])<span class="question-mark">?</span>;
+<a href=#1604 id=1604 data-nosnippet>1604</a>      }
+<a href=#1605 id=1605 data-nosnippet>1605</a>    }
+<a href=#1606 id=1606 data-nosnippet>1606</a>  });
+<a href=#1607 id=1607 data-nosnippet>1607</a>
+<a href=#1608 id=1608 data-nosnippet>1608</a>  <span class="comment">// Also override \pgfmathsetlengthmacro (Perl L426 area — uses same approach
+<a href=#1609 id=1609 data-nosnippet>1609</a>  // but assigns to a macro instead of a register; we approximate by just doing
+<a href=#1610 id=1610 data-nosnippet>1610</a>  // pgfmathparse and \def-ing the result)
+<a href=#1611 id=1611 data-nosnippet>1611</a>
+<a href=#1612 id=1612 data-nosnippet>1612</a>  // ==================== \pgfmath@smuggleone ====================
+<a href=#1613 id=1613 data-nosnippet>1613</a>  // Perl L285-299: DefMacro('\pgfmath@smuggleone Until:\endgroup', sub { ... })
+<a href=#1614 id=1614 data-nosnippet>1614</a>  //
+<a href=#1615 id=1615 data-nosnippet>1615</a>  // The raw TeX definition is: \def\pgfmath@smuggleone#1\endgroup{...}
+<a href=#1616 id=1616 data-nosnippet>1616</a>  // It "smuggles" a definition out of a group by expanding before \endgroup.
+<a href=#1617 id=1617 data-nosnippet>1617</a>  // Perl overrides: for expandables, emit the expansion chain; for primitives,
+<a href=#1618 id=1618 data-nosnippet>1618</a>  // just emit \endgroup (bindings are already global, no smuggling needed).
+<a href=#1619 id=1619 data-nosnippet>1619</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pgfmath@smuggleone Until:\\endgroup"</span>, sub[(arg)] {
+<a href=#1620 id=1620 data-nosnippet>1620</a>    <span class="comment">// The arg is everything up to \endgroup. Extract the first meaningful token.
+<a href=#1621 id=1621 data-nosnippet>1621</a>    </span><span class="kw">let </span>first_tok = arg.unlist_ref().iter()
+<a href=#1622 id=1622 data-nosnippet>1622</a>      .find(|t| {
+<a href=#1623 id=1623 data-nosnippet>1623</a>        <span class="kw">let </span>cc = t.get_catcode();
+<a href=#1624 id=1624 data-nosnippet>1624</a>        cc != Catcode::SPACE &amp;&amp; cc != Catcode::COMMENT &amp;&amp; cc != Catcode::MARKER
+<a href=#1625 id=1625 data-nosnippet>1625</a>      })
+<a href=#1626 id=1626 data-nosnippet>1626</a>      .cloned();
+<a href=#1627 id=1627 data-nosnippet>1627</a>    <span class="kw">let </span><span class="kw-2">mut </span>smuggle = <span class="bool-val">false</span>;
+<a href=#1628 id=1628 data-nosnippet>1628</a>    <span class="kw">let </span><span class="kw-2">mut </span>first_cs = <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>); <span class="comment">// placeholder
+<a href=#1629 id=1629 data-nosnippet>1629</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(first) = first_tok
+<a href=#1630 id=1630 data-nosnippet>1630</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(defn)) = lookup_definition(<span class="kw-2">&amp;</span>first)
+<a href=#1631 id=1631 data-nosnippet>1631</a>        &amp;&amp; defn.is_expandable() {
+<a href=#1632 id=1632 data-nosnippet>1632</a>          smuggle = <span class="bool-val">true</span>;
+<a href=#1633 id=1633 data-nosnippet>1633</a>          first_cs = first;
+<a href=#1634 id=1634 data-nosnippet>1634</a>        }
+<a href=#1635 id=1635 data-nosnippet>1635</a>    <span class="kw">if </span>smuggle {
+<a href=#1636 id=1636 data-nosnippet>1636</a>      <span class="comment">// Texlive 2020 definition: smuggle by expanding before endgroup
+<a href=#1637 id=1637 data-nosnippet>1637</a>      </span><span class="macro">vec!</span>[
+<a href=#1638 id=1638 data-nosnippet>1638</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>),
+<a href=#1639 id=1639 data-nosnippet>1639</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
+<a href=#1640 id=1640 data-nosnippet>1640</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), first_cs,
+<a href=#1641 id=1641 data-nosnippet>1641</a>        <span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_BEGIN!</span>(),
+<a href=#1642 id=1642 data-nosnippet>1642</a>        first_cs,
+<a href=#1643 id=1643 data-nosnippet>1643</a>        <span class="macro">T_END!</span>(),
+<a href=#1644 id=1644 data-nosnippet>1644</a>      ]
+<a href=#1645 id=1645 data-nosnippet>1645</a>    } <span class="kw">else </span>{
+<a href=#1646 id=1646 data-nosnippet>1646</a>      <span class="comment">// For primitives/bindings: already global, just close the group
+<a href=#1647 id=1647 data-nosnippet>1647</a>      </span><span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\endgroup"</span>)]
+<a href=#1648 id=1648 data-nosnippet>1648</a>    }
+<a href=#1649 id=1649 data-nosnippet>1649</a>  });
+<a href=#1650 id=1650 data-nosnippet>1650</a>
+<a href=#1651 id=1651 data-nosnippet>1651</a>});
+<a href=#1652 id=1652 data-nosnippet>1652</a>
+<a href=#1653 id=1653 data-nosnippet>1653</a><span class="attr">#[cfg(test)]
+<a href=#1654 id=1654 data-nosnippet>1654</a></span><span class="kw">mod </span>pgfmath_golden_tests {
+<a href=#1655 id=1655 data-nosnippet>1655</a>  <span class="kw">fn </span>describe(expr: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#1656 id=1656 data-nosnippet>1656</a>    <span class="kw">let </span>(result, units) = <span class="kw">super</span>::pgfmathparse_eval_with_units(expr);
+<a href=#1657 id=1657 data-nosnippet>1657</a>    <span class="macro">format!</span>(<span class="string">"{result}@{}"</span>, <span class="kw">if </span>units { <span class="string">"u" </span>} <span class="kw">else </span>{ <span class="string">"-" </span>})
+<a href=#1658 id=1658 data-nosnippet>1658</a>  }
+<a href=#1659 id=1659 data-nosnippet>1659</a>
+<a href=#1660 id=1660 data-nosnippet>1660</a>  <span class="doccomment">/// Golden corpus pinning the battle-tested recdescent's behavior
+<a href=#1661 id=1661 data-nosnippet>1661</a>  /// (captured 2026-06-10) — incl. its deliberate quirks (ternary dropped
+<a href=#1662 id=1662 data-nosnippet>1662</a>  /// after a comparison parse, pass-through formatting of "+3"/"3.").
+<a href=#1663 id=1663 data-nosnippet>1663</a>  /// The gate for the winnow grammar: divergence = regression.
+<a href=#1664 id=1664 data-nosnippet>1664</a>  </span><span class="attr">#[test]
+<a href=#1665 id=1665 data-nosnippet>1665</a>  </span><span class="kw">fn </span>golden_pgfmath_corpus() {
+<a href=#1666 id=1666 data-nosnippet>1666</a>    latexml_core::state::set_state(latexml_core::state::State::new(
+<a href=#1667 id=1667 data-nosnippet>1667</a>      latexml_core::state::StateOptions::default(),
+<a href=#1668 id=1668 data-nosnippet>1668</a>    ));
+<a href=#1669 id=1669 data-nosnippet>1669</a>    <span class="kw">let </span>golden: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)] = <span class="kw-2">&amp;</span>[
+<a href=#1670 id=1670 data-nosnippet>1670</a>      (<span class="string">"1+1"</span>, <span class="string">"2.0@-"</span>),
+<a href=#1671 id=1671 data-nosnippet>1671</a>      (<span class="string">"2+3*4"</span>, <span class="string">"14.0@-"</span>),
+<a href=#1672 id=1672 data-nosnippet>1672</a>      (<span class="string">"2*3+4"</span>, <span class="string">"10.0@-"</span>),
+<a href=#1673 id=1673 data-nosnippet>1673</a>      (<span class="string">"10/4"</span>, <span class="string">"2.5@-"</span>),
+<a href=#1674 id=1674 data-nosnippet>1674</a>      (<span class="string">"2^10"</span>, <span class="string">"1024.0@-"</span>),
+<a href=#1675 id=1675 data-nosnippet>1675</a>      (<span class="string">"(1+2)*3"</span>, <span class="string">"9.0@-"</span>),
+<a href=#1676 id=1676 data-nosnippet>1676</a>      (<span class="string">"-5+2"</span>, <span class="string">"-3.0@-"</span>),
+<a href=#1677 id=1677 data-nosnippet>1677</a>      (<span class="string">"+3"</span>, <span class="string">"3@-"</span>),
+<a href=#1678 id=1678 data-nosnippet>1678</a>      (<span class="string">"--2"</span>, <span class="string">"2.0@-"</span>),
+<a href=#1679 id=1679 data-nosnippet>1679</a>      (<span class="string">"3!"</span>, <span class="string">"6.0@-"</span>),
+<a href=#1680 id=1680 data-nosnippet>1680</a>      (<span class="string">"1.5^2"</span>, <span class="string">"2.25@-"</span>),
+<a href=#1681 id=1681 data-nosnippet>1681</a>      (<span class="string">"7/2"</span>, <span class="string">"3.5@-"</span>),
+<a href=#1682 id=1682 data-nosnippet>1682</a>      (<span class="string">"1/3"</span>, <span class="string">"0.33333@-"</span>),
+<a href=#1683 id=1683 data-nosnippet>1683</a>      (<span class="string">"57.29577951r"</span>, <span class="string">"3282.80635@-"</span>),
+<a href=#1684 id=1684 data-nosnippet>1684</a>      (<span class="string">"0x1F"</span>, <span class="string">"31.0@-"</span>),
+<a href=#1685 id=1685 data-nosnippet>1685</a>      (<span class="string">"0b101"</span>, <span class="string">"5.0@-"</span>),
+<a href=#1686 id=1686 data-nosnippet>1686</a>      (<span class="string">".5"</span>, <span class="string">"0.5@-"</span>),
+<a href=#1687 id=1687 data-nosnippet>1687</a>      (<span class="string">"3."</span>, <span class="string">"3.@-"</span>),
+<a href=#1688 id=1688 data-nosnippet>1688</a>      (<span class="string">"1.2e3"</span>, <span class="string">"1200.0@-"</span>),
+<a href=#1689 id=1689 data-nosnippet>1689</a>      (<span class="string">"1e-2"</span>, <span class="string">"0.01@-"</span>),
+<a href=#1690 id=1690 data-nosnippet>1690</a>      (<span class="string">"2.5E+2"</span>, <span class="string">"250.0@-"</span>),
+<a href=#1691 id=1691 data-nosnippet>1691</a>      (<span class="string">"."</span>, <span class="string">"0.0@-"</span>),
+<a href=#1692 id=1692 data-nosnippet>1692</a>      (<span class="string">"2pt"</span>, <span class="string">"2.0@u"</span>),
+<a href=#1693 id=1693 data-nosnippet>1693</a>      (<span class="string">"1cm"</span>, <span class="string">"28.45276@u"</span>),
+<a href=#1694 id=1694 data-nosnippet>1694</a>      (<span class="string">"10mm"</span>, <span class="string">"28.45276@u"</span>),
+<a href=#1695 id=1695 data-nosnippet>1695</a>      (<span class="string">"1in"</span>, <span class="string">"72.27@u"</span>),
+<a href=#1696 id=1696 data-nosnippet>1696</a>      (<span class="string">"3bp"</span>, <span class="string">"3.01125@u"</span>),
+<a href=#1697 id=1697 data-nosnippet>1697</a>      (<span class="string">"1dd"</span>, <span class="string">"1.07001@u"</span>),
+<a href=#1698 id=1698 data-nosnippet>1698</a>      (<span class="string">"1cc"</span>, <span class="string">"12.8401@u"</span>),
+<a href=#1699 id=1699 data-nosnippet>1699</a>      (<span class="string">"100sp"</span>, <span class="string">"0.00153@u"</span>),
+<a href=#1700 id=1700 data-nosnippet>1700</a>      (<span class="string">"3&gt;2"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1701 id=1701 data-nosnippet>1701</a>      (<span class="string">"2&gt;=3"</span>, <span class="string">"0.0@-"</span>),
+<a href=#1702 id=1702 data-nosnippet>1702</a>      (<span class="string">"1==1"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1703 id=1703 data-nosnippet>1703</a>      (<span class="string">"1!=2"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1704 id=1704 data-nosnippet>1704</a>      (<span class="string">"1&amp;&amp;0"</span>, <span class="string">"0.0@-"</span>),
+<a href=#1705 id=1705 data-nosnippet>1705</a>      (<span class="string">"0||1"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1706 id=1706 data-nosnippet>1706</a>      (<span class="string">"3&gt;2 ? 10 : 20"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1707 id=1707 data-nosnippet>1707</a>      (<span class="string">"(1&lt;2)&amp;&amp;(3&lt;4)"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1708 id=1708 data-nosnippet>1708</a>      (<span class="string">"!1"</span>, <span class="string">"0.0@-"</span>),
+<a href=#1709 id=1709 data-nosnippet>1709</a>      (<span class="string">"!0"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1710 id=1710 data-nosnippet>1710</a>      (<span class="string">"sin(30)"</span>, <span class="string">"0.5@-"</span>),
+<a href=#1711 id=1711 data-nosnippet>1711</a>      (<span class="string">"cos(60)"</span>, <span class="string">"0.5@-"</span>),
+<a href=#1712 id=1712 data-nosnippet>1712</a>      (<span class="string">"tan(45)"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1713 id=1713 data-nosnippet>1713</a>      (<span class="string">"min(3,5)"</span>, <span class="string">"3.0@-"</span>),
+<a href=#1714 id=1714 data-nosnippet>1714</a>      (<span class="string">"max(3,5)"</span>, <span class="string">"5.0@-"</span>),
+<a href=#1715 id=1715 data-nosnippet>1715</a>      (<span class="string">"mod(7,3)"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1716 id=1716 data-nosnippet>1716</a>      (<span class="string">"abs(-4)"</span>, <span class="string">"4.0@-"</span>),
+<a href=#1717 id=1717 data-nosnippet>1717</a>      (<span class="string">"sqrt(16)"</span>, <span class="string">"4.0@-"</span>),
+<a href=#1718 id=1718 data-nosnippet>1718</a>      (<span class="string">"floor(1.7)"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1719 id=1719 data-nosnippet>1719</a>      (<span class="string">"ceil(1.2)"</span>, <span class="string">"2.0@-"</span>),
+<a href=#1720 id=1720 data-nosnippet>1720</a>      (<span class="string">"round(2.5)"</span>, <span class="string">"3.0@-"</span>),
+<a href=#1721 id=1721 data-nosnippet>1721</a>      (<span class="string">"int(3.9)"</span>, <span class="string">"3@-"</span>),
+<a href=#1722 id=1722 data-nosnippet>1722</a>      (<span class="string">"exp(1)"</span>, <span class="string">"2.71828@-"</span>),
+<a href=#1723 id=1723 data-nosnippet>1723</a>      (<span class="string">"ln(2.718281828)"</span>, <span class="string">"1.0@-"</span>),
+<a href=#1724 id=1724 data-nosnippet>1724</a>      (<span class="string">"pow(2,8)"</span>, <span class="string">"256.0@-"</span>),
+<a href=#1725 id=1725 data-nosnippet>1725</a>      (<span class="string">"veclen(3,4)"</span>, <span class="string">"5.0@-"</span>),
+<a href=#1726 id=1726 data-nosnippet>1726</a>      (<span class="string">"atan(1)"</span>, <span class="string">"45.0@-"</span>),
+<a href=#1727 id=1727 data-nosnippet>1727</a>      (<span class="string">"pi"</span>, <span class="string">"3.14159@-"</span>),
+<a href=#1728 id=1728 data-nosnippet>1728</a>      (<span class="string">"e"</span>, <span class="string">"2.71828@-"</span>),
+<a href=#1729 id=1729 data-nosnippet>1729</a>      (<span class="string">"pi*2"</span>, <span class="string">"6.28319@-"</span>),
+<a href=#1730 id=1730 data-nosnippet>1730</a>      (<span class="string">"sin 30"</span>, <span class="string">"0.5@-"</span>),
+<a href=#1731 id=1731 data-nosnippet>1731</a>      (<span class="string">"{1}+{2}"</span>, <span class="string">"3.0@-"</span>),
+<a href=#1732 id=1732 data-nosnippet>1732</a>      (<span class="string">" 1 + { 2 } "</span>, <span class="string">"3.0@-"</span>),
+<a href=#1733 id=1733 data-nosnippet>1733</a>      (<span class="string">"2*3pt"</span>, <span class="string">"6.0@u"</span>),
+<a href=#1734 id=1734 data-nosnippet>1734</a>    ];
+<a href=#1735 id=1735 data-nosnippet>1735</a>    <span class="kw">for </span>(expr, expected) <span class="kw">in </span>golden {
+<a href=#1736 id=1736 data-nosnippet>1736</a>      <span class="macro">assert_eq!</span>(<span class="kw-2">&amp;</span>describe(expr), expected, <span class="string">"pgfmath diverged on {expr:?}"</span>);
+<a href=#1737 id=1737 data-nosnippet>1737</a>    }
+<a href=#1738 id=1738 data-nosnippet>1738</a>  }
+<a href=#1739 id=1739 data-nosnippet>1739</a>
+<a href=#1740 id=1740 data-nosnippet>1740</a>  <span class="doccomment">/// Review B2: a huge factorial argument must NOT spin the product loop.
+<a href=#1741 id=1741 data-nosnippet>1741</a>  /// `1e20!` saturates `n` to ~9.2e18; the pre-fix code looped that many
+<a href=#1742 id=1742 data-nosnippet>1742</a>  /// times (hang/DoS reachable from `\pgfmathparse{1e20!}`). It must now
+<a href=#1743 id=1743 data-nosnippet>1743</a>  /// return promptly with the Perl overflow value (0). The test itself
+<a href=#1744 id=1744 data-nosnippet>1744</a>  /// completing IS the DoS assertion.
+<a href=#1745 id=1745 data-nosnippet>1745</a>  </span><span class="attr">#[test]
+<a href=#1746 id=1746 data-nosnippet>1746</a>  </span><span class="kw">fn </span>factorial_overflow_is_bounded() {
+<a href=#1747 id=1747 data-nosnippet>1747</a>    latexml_core::state::set_state(latexml_core::state::State::new(
+<a href=#1748 id=1748 data-nosnippet>1748</a>      latexml_core::state::StateOptions::default(),
+<a href=#1749 id=1749 data-nosnippet>1749</a>    ));
+<a href=#1750 id=1750 data-nosnippet>1750</a>    <span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"1e20!"</span>), <span class="string">"0.0"</span>);
+<a href=#1751 id=1751 data-nosnippet>1751</a>    <span class="comment">// A few more saturating / large arguments — all overflow → 0, no spin.
+<a href=#1752 id=1752 data-nosnippet>1752</a>    </span><span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"1000000!"</span>), <span class="string">"0.0"</span>);
+<a href=#1753 id=1753 data-nosnippet>1753</a>    <span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"100!"</span>), <span class="string">"0.0"</span>);
+<a href=#1754 id=1754 data-nosnippet>1754</a>    <span class="comment">// Small factorials still compute (table path).
+<a href=#1755 id=1755 data-nosnippet>1755</a>    </span><span class="macro">assert_eq!</span>(<span class="kw">super</span>::pgfmathparse_eval(<span class="string">"5!"</span>), <span class="string">"120.0"</span>);
+<a href=#1756 id=1756 data-nosnippet>1756</a>  }
+<a href=#1757 id=1757 data-nosnippet>1757</a>
+<a href=#1758 id=1758 data-nosnippet>1758</a>  <span class="doccomment">/// Review M4: an invalid op yields NaN; the PUBLIC parse path must degrade
+<a href=#1759 id=1759 data-nosnippet>1759</a>  /// it to "0.0", never serialize the literal "NaN" (which would poison a
+<a href=#1760 id=1760 data-nosnippet>1760</a>  /// downstream `\pgfmathresult` dimension read).
+<a href=#1761 id=1761 data-nosnippet>1761</a>  </span><span class="attr">#[test]
+<a href=#1762 id=1762 data-nosnippet>1762</a>  </span><span class="kw">fn </span>nan_results_format_as_zero() {
+<a href=#1763 id=1763 data-nosnippet>1763</a>    latexml_core::state::set_state(latexml_core::state::State::new(
+<a href=#1764 id=1764 data-nosnippet>1764</a>      latexml_core::state::StateOptions::default(),
+<a href=#1765 id=1765 data-nosnippet>1765</a>    ));
+<a href=#1766 id=1766 data-nosnippet>1766</a>    <span class="kw">for </span>expr <span class="kw">in </span>[<span class="string">"sqrt(-1)"</span>, <span class="string">"ln(-1)"</span>, <span class="string">"asin(5)"</span>, <span class="string">"acos(-5)"</span>] {
+<a href=#1767 id=1767 data-nosnippet>1767</a>      <span class="macro">assert_eq!</span>(
+<a href=#1768 id=1768 data-nosnippet>1768</a>        <span class="kw">super</span>::pgfmathparse_eval(expr),
+<a href=#1769 id=1769 data-nosnippet>1769</a>        <span class="string">"0.0"</span>,
+<a href=#1770 id=1770 data-nosnippet>1770</a>        <span class="string">"non-finite {expr} must format as 0.0, not the literal NaN/inf"
+<a href=#1771 id=1771 data-nosnippet>1771</a>      </span>);
+<a href=#1772 id=1772 data-nosnippet>1772</a>    }
+<a href=#1773 id=1773 data-nosnippet>1773</a>  }
+<a href=#1774 id=1774 data-nosnippet>1774</a>}
 </code></pre></div></section></main></body></html>

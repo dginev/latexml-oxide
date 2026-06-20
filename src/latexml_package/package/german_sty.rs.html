@@ -84,9 +84,16 @@
 <a href=#84 id=84 data-nosnippet>84</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(defn) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@german@dq@dispatch"</span>)) {
 <a href=#85 id=85 data-nosnippet>85</a>    assign_meaning(<span class="kw-2">&amp;</span><span class="macro">T_ACTIVE!</span>(<span class="string">'"'</span>), defn, <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#86 id=86 data-nosnippet>86</a>  }
-<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
-<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\bbl@allowhyphens{}"</span>);
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}"</span>);
-<a href=#90 id=90 data-nosnippet>90</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\bbl@sz{\ss}\providecommand\bbl@SZ{SZ}"</span>);
-<a href=#91 id=91 data-nosnippet>91</a>});
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// germanb.ldf L173: `\def\dq{"}` — `\dq` yields a literal double-quote (the
+<a href=#88 id=88 data-nosnippet>88</a>  // saved catcode-12 `"`, since `"` itself becomes the active shorthand). Map to
+<a href=#89 id=89 data-nosnippet>89</a>  // `\textquotedbl`, LaTeXML's literal double-quote. (An earlier note recorded
+<a href=#90 id=90 data-nosnippet>90</a>  // `\dq` as "actively undefined after this binding runs" — that was while the
+<a href=#91 id=91 data-nosnippet>91</a>  // binding truncated past L57, before `\bbl@allowhyphens` below was added; the
+<a href=#92 id=92 data-nosnippet>92</a>  // truncation is resolved, so this now sticks.)
+<a href=#93 id=93 data-nosnippet>93</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\dq{\textquotedbl}"</span>);
+<a href=#94 id=94 data-nosnippet>94</a>  <span class="comment">// germanb.ldf helper stubs — no-op in Rust (no hyphenation / ligature phase).
+<a href=#95 id=95 data-nosnippet>95</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\bbl@allowhyphens{}"</span>);
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\bbl@ss{\ss}\providecommand\bbl@SS{SS}"</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\bbl@sz{\ss}\providecommand\bbl@SZ{SZ}"</span>);
+<a href=#98 id=98 data-nosnippet>98</a>});
 </code></pre></div></section></main></body></html>

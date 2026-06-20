@@ -1792,5 +1792,30 @@
 <a href=#1792 id=1792 data-nosnippet>1792</a>  // stub as a no-op so callers don't crash on undefined CS.
 <a href=#1793 id=1793 data-nosnippet>1793</a>  // Witnesses: 2405.19979, 2405.19935 (both tkz-euclide).
 <a href=#1794 id=1794 data-nosnippet>1794</a>  </span>def_macro_noop(<span class="string">"\\PatchFailed"</span>)<span class="question-mark">?</span>;
-<a href=#1795 id=1795 data-nosnippet>1795</a>});
+<a href=#1795 id=1795 data-nosnippet>1795</a>
+<a href=#1796 id=1796 data-nosnippet>1796</a>  <span class="comment">// LaTeXML-only: \robustify must NO-OP on a NATIVE (closure-bodied) binding.
+<a href=#1797 id=1797 data-nosnippet>1797</a>  // Many LaTeXML commands (e.g. natbib's \cite) are realized as Rust closures,
+<a href=#1798 id=1798 data-nosnippet>1798</a>  // whose \meaning renders as "...-&gt;CODE(0x...)". etoolbox's \robustify
+<a href=#1799 id=1799 data-nosnippet>1799</a>  // reconstructs a macro from its \meaning via \scantokens; for a native binding
+<a href=#1800 id=1800 data-nosnippet>1800</a>  // that yields a broken text-bodied "CODE(0x...)" macro that grabs the wrong
+<a href=#1801 id=1801 data-nosnippet>1801</a>  // number of args (Perl has the SAME bug — it silently emits the pointer text;
+<a href=#1802 id=1802 data-nosnippet>1802</a>  // we surfaced it as errors when the mangled \cite swallowed a following
+<a href=#1803 id=1803 data-nosnippet>1803</a>  // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
+<a href=#1804 id=1804 data-nosnippet>1804</a>  // Native bindings are already robust, so the faithful behavior is to leave them
+<a href=#1805 id=1805 data-nosnippet>1805</a>  // untouched. `\lx@ifnativecmd` mirrors etoolbox's own \ifdefmacro \meaning-split
+<a href=#1806 id=1806 data-nosnippet>1806</a>  // idiom, using "CODE(" as the sentinel.
+<a href=#1807 id=1807 data-nosnippet>1807</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#1808 id=1808 data-nosnippet>1808</a>    <span class="string">r"
+<a href=#1809 id=1809 data-nosnippet>1809</a>\newcommand{\lx@ifnativecmd}{}
+<a href=#1810 id=1810 data-nosnippet>1810</a>\long\edef\lx@ifnativecmd#1{%
+<a href=#1811 id=1811 data-nosnippet>1811</a>  \noexpand\expandafter\noexpand\lx@etb@ifnativecmd
+<a href=#1812 id=1812 data-nosnippet>1812</a>  \noexpand\meaning#1\detokenize{CODE(}&amp;}
+<a href=#1813 id=1813 data-nosnippet>1813</a>\edef\lx@etb@ifnativecmd{%
+<a href=#1814 id=1814 data-nosnippet>1814</a>  \def\noexpand\lx@etb@ifnativecmd##1\detokenize{CODE(}##2&amp;}
+<a href=#1815 id=1815 data-nosnippet>1815</a>\lx@etb@ifnativecmd{\notblank{#2}}
+<a href=#1816 id=1816 data-nosnippet>1816</a>\let\lx@saved@robustify\robustify
+<a href=#1817 id=1817 data-nosnippet>1817</a>\protected\def\robustify#1{\lx@ifnativecmd{#1}{}{\lx@saved@robustify{#1}}}
+<a href=#1818 id=1818 data-nosnippet>1818</a>"
+<a href=#1819 id=1819 data-nosnippet>1819</a>  </span>);
+<a href=#1820 id=1820 data-nosnippet>1820</a>});
 </code></pre></div></section></main></body></html>

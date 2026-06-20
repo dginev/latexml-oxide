@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_RED_ZONE_BYTES","DEFAULT_SEGMENT_BYTES","ENV_RED_ZONE","ENV_SEGMENT"],"fn":["maybe_grow","red_zone_bytes","segment_bytes","set_red_zone_bytes","set_segment_bytes"]};
