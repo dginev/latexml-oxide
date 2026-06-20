@@ -2530,35 +2530,42 @@ See WISDOM #55 for the full rationale. Long-term north star: shrink the
 51-stub set by making raw `.cls`/`.sty` interpretation robust enough that
 the automatic fallback subsumes each one.
 
-### Round-37 (2026-06-20): broad deferred/open re-sweep (58 papers) + OmniBus disk-`.cls` lever
+### Round-37 (2026-06-20): broad deferred/open re-sweep (58 papers); OmniBus "lever" RETRACTED (it was a `--quiet` artifact)
 
 Widened the stale-sweep: re-ran 58 deferred/open papers (branch binary w/ `\dq`,
 scantokens, P1 fixes; `cortex_worker --standalone`). **37 convert clean (0 err)**;
 21 still fail. The single-error tail breaks down as:
 
-- **OmniBus disk-`.cls`-body NOT raw-loaded (HIGH-VALUE lever).** `\qed` +
-  `\newproof` (1809.00236, `ectj.cls`), `\except` (1911.02137, `CCRpaper`),
-  `\abntnextkey` (1910.04251) etc. trace to ONE root: when a paper ships an
-  unknown class **on disk** (e.g. `ectj.cls`, which defines `\newcommand*{\qed}…`
-  at L597), Rust hits the OmniBus fallback (`tex_job.rs` Branch 3) and only
-  **dep-scans** the `.cls` (`\RequirePackage` extraction) — it never raw-loads the
-  class **body**, so the class's own macros are undefined. **Perl raw-loads the
-  real `.cls`** (verified: 1809.00236 Perl=0 err, `\qed` works; only `ectj.cls`
-  defines `\qed`). This is a class-loading divergence affecting many custom-class
-  papers — a high-value but core-risk lever (arbitrary `.cls` TeX), and it brushes
-  the deliberately-"tolerated" OmniBus shortcut (task #273). Dedicated session.
+- **`\qed`/`\newproof`/`\except` (custom-class) — SHARED, NOT a Rust-only gap.**
+  ⚠️ **CORRECTION (2026-06-20, same day): the earlier "OmniBus disk-`.cls`
+  raw-load lever" claim here was WRONG — a `--quiet` artifact.** `\qed`
+  (1809.00236, `ectj.cls`), `\except` (1911.02137), `\abntnextkey` (1910.04251)
+  etc. are emitted by an unknown class shipped on disk whose body Rust's OmniBus
+  fallback only dep-scans (not raw-loads). But **Perl does the SAME** — `latexml
+  --verbose` shows Perl ALSO prints *"Can't find binding for class … (using
+  OmniBus)"*, dep-scans, and **also errors `undefined:\qed`/`\newproof`** (verified
+  on the minimal ectj repro AND on 1809.00236's `supplement.tex`: Perl `--verbose`
+  = 1 `\qed` error, identical to Rust). The prior "Perl=0" reading came from
+  `latexml --quiet`, **which suppresses Perl's errors** — the exact trap CLAUDE.md
+  / this log warns about ("classify with `--verbose`, never `--quiet`"). So there
+  is **no OmniBus raw-load divergence** and **no high-value lever here**; these are
+  shared OmniBus limitations. (A separate, genuine surpass-Perl idea — make
+  *both*-failing custom-class macros resolve — would be beyond-Perl R&D, not a
+  parity fix.)
 - **`\endgroup`/mode-horizontal cluster** (2009.05630, 1702.06692, 1702.02037,
   1611.04940 — 1-2 err each): "Attempt to close a group that switched to mode
   horizontal" — the same box/mode-frame machinery as the 1610.00974 alignment
-  blocker. Deep.
-- **SHARED, not Rust gaps:** `\sep` (1810.06908) — Perl *times out* (exit 124),
-  so not a clean parity target.
+  blocker. Deep; Perl-parity not yet checked (use `--verbose`).
+- **SHARED, not Rust gaps:** `\sep` (1810.06908) — Perl *times out* (exit 124).
 - **Large/known:** 2203.05327 (443), 1705.10306 (357), 1804.01117 (305, fatal),
-  `\NiceTabular` (2212.09528, nicematrix stub).
+  `\NiceTabular` (2212.09528, nicematrix stub). Perl-parity unverified.
 
-Method note: the broad grep over "DEFERRED|Rust-only" is noisy (catches IDs in
-FIXED entries too), so each candidate was re-tested individually; the 37 clean are
-confirmed-resolved. The actionable cluster is the OmniBus disk-`.cls` lever above.
+**METHODOLOGY LESSON (re-learned the hard way 2026-06-20):** every Perl-parity
+check MUST use `latexml --verbose` (or read `.latexml.log`), NEVER `latexml
+--quiet` — `--quiet` hides Perl's `Error:` lines and makes SHARED failures look
+Rust-only. Two conclusions in this very sweep (the OmniBus "lever" and a "Rust-only
+`\qed`") were false positives from `--quiet` and are retracted above. The 37
+clean-in-Rust results stand (those are Rust error counts, not Perl comparisons).
 
 ### Round-37 (2026-06-20): stale-DEFERRED re-test sweep — 12 of 15 now convert with 0 errors
 
