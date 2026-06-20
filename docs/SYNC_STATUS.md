@@ -154,7 +154,8 @@ the METARELOP `formula_list` rule added `50dbf352aa` — common in
 `\forall x : P \quad Q` notation).
 **Still open (reproduces as `ltx_math_unparsed` in Rust, parses in Perl):**
 - **two leading operators + tail → SILENT prefix parse dropping the tail**
-  (found 2026-06-20; ROOT-CAUSED 2026-06-20; CONTENT-LOSS): the start rule
+  (found 2026-06-20; ROOT-CAUSED 2026-06-20; **CONTENT-LOSS FIXED `a75fbf17ed`** —
+  only the N-ary listing enhancement remains, see end of entry): the start rule
   `anything` has a binary alternative `anyop anyop => compound_operator_2`
   (builder.rs:1042). The hybrid engine accepts this 2-lexeme parse as a PREFIX
   of a longer input and the tree extraction keeps only those 2, silently
@@ -166,14 +167,21 @@ the METARELOP `formula_list` rule added `50dbf352aa` — common in
   lists — it's any input whose first two lexemes are operators and whose tail
   doesn't reduce. `\quad`-separated (WIDE_PUNCT) and comma-separated lists are
   N-ary and DO match Perl (they go through the punct list rules, not the
-  prefix-accepting `anyop anyop`). FIX DIRECTION for the focused session: the
-  hybrid parser must require the accepted parse to span ALL input lexemes (a
-  prefix parse should fall to the token-preserving kludge / `ltx_math_unparsed`,
-  matching Perl), and/or `anyop anyop` should be made N-ary (`compound_operator_2`
-  → recursive list) — both ambiguity-sensitive, needs full-suite + Perl
-  cross-check, NOT a safe cron change. (The trigger — two LEADING bare operators
-  — is itself uncommon in real math, but the silent content loss is why it's the
-  higher-priority half here.)
+  prefix-accepting `anyop anyop`). **FIXED 2026-06-20 (`a75fbf17ed`):** the
+  content-loss half is resolved — `parse_marpa` now wraps the ByteScanner in a
+  `CountingTokens` adapter and, after the engine returns, rejects the parse when
+  `consumed < input.trim_end().len()` (the recognizer exhausted before reaching
+  the last real byte). Such formulae fall to the token-preserving kludge /
+  `ltx_math_unparsed`, so the tail is no longer dropped: `+ - a` now matches
+  Perl (unparsed); `+ - \times \div` / `\leq \geq \neq \approx` mark unparsed
+  with ALL tokens preserved. A genuine full parse always consumes every real
+  byte, so the guard never rejects valid math (suite 1465/0; verified on a
+  battery of complex formulas). **REMAINING (lower priority, no content loss):**
+  the N-ary bare-operator upgrade — Perl emits `list@(+, -, *, /)` where Rust now
+  emits unparsed — needs `anyop anyop` → recursive `compound_operator_2` list
+  (the action's own `// TODO: extend to the n-ary case`); ambiguity-sensitive,
+  for the focused grammar session. (Trigger — two LEADING bare operators — is
+  itself uncommon in real math.)
   - **EXACT ROOT CAUSE (traced 2026-06-20):** the marpa fork's `Parser::read`
     (`marpa/src/parser/mod.rs:130`) does `if r.is_exhausted() { break; }` — it
     stops reading the instant the recognizer exhausts, leaving the remaining
