@@ -82,6 +82,13 @@ hash + page + DPI + format + render-affecting flags; exclude
 timestamps/tmpdir paths; bump a `cache_namespace` constant when
 fixing a rendering bug rather than relying on hash invalidation.
 
+**Resolver footgun**: extensionless graphics lookup is also an
+external-process risk. If `image_candidates` falls through to kpathsea
+for `<path>.png` / `<path>.pdf`, memoize both hits and misses by
+`(SOURCEDIRECTORY, path)`. On subprocess-backed kpathsea
+(`kpsewhich`), repeated missing figures can otherwise pay a fresh
+10–50 ms fork-exec for every `\includegraphics` reference.
+
 ---
 
 ## Phase distribution (190k aggregate, 2026-05-02..03)
@@ -253,7 +260,7 @@ The key release deliverable is a **maximally-performant, smallest**
 panic=abort, stripped, `--no-default-features --features runtime-bindings`).
 Beyond the source-level principles above, these are *build-time* levers.
 **Prerequisite for all of them:** pin the nightly toolchain
-(`rust-toolchain.toml`) so PGO / `-Z build-std` / codegen are reproducible
+(`rust-toolchain.toml`) so `-Z build-std` / codegen are reproducible
 and not at the mercy of nightly churn (we hit a live example: the
 `build-std-features=panic_immediate_abort` flag was renamed to a real
 `-Cpanic=immediate-abort` strategy on a 2026-06 nightly).
@@ -302,10 +309,9 @@ both fight the project's goals:
    highest-performance goal.
 
 **Decision (2026-06-11): accept the size.** 47 MB is the cost of feature-complete
-LaTeX coverage; spend the optimization budget on PGO (real perf headroom on the
-full-corpus run) rather than shrinking `.text`. Confirms the long-standing
-attribution: the binary is `.text`/binding-pool, **not** dumps (those gzip to
-~870 KB).
+LaTeX coverage; spend effort on engine-level wins rather than shrinking `.text`.
+Confirms the long-standing attribution: the binary is `.text`/binding-pool,
+**not** dumps (those gzip to ~870 KB).
 
 Reproduce (symbol-preserving, no-LTO so code stays attributed to its origin crate):
 
@@ -315,41 +321,6 @@ CARGO_PROFILE_RELEASE_LTO=off \
 cargo bloat --release --no-default-features --features runtime-bindings \
   --bin latexml_oxide --crates       # drop --crates, add -n 30 for per-function
 ```
-
-### High-effort (tracked tasks — not yet attempted)
-
-> **Measurement venue.** PGO, BOLT and the `target-cpu` decision all need
-> full-scale empirical measurement and belong on the **new hardware running the
-> entire arXiv corpus** (expected ~mid-June 2026), not the dev box. Schedule
-> them there; this dev box is freeze-prone under heavy builds and unrepresentative
-> for perf numbers.
-
-- **[~] PGO (Profile-Guided Optimization) — TOOLING LANDED 2026-06-20, measurement
-  pending.** The single largest perf lever for this CPU-bound tool; typically
-  10–20% on hot paths. We have the ideal training set: the arXiv sandbox corpus.
-  **`tools/make_release_pgo.sh`** implements passes 1–3 (instrument with
-  `-Cprofile-generate` → train over a diverse `*.tex` slice → `llvm-profdata
-  merge` into `target/pgo/merged.profdata`); **pass 4 is `make_release.sh`**,
-  which now honors `PGO_PROFILE=<merged.profdata>` and feeds `-Cprofile-use`
-  (+`-pgo-warn-missing-function`, since the profile is function-keyed and stacks
-  over the faster `release` instrument profile) into its existing maxperf
-  (fat-LTO/CGU-1) build — PGO stacks with LTO because the profile informs LTO
-  inlining. Operator recipe:
-  `PGO_TRAIN_DIR=/data/arxiv/2106 bash tools/make_release_pgo.sh` then
-  `PGO_PROFILE=target/pgo/merged.profdata bash tools/make_release.sh`. Pipeline
-  mechanics validated end-to-end at the `dev` profile (instrument→train→merge→
-  profile-use→run); the **maxperf measurement** is reserved for the full-corpus
-  hardware (see the venue note above). Prereq: `rustup component add
-  llvm-tools-preview` (the script resolves `llvm-profdata` from the active
-  toolchain sysroot, so its version matches rustc). Operator procedure:
-  `docs/RELEASING.md` step 3b — an on-machine release step with a real
-  `PGO_TRAIN_DIR=/data/arxiv/…` slice, **not** a GitHub-Actions job (a runner has
-  no arXiv corpus; toy-corpus training would optimize the wrong hot paths).
-  Remaining: the standing-corpus wall before/after per the checklist below, on
-  the full-corpus hardware.
-- **[ ] BOLT (post-link binary optimization)** — stacks on PGO for a further
-  few % by reordering hot/cold code in the linked binary (`llvm-bolt` + a
-  profiling run on the final executable). Attempt only after PGO lands.
 
 ### Lower-effort levers (measure / decide)
 
@@ -365,14 +336,13 @@ cargo bloat --release --no-default-features --features runtime-bindings \
   mid-evaluation) for 0.2%. Revisit only if the C-dep `.eh_frame` is addressed
   separately. (Aside: panic=abort already no-ops the `catch_unwind` backstops in
   `pathname.rs` — an accepted CLI trade, unrelated to build-std.)
-- **[ ] `target-cpu` baseline (decision) — DEFERRED to the full-corpus run.**
-  Release builds for the conservative default `x86-64` (no SSE4/AVX).
-  `-Ctarget-cpu=x86-64-v2` (SSE4.2, ~2009+) or `v3` (AVX2, ~2013+) can speed hot
-  loops at the cost of older CPUs — a deliberate **portability call**, not a free
-  win. macOS arm64 is already a fixed Apple-Silicon baseline. Examine this on the
-  **new hardware running the entire arXiv corpus** (expected ~mid-June 2026, a
-  few days after 2026-06-11), NOT on this dev box — the speedup is only
-  meaningful measured at full-corpus scale on representative hardware.
+- **`target-cpu` baseline (decision) — MEASURED 2026-06-21: NO GAIN, keep
+  portable `x86-64`.** On the dedicated box (Threadripper 9980X, full AVX-512), a
+  396-paper serial sweep showed `-Ctarget-cpu=x86-64-v3` (AVX2) and `=native`
+  (AVX-512) both within ±2% of the default baseline (0.978x / 0.985x — i.e.
+  noise, marginally slower). The engine is not SIMD-amenable at the hot path
+  (branchy catcode/macro dispatch), so ISA widening buys nothing. **Decision:
+  keep the conservative `x86-64` default** — runs on any CPU, zero perf penalty.
 - **runtime-bindings (rhai) size cost — MEASURED (2026-06-11): +2.23 MB
   (~4.8%).** maxperf with `runtime-bindings` 46.69 MB vs without 44.46 MB
   (`.text` 39.75 vs 37.84 MB → ~1.91 MB of rhai engine code). Shipping it is the
@@ -493,6 +463,17 @@ messages. Keep here as breadcrumbs for regression triage.
   corpus throughput is higher. Override `--workers N` only when the
   canvas is known compute-bound (math/digest-heavy) rather than
   graphics-bound.
+
+### Graphics phase — open perf traps
+
+- **Cache extensionless kpathsea image lookup** — the Perl-parity fix in
+  `latexml_core/src/util/image.rs::image_candidates` correctly asks
+  kpathsea for `<path>.png` / `<path>.pdf` only after local graphics
+  paths miss. Preserve that output behavior, but cache the resolved
+  candidate or negative result by `(SOURCEDIRECTORY, path)`: repeated
+  references to the same missing extensionless graphic are common in
+  arXiv sources, and the kpathsea subprocess backend pays `kpsewhich`
+  latency on every uncached miss.
 
 ---
 

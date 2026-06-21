@@ -9,7 +9,7 @@ use std::{
   rc::Rc,
 };
 
-use libxml::tree::{Document as XmlDoc, Namespace, Node, NodeType, set_node_rc_guard};
+use libxml::tree::{Document as XmlDoc, Namespace, Node, NodeType};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -133,21 +133,12 @@ enum Placement_ {
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
-    // `NODE_RC_MAX_GUARD` is libxml's diagnostic threshold for mutable
-    // access to Rc-shared nodes; the real aliasing guarantee is the
-    // `weak_count == 0` check in `Node::mut_node`. For legitimate large
-    // documents (e.g. arxiv 0805.2376 with deep dcpic commutative-diagram
-    // sharing), natural ref counts exceed the crate's default of 2 by
-    // several orders of magnitude. Raise to 8192 to accommodate.
-    //
-    // libxml-rs implements this as a `pub static mut NODE_RC_MAX_GUARD:
-    // usize` with `unsafe { NODE_RC_MAX_GUARD = value; }` — concurrent
-    // writes from N test threads each constructing their own Document
-    // are a classic data race on a `static mut`. Gate the write through
-    // a `std::sync::Once` so it happens exactly once per process; reads
-    // from `Node::mut_node` then see a stable value.
-    static GUARD_INIT: std::sync::Once = std::sync::Once::new();
-    GUARD_INIT.call_once(|| set_node_rc_guard(8192));
+    // Node-mutation aliasing is enforced by libxml's `Node::node_ptr_mut`
+    // (`RefCell::try_borrow_mut`, libxml >= 0.3.14): it rejects only an *active*
+    // re-entrant borrow, not a high `Rc::strong_count` from benign clones. The
+    // former `set_node_rc_guard(8192)` band-aid — which raised a clone-count
+    // threshold to stop spurious "shared Node" errors on deeply-shared docs
+    // (e.g. arxiv 0805.2376 dcpic) — is no longer needed. See WISDOM.md #46.
     let doc_scaffold = XmlDoc::new().unwrap();
     let root = match doc_scaffold.get_root_element() {
       Some(root) => root,

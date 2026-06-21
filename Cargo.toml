@@ -89,6 +89,19 @@ codegen-units = 1
 # release/maxperf.
 panic = "abort"
 
+# Distribution-grade profile for the long-lived `cortex_worker` fleet.
+# Inherits maxperf's real performance levers (opt-level=3, fat LTO,
+# codegen-units=1) but keeps `panic = "unwind"`. Rationale: the maxperf
+# `panic = "abort"` setting is NOT a meaningful speed driver (it only drops
+# ~3.3 MiB of unwind tables and frees a little codegen), and it breaks
+# cortex_worker, whose canvas sweeps rely on `std::panic::catch_unwind` to
+# isolate per-paper panics. So we take all of maxperf's optimization and
+# only override the one setting that conflicts.
+#   cargo build --profile maxperf-cortex --features cortex --bin cortex_worker
+[profile.maxperf-cortex]
+inherits = "maxperf"
+panic = "unwind"
+
 # Profiling-friendly variant of release: same optimizer pipeline but full
 # debuginfo and unstripped symbols, so `perf record` / `cargo flamegraph`
 # get function-level samples. Use:

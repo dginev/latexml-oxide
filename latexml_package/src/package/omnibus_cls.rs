@@ -357,6 +357,11 @@ LoadDefinitions!({
   DefMacro!("\\doi{}",
     "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\
      \\else\\lx@doi{#1}\\fi");
+  // INTENTIONAL DIVERGENCE (Rust supersedes): Perl OmniBus.cls.ltxml:157 has a
+  // typo — `href="https:/doi.org/#1"` (single slash) — producing a broken DOI
+  // link. We emit the valid `https://`. A DOI href is a functional link, so per
+  // "fix simple Perl bugs in Rust" we keep the working URL. See
+  // KNOWN_PERL_ERRORS.md #36. (Do NOT revert to the single-slash form.)
   DefConstructor!("\\lx@doi{}",
     "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
     enter_horizontal => true);

@@ -2028,3 +2028,83 @@ across the equation→equationgroup rename (2311.01600 dangling `\Pr` refs);
 `rearrange_lone_ams_aligned` read empty `eq_id`; `get_node_language` read
 `xml:lang` as `None` → non-English math used `.`/`,` English conventions. Full
 analysis: `archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md`.
+
+---
+
+## 46. "Can not mutably reference a shared Node" is a false-positive guard, not a real aliasing check
+
+**Discovery:** The cortex 10k cross-join flagged a 16-paper cluster
+(`document/convert`, e.g. `0805.2376` dcpic commutative diagrams, `1407.0452`
+emulateapj deluxetable) erroring `Can not mutably reference a shared Node` —
+papers Perl converts cleanly. Re-running the **current** binary on `1407.0452`
+(0 errors) and `0805.2376` (0 shared-Node errors; its 32 errors are
+`\begindc`/`\obj` = host lacks the dcpic package, shared with Perl) confirms the
+cluster is **already gone** — the cortex run used a pre-fix binary. The live fix
+is `Document::new` raising `NODE_RC_MAX_GUARD` 2 → 8192 (`document.rs:~137`).
+
+**Analysis — why the guard is the wrong invariant.** `libxml::Node` is
+`Rc<RefCell<_Node>>` wrapping a raw `xmlNodePtr`. `node_ptr_mut`
+(`libxml-0.3.13/src/tree/node.rs:180`, reached by every `&mut self` mutator —
+`set_attribute`×135, `add_child`×47, `set_content`, `unlink_node`, …) gates
+mutation on `weak_count == 0 && strong_count <= NODE_RC_MAX_GUARD`. But
+`strong_count` counts **live `Node` clones**, which is NOT an active aliasing
+conflict:
+- libxml's own `document.nodes` cache holds **one persistent clone per node**
+  (`_wrap` returns the cached clone), so every node already sits at strong_count
+  ≥ 1 before anything else.
+- latexml_core bookkeeping adds more **legitimate** persistent/transient clones:
+  `idstore: HashMap<String, Node>` (one per `xml:id`'d node), `pending: Vec<Node>`,
+  `constructed_nodes` / `localized_constructed_nodes: Vec<Vec<Node>>`. So any
+  id'd node being mutated is already at ≥ 3 (cache + idstore + self), tripping the
+  default guard of 2; deep legitimate sharing (dcpic arrow grids, XMDual content
+  reuse) holds **thousands** of simultaneous clones during absorb.
+
+None of that is a borrow conflict. The **real** safety mechanism is
+`RefCell::borrow_mut()` on line 190. For a node **linked** in the tree, all
+handles to it resolve to ONE shared `RefCell` (the per-document `nodes` cache,
+keyed by `xmlNodePtr`, hands back a clone of the existing wrapper — see
+`_wrap`/`ptr_as_option`), so `try_borrow_mut` serializes access and detects a
+genuine active aliased borrow. The `&mut self` receiver is a second layer
+(compiler-enforced exclusive access to the handle). `strong_count <= GUARD` is a
+redundant THIRD layer that is simultaneously **over-strict** (false-positives on
+benign clones — what bit the 16 papers) and **under-protective** (it never
+actually prevents the real hazard: once you extract the `*mut xmlNode`, raw C
+calls mutate sibling/parent nodes outside any RefCell). Raising it to 8192
+doesn't fix the theory — it just moves the false-positive threshold higher.
+
+**Bound on the shared-`RefCell` guarantee (don't overclaim):** the identity
+cache is NOT total — `set_unlinked` (on `unlink_node`) and `import_node` call
+`forget_node`, evicting the pointer (deliberate: a freed C node's address can be
+reused, so a stale wrapper would mis-identify it). After eviction, re-wrapping
+the same pointer mints an INDEPENDENT `RefCell`, so two such handles to an
+unlinked node are not mutually exclusive. The old `strong_count` heuristic was
+equally blind to this (two independent `Rc`s, each low-count), so `try_borrow_mut`
+neither introduces nor worsens it — it's the same inherent C-wrapping footgun.
+The fix lives in the dginev `libxml` fork (0.3.14): `node_ptr_mut` now uses
+`try_borrow_mut`; `NODE_RC_MAX_GUARD`/`set_node_rc_guard` became deprecated
+no-ops. After latexml-oxide bumps to 0.3.14, drop the `set_node_rc_guard(8192)`
+call in `Document::new`.
+
+**Why no conflict actually occurs:** document construction is single-threaded
+(State is thread-local, one Document per conversion) and the builder mutates one
+node at a time without re-entering a live borrow. The only place a real
+re-entrant mutable borrow can arise is the Rhai constructor trampoline (#248 / SYNC_STATUS §3) — and there, failing LOUDLY is correct.
+
+**Recommended structural fix (in the dginev `libxml` fork — published 0.3.13, not
+checked out locally, no `[patch]`):** replace the `strong_count` heuristic in
+`node_ptr_mut` with the real invariant —
+```rust
+match self.0.try_borrow_mut() {
+  Ok(b) => Ok(b.node_ptr),           // no active aliased borrow ⇒ safe
+  Err(_) => Err("… node is actively borrowed …".into()),
+}
+```
+This is strictly sounder (catches the genuine re-entrancy, ignores benign clone
+count), eliminates the false-positive class entirely, and makes
+`NODE_RC_MAX_GUARD` / the 8192 band-aid dead code (remove after the fork bump).
+A purely in-repo mitigation (key `idstore` by `xmlNodePtr`/`usize` and re-wrap on
+lookup, so it stops holding a persistent clone) shaves a few counts but CANNOT
+remove the issue "in theory" — the cache-clone + deep-sharing reality always
+exceeds a small guard. **Sequencing:** keep 8192 load-bearing until the fork fix
+lands, then delete the guard plumbing. Do NOT lower the guard while the heuristic
+exists (regresses the 16 papers).

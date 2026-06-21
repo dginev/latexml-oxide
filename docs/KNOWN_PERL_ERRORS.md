@@ -1462,3 +1462,30 @@ behavior (`latex_constructs.rs` `\@framebox` properties): always emit
 condition is unconditionally true), not a beneficial divergence — verified
 byte-for-byte against `/usr/local/bin/latexml` (e.g. enum.tex: 6/6 framed boxes
 gain the cssstyle in both engines).
+
+## 36. OmniBus `\lx@doi` emits a malformed `https:/doi.org/` URL (single slash)
+
+**Perl source:** `LaTeXML/Package/OmniBus.cls.ltxml:157`
+```perl
+DefConstructor('\lx@doi{}', '<ltx:ref href="https:/doi.org/#1">#1</ltx:ref>');
+```
+
+**Symptom:** every `\doi{…}` in the body of an OmniBus-fallback document (any
+unknown `\documentclass`) produces a **broken** DOI link
+`href="https:/doi.org/<doi>"` — the scheme separator is `https:/` (one slash),
+not `https://`, so the URL does not resolve.
+
+**Root cause:** a plain typo in the constructor template (`https:/` should be
+`https://`). Confirmed via `/usr/local/bin/latexml` on `\documentclass{zzz}` +
+`\doi{10.1234/example.5678}` → `href="https:/doi.org/10.1234/example.5678"`.
+
+**Perl status:** present and unchanged.
+
+**Rust status — DELIBERATELY CORRECT (Rust supersedes):** `omnibus_cls.rs`'s
+`\lx@doi` emits `href='https://doi.org/#1'` (valid double slash). Unlike #35
+(an output-*attribute* parity case where the faithful choice was to replicate
+Perl's bug), a DOI href is a **functional link**, so per the policy "fix simple
+Perl bugs in Rust" we keep the working URL rather than reproduce the typo. The
+constructor carries a code comment marking this as an intentional divergence so
+a future faithfulness pass does not revert it. (Maintainer may overrule toward
+strict parity if exact href bytes ever matter for a comparison.)

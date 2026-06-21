@@ -11,11 +11,11 @@
 > **This file is the BRIEF ACTIONABLE LIST.** The day-by-day fix log and
 > completed-task records are NOT kept here — they live in `git log` and
 > `docs/archive/`. **When you close an item, delete it here** (git keeps the
-> record). Last compaction: 2026-06-20.
+> record). Last compaction: 2026-06-21.
 
 ## Current status
 
-- `cargo test --tests`: **1465 / 0 / 0**.
+- `cargo test --tests`: **1466 / 0 / 0**.
 - `cargo clippy --workspace --all-targets -- -D warnings`: **clean**.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
@@ -33,15 +33,56 @@ Recipe: `GET /api/reports/<corpus>/oxidized-tex-to-html/<severity>` → categori
 win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
 `sandbox-arxiv-10k-shuffle`. URL-encode `\`→`%5C`, `^`→`%5E`.
 
-**State of the cross-join (2026-06-20):** the stale 10k Rust run is **mined out**
-for easy parity wins — every remaining apparent "Rust-only" cluster traced to a
-SHARED cause (third-party class/pkg neither engine binds; author errors; or a
-stale pre-fix run). The diagnostic-message seam is **also near-exhausted**: a
-systematic batch comparison (undefined CS/env, missing-number, group/mode close,
-malformed, close-environment) shows all primary messages now matching Perl.
-**NEXT: a FRESH cortex Rust rerun built from this branch** (needs `X-Cortex-Token`)
-is the prerequisite for mining genuine Rust-only *correctness* wins; always
-re-confirm any flagged paper on the CURRENT binary before chasing it.
+**State of the autonomous methods (2026-06-21) — all tapered; a FRESH cortex
+rerun is the clear next step:**
+- *Stale 10k error cross-join*: **mined out** — every remaining apparent
+  "Rust-only" cluster traced to a SHARED cause (third-party class/pkg neither
+  engine binds; author errors; stale pre-fix run). **2026-06-21 re-check via the
+  live cortex `document/<id>` API (not the stale ad-hoc join):** the last two
+  candidates were BOTH phantom — `1308.2655` "Extra alignment tab" on
+  `\lefteqn`/`\multicolumn{N>cols}` is **parity** (Perl 1 error, Rust 1 error —
+  Perl's `nextColumn` errors on column overflow too, `Alignment.pm:136-144`); and
+  `0710.5692` `equationgroup isn't allowed in <ltx:p>` is **parity** (Perl 2,
+  Rust 2). An ad-hoc same-tree cross-join had falsely reported both as "Perl 0";
+  the stable cortex DB is authoritative. **Lesson: confirm every cross-join
+  "Rust-only" read against the live cortex `document/<id>` API before chasing —
+  do not trust a bespoke join's Perl column.** (One genuine *minor* residual on
+  `0710.5692`: Rust reports the equationgroup location as `Anonymous String` vs
+  Perl's `cosmo_sing_iwa.tex; line 1124` — a source-locator gap, belongs to the
+  #47/#92 source-map track, NOT a parity/correctness bug.)
+- *Diagnostic-message faithfulness*: **exhausted** — a systematic batch
+  comparison (undefined CS/env, missing-number, group/mode close, malformed,
+  close-environment) shows all primary messages matching Perl.
+- *Structural-skeleton diff on Perl-clean papers* (the silent-divergence method
+  that found the REVTeX/OmniBus `\references` fix): now consistently surfaces
+  only the DEFERRED families — MathFork/content-MathML (`equation > tags`) and
+  document-builder block/paragraph auto-wrap — plus cosmetic/niche cases.
+- *Binding-completeness set-diff*: too noisy to be useful — it misses every
+  macro defined via `TeX!(r"…")` raw-TeX blocks (single-backslash), so its
+  flagged "gaps" are mostly false positives (verified: longtable `\LTcapwidth`
+  etc. ARE defined). OmniBus was confirmed structurally complete this way.
+
+**NEXT: a FRESH cortex Rust rerun built from this branch** (needs
+`X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
+wins now that the diagnostic messages are faithful; always re-confirm a flagged
+paper on the CURRENT binary before chasing it. Otherwise, the highest-value work
+is the DEFERRED focused sessions below (content-MathML, document-builder).
+
+> **2026-06-21 update — reruns IN PROGRESS, first cortex cross-check done.** A
+> fresh Rust rerun (`019eea79…`) AND a fresh Perl rerun (started 03:51) are both
+> live on `sandbox-arxiv-10k-shuffle`, so per-paper status is in flux (many show
+> transient `todo`). A first cortex-grounded cross-check of the **`error/malformed`
+> tail** (the richest vein for Rust-only document-builder bugs) — filtered to
+> papers where BOTH services are terminal AND Perl lacks the exact `what` —
+> surfaced **zero genuine Rust-only structural regressions**. Every apparent
+> candidate is either still `todo` in the Perl rerun, or a paper where **Rust is
+> at-or-better than Perl**: e.g. `0905.3143` Perl 101 errors→FATAL vs Rust 6
+> errors/no-fatal; `1710.08311` Perl FATAL vs Rust survives. (Method script
+> pattern: `reports/.../error/malformed/<what>` → per-paper
+> `corpus/<c>/tex_to_html/document/<id>`, require Perl status ∈ terminal AND no
+> `malformed/<what>` message.) **Re-run the clean full cross-join once both reruns
+> COMPLETE** — only then is a Perl=`no_problem`/`warning` vs Rust=`error` signal
+> trustworthy.
 
 **Beyond-parity coverage candidates (#2 track, surpass-Perl — defer while
 strict-parity is #1):** `arximspdf`/`imsart` support (16+ IMS papers aop/aos;
@@ -140,22 +181,28 @@ debt to force removal once fixed. Remaining:
 - **`figure_mixed_content`** — `ltx:theorem` not allowed in `ltx:figure` (Perl
   also errors 1). True fix = **schema expansion** (theorems/mdframed in figures).
 
-### 2. PGO of the release build — tooling LANDED, measurement pending
-`tools/make_release_pgo.sh` (instrument→train→merge) + `make_release.sh`
-`PGO_PROFILE` hook are in (recipe: `RELEASING.md` §3b). **Remaining:** the maxperf
-perf measurement on full-corpus hardware (dev box is freeze-prone). Deliberately
-NOT a CI job. BOLT + `target-cpu=v2/v3` stack on top, also deferred to that HW.
-
-### 3. `\gls`/`\acrshort` in MATH mode (1705.10306) — confirmed Rust-only gap
-293 errors `ltx:XMTok isn't allowed in <ltx:glossaryref>` (Perl 1): a glossary
-command in math mode digests the `glossaryref` content as math → bare `<XMTok>`,
-which the content model rejects. **Blocked** on a clean Perl target (the minimal
-repro is confounded by the glossaries package's own datatool/l3regex errors in
-BOTH engines, and Perl times out on the full paper). Fix needs core
-document-builder math-in-text handling. Repro:
+### 2. `\gls`/`\acrshort` in MATH mode (1705.10306) — suspected Rust gap, UNVERIFIED vs Perl
+293 errors `ltx:XMTok isn't allowed in <ltx:glossaryref>` (the "Perl 1" figure is
+**unverifiable** — 1705.10306 is in NO cortex corpus and Perl 0.8.8 times out on
+glossaries on this host, so it cannot be cross-checked; treat as suspected, not
+confirmed): a glossary
+command in math mode forces the `glossaryref` content (#3, the link display
+text) as math → bare `<XMTok>`, which `Inline.model` rejects. **Diagnosis
+re-narrowed 2026-06-21** (earlier "document-builder / Math-not-auto-openable"
+theory DISPROVEN): on the SAME host tree the current binary is **byte-identical
+to Perl** for `\textbf`/`\emph`/`\href` in math (general math-in-text is
+faithful); `ltx:Math`/`ltx:XMath` are **not** autoOpen in either engine (so no
+auto-open path), and `ltx:glossaryref` has **no** autoClose in either (faithful,
+so it can't float its content out like `emph` does). Most likely root: Perl's
+**raw-loaded `glossaries.sty`** typesets the term as TEXT (`\glstextformat`/
+`\mbox`), so Perl's #3 is PCDATA — the Rust divergence is in the raw-load
+display chain, **not** the document builder. **STILL BLOCKED** on a runnable
+Perl reference: glossaries times out in Perl 0.8.8 on this host (datatool/
+l3regex) even without `\makeglossaries`; the `glossary.{tex,xml}` fixture has no
+math case; witness 1705.10306 is not in the local corpus. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
 
-### 4. PR #248 B1 — re-entrant `&mut Document` UB (runtime-bindings), accepted caveat
+### 3. PR #248 B1 — re-entrant `&mut Document` UB (runtime-bindings), accepted caveat
 The Rhai constructor trampoline re-mints `&mut Document` (Stacked/Tree-Borrows UB
 under a re-entrant `\wrap{\myemph{..}}`). Consolidated to one audited
 `script_bindings/mod.rs::with_doc` site + documented; the review's checked-guard
@@ -163,9 +210,9 @@ fix **deadlocks** `Document::absorb`. **Optional future work:** make re-entrancy
 sound-while-succeeding (interior-mutable `Document` or a core handle around
 `do_absorption`). Not a blocker; `runtime-bindings` stays on by default.
 
-### 5. 0.7.0 release — release-prep LANDED; tag pending
+### 4. 0.7.0 release — release-prep LANDED; tag pending
 Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/README
-done. **Remaining:** tag `0.7.0` on master → `release.yml` runs the TL-window
+done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
 
 ---
@@ -200,12 +247,21 @@ done. **Remaining:** tag `0.7.0` on master → `release.yml` runs the TL-window
 ### Engine file open gaps (MINOR, demand-driven)
 - `tex_box.rs` box-dimension edges; `tex_fonts.rs` `\fontdimen` array + per-font
   `\hyphenchar`; `tex_tables.rs` padding CSS (XSLT concern).
-- **`\fcolorbox` inline paragraph-grouping**: an inline `\fcolorbox` mid-paragraph
-  — Perl breaks the `<p>` (its `internal_vertical` block ends it), Rust keeps it
-  inline. SAME flags on both; the divergence is in core document-builder
-  paragraph auto-close on a block-mode construct mid-flow (broad/risky; Rust's
-  inline reading arguably matches real LaTeX's `\mbox`-based `\fcolorbox`).
-  (`\colorbox` matches.)
+- **Document-builder block/paragraph auto-wrap of inline content** (core,
+  broad/risky family — two witnesses):
+  - **`\fcolorbox` inline paragraph-grouping**: an inline `\fcolorbox`
+    mid-paragraph — Perl breaks the `<p>` (its `internal_vertical` block ends
+    it), Rust keeps it inline. SAME flags on both; Rust's inline reading
+    arguably matches real LaTeX's `\mbox`-based `\fcolorbox`. (`\colorbox`
+    matches.)
+  - **bare `\includegraphics` run in a figure** (witness 1108.0198, found
+    2026-06-21 via skeleton diff — a clean, error-free reproducer): a
+    `\begin{figure*}` with several consecutive `\includegraphics` (no blank
+    line) — Perl wraps the inline run in a `<ltx:block>` (`figure > tags >
+    block > graphics×N`), Rust emits the graphics bare (`figure > graphics×N`).
+    Rust is error-clean and schema-valid, so this is a COSMETIC structural
+    divergence, not a validity bug. Same root: Perl's builder opens a block for
+    a horizontal run inside a block-context element; Rust doesn't.
 - **`\resizebox` panel scale-VALUE divergence**: in `complex/figure_mixed_content`
   two panels get a different computed natural width (xscale 1.13 vs 0.88). The
   construct in ISOLATION matches exactly (both xscale=1.9685); the divergence

@@ -21,11 +21,37 @@
 % glossaryref content model (#PCDATA, ltx:Math, ...; NOT ltx:XMTok) rejects.
 % Perl produces clean output (mechanism to verify against full-paper Perl
 % output: glossaryref content should be text/PCDATA — or wrapped — not raw
-% XMTok). The document-builder indirect auto-open model is transitive, but
-% neither ltx:Math nor ltx:XMath is auto-openable (only ltx:XMText is), so
-% there is no auto-open path glossaryref → Math → XMath → XMTok. The faithful
-% fix is a dedicated-session document-builder change (math-in-text handling for
-% content absorbed into a text-mode constructor); see docs/SYNC_STATUS.md.
+% XMTok).
+%
+% UPDATE 2026-06-21 — earlier "document-builder / Math-not-auto-openable"
+% hypothesis is DISPROVEN; root re-narrowed (no fix yet — still blocked):
+%   * Verified on the current binary, SAME host TeX tree, that Rust is
+%     BYTE-IDENTICAL to local Perl for text elements in math:
+%       - \textbf{w} in math → <XMText><text font="bold">w</text></XMText> (both)
+%       - \emph{hello}  in math → <XMText/> + bare XMTok h e l l o (both; emph's
+%         autoClose lets the content float out — content survives, unwrapped)
+%       - \href{u}{hello} in math → <XMApp class="ltx_href" href=u>…XMTok…</XMApp> (both)
+%     So Rust's GENERAL math-in-text handling already matches Perl.
+%   * ltx:Math and ltx:XMath are NOT autoOpen in EITHER engine (only ltx:XMText
+%     is: TeX_Math.pool.ltxml:42 == tex_math.rs:465). So the "auto-open Math
+%     path" theory cannot be how Perl stays clean.
+%   * ltx:glossaryref has NO autoClose in EITHER engine (faithful) — so unlike
+%     emph it cannot float its content out; the forced #3 XMTok errors.
+%   * Therefore Perl's clean output most likely comes from the LINK DISPLAY TEXT
+%     (#3 = \lx@orig@glossaries@gls@link…) being typeset as TEXT by the real
+%     raw-loaded glossaries.sty (\glstextformat/\mbox/\leavevmode), so Perl's
+%     #3 is PCDATA, not math letters. The Rust divergence is then in the
+%     raw-load of glossaries.sty's display chain (digesting the term as math),
+%     NOT the document builder.
+%
+% STILL BLOCKED on a runnable Perl reference: glossaries TIMES OUT in Perl
+% LaTeXML 0.8.8 on this host (datatool/l3regex), even with \makeglossaries
+% removed; the committed fixture LaTeXML/t/structure/glossary.{tex,xml} has no
+% math-mode gls; witness 1705.10306 is not in the local 10k corpus. Next step
+% for the dedicated session: obtain a Perl env where glossaries converts, add a
+% math-mode \gls case, capture the exact glossaryref-in-math structure, then
+% make the raw-load display text resolve to text (mode) to match. See
+% docs/SYNC_STATUS.md.
 %
 % NB: minimal Perl reproduction is finicky (glossaries \makeglossaries setup);
 % the canonical witness is the full 1705.10306 paper.

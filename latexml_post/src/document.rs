@@ -12,7 +12,7 @@ use std::path::Path;
 
 use libxml::{
   parser::Parser as XmlParser,
-  tree::{Document, Namespace, Node, NodeType, set_node_rc_guard},
+  tree::{Document, Namespace, Node, NodeType},
   xpath::Context as XPathContext,
 };
 use regex::Regex;
@@ -134,10 +134,10 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::new`.
   pub fn new(doc: Document, options: PostDocumentOptions) -> Self {
-    // Post-processing holds many shared references (id cache, XPath results).
-    // Raise the Rc guard to allow mutations on shared nodes.
-    set_node_rc_guard(128);
-
+    // Node-mutation aliasing is enforced by libxml's `Node::node_ptr_mut`
+    // (`RefCell::try_borrow_mut`, libxml >= 0.3.14), which ignores benign clone
+    // count, so the former `set_node_rc_guard(128)` band-aid (post-processing
+    // holds many shared id-cache / XPath-result handles) is no longer needed.
     let mut pd = Self::new_internal(doc, options);
     pd.set_document_internal();
     pd

@@ -37,7 +37,7 @@ latexml_codegen = {path = "../latexml_codegen"}
 latexml_engine = {path = "../latexml_engine"}
 latexml_package = {path = "../latexml_package"}
 rustc-hash = "2.0.0"
-libxml = "0.3.13"
+libxml = "0.3.14"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }
 # Optional — only compiled under `script-bindings`. Pure Rust, no native deps.
 rhai = { version = "1", optional = true, features = ["no_module", "no_time"] }

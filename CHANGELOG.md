@@ -1,5 +1,22 @@
 # Change Log
 
+## [0.7.2] (libxml 0.3.14: eliminate spurious "shared Node" conversion errors)
+
+  - **Upgraded to `libxml` 0.3.14.** Its `Node::node_ptr_mut` now guards mutable
+    access with `RefCell::try_borrow_mut` instead of an `Rc::strong_count`
+    heuristic (KWARC/rust-libxml#203). The old heuristic counted live `Node`
+    clones — which are normal bookkeeping, not an aliasing conflict — and so
+    spuriously rejected mutations on documents with heavily shared node
+    structures (dcpic commutative diagrams, large arrays, id-heavy trees),
+    emitting `Can not mutably reference a shared Node` errors. Those conversions
+    now complete cleanly. The two internal `set_node_rc_guard` workarounds
+    (`latexml_core::Document::new`, `latexml_post::PostDocument::new`) are
+    removed; node-mutation safety relies solely on the upstream `try_borrow_mut`
+    check.
+  - Added the `maxperf-cortex` build profile (inherits `maxperf` but keeps
+    `panic = "unwind"`) for the long-lived `cortex_worker` fleet, which needs
+    `catch_unwind` for per-paper panic isolation.
+
 ## [0.7.1] (portable binary: SONAME-independent, self-contained C libraries)
 
   - **Self-contained C libraries** — the release binary now statically links

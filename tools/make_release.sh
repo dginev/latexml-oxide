@@ -83,26 +83,6 @@ echo "make_release: version=${version} target=${target_triple} os=${os_family}"
 rm -rf "${artifacts_dir}"
 mkdir -p "${stage_dir}"
 
-# --- optional PGO (profile-use) ---------------------------------------------
-# When PGO_PROFILE points at a merged profile produced by
-# tools/make_release_pgo.sh, feed it into this maxperf build via
-# `-Cprofile-use`. PGO stacks with fat-LTO (the profile informs LTO inlining),
-# so this is the right place to apply it. `-pgo-warn-missing-function` keeps a
-# profile gathered from a differently-shaped instrument build (e.g. the faster
-# `release` profile) usable here — profiles are function-keyed, and missing
-# functions are warnings, not errors. Off by default; the build is unchanged
-# unless PGO_PROFILE is set. See docs/PERFORMANCE.md.
-if [[ -n "${PGO_PROFILE:-}" ]]; then
-  if [[ ! -s "${PGO_PROFILE}" ]]; then
-    echo "make_release: PGO_PROFILE='${PGO_PROFILE}' missing or empty" >&2
-    echo "             Generate it first: bash tools/make_release_pgo.sh" >&2
-    exit 1
-  fi
-  pgo_abs="$(cd "$(dirname "${PGO_PROFILE}")" && pwd)/$(basename "${PGO_PROFILE}")"
-  echo "make_release: PGO enabled — profile-use ${pgo_abs}"
-  export RUSTFLAGS="${RUSTFLAGS:-} -Cprofile-use=${pgo_abs} -Cllvm-args=-pgo-warn-missing-function"
-fi
-
 # --- build the binary -------------------------------------------------------
 # Distribution build: drop test-utils (audit DEP-02) but KEEP runtime-bindings
 # (ship the Rhai script-bindings capability so users customize contributed
