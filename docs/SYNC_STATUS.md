@@ -62,6 +62,18 @@ The genuine Rust-only wins were the harvested one-offs (`\ifodd`→glossary,
 `\notetoeditor`, `\endpage`). Further 10k cross-join needs a rerun built FROM
 this branch; otherwise pivot to the beyond-parity long-tail below.
 
+**Message-faithfulness fixes harvested from the (stale) cross-join 2026-06-20
+(shared errors — not pass/fail wins, but the `what`/`details` now match Perl,
+which matters when re-running the cross-join):** (a) `misdefined/\list` — the
+"not an allocated register type" error now names the CS (`, for \listcount`),
+per Perl `allocateRegister` (`47789523cf`); (b) `latex/\GenericError` (746 msgs
+/21 papers) — `\GenericError`/`\GenericWarning`/`\GenericInfo` now derive the
+diagnostic `what` ($type) from the stripped `(pkgname)` prefix and drop it from
+the body, per Perl `make_message` (`25118a3079`). NOTE for the next cross-join:
+the Rust `latex/\GenericError` category will now SPLIT into per-package `what`s
+(`(yjsco)`, `(LayAureo)`, …) exactly like Perl — a rerun will no longer show a
+single `\GenericError` bucket.
+
 **Beyond-parity long-tail coverage candidates (#2 track, surpass-Perl —
 defer while strict-parity is #1):** add `arximspdf`/`imsart` support (16+ IMS
 papers: aop/aos; needs a bundled/stubbed imsart.sty equivalent since the host
