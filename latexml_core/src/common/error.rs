@@ -374,14 +374,14 @@ macro_rules! Debug {
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
-    debug!(target: &s!("{}:{}", $category, $object), "{}",
+    debug!(target: &format!("{}:{}", $category, $object), "{}",
       $crate::generate_message!($message))
   }};
  ($category:expr_2021, $object:expr_2021, $message:expr_2021, $($details:expr_2021),*) => {{
     $crate::common::error::note_status(
       $crate::common::error::LogStatus::Debug, None);
     use log::debug;
-    debug!(target: &s!("{}:{}", $category, $object), "{}",
+    debug!(target: &format!("{}:{}", $category, $object), "{}",
       $crate::generate_message!($message, $($details),*))
   }};
   ($($simple:expr_2021),*) => {{
