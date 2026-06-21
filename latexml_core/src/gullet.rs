@@ -1388,7 +1388,11 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
 /// so this assumes there wont be braces in $delim!
 /// But, see readUntilBrace for that case.
 pub fn read_until(delim: &Tokens) -> Result<Tokens> {
-  let mut tokens: Vec<Token> = Vec::new();
+  // Pre-size like `read_balanced`: the accumulator is grown one token at a time
+  // in the loops below, so an unsized `Vec::new()` pays the 0→1→2→4→8 doubling
+  // reallocations on every call. 16 covers the common short delimited read in a
+  // single allocation (a top `grow_one` site in the allocation profile).
+  let mut tokens: Vec<Token> = Vec::with_capacity(16);
   let mut nbraces = 0;
   let want = delim.unlist_ref();
   let ntomatch = want.len();

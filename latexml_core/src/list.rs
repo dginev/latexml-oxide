@@ -67,7 +67,9 @@ impl Object for List {
   fn get_locator(&self) -> Option<Locator> { self.locator }
 
   fn revert(&self) -> Result<Tokens> {
-    let mut reverted = Vec::new();
+    // Seed with one-token-per-box (a lower bound) so the per-box `extend` loop
+    // starts past the first few doubling reallocations (a `grow_one` site).
+    let mut reverted = Vec::with_capacity(self.boxes.len());
     for tbox in self.boxes.iter() {
       reverted.extend(tbox.revert()?.unlist());
     }

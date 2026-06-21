@@ -798,7 +798,10 @@ impl Mouth {
   /// Read all tokens until a token equal to $until (if given), or until exhausted.
   /// Returns an empty Tokens list, if there is no input
   pub fn read_tokens(&mut self) -> Tokens {
-    let mut tokens = Vec::new();
+    // Pre-size to skip the early doubling reallocations of the per-token push
+    // loop below (a `grow_one` site in the allocation profile); 16 covers a
+    // typical line/group in one allocation.
+    let mut tokens = Vec::with_capacity(16);
     while let Some(token) = self.read_token() {
       tokens.push(token);
     }
