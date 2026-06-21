@@ -1429,9 +1429,14 @@ Perl's recall-oriented over-split there rather than substitute a different
 wrong guess. Authors who want such an affiliation kept whole can group it in
 `{…}` or `(…)` (both now honoured).
 
-**Witness:** 0804.0870 — `(Scuola Normale Superiore, Pisa)` stays one
-affiliation under one author. Suite 1465/0; verified balanced/nested parens
-protect, unbalanced parens do not regress the `\\` split.
+**Witnesses (real arXiv, both Perl-wrong):** 0804.0870 —
+`(Scuola Normale Superiore, Pisa)` (comma in parens) stays one affiliation;
+hep-ex0007011 — `(On behalf of the H1 and ZEUS collaborations)` (the literal
+` and ` separator in parens) stays one affiliation instead of splitting off a
+spurious `ZEUS collaborations)` author. So the protection covers *every*
+delimiter inside the group, not just commas. Suite 1465/0; verified
+balanced/nested parens protect, unbalanced parens do not regress the `\\`
+split.
 
 ---
 

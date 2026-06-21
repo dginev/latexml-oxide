@@ -13,6 +13,10 @@
     <personname>Fred Head</personname>
     <contact name="Thanks: " role="thanks">elsewhere</contact>
   </creator>
+  <creator before="  " role="author">
+    <personname>Alessio Martini</personname>
+    <contact name="Affiliation: " role="affiliation">(Scuola Normale Superiore, Pisa)</contact>
+  </creator>
   <date role="creation">Today!</date>
   <pubnote name="Thanks: " role="thanks">Whoppee!</pubnote>
   <section inlist="toc" labels="LABEL:sec:one" xml:id="S1">

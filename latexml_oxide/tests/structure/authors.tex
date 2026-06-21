@@ -1,6 +1,10 @@
 \documentclass{article}
 \title{Testing Authors\thanks{Whoppee!}}
-\author{Joe Blow\thanks{Somewhere}\and Fred Head\thanks{elsewhere}}
+% The third author exercises paren-protected affiliation splitting: the comma
+% inside "(Scuola Normale Superiore, Pisa)" must NOT split off a "Pisa)" author
+% (OXIDIZED_DESIGN #36; witness arXiv 0804.0870).
+\author{Joe Blow\thanks{Somewhere}\and Fred Head\thanks{elsewhere}\and
+  Alessio Martini\\(Scuola Normale Superiore, Pisa)}
 \date{Today!}
 \begin{document}
 \maketitle
