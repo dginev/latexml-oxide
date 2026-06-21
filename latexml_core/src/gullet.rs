@@ -2039,19 +2039,25 @@ pub fn read_number() -> Result<Number> {
     Ok(Number::new(s * n.value_of()))
   } else {
     let next = read_token()?;
-    // Fallback for the error message if the current-token register is not
-    // populated — hitting "missing number" with no current token is rare
-    // but plausible (deeply nested macro-expansion paths can leave the
-    // register empty), and the diagnostic should not bring the run down.
+    // Perl Gullet.pm:904-905: the primary message is just "Missing number,
+    // treated as zero"; the processing context and the unexpected-token
+    // (showUnexpected) are SEPARATE Error details rendered on their own
+    // lines. Render the tokens with ToString/Stringify, not Rust-Debug
+    // (which leaks `Some("\\relax")` into user-facing diagnostics).
     let current = get_current_token()
-      .map(|t| format!("{t:?}"))
-      .unwrap_or_else(|| String::from("<none>"));
-    let message = s!(
-      "Missing number, treated as zero while processing {}, next token is {:?}",
-      current,
-      next
+      .map(|t| t.to_string())
+      .unwrap_or_default();
+    let unexpected = match next {
+      Some(t) => s!("Next token is {}", t.stringify()),
+      None => s!("Input is empty"),
+    };
+    Warn!(
+      "expected",
+      "<number>",
+      "Missing number, treated as zero",
+      s!("while processing {current}"),
+      unexpected
     );
-    Warn!("expected", "<number>", message);
     if let Some(next) = next {
       unread_one(next);
     }
@@ -2220,11 +2226,18 @@ pub fn read_dimension() -> Result<Dimension> {
     let d_signed = if is_negative { -d } else { d };
     Ok(Dimension::new(fixpoint_unit(d_signed, num, den)))
   } else {
+    // Perl Gullet.pm:972: the type is named in the primary message
+    // ("(Dimension)") and "while processing X" is a separate detail
+    // (ToString of the current token, not Rust-Debug).
     let cur = get_current_token()
-      .map(|t| format!("{t:?}"))
-      .unwrap_or_else(|| String::from("<none>"));
-    let message = s!("Missing number, treated as zero. while processing {}", cur);
-    Warn!("expected", "<number>", message);
+      .map(|t| t.to_string())
+      .unwrap_or_default();
+    Warn!(
+      "expected",
+      "<number>",
+      "Missing number (Dimension), treated as zero.",
+      s!("while processing {cur}")
+    );
     Ok(Dimension::new(0))
   }
 }
