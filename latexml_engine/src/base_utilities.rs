@@ -2935,10 +2935,34 @@ impl From<Tokens> for SplitDelim {
   fn from(t: Tokens) -> Self { SplitDelim::Tokens(t) }
 }
 
+/// Does the remaining `stream` contain a `)` that balances the `(` just
+/// popped? Used by `split_tokens` to protect delimiters inside *balanced*
+/// parens only — an unbalanced `(` must NOT trigger paren-protection (else it
+/// would greedily swallow the rest of the author block, including `\\`
+/// name/affiliation separators).
+fn paren_closes_ahead(stream: &VecDeque<Token>) -> bool {
+  let mut level = 1usize;
+  for t in stream {
+    if *t == T_OTHER!("(") {
+      level += 1;
+    } else if *t == T_OTHER!(")") {
+      level -= 1;
+      if level == 0 {
+        return true;
+      }
+    }
+  }
+  false
+}
+
 /// Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
 /// Each of `delims` is a Token, OR Tokens to match a sequence.
 /// Returns a list of Tokens for the sub-sequences, with leading/trailing
 /// spaces trimmed from each piece, and any empty trailing piece dropped.
+///
+/// Like Perl, delimiters are not matched inside `{…}` braces or `$…$` math.
+/// As an INTENTIONAL DIVERGENCE FROM PERL, they are also not matched inside
+/// balanced `(…)` parentheses (see the paren branch below + OXIDIZED_DESIGN).
 pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
   let mut items: Vec<Tokens> = Vec::new();
   let mut toks: Vec<Token> = Vec::new();
@@ -3024,6 +3048,33 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
           let is_math = t.get_catcode() == Catcode::MATH;
           toks.push(t);
           if is_math {
+            break;
+          }
+        }
+      } else if t == T_OTHER!("(") && paren_closes_ahead(&stream) {
+        // INTENTIONAL DIVERGENCE FROM PERL: also protect delimiters inside
+        // BALANCED parentheses (mirroring the brace/math skipping above), so a
+        // parenthesized affiliation like "(Scuola Normale Superiore, Pisa)" is
+        // NOT split at its internal comma into a spurious second author. Perl's
+        // SplitTokens has no paren-awareness and makes exactly this mistake
+        // (witness arXiv 0804.0870 — "Pisa)" became a second <personname>).
+        // The `paren_closes_ahead` guard means an UNBALANCED `(` (rare/
+        // malformed) is treated as an ordinary token, so it never swallows a
+        // later `\\` name/affiliation separator. See OXIDIZED_DESIGN
+        // "Intentional divergences". NOTE: bare (unparenthesized) commas in an
+        // affiliation ("MIT, Cambridge") remain genuinely ambiguous — the same
+        // tokens read as either one comma-affiliation or two authors — so we
+        // match Perl's recall-oriented over-split there rather than guess.
+        toks.push(t);
+        let mut level = 1;
+        while let Some(t) = stream.pop_front() {
+          if t == T_OTHER!("(") {
+            level += 1;
+          } else if t == T_OTHER!(")") {
+            level -= 1;
+          }
+          toks.push(t);
+          if level < 1 {
             break;
           }
         }

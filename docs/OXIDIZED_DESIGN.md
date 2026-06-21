@@ -1395,6 +1395,44 @@ caller's `{fail}` callback, leaving the binding intact — verified
 `\patchcmd{\cite}…`/`\apptocmd{\cite}…` → graceful fail, 0 errors, no garbage.
 Only `\robustify`'s `\ifdefparam`-false → `\protected\edef` path was broken.)
 
+### 36. Author-list splitting protects balanced parentheses
+
+**Decision:** `SplitTokens` (`base_utilities.rs`, the author/frontmatter
+list splitter) does NOT match a delimiter (`,`, ` and `, `\and`, `\quad`, …)
+that sits inside balanced `(…)` parentheses — extending the brace `{…}` and
+math `$…$` protection it already has.
+
+**Rationale — what the heuristics assume, and why this is the safe level.**
+`\author{}` is free-form; LaTeX's only *designed* author separator is
+`\and`. To recover author lists from documents that didn't use it, LaTeXML
+heuristically also splits on `,`, the literal word ` and `, and `\quad`.
+Those tokens are **ambiguous**: the same `,` is an author separator in
+`Alice, Bob` and ordinary punctuation in an affiliation `MIT, Cambridge`.
+The *unambiguous* signal is syntactic **grouping**: content inside a balanced
+grouper is one unit and must never be split. Braces and math were already
+protected; parentheses are the remaining natural text grouper, so a
+parenthesized affiliation `(Scuola Normale Superiore, Pisa)` is now kept
+whole. The guard `paren_closes_ahead` means an *unbalanced* `(` is treated as
+an ordinary token (it must not greedily swallow a later `\\` name/affiliation
+separator).
+
+**Perl behavior & scope.** Perl's `SplitTokens` (Base_Utility.pool.ltxml)
+protects braces/math but NOT parens, so it makes the same mistake — witness
+**arXiv 0804.0870**, where `\author{Alessio Martini\\(Scuola Normale
+Superiore, Pisa)\\…}` produced a spurious second `<personname>Pisa)`. So this
+is a **surpass-Perl** correction. It deliberately stops at the *unambiguous*
+case: bare (unparenthesized) commas/` and ` in an affiliation (`MIT,
+Cambridge`; `School of Arts and Sciences`) and `Lastname, Firstname` name
+order remain genuinely undecidable from the token stream alone — the same
+tokens read as either one comma-affiliation or two authors — so we keep
+Perl's recall-oriented over-split there rather than substitute a different
+wrong guess. Authors who want such an affiliation kept whole can group it in
+`{…}` or `(…)` (both now honoured).
+
+**Witness:** 0804.0870 — `(Scuola Normale Superiore, Pisa)` stays one
+affiliation under one author. Suite 1465/0; verified balanced/nested parens
+protect, unbalanced parens do not regress the `\\` split.
+
 ---
 
 ## Future Work (Beyond Perl Parity)
