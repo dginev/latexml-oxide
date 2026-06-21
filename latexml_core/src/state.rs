@@ -1152,7 +1152,7 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Warn!(
         "undefined",
         ctr,
-        s!("Counter {} was not defined; assuming 0", ctr)
+        s!("Counter '{}' was not defined; assuming 0", ctr)
       );
     }
     crate::binding::def::dialect::def_register(*token, None, Number::new(0), None)?;

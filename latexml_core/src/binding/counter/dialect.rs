@@ -275,7 +275,8 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
 pub fn counter_value(ctr: &str) -> Result<Number> {
   match lookup_register(&s!("\\c@{ctr}"), Vec::new())? {
     None => {
-      let message = s!("Counter {} was not defined; assuming 0", ctr);
+      // Perl Package.pm L712 quotes the counter name: `Counter '$ctr' ...`.
+      let message = s!("Counter '{}' was not defined; assuming 0", ctr);
       Warn!("undefined", ctr, message);
       Ok(Number::new(0))
     },
