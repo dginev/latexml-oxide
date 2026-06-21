@@ -84,6 +84,29 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
 > COMPLETE** — only then is a Perl=`no_problem`/`warning` vs Rust=`error` signal
 > trustworthy.
 
+> **2026-06-21 (later) — reruns now COMPLETE; cross-join reopened.** Rust service
+> `oxidized-tex-to-html` on `sandbox-arxiv-10k-shuffle` is 100 % terminal
+> (todo=0); Perl `tex_to_html` is 99.77 % terminal (23/9849 `todo`). The
+> small-category sweep (xpath/document/misdefined, fully enumerated + per-paper
+> cross-checked against the live `document/<id>` API) found:
+> - **`1506.09203` — STALE signal, already FIXED on current HEAD.** The cortex
+>   DB shows Perl=`warning`, Rust=`error` (`error|xpath|findnodes|()` at
+>   `xml.rs:46`), but that Rust status is from the rerun binary `019eea79`. A
+>   local repro on current HEAD (`/data/arxiv/1506/1506.09203/`,
+>   `Subrepresentation_book_6tag3.tex`, TCI/Scientific-Word + `tcilatex.tex`,
+>   ar5iv profile) converts **clean: 0 errors / 0 fatals, no xpath failure, 52
+>   warnings** — matching Perl. An intervening branch commit (after the rerun
+>   snapshot) resolved the eqnarray/MathFork `findnodes` invalid-context failure.
+>   **Lesson reaffirmed: always re-confirm a flagged paper on the CURRENT binary
+>   before chasing.** Landed regardless: `xml.rs` `findnodes`/`findvalues` now
+>   include the failing XPath string + context-node presence in the error (the
+>   old message was just `{:?}` → empty `()`), so any future xpath failure is
+>   diagnosable.
+> - `0803.1344` (document/open_element_internal): Perl `fatal` vs Rust `error` →
+>   Rust at-or-better, not a regression.
+> - `1608.07271`, `1802.04240` (misdefined `#`), `hep-th9207093`
+>   (misdefined `\list`): Perl=`error` = Rust=`error` → parity (shared cause).
+
 **Beyond-parity coverage candidates (#2 track, surpass-Perl — defer while
 strict-parity is #1):** `arximspdf`/`imsart` support (16+ IMS papers aop/aos;
 needs a bundled imsart.sty since the host lacks it); `jpconf` class → iopart

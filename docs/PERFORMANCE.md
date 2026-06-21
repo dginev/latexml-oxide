@@ -412,6 +412,16 @@ where serialize_aux / get_tag_action_list / get_property-reuse land) is where th
 gain concentrates; `serialize` itself is already a tiny slice (~0.3 s), so the
 serialize-byte win is mostly an RSS/allocator-pressure benefit, not wall.
 
+**`grow_one` pre-sizing follow-up (LANDED).** A second pass over the profile's
+grow-by-push reallocation sites (`grow_one`/`grow_amortized`) pre-sized the
+token accumulators that were `Vec::new()` + per-token push: `gullet::read_until`
+(456 MB / 1.27M blk), `Mouth::read_tokens` (71 MB / 365k blk), `List::revert`
+(170 MB / 740k blk → `with_capacity(boxes.len())`), matching the existing
+`read_balanced` idiom. (`skip_conditional_body`'s apparent `grow_one` is actually
+`Tokens!(tok)` single-element construction — the architectural 1-element-`Tokens`
+box, not a pre-sizable accumulator; `parse_def_parameters`' `params` Vec is
+bounded by ~9 — negligible.) Output byte-identical; suite 1466/0/0.
+
 **Vetted candidates, NOT yet done (low risk, recorded so they aren't re-mined):**
 - *serialize child iteration*: the `ElementNode` arm builds a `Vec<Node>` via
   `get_child_nodes()` (~276 MB) where the `DocumentNode` arm already uses a
