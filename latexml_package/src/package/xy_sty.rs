@@ -6,6 +6,12 @@ LoadDefinitions!({
   // Perl: xy.sty.ltxml (57 lines) + xy.tex.ltxml (153 lines)
   //======================================================================
 
+  // xy-pic healthily expands 100M+ tokens (measured: math0402448 ~100M), far
+  // above the default 20M cycle-guard floor — lift it so the healthy stream skips
+  // the per-token loop-fingerprint cost. 400M token_limit stays the hard backstop;
+  // reset per-conversion in initialize_gullet.
+  raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);
+
   // Register SVG document namespace for xy picture output
   model::register_document_namespace("svg", Some("http://www.w3.org/2000/svg"));
 

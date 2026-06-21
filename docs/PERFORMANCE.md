@@ -309,6 +309,45 @@ build. This is NOT the `graphics` phase (that lane is for raster `xy`-pic /
 4. **build (23.9 %)** → the `get_first_child` / `find_insertion_point` build work
    (shared with the `math0605199` lane above).
 
+**Witness `1805.03265` (tikz-cd) — recorded baseline (2026-06-21, ar5iv profile,
+bench build, 0 errors):** wall **15.58 s** — digest 6.65 s / math_parse 3.96 s /
+build 3.77 s; ~6825 formulae, ~1.9 GB RSS. Source: `/data/arxiv_tikz_cd/1805.03265`.
+Heaviest of the rank-11–20 tikz-cd cluster that completes cleanly. Use as the
+cluster's regression/perf witness.
+
+##### LANDED 2026-06-21 — cycle-guard activation floor for graphics packages (digest lever)
+
+**Root cause (perf + token-progress probe).** `perf` on `1805.03265` showed
+`gullet::cycle_guard_checkpoint` at **2.46 %** self-time + `read_resource_checkpoint`
+1.33 % — the per-token expansion-loop guard. The guard is gated on a token-progress
+floor (`Gullet::cycle_guard_activate`, default 20 M) so ordinary papers (0.6–7.5 M
+tokens) never touch it. But an `LATEXML_PROGRESS_PROBE` count showed graphics docs
+blow far past it: **`1805.03265` ≈ 155 M tokens, `math0402448` (xy-pic) ≈ 100 M** —
+so a *healthy* tikz/xy stream paid the per-token `cycle_fingerprint()` + ring-buffer
+push for >100 M tokens. (The old in-code "80 M" figure predated the all-three-loops
+progress accounting; real counts are higher.)
+
+**Fix (package-conditional, faithful — the guard is a Rust-only robustness knob,
+no Perl-parity surface).** `cycle_guard_activate` became a per-gullet field (was a
+`const`); the pgf/tikz/xy bindings raise it to
+`CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M` at load via `raise_cycle_guard_activate`
+(monotonic; reset to 20 M per conversion in `initialize_gullet`). 150 M sits above
+the heaviest measured healthy graphics doc (155 M tikz-cd barely tips over at its
+very tail; 100 M xy-pic stays fully clean) and well below the 400 M `token_limit`
+hard backstop — so real runaways are still caught. Lives next to tikz's existing
+`AssignValue!("MAX_ERRORS" => 1000)` self-raise; pgf is loaded transitively by
+tikz/pgfplots/circuitikz and tikz by tikz-cd/circuitikz, so the three base bindings
+cover the family.
+
+**Measured (bench build, ar5iv profile, before = 20 M floor, output byte-identical):**
+- `1805.03265` tikz-cd: wall **15.58 → 14.3–14.75 s (~7 %)**, digest **6.65 → 5.97 s (~10 %)**.
+- `math0402448` xy-pic: digest 3.95 s, guard now fully eliminated (100 M < 150 M).
+- `1510.03361` (non-graphics control): **11.69 s unchanged, output identical** —
+  confirms the lift is correctly scoped to graphics packages only.
+
+Suite 1466/0/0. The remaining tikz-cd digest cost is genuine pgf macro expansion
+(the "TikZ/pgfplots digest backlog" below) + the formula-count lever (#1 above).
+
 ### P1 graphics phase (36.5% of wall) — CLOSED
 
 In-doc dedup (`Plan::Copy`/`Plan::Convert`), persistent on-disk cache,

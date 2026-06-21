@@ -5,6 +5,12 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: pgf.sty.ltxml (54 lines)
+  // pgf/tikz expand 100M+ tokens on real documents (measured: math0402448
+  // ~100M, 1805.03265 ~155M), far above the default 20M cycle-guard floor — so
+  // a healthy pgf stream would otherwise pay the per-token loop-fingerprint cost
+  // for >100M tokens. Lift the floor for this engine; the 400M token_limit
+  // remains the hard runaway backstop. (Reset per-conversion in initialize_gullet.)
+  raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);
   DefMacro!("\\pgfsysdriver", "pgfsys-latexml.def");
   // Pre-announce the driver binding so find_file discovers it.
   // Perl's FindFile finds pgfsys-latexml.def.ltxml on disk; in Rust, the binding

@@ -115,17 +115,25 @@ pub struct MouthRuntime {
 
 #[derive(Debug, Default)]
 pub struct Gullet {
-  pub runtime:          Option<MouthRuntime>,
-  pub mouthstack:       VecDeque<MouthRuntime>,
-  pub pending_comments: VecDeque<Token>,
-  pub token_limit:      Option<usize>,
-  pub pushback_limit:   Option<usize>,
-  pub progress:         usize,
+  pub runtime:              Option<MouthRuntime>,
+  pub mouthstack:           VecDeque<MouthRuntime>,
+  pub pending_comments:     VecDeque<Token>,
+  pub token_limit:          Option<usize>,
+  pub pushback_limit:       Option<usize>,
+  pub progress:             usize,
+  /// Token-progress floor above which [`cycle_guard`](Self::cycle_guard)
+  /// engages. Defaults to [`CYCLE_GUARD_ACTIVATE`] (20M). Graphics packages
+  /// whose healthy expansion legitimately runs to 100M+ tokens (pgf/tikz/xy)
+  /// raise it via [`raise_cycle_guard_activate`] so their streams stay out of
+  /// the per-token fingerprint regime; the 400M `token_limit` remains the hard
+  /// backstop. `#[derive(Default)]` would zero this (guard-always-on), so it is
+  /// set explicitly in the constructor and the per-conversion reset.
+  pub cycle_guard_activate: usize,
   /// Windowed cycle detector over the expansion (read-token) stream — catches
   /// small-period infinite expansion loops (`\def\x{a\x}` etc.) far earlier
   /// and more cheaply than `token_limit`/`pushback_limit`. Gated on a high
   /// `progress` so normal documents never touch it. See [`crate::cycle_guard`].
-  pub cycle_guard:      crate::cycle_guard::CycleGuard,
+  pub cycle_guard:          crate::cycle_guard::CycleGuard,
   /// Reading-context serial, mixed into every cycle-guard fingerprint so that
   /// windows never match ACROSS `reading_from_mouth` contexts: a cycle is only
   /// a cycle within one expansion context. Each `reading_from_mouth` entry
@@ -138,9 +146,9 @@ pub struct Gullet {
   /// runaway whose body calls `do_expand` each iteration (~164 call sites)
   /// remains detectable — the blind spot the blanket reset had (PR #249
   /// review P2-7).
-  pub ctx_serial:       u64,
-  ctx_next:             u64,
-  ctx_stack:            Vec<u64>,
+  pub ctx_serial:           u64,
+  ctx_next:                 u64,
+  ctx_stack:                Vec<u64>,
 }
 
 thread_local! {
@@ -188,6 +196,10 @@ pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
       Some(n) => Some(n),
       None => Some(400_000_000),
     },
+    // Explicit: `#[derive(Default)]` would set this to 0 (guard active from the
+    // first token). Graphics packages raise it at load (see
+    // `raise_cycle_guard_activate`).
+    cycle_guard_activate: CYCLE_GUARD_ACTIVATE,
     ..Gullet::default()
   })
 });
@@ -260,6 +272,9 @@ pub fn initialize_gullet() {
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
   gullet.cycle_guard.reset();
+  // Restore the default activation floor: a prior tikz/xy conversion in this
+  // reused thread-local engine must not leak its raised floor into the next doc.
+  gullet.cycle_guard_activate = CYCLE_GUARD_ACTIVATE;
   gullet.ctx_serial = 0;
   gullet.ctx_next = 0;
   gullet.ctx_stack.clear();
@@ -597,7 +612,7 @@ fn read_resource_checkpoint() -> Result<Option<bool>> {
       Fatal!(Timeout, PushbackLimit, msg);
     }
   }
-  Ok(Some(g.progress > CYCLE_GUARD_ACTIVATE))
+  Ok(Some(g.progress > g.cycle_guard_activate))
 }
 
 /// Windowed cycle-guard checkpoint over the token-read stream. Only engaged
@@ -724,10 +739,36 @@ pub fn read_token() -> Result<Option<Token>> {
 /// RECALIBRATED 2026-06-10 (PR #249 review P1-2) against the NEW
 /// all-three-loops progress accounting (see the `token_limit` table above):
 /// typical known-good papers measure 0.6–7.5M; 20M keeps every measured
-/// ordinary paper fingerprint-free with ~2.7× headroom. (math0402448 at
-/// 80M does enter the recording regime — its xymatrix stream is exactly why
-/// the guard is context-scoped, see `reading_from_mouth`.)
+/// ordinary paper fingerprint-free with ~2.7× headroom.
+///
+/// This is the DEFAULT floor (`Gullet::cycle_guard_activate`); graphics-heavy
+/// packages legitimately blow past it — measured 2026-06-21 under this build:
+/// math0402448 (xy-pic) ~100M, 1805.03265 (tikz-cd) ~155M — and would otherwise
+/// pay the per-token fingerprint cost for >100M tokens. Such packages raise the
+/// floor to [`CYCLE_GUARD_ACTIVATE_GRAPHICS`] at load via
+/// [`raise_cycle_guard_activate`], keeping their healthy streams clean while the
+/// 400M `token_limit` stays the hard backstop.
 const CYCLE_GUARD_ACTIVATE: usize = 20_000_000;
+
+/// Cycle-guard activation floor for graphics-heavy bindings (pgf/tikz/xy).
+/// These packages legitimately expand 100M+ tokens; this floor sits above the
+/// heaviest measured healthy graphics doc (1805.03265 tikz-cd ~155M) so they
+/// stay out of the per-token fingerprint regime, while remaining far below the
+/// 400M `token_limit` backstop. Raised — never lowered — per [`raise_cycle_guard_activate`].
+pub const CYCLE_GUARD_ACTIVATE_GRAPHICS: usize = 150_000_000;
+
+/// Raise the cycle-guard activation floor for the current (thread-local) gullet,
+/// only ever upward. Called from graphics package bindings (pgf/tikz/xy) whose
+/// healthy expansion runs to 100M+ tokens — see [`CYCLE_GUARD_ACTIVATE_GRAPHICS`].
+/// Idempotent and order-independent: loading several graphics packages just
+/// re-asserts the same floor. The per-conversion reset (`initialize_gullet`)
+/// restores the default so the raise does not leak across documents.
+pub fn raise_cycle_guard_activate(floor: usize) {
+  let mut g = gullet_mut!();
+  if floor > g.cycle_guard_activate {
+    g.cycle_guard_activate = floor;
+  }
+}
 
 /// Read the next non-expandable token (expanding tokens until there's a non-expandable one).
 ///
