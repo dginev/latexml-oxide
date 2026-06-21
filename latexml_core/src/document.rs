@@ -3,7 +3,6 @@ pub mod resource;
 pub mod tag;
 
 use std::{
-  backtrace::Backtrace,
   borrow::Cow,
   collections::{BTreeSet, VecDeque},
   fmt::Write as _,
@@ -2602,16 +2601,20 @@ impl Document {
           return Ok(self.node.clone());
         }
         // Didn't find a legit place.
+        // Perl Document.pm:1008-1010: "<qname> isn't allowed in <cur_qname>"
+        // (a bare qname for #PCDATA), with "Currently in <insertion
+        // context>" as a SEPARATE Error detail — NOT a Rust backtrace
+        // (`disabled backtrace`) merged into the user-facing message.
         let message = arena::with2(cur_qname, qsym, |cur_qname_str, qname| {
-          s!(
-            "{:?} isn't allowed in <{}>\n{}",
-            qname,
-            cur_qname_str,
-            Backtrace::capture()
-          )
+          let qname_disp = if qname == "#PCDATA" {
+            qname.to_string()
+          } else {
+            s!("<{}>", qname)
+          };
+          s!("{} isn't allowed in <{}>", qname_disp, cur_qname_str)
         });
-        //"Currently in " self.getInsertionContext());
-        Error!("malformed", arena::to_string(qsym), message);
+        let context = s!("Currently in {}", self.get_insertion_context(None)?);
+        Error!("malformed", arena::to_string(qsym), message, context);
 
         // But we'll do it anyway, unless Error => Fatal.
         Ok(self.node.clone())
