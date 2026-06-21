@@ -67,7 +67,7 @@ pub fn load_model(input: DeriveInput) -> Result<TokenStream> {
 
       operations.push(quote!(
         model::set_schema_class(#classname,
-          HashSet::from_iter(vec![#(#elements_vec),*].into_iter()
+          rustc_hash::FxHashSet::from_iter(vec![#(#elements_vec),*].into_iter()
           .map(latexml_core::common::arena::pin_static)));
       ));
     } else if let Some(caps) = NAMESPACE_MODEL_LINE.captures(&line) {

@@ -42,6 +42,14 @@ unused_qualifications = "warn"
 # [patch."https://github.com/dginev/marpa"]
 # marpa = { path = "/home/deyan/git/marpa/marpa" }
 
+# STOPGAP: consume the libxml FxHash node-cache (KWARC/rust-libxml
+# `perf-improvements`, ~28-30% wall on math-heavy docs) via a git-branch patch
+# until the official libxml release publishes it. When 0.3.15 lands: bump the
+# `libxml` dep and DROP this patch. (The marpa FxHash already ships via the
+# marpa git dep tracking `main`.)
+[patch.crates-io]
+libxml = { git = "https://github.com/KWARC/rust-libxml", branch = "perf-improvements" }
+
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries

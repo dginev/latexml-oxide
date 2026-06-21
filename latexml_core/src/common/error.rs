@@ -315,8 +315,8 @@ pub fn get_status_code() -> usize {
 
 static KNOWN_DEBUG_FEATURES: Lazy<std::sync::RwLock<std::collections::BTreeSet<String>>> =
   Lazy::new(|| std::sync::RwLock::new(std::collections::BTreeSet::new()));
-static ENABLED_DEBUG_FEATURES: Lazy<std::sync::RwLock<std::collections::HashSet<String>>> =
-  Lazy::new(|| std::sync::RwLock::new(std::collections::HashSet::new()));
+static ENABLED_DEBUG_FEATURES: Lazy<std::sync::RwLock<rustc_hash::FxHashSet<String>>> =
+  Lazy::new(|| std::sync::RwLock::new(rustc_hash::FxHashSet::default()));
 
 /// Perl: `DebuggableFeature($name)` — register a feature name so it can
 /// be listed/validated for `--debug`.
