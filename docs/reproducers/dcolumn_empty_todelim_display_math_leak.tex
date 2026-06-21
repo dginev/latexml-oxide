@@ -1,0 +1,29 @@
+% dcolumn `D{.}{}{3}` (empty output-separator) inside a float/center leaked a
+% display-math frame → cascading group/mode errors.
+% STATUS: FIXED (dcolumn_sty.rs `absorbed_string` — skip digesting an empty
+%   `\ensuremath{}`; witness 1805.00875, Perl 0 / Rust was 5 → 0).
+%
+% Root cause: the `D{}{}{}` column type computes its decimal-alignment character
+% via `absorbedString(\ensuremath{<todelim>})` at column-parse time. For an empty
+% todelim, `\ensuremath{}` expands to `$$` (display-math start) — a degenerate
+% sequence that leaks a display-math mode frame onto the stomach. BOTH engines
+% emit `$$` here (a lone bare tabular errors in Perl too — parity), but wrapped in
+% a float/center the leaked frame makes a later `\end{center}`/`\end{table}`/
+% `\endgroup` error in Rust while Perl recovers. The alignment char for an empty
+% todelim is empty regardless, so we return "" directly (replicating Perl's empty
+% RESULT) instead of digesting the leak-producing `$$`.
+%
+% Real-world papers always wrap tables in float/center environments — this is the
+% case the fix targets (parity with Perl's 0). A *bare* top-level
+% `\begin{tabular}{lD{.}{}{3}}` is a synthetic edge case where Perl still emits 1
+% error from the same `$$` artifact; we now produce clean output there.
+\documentclass{article}
+\usepackage{dcolumn}
+\begin{document}
+\begin{center}
+\begin{tabular}{l D{.}{}{3} D{.}{.}{-1}}
+Population & 11.45 & 0.95 \\
+Temperature & 13.80 & 2.42 \\
+\end{tabular}
+\end{center}
+\end{document}

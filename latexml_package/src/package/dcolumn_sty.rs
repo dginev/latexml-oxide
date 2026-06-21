@@ -4,6 +4,18 @@ use crate::prelude::*;
 /// Mirrors the Perl function in dcolumn.sty.ltxml that creates a temporary
 /// document to get the display form of math tokens (e.g. \cdot → ⋅).
 fn absorbed_string(todelim: &Tokens) -> String {
+  // An EMPTY todelim (e.g. the column spec `D{.}{}{3}` — no output separator)
+  // has an empty alignment character: Perl's `absorbedString(\ensuremath{})`
+  // digests to the same empty `textContent`. We return "" directly rather than
+  // digest `\ensuremath{}`, because the empty body expands to `$$` (display-math
+  // start) — a degenerate token sequence that leaks a display-math mode frame
+  // onto the stomach at column-parse time. Both engines emit `$$` here, but
+  // wrapped in a float/center the leaked frame makes a later `\end{...}`/`\endgroup`
+  // error in Rust while Perl recovers (witness 1805.00875: Perl 0 / Rust was 5).
+  // Replicating the empty RESULT without the buggy side effect is faithful.
+  if todelim.unlist_ref().is_empty() {
+    return String::new();
+  }
   // Build \ensuremath{todelim} tokens
   let mut toks = vec![T_CS!("\\ensuremath"), T_BEGIN!()];
   toks.extend_from_slice(todelim.unlist_ref());
@@ -80,28 +92,26 @@ LoadDefinitions!({
     // Save and deactivate $
     Let!("\\DC@saved@dollar", "$");
     let_i(&T_MATH!(), &T_CS!("\\relax"), None);
-    // Start inline math if not already in math
-    let in_math = lookup_bool_sym(pin!("IN_MATH"));
-    if in_math {
-      assign_value("DC_started_math", Stored::Bool(false), None);
+    // Perl: return Tokens(LookupValue('IN_MATH') ? () : T_CS('\lx@begin@inline@math'));
+    // FAITHFUL: no `DC_started_math` flag. Perl's \DC@ / \DC@end are symmetric by
+    // construction — \DC@ begins inline math unless already IN_MATH, and \DC@end
+    // ALWAYS ends inline math. The earlier Rust guard flag desynced across
+    // consecutive D columns (a global value read back in a different cell scope),
+    // leaking the math-mode frame so a later \endgroup/\end{...} failed with
+    // "close a group that switched to mode display_math" (witness 1805.00875:
+    // `D{.}{}{3}` followed by `D{.}{.}{-1}` — Perl 0, Rust was 5).
+    if lookup_bool_sym(pin!("IN_MATH")) {
       Ok(Tokens::default())
     } else {
-      assign_value("DC_started_math", Stored::Bool(true), None);
       Ok(Tokens!(T_CS!("\\lx@begin@inline@math")))
     }
   });
 
-  // Perl: \DC@end — restores $ and ends inline math (only if we started it)
+  // Perl: \DC@end — restores $ and ALWAYS ends inline math (unconditional).
   DefMacro!("\\DC@end", sub[_args] {
     let_i(&T_MATH!(), &T_CS!("\\DC@saved@dollar"), None);
-    let started = lookup_value("DC_started_math")
-      .map(|v| matches!(v, Stored::Bool(true)))
-      .unwrap_or(false);
-    if started {
-      Ok(Tokens!(T_CS!("\\lx@end@inline@math")))
-    } else {
-      Ok(Tokens::default())
-    }
+    // Perl: return (T_CS('\lx@end@inline@math'));
+    Ok(Tokens!(T_CS!("\\lx@end@inline@math")))
   });
 
   // Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
