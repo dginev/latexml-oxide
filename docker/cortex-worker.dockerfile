@@ -12,9 +12,11 @@
 #
 # Run the fleet (turnkey — pass just the dispatcher host; `--harness` auto-sizes the box):
 #   # local dispatcher (loopback, skips the Docker NAT):
-#   docker run --network host --shm-size=32g --hostname=$(hostname) cortex-worker 127.0.0.1
+#   docker run --network host -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=$(hostname) cortex-worker 127.0.0.1
 #   # remote dispatcher:
-#   docker run --shm-size=32g --hostname=$(hostname) cortex-worker DISPATCHER_IP
+#   docker run -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=$(hostname) cortex-worker DISPATCHER_IP
+#   # scratch (TMPDIR) is disk-backed at /opt/cortex-scratch — bind-mount a host dir on a SEPARATE
+#   # physical disk from the OS; staging on a ramdisk (/dev/shm) truncates inputs at scale (CorTeX D-18).
 #   # positional args: <dispatcher-host> [ventilator-port=51695] [sink-port=51696] [service=oxidized-tex-to-html]
 #   # env: PROFILE=ar5iv (default) | generic ; WORKERS=<n> to pin the fleet size
 #   #      (battle-hardened sweet spot = physical cores + 1/8; default = harness CPU-derived).
@@ -30,10 +32,11 @@ FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Build deps: mold (the linker pinned by .cargo/config.toml's `-Clink-arg=-fuse-ld=mold`),
+# clang+libclang (a dependency's build script uses bindgen, which needs libclang),
 # libxml2/libxslt/kpathsea for the engine, system ZeroMQ for the `cortex` feature's pericortex→zmq,
 # pkg-config, and curl+git+TLS for rustup and the pericortex git dependency.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      curl build-essential pkg-config git ca-certificates mold \
+      curl build-essential pkg-config git ca-certificates mold clang libclang-dev \
       libxml2-dev libxslt1-dev libkpathsea-dev libzmq3-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -106,8 +109,11 @@ RUN cd /usr/local/share/latexml-oxide && mkdir -p resources/dumps \
 COPY docker/cortex-worker-entrypoint.sh /usr/local/bin/cortex-worker-entrypoint.sh
 RUN chmod +x /usr/local/bin/cortex-worker-entrypoint.sh
 
-# Scratch on the ramdisk (run with --shm-size); matches the legacy worker's TMPDIR=/dev/shm.
-ENV TMPDIR=/dev/shm
+# Stage scratch on a disk-backed dir, NOT a ramdisk: /dev/shm exhaustion under a large fleet
+# truncates inputs → empty 0-byte results (CorTeX KNOWN_ISSUES D-18). Bind-mount a host dir on a
+# separate physical disk from the OS at run time: `-v /opt/cortex-scratch:/opt/cortex-scratch`.
+RUN mkdir -p /opt/cortex-scratch
+ENV TMPDIR=/opt/cortex-scratch
 
 ENTRYPOINT ["cortex-worker-entrypoint.sh"]
 # Default: harness fleet against a localhost dispatcher, service oxidized-tex-to-html.

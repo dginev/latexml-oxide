@@ -12,7 +12,9 @@
 # If the first argument is a flag (starts with `-`), it and the rest are passed straight to
 # cortex_worker instead — e.g. a one-off `--standalone --input … --output …` conversion.
 set -e
-export TMPDIR="${TMPDIR:-/dev/shm}"
+# Disk-backed scratch (NOT a ramdisk — /dev/shm exhaustion truncates inputs at scale, CorTeX D-18).
+export TMPDIR="${TMPDIR:-/opt/cortex-scratch}"
+mkdir -p "$TMPDIR"
 
 # Advanced/standalone: hand flags through verbatim.
 case "${1:-}" in

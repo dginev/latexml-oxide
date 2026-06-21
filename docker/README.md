@@ -25,10 +25,10 @@ docker build -f docker/cortex-worker.dockerfile --build-arg HOSTTIME=$HOSTTIME -
 **Run the fleet (turnkey — pass just the dispatcher host; `--harness` self-supervises and auto-sizes the box):**
 ```bash
 # local dispatcher (loopback, skips the Docker NAT — run on the dispatcher host):
-docker run --network host --shm-size=32g --hostname=$(hostname) cortex-worker 127.0.0.1
+docker run --network host -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=$(hostname) cortex-worker 127.0.0.1
 
 # remote dispatcher:
-docker run --shm-size=32g --hostname=$(hostname) cortex-worker DISPATCHER_IP
+docker run -v /opt/cortex-scratch:/opt/cortex-scratch --hostname=$(hostname) cortex-worker DISPATCHER_IP
 
 # positional args:  <dispatcher-host> [ventilator-port=51695] [sink-port=51696] [service=oxidized-tex-to-html]
 ```
@@ -51,5 +51,7 @@ docker run -v /data:/data cortex-worker --standalone --input /data/paper.zip --o
 - ~6 GB disk for the image (full arXiv-capable TeX Live + the Rust binary).
 - ~1 GB RAM per worker for typical arXiv papers (a heavy paper trips the per-child ceiling and is
   shed/respawned — see the harness doc); size `--memory`/`--cpus` and `WORKERS` per host.
-- `--shm-size` for the ramdisk scratch (`/dev/shm`); 32 GB is a safe default.
+- Disk-backed scratch on a SEPARATE physical disk from the OS, bind-mounted as `TMPDIR`:
+  `-v /opt/cortex-scratch:/opt/cortex-scratch`. Do NOT use a ramdisk (`/dev/shm`) — exhaustion under a
+  large fleet truncates inputs → empty 0-byte results (CorTeX KNOWN_ISSUES D-18).
 - ZMQ connectivity to the CorTeX dispatcher (fleet mode).
