@@ -107,6 +107,36 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
 > - `1608.07271`, `1802.04240` (misdefined `#`), `hep-th9207093`
 >   (misdefined `\list`): Perl=`error` = Rust=`error` → parity (shared cause).
 
+> **2026-06-21 (later still) — the existing rerun (`019eea79`) is now STALE; a
+> NEW rerun is required before further mining.** The Rust `oxidized-tex-to-html`
+> error data predates this session's fixes (m{}/b{} `\multicolumn`, dcolumn
+> empty-todelim, the over-parse/grammar work, etc.), so per-`what` mining keeps
+> surfacing already-fixed leads. This iteration checked the highest-cascade
+> `error/latex` clusters and ALL were stale/parity/Perl-worse on the CURRENT
+> binary: `(newunicodechar)` 1704.05587 (cortex "ASCII character requested" ×63 →
+> now PARITY: `\newunicodechar` simply undefined in both, 22=22 identical);
+> `(etoolbox)` 1604.02419 (cortex Rust=error but Perl=**fatal** → Rust at-or-
+> better); `(babel)` `Unknown option 'russian'` ×11 (witness 0709.3796 now
+> Rust=0=Perl=0; minimal `[russian]{babel}` is Rust=1 / Perl=3, the option error
+> emitted by BOTH → parity-or-better). **Do not mine `019eea79` further — request
+> a fresh Rust rerun on current HEAD first** (needs `X-Cortex-Token`); only then
+> is a Perl=clean / Rust=error signal trustworthy. Reliable interim method: a
+> direct LOCAL both-engines diff on a small paper sample (ground truth, not the
+> stale DB).
+>
+> **VETTED candidate from a local ground-truth scan (current binary, CONFIRMED
+> Rust-only — for the dedicated math session):** `1506.03557`
+> (`/data/arxiv/1506/1506.03557/`, `ESSS_2015.tex`) — **Rust 49 / Perl 2**, of
+> which **42× `Error:malformed:ltx:XMWrap <ltx:XMWrap> isn't allowed in <ltx:p>`**.
+> A math-parser `XMWrap` (wrapped/partial parse of complex inline math —
+> text-operators `\textit{Held\_For}` + comma-lists `(300,\ -50,\ +50)` + nested
+> parens + `~`/`\;`) leaks into `<ltx:p>` without a `<ltx:Math>` wrapper. NOT
+> reproducible from the math snippet alone — needs the paper's preamble/macro
+> context (`\name{}`, `caption`, …). Belongs to the deferred math-parser family
+> (XMWrap production + document-builder math-in-text wrapping); do not pick at it
+> piecemeal. (Same scan: `1704.05644` 17 err `expected:<variable>`, `1705.04022`
+> 16 err `_`/`^`-in-text — re-verify vs Perl before chasing.)
+
 **Beyond-parity coverage candidates (#2 track, surpass-Perl — defer while
 strict-parity is #1):** `arximspdf`/`imsart` support (16+ IMS papers aop/aos;
 needs a bundled imsart.sty since the host lacks it); `jpconf` class → iopart
