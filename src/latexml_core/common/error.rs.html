@@ -315,8 +315,8 @@
 <a href=#315 id=315 data-nosnippet>315</a>
 <a href=#316 id=316 data-nosnippet>316</a></span><span class="kw">static </span>KNOWN_DEBUG_FEATURES: Lazy&lt;std::sync::RwLock&lt;std::collections::BTreeSet&lt;String&gt;&gt;&gt; =
 <a href=#317 id=317 data-nosnippet>317</a>  Lazy::new(|| std::sync::RwLock::new(std::collections::BTreeSet::new()));
-<a href=#318 id=318 data-nosnippet>318</a><span class="kw">static </span>ENABLED_DEBUG_FEATURES: Lazy&lt;std::sync::RwLock&lt;std::collections::HashSet&lt;String&gt;&gt;&gt; =
-<a href=#319 id=319 data-nosnippet>319</a>  Lazy::new(|| std::sync::RwLock::new(std::collections::HashSet::new()));
+<a href=#318 id=318 data-nosnippet>318</a><span class="kw">static </span>ENABLED_DEBUG_FEATURES: Lazy&lt;std::sync::RwLock&lt;rustc_hash::FxHashSet&lt;String&gt;&gt;&gt; =
+<a href=#319 id=319 data-nosnippet>319</a>  Lazy::new(|| std::sync::RwLock::new(rustc_hash::FxHashSet::default()));
 <a href=#320 id=320 data-nosnippet>320</a>
 <a href=#321 id=321 data-nosnippet>321</a><span class="doccomment">/// Perl: `DebuggableFeature($name)` — register a feature name so it can
 <a href=#322 id=322 data-nosnippet>322</a>/// be listed/validated for `--debug`.
