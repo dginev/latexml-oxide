@@ -119,6 +119,31 @@ theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
 >   right) — a real limits-placement presentation bug, but entangled with the
 >   XMDual content-arm structure, so it belongs with the content-MathML work.
 
+## Systematic fixture-vs-Perl sweep (triage method + findings, 2026-06-20)
+
+**Method:** beyond hand-picked formula batches, run the *existing test fixtures*
+through both engines and diff — `for f in tests/<area>/*.tex; do latexml --quiet
+$f | norm vs latexml_oxide $f | norm`. The Rust fixtures are regression
+BASELINES (Rust output), so a non-empty Perl-vs-Rust diff flags every place the
+baseline diverges from Perl. A sweep over `parse/ math/ alignment/ fonts/
+encoding/` (2026-06-20) confirmed the divergence landscape is dominated by
+already-known categories — deferred content-MathML (`f(x)`/`f(a,b)` apply-vs-
+multiply, comma-list-as-relation-LHS), box-metrics (scalebox/resizebox panel
+natural-width in `vmode`/figure context), intentional comments-off, and
+Rust-supersedes-Perl (`wasysym` symbol rendering Perl can't, `soul`+color). One
+**genuine new bug** surfaced:
+- **`DefMathRewrite` with a `\WildCard` SUBSCRIPT pattern doesn't demote the
+  match** (witness `math/simplemath`): `simplemath.latexml` declares
+  `f_\WildCard → role=ID`, so `f_1(a+b)` should be `f _ 1 * (a+b)` (Perl). Rust
+  produces `Unknown@() * (a + b)` — the `f_\WildCard` rewrite isn't firing (or
+  loses to the sibling `f → FUNCTION` rewrite), so `f_1` stays a FUNCTION and
+  `f_1(a+b)` gets APPLIED, collapsing the subscripted-function to `Unknown@()`.
+  The specific `f_D → DIFFOP` rewrite (non-wildcard) works, so it's the
+  `\WildCard`-subscript match/ordering in `latexml_package/.../latexml_sty.rs`
+  (`compile_declare_pattern`, the `_\WildCard` branch) + the rewrite-application
+  order. Niche (DefMathRewrite \WildCard is a binding-author feature, rare in
+  real arXiv); the fixture encodes the buggy output. Focused-session item.
+
 ## Math-parser Rust-only gaps (parked — found by Rust-vs-Perl `text=` comparison)
 
 **Method (high-yield, repeatable):** math-parse failures are SILENT
