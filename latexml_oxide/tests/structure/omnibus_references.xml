@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="zzz_unknown_class"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p>Body text.</p>
+  </para>
+  <bibliography citestyle="numbers" xml:id="bib">
+    <title>References</title>
+    <biblist>
+      <bibitem key="ref1" xml:id="bib.bib1">
+        <tags>
+          <tag>[1]</tag>
+          <tag role="refnum">1</tag>
+        </tags>
+        <bibblock> A. Author, Some Title (2020).
+</bibblock>
+      </bibitem>
+    </biblist>
+  </bibliography>
+</document>

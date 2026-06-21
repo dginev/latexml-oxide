@@ -1,0 +1,13 @@
+% Unknown documentclass falls back to OmniBus.cls, which defines the RevTeX-style
+% \begin{references} bibliography environment. This guards OmniBus's \references
+% constructor: it must produce a FULL bibliography (xml:id, citestyle, and a
+% <title>References</title> via begin_bibliography) like Perl — not the old stub
+% that emitted a bare <bibliography> with auto-generated bibitem ids.
+% Witnesses: cond-mat9805405, hep-ex0007011 (\documentstyle{revtex}).
+\documentclass{zzz_unknown_class}
+\begin{document}
+Body text.
+\begin{references}
+\bibitem{ref1} A. Author, Some Title (2020).
+\end{references}
+\end{document}
