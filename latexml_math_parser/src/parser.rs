@@ -592,9 +592,17 @@ impl MathParser {
   }
 
   fn try_reset_clone_path(&mut self) -> std::result::Result<(), ()> {
-    let mut engine = Parser::with_grammar(self.grammar.clone());
-    // Run a trivial recognizer to advance state from G (precompute) through
-    // R → B → O → T → GReady. Use "NUMBER:1:1 " which is a valid single-token formula.
+    // `self.grammar` is ALREADY precomputed, and `Grammar::clone()` is a cheap
+    // `marpa_g_ref` refcount bump sharing that same precomputed grammar — so use
+    // `with_precomputed_grammar` (state GReady) instead of `with_grammar` (state
+    // G), which would redundantly re-run `marpa_g_precompute` on it (the
+    // dominant per-reset cost; recovery from a failed parse comes from the FRESH
+    // recognizer, not the precompute). Real grammar corruption still falls
+    // through to the step-3 `init_grammar` rebuild below.
+    let mut engine = Parser::with_precomputed_grammar(self.grammar.clone());
+    // Run a trivial recognizer to verify the fresh engine works (and leave it at
+    // GReady). From GReady this skips precompute entirely.
+    // Use "NUMBER:1:1 " which is a valid single-token formula.
     match engine.run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 "))) {
       Ok(_) => {
         self.engine = engine;
