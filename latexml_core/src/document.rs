@@ -1313,27 +1313,37 @@ impl Document {
       _ => {},
     };
 
-    let tag_hash = state::get_tag_property(tag);
-    let all_hash = state::get_tag_property(pin!("ltx:*"));
-
     let mut actions = Vec::new();
-    // we have Rc<> around the closures, so cloning them is cheap - just another
-    // pointer with a bumped up reference counter
-    if let Some(when0) = when_early {
-      actions.extend(tag_hash.get(&when0).cloned().unwrap_or_default());
-      // ns_hash TODO
-      actions.extend(all_hash.get(&when0).cloned().unwrap_or_default());
-    }
-
-    actions.extend(tag_hash.get(&when).cloned().unwrap_or_default());
-    // ns_hash TODO
-    actions.extend(all_hash.get(&when).cloned().unwrap_or_default());
-
-    if let Some(when1) = when_late {
-      actions.extend(tag_hash.get(&when1).cloned().unwrap_or_default());
-      // ns_hash TODO
-      actions.extend(all_hash.get(&when1).cloned().unwrap_or_default());
-    }
+    // Borrow the per-tag and `ltx:*` option hashes in place instead of cloning
+    // the whole `TagOptions` map twice per call (this runs on every element
+    // open/close — ~8.8M calls across the witness corpus). We only need to copy
+    // the matched action lists, and those hold `Rc<>` closures, so cloning each
+    // is just a pointer + refcount bump. `with_tag_property` returns `None` for
+    // an absent tag, equivalent to an empty `TagOptions` for a read (the only
+    // difference vs `get_tag_property` is it skips vivifying an empty default,
+    // which has no observable effect).
+    state::with_tag_property(tag, |tag_hash| {
+      state::with_tag_property(pin!("ltx:*"), |all_hash| {
+        let mut collect = |opts: Option<&tag::TagOptions>, key: &TagOptionName| {
+          if let Some(v) = opts.and_then(|o| o.get(key)) {
+            actions.extend(v.iter().cloned());
+          }
+        };
+        if let Some(when0) = when_early {
+          collect(tag_hash, &when0);
+          // ns_hash TODO
+          collect(all_hash, &when0);
+        }
+        collect(tag_hash, &when);
+        // ns_hash TODO
+        collect(all_hash, &when);
+        if let Some(when1) = when_late {
+          collect(tag_hash, &when1);
+          // ns_hash TODO
+          collect(all_hash, &when1);
+        }
+      });
+    });
     // return (
     //   (($v = $$taghash{$when0}) ? @$v : ()),
     //   (($v = $$nshash{$when0})  ? @$v : ()),
