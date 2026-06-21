@@ -16,8 +16,15 @@ use latexml_core::common::{Config, DataSize, DigestionMode, OutputFormat};
 
 /// Per-process allocator: mimalloc avoids glibc's arena-mutex contention
 /// which dominates multi-process workloads (seen as 3.4x slowdown at 16 workers).
+#[cfg(not(feature = "dhat-heap"))]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
+/// Heap-profiling allocator (`--features dhat-heap`): replaces mimalloc so dhat
+/// can attribute every allocation to its call site. Diagnostic only.
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static GLOBAL: dhat::Alloc = dhat::Alloc;
 
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
@@ -333,6 +340,14 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn real_main() -> Result<(), Box<dyn Error>> {
+  // Heap profiler (`--features dhat-heap`). Held for the whole conversion, which
+  // runs on this (worker) thread. The success/fatal exits below go through
+  // `process::exit`, which skips destructors, so the profile is flushed
+  // explicitly via `_dhat.take()` before those exits (writing `dhat-heap.json`);
+  // a normal `return` still drops it as a fallback.
+  #[cfg(feature = "dhat-heap")]
+  let mut _dhat = Some(dhat::Profiler::new_heap());
+
   let wall_start = std::time::Instant::now();
   let cli = Cli::parse();
 
@@ -904,6 +919,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       "fatal",
       final_status_code as i32,
     );
+    #[cfg(feature = "dhat-heap")]
+    drop(_dhat.take());
     process::exit(1);
   }
   write_telemetry_record(
@@ -913,6 +930,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     "ok",
     0,
   );
+  #[cfg(feature = "dhat-heap")]
+  drop(_dhat.take());
   process::exit(0);
 }
 
