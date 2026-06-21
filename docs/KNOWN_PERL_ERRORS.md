@@ -1489,3 +1489,41 @@ Perl bugs in Rust" we keep the working URL rather than reproduce the typo. The
 constructor carries a code comment marking this as an intentional divergence so
 a future faithfulness pass does not revert it. (Maintainer may overrule toward
 strict parity if exact href bytes ever matter for a comparison.)
+
+---
+
+## 37. Comma-list as a bare relation operand; right-nested formulae
+
+**Perl source:** `LaTeXML/MathGrammar` (the `Parse::RecDescent` grammar) — the
+relation productions admit a comma-list as a single RHS operand, and
+`moreRHS`/`maybeColRHS` build right-recursive formulae.
+
+**Symptom / Perl behavior** (verified via
+`latexmlmath --cmml` and `latexmlc --preload=stmaryrd.sty --whatsin=math`):
+* `a=b,c,d` → `eq(a, list(b,c,d))` — the comma-list becomes the **bare operand**
+  of `=`.
+* `0<x,y` → `lt(0, list(x,y))` — likewise for an inequality.
+* `\quad`-separated formulas → **right-nested** `formulae@(f1, formulae@(f2, …))`.
+
+**Why it's wrong:** a bare (unparenthesized) comma-list is **not a single
+expression**, so it can never be the operand of a relation — in no STEM reading
+does `a=b,c,d` mean "a equals the tuple (b,c,d)". It means the comma-separated
+list `[a=b, c, d]`. (A *parenthesized* list `(x,y)` IS a single expression —
+that stays a vector/tuple operand, unchanged.) The right-nesting of `formulae`
+is likewise an artifact, not a semantic structure.
+
+**Rust status — DELIBERATE DIVERGENCE (Rust supersedes; user-directed
+2026-06-21).** The math grammar drops the `formula relop formula_list` rule
+(`latexml_math_parser/src/grammar/builder.rs`), so a relation never takes a bare
+list operand. Bare separated sequences are classified by
+`latexml_math_parser/src/semantics.rs::list_apply`:
+* **comma, all items relational** → `formulae@(x=0, y=1)`
+* **comma, mixed/non-relational** → `list@(0<x, y)`, `list@(a=b, c, d)`
+* **`\quad` (WIDE_PUNCT), any items** → a distinct flat `fragments@(…)` class
+  (top-level heterogeneous fragments)
+
+All multi-item containers are kept **flat** (the `moreRHS`-analog
+`restructure_flat_to_right` nesting pass was removed). Besides being the correct
+reading, this **eliminates a large grammar-ambiguity over-parse**: on
+`1510.03361` the worst equation fell from the 5000-tree cap (578 ms) to 256
+trees (31 ms, ~19×) and the `math_parse` phase dropped ~12%. Suite 1466/0/0.

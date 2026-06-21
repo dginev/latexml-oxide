@@ -49,11 +49,11 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="a+b\quad c+d" text="list@(a + b, c + d)" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="a+b\quad c+d" text="fragments@(a + b, c + d)" xml:id="S0.Ex4.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex4.m1.1"/>
               <XMRef idref="S0.Ex4.m1.2"/>
             </XMApp>

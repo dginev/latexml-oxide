@@ -372,7 +372,16 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       formula = expression
         | formula relop expression => infix_relation
         | formula two_part_relop expression => infix_relation
-        | formula relop formula_list => infix_relation
+        // NOTE: deliberately NO `formula relop formula_list` rule. A bare
+        // (unparenthesized) comma-list is NOT a single expression, so it can
+        // never be a relation operand: `0 < x,y` can only mean
+        // `list(0<x, y)` (the comma splits at the statements level via
+        // `statements punct statement`), never `0 < list(x,y)`. Admitting the
+        // list as a relop RHS produced a spurious parse for every
+        // comma-after-relation, multiplying enumeration combinatorially down a
+        // formula_list (a top ambiguity-explosion source — `1510.03361`'s
+        // 5000-tree-cap equations). Parenthesized lists `(x,y)` remain single
+        // expressions via `lparen formula_list rparen => fenced`.
         | formula relop => postfix_relop
         // Perl moreRelations: `relop moreRelations` — consecutive relops chain without intervening terms
         // e.g. `A ∈ ∞ ∋` → the ∈ absorbs ∞, then ∋ appends to the chain (no absent)

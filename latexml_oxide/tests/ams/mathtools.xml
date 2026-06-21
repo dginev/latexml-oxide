@@ -163,11 +163,11 @@
       <title>Cramped</title>
       <para xml:id="S1.SS0.SSS0.Px2.p1">
         <equation xml:id="S1.Ex5">
-          <Math mode="display" tex="\cramped{x^{2}}\leftrightarrow x^{2}\quad\cramped[\scriptstyle]{x^{2}}\leftrightarrow{\scriptstyle x^{2}}" text="formulae@(x ^ 2 leftrightarrow x ^ 2, x ^ 2 leftrightarrow x ^ 2)" xml:id="S1.Ex5.m1">
+          <Math mode="display" tex="\cramped{x^{2}}\leftrightarrow x^{2}\quad\cramped[\scriptstyle]{x^{2}}\leftrightarrow{\scriptstyle x^{2}}" text="fragments@(x ^ 2 leftrightarrow x ^ 2, x ^ 2 leftrightarrow x ^ 2)" xml:id="S1.Ex5.m1">
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="formulae"/>
+                  <XMTok meaning="fragments"/>
                   <XMRef idref="S1.Ex5.m1.1"/>
                   <XMRef idref="S1.Ex5.m1.2"/>
                 </XMApp>
@@ -210,13 +210,15 @@
       <title>Smashoperator</title>
       <para xml:id="S1.SS0.SSS0.Px3.p1">
         <equation xml:id="S1.Ex6">
-          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\sum_{1\leq i\leq j\leq n}^{3456}X_{ij}\quad Y=\sum\limits_{1\leq i\leq j\leq n}Y_{ij}\quad Z=\mathop{T}_{1\leq i\leq j\leq n}Z_{ij}" text="formulae@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), formulae@(X = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ 3456)@(X _ (i * j)), formulae@(Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))))" xml:id="S1.Ex6.m1">
+          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\sum_{1\leq i\leq j\leq n}^{3456}X_{ij}\quad Y=\sum\limits_{1\leq i\leq j\leq n}Y_{ij}\quad Z=\mathop{T}_{1\leq i\leq j\leq n}Z_{ij}" text="fragments@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), X = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ 3456)@(X _ (i * j)), Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))" xml:id="S1.Ex6.m1">
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="formulae"/>
+                  <XMTok meaning="fragments"/>
                   <XMRef idref="S1.Ex6.m1.1"/>
                   <XMRef idref="S1.Ex6.m1.2"/>
+                  <XMRef idref="S1.Ex6.m1.3"/>
+                  <XMRef idref="S1.Ex6.m1.4"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S1.Ex6.m1.1">
@@ -253,117 +255,99 @@
                     </XMApp>
                   </XMApp>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S1.Ex6.m1.2">
+                  <XMApp xml:id="S1.Ex6.m1.2">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
                     <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S1.Ex6.m1.3"/>
-                      <XMRef idref="S1.Ex6.m1.4"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S1.Ex6.m1.3">
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                          <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                          <XMApp>
+                            <XMTok meaning="multirelation"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                            <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                            <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMTok fontsize="70%" meaning="3456" role="NUMBER">3456</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" role="UNKNOWN">X</XMTok>
                         <XMApp>
-                          <XMApp>
-                            <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                            <XMApp>
-                              <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                              <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                              <XMApp>
-                                <XMTok meaning="multirelation"/>
-                                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                              </XMApp>
-                            </XMApp>
-                            <XMTok fontsize="70%" meaning="3456" role="NUMBER">3456</XMTok>
-                          </XMApp>
-                          <XMApp>
-                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMApp>
-                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                            </XMApp>
-                          </XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
                         </XMApp>
                       </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMDual xml:id="S1.Ex6.m1.4">
+                    </XMApp>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex6.m1.3">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                        <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid1">∑</XMTok>
                         <XMApp>
-                          <XMTok meaning="formulae"/>
-                          <XMRef idref="S1.Ex6.m1.5"/>
-                          <XMRef idref="S1.Ex6.m1.6"/>
+                          <XMTok meaning="multirelation"/>
+                          <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                         </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S1.Ex6.m1.5">
-                            <XMTok meaning="equals" role="RELOP">=</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                            <XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid1">∑</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="multirelation"/>
-                                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                                </XMApp>
-                              </XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                </XMApp>
-                              </XMApp>
-                            </XMApp>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="10pt"/>
-                          <XMApp xml:id="S1.Ex6.m1.6">
-                            <XMTok meaning="equals" role="RELOP">=</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">Z</XMTok>
-                            <XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                                <XMTok font="italic" role="BIGOP" scriptpos="mid">T</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="multirelation"/>
-                                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                                </XMApp>
-                              </XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">Z</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                </XMApp>
-                              </XMApp>
-                            </XMApp>
-                          </XMApp>
-                        </XMWrap>
-                      </XMDual>
-                    </XMWrap>
-                  </XMDual>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex6.m1.4">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                        <XMTok font="italic" role="BIGOP" scriptpos="mid">T</XMTok>
+                        <XMApp>
+                          <XMTok meaning="multirelation"/>
+                          <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
                 </XMWrap>
               </XMDual>
             </XMath>
@@ -372,13 +356,15 @@
       </para>
       <para xml:id="S1.SS0.SSS0.Px3.p2">
         <equation xml:id="S1.Ex7">
-          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\sum_{1\leq i\leq j\leq n}^{3456}X_{ij}\quad Y=\sum\limits_{1\leq i\leq j\leq n}Y_{ij}\quad Z=\mathop{T}_{1\leq i\leq j\leq n}Z_{ij}" text="formulae@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), formulae@(X = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ 3456)@(X _ (i * j)), formulae@(Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))))" xml:id="S1.Ex7.m1">
+          <Math mode="display" tex="V=\sum_{1\leq i\leq j\leq n}^{\infty}V_{ij}\quad X=\sum_{1\leq i\leq j\leq n}^{3456}X_{ij}\quad Y=\sum\limits_{1\leq i\leq j\leq n}Y_{ij}\quad Z=\mathop{T}_{1\leq i\leq j\leq n}Z_{ij}" text="fragments@(V = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ infinity)@(V _ (i * j)), X = ((sum _ (1 &lt;= i &lt;= j &lt;= n)) ^ 3456)@(X _ (i * j)), Y = (sum _ (1 &lt;= i &lt;= j &lt;= n))@(Y _ (i * j)), Z = (T _ (1 &lt;= i &lt;= j &lt;= n))@(Z _ (i * j)))" xml:id="S1.Ex7.m1">
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="formulae"/>
+                  <XMTok meaning="fragments"/>
                   <XMRef idref="S1.Ex7.m1.1"/>
                   <XMRef idref="S1.Ex7.m1.2"/>
+                  <XMRef idref="S1.Ex7.m1.3"/>
+                  <XMRef idref="S1.Ex7.m1.4"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S1.Ex7.m1.1">
@@ -415,117 +401,99 @@
                     </XMApp>
                   </XMApp>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S1.Ex7.m1.2">
+                  <XMApp xml:id="S1.Ex7.m1.2">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">X</XMTok>
                     <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S1.Ex7.m1.3"/>
-                      <XMRef idref="S1.Ex7.m1.4"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S1.Ex7.m1.3">
-                        <XMTok meaning="equals" role="RELOP">=</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                        <XMApp>
+                          <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                          <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
+                          <XMApp>
+                            <XMTok meaning="multirelation"/>
+                            <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                            <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                            <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                            <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                            <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                          </XMApp>
+                        </XMApp>
+                        <XMTok fontsize="70%" meaning="3456" role="NUMBER">3456</XMTok>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
                         <XMTok font="italic" role="UNKNOWN">X</XMTok>
                         <XMApp>
-                          <XMApp>
-                            <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                            <XMApp>
-                              <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                              <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid">∑</XMTok>
-                              <XMApp>
-                                <XMTok meaning="multirelation"/>
-                                <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                              </XMApp>
-                            </XMApp>
-                            <XMTok fontsize="70%" meaning="3456" role="NUMBER">3456</XMTok>
-                          </XMApp>
-                          <XMApp>
-                            <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                            <XMTok font="italic" role="UNKNOWN">X</XMTok>
-                            <XMApp>
-                              <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                              <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                            </XMApp>
-                          </XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
                         </XMApp>
                       </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMDual xml:id="S1.Ex7.m1.4">
+                    </XMApp>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex7.m1.3">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                        <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid1">∑</XMTok>
                         <XMApp>
-                          <XMTok meaning="formulae"/>
-                          <XMRef idref="S1.Ex7.m1.5"/>
-                          <XMRef idref="S1.Ex7.m1.6"/>
+                          <XMTok meaning="multirelation"/>
+                          <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
                         </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S1.Ex7.m1.5">
-                            <XMTok meaning="equals" role="RELOP">=</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                            <XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                                <XMTok mathstyle="display" meaning="sum" role="SUMOP" scriptpos="mid1">∑</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="multirelation"/>
-                                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                                </XMApp>
-                              </XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">Y</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                </XMApp>
-                              </XMApp>
-                            </XMApp>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="10pt"/>
-                          <XMApp xml:id="S1.Ex7.m1.6">
-                            <XMTok meaning="equals" role="RELOP">=</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">Z</XMTok>
-                            <XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                                <XMTok font="italic" role="BIGOP" scriptpos="mid">T</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="multirelation"/>
-                                  <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                  <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
-                                </XMApp>
-                              </XMApp>
-                              <XMApp>
-                                <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
-                                <XMTok font="italic" role="UNKNOWN">Z</XMTok>
-                                <XMApp>
-                                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
-                                  <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
-                                </XMApp>
-                              </XMApp>
-                            </XMApp>
-                          </XMApp>
-                        </XMWrap>
-                      </XMDual>
-                    </XMWrap>
-                  </XMDual>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">Y</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S1.Ex7.m1.4">
+                    <XMTok meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                    <XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                        <XMTok font="italic" role="BIGOP" scriptpos="mid">T</XMTok>
+                        <XMApp>
+                          <XMTok meaning="multirelation"/>
+                          <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                          <XMTok fontsize="70%" meaning="less-than-or-equals" name="leq" role="RELOP">≤</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">n</XMTok>
+                        </XMApp>
+                      </XMApp>
+                      <XMApp>
+                        <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+                        <XMTok font="italic" role="UNKNOWN">Z</XMTok>
+                        <XMApp>
+                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
+                          <XMTok font="italic" fontsize="70%" role="UNKNOWN">j</XMTok>
+                        </XMApp>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
                 </XMWrap>
               </XMDual>
             </XMath>
@@ -625,11 +593,11 @@
       </para>
       <para xml:id="S1.SS0.SSS0.Px4.p2">
         <equation xml:id="S1.Ex9">
-          <Math mode="display" tex="\text{a)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p\geq n}\quad\text{b)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p^{2}\geq n}\quad\text{c)}\adjustlimits{\lim}_{n\to\infty}{\sup}_{p^{2}\geq nK}\quad\text{d)}\adjustlimits{\limsup}_{n\to\infty}{\max}_{p\geq n}" text="list@([a)] * limit _ (n to infinity) * maximum _ (p &gt;= n), [b)] * limit _ (n to infinity) * maximum _ (p ^ 2 &gt;= n), [c)] * limit _ (n to infinity) * supremum _ (p ^ 2 &gt;= n * K), [d)] * limit-supremum _ (n to infinity) * maximum _ (p &gt;= n))" xml:id="S1.Ex9.m1">
+          <Math mode="display" tex="\text{a)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p\geq n}\quad\text{b)}\adjustlimits{\lim}_{n\to\infty}{\max}_{p^{2}\geq n}\quad\text{c)}\adjustlimits{\lim}_{n\to\infty}{\sup}_{p^{2}\geq nK}\quad\text{d)}\adjustlimits{\limsup}_{n\to\infty}{\max}_{p\geq n}" text="fragments@([a)] * limit _ (n to infinity) * maximum _ (p &gt;= n), [b)] * limit _ (n to infinity) * maximum _ (p ^ 2 &gt;= n), [c)] * limit _ (n to infinity) * supremum _ (p ^ 2 &gt;= n * K), [d)] * limit-supremum _ (n to infinity) * maximum _ (p &gt;= n))" xml:id="S1.Ex9.m1">
             <XMath>
               <XMDual>
                 <XMApp>
-                  <XMTok meaning="list"/>
+                  <XMTok meaning="fragments"/>
                   <XMRef idref="S1.Ex9.m1.1"/>
                   <XMRef idref="S1.Ex9.m1.2"/>
                   <XMRef idref="S1.Ex9.m1.3"/>
@@ -1395,19 +1363,19 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S3.p2">
       <equation xml:id="S3.Ex22">
-        <Math mode="display" tex="z=\overbrace{\underbracket{x}_{\text{real}}+i\underbracket{y}_{\text{imaginary}}}^{\text{complex number}}\quad\underbrace{1+1}_{=2}" text="z = list@((overbrace@((underbracket@(x)) _ [real] + i * (underbracket@(y)) _ [imaginary])) ^ [complex number], (underbrace@(1 + 1)) _ (absent = 2))" xml:id="S3.Ex22.m1">
+        <Math mode="display" tex="z=\overbrace{\underbracket{x}_{\text{real}}+i\underbracket{y}_{\text{imaginary}}}^{\text{complex number}}\quad\underbrace{1+1}_{=2}" text="fragments@(z = (overbrace@((underbracket@(x)) _ [real] + i * (underbracket@(y)) _ [imaginary])) ^ [complex number], (underbrace@(1 + 1)) _ (absent = 2))" xml:id="S3.Ex22.m1">
           <XMath>
-            <XMApp>
-              <XMTok meaning="equals" role="RELOP">=</XMTok>
-              <XMTok font="italic" role="UNKNOWN">z</XMTok>
-              <XMDual>
-                <XMApp>
-                  <XMTok meaning="list"/>
-                  <XMRef idref="S3.Ex22.m1.1"/>
-                  <XMRef idref="S3.Ex22.m1.2"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S3.Ex22.m1.1">
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="fragments"/>
+                <XMRef idref="S3.Ex22.m1.1"/>
+                <XMRef idref="S3.Ex22.m1.2"/>
+              </XMApp>
+              <XMWrap>
+                <XMApp xml:id="S3.Ex22.m1.1">
+                  <XMTok meaning="equals" role="RELOP">=</XMTok>
+                  <XMTok font="italic" role="UNKNOWN">z</XMTok>
+                  <XMApp>
                     <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
                     <XMApp scriptpos="mid">
                       <XMTok name="overbrace" role="OVERACCENT" stretchy="true">⏞</XMTok>
@@ -1437,26 +1405,26 @@ Then a switch of tag forms.</p>
                     </XMApp>
                     <XMText><text fontsize="70%">complex number</text></XMText>
                   </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMApp xml:id="S3.Ex22.m1.2">
-                    <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
-                    <XMApp scriptpos="mid">
-                      <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
-                      <XMApp>
-                        <XMTok meaning="plus" role="ADDOP">+</XMTok>
-                        <XMTok meaning="1" role="NUMBER">1</XMTok>
-                        <XMTok meaning="1" role="NUMBER">1</XMTok>
-                      </XMApp>
-                    </XMApp>
+                </XMApp>
+                <XMHint name="quad" role="PUNCT" width="10pt"/>
+                <XMApp xml:id="S3.Ex22.m1.2">
+                  <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                  <XMApp scriptpos="mid">
+                    <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
                     <XMApp>
-                      <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
-                      <XMTok meaning="absent"/>
-                      <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
+                      <XMTok meaning="1" role="NUMBER">1</XMTok>
                     </XMApp>
                   </XMApp>
-                </XMWrap>
-              </XMDual>
-            </XMApp>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="equals" role="RELOP">=</XMTok>
+                    <XMTok meaning="absent"/>
+                    <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                  </XMApp>
+                </XMApp>
+              </XMWrap>
+            </XMDual>
           </XMath>
         </Math>
       </equation>
@@ -2699,7 +2667,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S5.p4">
       <equation xml:id="S5.Ex41">
-        <Math mode="display" tex="\begin{cases}E=mc^{2}&amp;5^{6}\quad\text{and so on}\\&#10;\int x-3\,dx&amp;\int x\,dx\end{cases}=b" text="cases@(E = m * c ^ 2, list@(5 ^ 6, [and so on]), integral@(x) - 3 * differential-d@(x), integral@(x * differential-d@(x))) = b" xml:id="S5.Ex41.m1">
+        <Math mode="display" tex="\begin{cases}E=mc^{2}&amp;5^{6}\quad\text{and so on}\\&#10;\int x-3\,dx&amp;\int x\,dx\end{cases}=b" text="cases@(E = m * c ^ 2, fragments@(5 ^ 6, [and so on]), integral@(x) - 3 * differential-d@(x), integral@(x * differential-d@(x))) = b" xml:id="S5.Ex41.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -2732,7 +2700,7 @@ Then a switch of tag forms.</p>
                       <XMCell align="left">
                         <XMDual xml:id="S5.Ex41.m1.2">
                           <XMApp>
-                            <XMTok meaning="list"/>
+                            <XMTok meaning="fragments"/>
                             <XMRef idref="S5.Ex41.m1.3"/>
                             <XMRef idref="S5.Ex41.m1.4"/>
                           </XMApp>
@@ -2860,7 +2828,7 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S5.p6">
       <equation xml:id="S5.Ex43">
-        <Math mode="display" tex="\begin{cases}E=mc^{2}&amp;5^{6}\quad\text{and so on}\\&#10;\int x-3\,dx&amp;\int x\,dx\end{cases}=b" text="cases@(E = m * c ^ 2, list@(5 ^ 6, [and so on]), integral@(x) - 3 * differential-d@(x), integral@(x * differential-d@(x))) = b" xml:id="S5.Ex43.m1">
+        <Math mode="display" tex="\begin{cases}E=mc^{2}&amp;5^{6}\quad\text{and so on}\\&#10;\int x-3\,dx&amp;\int x\,dx\end{cases}=b" text="cases@(E = m * c ^ 2, fragments@(5 ^ 6, [and so on]), integral@(x) - 3 * differential-d@(x), integral@(x * differential-d@(x))) = b" xml:id="S5.Ex43.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
@@ -2893,7 +2861,7 @@ Then a switch of tag forms.</p>
                       <XMCell align="left">
                         <XMDual xml:id="S5.Ex43.m1.2">
                           <XMApp>
-                            <XMTok meaning="list"/>
+                            <XMTok meaning="fragments"/>
                             <XMRef idref="S5.Ex43.m1.3"/>
                             <XMRef idref="S5.Ex43.m1.4"/>
                           </XMApp>
@@ -3476,11 +3444,11 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">7</tag>Delimiters</title>
     <para xml:id="S7.p1">
       <equation xml:id="S7.Ex51">
-        <Math mode="display" tex="\lvert\frac{a}{c}\rvert\quad\left\lvert\frac{a}{c}\right\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="list@(absolute-value@(a / c), absolute-value@(a / c), absolute-value@(a / b))" xml:id="S7.Ex51.m1">
+        <Math mode="display" tex="\lvert\frac{a}{c}\rvert\quad\left\lvert\frac{a}{c}\right\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="fragments@(absolute-value@(a / c), absolute-value@(a / c), absolute-value@(a / b))" xml:id="S7.Ex51.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="list"/>
+                <XMTok meaning="fragments"/>
                 <XMRef idref="S7.Ex51.m1.1"/>
                 <XMRef idref="S7.Ex51.m1.3"/>
                 <XMRef idref="S7.Ex51.m1.5"/>
@@ -3541,11 +3509,11 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p2">
       <equation xml:id="S7.Ex52">
-        <Math mode="display" tex="\lvert\frac{a}{b}\rvert\quad\left\lvert\frac{a}{b}\right\rvert\quad\big\lvert\frac{a}{b}\big\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="list@(absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b))" xml:id="S7.Ex52.m1">
+        <Math mode="display" tex="\lvert\frac{a}{b}\rvert\quad\left\lvert\frac{a}{b}\right\rvert\quad\big\lvert\frac{a}{b}\big\rvert\quad\Bigg\lvert\frac{a}{b}\Bigg\rvert" text="fragments@(absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b), absolute-value@(a / b))" xml:id="S7.Ex52.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="list"/>
+                <XMTok meaning="fragments"/>
                 <XMRef idref="S7.Ex52.m1.1"/>
                 <XMRef idref="S7.Ex52.m1.3"/>
                 <XMRef idref="S7.Ex52.m1.5"/>
@@ -3621,11 +3589,11 @@ Then a switch of tag forms.</p>
         </Math>
       </equation>
       <equation xml:id="S7.Ex53">
-        <Math mode="display" tex="\lvert@\pi@\rvert\quad\left\lvert\_\phi\_\right\rvert" text="list@(absolute-value@(@ * pi * @), absolute-value@(_ * phi * _))" xml:id="S7.Ex53.m1">
+        <Math mode="display" tex="\lvert@\pi@\rvert\quad\left\lvert\_\phi\_\right\rvert" text="fragments@(absolute-value@(@ * pi * @), absolute-value@(_ * phi * _))" xml:id="S7.Ex53.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="list"/>
+                <XMTok meaning="fragments"/>
                 <XMRef idref="S7.Ex53.m1.1"/>
                 <XMRef idref="S7.Ex53.m1.3"/>
               </XMApp>
@@ -3671,11 +3639,11 @@ Then a switch of tag forms.</p>
     </para>
     <para xml:id="S7.p3">
       <equation xml:id="S7.Ex54">
-        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="list@(delimited-⟨⟩@(list@(A, 1 / 2)), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
+        <Math mode="display" tex="\left\langle A,\frac{1}{2}\right\rangle\quad\Big\langle B\,\Big|\,\sum_{k}f_{k}\,\Big|\,C\Big\rangle" text="fragments@(delimited-⟨⟩@(list@(A, 1 / 2)), quantum-operator-product@(B, (sum _ k)@(f _ k), C))" xml:id="S7.Ex54.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="list"/>
+                <XMTok meaning="fragments"/>
                 <XMRef idref="S7.Ex54.m1.1"/>
                 <XMRef idref="S7.Ex54.m1.5"/>
               </XMApp>
@@ -3962,13 +3930,14 @@ Then a switch of tag forms.</p>
       <title>Operators</title>
       <para xml:id="S7.SS0.SSS0.Px1.p1">
         <equation xml:id="S7.Ex57">
-          <Math mode="display" tex="a:=b\quad a\vcentcolon=b\quad a\ordinarycolon=b" text="formulae@(a assign b, formulae@(a assign b, a assign b))" xml:id="S7.Ex57.m1">
+          <Math mode="display" tex="a:=b\quad a\vcentcolon=b\quad a\ordinarycolon=b" text="formulae@(a assign b, a assign b, a assign b)" xml:id="S7.Ex57.m1">
             <XMath>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="formulae"/>
                   <XMRef idref="S7.Ex57.m1.1"/>
                   <XMRef idref="S7.Ex57.m1.2"/>
+                  <XMRef idref="S7.Ex57.m1.3"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S7.Ex57.m1.1">
@@ -3977,26 +3946,17 @@ Then a switch of tag forms.</p>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S7.Ex57.m1.2">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S7.Ex57.m1.3"/>
-                      <XMRef idref="S7.Ex57.m1.4"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S7.Ex57.m1.3">
-                        <XMTok meaning="assign" role="RELOP">:=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S7.Ex57.m1.4">
-                        <XMTok meaning="assign" role="RELOP">:=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
+                  <XMApp xml:id="S7.Ex57.m1.2">
+                    <XMTok meaning="assign" role="RELOP">:=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S7.Ex57.m1.3">
+                    <XMTok meaning="assign" role="RELOP">:=</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
                 </XMWrap>
               </XMDual>
             </XMath>
@@ -4005,13 +3965,14 @@ Then a switch of tag forms.</p>
       </para>
       <para xml:id="S7.SS0.SSS0.Px1.p2">
         <equation xml:id="S7.Ex58">
-          <Math mode="display" tex="a\coloneqq b\quad c\Colonapprox d\quad e\dblcolon f" text="formulae@(a coloneqq b, formulae@(c Colonapprox d, e dblcolon f))" xml:id="S7.Ex58.m1">
+          <Math mode="display" tex="a\coloneqq b\quad c\Colonapprox d\quad e\dblcolon f" text="formulae@(a coloneqq b, c Colonapprox d, e dblcolon f)" xml:id="S7.Ex58.m1">
             <XMath>
               <XMDual>
                 <XMApp>
                   <XMTok meaning="formulae"/>
                   <XMRef idref="S7.Ex58.m1.1"/>
                   <XMRef idref="S7.Ex58.m1.2"/>
+                  <XMRef idref="S7.Ex58.m1.3"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S7.Ex58.m1.1">
@@ -4020,26 +3981,17 @@ Then a switch of tag forms.</p>
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S7.Ex58.m1.2">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S7.Ex58.m1.3"/>
-                      <XMRef idref="S7.Ex58.m1.4"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S7.Ex58.m1.3">
-                        <XMTok name="Colonapprox" role="RELOP">::≈</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">c</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">d</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S7.Ex58.m1.4">
-                        <XMTok name="dblcolon" role="RELOP">::</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">e</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">f</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
+                  <XMApp xml:id="S7.Ex58.m1.2">
+                    <XMTok name="Colonapprox" role="RELOP">::≈</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">c</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">d</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S7.Ex58.m1.3">
+                    <XMTok name="dblcolon" role="RELOP">::</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">e</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">f</XMTok>
+                  </XMApp>
                 </XMWrap>
               </XMDual>
             </XMath>
@@ -4071,11 +4023,11 @@ Then a switch of tag forms.</p>
     <title><tag close=" ">8</tag>Prescripts</title>
     <para xml:id="S8.p1">
       <equation xml:id="S8.Ex60">
-        <Math mode="display" tex="{}^{4}_{12}\mathbf{C}^{5+}_{2}\quad\prescript{14}{2}{\mathbf{C}}^{5+}_{2}\quad\prescript{4}{12}{\mathbf{C}}^{5+}_{2}\quad\prescript{14}{}{\mathbf{C}}^{5+}_{2}\quad\prescript{}{2}{\mathbf{C}}^{5+}_{2}" text="list@(^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ 14 _ 2 (C ^ (limit-from@(5, +))) _ 2, ^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ limit-from@(5, +) ^ 14 C _ 2, ^ limit-from@(5, +) _ 2 C _ 2)" xml:id="S8.Ex60.m1">
+        <Math mode="display" tex="{}^{4}_{12}\mathbf{C}^{5+}_{2}\quad\prescript{14}{2}{\mathbf{C}}^{5+}_{2}\quad\prescript{4}{12}{\mathbf{C}}^{5+}_{2}\quad\prescript{14}{}{\mathbf{C}}^{5+}_{2}\quad\prescript{}{2}{\mathbf{C}}^{5+}_{2}" text="fragments@(^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ 14 _ 2 (C ^ (limit-from@(5, +))) _ 2, ^ 4 _ 12 (C ^ (limit-from@(5, +))) _ 2, ^ limit-from@(5, +) ^ 14 C _ 2, ^ limit-from@(5, +) _ 2 C _ 2)" xml:id="S8.Ex60.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="list"/>
+                <XMTok meaning="fragments"/>
                 <XMRef idref="S8.Ex60.m1.1"/>
                 <XMRef idref="S8.Ex60.m1.2"/>
                 <XMRef idref="S8.Ex60.m1.3"/>
@@ -5154,30 +5106,30 @@ Then a switch of tag forms.</p>
                   <XMApp>
                     <XMTok meaning="formulae"/>
                     <XMRef idref="S9.E14.m1.1"/>
-                    <XMRef idref="S9.E14.m1.3"/>
+                    <XMRef idref="S9.E14.m1.2"/>
                   </XMApp>
                   <XMWrap>
                     <XMApp xml:id="S9.E14.m1.1">
+                      <XMRef idref="S9.E14.m1.4"/>
                       <XMRef idref="S9.E14.m1.5"/>
                       <XMRef idref="S9.E14.m1.6"/>
-                      <XMRef idref="S9.E14.m1.7" xml:id="S9.E14.m1.2"/>
                     </XMApp>
-                    <XMRef idref="S9.E14.m1.8"/>
-                    <XMApp xml:id="S9.E14.m1.3">
+                    <XMRef idref="S9.E14.m1.7"/>
+                    <XMApp xml:id="S9.E14.m1.2">
                       <XMTok meaning="multirelation"/>
                       <XMApp>
+                        <XMRef idref="S9.E14.m1.10"/>
                         <XMRef idref="S9.E14.m1.11"/>
                         <XMRef idref="S9.E14.m1.12"/>
-                        <XMRef idref="S9.E14.m1.13"/>
                       </XMApp>
-                      <XMRef idref="S9.E14.m1.10"/>
+                      <XMRef idref="S9.E14.m1.9"/>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                        <XMRef idref="S9.E14.m1.14"/>
-                        <XMRef idref="S9.E14.m1.16"/>
+                        <XMRef idref="S9.E14.m1.13"/>
+                        <XMRef idref="S9.E14.m1.15"/>
                       </XMApp>
-                      <XMRef idref="S9.E14.m1.15"/>
-                      <XMRef idref="S9.E14.m1.17"/>
+                      <XMRef idref="S9.E14.m1.14"/>
+                      <XMRef idref="S9.E14.m1.16"/>
                     </XMApp>
                   </XMWrap>
                 </XMDual>
@@ -5185,20 +5137,20 @@ Then a switch of tag forms.</p>
                   <XMRow>
                     <XMCell align="left">
                       <XMWrap>
-                        <XMApp xml:id="S9.E14.m1.4">
-                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.5">=</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.E14.m1.6">x</XMTok>
-                          <XMTok meaning="1" role="NUMBER" xml:id="S9.E14.m1.7">1</XMTok>
+                        <XMApp xml:id="S9.E14.m1.3">
+                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.4">=</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.E14.m1.5">x</XMTok>
+                          <XMTok meaning="1" role="NUMBER" xml:id="S9.E14.m1.6">1</XMTok>
                         </XMApp>
-                        <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S9.E14.m1.8">,</XMTok>
-                        <XMApp xml:id="S9.E14.m1.9">
-                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.10">=</XMTok>
+                        <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S9.E14.m1.7">,</XMTok>
+                        <XMApp xml:id="S9.E14.m1.8">
+                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.9">=</XMTok>
                           <XMApp>
-                            <XMTok meaning="plus" role="ADDOP" xml:id="S9.E14.m1.11">+</XMTok>
-                            <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S9.E14.m1.12">x</XMTok>
-                            <XMTok meaning="1" role="NUMBER" xml:id="S9.E14.m1.13">1</XMTok>
+                            <XMTok meaning="plus" role="ADDOP" xml:id="S9.E14.m1.10">+</XMTok>
+                            <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S9.E14.m1.11">x</XMTok>
+                            <XMTok meaning="1" role="NUMBER" xml:id="S9.E14.m1.12">1</XMTok>
                           </XMApp>
-                          <XMTok meaning="2" role="NUMBER" xml:id="S9.E14.m1.14">2</XMTok>
+                          <XMTok meaning="2" role="NUMBER" xml:id="S9.E14.m1.13">2</XMTok>
                         </XMApp>
                       </XMWrap>
                     </XMCell>
@@ -5206,9 +5158,9 @@ Then a switch of tag forms.</p>
                   <XMRow>
                     <XMCell align="left">
                       <XMApp>
-                        <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.15">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.E14.m1.16">y</XMTok>
-                        <XMTok meaning="2" role="NUMBER" xml:id="S9.E14.m1.17">2</XMTok>
+                        <XMTok meaning="equals" role="RELOP" xml:id="S9.E14.m1.14">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.E14.m1.15">y</XMTok>
+                        <XMTok meaning="2" role="NUMBER" xml:id="S9.E14.m1.16">2</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -5240,30 +5192,30 @@ Then a switch of tag forms.</p>
                   <XMApp>
                     <XMTok meaning="formulae"/>
                     <XMRef idref="S9.E15.m1.1"/>
-                    <XMRef idref="S9.E15.m1.3"/>
+                    <XMRef idref="S9.E15.m1.2"/>
                   </XMApp>
                   <XMWrap>
                     <XMApp xml:id="S9.E15.m1.1">
+                      <XMRef idref="S9.E15.m1.4"/>
                       <XMRef idref="S9.E15.m1.5"/>
                       <XMRef idref="S9.E15.m1.6"/>
-                      <XMRef idref="S9.E15.m1.7" xml:id="S9.E15.m1.2"/>
                     </XMApp>
-                    <XMRef idref="S9.E15.m1.8"/>
-                    <XMApp xml:id="S9.E15.m1.3">
+                    <XMRef idref="S9.E15.m1.7"/>
+                    <XMApp xml:id="S9.E15.m1.2">
                       <XMTok meaning="multirelation"/>
                       <XMApp>
+                        <XMRef idref="S9.E15.m1.10"/>
                         <XMRef idref="S9.E15.m1.11"/>
                         <XMRef idref="S9.E15.m1.12"/>
-                        <XMRef idref="S9.E15.m1.13"/>
                       </XMApp>
-                      <XMRef idref="S9.E15.m1.10"/>
+                      <XMRef idref="S9.E15.m1.9"/>
                       <XMApp>
                         <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                        <XMRef idref="S9.E15.m1.14"/>
-                        <XMRef idref="S9.E15.m1.16"/>
+                        <XMRef idref="S9.E15.m1.13"/>
+                        <XMRef idref="S9.E15.m1.15"/>
                       </XMApp>
-                      <XMRef idref="S9.E15.m1.15"/>
-                      <XMRef idref="S9.E15.m1.17"/>
+                      <XMRef idref="S9.E15.m1.14"/>
+                      <XMRef idref="S9.E15.m1.16"/>
                     </XMApp>
                   </XMWrap>
                 </XMDual>
@@ -5271,20 +5223,20 @@ Then a switch of tag forms.</p>
                   <XMRow>
                     <XMCell align="right">
                       <XMWrap>
-                        <XMApp xml:id="S9.E15.m1.4">
-                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.5">=</XMTok>
-                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.E15.m1.6">x</XMTok>
-                          <XMTok meaning="1" role="NUMBER" xml:id="S9.E15.m1.7">1</XMTok>
+                        <XMApp xml:id="S9.E15.m1.3">
+                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.4">=</XMTok>
+                          <XMTok font="italic" role="UNKNOWN" xml:id="S9.E15.m1.5">x</XMTok>
+                          <XMTok meaning="1" role="NUMBER" xml:id="S9.E15.m1.6">1</XMTok>
                         </XMApp>
-                        <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S9.E15.m1.8">,</XMTok>
-                        <XMApp xml:id="S9.E15.m1.9">
-                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.10">=</XMTok>
+                        <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S9.E15.m1.7">,</XMTok>
+                        <XMApp xml:id="S9.E15.m1.8">
+                          <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.9">=</XMTok>
                           <XMApp>
-                            <XMTok meaning="plus" role="ADDOP" xml:id="S9.E15.m1.11">+</XMTok>
-                            <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S9.E15.m1.12">x</XMTok>
-                            <XMTok meaning="1" role="NUMBER" xml:id="S9.E15.m1.13">1</XMTok>
+                            <XMTok meaning="plus" role="ADDOP" xml:id="S9.E15.m1.10">+</XMTok>
+                            <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S9.E15.m1.11">x</XMTok>
+                            <XMTok meaning="1" role="NUMBER" xml:id="S9.E15.m1.12">1</XMTok>
                           </XMApp>
-                          <XMTok meaning="2" role="NUMBER" xml:id="S9.E15.m1.14">2</XMTok>
+                          <XMTok meaning="2" role="NUMBER" xml:id="S9.E15.m1.13">2</XMTok>
                         </XMApp>
                       </XMWrap>
                     </XMCell>
@@ -5292,9 +5244,9 @@ Then a switch of tag forms.</p>
                   <XMRow>
                     <XMCell align="right">
                       <XMApp>
-                        <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.15">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.E15.m1.16">y</XMTok>
-                        <XMTok meaning="2" role="NUMBER" xml:id="S9.E15.m1.17">2</XMTok>
+                        <XMTok meaning="equals" role="RELOP" xml:id="S9.E15.m1.14">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S9.E15.m1.15">y</XMTok>
+                        <XMTok meaning="2" role="NUMBER" xml:id="S9.E15.m1.16">2</XMTok>
                       </XMApp>
                     </XMCell>
                   </XMRow>
@@ -6993,30 +6945,30 @@ Then a switch of tag forms.</p>
                 <XMApp>
                   <XMTok meaning="formulae"/>
                   <XMRef idref="S11.Ex81.m1.1"/>
-                  <XMRef idref="S11.Ex81.m1.3"/>
+                  <XMRef idref="S11.Ex81.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S11.Ex81.m1.1">
+                    <XMRef idref="S11.Ex81.m1.4"/>
                     <XMRef idref="S11.Ex81.m1.5"/>
                     <XMRef idref="S11.Ex81.m1.6"/>
-                    <XMRef idref="S11.Ex81.m1.7" xml:id="S11.Ex81.m1.2"/>
                   </XMApp>
-                  <XMRef idref="S11.Ex81.m1.8"/>
-                  <XMApp xml:id="S11.Ex81.m1.3">
+                  <XMRef idref="S11.Ex81.m1.7"/>
+                  <XMApp xml:id="S11.Ex81.m1.2">
                     <XMTok meaning="multirelation"/>
                     <XMApp>
+                      <XMRef idref="S11.Ex81.m1.10"/>
                       <XMRef idref="S11.Ex81.m1.11"/>
                       <XMRef idref="S11.Ex81.m1.12"/>
-                      <XMRef idref="S11.Ex81.m1.13"/>
                     </XMApp>
-                    <XMRef idref="S11.Ex81.m1.10"/>
+                    <XMRef idref="S11.Ex81.m1.9"/>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMRef idref="S11.Ex81.m1.14"/>
-                      <XMRef idref="S11.Ex81.m1.16"/>
+                      <XMRef idref="S11.Ex81.m1.13"/>
+                      <XMRef idref="S11.Ex81.m1.15"/>
                     </XMApp>
-                    <XMRef idref="S11.Ex81.m1.15"/>
-                    <XMRef idref="S11.Ex81.m1.17"/>
+                    <XMRef idref="S11.Ex81.m1.14"/>
+                    <XMRef idref="S11.Ex81.m1.16"/>
                   </XMApp>
                 </XMWrap>
               </XMDual>
@@ -7024,20 +6976,20 @@ Then a switch of tag forms.</p>
                 <XMRow>
                   <XMCell align="right">
                     <XMWrap>
-                      <XMApp xml:id="S11.Ex81.m1.4">
-                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.5">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex81.m1.6">x</XMTok>
-                        <XMTok meaning="1" role="NUMBER" xml:id="S11.Ex81.m1.7">1</XMTok>
+                      <XMApp xml:id="S11.Ex81.m1.3">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.4">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex81.m1.5">x</XMTok>
+                        <XMTok meaning="1" role="NUMBER" xml:id="S11.Ex81.m1.6">1</XMTok>
                       </XMApp>
-                      <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S11.Ex81.m1.8">,</XMTok>
-                      <XMApp xml:id="S11.Ex81.m1.9">
-                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.10">=</XMTok>
+                      <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S11.Ex81.m1.7">,</XMTok>
+                      <XMApp xml:id="S11.Ex81.m1.8">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.9">=</XMTok>
                         <XMApp>
-                          <XMTok meaning="plus" role="ADDOP" xml:id="S11.Ex81.m1.11">+</XMTok>
-                          <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S11.Ex81.m1.12">x</XMTok>
-                          <XMTok meaning="1" role="NUMBER" xml:id="S11.Ex81.m1.13">1</XMTok>
+                          <XMTok meaning="plus" role="ADDOP" xml:id="S11.Ex81.m1.10">+</XMTok>
+                          <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S11.Ex81.m1.11">x</XMTok>
+                          <XMTok meaning="1" role="NUMBER" xml:id="S11.Ex81.m1.12">1</XMTok>
                         </XMApp>
-                        <XMTok meaning="2" role="NUMBER" xml:id="S11.Ex81.m1.14">2</XMTok>
+                        <XMTok meaning="2" role="NUMBER" xml:id="S11.Ex81.m1.13">2</XMTok>
                       </XMApp>
                     </XMWrap>
                   </XMCell>
@@ -7045,9 +6997,9 @@ Then a switch of tag forms.</p>
                 <XMRow>
                   <XMCell align="right">
                     <XMApp>
-                      <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.15">=</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex81.m1.16">y</XMTok>
-                      <XMTok meaning="2" role="NUMBER" xml:id="S11.Ex81.m1.17">2</XMTok>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex81.m1.14">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex81.m1.15">y</XMTok>
+                      <XMTok meaning="2" role="NUMBER" xml:id="S11.Ex81.m1.16">2</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>
@@ -7067,30 +7019,30 @@ Then a switch of tag forms.</p>
                 <XMApp>
                   <XMTok meaning="formulae"/>
                   <XMRef idref="S11.Ex82.m1.1"/>
-                  <XMRef idref="S11.Ex82.m1.3"/>
+                  <XMRef idref="S11.Ex82.m1.2"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S11.Ex82.m1.1">
+                    <XMRef idref="S11.Ex82.m1.4"/>
                     <XMRef idref="S11.Ex82.m1.5"/>
                     <XMRef idref="S11.Ex82.m1.6"/>
-                    <XMRef idref="S11.Ex82.m1.7" xml:id="S11.Ex82.m1.2"/>
                   </XMApp>
-                  <XMRef idref="S11.Ex82.m1.8"/>
-                  <XMApp xml:id="S11.Ex82.m1.3">
+                  <XMRef idref="S11.Ex82.m1.7"/>
+                  <XMApp xml:id="S11.Ex82.m1.2">
                     <XMTok meaning="multirelation"/>
                     <XMApp>
+                      <XMRef idref="S11.Ex82.m1.10"/>
                       <XMRef idref="S11.Ex82.m1.11"/>
                       <XMRef idref="S11.Ex82.m1.12"/>
-                      <XMRef idref="S11.Ex82.m1.13"/>
                     </XMApp>
-                    <XMRef idref="S11.Ex82.m1.10"/>
+                    <XMRef idref="S11.Ex82.m1.9"/>
                     <XMApp>
                       <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                      <XMRef idref="S11.Ex82.m1.14"/>
-                      <XMRef idref="S11.Ex82.m1.16"/>
+                      <XMRef idref="S11.Ex82.m1.13"/>
+                      <XMRef idref="S11.Ex82.m1.15"/>
                     </XMApp>
-                    <XMRef idref="S11.Ex82.m1.15"/>
-                    <XMRef idref="S11.Ex82.m1.17"/>
+                    <XMRef idref="S11.Ex82.m1.14"/>
+                    <XMRef idref="S11.Ex82.m1.16"/>
                   </XMApp>
                 </XMWrap>
               </XMDual>
@@ -7098,20 +7050,20 @@ Then a switch of tag forms.</p>
                 <XMRow>
                   <XMCell align="right">
                     <XMWrap>
-                      <XMApp xml:id="S11.Ex82.m1.4">
-                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.5">=</XMTok>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex82.m1.6">s</XMTok>
-                        <XMTok meaning="2.8" role="NUMBER" xml:id="S11.Ex82.m1.7">2.8</XMTok>
+                      <XMApp xml:id="S11.Ex82.m1.3">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.4">=</XMTok>
+                        <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex82.m1.5">s</XMTok>
+                        <XMTok meaning="2.8" role="NUMBER" xml:id="S11.Ex82.m1.6">2.8</XMTok>
                       </XMApp>
-                      <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S11.Ex82.m1.8">,</XMTok>
-                      <XMApp xml:id="S11.Ex82.m1.9">
-                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.10">=</XMTok>
+                      <XMTok role="PUNCT" rpadding="10.0pt" xml:id="S11.Ex82.m1.7">,</XMTok>
+                      <XMApp xml:id="S11.Ex82.m1.8">
+                        <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.9">=</XMTok>
                         <XMApp>
-                          <XMTok meaning="plus" role="ADDOP" xml:id="S11.Ex82.m1.11">+</XMTok>
-                          <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S11.Ex82.m1.12">s</XMTok>
-                          <XMTok meaning="0.2" role="NUMBER" xml:id="S11.Ex82.m1.13">0.2</XMTok>
+                          <XMTok meaning="plus" role="ADDOP" xml:id="S11.Ex82.m1.10">+</XMTok>
+                          <XMTok font="italic" lpadding="10.0pt" role="UNKNOWN" xml:id="S11.Ex82.m1.11">s</XMTok>
+                          <XMTok meaning="0.2" role="NUMBER" xml:id="S11.Ex82.m1.12">0.2</XMTok>
                         </XMApp>
-                        <XMTok meaning="3" role="NUMBER" xml:id="S11.Ex82.m1.14">3</XMTok>
+                        <XMTok meaning="3" role="NUMBER" xml:id="S11.Ex82.m1.13">3</XMTok>
                       </XMApp>
                     </XMWrap>
                   </XMCell>
@@ -7119,9 +7071,9 @@ Then a switch of tag forms.</p>
                 <XMRow>
                   <XMCell align="right">
                     <XMApp>
-                      <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.15">=</XMTok>
-                      <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex82.m1.16">t</XMTok>
-                      <XMTok meaning="4.5" role="NUMBER" xml:id="S11.Ex82.m1.17">4.5</XMTok>
+                      <XMTok meaning="equals" role="RELOP" xml:id="S11.Ex82.m1.14">=</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S11.Ex82.m1.15">t</XMTok>
+                      <XMTok meaning="4.5" role="NUMBER" xml:id="S11.Ex82.m1.16">4.5</XMTok>
                     </XMApp>
                   </XMCell>
                 </XMRow>

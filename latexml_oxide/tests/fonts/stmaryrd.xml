@@ -7,13 +7,15 @@
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
     <equation xml:id="S0.Ex1">
-      <Math mode="display" tex="a\Ydown b\quad a\Yleft b\quad a\Yright b\quad a\Yup b" text="formulae@(a Ydown b, formulae@(a Yleft b, formulae@(a Yright b, a Yup b)))" xml:id="S0.Ex1.m1">
+      <Math mode="display" tex="a\Ydown b\quad a\Yleft b\quad a\Yright b\quad a\Yup b" text="fragments@(a Ydown b, a Yleft b, a Yright b, a Yup b)" xml:id="S0.Ex1.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex1.m1.1"/>
               <XMRef idref="S0.Ex1.m1.2"/>
+              <XMRef idref="S0.Ex1.m1.3"/>
+              <XMRef idref="S0.Ex1.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex1.m1.1">
@@ -22,54 +24,38 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex1.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex1.m1.3"/>
-                  <XMRef idref="S0.Ex1.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex1.m1.3">
-                    <XMTok class="ltx_nounicode" name="Yleft" role="RELOP">\Yleft</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex1.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex1.m1.5"/>
-                      <XMRef idref="S0.Ex1.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex1.m1.5">
-                        <XMTok class="ltx_nounicode" name="Yright" role="RELOP">\Yright</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex1.m1.6">
-                        <XMTok name="Yup" role="RELOP">⅄</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex1.m1.2">
+                <XMTok class="ltx_nounicode" name="Yleft" role="RELOP">\Yleft</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex1.m1.3">
+                <XMTok class="ltx_nounicode" name="Yright" role="RELOP">\Yright</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex1.m1.4">
+                <XMTok name="Yup" role="RELOP">⅄</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex2">
-      <Math mode="display" tex="a\baro b\quad a\bbslash b\quad a\binampersand b\quad a\bindnasrepma b" text="formulae@(a apl-reversal b, formulae@(a bbslash b, formulae@(a additive-conjunction b, a multiplicative-disjunction b)))" xml:id="S0.Ex2.m1">
+      <Math mode="display" tex="a\baro b\quad a\bbslash b\quad a\binampersand b\quad a\bindnasrepma b" text="fragments@(a apl-reversal b, a bbslash b, a additive-conjunction b, a multiplicative-disjunction b)" xml:id="S0.Ex2.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex2.m1.1"/>
               <XMRef idref="S0.Ex2.m1.2"/>
+              <XMRef idref="S0.Ex2.m1.3"/>
+              <XMRef idref="S0.Ex2.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex2.m1.1">
@@ -78,54 +64,42 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex2.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex2.m1.3"/>
-                  <XMRef idref="S0.Ex2.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex2.m1.3">
-                    <XMTok name="bbslash" role="RELOP">⑊</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex2.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex2.m1.5"/>
-                      <XMRef idref="S0.Ex2.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex2.m1.5">
-                        <XMTok meaning="additive-conjunction" name="binampersand" role="RELOP">&amp;</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex2.m1.6">
-                        <XMTok meaning="multiplicative-disjunction" name="bindnasrepma" role="RELOP">⅋</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex2.m1.2">
+                <XMTok name="bbslash" role="RELOP">⑊</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex2.m1.3">
+                <XMTok meaning="additive-conjunction" name="binampersand" role="RELOP">&amp;</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex2.m1.4">
+                <XMTok meaning="multiplicative-disjunction" name="bindnasrepma" role="RELOP">⅋</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex3">
-      <Math mode="display" tex="a\boxast b\quad a\boxbar b\quad a\boxbox b\quad a\boxbslash b\quad a\boxcircle b\quad a\boxdot b\quad a\boxempty b\quad a\boxslash b" text="formulae@(boxast@(a, b), formulae@(a boxbar list@(b, boxbox@(a, b), boxbslash@(a, b), boxcircle@(a, b), a boxdot b), a boxempty list@(b, boxslash@(a, b))))" xml:id="S0.Ex3.m1">
+      <Math mode="display" tex="a\boxast b\quad a\boxbar b\quad a\boxbox b\quad a\boxbslash b\quad a\boxcircle b\quad a\boxdot b\quad a\boxempty b\quad a\boxslash b" text="fragments@(boxast@(a, b), a boxbar b, boxbox@(a, b), boxbslash@(a, b), boxcircle@(a, b), a boxdot b, a boxempty b, boxslash@(a, b))" xml:id="S0.Ex3.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex3.m1.1"/>
               <XMRef idref="S0.Ex3.m1.2"/>
+              <XMRef idref="S0.Ex3.m1.3"/>
+              <XMRef idref="S0.Ex3.m1.4"/>
+              <XMRef idref="S0.Ex3.m1.5"/>
+              <XMRef idref="S0.Ex3.m1.6"/>
+              <XMRef idref="S0.Ex3.m1.7"/>
+              <XMRef idref="S0.Ex3.m1.8"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex3.m1.1">
@@ -134,90 +108,62 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex3.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex3.m1.3"/>
-                  <XMRef idref="S0.Ex3.m1.9"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex3.m1.3">
-                    <XMTok name="boxbar" role="RELOP">◫</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S0.Ex3.m1.4"/>
-                        <XMRef idref="S0.Ex3.m1.5"/>
-                        <XMRef idref="S0.Ex3.m1.6"/>
-                        <XMRef idref="S0.Ex3.m1.7"/>
-                        <XMRef idref="S0.Ex3.m1.8"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.4">b</XMTok>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex3.m1.5">
-                          <XMTok name="boxbox" role="BINOP">⧈</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex3.m1.6">
-                          <XMTok name="boxbslash" role="BINOP">⧅</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex3.m1.7">
-                          <XMTok name="boxcircle" role="BINOP">⧇</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex3.m1.8">
-                          <XMTok name="boxdot" role="MULOP">⊡</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                      </XMWrap>
-                    </XMDual>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMApp xml:id="S0.Ex3.m1.9">
-                    <XMTok name="boxempty" role="RELOP">□</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S0.Ex3.m1.10"/>
-                        <XMRef idref="S0.Ex3.m1.11"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex3.m1.10">b</XMTok>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex3.m1.11">
-                          <XMTok name="boxslash" role="BINOP">⧄</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                      </XMWrap>
-                    </XMDual>
-                  </XMApp>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex3.m1.2">
+                <XMTok name="boxbar" role="RELOP">◫</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex3.m1.3">
+                <XMTok name="boxbox" role="BINOP">⧈</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex3.m1.4">
+                <XMTok name="boxbslash" role="BINOP">⧅</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex3.m1.5">
+                <XMTok name="boxcircle" role="BINOP">⧇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex3.m1.6">
+                <XMTok name="boxdot" role="MULOP">⊡</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex3.m1.7">
+                <XMTok name="boxempty" role="RELOP">□</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex3.m1.8">
+                <XMTok name="boxslash" role="BINOP">⧄</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex4">
-      <Math mode="display" tex="a\curlyveedownarrow b\quad a\curlyveeuparrow b\quad a\curlywedgedownarrow b\quad a\curlywedgeuparrow b" text="formulae@(a curlyveedownarrow b, formulae@(a curlyveeuparrow b, formulae@(a curlywedgedownarrow b, a curlywedgeuparrow b)))" xml:id="S0.Ex4.m1">
+      <Math mode="display" tex="a\curlyveedownarrow b\quad a\curlyveeuparrow b\quad a\curlywedgedownarrow b\quad a\curlywedgeuparrow b" text="fragments@(a curlyveedownarrow b, a curlyveeuparrow b, a curlywedgedownarrow b, a curlywedgeuparrow b)" xml:id="S0.Ex4.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex4.m1.1"/>
               <XMRef idref="S0.Ex4.m1.2"/>
+              <XMRef idref="S0.Ex4.m1.3"/>
+              <XMRef idref="S0.Ex4.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex4.m1.1">
@@ -226,54 +172,38 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex4.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex4.m1.3"/>
-                  <XMRef idref="S0.Ex4.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex4.m1.3">
-                    <XMTok class="ltx_nounicode" name="curlyveeuparrow" role="ARROW">\curlyveeuparrow</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex4.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex4.m1.5"/>
-                      <XMRef idref="S0.Ex4.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex4.m1.5">
-                        <XMTok class="ltx_nounicode" name="curlywedgedownarrow" role="ARROW">\curlywedgedownarrow</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex4.m1.6">
-                        <XMTok class="ltx_nounicode" name="curlywedgeuparrow" role="ARROW">\curlywedgeuparrow</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex4.m1.2">
+                <XMTok class="ltx_nounicode" name="curlyveeuparrow" role="ARROW">\curlyveeuparrow</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex4.m1.3">
+                <XMTok class="ltx_nounicode" name="curlywedgedownarrow" role="ARROW">\curlywedgedownarrow</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex4.m1.4">
+                <XMTok class="ltx_nounicode" name="curlywedgeuparrow" role="ARROW">\curlywedgeuparrow</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex5">
-      <Math mode="display" tex="a\fatbslash b\quad a\fatsemi b\quad a\fatslash b\quad a\interleave b" text="formulae@(a fatbslash b, formulae@(a fatsemi b, formulae@(a fatslash b, a interleave b)))" xml:id="S0.Ex5.m1">
+      <Math mode="display" tex="a\fatbslash b\quad a\fatsemi b\quad a\fatslash b\quad a\interleave b" text="fragments@(a fatbslash b, a fatsemi b, a fatslash b, a interleave b)" xml:id="S0.Ex5.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex5.m1.1"/>
               <XMRef idref="S0.Ex5.m1.2"/>
+              <XMRef idref="S0.Ex5.m1.3"/>
+              <XMRef idref="S0.Ex5.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex5.m1.1">
@@ -282,54 +212,39 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex5.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex5.m1.3"/>
-                  <XMRef idref="S0.Ex5.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex5.m1.3">
-                    <XMTok name="fatsemi" role="RELOP">⨟</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex5.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex5.m1.5"/>
-                      <XMRef idref="S0.Ex5.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex5.m1.5">
-                        <XMTok class="ltx_nounicode" name="fatslash" role="ARROW">\fatslash</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex5.m1.6">
-                        <XMTok name="interleave" role="RELOP">⫴</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex5.m1.2">
+                <XMTok name="fatsemi" role="RELOP">⨟</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex5.m1.3">
+                <XMTok class="ltx_nounicode" name="fatslash" role="ARROW">\fatslash</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex5.m1.4">
+                <XMTok name="interleave" role="RELOP">⫴</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex6">
-      <Math mode="display" tex="a\leftslice b\quad a\merge b\quad a\minuso b\quad a\moo b\quad a\nplus b" text="formulae@(a leftslice b, formulae@(a merge b, a minuso list@(b, a * moo * b, a intersection-plus b)))" xml:id="S0.Ex6.m1">
+      <Math mode="display" tex="a\leftslice b\quad a\merge b\quad a\minuso b\quad a\moo b\quad a\nplus b" text="fragments@(a leftslice b, a merge b, a minuso b, a * moo * b, a intersection-plus b)" xml:id="S0.Ex6.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex6.m1.1"/>
               <XMRef idref="S0.Ex6.m1.2"/>
+              <XMRef idref="S0.Ex6.m1.3"/>
+              <XMRef idref="S0.Ex6.m1.4"/>
+              <XMRef idref="S0.Ex6.m1.5"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex6.m1.1">
@@ -338,68 +253,54 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex6.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex6.m1.3"/>
-                  <XMRef idref="S0.Ex6.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex6.m1.3">
-                    <XMTok name="merge" role="RELOP">⨇</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMApp xml:id="S0.Ex6.m1.4">
-                    <XMTok name="minuso" role="RELOP">⦵</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S0.Ex6.m1.5"/>
-                        <XMRef idref="S0.Ex6.m1.6"/>
-                        <XMRef idref="S0.Ex6.m1.7"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex6.m1.5">b</XMTok>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex6.m1.6">
-                          <XMTok meaning="times" role="MULOP">⁢</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok class="ltx_nounicode" name="moo" role="UNKNOWN">\moo</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex6.m1.7">
-                          <XMDual role="ADDOP">
-                            <XMTok meaning="intersection-plus" name="nplus" role="ADDOP"/>
-                            <XMWrap rule="kludge">
-                              <XMTok meaning="intersection" name="cap" role="ADDOP">∩</XMTok>
-                              <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-0.75em" yoffset="0.2ex">+</XMTok>
-                            </XMWrap>
-                          </XMDual>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                      </XMWrap>
-                    </XMDual>
-                  </XMApp>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex6.m1.2">
+                <XMTok name="merge" role="RELOP">⨇</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex6.m1.3">
+                <XMTok name="minuso" role="RELOP">⦵</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex6.m1.4">
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok class="ltx_nounicode" name="moo" role="UNKNOWN">\moo</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex6.m1.5">
+                <XMDual role="ADDOP">
+                  <XMTok meaning="intersection-plus" name="nplus" role="ADDOP"/>
+                  <XMWrap rule="kludge">
+                    <XMTok meaning="intersection" name="cap" role="ADDOP">∩</XMTok>
+                    <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-0.75em" yoffset="0.2ex">+</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex7">
-      <Math mode="display" tex="a\obar b\quad a\oblong b\quad a\obslash b\quad a\ogreaterthan b\quad a\olessthan b\quad a\ovee b\quad a\owedge b" text="formulae@(a obar b, formulae@(a oblong b, formulae@(a obslash b, formulae@(a ogreaterthan b, formulae@(a olessthan b, formulae@(a ovee b, a owedge b))))))" xml:id="S0.Ex7.m1">
+      <Math mode="display" tex="a\obar b\quad a\oblong b\quad a\obslash b\quad a\ogreaterthan b\quad a\olessthan b\quad a\ovee b\quad a\owedge b" text="formulae@(a obar b, a oblong b, a obslash b, a ogreaterthan b, a olessthan b, a ovee b, a owedge b)" xml:id="S0.Ex7.m1">
         <XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="formulae"/>
               <XMRef idref="S0.Ex7.m1.1"/>
               <XMRef idref="S0.Ex7.m1.2"/>
+              <XMRef idref="S0.Ex7.m1.3"/>
+              <XMRef idref="S0.Ex7.m1.4"/>
+              <XMRef idref="S0.Ex7.m1.5"/>
+              <XMRef idref="S0.Ex7.m1.6"/>
+              <XMRef idref="S0.Ex7.m1.7"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex7.m1.1">
@@ -408,99 +309,58 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex7.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex7.m1.3"/>
-                  <XMRef idref="S0.Ex7.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex7.m1.3">
-                    <XMTok name="oblong" role="RELOP">⎕</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex7.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex7.m1.5"/>
-                      <XMRef idref="S0.Ex7.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex7.m1.5">
-                        <XMTok name="obslash" role="RELOP">⦸</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMDual xml:id="S0.Ex7.m1.6">
-                        <XMApp>
-                          <XMTok meaning="formulae"/>
-                          <XMRef idref="S0.Ex7.m1.7"/>
-                          <XMRef idref="S0.Ex7.m1.8"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S0.Ex7.m1.7">
-                            <XMTok name="ogreaterthan" role="RELOP">⧁</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="10pt"/>
-                          <XMDual xml:id="S0.Ex7.m1.8">
-                            <XMApp>
-                              <XMTok meaning="formulae"/>
-                              <XMRef idref="S0.Ex7.m1.9"/>
-                              <XMRef idref="S0.Ex7.m1.10"/>
-                            </XMApp>
-                            <XMWrap>
-                              <XMApp xml:id="S0.Ex7.m1.9">
-                                <XMTok name="olessthan" role="RELOP">⧀</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                              </XMApp>
-                              <XMHint name="quad" role="PUNCT" width="10pt"/>
-                              <XMDual xml:id="S0.Ex7.m1.10">
-                                <XMApp>
-                                  <XMTok meaning="formulae"/>
-                                  <XMRef idref="S0.Ex7.m1.11"/>
-                                  <XMRef idref="S0.Ex7.m1.12"/>
-                                </XMApp>
-                                <XMWrap>
-                                  <XMApp xml:id="S0.Ex7.m1.11">
-                                    <XMTok name="ovee" role="RELOP">∨⃝</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                                  </XMApp>
-                                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                                  <XMApp xml:id="S0.Ex7.m1.12">
-                                    <XMTok name="owedge" role="RELOP">∧⃝</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                                  </XMApp>
-                                </XMWrap>
-                              </XMDual>
-                            </XMWrap>
-                          </XMDual>
-                        </XMWrap>
-                      </XMDual>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex7.m1.2">
+                <XMTok name="oblong" role="RELOP">⎕</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex7.m1.3">
+                <XMTok name="obslash" role="RELOP">⦸</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex7.m1.4">
+                <XMTok name="ogreaterthan" role="RELOP">⧁</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex7.m1.5">
+                <XMTok name="olessthan" role="RELOP">⧀</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex7.m1.6">
+                <XMTok name="ovee" role="RELOP">∨⃝</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex7.m1.7">
+                <XMTok name="owedge" role="RELOP">∧⃝</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex8">
-      <Math mode="display" tex="a\rightslice b\quad a\sslash b\quad a\talloblong b\quad a\varbigcirc b\quad a\varcurlyvee b\quad a\varcurlywedge b" text="formulae@(a rightslice b, formulae@(a sslash b, formulae@(a talloblong list@(b, a varbigcirc b), formulae@(a varcurlyvee b, a varcurlywedge b))))" xml:id="S0.Ex8.m1">
+      <Math mode="display" tex="a\rightslice b\quad a\sslash b\quad a\talloblong b\quad a\varbigcirc b\quad a\varcurlyvee b\quad a\varcurlywedge b" text="fragments@(a rightslice b, a sslash b, a talloblong b, a varbigcirc b, a varcurlyvee b, a varcurlywedge b)" xml:id="S0.Ex8.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex8.m1.1"/>
               <XMRef idref="S0.Ex8.m1.2"/>
+              <XMRef idref="S0.Ex8.m1.3"/>
+              <XMRef idref="S0.Ex8.m1.4"/>
+              <XMRef idref="S0.Ex8.m1.5"/>
+              <XMRef idref="S0.Ex8.m1.6"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex8.m1.1">
@@ -509,84 +369,53 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex8.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex8.m1.3"/>
-                  <XMRef idref="S0.Ex8.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex8.m1.3">
-                    <XMTok name="sslash" role="RELOP">⫽</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex8.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex8.m1.5"/>
-                      <XMRef idref="S0.Ex8.m1.8"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex8.m1.5">
-                        <XMTok name="talloblong" role="RELOP">⫿</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMDual>
-                          <XMApp>
-                            <XMTok meaning="list"/>
-                            <XMRef idref="S0.Ex8.m1.6"/>
-                            <XMRef idref="S0.Ex8.m1.7"/>
-                          </XMApp>
-                          <XMWrap>
-                            <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex8.m1.6">b</XMTok>
-                            <XMHint name="quad" role="PUNCT" width="10pt"/>
-                            <XMApp xml:id="S0.Ex8.m1.7">
-                              <XMTok name="varbigcirc" role="MULOP">◯</XMTok>
-                              <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                              <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                            </XMApp>
-                          </XMWrap>
-                        </XMDual>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMDual xml:id="S0.Ex8.m1.8">
-                        <XMApp>
-                          <XMTok meaning="formulae"/>
-                          <XMRef idref="S0.Ex8.m1.9"/>
-                          <XMRef idref="S0.Ex8.m1.10"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S0.Ex8.m1.9">
-                            <XMTok name="varcurlyvee" role="RELOP">⋎</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="10pt"/>
-                          <XMApp xml:id="S0.Ex8.m1.10">
-                            <XMTok name="varcurlywedge" role="RELOP">⋏</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          </XMApp>
-                        </XMWrap>
-                      </XMDual>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex8.m1.2">
+                <XMTok name="sslash" role="RELOP">⫽</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex8.m1.3">
+                <XMTok name="talloblong" role="RELOP">⫿</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex8.m1.4">
+                <XMTok name="varbigcirc" role="MULOP">◯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex8.m1.5">
+                <XMTok name="varcurlyvee" role="RELOP">⋎</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex8.m1.6">
+                <XMTok name="varcurlywedge" role="RELOP">⋏</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex9">
-      <Math mode="display" tex="a\varoast b\quad a\varobar b\quad a\varobslash b\quad a\varocircle b\quad a\varodot b\quad a\varogreaterthan b\quad a\varolessthan b" text="formulae@(a varoast b, formulae@(a varobar list@(b, a varobslash b, a varocircle b, a varodot b), formulae@(a varogreaterthan b, a varolessthan b)))" xml:id="S0.Ex9.m1">
+      <Math mode="display" tex="a\varoast b\quad a\varobar b\quad a\varobslash b\quad a\varocircle b\quad a\varodot b\quad a\varogreaterthan b\quad a\varolessthan b" text="fragments@(a varoast b, a varobar b, a varobslash b, a varocircle b, a varodot b, a varogreaterthan b, a varolessthan b)" xml:id="S0.Ex9.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex9.m1.1"/>
               <XMRef idref="S0.Ex9.m1.2"/>
+              <XMRef idref="S0.Ex9.m1.3"/>
+              <XMRef idref="S0.Ex9.m1.4"/>
+              <XMRef idref="S0.Ex9.m1.5"/>
+              <XMRef idref="S0.Ex9.m1.6"/>
+              <XMRef idref="S0.Ex9.m1.7"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex9.m1.1">
@@ -595,84 +424,57 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex9.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex9.m1.3"/>
-                  <XMRef idref="S0.Ex9.m1.8"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex9.m1.3">
-                    <XMTok name="varobar" role="RELOP">⦶</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMDual>
-                      <XMApp>
-                        <XMTok meaning="list"/>
-                        <XMRef idref="S0.Ex9.m1.4"/>
-                        <XMRef idref="S0.Ex9.m1.5"/>
-                        <XMRef idref="S0.Ex9.m1.6"/>
-                        <XMRef idref="S0.Ex9.m1.7"/>
-                      </XMApp>
-                      <XMWrap>
-                        <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex9.m1.4">b</XMTok>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex9.m1.5">
-                          <XMTok name="varobslash" role="MULOP">⦸</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex9.m1.6">
-                          <XMTok name="varocircle" role="MULOP">⊚</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                        <XMHint name="quad" role="PUNCT" width="10pt"/>
-                        <XMApp xml:id="S0.Ex9.m1.7">
-                          <XMTok name="varodot" role="MULOP">⊙</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                          <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                        </XMApp>
-                      </XMWrap>
-                    </XMDual>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex9.m1.8">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex9.m1.9"/>
-                      <XMRef idref="S0.Ex9.m1.10"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex9.m1.9">
-                        <XMTok name="varogreaterthan" role="RELOP">⧁</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex9.m1.10">
-                        <XMTok name="varolessthan" role="RELOP">⧀</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex9.m1.2">
+                <XMTok name="varobar" role="RELOP">⦶</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex9.m1.3">
+                <XMTok name="varobslash" role="MULOP">⦸</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex9.m1.4">
+                <XMTok name="varocircle" role="MULOP">⊚</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex9.m1.5">
+                <XMTok name="varodot" role="MULOP">⊙</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex9.m1.6">
+                <XMTok name="varogreaterthan" role="RELOP">⧁</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex9.m1.7">
+                <XMTok name="varolessthan" role="RELOP">⧀</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex10">
-      <Math mode="display" tex="a\varominus b\quad a\varoplus b\quad a\varoslash b\quad a\varotimes b\quad a\varovee b\quad a\varowedge b\quad a\vartimes b" text="list@(a varominus b, a additive-disjunction b, a varoslash list@(b, a multiplicative-conjunction b), a varovee b, a varowedge list@(b, a vartimes b))" xml:id="S0.Ex10.m1">
+      <Math mode="display" tex="a\varominus b\quad a\varoplus b\quad a\varoslash b\quad a\varotimes b\quad a\varovee b\quad a\varowedge b\quad a\vartimes b" text="fragments@(a varominus b, a additive-disjunction b, a varoslash b, a multiplicative-conjunction b, a varovee b, a varowedge b, a vartimes b)" xml:id="S0.Ex10.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex10.m1.1"/>
               <XMRef idref="S0.Ex10.m1.2"/>
               <XMRef idref="S0.Ex10.m1.3"/>
+              <XMRef idref="S0.Ex10.m1.4"/>
+              <XMRef idref="S0.Ex10.m1.5"/>
               <XMRef idref="S0.Ex10.m1.6"/>
               <XMRef idref="S0.Ex10.m1.7"/>
             </XMApp>
@@ -692,49 +494,31 @@
               <XMApp xml:id="S0.Ex10.m1.3">
                 <XMTok name="varoslash" role="RELOP">⊘</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMDual>
-                  <XMApp>
-                    <XMTok meaning="list"/>
-                    <XMRef idref="S0.Ex10.m1.4"/>
-                    <XMRef idref="S0.Ex10.m1.5"/>
-                  </XMApp>
-                  <XMWrap>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex10.m1.4">b</XMTok>
-                    <XMHint name="quad" role="PUNCT" width="10pt"/>
-                    <XMApp xml:id="S0.Ex10.m1.5">
-                      <XMTok meaning="multiplicative-conjunction" name="varotimes" role="MULOP">⊗</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    </XMApp>
-                  </XMWrap>
-                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMApp xml:id="S0.Ex10.m1.6">
+              <XMApp xml:id="S0.Ex10.m1.4">
+                <XMTok meaning="multiplicative-conjunction" name="varotimes" role="MULOP">⊗</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex10.m1.5">
                 <XMTok name="varovee" role="RELOP">∨⃝</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMApp xml:id="S0.Ex10.m1.7">
+              <XMApp xml:id="S0.Ex10.m1.6">
                 <XMTok name="varowedge" role="RELOP">∧⃝</XMTok>
                 <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                <XMDual>
-                  <XMApp>
-                    <XMTok meaning="list"/>
-                    <XMRef idref="S0.Ex10.m1.8"/>
-                    <XMRef idref="S0.Ex10.m1.9"/>
-                  </XMApp>
-                  <XMWrap>
-                    <XMTok font="italic" role="UNKNOWN" xml:id="S0.Ex10.m1.8">b</XMTok>
-                    <XMHint name="quad" role="PUNCT" width="10pt"/>
-                    <XMApp xml:id="S0.Ex10.m1.9">
-                      <XMTok name="vartimes" role="MULOP">×</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                      <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                    </XMApp>
-                  </XMWrap>
-                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex10.m1.7">
+                <XMTok name="vartimes" role="MULOP">×</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
             </XMWrap>
           </XMDual>
@@ -742,11 +526,11 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex11">
-      <Math mode="display" tex="\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="list@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex11.m1">
+      <Math mode="display" tex="\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="fragments@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex11.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex11.m1.1"/>
               <XMRef idref="S0.Ex11.m1.2"/>
               <XMRef idref="S0.Ex11.m1.3"/>
@@ -789,11 +573,11 @@
   </para>
   <para xml:id="p2">
     <equation xml:id="S0.Ex12">
-      <Math mode="display" tex="\textstyle\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="list@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex12.m1">
+      <Math mode="display" tex="\textstyle\bigbox\quad\bigcurlywedge\quad\bigcurlyvee\quad\biginterleave\quad\bignplus\quad\bigparallel\quad\bigsqcap\quad\bigtriangledown\quad\bigtriangleup" text="fragments@(bigbox, bigcurlywedge, bigcurlyvee, biginterleave, intersection-plus, bigparallel, bigsqcap, bigtriangledown, bigtriangleup)" xml:id="S0.Ex12.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex12.m1.1"/>
               <XMRef idref="S0.Ex12.m1.2"/>
               <XMRef idref="S0.Ex12.m1.3"/>
@@ -836,11 +620,11 @@
   </para>
   <para xml:id="p3">
     <equation xml:id="S0.Ex13">
-      <Math mode="display" tex="{\displaystyle\bignplus}\qquad{\textstyle\bignplus}\qquad{\scriptstyle\bignplus}\qquad{\scriptscriptstyle\bignplus}" text="list@(intersection-plus, intersection-plus, intersection-plus, intersection-plus)" xml:id="S0.Ex13.m1">
+      <Math mode="display" tex="{\displaystyle\bignplus}\qquad{\textstyle\bignplus}\qquad{\scriptstyle\bignplus}\qquad{\scriptscriptstyle\bignplus}" text="fragments@(intersection-plus, intersection-plus, intersection-plus, intersection-plus)" xml:id="S0.Ex13.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex13.m1.1"/>
               <XMRef idref="S0.Ex13.m1.2"/>
               <XMRef idref="S0.Ex13.m1.3"/>
@@ -886,11 +670,11 @@
   </para>
   <para xml:id="p4">
     <equation xml:id="S0.Ex14">
-      <Math mode="display" tex="\inplus\quad\niplus\quad\ntrianglelefteqslant\quad\ntrianglerighteqslant\quad\trianglelefteqslant\quad\trianglerighteqslant" text="list@(inplus, niplus, ntrianglelefteqslant, ntrianglerighteqslant, trianglelefteqslant, trianglerighteqslant)" xml:id="S0.Ex14.m1">
+      <Math mode="display" tex="\inplus\quad\niplus\quad\ntrianglelefteqslant\quad\ntrianglerighteqslant\quad\trianglelefteqslant\quad\trianglerighteqslant" text="fragments@(inplus, niplus, ntrianglelefteqslant, ntrianglerighteqslant, trianglelefteqslant, trianglerighteqslant)" xml:id="S0.Ex14.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex14.m1.1"/>
               <XMRef idref="S0.Ex14.m1.2"/>
               <XMRef idref="S0.Ex14.m1.3"/>
@@ -916,13 +700,15 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex15">
-      <Math mode="display" tex="a\subsetplus b\quad a\subsetpluseq b\quad a\supsetplus b\quad a\supsetpluseq b" text="formulae@(a subset-plus b, formulae@(a subset-equals-plus b, formulae@(a superset-plus b, a superset-equals-plus b)))" xml:id="S0.Ex15.m1">
+      <Math mode="display" tex="a\subsetplus b\quad a\subsetpluseq b\quad a\supsetplus b\quad a\supsetpluseq b" text="fragments@(a subset-plus b, a subset-equals-plus b, a superset-plus b, a superset-equals-plus b)" xml:id="S0.Ex15.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex15.m1.1"/>
               <XMRef idref="S0.Ex15.m1.2"/>
+              <XMRef idref="S0.Ex15.m1.3"/>
+              <XMRef idref="S0.Ex15.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex15.m1.1">
@@ -937,75 +723,61 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex15.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex15.m1.3"/>
-                  <XMRef idref="S0.Ex15.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex15.m1.3">
-                    <XMDual role="RELOP">
-                      <XMTok meaning="subset-equals-plus" name="subsetpluseq" role="RELOP"/>
-                      <XMWrap rule="kludge">
-                        <XMTok meaning="subset-of-or-equals" name="subseteq" role="RELOP">⊆</XMTok>
-                        <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-0.8em" yoffset="0.5ex">+</XMTok>
-                      </XMWrap>
-                    </XMDual>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex15.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex15.m1.5"/>
-                      <XMRef idref="S0.Ex15.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex15.m1.5">
-                        <XMDual role="RELOP">
-                          <XMTok meaning="superset-plus" name="supsetplus" role="RELOP"/>
-                          <XMWrap rule="kludge">
-                            <XMTok meaning="superset-of" name="supset" role="RELOP">⊃</XMTok>
-                            <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-1em" yoffset="0.3ex">+</XMTok>
-                          </XMWrap>
-                        </XMDual>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex15.m1.6">
-                        <XMDual role="RELOP">
-                          <XMTok meaning="superset-equals-plus" name="supsetpluseq" role="RELOP"/>
-                          <XMWrap rule="kludge">
-                            <XMTok meaning="superset-of-or-equals" name="supseteq" role="RELOP">⊇</XMTok>
-                            <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-1em" yoffset="0.5ex">+</XMTok>
-                          </XMWrap>
-                        </XMDual>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex15.m1.2">
+                <XMDual role="RELOP">
+                  <XMTok meaning="subset-equals-plus" name="subsetpluseq" role="RELOP"/>
+                  <XMWrap rule="kludge">
+                    <XMTok meaning="subset-of-or-equals" name="subseteq" role="RELOP">⊆</XMTok>
+                    <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-0.8em" yoffset="0.5ex">+</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex15.m1.3">
+                <XMDual role="RELOP">
+                  <XMTok meaning="superset-plus" name="supsetplus" role="RELOP"/>
+                  <XMWrap rule="kludge">
+                    <XMTok meaning="superset-of" name="supset" role="RELOP">⊃</XMTok>
+                    <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-1em" yoffset="0.3ex">+</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex15.m1.4">
+                <XMDual role="RELOP">
+                  <XMTok meaning="superset-equals-plus" name="supsetpluseq" role="RELOP"/>
+                  <XMWrap rule="kludge">
+                    <XMTok meaning="superset-of-or-equals" name="supseteq" role="RELOP">⊇</XMTok>
+                    <XMTok fontsize="50%" meaning="plus" role="ADDOP" width="0pt" xoffset="-1em" yoffset="0.5ex">+</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex16">
-      <Math mode="display" tex="a\mapsfromchar b\quad a\mapsfrom b\quad a\Mapsfromchar b\quad a\Mapsfrom b\quad a\longmapsfrom b\quad a\Longmapsfrom b\quad" text="formulae@(a mapsfromchar b, formulae@(a mapsfrom b, formulae@(a Mapsfromchar b, formulae@(a Mapsfrom b, formulae@(a longmapsfrom b, a Longmapsfrom b)))))" xml:id="S0.Ex16.m1">
+      <Math mode="display" tex="a\mapsfromchar b\quad a\mapsfrom b\quad a\Mapsfromchar b\quad a\Mapsfrom b\quad a\longmapsfrom b\quad a\Longmapsfrom b\quad" text="fragments@(a mapsfromchar b, a mapsfrom b, a Mapsfromchar b, a Mapsfrom b, a longmapsfrom b, a Longmapsfrom b)" xml:id="S0.Ex16.m1">
         <XMath>
           <XMDual>
             <XMRef idref="S0.Ex16.m1.1"/>
             <XMWrap>
               <XMDual xml:id="S0.Ex16.m1.1">
                 <XMApp>
-                  <XMTok meaning="formulae"/>
+                  <XMTok meaning="fragments"/>
                   <XMRef idref="S0.Ex16.m1.2"/>
                   <XMRef idref="S0.Ex16.m1.3"/>
+                  <XMRef idref="S0.Ex16.m1.4"/>
+                  <XMRef idref="S0.Ex16.m1.5"/>
+                  <XMRef idref="S0.Ex16.m1.6"/>
+                  <XMRef idref="S0.Ex16.m1.7"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S0.Ex16.m1.2">
@@ -1014,71 +786,35 @@
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex16.m1.3">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex16.m1.4"/>
-                      <XMRef idref="S0.Ex16.m1.5"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex16.m1.4">
-                        <XMTok name="mapsfrom" role="ARROW">↤</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMDual xml:id="S0.Ex16.m1.5">
-                        <XMApp>
-                          <XMTok meaning="formulae"/>
-                          <XMRef idref="S0.Ex16.m1.6"/>
-                          <XMRef idref="S0.Ex16.m1.7"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S0.Ex16.m1.6">
-                            <XMTok name="Mapsfromchar" role="RELOP">|</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="10pt"/>
-                          <XMDual xml:id="S0.Ex16.m1.7">
-                            <XMApp>
-                              <XMTok meaning="formulae"/>
-                              <XMRef idref="S0.Ex16.m1.8"/>
-                              <XMRef idref="S0.Ex16.m1.9"/>
-                            </XMApp>
-                            <XMWrap>
-                              <XMApp xml:id="S0.Ex16.m1.8">
-                                <XMTok name="Mapsfrom" role="ARROW">⤆</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                                <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                              </XMApp>
-                              <XMHint name="quad" role="PUNCT" width="10pt"/>
-                              <XMDual xml:id="S0.Ex16.m1.9">
-                                <XMApp>
-                                  <XMTok meaning="formulae"/>
-                                  <XMRef idref="S0.Ex16.m1.10"/>
-                                  <XMRef idref="S0.Ex16.m1.11"/>
-                                </XMApp>
-                                <XMWrap>
-                                  <XMApp xml:id="S0.Ex16.m1.10">
-                                    <XMTok name="longmapsfrom" role="ARROW">⟻</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                                  </XMApp>
-                                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                                  <XMApp xml:id="S0.Ex16.m1.11">
-                                    <XMTok name="Longmapsfrom" role="ARROW">⟽</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                                  </XMApp>
-                                </XMWrap>
-                              </XMDual>
-                            </XMWrap>
-                          </XMDual>
-                        </XMWrap>
-                      </XMDual>
-                    </XMWrap>
-                  </XMDual>
+                  <XMApp xml:id="S0.Ex16.m1.3">
+                    <XMTok name="mapsfrom" role="ARROW">↤</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S0.Ex16.m1.4">
+                    <XMTok name="Mapsfromchar" role="RELOP">|</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S0.Ex16.m1.5">
+                    <XMTok name="Mapsfrom" role="ARROW">⤆</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S0.Ex16.m1.6">
+                    <XMTok name="longmapsfrom" role="ARROW">⟻</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S0.Ex16.m1.7">
+                    <XMTok name="Longmapsfrom" role="ARROW">⟽</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
@@ -1088,7 +824,7 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex17">
-      <Math mode="display" tex="a\Mapstochar b\quad a\Mapsto b\quad a\Longmapsto b\quad" text="formulae@(a Mapstochar b, formulae@(a Mapsto b, a Longmapsto b))" xml:id="S0.Ex17.m1">
+      <Math mode="display" tex="a\Mapstochar b\quad a\Mapsto b\quad a\Longmapsto b\quad" text="formulae@(a Mapstochar b, a Mapsto b, a Longmapsto b)" xml:id="S0.Ex17.m1">
         <XMath>
           <XMDual>
             <XMRef idref="S0.Ex17.m1.1"/>
@@ -1098,6 +834,7 @@
                   <XMTok meaning="formulae"/>
                   <XMRef idref="S0.Ex17.m1.2"/>
                   <XMRef idref="S0.Ex17.m1.3"/>
+                  <XMRef idref="S0.Ex17.m1.4"/>
                 </XMApp>
                 <XMWrap>
                   <XMApp xml:id="S0.Ex17.m1.2">
@@ -1106,26 +843,17 @@
                     <XMTok font="italic" role="UNKNOWN">b</XMTok>
                   </XMApp>
                   <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex17.m1.3">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex17.m1.4"/>
-                      <XMRef idref="S0.Ex17.m1.5"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex17.m1.4">
-                        <XMTok name="Mapsto" role="ARROW">⤇</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex17.m1.5">
-                        <XMTok name="Longmapsto" role="ARROW">⟾</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
+                  <XMApp xml:id="S0.Ex17.m1.3">
+                    <XMTok name="Mapsto" role="ARROW">⤇</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
+                  <XMHint name="quad" role="PUNCT" width="10pt"/>
+                  <XMApp xml:id="S0.Ex17.m1.4">
+                    <XMTok name="Longmapsto" role="ARROW">⟾</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+                  </XMApp>
                 </XMWrap>
               </XMDual>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
@@ -1137,13 +865,15 @@
   </para>
   <para xml:id="p5">
     <equation xml:id="S0.Ex18">
-      <Math mode="display" tex="a\nnearrow b\quad a\nnwarrow b\quad a\ssearrow b\quad a\sswarrow b" text="formulae@(a nnearrow b, formulae@(a nnwarrow b, formulae@(a ssearrow b, a sswarrow b)))" xml:id="S0.Ex18.m1">
+      <Math mode="display" tex="a\nnearrow b\quad a\nnwarrow b\quad a\ssearrow b\quad a\sswarrow b" text="fragments@(a nnearrow b, a nnwarrow b, a ssearrow b, a sswarrow b)" xml:id="S0.Ex18.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex18.m1.1"/>
               <XMRef idref="S0.Ex18.m1.2"/>
+              <XMRef idref="S0.Ex18.m1.3"/>
+              <XMRef idref="S0.Ex18.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex18.m1.1">
@@ -1152,41 +882,23 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex18.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex18.m1.3"/>
-                  <XMRef idref="S0.Ex18.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex18.m1.3">
-                    <XMTok class="ltx_nounicode" name="nnwarrow" role="ARROW">\nnwarrow</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex18.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex18.m1.5"/>
-                      <XMRef idref="S0.Ex18.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex18.m1.5">
-                        <XMTok class="ltx_nounicode" name="ssearrow" role="ARROW">\ssearrow</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex18.m1.6">
-                        <XMTok class="ltx_nounicode" name="sswarrow" role="ARROW">\sswarrow</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex18.m1.2">
+                <XMTok class="ltx_nounicode" name="nnwarrow" role="ARROW">\nnwarrow</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex18.m1.3">
+                <XMTok class="ltx_nounicode" name="ssearrow" role="ARROW">\ssearrow</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex18.m1.4">
+                <XMTok class="ltx_nounicode" name="sswarrow" role="ARROW">\sswarrow</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
@@ -1195,13 +907,16 @@
   </para>
   <para xml:id="p6">
     <equation xml:id="S0.Ex19">
-      <Math mode="display" tex="a\leftarrowtriangle b\quad a\rightarrowtriangle b\quad a\leftrightarrowtriangle b\quad a\leftrightarroweq b\quad a\lightning b" text="formulae@(a leftarrowtriangle b, formulae@(a rightarrowtriangle b, formulae@(a leftrightarrowtriangle b, formulae@(a leftrightarroweq b, a lightning b))))" xml:id="S0.Ex19.m1">
+      <Math mode="display" tex="a\leftarrowtriangle b\quad a\rightarrowtriangle b\quad a\leftrightarrowtriangle b\quad a\leftrightarroweq b\quad a\lightning b" text="formulae@(a leftarrowtriangle b, a rightarrowtriangle b, a leftrightarrowtriangle b, a leftrightarroweq b, a lightning b)" xml:id="S0.Ex19.m1">
         <XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="formulae"/>
               <XMRef idref="S0.Ex19.m1.1"/>
               <XMRef idref="S0.Ex19.m1.2"/>
+              <XMRef idref="S0.Ex19.m1.3"/>
+              <XMRef idref="S0.Ex19.m1.4"/>
+              <XMRef idref="S0.Ex19.m1.5"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex19.m1.1">
@@ -1210,63 +925,36 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex19.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex19.m1.3"/>
-                  <XMRef idref="S0.Ex19.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex19.m1.3">
-                    <XMTok name="rightarrowtriangle" role="ARROW">⇾</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              <XMApp xml:id="S0.Ex19.m1.2">
+                <XMTok name="rightarrowtriangle" role="ARROW">⇾</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex19.m1.3">
+                <XMTok name="leftrightarrowtriangle" role="ARROW">⇿</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex19.m1.4">
+                <XMDual role="ARROW">
+                  <XMTok name="leftrightarroweq" role="ARROW"/>
+                  <XMApp role="RELOP">
+                    <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
+                    <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                    <XMTok fontsize="70%" name="leftrightarrow" role="METARELOP">↔</XMTok>
                   </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex19.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex19.m1.5"/>
-                      <XMRef idref="S0.Ex19.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex19.m1.5">
-                        <XMTok name="leftrightarrowtriangle" role="ARROW">⇿</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMDual xml:id="S0.Ex19.m1.6">
-                        <XMApp>
-                          <XMTok meaning="formulae"/>
-                          <XMRef idref="S0.Ex19.m1.7"/>
-                          <XMRef idref="S0.Ex19.m1.8"/>
-                        </XMApp>
-                        <XMWrap>
-                          <XMApp xml:id="S0.Ex19.m1.7">
-                            <XMDual role="ARROW">
-                              <XMTok name="leftrightarroweq" role="ARROW"/>
-                              <XMApp role="RELOP">
-                                <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
-                                <XMTok meaning="minus" role="ADDOP">-</XMTok>
-                                <XMTok fontsize="70%" name="leftrightarrow" role="METARELOP">↔</XMTok>
-                              </XMApp>
-                            </XMDual>
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          </XMApp>
-                          <XMHint name="quad" role="PUNCT" width="10pt"/>
-                          <XMApp xml:id="S0.Ex19.m1.8">
-                            <XMTok name="lightning" role="ARROW">↯</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                            <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                          </XMApp>
-                        </XMWrap>
-                      </XMDual>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+                </XMDual>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex19.m1.5">
+                <XMTok name="lightning" role="ARROW">↯</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
@@ -1275,13 +963,15 @@
   </para>
   <para xml:id="p7">
     <equation xml:id="S0.Ex20">
-      <Math mode="display" tex="a\shortdownarrow b\quad a\shortleftarrow b\quad a\shortrightarrow b\quad a\shortuparrow b" text="formulae@(a shortdownarrow b, formulae@(a shortleftarrow b, formulae@(a shortrightarrow b, a shortuparrow b)))" xml:id="S0.Ex20.m1">
+      <Math mode="display" tex="a\shortdownarrow b\quad a\shortleftarrow b\quad a\shortrightarrow b\quad a\shortuparrow b" text="fragments@(a shortdownarrow b, a shortleftarrow b, a shortrightarrow b, a shortuparrow b)" xml:id="S0.Ex20.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex20.m1.1"/>
               <XMRef idref="S0.Ex20.m1.2"/>
+              <XMRef idref="S0.Ex20.m1.3"/>
+              <XMRef idref="S0.Ex20.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex20.m1.1">
@@ -1290,54 +980,38 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex20.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex20.m1.3"/>
-                  <XMRef idref="S0.Ex20.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex20.m1.3">
-                    <XMTok name="shortleftarrow" role="ARROW">←</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex20.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex20.m1.5"/>
-                      <XMRef idref="S0.Ex20.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex20.m1.5">
-                        <XMTok name="shortrightarrow" role="ARROW">→</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex20.m1.6">
-                        <XMTok name="shortuparrow" role="ARROW">↑</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex20.m1.2">
+                <XMTok name="shortleftarrow" role="ARROW">←</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex20.m1.3">
+                <XMTok name="shortrightarrow" role="ARROW">→</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex20.m1.4">
+                <XMTok name="shortuparrow" role="ARROW">↑</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
       </Math>
     </equation>
     <equation xml:id="S0.Ex21">
-      <Math mode="display" tex="a\arrownot b\quad a\longarrownot b\quad a\Arrownot b\quad a\Longarrownot b" text="formulae@(a arrownot b, formulae@(a longarrownot b, formulae@(a Arrownot b, a Longarrownot b)))" xml:id="S0.Ex21.m1">
+      <Math mode="display" tex="a\arrownot b\quad a\longarrownot b\quad a\Arrownot b\quad a\Longarrownot b" text="fragments@(a arrownot b, a longarrownot b, a Arrownot b, a Longarrownot b)" xml:id="S0.Ex21.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="formulae"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex21.m1.1"/>
               <XMRef idref="S0.Ex21.m1.2"/>
+              <XMRef idref="S0.Ex21.m1.3"/>
+              <XMRef idref="S0.Ex21.m1.4"/>
             </XMApp>
             <XMWrap>
               <XMApp xml:id="S0.Ex21.m1.1">
@@ -1346,41 +1020,23 @@
                 <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
               <XMHint name="quad" role="PUNCT" width="10pt"/>
-              <XMDual xml:id="S0.Ex21.m1.2">
-                <XMApp>
-                  <XMTok meaning="formulae"/>
-                  <XMRef idref="S0.Ex21.m1.3"/>
-                  <XMRef idref="S0.Ex21.m1.4"/>
-                </XMApp>
-                <XMWrap>
-                  <XMApp xml:id="S0.Ex21.m1.3">
-                    <XMTok meaning="divide" name="longarrownot" role="RELOP" width="0pt">/</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                    <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                  </XMApp>
-                  <XMHint name="quad" role="PUNCT" width="10pt"/>
-                  <XMDual xml:id="S0.Ex21.m1.4">
-                    <XMApp>
-                      <XMTok meaning="formulae"/>
-                      <XMRef idref="S0.Ex21.m1.5"/>
-                      <XMRef idref="S0.Ex21.m1.6"/>
-                    </XMApp>
-                    <XMWrap>
-                      <XMApp xml:id="S0.Ex21.m1.5">
-                        <XMTok meaning="divide" name="Arrownot" role="RELOP" width="0pt">/</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                      <XMHint name="quad" role="PUNCT" width="10pt"/>
-                      <XMApp xml:id="S0.Ex21.m1.6">
-                        <XMTok meaning="divide" name="Longarrownot" role="RELOP" width="0pt">/</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">a</XMTok>
-                        <XMTok font="italic" role="UNKNOWN">b</XMTok>
-                      </XMApp>
-                    </XMWrap>
-                  </XMDual>
-                </XMWrap>
-              </XMDual>
+              <XMApp xml:id="S0.Ex21.m1.2">
+                <XMTok meaning="divide" name="longarrownot" role="RELOP" width="0pt">/</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex21.m1.3">
+                <XMTok meaning="divide" name="Arrownot" role="RELOP" width="0pt">/</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
+              <XMHint name="quad" role="PUNCT" width="10pt"/>
+              <XMApp xml:id="S0.Ex21.m1.4">
+                <XMTok meaning="divide" name="Longarrownot" role="RELOP" width="0pt">/</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
+              </XMApp>
             </XMWrap>
           </XMDual>
         </XMath>
@@ -1389,14 +1045,14 @@
   </para>
   <para xml:id="p8">
     <equation xml:id="S0.Ex22">
-      <Math mode="display" tex="\Lbag 42\Rbag\quad\lbag 42\rbag\quad" text="list@(delimited-⟅⟆@(42), delimited-⟅⟆@(42))" xml:id="S0.Ex22.m1">
+      <Math mode="display" tex="\Lbag 42\Rbag\quad\lbag 42\rbag\quad" text="fragments@(delimited-⟅⟆@(42), delimited-⟅⟆@(42))" xml:id="S0.Ex22.m1">
         <XMath>
           <XMDual>
             <XMRef idref="S0.Ex22.m1.1"/>
             <XMWrap>
               <XMDual xml:id="S0.Ex22.m1.1">
                 <XMApp>
-                  <XMTok meaning="list"/>
+                  <XMTok meaning="fragments"/>
                   <XMRef idref="S0.Ex22.m1.2"/>
                   <XMRef idref="S0.Ex22.m1.4"/>
                 </XMApp>
@@ -1433,11 +1089,11 @@
       </Math>
     </equation>
     <equation xml:id="S0.Ex23">
-      <Math mode="display" tex="\llbracket 42\rrbracket\quad\llfloor 42\rrfloor\quad\llceil 42\rrceil\quad\llparenthesis 42\rrparenthesis" text="list@(delimited-⟦⟧@(42), delimited-⌊⌊⌋⌋@(42), delimited-⌈⌈⌉⌉@(42), delimited-⦇⦈@(42))" xml:id="S0.Ex23.m1">
+      <Math mode="display" tex="\llbracket 42\rrbracket\quad\llfloor 42\rrfloor\quad\llceil 42\rrceil\quad\llparenthesis 42\rrparenthesis" text="fragments@(delimited-⟦⟧@(42), delimited-⌊⌊⌋⌋@(42), delimited-⌈⌈⌉⌉@(42), delimited-⦇⦈@(42))" xml:id="S0.Ex23.m1">
         <XMath>
           <XMDual>
             <XMApp>
-              <XMTok meaning="list"/>
+              <XMTok meaning="fragments"/>
               <XMRef idref="S0.Ex23.m1.1"/>
               <XMRef idref="S0.Ex23.m1.3"/>
               <XMRef idref="S0.Ex23.m1.5"/>

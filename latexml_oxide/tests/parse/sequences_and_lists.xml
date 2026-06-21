@@ -58,74 +58,74 @@
       </Math></p>
   </para>
   <para xml:id="p3">
-    <p><Math mode="inline" tex="a=b,c,d" text="a = list@(b, c, d)" xml:id="p3.m1">
+    <p><Math mode="inline" tex="a=b,c,d" text="list@(a = b, c, d)" xml:id="p3.m1">
         <XMath>
-          <XMApp>
-            <XMTok meaning="equals" role="RELOP">=</XMTok>
-            <XMTok font="italic" role="UNKNOWN">a</XMTok>
-            <XMDual>
-              <XMApp>
-                <XMTok meaning="list"/>
-                <XMRef idref="p3.m1.1"/>
-                <XMRef idref="p3.m1.2"/>
-                <XMRef idref="p3.m1.3"/>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="list"/>
+              <XMRef idref="p3.m1.1"/>
+              <XMRef idref="p3.m1.2"/>
+              <XMRef idref="p3.m1.3"/>
+            </XMApp>
+            <XMWrap>
+              <XMApp xml:id="p3.m1.1">
+                <XMTok meaning="equals" role="RELOP">=</XMTok>
+                <XMTok font="italic" role="UNKNOWN">a</XMTok>
+                <XMTok font="italic" role="UNKNOWN">b</XMTok>
               </XMApp>
-              <XMWrap>
-                <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.1">b</XMTok>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.2">c</XMTok>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.3">d</XMTok>
-              </XMWrap>
-            </XMDual>
-          </XMApp>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.2">c</XMTok>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p3.m1.3">d</XMTok>
+            </XMWrap>
+          </XMDual>
         </XMath>
       </Math></p>
   </para>
   <para xml:id="p4">
-    <p><Math mode="inline" tex="1&lt;2,3" text="1 &lt; list@(2, 3)" xml:id="p4.m1">
+    <p><Math mode="inline" tex="1&lt;2,3" text="list@(1 &lt; 2, 3)" xml:id="p4.m1">
         <XMath>
-          <XMApp>
-            <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-            <XMTok meaning="1" role="NUMBER">1</XMTok>
-            <XMDual>
-              <XMApp>
-                <XMTok meaning="list"/>
-                <XMRef idref="p4.m1.1"/>
-                <XMRef idref="p4.m1.2"/>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="list"/>
+              <XMRef idref="p4.m1.1"/>
+              <XMRef idref="p4.m1.2"/>
+            </XMApp>
+            <XMWrap>
+              <XMApp xml:id="p4.m1.1">
+                <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                <XMTok meaning="1" role="NUMBER">1</XMTok>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
               </XMApp>
-              <XMWrap>
-                <XMTok meaning="2" role="NUMBER" xml:id="p4.m1.1">2</XMTok>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok meaning="3" role="NUMBER" xml:id="p4.m1.2">3</XMTok>
-              </XMWrap>
-            </XMDual>
-          </XMApp>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok meaning="3" role="NUMBER" xml:id="p4.m1.2">3</XMTok>
+            </XMWrap>
+          </XMDual>
         </XMath>
       </Math></p>
   </para>
   <para xml:id="p5">
-    <p><Math mode="inline" tex="1&lt;2,3,4" text="1 &lt; list@(2, 3, 4)" xml:id="p5.m1">
+    <p><Math mode="inline" tex="1&lt;2,3,4" text="list@(1 &lt; 2, 3, 4)" xml:id="p5.m1">
         <XMath>
-          <XMApp>
-            <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
-            <XMTok meaning="1" role="NUMBER">1</XMTok>
-            <XMDual>
-              <XMApp>
-                <XMTok meaning="list"/>
-                <XMRef idref="p5.m1.1"/>
-                <XMRef idref="p5.m1.2"/>
-                <XMRef idref="p5.m1.3"/>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="list"/>
+              <XMRef idref="p5.m1.1"/>
+              <XMRef idref="p5.m1.2"/>
+              <XMRef idref="p5.m1.3"/>
+            </XMApp>
+            <XMWrap>
+              <XMApp xml:id="p5.m1.1">
+                <XMTok meaning="less-than" role="RELOP">&lt;</XMTok>
+                <XMTok meaning="1" role="NUMBER">1</XMTok>
+                <XMTok meaning="2" role="NUMBER">2</XMTok>
               </XMApp>
-              <XMWrap>
-                <XMTok meaning="2" role="NUMBER" xml:id="p5.m1.1">2</XMTok>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok meaning="3" role="NUMBER" xml:id="p5.m1.2">3</XMTok>
-                <XMTok role="PUNCT">,</XMTok>
-                <XMTok meaning="4" role="NUMBER" xml:id="p5.m1.3">4</XMTok>
-              </XMWrap>
-            </XMDual>
-          </XMApp>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok meaning="3" role="NUMBER" xml:id="p5.m1.2">3</XMTok>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMTok meaning="4" role="NUMBER" xml:id="p5.m1.3">4</XMTok>
+            </XMWrap>
+          </XMDual>
         </XMath>
       </Math></p>
   </para>

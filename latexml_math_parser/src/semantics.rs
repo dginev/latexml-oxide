@@ -1,7 +1,6 @@
 use std::{borrow::Cow, error::Error, rc::Rc};
 
 use latexml_core::{
-  binding::def::dialect::get_xmarg_id,
   common::{
     font::{self, Font},
     xml::element_nodes,
@@ -217,36 +216,29 @@ pub fn list_apply(
   let mut right = right.unwrap();
   let sep = sep.unwrap();
 
-  // list_apply always produces "list". Reject certain cases to force
-  // Marpa to use the competing formula_list rule (formulae_apply) instead.
-  //
-  // Rule 1: Both items relational → should be formulae, not list.
+  // The separator decides the wrapper:
+  //  * `\quad` (WIDE_PUNCT) separates whole FORMULAS at the top level — a
+  //    `\quad`-list is a flat `formulae@(…)` whose items may be of ANY kind
+  //    (relational or not), e.g. `a\op b \quad a\rel b \quad …`. (Perl emits a
+  //    right-NESTED `formulae@(a, formulae@(b, …))`; we keep it FLAT — an
+  //    intentional, user-directed divergence; see docs/KNOWN_PERL_ERRORS.md.)
+  //  * a plain comma separates a `list@(…)`. A MIXED comma-list — a relational
+  //    item plus plain items — IS a valid list: a bare (unparenthesized)
+  //    comma-list is a top-level list, and a relation is a legitimate item. So
+  //    `0 < x, y` → `list(0<x, y)` and `a = b, c, d` → `list(a=b, c, d)`, NOT
+  //    `lt(0, list(x,y))` / `eq(a, list(b,c,d))` (also an intentional divergence
+  //    from Perl, which wrongly reads the comma-list as a single bare relation
+  //    operand). The grammar's deleted `formula relop formula_list` rule used to
+  //    manufacture that bogus reading.
+  let is_quad = is_quad_separator(&sep);
   let left_rel = left.as_ref().is_some_and(is_relational_item);
   let right_rel = is_relational_item(&right);
-  if left_rel && right_rel {
-    return Err("list_apply: both items relational, use formulae_apply instead".into());
-  }
-  // Rule 2: If EITHER item is relational, reject. This prevents commas from
-  // creating lists within relational formulas. For `a=b, c=d`, the inner
-  // `list_apply(b, comma, c)` is rejected because the formula_list rule
-  // should handle the comma as a formula boundary instead.
-  // Exception: left can be relational when it's being extended (left is already
-  // a list/formulae Dual from a previous list_apply — handled by extension below).
-  if left_rel || right_rel {
-    // Allow extension of existing list/formulae Duals (flat accumulation)
-    let left_is_list_dual = left.as_ref().is_some_and(|l| {
-      if let XM::Dual(content, ..) = l
-        && let XM::Apply(ref op, ..) = **content
-        && let XM::Token(ref props, _) = *op.0
-      {
-        return props.meaning.as_deref() == Some("list")
-          || props.meaning.as_deref() == Some("formulae");
-      }
-      false
-    });
-    if !left_is_list_dual {
-      return Err("list_apply: item is relational, use formulae_apply instead".into());
-    }
+  // For a COMMA list, an all-relational pair (`a=b, c=d`) is a `formulae@`, not a
+  // list — defer to `formulae_apply`. `\quad` accepts relational pairs directly
+  // (it builds `formulae@` itself). A comma list with exactly one relational item
+  // (mixed) is accepted here as a `list@`.
+  if !is_quad && left_rel && right_rel {
+    return Err("list_apply: both items relational in a comma list, use formulae_apply".into());
   }
   // Rule 3: Reject when either item has `absent` as a relop operand.
   // `absent` means equation fragment — fragments should be single formulas,
@@ -316,15 +308,21 @@ pub fn list_apply(
         .into(),
     );
   }
-  let meaning = "list";
+  // `\quad` (WIDE_PUNCT) separates top-level FRAGMENTS — heterogeneous content
+  // that needn't be formulas — so it gets its own flat `fragments@` class,
+  // distinct from comma's `list@`/`formulae@`. A plain comma builds `list@`
+  // (all-relational comma pairs were already routed to `formulae_apply` above).
+  let meaning = if is_quad { "fragments" } else { "list" };
 
-  // If left is already a list/formulae Dual, extend it (flat accumulation).
-  // For formulae with \quad separators, post-processing in restructure_formulae_right
-  // converts flat to right-recursive nesting (matching Perl's moreRHS/maybeColRHS).
+  // If left is already a list/formulae/fragments Dual, extend it (flat
+  // accumulation — all three classes are kept flat).
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
     && let XM::Token(ref props, _) = *op.0
-    && (props.meaning.as_deref() == Some("list") || props.meaning.as_deref() == Some("formulae"))
+    && matches!(
+      props.meaning.as_deref(),
+      Some("list") | Some("formulae") | Some("fragments")
+    )
   {
     // Extend: add ref for new item to content args
     let new_ref = create_xmrefs(&mut [&mut right], ctxt)?;
@@ -619,24 +617,11 @@ pub fn restructure_formulae_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
     XM::Dual(content, pres, ..) => {
       restructure_formulae_right(content)?;
       restructure_formulae_right(pres)?;
-
-      // Check if this is a flat formulae Dual with \quad separators
-      if let XM::Apply(ref op, ref op_args, ..) = **content
-        && let XM::Token(ref props, _) = *op.0
-        && props.meaning.as_deref() == Some("formulae")
-        && op_args.0.len() > 2
-        && let XM::Wrap(ref items, ..) = **pres
-      {
-        // Check if ALL separators are \quad-type
-        let all_quad = items
-          .iter()
-          .enumerate()
-          .filter(|(i, _)| i % 2 == 1) // odd indices are separators
-          .all(|(_, sep)| is_quad_separator(sep));
-        if all_quad {
-          restructure_flat_to_right(xm)?;
-        }
-      }
+      // NOTE: `\quad`-separated `formulae@(…)` are kept FLAT. We used to
+      // right-nest them here (`formulae@(f1, formulae@(f2, …))`) to mirror
+      // Perl's `moreRHS`/`maybeColRHS`, but a flat `formulae@(f1, f2, …)` is the
+      // correct shape — an intentional, user-directed divergence from Perl (see
+      // docs/KNOWN_PERL_ERRORS.md).
     },
     XM::Choices(choices) => {
       for choice in choices.iter_mut() {
@@ -662,119 +647,6 @@ fn is_quad_separator(xm: &XM) -> bool {
   }
 }
 
-/// Convert a flat formulae XMDual to right-recursive nesting.
-/// Input: formulae@(f1,f2,...,fn) with XMWrap [f1,s1,f2,s2,...,fn]
-/// Output: formulae@(f1, formulae@(f2, ..., formulae@(fn-1, fn)))
-/// Items are MOVED (not cloned) to avoid DOM node aliasing.
-fn restructure_flat_to_right(xm: &mut XM) -> Result<(), Box<dyn Error>> {
-  // Take ownership of the flat Dual's contents
-  let old = std::mem::replace(xm, XM::Token(XProps::default(), Meta::default()));
-  if let XM::Dual(content, pres, _props, _meta) = old
-    && let XM::Apply(_, op_args, ..) = *content
-    && let XM::Wrap(wrap_items, ..) = *pres
-  {
-    let n_refs = op_args.0.len();
-    if n_refs <= 2 {
-      // Already binary — put it back
-      *xm = XM::Dual(
-        Box::new(XM::Apply(
-          XProps {
-            meaning: Some(Cow::Borrowed("formulae")),
-            ..XProps::default()
-          }
-          .into(),
-          op_args,
-          XProps::default(),
-          Meta::default(),
-        )),
-        Box::new(XM::Wrap(wrap_items, XProps::default(), Meta::default())),
-        _props,
-        _meta,
-      );
-      return Ok(());
-    }
-    // Split XMWrap items into (items, separators).
-    // wrap_items = [f1, s1, f2, s2, f3, s3, f4] (alternates item/sep).
-    // Pre-size: ~half each, bounded by `wrap_items.len()`.
-    let wrap_len = wrap_items.len();
-    let mut items: Vec<XM> = Vec::with_capacity(wrap_len.div_ceil(2));
-    let mut seps: Vec<XM> = Vec::with_capacity(wrap_len / 2);
-    for (i, item) in wrap_items.into_iter().enumerate() {
-      if i % 2 == 0 {
-        items.push(item);
-      } else {
-        seps.push(item);
-      }
-    }
-    let mut refs: Vec<Option<XM>> = op_args.0.into_iter().collect();
-
-    // Build right-recursive from right to left
-    // Start with last two items: formulae@(f_{n-1}, f_n)
-    let last_item = items.pop().unwrap();
-    let last_ref = refs.pop().unwrap();
-    let last_sep = seps.pop().unwrap();
-    let second_last_item = items.pop().unwrap();
-    let second_last_ref = refs.pop().unwrap();
-
-    let mut result = build_formulae_pair(
-      second_last_item,
-      last_sep,
-      last_item,
-      second_last_ref,
-      last_ref,
-    );
-
-    // Wrap from right to left
-    while let Some(item) = items.pop() {
-      let sep = seps.pop().unwrap();
-      let item_ref = refs.pop().unwrap();
-      // Assign xmkey to inner result so outer can reference it
-      let key = get_xmarg_id()?.to_string();
-      if let XM::Dual(_, _, ref mut props, _) = result {
-        props.xmkey = Some(Cow::Owned(key.clone()));
-      }
-      let inner_ref = Some(XM::Ref(XProps {
-        xmkey: Some(Cow::Owned(key)),
-        ..XProps::default()
-      }));
-      result = build_formulae_pair(item, sep, result, item_ref, inner_ref);
-    }
-
-    *xm = result;
-    return Ok(());
-  }
-  // If pattern didn't match, this shouldn't happen since we checked before calling
-  Ok(())
-}
-
-/// Build a 2-item formulae XMDual with pre-existing refs.
-fn build_formulae_pair(
-  left: XM,
-  sep: XM,
-  right: XM,
-  left_ref: Option<XM>,
-  right_ref: Option<XM>,
-) -> XM {
-  let op = XProps {
-    meaning: Some(Cow::Borrowed("formulae")),
-    ..XProps::default()
-  };
-  XM::Dual(
-    Box::new(XM::Apply(
-      op.into(),
-      Args(vec![left_ref, right_ref]),
-      XProps::default(),
-      Meta::default(),
-    )),
-    Box::new(XM::Wrap(
-      vec![left, sep, right],
-      XProps::default(),
-      Meta::default(),
-    )),
-    XProps::default(),
-    Meta::default(),
-  )
-}
 
 /// Post-processing: rename `list` to `vector`/`set` when delimiters wrap the list.
 /// Perl's Fence receives flat (open, item, punct, ..., close) and uses encloseN tables.
