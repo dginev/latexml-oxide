@@ -134,8 +134,24 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
 > reproducible from the math snippet alone — needs the paper's preamble/macro
 > context (`\name{}`, `caption`, …). Belongs to the deferred math-parser family
 > (XMWrap production + document-builder math-in-text wrapping); do not pick at it
-> piecemeal. (Same scan: `1704.05644` 17 err `expected:<variable>`, `1705.04022`
+> piecemeal. (Same scan: `1705.04022`
 > 16 err `_`/`^`-in-text — re-verify vs Perl before chasing.)
+>
+> **`1704.05644` (`Paperling_revu.tex`) — CONFIRMED Rust-only (Rust 17 / Perl 0)
+> but DEEP/tangled; deferred.** Root: `shadethm.sty` (raw-loaded, no binding in
+> either engine) fails to define `\newshadetheorem` in Rust in this paper's
+> context → cascade of undefined `{theorem}`/`{hyp}`/`{propgrise}` envs +
+> `\shadebox*`/`\shadedtextwidth` `expected:<variable>`. KEY: the *minimal*
+> `\usepackage{shadethm}\newshadetheorem{thm}{Theorem}` is **parity-broken** (BOTH
+> engines: `\newshadetheorem` undefined) — so shadethm's raw-load is incompletely
+> emulated in both, and only the full paper's preamble context makes Perl's
+> shadethm work while Rust's still fails. Not cheaply isolatable (bisection of the
+> preamble/`\input{macropulko}` did not localize a single culprit; the apparent
+> "`\input` breaks it" lead was a red herring — minimal no-`\input` is equally
+> broken). The `\Vertex`/gastex errors in this paper are SHARED (gastex depends on
+> pstricks/pst-pdf; both engines fail identically in isolation). A proper
+> `shadethm` binding (which neither engine has) would be the real fix — surpass-
+> Perl R&D, not strict parity. Do not chase piecemeal.
 
 **Beyond-parity coverage candidates (#2 track, surpass-Perl — defer while
 strict-parity is #1):** `arximspdf`/`imsart` support (16+ IMS papers aop/aos;
