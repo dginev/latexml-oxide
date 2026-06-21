@@ -1170,13 +1170,16 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
   if cs.starts_with("\\if") {
     // Apparently an \ifsomething ???
     let name = cs.replace("\\if", "");
+    // Perl `generateErrorStub` (State.pm L539-540) passes the recovery note
+    // as a SEPARATE Error detail, so `generateMessage` renders it on its own
+    // indented line — not merged into the primary message. Match that (and
+    // the already-correct stomach.rs path) so the cortex `details`/log first
+    // line is just "...is not defined." like Perl.
     Error!(
       "undefined",
       token,
-      s!(
-        "The token {} is not defined. Defining it now as with \\newif",
-        token.stringify()
-      )
+      s!("The token {} is not defined.", token.stringify()),
+      "Defining it now as with \\newif"
     );
     install_definition(
       Expandable::new(
@@ -1204,10 +1207,8 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       Error!(
         "undefined",
         token,
-        s!(
-          "The token {} is not defined. Defining it now as <ltx:ERROR/>",
-          token.stringify()
-        )
+        s!("The token {} is not defined.", token.stringify()),
+        "Defining it now as <ltx:ERROR/>"
       );
     }
     install_definition(
