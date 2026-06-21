@@ -161,13 +161,33 @@ reading: `math0605199` via bare CLI bailed in 0.24 s with 96 errors (PiCTeX
 undefined, 3 KB output) vs the production 160 s clean conversion. So profile only
 via the production-equivalent recipe (the "Standing performance corpus" block
 below: `--preload=ar5iv.sty --path=$HOME/git/ar5iv-bindings/bindings`, or
-`cortex_worker --standalone <zip>` with that profile). NOTE: `~/git/ar5iv-bindings`
-is not checked out on this box, and the cortex API exposes no per-task phase
-telemetry — so the **next step is per-phase attribution**: run each witness under
-the ar5iv profile with `LATEXML_TELEMETRY_OUT=…` (phase wall times; `perf` is
-locked down on this host, so telemetry + env-gated `Instant` probes are the
-profiling path), then rank the dominant phase per witness and fold each into the
-relevant P1 lane (digest / math_parse / graphics) below.
+`cortex_worker --standalone <zip>` with that profile). (`perf` is locked down on this host, so `LATEXML_TELEMETRY_OUT` phase wall times
++ env-gated `Instant` probes are the profiling path.)
+
+**Per-phase attribution of the two small-input hotspots (2026-06-21, ar5iv
+profile, `latexml_oxide --preload=ar5iv.sty --path=~/git/ar5iv-bindings/bindings`,
+release; both convert with 0 errors):**
+
+- **`math0605199` → `build` phase = 97.3 %** (43.7 s of 44.9 s wall; digest 0.9 %,
+  math_parse 1.1 %, graphics 0 assets; 920 formulae, 529 MB RSS). This is a
+  **document-builder hotspot**, NOT digest/math/graphics: PiCTeX (`\beginpicture`/
+  `\axis`/`\setplotarea`) emits ~920 picture formulae and a large node count, and
+  XML `build` (node construction / insertion-point walk) goes super-linear
+  (~49 ms/formula in build — orders above normal). **This is the "new evidence"
+  the CLOSED "P1 digest + build" lane requires to reopen** — a paper whose profile
+  diverges from the digest-bound pattern. Suspect a quadratic in the builder's
+  sibling-append / `find_insertion_point` path under high node fan-out; profile
+  `latexml_core::document` build hot path with env-gated probes.
+- **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
+  2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
+  (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
+  bocage cluster worth a `LATEXML_PARSE_AUDIT=1` pass.
+
+(Local walls 44.9 s / 19.6 s are well under the cortex 160.7 s / 96.7 s — local is
+faster, likely `cortex_worker` RSS-cap/mimalloc-decay/contention during the 10k
+sweep; the *phase split* is the actionable signal, not the absolute wall. The
+graphics-cluster witnesses, xy/tikz-cd, were not re-profiled — they belong to the
+P1 graphics lane by construction.)
 
 ### P1 graphics phase (36.5% of wall) — CLOSED
 
@@ -184,6 +204,14 @@ Investigation closed: the residual digest cost is structural to the TeX
 semantics, not a Rust-translation accident. **Do not reopen without
 new evidence** (e.g. a paper whose digest-time profile diverges from
 the pattern recorded below).
+
+> **REOPENED for `build` (not digest), 2026-06-21.** The 2026-05-19 close-out was
+> digest-focused. New evidence: `math0605199` spends **97.3 % in the `build`
+> phase** (43.7 s; digest only 0.9 %) — a builder hotspot under high node
+> fan-out (PiCTeX, 920 formulae), distinct from the digest pattern. The `build`
+> phase (XML node construction / insertion-point walk in `latexml_core::document`)
+> is an **open** lever; suspected super-linear sibling-append / `find_insertion_point`.
+> See "2026-06-21 benchmark" above. Digest itself remains closed.
 
 **Findings under `cargo build --profile bench` + `perf record
 -F 999 -e cycles:u` on `2305.06773` (digest-heavy ACM-class fixture,
