@@ -615,6 +615,18 @@ pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymStr>> {
 /// Get the node's qualified name in standard form
 /// Ie. using the registered (code) prefix for that namespace.
 /// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
+/// Build a `prefix:local` qname with one exact-capacity allocation, avoiding the
+/// `format!` machinery (`s!`) that showed up under `get_node_qname` in profiles —
+/// this runs on every model check / serialization step.
+#[inline]
+fn prefixed_qname(prefix: &str, local: &str) -> String {
+  let mut q = String::with_capacity(prefix.len() + 1 + local.len());
+  q.push_str(prefix);
+  q.push(':');
+  q.push_str(local);
+  q
+}
+
 pub fn get_node_qname(node: &Node) -> SymStr {
   use libxml::tree::NodeType::*;
   let node_type = node.get_type();
@@ -647,16 +659,16 @@ pub fn get_node_qname(node: &Node) -> SymStr {
         let prefix = ns.get_prefix();
         if prefix.is_empty() {
           // Default namespace — use ltx: prefix
-          arena::pin(s!("ltx:{}", name_str))
+          arena::pin(prefixed_qname("ltx", &name_str))
         } else {
           // Explicit prefix (e.g., "svg", "m") — use it
-          arena::pin(s!("{}:{}", prefix, name_str))
+          arena::pin(prefixed_qname(&prefix, &name_str))
         }
       } else {
         // No namespace — special cases for non-namespaced elements
         match name_str.as_str() {
           "song" | "verse" => arena::pin(name_str),
-          regular => arena::pin(s!("ltx:{}", regular)),
+          regular => arena::pin(prefixed_qname("ltx", regular)),
         }
       }
     },

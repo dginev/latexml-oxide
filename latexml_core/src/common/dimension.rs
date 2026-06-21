@@ -97,12 +97,16 @@ impl std::str::FromStr for Dimension {
 // This is Knuth's print_scaled (See TeX the Program, \S 103)
 // It (should) round-trip with kround.
 pub fn fixedformat(mut s: i64, unit_opt: Option<&str>) -> String {
+  use std::fmt::Write as _;
+  // Format directly into `string`; `write!` into a String is infallible.
+  // Avoids the per-iteration `i64::to_string()` temporaries the Perl-faithful
+  // algorithm would otherwise leak on a very hot path (≈1M calls/doc).
   let mut string = String::new();
   if s < 0 {
     string.push('-');
     s = -s;
   }
-  string.push_str(&(s / UNITY).to_string());
+  write!(string, "{}", s / UNITY).unwrap();
   string.push('.');
   s = 10 * (s % UNITY) + 5;
   let mut delta = 10;
@@ -110,7 +114,7 @@ pub fn fixedformat(mut s: i64, unit_opt: Option<&str>) -> String {
     if delta > UNITY {
       s += 0x8000 - 50000;
     }
-    string.push_str(&(s / UNITY).to_string());
+    write!(string, "{}", s / UNITY).unwrap();
     s = 10 * (s % UNITY);
     delta *= 10;
     if s <= delta {
