@@ -429,7 +429,7 @@ impl Document {
           if self.has_node_font(&current) {
             let desired_font = self.get_node_font(&current);
             *pending_declaration = desired_font.relative_to(&declared_font);
-            if (!current.get_child_nodes().is_empty() || current.has_attribute("_force_font"))
+            if (current.get_first_child().is_some() || current.has_attribute("_force_font"))
               && !pending_declaration.is_empty()
             {
               let mut keys_to_remove: Vec<SymStr> = Vec::new();
@@ -4715,7 +4715,7 @@ fn trim_node_right_whitespace(node: &Node) -> Result<()> {
   while let Some(ref child) = candidate {
     if child.get_type() == Some(NodeType::ElementNode)
       && child.get_name() == "text"
-      && child.get_child_nodes().is_empty()
+      && child.get_first_child().is_none()
       && child.has_attribute("_noautoclose")
     {
       candidate = child.get_prev_sibling();

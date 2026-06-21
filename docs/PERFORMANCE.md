@@ -184,9 +184,14 @@ release; both convert with 0 errors):**
   is O(1) — `latexml_core/src/document.rs:432` & `:4718`,
   `latexml_engine/src/base_utilities.rs:1108`, `tex_kern.rs:33`,
   `latex_constructs.rs:1080`/`1083`/`1086`. Behavior-identical swap; on a node
-  accumulating N children a per-node emptiness check is O(N²). Verify each is on
-  the build hot path, then swap + measure with the math0605199 before/after (not
-  just the standing corpus), per the acceptance checklist.
+  accumulating N children a per-node emptiness check is O(N²).
+  **LANDED 2026-06-21** (all 7 sites → `get_first_child().is_some()/is_none()`;
+  `get_child_nodes()` is literally built from `get_first_child()` + sibling walk
+  so emptiness is identical; suite 1466/0/0). Measured on `math0605199`:
+  build 43.7 s → ~37–40 s, wall 44.9 s → 37–40.6 s (≈10–18 %, single-run
+  variance). A real but partial win — **the dominant build quadratic remains**
+  (build still ~96 %); the next step is perf-profiling the builder
+  (`find_insertion_point` / per-node tree walks) to find the core O(N²).
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
@@ -197,6 +202,37 @@ faster, likely `cortex_worker` RSS-cap/mimalloc-decay/contention during the 10k
 sweep; the *phase split* is the actionable signal, not the absolute wall. The
 graphics-cluster witnesses, xy/tikz-cd, were not re-profiled — they belong to the
 P1 graphics lane by construction.)
+
+#### Next 10 witnesses (ranks 11–20) — the tikz-cd cluster (NEW, open)
+
+The next tier of healthy long-runners is **entirely tikz-cd** (10/10):
+`2106.15532` (135.6s), `2108.03453` (113.5s), `1911.09626`, `2202.12168`,
+`2107.04417`, `2007.07826`, `1907.04836`, `1805.03265`, `2011.09416`,
+`2102.09618`. One cluster, one plan.
+
+**Profile (representative `1805.03265`, ar5iv profile, 0 errors): NOT external
+graphics.** WALL 20.8s, **6825 formulae**, `graphics_assets=0` /
+`graphics_subprocess=0` (tikz-cd renders natively — no `gs`/`convert`), **1.9 GB
+RSS**. Phase split is spread, not dominated: **digest 35.7 % (7.4s) + math_parse
+32.7 % (6.8s) + build 23.9 % (5.0s)**. So the cost is driven by the **formula
+explosion**: pgf/tikz-cd macro expansion emits thousands of small math formulae
+(6825 from one document), and each pays digest (expansion) + math_parse +
+build. This is NOT the `graphics` phase (that lane is for raster `xy`-pic /
+`\includegraphics`); it's the pure-Rust digest/math/build hot path.
+
+**Levers (compounding — all three phases ride the formula count):**
+1. **Reduce the formula count.** 6825 formulae for one tikz-cd doc suggests each
+   cell/arrow/label becomes a separate parsed formula. If tikz-cd nodes can share
+   a parse or be built without a full per-node math-parse, every phase shrinks
+   proportionally. Highest-leverage; needs a look at how the tikz-cd binding emits
+   cell content (`latexml_contrib`/pgf bindings).
+2. **digest (35.7 %)** → the existing **"TikZ/pgfplots digest backlog"** below
+   (lazy `Tokens::Debug` hot path; `Option<SymStr>` from `lookup_value*` to drop
+   the `Cow::Borrowed`; pgf `\addplot table` bypass). Same pgf macro layer.
+3. **math_parse (32.7 %)** → P1 math over-parse lever; run `LATEXML_PARSE_AUDIT=1`
+   on `1805.03265` (6825 formulae, 1.9 GB RSS — likely an ambiguity cluster).
+4. **build (23.9 %)** → the `get_first_child` / `find_insertion_point` build work
+   (shared with the `math0605199` lane above).
 
 ### P1 graphics phase (36.5% of wall) — CLOSED
 

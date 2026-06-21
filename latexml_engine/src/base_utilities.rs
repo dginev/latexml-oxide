@@ -1105,7 +1105,7 @@ LoadDefinitions!({
   let remove_empty_element: Vec<ConstructionClosure> = construct!(document, _whatsit, {
     if let Some(node) = document.get_node().get_last_child() {
       // This should be the wrapper just added.
-      if node.get_child_nodes().is_empty() {
+      if node.get_first_child().is_none() {
         document.remove_node(node);
       }
     }

@@ -30,7 +30,7 @@ LoadDefinitions!({
       if x != 0.0 {
         let shift = s!("translate({x},0)");
         let parent = document.get_node_mut();
-        let has_children = !parent.get_child_nodes().is_empty();
+        let has_children = parent.get_first_child().is_some();
         if has_children {
           // Perl L37-38: If already have positioned children, open new svg:g
           let attrs = string_map!("_autoclose" => "1", "transform" => shift);

@@ -1077,13 +1077,13 @@ fn rearrange_eqnarray(document: &mut Document, equationgroup: &mut Node) -> Resu
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&rownode));
     let has_l = cells
       .first()
-      .is_some_and(|c| !c.get_child_nodes().is_empty());
+      .is_some_and(|c| c.get_first_child().is_some());
     let has_m = cells
       .get(1)
-      .is_some_and(|c| !c.get_child_nodes().is_empty());
+      .is_some_and(|c| c.get_first_child().is_some());
     let has_r = cells
       .get(2)
-      .is_some_and(|c| !c.get_child_nodes().is_empty());
+      .is_some_and(|c| c.get_first_child().is_some());
     let numbered = !document.findnodes("ltx:tags", Some(&rownode)).is_empty();
     let labelled = rownode.get_attribute("label").is_some();
     rows.push(EqRow {
