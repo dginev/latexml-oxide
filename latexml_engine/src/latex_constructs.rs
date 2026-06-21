@@ -10409,8 +10409,10 @@ LoadDefinitions!({
   });
 
   // Perl L5646-5648
-  DefPrimitive!("\\GenericError{}{}{}{}", sub[(_arg1,arg2,arg3,arg4)] {
-    make_generic_message("\\GenericError", vec![arg2, arg3, arg4], "error")?;
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[(arg1,arg2,arg3,arg4)] {
+    // Perl passes ALL four args; make_generic_message peels the first as
+    // the message $type (the `(pkgname)` prefix) and joins the rest.
+    make_generic_message("\\GenericError", vec![arg1, arg2, arg3, arg4], "error")?;
   });
   DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
     make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;

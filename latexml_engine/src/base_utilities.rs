@@ -3331,7 +3331,37 @@ pub fn set_align_or_class(
   Ok(())
 }
 
+/// Remove `\@spaces`/`\space` padding control sequences from a message
+/// prefix, mirroring Perl `make_message`'s `s/(?:\\\@?spaces?)+//g`
+/// (latex_constructs.pool.ltxml L5572). Longest-first so `\@spaces` is
+/// never left as a stray `s`.
+fn strip_message_spaces(s: &str) -> String {
+  s.replace("\\@spaces", "")
+    .replace("\\spaces", "")
+    .replace("\\@space", "")
+    .replace("\\space", "")
+}
+
 pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<()> {
+  // Faithful port of Perl latex_constructs.pool.ltxml `make_message`
+  // (L5569-5588). The first arg is the message PREFIX: its ToString,
+  // stripped of `\@spaces`/`\space` runs, becomes the diagnostic `what`
+  // ($type), falling back to the command name when the prefix is empty
+  // (e.g. `\@latex@error`'s all-`\space` prefix). The REMAINING args form
+  // the body — Perl `join(" ", map { ToString(Expand($_, \@spaces,
+  // \@spaces)) } @args)`. Earlier the Rust port discarded the prefix and
+  // pinned `what` to the command name, so package/class diagnostics lost
+  // their `(pkgname)` $type and `\GenericWarning`/`\GenericInfo` even
+  // leaked the prefix into the body. Witness: hep-th-style `\PackageError`
+  // /`\GenericWarning` now match Perl byte-for-byte (`(mypkg)` $type, no
+  // prefix in body).
+  let mut args = args.into_iter();
+  let lead = args.next().unwrap_or_default();
+  // $type = ToString(lead) with `\@?spaces?` runs removed (Perl regex
+  // `s/(?:\\\@?spaces?)+//g`); fall back to the command name when empty.
+  let type_str = strip_message_spaces(&lead.to_string());
+  let type_str: &str = if type_str.is_empty() { cmd } else { &type_str };
+
   bgroup();
   let_i(&T_CS!("\\protect"), &T_CS!("\\string"), None);
   let_i(
@@ -3339,10 +3369,9 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
     &T_CS!("\\ltx@hard@MessageBreak"),
     None,
   ); // tricky, we need Expand() to execute it
-  let mut message = String::new();
-  for arg in args.into_iter() {
+  let mut parts: Vec<String> = Vec::new();
+  for arg in args {
     let mut arg_toks = arg.unlist();
-    arg_toks.push(T_CS!("\\MessageBreak"));
     // Perl `make_message` pads each Expand input with two `\@spaces` tokens:
     //   ToString(Expand($_, T_CS('\@spaces'), T_CS('\@spaces')))
     // Comment in Perl: "expand padded with two \@spaces, to avoid pointless
@@ -3354,9 +3383,11 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
     // unbalanced.
     arg_toks.push(T_CS!("\\@spaces"));
     arg_toks.push(T_CS!("\\@spaces"));
-    let arg_str = Expand!(arg_toks).to_string();
-    message.push_str(&arg_str);
+    parts.push(Expand!(arg_toks).to_string());
   }
+  // Perl joins the body args with a single space (the `\MessageBreak`s
+  // *within* an arg already became hard newlines via the let above).
+  let message = parts.join(" ");
 
   egroup()?;
   // Downgrade vendor-class typesetting-only errors to Info. Publisher
@@ -3370,16 +3401,16 @@ pub fn make_generic_message(cmd: &str, args: Vec<Tokens>, kind: &str) -> Result<
   } else {
     kind
   };
-  //   return ('latex', $cmd, $stomach, $message);
+  //   return ('latex', $type, $stomach, $message);
   match effective_kind {
     "error" => {
-      Error!("latex", cmd, message);
+      Error!("latex", type_str, message);
     },
     "warn" => {
-      Warn!("latex", cmd, message);
+      Warn!("latex", type_str, message);
     },
     "info" => {
-      Info!("latex", cmd, message);
+      Info!("latex", type_str, message);
     },
     _other => panic!("Only call make_generic_message with error|warn|info message kinds."),
   };
