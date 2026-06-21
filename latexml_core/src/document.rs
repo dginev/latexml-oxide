@@ -1466,11 +1466,16 @@ impl Document {
             continue;
           }
           // For SVG elements that have plain "id", skip the xml:id duplicate
-          if key == "xml:id" && tag.starts_with("svg:") && node.get_attribute("id").is_some() {
+          if key == "xml:id" && tag.starts_with("svg:") && anodes.contains_key("id") {
             continue;
           }
           let key_sym = model::get_node_document_qname(&node.get_attribute_node(key).unwrap());
-          let val_serialized = serialize_attr(&node.get_property(key).unwrap_or_default());
+          // Reuse the value already in `anodes` instead of re-fetching it with
+          // `get_property` — `get_attributes()` read each value from the
+          // attribute node directly, so a by-name `xmlGetProp` re-scan (plus a
+          // fresh `CString` and result `String`) here is pure redundant FFI
+          // churn (top `get_property` caller in the alloc profile).
+          let val_serialized = serialize_attr(anodes.get(key).map(String::as_str).unwrap_or(""));
           arena::with(key_sym, |key_str| {
             write!(open_tag, " {key_str}=\"{val_serialized}\"")
           })
@@ -1479,7 +1484,7 @@ impl Document {
         // HACK for xml:id for now, assuming last element.
         // SVG elements use plain "id" (not xml:id) — skip xml:id conversion for them.
         if anodes.contains_key("id") && !tag.starts_with("svg:") {
-          let val_serialized = serialize_attr(&node.get_property("id").unwrap_or_default());
+          let val_serialized = serialize_attr(anodes.get("id").map(String::as_str).unwrap_or(""));
           write!(open_tag, " xml:id=\"{val_serialized}\"").ok();
         }
 
