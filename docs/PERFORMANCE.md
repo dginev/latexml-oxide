@@ -210,6 +210,19 @@ release; both convert with 0 errors):**
   in the id-management / math-parser flow (a sensitive, deferred area) → needs a
   focused design pass + (per the redesign guardrail) sign-off before reshaping
   the parse-time record/unrecord cadence.
+  **FIXED 2026-06-21 — no cadence change needed.** A `#[track_caller]` caller
+  split pinned 115,131 of the 119k calls to ONE site: `document.rs:~1999`, the
+  single-`ltx:text`-child merge calling `record_node_ids(node)` INSIDE the
+  per-grandchild move loop → O(G²) re-scans per merge. Hoisted to one post-loop
+  call (output-identical: `record_id_with_node` is idempotent for already-correct
+  nodes; final id set + sibling document order unchanged). **`math0605199`: wall
+  44.9 s → 2.1 s (~20×), build 43.7 s → 1.0 s, errors=0; suite 1466/0/0**
+  (commit `335b6b83`). Runs in every conversion → broad latent win, not
+  PiCTeX-specific. Remaining witnesses are NOT build-bound after this: re-measured
+  `1510.03361` (wall 19.6 s: math_parse 10.3 / build 5.4 / digest 2.2) and
+  `1805.03265` tikz-cd (wall 22.4 s: digest 7.8 / math_parse 7.5 / build 5.3) →
+  next levers are **math_parse (over-parse, P1 math)** and **digest (pgf, the
+  TikZ backlog)**, both in the deferred math-parser area.
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
