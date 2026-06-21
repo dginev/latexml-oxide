@@ -254,6 +254,19 @@ release; both convert with 0 errors):**
   node-cache (fork) — modest but corpus-wide. The big algorithmic outlier
   (`math0605199` build quadratic) is the one that fit the 1–2 s target and is
   done.
+  **FxHash node-cache — LANDED (fork `perf-improvements` `b1eab1aa`), measured
+  far bigger than expected (~28–30 %, not 3–5 %).** The libxml-rs `xmlNodePtr →
+  Node` cache is probed on EVERY `Node::wrap`; swapping its std SipHash
+  `RandomState` for a dependency-free FxHash-style pointer hasher cut wall on
+  every node-heavy phase: **`1510.03361` 19.6 s → 14.1 s** (math_parse 10.3→7.4,
+  build 5.4→3.8), **`1805.03265` tikz-cd 22.4 s → 15.7 s** (math_parse 7.5→5.0,
+  build 5.3→3.5), **`math0605199` 2.1 s → 1.7 s**. Zero new deps (std-only),
+  output-identical (the map is never iterated; keys are non-adversarial
+  allocator pointers so HashDoS is moot), suite 1466/0/0. Consumed in latexml-oxide
+  via a local `[patch.crates-io]` → `~/git/rust-libxml` (dev-only, uncommitted);
+  to ship: land the official libxml PR off `perf-improvements`, publish, bump the
+  dep, drop the patch. Next perf passes accumulate on the fork's
+  `perf-improvements` branch.
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
