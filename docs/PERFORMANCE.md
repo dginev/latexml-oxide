@@ -348,6 +348,97 @@ cover the family.
 Suite 1466/0/0. The remaining tikz-cd digest cost is genuine pgf macro expansion
 (the "TikZ/pgfplots digest backlog" below) + the formula-count lever (#1 above).
 
+### LANDED 2026-06-21 — dhat allocation sweep (comprehensive, cross-input)
+
+**Method.** Heap-profiled 5 witnesses spanning the workload — `1510.03361`
+(math-heavy small), `1805.03265` (tikz-cd), `1803.07098` + `1707.01155` (large
+theses), `math0402448`/`semidef.tex` (xy-pic + LP math) — via the off-by-default
+`dhat-heap` cargo feature (`cargo run --features dhat-heap … ; dhat-heap.json`).
+The raw per-call-site view *undercounts* any function whose allocations spread
+across many inlined sites / generic instantiations, so the JSONs were aggregated
+two ways (`tools`-style scripts, kept out of tree): **(1)** attribute every
+allocation to the first frame in *our* crates (skipping `RawVec`/`Box`/`Vec`/
+`String`/`hashbrown` machinery) and **(2)** a mechanism→caller view (which
+primitive, charged to whom). Both merged across all 5 inputs with per-input
+presence — **every site below is hot in ALL 5** (not an overfit to one paper).
+Totals are cumulative allocations over the run (alloc *churn* / allocator
+pressure), not live bytes.
+
+**Landed fixes (all faithful, output byte-identical, suite 1466/0/0):**
+- **`Document::serialize_aux` → `serialize_into(&mut String, …)`** — the recursion
+  returned a fresh `String` per node and the parent re-copied it; the single
+  largest byte source (~2.8 GB / `RawVec<u8>::reserve` 2.66 GB across the corpus).
+  Now threads one growing buffer. Also dropped the per-call `"  ".repeat(depth)`
+  indent allocation (was paid even on text nodes that return immediately).
+- **serialize attribute loop: reuse `get_attributes()` values** — the loop already
+  builds the full key→value map, then re-fetched each value with
+  `node.get_property(key)` (a by-name `xmlGetProp` re-scan + fresh `CString` +
+  result `String`). `get_attributes()` reads values straight from the attr node,
+  so the map value is byte-identical — the re-fetch was pure redundant FFI churn
+  (top `get_property` caller, ~28M calls/corpus).
+- **`get_tag_action_list`: borrow tag-option hashes** — was cloning the entire
+  `TagOptions` map twice per call (per-tag + `ltx:*`), then re-cloning each matched
+  action `Vec`; ~8.8M calls / 346 MB. Now borrows via `with_tag_property` and copies
+  only the matched `Rc<>` closure lists (clone = refcount bump).
+- **`common::dimension::fixedformat`** — `write!` integer parts in place instead of
+  a throwaway `i64::to_string()` per digit-group (~7 temporaries × ~5M calls).
+- **`common::model::get_node_qname`** — build `prefix:local` with one exact-capacity
+  `String` (`prefixed_qname`) instead of `format!`; top alloc site by *count*
+  (~36M calls/corpus — the call frequency is intrinsic; only the per-call cost was
+  reducible without a node-ptr-keyed cache, which is unsafe under libxml node reuse).
+
+**Measured (release build, ar5iv profile, same-machine before/after — perf files
+reverted to the pre-batch commit, rebuilt, timed; best of 3 each).** The wall
+deltas are **small but consistent in the improvement direction across all 5**
+witnesses — the allocation fixes cut multi-GB of *churn* (allocator pressure /
+memory traffic / RSS, which matters for the multi-process cortex fleet) but only
+~1–2 % of single-process wall, because the dominant wall consumers (`digest`,
+`math_parse`) are CPU-bound on parse/expansion logic, not allocation-bound, and
+mimalloc services the freed small allocations cheaply. The big *wall* levers
+remain the deferred architectural items below.
+
+| Witness | before | after | Δ |
+|---|---:|---:|---:|
+| `1805.03265` tikz-cd | 13.71 s | 13.51 s | −1.5 % |
+| `1510.03361` math | 11.45 s | 11.24 s | −1.8 % |
+| `1707.01155` thesis | 7.31 s | 7.19 s | −1.6 % |
+| `1803.07098` thesis | 4.43 s | 4.39 s | −0.9 % |
+| `math0402448` xy-pic | 7.39 s | 7.27 s | −1.6 % |
+
+Phase telemetry (after, `_us`→s): `1805` digest 5.83 / build 3.34 / math_parse
+3.47 / serialize 0.28; `1510` digest 1.67 / build 3.52 / math_parse 4.95 /
+serialize 0.32. The `build`-phase share (document construction + serialization,
+where serialize_aux / get_tag_action_list / get_property-reuse land) is where the
+gain concentrates; `serialize` itself is already a tiny slice (~0.3 s), so the
+serialize-byte win is mostly an RSS/allocator-pressure benefit, not wall.
+
+**Vetted candidates, NOT yet done (low risk, recorded so they aren't re-mined):**
+- *serialize child iteration*: the `ElementNode` arm builds a `Vec<Node>` via
+  `get_child_nodes()` (~276 MB) where the `DocumentNode` arm already uses a
+  zero-alloc `get_first_child`/`get_next_sibling` walk. `heuristic` is always
+  `false` in practice, so the walk is straightforward; deferred only to avoid a
+  third structural change to a hot serialization path in one sitting.
+- *libxml fork CString/name caching*: `get_property`/`get_name`/`set_property`/
+  `has_property` each marshal a fresh `CString` per call (100M+ blocks combined).
+  A node-name cache and an interned-CString path in the `rust-libxml` fork would
+  cut this, but it is cross-repo and sensitive to libxml2 node lifetime (ptr reuse
+  after free) — needs a careful fork-side audit.
+- *`Font::relative_to`* (866 MB): returns `HashMap<String, …>` with a fixed key set
+  (`font`/`fontsize`/`color`/…); `&'static str` keys would remove the key-`String`
+  allocs but the return type ripples to callers.
+
+**Deferred — architectural, require explicit sign-off (no-redesign-away-from-Perl
+constraint).** These are the token-list and AST data models, intrinsic to the Perl
+expansion/parse semantics; reducing them means changing the core types (token-list
+interning / COW, `Tokens` small-vec inline, AST arena), not a local fix:
+- gullet token machinery: `read_balanced` 2.46 GB, `read_arguments` 1.75 GB,
+  `substitute_parameters` 1.39 GB, `Token::to_vec` (clone) 1.29 GB, plus
+  `read_until`/`open_mouth`/`pack_parameters`/`read_keyword`/`skip_conditional_body`.
+- math parser / marpa ASF: `MathTraverser::traverse` 3.07 GB, `translate_node`
+  2.49 GB, marpa `Handle<ByteToken>` boxes 1.86 GB/33M blk, `XM`/`Option<XM>` vecs.
+- digestion data model: `Digested::From<List>` 1.17 GB, `From<Tbox>` 1.0 GB,
+  `Rc<DigestedData>::new`, `assign_internal` 761 MB.
+
 ### P1 graphics phase (36.5% of wall) — CLOSED
 
 In-doc dedup (`Plan::Copy`/`Plan::Convert`), persistent on-disk cache,
