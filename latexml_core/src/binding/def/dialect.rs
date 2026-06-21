@@ -1274,9 +1274,11 @@ pub fn def_environment(
   let unexpected_end_closure = after_digest_simple!(_whatsit, {
     let env = lookup_string_from_sym(crate::pin!("current_environment"));
     if env.is_empty() || name_clone != env {
-      let message1 = s!("Can't close environment {}", name_clone);
+      // Perl Package.pm:1946-1947: message has a trailing `;`, and the
+      // open-environment list is introduced by "Current are:" (with colon).
+      let message1 = s!("Can't close environment {};", name_clone);
       let message2 = s!(
-        "Current are {} ",
+        "Current are: {}",
         with_stacked_values_sym(crate::pin!("current_environment"), |vals| vals
           .iter()
           .map(|x| s!("{:?}", x))
