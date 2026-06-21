@@ -223,6 +223,19 @@ release; both convert with 0 errors):**
   `1805.03265` tikz-cd (wall 22.4 s: digest 7.8 / math_parse 7.5 / build 5.3) →
   next levers are **math_parse (over-parse, P1 math)** and **digest (pgf, the
   TikZ backlog)**, both in the deferred math-parser area.
+
+  **Build-side sweep CONCLUSION + a report caveat (2026-06-21).** The cortex
+  "slow report" runtimes are **fleet-inflated**, not single-paper algorithmic
+  cost: re-measured single-paper (ar5iv profile, new binary) the big "slow"
+  witnesses are ~10 s, not 90–160 s — `1201.5525` 158 s→**10.6 s** (math_parse
+  4.6 / build 4.0, 4999 formulae), `1707.01155` 103 s→**11.5 s**, `1803.07098`
+  92 s→**9.3 s**. The 10–15× gap is fleet contention / RSS pressure in the
+  72-worker 10k run, NOT a quadratic (build is now linear, ~0.8 ms/formula). So
+  the only genuine build *quadratic* was `math0605199` (fixed, 20×); the
+  build-side sweep is **exhausted**. Every remaining math-heavy witness is
+  **`math_parse`-bound (over-parse)** — the deferred math-parser lever. (Implication
+  for future triage: rank optimisation candidates by SINGLE-PAPER telemetry wall,
+  not the fleet `runtimes` report, which conflates contention with cost.)
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
