@@ -161,6 +161,22 @@ specific, cosmetic); `amsrefs_basic` bib formatting; `figure_grids` (220 lines,
 multi-panel box-metrics). Net: structure/ is in excellent shape — no common
 content bugs.
 
+**Clean expansion/tokenize/digestion sweep (--nocomments, 2026-06-20)** — also
+no common bugs: `at_in_cs_round_trip` is Rust-SUPERSEDES (Rust handles
+`\lx@NBSP`; Perl errors `\lx` undefined); `tokenize/snippet` is deliberately
+MALFORMED input (`|a}b#c^d_e$f|`, unclosed `$`) where the trailing-`|` tex
+capture at the unclosed-math boundary differs (Rust `tex="f"` vs Perl `"f|"`) —
+not real content; `digestion/dollar` is a one-space whitespace diff after
+`</equation>`; `whichinput`/`whichcache` are `\input`/cache path/env specifics;
+`badchars`/`alltt` tokenizer edges; `rebox` box-metrics. NET (whole sweep across
+parse/math/alignment/fonts/encoding/structure/expansion/tokenize/digestion): the
+codebase is in EXCELLENT parity shape; every real divergence reduces to a known
+category — deferred content-MathML, box-metrics (natural-width), intentional
+comments-off, Rust-supersedes-Perl, the niche `DefMathRewrite \WildCard` bug
+above, or malformed/deprecated edge cases. The synthetic + fixture sweep methods
+are now exhausted for common content bugs; further gains need real-corpus
+(cortex) runs or the deferred focused sessions.
+
 ## Math-parser Rust-only gaps (parked — found by Rust-vs-Perl `text=` comparison)
 
 **Method (high-yield, repeatable):** math-parse failures are SILENT
