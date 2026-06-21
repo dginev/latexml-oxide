@@ -647,7 +647,6 @@ fn is_quad_separator(xm: &XM) -> bool {
   }
 }
 
-
 /// Post-processing: rename `list` to `vector`/`set` when delimiters wrap the list.
 /// Perl's Fence receives flat (open, item, punct, ..., close) and uses encloseN tables.
 /// Our grammar builds `list` via `list_apply` before fencing can see the items.

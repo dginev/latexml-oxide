@@ -41,7 +41,10 @@ impl XPath {
     match self.context.findnodes(xpath, node) {
       Ok(nodes) => nodes,
       Err(e) => {
-        let message = s!("XPath {xpath:?} failed (context node: {}): {e:?}", node.is_some());
+        let message = s!(
+          "XPath {xpath:?} failed (context node: {}): {e:?}",
+          node.is_some()
+        );
         let err = || {
           Error!("xpath", "findnodes", message);
           Ok(())
@@ -61,7 +64,10 @@ impl XPath {
     match self.context.findvalues(xpath, node) {
       Ok(vals) => vals,
       Err(e) => {
-        let message = s!("XPath {xpath:?} failed (context node: {}): {e:?}", node.is_some());
+        let message = s!(
+          "XPath {xpath:?} failed (context node: {}): {e:?}",
+          node.is_some()
+        );
         let err = || {
           Error!("xpath", "findvalues", message);
           Ok(())
