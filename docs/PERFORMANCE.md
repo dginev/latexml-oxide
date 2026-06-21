@@ -119,6 +119,56 @@ Principle 4). Max RSS: 1,692 MB.
 
 ## Active improvement plan
 
+### 2026-06-21 benchmark — slowest *healthy* witnesses (NEW, open)
+
+Source: cortex runtimes for `oxidized-tex-to-html`
+(`GET /api/services/oxidized-tex-to-html/runtimes`, corpora at
+`corpora.latexml.rs/runtimes/oxidized-tex-to-html`; query the LOCAL instance
+`127.0.0.1:8000` — the public URL is Anubis-gated). `max_ms` 180001 = the 180 s
+watchdog **timeout** (infinite-loop class — out of scope here; track in
+`STABILITY_WITNESSES.md`, not as a speed lever). We want papers that **complete**
+(status `no_problem`/`warning`) yet run very long — genuine optimisation targets.
+
+**Top 10 healthy long-runners** (sub-178 s, status terminal-clean):
+
+| Wall | Status | Corpus | Paper | Note |
+|---:|---|---|---|---|
+| 160.7s | no_problem | 10k-shuffle | `math0605199` | **PiCTeX** plotting (`\beginpicture`/`\axis`/`\setplotarea`); 20 KB/1281 lines — small input, huge time |
+| 158.2s | warning | 10k-shuffle | `1201.5525` | large (3.8 MB, 39 files, 17k lines) |
+| 115.2s | warning | xy | `1106.6259` | xy-pic graphics cluster |
+| 108.5s | no_problem | xy | `math0404373` | xy-pic graphics cluster |
+| 108.3s | warning | tikz-cd | `1703.04679` | tikz-cd/pgf graphics cluster |
+| 103.3s | warning | 10k-shuffle | `1707.01155` | large (2.9 MB) |
+| 99.4s | warning | tikz-cd | `2012.14662` | tikz-cd/pgf graphics cluster |
+| 97.9s | warning | tikz-cd | `1307.3836` | tikz-cd/pgf graphics cluster |
+| 96.7s | warning | 10k-shuffle | `1510.03361` | 68 KB/4807 lines — small-ish input, high time |
+| 91.8s | no_problem | 10k-shuffle | `1803.07098` | large (2.0 MB) |
+
+Two clusters: **graphics** (`xy` + `tikz-cd`, 5/10 — commutative-diagram / pgf
+rendering, the known deep hot area; relates to the P1 graphics work) and
+**general arXiv** (10k-shuffle, 5/10). Highest-value leads are the
+**small-input-huge-time** outliers — `math0605199` (20 KB → 160 s) and
+`1510.03361` (68 KB → 97 s): a tiny source consuming minutes signals an
+**algorithmic hotspot** (super-linear digest/macro-expansion), likely shared
+across many papers. `math0605199` is PiCTeX (notoriously macro-expansion-heavy);
+suspect the digest phase.
+
+**MUST-profile-with-the-ar5iv-profile caveat (reconciled 2026-06-21).** The
+production runtimes come from `cortex_worker`, which **preloads `ar5iv.sty`** —
+this materially changes emulation decisions (and defines packages like PiCTeX).
+A bare `latexml_oxide <main>.tex` does NOT match it and gives a **false-fast**
+reading: `math0605199` via bare CLI bailed in 0.24 s with 96 errors (PiCTeX
+undefined, 3 KB output) vs the production 160 s clean conversion. So profile only
+via the production-equivalent recipe (the "Standing performance corpus" block
+below: `--preload=ar5iv.sty --path=$HOME/git/ar5iv-bindings/bindings`, or
+`cortex_worker --standalone <zip>` with that profile). NOTE: `~/git/ar5iv-bindings`
+is not checked out on this box, and the cortex API exposes no per-task phase
+telemetry — so the **next step is per-phase attribution**: run each witness under
+the ar5iv profile with `LATEXML_TELEMETRY_OUT=…` (phase wall times; `perf` is
+locked down on this host, so telemetry + env-gated `Instant` probes are the
+profiling path), then rank the dominant phase per witness and fold each into the
+relevant P1 lane (digest / math_parse / graphics) below.
+
 ### P1 graphics phase (36.5% of wall) — CLOSED
 
 In-doc dedup (`Plan::Copy`/`Plan::Convert`), persistent on-disk cache,
