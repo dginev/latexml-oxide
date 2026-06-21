@@ -64,15 +64,34 @@ this branch; otherwise pivot to the beyond-parity long-tail below.
 
 **Message-faithfulness fixes harvested from the (stale) cross-join 2026-06-20
 (shared errors — not pass/fail wins, but the `what`/`details` now match Perl,
-which matters when re-running the cross-join):** (a) `misdefined/\list` — the
-"not an allocated register type" error now names the CS (`, for \listcount`),
-per Perl `allocateRegister` (`47789523cf`); (b) `latex/\GenericError` (746 msgs
-/21 papers) — `\GenericError`/`\GenericWarning`/`\GenericInfo` now derive the
-diagnostic `what` ($type) from the stripped `(pkgname)` prefix and drop it from
-the body, per Perl `make_message` (`25118a3079`). NOTE for the next cross-join:
-the Rust `latex/\GenericError` category will now SPLIT into per-package `what`s
-(`(yjsco)`, `(LayAureo)`, …) exactly like Perl — a rerun will no longer show a
-single `\GenericError` bucket.
+which matters when re-running the cross-join). The diagnostic seam is now
+NEARLY EXHAUSTED for common error conditions — a systematic batch comparison
+(undefined CS/env, missing-number, group/mode close, malformed, extra-brace,
+close-environment) shows all primary messages matching Perl; only a deep
+recovery-CASCADE artifact remains (after a mismatched-env cascade the engines
+reach different states → "Attempt to end mode" vs "Attempt to pop last locked
+stack frame" — niche, deeply-broken input). The fixes:**
+- `misdefined/\list` — names the CS (`, for \listcount`), per `allocateRegister`
+  (`47789523cf`).
+- `latex/\GenericError` (746 msgs/21 papers) — `\GenericError`/`Warning`/`Info`
+  derive `what` ($type) from the stripped `(pkgname)` prefix and drop it from the
+  body, per `make_message` (`25118a3079`). NOTE: a rerun will SPLIT this into
+  per-package `what`s (`(yjsco)`, …) like Perl, not one `\GenericError` bucket.
+- `undefined/*` (870 tasks, biggest) — the "Defining it now as …" recovery note
+  is a SEPARATE detail line, not merged into the primary message (`803d959a3a`).
+- counter `was not defined` — quotes the name (`Counter '<n>'`) (`a7b9ea18dc`).
+- `expected/<number>` "Missing number" — clean primary + `(Dimension)` qualifier
+  + ToString (not Debug) tokens (`e5d6ff9e40`).
+- `unexpected` group/mode close (35+20+16 tasks) — `currentFrameMessage` as a
+  separate detail; `endMode` uses the bound mode (`e005085600`).
+- `malformed/*` (162 tasks) — `<qname> isn't allowed in <Y>` (was Debug-quoted +
+  a `disabled backtrace` dumped into the message) + restored "Currently in"
+  context (`a38bc2e608`).
+- `unexpected \end{…}` close-environment — trailing `;` + "Current are:"
+  (`914bb4a37d`).
+Also fixed a shared-branch build break: the `Debug!` macro used a bare `s!`
+(`2601082435`). NEXT: with messages faithful, a FRESH cortex Rust rerun is the
+prerequisite for genuine Rust-only-win mining (the stale 10k is mined out).
 
 **Beyond-parity long-tail coverage candidates (#2 track, surpass-Perl —
 defer while strict-parity is #1):** add `arximspdf`/`imsart` support (16+ IMS
