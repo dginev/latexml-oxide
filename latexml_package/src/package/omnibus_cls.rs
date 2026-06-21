@@ -526,12 +526,24 @@ LoadDefinitions!({
   DefRegister!("\\copyrightetc" => Tokens!());
   Let!("\\crdata", "\\acmcopyr");
 
-  // Perl L266-280: \references constructor (works as env or bare macro)
-  // Simplified: Perl's before_digest/after_digest setup for bibliography
-  // hooks is not yet publicly exposed; the constructor below produces the
-  // correct outer wrappers, relying on \bibitem's own auto_open/auto_close.
+  // Perl L266-280: \references constructor (works as env or bare macro).
+  // Full port — `before_digest_bibliography`/`begin_bibliography` are public
+  // (latex_constructs.rs), so the constructor sets the bibliography title
+  // (`\refname`), xml:id and bib/cite-style exactly like Perl's
+  // `beforeDigestBibliography`/`beginBibliography`, instead of a stub that
+  // emitted a bare `<bibliography>` (no <title>, no id → ugly auto-id
+  // `X-at-lx-at-bibliography0.bibN`). This OmniBus binding shadows
+  // revtex4_support's identical `\references` on the `\documentstyle{revtex}`
+  // path (where OmniBus is also loaded), so a REVTeX-3.x `\begin{references}`
+  // now matches Perl. Witnesses: cond-mat9805405, hep-ex0007011.
   DefConstructor!("\\references",
-    "<ltx:bibliography xml:id='#id'><ltx:biblist>");
+    "<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title><ltx:biblist>",
+    before_digest => {
+      engine::latex_constructs::before_digest_bibliography()
+    },
+    after_digest => sub[whatsit] {
+      engine::latex_constructs::begin_bibliography(whatsit)?;
+    });
   DefConstructor!("\\endreferences", sub[document] {
     let _ = document.maybe_close_element("ltx:biblist");
     let _ = document.maybe_close_element("ltx:bibliography");

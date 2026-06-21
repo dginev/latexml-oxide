@@ -200,23 +200,6 @@ done. **Remaining:** tag `0.7.0` on master → `release.yml` runs the TL-window
 ### Engine file open gaps (MINOR, demand-driven)
 - `tex_box.rs` box-dimension edges; `tex_fonts.rs` `\fontdimen` array + per-font
   `\hyphenchar`; `tex_tables.rs` padding CSS (XSLT concern).
-- **REVTeX-3.x `\references` constructor not dispatched** (found 2026-06-20 via a
-  real-corpus structural-skeleton diff on Perl-clean papers; witnesses
-  cond-mat9805405, hep-ex0007011 — both `\documentstyle{revtex}` +
-  `\begin{references}`). Rust emits a *generic* `<bibliography>` — no
-  `<title>References</title>`, no `citestyle="numbers"`, no clean `xml:id="bib"`,
-  and ugly `X-at-lx-at-bibliography0.bibN` bibitem ids (the `\bibitem`s auto-wrap
-  a generic bibliography) — where Perl emits the full structure. DIAGNOSIS: the
-  `\references` DefConstructor (`revtex4_support_sty.rs:223`) IS defined+locked
-  and revtex4_support DOES load (verified: `[DBG load]` fires, `\citep`/natbib
-  work, `\meaning\references` == Perl), but invoking `\references` (bare OR via
-  `\begin{references}`) NEVER enters its before/after-digest (verified by
-  eprintln probes) — so the constructor's body/`begin_bibliography` never runs.
-  `\thebibliography` (also a locked DefConstructor calling `begin_bibliography`)
-  works perfectly; removing `locked` from `\references` does NOT help. Root cause
-  is a gullet/stomach digestion-DISPATCH issue specific to this runtime-defined
-  constructor — needs a focused session tracing why the `\references` token isn't
-  digested as its Constructor. Narrow (old REVTeX 3.x).
 - **`\fcolorbox` inline paragraph-grouping**: an inline `\fcolorbox` mid-paragraph
   — Perl breaks the `<p>` (its `internal_vertical` block ends it), Rust keeps it
   inline. SAME flags on both; the divergence is in core document-builder
