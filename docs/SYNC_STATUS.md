@@ -247,7 +247,13 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   the global port exposes a `\cr`-mid-VBoxContents-predigest interleaving + a
   span/sizing bug on `\multicolumn` over p-columns. Also explains the p-column
   `td align="justify"` + width-on-`<p>` divergence (Perl: `align="left"` +
-  width-on-`<inline-block>`). Surpass-Perl R&D.
+  width-on-`<inline-block>`). Surpass-Perl R&D. **Related residuals catalogued
+  with minimal reproducers in `docs/reproducers/array_pcolumn/`** (Kind B: `>{}`
+  prefix align not on `<td>`; Kind C/D: regular `m{}`/`b{}` use a plain
+  `\vtop{}`/`\vbox{}` not the `\lx@tabular@p` VBox → width-on-`<td>` + inline-block
+  `vattach`/width drift). The `\multicolumn`-over-`m{}`/`b{}` GROUP ERROR in that
+  family is now **FIXED** (was 1805.01525 27→0; `tex_tables.rs`
+  `\lx@alignment@multicolumn` generalized from p{}-only to all paragraph columns).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.

@@ -578,36 +578,91 @@ LoadDefinitions!({
     // `\\`-less p-cell, and every non-paragraph column, are unaffected.
     let is_pcol = column.map(|c| c.align == Some(Align::Justify)).unwrap_or(false);
     if is_pcol {
-      // The `p{}` column's `before` is `[<border prefix>] \vtop { \hbox to <width>
-      // \relax {` and its `after` is `} } [<border suffix>]`. We splice out the
-      // `\vtop{\hbox to..{ … }}` middle, replacing it with the Perl-faithful VBox
-      // form `\lx@tabular@p t {<width>} { … }` (one open / one close brace),
-      // preserving the surrounding borders so `|p{}|` keeps its rules.
+      // A paragraph column (`p{}`, `m{}`, `b{}` — all `align=Justify`). Each wraps
+      // the cell in a box, but the `before`/`after` token *shape* differs:
+      //   * global `p{}`: before `[border] \vtop { \hbox to <w> \relax {`,
+      //     after `} } [border]` — two opening braces, width inside `\hbox to`;
+      //   * array.sty `m{}`/`b{}`: before `\vtop {` / `\vbox {`, after `}` —
+      //     one opening brace, width carried on the Cell's `width` field.
+      // For a multicolumn cell an embedded top-level `\\` must be a *paragraph
+      // line break*, not the row terminator, so we replace the box construct with
+      // the Perl-faithful VBox form `\lx@tabular@p <t|m|b> {<width>} { … }` (one
+      // open / one close brace), preserving surrounding `|`-borders. This handles
+      // all three forms uniformly — it was previously `p{}`-only, so a
+      // `\multicolumn` over an `m{}`/`b{}` column spliced the wrong brace count and
+      // corrupted the group stack (witness 1805.01525: `\multicolumn{1}{L{5cm}}`
+      // over `m{}` → `\@end@tabular Attempt to close boxing group`).
       let before_toks: Vec<Token> =
         column.and_then(|c| c.before.as_ref()).map(|b| b.unlist_ref().clone()).unwrap_or_default();
       let after_toks: Vec<Token> =
         column.and_then(|c| c.after.as_ref()).map(|a| a.unlist_ref().clone()).unwrap_or_default();
-      let width = extract_pcol_width(&before_toks);
-      let vtop_idx = before_toks.iter().position(|t| *t == T_CS!("\\vtop")).unwrap_or(before_toks.len());
-      // `after` is `[<inner> } } <border suffix>]` — the two consecutive `}` close
-      // `\hbox`/\vtop`; `<inner>` (e.g. `\lx@column@trimright`) belongs *inside* the
-      // box and `<border suffix>` after it. Locate that `} }` pair.
+      // Width: the global `p{}` encodes it in `\hbox to <w> \relax`; `m{}`/`b{}`
+      // carry it on the Cell — fall back to that when the tokens lack it.
+      let mut width = extract_pcol_width(&before_toks);
+      if width.is_empty()
+        && let Some(w) = column.and_then(|c| c.width.as_ref())
+        && let Ok(rev) = w.revert() {
+          width = rev.unlist();
+        }
+      // The box command (`\vtop` for p/m, `\vbox` for b) marks where the box
+      // construct begins; everything before it is the `|`-border prefix.
+      let box_idx = before_toks.iter()
+        .position(|t| *t == T_CS!("\\vtop") || *t == T_CS!("\\vbox"))
+        .unwrap_or(before_toks.len());
+      let tail = &before_toks[box_idx..];
+      // Extent of the box construct itself: `\vtop {` / `\vbox {` (one opening
+      // brace), or the global `p{}` form `\vtop { \hbox to <w> \relax {` (two).
+      // We count ONLY those braces — `column.before` is built (template.rs
+      // `add_column`) as `[\lx@intercol] <box-open> <`>{}`-prefix decls>`, so a
+      // `\hspace{0pt}` in a `>{…}` prefix sits AFTER the box-open; its balanced
+      // `{` must NOT inflate the close-brace count, and its decls must be kept
+      // INSIDE the cell (they are cell-content setup like `\raggedright`).
+      let first_brace = tail.iter().position(|t| t.get_catcode() == Catcode::BEGIN);
+      let (box_open_len, box_open_braces) = match first_brace {
+        // `p{}`: `\hbox` right after the first brace → a 2nd brace follows `\relax`.
+        Some(fb) if tail.get(fb + 1) == Some(&T_CS!("\\hbox")) => {
+          match tail[fb + 1..].iter().position(|t| t.get_catcode() == Catcode::BEGIN) {
+            Some(j) => (fb + 1 + j + 1, 2),
+            None => (fb + 1, 1),
+          }
+        }
+        // `m{}`/`b{}`: a single brace closes the construct.
+        Some(fb) => (fb + 1, 1),
+        None => (tail.len(), 1),
+      };
+      // `>{…}` cell-prefix declarations that followed the box-open — kept inside.
+      let decls: Vec<Token> = tail[box_open_len..].to_vec();
+      // Vertical attachment letter for `\lx@tabular@p` (t=top, m=middle, b=bottom).
+      let letter = match column.and_then(|c| c.vattach.as_deref()) {
+        Some("middle") => "m",
+        Some("bottom") => "b",
+        _ => "t",
+      };
+      // `after` is `[<inner> }×N <border suffix>]` — the N closing braces match the
+      // box's opens; `<inner>` (e.g. `\lx@column@trimright`) is inside the box and
+      // `<border suffix>` follows. Locate that run of N consecutive `}`.
       let is_end = |t: &Token| t.get_catcode() == Catcode::END;
-      let close_pair = (0..after_toks.len().saturating_sub(1))
-        .find(|&i| is_end(&after_toks[i]) && is_end(&after_toks[i + 1]));
-      let (inner_after, border_suffix): (&[Token], &[Token]) = match close_pair {
-        Some(i) => (&after_toks[..i], &after_toks[i + 2..]),
+      let close_run = if after_toks.len() >= box_open_braces {
+        (0..=after_toks.len() - box_open_braces)
+          .find(|&i| (0..box_open_braces).all(|k| is_end(&after_toks[i + k])))
+      } else {
+        None
+      };
+      let (inner_after, border_suffix): (&[Token], &[Token]) = match close_run {
+        Some(i) => (&after_toks[..i], &after_toks[i + box_open_braces..]),
         None => (&after_toks[..], &[]),
       };
-      // Border prefix (everything before `\vtop`), unchanged.
-      tks.extend(before_toks[..vtop_idx].iter().copied());
-      // VBox cell: \lx@tabular@p t {<width>} {
+      // Border prefix (everything before the box command), unchanged.
+      tks.extend(before_toks[..box_idx].iter().copied());
+      // VBox cell: \lx@tabular@p <letter> {<width>} {
       tks.push(T_CS!("\\lx@tabular@p"));
-      tks.extend(ExplodeText!("t"));
+      tks.extend(ExplodeText!(letter));
       tks.push(T_BEGIN!());
       tks.extend(width);
       tks.push(T_END!());
       tks.push(T_BEGIN!());
+      // `>{…}` declarations belong inside the cell, before the body.
+      tks.extend(decls);
       // Rebind only top-level `\\` (depth 0); nested groups keep their meaning.
       let dbl = T_CS!("\\\\");
       let nl = T_CS!("\\lx@newline");

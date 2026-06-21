@@ -1,0 +1,25 @@
+% KIND A — \multicolumn over an m{}/b{} column: group/brace corruption.
+% STATUS: FIXED (tex_tables.rs `\lx@alignment@multicolumn`, generalized the
+%   p{}-only VBox splice to m{}/b{} — was witness 1805.01525, 27 errors).
+%
+% BEFORE the fix, Rust emitted (Perl: 0 errors):
+%   Error:unexpected:\@end@tabular Attempt to close boxing group
+%   Error:unexpected:\lx@begin@alignment Attempt to close a group that
+%                    switched to mode restricted_horizontal
+% Root cause: the multicolumn handler hardcoded the global p{} token shape
+%   (`\vtop{\hbox to <w>\relax{ … }}`, two braces) and spliced the wrong brace
+%   count for an m{}/b{} column (`\vtop{ … }`/`\vbox{ … }`, one brace).
+%
+% Faithful to Perl: array.sty.ltxml defines m{}/b{} via `\lx@tabular@p <letter>
+%   {dim} { … }`, exactly as p{} (TeX_Tables.pool.ltxml); Perl's
+%   `\lx@alignment@multicolumn` just splices before+body+after. Our fix
+%   reconstructs that same `\lx@tabular@p`-based VBox cell.
+\documentclass{article}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}m{#1}}
+\begin{document}
+\begin{tabular}{m{4cm} c c}
+\multicolumn{1}{L{5cm}}{Heading text} & b & c \\
+x & y & z \\
+\end{tabular}
+\end{document}

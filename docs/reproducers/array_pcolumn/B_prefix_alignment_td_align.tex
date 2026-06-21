@@ -1,0 +1,23 @@
+% KIND B — a `>{\raggedright}` / `>{\raggedleft}` / `>{\centering}` column
+% prefix does NOT set the cell's `align` attribute in Rust.
+% STATUS: OPEN (pre-existing; NOT introduced by the Kind-A fix — it reproduces
+%   for p{} columns and for regular (non-multicolumn) columns alike).
+%
+% On the cell `<td>`:
+%   Rust:  <td align="justify" …>     (the column's base alignment)
+%   Perl:  <td align="left" …>        (\raggedright → left)
+% The inner <inline-block>/<p class="ltx_align_left"> already MATCH; only the
+% <td> `align` attribute differs. \raggedleft → "right", \centering → "center".
+%
+% Perl path: the `>{…}` declarations run inside the cell; \raggedright et al.
+%   set the paragraph alignment, which Perl also reflects onto the cell's
+%   `align`. Rust applies it to the inner <p> (class ltx_align_left) but leaves
+%   the <td>/<inline-block> `align` at the column default "justify".
+\documentclass{article}
+\usepackage{array}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\begin{document}
+\begin{tabular}{L{5cm} c c}
+ragged left text in a wide paragraph cell & b & c \\
+\end{tabular}
+\end{document}

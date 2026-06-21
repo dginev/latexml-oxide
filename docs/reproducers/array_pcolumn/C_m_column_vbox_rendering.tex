@@ -1,0 +1,28 @@
+% KIND C/D — a regular m{}/b{} column renders with a divergent box form.
+% STATUS: OPEN (deferred — same family as the "global p{} → VBox port",
+%   SYNC_STATUS "1610.00974 step-3"; risky because the VBox port exposes a
+%   latent \multicolumn span/sizing bug).
+%
+% Rust's array.sty m{}/b{} (array_sty.rs) wrap the cell in a plain
+%   `\vtop{ … }` / `\vbox{ … }` and carry the width as a *Cell attribute*,
+%   whereas Perl (array.sty.ltxml) uses `\lx@tabular@p m {dim} { … }` (a real
+%   VBox via TeX_Tables.pool.ltxml), putting width on the <inline-block>.
+%
+% For a REGULAR m{5cm} column cell:
+%   Rust:  <td align="justify" vattach="middle" width="142.3pt">
+%            <inline-block vattach="top">                 (no width, vattach top)
+%   Perl:  <td align="left" vattach="middle">             (no width on td)
+%            <inline-block vattach="middle" width="142.3pt">
+% Two sub-differences:
+%   (C) Rust leaks the column width onto the <td>; Perl puts it on inline-block.
+%   (D) Rust's inline-block is vattach="top" no-width; Perl vattach="middle"
+%       width=<dim> — i.e. the \vtop form is not the Perl \lx@tabular@p VBox.
+% (The Kind-A fix already makes the *multicolumn* m{} cell's inline-block match
+%  Perl — vattach=middle width=<dim>; this file is the REGULAR-column residual.)
+\documentclass{article}
+\usepackage{array}
+\begin{document}
+\begin{tabular}{m{5cm} c c}
+a wide middle-aligned paragraph cell & b & c \\
+\end{tabular}
+\end{document}
