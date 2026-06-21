@@ -1996,8 +1996,15 @@ impl Document {
         for mut gc in c_first.get_child_nodes().into_iter() {
           gc.unlink();
           node.add_child(&mut gc)?;
-          self.record_node_ids(node)?;
         }
+        // Re-record ids once, after ALL grandchildren are moved. Calling this
+        // per-grandchild inside the loop re-scanned the whole growing `node`
+        // subtree each iteration — O(G²) `descendant-or-self::*[@xml:id]` XPath
+        // scans per merge (115k scans / ~50% of build wall on a PiCTeX paper).
+        // record_id_with_node is idempotent for already-correct nodes and the
+        // final set/document-order is identical, so one post-loop call is
+        // output-equivalent. See PERFORMANCE.md.
+        self.record_node_ids(node)?;
         // Merge the attributes from the child onto $node
         self.merge_attributes(&c_first, node, None)?;
         self.remove_node(c_first);
