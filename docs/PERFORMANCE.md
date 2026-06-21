@@ -190,8 +190,26 @@ release; both convert with 0 errors):**
   so emptiness is identical; suite 1466/0/0). Measured on `math0605199`:
   build 43.7 s → ~37–40 s, wall 44.9 s → 37–40.6 s (≈10–18 %, single-run
   variance). A real but partial win — **the dominant build quadratic remains**
-  (build still ~96 %); the next step is perf-profiling the builder
-  (`find_insertion_point` / per-node tree walks) to find the core O(N²).
+  (build still ~96 %).
+  **ROOT CAUSE FOUND (perf + XPath instrumentation, 2026-06-21).** `perf record`
+  (after `sudo sysctl kernel.perf_event_paranoid=-1`) on the bench binary shows
+  build is ~50 % libxml2 **XPath** (`xmlXPathNextDescendant*` + NodeSet
+  `malloc`/`cfree` churn). An env-gated `findnodes` logger
+  (`LATEXML_XPATH_LOG`) pinned it: **122,857 `descendant-or-self::*[@xml:id]`
+  queries** (90 % of all 136 k findnodes) from `record_node_ids` /
+  `unrecord_node_ids` — the math-parser's per-element id-recording round-trips
+  (`parser.rs` parse recursion + `rebuild_idstore_from_dom`), each re-scanning a
+  subtree → O(N²). **NEGATIVE RESULT:** replacing the XPath with a manual
+  first-child/next-sibling Rust walk **REGRESSED** it (37–44 s → >60 s timeout):
+  the libxml2 C descendant walk is far cheaper per call than N Rust↔C FFI hops
+  through the `libxml`-rs Node wrapper cache (HashMap + Rc per node). So the bulk
+  C XPath scan is the *right* mechanism; **the lever is the call COUNT, not the
+  per-call cost.** Reverted. **Next = reduce the 122 k id-recording round-trips**
+  (the comment at `record_node_ids` notes they are "denser than Perl's" — so
+  fewer round-trips is likely *toward* Perl, i.e. faithful). This is structural
+  in the id-management / math-parser flow (a sensitive, deferred area) → needs a
+  focused design pass + (per the redesign guardrail) sign-off before reshaping
+  the parse-time record/unrecord cadence.
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
