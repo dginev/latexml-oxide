@@ -236,6 +236,24 @@ release; both convert with 0 errors):**
   **`math_parse`-bound (over-parse)** — the deferred math-parser lever. (Implication
   for future triage: rank optimisation candidates by SINGLE-PAPER telemetry wall,
   not the fleet `runtimes` report, which conflates contention with cost.)
+
+  **math_parse floor analysis (`1510.03361`, perf, 2026-06-21).** Not one
+  ambiguity explosion — 2385 formulae × ~4.3 ms each (mostly 2–10 trees;
+  dominant pattern `UNKNOWN:K OPEN:( … PUNCT:, … CLOSE:)` = the deferred
+  `f(x,y)` apply-vs-multiply ambiguity). perf self-time: **~25 % marpa-C engine**
+  (`transitive_closure`, `marpa_r_earleme_complete`, `postdot_items_create`,
+  `bv_scan`, `_marpa_avl_*`) — the docs mark deep-marpa-C as out-of-scope; **~5 %
+  libxml node-cache SipHash** (`hash_one::<*mut _xmlNode>` — the fork's
+  `nodes: HashMap` uses `RandomState`; FxHash on the pointer key is a broad
+  constant-factor win, ~3–5 % across ALL phases); ~10 % FFI string/alloc churn
+  (`CString::new`, `xmlStrEqual`, `xmlStrdup`, mimalloc). Grammar precompute is
+  already cached (parser.rs:504 + the 2215 note). **Conclusion:** a
+  2385–5000-formula paper at ~10 s is near the per-formula architectural floor
+  (~4 ms/formula, marpa-C-bound); 1–2 s there needs deep-marpa work (out-of-scope)
+  or the over-parse lever (deferred). The realistic in-scope win is the FxHash
+  node-cache (fork) — modest but corpus-wide. The big algorithmic outlier
+  (`math0605199` build quadratic) is the one that fit the 1–2 s target and is
+  done.
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
