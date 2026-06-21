@@ -462,21 +462,24 @@ pub fn egroup() -> Result<()> {
     }
     // Last stack frame was a mode switch!?!?!
     // Don't pop if there's an error; maybe we'll recover?
+    // Perl Stomach.pm:347-349 passes currentFrameMessage as a SEPARATE
+    // Error detail (its own line), not merged into the primary message.
     Error!(
       "unexpected",
       get_current_token().unwrap_or_else(|| T_CS!("\\?")),
       s!(
-        "Attempt to close a group that switched to mode {}; {}",
-        lookup_string_from_sym(crate::pin!("MODE")),
-        current_frame_message()
-      )
+        "Attempt to close a group that switched to mode {}",
+        lookup_string_from_sym(crate::pin!("MODE"))
+      ),
+      current_frame_message()
     );
   } else if lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \begingroup
     Error!(
       "unexpected",
       get_current_token().unwrap_or_else(|| T_CS!("\\?")),
-      s!("Attempt to close boxing group; {}", current_frame_message())
+      "Attempt to close boxing group",
+      current_frame_message()
     );
   } else {
     // Don't pop if there's an error; maybe we'll recover?
@@ -552,16 +555,17 @@ pub fn endgroup() -> Result<()> {
     }
     // Last stack frame was a mode switch!?!?!
     // Don't pop if there's an error; maybe we'll recover?
+    // Perl Stomach.pm:367-369: currentFrameMessage is a SEPARATE detail.
     Error!(
       "unexpected",
       get_current_token()
         .map(|t| t.to_string())
         .unwrap_or_else(|| String::from("\\?")),
       s!(
-        "Attempt to close a group that switched to mode {}; {}",
-        lookup_string_from_sym(crate::pin!("MODE")),
-        current_frame_message()
-      )
+        "Attempt to close a group that switched to mode {}",
+        lookup_string_from_sym(crate::pin!("MODE"))
+      ),
+      current_frame_message()
     );
   } else if !lookup_bool_sym(crate::pin!("groupNonBoxing")) {
     // or group was opened with \bgroup
@@ -570,10 +574,8 @@ pub fn endgroup() -> Result<()> {
       get_current_token()
         .map(|t| t.to_string())
         .unwrap_or_else(|| String::from("\\?")),
-      s!(
-        "Attempt to close non-boxing group; {}",
-        current_frame_message()
-      )
+      "Attempt to close non-boxing group",
+      current_frame_message()
     );
   } else {
     pop_stack_frame(true)?;
@@ -734,11 +736,12 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
     let current_bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
     let bound_on_top = is_value_bound("BOUND_MODE", Some(0));
     let make_mode_error = || {
-      let message = s!(
-        "Attempt to end mode `{}` in `{}`",
-        mode,
-        lookup_string_from_sym(crate::pin!("MODE"))
-      );
+      // Perl Stomach.pm:550: Error('unexpected', $CURRENT_TOKEN, $self,
+      //   "Attempt to end mode $mode", currentFrameMessage($self)) — where
+      // $mode is the BOUND (bindable) mode, and currentFrameMessage is a
+      // SEPARATE detail (added at the call sites below). The earlier Rust
+      // wording ("...mode `X` in `Y`") was not Perl-faithful.
+      let message = s!("Attempt to end mode {}", bound_mode);
       let category = match get_current_token() {
         Some(ref token) => token.to_string(),
         None => String::from("mode"),
@@ -760,7 +763,7 @@ pub fn end_mode_opt(mode: &str, noframe: bool) -> Result<()> {
         );
       }
       let (category, message) = make_mode_error();
-      Error!("unexpected", category, &message);
+      Error!("unexpected", category, &message, current_frame_message());
     } else {
       // Perl: leaveHorizontal_internal($self) if $mode =~ /vertical$/;
       if bound_mode.ends_with("vertical") {
