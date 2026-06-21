@@ -2982,7 +2982,7 @@ impl Document {
       // id=…" which already surfaces the consequence at the appro-
       // priate severity. Math-parser hygiene fix (preventing the
       // collision in the first place) is tracked separately.
-      Info!("malformed", "id", message);
+      Debug!("malformed", "id", message);
       new_id
     } else {
       id.to_string()

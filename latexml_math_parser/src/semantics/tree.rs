@@ -1,7 +1,7 @@
 use std::{borrow::Cow, cmp::Ordering, error::Error, fmt, fmt::Display, rc::Rc};
 
 use latexml_core::{
-  Info,
+  Debug,
   common::{font::Font, xml::element_nodes},
   document::Document,
 };
@@ -1963,7 +1963,7 @@ impl XM {
     loop {
       match tree {
         XM::Choices(mut choices) => {
-          Info!(
+          Debug!(
             "math_parser",
             "choices",
             format!(
