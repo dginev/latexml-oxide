@@ -304,7 +304,7 @@ pub fn def_register<T: Into<RegisterValue>>(
   let mut address = match options.address.take() {
     Some(v) => v,
     None => match options.allocate {
-      Some(v) => allocate_register(&v)?.unwrap_or_default(),
+      Some(v) => allocate_register(&v, &cs.to_string())?.unwrap_or_default(),
       None => String::new(),
     },
   };
@@ -1744,7 +1744,7 @@ fn transfer_common_constructor_options(
 // We ASSUME the same set of \count positions used by TeX & LaTeX
 // for recording the next available position in \count,\dimen,\skip,\muskip.
 
-pub fn allocate_register(rtype: &str) -> Result<Option<String>> {
+pub fn allocate_register(rtype: &str, cs: &str) -> Result<Option<String>> {
   let addr = match rtype {
     "\\count" => "\\count10",
     "\\dimen" => "\\count11",
@@ -1774,10 +1774,12 @@ pub fn allocate_register(rtype: &str) -> Result<Option<String>> {
       Ok(None)
     }
   } else {
+    // Perl Package.pm L626-627: the error names the CS being allocated
+    // (`Type $type is not an allocated register type, for ToString($cs)`).
     Error!(
       "misdefined",
       rtype,
-      format!("Type {rtype} is not an allocated register type")
+      format!("Type {rtype} is not an allocated register type, for {cs}")
     );
     Ok(None)
   }

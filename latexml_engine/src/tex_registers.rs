@@ -58,7 +58,7 @@ LoadDefinitions!({
       "\\countdef" | "\\dimendef" | "\\skipdef" | "\\muskipdef" | "\\toksdef");
     let next = if is_stored {
       // Use the register allocation system
-      if let Some(addr) = allocate_register(&type_str)? {
+      if let Some(addr) = allocate_register(&type_str, &cs.to_string())? {
         // Extract the number part from e.g. "\\count256"
         addr.trim_start_matches(&type_str).to_string()
       } else {
