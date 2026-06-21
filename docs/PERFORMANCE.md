@@ -178,6 +178,15 @@ release; both convert with 0 errors):**
   diverges from the digest-bound pattern. Suspect a quadratic in the builder's
   sibling-append / `find_insertion_point` path under high node fan-out; profile
   `latexml_core::document` build hot path with env-gated probes.
+  **Concrete low-risk lead (read-only, 2026-06-21):** 7
+  `get_child_nodes().is_empty()` sites materialize the *entire* child Vec (O(n),
+  walks all siblings) purely to test emptiness, where `get_first_child().is_some()`
+  is O(1) — `latexml_core/src/document.rs:432` & `:4718`,
+  `latexml_engine/src/base_utilities.rs:1108`, `tex_kern.rs:33`,
+  `latex_constructs.rs:1080`/`1083`/`1086`. Behavior-identical swap; on a node
+  accumulating N children a per-node emptiness check is O(N²). Verify each is on
+  the build hot path, then swap + measure with the math0605199 before/after (not
+  just the standing corpus), per the acceptance checklist.
 - **`1510.03361` → `math_parse` = 52.8 %** (10.4 s) + `build` 27.2 % (5.4 s);
   2385 formulae, **1.7 GB RSS**. Math-parser-bound — folds into **P1 math
   (over-parse lever)** below; the high RSS + 2385 formulae suggests an ambiguity/
