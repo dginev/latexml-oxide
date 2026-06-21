@@ -53,7 +53,13 @@ Core.pm-style source-directory prepends.</dd><dt><a class="fn" href="fn.has_indi
 in <code>pre_snapshot</code> are skipped. Operates on the Meaning table only —
 callers that need to promote Value/Catcode/etc. should add parallel
 helpers (none required so far).</dd><dt><a class="fn" href="fn.increment_align_group_count.html" title="fn latexml_engine::prelude::state::increment_align_group_count">increment_<wbr>align_<wbr>group_<wbr>count</a></dt><dt><a class="fn" href="fn.initialize_localized.html" title="fn latexml_engine::prelude::state::initialize_localized">initialize_<wbr>localized</a></dt><dd>Reset all localized variables to their default state.
-Must be called between conversion runs to prevent state pollution.</dd><dt><a class="fn" href="fn.install_definition.html" title="fn latexml_engine::prelude::state::install_definition">install_<wbr>definition</a></dt><dd>A shorthand for installing definitions</dd><dt><a class="fn" href="fn.is_binding_extension.html" title="fn latexml_engine::prelude::state::is_binding_extension">is_<wbr>binding_<wbr>extension</a></dt><dd><code>true</code> when at least one registered binding declares <code>ext</code> as its
+Must be called between conversion runs to prevent state pollution.</dd><dt><a class="fn" href="fn.install_definition.html" title="fn latexml_engine::prelude::state::install_definition">install_<wbr>definition</a></dt><dd>A shorthand for installing definitions</dd><dt><a class="fn" href="fn.install_undefined_error_constructor.html" title="fn latexml_engine::prelude::state::install_undefined_error_constructor">install_<wbr>undefined_<wbr>error_<wbr>constructor</a></dt><dd>Install a <code>Constructor</code> for <code>token</code> whose sole effect at digestion time is to
+emit <code>&lt;ltx:ERROR class='undefined'&gt;content&lt;/ltx:ERROR&gt;</code> (the Rust equivalent
+of Perl <code>Document::makeError</code>). It logs NOTHING — the caller is responsible
+for the <code>Error!</code>/<code>note_status</code>. Mirrors the make_error constructor that
+<code>generate_error_stub</code> installs for undefined <em>commands</em>, so undefined
+<em>environments</em> (<code>\begin{undefinedenv}</code>) leave the same visible
+<code>&lt;ltx:ERROR&gt;</code> marker as Perl instead of silently vanishing from the output.</dd><dt><a class="fn" href="fn.is_binding_extension.html" title="fn latexml_engine::prelude::state::is_binding_extension">is_<wbr>binding_<wbr>extension</a></dt><dd><code>true</code> when at least one registered binding declares <code>ext</code> as its
 extension. Used by <code>\input</code>’s heuristic to decide whether
 <code>\input{name.&lt;ext&gt;}</code> should consult the binding registry — e.g.
 <code>.sty</code>, <code>.cls</code>, <code>.def</code>, <code>.pool</code>, <code>code.tex</code> are all valid binding

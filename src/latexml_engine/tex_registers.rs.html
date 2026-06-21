@@ -58,7 +58,7 @@
 <a href=#58 id=58 data-nosnippet>58</a>      <span class="string">"\\countdef" </span>| <span class="string">"\\dimendef" </span>| <span class="string">"\\skipdef" </span>| <span class="string">"\\muskipdef" </span>| <span class="string">"\\toksdef"</span>);
 <a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">let </span>next = <span class="kw">if </span>is_stored {
 <a href=#60 id=60 data-nosnippet>60</a>      <span class="comment">// Use the register allocation system
-<a href=#61 id=61 data-nosnippet>61</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(addr) = allocate_register(<span class="kw-2">&amp;</span>type_str)<span class="question-mark">? </span>{
+<a href=#61 id=61 data-nosnippet>61</a>      </span><span class="kw">if let </span><span class="prelude-val">Some</span>(addr) = allocate_register(<span class="kw-2">&amp;</span>type_str, <span class="kw-2">&amp;</span>cs.to_string())<span class="question-mark">? </span>{
 <a href=#62 id=62 data-nosnippet>62</a>        <span class="comment">// Extract the number part from e.g. "\\count256"
 <a href=#63 id=63 data-nosnippet>63</a>        </span>addr.trim_start_matches(<span class="kw-2">&amp;</span>type_str).to_string()
 <a href=#64 id=64 data-nosnippet>64</a>      } <span class="kw">else </span>{

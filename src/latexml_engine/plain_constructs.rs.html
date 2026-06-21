@@ -380,297 +380,303 @@
 <a href=#380 id=380 data-nosnippet>380</a>      <span class="string">"width" </span>=&gt; lookup_dimension(<span class="string">"\\thinmuskip"</span>).unwrap().negate()),
 <a href=#381 id=381 data-nosnippet>381</a>    )
 <a href=#382 id=382 data-nosnippet>382</a>  });
-<a href=#383 id=383 data-nosnippet>383</a>  <span class="comment">// Perl: \&gt; and \; in math mode =&gt; Box(' ', ..., width =&gt; medmuskip/thickmuskip)
-<a href=#384 id=384 data-nosnippet>384</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\&gt;"</span>, {
-<a href=#385 id=385 data-nosnippet>385</a>    Tbox::new(
-<a href=#386 id=386 data-nosnippet>386</a>      pin_static(<span class="string">" "</span>),
-<a href=#387 id=387 data-nosnippet>387</a>      <span class="prelude-val">None</span>,
-<a href=#388 id=388 data-nosnippet>388</a>      <span class="prelude-val">None</span>,
-<a href=#389 id=389 data-nosnippet>389</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>)),
-<a href=#390 id=390 data-nosnippet>390</a>      <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"medspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-<a href=#391 id=391 data-nosnippet>391</a>      <span class="string">"width" </span>=&gt; lookup_register(<span class="string">"\\medmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
-<a href=#392 id=392 data-nosnippet>392</a>    )
-<a href=#393 id=393 data-nosnippet>393</a>  });
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\;"</span>, {
-<a href=#395 id=395 data-nosnippet>395</a>    Tbox::new(
-<a href=#396 id=396 data-nosnippet>396</a>      pin_static(<span class="string">" "</span>),
-<a href=#397 id=397 data-nosnippet>397</a>      <span class="prelude-val">None</span>,
-<a href=#398 id=398 data-nosnippet>398</a>      <span class="prelude-val">None</span>,
-<a href=#399 id=399 data-nosnippet>399</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\;"</span>)),
-<a href=#400 id=400 data-nosnippet>400</a>      <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"thickspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
-<a href=#401 id=401 data-nosnippet>401</a>      <span class="string">"width" </span>=&gt; lookup_register(<span class="string">"\\thickmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
-<a href=#402 id=402 data-nosnippet>402</a>    )
-<a href=#403 id=403 data-nosnippet>403</a>  });
-<a href=#404 id=404 data-nosnippet>404</a>
-<a href=#405 id=405 data-nosnippet>405</a>  <span class="macro">Let!</span>(<span class="string">"\\:"</span>, <span class="string">"\\&gt;"</span>);
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a>
-<a href=#408 id=408 data-nosnippet>408</a>  <span class="comment">//======================================================================
-<a href=#409 id=409 data-nosnippet>409</a>  // Perl: plain_constructs.pool.ltxml L217-218 — underscore
-<a href=#410 id=410 data-nosnippet>410</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\_"</span>, {
-<a href=#411 id=411 data-nosnippet>411</a>    Tbox::new(pin_static(<span class="string">"_"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\_"</span>)), SymHashMap::default())
-<a href=#412 id=412 data-nosnippet>412</a>  });
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="comment">// Perl plain_constructs.pool.ltxml L203-211: the box content is the actual
+<a href=#384 id=384 data-nosnippet>384</a>  // space glyph — U+2005 FOUR-PER-EM (medspace) for `\&gt;`, U+2004 THREE-PER-EM
+<a href=#385 id=385 data-nosnippet>385</a>  // (thickspace) for `\;` — NOT a plain ASCII space. The earlier Rust port used
+<a href=#386 id=386 data-nosnippet>386</a>  // " ", so `\:`/`\&gt;`/`\;` in TEXT mode collapsed to a regular space instead of
+<a href=#387 id=387 data-nosnippet>387</a>  // the wider Unicode space (matching `\,`→U+2009 and `\!`→U+200B above). In
+<a href=#388 id=388 data-nosnippet>388</a>  // MATH mode the content is irrelevant (isSpace+width → XMHint), so this only
+<a href=#389 id=389 data-nosnippet>389</a>  // corrects text-mode rendering.
+<a href=#390 id=390 data-nosnippet>390</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\&gt;"</span>, {
+<a href=#391 id=391 data-nosnippet>391</a>    Tbox::new(
+<a href=#392 id=392 data-nosnippet>392</a>      pin_static(<span class="string">"\u{2005}"</span>),
+<a href=#393 id=393 data-nosnippet>393</a>      <span class="prelude-val">None</span>,
+<a href=#394 id=394 data-nosnippet>394</a>      <span class="prelude-val">None</span>,
+<a href=#395 id=395 data-nosnippet>395</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\&gt;"</span>)),
+<a href=#396 id=396 data-nosnippet>396</a>      <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"medspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
+<a href=#397 id=397 data-nosnippet>397</a>      <span class="string">"width" </span>=&gt; lookup_register(<span class="string">"\\medmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
+<a href=#398 id=398 data-nosnippet>398</a>    )
+<a href=#399 id=399 data-nosnippet>399</a>  });
+<a href=#400 id=400 data-nosnippet>400</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\;"</span>, {
+<a href=#401 id=401 data-nosnippet>401</a>    Tbox::new(
+<a href=#402 id=402 data-nosnippet>402</a>      pin_static(<span class="string">"\u{2004}"</span>),
+<a href=#403 id=403 data-nosnippet>403</a>      <span class="prelude-val">None</span>,
+<a href=#404 id=404 data-nosnippet>404</a>      <span class="prelude-val">None</span>,
+<a href=#405 id=405 data-nosnippet>405</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\;"</span>)),
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="macro">stored_map!</span>(<span class="string">"name"  </span>=&gt; <span class="string">"thickspace"</span>, <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>,
+<a href=#407 id=407 data-nosnippet>407</a>      <span class="string">"width" </span>=&gt; lookup_register(<span class="string">"\\thickmuskip"</span>, Vec::new())<span class="question-mark">?</span>),
+<a href=#408 id=408 data-nosnippet>408</a>    )
+<a href=#409 id=409 data-nosnippet>409</a>  });
+<a href=#410 id=410 data-nosnippet>410</a>
+<a href=#411 id=411 data-nosnippet>411</a>  <span class="macro">Let!</span>(<span class="string">"\\:"</span>, <span class="string">"\\&gt;"</span>);
+<a href=#412 id=412 data-nosnippet>412</a>
 <a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml L220 — active `~` → `\lx@NBSP`.
-<a href=#415 id=415 data-nosnippet>415</a>  // Required HERE (not just in plain_base.rs) so the override survives
-<a href=#416 id=416 data-nosnippet>416</a>  // the `LoadFormat('plain')` dump path: when `plain_dump` is loaded
-<a href=#417 id=417 data-nosnippet>417</a>  // instead of `plain_base`, the dump captures raw plain.tex's
-<a href=#418 id=418 data-nosnippet>418</a>  // `~` definition (`\penalty\@M\ ` or LaTeX kernel's
-<a href=#419 id=419 data-nosnippet>419</a>  // `\ifincsname...\nobreakspace`) — but plain_constructs runs AFTER
-<a href=#420 id=420 data-nosnippet>420</a>  // and re-establishes the LaTeXML semantic mapping to nbsp.
-<a href=#421 id=421 data-nosnippet>421</a>  // Mirrors Perl's identical L220 def. `protected =&gt; true` keeps
-<a href=#422 id=422 data-nosnippet>422</a>  // partial expansion (`\write`'s `XGeneralText`, …) from baking
-<a href=#423 id=423 data-nosnippet>423</a>  // the internal `\lx@NBSP` CS into aux files; see the matching
-<a href=#424 id=424 data-nosnippet>424</a>  // `\&amp;` block above for the round-trip rationale.
-<a href=#425 id=425 data-nosnippet>425</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>), <span class="prelude-val">None</span>, <span class="string">"\\lx@NBSP"</span>, protected =&gt; <span class="bool-val">true</span>);
-<a href=#426 id=426 data-nosnippet>426</a>
-<a href=#427 id=427 data-nosnippet>427</a>  <span class="comment">//======================================================================
-<a href=#428 id=428 data-nosnippet>428</a>  // Perl: plain_constructs.pool.ltxml L222-277 — matrix/cases
-<a href=#429 id=429 data-nosnippet>429</a>  //======================================================================
-<a href=#430 id=430 data-nosnippet>430</a>  // TeX Book, Appendix B. p. 362
-<a href=#431 id=431 data-nosnippet>431</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="string">"\\matrix{}"</span>,
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="string">"\\lx@gen@plain@matrix{name=matrix,datameaning=matrix}{#1}"
-<a href=#434 id=434 data-nosnippet>434</a>  </span>);
-<a href=#435 id=435 data-nosnippet>435</a>
-<a href=#436 id=436 data-nosnippet>436</a>  <span class="macro">DefMacro!</span>(
-<a href=#437 id=437 data-nosnippet>437</a>    <span class="string">"\\bordermatrix{}"</span>, <span class="comment">// Semantics?
-<a href=#438 id=438 data-nosnippet>438</a>    </span><span class="string">r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
-<a href=#439 id=439 data-nosnippet>439</a>  </span>);
-<a href=#440 id=440 data-nosnippet>440</a>  <span class="comment">// HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
-<a href=#441 id=441 data-nosnippet>441</a>  // Perl: adds empty XMCell columns for stretchy parens with rowspan
-<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@hack@bordermatrix{}"</span>, sub[document, args, _props] {
-<a href=#443 id=443 data-nosnippet>443</a>      <span class="kw">let </span>matrix = args[<span class="number">0</span>].as_ref().unwrap();
-<a href=#444 id=444 data-nosnippet>444</a>      document.absorb(matrix, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#445 id=445 data-nosnippet>445</a>      <span class="comment">// Perl: Extract alignment dimensions for paren sizing
-<a href=#446 id=446 data-nosnippet>446</a>      // half = (totalHeight - row0Height) / 2 — symmetric strut height
-<a href=#447 id=447 data-nosnippet>447</a>      // shift = row0Height - half — yoffset to center parens on data rows
-<a href=#448 id=448 data-nosnippet>448</a>      // h1 = row[1] height — XMWrap height
-<a href=#449 id=449 data-nosnippet>449</a>      </span><span class="kw">let </span>(h1_sp, half_sp, shift_sp) = {
-<a href=#450 id=450 data-nosnippet>450</a>        <span class="kw">let </span>em = lookup_font().map(|f| f.get_em_width()).unwrap_or(<span class="number">655360</span>); <span class="comment">// 10pt default
-<a href=#451 id=451 data-nosnippet>451</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>found = (em, em, em); <span class="comment">// default: all 1em
-<a href=#452 id=452 data-nosnippet>452</a>        </span><span class="kw">for </span>item <span class="kw">in </span>matrix.unlist() {
-<a href=#453 id=453 data-nosnippet>453</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(prop) = item.get_property(<span class="string">"alignment"</span>)
-<a href=#454 id=454 data-nosnippet>454</a>            &amp;&amp; <span class="kw">let </span>Stored::Digested(<span class="kw-2">ref </span>alignment_d) = <span class="kw-2">*</span>prop
-<a href=#455 id=455 data-nosnippet>455</a>              &amp;&amp; <span class="kw">let </span>DigestedData::Alignment(alignment_rc) = alignment_d.data() {
-<a href=#456 id=456 data-nosnippet>456</a>                <span class="kw">let </span>alignment = alignment_rc.borrow();
-<a href=#457 id=457 data-nosnippet>457</a>                <span class="comment">// Use row_heights from normalization
-<a href=#458 id=458 data-nosnippet>458</a>                </span><span class="kw">let </span>row_heights = alignment.get_row_heights();
-<a href=#459 id=459 data-nosnippet>459</a>                <span class="kw">if </span>row_heights.len() &gt;= <span class="number">2 </span>{
-<a href=#460 id=460 data-nosnippet>460</a>                  <span class="kw">let </span>h0 = row_heights[<span class="number">0</span>].value_of();
-<a href=#461 id=461 data-nosnippet>461</a>                  <span class="kw">let </span>h1 = row_heights[<span class="number">1</span>].value_of();
-<a href=#462 id=462 data-nosnippet>462</a>                  <span class="kw">if let </span><span class="prelude-val">Some</span>(total_h) = alignment.get_cached_height() {
-<a href=#463 id=463 data-nosnippet>463</a>                    <span class="kw">let </span>total = total_h.value_of();
-<a href=#464 id=464 data-nosnippet>464</a>                    <span class="kw">if let </span><span class="prelude-val">Some</span>(total_d) = alignment.get_cached_depth() {
-<a href=#465 id=465 data-nosnippet>465</a>                      <span class="kw">let </span>total_height = total + total_d.value_of(); <span class="comment">// getTotalHeight = height + depth
-<a href=#466 id=466 data-nosnippet>466</a>                      </span><span class="kw">let </span>half = (total_height - h0) / <span class="number">2</span>;
-<a href=#467 id=467 data-nosnippet>467</a>                      <span class="kw">let </span>shift = h0 - half;
-<a href=#468 id=468 data-nosnippet>468</a>                      found = (h1, half, shift);
-<a href=#469 id=469 data-nosnippet>469</a>                    }
-<a href=#470 id=470 data-nosnippet>470</a>                  }
-<a href=#471 id=471 data-nosnippet>471</a>                }
-<a href=#472 id=472 data-nosnippet>472</a>              }
-<a href=#473 id=473 data-nosnippet>473</a>        }
-<a href=#474 id=474 data-nosnippet>474</a>        found
-<a href=#475 id=475 data-nosnippet>475</a>      };
-<a href=#476 id=476 data-nosnippet>476</a>      <span class="comment">// DOM manipulation: add paren columns to the border matrix
-<a href=#477 id=477 data-nosnippet>477</a>      </span><span class="kw">let </span>marray = document.get_node().get_last_element_child();
-<a href=#478 id=478 data-nosnippet>478</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(marray) = marray {
-<a href=#479 id=479 data-nosnippet>479</a>        <span class="kw">let </span>rows = document.findnodes(<span class="string">"ltx:XMRow"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>marray));
-<a href=#480 id=480 data-nosnippet>480</a>        <span class="kw">let </span>n = rows.len();
-<a href=#481 id=481 data-nosnippet>481</a>        <span class="kw">if </span>n &gt;= <span class="number">2 </span>{
-<a href=#482 id=482 data-nosnippet>482</a>          <span class="comment">// Add 2 empty cells to each row; move one to 2nd position
-<a href=#483 id=483 data-nosnippet>483</a>          </span><span class="kw">for </span><span class="kw-2">mut </span>row <span class="kw">in </span>rows.iter().cloned() {
-<a href=#484 id=484 data-nosnippet>484</a>            <span class="kw">let </span><span class="kw-2">mut </span>nopad_attrs = HashMap::default();
-<a href=#485 id=485 data-nosnippet>485</a>            nopad_attrs.insert(<span class="string">"class"</span>.to_string(), <span class="string">"ltx_nopad"</span>.to_string());
-<a href=#486 id=486 data-nosnippet>486</a>            <span class="kw">let </span><span class="kw-2">mut </span>cell1 = document.open_element_at(<span class="kw-2">&amp;mut </span>row, <span class="string">"ltx:XMCell"</span>, <span class="prelude-val">Some</span>(nopad_attrs.clone()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#487 id=487 data-nosnippet>487</a>            document.close_element_at(<span class="kw-2">&amp;mut </span>cell1)<span class="question-mark">?</span>;
-<a href=#488 id=488 data-nosnippet>488</a>            <span class="kw">let _ </span>= cell1.remove_attribute(<span class="string">"align"</span>); <span class="comment">// Empty paren cell — no alignment
-<a href=#489 id=489 data-nosnippet>489</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>cell2 = document.open_element_at(<span class="kw-2">&amp;mut </span>row, <span class="string">"ltx:XMCell"</span>, <span class="prelude-val">Some</span>(nopad_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#490 id=490 data-nosnippet>490</a>            document.close_element_at(<span class="kw-2">&amp;mut </span>cell2)<span class="question-mark">?</span>;
-<a href=#491 id=491 data-nosnippet>491</a>            <span class="kw">let _ </span>= cell2.remove_attribute(<span class="string">"align"</span>); <span class="comment">// Empty paren cell — no alignment
-<a href=#492 id=492 data-nosnippet>492</a>            // Move cell2 (last child) to 2nd position (after first child)
-<a href=#493 id=493 data-nosnippet>493</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first_child) = row.get_first_element_child() {
-<a href=#494 id=494 data-nosnippet>494</a>              cell2.unlink_node();
-<a href=#495 id=495 data-nosnippet>495</a>              first_child.add_next_sibling(<span class="kw-2">&amp;mut </span>cell2).ok();
-<a href=#496 id=496 data-nosnippet>496</a>            }
-<a href=#497 id=497 data-nosnippet>497</a>          }
-<a href=#498 id=498 data-nosnippet>498</a>          <span class="comment">// Set rowspan and add parens on 2nd and last columns of row 1
-<a href=#499 id=499 data-nosnippet>499</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(row1) = rows.get(<span class="number">1</span>) {
-<a href=#500 id=500 data-nosnippet>500</a>            <span class="kw">let </span>cols: Vec&lt;<span class="kw">_</span>&gt; = row1.get_child_elements();
-<a href=#501 id=501 data-nosnippet>501</a>            <span class="kw">if </span>cols.len() &gt;= <span class="number">2 </span>{
-<a href=#502 id=502 data-nosnippet>502</a>              <span class="kw">let </span>rowspan_str = (n - <span class="number">1</span>).to_string();
-<a href=#503 id=503 data-nosnippet>503</a>              <span class="comment">// 2nd column (index 1): open paren
-<a href=#504 id=504 data-nosnippet>504</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>col1 = cols[<span class="number">1</span>].clone();
-<a href=#505 id=505 data-nosnippet>505</a>              col1.set_attribute(<span class="string">"rowspan"</span>, <span class="kw-2">&amp;</span>rowspan_str).ok();
-<a href=#506 id=506 data-nosnippet>506</a>              col1.set_attribute(<span class="string">"class"</span>, <span class="string">"ltx_nopad"</span>).ok();
-<a href=#507 id=507 data-nosnippet>507</a>              <span class="comment">// Perl: XMWrap { height=&gt;h1, yoffset=&gt;shift }
-<a href=#508 id=508 data-nosnippet>508</a>              //   XMTok { role=&gt;'OPEN', stretchy=&gt;'true', font=&gt;pfont }  '('
-<a href=#509 id=509 data-nosnippet>509</a>              //   XMTok { height=&gt;half, depth=&gt;half, font=&gt;pfont }  ' ' (strut)
-<a href=#510 id=510 data-nosnippet>510</a>              </span><span class="kw">let </span>paren_font = lookup_font()
-<a href=#511 id=511 data-nosnippet>511</a>                .map(|f| f.specialize(<span class="string">"("</span>)).unwrap_or_else(Font::text_default);
-<a href=#512 id=512 data-nosnippet>512</a>              <span class="comment">// Open paren
-<a href=#513 id=513 data-nosnippet>513</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>wrap_attrs1 = HashMap::default();
-<a href=#514 id=514 data-nosnippet>514</a>              wrap_attrs1.insert(<span class="string">"height"</span>.to_string(), Dimension::new(h1_sp).to_attribute());
-<a href=#515 id=515 data-nosnippet>515</a>              wrap_attrs1.insert(<span class="string">"yoffset"</span>.to_string(), Dimension::new(shift_sp).to_attribute());
-<a href=#516 id=516 data-nosnippet>516</a>              <span class="kw">let </span><span class="kw-2">mut </span>wrap1 = document.open_element_at(<span class="kw-2">&amp;mut </span>col1, <span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">Some</span>(wrap_attrs1), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
-<a href=#517 id=517 data-nosnippet>517</a>              <span class="kw">let </span><span class="kw-2">mut </span>open_attrs = HashMap::default();
-<a href=#518 id=518 data-nosnippet>518</a>              open_attrs.insert(<span class="string">"role"</span>.to_string(), <span class="string">"OPEN"</span>.to_string());
-<a href=#519 id=519 data-nosnippet>519</a>              open_attrs.insert(<span class="string">"stretchy"</span>.to_string(), <span class="string">"true"</span>.to_string());
-<a href=#520 id=520 data-nosnippet>520</a>              <span class="kw">let </span><span class="kw-2">mut </span>open_tok = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap1, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(open_attrs), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
-<a href=#521 id=521 data-nosnippet>521</a>              <span class="kw">let _ </span>= open_tok.set_content(<span class="string">"("</span>);
-<a href=#522 id=522 data-nosnippet>522</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>open_tok)<span class="question-mark">?</span>;
-<a href=#523 id=523 data-nosnippet>523</a>              <span class="comment">// Strut: height=half, depth=half (symmetric)
-<a href=#524 id=524 data-nosnippet>524</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>strut_attrs = HashMap::default();
-<a href=#525 id=525 data-nosnippet>525</a>              strut_attrs.insert(<span class="string">"height"</span>.to_string(), Dimension::new(half_sp).to_attribute());
-<a href=#526 id=526 data-nosnippet>526</a>              strut_attrs.insert(<span class="string">"depth"</span>.to_string(), Dimension::new(half_sp).to_attribute());
-<a href=#527 id=527 data-nosnippet>527</a>              <span class="kw">let </span><span class="kw-2">mut </span>strut = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap1, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(strut_attrs), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
-<a href=#528 id=528 data-nosnippet>528</a>              <span class="kw">let _ </span>= strut.set_content(<span class="string">" "</span>);
-<a href=#529 id=529 data-nosnippet>529</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>strut)<span class="question-mark">?</span>;
-<a href=#530 id=530 data-nosnippet>530</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>wrap1)<span class="question-mark">?</span>;
-<a href=#531 id=531 data-nosnippet>531</a>              <span class="comment">// Close paren — same structure
-<a href=#532 id=532 data-nosnippet>532</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>coln = cols[cols.len() - <span class="number">1</span>].clone();
-<a href=#533 id=533 data-nosnippet>533</a>              coln.set_attribute(<span class="string">"rowspan"</span>, <span class="kw-2">&amp;</span>rowspan_str).ok();
-<a href=#534 id=534 data-nosnippet>534</a>              coln.set_attribute(<span class="string">"class"</span>, <span class="string">"ltx_nopad"</span>).ok();
-<a href=#535 id=535 data-nosnippet>535</a>              <span class="kw">let </span><span class="kw-2">mut </span>wrap_attrs2 = HashMap::default();
-<a href=#536 id=536 data-nosnippet>536</a>              wrap_attrs2.insert(<span class="string">"height"</span>.to_string(), Dimension::new(h1_sp).to_attribute());
-<a href=#537 id=537 data-nosnippet>537</a>              wrap_attrs2.insert(<span class="string">"yoffset"</span>.to_string(), Dimension::new(shift_sp).to_attribute());
-<a href=#538 id=538 data-nosnippet>538</a>              <span class="kw">let </span><span class="kw-2">mut </span>wrap2 = document.open_element_at(<span class="kw-2">&amp;mut </span>coln, <span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">Some</span>(wrap_attrs2), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
-<a href=#539 id=539 data-nosnippet>539</a>              <span class="kw">let </span><span class="kw-2">mut </span>close_attrs = HashMap::default();
-<a href=#540 id=540 data-nosnippet>540</a>              close_attrs.insert(<span class="string">"role"</span>.to_string(), <span class="string">"CLOSE"</span>.to_string());
-<a href=#541 id=541 data-nosnippet>541</a>              close_attrs.insert(<span class="string">"stretchy"</span>.to_string(), <span class="string">"true"</span>.to_string());
-<a href=#542 id=542 data-nosnippet>542</a>              <span class="kw">let </span><span class="kw-2">mut </span>close_tok = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap2, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(close_attrs), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
-<a href=#543 id=543 data-nosnippet>543</a>              <span class="kw">let _ </span>= close_tok.set_content(<span class="string">")"</span>);
-<a href=#544 id=544 data-nosnippet>544</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>close_tok)<span class="question-mark">?</span>;
-<a href=#545 id=545 data-nosnippet>545</a>              <span class="kw">let </span><span class="kw-2">mut </span>strut2_attrs = HashMap::default();
-<a href=#546 id=546 data-nosnippet>546</a>              strut2_attrs.insert(<span class="string">"height"</span>.to_string(), Dimension::new(half_sp).to_attribute());
-<a href=#547 id=547 data-nosnippet>547</a>              strut2_attrs.insert(<span class="string">"depth"</span>.to_string(), Dimension::new(half_sp).to_attribute());
-<a href=#548 id=548 data-nosnippet>548</a>              <span class="kw">let </span><span class="kw-2">mut </span>strut2 = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap2, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(strut2_attrs), <span class="prelude-val">Some</span>(paren_font))<span class="question-mark">?</span>;
-<a href=#549 id=549 data-nosnippet>549</a>              <span class="kw">let _ </span>= strut2.set_content(<span class="string">" "</span>);
-<a href=#550 id=550 data-nosnippet>550</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>strut2)<span class="question-mark">?</span>;
-<a href=#551 id=551 data-nosnippet>551</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>wrap2)<span class="question-mark">?</span>;
-<a href=#552 id=552 data-nosnippet>552</a>            }
-<a href=#553 id=553 data-nosnippet>553</a>          }
-<a href=#554 id=554 data-nosnippet>554</a>        }
-<a href=#555 id=555 data-nosnippet>555</a>      }
-<a href=#556 id=556 data-nosnippet>556</a>    },
-<a href=#557 id=557 data-nosnippet>557</a>    reversion =&gt; <span class="string">"#1"</span>);
-<a href=#558 id=558 data-nosnippet>558</a>  <span class="comment">// DefConstructor('\lx@hack@bordermatrix{}', sub {
-<a href=#559 id=559 data-nosnippet>559</a>  //     my ($document, $matrix) = @_;
-<a href=#560 id=560 data-nosnippet>560</a>  //     $document-&gt;absorb($matrix);
-<a href=#561 id=561 data-nosnippet>561</a>  //     my $marray = $document-&gt;getNode-&gt;lastChild;
-<a href=#562 id=562 data-nosnippet>562</a>  //     my @rows   = $document-&gt;findnodes('ltx:XMRow', $marray);
-<a href=#563 id=563 data-nosnippet>563</a>  //     my ($h, $d) = (10.0 * $UNITY, 0);    # 10pts.
-<a href=#564 id=564 data-nosnippet>564</a>  //                                          # Contrived, since $matrix may be a List or...
-<a href=#565 id=565 data-nosnippet>565</a>  //     my ($alignment) = grep { $_ } map { $_-&gt;getProperty('alignment') } $matrix-&gt;unlist;
-<a href=#566 id=566 data-nosnippet>566</a>  //     if ($alignment) {
-<a href=#567 id=567 data-nosnippet>567</a>  //       my $arrayh = $alignment-&gt;getHeight-&gt;ptValue;
-<a href=#568 id=568 data-nosnippet>568</a>  //       my ($row0, $row1) = $alignment-&gt;rows;    # What's row 0 ?
-<a href=#569 id=569 data-nosnippet>569</a>  //       $h = $$row1{y}-&gt;valueOf;
-<a href=#570 id=570 data-nosnippet>570</a>  //       $d = $h - $arrayh; }
-<a href=#571 id=571 data-nosnippet>571</a>  //     my $md = Dimension(-$d);
-<a href=#572 id=572 data-nosnippet>572</a>  //     $h = Dimension($h); $d = Dimension($d);
-<a href=#573 id=573 data-nosnippet>573</a>
-<a href=#574 id=574 data-nosnippet>574</a>  //     foreach my $row (@rows) {                  # Add empty cells for 2nd &amp; last colum
-<a href=#575 id=575 data-nosnippet>575</a>  //       $document-&gt;openElementAt($row, 'ltx:XMCell');
-<a href=#576 id=576 data-nosnippet>576</a>  //       $document-&gt;openElementAt($row, 'ltx:XMCell');
-<a href=#577 id=577 data-nosnippet>577</a>  //       $row-&gt;insertAfter($row-&gt;lastChild, $row-&gt;firstChild);    # Move to 2nd pos!
-<a href=#578 id=578 data-nosnippet>578</a>  //     }
-<a href=#579 id=579 data-nosnippet>579</a>  //     my @cols = element_nodes($rows[1]);
-<a href=#580 id=580 data-nosnippet>580</a>  //     my $col1 = $cols[1];
-<a href=#581 id=581 data-nosnippet>581</a>  //     my $coln = $cols[-1];
-<a href=#582 id=582 data-nosnippet>582</a>  //     my $n    = scalar(@rows) - 1;
-<a href=#583 id=583 data-nosnippet>583</a>  //     $col1-&gt;setAttribute(rowspan =&gt; $n);
-<a href=#584 id=584 data-nosnippet>584</a>  //     $coln-&gt;setAttribute(rowspan =&gt; $n);
-<a href=#585 id=585 data-nosnippet>585</a>  //     $document-&gt;appendTree($col1,
-<a href=#586 id=586 data-nosnippet>586</a>  //       ['ltx:XMWrap', { depth =&gt; $d },
-<a href=#587 id=587 data-nosnippet>587</a>  //         ['ltx:XMTok', { role   =&gt; 'OPEN', height  =&gt; 0, depth =&gt; $d, yoffset =&gt; $md }, '('],
-<a href=#588 id=588 data-nosnippet>588</a>  //         ['ltx:XMTok', { height =&gt; $h,     yoffset =&gt; $md }, ' ']]);    # Effectively, a strut
-<a href=#589 id=589 data-nosnippet>589</a>  //     $document-&gt;appendTree($coln,
-<a href=#590 id=590 data-nosnippet>590</a>  //       ['ltx:XMWrap', {},
-<a href=#591 id=591 data-nosnippet>591</a>  //         ['ltx:XMTok', { role   =&gt; 'CLOSE', height =&gt; 0, depth =&gt; $d, yoffset =&gt; $md }, ')'],
-<a href=#592 id=592 data-nosnippet>592</a>  //         ['ltx:XMTok', { height =&gt; $h, yoffset =&gt; $md }, ' ']]);
-<a href=#593 id=593 data-nosnippet>593</a>  //     return; },
-<a href=#594 id=594 data-nosnippet>594</a>  //   reversion =&gt; '#1');
-<a href=#595 id=595 data-nosnippet>595</a>
-<a href=#596 id=596 data-nosnippet>596</a>  // Perl plain_constructs.pool.ltxml L271-273
-<a href=#597 id=597 data-nosnippet>597</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#598 id=598 data-nosnippet>598</a>    <span class="string">"\\pmatrix{}"</span>,
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="string">r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}{#1}"
-<a href=#600 id=600 data-nosnippet>600</a>  </span>);
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="comment">//======================================================================
+<a href=#415 id=415 data-nosnippet>415</a>  // Perl: plain_constructs.pool.ltxml L217-218 — underscore
+<a href=#416 id=416 data-nosnippet>416</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\_"</span>, {
+<a href=#417 id=417 data-nosnippet>417</a>    Tbox::new(pin_static(<span class="string">"_"</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\_"</span>)), SymHashMap::default())
+<a href=#418 id=418 data-nosnippet>418</a>  });
+<a href=#419 id=419 data-nosnippet>419</a>
+<a href=#420 id=420 data-nosnippet>420</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml L220 — active `~` → `\lx@NBSP`.
+<a href=#421 id=421 data-nosnippet>421</a>  // Required HERE (not just in plain_base.rs) so the override survives
+<a href=#422 id=422 data-nosnippet>422</a>  // the `LoadFormat('plain')` dump path: when `plain_dump` is loaded
+<a href=#423 id=423 data-nosnippet>423</a>  // instead of `plain_base`, the dump captures raw plain.tex's
+<a href=#424 id=424 data-nosnippet>424</a>  // `~` definition (`\penalty\@M\ ` or LaTeX kernel's
+<a href=#425 id=425 data-nosnippet>425</a>  // `\ifincsname...\nobreakspace`) — but plain_constructs runs AFTER
+<a href=#426 id=426 data-nosnippet>426</a>  // and re-establishes the LaTeXML semantic mapping to nbsp.
+<a href=#427 id=427 data-nosnippet>427</a>  // Mirrors Perl's identical L220 def. `protected =&gt; true` keeps
+<a href=#428 id=428 data-nosnippet>428</a>  // partial expansion (`\write`'s `XGeneralText`, …) from baking
+<a href=#429 id=429 data-nosnippet>429</a>  // the internal `\lx@NBSP` CS into aux files; see the matching
+<a href=#430 id=430 data-nosnippet>430</a>  // `\&amp;` block above for the round-trip rationale.
+<a href=#431 id=431 data-nosnippet>431</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>), <span class="prelude-val">None</span>, <span class="string">"\\lx@NBSP"</span>, protected =&gt; <span class="bool-val">true</span>);
+<a href=#432 id=432 data-nosnippet>432</a>
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="comment">//======================================================================
+<a href=#434 id=434 data-nosnippet>434</a>  // Perl: plain_constructs.pool.ltxml L222-277 — matrix/cases
+<a href=#435 id=435 data-nosnippet>435</a>  //======================================================================
+<a href=#436 id=436 data-nosnippet>436</a>  // TeX Book, Appendix B. p. 362
+<a href=#437 id=437 data-nosnippet>437</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="string">"\\matrix{}"</span>,
+<a href=#439 id=439 data-nosnippet>439</a>    <span class="string">"\\lx@gen@plain@matrix{name=matrix,datameaning=matrix}{#1}"
+<a href=#440 id=440 data-nosnippet>440</a>  </span>);
+<a href=#441 id=441 data-nosnippet>441</a>
+<a href=#442 id=442 data-nosnippet>442</a>  <span class="macro">DefMacro!</span>(
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="string">"\\bordermatrix{}"</span>, <span class="comment">// Semantics?
+<a href=#444 id=444 data-nosnippet>444</a>    </span><span class="string">r"\lx@hack@bordermatrix{\lx@gen@plain@matrix{name=bordermatrix}{#1}}"
+<a href=#445 id=445 data-nosnippet>445</a>  </span>);
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="comment">// HACK the newly created border matrix to add columns for the (spanned) parentheses!!!
+<a href=#447 id=447 data-nosnippet>447</a>  // Perl: adds empty XMCell columns for stretchy parens with rowspan
+<a href=#448 id=448 data-nosnippet>448</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@hack@bordermatrix{}"</span>, sub[document, args, _props] {
+<a href=#449 id=449 data-nosnippet>449</a>      <span class="kw">let </span>matrix = args[<span class="number">0</span>].as_ref().unwrap();
+<a href=#450 id=450 data-nosnippet>450</a>      document.absorb(matrix, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#451 id=451 data-nosnippet>451</a>      <span class="comment">// Perl: Extract alignment dimensions for paren sizing
+<a href=#452 id=452 data-nosnippet>452</a>      // half = (totalHeight - row0Height) / 2 — symmetric strut height
+<a href=#453 id=453 data-nosnippet>453</a>      // shift = row0Height - half — yoffset to center parens on data rows
+<a href=#454 id=454 data-nosnippet>454</a>      // h1 = row[1] height — XMWrap height
+<a href=#455 id=455 data-nosnippet>455</a>      </span><span class="kw">let </span>(h1_sp, half_sp, shift_sp) = {
+<a href=#456 id=456 data-nosnippet>456</a>        <span class="kw">let </span>em = lookup_font().map(|f| f.get_em_width()).unwrap_or(<span class="number">655360</span>); <span class="comment">// 10pt default
+<a href=#457 id=457 data-nosnippet>457</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>found = (em, em, em); <span class="comment">// default: all 1em
+<a href=#458 id=458 data-nosnippet>458</a>        </span><span class="kw">for </span>item <span class="kw">in </span>matrix.unlist() {
+<a href=#459 id=459 data-nosnippet>459</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(prop) = item.get_property(<span class="string">"alignment"</span>)
+<a href=#460 id=460 data-nosnippet>460</a>            &amp;&amp; <span class="kw">let </span>Stored::Digested(<span class="kw-2">ref </span>alignment_d) = <span class="kw-2">*</span>prop
+<a href=#461 id=461 data-nosnippet>461</a>              &amp;&amp; <span class="kw">let </span>DigestedData::Alignment(alignment_rc) = alignment_d.data() {
+<a href=#462 id=462 data-nosnippet>462</a>                <span class="kw">let </span>alignment = alignment_rc.borrow();
+<a href=#463 id=463 data-nosnippet>463</a>                <span class="comment">// Use row_heights from normalization
+<a href=#464 id=464 data-nosnippet>464</a>                </span><span class="kw">let </span>row_heights = alignment.get_row_heights();
+<a href=#465 id=465 data-nosnippet>465</a>                <span class="kw">if </span>row_heights.len() &gt;= <span class="number">2 </span>{
+<a href=#466 id=466 data-nosnippet>466</a>                  <span class="kw">let </span>h0 = row_heights[<span class="number">0</span>].value_of();
+<a href=#467 id=467 data-nosnippet>467</a>                  <span class="kw">let </span>h1 = row_heights[<span class="number">1</span>].value_of();
+<a href=#468 id=468 data-nosnippet>468</a>                  <span class="kw">if let </span><span class="prelude-val">Some</span>(total_h) = alignment.get_cached_height() {
+<a href=#469 id=469 data-nosnippet>469</a>                    <span class="kw">let </span>total = total_h.value_of();
+<a href=#470 id=470 data-nosnippet>470</a>                    <span class="kw">if let </span><span class="prelude-val">Some</span>(total_d) = alignment.get_cached_depth() {
+<a href=#471 id=471 data-nosnippet>471</a>                      <span class="kw">let </span>total_height = total + total_d.value_of(); <span class="comment">// getTotalHeight = height + depth
+<a href=#472 id=472 data-nosnippet>472</a>                      </span><span class="kw">let </span>half = (total_height - h0) / <span class="number">2</span>;
+<a href=#473 id=473 data-nosnippet>473</a>                      <span class="kw">let </span>shift = h0 - half;
+<a href=#474 id=474 data-nosnippet>474</a>                      found = (h1, half, shift);
+<a href=#475 id=475 data-nosnippet>475</a>                    }
+<a href=#476 id=476 data-nosnippet>476</a>                  }
+<a href=#477 id=477 data-nosnippet>477</a>                }
+<a href=#478 id=478 data-nosnippet>478</a>              }
+<a href=#479 id=479 data-nosnippet>479</a>        }
+<a href=#480 id=480 data-nosnippet>480</a>        found
+<a href=#481 id=481 data-nosnippet>481</a>      };
+<a href=#482 id=482 data-nosnippet>482</a>      <span class="comment">// DOM manipulation: add paren columns to the border matrix
+<a href=#483 id=483 data-nosnippet>483</a>      </span><span class="kw">let </span>marray = document.get_node().get_last_element_child();
+<a href=#484 id=484 data-nosnippet>484</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(marray) = marray {
+<a href=#485 id=485 data-nosnippet>485</a>        <span class="kw">let </span>rows = document.findnodes(<span class="string">"ltx:XMRow"</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>marray));
+<a href=#486 id=486 data-nosnippet>486</a>        <span class="kw">let </span>n = rows.len();
+<a href=#487 id=487 data-nosnippet>487</a>        <span class="kw">if </span>n &gt;= <span class="number">2 </span>{
+<a href=#488 id=488 data-nosnippet>488</a>          <span class="comment">// Add 2 empty cells to each row; move one to 2nd position
+<a href=#489 id=489 data-nosnippet>489</a>          </span><span class="kw">for </span><span class="kw-2">mut </span>row <span class="kw">in </span>rows.iter().cloned() {
+<a href=#490 id=490 data-nosnippet>490</a>            <span class="kw">let </span><span class="kw-2">mut </span>nopad_attrs = HashMap::default();
+<a href=#491 id=491 data-nosnippet>491</a>            nopad_attrs.insert(<span class="string">"class"</span>.to_string(), <span class="string">"ltx_nopad"</span>.to_string());
+<a href=#492 id=492 data-nosnippet>492</a>            <span class="kw">let </span><span class="kw-2">mut </span>cell1 = document.open_element_at(<span class="kw-2">&amp;mut </span>row, <span class="string">"ltx:XMCell"</span>, <span class="prelude-val">Some</span>(nopad_attrs.clone()), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#493 id=493 data-nosnippet>493</a>            document.close_element_at(<span class="kw-2">&amp;mut </span>cell1)<span class="question-mark">?</span>;
+<a href=#494 id=494 data-nosnippet>494</a>            <span class="kw">let _ </span>= cell1.remove_attribute(<span class="string">"align"</span>); <span class="comment">// Empty paren cell — no alignment
+<a href=#495 id=495 data-nosnippet>495</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>cell2 = document.open_element_at(<span class="kw-2">&amp;mut </span>row, <span class="string">"ltx:XMCell"</span>, <span class="prelude-val">Some</span>(nopad_attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#496 id=496 data-nosnippet>496</a>            document.close_element_at(<span class="kw-2">&amp;mut </span>cell2)<span class="question-mark">?</span>;
+<a href=#497 id=497 data-nosnippet>497</a>            <span class="kw">let _ </span>= cell2.remove_attribute(<span class="string">"align"</span>); <span class="comment">// Empty paren cell — no alignment
+<a href=#498 id=498 data-nosnippet>498</a>            // Move cell2 (last child) to 2nd position (after first child)
+<a href=#499 id=499 data-nosnippet>499</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first_child) = row.get_first_element_child() {
+<a href=#500 id=500 data-nosnippet>500</a>              cell2.unlink_node();
+<a href=#501 id=501 data-nosnippet>501</a>              first_child.add_next_sibling(<span class="kw-2">&amp;mut </span>cell2).ok();
+<a href=#502 id=502 data-nosnippet>502</a>            }
+<a href=#503 id=503 data-nosnippet>503</a>          }
+<a href=#504 id=504 data-nosnippet>504</a>          <span class="comment">// Set rowspan and add parens on 2nd and last columns of row 1
+<a href=#505 id=505 data-nosnippet>505</a>          </span><span class="kw">if let </span><span class="prelude-val">Some</span>(row1) = rows.get(<span class="number">1</span>) {
+<a href=#506 id=506 data-nosnippet>506</a>            <span class="kw">let </span>cols: Vec&lt;<span class="kw">_</span>&gt; = row1.get_child_elements();
+<a href=#507 id=507 data-nosnippet>507</a>            <span class="kw">if </span>cols.len() &gt;= <span class="number">2 </span>{
+<a href=#508 id=508 data-nosnippet>508</a>              <span class="kw">let </span>rowspan_str = (n - <span class="number">1</span>).to_string();
+<a href=#509 id=509 data-nosnippet>509</a>              <span class="comment">// 2nd column (index 1): open paren
+<a href=#510 id=510 data-nosnippet>510</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>col1 = cols[<span class="number">1</span>].clone();
+<a href=#511 id=511 data-nosnippet>511</a>              col1.set_attribute(<span class="string">"rowspan"</span>, <span class="kw-2">&amp;</span>rowspan_str).ok();
+<a href=#512 id=512 data-nosnippet>512</a>              col1.set_attribute(<span class="string">"class"</span>, <span class="string">"ltx_nopad"</span>).ok();
+<a href=#513 id=513 data-nosnippet>513</a>              <span class="comment">// Perl: XMWrap { height=&gt;h1, yoffset=&gt;shift }
+<a href=#514 id=514 data-nosnippet>514</a>              //   XMTok { role=&gt;'OPEN', stretchy=&gt;'true', font=&gt;pfont }  '('
+<a href=#515 id=515 data-nosnippet>515</a>              //   XMTok { height=&gt;half, depth=&gt;half, font=&gt;pfont }  ' ' (strut)
+<a href=#516 id=516 data-nosnippet>516</a>              </span><span class="kw">let </span>paren_font = lookup_font()
+<a href=#517 id=517 data-nosnippet>517</a>                .map(|f| f.specialize(<span class="string">"("</span>)).unwrap_or_else(Font::text_default);
+<a href=#518 id=518 data-nosnippet>518</a>              <span class="comment">// Open paren
+<a href=#519 id=519 data-nosnippet>519</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>wrap_attrs1 = HashMap::default();
+<a href=#520 id=520 data-nosnippet>520</a>              wrap_attrs1.insert(<span class="string">"height"</span>.to_string(), Dimension::new(h1_sp).to_attribute());
+<a href=#521 id=521 data-nosnippet>521</a>              wrap_attrs1.insert(<span class="string">"yoffset"</span>.to_string(), Dimension::new(shift_sp).to_attribute());
+<a href=#522 id=522 data-nosnippet>522</a>              <span class="kw">let </span><span class="kw-2">mut </span>wrap1 = document.open_element_at(<span class="kw-2">&amp;mut </span>col1, <span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">Some</span>(wrap_attrs1), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
+<a href=#523 id=523 data-nosnippet>523</a>              <span class="kw">let </span><span class="kw-2">mut </span>open_attrs = HashMap::default();
+<a href=#524 id=524 data-nosnippet>524</a>              open_attrs.insert(<span class="string">"role"</span>.to_string(), <span class="string">"OPEN"</span>.to_string());
+<a href=#525 id=525 data-nosnippet>525</a>              open_attrs.insert(<span class="string">"stretchy"</span>.to_string(), <span class="string">"true"</span>.to_string());
+<a href=#526 id=526 data-nosnippet>526</a>              <span class="kw">let </span><span class="kw-2">mut </span>open_tok = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap1, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(open_attrs), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
+<a href=#527 id=527 data-nosnippet>527</a>              <span class="kw">let _ </span>= open_tok.set_content(<span class="string">"("</span>);
+<a href=#528 id=528 data-nosnippet>528</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>open_tok)<span class="question-mark">?</span>;
+<a href=#529 id=529 data-nosnippet>529</a>              <span class="comment">// Strut: height=half, depth=half (symmetric)
+<a href=#530 id=530 data-nosnippet>530</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>strut_attrs = HashMap::default();
+<a href=#531 id=531 data-nosnippet>531</a>              strut_attrs.insert(<span class="string">"height"</span>.to_string(), Dimension::new(half_sp).to_attribute());
+<a href=#532 id=532 data-nosnippet>532</a>              strut_attrs.insert(<span class="string">"depth"</span>.to_string(), Dimension::new(half_sp).to_attribute());
+<a href=#533 id=533 data-nosnippet>533</a>              <span class="kw">let </span><span class="kw-2">mut </span>strut = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap1, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(strut_attrs), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
+<a href=#534 id=534 data-nosnippet>534</a>              <span class="kw">let _ </span>= strut.set_content(<span class="string">" "</span>);
+<a href=#535 id=535 data-nosnippet>535</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>strut)<span class="question-mark">?</span>;
+<a href=#536 id=536 data-nosnippet>536</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>wrap1)<span class="question-mark">?</span>;
+<a href=#537 id=537 data-nosnippet>537</a>              <span class="comment">// Close paren — same structure
+<a href=#538 id=538 data-nosnippet>538</a>              </span><span class="kw">let </span><span class="kw-2">mut </span>coln = cols[cols.len() - <span class="number">1</span>].clone();
+<a href=#539 id=539 data-nosnippet>539</a>              coln.set_attribute(<span class="string">"rowspan"</span>, <span class="kw-2">&amp;</span>rowspan_str).ok();
+<a href=#540 id=540 data-nosnippet>540</a>              coln.set_attribute(<span class="string">"class"</span>, <span class="string">"ltx_nopad"</span>).ok();
+<a href=#541 id=541 data-nosnippet>541</a>              <span class="kw">let </span><span class="kw-2">mut </span>wrap_attrs2 = HashMap::default();
+<a href=#542 id=542 data-nosnippet>542</a>              wrap_attrs2.insert(<span class="string">"height"</span>.to_string(), Dimension::new(h1_sp).to_attribute());
+<a href=#543 id=543 data-nosnippet>543</a>              wrap_attrs2.insert(<span class="string">"yoffset"</span>.to_string(), Dimension::new(shift_sp).to_attribute());
+<a href=#544 id=544 data-nosnippet>544</a>              <span class="kw">let </span><span class="kw-2">mut </span>wrap2 = document.open_element_at(<span class="kw-2">&amp;mut </span>coln, <span class="string">"ltx:XMWrap"</span>, <span class="prelude-val">Some</span>(wrap_attrs2), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
+<a href=#545 id=545 data-nosnippet>545</a>              <span class="kw">let </span><span class="kw-2">mut </span>close_attrs = HashMap::default();
+<a href=#546 id=546 data-nosnippet>546</a>              close_attrs.insert(<span class="string">"role"</span>.to_string(), <span class="string">"CLOSE"</span>.to_string());
+<a href=#547 id=547 data-nosnippet>547</a>              close_attrs.insert(<span class="string">"stretchy"</span>.to_string(), <span class="string">"true"</span>.to_string());
+<a href=#548 id=548 data-nosnippet>548</a>              <span class="kw">let </span><span class="kw-2">mut </span>close_tok = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap2, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(close_attrs), <span class="prelude-val">Some</span>(paren_font.clone()))<span class="question-mark">?</span>;
+<a href=#549 id=549 data-nosnippet>549</a>              <span class="kw">let _ </span>= close_tok.set_content(<span class="string">")"</span>);
+<a href=#550 id=550 data-nosnippet>550</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>close_tok)<span class="question-mark">?</span>;
+<a href=#551 id=551 data-nosnippet>551</a>              <span class="kw">let </span><span class="kw-2">mut </span>strut2_attrs = HashMap::default();
+<a href=#552 id=552 data-nosnippet>552</a>              strut2_attrs.insert(<span class="string">"height"</span>.to_string(), Dimension::new(half_sp).to_attribute());
+<a href=#553 id=553 data-nosnippet>553</a>              strut2_attrs.insert(<span class="string">"depth"</span>.to_string(), Dimension::new(half_sp).to_attribute());
+<a href=#554 id=554 data-nosnippet>554</a>              <span class="kw">let </span><span class="kw-2">mut </span>strut2 = document.open_element_at(<span class="kw-2">&amp;mut </span>wrap2, <span class="string">"ltx:XMTok"</span>, <span class="prelude-val">Some</span>(strut2_attrs), <span class="prelude-val">Some</span>(paren_font))<span class="question-mark">?</span>;
+<a href=#555 id=555 data-nosnippet>555</a>              <span class="kw">let _ </span>= strut2.set_content(<span class="string">" "</span>);
+<a href=#556 id=556 data-nosnippet>556</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>strut2)<span class="question-mark">?</span>;
+<a href=#557 id=557 data-nosnippet>557</a>              document.close_element_at(<span class="kw-2">&amp;mut </span>wrap2)<span class="question-mark">?</span>;
+<a href=#558 id=558 data-nosnippet>558</a>            }
+<a href=#559 id=559 data-nosnippet>559</a>          }
+<a href=#560 id=560 data-nosnippet>560</a>        }
+<a href=#561 id=561 data-nosnippet>561</a>      }
+<a href=#562 id=562 data-nosnippet>562</a>    },
+<a href=#563 id=563 data-nosnippet>563</a>    reversion =&gt; <span class="string">"#1"</span>);
+<a href=#564 id=564 data-nosnippet>564</a>  <span class="comment">// DefConstructor('\lx@hack@bordermatrix{}', sub {
+<a href=#565 id=565 data-nosnippet>565</a>  //     my ($document, $matrix) = @_;
+<a href=#566 id=566 data-nosnippet>566</a>  //     $document-&gt;absorb($matrix);
+<a href=#567 id=567 data-nosnippet>567</a>  //     my $marray = $document-&gt;getNode-&gt;lastChild;
+<a href=#568 id=568 data-nosnippet>568</a>  //     my @rows   = $document-&gt;findnodes('ltx:XMRow', $marray);
+<a href=#569 id=569 data-nosnippet>569</a>  //     my ($h, $d) = (10.0 * $UNITY, 0);    # 10pts.
+<a href=#570 id=570 data-nosnippet>570</a>  //                                          # Contrived, since $matrix may be a List or...
+<a href=#571 id=571 data-nosnippet>571</a>  //     my ($alignment) = grep { $_ } map { $_-&gt;getProperty('alignment') } $matrix-&gt;unlist;
+<a href=#572 id=572 data-nosnippet>572</a>  //     if ($alignment) {
+<a href=#573 id=573 data-nosnippet>573</a>  //       my $arrayh = $alignment-&gt;getHeight-&gt;ptValue;
+<a href=#574 id=574 data-nosnippet>574</a>  //       my ($row0, $row1) = $alignment-&gt;rows;    # What's row 0 ?
+<a href=#575 id=575 data-nosnippet>575</a>  //       $h = $$row1{y}-&gt;valueOf;
+<a href=#576 id=576 data-nosnippet>576</a>  //       $d = $h - $arrayh; }
+<a href=#577 id=577 data-nosnippet>577</a>  //     my $md = Dimension(-$d);
+<a href=#578 id=578 data-nosnippet>578</a>  //     $h = Dimension($h); $d = Dimension($d);
+<a href=#579 id=579 data-nosnippet>579</a>
+<a href=#580 id=580 data-nosnippet>580</a>  //     foreach my $row (@rows) {                  # Add empty cells for 2nd &amp; last colum
+<a href=#581 id=581 data-nosnippet>581</a>  //       $document-&gt;openElementAt($row, 'ltx:XMCell');
+<a href=#582 id=582 data-nosnippet>582</a>  //       $document-&gt;openElementAt($row, 'ltx:XMCell');
+<a href=#583 id=583 data-nosnippet>583</a>  //       $row-&gt;insertAfter($row-&gt;lastChild, $row-&gt;firstChild);    # Move to 2nd pos!
+<a href=#584 id=584 data-nosnippet>584</a>  //     }
+<a href=#585 id=585 data-nosnippet>585</a>  //     my @cols = element_nodes($rows[1]);
+<a href=#586 id=586 data-nosnippet>586</a>  //     my $col1 = $cols[1];
+<a href=#587 id=587 data-nosnippet>587</a>  //     my $coln = $cols[-1];
+<a href=#588 id=588 data-nosnippet>588</a>  //     my $n    = scalar(@rows) - 1;
+<a href=#589 id=589 data-nosnippet>589</a>  //     $col1-&gt;setAttribute(rowspan =&gt; $n);
+<a href=#590 id=590 data-nosnippet>590</a>  //     $coln-&gt;setAttribute(rowspan =&gt; $n);
+<a href=#591 id=591 data-nosnippet>591</a>  //     $document-&gt;appendTree($col1,
+<a href=#592 id=592 data-nosnippet>592</a>  //       ['ltx:XMWrap', { depth =&gt; $d },
+<a href=#593 id=593 data-nosnippet>593</a>  //         ['ltx:XMTok', { role   =&gt; 'OPEN', height  =&gt; 0, depth =&gt; $d, yoffset =&gt; $md }, '('],
+<a href=#594 id=594 data-nosnippet>594</a>  //         ['ltx:XMTok', { height =&gt; $h,     yoffset =&gt; $md }, ' ']]);    # Effectively, a strut
+<a href=#595 id=595 data-nosnippet>595</a>  //     $document-&gt;appendTree($coln,
+<a href=#596 id=596 data-nosnippet>596</a>  //       ['ltx:XMWrap', {},
+<a href=#597 id=597 data-nosnippet>597</a>  //         ['ltx:XMTok', { role   =&gt; 'CLOSE', height =&gt; 0, depth =&gt; $d, yoffset =&gt; $md }, ')'],
+<a href=#598 id=598 data-nosnippet>598</a>  //         ['ltx:XMTok', { height =&gt; $h, yoffset =&gt; $md }, ' ']]);
+<a href=#599 id=599 data-nosnippet>599</a>  //     return; },
+<a href=#600 id=600 data-nosnippet>600</a>  //   reversion =&gt; '#1');
 <a href=#601 id=601 data-nosnippet>601</a>
-<a href=#602 id=602 data-nosnippet>602</a>  <span class="comment">// Note that 2nd column in \cases is in text mode!
-<a href=#603 id=603 data-nosnippet>603</a>  // Perl plain_constructs.pool.ltxml L276-277
-<a href=#604 id=604 data-nosnippet>604</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#605 id=605 data-nosnippet>605</a>    <span class="string">"\\cases{}"</span>,
-<a href=#606 id=606 data-nosnippet>606</a>    <span class="string">r"\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}{#1}"
-<a href=#607 id=607 data-nosnippet>607</a>  </span>);
-<a href=#608 id=608 data-nosnippet>608</a>
-<a href=#609 id=609 data-nosnippet>609</a>  <span class="comment">//======================================================================
-<a href=#610 id=610 data-nosnippet>610</a>  // Perl: plain_constructs.pool.ltxml L280-285 — pagination
-<a href=#611 id=611 data-nosnippet>611</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eject"</span>, <span class="string">"\\par\\lx@newpage"</span>);
-<a href=#612 id=612 data-nosnippet>612</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\supereject"</span>, <span class="string">"\\par\\lx@newpage"</span>);
-<a href=#613 id=613 data-nosnippet>613</a>  <span class="macro">Let!</span>(<span class="string">"\\newpage"</span>, <span class="string">"\\eject"</span>);
-<a href=#614 id=614 data-nosnippet>614</a>  <span class="macro">Let!</span>(<span class="string">"\\end"</span>, <span class="string">"\\lx@end@document"</span>);
-<a href=#615 id=615 data-nosnippet>615</a>  <span class="macro">Let!</span>(<span class="string">"\\bye"</span>, <span class="string">"\\lx@end@document"</span>);
-<a href=#616 id=616 data-nosnippet>616</a>
-<a href=#617 id=617 data-nosnippet>617</a>  <span class="comment">//======================================================================
-<a href=#618 id=618 data-nosnippet>618</a>  // Perl: plain_constructs.pool.ltxml L293-317 — font commands
-<a href=#619 id=619 data-nosnippet>619</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\rm"</span>, <span class="prelude-val">None</span>,
-<a href=#620 id=620 data-nosnippet>620</a>    font =&gt; {family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>});
-<a href=#621 id=621 data-nosnippet>621</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\sf"</span>, <span class="prelude-val">None</span>,
-<a href=#622 id=622 data-nosnippet>622</a>    font =&gt; {family =&gt; <span class="string">"sansserif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>});
-<a href=#623 id=623 data-nosnippet>623</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\bf"</span>, <span class="prelude-val">None</span>,
-<a href=#624 id=624 data-nosnippet>624</a>    font =&gt; {series =&gt; <span class="string">"bold"</span>, family =&gt; <span class="string">"serif"</span>, shape =&gt; <span class="string">"upright"</span>});
-<a href=#625 id=625 data-nosnippet>625</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\it"</span>, <span class="prelude-val">None</span>,
-<a href=#626 id=626 data-nosnippet>626</a>    font =&gt; {shape =&gt; <span class="string">"italic"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
-<a href=#627 id=627 data-nosnippet>627</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\tt"</span>, <span class="prelude-val">None</span>,
-<a href=#628 id=628 data-nosnippet>628</a>    font =&gt; {family =&gt; <span class="string">"typewriter"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright" </span>});
-<a href=#629 id=629 data-nosnippet>629</a>  <span class="comment">// No effect in math for the following 2 ?
-<a href=#630 id=630 data-nosnippet>630</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\sl"</span>, <span class="prelude-val">None</span>,
-<a href=#631 id=631 data-nosnippet>631</a>    font =&gt; {shape =&gt; <span class="string">"slanted"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
-<a href=#632 id=632 data-nosnippet>632</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\sc"</span>, <span class="prelude-val">None</span>,
-<a href=#633 id=633 data-nosnippet>633</a>    font =&gt; {shape =&gt; <span class="string">"smallcaps"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
-<a href=#634 id=634 data-nosnippet>634</a>  <span class="comment">// Perl: DefPrimitiveI('\cal', undef, sub {
-<a href=#635 id=635 data-nosnippet>635</a>  //   if (LookupValue('IN_MATH')) {
-<a href=#636 id=636 data-nosnippet>636</a>  //     MergeFont(family=&gt;'caligraphic', series=&gt;'medium', shape=&gt;'upright', encoding=&gt;'OMS');
-<a href=#637 id=637 data-nosnippet>637</a>  //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
-<a href=#638 id=638 data-nosnippet>638</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\cal"</span>, {
-<a href=#639 id=639 data-nosnippet>639</a>    <span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
-<a href=#640 id=640 data-nosnippet>640</a>      <span class="macro">MergeFont!</span>(family =&gt; <span class="string">"caligraphic"</span>, series =&gt; <span class="string">"medium"</span>,
-<a href=#641 id=641 data-nosnippet>641</a>        shape =&gt; <span class="string">"upright"</span>, encoding =&gt; <span class="string">"OMS"</span>);
-<a href=#642 id=642 data-nosnippet>642</a>    }
-<a href=#643 id=643 data-nosnippet>643</a>    Tbox::new(pin_static(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, Tokens::from(<span class="macro">T_CS!</span>(<span class="string">"\\cal"</span>)),
-<a href=#644 id=644 data-nosnippet>644</a>      SymHashMap::default())
-<a href=#645 id=645 data-nosnippet>645</a>  });
-<a href=#646 id=646 data-nosnippet>646</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\allowbreak"</span>, <span class="prelude-val">None</span>);
-<a href=#647 id=647 data-nosnippet>647</a>
-<a href=#648 id=648 data-nosnippet>648</a>  <span class="comment">// \boldmath / \unboldmath — re-establish here (post-dump) so the
-<a href=#649 id=649 data-nosnippet>649</a>  // LaTeXML-semantic mathfont merging survives the dump path. The
-<a href=#650 id=650 data-nosnippet>650</a>  // raw latex.ltx `\boldmath → \@nomath\boldmath \mathversion{bold}`
-<a href=#651 id=651 data-nosnippet>651</a>  // chain captured in the dump doesn't actually toggle our
-<a href=#652 id=652 data-nosnippet>652</a>  // `mathfont` slot, so post-dump bold math output lost the
-<a href=#653 id=653 data-nosnippet>653</a>  // `font="bold italic"` attribute on math tokens. plain_base.rs
-<a href=#654 id=654 data-nosnippet>654</a>  // had identical defs, but it's replaced by plain_dump in dump
-<a href=#655 id=655 data-nosnippet>655</a>  // mode. plain_constructs runs in BOTH paths, so the override
-<a href=#656 id=656 data-nosnippet>656</a>  // wins after the dump load (mirroring our `~ → \lx@NBSP` and
-<a href=#657 id=657 data-nosnippet>657</a>  // `\nobreakspace → \lx@nobreakspace` pattern).
-<a href=#658 id=658 data-nosnippet>658</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\boldmath"</span>, <span class="prelude-val">None</span>,
-<a href=#659 id=659 data-nosnippet>659</a>    before_digest =&gt; {
-<a href=#660 id=660 data-nosnippet>660</a>      <span class="kw">let </span>mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
-<a href=#661 id=661 data-nosnippet>661</a>      <span class="kw">let </span>merged = mf.merge(Font { forcebold: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>), ..Font::default() });
-<a href=#662 id=662 data-nosnippet>662</a>      assign_value(<span class="string">"mathfont"</span>, Stored::Font(Rc::new(merged)), <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#663 id=663 data-nosnippet>663</a>    },
-<a href=#664 id=664 data-nosnippet>664</a>    forbid_math =&gt; <span class="bool-val">true</span>);
-<a href=#665 id=665 data-nosnippet>665</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\unboldmath"</span>, <span class="prelude-val">None</span>,
-<a href=#666 id=666 data-nosnippet>666</a>    before_digest =&gt; {
-<a href=#667 id=667 data-nosnippet>667</a>      <span class="kw">let </span>mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
-<a href=#668 id=668 data-nosnippet>668</a>      <span class="kw">let </span>merged = mf.merge(Font { forcebold: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>), ..Font::default() });
-<a href=#669 id=669 data-nosnippet>669</a>      assign_value(<span class="string">"mathfont"</span>, Stored::Font(Rc::new(merged)), <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#670 id=670 data-nosnippet>670</a>    },
-<a href=#671 id=671 data-nosnippet>671</a>    forbid_math =&gt; <span class="bool-val">true</span>);
-<a href=#672 id=672 data-nosnippet>672</a>
-<a href=#673 id=673 data-nosnippet>673</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml L319 — load math_common last
-<a href=#674 id=674 data-nosnippet>674</a>  </span><span class="macro">InnerPool!</span>(math_common);
-<a href=#675 id=675 data-nosnippet>675</a>});
+<a href=#602 id=602 data-nosnippet>602</a>  // Perl plain_constructs.pool.ltxml L271-273
+<a href=#603 id=603 data-nosnippet>603</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#604 id=604 data-nosnippet>604</a>    <span class="string">"\\pmatrix{}"</span>,
+<a href=#605 id=605 data-nosnippet>605</a>    <span class="string">r"\lx@gen@plain@matrix{name=pmatrix,datameaning=matrix,left=\lx@left(,right=\lx@right)}{#1}"
+<a href=#606 id=606 data-nosnippet>606</a>  </span>);
+<a href=#607 id=607 data-nosnippet>607</a>
+<a href=#608 id=608 data-nosnippet>608</a>  <span class="comment">// Note that 2nd column in \cases is in text mode!
+<a href=#609 id=609 data-nosnippet>609</a>  // Perl plain_constructs.pool.ltxml L276-277
+<a href=#610 id=610 data-nosnippet>610</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#611 id=611 data-nosnippet>611</a>    <span class="string">"\\cases{}"</span>,
+<a href=#612 id=612 data-nosnippet>612</a>    <span class="string">r"\lx@gen@plain@cases{meaning=cases,left=\lx@left\{,conditionmode=text,style=\textstyle}{#1}"
+<a href=#613 id=613 data-nosnippet>613</a>  </span>);
+<a href=#614 id=614 data-nosnippet>614</a>
+<a href=#615 id=615 data-nosnippet>615</a>  <span class="comment">//======================================================================
+<a href=#616 id=616 data-nosnippet>616</a>  // Perl: plain_constructs.pool.ltxml L280-285 — pagination
+<a href=#617 id=617 data-nosnippet>617</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eject"</span>, <span class="string">"\\par\\lx@newpage"</span>);
+<a href=#618 id=618 data-nosnippet>618</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\supereject"</span>, <span class="string">"\\par\\lx@newpage"</span>);
+<a href=#619 id=619 data-nosnippet>619</a>  <span class="macro">Let!</span>(<span class="string">"\\newpage"</span>, <span class="string">"\\eject"</span>);
+<a href=#620 id=620 data-nosnippet>620</a>  <span class="macro">Let!</span>(<span class="string">"\\end"</span>, <span class="string">"\\lx@end@document"</span>);
+<a href=#621 id=621 data-nosnippet>621</a>  <span class="macro">Let!</span>(<span class="string">"\\bye"</span>, <span class="string">"\\lx@end@document"</span>);
+<a href=#622 id=622 data-nosnippet>622</a>
+<a href=#623 id=623 data-nosnippet>623</a>  <span class="comment">//======================================================================
+<a href=#624 id=624 data-nosnippet>624</a>  // Perl: plain_constructs.pool.ltxml L293-317 — font commands
+<a href=#625 id=625 data-nosnippet>625</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\rm"</span>, <span class="prelude-val">None</span>,
+<a href=#626 id=626 data-nosnippet>626</a>    font =&gt; {family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>});
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\sf"</span>, <span class="prelude-val">None</span>,
+<a href=#628 id=628 data-nosnippet>628</a>    font =&gt; {family =&gt; <span class="string">"sansserif"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright"</span>});
+<a href=#629 id=629 data-nosnippet>629</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\bf"</span>, <span class="prelude-val">None</span>,
+<a href=#630 id=630 data-nosnippet>630</a>    font =&gt; {series =&gt; <span class="string">"bold"</span>, family =&gt; <span class="string">"serif"</span>, shape =&gt; <span class="string">"upright"</span>});
+<a href=#631 id=631 data-nosnippet>631</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\it"</span>, <span class="prelude-val">None</span>,
+<a href=#632 id=632 data-nosnippet>632</a>    font =&gt; {shape =&gt; <span class="string">"italic"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
+<a href=#633 id=633 data-nosnippet>633</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\tt"</span>, <span class="prelude-val">None</span>,
+<a href=#634 id=634 data-nosnippet>634</a>    font =&gt; {family =&gt; <span class="string">"typewriter"</span>, series =&gt; <span class="string">"medium"</span>, shape =&gt; <span class="string">"upright" </span>});
+<a href=#635 id=635 data-nosnippet>635</a>  <span class="comment">// No effect in math for the following 2 ?
+<a href=#636 id=636 data-nosnippet>636</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\sl"</span>, <span class="prelude-val">None</span>,
+<a href=#637 id=637 data-nosnippet>637</a>    font =&gt; {shape =&gt; <span class="string">"slanted"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
+<a href=#638 id=638 data-nosnippet>638</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\sc"</span>, <span class="prelude-val">None</span>,
+<a href=#639 id=639 data-nosnippet>639</a>    font =&gt; {shape =&gt; <span class="string">"smallcaps"</span>, family =&gt; <span class="string">"serif"</span>, series =&gt; <span class="string">"medium" </span>});
+<a href=#640 id=640 data-nosnippet>640</a>  <span class="comment">// Perl: DefPrimitiveI('\cal', undef, sub {
+<a href=#641 id=641 data-nosnippet>641</a>  //   if (LookupValue('IN_MATH')) {
+<a href=#642 id=642 data-nosnippet>642</a>  //     MergeFont(family=&gt;'caligraphic', series=&gt;'medium', shape=&gt;'upright', encoding=&gt;'OMS');
+<a href=#643 id=643 data-nosnippet>643</a>  //     return Box(undef, undef, undef, T_CS('\cal')); } return; });
+<a href=#644 id=644 data-nosnippet>644</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\cal"</span>, {
+<a href=#645 id=645 data-nosnippet>645</a>    <span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
+<a href=#646 id=646 data-nosnippet>646</a>      <span class="macro">MergeFont!</span>(family =&gt; <span class="string">"caligraphic"</span>, series =&gt; <span class="string">"medium"</span>,
+<a href=#647 id=647 data-nosnippet>647</a>        shape =&gt; <span class="string">"upright"</span>, encoding =&gt; <span class="string">"OMS"</span>);
+<a href=#648 id=648 data-nosnippet>648</a>    }
+<a href=#649 id=649 data-nosnippet>649</a>    Tbox::new(pin_static(<span class="string">""</span>), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, Tokens::from(<span class="macro">T_CS!</span>(<span class="string">"\\cal"</span>)),
+<a href=#650 id=650 data-nosnippet>650</a>      SymHashMap::default())
+<a href=#651 id=651 data-nosnippet>651</a>  });
+<a href=#652 id=652 data-nosnippet>652</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\allowbreak"</span>, <span class="prelude-val">None</span>);
+<a href=#653 id=653 data-nosnippet>653</a>
+<a href=#654 id=654 data-nosnippet>654</a>  <span class="comment">// \boldmath / \unboldmath — re-establish here (post-dump) so the
+<a href=#655 id=655 data-nosnippet>655</a>  // LaTeXML-semantic mathfont merging survives the dump path. The
+<a href=#656 id=656 data-nosnippet>656</a>  // raw latex.ltx `\boldmath → \@nomath\boldmath \mathversion{bold}`
+<a href=#657 id=657 data-nosnippet>657</a>  // chain captured in the dump doesn't actually toggle our
+<a href=#658 id=658 data-nosnippet>658</a>  // `mathfont` slot, so post-dump bold math output lost the
+<a href=#659 id=659 data-nosnippet>659</a>  // `font="bold italic"` attribute on math tokens. plain_base.rs
+<a href=#660 id=660 data-nosnippet>660</a>  // had identical defs, but it's replaced by plain_dump in dump
+<a href=#661 id=661 data-nosnippet>661</a>  // mode. plain_constructs runs in BOTH paths, so the override
+<a href=#662 id=662 data-nosnippet>662</a>  // wins after the dump load (mirroring our `~ → \lx@NBSP` and
+<a href=#663 id=663 data-nosnippet>663</a>  // `\nobreakspace → \lx@nobreakspace` pattern).
+<a href=#664 id=664 data-nosnippet>664</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\boldmath"</span>, <span class="prelude-val">None</span>,
+<a href=#665 id=665 data-nosnippet>665</a>    before_digest =&gt; {
+<a href=#666 id=666 data-nosnippet>666</a>      <span class="kw">let </span>mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+<a href=#667 id=667 data-nosnippet>667</a>      <span class="kw">let </span>merged = mf.merge(Font { forcebold: <span class="prelude-val">Some</span>(<span class="bool-val">true</span>), ..Font::default() });
+<a href=#668 id=668 data-nosnippet>668</a>      assign_value(<span class="string">"mathfont"</span>, Stored::Font(Rc::new(merged)), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#669 id=669 data-nosnippet>669</a>    },
+<a href=#670 id=670 data-nosnippet>670</a>    forbid_math =&gt; <span class="bool-val">true</span>);
+<a href=#671 id=671 data-nosnippet>671</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\unboldmath"</span>, <span class="prelude-val">None</span>,
+<a href=#672 id=672 data-nosnippet>672</a>    before_digest =&gt; {
+<a href=#673 id=673 data-nosnippet>673</a>      <span class="kw">let </span>mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+<a href=#674 id=674 data-nosnippet>674</a>      <span class="kw">let </span>merged = mf.merge(Font { forcebold: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>), ..Font::default() });
+<a href=#675 id=675 data-nosnippet>675</a>      assign_value(<span class="string">"mathfont"</span>, Stored::Font(Rc::new(merged)), <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#676 id=676 data-nosnippet>676</a>    },
+<a href=#677 id=677 data-nosnippet>677</a>    forbid_math =&gt; <span class="bool-val">true</span>);
+<a href=#678 id=678 data-nosnippet>678</a>
+<a href=#679 id=679 data-nosnippet>679</a>  <span class="comment">// Perl: plain_constructs.pool.ltxml L319 — load math_common last
+<a href=#680 id=680 data-nosnippet>680</a>  </span><span class="macro">InnerPool!</span>(math_common);
+<a href=#681 id=681 data-nosnippet>681</a>});
 </code></pre></div></section></main></body></html>

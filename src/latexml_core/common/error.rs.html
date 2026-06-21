@@ -374,14 +374,14 @@
 <a href=#374 id=374 data-nosnippet>374</a>    <span class="macro-nonterminal">$crate::common::error::note_status</span>(
 <a href=#375 id=375 data-nosnippet>375</a>      <span class="macro-nonterminal">$crate::common::error::LogStatus::Debug</span>, <span class="prelude-val">None</span>);
 <a href=#376 id=376 data-nosnippet>376</a>    <span class="kw">use </span>log::debug;
-<a href=#377 id=377 data-nosnippet>377</a>    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}:{}"</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">"{}"</span>,
+<a href=#377 id=377 data-nosnippet>377</a>    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}:{}"</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">"{}"</span>,
 <a href=#378 id=378 data-nosnippet>378</a>      <span class="macro-nonterminal">$crate::generate_message</span>!(<span class="macro-nonterminal">$message</span>))
 <a href=#379 id=379 data-nosnippet>379</a>  }};
 <a href=#380 id=380 data-nosnippet>380</a> (<span class="macro-nonterminal">$category</span>:expr_2021, <span class="macro-nonterminal">$object</span>:expr_2021, <span class="macro-nonterminal">$message</span>:expr_2021, $(<span class="macro-nonterminal">$details</span>:expr_2021),<span class="kw-2">*</span>) =&gt; {{
 <a href=#381 id=381 data-nosnippet>381</a>    <span class="macro-nonterminal">$crate::common::error::note_status</span>(
 <a href=#382 id=382 data-nosnippet>382</a>      <span class="macro-nonterminal">$crate::common::error::LogStatus::Debug</span>, <span class="prelude-val">None</span>);
 <a href=#383 id=383 data-nosnippet>383</a>    <span class="kw">use </span>log::debug;
-<a href=#384 id=384 data-nosnippet>384</a>    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}:{}"</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">"{}"</span>,
+<a href=#384 id=384 data-nosnippet>384</a>    <span class="macro">debug!</span>(target: <span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}:{}"</span>, <span class="macro-nonterminal">$category</span>, <span class="macro-nonterminal">$object</span>), <span class="string">"{}"</span>,
 <a href=#385 id=385 data-nosnippet>385</a>      <span class="macro-nonterminal">$crate::generate_message</span>!(<span class="macro-nonterminal">$message</span>, $(<span class="macro-nonterminal">$details</span>),<span class="kw-2">*</span>))
 <a href=#386 id=386 data-nosnippet>386</a>  }};
 <a href=#387 id=387 data-nosnippet>387</a>  ($(<span class="macro-nonterminal">$simple</span>:expr_2021),<span class="kw-2">*</span>) =&gt; {{
