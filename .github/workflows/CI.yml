@@ -1,8 +1,8 @@
 on:
-  # `push` only on master, so a PR branch isn't checked twice (the
+  # `push` only on main, so a PR branch isn't checked twice (the
   # `pull_request` event already covers branch updates via `synchronize`).
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 name: CI

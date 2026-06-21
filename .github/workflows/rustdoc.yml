@@ -3,7 +3,7 @@ name: Deploy Docs to GitHub Pages
 on:
     push:
         branches:
-            - master
+            - main
 
 # Deploy step pushes the rendered docs to the gh-pages branch.
 permissions:

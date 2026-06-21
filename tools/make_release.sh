@@ -229,7 +229,7 @@ EOF
       in_block { print }
     ' CHANGELOG.md
   else
-    echo "_See [CHANGELOG.md](https://github.com/dginev/latexml-oxide/blob/master/CHANGELOG.md) for release notes._"
+    echo "_See [CHANGELOG.md](https://github.com/dginev/latexml-oxide/blob/main/CHANGELOG.md) for release notes._"
   fi
 } > "${release_body}"
 fi
