@@ -123,12 +123,18 @@ theorem/mdframed-in-figure schema (`figure_mixed_content`, task §1).
 
 **Method:** beyond hand-picked formula batches, run the *existing test fixtures*
 through both engines and diff — `for f in tests/<area>/*.tex; do latexml --quiet
-$f | norm vs latexml_oxide $f | norm`. The Rust fixtures are regression
-BASELINES (Rust output), so a non-empty Perl-vs-Rust diff flags every place the
-baseline diverges from Perl. A sweep over `parse/ math/ alignment/ fonts/
-encoding/` (2026-06-20) confirmed the divergence landscape is dominated by
-already-known categories — deferred content-MathML (`f(x)`/`f(a,b)` apply-vs-
-multiply, comma-list-as-relation-LHS), box-metrics (scalebox/resizebox panel
+--nocomments $f | norm vs latexml_oxide $f | norm`. The Rust fixtures are
+regression BASELINES (Rust output), so a non-empty Perl-vs-Rust diff flags every
+place the baseline diverges from Perl. **CRITICAL: pass Perl `--nocomments`.**
+Perl defaults `INCLUDE_COMMENTS=true` (Rust defaults false — intentional, see
+OXIDIZED_DESIGN #2), so without it Perl interleaves multi-line `%…` source
+comments that a naive `<!--`-line strip leaves orphaned, inflating diffs with
+pure noise (the structure/ sweep dropped from ~20 "divergent" fixtures to 6 once
+`--nocomments` was added — enum/itemize/footnote/figures-captions/article/… were
+ALL comment-noise, 0 real diff). A clean sweep over `parse/ math/ alignment/
+fonts/ encoding/ structure/` (2026-06-20) confirmed the divergence landscape is
+dominated by already-known categories — deferred content-MathML (`f(x)`/`f(a,b)`
+apply-vs-multiply, comma-list-as-relation-LHS), box-metrics (scalebox/resizebox panel
 natural-width in `vmode`/figure context), intentional comments-off, and
 Rust-supersedes-Perl (`wasysym` symbol rendering Perl can't, `soul`+color). One
 **genuine new bug** surfaced:
@@ -143,6 +149,17 @@ Rust-supersedes-Perl (`wasysym` symbol rendering Perl can't, `soul`+color). One
   (`compile_declare_pattern`, the `_\WildCard` branch) + the rewrite-application
   order. Niche (DefMathRewrite \WildCard is a binding-author feature, rare in
   real arXiv); the fixture encodes the buggy output. Focused-session item.
+
+**Clean structure/ sweep (--nocomments, 2026-06-20)** — only 6 real divergences,
+all niche/known: `autoref` & `amsarticle` minipage/panel *width* (the box-metric
+natural-width family, deferred); `revtex4_endpage` `\pageref{LastPage}` page-count
+guess (`19` vs `9` — LaTeXML has no real pagination, both approximate, not
+meaningful); `figures` missing `<break class="ltx_break"/>` between **subfigure**
+panels (the DEPRECATED `subfigure` package only — modern `subcaption` matches;
+a general `\\` in a figure produces 0 breaks in both, so it's subfigure-binding
+specific, cosmetic); `amsrefs_basic` bib formatting; `figure_grids` (220 lines,
+multi-panel box-metrics). Net: structure/ is in excellent shape — no common
+content bugs.
 
 ## Math-parser Rust-only gaps (parked — found by Rust-vs-Perl `text=` comparison)
 
