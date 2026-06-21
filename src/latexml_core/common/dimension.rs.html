@@ -97,98 +97,102 @@
 <a href=#97 id=97 data-nosnippet>97</a>// This is Knuth's print_scaled (See TeX the Program, \S 103)
 <a href=#98 id=98 data-nosnippet>98</a>// It (should) round-trip with kround.
 <a href=#99 id=99 data-nosnippet>99</a></span><span class="kw">pub fn </span>fixedformat(<span class="kw-2">mut </span>s: i64, unit_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; String {
-<a href=#100 id=100 data-nosnippet>100</a>  <span class="kw">let </span><span class="kw-2">mut </span>string = String::new();
-<a href=#101 id=101 data-nosnippet>101</a>  <span class="kw">if </span>s &lt; <span class="number">0 </span>{
-<a href=#102 id=102 data-nosnippet>102</a>    string.push(<span class="string">'-'</span>);
-<a href=#103 id=103 data-nosnippet>103</a>    s = -s;
-<a href=#104 id=104 data-nosnippet>104</a>  }
-<a href=#105 id=105 data-nosnippet>105</a>  string.push_str(<span class="kw-2">&amp;</span>(s / UNITY).to_string());
-<a href=#106 id=106 data-nosnippet>106</a>  string.push(<span class="string">'.'</span>);
-<a href=#107 id=107 data-nosnippet>107</a>  s = <span class="number">10 </span>* (s % UNITY) + <span class="number">5</span>;
-<a href=#108 id=108 data-nosnippet>108</a>  <span class="kw">let </span><span class="kw-2">mut </span>delta = <span class="number">10</span>;
-<a href=#109 id=109 data-nosnippet>109</a>  <span class="kw">loop </span>{
-<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw">if </span>delta &gt; UNITY {
-<a href=#111 id=111 data-nosnippet>111</a>      s += <span class="number">0x8000 </span>- <span class="number">50000</span>;
-<a href=#112 id=112 data-nosnippet>112</a>    }
-<a href=#113 id=113 data-nosnippet>113</a>    string.push_str(<span class="kw-2">&amp;</span>(s / UNITY).to_string());
-<a href=#114 id=114 data-nosnippet>114</a>    s = <span class="number">10 </span>* (s % UNITY);
-<a href=#115 id=115 data-nosnippet>115</a>    delta <span class="kw-2">*</span>= <span class="number">10</span>;
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">if </span>s &lt;= delta {
-<a href=#117 id=117 data-nosnippet>117</a>      <span class="kw">break</span>;
-<a href=#118 id=118 data-nosnippet>118</a>    }
-<a href=#119 id=119 data-nosnippet>119</a>  }
-<a href=#120 id=120 data-nosnippet>120</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(unit) = unit_opt {
-<a href=#121 id=121 data-nosnippet>121</a>    string.push_str(unit);
-<a href=#122 id=122 data-nosnippet>122</a>  }
-<a href=#123 id=123 data-nosnippet>123</a>  string
-<a href=#124 id=124 data-nosnippet>124</a>}
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a><span class="kw">pub fn </span>attribute_format(sp: i64, unit_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; String {
-<a href=#127 id=127 data-nosnippet>127</a>  <span class="kw">let </span>unit = unit_opt.unwrap_or(<span class="string">"pt"</span>);
-<a href=#128 id=128 data-nosnippet>128</a>  <span class="macro">s!</span>(<span class="string">"{:.1}{unit}"</span>, round_to(sp <span class="kw">as </span>f64 / UNITY_F64, <span class="prelude-val">Some</span>(<span class="number">1</span>)))
-<a href=#129 id=129 data-nosnippet>129</a>}
-<a href=#130 id=130 data-nosnippet>130</a>
-<a href=#131 id=131 data-nosnippet>131</a><span class="attr">#[cfg(test)]
-<a href=#132 id=132 data-nosnippet>132</a></span><span class="kw">mod </span>tests {
-<a href=#133 id=133 data-nosnippet>133</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="kw">use </span>std::fmt::Write <span class="kw">as _</span>;
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="comment">// Format directly into `string`; `write!` into a String is infallible.
+<a href=#102 id=102 data-nosnippet>102</a>  // Avoids the per-iteration `i64::to_string()` temporaries the Perl-faithful
+<a href=#103 id=103 data-nosnippet>103</a>  // algorithm would otherwise leak on a very hot path (≈1M calls/doc).
+<a href=#104 id=104 data-nosnippet>104</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>string = String::new();
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="kw">if </span>s &lt; <span class="number">0 </span>{
+<a href=#106 id=106 data-nosnippet>106</a>    string.push(<span class="string">'-'</span>);
+<a href=#107 id=107 data-nosnippet>107</a>    s = -s;
+<a href=#108 id=108 data-nosnippet>108</a>  }
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="macro">write!</span>(string, <span class="string">"{}"</span>, s / UNITY).unwrap();
+<a href=#110 id=110 data-nosnippet>110</a>  string.push(<span class="string">'.'</span>);
+<a href=#111 id=111 data-nosnippet>111</a>  s = <span class="number">10 </span>* (s % UNITY) + <span class="number">5</span>;
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="kw">let </span><span class="kw-2">mut </span>delta = <span class="number">10</span>;
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="kw">loop </span>{
+<a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">if </span>delta &gt; UNITY {
+<a href=#115 id=115 data-nosnippet>115</a>      s += <span class="number">0x8000 </span>- <span class="number">50000</span>;
+<a href=#116 id=116 data-nosnippet>116</a>    }
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="macro">write!</span>(string, <span class="string">"{}"</span>, s / UNITY).unwrap();
+<a href=#118 id=118 data-nosnippet>118</a>    s = <span class="number">10 </span>* (s % UNITY);
+<a href=#119 id=119 data-nosnippet>119</a>    delta <span class="kw-2">*</span>= <span class="number">10</span>;
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="kw">if </span>s &lt;= delta {
+<a href=#121 id=121 data-nosnippet>121</a>      <span class="kw">break</span>;
+<a href=#122 id=122 data-nosnippet>122</a>    }
+<a href=#123 id=123 data-nosnippet>123</a>  }
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(unit) = unit_opt {
+<a href=#125 id=125 data-nosnippet>125</a>    string.push_str(unit);
+<a href=#126 id=126 data-nosnippet>126</a>  }
+<a href=#127 id=127 data-nosnippet>127</a>  string
+<a href=#128 id=128 data-nosnippet>128</a>}
+<a href=#129 id=129 data-nosnippet>129</a>
+<a href=#130 id=130 data-nosnippet>130</a><span class="kw">pub fn </span>attribute_format(sp: i64, unit_opt: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; String {
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="kw">let </span>unit = unit_opt.unwrap_or(<span class="string">"pt"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">s!</span>(<span class="string">"{:.1}{unit}"</span>, round_to(sp <span class="kw">as </span>f64 / UNITY_F64, <span class="prelude-val">Some</span>(<span class="number">1</span>)))
+<a href=#133 id=133 data-nosnippet>133</a>}
 <a href=#134 id=134 data-nosnippet>134</a>
-<a href=#135 id=135 data-nosnippet>135</a>  <span class="attr">#[test]
-<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="kw">fn </span>fixedformat_zero() {
-<a href=#137 id=137 data-nosnippet>137</a>    <span class="comment">// Knuth's print_scaled of 0 with a unit.
-<a href=#138 id=138 data-nosnippet>138</a>    </span><span class="macro">assert_eq!</span>(fixedformat(<span class="number">0</span>, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"0.0pt"</span>);
-<a href=#139 id=139 data-nosnippet>139</a>    <span class="macro">assert_eq!</span>(fixedformat(<span class="number">0</span>, <span class="prelude-val">None</span>), <span class="string">"0.0"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>  }
-<a href=#141 id=141 data-nosnippet>141</a>
-<a href=#142 id=142 data-nosnippet>142</a>  <span class="attr">#[test]
-<a href=#143 id=143 data-nosnippet>143</a>  </span><span class="kw">fn </span>fixedformat_one_sp_unit() {
-<a href=#144 id=144 data-nosnippet>144</a>    <span class="comment">// UNITY = 65536 scaled-points = 1pt.
-<a href=#145 id=145 data-nosnippet>145</a>    </span><span class="macro">assert_eq!</span>(fixedformat(UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"1.0pt"</span>);
-<a href=#146 id=146 data-nosnippet>146</a>    <span class="macro">assert_eq!</span>(fixedformat(<span class="number">2 </span>* UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"2.0pt"</span>);
-<a href=#147 id=147 data-nosnippet>147</a>  }
-<a href=#148 id=148 data-nosnippet>148</a>
-<a href=#149 id=149 data-nosnippet>149</a>  <span class="attr">#[test]
-<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="kw">fn </span>fixedformat_negative() {
-<a href=#151 id=151 data-nosnippet>151</a>    <span class="macro">assert_eq!</span>(fixedformat(-UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"-1.0pt"</span>);
-<a href=#152 id=152 data-nosnippet>152</a>    <span class="macro">assert_eq!</span>(fixedformat(-<span class="number">2 </span>* UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"-2.0pt"</span>);
-<a href=#153 id=153 data-nosnippet>153</a>  }
-<a href=#154 id=154 data-nosnippet>154</a>
-<a href=#155 id=155 data-nosnippet>155</a>  <span class="attr">#[test]
-<a href=#156 id=156 data-nosnippet>156</a>  </span><span class="kw">fn </span>fixedformat_half_pt() {
-<a href=#157 id=157 data-nosnippet>157</a>    <span class="comment">// 0.5 pt = UNITY/2 = 32768 sp.
-<a href=#158 id=158 data-nosnippet>158</a>    </span><span class="kw">let </span>out = fixedformat(UNITY / <span class="number">2</span>, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>));
-<a href=#159 id=159 data-nosnippet>159</a>    <span class="macro">assert_eq!</span>(out, <span class="string">"0.5pt"</span>);
-<a href=#160 id=160 data-nosnippet>160</a>  }
-<a href=#161 id=161 data-nosnippet>161</a>
-<a href=#162 id=162 data-nosnippet>162</a>  <span class="attr">#[test]
-<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="kw">fn </span>attribute_format_defaults_to_pt() {
-<a href=#164 id=164 data-nosnippet>164</a>    <span class="macro">assert_eq!</span>(attribute_format(UNITY, <span class="prelude-val">None</span>), <span class="string">"1.0pt"</span>);
-<a href=#165 id=165 data-nosnippet>165</a>    <span class="macro">assert_eq!</span>(attribute_format(UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"1.0pt"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>  }
-<a href=#167 id=167 data-nosnippet>167</a>
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="attr">#[test]
-<a href=#169 id=169 data-nosnippet>169</a>  </span><span class="kw">fn </span>attribute_format_other_unit() {
-<a href=#170 id=170 data-nosnippet>170</a>    <span class="macro">assert_eq!</span>(attribute_format(UNITY, <span class="prelude-val">Some</span>(<span class="string">"in"</span>)), <span class="string">"1.0in"</span>);
-<a href=#171 id=171 data-nosnippet>171</a>  }
-<a href=#172 id=172 data-nosnippet>172</a>
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="attr">#[test]
-<a href=#174 id=174 data-nosnippet>174</a>  </span><span class="kw">fn </span>attribute_format_rounds_to_one_decimal() {
-<a href=#175 id=175 data-nosnippet>175</a>    <span class="comment">// sp = UNITY * 1.25 → 1.3pt (round to 1 decimal, half-up).
-<a href=#176 id=176 data-nosnippet>176</a>    </span><span class="kw">let </span>sp = (UNITY_F64 * <span class="number">1.25</span>) <span class="kw">as </span>i64;
-<a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">let </span>out = attribute_format(sp, <span class="prelude-val">None</span>);
-<a href=#178 id=178 data-nosnippet>178</a>    <span class="macro">assert_eq!</span>(out, <span class="string">"1.3pt"</span>, <span class="string">"got {out:?}"</span>);
-<a href=#179 id=179 data-nosnippet>179</a>  }
-<a href=#180 id=180 data-nosnippet>180</a>
-<a href=#181 id=181 data-nosnippet>181</a>  <span class="attr">#[test]
-<a href=#182 id=182 data-nosnippet>182</a>  </span><span class="kw">fn </span>spec_to_f64_empty_is_zero() {
-<a href=#183 id=183 data-nosnippet>183</a>    <span class="macro">assert_eq!</span>(Dimension::spec_to_f64(<span class="string">""</span>).unwrap(), <span class="number">0.0</span>);
-<a href=#184 id=184 data-nosnippet>184</a>  }
-<a href=#185 id=185 data-nosnippet>185</a>
-<a href=#186 id=186 data-nosnippet>186</a>  <span class="attr">#[test]
-<a href=#187 id=187 data-nosnippet>187</a>  </span><span class="kw">fn </span>spec_to_f64_bare_number_is_scaled() {
-<a href=#188 id=188 data-nosnippet>188</a>    <span class="comment">// No unit → treated as scaled-points directly; the value is
-<a href=#189 id=189 data-nosnippet>189</a>    // kround()-ed through, so "65536" stays 65536.
-<a href=#190 id=190 data-nosnippet>190</a>    </span><span class="kw">let </span>out = Dimension::spec_to_f64(<span class="string">"65536"</span>).unwrap();
-<a href=#191 id=191 data-nosnippet>191</a>    <span class="macro">assert_eq!</span>(out, <span class="number">65536.0</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  }
-<a href=#193 id=193 data-nosnippet>193</a>}
+<a href=#135 id=135 data-nosnippet>135</a><span class="attr">#[cfg(test)]
+<a href=#136 id=136 data-nosnippet>136</a></span><span class="kw">mod </span>tests {
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="attr">#[test]
+<a href=#140 id=140 data-nosnippet>140</a>  </span><span class="kw">fn </span>fixedformat_zero() {
+<a href=#141 id=141 data-nosnippet>141</a>    <span class="comment">// Knuth's print_scaled of 0 with a unit.
+<a href=#142 id=142 data-nosnippet>142</a>    </span><span class="macro">assert_eq!</span>(fixedformat(<span class="number">0</span>, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"0.0pt"</span>);
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="macro">assert_eq!</span>(fixedformat(<span class="number">0</span>, <span class="prelude-val">None</span>), <span class="string">"0.0"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>  }
+<a href=#145 id=145 data-nosnippet>145</a>
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="attr">#[test]
+<a href=#147 id=147 data-nosnippet>147</a>  </span><span class="kw">fn </span>fixedformat_one_sp_unit() {
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="comment">// UNITY = 65536 scaled-points = 1pt.
+<a href=#149 id=149 data-nosnippet>149</a>    </span><span class="macro">assert_eq!</span>(fixedformat(UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"1.0pt"</span>);
+<a href=#150 id=150 data-nosnippet>150</a>    <span class="macro">assert_eq!</span>(fixedformat(<span class="number">2 </span>* UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"2.0pt"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>  }
+<a href=#152 id=152 data-nosnippet>152</a>
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="attr">#[test]
+<a href=#154 id=154 data-nosnippet>154</a>  </span><span class="kw">fn </span>fixedformat_negative() {
+<a href=#155 id=155 data-nosnippet>155</a>    <span class="macro">assert_eq!</span>(fixedformat(-UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"-1.0pt"</span>);
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="macro">assert_eq!</span>(fixedformat(-<span class="number">2 </span>* UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"-2.0pt"</span>);
+<a href=#157 id=157 data-nosnippet>157</a>  }
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="attr">#[test]
+<a href=#160 id=160 data-nosnippet>160</a>  </span><span class="kw">fn </span>fixedformat_half_pt() {
+<a href=#161 id=161 data-nosnippet>161</a>    <span class="comment">// 0.5 pt = UNITY/2 = 32768 sp.
+<a href=#162 id=162 data-nosnippet>162</a>    </span><span class="kw">let </span>out = fixedformat(UNITY / <span class="number">2</span>, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>));
+<a href=#163 id=163 data-nosnippet>163</a>    <span class="macro">assert_eq!</span>(out, <span class="string">"0.5pt"</span>);
+<a href=#164 id=164 data-nosnippet>164</a>  }
+<a href=#165 id=165 data-nosnippet>165</a>
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="attr">#[test]
+<a href=#167 id=167 data-nosnippet>167</a>  </span><span class="kw">fn </span>attribute_format_defaults_to_pt() {
+<a href=#168 id=168 data-nosnippet>168</a>    <span class="macro">assert_eq!</span>(attribute_format(UNITY, <span class="prelude-val">None</span>), <span class="string">"1.0pt"</span>);
+<a href=#169 id=169 data-nosnippet>169</a>    <span class="macro">assert_eq!</span>(attribute_format(UNITY, <span class="prelude-val">Some</span>(<span class="string">"pt"</span>)), <span class="string">"1.0pt"</span>);
+<a href=#170 id=170 data-nosnippet>170</a>  }
+<a href=#171 id=171 data-nosnippet>171</a>
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="attr">#[test]
+<a href=#173 id=173 data-nosnippet>173</a>  </span><span class="kw">fn </span>attribute_format_other_unit() {
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="macro">assert_eq!</span>(attribute_format(UNITY, <span class="prelude-val">Some</span>(<span class="string">"in"</span>)), <span class="string">"1.0in"</span>);
+<a href=#175 id=175 data-nosnippet>175</a>  }
+<a href=#176 id=176 data-nosnippet>176</a>
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="attr">#[test]
+<a href=#178 id=178 data-nosnippet>178</a>  </span><span class="kw">fn </span>attribute_format_rounds_to_one_decimal() {
+<a href=#179 id=179 data-nosnippet>179</a>    <span class="comment">// sp = UNITY * 1.25 → 1.3pt (round to 1 decimal, half-up).
+<a href=#180 id=180 data-nosnippet>180</a>    </span><span class="kw">let </span>sp = (UNITY_F64 * <span class="number">1.25</span>) <span class="kw">as </span>i64;
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="kw">let </span>out = attribute_format(sp, <span class="prelude-val">None</span>);
+<a href=#182 id=182 data-nosnippet>182</a>    <span class="macro">assert_eq!</span>(out, <span class="string">"1.3pt"</span>, <span class="string">"got {out:?}"</span>);
+<a href=#183 id=183 data-nosnippet>183</a>  }
+<a href=#184 id=184 data-nosnippet>184</a>
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="attr">#[test]
+<a href=#186 id=186 data-nosnippet>186</a>  </span><span class="kw">fn </span>spec_to_f64_empty_is_zero() {
+<a href=#187 id=187 data-nosnippet>187</a>    <span class="macro">assert_eq!</span>(Dimension::spec_to_f64(<span class="string">""</span>).unwrap(), <span class="number">0.0</span>);
+<a href=#188 id=188 data-nosnippet>188</a>  }
+<a href=#189 id=189 data-nosnippet>189</a>
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="attr">#[test]
+<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="kw">fn </span>spec_to_f64_bare_number_is_scaled() {
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="comment">// No unit → treated as scaled-points directly; the value is
+<a href=#193 id=193 data-nosnippet>193</a>    // kround()-ed through, so "65536" stays 65536.
+<a href=#194 id=194 data-nosnippet>194</a>    </span><span class="kw">let </span>out = Dimension::spec_to_f64(<span class="string">"65536"</span>).unwrap();
+<a href=#195 id=195 data-nosnippet>195</a>    <span class="macro">assert_eq!</span>(out, <span class="number">65536.0</span>);
+<a href=#196 id=196 data-nosnippet>196</a>  }
+<a href=#197 id=197 data-nosnippet>197</a>}
 </code></pre></div></section></main></body></html>
