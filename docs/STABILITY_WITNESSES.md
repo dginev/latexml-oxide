@@ -396,6 +396,26 @@ The core mechanism is PROVEN; these two interactions are the remaining work for 
 focused session. NOTE: a `\loop`-iteration guard would make Rust *Fatal* where Perl
 *succeeds* (worse) — the frame-ordering correction is the only faithful fix.
 
+**SECOND ATTEMPT 2026-06-22 (content-shape gate) — FAILED; root is the halign
+mode-leak.** Tried gating the `end_mode` repack on
+`boxes_are_simple_horizontal(box_list)` (reset MODE→bound to skip repack for
+non-paragraph content, mirroring the OLD `has_only_simple_horizontal_content`
+guard). It FIXED sub-fix-2's 3 regressions (sizes_test/graphrot_test/xytest_test
+all pass) but **re-broke Cluster G** — 1707.02464 hangs again (`Fatal:Timeout`),
+because the shape gate FALSE-NEGATIVES on real `\narrow` paragraph content (it's
+not all plain TBoxes), so the repack it needs is skipped. **CONCLUSION: a
+content-shape gate is fundamentally unable to distinguish "genuine paragraph
+needing `\hsize` wrap" from "tabular that leaked MODE=horizontal" — the real
+distinction is the leaked mode, not the shape.** So sub-fix 2's clean form is to
+fix the ROOT: the halign/tabular box carries `mode=horizontal` (leaked) where Perl
+has it vertical, so Rust's `repack_horizontal` (which collects per-item by mode,
+stomach.rs:849) wrongly collects it. Perl's `repackHorizontal` skips it naturally
+(non-horizontal item). Fixing the tabular/halign result mode to vertical makes the
+faithful loop work with NO gate — then Cluster G AND the table sizing both pass.
+**Net: the box-model fix needs (a) the frame-ordering loop [proven], (b) the
+VBoxContents reversion-braces fix, (c) the halign/tabular `mode` root fix** — a
+three-part focused multi-subsystem session, NOT an autonomous inline change.
+
 **SHARED ROOT with the global p{}→VBox port (found 2026-06-22).** The same
 `\hsize`-invariant box model blocks SYNC_STATUS **1610.00974 step-3**: porting the
 global `p{}` column to Perl's faithful `\lx@tabular@p`/VBoxContents form is
