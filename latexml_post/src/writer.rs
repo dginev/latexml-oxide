@@ -51,6 +51,38 @@ pub fn write_output(content: &str, dest: Option<&str>) -> io::Result<()> {
   }
 }
 
+/// Like [`write_output`] but writes several segments back-to-back without
+/// concatenating them into one buffer first. Used for the conversion log,
+/// where the core and post-phase segments are each already-allocated and
+/// large for real articles — a `format!("{core}{post}")` would allocate a
+/// third copy of their combined size on the conversion hot path. Segments are
+/// written verbatim and in order through a single `BufWriter` (one file
+/// open/truncate); insert any separators (e.g. `"\n"`) as their own segments.
+pub fn write_output_segments(segments: &[&str], dest: Option<&str>) -> io::Result<()> {
+  match dest {
+    Some(path) => {
+      ensure_parent_dir(path)?;
+      let mut writer = io::BufWriter::new(fs::File::create(path)?);
+      let mut total = 0usize;
+      for seg in segments {
+        writer.write_all(seg.as_bytes())?;
+        total += seg.len();
+      }
+      writer.flush()?;
+      Info!("writer", "wrote", "Wrote '{}' ({} bytes)", path, total);
+      Ok(())
+    },
+    None => {
+      let stdout = io::stdout();
+      let mut handle = stdout.lock();
+      for seg in segments {
+        handle.write_all(seg.as_bytes())?;
+      }
+      Ok(())
+    },
+  }
+}
+
 /// Ensure the parent directory of `path` exists, creating it (and any
 /// missing ancestors) as needed. No-op when `path` has no parent or
 /// the parent is the current directory.

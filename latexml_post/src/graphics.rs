@@ -1236,7 +1236,6 @@ impl Graphics {
   /// Returns true only when the destination file was actually written.
   /// Optional dep: graceful fallthrough when `mutool` is not on PATH.
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    eprintln!("DBG convert_pdf_via_mutool: src={} dest={}", source, dest);
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
@@ -1284,10 +1283,6 @@ impl Graphics {
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
   fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    eprintln!(
-      "DBG convert_pdf_via_pdftocairo: src={} dest={}",
-      source, dest
-    );
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path

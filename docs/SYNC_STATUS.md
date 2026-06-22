@@ -394,17 +394,37 @@ unlogged, we **cannot tell from `cortex.log` whether Graphics ran-and-failed or 
 ran**. Fixing the logging is the prerequisite for diagnosing this and any future
 post-phase regression.
 
-**Fix design.** Provide a LOG_BUFFER equivalent spanning the post phase:
-`bind_log()` (or re-bind) immediately before `run_post_processing`, `flush_log()`
-after, and **append** the captured post-log to `response.log` before assembling the
-stored `cortex.log`. Convert the `post.rs` `eprintln!` failure sites to the
-capturable `Error!`/`Warn!`/`Note!` macros so they (a) land in the buffer and
-(b) bump the status counter, so `Status:conversion` reflects post failures. Remove
-the `graphics.rs` DBG `eprintln!`s. Mind the thread-locality (post must run on the
-same thread as `bind_log`; `convert_archive` is single-threaded per job, so OK).
-Verify: a forced EPS-tool failure yields a captured `Error:` line + non-zero
-`Status:`; a clean run's `cortex.log` now contains `graphics:process` / `MathML[`
-markers.
+**LANDED 2026-06-22 (latexml_oxide binary + shared wrapper); cortex_worker
+wiring deferred to the cortex-side owner.**
+- New shared wrapper `latexml::post::run_post_processing_logged() -> PostOutcome
+  { html, log, status_code }` (`latexml_oxide/src/post.rs`): re-binds the
+  thread-local `LOG_BUFFER` (which `convert()` already flushed) around
+  `run_post_processing`, then `flush_log()`s — the Rust equivalent of Perl's
+  single post-`convert_post` `flush_log()`. Captures every post-phase
+  `Info!`/`Warn!`/`post_error` (Graphics/MathML/XSLT), and reads the post
+  status from the shared (core+post) REPORT counter.
+- The `post.rs` failure `eprintln!`s are now `post_error()` (logs via
+  `log::error!` + `note_status(Error)` so they land in the buffer AND bump the
+  Error counter — but WITHOUT `Error!`'s too-many-errors `Fatal!`/`return`,
+  which would not typecheck in `run_post_processing`'s `String` return). The
+  splitnaming case is `Warn!`; the "Split into N" progress is `note_progress`.
+  Removed the two `graphics.rs` DBG `eprintln!`s.
+- `latexml_oxide` binary wired: `--log` and the archive-zip log now carry core
+  **+** post via `latexml_post::writer::write_output_segments(&[core, "\n",
+  post], dest)` — writes the (already-large) segments sequentially to avoid a
+  third concatenated allocation on the conversion path (cold archive path still
+  uses `assemble_conversion_log`, since `pack_archive` takes one `&str`). The
+  CLI exit status already reads post-inclusive `get_status_code()`.
+- **Verified:** `latexml_oxide --format=html5 --log=cortex.log --dest=test.html`
+  on hep-th0101114 → `cortex.log` now contains `scan:db_status`,
+  `graphics:process … 6 to process`, `math:converted`, `xslt:stylesheet`; 6
+  PNGs produced; suite 1467/0; clippy clean.
+- **Remaining:** `cortex_worker.rs::convert_archive` should call the same
+  `run_post_processing_logged` and fold `max(core, post.status_code)` into its
+  `Status:conversion` line (Perl `LaTeXML.pm` L631-634). The wrapper is ready;
+  the actual cortex_worker edit + `maxperf-cortex` rebuild are owned by the
+  cortex-side maintainer (per 2026-06-22 directive: leave the live fleet binary
+  alone).
 
 ---
 

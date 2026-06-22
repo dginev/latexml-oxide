@@ -686,6 +686,14 @@ fn real_main() -> Result<(), Box<dyn Error>> {
       converter.convert(source)
     };
     let _ = &source_for_post; // keep alive for post-processing
+    // Post-phase log (Graphics/MathML/XSLT) captured by
+    // `run_post_processing_logged`; written after the core log into --log / the
+    // archive log so BOTH conversion phases reach the persisted log (SYNC_STATUS
+    // task 5; Perl LaTeXML.pm flushes once after convert_post). Declared out here
+    // (not in the `Some(xml)` arm) so the post-if-let --log write can still see
+    // it; stays empty when post-processing is skipped, keeping that --log
+    // byte-identical to before.
+    let mut post_log = String::new();
     if let Some(xml) = response.result {
       // Infer format from --dest extension if --format not specified (Perl Config.pm L408-441)
       let inferred_format: Option<String> = cli
@@ -832,7 +840,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
         // does something useful out of the box.
         let default_pmml_for_xml_input =
           xml_input_mode && !cli.pmml && effective_stylesheet.is_none();
-        let output = run_post_processing(&xml, &PostOptions {
+        let post = latexml::post::run_post_processing_logged(&xml, &PostOptions {
           pmml: cli.pmml || cli.post || is_html_format || default_pmml_for_xml_input,
           cmml: cli.cmml,
           keep_xmath: cli.keep_xmath,
@@ -854,6 +862,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
           graphics_svg_threshold_kb: cli.graphics_svg_threshold_kb,
           whatsout: whatsout_mode,
         });
+        let output = post.html;
+        post_log = post.log;
         if let Some(zip_dest) = zip_dest {
           // whatsout=archive: pack the full document + resources into a ZIP.
           latexml_post::writer::ensure_parent_dir(&zip_dest)?;
@@ -874,7 +884,7 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             html_filename: &html_name,
             html: &output,
             log_filename: Some(&log_name),
-            log: &response.log,
+            log: &assemble_conversion_log(&response.log, &post_log),
             status: &response.status,
             resource_dir,
             telemetry_json: None,
@@ -896,7 +906,18 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     if let Some(ref log_path) = cli.log
       && !is_archive_out
     {
-      latexml_post::writer::write_output(&response.log, Some(log_path))?;
+      // Write the core log and the post-phase log sequentially rather than
+      // concatenating — both are already-allocated and large for real
+      // articles, so a merged `format!` would allocate a third copy of their
+      // combined size on the conversion path.
+      if post_log.is_empty() {
+        latexml_post::writer::write_output_segments(&[response.log.as_str()], Some(log_path))?;
+      } else {
+        latexml_post::writer::write_output_segments(
+          &[response.log.as_str(), "\n", post_log.as_str()],
+          Some(log_path),
+        )?;
+      }
       eprintln!("Log written to {}", log_path);
     }
   }
@@ -1025,11 +1046,17 @@ fn read_child_rusage_us() -> (u64, u64) { (0, 0) }
 
 use latexml::post::PostOptions;
 
-/// Delegate post-processing to the library API.
-fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
-  // Per-phase telemetry now lives inside latexml::post::run_post_processing
-  // (PostXmlParse, PostScan, Bibliography, Crossref, Graphics, Split, Xslt).
-  latexml::post::run_post_processing(xml, opts)
+/// Assemble the persisted conversion log: core conversion log followed by the
+/// captured post-phase log (Graphics/MathML/XSLT). Mirrors Perl `LaTeXML.pm`,
+/// whose single `flush_log()` after `convert_post` returns both phases in one
+/// buffer. `post_log` is empty when post-processing was skipped, in which case
+/// the core log is returned unchanged (no behavioral drift for non-post runs).
+fn assemble_conversion_log(core_log: &str, post_log: &str) -> String {
+  if post_log.trim().is_empty() {
+    core_log.to_string()
+  } else {
+    format!("{}\n{}", core_log.trim_end(), post_log.trim_end())
+  }
 }
 
 // `ensure_parent_dir` now lives in `latexml_post::writer` so all
