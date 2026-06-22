@@ -35,6 +35,14 @@
 % This one's too weird
 %\[  |a b |_\infty c | \]
 
+\section{Bracketed conditional}
+% [a|b] -> delimited-[]@(conditional@(a,b)), matching Perl. Was unparsed: the
+% bare a|b conditional isn't an expression, so [a|b] had no fence rule (unlike
+% (a|b) and \{a|b\}). \mid is canonicalized to | so [a\mid b] is the same.
+\[ [a|b] \]
+\[ [a \mid b] \]
+\[ E[X|Y] \]
+
 \section{Quantum Mechanics \& Sets}
 See qm.tex and sets.tex
 \end{document}

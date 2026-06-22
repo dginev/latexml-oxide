@@ -219,12 +219,17 @@ Open task §1).
   > that reshapes all math output. Because A is corpus-wide (even though
   > toward-Perl), it needs explicit scope sign-off before undertaking; B (below)
   > is the contained first step (~5 fixtures).
-- **`[a|b]` / `[a \mid b]` bracket-conditional**: unparsed in Rust; Perl
-  `delimited-[]@(conditional@(a,b))` (e.g. `E[X|Y]`). Rust has both pieces
-  (`a|b`→`conditional@`, `[x]`→`delimited-[]@`) but they don't compose — the bare
-  vertbar conditional sits at `statements` level, not `expression`. Fix = a
-  surgical `lbracket … singlevertbar … rbracket` rule, OR lift the
-  vertbar-conditional to `expression` (NOT a plain fence rule — Perl wraps it).
+- **`[a|b]` / `[a \mid b]` bracket-conditional — FIXED 2026-06-22.** Was unparsed
+  in Rust; now `delimited-[]@(conditional@(a,b))` matching Perl (`E[X|Y]` etc.).
+  Root: the bare `a|b` conditional reduces only at statement level (not as an
+  `expression`), so `[a|b]` had no fence rule — though `[(a|b)]` already worked.
+  Fix: a surgical grammar rule `lbracket formula singlevertbar formula rbracket =>
+  bracket_conditional` (`singlevertbar` also covers `\mid`) + a `bracket_conditional`
+  action (semantics.rs) that builds the inner `conditional@(a,b)` (delimiter-less
+  presentation) and wraps it in `delimited-[]` via the same `fenced` path
+  `[(a|b)]` uses (ctxt reborrow for the two ref levels). Suite 1466/0, clippy
+  clean, zero other-fixture changes; regression test in `parse/vertbars`. (The
+  `E` in `E[X|Y]` stays `E@(…)` apply vs Perl `E * …` — divergence #18, preserved.)
 - **`⁡` DecorateOperator over-insertion** (presentation): Rust's blanket
   `parser.rs:711-743` post-walk decorates ALL operator-base SCRIPTOP applies, so
   presentation emits `⁡` (U+2061) where Perl juxtaposes — even unscripted

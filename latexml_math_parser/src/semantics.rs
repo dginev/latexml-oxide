@@ -2259,6 +2259,68 @@ pub fn fence(
   interpret_delimited(op, stuff, ctxt).map(Some)
 }
 
+/// `[a|b]` / `[a \mid b]` — a bracketed conditional. Perl produces
+/// `delimited-[]@(conditional@(a,b))`. Unlike `(a|b)` (→ `conditional@`) and
+/// `\{a|b\}` (→ `conditional-set@`), the bare `a|b` conditional reduces only at
+/// statement level (not as an `expression`), so `[a|b]` had no fence rule and
+/// fell to `ltx_math_unparsed` — even though `[(a|b)]` already works. Build the
+/// inner `conditional@(a,b)` with a delimiter-less presentation, then wrap it in
+/// `delimited-[]` via the same `fenced` path `[(a|b)]` uses. `E[X|Y]`
+/// (conditional expectation) is the canonical witness.
+pub fn bracket_conditional(
+  rule_id: i32,
+  args: Vec<Option<XM>>,
+  pragmas: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let mut stuff: Vec<XM> = args.into_iter().flatten().collect();
+  // Expect [lbracket, a, bar, b, rbracket]; bail defensively otherwise.
+  if stuff.len() != 5 {
+    return Ok(None);
+  }
+  let rbracket = stuff.pop().unwrap();
+  let mut b = stuff.pop().unwrap();
+  let bar = stuff.pop().unwrap();
+  let mut a = stuff.pop().unwrap();
+  let lbracket = stuff.pop().unwrap();
+  // Inner conditional@(a,b) — refs created via a ctxt reborrow so the original
+  // `ctxt` remains available for the outer `fenced` wrap.
+  let inner_refs = {
+    let inner_ctxt = ActionContext {
+      nodes:    ctxt.nodes,
+      document: &mut *ctxt.document,
+    };
+    create_xmrefs(&mut [&mut a, &mut b], inner_ctxt)?
+  };
+  let cond_op: XM = XProps {
+    meaning: Some(Cow::Borrowed("conditional")),
+    ..XProps::default()
+  }
+  .into();
+  let inner = XM::Dual(
+    Box::new(XM::Apply(
+      cond_op.into(),
+      inner_refs.into(),
+      XProps::default(),
+      Meta::default(),
+    )),
+    Box::new(XM::Wrap(
+      vec![a, bar, b],
+      XProps::default(),
+      Meta::default(),
+    )),
+    XProps::default(),
+    Meta::default(),
+  );
+  // Wrap in delimited-[] using the standard single-arg fenced path.
+  fenced(
+    rule_id,
+    vec![Some(lbracket), Some(inner), Some(rbracket)],
+    pragmas,
+    ctxt,
+  )
+}
+
 /// This is similar, but "interprets" a delimited list as being the
 /// application of some operator to the items in the list.
 fn interpret_delimited(

@@ -514,8 +514,105 @@
       <tag role="refnum">4</tag>
       <tag role="typerefnum">§4</tag>
     </tags>
-    <title><tag close=" ">4</tag>Quantum Mechanics &amp; Sets</title>
+    <title><tag close=" ">4</tag>Bracketed conditional</title>
     <para xml:id="S4.p1">
+      <equation xml:id="S4.Ex17">
+        <Math mode="display" tex="[a|b]" text="delimited-[]@(conditional@(a, b))" xml:id="S4.Ex17.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S4.Ex17.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMDual xml:id="S4.Ex17.m1.1">
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S4.Ex17.m1.2"/>
+                    <XMRef idref="S4.Ex17.m1.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="ID" xml:id="S4.Ex17.m1.2">a</XMTok>
+                    <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S4.Ex17.m1.3">b</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S4.Ex18">
+        <Math mode="display" tex="[a\mid b]" text="delimited-[]@(conditional@(a, b))" xml:id="S4.Ex18.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="delimited-[]"/>
+                <XMRef idref="S4.Ex18.m1.1"/>
+              </XMApp>
+              <XMWrap>
+                <XMTok role="OPEN" stretchy="false">[</XMTok>
+                <XMDual xml:id="S4.Ex18.m1.1">
+                  <XMApp>
+                    <XMTok meaning="conditional"/>
+                    <XMRef idref="S4.Ex18.m1.2"/>
+                    <XMRef idref="S4.Ex18.m1.3"/>
+                  </XMApp>
+                  <XMWrap>
+                    <XMTok font="italic" role="ID" xml:id="S4.Ex18.m1.2">a</XMTok>
+                    <XMTok name="mid" role="VERTBAR">∣</XMTok>
+                    <XMTok font="italic" role="ID" xml:id="S4.Ex18.m1.3">b</XMTok>
+                  </XMWrap>
+                </XMDual>
+                <XMTok role="CLOSE" stretchy="false">]</XMTok>
+              </XMWrap>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S4.Ex19">
+        <Math mode="display" tex="E[X|Y]" text="E@(delimited-[]@(conditional@(X, Y)))" xml:id="S4.Ex19.m1">
+          <XMath>
+            <XMApp>
+              <XMTok font="italic" role="UNKNOWN">E</XMTok>
+              <XMDual>
+                <XMApp>
+                  <XMTok meaning="delimited-[]"/>
+                  <XMRef idref="S4.Ex19.m1.1"/>
+                </XMApp>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">[</XMTok>
+                  <XMDual xml:id="S4.Ex19.m1.1">
+                    <XMApp>
+                      <XMTok meaning="conditional"/>
+                      <XMRef idref="S4.Ex19.m1.2"/>
+                      <XMRef idref="S4.Ex19.m1.3"/>
+                    </XMApp>
+                    <XMWrap>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex19.m1.2">X</XMTok>
+                      <XMTok role="VERTBAR" stretchy="false">|</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex19.m1.3">Y</XMTok>
+                    </XMWrap>
+                  </XMDual>
+                  <XMTok role="CLOSE" stretchy="false">]</XMTok>
+                </XMWrap>
+              </XMDual>
+            </XMApp>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
+  <section inlist="toc" xml:id="S5">
+    <tags>
+      <tag>5</tag>
+      <tag role="refnum">5</tag>
+      <tag role="typerefnum">§5</tag>
+    </tags>
+    <title><tag close=" ">5</tag>Quantum Mechanics &amp; Sets</title>
+    <para xml:id="S5.p1">
       <p>See qm.tex and sets.tex</p>
     </para>
   </section>

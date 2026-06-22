@@ -599,6 +599,12 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
              | lparen formula singlevertbar formula rparen => fence
              | lparen formula_list singlevertbar formula rparen => fence
              | lparen formula singlevertbar formula_list rparen => fence
+             // Bracketed conditional `[a|b]` / `E[X|Y]` (conditional expectation).
+             // Perl: delimited-[]@(conditional@(a,b)). Unlike (a|b)/{a|b}, the bare
+             // a|b conditional isn't an `expression`, so [a|b] had no fence rule
+             // and fell to ltx_math_unparsed (though [(a|b)] worked). `singlevertbar`
+             // also covers `\mid` (canonicalized VERTBAR:mid → VERTBAR:|).
+             | lbracket formula singlevertbar formula rbracket => bracket_conditional
              // \middle separator: \left(a\middle|b\right) → fenced with separator
              // MIDDLE tokens are author-explicit (unlike bare |), so unambiguous.
              // `open`/`close` now only match generic delimiters (OTHER_OPEN/OTHER_CLOSE),
