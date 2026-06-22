@@ -202,6 +202,18 @@ Open task §1).
   `\zeta(s)`, `\Phi(x)`, `f(x)`). A real fix must respect Perl's "only declared
   FUNCTION/known-operator names apply; bare letters multiply" rule; heavily
   pruning-sensitive.
+  > **SURVEY 2026-06-22 (current-state + blast radius — groundwork, NOT yet
+  > changed):** confirmed the split cleanly — KNOWN functions ALREADY match Perl
+  > (`\sin(x)`/`\log(x)` → `sine@(x)`/`logarithm@(x)` in both); only UNKNOWN
+  > symbols diverge (`f(x)`/`g(x)`/`P(x)`/`\Gamma(s)`/`\zeta(s)`/`\phi(x)` →
+  > Rust `X@(x)` vs Perl `X * x`; `f(x+1)` → Rust `f@(x+1)` vs Perl `f * (x+1)`).
+  > LEXER ROLE: unknown `f` = `role="UNKNOWN"`, `\max` = `role="OPFUNCTION"` — so
+  > the apply-of-UNKNOWN (A) is separable from the known-fn flatten (B). BLAST
+  > RADIUS of A is corpus-wide: 25 test fixtures, ~150 single-letter applies
+  > (`f@(`×57, `d@(`×51, `g@(`×13, …) would flip to multiply — a sweeping change
+  > that reshapes all math output. Because A is corpus-wide (even though
+  > toward-Perl), it needs explicit scope sign-off before undertaking; B (below)
+  > is the contained first step (~5 fixtures).
 - **`[a|b]` / `[a \mid b]` bracket-conditional**: unparsed in Rust; Perl
   `delimited-[]@(conditional@(a,b))` (e.g. `E[X|Y]`). Rust has both pieces
   (`a|b`→`conditional@`, `[x]`→`delimited-[]@`) but they don't compose — the bare
