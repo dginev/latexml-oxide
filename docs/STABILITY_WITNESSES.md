@@ -367,17 +367,34 @@ box, and `compute_boxes_size` derives `wrapwidth` from the paragraph List's
   `end_mode` (`stomach.rs:726`) already mirrors this order — but it never sees the
   inner `\hsize` because the body-group frame already restored it.
 
-**Fix spec (OPEN — focused, core-path, regression-risky).** Collapse the
-double-framing so the box body's closing `}` drives `end_mode`
-(`leave_horizontal_internal`→repack, then pop) rather than an early body-group
-egroup — i.e. let the mode frame BE the body group, as Perl's `readBoxContents`
-does. Then repack captures the inner `\hsize`, fixing BOTH this `\ht`-invariant
-hang AND the rotated-`p{}`-cell mis-sizing that blocks the global p{}→VBox port
-(SYNC_STATUS 1610.00974 step-3). High regression risk (touches EVERY box body —
-hbox/vbox/vtop/p-cell/argument — and the full test suite), so it warrants its own
-session + an arXiv slice validation, NOT an autonomous inline fix. NOTE: a
-`\loop`-iteration guard would make Rust *Fatal* where Perl *succeeds* (worse) — the
-only faithful fix is the frame-ordering correction so the loop terminates.
+**Fix spec (OPEN — focused, core-path).** Collapse the double-framing so the box
+body's closing `}` drives `end_mode` (`leave_horizontal_internal`→repack, then pop)
+rather than an early body-group egroup — i.e. let the mode frame BE the body group,
+as Perl's `readBoxContents` (TeX_Box.pool.ltxml L139-160) does: a custom digest
+loop that STOPS at the matching `}` (`level >= get_frame_depth()`) WITHOUT
+processing it, then `end_mode` repacks (inner `\hsize` still in scope) + pops.
+
+**PROTOTYPED + VALIDATED + REVERTED 2026-06-22.** Implemented the faithful loop in
+`base_utilities.rs::predigest_box_contents_in_mode` for `mode.ends_with("vertical")`
+only (hbox/math keep the `invoke_token(T_BEGIN)` path). **CONFIRMED it fixes Cluster
+G**: 1707.02464 hang → **completes in 4.8s with PERFECT Perl parity** (10 errors,
+byte-identical to local Perl's 10: 1 babel-russian env + 9 `Attempt to close a
+group…`; the `\narrow` loop now terminates because `\ht` grows as `\hsize`
+shrinks). BUT the naive loop **over-triggers** for general vboxes → 4 suite
+regressions (1463/4), so REVERTED. The clean impl must additionally:
+1. **Preserve VBoxContents reversion braces.** Rebuilding the body as
+   `List::new(boxes)` loses the group `{}`, so `tex=` reverts `\vbox{a}` → `\vbox a`
+   (box_test; Perl keeps `{a}`). The List must revert as a brace group.
+2. **Not paragraph-wrap measured / non-paragraph boxes.** A short `\vbox` now
+   measures at full `\hsize` (sizes_test 37.06pt → 469.75pt) because
+   `compute_boxes_size_lines` returns `wrapwidth` for a fitting final line
+   (`final_wd = ww if wd>0`, font.rs:1667) once the content is a width-tagged
+   paragraph List. Perl measures natural width here — so either the box must not be
+   repacked into a paragraph in this context, or the single-fitting-line width must
+   be natural (not `ww`). Also affects graphrot_test, xytest_test (graphics sizing).
+The core mechanism is PROVEN; these two interactions are the remaining work for a
+focused session. NOTE: a `\loop`-iteration guard would make Rust *Fatal* where Perl
+*succeeds* (worse) — the frame-ordering correction is the only faithful fix.
 
 **SHARED ROOT with the global p{}→VBox port (found 2026-06-22).** The same
 `\hsize`-invariant box model blocks SYNC_STATUS **1610.00974 step-3**: porting the
