@@ -354,6 +354,58 @@ Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/READM
 done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
 
+### 5. Post-processing logging parity for cortex workflows (LOG_BUFFER over the post phase)
+**Goal:** `cortex.log` must carry BOTH core *and* post-processing
+(Scan→Bibliography→CrossRef→**Graphics**→Split→MathML→XSLT) stage information,
+so post-phase failures are captured and counted — not lost. Today the post phase
+is **invisible** in the stored log, which violates the project's #1 signal-integrity
+rule (CLAUDE.md "every `Error:`/`Fatal:` must be captured; fail-safe toward
+detecting failure").
+
+**Root cause (traced 2026-06-22).** The thread-local `LOG_BUFFER`
+(`latexml_core::util::logger`, `bind_log`/`flush_log`) is bound around the **core**
+conversion only. In `cortex_worker.rs::convert_archive`:
+- L370 `converter.convert(...)` runs the core conversion and **flushes** the buffer
+  internally (`converter.rs:167/285/443: log: self.flush_log()`), leaving
+  `LOG_BUFFER = None`.
+- L387 `run_post_processing(...)` then runs the post phases with the buffer
+  **already taken**, so nothing they emit can land in it.
+- L440 the stored log is built from `response.log` (core only) + `runtime_ms` +
+  `Status:`. (Confirmed empirically: a clean `cortex.log` for a 6-EPS paper had a
+  full core trace but **zero** `graphics:process`/`MathML[` lines.)
+
+**Two emission paths in post, both currently uncaptured:**
+1. Progress via `Note!` (`latexml_post/src/lib.rs:158`) → routes through the logger,
+   but is dropped because `LOG_BUFFER` is unbound during post.
+2. **Failures via raw `eprintln!`** in `latexml_oxide/src/post.rs`
+   (L127 parse, L174 Split, **L210 per-phase `"{label} failed"` — covers Graphics**,
+   L411 XSLT, L432 top-level, L476 page-write) → stderr only, never captured, and
+   they do **not** increment `common::error::REPORT`, so `Status:conversion` stays
+   `0`/OK on a real post failure (silent false-negative). Plus two leftover
+   `eprintln!("DBG …")` debug lines in `graphics.rs:1239/1287` to drop.
+
+**Why it matters (this session's trigger):** hep-th0101114 / astro-ph0004105 show
+raw `.eps` in the deployed preview. The current binary + fleet env convert all EPS→PNG
+correctly under `--standalone` (any profile — Graphics is **unconditional**,
+`post.rs:288`, NOT profile-gated; the ar5iv↔generic deltas are only
+`preload ar5iv.sty` / `noinvisibletimes` / `nodefaultresources`). So the deployed
+records were produced under different conditions — but because the post phase is
+unlogged, we **cannot tell from `cortex.log` whether Graphics ran-and-failed or never
+ran**. Fixing the logging is the prerequisite for diagnosing this and any future
+post-phase regression.
+
+**Fix design.** Provide a LOG_BUFFER equivalent spanning the post phase:
+`bind_log()` (or re-bind) immediately before `run_post_processing`, `flush_log()`
+after, and **append** the captured post-log to `response.log` before assembling the
+stored `cortex.log`. Convert the `post.rs` `eprintln!` failure sites to the
+capturable `Error!`/`Warn!`/`Note!` macros so they (a) land in the buffer and
+(b) bump the status counter, so `Status:conversion` reflects post failures. Remove
+the `graphics.rs` DBG `eprintln!`s. Mind the thread-locality (post must run on the
+same thread as `bind_log`; `convert_archive` is single-threaded per job, so OK).
+Verify: a forced EPS-tool failure yields a captured `Error:` line + non-zero
+`Status:`; a clean run's `cortex.log` now contains `graphics:process` / `MathML[`
+markers.
+
 ---
 
 ## Deep deferred families (parked — large or shared; dedicated sessions)
