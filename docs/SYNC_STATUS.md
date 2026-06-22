@@ -426,6 +426,50 @@ wiring deferred to the cortex-side owner.**
   cortex-side maintainer (per 2026-06-22 directive: leave the live fleet binary
   alone).
 
+### 6. Graphics: never ship a raw `.eps`/`.pdf` to the web + post-orchestration audit
+**Trigger:** hep-th0101114 / astro-ph0004105 showed raw `.eps` in the deployed
+preview. We can never show `.eps`/`.pdf` on the web — always a web-native target
+(`.png`/`.svg`). Verified the current binary converts both papers' EPS→PNG
+correctly (6/16 PNGs), so the symptom was a *failed* conversion shipping the raw
+source (now also visible via task 5's logging).
+
+**LANDED 2026-06-22 (`latexml_post/src/graphics.rs`).** Removed two raw-source
+leaks that diverged from Perl `Post/Graphics.pm`:
+- **Conversion-failure fallback** (was: `Error!` then `copy_to_destination` of
+  the raw source → `imagesrc="fig.eps"`). Perl L324-329 does `Error`/`Warn` +
+  `return` with NO imagesrc. Now matches: emit the `imageprocessing` Error and
+  leave `imagesrc` unset.
+- **`Plan::NotFound`** (was: `set_attribute("imagesrc", graphic)` → raw path for
+  a missing file). Perl L216-219 `Warn`s + `return` without imagesrc. Now Warn
+  only.
+- Both rely on the HTML5 XSLT (`LaTeXML-misc-xhtml.xsl:154`): a `<graphics>`
+  lacking `@imagesrc` renders as `class="ltx_missing ltx_missing_image"` (empty
+  src) — the correct "couldn't render" marker, never a broken `<img
+  src=".eps">`. `.eps`/`.ps`/`.pdf` all route through `Plan::Convert` (only
+  web-native rasters hit `Plan::Copy`), so this covers `.pdf` too. Suite 1467/0;
+  hep-th0101114 still 6 PNGs / zero `.eps` srcs.
+
+**Post-orchestration audit vs Perl `LaTeXML.pm::convert_post` + `Config.pm`
+(integrated path — the one cortex uses, NOT `bin/latexmlpost`).** Our
+`run_post_processing` order — Split → Scan → MakeIndex → MakeBibliography →
+CrossRef → Graphics → {pmml/cmml} → XSLT — **matches** Perl's `@procs` order,
+and our always-on phases are equivalent to Perl's `if <option>` gates at their
+`Config.pm` defaults (`scan`/`index`/`crossref`/`dographics`/`numbersections`
+all default 1; `pmml` auto-added for html/xhtml/jats). **Faithful for the
+`ltx:graphics`/EPS path.** Known deltas (separate, broader parity — NOT blocking
+the EPS task; candidates for future work):
+- **`PictureImages` processor is absent.** Perl always pushes it (full if
+  `picimages`, else `empty_only=>1`); Rust handles `<ltx:picture>` via the
+  regex `extract_svg_fragments` + HTML5 inline-SVG injection instead.
+- **`SVG` is a regex extractor, not a `LaTeXML::Post::SVG` processor** (intentional
+  divergence; functional for HTML5 inline SVG).
+- **No `prescan` mode** (Perl gates most procs on `!prescan`; rare multi-pass
+  DB-build path, unused by cortex/CLI).
+- **Graphics is unconditional** in Rust vs Perl's `dographics` (which Config.pm
+  only defaults to 1 when a destination/archive exists) — so Rust attempts
+  graphics even for stdout output. Harmless for web (always has a destination);
+  matches Perl whenever a destination is set.
+
 ---
 
 ## Deep deferred families (parked — large or shared; dedicated sessions)

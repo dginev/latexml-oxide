@@ -2003,8 +2003,6 @@ impl Processor for Graphics {
       .unwrap_or(4)
       .clamp(1, 22);
     let n_workers = convert_count.min(worker_cap).max(1);
-    let source_dir_ref = source_dir.as_str();
-    let dest_dir_ref = dest_dir.as_str();
     let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
     if convert_count > 0 {
       use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
@@ -2131,12 +2129,17 @@ impl Processor for Graphics {
                       raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
                     }
                   } else {
-                    // Final-failure: every conversion path exhausted. Promoted
-                    // from warn → Error 2026-05-08 because we want all
-                    // images to convert successfully, and a silent warning
-                    // hides regressions in the rasterizer chain.
-                    // Error class/object mirror Perl Graphics.pm:274
-                    // `Error('imageprocessing', $source, …)` so the
+                    // Final-failure: every conversion path exhausted. Mirror
+                    // Perl Graphics.pm L324-329 (Error + `return` with NO
+                    // imagesrc) — do NOT fall back to copying the raw source.
+                    // A raw .eps/.ps/.pdf is never usable on the web; copying it
+                    // would emit a broken `<img src="fig.eps">`. Leaving
+                    // @imagesrc unset makes the HTML5 XSLT
+                    // (LaTeXML-misc-xhtml.xsl L154) render the node as
+                    // `class="ltx_missing ltx_missing_image"` (empty src) — the
+                    // correct "couldn't render" signal. (User directive
+                    // 2026-06-22; raw .eps/.pdf are never web-native.)
+                    // Error class/object mirror Perl Graphics.pm:274 so the
                     // harness aggregates with engine/package emissions.
                     Error!(
                       "imageprocessing",
@@ -2145,20 +2148,10 @@ impl Processor for Graphics {
                       source,
                       abs_dest_str
                     );
-                    if let Some(rel) =
-                      Self::copy_to_destination(source, source_dir_ref, dest_dir_ref)
-                    {
-                      ConvertOutcome {
-                        job_id:   *job_id,
-                        imagesrc: Some(rel),
-                        raw_dims: Self::read_image_dimensions(source),
-                      }
-                    } else {
-                      ConvertOutcome {
-                        job_id:   *job_id,
-                        imagesrc: None,
-                        raw_dims: None,
-                      }
+                    ConvertOutcome {
+                      job_id:   *job_id,
+                      imagesrc: None,
+                      raw_dims: None,
                     }
                   };
                   local.push(outcome);
@@ -2199,24 +2192,25 @@ impl Processor for Graphics {
       };
     for plan in &plans {
       match plan {
-        Plan::NotFound { idx, graphic } => {
-          // Perl `Post/Graphics.pm:216` uses Warn level. An earlier
-          // Rust-only promotion to Error (2026-05-08) was motivated by
-          // "we want all images to convert", but the real driver of the
-          // not-found cases on the canvas is the missing
-          // `doc.get_search_paths()` half of `find_graphics_paths`
-          // (just fixed above), not actual missing files. With sources
-          // findable, this branch hits only when the .tex literally
-          // references a non-existent file — exactly the case Perl
-          // emits at Warn level. Restore Perl-faithful Warn.
+        Plan::NotFound { idx: _, graphic } => {
+          // Perl `Post/Graphics.pm:216-219`: Warn + `return` WITHOUT setting
+          // @imagesrc. An earlier Rust-only promotion to Error (2026-05-08)
+          // was reverted once the missing `doc.get_search_paths()` half of
+          // `find_graphics_paths` was fixed; with sources findable this branch
+          // hits only when the .tex references a genuinely non-existent file.
+          // We must NOT then set `imagesrc` to the raw `graphic` path: that
+          // emits a broken `<img src="missing.eps">` (and leaks a raw
+          // .eps/.pdf to the web). Leaving @imagesrc unset makes the HTML5
+          // XSLT (LaTeXML-misc-xhtml.xsl L154) render the node as
+          // `class="ltx_missing ltx_missing_image"` (empty src) — the correct
+          // "couldn't render" signal, matching Perl (user directive
+          // 2026-06-22; raw .eps/.pdf are never web-native).
           Warn!(
             "expected",
             "source",
             "No graphic source found; skipping (source was '{}')",
             graphic
           );
-          let mut node_mut = nodes[*idx].clone();
-          node_mut.set_attribute("imagesrc", graphic).ok();
         },
         Plan::Copy { idx, source, options } => {
           let mut node_mut = nodes[*idx].clone();
