@@ -71,6 +71,15 @@ rerun is the clear next step:**
   coverage fix is host-side (`tlmgr install cyrillic cm-super`), not a code bug;
   an optional surpass-Perl charset-decode fallback for missing inputenc `.def`s
   would convert them without the host package (needs authorization).**
+- *fatal/Timeout mining (2026-06-22)*: 18 papers → 16 Perl-fatal (parity), 2
+  candidates. `1506.09195` = missing custom `my_paper.sty` + deep expl3/datatool/
+  l3fp (local Perl also fatals; Rust runs the conditional runaway to the IfLimit
+  guard). **`1707.02464` = the ONE genuine Rust-only bug from all 53 fatal papers:
+  Perl completes in 11.76s, Rust hangs to the 60s watchdog** — a custom
+  `\narrow` macro's `\hsize`-shrink loop never terminates because Rust's vbox
+  `\ht` is `\hsize`-invariant (Perl models paragraph height ∝ `\hsize`). Recorded
+  as `STABILITY_WITNESSES.md` Cluster G (open; box-model fix, regression-risky,
+  warrants a focused session).
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*

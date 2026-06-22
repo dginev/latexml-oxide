@@ -315,6 +315,48 @@ slice, then pick the limit, add the guard, and validate against the full suite
 straightforward; only the calibration is open work. Distinct from Cluster A's
 *memory* (RSS-cap) blowups: this is *stack* (recursion-depth) exhaustion.
 
+## Cluster G — vbox `\ht` is `\hsize`-invariant → `\hsize`-shrink loops never terminate (GENUINE Rust-only; OPEN)
+
+**Witness:** `1707.02464` (`sandbox-arxiv-10k-shuffle`, fatal/Timeout/Convert).
+Mined 2026-06-22 from the fatal cross-join: **Perl `latexml` 0.8.8 COMPLETES in
+11.76s** (10 errors, exit 0) but **Rust hangs → `Fatal:Timeout:Convert`** (60s
+watchdog; release, current HEAD; RSS only 168 MB so it's CPU/loop, not memory).
+Not env, not parity — a real Rust-only divergence.
+
+**Root cause (airtight).** The paper's custom `\narrow[#1]#2\par` macro
+(used via `\disp`) line-fits a paragraph by shrinking `\hsize` 1pt at a time and
+**looping while the vbox height is unchanged**, expecting the paragraph to
+eventually wrap to one more line (taller box):
+```
+\loop \setbox\tmpbox\vbox{\hsize=\wd\tmpbox \advance\hsize by -1pt #2}%
+      \ifdim\ht\tmpbox=\tmpdim \relax \repeat
+```
+Rust's `\vbox{\hsize=W …para…}` height does **not** depend on `W`. Direct probe:
+a vbox at `\hsize=400pt` vs `\hsize=20pt` of the same 20-word paragraph compares
+**equal** (`\ifdim\ht=\ht` true → `BUG:VBOX-HEIGHT-HSIZE-INVARIANT`). So the loop
+condition never flips → it runs until the wall-clock guard. Threshold is ~18
+words (below that the natural width is ≤ `\hsize`, `\ifdim\wd>` is false, the
+loop is skipped). Minimal repro: preamble + `\disp{<≥18 words>}`.
+
+**Why this is Rust-only (vs the SHARED Cluster D).** Cluster D loops on `\wd` of
+a `\hbox{\font<glyph>}` which is 0 in BOTH engines (neither reads TFM glyph
+widths) → both hang → Rust's graceful abort is *better*. Here the loop depends on
+**paragraph height as a function of `\hsize`**, which **Perl LaTeXML models** (its
+`\narrow` loop terminates → 11.76s) but **Rust does not** (no `\hsize`-aware
+line-count/height estimate). Confirmed: removing the `$$`/math is still slow
+(B), and a *fixed* 200-iteration vbox-remeasure loop is fast (C) — so it's the
+non-terminating loop, not per-iteration math/box cost.
+
+**Fix direction (OPEN — focused box-model session; regression-risky).** Model a
+vbox paragraph's height as ∝ `ceil(content_width / \hsize) × \baselineskip` so
+`\ht` grows when `\hsize` shrinks below the content width, matching Perl. The
+grep for an `\hsize`-aware height estimate finds none, so this is a genuine
+box-dimension subsystem gap. High regression risk (every `\ht`/`\vbox` consumer +
+the 1467-test suite must stay green), so it warrants its own session + an arXiv
+slice validation, NOT an inline fix. NOTE: a `\loop`-iteration guard would make
+Rust *Fatal* where Perl *succeeds* (worse) — the only faithful fix is to make the
+loop terminate.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
