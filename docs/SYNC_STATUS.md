@@ -488,10 +488,17 @@ Perl `dographics`.
     pops the body-group frame (restoring the outer `\hsize`) BEFORE
     `repack_horizontal_in_list` captures it, so vbox paragraphs always wrap at the
     OUTER `\hsize`. Perl's `endMode` repacks BEFORE `popStackFrame` (one frame, not
-    two). Full mechanism + fix spec in `STABILITY_WITNESSES.md` Cluster G. The one
-    frame-ordering fix **unblocks BOTH** this global p{} port AND Cluster G's
-    `\narrow`-loop hang. High-value unifying target; dedicated session (core
-    digestion path → high regression surface).
+    two). **The frame-ordering fix LANDED 2026-06-22 (`7545e07fd6`) — see
+    `STABILITY_WITNESSES.md` Cluster G (FIXED).** `\hsize`-aware wrapping now applies
+    to p{} cells too (they use `\vtop`/VBoxContents), so this port's rotated-cell
+    sizing BLOCKER is RESOLVED. **Remaining step-3 work** (now unblocked, no longer
+    `\hsize`-blocked): flip the global `p{}` column to `\lx@tabular@p`/VBoxContents +
+    teach `\lx@alignment@multicolumn` to splice when the column is already
+    VBox-shaped (prototyped 2026-06-22: non-rotated tables become Perl-exact,
+    colortbls/tabular/array clean parity fixes) — then re-validate graphrot/cells
+    rotated sizing against Perl with the box-model fix in place, and fix the genuine
+    p{}-block-content correctness bug (1510.07685 `<ltx:itemize> isn't allowed in
+    <ltx:p>`). Reproducer: `docs/reproducers/pcolumn_block_content_in_p.tex`.
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.

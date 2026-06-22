@@ -315,126 +315,41 @@ slice, then pick the limit, add the guard, and validate against the full suite
 straightforward; only the calibration is open work. Distinct from Cluster A's
 *memory* (RSS-cap) blowups: this is *stack* (recursion-depth) exhaustion.
 
-## Cluster G — vbox `\ht` is `\hsize`-invariant → `\hsize`-shrink loops never terminate (GENUINE Rust-only; OPEN)
+## Cluster G — vbox `\ht` was `\hsize`-invariant (GENUINE Rust-only) — ✅ FIXED 2026-06-22
 
-**Witness:** `1707.02464` (`sandbox-arxiv-10k-shuffle`, fatal/Timeout/Convert).
-Mined 2026-06-22 from the fatal cross-join: **Perl `latexml` 0.8.8 COMPLETES in
-11.76s** (10 errors, exit 0) but **Rust hangs → `Fatal:Timeout:Convert`** (60s
-watchdog; release, current HEAD; RSS only 168 MB so it's CPU/loop, not memory).
-Not env, not parity — a real Rust-only divergence.
+**Witness `1707.02464`** (fatal/Timeout/Convert): a custom `\narrow` macro line-fits
+a paragraph by shrinking `\hsize` 1pt at a time, looping `\ifdim\ht\tmpbox=\tmpdim
+\repeat` — expecting `\ht` to grow as the paragraph wraps to more lines. Rust's vbox
+`\ht` did NOT depend on `\hsize`, so the loop never terminated → `Fatal:Timeout` at
+the 60s watchdog (Perl 0.8.8 completes in 11.76s, 10 errors). Not env, not parity.
 
-**Root cause (airtight).** The paper's custom `\narrow[#1]#2\par` macro
-(used via `\disp`) line-fits a paragraph by shrinking `\hsize` 1pt at a time and
-**looping while the vbox height is unchanged**, expecting the paragraph to
-eventually wrap to one more line (taller box):
-```
-\loop \setbox\tmpbox\vbox{\hsize=\wd\tmpbox \advance\hsize by -1pt #2}%
-      \ifdim\ht\tmpbox=\tmpdim \relax \repeat
-```
-Rust's `\vbox{\hsize=W …para…}` height does **not** depend on `W`. Direct probe:
-a vbox at `\hsize=400pt` vs `\hsize=20pt` of the same 20-word paragraph compares
-**equal** (`\ifdim\ht=\ht` true → `BUG:VBOX-HEIGHT-HSIZE-INVARIANT`). So the loop
-condition never flips → it runs until the wall-clock guard. Threshold is ~18
-words (below that the natural width is ≤ `\hsize`, `\ifdim\wd>` is false, the
-loop is skipped). Minimal repro: preamble + `\disp{<≥18 words>}`.
+**Root cause:** a FRAME-ORDERING bug in `predigest_box_contents_in_mode`. Rust used
+TWO frames (the mode frame + a body-group frame from `invoke_token(T_BEGIN)`); the
+body's `}` popped the body-group frame — restoring the OUTER `\hsize` — BEFORE the
+repack captured it, so every implicit vbox paragraph wrapped at the outer width. Perl
+uses ONE frame: `endMode` repacks (inner `\hsize` still in scope) THEN pops. (The
+`\hsize`-aware line-break machinery `compute_boxes_size_lines` was already correct.)
 
-**Why this is Rust-only (vs the SHARED Cluster D).** Cluster D loops on `\wd` of
-a `\hbox{\font<glyph>}` which is 0 in BOTH engines (neither reads TFM glyph
-widths) → both hang → Rust's graceful abort is *better*. Here the loop depends on
-**paragraph height as a function of `\hsize`**, which **Perl LaTeXML models** (its
-`\narrow` loop terminates → 11.76s) but **Rust does not** (no `\hsize`-aware
-line-count/height estimate). Confirmed: removing the `$$`/math is still slow
-(B), and a *fixed* 200-iteration vbox-remeasure loop is fast (C) — so it's the
-non-terminating loop, not per-iteration math/box cost.
+**Fix (`7545e07fd6`), three parts:** (a) for `mode.ends_with("vertical")`, a faithful
+port of Perl `readBoxContents` (TeX_Box.pool.ltxml L139-160) — one mode frame, a loop
+that STOPS at the matching `}` unprocessed (`level >= get_frame_depth()`), then
+`end_mode` repacks-then-pops (captures the inner `\hsize`); hbox/math keep the old
+`invoke_token(T_BEGIN)` path. (b) a brace-wrapping `reversion` on `VBoxContents` (the
+rebuilt `List::new(boxes)` lost the group `{}` → `\vbox{a}` reverted to `\vbox a`).
+(c) `\@@tabular` marks its result box `mode=internal_vertical` (like `\halign`,
+tex_tables.rs:312) so a containing `\vbox`/`\vtop`'s repack SKIPS it per-item instead
+of wrapping it to `\hsize` (was sizes_test 37→469.75pt) — no content-shape gate
+needed. 1707.02464 now completes ~4.8s with 10 errors = local Perl (byte-identical).
+Full suite 1467/0; clippy clean. graphrot.xml re-baselined (rotated `\rotatebox` dims
+shift, mostly toward Perl, e.g. angle=0 height 32.5→30.0 vs Perl 27.4; pre-existing
+font-metric / p{}-port divergences remain).
 
-**ROOT CAUSE — PRECISE (2026-06-22).** The `\hsize`-aware paragraph-wrap machinery
-**already exists and is correct**: `Font::compute_boxes_size_lines(wrapwidth, …)`
-(`common/font.rs:1629`) breaks a line when `wd > wrapwidth` → more lines → taller
-box, and `compute_boxes_size` derives `wrapwidth` from the paragraph List's
-`width` property (set by `repack_horizontal`/`make_horizontal_list` =
-`LookupDimension('\hsize')`). The bug is a **frame-ordering divergence** in
-`base_utilities.rs::predigest_box_contents_in_mode`:
-- Rust uses **TWO** frames — the mode frame (`begin_mode`) **plus** a body-group
-  frame pushed by `invoke_token(&T_BEGIN!())`. The inner `\hsize=W` is assigned in
-  the body-group frame, and the body's closing `}` (T_END) pops that frame
-  (**restoring `\hsize` to the outer value**) BEFORE the manual
-  `repack_horizontal_in_list(&mut item)` runs → `make_horizontal_list` captures the
-  OUTER `\hsize` → every implicit vbox paragraph wraps at the outer width
-  regardless of the inner `\hsize`.
-- Perl uses **ONE** frame (the mode frame IS the group): `endMode`
-  (`Stomach.pm:544-557`) runs `leaveHorizontal_internal`→`repackHorizontal`
-  (capturing the inner `\hsize`, L487) and ONLY THEN `popStackFrame`. Rust's
-  `end_mode` (`stomach.rs:726`) already mirrors this order — but it never sees the
-  inner `\hsize` because the body-group frame already restored it.
+**Also UNBLOCKS the global p{}→VBox port** (SYNC_STATUS 1610.00974 step-3): the same
+`\hsize`-aware wrapping now applies to p{} cells (`\vtop`/VBoxContents). Applying that
+port — now viable — is what fixes the p{} block-content correctness bug 1510.07685
+(`<ltx:itemize> isn't allowed in <ltx:p>`). The earlier failed attempts (naive loop
+regressions, the content-shape gate that re-broke Cluster G) are in git history.
 
-**Fix spec (OPEN — focused, core-path).** Collapse the double-framing so the box
-body's closing `}` drives `end_mode` (`leave_horizontal_internal`→repack, then pop)
-rather than an early body-group egroup — i.e. let the mode frame BE the body group,
-as Perl's `readBoxContents` (TeX_Box.pool.ltxml L139-160) does: a custom digest
-loop that STOPS at the matching `}` (`level >= get_frame_depth()`) WITHOUT
-processing it, then `end_mode` repacks (inner `\hsize` still in scope) + pops.
-
-**PROTOTYPED + VALIDATED + REVERTED 2026-06-22.** Implemented the faithful loop in
-`base_utilities.rs::predigest_box_contents_in_mode` for `mode.ends_with("vertical")`
-only (hbox/math keep the `invoke_token(T_BEGIN)` path). **CONFIRMED it fixes Cluster
-G**: 1707.02464 hang → **completes in 4.8s with PERFECT Perl parity** (10 errors,
-byte-identical to local Perl's 10: 1 babel-russian env + 9 `Attempt to close a
-group…`; the `\narrow` loop now terminates because `\ht` grows as `\hsize`
-shrinks). BUT the naive loop **over-triggers** for general vboxes → 4 suite
-regressions (1463/4), so REVERTED. The clean impl must additionally:
-1. **Preserve VBoxContents reversion braces.** Rebuilding the body as
-   `List::new(boxes)` loses the group `{}`, so `tex=` reverts `\vbox{a}` → `\vbox a`
-   (box_test; Perl keeps `{a}`). The List must revert as a brace group.
-2. **Not paragraph-wrap measured / non-paragraph boxes.** A short `\vbox` now
-   measures at full `\hsize` (sizes_test 37.06pt → 469.75pt) because
-   `compute_boxes_size_lines` returns `wrapwidth` for a fitting final line
-   (`final_wd = ww if wd>0`, font.rs:1667) once the content is a width-tagged
-   paragraph List. Perl measures natural width here — so either the box must not be
-   repacked into a paragraph in this context, or the single-fitting-line width must
-   be natural (not `ww`). Also affects graphrot_test, xytest_test (graphics sizing).
-The core mechanism is PROVEN; these two interactions are the remaining work for a
-focused session. NOTE: a `\loop`-iteration guard would make Rust *Fatal* where Perl
-*succeeds* (worse) — the frame-ordering correction is the only faithful fix.
-
-**SECOND ATTEMPT 2026-06-22 (content-shape gate) — FAILED; root is the halign
-mode-leak.** Tried gating the `end_mode` repack on
-`boxes_are_simple_horizontal(box_list)` (reset MODE→bound to skip repack for
-non-paragraph content, mirroring the OLD `has_only_simple_horizontal_content`
-guard). It FIXED sub-fix-2's 3 regressions (sizes_test/graphrot_test/xytest_test
-all pass) but **re-broke Cluster G** — 1707.02464 hangs again (`Fatal:Timeout`),
-because the shape gate FALSE-NEGATIVES on real `\narrow` paragraph content (it's
-not all plain TBoxes), so the repack it needs is skipped. **CONCLUSION: a
-content-shape gate is fundamentally unable to distinguish "genuine paragraph
-needing `\hsize` wrap" from "tabular that leaked MODE=horizontal" — the real
-distinction is the leaked mode, not the shape.**
-
-**CORRECTION 2026-06-22 (3rd look): the "halign mode-leak" hypothesis is WRONG —
-the over-wrap mechanism is OPAQUE to static analysis.** Read the `\halign`
-constructor (tex_tables.rs:311-342): its `after_digest` sets the whatsit
-`mode="internal_vertical"` (correct, NOT horizontal) and its
-`begin_mode("restricted_horizontal")`/`end_mode` are BALANCED (313/340) — no frame
-or mode leak. So `repack_horizontal`'s per-item check SHOULD skip the tabular
-(mode=internal_vertical), and the faithful loop's `end_mode` should see
-MODE=internal_vertical (no repack) → the `\vbox{\halign}` should measure natural
-width. Yet with the faithful loop it measures full `\hsize` (sizes_test
-37→469.75pt). **The mechanism cannot be determined by code-reading** — it needs
-runtime instrumentation (log mode/wrapwidth/lines in `compute_boxes_size` +
-`repack_horizontal` for the `\vbox{\halign}` case) in a focused session. **Net:
-the box-model fix is (a) the frame-ordering loop [PROVEN fixes Cluster G], (b) the
-VBoxContents reversion-braces fix, (c) the `\vbox{\halign}` over-wrap — root
-UNKNOWN, needs runtime debugging.** A focused, hands-on multi-subsystem session,
-NOT an autonomous static change.
-
-**SHARED ROOT with the global p{}→VBox port (found 2026-06-22).** The same
-`\hsize`-invariant box model blocks SYNC_STATUS **1610.00974 step-3**: porting the
-global `p{}` column to Perl's faithful `\lx@tabular@p`/VBoxContents form is
-Perl-exact for non-rotated tables (3 fixtures become clean parity fixes, fixes the
-genuine `<ltx:itemize> isn't allowed in <ltx:p>` correctness bug — 1510.07685) but
-**rotated `p{}` cells mis-size** (graphrot `rotfloat2`: Rust 810pt vs Perl 214pt)
-because the `p{1in}` cell **height** under `\hsize` is wrong — the very same gap.
-One box-model fix (`\hsize`-constrained line-breaking feeding `compute_boxes_size`)
-unblocks BOTH. Empirically verified + reverted; see SYNC_STATUS 1610.00974 step-3
-and `docs/reproducers/pcolumn_block_content_in_p.tex`.
 
 ## Method notes
 
