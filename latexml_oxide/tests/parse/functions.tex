@@ -63,5 +63,12 @@
 \[ f ( a \leftrightarrow b )  \]
 \[ f( \rightarrow , \leftarrow) \]
 
+\section{Multi-argument calls flatten (Perl ApplyDelimited)}
+% A known function applied to a paren comma-list spreads the items as direct
+% operands, dropping the implicit vector: f(a,b) -> f@(a,b), not f@(vector@(a,b)).
+% Matches Perl. (Unknown-symbol apply keeps its vector wrap -- divergence #18.)
+\[ f(a,b) \]
+\[ g(a,b,c) \]
+\[ \max(a,b) \]
 
 \end{document}

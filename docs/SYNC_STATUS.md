@@ -186,16 +186,21 @@ Open task §1).
 > the parse-tree / content-MathML structure and want a focused regression
 > budget). Notes kept here; do NOT pick at them piecemeal.
 
-- **`f(a,b)` multi-arg flattening** (HIGH value, central/risky): a
-  function/opfunction applied to a paren comma-list wraps it as one `vector@`
-  arg (`\max(a,b)`→`maximum@(vector@(a,b))`) vs Perl flat `maximum@(a,b)`.
-  Affects all multivariate calls. Perl `ApplyDelimited`/`extract_separators`
-  drops the commas and puts items DIRECTLY as the operator's args. Rust path:
-  `(a,b)`→`lparen formula_list rparen => fenced` (vector), then
-  `function fenced_factor => prefix_apply` (wrap). Fix = add
-  `function/opfunction/trigfunction lparen formula_list rparen => apply_delimited`
-  FLATTEN rules + pruning to prefer the flat apply. Pruning-sensitive; full-suite
-  + Perl cross-check required (see builder.rs:699-704).
+- **`f(a,b)` multi-arg flattening — FIXED 2026-06-22.** A KNOWN function applied
+  to a paren comma-list now flattens: `\max(a,b)`→`maximum@(a,b)` (was
+  `maximum@(vector@(a,b))`), matching Perl `ApplyDelimited`/`extract_separators`.
+  Implementation was simpler than the planned grammar-rule approach: a post-parse
+  spread in the `prefix_apply` ACTION (`semantics.rs`, helper `vector_tuple_items`)
+  — when a function-role op (FUNCTION/OPFUNCTION/TRIGFUNCTION) applies to a
+  `Dual` whose content is `Apply(vector, [refs])`, spread the items as direct
+  operands instead of wrapping. No grammar/pruning change → NOT pruning-sensitive,
+  zero fixture regressions. Scoped to known function roles, so unknown-`f` apply
+  (`f(a,b)`→`f@(vector@(a,b))`) is untouched — the intentional divergence #18.
+  Verified Perl-identical: `\max(a,b)`/`\gcd(a,b)`/`\min(x,y,z)`/`g(a,b,c)` +
+  nesting/`\frac`/trailing-ops; suite 1466/0; regression test in
+  `parse/functions`. (Known pre-existing aside: juxtaposed `\max(a,b)\min(c,d)`
+  greedily reads `\max` over the product — a separate function-juxtaposition
+  pruning issue, not this flatten.)
 - **`f(x)` single-arg apply-vs-multiply** (most PERVASIVE divergence): for an
   UNKNOWN/undeclared symbol + paren arg, Rust reads *application*, Perl reads
   *multiplication* — `\Gamma(s)`→Rust `Gamma@(s)` vs Perl `Gamma * s` (likewise

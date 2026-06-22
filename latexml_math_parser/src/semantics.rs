@@ -1186,6 +1186,24 @@ pub fn infix_apply_nary(
   Ok(Some(apply_tree))
 }
 
+/// If `xm` is the content branch of a paren comma-list — an `Apply(vector,
+/// [items])` produced by `(a,b,…)` — return its items (cloned) so a known
+/// function applied to it can SPREAD them as direct operands. Mirrors Perl's
+/// `ApplyDelimited`/`extract_separators`, which drops the implicit `vector`:
+/// `\max(a,b)` → `max@(a,b)`, NOT `max@(vector@(a,b))`. Returns None for a
+/// single fenced arg (a bare `Ref`) or any non-`vector` content, so `\sin(x)`
+/// and the unknown-`f` apply divergence (OXIDIZED_DESIGN #18) are unaffected.
+fn vector_tuple_items(xm: &XM) -> Option<Vec<Option<XM>>> {
+  if let XM::Apply(Operator(op), Args(items), ..) = xm
+    && let XM::Token(props, _) = op.as_ref()
+    && props.meaning.as_deref() == Some("vector")
+  {
+    Some(items.clone())
+  } else {
+    None
+  }
+}
+
 pub fn prefix_apply(
   _rule_id: i32,
   mut args: Vec<Option<XM>>,
@@ -1196,7 +1214,9 @@ pub fn prefix_apply(
   // Perl: when a FUNCTION applies to a fenced arg (from `fenced` semantic action),
   // lift the XMDual to wrap the entire application:
   //   Apply(func, Dual(Ref, Wrap)) → Dual(Apply(Ref(func), Ref), Apply(func, Wrap))
-  // This matches Perl's ApplyFunction XMDual structure.
+  // This matches Perl's ApplyFunction XMDual structure. A multi-arg paren
+  // comma-list (`Apply(vector, [refs])` content) is SPREAD into the operands
+  // (`\max(a,b)` → `max@(a,b)`), per Perl ApplyDelimited.
   let is_function_role = match &prefixop {
     Some(XM::Lexeme(lex, _)) => {
       let role = lex.split(':').next().unwrap_or("");
@@ -1210,7 +1230,7 @@ pub fn prefix_apply(
   };
   if is_function_role
     && let Some(XM::Dual(ref content, ref pres, ..)) = arg1
-    && matches!(**content, XM::Ref(_))
+    && (matches!(**content, XM::Ref(_)) || vector_tuple_items(content).is_some())
     && matches!(**pres, XM::Wrap(..))
   {
     let mut func = prefixop.unwrap();
@@ -1218,13 +1238,18 @@ pub fn prefix_apply(
     let XM::Dual(content_box, pres_box, ..) = arg1_inner else {
       unreachable!()
     };
-    let content_ref = *content_box;
     let pres_wrap = *pres_box;
+    // Single fenced arg `(x)` → one operand; n-ary paren comma-list `(a,b,…)`
+    // → spread its items, dropping the implicit `vector` (Perl ApplyDelimited).
+    let content_args = match vector_tuple_items(&content_box) {
+      Some(items) => items,
+      None => vec![Some(*content_box)],
+    };
     let func_refs = create_xmrefs(&mut [&mut func], ctxt)?;
     let func_ref = func_refs.into_iter().next().unwrap();
     let content_apply = XM::Apply(
       func_ref.into(),
-      Args(vec![Some(content_ref)]),
+      Args(content_args),
       XProps::default(),
       Meta::default(),
     );

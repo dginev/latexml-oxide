@@ -714,4 +714,86 @@
       </equation>
     </para>
   </section>
+  <section inlist="toc" xml:id="S8">
+    <tags>
+      <tag>8</tag>
+      <tag role="refnum">8</tag>
+      <tag role="typerefnum">§8</tag>
+    </tags>
+    <title><tag close=" ">8</tag>Multi-argument calls flatten (Perl ApplyDelimited)</title>
+    <para xml:id="S8.p1">
+      <equation xml:id="S8.Ex27">
+        <Math mode="display" tex="f(a,b)" text="f@(a, b)" xml:id="S8.Ex27.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S8.Ex27.m1.1"/>
+                <XMRef idref="S8.Ex27.m1.2"/>
+                <XMRef idref="S8.Ex27.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="FUNCTION" xml:id="S8.Ex27.m1.1">f</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex27.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex27.m1.3">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S8.Ex28">
+        <Math mode="display" tex="g(a,b,c)" text="g@(a, b, c)" xml:id="S8.Ex28.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S8.Ex28.m1.1"/>
+                <XMRef idref="S8.Ex28.m1.2"/>
+                <XMRef idref="S8.Ex28.m1.3"/>
+                <XMRef idref="S8.Ex28.m1.4"/>
+              </XMApp>
+              <XMApp>
+                <XMTok font="italic" role="FUNCTION" xml:id="S8.Ex28.m1.1">g</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex28.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex28.m1.3">b</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex28.m1.4">c</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S8.Ex29">
+        <Math mode="display" tex="\max(a,b)" text="maximum@(a, b)" xml:id="S8.Ex29.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMRef idref="S8.Ex29.m1.1"/>
+                <XMRef idref="S8.Ex29.m1.2"/>
+                <XMRef idref="S8.Ex29.m1.3"/>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="maximum" role="OPFUNCTION" scriptpos="mid" xml:id="S8.Ex29.m1.1">max</XMTok>
+                <XMWrap>
+                  <XMTok role="OPEN" stretchy="false">(</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex29.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S8.Ex29.m1.3">b</XMTok>
+                  <XMTok role="CLOSE" stretchy="false">)</XMTok>
+                </XMWrap>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
 </document>
