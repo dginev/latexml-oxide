@@ -406,15 +406,24 @@ because the shape gate FALSE-NEGATIVES on real `\narrow` paragraph content (it's
 not all plain TBoxes), so the repack it needs is skipped. **CONCLUSION: a
 content-shape gate is fundamentally unable to distinguish "genuine paragraph
 needing `\hsize` wrap" from "tabular that leaked MODE=horizontal" — the real
-distinction is the leaked mode, not the shape.** So sub-fix 2's clean form is to
-fix the ROOT: the halign/tabular box carries `mode=horizontal` (leaked) where Perl
-has it vertical, so Rust's `repack_horizontal` (which collects per-item by mode,
-stomach.rs:849) wrongly collects it. Perl's `repackHorizontal` skips it naturally
-(non-horizontal item). Fixing the tabular/halign result mode to vertical makes the
-faithful loop work with NO gate — then Cluster G AND the table sizing both pass.
-**Net: the box-model fix needs (a) the frame-ordering loop [proven], (b) the
-VBoxContents reversion-braces fix, (c) the halign/tabular `mode` root fix** — a
-three-part focused multi-subsystem session, NOT an autonomous inline change.
+distinction is the leaked mode, not the shape.**
+
+**CORRECTION 2026-06-22 (3rd look): the "halign mode-leak" hypothesis is WRONG —
+the over-wrap mechanism is OPAQUE to static analysis.** Read the `\halign`
+constructor (tex_tables.rs:311-342): its `after_digest` sets the whatsit
+`mode="internal_vertical"` (correct, NOT horizontal) and its
+`begin_mode("restricted_horizontal")`/`end_mode` are BALANCED (313/340) — no frame
+or mode leak. So `repack_horizontal`'s per-item check SHOULD skip the tabular
+(mode=internal_vertical), and the faithful loop's `end_mode` should see
+MODE=internal_vertical (no repack) → the `\vbox{\halign}` should measure natural
+width. Yet with the faithful loop it measures full `\hsize` (sizes_test
+37→469.75pt). **The mechanism cannot be determined by code-reading** — it needs
+runtime instrumentation (log mode/wrapwidth/lines in `compute_boxes_size` +
+`repack_horizontal` for the `\vbox{\halign}` case) in a focused session. **Net:
+the box-model fix is (a) the frame-ordering loop [PROVEN fixes Cluster G], (b) the
+VBoxContents reversion-braces fix, (c) the `\vbox{\halign}` over-wrap — root
+UNKNOWN, needs runtime debugging.** A focused, hands-on multi-subsystem session,
+NOT an autonomous static change.
 
 **SHARED ROOT with the global p{}→VBox port (found 2026-06-22).** The same
 `\hsize`-invariant box model blocks SYNC_STATUS **1610.00974 step-3**: porting the
