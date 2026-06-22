@@ -249,12 +249,20 @@ Open task §1).
   MathFork/split content-arm xml:id family as the `expected:id` tail
   (`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`). NOT the rpadding path (thin spaces
   `\,` are Perl-faithful incl. NewScript transfer, `005716ff66`).
-- **`\DeclareMathOperator` cluster** (`text=` already matches): (a) Perl splits
-  Math attrs `tex="\operatorname{Tr}…"` vs `content-tex="\Tr…"` (via
-  `revert_as=>'context'`); Rust keeps `\Tr` in `tex`, no `content-tex`. (b) Rust
-  drops the `name="Tr"` Perl infers from the CS. (c) `\DeclareMathOperator*`
-  limit operators: Perl base carries `scriptpos="mid"` (`\argmax_x` subscript
-  BELOW); Rust's XMDual base loses scriptpos → defaults to `post1` (right).
+- **`\DeclareMathOperator` cluster — INVESTIGATED 2026-06-22, LOW-VALUE metadata,
+  deprioritized** (`text=` and cMML already match): (a) Perl splits Math attrs
+  `tex="\operatorname{Tr}…"` vs `content-tex="\Tr…"` (Perl defines `\Tr` *via*
+  `Invocation(\operatorname,…)` + `revert_as=>'context'`); Rust defines it
+  directly so `tex` keeps the user macro `\Tr` (arguably MORE source-faithful) and
+  emits no `content-tex`. Matching Perl needs the deep `revert_as=>context`
+  content-tex mechanism — high effort, metadata-only value. (b) The `name="Tr"`
+  "gap" is NOT a bug: `def_math` (dialect.rs:1567) DOES infer `name` from the CS
+  but DROPS it when `name == presentation` (line ~33) — a deliberate
+  redundant-attr cleanup. `\Tr` (name "Tr" == content "Tr") drops it; `\argmax`
+  (name ≠ "arg max") keeps it. Perl always emits it. Changing this touches the
+  GENERAL def_math path (every math token) for cosmetic value → not worth it.
+  (c) `\DeclareMathOperator*` `scriptpos` in display mode — the remaining
+  candidate if revisited, but mode-dependent and niche. Whole cluster parked.
 - **N-ary bare-operator listing** (content-loss already FIXED `a75fbf17ed`):
   `\[ + - \times \div \]` → Perl `list@(+,-,*,/)`; Rust now marks unparsed with
   ALL tokens preserved (the coverage guard rejects the exhausted-early prefix
