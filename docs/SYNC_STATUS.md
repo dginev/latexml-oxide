@@ -80,6 +80,28 @@ rerun is the clear next step:**
   `\ht` is `\hsize`-invariant (Perl models paragraph height ∝ `\hsize`). Recorded
   as `STABILITY_WITNESSES.md` Cluster G (open; box-model fix, regression-risky,
   warrants a focused session).
+- *error-severity sweep (2026-06-22)*: full cross-join of the cortex `error`
+  severity (1189 tasks) on the **same local host** (env-artifact discipline).
+  **Parity/env-artifact dominated; ONE genuine Rust-only correctness bug.**
+  - `malformed` (162): all parity except **`ltx:itemize` in a `p{}` cell** — the
+    p{}-block-content bug (1510.07685), root = deferred **1610.00974 step-3**,
+    blocked on the same `\hsize`-invariant box model as Cluster G (see that entry).
+    `_CaptureBlock_`/listing errors are Perl-identical.
+  - `latex` (31): all parity. Every package `\PackageError` (`\GenericError`,
+    `(ifthen)`, `(newunicodechar)` 189, `(etoolbox)` 187, `(glossaries)` 224,
+    `(pgfkeys)`) is shared. The `(babel)` `Unknown option 'russian'`/`'ukrainian'`
+    cluster (11 papers, cortex Perl=warning) is a **babel-VERSION env artifact**:
+    local babel.sty ≥3.9 (locale-based) errors on the `russian` *option*
+    (`russianb.ldf` absent), and **local Perl emits the IDENTICAL single error**
+    (0709.3796: Rust==Perl==1). The cortex Perl=warning host had pre-3.9 babel.
+    Same class as the isolatin/cp1251 phantoms; not a code bug (a `babel_lang_stubs`
+    russian/ukrainian stub would surpass local-Perl + overlap the Cyrillic
+    host-side decision → left as-is).
+  - `missing_file` (31), `misdefined` (3), `document` (2), `xpath` (2): all parity.
+  - `undefined` (890): top-20 whats all parity — the `imsart` bib cluster
+    (`\bauthor`/`\bfnm`/`\btitle`/… + `{barticle}`, 16 papers) and `{diagram}`
+    (17/19) are **Perl-also-undefined** (Perl LaTeXML ships no imsart/diagram
+    binding either). Confirms "undefined = shared third-party CS".
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
