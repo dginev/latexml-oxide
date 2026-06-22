@@ -134,16 +134,25 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
 >   through `formulae_apply`, which fails inside a fence). Raised the threshold to
 >   ≥10pt (only `\quad`+; matches `filter_hints`). Now parses, matches Perl
 >   `vector@(300,-50,+50)`. Regression test in `parse/sequences_and_lists`.
-> - **The 42× `XMWrap isn't allowed in <ltx:p>` residual is a WRAPPING leak, NOT a
->   parse gap.** The paper's actual unparsed math is Z-notation/formal-methods
->   (`\bullet` quantifier-separators, `\mid` set-builder, `f(a,b)(t)` chains) —
->   and BOTH engines unparse those IDENTICALLY in isolation (parity, 0 errors). The
->   divergence: in the paper's macro context Rust leaks the unparsed bare
->   `<XMWrap>` into `<ltx:p>` (42 schema errors) while Perl keeps it wrapped in
->   `<ltx:Math>`. A document-builder fix (ensure unparsed inline math stays
->   `<Math>`-wrapped in the "Anonymous String"/macro context) would fix it
->   regardless of parse success — the real witness root, still OPEN. Not
->   reproducible from the snippet alone (needs the paper's macro context). (Same scan: `1705.04022`
+> - **The 42× `XMWrap isn't allowed in <ltx:p>` residual is a WRAPPING leak
+>   triggered by the `program` package — ROOT LOCALIZED 2026-06-21, still OPEN
+>   (niche, deferred).** Bisection: the 42 leaks come from 3 sections
+>   (preliminaries=18, trip_sealin=12, pushbutton=12), and preamble bisection pins
+>   the enabling factor to **`\usepackage{program}`** (commenting it → 0 leaks).
+>   `program.sty` makes `_`/`;`/`` ` `` ACTIVE in math (`\catcode\_=\active
+>   \def_{\ifmmode\sb\else\p@sb\fi}`, lines 535/67-75) and redefines `\(`; the
+>   preliminaries math is subscript-heavy (`t_n`, `t_{now}`, …), so under the
+>   active-`_` Rust produces unparsed inline math whose bare `<XMWrap>` leaks into
+>   `<ltx:p>` while Perl (which has NO program.sty.ltxml — it raw-loads) keeps it
+>   `<Math>`-wrapped. Rust loads `program` via the **contrib binding**
+>   (`latexml_contrib/src/program_sty.rs`), so the divergence is contrib-binding
+>   vs Perl-raw-load. NOT reproducible from `program` + the snippet alone — needs
+>   the full preliminaries context (accumulated state). Both the unparsed Z-math
+>   AND the leak are recovered in the final output; these are build-time errors.
+>   Niche (`program` is rare on arXiv); for a future contrib-binding session —
+>   fix in `program_sty.rs` (match Perl's raw-load active-`_` behavior) and/or the
+>   document-builder unparsed-math wrapping. The WIDE_PUNCT fix above was the
+>   general, landable win from this witness. (Same scan: `1705.04022`
 > 16 err `_`/`^`-in-text — re-verify vs Perl before chasing.)
 >
 > **`1704.05644` (`Paperling_revu.tex`) — CONFIRMED Rust-only (Rust 17 / Perl 0)
