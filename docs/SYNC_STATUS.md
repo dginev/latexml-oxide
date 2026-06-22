@@ -61,6 +61,16 @@ rerun is the clear next step:**
   macro defined via `TeX!(r"…")` raw-TeX blocks (single-backslash), so its
   flagged "gaps" are mostly false positives (verified: longtable `\LTcapwidth`
   etc. ARE defined). OmniBus was confirmed structurally complete this way.
+- *fatal/TooManyErrors mining (2026-06-22)*: **mined out — ZERO genuine
+  Rust-only bugs.** Of 35 `MaxLimit(100)` papers: 24 Perl-fatal (parity), **9 a
+  `cp1251`/Cyrillic env artifact** (all `[cp1251]{inputenc}`+`[T2A]{fontenc}`+
+  russian babel → ~100 `unexpected:<char>` each; the `cyrillic`/`t2` TeX package
+  is missing on this host so `cp1251.def`/`t2aenc.def` are absent — **local Perl
+  fails identically**, the cortex Perl=clean came from a host WITH the package),
+  2 stale/marginal. Same env-artifact family as the isolatin phantom. **Cyrillic
+  coverage fix is host-side (`tlmgr install cyrillic cm-super`), not a code bug;
+  an optional surpass-Perl charset-decode fallback for missing inputenc `.def`s
+  would convert them without the host package (needs authorization).**
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
