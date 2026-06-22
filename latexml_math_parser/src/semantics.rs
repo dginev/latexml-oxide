@@ -562,7 +562,103 @@ pub fn formulae_apply(
     }
     return Ok(left);
   }
+  // Comma-list LEFT of a relation: `a,b \in A` / `x,y \le z`. The grammar reaches
+  // here with `left` a bare (non-relational) item and `right` a binary RELOP
+  // relation `Apply(∈,[b,A])`. The plain `formulae@(a, b∈A)` is semantically wrong
+  // (∈ binds only `b`, splitting `a` off). Build the user-specified XMDual
+  // (2026-06-22): content DISTRIBUTES the relation over the list, presentation
+  // wraps the list as the relation's LHS. (List-RIGHT `0<x,y` is the separate
+  // `formula relop formula_list` path → `list(0<x,y)`, untouched.)
+  if !left_rel
+    && !sep_is_period
+    && left.as_ref().is_some_and(|l| !matches!(l, XM::Dual(..)))
+    && matches!(&right, XM::Apply(op, Args(a), ..) if a.len() == 2 && op_is_relop(op))
+  {
+    return Ok(Some(distribute_list_relation(
+      left.unwrap(),
+      sep,
+      right,
+      ctxt,
+    )?));
+  }
   list_or_formulae_create(left.unwrap(), sep, right, meaning, ctxt)
+}
+
+/// True iff `op` is a binary RELOP operator (`∈`, `≤`, `=`, …) — NOT a
+/// `multirelation` chain. Used to gate `distribute_list_relation`.
+fn op_is_relop(op: &Operator) -> bool {
+  match &*op.0 {
+    XM::Token(p, _) => {
+      p.meaning.as_deref() != Some("multirelation")
+        && p.role.as_deref().is_some_and(|r| r.contains("RELOP"))
+    },
+    XM::Lexeme(lex, _) => lex.split(':').next().is_some_and(|r| r.contains("RELOP")),
+    _ => false,
+  }
+}
+
+/// `a,b \in A` → the user-specified XMDual (2026-06-22, surpass-Perl): the content
+/// branch DISTRIBUTES the relation over each list element —
+/// `formulae@(∈(a,A), ∈(b,A))`, sharing XMRefs to the relop (∈) and RHS (A) — while
+/// the presentation branch wraps the list `a,b` in an `<XMWrap>` as the relation's
+/// LHS — `Apply(∈, XMWrap(a,',',b), A)`. `right` MUST be a binary RELOP relation
+/// (caller guarantees via `op_is_relop`).
+fn distribute_list_relation(
+  mut left: XM,
+  sep: XM,
+  right: XM,
+  ctxt: ActionContext,
+) -> Result<XM, Box<dyn Error>> {
+  let XM::Apply(Operator(r_op_box), Args(mut r_args), ..) = right else {
+    unreachable!("distribute_list_relation: caller guarantees a binary relation")
+  };
+  let mut rhs = r_args.pop().flatten().unwrap();
+  let mut lhs = r_args.pop().flatten().unwrap();
+  let mut r_op = *r_op_box;
+  // Ref the four presentation nodes (left, lhs, rhs, relop); rhs and relop are
+  // shared across the two distributed content relations.
+  let refs = create_xmrefs(&mut [&mut left, &mut lhs, &mut rhs, &mut r_op], ctxt)?;
+  let mut it = refs.into_iter();
+  let ref_left = it.next().unwrap();
+  let ref_lhs = it.next().unwrap();
+  let ref_rhs = it.next().unwrap();
+  let ref_rop = it.next().unwrap();
+  let mk_rel = |op: XM, l: XM, r: XM| {
+    XM::Apply(
+      Operator(Box::new(op)),
+      Args(vec![Some(l), Some(r)]),
+      XProps::default(),
+      Meta::default(),
+    )
+  };
+  // content: formulae@(∈(a,A), ∈(b,A))
+  let rel1 = mk_rel(ref_rop.clone(), ref_left, ref_rhs.clone());
+  let rel2 = mk_rel(ref_rop, ref_lhs, ref_rhs);
+  let formulae_op: XM = XProps {
+    meaning: Some(Cow::Borrowed("formulae")),
+    ..XProps::default()
+  }
+  .into();
+  let content = XM::Apply(
+    Operator(Box::new(formulae_op)),
+    Args(vec![Some(rel1), Some(rel2)]),
+    XProps::default(),
+    Meta::default(),
+  );
+  // presentation: ∈(XMWrap(a,',',b), A)
+  let pres_wrap = XM::Wrap(vec![left, sep, lhs], XProps::default(), Meta::default());
+  let pres = XM::Apply(
+    Operator(Box::new(r_op)),
+    Args(vec![Some(pres_wrap), Some(rhs)]),
+    XProps::default(),
+    Meta::default(),
+  );
+  Ok(XM::Dual(
+    Box::new(content),
+    Box::new(pres),
+    XProps::default(),
+    Meta::default(),
+  ))
 }
 
 fn list_or_formulae_create(

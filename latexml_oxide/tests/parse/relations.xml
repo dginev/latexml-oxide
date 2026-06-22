@@ -419,4 +419,74 @@
       </equation>
     </para>
   </section>
+  <section inlist="toc" xml:id="S4">
+    <tags>
+      <tag>4</tag>
+      <tag role="refnum">4</tag>
+      <tag role="typerefnum">§4</tag>
+    </tags>
+    <title><tag close=" ">4</tag>Comma-list left of a relation (distributed XMDual)</title>
+    <para xml:id="S4.p1">
+      <equation xml:id="S4.Ex16">
+        <Math mode="display" tex="a,b\in A" text="formulae@(a element-of A, b element-of A)" xml:id="S4.Ex16.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMApp>
+                  <XMRef idref="S4.Ex16.m1.1"/>
+                  <XMRef idref="S4.Ex16.m1.2"/>
+                  <XMRef idref="S4.Ex16.m1.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S4.Ex16.m1.1"/>
+                  <XMRef idref="S4.Ex16.m1.3"/>
+                  <XMRef idref="S4.Ex16.m1.4"/>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="element-of" name="in" role="RELOP" xml:id="S4.Ex16.m1.1">∈</XMTok>
+                <XMWrap>
+                  <XMTok font="italic" role="ID" xml:id="S4.Ex16.m1.2">a</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="ID" xml:id="S4.Ex16.m1.3">b</XMTok>
+                </XMWrap>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex16.m1.4">A</XMTok>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+      <equation xml:id="S4.Ex17">
+        <Math mode="display" tex="x,y\leq z" text="formulae@(x &lt;= z, y &lt;= z)" xml:id="S4.Ex17.m1">
+          <XMath>
+            <XMDual>
+              <XMApp>
+                <XMTok meaning="formulae"/>
+                <XMApp>
+                  <XMRef idref="S4.Ex17.m1.1"/>
+                  <XMRef idref="S4.Ex17.m1.2"/>
+                  <XMRef idref="S4.Ex17.m1.4"/>
+                </XMApp>
+                <XMApp>
+                  <XMRef idref="S4.Ex17.m1.1"/>
+                  <XMRef idref="S4.Ex17.m1.3"/>
+                  <XMRef idref="S4.Ex17.m1.4"/>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok meaning="less-than-or-equals" name="leq" role="RELOP" xml:id="S4.Ex17.m1.1">≤</XMTok>
+                <XMWrap>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex17.m1.2">x</XMTok>
+                  <XMTok role="PUNCT">,</XMTok>
+                  <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex17.m1.3">y</XMTok>
+                </XMWrap>
+                <XMTok font="italic" role="UNKNOWN" xml:id="S4.Ex17.m1.4">z</XMTok>
+              </XMApp>
+            </XMDual>
+          </XMath>
+        </Math>
+      </equation>
+    </para>
+  </section>
 </document>
