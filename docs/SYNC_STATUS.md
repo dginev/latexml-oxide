@@ -564,11 +564,16 @@ the EPS task; candidates for future work):
     (rotfloat2: Rust 810pt vs Perl 214pt) because Rust's vbox/paragraph dimensions
     are **`\hsize`-invariant** (no `\hsize`-constrained line-breaking → wrong line
     count → wrong height/width). The old `\hbox to <w>` form *forced* the width and
-    sidestepped this; the faithful VBox form exposes it. Fixing the box model's
-    `\hsize`-aware line-breaking (`compute_boxes_size` / `repack_horizontal_in_list`
-    is present but not reaching the rotated/spanned path) would **unblock BOTH**
-    this global p{} port AND Cluster G's `\narrow`-loop hang. High-value unifying
-    box-model target; dedicated session.
+    sidestepped this; the faithful VBox form exposes it. **PRECISE root cause
+    (2026-06-22): a frame-ordering bug**, not a missing wrap — the wrap machinery
+    (`compute_boxes_size_lines`) is correct, but `predigest_box_contents_in_mode`
+    pops the body-group frame (restoring the outer `\hsize`) BEFORE
+    `repack_horizontal_in_list` captures it, so vbox paragraphs always wrap at the
+    OUTER `\hsize`. Perl's `endMode` repacks BEFORE `popStackFrame` (one frame, not
+    two). Full mechanism + fix spec in `STABILITY_WITNESSES.md` Cluster G. The one
+    frame-ordering fix **unblocks BOTH** this global p{} port AND Cluster G's
+    `\narrow`-loop hang. High-value unifying target; dedicated session (core
+    digestion path → high regression surface).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.

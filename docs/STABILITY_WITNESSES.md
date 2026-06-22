@@ -347,15 +347,37 @@ line-count/height estimate). Confirmed: removing the `$$`/math is still slow
 (B), and a *fixed* 200-iteration vbox-remeasure loop is fast (C) — so it's the
 non-terminating loop, not per-iteration math/box cost.
 
-**Fix direction (OPEN — focused box-model session; regression-risky).** Model a
-vbox paragraph's height as ∝ `ceil(content_width / \hsize) × \baselineskip` so
-`\ht` grows when `\hsize` shrinks below the content width, matching Perl. The
-grep for an `\hsize`-aware height estimate finds none, so this is a genuine
-box-dimension subsystem gap. High regression risk (every `\ht`/`\vbox` consumer +
-the 1467-test suite must stay green), so it warrants its own session + an arXiv
-slice validation, NOT an inline fix. NOTE: a `\loop`-iteration guard would make
-Rust *Fatal* where Perl *succeeds* (worse) — the only faithful fix is to make the
-loop terminate.
+**ROOT CAUSE — PRECISE (2026-06-22).** The `\hsize`-aware paragraph-wrap machinery
+**already exists and is correct**: `Font::compute_boxes_size_lines(wrapwidth, …)`
+(`common/font.rs:1629`) breaks a line when `wd > wrapwidth` → more lines → taller
+box, and `compute_boxes_size` derives `wrapwidth` from the paragraph List's
+`width` property (set by `repack_horizontal`/`make_horizontal_list` =
+`LookupDimension('\hsize')`). The bug is a **frame-ordering divergence** in
+`base_utilities.rs::predigest_box_contents_in_mode`:
+- Rust uses **TWO** frames — the mode frame (`begin_mode`) **plus** a body-group
+  frame pushed by `invoke_token(&T_BEGIN!())`. The inner `\hsize=W` is assigned in
+  the body-group frame, and the body's closing `}` (T_END) pops that frame
+  (**restoring `\hsize` to the outer value**) BEFORE the manual
+  `repack_horizontal_in_list(&mut item)` runs → `make_horizontal_list` captures the
+  OUTER `\hsize` → every implicit vbox paragraph wraps at the outer width
+  regardless of the inner `\hsize`.
+- Perl uses **ONE** frame (the mode frame IS the group): `endMode`
+  (`Stomach.pm:544-557`) runs `leaveHorizontal_internal`→`repackHorizontal`
+  (capturing the inner `\hsize`, L487) and ONLY THEN `popStackFrame`. Rust's
+  `end_mode` (`stomach.rs:726`) already mirrors this order — but it never sees the
+  inner `\hsize` because the body-group frame already restored it.
+
+**Fix spec (OPEN — focused, core-path, regression-risky).** Collapse the
+double-framing so the box body's closing `}` drives `end_mode`
+(`leave_horizontal_internal`→repack, then pop) rather than an early body-group
+egroup — i.e. let the mode frame BE the body group, as Perl's `readBoxContents`
+does. Then repack captures the inner `\hsize`, fixing BOTH this `\ht`-invariant
+hang AND the rotated-`p{}`-cell mis-sizing that blocks the global p{}→VBox port
+(SYNC_STATUS 1610.00974 step-3). High regression risk (touches EVERY box body —
+hbox/vbox/vtop/p-cell/argument — and the full test suite), so it warrants its own
+session + an arXiv slice validation, NOT an autonomous inline fix. NOTE: a
+`\loop`-iteration guard would make Rust *Fatal* where Perl *succeeds* (worse) — the
+only faithful fix is the frame-ordering correction so the loop terminates.
 
 **SHARED ROOT with the global p{}→VBox port (found 2026-06-22).** The same
 `\hsize`-invariant box model blocks SYNC_STATUS **1610.00974 step-3**: porting the
