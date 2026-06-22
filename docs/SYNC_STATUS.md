@@ -102,6 +102,25 @@ rerun is the clear next step:**
     (`\bauthor`/`\bfnm`/`\btitle`/… + `{barticle}`, 16 papers) and `{diagram}`
     (17/19) are **Perl-also-undefined** (Perl LaTeXML ships no imsart/diagram
     binding either). Confirms "undefined = shared third-party CS".
+  - `unexpected` (268): the big "Script `_`/`^` can only appear in math mode" +
+    "Misplaced alignment tab `&`" clusters are **100% parity** under a FULLY
+    PAGINATED cross-join (`_` 109/109, `^` 45/45, `&` 51/51 papers — no math-mode
+    detection divergence; these are genuinely-malformed unescaped inputs both
+    engines flag). The only "candidates" were the `<char>` inputenc Cyrillic/latin
+    env-artifact cluster (0802.1123 isolatin, 1008.0492/1011.5076 babel-russian,
+    1009.2998 `[cp866]`+`[T2A]` — host missing the `.def`; same class as Clusters
+    A/C/E) and `\end{table}`/1805.00875 (**already FIXED** — see next).
+  - **META (2026-06-22): the cortex Rust service data is STALE** (predates recent
+    branch fixes). 1805.00875 (dcolumn) shows `unexpected/\end{table}` in the
+    cortex report but converts **0 errors on the current binary** (the 2026-06-21
+    dcolumn fix is in). So a flagged "Rust-only candidate" may already be fixed —
+    **always re-confirm on the current binary** (the genuine finds 1510.07685 /
+    1707.02464 were). A **fresh cortex Rust rerun built from this branch** is the
+    real prerequisite for surfacing NEW genuine Rust-only correctness bugs; the
+    stale data is still authoritative for *parity* and *env-artifact* classes
+    (those don't change). **Conclusion: the entire `error` severity is mined out —
+    parity + env-artifacts, the one genuine find (p{} block content) blocked on the
+    box-model frame-ordering fix (1610.00974 step-3 / Cluster G).**
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
