@@ -351,8 +351,12 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       // Infix: arg1 op arg2 op arg3 ...
       pmml_infix(doc, op, args)
     },
-    "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP" | "DIFFOP" => {
-      // Big operator: Σ/∫ applied to args
+    "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP" => {
+      // Big operator: Σ/∫ applied to args (gets FUNCTION APPLICATION ⁡).
+      // DIFFOP (∂, d, ∇-as-diff) is deliberately EXCLUDED — Perl MathML.pm:702
+      // `$ismoveop = … (SUMOP|INTOP|BIGOP|LIMITOP)$/  # Not DIFFOP`; a DIFFOP
+      // falls to the generic apply below, which juxtaposes (no ⁡) because its
+      // base renders as <m:mo>. (Witness: `\partial f` → ∂f, not ∂⁡f.)
       pmml_summation(doc, op, args)
     },
     "OPEN" | "CLOSE" | "ENCLOSE" if !args.is_empty() => {
@@ -408,9 +412,17 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
           children:   vec![pmml(doc, &args[0]), pmml_scriptsize(doc, &args[1])],
         }
       } else {
-        // Generic application: op(arg1, arg2, ...)
-        let mut items = vec![pmml(doc, op)];
-        items.push(pmml_mo_str("\u{2061}")); // FUNCTION APPLICATION
+        // Generic application: op(arg1, arg2, ...). Insert FUNCTION APPLICATION
+        // (⁡, U+2061) ONLY when the operator's base is NOT an <m:mo> — Perl
+        // MathML.pm `Apply:?:?` (`$is_mo ? () : pmml_mo("\x{2061}")`). So an
+        // OPERATOR/DIFFOP like ∇ juxtaposes (∇ϕ, spacing via the mo's rspace),
+        // while a function identifier f gets f⁡(x).
+        let pop = pmml(doc, op);
+        let needs_apply = !op_base_is_mo(&pop);
+        let mut items = vec![pop];
+        if needs_apply {
+          items.push(pmml_mo_str("\u{2061}")); // FUNCTION APPLICATION
+        }
         for arg in args {
           items.push(pmml(doc, arg));
         }
@@ -909,8 +921,15 @@ fn is_absent_operand(node: &Node) -> bool {
 /// Port of `pmml_summation`.
 fn pmml_summation(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
   let op_mml = pmml(doc, op);
+  // FUNCTION APPLICATION (⁡) only if the operator base is NOT an <m:mo> — Perl's
+  // universal is_mo rule (MathML.pm Apply:?:?). Big operators ∑/∫/⋃/∏/lim all
+  // render as <m:mo> (incl. scripted forms like ∑_i via munder), so they
+  // juxtapose their body (∑a_i, ∫f) rather than emit ∑⁡a_i — matching Perl.
+  let needs_apply = !op_base_is_mo(&op_mml);
   let mut items = vec![op_mml];
-  items.push(pmml_mo_str("\u{2061}")); // FUNCTION APPLICATION
+  if needs_apply {
+    items.push(pmml_mo_str("\u{2061}")); // FUNCTION APPLICATION
+  }
   for arg in args {
     items.push(pmml(doc, arg));
   }
@@ -1253,6 +1272,36 @@ fn pmml_cfrac(doc: &PostDocument, _op: &Node, numer: &Node, denom: &Node) -> Nod
 // Utility functions
 
 /// Wrap nodes in an mrow (or return single node unwrapped).
+/// Perl MathML.pm `Apply:?:?`: descend through script wrappers (msub/msup/…) to
+/// the operator's base and report whether it renders as `<m:mo>`. A generic
+/// application inserts FUNCTION APPLICATION (⁡) only when the base is NOT an
+/// `<m:mo>`, so an OPERATOR/DIFFOP (∇, ∂) juxtaposes its argument while a
+/// function identifier (`f`, `\sin`) gets the invisible apply char.
+fn op_base_is_mo(node: &NodeData) -> bool {
+  let mut cur = node;
+  loop {
+    let NodeData::Element { tag, children, .. } = cur else {
+      return false;
+    };
+    if tag == "m:mo" {
+      return true;
+    }
+    // Perl regex `^m:(?:msub|msup|munder|mover|mprescripts)` — a prefix match,
+    // so it also covers msubsup/munderover; descend to the base (first child).
+    if matches!(
+      tag.as_str(),
+      "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover" | "m:mprescripts"
+    ) {
+      match children.first() {
+        Some(child) => cur = child,
+        None => return false,
+      }
+    } else {
+      return false;
+    }
+  }
+}
+
 fn pmml_row(children: Vec<NodeData>) -> NodeData {
   if children.len() == 1 {
     children.into_iter().next().unwrap()

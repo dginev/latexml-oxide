@@ -91,4 +91,13 @@ fn simplemath_post_test() {
 }
 
 #[test]
+fn opdecoration_post_test() {
+  // FUNCTION APPLICATION (⁡) over-insertion: an operator whose presentation is an
+  // <m:mo> (∇, ∂, ∑, ∫, …) must juxtapose its argument (∇ϕ, ∂f, ∑a, ∫g) — NOT
+  // emit ∇⁡ϕ — matching Perl's is_mo rule (MathML.pm Apply:?:?). Regression guard
+  // for presentation.rs op_base_is_mo.
+  post_test("opdecoration", 0);
+}
+
+#[test]
 fn hyperref_post_test() { post_test("hyperref", 0); }

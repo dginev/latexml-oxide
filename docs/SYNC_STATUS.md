@@ -230,11 +230,19 @@ Open task §1).
   `[(a|b)]` uses (ctxt reborrow for the two ref levels). Suite 1466/0, clippy
   clean, zero other-fixture changes; regression test in `parse/vertbars`. (The
   `E` in `E[X|Y]` stays `E@(…)` apply vs Perl `E * …` — divergence #18, preserved.)
-- **`⁡` DecorateOperator over-insertion** (presentation): Rust's blanket
-  `parser.rs:711-743` post-walk decorates ALL operator-base SCRIPTOP applies, so
-  presentation emits `⁡` (U+2061) where Perl juxtaposes — even unscripted
-  `\nabla \phi` (`∇⁡ϕ` vs `∇ϕ`). content `text=` already matches. Fix = make the
-  walk selective like Perl's `addOpDecoration` (drop OPERATOR/DIFFOP).
+- **`⁡` DecorateOperator over-insertion — FIXED 2026-06-22.** Presentation MathML
+  emitted `⁡` (U+2061 FUNCTION APPLICATION) after operators that render as
+  `<m:mo>` — `\nabla \phi`→`∇⁡ϕ`, `\partial f`→`∂⁡f`, and (pre-existing) `\sum_i
+  a_i`→`∑⁡a_i`, `\int f`→`∫⁡f` — where Perl juxtaposes (∇ϕ/∂f/∑a/∫f). Perl's rule
+  (MathML.pm `Apply:?:?`): insert `⁡` only when the op base is NOT an `<m:mo>` (a
+  function identifier `f`/`\sin`/`\max` IS `<m:mi>` → keeps `⁡`). FIX
+  (`latexml_post/.../presentation.rs`): new `op_base_is_mo` helper (descends
+  msub/msup/munder/mover to the base); applied at the generic-apply site AND in
+  `pmml_summation`; and removed `DIFFOP` from the big-op→`pmml_summation` route
+  (Perl MathML.pm:702 `# Not DIFFOP`). Suite 1466/0, clippy clean; verified
+  Perl-identical for ∇/∂/∑/∫/∏/⋃/lim + `\sin`/`\max`/scripted forms; only residual
+  diff is the `f(x)` apply-vs-multiply (`f⁡(` vs `f⁢(`) — divergence #18,
+  preserved. Regression test in `tests/post/opdecoration`.
 - **wide-space PUNCT XMDual content-arm XMRef ordering**: `x^2\quad y` — the
   `\quad` (≥10pt) becomes a virtual PUNCT through `formulae_apply`, producing an
   XMDual whose content-arm XMRef siblings emit one slot off from Perl. Same
