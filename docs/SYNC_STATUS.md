@@ -509,13 +509,44 @@ the EPS task; candidates for future work):
   the global port exposes a `\cr`-mid-VBoxContents-predigest interleaving + a
   span/sizing bug on `\multicolumn` over p-columns. Also explains the p-column
   `td align="justify"` + width-on-`<p>` divergence (Perl: `align="left"` +
-  width-on-`<inline-block>`). Surpass-Perl R&D. **Related residuals catalogued
+  width-on-`<inline-block>`). **Related residuals catalogued
   with minimal reproducers in `docs/reproducers/array_pcolumn/`** (Kind B: `>{}`
   prefix align not on `<td>`; Kind C/D: regular `m{}`/`b{}` use a plain
   `\vtop{}`/`\vbox{}` not the `\lx@tabular@p` VBox → width-on-`<td>` + inline-block
   `vattach`/width drift). The `\multicolumn`-over-`m{}`/`b{}` GROUP ERROR in that
   family is now **FIXED** (was 1805.01525 27→0; `tex_tables.rs`
   `\lx@alignment@multicolumn` generalized from p{}-only to all paragraph columns).
+  - **NOT just surpass-Perl — also a CORRECTNESS bug (re-scoped 2026-06-22).**
+    The global `\vtop{\hbox to <w>..}` form opens the cell as an `ltx:p`
+    (`_noautoclose`), so **block content inside a `p{}` cell errors**:
+    `\begin{itemize}` (or any list/block) → `Error:malformed:ltx:itemize
+    <ltx:itemize> isn't allowed in <ltx:p>` (genuine Rust-only; Perl 0). New
+    witness **1510.07685** (Hera1706.tex): Rust 3 / Perl 0, full paper. Mined
+    from the cortex `error/malformed/ltx:itemize` report (the cross-join's only
+    non-parity, non-`todo` candidate; the rest of `error/malformed` is shared —
+    e.g. `_CaptureBlock_`/listing errors are Perl-identical). Reproducer:
+    `docs/reproducers/pcolumn_block_content_in_p.tex`.
+  - **De-risked 2026-06-22 (empirical port + revert).** Flipping the global p{}
+    to `\lx@tabular@p t {w} { … }` (matching Perl `DefColumnType('p{Dimension}')`)
+    + teaching `\lx@alignment@multicolumn` to splice directly when the column is
+    already `\lx@tabular@p`-shaped: the **non-rotated** common case becomes
+    **Perl-exact** — `colortbls`/`tabular`/`array` fixtures turn into clean parity
+    fixes (width moves onto `<inline-block>`; `<p class="ltx_align_left">` now
+    matches Perl; `<p width=>` count → 0 like Perl), and the witness goes 3 → 0.
+    Full suite 1462/5; the 5 failures are all p{}-tables, 3 clean parity fixes.
+  - **THE SOLE BLOCKER is rotated-table p-cell SIZING — and it is the SAME
+    root cause as Cluster G** ([`STABILITY_WITNESSES.md`](STABILITY_WITNESSES.md),
+    1707.02464). In a `\begin{sidewaystable}` (graphrot `rotfloat2`,
+    `{|llllllllp{1in}lp{1in}|}`; cells fixture) the rotated table width = original
+    height = Σ row heights, and Rust mis-computes the `p{1in}` cell **height**
+    (rotfloat2: Rust 810pt vs Perl 214pt) because Rust's vbox/paragraph dimensions
+    are **`\hsize`-invariant** (no `\hsize`-constrained line-breaking → wrong line
+    count → wrong height/width). The old `\hbox to <w>` form *forced* the width and
+    sidestepped this; the faithful VBox form exposes it. Fixing the box model's
+    `\hsize`-aware line-breaking (`compute_boxes_size` / `repack_horizontal_in_list`
+    is present but not reaching the rotated/spanned path) would **unblock BOTH**
+    this global p{} port AND Cluster G's `\narrow`-loop hang. High-value unifying
+    box-model target; dedicated session.
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.

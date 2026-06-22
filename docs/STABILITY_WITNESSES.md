@@ -357,6 +357,17 @@ slice validation, NOT an inline fix. NOTE: a `\loop`-iteration guard would make
 Rust *Fatal* where Perl *succeeds* (worse) — the only faithful fix is to make the
 loop terminate.
 
+**SHARED ROOT with the global p{}→VBox port (found 2026-06-22).** The same
+`\hsize`-invariant box model blocks SYNC_STATUS **1610.00974 step-3**: porting the
+global `p{}` column to Perl's faithful `\lx@tabular@p`/VBoxContents form is
+Perl-exact for non-rotated tables (3 fixtures become clean parity fixes, fixes the
+genuine `<ltx:itemize> isn't allowed in <ltx:p>` correctness bug — 1510.07685) but
+**rotated `p{}` cells mis-size** (graphrot `rotfloat2`: Rust 810pt vs Perl 214pt)
+because the `p{1in}` cell **height** under `\hsize` is wrong — the very same gap.
+One box-model fix (`\hsize`-constrained line-breaking feeding `compute_boxes_size`)
+unblocks BOTH. Empirically verified + reverted; see SYNC_STATUS 1610.00974 step-3
+and `docs/reproducers/pcolumn_block_content_in_p.tex`.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

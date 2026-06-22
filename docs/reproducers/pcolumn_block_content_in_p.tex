@@ -1,0 +1,49 @@
+% Reproducer: block content (a list) inside a `p{}` tabular column cell.
+%
+% GENUINE Rust-only correctness bug (Perl 0 errors / Rust 1 error), confirmed
+% 2026-06-22 against local Perl 0.8.8 on this host. Witness in the
+% sandbox-arxiv-10k-shuffle corpus: 1510.07685 (Hera1706.tex), which converts
+% with 3× `Error:malformed:ltx:itemize <ltx:itemize> isn't allowed in <ltx:p>`
+% in Rust and ZERO errors in Perl.
+%
+% Rust (current):  <td><inline-block><p width="..."><itemize>...   ⇒ malformed
+% Perl (correct):  <td><inline-block width="..."><itemize>...      ⇒ clean
+%
+% ROOT CAUSE — the global `p{Dimension}` column type
+% (latexml_engine/src/tex_tables.rs) wraps the cell in
+% `\vtop{\hbox to <w>\relax{...}}`. That `\hbox` (TeX_Box.pool.ltxml /
+% tex_box.rs `\hbox` constructor, vmode && !inline branch) opens an `ltx:p`
+% cell-container carrying `_noautoclose="true"`, so a block element like
+% `\begin{itemize}` cannot auto-close out of it → "isn't allowed in <ltx:p>".
+%
+% Perl's `p{Dimension}` column (TeX_Tables.pool.ltxml L69-80) instead builds the
+% cell via `\lx@tabular@p t {width} { ... }` → an `<ltx:inline-block>` whose body
+% is digested as VBoxContents (vertical mode): text auto-opens `<p>`, block
+% content nests directly. Rust ALREADY has `\lx@tabular@p@ ... VBoxContents`
+% (used for `\multicolumn{}{p{}}`) — the global column just doesn't use it.
+%
+% THE FAITHFUL FIX (global p{} → VBox form) is the deferred SYNC_STATUS
+% "1610.00974 step-3". It works structurally and is Perl-exact for non-rotated
+% tables (colortbls/tabular/array fixtures become clean parity fixes: width moves
+% onto <inline-block>, `<p class="ltx_align_left">` matches Perl), BUT it is
+% BLOCKED by the SAME box-model gap as Cluster G (1707.02464): Rust's
+% vbox/paragraph dimensions are `\hsize`-invariant, so a `p{}` cell inside a
+% ROTATED table (graphrot/cells fixtures, `\begin{sidewaystable}`) mis-sizes
+% (rotfloat2: Rust width 810pt vs Perl 214pt). Fixing the `\hsize`-constrained
+% line-breaking in the box model would unblock BOTH this port and Cluster G.
+\documentclass{article}
+\begin{document}
+\begin{table}
+\begin{tabular}{|p{6cm}|}
+\hline
+Some lead text in the cell\\
+\hline
+\begin{itemize}
+\item first
+\item second
+\end{itemize}
+\\
+\hline
+\end{tabular}
+\end{table}
+\end{document}
