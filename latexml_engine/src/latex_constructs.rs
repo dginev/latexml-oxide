@@ -7377,6 +7377,13 @@ LoadDefinitions!({
     before_digest => { bgroup(); },
     sizer        => "#3",
     after_digest  => sub[whatsit] {
+      // A tabular is a VERTICAL structure (like `\halign`, tex_tables.rs:312):
+      // mark the result box `internal_vertical` so a containing `\vbox`/`\vtop`'s
+      // paragraph repack (`repack_horizontal`) SKIPS it per-item rather than
+      // wrapping it to `\hsize`. Without this the box defaults to the `mode=>text`
+      // (horizontal-family) digestion mode and a `\vtop{\begin{tabular}…}` mis-
+      // measures at full `\hsize` (sizes_test 37→469.75pt). [DIAG part c]
+      whatsit.set_property("mode", Stored::from("internal_vertical"));
       if let Some(alignment) = lookup_alignment()
         && let DigestedData::Alignment(data) = alignment.data() {
           let attachment = if let Some(arg) = whatsit.get_arg(1) { translate_attachment(arg) }

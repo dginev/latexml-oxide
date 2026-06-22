@@ -506,7 +506,19 @@ LoadDefinitions!({
   DefParameterType!(VBoxContents, sub[_inner, _extra] {
       read_box_contents(lookup_tokens("\\everyvbox")) },
     predigest => sub[arg] {
-      predigest_box_contents_in_mode(arg, "internal_vertical") });
+      predigest_box_contents_in_mode(arg, "internal_vertical") },
+    // The faithful vertical-box loop (`predigest_box_contents_in_mode`) rebuilds the
+    // body as a fresh `List::new(boxes)`, whose `revert()` concatenates the boxes
+    // WITHOUT the delimiting group braces (the old `invoke_token(T_BEGIN)` group
+    // box carried them). Re-add the `{}` here so `\vbox{a}` reverts to `\vbox{a}`
+    // (not `\vbox a`) — matching Perl. Mirrors the standard `{}`-arg `Plain`/
+    // `DefPlain` reversion (base_parameter_types.rs).
+    reversion => sub[arg, _inner, _extra] {
+      let mut t: Vec<Token> = vec![T_BEGIN!()];
+      t.extend(arg);
+      t.push(T_END!());
+      Ok(Tokens::new(t))
+    });
 
   // This re-binds a number of important control sequences to their default text binding.
   // This is useful within common boxing or footnote macros that can appear within
