@@ -270,6 +270,18 @@ Open task §1).
   `compound_operator_2` list (its own `// TODO`). Ambiguity-sensitive. (Root
   cause was the marpa fork's `Parser::read` breaking on `is_exhausted()` before
   the token source drained — `marpa/src/parser/mod.rs:130`.)
+- **comma-list LEFT of a relation `a,b \in A` — DESIGN LOCKED 2026-06-22, impl
+  deferred (riskiest pruning area).** Current Rust gives the wrong
+  `formulae@(a, b∈A)` (∈ binds only `b`, splitting `a` off). User-specified
+  surpass-Perl target (via AskUserQuestion): an **XMDual** whose **content branch
+  DISTRIBUTES** the relation — `formulae@(∈(a,A), ∈(b,A))`, each element related to
+  the shared RHS via XMRefs — and whose **presentation branch wraps the list in an
+  `<XMWrap>` as the relation's LHS** — `Apply(∈, XMWrap(a,',',b), A)` (renders
+  `<mrow>` in pMML). ONLY for list-LEFT; the list-RIGHT `0<x,y`→`list(0<x,y)`
+  distribute stays (separate earlier blessed surpass). Touches the tuned
+  `formulae_apply`/`list_apply` (semantics.rs:486; 3-item `a,b,c∈S` uses
+  `list_apply`) — both paths + pruning. Verify: full suite + `0<x,y` +
+  over-parse fixtures stay green. Full spec in `memory/math-parser-asides`.
 - **relation with a list-RHS that itself contains a scripted relop**:
   `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >=^?, c)`, Rust
   unparsed. The scripted-relop atomic fix (`4a5ebf29f7`) cleared standalone list
