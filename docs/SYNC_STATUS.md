@@ -433,21 +433,32 @@ preview. We can never show `.eps`/`.pdf` on the web — always a web-native targ
 correctly (6/16 PNGs), so the symptom was a *failed* conversion shipping the raw
 source (now also visible via task 5's logging).
 
-**LANDED 2026-06-22 (`latexml_post/src/graphics.rs`).** Removed two raw-source
-leaks that diverged from Perl `Post/Graphics.pm`:
-- **Conversion-failure fallback** (was: `Error!` then `copy_to_destination` of
-  the raw source → `imagesrc="fig.eps"`). Perl L324-329 does `Error`/`Warn` +
-  `return` with NO imagesrc. Now matches: emit the `imageprocessing` Error and
-  leave `imagesrc` unset.
-- **`Plan::NotFound`** (was: `set_attribute("imagesrc", graphic)` → raw path for
-  a missing file). Perl L216-219 `Warn`s + `return` without imagesrc. Now Warn
-  only.
-- Both rely on the HTML5 XSLT (`LaTeXML-misc-xhtml.xsl:154`): a `<graphics>`
+**LANDED 2026-06-22 (`latexml_post/src/graphics.rs`).** THREE guards so a raw
+non-web-native source can never reach the web:
+1. **Conversion-failure fallback** (was: `Error!` then `copy_to_destination` of
+   the raw source → `imagesrc="fig.eps"`). Perl L324-329 does `Error`/`Warn` +
+   `return` with NO imagesrc. Now matches: emit the `imageprocessing` Error and
+   leave `imagesrc` unset.
+2. **`Plan::NotFound`** (was: `set_attribute("imagesrc", graphic)` → raw path for
+   a missing file). Perl L216-219 `Warn`s + `return` without imagesrc. Now Warn
+   only.
+3. **Plan routing default** (surpass-Perl): a source type with no explicit
+   `destination_type` now defaults to a WEB-NATIVE target — kept as-is for
+   web-native (svg/png/gif/jpg/jpeg), else `png`. Closes the hole where the
+   unmapped `.postscript` graphics_type (or any future addition) fell to
+   `dest_type == src_ext` → `Plan::Copy` (raw copy). Perl defaults dest_type to
+   srctype (Graphics.pm:244) and would copy such a source raw; we diverge so
+   non-web-native always routes through `Plan::Convert`.
+- All three rely on the HTML5 XSLT (`LaTeXML-misc-xhtml.xsl:154`): a `<graphics>`
   lacking `@imagesrc` renders as `class="ltx_missing ltx_missing_image"` (empty
-  src) — the correct "couldn't render" marker, never a broken `<img
-  src=".eps">`. `.eps`/`.ps`/`.pdf` all route through `Plan::Convert` (only
-  web-native rasters hit `Plan::Copy`), so this covers `.pdf` too. Suite 1467/0;
-  hep-th0101114 still 6 PNGs / zero `.eps` srcs.
+  src) — the correct "couldn't render" marker, never a broken `<img src=".eps">`.
+- **Witness verification (latexml_oxide --format=html5 --log --dest):**
+  hep-th0101114 → 6/6 `.eps`→PNG; astro-ph0004105 → 15/15 `.eps`→PNG; both with
+  ZERO raw `.eps`/`.pdf`/`.ps` srcs, ZERO `ltx_missing_image`, ZERO
+  `imageprocessing` errors. Suite 1467/0; clippy clean. **The `.eps`→web-image
+  conversion is confirmed working for both witnesses with the current binary —
+  the deployed preview's raw `.eps` was a previously-invisible failed conversion
+  / stale record, now both guarded against AND logged (task 5).**
 
 **Post-orchestration audit vs Perl `LaTeXML.pm::convert_post` + `Config.pm`
 (integrated path — the one cortex uses, NOT `bin/latexmlpost`).** Our

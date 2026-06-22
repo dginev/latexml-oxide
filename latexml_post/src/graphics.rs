@@ -1912,11 +1912,29 @@ impl Processor for Graphics {
         .unwrap_or("")
         .to_lowercase();
       let props = self.type_properties.get(&src_ext).cloned();
+      // Robustness guard (surpass-Perl; user directive 2026-06-22). A source
+      // type with no explicit `destination_type` defaults to a WEB-NATIVE
+      // target: keep web-native sources (svg/png/gif/jpg/jpeg) as-is, but
+      // rasterize anything else to `png`. This guarantees a non-web-native
+      // source is ALWAYS routed through Plan::Convert and never Plan::Copy'd
+      // verbatim — closing the hole for the unmapped `.postscript` graphics
+      // type (and any future addition) where a raw .ps/.eps/.pdf/.ai could
+      // otherwise reach the web. Perl defaults dest_type to srctype here
+      // (Graphics.pm:244, `$type = $properties{destination_type} || $srctype`),
+      // which would copy such a source raw; we deliberately diverge so the web
+      // output is never a raw .eps/.ps/.pdf the browser can't render.
+      const WEB_NATIVE: &[&str] = &["svg", "png", "gif", "jpg", "jpeg"];
       let dest_type = props
         .as_ref()
         .and_then(|p| p.destination_type.as_ref())
         .cloned()
-        .unwrap_or_else(|| src_ext.clone());
+        .unwrap_or_else(|| {
+          if WEB_NATIVE.contains(&src_ext.as_str()) {
+            src_ext.clone()
+          } else {
+            "png".to_string()
+          }
+        });
       let needs_conversion = dest_type != src_ext;
       let has_page = page.is_some();
       if needs_conversion || has_page {
