@@ -26,4 +26,11 @@ $+,-,\times$
 $+,-,\times .$
 $+,G$
 
+% a fenced comma-list with interword control spaces (\ ) before signed terms:
+% each \ produces 5pt rpadding on the preceding comma, which must NOT be treated
+% as a \quad-class WIDE_PUNCT formula-separator (that routed through
+% formulae_apply and failed inside the fence -> ltx_math_unparsed). Matches
+% Perl: vector@(300, -50, +50). Witness 1506.03557.
+$(300,\ -50,\ +50)$
+
 \end{document}

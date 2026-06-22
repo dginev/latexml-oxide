@@ -124,17 +124,26 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
 > direct LOCAL both-engines diff on a small paper sample (ground truth, not the
 > stale DB).
 >
-> **VETTED candidate from a local ground-truth scan (current binary, CONFIRMED
-> Rust-only — for the dedicated math session):** `1506.03557`
-> (`/data/arxiv/1506/1506.03557/`, `ESSS_2015.tex`) — **Rust 49 / Perl 2**, of
-> which **42× `Error:malformed:ltx:XMWrap <ltx:XMWrap> isn't allowed in <ltx:p>`**.
-> A math-parser `XMWrap` (wrapped/partial parse of complex inline math —
-> text-operators `\textit{Held\_For}` + comma-lists `(300,\ -50,\ +50)` + nested
-> parens + `~`/`\;`) leaks into `<ltx:p>` without a `<ltx:Math>` wrapper. NOT
-> reproducible from the math snippet alone — needs the paper's preamble/macro
-> context (`\name{}`, `caption`, …). Belongs to the deferred math-parser family
-> (XMWrap production + document-builder math-in-text wrapping); do not pick at it
-> piecemeal. (Same scan: `1705.04022`
+> **`1506.03557` (`ESSS_2015.tex`) — Rust 49 / Perl 2, PARTIALLY addressed
+> (math session, 2026-06-21).** Two distinct roots:
+> - **WIDE_PUNCT threshold — FIXED.** A fenced comma-list with an interword
+>   control space `\ ` before a signed term (`(3,\ -5)`, `(300,\ -50,\ +50)`,
+>   `\textit{Held\_For}\;(300,\ -50,\ +50)`) fell to `ltx_math_unparsed`: the `\ `
+>   put 5.0pt `rpadding` on the comma, and `punct_followed_by_wide_space`'s ≥5pt
+>   threshold mis-tagged it `WIDE_PUNCT` (a `\quad`-class formula-separator routed
+>   through `formulae_apply`, which fails inside a fence). Raised the threshold to
+>   ≥10pt (only `\quad`+; matches `filter_hints`). Now parses, matches Perl
+>   `vector@(300,-50,+50)`. Regression test in `parse/sequences_and_lists`.
+> - **The 42× `XMWrap isn't allowed in <ltx:p>` residual is a WRAPPING leak, NOT a
+>   parse gap.** The paper's actual unparsed math is Z-notation/formal-methods
+>   (`\bullet` quantifier-separators, `\mid` set-builder, `f(a,b)(t)` chains) —
+>   and BOTH engines unparse those IDENTICALLY in isolation (parity, 0 errors). The
+>   divergence: in the paper's macro context Rust leaks the unparsed bare
+>   `<XMWrap>` into `<ltx:p>` (42 schema errors) while Perl keeps it wrapped in
+>   `<ltx:Math>`. A document-builder fix (ensure unparsed inline math stays
+>   `<Math>`-wrapped in the "Anonymous String"/macro context) would fix it
+>   regardless of parse success — the real witness root, still OPEN. Not
+>   reproducible from the snippet alone (needs the paper's macro context). (Same scan: `1705.04022`
 > 16 err `_`/`^`-in-text — re-verify vs Perl before chasing.)
 >
 > **`1704.05644` (`Paperling_revu.tex`) — CONFIRMED Rust-only (Rust 17 / Perl 0)

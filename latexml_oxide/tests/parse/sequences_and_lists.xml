@@ -225,4 +225,33 @@
         </XMath>
       </Math></p>
   </para>
+  <para xml:id="p8">
+    <p><Math mode="inline" tex="(300,\ -50,\ +50)" text="vector@(300, - 50, + 50)" xml:id="p8.m1">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="vector"/>
+              <XMRef idref="p8.m1.1"/>
+              <XMRef idref="p8.m1.2"/>
+              <XMRef idref="p8.m1.3"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok role="OPEN" stretchy="false">(</XMTok>
+              <XMTok meaning="300" role="NUMBER" xml:id="p8.m1.1">300</XMTok>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMApp xml:id="p8.m1.2">
+                <XMTok meaning="minus" role="ADDOP">-</XMTok>
+                <XMTok meaning="50" role="NUMBER">50</XMTok>
+              </XMApp>
+              <XMTok role="PUNCT">,</XMTok>
+              <XMApp xml:id="p8.m1.3">
+                <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                <XMTok meaning="50" role="NUMBER">50</XMTok>
+              </XMApp>
+              <XMTok role="CLOSE" stretchy="false">)</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math></p>
+  </para>
 </document>

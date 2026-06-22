@@ -314,13 +314,20 @@ pub(crate) fn get_xmhint_spacing(width: &str) -> f64 {
 /// True iff the given PUNCT-like XMTok carries an `rpadding` attribute
 /// large enough to indicate a `\quad`-class spacing — TeX's idiom for
 /// separating a main formula from a side-condition (e.g.
-/// `A = B, \quad r \notin E`). Threshold of ≥5pt ignores `\,`/`\;`
-/// thin-space touch-ups while catching `\quad` (10pt) and `\qquad`.
+/// `A = B, \quad r \notin E`). Threshold of ≥10pt catches `\quad` (10pt)
+/// and `\qquad` (20pt) while EXCLUDING the interword control space `\ `
+/// (exactly 5pt) and thin-space touch-ups (`\,`/`\;`/`\:`). This matches
+/// `filter_hints`'s own `HINT_PUNCT_THRESHOLD` (10pt). An earlier ≥5pt
+/// threshold mis-tagged `\ ` as a separator, so a comma-list element with
+/// an interword space before a signed/`±` term — e.g. `(3,\ -5)` or
+/// `\textit{Held\_For}\;(300,\ -50,\ +50)` (witness 1506.03557) — became a
+/// fenced WIDE_PUNCT routed through `formulae_apply`, which doesn't apply
+/// inside a fence, so the whole formula fell to `ltx_math_unparsed`.
 /// Used by `node_to_grammar_lexemes_ctx` to emit a `WIDE_PUNCT` token
 /// the grammar can route through `formulae_apply` unambiguously.
 fn punct_followed_by_wide_space(node: &Node) -> bool {
   match node.get_attribute("rpadding") {
-    Some(s) => get_xmhint_spacing(&s) >= 5.0,
+    Some(s) => get_xmhint_spacing(&s) >= 10.0,
     None => false,
   }
 }
