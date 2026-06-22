@@ -414,132 +414,31 @@ Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/READM
 done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
 
-### 5. Post-processing logging parity for cortex workflows (LOG_BUFFER over the post phase)
-**Goal:** `cortex.log` must carry BOTH core *and* post-processing
-(Scan→Bibliography→CrossRef→**Graphics**→Split→MathML→XSLT) stage information,
-so post-phase failures are captured and counted — not lost. Today the post phase
-is **invisible** in the stored log, which violates the project's #1 signal-integrity
-rule (CLAUDE.md "every `Error:`/`Fatal:` must be captured; fail-safe toward
-detecting failure").
+### 5. Post-processing logging parity for cortex workflows — LANDED 2026-06-22
+`cortex.log` now carries core **+** post (Scan→…→Graphics→MathML→XSLT). Shared
+wrapper `latexml::post::run_post_processing_logged() -> PostOutcome {html, log,
+status_code}` re-binds `LOG_BUFFER` around `run_post_processing` then flushes
+(Perl's single post-`convert_post` flush); post failures use `post_error()` →
+buffer + Error counter (no `Fatal!`/`return`). `latexml_oxide` `--log`/archive-zip
+wired via `writer::write_output_segments` (no third concat alloc). Commits
+`512dbc1ba2`, `9524d2e179`; suite 1467/0. **Residual (cortex-side owner):** wire
+`cortex_worker.rs::convert_archive` to the same wrapper + fold
+`max(core, post.status_code)` into `Status:conversion` (Perl `LaTeXML.pm` L631-634).
 
-**Root cause (traced 2026-06-22).** The thread-local `LOG_BUFFER`
-(`latexml_core::util::logger`, `bind_log`/`flush_log`) is bound around the **core**
-conversion only. In `cortex_worker.rs::convert_archive`:
-- L370 `converter.convert(...)` runs the core conversion and **flushes** the buffer
-  internally (`converter.rs:167/285/443: log: self.flush_log()`), leaving
-  `LOG_BUFFER = None`.
-- L387 `run_post_processing(...)` then runs the post phases with the buffer
-  **already taken**, so nothing they emit can land in it.
-- L440 the stored log is built from `response.log` (core only) + `runtime_ms` +
-  `Status:`. (Confirmed empirically: a clean `cortex.log` for a 6-EPS paper had a
-  full core trace but **zero** `graphics:process`/`MathML[` lines.)
-
-**Two emission paths in post, both currently uncaptured:**
-1. Progress via `Note!` (`latexml_post/src/lib.rs:158`) → routes through the logger,
-   but is dropped because `LOG_BUFFER` is unbound during post.
-2. **Failures via raw `eprintln!`** in `latexml_oxide/src/post.rs`
-   (L127 parse, L174 Split, **L210 per-phase `"{label} failed"` — covers Graphics**,
-   L411 XSLT, L432 top-level, L476 page-write) → stderr only, never captured, and
-   they do **not** increment `common::error::REPORT`, so `Status:conversion` stays
-   `0`/OK on a real post failure (silent false-negative). Plus two leftover
-   `eprintln!("DBG …")` debug lines in `graphics.rs:1239/1287` to drop.
-
-**Why it matters (this session's trigger):** hep-th0101114 / astro-ph0004105 show
-raw `.eps` in the deployed preview. The current binary + fleet env convert all EPS→PNG
-correctly under `--standalone` (any profile — Graphics is **unconditional**,
-`post.rs:288`, NOT profile-gated; the ar5iv↔generic deltas are only
-`preload ar5iv.sty` / `noinvisibletimes` / `nodefaultresources`). So the deployed
-records were produced under different conditions — but because the post phase is
-unlogged, we **cannot tell from `cortex.log` whether Graphics ran-and-failed or never
-ran**. Fixing the logging is the prerequisite for diagnosing this and any future
-post-phase regression.
-
-**LANDED 2026-06-22 (latexml_oxide binary + shared wrapper); cortex_worker
-wiring deferred to the cortex-side owner.**
-- New shared wrapper `latexml::post::run_post_processing_logged() -> PostOutcome
-  { html, log, status_code }` (`latexml_oxide/src/post.rs`): re-binds the
-  thread-local `LOG_BUFFER` (which `convert()` already flushed) around
-  `run_post_processing`, then `flush_log()`s — the Rust equivalent of Perl's
-  single post-`convert_post` `flush_log()`. Captures every post-phase
-  `Info!`/`Warn!`/`post_error` (Graphics/MathML/XSLT), and reads the post
-  status from the shared (core+post) REPORT counter.
-- The `post.rs` failure `eprintln!`s are now `post_error()` (logs via
-  `log::error!` + `note_status(Error)` so they land in the buffer AND bump the
-  Error counter — but WITHOUT `Error!`'s too-many-errors `Fatal!`/`return`,
-  which would not typecheck in `run_post_processing`'s `String` return). The
-  splitnaming case is `Warn!`; the "Split into N" progress is `note_progress`.
-  Removed the two `graphics.rs` DBG `eprintln!`s.
-- `latexml_oxide` binary wired: `--log` and the archive-zip log now carry core
-  **+** post via `latexml_post::writer::write_output_segments(&[core, "\n",
-  post], dest)` — writes the (already-large) segments sequentially to avoid a
-  third concatenated allocation on the conversion path (cold archive path still
-  uses `assemble_conversion_log`, since `pack_archive` takes one `&str`). The
-  CLI exit status already reads post-inclusive `get_status_code()`.
-- **Verified:** `latexml_oxide --format=html5 --log=cortex.log --dest=test.html`
-  on hep-th0101114 → `cortex.log` now contains `scan:db_status`,
-  `graphics:process … 6 to process`, `math:converted`, `xslt:stylesheet`; 6
-  PNGs produced; suite 1467/0; clippy clean.
-- **Remaining:** `cortex_worker.rs::convert_archive` should call the same
-  `run_post_processing_logged` and fold `max(core, post.status_code)` into its
-  `Status:conversion` line (Perl `LaTeXML.pm` L631-634). The wrapper is ready;
-  the actual cortex_worker edit + `maxperf-cortex` rebuild are owned by the
-  cortex-side maintainer (per 2026-06-22 directive: leave the live fleet binary
-  alone).
-
-### 6. Graphics: never ship a raw `.eps`/`.pdf` to the web + post-orchestration audit
-**Trigger:** hep-th0101114 / astro-ph0004105 showed raw `.eps` in the deployed
-preview. We can never show `.eps`/`.pdf` on the web — always a web-native target
-(`.png`/`.svg`). Verified the current binary converts both papers' EPS→PNG
-correctly (6/16 PNGs), so the symptom was a *failed* conversion shipping the raw
-source (now also visible via task 5's logging).
-
-**LANDED 2026-06-22 (`latexml_post/src/graphics.rs`).** THREE guards so a raw
-non-web-native source can never reach the web:
-1. **Conversion-failure fallback** (was: `Error!` then `copy_to_destination` of
-   the raw source → `imagesrc="fig.eps"`). Perl L324-329 does `Error`/`Warn` +
-   `return` with NO imagesrc. Now matches: emit the `imageprocessing` Error and
-   leave `imagesrc` unset.
-2. **`Plan::NotFound`** (was: `set_attribute("imagesrc", graphic)` → raw path for
-   a missing file). Perl L216-219 `Warn`s + `return` without imagesrc. Now Warn
-   only.
-3. **Plan routing default** (surpass-Perl): a source type with no explicit
-   `destination_type` now defaults to a WEB-NATIVE target — kept as-is for
-   web-native (svg/png/gif/jpg/jpeg), else `png`. Closes the hole where the
-   unmapped `.postscript` graphics_type (or any future addition) fell to
-   `dest_type == src_ext` → `Plan::Copy` (raw copy). Perl defaults dest_type to
-   srctype (Graphics.pm:244) and would copy such a source raw; we diverge so
-   non-web-native always routes through `Plan::Convert`.
-- All three rely on the HTML5 XSLT (`LaTeXML-misc-xhtml.xsl:154`): a `<graphics>`
-  lacking `@imagesrc` renders as `class="ltx_missing ltx_missing_image"` (empty
-  src) — the correct "couldn't render" marker, never a broken `<img src=".eps">`.
-- **Witness verification (latexml_oxide --format=html5 --log --dest):**
-  hep-th0101114 → 6/6 `.eps`→PNG; astro-ph0004105 → 15/15 `.eps`→PNG; both with
-  ZERO raw `.eps`/`.pdf`/`.ps` srcs, ZERO `ltx_missing_image`, ZERO
-  `imageprocessing` errors. Suite 1467/0; clippy clean. **The `.eps`→web-image
-  conversion is confirmed working for both witnesses with the current binary —
-  the deployed preview's raw `.eps` was a previously-invisible failed conversion
-  / stale record, now both guarded against AND logged (task 5).**
-
-**Post-orchestration audit vs Perl `LaTeXML.pm::convert_post` + `Config.pm`
-(integrated path — the one cortex uses, NOT `bin/latexmlpost`).** Our
-`run_post_processing` order — Split → Scan → MakeIndex → MakeBibliography →
-CrossRef → Graphics → {pmml/cmml} → XSLT — **matches** Perl's `@procs` order,
-and our always-on phases are equivalent to Perl's `if <option>` gates at their
-`Config.pm` defaults (`scan`/`index`/`crossref`/`dographics`/`numbersections`
-all default 1; `pmml` auto-added for html/xhtml/jats). **Faithful for the
-`ltx:graphics`/EPS path.** Known deltas (separate, broader parity — NOT blocking
-the EPS task; candidates for future work):
-- **`PictureImages` processor is absent.** Perl always pushes it (full if
-  `picimages`, else `empty_only=>1`); Rust handles `<ltx:picture>` via the
-  regex `extract_svg_fragments` + HTML5 inline-SVG injection instead.
-- **`SVG` is a regex extractor, not a `LaTeXML::Post::SVG` processor** (intentional
-  divergence; functional for HTML5 inline SVG).
-- **No `prescan` mode** (Perl gates most procs on `!prescan`; rare multi-pass
-  DB-build path, unused by cortex/CLI).
-- **Graphics is unconditional** in Rust vs Perl's `dographics` (which Config.pm
-  only defaults to 1 when a destination/archive exists) — so Rust attempts
-  graphics even for stdout output. Harmless for web (always has a destination);
-  matches Perl whenever a destination is set.
+### 6. Graphics: never ship a raw `.eps`/`.pdf` to the web — LANDED 2026-06-22
+THREE `latexml_post/src/graphics.rs` guards so a non-web-native source can never
+reach the web: (1) conversion-failure → `imageprocessing` Error + NO imagesrc
+(Perl L324-329); (2) `Plan::NotFound` → Warn only, no imagesrc (Perl L216-219);
+(3) plan-routing default → web-native target (svg/png/gif/jpg/jpeg kept, else
+`png`) so non-web-native always routes through `Plan::Convert` (surpass-Perl: Perl
+would `Plan::Copy` the raw source). A `<graphics>` without `@imagesrc` renders
+`ltx_missing_image`, never a broken `.eps` src. Verified: hep-th0101114 6/6,
+astro-ph0004105 15/15 EPS→PNG, zero raw srcs. Commits `80b4438385`, `604951c232`.
+Post-orchestration matches Perl `convert_post`/`Config.pm` at defaults
+(Split→Scan→Index→Bib→CrossRef→Graphics→pmml/cmml→XSLT). Known deltas (broader
+parity, not blocking): `PictureImages` absent (Rust = regex inline-SVG); `SVG` is a
+regex extractor (intentional divergence); no `prescan`; Graphics unconditional vs
+Perl `dographics`.
 
 ---
 
