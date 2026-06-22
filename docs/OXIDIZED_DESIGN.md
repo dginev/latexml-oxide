@@ -740,6 +740,21 @@ the invisible-times parse is produced.
 **Affected tests:** 13 test XMLs updated session 107 (previously recorded
 Perl's SPECULATE-off behavior; now record mathematically-consistent parses).
 
+**Reaffirmed 2026-06-22 (user decision, AskUserQuestion "Keep f@(x) apply as
+intentional divergence").** A survey of the apply-vs-multiply family confirmed the
+clean split: KNOWN functions already match Perl (`\sin(x)`→`sine@(x)` in both);
+only UNKNOWN symbols diverge (`f(x)`→Rust `f@(x)` vs Perl `f * x`;
+`\Gamma(s)`→Rust `Gamma@(s)` vs Perl `Gamma * s`). The corpus-wide change to match
+Perl (≈25 test fixtures / ≈150 single-letter applies flip to multiply) was
+**declined**: `f@(x)` application is the better semantics for the common
+function-call case, so it stays the intentional divergence above. **Distinct,
+complementary fix (toward Perl, in progress):** the KNOWN-function multi-arg
+*flattening* — `\max(a,b)` should be `max@(a,b)`, not `max@(vector@(a,b))` (Perl
+`ApplyDelimited`/`extract_separators` spreads the comma-list items as direct
+args). That is a parity bug, NOT a divergence; tracked in SYNC_STATUS
+("`f(a,b)` multi-arg flattening"). It is scoped to FUNCTION/OPFUNCTION/
+TRIGFUNCTION roles, so it does NOT touch the unknown-`f` apply preserved here.
+
 ---
 
 ### 19. Perl `local` Mechanism — `latexml_core::common::local_assignments`
