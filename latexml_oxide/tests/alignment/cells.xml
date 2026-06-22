@@ -69,8 +69,8 @@
         <tr>
           <td align="center" border="l r t"><tabular vattach="middle">
               <tr>
-                <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                    <p width="85.4pt">Cell long text with predefined width</p>
+                <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top" width="85.4pt">
+                    <p>Cell long text with predefined width</p>
                   </inline-block></td>
               </tr>
             </tabular></td>
@@ -79,8 +79,8 @@
         <tr>
           <td align="center" border="b l r t"><tabular vattach="middle">
               <tr>
-                <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                    <p width="85.4pt">Cell long…</p>
+                <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top" width="85.4pt">
+                    <p>Cell long…</p>
                   </inline-block></td>
               </tr>
             </tabular></td>
@@ -148,14 +148,18 @@
                   <td align="center" class="ltx_nopad_r" thead="column row"><inline-block angle="90" depth="0.0pt" height="96.1pt" innerdepth="9.5pt" innerheight="14.5pt" innerwidth="96.1pt" width="24.0pt" xtranslate="-36.0pt" ytranslate="-36.0pt">
                       <p><text color="#FF0000" font="bold"><tabular rowsep="-1.7pt" vattach="middle">
                             <tr>
-                              <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                                  <p width="90.1pt">Second multilined</p>
-                                </inline-block></td>
+                              <td align="justify" class="ltx_nopad_r" vattach="top"><inline-logical-block vattach="top" width="90.1pt">
+                                  <para class="ltx_noindent" xml:id="S3.p1.p1">
+                                    <p>Second multilined</p>
+                                  </para>
+                                </inline-logical-block></td>
                             </tr>
                             <tr>
-                              <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                                  <p width="90.1pt">column head</p>
-                                </inline-block></td>
+                              <td align="justify" class="ltx_nopad_r" vattach="top"><inline-logical-block vattach="top" width="90.1pt">
+                                  <para class="ltx_noindent" xml:id="S3.p1.p2">
+                                    <p>column head</p>
+                                  </para>
+                                </inline-logical-block></td>
                             </tr>
                           </tabular></text></p>
                     </inline-block></td>
@@ -298,8 +302,8 @@
           <tr>
             <td align="left" border="l r t"><tabular vattach="middle">
                 <tr>
-                  <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                      <p width="142.3pt">Cell …</p>
+                  <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top" width="142.3pt">
+                      <p>Cell …</p>
                     </inline-block></td>
                 </tr>
               </tabular></td>
@@ -308,8 +312,8 @@
           <tr>
             <td align="left" border="b l r t"><tabular vattach="middle">
                 <tr>
-                  <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top">
-                      <p width="142.3pt">Cell …</p>
+                  <td align="justify" class="ltx_nopad_r" vattach="top"><inline-block vattach="top" width="142.3pt">
+                      <p>Cell …</p>
                     </inline-block></td>
                 </tr>
               </tabular></td>

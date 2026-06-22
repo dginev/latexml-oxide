@@ -19,8 +19,8 @@
       <tabular vattach="middle">
         <tbody>
           <tr>
-            <td align="justify" border="l r t" vattach="top"><inline-block vattach="top">
-                <p width="72.3pt">Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+            <td align="justify" border="l r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
               </inline-block></td>
             <td align="justify" border="r t" vattach="middle" width="72.3pt"><inline-block vattach="top">
                 <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
@@ -30,8 +30,8 @@
               </inline-block></td>
           </tr>
           <tr>
-            <td align="justify" border="b l r t" vattach="top"><inline-block vattach="top">
-                <p width="72.3pt">Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
+            <td align="justify" border="b l r t" vattach="top"><inline-block vattach="top" width="72.3pt">
+                <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
               </inline-block></td>
             <td align="justify" border="b r t" vattach="middle" width="72.3pt"><inline-block vattach="top">
                 <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit</p>
