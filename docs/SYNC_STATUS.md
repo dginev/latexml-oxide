@@ -474,10 +474,14 @@ Perl `dographics`.
   **0 regression-signatures** (no `\lx@tabular@p`/itemize-in-p/inline-block errors);
   the errors that remain are all pre-existing/shared (math-mode `^`/`_`,
   `\noalign`/`&` alignment, frontmatter mode-close, undefined third-party CS like
-  `collcell`'s `\collectcell`). NOTE: the `collcell` package (`\collectcell`/
-  `\endcollectcell`, undefined) recurs in table papers (1901.10277 cascades to a
-  TooManyErrors fatal; 1701.06504) — a candidate future binding (verify vs Perl
-  first; likely a third-party-undefined parity case).
+  `collcell`'s `\collectcell`). **`collcell` checked 2026-06-22 → PARITY, NOT a
+  Rust bug:** both Rust AND Perl error `\collectcell`/`\endcollectcell` undefined +
+  `missing file[collcell.sty]` (both default `notex=1` / `INCLUDE_STYLES=false`, so
+  neither raw-loads `collcell.sty`; Rust mirrors Perl Package.pm:2676-2677 exactly).
+  The first Perl run *looked* clean ("0 errors") only because `latexml --quiet`
+  SUPPRESSES the error display — `latexml` (verbose) shows the same 2 errors. So the
+  1901.10277 `collcell`→alignment cascade is shared; binding collcell would
+  *surpass* Perl. (Same `--quiet`-suppression artifact as babel-russian.)
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
