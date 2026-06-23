@@ -653,7 +653,11 @@ impl BoxOps for Alignment {
         // (kept for `is_pcol` detection in `\lx@alignment@multicolumn`) to the
         // Perl-faithful `"left"` here on the cell attribute only (cluster-B Kind-B).
         if let Some(ref align) = cell.align {
-          let td_align = if *align == Align::Justify { "left".to_string() } else { align.name() };
+          let td_align = if *align == Align::Justify {
+            "left".to_string()
+          } else {
+            align.name()
+          };
           cell_attrs.insert(String::from("align"), td_align);
         }
         if let Some(ref vattach) = cell.vattach {
