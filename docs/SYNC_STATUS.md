@@ -461,13 +461,14 @@ Perl `dographics`.
   `\multicolumn{}{p{}}` and `\multicolumn`-over-`m{}`/`b{}` GROUP ERROR were already
   fixed (1805.01525 27→0). **array.sty `m{}`/`b{}` ALSO ported to `\lx@tabular@p`
   (`eb978df5a9`)** — cluster-B residual C/D (m/b `vattach`/width drift, width on
-  `<td>`) is CLEARED: the m-cell `<inline-block>` is now Perl-exact. **Remaining
-  residual (deferred, COSMETIC — cluster-B Kind-B):** a p/m/b column's `<td>` gets
-  `align="justify"` where Perl uses `align="left"` (C_m_column reproducer: down to
-  this 1 diff). NOT a simple mapping flip — the `align == Some(Align::Justify)`
-  marker is load-bearing for the `is_pcol` detection in `\lx@alignment@multicolumn`,
-  so a clean fix must decouple the td-align attribute from that marker. No errors.
-  Reproducers: `docs/reproducers/array_pcolumn/` + `pcolumn_block_content_in_p.tex`.
+  `<td>`) CLEARED: the m-cell `<inline-block>` is Perl-exact. **Cluster-B Kind-B
+  CLEARED too (`1867f17da9`):** a p/m/b `<td>` now gets `align="left"` (Perl) not
+  `"justify"` — Justify mapped to `"left"` at the td cell-attr output only, keeping
+  the `Cell.align == Justify` marker intact for `is_pcol` detection. **Cluster-B is
+  now FULLY RESOLVED.** Every paragraph-column fixture moved toward Perl, several to
+  near-exact (array_newline_math 2→0 Perl-exact, array 14→2, tabular 21→3,
+  colortbls 41→9, graphrot 75→27, cells 72→64). The p/m/b table-column parity arc
+  (box-model → p{} port → m/b port → td-align) is COMPLETE.
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
