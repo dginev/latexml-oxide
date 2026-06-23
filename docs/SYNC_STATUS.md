@@ -459,11 +459,15 @@ Perl `dographics`.
   alignment/array 18→14 diff lines vs local Perl; cells 72→72 — same cluster-B
   family) and were re-baselined; suite 1467/0, clippy clean. The narrow
   `\multicolumn{}{p{}}` and `\multicolumn`-over-`m{}`/`b{}` GROUP ERROR were already
-  fixed (1805.01525 27→0). **Residual (deferred, COSMETIC — cluster-B):** remaining
-  p{} diffs vs Perl are `>{}`-prefix align on `<td>` and regular `m{}`/`b{}`
-  `vattach`/width drift (m/b still use plain `\vtop{}`/`\vbox{}`, not
-  `\lx@tabular@p`). Reproducers: `docs/reproducers/array_pcolumn/` +
-  `pcolumn_block_content_in_p.tex`.
+  fixed (1805.01525 27→0). **array.sty `m{}`/`b{}` ALSO ported to `\lx@tabular@p`
+  (`eb978df5a9`)** — cluster-B residual C/D (m/b `vattach`/width drift, width on
+  `<td>`) is CLEARED: the m-cell `<inline-block>` is now Perl-exact. **Remaining
+  residual (deferred, COSMETIC — cluster-B Kind-B):** a p/m/b column's `<td>` gets
+  `align="justify"` where Perl uses `align="left"` (C_m_column reproducer: down to
+  this 1 diff). NOT a simple mapping flip — the `align == Some(Align::Justify)`
+  marker is load-bearing for the `is_pcol` detection in `\lx@alignment@multicolumn`,
+  so a clean fix must decouple the td-align attribute from that marker. No errors.
+  Reproducers: `docs/reproducers/array_pcolumn/` + `pcolumn_block_content_in_p.tex`.
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
