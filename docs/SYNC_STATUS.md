@@ -122,6 +122,17 @@ rerun is the clear next step:**
     (those don't change). **Conclusion: the entire `error` severity is mined out —
     parity + env-artifacts; the one genuine find (p{} block content, 1510.07685) is
     now ✅ FIXED (1610.00974 step-3 port + Cluster G box-model fix, 2026-06-22).**
+  - **Current-binary same-host sweep (2026-06-22):** a fresh 24-paper deterministic
+    corpus sample (LaTeX2e + LaTeX 2.09 `\documentstyle` + revtex, multi-domain),
+    current Rust vs **verbose** local Perl (avoiding the `--quiet` trap). 21 real
+    TeX papers (3 were `\documentstyle` 2.09, 1 a misnamed PostScript file):
+    **ZERO Rust>Perl divergences — Rust is at-or-better than Perl on every paper.**
+    Parity on most (0/0, 33/33); **Rust BEATS Perl on 4** (1509.03503 Perl
+    timeout→Rust clean; 1604.03906 3 vs 101; astro-ph0210479 18 vs 101; 1712.01466
+    2 vs 3). Confirms the stale-DB mining: no genuine Rust-only bugs findable on the
+    current binary without a fresh cortex rerun. Sweep harness:
+    `tools/`-style `/tmp/sweep.sh` (grep `\documentclass` misses 2.09
+    `\documentstyle` — heuristic note, not a Rust gap).
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
