@@ -152,6 +152,17 @@ rerun is the clear next step:**
     current binary without a fresh cortex rerun. Sweep harness:
     `tools/`-style `/tmp/sweep.sh` (grep `\documentclass` misses 2.09
     `\documentstyle` — heuristic note, not a Rust gap).
+  - **`warning` severity mined too (2026-06-22) → nothing new actionable.** Of 2208
+    warning tasks, the bulk is **user-deferred math** (`ambiguous` 1348 + `expected`
+    1181 = `not_parsed` "MathParser failed to match" — content-MathML) + env
+    (`missing_file` 590). The small non-math categories are niche graceful-recovery
+    warnings, all parity/faithful: `unsupported/multirow` ("Negative row sizes … not
+    yet supported") is a **line-for-line mirror of Perl `multirow.sty.ltxml`:27-28**
+    (Perl doesn't support it either — implementing would surpass Perl);
+    `malformed/{_CaptureBlock_,labels,ltx:Proof}` (1-5 tasks) are graceful fallbacks
+    for custom/edge constructs. **All cortex severities (error/fatal/warning) are now
+    mined; no unblocked, in-scope, non-surpass Rust-only bug remains findable on the
+    current binary.**
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
