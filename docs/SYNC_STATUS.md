@@ -15,10 +15,29 @@
 
 ## Current status
 
-- `cargo test --tests`: **1466 / 0 / 0**.
+- `cargo test --tests`: **1467 / 0 / 0**.
 - `cargo clippy --workspace --all-targets -- -D warnings`: **clean**.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
+
+### Landed this session (2026-06-22, on `further-stability-coverage`, pushed)
+
+Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
+- **Cluster G hang** `1707.02464` — `\hsize`-aware vbox paragraph wrapping (faithful
+  Perl `readBoxContents`); the `\narrow` `\hsize`-shrink loop now terminates
+  (hang → ~4.8s, 10 errors = Perl). `7545e07fd6`. See `STABILITY_WITNESSES.md`
+  Cluster G (FIXED).
+- **p{} block-content** `1510.07685` — `\begin{itemize}` in a `p{}` cell (3→0
+  errors); global p{} → Perl `\lx@tabular@p` VBox form (1610.00974 step-3).
+  `f65b80c1c2`.
+- **array.sty m{}/b{} → `\lx@tabular@p`** (`eb978df5a9`) and **p/m/b `<td>`
+  `align="left"`** (`1867f17da9`) → **cluster-B FULLY RESOLVED**; table fixtures
+  near-/exact-to-Perl (array_newline_math Perl-exact); rotfloat2 sidewaystable
+  innerheight 69.1→98.6 vs Perl 98.5.
+- Validated regression-free: 12 table-stressed papers + a fresh 24-paper same-host
+  sweep (0 Rust>Perl; Rust at-or-better everywhere) + class-level cross-join.
+- (Earlier this session: tasks 5 & 6 below — post-processing log parity + graphics
+  never-ship-raw-.eps — also landed.)
 
 ## Methodology & the cortex cross-join
 
@@ -426,73 +445,29 @@ Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/READM
 done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
 
-### 5. Post-processing logging parity for cortex workflows — LANDED 2026-06-22
-`cortex.log` now carries core **+** post (Scan→…→Graphics→MathML→XSLT). Shared
-wrapper `latexml::post::run_post_processing_logged() -> PostOutcome {html, log,
-status_code}` re-binds `LOG_BUFFER` around `run_post_processing` then flushes
-(Perl's single post-`convert_post` flush); post failures use `post_error()` →
-buffer + Error counter (no `Fatal!`/`return`). `latexml_oxide` `--log`/archive-zip
-wired via `writer::write_output_segments` (no third concat alloc). Commits
-`512dbc1ba2`, `9524d2e179`; suite 1467/0. **Residual (cortex-side owner):** wire
-`cortex_worker.rs::convert_archive` to the same wrapper + fold
-`max(core, post.status_code)` into `Status:conversion` (Perl `LaTeXML.pm` L631-634).
-
-### 6. Graphics: never ship a raw `.eps`/`.pdf` to the web — LANDED 2026-06-22
-THREE `latexml_post/src/graphics.rs` guards so a non-web-native source can never
-reach the web: (1) conversion-failure → `imageprocessing` Error + NO imagesrc
-(Perl L324-329); (2) `Plan::NotFound` → Warn only, no imagesrc (Perl L216-219);
-(3) plan-routing default → web-native target (svg/png/gif/jpg/jpeg kept, else
-`png`) so non-web-native always routes through `Plan::Convert` (surpass-Perl: Perl
-would `Plan::Copy` the raw source). A `<graphics>` without `@imagesrc` renders
-`ltx_missing_image`, never a broken `.eps` src. Verified: hep-th0101114 6/6,
-astro-ph0004105 15/15 EPS→PNG, zero raw srcs. Commits `80b4438385`, `604951c232`.
-Post-orchestration matches Perl `convert_post`/`Config.pm` at defaults
-(Split→Scan→Index→Bib→CrossRef→Graphics→pmml/cmml→XSLT). Known deltas (broader
-parity, not blocking): `PictureImages` absent (Rust = regex inline-SVG); `SVG` is a
-regex extractor (intentional divergence); no `prescan`; Graphics unconditional vs
-Perl `dographics`.
+### 5–6. LANDED 2026-06-22 (see "Landed this session" above)
+- **Post-processing log parity** (`512dbc1ba2`, `9524d2e179`): `cortex.log` carries
+  core+post. **Residual (cortex-side owner):** wire `cortex_worker.rs::convert_archive`
+  to `run_post_processing_logged` + fold `max(core, post.status_code)` into
+  `Status:conversion` (Perl `LaTeXML.pm` L631-634).
+- **Graphics never ships a raw `.eps`/`.pdf`** (`80b4438385`, `604951c232`): three
+  guards → a `<graphics>` without `@imagesrc` renders `ltx_missing_image`. Known
+  post-orchestration deltas (not blocking, broader parity): `PictureImages` absent
+  (Rust = regex inline-SVG), `SVG` regex extractor, no `prescan`.
 
 ---
 
 ## Deep deferred families (parked — large or shared; dedicated sessions)
 
-- **1610.00974 step-3 — global p{} → Perl `\lx@tabular@p` VBox form — ✅ LANDED
-  2026-06-22 (`f65b80c1c2`).** The global `p{Dimension}` column now uses Perl's
-  `\lx@tabular@p t {width} { … }` (cell = `<ltx:inline-block>`, VBoxContents /
-  internal_vertical) instead of the old `\vtop{\hbox to <w>..}`;
-  `\lx@alignment@multicolumn` splices directly for the already-VBox-shaped column
-  (array.sty m{}/b{} keep the `\vtop`/`\vbox` transform). Unblocked by the box-model
-  fix (`7545e07fd6`, Cluster G). **Fixes the genuine Rust-only correctness bug
-  1510.07685** (`\begin{itemize}` in a `p{}` cell → 3→0 errors; the cell is now an
-  inline-block, not an `_noautoclose` `ltx:p`). rotfloat2 sidewaystable is now
-  near-Perl-exact (innerheight 69.1→98.6 vs Perl 98.5). All p{}-table fixtures moved
-  TOWARD-or-equal Perl (colortbls 73→41, tabular 39→21, graphrot 125→75,
-  alignment/array 18→14 diff lines vs local Perl; cells 72→72 — same cluster-B
-  family) and were re-baselined; suite 1467/0, clippy clean. The narrow
-  `\multicolumn{}{p{}}` and `\multicolumn`-over-`m{}`/`b{}` GROUP ERROR were already
-  fixed (1805.01525 27→0). **array.sty `m{}`/`b{}` ALSO ported to `\lx@tabular@p`
-  (`eb978df5a9`)** — cluster-B residual C/D (m/b `vattach`/width drift, width on
-  `<td>`) CLEARED: the m-cell `<inline-block>` is Perl-exact. **Cluster-B Kind-B
-  CLEARED too (`1867f17da9`):** a p/m/b `<td>` now gets `align="left"` (Perl) not
-  `"justify"` — Justify mapped to `"left"` at the td cell-attr output only, keeping
-  the `Cell.align == Justify` marker intact for `is_pcol` detection. **Cluster-B is
-  now FULLY RESOLVED.** Every paragraph-column fixture moved toward Perl, several to
-  near-exact (array_newline_math 2→0 Perl-exact, array 14→2, tabular 21→3,
-  colortbls 41→9, graphrot 75→27, cells 72→64). The p/m/b table-column parity arc
-  (box-model → p{} port → m/b port → td-align) is COMPLETE. **Validated
-  regression-free 2026-06-22**: re-ran 12 table-structure-stressed arXiv papers
-  (cortex `\@end@tabular`/`\lx@begin@alignment` clusters) on the current binary —
-  **0 regression-signatures** (no `\lx@tabular@p`/itemize-in-p/inline-block errors);
-  the errors that remain are all pre-existing/shared (math-mode `^`/`_`,
-  `\noalign`/`&` alignment, frontmatter mode-close, undefined third-party CS like
-  `collcell`'s `\collectcell`). **`collcell` checked 2026-06-22 → PARITY, NOT a
-  Rust bug:** both Rust AND Perl error `\collectcell`/`\endcollectcell` undefined +
-  `missing file[collcell.sty]` (both default `notex=1` / `INCLUDE_STYLES=false`, so
-  neither raw-loads `collcell.sty`; Rust mirrors Perl Package.pm:2676-2677 exactly).
-  The first Perl run *looked* clean ("0 errors") only because `latexml --quiet`
-  SUPPRESSES the error display — `latexml` (verbose) shows the same 2 errors. So the
-  1901.10277 `collcell`→alignment cascade is shared; binding collcell would
-  *surpass* Perl. (Same `--quiet`-suppression artifact as babel-russian.)
+- **1610.00974 step-3 (global p{}→VBox) + cluster-B — ✅ LANDED 2026-06-22, NO
+  LONGER DEFERRED.** See "Landed this session" above. p{}/m{}/b{} columns now build
+  the cell as Perl's `\lx@tabular@p` inline-block (VBoxContents); p/m/b `<td>`
+  `align="left"`; **cluster-B FULLY RESOLVED**; fixes 1510.07685. Commits
+  `f65b80c1c2` / `eb978df5a9` / `1867f17da9` (+ box-model `7545e07fd6`). NOTE: the
+  `collcell`/`\collectcell` undefined seen in some table papers is PARITY (both
+  engines default `notex=1`/`INCLUDE_STYLES=false`, so neither raw-loads
+  `collcell.sty`; the `--quiet` Perl "0 errors" was a display-suppression artifact —
+  use verbose Perl).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
