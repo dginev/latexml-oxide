@@ -468,7 +468,16 @@ Perl `dographics`.
   now FULLY RESOLVED.** Every paragraph-column fixture moved toward Perl, several to
   near-exact (array_newline_math 2→0 Perl-exact, array 14→2, tabular 21→3,
   colortbls 41→9, graphrot 75→27, cells 72→64). The p/m/b table-column parity arc
-  (box-model → p{} port → m/b port → td-align) is COMPLETE.
+  (box-model → p{} port → m/b port → td-align) is COMPLETE. **Validated
+  regression-free 2026-06-22**: re-ran 12 table-structure-stressed arXiv papers
+  (cortex `\@end@tabular`/`\lx@begin@alignment` clusters) on the current binary —
+  **0 regression-signatures** (no `\lx@tabular@p`/itemize-in-p/inline-block errors);
+  the errors that remain are all pre-existing/shared (math-mode `^`/`_`,
+  `\noalign`/`&` alignment, frontmatter mode-close, undefined third-party CS like
+  `collcell`'s `\collectcell`). NOTE: the `collcell` package (`\collectcell`/
+  `\endcollectcell`, undefined) recurs in table papers (1901.10277 cascades to a
+  TooManyErrors fatal; 1701.06504) — a candidate future binding (verify vs Perl
+  first; likely a third-party-undefined parity case).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
   `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
