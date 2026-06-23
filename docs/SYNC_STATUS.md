@@ -481,7 +481,14 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   use verbose Perl).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
-  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
+  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **QUANTIFIED 2026-06-22: this is the
+  #1 remaining Rust-only divergence** — `warning/expected/id` is **1005 cortex
+  tasks** ("Cannot find a node with xml:id='S…E…m1.N'" from
+  `latexml_math_parser/src/parser.rs:2840`; math-node ids, so genuinely the
+  content-arm/MathFork XMRef cluster). It's a large Rust-only WARNING excess vs
+  Perl (e.g. 0704.3530 Rust 152 vs Perl 9 warnings) — NOT parity. The prime
+  candidate for the deferred content-MathML dedicated session; do NOT pick at it
+  piecemeal (user directive).
 - **xy-pic `svg:path` / curve cluster** (1501.03690) — shifted-arrows `svg:path`
   in `ltx:text`; mode-frame cascade root.
 
