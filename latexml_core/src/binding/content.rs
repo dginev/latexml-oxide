@@ -3011,7 +3011,12 @@ pub fn convert_latex_args(
       }
       .init()?,
     );
-    nargs -= 1;
+    // Perl `convertLaTeXArgs` does `$nargs-- if $optional`; with `$nargs==0`
+    // that just yields an empty `1..$nargs` range. Saturate so the malformed
+    // `\newcommand\foo[0][d]{}` (0 args yet an optional default — outside
+    // LaTeX's 0..9 domain) can't underflow `usize` to ~2^64 and spin the loop
+    // below. Mirrors the sibling `convert_twoopt_args`.
+    nargs = nargs.saturating_sub(1);
   }
 
   for _ in 1..=nargs {
