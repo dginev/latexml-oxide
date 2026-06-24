@@ -42,7 +42,9 @@ arxiv-examples/
 USER_OK.md
 
 # Local Claude Code settings and ad-hoc HTML conversion outputs
-.claude/
+# (ignore local settings, but DO track shared project skills under .claude/skills/)
+.claude/*
+!.claude/skills/
 html/
 
 # Python bytecode (e.g. tools/check_memory.py emits __pycache__/)

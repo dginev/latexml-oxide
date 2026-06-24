@@ -4,6 +4,19 @@ Utility scripts for development, triage, sandbox sweeps, kernel-dump
 generation, schema work, and porting audits. Most are bash; a few are
 Python or Perl. Run from the repo root unless noted.
 
+## Skills (`.claude/skills/`) — the workflows these scripts plug into
+
+Project skills capture the *judgement* around the scripts (what verdict to
+trust, what trap to avoid); the scripts do the mechanical work. Invoke a skill
+with `/<name>` or let it surface by description.
+
+| Skill | When | Key scripts |
+|---|---|---|
+| `canvas-triage` | "Is this paper a genuine Rust bug or parity with Perl?" | `parity_check.sh`, `triage_failure.sh`, `first_error.sh` |
+| `min-repro` | Reduce a confirmed failure to a minimal `.tex`/fixture | `bisect_repro.sh`, `first_error.sh` |
+| `perl-port` | Faithfully translate/fix a binding from the Perl source | `audit_def_parity.py`, `audit_attrs.sh`, `audit_locked.sh` |
+| `perf-check` | Measure performance / pick a profile / avoid settled dead-ends | `perf_compare.py`, `perf_phase_summary.py`, `run_perf_corpus.sh` |
+
 ## Quick lookup
 
 | I want to … | Use |
@@ -54,7 +67,7 @@ Python or Perl. Run from the repo root unless noted.
 - **`generate-scholarly-schema-docs`** — standalone HTML schema-doc
   tree (trang + `genschema_oxide` + `latexml_oxide --split`).
 
-### Perl-porting audits (one-shot per binding migration)
+### Perl-porting audits (one-shot per binding migration; paired with skill `perl-port`)
 
 - **`audit_attrs.sh`** — Perl→Rust attribute parity sweep
   (locked / bounded / scope / requireMath / robust).
@@ -62,7 +75,7 @@ Python or Perl. Run from the repo root unless noted.
   parity counter.
 - **`audit_locked.sh`** — `locked=>1` parity.
 
-### Performance
+### Performance (paired with skill `perf-check`)
 
 - **`perf_compare.py`** — paired A/B comparison of two telemetry corpus
   runs (Δwall, Δphase_us).
