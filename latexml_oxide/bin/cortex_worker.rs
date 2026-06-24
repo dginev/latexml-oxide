@@ -516,6 +516,9 @@ fn read_max_rss_kb_proc() -> u64 {
 /// Read accumulated child user/sys CPU time in microseconds via getrusage(2).
 #[cfg(unix)]
 fn read_child_rusage_us_proc() -> (u64, u64) {
+  // SAFETY: `ru` points to a valid, zeroed `libc::rusage`; getrusage(2) only
+  // writes through it on success, and the `tv_sec`/`tv_usec` fields are read
+  // only after the `== 0` success check.
   unsafe {
     let mut ru: libc::rusage = std::mem::zeroed();
     if libc::getrusage(libc::RUSAGE_CHILDREN, &mut ru) == 0 {

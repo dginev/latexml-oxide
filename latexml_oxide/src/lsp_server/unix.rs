@@ -42,6 +42,9 @@ impl FdReader {
   fn fill(&mut self) -> std::io::Result<usize> {
     let mut tmp = [0u8; 8192];
     loop {
+      // SAFETY: self.fd is an owned, still-open read fd (stdin=0 or a test pipe end);
+      // tmp.as_mut_ptr()/tmp.len() describe a valid, fully-initialized [u8; 8192] region,
+      // and read(2) only writes up to len bytes into it.
       let n = unsafe { libc::read(self.fd, tmp.as_mut_ptr() as *mut libc::c_void, tmp.len()) };
       if n < 0 {
         let err = std::io::Error::last_os_error();
@@ -143,6 +146,9 @@ fn parse_content_length(header: &[u8]) -> Option<usize> {
 /// `124` on timeout / `137` on the memory ceiling.
 fn reap(pid: i32) -> i32 {
   let mut status = 0i32;
+  // SAFETY: &mut status is a valid &mut i32 the kernel writes the exit status
+  // through; pid is a child this server forked. waitpid/WIF* only read that pid
+  // and the local status word — no other memory is touched.
   unsafe {
     libc::waitpid(pid, &mut status, 0);
     if libc::WIFEXITED(status) {
@@ -198,6 +204,9 @@ fn wait_for_child(
   pending: &mut VecDeque<String>,
 ) -> WarmResult {
   // Owns `read_fd`; closes it on every return path.
+  // SAFETY: read_fd is a freshly-created, still-open pipe read end returned by
+  // spawn_body_child and not owned by any other File; from_raw_fd takes sole
+  // ownership so the fd is closed exactly once when `pipe` drops.
   let mut pipe = unsafe { std::fs::File::from_raw_fd(read_fd) };
 
   loop {
@@ -236,6 +245,9 @@ fn wait_for_child(
         revents: 0,
       },
     ];
+    // SAFETY: fds is a live [pollfd; 2] on the stack; fds.as_mut_ptr()/fds.len()
+    // describe exactly that array, and poll(2) only reads .fd/.events and writes
+    // .revents within those two elements. fd 0 and read_fd are both open.
     let rc = unsafe { libc::poll(fds.as_mut_ptr(), fds.len() as libc::nfds_t, -1) };
     if rc < 0 {
       let err = std::io::Error::last_os_error();
@@ -284,18 +296,24 @@ fn wait_for_child(
 /// `setsid`-detached converter grandchildren that would otherwise be
 /// orphaned with no watcher.
 fn kill_and_reap(pid: i32) {
+  // SAFETY: pid is a child this server forked; kill(2) only delivers a signal to
+  // that pid and touches no process memory.
   unsafe {
     libc::kill(pid, libc::SIGTERM);
   }
   // Brief grace: poll for exit up to ~50 ms before escalating.
   for _ in 0..10 {
     let mut status = 0i32;
+    // SAFETY: &mut status is a valid &mut i32 the kernel may write through; pid is
+    // a child we forked. waitpid only reads pid and writes the local status word.
     let r = unsafe { libc::waitpid(pid, &mut status, libc::WNOHANG) };
     if r == pid {
       return; // already reaped
     }
     std::thread::sleep(std::time::Duration::from_millis(5));
   }
+  // SAFETY: pid is a child this server forked; kill(2) only delivers SIGKILL to
+  // that pid and touches no process memory.
   unsafe {
     libc::kill(pid, libc::SIGKILL);
   }
@@ -400,6 +418,8 @@ fn spawn_body_child(
   max_rss_kb: u64,
 ) -> Result<(i32, i32), String> {
   let mut fds = [0i32; 2];
+  // SAFETY: fds.as_mut_ptr() points to a valid [i32; 2]; pipe(2) writes exactly
+  // two fds (read, write) into it on success and touches nothing else.
   unsafe {
     if libc::pipe(fds.as_mut_ptr()) < 0 {
       return Err("pipe() failed".to_string());
@@ -427,8 +447,15 @@ fn spawn_body_child(
     );
   }
 
+  // SAFETY: fork(2) only duplicates the calling process. The invariant asserted
+  // above guarantees no extra thread holds the allocator/logger lock at fork time,
+  // so the single-threaded child can proceed; in the child below, between fork and
+  // _exit/exec we restrict ourselves to async-signal-safe libc calls until the
+  // Watchdog/digest path is entered.
   let pid = unsafe { libc::fork() };
   if pid < 0 {
+    // SAFETY: read_fd and write_fd are the still-open pipe ends from the pipe(2)
+    // call above; closing each exactly once on the fork-failure path is sound.
     unsafe {
       libc::close(read_fd);
       libc::close(write_fd);
@@ -438,6 +465,10 @@ fn spawn_body_child(
 
   if pid == 0 {
     // ---- child ----
+    // SAFETY: runs in the freshly-forked single-threaded child. read_fd/write_fd
+    // are the inherited pipe ends; close/open/dup2 are async-signal-safe and only
+    // mutate this child's fd table. The c"/dev/null" literal is a valid NUL-
+    // terminated C string, and dup2/close are guarded on a successful open.
     unsafe {
       libc::close(read_fd);
       // Insurance: the child inherits the parent's stdout (fd 1) — the LSP
@@ -453,6 +484,9 @@ fn spawn_body_child(
     }
     let payload = run_body_child(uri, offset_lines, body, warmed, timeout_secs, max_rss_kb);
     let bytes = payload.to_string().into_bytes();
+    // SAFETY: write_fd is the still-open pipe write end inherited by this child and
+    // owned by nothing else here; from_raw_fd takes sole ownership so it is closed
+    // exactly once (on the explicit drop below), signalling EOF to the parent.
     let mut file = unsafe { std::fs::File::from_raw_fd(write_fd) };
     let _ = file.write_all(&bytes);
     let _ = file.flush();
@@ -461,6 +495,9 @@ fn spawn_body_child(
   }
 
   // ---- parent ----
+  // SAFETY: write_fd is the still-open pipe write end; the parent keeps only the
+  // read end (read_fd), so closing the write end exactly once here is sound and
+  // lets the parent observe EOF once the child's copy closes.
   unsafe {
     libc::close(write_fd);
   }
@@ -902,16 +939,23 @@ mod framing_tests {
   impl PipePair {
     fn new() -> Self {
       let mut fds = [0i32; 2];
+      // SAFETY: fds.as_mut_ptr() points to a valid [i32; 2]; pipe(2) writes exactly
+      // two fds into it on success and touches nothing else.
       assert_eq!(unsafe { libc::pipe(fds.as_mut_ptr()) }, 0);
       PipePair { r: fds[0], w: fds[1] }
     }
     fn write(&self, bytes: &[u8]) {
+      // SAFETY: self.w is the owned, still-open pipe write end; bytes.as_ptr()/
+      // bytes.len() describe a valid initialized region, and write(2) only reads
+      // up to len bytes from it.
       let n = unsafe { libc::write(self.w, bytes.as_ptr() as *const libc::c_void, bytes.len()) };
       assert_eq!(n, bytes.len() as isize);
     }
   }
   impl Drop for PipePair {
     fn drop(&mut self) {
+      // SAFETY: self.r and self.w are the two owned, still-open pipe ends created
+      // in PipePair::new; Drop runs once, so each fd is closed exactly once here.
       unsafe {
         libc::close(self.r);
         libc::close(self.w);

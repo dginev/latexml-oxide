@@ -946,6 +946,8 @@ impl Graphics {
           libc::killpg(pid, libc::SIGTERM);
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
+        // SAFETY: pgid is the child's own process group (set via setpgid in
+        // pre_exec); killpg only signals that group.
         unsafe {
           libc::killpg(pid, libc::SIGKILL);
         }
@@ -2323,7 +2325,15 @@ mod tests {
   impl EnvGuard {
     fn set(key: &str, value: &str) -> Self {
       let old = std::env::var(key).ok();
-      // FIXME: Audit that the environment access only happens in single-threaded code.
+      // SAFETY: EnvGuard is a test-only helper (`#[cfg(test)] mod tests`),
+      // used in `process_coalesces_only_matching_conversion_options` to point
+      // PATH at a fake `convert` for the duration of one test. `set_var`/
+      // `remove_var` are `unsafe` in edition 2024 because a concurrent env
+      // read/write from another thread is a data race.
+      // FIXME: the single-threaded property is NOT formally guaranteed here —
+      // cargo's default test harness runs the binary's tests on multiple
+      // threads and other tests read the environment (`std::env::var`). Make
+      // this airtight by serializing env-mutating tests (e.g. `serial_test`).
       unsafe { std::env::set_var(key, value) };
       Self { key: key.to_string(), old }
     }
@@ -2332,10 +2342,14 @@ mod tests {
   impl Drop for EnvGuard {
     fn drop(&mut self) {
       if let Some(old) = &self.old {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
+        // SAFETY: test-only restore of the value EnvGuard::set saved; same
+        // edition-2024 data-race rationale as in `set`.
+        // FIXME: single-threaded property not formally guaranteed (see `set`).
         unsafe { std::env::set_var(&self.key, old) };
       } else {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
+        // SAFETY: test-only removal of a var EnvGuard::set introduced; same
+        // edition-2024 data-race rationale as in `set`.
+        // FIXME: single-threaded property not formally guaranteed (see `set`).
         unsafe { std::env::remove_var(&self.key) };
       }
     }

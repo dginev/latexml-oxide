@@ -954,6 +954,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "argString",
     |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<String, Box<EvalAltResult>> {
+      // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
+      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
+      // errors out, not UB, when called outside one). The pointer is live for
+      // the call and read-only here (`&*`), so no aliasing `&mut` exists.
       let w = unsafe { &*current_whatsit()? };
       match w.get_arg(n as usize) {
         Some(d) => d.untex().map_err(rhai_err),
@@ -974,6 +978,11 @@ pub(super) fn make_engine() -> Engine {
           "setProperty in a construction hook (whatsit is read-only there)",
         ));
       }
+      // SAFETY: `ptr` is the in-flight whatsit the core published onto
+      // WHATSIT_CTX for THIS digestion-hook body, and the `mutable` flag (just
+      // checked) confirms it was published as writable. It is live for the
+      // call and the sole live reference (the hook body holds no other), so the
+      // re-minted `&mut` is unique and non-aliasing.
       let w = unsafe { &mut *ptr };
       w.set_property(key, val.to_string());
       Ok(())
@@ -983,6 +992,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "propertyString",
     |_w: &mut WhatsitProxy, key: &str| -> std::result::Result<String, Box<EvalAltResult>> {
+      // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
+      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
+      // errors out, not UB, when called outside one). The pointer is live for
+      // the call and read-only here (`&*`), so no aliasing `&mut` exists.
       let w = unsafe { &*current_whatsit()? };
       Ok(w.get_property_string(key))
     },

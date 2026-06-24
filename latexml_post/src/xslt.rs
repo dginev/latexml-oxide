@@ -63,6 +63,11 @@ mod max_depth_tests {
   #[test]
   fn dlsym_sets_perl_parity_cap() {
     super::set_xslt_max_depth();
+    // SAFETY: `dlsym(RTLD_DEFAULT, "xsltMaxDepth")` returns the address of
+    // libxslt's process-global `int` recursion cap, valid for the lifetime of
+    // the loaded libxslt (linked into this test binary). We assert non-null
+    // before dereferencing, and the `*const c_int` cast matches the symbol's C
+    // type; the read is on a single thread (`set_xslt_max_depth` already ran).
     let val = unsafe {
       let sym = libc::dlsym(libc::RTLD_DEFAULT, c"xsltMaxDepth".as_ptr());
       assert!(!sym.is_null(), "xsltMaxDepth not resolvable via dlsym");

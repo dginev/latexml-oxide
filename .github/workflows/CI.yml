@@ -59,6 +59,37 @@ jobs:
       - name: cargo-machete (unused dependencies)
         run: cargo machete
 
+  # Miri (UB detector) over the FFI-FREE pure-Rust `unsafe` — the string
+  # interner / arena bounds-skip (resolve_unchecked) + re-entrant `&mut *ptr`
+  # sites (docs/SAFETY.md categories B/C), the only `unsafe` here with genuine
+  # UB potential that Miri can execute. The FFI-bearing unsafe (libc / kpathsea
+  # / libxml2 / libxslt dlsym / getrusage / signal) CANNOT run under Miri, so
+  # coverage is deliberately scoped via tools/miri_check.sh. Build scripts
+  # (libxml/kpathsea/marpa) still compile C natively, hence the dev headers.
+  miri:
+    name: miri (pure-Rust UB check)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+      RUST_BACKTRACE: "1"
+    steps:
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+          key: miri
+      - name: miri (scoped arena UB check)
+        run: tools/miri_check.sh
+
   test:
     name: latexml-oxide CI
     runs-on: ubuntu-latest
