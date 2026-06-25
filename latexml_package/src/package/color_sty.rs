@@ -388,8 +388,15 @@ LoadDefinitions!({
 
   //========================
   // Low-level stuff; redefined from LaTeX stubs (Perl color.sty.ltxml L122-132)
-  // Note: Perl deliberately does not define \current@color / \default@color / \reset@color
-  // (see Perl comment "Not sure what \current@color should return").
+  // \current@color / \default@color hold the current/default color spec for the
+  // DVI driver; \reset@color clears it. LaTeXML gives them safe defaults so that
+  // packages using them (pgf/tikz color processing) don't error — the value must
+  // NOT contain braces (it may appear inside \csname...\endcsname). Faithful to
+  // Perl color.sty.ltxml (#2783, cb455179): DefMacroI(..., '0 0 0'/'0 0 0'/'').
+  DefMacro!("\\current@color", "0 0 0");
+  DefMacro!("\\default@color", "0 0 0");
+  DefMacro!("\\reset@color", None);
+  // Similarly, not sure what \set@color needs to do that isn't redundant.
   DefMacro!("\\set@color", None);
   DefMacro!("\\color@begingroup", "\\begingroup");
   DefMacro!("\\color@endgroup", "\\endgroup");

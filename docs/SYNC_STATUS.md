@@ -353,7 +353,7 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - **Complexity:** **S–M.**
 - **Tests:** none new (existing `listing` fixture exercises inline forms).
 
-### U9. ⬜ PR #2783 "quantikz2 raw interpretation" (`cb455179`) — MOSTLY ALREADY PRESENT
+### U9. ✅ PR #2783 "quantikz2 raw interpretation" (`cb455179`) — LANDED (color-macro residual)
 - **What:** four fixes (this PR was authored by us and partly upstreamed
   Rust-discovered fixes): (a) `\AtBeginDocument[]{}` / `\AtEndDocument[]{}`
   optional `[label]`; (b) `color.sty` defines `\current@color`/`\default@color`/
@@ -365,10 +365,11 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - **Rust state (verified 2026-06-25):**
   - (a) `\AtBeginDocument[]{}` — **ALREADY in Rust** (`latex_constructs.rs:3073`).
   - (c) `\tcb@use@autoparskip` — **ALREADY in Rust** (`tcolorbox_sty.rs:17`).
-  - (b) color macros — **GENUINE GAP.** `color_sty.rs:391-392` still mirrors the
-    *old* Perl ("deliberately does not define") — the new PR defines them.
-    **Action:** add the 3 `DefMacroI!` (`'0 0 0'`/`'0 0 0'`/`''`) and update the
-    comment. **(This is the only real porting work in #2783.)**
+  - (b) color macros — **✅ DONE** (this branch): added `\current@color`/
+    `\default@color`/`\reset@color` to `color_sty.rs` (`'0 0 0'`/`'0 0 0'`/empty,
+    in Perl order before `\set@color`) + updated the comment. Validated:
+    `\makeatletter` smoke error-clean; graphics (8) + tikz (10) suites green; no
+    regression. (This was the only real porting work in #2783.)
   - (d) hphantom split — **INTENTIONALLY DIVERGED in Rust** (`math_common.rs:1037`):
     the `restricted_horizontal` wrapping was reverted because it FATALs on
     `\minipage…\hphantom\endminipage` (2004.10048), and the `$$`-leak it guards
