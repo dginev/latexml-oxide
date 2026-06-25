@@ -302,14 +302,16 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - **Tests:** resyncs `t/alignment/listing.{tex,xml}` (adds `\underbar` to the
   bingo keywordstyle); sync the Rust `listing` fixture.
 
-### U4. ⬜ PR #2818 "listings: do not look up ltxml files when reading raw files" (`41bd31e8`)
+### U4. ✅ PR #2818 "listings: do not look up ltxml files when reading raw files" (`41bd31e8`) — LANDED
 - **What:** `listingsReadRawFile` now calls `FindFile($filename, noltxml => 1)`
   so `\lstinputlisting{foo.sty}` reads the raw source, never a `.ltxml` binding.
 - **Perl:** `listings.sty.ltxml` `listingsReadRawFile` (~L320).
 - **Rust target:** `listings_sty.rs` `listings_read_raw_file` (L234) — pass the
   `noltxml` flag to the find-file call.
-- **Complexity:** **S** (one-flag change).
-- **Tests:** none new (covered by existing `listing` fixture).
+- **Complexity:** **S** (one-flag change). Rust spells `noltxml` as `forbid_ltxml`
+  in `FindFileOptions` (matches `tex_job.rs:252`).
+- **Tests:** none new; listing suite (9 tests) green — output unchanged, so it's a
+  clean independent commit.
 
 ### U5. ⬜ PR #2828 "Resync listings test for change to underline" (`39f319bd`)
 - **What:** test-only follow-up to #2819 — the underline styling settled to
