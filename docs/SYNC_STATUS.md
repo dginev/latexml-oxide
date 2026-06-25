@@ -317,7 +317,7 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   sync done after the listings cluster (depends on #2819).
 - **Complexity:** **S** (fixture resync).
 
-### U6. ⬜ PR #2814 "Fix 2240 proof title punct" (`01b8d651`)
+### U6. ✅ PR #2814 "Fix 2240 proof title punct" (`01b8d651`) — LANDED
 - **What:** the amsthm `proof` env stops double-punctuating — append the trailing
   period only when the (optional) title doesn't already end in `.!?:;,` (mimics
   LaTeX `\@addpunct`). `\begin{proof}[x.]` → "x." not "x..".
@@ -327,7 +327,8 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   `properties` closure currently does an **unconditional** `title_tokens.push(
   T_OTHER!("."))` at **L188**; gate it on the last content token's last char.
 - **Complexity:** **S.**
-- **Tests:** port `t/theorem/proofpunct.{tex,xml}` → `latexml_oxide/tests/theorem/`.
+- **Tests:** ported `t/theorem/proofpunct.{tex,xml}` → `latexml_oxide/tests/theorem/`
+  — Rust output **byte-identical to Perl**, error-clean, `proofpunct_test` green.
 
 ### U7. ⬜ PR #2737 "Added bindings for causets (TikZ extension)" (`eb08bd7f`)
 - **What:** `causets.sty` binding = a raw-load passthrough:

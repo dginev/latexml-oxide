@@ -179,13 +179,31 @@ LoadDefinitions!({
       digest(mouth::tokenize_internal("\\the\\thm@bodyfont"))?;
     },
     properties => sub[args] {
-      let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\the"), T_CS!("\\thm@headfont")];
-      if let Some(Some(arg)) = args.first() {
-        title_tokens.extend(arg.revert()?.unlist());
+      // Perl amsthm.sty.ltxml \@proof (#2814 "Fix 2240 proof title punct"): like
+      // LaTeX's \@addpunct, only append the period when the (optional) title does
+      // not already end in punctuation (.!?:;,) — `\begin{proof}[x.]` must render
+      // "x.", not "x..". The end-char is taken from the RAW content token's
+      // toString (matches Perl `$content[-1]->toString`), so e.g. `\proofname`
+      // (ends in 'e') still gets a period; an empty arg also gets one.
+      let content = if let Some(Some(arg)) = args.first() {
+        arg.revert()?.unlist()
       } else {
-        title_tokens.push(T_CS!("\\proofname"));
+        vec![T_CS!("\\proofname")]
+      };
+      let needs_period = content
+        .last()
+        .map(|t| {
+          !matches!(
+            t.to_string().chars().next_back(),
+            Some('.' | '!' | '?' | ':' | ';' | ',')
+          )
+        })
+        .unwrap_or(true);
+      let mut title_tokens = vec![T_BEGIN!(), T_CS!("\\the"), T_CS!("\\thm@headfont")];
+      title_tokens.extend(content);
+      if needs_period {
+        title_tokens.push(T_OTHER!("."));
       }
-      title_tokens.push(T_OTHER!("."));
       title_tokens.push(T_END!());
       let title = digest(Tokens::new(title_tokens))?;
       // Perl: [$title->unlist]->[1]->getFont — get font from first content box.
