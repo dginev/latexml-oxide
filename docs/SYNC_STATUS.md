@@ -74,6 +74,24 @@ snapshot, true per-task transition matrix from `historical_tasks`):
   74,790 → 3,865 (only the parity pgfmath/counter ones remain). error 1175→1174,
   fatal 65→66 (within run-to-run variance).
 
+**Error-category triage (2026-06-25, same fresh rerun).** After the warning
+de-noising, re-mined the ERROR/FATAL cross-join (Rust error/fatal vs Perl
+no_problem/warning) for genuine Rust-only regressions. **Mined out** — the strict
+filter (Rust error/fatal AND Perl `no_problem`, excluding cyrillic phantoms)
+returns a single missing-macro singleton (`\textcjheb`). Specifics:
+- `unexpected:<char>` inputenc (20 papers) + babel (13) = **re-confirmed env-artifact
+  phantoms** (host lacks the `cyrillic` collection; same-host Perl fails identically).
+- `Attempt to end mode` box-recovery (73 papers) = **71/73 Perl-parity**.
+- `malformed:ltx:XMTok` (3 papers) = parity/Rust-better (Perl error/fatal).
+- The only GENUINE Rust-only finding is the **`{\input file}` box cascade**
+  (math0701308: same-host Perl 0, Rust 90; `TeXFileName` consumes the `}` —
+  shared Perl parity — then Rust's stricter box recovery cascades into text-mode
+  `_`/`^` errors). **Low-breadth (3 papers); deferred** — the faithful fix is a
+  deep stomach-recovery change, the easy fix (`TeXFileName` stop-at-`}`) diverges
+  from Perl-LaTeXML and has broad blast radius. Characterized for a dedicated
+  effort. Reconfirms: the cortex `Perl=clean` baseline is unreliable (env
+  artifacts) — verify every cross-service delta with same-host Perl.
+
 ### Landed earlier (2026-06-22, on `further-stability-coverage`, pushed)
 
 Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
