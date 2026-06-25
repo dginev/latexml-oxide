@@ -37,6 +37,23 @@
 >   GROUP, one content Math, parse-reinstall id preservation). Multi-part,
 >   high-fixture-churn — the "3 prior reverts" area. **Deferred to a dedicated,
 >   carefully-validated effort.**
+>   * **MOVE-only approach EMPIRICALLY EXHAUSTED 2026-06-25.** Changed the
+>     main-fork content append from `append_clone` (re-ids) to a true MOVE
+>     (`add_child`, keeping the originals' `A1.E66.m1.*` ids). Built clean, but the
+>     witness STILL danglers 6 (set shifted to `A1.E66.m1.{1,1a,4,4a}` /
+>     `A1.E68.m1.{1,1a}`). Dumped ids: the moved content's defs are re-assigned to
+>     `A1.E66X/Xa/Xb.m1.*` (ZERO `A1.E66.m1.*` defs). So a re-id pass keyed off the
+>     **main Math's id** — `open_math_fork` (`base_xmath.rs:1397`) ids the main
+>     `<ltx:Math>` off the enclosing **inner X equation** (`A1.E66Xa` → `A1.E66Xa.m1`),
+>     and `finalize_rec`/`generate_id` (`document.rs:377/4565`) + the parse reinstall
+>     overwrite the moved ids — confirming §3e is LIVE on current code, not stale.
+>     **Reverted (witness gate failed).** The actionable next step: make
+>     `open_math_fork` (or rearrange) derive the MathFork main content Math id from
+>     the **GROUP** (`{group}.m1`), build it **ONCE per group** (per-row mains
+>     collide on `{group}.m1`), MOVE all rows' originals into it, and ensure the
+>     parse reinstall **preserves** pre-existing ids. Core-builder + math-parser
+>     change — validate every `MathFork`/`equation`/`equationgroup` fixture vs Perl
+>     incrementally.
 >
 > **GUARANTEE (important correction).** These danglers are **NOT** unflagged: core
 > `markXMNodeVisibility` (`latexml_core/document.rs:3250`) fires **`Warning:expected:node`
