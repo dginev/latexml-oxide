@@ -19,6 +19,41 @@
 > refnum-id loss) is NOT fixed** — it simply no longer floods the cortex signal;
 > when a genuine dangler reaches output, the faithful post-Error reports it.
 >
+> **CLASS B RE-CONFIRMED + GUARANTEE CLARIFIED 2026-06-25.** Re-ran the
+> fully-traced witness `2311.01600` on current HEAD. Class B is **still live** but
+> the picture has moved on from the 2026-06-08 trace:
+> * The **container-id half IS fixed** — the group is `A1.E66` (NOT the old
+>   `A1.p10.1`), with per-row presentation equations `A1.E66X`/`A1.E66Xa`/`A1.E66Xb`
+>   and math under `A1.E66Xa.m1.*` (the X-equation scheme).
+> * **6 residual danglers**: `A1.E66.m1.1a/1b/4a/4b`, `A1.E68.m1.1a/1b` — the `\Pr`
+>   XMDual **content** refs, minted against the *group* Math scheme `A1.E66.m1.*`
+>   (pre-rearrange) while the parsed content lands under the *per-row* X scheme
+>   `A1.E66Xa.m1.*`. So `A1.E66.m1.*` never materializes → dangling.
+> * **Current root** (`rearrange_lone_ams_aligned`, `amsmath_sty.rs:1703`): Rust
+>   builds *per-row* equations each with their **own** MathFork main, id'd off the
+>   inner X equation (`A1.E66Xa.m1.*`). **Perl builds ONE group-level content Math
+>   `A1.E66.m1` + per-row presentation equations.** Closing it = restructure
+>   rearrange to Perl's single-content-Math shape (main Math id derived from the
+>   GROUP, one content Math, parse-reinstall id preservation). Multi-part,
+>   high-fixture-churn — the "3 prior reverts" area. **Deferred to a dedicated,
+>   carefully-validated effort.**
+>
+> **GUARANTEE (important correction).** These danglers are **NOT** unflagged: core
+> `markXMNodeVisibility` (`latexml_core/document.rs:3250`) fires **`Warning:expected:node`
+> "No node found with id='…' (referred to from ltx:XMRef)"** — one per dangling ref,
+> reaching the XMDual **content** branch — faithful to Perl `Document.pm:1553` (a
+> Warning). The 2026-06-25 parse-time `realize_xmnode` suppression did **not**
+> create a false negative; the earlier "0 errors / 6 danglers" reading was a grep
+> artifact (only `expected:id` was counted, not the `expected:node` Warning that
+> actually fires). So the id-message guarantee for digestion-created danglers is
+> already met by the faithful `expected:node` signal. (A genuinely-final-tree
+> fresh-scan check was prototyped and **reverted** — it merely duplicated the
+> `expected:node` Warning as an `expected:id` Error, double-fired, and escalated
+> severity, which Perl does not.) The remaining hardening target is *post-created*
+> danglers (a target renamed during a post phase), where the post
+> `markXMNodeVisibility` uses the possibly-stale `idcache` — verify before adding
+> any new signal.
+>
 > **Status:** DESIGN + PHASE-0 GROUNDED (no fix code yet). Scopes the fix for
 > the residual `expected:id Cannot find a node with xml:id='…'` cluster — the
 > non-VERTBAR XMDual-dangling remainder after the bra-ket VERTBAR work
