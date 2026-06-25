@@ -163,8 +163,15 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   `RawTeX` block (`\newcounter`, `\dirtytalk@lsymb/rsymb` `\ifnum`, `\say`).
 - **Rust target:** new `latexml_package/src/package/dirtytalk_sty.rs` (register
   in the package module list). `\say` is currently only in `revtex4_support_sty`
-  (unrelated). Use `DefKeyVal!` + a `RawTeX!`-style raw block for the counter/`\say`.
-- **Complexity:** **S–M** (KeyVal + RawTeX; no core changes).
+  (unrelated). The `\say` core + 4 symbol-default `DefMacro`s + the
+  `\newcounter`/`\say` `RawTeX!` block are straightforward (`raw_tex`,
+  `Tokens::is_empty` for `IsEmpty` all exist). **The 4 keyval overrides
+  (`left`/`right`/`leftsub`/`rightsub`) need the runtime
+  `keyval::define(KeyvalConfig { code: Some(…), .. })` directly** — the
+  `DefKeyVal!` macro has NO `code`-callback arm and Rust has no `UndigestedKey`
+  type, so map Perl's `UndigestedKey` + `code => sub` onto the config's `code`
+  field (verified `KeyvalConfig.code: Option<ExpansionBody>` exists).
+- **Complexity:** **M** (core `\say` is S; the keyval-override callbacks add the work).
 - **Tests:** port `t/structure/dirtytalk.{tex,xml}` → `latexml_oxide/tests/structure/`.
 
 ### U2. ⬜ PR #2798 "Leavehorizontal" (`24d39b55`) — LARGE CORE REFACTOR (XL; stage as a sub-mission)
@@ -196,8 +203,8 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     (`\p{Ideographic}`) counts as `isIdeographic`. Whatsit gains
     `flattenForSizing` (a horizontal whatsit with a pure `#arg`/`#prop` sizer is
     flattened so `\emph` etc. line-break across the paragraph).
-  - **(C) Application (~60 files):** new `mode`/`sizer`/padding props across the
-    engine pools + ~17 packages; `\begin{document}` sets
+  - **(C) Application (~75 files):** new `mode`/`sizer`/padding props across the
+    engine pools + ~31 package/class bindings; `\begin{document}` sets
     `\columnwidth=\hsize=\linewidth=\textwidth`; `\emph` → `bounded`+`sizer=>#1`
     (drops `restricted_horizontal`); itemize envs LOSE the mistaken `\par` and
     gain real `\topsep/\parsep/\partopsep/\itemsep` glue + padding; captions →
@@ -217,7 +224,12 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   → S0 is verify-only. **Known overlap:** the p/m/b + `\multicolumn` rework (S9)
   intersects landed Rust array work (memory
   `genuine-rust-only-unexpected-clusters-2026-06-21`, `array_pcolumn`
-  reproducers) — reconcile, don't re-port.
+  reproducers) — reconcile, don't re-port. **`Package.pm`** adds a `$noerror`
+  param to `LookupDimension`; Rust's `lookup_dimension` (`state.rs:1613`) is a
+  value-cast helper, NOT a faithful `LookupDimension` (it lacks the
+  register→macro-`readingFromMouth`→warn-on-undefined logic), so reconcile that
+  alongside the `noerror` add (small, but a real semantic gap; see also the
+  parked `lookup_register`→`lookup_dimension` eqnarray/cases cleanup).
 - **Complexity:** **XL** — two deep foundational rewrites on the hottest
   digestion/sizing paths + wide fixture churn. **Land as separate commits (one
   per sub-step), never one commit.**
@@ -254,10 +266,13 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     bounded+sizer; itemize `\par`-removal + glue + padding + `\preitem@par`;
     caption `PBoxContents`; `\@framebox` padding; parbox/minipage/picture
     inline_internal_vertical. Depends S1–S9.
-  - **S11 (M)** ~17 package bindings (soul, fancyvrb, setspace, graphics, xy,
-    paralist, sv_support, array, cancel, listings, enumitem, IEEEtran,
-    aas_support, beamer, hyperref, elsarticle, …) + `LaTeXML.css`
-    (`ltx_verbatim` nowrap, overline/underline classes) + picture XSLT. Depends S1–S10.
+  - **S11 (M)** ~31 package/class bindings — aas_support, acmart, alltt,
+    amsrefs, amstext, array, bbold, beamer, cancel, elsarticle, enumerate,
+    enumitem, epsf, fancyvrb, frenchb, glossaries, graphics, hyperref, IEEEtran,
+    JHEP, listings, natbib, ntheorem, numprint, paralist, pgfsys-latexml,
+    setspace, soul, sv_support, xcolor, xy — mostly mechanical mode/`sizer`/
+    property edits + `LaTeXML.css` (`ltx_verbatim` nowrap, overline/underline
+    classes) + `LaTeXML-picture-xhtml.xsl`. Depends S1–S10.
   - **S0 (S)** verify the already-done thanks/`\lx@personname` bit — expect no-op.
 - **Tests:** no new `.tex`; 24 regenerated `t/*.xml` (alignment
   array/cells/colortbls/halignatt/tabular; math array_newline_math; complex
