@@ -128,6 +128,7 @@ pub mod delarray_sty;
 pub mod deluxetable_sty;
 pub mod diagbox_sty;
 pub mod ding_fontmap;
+pub mod dirtytalk_sty;
 pub mod doi_sty;
 pub mod doublespace_sty;
 pub mod dsfont_sty;

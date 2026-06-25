@@ -874,6 +874,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("slashed", "sty", package::slashed_sty::load_definitions),
   ("slashbox", "sty", package::slashbox_sty::load_definitions),
   ("diagbox", "sty", package::diagbox_sty::load_definitions),
+  ("dirtytalk", "sty", package::dirtytalk_sty::load_definitions),
   ("nicefrac", "sty", package::nicefrac_sty::load_definitions),
   ("units", "sty", package::units_sty::load_definitions),
   ("parskip", "sty", package::parskip_sty::load_definitions),

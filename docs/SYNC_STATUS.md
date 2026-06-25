@@ -152,7 +152,7 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 > reshuffle the listings fixture again, so doing it after the listings cluster
 > avoids double fixture churn).
 
-### U1. ⬜ PR #2806 "Add dirtytalk binding" (`51fea96a`) — NEW BINDING (missing)
+### U1. ✅ PR #2806 "Add dirtytalk binding" (`51fea96a`) — LANDED
 - **What:** `dirtytalk.sty` — `\say{…}` context-aware quotation marks with a
   nesting-depth counter (`dirtytalk@qdepth`): outer level uses
   `\textquotedblleft/right`, nested uses `\textquoteleft/right`. Four KeyVals
@@ -172,7 +172,10 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   type, so map Perl's `UndigestedKey` + `code => sub` onto the config's `code`
   field (verified `KeyvalConfig.code: Option<ExpansionBody>` exists).
 - **Complexity:** **M** (core `\say` is S; the keyval-override callbacks add the work).
-- **Tests:** port `t/structure/dirtytalk.{tex,xml}` → `latexml_oxide/tests/structure/`.
+- **Tests:** ported `t/structure/dirtytalk.{tex,xml}` → `latexml_oxide/tests/structure/`
+  — Rust output **byte-identical to Perl** (nested `\say` curly quotes), error-clean,
+  `dirtytalk_test` green; keyval override (`[left={«},right={»}]` → `«hi»`) smoke-validated
+  via the faithful `ExpansionBody::Closure` (incl. the `IsEmpty` guard); clippy clean.
 
 ### U2. ⬜ PR #2798 "Leavehorizontal" (`24d39b55`) — LARGE CORE REFACTOR (XL; stage as a sub-mission)
 - **What:** two coupled rewrites + a wide application layer (75 files,
