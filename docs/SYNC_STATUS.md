@@ -60,6 +60,20 @@ reads the macro body; 354 msgs / 2 tasks) — deferred, needs a `LookupDimension
 
 Suite 1468/0, clippy clean, fmt clean.
 
+**10k-sandbox rerun validation** (maxperf-cortex, 72-worker fleet, vs the PR#269
+snapshot, true per-task transition matrix from `historical_tasks`):
+- **no_problem 6219 → 6982 (+763)**, warning 2446 → 1683 (−763) — the +763 are
+  papers that were `warning` SOLELY from the removed spurious diagnostics, now
+  correctly clean (matching Perl's clean output).
+- **ZERO clean→hard regressions**: 0 no_problem→{warning,error,fatal}, 0
+  warning→error. Only transitions: `warning→no_problem` 763, plus `error↔fatal`
+  ±1 boundary noise (2 papers `never_completed_with_retries` = cortex
+  timeout/retry infra, unrelated to the warning-suppression code).
+- **Total warning messages 262,986 → 62,106 (−200,880, −76%)**; `expected:id`
+  130,814 → 1,011 (only the faithful "Missing idref" Warn remains); `expected:register`
+  74,790 → 3,865 (only the parity pgfmath/counter ones remain). error 1175→1174,
+  fatal 65→66 (within run-to-run variance).
+
 ### Landed earlier (2026-06-22, on `further-stability-coverage`, pushed)
 
 Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
