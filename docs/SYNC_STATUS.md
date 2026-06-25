@@ -330,7 +330,7 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - **Tests:** ported `t/theorem/proofpunct.{tex,xml}` → `latexml_oxide/tests/theorem/`
   — Rust output **byte-identical to Perl**, error-clean, `proofpunct_test` green.
 
-### U7. ⬜ PR #2737 "Added bindings for causets (TikZ extension)" (`eb08bd7f`)
+### U7. ✅ PR #2737 "Added bindings for causets (TikZ extension)" (`eb08bd7f`) — LANDED
 - **What:** `causets.sty` binding = a raw-load passthrough:
   `InputDefinitions('causets', type => 'sty', noltxml => 1)`.
 - **Perl:** new `lib/LaTeXML/Package/causets.sty.ltxml` (24 lines, body is the
@@ -339,7 +339,9 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   raw-loads `causets.sty` with `noltxml`. Binding itself is trivial; actual
   rendering depends on the host TikZ machinery (out of scope for the binding).
 - **Complexity:** **S.**
-- **Tests:** none added upstream.
+- **Tests:** none added upstream. Smoke-validated: `\usepackage{causets}` loads
+  error-clean and raw-loads the host `causets.sty` (`Loading causets.sty…`),
+  body renders; clippy clean.
 
 ### U8. ⬜ PR #2824 "do not add frame and background to inline listings" (`a6f6316f`)
 - **What:** `\lstinline` / `\begin{lstinline}` now set `LISTINGS_INLINE => 1`;

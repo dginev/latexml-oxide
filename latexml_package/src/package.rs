@@ -97,6 +97,7 @@ pub mod calrsfs_sty;
 pub mod cancel_sty;
 pub mod caption_sty;
 pub mod cases_sty;
+pub mod causets_sty;
 pub mod ccfonts_sty;
 pub mod chancery_sty;
 pub mod chapterbib_sty;
