@@ -503,10 +503,13 @@ LoadDefinitions!({
       let Some(r_xmkey) = r.get_attribute("_xmkey") else { continue };
       if let Some(idref) = ids.get(&r_xmkey) {
         document.set_attribute(&mut r, "idref", idref)?;
-      } else {
-        // xmkey not resolved — may happen with parser-generated nested structures
-        Warn!("expected", "id", s!("Unresolved _xmkey '{}' in createXMRefs", r_xmkey));
       }
+      // else: Perl (Base_XMath.pool.ltxml L306-308) silently does
+      // `setAttribute($r, idref => $ids{key})` with an undef value — a no-op
+      // that leaves the ref with no idref — and emits NO warning. A genuinely
+      // dangling XMRef is flagged faithfully downstream by markXMNodeVisibility
+      // ("Missing idref on ltx:XMRef", Document.pm:1548). Do not emit a
+      // Rust-only warning that Perl never produces.
       r.remove_attribute("_xmkey")?;
     }
   });

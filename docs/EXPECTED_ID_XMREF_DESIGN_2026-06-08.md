@@ -1,5 +1,76 @@
 # `expected:id` dangling-XMRef — Design Scope
 
+> **UPDATE 2026-06-25 — parse-time warning SUPPRESSED (signal-fidelity), Class B
+> structural fix still deferred.** The dominant emitter of this cluster was the
+> math-parser's *parse-time* `realize_xmnode` (`parser.rs:2840`, ~128.9k of the
+> ~130.8k `warning:expected:id` messages in the 10k sandbox). It is a **benign
+> transient false-positive**: it consults the LIVE `document.lookup_id` mid-parse
+> while XMath elements reinstall (a Rust/ASF artifact Perl lacks), but the FINAL
+> tree is clean — empirically verified on the heaviest witness `0704.2400`: of 98
+> transient misses, 85 ids are present in the output and the other 13 leave **0
+> dangling `<XMRef idref>`** (the output has 0 dangling idrefs of 2597). The whole
+> 10k run has **0 `error:expected:id`**, i.e. the authoritative post-processing
+> check (`latexml_post` `realize_xm_node` / `mark_xm_node_visibility_aux`, faithful
+> Perl `Post.pm:1444/1456` Error) flags no genuine output danglers. So the
+> parse-time Warn was made SILENT (`parser.rs`), output byte-identical, genuine
+> danglers still caught downstream. The Rust-only `base_xmath.rs` createXMRefs
+> "Unresolved _xmkey" Warn (Perl `Base_XMath.pool.ltxml:306-308` is silent) was
+> also removed. **The Class B structural divergence below (equation→equationgroup
+> refnum-id loss) is NOT fixed** — it simply no longer floods the cortex signal;
+> when a genuine dangler reaches output, the faithful post-Error reports it.
+>
+> **CLASS B RE-CONFIRMED + GUARANTEE CLARIFIED 2026-06-25.** Re-ran the
+> fully-traced witness `2311.01600` on current HEAD. Class B is **still live** but
+> the picture has moved on from the 2026-06-08 trace:
+> * The **container-id half IS fixed** — the group is `A1.E66` (NOT the old
+>   `A1.p10.1`), with per-row presentation equations `A1.E66X`/`A1.E66Xa`/`A1.E66Xb`
+>   and math under `A1.E66Xa.m1.*` (the X-equation scheme).
+> * **6 residual danglers**: `A1.E66.m1.1a/1b/4a/4b`, `A1.E68.m1.1a/1b` — the `\Pr`
+>   XMDual **content** refs, minted against the *group* Math scheme `A1.E66.m1.*`
+>   (pre-rearrange) while the parsed content lands under the *per-row* X scheme
+>   `A1.E66Xa.m1.*`. So `A1.E66.m1.*` never materializes → dangling.
+> * **Current root** (`rearrange_lone_ams_aligned`, `amsmath_sty.rs:1703`): Rust
+>   builds *per-row* equations each with their **own** MathFork main, id'd off the
+>   inner X equation (`A1.E66Xa.m1.*`). **Perl builds ONE group-level content Math
+>   `A1.E66.m1` + per-row presentation equations.** Closing it = restructure
+>   rearrange to Perl's single-content-Math shape (main Math id derived from the
+>   GROUP, one content Math, parse-reinstall id preservation). Multi-part,
+>   high-fixture-churn — the "3 prior reverts" area. **Deferred to a dedicated,
+>   carefully-validated effort.**
+>   * **MOVE-only approach EMPIRICALLY EXHAUSTED 2026-06-25.** Changed the
+>     main-fork content append from `append_clone` (re-ids) to a true MOVE
+>     (`add_child`, keeping the originals' `A1.E66.m1.*` ids). Built clean, but the
+>     witness STILL danglers 6 (set shifted to `A1.E66.m1.{1,1a,4,4a}` /
+>     `A1.E68.m1.{1,1a}`). Dumped ids: the moved content's defs are re-assigned to
+>     `A1.E66X/Xa/Xb.m1.*` (ZERO `A1.E66.m1.*` defs). So a re-id pass keyed off the
+>     **main Math's id** — `open_math_fork` (`base_xmath.rs:1397`) ids the main
+>     `<ltx:Math>` off the enclosing **inner X equation** (`A1.E66Xa` → `A1.E66Xa.m1`),
+>     and `finalize_rec`/`generate_id` (`document.rs:377/4565`) + the parse reinstall
+>     overwrite the moved ids — confirming §3e is LIVE on current code, not stale.
+>     **Reverted (witness gate failed).** The actionable next step: make
+>     `open_math_fork` (or rearrange) derive the MathFork main content Math id from
+>     the **GROUP** (`{group}.m1`), build it **ONCE per group** (per-row mains
+>     collide on `{group}.m1`), MOVE all rows' originals into it, and ensure the
+>     parse reinstall **preserves** pre-existing ids. Core-builder + math-parser
+>     change — validate every `MathFork`/`equation`/`equationgroup` fixture vs Perl
+>     incrementally.
+>
+> **GUARANTEE (important correction).** These danglers are **NOT** unflagged: core
+> `markXMNodeVisibility` (`latexml_core/document.rs:3250`) fires **`Warning:expected:node`
+> "No node found with id='…' (referred to from ltx:XMRef)"** — one per dangling ref,
+> reaching the XMDual **content** branch — faithful to Perl `Document.pm:1553` (a
+> Warning). The 2026-06-25 parse-time `realize_xmnode` suppression did **not**
+> create a false negative; the earlier "0 errors / 6 danglers" reading was a grep
+> artifact (only `expected:id` was counted, not the `expected:node` Warning that
+> actually fires). So the id-message guarantee for digestion-created danglers is
+> already met by the faithful `expected:node` signal. (A genuinely-final-tree
+> fresh-scan check was prototyped and **reverted** — it merely duplicated the
+> `expected:node` Warning as an `expected:id` Error, double-fired, and escalated
+> severity, which Perl does not.) The remaining hardening target is *post-created*
+> danglers (a target renamed during a post phase), where the post
+> `markXMNodeVisibility` uses the possibly-stale `idcache` — verify before adding
+> any new signal.
+>
 > **Status:** DESIGN + PHASE-0 GROUNDED (no fix code yet). Scopes the fix for
 > the residual `expected:id Cannot find a node with xml:id='…'` cluster — the
 > non-VERTBAR XMDual-dangling remainder after the bra-ket VERTBAR work

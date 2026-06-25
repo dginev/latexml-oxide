@@ -1744,6 +1744,24 @@ pub fn lookup_register_token(
   })
 }
 
+/// Quiet sibling of [`lookup_register`] for call sites that mirror Perl's
+/// explicit `lookupDefinition(cs) && $defn->isRegister ? $defn->valueOf : <default>`
+/// guard — e.g. TeX_Tables `\lx@text@intercol`/`\lx@math@intercol`
+/// (`TeX_Tables.pool.ltxml` L639/L646), where a document may legitimately
+/// `\renewcommand` a length register (`\tabcolsep`/`\arraycolsep`) into a plain
+/// macro. In that case the register-ness is genuinely gone in Perl too, and Perl
+/// silently falls back to its default (`Dimension(0)`) with **no warning**.
+/// Returns `None` (no warning) when the CS is undefined or is not a register,
+/// so the caller can apply its own faithful default.
+pub fn lookup_register_quiet(cs: &str) -> Option<RegisterValue> {
+  let defn = lookup_definition(&T_CS!(cs)).ok().flatten()?;
+  if defn.is_register() {
+    defn.value_of(Vec::new())
+  } else {
+    None
+  }
+}
+
 pub fn lookup_expandable(
   token: &Token,
   toplevel_opt: Option<bool>,

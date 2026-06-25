@@ -446,7 +446,11 @@ LoadDefinitions!({
   },
   reversion => Tokens!(T_CS!("\\lx@intercol")),
   properties => {
-    let w = match lookup_register("\\tabcolsep", Vec::new())? {
+    // Perl TeX_Tables.pool.ltxml L639: silently falls back to Dimension(0)
+    // when \tabcolsep is not a register (e.g. a document \renewcommand'd it
+    // into a plain macro — a common author slip for \setlength). Use the quiet
+    // lookup so we don't emit a spurious `expected:register` warning per cell.
+    let w = match lookup_register_quiet("\\tabcolsep") {
       Some(RegisterValue::Dimension(d)) => d,
       Some(RegisterValue::Glue(g)) => Dimension::new(g.value_of()),
       _ => Dimension::default(),
@@ -456,7 +460,8 @@ LoadDefinitions!({
   DefConstructor!("\\lx@math@intercol", "",
   reversion => Tokens!(T_CS!("\\lx@intercol")),
   properties => {
-    let w = match lookup_register("\\arraycolsep", Vec::new())? {
+    // Perl TeX_Tables.pool.ltxml L646: same silent isRegister guard for \arraycolsep.
+    let w = match lookup_register_quiet("\\arraycolsep") {
       Some(RegisterValue::Dimension(d)) => d,
       Some(RegisterValue::Glue(g)) => Dimension::new(g.value_of()),
       _ => Dimension::default(),
