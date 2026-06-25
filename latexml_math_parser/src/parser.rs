@@ -2829,20 +2829,25 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // Can it happen that the target is itself an XMRef? Then recurse.
     if let Some(realnode) = document.lookup_id(&idref) {
       return Cow::Borrowed(realnode);
-    } else {
-      let message = s!("Cannot find a node with xml:id='{}'", idref);
-      // TODO:
-      // LaTeXML::MathParser::IDREFS{$idref}
-      // ? "Previously bound to " .
-      // ToString($LaTeXML::MathParser::IDREFS{$idref})           : ()));
-      // Perl Document.pm L1553: Warn, not Error (missing XMRef targets are common)
-      let warn_fn = || -> Result<()> {
-        Warn!("expected", "id", message);
-        Ok(())
-      };
-      warn_fn().ok();
-      //       return ['ltx:ERROR', {}, "Missing XMRef idref=$idref"]; } }
     }
+    // An unresolved ref HERE is a BENIGN parse-time transient, not a defect, so
+    // we stay SILENT. This resolver consults the LIVE `document.lookup_id`, which
+    // is mutated as each XMath element reinstalls during the parse — a Rust/ASF
+    // architectural artifact that Perl's `MathParser::realizeXMNode`
+    // (MathParser.pm:135) does NOT have, so Perl emits ~0 of these mid-parse.
+    // The target reliably exists in the FINAL tree (empirically on the heaviest
+    // witness 0704.2400: of 98 transient misses, 85 ids are present in the output
+    // and the other 13 leave ZERO dangling `<XMRef idref=…>` — the refs were
+    // re-pointed or absorbed; the output has 0 dangling idrefs of 2597).
+    // Callers rely on an unresolved ref returning the XMRef itself; do NOT "fix"
+    // by swapping in `resolve_xmref` — that DUPLICATES content (\choose →
+    // "a + ba + b binomial c + dc + d"; regresses choose/declare/sampler). See
+    // docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
+    // The AUTHORITATIVE dangling-ref check is the faithful post-processing pass
+    // (Perl Post.pm:1444/1456 → latexml_post `realize_xm_node` /
+    // `mark_xm_node_visibility_aux`, Error severity) plus core
+    // `markXMNodeVisibility` (Document.pm:1548/1553). Warning here floods ~128k
+    // false positives that bury that genuine signal.
   }
   Cow::Borrowed(node)
 }

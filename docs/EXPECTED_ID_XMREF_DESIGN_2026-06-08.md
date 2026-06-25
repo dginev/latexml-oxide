@@ -1,5 +1,24 @@
 # `expected:id` dangling-XMRef — Design Scope
 
+> **UPDATE 2026-06-25 — parse-time warning SUPPRESSED (signal-fidelity), Class B
+> structural fix still deferred.** The dominant emitter of this cluster was the
+> math-parser's *parse-time* `realize_xmnode` (`parser.rs:2840`, ~128.9k of the
+> ~130.8k `warning:expected:id` messages in the 10k sandbox). It is a **benign
+> transient false-positive**: it consults the LIVE `document.lookup_id` mid-parse
+> while XMath elements reinstall (a Rust/ASF artifact Perl lacks), but the FINAL
+> tree is clean — empirically verified on the heaviest witness `0704.2400`: of 98
+> transient misses, 85 ids are present in the output and the other 13 leave **0
+> dangling `<XMRef idref>`** (the output has 0 dangling idrefs of 2597). The whole
+> 10k run has **0 `error:expected:id`**, i.e. the authoritative post-processing
+> check (`latexml_post` `realize_xm_node` / `mark_xm_node_visibility_aux`, faithful
+> Perl `Post.pm:1444/1456` Error) flags no genuine output danglers. So the
+> parse-time Warn was made SILENT (`parser.rs`), output byte-identical, genuine
+> danglers still caught downstream. The Rust-only `base_xmath.rs` createXMRefs
+> "Unresolved _xmkey" Warn (Perl `Base_XMath.pool.ltxml:306-308` is silent) was
+> also removed. **The Class B structural divergence below (equation→equationgroup
+> refnum-id loss) is NOT fixed** — it simply no longer floods the cortex signal;
+> when a genuine dangler reaches output, the faithful post-Error reports it.
+>
 > **Status:** DESIGN + PHASE-0 GROUNDED (no fix code yet). Scopes the fix for
 > the residual `expected:id Cannot find a node with xml:id='…'` cluster — the
 > non-VERTBAR XMDual-dangling remainder after the bra-ket VERTBAR work

@@ -721,10 +721,18 @@ pub fn decode_math_char(
   n %= 16 * 256;
   let mut fam: u16 = n / 256;
 
-  let curfam_val: i32 = match state::lookup_register("\\fam", Vec::new()) {
-    Ok(Some(crate::definition::register::RegisterValue::Number(curfam))) => curfam.0 as i32,
+  // Perl Package.pm:2928 reads the internal `fontfamily` value DIRECTLY
+  // (`$STATE->lookupValue('fontfamily') // -1`), NOT the `\fam` register CS.
+  // The `\fam` register is merely backed by `fontfamily` (its getter, tex_math.rs;
+  // Perl TeX_Math.pool.ltxml:639-641). Reading the value directly mirrors Perl,
+  // stays correct when a document shadows `\fam` (e.g. `\let`/`\renewcommand`),
+  // and avoids the spurious `expected:register` warning that `lookup_register`
+  // emits per math char when `\fam` is no longer a register.
+  let curfam_val: i32 = state::with_value("fontfamily", |v| match v {
+    Some(Stored::Int(i)) => *i as i32,
+    Some(Stored::Number(n)) => n.0 as i32,
     _ => -1,
-  };
+  });
 
   if class == 7 && (0..=15).contains(&curfam_val) {
     fam = curfam_val as u16;

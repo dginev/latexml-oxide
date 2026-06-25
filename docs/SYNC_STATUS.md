@@ -15,12 +15,52 @@
 
 ## Current status
 
-- `cargo test --tests`: **1467 / 0 / 0**.
+- `cargo test --tests`: **1468 / 0 / 0**.
 - `cargo clippy --workspace --all-targets -- -D warnings`: **clean**.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
 
-### Landed this session (2026-06-22, on `further-stability-coverage`, pushed)
+### Landed this session (2026-06-25, on `post-processing-signal-fidelity`)
+
+**Signal-fidelity pass — ~200.7k spurious `warning` messages eliminated from the
+10k sandbox, all faithful to Perl, ZERO output change.** Triaged the dominant
+post-processing/digestion warning clusters in the cortex 10k run; each was a
+Rust-only divergence where Perl is silent (verified against the Perl source per
+fix):
+
+- **`expected:id` parse-time transient (128.9k msgs / 1142 tasks)** — the
+  math-parser `realize_xmnode` (`parser.rs`) warned "Cannot find a node with
+  xml:id" on a LIVE-`lookup_id` miss mid-reinstall (a Rust/ASF artifact Perl's
+  `MathParser::realizeXMNode` lacks). Empirically benign: on the heaviest witness
+  `0704.2400`, 85/98 warned ids are present in the output and the other 13 leave
+  **0 dangling `<XMRef>`** (0 dangling of 2597 idrefs); the whole 10k has **0
+  `error:expected:id`**. Made silent; genuine danglers still caught by the
+  faithful post-Error (`latexml_post`, Perl `Post.pm:1444/1456`). Output
+  byte-identical. See `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md` (2026-06-25 banner).
+- **`expected:register \tabcolsep`/`\arraycolsep` (43.8k msgs)** — `\lx@text@intercol`
+  / `\lx@math@intercol` used the warning `lookup_register`; Perl
+  (`TeX_Tables.pool.ltxml:639/646`) uses a silent `isRegister ? valueOf :
+  Dimension(0)` inline guard (a document may `\renewcommand` the length register
+  into a macro). Added `state::lookup_register_quiet` (no warn) and used it.
+- **`expected:register \fam` (27.1k msgs)** — `decode_math_char` (`mathchar.rs`)
+  read `\fam` via warning `lookup_register`; Perl `decodeMathChar`
+  (`Package.pm:2928`) reads `lookupValue('fontfamily')` DIRECTLY. Switched to a
+  direct `fontfamily` read (the `\fam` register's own getter already does this) —
+  no warn, and correct even when `\fam` is shadowed (matches Perl). Normal
+  (non-shadowed) `\fam` is unaffected (suite unchanged).
+- **`expected:id` createXMRefs (900 msgs)** — `base_xmath.rs` XMDual
+  `after_close_late` warned "Unresolved _xmkey"; Perl (`Base_XMath.pool.ltxml:306-308`)
+  silently does `setAttribute(idref => undef)`. Removed the Rust-only warning.
+
+NON-fixes (confirmed PARITY — Perl warns too via `LookupRegister`, left as-is):
+`\tikz@dashphase`/`\cmdGR@*` (pgfmath `pgfmath_register`→`LookupRegister`), `\c@*`
+counters (`CounterValue`→`LookupRegister`). `eqnarray` `\arraycolsep` at
+`latex_constructs.rs:971` is a minor remaining divergence (Perl `LookupDimension`
+reads the macro body; 354 msgs / 2 tasks) — deferred, needs a `LookupDimension` port.
+
+Suite 1468/0, clippy clean, fmt clean.
+
+### Landed earlier (2026-06-22, on `further-stability-coverage`, pushed)
 
 Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - **Cluster G hang** `1707.02464` — `\hsize`-aware vbox paragraph wrapping (faithful
