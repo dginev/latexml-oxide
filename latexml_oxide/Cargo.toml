@@ -7,7 +7,7 @@ license = "CC0-1.0"
 homepage = "https://github.com/dginev/latexml-oxide"
 repository = "https://github.com/dginev/latexml-oxide"
 readme = "README.md"
-description = "A TeX to XML/HTML/ePub converster: a LaTeXML reimplementation in Rust"
+description = "A TeX to XML/HTML/ePub converter: a LaTeXML reimplementation in Rust"
 default-run = "latexml_oxide"
 
 [lints]

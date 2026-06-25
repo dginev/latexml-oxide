@@ -24,27 +24,39 @@ LoadDefinitions!({
     });
   });
 
-  // Same as p but with vertical alignment centered
+  // Same as p{} but vertically centered. Build the cell as the Perl-faithful
+  // `\lx@tabular@p m {width} { … }` VBox (an `<ltx:inline-block>` digested as
+  // VBoxContents), matching the global `p{}` column (tex_tables.rs) — so width
+  // lands on the `<inline-block>` (not the `<td>`), block content nests directly,
+  // and `\hsize`-aware wrapping sizes it (box-model fix). The vattach letter `m`
+  // → `translate_attachment` → middle. (Was a plain `\vtop{}` → width-on-`<td>` +
+  // `vattach`/width drift vs Perl — cluster-B residual C/D.)
   DefColumnType!("m{Dimension}", sub[(width)] {
+    let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("m"), T_BEGIN!()];
+    before.extend(width.revert()?.unlist());
+    before.push(T_END!());
+    before.push(T_BEGIN!());
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vtop"), T_BEGIN!())),
+        before: Some(Tokens::new(before)),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Justify),
-        width: Some(width),
         vattach: Some(String::from("middle")),
         ..Cell::default()
       });
     });
   });
-  // Same as p but with vertical alignment bottom
+  // Same as p{} but vertically bottom-aligned — `\lx@tabular@p b {width} { … }`.
   DefColumnType!("b{Dimension}", sub[(width)] {
+    let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("b"), T_BEGIN!()];
+    before.extend(width.revert()?.unlist());
+    before.push(T_END!());
+    before.push(T_BEGIN!());
     with_current_build_template(|template_opt| {
       template_opt.unwrap().add_column(Cell {
-        before: Some(Tokens!(T_CS!("\\vbox"), T_BEGIN!())),
+        before: Some(Tokens::new(before)),
         after: Some(Tokens!(T_END!())),
         align: Some(Align::Justify),
-        width: Some(width),
         vattach: Some(String::from("bottom")),
         ..Cell::default()
       });

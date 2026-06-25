@@ -15,10 +15,29 @@
 
 ## Current status
 
-- `cargo test --tests`: **1466 / 0 / 0**.
+- `cargo test --tests`: **1467 / 0 / 0**.
 - `cargo clippy --workspace --all-targets -- -D warnings`: **clean**.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
+
+### Landed this session (2026-06-22, on `further-stability-coverage`, pushed)
+
+Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
+- **Cluster G hang** `1707.02464` — `\hsize`-aware vbox paragraph wrapping (faithful
+  Perl `readBoxContents`); the `\narrow` `\hsize`-shrink loop now terminates
+  (hang → ~4.8s, 10 errors = Perl). `7545e07fd6`. See `STABILITY_WITNESSES.md`
+  Cluster G (FIXED).
+- **p{} block-content** `1510.07685` — `\begin{itemize}` in a `p{}` cell (3→0
+  errors); global p{} → Perl `\lx@tabular@p` VBox form (1610.00974 step-3).
+  `f65b80c1c2`.
+- **array.sty m{}/b{} → `\lx@tabular@p`** (`eb978df5a9`) and **p/m/b `<td>`
+  `align="left"`** (`1867f17da9`) → **cluster-B FULLY RESOLVED**; table fixtures
+  near-/exact-to-Perl (array_newline_math Perl-exact); rotfloat2 sidewaystable
+  innerheight 69.1→98.6 vs Perl 98.5.
+- Validated regression-free: 12 table-stressed papers + a fresh 24-paper same-host
+  sweep (0 Rust>Perl; Rust at-or-better everywhere) + class-level cross-join.
+- (Earlier this session: tasks 5 & 6 below — post-processing log parity + graphics
+  never-ship-raw-.eps — also landed.)
 
 ## Methodology & the cortex cross-join
 
@@ -61,6 +80,89 @@ rerun is the clear next step:**
   macro defined via `TeX!(r"…")` raw-TeX blocks (single-backslash), so its
   flagged "gaps" are mostly false positives (verified: longtable `\LTcapwidth`
   etc. ARE defined). OmniBus was confirmed structurally complete this way.
+- *fatal/TooManyErrors mining (2026-06-22)*: **mined out — ZERO genuine
+  Rust-only bugs.** Of 35 `MaxLimit(100)` papers: 24 Perl-fatal (parity), **9 a
+  `cp1251`/Cyrillic env artifact** (all `[cp1251]{inputenc}`+`[T2A]{fontenc}`+
+  russian babel → ~100 `unexpected:<char>` each; the `cyrillic`/`t2` TeX package
+  is missing on this host so `cp1251.def`/`t2aenc.def` are absent — **local Perl
+  fails identically**, the cortex Perl=clean came from a host WITH the package),
+  2 stale/marginal. Same env-artifact family as the isolatin phantom. **Cyrillic
+  coverage fix is host-side (`tlmgr install cyrillic cm-super`), not a code bug;
+  an optional surpass-Perl charset-decode fallback for missing inputenc `.def`s
+  would convert them without the host package (needs authorization).**
+- *fatal/Timeout mining (2026-06-22)*: 18 papers → 16 Perl-fatal (parity), 2
+  candidates. `1506.09195` = missing custom `my_paper.sty` + deep expl3/datatool/
+  l3fp (local Perl also fatals; Rust runs the conditional runaway to the IfLimit
+  guard). **`1707.02464` = the ONE genuine Rust-only bug from all 53 fatal papers:
+  Perl completes in 11.76s, Rust hangs to the 60s watchdog** — a custom
+  `\narrow` macro's `\hsize`-shrink loop never terminates because Rust's vbox
+  `\ht` is `\hsize`-invariant (Perl models paragraph height ∝ `\hsize`). Recorded
+  as `STABILITY_WITNESSES.md` Cluster G (open; box-model fix, regression-risky,
+  warrants a focused session).
+- *error-severity sweep (2026-06-22)*: full cross-join of the cortex `error`
+  severity (1189 tasks) on the **same local host** (env-artifact discipline).
+  **Parity/env-artifact dominated; ONE genuine Rust-only correctness bug.**
+  - `malformed` (162): all parity except **`ltx:itemize` in a `p{}` cell** — the
+    p{}-block-content bug (1510.07685), root = **1610.00974 step-3**, now
+    **✅ FIXED 2026-06-22** (`f65b80c1c2`, the p{}→VBox port, unblocked by the
+    Cluster G box-model fix `7545e07fd6`). `_CaptureBlock_`/listing errors are
+    Perl-identical (parity).
+  - `latex` (31): all parity. Every package `\PackageError` (`\GenericError`,
+    `(ifthen)`, `(newunicodechar)` 189, `(etoolbox)` 187, `(glossaries)` 224,
+    `(pgfkeys)`) is shared. The `(babel)` `Unknown option 'russian'`/`'ukrainian'`
+    cluster (11 papers, cortex Perl=warning) is a **babel-VERSION env artifact**:
+    local babel.sty ≥3.9 (locale-based) errors on the `russian` *option*
+    (`russianb.ldf` absent), and **local Perl emits the IDENTICAL single error**
+    (0709.3796: Rust==Perl==1). The cortex Perl=warning host had pre-3.9 babel.
+    Same class as the isolatin/cp1251 phantoms; not a code bug (a `babel_lang_stubs`
+    russian/ukrainian stub would surpass local-Perl + overlap the Cyrillic
+    host-side decision → left as-is).
+  - `missing_file` (31), `misdefined` (3), `document` (2), `xpath` (2): all parity.
+  - `undefined` (890): top-20 whats all parity — the `imsart` bib cluster
+    (`\bauthor`/`\bfnm`/`\btitle`/… + `{barticle}`, 16 papers) and `{diagram}`
+    (17/19) are **Perl-also-undefined** (Perl LaTeXML ships no imsart/diagram
+    binding either). Confirms "undefined = shared third-party CS".
+  - `unexpected` (268): the big "Script `_`/`^` can only appear in math mode" +
+    "Misplaced alignment tab `&`" clusters are **100% parity** under a FULLY
+    PAGINATED cross-join (`_` 109/109, `^` 45/45, `&` 51/51 papers — no math-mode
+    detection divergence; these are genuinely-malformed unescaped inputs both
+    engines flag). The only "candidates" were the `<char>` inputenc Cyrillic/latin
+    env-artifact cluster (0802.1123 isolatin, 1008.0492/1011.5076 babel-russian,
+    1009.2998 `[cp866]`+`[T2A]` — host missing the `.def`; same class as Clusters
+    A/C/E) and `\end{table}`/1805.00875 (**already FIXED** — see next).
+  - **META (2026-06-22): the cortex Rust service data is STALE** (predates recent
+    branch fixes). 1805.00875 (dcolumn) shows `unexpected/\end{table}` in the
+    cortex report but converts **0 errors on the current binary** (the 2026-06-21
+    dcolumn fix is in). So a flagged "Rust-only candidate" may already be fixed —
+    **always re-confirm on the current binary** (the genuine finds 1510.07685 /
+    1707.02464 were). A **fresh cortex Rust rerun built from this branch** is the
+    real prerequisite for surfacing NEW genuine Rust-only correctness bugs; the
+    stale data is still authoritative for *parity* and *env-artifact* classes
+    (those don't change). **Conclusion: the entire `error` severity is mined out —
+    parity + env-artifacts; the one genuine find (p{} block content, 1510.07685) is
+    now ✅ FIXED (1610.00974 step-3 port + Cluster G box-model fix, 2026-06-22).**
+  - **Current-binary same-host sweep (2026-06-22):** a fresh 24-paper deterministic
+    corpus sample (LaTeX2e + LaTeX 2.09 `\documentstyle` + revtex, multi-domain),
+    current Rust vs **verbose** local Perl (avoiding the `--quiet` trap). 21 real
+    TeX papers (3 were `\documentstyle` 2.09, 1 a misnamed PostScript file):
+    **ZERO Rust>Perl divergences — Rust is at-or-better than Perl on every paper.**
+    Parity on most (0/0, 33/33); **Rust BEATS Perl on 4** (1509.03503 Perl
+    timeout→Rust clean; 1604.03906 3 vs 101; astro-ph0210479 18 vs 101; 1712.01466
+    2 vs 3). Confirms the stale-DB mining: no genuine Rust-only bugs findable on the
+    current binary without a fresh cortex rerun. Sweep harness:
+    `tools/`-style `/tmp/sweep.sh` (grep `\documentclass` misses 2.09
+    `\documentstyle` — heuristic note, not a Rust gap).
+  - **`warning` severity mined too (2026-06-22) → nothing new actionable.** Of 2208
+    warning tasks, the bulk is **user-deferred math** (`ambiguous` 1348 + `expected`
+    1181 = `not_parsed` "MathParser failed to match" — content-MathML) + env
+    (`missing_file` 590). The small non-math categories are niche graceful-recovery
+    warnings, all parity/faithful: `unsupported/multirow` ("Negative row sizes … not
+    yet supported") is a **line-for-line mirror of Perl `multirow.sty.ltxml`:27-28**
+    (Perl doesn't support it either — implementing would surpass Perl);
+    `malformed/{_CaptureBlock_,labels,ltx:Proof}` (1-5 tasks) are graceful fallbacks
+    for custom/edge constructs. **All cortex severities (error/fatal/warning) are now
+    mined; no unblocked, in-scope, non-surpass Rust-only bug remains findable on the
+    current binary.**
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
@@ -270,18 +372,20 @@ Open task §1).
   `compound_operator_2` list (its own `// TODO`). Ambiguity-sensitive. (Root
   cause was the marpa fork's `Parser::read` breaking on `is_exhausted()` before
   the token source drained — `marpa/src/parser/mod.rs:130`.)
-- **comma-list LEFT of a relation `a,b \in A` — DESIGN LOCKED 2026-06-22, impl
-  deferred (riskiest pruning area).** Current Rust gives the wrong
-  `formulae@(a, b∈A)` (∈ binds only `b`, splitting `a` off). User-specified
-  surpass-Perl target (via AskUserQuestion): an **XMDual** whose **content branch
-  DISTRIBUTES** the relation — `formulae@(∈(a,A), ∈(b,A))`, each element related to
-  the shared RHS via XMRefs — and whose **presentation branch wraps the list in an
-  `<XMWrap>` as the relation's LHS** — `Apply(∈, XMWrap(a,',',b), A)` (renders
-  `<mrow>` in pMML). ONLY for list-LEFT; the list-RIGHT `0<x,y`→`list(0<x,y)`
-  distribute stays (separate earlier blessed surpass). Touches the tuned
-  `formulae_apply`/`list_apply` (semantics.rs:486; 3-item `a,b,c∈S` uses
-  `list_apply`) — both paths + pruning. Verify: full suite + `0<x,y` +
-  over-parse fixtures stay green. Full spec in `memory/math-parser-asides`.
+- **comma-list LEFT of a relation `a,b \in A` — FIXED 2026-06-22 (2-item path).**
+  Was the wrong `formulae@(a, b∈A)` (∈ binding only `b`). Now the user-specified
+  surpass-Perl **XMDual**: content **DISTRIBUTES** — `formulae@(∈(a,A), ∈(b,A))`,
+  sharing XMRefs to the relop and RHS — presentation wraps the list as the
+  relation's LHS — `Apply(∈, XMWrap(a,',',b), A)`. Implemented as a scoped
+  transform at the end of `formulae_apply` (semantics.rs): when `left` is a bare
+  (non-relational, non-Dual) item and `right` is a binary RELOP relation
+  `Apply(R,[lhs,rhs])` under a comma, `distribute_list_relation` builds the dual.
+  `x,y \le z`→`formulae@(x≤z, y≤z)`. The list-RIGHT `0<x,y`→`list@(0<x,y)`,
+  all-relational `a=b,c=d`→`formulae@`, and bare `a,b`→`list@` all stay. Full suite
+  1466/0, clippy clean, zero other-fixture changes; regression test in
+  `parse/relations`. **Remaining (follow-up):** the 3+-item `a,b,c \in S` goes
+  through `list_apply` (not `formulae_apply`) → still `list@(a,b,c∈S)`; the same
+  distribution needs porting to that path.
 - **relation with a list-RHS that itself contains a scripted relop**:
   `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >=^?, c)`, Rust
   unparsed. The scripted-relop atomic fix (`4a5ebf29f7`) cleared standalone list
@@ -352,25 +456,39 @@ Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/READM
 done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
 
+### 5–6. LANDED 2026-06-22 (see "Landed this session" above)
+- **Post-processing log parity** (`512dbc1ba2`, `9524d2e179`): `cortex.log` carries
+  core+post. **Residual (cortex-side owner):** wire `cortex_worker.rs::convert_archive`
+  to `run_post_processing_logged` + fold `max(core, post.status_code)` into
+  `Status:conversion` (Perl `LaTeXML.pm` L631-634).
+- **Graphics never ships a raw `.eps`/`.pdf`** (`80b4438385`, `604951c232`): three
+  guards → a `<graphics>` without `@imagesrc` renders `ltx_missing_image`. Known
+  post-orchestration deltas (not blocking, broader parity): `PictureImages` absent
+  (Rust = regex inline-SVG), `SVG` regex extractor, no `prescan`.
+
 ---
 
 ## Deep deferred families (parked — large or shared; dedicated sessions)
 
-- **1610.00974 step-3** — port the *global* `p{}` column to the Perl VBox form
-  (`\lx@tabular@p`/VBoxContents). The narrow `\multicolumn{}{p{}}` case is fixed;
-  the global port exposes a `\cr`-mid-VBoxContents-predigest interleaving + a
-  span/sizing bug on `\multicolumn` over p-columns. Also explains the p-column
-  `td align="justify"` + width-on-`<p>` divergence (Perl: `align="left"` +
-  width-on-`<inline-block>`). Surpass-Perl R&D. **Related residuals catalogued
-  with minimal reproducers in `docs/reproducers/array_pcolumn/`** (Kind B: `>{}`
-  prefix align not on `<td>`; Kind C/D: regular `m{}`/`b{}` use a plain
-  `\vtop{}`/`\vbox{}` not the `\lx@tabular@p` VBox → width-on-`<td>` + inline-block
-  `vattach`/width drift). The `\multicolumn`-over-`m{}`/`b{}` GROUP ERROR in that
-  family is now **FIXED** (was 1805.01525 27→0; `tex_tables.rs`
-  `\lx@alignment@multicolumn` generalized from p{}-only to all paragraph columns).
+- **1610.00974 step-3 (global p{}→VBox) + cluster-B — ✅ LANDED 2026-06-22, NO
+  LONGER DEFERRED.** See "Landed this session" above. p{}/m{}/b{} columns now build
+  the cell as Perl's `\lx@tabular@p` inline-block (VBoxContents); p/m/b `<td>`
+  `align="left"`; **cluster-B FULLY RESOLVED**; fixes 1510.07685. Commits
+  `f65b80c1c2` / `eb978df5a9` / `1867f17da9` (+ box-model `7545e07fd6`). NOTE: the
+  `collcell`/`\collectcell` undefined seen in some table papers is PARITY (both
+  engines default `notex=1`/`INCLUDE_STYLES=false`, so neither raw-loads
+  `collcell.sty`; the `--quiet` Perl "0 errors" was a display-suppression artifact —
+  use verbose Perl).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
-  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`.
+  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **QUANTIFIED 2026-06-22: this is the
+  #1 remaining Rust-only divergence** — `warning/expected/id` is **1005 cortex
+  tasks** ("Cannot find a node with xml:id='S…E…m1.N'" from
+  `latexml_math_parser/src/parser.rs:2840`; math-node ids, so genuinely the
+  content-arm/MathFork XMRef cluster). It's a large Rust-only WARNING excess vs
+  Perl (e.g. 0704.3530 Rust 152 vs Perl 9 warnings) — NOT parity. The prime
+  candidate for the deferred content-MathML dedicated session; do NOT pick at it
+  piecemeal (user directive).
 - **xy-pic `svg:path` / curve cluster** (1501.03690) — shifted-arrows `svg:path`
   in `ltx:text`; mode-frame cascade root.
 

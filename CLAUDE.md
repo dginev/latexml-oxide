@@ -173,6 +173,25 @@ Completed/historical audits live in `docs/archive/` (see `docs/archive/README.md
 - **Diagnostic-snapshot naming.** Docs that capture a point-in-time technical diagnostic — `*_TRIAGE`, `*_HOTSPOTS`, `*_AUDIT`, `*_ANALYSIS`, `*_BISECT`, and similar — **must carry a date in the filename** (`NAME_YYYY-MM-DD.md`), using the date of their last commit. This keeps a study from masquerading as a live worklist. *Living* worklists are exempt even when their name reads like a diagnostic — date only what is a frozen snapshot. (When such a worklist's mission *completes*, date it and move it to `docs/archive/`, lifting any live residual into `SYNC_STATUS.md` — as was done for the LoadFormat audit.)
 - Keep this index current. When a diagnostic snapshot is superseded, archive it under `docs/archive/` rather than leaving it orphaned at the top level.
 
+## Skills (`.claude/skills/`)
+
+Reusable workflows that encode this project's hard-won judgement — invoke with
+`/<name>` or let them surface by description. They wrap the `tools/` scripts with
+the *rules* (what verdict to trust, what trap to avoid):
+
+- **`canvas-triage`** — decide if a failing paper is a genuine Rust bug or parity
+  with Perl. Encodes the non-negotiables: never downgrade errors to cheat,
+  fail-safe toward flagging failure, classify Perl with **verbose not `--quiet`**,
+  ANSI-strip before grepping, same-host Perl only, and "the cortex DB is a screen,
+  not ground truth."
+- **`min-repro`** — reduce a confirmed failure to a minimal reproducer/fixture.
+- **`perl-port`** — faithfully translate/fix a binding: read the Perl source
+  first, use `ORGANIZATION.md` for placement, check `WISDOM.md` /
+  `KNOWN_PERL_ERRORS.md` / `OXIDIZED_DESIGN.md`, and obey the divergence policy.
+- **`perf-check`** — measure correctly, pick the right profile, and don't
+  re-litigate the settled dead-ends (PGO/target-cpu = no gain; startup dump-parse
+  lever = declined).
+
 ## Build & Test
 
 Requires **Rust nightly**.

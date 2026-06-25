@@ -5,7 +5,9 @@
 //! Used by both the `latexml_oxide` binary and the `cortex_worker` binary.
 
 use latexml_core::{
-  Info, s,
+  Info, Warn,
+  common::error::{LogStatus, note_progress, note_status},
+  s,
   telemetry::{self, Phase},
 };
 use latexml_post::{
@@ -53,6 +55,54 @@ pub struct PostOptions<'a> {
   /// via `get_math`. Applied to each `PostDocument` in the final
   /// serialization loop.
   pub whatsout:                  latexml_post::extract::Whatsout,
+}
+
+/// Emit a post-processing error: capture it into the active log buffer (so it
+/// reaches `cortex.log`) AND bump the Error counter so `Status:conversion`
+/// reflects post-phase failures (Perl `LaTeXML.pm` L633: `max(core, post)`).
+///
+/// Deliberately NOT the `Error!` macro: that expands to a too-many-errors
+/// `Fatal!(…)` → `return Err(error::Error)`, which only typechecks inside the
+/// digester's `Result<_, error::Error>` functions. The post-processing entry
+/// points return `String`/`Result<_, ()>`, so we log+count directly with no
+/// control-flow side effect.
+fn post_error(object: &str, message: &str) {
+  note_status(LogStatus::Error, None);
+  log::error!(target: &format!("post:{object}"), "{message}");
+}
+
+/// Result of [`run_post_processing_logged`]: the serialized HTML plus the
+/// post-phase log text and status code, mirroring Perl `LaTeXML.pm`'s
+/// `convert_post`, which flushes the log AFTER post and folds the post status
+/// into the final `max(core, post)` verdict (L631-634).
+pub struct PostOutcome {
+  /// Serialized post-processed output (same value as [`run_post_processing`]).
+  pub html:        String,
+  /// Log text captured during the post phase only — Graphics/MathML/XSLT
+  /// `Info!`/`Warn!`/`post_error` lines. Append to the core conversion log.
+  pub log:         String,
+  /// Status code read from the shared REPORT counter AFTER post. Because the
+  /// counter is NOT reset between core and post, this is already the combined
+  /// core+post code; callers still `max()` it with the core code as a
+  /// belt-and-suspenders guard for paths that force a fatal outside REPORT
+  /// (e.g. a `catch_unwind`-trapped panic).
+  pub status_code: usize,
+}
+
+/// Run post-processing while capturing its log into a fresh thread-local
+/// LOG_BUFFER. `Converter::convert()` already flushed the *core* log into its
+/// own response, leaving the buffer unbound — so without re-binding here every
+/// post-phase `Info!`/`Warn!`/`post_error` (incl. a silent EPS→PNG failure)
+/// reaches stderr only and never the persisted `--log`/`cortex.log`. Perl's
+/// single `flush_log()` after `convert_post` sweeps up the post log for ALL
+/// consumers; this is the Rust equivalent, shared by the `latexml_oxide` and
+/// `cortex_worker` binaries so their logs reach parity. See SYNC_STATUS task 5.
+pub fn run_post_processing_logged(xml: &str, opts: &PostOptions) -> PostOutcome {
+  latexml_core::util::logger::bind_log();
+  let html = run_post_processing(xml, opts);
+  let log = latexml_core::util::logger::flush_log();
+  let status_code = latexml_core::common::error::get_status_code();
+  PostOutcome { html, log, status_code }
 }
 
 /// Run the post-processing pipeline on XML output.
@@ -124,7 +174,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let doc = match PostDocument::new_from_string(xml, doc_opts) {
     Ok(d) => d,
     Err(e) => {
-      eprintln!("Post-processing: failed to parse XML: {}", e);
+      post_error("parse", &format!("failed to parse XML: {e}"));
       telemetry::phase_exit();
       return xml.to_string();
     },
@@ -157,7 +207,11 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         Some("label") => latexml_post::split::SplitNaming::Label,
         Some("labelrelative") => latexml_post::split::SplitNaming::LabelRelative,
         Some(other) => {
-          eprintln!("Unknown splitnaming '{}', using 'id'", other);
+          Warn!(
+            "post",
+            "split",
+            format!("Unknown splitnaming '{other}', using 'id'")
+          );
           latexml_post::split::SplitNaming::Id
         },
       };
@@ -166,12 +220,12 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       match splitter.process(doc, split_nodes) {
         Ok(docs) => {
           if docs.len() > 1 {
-            eprintln!("Split into {} documents", docs.len());
+            note_progress(&format!("Split into {} documents", docs.len()));
           }
           Ok(docs)
         },
         Err(e) => {
-          eprintln!("Post-processing: Split failed: {}", e);
+          post_error("split", &format!("Split failed: {e}"));
           Err(())
         },
       }
@@ -207,7 +261,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       match proc.process(d, nodes) {
         Ok(processed) => out.extend(processed),
         Err(e) => {
-          eprintln!("Post-processing: {} failed: {}", label, e);
+          post_error(label, &format!("{label} failed: {e}"));
           return Err(());
         },
       }
@@ -408,7 +462,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
       searchpaths,
     ) {
       Ok(xslt) => processors.push(Box::new(xslt)),
-      Err(e) => eprintln!("Post-processing: XSLT error: {}", e),
+      Err(e) => post_error("xslt", &format!("XSLT error: {e}")),
     }
   }
 
@@ -429,7 +483,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
   let results = match chain_result {
     Ok(r) => r,
     Err(e) => {
-      eprintln!("Post-processing failed: {}", e);
+      post_error("convert", &format!("Post-processing failed: {e}"));
       return xml.to_string();
     },
   };
@@ -473,7 +527,7 @@ pub fn run_post_processing(xml: &str, opts: &PostOptions) -> String {
         let _ = std::fs::create_dir_all(parent);
       }
       if let Err(e) = std::fs::write(path, &output) {
-        eprintln!("Post-processing: failed to write page {}: {}", path, e);
+        post_error("write", &format!("failed to write page {path}: {e}"));
       }
     }
     if main_output.is_none() {

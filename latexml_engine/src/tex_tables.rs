@@ -110,22 +110,24 @@ LoadDefinitions!({
     });
   });
 
-  // Perl: p{Dimension} — before wraps content in \vtop{\hbox to <width>\relax{...}}.
-  // Width flows through \hbox BoxSpecification (not as cell attribute).
-  // vattach flows through \vtop → insertBlock.
-  // Perl: before => Tokens(\vtop, {, \hbox, T_LETTER('t'), T_LETTER('o'), $_[1]->revert, \relax, {)
+  // Perl TeX_Tables L69-74: p{Dimension} builds the cell as a *VBox* via
+  // `\lx@tabular@p t {width} { … }` → `<ltx:inline-block>` (VBoxContents, digested
+  // in internal_vertical mode), so text auto-opens `<p>` and block content (lists,
+  // etc.) nests directly. Replaces the earlier Rust `\vtop{\hbox to <w>\relax{…}}`
+  // divergence whose `\hbox`-opened `ltx:p` cell-container (with `_noautoclose`)
+  // rejected block content (1510.07685: `\begin{itemize}` in a `p{}` cell →
+  // malformed `<ltx:itemize> isn't allowed in <ltx:p>`). The `\hsize`-aware vbox
+  // paragraph wrap (box-model fix `7545e07fd6`) now sizes these cells correctly,
+  // so this faithful form no longer mis-sizes (was the blocker on 1610.00974).
+  // before => Tokens(\lx@tabular@p, T_LETTER('t'), {, <width>, }, {); after => }
   DefColumnType!("p{Dimension}", sub[(width)] {
-    // Build before tokens: \vtop { \hbox to <dim> \relax {
-    let mut before = vec![
-      T_CS!("\\vtop"), T_BEGIN!(), T_CS!("\\hbox"),
-    ];
-    before.extend(ExplodeText!("to"));
+    let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("t"), T_BEGIN!()];
     before.extend(width.revert()?.unlist());
-    before.push(T_CS!("\\relax"));
+    before.push(T_END!());
     before.push(T_BEGIN!());
     with_current_build_template(|template_opt| template_opt.unwrap().add_column(Cell {
       before: Some(Tokens::new(before)),
-      after: Some(Tokens!(T_END!(), T_END!())),
+      after: Some(Tokens!(T_END!())),
       align: Some(Align::Justify),
       vattach: Some("top".to_string()),
       ..Cell::default()}));
@@ -596,6 +598,31 @@ LoadDefinitions!({
         column.and_then(|c| c.before.as_ref()).map(|b| b.unlist_ref().clone()).unwrap_or_default();
       let after_toks: Vec<Token> =
         column.and_then(|c| c.after.as_ref()).map(|a| a.unlist_ref().clone()).unwrap_or_default();
+      // Rebind only top-level `\\` (depth 0) in the body to `\lx@newline`, so an
+      // embedded `\\` is a paragraph line break, not the alignment row terminator.
+      let rebind_newline = |body: &Tokens, out: &mut Vec<Token>| {
+        let dbl = T_CS!("\\\\");
+        let nl = T_CS!("\\lx@newline");
+        let mut depth = 0i32;
+        for t in body.unlist_ref().iter() {
+          match t.get_catcode() {
+            Catcode::BEGIN => { depth += 1; out.push(*t); },
+            Catcode::END => { depth -= 1; out.push(*t); },
+            _ if depth == 0 && *t == dbl => out.push(nl),
+            _ => out.push(*t),
+          }
+        }
+      };
+      // The global `p{}` column is now ALREADY in the Perl-faithful `\lx@tabular@p`
+      // VBox form (TeX_Tables L69-74), so Perl's `\lx@alignment@multicolumn` just
+      // splices before+body+after with no box rewrite. Mirror that. Only array.sty
+      // `m{}`/`b{}` (raw `\vtop{`/`\vbox{`) still need the transform below.
+      if before_toks.iter().any(|t| *t == T_CS!("\\lx@tabular@p")) {
+        tks.extend(before_toks.iter().copied());
+        rebind_newline(&body, &mut tks);
+        tks.extend(after_toks.iter().copied());
+        return Ok(Tokens::new(tks));
+      }
       // Width: the global `p{}` encodes it in `\hbox to <w> \relax`; `m{}`/`b{}`
       // carry it on the Cell — fall back to that when the tokens lack it.
       let mut width = extract_pcol_width(&before_toks);
@@ -663,18 +690,8 @@ LoadDefinitions!({
       tks.push(T_BEGIN!());
       // `>{…}` declarations belong inside the cell, before the body.
       tks.extend(decls);
-      // Rebind only top-level `\\` (depth 0); nested groups keep their meaning.
-      let dbl = T_CS!("\\\\");
-      let nl = T_CS!("\\lx@newline");
-      let mut depth = 0i32;
-      for t in body.unlist_ref().iter() {
-        match t.get_catcode() {
-          Catcode::BEGIN => { depth += 1; tks.push(*t); }
-          Catcode::END => { depth -= 1; tks.push(*t); }
-          _ if depth == 0 && *t == dbl => tks.push(nl),
-          _ => tks.push(*t),
-        }
-      }
+      // Rebind top-level `\\` (depth 0); nested groups keep their meaning.
+      rebind_newline(&body, &mut tks);
       tks.extend(inner_after.iter().copied()); // e.g. \lx@column@trimright, inside the box
       tks.push(T_END!()); // close the VBoxContents
       tks.extend(border_suffix.iter().copied()); // trailing border / intercolumn

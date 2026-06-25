@@ -2180,6 +2180,52 @@ pub fn predigest_box_contents_in_mode(_tokens: ArgWrap, mode: &str) -> Result<Op
   // in the content will pop this frame, since \egroup is \let to T_END and
   // invoke_token handles it via the standard group-closing mechanism.
   // Perl: $stomach->beginMode($mode) — push a new frame for this box content scope
+  // VERTICAL box modes (`\vbox`/`\vtop`/p{}-cell VBoxContents): faithful port of
+  // Perl `readBoxContents` (TeX_Box.pool.ltxml L139-160). ONE mode frame as the
+  // group; a loop that STOPS at the matching `}` WITHOUT processing it, so
+  // `end_mode` runs `leave_horizontal_internal` (repack — capturing the *inner*
+  // `\hsize`) BEFORE `pop_stack_frame` restores it. The `invoke_token(&T_BEGIN!())`
+  // path used for other modes lets the body's `}` egroup-restore `\hsize` before
+  // the post-hoc repack, so a `\vbox{\hsize=W …para…}` would wrap at the OUTER
+  // `\hsize` (the Cluster G `\narrow`-hang; rotated p{}-cell mis-sizing —
+  // SYNC_STATUS 1610.00974 step-3). hbox/math don't paragraph-wrap → the simpler
+  // `invoke_token(T_BEGIN)` path below. (A tabular inside a `\vbox`/`\vtop` is
+  // correctly SKIPPED by the repack because `\@@tabular`/`\halign` mark the result
+  // box `internal_vertical`.)
+  if mode.ends_with("vertical") {
+    begin_mode(mode)?;
+    let level = get_frame_depth(); // depth AFTER the mode frame (Perl: $level)
+    new_local_box_list(); // Perl: local @LaTeXML::LIST = ()
+    loop {
+      let next = match get_pending_comment() {
+        Some(comment) => Some(comment),
+        None => read_x_token(Some(true), false, None)?,
+      };
+      let Some(token) = next else { break };
+      // Perl: last if T_END && (level >= getFrameDepth). The box's own `}` (no
+      // nested group open → depth == level) ends the loop and is closed by
+      // `end_mode`, NOT egroup; a nested group's `}` (depth > level) is processed.
+      if token.defined_as(&T_END!()) && level >= get_frame_depth() {
+        break;
+      }
+      check_timeout()?; // runaway guard (mirrors the canonical group-digest loop)
+      extend_box_list(invoke_token(&token)?);
+    }
+    // Perl: $stomach->endMode($mode) — leave_horizontal_internal (repack with the
+    // still-in-scope inner `\hsize`) THEN pop_stack_frame (restores `\hsize`).
+    end_mode(mode)?;
+    let mode_tex = if lookup_bool_sym(pin!("IN_MATH")) {
+      TexMode::Math
+    } else {
+      TexMode::Text
+    };
+    let mut digested_list = List::new(expire_local_box_list());
+    digested_list.mode = Some(mode_tex);
+    let mut item: Digested = digested_list.into();
+    // Perl: List(@LaTeXML::LIST, mode => $mode)
+    item.set_property("mode", Stored::String(pin(mode)));
+    return Ok(Some(simplify_vertical_list(item)));
+  }
   if mode.ends_with("vertical") || mode.ends_with("horizontal") {
     begin_mode(mode)?;
   }

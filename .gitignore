@@ -41,8 +41,20 @@ arxiv-examples/
 *.latexml.log
 USER_OK.md
 
-# Local Claude Code settings and ad-hoc HTML conversion outputs
-.claude/
+# Local Claude Code settings and ad-hoc HTML conversion outputs.
+# Ignore local settings, but DO track our shared project skills under
+# .claude/skills/ — as an allowlist, so third-party/managed skills installed
+# via `npx skills add` (vendored under .agents/, symlinked in here) stay OUT of
+# the repo; only their skills-lock.json is tracked. Add a line per new project skill.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/canvas-triage/
+!.claude/skills/min-repro/
+!.claude/skills/perf-check/
+!.claude/skills/perl-port/
+# Vendored third-party agent skills (reproducible from skills-lock.json via npx skills add)
+.agents/
 html/
 
 # Python bytecode (e.g. tools/check_memory.py emits __pycache__/)

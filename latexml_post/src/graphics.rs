@@ -946,6 +946,8 @@ impl Graphics {
           libc::killpg(pid, libc::SIGTERM);
         }
         std::thread::sleep(std::time::Duration::from_millis(200));
+        // SAFETY: pgid is the child's own process group (set via setpgid in
+        // pre_exec); killpg only signals that group.
         unsafe {
           libc::killpg(pid, libc::SIGKILL);
         }
@@ -1236,7 +1238,6 @@ impl Graphics {
   /// Returns true only when the destination file was actually written.
   /// Optional dep: graceful fallthrough when `mutool` is not on PATH.
   fn convert_pdf_via_mutool(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    eprintln!("DBG convert_pdf_via_mutool: src={} dest={}", source, dest);
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
@@ -1284,10 +1285,6 @@ impl Graphics {
   /// `convert`/Ghostscript for vector-heavy PDFs. Returns true only when
   /// the destination file was actually written.
   fn convert_pdf_via_pdftocairo(source: &str, dest: &str, density: u32, page: Option<u32>) -> bool {
-    eprintln!(
-      "DBG convert_pdf_via_pdftocairo: src={} dest={}",
-      source, dest
-    );
     let dest_path = Path::new(dest);
     let parent = dest_path.parent().unwrap_or_else(|| Path::new("."));
     let stem = dest_path
@@ -1917,11 +1914,29 @@ impl Processor for Graphics {
         .unwrap_or("")
         .to_lowercase();
       let props = self.type_properties.get(&src_ext).cloned();
+      // Robustness guard (surpass-Perl; user directive 2026-06-22). A source
+      // type with no explicit `destination_type` defaults to a WEB-NATIVE
+      // target: keep web-native sources (svg/png/gif/jpg/jpeg) as-is, but
+      // rasterize anything else to `png`. This guarantees a non-web-native
+      // source is ALWAYS routed through Plan::Convert and never Plan::Copy'd
+      // verbatim — closing the hole for the unmapped `.postscript` graphics
+      // type (and any future addition) where a raw .ps/.eps/.pdf/.ai could
+      // otherwise reach the web. Perl defaults dest_type to srctype here
+      // (Graphics.pm:244, `$type = $properties{destination_type} || $srctype`),
+      // which would copy such a source raw; we deliberately diverge so the web
+      // output is never a raw .eps/.ps/.pdf the browser can't render.
+      const WEB_NATIVE: &[&str] = &["svg", "png", "gif", "jpg", "jpeg"];
       let dest_type = props
         .as_ref()
         .and_then(|p| p.destination_type.as_ref())
         .cloned()
-        .unwrap_or_else(|| src_ext.clone());
+        .unwrap_or_else(|| {
+          if WEB_NATIVE.contains(&src_ext.as_str()) {
+            src_ext.clone()
+          } else {
+            "png".to_string()
+          }
+        });
       let needs_conversion = dest_type != src_ext;
       let has_page = page.is_some();
       if needs_conversion || has_page {
@@ -2008,8 +2023,6 @@ impl Processor for Graphics {
       .unwrap_or(4)
       .clamp(1, 22);
     let n_workers = convert_count.min(worker_cap).max(1);
-    let source_dir_ref = source_dir.as_str();
-    let dest_dir_ref = dest_dir.as_str();
     let mut outcomes: Vec<ConvertOutcome> = Vec::with_capacity(convert_count);
     if convert_count > 0 {
       use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
@@ -2136,12 +2149,17 @@ impl Processor for Graphics {
                       raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
                     }
                   } else {
-                    // Final-failure: every conversion path exhausted. Promoted
-                    // from warn → Error 2026-05-08 because we want all
-                    // images to convert successfully, and a silent warning
-                    // hides regressions in the rasterizer chain.
-                    // Error class/object mirror Perl Graphics.pm:274
-                    // `Error('imageprocessing', $source, …)` so the
+                    // Final-failure: every conversion path exhausted. Mirror
+                    // Perl Graphics.pm L324-329 (Error + `return` with NO
+                    // imagesrc) — do NOT fall back to copying the raw source.
+                    // A raw .eps/.ps/.pdf is never usable on the web; copying it
+                    // would emit a broken `<img src="fig.eps">`. Leaving
+                    // @imagesrc unset makes the HTML5 XSLT
+                    // (LaTeXML-misc-xhtml.xsl L154) render the node as
+                    // `class="ltx_missing ltx_missing_image"` (empty src) — the
+                    // correct "couldn't render" signal. (User directive
+                    // 2026-06-22; raw .eps/.pdf are never web-native.)
+                    // Error class/object mirror Perl Graphics.pm:274 so the
                     // harness aggregates with engine/package emissions.
                     Error!(
                       "imageprocessing",
@@ -2150,20 +2168,10 @@ impl Processor for Graphics {
                       source,
                       abs_dest_str
                     );
-                    if let Some(rel) =
-                      Self::copy_to_destination(source, source_dir_ref, dest_dir_ref)
-                    {
-                      ConvertOutcome {
-                        job_id:   *job_id,
-                        imagesrc: Some(rel),
-                        raw_dims: Self::read_image_dimensions(source),
-                      }
-                    } else {
-                      ConvertOutcome {
-                        job_id:   *job_id,
-                        imagesrc: None,
-                        raw_dims: None,
-                      }
+                    ConvertOutcome {
+                      job_id:   *job_id,
+                      imagesrc: None,
+                      raw_dims: None,
                     }
                   };
                   local.push(outcome);
@@ -2204,24 +2212,25 @@ impl Processor for Graphics {
       };
     for plan in &plans {
       match plan {
-        Plan::NotFound { idx, graphic } => {
-          // Perl `Post/Graphics.pm:216` uses Warn level. An earlier
-          // Rust-only promotion to Error (2026-05-08) was motivated by
-          // "we want all images to convert", but the real driver of the
-          // not-found cases on the canvas is the missing
-          // `doc.get_search_paths()` half of `find_graphics_paths`
-          // (just fixed above), not actual missing files. With sources
-          // findable, this branch hits only when the .tex literally
-          // references a non-existent file — exactly the case Perl
-          // emits at Warn level. Restore Perl-faithful Warn.
+        Plan::NotFound { idx: _, graphic } => {
+          // Perl `Post/Graphics.pm:216-219`: Warn + `return` WITHOUT setting
+          // @imagesrc. An earlier Rust-only promotion to Error (2026-05-08)
+          // was reverted once the missing `doc.get_search_paths()` half of
+          // `find_graphics_paths` was fixed; with sources findable this branch
+          // hits only when the .tex references a genuinely non-existent file.
+          // We must NOT then set `imagesrc` to the raw `graphic` path: that
+          // emits a broken `<img src="missing.eps">` (and leaks a raw
+          // .eps/.pdf to the web). Leaving @imagesrc unset makes the HTML5
+          // XSLT (LaTeXML-misc-xhtml.xsl L154) render the node as
+          // `class="ltx_missing ltx_missing_image"` (empty src) — the correct
+          // "couldn't render" signal, matching Perl (user directive
+          // 2026-06-22; raw .eps/.pdf are never web-native).
           Warn!(
             "expected",
             "source",
             "No graphic source found; skipping (source was '{}')",
             graphic
           );
-          let mut node_mut = nodes[*idx].clone();
-          node_mut.set_attribute("imagesrc", graphic).ok();
         },
         Plan::Copy { idx, source, options } => {
           let mut node_mut = nodes[*idx].clone();
@@ -2316,7 +2325,15 @@ mod tests {
   impl EnvGuard {
     fn set(key: &str, value: &str) -> Self {
       let old = std::env::var(key).ok();
-      // FIXME: Audit that the environment access only happens in single-threaded code.
+      // SAFETY: EnvGuard is a test-only helper (`#[cfg(test)] mod tests`),
+      // used in `process_coalesces_only_matching_conversion_options` to point
+      // PATH at a fake `convert` for the duration of one test. `set_var`/
+      // `remove_var` are `unsafe` in edition 2024 because a concurrent env
+      // read/write from another thread is a data race.
+      // FIXME: the single-threaded property is NOT formally guaranteed here —
+      // cargo's default test harness runs the binary's tests on multiple
+      // threads and other tests read the environment (`std::env::var`). Make
+      // this airtight by serializing env-mutating tests (e.g. `serial_test`).
       unsafe { std::env::set_var(key, value) };
       Self { key: key.to_string(), old }
     }
@@ -2325,10 +2342,14 @@ mod tests {
   impl Drop for EnvGuard {
     fn drop(&mut self) {
       if let Some(old) = &self.old {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
+        // SAFETY: test-only restore of the value EnvGuard::set saved; same
+        // edition-2024 data-race rationale as in `set`.
+        // FIXME: single-threaded property not formally guaranteed (see `set`).
         unsafe { std::env::set_var(&self.key, old) };
       } else {
-        // FIXME: Audit that the environment access only happens in single-threaded code.
+        // SAFETY: test-only removal of a var EnvGuard::set introduced; same
+        // edition-2024 data-race rationale as in `set`.
+        // FIXME: single-threaded property not formally guaranteed (see `set`).
         unsafe { std::env::remove_var(&self.key) };
       }
     }

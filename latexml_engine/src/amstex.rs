@@ -444,20 +444,26 @@ LoadDefinitions!({
   // \innerhdotsfor / \spacehdots / \spaceinnerhdots — emit n copies
   // of \hdots (Perl L366-371). Uses sub-callback closures.
   DefMacro!("\\innerhdotsfor Number Match:\\after {}", sub[(n, _a, _b)] {
-    let count = n.value_of() as usize;
+    // Clamp like Perl's `1..$n` (empty for n<=0): a negative count must not
+    // wrap to ~2^64 and overflow `Vec::with_capacity` below.
+    let count = n.value_of().max(0) as usize;
     let mut out = Vec::with_capacity(count);
     for _ in 0..count { out.push(T_CS!("\\hdots")); }
     Tokens::new(out)
   });
   DefMacro!("\\spacehdots Number Match:\\for Number", sub[(n, _a, _b)] {
-    let count = n.value_of() as usize;
+    // Clamp like Perl's `1..$n` (empty for n<=0): a negative count must not
+    // wrap to ~2^64 and overflow `Vec::with_capacity` below.
+    let count = n.value_of().max(0) as usize;
     let mut out = Vec::with_capacity(count);
     for _ in 0..count { out.push(T_CS!("\\hdots")); }
     Tokens::new(out)
   });
   DefMacro!("\\spaceinnerhdots Number Match:\\for Number Match:\\after {}",
     sub[(n, _a, _b, _c, _d)] {
-      let count = n.value_of() as usize;
+      // Clamp like Perl's `1..$n` (empty for n<=0): a negative count must not
+      // wrap to ~2^64 and overflow `Vec::with_capacity` below.
+      let count = n.value_of().max(0) as usize;
       let mut out = Vec::with_capacity(count);
       for _ in 0..count { out.push(T_CS!("\\hdots")); }
       Tokens::new(out)

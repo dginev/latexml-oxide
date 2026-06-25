@@ -315,6 +315,42 @@ slice, then pick the limit, add the guard, and validate against the full suite
 straightforward; only the calibration is open work. Distinct from Cluster A's
 *memory* (RSS-cap) blowups: this is *stack* (recursion-depth) exhaustion.
 
+## Cluster G — vbox `\ht` was `\hsize`-invariant (GENUINE Rust-only) — ✅ FIXED 2026-06-22
+
+**Witness `1707.02464`** (fatal/Timeout/Convert): a custom `\narrow` macro line-fits
+a paragraph by shrinking `\hsize` 1pt at a time, looping `\ifdim\ht\tmpbox=\tmpdim
+\repeat` — expecting `\ht` to grow as the paragraph wraps to more lines. Rust's vbox
+`\ht` did NOT depend on `\hsize`, so the loop never terminated → `Fatal:Timeout` at
+the 60s watchdog (Perl 0.8.8 completes in 11.76s, 10 errors). Not env, not parity.
+
+**Root cause:** a FRAME-ORDERING bug in `predigest_box_contents_in_mode`. Rust used
+TWO frames (the mode frame + a body-group frame from `invoke_token(T_BEGIN)`); the
+body's `}` popped the body-group frame — restoring the OUTER `\hsize` — BEFORE the
+repack captured it, so every implicit vbox paragraph wrapped at the outer width. Perl
+uses ONE frame: `endMode` repacks (inner `\hsize` still in scope) THEN pops. (The
+`\hsize`-aware line-break machinery `compute_boxes_size_lines` was already correct.)
+
+**Fix (`7545e07fd6`), three parts:** (a) for `mode.ends_with("vertical")`, a faithful
+port of Perl `readBoxContents` (TeX_Box.pool.ltxml L139-160) — one mode frame, a loop
+that STOPS at the matching `}` unprocessed (`level >= get_frame_depth()`), then
+`end_mode` repacks-then-pops (captures the inner `\hsize`); hbox/math keep the old
+`invoke_token(T_BEGIN)` path. (b) a brace-wrapping `reversion` on `VBoxContents` (the
+rebuilt `List::new(boxes)` lost the group `{}` → `\vbox{a}` reverted to `\vbox a`).
+(c) `\@@tabular` marks its result box `mode=internal_vertical` (like `\halign`,
+tex_tables.rs:312) so a containing `\vbox`/`\vtop`'s repack SKIPS it per-item instead
+of wrapping it to `\hsize` (was sizes_test 37→469.75pt) — no content-shape gate
+needed. 1707.02464 now completes ~4.8s with 10 errors = local Perl (byte-identical).
+Full suite 1467/0; clippy clean. graphrot.xml re-baselined (rotated `\rotatebox` dims
+shift, mostly toward Perl, e.g. angle=0 height 32.5→30.0 vs Perl 27.4; pre-existing
+font-metric / p{}-port divergences remain).
+
+**Also UNBLOCKS the global p{}→VBox port** (SYNC_STATUS 1610.00974 step-3): the same
+`\hsize`-aware wrapping now applies to p{} cells (`\vtop`/VBoxContents). Applying that
+port — now viable — is what fixes the p{} block-content correctness bug 1510.07685
+(`<ltx:itemize> isn't allowed in <ltx:p>`). The earlier failed attempts (naive loop
+regressions, the content-shape gate that re-broke Cluster G) are in git history.
+
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

@@ -31,23 +31,35 @@ shell-escape) at all.
 
 ## `unsafe` budget
 
-As of 2026-05-29 the project contains **23 `unsafe` sites across 9 files**
-— five `unsafe impl Send/Sync` markers, seventeen `unsafe {}` blocks, and
-no `unsafe fn`. Every site carries a `// SAFETY:` comment at the call
-site that names the invariant it depends on.
+Reconciled **2026-06-24**: the project contains **48 `unsafe {}` blocks +
+5 `unsafe impl Send/Sync` + 0 `unsafe fn` = 53 sites**. Every `unsafe` block
+carries a `// SAFETY:` comment at the call site naming the invariant it
+depends on (the one caveat is category E's *test-only* `EnvGuard`, which
+documents the env data-race invariant but carries a `FIXME` that the default
+test harness does not yet *enforce* single-threaded env access).
 
-The five categories below describe what is unavoidable, what is a deliberate
-performance trade, and what could be refactored away at some cost.
+Counts and exact line numbers drift as the tree changes — this is a
+point-in-time reconciliation, not a live index. Regenerate the authoritative
+enumeration with:
+
+```
+rg -n 'unsafe\s*\{|unsafe impl|unsafe fn' -g '*.rs' -g '!target'
+```
+
+The categories below describe what is unavoidable, what is a deliberate
+performance trade, and what could be refactored away at some cost. Locations
+are given at the file/function level (not exact line) to stay robust against
+drift. **When this count changes, update this section** (see Audit posture).
 
 ---
 
 ### A. `unsafe impl Send/Sync` — pragmatic single-thread markers (5 sites)
 
-| File:line | Marker | Why |
+| Site | Marker | Why |
 |---|---|---|
-| `latexml_core/src/state.rs:279` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. We mark it `Send` so the harness can build a State on one thread and *transition* it to another thread before any first use. After that first use, the value is pinned to a single OS thread via `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`). The crate never reads a `State` from two threads concurrently. |
-| `latexml_core/src/common/store.rs:557-558` | `Send/Sync for Stored` | Same shape as `State`: `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists *only* to satisfy `Box<dyn Error + Send + Sync>` trait bounds on error returns — error variants transitively require `Send + Sync` on every embedded type. No code actually shares a `Stored` across threads. |
-| `latexml_core/src/common/error.rs:471-472` | `Send/Sync for Error` | `Error` carries a `Locator` whose `Mouth` is `!Send`. Identical justification to `Stored`: needed for the std `Error + Send + Sync` bound; not for actual cross-thread sharing. |
+| `latexml_core/src/state.rs` | `Send for State` | `State` holds `Rc`/`RefCell`/`libxml::tree::Node`, all `!Send`. We mark it `Send` so the harness can build a State on one thread and *transition* it to another thread before any first use. After that first use, the value is pinned to a single OS thread via `#[thread_local]` switchers (`use_main_state` / `use_std_state` / `use_sty_state`). The crate never reads a `State` from two threads concurrently. |
+| `latexml_core/src/common/store.rs` | `Send/Sync for Stored` | Same shape as `State`: `Stored` variants embed `Rc<RefCell<…>>` and libxml nodes. The marker exists *only* to satisfy `Box<dyn Error + Send + Sync>` trait bounds on error returns — error variants transitively require `Send + Sync` on every embedded type. No code actually shares a `Stored` across threads. |
+| `latexml_core/src/common/error.rs` | `Send/Sync for Error` | `Error` carries a `Locator` whose `Mouth` is `!Send`. Identical justification to `Stored`: needed for the std `Error + Send + Sync` bound; not for actual cross-thread sharing. |
 
 **Could we refactor?** Only by swapping every `Rc<RefCell<…>>` in `State`,
 `Stored`, and `Error` for `Arc<Mutex<…>>`. That contradicts the
@@ -57,9 +69,9 @@ sound because the runtime guarantees the invariant by construction.
 
 ### B. Arena `resolve_unchecked` — performance carve-out (8 sites)
 
-All in `latexml_core/src/common/arena.rs` (lines 191, 201, 202, 211, 212,
-213, 224, 233), inside `with`, `with2`, `with3`, `with_many`, and
-`to_string`. They use `string-interner`'s unchecked `Symbol → &str` lookup.
+All in `latexml_core/src/common/arena.rs`, inside `with`, `with2`, `with3`,
+`with_many`, and `to_string`. They use `string-interner`'s unchecked
+`Symbol → &str` lookup.
 
 The safety invariant is **append-only buffer**: every `SymStr` in the
 codebase originates from a successful `get_or_intern(_static|_char)` call
@@ -71,20 +83,17 @@ is a valid bounds-skip.
 arena is the hottest read site in the engine — every Token-to-string
 serialisation goes through it.
 
-**Refactor option**: replace each
-`arena.resolve_unchecked(sym)`
-with
-`arena.resolve(sym).expect("interned")`.
-This is mechanical and eliminates eight `unsafe` blocks. The cost is a
-re-validating `from_utf8` per lookup, ~3% of total runtime.
+**Refactor option**: replace each `arena.resolve_unchecked(sym)` with
+`arena.resolve(sym).expect("interned")`. This is mechanical and eliminates
+eight `unsafe` blocks. The cost is a re-validating `from_utf8` per lookup,
+~3% of total runtime.
 
 ### C. Arena re-entrant `&mut *ptr` (1 site)
 
-`latexml_core/src/common/arena.rs:78` — inside `with_arena_mut`. The
-outermost caller acquires `RefCell::borrow_mut()` and caches a raw pointer
-to the interner; nested re-entrant callers on the same thread reuse the
-pointer and skip the `RefCell` guard, which would otherwise panic ("already
-borrowed").
+`latexml_core/src/common/arena.rs` — inside `with_arena_mut`. The outermost
+caller acquires `RefCell::borrow_mut()` and caches a raw pointer to the
+interner; nested re-entrant callers on the same thread reuse the pointer and
+skip the `RefCell` guard, which would otherwise panic ("already borrowed").
 
 The safety invariant is documented in the function header: re-entrance is
 nested on the same stack and same thread (`#[thread_local]`), an
@@ -93,43 +102,69 @@ nested on the same stack and same thread (`#[thread_local]`), an
 **Cannot be refactored without changing semantics** — there is no safe
 mechanism for nested re-entrant mutable access through `RefCell`.
 
-### D. Binary entry-point FFI (5 sites)
+### D. Binary entry-point FFI — env + rusage + crash-handler (~7 sites)
 
-| File:line | Call | Why unsafe is unavoidable |
-|---|---|---|
-| `latexml_oxide.rs:423` | `std::env::set_var("LATEXML_INI_MODE", "1")` | Rust 2024 marked `set_var` `unsafe` by design — pre-thread-spawn env mutation isn't race-free in general. We call it before spawning anything. |
-| `latexml_oxide.rs:708`, `cortex_worker.rs:329` | `libc::getrusage(RUSAGE_CHILDREN, …)` | C FFI to capture child user/sys CPU time. No stable safe wrapper in stdlib. |
-| `latexml_oxide/src/util/test.rs:130, 137` | `libc::signal(SIGSEGV/SIGBUS/SIGABRT, handler)` and `raise(sig)` | Installing a SIGSEGV/SIGBUS/SIGABRT trap to dump a backtrace to a per-pid file before the signal kills the test binary. `signal(3)` is `unsafe extern "C"` and the handler-reset path uses `mem::transmute` of `SIG_DFL`. |
+In `latexml_oxide/bin/latexml_oxide.rs`, `latexml_oxide/bin/cortex_worker.rs`,
+and `latexml_oxide/src/util/test.rs`:
+
+| Call | Why unsafe is unavoidable |
+|---|---|
+| `std::env::set_var("LATEXML_INI_MODE", …)` (latexml_oxide.rs) | Rust 2024 marked `set_var` `unsafe` by design — pre-thread-spawn env mutation isn't race-free in general. We call it before spawning anything. |
+| `libc::getrusage(RUSAGE_CHILDREN, …)` (latexml_oxide.rs, cortex_worker.rs) | C FFI to capture child user/sys CPU time. No stable safe wrapper in stdlib. |
+| `libc::signal(SIGSEGV/SIGBUS/SIGABRT, handler)`, `mem::transmute(SIG_DFL)`, `raise(sig)` (util/test.rs) | A **test-only** SIGSEGV/SIGBUS/SIGABRT trap that dumps a backtrace to a per-pid file before the signal kills the test binary. `signal(3)` is `unsafe extern "C"`; the handler-reset path transmutes `SIG_DFL` to `sighandler_t`. |
 
 None can be refactored without losing the functionality (env mutation,
 rusage capture, signal-handler debugging).
 
-### E. Process-group lifecycle in graphics (3 sites)
+### E. Subprocess process-group lifecycle + test EnvGuard in graphics (~8 sites)
 
-`latexml_post/src/graphics.rs:890, 911, 915` — needed because subprocess
-rasterizers (`gs`, `pdftocairo`, `mutool draw`, `inkscape`, `convert`) can
-spawn child grandchildren, and a plain `Child::kill()` does not reap those.
+`latexml_post/src/graphics.rs` + `latexml_post/src/graphics_cache.rs` —
+process-group control is needed because subprocess rasterizers (`gs`,
+`pdftocairo`, `mutool draw`, `inkscape`, `convert`) can spawn grandchildren,
+and a plain `Child::kill()` does not reap those.
 
-| Site | Call | Why |
-|---|---|---|
-| `:890` | `cmd.pre_exec(|| libc::setsid(); libc::setpgid(0,0))` | `pre_exec` is `unsafe fn` per std API — the closure runs between `fork()` and `exec()` and must be async-signal-safe. `setsid(2)` is the documented way to make the child a process-group leader. |
-| `:911` | `libc::killpg(pid, SIGTERM)` | Graceful kill of the whole group on timeout. |
-| `:915` | `libc::killpg(pid, SIGKILL)` | Hard kill if SIGTERM grace expires. |
+| Call | Why |
+|---|---|
+| `cmd.pre_exec(|| setsid(); setpgid(0,0); prctl(…))` | Runs post-`fork()`/pre-`exec()`; must be async-signal-safe. `setsid(2)` makes the child a process-group leader so the whole group is killable. |
+| `libc::killpg(pid, SIGTERM)` / `killpg(pid, SIGKILL)` | Graceful then hard kill of the whole group on timeout (mirrors `timeout(1) --kill-after`). |
+| `libc::flock(fd, …)` (graphics_cache.rs) | Advisory lock on an owned, open lock-file fd; operates on the fd without aliasing Rust memory. |
+| `std::env::set_var`/`remove_var` in `EnvGuard` (graphics.rs) + a test `set_var` (graphics_cache.rs) | **Test-only.** `set_var`/`remove_var` are `unsafe` in Rust 2024 (concurrent env mutation races). `EnvGuard` is used only in test setup, but the default `cargo test` harness runs a binary's tests multi-threaded and other tests read the env — so the comment documents the invariant and keeps a `FIXME` proposing `serial_test` to make it airtight. The `graphics_cache.rs` test `set_var` is `OnceLock`-serialized. |
 
-These mirror what `timeout(1) --kill-after` does for the bench script's
-outer guard. They cannot be expressed via safe stdlib APIs:
 `Command::process_group` was stabilised but does not give us
-`setsid + killpg`.
+`setsid + killpg`, so the FFI path stays.
 
-### F. libxslt global recursion cap (1 site)
+### F. libxslt/libxml global config via FFI (2 sites)
 
-`latexml_post/src/xslt.rs` (`set_xslt_max_depth`) — `xsltMaxDepth = 1000`, a
-`Once`-guarded write to libxslt's process-global `static mut` recursion cap.
-Faithful port of Perl `XML::LibXSLT->max_depth(1000)`. The `libxslt-0.1.3`
-crate exposes no safe setter; libxslt only READS the value (when building each
-transform context), so the single guarded write cannot race a transform. This
-hardens the post-processor against stack-overflow/OOM on pathologically-deep
-stylesheet recursion (it aborts gracefully, like Perl).
+`latexml_post/src/xslt.rs` — a `Once`-guarded `dlsym` write to libxslt's
+process-global `xsltMaxDepth` recursion cap (`= 1000`, a faithful port of Perl
+`XML::LibXSLT->max_depth(1000)`), plus a `dlsym` read-back in a parity test.
+The `libxslt` crate exposes no safe setter; libxslt only READS the value (when
+building each transform context), so the single guarded write cannot race a
+transform. Hardens the post-processor against stack-overflow/OOM on
+pathologically-deep stylesheet recursion (it aborts gracefully, like Perl).
+
+### G. LSP server POSIX child-process management (16 sites)
+
+`latexml_oxide/src/lsp_server/unix.rs` — the **off-by-default** `--server`
+editor mode (design archived at `docs/archive/LSP_SERVER.md`) forks a worker
+child per request and drives it over a pipe with raw POSIX calls: `pipe(2)`,
+`fork(2)`, `open("/dev/null")`/`dup2`, `poll(2)`, `waitpid(2)`, `kill`/`killpg`,
+`read`/`write`, and `File::from_raw_fd` on the pipe ends. Each block is
+annotated. The invariant for the fork/child window is **single-threaded at
+fork** (asserted before `fork()`) and **async-signal-safe-only** libc calls
+between `fork()` and `exec()`/`_exit()` — no Rust heap allocation or drop glue
+in that window. Pipe-end fds are owned and closed exactly once.
+
+### H. Script-bindings whatsit-pointer bridge (5 sites)
+
+`latexml_contrib/src/script_bindings/{engine.rs,mod.rs}` — the
+**off-by-default** `script-bindings` (Rhai) front-end re-mints `&`/`&mut`
+references to the in-flight whatsit / document / properties from raw pointers
+the core publishes onto a thread-local active-context stack (`WHATSIT_CTX`)
+for the duration of a single hook body. The pointer is the sole live reference
+for the call; a `mutable` flag (checked first) gates the `&mut` sites; calling
+outside a hook context returns an error, not UB. Provenance + lifetime are
+documented in the `mod.rs::with_doc` *B1 SOUNDNESS CAVEAT*.
 
 ---
 
@@ -139,7 +174,9 @@ When adding `unsafe`:
 
 1. **Document the invariant in a `// SAFETY:` comment at the site**, not
    in a separate file. Future readers should see the justification in
-   context.
+   context. Every `unsafe {}` block must carry one (the sole documented
+   exception is the test-only `EnvGuard`, cat. E, whose comment states the
+   invariant but flags a `FIXME` that the harness doesn't yet enforce it).
 2. **Prefer category B** (perf carve-out with explicit measurement) over
    category D/E (FFI) when both would work, because B is reversible
    without losing functionality.
@@ -147,9 +184,15 @@ When adding `unsafe`:
    can take an `unsafe {}` at the call site without polluting the
    function signature.
 4. **Never add `unsafe impl Send/Sync` for a value the runtime actually
-   shares.** The three existing markers are sound because the
+   shares.** The five existing markers are sound because the
    single-thread invariant is upheld by construction; new markers must
    prove the same.
+5. **Reconcile this inventory and run Miri.** When the `unsafe` count
+   changes, refresh the budget section (the `rg` one-liner above). If you
+   touch the FFI-free pure-Rust `unsafe` (the arena/interner, cat. B/C),
+   run `tools/miri_check.sh` — it UB-checks those sites under Miri (CI runs
+   it as the `miri` job). The FFI sites (cat. D–H) can't run under Miri;
+   their safety rests on the documented invariants, not interpretation.
 
 ---
 

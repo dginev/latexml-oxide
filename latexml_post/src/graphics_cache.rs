@@ -416,6 +416,8 @@ fn acquire_prune_lock(root: &Path) -> Option<fs::File> {
     .truncate(false)
     .open(&lock_path)
     .ok()?;
+  // SAFETY: fd is an owned, open file descriptor for the lock file; flock(2)
+  // operates on it without aliasing Rust memory.
   let rc = unsafe { libc::flock(file.as_raw_fd(), libc::LOCK_EX | libc::LOCK_NB) };
   if rc == 0 { Some(file) } else { None }
 }

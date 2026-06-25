@@ -1,0 +1,14 @@
+\documentclass{article}
+
+% Regression guard (numeric-safety / low-level Rust): `\newcommand\foo[0][def]`
+% declares ZERO mandatory args yet supplies an optional default — outside
+% LaTeX's 0..9 arg-count domain. `convert_latex_args` does `nargs -= 1` for the
+% optional; with nargs==0 that must NOT underflow `usize` to ~2^64 and spin a
+% giant loop (which panics under overflow-checks / OOMs in release). It must
+% degrade like Perl's `1..$nargs` empty range: treat \foo as a single
+% optional-arg command. See latexml_core::binding::content::convert_latex_args.
+\newcommand\foo[0][def]{X-#1}
+
+\begin{document}
+\foo\ \foo[Y]
+\end{document}

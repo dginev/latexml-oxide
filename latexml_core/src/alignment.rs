@@ -645,9 +645,20 @@ impl BoxOps for Alignment {
         if let Some(d) = cell.cached_depth {
           cell_attrs.insert("cdepth".to_string(), format!("{}", d.px_value(None)));
         }
-        // Perl: always passes align attribute (Alignment.pm L350)
+        // Perl: always passes align attribute (Alignment.pm L350).
+        // A paragraph column (p/m/b/tabularx-X/tabulary — all `Align::Justify`)
+        // gets `align="left"` on the `<td>` in Perl, regardless of any `>{}`
+        // alignment prefix (the prefix's `\centering`/`\raggedleft` goes on the
+        // INNER `<inline-block>`/`<p>`, not the cell). Map the Justify marker
+        // (kept for `is_pcol` detection in `\lx@alignment@multicolumn`) to the
+        // Perl-faithful `"left"` here on the cell attribute only (cluster-B Kind-B).
         if let Some(ref align) = cell.align {
-          cell_attrs.insert(String::from("align"), align.name());
+          let td_align = if *align == Align::Justify {
+            "left".to_string()
+          } else {
+            align.name()
+          };
+          cell_attrs.insert(String::from("align"), td_align);
         }
         if let Some(ref vattach) = cell.vattach {
           cell_attrs.insert(String::from("vattach"), vattach.clone());

@@ -116,6 +116,10 @@ extern "C" fn sigsegv_installer() {
 /// stack print is more useful than the bare `signal: 11` line cargo
 /// reports today.
 fn install_sigsegv_handler() {
+  // SAFETY: declares the libc `signal(2)`/`raise(3)` FFI bindings for this
+  // test-only crash-backtrace handler. The signatures match libc's
+  // (`sighandler_t` is a `usize`-wide fn pointer here; `raise` returns int);
+  // calls below uphold the platform contract.
   unsafe extern "C" {
     fn signal(sig: i32, handler: extern "C" fn(i32)) -> usize;
     fn raise(sig: i32) -> i32;
@@ -150,6 +154,12 @@ fn install_sigsegv_handler() {
     eprintln!("{body}");
     eprintln!("[SIGSEGV-handler] full trace written to {path}");
     // Reset to default and re-raise so cargo still sees the original signal.
+    // SAFETY: test-only crash-backtrace handler (not async-signal-safe by
+    // design — see the fn docs). `transmute(SIG_DFL)` reinterprets the
+    // null/0 SIG_DFL sentinel as the `sighandler_t`-shaped fn pointer libc
+    // expects, restoring the default disposition; `signal`/`raise` then
+    // re-raise `sig` on the current thread so cargo observes the original
+    // fatal signal.
     unsafe {
       let raw_dfl: extern "C" fn(i32) = std::mem::transmute(SIG_DFL);
       signal(sig, raw_dfl);
@@ -157,6 +167,11 @@ fn install_sigsegv_handler() {
     }
   }
 
+  // SAFETY: installs the test-only `handler` as the disposition for SIGSEGV/
+  // SIGBUS/SIGABRT via libc `signal(2)`. `handler` is a valid `extern "C"
+  // fn(i32)` matching the expected `sighandler_t`; it is intentionally
+  // limited to (mostly) async-signal-safe work — see the fn docs for the
+  // accepted best-effort/heap caveat.
   unsafe {
     signal(SIGSEGV, handler);
     signal(SIGBUS, handler);
