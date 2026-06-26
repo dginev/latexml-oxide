@@ -544,6 +544,14 @@ Sequenced steps to stable + complete:
 >   span), deep S6/S9. **General lesson: the remaining S6-precision residuals
 >   (graphrot, figure_mixed 0.2pt) are box-GEOMETRY (baseline/stack/rotation/
 >   multirow), NOT font metrics** — narrows the deep-sizing work.
+>   **`stack_lines` RULED OUT 2026-06-26:** re-verified the Rust
+>   `compute_boxes_size_stack` port line-by-line against Perl `stack_lines`
+>   (cb455179) — identical (prevdepth/lineskip/`th`, vattach middle/bottom/top).
+>   So the graphrot/figure_mixed box-height residuals are NOT in line-stacking;
+>   they're in the box height/depth **computation** for the specific scaled/
+>   rotated/paneled content (the `\scalebox`/`\resizebox` natural-height — e.g.
+>   graphrot line-78 yscale 0.8 vs Perl 0.75 ⇒ ~6.7% natural-height delta — and
+>   the `\multirow`/`\rotatebox` dimension swap). Deep box-geometry, focused work.
 > - **inline-math strut** — `sizes` math-axis (`0.0`→`7.5/2.5`). Investigated
 >   2026-06-26: the inline-math constructor (`\lx@begin@inline@math`,
 >   `tex_math.rs:598`) has NO explicit `sizer`, so its size = `compute_boxes_size`
