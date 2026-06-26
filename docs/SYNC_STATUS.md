@@ -454,8 +454,16 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
         inline-block depth/height ~0.2pt off (Rust `9.5/13.1`, Perl `9.3/12.9`),
         cascading into the panel `xscale` (0.900 vs 0.882); a deep Font.pm
         sizing-precision detail. (b) **`<break>` divergence** — Rust emits 5 bare
-        `<break/>`, Perl 2 `<break class="ltx_break"/>` (class + count differ;
-        my changes added breaks — investigate whether faithful). (c) the
+        `<break/>`, Perl 2 `<break class="ltx_break"/>` (class + count differ).
+        **ROOT 2026-06-26: Rust classes `<ltx:break>` INCONSISTENTLY** — some
+        sites add `class="ltx_break"` (`latex_constructs.rs:1870`), others emit
+        bare (`amstex.rs:242` `\\`-in-text, `plain_base.rs:452` `\@break`,
+        `tex_paragraph.rs:29/132`), while Perl always classes. A genuine Rust
+        faithfulness gap (separate from #2798), but **broad-risk to unify**
+        (touches every break-containing fixture) and figure_mixed is multi-issue
+        regardless → handle in a focused break-consistency pass, verify each
+        break site against Perl. (The count delta (5 vs 2) is a separate S1/S6
+        over-break, still to confirm.) (c) the
         **pre-existing subcaption reversion gap** (`\begin{subfigure}[..]` vs
         `{..}`, missing `\lx@subcaption@addinlist`, `\includegraphics[width]` vs
         `[width=85.36pt]`) — Rust-specific, **unrelated to #2798**. → multi-issue;
