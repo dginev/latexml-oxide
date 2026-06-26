@@ -511,8 +511,17 @@ Sequenced steps to stable + complete:
 >   higher fixture risk). **graphrot's 12pt is deep S9** (bordered table +
 >   `\multicolumn`/`\multirow`/`\rotatebox` — the `replaceColumn` spec-copy +
 >   column sizing), NOT a simple pad-set.
-> - **math-Whatsit `getSize`** — `sizes` math-axis (`0.0`→`7.5/2.5`) does NOT go
->   through `compute_boxes_size`; it's the inline-math box sizer.
+> - **inline-math strut** — `sizes` math-axis (`0.0`→`7.5/2.5`). Investigated
+>   2026-06-26: the inline-math constructor (`\lx@begin@inline@math`,
+>   `tex_math.rs:598`) has NO explicit `sizer`, so its size = `compute_boxes_size`
+>   of the body with `mode=math` (no `vattach`). For `$   $` the body sizes to
+>   `0/0` (no glyphs). Perl's `7.5/2.5` = `th/2 ± mathaxis` with `mathaxis=2.5`
+>   (10pt/4) and `th≈10pt` (1em) — i.e. **vattach=middle + a ~1em math strut on
+>   the content**. So matching Perl needs BOTH (a) inline math sized with
+>   vattach=middle / math-axis centering AND (b) the math content carrying the
+>   font strut height/depth. Deep Font.pm math-mode sizing; NOT in TeX_Math.pool
+>   (verified). `sizes` also needs the vtop-tabular case + the pre-existing g(x),
+>   so it's multi-deep-issue.
 > - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0` is NARROWED (2026-06-26):
 >   of the **6** tabular measurements in `sizes.tex`, the **first 5 already
 >   match Perl** exactly (incl. plain `\begin{tabular}{cc}`); only the **6th**
