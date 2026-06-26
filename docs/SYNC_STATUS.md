@@ -286,6 +286,32 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   at pre-PR output — **regenerate each from same-host Perl `cb455179` and diff;
   never hand-edit** (legit size/paragraph-structure churn; a few intentional
   divergences per `OXIDIZED_DESIGN.md`). Gate each fixture on its sub-step.
+- **Empirical coupling (measured 2026-06-25 — S1 prototyped then reverted):**
+  S0 verified (thanks/`\lx@personname` already in Rust — `base_utilities.rs:215`,
+  `:807`; no-op). A standalone **S1** prototype (added `inline_internal_vertical`
+  to `bindable_mode` + the `leave_horizontal()`-on-vertical/display-entry guard
+  in `begin_mode_opt`, `stomach.rs:663,681`) **breaks exactly 11 tests**, which
+  split cleanly:
+  - **4 genuine regressions** — `footnote`, `endnote`, `etoolbox`, `fancyhdr`
+    — are **NOT** in Perl's 24-fixture regen list, so Perl's output for them is
+    unchanged by #2798. They break only because the inline blocks (footnotes
+    etc.) aren't yet reclassified to `inline_internal_vertical`, so they wrongly
+    `leaveHorizontal`. **Fix = the S9/S10 inline reclassification**, after which
+    their existing fixtures pass again.
+  - **7 sizing-coupled regens** — `dollar`, `autoref`, `enum`, `equationnest`,
+    `figure_mixed_content`, `picture`, `sizes` — **are** in Perl's regen list
+    (legit #2798 churn). Their regenerated Perl fixtures carry the new
+    paragraph-structure **and** the new `width/height/depth`/padding/`baseline`
+    size attributes, so Rust cannot match them until the **S5/S6 Box.pm/Font.pm
+    sizing rewrite** lands. Regenerating them before S5/S6 just trades one red
+    for another (Rust's intermediate sizes ≠ Perl's).
+  - **Conclusion: U2 is test-atomic.** No proper subset of S1–S11 reproduces the
+    combined-state fixtures — the +303 Font.pm rewrite (S6) is on the critical
+    path for 7 of the 11. Land U2 as **one coherent push** (S1→S11 + reclassify
+    inline blocks + regenerate all 24 fixtures from same-host Perl `cb455179`),
+    reaching green only at the end; do **not** commit a partial S1 (it leaves
+    the tree red). The S1 diff is small and known (above) — re-apply it first
+    when the coherent push begins. Prototype reverted; branch stays green.
 
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
