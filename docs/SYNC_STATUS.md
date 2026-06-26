@@ -345,6 +345,21 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     push must fix the tikz/pgf node minipage to use the node width (not
     `\linewidth`)**, or `various_colors` will diverge. (Same class of issue may
     lurk in other tikz tests whose minipage width happened to match at 6in.)
+    **Investigated 2026-06-26 — confirmed DEEP raw-pgf, no clean Rust-side fix:**
+    the node→minipage has NO literal `node`/`minipage`/`text width` in the
+    `.tex` and NO Rust binding controls its width (the only Rust pgf binding,
+    `pgfsys_latexml_def.rs`, handles SVG output, not node text layout). The
+    minipage width (`31.37em` = `345/11`) comes from **raw pgf** reading
+    `\hsize`/`\linewidth` during multi-line node-text layout — which the
+    `\begin{document}` change set to 345pt. Perl runs the SAME raw pgf yet gets
+    `40.23em`, so Perl's pgf-state at the node point differs (pgf likely sets a
+    large `\hsize` for natural-width node text; Rust's raw-pgf load doesn't
+    replicate that interaction). **Fix is in the raw-pgf/`\hsize`-state
+    interaction (deep), NOT a Rust binding** — defer to dedicated pgf work; the
+    width change stays (faithful #2798, net +3: fixes autoref/figure_grids/
+    figure_dual_caption/cleveref toward Perl, regresses only this pgf case).
+    `consort-flowchart` is the same tikz class (perturbed by S6; its committed
+    fixture is already ~193 lines off Perl — Rust-specific deep-tikz).
   - **Font.pm rewrite assessment (S6):** ~full-day effort (6–9.5 h), **localized
     to 4 files** — `common/font.rs` (`compute_boxes_size` + helpers), `whatsit.rs`
     (new `flatten_for_sizing`), `list.rs` + `binding/def/traits.rs` (call sites).
