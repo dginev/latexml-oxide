@@ -1452,28 +1452,21 @@ impl Font {
       Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
       _ => "restricted_horizontal".to_string(),
     };
-    // Perl L639-640: determine layout from mode
-    let layout = if mode_str == "horizontal" {
-      "paragraph"
-    } else if mode_str.ends_with("vertical") {
-      "vertical"
-    } else {
-      "restricted_horizontal"
-    };
-    // Perl L642: $vattach = $boxes->getProperty('vattach') || $options{vattach} || 'baseline'
+    // Perl: $vattach = $boxes->getProperty('vattach') || $options{vattach} || 'baseline'
     let vattach = match options.get("vattach") {
       Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
       _ => "baseline".to_string(),
     };
-    // Perl L643-648: wrapwidth for paragraph layout
-    let wrapwidth = if layout == "paragraph" {
+    // Perl #2798: `elsif (my $width = ($mode =~ /horizontal$/) && $boxes->getProperty('width'))`
+    // — a horizontal list is formatted as a paragraph IFF an explicit width is
+    // supplied (recorded by S4's repack_horizontal). NO `\hsize` fallback: a
+    // horizontal List without a width property is restricted_horizontal (a single
+    // line, no wrapping), matching Perl.
+    let para_width: Option<i64> = if mode_str.ends_with("horizontal") {
       match options.get("width") {
         Some(Stored::Dimension(d)) => Some(d.value_of()),
         Some(Stored::Int(i)) => Some(*i),
-        _ => match lookup_definition(&T_CS!("\\hsize"))? {
-          Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
-          None => None,
-        },
+        _ => None,
       }
     } else {
       None
@@ -1488,7 +1481,7 @@ impl Font {
     // Perl #2798: lines are now [baseline, wd, ht, dp] (per-line baseline; -1 = no
     // inter-line adjustment, e.g. \vskip / \hrule).
     let mut lines: Vec<[i64; 4]> = Vec::new();
-    if layout == "vertical" {
+    if mode_str.ends_with("vertical") {
       // Perl: For vertical, ALL boxes are lines.
       for bx in boxes {
         if bx.has_property("isEmpty") {
@@ -1529,9 +1522,7 @@ impl Font {
           lines.push([bs, w, h, d]);
         }
       }
-    } else if layout == "paragraph"
-      && let Some(w) = wrapwidth
-    {
+    } else if let Some(w) = para_width {
       // Perl: proper paragraph — flatten, split into words, break into lines.
       if w > maxwidth {
         maxwidth = w;
