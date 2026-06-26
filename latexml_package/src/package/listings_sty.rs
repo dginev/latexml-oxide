@@ -448,11 +448,20 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::String(pin(&classref)), None);
     } else {
-      // Otherwise, it's presumably TeX styling
+      // Otherwise, it's presumably TeX styling.
+      // Perl #2819: wrap the styling in a brace group —
+      //   begin => Tokens($style, T_BEGIN); end => T_END
+      // so a multi-token style (e.g. `\bfseries\underbar`) applies to the whole
+      // class content as a group, not just the first token. The matching T_END
+      // is collected by `lst_class_end` (which now walks the full class chain).
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::None, None);
       let begin_key = s!("{map_key}@{class}@begin");
-      assign_value(&begin_key, Stored::Tokens(style_toks.clone()), None);
+      let mut begin_toks = style_toks.unlist_ref().clone();
+      begin_toks.push(T_BEGIN!());
+      assign_value(&begin_key, Stored::Tokens(Tokens::new(begin_toks)), None);
+      let end_key = s!("{map_key}@{class}@end");
+      assign_value(&end_key, Stored::Tokens(Tokens::new(vec![T_END!()])), None);
     }
   }
   // Set cssclass based on class name
@@ -954,28 +963,30 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
 }
 
 /// Perl: lstClassEnd — generate closing tokens for a styled class.
-/// Mirrors lstClassBegin: close the style group first, then emit delimiter chars.
+///   my @close = ();
+///   while (my $class = ...) { push(@close, lstRescan($$class{end})->unlist) if $$class{end}; ... }
+///   return (@close, T_END, T_END);
+/// Walk the whole class chain and collect every class's `end` tokens via push
+/// (leaf close-delimiter chars first, then parent styling group-closers — the
+/// `T_END` added by #2819's `lstSetClassStyle`). Pre-#2819 only leaf delimiter
+/// classes carried an `end`, so collecting the full chain is a no-op extension
+/// there; it now also matches the brace group opened in `begin`.
 fn lst_class_end(classname: &str) -> Vec<Token> {
-  let mut delim_tokens = Vec::new();
+  let mut close_tokens = Vec::new();
   let mut current_class = Some(classname.to_string());
-  let mut is_leaf = true;
   while let Some(ref cname) = current_class {
     let end_key = s!("LST_CLASSES@{cname}@end");
     if let Some(Stored::Tokens(end)) = lookup_value(&end_key)
       && let Some(rescanned) = lst_rescan(Some(end))
-      && is_leaf
     {
-      delim_tokens.extend(rescanned.unlist());
+      close_tokens.extend(rescanned.unlist());
     }
     let class_key = s!("LST_CLASSES@{cname}@class");
     current_class = lookup_value(&class_key)
       .map(|v| v.to_string())
       .filter(|s| !s.is_empty());
-    is_leaf = false;
   }
-  let mut result = Vec::new();
-  // No separate style group to close — style applied at group level
-  result.extend(delim_tokens);
+  let mut result = close_tokens;
   result.push(T_END!());
   result.push(T_END!());
   result

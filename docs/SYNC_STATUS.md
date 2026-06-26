@@ -287,20 +287,42 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   never hand-edit** (legit size/paragraph-structure churn; a few intentional
   divergences per `OXIDIZED_DESIGN.md`). Gate each fixture on its sub-step.
 
-### U3. ⬜ PR #2819 "listings: create group around identifiers" (`0d748100`)
+### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
   brace group — `begin => Tokens($style, T_BEGIN)`, `end => T_END` (was
   `begin => $style` only). And in `lstProcess_internal`, index emission uses
   `lstRescan($index{begin})…lstRescan($index{end})` (was bare `T_BEGIN … T_END`).
   Net effect: identifier/keyword styling is grouped (e.g. `\bfseries\underbar`
-  applies as a group → `framed="underline"` nesting).
+  applies as a group so the underline spans the whole keyword).
 - **Perl:** `lib/LaTeXML/Package/listings.sty.ltxml` (`lstSetClassStyle` ~L496;
   `lstProcess_internal` ~L1413).
 - **Rust target:** `latexml_package/src/package/listings_sty.rs` —
-  `lst_set_class_style` (L425) + `lst_process_internal` index branch (L~1498).
+  `lst_set_class_style` (TeX branch, ~L450) + `lst_class_end` (~L956).
+- **Rust port (this branch):**
+  - `lst_set_class_style` TeX branch: `begin = Tokens(style, T_BEGIN)`, add
+    `end = T_END` — faithful to the Perl diff.
+  - `lst_class_end`: changed from **leaf-only** end collection to walking the
+    **full class chain** (push order: leaf close-delims first, parent styling
+    group-closers last), so the `T_END` added to a parent styling class
+    (comments/strings) matches the `T_BEGIN` in its `begin`. Pre-#2819 only leaf
+    delimiter classes carried an `end`, so this is a no-op extension there;
+    keyword/identifier classes are themselves the leaf, so their `T_END` was
+    already collected. Verified faithful for both keyword-leaf and
+    delimiter→styling chains (matches Perl's `@close` order exactly).
+  - The `lstProcess_internal` **index** line-change has **no functional Rust
+    target**: Rust's index branch is a no-op stub (`// Index generation
+    (simplified)`) that emits nothing, so the bare-`T_BEGIN/T_END` → `index{end}`
+    swap is moot until the index feature is implemented (left as-is).
 - **Complexity:** **M.**
-- **Tests:** resyncs `t/alignment/listing.{tex,xml}` (adds `\underbar` to the
-  bingo keywordstyle); sync the Rust `listing` fixture.
+- **Tests:** resynced `t/alignment/listing.{tex,xml}` (added `\underbar` to the
+  bingo keywordstyle). Rust output for the grouped keyword now renders
+  `<text class="ltx_lst_keyword ltx_underline" font="bold">foo</text>` —
+  **matching upstream HEAD `cb455179` (post-#2828) exactly**; the only delta vs
+  Perl is the missing `<indexmark>` blocks (pre-existing index-stub divergence,
+  not introduced here). `53_alignment` suite (9 tests incl. `listing_test`)
+  green; error-clean; clippy clean. **#2828 (U5) is absorbed**: Rust's
+  `\underbar` renders natively as `ltx_underline` (the settled form), so the
+  #2819→#2828 underline transition happens in one step here.
 
 ### U4. ✅ PR #2818 "listings: do not look up ltxml files when reading raw files" (`41bd31e8`) — LANDED
 - **What:** `listingsReadRawFile` now calls `FindFile($filename, noltxml => 1)`
@@ -313,13 +335,14 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - **Tests:** none new; listing suite (9 tests) green — output unchanged, so it's a
   clean independent commit.
 
-### U5. ⬜ PR #2828 "Resync listings test for change to underline" (`39f319bd`)
+### U5. ✅ PR #2828 "Resync listings test for change to underline" (`39f319bd`) — LANDED (absorbed into U3)
 - **What:** test-only follow-up to #2819 — the underline styling settled to
   `class="ltx_lst_keyword ltx_underline"` (from the intermediate
   `framed="underline"`).
 - **Perl:** `t/alignment/listing.xml` only.
-- **Rust target:** the Rust `listing` fixture — fold into the single fixture
-  sync done after the listings cluster (depends on #2819).
+- **Rust outcome:** **absorbed into U3** — Rust's `\underbar` renders natively as
+  `ltx_underline`, so the U3 fixture regen produced the final post-#2828 form
+  (`ltx_lst_keyword ltx_underline`) directly, in one step. No separate commit.
 - **Complexity:** **S** (fixture resync).
 
 ### U6. ✅ PR #2814 "Fix 2240 proof title punct" (`01b8d651`) — LANDED
