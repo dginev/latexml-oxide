@@ -345,21 +345,20 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     push must fix the tikz/pgf node minipage to use the node width (not
     `\linewidth`)**, or `various_colors` will diverge. (Same class of issue may
     lurk in other tikz tests whose minipage width happened to match at 6in.)
-    **Investigated 2026-06-26 — confirmed DEEP raw-pgf, no clean Rust-side fix:**
-    the node→minipage has NO literal `node`/`minipage`/`text width` in the
-    `.tex` and NO Rust binding controls its width (the only Rust pgf binding,
-    `pgfsys_latexml_def.rs`, handles SVG output, not node text layout). The
-    minipage width (`31.37em` = `345/11`) comes from **raw pgf** reading
-    `\hsize`/`\linewidth` during multi-line node-text layout — which the
-    `\begin{document}` change set to 345pt. Perl runs the SAME raw pgf yet gets
-    `40.23em`, so Perl's pgf-state at the node point differs (pgf likely sets a
-    large `\hsize` for natural-width node text; Rust's raw-pgf load doesn't
-    replicate that interaction). **Fix is in the raw-pgf/`\hsize`-state
-    interaction (deep), NOT a Rust binding** — defer to dedicated pgf work; the
-    width change stays (faithful #2798, net +3: fixes autoref/figure_grids/
-    figure_dual_caption/cleveref toward Perl, regresses only this pgf case).
-    `consort-flowchart` is the same tikz class (perturbed by S6; its committed
-    fixture is already ~193 lines off Perl — Rust-specific deep-tikz).
+    **CORRECTED 2026-06-26 — it's `tcolorbox`, NOT a tikz node:** various_colors
+    uses `\begin{tcolorbox}[...]` (line 204, no explicit `width`); the
+    `<inline-block class="ltx_minipage">` (rendered via tcolorbox's pgf box) is
+    the tcolorbox content. The doc sets NO geometry/`\textwidth` (default 345pt),
+    yet Perl `cb455179` keeps the content at `40.23em` (≈442pt, WIDER than
+    `\textwidth`) — and Rust MATCHED that 40.23em BEFORE my change. So Perl's
+    tcolorbox width does NOT track the `\begin{document}`-set `\linewidth=345`;
+    it stays at a stable ≈6in value (likely a **load-time `\linewidth`=6in
+    capture** inside raw tcolorbox.sty). Rust's raw tcolorbox re-reads the
+    **runtime `\linewidth`** (now 345 → `31.37em`), so my faithful width change
+    cascades in. **Fix is in tcolorbox's `\linewidth`-flow (deep, raw-loaded),
+    NOT a Rust binding** (`tcolorbox_sty.rs` doesn't set the width). The width
+    change stays (faithful #2798, net +3). `consort-flowchart` was a SEPARATE
+    tikz-matrix case (now ✅ GREEN via principled regen — see its entry).
   - **Font.pm rewrite assessment (S6):** ~full-day effort (6–9.5 h), **localized
     to 4 files** — `common/font.rs` (`compute_boxes_size` + helpers), `whatsit.rs`
     (new `flatten_for_sizing`), `list.rs` + `binding/def/traits.rs` (call sites).
