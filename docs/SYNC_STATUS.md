@@ -328,9 +328,33 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     matching code lands trades one red for another. Land U2 as **one coherent
     push** (S1 → inline reclassification → `\begin{document}` widths → S5/S6
     sizing → S2–S4/S7–S11 → regenerate all 24 fixtures from same-host Perl
-    `cb455179`), green only at the end. Known diffs to re-apply first:
-    `bindable_mode`+`begin_mode_opt` (S1, above) and the 4-line
-    `\begin{document}` width block. Prototype reverted; branch stays green.
+    `cb455179`), green only at the end.
+  - **Foundation WIP saved on branch `u2-leavehorizontal`** (commit `51336ae`,
+    branched off `upstream-sync-prs` HEAD): S1 (`bindable_mode` +
+    `begin_mode_opt`, `stomach.rs`) + the 4-line `\begin{document}` width block
+    (`latex_constructs.rs`, after the `\everypar` clear). **Red (15 failures) —
+    do NOT merge until green.** Resume the coherent push from there;
+    `upstream-sync-prs` stays clean/green.
+  - **⚠ CASCADE — `various_colors` (tikz):** the faithful `\begin{document}`
+    width change is a **genuine regression** here, and `various_colors` is NOT
+    in Perl's #2798 regen list. Perl `cb455179` keeps the tikz-node minipage at
+    `40.23em` (node-derived, independent of `\linewidth`); Rust's tikz/pgf
+    node-minipage width instead **scales with `\linewidth`**, so dropping
+    `\linewidth` 6in→345pt shrinks it to `31.37em`. This latent Rust tikz
+    node-width bug was masked while `\linewidth` defaulted to 6in. **The coherent
+    push must fix the tikz/pgf node minipage to use the node width (not
+    `\linewidth`)**, or `various_colors` will diverge. (Same class of issue may
+    lurk in other tikz tests whose minipage width happened to match at 6in.)
+  - **Font.pm rewrite assessment (S6):** ~full-day effort (6–9.5 h), **localized
+    to 4 files** — `common/font.rs` (`compute_boxes_size` + helpers), `whatsit.rs`
+    (new `flatten_for_sizing`), `list.rs` + `binding/def/traits.rs` (call sites).
+    The requested-vs-computed size split (`width` vs `cached_width`) **already
+    exists** in Rust (`lib.rs` `BoxOps`), so no trait surgery. Port order:
+    `split_words`/`collect_lines`/`stack_lines` (add per-line `baseline` field +
+    CJK `isIdeographic`) → `linebreak_paragraph`/`flatten_paragraph` wrappers →
+    `Whatsit::flatten_for_sizing` → `compute_boxes_size` dispatch (baseline/
+    totalheight/maxwidth). Risk: rewriting `compute_boxes_size` forces
+    re-validation of EVERY sizing-sensitive fixture, not just the 11.
 
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
