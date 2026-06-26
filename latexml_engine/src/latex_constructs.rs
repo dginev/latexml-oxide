@@ -3105,6 +3105,15 @@ LoadDefinitions!({
     Let!("\\@nodocument", "\\relax", Scope::Global);
     // Clear \everypar at document start (Perl parity)
     assign_value("\\everypar", Tokens!(), Some(Scope::Global));
+    // Perl #2798: at \begin{document}, make the fill widths consistent —
+    //   \columnwidth = \hsize = \linewidth = \textwidth
+    // (\columnwidth/\linewidth otherwise keep their 6in=433.62pt DefRegister
+    // default, which is wrong for the default 345pt article \textwidth).
+    if let Some(textwidth) = lookup_register("\\textwidth", Vec::new())? {
+      assign_register("\\columnwidth", textwidth.clone(), None, Vec::new())?;
+      assign_register("\\hsize", textwidth.clone(), None, Vec::new())?;
+      assign_register("\\linewidth", textwidth, None, Vec::new())?;
+    }
     let mut boxes = Vec::new();
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       boxes.push(digest(ops)?);
