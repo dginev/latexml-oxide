@@ -396,9 +396,24 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     - **Remaining 5, each needing a distinct deeper piece:**
       - `enum` (144-line diff): **S5** Box padding props + **S10** itemize
         `\par`/glue rework — tags need `cssstyle="padding:3.0pt"`.
-      - `etoolbox` (3): **S2/S3** beforeDigest-push / `digest_until` ordering —
-        an `\AtBeginEnvironment{equation}` hook splits a `<p>` one step early
-        (Perl keeps one `<p>`).
+      - `etoolbox` (3): **S2 (beforeDigest-push) — ROOT CAUSE NAILED 2026-06-26.**
+        `\AtBeginEnvironment{equation}{…(inside)}` splits a `<p>` (Perl: one `<p>`
+        with `…(outside).…(inside).`; Rust: split). Exact mechanism: in
+        `def_environment` (`dialect.rs:1099`) the begin-flow order is bgroup →
+        **atbegin hook** (`:1141`, digests "(inside)") → `begin_mode`(default
+        `restricted_horizontal`) → **user before_digest** (`:1200`, equation's
+        `before_equation()` → `begin_mode("display_math")` → `leave_horizontal`).
+        Because Rust `execute_before_digest` (`definition.rs:285`) **collects &
+        returns** the atbegin boxes (prepended to the whatsit later) instead of
+        Perl #2798's **push-to-`@LIST`-immediately**, "(inside)" isn't in the
+        box_list yet when the later `before_equation` `leave_horizontal` ends the
+        "(outside)" paragraph → "(inside)" lands in a new `<p>`. **Fix = S2:**
+        make before_digest results push to the active box_list as each closure
+        runs (constructor.rs:292 / primitive.rs:106 consume
+        `execute_before_digest`). Global mechanism change → blast radius across
+        all before_digest-returning constructors; validate full-suite (risk like
+        S5). Most before_digest returns nothing, so the *behavioral* change is
+        limited to box-returning ones (atbegin hooks, executeBeforeDigest).
       - `figure_mixed_content` (13): **S6** box height/depth precision (9.5 vs
         9.3pt etc.) + a **pre-existing subcaption reversion gap** (`\begin{
         subfigure}[..]` vs `{..}`, missing `\lx@subcaption@addinlist`,
