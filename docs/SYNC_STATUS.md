@@ -433,6 +433,18 @@ Sequenced steps to stable + complete:
 > the remaining gaps live in *other* sizing paths:
 > - **S5 box getters** (`get_sp_size`/`c*`/`compute_size_store` padding) — for
 >   `graphrot` depth/height (width already matches) and `figure_mixed_content`.
+>   **⚠ S5 mechanical port REGRESSES (attempted + reverted 2026-06-26):** porting
+>   `computeSizeStore` literally (requested-vs-computed merge + full-spec bypass +
+>   route `compute_boxes_size_box` through `get_sp_size`=cached) made things WORSE
+>   — graphrot 26→64, sizes 7→15, xytest +204 lines off Perl. **Root cause:** Rust
+>   boxes do NOT use `width`/`height`/`depth` uniformly as "requested box size" the
+>   way Perl assumes — a paragraph `List`'s `width` is the *wrap* width, a column's
+>   is a *spec*, etc. So `w_req.unwrap_or(computed)` / the full-spec bypass picks
+>   the wrong value. **S5 needs a box-property-model reconciliation first** (audit
+>   which box types set `width`/`height`/`depth` and why; only treat genuine
+>   "requested box size" as such), NOT a mechanical port. graphrot's residual is
+>   a consistent **12pt** in depth+width — likely **S9 tabular padding** (the pad
+>   must be SET by the app layer, then S5 must HANDLE it) rather than S5 alone.
 > - **math-Whatsit `getSize`** — `sizes` math-axis (`0.0`→`7.5/2.5`) does NOT go
 >   through `compute_boxes_size`; it's the inline-math box sizer.
 > - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0`.
