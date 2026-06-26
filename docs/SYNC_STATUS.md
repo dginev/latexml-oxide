@@ -415,6 +415,38 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
       core: **S6 Font.pm rewrite (full day)** + **S2/S3** + **S9 tabular** +
       **S5/S10 itemize** + the **tikz node-width** fix + the subcaption gap.
 
+#### U2 completion plan (decided 2026-06-25 — "keep one combined PR")
+
+The whole upstream-sync mission lands as **one combined PR** off
+`upstream-sync-prs`; U2 must be fully green and merged in before the PR opens.
+Sequenced steps to stable + complete:
+
+1. **S5+S6 sizing rewrite (atomic unit, the keystone).** Port on
+   `u2-leavehorizontal` as ONE coherent change: S5 box `c*` getters /
+   `get_sp_size` / `compute_size_store` padding, **+** S6 `compute_boxes_size`
+   + `split_words`/`collect_lines`/`stack_lines` (per-line `baseline`,
+   `mathaxis`, `is_ideographic`) + `linebreak_paragraph`/`flatten_paragraph` +
+   `Whatsit::flatten_for_sizing`. Spec in "S6 readiness" above; S4's List
+   `width`/`baseline` already feed it. **Validation loop:** after it compiles,
+   run the FULL suite — every *new* failure beyond the known 5 must be a fixture
+   #2798 legitimately changed (regenerate from `cb455179`); anything else is a
+   port bug to fix before moving on.
+2. **Smaller pieces:** S2/S3 (etoolbox beforeDigest-push/`digest_until`
+   ordering), S9 (sizes tabular/p{} width), S10 (enum itemize `\par`/glue +
+   padding).
+3. **Regression — MUST fix (self-introduced):** tikz `various_colors` —
+   pgf node-minipage must use the node width, not `\linewidth`; fallback is to
+   scope the `\begin{document}` width-consistency change so it doesn't reach
+   tikz node contexts. U2 cannot merge with this regression.
+4. **Pre-existing gaps (NOT #2798) — decouple, don't let them block U2:** the
+   subcaption reversion gap (`figure_mixed_content`: `\begin{subfigure}[..]` vs
+   `{..}`, missing `\lx@subcaption@addinlist`) and the `g(x)` invisible-times
+   math-parser diff (`sizes`). Fix separately or accept as documented Rust
+   divergences (track in `KNOWN_PERL_ERRORS`) so those fixtures can pass.
+5. **Land:** regenerate all 24 #2798 fixtures from `cb455179`, full suite green
+   + clippy clean, merge `u2-leavehorizontal` → `upstream-sync-prs` (resolve the
+   catalog conflict in favor of `upstream-sync-prs`), then open the combined PR.
+
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
   brace group — `begin => Tokens($style, T_BEGIN)`, `end => T_END` (was
