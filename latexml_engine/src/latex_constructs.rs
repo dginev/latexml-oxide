@@ -8654,6 +8654,19 @@ LoadDefinitions!({
       if let Some(sep) = lookup_dimension("\\fboxsep") {
         let sep_str = sep.to_attribute();
         props.insert("cssstyle", Stored::String(pin(s!("padding:{sep_str}"))));
+        // Perl: `my $pad = $sep->add(LookupRegister('\fboxrule'));` then
+        // `padtop => $pad, padbottom => $pad, padleft => $pad, padright => $pad`.
+        // computeSizeStore (S5 padding slice) adds these to the sizer's (#3)
+        // measured size, so the framed box reports content+frame dimensions
+        // (\fboxsep + \fboxrule per side). Without this the box under-measures
+        // by 2x3.4pt in width and 3.4pt each in height/depth — visible in
+        // graphrot's rotated \framebox{\usebox{\foo}} inner dimensions.
+        let rule = lookup_dimension("\\fboxrule").map(|r| r.value_of()).unwrap_or(0);
+        let pad = Dimension::new(sep.value_of() + rule);
+        props.insert("padtop", Stored::Dimension(pad));
+        props.insert("padbottom", Stored::Dimension(pad));
+        props.insert("padleft", Stored::Dimension(pad));
+        props.insert("padright", Stored::Dimension(pad));
       }
       Ok(props)
     },
