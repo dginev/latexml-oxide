@@ -1502,7 +1502,11 @@ impl Font {
         }
         // Perl: a horizontal sub-List WITH a width is formatted as a paragraph.
         if matches!(bx.data(), DigestedData::List(_))
-          && bx.get_property("mode").map(|v| v.to_string()).unwrap_or_default() == "horizontal"
+          && bx
+            .get_property("mode")
+            .map(|v| v.to_string())
+            .unwrap_or_default()
+            == "horizontal"
           && let Some(w) = bx.get_property("width").and_then(|v| match &*v {
             Stored::Dimension(d) => Some(d.value_of()),
             Stored::Int(i) => Some(*i),
@@ -1540,13 +1544,18 @@ impl Font {
       if w > maxwidth {
         maxwidth = w;
       }
-      let flat: Vec<&Digested> = boxes.iter().filter(|b| !b.has_property("isEmpty")).collect();
+      let flat: Vec<&Digested> = boxes
+        .iter()
+        .filter(|b| !b.has_property("isEmpty"))
+        .collect();
       let flat_owned: Vec<Digested> = flat.into_iter().cloned().collect();
       lines = self.linebreak_paragraph(&flat_owned, w, baseline)?;
     } else {
       // Perl: restricted_horizontal or math — one line, no wrapping.
-      let filtered: Vec<&Digested> =
-        boxes.iter().filter(|b| !b.has_property("isEmpty")).collect();
+      let filtered: Vec<&Digested> = boxes
+        .iter()
+        .filter(|b| !b.has_property("isEmpty"))
+        .collect();
       let words = self.compute_boxes_size_words(&filtered)?;
       lines = Self::compute_boxes_size_lines(None, baseline, &words);
     }
@@ -1591,7 +1600,11 @@ impl Font {
     let flat = Self::flatten_paragraph(boxes);
     let flat_refs: Vec<&Digested> = flat.iter().collect();
     let words = self.compute_boxes_size_words(&flat_refs)?;
-    Ok(Self::compute_boxes_size_lines(Some(width), baseline, &words))
+    Ok(Self::compute_boxes_size_lines(
+      Some(width),
+      baseline,
+      &words,
+    ))
   }
 
   /// Perl #2798: flatten_paragraph — open up contained horizontal Lists, and any
@@ -1602,7 +1615,11 @@ impl Font {
     let mut out: Vec<Digested> = Vec::new();
     while let Some(bx) = queue.pop_front() {
       if matches!(bx.data(), DigestedData::List(_))
-        && bx.get_property("mode").map(|v| v.to_string()).unwrap_or_default() == "horizontal"
+        && bx
+          .get_property("mode")
+          .map(|v| v.to_string())
+          .unwrap_or_default()
+          == "horizontal"
       {
         for ib in bx.unlist().into_iter().rev() {
           queue.push_front(ib);

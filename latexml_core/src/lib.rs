@@ -499,8 +499,16 @@ pub trait BoxOps: Object {
     mut options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
     for key in [
-      "width", "height", "depth", "vattach", "layout", "totalheight", "padtop", "padbottom",
-      "padleft", "padright",
+      "width",
+      "height",
+      "depth",
+      "vattach",
+      "layout",
+      "totalheight",
+      "padtop",
+      "padbottom",
+      "padleft",
+      "padright",
     ] {
       if let Some(v) = self.get_property(key) {
         options.insert(key, v.into_owned());

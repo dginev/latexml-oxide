@@ -236,9 +236,13 @@ fn listings_read_raw_file(file: &str) -> Option<String> {
   // Perl #2818 (41bd31e8): FindFile(..., noltxml => 1) — when reading a raw file
   // for a listing (\lstinputlisting), never substitute an .ltxml binding for the
   // real source text (Rust spells `noltxml` as `forbid_ltxml`).
-  if let Some(path) =
-    find_file(&filename, Some(FindFileOptions { forbid_ltxml: true, ..Default::default() }))
-  {
+  if let Some(path) = find_file(
+    &filename,
+    Some(FindFileOptions {
+      forbid_ltxml: true,
+      ..Default::default()
+    }),
+  ) {
     std::fs::read_to_string(&path).ok()
   } else {
     log::warn!("Can't read listings file '{}'", filename);

@@ -355,7 +355,12 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
     // Perl #2798: inline lists are inline blocks (internal_vertical but NO
     // leaveHorizontal — they stay inside the surrounding paragraph).
     mode: Some(
-      if is_inline { "inline_internal_vertical" } else { "internal_vertical" }.into(),
+      if is_inline {
+        "inline_internal_vertical"
+      } else {
+        "internal_vertical"
+      }
+      .into(),
     ),
     locked: true,
     properties,

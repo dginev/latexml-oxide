@@ -12,15 +12,17 @@ fn def_dirtytalk_symbol_key(key: &str, symbol: &'static str) -> Result<()> {
     key,
     vtype: "", // Perl 'UndigestedKey' → a plain `{}` undigested value
     default: Some(""),
-    code: Some(ExpansionBody::Closure(Rc::new(move |args: Vec<ArgWrap>| {
-      if let Some(value) = args.into_iter().next() {
-        let tokens = value.revert()?;
-        if !tokens.is_empty() {
-          def_macro(T_CS!(symbol), None, ExpansionBody::Tokens(tokens), None)?;
+    code: Some(ExpansionBody::Closure(Rc::new(
+      move |args: Vec<ArgWrap>| {
+        if let Some(value) = args.into_iter().next() {
+          let tokens = value.revert()?;
+          if !tokens.is_empty() {
+            def_macro(T_CS!(symbol), None, ExpansionBody::Tokens(tokens), None)?;
+          }
         }
-      }
-      Ok(Tokens!())
-    }))),
+        Ok(Tokens!())
+      },
+    ))),
     ..KeyvalConfig::default()
   })
 }
