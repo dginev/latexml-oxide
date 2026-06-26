@@ -447,10 +447,36 @@ Sequenced steps to stable + complete:
 >   must be SET by the app layer, then S5 must HANDLE it) rather than S5 alone.
 > - **math-Whatsit `getSize`** — `sizes` math-axis (`0.0`→`7.5/2.5`) does NOT go
 >   through `compute_boxes_size`; it's the inline-math box sizer.
-> - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0`.
+> - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0` is NARROWED (2026-06-26):
+>   of the **6** tabular measurements in `sizes.tex`, the **first 5 already
+>   match Perl** exactly (incl. plain `\begin{tabular}{cc}`); only the **6th**
+>   (`\vtop{\begin{tabular}{cc}…}`, line 139) differs — Perl measures the
+>   `\vtop` box width as **345.0pt (=\hsize)**, Rust as the tabular's 37.05pt.
+>   So this is **`\vtop` width-fill modeling** (a `\vtop` block fills `\hsize`
+>   in #2798), NOT a generic tabular-width bug. The 345 is only the *measured*
+>   `\the\wd`, no `width=` attribute in output. S9 tabular rework (p/m/b
+>   inline-block + `\lx@alignment@multicolumn`/`replaceColumn`) **overlaps
+>   existing Rust array work** (memory `genuine-rust-only-unexpected-clusters`)
+>   — reconcile, don't re-port.
 > - **tikz node-width** — `consort-flowchart` (committed Rust fixture already
 >   ~199 lines off Perl: deep tikz) + `various_colors`; same cascade class.
 > - **S2/S3** (etoolbox ordering), **S5/S10** (enum padding/itemize).
+>
+> **S6 critical-review fix landed** (commit `1e68234`): removed the `\hsize`
+> fallback (paragraph only on explicit List `width`, per S4) + `ends_with`
+> horizontal/vertical dispatch — behaviour-preserving (still 7), more faithful.
+> **Box-property-model audit done:** `width`/`height`/`depth` are mostly genuine
+> requested box sizes (spaces/kerns, math phantoms, minipage/parbox/cell width);
+> only the paragraph List `width` is special (wrap width). A correct S5 must be
+> per-box-type aware; the full-spec bypass + `isEmpty` are the delicate parts
+> (they caused the reverted regression).
+>
+> **Trajectory note (2026-06-26):** U2 has reached a **long tail of distinct,
+> delicate sizing edge cases** (vtop-width-fill, inline-math strut, graphrot
+> 12pt tabular padding, tikz node-width) plus **pre-existing non-#2798
+> divergences** (`g(x)` invisible-times, subcaption reversion). The engine
+> sizing path is regression-prone (S5 proved it). Remaining completion is
+> careful per-edge-case work with full-suite validation each step — not fast.
 
 1. **S5+S6 sizing rewrite (atomic unit, the keystone).** Port on
    `u2-leavehorizontal` as ONE coherent change: S5 box `c*` getters /
