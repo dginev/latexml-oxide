@@ -455,6 +455,15 @@ Sequenced steps to stable + complete:
 >   equations; graphrot's 12pt tabular pad — S9/S10), then regenerate. The
 >   inline-math strut (`sizes` `0/0`→`7.5/2.5`) is NOT in TeX_Math.pool (verified)
 >   — it's a deeper math-Whatsit/Font math-mode strut, separate from `pad*`.
+>   **✅ display-math `padtop`/`padbottom` SET (commit `70c6374`):** first
+>   end-to-end use of the S5 pad mechanism (`\lx@begin@display@math` properties
+>   read `\abovedisplayskip`/`\belowdisplayskip`); validated no-regression
+>   (still 7 — currently invisible since equation boxes aren't measured in the
+>   fixtures, but faithful). `\overline`/`\underline` pad is deferred — that
+>   change ALSO flips `framed=` → `class=ltx_{over,under}line` (structural,
+>   higher fixture risk). **graphrot's 12pt is deep S9** (bordered table +
+>   `\multicolumn`/`\multirow`/`\rotatebox` — the `replaceColumn` spec-copy +
+>   column sizing), NOT a simple pad-set.
 > - **math-Whatsit `getSize`** — `sizes` math-axis (`0.0`→`7.5/2.5`) does NOT go
 >   through `compute_boxes_size`; it's the inline-math box sizer.
 > - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0` is NARROWED (2026-06-26):
