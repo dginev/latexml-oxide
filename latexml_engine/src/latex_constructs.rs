@@ -6978,7 +6978,7 @@ LoadDefinitions!({
   // for a passing build.
   DefMacro!(
     "\\@caption{}[]{}",
-    r"\@ifnext\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}",
+    r"\@ifnextchar\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}",
     locked=>true
   );
   // Check for trailing \label, move it into the caption
@@ -10520,7 +10520,6 @@ LoadDefinitions!({
     result
   });
   Let!("\\kernel@ifnextchar", "\\@ifnextchar");
-  Let!("\\@ifnext", "\\@ifnextchar");
 
   // Re-establish the engine `\hline` override after dump load.
   // Mirrors `TeX_Tables.pool.ltxml`'s `DefMacro('\hline', '\noalign{\@@alignment@hline}')`
