@@ -3105,6 +3105,15 @@ LoadDefinitions!({
     Let!("\\@nodocument", "\\relax", Scope::Global);
     // Clear \everypar at document start (Perl parity)
     assign_value("\\everypar", Tokens!(), Some(Scope::Global));
+    // Perl #2798: at \begin{document}, make the fill widths consistent —
+    //   \columnwidth = \hsize = \linewidth = \textwidth
+    // (\columnwidth/\linewidth otherwise keep their 6in=433.62pt DefRegister
+    // default, which is wrong for the default 345pt article \textwidth).
+    if let Some(textwidth) = lookup_register("\\textwidth", Vec::new())? {
+      assign_register("\\columnwidth", textwidth.clone(), None, Vec::new())?;
+      assign_register("\\hsize", textwidth.clone(), None, Vec::new())?;
+      assign_register("\\linewidth", textwidth, None, Vec::new())?;
+    }
     let mut boxes = Vec::new();
     if let Some(ops) = lookup_tokens("@document@preamble@atend") {
       boxes.push(digest(ops)?);
@@ -3435,7 +3444,8 @@ LoadDefinitions!({
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
-  mode         => "internal_vertical",
+  // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
+  mode         => "inline_internal_vertical",
   before_digest => {
     neutralize_font(); },
   properties   => sub [args] {
@@ -3478,7 +3488,8 @@ LoadDefinitions!({
   // classification in SYNC_STATUS — this is the surpass-Perl path).
   DefConstructor!("\\lx@notetext OptionalSemiverbatim {} [] {}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
-  mode       => "internal_vertical",
+  // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
+  mode       => "inline_internal_vertical",
   properties => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -6967,7 +6978,7 @@ LoadDefinitions!({
   // for a passing build.
   DefMacro!(
     "\\@caption{}[]{}",
-    r"\@ifnext\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}",
+    r"\@ifnextchar\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}",
     locked=>true
   );
   // Check for trailing \label, move it into the caption
@@ -8643,6 +8654,19 @@ LoadDefinitions!({
       if let Some(sep) = lookup_dimension("\\fboxsep") {
         let sep_str = sep.to_attribute();
         props.insert("cssstyle", Stored::String(pin(s!("padding:{sep_str}"))));
+        // Perl: `my $pad = $sep->add(LookupRegister('\fboxrule'));` then
+        // `padtop => $pad, padbottom => $pad, padleft => $pad, padright => $pad`.
+        // computeSizeStore (S5 padding slice) adds these to the sizer's (#3)
+        // measured size, so the framed box reports content+frame dimensions
+        // (\fboxsep + \fboxrule per side). Without this the box under-measures
+        // by 2x3.4pt in width and 3.4pt each in height/depth — visible in
+        // graphrot's rotated \framebox{\usebox{\foo}} inner dimensions.
+        let rule = lookup_dimension("\\fboxrule").map(|r| r.value_of()).unwrap_or(0);
+        let pad = Dimension::new(sep.value_of() + rule);
+        props.insert("padtop", Stored::Dimension(pad));
+        props.insert("padbottom", Stored::Dimension(pad));
+        props.insert("padleft", Stored::Dimension(pad));
+        props.insert("padright", Stored::Dimension(pad));
       }
       Ok(props)
     },
@@ -8874,7 +8898,8 @@ LoadDefinitions!({
       }
       Ok(())
     },
-    mode => "internal_vertical",
+    // Perl #2798: minipage is an inline block — internal_vertical, no leaveHorizontal.
+    mode => "inline_internal_vertical",
     before_digest => {
       digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },
@@ -9040,7 +9065,8 @@ LoadDefinitions!({
       fill='none' stroke='none' unitlength='#unitlength'>\
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
-    mode => "internal_vertical",
+    // Perl #2798: picture is an inline block — internal_vertical, no leaveHorizontal.
+    mode => "inline_internal_vertical",
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
@@ -10494,7 +10520,6 @@ LoadDefinitions!({
     result
   });
   Let!("\\kernel@ifnextchar", "\\@ifnextchar");
-  Let!("\\@ifnext", "\\@ifnextchar");
 
   // Re-establish the engine `\hline` override after dump load.
   // Mirrors `TeX_Tables.pool.ltxml`'s `DefMacro('\hline', '\noalign{\@@alignment@hline}')`

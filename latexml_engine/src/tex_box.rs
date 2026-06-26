@@ -755,7 +755,8 @@ LoadDefinitions!({
     },
     sizer       => "#2",
     properties  => { stored_map!("vattach" => "bottom") },
-    mode        => "internal_vertical",
+    // Perl #2798: \vbox is an inline block — internal_vertical but no leaveHorizontal.
+    mode        => "inline_internal_vertical",
     after_digest => sub[whatsit] {
       // Perl: hackVBoxAttachment($box, 'bottom')
       hack_vbox_attachment(whatsit, "bottom");
@@ -776,7 +777,8 @@ LoadDefinitions!({
     },
     sizer       => "#2",
     properties  => { stored_map!("vattach" => "top") },
-    mode        => "internal_vertical",
+    // Perl #2798: \vtop is an inline block — internal_vertical but no leaveHorizontal.
+    mode        => "inline_internal_vertical",
     after_digest => sub[whatsit] {
       // Perl: hackVBoxAttachment($box, 'top')
       hack_vbox_attachment(whatsit, "top");

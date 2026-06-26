@@ -22,12 +22,12 @@ the phases of the trial</toccaption>
 the phases of the trial</caption>
     </figure>
     <para xml:id="p1">
-      <picture class="ltx_centering" height="738.85" width="460.99" xml:id="pic1">
-        <svg:svg height="738.85" overflow="visible" version="1.1" viewBox="0 0 460.99 738.85" width="460.99">
-          <svg:g fill="#000000" stroke="#000000" transform="translate(0,738.85) matrix(1 0 0 -1 0 0) translate(230.5,0) translate(0,369.43)">
-            <svg:g stroke-width="0.4pt" transform="matrix(1.0 0.0 0.0 1.0 -226.81 -348.58)">
-              <svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 731.48)">
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 34.11)">
+      <picture class="ltx_centering" height="825.33" width="460.99" xml:id="pic1">
+        <svg:svg height="825.33" overflow="visible" version="1.1" viewBox="0 0 460.99 825.33" width="460.99">
+          <svg:g fill="#000000" stroke="#000000" transform="translate(0,825.33) matrix(1 0 0 -1 0 0) translate(230.5,0) translate(0,412.67)">
+            <svg:g stroke-width="0.4pt" transform="matrix(1.0 0.0 0.0 1.0 -226.81 -391.82)">
+              <svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 817.96)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 39.3)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 59.96 0) translate(48.52,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
@@ -41,10 +41,10 @@ the phases of the trial</caption>
                   </svg:g>
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 228.04 0) translate(117.1,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -33.55 h 193.72 v 67.11 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -38.74 h 193.72 v 77.49 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 16.95)">
-                      <svg:foreignObject height="50.51" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:3.81em;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.14)">
+                      <svg:foreignObject height="60.88" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Excluded (n=17):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">a) Did not wish to participate (n=9)</text></p>
@@ -54,13 +54,13 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 133.86)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 154.61)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 59.96 0) translate(48.52,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 4.11)">
-                      <svg:foreignObject height="23.6" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.44em;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 5.84)">
+                      <svg:foreignObject height="27.06" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
                           <p/>
                           <p><text font="sansserif" fontsize="80%">Assessed for eligibility (n=156)</text></p>
                         </inline-block></svg:foreignObject>
@@ -68,10 +68,10 @@ the phases of the trial</caption>
                   </svg:g>
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 228.04 0) translate(117.1,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -53.27 h 193.72 v 106.54 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -63.65 h 193.72 v 127.3 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 36.67)">
-                      <svg:foreignObject height="89.94" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:7.38em;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 47.05)">
+                      <svg:foreignObject height="110.7" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.75em;--ltx-fo-depth:9.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Excluded (n=54):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">a) Inclusion criteria not met (n=22)</text></p>
@@ -84,20 +84,20 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 222.18)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 253.32)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 59.96 0) translate(48.52,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 4.11)">
-                      <svg:foreignObject height="23.6" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.44em;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -44.28 5.84)">
+                      <svg:foreignObject height="27.06" overflow="visible" style="--ltx-fo-width:8em;--ltx-fo-height:0.69em;--ltx-fo-depth:1.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="88.56"><inline-block class="ltx_minipage" vattach="top" width="8em">
                           <p/>
                           <p><text font="sansserif" fontsize="80%">Randomised (n=102)</text></p>
                         </inline-block></svg:foreignObject>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 265.3)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 296.43)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1 0 0 -1 5.17 0) translate(103.32,0) matrix(1.0 0.0 0.0 1.0 -99.63 -2.77)">
                     <svg:foreignObject height="9.84" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 7.69)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                         <p/>
@@ -111,13 +111,13 @@ the phases of the trial</caption>
                       </inline-block></svg:foreignObject>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 326.4)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 364.45)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 0 0) translate(108.48,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -107.93 -40.13 h 215.86 v 80.25 h -215.86 Z"/>
+                      <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 23.52)">
-                      <svg:foreignObject height="63.65" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:5em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 30.44)">
+                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Allocated to intervention (n=51):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Received intervention (n=49)</text></p>
@@ -129,10 +129,10 @@ the phases of the trial</caption>
                   </svg:g>
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 216.97 0) translate(128.17,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -107.93 -40.13 h 215.86 v 80.25 h -215.86 Z"/>
+                      <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 23.52)">
-                      <svg:foreignObject height="63.65" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:5em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 30.44)">
+                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Allocated to wait-list (n=51):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Stayed on wait-list (n=48)</text></p>
@@ -143,13 +143,13 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 412.69)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 462.85)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 11.07 0) translate(97.41,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -33.25 h 193.72 v 66.49 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 17.26)">
-                      <svg:foreignObject height="49.89" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.81em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.45)">
+                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Post-intervention measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=5,</text></p>
@@ -160,10 +160,10 @@ the phases of the trial</caption>
                   </svg:g>
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 228.04 0) translate(117.1,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -33.25 h 193.72 v 66.49 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 17.26)">
-                      <svg:foreignObject height="49.89" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.81em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.45)">
+                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Post-wait-list measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=6,</text></p>
@@ -173,13 +173,13 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 498.99)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 561.26)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 216.97 0) translate(128.17,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -107.93 -40.13 h 215.86 v 80.25 h -215.86 Z"/>
+                      <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 23.52)">
-                      <svg:foreignObject height="63.65" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:5em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -99.63 30.44)">
+                      <svg:foreignObject height="77.49" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.75em;--ltx-fo-depth:6.25em;" transform="matrix(1 0 0 -1 0 8.3)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Allocated to intervention (n=48):</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Received intervention (n=46)</text></p>
@@ -190,13 +190,13 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 585.28)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 659.66)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 11.07 0) translate(97.41,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -26.67 h 193.72 v 53.35 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -30.13 h 193.72 v 60.27 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 10.69)">
-                      <svg:foreignObject height="36.75" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:2.63em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 14.14)">
+                      <svg:foreignObject height="43.66" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.25em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">3-months follow-up measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=9,</text></p>
@@ -206,10 +206,10 @@ the phases of the trial</caption>
                   </svg:g>
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 228.04 0) translate(117.1,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -33.25 h 193.72 v 66.49 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 17.26)">
-                      <svg:foreignObject height="49.89" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.81em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 22.45)">
+                      <svg:foreignObject height="60.27" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:4.75em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Post-intervention measurement:</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=5,</text></p>
@@ -219,13 +219,13 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 658.12)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 741.15)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 228.04 0) translate(117.1,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
-                      <svg:path d="M -96.86 -26.67 h 193.72 v 53.35 h -193.72 Z"/>
+                      <svg:path d="M -96.86 -30.13 h 193.72 v 60.27 h -193.72 Z"/>
                     </svg:g>
-                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 10.69)">
-                      <svg:foreignObject height="36.75" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:2.63em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
+                    <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -88.56 14.14)">
+                      <svg:foreignObject height="43.66" overflow="visible" style="--ltx-fo-width:16em;--ltx-fo-height:0.69em;--ltx-fo-depth:3.25em;" transform="matrix(1 0 0 -1 0 7.69)" width="177.12"><inline-block class="ltx_minipage" vattach="top" width="16em">
                           <p/>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">3-months follow-up measurement</text></p>
                           <p class="ltx_align_left"><text font="sansserif" fontsize="80%">Lost to follow-up (n=2,</text></p>
@@ -234,7 +234,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 714.32)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 800.8)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 0 0) translate(108.48,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -107.93 -16.6 h 215.86 v 33.21 h -215.86 Z"/>
@@ -261,98 +261,98 @@ the phases of the trial</caption>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -69.8 331.63 L 16.6 331.63" style="fill:none"/>
-              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 331.63)">
+              <svg:path d="M -69.8 369.68 L 16.6 369.68" style="fill:none"/>
+              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 369.68)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 308.93 L -118.32 258.89" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 258.89)">
+              <svg:path d="M -118.32 346.99 L -118.32 281.38" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 281.38)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -69.8 231.88 L 16.6 231.88" style="fill:none"/>
-              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 231.88)">
+              <svg:path d="M -69.8 254.37 L 16.6 254.37" style="fill:none"/>
+              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 254.37)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 209.19 L -118.32 170.56" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 170.56)">
+              <svg:path d="M -118.32 231.67 L -118.32 182.67" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 182.67)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 120.86 L -118.32 113.92" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 113.92)">
+              <svg:path d="M -118.32 132.97 L -118.32 126.03" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 126.03)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -69.8 143.55 L 118.32 143.55 L 118.32 113.92" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 113.92)">
+              <svg:path d="M -69.8 155.66 L 118.32 155.66 L 118.32 126.03" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 126.03)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 91.28 L -118.32 84.34" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 84.34)">
+              <svg:path d="M -118.32 103.38 L -118.32 96.44" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 96.44)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 -1.34 L -118.32 -8.84" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -8.84)">
+              <svg:path d="M -118.32 -3.07 L -118.32 -10.57" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -10.57)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 -80.76 L -118.32 -187.99" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -187.99)">
+              <svg:path d="M -118.32 -92.86 L -118.32 -215.67" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -215.67)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 -246.77 L -118.32 -327.1" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -327.1)">
+              <svg:path d="M -118.32 -281.36 L -118.32 -370.34" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -370.34)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 91.28 L 118.32 84.34" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 84.34)">
+              <svg:path d="M 118.32 103.38 L 118.32 96.44" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 96.44)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -1.34 L 118.32 -8.84" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -8.84)">
+              <svg:path d="M 118.32 -3.07 L 118.32 -10.57" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -10.57)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -80.76 L 118.32 -88.25" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -88.25)">
+              <svg:path d="M 118.32 -92.86 L 118.32 -100.36" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -100.36)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -173.93 L 118.32 -181.42" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -181.42)">
+              <svg:path d="M 118.32 -199.87 L 118.32 -207.37" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -207.37)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -253.34 L 118.32 -260.83" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -260.83)">
+              <svg:path d="M 118.32 -289.66 L 118.32 -297.16" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -297.16)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -319.61 L 118.32 -327.1" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -327.1)">
+              <svg:path d="M 118.32 -362.85 L 118.32 -370.34" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -370.34)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>

@@ -282,13 +282,10 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
   [-1,  1, -2, -3, -1,  0, -1, -1],
 ];
 
-// Perl: Font.pm %baseline_map — used in computeStringSize() for baseline calculation
-static BASELINE_MAP: Lazy<HashMap<i64, f64>> = Lazy::new(|| {
-  raw_map!(
-    5 => 6.0, 6 => 7.0, 7 => 8.0, 8 => 9.5, 9 => 10.0, 10 => 12.0,
-    11 => 13.6, 12 => 14.0, 14 => 18.0, 17 => 22.0, 20 => 25.0, 25 => 30.0
-  )
-});
+// (Perl Font.pm %baseline_map removed with the #2798 S6 sizing rewrite:
+// `compute_boxes_size_stack` now uses the per-line baseline threaded from the
+// List's `\baselineskip` property (recorded by S4 in repack_horizontal),
+// which is the faithful #2798 source — not a static font-size→baseline map.)
 
 /// Global auxiliary for font family lookup
 pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
@@ -1447,89 +1444,197 @@ impl Font {
     boxes: &[Digested],
     options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
+    // Perl L646-647: `elsif ($ref =~ /^LaTeXML::Core::(?:Box|Whatsit|Alignment)$/) {
+    // return $boxes->getSize; }` — a single bare Box/Whatsit/Alignment (NOT a
+    // List) returns its getSize directly, short-circuiting ahead of the
+    // List/split_words logic. This is essential for an isSpace box carrying an
+    // explicit height/depth (e.g. `\phantom`'s XMHint): split_words keeps only
+    // its width as inter-word space and discards height/depth, but getSize honors
+    // the full width/height/depth. In Perl the dispatch is on the type of the
+    // measured object (a bare-box body, not a List); a single-element slice here
+    // is the faithful analogue (a List-of-one would still be a List in Perl).
+    if let [single] = boxes
+      && !matches!(single.data(), DigestedData::List(_))
+    {
+      let mut bx_clone = single.clone();
+      let (w, h, d, ..) = bx_clone.get_size(None)?;
+      return Ok((w, h, d));
+    }
     // Perl L638: my $mode = $boxes->getProperty('mode') || 'restricted_horizontal';
     let mode_str = match options.get("mode") {
       Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
       _ => "restricted_horizontal".to_string(),
     };
-    // Perl L639-640: determine layout from mode
-    let layout = if mode_str == "horizontal" {
-      "paragraph"
-    } else if mode_str.ends_with("vertical") {
-      "vertical"
-    } else {
-      "restricted_horizontal"
-    };
-    // Perl L642: $vattach = $boxes->getProperty('vattach') || $options{vattach} || 'baseline'
+    // Perl: $vattach = $boxes->getProperty('vattach') || $options{vattach} || 'baseline'
     let vattach = match options.get("vattach") {
       Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),
       _ => "baseline".to_string(),
     };
-    // Perl L643-648: wrapwidth for paragraph layout
-    let wrapwidth = if layout == "paragraph" {
+    // Perl #2798: `elsif (my $width = ($mode =~ /horizontal$/) && $boxes->getProperty('width'))`
+    // — a horizontal list is formatted as a paragraph IFF an explicit width is
+    // supplied (recorded by S4's repack_horizontal). NO `\hsize` fallback: a
+    // horizontal List without a width property is restricted_horizontal (a single
+    // line, no wrapping), matching Perl.
+    let para_width: Option<i64> = if mode_str.ends_with("horizontal") {
       match options.get("width") {
         Some(Stored::Dimension(d)) => Some(d.value_of()),
         Some(Stored::Int(i)) => Some(*i),
-        _ => match lookup_definition(&T_CS!("\\hsize"))? {
-          Some(def) => def.value_of(Vec::new()).map(|x| x.value_of()),
-          None => None,
-        },
+        _ => None,
       }
     } else {
       None
     };
-    // Perl L650-651: filter boxes
-    // NOTE: Perl does $boxes->unlist (one level) then filters. In Rust, boxes are
-    // already the unlist'd children (one level of unlist already applied).
-    // Do NOT flat_map(unlist) again — that would destroy paragraph Lists in vertical
-    // mode, preventing proper line-breaking and vattach height/depth splitting.
-    // Nested Lists are handled recursively via computeBoxesSize_box → getSize.
-    let filtered: Vec<&Digested> = boxes
-      .iter()
-      .filter(|thisbox| !thisbox.has_property("isEmpty"))
-      .collect();
-    // Perl L653-670: dispatch based on layout
-    let lines = if layout == "vertical" {
-      // Perl L654-666: For vertical, ALL boxes are lines
-      let mut lines: Vec<[i64; 3]> = Vec::new();
-      for bx in &filtered {
-        // Perl L658-663: horizontal sub-Lists get paragraph treatment
-        if matches!(bx.data(), DigestedData::List(_)) {
-          let sub_mode = bx
+    // Perl #2798: baseline (sp) — from List property (S4) / option, default 12pt.
+    let baseline: i64 = match options.get("baseline") {
+      Some(Stored::Dimension(d)) => d.value_of(),
+      Some(Stored::Int(i)) => *i,
+      _ => 12 * UNITY,
+    };
+    let mut maxwidth: i64 = 0;
+    // Perl #2798: lines are now [baseline, wd, ht, dp] (per-line baseline; -1 = no
+    // inter-line adjustment, e.g. \vskip / \hrule).
+    let mut lines: Vec<[i64; 4]> = Vec::new();
+    if mode_str.ends_with("vertical") {
+      // Perl: For vertical, ALL boxes are lines.
+      for bx in boxes {
+        if bx.has_property("isEmpty") {
+          continue;
+        }
+        // Perl: a horizontal sub-List WITH a width is formatted as a paragraph.
+        if matches!(bx.data(), DigestedData::List(_))
+          && bx
             .get_property("mode")
             .map(|v| v.to_string())
-            .unwrap_or_default();
-          if sub_mode == "horizontal" {
-            let sub_boxes: Vec<Digested> = bx.unlist();
-            let sub_refs: Vec<&Digested> = sub_boxes.iter().collect();
-            let sub_width = bx
-              .get_property("width")
-              .and_then(|v| match &*v {
-                Stored::Dimension(d) => Some(d.value_of()),
-                Stored::Int(i) => Some(*i),
-                _ => None,
-              })
-              .or(wrapwidth);
-            let words = self.compute_boxes_size_words(&sub_refs)?;
-            lines.extend(Self::compute_boxes_size_lines(sub_width, &words));
-            continue;
+            .unwrap_or_default()
+            == "horizontal"
+          && let Some(w) = bx.get_property("width").and_then(|v| match &*v {
+            Stored::Dimension(d) => Some(d.value_of()),
+            Stored::Int(i) => Some(*i),
+            _ => None,
+          })
+        {
+          if w > maxwidth {
+            maxwidth = w;
           }
+          let sub_baseline = bx
+            .get_property("baseline")
+            .and_then(|v| match &*v {
+              Stored::Dimension(d) => Some(d.value_of()),
+              Stored::Int(i) => Some(*i),
+              _ => None,
+            })
+            .unwrap_or(baseline);
+          lines.extend(self.linebreak_paragraph(&bx.unlist(), w, sub_baseline)?);
+          continue;
         }
-        // Perl L665-666: single box sizing
+        // Perl: single box → one line, with baseline (or -1 for vskip/rule).
         let (w, h, d) = self.compute_boxes_size_box(bx)?;
+        let bs =
+          if bx.get_property_bool("isVerticalSpace") || bx.get_property_bool("isHorizontalRule") {
+            -1
+          } else {
+            baseline
+          };
         if w != 0 || h != 0 || d != 0 {
-          lines.push([w, h, d]);
+          lines.push([bs, w, h, d]);
         }
       }
-      lines
+    } else if let Some(w) = para_width {
+      // Perl: proper paragraph — flatten, split into words, break into lines.
+      if w > maxwidth {
+        maxwidth = w;
+      }
+      let flat: Vec<&Digested> = boxes
+        .iter()
+        .filter(|b| !b.has_property("isEmpty"))
+        .collect();
+      let flat_owned: Vec<Digested> = flat.into_iter().cloned().collect();
+      lines = self.linebreak_paragraph(&flat_owned, w, baseline)?;
     } else {
-      // Perl L668-670: Scan all boxes, collecting into "words", then break into lines.
+      // Perl: restricted_horizontal or math — one line, no wrapping.
+      let filtered: Vec<&Digested> = boxes
+        .iter()
+        .filter(|b| !b.has_property("isEmpty"))
+        .collect();
       let words = self.compute_boxes_size_words(&filtered)?;
-      Self::compute_boxes_size_lines(wrapwidth, &words)
-    };
-    // Perl L673: stack up the multiple lines
-    let (wd, ht, dp) = self.compute_boxes_size_stack(&vattach, &lines);
+      lines = Self::compute_boxes_size_lines(None, baseline, &words);
+    }
+    // Perl: stack up the multiple lines; mathaxis = size/4.
+    let size = self.get_size().unwrap_or_else(defsize) as i64;
+    let mathaxis = size * UNITY / 4;
+    let (mut wd, mut ht, mut dp) = Self::compute_boxes_size_stack(&vattach, mathaxis, &lines);
+    // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty).
+    if wd != 0 && maxwidth != 0 {
+      wd = maxwidth;
+    }
+    // Perl: divide up totalheight, if requested.
+    if let Some(th) = options.get("totalheight").and_then(|v| match v {
+      Stored::Dimension(d) => Some(d.value_of()),
+      Stored::Int(i) => Some(*i),
+      _ => None,
+    }) {
+      let diff = th - ht - dp;
+      if diff > 0 {
+        match vattach.as_str() {
+          "bottom" => ht += diff,
+          "middle" => {
+            ht += diff / 2;
+            dp += diff / 2;
+          },
+          _ => dp += diff,
+        }
+      }
+    }
     Ok((Dimension::new(wd), Dimension::new(ht), Dimension::new(dp)))
+  }
+
+  /// Perl #2798: linebreak_paragraph — format a horizontal list (with width) as
+  /// a paragraph: flatten nested horizontal Lists + sizing-flattenable Whatsits,
+  /// split into words, then break into lines. Returns [baseline, wd, ht, dp] lines.
+  fn linebreak_paragraph(
+    &self,
+    boxes: &[Digested],
+    width: i64,
+    baseline: i64,
+  ) -> Result<Vec<[i64; 4]>> {
+    let flat = Self::flatten_paragraph(boxes);
+    let flat_refs: Vec<&Digested> = flat.iter().collect();
+    let words = self.compute_boxes_size_words(&flat_refs)?;
+    Ok(Self::compute_boxes_size_lines(
+      Some(width),
+      baseline,
+      &words,
+    ))
+  }
+
+  /// Perl #2798: flatten_paragraph — open up contained horizontal Lists, and any
+  /// Whatsits that format AS IF embedded paragraph material (e.g. `\emph`), so
+  /// they participate in line-breaking.
+  fn flatten_paragraph(boxes: &[Digested]) -> Vec<Digested> {
+    let mut queue: std::collections::VecDeque<Digested> = boxes.iter().cloned().collect();
+    let mut out: Vec<Digested> = Vec::new();
+    while let Some(bx) = queue.pop_front() {
+      if matches!(bx.data(), DigestedData::List(_))
+        && bx
+          .get_property("mode")
+          .map(|v| v.to_string())
+          .unwrap_or_default()
+          == "horizontal"
+      {
+        for ib in bx.unlist().into_iter().rev() {
+          queue.push_front(ib);
+        }
+      } else if matches!(bx.data(), DigestedData::Whatsit(_))
+        && let Some(repl) = flatten_for_sizing(&bx)
+      {
+        for ib in repl.into_iter().rev() {
+          queue.push_front(ib);
+        }
+      } else {
+        out.push(bx);
+      }
+    }
+    out
   }
 
   /// Perl: Font.pm sub computeBoxesSize_box (L683-702)
@@ -1584,6 +1689,17 @@ impl Font {
           prevspace += w as f64;
         }
       }
+      // Perl #2798: an ideographic (CJK) char is itself a word.
+      else if bx.get_property_bool("isIdeographic") {
+        if wd != 0.0 {
+          words.push([prevspace, wd, ht as f64, dp as f64]);
+        }
+        words.push([0.0, w as f64, h as f64, d as f64]);
+        wd = 0.0;
+        ht = 0;
+        dp = 0;
+        prevspace = 0.0;
+      }
       // Perl L729-741: Else accumulate into "word"
       else {
         wd += w as f64;
@@ -1624,118 +1740,96 @@ impl Font {
     Ok(words)
   }
 
-  /// Perl: Font.pm sub computeBoxesSize_lines (L749-766)
-  /// Do line breaking of words into lines, according to wrapwidth (if any), or explicit breaks.
-  fn compute_boxes_size_lines(wrapwidth: Option<i64>, words: &[[f64; 4]]) -> Vec<[i64; 3]> {
-    let mut lines: Vec<[i64; 3]> = Vec::new();
+  /// Perl #2798: collect_lines — break words into lines per `wrapwidth` (if any)
+  /// or explicit breaks. Each line is `[baseline, wd, ht, dp]`; the per-line
+  /// `baseline` drives inter-line spacing in `compute_boxes_size_stack`.
+  fn compute_boxes_size_lines(
+    wrapwidth: Option<i64>,
+    baseline: i64,
+    words: &[[f64; 4]],
+  ) -> Vec<[i64; 4]> {
+    let mut lines: Vec<[i64; 4]> = Vec::new();
+    let fuzz = UNITY as f64; // 1pt
     let (mut wd, mut ht, mut dp): (f64, i64, i64) = (0.0, 0, 0);
     for item in words {
       let (space, w, h, d) = (item[0], item[1], item[2] as i64, item[3] as i64);
-      // Perl L755-757: explicit line break (space == -1)
-      if space == -1.0 {
-        if wd != 0.0 || ht != 0 || dp != 0 {
-          lines.push([kround(wd), ht, dp]);
+      // Forced linebreak (space == -1) or wrapped linebreak.
+      if space == -1.0 || wrapwidth.is_some_and(|ww| wd + space * 0.5 + w > ww as f64 + fuzz) {
+        if wd != 0.0 {
+          lines.push([baseline, kround(wd), ht, dp]);
         }
         wd = w;
         ht = h;
         dp = d;
-      }
-      // Perl L758-760: wrapwidth line breaking
-      else if let Some(ww) = wrapwidth {
-        if kround(wd + space * 0.5 + w) > ww {
-          if wd != 0.0 {
-            lines.push([ww, ht, dp]);
-          }
-          wd = w;
-          ht = h;
-          dp = d;
-        } else {
-          wd += space + w;
-          ht = max(ht, h);
-          dp = max(dp, d);
-        }
-      }
-      // Perl L761-764: no wrap — just accumulate
-      else {
+      } else {
         wd += space + w;
         ht = max(ht, h);
         dp = max(dp, d);
       }
     }
-    // Perl L765: push final line
     if wd != 0.0 || ht != 0 || dp != 0 {
-      let final_wd = if let Some(ww) = wrapwidth {
-        if kround(wd) > 0 { ww } else { kround(wd) }
-      } else {
-        kround(wd)
-      };
-      lines.push([final_wd, ht, dp]);
+      lines.push([baseline, kround(wd), ht, dp]);
     }
     lines
   }
 
-  /// Perl: Font.pm sub computeBoxesSize_stack (L769-801)
-  /// Sum up a stack of lines, determining w as max, and h & d according to vattach.
-  fn compute_boxes_size_stack(&self, vattach: &str, lines: &[[i64; 3]]) -> (i64, i64, i64) {
+  /// Perl #2798: stack_lines — sum a stack of `[baseline, wd, ht, dp]` lines:
+  /// `wd` is the max, inter-line spacing uses each line's `baseline` (`bs < 0` =
+  /// no adjustment), and `ht`/`dp` are split per `vattach` (`mathaxis` = size/4).
+  fn compute_boxes_size_stack(vattach: &str, mathaxis: i64, lines: &[[i64; 4]]) -> (i64, i64, i64) {
     let nlines = lines.len();
     if nlines == 0 {
-      (0, 0, 0)
-    } else if nlines == 1 {
-      (lines[0][0], lines[0][1], lines[0][2])
-    } else {
-      // Perl L779-780: baseline adjustment
-      let size = self.get_size().unwrap_or_else(defsize) as i64;
-      let baseline = {
-        let bl_pt = BASELINE_MAP
-          .get(&size)
-          .copied()
-          .unwrap_or(size as f64 * 1.2);
-        kround(bl_pt * UNITY_F64)
-      };
-      // Perl L781: $lineskip = $STATE->lookupDefinition(T_CS('\lineskip'))->valueOf->valueOf
-      let lineskip = lookup_definition(&T_CS!("\\lineskip"))
-        .ok()
-        .flatten()
-        .and_then(|def| def.value_of(Vec::new()))
-        .map(|v| v.value_of())
-        .unwrap_or(0);
-      // Perl L782-789: adjust depths for baseline spacing
-      let mut adjusted = lines.to_vec();
-      for i in 0..adjusted.len() - 1 {
-        let cur_depth = adjusted[i][2];
-        let next_height = adjusted[i + 1][1];
-        if cur_depth + next_height < baseline {
-          adjusted[i][2] = baseline - next_height;
+      return (0, 0, 0);
+    }
+    if nlines == 1 {
+      let [_bs, w, h, d] = lines[0];
+      return (w, h, d);
+    }
+    // Perl: $lineskip = lookupDefinition('\lineskip')->valueOf->valueOf
+    let lineskip = lookup_definition(&T_CS!("\\lineskip"))
+      .ok()
+      .flatten()
+      .and_then(|def| def.value_of(Vec::new()))
+      .map(|v| v.value_of())
+      .unwrap_or(0);
+    let mut wd: i64 = 0;
+    let mut prevdepth: i64 = -99999;
+    let mut th: i64 = 0;
+    for line in lines {
+      let [bs, w, h, d] = *line;
+      wd = max(w, wd);
+      th += h + d;
+      if prevdepth >= 0 && bs >= 0 {
+        if prevdepth + h < bs {
+          th += bs - prevdepth - h;
         } else {
-          adjusted[i][2] += lineskip;
+          th += lineskip;
         }
       }
-      // Perl L790-792
-      let wd = adjusted.iter().map(|l| l[0]).max().unwrap_or(0);
-      let mut ht: i64 = adjusted.iter().map(|l| l[1]).sum();
-      let mut dp: i64 = adjusted.iter().map(|l| l[2]).sum();
-      // Perl L793-800: vattach adjustments
-      if vattach == "middle" {
-        // Perl L793-796
-        let hh = (ht + dp) / 2; // half total height
-        let c = size * UNITY / 4; // math axis ≈ size/4
-        ht = hh + c;
-        dp = hh - c;
-      } else if vattach == "bottom" {
-        // Perl L797-798: align to baseline of bottom row
-        let total = ht + dp;
-        dp = adjusted.last().unwrap()[2];
-        ht = total - dp;
-      } else {
-        // Perl L799-800: default — align to baseline of top row (includes "baseline" & "top")
-        let total = ht + dp;
-        ht = adjusted[0][1];
-        dp = total - ht;
-      }
-      (wd, ht, dp)
+      prevdepth = if bs >= 0 { d } else { -99999 };
     }
+    let (ht, dp) = match vattach {
+      "middle" => (th / 2 + mathaxis, th / 2 - mathaxis),
+      "bottom" => {
+        let d = lines[nlines - 1][3];
+        (th - d, d)
+      },
+      // else (baseline / top): align to baseline of top row.
+      _ => {
+        let h = lines[0][2];
+        (h, th - h)
+      },
+    };
+    (wd, ht, dp)
   }
 }
+
+/// Perl #2798: `Whatsit->flattenForSizing` — a horizontal Whatsit whose sizer is
+/// a pure `#arg`/`#prop` reference can be flattened so its content participates
+/// in paragraph line-breaking (e.g. `\emph`). STUB: returns `None` (no
+/// flattening) for now — refine to parse the sizer spec. None of the current
+/// sizing fixtures depend on this; only `\emph`-style line-wrapping differs.
+fn flatten_for_sizing(_w: &Digested) -> Option<Vec<Digested>> { None }
 
 fn is_diff(x: Option<&Cow<str>>, y: Option<&Cow<str>>) -> bool {
   x.is_some() && (y.is_none() || (x != y))

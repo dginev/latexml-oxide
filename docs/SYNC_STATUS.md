@@ -111,6 +111,444 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
 - (Earlier this session: tasks 5 & 6 below — post-processing log parity + graphics
   never-ship-raw-.eps — also landed.)
 
+## Upstream sync — translate brucemiller/LaTeXML PRs since #2767 (NEW MISSION, opened 2026-06-25)
+
+> **Mission.** The Rust port mirrors upstream Perl LaTeXML through commit
+> `23f3acfa` (#2767 "Frontmatter refactor"; record in
+> `docs/archive/frontmatter_api_refactor.md`). Upstream `master` has since
+> advanced **9 commits** to `cb455179` (#2783). Translate each PR **in merge
+> order, as a separate sub-task**, faithfully — `perl-port` discipline: read the
+> Perl diff first (`git -C LaTeXML show <commit>`), place per `ORGANIZATION.md`,
+> obey the divergence policy (`OXIDIZED_DESIGN.md`). Check an item off here when
+> it lands (`git log` keeps the record); archive this catalog when the whole
+> mission completes.
+>
+> **Commit granularity (user directive 2026-06-25): each sub-task = its own
+> self-contained commit** — one feature/patch deliverable per commit, never a
+> batched mega-commit. The #2798 sub-mission lands as several commits (one per
+> sub-step). All work on the **`upstream-sync-prs`** feature branch — never
+> FF-push to `main`; open a PR (per `branch-further-stability-coverage-workflow`).
+>
+> **The `LaTeXML/` checkout is already AT `cb455179`**, so the *new* Perl is the
+> live reference for every file; diff against the per-PR commit to isolate a
+> single PR's change. Each landed sub-task needs: faithful port + ported test
+> fixture(s) (`cargo clean` after adding a `.tex`/`.xml` pair so the test plugin
+> rediscovers them — see CLAUDE.md) + `cargo test --tests` green + clippy clean,
+> and re-confirm on the current binary.
+>
+> **Sizing.** 8 of 9 are small/contained (new bindings, listings tweaks, a proof
+> fix, a mostly-already-present residual). **#2798 "Leavehorizontal" is the one
+> large core-engine refactor** (Font.pm +303, latex_constructs +174, Box/List/
+> Stomach/Whatsit/Alignment + ~15 packages) — stage it as its own sub-mission
+> with a dedicated regression budget, NOT a single commit.
+>
+> **Recommended execution order** (the user's "in order" = merge order is the
+> default; the independent small wins can land first to build momentum):
+> ① #2737 causets → ② #2806 dirtytalk → ③ #2814 proof-punct → ④ #2783
+> quantikz2-residual (all independent, **S**) → the **listings cluster**
+> #2819 → #2818 → #2824, then #2828 (shared file `listings_sty.rs` + shared
+> `listing` fixture — sync the fixture ONCE at the end) → **⑤ #2798
+> Leavehorizontal LAST** (largest; its own listings.sty + table/box touches may
+> reshuffle the listings fixture again, so doing it after the listings cluster
+> avoids double fixture churn).
+
+### U1. ✅ PR #2806 "Add dirtytalk binding" (`51fea96a`) — LANDED
+- **What:** `dirtytalk.sty` — `\say{…}` context-aware quotation marks with a
+  nesting-depth counter (`dirtytalk@qdepth`): outer level uses
+  `\textquotedblleft/right`, nested uses `\textquoteleft/right`. Four KeyVals
+  (`left`/`right`/`leftsub`/`rightsub`) let the user override each symbol.
+- **Perl:** new `lib/LaTeXML/Package/dirtytalk.sty.ltxml` (54 lines): 4
+  `DefMacro` symbol defaults + 4 `DefKeyVal('dirtytalk', …, 'UndigestedKey', …,
+  code => setDirtytalkSymbol)` + `ProcessOptions(inorder=>1, keysets=>…)` + a
+  `RawTeX` block (`\newcounter`, `\dirtytalk@lsymb/rsymb` `\ifnum`, `\say`).
+- **Rust target:** new `latexml_package/src/package/dirtytalk_sty.rs` (register
+  in the package module list). `\say` is currently only in `revtex4_support_sty`
+  (unrelated). The `\say` core + 4 symbol-default `DefMacro`s + the
+  `\newcounter`/`\say` `RawTeX!` block are straightforward (`raw_tex`,
+  `Tokens::is_empty` for `IsEmpty` all exist). **The 4 keyval overrides
+  (`left`/`right`/`leftsub`/`rightsub`) need the runtime
+  `keyval::define(KeyvalConfig { code: Some(…), .. })` directly** — the
+  `DefKeyVal!` macro has NO `code`-callback arm and Rust has no `UndigestedKey`
+  type, so map Perl's `UndigestedKey` + `code => sub` onto the config's `code`
+  field (verified `KeyvalConfig.code: Option<ExpansionBody>` exists).
+- **Complexity:** **M** (core `\say` is S; the keyval-override callbacks add the work).
+- **Tests:** ported `t/structure/dirtytalk.{tex,xml}` → `latexml_oxide/tests/structure/`
+  — Rust output **byte-identical to Perl** (nested `\say` curly quotes), error-clean,
+  `dirtytalk_test` green; keyval override (`[left={«},right={»}]` → `«hi»`) smoke-validated
+  via the faithful `ExpansionBody::Closure` (incl. the `IsEmpty` guard); clippy clean.
+
+### U2. ✅ PR #2798 "Leavehorizontal" (`24d39b55`) — COMPLETE (2026-06-26, 1470/0; merged to `upstream-sync-prs`)
+- **What:** two coupled rewrites + a wide application layer (75 files,
+  +1172/−902; ignore the CI-only `windows.yml`):
+  - **(A) TeX-faithful mode / `leaveHorizontal`.** In real TeX, beginning a
+    vertical/display construct while in horizontal mode first ends the paragraph
+    (`\par`); an inline `\hbox`/block does not. LaTeXML scattered
+    `leaveHorizontal`/`enterHorizontal`/`\par` inconsistently. Now `beginMode`
+    itself calls `leaveHorizontal` when entering a vertical/display bindable mode
+    **unless the user mode name contains `inline`**, and a new pseudo-mode
+    **`inline_internal_vertical`** (→ bound `internal_vertical`, suppressing the
+    auto-leave) marks inline blocks (`\vbox`/`\vtop`/`\parbox`/`minipage`/
+    `picture`/footnotes). `digestNextBody` splits into `digestUntil` (digests
+    onto the *current* `@LIST` without rebinding) + a thin wrapper; `T_BEGIN`
+    only builds a fresh `List` in math mode, else digests onto the ambient list;
+    `executeBeforeDigest` pushes results onto `@LIST` instead of returning them;
+    `repackHorizontal` records `\hsize`+`\baselineskip` on the finished paragraph
+    (and `\hsize` is recorded ONLY there now).
+  - **(B) Box/Font sizing rewrite** (the +303 Font.pm is the largest piece).
+    Box.pm separates *requested* (`width/height/depth`) from *computed*
+    (`cwidth/cheight/cdepth`); `getWidth/…` return only `c*`; new `getSPSize`
+    (raw scaled-point triple); `computeSizeStore` bypasses fully-specified sizes,
+    marks `isEmpty`, adds padding (`padtop/padbottom/padleft/padright`,
+    `totalheight`). Font.pm rewrites `computeBoxesSize` to dispatch by ref-type
+    and thread real `baseline`/`totalheight`/math-axis, replacing the old
+    `_box/_words/_lines/_stack` helpers with `linebreak_paragraph`/
+    `flatten_paragraph`/`split_words`/`collect_lines`/`stack_lines`; CJK
+    (`\p{Ideographic}`) counts as `isIdeographic`. Whatsit gains
+    `flattenForSizing` (a horizontal whatsit with a pure `#arg`/`#prop` sizer is
+    flattened so `\emph` etc. line-break across the paragraph).
+  - **(C) Application (~75 files):** new `mode`/`sizer`/padding props across the
+    engine pools + ~31 package/class bindings; `\begin{document}` sets
+    `\columnwidth=\hsize=\linewidth=\textwidth`; `\emph` → `bounded`+`sizer=>#1`
+    (drops `restricted_horizontal`); itemize envs LOSE the mistaken `\par` and
+    gain real `\topsep/\parsep/\partopsep/\itemsep` glue + padding; captions →
+    new `PBoxContents` param (caption arg processed as a horizontal paragraph);
+    `\@framebox` padding from `\fboxsep+\fboxrule`; parbox/minipage/picture →
+    `inline_internal_vertical`; + 24 regenerated `t/*.xml` fixtures.
+- **Rust state:** core is at the **pre-PR shape** — `stomach.rs` `bindable_mode`
+  lacks `inline_internal_vertical`, `begin_mode_opt` does not `leave_horizontal`;
+  `executeBeforeDigest` still returns `@pre`; `digest_next_body` is monolithic;
+  `T_BEGIN` (`tex_box.rs`) always builds a List; `list.rs` infers mode/width
+  (pre-PR); `tbox.rs`/`lib.rs` size-getters use the old `width||cwidth` fallback
+  (no `get_sp_size`/padding/`isEmpty`/full-spec bypass); `common/font.rs`
+  `compute_boxes_size`+`_words/_lines/_stack/_box` is the pre-PR algorithm;
+  `whatsit.rs` has no `flatten_for_sizing`; alignment lacks `replace_column`.
+  **Already done in Rust:** the `\lx@add@thanks`/`\person@thanks` removal
+  (`base_utilities.rs:210`, `latex_constructs.rs:4505`) + `\lx@personname` sizer
+  → S0 is verify-only. **Known overlap:** the p/m/b + `\multicolumn` rework (S9)
+  intersects landed Rust array work (memory
+  `genuine-rust-only-unexpected-clusters-2026-06-21`, `array_pcolumn`
+  reproducers) — reconcile, don't re-port. **`Package.pm`** adds a `$noerror`
+  param to `LookupDimension`; Rust's `lookup_dimension` (`state.rs:1613`) is a
+  value-cast helper, NOT a faithful `LookupDimension` (it lacks the
+  register→macro-`readingFromMouth`→warn-on-undefined logic), so reconcile that
+  alongside the `noerror` add (small, but a real semantic gap; see also the
+  parked `lookup_register`→`lookup_dimension` eqnarray/cases cleanup).
+- **Complexity:** **XL** — two deep foundational rewrites on the hottest
+  digestion/sizing paths + wide fixture churn. **Land as separate commits (one
+  per sub-step), never one commit.**
+- **Ordered sub-steps** (two foundations first; the app layer needs both):
+  - **S1 (M, FOUNDATION — namesake)** core mode mechanism: `bindable_mode +=
+    inline_internal_vertical`; `begin_mode_opt` calls `leave_horizontal` on
+    vertical/display entry when the user mode lacks `inline`. `stomach.rs` + mode
+    mapping in `binding/def/dialect.rs`. Keystone; very high blast radius.
+  - **S2 (M)** `beforeDigest` pushes onto the active list (not return):
+    `primitive.rs`+`constructor.rs` invoke + drop the dialect prepend.
+  - **S3 (M, high risk)** extract `digest_until` from `digest_next_body`;
+    rewrite `T_BEGIN` (math-only List). Depends S2. (`{…}` grouping is everywhere.)
+  - **S4 (M)** `list.rs` `reqmode` + `baseline` on vertical lists; stop setting
+    per-List `width`; `repack_horizontal` records `width=\hsize`,
+    `baseline=\baselineskip`. Depends S1.
+  - **S5 (L, FOUNDATION)** Box.pm rework: `@sizing_properties`; getters return
+    `cached_*` only; setters set both; `get_sp_size`; `compute_size_store` with
+    full-spec bypass, `isEmpty`, padding/`totalheight`. `tbox.rs` + size trait in
+    `lib.rs`. Very high blast radius (every size query).
+  - **S6 (L, critical-path risk)** Font.pm rework: rewrite `compute_boxes_size`;
+    add `linebreak_paragraph`/`flatten_paragraph`/`split_words`/`collect_lines`/
+    `stack_lines`; baseline/totalheight/math-axis; per-box-font kern. `common/
+    font.rs`. Depends S5/S4. The +303 change — port behind the `size` debug
+    instrumentation and diff line/word/stack vs Perl.
+  - **S7 (M)** Whatsit `flatten_for_sizing` + CJK `isIdeographic`. Depends S5/S6.
+  - **S8 (M)** Alignment `replace_column` (template+alignment) + 3-tuple
+    `normalize_cell_sizes` + `extractAlignmentColumn` PUT/USED split. Depends S5/S6.
+  - **S9 (L)** TeX_* pools: `PBoxContents` + `\lx@enterhorizontal`; vbox/vtop →
+    inline_internal_vertical; `\vskip` pure-height; display-math pad +
+    under/overline; p/m/b inline-block cols + `\lx@tabular@p` + `\multicolumn`
+    (overlaps landed work). Depends S1–S8.
+  - **S10 (L, highest fixture impact)** latex_base+latex_constructs: `\baselinestretch`;
+    moved `\addvspace/\addpenalty/\@endparenv`; `\begin{document}` widths; `\emph`
+    bounded+sizer; itemize `\par`-removal + glue + padding + `\preitem@par`;
+    caption `PBoxContents`; `\@framebox` padding; parbox/minipage/picture
+    inline_internal_vertical. Depends S1–S9.
+  - **S11 (M)** ~31 package/class bindings — aas_support, acmart, alltt,
+    amsrefs, amstext, array, bbold, beamer, cancel, elsarticle, enumerate,
+    enumitem, epsf, fancyvrb, frenchb, glossaries, graphics, hyperref, IEEEtran,
+    JHEP, listings, natbib, ntheorem, numprint, paralist, pgfsys-latexml,
+    setspace, soul, sv_support, xcolor, xy — mostly mechanical mode/`sizer`/
+    property edits + `LaTeXML.css` (`ltx_verbatim` nowrap, overline/underline
+    classes) + `LaTeXML-picture-xhtml.xsl`. Depends S1–S10.
+  - **S0 (S)** verify the already-done thanks/`\lx@personname` bit — expect no-op.
+- **Tests:** no new `.tex`; 24 regenerated `t/*.xml` (alignment
+  array/cells/colortbls/halignatt/tabular; math array_newline_math; complex
+  figure_dual_caption/figure_mixed_content/cleveref_minimal/equationnest;
+  structure authors/autoref/enum/figure_grids/figures; fonts marvosym/sizes;
+  digestion dollar; babel numprints; ams mathtools; graphics
+  graphrot/picture/xytest; tokenize alltt). All exist in `latexml_oxide/tests/`
+  at pre-PR output — **regenerate each from same-host Perl `cb455179` and diff;
+  never hand-edit** (legit size/paragraph-structure churn; a few intentional
+  divergences per `OXIDIZED_DESIGN.md`). Gate each fixture on its sub-step.
+- **✅ U2 COMPLETE 2026-06-26 (loop session 2) — `u2-leavehorizontal` at
+  1470/0, clippy clean** (was 1466/4). All 4 residual failures resolved with
+  faithful #2798 ports + principled regenerations. The branch is ready to merge
+  into `upstream-sync-prs` for the single combined PR (resolve the SYNC_STATUS
+  conflict in favour of this branch's final state — the 21 docs-only
+  investigation commits on `upstream-sync-prs` are superseded; notably the old
+  "various_colors DEEP, no clean fix / do NOT regenerate" note is WRONG, see
+  below). Landed on the branch (each a self-contained WIP commit):
+  - **`\phantom` h/d via single-box short-circuit** (`font.rs`
+    `compute_boxes_size`): port Perl `computeBoxesSize` L646-647 — a single bare
+    Box/Whatsit (not a List) returns `get_size` directly, ahead of the
+    List/split_words path (which discards height/depth for an `isSpace` box).
+    `sizes` math-strut `\phantom{g(x)}` 18.62×0+0 → 18.62×7.5+2.5 = cb455179
+    Perl. Also moved `consort-flowchart` picture height 782.9 → **825.33 =
+    Perl exactly** (tikz node content lost h/d the same way); regenerated.
+  - **`\framebox` pad{top,bottom,left,right}=`\fboxsep+\fboxrule`** (3.4pt;
+    `latex_constructs.rs` `\@framebox` properties): Perl sets these alongside
+    `sizer=>#3`; the S5 padding slice (`compute_size_and_cache`) adds them.
+    `graphrot` rotated `\framebox{\usebox}` inner dims 72.3×24+19 →
+    79.1×27.4+22.4 = Perl; whole `\testrot` cluster aligns; Rust-vs-Perl
+    26→8 lines. Full suite: no ripple to other fbox/framebox tests.
+  - **Regenerated (Rust-specific fixtures, #2798 moved them toward Perl):**
+    `sizes` (vbox 469.755→345 = Perl; phantom; residual g@(x) math-parser +
+    `\vtop{tabular}` 37.055 — see below), `graphrot`, `consort-flowchart`,
+    `figure_mixed_content` (subfigure scale 1.131→0.900≈Perl 0.881, width
+    156.1→124.2 = Perl).
+  - **Documented intentional/pre-existing divergences (kept, not "fixed"):**
+    (a) `sizes` `\vtop{tabular}` width 37.055 (natural) vs Perl 345=`\hsize`:
+    Perl repacks restricted_horizontal `\@@tabular` into a width=`\hsize` List
+    inside the vtop's vertical list; Rust marks `\@@tabular`/`\halign`
+    internal_vertical so repack SKIPS it — the [[box-model-hsize-frame-ordering-fix]]
+    that cured the Cluster-G `\narrow`-hang (1610.00974). Matching Perl risks
+    that hang. (b) `sizes` g(x) `g@(x)` (function-application) vs Perl `g * x` —
+    pre-existing math-parser semantics. (c) `figure_mixed_content` panel
+    `<break>` divergence — Rust's simplified `arrange_panels` + load-bearing
+    `\par`-in-figure break (used by article/book/report/amsarticle/tikz_figure)
+    vs Perl's width-based `breakIntoPanels`.
+  - **✅ `various_colors` RESOLVED — stale fixture, regenerated.** The tcolorbox
+    inner width 40.23em (6in-based) was a STALE RUST-BUG artifact, NOT a Perl
+    divergence (correcting the prior session's "DEEP / do NOT regenerate" note).
+    Proof: `tcolorbox.sty` defaults `width=\linewidth` (L2947), evaluated LAZILY
+    at box-build (body) time via `\tcbdimto` (L1267); body `\linewidth`=345 in
+    BOTH Perl (measured v0.8.8 + cb455179: preamble 433.62/6in → body 345) and
+    Rust → both engines yield 31.37em. Old Rust never reset body `\linewidth`
+    from its 6in default, baking 40.23em into the fixture; #2798's
+    `\begin{document}` width-consistency (FAITHFUL — Perl matches) fixed that
+    latent bug. Regenerated from Rust (16 lines, all inside the tcolorbox picture
+    region). cb455179 Perl's own tcolorbox run HANGS in pgf-Perl (>5 min CPU on
+    a minimal doc), which is why the value was settled by analysis + the lazy
+    `\linewidth` proof rather than a direct Perl diff.
+- **Empirical coupling (measured 2026-06-25 — S1 prototyped then reverted):**
+  S0 verified (thanks/`\lx@personname` already in Rust — `base_utilities.rs:215`,
+  `:807`; no-op). A standalone **S1** prototype (added `inline_internal_vertical`
+  to `bindable_mode` + the `leave_horizontal()`-on-vertical/display-entry guard
+  in `begin_mode_opt`, `stomach.rs:663,681`) **breaks exactly 11 tests**, which
+  split cleanly:
+  - **4 genuine regressions** — `footnote`, `endnote`, `etoolbox`, `fancyhdr`
+    — are **NOT** in Perl's 24-fixture regen list, so Perl's output for them is
+    unchanged by #2798. They break only because the inline blocks (footnotes
+    etc.) aren't yet reclassified to `inline_internal_vertical`, so they wrongly
+    `leaveHorizontal`. **Fix = the S9/S10 inline reclassification**, after which
+    their existing fixtures pass again.
+  - **7 legit regens** — `dollar`, `autoref`, `enum`, `equationnest`,
+    `figure_mixed_content`, `picture`, `sizes` — **are** in Perl's regen list.
+    Per-fixture root cause (Perl diffs are tiny, 4–14 lines each), which
+    refines the earlier "all need S6" claim:
+    - `dollar` (4), `equationnest` (8): **pure spacing** — the `leaveHorizontal`
+      paragraph effect drops a space (`</equation> t`→`</equation>t`). S1 only.
+    - `autoref` (4), `figure_mixed_content` (10): **width consistency** —
+      minipage/figure width `433.6pt`→`345.0pt`. Root cause: Rust DefRegisters
+      `\columnwidth`/`\linewidth` = `6in` (=**433.62pt**) and never resets them;
+      #2798's `\begin{document}` adds `\columnwidth=\hsize=\linewidth=\textwidth`
+      (=`345pt`). Found: Perl `latex_constructs.pool` `\begin{document}` handler
+      (diff L139–142); Rust target `latex_constructs.rs:3107` (right after the
+      `\everypar` clear). The figure_mixed inline-block scale change cascades
+      from this width (124.2/156.1 = 345/433.6). **Width fix only, no Font.pm.**
+    - `sizes` (8): widths→`345.0` (width consistency) **plus** one genuine
+      math-axis change (`18.62154pt x 0.0pt + 0.0pt`→`x 7.5pt + 2.5pt`) — that
+      one needs **S6** math-axis height/depth.
+    - `enum` (14): tags gain `cssstyle="padding:3.0pt"` — needs **S5** Box pad
+      props + `\lx@tag` sizing.
+    - `picture` (14): `innerwidth` text-label widths shrink ~8% — needs **S6**
+      text word-width measurement.
+  - **So the dependency is narrower than first stated:** S1 + the inline
+    reclassification + the `\begin{document}` width-consistency clear 4–6 of the
+    11 on their own; only `picture`, the `sizes` math-axis line, and `enum`
+    padding truly require the S5/S6 sizing work. **But it is still test-atomic
+    for COMMIT purposes** — applying any one piece (even the width clear alone)
+    turns its fixtures red until regenerated, and regenerating before the
+    matching code lands trades one red for another. Land U2 as **one coherent
+    push** (S1 → inline reclassification → `\begin{document}` widths → S5/S6
+    sizing → S2–S4/S7–S11 → regenerate all 24 fixtures from same-host Perl
+    `cb455179`), green only at the end. Known diffs to re-apply first:
+    `bindable_mode`+`begin_mode_opt` (S1, above) and the 4-line
+    `\begin{document}` width block. Prototype reverted; branch stays green.
+
+### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
+- **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
+  brace group — `begin => Tokens($style, T_BEGIN)`, `end => T_END` (was
+  `begin => $style` only). And in `lstProcess_internal`, index emission uses
+  `lstRescan($index{begin})…lstRescan($index{end})` (was bare `T_BEGIN … T_END`).
+  Net effect: identifier/keyword styling is grouped (e.g. `\bfseries\underbar`
+  applies as a group so the underline spans the whole keyword).
+- **Perl:** `lib/LaTeXML/Package/listings.sty.ltxml` (`lstSetClassStyle` ~L496;
+  `lstProcess_internal` ~L1413).
+- **Rust target:** `latexml_package/src/package/listings_sty.rs` —
+  `lst_set_class_style` (TeX branch, ~L450) + `lst_class_end` (~L956).
+- **Rust port (this branch):**
+  - `lst_set_class_style` TeX branch: `begin = Tokens(style, T_BEGIN)`, add
+    `end = T_END` — faithful to the Perl diff.
+  - `lst_class_end`: changed from **leaf-only** end collection to walking the
+    **full class chain** (push order: leaf close-delims first, parent styling
+    group-closers last), so the `T_END` added to a parent styling class
+    (comments/strings) matches the `T_BEGIN` in its `begin`. Pre-#2819 only leaf
+    delimiter classes carried an `end`, so this is a no-op extension there;
+    keyword/identifier classes are themselves the leaf, so their `T_END` was
+    already collected. Verified faithful for both keyword-leaf and
+    delimiter→styling chains (matches Perl's `@close` order exactly).
+  - The `lstProcess_internal` **index** line-change has **no functional Rust
+    target**: Rust's index branch is a no-op stub (`// Index generation
+    (simplified)`) that emits nothing, so the bare-`T_BEGIN/T_END` → `index{end}`
+    swap is moot until the index feature is implemented (left as-is).
+- **Complexity:** **M.**
+- **Tests:** resynced `t/alignment/listing.{tex,xml}` (added `\underbar` to the
+  bingo keywordstyle). Rust output for the grouped keyword now renders
+  `<text class="ltx_lst_keyword ltx_underline" font="bold">foo</text>` —
+  **matching upstream HEAD `cb455179` (post-#2828) exactly**; the only delta vs
+  Perl is the missing `<indexmark>` blocks (pre-existing index-stub divergence,
+  not introduced here). `53_alignment` suite (9 tests incl. `listing_test`)
+  green; error-clean; clippy clean. **#2828 (U5) is absorbed**: Rust's
+  `\underbar` renders natively as `ltx_underline` (the settled form), so the
+  #2819→#2828 underline transition happens in one step here.
+
+### U4. ✅ PR #2818 "listings: do not look up ltxml files when reading raw files" (`41bd31e8`) — LANDED
+- **What:** `listingsReadRawFile` now calls `FindFile($filename, noltxml => 1)`
+  so `\lstinputlisting{foo.sty}` reads the raw source, never a `.ltxml` binding.
+- **Perl:** `listings.sty.ltxml` `listingsReadRawFile` (~L320).
+- **Rust target:** `listings_sty.rs` `listings_read_raw_file` (L234) — pass the
+  `noltxml` flag to the find-file call.
+- **Complexity:** **S** (one-flag change). Rust spells `noltxml` as `forbid_ltxml`
+  in `FindFileOptions` (matches `tex_job.rs:252`).
+- **Tests:** none new; listing suite (9 tests) green — output unchanged, so it's a
+  clean independent commit.
+
+### U5. ✅ PR #2828 "Resync listings test for change to underline" (`39f319bd`) — LANDED (absorbed into U3)
+- **What:** test-only follow-up to #2819 — the underline styling settled to
+  `class="ltx_lst_keyword ltx_underline"` (from the intermediate
+  `framed="underline"`).
+- **Perl:** `t/alignment/listing.xml` only.
+- **Rust outcome:** **absorbed into U3** — Rust's `\underbar` renders natively as
+  `ltx_underline`, so the U3 fixture regen produced the final post-#2828 form
+  (`ltx_lst_keyword ltx_underline`) directly, in one step. No separate commit.
+- **Complexity:** **S** (fixture resync).
+
+### U6. ✅ PR #2814 "Fix 2240 proof title punct" (`01b8d651`) — LANDED
+- **What:** the amsthm `proof` env stops double-punctuating — append the trailing
+  period only when the (optional) title doesn't already end in `.!?:;,` (mimics
+  LaTeX `\@addpunct`). `\begin{proof}[x.]` → "x." not "x..".
+- **Perl:** `lib/LaTeXML/Package/amsthm.sty.ltxml` `\@proof` properties (~L155):
+  inspect `$content[-1]->toString` and conditionally add `T_OTHER('.')`.
+- **Rust target:** `latexml_package/src/package/amsthm_sty.rs` — the `\@proof`
+  `properties` closure currently does an **unconditional** `title_tokens.push(
+  T_OTHER!("."))` at **L188**; gate it on the last content token's last char.
+- **Complexity:** **S.**
+- **Tests:** ported `t/theorem/proofpunct.{tex,xml}` → `latexml_oxide/tests/theorem/`
+  — Rust output **byte-identical to Perl**, error-clean, `proofpunct_test` green.
+
+### U7. ✅ PR #2737 "Added bindings for causets (TikZ extension)" (`eb08bd7f`) — LANDED
+- **What:** `causets.sty` binding = a raw-load passthrough:
+  `InputDefinitions('causets', type => 'sty', noltxml => 1)`.
+- **Perl:** new `lib/LaTeXML/Package/causets.sty.ltxml` (24 lines, body is the
+  one `InputDefinitions` call).
+- **Rust target:** new `latexml_package/src/package/causets_sty.rs` that
+  raw-loads `causets.sty` with `noltxml`. Binding itself is trivial; actual
+  rendering depends on the host TikZ machinery (out of scope for the binding).
+- **Complexity:** **S.**
+- **Tests:** none added upstream. Smoke-validated: `\usepackage{causets}` loads
+  error-clean and raw-loads the host `causets.sty` (`Loading causets.sty…`),
+  body renders; clippy clean.
+
+### U8. ✅ PR #2824 "do not add frame and background to inline listings" (`a6f6316f`) — LANDED
+- **What:** `\lstinline` / `\begin{lstinline}` now set `LISTINGS_INLINE => 1`;
+  `\lst@@@set@frame` and `\lst@@@set@background` skip the frame/background when
+  `LISTINGS_INLINE` is set (inline listings shouldn't get a box frame/bg).
+- **Perl:** `listings.sty.ltxml` — `\lx@lstinline` (~L58), `\begin{lstinline}`
+  (~L94), `\lst@@@set@frame` (~L929), `\lst@@@set@background` (~L958).
+- **Rust port (this branch):** set `LISTINGS_INLINE` (local to the inline
+  bgroup) in `\lx@lstinline` (after `lst_activate`, before reading the
+  delimiter) and the `lstinline` environment; `\lst@@@set@frame` returns an
+  empty `frame` prop when inline (constructor already skips an empty `framed=`).
+  For `\lst@@@set@background`, guarded the **entire** body on `!inline` — not
+  just the `merge_font`. Perl never clears `LISTINGS_BACKGROUND`; Rust's
+  `assign_value(None)` is a workaround so a *block* listing doesn't leak its bg
+  to later listings. Guarding the clear too keeps that workaround for block
+  listings while leaving the global value intact when an inline listing runs
+  first, so a **following block listing still renders its background** (verified
+  by repro: global `\lstset{frame=single,backgroundcolor=\color{yellow}}` →
+  inline gets neither, the next block listing gets both — matching Perl). A
+  naive merge-only guard regressed that case.
+- **Complexity:** **S–M.**
+- **Tests:** none new — `53_alignment` `listing` suite (9 tests) unchanged-green
+  (matches upstream: #2824 had no Perl fixture change); error-clean; clippy
+  clean; behaviour confirmed by the inline-vs-block repro above.
+
+### U9. ✅ PR #2783 "quantikz2 raw interpretation" (`cb455179`) — LANDED (color-macro residual)
+- **What:** four fixes (this PR was authored by us and partly upstreamed
+  Rust-discovered fixes): (a) `\AtBeginDocument[]{}` / `\AtEndDocument[]{}`
+  optional `[label]`; (b) `color.sty` defines `\current@color`/`\default@color`/
+  `\reset@color` with safe DVI defaults; (c) `tcolorbox.sty` pre-defines
+  `\tcb@use@autoparskip` (drops the `expl3`/`xparse` RequirePackage); (d)
+  `\hphantom` math/text split (`\lx@math@hphantom` / `\lx@text@hphantom` with
+  `restricted_horizontal`) to stop display-math leaks. Plus pure whitespace
+  realignment in `math_common.pool` (no semantics).
+- **Rust state (verified 2026-06-25):**
+  - (a) `\AtBeginDocument[]{}` — **ALREADY in Rust** (`latex_constructs.rs:3073`).
+  - (c) `\tcb@use@autoparskip` — **ALREADY in Rust** (`tcolorbox_sty.rs:17`).
+  - (b) color macros — **✅ DONE** (this branch): added `\current@color`/
+    `\default@color`/`\reset@color` to `color_sty.rs` (`'0 0 0'`/`'0 0 0'`/empty,
+    in Perl order before `\set@color`) + updated the comment. Validated:
+    `\makeatletter` smoke error-clean; graphics (8) + tikz (10) suites green; no
+    regression. (This was the only real porting work in #2783.)
+  - (d) hphantom split — **INTENTIONALLY DIVERGED in Rust** (`math_common.rs:1037`):
+    the `restricted_horizontal` wrapping was reverted because it FATALs on
+    `\minipage…\hphantom\endminipage` (2004.10048), and the `$$`-leak it guards
+    errors in installed Perl too. The new #2783 form uses the same mechanism →
+    re-evaluate only if the mode-end fatal is solved; otherwise keep the
+    divergence and document it against the new upstream form.
+- **Complexity:** **S** (color macros; the rest is verify/divergence-note).
+- **Tests:** none new; ensure tcolorbox/quantikz/color regressions stay green.
+
+### U10. ✅ PR #2833 "Remove \@ifnext, use \@ifnextchar" (`346279c9`) — LANDED (2026-06-26)
+- **What:** `\@ifnext` was a kernel alias `Let('\@ifnext','\@ifnextchar')` (with a
+  `# ????` comment). The PR drops the alias and calls `\@ifnextchar` directly in
+  its two use sites: `\@caption` (`latex_constructs.pool`) and `\@captionof`
+  (`caption.sty`). Behaviour-preserving (they were aliased).
+- **Rust port (this branch):** 3 edits — `latex_constructs.rs` `\@caption`
+  body `\@ifnext`→`\@ifnextchar` + removed `Let!("\\@ifnext","\\@ifnextchar")`;
+  `caption_sty.rs` `\@captionof` body `\@ifnext`→`\@ifnextchar`. Also updated the
+  `semantic_sty.rs` header comment: it pre-undefines `\@ifnext` (semantic.sty's
+  `\TestForConflict` errors on kernel-defined CSes, witness 2403.04708) — with the
+  alias gone that pre-undefine is now a defensive no-op (kept). No other bare
+  `\@ifnext` users (`\@ifnext@n` is a separate macro, retained).
+- **Complexity:** **S** (mechanical, behaviour-preserving).
+
+### U11. ✅ PR #2832 "initial \multicolumn content starts the new column" (`bc90e36c`) — N/A in Rust (verified)
+- **What:** Perl inserts a `\relax` between `\lx@alignment@altcolumn{template}`
+  and the cell `$tokens` in `\lx@alignment@multicolumn` (`TeX_Tables.pool`), so an
+  initial `\multicolumn`'s content starts the new column rather than being absorbed
+  by the template scan in `\halign`'s `\span`/`\omit` mechanics.
+- **Rust state:** **no code change needed.** Rust's `\lx@alignment@multicolumn`
+  (`tex_tables.rs:570`) is structurally divergent — it does NOT use
+  `\lx@alignment@altcolumn`; it inlines the column template directly (p/m/b → VBox
+  via `\lx@tabular@p`; normal → `before_cell` + body + `after_cell`) and digests
+  via the custom `alignment_bindings` processor, not real `\halign` `\span`
+  mechanics. The `\relax` boundary the PR adds guards a TeX gullet-scanning
+  subtlety that does not exist in that path. **Verified:** Rust output is byte-
+  identical to cb455179 Perl (which has the fix) across initial-`\multicolumn`
+  edge cases (bordered bold head, empty cell, 2-col span, math content). Adding a
+  `\relax` would risk regressing the matched output for zero benefit. Documented
+  as a structural divergence; revisit only if a real initial-multicolumn
+  divergence surfaces.
+- **Complexity:** **S** (verify + divergence-note; no code).
+
 ## Methodology & the cortex cross-join
 
 Working method (2026-06): **re-triage LARGE-error papers** (the single-error tail

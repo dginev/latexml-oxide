@@ -135,6 +135,14 @@ impl BoxOps for List {
     {
       options.insert("width", width.clone());
     }
+    // Perl #2798 (S6): pass the List's recorded \baselineskip (set by S4 in
+    // repack_horizontal) so compute_boxes_size can stack lines with the right
+    // inter-line spacing.
+    if let Some(baseline) = self.properties.get("baseline")
+      && options.get("baseline").is_none()
+    {
+      options.insert("baseline", baseline.clone());
+    }
     font.compute_boxes_size(&self.boxes, options)
   }
 }

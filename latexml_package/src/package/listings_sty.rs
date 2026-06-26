@@ -233,7 +233,16 @@ fn listings_read_raw_string(until: Option<&Token>, saved_catcodes: &[(char, Catc
 /// Perl: listingsReadRawFile — read entire file contents as string.
 fn listings_read_raw_file(file: &str) -> Option<String> {
   let filename = file.to_string();
-  if let Some(path) = find_file(&filename, None) {
+  // Perl #2818 (41bd31e8): FindFile(..., noltxml => 1) — when reading a raw file
+  // for a listing (\lstinputlisting), never substitute an .ltxml binding for the
+  // real source text (Rust spells `noltxml` as `forbid_ltxml`).
+  if let Some(path) = find_file(
+    &filename,
+    Some(FindFileOptions {
+      forbid_ltxml: true,
+      ..Default::default()
+    }),
+  ) {
     std::fs::read_to_string(&path).ok()
   } else {
     log::warn!("Can't read listings file '{}'", filename);
@@ -443,11 +452,20 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::String(pin(&classref)), None);
     } else {
-      // Otherwise, it's presumably TeX styling
+      // Otherwise, it's presumably TeX styling.
+      // Perl #2819: wrap the styling in a brace group —
+      //   begin => Tokens($style, T_BEGIN); end => T_END
+      // so a multi-token style (e.g. `\bfseries\underbar`) applies to the whole
+      // class content as a group, not just the first token. The matching T_END
+      // is collected by `lst_class_end` (which now walks the full class chain).
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::None, None);
       let begin_key = s!("{map_key}@{class}@begin");
-      assign_value(&begin_key, Stored::Tokens(style_toks.clone()), None);
+      let mut begin_toks = style_toks.unlist_ref().clone();
+      begin_toks.push(T_BEGIN!());
+      assign_value(&begin_key, Stored::Tokens(Tokens::new(begin_toks)), None);
+      let end_key = s!("{map_key}@{class}@end");
+      assign_value(&end_key, Stored::Tokens(Tokens::new(vec![T_END!()])), None);
     }
   }
   // Set cssclass based on class name
@@ -949,28 +967,30 @@ fn lst_class_begin(classname: &str) -> Vec<Token> {
 }
 
 /// Perl: lstClassEnd — generate closing tokens for a styled class.
-/// Mirrors lstClassBegin: close the style group first, then emit delimiter chars.
+///   my @close = ();
+///   while (my $class = ...) { push(@close, lstRescan($$class{end})->unlist) if $$class{end}; ... }
+///   return (@close, T_END, T_END);
+/// Walk the whole class chain and collect every class's `end` tokens via push
+/// (leaf close-delimiter chars first, then parent styling group-closers — the
+/// `T_END` added by #2819's `lstSetClassStyle`). Pre-#2819 only leaf delimiter
+/// classes carried an `end`, so collecting the full chain is a no-op extension
+/// there; it now also matches the brace group opened in `begin`.
 fn lst_class_end(classname: &str) -> Vec<Token> {
-  let mut delim_tokens = Vec::new();
+  let mut close_tokens = Vec::new();
   let mut current_class = Some(classname.to_string());
-  let mut is_leaf = true;
   while let Some(ref cname) = current_class {
     let end_key = s!("LST_CLASSES@{cname}@end");
     if let Some(Stored::Tokens(end)) = lookup_value(&end_key)
       && let Some(rescanned) = lst_rescan(Some(end))
-      && is_leaf
     {
-      delim_tokens.extend(rescanned.unlist());
+      close_tokens.extend(rescanned.unlist());
     }
     let class_key = s!("LST_CLASSES@{cname}@class");
     current_class = lookup_value(&class_key)
       .map(|v| v.to_string())
       .filter(|s| !s.is_empty());
-    is_leaf = false;
   }
-  let mut result = Vec::new();
-  // No separate style group to close — style applied at group level
-  result.extend(delim_tokens);
+  let mut result = close_tokens;
   result.push(T_END!());
   result.push(T_END!());
   result
@@ -1952,6 +1972,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
     lst_activate(kv.as_ref());
+    // Perl #2824: mark this as an inline listing (local to the bgroup) so the
+    // frame/background preamble constructors skip the box frame/bg. Set BEFORE
+    // reading the arg, matching Perl `listings.sty.ltxml:61`.
+    assign_value("LISTINGS_INLINE", Stored::Bool(true), None);
     // Read opening delimiter under NORMAL catcodes — so `{`/`}` keep
     // BEGIN/END catcodes and the standard "closing brace" pairing works
     // for `\lstinline{a_word}`-style invocations. Perl reads `$init`
@@ -2068,6 +2092,8 @@ LoadDefinitions!({
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
         let text = listings_read_raw_lines("lstinline");
         let _ = &kv; // lstActivate placeholder
+        // Perl #2824: mark inline (local to the bgroup) so frame/bg are skipped.
+        assign_value("LISTINGS_INLINE", Stored::Bool(true), None);
         let mut result = Vec::new();
         if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
           result.extend(pre.unlist());
@@ -2873,7 +2899,12 @@ LoadDefinitions!({
       }
     },
     properties => {
-      let frame = lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default();
+      // Perl #2824: inline listings get no box frame.
+      let frame = if lookup_value("LISTINGS_INLINE").is_some() {
+        String::new()
+      } else {
+        lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default()
+      };
       stored_map!("frame" => Stored::String(pin(&frame)))
     });
 
@@ -2887,12 +2918,22 @@ LoadDefinitions!({
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
   DefPrimitive!("\\lst@@@set@background", {
-    if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
-      && let Some(c) = with(bg, common::color::Color::from_stored) {
-        merge_font(Font { bg: Some(c), ..Font::default() });
-      }
-    // Clear after use so subsequent listings don't inherit
-    assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
+    // Perl #2824: `MergeFont(...) unless LookupValue('LISTINGS_INLINE')` — an
+    // inline listing gets no background fill. Perl does NOT clear
+    // LISTINGS_BACKGROUND here; the `assign_value(None)` below is a Rust-only
+    // workaround so a *non*-inline listing doesn't leak its background to later
+    // listings. Guarding the whole body on `!inline` (rather than just the
+    // merge) keeps that for block listings while leaving the global value intact
+    // when an inline listing runs first — so a following block listing still
+    // renders its background, matching Perl.
+    if lookup_value("LISTINGS_INLINE").is_none() {
+      if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
+        && let Some(c) = with(bg, common::color::Color::from_stored) {
+          merge_font(Font { bg: Some(c), ..Font::default() });
+        }
+      // Clear after use so subsequent listings don't inherit
+      assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
+    }
   });
 
   // Rule color handler

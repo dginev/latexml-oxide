@@ -1,13 +1,13 @@
 //! Stub for semantic.sty (proof tree / inference rules + ligatures).
 //!
-//! semantic.sty L?: \TestForConflict{\@ifnext, ...} checks if our LaTeX
-//! kernel-defined `\@ifnext` is already defined, then errors via
-//! \@ifdefinable with the "redefined" message. Our LaTeXML kernel
-//! pre-binds \@ifnext (latex_constructs.rs: Let!("\\@ifnext",
-//! "\\@ifnextchar")), so semantic.sty bails with
-//! `Package Semantic Error: The 1 command(s) listed above have been
-//! redefined.` Pre-undefine those CSes so semantic's TestForConflict
-//! check passes silently. Witness 2403.04708.
+//! semantic.sty L?: \TestForConflict{\@ifnext, ...} checks if any of
+//! those CSes are already defined, then errors via \@ifdefinable with
+//! the "redefined" message: `Package Semantic Error: The N command(s)
+//! listed above have been redefined.` Pre-undefine them so semantic's
+//! TestForConflict check passes silently. Witness 2403.04708.
+//! NOTE: upstream #2833 removed the kernel `Let('\@ifnext','\@ifnextchar')`
+//! alias, so `\@ifnext` is no longer kernel-bound — its pre-undefine below
+//! is now a defensive no-op (kept for robustness alongside the others).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
