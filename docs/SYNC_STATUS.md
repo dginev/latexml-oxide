@@ -177,7 +177,7 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   `dirtytalk_test` green; keyval override (`[left={«},right={»}]` → `«hi»`) smoke-validated
   via the faithful `ExpansionBody::Closure` (incl. the `IsEmpty` guard); clippy clean.
 
-### U2. ⬜ PR #2798 "Leavehorizontal" (`24d39b55`) — LARGE CORE REFACTOR (XL; stage as a sub-mission)
+### U2. ✅ PR #2798 "Leavehorizontal" (`24d39b55`) — COMPLETE (2026-06-26, 1470/0; merged to `upstream-sync-prs`)
 - **What:** two coupled rewrites + a wide application layer (75 files,
   +1172/−902; ignore the CI-only `windows.yml`):
   - **(A) TeX-faithful mode / `leaveHorizontal`.** In real TeX, beginning a
@@ -515,6 +515,39 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     divergence and document it against the new upstream form.
 - **Complexity:** **S** (color macros; the rest is verify/divergence-note).
 - **Tests:** none new; ensure tcolorbox/quantikz/color regressions stay green.
+
+### U10. ✅ PR #2833 "Remove \@ifnext, use \@ifnextchar" (`346279c9`) — LANDED (2026-06-26)
+- **What:** `\@ifnext` was a kernel alias `Let('\@ifnext','\@ifnextchar')` (with a
+  `# ????` comment). The PR drops the alias and calls `\@ifnextchar` directly in
+  its two use sites: `\@caption` (`latex_constructs.pool`) and `\@captionof`
+  (`caption.sty`). Behaviour-preserving (they were aliased).
+- **Rust port (this branch):** 3 edits — `latex_constructs.rs` `\@caption`
+  body `\@ifnext`→`\@ifnextchar` + removed `Let!("\\@ifnext","\\@ifnextchar")`;
+  `caption_sty.rs` `\@captionof` body `\@ifnext`→`\@ifnextchar`. Also updated the
+  `semantic_sty.rs` header comment: it pre-undefines `\@ifnext` (semantic.sty's
+  `\TestForConflict` errors on kernel-defined CSes, witness 2403.04708) — with the
+  alias gone that pre-undefine is now a defensive no-op (kept). No other bare
+  `\@ifnext` users (`\@ifnext@n` is a separate macro, retained).
+- **Complexity:** **S** (mechanical, behaviour-preserving).
+
+### U11. ✅ PR #2832 "initial \multicolumn content starts the new column" (`bc90e36c`) — N/A in Rust (verified)
+- **What:** Perl inserts a `\relax` between `\lx@alignment@altcolumn{template}`
+  and the cell `$tokens` in `\lx@alignment@multicolumn` (`TeX_Tables.pool`), so an
+  initial `\multicolumn`'s content starts the new column rather than being absorbed
+  by the template scan in `\halign`'s `\span`/`\omit` mechanics.
+- **Rust state:** **no code change needed.** Rust's `\lx@alignment@multicolumn`
+  (`tex_tables.rs:570`) is structurally divergent — it does NOT use
+  `\lx@alignment@altcolumn`; it inlines the column template directly (p/m/b → VBox
+  via `\lx@tabular@p`; normal → `before_cell` + body + `after_cell`) and digests
+  via the custom `alignment_bindings` processor, not real `\halign` `\span`
+  mechanics. The `\relax` boundary the PR adds guards a TeX gullet-scanning
+  subtlety that does not exist in that path. **Verified:** Rust output is byte-
+  identical to cb455179 Perl (which has the fix) across initial-`\multicolumn`
+  edge cases (bordered bold head, empty cell, 2-col span, math content). Adding a
+  `\relax` would risk regressing the matched output for zero benefit. Documented
+  as a structural divergence; revisit only if a real initial-multicolumn
+  divergence surfaces.
+- **Complexity:** **S** (verify + divergence-note; no code).
 
 ## Methodology & the cortex cross-join
 
