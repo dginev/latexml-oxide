@@ -336,19 +336,30 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
     begin_enum_itemize(&ln, &ln, kv.as_ref())
   });
 
-  let before_digest_end: BeforeDigestClosure = Rc::new(|| {
-    digest(Tokens!(T_CS!("\\par")))?;
-    Ok(Vec::new())
-  });
+  // Perl #2798: a block list ends with \par; an INLINE list must NOT \par
+  // (it would break the surrounding paragraph) — mirrors the standard
+  // itemize*/enumerate*/description* inline envs, which carry no before_digest_end.
+  let before_digest_end: Vec<BeforeDigestClosure> = if is_inline {
+    Vec::new()
+  } else {
+    vec![Rc::new(|| {
+      digest(Tokens!(T_CS!("\\par")))?;
+      Ok(Vec::new())
+    })]
+  };
 
   let after_digest_body: DigestionClosure =
     Rc::new(|whatsit: &mut Whatsit| end_enum_itemize(whatsit));
 
   let options = ConstructorOptions {
-    mode: Some("internal_vertical".into()),
+    // Perl #2798: inline lists are inline blocks (internal_vertical but NO
+    // leaveHorizontal — they stay inside the surrounding paragraph).
+    mode: Some(
+      if is_inline { "inline_internal_vertical" } else { "internal_vertical" }.into(),
+    ),
     locked: true,
     properties,
-    before_digest_end: vec![before_digest_end],
+    before_digest_end,
     after_digest_body: vec![after_digest_body],
     ..Default::default()
   };
@@ -472,7 +483,9 @@ LoadDefinitions!({
         begin_enum_itemize("inline@itemize", "@item", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      mode => "internal_vertical"
+      // Perl #2798: inline lists are inline blocks — internal_vertical but NO
+      // leaveHorizontal (they stay inside the surrounding paragraph).
+      mode => "inline_internal_vertical"
     );
     DefEnvironment!("{enumerate*} OptionalKeyVals:enumitem",
       "<ltx:inline-enumerate xml:id='#id'>#body</ltx:inline-enumerate>",
@@ -481,7 +494,8 @@ LoadDefinitions!({
         begin_enum_itemize("inline@enumerate", "enum", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      mode => "internal_vertical"
+      // Perl #2798: inline lists stay inside the surrounding paragraph.
+      mode => "inline_internal_vertical"
     );
     DefEnvironment!("{description*} OptionalKeyVals:enumitem",
       "<ltx:inline-description xml:id='#id'>#body</ltx:inline-description>",
@@ -490,7 +504,8 @@ LoadDefinitions!({
         begin_enum_itemize("inline@description", "@desc", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      mode => "internal_vertical"
+      // Perl #2798: inline lists stay inside the surrounding paragraph.
+      mode => "inline_internal_vertical"
     );
   }
 

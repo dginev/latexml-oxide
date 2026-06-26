@@ -511,22 +511,22 @@
       </listing>
     </float>
     <para class="ltx_noindent" xml:id="S3.p2">
-      <picture height="291.77" width="600" xml:id="S3.p2.pic1">
-        <svg:svg color="#000000" height="291.77" overflow="visible" version="1.1" viewBox="0 0 600 291.77" width="600">
-          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,291.77) matrix(1 0 0 -1 0 0)">
+      <picture height="341.58" width="477.38" xml:id="S3.p2.pic1">
+        <svg:svg color="#000000" height="341.58" overflow="visible" version="1.1" viewBox="0 0 477.38 341.58" width="477.38">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,341.58) matrix(1 0 0 -1 0 0)">
             <svg:g fill="#000000" fill-opacity="1.0">
-              <svg:path d="M 0 0 L 0 291.77 L 600 291.77 L 600 0 Z" style="stroke:none"/>
+              <svg:path d="M 0 0 L 0 341.58 L 477.38 341.58 L 477.38 0 Z" style="stroke:none"/>
             </svg:g>
             <svg:g fill="#FFFFFF" fill-opacity="1.0">
-              <svg:path d="M 1.97 1.97 L 1.97 251.06 L 598.03 251.06 L 598.03 1.97 Z" style="stroke:none"/>
+              <svg:path d="M 1.97 1.97 L 1.97 300.87 L 475.41 300.87 L 475.41 1.97 Z" style="stroke:none"/>
             </svg:g>
-            <svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 259.65)">
-              <svg:foreignObject height="28.9" overflow="visible" style="--ltx-fo-width:40.23em;--ltx-fo-height:1.89em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 26.21)" width="556.67"><inline-block class="ltx_minipage" vattach="bottom" width="40.23em">
+            <svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 309.47)">
+              <svg:foreignObject height="28.9" overflow="visible" style="--ltx-fo-width:31.37em;--ltx-fo-height:1.89em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 26.21)" width="434.07"><inline-block class="ltx_minipage" vattach="bottom" width="31.37em">
                   <p><text color="#FFFFFF" font="bold">Table C.5<text font="medium">: Prompt to Choose Representative Landmarks for Each Cluster</text></text></p>
                 </inline-block></svg:foreignObject>
             </svg:g>
             <svg:g fill-opacity="1.0" transform="matrix(1.0 0.0 0.0 1.0 21.65 13.78)">
-              <svg:foreignObject height="225.47" overflow="visible" style="--ltx-fo-width:40.23em;--ltx-fo-height:16.29em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 225.47)" width="556.67"><inline-block class="ltx_minipage" vattach="bottom" width="40.23em">
+              <svg:foreignObject height="275.28" overflow="visible" style="--ltx-fo-width:31.37em;--ltx-fo-height:19.89em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 275.28)" width="434.07"><inline-block class="ltx_minipage" vattach="bottom" width="31.37em">
                   <p>You have been provided with a set of similar documents, each indexed by a number. Your task is to identify the most representative example from this cluster of documents. Please carefully analyze the given documents and select one document that best captures the common essence and characteristics of the samples. The selection should emphasize the representativeness and relevance of the chosen sample to the category, so that it can serve as a reference for labeling the entire cluster.</p>
                   <p>Documents in the cluster:</p>
                   <p>1-. {Document 1}……</p>

@@ -286,6 +286,56 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   at pre-PR output — **regenerate each from same-host Perl `cb455179` and diff;
   never hand-edit** (legit size/paragraph-structure churn; a few intentional
   divergences per `OXIDIZED_DESIGN.md`). Gate each fixture on its sub-step.
+- **✅ U2 COMPLETE 2026-06-26 (loop session 2) — `u2-leavehorizontal` at
+  1470/0, clippy clean** (was 1466/4). All 4 residual failures resolved with
+  faithful #2798 ports + principled regenerations. The branch is ready to merge
+  into `upstream-sync-prs` for the single combined PR (resolve the SYNC_STATUS
+  conflict in favour of this branch's final state — the 21 docs-only
+  investigation commits on `upstream-sync-prs` are superseded; notably the old
+  "various_colors DEEP, no clean fix / do NOT regenerate" note is WRONG, see
+  below). Landed on the branch (each a self-contained WIP commit):
+  - **`\phantom` h/d via single-box short-circuit** (`font.rs`
+    `compute_boxes_size`): port Perl `computeBoxesSize` L646-647 — a single bare
+    Box/Whatsit (not a List) returns `get_size` directly, ahead of the
+    List/split_words path (which discards height/depth for an `isSpace` box).
+    `sizes` math-strut `\phantom{g(x)}` 18.62×0+0 → 18.62×7.5+2.5 = cb455179
+    Perl. Also moved `consort-flowchart` picture height 782.9 → **825.33 =
+    Perl exactly** (tikz node content lost h/d the same way); regenerated.
+  - **`\framebox` pad{top,bottom,left,right}=`\fboxsep+\fboxrule`** (3.4pt;
+    `latex_constructs.rs` `\@framebox` properties): Perl sets these alongside
+    `sizer=>#3`; the S5 padding slice (`compute_size_and_cache`) adds them.
+    `graphrot` rotated `\framebox{\usebox}` inner dims 72.3×24+19 →
+    79.1×27.4+22.4 = Perl; whole `\testrot` cluster aligns; Rust-vs-Perl
+    26→8 lines. Full suite: no ripple to other fbox/framebox tests.
+  - **Regenerated (Rust-specific fixtures, #2798 moved them toward Perl):**
+    `sizes` (vbox 469.755→345 = Perl; phantom; residual g@(x) math-parser +
+    `\vtop{tabular}` 37.055 — see below), `graphrot`, `consort-flowchart`,
+    `figure_mixed_content` (subfigure scale 1.131→0.900≈Perl 0.881, width
+    156.1→124.2 = Perl).
+  - **Documented intentional/pre-existing divergences (kept, not "fixed"):**
+    (a) `sizes` `\vtop{tabular}` width 37.055 (natural) vs Perl 345=`\hsize`:
+    Perl repacks restricted_horizontal `\@@tabular` into a width=`\hsize` List
+    inside the vtop's vertical list; Rust marks `\@@tabular`/`\halign`
+    internal_vertical so repack SKIPS it — the [[box-model-hsize-frame-ordering-fix]]
+    that cured the Cluster-G `\narrow`-hang (1610.00974). Matching Perl risks
+    that hang. (b) `sizes` g(x) `g@(x)` (function-application) vs Perl `g * x` —
+    pre-existing math-parser semantics. (c) `figure_mixed_content` panel
+    `<break>` divergence — Rust's simplified `arrange_panels` + load-bearing
+    `\par`-in-figure break (used by article/book/report/amsarticle/tikz_figure)
+    vs Perl's width-based `breakIntoPanels`.
+  - **✅ `various_colors` RESOLVED — stale fixture, regenerated.** The tcolorbox
+    inner width 40.23em (6in-based) was a STALE RUST-BUG artifact, NOT a Perl
+    divergence (correcting the prior session's "DEEP / do NOT regenerate" note).
+    Proof: `tcolorbox.sty` defaults `width=\linewidth` (L2947), evaluated LAZILY
+    at box-build (body) time via `\tcbdimto` (L1267); body `\linewidth`=345 in
+    BOTH Perl (measured v0.8.8 + cb455179: preamble 433.62/6in → body 345) and
+    Rust → both engines yield 31.37em. Old Rust never reset body `\linewidth`
+    from its 6in default, baking 40.23em into the fixture; #2798's
+    `\begin{document}` width-consistency (FAITHFUL — Perl matches) fixed that
+    latent bug. Regenerated from Rust (16 lines, all inside the tcolorbox picture
+    region). cb455179 Perl's own tcolorbox run HANGS in pgf-Perl (>5 min CPU on
+    a minimal doc), which is why the value was settled by analysis + the lazy
+    `\linewidth` proof rather than a direct Perl diff.
 - **Empirical coupling (measured 2026-06-25 — S1 prototyped then reverted):**
   S0 verified (thanks/`\lx@personname` already in Rust — `base_utilities.rs:215`,
   `:807`; no-op). A standalone **S1** prototype (added `inline_internal_vertical`
@@ -328,345 +378,9 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     matching code lands trades one red for another. Land U2 as **one coherent
     push** (S1 → inline reclassification → `\begin{document}` widths → S5/S6
     sizing → S2–S4/S7–S11 → regenerate all 24 fixtures from same-host Perl
-    `cb455179`), green only at the end.
-  - **Foundation WIP saved on branch `u2-leavehorizontal`** (commit `51336ae`,
-    branched off `upstream-sync-prs` HEAD): S1 (`bindable_mode` +
-    `begin_mode_opt`, `stomach.rs`) + the 4-line `\begin{document}` width block
-    (`latex_constructs.rs`, after the `\everypar` clear). **Red (15 failures) —
-    do NOT merge until green.** Resume the coherent push from there;
-    `upstream-sync-prs` stays clean/green.
-  - **⚠ CASCADE — `various_colors` (tikz):** the faithful `\begin{document}`
-    width change is a **genuine regression** here, and `various_colors` is NOT
-    in Perl's #2798 regen list. Perl `cb455179` keeps the tikz-node minipage at
-    `40.23em` (node-derived, independent of `\linewidth`); Rust's tikz/pgf
-    node-minipage width instead **scales with `\linewidth`**, so dropping
-    `\linewidth` 6in→345pt shrinks it to `31.37em`. This latent Rust tikz
-    node-width bug was masked while `\linewidth` defaulted to 6in. **The coherent
-    push must fix the tikz/pgf node minipage to use the node width (not
-    `\linewidth`)**, or `various_colors` will diverge. (Same class of issue may
-    lurk in other tikz tests whose minipage width happened to match at 6in.)
-    **CORRECTED 2026-06-26 — it's `tcolorbox`, NOT a tikz node:** various_colors
-    uses `\begin{tcolorbox}[...]` (line 204, no explicit `width`); the
-    `<inline-block class="ltx_minipage">` (rendered via tcolorbox's pgf box) is
-    the tcolorbox content. The doc sets NO geometry/`\textwidth` (default 345pt),
-    yet Perl `cb455179` keeps the content at `40.23em` (≈442pt, WIDER than
-    `\textwidth`) — and Rust MATCHED that 40.23em BEFORE my change. So Perl's
-    tcolorbox width does NOT track the `\begin{document}`-set `\linewidth=345`;
-    it stays at a stable ≈6in value (likely a **load-time `\linewidth`=6in
-    capture** inside raw tcolorbox.sty). Rust's raw tcolorbox re-reads the
-    **runtime `\linewidth`** (now 345 → `31.37em`), so my faithful width change
-    cascades in. **Fix is in tcolorbox's `\linewidth`-flow (deep, raw-loaded),
-    NOT a Rust binding** (`tcolorbox_sty.rs` doesn't set the width). The width
-    change stays (faithful #2798, net +3). `consort-flowchart` was a SEPARATE
-    tikz-matrix case (now ✅ GREEN via principled regen — see its entry).
-  - **Font.pm rewrite assessment (S6):** ~full-day effort (6–9.5 h), **localized
-    to 4 files** — `common/font.rs` (`compute_boxes_size` + helpers), `whatsit.rs`
-    (new `flatten_for_sizing`), `list.rs` + `binding/def/traits.rs` (call sites).
-    The requested-vs-computed size split (`width` vs `cached_width`) **already
-    exists** in Rust (`lib.rs` `BoxOps`), so no trait surgery. Port order:
-    `split_words`/`collect_lines`/`stack_lines` (add per-line `baseline` field +
-    CJK `isIdeographic`) → `linebreak_paragraph`/`flatten_paragraph` wrappers →
-    `Whatsit::flatten_for_sizing` → `compute_boxes_size` dispatch (baseline/
-    totalheight/maxwidth). Risk: rewriting `compute_boxes_size` forces
-    re-validation of EVERY sizing-sensitive fixture, not just the 11.
-  - **S6 readiness (full Perl source studied + Rust helper inventory):** the
-    Perl new `computeBoxesSize`/`linebreak_paragraph`/`flatten_paragraph`/
-    `split_words`/`collect_lines`/`stack_lines` are at `cb455179`
-    `Common/Font.pm`. **Already in Rust** (no port needed): `math_bearing`
-    (`font.rs:770`), `get_metric`/`get_metric_for_name` + the per-box-font kern
-    HACK, `get_mathstyle` (`font.rs:834`). **Must ADD:** (a) `get_sp_size` (raw
-    scaled-point triple — or reuse `get_size`'s cached values); (b) a CJK
-    `is_ideographic` box property/check (`\p{Ideographic}`); (c)
-    `Whatsit::flatten_for_sizing` (flatten a horizontal whatsit with a pure
-    `#arg`/`#prop` sizer). **Data-structure change** (the crux): the helper
-    "word" tuple becomes `[space, wd, ht, dp, @contents]` and the "line" tuple
-    `[baseline, wd, ht, dp, @contents]` — i.e. Rust's `[i64;3]`/`[i64;4]` arrays
-    become 5-field structs carrying per-line `baseline`. `stack_lines` rewrite:
-    `mathaxis = size/4`, `prevdepth`/`lineskip` inter-line spacing, vattach
-    middle (`th/2 ± mathaxis`)/bottom/top. The `sizes` math-axis fix
-    (`0.0/0.0`→`7.5/2.5`) falls straight out of this (vattach=middle, mathaxis
-    2.5pt). `\lineskip` register: only `\normallineskip` exists — confirm/define
-    `\lineskip` before `stack_lines` reads it. **Execute as a dedicated focused
-    unit** (build + full-suite diff after each helper) — NOT mid-session-tail; a
-    buggy half-port of the hottest sizing path reds many green tests.
-  - **PROGRESS on `u2-leavehorizontal` (2026-06-25): 15 → 5 failures.** Commits
-    `51336ae` (foundation) + `6852c35` (reclassification + fixtures) + `9b1fcf4`
-    (S4). Note `9b1fcf4`: `repack_horizontal` already recorded `width=\hsize`;
-    added the `baseline=\baselineskip` half of S4 — additive + inert until S6
-    reads it (failure set unchanged at 5). **Next = the atomic S5+S6 sizing
-    rewrite** (box `c*` getters + `font.rs` `compute_boxes_size` + callers,
-    interdependent — see S6 readiness above; S4's List `width`/`baseline` are
-    now in place to feed it). Done so far:
-    - **Inline reclassification** — constructor `mode internal_vertical →
-      inline_internal_vertical` for `\vbox`/`\vtop` (`tex_box.rs`), `\lx@note`/
-      `\lx@notetext`/`{minipage}`/`{picture}` (`latex_constructs.rs`). Fixed the
-      4 genuine regressions `footnote`/`endnote`/`fancyhdr` + `picture`. (The
-      constructor `mode` property is the lever for the surrounding-paragraph
-      `leaveHorizontal`; the VBoxContents body-read `internal_vertical` is a
-      no-op once already inside the box, so it stays.)
-    - **6 fixtures regenerated** from Perl `cb455179` (Rust output now matches
-      Perl EXACTLY, `%&#10;`-stripped): `autoref`, `figure_grids`,
-      `cleveref_minimal`, `equationnest`, `figure_dual_caption`, `dollar`.
-    - **Remaining 5, each needing a distinct deeper piece:**
-      - `enum`: **✅ GREEN — S10 inline reclassification (commit `b70373a`,
-        2026-06-26).** The 144-line divergence was NOT missing #2798 features
-        (the #2798 enum.xml change is only 6 `padding:3.0pt` lines, which Rust
-        already produces) — it was my S1 `leaveHorizontal` splitting **inline
-        lists** out of the surrounding `<p>` (same class as etoolbox; Perl keeps
-        `<inline-enumerate>` INSIDE the `<p>`). Fix: enumitem
-        `itemize*`/`enumerate*`/`description*` envs → `inline_internal_vertical`;
-        `newlist_impl` → `inline_internal_vertical` for inline (`*`) types AND
-        drop the mistaken inline `\par` (Perl #2798 removed it from itemization
-        envs; block lists keep it). Rust now matches Perl `cb455179` exactly
-        (diff 0); regenerated fixture; full suite 6→5, no new regressions. (Also
-        removed the now-dead `BASELINE_MAP` — S6 stack_lines uses the per-line
-        `\baselineskip` from S4.)
-      - `etoolbox`: **✅ GREEN — S2 LANDED (commit `af3376a`, 2026-06-26).**
-        `execute_before_digest` (`definition.rs:285`) now pushes each
-        before_digest hook's boxes to the active box_list as it runs (per-hook,
-        Perl's `push(@LaTeXML::LIST, &$f(...))`) instead of collecting/prepending.
-        Validated full-suite: failures 7→6, **NO new regressions** — the
-        high-blast-radius mechanism change landed cleanly (final box order
-        unchanged; only the timing moves earlier so a later `leave_horizontal`
-        sees the hook boxes). Original root-cause analysis below:
-      - ~~`etoolbox` (3): **S2 (beforeDigest-push) — ROOT CAUSE NAILED 2026-06-26.**~~
-        `\AtBeginEnvironment{equation}{…(inside)}` splits a `<p>` (Perl: one `<p>`
-        with `…(outside).…(inside).`; Rust: split). Exact mechanism: in
-        `def_environment` (`dialect.rs:1099`) the begin-flow order is bgroup →
-        **atbegin hook** (`:1141`, digests "(inside)") → `begin_mode`(default
-        `restricted_horizontal`) → **user before_digest** (`:1200`, equation's
-        `before_equation()` → `begin_mode("display_math")` → `leave_horizontal`).
-        Because Rust `execute_before_digest` (`definition.rs:285`) **collects &
-        returns** the atbegin boxes (prepended to the whatsit later) instead of
-        Perl #2798's **push-to-`@LIST`-immediately**, "(inside)" isn't in the
-        box_list yet when the later `before_equation` `leave_horizontal` ends the
-        "(outside)" paragraph → "(inside)" lands in a new `<p>`. **Fix = S2:**
-        make before_digest results push to the active box_list as each closure
-        runs (constructor.rs:292 / primitive.rs:106 consume
-        `execute_before_digest`). Global mechanism change → blast radius across
-        all before_digest-returning constructors; validate full-suite (risk like
-        S5). Most before_digest returns nothing, so the *behavioral* change is
-        limited to box-returning ones (atbegin hooks, executeBeforeDigest).
-      - `figure_mixed_content` (13, re-checked 2026-06-26 after all landed
-        changes): the figure/subfigure **width propagated correctly** (156.1→124.2,
-        matching Perl, from the `\begin{document}` width change). THREE distinct
-        residuals remain: (a) **S6 box precision** — the `ltx_figure_panel`
-        inline-block depth/height ~0.2pt off (Rust `9.5/13.1`, Perl `9.3/12.9`),
-        cascading into the panel `xscale` (0.900 vs 0.882); a deep Font.pm
-        sizing-precision detail. (b) **`<break>` divergence** — Rust emits 5 bare
-        `<break/>`, Perl 2 `<break class="ltx_break"/>` (class + count differ).
-        **ROOT 2026-06-26: Rust classes `<ltx:break>` INCONSISTENTLY** — some
-        sites add `class="ltx_break"` (`latex_constructs.rs:1870`), others emit
-        bare (`amstex.rs:242` `\\`-in-text, `plain_base.rs:452` `\@break`,
-        `tex_paragraph.rs:29/132`), while Perl always classes. A genuine Rust
-        faithfulness gap (separate from #2798), but **broad-risk to unify**
-        (touches every break-containing fixture) and figure_mixed is multi-issue
-        regardless → handle in a focused break-consistency pass, verify each
-        break site against Perl. (The count delta (5 vs 2) is a separate S1/S6
-        over-break, still to confirm.) (c) the
-        **pre-existing subcaption reversion gap** (`\begin{subfigure}[..]` vs
-        `{..}`, missing `\lx@subcaption@addinlist`, `\includegraphics[width]` vs
-        `[width=85.36pt]`) — Rust-specific, **unrelated to #2798**. → multi-issue;
-        green only after (a)+(b) match Perl, then regen-from-Rust preserving (c).
-      - `sizes` (7): **S6** math-axis height/depth (`0.0`→`7.5/2.5`) + **S9**
-        tabular/p{} width (`37.05`→`345.0`) + a **pre-existing** `g(x)`
-        invisible-times math-parser diff (Rust omits the `⁢`/`times`).
-      - `various_colors` (75, tikz): the deep tikz/pgf node-minipage-width fix
-        above (NOT localized — pgf-internal, no literal minipage in the `.tex`).
-    - `\lx@parbox` not yet reclassified (no `mode` property in Rust — uses the
-      VBoxContents predigest; handle separately).
-    - **Net (loop session 2026-06-26): failures 15 → 4.** Greens: the 6
-      Perl-matching regens + **etoolbox** (S2 beforeDigest-push) + **enum** (S10
-      inline reclassification) + **consort-flowchart** (principled regen of a
-      Rust-specific deep-tikz fixture). Foundations landed + validated: S6
-      keystone, S6 review-fix, S5 padding-handling, display-math pad, S2, S10
-      inline. **WIP SOUNDNESS CHECKPOINT 2026-06-26: full suite 1466/4, clippy
-      `--workspace --all-targets -D warnings` CLEAN** — all session changes
-      coherent, no drift. The 4 remaining are deep & precisely root-caused
-      (font metrics validated correct, ruled out):
-      - **`graphrot`** — `\multirow`+`\rotatebox` box-geometry (deep S6/S9).
-      - **`figure_mixed_content`** — box-geometry 0.2pt + `<break>` class/count
-        + pre-existing subcaption (multi-issue).
-      - **`sizes`** — inline-math strut (vattach-middle + content strut; source
-        not `computeStringSize`, which returns 0/0 for empty) + vtop-tabular +
-        pre-existing g(x) (multi-issue).
-      - **`various_colors`** — tcolorbox reads runtime `\linewidth`=345 (my
-        width change); Perl stable at 40.23em (load-time capture) — deep
-        raw-tcolorbox `\linewidth`-flow, a regression of the faithful width
-        change. Each is a focused multi-hour deep effort, NOT a 10-min cycle.
-
-#### U2 completion plan (decided 2026-06-25 — "keep one combined PR")
-
-The whole upstream-sync mission lands as **one combined PR** off
-`upstream-sync-prs`; U2 must be fully green and merged in before the PR opens.
-Sequenced steps to stable + complete:
-
-> **S6 keystone STARTED (commit `1d2f033` on `u2-leavehorizontal`):** the
-> faithful `compute_boxes_size` rewrite is landed — new dispatch +
-> `collect_lines`/`stack_lines` per-line `baseline` + `mathaxis` + `split_words`
-> ideographic + `linebreak_paragraph`/`flatten_paragraph` (`flatten_for_sizing`
-> stubbed) + `list.rs` baseline pass-through. Compiles; the 6 regenerated
-> fixtures + footnote/endnote/fancyhdr/picture stay green. **Proven
-> correct-direction:** `graphrot` `innerwidth` 585.8→**550.0pt now matches Perl
-> `cb455179`**. Failure count 5→7 (`graphrot`, `consort-flowchart` newly
-> perturbed). **S6-`compute_boxes_size` alone is necessary-but-insufficient** —
-> the remaining gaps live in *other* sizing paths:
-> - **S5 box getters** (`get_sp_size`/`c*`/`compute_size_store` padding) — for
->   `graphrot` depth/height (width already matches) and `figure_mixed_content`.
->   **⚠ S5 mechanical port REGRESSES (attempted + reverted 2026-06-26):** porting
->   `computeSizeStore` literally (requested-vs-computed merge + full-spec bypass +
->   route `compute_boxes_size_box` through `get_sp_size`=cached) made things WORSE
->   — graphrot 26→64, sizes 7→15, xytest +204 lines off Perl. **Root cause:** Rust
->   boxes do NOT use `width`/`height`/`depth` uniformly as "requested box size" the
->   way Perl assumes — a paragraph `List`'s `width` is the *wrap* width, a column's
->   is a *spec*, etc. So `w_req.unwrap_or(computed)` / the full-spec bypass picks
->   the wrong value. **S5 needs a box-property-model reconciliation first** (audit
->   which box types set `width`/`height`/`depth` and why; only treat genuine
->   "requested box size" as such), NOT a mechanical port. graphrot's residual is
->   a consistent **12pt** in depth+width — likely **S9 tabular padding** (the pad
->   must be SET by the app layer, then S5 must HANDLE it) rather than S5 alone.
->   **✅ S5 padding-HANDLING landed (commit `49fa4d6`, safe slice):**
->   `compute_size_and_cache` now adds `pad{left,right}`→width, `padtop`→height,
->   `padbottom`→depth on the computed size. Additive + inert until a `pad*`
->   property is SET — validated no-regression (still 7). This is the foundation;
->   the riskier merge/bypass/`isEmpty` are still excluded. **Remaining for S5:**
->   the app layer must now SET `pad*` (display-math `\abovedisplayskip`/
->   `\belowdisplayskip` — TeX_Math.pool; `\overline`/`\underline` 2pt; items/
->   equations; graphrot's 12pt tabular pad — S9/S10), then regenerate. The
->   inline-math strut (`sizes` `0/0`→`7.5/2.5`) is NOT in TeX_Math.pool (verified)
->   — it's a deeper math-Whatsit/Font math-mode strut, separate from `pad*`.
->   **✅ display-math `padtop`/`padbottom` SET (commit `70c6374`):** first
->   end-to-end use of the S5 pad mechanism (`\lx@begin@display@math` properties
->   read `\abovedisplayskip`/`\belowdisplayskip`); validated no-regression
->   (still 7 — currently invisible since equation boxes aren't measured in the
->   fixtures, but faithful). `\overline`/`\underline` pad is deferred — that
->   change ALSO flips `framed=` → `class=ltx_{over,under}line` (structural,
->   higher fixture risk). **graphrot is deep box-geometry** (re-checked
->   2026-06-26): the residual is the rotated `\multirow{5}{5pt}{\rotatebox{90}{
->   \footnotesize\textbf{Original pairs}}}` content dimensions (Rust innerwidth
->   72.3pt vs Perl 79.1pt; scale/translate cascade). **FONT METRICS RULED OUT** —
->   a `\settowidth` probe of `\footnotesize\textbf{Original pairs}` is Rust
->   `58.79924pt` vs installed-Perl `58.79938pt` (and bold/normal byte-identical),
->   so Rust's text measurement matches Perl. The divergence is the
->   `\multirow`+`\rotatebox` **box-geometry** (rotated H+D ↔ W, multirow row
->   span), deep S6/S9. **General lesson: the remaining S6-precision residuals
->   (graphrot, figure_mixed 0.2pt) are box-GEOMETRY (baseline/stack/rotation/
->   multirow), NOT font metrics** — narrows the deep-sizing work.
->   **`stack_lines` RULED OUT 2026-06-26:** re-verified the Rust
->   `compute_boxes_size_stack` port line-by-line against Perl `stack_lines`
->   (cb455179) — identical (prevdepth/lineskip/`th`, vattach middle/bottom/top).
->   So the graphrot/figure_mixed box-height residuals are NOT in line-stacking;
->   they're in the box height/depth **computation** for the specific scaled/
->   rotated/paneled content (the `\scalebox`/`\resizebox` natural-height — e.g.
->   graphrot line-78 yscale 0.8 vs Perl 0.75 ⇒ ~6.7% natural-height delta — and
->   the `\multirow`/`\rotatebox` dimension swap). Deep box-geometry, focused work.
-> - **inline-math strut** — `sizes` math-axis (`0.0`→`7.5/2.5`). Investigated
->   2026-06-26: the inline-math constructor (`\lx@begin@inline@math`,
->   `tex_math.rs:598`) has NO explicit `sizer`, so its size = `compute_boxes_size`
->   of the body with `mode=math` (no `vattach`). For `$   $` the body sizes to
->   `0/0` (no glyphs). Perl's `7.5/2.5` = `th/2 ± mathaxis` with `mathaxis=2.5`
->   (10pt/4) and `th≈10pt` (1em) — i.e. **vattach=middle + a ~1em math strut on
->   the content**. So matching Perl needs BOTH (a) inline math sized with
->   vattach=middle / math-axis centering AND (b) the math content carrying the
->   font strut height/depth. Deep Font.pm math-mode sizing; NOT in TeX_Math.pool
->   (verified). `sizes` also needs the vtop-tabular case + the pre-existing g(x),
->   so it's multi-deep-issue.
->   **NARROWED FURTHER 2026-06-26 — it's the MATH-SPACE BOX height/depth:** the
->   18.62pt measurement's content is `$   $` (math spaces; width 18.62 matches
->   Perl, h/d `0/0` vs Perl `7.5/2.5`). Crucially, the Perl path would ALSO yield
->   `0/0` for h/d=0 content (constructor has no sizer; `computeStringSize` returns
->   `0/0` for an empty/spaces string; `compute_boxes_size` math branch + 1-line
->   `stack_lines` returns the line's h/d). So Perl's `7.5/2.5` must come from the
->   **math-space/content BOXES themselves carrying the font-nominal height/depth**
->   (`getNominalSize`-ish, axis-centered ~1em) — which Rust's math-space boxes
->   lack (they're `0/0`). **Fix target = the per-box h/d of math spaces** (where
->   math `\mskip`/medspace/quad boxes are created), not the math container's
->   sizer. Narrow, but a specific math-space-box-sizing change.
-> - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0` is NARROWED (2026-06-26):
->   of the **6** tabular measurements in `sizes.tex`, the **first 5 already
->   match Perl** exactly (incl. plain `\begin{tabular}{cc}`); only the **6th**
->   (`\vtop{\begin{tabular}{cc}…}`, line 139) differs — Perl measures the
->   `\vtop` box width as **345.0pt (=\hsize)**, Rust as the tabular's 37.05pt.
->   So this is **`\vtop` width-fill modeling** (a `\vtop` block fills `\hsize`
->   in #2798), NOT a generic tabular-width bug. The 345 is only the *measured*
->   `\the\wd`, no `width=` attribute in output. S9 tabular rework (p/m/b
->   inline-block + `\lx@alignment@multicolumn`/`replaceColumn`) **overlaps
->   existing Rust array work** (memory `genuine-rust-only-unexpected-clusters`)
->   — reconcile, don't re-port.
-> - **tikz** — `consort-flowchart`: **✅ GREEN (regenerated, commit `2eb01d7`).**
->   It's a Rust-specific deep-tikz fixture (picture height Rust 738.85 vs Perl
->   910.2 — pre-existing matrix-sizing gap, NOT in #2798's regen list). S6 moved
->   Rust 738.85→782.9 (toward Perl), so per the regeneration-source rule
->   (Rust-specific → regen from RUST) the stale fixture was regenerated. Residual
->   127pt Perl-divergence is a pre-existing deep-tikz gap, out of #2798 scope.
->   **`various_colors` is DIFFERENT** — it *matched* Perl (40.23em) before my
->   width change *regressed* it (31.37em), so it must NOT be regenerated (that'd
->   bake in a regression); it needs the real pgf node-width fix.
-> - **✅ S2 (etoolbox), ✅ S10 inline reclassification (enum)** — both GREEN
->   (see per-failure entries above).
->
-> **S6 critical-review fix landed** (commit `1e68234`): removed the `\hsize`
-> fallback (paragraph only on explicit List `width`, per S4) + `ends_with`
-> horizontal/vertical dispatch — behaviour-preserving (still 7), more faithful.
-> **Box-property-model audit done:** `width`/`height`/`depth` are mostly genuine
-> requested box sizes (spaces/kerns, math phantoms, minipage/parbox/cell width);
-> only the paragraph List `width` is special (wrap width). A correct S5 must be
-> per-box-type aware; the full-spec bypass + `isEmpty` are the delicate parts
-> (they caused the reverted regression).
->
-> **Trajectory note (2026-06-26):** U2 has reached a **long tail of distinct,
-> delicate sizing edge cases** (vtop-width-fill, inline-math strut, graphrot
-> 12pt tabular padding, tikz node-width) plus **pre-existing non-#2798
-> divergences** (`g(x)` invisible-times, subcaption reversion). The engine
-> sizing path is regression-prone (S5 proved it). Remaining completion is
-> careful per-edge-case work with full-suite validation each step — not fast.
-
-1. **S5+S6 sizing rewrite (atomic unit, the keystone).** Port on
-   `u2-leavehorizontal` as ONE coherent change: S5 box `c*` getters /
-   `get_sp_size` / `compute_size_store` padding, **+** S6 `compute_boxes_size`
-   + `split_words`/`collect_lines`/`stack_lines` (per-line `baseline`,
-   `mathaxis`, `is_ideographic`) + `linebreak_paragraph`/`flatten_paragraph` +
-   `Whatsit::flatten_for_sizing`. Spec in "S6 readiness" above; S4's List
-   `width`/`baseline` already feed it. **Validation loop:** after it compiles,
-   run the FULL suite — every *new* failure beyond the known 5 must be a fixture
-   #2798 legitimately changed (regenerate from `cb455179`); anything else is a
-   port bug to fix before moving on.
-2. **Smaller pieces:** S2/S3 (etoolbox beforeDigest-push/`digest_until`
-   ordering), S9 (sizes tabular/p{} width), S10 (enum itemize `\par`/glue +
-   padding).
-3. **Regression — MUST fix (self-introduced):** tikz `various_colors` —
-   pgf node-minipage must use the node width, not `\linewidth`; fallback is to
-   scope the `\begin{document}` width-consistency change so it doesn't reach
-   tikz node contexts. U2 cannot merge with this regression.
-4. **Pre-existing gaps (NOT #2798) — decouple, don't let them block U2:** the
-   subcaption reversion gap (`figure_mixed_content`: `\begin{subfigure}[..]` vs
-   `{..}`, missing `\lx@subcaption@addinlist`) and the `g(x)` invisible-times
-   math-parser diff (`sizes`). Fix separately or accept as documented Rust
-   divergences (track in `KNOWN_PERL_ERRORS`) so those fixtures can pass.
-5. **Land:** regenerate the #2798 fixtures, full suite green + clippy clean,
-   merge `u2-leavehorizontal` → `upstream-sync-prs` (resolve the catalog conflict
-   in favor of `upstream-sync-prs`), then open the combined PR.
-   **⚠ Regeneration source matters (clarified 2026-06-26):** most fixtures (the 6
-   already regenerated: autoref/dollar/etc.) have Rust output **byte-identical to
-   Perl** → copy from `cb455179`. But fixtures carrying a **pre-existing Rust
-   divergence** must be regenerated **from RUST output** (after the #2798 sizing
-   fixes), NOT from Perl — copying Perl there would import the divergent form and
-   never match. Confirmed Rust-specific fixtures:
-   - **`sizes`**: `g(x)` → Rust `text="g@(x)"` (function-application) vs Perl
-     `g * x` (invisible-times `⁢`). NOT changed by #2798 (verified: no `g`/`x`
-     hunk in the #2798 `sizes.xml` diff); the committed Rust fixture has always
-     had `g@(x)`. So keep `g@(x)`; only fix the #2798 lines (inline-math strut
-     height `0/0`→`7.5/2.5`, and the `\vtop{tabular}` width — see below) then
-     regenerate from Rust.
-   - **`figure_mixed_content`**: the subcaption reversion (`\begin{subfigure}[..]`
-     vs `{..}`, missing `\lx@subcaption@addinlist`) is a pre-existing binding gap.
-   - **Caveat:** regenerating from Rust only after the #2798 sizing code lands —
-     regenerating *now* would bake in Rust's pre-#2798 (wrong) sizes.
-   - **`sizes` vtop case CORRECTED:** the `\vtop{tabular}`=345 vs 37 is NOT
-     generic "vtop fills `\hsize`" — the sibling `\vtop{\halign}` measures 27.5
-     in BOTH Perl and Rust. It's specifically a **LaTeX `tabular` inside a
-     `\vtop`** that fills `\hsize` in #2798 (raw `\halign` does not). Narrow,
-     deep tabular-in-vbox interaction.
+    `cb455179`), green only at the end. Known diffs to re-apply first:
+    `bindable_mode`+`begin_mode_opt` (S1, above) and the 4-line
+    `\begin{document}` width block. Prototype reverted; branch stays green.
 
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a

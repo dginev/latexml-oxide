@@ -21,7 +21,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Table 1</tag>
     </tags>
-    <inline-block class="ltx_figure_panel" depth="12.0pt" height="16.5pt" width="156.1pt" xscale="1.13120171431794" xtranslate="9.1pt" yscale="1.13120171431794" ytranslate="-1.7pt">
+    <inline-block class="ltx_figure_panel" depth="9.5pt" height="13.1pt" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.3pt">
       <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
         <tbody>
           <tr>
@@ -35,7 +35,7 @@
         </tbody>
       </tabular>
     </inline-block>
-    <inline-block class="ltx_figure_panel" depth="12.0pt" height="16.5pt" width="156.1pt" xscale="1.13120171431794" xtranslate="9.1pt" yscale="1.13120171431794" ytranslate="-1.7pt">
+    <inline-block class="ltx_figure_panel" depth="9.5pt" height="13.1pt" width="124.2pt" xscale="0.900015259021897" xtranslate="-6.9pt" yscale="0.900015259021897" ytranslate="1.3pt">
       <tabular class="ltx_minipage" vattach="middle" width="138.0pt">
         <tbody>
           <tr>
@@ -59,7 +59,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}[433.62pt]\includegraphics[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\end{subfigure}&amp;\begin{subfigure}[433.62pt]\includegraphics[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
+    <p class="ltx_figure_panel"><Math mode="inline" tex="\begin{array}[]{cc}\begin{subfigure}[345.0pt]\includegraphics[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(a)}}{}}}\@@caption{{\lx@tag[ ]{{\small(a)}}{\small}}}\end{subfigure}&amp;\begin{subfigure}[345.0pt]\includegraphics[width]{../graphics/none.png} \@@toccaption{{\lx@tag[ ]{{(b)}}{}}}\@@caption{{\lx@tag[ ]{{\small(b)}}{\small}}}\end{subfigure}\end{array}" text="Array[[absent, absent]]" xml:id="S0.F1.m1">
         <XMath>
           <XMArray role="ARRAY" vattach="middle">
             <XMRow>
@@ -99,7 +99,7 @@
     <p>Testing <ref labelref="LABEL:array:subfig1"/> and <ref labelref="LABEL:array:subfig2"/> inside <ref labelref="LABEL:array:fig"/>.</p>
     <pagination role="newpage"/>
   </para>
-  <figure align="center" class="ltx_minipage" float="right" framed="top" inlist="loa" placement="H" vattach="middle" width="433.6pt" xml:id="alg1">
+  <figure align="center" class="ltx_minipage" float="right" framed="top" inlist="loa" placement="H" vattach="middle" width="345.0pt" xml:id="alg1">
     <tags>
       <tag><text font="bold">Algorithm 1</text></tag>
       <tag role="refnum">1</tag>
@@ -236,6 +236,7 @@
       <break class="ltx_break"/>
       <p class="ltx_figure_panel">.</p>
       <break class="ltx_break"/>
+      <break/>
       <enumerate class="ltx_figure_panel" xml:id="S0.I3">
         <item xml:id="S0.I3.i1">
           <tags>
@@ -262,6 +263,7 @@
           </XMath>
         </Math></p>
       <break class="ltx_break"/>
+      <break/>
       <equation class="ltx_figure_panel" xml:id="S0.Ex2">
         <Math mode="display" tex="E=mc^{2}" text="E = m * c ^ 2" xml:id="S0.Ex2.m1">
           <XMath>
@@ -377,6 +379,7 @@
         </equation>
       </equationgroup>
       <break class="ltx_break"/>
+      <break/>
       <quote class="ltx_figure_panel">
         <p>Quote me later</p>
       </quote>

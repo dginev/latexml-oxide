@@ -664,6 +664,10 @@ fn bindable_mode(umode: &str) -> Option<&'static str> {
   match umode {
     "text" | "restricted_horizontal" => Some("restricted_horizontal"),
     "vertical" | "internal_vertical" => Some("internal_vertical"),
+    // Perl #2798: inline_internal_vertical binds to internal_vertical but does
+    // NOT leaveHorizontal (inline blocks: \vbox/\vtop/\parbox/minipage/picture/
+    // footnotes) — see begin_mode_opt.
+    "inline_internal_vertical" => Some("internal_vertical"),
     "math" | "inline_math" => Some("math"),
     "display_math" => Some("display_math"),
     _ => None,
@@ -680,6 +684,18 @@ pub fn begin_mode(mode: &str) -> Result<()> { begin_mode_opt(mode, false) }
 /// When `noframe` is true, no stack frame is pushed (the caller already did bgroup).
 pub fn begin_mode_opt(mode: &str, noframe: bool) -> Result<()> {
   if let Some(bound_mode) = bindable_mode(mode) {
+    // Perl #2798: beginning a vertical or display-math mode ends the current
+    // paragraph first (leaveHorizontal), UNLESS the *user* mode is an inline
+    // form (inline_internal_vertical / inline_math) — inline blocks must not
+    // break the surrounding paragraph. `leave_horizontal` is itself a no-op
+    // unless mid-paragraph (MODE==horizontal), so this only fires when a
+    // vertical/display construct is encountered inside a paragraph.
+    let is_display = bound_mode.starts_with("display");
+    let is_vertical = is_display || bound_mode.contains("vertical");
+    let is_inline = mode.contains("inline");
+    if is_vertical && !is_inline {
+      leave_horizontal()?;
+    }
     if !noframe {
       push_stack_frame(false); // Effectively bgroup
     }
@@ -899,9 +915,16 @@ pub fn repack_horizontal() {
     // Perl: List(@para, mode => 'horizontal') — set mode property string
     // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
     list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
-    // Perl: $list->setProperty(width => LookupRegister('\hsize')) if $mode eq 'horizontal';
+    // Perl #2798 (S4): a finished paragraph List records BOTH the fill width
+    // (\hsize) and the \baselineskip, so the sizing pass (compute_boxes_size)
+    // can line-break and stack with the right inter-line spacing.
+    //   $list->setProperty(width    => LookupDimension('\hsize'));
+    //   $list->setProperty(baseline => LookupDimension('\baselineskip', 1));
     if let Some(hsize) = lookup_dimension("\\hsize") {
       list.set_property("width", hsize);
+    }
+    if let Some(baseline) = lookup_dimension("\\baselineskip") {
+      list.set_property("baseline", baseline);
     }
     stomach.box_list.push(Digested::from(list));
   }

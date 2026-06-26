@@ -485,18 +485,53 @@ pub trait BoxOps: Object {
     })
   }
 
-  /// computes and caches (via named properties) the size of a box-like object
+  /// computes and caches (via named properties) the size of a box-like object.
+  /// Perl #2798 (S5, padding slice): after computing the size, add any requested
+  /// `pad{top,bottom,left,right}` to the computed dimensions. This is the SAFE
+  /// part of `computeSizeStore` — additive and inert until the app layer sets a
+  /// `pad*` property (display math `\abovedisplayskip`/`\belowdisplayskip`,
+  /// `\overline`/`\underline` 2pt, items/equations). The riskier requested-vs-
+  /// computed merge + full-spec bypass + `isEmpty` are deliberately NOT included
+  /// here — a mechanical port of those regressed (Rust boxes don't use
+  /// width/height/depth uniformly as "requested box size"); see SYNC_STATUS U2.
   fn compute_size_and_cache(
     &mut self,
     mut options: HashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
-    for key in ["width", "height", "depth", "vattach", "layout"] {
+    for key in [
+      "width", "height", "depth", "vattach", "layout", "totalheight", "padtop", "padbottom",
+      "padleft", "padright",
+    ] {
       if let Some(v) = self.get_property(key) {
         options.insert(key, v.into_owned());
       }
     }
 
-    let (w, h, d) = self.compute_size(options)?;
+    let (mut w, mut h, mut d) = self.compute_size(options.clone())?;
+    // Perl: add requested padding to the computed size.
+    fn pad_sp(s: Option<&Stored>) -> i64 {
+      match s {
+        Some(Stored::Dimension(d)) => d.value_of(),
+        Some(Stored::Glue(g)) => g.value_of(),
+        Some(Stored::Int(i)) => *i,
+        _ => 0,
+      }
+    }
+    let (padl, padr, padt, padb) = (
+      pad_sp(options.get("padleft")),
+      pad_sp(options.get("padright")),
+      pad_sp(options.get("padtop")),
+      pad_sp(options.get("padbottom")),
+    );
+    if padl != 0 || padr != 0 {
+      w = Dimension::new(w.value_of() + padl + padr);
+    }
+    if padt != 0 {
+      h = Dimension::new(h.value_of() + padt);
+    }
+    if padb != 0 {
+      d = Dimension::new(d.value_of() + padb);
+    }
 
     if !self.has_property("cached_width") {
       self.set_property("cached_width", w);
