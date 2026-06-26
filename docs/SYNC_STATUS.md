@@ -445,6 +445,16 @@ Sequenced steps to stable + complete:
 >   "requested box size" as such), NOT a mechanical port. graphrot's residual is
 >   a consistent **12pt** in depth+width — likely **S9 tabular padding** (the pad
 >   must be SET by the app layer, then S5 must HANDLE it) rather than S5 alone.
+>   **✅ S5 padding-HANDLING landed (commit `49fa4d6`, safe slice):**
+>   `compute_size_and_cache` now adds `pad{left,right}`→width, `padtop`→height,
+>   `padbottom`→depth on the computed size. Additive + inert until a `pad*`
+>   property is SET — validated no-regression (still 7). This is the foundation;
+>   the riskier merge/bypass/`isEmpty` are still excluded. **Remaining for S5:**
+>   the app layer must now SET `pad*` (display-math `\abovedisplayskip`/
+>   `\belowdisplayskip` — TeX_Math.pool; `\overline`/`\underline` 2pt; items/
+>   equations; graphrot's 12pt tabular pad — S9/S10), then regenerate. The
+>   inline-math strut (`sizes` `0/0`→`7.5/2.5`) is NOT in TeX_Math.pool (verified)
+>   — it's a deeper math-Whatsit/Font math-mode strut, separate from `pad*`.
 > - **math-Whatsit `getSize`** — `sizes` math-axis (`0.0`→`7.5/2.5`) does NOT go
 >   through `compute_boxes_size`; it's the inline-math box sizer.
 > - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0` is NARROWED (2026-06-26):
