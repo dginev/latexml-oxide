@@ -298,20 +298,39 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     etc.) aren't yet reclassified to `inline_internal_vertical`, so they wrongly
     `leaveHorizontal`. **Fix = the S9/S10 inline reclassification**, after which
     their existing fixtures pass again.
-  - **7 sizing-coupled regens** — `dollar`, `autoref`, `enum`, `equationnest`,
-    `figure_mixed_content`, `picture`, `sizes` — **are** in Perl's regen list
-    (legit #2798 churn). Their regenerated Perl fixtures carry the new
-    paragraph-structure **and** the new `width/height/depth`/padding/`baseline`
-    size attributes, so Rust cannot match them until the **S5/S6 Box.pm/Font.pm
-    sizing rewrite** lands. Regenerating them before S5/S6 just trades one red
-    for another (Rust's intermediate sizes ≠ Perl's).
-  - **Conclusion: U2 is test-atomic.** No proper subset of S1–S11 reproduces the
-    combined-state fixtures — the +303 Font.pm rewrite (S6) is on the critical
-    path for 7 of the 11. Land U2 as **one coherent push** (S1→S11 + reclassify
-    inline blocks + regenerate all 24 fixtures from same-host Perl `cb455179`),
-    reaching green only at the end; do **not** commit a partial S1 (it leaves
-    the tree red). The S1 diff is small and known (above) — re-apply it first
-    when the coherent push begins. Prototype reverted; branch stays green.
+  - **7 legit regens** — `dollar`, `autoref`, `enum`, `equationnest`,
+    `figure_mixed_content`, `picture`, `sizes` — **are** in Perl's regen list.
+    Per-fixture root cause (Perl diffs are tiny, 4–14 lines each), which
+    refines the earlier "all need S6" claim:
+    - `dollar` (4), `equationnest` (8): **pure spacing** — the `leaveHorizontal`
+      paragraph effect drops a space (`</equation> t`→`</equation>t`). S1 only.
+    - `autoref` (4), `figure_mixed_content` (10): **width consistency** —
+      minipage/figure width `433.6pt`→`345.0pt`. Root cause: Rust DefRegisters
+      `\columnwidth`/`\linewidth` = `6in` (=**433.62pt**) and never resets them;
+      #2798's `\begin{document}` adds `\columnwidth=\hsize=\linewidth=\textwidth`
+      (=`345pt`). Found: Perl `latex_constructs.pool` `\begin{document}` handler
+      (diff L139–142); Rust target `latex_constructs.rs:3107` (right after the
+      `\everypar` clear). The figure_mixed inline-block scale change cascades
+      from this width (124.2/156.1 = 345/433.6). **Width fix only, no Font.pm.**
+    - `sizes` (8): widths→`345.0` (width consistency) **plus** one genuine
+      math-axis change (`18.62154pt x 0.0pt + 0.0pt`→`x 7.5pt + 2.5pt`) — that
+      one needs **S6** math-axis height/depth.
+    - `enum` (14): tags gain `cssstyle="padding:3.0pt"` — needs **S5** Box pad
+      props + `\lx@tag` sizing.
+    - `picture` (14): `innerwidth` text-label widths shrink ~8% — needs **S6**
+      text word-width measurement.
+  - **So the dependency is narrower than first stated:** S1 + the inline
+    reclassification + the `\begin{document}` width-consistency clear 4–6 of the
+    11 on their own; only `picture`, the `sizes` math-axis line, and `enum`
+    padding truly require the S5/S6 sizing work. **But it is still test-atomic
+    for COMMIT purposes** — applying any one piece (even the width clear alone)
+    turns its fixtures red until regenerated, and regenerating before the
+    matching code lands trades one red for another. Land U2 as **one coherent
+    push** (S1 → inline reclassification → `\begin{document}` widths → S5/S6
+    sizing → S2–S4/S7–S11 → regenerate all 24 fixtures from same-host Perl
+    `cb455179`), green only at the end. Known diffs to re-apply first:
+    `bindable_mode`+`begin_mode_opt` (S1, above) and the 4-line
+    `\begin{document}` width block. Prototype reverted; branch stays green.
 
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
