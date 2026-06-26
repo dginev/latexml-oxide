@@ -3444,7 +3444,8 @@ LoadDefinitions!({
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{}[]{}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
-  mode         => "internal_vertical",
+  // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
+  mode         => "inline_internal_vertical",
   before_digest => {
     neutralize_font(); },
   properties   => sub [args] {
@@ -3487,7 +3488,8 @@ LoadDefinitions!({
   // classification in SYNC_STATUS — this is the surpass-Perl path).
   DefConstructor!("\\lx@notetext OptionalSemiverbatim {} [] {}",
   "^<ltx:note role='#role' mark='#mark' xml:id='#id'>#4</ltx:note>",
-  mode       => "internal_vertical",
+  // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
+  mode       => "inline_internal_vertical",
   properties => sub [args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -8883,7 +8885,8 @@ LoadDefinitions!({
       }
       Ok(())
     },
-    mode => "internal_vertical",
+    // Perl #2798: minipage is an inline block — internal_vertical, no leaveHorizontal.
+    mode => "inline_internal_vertical",
     before_digest => {
       digest(Tokens!(T_CS!("\\@minipagetrue")))?;
     },
@@ -9049,7 +9052,8 @@ LoadDefinitions!({
       fill='none' stroke='none' unitlength='#unitlength'>\
       ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
     </ltx:picture>",
-    mode => "internal_vertical",
+    // Perl #2798: picture is an inline block — internal_vertical, no leaveHorizontal.
+    mode => "inline_internal_vertical",
     before_digest => {
       // Perl: before_picture — Let \raisebox to \pic@raisebox
       Let!("\\raisebox", "\\pic@raisebox");
