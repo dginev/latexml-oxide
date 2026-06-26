@@ -421,6 +421,25 @@ The whole upstream-sync mission lands as **one combined PR** off
 `upstream-sync-prs`; U2 must be fully green and merged in before the PR opens.
 Sequenced steps to stable + complete:
 
+> **S6 keystone STARTED (commit `1d2f033` on `u2-leavehorizontal`):** the
+> faithful `compute_boxes_size` rewrite is landed — new dispatch +
+> `collect_lines`/`stack_lines` per-line `baseline` + `mathaxis` + `split_words`
+> ideographic + `linebreak_paragraph`/`flatten_paragraph` (`flatten_for_sizing`
+> stubbed) + `list.rs` baseline pass-through. Compiles; the 6 regenerated
+> fixtures + footnote/endnote/fancyhdr/picture stay green. **Proven
+> correct-direction:** `graphrot` `innerwidth` 585.8→**550.0pt now matches Perl
+> `cb455179`**. Failure count 5→7 (`graphrot`, `consort-flowchart` newly
+> perturbed). **S6-`compute_boxes_size` alone is necessary-but-insufficient** —
+> the remaining gaps live in *other* sizing paths:
+> - **S5 box getters** (`get_sp_size`/`c*`/`compute_size_store` padding) — for
+>   `graphrot` depth/height (width already matches) and `figure_mixed_content`.
+> - **math-Whatsit `getSize`** — `sizes` math-axis (`0.0`→`7.5/2.5`) does NOT go
+>   through `compute_boxes_size`; it's the inline-math box sizer.
+> - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0`.
+> - **tikz node-width** — `consort-flowchart` (committed Rust fixture already
+>   ~199 lines off Perl: deep tikz) + `various_colors`; same cascade class.
+> - **S2/S3** (etoolbox ordering), **S5/S10** (enum padding/itemize).
+
 1. **S5+S6 sizing rewrite (atomic unit, the keystone).** Port on
    `u2-leavehorizontal` as ONE coherent change: S5 box `c*` getters /
    `get_sp_size` / `compute_size_store` padding, **+** S6 `compute_boxes_size`
