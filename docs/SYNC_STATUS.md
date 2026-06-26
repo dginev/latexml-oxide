@@ -500,9 +500,30 @@ Sequenced steps to stable + complete:
    `{..}`, missing `\lx@subcaption@addinlist`) and the `g(x)` invisible-times
    math-parser diff (`sizes`). Fix separately or accept as documented Rust
    divergences (track in `KNOWN_PERL_ERRORS`) so those fixtures can pass.
-5. **Land:** regenerate all 24 #2798 fixtures from `cb455179`, full suite green
-   + clippy clean, merge `u2-leavehorizontal` → `upstream-sync-prs` (resolve the
-   catalog conflict in favor of `upstream-sync-prs`), then open the combined PR.
+5. **Land:** regenerate the #2798 fixtures, full suite green + clippy clean,
+   merge `u2-leavehorizontal` → `upstream-sync-prs` (resolve the catalog conflict
+   in favor of `upstream-sync-prs`), then open the combined PR.
+   **⚠ Regeneration source matters (clarified 2026-06-26):** most fixtures (the 6
+   already regenerated: autoref/dollar/etc.) have Rust output **byte-identical to
+   Perl** → copy from `cb455179`. But fixtures carrying a **pre-existing Rust
+   divergence** must be regenerated **from RUST output** (after the #2798 sizing
+   fixes), NOT from Perl — copying Perl there would import the divergent form and
+   never match. Confirmed Rust-specific fixtures:
+   - **`sizes`**: `g(x)` → Rust `text="g@(x)"` (function-application) vs Perl
+     `g * x` (invisible-times `⁢`). NOT changed by #2798 (verified: no `g`/`x`
+     hunk in the #2798 `sizes.xml` diff); the committed Rust fixture has always
+     had `g@(x)`. So keep `g@(x)`; only fix the #2798 lines (inline-math strut
+     height `0/0`→`7.5/2.5`, and the `\vtop{tabular}` width — see below) then
+     regenerate from Rust.
+   - **`figure_mixed_content`**: the subcaption reversion (`\begin{subfigure}[..]`
+     vs `{..}`, missing `\lx@subcaption@addinlist`) is a pre-existing binding gap.
+   - **Caveat:** regenerating from Rust only after the #2798 sizing code lands —
+     regenerating *now* would bake in Rust's pre-#2798 (wrong) sizes.
+   - **`sizes` vtop case CORRECTED:** the `\vtop{tabular}`=345 vs 37 is NOT
+     generic "vtop fills `\hsize`" — the sibling `\vtop{\halign}` measures 27.5
+     in BOTH Perl and Rust. It's specifically a **LaTeX `tabular` inside a
+     `\vtop`** that fills `\hsize` in #2798 (raw `\halign` does not). Narrow,
+     deep tabular-in-vbox interaction.
 
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
