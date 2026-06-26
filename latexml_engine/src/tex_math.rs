@@ -573,7 +573,19 @@ LoadDefinitions!({
       // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
       begin_mode("display_math")?;
     },
-    properties   => { stored_map!("mode" => "display_math") },
+    // Perl #2798: display math carries padtop=\abovedisplayskip,
+    // padbottom=\belowdisplayskip — the S5 padding mechanism adds these to the
+    // equation box's computed height/depth.
+    properties   => sub[_args] {
+      let mut props = stored_map!("mode" => "display_math");
+      if let Some(rv) = lookup_register("\\abovedisplayskip", Vec::new())? {
+        props.insert("padtop", Stored::from(rv));
+      }
+      if let Some(rv) = lookup_register("\\belowdisplayskip", Vec::new())? {
+        props.insert("padbottom", Stored::from(rv));
+      }
+      Ok(props)
+    },
     capture_body => true);
 
   DefConstructor!(T_CS!("\\lx@end@display@math"), None, None,
