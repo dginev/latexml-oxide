@@ -284,14 +284,25 @@ pub trait Definition: Object {
 
   fn execute_before_digest(&self) -> Result<Vec<Digested>> {
     local_state_unlocked(true);
-    let mut before_digested = Vec::new();
+    // Perl #2798 (S2): executeBeforeDigest pushes each hook's result DIRECTLY
+    // onto the active @LaTeXML::LIST as it runs, rather than collecting them to
+    // be prepended later. This lets a *later* before_digest side-effect see the
+    // earlier hooks' boxes in the current list — e.g. `\AtBeginEnvironment{
+    // equation}{…}` digests its text into the paragraph BEFORE the equation's
+    // own `before_equation` does `begin_mode("display_math")` → leave_horizontal,
+    // so the hook text stays in the (outside) paragraph instead of splitting off.
+    // The final box order is unchanged (these boxes still precede the whatsit,
+    // which the caller appends and the digestion loop pushes afterwards); only
+    // the *timing* moves earlier. Returns nothing.
     if let Some(pre_list) = self.before_digest() {
       for pre in pre_list.iter() {
-        before_digested.extend(pre()?);
+        for bx in pre()? {
+          crate::stomach::push_box_list(bx);
+        }
       }
     }
     expire_state_unlocked();
-    Ok(before_digested)
+    Ok(Vec::new())
   }
   fn execute_after_digest(&self, whatsit: &mut Whatsit) -> Result<Vec<Digested>> {
     local_state_unlocked(true);
