@@ -544,9 +544,17 @@ Sequenced steps to stable + complete:
 >   inline-block + `\lx@alignment@multicolumn`/`replaceColumn`) **overlaps
 >   existing Rust array work** (memory `genuine-rust-only-unexpected-clusters`)
 >   — reconcile, don't re-port.
-> - **tikz node-width** — `consort-flowchart` (committed Rust fixture already
->   ~199 lines off Perl: deep tikz) + `various_colors`; same cascade class.
-> - **S2/S3** (etoolbox ordering), **S5/S10** (enum padding/itemize).
+> - **tikz** — `consort-flowchart`: **✅ GREEN (regenerated, commit `2eb01d7`).**
+>   It's a Rust-specific deep-tikz fixture (picture height Rust 738.85 vs Perl
+>   910.2 — pre-existing matrix-sizing gap, NOT in #2798's regen list). S6 moved
+>   Rust 738.85→782.9 (toward Perl), so per the regeneration-source rule
+>   (Rust-specific → regen from RUST) the stale fixture was regenerated. Residual
+>   127pt Perl-divergence is a pre-existing deep-tikz gap, out of #2798 scope.
+>   **`various_colors` is DIFFERENT** — it *matched* Perl (40.23em) before my
+>   width change *regressed* it (31.37em), so it must NOT be regenerated (that'd
+>   bake in a regression); it needs the real pgf node-width fix.
+> - **✅ S2 (etoolbox), ✅ S10 inline reclassification (enum)** — both GREEN
+>   (see per-failure entries above).
 >
 > **S6 critical-review fix landed** (commit `1e68234`): removed the `\hsize`
 > fallback (paragraph only on explicit List `width`, per S4) + `ends_with`
