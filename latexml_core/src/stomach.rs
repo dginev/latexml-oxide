@@ -915,9 +915,16 @@ pub fn repack_horizontal() {
     // Perl: List(@para, mode => 'horizontal') — set mode property string
     // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
     list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
-    // Perl: $list->setProperty(width => LookupRegister('\hsize')) if $mode eq 'horizontal';
+    // Perl #2798 (S4): a finished paragraph List records BOTH the fill width
+    // (\hsize) and the \baselineskip, so the sizing pass (compute_boxes_size)
+    // can line-break and stack with the right inter-line spacing.
+    //   $list->setProperty(width    => LookupDimension('\hsize'));
+    //   $list->setProperty(baseline => LookupDimension('\baselineskip', 1));
     if let Some(hsize) = lookup_dimension("\\hsize") {
       list.set_property("width", hsize);
+    }
+    if let Some(baseline) = lookup_dimension("\\baselineskip") {
+      list.set_property("baseline", baseline);
     }
     stomach.box_list.push(Digested::from(list));
   }
