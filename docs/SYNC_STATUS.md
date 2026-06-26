@@ -371,17 +371,29 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   error-clean and raw-loads the host `causets.sty` (`Loading causets.sty…`),
   body renders; clippy clean.
 
-### U8. ⬜ PR #2824 "do not add frame and background to inline listings" (`a6f6316f`)
+### U8. ✅ PR #2824 "do not add frame and background to inline listings" (`a6f6316f`) — LANDED
 - **What:** `\lstinline` / `\begin{lstinline}` now set `LISTINGS_INLINE => 1`;
   `\lst@@@set@frame` and `\lst@@@set@background` skip the frame/background when
   `LISTINGS_INLINE` is set (inline listings shouldn't get a box frame/bg).
 - **Perl:** `listings.sty.ltxml` — `\lx@lstinline` (~L58), `\begin{lstinline}`
   (~L94), `\lst@@@set@frame` (~L929), `\lst@@@set@background` (~L958).
-- **Rust target:** `listings_sty.rs` — set `LISTINGS_INLINE` in `\lx@lstinline`
-  (L1952) and the `lstinline` environment (L2061); guard the frame/background
-  constructors (search `LISTINGS_FRAME` L2862 / `LISTINGS_BACKGROUND`) on it.
+- **Rust port (this branch):** set `LISTINGS_INLINE` (local to the inline
+  bgroup) in `\lx@lstinline` (after `lst_activate`, before reading the
+  delimiter) and the `lstinline` environment; `\lst@@@set@frame` returns an
+  empty `frame` prop when inline (constructor already skips an empty `framed=`).
+  For `\lst@@@set@background`, guarded the **entire** body on `!inline` — not
+  just the `merge_font`. Perl never clears `LISTINGS_BACKGROUND`; Rust's
+  `assign_value(None)` is a workaround so a *block* listing doesn't leak its bg
+  to later listings. Guarding the clear too keeps that workaround for block
+  listings while leaving the global value intact when an inline listing runs
+  first, so a **following block listing still renders its background** (verified
+  by repro: global `\lstset{frame=single,backgroundcolor=\color{yellow}}` →
+  inline gets neither, the next block listing gets both — matching Perl). A
+  naive merge-only guard regressed that case.
 - **Complexity:** **S–M.**
-- **Tests:** none new (existing `listing` fixture exercises inline forms).
+- **Tests:** none new — `53_alignment` `listing` suite (9 tests) unchanged-green
+  (matches upstream: #2824 had no Perl fixture change); error-clean; clippy
+  clean; behaviour confirmed by the inline-vs-block repro above.
 
 ### U9. ✅ PR #2783 "quantikz2 raw interpretation" (`cb455179`) — LANDED (color-macro residual)
 - **What:** four fixes (this PR was authored by us and partly upstreamed

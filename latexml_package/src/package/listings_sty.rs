@@ -1968,6 +1968,10 @@ LoadDefinitions!({
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
     lst_activate(kv.as_ref());
+    // Perl #2824: mark this as an inline listing (local to the bgroup) so the
+    // frame/background preamble constructors skip the box frame/bg. Set BEFORE
+    // reading the arg, matching Perl `listings.sty.ltxml:61`.
+    assign_value("LISTINGS_INLINE", Stored::Bool(true), None);
     // Read opening delimiter under NORMAL catcodes — so `{`/`}` keep
     // BEGIN/END catcodes and the standard "closing brace" pairing works
     // for `\lstinline{a_word}`-style invocations. Perl reads `$init`
@@ -2084,6 +2088,8 @@ LoadDefinitions!({
         def_macro(T_CS!("\\@currenvir"), None, Tokens!(T_OTHER!("lstlisting")), None)?;
         let text = listings_read_raw_lines("lstinline");
         let _ = &kv; // lstActivate placeholder
+        // Perl #2824: mark inline (local to the bgroup) so frame/bg are skipped.
+        assign_value("LISTINGS_INLINE", Stored::Bool(true), None);
         let mut result = Vec::new();
         if let Some(Stored::Tokens(pre)) = lookup_value("LISTINGS_PREAMBLE_BEFORE") {
           result.extend(pre.unlist());
@@ -2889,7 +2895,12 @@ LoadDefinitions!({
       }
     },
     properties => {
-      let frame = lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default();
+      // Perl #2824: inline listings get no box frame.
+      let frame = if lookup_value("LISTINGS_INLINE").is_some() {
+        String::new()
+      } else {
+        lookup_value("LISTINGS_FRAME").map(|v| v.to_string()).unwrap_or_default()
+      };
       stored_map!("frame" => Stored::String(pin(&frame)))
     });
 
@@ -2903,12 +2914,22 @@ LoadDefinitions!({
     lst_push_value_locally("LISTINGS_PREAMBLE_BEFORE", vec![T_CS!("\\lst@@@set@background")]);
   });
   DefPrimitive!("\\lst@@@set@background", {
-    if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
-      && let Some(c) = with(bg, common::color::Color::from_stored) {
-        merge_font(Font { bg: Some(c), ..Font::default() });
-      }
-    // Clear after use so subsequent listings don't inherit
-    assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
+    // Perl #2824: `MergeFont(...) unless LookupValue('LISTINGS_INLINE')` — an
+    // inline listing gets no background fill. Perl does NOT clear
+    // LISTINGS_BACKGROUND here; the `assign_value(None)` below is a Rust-only
+    // workaround so a *non*-inline listing doesn't leak its background to later
+    // listings. Guarding the whole body on `!inline` (rather than just the
+    // merge) keeps that for block listings while leaving the global value intact
+    // when an inline listing runs first — so a following block listing still
+    // renders its background, matching Perl.
+    if lookup_value("LISTINGS_INLINE").is_none() {
+      if let Some(Stored::String(bg)) = lookup_value("LISTINGS_BACKGROUND")
+        && let Some(c) = with(bg, common::color::Color::from_stored) {
+          merge_font(Font { bg: Some(c), ..Font::default() });
+        }
+      // Clear after use so subsequent listings don't inherit
+      assign_value("LISTINGS_BACKGROUND", Stored::None, Some(Scope::Global));
+    }
   });
 
   // Rule color handler
