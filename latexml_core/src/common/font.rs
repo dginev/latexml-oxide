@@ -282,13 +282,10 @@ static MATH_BEARINGS: [[i8; 8]; 8] = [
   [-1,  1, -2, -3, -1,  0, -1, -1],
 ];
 
-// Perl: Font.pm %baseline_map — used in computeStringSize() for baseline calculation
-static BASELINE_MAP: Lazy<HashMap<i64, f64>> = Lazy::new(|| {
-  raw_map!(
-    5 => 6.0, 6 => 7.0, 7 => 8.0, 8 => 9.5, 9 => 10.0, 10 => 12.0,
-    11 => 13.6, 12 => 14.0, 14 => 18.0, 17 => 22.0, 20 => 25.0, 25 => 30.0
-  )
-});
+// (Perl Font.pm %baseline_map removed with the #2798 S6 sizing rewrite:
+// `compute_boxes_size_stack` now uses the per-line baseline threaded from the
+// List's `\baselineskip` property (recorded by S4 in repack_horizontal),
+// which is the faithful #2798 source — not a static font-size→baseline map.)
 
 /// Global auxiliary for font family lookup
 pub fn lookup_font_family(code: &str) -> Option<&Font> { FONT_FAMILY.get(code) }
