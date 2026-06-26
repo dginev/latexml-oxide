@@ -555,6 +555,17 @@ Sequenced steps to stable + complete:
 >   font strut height/depth. Deep Font.pm math-mode sizing; NOT in TeX_Math.pool
 >   (verified). `sizes` also needs the vtop-tabular case + the pre-existing g(x),
 >   so it's multi-deep-issue.
+>   **NARROWED FURTHER 2026-06-26 — it's the MATH-SPACE BOX height/depth:** the
+>   18.62pt measurement's content is `$   $` (math spaces; width 18.62 matches
+>   Perl, h/d `0/0` vs Perl `7.5/2.5`). Crucially, the Perl path would ALSO yield
+>   `0/0` for h/d=0 content (constructor has no sizer; `computeStringSize` returns
+>   `0/0` for an empty/spaces string; `compute_boxes_size` math branch + 1-line
+>   `stack_lines` returns the line's h/d). So Perl's `7.5/2.5` must come from the
+>   **math-space/content BOXES themselves carrying the font-nominal height/depth**
+>   (`getNominalSize`-ish, axis-centered ~1em) — which Rust's math-space boxes
+>   lack (they're `0/0`). **Fix target = the per-box h/d of math spaces** (where
+>   math `\mskip`/medspace/quad boxes are created), not the math container's
+>   sizer. Narrow, but a specific math-space-box-sizing change.
 > - **S9 tabular/p{} width** — `sizes` `37.05`→`345.0` is NARROWED (2026-06-26):
 >   of the **6** tabular measurements in `sizes.tex`, the **first 5 already
 >   match Perl** exactly (incl. plain `\begin{tabular}{cc}`); only the **6th**
