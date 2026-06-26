@@ -409,8 +409,19 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
       Perl EXACTLY, `%&#10;`-stripped): `autoref`, `figure_grids`,
       `cleveref_minimal`, `equationnest`, `figure_dual_caption`, `dollar`.
     - **Remaining 5, each needing a distinct deeper piece:**
-      - `enum` (144-line diff): **S5** Box padding props + **S10** itemize
-        `\par`/glue rework — tags need `cssstyle="padding:3.0pt"`.
+      - `enum`: **✅ GREEN — S10 inline reclassification (commit `b70373a`,
+        2026-06-26).** The 144-line divergence was NOT missing #2798 features
+        (the #2798 enum.xml change is only 6 `padding:3.0pt` lines, which Rust
+        already produces) — it was my S1 `leaveHorizontal` splitting **inline
+        lists** out of the surrounding `<p>` (same class as etoolbox; Perl keeps
+        `<inline-enumerate>` INSIDE the `<p>`). Fix: enumitem
+        `itemize*`/`enumerate*`/`description*` envs → `inline_internal_vertical`;
+        `newlist_impl` → `inline_internal_vertical` for inline (`*`) types AND
+        drop the mistaken inline `\par` (Perl #2798 removed it from itemization
+        envs; block lists keep it). Rust now matches Perl `cb455179` exactly
+        (diff 0); regenerated fixture; full suite 6→5, no new regressions. (Also
+        removed the now-dead `BASELINE_MAP` — S6 stack_lines uses the per-line
+        `\baselineskip` from S4.)
       - `etoolbox`: **✅ GREEN — S2 LANDED (commit `af3376a`, 2026-06-26).**
         `execute_before_digest` (`definition.rs:285`) now pushes each
         before_digest hook's boxes to the active box_list as it runs (per-hook,
