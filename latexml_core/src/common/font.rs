@@ -1444,6 +1444,22 @@ impl Font {
     boxes: &[Digested],
     options: SymHashMap<Stored>,
   ) -> Result<(Dimension, Dimension, Dimension)> {
+    // Perl L646-647: `elsif ($ref =~ /^LaTeXML::Core::(?:Box|Whatsit|Alignment)$/) {
+    // return $boxes->getSize; }` — a single bare Box/Whatsit/Alignment (NOT a
+    // List) returns its getSize directly, short-circuiting ahead of the
+    // List/split_words logic. This is essential for an isSpace box carrying an
+    // explicit height/depth (e.g. `\phantom`'s XMHint): split_words keeps only
+    // its width as inter-word space and discards height/depth, but getSize honors
+    // the full width/height/depth. In Perl the dispatch is on the type of the
+    // measured object (a bare-box body, not a List); a single-element slice here
+    // is the faithful analogue (a List-of-one would still be a List in Perl).
+    if let [single] = boxes
+      && !matches!(single.data(), DigestedData::List(_))
+    {
+      let mut bx_clone = single.clone();
+      let (w, h, d, ..) = bx_clone.get_size(None)?;
+      return Ok((w, h, d));
+    }
     // Perl L638: my $mode = $boxes->getProperty('mode') || 'restricted_horizontal';
     let mode_str = match options.get("mode") {
       Some(Stored::String(s)) => arena::with(*s, |s| s.to_string()),

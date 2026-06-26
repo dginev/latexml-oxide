@@ -22,11 +22,11 @@ the phases of the trial</toccaption>
 the phases of the trial</caption>
     </figure>
     <para xml:id="p1">
-      <picture class="ltx_centering" height="782.9" width="460.99" xml:id="pic1">
-        <svg:svg height="782.9" overflow="visible" version="1.1" viewBox="0 0 460.99 782.9" width="460.99">
-          <svg:g fill="#000000" stroke="#000000" transform="translate(0,782.9) matrix(1 0 0 -1 0 0) translate(230.5,0) translate(0,359.52)">
-            <svg:g stroke-width="0.4pt" transform="matrix(1.0 0.0 0.0 1.0 -226.81 -338.67)">
-              <svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 711.66)">
+      <picture class="ltx_centering" height="825.33" width="460.99" xml:id="pic1">
+        <svg:svg height="825.33" overflow="visible" version="1.1" viewBox="0 0 460.99 825.33" width="460.99">
+          <svg:g fill="#000000" stroke="#000000" transform="translate(0,825.33) matrix(1 0 0 -1 0 0) translate(230.5,0) translate(0,412.67)">
+            <svg:g stroke-width="0.4pt" transform="matrix(1.0 0.0 0.0 1.0 -226.81 -391.82)">
+              <svg:g class="ltx_tikzmatrix" transform="matrix(1 0 0 -1 0 817.96)">
                 <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 39.3)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 59.96 0) translate(48.52,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
@@ -54,7 +54,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 142.8)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 154.61)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 59.96 0) translate(48.52,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
@@ -84,7 +84,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 229.69)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 253.32)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 59.96 0) translate(48.52,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -47.97 -22.14 h 95.94 v 44.28 h -95.94 Z"/>
@@ -97,7 +97,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 261)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 296.43)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1 0 0 -1 5.17 0) translate(103.32,0) matrix(1.0 0.0 0.0 1.0 -99.63 -2.77)">
                     <svg:foreignObject height="9.84" overflow="visible" style="--ltx-fo-width:18em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 7.69)" width="199.26"><inline-block class="ltx_minipage" vattach="top" width="18em">
                         <p/>
@@ -111,7 +111,7 @@ the phases of the trial</caption>
                       </inline-block></svg:foreignObject>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 317.21)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 364.45)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 0 0) translate(108.48,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
@@ -143,7 +143,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 403.8)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 462.85)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 11.07 0) translate(97.41,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -96.86 -38.44 h 193.72 v 76.87 h -193.72 Z"/>
@@ -173,7 +173,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 490.39)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 561.26)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 216.97 0) translate(128.17,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -107.93 -47.05 h 215.86 v 94.09 h -215.86 Z"/>
@@ -190,7 +190,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 576.98)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 659.66)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 11.07 0) translate(97.41,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -96.86 -30.13 h 193.72 v 60.27 h -193.72 Z"/>
@@ -219,7 +219,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 646.66)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 741.15)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 228.04 0) translate(117.1,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -96.86 -30.13 h 193.72 v 60.27 h -193.72 Z"/>
@@ -234,7 +234,7 @@ the phases of the trial</caption>
                     </svg:g>
                   </svg:g>
                 </svg:g>
-                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 694.5)">
+                <svg:g class="ltx_tikzmatrix_row" transform="matrix(1 0 0 1 0 800.8)">
                   <svg:g class="ltx_tikzmatrix_col ltx_nopad_l ltx_nopad_r" transform="matrix(1 0 0 -1 0 0) translate(108.48,0)">
                     <svg:g fill="#FFFFFF" stroke="#000000" stroke-width="0.8pt">
                       <svg:path d="M -107.93 -16.6 h 215.86 v 33.21 h -215.86 Z"/>
@@ -261,98 +261,98 @@ the phases of the trial</caption>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -69.8 422.83 L 16.6 422.83" style="fill:none"/>
-              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 422.83)">
+              <svg:path d="M -69.8 369.68 L 16.6 369.68" style="fill:none"/>
+              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 369.68)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 400.14 L -118.32 334.53" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 334.53)">
+              <svg:path d="M -118.32 346.99 L -118.32 281.38" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 281.38)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -69.8 307.52 L 16.6 307.52" style="fill:none"/>
-              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 307.52)">
+              <svg:path d="M -69.8 254.37 L 16.6 254.37" style="fill:none"/>
+              <svg:g transform="matrix(1.0 0.0 0.0 1.0 16.6 254.37)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 284.82 L -118.32 235.82" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 235.82)">
+              <svg:path d="M -118.32 231.67 L -118.32 182.67" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 182.67)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 186.12 L -118.32 179.18" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 179.18)">
+              <svg:path d="M -118.32 132.97 L -118.32 126.03" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 126.03)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -69.8 208.81 L 118.32 208.81 L 118.32 179.18" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 179.18)">
+              <svg:path d="M -69.8 155.66 L 118.32 155.66 L 118.32 126.03" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 126.03)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 156.53 L -118.32 149.59" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 149.59)">
+              <svg:path d="M -118.32 103.38 L -118.32 96.44" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 96.44)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 50.08 L -118.32 42.58" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 42.58)">
+              <svg:path d="M -118.32 -3.07 L -118.32 -10.57" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -10.57)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 -39.71 L -118.32 -162.52" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -162.52)">
+              <svg:path d="M -118.32 -92.86 L -118.32 -215.67" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -215.67)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M -118.32 -228.21 L -118.32 -317.19" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -317.19)">
+              <svg:path d="M -118.32 -281.36 L -118.32 -370.34" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 -118.32 -370.34)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 156.53 L 118.32 149.59" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 149.59)">
+              <svg:path d="M 118.32 103.38 L 118.32 96.44" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 96.44)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 50.08 L 118.32 42.58" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 42.58)">
+              <svg:path d="M 118.32 -3.07 L 118.32 -10.57" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -10.57)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -39.71 L 118.32 -47.21" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -47.21)">
+              <svg:path d="M 118.32 -92.86 L 118.32 -100.36" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -100.36)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -146.72 L 118.32 -154.22" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -154.22)">
+              <svg:path d="M 118.32 -199.87 L 118.32 -207.37" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -207.37)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -236.51 L 118.32 -244.01" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -244.01)">
+              <svg:path d="M 118.32 -289.66 L 118.32 -297.16" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -297.16)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
             <svg:g stroke-width="0.8pt">
-              <svg:path d="M 118.32 -309.7 L 118.32 -317.19" style="fill:none"/>
-              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -317.19)">
+              <svg:path d="M 118.32 -362.85 L 118.32 -370.34" style="fill:none"/>
+              <svg:g transform="matrix(0.0 -1.0 1.0 0.0 118.32 -370.34)">
                 <svg:path d="M 4.32 0 C 2.52 0.36 -0.72 1.08 -2.88 2.7 C -1.08 0.72 -1.08 -0.72 -2.88 -2.7 C -0.72 -1.08 2.52 -0.36 4.32 0 Z" style="stroke:none"/>
               </svg:g>
             </svg:g>
