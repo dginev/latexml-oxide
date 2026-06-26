@@ -355,6 +355,39 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     `Whatsit::flatten_for_sizing` → `compute_boxes_size` dispatch (baseline/
     totalheight/maxwidth). Risk: rewriting `compute_boxes_size` forces
     re-validation of EVERY sizing-sensitive fixture, not just the 11.
+  - **PROGRESS on `u2-leavehorizontal` (2026-06-25): 15 → 5 failures.** Commits
+    `51336ae` (foundation) + `6740cb6` (reclassification + fixtures). Done:
+    - **Inline reclassification** — constructor `mode internal_vertical →
+      inline_internal_vertical` for `\vbox`/`\vtop` (`tex_box.rs`), `\lx@note`/
+      `\lx@notetext`/`{minipage}`/`{picture}` (`latex_constructs.rs`). Fixed the
+      4 genuine regressions `footnote`/`endnote`/`fancyhdr` + `picture`. (The
+      constructor `mode` property is the lever for the surrounding-paragraph
+      `leaveHorizontal`; the VBoxContents body-read `internal_vertical` is a
+      no-op once already inside the box, so it stays.)
+    - **6 fixtures regenerated** from Perl `cb455179` (Rust output now matches
+      Perl EXACTLY, `%&#10;`-stripped): `autoref`, `figure_grids`,
+      `cleveref_minimal`, `equationnest`, `figure_dual_caption`, `dollar`.
+    - **Remaining 5, each needing a distinct deeper piece:**
+      - `enum` (144-line diff): **S5** Box padding props + **S10** itemize
+        `\par`/glue rework — tags need `cssstyle="padding:3.0pt"`.
+      - `etoolbox` (3): **S2/S3** beforeDigest-push / `digest_until` ordering —
+        an `\AtBeginEnvironment{equation}` hook splits a `<p>` one step early
+        (Perl keeps one `<p>`).
+      - `figure_mixed_content` (13): **S6** box height/depth precision (9.5 vs
+        9.3pt etc.) + a **pre-existing subcaption reversion gap** (`\begin{
+        subfigure}[..]` vs `{..}`, missing `\lx@subcaption@addinlist`,
+        `\includegraphics[width]` vs `[width=85.36pt]`) **unrelated to #2798**.
+      - `sizes` (7): **S6** math-axis height/depth (`0.0`→`7.5/2.5`) + **S9**
+        tabular/p{} width (`37.05`→`345.0`) + a **pre-existing** `g(x)`
+        invisible-times math-parser diff (Rust omits the `⁢`/`times`).
+      - `various_colors` (75, tikz): the deep tikz/pgf node-minipage-width fix
+        above (NOT localized — pgf-internal, no literal minipage in the `.tex`).
+    - `\lx@parbox` not yet reclassified (no `mode` property in Rust — uses the
+      VBoxContents predigest; handle separately).
+    - **Net:** the mode + width + reclassification foundation is proven correct
+      (10 of 15 resolved, 6 fixtures byte-match Perl). The finish needs the deep
+      core: **S6 Font.pm rewrite (full day)** + **S2/S3** + **S9 tabular** +
+      **S5/S10 itemize** + the **tikz node-width** fix + the subcaption gap.
 
 ### U3. ✅ PR #2819 "listings: create group around identifiers" (`0d748100`) — LANDED (absorbs U5)
 - **What:** in `lstSetClassStyle`, a TeX-style class now wraps its styling in a
