@@ -355,6 +355,26 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     `Whatsit::flatten_for_sizing` → `compute_boxes_size` dispatch (baseline/
     totalheight/maxwidth). Risk: rewriting `compute_boxes_size` forces
     re-validation of EVERY sizing-sensitive fixture, not just the 11.
+  - **S6 readiness (full Perl source studied + Rust helper inventory):** the
+    Perl new `computeBoxesSize`/`linebreak_paragraph`/`flatten_paragraph`/
+    `split_words`/`collect_lines`/`stack_lines` are at `cb455179`
+    `Common/Font.pm`. **Already in Rust** (no port needed): `math_bearing`
+    (`font.rs:770`), `get_metric`/`get_metric_for_name` + the per-box-font kern
+    HACK, `get_mathstyle` (`font.rs:834`). **Must ADD:** (a) `get_sp_size` (raw
+    scaled-point triple — or reuse `get_size`'s cached values); (b) a CJK
+    `is_ideographic` box property/check (`\p{Ideographic}`); (c)
+    `Whatsit::flatten_for_sizing` (flatten a horizontal whatsit with a pure
+    `#arg`/`#prop` sizer). **Data-structure change** (the crux): the helper
+    "word" tuple becomes `[space, wd, ht, dp, @contents]` and the "line" tuple
+    `[baseline, wd, ht, dp, @contents]` — i.e. Rust's `[i64;3]`/`[i64;4]` arrays
+    become 5-field structs carrying per-line `baseline`. `stack_lines` rewrite:
+    `mathaxis = size/4`, `prevdepth`/`lineskip` inter-line spacing, vattach
+    middle (`th/2 ± mathaxis`)/bottom/top. The `sizes` math-axis fix
+    (`0.0/0.0`→`7.5/2.5`) falls straight out of this (vattach=middle, mathaxis
+    2.5pt). `\lineskip` register: only `\normallineskip` exists — confirm/define
+    `\lineskip` before `stack_lines` reads it. **Execute as a dedicated focused
+    unit** (build + full-suite diff after each helper) — NOT mid-session-tail; a
+    buggy half-port of the hottest sizing path reds many green tests.
   - **PROGRESS on `u2-leavehorizontal` (2026-06-25): 15 → 5 failures.** Commits
     `51336ae` (foundation) + `6740cb6` (reclassification + fixtures). Done:
     - **Inline reclassification** — constructor `mode internal_vertical →
