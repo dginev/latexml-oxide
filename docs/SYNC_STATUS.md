@@ -437,10 +437,19 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
         all before_digest-returning constructors; validate full-suite (risk like
         S5). Most before_digest returns nothing, so the *behavioral* change is
         limited to box-returning ones (atbegin hooks, executeBeforeDigest).
-      - `figure_mixed_content` (13): **S6** box height/depth precision (9.5 vs
-        9.3pt etc.) + a **pre-existing subcaption reversion gap** (`\begin{
-        subfigure}[..]` vs `{..}`, missing `\lx@subcaption@addinlist`,
-        `\includegraphics[width]` vs `[width=85.36pt]`) **unrelated to #2798**.
+      - `figure_mixed_content` (13, re-checked 2026-06-26 after all landed
+        changes): the figure/subfigure **width propagated correctly** (156.1→124.2,
+        matching Perl, from the `\begin{document}` width change). THREE distinct
+        residuals remain: (a) **S6 box precision** — the `ltx_figure_panel`
+        inline-block depth/height ~0.2pt off (Rust `9.5/13.1`, Perl `9.3/12.9`),
+        cascading into the panel `xscale` (0.900 vs 0.882); a deep Font.pm
+        sizing-precision detail. (b) **`<break>` divergence** — Rust emits 5 bare
+        `<break/>`, Perl 2 `<break class="ltx_break"/>` (class + count differ;
+        my changes added breaks — investigate whether faithful). (c) the
+        **pre-existing subcaption reversion gap** (`\begin{subfigure}[..]` vs
+        `{..}`, missing `\lx@subcaption@addinlist`, `\includegraphics[width]` vs
+        `[width=85.36pt]`) — Rust-specific, **unrelated to #2798**. → multi-issue;
+        green only after (a)+(b) match Perl, then regen-from-Rust preserving (c).
       - `sizes` (7): **S6** math-axis height/depth (`0.0`→`7.5/2.5`) + **S9**
         tabular/p{} width (`37.05`→`345.0`) + a **pre-existing** `g(x)`
         invisible-times math-parser diff (Rust omits the `⁢`/`times`).
