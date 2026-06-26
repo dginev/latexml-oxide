@@ -467,10 +467,25 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
         above (NOT localized — pgf-internal, no literal minipage in the `.tex`).
     - `\lx@parbox` not yet reclassified (no `mode` property in Rust — uses the
       VBoxContents predigest; handle separately).
-    - **Net:** the mode + width + reclassification foundation is proven correct
-      (10 of 15 resolved, 6 fixtures byte-match Perl). The finish needs the deep
-      core: **S6 Font.pm rewrite (full day)** + **S2/S3** + **S9 tabular** +
-      **S5/S10 itemize** + the **tikz node-width** fix + the subcaption gap.
+    - **Net (loop session 2026-06-26): failures 15 → 4.** Greens: the 6
+      Perl-matching regens + **etoolbox** (S2 beforeDigest-push) + **enum** (S10
+      inline reclassification) + **consort-flowchart** (principled regen of a
+      Rust-specific deep-tikz fixture). Foundations landed + validated: S6
+      keystone, S6 review-fix, S5 padding-handling, display-math pad, S2, S10
+      inline. **WIP SOUNDNESS CHECKPOINT 2026-06-26: full suite 1466/4, clippy
+      `--workspace --all-targets -D warnings` CLEAN** — all session changes
+      coherent, no drift. The 4 remaining are deep & precisely root-caused
+      (font metrics validated correct, ruled out):
+      - **`graphrot`** — `\multirow`+`\rotatebox` box-geometry (deep S6/S9).
+      - **`figure_mixed_content`** — box-geometry 0.2pt + `<break>` class/count
+        + pre-existing subcaption (multi-issue).
+      - **`sizes`** — inline-math strut (vattach-middle + content strut; source
+        not `computeStringSize`, which returns 0/0 for empty) + vtop-tabular +
+        pre-existing g(x) (multi-issue).
+      - **`various_colors`** — tcolorbox reads runtime `\linewidth`=345 (my
+        width change); Perl stable at 40.23em (load-time capture) — deep
+        raw-tcolorbox `\linewidth`-flow, a regression of the faithful width
+        change. Each is a focused multi-hour deep effort, NOT a 10-min cycle.
 
 #### U2 completion plan (decided 2026-06-25 — "keep one combined PR")
 
