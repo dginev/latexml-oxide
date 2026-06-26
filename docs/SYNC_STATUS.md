@@ -396,7 +396,15 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     - **Remaining 5, each needing a distinct deeper piece:**
       - `enum` (144-line diff): **S5** Box padding props + **S10** itemize
         `\par`/glue rework — tags need `cssstyle="padding:3.0pt"`.
-      - `etoolbox` (3): **S2 (beforeDigest-push) — ROOT CAUSE NAILED 2026-06-26.**
+      - `etoolbox`: **✅ GREEN — S2 LANDED (commit `af3376a`, 2026-06-26).**
+        `execute_before_digest` (`definition.rs:285`) now pushes each
+        before_digest hook's boxes to the active box_list as it runs (per-hook,
+        Perl's `push(@LaTeXML::LIST, &$f(...))`) instead of collecting/prepending.
+        Validated full-suite: failures 7→6, **NO new regressions** — the
+        high-blast-radius mechanism change landed cleanly (final box order
+        unchanged; only the timing moves earlier so a later `leave_horizontal`
+        sees the hook boxes). Original root-cause analysis below:
+      - ~~`etoolbox` (3): **S2 (beforeDigest-push) — ROOT CAUSE NAILED 2026-06-26.**~~
         `\AtBeginEnvironment{equation}{…(inside)}` splits a `<p>` (Perl: one `<p>`
         with `…(outside).…(inside).`; Rust: split). Exact mechanism: in
         `def_environment` (`dialect.rs:1099`) the begin-flow order is bgroup →
