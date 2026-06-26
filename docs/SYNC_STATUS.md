@@ -376,7 +376,13 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     unit** (build + full-suite diff after each helper) — NOT mid-session-tail; a
     buggy half-port of the hottest sizing path reds many green tests.
   - **PROGRESS on `u2-leavehorizontal` (2026-06-25): 15 → 5 failures.** Commits
-    `51336ae` (foundation) + `6740cb6` (reclassification + fixtures). Done:
+    `51336ae` (foundation) + `6852c35` (reclassification + fixtures) + `9b1fcf4`
+    (S4). Note `9b1fcf4`: `repack_horizontal` already recorded `width=\hsize`;
+    added the `baseline=\baselineskip` half of S4 — additive + inert until S6
+    reads it (failure set unchanged at 5). **Next = the atomic S5+S6 sizing
+    rewrite** (box `c*` getters + `font.rs` `compute_boxes_size` + callers,
+    interdependent — see S6 readiness above; S4's List `width`/`baseline` are
+    now in place to feed it). Done so far:
     - **Inline reclassification** — constructor `mode internal_vertical →
       inline_internal_vertical` for `\vbox`/`\vtop` (`tex_box.rs`), `\lx@note`/
       `\lx@notetext`/`{minipage}`/`{picture}` (`latex_constructs.rs`). Fixed the
