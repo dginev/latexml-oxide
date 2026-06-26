@@ -286,6 +286,43 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   at pre-PR output — **regenerate each from same-host Perl `cb455179` and diff;
   never hand-edit** (legit size/paragraph-structure churn; a few intentional
   divergences per `OXIDIZED_DESIGN.md`). Gate each fixture on its sub-step.
+- **PROGRESS 2026-06-26 (loop session 2) — `u2-leavehorizontal` at 1469/1**
+  (was 1466/4). Landed on the branch (each a self-contained WIP commit):
+  - **`\phantom` h/d via single-box short-circuit** (`font.rs`
+    `compute_boxes_size`): port Perl `computeBoxesSize` L646-647 — a single bare
+    Box/Whatsit (not a List) returns `get_size` directly, ahead of the
+    List/split_words path (which discards height/depth for an `isSpace` box).
+    `sizes` math-strut `\phantom{g(x)}` 18.62×0+0 → 18.62×7.5+2.5 = cb455179
+    Perl. Also moved `consort-flowchart` picture height 782.9 → **825.33 =
+    Perl exactly** (tikz node content lost h/d the same way); regenerated.
+  - **`\framebox` pad{top,bottom,left,right}=`\fboxsep+\fboxrule`** (3.4pt;
+    `latex_constructs.rs` `\@framebox` properties): Perl sets these alongside
+    `sizer=>#3`; the S5 padding slice (`compute_size_and_cache`) adds them.
+    `graphrot` rotated `\framebox{\usebox}` inner dims 72.3×24+19 →
+    79.1×27.4+22.4 = Perl; whole `\testrot` cluster aligns; Rust-vs-Perl
+    26→8 lines. Full suite: no ripple to other fbox/framebox tests.
+  - **Regenerated (Rust-specific fixtures, #2798 moved them toward Perl):**
+    `sizes` (vbox 469.755→345 = Perl; phantom; residual g@(x) math-parser +
+    `\vtop{tabular}` 37.055 — see below), `graphrot`, `consort-flowchart`,
+    `figure_mixed_content` (subfigure scale 1.131→0.900≈Perl 0.881, width
+    156.1→124.2 = Perl).
+  - **Documented intentional/pre-existing divergences (kept, not "fixed"):**
+    (a) `sizes` `\vtop{tabular}` width 37.055 (natural) vs Perl 345=`\hsize`:
+    Perl repacks restricted_horizontal `\@@tabular` into a width=`\hsize` List
+    inside the vtop's vertical list; Rust marks `\@@tabular`/`\halign`
+    internal_vertical so repack SKIPS it — the [[box-model-hsize-frame-ordering-fix]]
+    that cured the Cluster-G `\narrow`-hang (1610.00974). Matching Perl risks
+    that hang. (b) `sizes` g(x) `g@(x)` (function-application) vs Perl `g * x` —
+    pre-existing math-parser semantics. (c) `figure_mixed_content` panel
+    `<break>` divergence — Rust's simplified `arrange_panels` + load-bearing
+    `\par`-in-figure break (used by article/book/report/amsarticle/tikz_figure)
+    vs Perl's width-based `breakIntoPanels`.
+  - **REMAINING: `various_colors`** (only failure) — raw-tcolorbox inner width
+    `\hsize` 313.70pt (31.37em, from `\linewidth`=345) vs fixture 402.3pt
+    (40.23em, from a 6in outer). My `\begin{document}` width-consistency (FAITHFUL
+    — Perl matches: tw=lw=cw=345) exposed this. **Verifying whether cb455179 Perl
+    now gives 31.37 too (stale fixture → regenerate) or 40.23 (real raw-tcolorbox
+    timing divergence → tcolorbox fix).**
 - **Empirical coupling (measured 2026-06-25 — S1 prototyped then reverted):**
   S0 verified (thanks/`\lx@personname` already in Rust — `base_utilities.rs:215`,
   `:807`; no-op). A standalone **S1** prototype (added `inline_internal_vertical`
