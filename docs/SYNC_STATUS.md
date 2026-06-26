@@ -286,8 +286,14 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   at pre-PR output — **regenerate each from same-host Perl `cb455179` and diff;
   never hand-edit** (legit size/paragraph-structure churn; a few intentional
   divergences per `OXIDIZED_DESIGN.md`). Gate each fixture on its sub-step.
-- **PROGRESS 2026-06-26 (loop session 2) — `u2-leavehorizontal` at 1469/1**
-  (was 1466/4). Landed on the branch (each a self-contained WIP commit):
+- **✅ U2 COMPLETE 2026-06-26 (loop session 2) — `u2-leavehorizontal` at
+  1470/0, clippy clean** (was 1466/4). All 4 residual failures resolved with
+  faithful #2798 ports + principled regenerations. The branch is ready to merge
+  into `upstream-sync-prs` for the single combined PR (resolve the SYNC_STATUS
+  conflict in favour of this branch's final state — the 21 docs-only
+  investigation commits on `upstream-sync-prs` are superseded; notably the old
+  "various_colors DEEP, no clean fix / do NOT regenerate" note is WRONG, see
+  below). Landed on the branch (each a self-contained WIP commit):
   - **`\phantom` h/d via single-box short-circuit** (`font.rs`
     `compute_boxes_size`): port Perl `computeBoxesSize` L646-647 — a single bare
     Box/Whatsit (not a List) returns `get_size` directly, ahead of the
@@ -317,12 +323,19 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
     `<break>` divergence — Rust's simplified `arrange_panels` + load-bearing
     `\par`-in-figure break (used by article/book/report/amsarticle/tikz_figure)
     vs Perl's width-based `breakIntoPanels`.
-  - **REMAINING: `various_colors`** (only failure) — raw-tcolorbox inner width
-    `\hsize` 313.70pt (31.37em, from `\linewidth`=345) vs fixture 402.3pt
-    (40.23em, from a 6in outer). My `\begin{document}` width-consistency (FAITHFUL
-    — Perl matches: tw=lw=cw=345) exposed this. **Verifying whether cb455179 Perl
-    now gives 31.37 too (stale fixture → regenerate) or 40.23 (real raw-tcolorbox
-    timing divergence → tcolorbox fix).**
+  - **✅ `various_colors` RESOLVED — stale fixture, regenerated.** The tcolorbox
+    inner width 40.23em (6in-based) was a STALE RUST-BUG artifact, NOT a Perl
+    divergence (correcting the prior session's "DEEP / do NOT regenerate" note).
+    Proof: `tcolorbox.sty` defaults `width=\linewidth` (L2947), evaluated LAZILY
+    at box-build (body) time via `\tcbdimto` (L1267); body `\linewidth`=345 in
+    BOTH Perl (measured v0.8.8 + cb455179: preamble 433.62/6in → body 345) and
+    Rust → both engines yield 31.37em. Old Rust never reset body `\linewidth`
+    from its 6in default, baking 40.23em into the fixture; #2798's
+    `\begin{document}` width-consistency (FAITHFUL — Perl matches) fixed that
+    latent bug. Regenerated from Rust (16 lines, all inside the tcolorbox picture
+    region). cb455179 Perl's own tcolorbox run HANGS in pgf-Perl (>5 min CPU on
+    a minimal doc), which is why the value was settled by analysis + the lazy
+    `\linewidth` proof rather than a direct Perl diff.
 - **Empirical coupling (measured 2026-06-25 — S1 prototyped then reverted):**
   S0 verified (thanks/`\lx@personname` already in Rust — `base_utilities.rs:215`,
   `:807`; no-op). A standalone **S1** prototype (added `inline_internal_vertical`
