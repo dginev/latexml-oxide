@@ -519,9 +519,17 @@ Sequenced steps to stable + complete:
 >   (still 7 — currently invisible since equation boxes aren't measured in the
 >   fixtures, but faithful). `\overline`/`\underline` pad is deferred — that
 >   change ALSO flips `framed=` → `class=ltx_{over,under}line` (structural,
->   higher fixture risk). **graphrot's 12pt is deep S9** (bordered table +
->   `\multicolumn`/`\multirow`/`\rotatebox` — the `replaceColumn` spec-copy +
->   column sizing), NOT a simple pad-set.
+>   higher fixture risk). **graphrot is deep box-geometry** (re-checked
+>   2026-06-26): the residual is the rotated `\multirow{5}{5pt}{\rotatebox{90}{
+>   \footnotesize\textbf{Original pairs}}}` content dimensions (Rust innerwidth
+>   72.3pt vs Perl 79.1pt; scale/translate cascade). **FONT METRICS RULED OUT** —
+>   a `\settowidth` probe of `\footnotesize\textbf{Original pairs}` is Rust
+>   `58.79924pt` vs installed-Perl `58.79938pt` (and bold/normal byte-identical),
+>   so Rust's text measurement matches Perl. The divergence is the
+>   `\multirow`+`\rotatebox` **box-geometry** (rotated H+D ↔ W, multirow row
+>   span), deep S6/S9. **General lesson: the remaining S6-precision residuals
+>   (graphrot, figure_mixed 0.2pt) are box-GEOMETRY (baseline/stack/rotation/
+>   multirow), NOT font metrics** — narrows the deep-sizing work.
 > - **inline-math strut** — `sizes` math-axis (`0.0`→`7.5/2.5`). Investigated
 >   2026-06-26: the inline-math constructor (`\lx@begin@inline@math`,
 >   `tex_math.rs:598`) has NO explicit `sizer`, so its size = `compute_boxes_size`
