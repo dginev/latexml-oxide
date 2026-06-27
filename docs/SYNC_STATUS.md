@@ -1248,7 +1248,13 @@ runs it (stacked + tree) in CI. The checked-guard "fix" was correctly rejected:
 there is no UB to guard, and it would deadlock `Document::absorb`'s loop (which
 needs the nested construction to SUCCEED). No architectural change needed; the
 single audited `with_doc` `unsafe` stays, now documented as verified-sound.
-`runtime-bindings` stays on by default.
+`runtime-bindings` stays on by default. **Sibling site audited too (2026-06-27):**
+the `WHATSIT_CTX` re-mint (`engine.rs` `setProperty` `&mut *ptr`; `argString`/
+`propertyString` are read-only `&*`) is sound — after-digest hooks run one-pass/
+sequentially on a fresh-local whatsit (`definition.rs::execute_after_digest`) and
+never re-enter on the SAME whatsit, so it's always the single-body re-mint pattern
+the Miri model already covers. The runtime-bindings unsafe re-mint sites are now
+fully audited.
 
 ### 4. 0.7.0 release — release-prep LANDED; tag pending
 Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/README

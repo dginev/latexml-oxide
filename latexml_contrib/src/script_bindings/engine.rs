@@ -980,9 +980,19 @@ pub(super) fn make_engine() -> Engine {
       }
       // SAFETY: `ptr` is the in-flight whatsit the core published onto
       // WHATSIT_CTX for THIS digestion-hook body, and the `mutable` flag (just
-      // checked) confirms it was published as writable. It is live for the
-      // call and the sole live reference (the hook body holds no other), so the
-      // re-minted `&mut` is unique and non-aliasing.
+      // checked) confirms it was published as writable. It is the sole live
+      // `&mut` to this whatsit, so the re-mint is unique and non-aliasing.
+      // AUDITED (2026-06-27, sibling of PR #248 B1): the core runs after-digest
+      // hooks ONE-PASS and sequentially on a FRESH-LOCAL whatsit
+      // (`definition.rs::execute_after_digest`: `for post in … { post(&mut
+      // whatsit) }`), never re-entering a hook on the SAME whatsit — so unlike
+      // the Document case there is no nested same-object re-mint at all. This is
+      // the single-body parked-`&mut` + brief-re-mint pattern proven sound by
+      // the Miri model `latexml_core::runtime_bindings_reentrancy_model`
+      // (`reentrancy_model_single_body_sound`). (A hook that digests other
+      // content builds DIFFERENT whatsits → different `WHATSIT_CTX` entries, not
+      // an alias of this one.) The read-only ops above (`&*`) need no such
+      // argument — shared refs may alias freely.
       let w = unsafe { &mut *ptr };
       w.set_property(key, val.to_string());
       Ok(())
