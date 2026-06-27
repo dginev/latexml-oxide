@@ -1527,3 +1527,24 @@ All multi-item containers are kept **flat** (the `moreRHS`-analog
 reading, this **eliminates a large grammar-ambiguity over-parse**: on
 `1510.03361` the worst equation fell from the 5000-tree cap (578 ms) to 256
 trees (31 ms, ~19×) and the `math_parse` phase dropped ~12%. Suite 1466/0/0.
+
+## 38. `\marginpar` does not scope font/catcode changes (leaks into body)
+
+**Trigger:**
+```latex
+\marginpar{\Large !} BODYWORD
+```
+**Perl behavior:** `BODYWORD` (and everything after) renders at `\Large` (144%) —
+the `\Large` inside the margin note leaks into the main galley. Verified on Perl
+LaTeXML 0.8.8 (`<text fontsize="144%">BODYWORD`). Real pdflatex typesets the note
+in a separate margin box, so the switch is scoped; the LaTeXML `\marginpar`
+`DefConstructor` (`latex_constructs.pool.ltxml` L3487) is not `bounded`, so its
+argument digests in the enclosing group and the font assignment persists.
+
+**Severity:** can be catastrophic for documents that put a size/style switch in a
+margin note — e.g. the mhchem package manual's `\marginpar{\Large !}` rendered the
+*entire* manual at 144%.
+
+**Rust status — DELIBERATE DIVERGENCE (Rust supersedes).** `\marginpar` now carries
+`bounded => true` (mirrors `\mbox`), scoping the note's font/catcode changes. Output-
+neutral across the suite (1487/0). See `OXIDIZED_DESIGN.md` #39. Candidate to upstream.
