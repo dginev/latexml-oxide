@@ -35,6 +35,10 @@ current `HEAD` — class/file layout, definitions, and counts have shifted.
 
 ## Completed missions & resolved diagnostics (archived 2026-06-10)
 
+- `UPSTREAM_SYNC_2767_to_2833_2026-06-26.md` — the per-PR catalog for the
+  "translate brucemiller/LaTeXML PRs since #2767" mission (U1–U11, #2783 → #2833,
+  incl. #2798 Leavehorizontal). All landed and merged to `main` via PR #271
+  (`7869b5f459`); lifted out of the active `SYNC_STATUS.md` worklist on completion.
 - `frontmatter_api_refactor.md` — design + decisions log for the upstream
   LaTeXML PR #2767 frontmatter-API port. Implemented and landed (commit
   `da495dd335`); kept as the historical design record.

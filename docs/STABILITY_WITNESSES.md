@@ -117,6 +117,20 @@ them fast (~1.2 s, ~128 MB) in digestion with ~109 xy-pic errors
 undefined + closed-mouth, see `SYNC_STATUS.md` 2026-05-29 re-mine). Not a memory
 witness; tracked here only to explain the stale TIMEOUT records.
 
+### Witness 1402.1906 — large amsbook + xypic, never_completed (2026-06-26)
+
+26k-line `amsbook` with `xypic`/`emlines`/`psboxit`, 14841 maths. cortex
+`Status:conversion` = **never_completed_with_retries** (exceeds the 240 s lease);
+fatal in BOTH the pre- and post-`parity-followups` 10k runs (NOT a regression).
+Perl = **error** (so genuinely Rust-worse). Local maxperf-cortex standalone: the
+**core** finishes ~108 s (14841 Maths) then **XSLT** runs >150 s (killed ~260 s).
+An OUTLIER vs Cluster A — slow for its math count (1901.10171 has MORE maths,
+18829, in 49 s TOTAL), so it is NOT pure node-count: the combination of xypic
+(Cluster B core cost) + a very large book DOM + the dual pMML/cMML XSLT
+(hypothesis 2) compounds. The dup() lever (hypothesis 1) is already fixed, so the
+XSLT cost here is inherent transform time, not the deep-copy. Deferred to a
+dedicated perf session (xypic core + XSLT/MathML-doubling); deep, low-breadth.
+
 ## Cluster C — engine-phase slowness (RESOLVED — not a hang)
 
 1810.05230 (stage_75 TIMEOUT) was recorded hung in the **Building** (engine)
