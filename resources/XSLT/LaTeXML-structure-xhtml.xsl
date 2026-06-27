@@ -298,55 +298,61 @@
   plus 1 if the parent-type is actually present, with a title.
   Special considerations are needed to detect whether backmatter elements
   (appendix | index | glossary | bibliography) are appearing at the level of chapters or sections.
+
+  PERF (latexml-oxide divergence): the level for a given element-type NAME is a
+  document-GLOBAL constant — it depends only on which structural element types are
+  present (the `boolean(//ltx:X/ltx:title)` probes below), NOT on the calling node.
+  The upstream f:seclev-aux recomputed these whole-tree `//` descendant scans on
+  EVERY heading (`f:section-head-level` fires per `ltx:title`), giving
+  O(headings × tree-size) ≈ O(n²) — the dominant XSLT hotspot on large
+  math/section-heavy docs (witness 2404.12418: XSLT 150s; gdb hot path
+  `xsltValueOf → xmlXPathNextDescendant`). Precompute each level ONCE as a global
+  variable; f:seclev-aux just selects the matching one. OUTPUT-NEUTRAL (identical
+  values, evaluated once instead of per-heading). Candidate for upstreaming to
+  Perl LaTeXML, which has the identical O(n²). See docs/ARXIV_PERFORMANCE.md.
 -->
+  <xsl:variable name="seclev_document" select="1"/>
+  <xsl:variable name="seclev_part"
+                select="$seclev_document + number(boolean(//ltx:document))"/>
+  <xsl:variable name="seclev_chapter"
+                select="$seclev_part + number(boolean(//ltx:part/ltx:title))"/>
+  <xsl:variable name="seclev_section"
+                select="$seclev_chapter
+                        + number(boolean(//ltx:chapter/ltx:title
+                                         | //ltx:appendix/ltx:section/ltx:title))"/>
+  <xsl:variable name="seclev_subsection"
+                select="$seclev_section
+                        + number(boolean(//ltx:section/ltx:title
+                                         | //ltx:appendix/ltx:subsection/ltx:title))"/>
+  <xsl:variable name="seclev_subsubsection"
+                select="$seclev_subsection + number(boolean(//ltx:subsection/ltx:title))"/>
+  <xsl:variable name="seclev_paragraph"
+                select="$seclev_subsubsection + number(boolean(//ltx:subsubsection/ltx:title))"/>
+  <xsl:variable name="seclev_subparagraph"
+                select="$seclev_paragraph + number(boolean(//ltx:paragraph/ltx:title))"/>
+  <!-- Backmatter (appendix|index|glossary|bibliography): chapter-level if there are
+       chapters or sections-within-appendices, else section-level. -->
+  <xsl:variable name="seclev_backmatter"
+                select="f:if(//ltx:chapter | //ltx:appendix/ltx:section,
+                             $seclev_chapter, $seclev_section)"/>
+
   <func:function name="f:seclev-aux">
     <xsl:param name="name"/>
     <func:result>
       <xsl:choose>
-        <xsl:when test="$name = 'document'">1</xsl:when>
-        <xsl:when test="$name = 'part'">
-          <!-- reserve level 1 for document if present, EVEN IF it has no title -->
-          <xsl:value-of select="f:seclev-aux('document')+number(boolean(//ltx:document))"/>
-        </xsl:when>
-        <xsl:when test="$name = 'chapter'">
-          <xsl:value-of select="f:seclev-aux('part')+number(boolean(//ltx:part/ltx:title))"/>
-        </xsl:when>
-        <xsl:when test="$name = 'section'">
-          <!-- detect presence of chapter OR apparently chapter-level appendices -->
-          <xsl:value-of select="f:seclev-aux('chapter')
-                                +number(boolean(//ltx:chapter/ltx:title
-                                    | //ltx:appendix/ltx:section/ltx:title))"/>
-        </xsl:when>
-        <xsl:when test="$name = 'subsection'"> <!--Weird? (could be in appendix!)-->
-          <!-- detect presence of section OR apparently section-level appendices -->
-          <xsl:value-of select="f:seclev-aux('section')
-                                +number(boolean(//ltx:section/ltx:title
-                                    | //ltx:appendix/ltx:subsection/ltx:title))"/>
-        </xsl:when>
-        <xsl:when test="$name = 'subsubsection'">
-          <xsl:value-of select="f:seclev-aux('subsection')
-                                +number(boolean(//ltx:subsection/ltx:title))"/>
-        </xsl:when>
-        <xsl:when test="$name = 'paragraph'">
-          <xsl:value-of select="f:seclev-aux('subsubsection')
-                                +number(boolean(//ltx:subsubsection/ltx:title))"/>
-        </xsl:when>
-        <xsl:when test="$name = 'subparagraph'">
-          <xsl:value-of select="f:seclev-aux('paragraph')
-                                +number(boolean(//ltx:paragraph/ltx:title))"/>
-        </xsl:when>
+        <xsl:when test="$name = 'document'"><xsl:value-of select="$seclev_document"/></xsl:when>
+        <xsl:when test="$name = 'part'"><xsl:value-of select="$seclev_part"/></xsl:when>
+        <xsl:when test="$name = 'chapter'"><xsl:value-of select="$seclev_chapter"/></xsl:when>
+        <xsl:when test="$name = 'section'"><xsl:value-of select="$seclev_section"/></xsl:when>
+        <xsl:when test="$name = 'subsection'"><xsl:value-of select="$seclev_subsection"/></xsl:when>
+        <xsl:when test="$name = 'subsubsection'"><xsl:value-of select="$seclev_subsubsection"/></xsl:when>
+        <xsl:when test="$name = 'paragraph'"><xsl:value-of select="$seclev_paragraph"/></xsl:when>
+        <xsl:when test="$name = 'subparagraph'"><xsl:value-of select="$seclev_subparagraph"/></xsl:when>
         <!-- just put low-level structures, like proofs or theorems, at h6 -->
         <xsl:when test="$name = 'theorem' or $name = 'proof'">6</xsl:when> <!--what else?-->
-
-        <!-- Backmatter elements are at the same level as either chapter (eg.book) or section.
-             But it's tricky to detect that here -->
         <xsl:when test="$name = 'appendix' or $name = 'index'
                         or $name = 'glossary' or $name = 'bibliography'">
-          <!-- if there are chapters, or sections within appendices,
-               assume chapter-level backmatter -->
-          <xsl:value-of
-              select="f:if(//ltx:chapter | //ltx:appendix/ltx:section,
-                           f:seclev-aux('chapter'),f:seclev-aux('section'))"/>
+          <xsl:value-of select="$seclev_backmatter"/>
         </xsl:when>
       </xsl:choose>
     </func:result>

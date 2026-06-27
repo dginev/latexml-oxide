@@ -1,5 +1,3 @@
-use latexml_core::definition::register::RegisterValue;
-
 use crate::prelude::*;
 
 /// Perl floatflt.sty.ltxml L40-42: float direction from optional arg or
@@ -27,24 +25,25 @@ fn floatflt_float_direction(whatsit: &Whatsit) -> &'static str {
   }
 }
 
-/// Perl `toPercent($_[2])` — 100 * dimen / \textwidth, formatted as "NN%".
-/// Called on the mandatory Dimension arg to populate the `width` attribute.
+/// Perl `toPercent($_[2])` (floatflt.sty.ltxml L55-57):
+/// `int(100 * $dimen->valueOf / LookupValue('\textwidth')->valueOf) . '%'`.
+/// Reads the mandatory `{Dimension}` arg (#2) and `\textwidth` via the VALUE
+/// table — `lookup_dimension` mirrors Perl's `LookupValue('\textwidth')`, which
+/// never warns about register-ness (a `\def`-ized `\textwidth` is read silently,
+/// unlike the old `lookup_register` path which emitted a spurious
+/// `expected:register`). Must be called where the env args exist (after_digest_begin).
 fn floatflt_pct_width(whatsit: &Whatsit) -> String {
-  let dim_arg = whatsit
-    .get_arg(2)
-    .map(|a| a.to_attribute())
-    .unwrap_or_default();
-  let Ok(dim) = Dimension::from_str(&dim_arg) else {
+  let Some(dim_arg) = whatsit.get_arg(2) else {
     return String::new();
   };
-  let tw = match lookup_register("\\textwidth", Vec::new()) {
-    Ok(Some(RegisterValue::Dimension(d))) => d.value_of(),
-    _ => return String::new(),
+  let Some(tw) = lookup_dimension("\\textwidth") else {
+    return String::new();
   };
-  if tw == 0 {
+  let tw_sp = tw.value_of();
+  if tw_sp == 0 {
     return String::new();
   }
-  let pct = (100 * dim.value_of()) / tw;
+  let pct = (100 * dim_arg.value_of()) / tw_sp;
   s!("{pct}%")
 }
 
@@ -61,14 +60,23 @@ LoadDefinitions!({
   // causing `after_float`'s `digest(\@captype)` to error with "T_CS[\@captype]
   // is not defined" (sandbox paper 0810.1610). The engine's `{figure}` /
   // `{table}` envs use `after_digest` for this reason; match them.
+  // Perl computes `float`/`pctwidth` in the `properties` sub (floatflt.sty.ltxml
+  // L40-42), which has the env args. The Rust env args live on the BEGIN whatsit
+  // (reachable in after_digest_begin, cf. minipage's `get_arg(4)`); the END
+  // whatsit seen by `after_digest` has NONE (all get_arg → None), so computing
+  // there silently produced `float`-default + `width="0%"`. Compute in
+  // after_digest_begin; keep `after_float` in after_digest (needs `\@captype`,
+  // still live there — the reason after_digest_body is avoided).
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
     before_digest => {
       engine::latex_constructs::before_float("figure", None);
     },
-    after_digest => sub[whatsit] {
+    after_digest_begin => sub[whatsit] {
       whatsit.set_property("float", floatflt_float_direction(whatsit));
       whatsit.set_property("pctwidth", Stored::from(floatflt_pct_width(whatsit)));
+    },
+    after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
     });
   DefEnvironment!("{floatingtable}[]{Dimension}",
@@ -76,9 +84,11 @@ LoadDefinitions!({
     before_digest => {
       engine::latex_constructs::before_float("table", None);
     },
-    after_digest => sub[whatsit] {
+    after_digest_begin => sub[whatsit] {
       whatsit.set_property("float", floatflt_float_direction(whatsit));
       whatsit.set_property("pctwidth", Stored::from(floatflt_pct_width(whatsit)));
+    },
+    after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
     });
   DefMacro!("\\fltitem[]{}",    "\\item {#2}");

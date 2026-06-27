@@ -1,0 +1,14 @@
+% Regression: floatflt `floatingfigure` must compute the `width` percentage
+% (Perl toPercent: int(100*dim/\textwidth)) and the float direction from its
+% args. The args live on the BEGIN whatsit (after_digest_begin); computing in
+% after_digest (END whatsit, args=None) produced width="0%". With default
+% \textwidth=345pt, a 3cm figure → width="24%" (matches Perl 0.8.8). The optional
+% [r] → float="right". See docs/SYNC_STATUS.md.
+\documentclass{article}
+\usepackage{floatflt}
+\begin{document}
+\begin{floatingfigure}{3cm}
+A wrapped figure.
+\end{floatingfigure}
+Body text after the floating figure for context and paragraph flow.
+\end{document}

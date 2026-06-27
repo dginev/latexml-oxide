@@ -149,7 +149,11 @@ figure_attributes =
   attribute placement { text }?
 
 ## Content model for \elementref{figure}; allow nested figures, etc for "sub" floats.
-figure_model = (tags? | figure | table | float | Block.model | Caption.class)*
+## (latexml-oxide) theorem|proof added: a boxed/framed theorem or proof inside a
+## figure/table float is valid LaTeX (e.g. \begin{figure}…\begin{theorem}…). Both
+## engines previously rejected it as schema-invalid; this is a monotonic (strictly
+## more permissive) expansion that drains the figure_mixed_content ERROR_DEBT.
+figure_model = (tags? | figure | table | float | theorem | proof | Block.model | Caption.class)*
 
 #======================================================================
 
@@ -170,7 +174,8 @@ table_attributes =
   attribute placement { text }?
 
 ## Content model for \elementref{table}.
-table_model = (tags? | table | figure | float | Block.model | Caption.class)*
+## (latexml-oxide) theorem|proof added — see figure_model note.
+table_model = (tags? | table | figure | float | theorem | proof | Block.model | Caption.class)*
 
 #======================================================================
 
@@ -193,7 +198,8 @@ float_attributes =
   attribute placement { text }?
 
 ## Content model for \elementref{float}.
-float_model = (tags? | float | figure | table | Block.model | Caption.class)*
+## (latexml-oxide) theorem|proof added — see figure_model note.
+float_model = (tags? | float | figure | table | theorem | proof | Block.model | Caption.class)*
 
 #======================================================================
 

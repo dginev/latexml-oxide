@@ -1,0 +1,11 @@
+% Regression: a plain DefMath symbol (e.g. \rightarrowfill, a DefMath ARROW) used
+% in TEXT mode must NOT emit the Rust-only "should only appear in math mode"
+% warning. Perl (Package.pm:1304) adds the requireMath beforeDigest ONLY when the
+% binding passes requireMath=>1; Rust's transfer_common_constructor_options added
+% it UNCONDITIONALLY for every DefMath → a broad `unexpected:mode` over-emission
+% (e.g. 0802.3360: Rust 3 vs Perl 0). Only explicit requireMath constructs (\bm)
+% warn. See docs/SYNC_STATUS.md.
+\documentclass{article}
+\begin{document}
+\rightarrowfill
+\end{document}

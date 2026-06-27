@@ -33,6 +33,10 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
   token!(wide_punct ~ "WIDE_PUNCT");
   token!(addop ~ "ADDOP");
   token!(mulop ~ "MULOP");
+  // The `/` divide-MULOP specifically (vs `\times`/`\cdot`/etc.). Used to scope
+  // the bare-bigop fraction rule (`\partial/\partial t`) to division only, so it
+  // does NOT fire on `\partial \times B` (which Perl keeps as a flat product).
+  token!(divide = "MULOP:divide");
   token!(relop ~ "RELOP");
   token!(elideop ~ "ELIDEOP");
   token!(langle_rel = "RELOP:less-than");
@@ -444,7 +448,14 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
         // Perl MathGrammar L129: endPunct includes PERIOD. Period creates formulae, not list.
         | statements period statement => formulae_apply
         // Perl: MorphVertbar — VERTBAR as conditional modifier: x | y,z,t
-        | statement vertbar statements => vertbar_modifier;
+        | statement vertbar statements => vertbar_modifier
+        // Comma-LIST left of the bar: `a,b | c` → conditional(list@(a,b), c).
+        // Explicit `statements punct statement vertbar …` shape (NOT a generalized
+        // `statements vertbar statements`, which over-applies to abs-value `|a|`
+        // and explodes the forest). Root fix for the Class-B `\Pr(s_A,s_B|\Omega)`
+        // dangling-XMRef (its argument previously failed to parse). See
+        // EXPECTED_ID_XMREF_DESIGN 2026-06-26p/q.
+        | statements punct statement vertbar statements => vertbar_modifier_listlhs;
 
       // Perl MathGrammar: Formulae = Formula (endPunct Formula)* → NewFormulae()
       // Separate nonterminal from expression-level formula_list to avoid ambiguity:
@@ -989,6 +1000,18 @@ pub fn init_grammar() -> Result<(MarpaGrammar, Actions, TreeBuilder)> {
       term += tight_term bigop_application => apply_invisible_times;
       // Same but with explicit mulop: a * ∫ f dx → a * ∫(f*dx)
       term += term mulop bigop_application => infix_apply_nary;
+      // BARE bigop as the LEFT operand of a binary mul-op: `\partial/\partial t`
+      // (Leibniz partial-derivative notation, pervasive in physics) → Perl
+      // `partial-differential / partial-differential@(t)`. A bigop normally MUST
+      // apply (`bigop_application = any_bigop term`), so a bigop directly followed
+      // by `/` had no rule → `ltx_math_unparsed` (Rust-only; Perl treats `\partial`
+      // as a bare factor). This rule fires ONLY when a DIVIDE-mulop (`/`)
+      // IMMEDIATELY follows the bigop — where `bigop_application` cannot match (the
+      // next token is an operator, not a term) — so it adds no competing parse for
+      // the normal `\partial t` apply case. Scoped to `divide` (NOT all `mulop`):
+      // scoping to `mulop` regressed `\partial \times B` (Perl keeps it a flat
+      // product), so restrict to `/`. See SYNC_STATUS math-coverage notes.
+      term += any_bigop divide term => infix_apply;
       // Scripted bigops can also appear as standalone statements
       statement += scripted_bigop;
 

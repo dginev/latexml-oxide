@@ -212,8 +212,7 @@ pub fn list_apply(
   // Grammar is left-recursive: `statements punct statement => list_apply`
   // so `left` is the accumulated structure and `right` is the new item.
   unp!(args => left, sep, right);
-  let mut left = left;
-  let mut right = right.unwrap();
+  let right = right.unwrap();
   let sep = sep.unwrap();
 
   // The separator decides the wrapper:
@@ -312,11 +311,32 @@ pub fn list_apply(
   // that needn't be formulas — so it gets its own flat `fragments@` class,
   // distinct from comma's `list@`/`formulae@`. A plain comma builds `list@`
   // (all-relational comma pairs were already routed to `formulae_apply` above).
+  list_apply_core(left, sep, right, ctxt)
+}
+
+/// Core list/fragments construction for `list_apply`, AFTER its admission
+/// checks (relational pairs, absent-relop, Rule-4 bare-conditional). Extracted
+/// so `vertbar_modifier_listlhs` can append a conditional as the LAST list item
+/// WITHOUT Rule-4's rejection: in the bar-after-comma context (`a,b | c`) the
+/// conditional `b|c` IS a legitimate item (Perl `list@(a, conditional@(b,c))`),
+/// unlike the bar-first `x|y,z` wrap case (`conditional@(x, list@(y,z))`) that
+/// Rule 4 guards against. `list_apply` itself runs the checks then calls this.
+fn list_apply_core(
+  mut left: Option<XM>,
+  sep: XM,
+  mut right: XM,
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  let is_quad = is_quad_separator(&sep);
   let meaning = if is_quad { "fragments" } else { "list" };
 
   // If left is already a list/formulae/fragments Dual, extend it (flat
-  // accumulation — all three classes are kept flat).
+  // accumulation — all three classes are kept flat). Require a Wrap presentation:
+  // a `distribute_list_relation` dual has `formulae` content but a relation-Apply
+  // presentation, and extending it here would strand a keyless bare ref (see the
+  // matching guard + rationale in `formulae_apply`, EXPECTED_ID_XMREF_DESIGN 26v).
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
+    && matches!(**pres, XM::Wrap(..))
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
     && let XM::Token(ref props, _) = *op.0
     && matches!(
@@ -548,8 +568,18 @@ pub fn formulae_apply(
 
   let meaning = "formulae"; // always
 
-  // If left is already a formulae Dual, extend it
+  // If left is already a formulae Dual, extend it — BUT only when its
+  // presentation is an `XMWrap` (the normal flat-list shape). A
+  // `distribute_list_relation` dual ALSO has `meaning="formulae"` content yet a
+  // RELATION-`Apply` presentation (`(a,b)=c`), not a Wrap; extending that here
+  // would push a content ref but silently skip the presentation update (the
+  // `if let XM::Wrap` below fails), stranding the ref as a keyless bare `<XMRef/>`
+  // → the dominant `expected:id` "Missing idref" cluster (370 papers; witness
+  // `0704.2334`, `a,\quad b=c,\quad d=e`). Requiring a Wrap presentation makes
+  // such a left fall through to `list_or_formulae_create`, which builds a fresh
+  // dual whose content refs BOTH resolve. See EXPECTED_ID_XMREF_DESIGN 2026-06-26v.
   if let Some(XM::Dual(ref mut content, ref mut pres, ..)) = left
+    && matches!(**pres, XM::Wrap(..))
     && let XM::Apply(ref op, ref mut op_args, ..) = **content
     && let XM::Token(ref props, _) = *op.0
     && props.meaning.as_deref() == Some(meaning)
@@ -3695,6 +3725,54 @@ pub fn vertbar_modifier(
     XProps::default(),
     Meta::default(),
   )))
+}
+
+/// VERTBAR conditional with a comma-LIST left-hand side: `a,b | c` →
+/// `conditional(list@(a,b), c)`. The grammar rule is the explicit
+/// `statements punct statement vertbar statements` (NOT a generalized
+/// `statements vertbar statements`, which over-applies to abs-value `|a|`
+/// and explodes the parse forest — see EXPECTED_ID_XMREF_DESIGN 2026-06-26p/q).
+/// Restricting to a literal comma-before-bar shape means it fires ONLY on
+/// genuine list-LHS conditionals, leaving abs-value/norm parsing untouched.
+/// Composes `list_apply` (build the list LHS) + `vertbar_modifier` (condition it).
+/// Root fix for the Class-B `\Pr(s_A,s_B|\Omega)` dangling-XMRef witness.
+pub fn vertbar_modifier_listlhs(
+  rule_id: i32,
+  mut args: Vec<Option<XM>>,
+  prag: &[ValidationPragmatics],
+  ctxt: ActionContext,
+) -> Result<Option<XM>, Box<dyn Error>> {
+  // args: [left_statements, punct, statement, vertbar, right_statements]
+  if args.len() != 5 {
+    return Err("vertbar_modifier_listlhs: expected 5 args".into());
+  }
+  let right = args.pop().unwrap();
+  let vertbar = args.pop().unwrap();
+  let mid = args.pop().unwrap();
+  let sep = args.pop().unwrap();
+  let left = args.pop().unwrap();
+  // Perl binds `|` to the LAST item before the bar (Factor-level, tight), NOT the
+  // whole comma-list: `a,b | c` → `list@(a, conditional@(b, c))` (NOT
+  // `conditional@(list@(a,b), c)`). So condition `mid | right` FIRST, then append
+  // that conditional as the final item of the list `left`. (`x | y,z` — no comma
+  // before the bar — is handled by the single-LHS `statement vertbar statements`
+  // rule, giving `conditional@(x, list@(y,z))`, also matching Perl.)
+  let cond = {
+    let inner = ActionContext {
+      nodes:    ctxt.nodes,
+      document: &mut *ctxt.document,
+    };
+    vertbar_modifier(rule_id, vec![mid, vertbar, right], prag, inner)?
+  };
+  // Append the conditional as the list's last item via `list_apply_core` (NOT
+  // `list_apply`, whose Rule-4 would reject the bare conditional item — here it
+  // is legitimately the last item of a bar-after-comma list). Guard the unwraps:
+  // if either operand is absent, drop this combo (pruned).
+  let (sep, cond) = match (sep, cond) {
+    (Some(s), Some(c)) => (s, c),
+    _ => return Err("vertbar_modifier_listlhs: missing separator or conditional".into()),
+  };
+  list_apply_core(left, sep, cond, ctxt)
 }
 
 /// Perl moreRelations: consecutive relops without intervening terms.

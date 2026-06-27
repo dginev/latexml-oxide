@@ -3318,6 +3318,29 @@ impl Document {
         None => continue,
       };
       if RE_MATH_ID.is_match(&idref) && self.lookup_id(&idref).is_none() {
+        // Safety guard: NEVER drop a ref that is an OPERAND of an XMApp.
+        // Removing it would corrupt the application — e.g. an `\lx@dual`
+        // content arm `XMApp(probability, XMRef)` would lose its argument,
+        // emitting a malformed `apply(probability)` with no operand (silent
+        // content-MathML corruption; witnessed on `aligned`+`\Pr(a,b|c)`,
+        // docs/reproducers/class_b_aligned_pr_xmref.tex). Such content-arm
+        // refs are essential shared links — they are NEVER the redundant
+        // MathFork/`_split_ref` mirrors this sweep targets (those live in
+        // XMWrap/XMArray, not as XMApp operands). Leave it dangling so the
+        // faithful "No node found" Warn (`mark_xmnode_visibility`) fires
+        // rather than silently corrupting the content tree.
+        if let Some(parent) = xmref.get_parent()
+          && get_node_qname(&parent) == pin!("ltx:XMApp")
+        {
+          let kids = parent.get_child_elements();
+          let is_operand = kids
+            .iter()
+            .position(|k| *k == xmref)
+            .is_some_and(|pos| pos > 0);
+          if is_operand {
+            continue;
+          }
+        }
         self.remove_node(xmref);
       }
     }

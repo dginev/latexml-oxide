@@ -11,20 +11,22 @@ use crate::prelude::*;
 
 /// Perl: amsAlignmentBindings($template, %properties) — amsmath.sty.ltxml lines 107-120
 /// Simple alignment bindings for ams environments (no equation rearrangement)
-fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, String>) {
+fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String, String>) {
   use crate::engine::tex_tables::alignment_bindings;
-  let mut properties = SymHashMap::default();
-  // Perl: my $cur_jot = LookupDimension('\jot');
-  // If \jot differs from default, set rowsep as PROPERTY (for equationgroup)
-  // Perl sets $properties{rowsep} = $cur_jot for gather/align environments
-  if !xml_attributes.contains_key("rowsep")
-    && let Some(cur_jot) = lookup_dimension("\\jot")
-  {
-    let default_jot = lookup_dimension("\\lx@default@jot");
-    let default_val = default_jot.map(|d| d.0).unwrap_or(0);
-    if cur_jot.0 != default_val && cur_jot.0 != 0 {
-      let rowsep_str = cur_jot.to_attribute();
-      properties.insert("rowsep", Stored::String(pin(&rowsep_str)));
+  let properties = SymHashMap::default();
+  // Perl (amsmath.sty.ltxml L111-114):
+  //   my $cur_jot = LookupDimension('\jot');
+  //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)
+  //     { $properties{rowsep} = $cur_jot; }
+  //   alignmentBindings($template, 'math', attributes => {%properties});
+  // The rowsep is passed via the `attributes` arg, so it must land in
+  // `xml_attributes` (the container's XML attributes), NOT the alignment
+  // `properties` — only `xml_attributes` reach the openContainer callback. Use
+  // LookupDimension (lookup_dimension_cs) so a `\def`-ized `\jot` reads silently.
+  if !xml_attributes.contains_key("rowsep") {
+    let cur_jot = lookup_dimension_cs("\\jot", false);
+    if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+      xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
     }
   }
   alignment_bindings(template, String::from("math"), properties, xml_attributes);
@@ -43,10 +45,23 @@ fn ams_alignment_bindings(template: Template, xml_attributes: HashMap<String, St
 /// amsmath.sty.ltxml lines 121-147
 fn ams_rearrangeable_bindings(
   template: Template,
-  xml_attributes: HashMap<String, String>,
+  mut xml_attributes: HashMap<String, String>,
   redirect_label: bool,
 ) -> Result<()> {
   let properties = SymHashMap::default();
+  // Perl (amsmath.sty.ltxml L123-125):
+  //   my $cur_jot = LookupDimension('\jot');
+  //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)
+  //     { $properties{attributes}{rowsep} = $cur_jot; }
+  // i.e. for the rearrangeable envs ({align},{gather}) `\jot`≠default sets the
+  // equationgroup's rowsep attribute. (Was missing entirely — Rust emitted no
+  // rowsep on align/gather, diverging from Perl.)
+  if !xml_attributes.contains_key("rowsep") {
+    let cur_jot = lookup_dimension_cs("\\jot", false);
+    if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+      xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
+    }
+  }
   // Create alignment with equationgroup/equation/_Capture_ hooks
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),

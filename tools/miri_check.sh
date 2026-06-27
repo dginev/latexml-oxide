@@ -7,10 +7,15 @@
 # dlsym, getrusage, signal handlers) — Miri CANNOT execute extern "C" calls,
 # so a blanket `cargo miri test` aborts on the first FFI call. See
 # docs/SAFETY.md for the full `unsafe` inventory and which category each site
-# is in. The category with genuine UB potential that Miri *can* check is the
-# string-interner / arena (`latexml_core/src/common/arena.rs`): unchecked
-# `resolve_unchecked` bounds-skips (cat. B) and the re-entrant `&mut *ptr`
-# (cat. C). That is what this script exercises.
+# is in. The categories with genuine UB potential that Miri *can* check are:
+#  (1) the string-interner / arena (`latexml_core/src/common/arena.rs`): unchecked
+#      `resolve_unchecked` bounds-skips (cat. B) and the re-entrant `&mut *ptr`
+#      (cat. C);
+#  (2) the `runtime-bindings` (Rhai) trampoline's re-entrant `&mut Document`
+#      round-trip (PR #248 B1), modeled libxml2-free in
+#      `latexml_core::runtime_bindings_reentrancy_model` so Miri can adjudicate the
+#      reborrow aliasing under BOTH Stacked and Tree Borrows.
+# That is what this script exercises.
 #
 # FLAGS:
 #  -Zmiri-disable-isolation : allow time/getrandom (harmless for these tests)
@@ -19,11 +24,10 @@
 #                             never drops BY DESIGN; without this flag Miri
 #                             reports the singleton as a "leak" (not UB).
 #
-# Usage: tools/miri_check.sh            # run the scoped arena UB check
-#        tools/miri_check.sh <filter>   # override the test-name filter
+# Usage: tools/miri_check.sh            # run arena (SB) + reentrancy model (SB+TB)
+#        tools/miri_check.sh <filter>   # run ONLY this test-name filter (SB)
 set -euo pipefail
 
-FILTER="${1:-arena}"
 export MIRIFLAGS="${MIRIFLAGS:-} -Zmiri-disable-isolation -Zmiri-ignore-leaks"
 
 if ! rustup component list --toolchain nightly 2>/dev/null | grep -q 'miri.*(installed)'; then
@@ -31,6 +35,21 @@ if ! rustup component list --toolchain nightly 2>/dev/null | grep -q 'miri.*(ins
   rustup component add --toolchain nightly miri
 fi
 
-echo "==> cargo +nightly miri test -p latexml_core --lib ${FILTER}" >&2
-echo "    MIRIFLAGS=${MIRIFLAGS}" >&2
-exec cargo +nightly miri test -p latexml_core --lib "${FILTER}"
+run() { # <label> <extra-miriflags> <test-filter>
+  echo "==> [$1] cargo +nightly miri test -p latexml_core --lib $3" >&2
+  echo "    MIRIFLAGS=${MIRIFLAGS} $2" >&2
+  MIRIFLAGS="${MIRIFLAGS} $2" cargo +nightly miri test -p latexml_core --lib "$3"
+}
+
+if [ "$#" -ge 1 ]; then
+  # Explicit filter: single Stacked-Borrows run (ad-hoc / back-compat).
+  run "stacked" "" "$1"
+else
+  # Default (CI): arena under Stacked Borrows, plus the runtime-bindings
+  # re-entrancy model under BOTH Stacked and Tree Borrows (PR #248 B1 — the
+  # whole point of the model is the aliasing soundness, which Tree Borrows
+  # checks more strictly).
+  run "stacked" "" "arena"
+  run "stacked" "" "reentrancy_model"
+  run "tree-borrows" "-Zmiri-tree-borrows" "reentrancy_model"
+fi

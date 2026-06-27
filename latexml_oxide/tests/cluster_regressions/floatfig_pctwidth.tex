@@ -1,0 +1,10 @@
+% Regression: floatfig `floatingfigure` width percentage (same fix as floatflt).
+% Default \textwidth=345pt, a 4cm figure → width="32%" (matches Perl 0.8.8).
+\documentclass{article}
+\usepackage{floatfig}
+\begin{document}
+\begin{floatingfigure}{4cm}
+A wrapped figure via floatfig.
+\end{floatingfigure}
+Body text after the floating figure for context and paragraph flow.
+\end{document}

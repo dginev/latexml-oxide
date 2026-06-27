@@ -1,0 +1,12 @@
+% Regression: a BARE bigop (e.g. \partial) as the numerator of a `/` fraction —
+% Leibniz partial-derivative notation `\partial/\partial t`, pervasive in physics.
+% A bigop normally MUST apply (bigop_application = any_bigop term), so a bigop
+% directly followed by `/` had no grammar rule -> ltx_math_unparsed (Rust-only;
+% Perl: partial-differential / partial-differential@(t)). The divide-scoped rule
+% `any_bigop divide term` fixes it without touching `\partial \times B`.
+% See docs/SYNC_STATUS.md math-coverage notes.
+\documentclass{article}
+\begin{document}
+\( V = \partial/\partial t \)
+\( \partial t \)
+\end{document}

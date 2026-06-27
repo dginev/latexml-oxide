@@ -1,5 +1,3 @@
-use latexml_core::definition::register::RegisterValue;
-
 use crate::prelude::*;
 
 /// Perl floatfig.sty.ltxml L37-39: same direction-from-arg logic as
@@ -25,23 +23,23 @@ fn floatfig_float_direction(whatsit: &Whatsit) -> &'static str {
   }
 }
 
-/// Perl `toPercent($_[2])` — 100 * dimen / \textwidth, formatted as "NN%".
+/// Perl `toPercent($_[2])` (floatfig.sty.ltxml L41-43):
+/// `int(100 * $dimen->valueOf / LookupValue('\textwidth')->valueOf) . '%'`.
+/// `lookup_dimension` mirrors Perl's `LookupValue('\textwidth')` (value table,
+/// never warns about register-ness). Must run where the env args exist
+/// (after_digest_begin). See floatflt_sty.rs for the full rationale.
 fn floatfig_pct_width(whatsit: &Whatsit) -> String {
-  let dim_arg = whatsit
-    .get_arg(2)
-    .map(|a| a.to_attribute())
-    .unwrap_or_default();
-  let Ok(dim) = Dimension::from_str(&dim_arg) else {
+  let Some(dim_arg) = whatsit.get_arg(2) else {
     return String::new();
   };
-  let tw = match lookup_register("\\textwidth", Vec::new()) {
-    Ok(Some(RegisterValue::Dimension(d))) => d.value_of(),
-    _ => return String::new(),
+  let Some(tw) = lookup_dimension("\\textwidth") else {
+    return String::new();
   };
-  if tw == 0 {
+  let tw_sp = tw.value_of();
+  if tw_sp == 0 {
     return String::new();
   }
-  let pct = (100 * dim.value_of()) / tw;
+  let pct = (100 * dim_arg.value_of()) / tw_sp;
   s!("{pct}%")
 }
 
@@ -62,14 +60,20 @@ LoadDefinitions!({
   // time `\@captype` (set locally by before_float) is gone, and
   // after_float's `digest(\@captype)` would error. See floatflt_sty.rs
   // commit 2b57844c4 for details.
+  // float/pctwidth need the env args, which live on the BEGIN whatsit
+  // (after_digest_begin); the END whatsit in after_digest has none (get_arg →
+  // None → `width="0%"`). Compute in after_digest_begin, keep after_float in
+  // after_digest (needs live `\@captype`). See floatflt_sty.rs for full details.
   DefEnvironment!("{floatingfigure}[]{Dimension}",
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float' width='#pctwidth'>#tags #body</ltx:figure>",
     before_digest => {
       engine::latex_constructs::before_float("figure", None);
     },
-    after_digest => sub[whatsit] {
+    after_digest_begin => sub[whatsit] {
       whatsit.set_property("float", floatfig_float_direction(whatsit));
       whatsit.set_property("pctwidth", Stored::from(floatfig_pct_width(whatsit)));
+    },
+    after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
     });
 

@@ -1676,9 +1676,18 @@ fn transfer_common_constructor_options(
   //
   // before_digest
   //
-  let mut before_digest_closures: Vec<BeforeDigestClosure> = vec![before_digest_simple!({
-    requireMath!(cs_str);
-  })];
+  // Perl (Package.pm:1304): the `requireMath` beforeDigest is added ONLY when the
+  // binding passes `requireMath => 1` (`$options{requireMath} ? (sub {...}) : ()`),
+  // NOT for every DefMath. A plain math symbol (e.g. `\rightarrowfill`, a DefMath
+  // ARROW) used in TEXT mode must not warn "should only appear in math mode" — Perl
+  // auto-enters math for it; only explicit requireMath constructs (`\bm`, …) warn.
+  // (Was unconditional → a broad Rust-only `unexpected:mode` over-emission.)
+  let mut before_digest_closures: Vec<BeforeDigestClosure> = Vec::new();
+  if options.require_math {
+    before_digest_closures.push(before_digest_simple!({
+      requireMath!(cs_str);
+    }));
+  }
   if !options.nogroup {
     before_digest_closures.push(before_digest_simple!({
       bgroup();

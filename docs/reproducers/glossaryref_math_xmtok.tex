@@ -55,6 +55,27 @@
 %
 % NB: minimal Perl reproduction is finicky (glossaries \makeglossaries setup);
 % the canonical witness is the full 1705.10306 paper.
+%
+% UPDATE 2026-06-27 — RE-CLASSIFIED: almost certainly PARITY (NOT a Rust-only gap).
+%   * Perl Stomach.pm::enterHorizontal (L422-434) is a NO-OP in math
+%     (`$mode =~ /math$/ => {}`) — Rust's enter_horizontal matches. So the
+%     `enterHorizontal => 1` on the shared \lx@glossaries@gls@link constructor does
+%     NOT switch #3 to text in math in EITHER engine.
+%   * BOTH engines raw-load the SAME glossaries.sty (InputDefinitions noltxml=>1)
+%     with the SAME override → both digest #3 in ambient math → both produce
+%     glossaryref > XMTok → both hit the same schema rejection. The earlier
+%     "Perl's .sty typesets the term as TEXT" hypothesis is WEAKENED: Rust loads
+%     the identical .sty and does NOT get text (output is italic letter-XMToks).
+%   * \ref / \cite in math do NOT error (verified) — structured content
+%     (bibref / number); only \gls/\acrshort emit raw letter-XMToks. glossaryref
+%     is specific, but the mechanism is shared with Perl.
+%   * Perl CONFIRMED UNRUNNABLE here: `latexml` on this file → Fatal:terminate in
+%     expl3-code.tex (l3kernel) at 150s. Cannot capture ground truth.
+%   => Deferred as a LIKELY NON-BUG. A fix would parallel figure_mixed_content
+%      (monotonic schema expansion to accept the math content the builder already
+%      produces), but the correct structure is uncertain without Perl and there is
+%      NO precedent for XMTok in any inline element's model — a speculative change
+%      risks an unfaithful divergence. See docs/SYNC_STATUS.md "Open tasks #2".
 \documentclass{article}
 \usepackage{amsmath}
 \usepackage[acronym]{glossaries}

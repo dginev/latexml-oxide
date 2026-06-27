@@ -1,0 +1,17 @@
+% Regression: the `cases` package `numcases` environment reads `\arraycolsep`
+% via Perl's `LookupDimension` (cases.sty.ltxml L82), exactly like eqnarray. A
+% `\def`-ized `\arraycolsep` (plain macro, not a length register) must NOT emit a
+% Rust-only `expected:register` warning — Perl 0.8.8 is silent (reads the macro
+% body as a dimension). Fixed by switching numcases to state::lookup_dimension_cs.
+% See docs/SYNC_STATUS.md (companion to eqnarray_arraycolsep_macro.tex).
+\documentclass{article}
+\usepackage{cases}
+\begin{document}
+\makeatletter
+\def\arraycolsep{4pt}
+\makeatother
+\begin{numcases}{f(x)=}
+  a & for $x>0$ \\
+  b & otherwise
+\end{numcases}
+\end{document}

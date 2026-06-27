@@ -968,11 +968,20 @@ pub fn eqnarray_bindings() -> Result<()> {
   let mut xml_attrs = HashMap::default();
   xml_attrs.insert(String::from("class"), String::from("ltx_eqn_eqnarray"));
   // Perl: colsep => LookupDimension('\arraycolsep')->multiply(2)
-  if let Ok(Some(acol)) = lookup_register("\\arraycolsep", Vec::new()) {
-    let colsep = acol.pt_value(None) * 2.0;
-    if colsep > 0.0 {
-      xml_attrs.insert(String::from("colsep"), s!("{}pt", colsep));
-    }
+  // LookupDimension (not lookup_register) so a document that `\def`s
+  // `\arraycolsep` into a plain macro reads its body silently, matching Perl —
+  // `lookup_register` would emit a spurious `expected:register` warning there.
+  let acol = lookup_dimension_cs("\\arraycolsep", false);
+  let colsep = acol.pt_value(None) * 2.0;
+  if colsep > 0.0 {
+    xml_attrs.insert(String::from("colsep"), s!("{}pt", colsep));
+  }
+  // Perl: my $cur_jot = LookupDimension('\jot');
+  //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)
+  //     { $attributes{rowsep} = $cur_jot; }
+  let cur_jot = lookup_dimension_cs("\\jot", false);
+  if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+    xml_attrs.insert(String::from("rowsep"), cur_jot.to_string());
   }
   let mut properties = SymHashMap::default();
   properties.insert("preserve_structure", Stored::Bool(true));

@@ -30,7 +30,7 @@ static NODUMP: Lazy<bool> = Lazy::new(|| std::env::var_os("LATEXML_NODUMP").is_s
 /// package load. The Perl-faithful global clear (Stored::None at Global)
 /// covers the same re-entry-during-package-load case AND the
 /// autoload-from-inside-a-group case.
-fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
+pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   use latexml_core::{common::store::Stored, definition::ExpansionBody};
   let cs_tok = T_CS!(cs_name);
   // Don't overwrite if already defined

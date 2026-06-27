@@ -63,6 +63,10 @@ pub mod dump_writer;
 /// Gullet into Boxes
 #[macro_use]
 pub mod stomach;
+/// Miri soundness model for the `runtime-bindings` re-entrant trampoline (PR #248
+/// B1). Test-only; the real path is libxml2-backed and cannot be Miri-checked.
+#[cfg(test)]
+mod runtime_bindings_reentrancy_model;
 /// A TeX-like digested Box
 pub mod tbox;
 /// Per-job structured telemetry: phase wall times, counts, resource peaks.

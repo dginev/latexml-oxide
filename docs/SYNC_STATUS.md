@@ -15,8 +15,47 @@
 
 ## Current status
 
-- `cargo test --tests`: **1468 / 0 / 0**.
-- `cargo clippy --workspace --all-targets -- -D warnings`: **clean**.
+- `cargo test --tests`: **1481 / 0 / 0** (on `class-b-xmref`; +13 vs main). The +13
+  regression tests: content-corruption guard, comma-list-conditional,
+  formulae-distribute, partial-over-partial (earlier), plus this session's
+  eqnarray/numcases `\arraycolsep`-macro, floatflt/floatfig pctwidth, DefMath
+  textmode-no-mode-warning, feynmp_fmf, arximspdf_imsart,
+  omnibus_natbib_autoload_no_reload_loop, and seclev_heading_levels_stable
+  (07_xslt_seclev_levels) — see the PERF notes below.
+- **PERF (2026-06-27): OmniBus natbib-autoload reload loop — FIXED.** The dominant
+  arXiv slow/timeout cluster (~50 `sn-jnl` + Wiley/`sagej`/`wlpeerj`/… papers, all
+  unbound classes → OmniBus fallback) hung ~90 s in digest: OmniBus's hand-rolled
+  natbib autoload re-loaded natbib on every cite-CS re-emit. Routed through the
+  canonical loop-safe `def_autoload` (clear-trigger-globally-before-load + hoist).
+  2603.06884: 90 s→fatal ⇒ **0.5 s, 0 errors**. Regression witnesses 1403.6801 +
+  2207.14344 both green. Full root-cause + breadth in `docs/ARXIV_PERFORMANCE.md`.
+- **PERF (2026-06-27): XSLT `f:seclev-aux` O(n²) — FIXED (output-neutral).** The
+  second arXiv perf cluster (14 XSLT-dominated papers, ~133–167 s in XSLT) was an
+  O(headings × tree-size) heading-level computation in
+  `resources/XSLT/LaTeXML-structure-xhtml.xsl` (whole-tree `//` descendant scans
+  per `ltx:title`). Memoized to per-name global `<xsl:variable>`s (O(n)).
+  2404.12418: 179 s fatal ⇒ **34.7 s**; XSLT @99k 21.2 s → 5.3 s (below Perl's 8.7 s
+  — Perl keeps the O(n²)). Byte-identical output, suite 1480/0. Shared upstream XSLT
+  issue (candidate to upstream); see `docs/OXIDIZED_DESIGN.md` #37 +
+  `docs/ARXIV_PERFORMANCE.md` Hotspot #2.
+- **Broad regression + health sweep (2026-06-27):** ~140 diverse random corpus
+  papers (two samples of 40 + 100, NOT the perf testbed) on the current binary →
+  **0 crashes, 0 fatals, 0 hangs** across all conversions; unbound-class (OmniBus
+  natbib path) papers — aastex/revtex4/llncs/IEEEtran/elsarticle — all clean + fast.
+  The single highest-error paper (1908.08787, 35 errors) is **Rust-BETTER than Perl**
+  (same-host: Perl 101 errors + `too_many_errors` FATAL abort vs Rust 35 errors,
+  completes) — shared root (`tabu.sty`/`arxiv.sty` missing in both, `\keywords`); Rust
+  degrades gracefully. Undefined-CS discovery surfaced only package-specific gaps
+  (svjour/babel/marvosym), **no engine long-tail-CS witnesses**. Confirms the
+  session's broad changes (omnibus autoload, XSLT seclev, float-schema) introduce no
+  regressions and there is no hidden fixable cluster in the sample.
+- **Same-host parity sweep (2026-06-27):** 30 OLD papers (pre-expl3 YYMM dirs, where
+  Perl 0.8.8 completes fast), Rust vs same-host Perl. Of the 8 where BOTH completed:
+  **8/8 perfect parity (`rust=0 errors = perl=0`)** — zero Rust-worse cases. (1 Perl
+  timeout; 21 no-top-level-main, a subdir sampling artifact.) Re-confirms the standing
+  lesson that "Rust worse" deltas are rare/parity; on the Perl-comparable subset Rust
+  matches Perl exactly.
+- `cargo clippy --workspace --all-targets -- -D warnings`: **clean**; `cargo fmt --check`: clean.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
 
@@ -52,13 +91,139 @@ fix):
   `after_close_late` warned "Unresolved _xmkey"; Perl (`Base_XMath.pool.ltxml:306-308`)
   silently does `setAttribute(idref => undef)`. Removed the Rust-only warning.
 
-NON-fixes (confirmed PARITY — Perl warns too via `LookupRegister`, left as-is):
-`\tikz@dashphase`/`\cmdGR@*` (pgfmath `pgfmath_register`→`LookupRegister`), `\c@*`
-counters (`CounterValue`→`LookupRegister`). `eqnarray` `\arraycolsep` at
-`latex_constructs.rs:971` is a minor remaining divergence (Perl `LookupDimension`
-reads the macro body; 354 msgs / 2 tasks) — deferred, needs a `LookupDimension` port.
+- **`expected:register \arraycolsep` eqnarray (354 msgs / 2 tasks) — ✅ FIXED
+  2026-06-27 (`db1b879e03`, on `class-b-xmref`).** eqnarray read `\arraycolsep`
+  via the warning `lookup_register`; when a document `\def`s `\arraycolsep` into a
+  plain macro, Perl's `LookupDimension` (`Package.pm` L1371-1383) reads the macro
+  body AS A DIMENSION instead of warning. Ported it as
+  `state::lookup_dimension_cs` (register→valueOf; macro→`readingFromMouth`+
+  `readDimension`; undefined→warn-unless-noerror + `Dimension(0)`) — distinct from
+  the value-casting `lookup_dimension`. Same-host verified: Perl 0.8.8 silent on
+  the repro, Rust was 1×. **Bonus parity from extending the same helper to its
+  sibling sites:** the `\jot`→rowsep emission gap — Perl emits `rowsep` on
+  alignment containers when `\jot`≠default, Rust emitted none (eqnarray, align,
+  gather) or wrote it to the wrong channel (`ams_alignment_bindings` → alignment
+  `properties`, which never reach openContainer). Fixed across eqnarray +
+  `ams_alignment_bindings` (→`xml_attributes`) + `ams_rearrangeable_bindings`
+  (added). `mathtools.xml` regenerated: +8 `rowsep`, now byte-for-byte Perl on all
+  9 rowsep sites. Suite 1472/0.
+  - **Follow-up: `cases` `numcases`/`subnumcases` (`cases_sty.rs`) — same fix,
+    2026-06-27.** A full audit of every Perl `LookupDimension` caller vs its Rust
+    site found `numcases` was the ONE remaining `lookup_register` (warning) site
+    for a `LookupDimension` CS (`\arraycolsep`, cases.sty.ltxml L82) — same class
+    as eqnarray. Switched to `lookup_dimension_cs` + added its `\jot`→rowsep block
+    (L83-85). Same-host verified (Perl silent; `\jot=8pt`→`rowsep="8.0pt"`
+    identical). The other `LookupDimension` sites are already faithful: the
+    `@@tabular` `\tabcolsep`→colsep uses the silent `lookup_dimension` (no warn);
+    the `strut`←`\baselineskip` sites (`latex_constructs.rs:394`, `tex_tables.rs:771`)
+    are Perl `LookupRegister` (parity); list-spacing/List/Stomach baseline/hsize
+    don't warn. Regression tests `cluster_{eqnarray,numcases}_arraycolsep_macro_no_register_warning`.
+  - **Follow-up: `floatflt`/`floatfig` `floatingfigure` width/float — 3 bugs fixed,
+    2026-06-27.** Mining the lone non-parity `expected:register` CS (`\textwidth`,
+    3 papers) uncovered a deeper break: the bindings computed `float`/`pctwidth`
+    from the env args in `after_digest`, but env args live on the BEGIN whatsit
+    (reachable in `after_digest_begin`, cf. minipage `get_arg(4)`) — in
+    `after_digest` every `get_arg` is `None`. So (a) `width` was ALWAYS `"0%"` (the
+    `{Dimension}` arg read as 0; affected every floatflt/floatfig use, not just the
+    3 warning papers), (b) the optional `[l]`/`[r]` float direction was ignored
+    (always fell back to `floatfltpos`), and (c) `\textwidth` was read via the
+    warning `lookup_register` instead of Perl's silent `LookupValue` (`toPercent`,
+    floatflt.sty.ltxml L57). Fix: move float/pctwidth to `after_digest_begin`; read
+    the arg via `value_of()` and `\textwidth` via `lookup_dimension`
+    (=`LookupValue`). Same-host verified vs Perl 0.8.8: `floatingfigure{3cm}`→
+    `width="24%"` (was `0%`), `floatfig{4cm}`→`width="32%"`, `[l]`→`float="left"`,
+    `\def\textwidth` macro → no warning. Regression tests
+    `cluster_float{flt,fig}_pctwidth`. **Bug-class audit (2026-06-27):** a precise
+    codebase scan for `DefEnvironment!` blocks reading `get_arg` in `after_digest`
+    (where env args are `None` — they live on the BEGIN whatsit) found **zero**
+    remaining after the fix — floatflt/floatfig were the only two affected envs.
+    (DefConstructor `after_digest` is fine: single whatsit, args present.)
 
-Suite 1468/0, clippy clean, fmt clean.
+- **`unexpected:mode` "should only appear in math mode" — broad Rust-only
+  over-emission FIXED 2026-06-27.** Rust's `transfer_common_constructor_options`
+  (`dialect.rs`) added the `requireMath` beforeDigest UNCONDITIONALLY for every
+  `DefMath`, so any plain math symbol (e.g. `\rightarrowfill`, a DefMath ARROW)
+  used in TEXT mode warned — Perl (`Package.pm:1304`) adds it ONLY for
+  `requireMath => 1` bindings (`$options{requireMath} ? (sub {...}) : ()`); plain
+  DefMath auto-enters math, no warning. Gated the Rust closure on
+  `options.require_math` (matching the already-correct sibling paths at
+  `dialect.rs:368/995/1118`). `requireMath!` is warning-only (no output effect), so
+  zero XML change. Same-host verified: `\rightarrowfill` text → Rust 0 = Perl 0;
+  explicit `\bm` (requireMath) text → Rust 1 = Perl 1 (preserved); witness
+  `0802.3360` Rust 3→0. Cortex cluster: `unexpected:mode` 767 msgs / 28 papers.
+  Regression test `cluster_defmath_textmode_no_mode_warning`. **Deep re-validation
+  2026-06-27** (both directions, all Rust=Perl): 15 plain DefMath in text mode
+  (`\alpha`/`\infty`/`\sum`/`\int`/`\rightarrow`/`\to`/`\leq`/`\partial`/`\nabla`/
+  `\otimes`/`\forall`/`\Re`/`\aleph`/`\hbar`/`\ell`) → 0 (no over-emission), and the
+  `requireMath=>1` families (`\bm`/`\pmb`/`\boldsymbol`/`\mathbb`/`\mathfrak`) → 1
+  (no under-emission, genuine warnings preserved).
+- **`feynmp` package unbound → `error:expected:$` cascade FIXED 2026-06-27.** The
+  `error/expected/$` cluster (116 msgs / 9 papers) was dominated by one feynmp
+  paper (`1003.1620`, 28 of them). feynmp (the MetaPost/PDF variant of feynmf,
+  IDENTICAL user macros) had a Rust binding for **feynmf** but NOT feynmp, so
+  `{fmfgraph*}`/`\fmf`/`\fmfleft`/… were undefined and `\fmf{...label=$$}`
+  digested the empty `$$` → 28 `expected:$` "Missing $ closing display math"
+  errors. (The general `{$$}` display-math case is Rust at-or-better: minimal
+  `before{$$}after` is Rust 1 / Perl 5 — ruled out as a Rust bug.) Fix: a feynmp
+  binding mirroring feynmf, sharing an extracted `feynmf_diagram_stubs()` helper
+  (extended to stub `\fmfleft`/`\fmfright`/`\fmftop`/`\fmfbottom`/`\fmfsurround`/
+  `\fmfdot`/`\fmfblob`/`\fmffreeze`/`\fmfcmd`/`\fmfpen` as arg-absorbing no-ops).
+  Same-host: `1003.1620` had **28 Rust-only** `expected:$` errors (Perl 0 of
+  these); after the fix Rust has **0 total** errors on the paper vs **Perl 17**
+  (Perl has no feynmp binding either — no `feynmp.sty.ltxml`, and `feynmp.sty`
+  absent on this host — so Perl also struggles, just with different residual
+  errors; the `$$` cascade was specifically Rust-only). Rust now SURPASSES Perl
+  here. Genuine text-mode `_` still flagged (minimal `a_b` Rust 1 = Perl 1).
+  Regression test `cluster_feynmp_fmf`. Suite 1478/0.
+
+NON-fixes (confirmed PARITY — Perl warns too, left as-is): `expected:<number>`
+"Missing number (Dimension)" (3148 msgs, ~half from one paper `1408.6720`'s
+`\dimen@`/`\R@`/`\A@`/`\B@`) is the faithful TeX dimension-recovery warning Perl
+also emits (Gullet.pm:972); same-host confirmed Rust 1384 ≈ Perl 1392 on
+`1408.6720`. Via `LookupRegister`:
+`\tikz@dashphase`/`\cmdGR@*` (pgfmath `pgfmath_register`→`LookupRegister`), `\c@*`
+counters (`CounterValue`→`LookupRegister`), tabular/array `strut`←`\baselineskip`
+(`LookupRegister`). Also parity in `warning/unexpected`: `\end{document}` "open
+groups…" (271 papers, latex_constructs.pool:379), `annotation` "Orphaned
+frontmatter annotation" (130 papers, Base_Utility.pool:907; same-host 0705.4287
+Rust 2 = Perl 2) — faithful ports both engines emit. **The whole `warning`
+severity is now mined: the only Rust-only over-emissions were `expected:register`
+(eqnarray/numcases/floatflt) and `unexpected:mode` (DefMath requireMath), all
+fixed; the rest are parity / env / the deferred `expected:id` math-fork.**
+
+**`error` severity re-mined 2026-06-27 (stale data, but parity/static classes hold):**
+- `undefined` (890): big clusters are the **imsart/arximspdf** journal class (aop/aos:
+  `\bauthor`/`\btitle`/`{barticle}`/`\operatorname`/`\Name`/`\REVIEW`/`\pagerange`/… ,
+  16+ papers) and `{diagram}` — **both engines lacked the class**. The
+  **arximspdf/arxstspdf half is now ✅ FIXED** (the `arximspdf_cls.rs` binding —
+  see "Beyond-parity coverage" below — Rust now surpasses Perl on the 16-paper
+  cluster). `{diagram}` remains both-undefined (parity). `\citen` is parity
+  (works with `cite` loaded; undefined without = Perl undefined too).
+- `malformed` (151): largest is `ltx:XMApp` (28, content-MathML → deferred math-fork,
+  don't pick piecemeal); the rest (`ltx:section`/`caption`/`bibitem`/…) are
+  document-structure parity.
+- `expected` (50): `$` feynmp FIXED (above); `<number>` parity; `{`/`}`/`\fi` are TeX
+  syntax errors on malformed input (parity). The ONE static-gap find was feynmp.
+- `fatal` (51) re-cross-joined vs Perl: **ZERO Rust-only fatals.** All 26
+  `TooManyErrors`/`MaxLimit(100)` papers are Perl-fatal (24, parity) or Perl-error
+  (2: `math0701308` = known input-brace cascade [[input-brace-filename-box-cascade-2026-06-25]];
+  `1607.08317` = parity, same-host Rust 102 = Perl 102 identical errors — the
+  fatal-vs-error status is just Rust's 100-error cap escalating where Perl's
+  effective cap is higher, a classification artifact, not a content divergence).
+  `Timeout` (17) was prior-triaged (16 Perl-fatal + the FIXED 1707.02464).
+- `info` (550k msgs) checked too: dominated by Rust-infrastructure
+  (`loaded_file`/`dump_reader`/`cleanup`/`cortex` — informational, not divergences)
+  and parity ports — the biggest non-infra cluster `ignored:special` (34.8k msgs,
+  "Unrecognized TeX Special") is a faithful port of Perl's `Info('ignored',
+  'special', …)` (`TeX_FileIO.pool.ltxml:193`), parity. No Rust-only info
+  over-emission.
+**Conclusion: ALL cortex severities (info/warning/error/fatal) re-mined this session
++ the package-binding audit + a (corrected) structural skeleton diff done —
+cortex-mineable parity wins are exhausted. New Rust-only correctness divergences
+need a FRESH rerun (dynamic); the big remaining clusters (imsart, content-MathML,
+figure-panel box-metric) are deferred #2-track / math-fork / box-session.**
+
+Suite 1468/0→1478/0, clippy clean, fmt clean.
 
 **10k-sandbox rerun validation** (maxperf-cortex, 72-worker fleet, vs the PR#269
 snapshot, true per-task transition matrix from `historical_tasks`):
@@ -586,10 +751,41 @@ rerun is the clear next step:**
   that found the REVTeX/OmniBus `\references` fix): now consistently surfaces
   only the DEFERRED families — MathFork/content-MathML (`equation > tags`) and
   document-builder block/paragraph auto-wrap — plus cosmetic/niche cases.
+  **Re-run 2026-06-27 with current code** on 22 both-clean papers (0704 + 1401/1501).
+  **CORRECTION (self-caught):** my first-pass harness matched only `<(ltx|m|svg):`
+  *prefixed* elements, but the core XML uses the DEFAULT namespace
+  (`xmlns="http://dlmf.nist.gov/LaTeXML"`, so `<break/>`/`<graphics/>`/`<block>` —
+  no prefix), so it compared near-empty sets and falsely reported "identical." The
+  CORRECTED all-element diff shows real silent divergences on both-clean papers —
+  **all in the known DEFERRED families**, re-confirming the assessment above:
+  - **document-builder figure-panel block-wrap** (0704.0001, 0704.0017): Perl wraps a
+    consecutive `\includegraphics` run in `<block class="ltx_figure_panel">`; Rust
+    emits the graphics bare with `class="…ltx_figure_panel"` — AND the panel sizing
+    differs (Rust `width=303.5pt` vs Perl `241.5pt`, a consistent ~1.257×, a
+    downstream consequence of the missing panel block). This is the "broad/risky"
+    document-builder item below — now FRESHLY witnessed on clean papers; it has real
+    visual impact (figure widths), not just structure.
+  - equation `<tags>`/`<tag role="refnum">` (1501.00006), `<p>` paragraph auto-wrap
+    (0704.0007), and content-MathML (`\qquad`→`formulae@`/`fragments@`,
+    `ltx_math_unparsed`, XMDual) — deferred math-fork.
+  - cosmetic serialization (trailing space `<XMArray … >`) and a Rust-BETTER case
+    (1401.0003: Perl italicizes empty-base math-superscript digits `$^{12}$`→
+    `<text font="italic">12`, Rust keeps them upright — correct for math digits).
+  No NEW bounded *non-deferred* gap; the one real-impact divergence (figure-panel
+  block-wrap) is the deferred broad/risky document-builder item.
 - *Binding-completeness set-diff*: too noisy to be useful — it misses every
   macro defined via `TeX!(r"…")` raw-TeX blocks (single-backslash), so its
   flagged "gaps" are mostly false positives (verified: longtable `\LTcapwidth`
   etc. ARE defined). OmniBus was confirmed structurally complete this way.
+- *PACKAGE-level binding diff (2026-06-27)*: cleaner than the macro set-diff —
+  Perl 408 `*.{sty,cls}.ltxml` vs Rust's 389-entry registry. After excluding
+  classes handled via `*_support`/omnibus (elsart/revtex/aastex/JHEP/emulateapj/mn…)
+  and packages aliased/partially-handled (the algorithm family WORKS: `algorithm`
+  registered + `algorithmic`/`\STATE`/`\IF` → Rust 0 = Perl 0), only **2** are
+  genuinely absent from Rust: `causets` (niche physics) and `dirtytalk` (`\say{}`)
+  — and BOTH are **unwitnessed** in the 10k sandbox (0 cortex `undefined` entries),
+  so per the demand-driven rule they're left unported. Rust package coverage is
+  complete for what arXiv witnesses.
 - *fatal/TooManyErrors mining (2026-06-22)*: **mined out — ZERO genuine
   Rust-only bugs.** Of 35 `MaxLimit(100)` papers: 24 Perl-fatal (parity), **9 a
   `cp1251`/Cyrillic env artifact** (all `[cp1251]{inputenc}`+`[T2A]{fontenc}`+
@@ -673,6 +869,47 @@ rerun is the clear next step:**
     for custom/edge constructs. **All cortex severities (error/fatal/warning) are now
     mined; no unblocked, in-scope, non-surpass Rust-only bug remains findable on the
     current binary.**
+  - **`ambiguous/math` triaged 2026-06-27 — NOT a suppression target.** The
+    biggest warning category (977 tasks / 10713 msgs) is the `log_math_warn!`
+    "Ambiguous math: N enumerated (… pruned … unique)" message (`parser.rs:2030`),
+    which fires when a formula enumerates >10 Marpa parse trees. It is an
+    INTENTIONAL Rust-internal diagnostic (the comment: "Diagnostic only — high
+    ambiguity isn't a Perl-side Error") — Perl's RecDescent can't emit it (no tree
+    enumeration), so Perl=0, but it was deliberately KEPT in the 2026-06-25
+    signal-fidelity pass. Do NOT downgrade it (violates the don't-silence directive
+    + hides the parser-struggle signal; it's a parser-dev metric, also available via
+    `LATEXML_PARSE_AUDIT`). The UNDERLYING unparsed math (`ltx_math_unparsed`) is
+    MOSTLY PARITY — hard physics math both engines fail on (`0705.2208` Rust 320 /
+    **Perl 273** of 1734 Math; `\mathfrak{su}(4)\oplus_s`, `{}^{*}G_{…}`). The modest
+    Rust-EXCESS (+47 here) is the genuine but DEFERRED open-ended math-coverage gap
+    (each a distinct grammar rule; the deferred math-fork session, not loop-tick).
+    **★ One common Rust-excess gap FIXED (2026-06-27):** a BARE bigop as a `/`-frac
+    numerator — `\partial/\partial t` (Leibniz partial-derivative, pervasive in
+    physics) — was `ltx_math_unparsed` (a bigop must apply, so `bigop /` had no
+    rule). Added the divide-scoped rule `any_bigop divide term` (`builder.rs`),
+    matching Perl `partial-differential / partial-differential@(t)`. Scoped to the
+    `/` divide-MULOP (NOT all `mulop`) so it doesn't fire on `\partial \times B`
+    (which regressed mathtools). 0705.2208 unparsed 320→315; suite 1472/0; clippy
+    clean; regression `cluster_partial_over_partial`. The other excess gaps remain
+    deferred (each a distinct, more-specialized grammar fix): **`\star_N`** =
+    SCRIPTED PREFIX MULOP (`\star_3 x` lexes `MULOP start_POSTSUBSCRIPT 3
+    end_POSTSUBSCRIPT UNKNOWN`; `\star x` parses but the scripted prefix form has
+    no rule; Perl `absent star _ 3 x`). `scripted_mulop` exists (`builder.rs:852`)
+    but is INFIX-only. ATTEMPTED 2026-06-27 (reverted): `scripted_mulop tight_term
+    => prefix_apply` makes it parse BUT as `(star)@(x)` (apply) — DIVERGES from Perl
+    `absent star x` (binary-with-absent-left). Needs the absent-binary prefix action
+    the bare `\star x` uses (mechanism not located — likely a kludge/fallback, not a
+    clean grammar rule); `prefix_apply` is wrong. The clean fix is the focused
+    math-fork session. **`\Omega_{+,+-}`** = a comma-list of OPERATORS in a
+    subscript (`+,+-` → Perl `list@(+, absent + -)`) — plain subscript-lists
+    (`\Omega_{a,b}`, `\Omega_{p,1\bar 1}`) ALREADY work/match Perl; only the
+    operator-list form fails = the PARKED "N-ary bare-operator listing" aside.
+    **prefix `{}^{*}[…]`** = empty-base prefixed-star (the empty-base-script family,
+    cf 0707.1339 `{}^{++}`). **CONCLUSION (2026-06-27): every remaining
+    math-coverage gap connects to a known finicky/parked area** (scripted-prefix
+    operators, N-ary operator-lists, empty-base scripts) — all ambiguity-sensitive
+    → the deferred focused math-fork session, NOT loop-tick work. The clean common
+    gap (`\partial/\partial t`) is landed.
 
 **NEXT: a FRESH cortex Rust rerun built from this branch** (needs
 `X-Cortex-Token`) is the prerequisite for mining genuine Rust-only *correctness*
@@ -783,11 +1020,26 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
 > `shadethm` binding (which neither engine has) would be the real fix — surpass-
 > Perl R&D, not strict parity. Do not chase piecemeal.
 
-**Beyond-parity coverage candidates (#2 track, surpass-Perl — defer while
-strict-parity is #1):** `arximspdf`/`imsart` support (16+ IMS papers aop/aos;
-needs a bundled imsart.sty since the host lacks it); `jpconf` class → iopart
-(18+ IOP-conf papers); theorem/mdframed-in-figure schema (`figure_mixed_content`,
-Open task §1).
+**Beyond-parity coverage (#2 track, surpass-Perl):**
+- **`arximspdf`/`arxstspdf` (arXiv IMS journal classes, aop/aos/aap/aoas) — ✅
+  LANDED 2026-06-27** (user-directed). New `arximspdf_cls.rs` binding (one binding
+  serves both — identical `\b*` bib macros): loads `article`, defines the IMS
+  macros, and PRESERVES frontmatter metadata via the standard `\lx@add@*` API
+  (title/creator+personname/contact/keywords/abstract/date all emitted). Key
+  pivots: arximspdf does NOT load amsmath (defines `\tfrac`/`\dfrac`/`\operatorname`
+  itself) — so we load `amsopn` not full `amsmath`, whose env-form `\matrix`
+  override otherwise broke the plain-TeX `\matrix{…\cr…}` the papers use (Perl is
+  parity-broken there too); the structured `\b*` bib is PASSTHROUGH text (the
+  `ltx:bib-*` vocabulary is schema-valid only in the BibTeX `bibentry` path, not in
+  `\bibitem`'s `bibblock`); `{keyword}` uses the COLLECTING
+  `\lx@begin@keywords`/`\lx@end@keywords` form (`\lx@add@keywords` alone clears on
+  each call). Both engines previously FAILED outright (cascade) — Rust now
+  SURPASSES Perl: aop632 (0910.0069) 28→**1** vs Perl 17; the 16-paper aop/aos
+  cluster all convert (1–11 errors, metadata preserved). Suite 1479/0; regression
+  `cluster_arximspdf_imsart`. (Residual: the unusual `\ead`-inside-`\author`
+  nesting leaves 1 frame-balance artifact; email still captured as a contact.)
+- Remaining candidates: `jpconf` class → iopart (18+ IOP-conf papers);
+  theorem/mdframed-in-figure schema (`figure_mixed_content`, Open task §1).
 
 ---
 
@@ -875,13 +1127,16 @@ Open task §1).
   GENERAL def_math path (every math token) for cosmetic value → not worth it.
   (c) `\DeclareMathOperator*` `scriptpos` in display mode — the remaining
   candidate if revisited, but mode-dependent and niche. Whole cluster parked.
-- **N-ary bare-operator listing** (content-loss already FIXED `a75fbf17ed`):
-  `\[ + - \times \div \]` → Perl `list@(+,-,*,/)`; Rust now marks unparsed with
-  ALL tokens preserved (the coverage guard rejects the exhausted-early prefix
-  parse). Remaining = the N-ary upgrade: `anyop anyop` → recursive
-  `compound_operator_2` list (its own `// TODO`). Ambiguity-sensitive. (Root
-  cause was the marpa fork's `Parser::read` breaking on `is_exhausted()` before
-  the token source drained — `marpa/src/parser/mod.rs:130`.)
+- **N-ary bare-operator listing — ✅ NOW WORKS (verified 2026-06-27); note was
+  STALE.** `+,-,\times,\div` → `list@(+,-,*,/)` (Perl-exact); `+,-`, `+,+`, `a,+,b`,
+  `++`, `+-` all parse and match Perl. An intervening fix (likely the comma-list /
+  marpa-drain work) closed this. NOT an open gap anymore. The truly-remaining
+  operator-script cases are narrower and finicky/context-dependent: `\Omega_{+,+-}`
+  (a comma-list-of-operators in a SUBSCRIPT — Perl's subscript grammar parses it as
+  `list@(+, absent + -)`, Rust's doesn't; note `+,+-` STANDALONE is PARITY-unparsed
+  in BOTH), and operator-scripts where both parse but DIVERGE structurally
+  (`a^{++}`: Rust `a^(list@(+,+))` vs Perl `a^(absent + +)`). These are the deferred
+  math-fork session (subscript-content grammar + scripted-operator structure).
 - **comma-list LEFT of a relation `a,b \in A` — FIXED 2026-06-22 (2-item path).**
   Was the wrong `formulae@(a, b∈A)` (∈ binding only `b`). Now the user-specified
   surpass-Perl **XMDual**: content **DISTRIBUTES** — `formulae@(∈(a,A), ∈(b,A))`,
@@ -897,9 +1152,13 @@ Open task §1).
   through `list_apply` (not `formulae_apply`) → still `list@(a,b,c∈S)`; the same
   distribution needs porting to that path.
 - **relation with a list-RHS that itself contains a scripted relop**:
-  `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >=^?, c)`, Rust
-  unparsed. The scripted-relop atomic fix (`4a5ebf29f7`) cleared standalone list
-  items but not a relop-item inside a relation's list-RHS.
+  `a \le b \quad \stackrel{?}{\ge} \quad c` → Perl `a <= list@(b, >=^?, c)`.
+  **UPDATED 2026-06-27: no longer `ltx_math_unparsed` (stale)** — Rust now PARSES
+  it as `fragments@(a <= b, >= ^ ?, c)` (the `\quad`-WIDE_PUNCT routes it through
+  `formulae_apply`→`fragments@` rather than the relation-with-list-RHS shape). So
+  it's now a STRUCTURAL divergence (fragments@ vs `a <= list@(…)`), not a parse
+  failure. Lower-severity (renders) cMML-structure item; the scripted-relop atomic
+  fix (`4a5ebf29f7`) cleared standalone list items.
 - **`\underset`/`\overset` over an ARROW with a multi-token script**:
   `x \underset{n\to\infty}{\to} y` — the under-script reads `n@to@infinity`
   (apply) where Perl groups `(n to infinity)`. Same ARROW-as-applied-function
@@ -926,40 +1185,70 @@ output.
 
 ## Open tasks (actionable)
 
-### 1. `ERROR_DEBT` test-gate drain
+### 1. `ERROR_DEBT` test-gate drain — ✅ DRAINED 2026-06-27 (now empty)
 The harness error-gate (`latexml_oxide/src/util/test.rs`) fails a test at zero
-debt to force removal once fixed. Remaining:
-- **`figure_mixed_content`** — `ltx:theorem` not allowed in `ltx:figure` (Perl
-  also errors 1). True fix = **schema expansion** (theorems/mdframed in figures).
+debt to force removal once fixed.
+- **`figure_mixed_content`** — ✅ FIXED: `ltx:theorem`/`ltx:proof` were rejected in
+  `ltx:figure`/`ltx:table`/`ltx:float` (both engines errored — parity). A boxed
+  theorem/proof inside a float is valid LaTeX, so expanded the schema model
+  (`resources/RelaxNG/LaTeXML.model` + `LaTeXML-para.{rng,rnc}`: added `theorem`,
+  `proof` to the three float content models). **Output-neutral** (the builder already
+  placed the theorem inside the figure; only the spurious malformed-error is gone —
+  golden XML byte-identical). Suite 1481/0; `ERROR_DEBT` is now empty. Surpass-Perl,
+  monotonic (strictly more permissive — cannot invalidate any prior-valid doc).
+  See OXIDIZED_DESIGN #38.
 
-### 2. `\gls`/`\acrshort` in MATH mode (1705.10306) — suspected Rust gap, UNVERIFIED vs Perl
-293 errors `ltx:XMTok isn't allowed in <ltx:glossaryref>` (the "Perl 1" figure is
-**unverifiable** — 1705.10306 is in NO cortex corpus and Perl 0.8.8 times out on
-glossaries on this host, so it cannot be cross-checked; treat as suspected, not
-confirmed): a glossary
-command in math mode forces the `glossaryref` content (#3, the link display
-text) as math → bare `<XMTok>`, which `Inline.model` rejects. **Diagnosis
-re-narrowed 2026-06-21** (earlier "document-builder / Math-not-auto-openable"
-theory DISPROVEN): on the SAME host tree the current binary is **byte-identical
-to Perl** for `\textbf`/`\emph`/`\href` in math (general math-in-text is
-faithful); `ltx:Math`/`ltx:XMath` are **not** autoOpen in either engine (so no
-auto-open path), and `ltx:glossaryref` has **no** autoClose in either (faithful,
-so it can't float its content out like `emph` does). Most likely root: Perl's
-**raw-loaded `glossaries.sty`** typesets the term as TEXT (`\glstextformat`/
-`\mbox`), so Perl's #3 is PCDATA — the Rust divergence is in the raw-load
-display chain, **not** the document builder. **STILL BLOCKED** on a runnable
-Perl reference: glossaries times out in Perl 0.8.8 on this host (datatool/
-l3regex) even without `\makeglossaries`; the `glossary.{tex,xml}` fixture has no
-math case; witness 1705.10306 is not in the local corpus. Repro + full notes:
+### 2. `\gls`/`\acrshort` in MATH mode (1705.10306) — RE-CLASSIFIED 2026-06-27: almost certainly PARITY (source-confirmed), blocked on unrunnable Perl
+293 errors `ltx:XMTok isn't allowed in <ltx:glossaryref>`: a glossary command in
+math mode digests the link display text (#3, the literal acronym term) as math →
+bare per-letter `<XMTok>`, which the `glossaryref` content model rejects.
+**Source-confirmed 2026-06-27 that this is most likely PARITY (NOT a Rust-only
+gap — the cortex "Perl 1" is stale/unreliable, per `use-cortex-for-parity-work`):**
+- Perl `Stomach.pm::enterHorizontal` (L422-434) is a **no-op in math** (`$mode
+  =~ /math$/ => {}`) — Rust's `enter_horizontal` matches faithfully. So the
+  `enterHorizontal => 1` on the shared `\lx@glossaries@gls@link` constructor does
+  NOT switch #3 to text in math in EITHER engine.
+- BOTH engines raw-load the SAME `glossaries.sty` (`InputDefinitions(noltxml=>1)`)
+  with the SAME override constructor → both digest #3 in the ambient math mode →
+  both produce `glossaryref > XMTok` → both hit the same schema rejection.
+- `\ref`/`\cite` in math do NOT error (verified) — their content is STRUCTURED
+  (bibref / ref-number), not a literal term; only `\gls`/`\acrshort` emit raw
+  letter-XMToks. So glossaryref is specific, but the mechanism is shared with Perl.
+- **The earlier "Perl raw-loads glossaries.sty and typesets as TEXT" hypothesis is
+  weakened:** Rust raw-loads the identical `.sty`, so if it typeset the term as
+  text, Rust would too. It doesn't (output: italic letter-XMToks) → so the `.sty`
+  display chain does NOT force text in math.
+**Perl confirmed UNRUNNABLE here (2026-06-27):** `latexml glx.tex` → `Fatal:terminate`
+in `expl3-code.tex` (l3kernel) at 150 s — glossaries pulls in expl3 which is
+pathologically slow in Perl 0.8.8 on this host; cannot capture ground truth.
+**Fixing is therefore deferred as a likely non-bug.** If pursued, it parallels the
+figure_mixed_content surpass-Perl pattern (a monotonic schema expansion to accept
+the math content the builder already produces) — BUT the correct structure is
+genuinely uncertain without Perl (XMTok directly? XMText-wrapped? operator-token
+for the `\DeclareMathOperator` case? text PCDATA?), and there is **no precedent**
+for `XMTok` in any inline element's model, so a speculative change risks an
+unfaithful divergence. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
 
-### 3. PR #248 B1 — re-entrant `&mut Document` UB (runtime-bindings), accepted caveat
-The Rhai constructor trampoline re-mints `&mut Document` (Stacked/Tree-Borrows UB
-under a re-entrant `\wrap{\myemph{..}}`). Consolidated to one audited
-`script_bindings/mod.rs::with_doc` site + documented; the review's checked-guard
-fix **deadlocks** `Document::absorb`. **Optional future work:** make re-entrancy
-sound-while-succeeding (interior-mutable `Document` or a core handle around
-`do_absorption`). Not a blocker; `runtime-bindings` stays on by default.
+### 3. PR #248 B1 — re-entrant `&mut Document` round-trip (runtime-bindings) — ✅ RESOLVED 2026-06-27 (verified SOUND, was a misanalysis)
+The Rhai constructor trampoline re-mints `&mut Document` from a thread-local
+`*mut` for a nested `\wrap{\myemph{..}}` construct. The earlier B1 review feared
+this was Stacked/Tree-Borrows **aliasing UB**; a careful reborrow analysis shows
+it is **sound** — the nested pointer is a reborrow **descendant** of the outer
+one (the core threads a reborrow of `absorb`'s `&mut self` down to the nested
+constructor via `be_absorbed(self)`), and `with_doc` always re-mints from the
+**innermost** published pointer (`CTOR_CTX` is a stack), so every re-mint is a
+genuine descendant of all parked outer `&mut`s — a descendant reborrow never
+invalidates its ancestors. **VERIFIED:** the exact pattern (thread-local `*mut`
+stack + RAII guard + `with_doc` re-mint + nested `absorb` reborrowing down) is
+modeled libxml2-free in `latexml_core::runtime_bindings_reentrancy_model` and
+passes **Miri under both Stacked and Tree Borrows, 0 UB** (the real path is
+libxml2/FFI, which Miri can't execute — hence the model). `tools/miri_check.sh`
+runs it (stacked + tree) in CI. The checked-guard "fix" was correctly rejected:
+there is no UB to guard, and it would deadlock `Document::absorb`'s loop (which
+needs the nested construction to SUCCEED). No architectural change needed; the
+single audited `with_doc` `unsafe` stays, now documented as verified-sound.
+`runtime-bindings` stays on by default.
 
 ### 4. 0.7.0 release — release-prep LANDED; tag pending
 Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/README
@@ -991,14 +1280,103 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   use verbose Perl).
 - **`expected:id` cmml dangling-XMRef tail** — MathFork/split content-arm xml:id
   duplication; the last live `expected:id` class. See
-  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **QUANTIFIED 2026-06-22: this is the
+  `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`. **★ CANONICAL WITNESS FIXED AT THE ROOT
+  (2026-06-26q, LANDED on `class-b-xmref`):** the grammar rule `statements punct
+  statement vertbar statements => vertbar_modifier_listlhs` makes a comma-list left
+  of a conditional bar parse (`a,b|c` → `list@(a, conditional@(b,c))`, Perl-exact),
+  so the witness's aligned `\Pr(s_A,s_B|\Omega)` arg parses → refs RESOLVE, dual
+  PRESERVED. cb_repro & full witness `2311.01600` → 0 danglers; suite 1470/0; also
+  fixes the standalone `a,b|c` aside. **RESIDUAL CHARACTERIZED (2026-06-26r):** the
+  fix closed the "No node found"/DANGLING sub-case (canonical witness). The
+  DOMINANT remaining `warning/expected/id` cortex cluster (**370 tasks**) is a
+  DISTINCT class — `Missing idref on ltx:XMRef … _xmkey is `` ` (keyless XMRef, no
+  idref, document.rs:3238), NOT a dangling idref — Rust-only (0704.2334 Rust 2 /
+  Perl 0), from `\quad`/`\;`-separated **formulae/lists** with function-fence
+  applies; context-dependent; root = `formulae_apply` content ref whose key never
+  reaches the presentation item's top node (structure captured 2026-06-26t: a
+  `formulae@` dual with a trailing bare `XMRef _xmkey=XM291` and no presentation
+  top carrying XM291; the extend path doesn't clone `right`, so it's a subtler
+  nested-relation/`\lx@dual` interaction). **SEVERITY: content-MathML QUALITY gap,
+  NOT corruption** — the keyless ref has no idref so the prune sweep skips it; it
+  survives with the faithful `Missing idref` Warn, schema-valid, no content dropped.
+  Lower-priority cMML-polish item for the deferred math-fork session; the two
+  higher-severity sub-classes (Class-B dangling + content-corruption) are FIXED.
+  **★ COMMON SUB-CAUSE FIXED (2026-06-26v):** the keyless bare ref is a
+  distribute-dual extend interaction — `distribute_list_relation` makes a
+  `formulae`-content dual with a relation-`Apply` (non-Wrap) presentation; the
+  formulae/list extend paths then push a content ref but silently skip the non-Wrap
+  presentation → bare ref. Fix = gate the extend on a Wrap presentation (fall
+  through to a fresh dual otherwise). Witnesses 0704.2334/0705.0790/0707.1173 →
+  0 Missing-idref; suite 1471/0; regression `cluster_formulae_distribute_no_bare_ref`.
+  PARTIAL: 0707.1339 still emits 2 (a different sub-cause). **QUANTIFIED 2026-06-22 (pre-fix): this WAS the
   #1 remaining Rust-only divergence** — `warning/expected/id` is **1005 cortex
   tasks** ("Cannot find a node with xml:id='S…E…m1.N'" from
   `latexml_math_parser/src/parser.rs:2840`; math-node ids, so genuinely the
   content-arm/MathFork XMRef cluster). It's a large Rust-only WARNING excess vs
   Perl (e.g. 0704.3530 Rust 152 vs Perl 9 warnings) — NOT parity. The prime
   candidate for the deferred content-MathML dedicated session; do NOT pick at it
-  piecemeal (user directive).
+  piecemeal (user directive). **FULLY DIAGNOSED + DE-RISKED 2026-06-26** (branch
+  `class-b-xmref`, research-only, no code): same-host confirmed (0803.3810 Rust 51
+  vs Perl 0), exact 6-dangler witness `2311.01600` (now `/data/arxiv/2311/`),
+  Perl's target tree captured, a ~15s repro, and ALL peripheral fixes (clone/move/
+  `.mf`/combos) empirically RULED OUT — the sole fix is the core post-parse
+  preserving the structural XMArg ids (it rebuilds a fresh result tree → fresh
+  per-row `{group}X.m1.*` ids, stranding the build-time `{group}.m1.*` refs). The
+  re-id is in a distributed parse/install path (the `parser.rs:1354` reinstall is
+  NOT it). **PIN SHARPENED 2026-06-26 (notes 2026-06-26i/j) — full end-to-end
+  runtime trace; exact unrecord site identified by backtrace.** The danglers are
+  the `\Pr` (physics-pkg `I_dual`) CONTENT-arm arg refs; the arg material is still
+  present (ref merely dangles → any prune/drop is content loss, RULED OUT as a
+  cheat). The arg XMArg (`_xmkey="1"`, `xml:id`) is **swallowed by the
+  `parse_single` reparse of its ancestor presentation XMWrap** (`unrecord_node_ids`
+  ← `parser.rs:1501`), NOT parse_rec'd standalone — so the working `parse_rec`
+  id-transfer (`:1136-1196`, which heals the sibling dual args keys 2,3,5,6,7,8)
+  never applies. RULED OUT (all empirically): prune/drop, `XProps` xml:id capture
+  (dual not ingested via `From<&Node>`), `_xmkey` re-resolution + remap (parser
+  REGENERATES keys; `XM::Arg` drops the build key). LANDMINE: the reparse
+  orphan-detection (`:1502-1528`) is dead-code via the `@xml:id` namespace footgun;
+  naively fixing it ACTIVATES a content-losing `__LOSTNODE__` drop. Two viable fix
+  designs (key-carrying `XM::Arg` + re-point handler; OR cross-recursion old↔new
+  `_xmkey` snapshot) with failure modes in the design doc. **DEFINITIVE ROOT
+  (2026-06-26k, proven vs Perl source):** the ASF-vs-RecDescent node-identity
+  divergence — Perl `parse_rec` returns an array-tree EMBEDDING the real parsed
+  child nodes, so `appendTree` preserves their `xml:id`; Rust's ASF `into_xmath`
+  REBUILDS fresh nodes (XM::Apply), so a re-materialized (non-`XM::Lexeme`)
+  referenced target loses its id and the content XMRef strands. Faithful fix =
+  identity-preserving `into_xmath` for non-leaf referenced nodes (reuse the input
+  DOM node, like the leaf `XM::Lexeme` arm); LOSTNODES re-point is the pragmatic
+  alternative. **TRIGGER ISOLATED (2026-06-26l):** the dangler is a downstream
+  symptom of a CONTEXT-DEPENDENT **parse FAILURE** of the `\Pr` argument
+  (`s_A,s_B|Ω_{len=k}` → `parse_single` returns `None`), so the `parse_rec` id-transfer
+  (which heals the args that DO parse) never runs and the ancestor reparse strands the
+  ref. Confirmed: the SAME arg parses standalone (0 danglers) — only the paper's
+  preamble makes it fail in-context. Two fix axes (both dedicated-session): (A)
+  parse-coverage (make the in-context arg parse; relates to the open VERTBAR/comma-list
+  asides); (B) failure-robust id preservation via reused-leaf correspondence
+  (`record_replacement(oldXMArgId, newTopId)` re-point, content-preserving). Precise
+  repro + ruled-out approaches in `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`
+  (2026-06-26a–o). The dedicated session = fix axis A or B + full math-fixture/corpus
+  validation. **PARTIAL FIX LANDED (2026-06-26o, `class-b-xmref`):** an
+  operand-protection guard in `prune_dangling_split_xmrefs` stops the broad `^S\d+`
+  sweep from DROPPING `\Pr` content-arm arg refs (which emitted a malformed
+  `apply(probability)` = silent content loss for section-numbered aligned `\Pr`);
+  it now PRESERVES the arg (dangling, closer to Perl). 1469/0, clippy clean, does
+  NOT re-flood wp3, regression test `cluster_xmref_pr_arg_not_dropped`. Does NOT
+  make refs resolve — that is still the dedicated session (the leaf-LCA re-point,
+  design B, works mechanically but collapses the dual; the faithful fix needs a
+  CONTENT-branch arg copy, Perl's `.mf` scheme, via `rearrange_lone_ams_aligned`).
+  **ROOT CAUSE + EXACT FIX FOUND (2026-06-26p) — AXIS A now recommended.** Bisected:
+  only `\Pr(a,b|c)` (comma-list-LHS conditional) dangles; `\Pr(x)/\Pr(a|b)/\Pr(a,b)`
+  resolve. The grammar's lone VERTBAR-modifier rule is `statement vertbar statements`
+  (single LHS, `builder.rs:447`), so `a,b|c` doesn't parse → arg fails → ref strands.
+  ONE-LINE fix `statements vertbar statements` TESTED: standalone `a,b|c` parses
+  (fixes the open VERTBAR aside), witness → 0 danglers, refs **RESOLVE**, dual
+  PRESERVED (faithful, = Perl's path). BUT regresses abs-value (`a|a|` →
+  `conditional@(a,a)` not `a*|a|`; abs-value-vs-conditional ambiguity defeats
+  `prefer_fewer_conditionals`). Reverted. Targeted fix = a `comma_statements`
+  nonterminal (≥1 comma, not subsumed by `statements`) so the rule fires only on
+  genuine lists, OR a pruning tweak — dedicated math-parser session. Axis A produces
+  the genuinely-correct tree; preferred over the deep rearrange materialization.
 - **xy-pic `svg:path` / curve cluster** (1501.03690) — shifted-arrows `svg:path`
   in `ltx:text`; mode-frame cascade root.
 
@@ -1030,9 +1408,17 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
     `\begin{figure*}` with several consecutive `\includegraphics` (no blank
     line) — Perl wraps the inline run in a `<ltx:block>` (`figure > tags >
     block > graphics×N`), Rust emits the graphics bare (`figure > graphics×N`).
-    Rust is error-clean and schema-valid, so this is a COSMETIC structural
-    divergence, not a validity bug. Same root: Perl's builder opens a block for
-    a horizontal run inside a block-context element; Rust doesn't.
+    Rust is error-clean and schema-valid. **Re-witnessed + root-confirmed
+    2026-06-27** (0704.0001, 0704.0017 via the corrected structural diff): NOT
+    merely cosmetic — the panel `<graphics>` WIDTHS also diverge (Rust 303.5pt vs
+    Perl 241.5pt, ~1.257×), so figure sizing is visibly affected. Root: Perl's
+    `arrange_panels_and_breaks` (`latex_constructs.pool.ltxml:3229-3295`) does a
+    full box-metric panel layout — it inserts `<break class="ltx_break">` and wraps
+    panels using `getNodeBox($child)->getWidth` vs `float_width`; Rust's
+    counterpart (`latex_constructs.rs:1784-1869`) is explicitly **"Simplified: mark
+    panel children with the class"** and skips the break/block arrangement. A
+    faithful port DEPENDS on matching box widths → the deep box session (sibling of
+    the `\resizebox` panel-width item below), not a loop-tick fix.
 - **`\resizebox` panel scale-VALUE divergence**: in `complex/figure_mixed_content`
   two panels get a different computed natural width (xscale 1.13 vs 0.88). The
   construct in ISOLATION matches exactly (both xscale=1.9685); the divergence

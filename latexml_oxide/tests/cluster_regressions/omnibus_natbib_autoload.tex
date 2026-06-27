@@ -1,0 +1,19 @@
+% An UNBOUND journal class (no .cls binding, not on texmf) falls back to the
+% OmniBus class, which installs lazy natbib autoload triggers for \citep/\citet/…
+% Using a cite trigger must load natbib EXACTLY ONCE and then resolve to natbib's
+% real definition — NOT loop re-loading natbib until the wall-clock watchdog.
+% Pre-fix this hung ~60s+ (digest) on the broad sn-jnl/wlpeerj/sagej/Wiley
+% OmniBus-fallback cluster (witness 2603.06884). Routing the OmniBus natbib
+% autoload through the canonical loop-safe def_autoload (clear-trigger-globally
+% BEFORE load → hoist new defs to global → re-emit) fixes it while keeping
+% citations defined (1403.6801 wlpeerj regression). See docs/ARXIV_PERFORMANCE.md.
+\documentclass{lxtest_unbound_journal_xyz}
+\begin{document}
+\section{Introduction}
+A first cite \citep{foo}, an author cite \citet{bar}, and a year \citeyear{foo}.
+
+\begin{thebibliography}{9}
+\bibitem{foo} A. Author, \emph{A title}, Journal of Examples, 2020.
+\bibitem{bar} B. Writer, \emph{Another title}, Proc. of Things, 2021.
+\end{thebibliography}
+\end{document}

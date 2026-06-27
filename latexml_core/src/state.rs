@@ -1762,6 +1762,54 @@ pub fn lookup_register_quiet(cs: &str) -> Option<RegisterValue> {
   }
 }
 
+/// Faithful port of Perl `LookupDimension` (`Package.pm` L1371-1383).
+///
+/// Distinct from [`lookup_dimension`] (which casts a stored *value*) and from
+/// [`lookup_register`] / [`lookup_register_quiet`]: this resolves a control
+/// sequence's DEFINITION and, crucially, when the CS is **defined but not a
+/// register** — e.g. a document that `\def`s a length like `\arraycolsep` into a
+/// plain macro — reads its body **as a dimension** instead of warning, exactly
+/// as Perl does:
+/// * register  → `$defn->valueOf`                              (easy & proper case)
+/// * macro     → `readingFromMouth($cs, sub { readDimension })` (read the body)
+/// * undefined → `Warn('expected','register')` unless `noerror`, then `Dimension(0)`
+///
+/// `noerror` mirrors Perl's optional second positional argument (e.g.
+/// `LookupDimension('\baselineskip', 1)`). Used where Perl uses `LookupDimension`
+/// (eqnarray `\arraycolsep`/`\jot`, list `\itemsep`/`\topsep`, …), to avoid the
+/// spurious `expected:register` warnings `lookup_register` emits on a macro-ized
+/// length (Perl is silent there).
+pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Dimension {
+  let cs_token = T_CS!(cs);
+  match lookup_definition(&cs_token) {
+    Ok(Some(defn)) if defn.is_register() => {
+      // Easy (and proper) case.
+      defn
+        .value_of(Vec::new())
+        .map(|rv| Dimension::from(&rv))
+        .unwrap_or_default()
+    },
+    Ok(Some(_defn)) => {
+      // Defined, but not a register: read its body as a dimension (Perl's
+      // `readingFromMouth($cs, sub { readDimension })`). `read_dimension`
+      // already emits the faithful "Missing number (Dimension)" warning and
+      // returns `Dimension(0)` if the body isn't a dimension.
+      gullet::reading_from_mouth(mouth::Mouth::default(), move || {
+        gullet::unread(Tokens::new(vec![cs_token]));
+        gullet::read_dimension()
+      })
+      .unwrap_or_default()
+    },
+    _ => {
+      if !noerror {
+        let message = s!("The control sequence '{}' is not a register", cs);
+        Warn!("expected", "register", message);
+      }
+      Dimension::default()
+    },
+  }
+}
+
 pub fn lookup_expandable(
   token: &Token,
   toplevel_opt: Option<bool>,

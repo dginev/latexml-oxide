@@ -207,22 +207,34 @@ fn current_ctx() -> std::result::Result<CtorCtx, Box<EvalAltResult>> {
 /// in-flight body (review B1: consolidated here so the `unsafe` has one
 /// documented home instead of being scattered across every proxy op).
 ///
-/// SOUNDNESS CAVEAT (B1, NOT fully resolved): for a NESTED script construct —
-/// `\wrap{\myemph{..}}`, where the outer body's `Document::absorb` re-enters the
-/// bridge while its own `&mut self` is still live — this re-mints a second
-/// `&mut` from a raw pointer while the outer one is parked on the stack, which
-/// the Stacked/Tree-Borrows model treats as aliasing UB (it works today only
-/// because `Document` is `Rc`/`RefCell`/libxml-heavy, suppressing the
-/// optimization that would miscompile it). The native path is sound because it
-/// *reborrows* `&mut` down the call chain; the Rhai closure boundary erases that
-/// lifetime, so the round-trip through `*mut` is unavoidable here. A checked
-/// guard was tried and REJECTED: failing the re-entrant op (panic OR error)
-/// deadlocks `Document::absorb`'s loop, which requires the nested construction
-/// to SUCCEED. A real fix needs an architectural change (interior-mutable
-/// `Document`, or a core handle installed around `do_absorption`). This is an
-/// ACCEPTED, documented limitation of the experimental `runtime-bindings`
-/// front-end (decision 2026-06-10: keep the feature on, defer the architectural
-/// fix) — tracked in `docs/SYNC_STATUS.md` "PR #248 critical-review findings", B1.
+/// RE-ENTRANCY SOUNDNESS (B1 — RESOLVED 2026-06-27, verified, not a band-aid):
+/// for a NESTED script construct — `\wrap{\myemph{..}}`, where the outer body's
+/// `Document::absorb` re-enters the bridge while its own `&mut self` is still
+/// live — this re-mints a *second* `&mut` from a raw pointer while the outer one
+/// is parked on the stack. The earlier B1 review feared this was aliasing UB; a
+/// careful reborrow analysis (and a Miri model — see below) shows it is **sound**:
+/// the nested pointer is a reborrow **descendant** of the outer one, not an alias.
+/// The chain is linear: the outer body's `with_doc` reborrows the top pointer →
+/// `Document::absorb(&mut self)` reborrows that → the core threads a reborrow of
+/// `&mut self` down to the nested constructor (`absorb` → `be_absorbed(self)` →
+/// the nested trampoline's `&mut Document`) → that body's `with_doc` reborrows
+/// *it*. Because `CTOR_CTX` is a STACK and `current_ctx()` always returns the
+/// **innermost** published pointer, every `with_doc` re-mints from a genuine
+/// descendant of all parked outer `&mut`s; a descendant reborrow never
+/// invalidates its ancestors. The native path is sound for the same reason
+/// (reborrow down the call chain); the Rhai closure boundary erases the
+/// lifetime, so the round-trip through `*mut` is unavoidable here, but it
+/// preserves the reborrow lineage.
+///
+/// VERIFIED: the exact pattern (thread-local `*mut` stack + RAII guard +
+/// `with_doc` re-mint + nested `absorb` reborrowing down) is modeled over a
+/// libxml2-free `Doc` in `latexml_core::runtime_bindings_reentrancy_model` and
+/// passes Miri under **both Stacked and Tree Borrows, 0 UB** (the real path can't
+/// be Miri-checked directly because `Document` is libxml2/FFI). The earlier
+/// checked-guard "fix" was correctly REJECTED — there is no UB to guard against,
+/// and failing the re-entrant op would deadlock `Document::absorb`'s loop, which
+/// requires the nested construction to SUCCEED. Tracked in `docs/SYNC_STATUS.md`
+/// "Open tasks #3 / PR #248 B1".
 fn with_doc<R>(
   f: impl FnOnce(&mut Document, &SymHashMap<Stored>) -> std::result::Result<R, Box<EvalAltResult>>,
 ) -> std::result::Result<R, Box<EvalAltResult>> {

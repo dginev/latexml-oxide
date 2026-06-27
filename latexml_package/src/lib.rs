@@ -80,6 +80,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("amsaddr", "sty", package::amsaddr_sty::load_definitions),
   ("amsart", "cls", package::amsart_cls::load_definitions),
   ("amsproc", "cls", package::amsproc_cls::load_definitions),
+  // arXiv IMS journal classes (Annals of Probability/Statistics/…). Self-contained
+  // ~3000-line classes neither engine binds; one binding serves both (identical
+  // \b* bib macros). See arximspdf_cls.rs.
+  ("arximspdf", "cls", package::arximspdf_cls::load_definitions),
+  ("arxstspdf", "cls", package::arximspdf_cls::load_definitions),
   // smfart: no binding — Perl falls through to OmniBus, which provides
   // \Subsection, \Paragraph, \institute, etc. The earlier Rust binding
   // loaded amsart instead, which doesn't define those CSes; smfart-using
@@ -270,6 +275,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("empheq", "sty", package::empheq_sty::load_definitions),
   ("fancybox", "sty", package::fancybox_sty::load_definitions),
   ("feynmf", "sty", package::feynmf_sty::load_definitions),
+  ("feynmp", "sty", package::feynmp_sty::load_definitions),
   ("filehook", "sty", package::filehook_sty::load_definitions),
   ("flushend", "sty", package::flushend_sty::load_definitions),
   ("fix-cm", "sty", package::fix_cm_sty::load_definitions),

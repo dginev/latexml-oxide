@@ -46,46 +46,28 @@ LoadDefinitions!({
   RequirePackage!("graphicx");
   RequirePackage!("aas_macros");
 
-  // Perl L48-51: natbib autoloads — load natbib when any of its macros is used
+  // Perl L48-51: natbib autoloads — `DefAutoload($trigger, 'natbib.sty.ltxml')`
+  // for every obvious natbib macro. Route through the canonical, loop-safe
+  // `def_autoload` (the same primitive TeX.pool uses for `\mathbb`→amssymb):
+  // it clears the trigger GLOBALLY *before* loading natbib, then hoists
+  // natbib's freshly-installed defs to global and re-emits the CS so the
+  // re-try resolves to natbib's real def, not back to this stub.
+  //
+  // The earlier hand-rolled version (require_package → re-emit, with no
+  // clear) re-fired the stub on every re-emit because natbib's local def
+  // did NOT shadow it through the locked class frame — fully re-loading
+  // natbib each iteration until the wall-clock watchdog (witness:
+  // sn-jnl.cls → OmniBus → frontmatter `\citeyear` / body `\citep` →
+  // 60s+ digest hang; 2603.06884 and the broad sn-jnl/omnibus-fallback
+  // cluster). Clearing *after* the load (the even-earlier attempt) wiped
+  // natbib's fresh def → 1403.6801 undefined-`\citep` cascade. `def_autoload`
+  // clears *before* the load, which is correct for both. Task #260.
   for trigger in [
     "\\citet", "\\citep", "\\citealt", "\\citealp", "\\citenum",
     "\\citeauthor", "\\citefullauthor", "\\citeyear", "\\citeyearpar",
     "\\citeauthoryear", "\\setcitestyle", "\\bibpunct",
   ] {
-    let cs = T_CS!(trigger);
-    if !IsDefined!(&cs) {
-      let cs_clone = cs;
-      // Lazy-load natbib on first use of any cite trigger. After
-      // require_package returns, natbib's own DefMacro for \citet etc.
-      // is in scope, but the closure persists at OmniBus's load
-      // frame so re-emitting cs_clone could fire THIS closure again
-      // (infinite loop on every \citet — witness 2207.14344 timeout
-      // with 8K+ require_package(natbib) calls). Clear the closure
-      // GLOBALLY before re-emitting so the next lookup of cs_clone
-      // finds natbib's binding-loaded def, not us. Task #260.
-      def_macro(cs, None,
-        ExpansionBody::Closure(Rc::new(move |_args| {
-          require_package("natbib", RequireOptions::default())?;
-          // After require_package, natbib's LoadDefinitions has overlaid
-          // `\citep`/`\citet`/etc. at LOCAL scope on the current frame
-          // stack — so a fresh lookup of `cs_clone` will resolve to
-          // natbib's real def (the local overlay sits ABOVE this
-          // closure on the meaning stack). No need to "clear" the
-          // closure; just re-emit. If we cleared with Global scope
-          // (previous behavior), assign_internal walks down to the
-          // locked frame and removes ALL overlays of `cs_clone` —
-          // including natbib's freshly-installed local def — leaving
-          // `\citep` undefined after the load. Witness: 1403.6801
-          // (paper-class wlpeerj.cls → OmniBus fallback → user calls
-          // `\citep{foo}` → natbib loads, but `\citep` immediately
-          // reverts to undefined → 101 errors + fatal). The recursion
-          // concern (cited in original comment: 2207.14344 with 8K
-          // require_package(natbib) calls) is moot when natbib's
-          // local def shadows this closure correctly — re-emission
-          // resolves to natbib's def, not back to here.
-          Ok(Tokens::new(vec![cs_clone]))
-        })), None)?;
-    }
+    def_autoload(trigger, "natbib")?;
   }
 
   // Perl L52-57: save original \bibitem; redefine to auto-load natbib if the
@@ -426,6 +408,19 @@ LoadDefinitions!({
   // Observed in arxiv 0906.1883 where birkmult.cls's dep-scan pre-loaded
   // amsthm, and the resulting 163M-iteration pin loop blew the arena
   // past `u32::MAX` offset (SymStr wraparound → garbled error text).
+  //
+  // NB (2026-06-27 audit): these amsthm stubs intentionally keep the raw
+  // require_package+re-emit closure (NOT the canonical `def_autoload` the
+  // natbib triggers above now use). They are safe because they fire in
+  // PREAMBLE / block context (`\theoremstyle`/`\newtheorem`/`\begin{thm}`),
+  // where amsthm's freshly-loaded def DOES override the stub on re-emit — so
+  // there is no clear-before-load + hoist needed. The natbib triggers needed
+  // `def_autoload` precisely because cite CSes fire mid-body INSIDE math /
+  // the locked frontmatter frame, where the stub shadowed natbib's def and
+  // re-loaded on every re-emit. Verified: an unbound-class doc exercising all
+  // three amsthm triggers loads amsthm exactly once, 0 errors. (And the
+  // re-emit here differs from `def_autoload`'s — it prepends `theorem_preload`
+  // — so `def_autoload` is not a drop-in anyway.)
   for env in [
     "conjecture", "theorem", "corollary", "definition", "example", "exercise",
     "lemma", "note", "problem", "proof", "proposition", "question", "remark",

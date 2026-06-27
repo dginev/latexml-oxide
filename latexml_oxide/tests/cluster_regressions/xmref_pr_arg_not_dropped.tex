@@ -1,0 +1,16 @@
+% Regression: the broad prune sweep (Document::prune_dangling_split_xmrefs)
+% must NOT drop a \Pr (\lx@dual content-arm) ARGUMENT ref for section-numbered
+% aligned equations — doing so emitted a malformed apply(probability) with no
+% operand (silent content-MathML corruption). The operand-protection guard keeps
+% the ref. See docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o) and
+% docs/reproducers/class_b_aligned_pr_xmref.tex.
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{physics}
+\begin{document}
+\section{a}
+\begin{equation}\begin{aligned}
+\rho &= \Pr(s_A,s_B | \Omega) \\
+\sigma &= x
+\end{aligned}\end{equation}
+\end{document}

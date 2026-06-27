@@ -260,7 +260,7 @@ fn script_binding_macro_and_constructor_convert() {
 
   let tex = concat!(
     "literal:\\documentclass{article}\\usepackage[draft]{lxrhaitest}",
-    "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
+    "\\begin{document}\\twicex{ab} \\myemph{hi} \\mytext{zz} \\wrap{\\myemph{deep}} \\wrap{\\wrap{\\myemph{deeper}}} \\note{N} \\rot{xx}{yy}{zz2} \\cif{Y}\\cif{} ",
     "body\\fnote{*}{Marked}more\\fnote{}{Plain} \\pnote{dyn} \\snote{st} \\mypi{d1} ",
     "\\begin{rquote}Quotable\\end{rquote} \\begin{bio}{Ada}Pioneer\\end{bio} ",
     "\\begin{biop}{Ada}Idiom\\end{biop} \\begin{rbox}Boxed\\end{rbox} ",
@@ -301,12 +301,23 @@ fn script_binding_macro_and_constructor_convert() {
   );
   // Re-entrancy: the nested script constructor (\myemph) ran inside \wrap's
   // body — one script constructor's body triggering another's construction
-  // while \wrap's active-context is live. (See the B1 soundness caveat in
-  // `script_bindings/mod.rs::with_doc`: this works but rests on a raw-pointer
-  // re-mint that a checked guard could not replace without deadlocking absorb.)
+  // while \wrap's active-context is live. This exercises the raw-pointer
+  // re-mint in `script_bindings/mod.rs::with_doc` on the REAL libxml2-backed
+  // path; the borrow-aliasing soundness of the pattern is proven separately by
+  // the Miri model `latexml_core::runtime_bindings_reentrancy_model` (PR #248 B1).
   assert!(
     xml.contains("<emph>deep</emph>"),
     "re-entrant nested script constructor failed; xml=\n{xml}"
+  );
+  // Deeper 3-level re-entrancy `\wrap{\wrap{\myemph{deeper}}}` — two outer
+  // `absorb`s parked while the innermost body mutates (the worst-case live
+  // reborrow depth; mirrors the model's `three_levels` Miri case). `\wrap`'s
+  // attribute-less `<text>` wrappers collapse (LaTeXML merges them, as with the
+  // single-`\wrap` case above), so the proof is that the innermost content
+  // survived all three re-entrant `absorb` levels intact.
+  assert!(
+    xml.contains("<emph>deeper</emph>"),
+    "deep (3-level) re-entrant script construction failed; xml=\n{xml}"
   );
   // Imperative attributes + text (el_attr/el_text).
   assert!(

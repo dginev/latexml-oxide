@@ -1,0 +1,36 @@
+% Regression: the arXiv IMS journal class (arximspdf / arxstspdf, used by Annals
+% of Probability/Statistics — aop/aos). Neither Perl LaTeXML nor Rust bound this
+% self-contained ~3000-line class, so papers cascaded into dozens of undefined
+% errors (\b* structured bib, {barticle}, \operatorname/\tfrac, plain \matrix).
+% The arximspdf_cls binding loads article + defines the IMS macros, preserving
+% frontmatter metadata via the standard \lx@add@* API. Surpasses Perl (which fails
+% outright). See docs/SYNC_STATUS.md. Witness cluster: 0910.0069 + 15 aop/aos.
+\documentclass[aop,MSNbibl]{arximspdf}
+\begin{document}
+\begin{frontmatter}
+\title{A Sample IMS Paper}
+\begin{aug}
+\author[A]{\fnms{Jane} \snm{Doe}}
+\affiliation{Sample University}
+\end{aug}
+\begin{abstract}
+We study $\sigma_0 = \matrix{ 1 & 2 \cr 3 & 4 }$ and the operator
+$\operatorname{Tr}(A)$ with $\tfrac{1}{2}$.
+\end{abstract}
+\begin{keyword}
+\kwd{probability}
+\kwd{statistics}
+\end{keyword}
+\end{frontmatter}
+\section{Introduction}
+The result follows.
+\begin{thebibliography}{9}
+\bibitem{key1}
+\begin{barticle}
+\bauthor{\bsnm{Smith}\bfnm{John}}
+\btitle{On examples}.
+\bjournal{Ann. Statist.}
+\bvolume{12} \byear{2020} \bpages{1--10}.
+\end{barticle}
+\end{thebibliography}
+\end{document}

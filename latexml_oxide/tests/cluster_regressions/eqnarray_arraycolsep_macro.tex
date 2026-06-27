@@ -1,0 +1,17 @@
+% Regression: a document that `\def`s `\arraycolsep` into a plain MACRO (not a
+% length register) must NOT emit a Rust-only `expected:register` warning when an
+% eqnarray reads it. Perl's `LookupDimension` (Package.pm L1371-1383) reads the
+% macro body AS A DIMENSION there and is silent; Rust used `lookup_register`,
+% which warned "The control sequence '\arraycolsep' is not a register" (354 msgs
+% / 2 tasks in the 10k sandbox). Verified same-host: Perl 0.8.8 is silent.
+% Fix: state::lookup_dimension_cs (faithful LookupDimension port). See SYNC_STATUS.
+\documentclass{article}
+\begin{document}
+\makeatletter
+\def\arraycolsep{4pt}
+\makeatother
+\begin{eqnarray}
+  a &=& b \\
+  c &=& d
+\end{eqnarray}
+\end{document}

@@ -230,12 +230,15 @@ const INTENTIONALLY_FAILING: &[(&str, usize, &str)] = &[
 /// entry's `[error-debt] … 0 errors` shows up EVERYWHERE, remove it by review.
 /// Each note records Perl's current behavior (verify with `latexml --verbose`
 /// — `--quiet` HIDES Perl errors). Tracked in `docs/SYNC_STATUS.md`.
-const ERROR_DEBT: &[(&str, &str)] = &[(
-  "figure_mixed_content",
-  "complex figures should convert clean; today: ltx:theorem not allowed in \
-     ltx:figure (Perl also: 1). True fix = schema expansion (theorems in \
-     figures) — tracked as a separate issue.",
-)];
+///
+/// Currently EMPTY: the last entry (`figure_mixed_content` —
+/// `ltx:theorem`/`ltx:proof` not allowed in `ltx:figure`/`ltx:table`/`ltx:float`)
+/// was drained 2026-06-27 by the schema expansion in
+/// `resources/RelaxNG/LaTeXML.model` + `LaTeXML-para.{rng,rnc}` (a boxed theorem/
+/// proof inside a float is valid LaTeX; both engines previously rejected it). The
+/// fix is output-neutral — the builder already placed the theorem inside the
+/// figure, so only the spurious malformed-error is gone (XML byte-identical).
+const ERROR_DEBT: &[(&str, &str)] = &[];
 
 /// Emit a line to the process's REAL stderr, SURVIVING libtest's per-test
 /// output capture. libtest only intercepts the `print!`/`eprint!` macros and

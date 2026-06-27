@@ -1453,6 +1453,58 @@ delimiter inside the group, not just commas. Suite 1465/0; verified
 balanced/nested parens protect, unbalanced parens do not regress the `\\`
 split.
 
+### 37. XSLT `f:seclev-aux` memoized to global variables (O(n²)→O(n), output-neutral)
+
+**Decision:** In the embedded `resources/XSLT/LaTeXML-structure-xhtml.xsl`,
+the recursive `f:seclev-aux` (which computes a section heading's `<hN>` level)
+is replaced by a lookup into precomputed global `<xsl:variable>`s
+(`seclev_document` … `seclev_backmatter`). The function body now just selects
+the variable matching the element-type name.
+
+**Perl behavior:** upstream LaTeXML's `f:seclev-aux` recomputes whole-tree
+`boolean(//ltx:chapter/ltx:title)`-style **descendant scans** on *every* call,
+and `f:section-head-level` calls it once per `ltx:title`. That is
+O(headings × tree-size) ≈ **O(n²)** — the dominant XSLT cost on large
+section/math-heavy documents.
+
+**Rationale & neutrality:** the level for a given element-type *name* is a
+**document-global constant** — it depends only on which structural element
+types are present (the `boolean(//…)` probes), never on the calling node. So
+computing it once per name yields *identical* values; only the redundant
+recomputation is removed. Verified byte-identical (a 99k-element truncation of
+arXiv 2404.12418 `diff`s IDENTICAL pre/post; full suite 1480/0 unchanged).
+
+**Impact:** 2404.12418 went 179 s fatal-timeout → 34.7 s; all 14 "XSLT-dominated"
+arXiv perf-testbed papers (formerly 176–179 s timeouts) now complete. This is a
+**surpass-Perl** perf win (Perl keeps the O(n²); Rust @99k is now 5.3 s vs Perl
+8.7 s on the same stylesheet) and a candidate to upstream. Local divergence from
+upstream XSLT only. Full analysis: `docs/ARXIV_PERFORMANCE.md` (Hotspot #2).
+
+### 38. `theorem`/`proof` allowed inside `figure`/`table`/`float` (schema expansion)
+
+**Decision:** The schema content models for `ltx:figure`, `ltx:table`, and
+`ltx:float` now permit `ltx:theorem` and `ltx:proof` children. Edited the
+precompiled `resources/RelaxNG/LaTeXML.model` (the flattened `canContain` table the
+document builder actually consults) plus the `figure_model`/`table_model`/`float_model`
+source in `resources/RelaxNG/LaTeXML-para.{rng,rnc}`.
+
+**Perl behavior:** upstream LaTeXML's float models do NOT include theorem/proof, so
+Perl emits `Error:malformed:ltx:theorem <ltx:theorem> isn't allowed in <ltx:figure>`
+for the same input (verified: parity — both engines error).
+
+**Rationale & neutrality:** a boxed/framed theorem or proof inside a figure/table
+float is valid LaTeX (e.g. `\begin{figure}…\begin{theorem}…\end{theorem}…`). The
+document builder already PLACED the theorem inside the figure (it logged the schema
+error but inserted the node anyway), so accepting it in the model is **output-neutral**
+— the golden `figure_mixed_content.xml` is byte-identical pre/post; only the spurious
+malformed-error disappears. The change is **monotonic** (strictly more permissive): it
+cannot invalidate any document that validated before, so no existing test can break
+(full suite 1481/0 unchanged).
+
+**Impact:** drains the last `ERROR_DEBT` entry (`figure_mixed_content`); `ERROR_DEBT`
+is now empty. Surpass-Perl; candidate to upstream. (mdframed-style framed blocks
+typically lower to `float`/`theorem` too, so they benefit as well.)
+
 ---
 
 ## Future Work (Beyond Perl Parity)

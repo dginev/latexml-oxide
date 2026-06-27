@@ -1,0 +1,18 @@
+% Regression: a feynmp (Feynman-diagram, MetaPost) document. feynmp shares
+% feynmf's macros but had NO Rust binding, so `{fmfgraph*}`/`\fmf`/`\fmfleft`/…
+% were undefined and `\fmf{...label=$$}` cascaded into `expected:$` display-math
+% errors (witness 1003.1620: Rust 28 / Perl 0). The feynmp binding (mirroring
+% feynmf + the shared diagram-macro stubs) absorbs the diagram macros so the
+% document converts cleanly. See docs/SYNC_STATUS.md.
+\documentclass{article}
+\usepackage{feynmp}
+\begin{document}
+\begin{fmffile}{graphs}
+\begin{fmfgraph*}(30,20)
+  \fmfleft{i1,i2}\fmfright{o1,o2}
+  \fmf{photon,tension=0,label=$$}{i1,o1}
+  \fmf{dbl_wiggly,tension=0}{i2,o2}
+  \fmfblob{0.1w}{v1}\fmfdot{v1}\fmflabel{$q$}{i1}\fmffreeze
+\end{fmfgraph*}
+\end{fmffile}
+\end{document}
