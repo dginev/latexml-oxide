@@ -1185,6 +1185,58 @@ output.
 
 ## Open tasks (actionable)
 
+### mhchem-manual fidelity mission (2026-06-27, on `followups-2026-06-27`) — LANDED
+Driven by a manual review of `~/Downloads/mhchem.tex` (the mhchem package manual)
+rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
+--path=~/git/ar5iv-css/css` (glowup branch), examined via playwright + Chrome.
+
+1. **7 new `latexml_contrib` package bindings** for the manual's missing packages
+   (errors 10→0): `fancyvrb-ex`, `rsphrase`, `hpstatement`, `tgpagella`,
+   `sourcecodepro`, `AlegreyaSans` (raw-load real `.sty` where installed, per the
+   user directive that raw-loading `.sty` is encouraged; fonts no-op where absent),
+   and `scrreprt` (OmniBus `.cls` stub like `scrbook_cls`, + `\minisec`/`addmargin`/
+   `\addtokomafont`). Perl ships no binding for any of these, so they are surpass-Perl
+   contrib additions. `pstricks` already bound (its warning is a transitive
+   fancyvrb-ex dep-scan artifact when the raw `pstricks.sty` is absent — benign).
+2. **`\marginpar` font-leak fix** (`latex_constructs.rs`, `bounded => true`) — the
+   manual's `\marginpar{\Large !}` leaked `\Large` document-wide (1388 `144%` nodes →
+   4). PARITY bug (Perl 0.8.8 leaks identically); fixed surpass-Perl. OXIDIZED_DESIGN
+   #39, KNOWN_PERL_ERRORS #38. Output-neutral (suite 1487/0).
+3. **mhchem stub RETIRED → raw-load real `mhchem.sty`.** The engine's expl3/xparse/
+   chemgreek support is now mature enough that `\usepackage{mhchem}` raw-loads the
+   genuine package: chemistry renders with proper digit subscripts (`\ce{H2O}`→H₂O),
+   charge superscripts, reaction arrows (`->`/`<=>`/`->[..]`), bonds, states,
+   `\cesplit`. Simple `\ce` is 0 errors + correctly formatted (the old stub rendered
+   formulae FLAT). chemformula stub updated to require mhchem with `version=4` (the
+   real package warns without it; the old stub was silent). **Residual:** the full
+   manual still emits ~69 edge-case errors under raw-load (`\ce` inside `align*` →
+   `\lx@begin@alignment`/`\end@amsalign`; ~56 `\lx@end@inline@math` from specific
+   `$`-toggle / `\cesplit`-derived example patterns). Basic `SideBySideExample`+`\ce`
+   is clean. **TODO (this branch):** debug the align*/`\lx@end@inline@math` edge
+   cases toward 0 errors; validate the corpus mhchem witnesses via cortex (the flip
+   is corpus-wide).
+
+### `ltx_env_<name>` env-markup class — PLANNED, separate branch (churns every test XML)
+**User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
+with `class="ltx_env_<name>"` so custom/minipage-like envs (e.g. `SideBySideExample`)
+become responsively styleable in CSS instead of fixed-width minipages. **MUST be on a
+dedicated branch** — it changes nearly every test XML (additive class on every env
+element), so the golden-suite update is large and must be done in isolation.
+Two implementations, same markup outcome:
+- **Binding side (`DefEnvironment!`):** the constructor guarantees exactly one element,
+  so unconditionally add `ltx_env_<name>` (via an `@ADDCLASS`/`add_class` after the
+  begin constructor opens). Applies to ALL DefEnvironments (`figure`, `table`,
+  `theorem`, `minipage`, …) — user chose full scope.
+- **Raw side (`\newenvironment`/`\renewenvironment`):** arm at env start; at `\begin`
+  construction record `{name, anchor = globally-unique gid of current node, mark}`; at
+  `\end` afterConstruct, if EXACTLY ONE element was deposited under the anchor since
+  the mark → tag it; zero (font/text-only) or >1 (siblings, e.g. SideBySideExample's
+  parboxes) → nothing. **Needs a globally-unique monotonic node gid** (verify/ add;
+  `record_node_ids` exists but is xml:id-oriented).
+- **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
+  + drive responsive layout from the resulting `ltx_minipage`/`ltx_env_*` hooks in
+  `ar5iv.css`; do NOT re-implement the verbatim+render dual capture.
+
 ### 1. `ERROR_DEBT` test-gate drain — ✅ DRAINED 2026-06-27 (now empty)
 The harness error-gate (`latexml_oxide/src/util/test.rs`) fails a test at zero
 debt to force removal once fixed.
