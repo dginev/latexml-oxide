@@ -1247,10 +1247,20 @@ regenerated, purely additive class additions.
   corpus.** (4) imperative-form DefEnvironments (rhai `{rbox}` via absorbProperty) were
   observed NOT tagged — possible gap to investigate.
 
-**RAW SIDE (`\newenvironment`/`\renewenvironment`) — TODO.** The depth-guard "first
-outermost open" is unreliable here (begin-code may open 0/many siblings). Plan: inject
-`\name` = `\lx@env@arm{class} B \lx@env@finalize`; count outermost opens during the
-begin-code `B` only; `\lx@env@finalize` (after `B`, before body) tags iff exactly one.
+**RAW SIDE (`\newenvironment`/`\renewenvironment`) — ATTEMPTED, ABANDONED (regresses).**
+The Count-mode mechanism worked in isolation (`env_arm_count`/`env_finalize_count`,
+nesting-correct: `mybox`={quote} → `class="ltx_env_mybox ltx_env_quote"`; font-only and
+two-sibling cases correctly untagged). BUT it requires injecting `\name` =
+`\lx@env@arm@raw{class} B \lx@env@finalize@raw` — and the `\lx@env@finalize@raw` token
+at the begin-code/body boundary **disrupts position-sensitive begin-codes**: csquotes'
+`displayquote` mangled its citation (`[Citation] du texte ici` vs the proper nested
+`ltx_citation`). There is NO safe boundary token between a `\newenvironment` begin-code
+and its body. The two alternatives also fail: finalize-at-`\end` over-counts body
+blocks (a body `\begin{quote}` is an outermost open → count>1 → no tag); tree-diff
+"single deposited root" hits the shared auto-`<para>` (tags the para). **Conclusion:**
+the raw side needs a fundamentally different mechanism (e.g. an engine-level
+begin-code/body boundary signal, or per-env construct introspection) — deferred. The
+binding side (all DefEnvironments) is the shipped feature.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.
