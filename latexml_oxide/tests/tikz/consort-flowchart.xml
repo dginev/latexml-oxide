@@ -9,8 +9,8 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:svg="http://www.w3.org/2000/svg">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <logical-block>
-    <figure align="center" inlist="lof" xml:id="S0.F1">
+  <logical-block class="ltx_env_center">
+    <figure align="center" class="ltx_env_figure" inlist="lof" xml:id="S0.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>

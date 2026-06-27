@@ -42,7 +42,7 @@ At End stuff(inside).End stuff.After End stuff(outside).</p>
     </para>
     <para xml:id="S2.p2">
       <p>Before Begin equation(outside).At Begin equation(inside).</p>
-      <equation xml:id="S2.E1">
+      <equation class="ltx_env_equation" xml:id="S2.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -568,7 +568,7 @@ Bold to <text font="italic">italic</text></p>
       <title><tag close=" ">3.7</tag>List Processing</title>
       <para class="ltx_noindent" xml:id="S3.SS7.p1">
         <p>Itemize list:</p>
-        <itemize xml:id="S3.I1">
+        <itemize class="ltx_env_itemize" xml:id="S3.I1">
           <item xml:id="S3.I1.i1">
             <tags>
               <tag>•</tag>
@@ -612,7 +612,7 @@ Bold to <text font="italic">italic</text></p>
       </para>
       <para xml:id="S3.SS7.p3">
         <p>Dolistloop itemize:</p>
-        <itemize xml:id="S3.I2">
+        <itemize class="ltx_env_itemize" xml:id="S3.I2">
           <item xml:id="S3.I2.i1">
             <tags>
               <tag>•</tag>
@@ -644,7 +644,7 @@ Bold to <text font="italic">italic</text></p>
       </para>
       <para xml:id="S3.SS7.p4">
         <p>Forlistloop itemize:</p>
-        <itemize xml:id="S3.I3">
+        <itemize class="ltx_env_itemize" xml:id="S3.I3">
           <item xml:id="S3.I3.i1">
             <tags>
               <tag>•</tag>

@@ -290,7 +290,7 @@
   <para class="ltx_noindent" xml:id="p2">
     <p>Range example: <ref labelref="LABEL:eqn:1" show="creftypeplural refnum"/> to <ref labelref="LABEL:eqn:4"/></p>
   </para>
-  <figure inlist="lof" labels="LABEL:fig:1" placement="ht" xml:id="S0.F1">
+  <figure class="ltx_env_figure" inlist="lof" labels="LABEL:fig:1" placement="ht" xml:id="S0.F1">
     <tags>
       <tag>Figure 1</tag>
       <tag role="creftype">fig.</tag>

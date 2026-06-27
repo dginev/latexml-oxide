@@ -23,7 +23,7 @@
       <tag role="typerefnum">§1</tag>
     </tags>
     <title><tag close=" ">1</tag>Scalings, Rotations using <text font="typewriter">graphics</text></title>
-    <table inlist="lot" labels="LABEL:tb:tab1" placement="htb" xml:id="S1.T1">
+    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab1" placement="htb" xml:id="S1.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="autoref">Table 1</tag>
@@ -33,7 +33,7 @@
       <tabular class="ltx_centering ltx_guessed_headers" vattach="middle">
         <tbody>
           <tr>
-            <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
+            <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" class="ltx_env_rotatebox" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
                 <p><text font="bold" fontsize="80%">Original pairs</text></p>
               </inline-block></td>
             <td border="l r t" thead="column"/>
@@ -68,7 +68,7 @@
       <toccaption class="ltx_centering"><tag close=" ">1</tag>Normal: Distribution of monothematic pairs with respect to original Y/N pairs</toccaption>
       <caption class="ltx_centering"><tag close=": ">Table 1</tag>Normal: Distribution of monothematic pairs with respect to original Y/N pairs</caption>
     </table>
-    <table inlist="lot" labels="LABEL:tb:tab2" placement="htb" xml:id="S1.T2">
+    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab2" placement="htb" xml:id="S1.T2">
       <tags>
         <tag>Table 2</tag>
         <tag role="autoref">Table 2</tag>
@@ -79,7 +79,7 @@
         <tabular class="ltx_guessed_headers" vattach="middle">
           <tbody>
             <tr>
-              <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
+              <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" class="ltx_env_rotatebox" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
                   <p><text font="bold" fontsize="80%">Original pairs</text></p>
                 </inline-block></td>
               <td border="l r t" thead="column"/>
@@ -115,7 +115,7 @@
       <toccaption><tag close=" ">2</tag>Squinched: Distribution of monothematic pairs with respect to original Y/N pairs</toccaption>
       <caption><tag close=": ">Table 2</tag>Squinched: Distribution of monothematic pairs with respect to original Y/N pairs</caption>
     </table>
-    <table inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T3">
+    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T3">
       <tags>
         <tag>Table 3</tag>
         <tag role="autoref">Table 3</tag>
@@ -126,7 +126,7 @@
         <tabular class="ltx_guessed_headers" vattach="middle">
           <tbody>
             <tr>
-              <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
+              <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" class="ltx_env_rotatebox" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
                   <p><text font="bold" fontsize="80%">Original pairs</text></p>
                 </inline-block></td>
               <td border="l r t" thead="column"/>
@@ -162,7 +162,7 @@
       <toccaption><tag close=" ">3</tag>Flipped: Distribution of monothematic pairs with respect to original Y/N pairs</toccaption>
       <caption><tag close=": ">Table 3</tag>Flipped: Distribution of monothematic pairs with respect to original Y/N pairs</caption>
     </table>
-    <table inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T4">
+    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T4">
       <tags>
         <tag>Table 4</tag>
         <tag role="autoref">Table 4</tag>
@@ -173,7 +173,7 @@
         <tabular class="ltx_guessed_headers" vattach="middle">
           <tbody>
             <tr>
-              <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
+              <td align="center" border="b l r t" rowspan="5" thead="column"><inline-block angle="90" class="ltx_env_rotatebox" depth="0.0pt" height="58.8pt" innerdepth="1.6pt" innerheight="5.6pt" innerwidth="58.8pt" width="7.1pt" xtranslate="-25.8pt" ytranslate="-25.8pt">
                   <p><text font="bold" fontsize="80%">Original pairs</text></p>
                 </inline-block></td>
               <td border="l r t" thead="column"/>
@@ -220,24 +220,24 @@
     <title><tag close=" ">2</tag>Scalings, Rotations using <text font="typewriter">rotating</text></title>
     <para xml:id="S2.p1">
       <p>Start here
-<inline-block angle="-56" depth="48.6pt" height="3.9pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="58.7pt" width="0.0pt" xtranslate="-10.1pt" ytranslate="-22.8pt">
+<inline-block angle="-56" class="ltx_env_rotate" depth="48.6pt" height="3.9pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="58.7pt" width="0.0pt" xtranslate="-10.1pt" ytranslate="-22.8pt">
           <p>Save whales</p>
         </inline-block>
 End here</p>
     </para>
     <para xml:id="S2.p2">
-      <p>Start here <inline-block angle="56" depth="0.0pt" height="60.8pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="68.6pt" width="44.1pt" xtranslate="-12.2pt" ytranslate="-26.9pt">
+      <p>Start here <inline-block angle="56" class="ltx_env_turn" depth="0.0pt" height="60.8pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="68.6pt" width="44.1pt" xtranslate="-12.2pt" ytranslate="-26.9pt">
           <p>Save the whale</p>
         </inline-block> end here</p>
     </para>
     <para xml:id="S2.p3">
       <p>Start here
-<inline-block angle="90" depth="0.0pt" height="68.6pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="68.6pt" width="6.9pt" xtranslate="-30.8pt" ytranslate="-30.8pt">
+<inline-block angle="90" class="ltx_env_sideways" depth="0.0pt" height="68.6pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="68.6pt" width="6.9pt" xtranslate="-30.8pt" ytranslate="-30.8pt">
           <p>Save the whale</p>
         </inline-block>
 End here</p>
     </para>
-    <figure inlist="lof" labels="LABEL:angles1" xml:id="S2.F1">
+    <figure class="ltx_env_figure*" inlist="lof" labels="LABEL:angles1" xml:id="S2.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="autoref">Figure 1</tag>
@@ -247,19 +247,19 @@ End here</p>
       <tabular vattach="middle">
         <tbody>
           <tr>
-            <td align="center" border="l r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="0" depth="22.4pt" height="27.4pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="79.1pt" xtranslate="0.0pt" ytranslate="0.0pt">
+            <td align="center" border="l r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="0" class="ltx_env_turn" depth="22.4pt" height="27.4pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="79.1pt" xtranslate="0.0pt" ytranslate="0.0pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
                     </inline-block></p>
                 </inline-block>—</text></td>
-            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-40" depth="68.0pt" height="21.0pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="92.6pt" xtranslate="6.7pt" ytranslate="-19.6pt">
+            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-40" class="ltx_env_turn" depth="68.0pt" height="21.0pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="92.6pt" xtranslate="6.7pt" ytranslate="-19.6pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
                     </inline-block></p>
                 </inline-block>—</text></td>
-            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-80" depth="81.8pt" height="4.8pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="62.7pt" xtranslate="-8.2pt" ytranslate="-18.4pt">
+            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-80" class="ltx_env_turn" depth="81.8pt" height="4.8pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="62.7pt" xtranslate="-8.2pt" ytranslate="-18.4pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
@@ -272,19 +272,19 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
             <td align="center" border="r">-80<sup><text font="italic" fontsize="90%">o</text></sup></td>
           </tr>
           <tr>
-            <td align="center" border="l r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-120" depth="82.2pt" height="11.2pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="82.6pt" xtranslate="1.8pt" ytranslate="-21.8pt">
+            <td align="center" border="l r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-120" class="ltx_env_turn" depth="82.2pt" height="11.2pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="82.6pt" xtranslate="1.8pt" ytranslate="-21.8pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
                     </inline-block></p>
                 </inline-block>—</text></td>
-            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-160" depth="52.8pt" height="21.0pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="91.3pt" xtranslate="6.1pt" ytranslate="-12.0pt">
+            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-160" class="ltx_env_turn" depth="52.8pt" height="21.0pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="91.3pt" xtranslate="6.1pt" ytranslate="-12.0pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
                     </inline-block></p>
                 </inline-block>—</text></td>
-            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-200" depth="25.7pt" height="48.1pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="91.3pt" xtranslate="6.1pt" ytranslate="-12.0pt">
+            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-200" class="ltx_env_turn" depth="25.7pt" height="48.1pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="91.3pt" xtranslate="6.1pt" ytranslate="-12.0pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
@@ -297,19 +297,19 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
             <td align="center" border="r">-200<sup><text font="italic" fontsize="90%">o</text></sup></td>
           </tr>
           <tr>
-            <td align="center" border="l r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-240" depth="13.7pt" height="79.7pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="82.6pt" xtranslate="1.8pt" ytranslate="-21.8pt">
+            <td align="center" border="l r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-240" class="ltx_env_turn" depth="13.7pt" height="79.7pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="82.6pt" xtranslate="1.8pt" ytranslate="-21.8pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
                     </inline-block></p>
                 </inline-block>—</text></td>
-            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-280" depth="3.9pt" height="82.7pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="62.7pt" xtranslate="-8.2pt" ytranslate="-18.4pt">
+            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-280" class="ltx_env_turn" depth="3.9pt" height="82.7pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="62.7pt" xtranslate="-8.2pt" ytranslate="-18.4pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
                     </inline-block></p>
                 </inline-block>—</text></td>
-            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-320" depth="17.1pt" height="71.8pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="92.6pt" xtranslate="6.7pt" ytranslate="-19.6pt">
+            <td align="center" border="r t"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">—<inline-block angle="-320" class="ltx_env_turn" depth="17.1pt" height="71.8pt" innerdepth="22.4pt" innerheight="27.4pt" innerwidth="79.1pt" width="92.6pt" xtranslate="6.7pt" ytranslate="-19.6pt">
                   <p><inline-block class="ltx_parbox" framed="rectangle" vattach="middle" width="72.3pt">
                       <p>Save
 the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.gov/LaTeXML/">Kitty!</ref> Save the whale</p>
@@ -327,18 +327,18 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
       <caption><tag close=": ">Figure 1</tag>Rotation of paragraphs between 0 and -320 degrees </caption>
     </figure>
     <para xml:id="S2.p4">
-      <quote>
+      <quote class="ltx_env_quote">
         <rule height="108.4pt" width="0.0pt"/>
         <tabular vattach="middle">
           <tbody>
             <tr>
-              <td align="right"><inline-block angle="45" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="0.0pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
+              <td align="right"><inline-block angle="45" class="ltx_env_rotate" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="0.0pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
                   <p>Column 1</p>
                 </inline-block></td>
-              <td align="right"><inline-block angle="45" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="0.0pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
+              <td align="right"><inline-block angle="45" class="ltx_env_rotate" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="0.0pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
                   <p>Column 2</p>
                 </inline-block></td>
-              <td align="right"><inline-block angle="45" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="0.0pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
+              <td align="right"><inline-block angle="45" class="ltx_env_rotate" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="0.0pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
                   <p>Column 3</p>
                 </inline-block></td>
             </tr>
@@ -362,17 +362,17 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
       </quote>
     </para>
     <para xml:id="S2.p5">
-      <quote>
+      <quote class="ltx_env_quote">
         <tabular vattach="middle">
           <tbody>
             <tr>
-              <td align="right"><inline-block angle="45" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="35.2pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
+              <td align="right"><inline-block angle="45" class="ltx_env_turn" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="35.2pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
                   <p>Column 1</p>
                 </inline-block></td>
-              <td align="right"><inline-block angle="45" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="35.2pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
+              <td align="right"><inline-block angle="45" class="ltx_env_turn" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="35.2pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
                   <p>Column 2</p>
                 </inline-block></td>
-              <td align="right"><inline-block angle="45" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="35.2pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
+              <td align="right"><inline-block angle="45" class="ltx_env_turn" depth="0.0pt" height="35.2pt" innerdepth="0.0pt" innerheight="6.9pt" innerwidth="42.8pt" width="35.2pt" xtranslate="-3.8pt" ytranslate="-14.1pt">
                   <p>Column 3</p>
                 </inline-block></td>
             </tr>
@@ -395,7 +395,7 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
         </tabular>
       </quote>
     </para>
-    <table angle="90" depth="0.0pt" height="550.0pt" inlist="lot" innerdepth="103.4pt" innerheight="98.6pt" innerwidth="550.0pt" labels="LABEL:rotfloat2" width="202.0pt" xtranslate="-174.0pt" ytranslate="-174.0pt" xml:id="S2.T5">
+    <table angle="90" class="ltx_env_sidewaystable" depth="0.0pt" height="550.0pt" inlist="lot" innerdepth="103.4pt" innerheight="98.6pt" innerwidth="550.0pt" labels="LABEL:rotfloat2" width="202.0pt" xtranslate="-174.0pt" ytranslate="-174.0pt" xml:id="S2.T5">
       <tags>
         <tag>Table 5</tag>
         <tag role="autoref">Table 5</tag>

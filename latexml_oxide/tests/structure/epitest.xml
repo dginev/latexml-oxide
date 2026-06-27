@@ -73,7 +73,7 @@ that are within your reach</text></p>
     </tags>
     <title><tag close=" ">4</tag>Four</title>
     <para xml:id="S4.p1">
-      <quote class="ltx_epigraph " cssstyle="width:138pt; margin-left:auto;">
+      <quote class="ltx_env_epigraphs ltx_epigraph" cssstyle="width:138pt; margin-left:auto;">
         <block class="ltx_epigraph_text" cssstyle="text-align:left; ">
           <p><text fontsize="90%">My soul, seek not the life of immortals; but enjoy to the full the resources
 that are within your reach</text></p>

@@ -1216,26 +1216,44 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    cases toward 0 errors; validate the corpus mhchem witnesses via cortex (the flip
    is corpus-wide).
 
-### `ltx_env_<name>` env-markup class — PLANNED, separate branch (churns every test XML)
+### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING SIDE LANDED; raw side next)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
-with `class="ltx_env_<name>"` so custom/minipage-like envs (e.g. `SideBySideExample`)
-become responsively styleable in CSS instead of fixed-width minipages. **MUST be on a
-dedicated branch** — it changes nearly every test XML (additive class on every env
-element), so the golden-suite update is large and must be done in isolation.
-Two implementations, same markup outcome:
-- **Binding side (`DefEnvironment!`):** the constructor guarantees exactly one element,
-  so unconditionally add `ltx_env_<name>` (via an `@ADDCLASS`/`add_class` after the
-  begin constructor opens). Applies to ALL DefEnvironments (`figure`, `table`,
-  `theorem`, `minipage`, …) — user chose full scope.
-- **Raw side (`\newenvironment`/`\renewenvironment`):** arm at env start; at `\begin`
-  construction record `{name, anchor = globally-unique gid of current node, mark}`; at
-  `\end` afterConstruct, if EXACTLY ONE element was deposited under the anchor since
-  the mark → tag it; zero (font/text-only) or >1 (siblings, e.g. SideBySideExample's
-  parboxes) → nothing. **Needs a globally-unique monotonic node gid** (verify/ add;
-  `record_node_ids` exists but is xml:id-oriented).
+with `class="ltx_env_<name>"` so any env (incl. minipage-like `SideBySideExample`)
+becomes responsively styleable in CSS. On its own branch — it changes nearly every
+test XML (additive class on every env element). Regenerate goldens with the new
+`tools/maketests.sh` (the `LATEXML_BLESS=1` bless mode).
+
+**BINDING SIDE (`DefEnvironment!`) — DONE.** Mechanism (after exploring & rejecting
+several): the wrapper is the **FIRST OUTERMOST `open_element`** after `\begin`. A
+`DefEnvironment`'s constructor opens its single wrapper before any body content;
+structural auto-opens (`<para>`) that `find_insertion_point` performs are NESTED
+`open_element` calls, skipped via a re-entrancy depth guard. `def_environment` arms a
+pending class in the begin's before_construct; the outermost `open_element` consumes it
+(`document.rs::env_arm`/`env_take`/`OpenDepthGuard`); the begin's after_construct
+disarms any leftover. **Rejected alternatives (all empirically):** begin/end
+afterConstruct + `get_element` (fires at env end with current = ancestor, not the
+wrapper); gid-on-parent + check-at-`\end` (the wrapper is closed by then — current = P);
+tree-diff "single deposited root" (consecutive block envs share one auto-`<para>`, so
+the topmost root is that para → mis-tags). Validated: quote/itemize/figure/theorem/
+equation/alltt + nesting all tag the correct element; suite 1487/0; 76 goldens
+regenerated, purely additive class additions.
+- **Consequences of full-scope tagging (accepted, user-directed):** (1) inline `$…$`
+  (the `math` env) gains `ltx_env_math` everywhere; (2) attribute-less wrappers that
+  LaTeXML normally elides are now PRESERVED (they carry a class) — rare, structural,
+  but desirable for styling; (3) **class-predicate DefRewrites break** — a rule keyed on
+  `[not(@class)]` or `[@class='exact']` on an env element no longer matches (the env now
+  carries `ltx_env_<name>`); the script-bindings `rw-stamp` test caught this. ⚠️ **Real
+  bindings using such predicates on env elements may need updating — validate the
+  corpus.** (4) imperative-form DefEnvironments (rhai `{rbox}` via absorbProperty) were
+  observed NOT tagged — possible gap to investigate.
+
+**RAW SIDE (`\newenvironment`/`\renewenvironment`) — TODO.** The depth-guard "first
+outermost open" is unreliable here (begin-code may open 0/many siblings). Plan: inject
+`\name` = `\lx@env@arm{class} B \lx@env@finalize`; count outermost opens during the
+begin-code `B` only; `\lx@env@finalize` (after `B`, before body) tags iff exactly one.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
-  + drive responsive layout from the resulting `ltx_minipage`/`ltx_env_*` hooks in
-  `ar5iv.css`; do NOT re-implement the verbatim+render dual capture.
+  + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
+  NOT re-implement the verbatim+render dual capture.
 
 ### 1. `ERROR_DEBT` test-gate drain — ✅ DRAINED 2026-06-27 (now empty)
 The harness error-gate (`latexml_oxide/src/util/test.rs`) fails a test at zero

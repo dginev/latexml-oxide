@@ -23,7 +23,7 @@
             </XMApp>
           </XMath>
         </Math>
-<picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S1.p1.pic1">
+<picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S1.p1.pic1">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="32.8pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -51,7 +51,7 @@
         <p>All should be the same.</p>
       </para>
       <para xml:id="S2.SS1.p3">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic1">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="32.8pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -62,7 +62,7 @@
             <line points="0,0 0,138.37" stroke="#000000" stroke-width="0.4"/>
           </g>
         </picture>
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="100.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic2">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="100.0pt" width="100.0pt" xml:id="S2.SS1.p3.pic2">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="22.8pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -75,7 +75,7 @@
         </picture>
       </para>
       <para xml:id="S2.SS1.p4">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic1">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="32.8pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -86,7 +86,7 @@
             <line points="0,0 0,138.37" stroke="#000000" stroke-width="0.4"/>
           </g>
         </picture>
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic2">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS1.p4.pic2">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="32.8pt" transform="translate(0,0)">
             <line points="0,0 138.37,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -107,7 +107,7 @@
       </tags>
       <title><tag close=" ">2.2</tag>Vectors:</title>
       <para xml:id="S2.SS2.p1">
-        <picture fill="none" height="100.0pt" origin-x="-100.0pt" origin-y="-100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS2.p1.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" origin-x="-100.0pt" origin-y="-100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS2.p1.pic1">
           <g transform="translate(138.37,138.37)">
             <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="39.4pt" transform="translate(0,0)">
               <line points="0,0 -138.37,0" stroke="#000000" stroke-width="0.4" terminators="-&gt;"/>
@@ -130,7 +130,7 @@
       </tags>
       <title><tag close=" ">2.3</tag>Boxes;</title>
       <para xml:id="S2.SS3.p1">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p1.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p1.pic1">
           <g innerdepth="0.0pt" innerheight="6.9pt" innerwidth="8.7pt" transform="translate(0,0)">
             <text font="bold">A</text>
           </g>
@@ -177,7 +177,7 @@
         </picture>
       </para>
       <para xml:id="S2.SS3.p2">
-        <picture fill="none" height="40.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p2.pic1">
+        <picture class="ltx_env_picture" fill="none" height="40.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS3.p2.pic1">
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.3pt" transform="translate(0,0)">
             <g class="makebox" innerdepth="0.0pt" innerheight="4.30554pt" innerwidth="5.2778pt" transform="translate(3.27,3.94)">
               <text>x</text>
@@ -222,12 +222,12 @@ vs. <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p1.m1">
               </XMApp>
             </XMath>
           </Math>
-vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic1">
+vs. <picture class="ltx_env_picture" fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic1">
             <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="12.5pt" transform="translate(0,0)">
               <text>Xg</text>
             </g>
           </picture>
-vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic2">
+vs. <picture class="ltx_env_picture" fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic2">
             <g innerdepth="1.9pt" innerheight="6.8pt" innerwidth="14.2pt" transform="translate(0,0)">
               <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p1.pic2.m1">
                 <XMath>
@@ -240,14 +240,14 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
               </Math>
             </g>
           </picture>
-vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic3">
+vs. <picture class="ltx_env_picture" fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic3">
             <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="20.8pt" transform="translate(0,0)">
               <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="12.50003pt" transform="translate(0,0)">
                 <text>Xg</text>
               </g>
             </g>
           </picture>
-vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic4">
+vs. <picture class="ltx_env_picture" fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width="12.0pt" xml:id="S2.SS4.p1.pic4">
             <g innerdepth="1.9pt" innerheight="6.9pt" innerwidth="22.5pt" transform="translate(0,0)">
               <g class="makebox" innerdepth="1.94444pt" innerheight="6.83331pt" innerwidth="14.19789pt" transform="translate(0,0)">
                 <Math mode="inline" tex="Xg" text="X * g" xml:id="S2.SS4.p1.pic4.m1">
@@ -264,7 +264,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
           </picture></p>
       </para>
       <para xml:id="S2.SS4.p2">
-        <picture fill="none" height="120.0pt" stroke="none" unitlength="1.0pt" width="120.0pt" xml:id="S2.SS4.p2.pic1">
+        <picture class="ltx_env_picture" fill="none" height="120.0pt" stroke="none" unitlength="1.0pt" width="120.0pt" xml:id="S2.SS4.p2.pic1">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="32.8pt" transform="translate(0,0)">
             <line points="0,0 166.04,0" stroke="#000000" stroke-width="0.4"/>
           </g>
@@ -512,7 +512,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       </tags>
       <title><tag close=" ">2.5</tag>Circles:</title>
       <para xml:id="S2.SS5.p1">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS5.p1.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS5.p1.pic1">
           <g innerdepth="0.0pt" innerheight="7.5pt" innerwidth="63.3pt" transform="translate(27.67,27.67)">
             <circle fill="none" r="20.76" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
             <line points="0,0 0,20.76" stroke="#000000" stroke-width="0.4" terminators="-&gt;"/>
@@ -535,7 +535,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       </tags>
       <title><tag close=" ">2.6</tag>Curves:</title>
       <para xml:id="S2.SS6.p1">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS6.p1.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS6.p1.pic1">
           <bezier points="55.35,110.7 110.7,166.04 138.37,110.7" stroke="#000000" stroke-width="0.4"/>
           <bezier points="55.35,123.15 110.7,178.5 138.37,123.15" stroke="#000000" stroke-width="0.4"/>
         </picture>
@@ -549,7 +549,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       </tags>
       <title><tag close=" ">2.7</tag>Repeats:</title>
       <para xml:id="S2.SS7.p1">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p1.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p1.pic1">
           <g innerdepth="0.0pt" innerheight="4.3pt" innerwidth="5.0pt" transform="translate(0,0)">
             <text>a</text>
           </g>
@@ -586,7 +586,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
         </picture>
       </para>
       <para xml:id="S2.SS7.p2">
-        <picture fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p2.pic1">
+        <picture class="ltx_env_picture" fill="none" height="100.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S2.SS7.p2.pic1">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="12.8pt" transform="translate(13.84,13.84)">
             <circle fill="none" r="3.46" stroke="#000000" stroke-width="0.4" x="0" y="0"/>
           </g>
@@ -632,7 +632,7 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
     </tags>
     <title><tag close=" ">3</tag>User Examples</title>
     <para xml:id="S3.p1">
-      <picture fill="none" height="100.0pt" origin-x="-30.0pt" origin-y="0.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S3.p1.pic1">
+      <picture class="ltx_env_picture" fill="none" height="100.0pt" origin-x="-30.0pt" origin-y="0.0pt" stroke="none" unitlength="1.0pt" width="100.0pt" xml:id="S3.p1.pic1">
         <g transform="translate(41.51,0)">
           <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(15.22,15.22)">
             <line points="0,0 45.66,45.66" stroke="#000000" stroke-width="0.8" terminators="-&gt;"/>
@@ -698,13 +698,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
     <para xml:id="S3.p2">
       <p>Impressive, eh?</p>
     </para>
-    <figure inlist="lof" labels="LABEL:fg:kmap2" placement="!ht" xml:id="S3.F1">
+    <figure class="ltx_env_figure" inlist="lof" labels="LABEL:fg:kmap2" placement="!ht" xml:id="S3.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>
         <tag role="typerefnum">Figure 1</tag>
       </tags>
-      <picture class="ltx_centering" fill="none" height="65.0pt" stroke="none" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
+      <picture class="ltx_centering ltx_env_picture" fill="none" height="65.0pt" stroke="none" unitlength="1.0pt" width="70.0pt" xml:id="S3.F1.pic1">
         <g innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.0pt" transform="translate(16.6,78.87)">
           <g class="makebox" innerdepth="2.5pt" innerheight="7.5pt" innerwidth="31.01854pt" transform="translate(0,0)">
             <Math mode="inline" tex="F(x,y)" text="F@(vector@(x, y))" xml:id="S3.F1.pic1.m1">
@@ -866,13 +866,13 @@ vs. <picture fill="none" height="12.0pt" stroke="none" unitlength="1.0pt" width=
       <tag role="typerefnum">§4</tag>
     </tags>
     <title><tag close=" ">4</tag>DLMF Examples</title>
-    <figure inlist="lof" placement="h" xml:id="S4.F2">
+    <figure class="ltx_env_figure" inlist="lof" placement="h" xml:id="S4.F2">
       <tags>
         <tag>Figure 2</tag>
         <tag role="refnum">2</tag>
         <tag role="typerefnum">Figure 2</tag>
       </tags>
-      <picture class="ltx_centering" fill="none" height="96.13999999999999pt" origin-x="-2.53pt" origin-y="-2.53pt" stroke="none" unitlength="2.53pt" width="384.55999999999995pt" xml:id="S4.F2.pic1">
+      <picture class="ltx_centering ltx_env_picture" fill="none" height="96.13999999999999pt" origin-x="-2.53pt" origin-y="-2.53pt" stroke="none" unitlength="2.53pt" width="384.55999999999995pt" xml:id="S4.F2.pic1">
         <g transform="translate(3.5,3.5)">
           <g innerdepth="0.0pt" innerheight="5.8pt" innerwidth="4.6pt" transform="translate(0,108.52)">
             <g class="makebox" innerdepth="0.0pt" innerheight="5.79999pt" innerwidth="4.62497pt" transform="translate(0.3,6.49)">
@@ -1086,7 +1086,7 @@ for binary32, binary64 and binary128.</toccaption>
 interchange formats for binary32, binary64 and binary128
 (previously single, double and quad precision).</caption>
     </figure>
-    <table inlist="lot" placement="h" xml:id="S4.T1">
+    <table class="ltx_env_table" inlist="lot" placement="h" xml:id="S4.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>
@@ -1146,7 +1146,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic1">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic1">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -1409,7 +1409,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="2" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic2">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic2">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -1625,7 +1625,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic3">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic3">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -1939,7 +1939,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic4">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic4">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2247,7 +2247,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic5">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic5">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2554,7 +2554,7 @@ square.</caption>
           <tr>
             <td align="center" border="t" class="ltx_nopad_r" rowspan="2" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic6">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic6">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>
@@ -2787,7 +2787,7 @@ square.</caption>
           <tr>
             <td align="center" border="b t" class="ltx_nopad_r" rowspan="4" thead="row">
 
-<picture fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic7">
+<picture class="ltx_env_picture" fill="none" height="75.9pt" origin-x="-30.36pt" origin-y="-39.215pt" stroke="none" unitlength="25.3pt" width="60.72pt" xml:id="S4.T1.pic7">
                 <g transform="translate(42.01,54.26)">
                   <g innerdepth="0.0pt" innerheight="6.4pt" innerwidth="27.8pt" transform="translate(0,0)">
                     <line points="0,0 1.75,0" stroke="#000000" stroke-width="0.4"/>

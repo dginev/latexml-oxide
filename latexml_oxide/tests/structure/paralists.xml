@@ -6,7 +6,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <inline-enumerate xml:id="S0.I1">
+    <inline-enumerate class="ltx_env_inparaenum" xml:id="S0.I1">
       <inline-item xml:id="S0.I1.i1">
         <tags>
           <tag><text font="italic">a)</text></tag>
@@ -28,7 +28,7 @@
     </inline-enumerate>
   </para>
   <para xml:id="p2">
-    <inline-enumerate xml:id="S0.I2">
+    <inline-enumerate class="ltx_env_inparaenum" xml:id="S0.I2">
       <inline-item xml:id="S0.I2.i1">
         <tags>
           <tag>1.</tag>
@@ -50,7 +50,7 @@
     </inline-enumerate>
   </para>
   <para xml:id="p3">
-    <inline-enumerate xml:id="S0.I3">
+    <inline-enumerate class="ltx_env_inparaenum" xml:id="S0.I3">
       <inline-item xml:id="S0.I3.i1">
         <tags>
           <tag>1</tag>
@@ -72,7 +72,7 @@
     </inline-enumerate>
   </para>
   <para xml:id="p4">
-    <itemize xml:id="S0.I4">
+    <itemize class="ltx_env_itemize" xml:id="S0.I4">
       <item xml:id="S0.I4.i1">
         <tags>
           <tag>•</tag>
@@ -103,7 +103,7 @@
     </itemize>
   </para>
   <para xml:id="p5">
-    <enumerate xml:id="S0.I5">
+    <enumerate class="ltx_env_enumerate" xml:id="S0.I5">
       <item xml:id="S0.I5.i1">
         <tags>
           <tag>1</tag>
@@ -137,7 +137,7 @@
     </enumerate>
   </para>
   <para xml:id="p6">
-    <itemize xml:id="S0.I6">
+    <itemize class="ltx_env_itemize" xml:id="S0.I6">
       <item xml:id="S0.I6.i1">
         <tags>
           <tag><Math mode="inline" tex="\star" text="star" xml:id="S0.I6.i1.m1">
@@ -162,7 +162,7 @@
         </tags>
         <para xml:id="S0.I6.i2.p1">
           <p>two</p>
-          <itemize xml:id="S0.I6.i2.I1">
+          <itemize class="ltx_env_itemize" xml:id="S0.I6.i2.I1">
             <item xml:id="S0.I6.i2.I1.i1">
               <tags>
                 <tag><text font="bold">–</text></tag>
@@ -200,7 +200,7 @@
     </itemize>
   </para>
   <para xml:id="p7">
-    <enumerate xml:id="S0.I7">
+    <enumerate class="ltx_env_enumerate" xml:id="S0.I7">
       <item xml:id="S0.I7.i1">
         <tags>
           <tag><text font="bold">-a-</text></tag>
@@ -219,7 +219,7 @@
         </tags>
         <para xml:id="S0.I7.i2.p1">
           <p>two</p>
-          <enumerate xml:id="S0.I7.i2.I1">
+          <enumerate class="ltx_env_enumerate" xml:id="S0.I7.i2.I1">
             <item xml:id="S0.I7.i2.I1.i1">
               <tags>
                 <tag>b.1</tag>
@@ -256,7 +256,7 @@
     </enumerate>
   </para>
   <para xml:id="p8">
-    <description xml:id="S0.I8">
+    <description class="ltx_env_description" xml:id="S0.I8">
       <item xml:id="S0.I8.ix1">
         <tags>
           <tag><text font="bold">do</text></tag>
@@ -278,7 +278,7 @@
     </description>
   </para>
   <para xml:id="p9">
-    <description xml:id="S0.I9">
+    <description class="ltx_env_description" xml:id="S0.I9">
       <item xml:id="S0.I9.ix1">
         <tags>
           <tag><Math mode="inline" tex="\{" text="{" xml:id="S0.I9.ix1.m1">
@@ -316,7 +316,7 @@
     </description>
   </para>
   <para xml:id="p10">
-    <description xml:id="S0.I10">
+    <description class="ltx_env_description" xml:id="S0.I10">
       <item xml:id="S0.I10.i1">
         <tags>
           <tag><Math mode="inline" tex="\{" text="{" xml:id="S0.I10.i1.m1">
@@ -354,7 +354,7 @@
     </description>
   </para>
   <para xml:id="p11">
-    <enumerate xml:id="S0.I11">
+    <enumerate class="ltx_env_enumerate" xml:id="S0.I11">
       <item xml:id="S0.I11.i1">
         <tags>
           <tag><text font="bold">-a-</text></tag>

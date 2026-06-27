@@ -3195,7 +3195,7 @@
       </tags>
       <title><tag close=" ">1.6</tag>Dirac bra-ket notation</title>
       <para xml:id="S1.SS6.p1">
-        <equation xml:id="S1.Ex30">
+        <equation class="ltx_env_displaymath" xml:id="S1.Ex30">
           <Math mode="display" tex="\bra{\phi}\ket{\psi}\quad\mbox{as opposed to}\quad\bra{\phi}\ket{\psi}" text="fragments@(inner-product@(phi, psi), [as opposed to], bra@(phi) * ket@(psi))" xml:id="S1.Ex30.m1">
             <XMath>
               <XMDual>
@@ -3253,7 +3253,7 @@
             </XMath>
           </Math>
         </equation>
-        <equation xml:id="S1.Ex31">
+        <equation class="ltx_env_displaymath" xml:id="S1.Ex31">
           <Math mode="display" tex="\bra{\phi}\outerproduct{\psi}{\xi}.\quad\mbox{as opposed to}\quad\bra{\phi}\ket{\psi}\bra{\xi}" text="list@(bra@(phi) * outer-product@(psi, xi), [as opposed to], inner-product@(phi, psi) * bra@(xi))" xml:id="S1.Ex31.m1">
             <XMath>
               <XMDual>

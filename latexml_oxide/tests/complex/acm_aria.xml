@@ -6,17 +6,17 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-amsart.css" type="text/css"/>
-  <figure aria:labelledby="acmlabel1" inlist="lof" labels="LABEL:fig:one" xml:id="S0.F1">
+  <figure aria:labelledby="acmlabel1" class="ltx_env_figure" inlist="lof" labels="LABEL:fig:one" xml:id="S0.F1">
     <tags>
       <tag>Figure 1</tag>
       <tag role="autoref">Figure 1</tag>
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <figure class="ltx_figure_panel" xml:id="S0.F1.fig1">
+    <figure class="ltx_env_@subfigure ltx_figure_panel" xml:id="S0.F1.fig1">
       <p>example-a</p>
     </figure>
-    <figure class="ltx_figure_panel" xml:id="S0.F1.fig2">
+    <figure class="ltx_env_@subfigure ltx_figure_panel" xml:id="S0.F1.fig2">
       <p>example-b</p>
     </figure>
     <toccaption><tag close=" ">1</tag>caption text</toccaption>

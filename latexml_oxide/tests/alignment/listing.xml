@@ -2183,7 +2183,7 @@ and with messed up braces <text class="ltx_lst_numbers_left ltx_lstlisting"><tex
 <text font="bold italic">itbf</text></p>
     </para>
   </section>
-  <index xml:id="idx">
+  <index class="ltx_env_theindex" xml:id="idx">
     <title>Index</title>
   </index>
 </document>

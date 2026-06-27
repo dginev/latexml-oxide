@@ -1216,7 +1216,28 @@ pub fn def_environment(
   let mut before_construct_with_frame: Vec<ConstructionClosure> = vec![push_frame_closure];
   before_construct_with_frame.extend(options.before_construct);
 
-  let mut after_construct_with_frame: Vec<ConstructionClosure> = options.after_construct;
+  // env-markup-class (begin): start tracking the nodes this environment deposits;
+  // the matching `\end` finalize (below) tags the sole deposited wrapper (if any)
+  // with `ltx_env_<name>`. Robust for nested envs and sibling/font-only deposits
+  // (it inspects the built tree, not an open-depth or current-node proxy). Runs
+  // after push_frame (which opens no element).
+  let env_class = s!("ltx_env_{name}");
+  before_construct_with_frame.push(Rc::new(
+    move |_document: &mut Document, _whatsit: &Whatsit| {
+      crate::document::env_arm(&env_class);
+      Ok(())
+    },
+  ));
+
+  // env-markup-class: the wrapper is tagged when it opens (consume-at-open); this
+  // after_construct (fires at env END) just disarms any class the env left
+  // unconsumed (e.g. it opened no element), so it never leaks into a sibling env.
+  let mut after_construct_with_frame: Vec<ConstructionClosure> =
+    vec![Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
+      crate::document::env_disarm();
+      Ok(())
+    })];
+  after_construct_with_frame.extend(options.after_construct);
 
   let pop_frame_closure = Rc::new(|_document: &mut Document, _whatsit: &Whatsit| {
     pop_frame()?;

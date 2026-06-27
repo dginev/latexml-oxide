@@ -32,7 +32,7 @@ using the <verbatim font="typewriter">--pmml --cmml</verbatim> options.</p>
     <para xml:id="S1.p1">
       <p>Token elements <text font="typewriter">m:mi</text>, <text font="typewriter">m:mo</text> and <text font="typewriter">m:mn</text>, with various
 attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">@mathsize</text> and <text font="typewriter">@class</text>.</p>
-      <equation xml:id="S1.E1">
+      <equation class="ltx_env_equation" xml:id="S1.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -75,7 +75,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S1.E2">
+      <equation class="ltx_env_equation" xml:id="S1.E2">
         <tags>
           <tag>(2)</tag>
           <tag role="refnum">2</tag>
@@ -103,7 +103,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S1.E3">
+      <equation class="ltx_env_equation" xml:id="S1.E3">
         <tags>
           <tag>(3)</tag>
           <tag role="refnum">3</tag>
@@ -178,7 +178,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
     </para>
     <para xml:id="S1.p2">
       <p>And some color, <text font="typewriter">@mathcolor</text>, <text font="typewriter">@mathbackground</text>:</p>
-      <equation xml:id="S1.E4">
+      <equation class="ltx_env_equation" xml:id="S1.E4">
         <tags>
           <tag>(4)</tag>
           <tag role="refnum">4</tag>
@@ -209,7 +209,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
     </para>
     <para xml:id="S1.p3">
       <p>Playing with <text font="typewriter">@minsize</text>, <text font="typewriter">@maxsize</text>, <text font="typewriter">@stretchy</text>:</p>
-      <equation xml:id="S1.E5">
+      <equation class="ltx_env_equation" xml:id="S1.E5">
         <tags>
           <tag>(5)</tag>
           <tag role="refnum">5</tag>
@@ -307,7 +307,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
       </equation>
     </para>
     <para xml:id="S1.p4">
-      <equation xml:id="S1.E6">
+      <equation class="ltx_env_equation" xml:id="S1.E6">
         <tags>
           <tag>(6)</tag>
           <tag role="refnum">6</tag>
@@ -398,7 +398,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
     </para>
     <para xml:id="S1.p5">
       <p>Weird arguments for delimiters</p>
-      <equation xml:id="S1.E7">
+      <equation class="ltx_env_equation" xml:id="S1.E7">
         <tags>
           <tag>(7)</tag>
           <tag role="refnum">7</tag>
@@ -457,7 +457,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
       </equation>
     </para>
     <para xml:id="S1.p6">
-      <equation xml:id="S1.E8">
+      <equation class="ltx_env_equation" xml:id="S1.E8">
         <tags>
           <tag>(8)</tag>
           <tag role="refnum">8</tag>
@@ -477,7 +477,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
         </Math>
       </equation>
       <p>Some spacing <text font="typewriter">m:mspace</text>.</p>
-      <equation xml:id="S1.E9">
+      <equation class="ltx_env_equation" xml:id="S1.E9">
         <tags>
           <tag>(9)</tag>
           <tag role="refnum">9</tag>
@@ -525,7 +525,7 @@ attributes <text font="typewriter">@mathvariant</text>, <text font="typewriter">
     <para xml:id="S2.p1">
       <p>Various layout schemata <text font="typewriter">m:mrow</text>, <text font="typewriter">m:mfrac</text> (with various <text font="typewriter">@linethickness</text>),
 and <text font="typewriter">m:mstyle</text>:</p>
-      <equation xml:id="S2.E10">
+      <equation class="ltx_env_equation" xml:id="S2.E10">
         <tags>
           <tag>(10)</tag>
           <tag role="refnum">10</tag>
@@ -562,7 +562,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S2.E11">
+      <equation class="ltx_env_equation" xml:id="S2.E11">
         <tags>
           <tag>(11)</tag>
           <tag role="refnum">11</tag>
@@ -625,7 +625,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S2.E12">
+      <equation class="ltx_env_equation" xml:id="S2.E12">
         <tags>
           <tag>(12)</tag>
           <tag role="refnum">12</tag>
@@ -762,7 +762,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
     </para>
     <para xml:id="S2.p2">
       <p>Roots <text font="typewriter">m:msqrt</text> and <text font="typewriter">m:mroot</text>, as well as enclosures <text font="typewriter">m:menclose</text>:</p>
-      <equation xml:id="S2.E13">
+      <equation class="ltx_env_equation" xml:id="S2.E13">
         <tags>
           <tag>(13)</tag>
           <tag role="refnum">13</tag>
@@ -811,7 +811,7 @@ and <text font="typewriter">m:mstyle</text>:</p>
     </para>
     <para xml:id="S2.p3">
       <p>More spacing examples with <text font="typewriter">m:mpadded</text>:</p>
-      <equation xml:id="S2.E14">
+      <equation class="ltx_env_equation" xml:id="S2.E14">
         <tags>
           <tag>(14)</tag>
           <tag role="refnum">14</tag>
@@ -1068,7 +1068,7 @@ under- and over-scripts (<text font="typewriter">m:munder</text>, <text font="ty
 some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>, <text font="typewriter">m:mprescripts</text>).</p>
     </para>
     <para xml:id="S3.p2">
-      <equation xml:id="S3.E18">
+      <equation class="ltx_env_equation" xml:id="S3.E18">
         <tags>
           <tag>(18)</tag>
           <tag role="refnum">18</tag>
@@ -1163,7 +1163,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
       </equation>
     </para>
     <para xml:id="S3.p3">
-      <equation xml:id="S3.E19">
+      <equation class="ltx_env_equation" xml:id="S3.E19">
         <tags>
           <tag>(19)</tag>
           <tag role="refnum">19</tag>
@@ -1204,7 +1204,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S3.E20">
+      <equation class="ltx_env_equation" xml:id="S3.E20">
         <tags>
           <tag>(20)</tag>
           <tag role="refnum">20</tag>
@@ -1346,7 +1346,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
       </equation>
     </para>
     <para xml:id="S3.p4">
-      <equation xml:id="S3.E21">
+      <equation class="ltx_env_equation" xml:id="S3.E21">
         <tags>
           <tag>(21)</tag>
           <tag role="refnum">21</tag>
@@ -1408,7 +1408,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
       </equation>
     </para>
     <para xml:id="S3.p5">
-      <equation xml:id="S3.E22">
+      <equation class="ltx_env_equation" xml:id="S3.E22">
         <tags>
           <tag>(22)</tag>
           <tag role="refnum">22</tag>
@@ -1516,7 +1516,7 @@ some as accents, and pre-scripts (<text font="typewriter">m:multiscripts</text>,
       </equation>
     </para>
     <para xml:id="S3.p6">
-      <equation xml:id="S3.E23">
+      <equation class="ltx_env_equation" xml:id="S3.E23">
         <tags>
           <tag>(23)</tag>
           <tag role="refnum">23</tag>
@@ -1578,7 +1578,7 @@ many combinations of row and column spacing and spans
 are not currently tested.</p>
     </para>
     <para xml:id="S4.p2">
-      <equation xml:id="S4.E24">
+      <equation class="ltx_env_equation" xml:id="S4.E24">
         <tags>
           <tag>(24)</tag>
           <tag role="refnum">24</tag>

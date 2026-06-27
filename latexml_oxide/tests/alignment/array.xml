@@ -107,7 +107,7 @@
       </tabular>
     </para>
     <para xml:id="S2.p2">
-      <equation xml:id="S2.E1">
+      <equation class="ltx_env_equation" xml:id="S2.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>

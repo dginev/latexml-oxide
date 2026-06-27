@@ -25,28 +25,28 @@
   </para>
   <para xml:id="p7">
     <p>KV Environment no options:
-Inside the environment.
-
+<text class="ltx_env_KVenv">Inside the environment.
+</text>
 After the environment.</p>
   </para>
   <para xml:id="p8">
     <p>KV Environment with options:
-<text height="200" width="100">
+<text class="ltx_env_KVenv" height="200" width="100">
 Inside the environment.
 </text>
 After the environment.</p>
   </para>
   <para xml:id="p9">
     <p>KV Environment with structure no options:
-&amp;Inside the environment.
-
+<text class="ltx_env_KVstruct">&amp;Inside the environment.
+</text>
 After the environment.</p>
   </para>
   <para xml:id="p10">
     <p>KV Environment with structure with options:
-Width: 100&amp;Height: 200
+<text class="ltx_env_KVstruct">Width: 100&amp;Height: 200
 Inside the environment.
-
+</text>
 After the environment.</p>
   </para>
   <para xml:id="p11">

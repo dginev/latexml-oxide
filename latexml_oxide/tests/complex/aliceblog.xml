@@ -26,7 +26,7 @@
     </para>
     <para xml:id="S1.p2">
       <p>My Buddies:</p>
-      <itemize xml:id="S1.I1">
+      <itemize class="ltx_env_itemize" xml:id="S1.I1">
         <item property="foaf:knows" typeof="foaf:Person" xml:id="S1.I1.i1">
           <tags>
             <tag>•</tag>

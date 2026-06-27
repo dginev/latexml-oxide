@@ -4,7 +4,7 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-report.css" type="text/css"/>
-  <titlepage>
+  <titlepage class="ltx_env_titlepage">
     <p><text fontsize="207%">This is an <emph font="italic">fake</emph> titlepage.</text></p>
   </titlepage>
   <abstract name="Abstract">

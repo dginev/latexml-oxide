@@ -12,25 +12,25 @@
       <tag role="typerefnum">§1</tag>
     </tags>
     <title><tag close=" ">1</tag>Frames</title>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section1.p1">
         <p>This frame has exactly one slide.</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section1.p2">
         <listing class="ltx_lstlisting" data="ICAgICAgICBJIGNoYW5nZWQgc29tZSBjYXRjb2RlcyBhcm91bmQgYW5kIHN0aWxsIHdvcmsh" dataencoding="base64" datamimetype="text/plain">
           <listingline xml:id="lstnumberx1"><text class="ltx_lst_space">        </text><text class="ltx_lst_identifier">I</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">changed</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">some</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">catcodes</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">around</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">and</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">still</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">work</text>!</listingline>
         </listing>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section1.p3">
         <p>This is on every slide. 
 ¡2¿This is on the second slide.</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section1.p4">
         <p>2Before second slideon second slideafter second slide</p>
       </para>
@@ -49,42 +49,42 @@
       <tag role="typerefnum">§2</tag>
     </tags>
     <title><tag close=" ">2</tag>Counting of Frames</title>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p1">
         <p>¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p2">
         <p>¡1¿
 ¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p3">
         <p>¡2¿
 ¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p4">
         <p>¡3¿
 ¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p5">
         <p>¡4¿
 ¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p6">
         <p>¡2-¿
 ¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section2.p7">
         <p>¡-2¿
 ¡1¿Slide 1¡2¿Slide 2¡3¿Slide 3¡4¿Slide 4<break/>,,,</p>
@@ -98,7 +98,7 @@
       <tag role="typerefnum">§3</tag>
     </tags>
     <title><tag close=" ">3</tag>Overlays</title>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section3.p1">
         <p>Always
 ¡2-¿
@@ -106,12 +106,12 @@ Onslide 2
 Always</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section3.p2">
         <p>Hello I am uncovered One-by-one.</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section3.p3">
         <p>¡2-¿ Visible on Slide 2 onwards
 ¡2-¿ Invisible on Slide 2 onwards 
@@ -126,7 +126,7 @@ Always</p>
       <tag role="typerefnum">§4</tag>
     </tags>
     <title><tag close=" ">4</tag>Overlay Environments</title>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section4.p1">
         <p>This
 )[]
@@ -135,41 +135,41 @@ word
 is in round brackets on slide 2 and in square brackets on slide 1.</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section4.p2">
         <p>We are on slide 1 or 2.
 ¡2¿
 We are on slide 2.</p>
       </para>
     </subsection>
-    <subsection>
-      <para xml:id="section4.p3">
+    <subsection class="ltx_env_frame">
+      <para class="ltx_env_uncoverenv" xml:id="section4.p3">
         <p>¡2¿
 I’m uncovered on slide 2</p>
       </para>
     </subsection>
-    <subsection>
-      <para xml:id="section4.p4">
+    <subsection class="ltx_env_frame">
+      <para class="ltx_env_alertenv" xml:id="section4.p4">
         <p>¡2¿
 I’m alerted on slide 2</p>
       </para>
     </subsection>
-    <subsection>
-      <para xml:id="section4.p5">
+    <subsection class="ltx_env_frame">
+      <para class="ltx_env_uncoverenv" xml:id="section4.p5">
         <p>¡2-¿
 ¡3-4,6¿
 This text is shown the same way as the text above.</p>
       </para>
     </subsection>
-    <subsection>
-      <para xml:id="section4.p6">
+    <subsection class="ltx_env_frame">
+      <para class="ltx_env_actionenv" xml:id="section4.p6">
         <p>¡3-—alert@3-4,6¿
 This text is shown the same way as the text below.</p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section4.p7">
-        <itemize>
+        <itemize class="ltx_env_itemize">
           <item>
             <para xml:id="section4.p7.p1">
               <p>First</p>
@@ -192,7 +192,7 @@ This text is shown the same way as the text below.</p>
       <tag role="typerefnum">§5</tag>
     </tags>
     <title><tag close=" ">5</tag>Titles</title>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p1">
         <p><text font="bold">Title</text></p>
       </para>
@@ -200,7 +200,7 @@ This text is shown the same way as the text below.</p>
         <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p3">
         <p><text font="bold">Title</text></p>
       </para>
@@ -208,7 +208,7 @@ This text is shown the same way as the text below.</p>
         <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p5">
         <p>Title</p>
       </para>
@@ -216,13 +216,13 @@ This text is shown the same way as the text below.</p>
         <p>¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p7">
         <p>TitleSubtitle
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p8">
         <p><text font="bold">¡</text></p>
       </para>
@@ -231,7 +231,7 @@ This text is shown the same way as the text below.</p>
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p10">
         <p>Title Default</p>
       </para>
@@ -243,7 +243,7 @@ This text is shown the same way as the text below.</p>
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p13">
         <p><text font="bold">Title Default</text></p>
       </para>
@@ -255,21 +255,21 @@ This text is shown the same way as the text below.</p>
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p16">
         <p>Title
 2¿Subtitle
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p17">
         <p>TitleSubtitle
 2¿Second Subtitle
 ¡1¿Slide 1¡2¿Slide 2<break/></p>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section5.p18">
         <p>Title
 
@@ -285,9 +285,9 @@ This text is shown the same way as the text below.</p>
       <tag role="typerefnum">§6</tag>
     </tags>
     <title><tag close=" ">6</tag>Enumerate</title>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section6.p1">
-        <enumerate>
+        <enumerate class="ltx_env_enumerate">
           <item>
             <para xml:id="section6.p1.p1">
               <p>First</p>
@@ -302,9 +302,9 @@ This text is shown the same way as the text below.</p>
         </enumerate>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section6.p2">
-        <enumerate>
+        <enumerate class="ltx_env_enumerate">
           <item>
             <para xml:id="section6.p2.p1">
               <p>First</p>
@@ -319,9 +319,9 @@ This text is shown the same way as the text below.</p>
         </enumerate>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section6.p3">
-        <enumerate>
+        <enumerate class="ltx_env_enumerate">
           <item>
             <para xml:id="section6.p3.p1">
               <p>First</p>
@@ -336,9 +336,9 @@ This text is shown the same way as the text below.</p>
         </enumerate>
       </para>
     </subsection>
-    <subsection>
+    <subsection class="ltx_env_frame">
       <para xml:id="section6.p4">
-        <enumerate>
+        <enumerate class="ltx_env_enumerate">
           <item>
             <para xml:id="section6.p4.p1">
               <p>First</p>
@@ -353,7 +353,7 @@ This text is shown the same way as the text below.</p>
         </enumerate>
       </para>
       <para xml:id="section6.p5">
-        <enumerate>
+        <enumerate class="ltx_env_enumerate">
           <item>
             <para xml:id="section6.p5.p1">
               <p>Third</p>

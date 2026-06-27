@@ -130,6 +130,54 @@ enum Placement_ {
   PrevSibling,
 }
 
+// ── env-markup-class ────────────────────────────────────────────────────────
+// Tag an environment's wrapper with `ltx_env_<name>` so any environment becomes
+// uniformly styleable in CSS. The wrapper is identified as the FIRST OUTERMOST
+// `open_element` after `\begin`: a `DefEnvironment`'s constructor opens its single
+// wrapper before any body content, and structural auto-opens like `<para>` (which
+// `find_insertion_point` performs as NESTED `open_element` calls) are skipped via
+// re-entrancy depth — so the constructor's explicit element is captured, not the
+// surrounding paragraph. (A tree-diff "single deposited root" was tried and
+// rejected: consecutive block envs share one auto-`<para>`, making that para the
+// topmost root and mis-tagging it.) A `\begin` arms the pending class; the
+// outermost `open_element` consumes it; the `\begin` afterConstruct disarms any
+// leftover so it never crosses into a sibling environment.
+thread_local! {
+  /// Stack of armed `ltx_env_<name>` classes (stack ⇒ nested environments work).
+  /// The innermost is consumed by the next outermost `open_element`.
+  static ENV_ARM_STACK: std::cell::RefCell<Vec<String>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+  /// Re-entrancy depth of `open_element`; only the OUTERMOST call (depth 0 on
+  /// entry) is a constructor's explicit element — nested calls are structural
+  /// auto-opens (`<para>`…) and must not consume the armed class.
+  static OPEN_ELEMENT_DEPTH: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+/// Arm a pending `ltx_env_<name>` class for the next outermost-opened element.
+pub fn env_arm(class: &str) { ENV_ARM_STACK.with(|s| s.borrow_mut().push(class.to_string())); }
+/// Disarm the innermost armed class (safety: the env opened no element).
+pub fn env_disarm() {
+  ENV_ARM_STACK.with(|s| {
+    s.borrow_mut().pop();
+  });
+}
+/// Take (consume) the innermost armed env class, if any.
+fn env_take() -> Option<String> { ENV_ARM_STACK.with(|s| s.borrow_mut().pop()) }
+/// RAII: tracks `open_element` re-entrancy; `enter()` returns `(guard, outermost)`.
+struct OpenDepthGuard;
+impl OpenDepthGuard {
+  fn enter() -> (Self, bool) {
+    let outermost = OPEN_ELEMENT_DEPTH.with(|d| {
+      let was = d.get();
+      d.set(was + 1);
+      was == 0
+    });
+    (OpenDepthGuard, outermost)
+  }
+}
+impl Drop for OpenDepthGuard {
+  fn drop(&mut self) { OPEN_ELEMENT_DEPTH.with(|d| d.set(d.get().saturating_sub(1))); }
+}
+
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
@@ -926,9 +974,18 @@ impl Document {
     //   qname,
     //   self.with_node_qname(&self.node))
     // );
+    // env-markup-class: only the OUTERMOST open is the constructor's explicit
+    // element; nested calls below (find_insertion_point auto-opening <para> etc.)
+    // must not consume the armed class.
+    let (_depth_guard, outermost) = OpenDepthGuard::enter();
     let mut point = self.find_insertion_point(qname, None)?;
-    let newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
+    let mut newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
     self.set_node(&newnode);
+    // The constructor's wrapper (first outermost open after \begin) consumes the
+    // armed `ltx_env_<name>` class.
+    if outermost && let Some(cls) = env_take() {
+      self.add_class(&mut newnode, &cls)?;
+    }
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
     // Ideally should be as quick to recompute natively as it would be to set/get

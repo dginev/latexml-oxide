@@ -76,12 +76,12 @@ No quirks</p>
       </tags>
       <title><tag close=" ">2.1</tag>AfterGroup in Environments</title>
       <para xml:id="S2.SS1.p1">
-        <quote>
+        <quote class="ltx_env_quote">
           <p>before <text font="italic">after</text></p>
         </quote>
       </para>
       <para xml:id="S2.SS1.p2">
-        <quote>
+        <quote class="ltx_env_quote">
           <p>before after</p>
         </quote>
         <p>[Grouped!]</p>
@@ -140,7 +140,7 @@ No quirks</p>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="\rightarrow a+b" text="absent rightarrow a + b" xml:id="S5.p1.m2">
+<Math class="ltx_env_math" mode="inline" tex="\rightarrow a+b" text="absent rightarrow a + b" xml:id="S5.p1.m2">
           <XMath>
             <XMApp>
               <XMTok name="rightarrow" role="ARROW">→</XMTok>
@@ -175,7 +175,7 @@ No quirks</p>
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S5.Ex3">
+      <equation class="ltx_env_displaymath" xml:id="S5.Ex3">
         <Math mode="display" tex="a+b" text="a + b" xml:id="S5.Ex3.m1">
           <XMath>
             <XMApp>
@@ -186,7 +186,7 @@ No quirks</p>
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S5.E1">
+      <equation class="ltx_env_equation" xml:id="S5.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -210,7 +210,7 @@ No quirks</p>
             </XMApp>
           </XMath>
         </Math>
-<Math mode="inline" tex="a+b" text="a + b" xml:id="S5.p1.m4">
+<Math class="ltx_env_math" mode="inline" tex="a+b" text="a + b" xml:id="S5.p1.m4">
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
@@ -249,7 +249,7 @@ No quirks</p>
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S5.Ex6">
+      <equation class="ltx_env_displaymath" xml:id="S5.Ex6">
         <Math mode="display" tex="\rightarrow a+b" text="absent rightarrow a + b" xml:id="S5.Ex6.m1">
           <XMath>
             <XMApp>
@@ -264,7 +264,7 @@ No quirks</p>
           </XMath>
         </Math>
       </equation>
-      <equation xml:id="S5.E2">
+      <equation class="ltx_env_equation" xml:id="S5.E2">
         <tags>
           <tag>(2)</tag>
           <tag role="refnum">2</tag>

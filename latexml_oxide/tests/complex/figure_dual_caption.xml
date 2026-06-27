@@ -5,30 +5,30 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <figure inlist="lof" labels="LABEL:fig:dual-left LABEL:fig:dual-right" xml:id="S0.F2">
+  <figure class="ltx_env_figure" inlist="lof" labels="LABEL:fig:dual-left LABEL:fig:dual-right" xml:id="S0.F2">
     <tags>
       <tag>Figure 2</tag>
       <tag role="refnum">2</tag>
       <tag role="typerefnum">Figure 2</tag>
     </tags>
-    <figure align="center" class="ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.F2.fig1">
+    <figure align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.F2.fig1">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=327.74895pt,keepaspectratio=true" xml:id="S0.F2.g1"/>
       <toccaption class="ltx_centering"><tag close=" ">1</tag>Left figure.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Figure 1</tag>Left figure.</caption>
     </figure>
-    <figure align="center" class="ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.F2.fig2">
+    <figure align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.F2.fig2">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=327.74895pt,keepaspectratio=true" xml:id="S0.F2.g2"/>
       <toccaption class="ltx_centering"><tag close=" ">2</tag>Right figure.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Figure 2</tag>Right figure.</caption>
     </figure>
   </figure>
-  <table inlist="lot" labels="LABEL:table:dual-left LABEL:table:dual-right" xml:id="S0.T2">
+  <table class="ltx_env_table" inlist="lot" labels="LABEL:table:dual-left LABEL:table:dual-right" xml:id="S0.T2">
     <tags>
       <tag>Table 2</tag>
       <tag role="refnum">2</tag>
       <tag role="typerefnum">Table 2</tag>
     </tags>
-    <figure align="center" class="ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.T2.fig1">
+    <figure align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.T2.fig1">
       <tabular class="ltx_centering" vattach="middle">
         <tbody>
           <tr>
@@ -46,7 +46,7 @@
       <toccaption class="ltx_centering"><tag close=" ">1</tag>Left table.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Table 1</tag>Left table.</caption>
     </figure>
-    <figure align="center" class="ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.T2.fig2">
+    <figure align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="middle" width="172.5pt" xml:id="S0.T2.fig2">
       <tabular class="ltx_centering" vattach="middle">
         <tbody>
           <tr>

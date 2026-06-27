@@ -555,7 +555,7 @@
   </para>
   <para xml:id="p9">
     <p>Equation with split; Ampersand before relation</p>
-    <equation xml:id="Ch0.E10">
+    <equation class="ltx_env_equation" xml:id="Ch0.E10">
       <tags>
         <tag>(10)</tag>
         <tag role="refnum">10</tag>
@@ -600,7 +600,7 @@
       </Math>
     </equation>
     <p>or after</p>
-    <equation xml:id="Ch0.E11">
+    <equation class="ltx_env_equation" xml:id="Ch0.E11">
       <tags>
         <tag>(11)</tag>
         <tag role="refnum">11</tag>

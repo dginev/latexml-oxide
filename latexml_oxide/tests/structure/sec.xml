@@ -38,7 +38,7 @@
     <para xml:id="S3.p1">
       <p>Previously, in §<ref labelref="LABEL:sec:two"/>.</p>
     </para>
-    <figure inlist="lof" labels="LABEL:fig_three" xml:id="S3.F1">
+    <figure class="ltx_env_figure" inlist="lof" labels="LABEL:fig_three" xml:id="S3.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>

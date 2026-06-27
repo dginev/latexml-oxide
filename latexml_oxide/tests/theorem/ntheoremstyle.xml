@@ -5,7 +5,7 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1">
+  <theorem class="ltx_env_theorem ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1">
     <tags>
       <tag>Theorem 1</tag>
       <tag role="refnum">1</tag>
@@ -17,7 +17,7 @@
 <text class="ltx_align_floatright"/></text></p>
     </para>
   </theorem>
-  <theorem class="ltx_theorem_remark" inlist="thm theorem:remark" xml:id="Thmremark1">
+  <theorem class="ltx_env_remark ltx_theorem_remark" inlist="thm theorem:remark" xml:id="Thmremark1">
     <tags>
       <tag>Remark 1</tag>
       <tag role="refnum">1</tag>

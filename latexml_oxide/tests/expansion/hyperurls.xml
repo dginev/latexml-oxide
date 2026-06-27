@@ -16,7 +16,7 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px1">
       <title>URLs</title>
       <para xml:id="S1.SS0.SSS0.Px1.p1">
-        <itemize xml:id="S1.I1">
+        <itemize class="ltx_env_itemize" xml:id="S1.I1">
           <item xml:id="S1.I1.i1">
             <tags>
               <tag>•</tag>
@@ -163,7 +163,7 @@
     <paragraph inlist="toc" xml:id="S1.SS0.SSS0.Px2">
       <title>Probably unexpected URLs</title>
       <para xml:id="S1.SS0.SSS0.Px2.p1">
-        <itemize xml:id="S1.I2">
+        <itemize class="ltx_env_itemize" xml:id="S1.I2">
           <item xml:id="S1.I2.i1">
             <tags>
               <tag>•</tag>

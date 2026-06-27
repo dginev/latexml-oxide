@@ -44,7 +44,7 @@
       <title><tag close=" ">1.1</tag>First Section</title>
       <para xml:id="Ch1.S1.p1">
         <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <equation xml:id="Ch1.E1">
+        <equation class="ltx_env_equation" xml:id="Ch1.E1">
           <tags>
             <tag>(1.1)</tag>
             <tag role="refnum">1.1</tag>
@@ -67,7 +67,7 @@
         </equation>
       </para>
       <para xml:id="Ch1.S1.p2">
-        <equation xml:id="Ch1.E2">
+        <equation class="ltx_env_equation" xml:id="Ch1.E2">
           <tags>
             <tag>(1.2)</tag>
             <tag role="refnum">1.2</tag>
@@ -89,7 +89,7 @@
           </Math>
         </equation>
       </para>
-      <figure inlist="lof" xml:id="Ch1.F1">
+      <figure class="ltx_env_figure" inlist="lof" xml:id="Ch1.F1">
         <tags>
           <tag>Figure 1.1</tag>
           <tag role="refnum">1.1</tag>
@@ -99,7 +99,7 @@
         <toccaption><tag close=" ">1.1</tag>A Figure</toccaption>
         <caption><tag close=": ">Figure 1.1</tag>A Figure</caption>
       </figure>
-      <table inlist="lot" xml:id="Ch1.T1">
+      <table class="ltx_env_table" inlist="lot" xml:id="Ch1.T1">
         <tags>
           <tag>Table 1.1</tag>
           <tag role="refnum">1.1</tag>
@@ -155,7 +155,7 @@
         <break class="ltx_centering"/>
       </table>
       <para xml:id="Ch1.S1.p3">
-        <itemize xml:id="Ch1.S1.I1">
+        <itemize class="ltx_env_itemize" xml:id="Ch1.S1.I1">
           <item xml:id="Ch1.S1.I1.i1">
             <tags>
               <tag>•</tag>
@@ -172,7 +172,7 @@
             </tags>
             <para xml:id="Ch1.S1.I1.i2.p1">
               <p>two</p>
-              <itemize xml:id="Ch1.S1.I1.i2.I1">
+              <itemize class="ltx_env_itemize" xml:id="Ch1.S1.I1.i2.I1">
                 <item xml:id="Ch1.S1.I1.i2.I1.i1">
                   <tags>
                     <tag><text font="bold">–</text></tag>
@@ -197,7 +197,7 @@
         </itemize>
       </para>
       <para xml:id="Ch1.S1.p4">
-        <enumerate xml:id="Ch1.S1.I2">
+        <enumerate class="ltx_env_enumerate" xml:id="Ch1.S1.I2">
           <item xml:id="Ch1.S1.I2.i1">
             <tags>
               <tag>1.</tag>
@@ -216,7 +216,7 @@
             </tags>
             <para xml:id="Ch1.S1.I2.i2.p1">
               <p>two</p>
-              <enumerate xml:id="Ch1.S1.I2.i2.I2">
+              <enumerate class="ltx_env_enumerate" xml:id="Ch1.S1.I2.i2.I2">
                 <item xml:id="Ch1.S1.I2.i2.I2.i1">
                   <tags>
                     <tag>(a)</tag>
@@ -243,7 +243,7 @@
         </enumerate>
       </para>
       <para xml:id="Ch1.S1.p5">
-        <description xml:id="Ch1.S1.I3">
+        <description class="ltx_env_description" xml:id="Ch1.S1.I3">
           <item xml:id="Ch1.S1.I3.ix1">
             <tags>
               <tag><text font="bold">A thing</text></tag>
@@ -328,7 +328,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       </para>
       <para xml:id="Ch1.S2.p2">
         <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <equation xml:id="Ch1.E3">
+        <equation class="ltx_env_equation" xml:id="Ch1.E3">
           <tags>
             <tag>(1.3)</tag>
             <tag role="refnum">1.3</tag>
@@ -351,7 +351,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         </equation>
       </para>
       <para xml:id="Ch1.S2.p3">
-        <equation xml:id="Ch1.E4">
+        <equation class="ltx_env_equation" xml:id="Ch1.E4">
           <tags>
             <tag>(1.4)</tag>
             <tag role="refnum">1.4</tag>
@@ -373,7 +373,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
           </Math>
         </equation>
       </para>
-      <figure inlist="lof" xml:id="Ch1.F2">
+      <figure class="ltx_env_figure" inlist="lof" xml:id="Ch1.F2">
         <tags>
           <tag>Figure 1.2</tag>
           <tag role="refnum">1.2</tag>
@@ -383,7 +383,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         <toccaption><tag close=" ">1.2</tag>Another Figure</toccaption>
         <caption><tag close=": ">Figure 1.2</tag>Another Figure</caption>
       </figure>
-      <table inlist="lot" xml:id="Ch1.T2">
+      <table class="ltx_env_table" inlist="lot" xml:id="Ch1.T2">
         <tags>
           <tag>Table 1.2</tag>
           <tag role="refnum">1.2</tag>
@@ -439,7 +439,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         <break class="ltx_centering"/>
       </table>
       <para xml:id="Ch1.S2.p4">
-        <enumerate xml:id="Ch1.S2.I1">
+        <enumerate class="ltx_env_enumerate" xml:id="Ch1.S2.I1">
           <item xml:id="Ch1.S2.I1.i1">
             <tags>
               <tag>1.</tag>
@@ -458,7 +458,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
             </tags>
             <para xml:id="Ch1.S2.I1.i2.p1">
               <p>two</p>
-              <enumerate xml:id="Ch1.S2.I1.i2.I1">
+              <enumerate class="ltx_env_enumerate" xml:id="Ch1.S2.I1.i2.I1">
                 <item xml:id="Ch1.S2.I1.i2.I1.i1">
                   <tags>
                     <tag>(a)</tag>
@@ -512,7 +512,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       </para>
       <para xml:id="Ch2.S1.p2">
         <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <equation xml:id="Ch2.E1">
+        <equation class="ltx_env_equation" xml:id="Ch2.E1">
           <tags>
             <tag>(2.1)</tag>
             <tag role="refnum">2.1</tag>
@@ -535,7 +535,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         </equation>
       </para>
       <para xml:id="Ch2.S1.p3">
-        <equation xml:id="Ch2.E2">
+        <equation class="ltx_env_equation" xml:id="Ch2.E2">
           <tags>
             <tag>(2.2)</tag>
             <tag role="refnum">2.2</tag>
@@ -557,7 +557,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
           </Math>
         </equation>
       </para>
-      <figure inlist="lof" xml:id="Ch2.F1">
+      <figure class="ltx_env_figure" inlist="lof" xml:id="Ch2.F1">
         <tags>
           <tag>Figure 2.1</tag>
           <tag role="refnum">2.1</tag>
@@ -567,7 +567,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         <toccaption><tag close=" ">2.1</tag>Yet another Figure</toccaption>
         <caption><tag close=": ">Figure 2.1</tag>Yet another Figure</caption>
       </figure>
-      <table inlist="lot" xml:id="Ch2.T1">
+      <table class="ltx_env_table" inlist="lot" xml:id="Ch2.T1">
         <tags>
           <tag>Table 2.1</tag>
           <tag role="refnum">2.1</tag>
@@ -623,7 +623,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         <break class="ltx_centering"/>
       </table>
       <para xml:id="Ch2.S1.p4">
-        <enumerate xml:id="Ch2.S1.I1">
+        <enumerate class="ltx_env_enumerate" xml:id="Ch2.S1.I1">
           <item xml:id="Ch2.S1.I1.i1">
             <tags>
               <tag>1.</tag>
@@ -642,7 +642,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
             </tags>
             <para xml:id="Ch2.S1.I1.i2.p1">
               <p>two</p>
-              <enumerate xml:id="Ch2.S1.I1.i2.I1">
+              <enumerate class="ltx_env_enumerate" xml:id="Ch2.S1.I1.i2.I1">
                 <item xml:id="Ch2.S1.I1.i2.I1.i1">
                   <tags>
                     <tag>(a)</tag>
@@ -681,7 +681,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       </para>
       <para xml:id="Ch2.S2.p2">
         <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-        <equation xml:id="Ch2.E3">
+        <equation class="ltx_env_equation" xml:id="Ch2.E3">
           <tags>
             <tag>(2.3)</tag>
             <tag role="refnum">2.3</tag>
@@ -704,7 +704,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         </equation>
       </para>
       <para xml:id="Ch2.S2.p3">
-        <equation xml:id="Ch2.E4">
+        <equation class="ltx_env_equation" xml:id="Ch2.E4">
           <tags>
             <tag>(2.4)</tag>
             <tag role="refnum">2.4</tag>
@@ -726,7 +726,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
           </Math>
         </equation>
       </para>
-      <figure inlist="lof" xml:id="Ch2.F2">
+      <figure class="ltx_env_figure" inlist="lof" xml:id="Ch2.F2">
         <tags>
           <tag>Figure 2.2</tag>
           <tag role="refnum">2.2</tag>
@@ -736,7 +736,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         <toccaption><tag close=" ">2.2</tag>A Figure</toccaption>
         <caption><tag close=": ">Figure 2.2</tag>A Figure</caption>
       </figure>
-      <table inlist="lot" xml:id="Ch2.T2">
+      <table class="ltx_env_table" inlist="lot" xml:id="Ch2.T2">
         <tags>
           <tag>Table 2.2</tag>
           <tag role="refnum">2.2</tag>
@@ -792,7 +792,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         <break class="ltx_centering"/>
       </table>
       <para xml:id="Ch2.S2.p4">
-        <enumerate xml:id="Ch2.S2.I1">
+        <enumerate class="ltx_env_enumerate" xml:id="Ch2.S2.I1">
           <item xml:id="Ch2.S2.I1.i1">
             <tags>
               <tag>1.</tag>
@@ -811,7 +811,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
             </tags>
             <para xml:id="Ch2.S2.I1.i2.p1">
               <p>two</p>
-              <enumerate xml:id="Ch2.S2.I1.i2.I1">
+              <enumerate class="ltx_env_enumerate" xml:id="Ch2.S2.I1.i2.I1">
                 <item xml:id="Ch2.S2.I1.i2.I1.i1">
                   <tags>
                     <tag>(a)</tag>

@@ -7,7 +7,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <equation xml:id="S0.E1">
+    <equation class="ltx_env_equation" xml:id="S0.E1">
       <tags>
         <tag>(1)</tag>
         <tag role="refnum">1</tag>
@@ -111,7 +111,7 @@
         </XMath>
       </Math>
     </equation>
-    <equation xml:id="S0.E2">
+    <equation class="ltx_env_equation" xml:id="S0.E2">
       <tags>
         <tag>(2)</tag>
         <tag role="refnum">2</tag>

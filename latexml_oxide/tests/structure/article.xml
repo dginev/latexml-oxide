@@ -24,7 +24,7 @@
     <title><tag close=" ">1</tag>First Section</title>
     <para xml:id="S1.p1">
       <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-      <equation xml:id="S1.E1">
+      <equation class="ltx_env_equation" xml:id="S1.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -47,7 +47,7 @@
       </equation>
     </para>
     <para xml:id="S1.p2">
-      <equation xml:id="S1.E2">
+      <equation class="ltx_env_equation" xml:id="S1.E2">
         <tags>
           <tag>(2)</tag>
           <tag role="refnum">2</tag>
@@ -69,7 +69,7 @@
         </Math>
       </equation>
     </para>
-    <figure inlist="lof" xml:id="S1.F1">
+    <figure class="ltx_env_figure" inlist="lof" xml:id="S1.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>
@@ -79,7 +79,7 @@
       <toccaption><tag close=" ">1</tag>A Figure</toccaption>
       <caption><tag close=": ">Figure 1</tag>A Figure</caption>
     </figure>
-    <table inlist="lot" xml:id="S1.T1">
+    <table class="ltx_env_table" inlist="lot" xml:id="S1.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>
@@ -135,7 +135,7 @@
       <break class="ltx_centering"/>
     </table>
     <para xml:id="S1.p3">
-      <itemize xml:id="S1.I1">
+      <itemize class="ltx_env_itemize" xml:id="S1.I1">
         <item xml:id="S1.I1.i1">
           <tags>
             <tag>•</tag>
@@ -152,7 +152,7 @@
           </tags>
           <para xml:id="S1.I1.i2.p1">
             <p>two</p>
-            <itemize xml:id="S1.I1.i2.I1">
+            <itemize class="ltx_env_itemize" xml:id="S1.I1.i2.I1">
               <item xml:id="S1.I1.i2.I1.i1">
                 <tags>
                   <tag><text font="bold">–</text></tag>
@@ -177,7 +177,7 @@
       </itemize>
     </para>
     <para xml:id="S1.p4">
-      <enumerate xml:id="S1.I2">
+      <enumerate class="ltx_env_enumerate" xml:id="S1.I2">
         <item xml:id="S1.I2.i1">
           <tags>
             <tag>1.</tag>
@@ -196,7 +196,7 @@
           </tags>
           <para xml:id="S1.I2.i2.p1">
             <p>two</p>
-            <enumerate xml:id="S1.I2.i2.I2">
+            <enumerate class="ltx_env_enumerate" xml:id="S1.I2.i2.I2">
               <item xml:id="S1.I2.i2.I2.i1">
                 <tags>
                   <tag>(a)</tag>
@@ -223,7 +223,7 @@
       </enumerate>
     </para>
     <para xml:id="S1.p5">
-      <description xml:id="S1.I3">
+      <description class="ltx_env_description" xml:id="S1.I3">
         <item xml:id="S1.I3.ix1">
           <tags>
             <tag><text font="bold">A thing</text></tag>
@@ -310,7 +310,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
     <title><tag close=" ">2</tag>Second Section</title>
     <para xml:id="S2.p1">
       <p>Begin first paragraph,</p>
-      <equation xml:id="S2.E3">
+      <equation class="ltx_env_equation" xml:id="S2.E3">
         <tags>
           <tag>(3)</tag>
           <tag role="refnum">3</tag>
@@ -333,7 +333,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       </equation>
     </para>
     <para xml:id="S2.p2">
-      <equation xml:id="S2.E4">
+      <equation class="ltx_env_equation" xml:id="S2.E4">
         <tags>
           <tag>(4)</tag>
           <tag role="refnum">4</tag>
@@ -355,7 +355,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
         </Math>
       </equation>
     </para>
-    <figure inlist="lof" xml:id="S2.F2">
+    <figure class="ltx_env_figure" inlist="lof" xml:id="S2.F2">
       <tags>
         <tag>Figure 2</tag>
         <tag role="refnum">2</tag>
@@ -365,7 +365,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       <toccaption><tag close=" ">2</tag>Another Figure</toccaption>
       <caption><tag close=": ">Figure 2</tag>Another Figure</caption>
     </figure>
-    <table inlist="lot" xml:id="S2.T2">
+    <table class="ltx_env_table" inlist="lot" xml:id="S2.T2">
       <tags>
         <tag>Table 2</tag>
         <tag role="refnum">2</tag>
@@ -421,7 +421,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       <break class="ltx_centering"/>
     </table>
     <para xml:id="S2.p3">
-      <enumerate xml:id="S2.I1">
+      <enumerate class="ltx_env_enumerate" xml:id="S2.I1">
         <item xml:id="S2.I1.i1">
           <tags>
             <tag>1.</tag>
@@ -440,7 +440,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
           </tags>
           <para xml:id="S2.I1.i2.p1">
             <p>two</p>
-            <enumerate xml:id="S2.I1.i2.I1">
+            <enumerate class="ltx_env_enumerate" xml:id="S2.I1.i2.I1">
               <item xml:id="S2.I1.i2.I1.i1">
                 <tags>
                   <tag>(a)</tag>

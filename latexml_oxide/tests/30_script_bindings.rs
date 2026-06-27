@@ -232,8 +232,11 @@ const SAMPLE: &str = r##"
     document.closeElement("ltx:text");
   });
 
-  // DefRewrite (data form): stamp every biography note at finalization.
-  DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][not(@class)]",
+  // DefRewrite (data form): stamp the {bio} biography note at finalization.
+  // (The env-markup-class feature gives the note class="ltx_env_bio", so the
+  // selector targets that exact class — the old `[not(@class)]` no longer matches
+  // since every environment wrapper now carries an `ltx_env_<name>` class.)
+  DefRewrite(#{ xpath: "descendant-or-self::ltx:note[@role='biography'][@class='ltx_env_bio']",
                 attributes: #{ class: "rw-stamp" } });
 "##;
 
@@ -390,9 +393,10 @@ fn script_binding_macro_and_constructor_convert() {
     "environment with arg ({{bio}}{{Ada}}) diverged from faithful-Perl output; xml=\n{xml}"
   );
   // The working idiom ({biop}): env arg → properties closure → #pname hole at
-  // attribute position, on a schema-allowed attribute.
+  // attribute position, on a schema-allowed attribute. (The env-markup-class
+  // feature appends `ltx_env_biop` to the wrapper's class → `Ada ltx_env_biop`.)
   assert!(
-    xml.contains("class=\"Ada\"") && xml.contains("Idiom"),
+    xml.contains("class=\"Ada ltx_env_biop\"") && xml.contains("Idiom"),
     "environment properties idiom ({{biop}}) failed; xml=\n{xml}"
   );
   // DefEnvironment, imperative form: absorbProperty(\"body\").

@@ -55,7 +55,7 @@ XT 0.</p>
     </tags>
     <title><tag close=" ">3</tag>Test “expanded redefinition timing</title>
     <para xml:id="S3.p1">
-      <itemize xml:id="S3.I1">
+      <itemize class="ltx_env_itemize" xml:id="S3.I1">
         <item xml:id="S3.I1.ix1">
           <tags>
             <tag>Normal:</tag>
