@@ -37,6 +37,7 @@ pub mod aamas_cls;
 pub mod achemso_cls;
 pub mod agujournal2019_cls;
 pub mod aistats2026_sty;
+pub mod alegreyasans_sty;
 pub mod aliascnt_sty;
 pub mod aomart_cls;
 pub mod apacite_sty;
@@ -96,6 +97,7 @@ pub mod emlines_sty;
 pub mod envmath_sty;
 pub mod equations_sty;
 pub mod eso_pic_sty;
+pub mod fancyvrb_ex_sty;
 pub mod fcs_cls;
 pub mod figcaps_sty;
 pub mod fontawesome5_sty;
@@ -110,6 +112,7 @@ pub mod harvmac_tex;
 pub mod hepnames_sty;
 pub mod hepparticles_sty;
 pub mod hobby_code_tex;
+pub mod hpstatement_sty;
 pub mod hyphenat_sty;
 pub mod iccv_sty;
 pub mod ieeeaccess_cls;
@@ -174,6 +177,7 @@ pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod refstyle_sty;
 pub mod rotfloat_sty;
+pub mod rsphrase_sty;
 pub mod sagej_cls;
 pub mod savetrees_sty;
 pub mod scicite_sty;
@@ -181,8 +185,11 @@ pub mod scrartcl_cls;
 pub mod scrbook_cls;
 pub mod scrpage2_sty;
 pub mod scrpage_sty;
+pub mod scrreprt_cls;
+pub mod sourcecodepro_sty;
 pub mod tabls_sty;
 pub mod tac_cls;
+pub mod tgpagella_sty;
 pub mod titleref_sty;
 pub mod typearea_sty;
 // scipost_cls: removed — SciPost.cls (and SciPostMod variants) raw-load like
@@ -344,6 +351,16 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // article-base superset), preserving their article-like layout.
   ("scrartcl", "cls", scrartcl_cls::load_definitions),
   ("scrbook", "cls", scrbook_cls::load_definitions),
+  ("scrreprt", "cls", scrreprt_cls::load_definitions),
+  // mhchem-manual / chemistry-document long tail (raw-load real .sty where
+  // installed; OmniBus-stub the .cls). See the per-module docs for the
+  // Perl-parity rationale (Perl ships no binding for any of these).
+  ("fancyvrb-ex", "sty", fancyvrb_ex_sty::load_definitions),
+  ("rsphrase", "sty", rsphrase_sty::load_definitions),
+  ("hpstatement", "sty", hpstatement_sty::load_definitions),
+  ("tgpagella", "sty", tgpagella_sty::load_definitions),
+  ("sourcecodepro", "sty", sourcecodepro_sty::load_definitions),
+  ("AlegreyaSans", "sty", alegreyasans_sty::load_definitions),
   ("tabularray", "sty", tabularray_sty::load_definitions),
   ("widetext", "sty", widetext_sty::load_definitions),
   ("xwatermark", "sty", xwatermark_sty::load_definitions),
