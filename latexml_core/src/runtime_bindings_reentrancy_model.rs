@@ -110,7 +110,11 @@ fn nested_trampoline(document: &mut Doc) {
   });
 }
 
-/// `\myemph{X}` alone: a single (non-nested) constructor body. Baseline.
+/// `\myemph{X}` alone: a single (non-nested) constructor body. Baseline. This
+/// also models the SIBLING `WHATSIT_CTX` re-mint (`engine.rs::setProperty`,
+/// `&mut *ptr`): after-digest hooks run one-pass/sequentially on a fresh-local
+/// whatsit and never re-enter on the SAME whatsit, so the whatsit case is ALWAYS
+/// this single-body pattern (no nested same-object re-mint).
 #[test]
 fn reentrancy_model_single_body_sound() {
   let mut doc = Doc { n: 0 };
