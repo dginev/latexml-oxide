@@ -7201,7 +7201,15 @@ LoadDefinitions!({
   Let!("\\reversemarginpar", "\\@reversemargintrue");
   Let!("\\normalmarginpar", "\\@reversemarginfalse");
   // Perl: latex_constructs.pool.ltxml lines 3543-3546
-  DefConstructor!("\\marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###);
+  // `bounded => true` scopes font/catcode changes inside the margin note to the
+  // note itself. This is an INTENTIONAL surpass-Perl divergence (OXIDIZED_DESIGN
+  // #39, KNOWN_PERL_ERRORS): upstream Perl LaTeXML's `\marginpar` is NOT bounded,
+  // so a `\marginpar{\Large …}` leaks the size switch into the body text after
+  // it (real pdflatex scopes it to the margin box — the leak is a LaTeXML bug,
+  // shared by both engines). Mirrors `\mbox`'s `bounded => true`. Witness:
+  // mhchem.tex `\marginpar{\Large !}` made the entire manual render at 144%.
+  DefConstructor!("\\marginpar[]{}", r###"?#1(<ltx:note role='margin' class='ltx_marginpar_left'><ltx:inline-logical-block>#1</ltx:inline-logical-block></ltx:note>?#2(<ltx:note role='margin' class='ltx_marginpar_right'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>))(<ltx:note role='margin' class='ltx_marginpar'><ltx:inline-logical-block>#2</ltx:inline-logical-block></ltx:note>)"###,
+    bounded => true);
 
   DefRegister!("\\marginparpush", Dimension::new(0));
 

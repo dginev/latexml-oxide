@@ -1505,6 +1505,26 @@ cannot invalidate any document that validated before, so no existing test can br
 is now empty. Surpass-Perl; candidate to upstream. (mdframed-style framed blocks
 typically lower to `float`/`theorem` too, so they benefit as well.)
 
+### 39. `\marginpar` font/catcode changes are scoped (`bounded`)
+
+**Decision:** `\marginpar[]{}` (`latex_constructs.rs`) now carries `bounded => true`,
+so font/catcode switches inside the margin note are local to the note. Mirrors
+`\mbox`'s `bounded => true`.
+
+**Perl behavior:** upstream Perl LaTeXML's `\marginpar` is NOT bounded, so a
+`\marginpar{\Large …}` **leaks** the `\Large` (or any switch) into the body text that
+follows. Verified parity bug — Perl LaTeXML 0.8.8 reproduces it identically
+(`\marginpar{\Large !} X` renders `X` at 144%); real pdflatex scopes the note to its
+margin box, so the leak is a LaTeXML-engine bug shared by both ports, NOT a Rust
+regression.
+
+**Rationale:** the margin note's content is conceptually a separate box; its size/font
+changes must not affect the main galley. **Witness:** the mhchem manual's
+`\marginpar{\Large !}` (line 120) leaked `\Large` document-wide, rendering the ENTIRE
+manual at 144% (1388 `fontsize="144%"` nodes → 4 after the fix). Output-neutral across
+the suite (1487/0): no golden test relies on the leak. Surpass-Perl; candidate to
+upstream. See `KNOWN_PERL_ERRORS.md`.
+
 ---
 
 ## Future Work (Beyond Perl Parity)
