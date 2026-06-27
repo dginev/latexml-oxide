@@ -325,6 +325,13 @@ fn latexml_ok_internal(
       eprintln!("BLESS skip {name:?}: conversion produced no output (not overwriting {xml_path})");
       return;
     }
+    // Idempotent: only rewrite when the content actually changed (line-wise, the
+    // same comparison the test uses), so unchanged goldens aren't churned by
+    // trailing-newline normalization — the diff stays scoped to real changes.
+    let existing = process_xmlfile(xml_path, name);
+    if existing == tex_strings {
+      return;
+    }
     let body = format!("{}\n", tex_strings.join("\n"));
     match std::fs::write(xml_path, &body) {
       Ok(()) => eprintln!("BLESS wrote {xml_path} ({} lines)", tex_strings.len()),
