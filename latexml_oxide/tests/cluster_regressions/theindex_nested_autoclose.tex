@@ -1,0 +1,23 @@
+\documentclass{article}
+% Regression: a multi-level `theindex` (makeidx `\item`/`\subitem`) must build
+% nested <ltx:indexlist>/<ltx:indexentry> without errors. Two core pieces:
+%  (1) Tag('ltx:indexentry', autoClose=>1) — a new \item/\subitem opens a new
+%      indexentry while a sibling is still open; closing an indexlist unwinds
+%      open indexentry children. Without it: "<ltx:indexentry> isn't allowed in
+%      <ltx:indexentry>" and "Closing ltx:indexlist whose descendents do not
+%      auto-close".
+%  (2) theindex's beforeDigestEnd must RETURN the digested \index@done whatsit
+%      so it is constructed and unwinds the trailing indexphrase/indexlist;
+%      otherwise \end{theindex} force-closes them and errors on ltx:index.
+% Witness arXiv:1205.0533 (makeidx + \input of a multi-level .ind): 102 errors
+% / Fatal -> 1 (the lone residual, \hyperpage, is shared with Perl).
+\begin{document}
+\begin{theindex}
+\item alpha, 1
+\item beta
+  \subitem gamma, 2
+  \subitem delta, 3
+    \subsubitem zeta, 9
+\item epsilon, 4
+\end{theindex}
+\end{document}

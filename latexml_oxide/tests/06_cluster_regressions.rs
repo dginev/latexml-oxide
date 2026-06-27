@@ -392,3 +392,17 @@ fn cluster_omnibus_natbib_autoload_no_reload_loop() {
 fn cluster_mhchem_cf_author_macro() {
   convert_clean("tests/cluster_regressions/mhchem_cf_author_macro.tex");
 }
+
+/// Multi-level `theindex` (`\item`/`\subitem`/`\subsubitem`) must build nested
+/// `<ltx:indexlist>`/`<ltx:indexentry>` cleanly. Requires (1) `Tag('ltx:indexentry',
+/// autoClose=>1)` — Perl `latex_constructs.pool.ltxml` L4477 — so a new entry
+/// auto-closes its open sibling and indexlist unwinds its entry children; and (2)
+/// the theindex `beforeDigestEnd` must RETURN the digested `\index@done` whatsit so
+/// it is constructed and unwinds the trailing indexphrase/indexlist. Without these
+/// the builder errors "indexentry isn't allowed in indexentry" / "Closing ltx:index
+/// whose descendents do not auto-close". Witness: arXiv:1205.0533 (102 errors /
+/// Fatal → 1, the residual `\hyperpage` shared with Perl).
+#[test]
+fn cluster_theindex_nested_autoclose() {
+  convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
+}

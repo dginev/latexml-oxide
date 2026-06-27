@@ -8253,8 +8253,17 @@ LoadDefinitions!({
       Let!("\\item", "\\index@item");
       Let!("\\subitem", "\\index@subitem");
       Let!("\\subsubitem", "\\index@subsubitem");
+      // Perl L4519: `\dotfill` between an index phrase and its page list opens
+      // the `ltx:indexrefs` separator (index styles that use `term \dotfill page`).
+      Let!("\\dotfill", "\\index@dotfill");
     },
-    before_digest_end => { digest(Tokens!(T_CS!("\\index@done")))?; },
+    // Must RETURN the digested `\index@done` whatsit (no trailing `;`) so it is
+    // appended to the env body and CONSTRUCTED — it closes the trailing
+    // indexphrase/indexrefs and unwinds the open indexlist levels (do_index_item
+    // level 0). With a discarding `;` the whatsit was dropped, so `\end{theindex}`
+    // force-closed the still-open indexphrase/indexlist and errored "Closing tag
+    // ltx:index whose open descendents do not auto-close". Cf. the titlepage env.
+    before_digest_end => { digest(Tokens!(T_CS!("\\index@done")))? },
     after_digest_begin => sub[whatsit] {
       note_backmatter_element(whatsit, "ltx:index");
       let docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
@@ -8360,6 +8369,17 @@ LoadDefinitions!({
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
+
+  // Perl latex_constructs.pool.ltxml L4477: `Tag('ltx:indexentry', autoClose => 1)`.
+  // `doIndexItem` opens a new `ltx:indexentry` for each `\item`/`\subitem` while a
+  // sibling entry may still be open (consecutive items at the same level) and
+  // closes an `ltx:indexlist` whose `indexentry` children are still open (at level
+  // descent / `\index@done`). Both rely on `indexentry` auto-closing; without this
+  // Tag the builder errors "<ltx:indexentry> isn't allowed in <ltx:indexentry>"
+  // and "Closing tag ltx:indexlist whose open descendents do not auto-close".
+  // Witness arXiv:1205.0533 (makeidx + `\input` of a multi-level `.ind`): 102
+  // errors / Fatal → 0.
+  Tag!("ltx:indexentry", auto_close => true);
 
   // Helper: close an open indexphrase element
   DefConstructor!("\\index@dotfill", sub[document] {
