@@ -183,9 +183,74 @@ use crate::{
   tbox::*,
   token::{Catcode, Token},
   tokens::Tokens,
+  whatsit::Whatsit,
 };
 
 static MAXSTACK: usize = 200;
+
+// ── env-markup-class (raw side): token-free begin/end environment markers ─────
+// A raw-defined environment (`\newenvironment`/`\renewenvironment`, or any env
+// taking the `\begin`/`\end` dispatchers' non-magic path) should get its sole
+// deposited XML node tagged `ltx_env_<name>`. The dispatchers (latex_constructs
+// `\begin{}`/`\end {}`) push begin/end requests onto this thread-local queue
+// rather than injecting marker TOKENS into the gullet stream — a token at the
+// begin/body or end boundary trips `\expandafter` and other expansion flows in
+// position-sensitive begin/end codes (e.g. csquotes). `invoke_token` drains the
+// queue into absorb-phase marker Whatsit boxes positioned at the env's box-list
+// boundaries; at absorb they snapshot/diff the insertion node and tag its lone
+// new element child. See document::env_construct_{begin,end}.
+enum EnvMarker {
+  /// Begin of a raw env; carries the `ltx_env_<name>` class to tag with.
+  Begin(String),
+  /// End of a raw env.
+  End,
+}
+thread_local! {
+  static ENV_MARKER_QUEUE: RefCell<Vec<EnvMarker>> = const { RefCell::new(Vec::new()) };
+  /// Cheap gate: the per-token `invoke_token` fast path is a single `Cell` read;
+  /// only a non-empty queue pays the `RefCell` drain + Whatsit construction.
+  static ENV_MARKER_PENDING: Cell<bool> = const { Cell::new(false) };
+}
+/// Queue a begin-marker for a raw environment (class = `ltx_env_<name>`).
+pub fn env_marker_push_begin(class: String) {
+  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().push(EnvMarker::Begin(class)));
+  ENV_MARKER_PENDING.with(|f| f.set(true));
+}
+/// Queue an end-marker for a raw environment.
+pub fn env_marker_push_end() {
+  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().push(EnvMarker::End));
+  ENV_MARKER_PENDING.with(|f| f.set(true));
+}
+/// Drain queued env markers into absorb-phase marker Whatsit boxes. Called from
+/// `invoke_token` only when `ENV_MARKER_PENDING` is set; the resulting boxes are
+/// emitted into the box list ahead of the current token's boxes.
+fn drain_env_markers() -> Vec<Digested> {
+  ENV_MARKER_PENDING.with(|f| f.set(false));
+  let markers = ENV_MARKER_QUEUE.with(|q| std::mem::take(&mut *q.borrow_mut()));
+  let mut out = Vec::with_capacity(markers.len());
+  for marker in markers {
+    let (cs, class) = match marker {
+      EnvMarker::Begin(class) => ("\\lx@env@begin@mark", Some(class)),
+      EnvMarker::End => ("\\lx@env@end@mark", None),
+    };
+    // The marker constructors live in latex_constructs (LaTeX only). If absent
+    // (e.g. plain-TeX), silently drop — the queue is only ever fed by the LaTeX
+    // `\begin`/`\end` dispatchers, so this is purely defensive.
+    let Ok(Some(definition)) = lookup_definition(&T_CS!(cs)) else {
+      continue;
+    };
+    let properties = match class {
+      Some(class) => crate::stored_map!("envname" => class),
+      None => HashMap::default(),
+    };
+    out.push(Digested::from(Whatsit {
+      definition,
+      properties,
+      ..Whatsit::default()
+    }));
+  }
+  out
+}
 
 /// The Stomach is responsible for digesting tokens into boxes, lists, etc.
 #[derive(Default)]
@@ -1333,6 +1398,15 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
   // directly instead of wrapping in Cow<Token>.
   let mut maybe_token: Option<Token> = Some(*input_token);
   let mut result: Vec<Digested> = Vec::new();
+  // env-markup-class: drain any queued raw-env begin/end markers (pushed by the
+  // `\begin`/`\end` dispatchers during the preceding expansion) into marker boxes
+  // emitted into the box list AHEAD of this token's boxes. Token-free: the markers
+  // never entered the gullet stream. The fast path is a single `Cell` read.
+  let env_markers = if ENV_MARKER_PENDING.with(|f| f.get()) {
+    drain_env_markers()
+  } else {
+    Vec::new()
+  };
   // INVOKE:
   while let Some(token) = maybe_token.take() {
     // RAII guard: auto-pops current_token on scope exit (even on early return/panic)
@@ -1476,7 +1550,14 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
     break;
   }
   stomach_mut!().token_stack.pop();
-  Ok(result)
+  if env_markers.is_empty() {
+    Ok(result)
+  } else {
+    // Marker boxes lead, then this token's boxes.
+    let mut out = env_markers;
+    out.append(&mut result);
+    Ok(out)
+  }
 }
 
 fn invoke_token_undefined(token: &Token) -> Result<Vec<Digested>> {

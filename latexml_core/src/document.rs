@@ -178,6 +178,34 @@ impl Drop for OpenDepthGuard {
   fn drop(&mut self) { OPEN_ELEMENT_DEPTH.with(|d| d.set(d.get().saturating_sub(1))); }
 }
 
+// ── env-markup-class: RAW side (`\newenvironment`) ───────────────────────────
+// The binding side (above) can't be used for raw envs (their begin is an
+// Expandable macro, not a constructor). Crucially, we also do NOT inject marker
+// TOKENS into the gullet stream — a token at the begin/body or end boundary
+// disrupts `\expandafter` and other expansion flows in position-sensitive
+// begin/end codes (e.g. csquotes). Instead the `\begin`/`\end` dispatchers push
+// begin/end requests onto a thread-local queue (`stomach::env_marker_push_*`)
+// that `stomach::invoke_token` drains into absorb-phase MARKER boxes positioned
+// at the env's box-list boundaries. The begin-marker (carrying the class in its
+// `envname` property) snapshots the current insertion node `N` and a child
+// cursor; the end-marker diffs `N`'s ELEMENT children against the cursor and, iff
+// EXACTLY ONE was deposited, tags it `ltx_env_<name>`. One-element-child gives
+// precise single-deposit semantics: single wrapper → tag; siblings → no tag;
+// font/text-only → no tag. Caveat: in a block context an inline env's content can
+// land in an auto-`<para>` that becomes the single child, so the para (not the
+// inner node) is tagged.
+/// One raw-env begin snapshot: `(N, cursor, class)` — `N` is the insertion node at
+/// the env's begin, `cursor` is `N`'s last child then (None ⇒ N was empty), `class`
+/// is the `ltx_env_<name>` to tag with.
+type EnvSnapshot = (Option<Node>, Option<Node>, String);
+thread_local! {
+  /// Stack of [`EnvSnapshot`]s, pushed by `env_construct_begin`, popped by
+  /// `env_construct_end` (the name rides the begin-marker, so the end-marker is
+  /// nameless — pairing is by LIFO stack order, robust under nesting).
+  static ENV_CONSTRUCTION_STACK: std::cell::RefCell<Vec<EnvSnapshot>> =
+    const { std::cell::RefCell::new(Vec::new()) };
+}
+
 impl Document {
   pub fn new() -> Self {
     crate::ensure_libxml_init(); // Thread-safe libxml2 initialization
@@ -995,6 +1023,44 @@ impl Document {
     // attributes.entry("_box").or_insert(state_mut!().locals.box);
 
     Ok(newnode)
+  }
+
+  /// env-markup-class (raw side) — begin-marker. Absorbed at a raw env's begin
+  /// position: snapshot the current insertion node `N` and its last child (the
+  /// cursor) plus the `ltx_env_<name>` `class`, so [`env_construct_end`] can tell
+  /// what `N` gained inside the env and how to tag it.
+  pub fn env_construct_begin(&mut self, class: String) {
+    let n = self.get_element();
+    let cursor = n.as_ref().and_then(|node| node.get_last_child());
+    ENV_CONSTRUCTION_STACK.with(|s| s.borrow_mut().push((n, cursor, class)));
+  }
+
+  /// env-markup-class (raw side) — end-marker. Absorbed after the env body: pop the
+  /// matching begin snapshot; if its node gained EXACTLY ONE element child since the
+  /// begin cursor, tag it with the snapshot's `ltx_env_<name>` class. Zero or many
+  /// ⇒ no tag (single-deposit semantics).
+  pub fn env_construct_end(&mut self) -> Result<()> {
+    let Some((n_opt, cursor, class)) = ENV_CONSTRUCTION_STACK.with(|s| s.borrow_mut().pop()) else {
+      return Ok(());
+    };
+    let Some(n) = n_opt else {
+      return Ok(());
+    };
+    let mut cur = match cursor {
+      Some(last) => last.get_next_sibling(),
+      None => n.get_first_child(),
+    };
+    let mut deposited: Vec<Node> = Vec::new();
+    while let Some(node) = cur {
+      if node.get_type() == Some(NodeType::ElementNode) {
+        deposited.push(node.clone());
+      }
+      cur = node.get_next_sibling();
+    }
+    if let [only] = deposited.as_slice() {
+      self.add_class(&mut only.clone(), &class)?;
+    }
+    Ok(())
   }
 
   /// Stamp a freshly-opened element with its source range as a

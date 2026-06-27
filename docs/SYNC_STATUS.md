@@ -1216,7 +1216,7 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    cases toward 0 errors; validate the corpus mhchem witnesses via cortex (the flip
    is corpus-wide).
 
-### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING SIDE LANDED; raw side next)
+### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING + RAW SIDES LANDED)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
 with `class="ltx_env_<name>"` so any env (incl. minipage-like `SideBySideExample`)
 becomes responsively styleable in CSS. On its own branch — it changes nearly every
@@ -1247,20 +1247,44 @@ regenerated, purely additive class additions.
   corpus.** (4) imperative-form DefEnvironments (rhai `{rbox}` via absorbProperty) were
   observed NOT tagged — possible gap to investigate.
 
-**RAW SIDE (`\newenvironment`/`\renewenvironment`) — ATTEMPTED, ABANDONED (regresses).**
-The Count-mode mechanism worked in isolation (`env_arm_count`/`env_finalize_count`,
-nesting-correct: `mybox`={quote} → `class="ltx_env_mybox ltx_env_quote"`; font-only and
-two-sibling cases correctly untagged). BUT it requires injecting `\name` =
-`\lx@env@arm@raw{class} B \lx@env@finalize@raw` — and the `\lx@env@finalize@raw` token
-at the begin-code/body boundary **disrupts position-sensitive begin-codes**: csquotes'
-`displayquote` mangled its citation (`[Citation] du texte ici` vs the proper nested
-`ltx_citation`). There is NO safe boundary token between a `\newenvironment` begin-code
-and its body. The two alternatives also fail: finalize-at-`\end` over-counts body
-blocks (a body `\begin{quote}` is an outermost open → count>1 → no tag); tree-diff
-"single deposited root" hits the shared auto-`<para>` (tags the para). **Conclusion:**
-the raw side needs a fundamentally different mechanism (e.g. an engine-level
-begin-code/body boundary signal, or per-env construct introspection) — deferred. The
-binding side (all DefEnvironments) is the shipped feature.
+**RAW SIDE (`\newenvironment`/`\renewenvironment`) — ✅ DONE 2026-06-27 (token-free).**
+Mechanism (after rejecting all token-injection approaches): the `\begin`/`\end`
+*dispatchers* (native `DefMacro!` closures in `latex_constructs.rs`, the single
+chokepoint every env flows through) push begin/end *requests* onto a thread-local
+queue (`stomach::env_marker_push_{begin,end}`) — **NO token enters the gullet
+stream**. `stomach::invoke_token` drains the queue into absorb-phase MARKER Whatsit
+boxes (`\lx@env@begin@mark`/`\lx@env@end@mark`, built programmatically via
+`lookup_definition`, name carried in the begin marker's `envname` property) positioned
+at the env's box-list boundaries. At absorb, the begin marker snapshots the insertion
+node `N`+last-child cursor (`document::env_construct_begin`); the end marker diffs `N`'s
+new ELEMENT children and, iff EXACTLY ONE, tags it `ltx_env_<name>`
+(`env_construct_end`). LIFO `ENV_CONSTRUCTION_STACK` makes nesting robust; the name
+rides the begin marker so the end marker is nameless.
+- **Why token-free matters:** the abandoned approach injected `\lx@env@arm@raw{class} B
+  \lx@env@finalize@raw` into `\name`; the boundary `\lx@env@finalize@raw` token
+  **disrupted position-sensitive begin-codes** (csquotes `displayquote` mangled its
+  citation to `[Citation] du texte ici`). The marker-as-box approach is invisible to
+  expansion: validated that a begin-code using `\expandafter` (`\newenvironment{peek}
+  {\expandafter\textbf\expandafter{\romannumeral5}}{}`) works perfectly, and csquotes
+  `displayquote` now tags correctly with the citation **fully intact**.
+- **Scope (deliberate, two gates evaluated identically at `\begin`/`\end`):**
+  (1) **flag** `lx@envmarkup:<name>` (set by `\newenvironment`/`\renewenvironment`,
+  local scope matching the `\name` def) — tags ONLY user/package raw envs, NOT
+  LaTeXML's own internal raw envs (tabular/array/tikz/list/proof — those already have
+  semantic markup; un-gated it tagged 100+ goldens incl. all matrices); (2) **`!IN_MATH`**
+  — never tag inside math (would pollute the `tex=` reversion + tag XMArray/XMWrap; the
+  markers also carry `reversion => ""` as belt-and-suspenders).
+- **Perf:** the bookkeeping lives in the native `\begin`/`\end` closures (once per env)
+  + a single `Cell<bool>` (`ENV_MARKER_PENDING`) read on `invoke_token`'s per-token fast
+  path — strictly cheaper than per-token `.starts_with("\\begin")` or a per-`Expandable`
+  property read on the hot expansion path (neither needed).
+- **Result:** suite 1487/0; **7 goldens** regenerated (algx/figure_mixed_content
+  `algorithmic`; csquotes `displayquote`/`foreigndisplayquote`; environments
+  `myquote`/`quote1`; etoolbox `stuff`; xcolors `testcolors`; ac-drive-components
+  `circuitikz`), every diff a pure additive class — no structural/content/`tex=` change.
+- **Caveat (shared with binding side):** an inline env that *starts* a paragraph tags
+  the auto-`<para>` (the single child) rather than the inner node; mid-paragraph inline
+  envs tag the inner node directly. Acceptable for a CSS hook.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.

@@ -467,7 +467,7 @@
         </tags>
         <toccaption><tag close=" ">2</tag>Algorithms in minipage</toccaption>
         <caption><tag close=" "><text font="bold">Algorithm 2</text></tag> Algorithms in minipage</caption>
-        <listing>
+        <listing class="ltx_env_algorithmic">
           <listingline xml:id="alg2.l0"><tags>
               <tag><text fontsize="80%">0:</text></tag>
               <tag role="refnum">0</tag>
@@ -685,7 +685,7 @@
           </tags>
           <toccaption><tag close=" ">3</tag><text color="#0000FF">line</text></toccaption>
           <caption><tag close=" "><text font="bold">Algorithm 3</text></tag> <text color="#0000FF">line</text></caption>
-          <listing>
+          <listing class="ltx_env_algorithmic">
             <listingline xml:id="alg3.l0"><tags>
                 <tag><text fontsize="80%">0:</text></tag>
                 <tag role="refnum">0</tag>
@@ -774,7 +774,7 @@
           </tags>
           <toccaption><tag close=" ">4</tag><text color="#0000FF">line</text></toccaption>
           <caption><tag close=" "><text font="bold">Algorithm 4</text></tag> <text color="#0000FF">line</text></caption>
-          <listing>
+          <listing class="ltx_env_algorithmic">
             <listingline xml:id="alg4.l0"><tags>
                 <tag><text fontsize="80%">0:</text></tag>
                 <tag role="refnum">0</tag>

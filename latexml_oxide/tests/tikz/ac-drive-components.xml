@@ -17,7 +17,7 @@
           </svg:g>
           <svg:path d="M 62.6 -59.06 h 78.74 v 118.11 h -78.74 Z" style="fill:none"/>
           <svg:g transform="matrix(1.0 0.0 0.0 1.0 85.33 -39.65)">
-            <svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" transform="matrix(1 0 0 1 0 0) translate(14.33,0) translate(0,0.28)">
+            <svg:g class="ltx_env_circuitikz ltx_nestedsvg" fill="#000000" stroke="#000000" transform="matrix(1 0 0 1 0 0) translate(14.33,0) translate(0,0.28)">
               <svg:g stroke-width="0.4pt">
                 <svg:path d="M 0 0 L 0 39.37 M 0 61.42 L 0 78.74" style="fill:none"/>
               </svg:g>
@@ -37,7 +37,7 @@
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 220.63 -52.21)">
             <svg:foreignObject height="104.43" overflow="visible" style="--ltx-fo-width:2.85em;--ltx-fo-height:7.55em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 104.43)" width="39.44"><inline-block class="ltx_minipage" vattach="top" width="2.85em">
                 <p/>
-                <picture class="ltx_align_left" height="104.43" width="197.44" xml:id="p1.pic1.pic1">
+                <picture class="ltx_align_left ltx_env_circuitikz" height="104.43" width="197.44" xml:id="p1.pic1.pic1">
                   <svg:svg height="104.43" overflow="visible" version="1.1" viewBox="0 0 197.44 104.43" width="197.44">
                     <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,104.43) matrix(1 0 0 -1 0 0) translate(17.09,0) translate(0,10.09)">
                       <svg:path d="M 0 0 L 0 39.37 M 4.41 21.41 M 4.41 62.84 M 0 50.39 L 0 78.74" style="fill:none"/>
@@ -72,7 +72,7 @@
           </svg:g>
           <svg:path d="M 339.3 -59.06 h 78.74 v 118.11 h -78.74 Z" style="fill:none"/>
           <svg:g transform="matrix(1.0 0.0 0.0 1.0 359.41 -30.87)">
-            <svg:g class="ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(0.55,0) translate(0,30.87)">
+            <svg:g class="ltx_env_circuitikz ltx_nestedsvg" fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="matrix(1 0 0 1 0 0) translate(0.55,0) translate(0,30.87)">
               <svg:path d="M 0 0" style="fill:none"/>
               <svg:path d="M 33.07 30.59 L 33.07 13.64 L 16.54 4.55" style="fill:none"/>
               <svg:g stroke-width="0.79999pt">

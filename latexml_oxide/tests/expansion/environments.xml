@@ -9,17 +9,17 @@
       <p>A Quote!</p>
     </quote>
   </para>
-  <para xml:id="p2">
+  <para class="ltx_env_myquote" xml:id="p2">
     <quote class="ltx_env_quote">
       <p>MY<break/>A Quote!</p>
     </quote>
   </para>
-  <para xml:id="p3">
+  <para class="ltx_env_quote1" xml:id="p3">
     <quote class="ltx_env_quote">
       <p>1<break/>A Quote!</p>
     </quote>
   </para>
-  <para xml:id="p4">
+  <para class="ltx_env_quote1" xml:id="p4">
     <quote class="ltx_env_quote">
       <p>ONE<break/>A Quote!</p>
     </quote>

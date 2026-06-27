@@ -6,7 +6,7 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-book.css" type="text/css"/>
-  <para xml:id="p1">
+  <para class="ltx_env_algorithmic" xml:id="p1">
     <listing>
       <listingline xml:id="algx1.l1"><tags>
           <tag><text fontsize="80%">1:</text></tag>
@@ -47,7 +47,7 @@
     </tags>
     <toccaption><tag close=" ">1</tag>Euclid’s algorithm</toccaption>
     <caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Euclid’s algorithm</caption>
-    <listing>
+    <listing class="ltx_env_algorithmic">
       <listingline xml:id="alg1.l1"><tags>
           <tag><text fontsize="80%">1:</text></tag>
           <tag role="refnum">1</tag>

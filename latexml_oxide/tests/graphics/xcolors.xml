@@ -317,7 +317,7 @@ A=100*13 = 1300.0pt;</p>
       <tag role="typerefnum">§10</tag>
     </tags>
     <title><tag close=" ">10</tag>Color Compararisons</title>
-    <para xml:id="S10.p1">
+    <para class="ltx_env_testcolors" xml:id="S10.p1">
       <tabular vattach="middle">
         <tbody>
           <tr>

@@ -2867,6 +2867,20 @@ LoadDefinitions!({
       Ok(Tokens::new(tks)) // Magic cs!
     } else {
       let token = T_CS!(format!("\\{name}"));
+      // env-markup-class (raw side): tag the sole node deposited by a user/package
+      // `\newenvironment`/`\renewenvironment` env (flagged `lx@envmarkup:<name>`)
+      // with `ltx_env_<name>`. Push a begin request now (token-free — NO token
+      // enters the gullet stream, so `\expandafter`/position-sensitive begin-codes
+      // are untouched); the `\end` dispatcher pushes the matching end and
+      // `invoke_token` drains both into absorb-phase marker boxes. Scope guards:
+      //   • flag gate — ONLY `\newenvironment`-style envs, NOT LaTeXML's internal
+      //     raw envs (tabular/array/tikz/list/…) which already have semantic markup;
+      //   • `!IN_MATH` — never tag inside math (would pollute the `tex=` reversion
+      //     and tag XMArray/XMWrap nodes). Both gates are evaluated identically at
+      //     `\begin`/`\end`, so begin/end markers stay balanced.
+      if lookup_bool(&s!("lx@envmarkup:{name}")) && !lookup_bool_sym(pin!("IN_MATH")) {
+        env_marker_push_begin(s!("ltx_env_{name}"));
+      }
       if !is_defined_token(&token) {
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
         let undef = format!("{{{name}}}");
@@ -2909,6 +2923,14 @@ LoadDefinitions!({
         out_tokens.extend(afterend_toks.unlist())
       }
     } else {
+      // env-markup-class (raw side): matching end request for the begin pushed by
+      // the `\begin` dispatcher. `invoke_token` drains it into an end-marker box
+      // that tags the env's sole deposited node. Same flag + `!IN_MATH` gates as
+      // `\begin` (evaluated identically), so begin/end markers stay balanced. See
+      // `\begin` above and latexml_core::document::env_construct_{begin,end}.
+      if lookup_bool(&s!("lx@envmarkup:{name}")) && !lookup_bool_sym(pin!("IN_MATH")) {
+        env_marker_push_end();
+      }
       out_tokens = before.map(Tokens::unlist).unwrap_or_default();
       t = T_CS!(s!("\\end{name}"));
       if is_defined_token(&t) {
@@ -6601,6 +6623,26 @@ LoadDefinitions!({
   DefPrimitive!("\\TH", "\u{00DE}", robust => true);
 
 
+  // env-markup-class (raw side): absorb-phase markers that tag the sole node a
+  // raw-defined environment (`\newenvironment`/`\renewenvironment`, or any env
+  // taking the `\begin` dispatcher's non-magic path) deposits with
+  // `ltx_env_<name>`. The markers are NOT tokens in the gullet stream (that would
+  // trip `\expandafter` and other expansion flows in position-sensitive begin/end
+  // codes); instead the `\begin`/`\end` dispatchers (latex_constructs `\begin{}`/
+  // `\end {}`) push begin/end requests onto a thread-local queue
+  // (`stomach::env_marker_push_{begin,end}`) that `invoke_token` drains into these
+  // marker Whatsit boxes at the env's box-list boundaries. The begin-marker
+  // carries the class in its `envname` property and snapshots the insertion node;
+  // the end-marker diffs and tags. See latexml_core::document::env_construct_*.
+  DefConstructor!("\\lx@env@begin@mark", sub[document, _args, props] {
+    let class = props.get("envname").map(|s| s.to_string()).unwrap_or_default();
+    document.env_construct_begin(class);
+  }, sizer => 0, reversion => "");
+  DefConstructor!("\\lx@env@end@mark", sub[document, args] {
+    let _ = &args;
+    document.env_construct_end()?;
+  }, sizer => 0, reversion => "");
+
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(_star_opt, name, nargs, opt, begin, end)] {
     let name = { Expand!(name).to_string() };
@@ -6630,6 +6672,11 @@ LoadDefinitions!({
       let end_name_cs = T_CS!(s!("\\end{}",name));
       DefMacro!(name_cs, converted_args, begin);
       DefMacro!(end_name_cs, None, end);
+      // env-markup-class (raw side): flag this as a user/package `\newenvironment`
+      // so the `\begin`/`\end` dispatchers emit env-markers for it (and ONLY for
+      // such envs — NOT LaTeXML's own internal raw envs like tabular/array/tikz).
+      // Local scope matches the `\<name>`/`\end<name>` macro defs above.
+      assign_value(&s!("lx@envmarkup:{name}"), true, None::<Scope>);
     }
     Ok(Vec::new())
   });
@@ -6646,6 +6693,9 @@ LoadDefinitions!({
 
       DefMacro!(name_cs, converted_args, begin);
       DefMacro!(end_name_cs, None, end);
+      // env-markup-class (raw side): flag for the `\begin`/`\end` dispatchers. See
+      // `\newenvironment` above.
+      assign_value(&s!("lx@envmarkup:{name}"), true, None::<Scope>);
     }
     Ok(Vec::new())
   });
