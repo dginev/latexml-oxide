@@ -36,8 +36,13 @@
 //! divergence from Perl LaTeXML — the full chemistry rendering needs
 //! a real port. Driver paper: 1806.06448 (3 errors → 0 errors).
 //!
-//! Stubs cover the public mhchem v3/v4 surface most papers actually
-//! use: `\ce`, `\cee`, `\cf`, plus `\mhchemoptions` (no-op).
+//! The stub provides `\ce` (defined for all mhchem versions) plus
+//! `\mhchemoptions` (no-op). The legacy `\cee`/`\cf` spellings are defined
+//! ONLY when the document requests `version < 4` (e.g.
+//! `\usepackage[version=3]{mhchem}`), mirroring real mhchem's
+//! `\int_compare:nT { version < 4 }` gate. Defining them unconditionally
+//! diverged from Perl's default (version 4 → undefined) and clobbered the
+//! common author macro `\cf` ("cf."). See the note at the `\ce` definition.
 
 use latexml_package::prelude::*;
 
@@ -119,8 +124,49 @@ LoadDefinitions!({
     Tokens::new(result)
   }
   DefMacro!("\\ce{}",  sub[(body)] { Ok(ce_expand(&body)) });
-  DefMacro!("\\cee{}", sub[(body)] { Ok(ce_expand(&body)) });
-  DefMacro!("\\cf{}",  sub[(body)] { Ok(ce_expand(&body)) });
+
+  // `\cee` / `\cf` are LEGACY (mhchem v3) spellings. Real mhchem.sty defines them
+  // ONLY inside `\int_compare:nT { version < 4 } { \DeclareRobustCommand\cf …
+  // \cee … }` (mhchem.sty L3430-3435). With no `version=` option (the
+  // overwhelmingly common case) mhchem resolves the version to 4 (L3384-3394, with
+  // a "please specify a version" warning) and SKIPS the legacy block, so Perl —
+  // which has no mhchem.sty.ltxml and raw-loads the real .sty — leaves `\cf`/`\cee`
+  // UNDEFINED by default. Defining them unconditionally diverged from Perl AND
+  // clobbered the ubiquitous author macro `\newcommand{\cf}{cf.\ }` ("cf."): when a
+  // paper redefines `\cf` after loading mhchem (directly or via chemformula),
+  // `\newcommand` errors "already defined" and `\cf` stays our `\ensuremath{…}`
+  // math macro, so plain "cf." text leaks into math mode and cascades ("Script _
+  // can only appear in math mode" → `<ltx:XMTok> isn't allowed in …`). Witness
+  // 1901.08894 (chemformula → mhchem, `\newcommand{\cf}[0]{cf.\ }`): 1002 errors /
+  // Fatal → 0, matching Perl (~5 / Error). `\ce` (unconditional in real mhchem,
+  // L188) stays defined for all versions.
+  //
+  // To preserve the v3 binding path, mirror mhchem's gate: read the `version=`
+  // package option (stored in `opt@mhchem.sty` by `\usepackage[…]{mhchem}`) and
+  // define the legacy spellings ONLY when the document explicitly asked for
+  // version < 4. They render via `\ce` (same `\ensuremath` stub).
+  let mhchem_opts: Vec<String> = match lookup_value("opt@mhchem.sty") {
+    Some(Stored::VecDequeStored(vdq)) => vdq
+      .iter()
+      .filter_map(|item| match item {
+        Stored::String(s) => Some(with(*s, |s| s.to_string())),
+        _ => None,
+      })
+      .collect(),
+    Some(Stored::Strings(rc)) => rc.iter().map(|s| with(*s, |s| s.to_string())).collect(),
+    _ => Vec::new(),
+  };
+  let legacy_version = mhchem_opts.iter().any(|opt| {
+    opt
+      .split_once('=')
+      .filter(|(k, _)| k.trim() == "version")
+      .and_then(|(_, v)| v.trim().parse::<i32>().ok())
+      .is_some_and(|v| v < 4)
+  });
+  if legacy_version {
+    RawTeX!(r"\DeclareRobustCommand\cee[1]{\ce{#1}}");
+    RawTeX!(r"\DeclareRobustCommand\cf[2][]{\ce{#2}}");
+  }
 
   // \arrow / \chemarrow — used inside \ce arguments. Stub as small text
   // arrow so a `\ce{A \arrow B}` doesn't error if it leaks out.

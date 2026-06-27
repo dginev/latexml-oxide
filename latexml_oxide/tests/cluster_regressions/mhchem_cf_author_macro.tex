@@ -1,0 +1,14 @@
+\documentclass{article}
+% Regression: the mhchem stub must NOT clobber an author's own \cf ("cf.")
+% macro. mhchem's \cf/\cee are LEGACY (version < 4) commands; with no
+% version option (default 4) real mhchem leaves them undefined, so a paper
+% may \newcommand{\cf} as a text abbreviation. chemformula pulls in mhchem.
+% Before the fix, the stub defined \cf unconditionally as an \ensuremath
+% math macro, so \newcommand errored "already defined" and plain "cf." text
+% leaked into math mode ("Script _ can only appear in math mode" cascade).
+% Witness arXiv:1901.08894 (chemformula + revtex4-1): 1002 errors -> 0.
+\usepackage{chemformula}
+\newcommand{\cf}[0]{cf.\ }
+\begin{document}
+In order to compare with earlier results (\cf the introduction) we proceed.
+\end{document}

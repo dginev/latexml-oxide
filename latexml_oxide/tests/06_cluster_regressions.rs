@@ -378,3 +378,17 @@ fn cluster_omnibus_natbib_autoload_no_reload_loop() {
     "OmniBus natbib autoload: a cite trigger reverted to undefined after the load:\n{log}"
   );
 }
+
+/// The mhchem stub must NOT clobber an author's own `\cf` ("cf.") macro.
+/// `\cf`/`\cee` are mhchem LEGACY (`version < 4`) commands; real mhchem
+/// resolves the default version to 4 and leaves them undefined, so Perl
+/// (raw-load) lets `\newcommand{\cf}` succeed as text. Defining them
+/// unconditionally made `\newcommand` error "already defined" and left
+/// `\cf` an `\ensuremath` math macro, so "cf." text leaked into math mode
+/// ("Script _ can only appear in math mode" → `<ltx:XMTok>` cascade).
+/// Mirrors mhchem.sty L3430 `\int_compare:nT { version < 4 }`. Witness:
+/// arXiv:1901.08894 (chemformula + revtex4-1): 1002 errors / Fatal → 0.
+#[test]
+fn cluster_mhchem_cf_author_macro() {
+  convert_clean("tests/cluster_regressions/mhchem_cf_author_macro.tex");
+}
