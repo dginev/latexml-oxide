@@ -1292,6 +1292,23 @@ rides the begin marker so the end marker is nameless.
 - **Caveat (shared with binding side):** an inline env that *starts* a paragraph tags
   the auto-`<para>` (the single child) rather than the inner node; mid-paragraph inline
   envs tag the inner node directly. Acceptable for a CSS hook.
+- **Validated on the motivating doc (mhchem.tex, 2026-06-27):** error count unchanged
+  (69 residual chem edge cases, **0 regression** from the marker change); the doc's own
+  `\newenvironment{annotation}` is tagged `ltx_env_annotation`, and the `SideBySideExample`
+  bodies carry `ltx_env_minipage` (124×, binding side) — the exact CSS hooks the
+  ar5iv.css layout targets.
+- **Known limitation — `\NewDocumentEnvironment` not tagged (tracked, NOT planned):**
+  xparse/`\NewDocumentEnvironment` (and `\DeclareDocumentEnvironment`/`\ProvideDocumentEnvironment`)
+  come from the **raw-loaded l3 kernel (ltcmd)**, which declares the env's `\<name>`/
+  `\end<name>` macros via `\cs_new:cpn`, NOT our `\newenvironment` primitive — so the
+  `lx@envmarkup:<name>` flag is never set and the env gets no `ltx_env_<name>` (verified:
+  `\NewDocumentEnvironment{fancy}{}{\begin{quote}}{\end{quote}}` → only `ltx_env_quote`
+  from the binding side, no `ltx_env_fancy`). The deposited semantic nodes still carry
+  their own classes (a CSS hook exists), so this is a missing *env-name* hook, not lost
+  styling. Covering it cleanly needs definition-provenance tracking or a robust l3-kernel
+  hook (both fragile/out of the feature's `\newenvironment`/`\renewenvironment` scope), so
+  it is deliberately **deferred**, not attempted. The feature scope matches the user's
+  stated ask exactly.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.
