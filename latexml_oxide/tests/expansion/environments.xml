@@ -68,4 +68,35 @@
       </Math>
     </equation>
   </para>
+  <para class="ltx_env_myem" xml:id="p9">
+    <p><text font="italic">emphasized</text></p>
+  </para>
+  <para class="ltx_env_myquote" xml:id="p10">
+    <quote class="ltx_env_quote">
+      <p>MY<break/></p>
+      <quote class="ltx_env_quote">
+        <p>ONE<break/>deep</p>
+      </quote>
+    </quote>
+  </para>
+  <para class="ltx_env_peek" xml:id="p11">
+    <p><text font="bold">v</text>x</p>
+  </para>
+  <para xml:id="p12">
+    <p><Math mode="inline" tex="\langle x\rangle" text="delimited-⟨⟩@(x)" xml:id="p12.m1">
+        <XMath>
+          <XMDual>
+            <XMApp>
+              <XMTok meaning="delimited-⟨⟩"/>
+              <XMRef idref="p12.m1.1"/>
+            </XMApp>
+            <XMWrap>
+              <XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p12.m1.1">x</XMTok>
+              <XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok>
+            </XMWrap>
+          </XMDual>
+        </XMath>
+      </Math></p>
+  </para>
 </document>

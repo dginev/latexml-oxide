@@ -38,4 +38,27 @@ a + b
 a + b
 \end{\foo}
 
+% env-markup-class raw-side regressions (token-free invoke markers):
+% (a) font-only \newenvironment — no wrapper element; the single deposited node
+% is the auto-para, which carries ltx_env_myem (documented inline-in-block caveat)
+\newenvironment{myem}{\em}{}
+\begin{myem}emphasized\end{myem}
+
+% (b) nested \newenvironment envs — LIFO begin/end pairing stays correct (no
+% cross-contamination). The OUTER (myquote) tags its para; the inner quote1's
+% block is re-parented away from its snapshot node, so it is left untagged — the
+% documented best-effort caveat for nested block envs, not a regression.
+\begin{myquote}\begin{quote1}deep\end{quote1}\end{myquote}
+
+% (c) \expandafter begin-code — token-free robustness: a marker token in the
+% stream would derail this; \romannumeral5 -> "v" inside \textbf, then body "x"
+\newenvironment{peek}{\expandafter\textbf\expandafter{\romannumeral5}}{}
+\begin{peek}x\end{peek}
+
+% (d) math-mode \newenvironment — IN_MATH gate: the env is NOT tagged and no
+% \lx@env@begin@mark leaks into the Math tex= reversion (\langle/\rangle avoid the
+% unrelated \newenvironment-wraps-alignment stray-& limitation)
+\newenvironment{mw}{\langle}{\rangle}
+$\begin{mw}x\end{mw}$
+
 \end{document}
