@@ -11,6 +11,13 @@ use crate::core_interface::DigestionAPI;
 static TEST_LOG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_TEST_LOG").is_ok());
 static SIGSEGV_TRACE: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_SIGSEGV_TRACE").is_ok());
 static SAVE_ACTUAL: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_SAVE_ACTUAL").is_ok());
+/// "Bless" / regenerate mode — the Rust equivalent of Perl's `tools/maketests`.
+/// When `LATEXML_BLESS=1`, a `…_ok` test writes the ACTUAL conversion output to
+/// its golden `.xml` (overwriting it) instead of comparing+asserting. Run via
+/// `tools/maketests.sh` (optionally with a test-name filter). Because it reuses
+/// the exact harness conversion + serialization (`process_texfile`), the
+/// regenerated golden is byte-identical to what the comparison expects.
+static BLESS: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_BLESS").is_ok());
 
 pub fn latexml_tests(
   dirpath: &str,
@@ -311,6 +318,20 @@ fn latexml_ok_internal(
   extra_bindings_dispatcher: Option<BindingDispatcher>,
 ) {
   let tex_strings = process_texfile(tex_path, name, extra_bindings_dispatcher);
+  // Bless / regenerate mode (Perl `tools/maketests` equivalent): overwrite the
+  // golden with the actual output instead of comparing. Git is the backup.
+  if *BLESS {
+    if tex_strings.is_empty() {
+      eprintln!("BLESS skip {name:?}: conversion produced no output (not overwriting {xml_path})");
+      return;
+    }
+    let body = format!("{}\n", tex_strings.join("\n"));
+    match std::fs::write(xml_path, &body) {
+      Ok(()) => eprintln!("BLESS wrote {xml_path} ({} lines)", tex_strings.len()),
+      Err(e) => eprintln!("BLESS FAILED to write {xml_path}: {e}"),
+    }
+    return;
+  }
   if !tex_strings.is_empty() {
     let xml_strings = process_xmlfile(xml_path, name);
     if !xml_strings.is_empty() {
