@@ -1244,8 +1244,15 @@ regenerated, purely additive class additions.
   `[not(@class)]` or `[@class='exact']` on an env element no longer matches (the env now
   carries `ltx_env_<name>`); the script-bindings `rw-stamp` test caught this. ⚠️ **Real
   bindings using such predicates on env elements may need updating — validate the
-  corpus.** (4) imperative-form DefEnvironments (rhai `{rbox}` via absorbProperty) were
-  observed NOT tagged — possible gap to investigate.
+  corpus.** (4) imperative-form DefEnvironments (rhai `{rbox}`): **investigated
+  2026-06-27 — NOT a gap.** The imperative path's `document.openElement` routes through
+  the same depth-guarded `open_element` that consumes the armed class, so it DOES get
+  `ltx_env_rbox` at open (empirically: probing a non-`class` attribute leaves
+  `<text class="ltx_env_rbox">`). The `{rbox}` *specimen* then calls
+  `setAttribute("class","rbox")`, which REPLACES the attribute — the binding author's
+  explicit class-set clobbers the env class. Expected `setAttribute` semantics, not a
+  feature bug; an imperative binding that wants to keep `ltx_env_<name>` simply
+  shouldn't overwrite `class`.
 
 **RAW SIDE (`\newenvironment`/`\renewenvironment`) — ✅ DONE 2026-06-27 (token-free).**
 Mechanism (after rejecting all token-injection approaches): the `\begin`/`\end`
