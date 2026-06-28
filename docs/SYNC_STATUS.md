@@ -1233,6 +1233,13 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
      `amsAlignmentBindings` uses it — switching to `"math"`-cells would diverge + break
      display sizing); it lies in the protected-group-vs-cell-template digestion ordering →
      focused session.
+   - **DEAD ENDS (verified 2026-06-27 — do NOT re-try in the focused session):** NO wrapper
+     isolates `\ce` — `\(\ce{…}\)`, `$\ce{…}$`, `\ensuremath{\ce{…}}`, `\mbox{\ce{…}}`,
+     `\text{\ce{…}}`, `{}\ce{…}` ALL fail identically (6 err) in align*. It is NOT a broad
+     math-in-box bug: `\mbox{$a$}`/`\hbox{$a$}`/`\fbox{$a$}`/`\text{$a$}` are all 0 err in
+     align* (so `\mbox` isolates a plain `$…$` but NOT `\ce`'s expl3 group). The fix is not in
+     cell mode / wrapping; it is in the deferred-alignment group/mode tracking (or expl3
+     `\group_begin:` mode-switch handling). See memory `mhchem-ce-amsmath-alignment-2026-06-27`.
    - **Rust ALREADY SURPASSES Perl here; no parity baseline exists or is needed.** Perl
      LaTeXML ships **no** mhchem/chemformula binding (verified in both `LaTeXML/lib` and the
      installed `/usr/local/share/perl/.../LaTeXML`), so Perl raw-loads mhchem.sty exactly like
