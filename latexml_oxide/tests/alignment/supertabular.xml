@@ -5,7 +5,7 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <table class="ltx_env_table" inlist="lot" xml:id="S0.T1">
+  <table inlist="lot" xml:id="S0.T1">
     <tags>
       <tag>Table 1</tag>
       <tag role="refnum">1</tag>
@@ -60,7 +60,7 @@
       </tbody>
     </tabular>
   </table>
-  <table class="ltx_env_table" inlist="lot" xml:id="S0.T2">
+  <table inlist="lot" xml:id="S0.T2">
     <tags>
       <tag>Table 2</tag>
       <tag role="refnum">2</tag>
@@ -115,7 +115,7 @@
       </tbody>
     </tabular>
   </table>
-  <table class="ltx_env_table" xml:id="tab1">
+  <table xml:id="tab1">
     <tabular>
       <thead>
         <tr>
@@ -163,7 +163,7 @@
       </tbody>
     </tabular>
   </table>
-  <table class="ltx_env_table" inlist="lot" xml:id="S0.T3">
+  <table inlist="lot" xml:id="S0.T3">
     <tags>
       <tag>Table 3</tag>
       <tag role="refnum">3</tag>

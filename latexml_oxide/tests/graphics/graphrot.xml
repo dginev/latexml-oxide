@@ -23,7 +23,7 @@
       <tag role="typerefnum">§1</tag>
     </tags>
     <title><tag close=" ">1</tag>Scalings, Rotations using <text font="typewriter">graphics</text></title>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab1" placement="htb" xml:id="S1.T1">
+    <table inlist="lot" labels="LABEL:tb:tab1" placement="htb" xml:id="S1.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="autoref">Table 1</tag>
@@ -68,7 +68,7 @@
       <toccaption class="ltx_centering"><tag close=" ">1</tag>Normal: Distribution of monothematic pairs with respect to original Y/N pairs</toccaption>
       <caption class="ltx_centering"><tag close=": ">Table 1</tag>Normal: Distribution of monothematic pairs with respect to original Y/N pairs</caption>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab2" placement="htb" xml:id="S1.T2">
+    <table inlist="lot" labels="LABEL:tb:tab2" placement="htb" xml:id="S1.T2">
       <tags>
         <tag>Table 2</tag>
         <tag role="autoref">Table 2</tag>
@@ -115,7 +115,7 @@
       <toccaption><tag close=" ">2</tag>Squinched: Distribution of monothematic pairs with respect to original Y/N pairs</toccaption>
       <caption><tag close=": ">Table 2</tag>Squinched: Distribution of monothematic pairs with respect to original Y/N pairs</caption>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T3">
+    <table inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T3">
       <tags>
         <tag>Table 3</tag>
         <tag role="autoref">Table 3</tag>
@@ -162,7 +162,7 @@
       <toccaption><tag close=" ">3</tag>Flipped: Distribution of monothematic pairs with respect to original Y/N pairs</toccaption>
       <caption><tag close=": ">Table 3</tag>Flipped: Distribution of monothematic pairs with respect to original Y/N pairs</caption>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T4">
+    <table inlist="lot" labels="LABEL:tb:tab3" placement="htb" xml:id="S1.T4">
       <tags>
         <tag>Table 4</tag>
         <tag role="autoref">Table 4</tag>
@@ -327,7 +327,7 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
       <caption><tag close=": ">Figure 1</tag>Rotation of paragraphs between 0 and -320 degrees </caption>
     </figure>
     <para xml:id="S2.p4">
-      <quote class="ltx_env_quote">
+      <quote>
         <rule height="108.4pt" width="0.0pt"/>
         <tabular vattach="middle">
           <tbody>
@@ -362,7 +362,7 @@ the whales Save the whale Save the <ref class="ltx_href" href="http://dlmf.nist.
       </quote>
     </para>
     <para xml:id="S2.p5">
-      <quote class="ltx_env_quote">
+      <quote>
         <tabular vattach="middle">
           <tbody>
             <tr>

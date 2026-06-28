@@ -393,10 +393,12 @@ fn script_binding_macro_and_constructor_convert() {
     "environment with arg ({{bio}}{{Ada}}) diverged from faithful-Perl output; xml=\n{xml}"
   );
   // The working idiom ({biop}): env arg → properties closure → #pname hole at
-  // attribute position, on a schema-allowed attribute. (The env-markup-class
-  // feature appends `ltx_env_biop` to the wrapper's class → `Ada ltx_env_biop`.)
+  // attribute position, on a schema-allowed attribute. The env-markup-class
+  // anti-bloat rule (2) exempts self-classed envs: because biop already sets its
+  // own `class="Ada"`, `ltx_env_biop` is NOT appended (the env carries pre-dated
+  // styling assumptions), so the wrapper stays `class="Ada"`.
   assert!(
-    xml.contains("class=\"Ada ltx_env_biop\"") && xml.contains("Idiom"),
+    xml.contains("class=\"Ada\"") && xml.contains("Idiom"),
     "environment properties idiom ({{biop}}) failed; xml=\n{xml}"
   );
   // DefEnvironment, imperative form: absorbProperty(\"body\").

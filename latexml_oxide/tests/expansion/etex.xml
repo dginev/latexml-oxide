@@ -280,7 +280,7 @@ Size of X:
       <p>Return to body group level=0.</p>
     </para>
     <para xml:id="S10.p8">
-      <quote class="ltx_env_quote">
+      <quote>
         <p>quote env group level=1.</p>
       </quote>
     </para>

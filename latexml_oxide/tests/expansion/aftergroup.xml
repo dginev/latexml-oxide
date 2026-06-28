@@ -76,12 +76,12 @@ No quirks</p>
       </tags>
       <title><tag close=" ">2.1</tag>AfterGroup in Environments</title>
       <para xml:id="S2.SS1.p1">
-        <quote class="ltx_env_quote">
+        <quote>
           <p>before <text font="italic">after</text></p>
         </quote>
       </para>
       <para xml:id="S2.SS1.p2">
-        <quote class="ltx_env_quote">
+        <quote>
           <p>before after</p>
         </quote>
         <p>[Grouped!]</p>
@@ -140,7 +140,7 @@ No quirks</p>
             </XMApp>
           </XMath>
         </Math>
-<Math class="ltx_env_math" mode="inline" tex="\rightarrow a+b" text="absent rightarrow a + b" xml:id="S5.p1.m2">
+<Math mode="inline" tex="\rightarrow a+b" text="absent rightarrow a + b" xml:id="S5.p1.m2">
           <XMath>
             <XMApp>
               <XMTok name="rightarrow" role="ARROW">→</XMTok>
@@ -186,7 +186,7 @@ No quirks</p>
           </XMath>
         </Math>
       </equation>
-      <equation class="ltx_env_equation" xml:id="S5.E1">
+      <equation xml:id="S5.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -210,7 +210,7 @@ No quirks</p>
             </XMApp>
           </XMath>
         </Math>
-<Math class="ltx_env_math" mode="inline" tex="a+b" text="a + b" xml:id="S5.p1.m4">
+<Math mode="inline" tex="a+b" text="a + b" xml:id="S5.p1.m4">
           <XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
@@ -264,7 +264,7 @@ No quirks</p>
           </XMath>
         </Math>
       </equation>
-      <equation class="ltx_env_equation" xml:id="S5.E2">
+      <equation xml:id="S5.E2">
         <tags>
           <tag>(2)</tag>
           <tag role="refnum">2</tag>

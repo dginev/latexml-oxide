@@ -5,7 +5,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <resource src="ltx-ulem.css" type="text/css"/>
-  <table class="ltx_env_table" inlist="lot" xml:id="S0.T1">
+  <table inlist="lot" xml:id="S0.T1">
     <tags>
       <tag>Table 1</tag>
       <tag role="autoref">Table 1</tag>

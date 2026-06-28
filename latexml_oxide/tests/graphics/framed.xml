@@ -79,7 +79,7 @@ This is a titled frame.</p>
       <para xml:id="S2.p8">
         <p>Lorem ipsum.</p>
       </para>
-      <theorem class="ltx_env_thm ltx_theorem_thm" inlist="thm theorem:thm" xml:id="Thmthm1">
+      <theorem class="ltx_theorem_thm" inlist="thm theorem:thm" xml:id="Thmthm1">
         <tags>
           <tag>Theorem 1</tag>
           <tag role="refnum">1</tag>
@@ -91,7 +91,7 @@ This is a titled frame.</p>
         </para>
       </theorem>
     </logical-block>
-    <theorem backgroundcolor="#80BF80" class="ltx_env_thm ltx_theorem_thm" cssstyle="padding:9pt" inlist="thm theorem:thm" xml:id="Thmthm2">
+    <theorem backgroundcolor="#80BF80" class="ltx_theorem_thm" cssstyle="padding:9pt" inlist="thm theorem:thm" xml:id="Thmthm2">
       <tags>
         <tag>Theorem 2</tag>
         <tag role="refnum">2</tag>

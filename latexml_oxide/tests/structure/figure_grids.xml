@@ -7,20 +7,20 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <figure class="ltx_env_figure" xml:id="fig1">
+  <figure xml:id="fig1">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g1"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g2"/>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig2">
+  <figure xml:id="fig2">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=342.15474pt,keepaspectratio=true" xml:id="g3"/>
     <break class="ltx_centering"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=342.15474pt,keepaspectratio=true" xml:id="g4"/>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig3">
+  <figure xml:id="fig3">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g5"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g6"/>
     <break class="ltx_centering"/>
@@ -29,7 +29,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig4">
+  <figure xml:id="fig4">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g9"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g10"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=112.15474pt,keepaspectratio=true" xml:id="g11"/>
@@ -44,7 +44,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig5">
+  <figure xml:id="fig5">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g18"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g19"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g20"/>
@@ -67,7 +67,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig6">
+  <figure xml:id="fig6">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g34"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g35"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=83.40474pt,keepaspectratio=true" xml:id="g36"/>
@@ -80,7 +80,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig7">
+  <figure xml:id="fig7">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g42"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=169.65474pt,keepaspectratio=true" xml:id="g43"/>
     <break class="ltx_centering"/>
@@ -95,7 +95,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig8">
+  <figure xml:id="fig8">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g50"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g51"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=66.15474pt,keepaspectratio=true" xml:id="g52"/>
@@ -128,7 +128,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig9">
+  <figure xml:id="fig9">
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g75"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g76"/>
     <graphics candidates="../graphics/none.png" class="ltx_centering ltx_figure_panel" graphic="../graphics/none.png" options="width=54.65474pt,keepaspectratio=true" xml:id="g77"/>
@@ -173,7 +173,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig10">
+  <figure xml:id="fig10">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -195,7 +195,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig11">
+  <figure xml:id="fig11">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F2.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -218,7 +218,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig12">
+  <figure xml:id="fig12">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F3.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -259,7 +259,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig13">
+  <figure xml:id="fig13">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F4.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -346,7 +346,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig14">
+  <figure xml:id="fig14">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F5.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -497,7 +497,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig15">
+  <figure xml:id="fig15">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F6.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -574,7 +574,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig16">
+  <figure xml:id="fig16">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F7.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -653,7 +653,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig17">
+  <figure xml:id="fig17">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F8.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -886,7 +886,7 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig18">
+  <figure xml:id="fig18">
     <figure align="center" class="ltx_env_subfigure ltx_figure_panel" inlist="lof" xml:id="S0.F9.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
@@ -1219,387 +1219,387 @@
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig19">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+  <figure xml:id="fig19">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g111"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g112"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig20">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="342.2pt">
+  <figure xml:id="fig20">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="342.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=273.72482pt,keepaspectratio=true" xml:id="g113"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="342.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="342.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=273.72482pt,keepaspectratio=true" xml:id="g114"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig21">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+  <figure xml:id="fig21">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g115"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g116"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g117"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g118"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig22">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+  <figure xml:id="fig22">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g119"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g120"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g121"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g122"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g123"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g124"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g125"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g126"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="112.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=89.72412pt,keepaspectratio=true" xml:id="g127"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig23">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+  <figure xml:id="fig23">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g128"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g129"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g130"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g131"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g132"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g133"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g134"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g135"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g136"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g137"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g138"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g139"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g140"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g141"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g142"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g143"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig24">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+  <figure xml:id="fig24">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g144"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g145"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g146"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g147"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g148"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g149"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g150"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="83.4pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=66.72404pt,keepaspectratio=true" xml:id="g151"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig25">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+  <figure xml:id="fig25">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g152"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g153"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g154"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g155"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g156"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g157"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g158"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="169.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=135.7243pt,keepaspectratio=true" xml:id="g159"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig26">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+  <figure xml:id="fig26">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g160"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g161"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g162"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g163"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g164"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g165"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g166"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g167"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g168"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g169"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g170"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g171"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g172"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g173"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g174"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g175"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g176"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g177"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g178"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g179"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g180"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g181"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g182"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g183"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="66.2pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=52.92398pt,keepaspectratio=true" xml:id="g184"/>
     </block>
     <break class="ltx_centering"/>
   </figure>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" xml:id="fig27">
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+  <figure xml:id="fig27">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g185"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g186"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g187"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g188"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g189"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g190"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g191"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g192"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g193"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g194"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g195"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g196"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g197"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g198"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g199"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g200"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g201"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g202"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g203"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g204"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g205"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g206"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g207"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g208"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g209"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g210"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g211"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g212"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g213"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g214"/>
     </block>
     <break class="ltx_centering"/>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g215"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g216"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g217"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g218"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g219"/>
     </block>
-    <block align="center" class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
+    <block align="center" class="ltx_figure_panel ltx_minipage" vattach="top" width="54.7pt">
       <graphics candidates="../graphics/none.png" class="ltx_centering" graphic="../graphics/none.png" options="width=43.72395pt,keepaspectratio=true" xml:id="g220"/>
     </block>
     <break class="ltx_centering"/>

@@ -12,7 +12,7 @@
   <para xml:id="p2">
     <p>Also figure <ref labelref="LABEL:fig:2"/>.</p>
   </para>
-  <figure class="ltx_env_figure" inlist="lof" labels="LABEL:fig:1" placement="t!" xml:id="S0.F1">
+  <figure inlist="lof" labels="LABEL:fig:1" placement="t!" xml:id="S0.F1">
     <tags>
       <tag><text fontsize="90%">Figure 1</text></tag>
       <tag role="refnum">1</tag>

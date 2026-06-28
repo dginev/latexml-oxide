@@ -7,7 +7,7 @@
   <resource src="ltx-article.css" type="text/css"/>
   <bibliography citestyle="numbers" class="ltx_env_bibdiv" xml:id="bib">
     <title>References</title>
-    <biblist class="ltx_env_biblist">
+    <biblist>
       <bibentry class="ltx_env_bib@entry" key="Smith2020" type="article" xml:id="bib.bib1">
         <bib-name role="author">
           <surname>Smith</surname>

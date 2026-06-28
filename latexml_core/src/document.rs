@@ -198,6 +198,24 @@ impl Drop for OpenDepthGuard {
 /// the env's begin, `cursor` is `N`'s last child then (None ⇒ N was empty), `class`
 /// is the `ltx_env_<name>` to tag with.
 type EnvSnapshot = (Option<Node>, Option<Node>, String);
+
+/// The sole ELEMENT child of `node`, or `None` if it has zero or more than one.
+/// Used by `add_env_class` to look through an auto-opened wrapper to the element it
+/// wraps (text/comment children are ignored).
+fn sole_element_child(node: &Node) -> Option<Node> {
+  let mut found: Option<Node> = None;
+  let mut cur = node.get_first_child();
+  while let Some(n) = cur {
+    if n.get_type() == Some(NodeType::ElementNode) {
+      if found.is_some() {
+        return None;
+      }
+      found = Some(n.clone());
+    }
+    cur = n.get_next_sibling();
+  }
+  found
+}
 thread_local! {
   /// Stack of [`EnvSnapshot`]s, pushed by `env_construct_begin`, popped by
   /// `env_construct_end` (the name rides the begin-marker, so the end-marker is
@@ -1010,9 +1028,10 @@ impl Document {
     let mut newnode = self.open_element_at(&mut point, qname, attributes, font_opt.cloned())?;
     self.set_node(&newnode);
     // The constructor's wrapper (first outermost open after \begin) consumes the
-    // armed `ltx_env_<name>` class.
+    // armed `ltx_env_<name>` class — via the anti-bloat guard, so it is dropped
+    // when the element name already conveys the env (e.g. `<enumerate>`).
     if outermost && let Some(cls) = env_take() {
-      self.add_class(&mut newnode, &cls)?;
+      self.add_env_class(&mut newnode, &cls)?;
     }
     // Underscore attributes such as _box and _font from LaTeXML-proper are now
     // bookkept in special substructs of Document Connected to the node hash.
@@ -1058,9 +1077,72 @@ impl Document {
       cur = node.get_next_sibling();
     }
     if let [only] = deposited.as_slice() {
-      self.add_class(&mut only.clone(), &class)?;
+      self.add_env_class(&mut only.clone(), &class)?;
     }
     Ok(())
+  }
+
+  /// Add an `ltx_env_<name>` env-markup class to `node` — UNLESS the class would be
+  /// redundant, per two deliberate anti-bloat rules: (1) the env is already conveyed
+  /// by an element NAME — `node`'s own name equals `<name>` (`<enumerate>`,
+  /// `<equation>`, `<Math>`), or the sole element it wraps through a chain of
+  /// builder-inserted (`_autoopened`) wrappers does (top-level `tabular` →
+  /// `<para><tabular>`); or (2) the env's construct already set its own `class`
+  /// (`minipage`→`ltx_minipage`). So `ltx_env_*` only appears where the env adds
+  /// information the element doesn't (`myquote`→`<para>`, `algorithmic`→`<listing>`,
+  /// `tikzpicture`→`<picture>`). Shared by the binding (`env_arm`) and raw (marker)
+  /// tag paths. (SVG rendering internals are excluded up front — see body.)
+  pub(crate) fn add_env_class(&mut self, node: &mut Node, class: &str) -> Result<()> {
+    // (0) Opaque rendering internals: never tag SVG nodes. tikz/pgf `scope`,
+    // `pgfscope`, `pgfonlayer` deposit `<svg:g>` groups — rendering output, not the
+    // ltx HTML tree. This is the SVG analog of the `IN_MATH` dispatcher gate that
+    // keeps env markers off math `XM*` internals. (The outer `tikzpicture`→`<picture>`
+    // is NOT svg-namespaced, so it is still tagged.)
+    if with_node_qname(node, |q| q.starts_with("svg:")) {
+      return Ok(());
+    }
+    // (1) Name-match (with structural-`<para>` look-through): the env is already
+    // conveyed by the element name — on the node itself (`<enumerate>`,
+    // `<equation>`, `<Math>`), OR on the sole element it wraps through a chain of
+    // structural `<para>`s (top-level `tabular` → `<para><tabular>`). In the wrapped
+    // case the `<para>` is just block structure, so tagging it would be the same
+    // redundancy as tagging `<tabular>` directly — and this keeps `tabular` skipped
+    // CONSISTENTLY whether it lands directly (inside a float) or para-wrapped.
+    // `myquote`→`<para><quote>` is kept (quote ≠ myquote); `tikzpicture`→`<picture>`
+    // is kept (no para; picture ≠ tikzpicture).
+    if let Some(name) = class.strip_prefix("ltx_env_") {
+      let mut probe = (*node).clone();
+      loop {
+        if probe.get_name().eq_ignore_ascii_case(name) {
+          return Ok(());
+        }
+        // Descend only through builder-inserted (`_autoopened`) wrappers — a
+        // structural `<para>` or fontswitch `<text>` the env didn't ask for. A
+        // wrapper an env's own construct opened (e.g. `<picture>`) is NOT
+        // auto-opened, so we stop and tag it.
+        if probe.get_attribute("_autoopened").is_none() {
+          break;
+        }
+        match sole_element_child(&probe) {
+          Some(child) => probe = child,
+          None => break,
+        }
+      }
+    }
+    // (2) Self-classed binding: skip if the node carries a NON-`ltx_env_` class —
+    // a pre-dated styling class the env's own construct set (minipage's
+    // `ltx_minipage`, the algorithm float's `ltx_float_algorithm`). Existing
+    // `ltx_env_` classes do NOT count: those are ours, from a NESTED env tagging
+    // the same node, and nested envs legitimately stack (e.g. `algorithmic` over
+    // `list` → `ltx_env_list ltx_env_algorithmic`). Without this exclusion the
+    // inner env's class would suppress the outer one.
+    if node
+      .get_attribute("class")
+      .is_some_and(|c| c.split_whitespace().any(|tok| !tok.starts_with("ltx_env_")))
+    {
+      return Ok(());
+    }
+    self.add_class(node, class)
   }
 
   /// Stamp a freshly-opened element with its source range as a

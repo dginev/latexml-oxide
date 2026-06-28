@@ -5,37 +5,37 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <para xml:id="p1">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>A Quote!</p>
     </quote>
   </para>
   <para class="ltx_env_myquote" xml:id="p2">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>MY<break/>A Quote!</p>
     </quote>
   </para>
   <para class="ltx_env_quote1" xml:id="p3">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>1<break/>A Quote!</p>
     </quote>
   </para>
   <para class="ltx_env_quote1" xml:id="p4">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>ONE<break/>A Quote!</p>
     </quote>
   </para>
   <para xml:id="p5">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>a + b</p>
     </quote>
   </para>
   <para xml:id="p6">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>a + b</p>
     </quote>
   </para>
   <para xml:id="p7">
-    <equation class="ltx_env_equation" xml:id="S0.E1">
+    <equation xml:id="S0.E1">
       <tags>
         <tag>(1)</tag>
         <tag role="refnum">1</tag>
@@ -52,7 +52,7 @@
     </equation>
   </para>
   <para xml:id="p8">
-    <equation class="ltx_env_equation" xml:id="S0.E2">
+    <equation xml:id="S0.E2">
       <tags>
         <tag>(2)</tag>
         <tag role="refnum">2</tag>
@@ -72,9 +72,9 @@
     <p><text font="italic">emphasized</text></p>
   </para>
   <para class="ltx_env_myquote" xml:id="p10">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>MY<break/></p>
-      <quote class="ltx_env_quote">
+      <quote>
         <p>ONE<break/>deep</p>
       </quote>
     </quote>
@@ -100,7 +100,7 @@
       </Math></p>
   </para>
   <para class="ltx_env_ndfancy" xml:id="p13">
-    <quote class="ltx_env_quote">
+    <quote>
       <p>nd-body</p>
     </quote>
   </para>

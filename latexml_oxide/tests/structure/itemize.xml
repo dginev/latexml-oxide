@@ -12,7 +12,7 @@
     </tags>
     <title><tag close=" ">1</tag>Itemize</title>
     <para xml:id="S1.p1">
-      <itemize class="ltx_env_itemize" xml:id="S1.I1">
+      <itemize xml:id="S1.I1">
         <item labels="LABEL:it:one" xml:id="S1.I1.i1">
           <tags>
             <tag>•</tag>
@@ -51,7 +51,7 @@
     </tags>
     <title><tag close=" ">2</tag>Enumerate</title>
     <para xml:id="S2.p1">
-      <enumerate class="ltx_env_enumerate" xml:id="S2.I1">
+      <enumerate xml:id="S2.I1">
         <item labels="LABEL:en:one" xml:id="S2.I1.i1">
           <tags>
             <tag>1.</tag>
@@ -93,7 +93,7 @@
     </tags>
     <title><tag close=" ">3</tag>Description</title>
     <para xml:id="S3.p1">
-      <description class="ltx_env_description" xml:id="S3.I1">
+      <description xml:id="S3.I1">
         <item labels="LABEL:de:one" xml:id="S3.I1.ix1">
           <tags>
             <tag><text font="bold">One</text></tag>
@@ -132,7 +132,7 @@
     </tags>
     <title><tag close=" ">4</tag>Nested Enumerate</title>
     <para xml:id="S4.p1">
-      <enumerate class="ltx_env_enumerate" xml:id="S4.I1">
+      <enumerate xml:id="S4.I1">
         <item xml:id="S4.I1.i1">
           <tags>
             <tag>1.</tag>
@@ -141,7 +141,7 @@
           </tags>
           <para xml:id="S4.I1.i1.p1">
             <p>One</p>
-            <enumerate class="ltx_env_enumerate" xml:id="S4.I1.i1.I1">
+            <enumerate xml:id="S4.I1.i1.I1">
               <item xml:id="S4.I1.i1.I1.i1">
                 <tags>
                   <tag>(a)</tag>
@@ -183,7 +183,7 @@
           </tags>
           <para xml:id="S4.I1.i2.p1">
             <p>Two</p>
-            <enumerate class="ltx_env_enumerate" xml:id="S4.I1.i2.I1">
+            <enumerate xml:id="S4.I1.i2.I1">
               <item xml:id="S4.I1.i2.I1.i1">
                 <tags>
                   <tag>(a)</tag>
@@ -225,7 +225,7 @@
           </tags>
           <para xml:id="S4.I1.i3.p1">
             <p>Three</p>
-            <enumerate class="ltx_env_enumerate" xml:id="S4.I1.i3.I1">
+            <enumerate xml:id="S4.I1.i3.I1">
               <item xml:id="S4.I1.i3.I1.i1">
                 <tags>
                   <tag>(a)</tag>
@@ -271,7 +271,7 @@
     <title><tag close=" ">5</tag>Spacing</title>
     <para xml:id="S5.p1">
       <p>Taller:</p>
-      <itemize class="ltx_env_itemize" xml:id="S5.I1">
+      <itemize xml:id="S5.I1">
         <item xml:id="S5.I1.i1">
           <tags>
             <tag>•</tag>
@@ -303,7 +303,7 @@
     </para>
     <para xml:id="S5.p2">
       <p>Taller &amp; Taller:</p>
-      <itemize class="ltx_env_itemize" xml:id="S5.I2">
+      <itemize xml:id="S5.I2">
         <item xml:id="S5.I2.i1">
           <tags>
             <tag>•</tag>
@@ -335,7 +335,7 @@
     </para>
     <para xml:id="S5.p3">
       <p>Itemsep outside has no effect:</p>
-      <itemize class="ltx_env_itemize" xml:id="S5.I3">
+      <itemize xml:id="S5.I3">
         <item xml:id="S5.I3.i1">
           <tags>
             <tag>•</tag>
@@ -374,7 +374,7 @@
     </tags>
     <title><tag close=" ">6</tag>Mixed tags</title>
     <para xml:id="S6.p1">
-      <itemize class="ltx_env_itemize" xml:id="S6.I1">
+      <itemize xml:id="S6.I1">
         <item xml:id="S6.I1.i1">
           <tags>
             <tag>•</tag>
@@ -414,7 +414,7 @@
       </itemize>
     </para>
     <para xml:id="S6.p2">
-      <enumerate class="ltx_env_enumerate" xml:id="S6.I2">
+      <enumerate xml:id="S6.I2">
         <item xml:id="S6.I2.i1">
           <tags>
             <tag>1.</tag>
@@ -596,7 +596,7 @@
           </tags>
           <para xml:id="S7.I4.i2.p1">
             <p>Two.</p>
-            <enumerate class="ltx_env_enumerate" xml:id="S7.I4.i2.I1">
+            <enumerate xml:id="S7.I4.i2.I1">
               <item xml:id="S7.I4.i2.I0.i1">
                 <tags>
                   <tag>1.</tag>

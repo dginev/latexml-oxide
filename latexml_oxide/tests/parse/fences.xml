@@ -14,7 +14,7 @@
     </tags>
     <title><tag close=" ">0.0.1</tag>Empty Balanced</title>
     <para xml:id="S0.SS0.SSS1.p1">
-      <enumerate class="ltx_env_enumerate" xml:id="S0.I1">
+      <enumerate xml:id="S0.I1">
         <item xml:id="S0.I1.i1">
           <tags>
             <tag>1.</tag>
@@ -219,7 +219,7 @@
     </tags>
     <title><tag close=" ">1</tag>Advanced Fenced</title>
     <para xml:id="S1.p1">
-      <enumerate class="ltx_env_enumerate" xml:id="S1.I1">
+      <enumerate xml:id="S1.I1">
         <item xml:id="S1.I1.i1">
           <tags>
             <tag>1.</tag>

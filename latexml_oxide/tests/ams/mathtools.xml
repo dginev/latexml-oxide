@@ -723,7 +723,7 @@
     </tags>
     <title><tag close=" ">2</tag>Tags</title>
     <para xml:id="S2.p1">
-      <quote class="ltx_env_quote">
+      <quote>
         <equation class="ltx_env_equation*" labels="LABEL:eq:example" xml:id="S2.Ex10">
           <tags>
             <tag>Q&amp;A</tag>
@@ -777,7 +777,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
     </para>
     <para xml:id="S2.p3">
       <p>Normal tags.</p>
-      <equation class="ltx_env_equation" labels="LABEL:eq:a0" xml:id="S2.E1">
+      <equation labels="LABEL:eq:a0" xml:id="S2.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -796,7 +796,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
     </para>
     <para xml:id="S2.p4">
       <p>OK tags.</p>
-      <equation class="ltx_env_equation" labels="LABEL:eq:a1" xml:id="S2.E2">
+      <equation labels="LABEL:eq:a1" xml:id="S2.E2">
         <tags>
           <tag>[<text font="bold">2</text>]</tag>
           <tag role="refnum">2</tag>
@@ -815,7 +815,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
     </para>
     <para xml:id="S2.p5">
       <p>odd tag.</p>
-      <equation class="ltx_env_equation" labels="LABEL:eq:a2" xml:id="S2.E3">
+      <equation labels="LABEL:eq:a2" xml:id="S2.E3">
         <tags>
           <tag>{3}</tag>
           <tag role="refnum">3</tag>
@@ -834,7 +834,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
     </para>
     <para xml:id="S2.p6">
       <p>weird tag.</p>
-      <equation class="ltx_env_equation" labels="LABEL:eq:b1" xml:id="S2.E4">
+      <equation labels="LABEL:eq:b1" xml:id="S2.E4">
         <tags>
           <tag>((4))</tag>
           <tag role="refnum">4</tag>
@@ -853,7 +853,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
     </para>
     <para xml:id="S2.p7">
       <p>Normal tags again.</p>
-      <equation class="ltx_env_equation" labels="LABEL:eq:c0" xml:id="S2.E5">
+      <equation labels="LABEL:eq:c0" xml:id="S2.E5">
         <tags>
           <tag>(5)</tag>
           <tag role="refnum">5</tag>
@@ -871,7 +871,7 @@ In the star form <verbatim font="typewriter upright">\ref*</verbatim> becomes <r
     </para>
     <para xml:id="S2.p8">
       <p>Non-textual</p>
-      <equation class="ltx_env_equation" labels="LABEL:eq:nt1" xml:id="S2.Ex13">
+      <equation labels="LABEL:eq:nt1" xml:id="S2.Ex13">
         <tags>
           <tag>(n<sup><text font="italic">th</text></sup>)</tag>
           <tag role="refnum">n<sup><text font="italic">th</text></sup></tag>
@@ -1012,7 +1012,7 @@ Then a switch of tag forms.</p>
           </XMath>
         </Math>: (<ref labelref="LABEL:eq:d"/>)
 (but recall (<ref labelref="LABEL:eq:a"/>)).</p>
-      <equation class="ltx_env_equation" xml:id="S2.E9">
+      <equation xml:id="S2.E9">
         <tags>
           <tag>(9)</tag>
           <tag role="refnum">9</tag>
@@ -1027,7 +1027,7 @@ Then a switch of tag forms.</p>
           </XMath>
         </Math>
       </equation>
-      <equation class="ltx_env_equation" xml:id="S2.E10">
+      <equation xml:id="S2.E10">
         <tags>
           <tag>(10)</tag>
           <tag role="refnum">10</tag>
@@ -5086,7 +5086,7 @@ Then a switch of tag forms.</p>
       </equation>
     </para>
     <para xml:id="S9.p11">
-      <equation class="ltx_env_equation" xml:id="S9.E14">
+      <equation xml:id="S9.E14">
         <tags>
           <tag>(14)</tag>
           <tag role="refnum">14</tag>
@@ -5172,7 +5172,7 @@ Then a switch of tag forms.</p>
       </equation>
     </para>
     <para xml:id="S9.p12">
-      <equation class="ltx_env_equation" xml:id="S9.E15">
+      <equation xml:id="S9.E15">
         <tags>
           <tag>(15)</tag>
           <tag role="refnum">15</tag>
@@ -5604,7 +5604,7 @@ Then a switch of tag forms.</p>
         </Math></p>
     </para>
     <para xml:id="S10.p5">
-      <equation class="ltx_env_equation" labels="LABEL:xx" xml:id="S10.E16">
+      <equation labels="LABEL:xx" xml:id="S10.E16">
         <tags>
           <tag>(16)</tag>
           <tag role="refnum">16</tag>

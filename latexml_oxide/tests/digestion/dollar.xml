@@ -36,7 +36,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
           </Math>
         </equation>t</note></p>
   </para>
-  <logical-block class="ltx_env_minipage ltx_minipage" vattach="middle" width="216.8pt">
+  <logical-block class="ltx_minipage" vattach="middle" width="216.8pt">
     <para xml:id="p4">
       <p>t</p>
       <equation xml:id="S0.Ex2">
@@ -50,7 +50,7 @@ Another<note mark="2" role="footnote" xml:id="footnote2"><tags>
     </para>
   </logical-block>
   <para xml:id="p5">
-    <p><inline-block class="ltx_env_minipage ltx_minipage" vattach="middle" width="216.8pt">
+    <p><inline-block class="ltx_minipage" vattach="middle" width="216.8pt">
         <p>t</p>
         <equation xml:id="S0.Ex3">
           <Math mode="display" tex="m" text="m" xml:id="S0.Ex3.m1">

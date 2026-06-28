@@ -13,7 +13,7 @@
     </tags>
     <title><tag close=" ">1</tag>Introduction</title>
     <para xml:id="S1.p1">
-      <itemize class="ltx_env_itemize" xml:id="S1.I1">
+      <itemize xml:id="S1.I1">
         <item xml:id="S1.I1.i1">
           <tags>
             <tag>•</tag>

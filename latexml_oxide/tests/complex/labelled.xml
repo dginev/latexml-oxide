@@ -43,7 +43,7 @@ as well as some figures <ref labelref="LABEL:First.Sunset"/>, <ref labelref="LAB
       <title>First: First Subsection</title>
       <para xml:id="First.First.p1">
         <p>A subsection with some math.</p>
-        <equation class="ltx_env_equation" labels="LABEL:First.Pythagoras" xml:id="First.Pythagoras">
+        <equation labels="LABEL:First.Pythagoras" xml:id="First.Pythagoras">
           <tags>
             <tag>(Pythagoras)</tag>
             <tag role="refnum">Pythagoras</tag>
@@ -86,7 +86,7 @@ as well as some figures <ref labelref="LABEL:First.Sunset"/>, <ref labelref="LAB
       <para xml:id="First.Second.p1">
         <p>A subsection with a figure.</p>
       </para>
-      <figure class="ltx_env_figure" inlist="lof" labels="LABEL:First.Sunset" xml:id="First.Sunset">
+      <figure inlist="lof" labels="LABEL:First.Sunset" xml:id="First.Sunset">
         <tags>
           <tag>Figure Sunset</tag>
           <tag role="refnum">Sunset</tag>
@@ -117,7 +117,7 @@ as well as some figures <ref labelref="LABEL:First.Sunset"/>, <ref labelref="LAB
       <title>First: First Subsection</title>
       <para xml:id="Second.First.p1">
         <p>Another subsection with some math.</p>
-        <equation class="ltx_env_equation" labels="LABEL:Second.Einstein" xml:id="Second.Einstein">
+        <equation labels="LABEL:Second.Einstein" xml:id="Second.Einstein">
           <tags>
             <tag>(Einstein)</tag>
             <tag role="refnum">Einstein</tag>
@@ -152,7 +152,7 @@ as well as some figures <ref labelref="LABEL:First.Sunset"/>, <ref labelref="LAB
       <para xml:id="Second.Second.p1">
         <p>Another subsection with a figure.</p>
       </para>
-      <figure class="ltx_env_figure" inlist="lof" labels="LABEL:Second.Sunset" xml:id="Second.Sunset">
+      <figure inlist="lof" labels="LABEL:Second.Sunset" xml:id="Second.Sunset">
         <tags>
           <tag>Figure Sunset</tag>
           <tag role="refnum">Sunset</tag>

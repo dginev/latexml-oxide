@@ -114,7 +114,7 @@
         <tag role="typerefnum">§1.9</tag>
       </tags>
       <title><tag close=" ">1.9</tag>Figure test</title>
-      <figure class="ltx_env_figure" inlist="lof" labels="LABEL:fig:rootq-node" placement="h" xml:id="S1.F1">
+      <figure inlist="lof" labels="LABEL:fig:rootq-node" placement="h" xml:id="S1.F1">
         <tags>
           <tag>Figure 1</tag>
           <tag role="refnum">1</tag>

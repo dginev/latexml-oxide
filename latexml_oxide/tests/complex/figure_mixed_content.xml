@@ -53,7 +53,7 @@
     <caption fontsize="80%"><tag close=": "><text fontsize="113%">Table 1</text></tag><text fontsize="113%">table with two resized, minipage, tabulars</text></caption>
   </table>
   <pagination role="newpage"/>
-  <figure class="ltx_env_figure" inlist="lof" labels="LABEL:array:fig" xml:id="S0.F1">
+  <figure inlist="lof" labels="LABEL:array:fig" xml:id="S0.F1">
     <tags>
       <tag><text fontsize="90%">Figure 1</text></tag>
       <tag role="refnum">1</tag>
@@ -151,21 +151,21 @@
       <caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">a tabular + resizebox</text></caption>
     </figure>
     <pagination role="newpage"/>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S0.F3">
+    <figure inlist="lof" xml:id="S0.F3">
       <tags>
         <tag><text fontsize="90%">Figure 3</text></tag>
         <tag role="refnum">3</tag>
         <tag role="typerefnum">Figure 3</tag>
       </tags>
-      <block class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
+      <block class="ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
         <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=55.1983pt,keepaspectratio=true" xml:id="S0.F3.g1"/>
       </block>
-      <block class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
+      <block class="ltx_figure_panel ltx_minipage" vattach="top" width="138.0pt">
         <graphics candidates="../graphics/none.png" graphic="../graphics/none.png" options="width=55.1983pt,keepaspectratio=true" xml:id="S0.F3.g2"/>
       </block>
       <break class="ltx_break"/>
       <break/>
-      <itemize class="ltx_centering ltx_env_itemize ltx_figure_panel" xml:id="S0.I1">
+      <itemize class="ltx_centering ltx_figure_panel" xml:id="S0.I1">
         <item xml:id="S0.I1.i1">
           <tags>
             <tag>•</tag>
@@ -198,7 +198,7 @@
       <caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Two minipages and an itemize</text></caption>
     </figure>
     <pagination role="newpage"/>
-    <figure class="ltx_env_figure" xml:id="S0.SS0.SSS0.Px1.fig1">
+    <figure xml:id="S0.SS0.SSS0.Px1.fig1">
       <p align="center" class="ltx_figure_panel">First</p>
       <break class="ltx_break"/>
       <equation class="ltx_figure_panel" xml:id="S0.Ex1">
@@ -212,7 +212,7 @@
       <p align="center" class="ltx_figure_panel">Third</p>
     </figure>
     <pagination role="newpage"/>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S0.F4">
+    <figure inlist="lof" xml:id="S0.F4">
       <tags>
         <tag><text fontsize="90%">Figure 4</text></tag>
         <tag role="refnum">4</tag>
@@ -222,7 +222,7 @@
         <listingline xml:id="lstnumberx1"><text class="ltx_lst_space">    </text><text class="ltx_lst_identifier">listing</text></listingline>
       </listing>
       <break class="ltx_break"/>
-      <itemize class="ltx_env_itemize ltx_figure_panel" xml:id="S0.I2">
+      <itemize class="ltx_figure_panel" xml:id="S0.I2">
         <item xml:id="S0.I2.i1">
           <tags>
             <tag>•</tag>
@@ -237,7 +237,7 @@
       <p class="ltx_figure_panel">.</p>
       <break class="ltx_break"/>
       <break/>
-      <enumerate class="ltx_env_enumerate ltx_figure_panel" xml:id="S0.I3">
+      <enumerate class="ltx_figure_panel" xml:id="S0.I3">
         <item xml:id="S0.I3.i1">
           <tags>
             <tag>1.</tag>
@@ -380,11 +380,11 @@
       </equationgroup>
       <break class="ltx_break"/>
       <break/>
-      <quote class="ltx_env_quote ltx_figure_panel">
+      <quote class="ltx_figure_panel">
         <p>Quote me later</p>
       </quote>
       <break class="ltx_break"/>
-      <theorem class="ltx_env_theorem ltx_figure_panel ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1">
+      <theorem class="ltx_figure_panel ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheorem1">
         <tags>
           <tag>Theorem 1</tag>
           <tag role="refnum">1</tag>
@@ -406,7 +406,7 @@
           </tags>note1</note></caption>
     </figure>
     <pagination role="newpage"/>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S0.F5">
+    <figure inlist="lof" xml:id="S0.F5">
       <tags>
         <tag><text fontsize="90%">Figure 5</text></tag>
         <tag role="refnum">5</tag>
@@ -424,7 +424,7 @@
           </tags>Note</note></caption>
     </figure>
     <pagination role="newpage"/>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S0.F6">
+    <figure inlist="lof" xml:id="S0.F6">
       <tags>
         <tag><text fontsize="90%">Figure 6</text></tag>
         <tag role="refnum">6</tag>
@@ -439,7 +439,7 @@
       <graphics candidates="../graphics/none.png" class="ltx_figure_panel" graphic="../graphics/none.png" options="width=113.85063pt,keepaspectratio=true" xml:id="S0.F6.g4"/>
     </figure>
     <pagination role="newpage"/>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S0.F9">
+    <figure inlist="lof" xml:id="S0.F9">
       <tags>
         <tag><text fontsize="90%">Figure 9</text></tag>
         <tag role="refnum">9</tag>
@@ -676,8 +676,8 @@
 </listingline>
         </listing>
       </float>
-      <figure class="ltx_env_minipage ltx_figure_panel ltx_minipage" vattach="middle" width="144.9pt" xml:id="S0.SS0.SSS0.Px1.fig2">
-        <float class="ltx_env_algorithm ltx_figure_panel ltx_float_algorithm" framed="top" inlist="loa" labels="LABEL:alg:rpc" placement="H" xml:id="alg3">
+      <figure class="ltx_figure_panel ltx_minipage" vattach="middle" width="144.9pt" xml:id="S0.SS0.SSS0.Px1.fig2">
+        <float class="ltx_figure_panel ltx_float_algorithm" framed="top" inlist="loa" labels="LABEL:alg:rpc" placement="H" xml:id="alg3">
           <tags>
             <tag><text font="bold">Algorithm 3</text></tag>
             <tag role="refnum">3</tag>
@@ -766,7 +766,7 @@
               </tags> <text font="bold">end</text> <text font="bold">while</text></listingline>
           </listing>
         </float>
-        <float class="ltx_env_algorithm ltx_figure_panel ltx_float_algorithm" framed="top" inlist="loa" labels="LABEL:alg:replace" placement="H" xml:id="alg4">
+        <float class="ltx_figure_panel ltx_float_algorithm" framed="top" inlist="loa" labels="LABEL:alg:replace" placement="H" xml:id="alg4">
           <tags>
             <tag><text font="bold">Algorithm 4</text></tag>
             <tag role="refnum">4</tag>

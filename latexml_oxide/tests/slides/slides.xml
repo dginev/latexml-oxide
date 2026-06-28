@@ -3,7 +3,7 @@
 <?latexml RelaxNGSchema="LaTeXML"?>
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
-  <slide class="ltx_env_slide" xml:id="s1">
+  <slide xml:id="s1">
     <tags>
       <tag>1</tag>
       <tag role="refnum">1</tag>
@@ -13,7 +13,7 @@
 
 <text opacity="0">Invisible
 </text>Visible</p>
-      <itemize class="ltx_env_itemize" xml:id="I1">
+      <itemize xml:id="I1">
         <item xml:id="I1.i1">
           <tags>
             <tag>•</tag>
@@ -44,7 +44,7 @@
       </itemize>
     </para>
   </slide>
-  <slide class="ltx_env_slide" xml:id="s2">
+  <slide xml:id="s2">
     <tags>
       <tag>2</tag>
       <tag role="refnum">2</tag>
@@ -54,7 +54,7 @@
 
 <text opacity="0">Invisible
 </text>Visible</p>
-      <itemize class="ltx_env_itemize" xml:id="I2">
+      <itemize xml:id="I2">
         <item xml:id="I2.i1">
           <tags>
             <tag>•</tag>
@@ -95,7 +95,7 @@
 
 <text opacity="0">Invisible
 </text>Visible</p>
-      <itemize class="ltx_env_itemize" xml:id="I3">
+      <itemize xml:id="I3">
         <item xml:id="I3.i1">
           <tags>
             <tag>•</tag>
@@ -136,7 +136,7 @@
 
 <text opacity="0">Invisible
 </text>Visible</p>
-      <itemize class="ltx_env_itemize" xml:id="I4">
+      <itemize xml:id="I4">
         <item xml:id="I4.i1">
           <tags>
             <tag>•</tag>
@@ -167,7 +167,7 @@
       </itemize>
     </para>
   </slide>
-  <note class="ltx_env_note" xml:id="n1"><tags>
+  <note xml:id="n1"><tags>
       <tag>1</tag>
       <tag role="refnum">1</tag>
     </tags>
@@ -175,7 +175,7 @@ This is the first note.
 
 <text opacity="0">Invisible
 </text>Visible
-<itemize class="ltx_env_itemize" xml:id="I5">
+<itemize xml:id="I5">
       <item xml:id="I5.i1">
         <tags>
           <tag>•</tag>
@@ -205,7 +205,7 @@ This is the first note.
       </item>
     </itemize>
 </note>
-  <note class="ltx_env_note" xml:id="n2"><tags>
+  <note xml:id="n2"><tags>
       <tag>2</tag>
       <tag role="refnum">2</tag>
     </tags>
@@ -213,7 +213,7 @@ This is the second note.
 
 <text opacity="0">Invisible
 </text>Visible
-<itemize class="ltx_env_itemize" xml:id="I6">
+<itemize xml:id="I6">
       <item xml:id="I6.i1">
         <tags>
           <tag>•</tag>

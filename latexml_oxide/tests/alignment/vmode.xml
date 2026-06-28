@@ -73,11 +73,11 @@
         <p vattach="bottom">vbox2</p>
       </para>
     </logical-block>
-    <logical-block class="ltx_env_minipage ltx_minipage" vattach="middle" width="144.5pt">
+    <logical-block class="ltx_minipage" vattach="middle" width="144.5pt">
       <para xml:id="S2.p2">
         <p>This is random text. This is random text.
 This is random text. This is random text. This is random text.</p>
-        <itemize class="ltx_env_itemize" xml:id="S2.I1">
+        <itemize xml:id="S2.I1">
           <item xml:id="S2.I1.i1">
             <tags>
               <tag>•</tag>
@@ -163,7 +163,7 @@ This is random text. This is random text. This is random text.</p>
           </Math>)</p>
       </para>
     </logical-block>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S3.F1">
+    <figure inlist="lof" xml:id="S3.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>
@@ -173,7 +173,7 @@ This is random text. This is random text. This is random text.</p>
       <toccaption class="ltx_centering"><tag close=" ">1</tag>This is random text. This is random text. This is random text.</toccaption>
       <caption class="ltx_centering"><tag close=": ">Figure 1</tag>This is random text. This is random text. This is random text.</caption>
     </figure>
-    <figure class="ltx_env_figure" inlist="lof" xml:id="S3.F2">
+    <figure inlist="lof" xml:id="S3.F2">
       <tags>
         <tag>Figure 2</tag>
         <tag role="refnum">2</tag>

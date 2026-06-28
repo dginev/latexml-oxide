@@ -224,7 +224,7 @@
         </Math><text color="#000000"> and black text </text><text color="#0000FF">blue text.</text></p>
     </para>
     <para xml:id="S2.p3">
-      <equation class="ltx_env_equation" labels="LABEL:eq:smp" xml:id="S2.E1">
+      <equation labels="LABEL:eq:smp" xml:id="S2.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -487,7 +487,7 @@
           </tags><text class="ltx_lst_space" color="#000000" font="typewriter" fontsize="80%">  </text><text color="#000000" font="typewriter" fontsize="80%">}%</text></listingline>
       </listing>
     </para>
-    <float class="ltx_env_algorithm ltx_float_algorithm" framed="top" inlist="loa" placement="!h" xml:id="algorithm1">
+    <float class="ltx_float_algorithm" framed="top" inlist="loa" placement="!h" xml:id="algorithm1">
       <tags>
         <tag><text font="bold">Algorithm 1</text></tag>
         <tag role="refnum">1</tag>

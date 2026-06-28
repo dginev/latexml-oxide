@@ -10,7 +10,7 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <logical-block class="ltx_env_center">
-    <figure align="center" class="ltx_env_figure" inlist="lof" xml:id="S0.F1">
+    <figure align="center" inlist="lof" xml:id="S0.F1">
       <tags>
         <tag>Figure 1</tag>
         <tag role="refnum">1</tag>

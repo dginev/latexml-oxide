@@ -55,7 +55,7 @@
     </equation>
   </para>
   <para xml:id="p3">
-    <equation class="ltx_env_equation" xml:id="S0.Ex5">
+    <equation xml:id="S0.Ex5">
       <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex5.m1">
         <XMath>
           <XMApp>
@@ -67,7 +67,7 @@
       </Math>
     </equation>
     <p>and</p>
-    <equation class="ltx_env_equation" xml:id="S0.E1">
+    <equation xml:id="S0.E1">
       <tags>
         <tag>(1)</tag>
         <tag role="refnum">1</tag>
@@ -84,7 +84,7 @@
     </equation>
   </para>
   <para xml:id="p4">
-    <equation class="ltx_env_equation" xml:id="S0.Ex6">
+    <equation xml:id="S0.Ex6">
       <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex6.m1">
         <XMath>
           <XMApp>
@@ -96,7 +96,7 @@
       </Math>
     </equation>
     <p>and</p>
-    <equation class="ltx_env_equation" xml:id="S0.E2">
+    <equation xml:id="S0.E2">
       <tags>
         <tag>(2)</tag>
         <tag role="refnum">2</tag>
@@ -113,7 +113,7 @@
     </equation>
   </para>
   <para xml:id="p5">
-    <equation class="ltx_env_equation" xml:id="S0.Ex7">
+    <equation xml:id="S0.Ex7">
       <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex7.m1">
         <XMath>
           <XMApp>
@@ -125,7 +125,7 @@
       </Math>
     </equation>
     <p>and</p>
-    <equation class="ltx_env_equation" xml:id="S0.E3">
+    <equation xml:id="S0.E3">
       <tags>
         <tag>(3)</tag>
         <tag role="refnum">3</tag>
@@ -142,7 +142,7 @@
     </equation>
   </para>
   <para xml:id="p6">
-    <equation class="ltx_env_equation" xml:id="S0.Ex8">
+    <equation xml:id="S0.Ex8">
       <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex8.m1">
         <XMath>
           <XMApp>
@@ -154,7 +154,7 @@
       </Math>
     </equation>
     <p>and</p>
-    <equation class="ltx_env_equation" xml:id="S0.E4">
+    <equation xml:id="S0.E4">
       <tags>
         <tag>(4)</tag>
         <tag role="refnum">4</tag>
@@ -171,7 +171,7 @@
     </equation>
   </para>
   <para xml:id="p7">
-    <equation class="ltx_env_equation" xml:id="S0.E5">
+    <equation xml:id="S0.E5">
       <tags>
         <tag>(5)</tag>
         <tag role="refnum">5</tag>
@@ -204,7 +204,7 @@
     </equation>
   </para>
   <para xml:id="p8">
-    <equation class="ltx_env_equation" xml:id="S0.E6">
+    <equation xml:id="S0.E6">
       <tags>
         <tag>(6)</tag>
         <tag role="refnum">6</tag>

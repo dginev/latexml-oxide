@@ -19,7 +19,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
     </para>
     <para xml:id="S1.p2">
       <p>Normal (w/eq=0)</p>
-      <equation class="ltx_env_equation" xml:id="S1.E1">
+      <equation xml:id="S1.E1">
         <tags>
           <tag>(1)</tag>
           <tag role="refnum">1</tag>
@@ -35,7 +35,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </Math>
       </equation>
       <p>Nonumber before (w/eq=1)</p>
-      <equation class="ltx_env_equation" xml:id="S1.Ex1">
+      <equation xml:id="S1.Ex1">
         <Math mode="display" tex="N=\mbox{1}" text="N = [1]" xml:id="S1.Ex1.m1">
           <XMath>
             <XMApp>
@@ -47,7 +47,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </Math>
       </equation>
       <p>Nonumber after (w/eq=1)</p>
-      <equation class="ltx_env_equation" xml:id="S1.Ex2">
+      <equation xml:id="S1.Ex2">
         <Math mode="display" tex="N=\mbox{2}" text="N = [2]" xml:id="S1.Ex2.m1">
           <XMath>
             <XMApp>
@@ -59,7 +59,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </Math>
       </equation>
       <p>Numbered, Tag before (w/eq=1)</p>
-      <equation class="ltx_env_equation" xml:id="S1.Ex3">
+      <equation xml:id="S1.Ex3">
         <tags>
           <tag>(1<sup><text font="italic">′</text></sup>)</tag>
           <tag role="refnum">1<sup><text font="italic">′</text></sup></tag>
@@ -75,7 +75,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </Math>
       </equation>
       <p>Numbered, Tag after (w/eq=1)</p>
-      <equation class="ltx_env_equation" xml:id="S1.Ex4">
+      <equation xml:id="S1.Ex4">
         <tags>
           <tag>(1<sup><text font="italic">′′</text></sup>)</tag>
           <tag role="refnum">1<sup><text font="italic">′′</text></sup></tag>
@@ -91,7 +91,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
         </Math>
       </equation>
       <p>Other variations:</p>
-      <equation class="ltx_env_equation" xml:id="S1.Ex5">
+      <equation xml:id="S1.Ex5">
         <tags>
           <tag>(1<text font="typewriter"> primed</text>)</tag>
           <tag role="refnum">1<text font="typewriter"> primed</text></tag>
@@ -106,7 +106,7 @@ even if later on, the equation tag is removed or set explicitly!</p>
           </XMath>
         </Math>
       </equation>
-      <equation class="ltx_env_equation" xml:id="S1.Ex6">
+      <equation xml:id="S1.Ex6">
         <tags>
           <tag>(1 in text)</tag>
           <tag role="refnum">1 in text</tag>

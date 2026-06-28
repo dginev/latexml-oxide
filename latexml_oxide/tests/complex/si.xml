@@ -2917,7 +2917,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
       <tag role="typerefnum">§2</tag>
     </tags>
     <title><tag close=" ">2</tag>Units</title>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T1">
+    <table inlist="lot" xml:id="S2.T1">
       <tags>
         <tag>Table 1</tag>
         <tag role="refnum">1</tag>
@@ -3000,7 +3000,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T2">
+    <table inlist="lot" xml:id="S2.T2">
       <tags>
         <tag>Table 2</tag>
         <tag role="refnum">2</tag>
@@ -3199,7 +3199,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T3">
+    <table inlist="lot" xml:id="S2.T3">
       <tags>
         <tag>Table 3</tag>
         <tag role="refnum">3</tag>
@@ -3309,7 +3309,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T4">
+    <table inlist="lot" xml:id="S2.T4">
       <tags>
         <tag>Table 4</tag>
         <tag role="refnum">4</tag>
@@ -3419,7 +3419,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T5">
+    <table inlist="lot" xml:id="S2.T5">
       <tags>
         <tag>Table 5</tag>
         <tag role="refnum">5</tag>
@@ -3520,7 +3520,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T6">
+    <table inlist="lot" xml:id="S2.T6">
       <tags>
         <tag>Table 6</tag>
         <tag role="refnum">6</tag>
@@ -3805,7 +3805,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T7">
+    <table inlist="lot" xml:id="S2.T7">
       <tags>
         <tag>Table 7</tag>
         <tag role="refnum">7</tag>
@@ -4648,7 +4648,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" xml:id="S2.T8">
+    <table inlist="lot" xml:id="S2.T8">
       <tags>
         <tag>Table 8</tag>
         <tag role="refnum">8</tag>
@@ -6522,7 +6522,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
       <tag role="typerefnum">§3</tag>
     </tags>
     <title><tag close=" ">3</tag>Tabular material</title>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:standard" placement="H" xml:id="S3.T9">
+    <table inlist="lot" labels="LABEL:tab:S:standard" placement="H" xml:id="S3.T9">
       <tags>
         <tag>Table 9</tag>
         <tag role="refnum">9</tag>
@@ -6611,7 +6611,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:extras" placement="H" xml:id="S3.T10">
+    <table inlist="lot" labels="LABEL:tab:S:extras" placement="H" xml:id="S3.T10">
       <tags>
         <tag>Table 10</tag>
         <tag role="refnum">10</tag>
@@ -6646,7 +6646,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:tablenum" placement="H" xml:id="S3.T11">
+    <table inlist="lot" labels="LABEL:tab:tablenum" placement="H" xml:id="S3.T11">
       <tags>
         <tag>Table 11</tag>
         <tag role="refnum">11</tag>
@@ -6726,7 +6726,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:s:demo" placement="H" xml:id="S3.T12">
+    <table inlist="lot" labels="LABEL:tab:s:demo" placement="H" xml:id="S3.T12">
       <tags>
         <tag>Table 12</tag>
         <tag role="refnum">12</tag>
@@ -6791,7 +6791,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         </tbody>
       </tabular>
     </table>
-    <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:s:processing" placement="H" xml:id="S3.T13">
+    <table inlist="lot" labels="LABEL:tab:s:processing" placement="H" xml:id="S3.T13">
       <tags>
         <tag>Table 13</tag>
         <tag role="refnum">13</tag>
@@ -6849,7 +6849,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="typerefnum">§3.0.1</tag>
       </tags>
       <title><tag close=" ">3.0.1</tag>table-parse-only</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:parse" placement="H" xml:id="S3.T14">
+      <table inlist="lot" labels="LABEL:tab:S:parse" placement="H" xml:id="S3.T14">
         <tags>
           <tag>Table 14</tag>
           <tag role="refnum">14</tag>
@@ -6974,7 +6974,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
         <tag role="typerefnum">§3.0.2</tag>
       </tags>
       <title><tag close=" ">3.0.2</tag>table-number-alignment</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:align" placement="H" xml:id="S3.T15">
+      <table inlist="lot" labels="LABEL:tab:S:align" placement="H" xml:id="S3.T15">
         <tags>
           <tag>Table 15</tag>
           <tag role="refnum">15</tag>
@@ -7092,7 +7092,7 @@ Some text <break/><Math mode="inline" tex="4\text{\,}\mathrm{m}\text{\,}{\mathrm
       </tags>
       <title><tag close=" ">3.0.3</tag>table-figures-decimal, table-figures-exponent,table-figures-integer,table-figures-
 uncertainty</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:space" placement="H" xml:id="S3.T16">
+      <table inlist="lot" labels="LABEL:tab:S:space" placement="H" xml:id="S3.T16">
         <tags>
           <tag>Table 16</tag>
           <tag role="refnum">16</tag>
@@ -7347,7 +7347,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.4</tag>
       </tags>
       <title><tag close=" ">3.0.4</tag>table-comparator</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:comparators" placement="H" xml:id="S3.T17">
+      <table inlist="lot" labels="LABEL:tab:S:comparators" placement="H" xml:id="S3.T17">
         <tags>
           <tag>Table 17</tag>
           <tag role="refnum">17</tag>
@@ -7462,7 +7462,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.5</tag>
       </tags>
       <title><tag close=" ">3.0.5</tag>table-format</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:format" placement="H" xml:id="S3.T18">
+      <table inlist="lot" labels="LABEL:tab:S:format" placement="H" xml:id="S3.T18">
         <tags>
           <tag>Table 18</tag>
           <tag role="refnum">18</tag>
@@ -7680,7 +7680,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.6</tag>
       </tags>
       <title><tag close=" ">3.0.6</tag>table-space-text-pre, table-space-text-post</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:ends" placement="H" xml:id="S3.T19">
+      <table inlist="lot" labels="LABEL:tab:S:ends" placement="H" xml:id="S3.T19">
         <tags>
           <tag>Table 19</tag>
           <tag role="refnum">19</tag>
@@ -7728,7 +7728,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.7</tag>
       </tags>
       <title><tag close=" ">3.0.7</tag>table-align-comparator, table-align-exponent, table-align-uncertainty</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:align:exp" placement="H" xml:id="S3.T20">
+      <table inlist="lot" labels="LABEL:tab:align:exp" placement="H" xml:id="S3.T20">
         <tags>
           <tag>Table 20</tag>
           <tag role="refnum">20</tag>
@@ -7803,7 +7803,7 @@ uncertainty</title>
           </tbody>
         </tabular>
       </table>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:align:uncert" placement="H" xml:id="S3.T21">
+      <table inlist="lot" labels="LABEL:tab:align:uncert" placement="H" xml:id="S3.T21">
         <tags>
           <tag>Table 21</tag>
           <tag role="refnum">21</tag>
@@ -7862,7 +7862,7 @@ uncertainty</title>
           </tbody>
         </tabular>
       </table>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:align:comp" placement="H" xml:id="S3.T22">
+      <table inlist="lot" labels="LABEL:tab:align:comp" placement="H" xml:id="S3.T22">
         <tags>
           <tag>Table 22</tag>
           <tag role="refnum">22</tag>
@@ -7929,7 +7929,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.8</tag>
       </tags>
       <title><tag close=" ">3.0.8</tag>table-omit-exponent</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:exp:omit" placement="H" xml:id="S3.T23">
+      <table inlist="lot" labels="LABEL:tab:exp:omit" placement="H" xml:id="S3.T23">
         <tags>
           <tag>Table 23</tag>
           <tag role="refnum">23</tag>
@@ -8060,7 +8060,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.10</tag>
       </tags>
       <title><tag close=" ">3.0.10</tag>table-auto-round</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:auto" placement="H" xml:id="S3.T24">
+      <table inlist="lot" labels="LABEL:tab:S:auto" placement="H" xml:id="S3.T24">
         <tags>
           <tag>Table 24</tag>
           <tag role="refnum">24</tag>
@@ -8111,7 +8111,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.11</tag>
       </tags>
       <title><tag close=" ">3.0.11</tag>parse-numbers</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:nonparsed" placement="H" xml:id="S3.T25">
+      <table inlist="lot" labels="LABEL:tab:S:nonparsed" placement="H" xml:id="S3.T25">
         <tags>
           <tag>Table 25</tag>
           <tag role="refnum">25</tag>
@@ -8295,7 +8295,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.12</tag>
       </tags>
       <title><tag close=" ">3.0.12</tag>table-text-alignment</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:S:text" placement="H" xml:id="S3.T26">
+      <table inlist="lot" labels="LABEL:tab:S:text" placement="H" xml:id="S3.T26">
         <tags>
           <tag>Table 26</tag>
           <tag role="refnum">26</tag>
@@ -8391,7 +8391,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.13</tag>
       </tags>
       <title><tag close=" ">3.0.13</tag>table-unit-alignment</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:s:align" placement="H" xml:id="S3.T27">
+      <table inlist="lot" labels="LABEL:tab:s:align" placement="H" xml:id="S3.T27">
         <tags>
           <tag>Table 27</tag>
           <tag role="refnum">27</tag>
@@ -8494,7 +8494,7 @@ uncertainty</title>
         <tag role="typerefnum">§3.0.15</tag>
       </tags>
       <title><tag close=" ">3.0.15</tag>table-column-width</title>
-      <table class="ltx_env_table" inlist="lot" labels="LABEL:tab:width:fixed" placement="H" xml:id="S3.T28">
+      <table inlist="lot" labels="LABEL:tab:width:fixed" placement="H" xml:id="S3.T28">
         <tags>
           <tag>Table 28</tag>
           <tag role="refnum">28</tag>

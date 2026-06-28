@@ -67,7 +67,7 @@
     <title><tag close=" ">2</tag>Itemizations</title>
     <para xml:id="S2.p1">
       <p>Begin first paragraph,</p>
-      <itemize class="ltx_env_itemize" xml:id="S2.I1">
+      <itemize xml:id="S2.I1">
         <item xml:id="S2.I1.i1">
           <tags>
             <tag>•</tag>
@@ -93,7 +93,7 @@
       <p>Single line paragraph.</p>
     </para>
     <para xml:id="S2.p3">
-      <itemize class="ltx_env_itemize" xml:id="S2.I2">
+      <itemize xml:id="S2.I2">
         <item xml:id="S2.I2.i1">
           <tags>
             <tag>•</tag>
@@ -119,7 +119,7 @@
     </para>
     <para xml:id="S2.p5">
       <p>Multiple Para within item</p>
-      <itemize class="ltx_env_itemize" xml:id="S2.I3">
+      <itemize xml:id="S2.I3">
         <item xml:id="S2.I3.i1">
           <tags>
             <tag>•</tag>

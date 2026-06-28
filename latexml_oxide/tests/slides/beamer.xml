@@ -169,7 +169,7 @@ This text is shown the same way as the text below.</p>
     </subsection>
     <subsection class="ltx_env_frame">
       <para xml:id="section4.p7">
-        <itemize class="ltx_env_itemize">
+        <itemize>
           <item>
             <para xml:id="section4.p7.p1">
               <p>First</p>
@@ -287,7 +287,7 @@ This text is shown the same way as the text below.</p>
     <title><tag close=" ">6</tag>Enumerate</title>
     <subsection class="ltx_env_frame">
       <para xml:id="section6.p1">
-        <enumerate class="ltx_env_enumerate">
+        <enumerate>
           <item>
             <para xml:id="section6.p1.p1">
               <p>First</p>
@@ -304,7 +304,7 @@ This text is shown the same way as the text below.</p>
     </subsection>
     <subsection class="ltx_env_frame">
       <para xml:id="section6.p2">
-        <enumerate class="ltx_env_enumerate">
+        <enumerate>
           <item>
             <para xml:id="section6.p2.p1">
               <p>First</p>
@@ -321,7 +321,7 @@ This text is shown the same way as the text below.</p>
     </subsection>
     <subsection class="ltx_env_frame">
       <para xml:id="section6.p3">
-        <enumerate class="ltx_env_enumerate">
+        <enumerate>
           <item>
             <para xml:id="section6.p3.p1">
               <p>First</p>
@@ -338,7 +338,7 @@ This text is shown the same way as the text below.</p>
     </subsection>
     <subsection class="ltx_env_frame">
       <para xml:id="section6.p4">
-        <enumerate class="ltx_env_enumerate">
+        <enumerate>
           <item>
             <para xml:id="section6.p4.p1">
               <p>First</p>
@@ -353,7 +353,7 @@ This text is shown the same way as the text below.</p>
         </enumerate>
       </para>
       <para xml:id="section6.p5">
-        <enumerate class="ltx_env_enumerate">
+        <enumerate>
           <item>
             <para xml:id="section6.p5.p1">
               <p>Third</p>
