@@ -4192,7 +4192,11 @@ impl Document {
       return Ok(None);
     }
     let first_node = &nodes[0];
-    let mut parent = first_node.get_parent().unwrap();
+    // Can't wrap a node that has no parent (already detached / is the root) —
+    // return None like the other "can't wrap here" paths. Witness: 1804.09736.
+    let Some(mut parent) = first_node.get_parent() else {
+      return Ok(None);
+    };
     let (ns, tag) = model::decode_qname(qname)?;
     let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
     self.after_open(&mut new)?;

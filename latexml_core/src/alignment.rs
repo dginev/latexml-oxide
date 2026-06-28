@@ -267,7 +267,12 @@ impl Alignment {
       return Ok(None);
     }
     self.current_column += 1;
-    let current_row = self.rows.get_mut(self.current_row.unwrap()).unwrap();
+    // `current_row` index is Some (guarded above), but it can point past
+    // `self.rows` if that row was never materialised — degrade to "no next
+    // column" instead of panicking. Witness: 1809.10756.
+    let Some(current_row) = self.rows.get_mut(self.current_row.unwrap()) else {
+      return Ok(None);
+    };
     if current_row.get_column_mut(self.current_column).is_some() {
       Ok(current_row.get_column_mut(self.current_column))
     } else {

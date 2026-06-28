@@ -169,7 +169,9 @@ LoadDefinitions!({
         // Per eTeX spec, \interlinepenalties (like \parshape) is reset after each paragraph.
         { assign_value("interlinepenalties", Stored::None, None); }
         // Fish out flags for next ltx:para, to be used when the next \par closes:
-        if lookup_register("\\parindent",Vec::new())?.unwrap().value_of() == 0 {
+        // `\parindent` is normally defined; if it isn't (None), don't assume zero
+        // and force noindent — skip the override. Witness: 1502.07281.
+        if lookup_register("\\parindent", Vec::new())?.is_some_and(|r| r.value_of() == 0) {
           // respect \parindent if no overrides are given
           { assign_value("next_para_class", "ltx_noindent", None); }
         }
