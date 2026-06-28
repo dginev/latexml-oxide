@@ -1242,10 +1242,13 @@ appears where the env adds info the markup doesn't:
   `IN_MATH` is still false) **structurally corrupts** their equationgroup build (spurious
   `<equation>` nodes) — a digest-phase problem the absorb-phase `add_env_class` guards
   cannot catch, and no clean digest signal distinguishes a math-entering env.
-- **Note (CLI vs harness):** the test harness passes `labelled_test`, but a bare CLI run
-  of `tests/complex/labelled.tex` emits 14 ERRORs (it `\input`s a `.latexml` binding file
-  the CLI path handles differently). PRE-EXISTING (committed CLI identical), unrelated to
-  env-markup; out of scope.
+- **Note (CLI vs harness, RESOLVED — not a bug):** a bare CLI run of
+  `tests/complex/labelled.tex` emits 14 ERRORs because it `\input`s `labelled.latexml`,
+  which is **Perl code** (`package LaTeXML::Package::Pool; … AssignValue(LABEL_MAPPING_HOOK
+  => sub {…})`). The Rust port can't execute Perl bindings; the test harness substitutes a
+  hand-ported Rust binding (`helpers::labelled_tex::load_definitions`, 80_complex.rs:19), so
+  `labelled_test` passes. A standalone CLI run parses the Perl as TeX → errors. Expected
+  (no real doc `\input`s a Perl `.latexml`), unrelated to env-markup.
 
 **BINDING SIDE (`DefEnvironment!`) — DONE.** Mechanism (after exploring & rejecting
 several): the wrapper is the **FIRST OUTERMOST `open_element`** after `\begin`. A
