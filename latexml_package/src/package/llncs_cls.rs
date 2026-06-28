@@ -34,9 +34,12 @@ LoadDefinitions!({
   DefMacro!("\\mailname",  "\\textit{Correspondence to}:");
 
   // Single \author, with multiple authors separated by \and  (Perl PR #2767)
-  // \inst{labels} can be used within each author to identify which affiliations apply
+  // \inst{labels} can be used within each author to identify which affiliations apply.
+  // IMPROVEMENT over upstream: also split on \\ -- authors commonly use a manual
+  // row break in place of \and ("A\inst{1} \\ B\inst{2}"), which upstream merges
+  // into a single creator (witness 2606.19939: "Hiuyi Cheng \\ Dezhi Peng").
   DefMacro!("\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}");
+    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,\\\\}{#1}");
   // Single \institute, with multiple institutions separated by \and.
   // The n-th institution is attached to the author which has that n in its \inst labels.
   //
