@@ -65,11 +65,27 @@ LoadDefinitions!({
 // width) as the float's `width` property so it renders as a CSS `width:`,
 // capping the float (image + caption) to that width. Perl's wrapfig binding
 // discards this arg; applying it is an intentional ar5iv-rendering divergence.
+//
+// Emit it as a PERCENTAGE of \textwidth, not the resolved absolute pt. A
+// wrapfigure width is a layout reservation -- the fraction of the line the float
+// occupies (authors write it proportionally, e.g. 0.48\linewidth). In print the
+// column is fixed so absolute == relative; in responsive HTML the main column is
+// far wider than the print \textwidth, so an absolute pt renders far narrower
+// than the intended fraction (0.48\linewidth -> ~165pt -> ~26% of an 832px
+// column instead of ~48%). A percentage preserves the proportion and scales.
+// This also makes wrapfig consistent with the floatfig/floatflt sibling
+// packages, which already emit `100 * dimen / \textwidth . '%'` (Perl toPercent).
 fn set_wrap_width(whatsit: &mut Whatsit) {
-  if let Some(width_arg) = whatsit.get_arg(4) {
-    let v = width_arg.value_of();
-    if v != 0 {
-      whatsit.set_property("width", Stored::Dimension(Dimension::new(v)));
-    }
+  let Some(width_arg) = whatsit.get_arg(4) else { return };
+  let v = width_arg.value_of();
+  if v == 0 {
+    return;
   }
+  let Some(tw) = lookup_dimension("\\textwidth") else { return };
+  let tw_sp = tw.value_of();
+  if tw_sp == 0 {
+    return;
+  }
+  let pct = (100 * v) / tw_sp;
+  whatsit.set_property("width", Stored::from(s!("{pct}%")));
 }
