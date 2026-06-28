@@ -16,8 +16,10 @@
 %        UNBALANCED in Rust, so the SafeCatcodes `\begingroup` never closes.
 %        `\currentgrouplevel` is 1 after `\usepackage{xintexpr}` (baseline 0)
 %        — exactly one leaked group. SafeCatcodes keeps {=1 }=2 (NOT a brace
-%        catcode issue). Perl LaTeXML processes the SAME xint TeX with no leak
-%        (the full paper converts in Perl, 32 s).
+%        catcode issue). GENUINE RUST BUG, confirmed both ways: real pdflatex
+%        SUCCEEDS (exit 0, PDF, "result: 4" for @f(3)); Perl LaTeXML processes
+%        the SAME xint TeX with no leak (full paper converts in Perl, 32 s).
+%        Only Rust's read_balanced diverges.
 %
 % (2) HOW IT BECOMES THE 1804.01117 FATAL: with the leaked `\begingroup` open,
 %     a later `\usepackage{pgfmath}` raw-load (pgfmath declares its functions via
