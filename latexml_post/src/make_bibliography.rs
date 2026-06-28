@@ -1213,47 +1213,10 @@ impl MakeBibliography {
       }
     }
 
-    // META_BLOCK: Note and External Links
-    if let Some(ref bibentry) = entry.bibentry {
-      // Note block
-      if !PostDocument::findnodes_foreign("ltx:bib-note", bibentry).is_empty() {
-        let notes = PostDocument::findnodes_foreign("ltx:bib-note", bibentry);
-        let content: Vec<NodeData> = notes
-          .iter()
-          .map(|n| NodeData::Text(n.get_content()))
-          .collect();
-        if !content.is_empty() {
-          let mut items = vec![NodeData::Text("Note: ".to_string())];
-          items.push(NodeData::Element {
-            tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from_iter([(
-              "class".to_string(),
-              "ltx_bib_note".to_string(),
-            )])),
-            children:   content,
-          });
-          blocks.push(make_bibblock("", &items));
-        }
-      }
-      // External Links block
-      let links_xpath = "ltx:bib-links | ltx:bib-review | ltx:bib-identifier | ltx:bib-url";
-      let link_nodes = PostDocument::findnodes_foreign(links_xpath, bibentry);
-      if !link_nodes.is_empty() {
-        let link_items = format_links(doc, &link_nodes);
-        if !link_items.is_empty() {
-          let mut items = vec![NodeData::Text("External Links: ".to_string())];
-          items.push(NodeData::Element {
-            tag:        "ltx:text".to_string(),
-            attributes: Some(HashMap::from_iter([(
-              "class".to_string(),
-              "ltx_bib_links".to_string(),
-            )])),
-            children:   link_items,
-          });
-          blocks.push(make_bibblock("", &items));
-        }
-      }
-    }
+    // Note + External Links are part of every type's FMT_SPEC via the
+    // `meta_block` appended in get_fmt_spec, so the loop above already emits
+    // them. (A second, hard-coded copy here previously duplicated every
+    // entry's final Note/External-Links bibblock.)
 
     blocks
   }
