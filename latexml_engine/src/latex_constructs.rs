@@ -7724,11 +7724,26 @@ LoadDefinitions!({
     // branch on the first phase only.
     let first_is_bbl = with(bib_config[0], |s| s == "bbl");
     if first_is_bbl {
-      if bbl_path.is_none() {
-        Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
-        return Ok(Tokens!());
+      if bbl_path.is_some() {
+        return Ok(bbl_clause);
       }
-      Ok(bbl_clause)
+      // bbl-first precedence (e.g. ar5iv's bibconfig=bbl,bib) but no
+      // <jobname>.bbl on disk: fall through to a configured 'bib' phase, BUT
+      // only when the .bib files actually exist. Emitting \lx@bibliography
+      // unconditionally would add an empty placeholder "References"; when the
+      // real entries instead arrive via a manual \input{refs.bbl} (witness
+      // 2107.03065, which ships refs.bbl and NO refs.bib) that produces a
+      // duplicate, content-less bibliography. Requiring a real .bib delivers
+      // true "bbl-over-bib" precedence (prefer .bbl, else .bib) without the
+      // double. Witness 2605.16562 (refs.bib, no .bbl) now gets a bibliography.
+      let bib_in_config = bib_config.iter().any(|p| with(*p, |s| s == "bib"));
+      let all_bibs_exist = bib_in_config
+        && bib_files.split(',').all(|bf| FindFile!(bf, type => "bib").is_some());
+      if all_bibs_exist {
+        return Ok(bib_clause);
+      }
+      Info!("expected", "bbl", "Couldn't find bbl file, bibliography may be empty.");
+      Ok(Tokens!())
     } else {
       // 'bib' phase — check if .bib files exist
       let mut missing_bibs = String::new();
