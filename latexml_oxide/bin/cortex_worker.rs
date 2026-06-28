@@ -432,13 +432,14 @@ impl LatexmlWorker {
     // 6. Get log and status (Perl: status line is last line of log)
     let status_str = format!("Status:conversion:{}", response.status_code);
     // Emit the total job wall-time as a CorTeX log message so the dispatcher persists it: CorTeX
-    // parses `Info:cortex:runtime_ms <N>` into log_infos (category=cortex, what=runtime_ms,
-    // details=N), giving a per-paper conversion-time handle for ranking the slowest conversions —
-    // captured for graceful conversion-fatals too (TokenLimit/PushbackLimit/… still come through
-    // here). Placed before the Status line, which must remain the last line of the log.
+    // parses `Info:runtime_ms:<N>` into log_infos (category=runtime_ms, what=N, details=empty), so
+    // the conversion time surfaces as its own report category whose drill-down subreport is the
+    // per-value distribution — and still gives a per-paper handle for ranking the slowest
+    // conversions. Captured for graceful conversion-fatals too (TokenLimit/PushbackLimit/… still
+    // come through here). Placed before the Status line, which must remain the last line of the log.
     let runtime_ms = wall_start.elapsed().as_millis();
     let log = format!(
-      "{}\nInfo:cortex:runtime_ms {runtime_ms}\n{}",
+      "{}\nInfo:runtime_ms:{runtime_ms}\n{}",
       response.log, status_str
     );
 
