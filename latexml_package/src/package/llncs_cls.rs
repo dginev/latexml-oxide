@@ -49,19 +49,29 @@ LoadDefinitions!({
   // Single \institute, with multiple institutions separated by \and.
   // The n-th institution is attached to the author which has that n in its \inst labels.
   //
-  // IMPROVEMENT over upstream llncs.cls.ltxml: upstream splits \institute ONLY on
-  // \and. The very common lazy LNCS style instead writes ONE \institute block with
-  // hand-typed superscripts ("$^1$..\quad $^2$..") and no \and; upstream then makes
-  // a single affiliation = the whole block, attached to every \inst{1} author
-  // (duplicating it) while \inst{2}+ authors get nothing (witness 2606.19939;
-  // reproduces identically in Perl LaTeXML 0.8.8). Instead we route through the
-  // shared smart affiliation parser \lx@add@affiliations, which already handles
-  // BOTH forms: with superscript markers it splits on \quad/\qquad/\\ and extracts
-  // each superscript as the affiliation label that \inst{N} links to; without them
-  // it splits on \and (affil_splits() was extended to include \and). labelseq gives
-  // the \and-separated form its sequential 1,2,.. labels for \inst linking.
+  // Two shapes occur in the wild and need different splitting:
+  //  (a) Well-formed: institutions separated by \and, each possibly with an
+  //      internal "\\" line break between its name and its \email/\url
+  //      (witness 2605.16562). Here we MUST split on \and ONLY -- splitting on
+  //      "\\" too would break each institution into name + email as separate
+  //      affiliations and mis-align the labelseq with \inst{N}, scrambling which
+  //      author gets which affiliation/email. \email inside an affiliation
+  //      inherits that affiliation's label, so it attaches to the right authors.
+  //  (b) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
+  //      (witness 2606.19939). Upstream makes a single affiliation = the whole
+  //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
+  //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). The shared
+  //      \lx@add@affiliations parser handles this: it splits on \quad/\qquad/\\
+  //      and extracts each superscript as the affiliation label \inst{N} links to.
+  // So: branch on whether \and is present.
   DefMacro!("\\institute{}",
-    "\\lx@add@affiliations[labelseq={affiliation}]{#1}");
+    "\\in@{\\and}{#1}\\ifin@\
+       \\lx@clear@frontmatter{ltx:contact}[role=affiliation]\
+       \\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}\
+     \\else\
+       \\lx@add@affiliations[labelseq={affiliation}]{#1}\
+     \\fi");
+  DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
   DefMacro!("\\inst{}",                 "\\lx@request@frontmatter@annotation[affiliation]{#1}");
   // \orcidID should be used within each author in \author
   DefMacro!("\\orcidID{}", "\\lx@add@orcid{#1}");
