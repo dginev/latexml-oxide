@@ -1470,13 +1470,22 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   1409.4048, 2011.08422) fail in BOTH. Only **1804.01117 (svjour3) is genuine Rust-only**
   (Perl completes in 32 s; Rust hits the token-stack guard). Crucially the limit
   **matches Perl exactly** (`Stomach.pm:159 $MAXSTACK=200`, identical guard at L175) —
-  so it is NOT a mis-set cap; Rust's `invoke_token` token_stack simply grows DEEPER than
-  Perl for the same input (the deep `\usepackage`→`\RequirePackage`→`\@iinput`→`{`…
-  stack), most likely because Rust digests package/`\@iinput` content inline on the
-  token_stack where Perl re-feeds it through the mouth/outer loop. Aligning that is a
-  deep, risky core-digestion change for a ~1-paper Rust-only subset ⇒ **deferred**; do
-  NOT raise `MAXSTACK` (diverges from Perl and lets genuine infinite recursion run). The
-  guard is doing its job — this category is a Rust **stability win**, not a bug cluster.
+  so it is NOT a mis-set cap; do NOT raise `MAXSTACK` (diverges from Perl and lets genuine
+  infinite recursion run). The guard is doing its job — this category is a Rust **stability
+  win**, not a bug cluster.
+  **DEEP-DIVE of the lone Rust-only case 1804.01117 (2026-06-28): it is NOT a
+  stomach-accounting bug — it is a tikz/pgf cascade.** Full stack capture: the top ~170
+  frames are `{ \bgroup { \bgroup …` piled up by **`\pgffor@expand@list`** (pgffor's
+  `\foreach`), immediately after `Error:pushback_limit:Timeout … loading binding for
+  'tikz.sty'`. Rust fails to load the `tikz.sty` binding (pushback-limit), leaving
+  `\foreach` in a broken state that floods the digestion stack → `Stomach:Recursion`;
+  Perl loads tikz fine and never gets there. (The earlier "Rust digests packages deeper"
+  hypothesis was WRONG.) Minimal `\usepackage{tikz}`, the full preamble package set, and
+  `tikz`+`\foreach` in the body all load CLEANLY — the binding-load pushback only triggers
+  under the paper's specific complex state (late in-body `\usepackage`/`\@iinput` mixed
+  with nested tables/cases), so it is not minimally reducible. ⇒ The real root is the
+  **known deep tikz/pgf binding-load lever**, not the stomach; the Stomach:Recursion
+  category has **zero genuine stomach bugs**.
 
 - **1610.00974 step-3 (global p{}→VBox) + cluster-B — ✅ LANDED 2026-06-22, NO
   LONGER DEFERRED.** See "Landed this session" above. p{}/m{}/b{} columns now build
