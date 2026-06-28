@@ -1,0 +1,23 @@
+% REPRODUCER — TeX's \noexpand is TRANSIENT, but our per-token \special_relax
+% family token is PERSISTENT, so a captured \noexpand'd token keeps relax meaning
+% instead of reverting to its plain shadowed token. Extracted 2026-06-28 from the
+% xint 1804.01117 cascade: xint's f-stop is `\def\XINTfstop{\noexpand\XINTfstop}`
+% (self-noexpanding) and its parser matches it with `\ifx\XINTfstop#1`
+% (xintexpr.sty:94, 562); the captured #1 is our family token, so \ifx fails ->
+% \XINT_expr_var_! loop.
+%
+% In TeX, `\romannumeral0\bar` expands \bar to its no_expand'd form, \romannumeral
+% backs it up, \test captures #1. TeX's no_expand_flag lives only for the one
+% get_x_token that read the \notexpanded: prefix; the backed-up / captured token
+% is the PLAIN \bar (cur_cs preserved, meaning re-derived from eqtb). So:
+%   \ifx\bar#1  ==  \ifx\bar\bar  ->  SAME
+% Rust (persistent family token \special_relax<0x01>\bar, relax meaning) -> DIFF.
+%
+% Expected (pdflatex): SAME.  Rust before fix: DIFF.
+\documentclass{article}
+\makeatletter
+\def\bar{\noexpand\bar}
+\def\test#1{\ifx\bar#1 SAME\else DIFF\fi}
+\begin{document}
+\expandafter\test\romannumeral0\bar
+\end{document}

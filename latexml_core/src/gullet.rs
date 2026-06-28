@@ -1823,7 +1823,14 @@ pub fn read_arg(expansion_level: ExpansionLevel) -> Result<Tokens> {
       if token.get_catcode() == Catcode::BEGIN {
         read_balanced(expansion_level, false, false)
       } else if matches!(expansion_level, ExpansionLevel::Off) {
-        Ok(Tokens!(token))
+        // A `\noexpand`'d token captured as an (undelimited) macro argument
+        // reverts to its plain shadowed identity — faithful to TeX, where the
+        // `no_expand_flag` is transient and never stored in the captured arg
+        // (`#1` is `cur_cs`, the plain token). This lets `\ifx\X#1` match (xint's
+        // `\def\XINTfstop{\noexpand\XINTfstop}` f-stop, witness 1804.01117).
+        // `\let`/`\ifx` of the LIVE token read via `read_token` (the `Token`
+        // param), NOT here, so their relax-meaning capture is unaffected.
+        Ok(Tokens!(token.noexpand_shadowed().unwrap_or(token)))
       } else {
         // Perl Gullet.pm `readArg`:
         //   return $self->readingFromMouth(Tokens(T_BEGIN, $token, T_END), sub {
