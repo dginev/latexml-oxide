@@ -1333,24 +1333,27 @@ rides the begin marker so the end marker is nameless.
     quant-ph0601167 2v9, cs0601001 0v8).
   Confirms the env-marker + anti-bloat + dump-regen changes introduce no real-paper
   parity regression, and re-confirms the high same-host-parity state across subjects.
-- **`\NewDocumentEnvironment` family — ✅ COVERED 2026-06-27** (was a limitation; the
-  fix was simpler than first thought). KEY INSIGHT: the `\begin`/`\end` dispatchers
-  ALREADY fire for these envs — every env flows through them — so the dispatcher half was
-  never the gap; only the `lx@envmarkup` flag was missing (l3 declares the env via
-  `\cs_new:cpn`, bypassing our `\newenvironment`). The clean fix wraps the **public**
-  declarations (`\NewDocumentEnvironment`/`\Renew…`/`\Provide…`/`\Declare…`,
-  kernel-default — in the dump) at the TeX level to set the SAME flag via a new
-  `\lx@mark@envmarkup{}` primitive, then chain to the original (verified the chain
-  preserves the env). Idempotent (`lx@orig@…` guard), existence-gated (`\@ifundefined`),
-  and **`@`-internal envs are excluded** (`tcb@drawing`/`tcb@savebox` etc. — package
-  implementation details, not user markup; that exclusion is locked by
-  `tests/tikz/various_colors`). Verified: `\NewDocumentEnvironment{fancy}…` → `ltx_env_fancy`
-  (regression case `ndfancy` in `tests/expansion/environments`). NOT patching l3 internals
-  — the earlier "fragile/deferred" assessment was wrong: wrapping the public command is
-  contained and robust. **Still uncovered:** purely `\def`-based envs (e.g. fancyvrb-ex's
-  `SideBySideExample`) — no definition chokepoint to flag, AND it's multi-deposit (two
-  sibling minipages, no single wrapper node) so the single-deposit rule wouldn't tag it
-  even if flagged; its `ltx_env_minipage` body hooks are the styling path.
+- **`\NewDocumentEnvironment` family — NOT covered (documented limitation; wrapper
+  REVERTED 2026-06-27, `94829c9634`).** It was briefly covered by a TeX wrapper of the
+  public declarations (setting the `lx@envmarkup` flag l3's `\cs_new:cpn` path skips), but
+  that wrapper caused an **infinite-expansion loop in the NODUMP base-load of `LaTeX.pool`**
+  (re-entrant require_package short-circuit → 2-token loop) — a strict-parity regression
+  (with-dump clean, NODUMP went from main's 0 errors to 1). Reverted for robustness; there
+  is no clean flag chokepoint for l3-declared envs, and user/package envs in practice use
+  `\newenvironment` (mhchem `annotation`, csquotes `displayquote`), which ARE covered. Also
+  **uncovered:** purely `\def`-based envs (fancyvrb-ex's `SideBySideExample`) — no chokepoint,
+  and multi-deposit anyway; its `ltx_env_minipage` body hooks are the styling path.
+- **Robustness fixes from an independent code review (2026-06-27, `94829c9634`):**
+  - **begin/end balance.** `IN_MATH` is asymmetric — a `\newenvironment` entering math in
+    its begin-code and exiting in its end-code (`{\[}{\]}`) pushed a begin but suppressed
+    its end, leaking a snapshot that desynced `ENV_CONSTRUCTION_STACK` for every later env.
+    Fix: the end marker carries the env name and `env_construct_end` matches its begin BY
+    NAME (rposition), discarding leaked-above snapshots, no-op if absent. Such a math-
+    entering env is itself left untagged (keeps the marker out of math); the cascade is gone.
+  - **thread-local reset.** The env-markup thread-locals had no reset, so on the LSP thread-
+    reuse path a leaked snapshot from conversion A could make B's `add_env_class` touch a
+    Node from A's dropped Document (use-after-free). `stomach::reset_env_markers` +
+    `document::reset_env_markup_state` now run from `state::reset_thread_state`.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.
