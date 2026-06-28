@@ -21,7 +21,7 @@ rss() { ps --no-headers -o rss -C cortex_worker 2>/dev/null | awk '{s+=$1}END{pr
 printf '%-8s %-9s %-10s %-11s %-6s %-7s\n' workers tasks_s peakRSSgb minMemAvgb sheds wall_s
 for N in $COUNTS; do
   ( cd ~/git/cortex && DATABASE_URL="$DB" "$CORTEX" rerun \
-      sandbox-arxiv-10k-shuffle oxidized-tex-to-html --yes --owner claude-agent \
+      sandbox-arxiv-10k-shuffle oxidized_tex_to_html --yes --owner claude-agent \
       --description "wc-sweep N=$N" ) >/dev/null 2>&1
   log="/tmp/swc_N${N}.log"
   setsid "$BIN" --harness --workers "$N" >"$log" 2>&1 &

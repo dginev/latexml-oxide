@@ -3,7 +3,7 @@
 # Perl `latexml_harness`. Brings up the self-supervising `--harness` fleet pointed at a dispatcher.
 #
 #   cortex-worker <dispatcher-host> [ventilator-port] [sink-port] [service]
-#   defaults:                        51695            51696       oxidized-tex-to-html
+#   defaults:                        51695            51696       oxidized_tex_to_html
 #
 #   env:  PROFILE=ar5iv (default) | generic
 #         WORKERS=<n>  pin the fleet size (battle-hardened sweet spot = physical cores + 1/8;
@@ -24,7 +24,7 @@ esac
 HOST="${1:-127.0.0.1}"
 VENT="${2:-51695}"
 SINK="${3:-51696}"
-SERVICE="${4:-oxidized-tex-to-html}"
+SERVICE="${4:-oxidized_tex_to_html}"
 
 # Optional explicit worker count (else the harness sizes itself); keep memory/timeout guards at the
 # binary's validated defaults — see docs/CORTEX_WORKER_HARNESS.md.

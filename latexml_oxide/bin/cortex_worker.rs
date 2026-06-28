@@ -60,8 +60,10 @@ struct Cli {
   /// the sink re-validates each returned result's service name against the
   /// task's service id (`src/dispatcher/sink.rs`) — a mismatch silently
   /// discards the result. The CorTeX preview registers this service as
-  /// `oxidized-tex-to-html` (hyphenated), so that is the default.
-  #[arg(long, default_value = "oxidized-tex-to-html")]
+  /// `oxidized_tex_to_html` (underscored — names use underscores consistently,
+  /// matching the `oxidized_tex_to_html.zip` result bundle), so that is the
+  /// default.
+  #[arg(long, default_value = "oxidized_tex_to_html")]
   service: String,
 
   /// Number of parallel worker threads

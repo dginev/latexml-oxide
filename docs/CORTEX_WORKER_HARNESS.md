@@ -61,7 +61,7 @@ Example (one command brings up the whole fleet):
 
 ```bash
 cortex_worker --harness \
-  --service oxidized-tex-to-html \
+  --service oxidized_tex_to_html \
   --source-address tcp://dispatcher:51695 \
   --sink-address   tcp://dispatcher:51696 \
   --profile ar5iv
