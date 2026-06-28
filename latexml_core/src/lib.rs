@@ -133,6 +133,10 @@ pub fn ensure_libxml_init() { libxml::init_parser(); }
 pub fn reset_thread_engine() {
   state::reset_thread_state();
   common::arena::reset();
+  // The error REPORT's `undefined`/`missing` maps are keyed by arena `SymStr`s,
+  // so they MUST be cleared together with the arena — otherwise a stale key
+  // resolves, in the renumbered arena, to a different string (phantom undefined).
+  common::error::reset_arena_keyed_reports();
 }
 
 pub use crate::common::error::*;

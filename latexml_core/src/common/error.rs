@@ -137,14 +137,17 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
       report.fatal = true;
     },
     Undefined => {
-      let entry = report
-        .undefined
-        .entry(what.unwrap_or_default())
-        .or_insert(0);
+      // `what` may borrow the arena buffer; `entry` re-interns via `arena::pin`,
+      // which can REALLOCATE that buffer and invalidate `what` mid-read, then
+      // intern whatever bytes now occupy the slot (e.g. a freshly-interned
+      // `\special_relax` family-token name → phantom undefined). Copy out first.
+      let key = what.unwrap_or_default().to_string();
+      let entry = report.undefined.entry(&key).or_insert(0);
       *entry += 1;
     },
     Missing => {
-      let entry = report.missing.entry(what.unwrap_or_default()).or_insert(0);
+      let key = what.unwrap_or_default().to_string();
+      let entry = report.missing.entry(&key).or_insert(0);
       *entry += 1;
     },
   }
@@ -185,6 +188,17 @@ pub fn initialize_report() {
   *report = LogState::default();
   reset_consecutive_error_tracker();
   LAST_RESOURCE_FATAL.with(|c| *c.borrow_mut() = None);
+}
+
+/// Clear the arena-`SymStr`-keyed report maps (`undefined`, `missing`). MUST be
+/// called whenever the arena is reset (see `crate::reset_thread_engine`): their
+/// keys are arena interner ids, so after `arena::reset()` a stale key resolves to
+/// whatever string now occupies that id — e.g. a `\special_relax` family-token
+/// name — producing phantom "undefined macro" reports across conversions.
+pub fn reset_arena_keyed_reports() {
+  let mut report = REPORT.borrow_mut();
+  report.undefined = Default::default();
+  report.missing = Default::default();
 }
 
 thread_local! {
