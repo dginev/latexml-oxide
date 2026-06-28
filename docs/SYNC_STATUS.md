@@ -1470,16 +1470,24 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   not read `.bst` yet. **Witness: arXiv:2605.16562** (LNCS, `splncs04.bst`). With a
   `bibtex`-generated `main.bbl` present, the bibliography matches the PDF exactly — PDF sort
   order, inline `\url`/`\doi` links, no "External Links:" label, corporate author rendered
-  "W3C Math Working Group". Without the `.bbl`, the `.bib`-direct path diverges: LaTeXML's
-  own alphabetical sort (different order), "External Links:" prefixes, DOI shown as bare
-  text (`10.48550/...`) rather than a `https://doi.org/...` link, the corporate author
-  mis-parsed as a personal name ("W. M. W. Group"), and a "See ," empty-crossref artifact.
-  None of these are formatting bugs in `MakeBibliography` (the duplicate-bibblock bug that
-  *was* there is fixed, commit `8ffca54713`); they are all consequences of synthesising a
-  bibliography from `.bib` without the `.bst`. **Resolution:** until native `.bst`
-  interpretation lands, rely on `bibtex`/AutoTeX producing the `.bbl` (production already
-  does); no latexml-oxide change. To reproduce: `latex main && bibtex main`, add `main.bbl`
-  to the source, re-convert → matches PDF; remove it → diverges as above.
+  "W3C Math Working Group". Without the `.bbl`, the `.bib`-direct path still diverges from
+  the PDF in ways that genuinely require the `.bst` (DEFERRED): LaTeXML's own alphabetical
+  sort (different order from splncs04), "External Links:" prefixes instead of inline links,
+  and DOI shown as bare text (`10.48550/...`) rather than a `https://doi.org/...` link.
+  These are inherent to synthesising a bibliography from `.bib` without the `.bst`, not
+  formatting bugs. **Resolution:** until native `.bst` interpretation lands, rely on
+  `bibtex`/AutoTeX producing the `.bbl` (production already does); no latexml-oxide change.
+  To reproduce: `latex main && bibtex main`, add `main.bbl` to the source, re-convert →
+  matches PDF; remove it → diverges as above.
+  NOTE: two *native-pipeline* bib bugs surfaced by the same witness were genuine and have
+  been FIXED (they did NOT need `.bst`): (1) the duplicate Note/External-Links bibblock
+  (`8ffca54713`); (2) brace-protected corporate authors mis-split into initials
+  ("{W3C Math Working Group}" → "W. M. W. Group") and the `@inproceedings` `booktitle`
+  dropped to a "See ," artifact — both from the simplified `.bib` parser
+  (`convert_bib_file_to_xml`) and the lightweight XPath matcher in `document.rs`
+  (value-less `[@attr]` predicate treated as always-true; `split('/')` fragmenting a
+  predicate's `../`). Fixed: corporate-author detection in `parse_bib_authors`, and a
+  bracket-aware / existence-checking `findnodes_by_traversal`.
 
 - **`Fatal:Stomach:Recursion` (43 cortex Rust-service fatals) — TRIAGED 2026-06-28,
   mostly SHARED / Rust-better; ~1 Rust-only over-fatal DEFERRED (deep core).** Two

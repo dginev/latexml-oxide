@@ -2961,6 +2961,30 @@ fn strip_braces(s: &str) -> String {
   result
 }
 
+/// True if `s` is a single brace group wrapping its entire content, e.g.
+/// `{W3C Math Working Group}` — i.e. the opening brace's match is the final
+/// character. Used to detect brace-protected corporate author names.
+fn is_braced_group(s: &str) -> bool {
+  let s = s.trim();
+  if s.len() < 2 || !s.starts_with('{') || !s.ends_with('}') {
+    return false;
+  }
+  let mut depth = 0i32;
+  for (i, b) in s.bytes().enumerate() {
+    match b {
+      b'{' => depth += 1,
+      b'}' => {
+        depth -= 1;
+        if depth == 0 {
+          return i == s.len() - 1;
+        }
+      },
+      _ => {},
+    }
+  }
+  false
+}
+
 /// Parse BibTeX author field into individual author names.
 /// "Lastname, Firstname and Lastname2, Firstname2" → vec of (surname, givenname)
 fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
@@ -2970,6 +2994,15 @@ fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
   for part in parts {
     let part = part.trim();
     if part.is_empty() {
+      continue;
+    }
+    // Corporate/institutional author wrapped in braces, e.g.
+    // `{W3C Math Working Group}`. BibTeX treats a fully brace-protected name as
+    // a single unit (a "last" name with no first/von parts), so keep it verbatim
+    // as the surname instead of splitting "last word = surname" (which produced
+    // "W. M. W. Group"). Witness 2605.16562.
+    if is_braced_group(part) {
+      result.push((strip_braces(part).trim().to_string(), String::new()));
       continue;
     }
     let clean = strip_braces(part);
