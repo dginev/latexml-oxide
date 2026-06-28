@@ -37,11 +37,22 @@ LoadDefinitions!({
   // \inst{labels} can be used within each author to identify which affiliations apply
   DefMacro!("\\author{}",
     "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author}{\\and\\And,}{#1}");
-  // Single \institute, with multiple institutions separated by \and
+  // Single \institute, with multiple institutions separated by \and.
   // The n-th institution is attached to the author which has that n in its \inst labels.
+  //
+  // IMPROVEMENT over upstream llncs.cls.ltxml: upstream splits \institute ONLY on
+  // \and. The very common lazy LNCS style instead writes ONE \institute block with
+  // hand-typed superscripts ("$^1$..\quad $^2$..") and no \and; upstream then makes
+  // a single affiliation = the whole block, attached to every \inst{1} author
+  // (duplicating it) while \inst{2}+ authors get nothing (witness 2606.19939;
+  // reproduces identically in Perl LaTeXML 0.8.8). Instead we route through the
+  // shared smart affiliation parser \lx@add@affiliations, which already handles
+  // BOTH forms: with superscript markers it splits on \quad/\qquad/\\ and extracts
+  // each superscript as the affiliation label that \inst{N} links to; without them
+  // it splits on \and (affil_splits() was extended to include \and). labelseq gives
+  // the \and-separated form its sequential 1,2,.. labels for \inst linking.
   DefMacro!("\\institute{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
-  DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
+    "\\lx@add@affiliations[labelseq={affiliation}]{#1}");
   DefMacro!("\\inst{}",                 "\\lx@request@frontmatter@annotation[affiliation]{#1}");
   // \orcidID should be used within each author in \author
   DefMacro!("\\orcidID{}", "\\lx@add@orcid{#1}");

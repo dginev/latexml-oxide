@@ -659,8 +659,15 @@ LoadDefinitions!({
   // frontmatter so that the annotation inherits it as label (!!)
   // Typically would \let\label to this so that a \ref within a parent frontmatter
   // will get an annotation with corresponding \label will be attached.
-  DefPrimitive!("\\lx@set@frontmatter@label Semiverbatim", sub[(label)] {
-    let label = clean_frontmatter_labels(&label.to_string(), "LABEL").into_iter().next();
+  DefPrimitive!("\\lx@set@frontmatter@label [] Semiverbatim", sub[(prefix, label)] {
+    // Optional prefix (default "LABEL"). The superscript heuristic passes the
+    // role ("affiliation") so the label exactly matches the corresponding
+    // \lx@request@frontmatter@annotation[affiliation] on the author; otherwise
+    // relocate_annotations falls back to prefix-stripped matching and conflates
+    // it with the creator's own "author:N" sequence label (double-attach).
+    let prefix = prefix.as_ref().map(ToString::to_string)
+      .filter(|p| !p.is_empty()).unwrap_or_else(|| "LABEL".to_string());
+    let label = clean_frontmatter_labels(&label.to_string(), &prefix).into_iter().next();
     with_pending_entry_attr(move |attr| {
       match label {
         Some(label) => {
@@ -896,13 +903,21 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   });
 
+  // Superscript markers in author/affiliation blocks carry the affiliation
+  // number. Both sides use the "affiliation" prefix so the author's requested
+  // annotation ("affiliation:N") exactly matches the affiliation's label
+  // ("affiliation:N") in relocate_annotations -- avoiding the prefix-stripped
+  // fallback that would otherwise conflate them with a creator's own "author:N"
+  // sequence label and double-attach.
+  DefMacro!("\\lx@sup@request@affiliation", "\\lx@request@frontmatter@annotation[affiliation]");
+  DefMacro!("\\lx@sup@setlabel@affiliation", "\\lx@set@frontmatter@label[affiliation]");
   DefMacro!(
     "\\lx@author@withsup{}",
-    "\\bgroup\\let^\\lx@request@frontmatter@annotation\\let\\textsuperscript\\lx@request@frontmatter@annotation#1\\egroup"
+    "\\bgroup\\let^\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"
   );
   DefMacro!(
     "\\lx@affiliation@withsup{}",
-    "\\bgroup\\let^\\lx@set@frontmatter@label\\let\\textsuperscript\\lx@set@frontmatter@label#1\\egroup"
+    "\\bgroup\\let^\\lx@sup@setlabel@affiliation\\let\\textsuperscript\\lx@sup@setlabel@affiliation#1\\egroup"
   );
 
   DefMacro!("\\lx@add@affiliations[]{}", sub[(attr, stuff)] {
@@ -910,10 +925,20 @@ LoadDefinitions!({
     dequeue_front_matter("ltx:contact", &[("role", "affiliation")]);
     let with_sup = position_of(&stuff, &authorsup_markers()).is_some();
     for line in split_tokens(stuff, affil_splits()) {
+      // Skip empty segments (e.g. a trailing \\ or a line that was wholly
+      // consumed by an \email/\url) so they don't become blank affiliations.
+      // Mirrors \lx@add@authors.
+      if line.is_empty() {
+        continue;
+      }
       if with_sup {
+        // The superscript markers ARE the affiliation labels here, so drop any
+        // caller-supplied labelseq: applying both double-labels each affiliation
+        // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
+        // which likewise passes no attr in its with-superscript branch.
         let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(line)]);
         calls.extend(
-          Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(withsup)]).unlist());
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(withsup)]).unlist());
       } else {
         calls.extend(
           Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr.clone(), Some(line)]).unlist());
@@ -3198,6 +3223,16 @@ fn author_affil_splits() -> Vec<SplitDelim> {
 }
 fn affil_splits() -> Vec<SplitDelim> {
   vec![
+    // The \and CONTROL-SEQUENCE family is added (vs upstream, which splits
+    // affiliations only on \quad/\qquad/\\): it lets the shared affiliation
+    // parser handle \and-separated institute/affiliation lists (e.g. LNCS
+    // \institute{A \and B}). NOTE: the literal word " and " is deliberately NOT
+    // included (unlike author_affil_splits) — institution names routinely
+    // contain "and" ("Electrical and Computer Engineering"), so splitting on it
+    // wrongly fragments them. Affiliations never use ',' as a separator either.
+    T_CS!("\\and").into(),
+    T_CS!("\\And").into(),
+    T_CS!("\\AND").into(),
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
     T_CS!("\\\\").into(),
