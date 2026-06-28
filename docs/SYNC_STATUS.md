@@ -1459,6 +1459,28 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 
 ## Deep deferred families (parked — large or shared; dedicated sessions)
 
+- **Native `.bst` interpretation — DEFERRED (pending plan, ~a few months out; do NOT
+  start work that requires reading `.bst`).** arXiv's bibliography convention is codified
+  in `ar5iv.sty`: LaTeXML prefers a ready-made `.bbl` and, only if none is present,
+  interprets the `.bib` itself into XML internally (its own `MakeBibliography` conventions).
+  In production this is a non-issue — arXiv's AutoTeX runs `bibtex`, so a `.bbl` is present
+  and the conversion reproduces the PDF. The gap only appears when a conversion sees
+  `.bib` + `.bst` but **no** `.bbl` (e.g. a standalone/manual run that skips `bibtex`):
+  the `.bib`-direct fallback cannot reproduce the document's `.bst` output, because we do
+  not read `.bst` yet. **Witness: arXiv:2605.16562** (LNCS, `splncs04.bst`). With a
+  `bibtex`-generated `main.bbl` present, the bibliography matches the PDF exactly — PDF sort
+  order, inline `\url`/`\doi` links, no "External Links:" label, corporate author rendered
+  "W3C Math Working Group". Without the `.bbl`, the `.bib`-direct path diverges: LaTeXML's
+  own alphabetical sort (different order), "External Links:" prefixes, DOI shown as bare
+  text (`10.48550/...`) rather than a `https://doi.org/...` link, the corporate author
+  mis-parsed as a personal name ("W. M. W. Group"), and a "See ," empty-crossref artifact.
+  None of these are formatting bugs in `MakeBibliography` (the duplicate-bibblock bug that
+  *was* there is fixed, commit `8ffca54713`); they are all consequences of synthesising a
+  bibliography from `.bib` without the `.bst`. **Resolution:** until native `.bst`
+  interpretation lands, rely on `bibtex`/AutoTeX producing the `.bbl` (production already
+  does); no latexml-oxide change. To reproduce: `latex main && bibtex main`, add `main.bbl`
+  to the source, re-convert → matches PDF; remove it → diverges as above.
+
 - **`Fatal:Stomach:Recursion` (43 cortex Rust-service fatals) — TRIAGED 2026-06-28,
   mostly SHARED / Rust-better; ~1 Rust-only over-fatal DEFERRED (deep core).** Two
   guards in `stomach.rs`: the box-cycle "Infinite digestion loop" (9 papers,
