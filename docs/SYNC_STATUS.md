@@ -1521,30 +1521,36 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   `\begingroup`) then `\XINT_NewFloatFunc`/`\XINT_NewExpr` (xintexpr.sty:4721) whose
   body-compilation does a balanced read that goes UNBALANCED ("readBalanced ran out of
   input in an unbalanced state" + "Attempt to close boxing group").
-  **CORRECTED CONCLUSION (3rd deep dive, 2026-06-28): this is a SHARED LaTeXML limitation,
-  NOT a Rust-unique bug.** The earlier "Perl processes the SAME xint TeX with no leak /
-  converts in 32 s" was an **invalid comparison** — the reference Perl on this host has no
-  `ar5iv.sty`, so `--preload=ar5iv.sty` silently emitted `missing_file:xintexpr` and
-  SKIPPED xint (never raw-loaded it). Forcing the raw-load with **`latexml --includestyles`
-  reproduces the IDENTICAL `readBalanced ran out` at xinttrig.sty:350** (26 errors,
-  degraded 459-byte XML, exit 0). Mechanism: xint does `\edef\X{\scantokens{...}}` where
-  `\scantokens` opens an autoclose "Anonymous String" mouth MID-`\edef`-body and the
-  `\edef`'s closing `}` is in the PARENT file; `readBalanced` reads the raw mouth and
-  breaks at the boundary WITHOUT crossing (gullet.rs `None => break`; **Perl Gullet.pm:466,
-  470-472 is line-for-line identical, same `level>0` TODO**). Real pdflatex succeeds only
-  because TeX `get_x_token`/`scan_toks` (tex.web §362-365) pops exhausted input levels
-  transparently. **The Rust-specific gap is RECOVERY, not the failure itself:** Rust leaks
-  the `\xintexprSafeCatcodes` `\begingroup` → "Attempt to close boxing group" → Missing-
-  number cascade through xinttrig → `Fatal:Timeout:TokenLimit`, where Perl degrades
-  gracefully (`\XINT_zapsp_b Match:` errors) and completes. **So 1804.01117 cannot convert
-  cleanly even in Perl — out of scope for the "clean ar5iv conversion" goal.** Fix options
-  (both deferred): (1) **parity** = harden Rust's post-readBalanced recovery so the leaked
-  `\begingroup` doesn't cascade to a TokenLimit fatal → match Perl's degraded-but-completing
-  output (delicate stomach/group code); (2) **surpass-Perl** = make `read_balanced` cross
-  autoclose mouths like `get_x_token` (prototyped this session: eliminates the readBalanced
-  failure + GD leak, passes all 1491 tests, dumps stay semantically identical — but
-  DIVERGES from Perl and exposes a deeper xint `\number` "Missing number" loop = a
-  multi-layer surpass-Perl chain). Full bisection +corrected diagnosis in
+  **✅ SURPASS-PERL LANDED 2026-06-28: 1804.01117 now converts FULLY under
+  `--preload=ar5iv.sty` (0 Error/Fatal, 423 KB HTML, renders cleanly with `--css=ar5iv.css
+  --nodefaultresources --path=~/git/ar5iv-css/css`; 463 native MathML nodes, 0 degraded
+  body nodes). Perl LaTeXML still DEGRADES to a 459-byte error stub here** (`latexml
+  --includestyles` → 26 errors, the IDENTICAL `readBalanced ran out` at xinttrig.sty:350),
+  so this is a genuine beyond-Perl win. The chain: ar5iv (INCLUDE_STYLES) raw-loads xint;
+  `xintexpr` does `\edef\X{\scantokens{...}}` where `\scantokens` opens an autoclose
+  "Anonymous String" mouth MID-`\edef`-body and the `\edef`'s closing `}` is in the PARENT
+  file. The fix is two-part, both faithful to tex.web `get_next`/`get_x_token` §362-365:
+  (1) **`read_balanced` now CROSSES autoclose mouths** (gullet.rs `None =>` arm: close the
+  exhausted autoclose mouth and resume the parent instead of `break`-ing unbalanced — the
+  same crossing `read_x_token` already does; dump-neutral, suite 1491/0). This kills the
+  `\xintexprSafeCatcodes` `\begingroup` leak → no "Attempt to close boxing group" → no
+  TokenLimit cascade. DELIBERATE divergence from Perl (Gullet.pm:466 `last`s here and so
+  also fails this input). (2) the prior-committed transient-`\noexpand` arg-capture decode +
+  per-token `\special_relax` family + native `\Ucharcat` (see
+  [[ucharcat-char-generate-noexpand-2026-06-28]]) which eliminated the `\XINT_expr_var_!`
+  expr-compiler cascade.
+  **Residual (HARMLESS, package-load-time only): 112 `Warning:expected:<number>` during
+  xinttrig's `\xintdeffloatfunc` compilation** (56× `\the` seeing `$`, 56× `\romannumeral`
+  seeing the f-stop `\special_relax\XINTusefunc`, all inside the "Anonymous String"
+  scantokens mouth). xint's compiled expression token-stream is slightly MISALIGNED vs real
+  xint, so a number scan lands on the f-stop. **Zero body impact** — this paper only
+  `\usepackage{xintexpr}` and never evaluates an expression in the body. Full xint
+  expression *evaluation* fidelity (so a real `\xintthefloatexpr sind(30)` computes the
+  correct value, not just "doesn't crash") is a deeper, separate surpass layer — **parked**.
+  **LONG-TERM FIDELITY FOLLOW-UP (user-flagged 2026-06-28):** the ar5iv rendering is a fair,
+  successful conversion but not yet pixel-perfect — improve the *fidelity* of **subfigures
+  and listings (reflow)**. Tracked here as a long-term task (not a correctness bug; the page
+  is far better than the prior broken/Fatal state). Repro + full bisection history in
   `docs/reproducers/xintexpr_pgfmath_ar5iv_pushback.tex`. The Stomach:Recursion category
   itself still has **zero genuine stomach bugs**.
 

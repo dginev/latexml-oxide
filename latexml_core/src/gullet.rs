@@ -1225,8 +1225,31 @@ pub fn read_balanced(
       cycle_guard_checkpoint(guard_active, t)?;
     }
     match next_token {
-      // What's the right error handling now?
-      None => break,
+      // Current mouth exhausted mid-balanced-read. Mirror read_x_token /
+      // tex.web get_next §362-365: a *transparent autoclose injection*
+      // (\scantokens, raw_tex) is part of the current logical input stream,
+      // so drain it and resume the enclosing mouth rather than reporting an
+      // unbalanced read. xint's `\edef\X{\scantokens{...}}` (xintexpr.sty
+      // \XINT_NewExpr) opens an autoclose "Anonymous String" mouth
+      // mid-edef-body whose matching `}` lives in the PARENT file; without
+      // crossing, the balanced read breaks at the mouth boundary and leaks the
+      // `\xintexprSafeCatcodes` `\begingroup`, corrupting everything after.
+      // DELIBERATE SURPASS-PERL divergence: Perl readBalanced (Gullet.pm:466)
+      // `last`s here and so also fails this xint input. We only cross autoclose
+      // injections (a real file/stream boundary is still left to its owner),
+      // matching the established read_x_token crossing.
+      None => {
+        let cross = {
+          let gullet = gullet!();
+          gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(false)
+            && !gullet.mouthstack.is_empty()
+        };
+        if cross {
+          close_mouth(false)?;
+          continue;
+        }
+        break;
+      },
       Some(token) => match token.get_catcode() {
         Catcode::CS if token.text == pin!("\\dont_expand") => {
           if let Some(next_t) = read_token()? {
