@@ -1548,3 +1548,30 @@ margin note — e.g. the mhchem package manual's `\marginpar{\Large !}` rendered
 **Rust status — DELIBERATE DIVERGENCE (Rust supersedes).** `\marginpar` now carries
 `bounded => true` (mirrors `\mbox`), scoping the note's font/catcode changes. Output-
 neutral across the suite (1487/0). See `OXIDIZED_DESIGN.md` #39. Candidate to upstream.
+
+## 39. booktabs `\cmidrule` defined via `\cline` → infinite loop under `\let\cline\cmidrule`
+
+`booktabs.sty.ltxml` defines `\cmidrule` to draw its partial rule by expanding to
+`\cline{<cols>}` (`\ltx@cmidrule` / `\ltx@@cmidrule` → `\cline{#2}`/`\cline{#3}`).
+This is a simplification — real booktabs `\cmidrule` draws the rule directly and
+does **not** touch `\cline`.
+
+**Trigger:** a document that does `\let\cline\cmidrule` (a common idiom to make
+`\cline` render as a nicer booktabs-style partial rule). In real LaTeX this is
+harmless because `\cmidrule` is self-contained. In LaTeXML it creates a cycle:
+`\cline` → `\cmidrule` → `\ltx@cmidrule` → `\cline` → `\cmidrule` → … — an infinite
+macro expansion.
+
+**Perl behavior:** Perl LaTeXML **hangs** (confirmed: `latexml --quiet` on
+arXiv 2506.23179 runs to a 90 s+ timeout with no output) — the identical
+`\cmidrule`→`\cline` binding loops with no conditional/expansion guard.
+
+**Rust status — DELIBERATE DIVERGENCE (Rust supersedes).** Rust's gullet has an
+8M-conditional `IfLimit` guard, so it fatals at ~12 s rather than hanging; and the
+booktabs binding now routes `\cmidrule` through a **private saved copy** of `\cline`
+(`\ltx@saved@cline`, captured at package-load before any document `\let`), so the
+cycle never forms — the witnesses convert cleanly (2506.23179 172.9 s→fatal ⇒ **3 s,
+0 errors**; 2511.17056 171.4 s→fatal ⇒ **1 s, 0 errors**). Output-neutral for ordinary
+`\cmidrule` (the saved CS equals `\cline` at load). Guard:
+`06_cluster_regressions.rs::cluster_cmidrule_cline_let`. Candidate to upstream.
+File: `latexml_package/src/package/booktabs_sty.rs`.

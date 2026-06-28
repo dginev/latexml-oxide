@@ -1,0 +1,16 @@
+\documentclass{article}
+\usepackage{booktabs}
+% A common idiom: make \cline render like a booktabs partial rule. LaTeXML's
+% booktabs binding defines \cmidrule in terms of \cline, so this \let would
+% create a \cmidrule->\cline->\cmidrule infinite expansion (8M-conditional
+% IfLimit fatal) unless \cmidrule routes through a saved private \cline.
+% Witnesses: arXiv 2506.23179, 2511.17056. Shared with Perl LaTeXML (which
+% hangs); Rust surpasses (see booktabs_sty.rs, KNOWN_PERL_ERRORS).
+\let\cline\cmidrule
+\begin{document}
+\begin{tabular}{ccccc}
+a & b & c & d & e \\
+\cline{2-5}
+f & g & h & i & j \\
+\end{tabular}
+\end{document}

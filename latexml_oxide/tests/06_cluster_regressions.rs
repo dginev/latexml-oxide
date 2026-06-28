@@ -81,6 +81,15 @@ fn cluster_setdec_dec() { convert_clean("tests/cluster_regressions/setdec_dec.te
 #[test]
 fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppercase.tex"); }
 
+/// `\let\cline\cmidrule` (a common booktabs idiom) must NOT create a
+/// `\cmidrule`->`\cline`->`\cmidrule` infinite expansion. LaTeXML's booktabs
+/// binding defines `\cmidrule` via `\cline`, so the `\let` would loop until the
+/// 8M-conditional IfLimit fatal unless `\cmidrule` routes through a private
+/// saved `\cline` (`booktabs_sty.rs` `\ltx@saved@cline`). Shared with Perl
+/// LaTeXML (which hangs); Rust surpasses. Witnesses: arXiv 2506.23179, 2511.17056.
+#[test]
+fn cluster_cmidrule_cline_let() { convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex"); }
+
 /// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)
 /// and `\textquoteright` apostrophe — must produce 0 errors after the
 /// csname-stream soft-substitute fixes for `\lx@applyaccent`, the canonical

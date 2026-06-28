@@ -49,6 +49,18 @@
   (xsltproc full-HTML diff + historical-bundle keywords-meta diff), suite **1488/0**
   + guard `08_xslt_head_keywords.rs`. See the #201–300 4-cluster triage below,
   `OXIDIZED_DESIGN.md` #40, `ARXIV_PERFORMANCE.md` Hotspot #3.
+- **PERF/parity (2026-06-28): booktabs `\cmidrule` infinite loop under
+  `\let\cline\cmidrule` — FIXED (surpass-Perl).** Triaging the slowest-100 batch
+  **#301-400** (parallel 50-worker re-run: 74/100 <5 s, ~24 known Cluster-C
+  math-heavy theses, **0 timeouts**) surfaced 2 `Fatal:Timeout:IfLimit` papers
+  (2506.23179, 2511.17056, both sn-jnl). Root cause: LaTeXML's booktabs binding
+  defines `\cmidrule`→`\cline`, so a document `\let\cline\cmidrule` makes
+  `\cmidrule`→`\cline`→`\cmidrule` loop forever. **Shared with Perl** (Perl *hangs*
+  90 s+; Rust's 8M-`IfLimit` guard fatals at ~12 s — already better). Fixed by
+  routing `\cmidrule` through a private `\ltx@saved@cline` captured at booktabs-load
+  (`booktabs_sty.rs`): 2506.23179 →**3 s/0 err**, 2511.17056 →**1 s/0 err**.
+  Output-neutral for ordinary `\cmidrule`; guard
+  `06_cluster_regressions.rs::cluster_cmidrule_cline_let`; `KNOWN_PERL_ERRORS.md` #39.
 - **Broad regression + health sweep (2026-06-27):** ~140 diverse random corpus
   papers (two samples of 40 + 100, NOT the perf testbed) on the current binary →
   **0 crashes, 0 fatals, 0 hangs** across all conversions; unbound-class (OmniBus
