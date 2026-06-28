@@ -439,15 +439,32 @@ impl BoxOps for Digested {
   /// but when called on the concrete types it will always compute sizes fresh.
   fn compute_size(&self, options: HashMap<Stored>) -> Result<(Dimension, Dimension, Dimension)> {
     use DigestedData::*;
+    // A self-referential box (its size computation recurses into the SAME
+    // RefCell — e.g. a box that transitively contains itself) would re-enter
+    // `borrow_mut` and panic ("already borrowed"). The other traversals on
+    // `Digested` (fingerprint, serialization) already guard with `try_borrow`;
+    // do the same here and treat a re-entrant cycle as zero-size to break it.
+    // Witness: astro-ph0310145 (panicked at digested.rs Alignment arm).
+    let zero = (Dimension::new(0), Dimension::new(0), Dimension::new(0));
     match *self.0 {
-      TBox(ref b) => b.borrow_mut().compute_size_and_cache(options),
-      List(ref l) => l.borrow_mut().compute_size_and_cache(options),
-      KeyVals(ref kvs) => kvs.compute_size(options),
-      Whatsit(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Alignment(ref w) => w.borrow_mut().compute_size_and_cache(options),
-      Postponed(_) | RegisterValue(_) | Comment(_) => {
-        Ok((Dimension::new(0), Dimension::new(0), Dimension::new(0)))
+      TBox(ref b) => match b.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
       },
+      List(ref l) => match l.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
+      },
+      KeyVals(ref kvs) => kvs.compute_size(options),
+      Whatsit(ref w) => match w.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
+      },
+      Alignment(ref w) => match w.try_borrow_mut() {
+        Ok(mut x) => x.compute_size_and_cache(options),
+        Err(_) => Ok(zero),
+      },
+      Postponed(_) | RegisterValue(_) | Comment(_) => Ok(zero),
     }
   }
 }

@@ -667,7 +667,13 @@ impl Document {
         Alignment(alignment) => {
           self.set_box_to_absorb(Some((*front_box).clone()));
           self.init_constructed_nodes();
-          alignment.borrow_mut().be_absorbed_mut(self)?;
+          // A self-referential alignment (transitively contains itself) would
+          // re-enter `borrow_mut` here and panic ("already borrowed"). Guard like
+          // the size-computation traversal (digested.rs) and skip the re-entrant
+          // absorption to break the cycle. Witness: astro-ph0310145 et al.
+          if let Ok(mut a) = alignment.try_borrow_mut() {
+            a.be_absorbed_mut(self)?;
+          }
           self.close_constructed_nodes();
           self.expire_box_to_absorb();
         },
@@ -844,17 +850,22 @@ impl Document {
       self.absorb(digested, None)?;
     }
 
-    let self_node = self.node.get_parent().unwrap();
-    let mut c = Some(self_node);
+    // Walk up from the current insertion point to learn whether `node` is still
+    // an open ancestor (so it can be closed below). `self.node` may be the
+    // parentless document root, and an intermediate node may be detached — a
+    // `None` parent there simply means `node` is NOT an ancestor (stop the walk),
+    // so don't `.unwrap()`-panic on it. Witnesses: hep-th0201062, 1009.0637.
+    let mut c = self.node.get_parent();
     while c.is_some()
       && c.as_ref() != Some(&node)
       && c.as_ref().unwrap().get_type() != Some(NodeType::DocumentNode)
     {
-      let parent = c.unwrap().get_parent().unwrap();
-      c = match parent.get_type() {
-        Some(NodeType::DocumentNode) => None,
+      c = match c.as_ref().unwrap().get_parent() {
         None => None,
-        Some(_) => Some(parent),
+        Some(parent) => match parent.get_type() {
+          Some(NodeType::DocumentNode) | None => None,
+          Some(_) => Some(parent),
+        },
       };
     }
 
