@@ -6643,6 +6643,23 @@ LoadDefinitions!({
     document.env_construct_end()?;
   }, sizer => 0, reversion => "");
 
+  // env-markup-class: set the `lx@envmarkup:<name>` flag that the `\begin`/`\end`
+  // dispatchers gate marker emission on. `\newenvironment`/`\renewenvironment` set
+  // it inline (below); this primitive lets the TeX-level wrappers of the public
+  // `\NewDocumentEnvironment`-family (l3/xparse, whose `\cs_new` path bypasses our
+  // `\newenvironment`) set the SAME flag, so the already-general dispatcher tags
+  // those user/package envs too. Global scope matches l3's global env definitions.
+  DefPrimitive!("\\lx@mark@envmarkup{}", sub[(name)] {
+    let name = Expand!(name).to_string();
+    // Skip `@`-named envs: the LaTeX internal-naming convention marks package
+    // implementation details (e.g. tcolorbox's `tcb@drawing`/`tcb@savebox`), not
+    // user-facing markup worth a CSS hook. Public `\NewDocumentEnvironment` envs
+    // (no `@`) are still flagged.
+    if !name.contains('@') {
+      assign_value(&s!("lx@envmarkup:{name}"), true, Some(Scope::Global));
+    }
+  });
+
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(_star_opt, name, nargs, opt, begin, end)] {
     let name = { Expand!(name).to_string() };
@@ -6699,6 +6716,31 @@ LoadDefinitions!({
     }
     Ok(Vec::new())
   });
+
+  // env-markup-class: extend tagging to the l3/xparse document-environment family.
+  // The `\begin`/`\end` dispatchers already fire for these envs (every env flows
+  // through them); they only lacked the `lx@envmarkup` flag because l3 declares the
+  // env via `\cs_new:cpn`, not our `\newenvironment`. Wrap the PUBLIC declarations
+  // (NOT l3 internals) to set the flag, then chain to the original (verified the
+  // chain preserves the env). Idempotent (`lx@orig@…` guard ⇒ no double-wrap across
+  // dump+constructs) and gated on existence (`\@ifundefined` ⇒ safe in plain TeX).
+  TeX!(
+    r"\makeatletter
+\def\lx@@wrap@docenv#1{%
+  \expandafter\ifx\csname lx@orig@\expandafter\@gobble\string#1\endcsname\relax
+    \expandafter\let\csname lx@orig@\expandafter\@gobble\string#1\endcsname#1%
+    \begingroup\edef\lx@@x{\endgroup
+      \protected\def\noexpand#1####1{%
+        \noexpand\lx@mark@envmarkup{####1}%
+        \expandafter\noexpand\csname lx@orig@\expandafter\@gobble\string#1\endcsname{####1}}}%
+    \lx@@x
+  \fi}
+\@ifundefined{NewDocumentEnvironment}{}{\lx@@wrap@docenv\NewDocumentEnvironment}%
+\@ifundefined{RenewDocumentEnvironment}{}{\lx@@wrap@docenv\RenewDocumentEnvironment}%
+\@ifundefined{ProvideDocumentEnvironment}{}{\lx@@wrap@docenv\ProvideDocumentEnvironment}%
+\@ifundefined{DeclareDocumentEnvironment}{}{\lx@@wrap@docenv\DeclareDocumentEnvironment}%
+\makeatother"
+  );
 
 
   //======================================================================

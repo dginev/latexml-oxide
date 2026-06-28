@@ -1297,18 +1297,28 @@ rides the begin marker so the end marker is nameless.
   `\newenvironment{annotation}` is tagged `ltx_env_annotation`, and the `SideBySideExample`
   bodies carry `ltx_env_minipage` (124×, binding side) — the exact CSS hooks the
   ar5iv.css layout targets.
-- **Known limitation — `\NewDocumentEnvironment` not tagged (tracked, NOT planned):**
-  xparse/`\NewDocumentEnvironment` (and `\DeclareDocumentEnvironment`/`\ProvideDocumentEnvironment`)
-  come from the **raw-loaded l3 kernel (ltcmd)**, which declares the env's `\<name>`/
-  `\end<name>` macros via `\cs_new:cpn`, NOT our `\newenvironment` primitive — so the
-  `lx@envmarkup:<name>` flag is never set and the env gets no `ltx_env_<name>` (verified:
-  `\NewDocumentEnvironment{fancy}{}{\begin{quote}}{\end{quote}}` → only `ltx_env_quote`
-  from the binding side, no `ltx_env_fancy`). The deposited semantic nodes still carry
-  their own classes (a CSS hook exists), so this is a missing *env-name* hook, not lost
-  styling. Covering it cleanly needs definition-provenance tracking or a robust l3-kernel
-  hook (both fragile/out of the feature's `\newenvironment`/`\renewenvironment` scope), so
-  it is deliberately **deferred**, not attempted. The feature scope matches the user's
-  stated ask exactly.
+- **Same-host parity spot-check (2026-06-27, this branch's binary vs Perl 0.8.8):** 12 old
+  (pre-expl3) `0704.*` papers, Rust-vs-Perl error counts → **0 Rust-worse**; 9/12 exact
+  parity, 2 Rust-BETTER (0704.0295 1v6, 0704.3173 0v12), 1 equal (0704.3654 12v12, shared
+  root). Confirms the env-marker change introduces no real-paper parity regression.
+- **`\NewDocumentEnvironment` family — ✅ COVERED 2026-06-27** (was a limitation; the
+  fix was simpler than first thought). KEY INSIGHT: the `\begin`/`\end` dispatchers
+  ALREADY fire for these envs — every env flows through them — so the dispatcher half was
+  never the gap; only the `lx@envmarkup` flag was missing (l3 declares the env via
+  `\cs_new:cpn`, bypassing our `\newenvironment`). The clean fix wraps the **public**
+  declarations (`\NewDocumentEnvironment`/`\Renew…`/`\Provide…`/`\Declare…`,
+  kernel-default — in the dump) at the TeX level to set the SAME flag via a new
+  `\lx@mark@envmarkup{}` primitive, then chain to the original (verified the chain
+  preserves the env). Idempotent (`lx@orig@…` guard), existence-gated (`\@ifundefined`),
+  and **`@`-internal envs are excluded** (`tcb@drawing`/`tcb@savebox` etc. — package
+  implementation details, not user markup; that exclusion is locked by
+  `tests/tikz/various_colors`). Verified: `\NewDocumentEnvironment{fancy}…` → `ltx_env_fancy`
+  (regression case `ndfancy` in `tests/expansion/environments`). NOT patching l3 internals
+  — the earlier "fragile/deferred" assessment was wrong: wrapping the public command is
+  contained and robust. **Still uncovered:** purely `\def`-based envs (e.g. fancyvrb-ex's
+  `SideBySideExample`) — no definition chokepoint to flag, AND it's multi-deposit (two
+  sibling minipages, no single wrapper node) so the single-deposit rule wouldn't tag it
+  even if flagged; its `ltx_env_minipage` body hooks are the styling path.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.

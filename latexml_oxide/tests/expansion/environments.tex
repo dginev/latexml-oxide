@@ -61,4 +61,12 @@ a + b
 \newenvironment{mw}{\langle}{\rangle}
 $\begin{mw}x\end{mw}$
 
+% (e) \NewDocumentEnvironment (l3/xparse, kernel-default) — the \begin/\end
+% dispatchers already fire for it; a TeX-level wrapper of the public declaration
+% sets the same lx@envmarkup flag, so a PUBLIC env is tagged ltx_env_ndfancy.
+% (@-internal envs like tcolorbox's tcb@drawing are excluded — locked by
+% tests/tikz/various_colors.)
+\NewDocumentEnvironment{ndfancy}{}{\begin{quote}}{\end{quote}}
+\begin{ndfancy}nd-body\end{ndfancy}
+
 \end{document}
