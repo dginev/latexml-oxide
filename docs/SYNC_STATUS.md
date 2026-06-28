@@ -1216,12 +1216,36 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    cases toward 0 errors; validate the corpus mhchem witnesses via cortex (the flip
    is corpus-wide).
 
-### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING + RAW SIDES LANDED)
+### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING + RAW + ANTI-BLOAT LANDED)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
 with `class="ltx_env_<name>"` so any env (incl. minipage-like `SideBySideExample`)
-becomes responsively styleable in CSS. On its own branch — it changes nearly every
-test XML (additive class on every env element). Regenerate goldens with the new
+becomes responsively styleable in CSS. On its own branch. Regenerate goldens with
 `tools/maketests.sh` (the `LATEXML_BLESS=1` bless mode).
+
+**ANTI-BLOAT + FINAL SCOPE — ✅ DONE 2026-06-27** (`8f2888fcc3`). The class is added by
+the shared `document::add_env_class` (both the binding `env_arm` path and the raw
+marker path route through it), which **drops it when redundant**, so `ltx_env_*` only
+appears where the env adds info the markup doesn't:
+- **(0) SVG internals** — never tag `<svg:g>` (tikz/pgf `scope`/`pgfscope`/`pgfonlayer`);
+  the SVG analog of the IN_MATH gate for math `XM*`.
+- **(1) name-match (+ `_autoopened` look-through)** — skip if the node's own name equals
+  `<name>` (`<enumerate>`, `<equation>`, `<Math>`), OR the sole element it wraps through
+  a chain of builder-inserted (`_autoopened`) wrappers does (top-level `tabular` →
+  `<para><tabular>`, kept consistent with the in-float direct form). `myquote`→`<para>`,
+  `algorithmic`→`<listing>`, `tikzpicture`→`<picture>` are KEPT.
+- **(2) self-classed** — skip if the node already carries a NON-`ltx_env_` class
+  (`minipage`→`ltx_minipage`, algorithm-float→`ltx_float_algorithm`). Existing
+  `ltx_env_` classes don't count, so nested envs stack (`algorithmic` over `list`).
+- **Scope: user/package (`\newenvironment`/`\renewenvironment`/`\NewDocumentEnvironment`)
+  + binding `DefEnvironment`s.** Tagging ALL path-2 built-ins was evaluated and REJECTED:
+  emitting marker boxes for math-block envs (`eqnarray`/`align`) at `\begin` (where
+  `IN_MATH` is still false) **structurally corrupts** their equationgroup build (spurious
+  `<equation>` nodes) — a digest-phase problem the absorb-phase `add_env_class` guards
+  cannot catch, and no clean digest signal distinguishes a math-entering env.
+- **Note (CLI vs harness):** the test harness passes `labelled_test`, but a bare CLI run
+  of `tests/complex/labelled.tex` emits 14 ERRORs (it `\input`s a `.latexml` binding file
+  the CLI path handles differently). PRE-EXISTING (committed CLI identical), unrelated to
+  env-markup; out of scope.
 
 **BINDING SIDE (`DefEnvironment!`) — DONE.** Mechanism (after exploring & rejecting
 several): the wrapper is the **FIRST OUTERMOST `open_element`** after `\begin`. A
@@ -1238,7 +1262,8 @@ the topmost root is that para → mis-tags). Validated: quote/itemize/figure/the
 equation/alltt + nesting all tag the correct element; suite 1487/0; 76 goldens
 regenerated, purely additive class additions.
 - **Consequences of full-scope tagging (accepted, user-directed):** (1) inline `$…$`
-  (the `math` env) gains `ltx_env_math` everywhere; (2) attribute-less wrappers that
+  (the `math` env) ~~gains `ltx_env_math` everywhere~~ — **REVERSED by anti-bloat rule
+  (1)**: `<Math>` name-matches `math`, so it is no longer tagged; (2) attribute-less wrappers that
   LaTeXML normally elides are now PRESERVED (they carry a class) — rare, structural,
   but desirable for styling; (3) **class-predicate DefRewrites break** — a rule keyed on
   `[not(@class)]` or `[@class='exact']` on an env element no longer matches (the env now
