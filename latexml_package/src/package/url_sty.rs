@@ -41,7 +41,14 @@ LoadDefinitions!({
   DefMacro!("\\lx@url@url Token", sub[(cmd)] {
     let perc = vec!['%'];
    begin_semiverbatim(Some(&perc));
-    let mut open = read_token()?.unwrap();
+    // `\url`/`\path` requires a following delimiter/argument token; on
+    // input-exhaustion `read_token_required` emits the parity "file ended while
+    // scanning use of \url" error. Don't panic — unwind the semiverbatim frame
+    // and close the `\begingroup` `\url`/`\path` opened, emitting nothing.
+    let Some(mut open) = read_token_required(&cmd.to_string())? else {
+      end_semiverbatim()?;
+      return Ok(Tokens::new(vec![T_CS!("\\endgroup")]));
+    };
     let close;
     let url = if open.get_catcode() == Catcode::BEGIN {
       open = T_OTHER!("{");

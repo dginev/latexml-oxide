@@ -102,6 +102,21 @@ fn cluster_omnibus_natbib_bbl_sideload() {
   convert_clean("tests/cluster_regressions/omnibus_natbib_bbl_sideload.tex");
 }
 
+/// A bare `\url` at end-of-input previously panicked: `\url`'s reader did
+/// `read_token()?.unwrap()` and the `None` (input exhausted) hit the `.unwrap()`.
+/// Real TeX raises a clean "Emergency stop" ("File ended while scanning use of
+/// \url"); now `read_token_required` emits that parity Error and the macro
+/// degrades (closes its group) instead of crashing. Guards the whole
+/// `read_token_required` family (hyperref/url.sty `\url`, `\path`, amscd `\cd@`,
+/// `\textfont`). Witnesses: 1401.5000, 1502.05051, 2204.10457. `convert_to_xml`
+/// panics if the conversion produced no result — i.e. it catches a regressed
+/// panic — while tolerating the one intentional `expected` Error.
+#[test]
+fn cluster_url_at_eof_no_panic() {
+  let xml = convert_to_xml("tests/cluster_regressions/url_eof_no_panic.tex");
+  assert!(!xml.is_empty(), "url-at-EOF conversion produced empty output");
+}
+
 /// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)
 /// and `\textquoteright` apostrophe — must produce 0 errors after the
 /// csname-stream soft-substitute fixes for `\lx@applyaccent`, the canonical

@@ -668,6 +668,26 @@ fn cycle_guard_checkpoint(active: bool, nextt: &Token) -> Result<()> {
   Ok(())
 }
 
+/// Read a token that the calling macro/primitive REQUIRES, holding the
+/// "argument expected but input ended" diagnostic in one place.
+///
+/// `read_token()` returning `None` (input exhausted) is a normal, expected
+/// control-flow signal in most contexts (end of file/group/optional-arg scan) —
+/// so the primitive deliberately keeps the `Option`. But for a caller that
+/// genuinely requires a token here, `None` is TeX's *"File ended while scanning
+/// use of \cs"* error state (real `pdftex` raises an `! Emergency stop`). This
+/// helper emits that parity `Error!` once, centrally, instead of every call site
+/// `.unwrap()`-panicking on the `None`. It STILL returns the `Option` (it does
+/// NOT fabricate a token), so the type system keeps each caller honest about how
+/// it degrades — close its group, substitute a default, etc.
+pub fn read_token_required(what: &str) -> Result<Option<Token>> {
+  let tok = read_token()?;
+  if tok.is_none() {
+    Error!("expected", what, format!("input ended while scanning use of {what}"));
+  }
+  Ok(tok)
+}
+
 pub fn read_token() -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
   loop {
@@ -1539,7 +1559,9 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         "csname",
         format!(
           "CS-name read exceeded {MAX_CS_NAME_BYTES} bytes; aborting at partial cs: {:?}",
-          &cs[..cs.len().min(200)]
+          // Truncate by CHARS, not bytes — a byte slice at 200 can split a
+          // multi-byte UTF-8 char (e.g. 'ä') and panic. Witness 2601.03403.
+          cs.chars().take(200).collect::<String>()
         )
       );
       break;
