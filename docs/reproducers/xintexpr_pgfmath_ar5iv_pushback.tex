@@ -1,5 +1,23 @@
 % REPRODUCER — arXiv:1804.01117 fails ONLY with --preload=ar5iv.sty.
 % =============================================================================
+% ✅ RESOLVED — SURPASS-PERL LANDED 2026-06-28. 1804.01117 now converts FULLY
+% under `--preload=ar5iv.sty` (0 Error/Fatal, ~423 KB HTML, renders cleanly
+% with `--css=ar5iv.css --nodefaultresources --path=~/git/ar5iv-css/css`).
+% Perl LaTeXML still DEGRADES here (`latexml --includestyles` => 26 errors,
+% 459-byte stub) — a genuine beyond-Perl win. The fix is two faithful
+% tex.web get_next/get_x_token §362-365 changes in gullet.rs read_balanced:
+%   (1) CROSS autoclose mouths: on `None` (current mouth exhausted) close the
+%       exhausted autoclose injection and resume the parent instead of breaking
+%       unbalanced. Kills the \xintexprSafeCatcodes \begingroup leak.
+%   (2) COLLAPSE \noexpand'd family tokens to plain when collected into the
+%       result (the \edef-body fidelity fix; see noexpand_edef_collapse.tex).
+% Plus the earlier per-token \special_relax family + transient arg-capture
+% decode + native \Ucharcat. Residual: 112 package-LOAD `Warning:expected:
+% <number>` from xinttrig's \xintdeffloatfunc compilation (deeper xint
+% expression-evaluation misalignment — PARKED; 0 body impact, the paper never
+% evaluates xint). Long-term fidelity follow-up: subfigure + listings reflow.
+% See docs/SYNC_STATUS.md "Deep deferred families", 1804.01117.
+% =============================================================================
 % CORRECTED DIAGNOSIS 2026-06-28 (supersedes the "GENUINE Rust bug / Perl
 % succeeds" framing further down — that was an INVALID comparison: the
 % reference Perl on this host has no ar5iv.sty, so `--preload=ar5iv.sty`

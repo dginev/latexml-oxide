@@ -1,0 +1,42 @@
+% REPRODUCER — a \noexpand'd token COLLECTED INTO AN \edef BODY must collapse to
+% its plain shadowed identity. TeX's no_expand_flag is TRANSIENT (tex.web
+% §1149-1153): it gives relax meaning for exactly one get_x_token, and \edef
+% stores the PLAIN token (cur_cs preserved), NOT a relax marker. Our per-token
+% \special_relax family token is PERSISTENT, so before the fix it leaked into
+% the \edef body verbatim.
+%
+% Extracted 2026-06-28 from the xint 1804.01117 ar5iv cascade: xint's
+% self-noexpanding f-stop is `\def\XINTfstop{\noexpand\XINTfstop}` and the
+% expression compiler does `\edef\X{...\romannumeral0...\XINTfstop...}` — the
+% f-stop is reached via \romannumeral's scan_int backing it up, then stored.
+%
+% ============================ etex GROUND TRUTH ============================
+%   \def\stopx{\noexpand\stopx}
+%   \edef\ra{\romannumeral0\stopx}        => \meaning\ra == "macro:->\stopx"
+%   \def\fstop{\noexpand\fstop}
+%   \edef\rb{\romannumeral\fstop 7}       => \meaning\rb == "macro:->\fstop 7"
+%     (the "Missing number, treated as zero" on \rb is GENUINE TeX parity —
+%      \romannumeral on a bare relax-meaning f-stop; real etex warns too. The
+%      bug was only the STORED token: \special_relax\fstop instead of \fstop.)
+%
+% Rust BEFORE fix:  \ra == "macro:->\special_relax\stopx"   (WRONG)
+% Rust AFTER  fix:  \ra == "macro:->\stopx"                 (matches etex)
+%
+% FIX: latexml_core/src/gullet.rs read_balanced — when a \special_relax family
+% token is collected into the result list, push its noexpand_shadowed() plain
+% identity. Gated on CS/active so the hot per-token push pays only a catcode
+% check. Mirrors the macro-arg-capture decode in read_arg (commit 6626a6d48c,
+% docs/reproducers/noexpand_transient_capture.tex).
+%
+% NOTE: this fixes the STORED-token discrepancy. It does NOT clear the deeper
+% xint-compilation misalignment (112 package-load `Warning:expected:<number>`
+% in 1804.01117) where a number scan ENCOUNTERS the f-stop — that is the parked
+% xint expression-evaluation fidelity work (docs/SYNC_STATUS.md, "Deep deferred
+% families", 1804.01117).
+\documentclass{article}
+\makeatletter
+\def\stopx{\noexpand\stopx}
+\edef\ra{\romannumeral0\stopx}
+\begin{document}
+A[\meaning\ra]
+\end{document}

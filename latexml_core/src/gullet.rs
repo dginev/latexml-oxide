@@ -1347,8 +1347,25 @@ pub fn read_balanced(
               generate_error_stub(&token)?;
             }
           }
-          // if no special handling triggered above, just return the token
-          tokens.push(token);
+          // If no special handling triggered above, return the token — EXCEPT a
+          // \special_relax (noexpand'd) family token collected into an expanded
+          // token list reverts to its plain shadowed identity. TeX's
+          // no_expand_flag is transient (tex.web §1149-1153), so \edef/\xdef
+          // store the PLAIN token, not a relax marker. etex/pdflatex ground
+          // truth:
+          //   \def\s{\noexpand\s}\edef\r{\romannumeral0\s} => \meaning\r is
+          //   "macro:->\s"  (xint's self-noexpanding f-stop idiom).
+          // Without this, the family token persists into the \edef body and a
+          // later number scan (\the/\romannumeral) lands on it ("Missing
+          // number"). Mirrors the macro-arg-capture decode in read_arg. Gated
+          // on CS/active so the hot per-token push pays only a cheap catcode
+          // check (only CS/active tokens are ever family tokens, and minting
+          // only happens while expanding).
+          if cc.is_active_or_cs() {
+            tokens.push(token.noexpand_shadowed().unwrap_or(token));
+          } else {
+            tokens.push(token);
+          }
         },
       },
     }
