@@ -1776,7 +1776,9 @@ LoadDefinitions!({
         script_sizer(w.get_arg(1).unwrap(), None, None, "SUBSCRIPT", "post") }
   );
 
-  // Rewrite: floating superscript in frontmatter → plain text sup/sub
+  // Rewrite: a floating super/subscript that is really text — a plain-text
+  // frontmatter mark, or a text-mode `\mbox{…}` of rendered markup (e.g. an
+  // ORCID logo) — into an HTML ltx:sup/ltx:sub rather than empty-base math.
   //
   // Performance note (R35.D, 2026-05-22). The original XPath included
   // a `not(./*/*[not(self::ltx:XMTok)])` predicate (every XMApp
@@ -1835,51 +1837,91 @@ LoadDefinitions!({
           let xmarg_children: Vec<Node> = xmapp.get_child_nodes().into_iter()
             .filter(|n| n.get_type() == Some(NodeType::ElementNode)).collect();
           if xmarg_children.len() != 1 { return restore(document, math); }
-          let only_xmtok_grandchildren = xmarg_children.iter().all(|c| {
-            c.get_child_nodes().into_iter()
+          let qname = if role == "FLOATSUPERSCRIPT" { "ltx:sup" } else { "ltx:sub" };
+          let content_box = xmarg_children.first().unwrap();
+          // Locate a text-mode box (`ltx:XMText`, from `\mbox{…}`): either the
+          // float's argument itself, or — the argument is still wrapped at
+          // rewrite time — the sole XMText inside its XMArg wrapper, ignoring
+          // any spacing hints (the `\,` in `\orcidID` becomes an XMHint sibling).
+          let text_box = if document::with_node_qname(content_box, |q| q == "ltx:XMText") {
+            Some(content_box.clone())
+          } else {
+            let inner: Vec<Node> = content_box.get_child_nodes().into_iter()
               .filter(|n| n.get_type() == Some(NodeType::ElementNode))
-              .all(|gc| document::with_node_qname(&gc, |q| q == "ltx:XMTok"))
+              .filter(|n| !document::with_node_qname(n, |q| q == "ltx:XMHint"))
+              .collect();
+            match inner.first() {
+              Some(n) if inner.len() == 1
+                && document::with_node_qname(n, |q| q == "ltx:XMText") => Some(n.clone()),
+              _ => None,
+            }
+          };
+          // A text-mode box carrying rendered elements rather than math tokens
+          // is not math at all. LNCS `\orcidID` expands to
+          // `$^{\,\mbox{\scriptsize\orcidlink{…}}}$` — an ORCID logo `<ref>`/`<svg>`;
+          // the plain-text path below (`get_content()`) would drop that markup
+          // and leave an empty script, so move the box's children verbatim into
+          // the new sup/sub instead. Witness 2605.16562.
+          let markup_box = text_box.filter(|tb| {
+            tb.get_child_nodes().into_iter()
+              .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+              .any(|gc| !document::with_node_qname(&gc, |q| q == "ltx:XMTok"))
           });
-          if !only_xmtok_grandchildren { return restore(document, math); }
-          if let Some(xmarg) = xmarg_children.first() {
-            let text = xmarg.get_content();
-            let qname = if role == "FLOATSUPERSCRIPT" { "ltx:sup" } else { "ltx:sub" };
-            let font_attr = {
-              let from_attr = xmarg.get_child_nodes().into_iter()
-                .filter(|n| n.get_type() == Some(NodeType::ElementNode))
-                .find_map(|n| {
-                  let attr = n.get_attribute("font");
-                  if attr.is_some() { return attr; }
-                  let node_font = document.get_node_font(&n);
-                  node_font.get_shape().and_then(|s|
-                    if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
-                  )
-                });
-              if from_attr.is_some() {
-                from_attr
-              } else {
-                document.get_node_box(xmarg).and_then(|tbox| {
-                  tbox.get_font().ok().flatten().and_then(|font| {
-                    if font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false) {
-                      Some("italic".to_string())
-                    } else {
-                      None
-                    }
-                  })
-                })
-              }
-            };
+          if let Some(tb) = markup_box {
             document.open_element(qname, None, None)?;
-            if let Some(ref font) = font_attr {
-              let mut text_node = document.open_element("ltx:text", None, None)?;
-              document.set_attribute(&mut text_node, "font", font)?;
-              document.get_node_mut().append_text(&text)?;
-              document.close_element("ltx:text")?;
-            } else {
-              document.get_node_mut().append_text(&text)?;
+            for mut child in tb.get_child_nodes() {
+              document.get_node_mut().add_child(&mut child)?;
             }
             document.close_element(qname)?;
             replaced = true;
+          } else {
+            // Original frontmatter case: a plain-text float (all XMTok), e.g. an
+            // author affiliation mark. Extract its text into the sup/sub.
+            let only_xmtok_grandchildren = xmarg_children.iter().all(|c| {
+              c.get_child_nodes().into_iter()
+                .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+                .all(|gc| document::with_node_qname(&gc, |q| q == "ltx:XMTok"))
+            });
+            if !only_xmtok_grandchildren { return restore(document, math); }
+            if let Some(xmarg) = xmarg_children.first() {
+              let text = xmarg.get_content();
+              let font_attr = {
+                let from_attr = xmarg.get_child_nodes().into_iter()
+                  .filter(|n| n.get_type() == Some(NodeType::ElementNode))
+                  .find_map(|n| {
+                    let attr = n.get_attribute("font");
+                    if attr.is_some() { return attr; }
+                    let node_font = document.get_node_font(&n);
+                    node_font.get_shape().and_then(|s|
+                      if s.as_ref() == "italic" { Some("italic".to_string()) } else { None }
+                    )
+                  });
+                if from_attr.is_some() {
+                  from_attr
+                } else {
+                  document.get_node_box(xmarg).and_then(|tbox| {
+                    tbox.get_font().ok().flatten().and_then(|font| {
+                      if font.get_family().map(|f| f.as_ref() == "math").unwrap_or(false) {
+                        Some("italic".to_string())
+                      } else {
+                        None
+                      }
+                    })
+                  })
+                }
+              };
+              document.open_element(qname, None, None)?;
+              if let Some(ref font) = font_attr {
+                let mut text_node = document.open_element("ltx:text", None, None)?;
+                document.set_attribute(&mut text_node, "font", font)?;
+                document.get_node_mut().append_text(&text)?;
+                document.close_element("ltx:text")?;
+              } else {
+                document.get_node_mut().append_text(&text)?;
+              }
+              document.close_element(qname)?;
+              replaced = true;
+            }
           }
         }
       }
