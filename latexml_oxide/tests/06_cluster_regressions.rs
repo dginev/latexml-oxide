@@ -90,6 +90,18 @@ fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppe
 #[test]
 fn cluster_cmidrule_cline_let() { convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex"); }
 
+/// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
+/// side-loads natbib must not leave a body `\citep` looping. The side-load runs
+/// inside the `thebibliography` group, so natbib's `\citep` would be popped on
+/// `\end{thebibliography}` and revert to its (now `sty_loaded`) `def_autoload`
+/// trigger, whose already-loaded re-emit then loops to the token limit. Fixed by
+/// hoisting the side-loaded package's defs to global (`\lx@late@usepackage`,
+/// omnibus_cls.rs). Witness: arXiv 2209.11799 (200s TokenLimit fatal -> 1s/0err).
+#[test]
+fn cluster_omnibus_natbib_bbl_sideload() {
+  convert_clean("tests/cluster_regressions/omnibus_natbib_bbl_sideload.tex");
+}
+
 /// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)
 /// and `\textquoteright` apostrophe — must produce 0 errors after the
 /// csname-stream soft-substitute fixes for `\lx@applyaccent`, the canonical

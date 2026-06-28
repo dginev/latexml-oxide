@@ -61,6 +61,15 @@
   (`booktabs_sty.rs`): 2506.23179 →**3 s/0 err**, 2511.17056 →**1 s/0 err**.
   Output-neutral for ordinary `\cmidrule`; guard
   `06_cluster_regressions.rs::cluster_cmidrule_cline_let`; `KNOWN_PERL_ERRORS.md` #39.
+- **PERF/parity (2026-06-28): OmniBus bbl-side-load natbib loop (2209.11799) — FIXED.**
+  The lone HEAD timeout from the #201-300 batch (sn-jnl, 200 s `Fatal:Timeout:TokenLimit`):
+  an unbound class's `.bbl` `\bibitem[\protect\citeauthoryear…]` side-loads natbib INSIDE
+  the `thebibliography` group, so natbib's `\citep` is popped on group exit and reverts to
+  its `def_autoload` trigger, whose already-loaded re-emit then loops. Fixed by hoisting the
+  side-loaded defs to global in `\lx@late@usepackage` (`omnibus_cls.rs`) — localized to
+  OmniBus, NOT the regression-trap-heavy shared `def_autoload` path. 2209.11799 →**1 s/0 err**;
+  brings Rust to parity with Perl. Witnesses clean (2310.13684/1403.6801/2207.14344); guard
+  `cluster_omnibus_natbib_bbl_sideload`. See the #201-300 Cluster D triage below.
 - **Broad regression + health sweep (2026-06-27):** ~140 diverse random corpus
   papers (two samples of 40 + 100, NOT the perf testbed) on the current binary →
   **0 crashes, 0 fatals, 0 hangs** across all conversions; unbound-class (OmniBus
@@ -365,9 +374,9 @@ digest cost points to **pgfplots picture digestion** (known-heavy). Not pinned t
 release binary; needs a symbols build). **Low priority** — 16.5 s, well under the 180 s budget; no
 shared breadth. Noted, not actioned.
 
-### Cluster D — 2209.11799 token-limit recursion — 🐞 GENUINE RUST-ONLY (fix queued)
+### Cluster D — 2209.11799 token-limit recursion — ✅ FIXED 2026-06-28 (Rust-only, parity)
 The lone HEAD timeout (sn-jnl, 200 s, `Fatal:Timeout:TokenLimit`). NOT the natbib reload —
-a **follow-on regression of the `def_autoload` fix**. When natbib is side-loaded via a
+a **follow-on of the `def_autoload` fix**. When natbib is side-loaded via a
 non-autoload path (OmniBus's redefined `\bibitem` sees `[\protect\citeauthoryear` in the
 `.bbl` → `\lx@late@usepackage{natbib}`, `omnibus_cls.rs:80`), the `\citep`/`\citet`
 `def_autoload` triggers are **never cleared**; the "already-loaded → re-emit `cs_for_closure`
@@ -383,19 +392,21 @@ the `\citep` re-emit re-firing the autoload closure.
 the `\bibitem`/bbl group frame during the side-load and **popped on group exit**, reverting
 `\citep` to the global autoload trigger; the body `\citep{a}` then re-fires it. The
 non-early-return path already guards this via `hoist_top_frame_meaning_delta`, but the
-side-load (`\lx@late@usepackage{natbib}`) bypasses that hoist. NB: `require_package` is
-**idempotent** (skips when `<pkg>.sty_loaded`), so a naive "clear + re-`require_package`"
-in the early-return branch would NOT reinstall `\citep` — a correct fix must hoist the
-already-installed defs to global (or detect the self-loop and clear→graceful-undefined,
-which still diverges from Perl's rendered cite).
-**Implementation DEFERRED (task #7), per the established policy** (`ARXIV_PERFORMANCE.md`
-L420): *do not fix speculatively in the shared `def_autoload` path* — regression traps
-2310.13684 (`\varmathbb`) + 1403.6801 (wlpeerj) are live, and the mechanism needs a full
-meaning-resolution state-trace to fix correctly. This entry SUPERSEDES the prior vaguer
-2602.15365 (informs4) deferral with a precise root cause + minimal repro, so the future
-focused session starts from a strong position. Breadth: 1 paper of 100; completes-as-fatal
-under the 180 s budget (not a hang that consumes the slot). Guards for the eventual fix:
-2310.13684, 1403.6801, 2207.14344, + the new repro.
+side-load (`\lx@late@usepackage{natbib}`) bypasses that hoist. (`require_package` is
+**idempotent** — skips when `<pkg>.sty_loaded` — so a naive "clear + re-`require_package`"
+in the shared early-return branch would NOT reinstall `\citep`; the correct fix hoists the
+already-installed defs to global.)
+**Fix (landed 2026-06-28):** `\lx@late@usepackage` (`omnibus_cls.rs`) now snapshots the
+calling frame's meanings, loads, then `hoist_top_frame_meaning_delta` — exactly mirroring
+`def_autoload` — so the side-loaded natbib's `\citep`/`\citet` are hoisted to GLOBAL and
+survive `\end{thebibliography}` (matching a top-level `\usepackage{natbib}`). The fix is
+**localized to OmniBus**, NOT the regression-trap-heavy shared `def_autoload` closure (so it
+sidesteps the `ARXIV_PERFORMANCE.md` L420 "don't fix speculatively in the shared path"
+hazard). 2209.11799: 200 s TokenLimit fatal ⇒ **1 s, 0 errors** (cite renders). Brings Rust
+to **parity with Perl** (Perl already handled this — repro 1.0 s, full 11.7 s). Regression
+witnesses all clean: 2310.13684 (`\varmathbb`) 0.3 s/0, 1403.6801 (wlpeerj) 0.6 s/0,
+2207.14344 0.4 s/0. Guard: `06_cluster_regressions.rs::cluster_omnibus_natbib_bbl_sideload`.
+Also resolves the analogous earlier-deferred 2602.15365 (informs4) class of secondary loop.
 
 ## Upstream sync — translate brucemiller/LaTeXML PRs since #2767 (NEW MISSION, opened 2026-06-25)
 
