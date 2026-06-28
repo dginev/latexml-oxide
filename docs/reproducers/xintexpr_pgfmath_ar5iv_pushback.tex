@@ -1,0 +1,52 @@
+% REPRODUCER — arXiv:1804.01117 fails ONLY with --preload=ar5iv.sty.
+% Root-caused 2026-06-28 to a Rust `readBalanced` divergence in xint's float
+% function definition (`\xintdeffloatfunc`). Chain, narrowest first.
+% =============================================================================
+%
+% (1) SMALLEST BUG REPRO — `\xintdeffloatfunc` leaks a group / unbalances:
+%     \documentclass{article}\usepackage{xintexpr}
+%     \makeatletter\xintdeffloatfunc @f(x):=x+1;
+%   Run WITH --preload=ar5iv.sty (INCLUDE_STYLES => raw-load xint as TeX):
+%     => Error:expected:} "Gullet->readBalanced ran out of input in an
+%        unbalanced state" + Error:unexpected:} "Attempt to close boxing group"
+%        ("current frame is non-boxing group due to \begingroup at xinttrig
+%        line 350"). i.e. `\xintdeffloatfunc` runs `\xintexprSafeCatcodes`
+%        (a `\begingroup`), then `\XINT_NewFloatFunc`/`\XINT_NewExpr`
+%        (xintexpr.sty:3871/4672) does a balanced read of the body that goes
+%        UNBALANCED in Rust, so the SafeCatcodes `\begingroup` never closes.
+%        `\currentgrouplevel` is 1 after `\usepackage{xintexpr}` (baseline 0)
+%        — exactly one leaked group. SafeCatcodes keeps {=1 }=2 (NOT a brace
+%        catcode issue). Perl LaTeXML processes the SAME xint TeX with no leak
+%        (the full paper converts in Perl, 32 s).
+%
+% (2) HOW IT BECOMES THE 1804.01117 FATAL: with the leaked `\begingroup` open,
+%     a later `\usepackage{pgfmath}` raw-load (pgfmath declares its functions via
+%     `\pgfkeys{/pgf/declare function/...}` + a `\pgfmath@local@@functions #1=#2;`
+%     reader) hits the corrupted group/conditional nesting -> stray `\fi`
+%     (conditional.rs:429) -> the reader never sees its `@` terminator ->
+%     infinite expansion -> Error:pushback_limit:Timeout (650000) "loading
+%     binding for 'pgfmath.code.tex'". pgffor/`\foreach` is then left broken, so
+%     the body's tikz `\foreach` floods the digest token_stack -> FINAL
+%     Fatal:Stomach:Recursion (MAXSTACK=200, identical to Perl). See the cascade
+%     repro below.
+%
+% (3) CASCADE REPRO (this file): xintexpr + pgfmath + ar5iv.
+%
+% BISECTION (each verified): needs --preload=ar5iv.sty (raw-load); needs
+% `xintexpr` (plain `xint` / xintfrac / xinttools / xinttrig / xintbinhex are
+% each clean); xintexpr BEFORE pgfmath (reverse order clean). The group leak is
+% in xinttrig.sty's `\xintdeffloatfunc @sind(x):=(x)??{...\ifnum...\fi...};`
+% block (truncating xinttrig before it => GD 0; after => GD 1), loaded inside
+% xintexpr. Catcodes of ; , = x ( e i j are all normal after xintexpr (ruled out).
+%
+% FIX TARGET: Rust gullet `read_balanced` (or the expansion it drives) diverges
+% from TeX when compiling an xint expression-function body under
+% `\xintexprSafeCatcodes`, leaving a `\begingroup` unbalanced. Deep engine fix.
+% 1804.01117 converts CLEANLY without ar5iv (0 errors, 394 KB HTML) — only the
+% ar5iv raw-load path is affected. See docs/SYNC_STATUS.md "Deep deferred families".
+\documentclass{article}
+\usepackage{xintexpr}
+\usepackage{pgfmath}
+\begin{document}
+x
+\end{document}

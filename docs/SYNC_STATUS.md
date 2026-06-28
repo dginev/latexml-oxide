@@ -1482,10 +1482,29 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   Perl loads tikz fine and never gets there. (The earlier "Rust digests packages deeper"
   hypothesis was WRONG.) Minimal `\usepackage{tikz}`, the full preamble package set, and
   `tikz`+`\foreach` in the body all load CLEANLY — the binding-load pushback only triggers
-  under the paper's specific complex state (late in-body `\usepackage`/`\@iinput` mixed
-  with nested tables/cases), so it is not minimally reducible. ⇒ The real root is the
-  **known deep tikz/pgf binding-load lever**, not the stomach; the Stomach:Recursion
-  category has **zero genuine stomach bugs**.
+  under the paper's specific complex state. **FULLY ROOT-CAUSED 2026-06-28 (a 2nd deep
+  dive) — it is NOT tikz/pgf either; it is a Rust `read_balanced` bug in xint.** The
+  trigger is **`--preload=ar5iv.sty` + `xintexpr` (loaded before pgfmath/tikz)**. ar5iv
+  (INCLUDE_STYLES) RAW-loads xint; `xintexpr`'s load of its built-in float functions
+  (`\xintdeffloatfunc`, e.g. xinttrig's `@sind`) runs `\xintexprSafeCatcodes` (a
+  `\begingroup`) then `\XINT_NewFloatFunc`/`\XINT_NewExpr` (xintexpr.sty:3871/4672) whose
+  body-compilation does a balanced read that goes **UNBALANCED in Rust** ("readBalanced
+  ran out of input in an unbalanced state" + "Attempt to close boxing group") — so the
+  SafeCatcodes `\begingroup` never closes. **`\currentgrouplevel` is 1 after
+  `\usepackage{xintexpr}` (baseline 0)** — exactly one leaked group. That open group then
+  corrupts the later pgfmath raw-load (its `\pgfkeys{/pgf/declare function/…}` reader hits
+  a stray `\fi`, conditional.rs:429, loops to the 650000 pushback limit), which breaks
+  `\foreach`, which floods the digest stack → `Stomach:Recursion`. Perl processes the SAME
+  xint TeX with no leak (the paper converts in Perl, 32 s) and 1804.01117 converts CLEANLY
+  in Rust WITHOUT ar5iv (0 err, 394 KB HTML). **Minimal bug repro:
+  `\usepackage{xintexpr}\xintdeffloatfunc @f(x):=x+1;` + ar5iv** (SafeCatcodes keeps {=1
+  }=2, so NOT a brace-catcode issue — it is the expansion `read_balanced` itself). Full
+  bisection in `docs/reproducers/xintexpr_pgfmath_ar5iv_pushback.tex`. **FIX = a deep
+  gullet `read_balanced`/expansion divergence in xint's expr-function compiler under
+  SafeCatcodes** — a focused engine task (multi-hour expansion trace through
+  `\XINT_NewExpr`/`\subs`/`\xintFor*`); deferred. The Stomach:Recursion category itself
+  still has **zero genuine stomach bugs** (this is an upstream `read_balanced` divergence
+  surfacing through it).
 
 - **1610.00974 step-3 (global p{}→VBox) + cluster-B — ✅ LANDED 2026-06-22, NO
   LONGER DEFERRED.** See "Landed this session" above. p{}/m{}/b{} columns now build
