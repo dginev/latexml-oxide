@@ -1392,8 +1392,19 @@ rides the begin marker so the end marker is nameless.
   loop `?`-early-returns on engine error — traced benign (at worst a missing cosmetic class on
   an error path; no desync, no UAF), explicitly NOT worth changing. Verification snapshot:
   suite 1487/0/0, clippy/fmt clean, all four `--init` paths (plain/latex × dump/NODUMP) are
-  zero-`Error:`/`Fatal:` (latex NODUMP raw-load ~185 s, slow but clean). Branch is 3 commits
-  behind `main` (merge-base `f167f60`) — a merge-time concern only.
+  zero-`Error:`/`Fatal:` (latex NODUMP raw-load ~185 s, slow but clean).
+- **Merge-readiness vs `main` (verified 2026-06-27).** Branch is 3 commits behind `main`
+  (merge-base `f167f60`): `3d7ab2dad3` (docs only), `15e9f1fa51` (theindex autoClose), and
+  `4344448cd5` (mhchem: gate legacy `\cf`/`\cee` on version<4 in the OLD stub). A
+  `git merge-tree` scan shows exactly **one conflict — `mhchem_sty.rs`** (`latex_constructs.rs`
+  auto-merges clean). The conflict is **benign**: main's commit gated the stub's `\cf`/`\cee`
+  to stop clobbering an author `\cf` macro; this branch **retired the stub** and raw-loads real
+  mhchem.sty, which already gates `\cf`/`\cee` on version<4 itself (mhchem.sty L3430), so the
+  author-`\cf` fix is subsumed by the real package. Verified: main's regression witness
+  `mhchem_cf_author_macro.tex` (arXiv:1901.08894, `\newcommand{\cf}{cf.\ }` after
+  chemformula→mhchem) runs **0 errors** on this branch's binary. **Resolution at merge: take
+  ours (stub retired), keep main's regression test** (it passes here). No code action this
+  session (per "update main only when the session is complete").
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.
