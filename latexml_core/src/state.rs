@@ -1092,6 +1092,11 @@ pub fn reset_thread_state() {
     ..StateOptions::default()
   });
   STATE_IN_USE.set(RotateState::Main);
+  // env-markup-class thread-locals live outside `State`; clear them too so a leaked
+  // marker/snapshot from a prior conversion can't bleed into the next on a reused
+  // thread (LSP). See stomach::reset_env_markers / document::reset_env_markup_state.
+  crate::stomach::reset_env_markers();
+  crate::document::reset_env_markup_state();
 }
 
 /// A shorthand for installing definitions

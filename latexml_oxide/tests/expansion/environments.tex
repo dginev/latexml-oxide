@@ -61,12 +61,22 @@ a + b
 \newenvironment{mw}{\langle}{\rangle}
 $\begin{mw}x\end{mw}$
 
-% (e) \NewDocumentEnvironment (l3/xparse, kernel-default) — the \begin/\end
-% dispatchers already fire for it; a TeX-level wrapper of the public declaration
-% sets the same lx@envmarkup flag, so a PUBLIC env is tagged ltx_env_ndfancy.
-% (@-internal envs like tcolorbox's tcb@drawing are excluded — locked by
-% tests/tikz/various_colors.)
+% (e) \NewDocumentEnvironment (l3/xparse) is NOT tagged — documented limitation.
+% l3 declares the env via \cs_new (not our \newenvironment), so the lx@envmarkup
+% flag is never set; the TeX-wrapper approach to set it caused a NODUMP base-load
+% infinite-expansion loop and was removed for robustness. So ndfancy's quote gets
+% no ltx_env_ndfancy (the inner quote is name-match-skipped too).
 \NewDocumentEnvironment{ndfancy}{}{\begin{quote}}{\end{quote}}
 \begin{ndfancy}nd-body\end{ndfancy}
+
+% (f) balance under IN_MATH skew: a \newenvironment that ENTERS math in its begin-
+% code (\[, IN_MATH false at \begin) and EXITS in its end-code (\], IN_MATH true at
+% \end → end marker suppressed to keep markers out of math). So myeq itself is NOT
+% tagged (its leaked begin is discarded by the absorb-side by-name match), but the
+% FOLLOWING env must stay correctly tagged — never popping myeq's leftover snapshot.
+\newenvironment{myeq}{\[}{\]}
+\begin{myeq}a=b\end{myeq}
+\newenvironment{aftermath}{\begin{quote} AFTER\\}{\end{quote}}
+\begin{aftermath}ok\end{aftermath}
 
 \end{document}

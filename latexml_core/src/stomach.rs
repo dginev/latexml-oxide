@@ -202,8 +202,9 @@ static MAXSTACK: usize = 200;
 enum EnvMarker {
   /// Begin of a raw env; carries the `ltx_env_<name>` class to tag with.
   Begin(String),
-  /// End of a raw env.
-  End,
+  /// End of a raw env; carries the SAME `ltx_env_<name>` class so the absorb-phase
+  /// `env_construct_end` can match it to its begin by NAME (not by stack position).
+  End(String),
 }
 thread_local! {
   static ENV_MARKER_QUEUE: RefCell<Vec<EnvMarker>> = const { RefCell::new(Vec::new()) };
@@ -211,15 +212,27 @@ thread_local! {
   /// only a non-empty queue pays the `RefCell` drain + Whatsit construction.
   static ENV_MARKER_PENDING: Cell<bool> = const { Cell::new(false) };
 }
-/// Queue a begin-marker for a raw environment (class = `ltx_env_<name>`).
-pub fn env_marker_push_begin(class: String) {
-  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().push(EnvMarker::Begin(class)));
+/// Queue a begin-marker for a raw environment named `name` (→ class `ltx_env_<name>`).
+pub fn env_marker_push_begin(name: &str) {
+  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().push(EnvMarker::Begin(s!("ltx_env_{name}"))));
   ENV_MARKER_PENDING.with(|f| f.set(true));
 }
-/// Queue an end-marker for a raw environment.
-pub fn env_marker_push_end() {
-  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().push(EnvMarker::End));
+/// Queue an end-marker for env `name`. The end carries the class so that
+/// `env_construct_end` matches it to its begin BY NAME at absorb — robust against
+/// `IN_MATH` skew between `\begin`/`\end` (a math-entering env can leave a begin with
+/// no end; the absorb-side name match discards that leak instead of mis-popping a
+/// sibling env's snapshot).
+pub fn env_marker_push_end(name: &str) {
+  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().push(EnvMarker::End(s!("ltx_env_{name}"))));
   ENV_MARKER_PENDING.with(|f| f.set(true));
+}
+/// Clear env-marker thread-locals at a conversion boundary. Needed on the LSP
+/// thread-reuse path: a queued marker from a prior conversion must not leak into the
+/// next (it would drain into the wrong document). Called from
+/// `state::reset_thread_state`.
+pub fn reset_env_markers() {
+  ENV_MARKER_QUEUE.with(|q| q.borrow_mut().clear());
+  ENV_MARKER_PENDING.with(|f| f.set(false));
 }
 /// Drain queued env markers into absorb-phase marker Whatsit boxes. Called from
 /// `invoke_token` only when `ENV_MARKER_PENDING` is set; the resulting boxes are
@@ -229,9 +242,11 @@ fn drain_env_markers() -> Vec<Digested> {
   let markers = ENV_MARKER_QUEUE.with(|q| std::mem::take(&mut *q.borrow_mut()));
   let mut out = Vec::with_capacity(markers.len());
   for marker in markers {
+    // Both markers carry the `ltx_env_<name>` class in the `envname` property: the
+    // begin uses it to tag, the end uses it to MATCH its begin by name at absorb.
     let (cs, class) = match marker {
-      EnvMarker::Begin(class) => ("\\lx@env@begin@mark", Some(class)),
-      EnvMarker::End => ("\\lx@env@end@mark", None),
+      EnvMarker::Begin(class) => ("\\lx@env@begin@mark", class),
+      EnvMarker::End(class) => ("\\lx@env@end@mark", class),
     };
     // The marker constructors live in latex_constructs (LaTeX only). If absent
     // (e.g. plain-TeX), silently drop — the queue is only ever fed by the LaTeX
@@ -239,10 +254,7 @@ fn drain_env_markers() -> Vec<Digested> {
     let Ok(Some(definition)) = lookup_definition(&T_CS!(cs)) else {
       continue;
     };
-    let properties = match class {
-      Some(class) => crate::stored_map!("envname" => class),
-      None => HashMap::default(),
-    };
+    let properties = crate::stored_map!("envname" => class);
     out.push(Digested::from(Whatsit {
       definition,
       properties,

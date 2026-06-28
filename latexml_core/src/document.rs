@@ -162,6 +162,16 @@ pub fn env_disarm() {
 }
 /// Take (consume) the innermost armed env class, if any.
 fn env_take() -> Option<String> { ENV_ARM_STACK.with(|s| s.borrow_mut().pop()) }
+/// Clear all env-markup thread-locals at a conversion boundary. Required on the LSP
+/// thread-reuse path: a leftover `ENV_CONSTRUCTION_STACK` snapshot (or armed class /
+/// open-depth) from conversion A must not survive into B — its `Node` belongs to A's
+/// now-dropped `Document`, so tagging it would be a use-after-free. Companion to
+/// `stomach::reset_env_markers`; both are called from `state::reset_thread_state`.
+pub fn reset_env_markup_state() {
+  ENV_ARM_STACK.with(|s| s.borrow_mut().clear());
+  OPEN_ELEMENT_DEPTH.with(|d| d.set(0));
+  ENV_CONSTRUCTION_STACK.with(|s| s.borrow_mut().clear());
+}
 /// RAII: tracks `open_element` re-entrancy; `enter()` returns `(guard, outermost)`.
 struct OpenDepthGuard;
 impl OpenDepthGuard {
@@ -1054,12 +1064,23 @@ impl Document {
     ENV_CONSTRUCTION_STACK.with(|s| s.borrow_mut().push((n, cursor, class)));
   }
 
-  /// env-markup-class (raw side) — end-marker. Absorbed after the env body: pop the
-  /// matching begin snapshot; if its node gained EXACTLY ONE element child since the
-  /// begin cursor, tag it with the snapshot's `ltx_env_<name>` class. Zero or many
-  /// ⇒ no tag (single-deposit semantics).
-  pub fn env_construct_end(&mut self) -> Result<()> {
-    let Some((n_opt, cursor, class)) = ENV_CONSTRUCTION_STACK.with(|s| s.borrow_mut().pop()) else {
+  /// env-markup-class (raw side) — end-marker. Absorbed after the env body: find the
+  /// matching begin snapshot BY NAME (`class`), not by stack position. Pop it AND any
+  /// snapshots stacked above it (leaked begins from envs whose end was suppressed by
+  /// `IN_MATH` skew — see `stomach::env_marker_push_end`); if no snapshot matches,
+  /// no-op (an end whose begin was suppressed — never mis-pop a sibling's snapshot).
+  /// If the matched begin's node gained EXACTLY ONE element child since its cursor,
+  /// tag it with `class`. Zero or many ⇒ no tag (single-deposit semantics).
+  pub fn env_construct_end(&mut self, class: &str) -> Result<()> {
+    let snapshot = ENV_CONSTRUCTION_STACK.with(|s| {
+      let mut st = s.borrow_mut();
+      st.iter().rposition(|(_, _, c)| c == class).map(|pos| {
+        let snap = st[pos].clone();
+        st.truncate(pos); // drop the match and any leaked snapshots above it
+        snap
+      })
+    });
+    let Some((n_opt, cursor, class)) = snapshot else {
       return Ok(());
     };
     let Some(n) = n_opt else {

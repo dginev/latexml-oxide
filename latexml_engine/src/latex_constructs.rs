@@ -2871,15 +2871,18 @@ LoadDefinitions!({
       // `\newenvironment`/`\renewenvironment` env (flagged `lx@envmarkup:<name>`)
       // with `ltx_env_<name>`. Push a begin request now (token-free — NO token
       // enters the gullet stream, so `\expandafter`/position-sensitive begin-codes
-      // are untouched); the `\end` dispatcher pushes the matching end and
+      // are untouched); the `\end` dispatcher emits the MATCHING end and
       // `invoke_token` drains both into absorb-phase marker boxes. Scope guards:
       //   • flag gate — ONLY `\newenvironment`-style envs, NOT LaTeXML's internal
       //     raw envs (tabular/array/tikz/list/…) which already have semantic markup;
       //   • `!IN_MATH` — never tag inside math (would pollute the `tex=` reversion
-      //     and tag XMArray/XMWrap nodes). Both gates are evaluated identically at
-      //     `\begin`/`\end`, so begin/end markers stay balanced.
+      //     and tag XMArray/XMWrap nodes).
+      // The begin/end markers both carry `name`; balance is enforced at ABSORB by
+      // `env_construct_end` matching the end to its begin by name (robust to
+      // `IN_MATH` skew between `\begin`/`\end` for a math-entering env — its leaked
+      // begin is discarded by the matching, never mis-popping a sibling's snapshot).
       if lookup_bool(&s!("lx@envmarkup:{name}")) && !lookup_bool_sym(pin!("IN_MATH")) {
-        env_marker_push_begin(s!("ltx_env_{name}"));
+        env_marker_push_begin(&name);
       }
       if !is_defined_token(&token) {
         // this creates {name} , {{ and }} are escapes in Rust's `format` macro
@@ -2923,13 +2926,13 @@ LoadDefinitions!({
         out_tokens.extend(afterend_toks.unlist())
       }
     } else {
-      // env-markup-class (raw side): matching end request for the begin pushed by
-      // the `\begin` dispatcher. `invoke_token` drains it into an end-marker box
-      // that tags the env's sole deposited node. Same flag + `!IN_MATH` gates as
-      // `\begin` (evaluated identically), so begin/end markers stay balanced. See
-      // `\begin` above and latexml_core::document::env_construct_{begin,end}.
+      // env-markup-class (raw side): emit the matching end marker (carries the same
+      // `ltx_env_<name>` class as the begin). Same flag + `!IN_MATH` gate as `\begin`;
+      // any begin/end skew from `IN_MATH` differing here is reconciled at ABSORB by
+      // `env_construct_end`'s by-name match. See `\begin` above and
+      // latexml_core::document::env_construct_{begin,end}.
       if lookup_bool(&s!("lx@envmarkup:{name}")) && !lookup_bool_sym(pin!("IN_MATH")) {
-        env_marker_push_end();
+        env_marker_push_end(&name);
       }
       out_tokens = before.map(Tokens::unlist).unwrap_or_default();
       t = T_CS!(s!("\\end{name}"));
@@ -6638,27 +6641,10 @@ LoadDefinitions!({
     let class = props.get("envname").map(|s| s.to_string()).unwrap_or_default();
     document.env_construct_begin(class);
   }, sizer => 0, reversion => "");
-  DefConstructor!("\\lx@env@end@mark", sub[document, args] {
-    let _ = &args;
-    document.env_construct_end()?;
+  DefConstructor!("\\lx@env@end@mark", sub[document, _args, props] {
+    let class = props.get("envname").map(|s| s.to_string()).unwrap_or_default();
+    document.env_construct_end(&class)?;
   }, sizer => 0, reversion => "");
-
-  // env-markup-class: set the `lx@envmarkup:<name>` flag that the `\begin`/`\end`
-  // dispatchers gate marker emission on. `\newenvironment`/`\renewenvironment` set
-  // it inline (below); this primitive lets the TeX-level wrappers of the public
-  // `\NewDocumentEnvironment`-family (l3/xparse, whose `\cs_new` path bypasses our
-  // `\newenvironment`) set the SAME flag, so the already-general dispatcher tags
-  // those user/package envs too. Global scope matches l3's global env definitions.
-  DefPrimitive!("\\lx@mark@envmarkup{}", sub[(name)] {
-    let name = Expand!(name).to_string();
-    // Skip `@`-named envs: the LaTeX internal-naming convention marks package
-    // implementation details (e.g. tcolorbox's `tcb@drawing`/`tcb@savebox`), not
-    // user-facing markup worth a CSS hook. Public `\NewDocumentEnvironment` envs
-    // (no `@`) are still flagged.
-    if !name.contains('@') {
-      assign_value(&s!("lx@envmarkup:{name}"), true, Some(Scope::Global));
-    }
-  });
 
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(_star_opt, name, nargs, opt, begin, end)] {
@@ -6717,30 +6703,15 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-  // env-markup-class: extend tagging to the l3/xparse document-environment family.
-  // The `\begin`/`\end` dispatchers already fire for these envs (every env flows
-  // through them); they only lacked the `lx@envmarkup` flag because l3 declares the
-  // env via `\cs_new:cpn`, not our `\newenvironment`. Wrap the PUBLIC declarations
-  // (NOT l3 internals) to set the flag, then chain to the original (verified the
-  // chain preserves the env). Idempotent (`lx@orig@…` guard ⇒ no double-wrap across
-  // dump+constructs) and gated on existence (`\@ifundefined` ⇒ safe in plain TeX).
-  TeX!(
-    r"\makeatletter
-\def\lx@@wrap@docenv#1{%
-  \expandafter\ifx\csname lx@orig@\expandafter\@gobble\string#1\endcsname\relax
-    \expandafter\let\csname lx@orig@\expandafter\@gobble\string#1\endcsname#1%
-    \begingroup\edef\lx@@x{\endgroup
-      \protected\def\noexpand#1####1{%
-        \noexpand\lx@mark@envmarkup{####1}%
-        \expandafter\noexpand\csname lx@orig@\expandafter\@gobble\string#1\endcsname{####1}}}%
-    \lx@@x
-  \fi}
-\@ifundefined{NewDocumentEnvironment}{}{\lx@@wrap@docenv\NewDocumentEnvironment}%
-\@ifundefined{RenewDocumentEnvironment}{}{\lx@@wrap@docenv\RenewDocumentEnvironment}%
-\@ifundefined{ProvideDocumentEnvironment}{}{\lx@@wrap@docenv\ProvideDocumentEnvironment}%
-\@ifundefined{DeclareDocumentEnvironment}{}{\lx@@wrap@docenv\DeclareDocumentEnvironment}%
-\makeatother"
-  );
+  // env-markup-class: `\NewDocumentEnvironment` family is NOT tagged — a documented
+  // limitation. An earlier TeX wrapper of the public `\NewDocumentEnvironment`/`\Renew…`/
+  // `\Provide…`/`\Declare…` (to set the `lx@envmarkup` flag like `\newenvironment` does)
+  // caused an INFINITE-EXPANSION LOOP in the NODUMP base-load of `LaTeX.pool` (re-entrant
+  // require_package short-circuit → 2-token expansion loop; with-dump path was clean,
+  // NODUMP regressed from main's 0 errors). The l3 envs are declared via `\cs_new:cpn`,
+  // not our `\newenvironment`, so there is no clean flag chokepoint; the wrapper was the
+  // fragile option and is removed for robustness. User/package envs in practice use
+  // `\newenvironment` (mhchem `annotation`, csquotes `displayquote`), which ARE covered.
 
 
   //======================================================================

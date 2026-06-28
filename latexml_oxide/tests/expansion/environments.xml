@@ -99,9 +99,25 @@
         </XMath>
       </Math></p>
   </para>
-  <para class="ltx_env_ndfancy" xml:id="p13">
+  <para xml:id="p13">
     <quote>
       <p>nd-body</p>
+    </quote>
+  </para>
+  <para xml:id="p14">
+    <equation xml:id="S0.Ex1">
+      <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="equals" role="RELOP">=</XMTok>
+            <XMTok font="italic" role="UNKNOWN">a</XMTok>
+            <XMTok font="italic" role="UNKNOWN">b</XMTok>
+          </XMApp>
+        </XMath>
+      </Math>
+    </equation>
+    <quote class="ltx_env_aftermath">
+      <p>AFTER<break/>ok</p>
     </quote>
   </para>
 </document>
