@@ -1459,6 +1459,25 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 
 ## Deep deferred families (parked — large or shared; dedicated sessions)
 
+- **`Fatal:Stomach:Recursion` (43 cortex Rust-service fatals) — TRIAGED 2026-06-28,
+  mostly SHARED / Rust-better; ~1 Rust-only over-fatal DEFERRED (deep core).** Two
+  guards in `stomach.rs`: the box-cycle "Infinite digestion loop" (9 papers,
+  stomach.rs:1040) and the token-stack-depth "Excessive recursion(?)" (28 pkg-loading
+  + 6 box/thm, stomach.rs:1343, `MAXSTACK=200`). **Same-host Perl parity on an 11-paper
+  sample: ~10/11 SHARED** — the box-cycle/digloop papers (1906.06902, 1810.02304,
+  1911.00254, 1911.11563, 2605.27339) **HANG in Perl 50–94 s** while Rust fail-fasts in
+  <1 s via the guard (**Rust strictly better**); others (1809.00641, 2103.12717,
+  1409.4048, 2011.08422) fail in BOTH. Only **1804.01117 (svjour3) is genuine Rust-only**
+  (Perl completes in 32 s; Rust hits the token-stack guard). Crucially the limit
+  **matches Perl exactly** (`Stomach.pm:159 $MAXSTACK=200`, identical guard at L175) —
+  so it is NOT a mis-set cap; Rust's `invoke_token` token_stack simply grows DEEPER than
+  Perl for the same input (the deep `\usepackage`→`\RequirePackage`→`\@iinput`→`{`…
+  stack), most likely because Rust digests package/`\@iinput` content inline on the
+  token_stack where Perl re-feeds it through the mouth/outer loop. Aligning that is a
+  deep, risky core-digestion change for a ~1-paper Rust-only subset ⇒ **deferred**; do
+  NOT raise `MAXSTACK` (diverges from Perl and lets genuine infinite recursion run). The
+  guard is doing its job — this category is a Rust **stability win**, not a bug cluster.
+
 - **1610.00974 step-3 (global p{}→VBox) + cluster-B — ✅ LANDED 2026-06-22, NO
   LONGER DEFERRED.** See "Landed this session" above. p{}/m{}/b{} columns now build
   the cell as Perl's `\lx@tabular@p` inline-block (VBoxContents); p/m/b `<td>`
