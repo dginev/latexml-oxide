@@ -1,6 +1,34 @@
 % REPRODUCER — arXiv:1804.01117 fails ONLY with --preload=ar5iv.sty.
-% Root-caused 2026-06-28 to a Rust `readBalanced` divergence in xint's float
-% function definition (`\xintdeffloatfunc`). Chain, narrowest first.
+% =============================================================================
+% CORRECTED DIAGNOSIS 2026-06-28 (supersedes the "GENUINE Rust bug / Perl
+% succeeds" framing further down — that was an INVALID comparison: the
+% reference Perl on this host has no ar5iv.sty, so `--preload=ar5iv.sty`
+% silently skipped xint instead of raw-loading it).  THE TRUTH:
+%   * This is a SHARED LaTeXML limitation, NOT a Rust-unique bug.
+%     `latexml --includestyles` (which DOES force the raw-load) hits the
+%     IDENTICAL "readBalanced ran out of input in an unbalanced state" at
+%     xinttrig.sty:350 (26 errors, degraded 459-byte XML, exit 0).
+%   * Cause: xint's \XINT_NewExpr (xintexpr.sty:4721) does
+%     \edef\X{\scantokens{...}} — \scantokens opens an autoclose
+%     "Anonymous String" mouth MID-edef-body, and the \edef's closing } is
+%     in the PARENT file.  readBalanced (gullet.rs `None => break`; Perl
+%     Gullet.pm:466,470-472 is line-for-line identical, same TODO) breaks at
+%     the mouth boundary WITHOUT crossing it.  Real pdflatex succeeds only
+%     because TeX get_x_token/scan_toks (tex.web §362-365) pops exhausted
+%     input levels transparently — which neither LaTeXML does.
+%   * The Rust-specific gap is RECOVERY: Rust leaks the \xintexprSafeCatcodes
+%     \begingroup -> "Attempt to close boxing group" -> Missing-number
+%     cascade -> Fatal:Timeout:TokenLimit, where Perl degrades gracefully.
+%   => 1804.01117 cannot convert cleanly even in Perl; out of scope for the
+%      "clean ar5iv conversion" goal.  Fix options (deferred): (1) parity =
+%      harden post-readBalanced recovery to match Perl's degrade; (2)
+%      surpass-Perl = make read_balanced cross autoclose mouths like
+%      get_x_token (prototyped: kills the readBalanced failure + GD leak,
+%      passes all 1491 tests + dump-identical, but diverges from Perl and
+%      exposes a deeper xint \number loop).
+% =============================================================================
+% --- ORIGINAL (partly-superseded) narrative below; kept for the bisection ---
+% Chain, narrowest first.
 % =============================================================================
 %
 % (1) SMALLEST BUG REPRO — `\xintdeffloatfunc` leaks a group / unbalances:

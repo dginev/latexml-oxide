@@ -1467,8 +1467,9 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   sample: ~10/11 SHARED** — the box-cycle/digloop papers (1906.06902, 1810.02304,
   1911.00254, 1911.11563, 2605.27339) **HANG in Perl 50–94 s** while Rust fail-fasts in
   <1 s via the guard (**Rust strictly better**); others (1809.00641, 2103.12717,
-  1409.4048, 2011.08422) fail in BOTH. Only **1804.01117 (svjour3) is genuine Rust-only**
-  (Perl completes in 32 s; Rust hits the token-stack guard). Crucially the limit
+  1409.4048, 2011.08422) fail in BOTH. **1804.01117 (svjour3) was thought Rust-only but
+  is actually SHARED — see the corrected deep-dive below (Perl `--includestyles` hits the
+  identical readBalanced failure).** Crucially the limit
   **matches Perl exactly** (`Stomach.pm:159 $MAXSTACK=200`, identical guard at L175) —
   so it is NOT a mis-set cap; do NOT raise `MAXSTACK` (diverges from Perl and lets genuine
   infinite recursion run). The guard is doing its job — this category is a Rust **stability
@@ -1487,24 +1488,35 @@ done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
   trigger is **`--preload=ar5iv.sty` + `xintexpr` (loaded before pgfmath/tikz)**. ar5iv
   (INCLUDE_STYLES) RAW-loads xint; `xintexpr`'s load of its built-in float functions
   (`\xintdeffloatfunc`, e.g. xinttrig's `@sind`) runs `\xintexprSafeCatcodes` (a
-  `\begingroup`) then `\XINT_NewFloatFunc`/`\XINT_NewExpr` (xintexpr.sty:3871/4672) whose
-  body-compilation does a balanced read that goes **UNBALANCED in Rust** ("readBalanced
-  ran out of input in an unbalanced state" + "Attempt to close boxing group") — so the
-  SafeCatcodes `\begingroup` never closes. **`\currentgrouplevel` is 1 after
-  `\usepackage{xintexpr}` (baseline 0)** — exactly one leaked group. That open group then
-  corrupts the later pgfmath raw-load (its `\pgfkeys{/pgf/declare function/…}` reader hits
-  a stray `\fi`, conditional.rs:429, loops to the 650000 pushback limit), which breaks
-  `\foreach`, which floods the digest stack → `Stomach:Recursion`. Perl processes the SAME
-  xint TeX with no leak (the paper converts in Perl, 32 s) and 1804.01117 converts CLEANLY
-  in Rust WITHOUT ar5iv (0 err, 394 KB HTML). **Minimal bug repro:
-  `\usepackage{xintexpr}\xintdeffloatfunc @f(x):=x+1;` + ar5iv** (SafeCatcodes keeps {=1
-  }=2, so NOT a brace-catcode issue — it is the expansion `read_balanced` itself). Full
-  bisection in `docs/reproducers/xintexpr_pgfmath_ar5iv_pushback.tex`. **FIX = a deep
-  gullet `read_balanced`/expansion divergence in xint's expr-function compiler under
-  SafeCatcodes** — a focused engine task (multi-hour expansion trace through
-  `\XINT_NewExpr`/`\subs`/`\xintFor*`); deferred. The Stomach:Recursion category itself
-  still has **zero genuine stomach bugs** (this is an upstream `read_balanced` divergence
-  surfacing through it).
+  `\begingroup`) then `\XINT_NewFloatFunc`/`\XINT_NewExpr` (xintexpr.sty:4721) whose
+  body-compilation does a balanced read that goes UNBALANCED ("readBalanced ran out of
+  input in an unbalanced state" + "Attempt to close boxing group").
+  **CORRECTED CONCLUSION (3rd deep dive, 2026-06-28): this is a SHARED LaTeXML limitation,
+  NOT a Rust-unique bug.** The earlier "Perl processes the SAME xint TeX with no leak /
+  converts in 32 s" was an **invalid comparison** — the reference Perl on this host has no
+  `ar5iv.sty`, so `--preload=ar5iv.sty` silently emitted `missing_file:xintexpr` and
+  SKIPPED xint (never raw-loaded it). Forcing the raw-load with **`latexml --includestyles`
+  reproduces the IDENTICAL `readBalanced ran out` at xinttrig.sty:350** (26 errors,
+  degraded 459-byte XML, exit 0). Mechanism: xint does `\edef\X{\scantokens{...}}` where
+  `\scantokens` opens an autoclose "Anonymous String" mouth MID-`\edef`-body and the
+  `\edef`'s closing `}` is in the PARENT file; `readBalanced` reads the raw mouth and
+  breaks at the boundary WITHOUT crossing (gullet.rs `None => break`; **Perl Gullet.pm:466,
+  470-472 is line-for-line identical, same `level>0` TODO**). Real pdflatex succeeds only
+  because TeX `get_x_token`/`scan_toks` (tex.web §362-365) pops exhausted input levels
+  transparently. **The Rust-specific gap is RECOVERY, not the failure itself:** Rust leaks
+  the `\xintexprSafeCatcodes` `\begingroup` → "Attempt to close boxing group" → Missing-
+  number cascade through xinttrig → `Fatal:Timeout:TokenLimit`, where Perl degrades
+  gracefully (`\XINT_zapsp_b Match:` errors) and completes. **So 1804.01117 cannot convert
+  cleanly even in Perl — out of scope for the "clean ar5iv conversion" goal.** Fix options
+  (both deferred): (1) **parity** = harden Rust's post-readBalanced recovery so the leaked
+  `\begingroup` doesn't cascade to a TokenLimit fatal → match Perl's degraded-but-completing
+  output (delicate stomach/group code); (2) **surpass-Perl** = make `read_balanced` cross
+  autoclose mouths like `get_x_token` (prototyped this session: eliminates the readBalanced
+  failure + GD leak, passes all 1491 tests, dumps stay semantically identical — but
+  DIVERGES from Perl and exposes a deeper xint `\number` "Missing number" loop = a
+  multi-layer surpass-Perl chain). Full bisection +corrected diagnosis in
+  `docs/reproducers/xintexpr_pgfmath_ar5iv_pushback.tex`. The Stomach:Recursion category
+  itself still has **zero genuine stomach bugs**.
 
 - **1610.00974 step-3 (global p{}→VBox) + cluster-B — ✅ LANDED 2026-06-22, NO
   LONGER DEFERRED.** See "Landed this session" above. p{}/m{}/b{} columns now build
