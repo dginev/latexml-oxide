@@ -1212,9 +1212,24 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    manual still emits ~69 edge-case errors under raw-load (`\ce` inside `align*` →
    `\lx@begin@alignment`/`\end@amsalign`; ~56 `\lx@end@inline@math` from specific
    `$`-toggle / `\cesplit`-derived example patterns). Basic `SideBySideExample`+`\ce`
-   is clean. **TODO (this branch):** debug the align*/`\lx@end@inline@math` edge
-   cases toward 0 errors; validate the corpus mhchem witnesses via cortex (the flip
-   is corpus-wide).
+   is clean.
+   - **LOCALIZED 2026-06-27 (`\ce`-in-`align*`), but DEFERRED — deep + no local Perl
+     baseline.** A SINGLE `\ce{H2O}` in one align* cell (no `&`/`\\`) already emits 6
+     errors, all "close a group that switched to mode math" (`\lx@begin@alignment` ×3,
+     `\lx@hidden@egroup`, `\endgroup`, `\end@amsalign`). Ruled OUT two hypotheses:
+     (i) **NOT a `\ifmmode` mode-detection divergence** — `\ifmmode` returns *text mode*
+     inside an align* cell during cell-token reading in BOTH Rust and Perl (LaTeXML builds
+     alignments deferred), so that is **parity**, not the bug; (ii) **NOT `\ensuremath`** —
+     plain `\ensuremath{…}` with every content variant tried (`H_2O`, `\mathrm{H}_2\mathrm{O}`,
+     `{}\mathop{\downarrow}{}`, nested) is 0 errors in align*. The fault is therefore inside
+     mhchem's `\ce` expl3 result machinery (`\protect@unexpand@cmd@arg\ce` / `\tl_use:N
+     \l__mhchem_ce_result_tl`, mhchem.sty L188-196,413) interacting with the alignment cell's
+     math-group tracking — a deep mhchem-internals × LaTeXML-alignment interaction.
+   - **Local Perl baseline is UNAVAILABLE:** reference Perl LaTeXML 0.8.8 on this host
+     **hangs** (99.9% CPU, killed at >4 min) on even simple `\ce{H2O}` — though it converts
+     a trivial non-mhchem doc in <1s — so the Perl mhchem binding cannot serve as a local
+     parity oracle for this cluster. **TODO:** classify via cortex (svc3=Perl corpus runs)
+     before any fix; the flip is corpus-wide. Do NOT guess a fix without that baseline.
 
 ### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING + RAW + ANTI-BLOAT LANDED)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
@@ -1354,6 +1369,21 @@ rides the begin marker so the end marker is nameless.
     reuse path a leaked snapshot from conversion A could make B's `add_env_class` touch a
     Node from A's dropped Document (use-after-free). `stomach::reset_env_markers` +
     `document::reset_env_markup_state` now run from `state::reset_thread_state`.
+- **Second independent code review — CLEAN (2026-06-27).** A fresh post-fix review of the
+  core mechanism (`document.rs`/`stomach.rs`/`latex_constructs.rs`/`state.rs`/`dialect.rs`)
+  found **no high-confidence issues**: balance (`truncate(pos)` keeps `[0,pos)`, drops the
+  matched entry + everything above, retains lower entries — confirmed correct), thread-local
+  UAF (all five thread-locals cleared and wired into `reset_thread_state`; LSP resets at
+  conversion *start*, harness after `drop`), anti-bloat termination (`_autoopened`
+  look-through strictly descends a finite acyclic tree), mutual-exclusion (raw marker push is
+  in the *non-magic* `\begin`/`\end` else-branch gated by `lx@envmarkup`; binding `env_arm` is
+  in the *magic* DefEnvironment branch), and queue-leak safety all verified SOUND. One
+  sub-threshold (~35) note: markers drained at `invoke_token` top are dropped if the INVOKE
+  loop `?`-early-returns on engine error — traced benign (at worst a missing cosmetic class on
+  an error path; no desync, no UAF), explicitly NOT worth changing. Verification snapshot:
+  suite 1487/0/0, clippy/fmt clean, all four `--init` paths (plain/latex × dump/NODUMP) are
+  zero-`Error:`/`Fatal:` (latex NODUMP raw-load ~185 s, slow but clean). Branch is 3 commits
+  behind `main` (merge-base `f167f60`) — a merge-time concern only.
 - **SideBySideExample:** keep the working `fancyvrb-ex` raw-load (correct source+result)
   + drive responsive layout from `ltx_minipage`/`ltx_env_*` hooks in `ar5iv.css`; do
   NOT re-implement the verbatim+render dual capture.
