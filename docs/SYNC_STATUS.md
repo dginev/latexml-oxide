@@ -1227,6 +1227,15 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
      ALL tables/math), which is an explicit OXIDIZED_DESIGN surpass-Perl choice, NOT autonomous
      work. Rust still beats Perl operationally (completes vs Perl's mhchem hang). Status:
      leave faithful; revisit only as a deliberate surpass-Perl core project.
+     *Precision caveat (critical-review):* the `\ce` proximate symptom differs slightly from
+     the minimal reduction — `\ce` leaves the cell `$`-template math frame UNclosed (every
+     teardown `egroup` then fails with `BOUND_MODE=math`), whereas `\begingroup$a$\endgroup`
+     fails earlier at the author `$`'s `end_mode` (top frame is the `\begingroup`). A direct
+     Perl-`\ce` comparison is impossible (Perl hangs on raw mhchem). So what is *proven* parity
+     is the shared **root family** (cell `$`-frame lifecycle broken by an intervening user
+     `\begingroup`/`\group_begin:` in a deferred align cell), of which `\ce` is a member —
+     `\ce`'s own expl3 groups are balanced (`bound_top=false` throughout the trace), so the
+     unclosed thing is solely the cell math frame, not a `\ce` group imbalance.
    - **ROOT-CAUSE detail (2026-06-27).** Scope: `\ce` (any `version=`) is clean in
      `equation`, `$$…$$`, `$…$`, `array`, and `matrix`, and breaks (6–9 errors, all "close a
      group that switched to mode math") **only** inside amsmath's `\lx@begin@alignment`-based
