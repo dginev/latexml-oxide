@@ -14,6 +14,12 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
+  // Real llncs.cls L244 sets secnumdepth to 2, so subsubsections are NOT
+  // numbered. Both the Perl llncs.cls.ltxml and this port previously omitted it
+  // and inherited article's default of 3, giving a plain \subsubsection a
+  // printed number ("7.0.1") that the PDF never shows. Witness 2605.16562
+  // ("Author contributions.").
+  SetCounter!("secnumdepth", Number::new(2));
 
   RequirePackage!("multicol");
   // LLNCS authors routinely use \boldsymbol (amsbsy) and \mathbb / \mathfrak
