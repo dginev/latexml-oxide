@@ -1213,23 +1213,33 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    `\lx@begin@alignment`/`\end@amsalign`; ~56 `\lx@end@inline@math` from specific
    `$`-toggle / `\cesplit`-derived example patterns). Basic `SideBySideExample`+`\ce`
    is clean.
-   - **LOCALIZED 2026-06-27 (`\ce`-in-`align*`), but DEFERRED — deep + no local Perl
-     baseline.** A SINGLE `\ce{H2O}` in one align* cell (no `&`/`\\`) already emits 6
-     errors, all "close a group that switched to mode math" (`\lx@begin@alignment` ×3,
-     `\lx@hidden@egroup`, `\endgroup`, `\end@amsalign`). Ruled OUT two hypotheses:
-     (i) **NOT a `\ifmmode` mode-detection divergence** — `\ifmmode` returns *text mode*
-     inside an align* cell during cell-token reading in BOTH Rust and Perl (LaTeXML builds
-     alignments deferred), so that is **parity**, not the bug; (ii) **NOT `\ensuremath`** —
-     plain `\ensuremath{…}` with every content variant tried (`H_2O`, `\mathrm{H}_2\mathrm{O}`,
-     `{}\mathop{\downarrow}{}`, nested) is 0 errors in align*. The fault is therefore inside
-     mhchem's `\ce` expl3 result machinery (`\protect@unexpand@cmd@arg\ce` / `\tl_use:N
-     \l__mhchem_ce_result_tl`, mhchem.sty L188-196,413) interacting with the alignment cell's
-     math-group tracking — a deep mhchem-internals × LaTeXML-alignment interaction.
-   - **Local Perl baseline is UNAVAILABLE:** reference Perl LaTeXML 0.8.8 on this host
-     **hangs** (99.9% CPU, killed at >4 min) on even simple `\ce{H2O}` — though it converts
-     a trivial non-mhchem doc in <1s — so the Perl mhchem binding cannot serve as a local
-     parity oracle for this cluster. **TODO:** classify via cortex (svc3=Perl corpus runs)
-     before any fix; the flip is corpus-wide. Do NOT guess a fix without that baseline.
+   - **ROOT-CAUSED 2026-06-27 (`\ce` in amsmath alignments) — DEFERRED to a focused
+     session (deep, but pure surpass-Perl).** Scope: `\ce` (any `version=`) is clean in
+     `equation`, `$$…$$`, `$…$`, `array`, and `matrix`, and breaks (6–9 errors, all "close a
+     group that switched to mode math") **only** inside amsmath's `\lx@begin@alignment`-based
+     environments — `align*`, `gather` — even a single `\ce{H2O}` in one cell. The
+     `LXML_TRACE_BOUND_MODE` trace pins it: `\ce` digests and leaves a stack frame **bound to
+     math** (`BOUND_MODE=math`), then the *deferred* alignment build (`\lx@begin@alignment` /
+     `\end@amsalign` / `\lx@hidden@egroup`, which run AFTER the body is captured) hits `egroup`
+     on that math-bound frame → error. Mechanism: `ams_align_bindings`
+     (`amsmath_sty.rs:195`) establishes per-cell math via `$\displaystyle … $` **template
+     tokens** (`T_MATH!()` before/after), whereas `array`/`matrix`
+     (`alignment_bindings(template, "math", …)`) digest cells in math mode **directly** — and
+     `\ce`'s `\protected` `\group_begin:…\group_end:` body (mhchem.sty `\__mhchem_ce:n`)
+     digests at body-capture time, so its math-frame nesting races the cell `$`-template
+     application. Ruled OUT: `\ifmmode` divergence (returns text-mode in align cells in BOTH
+     Rust+Perl — parity) and `\ensuremath` (every content variant clean; version=4 emits none
+     yet still fails). The faithful fix must KEEP the `$`-template (Perl's
+     `amsAlignmentBindings` uses it — switching to `"math"`-cells would diverge + break
+     display sizing); it lies in the protected-group-vs-cell-template digestion ordering →
+     focused session.
+   - **Rust ALREADY SURPASSES Perl here; no parity baseline exists or is needed.** Perl
+     LaTeXML ships **no** mhchem/chemformula binding (verified in both `LaTeXML/lib` and the
+     installed `/usr/local/share/perl/.../LaTeXML`), so Perl raw-loads mhchem.sty exactly like
+     Rust — and reference Perl 0.8.8 on this host **hangs** (99.9% CPU, killed >4 min) on even
+     `\ce{H2O}` (while converting a trivial doc in <1s). So Rust completing with a few
+     localized errors is strictly better than Perl; this is a surpass-Perl polish item, not a
+     regression, and needs no cortex parity gate.
 
 ### `ltx_env_<name>` env-markup class — branch `env-markup-class` (BINDING + RAW + ANTI-BLOAT LANDED)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
