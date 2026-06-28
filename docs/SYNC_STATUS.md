@@ -1213,8 +1213,21 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    `\lx@begin@alignment`/`\end@amsalign`; ~56 `\lx@end@inline@math` from specific
    `$`-toggle / `\cesplit`-derived example patterns). Basic `SideBySideExample`+`\ce`
    is clean.
-   - **ROOT-CAUSED 2026-06-27 (`\ce` in amsmath alignments) — DEFERRED to a focused
-     session (deep, but pure surpass-Perl).** Scope: `\ce` (any `version=`) is clean in
+   - **RECLASSIFIED 2026-06-28 — FAITHFUL shared-LaTeXML limitation, NOT a Rust parity
+     gap.** The proximate failure reduces to a minimal NON-mhchem case —
+     `\begingroup$a$\endgroup` inside `align*` — which **errors IDENTICALLY in BOTH Rust and
+     same-host Perl 0.8.8** (2× `\lx@end@inline@math Attempt to end mode math`; Perl runs it
+     fine since there's no mhchem to hang on). So LaTeXML's *shared* deferred-alignment model
+     genuinely cannot clean up the cell `$`-template math frame across an intervening
+     `\begingroup`/`\group_begin:` frame — and that model is a faithful port, so Rust sharing
+     the limitation is **correct behavior**, not a regression. `\ce` triggers it because its
+     expl3 body wraps math in `\group_begin:…\group_end:`. Consequence: there is **nothing to
+     "fix" for parity**; a fix would be a deliberate, deep, risky **divergence** from Perl's
+     shared core alignment design (changing how align cells scope math across groups — affects
+     ALL tables/math), which is an explicit OXIDIZED_DESIGN surpass-Perl choice, NOT autonomous
+     work. Rust still beats Perl operationally (completes vs Perl's mhchem hang). Status:
+     leave faithful; revisit only as a deliberate surpass-Perl core project.
+   - **ROOT-CAUSE detail (2026-06-27).** Scope: `\ce` (any `version=`) is clean in
      `equation`, `$$…$$`, `$…$`, `array`, and `matrix`, and breaks (6–9 errors, all "close a
      group that switched to mode math") **only** inside amsmath's `\lx@begin@alignment`-based
      environments — `align*`, `gather` — even a single `\ce{H2O}` in one cell. The
