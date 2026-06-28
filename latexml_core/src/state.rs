@@ -1001,7 +1001,9 @@ impl State {
     let cc = key.get_catcode();
     let name = key.get_sym();
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
-      if name == pin!("") { None } else { Some(name) }
+      // `\special_relax`-family tokens all resolve under the bare `\special_relax`
+      // name (shared `\relax` meaning; identity lives in `noexpand_shadowed`).
+      if name == pin!("") { None } else { Some(meaning_key(key)) }
     } else {
       key.get_executable_primitive_name().map(arena::pin)
     };
@@ -1828,7 +1830,7 @@ pub fn is_dont_expandable(token: &Token) -> bool {
   // Basically: a CS or Active token that is either not defined, or is expandable
   // (but not \let to a token)
   if token.get_catcode().is_active_or_cs() {
-    let lookupname = token.text;
+    let lookupname = meaning_key(token);
     if lookupname != pin!("") {
       match state!().meaning.get(&lookupname) {
         Some(entry) => {
@@ -2129,9 +2131,27 @@ pub fn assign_delcode<T: Into<u16>>(key: char, value: T, scope: Option<Scope>) {
 /// Get the `Meaning' of a token.  For active control sequences
 /// this may give the definition object (if defined) or another token (if \let) or undef
 /// Any other token is returned as is.
+/// The key under which a token's meaning is stored. **All** `\special_relax`-family
+/// tokens (`\noexpand`'d forms — the bare `\special_relax` and every
+/// `\special_relax\x01<shadowed>`) resolve under the bare `\special_relax` name:
+/// they share its `\relax` meaning, faithful to TeX where a `\noexpand`'d token
+/// has relax meaning regardless of which token it shadows. The shadowed identity
+/// is recovered separately via [`Token::noexpand_shadowed`] (delimited matching
+/// only). Use this anywhere a token's *name* keys a meaning lookup or a
+/// "same control sequence?" comparison. Cheap on the common path: non-CS tokens
+/// short-circuit before any string access.
+#[inline]
+pub fn meaning_key(token: &Token) -> SymStr {
+  if token.is_noexpand_family() {
+    pin!("\\special_relax")
+  } else {
+    token.text
+  }
+}
+
 pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
-    match state!().meaning.get(&token.text) {
+    match state!().meaning.get(&meaning_key(token)) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => None,
         Some(other) => Some(other.clone()),
@@ -2157,7 +2177,7 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
 pub fn with_meaning<R>(token: &Token, f: impl FnOnce(Option<&Stored>) -> R) -> R {
   let state = state!();
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
-    match state.meaning.get(&token.text) {
+    match state.meaning.get(&meaning_key(token)) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => f(None),
         Some(other) => f(Some(other)),
@@ -2223,7 +2243,7 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
-    match state!().meaning.get(&token.text) {
+    match state!().meaning.get(&meaning_key(token)) {
       Some(entry) => match entry.front() {
         None | Some(Stored::None) => false,
         Some(_) => true,
@@ -2317,7 +2337,8 @@ pub fn lookup_digestable_definition(token: &Token) -> Option<Stored> {
       && lookup_bool_sym(crate::pin!("IN_MATH"))
       && (lookup_mathcode_sym(t_sym).unwrap_or(0) == 0x8000))
   {
-    t_sym
+    // `\special_relax`-family tokens digest under the bare `\special_relax` no-op.
+    meaning_key(token)
   } else {
     // Use cached SymStr from `Catcode::name_sym` instead of re-interning
     // `cc.name()` (a &'static str) on every non-active-or-cs token —

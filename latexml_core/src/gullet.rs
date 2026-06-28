@@ -52,25 +52,21 @@ static HEX_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"[0-9A-F]").unwrap());
 pub static TRACE_GROUP_END: Lazy<bool> =
   Lazy::new(|| std::env::var("LXML_TRACE_GROUP_END").is_ok());
 
-// Perl smuggles the unexpanded token inside \special_relax's slot [2].
-// Rust Token is Copy+Clone with no extra slot, so we use a thread-local Cell.
+// `\noexpand`'d tokens are represented per-token by the `\special_relax` family
+// (`Token::is_noexpand_family` / `token::noexpand_family`): the shadowed token's
+// identity is encoded in the CS name, so it survives storage and dumps without a
+// global smuggle slot. The family resolves to `\relax` meaning via the
+// `state::lookup_meaning` fallback. Faithful to TeX's `no_expand_flag`, which
+// preserves the shadowed `cur_cs` while giving it relax meaning for one access.
 use std::cell::Cell;
 
 use crate::pin;
-#[thread_local]
-static SPECIAL_RELAX_SMUGGLED: Cell<Option<Token>> = Cell::new(None);
 
-/// Store the unexpanded token smuggled inside \special_relax (Perl: $$special_relax[2])
-fn set_special_relax_smuggled(token: Token) { SPECIAL_RELAX_SMUGGLED.set(Some(token)); }
-/// Retrieve (and clear) the smuggled token from the last \special_relax
-pub fn take_special_relax_smuggled() -> Option<Token> { SPECIAL_RELAX_SMUGGLED.take() }
-/// Peek at the smuggled token without consuming it
-fn peek_special_relax_smuggled() -> Option<Token> { SPECIAL_RELAX_SMUGGLED.get() }
-/// Check if a token is \special_relax and its smuggled unexpanded token matches `target`
+/// True when `token` is a `\noexpand`'d form (`\special_relax` family) shadowing
+/// `target` — used by delimited-parameter / keyword matching so that, faithful to
+/// TeX, a `\noexpand`'d token still matches its underlying identity.
 fn special_relax_matches(token: &Token, target: &Token) -> bool {
-  token.code == Catcode::CS
-    && token.text == pin!("\\special_relax")
-    && peek_special_relax_smuggled().as_ref() == Some(target)
+  token.noexpand_shadowed().as_ref() == Some(target)
 }
 #[thread_local]
 static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(|| {
@@ -278,8 +274,6 @@ pub fn initialize_gullet() {
   gullet.ctx_serial = 0;
   gullet.ctx_next = 0;
   gullet.ctx_stack.clear();
-  // Reset smuggled token from previous conversion
-  SPECIAL_RELAX_SMUGGLED.set(None);
 }
 
 /// Get the current location of input getting read
@@ -723,12 +717,14 @@ pub fn read_token() -> Result<Option<Token>> {
         continue; // Perl: handleTemplate then continue while(1) loop
       }
       if nextt.code == Catcode::CS && nextt.text == pin!("\\dont_expand") {
-        let unexpanded = read_token()?;
-        // Perl: smuggle the unexpanded token in the "meaning" slot of \special_relax
-        if let Some(tok) = unexpanded {
-          set_special_relax_smuggled(tok);
-        }
-        next_token = Some(T_CS!("\\special_relax"));
+        // `\noexpand <tok>`: collapse to the per-token `\special_relax` family,
+        // encoding <tok>'s identity in the name (faithful to TeX's
+        // `no_expand_flag`, which keeps `cur_cs`). End-of-input ⇒ bare
+        // `\special_relax` (nothing to shadow).
+        next_token = Some(match read_token()? {
+          Some(tok) => crate::token::noexpand_family(&tok),
+          None => T_CS!("\\special_relax"),
+        });
       }
       break;
     } else {
@@ -895,12 +891,14 @@ pub fn read_x_token(
       if for_conditional && unexpanded.code == Catcode::ACTIVE {
         return Ok(Some(unexpanded));
       } else {
-        // Perl Gullet.pm L395-397 (readXToken): does NOT smuggle the
-        // unexpanded token here. Only Perl's readToken (Gullet.pm
-        // L313-317) smuggles. We follow Perl exactly: drop the
-        // unexpanded token in this path. (Earlier Rust always
-        // smuggled; that diverged from Perl on this branch.)
-        return Ok(Some(T_CS!("\\special_relax")));
+        // `\noexpand <tok>`: per-token `\special_relax` family encoding <tok>'s
+        // identity in the name — faithful to TeX's `no_expand_flag`, which keeps
+        // `cur_cs` while giving relax meaning for this one access. (Perl
+        // readXToken returns a bare `\special_relax`, dropping the identity;
+        // recovering it is a deliberate, SURPASS-PERL fidelity fix so a
+        // `\noexpand`'d delimiter — e.g. xint's `\XINTfstop`, witness
+        // 1804.01117 — survives a number/macro scan for the surrounding parser.)
+        return Ok(Some(crate::token::noexpand_family(&unexpanded)));
       }
     }
     // Wow!!!!! See TeX the Program \S 309

@@ -330,6 +330,31 @@ impl PartialEq for Token {
   }
 }
 
+/// Name of the bare no-op control sequence `\noexpand` collapses to, and the
+/// prefix of every member of the no-expand family. See [`Token::is_noexpand_family`].
+pub const NOEXPAND_PREFIX: &str = "\\special_relax";
+/// Separator byte between the `\special_relax` prefix and the shadowed token's
+/// text in a family token's name. `\x01` is never valid in a CS name or active
+/// char, so `\special_relax\x01\foo` is unambiguous and cannot collide with a
+/// real CS such as a (hypothetical) `\special_relaxfoo`.
+pub const NOEXPAND_SEP: u8 = 1;
+
+/// Build the no-expand family token shadowing `shadowed` — the per-token,
+/// dump-safe representation of `\noexpand <shadowed>` (faithful to TeX's
+/// `no_expand_flag`: the shadowed identity is preserved in the name; the family
+/// resolves to `\relax` meaning). `shadowed` is an expandable/undefined CS or
+/// active token (the only things `\noexpand` wraps; see `is_dont_expandable`).
+pub fn noexpand_family(shadowed: &Token) -> Token {
+  let text =
+    shadowed.with_str(|s| format!("{NOEXPAND_PREFIX}{}{s}", NOEXPAND_SEP as char));
+  Token {
+    text: arena::pin(text),
+    code: Catcode::CS,
+    #[cfg(feature = "token-locators")]
+    loc: 0,
+  }
+}
+
 // Note: given that we are pinning the strings in an arena,
 //  once we have a token of a certain kind it is now faster to clone
 //  a known token than it is to build a new one
@@ -822,6 +847,47 @@ impl Token {
   pub fn with_str<R, FnR>(&self, caller: FnR) -> R
   where FnR: FnOnce(&str) -> R {
     arena::with(self.text, caller)
+  }
+
+  /// True for any member of the `\special_relax` no-expand family — the
+  /// representation of a `\noexpand`'d (expandable or undefined) CS/active token.
+  /// Such a token is a CS whose NAME is `\special_relax` `\x01` `<shadowed text>`,
+  /// carrying the shadowed token's identity PER-TOKEN (faithful to TeX's
+  /// `no_expand_flag`, which preserves `cur_cs`), while the whole family resolves
+  /// to `\special_relax`'s `\relax` meaning ([`crate::state::lookup_meaning`]
+  /// fallback). The bare `\special_relax` (no suffix) is the no-shadow case
+  /// (`\dont_expand` at end-of-input). `\x01` is never valid in a CS name or as
+  /// an active char, so the encoding is unambiguous.
+  pub fn is_noexpand_family(&self) -> bool {
+    self.code == Catcode::CS
+      && self.with_str(|s| {
+        s.starts_with(NOEXPAND_PREFIX)
+          && (s.len() == NOEXPAND_PREFIX.len() || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
+      })
+  }
+
+  /// Recover the shadowed token from a `\special_relax`-family token, if it
+  /// shadows one (i.e. not the bare `\special_relax`). The shadowed token is a
+  /// CS (text begins `\`) or an active char.
+  pub fn noexpand_shadowed(&self) -> Option<Token> {
+    if self.code != Catcode::CS {
+      return None;
+    }
+    self.with_str(|s| {
+      let rest = s.strip_prefix(NOEXPAND_PREFIX)?;
+      let rest = rest.strip_prefix(NOEXPAND_SEP as char)?;
+      let code = if rest.starts_with('\\') {
+        Catcode::CS
+      } else {
+        Catcode::ACTIVE
+      };
+      Some(Token {
+        text: arena::pin(rest.to_string()),
+        code,
+        #[cfg(feature = "token-locators")]
+        loc: 0,
+      })
+    })
   }
 
   /// Return the character code of  character part of the token, or 256 if it is a control
