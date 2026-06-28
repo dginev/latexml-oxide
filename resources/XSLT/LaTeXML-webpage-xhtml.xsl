@@ -348,6 +348,12 @@
     </xsl:element>
   </xsl:template>
 
+  <!-- Distinct-by-string-value index for indexphrases, so head-keywords can
+       deduplicate in O(n) (Muenchian method) instead of the O(n^2)
+       not(.=preceding::ltx:indexphrase) scan. Local perf divergence from
+       upstream LaTeXML (output-neutral); candidate to upstream. -->
+  <xsl:key name="f:indexphrase-by-value" match="ltx:indexphrase" use="."/>
+
   <!-- Generate a keywords meta entry for the head; typically from indexphrase's or keywords-->
   <xsl:template match="/" mode="head-keywords">
     <xsl:if test="//ltx:indexphrase | //ltx:keywords">
@@ -362,7 +368,7 @@
           <xsl:if test="//ltx:indexphrase and //ltx:keywords">
             <xsl:text>, </xsl:text>
           </xsl:if>
-          <xsl:for-each select="//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]">
+          <xsl:for-each select="//ltx:indexphrase[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]">
             <xsl:sort select="text()"/>
             <xsl:if test="position() &gt; 1">, </xsl:if>
             <xsl:value-of select="text()"/>

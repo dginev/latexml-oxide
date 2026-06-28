@@ -327,6 +327,35 @@ See the testbed table above (category + dominant phase per paper). Status legend
 > One entry per investigated hotspot: root cause, change, before→after delta,
 > output-neutrality (byte-identical XML) + test evidence. Newest first.
 
+### #3 — XSLT `head-keywords` index dedup O(n²) (batch #201–300 index cluster) — 2026-06-28
+- **Root cause:** `resources/XSLT/LaTeXML-webpage-xhtml.xsl`'s `head-keywords`
+  (builds `<meta name="keywords">`) deduplicated index phrases with
+  `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]` — the XSLT-1.0
+  distinct-by-value antipattern: each indexphrase walks the `preceding::` axis ⇒
+  **O(indexphrases² × tree-size)**. `xsltproc --profile` pinned it: `head-keywords`
+  = **145 s of a ~150 s** transform on 2208.07515 (1 call), matching the gdb stack
+  `xsltElement(meta)→xsltAttribute(content)→xsltForEach→xmlXPathCompiledEval`.
+- **Change:** the Muenchian method — a hashed
+  `<xsl:key name="f:indexphrase-by-value" match="ltx:indexphrase" use="."/>` +
+  `//ltx:indexphrase[generate-id()=generate-id(key('f:indexphrase-by-value',.)[1])]`.
+  O(n), identical first-occurrence-in-document-order + `<xsl:sort>` semantics.
+  File: `resources/XSLT/LaTeXML-webpage-xhtml.xsl` (embedded at build time).
+- **Before→after** (HEAD pre-fix → post-fix wall; all were ~173–175 s in cortex):
+  2208.07515 (560 \index) 95.5 s → **33.4 s** (xslt 71.5 → 11.8 s); 0807.4838 (1032)
+  78.1 → **13.2 s**; 1802.06435 (515) 77.6 → **17.3 s**; 2403.19732 (334) 68.1 →
+  **29.1 s**; math0206203 (189) 50.0 → **30.0 s**; 1807.02129 (310) 49.6 → **26.9 s**.
+- **Output-neutral:** `xsltproc` full-HTML byte-identical (3.2 MB, 2208.07515 `diff`
+  IDENTICAL); independently, the keywords-meta is byte-identical between the
+  historical pre-fix bundle and the fixed binary on 2208.07515 (5991 ch) and
+  1802.06435 (14394 ch). Suite **1488/0** + new guard `08_xslt_head_keywords.rs`.
+- **Supersedes** the prior campaign's *deferred* "Third XSLT O(n²) — large-index"
+  (1802.06435): the real root was `head-keywords`, NOT the index-render templates
+  (which are locally linear); the prior deferral couldn't pin it without
+  `xsltproc --profile`. 1802.06435 is now 77.6 → 17.3 s.
+- **Note:** local-only XSLT divergence from upstream LaTeXML; the O(n²) exists
+  verbatim upstream — candidate to upstream (like the seclev memoization).
+  See OXIDIZED_DESIGN.md #40.
+
 ### #2 — XSLT `f:seclev-aux` O(n²) heading-level computation (Cluster B; 14 papers) — 2026-06-27
 - **Root cause:** `LaTeXML-structure-xhtml.xsl`'s `f:seclev-aux` recomputes
   whole-tree `boolean(//ltx:X/ltx:title)` descendant scans on every heading

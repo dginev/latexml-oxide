@@ -1525,6 +1525,36 @@ manual at 144% (1388 `fontsize="144%"` nodes → 4 after the fix). Output-neutra
 the suite (1487/0): no golden test relies on the leak. Surpass-Perl; candidate to
 upstream. See `KNOWN_PERL_ERRORS.md`.
 
+### 40. XSLT `head-keywords` index dedup via Muenchian key (O(n²)→O(n), output-neutral)
+
+**Decision:** In the embedded `resources/XSLT/LaTeXML-webpage-xhtml.xsl`, the
+`head-keywords` template (which builds `<meta name="keywords">` from the distinct
+index phrases) selects its distinct set with a hashed `xsl:key`
+(`f:indexphrase-by-value`, the **Muenchian method**:
+`//ltx:indexphrase[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]`)
+instead of upstream's `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]`.
+
+**Perl behavior:** upstream LaTeXML deduplicates by testing each indexphrase
+against the entire `preceding::ltx:indexphrase` axis — O(P²) string comparisons in
+the indexphrase count P, and each `preceding::` traversal is itself O(tree-size).
+On index-bearing math documents (large trees) this is the dominant XSLT cost. Perl
+keeps the O(n²).
+
+**Rationale & neutrality:** the Muenchian key returns, for each distinct
+string-value, the first indexphrase in document order — exactly the set
+`not(.=preceding::)` keeps. The `<xsl:sort>` is unchanged, so the keywords string is
+**identical**. Verified byte-identical via `xsltproc` (full HTML `diff` IDENTICAL on
+arXiv 2208.07515) and a full-pipeline regression guard
+(`08_xslt_head_keywords.rs`); suite unchanged.
+
+**Impact:** the `head-keywords` template went 145 s → 0.04 s on 2208.07515 (560
+indexphrases); cluster-wide the index-bearing arXiv perf survivors dropped 2–5×
+(2208.07515 95 s→33 s, 1802.06435 78 s→17 s, 0807.4838 78 s→13 s). This **supersedes**
+the prior campaign's deferral of the "third XSLT O(n²)" (`docs/ARXIV_PERFORMANCE.md`)
+— head-keywords, not the index-render templates, was the real root. Surpass-Perl;
+candidate to upstream. Local divergence from upstream XSLT only. Full analysis:
+`docs/ARXIV_PERFORMANCE.md` (Hotspot #3).
+
 ---
 
 ## Future Work (Beyond Perl Parity)

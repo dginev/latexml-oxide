@@ -38,6 +38,17 @@
   — Perl keeps the O(n²)). Byte-identical output, suite 1480/0. Shared upstream XSLT
   issue (candidate to upstream); see `docs/OXIDIZED_DESIGN.md` #37 +
   `docs/ARXIV_PERFORMANCE.md` Hotspot #2.
+- **PERF (2026-06-28): XSLT `head-keywords` index-dedup O(n²) — FIXED (output-neutral).**
+  The slowest-100 follow-up batch (#201–300) re-run on HEAD was 81/100 already <5 s
+  (natbib fix) but left an XSLT survivor tier; root-caused via `xsltproc --profile`
+  to `head-keywords` in `resources/XSLT/LaTeXML-webpage-xhtml.xsl` building
+  `<meta name="keywords">` with `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]`
+  — O(indexphrases² × tree). Replaced with a Muenchian `xsl:key` (O(n)).
+  2208.07515 95→**33 s** (xslt 71.5→11.8); 1802.06435 (the prior campaign's *deferred*
+  large-index witness) 78→**17 s**; 0807.4838 78→**13 s**. Byte-identical output
+  (xsltproc full-HTML diff + historical-bundle keywords-meta diff), suite **1488/0**
+  + guard `08_xslt_head_keywords.rs`. See the #201–300 4-cluster triage below,
+  `OXIDIZED_DESIGN.md` #40, `ARXIV_PERFORMANCE.md` Hotspot #3.
 - **Broad regression + health sweep (2026-06-27):** ~140 diverse random corpus
   papers (two samples of 40 + 100, NOT the perf testbed) on the current binary →
   **0 crashes, 0 fatals, 0 hangs** across all conversions; unbound-class (OmniBus
@@ -275,6 +286,104 @@ Two genuine Rust-only bugs fixed + the full p/m/b table-column parity arc:
   sweep (0 Rust>Perl; Rust at-or-better everywhere) + class-level cross-join.
 - (Earlier this session: tasks 5 & 6 below — post-processing log parity + graphics
   never-ship-raw-.eps — also landed.)
+
+## arXiv slowest-100 batch #201–300 — 4-cluster triage (2026-06-28, on `followups-2026-06-27`)
+
+The follow-up perf batch (ranks #201–300; historically **173.2–175.5 s**, all pinned
+near the 180 s cortex watchdog). Re-run on HEAD (current binary, *after* the 2026-06-27
+natbib + seclev fixes): **81/100 already <5 s**, **1 still timing out**, ~18 XSLT/math
+survivors at 13–95 s. Triaged into 4 clusters (the last 4 investigated in parallel);
+**one new shared O(n²) fix landed, one genuine Rust-only timeout root-caused.**
+Methodology: in-zip `telemetry.json` phase split (`scratchpad/triage_slow.py`) → re-run
+on HEAD (`rerun.sh`, `--preload=ar5iv.sty`) → for survivors, `xsltproc --profile` +
+gdb worker-thread sampling + (Cluster D) Perl-parity check. Full analysis in
+`docs/ARXIV_PERFORMANCE.md` (Hotspot #3).
+
+### Cluster A — OmniBus/natbib digest (≈77 papers) — ✅ CLEARED
+Unbound journal classes → OmniBus → natbib (sn-jnl ×52, Wiley/sagej/ws-procs/lmcs/oup/
+ecai/…). Already fixed by the loop-safe `def_autoload` (2026-06-27). Verified on HEAD:
+every class now **0.3–0.9 s**, natbib loads exactly once, citations render (196–321
+ltx_cite/ref), zero undefined-`\citep`. **No action.** Only OmniBus paper still slow is
+2209.11799 → Cluster D (a *different* loop). Guard `omnibus_natbib_autoload_no_reload_loop`.
+
+### Cluster B — index `head-keywords` XSLT O(n²) — ✅ FIXED this session
+`resources/XSLT/LaTeXML-webpage-xhtml.xsl` `head-keywords` built `<meta name="keywords">`
+via `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]` — distinct-by-value over the
+`preceding::` axis = **O(indexphrases² × tree)**. `xsltproc --profile` pinned it (145 s of
+a ~150 s transform on 2208.07515, 1 call). Replaced with a Muenchian hashed `xsl:key`
+(O(n), identical first-occurrence + `xsl:sort` ⇒ byte-identical output). Cluster-wide:
+2208.07515 95→**33 s** (xslt 71.5→11.8); 1802.06435 78→**17 s**; 0807.4838 78→**13 s**;
+2403.19732 68→29 s; math0206203 50→30 s; 1807.02129 50→27 s. Output-neutral (xsltproc
+full-HTML diff + historical-bundle keywords-meta diff, byte-identical), suite **1488/0** +
+guard `08_xslt_head_keywords.rs`. **Supersedes** the prior campaign's *deferred* large-index
+witness (1802.06435 — the real root was head-keywords, not the index-render templates).
+Surpass-Perl; candidate to upstream. See `OXIDIZED_DESIGN.md` #40.
+
+### Cluster C — math-heavy large-doc residual (6 papers) — ⏸ DEFERRED (P1 large-doc lever)
+0707.3572 (20894 formulae), 2310.07949, 2106.02143, 2406.00467, 1708.01795, 1912.06823 —
+~33–50 s, **no significant index** (head-keywords didn't help). Cost is **distributed**
+across build + math_parse + xslt + mathml_pres, scaling with formula volume; **O(n²) ruled
+out** by element-scaling on 0707.3572 (xslt ms/formula 0.43→0.83 across 25→100 % ⇒ ~**n^1.45
+mild superlinear**, not the ~4× of O(n²)). gdb localizes the mild superlinearity to diffuse
+per-element descendant-axis `xsl:if`/`xsl:choose` in the math/structural templates
+(`xsltCallTemplate→xsltIf→xmlXPathNextDescendant`), worse on libxml2 2.16. No single hoistable
+template (unlike seclev/head-keywords). All complete under the 180 s budget (max ~50 s).
+**Second-XSLT-win hunt (deep dive, 2026-06-28): NEGATIVE.** Static enumeration of the
+per-element high-frequency templates (`add_id` common.xsl:469, `add_classes`:511, `add_style`:572,
+`base-classes`/`base-styling`/`add_RDFa`) found **no `//`/`descendant::`/`generate-id`/`count()`/
+`key()`** — genuinely O(1)/element. The only per-element descendant-axis predicates are in
+equation handling (`LaTeXML-block-xhtml.xsl:279/287/549`, `not(descendant::ltx:equation[ltx:tags])`
+etc.), which scan an **equationgroup's own subtree, not the whole tree** — group-size-bounded, the
+source of the n^1.45, NOT whole-tree O(n²). Memoizing them saves <~15 % of the ~16–22 s xslt only on
+align-heavy docs, for real output-divergence risk ⇒ not worth it. (The `xsltproc --profile`
+`maketitle` 66 s #1 is an inclusive-time + core.xml-XMath artifact — core.xml carries the giant
+XMath trees the real compact-MathML input lacks — not a real leaf hotspot.)
+**Digest/math-parse half (deep dive, 2026-06-28): also inherent O(formulae), no fixable hotspot.**
+On the math-heavy papers build (~11 s) + math_parse (~12 s) are large but **not** a re-parse blowup:
+`math_parse_count/formulae` ≈ **1.2** (0707.3572: 20894 formulae → 25086 parses; buckets
+[13954,4004,1768,710,132,21,0,0,0] decay cleanly — Marpa healthy, no ambiguity blowup), and
+build+math_parse µs/formula is **FLAT** across a 0707.3572 truncation (916.8 → 923.2 → 1085.5 at
+25/50/100 %, +18 % at 4× = cache/working-set, not quadratic) ⇒ **O(n), ~1 ms/formula**. The only
+lever is shrinking that per-formula constant (math-recognizer / document-builder micro-opt) = the
+deep **P1 large-doc track**. **Action:** defer to P1; keep 0707.3572 as a STABILITY_WITNESS.
+
+**Isolated outlier (not Cluster C): 2112.14457 — DIGEST-bound (7.1 s of 16.5 s), not math/xslt.**
+`lipics-v2021` + `tikz`/`pgfplots`/`pgfplotstable`/`algorithm2e` (206 package-load lines); the
+digest cost points to **pgfplots picture digestion** (known-heavy). Not pinned to a frame (stripped
+release binary; needs a symbols build). **Low priority** — 16.5 s, well under the 180 s budget; no
+shared breadth. Noted, not actioned.
+
+### Cluster D — 2209.11799 token-limit recursion — 🐞 GENUINE RUST-ONLY (fix queued)
+The lone HEAD timeout (sn-jnl, 200 s, `Fatal:Timeout:TokenLimit`). NOT the natbib reload —
+a **follow-on regression of the `def_autoload` fix**. When natbib is side-loaded via a
+non-autoload path (OmniBus's redefined `\bibitem` sees `[\protect\citeauthoryear` in the
+`.bbl` → `\lx@late@usepackage{natbib}`, `omnibus_cls.rs:80`), the `\citep`/`\citet`
+`def_autoload` triggers are **never cleared**; the "already-loaded → re-emit `cs_for_closure`
+without clearing" branch (`latexml_engine/src/tex.rs:60-62`, added for the `\let`-alias case
+2310.13684) re-fires the same closure → infinite token recursion (gdb: tight `__memcpy` +
+repeating return-address cycle). **Perl completes** (repro 1.0 s, full paper 11.7 s) ⇒
+genuine Rust-only. Minimal repro: `\documentclass{sn-jnl}` + `\begin{thebibliography}` with one
+`\bibitem[\protect\citeauthoryear{Foo et~al.}{2020}]{a}` + a top-level `\citep{a}`
+(saved at `scratchpad/cluster_D/repro.tex`). gdb on a debug build confirms a gullet
+token-expansion spin (`read_x_token`/`read_internal_token` under `digest_next_body`) —
+the `\citep` re-emit re-firing the autoload closure.
+**Likely deeper mechanism (refined 2026-06-28):** natbib's real `\citep` is installed at
+the `\bibitem`/bbl group frame during the side-load and **popped on group exit**, reverting
+`\citep` to the global autoload trigger; the body `\citep{a}` then re-fires it. The
+non-early-return path already guards this via `hoist_top_frame_meaning_delta`, but the
+side-load (`\lx@late@usepackage{natbib}`) bypasses that hoist. NB: `require_package` is
+**idempotent** (skips when `<pkg>.sty_loaded`), so a naive "clear + re-`require_package`"
+in the early-return branch would NOT reinstall `\citep` — a correct fix must hoist the
+already-installed defs to global (or detect the self-loop and clear→graceful-undefined,
+which still diverges from Perl's rendered cite).
+**Implementation DEFERRED (task #7), per the established policy** (`ARXIV_PERFORMANCE.md`
+L420): *do not fix speculatively in the shared `def_autoload` path* — regression traps
+2310.13684 (`\varmathbb`) + 1403.6801 (wlpeerj) are live, and the mechanism needs a full
+meaning-resolution state-trace to fix correctly. This entry SUPERSEDES the prior vaguer
+2602.15365 (informs4) deferral with a precise root cause + minimal repro, so the future
+focused session starts from a strong position. Breadth: 1 paper of 100; completes-as-fatal
+under the 180 s budget (not a hang that consumes the slot). Guards for the eventual fix:
+2310.13684, 1403.6801, 2207.14344, + the new repro.
 
 ## Upstream sync — translate brucemiller/LaTeXML PRs since #2767 (NEW MISSION, opened 2026-06-25)
 
