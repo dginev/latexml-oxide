@@ -1322,10 +1322,14 @@ rides the begin marker so the end marker is nameless.
   `\newenvironment{annotation}` is tagged `ltx_env_annotation`, and the `SideBySideExample`
   bodies carry `ltx_env_minipage` (124×, binding side) — the exact CSS hooks the
   ar5iv.css layout targets.
-- **Same-host parity spot-check (2026-06-27, this branch's binary vs Perl 0.8.8):** 12 old
-  (pre-expl3) `0704.*` papers, Rust-vs-Perl error counts → **0 Rust-worse**; 9/12 exact
-  parity, 2 Rust-BETTER (0704.0295 1v6, 0704.3173 0v12), 1 equal (0704.3654 12v12, shared
-  root). Confirms the env-marker change introduces no real-paper parity regression.
+- **Same-host parity sweeps (2026-06-27, this branch's binary vs Perl 0.8.8):**
+  - 12 old `0704.*` papers → **0 Rust-worse**; 9 parity, 2 Rust-BETTER (0704.0295 1v6,
+    0704.3173 0v12), 1 equal (0704.3654 12v12, shared root).
+  - 27 **cross-subject** `0601` papers (math/hep-th/cond-mat/quant-ph/cs/gr-qc) →
+    **0 Rust-worse**; 23 parity, 4 Rust-BETTER (math0601001 0v1, hep-th0601095 84v102,
+    quant-ph0601167 2v9, cs0601001 0v8).
+  Confirms the env-marker + anti-bloat + dump-regen changes introduce no real-paper
+  parity regression, and re-confirms the high same-host-parity state across subjects.
 - **`\NewDocumentEnvironment` family — ✅ COVERED 2026-06-27** (was a limitation; the
   fix was simpler than first thought). KEY INSIGHT: the `\begin`/`\end` dispatchers
   ALREADY fire for these envs — every env flows through them — so the dispatcher half was
