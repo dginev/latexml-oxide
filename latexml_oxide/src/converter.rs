@@ -27,7 +27,10 @@ const CONVERTER_IDENTITY: &str = "latexml_oxide (v0.5.0)";
 /// See `docs/script_bindings_plan.md` §7.
 #[cfg(feature = "runtime-bindings")]
 fn rhai_dispatch(request: &str) -> Option<Result<()>> {
-  use latexml_core::binding::content::{FindFileOptions, find_file};
+  use latexml_core::{
+    binding::content::{FindFileOptions, find_file},
+    state::record_opened_source,
+  };
   let path = find_file(
     request,
     Some(FindFileOptions {
@@ -38,6 +41,14 @@ fn rhai_dispatch(request: &str) -> Option<Result<()>> {
       ..FindFileOptions::default()
     }),
   )?;
+  // Pin the resolved `.rhai` in the opened-sources read-log. `load_file`
+  // below reads it with a raw `std::fs::read_to_string` (it is not opened
+  // through a `Mouth`, so `Mouth::create`'s `record_opened_source` never
+  // fires for it). Without this, an edited binding is invisible to the warm
+  // LSP preamble cache (`warmup_dep_snapshot` / `deps_still_current`) and the
+  // stale macros survive every reconversion. Recording the resolved path lets
+  // the cache invalidate on the file's mtime change.
+  record_opened_source(arena::pin(&path));
   Some(latexml_contrib::script_bindings::load_file(&path).map(|_| ()))
 }
 

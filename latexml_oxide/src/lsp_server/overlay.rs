@@ -308,4 +308,44 @@ mod tests {
     )];
     assert!(!deps_still_current(&stale, &bufs));
   }
+
+  #[test]
+  fn recorded_rhai_dep_pins_to_disk_and_invalidates_on_edit() {
+    // Models the runtime `.rhai` binding flow: `rhai_dispatch` records the
+    // resolved `.rhai` path in the opened-sources read-log (the binding is
+    // loaded via a raw `std::fs` read, never through a `Mouth`, so nothing
+    // else logs it). The warm-cache snapshot must pin it as `Disk(mtime)` —
+    // it is never an open editor buffer — and an edit (mtime change) must
+    // read as stale, otherwise an edited binding survives in the warm
+    // preamble cache and the user sees no effect.
+    use std::time::Duration;
+
+    use latexml_core::common::arena;
+
+    let tmp = tempfile::tempdir().unwrap();
+    let rhai = tmp.path().join("example.sty.rhai");
+    std::fs::write(&rhai, "DefMacro(\"\\\\foo\", || \"FOO\");\n").unwrap();
+    let rhai_path = rhai.to_str().unwrap().to_string();
+
+    state::reset_thread_state();
+    state::record_opened_source(arena::pin(&rhai_path)); // what rhai_dispatch now does
+
+    // The binding only ever exists on disk (never an open editor buffer).
+    let bufs: FxHashMap<String, Buffer> = FxHashMap::default();
+    let snap = warmup_dep_snapshot(&bufs, &tmp.path().join("main.tex"));
+    assert!(
+      matches!(snap.as_slice(), [(n, DepState::Disk(Some(_)))] if *n == rhai_path),
+      "the recorded .rhai must be pinned as Disk(mtime): {snap:?}"
+    );
+    assert!(deps_still_current(&snap, &bufs), "an unedited binding stays current");
+
+    // Edit the binding (new content + a distinct mtime): the warm cache,
+    // gated on `deps_still_current`, must now miss and re-digest the preamble.
+    std::fs::write(&rhai, "DefMacro(\"\\\\foo\", || \"BAR\");\n").unwrap();
+    std::fs::File::open(&rhai)
+      .unwrap()
+      .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000))
+      .unwrap();
+    assert!(!deps_still_current(&snap, &bufs), "an edited binding reads as stale");
+  }
 }
