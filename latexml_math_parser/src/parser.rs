@@ -1,4 +1,10 @@
-use std::{borrow::Cow, cell::RefCell, io::Cursor};
+use std::{
+  borrow::Cow,
+  cell::RefCell,
+  collections::HashSet,
+  hash::{Hash, Hasher},
+  io::Cursor,
+};
 
 use latexml_core::{
   Warn,
@@ -412,8 +418,13 @@ pub struct MathParser {
   n_parsed:                  usize,
   /// Grammar tree count from the last successful parse (for \ltx@count@parses)
   pub last_parsetrees_count: usize,
+  /// Hashes of the distinct formula token streams that have already emitted an `ambiguous_math` /
+  /// `unparsed_math` warning in THIS document. Perl LaTeXML warns once per distinct formula per
+  /// document — a formula repeated N times still warns once. The parser is built per document
+  /// (`core_interface`), so this set's lifetime IS the document scope. Hashed (not stored whole) to
+  /// stay O(8 bytes) per formula under the worker fleet.
+  warned_formulas:           HashSet<u64>,
   // strict: bool,
-  // warned: bool,
   // xnode: Option<Node>,
 }
 impl Default for MathParser {
@@ -438,8 +449,8 @@ impl Default for MathParser {
       // idrefs: Vec::new(),
       n_parsed: 0,
       last_parsetrees_count: 0,
+      warned_formulas: HashSet::new(),
       // strict: true,
-      // warned: false,
       // xnode: None,
     }
   }
@@ -2027,21 +2038,37 @@ impl MathParser {
     // Use post-dedup count (distinct semantic trees), not raw grammar count
     self.last_parsetrees_count = parses.len();
 
-    if ok_trees + pruned_trees > 10 {
-      // Diagnostic only — high ambiguity isn't a Perl-side Error in
-      // MathParser.pm; the warn target uses a Rust-internal class.
-      log_math_warn!(
-        "ambiguous",
-        "math",
-        "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
-        ok_trees + pruned_trees + deduped,
-        ok_trees + deduped,
-        pruned_trees,
-        deduped,
-        parses.len(),
-        start.elapsed(),
-        input.trim()
-      );
+    // Diagnostic only — neither high ambiguity nor a parse failure is a Perl-side MathParser.pm
+    // Error; the warn target uses a Rust-internal class. One message, two categories:
+    //   * `unparsed_math`  — the formula produced no parse at all (the `Err` returned below), or
+    //   * `ambiguous_math` — the grammar enumerated many derivations (>10).
+    // The `what` field is a structural FOOTPRINT of the token stream (see `token_type_footprint`),
+    // so the dashboard buckets formulas by shape instead of one unique token dump per paper.
+    let diagnostic_category = if parses.is_empty() {
+      Some("unparsed_math")
+    } else if ok_trees + pruned_trees > 10 {
+      Some("ambiguous_math")
+    } else {
+      None
+    };
+    if let Some(category) = diagnostic_category {
+      // Warn once per DISTINCT formula per document (Perl LaTeXML's rule): a formula repeated N
+      // times in one document emits a single warning. Keyed on the exact token stream — true only
+      // the first time this document sees it; repeats are silently skipped.
+      if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+        log_math_warn!(
+          category,
+          token_type_footprint(input.trim()),
+          "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
+          ok_trees + pruned_trees + deduped,
+          ok_trees + deduped,
+          pruned_trees,
+          deduped,
+          parses.len(),
+          start.elapsed(),
+          input.trim()
+        );
+      }
     }
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
     // Useful for identifying grammar ambiguity hotspots across the test suite.
@@ -2654,6 +2681,58 @@ fn textrec(
   }
 }
 
+/// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
+/// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
+/// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
+/// appends `_cntd` when the stream is truncated. Space-free, so it slots into CorTeX's
+/// `severity:category:what` log parser as a groupable frequency key — collapsing a per-formula
+/// token dump into a shape signature the dashboard can bucket (the full token stream stays in the
+/// message `details`). E.g. arXiv 0708.2155's `UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 …` →
+/// `UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_…` (truncated with `_cntd` once it would pass the budget).
+/// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
+/// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token
+/// stream is hashed (SipHash) so the set stays 8 bytes per distinct formula no matter how long the
+/// formula is; a hash collision at worst suppresses one warning, which is harmless.
+fn warn_formula_once(seen: &mut HashSet<u64>, formula: &str) -> bool {
+  let mut hasher = std::collections::hash_map::DefaultHasher::new();
+  formula.hash(&mut hasher);
+  seen.insert(hasher.finish())
+}
+
+fn token_type_footprint(tokens: &str) -> String {
+  // CorTeX's log `what` column is varchar(200) and a btree index key (category, what, task_id), so
+  // bound the footprint to fit by construction: append token types until the next would pass the
+  // budget, then mark the truncation with `_cntd`. Reserving the suffix length keeps a truncated
+  // footprint within 200 chars (195 types + "_cntd"), so the dispatcher's insert never silently
+  // chops the marker.
+  const SUFFIX: &str = "_cntd";
+  const BUDGET: usize = 200 - SUFFIX.len();
+  let mut out = String::new();
+  let mut truncated = false;
+  for token in tokens.split_whitespace() {
+    let ty = token.split(':').next().unwrap_or(token);
+    // First type always lands (a lone >budget type is backstopped by CorTeX's 200-char cap); every
+    // subsequent one must fit the budget WITH its separator, else we stop and mark `_cntd`.
+    if !out.is_empty() && out.len() + 1 + ty.len() > BUDGET {
+      truncated = true;
+      break;
+    }
+    if !out.is_empty() {
+      out.push('_');
+    }
+    out.push_str(ty);
+  }
+  if truncated {
+    out.push_str(SUFFIX);
+  }
+  // A formula with no tokens would yield an empty `what`, which CorTeX's parser can't key on —
+  // emit a placeholder so the line still groups.
+  if out.is_empty() {
+    out.push_str("none");
+  }
+  out
+}
+
 fn textrec_apply(name: &str, op: &Node, args: Vec<Node>, document: &Document) -> (usize, String) {
   let role = op
     .get_attribute("role")
@@ -2922,6 +3001,62 @@ mod tests {
   use libxml::parser::Parser as XmlParser;
 
   use super::*;
+
+  #[test]
+  fn token_type_footprint_bounds_to_varchar200_with_cntd() {
+    // arXiv 0708.2155 — a short slice fits whole: just the token TYPES, no suffix.
+    let short = "UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 CLOSE:):4 RELOP:equals:5 \
+                 start_POSTSUBSCRIPT:start:9 NUMBER:0:10";
+    assert_eq!(
+      token_type_footprint(short),
+      "UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_start_POSTSUBSCRIPT_NUMBER"
+    );
+    // The type is the segment before the first `:` (value/position dropped); empty → placeholder.
+    assert_eq!(token_type_footprint("UNKNOWN:x:1 OPEN:(:2"), "UNKNOWN_OPEN");
+    assert_eq!(token_type_footprint(""), "none");
+    // A long formula is bounded to the varchar(200) `what` column and carries the `_cntd` marker;
+    // the result never exceeds 200 chars so the dispatcher insert can't chop the marker.
+    let many = (0..120)
+      .map(|i| format!("UNKNOWN:x{i}:{i}"))
+      .collect::<Vec<_>>()
+      .join(" ");
+    let fp = token_type_footprint(&many);
+    assert!(
+      fp.len() <= 200,
+      "footprint {} exceeds varchar(200)",
+      fp.len()
+    );
+    assert!(
+      fp.ends_with("_cntd"),
+      "a truncated footprint must mark it: {fp}"
+    );
+    assert!(fp.starts_with("UNKNOWN_UNKNOWN"));
+  }
+
+  #[test]
+  fn warns_once_per_distinct_formula_per_document() {
+    // Per-document scope = one `seen` set per document (the parser is built per document).
+    let mut doc = HashSet::new();
+    let f1 = "UNKNOWN:x:1 RELOP:=:2 NUMBER:0:3";
+    let f2 = "UNKNOWN:y:1 ADDOP:+:2 UNKNOWN:z:3";
+    assert!(warn_formula_once(&mut doc, f1), "first sighting warns");
+    assert!(
+      !warn_formula_once(&mut doc, f1),
+      "the same formula repeated is suppressed"
+    );
+    assert!(
+      !warn_formula_once(&mut doc, f1),
+      "still suppressed on the 3rd repeat"
+    );
+    assert!(
+      warn_formula_once(&mut doc, f2),
+      "a DISTINCT formula warns once of its own"
+    );
+    assert!(!warn_formula_once(&mut doc, f2));
+    // A new document (fresh set) warns again for the same formula — dedup is document-scoped.
+    let mut other_doc = HashSet::new();
+    assert!(warn_formula_once(&mut other_doc, f1));
+  }
 
   /// Pin the message↔classifier coupling for the string-fallback path of
   /// resource-fatal recovery (P1-4). The PRIMARY transport is the structured
