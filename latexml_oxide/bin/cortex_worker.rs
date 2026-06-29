@@ -386,7 +386,7 @@ impl LatexmlWorker {
     let dest_html_str = dest_html.to_string_lossy().to_string();
 
     // 5. Post-process: MathML + XSLT (matching CorTeX tex_to_html settings)
-    let html = latexml::post::run_post_processing(&xml, &latexml::post::PostOptions {
+    let post = latexml::post::run_post_processing_logged(&xml, &latexml::post::PostOptions {
       pmml:                      self.profile.pmml,
       // Presentation MathML only — matches Perl LaTeXML's CorTeX `tex_to_html`
       // (whose output carries zero Content MathML) and the ar5iv profile, whose
@@ -431,8 +431,16 @@ impl LatexmlWorker {
       whatsout:                  latexml_post::extract::Whatsout::Document,
     });
 
-    // 6. Get log and status (Perl: status line is last line of log)
-    let status_str = format!("Status:conversion:{}", response.status_code);
+    // 6. Get log and status (Perl: status line is last line of log).
+    //
+    // Fold the post-processing status into the verdict — Perl LaTeXML reports `max(core, post)`
+    // (LaTeXML.pm L631-634), so a post-only fatal (a Graphics/MathML/XSLT failure on a cleanly
+    // digested core) marks the document fatal instead of passing as the core's status. The
+    // `PostOutcome.status_code` is already the combined core+post code (the REPORT counter is not
+    // reset between phases); `max()` with the core code is the documented belt-and-suspenders.
+    let status_code = response.status_code.max(post.status_code);
+    let status_str = format!("Status:conversion:{}", status_code);
+    let html = post.html;
     // Emit the total job wall-time as a CorTeX log message so the dispatcher persists it: CorTeX
     // parses `Info:runtime_ms:<N>` into log_infos (category=runtime_ms, what=N, details=empty), so
     // the conversion time surfaces as its own report category whose drill-down subreport is the
@@ -440,10 +448,21 @@ impl LatexmlWorker {
     // conversions. Captured for graceful conversion-fatals too (TokenLimit/PushbackLimit/… still
     // come through here). Placed before the Status line, which must remain the last line of the log.
     let runtime_ms = wall_start.elapsed().as_millis();
-    let log = format!(
-      "{}\nInfo:runtime_ms:{runtime_ms}\n{}",
-      response.log, status_str
-    );
+    // Append the post-processing log (Graphics/MathML/XSLT `Info!`/`Warn!`/`post_error` lines,
+    // incl. silent EPS→PNG failures) after the core conversion log so post-phase messages reach
+    // cortex.log and the dashboard reports — the Rust equivalent of Perl LaTeXML's single
+    // `flush_log()` after `convert_post`. Omit the segment (no blank line) when post logged nothing.
+    let log = if post.log.is_empty() {
+      format!(
+        "{}\nInfo:runtime_ms:{runtime_ms}\n{}",
+        response.log, status_str
+      )
+    } else {
+      format!(
+        "{}\n{}\nInfo:runtime_ms:{runtime_ms}\n{}",
+        response.log, post.log, status_str
+      )
+    };
 
     // 7. Finalize per-job telemetry. Phase counters were populated by the converter/post guards;
     //    here we fill in identifiers, wall, and resource peaks before serializing.
@@ -454,12 +473,12 @@ impl LatexmlWorker {
       };
       telemetry::set_paper_id(&arxiv_id);
       telemetry::set_wall_us(wall_start.elapsed().as_micros() as u64);
-      telemetry::set_category(match response.status_code {
+      telemetry::set_category(match status_code {
         0 | 1 => "ok",
         2 => "conversion_error",
         _ => "conversion_fatal",
       });
-      telemetry::set_exit_code(response.status_code as i32);
+      telemetry::set_exit_code(status_code as i32);
       telemetry::set_output_bytes(html.len() as u64);
       telemetry::set_max_rss_kb(read_max_rss_kb_proc());
       let (cu, cs) = read_child_rusage_us_proc();
