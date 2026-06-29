@@ -52,7 +52,18 @@ COPY . .
 # `cargo build --bin cortex_worker` refuses to build it. The worker uses compiled-in bindings, so
 # `runtime-bindings` is NOT enabled (unused). Also build latexml_oxide: its `--init` generates the
 # kernel dumps baked into the runtime stage below (cortex_worker has no --init of its own).
-RUN cargo build --release --no-default-features --features cortex \
+#
+# Profile = `maxperf-cortex`, NOT `release`: this is a DISTRIBUTION artifact (a long-lived fleet
+# binary built once and run over millions of conversions), and `release` is the dev/sandbox/
+# Perl-parity-measurement profile. `maxperf-cortex` inherits maxperf's real levers (opt-level=3,
+# fat LTO, codegen-units=1) for the smallest+fastest binary, but overrides `panic = "abort"` back
+# to `panic = "unwind"` — MANDATORY here, because the worker relies on `std::panic::catch_unwind`
+# to isolate per-paper panics (cortex_worker.rs); maxperf's abort would turn that into a no-op and
+# crash the whole fleet child on one bad paper. Trade-off: fat LTO + CGU=1 makes THIS layer much
+# slower to build than release — acceptable for a once-per-release image. latexml_oxide rides the
+# same profile (one cargo invocation, one target dir, shared dep graph); it only runs at image-build
+# time for dump-gen, so its extra LTO cost is a single link.
+RUN cargo build --profile maxperf-cortex --no-default-features --features cortex \
       --bin cortex_worker --bin latexml_oxide
 
 # --- Stage 2: runtime — same ubuntu:24.04, full arXiv-capable TeX Live ---
@@ -98,8 +109,9 @@ RUN set -e; P=/etc/ImageMagick-6/policy.xml; if [ -f "$P" ]; then \
     fi
 
 # The worker binary + its resources (XSLT/CSS/RelaxNG), plus latexml_oxide (only to generate dumps).
-COPY --from=builder /build/target/release/cortex_worker /usr/local/bin/
-COPY --from=builder /build/target/release/latexml_oxide /usr/local/bin/
+# Built under the `maxperf-cortex` profile (see the build stage), so they live in target/maxperf-cortex/.
+COPY --from=builder /build/target/maxperf-cortex/cortex_worker /usr/local/bin/
+COPY --from=builder /build/target/maxperf-cortex/latexml_oxide /usr/local/bin/
 COPY --from=builder /build/resources/ /usr/local/share/latexml-oxide/resources/
 
 # Bake the ambient-year TeX kernel dumps into the image — the Rust analog of the legacy Perl image's
