@@ -71,12 +71,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       texlive-bibtex-extra texlive-science texlive-pictures texlive-pstricks \
       texlive-publishers \
       libxml2 libxslt1.1 libkpathsea6 libzmq5 \
-      imagemagick poppler-utils mupdf-tools \
+      ghostscript imagemagick poppler-utils mupdf-tools \
       ca-certificates \
     && rm -rf /var/lib/apt/lists/*
-# poppler-utils → pdftocairo; mupdf-tools → `mutool draw`, the first-choice PDF rasterizer
-# (faster + more gzip-compressible than pdftocairo on the canvas slow-tail PDFs; graceful
-# fallback to pdftocairo if absent).
+# ghostscript → `gs`, the EPS/PS rasterizer (convert_eps_via_gs) AND ImageMagick's
+# delegate for PS/EPS/PDF. MANDATORY and EXPLICIT: on Ubuntu `ghostscript` is only a
+# *Recommends* of `imagemagick`, so `--no-install-recommends` would drop it — leaving
+# both `convert file.eps` and direct `gs` unable to run, so EVERY EPS/PS figure fails
+# `imageprocessing:failed_to_convert` (PDFs survive via mutool/pdftocairo, which need no
+# gs). Installing `ghostscript` also pulls `libpng16-16` (a Depends of `libgs`), which
+# gs's `pngalpha`/`png16m` devices need to emit PNG output. poppler-utils → pdftocairo;
+# mupdf-tools → `mutool draw`, the first-choice PDF rasterizer (faster + more
+# gzip-compressible than pdftocairo on the canvas slow-tail PDFs; graceful fallback to
+# pdftocairo if absent).
 
 # Let ImageMagick read/write PDF/EPS and raise its resource ceilings — arXiv figures need it
 # (the same patch the legacy Perl image applies; Debian's default policy.xml blocks PDF/EPS).
