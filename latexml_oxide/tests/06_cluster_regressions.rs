@@ -92,6 +92,20 @@ fn cluster_cmidrule_cline_let() {
   convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex");
 }
 
+/// fvextra's `breakanywhere=true` installs a recursive char-by-char break
+/// scanner that measures every character by boxing a line-prefix. In our
+/// engine that recursed through `predigest_box_contents_in_mode` and grew the
+/// gullet pushback until the 650000 `Timeout/PushbackLimit` Fatal — where Perl
+/// converts cleanly. The `fvextra_sty` binding routes the breaking
+/// line-processor to the non-breaking one (line wrapping is a PDF-visual
+/// concern with no HTML semantics), so the verbatim completes with the
+/// `font="typewriter"` styling preserved. Drove 119/121 fatal papers in the
+/// sandbox-arxiv-2605 corpus (witness arXiv 2605.01024).
+#[test]
+fn cluster_fvextra_breakanywhere() {
+  convert_clean("tests/cluster_regressions/fvextra_breakanywhere.tex");
+}
+
 /// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
 /// side-loads natbib must not leave a body `\citep` looping. The side-load runs
 /// inside the `thebibliography` group, so natbib's `\citep` would be popped on

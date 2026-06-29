@@ -912,6 +912,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fancyvrb", "sty", package::fancyvrb_sty::load_definitions),
   ("fdsymbol", "sty", package::fdsymbol_sty::load_definitions),
   ("flafter", "sty", package::flafter_sty::load_definitions),
+  ("fvextra", "sty", package::fvextra_sty::load_definitions),
   ("here", "sty", package::here_sty::load_definitions),
   (
     "indentfirst",
