@@ -18,6 +18,27 @@ use crate::{
   processor::{ProcessResult, Processor},
 };
 
+thread_local! {
+  /// The most recent converter-subprocess diagnostic on this thread: the program
+  /// name plus its captured stderr (or the spawn error). Surfaced into the
+  /// `imageprocessing:failed_to_convert` Error so an ENVIRONMENT failure is
+  /// self-explaining in the log instead of needing a strace — e.g. `gs` not
+  /// installed (`could not start … No such file or directory`), an AppArmor
+  /// denial (`gs: … /undefinedfilename …` while gs exits 0), or an ImageMagick
+  /// policy block. Set by `run_with_timeout`, cleared per node in `process`'s
+  /// worker loop, read+cleared at the Error site. Worker-thread-local — it rides
+  /// the same `logger::capture`/`replay_captured` fold to the main thread as the
+  /// Error itself.
+  static LAST_CONVERTER_DIAG: std::cell::RefCell<Option<String>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+/// Record (overwrite) the latest converter diagnostic on this thread.
+fn record_converter_diag(msg: String) { LAST_CONVERTER_DIAG.with(|c| *c.borrow_mut() = Some(msg)); }
+
+/// Take (read + clear) this thread's latest converter diagnostic.
+fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borrow_mut().take()) }
+
 // Diagnostic emission: `Error!` (and friends) live in
 // `crate::diag` and are exposed crate-wide via `#[macro_use] pub mod
 // diag;` in `lib.rs`. They emit harness-compatible structured Error
@@ -892,10 +913,15 @@ impl Graphics {
     mut cmd: std::process::Command,
     timeout: std::time::Duration,
   ) -> Option<std::process::ExitStatus> {
-    // Redirect stdio so a slow inkscape doesn't block on a full pipe.
+    // Capture the program name for the failure diagnostic before `cmd` is moved.
+    let prog = cmd.get_program().to_string_lossy().into_owned();
+    // stdout is uninteresting (null); stderr is PIPED so a converter's error text
+    // (gs `/undefinedfilename`, an ImageMagick policy block, a missing delegate)
+    // can be surfaced into the failed_to_convert Error. A draining reader thread
+    // (below) keeps the child from blocking on a full stderr pipe.
     cmd
       .stdout(std::process::Stdio::null())
-      .stderr(std::process::Stdio::null());
+      .stderr(std::process::Stdio::piped());
     #[cfg(unix)]
     {
       use std::os::unix::process::CommandExt;
@@ -932,7 +958,35 @@ impl Graphics {
         });
       }
     }
-    let mut child = cmd.spawn().ok()?;
+    let mut child = match cmd.spawn() {
+      Ok(c) => c,
+      Err(e) => {
+        // Spawn failure is the "converter not installed / not on PATH" case
+        // (e.g. `gs` absent in a minimal image): record it so the Error names
+        // the missing tool instead of a bare "failed to convert".
+        record_converter_diag(format!("could not start `{prog}`: {e}"));
+        return None;
+      },
+    };
+    // Drain stderr concurrently into a bounded (8 KiB) buffer so the child never
+    // blocks on a full pipe; joined after it exits.
+    let stderr_reader = child.stderr.take().map(|mut se| {
+      std::thread::spawn(move || {
+        use std::io::Read;
+        let mut kept: Vec<u8> = Vec::new();
+        let mut chunk = [0u8; 4096];
+        while let Ok(n) = se.read(&mut chunk) {
+          if n == 0 {
+            break;
+          }
+          if kept.len() < 8192 {
+            let room = 8192 - kept.len();
+            kept.extend_from_slice(&chunk[..n.min(room)]);
+          }
+        }
+        String::from_utf8_lossy(&kept).trim().to_string()
+      })
+    });
     let pid = child.id() as i32;
     let kill_group = || {
       #[cfg(unix)]
@@ -959,15 +1013,15 @@ impl Graphics {
       }
     };
     let start = std::time::Instant::now();
-    loop {
+    let status = loop {
       match child.try_wait() {
-        Ok(Some(status)) => return Some(status),
+        Ok(Some(status)) => break Some(status),
         Ok(None) => {
           if start.elapsed() >= timeout {
             kill_group();
             let _ = child.kill();
             let _ = child.wait();
-            return None;
+            break None;
           }
           std::thread::sleep(std::time::Duration::from_millis(50));
         },
@@ -975,10 +1029,27 @@ impl Graphics {
           kill_group();
           let _ = child.kill();
           let _ = child.wait();
-          return None;
+          break None;
         },
       }
+    };
+    // Join the stderr drainer and record a diagnostic. gs can print a fatal
+    // error (e.g. `/undefinedfilename` under an AppArmor denial) to stderr yet
+    // still exit 0, so a non-empty stderr is always worth surfacing — not only
+    // on a non-zero exit.
+    let stderr_text = stderr_reader
+      .and_then(|h| h.join().ok())
+      .unwrap_or_default();
+    if !stderr_text.is_empty() {
+      record_converter_diag(format!("`{prog}`: {stderr_text}"));
+    } else if status.map(|s| !s.success()).unwrap_or(true) {
+      let how = match status {
+        Some(s) => format!("exited {s}"),
+        None => format!("timed out after {}s / killed", timeout.as_secs()),
+      };
+      record_converter_diag(format!("`{prog}`: {how}, no stderr"));
     }
+    status
   }
 
   /// Parse SVG viewBox ("minX minY width height") and return (width, height).
@@ -2104,6 +2175,10 @@ impl Processor for Graphics {
                       abs_dest_str,
                       svg_paths,
                     } = jobs[i];
+                    // Fresh converter-diagnostic slate for this node, so the
+                    // failed_to_convert Error (if it fires) reports THIS asset's
+                    // converter error, not a previous job's.
+                    take_converter_diag();
                     // Try vector-SVG path first if requested for this source.
                     // The cache layer (graphics_cache) hardlinks/copies a
                     // matching cached output before any subprocess fires and
@@ -2201,13 +2276,20 @@ impl Processor for Graphics {
                       // NOT the target — so the log clearly identifies which
                       // input could not be rendered; the intended target is
                       // secondary context.
+                      // Surface the last converter's stderr / spawn error so an
+                      // environment failure (gs not installed, AppArmor denial,
+                      // ImageMagick policy block) is self-diagnosing in the log.
+                      let why = take_converter_diag()
+                        .unwrap_or_else(|| "no converter diagnostic captured".to_string());
                       Error!(
                         "imageprocessing",
                         "failed_to_convert",
                         "Graphics: failed to convert source asset {} — every converter \
-                         failed, no usable image produced (intended target {})",
+                         failed, no usable image produced (intended target {}); last \
+                         converter error: {}",
                         source,
-                        abs_dest_str
+                        abs_dest_str,
+                        why
                       );
                       ConvertOutcome {
                         job_id:   *job_id,
@@ -2758,5 +2840,39 @@ endobj
       "a non-empty file is usable output"
     );
     std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  /// A converter that fails must leave its stderr in the thread-local diagnostic,
+  /// so the failed_to_convert Error can name WHY (e.g. gs `/undefinedfilename`).
+  #[test]
+  fn run_with_timeout_captures_stderr_into_diag() {
+    take_converter_diag(); // clear
+    let mut cmd = std::process::Command::new("sh");
+    cmd.arg("-c").arg("echo 'boom on stderr' >&2; exit 3");
+    let status = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
+    assert!(
+      status.map(|s| !s.success()).unwrap_or(false),
+      "command should report failure"
+    );
+    let diag = take_converter_diag().expect("a diagnostic must be recorded");
+    assert!(
+      diag.contains("boom on stderr") && diag.contains("sh"),
+      "diag should name the program + its stderr; got: {diag}"
+    );
+  }
+
+  /// A converter that can't be spawned (not installed / not on PATH — e.g. `gs`
+  /// missing in a minimal image) must record a "could not start" diagnostic.
+  #[test]
+  fn run_with_timeout_records_spawn_failure() {
+    take_converter_diag();
+    let cmd = std::process::Command::new("definitely_not_a_real_binary_xyz_123");
+    let status = Graphics::run_with_timeout(cmd, std::time::Duration::from_secs(5));
+    assert!(status.is_none(), "spawn failure returns None");
+    let diag = take_converter_diag().expect("a spawn diagnostic must be recorded");
+    assert!(
+      diag.contains("could not start") && diag.contains("definitely_not_a_real_binary_xyz_123"),
+      "diag should name the missing tool; got: {diag}"
+    );
   }
 }
