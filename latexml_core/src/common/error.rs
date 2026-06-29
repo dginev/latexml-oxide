@@ -319,6 +319,48 @@ pub fn get_status_code() -> usize {
   }
 }
 
+/// A thread-portable snapshot of the `REPORT`'s integer status counters
+/// (everything EXCEPT the arena-`SymStr`-keyed `undefined`/`missing` maps,
+/// whose keys are interner ids local to one thread's arena). Used to forward a
+/// worker thread's diagnostic tally back to the main thread: `REPORT` is
+/// `#[thread_local]`, so an `Error!`/`Warn!` raised on a spawned post-processing
+/// worker increments only that worker's counters and is invisible to the
+/// main-thread `status_code` unless merged here. See
+/// [`crate::util::logger::capture`] / [`crate::util::logger::replay_captured`].
+#[derive(Default, Clone, Copy)]
+pub struct ReportCounts {
+  pub debug:   usize,
+  pub info:    usize,
+  pub warning: usize,
+  pub error:   usize,
+  pub fatal:   bool,
+}
+
+/// Snapshot the current thread's `REPORT` integer counters.
+pub fn snapshot_report_counts() -> ReportCounts {
+  let r = REPORT.borrow();
+  ReportCounts {
+    debug:   r.debug,
+    info:    r.info,
+    warning: r.warning,
+    error:   r.error,
+    fatal:   r.fatal,
+  }
+}
+
+/// Add a worker thread's [`ReportCounts`] into the current (main) thread's
+/// `REPORT`. Only the integer counts + the sticky `fatal` flag are merged; the
+/// arena-keyed `undefined`/`missing` maps are NOT (a worker has its own
+/// thread-local arena, so those keys are not portable).
+pub fn merge_report_counts(c: ReportCounts) {
+  let mut r = REPORT.borrow_mut();
+  r.debug += c.debug;
+  r.info += c.info;
+  r.warning += c.warning;
+  r.error += c.error;
+  r.fatal |= c.fatal;
+}
+
 //======================================================================
 // Debuggable features (Perl: `DebuggableFeature($name)` registration +
 // `$LaTeXML::DEBUG{$name}` gating, enabled by the CLI's `--debug NAME`).

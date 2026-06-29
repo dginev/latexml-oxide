@@ -2052,131 +2052,147 @@ impl Processor for Graphics {
       // workers pick up the remaining jobs via the shared `next`
       // counter. If every spawn fails, run all jobs on the current
       // thread instead of crashing.
-      let worker_outcomes: Vec<Vec<ConvertOutcome>> = std::thread::scope(|s| {
+      type WorkerResult = (
+        Vec<ConvertOutcome>,
+        latexml_core::util::logger::CapturedDiagnostics,
+      );
+      let worker_outcomes: Vec<WorkerResult> = std::thread::scope(|s| {
         let handles: Vec<_> = (0..n_workers)
           .filter_map(|_| {
             std::thread::Builder::new()
               .stack_size(2 * 1024 * 1024)
               .spawn_scoped(s, || {
-                let mut local = Vec::<ConvertOutcome>::new();
-                loop {
-                  let i = next.fetch_add(1, Ordering::Relaxed);
-                  if i >= jobs.len() {
-                    break;
-                  }
-                  let ConvertJob {
-                    job_id,
-                    source,
-                    page,
-                    rel_dest,
-                    abs_dest_str,
-                    svg_paths,
-                  } = jobs[i];
-                  // Try vector-SVG path first if requested for this source.
-                  // The cache layer (graphics_cache) hardlinks/copies a
-                  // matching cached output before any subprocess fires and
-                  // round-trips the dimensions through a .dims sidecar so
-                  // hits skip the `read_*_dimensions` re-measure too.
-                  // Misses fall through to the real conversion + measure
-                  // and write back on success. Disable via
-                  // LATEXML_GRAPHICS_CACHE_OFF=1.
-                  let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
-                    let svg_key = crate::graphics_cache::RenderKey {
-                      page:    *page,
-                      density: 0,
-                      ext:     "svg",
-                    };
-                    let svg_res = crate::graphics_cache::with_cache_dims(
-                      source,
-                      abs_svg,
-                      svg_key,
-                      || {
-                        subproc_ref.fetch_add(1, Ordering::Relaxed);
-                        Self::convert_image_svg(source, abs_svg, *page)
-                      },
-                      || {
-                        Self::read_svg_dimensions(abs_svg)
-                          .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h })
-                      },
-                    );
-                    match svg_res {
-                      crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
-                        job_id:   *job_id,
-                        imagesrc: Some(rel_svg.clone()),
-                        raw_dims: dims.map(|d| (d.width, d.height)),
-                      }),
-                      crate::graphics_cache::ConvertResult::Failed => {
-                        Warn!(
-                          "shell",
-                          "inkscape",
-                          "Graphics: inkscape SVG path failed for {}, falling back to convert",
-                          source
-                        );
-                        None
-                      },
+                // Capture this worker's diagnostics and hand them back on join.
+                // LOG_BUFFER + REPORT are #[thread_local], so an Error!/Warn! a
+                // conversion raises on this worker would otherwise be lost from
+                // cortex.log AND from status_code. The main thread replays them
+                // (text + count deltas) in worker order after the scope joins.
+                latexml_core::util::logger::capture(|| {
+                  let mut local = Vec::<ConvertOutcome>::new();
+                  loop {
+                    let i = next.fetch_add(1, Ordering::Relaxed);
+                    if i >= jobs.len() {
+                      break;
                     }
-                  } else {
-                    None
-                  };
-                  let raster_res = if svg_outcome.is_none() {
-                    let raster_key = crate::graphics_cache::RenderKey {
-                      page:    *page,
-                      density: Self::raster_density_for_source(source),
-                      ext:     ext_from_path(abs_dest_str),
-                    };
-                    crate::graphics_cache::with_cache_dims(
+                    let ConvertJob {
+                      job_id,
                       source,
+                      page,
+                      rel_dest,
                       abs_dest_str,
-                      raster_key,
-                      || {
-                        subproc_ref.fetch_add(1, Ordering::Relaxed);
-                        Self::convert_image(source, abs_dest_str, dpi, *page)
-                      },
-                      || {
-                        Self::read_image_dimensions(abs_dest_str)
-                          .map(|(w, h)| crate::graphics_cache::CachedDims { width: w, height: h })
-                      },
-                    )
-                  } else {
-                    crate::graphics_cache::ConvertResult::Failed
-                  };
-                  let outcome = if let Some(o) = svg_outcome {
-                    o
-                  } else if raster_res.is_ok() {
-                    ConvertOutcome {
-                      job_id:   *job_id,
-                      imagesrc: Some(rel_dest.clone()),
-                      raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
-                    }
-                  } else {
-                    // Final-failure: every conversion path exhausted. Mirror
-                    // Perl Graphics.pm L324-329 (Error + `return` with NO
-                    // imagesrc) — do NOT fall back to copying the raw source.
-                    // A raw .eps/.ps/.pdf is never usable on the web; copying it
-                    // would emit a broken `<img src="fig.eps">`. Leaving
-                    // @imagesrc unset makes the HTML5 XSLT
-                    // (LaTeXML-misc-xhtml.xsl L154) render the node as
-                    // `class="ltx_missing ltx_missing_image"` (empty src) — the
-                    // correct "couldn't render" signal. (User directive
-                    // 2026-06-22; raw .eps/.pdf are never web-native.)
-                    // Error class/object mirror Perl Graphics.pm:274 so the
-                    // harness aggregates with engine/package emissions.
-                    Error!(
-                      "imageprocessing",
-                      source,
-                      "Graphics: Failed to convert {} to {}",
-                      source,
-                      abs_dest_str
-                    );
-                    ConvertOutcome {
-                      job_id:   *job_id,
-                      imagesrc: None,
-                      raw_dims: None,
-                    }
-                  };
-                  local.push(outcome);
-                }
-                local
+                      svg_paths,
+                    } = jobs[i];
+                    // Try vector-SVG path first if requested for this source.
+                    // The cache layer (graphics_cache) hardlinks/copies a
+                    // matching cached output before any subprocess fires and
+                    // round-trips the dimensions through a .dims sidecar so
+                    // hits skip the `read_*_dimensions` re-measure too.
+                    // Misses fall through to the real conversion + measure
+                    // and write back on success. Disable via
+                    // LATEXML_GRAPHICS_CACHE_OFF=1.
+                    let svg_outcome = if let Some((rel_svg, abs_svg)) = svg_paths {
+                      let svg_key = crate::graphics_cache::RenderKey {
+                        page:    *page,
+                        density: 0,
+                        ext:     "svg",
+                      };
+                      let svg_res = crate::graphics_cache::with_cache_dims(
+                        source,
+                        abs_svg,
+                        svg_key,
+                        || {
+                          subproc_ref.fetch_add(1, Ordering::Relaxed);
+                          Self::convert_image_svg(source, abs_svg, *page)
+                        },
+                        || {
+                          Self::read_svg_dimensions(abs_svg).map(|(w, h)| {
+                            crate::graphics_cache::CachedDims { width: w, height: h }
+                          })
+                        },
+                      );
+                      match svg_res {
+                        crate::graphics_cache::ConvertResult::Ok { dims } => Some(ConvertOutcome {
+                          job_id:   *job_id,
+                          imagesrc: Some(rel_svg.clone()),
+                          raw_dims: dims.map(|d| (d.width, d.height)),
+                        }),
+                        crate::graphics_cache::ConvertResult::Failed => {
+                          Warn!(
+                            "shell",
+                            "inkscape",
+                            "Graphics: inkscape SVG path failed for {}, falling back to convert",
+                            source
+                          );
+                          None
+                        },
+                      }
+                    } else {
+                      None
+                    };
+                    let raster_res = if svg_outcome.is_none() {
+                      let raster_key = crate::graphics_cache::RenderKey {
+                        page:    *page,
+                        density: Self::raster_density_for_source(source),
+                        ext:     ext_from_path(abs_dest_str),
+                      };
+                      crate::graphics_cache::with_cache_dims(
+                        source,
+                        abs_dest_str,
+                        raster_key,
+                        || {
+                          subproc_ref.fetch_add(1, Ordering::Relaxed);
+                          Self::convert_image(source, abs_dest_str, dpi, *page)
+                        },
+                        || {
+                          Self::read_image_dimensions(abs_dest_str).map(|(w, h)| {
+                            crate::graphics_cache::CachedDims { width: w, height: h }
+                          })
+                        },
+                      )
+                    } else {
+                      crate::graphics_cache::ConvertResult::Failed
+                    };
+                    let outcome = if let Some(o) = svg_outcome {
+                      o
+                    } else if raster_res.is_ok() {
+                      ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: Some(rel_dest.clone()),
+                        raw_dims: raster_res.dims().map(|d| (d.width, d.height)),
+                      }
+                    } else {
+                      // Final-failure: every conversion path exhausted. Mirror
+                      // Perl Graphics.pm L324-329 (Error + `return` with NO
+                      // imagesrc) — do NOT fall back to copying the raw source.
+                      // A raw .eps/.ps/.pdf is never usable on the web; copying it
+                      // would emit a broken `<img src="fig.eps">`. Leaving
+                      // @imagesrc unset makes the HTML5 XSLT
+                      // (LaTeXML-misc-xhtml.xsl L154) render the node as
+                      // `class="ltx_missing ltx_missing_image"` (empty src) — the
+                      // correct "couldn't render" signal. (User directive
+                      // 2026-06-22; raw .eps/.pdf are never web-native.)
+                      // Error class/object mirror Perl Graphics.pm:274 so the
+                      // harness aggregates with engine/package emissions.
+                      // Object is the failure TYPE (not the filename) so the
+                      // harness can aggregate by failure mode; the filenames are
+                      // in the details that follow.
+                      Error!(
+                        "imageprocessing",
+                        "failed_to_convert",
+                        "Graphics: Failed to convert {} to {}",
+                        source,
+                        abs_dest_str
+                      );
+                      ConvertOutcome {
+                        job_id:   *job_id,
+                        imagesrc: None,
+                        raw_dims: None,
+                      }
+                    };
+                    local.push(outcome);
+                  }
+                  local
+                })
               })
               .ok()
           })
@@ -2189,8 +2205,12 @@ impl Processor for Graphics {
         // enough to complete all jobs.
         handles.into_iter().map(|h| h.join().unwrap()).collect()
       });
-      for v in worker_outcomes {
+      // Merge each worker's outcomes AND replay its captured diagnostics on the
+      // main thread (in worker order), so any conversion Error!/Warn! reaches the
+      // bound cortex.log and registers in the main REPORT / status_code.
+      for (v, diags) in worker_outcomes {
         outcomes.extend(v);
+        latexml_core::util::logger::replay_captured(diags);
       }
       outcomes.sort_by_key(|o| o.job_id);
       latexml_core::telemetry::add_graphics_subprocess(subproc_count.load(Ordering::Relaxed));
@@ -2617,5 +2637,70 @@ endobj
     assert_eq!(out.matches(r#"imagesrc="x1.png""#).count(), 1);
 
     std::fs::remove_dir_all(&tmp).ok();
+  }
+
+  /// A post-processing diagnostic raised on a WORKER THREAD must reach the MAIN
+  /// thread's bound log AND register in the main `REPORT` status counters — both
+  /// `LOG_BUFFER` and `REPORT` are `#[thread_local]`, so a worker's `Error!`
+  /// would otherwise be lost from cortex.log and from `status_code`. This
+  /// exercises the exact "thread join + fold" the graphics pool uses: each
+  /// worker returns its [`CapturedDiagnostics`] from `logger::capture`, and the
+  /// main thread folds them in via `replay_captured` after join — no shared
+  /// writeable state, no lock, no env mutation. (Companion: the real pipeline is
+  /// validated end-to-end by converting a document with an unconvertible image;
+  /// see docs and the manual `--preload`/`--dest` smoke.)
+  #[test]
+  fn worker_diagnostics_fold_into_main_thread_on_join() {
+    // The `log` macros are inert until a logger + level are installed (the
+    // CLI/cortex do this at startup). `init` is process-global + idempotent
+    // across tests; force the level since `init` skips it if already installed.
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Info);
+
+    latexml_core::util::logger::bind_log();
+    let before = latexml_core::common::error::snapshot_report_counts();
+
+    // Two workers, each emitting a post Error! under capture (so the diagnostic
+    // lands in the worker's own thread-local buffer + REPORT), returning their
+    // CapturedDiagnostics on join — exactly the graphics pool's pattern.
+    let captured: Vec<latexml_core::util::logger::CapturedDiagnostics> = std::thread::scope(|s| {
+      (0..2)
+        .map(|i| {
+          s.spawn(move || {
+            latexml_core::util::logger::capture(|| {
+              Error!(
+                "imageprocessing",
+                "failed_to_convert",
+                "Graphics: Failed to convert {} to {}",
+                format!("w{i}.pdf"),
+                format!("w{i}.png")
+              );
+            })
+            .1
+          })
+        })
+        .collect::<Vec<_>>()
+        .into_iter()
+        .map(|h| h.join().unwrap())
+        .collect()
+    });
+
+    // Fold the per-worker diagnostics into the main thread.
+    for diags in captured {
+      latexml_core::util::logger::replay_captured(diags);
+    }
+
+    let after = latexml_core::common::error::snapshot_report_counts();
+    let log = latexml_core::util::logger::flush_log();
+
+    assert!(
+      log.contains("imageprocessing:failed_to_convert") && log.contains("Failed to convert"),
+      "worker Error! must reach the main-thread log; got: {log:?}"
+    );
+    assert_eq!(
+      after.error,
+      before.error + 2,
+      "both workers' Error! must increment the main REPORT error count via the fold"
+    );
   }
 }

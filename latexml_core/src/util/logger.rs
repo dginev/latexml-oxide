@@ -43,6 +43,55 @@ pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
 /// Flush and return the captured log output, stopping capture (Perl: flush_log).
 pub fn flush_log() -> String { LOG_BUFFER.borrow_mut().take().unwrap_or_default() }
 
+/// Diagnostics captured from a worker thread by [`capture`], for the main thread
+/// to fold back in via [`replay_captured`]. Carries both the already-formatted
+/// log text AND the `REPORT` count deltas — `LOG_BUFFER` and `REPORT` are BOTH
+/// `#[thread_local]`, so forwarding only the text would still leave
+/// `status_code` blind to a worker's failures.
+pub struct CapturedDiagnostics {
+  pub log:    String,
+  pub counts: crate::common::error::ReportCounts,
+}
+
+/// Run `f` on the CURRENT (worker) thread with diagnostic capture. Binds a fresh
+/// thread-local log buffer for the duration so any `Error!`/`Warn!`/`Info!` `f`
+/// emits (directly or deep inside a conversion helper) is recorded instead of
+/// lost, and snapshots the worker's `REPORT` counters afterward. The returned
+/// [`CapturedDiagnostics`] is replayed on the main thread by [`replay_captured`]
+/// after the worker is joined, so the messages reach the bound `cortex.log` and
+/// the failures register in `status_code`.
+///
+/// Assumes the worker thread has no pre-bound buffer (the spawned post-processing
+/// pool threads start clean); it does not save/restore a prior binding.
+pub fn capture<R>(f: impl FnOnce() -> R) -> (R, CapturedDiagnostics) {
+  bind_log();
+  let result = f();
+  let log = flush_log();
+  let counts = crate::common::error::snapshot_report_counts();
+  (result, CapturedDiagnostics { log, counts })
+}
+
+/// Fold worker-thread diagnostics (from [`capture`]) into the main thread: append
+/// the captured log text to the bound `LOG_BUFFER` and merge the count deltas
+/// into the main `REPORT`. Call on the MAIN thread, in a deterministic order
+/// (e.g. worker/job order), after the workers join. The worker already echoed
+/// each line to the shared stderr fd in real time, so this does NOT re-print to
+/// stderr — it only repairs the captured log + status tally.
+pub fn replay_captured(d: CapturedDiagnostics) {
+  if !d.log.is_empty()
+    && let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+    && let Some(ref mut log) = *buf
+  {
+    // The captured text is already per-record newline-terminated; just make
+    // sure it starts on a fresh line so it can't glue onto an in-flight note.
+    if !log.is_empty() && !log.ends_with('\n') {
+      log.push('\n');
+    }
+    log.push_str(&d.log);
+  }
+  crate::common::error::merge_report_counts(d.counts);
+}
+
 /// Strip ANSI escape sequences from a string for log file output.
 fn strip_ansi(s: &str) -> String {
   // Match ESC[ ... m sequences
