@@ -44,9 +44,10 @@ pub struct PostOptions<'a> {
   pub split_xpath:               Option<String>,
   pub split_naming:              Option<&'a str>,
   pub xslt_parameters:           &'a [String],
-  /// If > 0, try `inkscape` for PDF graphics smaller than this many KB
-  /// (vector-preservation path). Fall back to ImageMagick `convert` on
-  /// failure or timeout. Tracks upstream brucemiller/LaTeXML#902.
+  /// If > 0, try the vector-SVG converters (mutool → pdftocairo) for PDF
+  /// graphics smaller than this many KB (vector-preservation path). Fall
+  /// back to the raster ImageMagick `convert`/`gs` → PNG path on failure
+  /// or timeout. Tracks upstream brucemiller/LaTeXML#902.
   pub graphics_svg_threshold_kb: u32,
   /// Output extraction mode (Perl `LaTeXML::Util::Pack::whatsout`).
   /// `Document` (default) → serialize the full post-processed

@@ -35,7 +35,7 @@ pub enum Phase {
   PostScan = 6,
   Bibliography = 7,
   Crossref = 8,
-  /// External-tool dispatch for `\includegraphics` (convert / gs / inkscape).
+  /// External-tool dispatch for `\includegraphics` (mutool / pdftocairo / convert / gs).
   Graphics = 9,
   /// External-tool dispatch for picture/latex/math image rendering
   /// (`picture_images.rs` + `latex_images.rs` + `math_images.rs`).

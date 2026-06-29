@@ -159,7 +159,7 @@ gate (§2); embedded-resource smoke — *promote/extend* existing
 `tests/001_single_binary_smoke.rs` + the "rename `resources/` away" check;
 `strace` no-own-disk-read assertion; license-inventory check (§4); corpus
 smoke + telemetry upload; graphics-tool matrix (pdftocairo / mutool /
-inkscape present-or-not); `cargo clippy --all-targets`.
+gs present-or-not); `cargo clippy --all-targets`.
 
 ## 8. Surpass-Perl policy
 

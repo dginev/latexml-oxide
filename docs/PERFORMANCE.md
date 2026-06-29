@@ -66,7 +66,7 @@ Three tools, in order of preference:
 
 ## 5. External-process discipline (fork-exec is not free)
 
-Every `gs`/`convert`/`inkscape`/`kpsewhich`/`pdfcrop` costs 10–50 ms
+Every `gs`/`convert`/`mutool`/`pdftocairo`/`kpsewhich`/`pdfcrop` costs 10–50 ms
 ambient plus dynamic-linker and font-cache init for `gs`/`convert`.
 **Coalesce, dedup, and cache before spawning — not after.**
 
@@ -785,7 +785,7 @@ messages. Keep here as breadcrumbs for regression triage.
   `--graphics-svg-threshold-kb N` bypasses ImageMagick for vector PDFs.
   Witness: `fig8.pdf` (41 KB) 32.4s → 0.3s (~130× / ~111×). Test:
   `latexml_post/tests/integration.rs::test_vector_svg_pathological_convert_case`
-  (<5s assertion, skipped without inkscape).
+  (<5s assertion, skipped without a vector converter — mutool/pdftocairo).
 - **Vector-PDF auto-detection** (2026-05-16) — `cortex_worker` `ar5iv`
   profile passes `graphics_svg_threshold_kb: 0`; auto-detect scans PDF
   header (≤256 KB) for `/Subtype /Image` markers and routes to SVG
@@ -796,7 +796,7 @@ messages. Keep here as breadcrumbs for regression triage.
   `latexml_post::graphics::tests::should_try_svg_path_auto_detect`.
 - **Sandbox worker default 20 → 8** (2026-05-16,
   `tools/benchmark_canvas.sh`) — graphics-bound papers ran 5–10×
-  slower at 20 workers vs single-threaded due to gs/convert/inkscape
+  slower at 20 workers vs single-threaded due to gs/convert
   fork-exec contention; at 8 workers per-paper overhead is ≤30% and
   corpus throughput is higher. Override `--workers N` only when the
   canvas is known compute-bound (math/digest-heavy) rather than

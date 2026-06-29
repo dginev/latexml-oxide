@@ -48,10 +48,10 @@ fn take_converter_diag() -> Option<String> { LAST_CONVERTER_DIAG.with(|c| c.borr
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 // Parsed-and-validated at init: only positive integer values are
 // honored; everything else (unset, empty, "0", malformed) leaves
-// `INKSCAPE_TIMEOUT_SECS` at None and the caller falls back to the
-// 15-second default in `inkscape_timeout_secs`.
-static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
-  std::env::var("LATEXML_INKSCAPE_TIMEOUT_SECS")
+// `SVG_CONVERT_TIMEOUT_SECS` at None and the caller falls back to the
+// 15-second default in `svg_convert_timeout_secs`.
+static SVG_CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
+  std::env::var("LATEXML_SVG_CONVERT_TIMEOUT_SECS")
     .ok()
     .and_then(|s| s.parse::<u64>().ok())
     .filter(|&n| n > 0)
@@ -59,7 +59,7 @@ static INKSCAPE_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
 
 /// Wall-clock timeout for the `convert` (ImageMagick / gs) subprocess.
 /// Defaults to 60 s; override via `LATEXML_CONVERT_TIMEOUT_SECS`. Same
-/// pattern as `INKSCAPE_TIMEOUT_SECS` — see WISDOM #56.
+/// pattern as `SVG_CONVERT_TIMEOUT_SECS` — see WISDOM #56.
 static CONVERT_TIMEOUT_SECS: LazyLock<Option<u64>> = LazyLock::new(|| {
   std::env::var("LATEXML_CONVERT_TIMEOUT_SECS")
     .ok()
@@ -124,8 +124,9 @@ pub struct Graphics {
   type_properties:  HashMap<String, TypeProperties>,
   background:       String,
   /// Opt-in vector-SVG path for PDF graphics. When > 0, PDFs under this
-  /// many KB are first attempted via `inkscape`; fall back to ImageMagick
-  /// `convert` on failure or timeout. 0 disables the path entirely.
+  /// many KB are first attempted via the vector converters (mutool, then
+  /// pdftocairo); fall back to the raster (`convert`/`gs` → PNG) path on
+  /// failure or timeout. 0 disables the path entirely.
   /// Tracks upstream brucemiller/LaTeXML#902.
   svg_threshold_kb: u32,
 }
@@ -695,84 +696,47 @@ impl Graphics {
     None
   }
 
-  /// Try to convert a PDF to plain SVG via `inkscape`, preserving vector
-  /// content. Returns `true` on success. Tracks upstream
-  /// brucemiller/LaTeXML#902.
+  /// Try to convert a PDF to plain SVG, preserving vector content. Returns
+  /// `true` on success. Tracks upstream brucemiller/LaTeXML#902.
   ///
   /// Caller decides when to attempt this — typically only for PDF sources
-  /// below a file-size threshold, because inkscape on raster-embedded PDFs
-  /// produces massive output (>100 MB) and can take 40+ seconds
-  /// (measured: Fade.pdf 1.7 MB → 46 s / 102 MB SVG vs `convert` 1.4 s /
-  /// 61 KB PNG).
+  /// below a file-size threshold (`should_try_svg_path`), because vector
+  /// converters on raster-embedded PDFs produce massive output (>100 MB).
+  /// On any failure the function returns `false` and the worker falls back
+  /// to the raster (PNG) path — so a PDF that no vector tool can handle is
+  /// never lost, just rasterized instead.
   ///
-  /// `page` is 1-based (graphicx convention); converted to 0-based for
-  /// inkscape's `--pdf-page`.
+  /// `page` is 1-based (graphicx convention).
   ///
-  /// Guarded by a **hard timeout** (15 s default; see
-  /// `inkscape_timeout_secs`). Pathological small-PDF cases have been
-  /// observed — if inkscape is still running after the deadline we SIGKILL
-  /// it and return `false` so the caller falls back to ImageMagick. The
-  /// timeout is generous enough (15 s) for all well-behaved small vector
-  /// plots and strict enough to prevent the 46 s+ runaway behaviour seen
-  /// on Fade.pdf-class inputs.
+  /// Each converter is guarded by a **hard timeout** (15 s default; see
+  /// `svg_convert_timeout_secs`) and an output-size cap
+  /// (`MAX_SVG_OUTPUT_BYTES`): a converter still running after the deadline
+  /// is SIGKILLed, and oversized output is discarded — either way we fall
+  /// through to the next converter, then to raster.
   fn convert_image_svg(source: &str, dest: &str, page: Option<u32>) -> bool {
-    // Try fast vector rasterizers in order of measured speed +
+    // Try the two fast vector converters in order of measured speed +
     // gzip-compressibility on the canvas slow-tail. Each is gated by
     // `MAX_SVG_OUTPUT_BYTES`; pathological vector-heavy PDFs (e.g.
-    // R-Graphics `W.pdf`) can emit >100 MB SVG which we discard so
-    // the caller falls back to raster.
+    // R-Graphics `W.pdf`) can emit >100 MB SVG which we discard so the
+    // caller falls back to raster.
     //
     // Order (subprocess; library license doesn't propagate):
     //   1. mutool (MuPDF CLI) — fastest, plus ~4× more gzip-compressible SVG output than pdftocairo
     //      (1.5 MB vs 6.0 MB gz on matplotlib scatter).
-    //   2. pdftocairo (poppler) — universally available with TeX Live. 20-40× faster than inkscape
-    //      on benign vector PDFs.
-    //   3. inkscape — last vector resort. Some PDFs that fail poppler still render via inkscape
-    //      (but it can time out).
+    //   2. pdftocairo (poppler) — universally available with TeX Live; parses vector PDFs directly,
+    //      so it's fast even on the inputs that make ImageMagick/gs rasterization crawl.
+    //
+    // A heavyweight third resort (inkscape) was removed deliberately: it
+    // pulls a GTK/X11 stack, is 20-40× slower, and is timeout-prone, while
+    // adding no real coverage — when both converters above fail, the worker
+    // rasterizes to PNG anyway.
     if Self::convert_image_svg_mutool(source, dest, page) {
       return true;
     }
     if Self::convert_image_svg_pdftocairo(source, dest, page) {
       return true;
     }
-    let mut cmd = std::process::Command::new("inkscape");
-    cmd
-      .arg("--export-type=svg")
-      .arg("--export-plain-svg")
-      .arg(format!("--export-filename={}", dest));
-    if let Some(p) = page {
-      cmd.arg(format!("--pdf-page={}", p.saturating_sub(1)));
-    }
-    cmd.arg(source);
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
-    match Self::run_with_timeout(cmd, timeout) {
-      Some(status) => {
-        if !(status.success() && Path::new(dest).exists()) {
-          return false;
-        }
-        // Reject pathological inkscape output that explodes to >100 MB
-        // — keep the dest hole open so the worker falls back to raster.
-        if Self::svg_output_too_large(dest) {
-          let _ = std::fs::remove_file(dest);
-          return false;
-        }
-        true
-      },
-      None => {
-        // Subprocess wall-clock timeout; class=`shell` mirrors Perl
-        // LaTeXImages.pm:293 `Error('shell', $cmd, …)`.
-        Warn!(
-          "shell",
-          "inkscape",
-          "Graphics: inkscape SVG conversion for {} exceeded {} s — killed",
-          source,
-          timeout.as_secs()
-        );
-        // Best-effort cleanup of a partial output.
-        let _ = std::fs::remove_file(dest);
-        false
-      },
-    }
+    false
   }
 
   /// Maximum acceptable SVG output size from a vector conversion. Above
@@ -828,7 +792,7 @@ impl Graphics {
       .arg(&tmp_pattern_str)
       .arg(source)
       .arg(p1.to_string());
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    let timeout = std::time::Duration::from_secs(Self::svg_convert_timeout_secs());
     let ok = Self::run_with_timeout(cmd, timeout)
       .map(|status| status.success())
       .unwrap_or(false)
@@ -854,10 +818,10 @@ impl Graphics {
   }
 
   /// `pdftocairo -svg` rasterizes the page's vector content to SVG via
-  /// poppler/cairo. Much faster than inkscape on the kind of vector PDFs
-  /// matplotlib/pgfplots produce. Returns true ONLY if the output is
-  /// reasonably-sized; otherwise we discard and let the caller try
-  /// inkscape (which sometimes simplifies further).
+  /// poppler/cairo — the second-choice vector converter after mutool, and
+  /// universally available with TeX Live. Returns true ONLY if the output
+  /// is reasonably-sized; otherwise we discard it and the caller falls
+  /// through to the raster (PNG) path.
   fn convert_image_svg_pdftocairo(source: &str, dest: &str, page: Option<u32>) -> bool {
     let mut cmd = std::process::Command::new("pdftocairo");
     cmd.arg("-svg");
@@ -872,7 +836,7 @@ impl Graphics {
       cmd.arg("-f").arg("1").arg("-l").arg("1");
     }
     cmd.arg(source).arg(dest);
-    let timeout = std::time::Duration::from_secs(Self::inkscape_timeout_secs());
+    let timeout = std::time::Duration::from_secs(Self::svg_convert_timeout_secs());
     match Self::run_with_timeout(cmd, timeout) {
       Some(status) => {
         if !(status.success() && Path::new(dest).exists()) {
@@ -892,12 +856,12 @@ impl Graphics {
     }
   }
 
-  /// Hard timeout (seconds) for the `inkscape` subprocess. Overridable via
-  /// the `LATEXML_INKSCAPE_TIMEOUT_SECS` environment variable for
-  /// debugging; defaults to 15 s — enough for all benign vector-authored
-  /// plots we've measured (< 1 s typical), strict enough to cut off the
-  /// Fade.pdf-class 40 s+ runaway cases.
-  fn inkscape_timeout_secs() -> u64 { INKSCAPE_TIMEOUT_SECS.unwrap_or(15) }
+  /// Hard timeout (seconds) for a vector-SVG converter subprocess (mutool /
+  /// pdftocairo). Overridable via the `LATEXML_SVG_CONVERT_TIMEOUT_SECS`
+  /// environment variable for debugging; defaults to 15 s — enough for all
+  /// benign vector-authored plots we've measured (< 1 s typical), strict
+  /// enough to cut off the Fade.pdf-class 40 s+ runaway cases.
+  fn svg_convert_timeout_secs() -> u64 { SVG_CONVERT_TIMEOUT_SECS.unwrap_or(15) }
 
   /// Run `cmd` and enforce a wall-clock timeout. Returns `Some(status)` on
   /// clean exit, `None` if the child was killed on timeout or spawn
@@ -908,7 +872,7 @@ impl Graphics {
   /// Without that, ImageMagick's `convert` was spawning `gs` and dying
   /// on SIGKILL while leaving gs orphaned — those gs processes held on
   /// for 10+ minutes per pathological PDF and stalled large sandbox
-  /// runs. The same hardening protects inkscape / pdftocairo / ps2pdf.
+  /// runs. The same hardening protects mutool / pdftocairo / ps2pdf.
   fn run_with_timeout(
     mut cmd: std::process::Command,
     timeout: std::time::Duration,
@@ -938,7 +902,7 @@ impl Graphics {
           // process group, so if the process running `run_with_timeout` is
           // itself killed (e.g. the LSP server SIGKILLs a preempted body
           // child mid-post-processing), nothing would ever time out or kill
-          // a runaway gs/inkscape — the exact orphan pathology this
+          // a runaway gs/convert — the exact orphan pathology this
           // function's group-kill solves, reintroduced one level up.
           // PR_SET_PDEATHSIG makes the kernel SIGKILL the converter when its
           // spawning thread dies; it survives execve, so setting it here
@@ -1127,9 +1091,9 @@ impl Graphics {
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` (auto-detect only — leaves
   /// the explicit-threshold path active).
   ///
-  /// Safety net: any false positive falls back to ImageMagick when
-  /// inkscape emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a misread
-  /// raster PDF degrades to "tried SVG, got too-big output, used
+  /// Safety net: any false positive falls back to the raster path when a
+  /// vector converter emits >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG, so a
+  /// misread raster PDF degrades to "tried SVG, got too-big output, used
   /// convert" instead of a stuck pipeline.
   fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
     if !source.to_lowercase().ends_with(".pdf") {
@@ -1152,7 +1116,7 @@ impl Graphics {
     };
     // Hard upper bound: even if the detector misses an image
     // somewhere deeper in the file, a 500 KB cap keeps the
-    // worst-case wasted inkscape work bounded (~1-2 s before the
+    // worst-case wasted vector-conversion work bounded (~1-2 s before the
     // 8 MB output cap kicks in or the conversion finishes anyway).
     const AUTO_MAX_BYTES: u64 = 500 * 1024;
     if len > AUTO_MAX_BYTES {
@@ -1288,7 +1252,7 @@ impl Graphics {
   /// `-f`/`-l` page selector. Empirical: for vector-heavy PDFs (e.g.
   /// R-Graphics output) `pdftocairo` rasterizes 25× faster than
   /// ImageMagick-via-Ghostscript and produces a clean PNG, where the
-  /// inkscape SVG path explodes to >100 MB and `convert`/`gs` runs into
+  /// vector-SVG path explodes to >100 MB and `convert`/`gs` runs into
   /// tens of seconds on a single page.
   fn should_try_pdf_cairo_path(source: &str) -> bool { source.to_lowercase().ends_with(".pdf") }
 
@@ -1670,7 +1634,7 @@ impl Graphics {
     }
     // Wall-clock timeout to bound `gs`-via-`convert` runaways on
     // pathological PDFs (raster-heavy or with broken xref tables).
-    // Matches the inkscape path's defensive bound; without this, an
+    // Matches the vector-SVG path's defensive bound; without this, an
     // arbitrary `convert` invocation could run for minutes and stall
     // the entire post-processing phase. 60 s is enough for any
     // reasonably-sized graphic; tune via `LATEXML_CONVERT_TIMEOUT_SECS`.
@@ -1730,7 +1694,7 @@ impl Graphics {
   }
 
   /// Hard timeout (seconds) for the `convert` subprocess. Mirrors
-  /// `inkscape_timeout_secs`; default 60 s. Override via
+  /// `svg_convert_timeout_secs`; default 60 s. Override via
   /// `LATEXML_CONVERT_TIMEOUT_SECS` for debugging.
   fn convert_timeout_secs() -> u64 { CONVERT_TIMEOUT_SECS.unwrap_or(60) }
 }
@@ -1954,9 +1918,9 @@ impl Processor for Graphics {
       rel_dest:     String,
       abs_dest_str: String,
       /// `Some((rel_svg, abs_svg_str))` when the worker should
-      /// first attempt the inkscape-SVG path and only fall back
-      /// to `convert` on failure. `None` means the classic
-      /// raster-only path.
+      /// first attempt the vector-SVG path and only fall back
+      /// to the raster `convert` path on failure. `None` means
+      /// the classic raster-only path.
       svg_paths:    Option<(String, String)>,
     }
     struct ConvertOutcome {
@@ -2055,7 +2019,7 @@ impl Processor for Graphics {
           convert_source_counts.insert(source.clone(), prior_source_jobs + 1);
           // Vector-SVG path: opt-in for small PDFs only. We prepare an
           // alternate `.svg` destination path alongside the normal raster
-          // destination so the worker can try inkscape first, then fall
+          // destination so the worker can try the vector-SVG path first, then fall
           // back. The file-size heuristic gates this — see
           // `should_try_svg_path`.
           let try_svg = Self::should_try_svg_path(&source, self.svg_threshold_kb);
@@ -2216,8 +2180,8 @@ impl Processor for Graphics {
                         crate::graphics_cache::ConvertResult::Failed => {
                           Warn!(
                             "shell",
-                            "inkscape",
-                            "Graphics: inkscape SVG path failed for {}, falling back to convert",
+                            "svg",
+                            "Graphics: vector-SVG path failed for {}, falling back to raster",
                             source
                           );
                           None
@@ -2485,7 +2449,7 @@ mod tests {
 
   /// `run_with_timeout` kills the child and returns `None` when the
   /// process exceeds the deadline. Uses `sleep` as a stand-in for any
-  /// runaway subprocess (inkscape, convert, …).
+  /// runaway subprocess (convert, gs, mutool, …).
   #[test]
   fn run_with_timeout_kills_slow_child() {
     let start = std::time::Instant::now();

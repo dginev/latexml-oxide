@@ -1739,8 +1739,11 @@ drops stretch/shrink to bare pt.
 
 ### Graphics renderer chain (subprocess-only; LANDED)
 PDF→PNG `mutool draw`→`pdftocairo`→`convert+gs`; PDF→SVG `mutool convert`→
-`pdftocairo`→`inkscape`. Subprocess `exec` (no GPL linking). Apt: `poppler-utils`
-(req), `mupdf-tools` (rec), `imagemagick+ghostscript`, `inkscape`.
+`pdftocairo`→(raster PNG fallback). EPS/PS→`gs` direct→`convert+gs`. Subprocess
+`exec` (no GPL linking). Apt: `poppler-utils` (req), `mupdf-tools` (rec),
+`imagemagick+ghostscript`. A heavyweight inkscape third resort for PDF→SVG was
+removed 2026-06-29 (GTK stack, 20–40× slower, timeout-prone, no coverage over the
+raster fallback).
 
 ### Other tracks (separate docs)
 - Performance: `PERFORMANCE.md` (P1 math/large-doc open; P2 allocation partial).

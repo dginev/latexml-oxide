@@ -136,20 +136,15 @@ PDF, mutool runs in 0.48 s vs pdftocairo's 0.86 s, and its SVG
 output is ~4× more gzip-compressible. Falls through to `pdftocairo`
 if `mutool` is not on PATH — install is optional.
 
-#### Optional: inkscape fallback for vector-preserving PDF → SVG
-
-For the opt-in `--graphics-svg-threshold-kb N` flag (see
+The opt-in vector-SVG path (`--graphics-svg-threshold-kb N`; see
 [docs/SYNC_STATUS.md](docs/SYNC_STATUS.md) and upstream
-[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902)):
-
-```
-$ sudo apt install inkscape
-```
-
-`inkscape` is used as the **last-resort** SVG converter when both
-`mutool` and `pdftocairo` fail. The path is disabled by default; if
-the flag is enabled but inkscape is missing at runtime, the pipeline
-silently falls back to raster `convert`.
+[brucemiller/LaTeXML#902](https://github.com/brucemiller/LaTeXML/issues/902))
+uses **only** `mutool` then `pdftocairo`. If both fail (or are absent)
+the pipeline falls back to the raster `convert`/`gs` → PNG path, so a PDF
+is never lost — just rasterized. A heavyweight third resort (inkscape)
+was evaluated and **deliberately dropped**: it pulls a large GTK/X11
+stack, runs 20–40× slower, and is timeout-prone, while adding no real
+coverage over the raster fallback.
 
 ### Build profiles (Rust best practice)
 
