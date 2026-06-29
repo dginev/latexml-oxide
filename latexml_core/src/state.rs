@@ -1003,7 +1003,11 @@ impl State {
     let lookupname: Option<SymStr> = if (cc == Catcode::ACTIVE) || (cc == Catcode::CS) {
       // `\special_relax`-family tokens all resolve under the bare `\special_relax`
       // name (shared `\relax` meaning; identity lives in `noexpand_shadowed`).
-      if name == pin!("") { None } else { Some(meaning_key(key)) }
+      if name == pin!("") {
+        None
+      } else {
+        Some(meaning_key(key))
+      }
     } else {
       key.get_executable_primitive_name().map(arena::pin)
     };

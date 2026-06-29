@@ -88,7 +88,9 @@ fn cluster_cite_uppercase() { convert_clean("tests/cluster_regressions/cite_uppe
 /// saved `\cline` (`booktabs_sty.rs` `\ltx@saved@cline`). Shared with Perl
 /// LaTeXML (which hangs); Rust surpasses. Witnesses: arXiv 2506.23179, 2511.17056.
 #[test]
-fn cluster_cmidrule_cline_let() { convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex"); }
+fn cluster_cmidrule_cline_let() {
+  convert_clean("tests/cluster_regressions/cmidrule_cline_let.tex");
+}
 
 /// An unbound class (->OmniBus) whose `.bbl` `\bibitem[\protect\citeauthoryear…]`
 /// side-loads natbib must not leave a body `\citep` looping. The side-load runs
@@ -114,7 +116,10 @@ fn cluster_omnibus_natbib_bbl_sideload() {
 #[test]
 fn cluster_url_at_eof_no_panic() {
   let xml = convert_to_xml("tests/cluster_regressions/url_eof_no_panic.tex");
-  assert!(!xml.is_empty(), "url-at-EOF conversion produced empty output");
+  assert!(
+    !xml.is_empty(),
+    "url-at-EOF conversion produced empty output"
+  );
 }
 
 /// Twemoji-style csname construction with accent macros (`\'`, `\^`, `\~`)

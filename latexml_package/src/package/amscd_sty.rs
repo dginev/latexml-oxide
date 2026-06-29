@@ -30,7 +30,9 @@ LoadDefinitions!({
   DefPrimitive!(T_CS!("\\cd@"), None, {
     // `\cd@` requires a following token to build the `@<token>` connector CS; on
     // input-exhaustion emit the parity "file ended" error instead of panicking.
-    let Some(token) = read_token_required("\\cd@")? else { return Ok(vec![]); };
+    let Some(token) = read_token_required("\\cd@")? else {
+      return Ok(vec![]);
+    };
     let cs_name = token.with_str(|s| format!("@{s}"));
     unread(Tokens::from(T_CS!(&*cs_name)));
   });

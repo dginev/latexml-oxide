@@ -76,12 +76,16 @@ LoadDefinitions!({
 // This also makes wrapfig consistent with the floatfig/floatflt sibling
 // packages, which already emit `100 * dimen / \textwidth . '%'` (Perl toPercent).
 fn set_wrap_width(whatsit: &mut Whatsit) {
-  let Some(width_arg) = whatsit.get_arg(4) else { return };
+  let Some(width_arg) = whatsit.get_arg(4) else {
+    return;
+  };
   let v = width_arg.value_of();
   if v == 0 {
     return;
   }
-  let Some(tw) = lookup_dimension("\\textwidth") else { return };
+  let Some(tw) = lookup_dimension("\\textwidth") else {
+    return;
+  };
   let tw_sp = tw.value_of();
   if tw_sp == 0 {
     return;

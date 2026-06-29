@@ -345,8 +345,7 @@ pub const NOEXPAND_SEP: u8 = 1;
 /// resolves to `\relax` meaning). `shadowed` is an expandable/undefined CS or
 /// active token (the only things `\noexpand` wraps; see `is_dont_expandable`).
 pub fn noexpand_family(shadowed: &Token) -> Token {
-  let text =
-    shadowed.with_str(|s| format!("{NOEXPAND_PREFIX}{}{s}", NOEXPAND_SEP as char));
+  let text = shadowed.with_str(|s| format!("{NOEXPAND_PREFIX}{}{s}", NOEXPAND_SEP as char));
   Token {
     text: arena::pin(text),
     code: Catcode::CS,
@@ -862,7 +861,8 @@ impl Token {
     self.code == Catcode::CS
       && self.with_str(|s| {
         s.starts_with(NOEXPAND_PREFIX)
-          && (s.len() == NOEXPAND_PREFIX.len() || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
+          && (s.len() == NOEXPAND_PREFIX.len()
+            || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
       })
   }
 

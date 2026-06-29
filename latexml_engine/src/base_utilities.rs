@@ -909,8 +909,14 @@ LoadDefinitions!({
   // ("affiliation:N") in relocate_annotations -- avoiding the prefix-stripped
   // fallback that would otherwise conflate them with a creator's own "author:N"
   // sequence label and double-attach.
-  DefMacro!("\\lx@sup@request@affiliation", "\\lx@request@frontmatter@annotation[affiliation]");
-  DefMacro!("\\lx@sup@setlabel@affiliation", "\\lx@set@frontmatter@label[affiliation]");
+  DefMacro!(
+    "\\lx@sup@request@affiliation",
+    "\\lx@request@frontmatter@annotation[affiliation]"
+  );
+  DefMacro!(
+    "\\lx@sup@setlabel@affiliation",
+    "\\lx@set@frontmatter@label[affiliation]"
+  );
   DefMacro!(
     "\\lx@author@withsup{}",
     "\\bgroup\\let^\\lx@sup@request@affiliation\\let\\textsuperscript\\lx@sup@request@affiliation#1\\egroup"

@@ -677,7 +677,11 @@ fn cycle_guard_checkpoint(active: bool, nextt: &Token) -> Result<()> {
 pub fn read_token_required(what: &str) -> Result<Option<Token>> {
   let tok = read_token()?;
   if tok.is_none() {
-    Error!("expected", what, format!("input ended while scanning use of {what}"));
+    Error!(
+      "expected",
+      what,
+      format!("input ended while scanning use of {what}")
+    );
   }
   Ok(tok)
 }
@@ -1241,7 +1245,11 @@ pub fn read_balanced(
       None => {
         let cross = {
           let gullet = gullet!();
-          gullet.runtime.as_ref().map(|r| r.autoclose).unwrap_or(false)
+          gullet
+            .runtime
+            .as_ref()
+            .map(|r| r.autoclose)
+            .unwrap_or(false)
             && !gullet.mouthstack.is_empty()
         };
         if cross {
