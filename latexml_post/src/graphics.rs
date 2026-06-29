@@ -1618,10 +1618,22 @@ impl Graphics {
       .arg(dest);
     let timeout = std::time::Duration::from_secs(Self::convert_timeout_secs());
     match Self::run_with_timeout(cmd, timeout) {
-      // Mirror the original `cmd.output()` semantics: report success based
-      // on exit status alone, not on whether `dest` was actually written.
-      // (The fake-convert test fixture exits 0 without producing a file.)
-      Some(status) => status.success(),
+      Some(status) => {
+        // A clean exit is NOT sufficient: ImageMagick `convert` (and the `gs`
+        // it drives) exits 0 on some corrupt/unrenderable inputs while writing
+        // no file. Require an actual non-empty output so a genuine "no image"
+        // failure surfaces (returns false → the caller's imageprocessing
+        // Error) instead of being mistaken for success and emitting a
+        // broken/empty <img>. The fast PDF/EPS paths already verify their
+        // output (mutool/pdftocairo check `dest.exists()`); this brings the
+        // final `convert` fallback in line.
+        if status.success() && Self::produced_output(dest) {
+          true
+        } else {
+          let _ = std::fs::remove_file(dest); // drop any partial/empty output
+          false
+        }
+      },
       None => {
         Warn!(
           "shell",
@@ -1634,6 +1646,16 @@ impl Graphics {
         false
       },
     }
+  }
+
+  /// True iff `dest` was actually written as a usable (non-empty) file. Used to
+  /// validate a subprocess conversion whose exit code alone is unreliable
+  /// (`convert`/`gs` can exit 0 having produced nothing). A 0-byte file counts
+  /// as failure — it would render as a broken image.
+  fn produced_output(dest: &str) -> bool {
+    std::fs::metadata(dest)
+      .map(|m| m.len() > 0)
+      .unwrap_or(false)
   }
 
   /// Hard timeout (seconds) for the `convert` subprocess. Mirrors
@@ -2595,9 +2617,12 @@ endobj
     std::fs::write(&source, "%!PS-Adobe-3.0\n%%BoundingBox: 0 0 100 100\n").unwrap();
     let log = tmp.join("convert.log");
     let fake_convert = tmp.join("convert");
+    // Log the args AND write a non-empty file at the dest (the last positional
+    // arg) — `convert_image` now requires actual output, not just exit 0.
     std::fs::write(
       &fake_convert,
-      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LATEXML_FAKE_CONVERT_LOG\"\nexit 0\n",
+      "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$LATEXML_FAKE_CONVERT_LOG\"\n\
+       for a in \"$@\"; do d=\"$a\"; done\nprintf x > \"$d\"\nexit 0\n",
     )
     .unwrap();
     let mut perms = std::fs::metadata(&fake_convert).unwrap().permissions();
@@ -2702,5 +2727,32 @@ endobj
       before.error + 2,
       "both workers' Error! must increment the main REPORT error count via the fold"
     );
+  }
+
+  /// `produced_output` is the guard that turns a `convert`/`gs` exit-0-but-no-file
+  /// into a reported failure: a usable conversion is a non-empty file, not just a
+  /// clean exit. Missing OR empty (0-byte) => not output.
+  #[test]
+  fn produced_output_requires_a_nonempty_file() {
+    let tmp = std::env::temp_dir().join(format!("latexml_produced_{}", std::process::id()));
+    std::fs::create_dir_all(&tmp).unwrap();
+    let missing = tmp.join("missing.png");
+    let empty = tmp.join("empty.png");
+    let real = tmp.join("real.png");
+    std::fs::write(&empty, b"").unwrap();
+    std::fs::write(&real, b"\x89PNG").unwrap();
+    assert!(
+      !Graphics::produced_output(&missing.to_string_lossy()),
+      "a missing file is not usable output"
+    );
+    assert!(
+      !Graphics::produced_output(&empty.to_string_lossy()),
+      "a 0-byte file is not usable output (would render as a broken image)"
+    );
+    assert!(
+      Graphics::produced_output(&real.to_string_lossy()),
+      "a non-empty file is usable output"
+    );
+    std::fs::remove_dir_all(&tmp).ok();
   }
 }
