@@ -873,7 +873,13 @@ impl Token {
     if self.code != Catcode::CS {
       return None;
     }
-    self.with_str(|s| {
+    // Compute the owned shadowed name + its catcode INSIDE the `with_str`
+    // borrow, then `arena::pin` it OUTSIDE. `with_str`'s `s` (hence `rest`)
+    // aliases the arena's append-only buffer; a re-entrant `arena::pin(rest)`
+    // could reallocate that buffer mid-intern and read freed memory. Owning the
+    // name first (and pinning after the borrow ends) removes the hazard — and
+    // satisfies clippy::unnecessary_to_owned, which can't see the aliasing.
+    let (name, code) = self.with_str(|s| {
       let rest = s.strip_prefix(NOEXPAND_PREFIX)?;
       let rest = rest.strip_prefix(NOEXPAND_SEP as char)?;
       let code = if rest.starts_with('\\') {
@@ -881,12 +887,13 @@ impl Token {
       } else {
         Catcode::ACTIVE
       };
-      Some(Token {
-        text: arena::pin(rest.to_string()),
-        code,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      })
+      Some((rest.to_string(), code))
+    })?;
+    Some(Token {
+      text: arena::pin(name),
+      code,
+      #[cfg(feature = "token-locators")]
+      loc: 0,
     })
   }
 

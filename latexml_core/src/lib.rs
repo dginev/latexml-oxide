@@ -136,7 +136,8 @@ pub fn reset_thread_engine() {
   // The error REPORT's `undefined`/`missing` maps are keyed by arena `SymStr`s,
   // so they MUST be cleared together with the arena — otherwise a stale key
   // resolves, in the renumbered arena, to a different string (phantom undefined).
-  common::error::reset_arena_keyed_reports();
+  // (`reset_arena_keyed_reports` is in scope via `pub use crate::common::error::*`.)
+  reset_arena_keyed_reports();
 }
 
 pub use crate::common::error::*;
