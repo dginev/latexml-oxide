@@ -2196,12 +2196,16 @@ impl Processor for Graphics {
                       // Error class/object mirror Perl Graphics.pm:274 so the
                       // harness aggregates with engine/package emissions.
                       // Object is the failure TYPE (not the filename) so the
-                      // harness can aggregate by failure mode; the filenames are
-                      // in the details that follow.
+                      // harness can aggregate by failure mode. The message marks
+                      // the SOURCE asset (the input that failed) as the subject —
+                      // NOT the target — so the log clearly identifies which
+                      // input could not be rendered; the intended target is
+                      // secondary context.
                       Error!(
                         "imageprocessing",
                         "failed_to_convert",
-                        "Graphics: Failed to convert {} to {}",
+                        "Graphics: failed to convert source asset {} — every converter \
+                         failed, no usable image produced (intended target {})",
                         source,
                         abs_dest_str
                       );
