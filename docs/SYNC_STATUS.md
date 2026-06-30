@@ -15,13 +15,10 @@
 
 ## Current status
 
-- `cargo test --tests`: **1481 / 0 / 0** (on `class-b-xmref`; +13 vs main). The +13
-  regression tests: content-corruption guard, comma-list-conditional,
-  formulae-distribute, partial-over-partial (earlier), plus this session's
-  eqnarray/numcases `\arraycolsep`-macro, floatflt/floatfig pctwidth, DefMath
-  textmode-no-mode-warning, feynmp_fmf, arximspdf_imsart,
-  omnibus_natbib_autoload_no_reload_loop, and seclev_heading_levels_stable
-  (07_xslt_seclev_levels) — see the PERF notes below.
+- `cargo test --tests`: **1502 / 0 / 0** (on `ar5iv-2606-prep`, 50 commits ahead of
+  `main`: the consolidated parity-followups + graphics + noexpand/xint + the two prior
+  XSLT O(n²) fixes, plus this session's fvextra fix and the `maketitle` XSLT memoization
+  with guard `09_xslt_maketitle_navscan.rs`). See "Landed this session (2026-06-29)" below.
 - **PERF (2026-06-27): OmniBus natbib-autoload reload loop — FIXED.** The dominant
   arXiv slow/timeout cluster (~50 `sn-jnl` + Wiley/`sagej`/`wlpeerj`/… papers, all
   unbound classes → OmniBus fallback) hung ~90 s in digest: OmniBus's hand-rolled
@@ -90,6 +87,35 @@
 - `cargo clippy --workspace --all-targets -- -D warnings`: **clean**; `cargo fmt --check`: clean.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
+
+### Landed this session (2026-06-29, on `ar5iv-2606-prep`) — sandbox-arxiv-2605 prep for the July-5 2606 ar5iv run
+
+- **fvextra `breakanywhere` PushbackLimit loop — FIXED (commit `c422c64937`), the #1
+  genuine Rust-only fatal cluster.** `breakanywhere=true` installs a recursive
+  char-scanner (`\FancyVerbBreakStart`) that measures every character by boxing a
+  line-prefix through `predigest_box_contents`, growing the gullet pushback until the
+  650k guard fatals; Perl converts cleanly. Fix routes the breaking line-processor to
+  the non-breaking one (`\let\FV@ListProcessLine@Break\FV@ListProcessLine@NoBreak`,
+  `fvextra_sty.rs`) — output-faithful (`font="typewriter"` preserved, browser-handled
+  wrapping). **Official cortex before/after on all 30 079 papers: fatal 415→284
+  (−31.6 %), PushbackLimit 185→63, OK+warn 82.4→82.7 %.** Regression
+  `cluster_fvextra_breakanywhere`. Witness 2605.01024. See memory
+  `sandbox-2605-error-landscape-2026-06-29`, `ar5iv-preload-required-for-sandbox-repro`.
+- **Triage conclusion: the 2605 error/fatal tail is at a PARITY CEILING.** Two
+  specific findings recorded for future agents (do NOT chase): (1) `undefined:\cellcolor`
+  (483 papers) is PARITY — same-host Perl also leaves it undefined (a shared LaTeX
+  option-clash from `\usepackage{xcolor}` then `\usepackage[table]{xcolor}`; the re-load
+  is a no-op in both engines, `colortbl` never loads). (2) The `\lx@begin@alignment`/
+  `\Gscale@@box` cluster (~164/129) is a heterogeneous `\begingroup`-leak mechanism, NOT
+  tabularray-driven (minimal `tblr` passes) — and Rust frequently already BEATS Perl
+  there (2605.00025: Perl fatals/timeouts, Rust completes with errors). No second clean
+  Rust-only error fix exists in this corpus's tail.
+- **SPEED on large math books — 3rd XSLT O(n²) FOUND & FIXED.** Witness 2605.01585 (a
+  multi-chapter physics book, 2000+ formulae, 512 titles): `maketitle`'s per-title
+  `//ltx:navigation` full-tree scan was 22.7 s of 24.9 s of XSLT. Memoized to a global
+  → **XSLT 24.94 s → 2.15 s, output byte-identical, suite 1502/0** (Open task §3 below,
+  OXIDIZED_DESIGN #41). The fleet `phase_xslt_us` on this paper (65.7 s) collapses to
+  ~2 s; large books that were near/at the 180 s timeout should flip fatal→complete.
 
 ### Landed this session (2026-06-25, on `post-processing-signal-fidelity`)
 
@@ -1170,8 +1196,9 @@ is the DEFERRED focused sessions below (content-MathML, document-builder).
   cluster all convert (1–11 errors, metadata preserved). Suite 1479/0; regression
   `cluster_arximspdf_imsart`. (Residual: the unusual `\ead`-inside-`\author`
   nesting leaves 1 frame-balance artifact; email still captured as a contact.)
-- Remaining candidates: `jpconf` class → iopart (18+ IOP-conf papers);
-  theorem/mdframed-in-figure schema (`figure_mixed_content`, Open task §1).
+- Remaining candidates: `jpconf` class → iopart (18+ IOP-conf papers).
+  (theorem/mdframed-in-figure schema `figure_mixed_content` — ✅ FIXED 2026-06-27,
+  float content models accept `theorem`/`proof`; OXIDIZED_DESIGN #38.)
 
 ---
 
@@ -1340,13 +1367,15 @@ rendered with `--preload=ar5iv.sty --css=ar5iv.css --nodefaultresources
    charge superscripts, reaction arrows (`->`/`<=>`/`->[..]`), bonds, states,
    `\cesplit`. Simple `\ce` is 0 errors + correctly formatted (the old stub rendered
    formulae FLAT). chemformula stub updated to require mhchem with `version=4` (the
-   real package warns without it; the old stub was silent). **Residual:** the full
-   manual still emits ~69 edge-case errors under raw-load (`\ce` inside `align*` →
-   `\lx@begin@alignment`/`\end@amsalign`; ~56 `\lx@end@inline@math` from specific
-   `$`-toggle / `\cesplit`-derived example patterns). Basic `SideBySideExample`+`\ce`
-   is clean. **TODO (this branch):** debug the align*/`\lx@end@inline@math` edge
-   cases toward 0 errors; validate the corpus mhchem witnesses via cortex (the flip
-   is corpus-wide).
+   real package warns without it; the old stub was silent). **Residual = SHARED Perl
+   limitation, NOT a Rust gap (re-classified 2026-06-27):** the full manual still
+   emits ~69 edge-case errors under raw-load (`\ce` inside `align*` →
+   `\lx@begin@alignment`/`\end@amsalign`; ~56 `\lx@end@inline@math`). The minimal
+   reduction `\begingroup$a$\endgroup` inside `align*` errors **IDENTICALLY in Rust
+   AND same-host Perl** — deferred-alignment can't clean the cell `$`-frame across an
+   intervening `\begingroup`. Nothing to fix for parity; a fix would be a deliberate
+   deep surpass-Perl core divergence (not autonomous work). Basic
+   `SideBySideExample`+`\ce` is clean. See memory `mhchem-ce-amsmath-alignment-2026-06-27`.
 
 ### `ltx_env_<name>` env-markup class — PLANNED, separate branch (churns every test XML)
 **User-requested generic enhancement** (2026-06-27): tag environment wrapper markup
@@ -1369,20 +1398,7 @@ Two implementations, same markup outcome:
   + drive responsive layout from the resulting `ltx_minipage`/`ltx_env_*` hooks in
   `ar5iv.css`; do NOT re-implement the verbatim+render dual capture.
 
-### 1. `ERROR_DEBT` test-gate drain — ✅ DRAINED 2026-06-27 (now empty)
-The harness error-gate (`latexml_oxide/src/util/test.rs`) fails a test at zero
-debt to force removal once fixed.
-- **`figure_mixed_content`** — ✅ FIXED: `ltx:theorem`/`ltx:proof` were rejected in
-  `ltx:figure`/`ltx:table`/`ltx:float` (both engines errored — parity). A boxed
-  theorem/proof inside a float is valid LaTeX, so expanded the schema model
-  (`resources/RelaxNG/LaTeXML.model` + `LaTeXML-para.{rng,rnc}`: added `theorem`,
-  `proof` to the three float content models). **Output-neutral** (the builder already
-  placed the theorem inside the figure; only the spurious malformed-error is gone —
-  golden XML byte-identical). Suite 1481/0; `ERROR_DEBT` is now empty. Surpass-Perl,
-  monotonic (strictly more permissive — cannot invalidate any prior-valid doc).
-  See OXIDIZED_DESIGN #38.
-
-### 2. `\gls`/`\acrshort` in MATH mode (1705.10306) — RE-CLASSIFIED 2026-06-27: almost certainly PARITY (source-confirmed), blocked on unrunnable Perl
+### 1. `\gls`/`\acrshort` in MATH mode (1705.10306) — RE-CLASSIFIED 2026-06-27: almost certainly PARITY (source-confirmed), blocked on unrunnable Perl
 293 errors `ltx:XMTok isn't allowed in <ltx:glossaryref>`: a glossary command in
 math mode digests the link display text (#3, the literal acronym term) as math →
 bare per-letter `<XMTok>`, which the `glossaryref` content model rejects.
@@ -1414,46 +1430,23 @@ for `XMTok` in any inline element's model, so a speculative change risks an
 unfaithful divergence. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
 
-### 3. PR #248 B1 — re-entrant `&mut Document` round-trip (runtime-bindings) — ✅ RESOLVED 2026-06-27 (verified SOUND, was a misanalysis)
-The Rhai constructor trampoline re-mints `&mut Document` from a thread-local
-`*mut` for a nested `\wrap{\myemph{..}}` construct. The earlier B1 review feared
-this was Stacked/Tree-Borrows **aliasing UB**; a careful reborrow analysis shows
-it is **sound** — the nested pointer is a reborrow **descendant** of the outer
-one (the core threads a reborrow of `absorb`'s `&mut self` down to the nested
-constructor via `be_absorbed(self)`), and `with_doc` always re-mints from the
-**innermost** published pointer (`CTOR_CTX` is a stack), so every re-mint is a
-genuine descendant of all parked outer `&mut`s — a descendant reborrow never
-invalidates its ancestors. **VERIFIED:** the exact pattern (thread-local `*mut`
-stack + RAII guard + `with_doc` re-mint + nested `absorb` reborrowing down) is
-modeled libxml2-free in `latexml_core::runtime_bindings_reentrancy_model` and
-passes **Miri under both Stacked and Tree Borrows, 0 UB** (the real path is
-libxml2/FFI, which Miri can't execute — hence the model). `tools/miri_check.sh`
-runs it (stacked + tree) in CI. The checked-guard "fix" was correctly rejected:
-there is no UB to guard, and it would deadlock `Document::absorb`'s loop (which
-needs the nested construction to SUCCEED). No architectural change needed; the
-single audited `with_doc` `unsafe` stays, now documented as verified-sound.
-`runtime-bindings` stays on by default. **Sibling site audited too (2026-06-27):**
-the `WHATSIT_CTX` re-mint (`engine.rs` `setProperty` `&mut *ptr`; `argString`/
-`propertyString` are read-only `&*`) is sound — after-digest hooks run one-pass/
-sequentially on a fresh-local whatsit (`definition.rs::execute_after_digest`) and
-never re-enter on the SAME whatsit, so it's always the single-body re-mint pattern
-the Miri model already covers. The runtime-bindings unsafe re-mint sites are now
-fully audited.
-
-### 4. 0.7.0 release — release-prep LANDED; tag pending
+### 2. 0.7.0 release — release-prep LANDED; tag pending
 Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/README
 done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
 
-### 5–6. LANDED 2026-06-22 (see "Landed this session" above)
-- **Post-processing log parity** (`512dbc1ba2`, `9524d2e179`): `cortex.log` carries
-  core+post. **Residual (cortex-side owner):** wire `cortex_worker.rs::convert_archive`
-  to `run_post_processing_logged` + fold `max(core, post.status_code)` into
-  `Status:conversion` (Perl `LaTeXML.pm` L631-634).
-- **Graphics never ships a raw `.eps`/`.pdf`** (`80b4438385`, `604951c232`): three
-  guards → a `<graphics>` without `@imagesrc` renders `ltx_missing_image`. Known
-  post-orchestration deltas (not blocking, broader parity): `PictureImages` absent
-  (Rust = regex inline-SVG), `SVG` regex extractor, no `prescan`.
+### 3. Speed: residual XSLT cost on large math books — ✅ FIXED 2026-06-29 (3rd O(n²) found)
+After the seclev (`1172569034`) and head-keywords (`da74f6ecfe`) O(n²) XSLT fixes, the
+slowest 2605 papers were multi-chapter math books where XSLT still dominated. Profiled
+witness **2605.01585** ("From Qubit to Qubit", 2000+ formulae, 512 titles): `xsltproc
+--profile` pinned **`maketitle` at 22.7 s of 24.9 s self-time (95 %)** — the inline
+`not(//ltx:navigation/ltx:ref[@rel='up'])` full-tree scan, re-run **per title** =
+O(titles × tree). Fixed by memoizing the document-global check into the global
+`$maketitle_has_up_nav` (`LaTeXML-structure-xhtml.xsl`), same shape as the seclev fix.
+**XSLT 24.94 s → 2.15 s (11.6×); maketitle self 22.7 s → 0.004 s; output byte-identical**
+(`cmp` clean, 25 MB Core XML). Suite **1502/0** + guard `09_xslt_maketitle_navscan.rs`.
+OXIDIZED_DESIGN #41, ARXIV_PERFORMANCE Hotspot #4. The three XSLT O(n²) templates on
+large arXiv docs (seclev / head-keywords / maketitle) are now all O(n).
 
 ---
 
