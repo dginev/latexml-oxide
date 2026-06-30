@@ -122,24 +122,29 @@
   Errors intact (parity). So **all 76 public-corpus panic clusters are now resolved on
   `ar5iv-2606-prep`** (the public corpus runs an older binary; a re-run would clear them).
 
-- **TokenLimit hot-loop root-cause (IN PROGRESS, task #20) — heterogeneous/deep, no quick win.**
+- **TokenLimit hot-loop root-cause (task #20) — heterogeneous; the tabularray one FIXED.**
   After the iflimit raise, 16/32 of the IfLimit cluster flip to `Timeout/TokenLimit`. Per user
   directive (root-cause the hot loops, then shortcut via native bindings or fix translation
   bugs), traced 3 witnesses via a sampled macro-expansion histogram (`EXP_TRACE`, reverted):
-  the cluster is **heterogeneous** — three different hot loops: (1) **2605.06284 = `\@for`
-  (`\@iforloop`, 62%) driven by tabularray.** Rust's `tabularray_sty.rs` is a 27-line stub
-  that maps `\tblr`→`\tabular` WITHOUT translating the `tblr` colspec; `{colspec={Q[c]…},hlines}`
-  leaks into the classic alignment template parser (`alignment.rs:986`) which char-explodes
-  ("Unrecognized tabular template" per char). **Minimal repro:** `\begin{tblr}{colspec={Q[c]Q[c]},
-  hlines}…` → 15 such warnings (completes; the runaway is a compound effect on big multi-table
-  + tikz-cell-color docs). **PARITY at the binding level** — Perl's ar5iv `tabularray.sty.ltxml`
-  is the identical naive `\tblr`→`\tabular` stub; a proper colspec-parsing binding would be a
-  surpass-Perl improvement (bounded but non-trivial: parse the `Q[…]`/`X[…]` colspec
-  mini-language → classic column letters). (2) **2605.29738 = babel** modern `.ini` loading
-  (`\usepackage[ukrainian,english]{babel}` + `\foreignlanguage{lithuanian}`; `\languagename`
-  52M× + `\bbl@ifunset`) — deep expl3/`.ini` interaction. (3) **2605.05840 = expl3** l3kernel
-  internals (`\__kernel_exp_not:w`/`\use_none:n`). Each is a dedicated deep effort; none is a
-  clean drive-by fix. Method + per-witness findings are the actionable record for a follow-up.
+  the cluster is **heterogeneous** — three different hot loops:
+  - **(1) 2605.06284 = `\@for` (`\@iforloop`, 62%) driven by tabularray — ✅ FIXED (`226d3bfa51`).**
+    Rust's `tabularray_sty.rs` mapped `\tblr`→`\tabular` WITHOUT translating the `tblr` colspec;
+    `{colspec={Q[c]…},hlines}` leaked into the classic alignment template parser
+    (`alignment.rs:986`) → char-explosion ("Unrecognized tabular template" per char, the
+    `\lx@begin@alignment` leak = a **12,100-paper** error cluster on the full arXiv corpus), and
+    on big multi-table + tikz-cell-color docs the leak compounds into the `\@for`/pgfkeys runaway.
+    `\tblr` now parses the inner spec and translates the `Q[…]`/`X[…]`/`c`/`l`/`r`/`p|m|b{…}`/`|`/
+    `*{n}{…}` colspec mini-language to a classic `\tabular` template (correct column count +
+    alignment), bailing to the unchanged stub on any unhandled construct (never worse). Witness
+    2605.06284: **TokenLimit FATAL → completes rc=0**, 0 "Unrecognized" warnings (was 57+), 0
+    `alignment.rs:986` errors (was 208). Surpass-Perl (Perl's ar5iv binding is the identical
+    stub). Suite 1502/0 + unit test `colspec_translation`.
+  - **(2) 2605.29738 = babel** modern `.ini` loading (`\usepackage[ukrainian,english]{babel}` +
+    `\foreignlanguage{lithuanian}`; `\languagename` 52M× + `\bbl@ifunset`) — deep expl3/`.ini`
+    interaction, NOT yet fixed.
+  - **(3) 2605.05840 = expl3** l3kernel internals (`\__kernel_exp_not:w`/`\use_none:n`) — deep,
+    NOT yet fixed. (2) and (3) remain dedicated deep efforts; the method + per-witness findings
+    are the actionable record.
 
 ### Landed this session (2026-06-29, on `ar5iv-2606-prep`) — sandbox-arxiv-2605 prep for the July-5 2606 ar5iv run
 
@@ -1407,17 +1412,14 @@ fatal/error cluster breakdown from the cortex report API, reproduce locally with
 loops via native bindings per the TokenLimit directive). The full corpus is far larger than the
 2605 slice, so new clusters not present in 2605 may surface.
 
-### TokenLimit `tblr` colspec binding — concrete follow-up (2026-06-30)
-The cleanest fixable thread from the TokenLimit root-cause: Rust's `tabularray_sty.rs`
-(`\tblr`→`\tabular`, 27-line stub) does not translate the `tblr` colspec, leaking
-`{colspec={Q[c]…},hlines}` into the classic alignment template parser (char-explosion +
-`\lx@begin@alignment` leak, the known ~164-paper cluster). A faithful surpass-Perl fix
-(Perl's binding is the identical stub) = a `DefMacro`/`DefEnvironment` for `tblr` that parses
-the key-value argument, extracts `colspec`, and translates the `Q[…]`/`X[…]` column
-mini-language to classic column letters before handing off to `\tabular`. Minimal repro:
-`\begin{tblr}{colspec={Q[c]Q[c]},hlines}…`. Bounded but non-trivial (colspec mini-language
-parser); validate against the alignment/table fixtures + the 164-paper cluster. See the
-2026-06-30 "Landed this session" TokenLimit note.
+### TokenLimit `tblr` colspec binding — ✅ DONE 2026-06-30 (`226d3bfa51`)
+The cleanest fixable thread from the TokenLimit root-cause: `\tblr` now parses its inner spec,
+extracts `colspec`, and translates the column mini-language to a classic `\tabular` template
+(see the 2026-06-30 "Landed this session" TokenLimit note). **Remaining tabularray follow-ups
+(not done):** the `colspec` translation drops X-column stretch (maps `X→l`) and ignores the
+non-`colspec` keys (cell/row coloring, spans via `\SetCell`, `hlines`/`vlines` are no-ops) —
+those are fidelity polish, not the alignment-leak/runaway bug (which is fixed). The babel-`.ini`
+and expl3 TokenLimit hot loops (witnesses 2605.29738 / 2605.05840) remain deep open efforts.
 
 ### mhchem-manual fidelity mission (2026-06-27, on `followups-2026-06-27`) — LANDED
 Driven by a manual review of `~/Downloads/mhchem.tex` (the mhchem package manual)
