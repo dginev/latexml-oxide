@@ -15,10 +15,10 @@
 
 ## Current status
 
-- `cargo test --tests`: **1502 / 0 / 0** (on `ar5iv-2606-prep`, 50 commits ahead of
-  `main`: the consolidated parity-followups + graphics + noexpand/xint + the two prior
-  XSLT O(n²) fixes, plus this session's fvextra fix and the `maketitle` XSLT memoization
-  with guard `09_xslt_maketitle_navscan.rs`). See "Landed this session (2026-06-29)" below.
+- `cargo test --tests`: **1502 / 0 / 0** (on `ar5iv-2606-prep`, 51 commits ahead of
+  `main`: the consolidated parity-followups + graphics + noexpand/xint + the prior
+  XSLT O(n²) fixes + fvextra + `maketitle` XSLT memoization, plus this session's
+  `iflimit` 8M→16M raise (`f3fab341`)). See "Landed this session (2026-06-30)" below.
 - **PERF (2026-06-27): OmniBus natbib-autoload reload loop — FIXED.** The dominant
   arXiv slow/timeout cluster (~50 `sn-jnl` + Wiley/`sagej`/`wlpeerj`/… papers, all
   unbound classes → OmniBus fallback) hung ~90 s in digest: OmniBus's hand-rolled
@@ -87,6 +87,46 @@
 - `cargo clippy --workspace --all-targets -- -D warnings`: **clean**; `cargo fmt --check`: clean.
 - `--init=plain.tex` / `--init=latex.ltx`: **0 errors** (with dump and `LATEXML_NODUMP=1`).
 - Distribution build (`maxperf`): ~45 MB; beats 2× pdflatex on the mini-benchmark.
+
+### Landed this session (2026-06-30, on `ar5iv-2606-prep`) — conditional-accounting root-cause + iflimit raise
+
+- **`iflimit` 8M→16M — Rust counts conditionals more comprehensively than Perl (FIXED, `f3fab341`).**
+  Root-caused the long-standing "2× iflimit vs Perl" gap: it is NOT an accounting bug to
+  tighten away, but *deliberate, more-comprehensive runaway counting*. Rust defines
+  `\ifx`/`\ifcsname` (and the low-level TeX conditionals) as real `DefConditional`s that
+  feed the global `if_count` runaway guard; **Perl does NOT count `\ifx`/`\ifcsname` toward
+  its `if_count` at all**. On pgfkeys-driven tikz/pgfplots input (both engines raw-load the
+  real `pgfkeys.code.tex` — Perl's native pgfkeys override is `__END__`-disabled), a
+  controlled 2-plot figure that BOTH engines render identically (≈86 vs 87 graphic nodes)
+  counts **148,078** conditionals in Rust vs **<200** in Perl (≈740×), dominated by `\ifx`
+  (63%) + `\ifcsname` (15%) inside the pgfkeys key-dispatch. Counting these is *correct* — a
+  `\ifx`/`\ifcsname` runaway is invisible to Perl's counter but caught by Rust's. So the
+  right response is to raise the limit (per user directive 2026-06-30: "count as many as we
+  can … doubling the limit is justified"), not count less. Real *finite* heavy docs measure
+  ≈10–15M conditionals and complete in 24–43 s; a genuine runaway still trips well before the
+  180 s worker lease (≈350k cond/s ⇒ 16M ≈ 46 s) and the RSS fuse. **Recovers coverage on
+  12/32 `Timeout/IfLimit` papers** (the `\tikz@dashphase` pgfplots cluster), which Perl
+  cannot convert at all (chokes on their expl3 first). Output byte-identical, suite 1502/0.
+  Corpus-wide cortex rerun measuring the fatal reduction (in flight at session end).
+
+- **TokenLimit hot-loop root-cause (IN PROGRESS, task #20) — heterogeneous/deep, no quick win.**
+  After the iflimit raise, 16/32 of the IfLimit cluster flip to `Timeout/TokenLimit`. Per user
+  directive (root-cause the hot loops, then shortcut via native bindings or fix translation
+  bugs), traced 3 witnesses via a sampled macro-expansion histogram (`EXP_TRACE`, reverted):
+  the cluster is **heterogeneous** — three different hot loops: (1) **2605.06284 = `\@for`
+  (`\@iforloop`, 62%) driven by tabularray.** Rust's `tabularray_sty.rs` is a 27-line stub
+  that maps `\tblr`→`\tabular` WITHOUT translating the `tblr` colspec; `{colspec={Q[c]…},hlines}`
+  leaks into the classic alignment template parser (`alignment.rs:986`) which char-explodes
+  ("Unrecognized tabular template" per char). **Minimal repro:** `\begin{tblr}{colspec={Q[c]Q[c]},
+  hlines}…` → 15 such warnings (completes; the runaway is a compound effect on big multi-table
+  + tikz-cell-color docs). **PARITY at the binding level** — Perl's ar5iv `tabularray.sty.ltxml`
+  is the identical naive `\tblr`→`\tabular` stub; a proper colspec-parsing binding would be a
+  surpass-Perl improvement (bounded but non-trivial: parse the `Q[…]`/`X[…]` colspec
+  mini-language → classic column letters). (2) **2605.29738 = babel** modern `.ini` loading
+  (`\usepackage[ukrainian,english]{babel}` + `\foreignlanguage{lithuanian}`; `\languagename`
+  52M× + `\bbl@ifunset`) — deep expl3/`.ini` interaction. (3) **2605.05840 = expl3** l3kernel
+  internals (`\__kernel_exp_not:w`/`\use_none:n`). Each is a dedicated deep effort; none is a
+  clean drive-by fix. Method + per-witness findings are the actionable record for a follow-up.
 
 ### Landed this session (2026-06-29, on `ar5iv-2606-prep`) — sandbox-arxiv-2605 prep for the July-5 2606 ar5iv run
 
@@ -1343,6 +1383,28 @@ output.
 ---
 
 ## Open tasks (actionable)
+
+### Large arXiv corpus troubleshooting (2026-06-30, user-requested) — NEXT after 2605 sandbox
+**User directive 2026-06-30:** after the 2605 (10k/sandbox) troubleshooting, also troubleshoot
+the **full arXiv corpus** at
+<https://corpora.latexml.rs/corpus/arXiv/oxidized_tex_to_html> (the public cortex frontend,
+distinct from the local `127.0.0.1:8000` sandbox). Same method as the 2605 work: pull the
+fatal/error cluster breakdown from the cortex report API, reproduce locally with
+`--preload=ar5iv.sty`, root-cause genuine Rust-only clusters, fix faithfully (or shortcut deep
+loops via native bindings per the TokenLimit directive). The full corpus is far larger than the
+2605 slice, so new clusters not present in 2605 may surface.
+
+### TokenLimit `tblr` colspec binding — concrete follow-up (2026-06-30)
+The cleanest fixable thread from the TokenLimit root-cause: Rust's `tabularray_sty.rs`
+(`\tblr`→`\tabular`, 27-line stub) does not translate the `tblr` colspec, leaking
+`{colspec={Q[c]…},hlines}` into the classic alignment template parser (char-explosion +
+`\lx@begin@alignment` leak, the known ~164-paper cluster). A faithful surpass-Perl fix
+(Perl's binding is the identical stub) = a `DefMacro`/`DefEnvironment` for `tblr` that parses
+the key-value argument, extracts `colspec`, and translates the `Q[…]`/`X[…]` column
+mini-language to classic column letters before handing off to `\tabular`. Minimal repro:
+`\begin{tblr}{colspec={Q[c]Q[c]},hlines}…`. Bounded but non-trivial (colspec mini-language
+parser); validate against the alignment/table fixtures + the 164-paper cluster. See the
+2026-06-30 "Landed this session" TokenLimit note.
 
 ### mhchem-manual fidelity mission (2026-06-27, on `followups-2026-06-27`) — LANDED
 Driven by a manual review of `~/Downloads/mhchem.tex` (the mhchem package manual)
