@@ -327,6 +327,31 @@ See the testbed table above (category + dominant phase per paper). Status legend
 > One entry per investigated hotspot: root cause, change, before→after delta,
 > output-neutrality (byte-identical XML) + test evidence. Newest first.
 
+### #4 — XSLT `maketitle` per-title `//ltx:navigation` scan O(n²) (sandbox-2605 large books) — 2026-06-29
+- **Root cause:** `resources/XSLT/LaTeXML-structure-xhtml.xsl`'s `maketitle` gated the
+  title's `\date` block with `not(//ltx:navigation/ltx:ref[@rel='up'])`. That `//`
+  descendant scan walks the **whole document tree from the root**, yet it is
+  re-evaluated once **per title** — so a large book with hundreds of titled units does
+  **O(titles × tree-size)** scans. `xsltproc --profile` pinned it on **2605.01585**
+  ("From Qubit to Qubit", a 2000+-formula physics book): `maketitle` = **22.739 s of
+  self-time (95 % of a 24.9 s transform)** across 512 calls (44 ms/scan), with children
+  totaling only 0.058 s — the cost is entirely the inline `//ltx:navigation` XPath.
+- **Change:** hoist the document-global check into a single global
+  `<xsl:variable name="maketitle_has_up_nav" select="boolean(//ltx:navigation/ltx:ref[@rel='up'])"/>`
+  (evaluated once, from the root) and test `not($maketitle_has_up_nav)` in `maketitle`.
+  Same memoization shape as the seclev fix (#2). The other `//ltx:navigation` scans live
+  in `LaTeXML-webpage-xhtml.xsl`'s navbar/header/footer, which run **once per document**
+  (the cheap 1-call profile entries) — left as-is.
+- **Before→after** (standalone `xsltproc` on the 25 MB Core XML): **24.94 s → 2.15 s**
+  (11.6×); `maketitle` self-time 22.739 s → **0.004 s**. The fleet's `phase_xslt_us` on
+  this paper (65.7 s) collapses accordingly; total wall 102 s → ~38 s.
+- **Output-neutral:** `xsltproc` full-HTML **byte-identical** (`cmp` clean, 25 MB Core
+  XML → HTML). Suite **1502/0** + new guard `09_xslt_maketitle_navscan.rs` (asserts the
+  `\date` still renders when no `ltx:navigation` is present, i.e. the memoized value is
+  `false`). See OXIDIZED_DESIGN.md #41.
+- **Note:** local-only XSLT divergence from upstream LaTeXML; the per-title `//` scan
+  exists verbatim upstream — candidate to upstream (like #2/#3).
+
 ### #3 — XSLT `head-keywords` index dedup O(n²) (batch #201–300 index cluster) — 2026-06-28
 - **Root cause:** `resources/XSLT/LaTeXML-webpage-xhtml.xsl`'s `head-keywords`
   (builds `<meta name="keywords">`) deduplicated index phrases with

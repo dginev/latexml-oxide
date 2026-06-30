@@ -1555,6 +1555,34 @@ the prior campaign's deferral of the "third XSLT O(n²)" (`docs/ARXIV_PERFORMANC
 candidate to upstream. Local divergence from upstream XSLT only. Full analysis:
 `docs/ARXIV_PERFORMANCE.md` (Hotspot #3).
 
+### 41. XSLT `maketitle` navigation scan memoized to a global variable (O(n²)→O(n), output-neutral)
+
+**Decision:** In the embedded `resources/XSLT/LaTeXML-structure-xhtml.xsl`, the
+`maketitle` template decides whether to emit the title's `\date` block with
+`not($maketitle_has_up_nav)`, where `maketitle_has_up_nav` is a single global
+`<xsl:variable select="boolean(//ltx:navigation/ltx:ref[@rel='up'])"/>` evaluated
+once. Upstream re-evaluates `not(//ltx:navigation/ltx:ref[@rel='up'])` **inline, once
+per title**.
+
+**Perl behavior:** upstream LaTeXML scans `//ltx:navigation` (a full descendant
+traversal from the document root) inside `maketitle`, which runs for every titled
+unit. On a large book with hundreds of titles this is O(titles × tree-size) — Perl
+keeps the O(n²).
+
+**Rationale & neutrality:** `//ltx:navigation` always resolves from the root
+regardless of the current title (the `//` axis resets to the document node), so the
+boolean is document-global and identical for every title. Hoisting it to a global
+variable changes nothing in the output — verified `xsltproc` **byte-identical** HTML
+on the 25 MB Core XML of arXiv 2605.01585, plus a full-pipeline regression guard
+(`09_xslt_maketitle_navscan.rs`, asserting the `\date` still renders for a non-split
+document where the memoized value is `false`).
+
+**Impact:** `maketitle` self-time 22.739 s → 0.004 s; the whole html5 transform
+24.94 s → 2.15 s (11.6×) on 2605.01585 (a 2000+-formula physics book, 512 titles).
+This was the dominant residual XSLT cost on large math books after #2/#3 landed.
+Surpass-Perl; candidate to upstream. Local divergence from upstream XSLT only. Full
+analysis: `docs/ARXIV_PERFORMANCE.md` (Hotspot #4).
+
 ---
 
 ## Future Work (Beyond Perl Parity)
