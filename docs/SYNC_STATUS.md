@@ -90,6 +90,16 @@
 
 ### Landed this session (2026-06-30, on `ar5iv-2606-prep`) — conditional-accounting root-cause + iflimit raise
 
+**Combined session impact (final cortex rerun, all 30,079 sandbox-arxiv-2605 papers):
+fatal 281→268, `Timeout/IfLimit` 32→4.** Three fixes: iflimit 8M→16M (`f3fab341`, the −12 fatal
+mover + IfLimit collapse), base_xmath re-entrant-borrow panic (`75c452843d`, full-arXiv panic
+cluster — 0 papers in 2605, broad value elsewhere), and tabularray `tblr` colspec
+(`226d3bfa51`, fidelity + the compound TokenLimit runaway, e.g. 2605.06284 fatal→complete). The
+error count is flat (±5 variance + a fatal→error shift as previously-fatal papers now complete
+with their residual errors). NOTE: 2605's `\lx@begin@alignment` cluster stayed ~163 — it is
+heterogeneous `\begingroup` group-leaks, NOT mostly tabularray, so the tblr fix's error-count
+impact is small; its value is correct tblr column rendering + the runaway fix.
+
 - **`iflimit` 8M→16M — Rust counts conditionals more comprehensively than Perl (FIXED, `f3fab341`).**
   Root-caused the long-standing "2× iflimit vs Perl" gap: it is NOT an accounting bug to
   tighten away, but *deliberate, more-comprehensive runaway counting*. Rust defines
