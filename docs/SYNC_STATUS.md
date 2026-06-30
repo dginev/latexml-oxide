@@ -107,7 +107,20 @@
   180 s worker lease (≈350k cond/s ⇒ 16M ≈ 46 s) and the RSS fuse. **Recovers coverage on
   12/32 `Timeout/IfLimit` papers** (the `\tikz@dashphase` pgfplots cluster), which Perl
   cannot convert at all (chokes on their expl3 first). Output byte-identical, suite 1502/0.
-  Corpus-wide cortex rerun measuring the fatal reduction (in flight at session end).
+  **Corpus-wide cortex rerun CONFIRMS: fatal 281→269 (−12) on all 30,079 papers**
+  (Timeout 148→136, the IfLimit cluster; no_problem/warning stable, error ±4 variance) —
+  exactly matching the local 12/32 IfLimit measurement.
+
+- **base_xmath re-entrant Alignment-reversion panic — FIXED (`75c452843d`).** Surfaced from the
+  FULL arXiv corpus (<https://corpora.latexml.rs/.../arXiv/oxidized_tex_to_html>, 76 panics):
+  reproducing one witness per panic *location* on current HEAD found **14/15 already fixed**
+  locally; the one live cluster (2 papers, witness `hep-ph9806263`) was
+  `base_xmath.rs` `\lx@gen@matrix@` reversion `al.borrow()` re-entering an Alignment RefCell
+  left mutably borrowed by a broken `\matrix`/`\pmatrix` (mode-group mismatch). `try_borrow` +
+  graceful fallback (mirrors `digested.rs:447`); Perl has no borrow-checker so its
+  `$alignment->revert` never crashes. Witness now completes rc=1, 0 panics, genuine mode-group
+  Errors intact (parity). So **all 76 public-corpus panic clusters are now resolved on
+  `ar5iv-2606-prep`** (the public corpus runs an older binary; a re-run would clear them).
 
 - **TokenLimit hot-loop root-cause (IN PROGRESS, task #20) — heterogeneous/deep, no quick win.**
   After the iflimit raise, 16/32 of the IfLimit cluster flip to `Timeout/TokenLimit`. Per user
