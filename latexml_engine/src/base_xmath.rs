@@ -1005,11 +1005,22 @@ LoadDefinitions!({
       let alignment_rev = {
         let prop = _whatsit.get_property("alignment");
         let mut rev = None;
+        // A broken matrix — e.g. hep-ph9806263's `\matrix` whose
+        // `\lx@end@gen@matrix` fails to close its math-mode-switch frame
+        // ("Attempt to close a group that switched to mode display_math",
+        // already reported as an Error) — can leave the Alignment RefCell
+        // mutably borrowed while reversion re-enters it here, panicking
+        // "already mutably borrowed". Perl has no borrow-checker, so its
+        // `$alignment->revert` is plain re-entrant data access and never
+        // crashes. Use `try_borrow` and fall through to the default
+        // reversion on a re-entrant cycle, mirroring `digested.rs::compute_size`.
         if let Some(cow) = prop.as_ref()
           && let Stored::Digested(alignment) = &**cow
-            && let DigestedData::Alignment(al) = alignment.data() {
-              rev = Some(al.borrow().revert()?);
-            }
+          && let DigestedData::Alignment(al) = alignment.data()
+          && let Ok(al_ref) = al.try_borrow()
+        {
+          rev = Some(al_ref.revert()?);
+        }
         rev.unwrap_or(match &args[1] { Some(inner) => inner.revert()?, None => Tokens!() })
       };
       let cs_name = format!("\\{}", name);
