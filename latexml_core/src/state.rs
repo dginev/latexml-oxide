@@ -3106,7 +3106,7 @@ pub fn current_verbosity() -> i32 { state!().verbosity }
 
 pub fn push_pending_resource(value: Resource) { state_mut!().pending_resources.push(value); }
 pub fn take_pending_resources() -> Vec<Resource> {
-  state_mut!().pending_resources.drain(..).collect()
+  std::mem::take(&mut state_mut!().pending_resources)
 }
 pub fn reset_pending_resources() { state_mut!().pending_resources = Vec::new(); }
 pub fn get_indirect_model_relationship(tag: SymStr, childtag: SymStr) -> Option<SymStr> {

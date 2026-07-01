@@ -260,7 +260,7 @@ pub fn initialize_stomach() {
 }
 
 /// steal the previously digested boxes from the current level.
-pub fn regurgitate() -> Vec<Digested> { stomach_mut!().box_list.drain(..).collect() }
+pub fn regurgitate() -> Vec<Digested> { std::mem::take(&mut stomach_mut!().box_list) }
 
 //**********************************************************************
 // Maintaining state

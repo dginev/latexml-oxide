@@ -100,28 +100,26 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
     },
     "wave" => {
       let lambda = comps.first().copied().unwrap_or(500.0);
-      let h;
-      let bb;
-      if lambda < 440.0 {
-        h = 4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0);
+      let h = if lambda < 440.0 {
+        4.0 + ((lambda - 440.0) / (-60.0)).clamp(0.0, 1.0)
       } else if lambda < 490.0 {
-        h = 4.0 - ((lambda - 440.0) / 50.0).clamp(0.0, 1.0);
+        4.0 - ((lambda - 440.0) / 50.0).clamp(0.0, 1.0)
       } else if lambda < 510.0 {
-        h = 2.0 + ((lambda - 510.0) / (-20.0)).clamp(0.0, 1.0);
+        2.0 + ((lambda - 510.0) / (-20.0)).clamp(0.0, 1.0)
       } else if lambda < 580.0 {
-        h = 2.0 - ((lambda - 510.0) / 70.0).clamp(0.0, 1.0);
+        2.0 - ((lambda - 510.0) / 70.0).clamp(0.0, 1.0)
       } else if lambda < 645.0 {
-        h = ((lambda - 645.0) / (-65.0)).clamp(0.0, 1.0);
+        ((lambda - 645.0) / (-65.0)).clamp(0.0, 1.0)
       } else {
-        h = 0.0;
-      }
-      if lambda < 420.0 {
-        bb = (0.3 + 0.7 * (lambda - 380.0) / 40.0).clamp(0.0, 1.0);
+        0.0
+      };
+      let bb = if lambda < 420.0 {
+        (0.3 + 0.7 * (lambda - 380.0) / 40.0).clamp(0.0, 1.0)
       } else if lambda < 700.0 {
-        bb = 1.0;
+        1.0
       } else {
-        bb = (0.3 + 0.7 * (lambda - 780.0) / (-80.0)).clamp(0.0, 1.0);
-      }
+        (0.3 + 0.7 * (lambda - 780.0) / (-80.0)).clamp(0.0, 1.0)
+      };
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
     _ => color_from_model_spec(model, spec),

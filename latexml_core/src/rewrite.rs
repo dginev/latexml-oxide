@@ -211,7 +211,7 @@ impl Rewrite {
   }
 
   pub fn compile_clauses(&mut self, document: &mut Document) {
-    let current_clauses: Vec<RewriteClause> = self.clauses.drain(..).collect();
+    let current_clauses: Vec<RewriteClause> = std::mem::take(&mut self.clauses);
     let mut new_clauses: Vec<RewriteClause> = Vec::new();
     for clause in current_clauses {
       if !clause.compiled {
