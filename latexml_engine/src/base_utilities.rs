@@ -1042,6 +1042,9 @@ LoadDefinitions!({
       _ => false,
     });
     if abstract_only {
+      // No \title/\author/\maketitle but a leading hand-formatted display block
+      // may BE the title (arXiv 1609.07638) — promote it to <ltx:title> first.
+      maybe_promote_leading_title(document)?;
       insert_frontmatter(document)?;
     } else {
     let savenode = document.get_node().clone();
@@ -1742,6 +1745,146 @@ pub fn digest_front_matter() -> Result<()> {
     });
   }
   egroup()?;
+  Ok(())
+}
+
+/// First `<ltx:p align="center">` in document order at/under `root` (manual DFS —
+/// see the shared-node caveat in `maybe_promote_leading_title`).
+fn first_centered_paragraph(root: &Node) -> Option<Node> {
+  let is_centered_p = with(document::get_node_qname(root), |q| q == "ltx:p")
+    && root.get_attribute("align").as_deref() == Some("center");
+  if is_centered_p {
+    return Some(root.clone());
+  }
+  for child in root.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode)
+      && let Some(found) = first_centered_paragraph(&child)
+    {
+      return Some(found);
+    }
+  }
+  None
+}
+
+/// True if `root` or any descendant is set in a font larger than the body size —
+/// the display-title signal. During construction the human-readable `fontsize`
+/// attribute does not exist yet (it is derived from `_font` in a later finalize
+/// pass); read the interned `_font` id and decode it here instead. `nominal` is
+/// the document body size (NOMINAL_FONT_SIZE, mirroring font::defsize), so
+/// `size > nominal * 1.1` is the construction-time analogue of `fontsize` > 110%.
+fn descendant_has_display_font(document: &Document, root: &Node, nominal: f64) -> bool {
+  if let Some(fontid) = root.get_attribute("_font")
+    && document
+      .decode_font(&fontid)
+      .and_then(Font::get_size)
+      .is_some_and(|size| size > nominal * 1.1)
+  {
+    return true;
+  }
+  root.get_child_nodes().iter().any(|c| {
+    c.get_type() == Some(NodeType::ElementNode) && descendant_has_display_font(document, c, nominal)
+  })
+}
+
+/// True if `node` has at least one element child.
+fn has_element_child(node: &Node) -> bool {
+  node
+    .get_child_nodes()
+    .iter()
+    .any(|c| c.get_type() == Some(NodeType::ElementNode))
+}
+
+/// Beyond-Perl heuristic: recover a document title from a hand-formatted leading
+/// block when the author never used `\title`/`\maketitle`.
+///
+/// Many papers set their title as a plain `\begin{center}{\Large ...}\end{center}`
+/// block instead of the frontmatter machinery, then declare only an abstract (e.g.
+/// arXiv 1609.07638). With no `\title` there is no `ltx:title` frontmatter to
+/// flush, so the document renders titleless. This promotes that first block — gated
+/// conservatively so it does not fire on epigraphs, dedications, centered figures or
+/// "draft" notices — into a real `<ltx:title>` at the document top.
+///
+/// Called only from the ABSTRACT-ONLY `\lx@frontmatter@fallback` branch: reaching it
+/// already means no `\title`/`\author`/`\maketitle` were used yet the paper carries
+/// frontmatter (an abstract) — the strongest signal a leading display block is the
+/// title. It fires only when no `<ltx:title>` exists yet, the first non-resource body
+/// element holds a leading centered `<ltx:p>` set in a larger-than-body font, and
+/// that paragraph has non-whitespace text. On a match the paragraph's inline children
+/// are MOVED into a fresh `<ltx:title>` after the resources, pruning empty wrappers.
+fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
+  // Never override an existing (real) title.
+  if document.findnode("/ltx:document/ltx:title", None).is_some() {
+    return Ok(());
+  }
+  // The first non-resource body element (the candidate title block). Fetch it
+  // with an ABSOLUTE query: nodes returned from a RELATIVE-context findnode are
+  // detached for child traversal (a rust-libxml shared-node artifact —
+  // get_content works but get_child_nodes is empty), so every step below walks
+  // the live DOM by hand from this anchor.
+  let Some(first_body) = document.findnode("/ltx:document/*[not(self::ltx:resource)][1]", None)
+  else {
+    eprintln!("PROMOTE2: no first_body");
+    return Ok(());
+  };
+  // First centered <ltx:p> in document order within the block; it must be set in
+  // a larger-than-body font (the display-title signal) and hold real text.
+  let Some(title_p) = first_centered_paragraph(&first_body) else {
+    return Ok(());
+  };
+  let nominal = {
+    let v = lookup_int("NOMINAL_FONT_SIZE");
+    if v > 0 { v as f64 } else { 10.0 }
+  };
+  if title_p.get_content().trim().is_empty()
+    || !descendant_has_display_font(document, &title_p, nominal)
+  {
+    return Ok(());
+  }
+  // Create <ltx:title> at the document top (after the last resource), mirroring
+  // the frontmatter fallback's placement.
+  let mut point = document.findnode("/ltx:document/ltx:resource[last()]", None);
+  if let Some(p) = point.take() {
+    point = p.get_next_sibling();
+  }
+  let Some(point) = point else { return Ok(()) };
+  // Create with a BARE tag + bind the root (default LaTeXML) namespace, so it
+  // serializes as <title> like a real frontmatter title — a prefixed "ltx:title"
+  // qname would emit a stray <ltx:title>. Mirrors open_element_internal's
+  // default-namespace path.
+  let mut title = document.insert_element_before(&point, "title", None)?;
+  if let Some(rns) = document
+    .get_document()
+    .get_root_element()
+    .and_then(|r| r.get_namespace())
+  {
+    let _ = title.set_namespace(&rns);
+  }
+  // MOVE the paragraph's inline children into the title (a true move preserves
+  // xml:ids, so any footnotes/marks carry over rather than being cloned+orphaned).
+  for mut child in title_p.get_child_nodes() {
+    child.unbind();
+    title.add_child(&mut child)?;
+  }
+  // Drop the now-empty paragraph, and any wrapper ancestor it leaves empty
+  // (para → logical-block), so we don't strand empty blocks above the abstract.
+  let mut victim = title_p;
+  loop {
+    let parent = victim.get_parent();
+    document.remove_node(victim);
+    match parent {
+      Some(p) if !has_element_child(&p) => {
+        let is_wrapper = with(document::get_node_qname(&p), |name| {
+          name == "ltx:para" || name == "ltx:logical-block"
+        });
+        if is_wrapper {
+          victim = p;
+          continue;
+        }
+      },
+      _ => {},
+    }
+    break;
+  }
   Ok(())
 }
 
