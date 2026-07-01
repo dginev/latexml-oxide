@@ -315,6 +315,11 @@ impl Alignment {
     self.rows.iter().filter(|row| !row.is_pseudo()).count()
   }
 
+  /// The alignment's `name` XML attribute (e.g. `multline`, `gathered`), set
+  /// via the container bindings. Perl reads `$$alignment{properties}{attributes}
+  /// {name}`; here it lives in `xml_attributes`. Used by amsmath's `\shove*`.
+  pub fn get_name(&self) -> Option<&str> { self.xml_attributes.get("name").map(String::as_str) }
+
   pub fn current_column(&mut self) -> Option<&mut Cell> {
     self
       .current_row

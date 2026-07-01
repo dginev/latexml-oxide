@@ -1,0 +1,15 @@
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+% \shoveleft/\shoveright override a multline row's alignment (upstream #2835).
+\begin{multline}
+a+b\\
+\shoveleft{c+d}\\
+e+f
+\end{multline}
+\begin{multline}
+a+b\\
+\shoveright{c+d}\\
+e+f
+\end{multline}
+\end{document}

@@ -1190,6 +1190,14 @@ LoadDefinitions!({
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // #2835: snapshot the \shove* row overrides accumulated during THIS body's
+    // digestion onto the whatsit — afterConstruct is deferred past sibling
+    // multlines, so the shared global map cannot be read there.
+    let shoves = take_ams_shove_rows();
+    if !shoves.is_empty() {
+      whatsit
+        .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+    }
     // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
     if let Some(arg) = whatsit.get_arg(1) {
       let mut body = arg.unlist();
@@ -1229,6 +1237,14 @@ LoadDefinitions!({
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // #2835: snapshot the \shove* row overrides accumulated during THIS body's
+    // digestion onto the whatsit — afterConstruct is deferred past sibling
+    // multlines, so the shared global map cannot be read there.
+    let shoves = take_ams_shove_rows();
+    if !shoves.is_empty() {
+      whatsit
+        .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+    }
     if let Some(arg) = whatsit.get_arg(1) {
       let mut body = arg.unlist();
       body.push(Digested::default());
@@ -1285,6 +1301,14 @@ LoadDefinitions!({
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+    // #2835: snapshot the \shove* row overrides accumulated during THIS body's
+    // digestion onto the whatsit — afterConstruct is deferred past sibling
+    // multlines, so the shared global map cannot be read there.
+    let shoves = take_ams_shove_rows();
+    if !shoves.is_empty() {
+      whatsit
+        .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+    }
     if let Some(arg) = whatsit.get_arg(1) {
       let mut body = arg.unlist();
       body.push(Digested::default());
@@ -1622,8 +1646,18 @@ LoadDefinitions!({
   def_macro_noop("\\mintagsep")?;
   DefMacro!("\\minalignsep", "10pt");
   def_macro_noop("\\primfrac{}")?;
-  DefMacro!("\\shoveleft{}", "#1");
-  DefMacro!("\\shoveright{}", "#1");
+  // Perl #2835: \shoveleft/\shoveright shove a multline row left/right. The
+  // internal \lx@ams@shove* record the override (amsShove) then pass the body
+  // through; the reversion is just the body (Perl omits the \shove* reversion —
+  // it is invalid outside multline and breaks mathtex/mathimages).
+  DefConstructor!("\\lx@ams@shoveleft{}", "#1",
+    before_digest => { ams_shove("left"); },
+    reversion => "#1");
+  DefConstructor!("\\lx@ams@shoveright{}", "#1",
+    before_digest => { ams_shove("right"); },
+    reversion => "#1");
+  Let!("\\shoveleft", "\\lx@ams@shoveleft");
+  Let!("\\shoveright", "\\lx@ams@shoveright");
   // Perl: amsmath.sty.ltxml L1313-1314
   DefRegister!("\\multlinegap" => Glue::new(Dimension!("10pt").0));
   DefRegister!("\\multlinetaggap" => Glue::new(Dimension!("10pt").0));
@@ -1906,6 +1940,61 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   Ok(())
 }
 
+/// Perl #2835 `amsShove`: record a per-row alignment override for the current
+/// multline row. `\shoveleft`/`\shoveright` set (currentRowNumber-1) => dir in
+/// the global `AMS_SHOVE_ROWS` map, which the enclosing multline layers on top
+/// of its base rule (so a shove wins). Perl mutates the `MULTIROW_ALIGNMENT_RULE`
+/// hashref in place; Rust keeps the base rule in whatsit properties (set in
+/// afterDigest, unreachable mid-body), so the shoves ride a separate global
+/// state map instead. Only fires inside a `multline`/`multlined` alignment
+/// (Perl's `name =~ /^multline/`), so shoves in align/gather are ignored.
+fn ams_shove(shove_dir: &str) {
+  use latexml_core::{
+    digested::DigestedData,
+    state::{assign_value, lookup_alignment, lookup_value},
+  };
+  let Some(alignment) = lookup_alignment() else {
+    return;
+  };
+  let DigestedData::Alignment(cell) = alignment.data() else {
+    return;
+  };
+  let row = {
+    let cell = cell.borrow();
+    match cell.get_name() {
+      Some(name) if name.starts_with("multline") => cell.current_row_number().saturating_sub(1),
+      _ => return,
+    }
+  };
+  let mut map = match lookup_value("AMS_SHOVE_ROWS") {
+    Some(Stored::HashString(m)) => m,
+    _ => HashMap::default(),
+  };
+  map.insert(row.to_string(), shove_dir.to_string());
+  assign_value(
+    "AMS_SHOVE_ROWS",
+    Stored::HashString(map),
+    Some(Scope::Global),
+  );
+}
+
+/// Read and clear the `\shove*` row overrides accumulated during the current
+/// multline body, as `(row, dir)` pairs to append to the base alignment rule.
+fn take_ams_shove_rows() -> Vec<(String, String)> {
+  use latexml_core::state::{assign_value, lookup_value};
+  match lookup_value("AMS_SHOVE_ROWS") {
+    Some(Stored::HashString(m)) if !m.is_empty() => {
+      assign_value(
+        "AMS_SHOVE_ROWS",
+        Stored::HashString(HashMap::default()),
+        Some(Scope::Global),
+      );
+      m.into_iter().collect()
+    },
+    _ => Vec::new(),
+  }
+}
+
 /// Extract the alignment rule from whatsit properties.
 /// Perl stores as hash {0 => 'left', -1 => 'right', default => ...}
 /// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST,
@@ -1930,6 +2019,15 @@ pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
     && let Stored::String(s) = &*val
   {
     rules.push(("0".to_string(), to_string(*s)));
+  }
+  // #2835 \shove* per-row overrides, applied LAST so they win over the base
+  // rule (Perl mutates the same MULTIROW_ALIGNMENT_RULE hash in place).
+  if let Some(val) = whatsit.get_property("MULTIROW_SHOVE_ROWS")
+    && let Stored::HashString(m) = &*val
+  {
+    for (row, dir) in m.iter() {
+      rules.push((row.clone(), dir.clone()));
+    }
   }
   rules
 }
