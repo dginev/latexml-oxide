@@ -163,27 +163,12 @@ static DEBUG_FATAL: Lazy<bool> = Lazy::new(debug_fatal_enabled);
 #[thread_local]
 pub static GULLET: Lazy<RefCell<Gullet>> = Lazy::new(|| {
   RefCell::new(Gullet {
-    // Safety limit: prevents infinite loops from corrupted macro state.
-    //
-    // RECALIBRATED 2026-06-10 (PR #249 review P1-2): the read checkpoints now
-    // count in ALL THREE reader loops (read_token, read_x_token,
-    // read_balanced) — the historical "TikZ papers need ~80M" figure was
-    // measured when ONLY read_token counted, so the old 100M cap silently
-    // shrank by the multi-counting factor. Measured end-of-run progress
-    // under the NEW accounting (`Info:gullet:progress`, release build,
-    // known-good papers):
-    //   math0402448 (amsart + xy-pic, 3464 formulae)  80.2M  ← heaviest
-    //   hep-ph0012156 (28 MB output)                   7.5M
-    //   math0104252                                    3.1M
-    //   2110.10227 (ems-journal + babel)               2.7M
-    //   gr-qc0209055                                   1.7M
-    // 400M = 5× the heaviest measured legitimate paper, preserving the old
-    // margin ratio while absorbing the counting change. The token limit is
-    // the BACKSTOP — real runaways are cut far earlier by the cycle guards /
-    // pushback limit / byte budget — so erring high costs nothing in
-    // detection latency.
-    // `LATEXML_TOKEN_LIMIT` overrides (0 disables) — diagnostic/operator
-    // control, mirroring LATEXML_RSS_CAP_BYTES.
+    // Safety BACKSTOP against corrupted-macro-state loops (real runaways are cut
+    // far earlier by the cycle guards / pushback limit / byte budget, so erring
+    // high costs no detection latency). 400M = 5× the heaviest measured legit
+    // paper (math0402448, amsart + xy-pic, 80.2M end-of-run progress under the
+    // 2026-06-10 all-three-reader-loop accounting; the old "80M" figure predated
+    // that multi-counting). `LATEXML_TOKEN_LIMIT` overrides (0 disables).
     token_limit: match std::env::var("LATEXML_TOKEN_LIMIT")
       .ok()
       .and_then(|v| v.parse::<usize>().ok())
@@ -268,6 +253,9 @@ pub fn initialize_gullet() {
   // thread-local singleton reused across conversions in the test harness).
   gullet.progress = 0;
   gullet.cycle_guard.reset();
+  // Reset the Cluster F expansion-depth counter + re-read its env limit
+  // (independent thread-locals, no GULLET borrow — safe to call here).
+  reset_expand_depth();
   // Restore the default activation floor: a prior tikz/xy conversion in this
   // reused thread-local engine must not leak its raised floor into the next doc.
   gullet.cycle_guard_activate = CYCLE_GUARD_ACTIVATE;
@@ -549,23 +537,17 @@ fn read_internal_token() -> Option<Token> {
   next_token
 }
 
-/// Per-token-read resource checkpoint: runtime probe, progress/token-limit
-/// accounting, pushback-limit probe, and the cycle-guard activation state —
-/// in ONE combined mutable borrow. Returns `Ok(None)` when the gullet has no
-/// runtime (caller returns end-of-input), otherwise
-/// `Ok(Some(cycle_guard_active))` — the caller passes that flag to
-/// [`cycle_guard_checkpoint`] so the per-token fast path costs exactly one
-/// `RefCell` borrow (PR #249 review P2-9; master's `read_token` comment
-/// demanded the same single-borrow shape).
+/// Per-token-read resource checkpoint — runtime probe, progress/token-limit
+/// accounting, pushback-limit probe, and cycle-guard activation — in ONE
+/// mutable borrow. Returns `Ok(None)` when the gullet has no runtime (caller
+/// returns end-of-input), else `Ok(Some(cycle_guard_active))` for the caller to
+/// pass to [`cycle_guard_checkpoint`] (single-borrow fast path, PR #249 P2-9).
 ///
 /// Shared by all FOUR reader loops (`read_token`, `read_x_token`,
-/// `read_balanced`, `read_next_conditional`) — they are siblings over the
-/// low-level `read_internal_token`/raw-mouth reads, NOT a delegation chain,
-/// so each must run its own checkpoint; otherwise full-expansion read paths
-/// (`\edef` bodies, csname construction, conditional skipping) bypass all
-/// gullet guards and a `\def\x{a\x}\edef\y{\x}` runaway grinds to the
-/// multi-GB watchdog instead of a clean early `Fatal` (pre-existing gap
-/// found while diagnosing math0402448).
+/// `read_balanced`, `read_next_conditional`) — siblings over
+/// `read_internal_token`, NOT a delegation chain, so each must run its own or
+/// full-expansion paths (`\edef`, csname, conditional skipping) bypass every
+/// gullet guard and a runaway grinds to the watchdog (gap found on math0402448).
 #[inline]
 fn read_resource_checkpoint() -> Result<Option<bool>> {
   let mut g = gullet_mut!();
@@ -749,25 +731,15 @@ pub fn read_token() -> Result<Option<Token>> {
   Ok(next_token)
 }
 
-/// Engage the gullet's expansion-stream cycle guard only after this many
-/// tokens have been read. Sits above the ordinary range so light/normal
-/// conversions never record a fingerprint, while an actual runaway (which
-/// heads for the 400M `token_limit` / multi-GB RSS) blows past it and gets
-/// cut off in O(window) extra tokens. False positives are guarded by the
-/// period-`REPEAT` requirement, not this bound.
-///
-/// RECALIBRATED 2026-06-10 (PR #249 review P1-2) against the NEW
-/// all-three-loops progress accounting (see the `token_limit` table above):
-/// typical known-good papers measure 0.6–7.5M; 20M keeps every measured
-/// ordinary paper fingerprint-free with ~2.7× headroom.
-///
-/// This is the DEFAULT floor (`Gullet::cycle_guard_activate`); graphics-heavy
-/// packages legitimately blow past it — measured 2026-06-21 under this build:
-/// math0402448 (xy-pic) ~100M, 1805.03265 (tikz-cd) ~155M — and would otherwise
-/// pay the per-token fingerprint cost for >100M tokens. Such packages raise the
-/// floor to [`CYCLE_GUARD_ACTIVATE_GRAPHICS`] at load via
-/// [`raise_cycle_guard_activate`], keeping their healthy streams clean while the
-/// 400M `token_limit` stays the hard backstop.
+/// Engage the expansion-stream cycle guard only after this many tokens — above
+/// the ordinary range (measured known-good papers 0.6–7.5M under the 2026-06-10
+/// all-three-loop accounting; 20M keeps them fingerprint-free with ~2.7×
+/// headroom), so only a runaway (heading for the 400M `token_limit` / RSS cap)
+/// records fingerprints, cut off in O(window) tokens (false positives guarded by
+/// the period-`REPEAT` requirement, not this bound). DEFAULT floor; graphics-heavy
+/// packages legitimately reach ~100–155M (math0402448 xy-pic, 1805.03265 tikz-cd)
+/// and raise it to [`CYCLE_GUARD_ACTIVATE_GRAPHICS`] at load via
+/// [`raise_cycle_guard_activate`], the 400M `token_limit` staying the backstop.
 const CYCLE_GUARD_ACTIVATE: usize = 20_000_000;
 
 /// Cycle-guard activation floor for graphics-heavy bindings (pgf/tikz/xy).
@@ -790,22 +762,60 @@ pub fn raise_cycle_guard_activate(floor: usize) {
   }
 }
 
-/// Read the next non-expandable token (expanding tokens until there's a non-expandable one).
-///
-/// Note that most tokens pass through here, so be Fast & Clean! readToken is folded in.
-///    `Toplevel' processing, (if `toplevel` is true), used at the toplevel processing by Stomach,
-///     will step to the next input stream (Mouth) if one is available,
-///     `toplevel` when true:
-/// * If a mouth is exhausted, move on to the containing mouth to continue reading `fully_expand`
-///   when true, OR when None but `toplevel` is true
-/// * expand even protected defns, essentially this means expand "for execution"
-///
-/// Note that, unlike readBalanced, this does NOT defer expansion of \the & friends.
-///
-/// Also, \noexpand'd tokens effectively act ilke \relax
-///
-/// For arguments to \if,\ifx, etc use `for_conditional` true,
-///    which handles \noexpand and CS which have been \let to tokens specially.
+// Cluster F: bound gullet expansion-recursion depth (= `read_x_token`
+// re-entrancy) so a runaway — an xint number-arg chain, a self-referential
+// `\csname`/`\number`/`\romannumeral` — raises a fast `Fatal:Timeout:Recursion`
+// rather than grinding to the watchdog / RSS fuse. Legit docs nest ≲20; the cap
+// is 12_000. Env override `LATEXML_EXPAND_DEPTH_LIMIT` (0 disables).
+#[thread_local]
+static EXPAND_DEPTH: Cell<usize> = Cell::new(0);
+#[thread_local]
+static EXPAND_DEPTH_LIMIT: Cell<usize> = Cell::new(12_000);
+
+/// Reset the counter + re-read the env limit each conversion (the thread-local
+/// engine is reused; a caught unwind could otherwise leave the counter high).
+fn reset_expand_depth() {
+  EXPAND_DEPTH.set(0);
+  EXPAND_DEPTH_LIMIT.set(
+    std::env::var("LATEXML_EXPAND_DEPTH_LIMIT")
+      .ok()
+      .and_then(|v| v.trim().parse().ok())
+      .unwrap_or(12_000),
+  );
+}
+
+/// RAII depth counter for `read_x_token`: `enter` increments (Fatals past the
+/// limit), drop decrements — so every return path stays balanced.
+struct ExpandDepthGuard;
+impl ExpandDepthGuard {
+  #[inline]
+  fn enter() -> Result<ExpandDepthGuard> {
+    let d = EXPAND_DEPTH.get() + 1;
+    EXPAND_DEPTH.set(d);
+    let limit = EXPAND_DEPTH_LIMIT.get();
+    if limit != 0 && d > limit {
+      EXPAND_DEPTH.set(d - 1); // Drop won't run — decrement here.
+      Fatal!(
+        Timeout,
+        Recursion,
+        format!("Excessive expansion recursion (depth {d} > {limit}); infinite macro loop?")
+      );
+    }
+    Ok(ExpandDepthGuard)
+  }
+}
+impl Drop for ExpandDepthGuard {
+  #[inline]
+  fn drop(&mut self) { EXPAND_DEPTH.set(EXPAND_DEPTH.get().saturating_sub(1)); }
+}
+
+/// Read the next non-expandable token, expanding until one appears. Hot path —
+/// `read_token` is folded in. `toplevel` (default true): on mouth exhaustion,
+/// step to the containing mouth. `fully_expand` (default = toplevel): expand
+/// even protected defns ("for execution"). Unlike `read_balanced`, does NOT
+/// defer `\the` & friends; `\noexpand`'d tokens act like `\relax`. For `\if`/
+/// `\ifx` arguments pass `for_conditional=true` (handles `\noexpand` and CS
+/// `\let` to tokens specially).
 pub fn read_x_token(
   toplevel_opt: Option<bool>,
   for_conditional: bool,
@@ -814,6 +824,7 @@ pub fn read_x_token(
   // toplevel should be true by default
   let toplevel = toplevel_opt.unwrap_or(true);
   let fully_expand = fully_expand_opt.unwrap_or(toplevel);
+  let _depth_guard = ExpandDepthGuard::enter()?; // Cluster F expansion-depth cap
   loop {
     // Resource + cycle checkpoints: this loop reads via the low-level
     // `read_internal_token` (NOT `read_token`), so it must run the same
@@ -836,47 +847,17 @@ pub fn read_x_token(
           .as_ref()
           .map(|r| r.autoclose)
           .unwrap_or(false);
-        // Advance to the enclosing mouth when the exhausted one is a
-        // *transparent autoclose injection* (\scantokens, raw_tex). These are
-        // part of the current logical input stream, so even a BOUNDED reader
-        // (`toplevel == false`, e.g. the InputDefinitions file loop) must drain
-        // them and resume the parent mouth.
-        //
-        // GROUNDING IN KNUTH'S TeX (background/tex.web `get_next`, §362-365):
-        // exhausting ANY input level resumes the enclosing one —
-        //   `end_token_list; goto restart;   {resume previous level}`  (L7500)
-        //   `end_file_reading; goto restart;  {resume previous level}`  (L7534)
-        // There is no "stop at this level" in TeX's input stack; `get_next`
-        // always pops and continues. `\scantokens` (e-TeX) is a *pseudo-file*
-        // input level — its `\everyeof`/EOF behaves exactly like `\input`, so on
-        // exhaustion the enclosing input resumes. Draining the autoclose mouth
-        // here is the faithful implementation of that; the old toplevel-gated
-        // behavior diverged from tex.web.
-        //
-        // DELIBERATE DIVERGENCE FROM PERL (beneficial). Perl `Gullet.pm`
-        // readXToken L376 sets `my $autoclose = $toplevel;` and its
-        // end-of-mouth test (L393) is
-        //   `return unless $autoclose && $$self{autoclose} && @{$$self{mouthstack}};`
-        // i.e. it advances ONLY when reading at toplevel — and the source even
-        // carries the comment "Potentially, these should have distinct
-        // controls?" flagging the conflation as suspect. The old Rust faithfully
-        // ported that (`autoclose = toplevel`). Both `\scantokens`
-        // (eTeX.pool.ltxml L251 / etex.rs) open an autoclose mouth, and
-        // `InputDefinitions` reads at `readXToken(0)` (toplevel=false, Package.pm
-        // L2376 / content.rs:input_definitions), so the conflated test returns at
-        // the FIRST exhausted mouth — TRUNCATING the rest of a `.sty` whenever a
-        // `\scantokens` runs mid-load. Perl never trips this only because its
-        // babel is a hand-written `.ltxml` whose `\select@language` avoids
-        // `\scantokens`; Rust raw-loads the real `babel.sty`, whose
-        // `\select@language` runs `\scantokens`, so `\selectlanguage` in a custom
-        // package preamble dropped every later definition (witness 1906.03240:
-        // `mijnpackages.sty` → `\GL`/`\bP`/… undefined → MaxLimit-fatal cascade;
-        // Perl loads it fully). We take the "distinct controls" the Perl comment
-        // asks for: autoclose injections are drained regardless of `toplevel`.
-        //
-        // A non-autoclose boundary (a real input stream / the reading context
-        // mouth itself) is still left to its owner (return None), so toplevel
-        // Stomach reading and `\input` handling are unchanged.
+        // Drain a *transparent autoclose injection* (\scantokens, raw_tex) and
+        // resume the enclosing mouth even for a BOUNDED reader (toplevel==false,
+        // e.g. the InputDefinitions file loop) — these are part of the current
+        // logical stream. Faithful to tex.web `get_next` §362-365 (exhausting any
+        // input level resumes the enclosing one; \scantokens is a pseudo-file
+        // level). DIVERGES from Perl `Gullet.pm` readXToken, which gates on
+        // `autoclose = toplevel` and so returns at the first exhausted mouth —
+        // truncating a `.sty` whenever `\scantokens` runs mid-load (witness
+        // 1906.03240: real babel.sty `\selectlanguage` dropped every later def →
+        // undefined-CS cascade; Perl's hand-written babel.ltxml dodges it).
+        // A non-autoclose boundary is left to its owner (return None).
         if !current_is_autoclose || gullet.mouthstack.is_empty() {
           return Ok(None);
         }
@@ -967,22 +948,13 @@ pub fn read_x_token(
         },
         Outcome::Invoke(defn) => {
           local_current_token(token);
-          // Stack-overflow guard for deeply-recursive expansion. Some inputs
-          // recurse through the gullet far deeper than a normal document:
-          // e.g. a number-argument macro whose argument is read by expanding
-          // the next number-argument macro (xint's `\XINT_…` chains under a
-          // raw `\usepackage{xintexpr}`), nesting tens of thousands deep —
-          // `read_number → read_x_token → invoke → read_arguments → read_number
-          // → …`. Without a guard this overflows even the conversion thread's
-          // 256 MB stack and the process ABORTS (SIGABRT), where Perl degrades
-          // gracefully via its `$MAXSTACK` guard (Core/Stomach.pm). This is the
-          // single point every such cycle passes through, hit roughly every
-          // ~10 frames (≪ the red zone), so growing here keeps the native stack
-          // ahead of the recursion: finite-deep recursion now completes, and a
-          // genuine runaway grows until the existing RSS cap fires a graceful
-          // `Fatal` instead of crashing. Same growth idiom as the recursive tree
-          // walks in `document.rs` / the math parser; guard params are
-          // configurable in `crate::stack_guard`.
+          // Grow the native stack ahead of deep expansion recursion (xint
+          // `\XINT_…` number-arg chains nest tens of thousands deep) so
+          // finite-deep recursion completes instead of overflowing the conversion
+          // thread's 256 MB stack → SIGABRT (Perl degrades via `$MAXSTACK`). This
+          // only grows the stack; the depth CAP is `ExpandDepthGuard` at the top
+          // of `read_x_token`. Same idiom as the recursive walks in `document.rs`
+          // / the math parser; params in `crate::stack_guard`.
           #[cfg_attr(not(feature = "token-locators"), allow(unused_mut))]
           let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
           // token-locators: fill-only origin inheritance. A macro that
@@ -1229,19 +1201,16 @@ pub fn read_balanced(
       cycle_guard_checkpoint(guard_active, t)?;
     }
     match next_token {
-      // Current mouth exhausted mid-balanced-read. Mirror read_x_token /
-      // tex.web get_next §362-365: a *transparent autoclose injection*
-      // (\scantokens, raw_tex) is part of the current logical input stream,
-      // so drain it and resume the enclosing mouth rather than reporting an
-      // unbalanced read. xint's `\edef\X{\scantokens{...}}` (xintexpr.sty
-      // \XINT_NewExpr) opens an autoclose "Anonymous String" mouth
-      // mid-edef-body whose matching `}` lives in the PARENT file; without
-      // crossing, the balanced read breaks at the mouth boundary and leaks the
-      // `\xintexprSafeCatcodes` `\begingroup`, corrupting everything after.
-      // DELIBERATE SURPASS-PERL divergence: Perl readBalanced (Gullet.pm:466)
-      // `last`s here and so also fails this xint input. We only cross autoclose
-      // injections (a real file/stream boundary is still left to its owner),
-      // matching the established read_x_token crossing.
+      // Mouth exhausted mid-balanced-read: mirror read_x_token / tex.web get_next
+      // §362-365 — a transparent autoclose injection (\scantokens, raw_tex) is
+      // part of the current logical stream, so drain it and resume the enclosing
+      // mouth rather than reporting an unbalanced read. xint's
+      // `\edef\X{\scantokens{...}}` opens an autoclose mouth mid-edef whose
+      // matching `}` lives in the PARENT file; not crossing breaks the read at the
+      // boundary and leaks `\xintexprSafeCatcodes`' `\begingroup`, corrupting
+      // everything after. SURPASS-PERL: Perl readBalanced (Gullet.pm:466) `last`s
+      // here and also fails this xint input. A real file/stream boundary is still
+      // left to its owner.
       None => {
         let cross = {
           let gullet = gullet!();
@@ -1355,20 +1324,14 @@ pub fn read_balanced(
               generate_error_stub(&token)?;
             }
           }
-          // If no special handling triggered above, return the token — EXCEPT a
-          // \special_relax (noexpand'd) family token collected into an expanded
-          // token list reverts to its plain shadowed identity. TeX's
-          // no_expand_flag is transient (tex.web §1149-1153), so \edef/\xdef
-          // store the PLAIN token, not a relax marker. etex/pdflatex ground
-          // truth:
-          //   \def\s{\noexpand\s}\edef\r{\romannumeral0\s} => \meaning\r is
-          //   "macro:->\s"  (xint's self-noexpanding f-stop idiom).
-          // Without this, the family token persists into the \edef body and a
-          // later number scan (\the/\romannumeral) lands on it ("Missing
-          // number"). Mirrors the macro-arg-capture decode in read_arg. Gated
-          // on CS/active so the hot per-token push pays only a cheap catcode
-          // check (only CS/active tokens are ever family tokens, and minting
-          // only happens while expanding).
+          // Return the token — EXCEPT a `\special_relax` (noexpand'd) family token
+          // collected into an expanded token list reverts to its plain shadowed
+          // identity: TeX's no_expand_flag is transient (tex.web §1149-1153), so
+          // `\edef`/`\xdef` store the PLAIN token, not a relax marker (etex ground
+          // truth: `\def\s{\noexpand\s}\edef\r{\romannumeral0\s}` → `\meaning\r` =
+          // "macro:->\s", xint's f-stop idiom). Otherwise the family token persists
+          // into the `\edef` body and a later number scan hits "Missing number".
+          // Gated on CS/active so the hot per-token push pays only a catcode check.
           if cc.is_active_or_cs() {
             tokens.push(token.noexpand_shadowed().unwrap_or(token));
           } else {
@@ -1614,40 +1577,17 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
     }
     match token.get_catcode() {
       Catcode::CS => {
-        // Soft-expansion of character-equivalent CS tokens — a
-        // documented Rust-port divergence from Knuth TeX.
-        //
-        // Real-TeX semantics (cited from background/):
-        //   - tex.web @<Manufacture a control...@> L7745-7758: the \csname loop calls
-        //     `get_x_token`; if `cur_cs != 0` (i.e. the expanded token is *any* CS — including
-        //     `\let`-to-char "implicit characters"), the loop EXITS, and unless that CS is
-        //     `\endcsname` an error fires: "Missing \endcsname inserted; the control sequence
-        //     marked <to be read again> should not appear between \csname and \endcsname."
-        //   - texbook.tex p.~277 (line 3001-3002): "after `\let\lq=` the control sequence token
-        //     `\lq` will not expand into a character token, nor *is* it a character token!".
-        //     `\let`-to-char produces an *implicit character* that real TeX still treats as a CS
-        //     for csname purposes.
-        //
-        // Why diverge: our Rust port's expansion pipeline produces
-        // a swath of Stored::Token CSes (PA-aliased single-char
-        // expl3 primitives like `\exp_stop_f:` = frozen space, plus
-        // `\lx@NBSP` from the CLUSTER-NBSP path) that surface in
-        // the csname stream where real TeX wouldn't reach this
-        // state at all. Hard-erroring like Knuth would mismatch the
-        // real-world expl3 / mhchem / glossaries loads — our
-        // upstream gullet pushes these tokens further than Knuth's
-        // expansion would. We soft-substitute the underlying char
-        // so the constructed name is what the author meant.
-        //
-        // Witnesses:
-        //   - `\lx@NBSP` (round-19 CLUSTER-NBSP, 18 papers): `~` active char defined as `\lx@NBSP`
-        //     (Stored::Token of U+00A0) surfacing in `\csname r@LABEL\endcsname`.
-        //   - `\exp_stop_f:` (mhchem raw-load 2026-05-12, 92→77 errors): expl3 frozen-space token
-        //     reaching csname stream during raw mhchem.sty load.
-        //
-        // Hardcoded carve-out for `\lx@NBSP` etc. stays for
-        // historical clarity; the general `Stored::Token` case
-        // below handles other PA-aliased CSes uniformly.
+        // Soft-substitute the underlying char for a character-equivalent CS
+        // token in the \csname stream — a documented divergence from Knuth TeX
+        // (tex.web L7745-7758 hard-errors "Missing \endcsname inserted" for any
+        // CS that isn't \endcsname). Our expansion pipeline surfaces PA-aliased
+        // `Stored::Token` CSes (expl3 `\exp_stop_f:` = frozen space, `\lx@NBSP`
+        // from CLUSTER-NBSP) into the csname stream where real TeX wouldn't reach
+        // this state; erroring like Knuth would break real expl3/mhchem/glossaries
+        // loads, so we substitute the char the author meant. Witnesses: `\lx@NBSP`
+        // (CLUSTER-NBSP, 18 papers; `~`→U+00A0 in `\csname r@LABEL\endcsname`),
+        // `\exp_stop_f:` (mhchem raw-load). The `\lx@NBSP` carve-out below stays
+        // for clarity; the general `Stored::Token` case handles the rest uniformly.
         let cs_str = token.with_str(|s| s.to_string());
         // Well-known `\text…` primitives that map to a single char in real
         // pdflatex's csname-stream interpretation. The `DefPrimitive!(name,
@@ -1693,21 +1633,15 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         if let Some(c) = soft_char {
           cs.push(c);
         } else if cs_str == "\\lx@applyaccent" {
-          // Accent macros like `\'`, `\\\"`, `\\^`, … all expand to
-          //   \lx@applyaccent <accent-token> <combining-char> <standalone-char> { <letter> }
-          // via tex_character.rs::accent_def. Real pdflatex's `\csname`
-          // skips through the resulting accented char because the accent
-          // primitive is performed in the gullet; our `\lx@applyaccent`
-          // is a `DefPrimitive` (stomach-level), so a literal CS token
-          // surfaces in the csname stream and aborts the read with
-          //   `\lx@applyaccent should not appear between \\csname and \\endcsname`.
-          // (Witnesses: twemoji.sty `\twemoji flag: St. Barthélemy` —
-          // arXiv:2603.22193, 2603.23433.)
-          //
-          // Faithful resolution: peek the 4 args, append the standalone
-          // char (arg 3, T_OTHER!) to the constructed csname, discard
-          // the rest. Mirrors the implicit-character substitution above
-          // for `\let`-to-char CSes.
+          // Accent macros (`\'`, `\"`, `\^`, …) expand to
+          // `\lx@applyaccent <accent> <combining> <standalone> {<letter>}`
+          // (tex_character.rs::accent_def). pdflatex's `\csname` skips the
+          // accented char (the accent runs in the gullet); ours is a stomach
+          // `DefPrimitive`, so a literal `\lx@applyaccent` surfaces in the csname
+          // stream and aborts the read (witnesses: twemoji.sty, arXiv:2603.22193 /
+          // 2603.23433). Faithful fix: peek the 4 args, append the standalone char
+          // (arg 3, T_OTHER!) to the name, discard the rest — mirrors the
+          // implicit-character substitution above.
           let _accent = read_x_token(Some(true), false, None)?;
           let _combiner = read_x_token(Some(true), false, None)?;
           let standalone = read_x_token(Some(true), false, None)?;
