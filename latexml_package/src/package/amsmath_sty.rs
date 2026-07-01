@@ -272,6 +272,12 @@ LoadDefinitions!({
   DeclareOption!("alignedleftspaceyes", None);
   DeclareOption!("alignedleftspaceno", None);
   DeclareOption!("alignedleftspaceyesifneg", None);
+
+  // Perl L53 (#2835): defined here, before ProcessOptions, so the `fleqn`
+  // option below can `\Let` it to `\iftrue`. Drives multline's default row
+  // alignment (center normally, left under fleqn).
+  DefConditional!("\\if@fleqn");
+
   DeclareOption!("reqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::None));
   });
@@ -280,6 +286,7 @@ LoadDefinitions!({
   });
   DeclareOption!("fleqn", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", Some(Stored::Bool(true)));
+    Let!("\\if@fleqn", "\\iftrue");
   });
 
   Let!("\\@xp", "\\expandafter");
@@ -1172,6 +1179,15 @@ LoadDefinitions!({
   properties => { ref_step_counter("equation", false) },
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
+    // Perl #2835: multline rows center by default (left under fleqn); the
+    // first row is left-aligned and the last row right-aligned.
+    let default_align =
+      if if_condition(&T_CS!("\\if@fleqn")).ok().flatten().unwrap_or(false) {
+        "left"
+      } else {
+        "center"
+      };
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
     // Perl: setBody(getArg(1)->unlist, undef) — sets body for tex= generation
@@ -1202,6 +1218,15 @@ LoadDefinitions!({
   mode => "display_math",
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
+    // Perl #2835: multline rows center by default (left under fleqn); the
+    // first row is left-aligned and the last row right-aligned.
+    let default_align =
+      if if_condition(&T_CS!("\\if@fleqn")).ok().flatten().unwrap_or(false) {
+        "left"
+      } else {
+        "center"
+      };
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
     if let Some(arg) = whatsit.get_arg(1) {
@@ -1249,6 +1274,15 @@ LoadDefinitions!({
   mode => "display_math",
   before_digest => { bgroup(); },
   after_digest => sub[whatsit] {
+    // Perl #2835: multline rows center by default (left under fleqn); the
+    // first row is left-aligned and the last row right-aligned.
+    let default_align =
+      if if_condition(&T_CS!("\\if@fleqn")).ok().flatten().unwrap_or(false) {
+        "left"
+      } else {
+        "center"
+      };
+    whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from(default_align));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
     whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
     if let Some(arg) = whatsit.get_arg(1) {
@@ -1707,7 +1741,8 @@ LoadDefinitions!({
   // Conditionals (always false sentinels — Perl L58-68)
   DefConditional!("\\ifmeasuring@");
   DefConditional!("\\iftagsleft@");
-  DefConditional!("\\if@fleqn");
+  // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
+  // `fleqn` option can `\Let` it to `\iftrue`.
 });
 
 use latexml_core::document;
@@ -1876,21 +1911,25 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
 /// Rust stores as individual properties: MULTIROW_ALIGNMENT_RULE_0, MULTIROW_ALIGNMENT_RULE_LAST,
 /// etc.
 pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
+  // Perl applies `default` to every row first, then the remaining keys in
+  // `sort` order: string-sorted, `-1` (last) precedes `0`, so the first-row
+  // rule is applied LAST and wins when they collide on a single-row multline
+  // (rearrangeAMSMultirow, amsmath.sty.ltxml). Emit DEFAULT, LAST, 0 to match.
   let mut rules = Vec::new();
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_DEFAULT")
     && let Stored::String(s) = &*val
   {
     rules.push(("default".to_string(), to_string(*s)));
   }
-  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_0")
-    && let Stored::String(s) = &*val
-  {
-    rules.push(("0".to_string(), to_string(*s)));
-  }
   if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_LAST")
     && let Stored::String(s) = &*val
   {
     rules.push(("last".to_string(), to_string(*s)));
+  }
+  if let Some(val) = whatsit.get_property("MULTIROW_ALIGNMENT_RULE_0")
+    && let Stored::String(s) = &*val
+  {
+    rules.push(("0".to_string(), to_string(*s)));
   }
   rules
 }
