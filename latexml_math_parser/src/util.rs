@@ -25,7 +25,36 @@ pub fn node_to_grammar_lexemes_from(
   child_nodes: Vec<Node>,
   idx: &mut usize,
 ) -> (Vec<String>, Vec<Node>) {
-  node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false)
+  let (mut lexemes, nodes) = node_to_grammar_lexemes_ctx(mathnode, child_nodes, idx, false);
+  // M4 over-parse pruning: the differential-d grammar branch
+  // (`diffunk/diffid factor_base => diffop_apply`, grammar/builder.rs:814) is the ONLY
+  // place `XDIFFUNK`/`XDIFFID` differ from plain `unknown`/`id` — they are otherwise
+  // identical `factor_base` alternatives (builder.rs:134) with the same speculative-apply
+  // rules (builder.rs:672-673/767-768). And `diffop_apply` (semantics.rs:1726) prunes
+  // EVERY diffop parse unless an `INTOP` node is present in the formula. So for an
+  // INTOP-free formula the diffop branch is dead weight: Marpa still builds it into the
+  // bocage (≈71 and-nodes per `d<var>`) only for the action to reject it. Downgrade
+  // `XDIFFUNK`→`UNKNOWN` / `XDIFFID`→`ID` here so the branch is never built. This is
+  // OUTPUT-NEUTRAL (the same `has_intop` predicate `diffop_apply` uses, over the same
+  // node list that becomes `ctxt.nodes`) and removes the over-parse on every non-integral
+  // `d` (`\frac{dx}{dt}`, `d` as a variable, `d`-subscripts). The differential case
+  // (`\int … dx`) keeps `XDIFFUNK` and is unaffected. Cheap: only formulae that actually
+  // contain a `d` pay the `INTOP` scan.
+  if lexemes.iter().any(|l| l.starts_with("XDIFF")) {
+    let has_intop = nodes
+      .iter()
+      .any(|n| n.get_attribute("role").as_deref() == Some("INTOP"));
+    if !has_intop {
+      for lex in &mut lexemes {
+        if let Some(rest) = lex.strip_prefix("XDIFFUNK:") {
+          *lex = format!("UNKNOWN:{rest}");
+        } else if let Some(rest) = lex.strip_prefix("XDIFFID:") {
+          *lex = format!("ID:{rest}");
+        }
+      }
+    }
+  }
+  (lexemes, nodes)
 }
 
 fn node_to_grammar_lexemes_ctx(
