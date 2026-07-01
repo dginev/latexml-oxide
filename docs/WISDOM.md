@@ -2108,3 +2108,36 @@ remove the issue "in theory" — the cache-clone + deep-sharing reality always
 exceeds a small guard. **Sequencing:** keep 8192 load-bearing until the fork fix
 lands, then delete the guard plumbing. Do NOT lower the guard while the heuristic
 exists (regresses the 16 papers).
+
+## 41. Frontmatter fallback DOM surgery: three construction-time traps
+
+Context: `base_utilities.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title`
+(the beyond-Perl "keep abstract below a hand-formatted title block" ordering fix
+and the "promote a leading centered display block to `<ltx:title>`" heuristic for
+`\title`-less papers, e.g. arXiv 1609.07638). Three traps bite any code that
+manipulates the live document DOM *during construction* (inside a `DefConstructor`
+sub), not at serialize/finalize time:
+
+1. **A RELATIVE-context `findnode`/`findnodes` returns nodes detached for child
+   traversal.** `document.findnode(".//ltx:p", Some(&ctx))` yields a node whose
+   `get_content()` works but whose `get_child_nodes()` is **empty** and on which a
+   further relative XPath finds nothing — a rust-libxml shared-node artifact. An
+   ABSOLUTE query (`/ltx:document/...`, `None` context) returns a live node that
+   traverses correctly. Rule: fetch ONE anchor with an absolute query, then walk
+   the DOM by hand (`get_child_nodes()` recursion) for everything downstream.
+
+2. **The human-readable `fontsize`/`font` attributes do not exist yet at
+   construction time.** The `<ltx:text>` carries `_font` (an interned Font id) +
+   `_fontswitch="true"`; `fontsize="144%"` etc. are derived from `_font` in a
+   later finalize pass (`Font::relative_to`). To test "larger than body" at
+   construction, decode `_font` via `document.decode_font(&id)` → `Font::get_size`
+   and compare to `NOMINAL_FONT_SIZE` (mirroring `font::defsize`): `size >
+   nominal*1.1` is the analogue of `fontsize > 110%`.
+
+3. **Creating a default-namespace LTX element.** `insert_element_before(pt,
+   "ltx:title", None)` emits a stray prefixed `<ltx:title>`. Mirror
+   `open_element_internal`'s default path: create with a BARE tag (`"title"`) then
+   `set_namespace(root.get_namespace())` so it serializes as `<title>` in the
+   document's default namespace. Move children with a true move
+   (`child.unbind(); parent.add_child(&mut child)`) — preserves xml:ids, unlike
+   `append_clone` which clones + remaps.

@@ -15,10 +15,36 @@
 
 ## Current status
 
-- `cargo test --tests`: **1503 / 0 / 0** (on `ar5iv-2606-prep`, 51 commits ahead of
+- `cargo test --tests`: **1504 / 0 / 0** (on `ar5iv-2606-prep`, 53 commits ahead of
   `main`: the consolidated parity-followups + graphics + noexpand/xint + the prior
-  XSLT O(n²) fixes + fvextra + `maketitle` XSLT memoization, plus this session's
-  `iflimit` 8M→16M raise (`f3fab341`)). See "Landed this session (2026-06-30)" below.
+  XSLT O(n²) fixes + fvextra + `maketitle` XSLT memoization + `iflimit` 8M→16M raise,
+  plus this session's frontmatter title fixes). See "Landed this session" entries below.
+
+### Landed this session (2026-07-01, on `ar5iv-2606-prep`) — frontmatter title fidelity (no-`\maketitle` papers)
+
+Two fixes to the post-PR#2767 Frontmatter API for papers that hand-format their
+title as a leading `\begin{center}{\Large ...}` block and declare only an abstract
+(no `\title`/`\author`/`\maketitle`), driver arXiv 1609.07638. Suite **1504/0**,
+clippy + fmt clean; pushed (`437a8745`, `1ec4fb36`).
+
+- **Ordering — keep the title block above the abstract (`437a8745`).** The
+  abstract-only `\lx@frontmatter@fallback` flushed the abstract at the document TOP
+  (after `ltx:resource`), floating it ABOVE the hand-formatted title block deposited
+  before it. Scoped a rescue to the abstract-only case (exactly what
+  `insert_frontmatter` already flags for deferral): insert at the CURRENT position so
+  preceding body stays in place. Preamble-`\title` (no `\maketitle`,
+  `tests/digestion/rebox`) still goes to the top.
+- **Promotion — synthesize `<ltx:title>` from the first display block (`1ec4fb36`).**
+  With no `\title` there was no `ltx:title` frontmatter, so the doc rendered
+  titleless (Perl LaTeXML wished for this in its `{titlepage}` "how could we guess?"
+  note but never built it). In the abstract-only fallback, promote the first
+  non-resource body element's leading centered, larger-than-body paragraph to a real
+  default-namespace `<title>` (children MOVED, xml:ids preserved; empty wrappers
+  pruned). Conservative gates reject epigraphs / normal-size blocks / `\maketitle`
+  papers. New fixture `tests/structure/promote_center_title`. The three
+  construction-time DOM traps (relative-context `findnode` detachment, `_font` vs
+  resolved `fontsize` timing, default-namespace element creation) are in
+  `WISDOM.md` §41.
 
 ### Landed this session (2026-06-30, cont.) — pre-rerun audits: perf/stability hardening + gullet cleanup
 
