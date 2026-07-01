@@ -1513,10 +1513,22 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   let search_paths = cli.search_paths.clone();
   let (no_pmml, no_mathtex, verbose, quiet) = (cli.no_pmml, cli.no_mathtex, cli.verbose, cli.quiet);
 
+  // Unresponsive-worker watchdog: SIGKILL + respawn any live worker whose CPU
+  // time freezes for longer than this. Set to 2× the per-paper wall-clock
+  // timeout (floor 300s) so it sits safely above a legitimately slow paper
+  // (whose own `Watchdog` aborts the process at `cli.timeout`); it only fires
+  // when that in-process watchdog itself failed to fire — a genuine wedge
+  // (deadlock, uninterruptible D-state I/O, a dead watchdog thread) that
+  // death-driven SIGCHLD supervision cannot see because the process is alive.
+  let unresponsive_timeout = Some(std::time::Duration::from_secs(
+    (cli.timeout as u64).saturating_mul(2).max(300),
+  ));
+
   let config = HarnessConfig {
     workers,
     mem_limit_bytes,
     mem_pressure_floor_bytes,
+    unresponsive_timeout,
     ..Default::default()
   };
 
