@@ -1023,6 +1023,27 @@ LoadDefinitions!({
 
   // Same, but put it at the beginning of document, but after any ltx:resources
   DefConstructor!("\\lx@frontmatter@fallback", sub[document,_args] {
+    // Rationalized ordering (beyond-Perl divergence): the fallback flushes queued
+    // frontmatter when there is no \maketitle (triggered by the first \section via
+    // \@startsection@hook, or at document end). Perl (post PR#2767 Frontmatter API)
+    // always inserts it at the document TOP (after ltx:resource). Scope the rescue to
+    // the ABSTRACT-ONLY case — exactly the case `insert_frontmatter` already flags for
+    // deferral (see the "defer until abstract's document location" branch below): a
+    // manual \begin{center} "title" block preceding \begin{abstract} with no
+    // \maketitle (arXiv 1609.07638) deposits the title as ordinary body BEFORE the
+    // abstract is queued, so flushing at the top floats the abstract ABOVE the title.
+    // Insert the abstract at the CURRENT position instead, keeping the preceding body
+    // in place. Title/author/date frontmatter (e.g. a preamble \title with no
+    // \maketitle — tests/digestion/rebox) was registered before any body and keeps the
+    // original top-of-document insertion; and for a plain abstract with no preceding
+    // body the current position IS the top, so that case is unchanged too.
+    let abstract_only = with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frnt)) => frnt.len() == 1 && frnt.contains_key("ltx:abstract"),
+      _ => false,
+    });
+    if abstract_only {
+      insert_frontmatter(document)?;
+    } else {
     let savenode = document.get_node().clone();
     // Perl: findnode('ltx:document/ltx:resource[last()]') — relative to the
     // DOCUMENT node (Perl's default xpath context). The Rust cached XPath
@@ -1044,6 +1065,7 @@ LoadDefinitions!({
       insert_frontmatter(document)?;
       document.unwrap_nodes(wrapper)?;
       document.set_node(&savenode);
+    }
     }
   },
   after_digest => {
