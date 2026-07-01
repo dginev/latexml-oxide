@@ -353,29 +353,32 @@ impl XM {
           }
         },
       },
-      XM::Apply(op, args, ..) => Cow::Owned(format!(
-        "{}{}",
-        op.0.get_value(nodes)?,
-        args
+      // Propagate a bad-lexeme-id lookup failure with `?` instead of
+      // `.expect()`-panicking — these recursive arms must match the top-level
+      // arm's graceful Err (a `lookup_lex_node` miss on adversarial input is
+      // recoverable; the caller prunes the parse).
+      XM::Apply(op, args, ..) => {
+        let head = op.0.get_value(nodes)?;
+        let parts = args
           .trees()
           .iter()
-          .map(|t| t.get_value(nodes).expect("inner"))
-          .collect::<Vec<_>>()
-          .join("")
-      )),
+          .map(|t| t.get_value(nodes))
+          .collect::<Result<Vec<_>, _>>()?;
+        Cow::Owned(format!("{head}{}", parts.join("")))
+      },
       // Choices/Arg don't carry a serialized value — return empty for safety;
       // callers treat Ref similarly (see the XM::Ref arm below).
       XM::Choices(_) | XM::Arg(_) => Cow::Borrowed(""),
       XM::Dual(content, pres, ..) => Cow::Owned(format!(
         "{}{}",
-        content.get_value(nodes).expect("inner"),
-        pres.get_value(nodes).expect("inner")
+        content.get_value(nodes)?,
+        pres.get_value(nodes)?
       )),
       XM::Wrap(args, ..) => Cow::Owned(
         args
           .iter()
-          .map(|a| a.get_value(nodes).expect("oof"))
-          .collect::<Vec<_>>()
+          .map(|a| a.get_value(nodes))
+          .collect::<Result<Vec<_>, _>>()?
           .join(""),
       ),
       XM::Ref(_) => Cow::Borrowed(""),

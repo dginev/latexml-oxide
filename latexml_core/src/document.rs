@@ -2356,7 +2356,10 @@ impl Document {
       let mut boxes = VecDeque::new();
       boxes.push_front(self.get_node_box(node).unwrap());
       node.get_first_child().unwrap().set_content(&newstring)?;
-      for _idx in 0..nmatched - 1 {
+      // `nmatched - 1` (usize) underflows to usize::MAX if a matcher returns a
+      // zero-length match, spinning `get_prev_sibling().unwrap()` until it
+      // panics. Saturate: a 0/1-length match removes no prior siblings.
+      for _idx in 0..nmatched.saturating_sub(1) {
         let remove = node.get_prev_sibling().unwrap();
         boxes.push_front(self.get_node_box(&remove).unwrap());
         self.remove_node(remove);
