@@ -794,9 +794,11 @@ LoadDefinitions!({
   // (moved from latex_semi_undocumented.rs)
   //======================================================================
 
-  // Perl-parity: `\@ifnextchar`, `\kernel@ifnextchar`, `\@ifnext` are
+  // Perl-parity: `\@ifnextchar` and `\kernel@ifnextchar` are
   // defined in latex_constructs.pool.ltxml L5687 (closure-backed, can't
   // round-trip through the dump). Relocated there 2026-04-18.
+  // (upstream #2833 removed the mistaken kernel `\@ifnext` alias; it is
+  // deliberately not defined here.)
 
   // Perl-parity: `\makeatletter` / `\makeatother` are defined in
   // latex_constructs.pool.ltxml L5765-5766. Relocated there 2026-04-18.
