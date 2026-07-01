@@ -248,7 +248,25 @@ top of this cluster (the `\pgfmathsetlength` expand-before-`+` fix); all four no
 without `MemoryBudget`. The earlier "deep pgf allocation vs Perl" hypothesis was wrong: it was a
 single decoration-automaton non-termination bug.
 
-## Cluster F — xint raw-load runaway native recursion → stack-overflow SIGABRT (✅ FIXED 2026-06-20 — no longer crashes)
+## Cluster F — xint raw-load runaway native recursion → stack-overflow SIGABRT (✅ FIXED 2026-06-20 — no crash; ✅ fast-fail depth guard 2026-06-30)
+
+> **FAST-FAIL DEPTH GUARD LANDED 2026-06-30 (`gullet.rs`, top of `read_x_token`).**
+> The "possible future refinement" flagged below is done: a lean thread-local
+> depth counter (`ExpandDepthGuard`, ~30 lines) at the top of `read_x_token`
+> bounds expansion-recursion DEPTH (= `read_x_token` re-entrancy, which covers
+> every recursion edge — macro invoke, `\csname`/`\number`/`\romannumeral`
+> primitive re-expansion, number-argument reading). Past the cap (default
+> **12_000**, env `LATEXML_EXPAND_DEPTH_LIMIT`, `0` disables) it raises a graceful
+> `Fatal:Timeout:Recursion` in milliseconds instead of grinding to the watchdog /
+> RSS fuse. Measured: a self-referential `\csname a\a\endcsname` runaway that
+> WITHOUT the guard hit the RSS fuse at **6.5 GB / 1.5 s / exit 137** now Fatals at
+> **145 MB / 0.10 s**. Calibration: legit expansion-nesting depth is ~6–20 on real
+> docs (t1, si.tex, si.tex+NODUMP raw-loading expl3), so 12_000 is a ~600× margin;
+> full suite **1503/0** unchanged (zero false positives). `maybe_grow` (below) stays
+> — it grows the stack; this only caps the depth. A lean version was chosen over a
+> heavily-instrumented one to keep the gullet hot path readable/cheap.
+
+## (historical) SIGABRT crash fix
 
 > **FIXED 2026-06-20 (`gullet.rs`, `read_x_token` `Outcome::Invoke`).** Wrapped the
 > per-expansion `defn.invoke(false)` call in the stack-growth guard (default

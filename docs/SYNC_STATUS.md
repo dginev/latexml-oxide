@@ -15,10 +15,62 @@
 
 ## Current status
 
-- `cargo test --tests`: **1502 / 0 / 0** (on `ar5iv-2606-prep`, 51 commits ahead of
+- `cargo test --tests`: **1503 / 0 / 0** (on `ar5iv-2606-prep`, 51 commits ahead of
   `main`: the consolidated parity-followups + graphics + noexpand/xint + the prior
   XSLT O(n²) fixes + fvextra + `maketitle` XSLT memoization, plus this session's
   `iflimit` 8M→16M raise (`f3fab341`)). See "Landed this session (2026-06-30)" below.
+
+### Landed this session (2026-06-30, cont.) — pre-rerun audits: perf/stability hardening + gullet cleanup
+
+Three requested pre-rerun audits (performance, stability, deep dives). All
+changes suite-green (**1503/0**), clippy + fmt clean, `--release` re-validated.
+
+- **Math over-parse — differential-`d` lexer gating (perf, output-neutral).** The
+  lexer emitted the diffop-competing `XDIFFUNK`/`XDIFFID` terminal for *every* `d`;
+  outside integrals `diffop_apply` always prunes it, so Marpa built a ~71-and-node
+  branch per `d<var>` only to reject it. `util.rs::node_to_grammar_lexemes_from` now
+  downgrades `XDIFFUNK→UNKNOWN`/`XDIFFID→ID` when the formula has no `INTOP` (same
+  predicate + node list `diffop_apply` uses → **byte-identical output**), killing the
+  over-parse on every non-integral `d` (high volume — differentials are everywhere).
+  Full ranked lever list in `docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md` (which also
+  corrects stale `MATH_AMBIGUITY_AUDIT` claims: `\Pi^N(p,q,r)` and simple `|x|≤|y|`
+  are now unambiguous).
+- **Stability — process-crash surface hardening (defensive, output-neutral).**
+  Extended the base_xmath re-entrant-borrow fix (`75c452843d`) to the two remaining
+  infallible Alignment arms in `digested.rs` (`revert` `:277`, `be_absorbed` `:315`)
+  → `try_borrow` + graceful default. Hardened three math-parser panic sites the
+  crash-surface audit ranked highest: `semantics.rs` `postfix_embellished`
+  (empty-xmref `remove(0)` → bare Wrap, mirrors the landed `fenced` guard) and
+  `fence` (degenerate `stuff[0]`/`len-2` underflow → prune), and `semantics/tree.rs`
+  `get_value` (`.expect()`→`?` propagation on bad-lexeme-id). Fixed the
+  `apply_math_ligature` `0..nmatched-1` usize underflow (`document.rs`, `saturating_sub`).
+- **Stability — Cluster F fast-fail expansion-depth guard (lean).** A ~30-line
+  thread-local `ExpandDepthGuard` at the top of `read_x_token` caps expansion-recursion
+  DEPTH (= re-entrancy, covering all edges) at 12_000 (env `LATEXML_EXPAND_DEPTH_LIMIT`,
+  0 disables) → graceful `Fatal:Timeout:Recursion` in ms instead of the watchdog/RSS
+  grind. Measured: a `\csname a\a\endcsname` runaway 6.5 GB/1.5 s/exit-137 → 145 MB/0.10 s.
+  Legit depth ~6–20 on real docs (incl. `NODUMP` expl3 raw-load) → 12_000 is ~600×
+  margin. See `STABILITY_WITNESSES.md` Cluster F. (Full guard/crash-surface audit
+  recorded; the `catch_unwind` per-formula-isolation option was left as a follow-up.)
+- **Docs.** `PERFORMANCE.md` compressed 974→~380 lines (new Principle 6: no per-node
+  whole-tree `//`/`preceding::` XSLT scans; FxHash node-cache shipping status
+  corrected). `gullet.rs` verbose-comment cleanup 3023→2906 lines (essays condensed to
+  their essential facts; no code change).
+- **Validation — `sandbox-arxiv-10k-shuffle` rerun (2026-06-30, 9905 tasks).**
+  Full cortex fleet rerun (72-worker harness, release binary) vs the 2026-06-29
+  baseline. Aggregate: no_problem 6931→6928, warning 1756→1754, error 1166→1172,
+  **fatal 52→51**, invalid 95. Transition audit (`/runs/…/diff` + per-paper
+  before-vs-after `cortex_worker` repro): **3 genuine `fatal→error` wins** (the
+  Alignment `try_borrow` / math-panic guards recovered hard-failing papers:
+  0803.1344, 1205.0533, 1406.0085). The 2 "new fatals" (1506.09203, 1511.07586)
+  were `cortex:never_completed_with_retries` **fleet-contention nondeterminism** —
+  both convert to their baseline status standalone, before==after. The 3
+  "error-regressions" (astro-ph9701035, physics0408020, 1408.6720) likewise
+  before==after (multi-file main-selection nondeterminism). **Depth guard fired 0×
+  across 10k** (the sole `Timeout:Recursion` fatal was the pre-existing cycle_guard
+  "repeated token window", not the new `ExpandDepthGuard`) → zero false positives.
+  Output-neutrality independently confirmed byte-identical on 145 sampled
+  math-bearing papers (isolated-dir before/after).
 - **PERF (2026-06-27): OmniBus natbib-autoload reload loop — FIXED.** The dominant
   arXiv slow/timeout cluster (~50 `sn-jnl` + Wiley/`sagej`/`wlpeerj`/… papers, all
   unbound classes → OmniBus fallback) hung ~90 s in digest: OmniBus's hand-rolled
