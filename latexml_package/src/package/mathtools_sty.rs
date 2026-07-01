@@ -582,6 +582,13 @@ LoadDefinitions!({
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_DEFAULT", Stored::from("center"));
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_0", Stored::from("left"));
       whatsit.set_property("MULTIROW_ALIGNMENT_RULE_LAST", Stored::from("right"));
+      // #2835: snapshot \shoveleft/\shoveright row overrides for this multlined
+      // (amsShove accepts name=multlined), mirroring amsmath's multline.
+      let shoves = amsmath_sty::take_ams_shove_rows();
+      if !shoves.is_empty() {
+        whatsit
+          .set_property("MULTIROW_SHOVE_ROWS", Stored::HashString(shoves.into_iter().collect()));
+      }
     },
     after_construct => sub[document, whatsit] {
       if let Some(last) = document.get_node().get_last_child() {
@@ -598,12 +605,14 @@ LoadDefinitions!({
   DefMacro!("\\endmultlined", "\\lx@end@alignment\\@end@multlined");
   DefPrimitive!("\\@end@multlined", { egroup()?; });
 
-  // Perl L590-599: \@MT@shove stores alignment direction for current row.
-  // Perl: LookupValue('Alignment')->currentRowNumber → sets MULTIROW_ALIGNMENT_RULE hash.
-  // Currently passes content through; the alignment shifting is cosmetic
-  // and requires deep integration with the alignment row tracking.
-  DefMacro!("\\shoveright[]{}", "#2");
-  DefMacro!("\\shoveleft[]{}", "#2");
+  // Perl #2835: mathtools \shoveleft/\shoveright delegate to amsmath's
+  // \lx@ams@shove* (which record the row alignment via amsShove), plus an
+  // optional \kern<dim> — before the body for left, after it for right. Perl
+  // reads the optional arg with readExpression('dimen') then re-serializes;
+  // here `\kern` normalizes the dimension in reversion to the same pt form,
+  // and `\ifx/#1/` drops the \kern when no optional dimension was given.
+  DefMacro!("\\shoveleft[]{}", "\\lx@ams@shoveleft{\\ifx/#1/\\else\\kern#1\\fi #2}");
+  DefMacro!("\\shoveright[]{}", "\\lx@ams@shoveright{#2\\ifx/#1/\\else\\kern#1\\fi}");
 
   //======================================================================
   // Cases variants

@@ -6849,7 +6849,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="left">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP" xml:id="S10.Ex80.m1.3">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.4">L</XMTok>
@@ -6860,7 +6860,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="right">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.8">R</XMTok>
@@ -6872,7 +6872,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="left">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.13">L</XMTok>
@@ -6883,7 +6883,7 @@ Then a switch of tag forms.</p>
                   </XMCell>
                 </XMRow>
                 <XMRow>
-                  <XMCell align="center">
+                  <XMCell align="right">
                     <XMApp>
                       <XMTok meaning="plus" role="ADDOP">+</XMTok>
                       <XMTok font="italic" role="UNKNOWN" xml:id="S10.Ex80.m1.17">R</XMTok>

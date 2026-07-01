@@ -1980,7 +1980,9 @@ fn ams_shove(shove_dir: &str) {
 
 /// Read and clear the `\shove*` row overrides accumulated during the current
 /// multline body, as `(row, dir)` pairs to append to the base alignment rule.
-fn take_ams_shove_rows() -> Vec<(String, String)> {
+/// Called from the multline constructors' afterDigest (here and mathtools'
+/// `\@@multlined`) to snapshot the shoves onto the whatsit.
+pub(crate) fn take_ams_shove_rows() -> Vec<(String, String)> {
   use latexml_core::state::{assign_value, lookup_value};
   match lookup_value("AMS_SHOVE_ROWS") {
     Some(Stored::HashString(m)) if !m.is_empty() => {
