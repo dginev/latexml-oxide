@@ -15,8 +15,56 @@
 
 ## Current status
 
-- `cargo test --tests`: **1505 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
+- `cargo test --tests`: **1506 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
   session" entries below).
+
+### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — MathML-post exhaustive line audit, wave 1+2
+
+User-commissioned ("the Rust translation wants to be an exhaustive port") audit
+of the MathML post-processors, opened as the living worklist
+[`docs/MATHML_POST_LINE_AUDIT.md`](MATHML_POST_LINE_AUDIT.md) (verdicts for all
+60 MathML.pm subs + 197 DefMathML registrations + sibling files; F-numbered
+findings). Ten findings LANDED same-day, each witness-verified byte-identical
+against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
+
+- **F1** author-spacing (lpadding/rpadding) carry into the spacewalk
+  (astro-ph0001001 witness — the user-reported lost-spaces bug).
+- **F2** dead duplicate spacewalk deleted from `mathml/mod.rs` (three-way
+  table verification first).
+- **F10/F12/F13** pmml-wrapper parity (menclose/class/_role), Apply:ENCLOSE →
+  `m:menclose` (`\cancel`), FRACOP verbatim linethickness/mathcolor/bevelled.
+- **F18** `nth-root` arg order: all THREE consumers had (degree, radicand)
+  swapped — `<mroot>` was spec-backwards, cmml `<degree>` wrapped the
+  radicand, unicode_math used the radicand as index.
+- **F7** mathstyle→`m:mstyle` propagation (stylemap tables, needsMathstyle,
+  XMApp/XMArray/bigop/script wraps, mode-sensitive entry baseline
+  display↔text) — `\tfrac`/`\dfrac`/`\displaystyle` sizing.
+- **F8** faithful mo styler (opdict xor-emission, largeop/movablelimits/
+  symmetric, minsize/maxsize stretchyhack, %→em size resolution, mathsize on
+  all token types). **F9** `pmml_maybe_resize` wired at all five call sites.
+  **F4** `fmt_em` byte-parity (`%.3f`, trailing zeros kept).
+- **F3/F6/F11** spacewalk rewritten as Perl's stream algorithm (mrow/script
+  unwinding into the pair stream, negative-target mpadded via string metrics,
+  mspace merge, both-mo target/2 split; Hint widths normalized to em,
+  `_ignorable` + filter_row).
+- **F14** content-MathML: multirelation → `m:and`-chained pairwise applies
+  with `m:share` (generateNodeID port), or-composition, and STYLIZED ci
+  content (plane1: `<ci>𝑥</ci>` — formerly raw ASCII on every cmml
+  identifier), decorated symbols, Perl-regex integer test.
+- **F16** OperatorDictionary Content_form/fence tables REGENERATED verbatim
+  from Perl's range strings (machine-parsed, non-overlap asserted) — closes
+  the arrow/negation codepoint holes and the U+2A50 misclassification.
+- **F15** `do_cfrac` unrolling behind the `cfrac-inline` gate + the amsmath
+  `\cfrac` binding rewritten to Perl's trampoline (capture surrounding
+  mathstyle once, nested reuse, no size compounding).
+
+Open queue lives in the audit doc: **F8b** inherited-context bindings
+(FONT/SIZE/COLOR/… — largest residual), F17 misc, F14 share-suffix wiring,
+**F5** linebreaker decision (Perl gates on `--linelength`, default OFF →
+feature gap, not production divergence), **F19** math-parser
+`\mathop{=}\limits^{def}` mis-parse (XMWrap vs script application — math-
+parser worklist). Method traps recorded in the doc (installed Perl 0.8.8 lags
+the reference tree; trace producer-vs-consumer before patching post).
 
 ### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — live-run fatal mining: 2 panic sites, `\dabar@`, plain-`\+` retraction
 

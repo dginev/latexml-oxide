@@ -1826,14 +1826,89 @@ fn apply_multi_scripts(
 /// Handle continued fraction rendering.
 ///
 /// Port of `Apply:?:continued-fraction` + `do_cfrac`.
-fn pmml_cfrac(doc: &PostDocument, _op: &Node, numer: &Node, denom: &Node) -> NodeData {
-  // Simplified: just produce mfrac
-  // Full version unrolls nested continued fractions and pulls \cdots up
+fn pmml_cfrac(doc: &PostDocument, op: &Node, numer: &Node, denom: &Node) -> NodeData {
+  // Perl registration (L1954-1960): only the `cfrac-inline` variant unrolls
+  // via do_cfrac; display cfrac is a plain (recursively converted) mfrac.
+  if op.get_attribute("name").as_deref() == Some("cfrac-inline") {
+    return pmml_row(do_cfrac(doc, numer, denom));
+  }
   NodeData::Element {
     tag:        "m:mfrac".to_string(),
     attributes: None,
     children:   vec![pmml_smaller(doc, numer), pmml_smaller(doc, denom)],
   }
+}
+
+/// Port of Perl `do_cfrac` (L1930-1951): unroll an inline continued fraction —
+/// when the denominator is a sum (or \cdots) its LAST summand is pulled up to
+/// the top level (a trailing \cdots, a nested cfrac unrolled recursively, or
+/// an invisible-times of \cdots and a factor), leaving the current fraction
+/// with the trailing operator inside its denominator row.
+fn do_cfrac(doc: &PostDocument, numer: &Node, denom: &Node) -> Vec<NodeData> {
+  if doc.is_qname(denom, "ltx:XMApp") {
+    let dchildren = element_children(denom);
+    if dchildren.len() >= 2 {
+      let denomop = &dchildren[0];
+      let denomargs = &dchildren[1..];
+      if denomop.get_attribute("role").as_deref() == Some("ADDOP")
+        || denomop.get_content() == "\u{22EF}"
+      {
+        let (rest, last) = denomargs.split_at(denomargs.len() - 1);
+        let last = &last[0];
+        if !rest.is_empty() {
+          let curr = NodeData::Element {
+            tag:        "m:mfrac".to_string(),
+            attributes: None,
+            children:   vec![pmml_smaller(doc, numer), NodeData::Element {
+              tag:        "m:mrow".to_string(),
+              attributes: None,
+              children:   vec![
+                if rest.len() > 1 {
+                  pmml_infix(doc, denomop, rest)
+                } else {
+                  pmml_smaller(doc, &rest[0])
+                },
+                pmml_smaller(doc, denomop),
+              ],
+            }],
+          };
+          if last.get_content() == "\u{22EF}" {
+            // Denominator ends with \cdots: bring the dots up to toplevel.
+            return vec![curr, pmml_smaller(doc, last)];
+          } else if doc.is_qname(last, "ltx:XMApp") {
+            let lchildren = element_children(last);
+            if lchildren.len() >= 2 {
+              let lastop = &lchildren[0];
+              let lastargs = &lchildren[1..];
+              if lastop.get_attribute("meaning").as_deref() == Some("continued-fraction")
+                && lastargs.len() >= 2
+              {
+                // Denominator ends with a cfrac: unroll it to toplevel.
+                let mut out = vec![curr];
+                out.extend(do_cfrac(doc, &lastargs[0], &lastargs[1]));
+                return out;
+              } else if lastop.get_content() == "\u{2062}"
+                && lastargs.len() == 2
+                && lastargs[0].get_content() == "\u{22EF}"
+              {
+                // Denominator ends with (invisible-times of) \cdots · factor.
+                return vec![
+                  curr,
+                  pmml_smaller(doc, &lastargs[0]),
+                  pmml_smaller(doc, &lastargs[1]),
+                ];
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  vec![NodeData::Element {
+    tag:        "m:mfrac".to_string(),
+    attributes: None,
+    children:   vec![pmml_smaller(doc, numer), pmml_smaller(doc, denom)],
+  }]
 }
 
 // ======================================================================

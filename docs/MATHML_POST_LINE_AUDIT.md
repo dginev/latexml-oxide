@@ -109,9 +109,12 @@ Verified-and-landed items move to the ✅ list at the bottom.
   parallel-markup secondary-suffix wiring (Perl `$MATHPROCESSOR->IDSuffix`)
   still to connect. `cmml_not` (L1406) has no callers among the ported
   registrations — N-A unless a key needing it shows up.
-- **F15 — `do_cfrac` is a stub** (Perl L1931-1973): continued fractions
-  render as one flat `m:mfrac`; the denominator-recursion unrolling, `\cdots`
-  pull-up, and `cfrac-inline` style select are all absent.
+- **F20 (NEW, engine) — witnesses to re-run after binding fixes.** The cfrac
+  investigation showed the deltas were ENGINE-side (amsmath binding), fixed
+  2026-07-02: the fused `\cfrac` constructor hardcoded mathstyle='display',
+  never emitted `name='cfrac-inline'`, and compounded nested sizes to 50%.
+  Lesson: witness diffs must be traced to producer vs consumer before
+  patching the post side.
 
 - **F17 — smaller pmml gaps:** `pmml_infix` ADDOP flatten via `pmml_unrow`
   (L639-644) absent; `pmml_scriptsize_padded` (L926, primed-sum limit
@@ -134,6 +137,17 @@ Verified-and-landed items move to the ✅ list at the bottom.
   extraction, `isFence`/`isSeparator` attribute overrides.
 
 ### Landed
+
+- **F15 ✅ (2026-07-02)** — `do_cfrac` ported in full (denominator-sum last-
+  term pull-up: trailing `\cdots`, nested-cfrac recursion, invisible-times
+  `\cdots`·factor; Perl L1930-1951) behind the faithful `cfrac-inline` gate
+  (only that variant unrolls; display cfrac stays a plain recursive mfrac —
+  the sweep overstated this). PLUS the amsmath `\cfrac` binding rewritten to
+  Perl's trampoline structure (capture surrounding mathstyle once, \let-
+  rebind for nested reuse, args digest under the captured style, name from
+  CFRACSTYLE). Witness (nested cfrac inline/display/\cfracstyle{inline}):
+  structures byte-identical; sole residual delta is the DOCUMENTED \cdots
+  ELIDEOP-vs-ID divergence (OXIDIZED_DESIGN).
 
 - **F3+F6+F11 ✅ (`856de84a10`)** — spacewalk rewritten as Perl's stream
   algorithm on child-index paths: mrow unwinding + script-base streaming

@@ -1702,32 +1702,61 @@ LoadDefinitions!({
     </ltx:XMApp>"
   );
 
-  // Section 4.12: Continued fractions — Perl amsmath.sty.ltxml L1102-1125
-  // is structurally a DefMacro trampoline (`\cfrac` Lets itself to
-  // `\lx@inner@cfrac` and calls `\lx@inner@cfrac`) plus a
-  // DefConstructor implementing the XML emit. The Let-self-rebind is
-  // how Perl captures the mathstyle *once* on first invocation while
-  // subsequent nested `\cfrac`s reuse the captured style without
-  // another save. Rust fuses the trampoline-and-constructor into a
-  // single `\cfrac[]` DefConstructor + a CFRACSTYLE global that
-  // replaces the Let-self-rebind trick — the mathstyle attribute
-  // tells the MathML renderer which fraction style to use in both
-  // forms. Intentional DefMacro → DefConstructor kind divergence
-  // (WISDOM #44) — observable XML identical; the Let-rebind is a
-  // Perl-only stateful shortcut that Rust achieves via a scope-
-  // bounded global.
+  // Section 4.12: Continued fractions — Perl amsmath.sty.ltxml L1106-1125,
+  // ported structurally. The `\cfrac` trampoline captures the SURROUNDING
+  // mathstyle ONCE (\lx@savecfrac@mathstyle), then \let-rebinds `\cfrac` to
+  // `\lx@inner@cfrac` so nested `\cfrac`s inside the arguments reuse the
+  // captured style instead of re-capturing their (by then script-sized)
+  // context. The arguments digest UNDER the captured style (bgroup +
+  // MergeFont), so nested continued fractions do NOT compound down to
+  // scriptscript sizes; `name` records the CFRACSTYLE choice
+  // (\cfracstyle{inline} → name='cfrac-inline', which the pmml
+  // continued-fraction handler unrolls via do_cfrac). The previous fused
+  // single-DefConstructor version hardcoded mathstyle='display', never
+  // emitted cfrac-inline, and compounded nested sizes (50%) — all three
+  // observable divergences from Perl on the same input.
   assign_value(
     "CFRACSTYLE",
     Stored::String(pin("display")),
     Some(Scope::Global),
   );
+  DefMacro!(
+    "\\cfrac",
+    "\\lx@savecfrac@mathstyle\\let\\cfrac=\\lx@inner@cfrac\\lx@inner@cfrac"
+  );
+  DefPrimitive!("\\lx@savecfrac@mathstyle", {
+    let style = lookup_font()
+      .and_then(|f| f.mathstyle.as_ref().map(|ms| ms.to_string()))
+      .unwrap_or_else(|| "text".to_string());
+    assign_value("cfracmathstyle", Stored::String(pin(style)), None);
+  });
   DefConstructor!(
-    "\\cfrac[] InFractionStyle InFractionStyle",
+    "\\lx@inner@cfrac InFractionStyle InFractionStyle",
     "<ltx:XMApp>\
-      <ltx:XMTok name='cfrac' meaning='continued-fraction' mathstyle='display'/>\
+      <ltx:XMTok name='#name' mathstyle='#mathstyle' meaning='continued-fraction'/>\
+      <ltx:XMArg>#1</ltx:XMArg>\
       <ltx:XMArg>#2</ltx:XMArg>\
-      <ltx:XMArg>#3</ltx:XMArg>\
-    </ltx:XMApp>"
+    </ltx:XMApp>",
+    alias => "\\cfrac",
+    before_digest => {
+      bgroup();
+      if let Some(Stored::String(s)) = lookup_value("cfracmathstyle") {
+        merge_font(Font {
+          mathstyle: Some(Cow::Owned(to_string(s))),
+          ..Font::default()
+        });
+      }
+    },
+    after_digest => sub[whatsit] {
+      egroup()?;
+      let inline = matches!(lookup_value("CFRACSTYLE"),
+        Some(Stored::String(s)) if with(s, |v| v == "inline"));
+      whatsit.set_property("name", if inline { "cfrac-inline" } else { "cfrac" });
+      if let Some(Stored::String(s)) = lookup_value("cfracmathstyle") {
+        whatsit.set_property("mathstyle", to_string(s));
+      }
+      Ok(Vec::new())
+    }
   );
   DefConstructor!("\\cfracstyle{}", "",
   after_digest => sub[whatsit] {
