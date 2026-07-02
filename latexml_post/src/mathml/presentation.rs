@@ -142,16 +142,54 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
 /// Port of `pmml` + `pmml_internal`.
 fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
   let mut result = pmml_inner(doc, node);
+  // Perl MathML.pm L339-341: wrap in m:menclose if the source node carries an
+  // `enclose` attribute (e.g. \boxed puts enclose="box" on the whole XMApp).
+  if let Some(enclose) = node.get_attribute("enclose") {
+    let mut attrs = HashMap::default();
+    attrs.insert("notation".to_string(), enclose);
+    result = NodeData::Element {
+      tag:        "m:menclose".to_string(),
+      attributes: Some(attrs),
+      children:   vec![result],
+    };
+  }
   // Port of Perl MathML.pm L344-348: attach author spacing (lpadding/rpadding,
   // e.g. from `~` ties or collapsed XMHints — `{\rm number~of~…}`) as the
-  // internal `_lpadding`/`_rpadding` attributes the space_walk consumes
-  // (mod.rs::space_walk). Perl's `_getspace($refr, $node, …)` SUMS the
-  // referring XMRef's padding with the target's; here the XMRef branch of
-  // `pmml_inner` recurses through this wrapper for the target, and the
-  // XMRef's own padding is then added on top — same sum. Without this
-  // attachment the spacewalk sees zero author padding and `~`-separated
-  // words render jammed together (witness astro-ph0001001 S9.Ex4.m1).
+  // internal `_lpadding`/`_rpadding` attributes the space_walk consumes.
+  // Perl's `_getspace($refr, $node, …)` SUMS the referring XMRef's padding
+  // with the target's; here the XMRef branch of `pmml_inner` recurses through
+  // this wrapper for the target, and the XMRef's own padding is then added on
+  // top — same sum. Without this attachment the spacewalk sees zero author
+  // padding and `~`-separated words render jammed together (witness
+  // astro-ph0001001 S9.Ex4.m1). Same recursion argument covers enclose /
+  // class / _role below, with refr-preference falling out of the outer level
+  // overwriting (_role) or appending (class) the inner one; sole corner
+  // divergence: an XMRef AND its target both carrying `enclose` would nest
+  // two m:menclose where Perl picks the XMRef's one.
   attach_source_padding(node, &mut result);
+  if let NodeData::Element { ref mut attributes, .. } = result {
+    // Perl L350-352: merge the source node's class onto the result.
+    if let Some(cl) = node.get_attribute("class")
+      && !cl.is_empty()
+    {
+      let attrs = attributes.get_or_insert_with(Default::default);
+      match attrs.get("class") {
+        Some(ocl) if !ocl.is_empty() && *ocl != cl => {
+          let merged = format!("{ocl} {cl}");
+          attrs.insert("class".to_string(), merged);
+        },
+        _ => {
+          attrs.insert("class".to_string(), cl);
+        },
+      }
+    }
+    // Perl L354-355: record the source role so the spacewalk can atom-type
+    // composite results (XMApp/XMDual with role=RELOP etc., not just tokens).
+    if let Some(role) = node.get_attribute("role") {
+      let attrs = attributes.get_or_insert_with(Default::default);
+      attrs.insert("_role".to_string(), role);
+    }
+  }
   result
 }
 
@@ -302,12 +340,22 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       pmml_script_full(doc, op, &args[0], &args[1])
     },
     "FRACOP" if args.len() >= 2 => {
-      let thickness = rop.get_attribute("thickness");
+      // Perl MathML.pm L1597-1605 `Apply:FRACOP:?`: linethickness passes
+      // through VERBATIM whenever defined (\binom → "0pt", \genfrac 2pt →
+      // "2.0pt"); mathcolor from the op's color; bevelled fractions carry
+      // class="ltx_bevelled" → bevelled="true". (Perl's context $COLOR
+      // fallback is part of the unported pmml_top bindings — F8.)
       let mut attrs = HashMap::default();
-      if let Some(ref t) = thickness {
-        if t == "0" || t == "0pt" {
-          attrs.insert("linethickness".to_string(), "0".to_string());
-        }
+      if let Some(t) = rop.get_attribute("thickness") {
+        attrs.insert("linethickness".to_string(), t);
+      }
+      if let Some(c) = rop.get_attribute("color") {
+        attrs.insert("mathcolor".to_string(), c);
+      }
+      if let Some(cl) = rop.get_attribute("class")
+        && cl.split_ascii_whitespace().any(|c| c == "ltx_bevelled")
+      {
+        attrs.insert("bevelled".to_string(), "true".to_string());
       }
       NodeData::Element {
         tag:        "m:mfrac".to_string(),
@@ -394,9 +442,40 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       // base renders as <m:mo>. (Witness: `\partial f` → ∂f, not ∂⁡f.)
       pmml_summation(doc, op, args)
     },
-    "OPEN" | "CLOSE" | "ENCLOSE" if !args.is_empty() => {
+    "OPEN" | "CLOSE" if !args.is_empty() => {
       // Fenced: (args)
       pmml_parenthesize(doc, op, args)
+    },
+    "ENCLOSE" if !args.is_empty() => {
+      // Perl MathML.pm L1507-1513 `Apply:ENCLOSE:?`: m:menclose with the
+      // operator's `enclose` attribute as notation (e.g. \cancel →
+      // updiagonalstrike); if the op carries a color, the enclosure gets it
+      // as mathcolor and the base is reset via m:mstyle (Perl's context
+      // $COLOR fallback is part of the unported pmml_top bindings — F8).
+      let mut attrs = HashMap::default();
+      if let Some(notation) = rop.get_attribute("enclose") {
+        attrs.insert("notation".to_string(), notation);
+      }
+      let color = rop.get_attribute("color");
+      let base = pmml(doc, &args[0]);
+      let inner = if let Some(ref c) = color {
+        attrs.insert("mathcolor".to_string(), c.clone());
+        NodeData::Element {
+          tag:        "m:mstyle".to_string(),
+          attributes: Some(HashMap::from_iter([(
+            "mathcolor".to_string(),
+            "black".to_string(),
+          )])),
+          children:   vec![base],
+        }
+      } else {
+        base
+      };
+      NodeData::Element {
+        tag:        "m:menclose".to_string(),
+        attributes: if attrs.is_empty() { None } else { Some(attrs) },
+        children:   vec![inner],
+      }
     },
     _ if meaning == "multirelation" => {
       // Multirelation: a = b = c (interleaved args and operators)
@@ -433,17 +512,25 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
           pmml(doc, &args[1]),
         ])
       } else if meaning == "square-root" && !args.is_empty() {
+        // Perl L1639-1642: mathcolor from the op's color (context $COLOR — F8)
         NodeData::Element {
           tag:        "m:msqrt".to_string(),
-          attributes: None,
+          attributes: rop
+            .get_attribute("color")
+            .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
           children:   vec![pmml(doc, &args[0])],
         }
       } else if meaning == "continued-fraction" && args.len() >= 2 {
         pmml_cfrac(doc, op, &args[0], &args[1])
       } else if meaning == "nth-root" && args.len() >= 2 {
+        // Perl L1644-1647: mathcolor as above. NB our XMath arg order is
+        // reversed from Perl's (args[0]=radicand) — self-consistent with the
+        // producer; do NOT "fix" one side alone (see audit doc).
         NodeData::Element {
           tag:        "m:mroot".to_string(),
-          attributes: None,
+          attributes: rop
+            .get_attribute("color")
+            .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
           children:   vec![pmml(doc, &args[0]), pmml_scriptsize(doc, &args[1])],
         }
       } else {
