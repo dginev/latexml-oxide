@@ -594,8 +594,41 @@ pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
 
 /// search for a list of candidate names via the external `kpsewhich` utility
 /// returning the first path that is found
+///
+/// Memoized (hits AND misses) per thread, keyed by the candidate list
+/// (Principle 5, closed by the 2026-07-02 perf audit): repeated lookups of
+/// the same missing asset (e.g. a figure referenced by many
+/// `\includegraphics`) otherwise re-probe kpathsea each time — a full
+/// fork-exec per probe on the subprocess-`kpsewhich` backend (portable
+/// builds without linked libkpathsea), a cheaper but nonzero library walk
+/// on the in-process backend. Results are stable for a fixed texmf tree
+/// (the same assumption kpathsea's own ls-R cache makes).
 #[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
+  use rustc_hash::FxHashMap;
+  std::thread_local! {
+    static KPSE_MEMO: std::cell::RefCell<FxHashMap<String, Option<String>>> =
+      std::cell::RefCell::new(FxHashMap::default());
+  }
+  let key = candidates.join("\x1f");
+  if let Some(cached) = KPSE_MEMO.with(|m| m.borrow().get(&key).cloned()) {
+    return cached;
+  }
+  let result = kpsewhich_uncached(candidates);
+  KPSE_MEMO.with(|m| {
+    let mut m = m.borrow_mut();
+    // Long-lived processes (--server, test harness): bound the memo rather
+    // than grow without limit; 4096 distinct lookups per epoch is plenty.
+    if m.len() >= 4096 {
+      m.clear();
+    }
+    m.insert(key, result.clone());
+  });
+  result
+}
+
+#[cfg(feature = "kpathsea")]
+fn kpsewhich_uncached(candidates: &[&str]) -> Option<String> {
   if let Some(ref kpse) = *KPSE.lock().unwrap() {
     for candidate in candidates {
       // kpathsea-0.2.3 panics with "attempt to subtract with overflow" in
