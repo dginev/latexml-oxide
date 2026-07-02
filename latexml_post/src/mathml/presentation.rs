@@ -141,6 +141,41 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
 ///
 /// Port of `pmml` + `pmml_internal`.
 fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
+  let mut result = pmml_inner(doc, node);
+  // Port of Perl MathML.pm L344-348: attach author spacing (lpadding/rpadding,
+  // e.g. from `~` ties or collapsed XMHints — `{\rm number~of~…}`) as the
+  // internal `_lpadding`/`_rpadding` attributes the space_walk consumes
+  // (mod.rs::space_walk). Perl's `_getspace($refr, $node, …)` SUMS the
+  // referring XMRef's padding with the target's; here the XMRef branch of
+  // `pmml_inner` recurses through this wrapper for the target, and the
+  // XMRef's own padding is then added on top — same sum. Without this
+  // attachment the spacewalk sees zero author padding and `~`-separated
+  // words render jammed together (witness astro-ph0001001 S9.Ex4.m1).
+  attach_source_padding(node, &mut result);
+  result
+}
+
+/// Add `node`'s lpadding/rpadding (converted to em) onto `result`'s internal
+/// `_lpadding`/`_rpadding`, summing with any value already present.
+fn attach_source_padding(node: &Node, result: &mut NodeData) {
+  for (src, dst) in [("lpadding", "_lpadding"), ("rpadding", "_rpadding")] {
+    if let Some(v) = node.get_attribute(src) {
+      let em = super::get_xm_hint_spacing(&v);
+      if em != 0.0
+        && let NodeData::Element { ref mut attributes, .. } = *result
+      {
+        let attrs = attributes.get_or_insert_with(Default::default);
+        let prior = attrs
+          .get(dst)
+          .and_then(|s| s.trim_end_matches("em").parse::<f64>().ok())
+          .unwrap_or(0.0);
+        attrs.insert(dst.to_string(), fmt_em(prior + em));
+      }
+    }
+  }
+}
+
+fn pmml_inner(doc: &PostDocument, node: &Node) -> NodeData {
   // Fast-path dispatch: all tags we recognize live in the ltx namespace.
   // Compare localname directly and check namespace prefix separately to
   // avoid the `format!("{}:{}", prefix, localname)` allocation inside
@@ -1534,8 +1569,11 @@ fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
   }
 }
 
-/// Adjust spacing between two adjacent nodes.
-fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
+/// Adjust spacing between two adjacent nodes. `invisop` is the invisible
+/// operator sitting BETWEEN the pair, if any — Perl `adjust_pair L1220-1284`
+/// pairs the visible neighbors across it and materializes any needed
+/// adjustment on the invisible op itself (`$$invisop[1]{lspace}`).
+fn adjust_pair(prev: &mut NodeData, next: &mut NodeData, invisop: Option<&mut NodeData>) {
   let prev_role_s = get_node_role(prev);
   let next_role_s = get_node_role(next);
   let prev_role = if prev_role_s.is_empty() {
@@ -1555,10 +1593,18 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
   let tex_code = atompair_spacing(prev_type, next_type);
   let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
 
+  // Author spacing (Perl L1228-1229, L1237): explicit lpadding/rpadding from
+  // the source XMath (e.g. `~` ties in `{\rm number~of~…}` collapsed onto the
+  // word tokens) is ADDED to the TeX atom-pair spacing. This term was missing
+  // from the port — `~`-separated identifiers rendered jammed together
+  // (witness astro-ph0001001 S9.Ex4.m1).
+  let prev_req_right = get_node_attr_f64(prev, "_rpadding");
+  let next_req_left = get_node_attr_f64(next, "_lpadding");
+
   let prev_dict_right = get_node_attr_f64(prev, "_rspace");
   let next_dict_left = get_node_attr_f64(next, "_lspace");
   let default = prev_dict_right + next_dict_left;
-  let target = tex_space;
+  let target = prev_req_right + next_req_left + tex_space;
 
   if (target - default).abs() <= SPACING_EPSILON {
     return;
@@ -1567,7 +1613,12 @@ fn adjust_pair(prev: &mut NodeData, next: &mut NodeData) {
   let prev_is_mo = get_node_tag(prev) == "m:mo";
   let next_is_mo = get_node_tag(next) == "m:mo";
 
-  if prev_is_mo && next_is_mo {
+  // Perl materialization order (L1255-1283): target<0 mpadded-rewrap and the
+  // mspace width-merge branches are not yet ported (TODO, MathML-post audit);
+  // the invisible-op branch comes before the mo branches.
+  if let Some(inv) = invisop {
+    set_node_attr(inv, "lspace", &fmt_em(target));
+  } else if prev_is_mo && next_is_mo {
     let n = next_dict_left;
     let rem = target - n;
     if rem >= 0.0 {
@@ -1613,22 +1664,23 @@ pub fn adjust_spacing(node: &mut NodeData) {
         let mut i = 0;
         while i + 1 < len {
           let j = i + 1;
-          // Skip invisible operators
+          // Pair the visible neighbors ACROSS an invisible operator, handing
+          // the invisible op to adjust_pair so the adjustment can land on it
+          // (Perl space_walk L1120-1128 collects $invisop and passes it).
           if j + 1 < len
             && get_node_tag(&children[j]) == "m:mo"
             && is_node_text_invisible_op(&children[j])
           {
-            if j + 1 < len {
-              let (left, right) = children.split_at_mut(j + 1);
-              if let Some(next) = right.first_mut() {
-                adjust_pair(&mut left[i], next);
-              }
+            let (left, right) = children.split_at_mut(j);
+            let (mid, rest) = right.split_at_mut(1);
+            if let Some(next) = rest.first_mut() {
+              adjust_pair(&mut left[i], next, mid.first_mut());
             }
             i = j + 1;
           } else {
             let (left, right) = children.split_at_mut(j);
             if let Some(next) = right.first_mut() {
-              adjust_pair(&mut left[i], next);
+              adjust_pair(&mut left[i], next, None);
             }
             i = j;
           }
