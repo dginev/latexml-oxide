@@ -1253,9 +1253,10 @@ fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<(
             // get_property("id"). This only fires for a genuinely id-bearing
             // wildcard XMArg, so non-wildcard subscripts (e.g. simplemath
             // `f _ 1`, which never reaches this wildcard path) are unaffected.
-            let xmarg_id = child
-              .get_property("id")
-              .or_else(|| child.get_attribute("xml:id"));
+            // (No `get_attribute("xml:id")` fallback: per the audit it always
+            // returns None for the ns-qualified name, so it was dead code and
+            // tripped the xml:id-accessor pre-push lint.)
+            let xmarg_id = child.get_property("id");
             let xmarg_children: Vec<Node> = child.get_child_nodes();
             if xmarg_children.len() == 1 {
               let mut inner = xmarg_children[0].clone();
