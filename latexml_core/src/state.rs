@@ -1768,52 +1768,67 @@ pub fn lookup_register_quiet(cs: &str) -> Option<RegisterValue> {
   }
 }
 
-/// Faithful port of Perl `LookupDimension` (`Package.pm` L1371-1383).
+/// Faithful port of Perl `LookupDimension` (`Package.pm` L1371-1393, as
+/// widened by upstream PR #2829): try to turn the argument into a Dimension,
+/// recognizing strings, registers, ….
 ///
-/// Distinct from [`lookup_dimension`] (which casts a stored *value*) and from
-/// [`lookup_register`] / [`lookup_register_quiet`]: this resolves a control
-/// sequence's DEFINITION and, crucially, when the CS is **defined but not a
-/// register** — e.g. a document that `\def`s a length like `\arraycolsep` into a
-/// plain macro — reads its body **as a dimension** instead of warning, exactly
-/// as Perl does:
-/// * register  → `$defn->valueOf`                              (easy & proper case)
-/// * macro     → `readingFromMouth($cs, sub { readDimension })` (read the body)
-/// * undefined → `Warn('expected','register')` unless `noerror`, then `Dimension(0)`
+/// * a string that looks like an obvious dimension (`/^[0-9+-.]\w\w+$/`,
+///   e.g. `"3pt"` — but NOT `"0.4pt"`, whose `.` fails `\w`) parses directly;
+/// * otherwise the string is tokenized: a single token that resolves to a
+///   register returns its value ("easy and proper case");
+/// * a multi-token sequence is read as a dimension from a fresh mouth;
+/// * anything else warns (`expected:register`) unless `noerror`, and yields
+///   `None` (Perl returns undef).
 ///
-/// `noerror` mirrors Perl's optional second positional argument (e.g.
-/// `LookupDimension('\baselineskip', 1)`). Used where Perl uses `LookupDimension`
-/// (eqnarray `\arraycolsep`/`\jot`, list `\itemsep`/`\topsep`, …), to avoid the
-/// spurious `expected:register` warnings `lookup_register` emits on a macro-ized
-/// length (Perl is silent there).
-pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Dimension {
-  let cs_token = T_CS!(cs);
-  match lookup_definition(&cs_token) {
-    Ok(Some(defn)) if defn.is_register() => {
-      // Easy (and proper) case.
-      defn
-        .value_of(Vec::new())
-        .map(|rv| Dimension::from(&rv))
-        .unwrap_or_default()
-    },
-    Ok(Some(_defn)) => {
-      // Defined, but not a register: read its body as a dimension (Perl's
-      // `readingFromMouth($cs, sub { readDimension })`). `read_dimension`
-      // already emits the faithful "Missing number (Dimension)" warning and
-      // returns `Dimension(0)` if the body isn't a dimension.
-      gullet::reading_from_mouth(mouth::Mouth::default(), move || {
+/// NOTE the #2829 semantics change carried over faithfully: a single token
+/// whose definition is a MACRO (e.g. a document that `\def`s `\jot`) no
+/// longer reads its body as a dimension — it now falls through to the warn
+/// branch. (Perl's digested-Box coercion branch has no Rust equivalent here:
+/// all our callers pass strings.)
+pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Option<Dimension> {
+  use std::str::FromStr;
+  // Obvious dimension string? (Perl: /^[0-9\+\-\.]\w\w+$/)
+  let mut chars = cs.chars();
+  let obvious = matches!(chars.next(), Some(c) if c.is_ascii_digit() || matches!(c, '+' | '-' | '.'))
+    && cs.chars().count() >= 3
+    && chars.all(|c| c.is_alphanumeric() || c == '_');
+  if obvious && let Ok(d) = Dimension::from_str(cs) {
+    return Some(d);
+  }
+  let tokens = mouth::tokenize_internal(cs);
+  let toks = tokens.unlist();
+  if toks.len() == 1 {
+    if let Ok(Some(defn)) = lookup_definition(&toks[0]) {
+      if defn.is_register() {
+        // Easy (and proper) case.
+        return defn.value_of(Vec::new()).map(|rv| Dimension::from(&rv));
+      }
+      // Defined but not a register (a `\def`-ized length): read its body as
+      // a dimension. NB this branch is a deliberate DIVERGENCE from
+      // post-#2829 Perl, which unintentionally LOST it in the rewrite (a
+      // single macro token now falls to the warn branch upstream) — see
+      // KNOWN_PERL_ERRORS. Real arXiv papers `\def\arraycolsep{...}`
+      // (cluster regressions cover this); pre-#2829 Perl read the body.
+      let cs_token = toks[0];
+      return gullet::reading_from_mouth(mouth::Mouth::default(), move || {
         gullet::unread(Tokens::new(vec![cs_token]));
         gullet::read_dimension()
       })
-      .unwrap_or_default()
-    },
-    _ => {
-      if !noerror {
-        let message = s!("The control sequence '{}' is not a register", cs);
-        Warn!("expected", "register", message);
-      }
-      Dimension::default()
-    },
+      .ok();
+    }
+  } else if !toks.is_empty() {
+    // Multi-token: read the sequence as a dimension from a fresh mouth.
+    return gullet::reading_from_mouth(mouth::Mouth::default(), move || {
+      gullet::unread(Tokens::new(toks));
+      gullet::read_dimension()
+    })
+    .ok();
   }
+  if !noerror {
+    let message = s!("The control sequence '{}' is not a register", cs);
+    Warn!("expected", "register", message);
+  }
+  None
 }
 
 pub fn lookup_expandable(

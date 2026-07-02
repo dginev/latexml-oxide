@@ -18,6 +18,38 @@
 - `cargo test --tests`: **1506 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
   session" entries below).
 
+### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — upstream PR #2829 "Framing" ported in full
+
+Faithful translation of brucemiller/LaTeXML#2829 (merged upstream 2026-07-02,
+ref `d666adf8` — post-dates the archived U1-U11 sync window):
+
+- `LookupDimension` coercion widening (`state.rs::lookup_dimension_cs` →
+  `Option<Dimension>`): obvious-dimension strings parse directly, tokenized
+  specs resolve registers or read multi-token dimensions. **KNOWN_PERL_ERRORS
+  #41**: the upstream rewrite unintentionally LOST the macro-body-read path
+  for `\def`-ized lengths (warns + 0 now) — Rust keeps it (deliberate
+  divergence, covered by the arraycolsep cluster regressions).
+- `framedProperties` helper (`tex_box.rs`, pub via prelude): consistent
+  framed/framecolor/cssstyle attributes + pad* Dimension properties;
+  `\lx@framed` now takes `OptionalKeyVals:framed` (margin/rule).
+- `insertBlock` filters properties to the ltx:figure attribute set.
+- `\makebox`: alignment map gains `c`→center, `s`→stretched (was
+  "justified"); width without explicit alignment defaults to center.
+  `\@framebox` properties now via framedProperties (this RESOLVES the
+  KNOWN_PERL_ERRORS #35 `$sep ne '3.0pt'` bug upstream — entry updated), and
+  the single-child unwrap is skipped when an explicit width was given.
+- framed.sty ({framed}/{oframed}/{shaded}/{shaded*}/{snugshade} via
+  framedProperties — shaded family now carries framed=rectangle+framecolor;
+  {leftbar} direct properties, its `color` filtered out by insertBlock;
+  {titled-frame} margin 0pt/rule 2pt), ntheorem `\lx@addframing` (copies
+  framed/framecolor/cssstyle, cssstyle SET not merged), soul `\textul`
+  (framedProperties with font-color fallback → framecolor always present).
+- CSS: `.ltx_framed { padding:3pt; }` default removed (padding now supplied
+  per-construct via framedProperties).
+- All 6 upstream fixture updates mirrored: our re-blessed
+  tabbing/mathtools/marvosym/soul/framed/ntheorem golden diffs are
+  **byte-identical to the upstream fixture diffs**. Suite 1506/0.
+
 ### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — MathML-post exhaustive line audit, wave 1+2
 
 User-commissioned ("the Rust translation wants to be an exhaustive port") audit

@@ -40,7 +40,7 @@ pub mod base_utilities; // Perl: Base_Utility.pool.ltxml
 pub mod base_xmath; // Perl: Base_XMath.pool.ltxml // Perl: Base_Deprecated.pool.ltxml
 
 // TeX_*.pool.ltxml
-mod tex_box; // Perl: TeX_Box.pool.ltxml
+pub mod tex_box; // Perl: TeX_Box.pool.ltxml
 mod tex_character; // Perl: TeX_Character.pool.ltxml
 mod tex_debugging; // Perl: TeX_Debugging.pool.ltxml
 mod tex_file_io; // Perl: TeX_FileIO.pool.ltxml

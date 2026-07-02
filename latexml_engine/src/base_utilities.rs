@@ -2741,6 +2741,14 @@ pub fn insert_block(
   contents: &Digested,
   block_attr: HashMap<String, String>,
 ) -> Result<Vec<Node>> {
+  // Perl #2829 (TeX_Box.pool insertBlock L449-456): callers may (sloppily)
+  // pass ALL Whatsit properties, but only SOME are intended as attributes.
+  // Filter out non-attributes, based on what ltx:figure accepts — a maximal
+  // set of the attributes for candidate containers.
+  let block_attr: HashMap<String, String> = block_attr
+    .into_iter()
+    .filter(|(k, _)| document::can_have_attribute("ltx:figure", k))
+    .collect();
   // Create something like:
   // "<ltx:inline-block vattach='$vattach' height='#height'>#2</ltx:inline-block>"
   let context_opt = document.get_element(); // Where we originally start inserting.

@@ -43,12 +43,16 @@ fn numcases_bindings(lhs: Tokens) -> Result<()> {
   // LookupDimension (lookup_dimension_cs), not lookup_register, so a `\def`-ized
   // `\arraycolsep` reads its body silently, matching Perl — lookup_register would
   // emit a spurious `expected:register` warning (same class as the eqnarray fix).
-  let colsep_dim = lookup_dimension_cs("\\arraycolsep", false);
+  let colsep_dim = lookup_dimension_cs("\\arraycolsep", false).unwrap_or_default();
   let doubled = Dimension::new(colsep_dim.value_of() * 2);
   attrs.insert(String::from("colsep"), doubled.to_attribute());
   // Perl (cases.sty.ltxml L83-85): \jot ≠ default → rowsep on the equationgroup.
-  let cur_jot = lookup_dimension_cs("\\jot", false);
-  if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+  let cur_jot = lookup_dimension_cs("\\jot", false).unwrap_or_default();
+  if cur_jot.value_of()
+    != lookup_dimension_cs("\\lx@default@jot", false)
+      .unwrap_or_default()
+      .value_of()
+  {
     attrs.insert(String::from("rowsep"), cur_jot.to_string());
   }
 

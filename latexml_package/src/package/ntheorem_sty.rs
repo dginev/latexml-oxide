@@ -1,3 +1,5 @@
+use latexml_core::common::color;
+
 use crate::{engine::latex_constructs::*, prelude::*};
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -197,25 +199,26 @@ LoadDefinitions!({
   //======================================================================
   // Framing support
   // Perl: ntheorem.sty.ltxml lines 213-220
+  // Perl (#2829): `\lx@addframing` copies the framedProperties results
+  // (framed/framecolor/cssstyle) straight onto the current element —
+  // cssstyle is SET, not merged.
   DefConstructor!("\\lx@addframing", sub[document, _args, props] {
     let mut node = document.get_element().unwrap();
-    document.set_attribute(&mut node, "framed", "rectangle")?;
-    // Add padding from \FrameSep register
-    if let Some(Stored::String(margin)) = props.get("margin") {
-      let margin_str = with(*margin, |s| s.to_string());
-      let pad = s!("padding:{}pt;", margin_str);
-      let existing = node.get_attribute("cssstyle").unwrap_or_default();
-      let css = if existing.is_empty() { pad } else { s!("{};{}", existing, pad) };
-      document.set_attribute(&mut node, "cssstyle", &css)?;
+    for key in ["framed", "framecolor", "cssstyle"] {
+      if let Some(v) = props.get(key) {
+        let val = v.to_string();
+        if !val.is_empty() {
+          document.set_attribute(&mut node, key, &val)?;
+        }
+      }
     }
   },
   properties => sub[_args] {
-    let margin = LookupRegisterOrDefault!("\\FrameSep");
-    let pt_val = match margin {
-      RegisterValue::Dimension(d) => d.pt_value(None),
-      _ => 9.0, // default 3*\fboxsep = 9pt
-    };
-    Ok(stored_map!("margin" => s!("{}", pt_val)))
+    Ok(framed_properties(FramedOptions {
+      color: Some(color::BLACK.to_attribute()),
+      margin: Some("\\FrameSep".to_string()),
+      ..FramedOptions::default()
+    }))
   });
 
   // Perl: ntheorem.sty.ltxml lines 228-248

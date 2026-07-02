@@ -17,7 +17,11 @@ use latexml_core::{
 /// NOTE: This will be loaded after `TeX.pool`, so it inherits.
 ///**********************************************************************
 use crate::base_utilities::insert_frontmatter;
-use crate::{prelude::*, tex_tables::alignment_bindings};
+use crate::{
+  prelude::*,
+  tex_box::{FramedOptions, framed_properties},
+  tex_tables::alignment_bindings,
+};
 
 // digested_to_text moved to base_utilities.rs (PR #2767: needed by
 // digest_front_matter for the creator before-separators).
@@ -971,7 +975,7 @@ pub fn eqnarray_bindings() -> Result<()> {
   // LookupDimension (not lookup_register) so a document that `\def`s
   // `\arraycolsep` into a plain macro reads its body silently, matching Perl —
   // `lookup_register` would emit a spurious `expected:register` warning there.
-  let acol = lookup_dimension_cs("\\arraycolsep", false);
+  let acol = lookup_dimension_cs("\\arraycolsep", false).unwrap_or_default();
   let colsep = acol.pt_value(None) * 2.0;
   if colsep > 0.0 {
     xml_attrs.insert(String::from("colsep"), s!("{}pt", colsep));
@@ -979,8 +983,12 @@ pub fn eqnarray_bindings() -> Result<()> {
   // Perl: my $cur_jot = LookupDimension('\jot');
   //   if ($cur_jot && $cur_jot->valueOf != LookupDimension('\lx@default@jot')->valueOf)
   //     { $attributes{rowsep} = $cur_jot; }
-  let cur_jot = lookup_dimension_cs("\\jot", false);
-  if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+  let cur_jot = lookup_dimension_cs("\\jot", false).unwrap_or_default();
+  if cur_jot.value_of()
+    != lookup_dimension_cs("\\lx@default@jot", false)
+      .unwrap_or_default()
+      .value_of()
+  {
     xml_attrs.insert(String::from("rowsep"), cur_jot.to_string());
   }
   let mut properties = SymHashMap::default();
@@ -2510,8 +2518,18 @@ fn unicode_enclosed_alphanumeric(text: &str) -> Option<String> {
 }
 
 #[rustfmt::skip]
-LoadDefinitions!({
+/// Perl `%makebox_alignment` (#2829): l/r/c/s → left/right/center/stretched.
+fn makebox_alignment(key: &str) -> &'static str {
+  match key {
+    "l" => "left",
+    "r" => "right",
+    "c" => "center",
+    "s" => "stretched",
+    _ => "",
+  }
+}
 
+LoadDefinitions!({
   // Perl `latex_constructs.pool.ltxml` L19-38 — force-reload of
   // `plain_constructs` and `math_common`. By the time
   // `latex_constructs` runs, both pools were already loaded during the
@@ -2540,11 +2558,7 @@ LoadDefinitions!({
     Stored::None,
     Some(Scope::Global),
   );
-  assign_value(
-    "math_common.pool_loaded",
-    Stored::None,
-    Some(Scope::Global),
-  );
+  assign_value("math_common.pool_loaded", Stored::None, Some(Scope::Global));
   // The reloads MUST run with state unlocked. By the time we get here,
   // the first plain-format pass has already locked common math CSes
   // (e.g. `\prime`, `\active@math@prime`) via their `locked => true`
@@ -2611,7 +2625,6 @@ LoadDefinitions!({
   // ======================================================================
   // C.1 Commands and Environments
   // ======================================================================
-
 
   // Perl latex_constructs.pool.ltxml L45-48 — page counter + early Lets.
   // These are redundant with `NewCounter!("page")` later in the file
@@ -2711,15 +2724,16 @@ LoadDefinitions!({
   AssignValue!("@unusedoptionlist", Stored::Strings(Rc::new([])));
   DefPrimitive!("\\warn@unusedclassoptions", {
     if let Some(Stored::Strings(unused)) = lookup_value("@unusedoptionlist")
-      && !unused.is_empty() {
-        Info!(
-          "unexpected",
-          "options",
-          "Unused global options: {}",
-          with_many(&unused, |u| u.join(","))
-        );
-        assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
-      }
+      && !unused.is_empty()
+    {
+      Info!(
+        "unexpected",
+        "options",
+        "Unused global options: {}",
+        with_many(&unused, |u| u.join(","))
+      );
+      assign_value("@unusedoptionlist", Stored::Strings(Rc::new([])), None);
+    }
   });
 
   // Perl latex_constructs.pool.ltxml:137-154:
@@ -2751,19 +2765,14 @@ LoadDefinitions!({
     let unused_list: Vec<String> = match lookup_value("@unusedoptionlist") {
       // `\OptionNotUsed` uses `state::push_value` which converts `Strings`
       // → `VecDequeStored` on first push. Either form may be live here.
-      Some(Stored::Strings(rc)) => {
-        rc.iter()
-          .map(|s| with(*s, |s| s.to_string()))
-          .collect()
-      },
-      Some(Stored::VecDequeStored(vdq)) => {
-        vdq.iter()
-          .filter_map(|item| match item {
-            Stored::String(s) => Some(with(*s, |s| s.to_string())),
-            _ => None,
-          })
-          .collect()
-      },
+      Some(Stored::Strings(rc)) => rc.iter().map(|s| with(*s, |s| s.to_string())).collect(),
+      Some(Stored::VecDequeStored(vdq)) => vdq
+        .iter()
+        .filter_map(|item| match item {
+          Stored::String(s) => Some(with(*s, |s| s.to_string())),
+          _ => None,
+        })
+        .collect(),
       _ => Vec::new(),
     };
     let mut had_missing = false;
@@ -2780,11 +2789,26 @@ LoadDefinitions!({
       // even though the paper-local sty defines them. Min repro:
       // `\documentstyle[mysty]{article}` with local mysty.sty.
       use latexml_core::binding::content::FindFileOptions;
-      let found_binding = find_file(&format!("{opt}.sty"),
-        Some(FindFileOptions { notex: true, ..Default::default() })).is_some();
+      let found_binding = find_file(
+        &format!("{opt}.sty"),
+        Some(FindFileOptions {
+          notex: true,
+          ..Default::default()
+        }),
+      )
+      .is_some();
       let found_fallback = !found_binding && find_file_fallback(opt, "sty").is_some();
-      let found_disk = !found_binding && !found_fallback && find_file(opt,
-        Some(FindFileOptions { ext_type: Some("sty".into()), forbid_ltxml: true, ..Default::default() })).is_some();
+      let found_disk = !found_binding
+        && !found_fallback
+        && find_file(
+          opt,
+          Some(FindFileOptions {
+            ext_type: Some("sty".into()),
+            forbid_ltxml: true,
+            ..Default::default()
+          }),
+        )
+        .is_some();
       if found_binding || found_fallback || found_disk {
         // When the file was found ONLY via paper-local disk-probe (no
         // .sty.ltxml binding and no version-strip fallback), we must
@@ -2796,18 +2820,30 @@ LoadDefinitions!({
         // RequirePackage but never actually loaded, leaving `\affil`,
         // `\references`, etc. undefined.
         let opts = if found_disk {
-          RequireOptions { notex: Some(false), ..RequireOptions::default() }
+          RequireOptions {
+            notex: Some(false),
+            ..RequireOptions::default()
+          }
         } else {
           RequireOptions::default()
         };
         require_package(opt, opts)?;
       } else {
         had_missing = true;
-        Info!("unexpected", opt, "Unexpected option '{}' passed via \\documentstyle", opt);
+        Info!(
+          "unexpected",
+          opt,
+          "Unexpected option '{}' passed via \\documentstyle",
+          opt
+        );
       }
     }
     if had_missing && !lookup_bool("OmniBus.cls_loaded") {
-      Info!("note", "OmniBus", "Loading OmniBus class to attempt to cover missing options");
+      Info!(
+        "note",
+        "OmniBus",
+        "Loading OmniBus class to attempt to cover missing options"
+      );
       load_class("OmniBus", Vec::new(), Tokens!())?;
     }
     assign_value(
@@ -2820,7 +2856,6 @@ LoadDefinitions!({
   // onlyPreamble (Perl helper) — flag-only; the actual Error emission when
   // used outside preamble is a future polish (the mis-use cascade already
   // surfaces downstream Errors today).
-
 
   AssignValue!("current_environment", String::new(), Some(Scope::Global));
   def_macro_noop("\\@currenvir")?;
@@ -2853,7 +2888,10 @@ LoadDefinitions!({
   // Dropping the artifact matches standard-LaTeX semantics. Witness
   // 2007.09971 (IEEEtran+extract under ar5iv: 41 errors -> clean). See
   // KNOWN_PERL_ERRORS.md.
-  DefMacro!("\\@checkend{}", r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi");
+  DefMacro!(
+    "\\@checkend{}",
+    r"\def\reserved@a{#1}\ifx\reserved@a\@currenvir \else\@badend{#1}\fi"
+  );
 
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
@@ -2922,7 +2960,6 @@ LoadDefinitions!({
     Ok(Tokens::new(out_tokens))
   });
 
-
   TeX!(
     r"
 \def\@ignorefalse{\global\let\if@ignore\iffalse}
@@ -2985,7 +3022,6 @@ LoadDefinitions!({
 \newif\if@noskipsec \@noskipsectrue
 "
   );
-
 
   //======================================================================
   // C.1.4 Declarations
@@ -3058,11 +3094,9 @@ LoadDefinitions!({
   );
   DefMacro!("\\@icentercr[]", "\\vskip #1\\ignorespaces");
 
-
   // ======================================================================
   // C.2 The Structure of the Document
   // ======================================================================
-
 
   //**********************************************************************
   // C.2. The Structure of the Document
@@ -3314,11 +3348,9 @@ LoadDefinitions!({
   // \enddocument is used directly in e.g. standalone.cls
   Let!("\\enddocument", "\\end{document}", Scope::Global);
 
-
   // ======================================================================
   // C.3 Sentences and Paragraphs
   // ======================================================================
-
 
   //======================================================================
   // C.3.1 Making Sentences
@@ -3539,11 +3571,9 @@ LoadDefinitions!({
   // \footnotesep register lives in `latex_constructs_rust_only.rs` section 8.
   def_primitive_noop("\\footnoterule")?;
 
-
   // ======================================================================
   // C.4 Sectioning and Table of Contents
   // ======================================================================
-
 
   //======================================================================
   // C.4.1 Sectioning Commands.
@@ -3979,11 +4009,9 @@ LoadDefinitions!({
   //======================================================================
   NewCounter!("tocdepth");
 
-
   // ======================================================================
   // C.5 Classes, Packages and Page Styles
   // ======================================================================
-
 
   // ======================================================================
   // C.5.2 Packages
@@ -4129,13 +4157,13 @@ LoadDefinitions!({
   // with an `Info:ignore` (etoolbox_sty.rs:31), so the cascade lands
   // correctly with the most-recent definition still in effect.
   DefMacro!("\\IncludeInRelease{}{}{} Until:\\EndIncludeInRelease",
-    sub[(_date, _cs, _descr, body)] {
-      Ok(body)
-    });
+  sub[(_date, _cs, _descr, body)] {
+    Ok(body)
+  });
   DefMacro!("\\NewModuleRelease{}{}{} Until:\\EndModuleRelease",
-    sub[(_date, _cs, _descr, body)] {
-      Ok(body)
-    });
+  sub[(_date, _cs, _descr, body)] {
+    Ok(body)
+  });
 
   DefPrimitive!("\\DeclareOption{}{}", sub[(option, code)] {
     let option_str = option.to_string();
@@ -4253,7 +4281,11 @@ LoadDefinitions!({
   DefPrimitive!("\\@unknownoptionerror", {
     let option = Expand!(T_CS!("\\CurrentOption")).to_string();
     let name = Expand!(T_CS!("\\@currname")).to_string();
-    Info!("unexpected", &option, &s!("Unknown option '{}' for {}", option, name));
+    Info!(
+      "unexpected",
+      &option,
+      &s!("Unknown option '{}' for {}", option, name)
+    );
   });
 
   DefPrimitive!("\\ExecuteOptions{}", sub[(options)] {
@@ -4393,8 +4425,10 @@ LoadDefinitions!({
   // placement), but they need to be defined so latex.ltx-driven code paths
   // that consult them (e.g. via `\@cons`) don't error on `\@empty` lookups.
   def_macro_identity("\\@topnewpage{}")?;
-  DefMacro!("\\@next{}{}{}{}",
-    r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi");
+  DefMacro!(
+    "\\@next{}{}{}{}",
+    r"\ifx#2\@empty #4\else\expandafter\@xnext #2\@@#1#2#3\fi"
+  );
   TeX!(r"\def\@xnext \@elt #1#2\@@#3#4{\def#3{#1}\gdef#4{#2}}");
   Let!("\\@elt", "\\relax");
   def_macro_noop("\\@freelist")?;
@@ -4437,13 +4471,17 @@ LoadDefinitions!({
   NewCounter!("page");
   SetCounter!("page" => Number::new(1));
   DefMacro!("\\@mkboth", "\\@gobbletwo");
-  DefMacro!("\\ps@empty",
+  DefMacro!(
+    "\\ps@empty",
     "\\let\\@mkboth\\@gobbletwo\\let\\@oddhead\\@empty\\let\\@oddfoot\\@empty\
-     \\let\\@evenhead\\@empty\\let\\@evenfoot\\@empty");
-  DefMacro!("\\ps@plain",
+     \\let\\@evenhead\\@empty\\let\\@evenfoot\\@empty"
+  );
+  DefMacro!(
+    "\\ps@plain",
     "\\let\\@mkboth\\@gobbletwo\
      \\let\\@oddhead\\@empty\\def\\@oddfoot{\\reset@font\\hfil\\thepage\
-     \\hfil}\\let\\@evenhead\\@empty\\let\\@evenfoot\\@oddfoot");
+     \\hfil}\\let\\@evenhead\\@empty\\let\\@evenfoot\\@oddfoot"
+  );
   Let!("\\@leftmark", "\\@firstoftwo");
   Let!("\\@rightmark", "\\@secondoftwo");
 
@@ -4549,10 +4587,10 @@ LoadDefinitions!({
   // not in Perl `*.ltxml`, defined in TL `cyracc.def` for math
   // context only. Per WISDOM #50 the visual intent (apostrophe-like
   // mark) is what survives the XML→HTML pipeline.
-  DefMacro!("\\cprime",   "\u{02B9}");
-  DefMacro!("\\Cprime",   "\u{02B9}");
-  DefMacro!("\\cdprime",  "\u{02BA}");
-  DefMacro!("\\Cdprime",  "\u{02BA}");
+  DefMacro!("\\cprime", "\u{02B9}");
+  DefMacro!("\\Cprime", "\u{02B9}");
+  DefMacro!("\\cdprime", "\u{02BA}");
+  DefMacro!("\\Cdprime", "\u{02BA}");
   // `\polhk{char}` — Polish hook (ogonek) accent. Defined in tipa.sty
   // for TS1-encoded composite output. Bibliographies use it directly
   // (e.g. `\polhk{a}` → ą). Stub as identity so the bare char shows.
@@ -4632,8 +4670,10 @@ LoadDefinitions!({
   // In case \maketitle isn't used in the document, let's check for it.
   AddToMacro!("\\@startsection@hook", "\\lx@frontmatter@fallback");
   // in cases such as titlepage, the document end is the last fallback.
-  let _ = push_value("@at@end@document",
-    Tokens!(T_CS!("\\lx@frontmatter@fallback")));
+  let _ = push_value(
+    "@at@end@document",
+    Tokens!(T_CS!("\\lx@frontmatter@fallback")),
+  );
 
   DefMacro!("\\@thanks", "\\@empty");
   // Perl (PR #2767): `\thanks[]{}` → '\def\@thanks{#2}\lx@add@pubnote{#2}' —
@@ -4644,7 +4684,10 @@ LoadDefinitions!({
   // to `OptionalSemiverbatim` so a literal `_` in the label doesn't bleed
   // through as `T_SUB` and trip the script-handler text-mode error.
   // Perl uses default catcodes for `[opt]` and SHARES the failure mode.
-  DefMacro!("\\thanks OptionalSemiverbatim {}", r"\def\@thanks{#2}\lx@add@pubnote{#2}");
+  DefMacro!(
+    "\\thanks OptionalSemiverbatim {}",
+    r"\def\@thanks{#2}\lx@add@pubnote{#2}"
+  );
 
   // Abstract SHOULD have been so simple, but seems to be a magnet for abuse & confusion.
   // Standard LaTeX classes expect it after \maketitle, and deposit it where found.
@@ -4673,9 +4716,15 @@ LoadDefinitions!({
   },
   locked => true);
 
-  DefMacro!("\\endabstract", "\\lx@end@abstract\\let\\maybe@end@abstract\\relax");
+  DefMacro!(
+    "\\endabstract",
+    "\\lx@end@abstract\\let\\maybe@end@abstract\\relax"
+  );
   DefMacro!("\\maybe@end@abstract", "\\lx@end@abstract");
-  DefMacro!("\\lx@abstract@name", "\\format@title@abstract{\\abstractname}"); // Redefine
+  DefMacro!(
+    "\\lx@abstract@name",
+    "\\format@title@abstract{\\abstractname}"
+  ); // Redefine
   DefMacro!("\\abstractname", "Abstract");
   def_macro_identity("\\format@title@abstract{}")?;
 
@@ -4757,11 +4806,9 @@ LoadDefinitions!({
   def_macro_noop("\\@evenfoot")?;
   def_macro_noop("\\@evenfoot")?;
 
-
   // ======================================================================
   // C.6 Displayed Paragraphs
   // ======================================================================
-
 
   // `mode => "internal_vertical"`: LaTeX's `{center}`/`{flushleft}`/
   // `{flushright}` open a trivlist (vertical structure); the body's
@@ -4878,7 +4925,7 @@ LoadDefinitions!({
   // frame. `\begin{flushleft}` / `\end{flushleft}` still go through the
   // environment constructors and are unaffected.
   Let!("\\flushright", "\\raggedleft");
-  Let!("\\flushleft",  "\\raggedright");
+  Let!("\\flushleft", "\\raggedright");
 
   // Perl: Let('\@block@cr', '\lx@newline');  # Obsolete, but in case still used
   Let!("\\@block@cr", "\\lx@newline");
@@ -4891,7 +4938,6 @@ LoadDefinitions!({
   DefEnvironment!("{verse}",
     "<ltx:quote role='verse'>#body</ltx:quote>",
     mode => "internal_vertical");
-
 
   //======================================================================
   // C.6.2 List-Making environments
@@ -5171,7 +5217,6 @@ LoadDefinitions!({
     DefMacro!(T_CS!(s!("\\{}name", lvl)), None, T_CS!("\\desctyperefname"));
   }
 
-
   //======================================================================
   // C.6.3 The list and trivlist environments.
   //======================================================================
@@ -5326,14 +5371,14 @@ LoadDefinitions!({
   // So, we'll end up doing things more manually.
   // We're going to sidestep the Gullet for inputting,
   // and also the usual environment capture.
-  DefConstructor!(T_CS!("\\begin{verbatim}"), None, 
+  DefConstructor!(T_CS!("\\begin{verbatim}"), None,
     "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
     before_digest => { before_digest_verbatim() }
     after_digest => sub[whatsit] { after_digest_verbatim(false, whatsit)?; },
     before_construct => sub[document, _whatsit] {
       document.maybe_close_element("ltx:p")?; }
   );
-  DefConstructor!(T_CS!("\\begin{verbatim*}"), None, 
+  DefConstructor!(T_CS!("\\begin{verbatim*}"), None,
     "<ltx:verbatim font='#font'>#body</ltx:verbatim>",
     before_digest => { before_digest_verbatim() }
     after_digest => sub[whatsit] { after_digest_verbatim(true, whatsit)?; },
@@ -5360,7 +5405,7 @@ LoadDefinitions!({
   // WARNING: Need to be careful about what catcodes are active here
   // And clearly separate expansion from digestion
   DefMacro!("\\verb", {
-   begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
+    begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
     // Do NOT (necessarily) skip spaces after \verb!!!
     assign_catcode(' ', Catcode::ACTIVE, None);
     let mut init = None;
@@ -5378,15 +5423,17 @@ LoadDefinitions!({
     }
     let mut starred = false;
     if let Some(ref init_token) = init
-      && *init_token == T_OTHER!("*") && !skipped_space {
-        starred = true;
-        while let Some(maybe_init) =  read_token()? {
-          if maybe_init.get_sym() != space_sym {
-            init = Some(maybe_init);
-            break;
-          }
+      && *init_token == T_OTHER!("*")
+      && !skipped_space
+    {
+      starred = true;
+      while let Some(maybe_init) = read_token()? {
+        if maybe_init.get_sym() != space_sym {
+          init = Some(maybe_init);
+          break;
         }
       }
+    }
     if let Some(init_token) = init {
       let init_ch = init_token.with_str(|is| is.chars().next().unwrap());
       assign_catcode(init_ch, Catcode::ACTIVE, None);
@@ -5398,16 +5445,27 @@ LoadDefinitions!({
       if starred {
         result.push(T_CS!("\\lx@use@visiblespace"));
       }
-      result.extend(Invocation!(T_CS!("\\@internal@verb"), vec![
-        if starred { Tokens!(T_OTHER!("*")) } else { Tokens!() },
-        Tokens!(init_token),
-        body
-      ]).unlist());
+      result.extend(
+        Invocation!(T_CS!("\\@internal@verb"), vec![
+          if starred {
+            Tokens!(T_OTHER!("*"))
+          } else {
+            Tokens!()
+          },
+          Tokens!(init_token),
+          body
+        ])
+        .unlist(),
+      );
       result.push(T_CS!("\\lx@hidden@egroup"));
       Ok(Tokens::new(result))
-    } else { // typically something read too far got \verb and the content is somewhere else..?
-      Error!("expected", "delimiter",
-        "Verbatim argument lost\n Bindings for preceding code is probably broken");
+    } else {
+      // typically something read too far got \verb and the content is somewhere else..?
+      Error!(
+        "expected",
+        "delimiter",
+        "Verbatim argument lost\n Bindings for preceding code is probably broken"
+      );
       end_semiverbatim()?;
       Ok(Tokens!())
     }
@@ -5421,8 +5479,10 @@ LoadDefinitions!({
   });
 
   // Arrange to digest the body in text mode, to keep (eg) "_" from turning to "\_"
-  DefMacro!("\\@internal@verb{}{}{}",
-      r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi");
+  DefMacro!(
+    "\\@internal@verb{}{}{}",
+    r"\ifmmode\@internal@math@verb{#1}{#2}{#3}\else\@internal@text@verb{#1}{#2}{#3}\fi"
+  );
   DefConstructor!("\\@internal@math@verb{} Undigested {}",
     "<ltx:XMTok font='#font'>#3</ltx:XMTok>",
     mode      => "text",
@@ -5440,7 +5500,6 @@ LoadDefinitions!({
     },
     reversion => "\\verb#1#2#3#2");
 
-
   // Actually, latex sets catcode to 13 ... is this close enough?
   DefPrimitive!("\\obeycr", {
     AssignValue!("PRESERVE_NEWLINES", 1);
@@ -5450,11 +5509,9 @@ LoadDefinitions!({
   });
   DefMacro!(T_CS!("\\normalsfcodes"), None, Tokens!());
 
-
   // ======================================================================
   // C.7 Mathematical Formulas
   // ======================================================================
-
 
   DefMacro!("\\@eqnnum", "(\\theequation)", locked => true);
   DefMacro!("\\fnum@equation", "\\@eqnnum");
@@ -5494,7 +5551,9 @@ LoadDefinitions!({
     "\\lx@end@fake@intertext",
     "\\let\\lx@begin@display@math\\lx@saved@begin@display@math\\let\\[\\lx@saved@bdm\\begin{equation}"
   );
-  DefPrimitive!("\\lx@retract@eqnno", { retract_equation(); });
+  DefPrimitive!("\\lx@retract@eqnno", {
+    retract_equation();
+  });
 
   DefEnvironment!("{displaymath}",
   "<ltx:equation xml:id='#id'><ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
@@ -5538,14 +5597,13 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml lines 2039-2057
   DefMacro!("\\nonumber", "\\lx@equation@nonumber");
   DefPrimitive!("\\lx@equation@nonumber", {
-    let (in_equation, defer_retract) =
-      with_value("EQUATION_NUMBERING", |v| match v {
-        Some(Stored::HashStored(n)) => (
-          matches!(n.get("in_equation"), Some(&Stored::Bool(true))),
-          matches!(n.get("deferretract"), Some(&Stored::Bool(true))),
-        ),
-        _ => (false, false),
-      });
+    let (in_equation, defer_retract) = with_value("EQUATION_NUMBERING", |v| match v {
+      Some(Stored::HashStored(n)) => (
+        matches!(n.get("in_equation"), Some(&Stored::Bool(true))),
+        matches!(n.get("deferretract"), Some(&Stored::Bool(true))),
+      ),
+      _ => (false, false),
+    });
     if in_equation {
       if defer_retract {
         with_value_mut("EQUATIONROW_TAGS", |tags_opt| {
@@ -5564,7 +5622,9 @@ LoadDefinitions!({
     "\\lx@equation@settag",
     "\\lx@equation@retract\\lx@equation@settag@"
   );
-  DefPrimitive!("\\lx@equation@retract", { retract_equation(); });
+  DefPrimitive!("\\lx@equation@retract", {
+    retract_equation();
+  });
   DefPrimitive!(
     "\\lx@equation@settag@ {}",
     sub[(content)] {
@@ -5619,12 +5679,20 @@ LoadDefinitions!({
   });
 
   // Perl: latex_constructs.pool.ltxml lines 2282-2285
-  DefPrimitive!("\\eqnarray@row@before@", { before_equation()?; });
+  DefPrimitive!("\\eqnarray@row@before@", {
+    before_equation()?;
+  });
   DefPrimitive!("\\eqnarray@row@after@", {
     after_equation(None)?;
   });
-  DefMacro!("\\eqnarray@row@before", "\\lx@hidden@noalign{\\eqnarray@row@before@}");
-  DefMacro!("\\eqnarray@row@after", "\\lx@hidden@noalign{\\eqnarray@row@after@}");
+  DefMacro!(
+    "\\eqnarray@row@before",
+    "\\lx@hidden@noalign{\\eqnarray@row@before@}"
+  );
+  DefMacro!(
+    "\\eqnarray@row@after",
+    "\\lx@hidden@noalign{\\eqnarray@row@after@}"
+  );
 
   // Perl: latex_constructs.pool.ltxml lines 2323-2329
   // \lx@eqnarray@label wraps the label in \lx@hidden@noalign so it's processed
@@ -5642,8 +5710,10 @@ LoadDefinitions!({
   // un-consumed `[type]{key}` reaches math digestion as text/subscript tokens
   // and an `eq:foo_bar_baz`-style key fires "double subscript" errors.
   // Witness 2311.02006.
-  DefMacro!("\\lx@eqnarray@label [OptionalSemiverbatim] Semiverbatim",
-    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}}");
+  DefMacro!(
+    "\\lx@eqnarray@label [OptionalSemiverbatim] Semiverbatim",
+    "\\lx@hidden@noalign{\\lx@eqnarray@save@label{#2}}"
+  );
 
   // Perl: latex_constructs.pool.ltxml lines 2262-2335
   // eqnarray and eqnarray* — alignment-based environments
@@ -5686,24 +5756,27 @@ LoadDefinitions!({
 
   // Perl: latex_constructs.pool.ltxml lines 2243-2247
   DefConditional!("\\if@in@firstcolumn", {
-    match lookup_alignment() { Some(alignment_digested) => {
-      if let Some(alignment_cell) = alignment_digested.alignment_cell() {
-        let alignment = alignment_cell.borrow();
-        !alignment.is_in_row()
-          || (!alignment.is_in_column() && alignment.current_column_number() < 2)
-      } else {
-        false
-      }
-    } _ => {
-      false
-    }}
+    match lookup_alignment() {
+      Some(alignment_digested) => {
+        if let Some(alignment_cell) = alignment_digested.alignment_cell() {
+          let alignment = alignment_cell.borrow();
+          !alignment.is_in_row()
+            || (!alignment.is_in_column() && alignment.current_column_number() < 2)
+        } else {
+          false
+        }
+      },
+      _ => false,
+    }
   });
 
   // Perl: latex_constructs.pool.ltxml lines 2251-2254
-  DefMacro!("\\lefteqn{}",
+  DefMacro!(
+    "\\lefteqn{}",
     "\\ifx.#1.\\else\
       \\if@in@firstcolumn\\multicolumn{3}{l}{\\@ADDCLASS{ltx_eqn_lefteqn}\\lx@begin@inline@math \\displaystyle #1\\lx@end@inline@math\\mbox{}}\
-      \\else\\rlap{\\lx@begin@inline@math\\displaystyle #1\\lx@end@inline@math}\\fi\\fi");
+      \\else\\rlap{\\lx@begin@inline@math\\displaystyle #1\\lx@end@inline@math}\\fi\\fi"
+  );
 
   // Perl: latex_constructs.pool.ltxml lines 2258-2259
   Let!("\\displ@y", "\\displaystyle");
@@ -5719,85 +5792,85 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml L2174-2191
   // \lx@equationgroup@subnumbering@begin/end — subequation numbering
   DefConstructor!("\\lx@equationgroup@subnumbering@begin",
-    "<ltx:equationgroup xml:id='#id'>#tags",
-    after_digest => sub[whatsit] {
-      use latexml_core::binding::counter::dialect::reset_counter;
-      use latexml_core::mouth;
-      // Step the equation counter and get properties (id, refnum, tags)
-      let eqn_props = ref_step_counter("equation", false)?;
-      // Expand \theequation to get the parent equation number tokens.
-      // Keep the TOKEN list — do NOT round-trip through `.to_string()` +
-      // re-tokenize: a `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`
-      // expands to `{ \rm S } <n>`, and serializing that drops the space
-      // between the control word `\rm` and the letter `S`, so re-tokenizing
-      // "{\rmS}<n>" yields the undefined CS `\rmS`. Perl fixates the parent
-      // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
-      // L1134) — token-level, no string round-trip. Witness 2005.06712
-      // (subequation tags `(S15a)` → `(\rmS15a)`).
-      let eqnum_toks = do_expand(T_CS!("\\theequation"))?;
-      // Save current equation counter value
-      let saved = lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
-        match rv {
-          RegisterValue::Number(n) => n.0,
-          _ => 0,
-        }
-      });
-      assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
-      // Set properties on the whatsit
-      for (k, v) in eqn_props {
-        with(k, |ks| whatsit.set_property(ks, v));
-      }
-      // Reset equation counter to 0
-      reset_counter(&T_OTHER!("equation"))?;
-      // amsmath.sty L1134: `\protected@edef\theparentequation{\theequation}`
-      // — fixates the parent equation's expansion before the local
-      // \theequation is redefined. Papers commonly do
-      // `\renewcommand{\theequation}{\theparentequation\alph{equation}}`
-      // inside subequations, expecting \theparentequation to resolve.
-      // Witness 2402.03202.
-      def_macro(T_CS!("\\theparentequation"), None,
-        eqnum_toks.clone(), None)?;
-      // Redefine \theequation to parent_number + \alph{equation} — append
-      // the `\alph{equation}` tokens to the parent tokens directly (again
-      // no string round-trip, to preserve `\rm S` etc.).
-      let mut new_theequation = eqnum_toks.unlist();
-      new_theequation.extend(mouth::tokenize_internal("\\alph{equation}").unlist());
-      def_macro(T_CS!("\\theequation"), None, Tokens::new(new_theequation), None)?;
-      // Redefine \theequation@ID for xml:id generation
-      if let Some(id_val) = whatsit.get_property("id") {
-        let id_str = match &*id_val {
-          Stored::String(s) => to_string(*s),
-          other => other.to_string(),
-        };
-        let new_id_macro = format!("{}.\\@equation@ID", id_str);
-        def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+  "<ltx:equationgroup xml:id='#id'>#tags",
+  after_digest => sub[whatsit] {
+    use latexml_core::binding::counter::dialect::reset_counter;
+    use latexml_core::mouth;
+    // Step the equation counter and get properties (id, refnum, tags)
+    let eqn_props = ref_step_counter("equation", false)?;
+    // Expand \theequation to get the parent equation number tokens.
+    // Keep the TOKEN list — do NOT round-trip through `.to_string()` +
+    // re-tokenize: a `\renewcommand{\theequation}{{\rm S}\arabic{equation}}`
+    // expands to `{ \rm S } <n>`, and serializing that drops the space
+    // between the control word `\rm` and the letter `S`, so re-tokenizing
+    // "{\rmS}<n>" yields the undefined CS `\rmS`. Perl fixates the parent
+    // via `\protected@edef\theparentequation{\theequation}` (amsmath.sty
+    // L1134) — token-level, no string round-trip. Witness 2005.06712
+    // (subequation tags `(S15a)` → `(\rmS15a)`).
+    let eqnum_toks = do_expand(T_CS!("\\theequation"))?;
+    // Save current equation counter value
+    let saved = lookup_register("\\c@equation", Vec::new())?.map_or(0, |rv| {
+      match rv {
+        RegisterValue::Number(n) => n.0,
+        _ => 0,
       }
     });
+    assign_value("SAVED_EQUATION_NUMBER", Stored::Number(Number::new(saved)), None);
+    // Set properties on the whatsit
+    for (k, v) in eqn_props {
+      with(k, |ks| whatsit.set_property(ks, v));
+    }
+    // Reset equation counter to 0
+    reset_counter(&T_OTHER!("equation"))?;
+    // amsmath.sty L1134: `\protected@edef\theparentequation{\theequation}`
+    // — fixates the parent equation's expansion before the local
+    // \theequation is redefined. Papers commonly do
+    // `\renewcommand{\theequation}{\theparentequation\alph{equation}}`
+    // inside subequations, expecting \theparentequation to resolve.
+    // Witness 2402.03202.
+    def_macro(T_CS!("\\theparentequation"), None,
+      eqnum_toks.clone(), None)?;
+    // Redefine \theequation to parent_number + \alph{equation} — append
+    // the `\alph{equation}` tokens to the parent tokens directly (again
+    // no string round-trip, to preserve `\rm S` etc.).
+    let mut new_theequation = eqnum_toks.unlist();
+    new_theequation.extend(mouth::tokenize_internal("\\alph{equation}").unlist());
+    def_macro(T_CS!("\\theequation"), None, Tokens::new(new_theequation), None)?;
+    // Redefine \theequation@ID for xml:id generation
+    if let Some(id_val) = whatsit.get_property("id") {
+      let id_str = match &*id_val {
+        Stored::String(s) => to_string(*s),
+        other => other.to_string(),
+      };
+      let new_id_macro = format!("{}.\\@equation@ID", id_str);
+      def_macro(T_CS!("\\theequation@ID"), None, mouth::tokenize_internal(&new_id_macro), None)?;
+    }
+  });
   Tag!("ltx:equationgroup", auto_close => true);
   DefConstructor!("\\lx@equationgroup@subnumbering@end",
-    sub[document, _args, _props] {
-      document.maybe_close_element("ltx:equationgroup")?;
-    },
-    after_digest => {
-      // Restore the saved equation counter
-      if let Some(saved) = lookup_value("SAVED_EQUATION_NUMBER") {
-        let n = match saved {
-          Stored::Number(n) => n.0,
-          _ => 0,
-        };
-        assign_register(
-          "\\c@equation",
-          Number::new(n).into(),
-          Some(Scope::Global),
-          Vec::new(),
-        )?;
-      }
-    });
+  sub[document, _args, _props] {
+    document.maybe_close_element("ltx:equationgroup")?;
+  },
+  after_digest => {
+    // Restore the saved equation counter
+    if let Some(saved) = lookup_value("SAVED_EQUATION_NUMBER") {
+      let n = match saved {
+        Stored::Number(n) => n.0,
+        _ => 0,
+      };
+      assign_register(
+        "\\c@equation",
+        Number::new(n).into(),
+        Some(Scope::Global),
+        Vec::new(),
+      )?;
+    }
+  });
 
   // Perl: latex_constructs.pool.ltxml L2142-2163 — automath wrapping
   // Simplified: \ensuremathfollows checks if next content is already math,
   // if not wraps with \( ... \). Used by equation labels / alt text.
-  def_macro_noop("\\ensuremathfollows")?;  // stub — automath needs gullet lookahead
+  def_macro_noop("\\ensuremathfollows")?; // stub — automath needs gullet lookahead
   def_macro_noop("\\ensuremathpreceeds")?; // stub — pairs with ensuremathfollows
 
   // Perl: latex_constructs.pool.ltxml L2166
@@ -5805,7 +5878,6 @@ LoadDefinitions!({
   Tag!("ltx:Math", after_open => sub[document, node] {
     document.generate_id(node, "m")?;
   });
-
 
   // \stackrel{over}{base}: places "over" as a superscript over "base" relation
   DefMacro!("\\stackrel{}{}", r"\lx@stackrel{{\scriptstyle #1}}{{#2}}");
@@ -5873,7 +5945,6 @@ LoadDefinitions!({
     }
   );
 
-
   DefConstructor!("\\mathrm{}", "#1", bounded => true, require_math => true,
     locked => true,
     font => {family => "serif", series => "medium", shape => "upright"});
@@ -5905,11 +5976,9 @@ LoadDefinitions!({
   DefPrimitive!("\\operator@font", None,
     font => {family => "serif", series => "medium", shape => "upright"});
 
-
   // ======================================================================
   // C.8 Definitions, Numbering and Programming
   // ======================================================================
-
 
   //**********************************************************************
   // C.8 Definitions, Numbering and Programming
@@ -6216,14 +6285,20 @@ LoadDefinitions!({
   DefMacro!("\\f@encoding", {
     ExplodeText!(
       LookupFont!()
-        .map(|f| f.get_encoding().map(|e| e.to_string()).unwrap_or_else(|| "OT1".to_string()))
+        .map(|f| f
+          .get_encoding()
+          .map(|e| e.to_string())
+          .unwrap_or_else(|| "OT1".to_string()))
         .unwrap_or_default()
     )
   });
   DefMacro!("\\cf@encoding", {
     ExplodeText!(
       LookupFont!()
-        .map(|f| f.get_encoding().map(|e| e.to_string()).unwrap_or_else(|| "OT1".to_string()))
+        .map(|f| f
+          .get_encoding()
+          .map(|e| e.to_string())
+          .unwrap_or_else(|| "OT1".to_string()))
         .unwrap_or_default()
     )
   });
@@ -6600,7 +6675,6 @@ LoadDefinitions!({
   DefPrimitive!("\\th", "\u{00FE}", robust => true);
   DefPrimitive!("\\TH", "\u{00DE}", robust => true);
 
-
   DefPrimitive!("\\newenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(_star_opt, name, nargs, opt, begin, end)] {
     let name = { Expand!(name).to_string() };
@@ -6650,7 +6724,6 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
 
-
   //======================================================================
   // C.8.3 Theorem-like Environments
   //======================================================================
@@ -6669,21 +6742,31 @@ LoadDefinitions!({
   DefRegister!("\\thm@numbering"     => Tokens!(T_CS!("\\arabic")));
 
   DefPrimitive!("\\th@plain", {
-    assign_register("\\thm@bodyfont",
-      RegisterValue::Tokens(Tokens!(T_CS!("\\itshape"))), None, vec![])?;
-    assign_register("\\thm@headstyling",
-      RegisterValue::Tokens(Tokens!(T_CS!("\\lx@makerunin"))), None, vec![])?;
+    assign_register(
+      "\\thm@bodyfont",
+      RegisterValue::Tokens(Tokens!(T_CS!("\\itshape"))),
+      None,
+      vec![],
+    )?;
+    assign_register(
+      "\\thm@headstyling",
+      RegisterValue::Tokens(Tokens!(T_CS!("\\lx@makerunin"))),
+      None,
+      vec![],
+    )?;
   });
 
-  DefMacro!("\\lx@makerunin",   "\\@ADDCLASS{ltx_runin}");
+  DefMacro!("\\lx@makerunin", "\\@ADDCLASS{ltx_runin}");
   DefMacro!("\\lx@makeoutdent", "\\@ADDCLASS{ltx_outdent}");
 
   DefMacro!("\\@thmcountersep", ".");
   def_macro_noop("\\thm@doendmark")?;
 
   init_savable_theorem_parameters(vec![
-    "\\thm@bodyfont", "\\thm@headpunct",
-    "\\thm@styling", "\\thm@headstyling",
+    "\\thm@bodyfont",
+    "\\thm@headpunct",
+    "\\thm@styling",
+    "\\thm@headstyling",
     "thm@swap",
   ]);
 
@@ -6707,7 +6790,6 @@ LoadDefinitions!({
     assign_register("\\thm@postwork",
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
   });
-
 
   //======================================================================
   // C.8.4 Numbering
@@ -6871,8 +6953,10 @@ LoadDefinitions!({
   // the kernel. Used by grfext and other comma-list-manipulating packages
   // (witness 2309.13586 chain). `\@empty` already exists; `\reserved@a/b` are
   // scratch macros defined inline by the body.
-  DefMacro!("\\@removeelement{}{}{}",
-    r"\def\reserved@a##1,#1,##2\reserved@a{##1,##2\reserved@b}\def\reserved@b##1,\reserved@b##2\reserved@b{\ifx,##1\@empty\else##1\fi}\edef#3{\expandafter\reserved@b\reserved@a,#2,\reserved@b,#1,\reserved@a}");
+  DefMacro!(
+    "\\@removeelement{}{}{}",
+    r"\def\reserved@a##1,#1,##2\reserved@a{##1,##2\reserved@b}\def\reserved@b##1,\reserved@b##2\reserved@b{\ifx,##1\@empty\else##1\fi}\edef#3{\expandafter\reserved@b\reserved@a,#2,\reserved@b,#1,\reserved@a}"
+  );
   // latex.ltx L7634: \protected\def\leavevmode@ifvmode{\ifvmode\expandafter\indent\fi}
   // Emit \indent only when currently in vertical mode (used by \enspace and
   // by `\vcenter`/box helpers). Was undefined in Rust; Perl defines it via the
@@ -6888,8 +6972,10 @@ LoadDefinitions!({
   // \@starttoc{loa}/etc. run without erroring. Was undefined in Rust; Perl
   // defines it via the kernel (witness 2211.02345). All deps
   // (\@input/\newwrite/\if@filesw/\@nobreakfalse) already exist.
-  DefMacro!("\\@starttoc{}",
-    r"\begingroup\makeatletter\@input{\jobname.#1}\if@filesw\expandafter\newwrite\csname tf@#1\endcsname\immediate\openout \csname tf@#1\endcsname \jobname.#1\relax\fi\@nobreakfalse\endgroup");
+  DefMacro!(
+    "\\@starttoc{}",
+    r"\begingroup\makeatletter\@input{\jobname.#1}\if@filesw\expandafter\newwrite\csname tf@#1\endcsname\immediate\openout \csname tf@#1\endcsname \jobname.#1\relax\fi\@nobreakfalse\endgroup"
+  );
   DefMacro!("\\arabic{}", sub[(value)] {
     let ctr_expansion = Expand!(value).to_string();
     let ctr_value = CounterValue!(&ctr_expansion).value_of();
@@ -6933,11 +7019,9 @@ LoadDefinitions!({
     ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))
   });
 
-
   // ======================================================================
   // C.9 Figures and Other Floating Bodies
   // ======================================================================
-
 
   //======================================================================
   // C.9.1 Figures and Tables
@@ -7034,15 +7118,18 @@ LoadDefinitions!({
     // `\thefigure\par` undefined errors when captype was "figure\par".
     let captype = do_expand(T_CS!("\\@captype"))?.to_string();
     let prekey = s!("PREINCREMENTED_{captype}");
-    let props = match remove_value(&prekey) { Some(Stored::HashStored(pre)) => {
-      pre
-    } _ => {
-      ref_step_counter(&captype, false)?
-    }};
-    let inlist  = digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
-    assign_value(&s!("{}_tags", captype), props.get("tags"), Some(Scope::Global));
-    assign_value(&s!("{}_id", captype), props.get("id"),   Some(Scope::Global));
-    assign_value(&s!("{}_inlist", captype), inlist,      Some(Scope::Global));
+    let props = match remove_value(&prekey) {
+      Some(Stored::HashStored(pre)) => pre,
+      _ => ref_step_counter(&captype, false)?,
+    };
+    let inlist = digest(T_CS!(s!("\\ext@{}", captype)))?.to_string();
+    assign_value(
+      &s!("{}_tags", captype),
+      props.get("tags"),
+      Some(Scope::Global),
+    );
+    assign_value(&s!("{}_id", captype), props.get("id"), Some(Scope::Global));
+    assign_value(&s!("{}_inlist", captype), inlist, Some(Scope::Global));
   });
 
   DefConstructor!("\\@@generic@caption[]{}", "<ltx:text class='ltx_caption'>#2</ltx:text>",
@@ -7156,7 +7243,7 @@ LoadDefinitions!({
   DefMacro!("\\textfraction", "0.25");
   DefMacro!("\\floatpagefraction", "0.25");
   NewCounter!("dbltopnumber");
-  DefMacro!("\\dbltopfraction",       "0.7");
+  DefMacro!("\\dbltopfraction", "0.7");
   DefMacro!("\\dblfloatpagefraction", "0.25");
   DefRegister!("\\floatsep"         => Glue!("12.0pt plus 2.0pt minus 2.0pt"));
   DefRegister!("\\textfloatsep"     => Glue!("20.0pt plus 2.0pt minus 4.0pt"));
@@ -7191,11 +7278,9 @@ LoadDefinitions!({
 
   Let!("\\outer@nobreak", "\\@empty");
   def_macro_identity("\\@dbflt{}")?;
-  DefMacro!("\\@xdblfloat{}[]",     "\\@xfloat{#1}[#2]");
+  DefMacro!("\\@xdblfloat{}[]", "\\@xfloat{#1}[#2]");
   def_macro_noop("\\@floatplacement")?;
   def_macro_noop("\\@dblfloatplacement")?;
-
-
 
   DefConditional!("\\if@reversemargin");
   Let!("\\reversemarginpar", "\\@reversemargintrue");
@@ -7217,7 +7302,6 @@ LoadDefinitions!({
   // C.10 Lining It Up in Columns
   // ======================================================================
 
-
   //======================================================================
   // C.10.1 The tabbing Environment
   // Perl: latex_constructs.pool.ltxml lines 3554-3651
@@ -7226,7 +7310,10 @@ LoadDefinitions!({
   DefRegister!("\\tabbingsep" => Dimension::new(0));
 
   // Main entry: \tabbing → \par\@tabbing@bindings\@@tabbing\lx@begin@alignment
-  DefMacro!("\\tabbing", "\\par\\@tabbing@bindings\\@@tabbing\\lx@begin@alignment");
+  DefMacro!(
+    "\\tabbing",
+    "\\par\\@tabbing@bindings\\@@tabbing\\lx@begin@alignment"
+  );
   DefMacro!("\\endtabbing", "\\lx@end@alignment\\@end@tabbing\\par");
 
   DefPrimitive!("\\@end@tabbing", sub [_args] {
@@ -7244,8 +7331,14 @@ LoadDefinitions!({
   // Wrapper macros that expand to marker + & (column separator)
   DefMacro!("\\@tabbing@tabset", "\\@tabbing@tabset@marker&");
   DefMacro!("\\@tabbing@nexttab", "\\@tabbing@nexttab@marker&");
-  DefMacro!("\\@tabbing@newline OptionalMatch:* [Dimension]", "\\@tabbing@newline@marker\\cr");
-  DefMacro!("\\@tabbing@kill", "\\@tabbing@kill@marker\\cr\\@tabbing@start@tabs");
+  DefMacro!(
+    "\\@tabbing@newline OptionalMatch:* [Dimension]",
+    "\\@tabbing@newline@marker\\cr"
+  );
+  DefMacro!(
+    "\\@tabbing@kill",
+    "\\@tabbing@kill@marker\\cr\\@tabbing@start@tabs"
+  );
 
   // Marker constructors
   DefConstructor!("\\@tabbing@tabset@marker", "",
@@ -7343,11 +7436,19 @@ LoadDefinitions!({
   });
 
   // Internals of tabbing for program.sty compatibility
-  DefMacro!("\\@startfield", "\\global\\setbox\\@curfield\\hbox\\bgroup\\color@begingroup");
+  DefMacro!(
+    "\\@startfield",
+    "\\global\\setbox\\@curfield\\hbox\\bgroup\\color@begingroup"
+  );
   DefMacro!("\\@stopfield", "\\color@endgroup\\egroup");
-  DefMacro!("\\@contfield", "\\global\\setbox\\@curfield\\hbox\\bgroup\\color@begingroup\\unhbox\\@curfield");
-  DefMacro!("\\@addfield", "\\global\\setbox\\@curline\\hbox{\\unhbox\\@curline\\unhbox\\@curfield}");
-
+  DefMacro!(
+    "\\@contfield",
+    "\\global\\setbox\\@curfield\\hbox\\bgroup\\color@begingroup\\unhbox\\@curfield"
+  );
+  DefMacro!(
+    "\\@addfield",
+    "\\global\\setbox\\@curline\\hbox{\\unhbox\\@curline\\unhbox\\@curfield}"
+  );
 
   DefRegister!("\\lx@arstrut", Dimension!("0pt"));
   DefRegister!("\\lx@default@tabcolsep", Dimension!("6pt"));
@@ -7425,10 +7526,14 @@ LoadDefinitions!({
     mode   => "text",
     enter_horizontal => true);
 
-  DefMacro!("\\csname tabular*\\endcsname{Dimension}[]{}",
-    r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\lx@begin@alignment");
-  DefMacro!("\\csname endtabular*\\endcsname",
-    r"\lx@end@alignment\@end@tabular@");
+  DefMacro!(
+    "\\csname tabular*\\endcsname{Dimension}[]{}",
+    r"\@tabular@bindings{#3}[width=#1,vattach=#2]\@@tabular@{#1}[#2]{#3}\lx@begin@alignment"
+  );
+  DefMacro!(
+    "\\csname endtabular*\\endcsname",
+    r"\lx@end@alignment\@end@tabular@"
+  );
   // Perl latex_constructs.pool.ltxml L3753-3757: mode => 'restricted_horizontal',
   //   enterHorizontal => 1.
   DefConstructor!("\\@@tabular@{Dimension}[] Undigested DigestedBody",
@@ -7568,11 +7673,9 @@ LoadDefinitions!({
 
   DefMacro!("\\@tabarray", r"\m@th\@@array[c]");
 
-
   // ======================================================================
   // C.11 Moving Information Around
   // ======================================================================
-
 
   //======================================================================
   // C.11.1 Files
@@ -8130,7 +8233,6 @@ LoadDefinitions!({
     }
   );
 
-
   // #======================================================================
   // # C.11.4 Splitting the input
   // #======================================================================
@@ -8271,41 +8373,41 @@ LoadDefinitions!({
   // the document/backmatter level instead of nesting (the BACKMATTER_ELEMENT
   // mapping for ltx:index already exists alongside ltx:bibliography's).
   DefEnvironment!("{theindex}",
-    "<ltx:index xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#body</ltx:index>",
-    before_digest => {
-      Let!("\\item", "\\index@item");
-      Let!("\\subitem", "\\index@subitem");
-      Let!("\\subsubitem", "\\index@subsubitem");
-      // Perl L4519: `\dotfill` between an index phrase and its page list opens
-      // the `ltx:indexrefs` separator (index styles that use `term \dotfill page`).
-      Let!("\\dotfill", "\\index@dotfill");
-    },
-    // Must RETURN the digested `\index@done` whatsit (no trailing `;`) so it is
-    // appended to the env body and CONSTRUCTED — it closes the trailing
-    // indexphrase/indexrefs and unwinds the open indexlist levels (do_index_item
-    // level 0). With a discarding `;` the whatsit was dropped, so `\end{theindex}`
-    // force-closed the still-open indexphrase/indexlist and errored "Closing tag
-    // ltx:index whose open descendents do not auto-close". Cf. the titlepage env.
-    before_digest_end => { digest(Tokens!(T_CS!("\\index@done")))? },
-    after_digest_begin => sub[whatsit] {
-      note_backmatter_element(whatsit, "ltx:index");
-      let docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
-      let id = if docid.is_empty() {
-        "idx".to_string()
-      } else {
-        s!("{docid}.idx")
-      };
-      whatsit.set_property("id", id);
-      if let Some(title) = DigestIf!("\\indexname")? {
-        if let Some(titlefont) = title.get_font()? {
-          whatsit.set_property("titlefont", titlefont);
-        }
-        whatsit.set_property("title", title);
+  "<ltx:index xml:id='#id'><ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>#body</ltx:index>",
+  before_digest => {
+    Let!("\\item", "\\index@item");
+    Let!("\\subitem", "\\index@subitem");
+    Let!("\\subsubitem", "\\index@subsubitem");
+    // Perl L4519: `\dotfill` between an index phrase and its page list opens
+    // the `ltx:indexrefs` separator (index styles that use `term \dotfill page`).
+    Let!("\\dotfill", "\\index@dotfill");
+  },
+  // Must RETURN the digested `\index@done` whatsit (no trailing `;`) so it is
+  // appended to the env body and CONSTRUCTED — it closes the trailing
+  // indexphrase/indexrefs and unwinds the open indexlist levels (do_index_item
+  // level 0). With a discarding `;` the whatsit was dropped, so `\end{theindex}`
+  // force-closed the still-open indexphrase/indexlist and errored "Closing tag
+  // ltx:index whose open descendents do not auto-close". Cf. the titlepage env.
+  before_digest_end => { digest(Tokens!(T_CS!("\\index@done")))? },
+  after_digest_begin => sub[whatsit] {
+    note_backmatter_element(whatsit, "ltx:index");
+    let docid: String = Expand!(T_CS!("\\thedocument@ID")).to_string();
+    let id = if docid.is_empty() {
+      "idx".to_string()
+    } else {
+      s!("{docid}.idx")
+    };
+    whatsit.set_property("id", id);
+    if let Some(title) = DigestIf!("\\indexname")? {
+      if let Some(titlefont) = title.get_font()? {
+        whatsit.set_property("titlefont", titlefont);
       }
-    },
-    before_construct => sub[doc, whatsit] {
-      adjust_backmatter_element(doc, whatsit)?;
-    });
+      whatsit.set_property("title", title);
+    }
+  },
+  before_construct => sub[doc, whatsit] {
+    adjust_backmatter_element(doc, whatsit)?;
+  });
 
   def_primitive_noop("\\indexspace")?;
   def_primitive_noop("\\makeindex")?;
@@ -8366,11 +8468,11 @@ LoadDefinitions!({
   // Provide English defaults here (NOT in latex_base.rs — that file
   // is skipped on the dump path so defs there don't survive). Witness
   // 2110.05865 (article + blindtext pulls babel; 8 undefined captions).
-  DefMacro!("\\bibname",       "Bibliography");
-  DefMacro!("\\seename",       "see");
-  DefMacro!("\\alsoname",      "see also");
-  DefMacro!("\\glossaryname",  "Glossary");
-  DefMacro!("\\pagename",      "Page");
+  DefMacro!("\\bibname", "Bibliography");
+  DefMacro!("\\seename", "see");
+  DefMacro!("\\alsoname", "see also");
+  DefMacro!("\\glossaryname", "Glossary");
+  DefMacro!("\\pagename", "Page");
   // NOTE: the letter-class captions `\ccname`/`\enclname`/`\headtoname` are NOT
   // defaulted here. Perl LaTeXML defines them NOWHERE (not in the base, babel,
   // or letter.cls.ltxml — its babel shim merely absorbs undefined references),
@@ -8385,10 +8487,10 @@ LoadDefinitions!({
   // for every article is non-faithful and clobbers author macros (cf. the
   // iopart `\revised` and pgfmath `\real` clobber traps).
   // Additional babel-english.ldf captions (\captionsenglish hook).
-  DefMacro!("\\prefacename",   "Preface");
-  DefMacro!("\\proofname",     "Proof");
-  DefMacro!("\\abstractname",  "Abstract");
-  DefMacro!("\\indexname",     "Index");
+  DefMacro!("\\prefacename", "Preface");
+  DefMacro!("\\proofname", "Proof");
+  DefMacro!("\\abstractname", "Abstract");
+  DefMacro!("\\indexname", "Index");
 
   //======================================================================
   // Perl: latex_constructs.pool.ltxml L4536-4564 — index constructors
@@ -8436,11 +8538,9 @@ LoadDefinitions!({
   });
   def_primitive_noop("\\typein[]{}")?;
 
-
   // ======================================================================
   // C.12-C.13 Line/Page Breaking, Boxes
   // ======================================================================
-
 
   //======================================================================
   // C.12.1 Line Breaking
@@ -8476,7 +8576,6 @@ LoadDefinitions!({
   DefMacro!("\\clearpage", "\\lx@newpage");
   DefMacro!("\\cleardoublepage", "\\lx@newpage");
   DefPrimitive!("\\samepage");
-
 
   //======================================================================
   // C.13.1 Length
@@ -8594,37 +8693,36 @@ LoadDefinitions!({
     }
   );
 
-  // our %makebox_alignment = (l => 'left', r => 'right', s => 'justified');
+  // Perl #2829: %makebox_alignment = (l=>'left', r=>'right', c=>'center',
+  // s=>'stretched') — 'c' added, 's' renamed justified→stretched; a width
+  // with no explicit alignment now defaults to 'c' (center).
   // Perl latex_constructs.pool.ltxml L4717: `robust => 1` so \makebox
   // survives \write/\edef contexts (e.g. captions, moving arguments).
-  // Rust was missing the flag.
   DefMacro!("\\makebox", "\\@ifnextchar(\\pic@makebox\\@makebox",
     robust => true);
   // Perl: enterHorizontal => 1 (now automatic via mode => "text")
   // Perl latex_constructs.pool.ltxml L4718-4724: `\@makebox` has NO
   // beforeDigest — the outer T_MATH binding persists.
   DefConstructor!("\\@makebox[Dimension][]{}",
-    "<ltx:text ?#width(width='#width') ?#align(align='#align') _noautoclose='1'>#3</ltx:text>",
+    "<ltx:text width='#width' align='#align' _noautoclose='1'>#3</ltx:text>",
     mode         => "text", bounded => true, alias => "\\makebox", sizer => "#3",
     properties   => sub[args] {
-      // Perl: (($_[2] ? (align => $makebox_alignment{...}) : ()), ($_[1] ? (width => $_[1]) : ()))
       let mut props = stored_map!();
+      let mut has_width = false;
       if let Some(ref dim_d) = args[0]
         && let DigestedData::RegisterValue(v) = dim_d.data() {
           let dim: Dimension = v.into();
           props.insert("width", Stored::from(dim));
+          has_width = true;
         }
-      if let Some(ref align_d) = args[1] {
-        let align_str = align_d.to_string();
-        let align = match align_str.as_str() {
-          "l" => "left",
-          "r" => "right",
-          "s" => "justified",
-          _ => "",
-        };
-        if !align.is_empty() {
-          props.insert("align", Stored::from(align));
-        }
+      let mut align_str = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      // Perl #2829: `$align = 'c' if !$align && $width;`
+      if align_str.is_empty() && has_width {
+        align_str = "c".to_string();
+      }
+      let align = makebox_alignment(&align_str);
+      if !align.is_empty() {
+        props.insert("align", Stored::from(align));
       }
       Ok(props)
     }
@@ -8669,56 +8767,31 @@ LoadDefinitions!({
       begin_mode("restricted_horizontal")?;
       assign_value("FRAME_IN_MATH", wasmath, None); },
     properties => sub[args] {
-      // Perl: framecolor => LookupValue('font')->getColor
-      let framecolor = lookup_font()
-        .and_then(|f| f.get_color().cloned())
-        .map(|c| c.to_attribute())
-        .unwrap_or_else(|| s!("#000000"));
-      let mut props = stored_map!("framecolor" => framecolor);
-      // Perl: align from arg 2 (optional []) — only set when explicitly given
-      // Perl: only emit align for l/r/s; 'c' (center) is default → not emitted
-      if let Some(align_val) = args[1].as_ref() {
-        let align_str = align_val.to_string();
-        let mapped = match align_str.as_str() {
-          "l" => Some("left"),
-          "r" => Some("right"),
-          "s" => Some("justified"),
-          _ => None, // 'c' or empty → default center, not emitted
-        };
-        if let Some(m) = mapped {
-          props.insert("align", Stored::String(pin_static(m)));
-        }
-      }
+      // Perl #2829: framedProperties(margin => '\fboxsep', rule =>
+      // '\fboxrule') supplies framecolor, cssstyle padding (border-width
+      // only when \fboxrule differs from the 0.4pt default) and the four
+      // pad* Dimension properties for size computation. This REPLACES the
+      // old hand-rolled block (including the faithful mirror of Perl's
+      // `$sep ne '3.0pt'` object-stringification bug — upstream fixed it
+      // via this refactor). Width/align keep their args, with align
+      // defaulting to 'c' (center) when a width is given.
+      let mut props = framed_properties(FramedOptions {
+        margin: Some("\\fboxsep".to_string()),
+        rule: Some("\\fboxrule".to_string()),
+        ..FramedOptions::default()
+      });
+      let mut has_width = false;
       if let Some(width_val) = args[0].as_ref() {
         props.insert("width", Stored::String(pin(width_val.to_attribute())));
+        has_width = true;
       }
-      // Perl: `($sep ne '3.0pt' ? (cssstyle => 'padding:' . $sep_pts) : ())`.
-      // Subtle: `$sep` is the `\fboxsep` Dimension OBJECT, and `ne` forces a
-      // STRING compare — the object stringifies to its internal form (e.g.
-      // "Dimension[196608]"), NEVER the literal "3.0pt", so the guard is ALWAYS
-      // true and Perl ALWAYS emits the padding cssstyle, even at the default
-      // 3pt. (The author clearly INTENDED `$sep->toAttribute ne '3.0pt'`, i.e.
-      // skip the default — an upstream Perl bug; see KNOWN_PERL_ERRORS.) The
-      // previous Rust port compared the attribute string (`sep_str != "3.0pt"`),
-      // which faithfully implemented the *intent* but DIVERGED from Perl's
-      // actual output (Rust dropped `cssstyle="padding:3.0pt"` on every default
-      // \fbox/\framebox). Match Perl's behavior: always emit.
-      if let Some(sep) = lookup_dimension("\\fboxsep") {
-        let sep_str = sep.to_attribute();
-        props.insert("cssstyle", Stored::String(pin(s!("padding:{sep_str}"))));
-        // Perl: `my $pad = $sep->add(LookupRegister('\fboxrule'));` then
-        // `padtop => $pad, padbottom => $pad, padleft => $pad, padright => $pad`.
-        // computeSizeStore (S5 padding slice) adds these to the sizer's (#3)
-        // measured size, so the framed box reports content+frame dimensions
-        // (\fboxsep + \fboxrule per side). Without this the box under-measures
-        // by 2x3.4pt in width and 3.4pt each in height/depth — visible in
-        // graphrot's rotated \framebox{\usebox{\foo}} inner dimensions.
-        let rule = lookup_dimension("\\fboxrule").map(|r| r.value_of()).unwrap_or(0);
-        let pad = Dimension::new(sep.value_of() + rule);
-        props.insert("padtop", Stored::Dimension(pad));
-        props.insert("padbottom", Stored::Dimension(pad));
-        props.insert("padleft", Stored::Dimension(pad));
-        props.insert("padright", Stored::Dimension(pad));
+      let mut align_str = args[1].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      if align_str.is_empty() && has_width {
+        align_str = "c".to_string();
+      }
+      let align = makebox_alignment(&align_str);
+      if !align.is_empty() {
+        props.insert("align", Stored::from(align));
       }
       Ok(props)
     },
@@ -8746,9 +8819,14 @@ LoadDefinitions!({
           }
         }
     },
-    after_construct => sub[document, _whatsit] {
+    after_construct => sub[document, whatsit] {
       // Perl afterConstruct: if the <ltx:text> has a single non-text child
       // that can have 'framed', unwrap the text and copy attributes to the child.
+      // #2829: NOT when an explicit width was given — \framebox shouldn't
+      // lose its width (the child can't carry it).
+      if whatsit.get_property("width").is_some() {
+        return Ok(());
+      }
       let current = document.get_node().clone();
       if let Some(node) = current.get_last_child() {
         if document::get_node_qname(&node) != pin!("ltx:text") {
@@ -8836,8 +8914,10 @@ LoadDefinitions!({
   Let!("\\lx@parboxnewline", "\\lx@newline");
   // NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
   // for height and inner-pos. We're ignoring inner-pos, for now, though.
-  DefMacro!("\\parbox[] [] [] {Dimension}{}",
-    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup");
+  DefMacro!(
+    "\\parbox[] [] [] {Dimension}{}",
+    r"\lx@hidden@bgroup\hsize=#4\textwidth\hsize\columnwidth\hsize\ifx.#2.\lx@parbox[#1]{#4}{#5}\else\lx@parbox[#1][#2][#3]{#4}{#5}\fi\lx@hidden@egroup"
+  );
   DefConstructor!("\\lx@parbox[][Dimension] OptionalUndigested {Dimension} VBoxContents",
     sub[document, args, props] {
       let body = args[4].as_ref().unwrap();
@@ -9005,13 +9085,14 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml L4857 — \@finalstrut emits a
   // zero-dimension strut taking depth from box #1. Used by tabular-cell
   // end-of-row spacing (\@arstrutbox + \@finalstrut\@arstrutbox idiom).
-  DefMacro!("\\@finalstrut{}",
-    r"\unskip\ifhmode\nobreak\fi\vrule\@width\z@\@height\z@\@depth\dp#1");
+  DefMacro!(
+    "\\@finalstrut{}",
+    r"\unskip\ifhmode\nobreak\fi\vrule\@width\z@\@height\z@\@depth\dp#1"
+  );
 
   // ======================================================================
   // C.14-C.15 Pictures, Fonts, Symbols
   // ======================================================================
-
 
   // Not sure that ltx:p is the best to use here, but ... (see also \vbox, \vtop)
   // This should be fairly compact vertically.
@@ -9090,9 +9171,15 @@ LoadDefinitions!({
   });
   DefMacro!("\\qbeziermax", "500");
   // Perl: \bezier — LaTeX 2.09 compat alias for \qbezier with different syntax
-  DefMacro!("\\bezier Until:(", "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi");
+  DefMacro!(
+    "\\bezier Until:(",
+    "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi"
+  );
   DefMacro!("\\lx@pic@bezier{} Pair Pair Pair", "\\qbezier[#1]#2#3#4");
-  DefMacro!("\\@killglue", "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}");
+  DefMacro!(
+    "\\@killglue",
+    "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}"
+  );
 
   // Tag: ltx:picture — Perl latex_constructs.pool.ltxml L4995:
   //   Tag('ltx:picture', autoOpen => 0.5, autoClose => 1, afterOpen => &GenerateID)
@@ -9163,7 +9250,10 @@ LoadDefinitions!({
 
   // \put(x,y){content} — Perl: Match:( reads "(", Until:, reads y, Until:) reads y
   // Now that Pair survives digestion (RegisterValue::Pair), use it directly.
-  DefMacro!("\\put SkipSpaces Match:( Until:, Until:) {}", "\\lx@pic@put(#2,#3){#4\\relax}");
+  DefMacro!(
+    "\\put SkipSpaces Match:( Until:, Until:) {}",
+    "\\lx@pic@put(#2,#3){#4\\relax}"
+  );
   DefConstructor!("\\lx@pic@put Pair {}",
     "<ltx:g transform='#transform' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth'>#2</ltx:g>",
     alias => "\\put",
@@ -9249,8 +9339,10 @@ LoadDefinitions!({
     }
   });
   // The actual picture-mode \line dispatched from the peek above.
-  DefMacro!("\\lx@pic@line@dispatch Match:( Until:, Until:) {Float}",
-    "\\lx@pic@line{#2}{#3}{#4}");
+  DefMacro!(
+    "\\lx@pic@line@dispatch Match:( Until:, Until:) {Float}",
+    "\\lx@pic@line{#2}{#3}{#4}"
+  );
   DefConstructor!("\\lx@pic@line{}{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
@@ -9283,7 +9375,10 @@ LoadDefinitions!({
   );
 
   // \vector(slope){length} — Perl: DefConstructor('\vector Pair:Number {Float}', ...)
-  DefMacro!("\\vector Match:( Until:, Until:) {Float}", "\\lx@pic@vector{#2}{#3}{#4}");
+  DefMacro!(
+    "\\vector Match:( Until:, Until:) {Float}",
+    "\\lx@pic@vector{#2}{#3}{#4}"
+  );
   DefConstructor!("\\lx@pic@vector{}{}{}",
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
     alias => "\\vector",
@@ -9641,13 +9736,20 @@ LoadDefinitions!({
   );
 
   // Perl macro aliases
-  DefMacro!("\\pic@makebox",            "\\pic@makebox@{\\makebox}{}");
-  DefMacro!("\\pic@framebox",           "\\pic@makebox@{\\framebox}{framed=true}");
-  DefMacro!("\\lx@pic@dashbox{Float}",  "\\pic@makebox@{\\dashbox(#1)}{framed=true,dash={#1}}");
-  DefMacro!("\\dashbox Until:(",
-    "\\ifx.#1.\\lx@pic@dashbox{0}(\\else\\lx@pic@dashbox{#1}(\\fi");
-  DefMacro!("\\frame{}",
-    "\\pic@makebox@{\\framebox}{framed=true}(0,0)[bl]{#1}");
+  DefMacro!("\\pic@makebox", "\\pic@makebox@{\\makebox}{}");
+  DefMacro!("\\pic@framebox", "\\pic@makebox@{\\framebox}{framed=true}");
+  DefMacro!(
+    "\\lx@pic@dashbox{Float}",
+    "\\pic@makebox@{\\dashbox(#1)}{framed=true,dash={#1}}"
+  );
+  DefMacro!(
+    "\\dashbox Until:(",
+    "\\ifx.#1.\\lx@pic@dashbox{0}(\\else\\lx@pic@dashbox{#1}(\\fi"
+  );
+  DefMacro!(
+    "\\frame{}",
+    "\\pic@makebox@{\\framebox}{framed=true}(0,0)[bl]{#1}"
+  );
 
   // \pic@raisebox — simplified raisebox for picture mode
   DefConstructor!("\\pic@raisebox{Dimension}[Dimension][Dimension]{}",
@@ -9672,7 +9774,6 @@ LoadDefinitions!({
 
   // \Gin@driver lives in `latex_constructs_rust_only.rs` (pure Rust
   // hotfix, not in any Perl latex_*.pool.ltxml).
-
 
   //**********************************************************************
   // C.15 Font Selection
@@ -10086,9 +10187,7 @@ LoadDefinitions!({
     // and mis-registering the case mapping.
     let pairs: Vec<Token> = match lookup_definition_stored(&T_CS!("\\@uclclist"))? {
       Some(Stored::Expandable(exp)) => match exp.get_expansion() {
-        Some(ExpansionBody::Tokens(tks)) => {
-          tks.clone().unlist()
-        },
+        Some(ExpansionBody::Tokens(tks)) => tks.clone().unlist(),
         _ => Vec::new(),
       },
       _ => Vec::new(),
@@ -10355,11 +10454,26 @@ LoadDefinitions!({
   DefMacro!("\\partname", "Part");
   // \appendixname already defined earlier in this file (DefMacro `Appendix` at the
   // C.4.4 appendix block); avoid duplicate identical re-definition.
-  DefMacro!("\\sectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\subsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\subsubsectiontyperefname", "\\lx@sectionsign\\lx@ignorehardspaces");
-  DefMacro!("\\paragraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
-  DefMacro!("\\subparagraphtyperefname", "\\lx@paragraphsign\\lx@ignorehardspaces");
+  DefMacro!(
+    "\\sectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subsectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subsubsectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\paragraphtyperefname",
+    "\\lx@paragraphsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subparagraphtyperefname",
+    "\\lx@paragraphsign\\lx@ignorehardspaces"
+  );
 
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
@@ -10407,7 +10521,8 @@ LoadDefinitions!({
   // Perl latex_constructs.pool.ltxml L5836-5886: language declarations
   // Pre-declare hyphenation languages for babel's \iflanguage checks
   //======================================================================
-  TeX!(r"\newlanguage\l@english
+  TeX!(
+    r"\newlanguage\l@english
 \newlanguage\l@usenglishmax
 \newlanguage\l@USenglish
 \newlanguage\l@dumylang
@@ -10455,7 +10570,8 @@ LoadDefinitions!({
 \newlanguage\l@swedish
 \newlanguage\l@turkish
 \newlanguage\l@ukenglish
-\newlanguage\l@ukrainiane");
+\newlanguage\l@ukrainiane"
+  );
 
   // Perl latex_constructs: \protected@write
   DefPrimitive!("\\protected@write{Number}{}{}", sub[(_port, prelude, _tokens)] {
@@ -10526,16 +10642,22 @@ LoadDefinitions!({
   // `\@latex@error`/`\@warning` and our own `\@currenvline` block at
   // L8219) and friends are auto-defined as `<ltx:ERROR/>`, leaking
   // raw `#` parameters into the Stomach (witness 1610.05489 + ~17 more).
-  DefMacro!("\\hexnumber@ {}",
-    r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi");
+  DefMacro!(
+    "\\hexnumber@ {}",
+    r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi"
+  );
   DefMacro!("\\on@line", r" on input line \the\inputlineno");
-  Let!("\\@warning",  "\\@latex@warning");
+  Let!("\\@warning", "\\@latex@warning");
   Let!("\\@@warning", "\\@latex@warning@no@line");
   def_macro_noop("\\G@refundefinedtrue")?;
-  DefMacro!("\\@nomath{}",
-    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi");
-  DefMacro!("\\@font@warning{}",
-    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}");
+  DefMacro!(
+    "\\@nomath{}",
+    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
+  );
+  DefMacro!(
+    "\\@font@warning{}",
+    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
+  );
 
   // Perl L5765-5766
   DefPrimitive!("\\makeatletter", {

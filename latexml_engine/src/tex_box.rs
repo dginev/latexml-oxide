@@ -267,6 +267,82 @@ fn collapse_svg_group(document: &mut Document, node: &mut Node) -> Result<()> {
   Ok(())
 }
 
+/// Options for [`framed_properties`] (Perl `framedProperties(%options)`,
+/// TeX_Box.pool.ltxml #2829).
+#[derive(Default)]
+pub struct FramedOptions {
+  /// the frame kind (default "rectangle")
+  pub frame:           Option<String>,
+  /// the margin separation, e.g. `margin => '\fboxsep'`
+  pub margin:          Option<String>,
+  /// the rule thickness
+  pub rule:            Option<String>,
+  /// the rule color (default, the current font color)
+  pub color:           Option<String>,
+  /// the background color (default, NONE)
+  pub backgroundcolor: Option<String>,
+}
+
+/// Compute the properties required for a framed something.
+///
+/// Port of Perl `framedProperties` (TeX_Box.pool.ltxml L69-89, #2829):
+/// consistent `framed`/`framecolor`/`backgroundcolor`/`cssstyle` attributes,
+/// plus `padtop`/`padbottom`/`padleft`/`padright` Dimension properties
+/// (margin + rule per side) that feed the whatsit size computation.
+/// `cssstyle` carries `padding:` whenever a margin is given, and
+/// `border-width:` only when the rule differs from the 0.4pt default.
+pub fn framed_properties(options: FramedOptions) -> SymHashMap<Stored> {
+  let sep = options
+    .margin
+    .as_deref()
+    .and_then(|m| lookup_dimension_cs(m, false));
+  let th = options
+    .rule
+    .as_deref()
+    .and_then(|r| lookup_dimension_cs(r, false));
+  let pad = match (sep, th) {
+    (Some(s), Some(t)) => Some(Dimension::new(s.value_of() + t.value_of())),
+    (s, t) => s.or(t),
+  };
+  let th_pt = th.map(|t| t.to_attribute());
+  let mut style_parts: Vec<String> = Vec::new();
+  if let Some(s) = sep {
+    style_parts.push(s!("padding:{}", s.to_attribute()));
+  }
+  if let (Some(t), Some(tp)) = (th, th_pt.as_deref())
+    && tp != "0.4pt"
+  {
+    style_parts.push(s!("border-width:{}", t.to_attribute()));
+  }
+  let style = style_parts.join(";");
+
+  let mut props: SymHashMap<Stored> = SymHashMap::default();
+  props.insert(
+    "framed",
+    Stored::from(options.frame.unwrap_or_else(|| "rectangle".to_string())),
+  );
+  // Perl `LookupValue('font')->getColor` always yields a color (default
+  // Black), so framecolor is always present.
+  let framecolor = options
+    .color
+    .or_else(|| lookup_font().and_then(|f| f.get_color().map(|c| c.to_attribute())))
+    .unwrap_or_else(|| s!("#000000"));
+  props.insert("framecolor", Stored::from(framecolor));
+  if let Some(bg) = options.backgroundcolor {
+    props.insert("backgroundcolor", Stored::from(bg));
+  }
+  if !style.is_empty() {
+    props.insert("cssstyle", Stored::from(style));
+  }
+  if let Some(p) = pad {
+    props.insert("padtop", Stored::Dimension(p));
+    props.insert("padbottom", Stored::Dimension(p));
+    props.insert("padleft", Stored::Dimension(p));
+    props.insert("padright", Stored::Dimension(p));
+  }
+  props
+}
+
 LoadDefinitions!({
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Box Family of primitive control sequences
@@ -377,18 +453,33 @@ LoadDefinitions!({
     r"\ifmmode\lx@math@nounicode#1\else\lx@text@nounicode#1\fi"
   );
 
-  // Perl: enterHorizontal => 1
-  // properties => { frame => sub { ToString($_[1] || 'rectangle'); }}
+  // Perl TeX_Box.pool.ltxml L61-90 (#2829): `\lx@framed` takes keyvals to
+  // specify framing parameters; framedProperties massages them into
+  // consistent attributes + padding properties for size calculations.
+  DefKeyVal!("framed", "margin", "Dimension");
+  DefKeyVal!("framed", "rule", "Dimension");
   DefConstructor!(
-    "\\lx@framed[]{}",
-    "<ltx:text framed='#frame'>#2</ltx:text>",
+    "\\lx@framed OptionalKeyVals:framed {}",
+    "<ltx:text framed='#framed' framecolor='#framecolor' cssstyle='#cssstyle' \
+  _noautoclose='1'>#2</ltx:text>",
     enter_horizontal => true,
-    after_digest => sub[whatsit] {
-      let frame = whatsit.get_arg(1)
-        .map(|a| a.to_string())
-        .filter(|s| !s.is_empty())
-        .unwrap_or_else(|| "rectangle".to_string());
-      whatsit.set_property("frame", Stored::from(frame));
+    sizer => "#2",
+    properties => sub[args] {
+      let mut opts = FramedOptions::default();
+      if let Some(kv) = args[0].clone()
+        && let DigestedData::KeyVals(dkv) = kv.be_digested()?.data()
+      {
+        // Perl passes the whole getHash through; framedProperties reads
+        // margin/rule (declared Dimension keyvals) plus any of its other
+        // recognized options.
+        let hash = dkv.get_hash_digested();
+        opts.margin = hash.get("margin").cloned();
+        opts.rule = hash.get("rule").cloned();
+        opts.frame = hash.get("frame").cloned();
+        opts.color = hash.get("color").cloned();
+        opts.backgroundcolor = hash.get("backgroundcolor").cloned();
+      }
+      Ok(framed_properties(opts))
     }
   );
   // Perl: enterHorizontal => 1

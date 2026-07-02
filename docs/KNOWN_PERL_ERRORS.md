@@ -1451,17 +1451,15 @@ author plainly intended `$sep->toAttribute ne '3.0pt'` (skip the default).
 framecolor='#000000' framed='rectangle'>x</ltx:text>` (the padding appears even
 though `\fboxsep` is the default 3pt).
 
-**Perl status:** present and unchanged.
+**Perl status:** RESOLVED upstream by PR #2829 (merged 2026-07-02): the
+hand-rolled properties block was replaced by `framedProperties(margin =>
+'\fboxsep', rule => '\fboxrule')`, which compares attribute strings properly
+(`$th_pt ne '0.4pt'` for the border) and emits `padding:` whenever a margin is
+given — the buggy `$sep ne '3.0pt'` guard is gone.
 
-**Rust status (FIXED 2026-06-20, faithful):** an earlier Rust port translated
-the guard as `sep_str != "3.0pt"` (comparing the *attribute* string), which
-implemented the *intent* but DIVERGED from Perl's actual output — Rust dropped
-`cssstyle='padding:3.0pt'` on every default `\fbox`/`\framebox`. Restored Perl's
-behavior (`latex_constructs.rs` `\@framebox` properties): always emit
-`cssstyle='padding:<fboxsep>'`. This is a faithful-translation fix (Perl's
-condition is unconditionally true), not a beneficial divergence — verified
-byte-for-byte against `/usr/local/bin/latexml` (e.g. enum.tex: 6/6 framed boxes
-gain the cssstyle in both engines).
+**Rust status:** tracked Perl throughout — first the faithful mirror of the
+buggy always-true guard (2026-06-20), now the #2829 `framed_properties` port
+(2026-07-02, `tex_box.rs`), byte-identical fixtures both times.
 
 ## 36. OmniBus `\lx@doi` emits a malformed `https:/doi.org/` URL (single slash)
 
@@ -1600,3 +1598,38 @@ tfm-based label widths make `\dimen@ > 0`, so the same papers ran to
 binding now defines `\dabar@` (`╌`, U+254C) in `amsfonts_sty.rs`, terminating
 the loop exactly as real TeX does. `\symAMSa` remains undefined in both
 engines (same 2-error surface as Perl on the witness). Candidate to upstream.
+
+## 41. PR #2829 `LookupDimension` rewrite loses the macro-body-read path
+
+**Perl source:** `LaTeXML/Package.pm` `LookupDimension` (as of #2829, merged
+2026-07-02)
+```perl
+elsif ((ref $cs eq 'LaTeXML::Core::Token') && ($defn = $STATE->lookupDefinition($cs))
+  && $defn->isRegister) { return $defn->valueOf; }
+elsif (ref $cs eq 'LaTeXML::Core::Tokens') { ... readDimension ... }
+elsif (!$noerror) { Warn('expected', 'register', ...); }
+```
+
+**Symptom:** a document that `\def`s a length into a plain macro (e.g.
+`\def\arraycolsep{5pt}` — real arXiv usage, our eqnarray/numcases cluster
+regressions) now triggers `Warn('expected','register')` and the dimension
+silently degrades to 0. Pre-#2829 Perl read the macro's body as a dimension
+(`readingFromMouth($cs, sub { readDimension })`).
+
+**Root cause:** the #2829 coercion rewrite ("LookupDimension coerces more
+strings, CS, Dimensions") tokenizes a string argument and unwraps a
+single-token result to a `Token` — but the new elsif chain only accepts a
+single Token when its definition **isRegister**; the old defined-but-not-
+register fallback (read the body) was dropped, presumably unintentionally
+(the PR is about framing consistency).
+
+**Minimal example:** `\def\arraycolsep{5pt}\begin{eqnarray}a&=&b\end{eqnarray}`
+→ `expected:register` warning + zero column separation (was: silent, 5pt).
+
+**Perl status:** present as of #2829 (d666adf8). Candidate to upstream.
+
+**Rust status (kept pre-#2829 behavior, deliberate divergence):**
+`state.rs::lookup_dimension_cs` ports the #2829 coercions (obvious-dimension
+strings, register tokens, multi-token read) but RETAINS the macro-body-read
+branch for a single defined-but-not-register token. Covered by the
+`cluster_{eqnarray,numcases}_arraycolsep_macro_no_register_warning` tests.

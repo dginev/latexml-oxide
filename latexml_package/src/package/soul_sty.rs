@@ -100,18 +100,25 @@ LoadDefinitions!({
   // Underline (with optional frame color from \setulcolor)
   // Perl L69-72: framecolor property is getSOULcolor('soul_ul_color'), which
   // Perl L61-65 gates on LookupValue('color.sty_loaded').
+  // Perl (#2829): properties come from framedProperties(color =>
+  // getSOULcolor('soul_ul_color')) — when no soul color is set, the
+  // framecolor falls back to the CURRENT FONT color (so plain \textul now
+  // carries framecolor="#000000", per the updated Perl fixture).
   DefConstructor!("\\textul{}",
   "<ltx:text framed='underline' framecolor='#framecolor' _noautoclose='1'>#1</ltx:text>",
-  enter_horizontal => true,
-  after_digest => sub[whatsit] {
-    // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
+  enter_horizontal => true, bounded => true, sizer => "#1",
+  properties => sub[_args] {
+    let mut soul_color: Option<String> = None;
+    // Perl getSOULcolor: only when color.sty is loaded.
     if (lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded"))
       && let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
         let color_name = to_string(color_sym);
-        let hex = lookup_color(&color_name);
-        whatsit.set_property("framecolor", hex);
+        soul_color = Some(lookup_color(&color_name));
       }
-    Ok(Vec::new())
+    Ok(framed_properties(FramedOptions {
+      color: soul_color,
+      ..FramedOptions::default()
+    }))
   });
 
   // Customizing underlines

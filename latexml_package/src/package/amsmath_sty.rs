@@ -24,8 +24,12 @@ fn ams_alignment_bindings(template: Template, mut xml_attributes: HashMap<String
   // `properties` — only `xml_attributes` reach the openContainer callback. Use
   // LookupDimension (lookup_dimension_cs) so a `\def`-ized `\jot` reads silently.
   if !xml_attributes.contains_key("rowsep") {
-    let cur_jot = lookup_dimension_cs("\\jot", false);
-    if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+    let cur_jot = lookup_dimension_cs("\\jot", false).unwrap_or_default();
+    if cur_jot.value_of()
+      != lookup_dimension_cs("\\lx@default@jot", false)
+        .unwrap_or_default()
+        .value_of()
+    {
       xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
     }
   }
@@ -57,8 +61,12 @@ fn ams_rearrangeable_bindings(
   // equationgroup's rowsep attribute. (Was missing entirely — Rust emitted no
   // rowsep on align/gather, diverging from Perl.)
   if !xml_attributes.contains_key("rowsep") {
-    let cur_jot = lookup_dimension_cs("\\jot", false);
-    if cur_jot.value_of() != lookup_dimension_cs("\\lx@default@jot", false).value_of() {
+    let cur_jot = lookup_dimension_cs("\\jot", false).unwrap_or_default();
+    if cur_jot.value_of()
+      != lookup_dimension_cs("\\lx@default@jot", false)
+        .unwrap_or_default()
+        .value_of()
+    {
       xml_attributes.insert(String::from("rowsep"), cur_jot.to_string());
     }
   }
