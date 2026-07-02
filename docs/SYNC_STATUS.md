@@ -146,11 +146,15 @@ win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
   > that reshapes all math output. Because A is corpus-wide (even though
   > toward-Perl), it needed explicit scope sign-off; B (below) was the
   > contained first step (~5 fixtures).
-  > **GREEN-LIT 2026-07-02 (user): fix A in a dedicated session BEFORE the
-  > July-5 run** — the run should ship Perl-faithful math structure. Scope:
-  > flip apply-of-UNKNOWN to multiply per Perl's rule, full fixture re-bless
-  > with per-fixture Perl cross-checks, suite + math-bound canvas sample
-  > before/after.
+  > **DECISION FINAL 2026-07-02: divergence #18 STANDS — `f(x)` leans toward
+  > function application.** The toward-Perl flip was green-lit earlier the
+  > same day, fully implemented (12/12 witness parity with Perl, ~22 fixtures
+  > verified toward-Perl), and then **REVERTED on user review**: "f(x) is
+  > almost always an application in common STEM use." The apply-of-UNKNOWN
+  > reading is the settled intentional divergence (OXIDIZED_DESIGN #18,
+  > re-affirmed). The reverted implementation is preserved on branch
+  > `archive/fx-perl-parity-attempt-2026-07-02` (local) for reference — do
+  > NOT re-attempt the flip without a fresh explicit user decision.
 - **`[a|b]` / `[a \mid b]` bracket-conditional — FIXED 2026-06-22.** Was unparsed
   in Rust; now `delimited-[]@(conditional@(a,b))` matching Perl (`E[X|Y]` etc.).
   Root: the bare `a|b` conditional reduces only at statement level (not as an
@@ -250,9 +254,10 @@ Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
    (`~/git/cortex`) — bump/vendor the released CSS in both.
 3. **PR `ar5iv-2606-prep` → `main`** (user: later today, 2026-07-02) — parity
    fixes, perf audit + pin! sweep, fatal-mining fixes, docs consolidation.
-4. **`f(x)` apply-vs-multiply dedicated session** (green-lit, see the
-   math-parser section) — land + re-bless BEFORE the rebuild if schedule
-   allows; it reshapes math output and should be in the July-5 binary.
+4. ~~`f(x)` apply-vs-multiply dedicated session~~ — **CANCELLED 2026-07-02**:
+   built, verified vs Perl, then reverted on user review; divergence #18
+   (f(x) → function application) re-affirmed and stands. No math-output
+   change ships in the July-5 binary from this item.
 5. **After the current full-arXiv run finishes (~2026-07-04)**: rebuild
    `target/maxperf-cortex/cortex_worker` from merged `main` (fleet binary was
    deliberately NOT swapped mid-run).

@@ -755,6 +755,21 @@ args). That is a parity bug, NOT a divergence; tracked in SYNC_STATUS
 ("`f(a,b)` multi-arg flattening"). It is scoped to FUNCTION/OPFUNCTION/
 TRIGFUNCTION roles, so it does NOT touch the unknown-`f` apply preserved here.
 
+**Re-affirmed 2026-07-02 — the strongest form of the decision.** The
+toward-Perl flip was green-lit that morning, then FULLY IMPLEMENTED and
+verified (12-formula witness set byte-identical to same-host Perl; ~22
+fixtures re-blessed toward Perl; grammar productions + the
+`FencedLettersAreFunctionArguments` pragma removed) — and then **reverted on
+user review before pushing**: *"f(x) is almost always an application in
+common STEM use."* The application reading is a deliberate beyond-Perl
+quality choice (screen readers say "f of x", not "f times x"; U+2061 vs
+U+2062), and it wins over strict Perl parity here. The reverted
+implementation — including the finding that the pragma is load-bearing (its
+deletion alone leaves `f(x)` unparseable) and the per-fixture toward-Perl
+verification method — is preserved on branch
+`archive/fx-perl-parity-attempt-2026-07-02` (commit `bcf88db280`). Do not
+re-attempt the flip without a fresh explicit user decision.
+
 ---
 
 ### 19. Perl `local` Mechanism — `latexml_core::common::local_assignments`
