@@ -4,10 +4,10 @@ Repeatable checklist + current lever state. Review before release
 milestones, after major features, and during periodic optimisation
 passes.
 
-This doc holds the **timeless principles** and the **current open/closed
-lever state**. The per-paper empirical campaign log (slowest-100 testbed,
-hotspot-by-hotspot deltas) lives in
-[`ARXIV_PERFORMANCE.md`](ARXIV_PERFORMANCE.md); reliability witnesses
+This doc holds the **timeless principles**, the **current open/closed
+lever state**, and a dated **Audit log** of periodic passes. The per-paper
+empirical campaign log (slowest-100 testbed, hotspot-by-hotspot deltas) lives
+in [`ARXIV_PERFORMANCE.md`](ARXIV_PERFORMANCE.md); reliability witnesses
 (timeout/OOM/hang) live in [`STABILITY_WITNESSES.md`](STABILITY_WITNESSES.md).
 Detailed investigation narratives are in `git log` + commit messages —
 this doc keeps outcomes, not sagas.
@@ -21,16 +21,23 @@ this doc keeps outcomes, not sagas.
 Never `.to_string()`, `String::from()`, or `format!()` when the string is
 already in the interner arena.
 
-- **String literals**: `pin_static("…")` (per-call-site `OnceCell<SymStr>`,
-  subsequent calls are branch+load; saves the 30–50 ns intern probe). The
-  older `pin!("…")` macro is being phased out for literals.
+- **String literals on HOT paths**: the `pin!("…")` macro — it is the
+  per-call-site `OnceCell<SymStr>` cache (thread-local; first call interns via
+  `pin_static`, every later call is a branch+load, no arena access). *(The
+  2026-07-02 audit corrected this doc: an earlier revision attributed the
+  OnceCell mechanism to `pin_static` and called `pin!` deprecated — backwards.
+  The cached `pin!` landed 2026-04-20, `df720961d7`.)*
+- **String literals on COLD paths** (binding tables, one-shot setup):
+  `arena::pin_static("…")` — zero-copy static intern, a per-call arena probe,
+  but no per-call-site thread-local static (matters for code size across the
+  ~60k binding functions).
 - **Runtime strings**: `arena::pin(s)`.
 - **Comparisons/reads**: `arena::with*` to read an existing `SymStr` without
   re-allocating.
 
 ```rust
-// BAD                                   // GOOD
-token.text.to_string() == "endgroup"     token.text == pin_static("endgroup")
+// BAD                                   // GOOD (hot path)
+token.text.to_string() == "endgroup"     token.text == pin!("endgroup")
                                           arena::with(token.text, |s| s == "endgroup")
 ```
 
@@ -73,10 +80,17 @@ largest corpus band (36.5% of wall); in-doc coalescing + persistent on-disk
 cache landed (see "Graphics — completed" below). Cache-key contract: include
 source-bytes hash + page + DPI + format + render-affecting flags; exclude
 timestamps/tmpdir paths; bump a `cache_namespace` constant when fixing a
-rendering bug rather than relying on hash invalidation. Also memoize
-extensionless kpathsea image lookups (hits AND misses) by
-`(SOURCEDIRECTORY, path)` — repeated missing figures otherwise pay a fresh
-fork-exec per `\includegraphics`.
+rendering bug rather than relying on hash invalidation.
+
+`pathname::kpsewhich` lookups are **memoized** (hits AND misses, thread-local,
+keyed by the candidate list — landed 2026-07-02): repeated probes of the same
+missing asset were a fresh kpathsea probe each time. Mechanism note (audit
+correction): this call is the **kpathsea crate**, in-process when libkpathsea
+is statically linked (all release/production builds) — NOT a fork-exec; the
+subprocess-`kpsewhich` fallback only applies to portable builds without the
+linked library (where the memo saves a real 10–20 ms spawn per repeat). The
+only true `kpsewhich` *subprocesses* in a conversion binary are one-shot
+startup/dumper paths (`dump_paths.rs` year-detect, `ini_tex.rs`).
 
 ### 6. No whole-tree `//` / `preceding::` scans inside per-node XSLT templates
 
@@ -187,10 +201,11 @@ there needs the over-parse lever, not deeper marpa work. Audit with
 ### P1 — graphics (36.5%) — largely CLOSED, two open traps
 
 In-doc dedup, persistent disk cache, vector-SVG fast path, vector-PDF
-auto-detect all landed (see "Graphics — completed"). Remaining: the
-extensionless-kpathsea-lookup cache (Principle 5), and tikz-cd/xy/pgf
-**native** rendering cost (NOT external `gs`/`convert` — these render in-Rust
-and show up as digest+math+build on the formula count; see "tikz-cd cluster").
+auto-detect all landed (see "Graphics — completed"), and the
+extensionless-kpathsea-lookup memo landed 2026-07-02 (Principle 5).
+Remaining: tikz-cd/xy/pgf **native** rendering cost (NOT external
+`gs`/`convert` — these render in-Rust and show up as digest+math+build on
+the formula count; see "tikz-cd cluster").
 
 ### FxHash libxml node-cache (measured ~28–30%, biggest single win) — SHIPS, pending upstream cleanup
 
@@ -219,6 +234,84 @@ retry without first shrinking `Token` below 8 bytes. The per-token cycle-guard
 floor for graphics packages is raised to `CYCLE_GUARD_ACTIVATE_GRAPHICS = 150 M`
 (pgf/tikz/xy bindings call `raise_cycle_guard_activate` at load) so healthy
 100–155 M-token graphics streams don't pay the guard.
+
+---
+
+## Audit log (periodic passes; newest first)
+
+### 2026-07-02 — fleet-concurrent audit (idle re-baseline deferred)
+
+Run **while the full-arXiv fleet occupied the box** (72 workers, load ~85), so
+per the measurement discipline no absolute wall-clock numbers were taken —
+scope was static/code checks, artifact checks, and live-fleet observation.
+
+**Live-fleet observation** (corpus `arXiv` 2.82 M docs, `cortex_worker`
+maxperf-cortex, one-conversion-per-process; numbers are contention-inflated
+fleet context, NOT single-process baselines):
+- Throughput **~44 k docs/hr** at 72 workers (normal band; ~44 h to finish).
+- Per-doc wall (`runtime_ms`, n = 884,671 finalized): **avg 4.06 s, p50
+  2.29 s, p90 9.02 s, p99 24.8 s, max 180 s** (the cortex timeout cap).
+- Fatal rate 0.78% of completed; the perf-signal slice: `Timeout:
+  PushbackLimit` 1,123, `TokenLimit` 718, `Recursion` 250, `IfLimit` 140
+  (runaway guards, ~0.25% of done), `never_completed_with_retries` 1,069.
+
+**Checks & outcomes:**
+- **XSLT O(n²) re-audit — HOLDS.** Only XSLT change since the 2026-06-29
+  zero-per-node-scan audit is the maketitle memoize fix itself; remaining `//`
+  uses are document-global params/variables (verified `classPI`,
+  `LaTeXML-common` date, jats/tei doc-level templates).
+- **Spawn-site inventory — per design.** All runtime `Command::new` sites are
+  the cached/coalesced graphics converters or one-shot startup/dumper
+  `kpsewhich`; `line_fontmap`'s tftopl is `#[cfg(test)]`-only. Doc corrections:
+  Principle 5's fork-exec claim for image lookups was mis-attributed (the call
+  is the in-process kpathsea crate in production builds); the lookup memo
+  landed anyway (subprocess-backend builds benefit fully).
+- **Self-contained invariant — holds by design** (disk-first in the dev tree,
+  embedded fallback for shipped binaries; strace showed the expected dev-tree
+  reads of dumps/XSLT/CSS). The definitive rename-away re-verification is
+  deferred — the running fleet reads `resources/dumps/` at every worker spawn;
+  do not perturb mid-run.
+- **Binary size — no drift.** `release/latexml_oxide` 47.1 MB (accepted ~47 MB
+  decision, 2026-06-11); `maxperf-cortex/cortex_worker` 52.5 MB.
+- **Clippy `-W clippy::perf -W clippy::redundant_clone`** — perf lints clean
+  (deny-gated baseline); 7 lib-code redundant clones found: 3 in the
+  `count_nested_same_fence` tie-break walk (**fixed** — walk now threads
+  `Option<&str>`, killing a per-Apply `String::from` + per-node clones), 3
+  cold ones fixed (`content.rs` load guard, `biblatex_sty` label,
+  `latexml_sty` replace-tokens), 1 skipped as FP-suspect
+  (`latex_constructs.rs:913` — `ctr` is used after the flagged clone; nursery
+  lint caution).
+- **pin!/pin_static doc correction** (Principle 1): the call-site-cached
+  OnceCell mechanism belongs to the `pin!` macro (since 2026-04-20), not
+  `pin_static`; an earlier doc revision had it backwards. Trade-off as
+  measured from the code: `pin!` = fastest repeated call (branch+load) at the
+  cost of a per-site thread-local static; `pin_static` = per-call arena probe,
+  no per-site static. **Policy settled 2026-07-02 (user): hot-path carve-out**
+  — `pin_static` for new cold-path literals (bindings, setup), `pin!`
+  kept/allowed on hot paths (`state.rs` meaning lookups, gullet/stomach
+  per-token code). 387 `pin!("literal")` sites total; only 2 added since the
+  2026-06-28 directive, both hot-path `state.rs` sites (compliant under the
+  carve-out).
+- **Commits since 2026-06-27 (81) reviewed for hot-path additions.** One watch
+  item: the noexpand redesign (`6ac88769eb`+) put `is_noexpand_family()` — an
+  arena `with_str` + short prefix memcmp — inside `meaning_key`, i.e. on the
+  per-CS-token meaning-lookup path (×2 probes/token via
+  read_x_token/invoke_token). Estimated a few ns/token; include in the
+  post-fleet A/B (below). If it shows, the fix direction is a Token flag bit,
+  not string checks. Logger inline notes and the ambiguous-math diagnostics
+  are gated/cold — fine.
+
+**Landed from this audit:** the `pathname::kpsewhich` thread-local memo
+(hits+misses, 4096-entry epoch bound) and the clone/borrow fixes above — all
+output-neutral (suite green).
+
+**Deferred follow-ups (post-fleet, idle box):**
+1. **Standing-corpus re-baseline** vs the (stale) 2026-04-30 table + paired
+   `tools/perf_compare.py` on telemetry runs — the noexpand redesign and the
+   June fix wave have never been idle-A/B'd.
+2. Rename-away re-verification of the self-contained invariant.
+3. The `speculative_prefix_apply` `MATHPARSER_SPECULATE` gate check (already
+   under P1 math_parse) — parity first, then cost.
 
 ---
 
@@ -352,7 +445,12 @@ target/release/latexml_oxide \
 Papers under `data/10k_sandbox/<id>.zip`; `complex/si.tex` in-tree. Helper:
 `tools/run_perf_corpus.sh`.
 
-### Baseline (2026-04-30, release)
+### Baseline (2026-04-30, release) — STALE, re-baseline scheduled
+
+**The 2026-07-02 audit flags this baseline as two months stale** (many engine
+changes since, incl. the noexpand redesign — see the audit log). Re-run the
+corpus on an idle box after the full-arXiv fleet completes (~2026-07-04) and
+record a new dated sub-heading below.
 
 | Paper | Wall | Note |
 |---|---:|---|
