@@ -22,6 +22,18 @@ use crate::document::{NodeData, PostDocument, element_children, element_children
 // When false, U+2062 is replaced with U+200B (zero-width space).
 thread_local! {
   static INVISIBLE_TIMES: Cell<bool> = const { Cell::new(true) };
+  /// Inherited style context (Perl `pmml_top` L278-285 binds
+  /// $LaTeXML::MathML::FONT/COLOR/BGCOLOR/OPACITY from the XMath node's
+  /// ancestor chain; `pmml` L332-335 locally rebinds them from each node on
+  /// the way down). A token missing its own attribute styles from context —
+  /// e.g. `{\color{red}$a+b$}` colors every token. (audit F8b; the SIZE/
+  /// DESIRED_SIZE half is deliberately NOT ported: our engine stamps
+  /// absolute fontsize on tokens, which the mathsize context gate already
+  /// compensates.)
+  static CTX_FONT: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  static CTX_COLOR: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  static CTX_BGCOLOR: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
+  static CTX_OPACITY: std::cell::RefCell<Option<String>> = const { std::cell::RefCell::new(None) };
   /// Current math style context, tracking Perl's `$LaTeXML::MathML::STYLE` /
   /// `$LaTeXML::MathML::SIZE`. Stepped down inside sub/superscripts (`pmml_scriptsize`)
   /// and fraction parts (`pmml_smaller`); its `size_percent()` is the contextual size a
@@ -262,6 +274,34 @@ fn pmml_maybe_resize(doc: &PostDocument, node: &Node, result: NodeData) -> NodeD
   result
 }
 
+fn ctx_get(
+  cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
+) -> Option<String> {
+  cell.with(|c| c.borrow().clone())
+}
+
+/// Rebind a context cell to the node's attribute (if present) for a scope;
+/// returns the saved value for restore. Perl's `local $CTX = attr || $CTX`.
+fn ctx_rebind(
+  cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
+  attr: Option<String>,
+) -> Option<String> {
+  cell.with(|c| {
+    let old = c.borrow().clone();
+    if attr.is_some() {
+      *c.borrow_mut() = attr;
+    }
+    old
+  })
+}
+
+fn ctx_set(
+  cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
+  val: Option<String>,
+) {
+  cell.with(|c| *c.borrow_mut() = val);
+}
+
 /// Embellishing roles (scripts/accents applied to operators).
 fn is_embellishing_role(role: &str) -> bool {
   matches!(
@@ -317,6 +357,25 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
       MathStyle::Text
     })
   });
+  // Perl pmml_top L278-285: bind the inherited style context from the XMath
+  // node's ancestor chain, so tokens without their own attributes pick up
+  // the surrounding font/color ({\color{red}$a+b$}).
+  ctx_set(
+    &CTX_FONT,
+    super::find_inherited_attribute(doc, xmath, "font"),
+  );
+  ctx_set(
+    &CTX_COLOR,
+    super::find_inherited_attribute(doc, xmath, "color"),
+  );
+  ctx_set(
+    &CTX_BGCOLOR,
+    super::find_inherited_attribute(doc, xmath, "backgroundcolor"),
+  );
+  ctx_set(
+    &CTX_OPACITY,
+    super::find_inherited_attribute(doc, xmath, "opacity"),
+  );
   let children = element_children(xmath);
   let results: Vec<NodeData> = children.iter().map(|c| pmml(doc, c)).collect();
   let mut result = if results.len() == 1 {
@@ -339,7 +398,15 @@ pub(super) fn pmml_for_ci(doc: &PostDocument, node: &Node) -> NodeData { pmml(do
 ///
 /// Port of `pmml` + `pmml_internal`.
 fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
+  // Perl L332-335: rebind the color/background/opacity context from this
+  // node for the subtree, so styles inherit downward.
+  let saved_color = ctx_rebind(&CTX_COLOR, node.get_attribute("color"));
+  let saved_bg = ctx_rebind(&CTX_BGCOLOR, node.get_attribute("backgroundcolor"));
+  let saved_op = ctx_rebind(&CTX_OPACITY, node.get_attribute("opacity"));
   let mut result = pmml_inner(doc, node);
+  ctx_set(&CTX_COLOR, saved_color);
+  ctx_set(&CTX_BGCOLOR, saved_bg);
+  ctx_set(&CTX_OPACITY, saved_op);
   // Perl MathML.pm L339-341: wrap in m:menclose if the source node carries an
   // `enclose` attribute (e.g. \boxed puts enclose="box" on the whole XMApp).
   if let Some(enclose) = node.get_attribute("enclose") {
@@ -740,11 +807,12 @@ fn pmml_apply_dispatch(
           pmml(doc, &args[1]),
         ])
       } else if meaning == "square-root" && !args.is_empty() {
-        // Perl L1639-1642: mathcolor from the op's color (context $COLOR — F8)
+        // Perl L1639-1642: mathcolor from the op's color or the context.
         NodeData::Element {
           tag:        "m:msqrt".to_string(),
           attributes: rop
             .get_attribute("color")
+            .or_else(|| ctx_get(&CTX_COLOR))
             .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
           children:   vec![pmml(doc, &args[0])],
         }
@@ -759,6 +827,7 @@ fn pmml_apply_dispatch(
           tag:        "m:mroot".to_string(),
           attributes: rop
             .get_attribute("color")
+            .or_else(|| ctx_get(&CTX_COLOR))
             .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
           children:   vec![pmml(doc, &args[1]), pmml_scriptsize(doc, &args[0])],
         }
@@ -854,7 +923,8 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let role = node
     .get_attribute("role")
     .unwrap_or_else(|| "UNKNOWN".to_string());
-  let font = node.get_attribute("font");
+  // Perl stylizeContent L678: token attribute, else the inherited context.
+  let font = node.get_attribute("font").or_else(|| ctx_get(&CTX_FONT));
   let mut text = node.get_content();
   let meaning = node.get_attribute("meaning");
 
@@ -912,6 +982,15 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
 
   let mut attrs = HashMap::default();
 
+  // Perl L747-748: text consisting only of Format characters (invisible
+  // times/apply/separator, ZWSP, …) gets NO visual styling attributes —
+  // without this, context color would paint invisible operators.
+  // (Approximates \p{Format} with the Cf codepoints that occur in math.)
+  let is_format_only = text.chars().all(|c| {
+    matches!(c,
+      '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')
+  });
+
   // Perl: zero-width space <mo> needs lspace/rspace="0em" to prevent browser
   // default operator spacing that creates visible gaps between letters.
   if is_replaced_invisible_times && tag == "m:mo" {
@@ -921,7 +1000,7 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
 
   // Math variant from font — with Plane 1 Unicode conversion.
   // Port of Perl stylizeContent lines 689-756.
-  {
+  if !is_format_only {
     use crate::unicode;
     let mut variant: Option<&str> = font.as_deref().map(unicode::unicode_mathvariant);
 
@@ -1141,9 +1220,31 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
     }
   }
 
-  // Color
-  if let Some(color) = node.get_attribute("color") {
-    attrs.insert("mathcolor".to_string(), color);
+  // Color / background / opacity (Perl L680-687 fallback to the inherited
+  // context; L761-762 opacity → css style; the Format suppression above).
+  if !is_format_only {
+    if let Some(color) = node.get_attribute("color").or_else(|| ctx_get(&CTX_COLOR)) {
+      attrs.insert("mathcolor".to_string(), color);
+    }
+    // NB Perl's `$attr{backgroundcolor} && $item->getAttribute(…) || $BGCOLOR`
+    // (L683-684) means a token's OWN backgroundcolor attribute is never
+    // consulted on this path — only the context. Mirrored faithfully.
+    if let Some(bg) = ctx_get(&CTX_BGCOLOR) {
+      attrs.insert("mathbackground".to_string(), bg);
+    }
+    let cssstyle = node.get_attribute("cssstyle").unwrap_or_default();
+    let opacity = node
+      .get_attribute("opacity")
+      .or_else(|| ctx_get(&CTX_OPACITY));
+    let style = match (cssstyle.is_empty(), opacity) {
+      (true, None) => String::new(),
+      (true, Some(op)) => format!("opacity:{op}"),
+      (false, None) => cssstyle,
+      (false, Some(op)) => format!("{cssstyle};opacity:{op}"),
+    };
+    if !style.is_empty() {
+      attrs.insert("style".to_string(), style);
+    }
   }
 
   // Href

@@ -83,14 +83,13 @@ Consequences recorded here, deprioritized behind the live-path findings:
 
 Verified-and-landed items move to the ✅ list at the bottom.
 
-- **F8 residuals — token styler** (the bulk landed, see ✅ below): still
-  missing vs Perl `stylizeContent`: opacity→cssstyle + `mathbackground`
-  (context bindings F8b), the Format-char styling suppression (L747-748),
-  `color='red'` on unknown empty tokens (L713), Perl's `name||meaning`
-  fallback order (Rust: meaning||name), `force_lspace`/`force_rspace` beyond
-  the ZWSP case, and the whole `$LaTeXML::MathML::FONT/SIZE/COLOR/BGCOLOR/
-  OPACITY/DESIRED_SIZE` inherited-context bindings (pmml_top L278-285 +
-  pmml L332-335) — **F8b**, the largest residual. The dead, fuller
+- **F8 residuals — token styler** (bulk + F8b landed, see ✅): still missing
+  vs Perl `stylizeContent`: `color='red'` on unknown empty tokens (L713),
+  Perl's `name||meaning` fallback order (Rust: meaning||name),
+  `force_lspace`/`force_rspace` beyond the ZWSP case, and the SIZE/
+  DESIRED_SIZE context half (deliberately unported — our engine stamps
+  absolute fontsize on tokens, the mathsize context gate compensates; a
+  faithful port would regress script sizing). The dead, fuller
   `mod.rs::stylize_content` remains to reconcile/delete (used by mod.rs
   text paths only).
 - **F19 (NEW) — math-parser mid-script mis-parse.** `x\mathrel{\mathop{=}
@@ -137,6 +136,20 @@ Verified-and-landed items move to the ✅ list at the bottom.
   extraction, `isFence`/`isSeparator` attribute overrides.
 
 ### Landed
+
+- **F8b ✅ (2026-07-02)** — inherited-context bindings: CTX_FONT/COLOR/
+  BGCOLOR/OPACITY thread-locals bound in `convert_to_pmml` from the XMath
+  ancestor chain (Perl pmml_top L278-285), rebound per node down the
+  recursion (pmml L332-335), consumed in the token path (color→mathcolor,
+  context-only mathbackground mirroring Perl's L683 `&&` quirk,
+  opacity→style, font fallback) and the ENCLOSE/FRACOP/sqrt/mroot color
+  fallbacks; Perl's Format-char styling suppression (L747-748) added so
+  invisible operators stay unstyled. Witness `{\color{red}$a+b$}`: every
+  token now `mathcolor="#FF0000"` byte-identical (was: colored math rendered
+  black — a visible arXiv bug class). Bonus: fixed a latent FFI crash in
+  `find_inherited_attribute` (walking up to the Document node read a
+  misaligned ns field — the known rust-libxml class; element-type guard,
+  Perl-faithful).
 
 - **F15 ✅ (2026-07-02)** — `do_cfrac` ported in full (denominator-sum last-
   term pull-up: trailing `\cdots`, nested-cfrac recursion, invisible-times

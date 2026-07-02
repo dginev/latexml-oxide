@@ -686,6 +686,11 @@ pub fn find_inherited_attribute(
 ) -> Option<String> {
   let mut current = Some(node.clone());
   while let Some(ref n) = current {
+    // Perl getQName returns undef for non-elements → stop. Also guards the
+    // FFI: reading the ns field of a Document node is a misaligned deref.
+    if n.get_type() != Some(libxml::tree::NodeType::ElementNode) {
+      break;
+    }
     if let Some(ns) = n.get_namespace() {
       if ns.get_href() != crate::document::LTX_NSURI {
         break; // Stop at non-LaTeXML elements

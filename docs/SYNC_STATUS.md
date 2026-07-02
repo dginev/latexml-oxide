@@ -58,8 +58,11 @@ against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
   `\cfrac` binding rewritten to Perl's trampoline (capture surrounding
   mathstyle once, nested reuse, no size compounding).
 
-Open queue lives in the audit doc: **F8b** inherited-context bindings
-(FONT/SIZE/COLOR/… — largest residual), F17 misc, F14 share-suffix wiring,
+- **F8b** inherited-context bindings (same day): `{\color{red}$a+b$}` math
+  now colors its tokens (was black — visible arXiv bug class); + a latent
+  rust-libxml misaligned-ns-read crash fixed in `find_inherited_attribute`.
+
+Open queue lives in the audit doc: F17 misc, F14 share-suffix wiring,
 **F5** linebreaker decision (Perl gates on `--linelength`, default OFF →
 feature gap, not production divergence), **F19** math-parser
 `\mathop{=}\limits^{def}` mis-parse (XMWrap vs script application — math-
