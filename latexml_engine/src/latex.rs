@@ -137,7 +137,7 @@ LoadDefinitions!({
       .first()
       .is_some_and(|t| t.text == pin!("\\tabalign"))
   {
-    state::remove_meaning_global(&T_CS!("\\+"));
+    remove_meaning_global(&T_CS!("\\+"));
   }
 
   InnerPool!(latex_constructs);

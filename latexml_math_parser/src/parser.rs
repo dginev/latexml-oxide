@@ -477,7 +477,7 @@ impl Default for MathParser {
 /// The target/category structure is reconstructed from the (distinctive,
 /// engine-owned) message prefixes so the caller can `log_fatal()` + abort
 /// math parsing honestly. Witness math0402448 (amsart + xy-pic).
-fn resource_fatal_from_message(msg: &str) -> Option<latexml_core::common::error::Error> {
+fn resource_fatal_from_message(msg: &str) -> Option<Error> {
   use latexml_core::common::error::{Error, ErrorCategory, ErrorTarget};
   let category = if msg.contains("Infinite expansion loop") {
     ErrorCategory::Recursion
