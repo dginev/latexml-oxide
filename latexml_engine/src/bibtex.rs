@@ -7,7 +7,7 @@
 //!
 //! ## Status (2026-05-15): Phase 1 foundation
 //!
-//! Per [`docs/BIBTEX_PORT_PLAN.md`](../../../docs/BIBTEX_PORT_PLAN.md),
+//! Per [`docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../../../docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md),
 //! the full port is split into 6 phases. This file is at **Phase 1**:
 //! the `BibEntry` data structure + current-entry tracking + field
 //! accessors are in place; no Def\* bindings yet.
@@ -202,7 +202,7 @@ pub fn current_entry() -> Option<Rc<RefCell<BibEntry>>> {
 /// normalized key of the entry currently being processed, or `None`
 /// if not inside a `\bib{...}` block.
 ///
-/// Divergence B1 (see `docs/BIBTEX_PORT_PLAN.md`): Perl stores this
+/// Divergence B1 (see `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`): Perl stores this
 /// as a State Value `CURRENT@BIBKEY` (group-scoped via Perl
 /// `\bgroup`/`\egroup`); Rust stores it as a thread-local, which
 /// does NOT auto-pop on group exit. The current Phase 1-3 code never
@@ -1733,7 +1733,7 @@ LoadDefinitions!({
   // Rust port does it all in one DefMacro returning a Tokens stream,
   // since our gullet handles the tokens-back path natively (no
   // openMouth needed). Divergence is documented under audit B1
-  // (`current_bib_key` rustdoc + `docs/BIBTEX_PORT_PLAN.md`).
+  // (`current_bib_key` rustdoc + `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`).
   DefMacro!("\\ProcessBibTeXEntry Semiverbatim", sub[args] {
     let key = if args[0].is_some() { args[0].to_string() } else {
       return Ok(Tokens!());

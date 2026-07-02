@@ -10,7 +10,7 @@
 #
 # Companion to tools/benchmark_canvas.sh, which is the Phase-1 canvas runner
 # (release profile, no debug info, max throughput). See
-# docs/SANDBOX_TRIAGE_2026-05-21.md "Two-phase workflow" for the philosophy.
+# docs/archive/SANDBOX_TRIAGE_2026-05-21.md "Two-phase workflow" for the philosophy.
 #
 # Usage:
 #   tools/triage_failure.sh 1407.5769

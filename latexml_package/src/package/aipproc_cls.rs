@@ -125,7 +125,7 @@ LoadDefinitions!({
   // Rust's stricter validator surfaces Error:malformed:ltx:bibitem
   // "…isn't allowed in <ltx:section>". Rust-over-Perl improvement:
   // alias to the thebibliography machinery so the content is
-  // preserved. Fixes 4 papers in SANDBOX_TRIAGE_2026-05-21 Class D bibitem-aipproc
+  // preserved. Fixes 4 papers in docs/archive/SANDBOX_TRIAGE_2026-05-21.md Class D bibitem-aipproc
   // cluster (astro-ph9711070, cond-mat0109365, nucl-ex9706010,
   // nucl-th0010030). See also the mirror alias in aipproc_sty.rs.
   //

@@ -131,7 +131,7 @@ Crates are `CC0`, but the binary ships more. Before any public-domain claim:
 
 The public-quality risk is outliers, not the mean: 60s+ timeout/fatal tail;
 math-bocage ambiguity explosions
-([`MATH_AMBIGUITY_AUDIT_2026-05-21.md`](MATH_AMBIGUITY_AUDIT_2026-05-21.md));
+([`archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md`](archive/MATH_AMBIGUITY_AUDIT_2026-05-21.md));
 4 GiB alloc failures; high-RSS package loads; ar5iv limit creep hiding
 over-evaluation. Build a rolling dashboard from `telemetry.jsonl.gz`
 (schema exists, [`TELEMETRY.md`](TELEMETRY.md)): P50/P90/P99 wall+RSS, top
@@ -210,7 +210,7 @@ validation contract.
   [`ISSUE_AUDIT.md`](ISSUE_AUDIT.md). (Earlier "essentially done" was wrong.)
 - **Single-binary smoke test exists** (`tests/001_single_binary_smoke.rs`) —
   §7 is promote/extend, not create.
-- **BibTeX is ported** (Phases 1–8, [`BIBTEX_PORT_PLAN.md`](BIBTEX_PORT_PLAN.md));
+- **BibTeX is ported** (Phases 1–8, [`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](archive/BIBTEX_PORT_PLAN_2026-06-20.md));
   the stale SYNC_STATUS "unported" line is fixed. B1–B6 / Phase 4–5 polish is
   product correctness; `--nobibtex` is not the default escape hatch.
 - **#47 is not purely post-1.0** — Tier A is near-term.

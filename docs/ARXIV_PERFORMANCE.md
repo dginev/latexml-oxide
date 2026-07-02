@@ -130,7 +130,7 @@ These were measured and declined/closed; re-investigating wastes time:
 - **PGO / `target-cpu` (v3/native)** — NO measurable speedup; `maxperf` is already
   at the fat-LTO + CGU1 ceiling. Tooling deleted. (memory `pgo-isa-no-gain-2026-06-21`.)
 - **Startup dump-parse lever** (~50 ms of the ~161 ms startup floor) — measured and
-  declined as too small for the release-critical risk. (`STARTUP_COST_ANALYSIS_2026-06-21.md`,
+  declined as too small for the release-critical risk. (`archive/STARTUP_COST_ANALYSIS_2026-06-21.md`,
   memory `startup-cost-investigation-2026-06-21`.) For *long* papers the startup
   floor is amortized to noise anyway — so this testbed (slow = long) is the right
   place to look at the **digestion / math-parse / post** phases instead.

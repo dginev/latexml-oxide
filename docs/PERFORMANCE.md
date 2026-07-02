@@ -361,7 +361,7 @@ One-line outcomes; detail in `git log` + commit messages.
   `pgo-isa-no-gain-2026-06-21`.)
 - **Startup dump-parse lever (~50 ms of ~161 ms floor) — declined** as too
   small for release-critical risk; amortized to noise on long papers anyway.
-  (`STARTUP_COST_ANALYSIS_2026-06-21.md`.)
+  (`archive/STARTUP_COST_ANALYSIS_2026-06-21.md`.)
 - **`build-std` (panic_abort) — PARKED.** −0.11 MB (0.2%); `.eh_frame` is from
   the static C deps (mimalloc/libmarpa/zstd), which `-Z build-std` doesn't
   touch. Not worth the nightly fragility.
