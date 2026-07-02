@@ -73,11 +73,10 @@ friends) — the `\+` family; (2) the plain **output routine** (`\plainoutput`,
 `\p@renwd`, `\if@`, `\@nother`) and record-format artifacts (`%NN`,
 `\skewchar\<font>`, `count/dimen/skip254`). Live-run evidence: zero errors key
 on any of these names (only `\+` was a typo-magnet; the rest execute only when
-intentionally invoked and are silent if they work). **Decision pending (user)**:
-retract the remaining tabbing entry points at the latex seam for strict Perl
-parity (undefined errors) vs. keep them as beneficial plain-coverage for
-intentional plain-tabbing in latex documents. List archived at the audit
-scratchpad; regenerate with the three-set diff above.
+intentionally invoked and are silent if they work). **DECIDED 2026-07-02
+(user): keep and watch** — the remaining tabbing entry points stay defined as
+beneficial plain coverage; revisit only if next-run cascade signatures
+implicate them. Regenerate the list with the three-set diff above.
 
 **Resolved en passant (2026-07-01 lxDeclare session):** the long-standing
 "DefMathRewrite `\WildCard` subscript bug" (wildcard-subscript rewrite not
@@ -145,8 +144,13 @@ win is **Perl=no_problem/warning but Rust=error/fatal**. Corpus
   > RADIUS of A is corpus-wide: 25 test fixtures, ~150 single-letter applies
   > (`f@(`×57, `d@(`×51, `g@(`×13, …) would flip to multiply — a sweeping change
   > that reshapes all math output. Because A is corpus-wide (even though
-  > toward-Perl), it needs explicit scope sign-off before undertaking; B (below)
-  > is the contained first step (~5 fixtures).
+  > toward-Perl), it needed explicit scope sign-off; B (below) was the
+  > contained first step (~5 fixtures).
+  > **GREEN-LIT 2026-07-02 (user): fix A in a dedicated session BEFORE the
+  > July-5 run** — the run should ship Perl-faithful math structure. Scope:
+  > flip apply-of-UNKNOWN to multiply per Perl's rule, full fixture re-bless
+  > with per-fixture Perl cross-checks, suite + math-bound canvas sample
+  > before/after.
 - **`[a|b]` / `[a \mid b]` bracket-conditional — FIXED 2026-06-22.** Was unparsed
   in Rust; now `delimited-[]@(conditional@(a,b))` matching Perl (`E[X|Y]` etc.).
   Root: the bare `a|b` conditional reduces only at statement level (not as an
@@ -234,6 +238,31 @@ assuming a regression (the norm rule "regressed" physics_test, but Perl matched
 the new output, so it was a parity *fix*).
 
 ## Open tasks (actionable)
+
+### July-5 arXiv run — prep checklist (drafted 2026-07-02, user-approved sequence)
+
+Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
+
+1. **ar5iv-css `glowup`**: merge the `glowup` branch (currently checked out at
+   `~/git/ar5iv-css`, HEAD `3542c57` "ship committed lightningcss min bundles +
+   automate the release") and **release a new ar5iv-css version**.
+2. **Propagate ar5iv-css** to **ar5iv** (`~/git/ar5iv`) and **cortex**
+   (`~/git/cortex`) — bump/vendor the released CSS in both.
+3. **PR `ar5iv-2606-prep` → `main`** (user: later today, 2026-07-02) — parity
+   fixes, perf audit + pin! sweep, fatal-mining fixes, docs consolidation.
+4. **`f(x)` apply-vs-multiply dedicated session** (green-lit, see the
+   math-parser section) — land + re-bless BEFORE the rebuild if schedule
+   allows; it reshapes math output and should be in the July-5 binary.
+5. **After the current full-arXiv run finishes (~2026-07-04)**: rebuild
+   `target/maxperf-cortex/cortex_worker` from merged `main` (fleet binary was
+   deliberately NOT swapped mid-run).
+6. **Smoke canvas** on the new binary (a few hundred mixed papers via
+   `tools/benchmark_canvas.sh`; verify fatal classes vs the known list, spot
+   HTML with the new CSS).
+7. **Corpus/service setup** for the July-5 (2606) run; verify the harness
+   watchdog + memory-governor settings match `CORTEX_WORKER_HARNESS.md`.
+8. Post-run: idle standing-corpus perf re-baseline (PERFORMANCE.md audit-log
+   follow-up), then **tag 0.7.0** from post-run `main` (decided 2026-07-02).
 
 ### Large arXiv corpus troubleshooting (2026-06-30, user-requested) — IN PROGRESS
 **User directive 2026-06-30:** after the 2605 (10k/sandbox) troubleshooting, also troubleshoot
@@ -349,10 +378,12 @@ for `XMTok` in any inline element's model, so a speculative change risks an
 unfaithful divergence. Repro + full notes:
 `docs/reproducers/glossaryref_math_xmtok.tex`.
 
-### 2. 0.7.0 release — release-prep LANDED; tag pending
+### 2. 0.7.0 release — release-prep LANDED; tag AFTER the July-5 run (user, 2026-07-02)
 Version bumped, `runtime-bindings` in the artifact, `.deb` deps, CHANGELOG/README
 done. **Remaining:** tag `0.7.0` on `main` → `release.yml` runs the TL-window
 `dumps` + macOS arm64 leg + publish (each first-exercised on that tag).
+**Timing decided:** tag from post-run `main`, folding the fatal-mining + perf
+fixes and the July-5 run's validation into the release.
 
 ### 3. Speed: residual XSLT cost on large math books — ✅ FIXED 2026-06-29 (3rd O(n²) found)
 After the seclev (`1172569034`) and head-keywords (`da74f6ecfe`) O(n²) XSLT fixes, the
