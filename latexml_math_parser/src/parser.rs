@@ -2635,19 +2635,19 @@ fn textrec(
       // emit empty string and continue.
       return String::new();
     };
-    textrec(content, Some(outer_bp), Some(outer_name), document) // Just send out the
-  // semantic form
-  // Fall back to
-  // presentation, if
-  // content has poor
-  // semantics (eg. from
-  // replacement patterns)
-  // TODO
-  // return ($text =~
-  // /^\(*Unknown/ ?
-  // textrec($presentation,
-  // $outer_bp, $outer_name)
-  // : $text); }
+    // Perl MathParser.pm:950-954: emit the semantic (content) form, but fall
+    // back to the presentation form when the content has poor semantics —
+    // `$text =~ /^\(*Unknown/`. This is what makes \lxDeclare replacement /
+    // \WildCard duals (whose content-arm operator is a decl_id-only XMTok with
+    // no meaning) serialize as their presentation (e.g. `x _ n`, `widehat@(x)`)
+    // rather than `Unknown@(...)`.
+    let text = textrec(content, Some(outer_bp), Some(outer_name), document);
+    if text.trim_start_matches('(').starts_with("Unknown")
+      && let Some(presentation) = children.get(1)
+    {
+      return textrec(presentation, Some(outer_bp), Some(outer_name), document);
+    }
+    text
   } else if tag == pin!("ltx:XMTok") {
     let name = match get_token_meaning(&node, document) {
       Some(meaning) => meaning,

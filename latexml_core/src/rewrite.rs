@@ -1242,18 +1242,20 @@ fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<(
         let mut script_node = next.clone();
         for mut child in script_node.get_child_nodes() {
           child.unlink();
-          // Unwrap XMArg if present (Perl doesn't use XMArg in the parsed form)
+          // Unwrap XMArg if present (Perl doesn't use XMArg in the parsed form).
           if child.get_name() == "XMArg" {
-            // Transfer xml:id from XMArg to its single element child (wildcard ID).
-            // NOTE: `get_property("xml:id")` always returns None (xml:id is
-            // ns-stored as local "id"; see docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md),
-            // so this transfer is effectively a NO-OP. That is INTENTIONALLY left
-            // as-is: "correcting" the accessor makes the wildcard `1`/`n` tokens
-            // acquire ids that Perl does NOT emit (Perl `f _ 1`, no id on the
-            // `1`), diverging from `simplemath.xml`/`declare.xml`. The masked
-            // behaviour is closer to Perl here; a real fix needs dedicated
-            // analysis of the wildcard/XMRef content path, not an accessor swap.
-            let xmarg_id = child.get_property("xml:id");
+            // Carry the wildcard id from the XMArg onto the promoted content so
+            // the XMDual content-arm XMRef resolves (Perl set_wildcard_ids gives
+            // the wildcard node an id and keeps it in the presentation arm).
+            // NOTE: xml:id round-trips through libxml under the *local* name
+            // "id" (the ns-qualified "xml:id" accessor returns None here — see
+            // docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md), so read via
+            // get_property("id"). This only fires for a genuinely id-bearing
+            // wildcard XMArg, so non-wildcard subscripts (e.g. simplemath
+            // `f _ 1`, which never reaches this wildcard path) are unaffected.
+            let xmarg_id = child
+              .get_property("id")
+              .or_else(|| child.get_attribute("xml:id"));
             let xmarg_children: Vec<Node> = child.get_child_nodes();
             if xmarg_children.len() == 1 {
               let mut inner = xmarg_children[0].clone();
@@ -1265,10 +1267,14 @@ fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<(
               }
               new_app.add_child(&mut inner)?;
             } else {
-              for mut grandchild in xmarg_children {
-                grandchild.unlink();
-                new_app.add_child(&mut grandchild)?;
-              }
+              // Multi-token content (an expression such as `2n-1`): keep it
+              // grouped as the XMArg so the math parser can still parse it as a
+              // unit (flattening its tokens into the SUBSCRIPTOP app destroys
+              // the grouping and leaves it unparsed). The parser consumes the
+              // XMArg and lands the wildcard id on the parsed result.
+              let mut arg = child.clone();
+              arg.unlink();
+              new_app.add_child(&mut arg)?;
             }
           } else {
             new_app.add_child(&mut child)?;
