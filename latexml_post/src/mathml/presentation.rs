@@ -1869,4 +1869,41 @@ mod tests {
       _ => panic!("expected text untouched"),
     }
   }
+  #[test]
+  fn test_role_to_atom_type() {
+    // Perl MathML.pm $role_atomtype (L1150)
+    assert_eq!(role_to_atom_type("ID"), "Ord");
+    assert_eq!(role_to_atom_type("NUMBER"), "Ord");
+    assert_eq!(role_to_atom_type("ADDOP"), "Bin");
+    assert_eq!(role_to_atom_type("RELOP"), "Rel");
+    assert_eq!(role_to_atom_type("OPEN"), "Open");
+    assert_eq!(role_to_atom_type("CLOSE"), "Close");
+    assert_eq!(role_to_atom_type("SUMOP"), "Op");
+    assert_eq!(role_to_atom_type("PUNCT"), "Punct");
+    assert_eq!(role_to_atom_type("ARRAY"), "Inner");
+    assert_eq!(role_to_atom_type("no-such-role"), "Ord");
+  }
+
+  #[test]
+  fn test_atompair_spacing() {
+    // Perl MathML.pm $atompair_spacing (L1196): negative = display/text-style only
+    assert_eq!(atompair_spacing("Ord", "Op"), 1);
+    assert_eq!(atompair_spacing("Ord", "Bin"), -2);
+    assert_eq!(atompair_spacing("Rel", "Ord"), -3);
+    assert_eq!(atompair_spacing("Open", "Ord"), 0);
+    assert_eq!(atompair_spacing("Open", "Open"), 0);
+    assert_eq!(atompair_spacing("Punct", "Bin"), 0);
+    assert_eq!(atompair_spacing("Inner", "Op"), 1);
+    assert_eq!(atompair_spacing("Inner", "Close"), 0);
+  }
+
+  #[test]
+  fn test_fmt_em() {
+    assert_eq!(fmt_em(0.0), "0em");
+    assert_eq!(fmt_em(1.0), "1em");
+    // NOTE: Perl fmt_em (L1285) keeps trailing zeros ("0.330em"); we trim.
+    // Cosmetic divergence tracked in docs/MATHML_POST_LINE_AUDIT.md F4.
+    assert!(fmt_em(0.167).starts_with("0.167"));
+    assert_eq!(fmt_em(0.33), "0.33em");
+  }
 }

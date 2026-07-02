@@ -655,112 +655,6 @@ pub fn stylize_content(node: &Node, target_tag: &str) -> (String, HashMap<String
   (text, attrs)
 }
 
-// ======================================================================
-// TeX atom spacing adjustment
-//
-// Port of `adjust_spacing` + `space_walk` + `adjust_pair` from MathML.pm.
-// Maps LaTeXML roles → TeX atom types → inter-atom spacing.
-
-/// TeX math atom types.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AtomType {
-  Ord,
-  Op,
-  Bin,
-  Rel,
-  Open,
-  Close,
-  Punct,
-  Inner,
-}
-
-/// Map LaTeXML role to TeX atom type.
-///
-/// Port of `$role_atomtype`.
-pub fn role_to_atom_type(role: &str) -> AtomType {
-  match role {
-    "ATOM" | "UNKNOWN" | "ID" | "NUMBER" => AtomType::Ord,
-    "ARRAY" => AtomType::Inner,
-    "RELOP" | "METARELOP" | "MODIFIEROP" | "MODIFIER" | "ARROW" => AtomType::Rel,
-    "OPEN" => AtomType::Open,
-    "CLOSE" => AtomType::Close,
-    "PUNCT" | "VERTBAR" | "PERIOD" => AtomType::Punct,
-    "MIDDLE" => AtomType::Ord,
-    "ADDOP" | "MULOP" | "BINOP" | "APPLYOP" | "COMPOSEOP" => AtomType::Bin,
-    "POSTFIX" | "SUPOP" | "DIFFOP" => AtomType::Ord,
-    "FUNCTION" => AtomType::Ord,
-    "OPFUNCTION" | "TRIGFUNCTION" | "OPERATOR" | "BIGOP" | "SUMOP" | "INTOP" | "LIMITOP" => {
-      AtomType::Op
-    },
-    "POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUPERSCRIPT" | "FLOATSUBSCRIPT" => AtomType::Inner,
-    _ => AtomType::Ord,
-  }
-}
-
-/// Atom type for a MathML element tag.
-///
-/// Port of `%m_atomtype`.
-pub fn tag_to_atom_type(tag: &str) -> Option<AtomType> {
-  match tag {
-    "m:mfrac" => Some(AtomType::Ord), // Knuth says Inner, but Ord looks better
-    "m:marray" => Some(AtomType::Inner),
-    "m:mspace" => Some(AtomType::Ord),
-    _ => None,
-  }
-}
-
-/// TeX inter-atom spacing table.
-///
-/// Returns spacing code: 0=none, 1=thin(3mu), 2=medium(4mu), 3=thick(5mu).
-/// Negative means "only in display/text style".
-///
-/// Port of `$atompair_spacing`.
-pub fn atom_pair_spacing(left: AtomType, right: AtomType) -> i32 {
-  use AtomType::*;
-  match (left, right) {
-    (Ord, Op) => 1,
-    (Ord, Bin) => -2,
-    (Ord, Rel) => -3,
-    (Ord, Inner) => -1,
-    (Op, Ord) => 1,
-    (Op, Op) => 1,
-    (Op, Rel) => -3,
-    (Op, Inner) => -1,
-    (Bin, Ord) => -2,
-    (Bin, Op) => -2,
-    (Bin, Open) => -2,
-    (Bin, Inner) => -2,
-    (Rel, Ord) => -3,
-    (Rel, Op) => -3,
-    (Rel, Open) => -3,
-    (Rel, Inner) => -3,
-    (Close, Op) => 1,
-    (Close, Bin) => -2,
-    (Close, Rel) => -3,
-    (Close, Inner) => -1,
-    (Punct, Ord) => -1,
-    (Punct, Op) => -1,
-    (Punct, Rel) => -1,
-    (Punct, Open) => -1,
-    (Punct, Close) => -1,
-    (Punct, Punct) => -1,
-    (Punct, Inner) => -1,
-    (Inner, Ord) => -1,
-    (Inner, Op) => 1,
-    (Inner, Bin) => -2,
-    (Inner, Rel) => -3,
-    (Inner, Open) => -1,
-    (Inner, Punct) => -1,
-    (Inner, Inner) => -1,
-    _ => 0,
-  }
-}
-
-/// TeX spacing values in em units (indexed by abs(spacing_code)).
-///
-/// Port of `@tex_spacing`.
-pub const TEX_SPACING: [f64; 4] = [0.0, 0.167, 0.222, 0.2778];
-
 /// Convert an XMHint spacing attribute to em value.
 ///
 /// Port of `getXMHintSpacing`.
@@ -797,21 +691,6 @@ pub fn needs_mathstyle(node: &NodeData) -> bool {
       children.iter().any(needs_mathstyle)
     },
     _ => false,
-  }
-}
-
-/// Format a float as em string, trimming trailing zeros.
-///
-/// Port of `fmt_em`.
-pub fn fmt_em(val: f64) -> String {
-  if (val - val.round()).abs() < 0.001 {
-    format!("{}em", val.round() as i32)
-  } else {
-    format!("{:.3}em", val)
-      .trim_end_matches('0')
-      .trim_end_matches('.')
-      .to_string()
-      + "em"
   }
 }
 
@@ -1438,160 +1317,9 @@ pub fn pmml_unrow(mml: NodeData) -> Vec<NodeData> {
   }
 }
 
-// ======================================================================
-// Spacing adjustment
-//
-// Port of `adjust_spacing` + `space_walk` + `adjust_pair` from MathML.pm.
-// This resolves the difference between TeX's inter-atom spacing and
-// MathML's operator dictionary spacing.
-
-const EPSILON: f64 = 0.01; // em: ignore differences below this
-const FUDGE: f64 = 0.3; // em: don't warn if can't adjust less than this
-
-/// MathML tags that are "atomic" (no internal spacing adjustment needed).
-fn is_atom_tag(tag: &str) -> bool { matches!(tag, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") }
-
-/// MathML tags that are "mrow-like" (adjacent pairs need spacing checks).
-fn is_mrow_tag(tag: &str) -> bool {
-  matches!(
-    tag,
-    "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd"
-  )
-}
-
-/// MathML tags that are "embellishers" (base is first child).
-fn is_embellisher_tag(tag: &str) -> bool {
-  matches!(
-    tag,
-    "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover"
-  )
-}
-
-/// Walk the MathML tree and adjust spacing between adjacent items.
-///
-/// Port of `space_walk`.
-/// This operates on the array-form MathML representation.
-/// In our case, NodeData serves the same purpose.
-pub fn adjust_spacing(node: &mut NodeData) { space_walk(node); }
-
-fn space_walk(node: &mut NodeData) {
-  if let NodeData::Element { tag, children, .. } = node {
-    if is_atom_tag(tag) {
-      return; // Atomic: nothing to adjust
-    }
-    if is_mrow_tag(tag) {
-      // Check adjacent pairs in mrow-like elements
-      // Recursively process each child first
-      for child in children.iter_mut() {
-        space_walk(child);
-      }
-      // Then adjust pairs (simplified version — full version unwraps mrows and scripts)
-      if children.len() >= 2 {
-        for i in 0..children.len() - 1 {
-          let prev_role = get_role_from_node(&children[i]);
-          let next_role = get_role_from_node(&children[i + 1]);
-          let prev_type = role_to_atom_type(&prev_role);
-          let next_type = role_to_atom_type(&next_role);
-          let tex_code = atom_pair_spacing(prev_type, next_type);
-          let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
-
-          // Get operator dictionary spacing
-          let prev_rspace = get_internal_attr(&children[i], "_rspace");
-          let next_lspace = get_internal_attr(&children[i + 1], "_lspace");
-          let default_space = prev_rspace + next_lspace;
-
-          // Get author padding
-          let prev_rpad = get_internal_attr(&children[i], "_rpadding");
-          let next_lpad = get_internal_attr(&children[i + 1], "_lpadding");
-          let target = prev_rpad + next_lpad + tex_space;
-
-          if (target - default_space).abs() > EPSILON {
-            // Adjustment needed
-            // Try to set on the mo element that's adjacent
-            if is_mo(&children[i]) {
-              set_attr(&mut children[i], "rspace", &fmt_em(target));
-            } else if is_mo(&children[i + 1]) {
-              set_attr(&mut children[i + 1], "lspace", &fmt_em(target));
-            }
-            // Other cases: invisop, mspace, mpadded wrapping — handled in full version
-          }
-        }
-      }
-    } else {
-      // Other elements: just recurse on children
-      for child in children.iter_mut() {
-        space_walk(child);
-      }
-    }
-  }
-}
-
-/// Get the _role attribute from a NodeData.
-fn get_role_from_node(node: &NodeData) -> String {
-  match node {
-    NodeData::Element { attributes, .. } => attributes
-      .as_ref()
-      .and_then(|a| a.get("_role"))
-      .cloned()
-      .unwrap_or_else(|| "ATOM".to_string()),
-    _ => "ATOM".to_string(),
-  }
-}
-
-/// Get a numeric internal attribute (like _lspace, _rspace, _lpadding, _rpadding).
-fn get_internal_attr(node: &NodeData, attr: &str) -> f64 {
-  match node {
-    NodeData::Element { attributes, .. } => attributes
-      .as_ref()
-      .and_then(|a| a.get(attr))
-      .and_then(|v| {
-        let s = v.trim_end_matches("em");
-        s.parse::<f64>().ok()
-      })
-      .unwrap_or(0.0),
-    _ => 0.0,
-  }
-}
-
-/// Check if a NodeData is an m:mo element.
-fn is_mo(node: &NodeData) -> bool { matches!(node, NodeData::Element { tag, .. } if tag == "m:mo") }
-
-/// Set an attribute on a NodeData element.
-fn set_attr(node: &mut NodeData, key: &str, value: &str) {
-  if let NodeData::Element { attributes, .. } = node {
-    let attrs = attributes.get_or_insert_with(HashMap::default);
-    attrs.insert(key.to_string(), value.to_string());
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
-
-  #[test]
-  fn test_role_to_atom_type() {
-    assert_eq!(role_to_atom_type("ID"), AtomType::Ord);
-    assert_eq!(role_to_atom_type("NUMBER"), AtomType::Ord);
-    assert_eq!(role_to_atom_type("ADDOP"), AtomType::Bin);
-    assert_eq!(role_to_atom_type("RELOP"), AtomType::Rel);
-    assert_eq!(role_to_atom_type("OPEN"), AtomType::Open);
-    assert_eq!(role_to_atom_type("CLOSE"), AtomType::Close);
-    assert_eq!(role_to_atom_type("SUMOP"), AtomType::Op);
-    assert_eq!(role_to_atom_type("PUNCT"), AtomType::Punct);
-  }
-
-  #[test]
-  fn test_atom_pair_spacing() {
-    // Ord Op → thin space (1)
-    assert_eq!(atom_pair_spacing(AtomType::Ord, AtomType::Op), 1);
-    // Ord Bin → medium space (-2, display only)
-    assert_eq!(atom_pair_spacing(AtomType::Ord, AtomType::Bin), -2);
-    // Open anything → 0
-    assert_eq!(atom_pair_spacing(AtomType::Open, AtomType::Ord), 0);
-    assert_eq!(atom_pair_spacing(AtomType::Open, AtomType::Open), 0);
-    // Rel Ord → thick space (-3)
-    assert_eq!(atom_pair_spacing(AtomType::Rel, AtomType::Ord), -3);
-  }
 
   #[test]
   fn test_style_step() {
@@ -1599,13 +1327,6 @@ mod tests {
     assert_eq!(style_step("text"), "script");
     assert_eq!(style_step("script"), "scriptscript");
     assert_eq!(style_step("scriptscript"), "scriptscript");
-  }
-
-  #[test]
-  fn test_fmt_em() {
-    assert_eq!(fmt_em(0.0), "0em");
-    assert_eq!(fmt_em(1.0), "1em");
-    assert!(fmt_em(0.167).starts_with("0.167"));
   }
 
   #[test]

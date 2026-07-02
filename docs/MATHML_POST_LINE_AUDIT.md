@@ -6,6 +6,13 @@
 > against the Rust port, and — critically — verify the **wiring** (producer →
 > consumer chains), not just function existence. When complete: date + move to
 > `docs/archive/`, lifting residuals into `SYNC_STATUS.md`.
+>
+> **Status 2026-07-02:** full sweep complete (3 parallel readers over
+> MathML.pm's 60 subs, the 197 `DefMathML` registrations, and the four sibling
+> files). Verdicts below are the sweep's output; each fix re-verifies its item
+> against the Perl source before landing (the sweep itself already caught one
+> self-error: it called `fmt_em` a match — it isn't, see F4). Fixes land as
+> individual commits with a witness formula vs same-host Perl MathML.
 
 ## Motivation (the charter bugs)
 
@@ -14,329 +21,262 @@ The astro-ph0001001 `S9.Ex4.m1` lost-spaces bug (fixed 2026-07-02,
 (attach `lpadding`/`rpadding` → `_lpadding`/`_rpadding`) was never ported —
 the consumer existed with no producer — AND the live `adjust_pair` dropped
 Perl's author-spacing term from `target` and could not materialize onto an
-invisible operator. Neither is findable by name-matching functions. Also
-discovered: a **dead duplicate spacewalk** in `mod.rs` (unused, but it HAD
-the padding term the live one lacked), and a Linebreaker port ratio (Perl
-1053L/58 subs vs Rust 378L/7 fns) that suggests wholesale stubs.
+invisible operator. Neither is findable by name-matching functions. The same
+sweep found the systemic cause: **`mod.rs` carries a parallel, fuller set of
+ports (`stylize_content`, `pmml_maybe_resize`, `needs_mathstyle`, a whole
+spacewalk) that the live `presentation.rs` pipeline never calls** — the
+thinner inline versions are what actually run.
 
 ## Method
 
 - Perl side: `LaTeXML/lib/LaTeXML/Post/MathML.pm` (60 subs + 197 `DefMathML`
   registrations), `MathML/{Presentation,Content,OperatorDictionary,
-  Linebreaker}.pm`, plus the `MathProcessor.pm` parallel-markup layer.
+  Linebreaker}.pm`. (`MathProcessor.pm` does not exist as a file in our Perl
+  snapshot; its role is covered by the base-class code in MathML.pm/Post.pm →
+  Rust `math_processor.rs` trait.)
 - Rust side: `latexml_post/src/mathml/{presentation,mod,content,
-  operator_dictionary,linebreaker}.rs`.
+  operator_dictionary,linebreaker}.rs`. Live pipeline:
+  `mod.rs::convert_node` → `presentation.rs::convert_to_pmml` /
+  `content.rs::convert_to_cmml`.
 - Verdicts: **PORTED** (where) / **PARTIAL** (what's missing) / **MISSING** /
-  **N-A** (infrastructure Perl-ism). Every PARTIAL/MISSING becomes a numbered
-  Finding; fixes ship individually with a witness formula compared against
-  Perl-generated MathML (`latexmlc --format=html5`; NB it segfaults at exit
-  on this host AFTER writing complete output — exit 139 is not a failure).
-- Regenerate inventories:
-  `grep -n '^sub ' LaTeXML/lib/LaTeXML/Post/MathML.pm` and
-  `grep -oE "DefMathML\(...\"" …` (keys below).
+  **N-A** (infrastructure Perl-ism with an idiomatic replacement) /
+  **DEAD** (Rust code exists but is unreachable from the live pipeline).
+- Witness protocol: same-host Perl via `latexmlc --format=html5` (segfaults at
+  exit-cleanup on this host AFTER writing complete output — exit 139 with a
+  complete file is not a failure) or `/usr/local/bin/latexml | latexmlpost`.
+
+## Scope ruling: line-breaking is OPT-IN in Perl (default-parity)
+
+Perl's whole linebreaking stack (`preprocess_linebreaking`, `convertNode_linebreak`,
+Linebreaker.pm's 58 subs, the MathFork/MathBranch document rewrap) activates
+**only** when `--linelength=n` is passed (`Presentation.pm` L21/L58 gate on
+`$$self{linelength}`, default `undef` — `latexmlpost` L39). Neither ar5iv nor
+cortex set it, and our CLI does not expose it. So the Rust linebreaker gap is a
+**feature gap** (like DTD support), NOT a production-output divergence.
+Consequences recorded here, deprioritized behind the live-path findings:
+- `latexml_post/src/mathml/linebreaker.rs` is a from-scratch sketch (~10% of
+  the Perl algorithm), uses the `mspace linebreak=newline` strategy Perl
+  explicitly **abandoned** (live Perl builds an `mtable`), and is **dead**
+  (`best_fit_to_width`/`apply_layout` have zero callers; the
+  `with_linebreaking` flag is never read).
+- Decision needed at release time: either port Linebreaker.pm faithfully
+  behind a `--linelength` option, or delete `linebreaker.rs` and document the
+  feature as out of scope. Tracked as **F5**.
 
 ## Internal-attribute wiring table (the bug class)
 
 | attr | Perl producer | Perl consumer | Rust producer | Rust consumer | status |
 |---|---|---|---|---|---|
-| `_role` | stylizeContent L821+ / pmml L355 | adjust_pair (atom types) | presentation.rs stylize port (L642) | get_node_role | ✅ wired |
-| `_lspace`/`_rspace` | stylizeContent (opdict) | adjust_pair defaults | presentation.rs (opdict>0 only) | get_node_attr_f64 | ⚠️ verify: Perl stores 0-values? check `>0` gate |
-| `_lpadding`/`_rpadding` | pmml L344-348 | adjust_pair L1228-9 | pmml wrapper (`attach_source_padding`, 2026-07-02) | adjust_pair | ✅ FIXED `3ab9ce3cb3` |
-| `_largeop` | stylizeContent | pmml_bigop?/display sizing | 4 sites | ? | ⬜ trace |
-| `_ignorable` | stylizeContent (mo ignorables) | linebreaker? | 1 site | ? | ⬜ trace |
-| cleanup | (attrs dropped on serialize — Perl arrays never serialize _keys) | | `clean_internal_attrs` | | ✅ (verify runs AFTER spacewalk in all pipelines) |
+| `_role` | stylizeContent + pmml L354-355 | adjust_pair atom types | presentation.rs token path | get_node_role | ⚠️ Perl also sets `_role` on non-mo results via the XMRef/refr path (L354-355) — Rust doesn't (F13) |
+| `_lspace`/`_rspace` | stylizeContent (opdict) | adjust_pair defaults | presentation.rs (opdict) | get_node_attr_f64 | ✅ wired |
+| `_lpadding`/`_rpadding` | pmml L344-348 (sums refr+node) | adjust_pair L1228-9 | pmml wrapper `attach_source_padding` | adjust_pair | ✅ FIXED `3ab9ce3cb3`; residual: Perl sums the **referring XMRef's** padding too (F13) |
+| `_largeop` | stylizeContent L811-820 | needsMathstyle | ⚠️ token path doesn't emit it (F8) | needs_mathstyle is DEAD (F7) | ⬜ both halves unwired |
+| `_ignorable` | stylizeContent (zero-width Hints) | filter_row L577 | ⚠️ Hint path doesn't mark (F11) | no filter_row in live pmml_row (F11) | ⬜ both halves unwired |
+| cleanup | (Perl arrays never serialize `_`-keys) | | `clean_internal_attrs` | | ✅ |
 
-## Findings
+## Findings (fix queue — ranked by production impact)
 
-- **F1 ✅ FIXED (`3ab9ce3cb3`)** — `_lpadding`/`_rpadding` producer missing +
-  `adjust_pair` author-spacing term dropped + no invisop materialization.
-- **F2 ⬜ dead duplicate** — `mod.rs::adjust_spacing`/`space_walk`/
-  `get_internal_attr` (mod.rs ~1444-1560) is an unused second port with
-  *different* behavior. Reconcile into the live presentation.rs one, delete.
-- **F3 ⬜ adjust_pair unported branches** — Perl L1255-1262: `target < 0`
-  → mpadded width rewrap (needs `compute_size` L1135, MISSING); prev/next
-  `m:mspace` → width merge with `getXMHintSpacing`. TODO comments in code.
-- **F4 ⬜ fmt_em format divergence** — Perl `sprintf("%.3fem")` → `0.330em`;
-  Rust trims trailing zeros → `0.33em`. Semantically equal; decide byte-parity.
-- **F5 ⬜ Linebreaker coverage** — Perl 1053L/58 subs vs Rust 378L/7 fns.
-  Enumerate what `convertNode_linebreak` needs; likely large PARTIAL/MISSING.
-- **F6 ⬜ space_walk simplifications** — Perl space_walk descends into
-  scripts (L1124) and unwraps rows; embellisher descent for atom-typing
-  exists in Rust (`get_node_role`) but the script-descent recursion needs
-  verification.
+Verified-and-landed items move to the ✅ list at the bottom.
 
-## MathML.pm named subs (60)
+- **F7 — mathstyle→`m:mstyle` propagation absent in the live pmml path.**
+  Perl wraps in `m:mstyle displaystyle=…` whenever the saved `mathstyle`
+  attribute differs from the current style: XMApp (L414-427), XMArray
+  (L487-491), big operators (`pmml_bigop` L847-856), script inner-base
+  (L882-887); `needsMathstyle` (L512) decides `displaytyle=true` vs
+  `scriptlevel` reset. Rust: no `m:mstyle` is ever emitted; `needs_mathstyle`
+  (mod.rs) is dead and also misses the `m:mfrac`→true / explicit-displaystyle
+  branches. Hits `\sum`/`\int`/`\displaystyle`-in-scripts sizing — the single
+  largest visual-fidelity gap.
+- **F8 — live token styler is the THIN one.** `pmml_token`
+  (presentation.rs) emits only `stretchy`, `mathsize`, `href`/`title`, and the
+  internal `_role`/`_lspace`/`_rspace`. Perl `stylizeContent` (L672-828) also
+  emits: `symmetric='true'` (stretchy fences/large-ops and `/`),
+  `movablelimits='false'` (mid-position bigops), `largeop` + `_largeop`,
+  `fence`/`separator` on opdict mismatch, relative font-size %→em rescale
+  inside script levels (L776-797), `minsize`/`maxsize` stretchy-hack
+  (L788-817), opacity→cssstyle, `mathbackground`, `force_lspace`/`force_rspace`
+  (L825-826). The fuller port sits DEAD in `mod.rs::stylize_content`.
+  Reconcile: wire ONE styler (presentation-side), delete the other.
+- **F9 — `pmml_maybe_resize` never invoked** (Perl L525-575, called at
+  L421/492/501 + token subs L833/839/845). Loses: width/height/depth/x-y
+  offset→`m:mpadded`, `framed`/`framecolor` (`\boxed`, `\fbox` in math),
+  stretchy-ARROW→`m:mover`+`m:mspace` (`\xrightarrow` sizing), XMDual
+  parent-attr inheritance (L529-539). A fuller dead port exists at
+  mod.rs `pmml_maybe_resize`; wire it into the live path.
+- **F10 — `Apply:ENCLOSE:?` emits no `m:menclose`.** presentation.rs routes
+  ENCLOSE to `pmml_parenthesize` → plain fenced mrow; Perl emits
+  `m:menclose notation=@enclose` (+`mathcolor`, +`mstyle` padding wrap).
+  `\cancel`/`\sout`/`\boxed`-class markup silently degrades.
+- **F11 — `_ignorable`/`filter_row` + Hint width normalization.** Perl marks
+  zero-width Hints `_ignorable` and `filter_row` (L577) drops them from rows;
+  Hint widths go through `getXMHintSpacing`→`em`. Rust `pmml_row` never
+  filters, and the Hint arm passes the raw width string to `m:mspace`
+  (malformed for `mu`/`pt` inputs).
+- **F12 — FRACOP attribute loss.** Rust `m:mfrac` keeps only zero
+  `linethickness`; drops non-zero `linethickness`, `bevelled='true'`
+  (`ltx_bevelled` class path, Perl L1614-1616), and `mathcolor`. Also
+  `mathcolor` dropped on `m:msqrt`/`m:mroot` (Perl L1639-1646).
+- **F13 — XMRef refr-preference (`_getattr`) unported** (Perl L367-378 +
+  pmml L339-355). Through an XMRef, Perl prefers the *referring* node's
+  role/color/class/enclose and **sums both** refr+node padding; Rust reads
+  only the target node (our `attach_source_padding` covers the node half).
+  Also missing there: `enclose`→menclose wrap, class merge, `_role` on non-mo
+  results.
+- **F14 — content-MathML structural arms missing:** `multirelation` cmml
+  (pairwise `apply(rel,·,·)` chained under `m:and` with `m:share`, L1719-1729)
+  — chained `a<b<c` semantics are wrong; `cmml_shared`/`cmml_share`
+  (L1420-1434); `less-than-or-approximately-equals` → `or`-composition
+  (L1436-1445); `cmml_leaf` no-meaning branch drops the `mathvariant-`
+  prefix on `m:ci` (L1388-1390); `cmml_decoratedSymbol` missing the
+  meaning→csymbol branch + pmml-subtree content (L1399-1403).
+- **F15 — `do_cfrac` is a stub** (Perl L1931-1973): continued fractions
+  render as one flat `m:mfrac`; the denominator-recursion unrolling, `\cdots`
+  pull-up, and `cfrac-inline` style select are all absent.
+- **F16 — OperatorDictionary codepoint holes** (properties on the common set
+  verified identical; gaps are in the long tail): Cat A missing dingbat/arrow
+  ranges (`2794`, `279B-27A1`, `27A5-27B8` singles, `2B0C-2B11`, `2B6A-2B7D`,
+  `2BA0-2BAF`…) with some over-inclusion at range boundaries; Cat B missing
+  `0322`, `29B8`, `29BC`, `29C4-29C5`, `29F5-29FB`; **U+2A50 misclassified**
+  Cat B (MED) vs Perl Cat C (THIN); fence table missing `U+0331`.
+- **F17 — smaller pmml gaps:** `pmml_infix` ADDOP flatten via `pmml_unrow`
+  (L639-644) absent; `pmml_scriptsize_padded` (L926, primed-sum limit
+  centering) + `pmml_script_decipher` emb_left/emb_right absent;
+  `pmml_text_aux` text nodes skip `stylizeContent` (font/color lost on mtext,
+  L1034) and element attrs not propagated (L1040-1044); `Apply:?:formulae`
+  has no pmml arm (renders the phantom op); `pmml_parenthesize` no
+  `usemfenced` branch (obsolete `m:mfenced` — probably N-A, confirm);
+  `outerWrapper` missing altimg/RDFa attrs (L82-89); `combineParallel`
+  missing `annotation-xml` non-mathml wrap (L123-127); `preprocess` doesn't
+  wire plane1/hackplane1/nestmath config (L69-73).
+- **F3 — `adjust_pair` unported branches** (Perl L1255-1275): `target<0` →
+  mpadded rewrap of prev (needs `compute_size` L1135, MISSING); prev/next
+  `m:mspace` width-merge; the both-mo `$target/2` split fallback (L1272-1275).
+  Plus **F6**: Perl `space_walk` iteratively unwraps nested mrows into the
+  pair stream (L1105-1118) — verify the Rust walk's flattening matches.
+- **F4 — `fmt_em` format divergence.** Perl `sprintf("%.3fem")` → `0.330em`
+  (verified L1285; keeps trailing zeros); Rust trims → `0.33em`. Semantically
+  equal. Either match byte-for-byte or record in OXIDIZED_DESIGN. Same class:
+  `annotated` mspace width `0.389em` vs Perl's raw `0.3888888888888889em`.
+- **F5 — Linebreaker feature gap** (see Scope ruling above). Decide: faithful
+  port behind `--linelength`, or delete the dead sketch + document as out of
+  scope. Sub-findings if ported: mtable strategy (not mspace-newline),
+  multiplex/breakstepper enumeration, height/depth model, scriptlevel-scaled
+  width estimation, fence resize, `lhs_pos` alignment, punctuation
+  extraction, `isFence`/`isSeparator` attribute overrides.
+
+### Landed
+
+- **F1 ✅ (`3ab9ce3cb3`)** — `_lpadding`/`_rpadding` producer + author-spacing
+  term + invisop materialization (astro-ph0001001 witness).
+- **F2 ✅ (this commit)** — dead duplicate spacewalk deleted from `mod.rs`
+  (`adjust_spacing`/`space_walk`/`AtomType`/`role_to_atom_type`/
+  `tag_to_atom_type`/`atom_pair_spacing`/`TEX_SPACING`/`fmt_em` + helpers).
+  Before deletion, all three tables were verified entry-for-entry against
+  Perl `$role_atomtype`/`$atompair_spacing`/`%m_atomtype` (L1150-1218) AND
+  against the live presentation.rs copies — full three-way match, including
+  Perl's deliberate `mfrac→Ord` deviation from Knuth. Table-parity tests
+  moved onto the live copies in presentation.rs. NOTE: `mod.rs` still holds
+  live helpers (`pmml_row`, `pmml_parenthesize`, `get_xm_hint_spacing`,
+  `find_inherited_attribute`, `stylize_content`…) — only the spacewalk
+  cluster was dead. Remaining suspected-dead mod.rs items are audit items,
+  not deleted blind: `style_step`, `style_size`, `pmml_tag_for_role`,
+  `needs_mathstyle` (→F7), `pmml_maybe_resize` (→F9), `apply_handler_for_meaning`,
+  `cmml_element_for_meaning`, `has_dedicated_cmml_structure`, `pmml_punctuate`
+  (dead in Perl too, "never used?"), `pmml_unrow` (→F17 ADDOP flatten).
+
+## MathML.pm named subs (60) — sweep verdicts
 
 | Perl sub (line) | verdict | notes |
 |---|---|---|
-| `preprocess` (L66) | ⬜ | |
-| `outerWrapper` (L77) | ⬜ | |
-| `rawIDSuffix` (L109) | ⬜ | |
-| `combineParallel` (L113) | ⬜ | |
-| `getQName` (L147) | ⬜ | |
-| `addCrossref` (L154) | ⬜ | |
-| `realize` (L163) | ⬜ | |
-| `getOperatorRole` (L173) | ⬜ | |
-| `DefMathML` (L199) | ⬜ | |
-| `lookupPresenter` (L205) | ⬜ | |
-| `lookupContent` (L212) | ⬜ | |
-| `pmml_top` (L273) | ⬜ | |
-| `find_inherited_attribute` (L291) | ⬜ | |
-| `pmml_smaller` (L303) | ⬜ | |
-| `pmml_scriptsize` (L311) | ⬜ | |
-| `pmml` (L318) | ⬜ | |
-| `first_element` (L359) | ⬜ | |
-| `_getattr` (L367) | ⬜ | |
-| `_getspace` (L371) | ⬜ | |
-| `getXMHintSpacing` (L380) | ⬜ | |
-| `pmml_internal` (L387) | ⬜ | |
-| `needsMathstyle` (L512) | ⬜ | |
-| `pmml_maybe_resize` (L525) | ⬜ | |
-| `filter_row` (L577) | ⬜ | |
-| `pmml_row` (L581) | ⬜ | |
-| `pmml_unrow` (L586) | ⬜ | |
-| `pmml_parenthesize` (L594) | ⬜ | |
-| `pmml_punctuate` (L611) | ⬜ | |
-| `pmml_infix` (L626) | ⬜ | |
-| `stylizeContent` (L672) | ⬜ | |
-| `pmml_mi` (L830) | ⬜ | |
-| `pmml_mn` (L836) | ⬜ | |
-| `pmml_mo` (L842) | ⬜ | |
-| `pmml_bigop` (L847) | ⬜ | |
-| `pmml_script` (L876) | ⬜ | |
-| `pmml_script_mid_layout` (L893) | ⬜ | |
-| `pmml_scriptsize_padded` (L926) | ⬜ | |
-| `pmml_script_multi_layout` (L936) | ⬜ | |
-| `pmml_script_decipher` (L963) | ⬜ | |
-| `pmml_text_aux` (L1029) | ⬜ | |
-| `adjust_spacing` (L1079) | ⬜ | |
-| `space_walk` (L1096) | ⬜ | |
-| `compute_size` (L1135) | ⬜ | |
-| `adjust_pair` (L1220) | ⬜ | |
-| `fmt_em` (L1285) | ⬜ | |
-| `cmml_top` (L1290) | ⬜ | |
-| `cmml` (L1301) | ⬜ | |
-| `cmml_internal` (L1311) | ⬜ | |
-| `cmml_contents` (L1350) | ⬜ | |
-| `cmml_unparsed` (L1360) | ⬜ | |
-| `cmml_leaf` (L1377) | ⬜ | |
-| `cmml_decoratedSymbol` (L1396) | ⬜ | |
-| `cmml_not` (L1406) | ⬜ | |
-| `cmml_synth_not` (L1410) | ⬜ | |
-| `cmml_synth_complement` (L1415) | ⬜ | |
-| `cmml_shared` (L1420) | ⬜ | |
-| `cmml_share` (L1426) | ⬜ | |
-| `cmml_or_compose` (L1436) | ⬜ | |
-| `pmml_summation` (L1796) | ⬜ | |
-| `do_cfrac` (L1931) | ⬜ | |
+| `preprocess` (L66) | PARTIAL | plane1/hackplane1/nestmath config unwired (→F17) |
+| `outerWrapper` (L77) | PARTIAL | altimg/imagesrc/valign + RDFa attrs missing (→F17) |
+| `rawIDSuffix` (L109) | PORTED | mod.rs `raw_id_suffix` |
+| `combineParallel` (L113) | PARTIAL | `annotation-xml` non-mathml wrap missing (→F17) |
+| `getQName` (L147) | N-A | document.rs qname helpers |
+| `addCrossref` (L154) | PORTED | crossref.rs |
+| `realize` (L163) | PORTED | inlined idref resolution at call sites |
+| `getOperatorRole` (L173) | PORTED | presentation.rs embellished-role recursion |
+| `DefMathML` (L199) | N-A | registry → match-arm dispatch |
+| `lookupPresenter` (L205) | N-A | presentation.rs match |
+| `lookupContent` (L212) | N-A | content.rs match |
+| `pmml_top` (L273) | PARTIAL | FONT/SIZE/COLOR/… context bindings not bound (→F8 interplay) |
+| `find_inherited_attribute` (L291) | PORTED | mod.rs |
+| `pmml_smaller` (L303) | PORTED | presentation.rs |
+| `pmml_scriptsize` (L311) | PORTED | presentation.rs |
+| `pmml` (L318) | PARTIAL | enclose/class/_role refr wiring missing (→F13); padding half FIXED (F1) |
+| `first_element` (L359) | N-A | libxml |
+| `_getattr` (L367) | MISSING | refr-preferred attr read (→F13) |
+| `_getspace` (L371) | PARTIAL | refr's own padding not summed (→F13) |
+| `getXMHintSpacing` (L380) | PORTED | mod.rs `get_xm_hint_spacing` (but Hint arm bypasses it →F11) |
+| `pmml_internal` (L387) | PARTIAL | mstyle wraps (→F7), maybe_resize (→F9), XMArray span/border/thead, nestmath, ltx:ERROR (→F17) |
+| `needsMathstyle` (L512) | DEAD+PARTIAL | mod.rs, uncalled; missing mfrac/mstyle branches (→F7) |
+| `pmml_maybe_resize` (L525) | DEAD | mod.rs port unwired (→F9) |
+| `filter_row` (L577) | MISSING | `_ignorable` drop (→F11) |
+| `pmml_row` (L581) | PARTIAL | no filter_row (→F11) |
+| `pmml_unrow` (L586) | DEAD | needed by ADDOP flatten (→F17) |
+| `pmml_parenthesize` (L594) | PARTIAL | no usemfenced branch; no synthesized OPEN/CLOSE mo (→F17) |
+| `pmml_punctuate` (L611) | N-A | dead in Perl too ("never used?") |
+| `pmml_infix` (L626) | PARTIAL | ADDOP flatten missing (→F17) |
+| `stylizeContent` (L672) | PARTIAL | live inline is thin; full dead copy in mod.rs (→F8) |
+| `pmml_mi/mn/mo` (L830-845) | PARTIAL | no maybe_resize wrap (→F9) |
+| `pmml_bigop` (L847) | MISSING | no mstyle wrap (→F7) |
+| `pmml_script` (L876) | PARTIAL | innerbase mstyle wrap (→F7) |
+| `pmml_script_mid_layout` (L893) | PARTIAL | NOMOVABLELIMITS + phantom padding (→F17) |
+| `pmml_scriptsize_padded` (L926) | MISSING | primed-sum limit centering (→F17) |
+| `pmml_script_multi_layout` (L936) | PARTIAL | empty slot `m:none` vs Perl empty mrow (→F17) |
+| `pmml_script_decipher` (L963) | PARTIAL | emb_left/emb_right + prelevel logic (→F17) |
+| `pmml_text_aux` (L1029) | PARTIAL | text-node styling + attr propagation (→F17) |
+| `adjust_spacing` (L1079) | PORTED | presentation.rs |
+| `space_walk` (L1096) | PARTIAL? | verify mrow-unwrap parity (→F6) |
+| `compute_size` (L1135) | MISSING | needed by F3 mpadded branch |
+| `adjust_pair` (L1220) | PARTIAL | mpadded/mspace/target÷2 branches (→F3) |
+| `fmt_em` (L1285) | PARTIAL | trailing-zero trim divergence (→F4) |
+| `cmml_top` (L1290) | PORTED | content.rs |
+| `cmml` (L1301) | PORTED | + Rust-only cycle/depth guard |
+| `cmml_internal` (L1311) | PARTIAL | meaning-vs-role dispatch nuance |
+| `cmml_contents` (L1350) | PORTED | |
+| `cmml_unparsed` (L1360) | PORTED | |
+| `cmml_leaf` (L1377) | PARTIAL | mathvariant prefix on m:ci (→F14) |
+| `cmml_decoratedSymbol` (L1396) | PARTIAL | meaning→csymbol + pmml content (→F14) |
+| `cmml_not` (L1406) | MISSING | (→F14) |
+| `cmml_synth_not` (L1410) | PARTIAL | inlined for one caller |
+| `cmml_synth_complement` (L1415) | PORTED | inlined |
+| `cmml_shared`/`cmml_share` (L1420-1434) | MISSING | m:share (→F14) |
+| `cmml_or_compose` (L1436) | MISSING | (→F14) |
+| `pmml_summation` (L1796) | PARTIAL | Rust adds ⁡ when base≠mo — verify vs Perl |
+| `do_cfrac` (L1931) | MISSING | cfrac unrolling (→F15) |
 
-## Sibling files
+## DefMathML registrations (197) — sweep verdicts
 
-| Perl sub | verdict | notes |
-|---|---|---|
-| Presentation.pm: preprocess / convertNode_simple / convertNode_linebreak / convertNode / rawIDSuffix / associateNodeHook / preprocess_linebreaking | ⬜ | linebreaking entry points — pairs with F5 |
-| Content.pm: convertNode / rawIDSuffix / canConvert | ⬜ | |
-| OperatorDictionary.pm: opdict_lookup / lookup_category / decode_ranges | ⬜ | Rust `operator_dictionary.rs` (11 fns) — verify table completeness |
-| MathProcessor.pm (parallel markup / associateNode / crossref) | ⬜ | scope: only the parts MathML.pm calls |
+Dispatch: pmml via `pmml_apply`/`pmml_token` match arms; cmml via `cmml_impl`/
+`cmml_leaf` + the `meaning_to_cmml_element` table. Bulk verdict: **the long
+tail is PORTED** — all Token meaning→cmml entries (trig/hyperbolic/inverse ×28,
+arithmetic ×27, relations ×9, sets ×10, calculus ×11, statistics ×6, linear
+algebra ×6, constants ×15 — including Perl's preserved `hyperbolic-cotantent`
+typo), interval/set/list/vector/cases/matrix constructors, accents
+(OVER/UNDER incl. nesting), scripts, infix/postfix roles, `hack-definite-
+integral`, `not-approximately-equals`/complement synthesis. Exceptions (all
+folded into the Findings): ENCLOSE (F10), FRACOP/root mathcolor+bevelled
+(F12), multirelation + lt-or-approx cmml (F14), continued-fraction (F15),
+formulae pmml arm (F17), Hint width normalization (F11), `Token:?:absent`
+empty `m:mi` vs `m:mrow` (documented divergence, Task #264), `m:cn` integer
+detection `i64`-parse vs Perl regex (huge ints/leading `+` — micro-gap),
+nth-root arg order reversed on BOTH producer+consumers (self-consistent, final
+markup matches — do not "fix" one side alone).
 
-## DefMathML registrations (197 calls, 196 unique keys)
+## Sibling files — sweep verdicts
 
-Verdict ⬜/✅ per key: does the Rust dispatch (presentation.rs match arms +
-content.rs) produce the same markup for the same role/meaning?
+**Presentation.pm:** `convertNode_simple`/`rawIDSuffix`/`canConvert`-adjacent
+flow PORTED; `associateNodeHook` (href/title) relocated to token build-time —
+equivalent for same-node association; everything linebreaking-related is the
+F5 feature gap; `convertNode`'s `converted_pmml_cache` + MathBranch branch are
+linebreaking-only (F5).
 
-- ⬜ `Apply:?:?`
-- ⬜ `Apply:ADDOP:?`
-- ⬜ `Apply:?:annotated`
-- ⬜ `Apply:ARROW:?`
-- ⬜ `Apply:BIGOP:?`
-- ⬜ `Apply:BINOP:?`
-- ⬜ `Apply:?:closed-interval`
-- ⬜ `Apply:?:closed-open-interval`
-- ⬜ `Apply:COMPOSEOP:?`
-- ⬜ `Apply:?:contains`
-- ⬜ `Apply:?:continued-fraction`
-- ⬜ `Apply:ENCLOSE:?`
-- ⬜ `Apply:?:formulae`
-- ⬜ `Apply:FRACOP:?`
-- ⬜ `Apply:?:hack-definite-integral`
-- ⬜ `Apply:INTOP:?`
-- ⬜ `Apply:?:less-than-or-approximately-equals`
-- ⬜ `Apply:?:limit-from`
-- ⬜ `Apply:?:list`
-- ⬜ `Apply:METARELOP:?`
-- ⬜ `Apply:MIDDLE:?`
-- ⬜ `Apply:MODIFIEROP:?`
-- ⬜ `Apply:MULOP:?`
-- ⬜ `Apply:?:multirelation`
-- ⬜ `Apply:?:not-approximately-equals`
-- ⬜ `Apply:?:not-contains`
-- ⬜ `Apply:?:nth-root`
-- ⬜ `Apply:?:open-closed-interval`
-- ⬜ `Apply:?:open-interval`
-- ⬜ `Apply:OVERACCENT:?`
-- ⬜ `Apply:POSTFIX:?`
-- ⬜ `Apply:RELOP:?`
-- ⬜ `Apply:?:set`
-- ⬜ `Apply:?:square-root`
-- ⬜ `Apply:SUBSCRIPTOP:?`
-- ⬜ `Apply:SUMOP:?`
-- ⬜ `Apply:SUPERSCRIPTOP:?`
-- ⬜ `Apply:?:superset-of`
-- ⬜ `Apply:?:superset-of-and-not-equals`
-- ⬜ `Apply:?:superset-of-or-equals`
-- ⬜ `Apply:UNDERACCENT:?`
-- ⬜ `Apply:?:vector`
-- ⬜ `Array:?:?`
-- ⬜ `Array:?:cases`
-- ⬜ `Hint:?:?`
-- ⬜ `Token:?:?`
-- ⬜ `Token:?:absent`
-- ⬜ `Token:?:absolute-value`
-- ⬜ `Token:ADDOP:?`
-- ⬜ `Token:ADDOP:minus`
-- ⬜ `Token:ADDOP:plus`
-- ⬜ `Token:?:and`
-- ⬜ `Token:APPLYOP:?`
-- ⬜ `Token:?:approximately-equals`
-- ⬜ `Token:?:argument`
-- ⬜ `Token:ARROW:?`
-- ⬜ `Token:BIGOP:?`
-- ⬜ `Token:BINOP:?`
-- ⬜ `Token:?:cardinality`
-- ⬜ `Token:?:cartesian-product`
-- ⬜ `Token:?:ceiling`
-- ⬜ `Token:CLOSE:?`
-- ⬜ `Token:?:codomain`
-- ⬜ `Token:?:compose`
-- ⬜ `Token:COMPOSEOP:?`
-- ⬜ `Token:?:conjugate`
-- ⬜ `Token:?:cosecant`
-- ⬜ `Token:?:cosine`
-- ⬜ `Token:?:cotangent`
-- ⬜ `Token:?:curl`
-- ⬜ `Token:?:determinant`
-- ⬜ `Token:?:differential`
-- ⬜ `Token:DIFFOP:?`
-- ⬜ `Token:?:divergence`
-- ⬜ `Token:?:divide`
-- ⬜ `Token:?:domain`
-- ⬜ `Token:?:element-of`
-- ⬜ `Token:?:equals`
-- ⬜ `Token:?:equivalent-to`
-- ⬜ `Token:?:exists`
-- ⬜ `Token:?:exponential`
-- ⬜ `Token:?:factorial`
-- ⬜ `Token:?:factor-of`
-- ⬜ `Token:?:floor`
-- ⬜ `Token:?:forall`
-- ⬜ `Token:?:gcd`
-- ⬜ `Token:?:gradient`
-- ⬜ `Token:?:greater-than`
-- ⬜ `Token:?:greater-than-or-equals`
-- ⬜ `Token:?:hyperbolic-cosecant`
-- ⬜ `Token:?:hyperbolic-cosine`
-- ⬜ `Token:?:hyperbolic-cotantent`
-- ⬜ `Token:?:hyperbolic-secant`
-- ⬜ `Token:?:hyperbolic-sine`
-- ⬜ `Token:?:hyperbolic-tangent`
-- ⬜ `Token:ID:circular-pi`
-- ⬜ `Token:ID:complexes`
-- ⬜ `Token:ID:empty-set`
-- ⬜ `Token:?:identity`
-- ⬜ `Token:ID:Euler-constant`
-- ⬜ `Token:ID:exponential-e`
-- ⬜ `Token:ID:false`
-- ⬜ `Token:ID:imaginary-i`
-- ⬜ `Token:ID:infinity`
-- ⬜ `Token:ID:integers`
-- ⬜ `Token:ID:notanumber`
-- ⬜ `Token:ID:numbers`
-- ⬜ `Token:ID:primes`
-- ⬜ `Token:ID:rationals`
-- ⬜ `Token:ID:reals`
-- ⬜ `Token:ID:true`
-- ⬜ `Token:?:image`
-- ⬜ `Token:?:imaginary-part`
-- ⬜ `Token:?:implies`
-- ⬜ `Token:?:integral`
-- ⬜ `Token:?:intersection`
-- ⬜ `Token:INTOP:?`
-- ⬜ `Token:?:inverse`
-- ⬜ `Token:?:inverse-cosecant`
-- ⬜ `Token:?:inverse-cosine`
-- ⬜ `Token:?:inverse-cotangent`
-- ⬜ `Token:?:inverse-hyperbolic-cosecant`
-- ⬜ `Token:?:inverse-hyperbolic-cosine`
-- ⬜ `Token:?:inverse-hyperbolic-cotangent`
-- ⬜ `Token:?:inverse-hyperbolic-secant`
-- ⬜ `Token:?:inverse-hyperbolic-sine`
-- ⬜ `Token:?:inverse-hyperbolic-tangent`
-- ⬜ `Token:?:inverse-secant`
-- ⬜ `Token:?:inverse-sine`
-- ⬜ `Token:?:inverse-tangent`
-- ⬜ `Token:?:lambda`
-- ⬜ `Token:?:laplacian`
-- ⬜ `Token:?:lcm`
-- ⬜ `Token:?:less-than`
-- ⬜ `Token:?:less-than-or-equals`
-- ⬜ `Token:?:limit`
-- ⬜ `Token:LIMITOP:?`
-- ⬜ `Token:?:logarithm`
-- ⬜ `Token:?:matrix`
-- ⬜ `Token:?:maximum`
-- ⬜ `Token:?:mean`
-- ⬜ `Token:?:median`
-- ⬜ `Token:METARELOP:?`
-- ⬜ `Token:MIDDLE:?`
-- ⬜ `Token:?:minimum`
-- ⬜ `Token:?:minus`
-- ⬜ `Token:?:mode`
-- ⬜ `Token:MODIFIEROP:?`
-- ⬜ `Token:?:moment`
-- ⬜ `Token:MULOP:?`
-- ⬜ `Token:?:natural-logarithm`
-- ⬜ `Token:?:not`
-- ⬜ `Token:?:not-element-of`
-- ⬜ `Token:?:not-equals`
-- ⬜ `Token:NUMBER:?`
-- ⬜ `Token:OPEN:?`
-- ⬜ `Token:OPERATOR:?`
-- ⬜ `Token:?:or`
-- ⬜ `Token:?:outer-product`
-- ⬜ `Token:OVERACCENT:?`
-- ⬜ `Token:?:partial-differential`
-- ⬜ `Token:PERIOD:?`
-- ⬜ `Token:?:plus`
-- ⬜ `Token:POSTFIX:?`
-- ⬜ `Token:?:power`
-- ⬜ `Token:?:prod`
-- ⬜ `Token:PUNCT:?`
-- ⬜ `Token:?:quotient`
-- ⬜ `Token:?:real-part`
-- ⬜ `Token:RELOP:?`
-- ⬜ `Token:?:remainder`
-- ⬜ `Token:?:scalar-product`
-- ⬜ `Token:?:secant`
-- ⬜ `Token:?:selector`
-- ⬜ `Token:?:set-minus`
-- ⬜ `Token:?:sine`
-- ⬜ `Token:?:standard-deviation`
-- ⬜ `Token:SUBSCRIPTOP:?`
-- ⬜ `Token:?:subset-of`
-- ⬜ `Token:?:subset-of-and-not-equals`
-- ⬜ `Token:?:subset-of-or-equals`
-- ⬜ `Token:?:sum`
-- ⬜ `Token:SUMOP:?`
-- ⬜ `Token:SUPERSCRIPTOP:?`
-- ⬜ `Token:SUPOP:?`
-- ⬜ `Token:?:tangent`
-- ⬜ `Token:?:tends-to`
-- ⬜ `Token:?:times`
-- ⬜ `Token:?:transpose`
-- ⬜ `Token:?:uminus`
-- ⬜ `Token:UNDERACCENT:?`
-- ⬜ `Token:?:union`
-- ⬜ `Token:?:variance`
-- ⬜ `Token:?:vector-product`
-- ⬜ `Token:VERTBAR:?`
-- ⬜ `Token:?:xor`
+**Content.pm:** all 3 subs PORTED (`convert_to_cmml`, `.cmml` suffix,
+`can_convert` gating on `math_is_parsed`).
+
+**OperatorDictionary.pm:** structure + all 14 category property sets PORTED
+(spot-check of 10 diverse operators: lspace/rspace/properties identical);
+data holes in the Cat A/B long tail + U+2A50 misclass + fence `U+0331` → F16.
+
+**Linebreaker.pm:** F5 in full (dead sketch, wrong strategy, ~10% algorithm).
