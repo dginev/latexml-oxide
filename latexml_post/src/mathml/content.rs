@@ -163,6 +163,7 @@ fn meaning_to_cmml_element(meaning: &str) -> Option<&'static str> {
 ///
 /// Port of `MathML::Content::convertNode` + `cmml_top`.
 pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData {
+  reset_share_counter();
   CMML_DEPTH.with(|d| d.set(0));
   CMML_PATH.with(|p| p.borrow_mut().clear());
   cmml_contents(doc, xmath)
@@ -321,6 +322,71 @@ fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
 
       // Special meanings with dedicated structure
       match meaning.as_str() {
+        // Perl `Apply:?:multirelation` cmml (L1713-1729): chained relations
+        // a<b<c become pairwise applies sharing the middle operands, under
+        // m:and when there is more than one.
+        "multirelation" if !args.is_empty() => {
+          let lhs0 = cmml(doc, &args[0]);
+          if args.len() == 1 {
+            return lhs0;
+          }
+          let mut lhs = lhs0;
+          let mut relations = Vec::new();
+          let mut i = 1;
+          while i + 1 < args.len() + 1 && i < args.len() {
+            let rel = &args[i];
+            let Some(rhs) = args.get(i + 1) else { break };
+            relations.push(NodeData::Element {
+              tag:        "m:apply".to_string(),
+              attributes: None,
+              children:   vec![cmml(doc, rel), lhs, cmml_shared(doc, rhs)],
+            });
+            lhs = cmml_share(rhs);
+            i += 2;
+          }
+          if relations.len() > 1 {
+            let mut children = vec![NodeData::Element {
+              tag:        "m:and".to_string(),
+              attributes: None,
+              children:   vec![],
+            }];
+            children.extend(relations);
+            NodeData::Element {
+              tag: "m:apply".to_string(),
+              attributes: None,
+              children,
+            }
+          } else {
+            relations
+              .pop()
+              .unwrap_or_else(|| cmml_error("multirelation"))
+          }
+        },
+        // Perl `Apply:?:less-than-or-approximately-equals` →
+        // cmml_or_compose(['m:lt','m:approx']) (L1436-1445): each relation
+        // applied to the (shared) operands, disjoined under m:or.
+        "less-than-or-approximately-equals" if !args.is_empty() => {
+          let first: Vec<NodeData> = args.iter().map(|a| cmml_shared(doc, a)).collect();
+          let second: Vec<NodeData> = args.iter().map(cmml_share).collect();
+          let mk = |op: &str, ops: Vec<NodeData>| {
+            let mut children = vec![NodeData::Element {
+              tag:        op.to_string(),
+              attributes: None,
+              children:   vec![],
+            }];
+            children.extend(ops);
+            NodeData::Element {
+              tag: "m:apply".to_string(),
+              attributes: None,
+              children,
+            }
+          };
+          NodeData::Element {
+            tag:        "m:or".to_string(),
+            attributes: None,
+            children:   vec![mk("m:lt", first), mk("m:approx", second)],
+          }
+        },
         "square-root" if !args.is_empty() => NodeData::Element {
           tag:        "m:apply".to_string(),
           attributes: None,
@@ -577,7 +643,8 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
 
     // Number with meaning
     if role == "NUMBER" {
-      let cn_type = if m.parse::<i64>().is_ok() {
+      // Perl /^[+-]?\d+$/ — arbitrary-length integers, unlike i64::parse.
+      let cn_type = if is_perl_integer(m) {
         "integer"
       } else {
         "float"
@@ -607,7 +674,7 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
   let content = node.get_content();
   match role.as_str() {
     "NUMBER" => {
-      let cn_type = if content.parse::<i64>().is_ok() {
+      let cn_type = if is_perl_integer(&content) {
         "integer"
       } else {
         "float"
@@ -638,7 +705,7 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
       children:   vec![NodeData::Text("subscript".to_string())],
     },
     _ => {
-      // Variable / identifier
+      // Variable / identifier (Perl cmml_leaf L1388-1391: stylized ci).
       let name = if content.is_empty() {
         node
           .get_attribute("name")
@@ -649,7 +716,7 @@ fn cmml_leaf(_doc: &PostDocument, node: &Node) -> NodeData {
       NodeData::Element {
         tag:        "m:ci".to_string(),
         attributes: None,
-        children:   vec![NodeData::Text(name)],
+        children:   vec![NodeData::Text(stylize_ci_content(node, name))],
       }
     },
   }
@@ -675,15 +742,122 @@ fn cmml_token_by_meaning(meaning: &str, _node: &Node) -> NodeData {
   }
 }
 
-/// Convert a "decorated symbol" — text or complex node treated as identifier.
+// Per-formula counter for generated share ids (Perl uses the document
+// idcache to find the next free `sh<n>`; ancestor-id scoping makes a
+// per-formula counter equivalent). Reset by `convert_to_cmml`.
+thread_local! {
+  static SH_COUNTER: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+pub(super) fn reset_share_counter() { SH_COUNTER.with(|c| c.set(0)); }
+
+/// Port of Perl `generateNodeID` + `cmml_shared` (MathML.pm L1420-1424,
+/// Post.pm generateNodeID): make sure the XMath node has an xml:id (and a
+/// fragid mirroring its ancestor's) so it can be shared, then convert.
+fn cmml_shared(doc: &PostDocument, node: &Node) -> NodeData {
+  if crate::document::get_xml_id(node).is_none() {
+    // Closest ancestor with an id (Perl walks parentNode chain).
+    // NB xml:id is namespaced — always read via get_xml_id (WISDOM).
+    let mut parent = node.get_parent();
+    while let Some(ref p) = parent {
+      if crate::document::get_xml_id(p).is_some() {
+        break;
+      }
+      parent = p.get_parent();
+    }
+    let n = SH_COUNTER.with(|c| {
+      let v = c.get() + 1;
+      c.set(v);
+      v
+    });
+    let pid = parent
+      .as_ref()
+      .and_then(crate::document::get_xml_id)
+      .map(|id| format!("{id}."))
+      .unwrap_or_default();
+    let mut handle = node.clone();
+    handle.set_attribute("xml:id", &format!("{pid}sh{n}")).ok();
+    if let Some(pfragid) = parent.as_ref().and_then(|p| p.get_attribute("fragid")) {
+      handle
+        .set_attribute("fragid", &format!("{pfragid}.sh{n}"))
+        .ok();
+    }
+  }
+  cmml(doc, node)
+}
+
+/// Port of Perl `cmml_share` (L1426-1434): reference a shared operand.
+fn cmml_share(node: &Node) -> NodeData {
+  if let Some(fragid) = node.get_attribute("fragid") {
+    // NB Perl appends $MATHPROCESSOR->IDSuffix; our cmml runs with the
+    // primary suffix '' (parallel-markup suffix wiring is an audit residual).
+    NodeData::Element {
+      tag:        "m:share".to_string(),
+      attributes: Some(HashMap::from_iter([(
+        "href".to_string(),
+        format!("#{fragid}"),
+      )])),
+      children:   vec![],
+    }
+  } else {
+    crate::Warn!(
+      "expected",
+      "fragid",
+      "Shared node is missing fragid (multirelation/or-compose share)"
+    );
+    NodeData::Element {
+      tag:        "m:share".to_string(),
+      attributes: None,
+      children:   vec![],
+    }
+  }
+}
+
+/// Perl integer test `/^[+-]?\d+$/` (arbitrary length, unlike i64::parse).
+fn is_perl_integer(s: &str) -> bool {
+  let digits = s.strip_prefix(['+', '-']).unwrap_or(s);
+  !digits.is_empty() && digits.bytes().all(|b| b.is_ascii_digit())
+}
+
+/// The identifier-content half of Perl `stylizeContent($item, 'm:ci')`
+/// (cmml_leaf L1388-1391): font → mathvariant → plane1 unicode conversion;
+/// a variant that could not be baked into characters prefixes the content
+/// ("bold-x"). This is why Perl's cmml says `<ci>𝑥</ci>`, not `<ci>x</ci>`.
+fn stylize_ci_content(node: &Node, text: String) -> String {
+  let Some(font) = node.get_attribute("font") else {
+    return text;
+  };
+  let variant = crate::unicode::unicode_mathvariant(&font);
+  if variant.is_empty() || variant == "normal" {
+    return text;
+  }
+  if let Some(u) = crate::unicode::unicode_convert(&text, variant)
+    && !u.is_empty()
+  {
+    return u;
+  }
+  format!("{variant}-{text}")
+}
+
+/// Convert a "decorated symbol" — an XMApp with role=ID treated as a ci.
 ///
-/// Port of `cmml_decoratedSymbol`.
-fn cmml_decorated_symbol(_doc: &PostDocument, node: &Node) -> NodeData {
-  let content = node.get_content();
+/// Port of `cmml_decoratedSymbol` (L1396-1404): with a meaning it is a
+/// csymbol (cd from omcd, default latexml); otherwise a ci whose content is
+/// the node's PRESENTATION conversion.
+fn cmml_decorated_symbol(doc: &PostDocument, node: &Node) -> NodeData {
+  if let Some(meaning) = node.get_attribute("meaning") {
+    let cd = node
+      .get_attribute("omcd")
+      .unwrap_or_else(|| "latexml".to_string());
+    return NodeData::Element {
+      tag:        "m:csymbol".to_string(),
+      attributes: Some(HashMap::from_iter([("cd".to_string(), cd)])),
+      children:   vec![NodeData::Text(meaning)],
+    };
+  }
   NodeData::Element {
     tag:        "m:ci".to_string(),
     attributes: None,
-    children:   vec![NodeData::Text(content)],
+    children:   vec![super::presentation::pmml_for_ci(doc, node)],
   }
 }
 

@@ -331,6 +331,10 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   result
 }
 
+/// Presentation conversion of a node for use as ci CONTENT by the content
+/// side (Perl `cmml_decoratedSymbol` L1403 calls pmml($item)).
+pub(super) fn pmml_for_ci(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
+
 /// Core dispatch: convert a single XMath node to Presentation MathML.
 ///
 /// Port of `pmml` + `pmml_internal`.
