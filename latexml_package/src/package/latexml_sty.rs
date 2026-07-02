@@ -911,7 +911,7 @@ LoadDefinitions!({
         // mutually exclusive. A `replace=` declaration digests its replacement
         // pattern at rewrite time (compile_replacement) rather than marking
         // attributes on the matched node.
-        let rewrite = if let Some(replace_tks) = replace_tokens.clone() {
+        let rewrite = if let Some(replace_tks) = replace_tokens {
           use latexml_core::rewrite::RewriteReplaceClosure;
           use std::rc::Rc;
           let closure: RewriteReplaceClosure = Rc::new(move |document, _nodes| {

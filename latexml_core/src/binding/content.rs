@@ -864,7 +864,7 @@ fn _load_binding(internal: bool, request: &str, reloadable: bool) -> Result<bool
           });
         }
       }
-      let _in_progress_guard = InProgressGuard(request_key.clone());
+      let _in_progress_guard = InProgressGuard(request_key);
       let result_opt = dispatcher(request);
       match result_opt {
         Some(result) => {

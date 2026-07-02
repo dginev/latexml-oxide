@@ -439,7 +439,7 @@ LoadDefinitions!({
             _ => SymHashMap::default(),
           };
           let final_label = if labels.contains_key(&label) {
-            let mut base = label.clone();
+            let mut base = label;
             let mut suffix = b'a';
             while labels.contains_key(&format!("{base}{}", suffix as char)) {
               if suffix == b'z' { base.push('a'); suffix = b'a'; }
