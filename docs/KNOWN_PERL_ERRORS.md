@@ -1575,3 +1575,28 @@ cycle never forms — the witnesses convert cleanly (2506.23179 172.9 s→fatal 
 `\cmidrule` (the saved CS equals `\cline` at load). Guard:
 `06_cluster_regressions.rs::cluster_cmidrule_cline_let`. Candidate to upstream.
 File: `latexml_package/src/package/booktabs_sty.rs`.
+
+## 40. amsfonts binding omits `\dabar@` → author `\xdashrightarrow` copies loop forever
+
+**Trigger:** real `amsfonts.sty` defines
+`\DeclareMathSymbol{\dabar@}{\mathord}{AMSa}{"39}` — the dash piece it
+composes into `\dashrightarrow`/`\dashleftarrow`. Both LaTeXML bindings map the
+arrows directly to `⇢`/`⇠` and omit `\dabar@`. Papers that paste the classic
+extensible dashed-arrow snippet (`\xdashrightarrow`, mathtools-era folklore)
+measure `\sbox4{$\dabar@\m@th$}` and grow a bar chain with
+`\@whiledim\count@\wd4<\dimen@` — with `\dabar@` undefined, box 4 is 0 wide
+and the loop can never terminate. Minimal trigger:
+`docs/reproducers/xdasharrow_dabar_whiledim_loop.tex` (pdflatex compiles it
+fine — the real package defines the glyph).
+
+**Perl behavior:** emits `undefined \dabar@` but *completes* — only because
+Perl computes **all** box widths as 0, so the loop target `\dimen@` is also 0
+and `0 < 0` exits immediately (witness arXiv `1705.09248`: 2 errors, 58 s).
+The escape is accidental, not a guard.
+
+**Rust status — FIXED (2026-07-02), faithful to the real package.** Rust's
+tfm-based label widths make `\dimen@ > 0`, so the same papers ran to
+`Fatal:Timeout:TokenLimit` (31 papers in the 2026-07 full-arXiv run). The
+binding now defines `\dabar@` (`╌`, U+254C) in `amsfonts_sty.rs`, terminating
+the loop exactly as real TeX does. `\symAMSa` remains undefined in both
+engines (same 2-error surface as Perl on the witness). Candidate to upstream.

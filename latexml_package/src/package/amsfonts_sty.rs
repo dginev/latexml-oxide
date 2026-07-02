@@ -29,6 +29,17 @@ LoadDefinitions!({
   DefMath!("\\dashrightarrow", "\u{21E2}", role => "ARROW"); // RIGHTWARDS DASHED ARROW
   DefMath!("\\dashleftarrow",  "\u{21E0}", role => "ARROW"); // LEFTWARDS DASHED ARROW
   DefMath!("\\dasharrow",      "\u{21E2}", role => "ARROW"); // RIGHTWARDS DASHED ARROW
+  // Real amsfonts.sty: \DeclareMathSymbol{\dabar@}{\mathord}{AMSa}{"39} — the
+  // dash piece the real package composes into \dashrightarrow. Perl's binding
+  // omits it (KNOWN_PERL_ERRORS "missing \dabar@"): author copies of the
+  // classic \xdashrightarrow snippet measure an \sbox{$\dabar@$} and
+  // \@whiledim-loop until the bar chain is wide enough — with the macro
+  // undefined that box is 0 wide, and Rust's real (tfm-based) label widths
+  // make the loop condition unsatisfiable → Fatal:Timeout:TokenLimit (31
+  // papers in the 2026-07 arXiv run; witness 1705.09248). Perl escapes only
+  // because ALL its box widths are 0. Defining the glyph terminates the loop
+  // exactly as real TeX does (pdflatex ground truth: compiles).
+  DefMath!("\\dabar@", "\u{254C}"); // ╌ (dash piece of the dashed arrows)
 
   DefMath!("\\square", "\u{25A1}"); // WHITE SQUARE
   DefMath!("\\lozenge", "\u{25C6}"); // WHITE DIAMOND
