@@ -2275,7 +2275,36 @@ impl Processor for Graphics {
         // and losing the entire conversion. Surviving workers always
         // race for the same `next` counter, so a single survivor is
         // enough to complete all jobs.
-        handles.into_iter().map(|h| h.join().unwrap()).collect()
+        //
+        // The same degradation policy applies to a worker that PANICS
+        // mid-run (observed under fleet memory pressure: 15 papers in
+        // the 2026-07 full-arXiv run, where join().unwrap() escalated
+        // a thread panic into a whole-conversion Fatal). Surface the
+        // payload as a conversion Error and keep the survivors'
+        // outcomes — a casualty's unfinished job stays unconverted
+        // (the outcomes_by_job lookups below tolerate missing ids).
+        handles
+          .into_iter()
+          .filter_map(|h| match h.join() {
+            Ok(res) => Some(res),
+            Err(payload) => {
+              let msg = payload
+                .downcast_ref::<&'static str>()
+                .map(|s| (*s).to_string())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "opaque panic payload".to_string());
+              Error!(
+                "imageprocessing",
+                "worker_panicked",
+                "Graphics: a conversion worker thread panicked ({}); its \
+                 unfinished jobs are skipped and their graphics left \
+                 unconverted",
+                msg
+              );
+              None
+            },
+          })
+          .collect()
       });
       // Merge each worker's outcomes AND replay its captured diagnostics on the
       // main thread (in worker order), so any conversion Error!/Warn! reaches the

@@ -7,7 +7,7 @@ use std::{
 };
 
 use latexml_core::{
-  Warn,
+  Error, Fatal, Warn,
   common::{
     arena::{self, SymHashMap},
     error::{Result, note_begin, note_end, note_progress},
@@ -734,7 +734,7 @@ impl MathParser {
           && child_elems.iter().any(|ch| ch.get_name() == "XMTok");
         if has_direct_open || has_array_with_tok {
           let mut xm = xmath;
-          self.parse_kludge(&mut xm, document);
+          self.parse_kludge(&mut xm, document)?;
         }
       }
 
@@ -1123,7 +1123,7 @@ impl MathParser {
     };
 
     if rule == "kludge" {
-      self.parse_kludge(&mut node, document);
+      self.parse_kludge(&mut node, document)?;
       Ok(None)
     } else {
       match self.parse_single(&mut node, document, &rule)? {
@@ -1277,11 +1277,11 @@ impl MathParser {
   //     unless they're attached to something plausible.
   /// Perl: parse_kludge (MathParser.pm L530-566)
   /// Stack-based matching of OPEN/CLOSE delimiter pairs + script attachment.
-  fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) {
+  fn parse_kludge(&self, mathnode: &mut Node, document: &mut Document) -> Result<()> {
     use crate::data::get_grammatical_role;
     let children: Vec<Node> = filter_hints(mathnode.get_child_nodes());
     if children.is_empty() {
-      return;
+      return Ok(());
     }
 
     // Build (node, role) pairs — matching Perl's @pairs.
@@ -1314,7 +1314,7 @@ impl MathParser {
             row.push(pair);
           }
           // Perl L546: handle scripts within this fenced group
-          let kludged = kludge_scripts_rec(row, document);
+          let kludged = kludge_scripts_rec(row, document)?;
           // Wrap if > 1 node, give role FENCED
           let result = if kludged.len() > 1 {
             let mut wrap = Node::new("XMWrap", None, document.get_document()).unwrap();
@@ -1345,7 +1345,7 @@ impl MathParser {
 
     // Perl L555: process remaining top-level items through kludge_scripts
     let final_pairs = stack.into_iter().next().unwrap_or_default();
-    let result_nodes = kludge_scripts_rec(final_pairs, document);
+    let result_nodes = kludge_scripts_rec(final_pairs, document)?;
 
     // Perl L558-563: at top level, unwrap top-level XMWraps (extract children).
     // Perl iterates all pairs and extracts children of any array-rep XMWrap.
@@ -1378,6 +1378,7 @@ impl MathParser {
     // `rebuild_idstore_from_dom` is the only recovery path and
     // downstream XMRef lookups can SIGSEGV via stale cache.
     let _ = document.record_node_ids(mathnode);
+    Ok(())
   }
 
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -2283,13 +2284,15 @@ impl MathParser {
 /// Takes a list of (Node, role) pairs and attaches scripts to their bases:
 /// - POSTSUPERSCRIPT/POSTSUBSCRIPT → attach to preceding node
 /// - FLOATSUPERSCRIPT/FLOATSUBSCRIPT → pre-script on following node
-fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Vec<Node> {
+// Result-threaded so new_script_node's allocation-failure Error! (whose
+// too-many-errors escalation early-returns an Err) has a path out.
+fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Result<Vec<Node>> {
   use crate::data::get_grammatical_role;
   if pairs.is_empty() {
-    return vec![];
+    return Ok(vec![]);
   }
   if pairs.len() == 1 {
-    return vec![pairs.into_iter().next().unwrap().0];
+    return Ok(vec![pairs.into_iter().next().unwrap().0]);
   }
 
   let mut acc: Vec<Node> = Vec::new();
@@ -2312,10 +2315,10 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
       if is_post_script(&y.1) {
         if !more.is_empty() {
           // Perl L575-576: FLOAT + POST + more → combined pre-sub+super
-          let mut rest = kludge_scripts_rec(more, document);
+          let mut rest = kludge_scripts_rec(more, document)?;
           if let Some(base) = rest.first_mut() {
-            let inner = new_script_node(base.clone(), &y, document);
-            let outer = new_script_node(inner, &x, document);
+            let inner = new_script_node(base.clone(), &y, document)?;
+            let outer = new_script_node(inner, &x, document)?;
             rest[0] = outer;
           }
           acc.extend(rest);
@@ -2323,8 +2326,8 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
         } else {
           // Perl L578: FLOAT + POST, no more → floating sub+super on Absent
           let absent = new_absent_node(document);
-          let inner = new_script_node(absent, &y, document);
-          let outer = new_script_node(inner, &x, document);
+          let inner = new_script_node(absent, &y, document)?;
+          let outer = new_script_node(inner, &x, document)?;
           acc.push(outer);
           break;
         }
@@ -2332,9 +2335,9 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
         // Perl L580-581: FLOAT + non-script → prescript on whatever follows
         let mut rest_pairs = vec![y];
         rest_pairs.extend(more);
-        let mut rest = kludge_scripts_rec(rest_pairs, document);
+        let mut rest = kludge_scripts_rec(rest_pairs, document)?;
         if let Some(base) = rest.first_mut() {
-          let scripted = new_script_node(base.clone(), &x, document);
+          let scripted = new_script_node(base.clone(), &x, document)?;
           rest[0] = scripted;
         }
         acc.extend(rest);
@@ -2342,11 +2345,11 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
       }
     } else if is_post_script(&y.1) {
       // Perl L583-584: POST script → attach to preceding, recurse with result
-      let scripted = new_script_node(x.0.clone(), &y, document);
+      let scripted = new_script_node(x.0.clone(), &y, document)?;
       let role = get_grammatical_role(&scripted);
       let mut rest_pairs = vec![(scripted, role)];
       rest_pairs.extend(more);
-      let rest = kludge_scripts_rec(rest_pairs, document);
+      let rest = kludge_scripts_rec(rest_pairs, document)?;
       acc.extend(rest);
       break;
     } else {
@@ -2356,7 +2359,7 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Ve
       iter = more.into_iter();
     }
   }
-  acc
+  Ok(acc)
 }
 
 fn is_float_script(role: &str) -> bool { role == "FLOATSUPERSCRIPT" || role == "FLOATSUBSCRIPT" }
@@ -2365,7 +2368,11 @@ fn is_post_script(role: &str) -> bool { role == "POSTSUPERSCRIPT" || role == "PO
 
 /// Perl: NewScript (MathParser.pm L1597-1644)
 /// Creates XMApp(XMTok[role=SCRIPTOP, scriptpos=...], base, script_content).
-fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Document) -> Node {
+fn new_script_node(
+  base: Node,
+  script_pair: &(Node, String),
+  document: &mut Document,
+) -> Result<Node> {
   let (script_node, script_role) = script_pair;
 
   // Determine SUPER vs SUB from role
@@ -2429,16 +2436,29 @@ fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Docu
   let scriptpos = format!("{x}{l}");
 
   // Create XMTok operator: <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-  let mut op_node = Node::new("XMTok", None, document.get_document()).unwrap();
+  // Node creation only fails on libxml allocation failure (observed under
+  // fleet memory pressure — 2 papers in the 2026-07 full-arXiv run panicked
+  // here via .unwrap()). Degrade: record an Error and return the base node
+  // un-scripted; a genuine OOM then terminates through the designed RSS
+  // watchdog (Fatal:oom:rss) instead of a panic.
+  let (Ok(mut op_node), Ok(mut app_node)) = (
+    Node::new("XMTok", None, document.get_document()),
+    Node::new("XMApp", None, document.get_document()),
+  ) else {
+    Error!(
+      "misc",
+      "allocation",
+      "math script restructuring could not allocate an XML node (out of \
+       memory?); leaving the base expression un-scripted"
+    );
+    return Ok(base);
+  };
   op_node.set_attribute("role", op_role).ok();
   op_node.set_attribute("scriptpos", &scriptpos).ok();
 
   // Extract script content: first child element of the script XMApp
   // Perl: Arg($script, 0) — gets first element child
   let script_content = script_node.get_child_elements().into_iter().next();
-
-  // Create XMApp: <XMApp> op, base, script_content </XMApp>
-  let mut app_node = Node::new("XMApp", None, document.get_document()).unwrap();
 
   // Propagate _font from operator if present
   if let Some(font) = op_node.get_attribute("_font") {
@@ -2478,7 +2498,7 @@ fn new_script_node(base: Node, script_pair: &(Node, String), document: &mut Docu
   {
     app_node.set_attribute("rpadding", &rpad).ok();
   }
-  app_node
+  Ok(app_node)
 }
 
 /// Create an XMTok with meaning="absent" (Perl: Absent())
