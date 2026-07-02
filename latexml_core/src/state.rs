@@ -1798,37 +1798,37 @@ pub fn lookup_dimension_cs(cs: &str, noerror: bool) -> Option<Dimension> {
   let tokens = mouth::tokenize_internal(cs);
   let toks = tokens.unlist();
   if toks.len() == 1 {
-    if let Ok(Some(defn)) = lookup_definition(&toks[0]) {
-      if defn.is_register() {
+    match lookup_definition(&toks[0]) {
+      Ok(Some(defn)) if defn.is_register() => {
         // Easy (and proper) case.
         return defn.value_of(Vec::new()).map(|rv| Dimension::from(&rv));
-      }
-      // Defined but not a register (a `\def`-ized length): read its body as
-      // a dimension. NB this branch is a deliberate DIVERGENCE from
-      // post-#2829 Perl, which unintentionally LOST it in the rewrite (a
-      // single macro token now falls to the warn branch upstream) — see
-      // KNOWN_PERL_ERRORS. Real arXiv papers `\def\arraycolsep{...}`
+      },
+      // Defined but not a register (a `\def`-ized length): fall through and
+      // read its body as a dimension. NB this is a deliberate DIVERGENCE
+      // from post-#2829 Perl, which unintentionally LOST this path in the
+      // rewrite (a single macro token falls to the warn branch upstream) —
+      // see KNOWN_PERL_ERRORS #41. Real arXiv papers `\def\arraycolsep{...}`
       // (cluster regressions cover this); pre-#2829 Perl read the body.
-      let cs_token = toks[0];
-      return gullet::reading_from_mouth(mouth::Mouth::default(), move || {
-        gullet::unread(Tokens::new(vec![cs_token]));
-        gullet::read_dimension()
-      })
-      .ok();
+      Ok(Some(_)) => {},
+      // Undefined single token: warn like Perl and yield nothing.
+      _ => {
+        if !noerror {
+          let message = s!("The control sequence '{}' is not a register", cs);
+          Warn!("expected", "register", message);
+        }
+        return None;
+      },
     }
-  } else if !toks.is_empty() {
-    // Multi-token: read the sequence as a dimension from a fresh mouth.
-    return gullet::reading_from_mouth(mouth::Mouth::default(), move || {
-      gullet::unread(Tokens::new(toks));
-      gullet::read_dimension()
-    })
-    .ok();
   }
-  if !noerror {
-    let message = s!("The control sequence '{}' is not a register", cs);
-    Warn!("expected", "register", message);
-  }
-  None
+  // Read the token sequence (a defined single CS expands here, exactly like
+  // Perl's readingFromMouth) as a dimension from a fresh mouth; an
+  // unreadable sequence warns Missing-number inside read_dimension and
+  // yields Dimension(0), matching Perl.
+  gullet::reading_from_mouth(mouth::Mouth::default(), move || {
+    gullet::unread(Tokens::new(toks));
+    gullet::read_dimension()
+  })
+  .ok()
 }
 
 pub fn lookup_expandable(

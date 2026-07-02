@@ -292,13 +292,17 @@ pub struct FramedOptions {
 /// `cssstyle` carries `padding:` whenever a margin is given, and
 /// `border-width:` only when the rule differs from the 0.4pt default.
 pub fn framed_properties(options: FramedOptions) -> SymHashMap<Stored> {
+  // Perl `$options{margin} && LookupDimension(...)`: an absent OR empty
+  // option is falsy and skips the lookup entirely.
   let sep = options
     .margin
     .as_deref()
+    .filter(|m| !m.is_empty())
     .and_then(|m| lookup_dimension_cs(m, false));
   let th = options
     .rule
     .as_deref()
+    .filter(|r| !r.is_empty())
     .and_then(|r| lookup_dimension_cs(r, false));
   let pad = match (sep, th) {
     (Some(s), Some(t)) => Some(Dimension::new(s.value_of() + t.value_of())),
@@ -466,8 +470,10 @@ LoadDefinitions!({
     sizer => "#2",
     properties => sub[args] {
       let mut opts = FramedOptions::default();
-      if let Some(kv) = args[0].clone()
-        && let DigestedData::KeyVals(dkv) = kv.be_digested()?.data()
+      // The OptionalKeyVals arg arrives already digested in a properties
+      // closure — read its data directly (be_digested would panic here).
+      if let Some(kv) = args[0].as_ref()
+        && let DigestedData::KeyVals(dkv) = kv.data()
       {
         // Perl passes the whole getHash through; framedProperties reads
         // margin/rule (declared Dimension keyvals) plus any of its other
