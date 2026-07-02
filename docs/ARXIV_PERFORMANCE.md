@@ -44,6 +44,85 @@ survivors (math0607481 84 s, 1802.06435 70 s) complete comfortably under cortex'
 only ever hit the artificially-low 60 s *local* `--timeout` default, not the real
 budget. Details per cluster below + in the Hotspot log.
 
+## Corpus-wide profile + the inkscape→gs question (2026-07-02)
+
+The 2026-06-27 campaign optimized the *slowest-100 tail*. This section records a
+**whole-corpus** profile taken during the in-progress full-arXiv rerun on the
+current worker, prompted by a "did the worker get slower — did dropping inkscape
+push work onto `gs`?" question.
+
+**Live per-doc `runtime_ms`** (`log_infos` category `runtime_ms`; core+**post** wall,
+`cortex_worker.rs` `wall_start`→`elapsed`), sample of ~8k finalized `arXiv` tasks:
+
+| n | avg | p50 | p90 | p99 | max |
+|---|-----|-----|-----|-----|-----|
+| 7975 | 5.3 s | 3.3 s | 11.2 s | 30.0 s | 132 s |
+
+**Verdict — inkscape→gs is not a slowdown:**
+- inkscape was the 3rd/last-resort *vector*-SVG converter, reachable only when both
+  mutool AND pdftocairo failed on the same PDF, and it was **never installed** in the
+  image — so `gs`/`convert` (raster PNG) was already the effective fallback. Removing
+  it (`57d28a633c`) deleted a shadowed dead branch: **zero runtime change**. When it
+  *did* run it was 20–40× slower than pdftocairo, so its absence is a net positive.
+- External rasterizers are cheap + deduped: per [`PERFORMANCE.md`](PERFORMANCE.md),
+  each `gs`/`convert`/`mutool`/`pdftocairo` is ~10–50 ms ambient behind a spawn cache
+  (key = source-hash + page + DPI + format). The 36.5 %-of-wall **graphics** phase is
+  dominated by **native in-Rust tikz/pgf rendering**, NOT external `gs`.
+- Direct test — `runtime_ms` bucketed by per-doc graphics-message count: **0-graphics
+  docs are *slower*** (avg 6.6 s, n=2591) than 1–5-graphics docs (avg 4.7 s, n=5384).
+  Per-doc wall tracks core parse/math, not image work — graphics-heavy docs are not
+  the tail.
+
+**No in-DB per-doc baseline.** Marking-for-rerun wipes prior logs (verified: TODO
+tasks carry zero `runtime_ms`), so the old-worker per-doc numbers are gone. The one
+clean cross-run figure is fleet throughput from `historical_runs` **run 202** (old
+worker, Jun 21–25): 2,795,618 tasks / 266,995 s ≈ **95 ms/task across the fleet** —
+but that conflates fleet size (a maxperf box was added), so it is **not** a clean
+per-doc regression measure. For a real before/after, use the fixed slowest-100
+testbed A/B (current HEAD vs. the pre-post-processing-change commit) — measured in the
+A/B subsection below.
+
+**What genuinely changed (added work, not a lost optimization):** `runtime_ms` now
+spans core+**post**, so post-processing time is now *inside* the watched number; and
+post emits its own log lines while the math parser's per-formula ambiguity/unparsed
+footprints (hashed dedup) land in the math-parse band. Recent latexml-oxide perf
+commits are all output-neutral *speedups* (see Hotspot log #2–#4).
+
+### A/B — HEAD vs. pre-post-processing-change (`eb0b0a09ce`), slowest-100 (2026-07-02)
+
+Ran the fixed slowest-100 testbed through two `--release` binaries — current HEAD
+(`83a7dc89a4`) and `eb0b0a09ce` (the commit just *before* the questioned series:
+`Info:runtime_ms`, math diagnostics, post-log fold, inkscape removal, watchdog) —
+standalone `latexml_oxide --dest=…html` (core+post), `--timeout=180`, interleaved
+per paper on the DB host (mild shared-load noise, hits both equally). Both binaries
+already carry the seclev (#2) and head-keywords (#3) fixes; only maketitle (#4) and
+the diffop prune are HEAD-only.
+
+**Result: HEAD is net 1.81× faster — no lost optimization.** 97 papers rc=0 on both:
+**sum 2002 s → 1107 s**; 48 faster, 24 within ±10 %, 25 nominally "slower."
+
+- **Wins are large and real:** −17 to −72 s on the slow XSLT/OmniBus/maketitle papers
+  (1508.04636 128→56 s, 2603.26887 139→71 s, 1610.08336 19.4→0.8 s), from the
+  seclev/head-keywords/maketitle memoizations (#2–#4) + diffop prune.
+- **24 of the 25 "slower" are a ~0.2 s fixed *digest* overhead**, not a scaling
+  regression — same output, delta entirely in `phase_digest_us` (2306.12058
+  0.13→0.35 s @44 formulae, identical 44/24 gfx out; 2603.06884 0.19→0.39 s @55).
+  Cosmetic as a ratio on sub-second papers; ~4 % of the ~5.3 s corpus mean. A small
+  real fixed cost entered the window (NOT the math diagnostics — `phase_math_parse_us`
+  is unchanged; not root-caused to one commit — low priority).
+- **The one *large* "regression" is false:** 1704.08246 18 s → 77 s because the
+  **before binary silently produced an empty document** (0 formulae, 0 graphics,
+  159 MB RSS, `exit 0`); HEAD correctly converts all **11,291 formulae + 35 graphics**
+  (digest 1.8 s / build 17 s / math_parse 23.9 s / xslt 11.4 s, 2.9 GB RSS). An
+  output-changing **correctness fix**, not a perf loss — before's fast 18 s was a
+  degenerate no-op.
+
+**Answer to "did the worker get slower?":** No. Per-doc conversion is faster on the
+papers that dominate wall-time. The higher live `runtime_ms` is (a) the metric now
+spanning core+**post**, (b) a ~0.2 s fixed digest overhead, and (c) genuinely more
+work where the old binary was silently under-converting. **inkscape/gs is not
+involved.**
+
 ## Settled dead-ends — do NOT re-litigate (see memories + docs)
 
 These were measured and declined/closed; re-investigating wastes time:
