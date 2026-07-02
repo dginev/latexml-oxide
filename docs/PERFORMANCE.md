@@ -21,16 +21,20 @@ this doc keeps outcomes, not sagas.
 Never `.to_string()`, `String::from()`, or `format!()` when the string is
 already in the interner arena.
 
-- **String literals on HOT paths**: the `pin!("…")` macro — it is the
-  per-call-site `OnceCell<SymStr>` cache (thread-local; first call interns via
-  `pin_static`, every later call is a branch+load, no arena access). *(The
-  2026-07-02 audit corrected this doc: an earlier revision attributed the
-  OnceCell mechanism to `pin_static` and called `pin!` deprecated — backwards.
-  The cached `pin!` landed 2026-04-20, `df720961d7`.)*
-- **String literals on COLD paths** (binding tables, one-shot setup):
-  `arena::pin_static("…")` — zero-copy static intern, a per-call arena probe,
-  but no per-call-site thread-local static (matters for code size across the
-  ~60k binding functions).
+- **String literals**: the `pin!("…")` macro — it is the per-call-site
+  `OnceCell<SymStr>` cache (thread-local; first call interns via `pin_static`,
+  every later call is a branch+load, no arena access). **Policy (user,
+  clarified 2026-07-02): always the faster arena behavior, syntax is
+  irrelevant** — so `pin!` for any literal on a path that executes more than
+  once. *(The 2026-07-02 audit corrected this doc: an earlier revision
+  attributed the OnceCell mechanism to `pin_static` and called `pin!`
+  deprecated — backwards. The cached `pin!` landed 2026-04-20,
+  `df720961d7`.)*
+- **`arena::pin_static("…")`** (zero-copy static intern, per-call arena
+  probe) remains for the two places `pin!` doesn't fit: non-literal
+  `&'static str` *values* (`pin_static(var)` — a macro can't cache a varying
+  input), and genuinely one-shot init (`Lazy` statics, model/state setup)
+  where the two are equal-cost.
 - **Runtime strings**: `arena::pin(s)`.
 - **Comparisons/reads**: `arena::with*` to read an existing `SymStr` without
   re-allocating.
@@ -286,12 +290,16 @@ fleet context, NOT single-process baselines):
   `pin_static`; an earlier doc revision had it backwards. Trade-off as
   measured from the code: `pin!` = fastest repeated call (branch+load) at the
   cost of a per-site thread-local static; `pin_static` = per-call arena probe,
-  no per-site static. **Policy settled 2026-07-02 (user): hot-path carve-out**
-  — `pin_static` for new cold-path literals (bindings, setup), `pin!`
-  kept/allowed on hot paths (`state.rs` meaning lookups, gullet/stomach
-  per-token code). 387 `pin!("literal")` sites total; only 2 added since the
-  2026-06-28 directive, both hot-path `state.rs` sites (compliant under the
-  carve-out).
+  no per-site static. **Policy settled 2026-07-02 (user): always the faster
+  behavior, irrespective of syntax** — `pin!` for repeated-path literals;
+  `pin_static` only for non-literal `&'static str` values and one-shot init
+  where the forms are equal-cost. The same-day follow-up sweep converted the
+  ~101 literal `pin_static` sites in warm/hot files to `pin!` (per-element
+  `Tag!("ltx:*")` compares in `base_xmath`, `get_node_qname`'s literal
+  branches, constructor closures across engine/package/contrib); `token.rs`
+  `Lazy` statics and state/model init keep `pin_static` (equal-cost
+  one-shots). This retires the earlier "sweep pin! → pin_static" direction,
+  which rested on the swapped doc text.
 - **Commits since 2026-06-27 (81) reviewed for hot-path additions.** One watch
   item: the noexpand redesign (`6ac88769eb`+) put `is_noexpand_family()` — an
   arena `with_str` + short prefix memcmp — inside `meaning_key`, i.e. on the
