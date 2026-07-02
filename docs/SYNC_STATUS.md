@@ -15,10 +15,47 @@
 
 ## Current status
 
-- `cargo test --tests`: **1504 / 0 / 0** (on `ar5iv-2606-prep`, 53 commits ahead of
-  `main`: the consolidated parity-followups + graphics + noexpand/xint + the prior
-  XSLT O(n²) fixes + fvextra + `maketitle` XSLT memoization + `iflimit` 8M→16M raise,
-  plus this session's frontmatter title fixes). See "Landed this session" entries below.
+- `cargo test --tests`: **1505 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
+  session" entries below).
+
+### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — live-run fatal mining: 2 panic sites, `\dabar@`, plain-`\+` retraction
+
+Mining the in-flight full-arXiv rerun's fresh fatals (6.9k at ~32% corpus) produced
+four fixes, each witness-verified against same-host Perl:
+
+- **Graphics worker-join panic (15 papers)** — `graphics.rs` `join().unwrap()`
+  escalated a pressure-induced worker-thread panic into a whole-conversion
+  `Fatal:panic`. Now degrades per the function's own design: payload surfaced as
+  `Error:imageprocessing:worker_panicked`, survivors' outcomes kept. Witness
+  1811.01777 converts clean standalone (pressure-dependent, not paper-dependent).
+- **`parser.rs` `Node::new().unwrap()` panic (2 papers)** — allocation failure in
+  kludge-script restructuring now records `Error:misc:allocation` and returns the
+  base un-scripted (`Result` threaded `new_script_node` → `kludge_scripts_rec` →
+  `parse_kludge`); a genuine OOM then dies via the designed RSS watchdog.
+- **`\dabar@` runaway (31 papers)** — KNOWN_PERL_ERRORS #40: real `amsfonts.sty`
+  defines the dash glyph; both bindings omitted it, and author copies of the
+  `\xdashrightarrow` snippet `\@whiledim`-loop on a 0-width `\sbox` of it forever
+  (Rust's real label widths → `Fatal:Timeout:TokenLimit`; Perl escapes only via
+  all-zero box widths). Binding now defines it (`╌`); witness 1705.09248
+  180s-Fatal → completes with 1 error (same class as Perl's 2); pdflatex ground
+  truth compiles. Reproducer `docs/reproducers/xdasharrow_dabar_whiledim_loop.tex`.
+- **plain-`\+` retraction (Rust-only fix; part of the 516-paper
+  `\lx@begin@alignment` TooManyErrors family)** — real LaTeX (INITEX-based) never
+  defines plain.tex's `\+` (= `\tabalign`), but Rust's latex layer inherited it
+  from the plain dump, so an author typo `\+` in math expanded into `\halign` and
+  detonated a 102-error mode cascade (witness cond-mat0001412; Perl: 1 undefined
+  error). The latex format loader (`latex.rs`, at the "kernel layer complete"
+  seam after the dump/base branch) now retracts the inherited definition
+  (guarded on the body still being plain's bare `\tabalign`; new
+  `state::remove_meaning_global`). Witness now: exactly 1 error `undefined \+`
+  — byte-parity with Perl. Watch the
+  same class for other plain-only macros (`\tabalign` invoked directly, etc.) if
+  cascade signatures persist in the next run.
+
+Triage byproducts: `\tikzcdmatrixname` PushbackLimit cluster (345 papers) verified
+**PARITY** (witness 1304.2913: Perl `Fatal:too_many_errors` in pgfmath, 44 s) —
+known tikz-cd deep-divergence territory, not chaseable; `never_completed` (1,069)
+spread evenly across months (governor sheds/hangs, overlaps STABILITY_WITNESSES).
 
 ### Landed this session (2026-07-01, on `ar5iv-2606-prep`) — frontmatter title fidelity (no-`\maketitle` papers)
 

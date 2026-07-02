@@ -2244,6 +2244,18 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
   state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
 }
 
+/// Remove a token's meaning entirely — the token becomes undefined, as if it
+/// had never been defined, so a later use takes the normal undefined-CS error
+/// path naming the token itself. Bypasses the group-undo journal: intended
+/// ONLY for format-bootstrap time (no user groups open), where a format layer
+/// retracts a definition inherited from a lower layer that the emulated
+/// format must not expose (e.g. plain.tex's `\+` in a LaTeX session — real
+/// LaTeX is INITEX-based and never defines it).
+pub fn remove_meaning_global(token: &Token) {
+  let key = meaning_key(token);
+  state_mut!().meaning.remove(&key);
+}
+
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {
