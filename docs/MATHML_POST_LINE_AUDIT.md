@@ -93,33 +93,26 @@ Verified-and-landed items move to the ✅ list at the bottom.
   pmml L332-335) — **F8b**, the largest residual. The dead, fuller
   `mod.rs::stylize_content` remains to reconcile/delete (used by mod.rs
   text paths only).
-- **F11 — `_ignorable`/`filter_row` + Hint width normalization.** Perl marks
-  zero-width Hints `_ignorable` and `filter_row` (L577) drops them from rows;
-  Hint widths go through `getXMHintSpacing`→`em`. Rust `pmml_row` never
-  filters, and the Hint arm passes the raw width string to `m:mspace`
-  (malformed for `mu`/`pt` inputs).
+- **F19 (NEW) — math-parser mid-script mis-parse.** `x\mathrel{\mathop{=}
+  \limits^{def}}y` parses in Perl as a script application (`XMApp(
+  SUPERSCRIPTOP, =, def)` → `m:mover`) but in Rust as a failed parse
+  (`XMWrap[BIGOP =, XMApp role=POSTSUPERSCRIPT]` → empty-base `m:msup`).
+  NOT a post-processing gap (each post side renders its input faithfully) —
+  belongs on the math-parser worklist.
 - **F13 residual** — through an XMRef the wrapper attrs apply by recursion
   (inner=target, outer=refr): equivalent to Perl's `_getattr` refr-preference
   for `_role` (outer overwrites) and padding (sums), near-equivalent for
   class (order reversed); sole corner: refr AND target both carrying
   `enclose` nest two menclose where Perl picks one. Accepted; revisit only on
   a witness.
-- **F14 — content-MathML structural arms missing:** `multirelation` cmml
-  (pairwise `apply(rel,·,·)` chained under `m:and` with `m:share`, L1719-1729)
-  — chained `a<b<c` semantics are wrong; `cmml_shared`/`cmml_share`
-  (L1420-1434); `less-than-or-approximately-equals` → `or`-composition
-  (L1436-1445); `cmml_leaf` no-meaning branch drops the `mathvariant-`
-  prefix on `m:ci` (L1388-1390); `cmml_decoratedSymbol` missing the
-  meaning→csymbol branch + pmml-subtree content (L1399-1403).
+- **F14 residual** — `m:share` hrefs use the primary ID suffix ('');
+  parallel-markup secondary-suffix wiring (Perl `$MATHPROCESSOR->IDSuffix`)
+  still to connect. `cmml_not` (L1406) has no callers among the ported
+  registrations — N-A unless a key needing it shows up.
 - **F15 — `do_cfrac` is a stub** (Perl L1931-1973): continued fractions
   render as one flat `m:mfrac`; the denominator-recursion unrolling, `\cdots`
   pull-up, and `cfrac-inline` style select are all absent.
-- **F16 — OperatorDictionary codepoint holes** (properties on the common set
-  verified identical; gaps are in the long tail): Cat A missing dingbat/arrow
-  ranges (`2794`, `279B-27A1`, `27A5-27B8` singles, `2B0C-2B11`, `2B6A-2B7D`,
-  `2BA0-2BAF`…) with some over-inclusion at range boundaries; Cat B missing
-  `0322`, `29B8`, `29BC`, `29C4-29C5`, `29F5-29FB`; **U+2A50 misclassified**
-  Cat B (MED) vs Perl Cat C (THIN); fence table missing `U+0331`.
+
 - **F17 — smaller pmml gaps:** `pmml_infix` ADDOP flatten via `pmml_unrow`
   (L639-644) absent; `pmml_scriptsize_padded` (L926, primed-sum limit
   centering) + `pmml_script_decipher` emb_left/emb_right absent;
@@ -130,11 +123,7 @@ Verified-and-landed items move to the ✅ list at the bottom.
   `outerWrapper` missing altimg/RDFa attrs (L82-89); `combineParallel`
   missing `annotation-xml` non-mathml wrap (L123-127); `preprocess` doesn't
   wire plane1/hackplane1/nestmath config (L69-73).
-- **F3 — `adjust_pair` unported branches** (Perl L1255-1275): `target<0` →
-  mpadded rewrap of prev (needs `compute_size` L1135, MISSING); prev/next
-  `m:mspace` width-merge; the both-mo `$target/2` split fallback (L1272-1275).
-  Plus **F6**: Perl `space_walk` iteratively unwraps nested mrows into the
-  pair stream (L1105-1118) — verify the Rust walk's flattening matches.
+
 - **F4 residual** — `annotated` mspace width `0.389em` vs Perl's raw
   `0.3888888888888889em` (fmt_em itself is now byte-parity, see ✅).
 - **F5 — Linebreaker feature gap** (see Scope ruling above). Decide: faithful
@@ -145,6 +134,32 @@ Verified-and-landed items move to the ✅ list at the bottom.
   extraction, `isFence`/`isSeparator` attribute overrides.
 
 ### Landed
+
+- **F3+F6+F11 ✅ (`856de84a10`)** — spacewalk rewritten as Perl's stream
+  algorithm on child-index paths: mrow unwinding + script-base streaming
+  into the pair stream, embellished dict-spacing reads from the INNER
+  operator, all adjust_pair branches (negative-target mpadded rewrap via
+  `compute_size` string metrics incl. the min-10pt mathscript hack, mspace
+  width-merge, both-mo target/2 split with raw Perl number concat, fudge
+  Info); Hint widths normalized to em, zero-width Hints `_ignorable` +
+  `filter_row` in rows and array cells. Witnesses 26/28 byte-identical
+  (residuals: Perl-0.8.8 version artifact + F19).
+- **F14 ✅ (bulk, 2026-07-02)** — content-MathML structural parity:
+  `multirelation` → pairwise applies chained under `m:and` with `m:share`
+  (cmml_shared generates xml:id/fragid like Perl generateNodeID; xml:id read
+  via the namespaced accessor — WISDOM trap); `less-than-or-approximately-
+  equals` → `m:or` composition; `cmml_leaf` ci content now STYLIZED (font →
+  mathvariant → plane1: `<ci>𝑥</ci>`, `𝐯`, `ℒ` — formerly raw ASCII on every
+  identifier, the largest cmml delta); `cmml_decoratedSymbol` meaning→csymbol
+  branch + pmml-subtree ci content; Perl-regex integer test for `m:cn`
+  (arbitrary length, not i64). Witness a<b<c / \mathbf{v} / \mathcal{L}:
+  byte-identical incl. share hrefs.
+- **F16 ✅ (2026-07-02)** — OperatorDictionary `$Content_form` + fence tables
+  REGENERATED verbatim from the Perl range strings (machine-parsed, sorted,
+  non-overlap asserted) replacing the hand-written if-chains: closes the Cat
+  A dingbat/arrow holes, Cat B negation holes, the U+2A50 B-vs-C
+  misclassification, fence `U+0331`, and the boundary over-inclusions.
+  Regression tests pin 2A50/27A1/0331.
 
 - **F10+F12+F13 ✅ (`8074ef8e0a`)** — pmml-wrapper parity (menclose wrap from
   source `enclose`, class merge, `_role` recording) + dedicated Apply:ENCLOSE
