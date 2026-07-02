@@ -179,8 +179,9 @@ fn unimath_internal(doc: &PostDocument, node: &Node) -> (String, i32) {
         },
         (_, "nth-root") => {
           if args.len() >= 2 {
-            let (n, _) = unimath_internal(doc, &args[1]);
-            let base = unimath_nested(doc, &args[0], PREC_MULOP);
+            // nth-root args are (degree, radicand) — same order as Perl.
+            let (n, _) = unimath_internal(doc, &args[0]);
+            let base = unimath_nested(doc, &args[1], PREC_MULOP);
             let op_str = match n.as_str() {
               "2" => "\u{221A}".to_string(),
               "3" => "\u{221B}".to_string(),

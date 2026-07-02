@@ -523,15 +523,16 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
       } else if meaning == "continued-fraction" && args.len() >= 2 {
         pmml_cfrac(doc, op, &args[0], &args[1])
       } else if meaning == "nth-root" && args.len() >= 2 {
-        // Perl L1644-1647: mathcolor as above. NB our XMath arg order is
-        // reversed from Perl's (args[0]=radicand) — self-consistent with the
-        // producer; do NOT "fix" one side alone (see audit doc).
+        // Perl L1644-1647: `['m:mroot', …, pmml($_[2]), pmml_scriptsize($_[1])]`
+        // — args are (degree, radicand) in BOTH engines' XMath; m:mroot takes
+        // the base first, then the scriptsized degree. (Previously swapped:
+        // degree rendered as the base, radicand shrunk.)
         NodeData::Element {
           tag:        "m:mroot".to_string(),
           attributes: rop
             .get_attribute("color")
             .map(|c| HashMap::from_iter([("mathcolor".to_string(), c)])),
-          children:   vec![pmml(doc, &args[0]), pmml_scriptsize(doc, &args[1])],
+          children:   vec![pmml(doc, &args[1]), pmml_scriptsize(doc, &args[0])],
         }
       } else {
         // Generic application: op(arg1, arg2, ...). Insert FUNCTION APPLICATION

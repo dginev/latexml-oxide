@@ -345,9 +345,10 @@ fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
             NodeData::Element {
               tag:        "m:degree".to_string(),
               attributes: None,
-              children:   vec![cmml(doc, &args[1])],
+              // Perl L1648: degree is args[0], radicand args[1] (was swapped).
+              children:   vec![cmml(doc, &args[0])],
             },
-            cmml(doc, &args[0]),
+            cmml(doc, &args[1]),
           ],
         },
         "set" => {
