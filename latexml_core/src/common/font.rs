@@ -1971,7 +1971,7 @@ pub fn decode_str(code: u8, encoding_opt: Option<String>, implicit: bool) -> Opt
   if let Some(c) = decode(code, encoding_opt, implicit) {
     // T1 position 223: "SS" (capital sharp S as two chars)
     if c == '\u{1E9E}' {
-      return Some(arena::pin_static("SS"));
+      return Some(pin!("SS"));
     }
     // For standalone combining characters, prepend NBSP as base character
     // (Perl fontmaps encode these as UTF(0xA0)."\x{combining}")

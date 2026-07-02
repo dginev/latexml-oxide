@@ -213,8 +213,8 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
 
 /// Perl: addFloatFrames (float.sty.ltxml L76-85)
 pub fn add_float_frames(document: &mut Document, style: &str) -> Result<()> {
-  let caption_qname = pin_static("ltx:caption");
-  let toccaption_qname = pin_static("ltx:toccaption");
+  let caption_qname = pin!("ltx:caption");
+  let toccaption_qname = pin!("ltx:toccaption");
   let node = document.get_node();
   if let Some(float_node) = node.get_last_child() {
     match style {

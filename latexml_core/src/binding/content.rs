@@ -24,6 +24,7 @@ use crate::{
   gullet::do_expand,
   mouth::{Mouth, MouthOptions},
   parameter::{Parameter, Parameters},
+  pin,
   state::{let_i, *},
   stomach::*,
   token::*,
@@ -3004,7 +3005,7 @@ pub fn convert_latex_args(
   if let Some(tks) = optional {
     params.push(
       Parameter {
-        name: arena::pin_static("Optional"),
+        name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
@@ -3022,8 +3023,8 @@ pub fn convert_latex_args(
   for _ in 1..=nargs {
     params.push(
       Parameter {
-        name: arena::pin_static("Plain"),
-        spec: arena::pin_static("{}"),
+        name: pin!("Plain"),
+        spec: pin!("{}"),
         ..Parameter::default()
       }
       .init()?,
@@ -3049,7 +3050,7 @@ pub fn convert_twoopt_args(
   if let Some(tks) = opt1 {
     params.push(
       Parameter {
-        name: arena::pin_static("Optional"),
+        name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
@@ -3061,7 +3062,7 @@ pub fn convert_twoopt_args(
   if let Some(tks) = opt2 {
     params.push(
       Parameter {
-        name: arena::pin_static("Optional"),
+        name: pin!("Optional"),
         spec: arena::pin(s!("[Default:{}]", tks.clone().untex())),
         extra: vec![tks],
         ..Parameter::default()
@@ -3073,8 +3074,8 @@ pub fn convert_twoopt_args(
   for _ in 1..=nargs {
     params.push(
       Parameter {
-        name: arena::pin_static("Plain"),
-        spec: arena::pin_static("{}"),
+        name: pin!("Plain"),
+        spec: pin!("{}"),
         ..Parameter::default()
       }
       .init()?,

@@ -154,7 +154,7 @@ LoadDefinitions!({
               "RequireBrace" => {
                 // tex's \meaning prints out the required braces for "\def\a#{}" variants
                 p_trailer = "{";
-                p_spec    = pin_static("{");
+                p_spec    = pin!("{");
               },
               "UntilBrace" => {
                 p_trailer = "{";

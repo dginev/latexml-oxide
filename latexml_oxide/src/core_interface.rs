@@ -17,6 +17,7 @@ use latexml_core::{
   document::Document,
   gullet,
   list::List,
+  pin,
   rewrite::{Rewrite, RewriteOptions},
   state::{self, Scope},
   stomach,
@@ -350,7 +351,7 @@ impl DigestionAPI for Core {
         .collect::<Vec<&str>>();
       let default_model_load = model::with_schema_data(|schema_opt| match schema_opt {
         None => true,
-        Some(v) => v.last() == Some(&arena::pin_static("LaTeXML")),
+        Some(v) => v.last() == Some(&pin!("LaTeXML")),
       });
       if default_model_load {
         // Compile-time load of model AND indirect model. Single

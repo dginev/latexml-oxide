@@ -89,7 +89,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L44-45
   DefPrimitive!("\\lx@endash", {
     Tbox::new(
-      pin_static("\u{2013}"),
+      pin!("\u{2013}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@endash")),
@@ -99,7 +99,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L46-47
   DefPrimitive!("\\lx@emdash", {
     Tbox::new(
-      pin_static("\u{2014}"),
+      pin!("\u{2014}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@emdash")),
@@ -109,7 +109,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L50-52: stand-in for T_ACTIVE('~').
   DefPrimitive!("\\lx@NBSP", {
     Tbox::new(
-      pin_static("\u{00A0}"),
+      pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_ACTIVE!('~')),
@@ -119,7 +119,7 @@ LoadDefinitions!({
   // Perl Base_Utility.pool.ltxml L53-55
   DefPrimitive!("\\lx@nobreakspace", {
     Tbox::new(
-      pin_static("\u{00A0}"),
+      pin!("\u{00A0}"),
       None,
       None,
       Tokens!(T_CS!("\\lx@nobreakspace")),
@@ -2249,7 +2249,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
         let extra = Tokens::new(delim);
         params.push(
           Parameter {
-            name: pin_static("Until"),
+            name: pin!("Until"),
             spec: pin(format!("Until:{extra}")),
             extra: vec![extra],
             ..Parameter::default()
@@ -2277,7 +2277,7 @@ pub fn parse_def_parameters(cs: &Token, params_in: Tokens) -> Result<Option<Para
       let expected = Tokens::new(lit);
       params.push(
         Parameter {
-          name: pin_static("Match"),
+          name: pin!("Match"),
           spec: pin(s!("Match:{expected}")),
           extra: vec![expected],
           novalue: true,
@@ -2583,7 +2583,7 @@ fn repack_horizontal_in_list(item: &mut Digested) {
 fn make_horizontal_list(para: Vec<Digested>) -> List {
   let mut list = List::new(para);
   list.mode = Some(TexMode::Text);
-  list.set_property("mode", Stored::String(pin_static("horizontal")));
+  list.set_property("mode", Stored::String(pin!("horizontal")));
   if let Some(hsize) = lookup_dimension("\\hsize") {
     list.set_property("width", Stored::Dimension(hsize));
   }
@@ -3623,12 +3623,12 @@ pub fn set_align_or_class(
   class: &str,
 ) -> Result<()> {
   let qname = model::get_node_qname(node);
-  if qname == pin_static("ltx:tag") {
+  if qname == pin!("ltx:tag") {
   }
   // HACK
-  else if !align.is_empty() && model::can_have_attribute(qname, pin_static("align")) {
+  else if !align.is_empty() && model::can_have_attribute(qname, pin!("align")) {
     node.set_attribute("align", align)?;
-  } else if !class.is_empty() && model::can_have_attribute(qname, pin_static("class")) {
+  } else if !class.is_empty() && model::can_have_attribute(qname, pin!("class")) {
     document.add_class(node, class)?;
   }
   Ok(())

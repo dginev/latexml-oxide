@@ -556,7 +556,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\@@endash", {
     Tbox::new(
-      pin_static("\u{2013}"),
+      pin!("\u{2013}"),
       None,
       None,
       Tokens!(T_CS!("\\@@endash")),
@@ -565,7 +565,7 @@ LoadDefinitions!({
   });
   DefPrimitive!("\\@@emdash", {
     Tbox::new(
-      pin_static("\u{2014}"),
+      pin!("\u{2014}"),
       None,
       None,
       Tokens!(T_CS!("\\@@emdash")),

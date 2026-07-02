@@ -81,13 +81,13 @@ LoadDefinitions!({
         let neg = w.negate();
         whatsit.set_property("xoffset", Stored::String(pin(neg.to_attribute())));
       }
-      whatsit.set_width(Stored::String(pin_static("0pt")));
+      whatsit.set_width(Stored::String(pin!("0pt")));
     });
   // \mathrlap — zero-width math overlap (right): no xoffset needed
   DefConstructor!("\\mathrlap[]{}",
     "<ltx:XMArg width='0pt' ?#xoffset(xoffset='#xoffset')>#2</ltx:XMArg>",
     after_digest => sub[whatsit] {
-      whatsit.set_width(Stored::String(pin_static("0pt")));
+      whatsit.set_width(Stored::String(pin!("0pt")));
     });
   // \mathclap — zero-width math overlap (center): xoffset = -0.5 * width
   DefConstructor!("\\mathclap[]{}",
@@ -97,7 +97,7 @@ LoadDefinitions!({
         let half_neg = w.multiply(Float::new_f64(-0.5));
         whatsit.set_property("xoffset", Stored::String(pin(half_neg.to_attribute())));
       }
-      whatsit.set_width(Stored::String(pin_static("0pt")));
+      whatsit.set_width(Stored::String(pin!("0pt")));
     });
 
   DefConstructor!("\\clap{}", "#1");

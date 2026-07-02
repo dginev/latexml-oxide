@@ -1803,7 +1803,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   let children = element_nodes(&math_first);
   // The first element child of Math's first element should be the XMArray
   // (possibly after XMath wrapper)
-  let array = if document::get_node_qname(&math_first) == pin_static("ltx:XMath") {
+  let array = if document::get_node_qname(&math_first) == pin!("ltx:XMath") {
     let xmath_children = element_nodes(&math_first);
     if xmath_children.len() != 1 {
       return Ok(());
@@ -1814,7 +1814,7 @@ pub fn rearrange_lone_ams_aligned(document: &mut Document, equation: &mut Node) 
   } else {
     return Ok(());
   };
-  if document::get_node_qname(&array) != pin_static("ltx:XMArray") {
+  if document::get_node_qname(&array) != pin!("ltx:XMArray") {
     return Ok(());
   }
   if array.get_attribute("name").as_deref() != Some("aligned") {
@@ -2039,8 +2039,8 @@ pub fn get_multirow_alignment_rule(whatsit: &Whatsit) -> Vec<(String, String)> {
 /// Strips leading/trailing XMHint, deduplicates operators at row boundaries.
 fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
   use latexml_core::common::xml::element_nodes;
-  let xmhint_sym = pin_static("ltx:XMHint");
-  let xmtok_sym = pin_static("ltx:XMTok");
+  let xmhint_sym = pin!("ltx:XMHint");
+  let xmtok_sym = pin!("ltx:XMTok");
   let mut contents: Vec<Node> = Vec::new();
   let rows = element_nodes(array);
   for row in rows.iter() {
@@ -2055,7 +2055,7 @@ fn extract_xm_array_cells(array: &Node) -> Vec<Node> {
       let arg_nodes: Vec<Node> = {
         let first = &cell_children[0];
         let qname = document::get_node_qname(first);
-        if qname == pin_static("ltx:XMArg") {
+        if qname == pin!("ltx:XMArg") {
           element_nodes(first)
         } else {
           cell_children
@@ -2129,7 +2129,7 @@ fn rearrange_ams_split(document: &mut Document, mut array: Node) -> Result<()> {
 
   // Perl: prefilterMath runs on each XMCell, converting XMHint spacing to lpadding.
   // Process cells: convert XMHint → lpadding on next sibling, then remove XMHint.
-  let xmhint_sym = pin_static("ltx:XMHint");
+  let xmhint_sym = pin!("ltx:XMHint");
   let mut i = 0;
   while i < cells.len() {
     let qname = document::get_node_qname(&cells[i]);
@@ -2284,7 +2284,7 @@ pub fn rearrange_ams_gather(document: &mut Document, equationgroup: &mut Node) -
     let children: Vec<Node> = equation.get_child_elements();
     for child in children {
       let qname = document::get_node_qname(&child);
-      if qname == pin_static("ltx:_Capture_") {
+      if qname == pin!("ltx:_Capture_") {
         document.unwrap_nodes(child)?;
       }
     }

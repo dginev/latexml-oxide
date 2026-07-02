@@ -33,7 +33,7 @@ LoadDefinitions!({
   DefPrimitive!("\\ ", {
     enter_horizontal();
     Tbox::new(
-      pin_static(" "),
+      pin!(" "),
       None,
       None,
       Tokens!(T_CS!("\\ ")),

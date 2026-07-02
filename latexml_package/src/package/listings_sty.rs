@@ -2583,7 +2583,7 @@ LoadDefinitions!({
     enter_horizontal => true,
     after_construct => sub[document, _whatsit] {
       if let Some(node) = document.get_element()
-        && document::get_node_qname(&node) == pin_static("ltx:text") {
+        && document::get_node_qname(&node) == pin!("ltx:text") {
           document.close_element("ltx:text")?;
         }
     });

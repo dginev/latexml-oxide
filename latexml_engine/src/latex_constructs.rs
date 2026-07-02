@@ -670,7 +670,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     }
   }
   if let Some(last_line) = lines.last()
-    && *last_line == pin_static("\n")
+    && *last_line == pin!("\n")
   {
     lines.pop();
   }
@@ -1812,8 +1812,8 @@ fn arrange_panels(document: &mut Document, node: &mut Node) -> Result<()> {
       )
     })
   };
-  let note_qname = pin_static("ltx:note");
-  let caption_qname = pin_static("ltx:caption");
+  let note_qname = pin!("ltx:note");
+  let caption_qname = pin!("ltx:caption");
   let mut panels: Vec<Node> = Vec::new();
   let mut notes: Vec<Node> = Vec::new();
   let mut caption: Option<Node> = None;
@@ -1887,10 +1887,10 @@ fn arrange_panels(document: &mut Document, node: &mut Node) -> Result<()> {
 /// If a figure/table/float contains exactly one inner float child,
 /// and they don't BOTH have captions, collapse the inner into the outer.
 fn collapse_float(document: &mut Document, float: &mut Node) -> Result<()> {
-  let caption_qname = pin_static("ltx:caption");
-  let figure_qname = pin_static("ltx:figure");
-  let table_qname = pin_static("ltx:table");
-  let float_qname = pin_static("ltx:float");
+  let caption_qname = pin!("ltx:caption");
+  let figure_qname = pin!("ltx:figure");
+  let table_qname = pin!("ltx:table");
+  let float_qname = pin!("ltx:float");
   // Find inner float/figure/table children
   let mut inners: Vec<Node> = Vec::new();
   for child in float.get_child_elements() {
@@ -3012,10 +3012,10 @@ LoadDefinitions!({
     } else {
       if let Some(context) = document.get_element() {
         let tag = document::get_node_qname(&context);
-        let capture_block = pin_static("ltx:_CaptureBlock_");
+        let capture_block = pin!("ltx:_CaptureBlock_");
         if tag == capture_block {
           // skip, if in insertBlock
-        } else if tag == pin_static("ltx:p") {
+        } else if tag == pin!("ltx:p") {
           // Close <p> if parent is _CaptureBlock_
           if let Some(parent) = context.get_parent() {
             if document::get_node_qname(&parent) == capture_block {
@@ -4943,7 +4943,7 @@ LoadDefinitions!({
     let in_preamble = lookup_bool_sym(pin!("inPreamble"));
     let cur_is_itemize = document
       .get_element()
-      .map(|e| document::get_node_qname(&e) == pin_static("ltx:itemize"))
+      .map(|e| document::get_node_qname(&e) == pin!("ltx:itemize"))
       .unwrap_or(false);
     if !in_preamble && !cur_is_itemize {
       let _ = document.maybe_close_element("ltx:p");
@@ -5367,7 +5367,7 @@ LoadDefinitions!({
     let mut skipped_space = false;
     // As of texlive 2021, DO skip spaces before delimiter (even tho we've changed catcodes)
     // but if we do skip spaces, * can be the delimiter
-    let space_sym = pin_static(" ");
+    let space_sym = pin!(" ");
     while let Some(maybe_init) = read_token()? {
       if maybe_init.get_sym() == space_sym {
         skipped_space = true;
@@ -8751,7 +8751,7 @@ LoadDefinitions!({
       // that can have 'framed', unwrap the text and copy attributes to the child.
       let current = document.get_node().clone();
       if let Some(node) = current.get_last_child() {
-        if document::get_node_qname(&node) != pin_static("ltx:text") {
+        if document::get_node_qname(&node) != pin!("ltx:text") {
           return Ok(());
         }
         // Filter to non-whitespace children

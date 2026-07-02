@@ -5,15 +5,11 @@ use libxml::tree::Node;
 use crate::{
   BoxOps, Digested, TexMode,
   common::{
-    arena::{self, SymHashMap as HashMap},
-    dimension::Dimension,
-    error::*,
-    font::Font,
-    locator::Locator,
-    object::Object,
-    store::Stored,
+    arena::SymHashMap as HashMap, dimension::Dimension, error::*, font::Font, locator::Locator,
+    object::Object, store::Stored,
   },
   document::Document,
+  pin,
   tokens::Tokens,
 };
 
@@ -125,7 +121,7 @@ impl BoxOps for List {
       }
     } else if self.properties.get("width").is_some() && matches!(self.mode, Some(TexMode::Text)) {
       // Lists with width property set are from horizontal mode (paragraph layout)
-      options.insert("mode", Stored::String(arena::pin_static("horizontal")));
+      options.insert("mode", Stored::String(pin!("horizontal")));
     }
     if let Some(Stored::String(s)) = self.properties.get("vattach") {
       options.insert("vattach", Stored::String(*s));

@@ -216,7 +216,7 @@ LoadDefinitions!({
   //       class=>'ltx_horizontally_stretchy',  width => Dimension('30pt')); });
   DefPrimitive!(T_CS!("\\lx@amscd@leftarrow"), None, {
     Tbox::new(
-      pin_static("\u{2190}"),
+      pin!("\u{2190}"),
       None,
       None,
       Tokens!(T_CS!("\\leftarrow")),
@@ -232,7 +232,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@rightarrow"), None, {
     Tbox::new(
-      pin_static("\u{2192}"),
+      pin!("\u{2192}"),
       None,
       None,
       Tokens!(T_CS!("\\rightarrow")),
@@ -248,7 +248,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@leftrightarrow"), None, {
     Tbox::new(
-      pin_static("\u{2194}"),
+      pin!("\u{2194}"),
       None,
       None,
       Tokens!(T_CS!("\\leftrightarrow")),
@@ -264,7 +264,7 @@ LoadDefinitions!({
 
   DefPrimitive!(T_CS!("\\lx@amscd@equals"), None, {
     Tbox::new(
-      pin_static("="),
+      pin!("="),
       None,
       None,
       Tokens!(T_OTHER!("=")),

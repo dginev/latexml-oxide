@@ -335,10 +335,8 @@ impl Model {
         "BackMatter",
       ]);
       let cb_entry = self.tagprop.entry("ltx:_CaptureBlock_").or_default();
-      cb_entry.model.insert(arena::pin_static("svg:g"));
-      cb_entry
-        .model
-        .insert(arena::pin_static("svg:foreignObject"));
+      cb_entry.model.insert(pin!("svg:g"));
+      cb_entry.model.insert(pin!("svg:foreignObject"));
     }
   }
 
@@ -631,14 +629,16 @@ pub fn get_node_qname(node: &Node) -> SymStr {
   use libxml::tree::NodeType::*;
   let node_type = node.get_type();
   if node_type.is_none() {
-    return arena::pin_static("#BrokenNode");
+    return pin!("#BrokenNode");
   }
+  // per-node hot path: the literal branches use the call-site-cached `pin!`
+  // (branch+load) rather than a per-call `pin_static` arena probe.
   match node_type.unwrap() {
-    TextNode => arena::pin_static("#PCDATA"),
-    DocumentNode => arena::pin_static("#Document"),
-    CommentNode => arena::pin_static("#Comment"),
-    PiNode => arena::pin_static("#ProcessingInstruction"),
-    DTDNode => arena::pin_static("#DTD"),
+    TextNode => pin!("#PCDATA"),
+    DocumentNode => pin!("#Document"),
+    CommentNode => pin!("#Comment"),
+    PiNode => pin!("#ProcessingInstruction"),
+    DTDNode => pin!("#DTD"),
     NamespaceDecl => {
       // match node.declared_uri() {
       //   Some(ns) => match self.get_namespace_prefix(ns, false, true) {
@@ -647,7 +647,7 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       //   },
       //   None => s!("xmlns")
       // }
-      arena::pin_static("xmlns")
+      pin!("xmlns")
     },
     ElementNode | AttributeNode => {
       let name_str = node.get_name();
@@ -680,7 +680,7 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       // original hard `panic!`. LaTeXML never builds such nodes, so on a
       // healthy tree this arm is unreachable; it exists only so a stray
       // corrupt/foreign node can never crash qname resolution.
-      arena::pin_static("#BrokenNode")
+      pin!("#BrokenNode")
     },
   }
 }
@@ -696,22 +696,22 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
   use libxml::tree::NodeType::*;
   let node_type = node.get_type();
   if node_type.is_none() {
-    return arena::pin_static("#BrokenNode");
+    return pin!("#BrokenNode");
   }
 
   match node_type.unwrap() {
-    TextNode => arena::pin_static("#PCDATA"),
-    DocumentNode => arena::pin_static("#Document"),
-    CommentNode => arena::pin_static("#Comment"),
-    PiNode => arena::pin_static("#ProcessingInstruction"),
-    DTDNode => arena::pin_static("#DTD"),
+    TextNode => pin!("#PCDATA"),
+    DocumentNode => pin!("#Document"),
+    CommentNode => pin!("#Comment"),
+    PiNode => pin!("#ProcessingInstruction"),
+    DTDNode => pin!("#DTD"),
 
     // TODO
     // elsif ($type == XML_NAMESPACE_DECL) {
     //   my $ns = $node->declaredURI;
     //   my $prefix = $ns && $self->getDocumentNamespacePrefix($ns, 0, 1);
     //   return ($prefix ? 'xmlns:' . $prefix : 'xmlns'); }
-    NamespaceDecl => arena::pin_static("xmlns"),
+    NamespaceDecl => pin!("xmlns"),
 
     ElementNode | AttributeNode => {
       let empty_sym = pin!("");

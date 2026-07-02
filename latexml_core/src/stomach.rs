@@ -8,7 +8,7 @@ use std::{
 
 use once_cell::sync::Lazy;
 
-use crate::digested::DigestedData;
+use crate::{digested::DigestedData, pin};
 
 /// Cached snapshot of `LXML_TRACE_BOUND_MODE` env var. Like the
 /// `TRACE_GROUP_END` cache in gullet.rs, this avoids per-digest
@@ -914,7 +914,7 @@ pub fn repack_horizontal() {
     list.mode = Some(TexMode::Text); // "horizontal" in Perl
     // Perl: List(@para, mode => 'horizontal') — set mode property string
     // This is needed for compute_boxes_size vertical layout to detect paragraph Lists
-    list.set_property("mode", Stored::String(arena::pin_static("horizontal")));
+    list.set_property("mode", Stored::String(pin!("horizontal")));
     // Perl #2798 (S4): a finished paragraph List records BOTH the fill width
     // (\hsize) and the \baselineskip, so the sizing pass (compute_boxes_size)
     // can line-break and stack with the right inter-line spacing.

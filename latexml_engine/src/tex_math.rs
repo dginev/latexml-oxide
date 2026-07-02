@@ -1573,10 +1573,10 @@ LoadDefinitions!({
   // Perl: Box(' ', undef, undef, Invocation(...), width => $length, isSpace => 1)
   // Use regular space as content, matching Perl. Width is stored as MuGlue.
   DefPrimitive!("\\mkern MuGlue", sub[(length)] {
-    Tbox::new(pin_static(" "), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
+    Tbox::new(pin!(" "), None, None, Invocation!(T_CS!("\\mkern"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
   DefPrimitive!("\\mskip MuGlue", sub[(length)] {
-    Tbox::new(pin_static(" "), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
+    Tbox::new(pin!(" "), None, None, Invocation!(T_CS!("\\mskip"), vec![length]),
       stored_map!("width" => length, "isSpace" => true)) });
 
   // MuGlue registers; TeXBook p.274
@@ -2068,7 +2068,7 @@ fn adjust_math_role(
     // Filter out XMHint nodes
     let nodes: Vec<_> = element_nodes(&wrapper)
       .into_iter()
-      .filter(|n| document::get_node_qname(n) != pin_static("ltx:XMHint"))
+      .filter(|n| document::get_node_qname(n) != pin!("ltx:XMHint"))
       .collect();
 
     // Perl: %mathclass_subclass lookup

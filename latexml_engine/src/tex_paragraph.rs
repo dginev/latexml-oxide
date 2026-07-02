@@ -64,7 +64,7 @@ LoadDefinitions!({
   DefConstructor!("\\indent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
-      let para_tag = pin_static("ltx:para");
+      let para_tag = pin!("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_indent")?;
       } else if document::sym_can_contain_somehow(tag, para_tag).is_some() {
@@ -88,7 +88,7 @@ LoadDefinitions!({
   DefConstructor!("\\noindent", sub[document] {
     if let Some(mut node) = document.get_element() {
       let tag = document::get_node_qname(&node);
-      let para_tag = pin_static("ltx:para");
+      let para_tag = pin!("ltx:para");
       if tag == para_tag {
         node.set_attribute("class","ltx_noindent")?;
       } else if document::sym_can_contain_somehow(tag, para_tag ).is_some() {
@@ -121,13 +121,13 @@ LoadDefinitions!({
         if let Some(mut node) = element {
           let qname = document::get_node_qname(&node);
           // Only set on the para about to close, if unknown!
-          if qname == pin_static("ltx:para") && node.get_attribute("class").is_none() {
+          if qname == pin!("ltx:para") && node.get_attribute("class").is_none() {
             let class_sym = prop_str!(props,"class");
             if class_sym != pin!("") {
               let class_s = with(class_sym, |s| s.to_string());
               document.set_attribute(&mut node, "class", &class_s)?;
             }
-          } else if qname == pin_static("ltx:figure") {
+          } else if qname == pin!("ltx:figure") {
             // insert breaks in figures, for vertically separating subfigures
             document.insert_element("ltx:break",Vec::new(), None)?;
           }

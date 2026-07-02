@@ -219,7 +219,7 @@ LoadDefinitions!({
         // Only set on ltx:text elements (the element we constructed), not auto-opened parents
         for node in document.get_constructed_nodes() {
           let qname = document::get_node_qname(node);
-          if qname == pin_static("ltx:text") {
+          if qname == pin!("ltx:text") {
             let mut n = node.clone();
             set_rdf_attrs_on_node(&mut n, &attrs);
           }

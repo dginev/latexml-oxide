@@ -71,10 +71,10 @@ fn special_relax_matches(token: &Token, target: &Token) -> bool {
 #[thread_local]
 static DEFERRED_COMMANDS: Lazy<HashSet<SymStr>> = Lazy::new(|| {
   set!(
-    arena::pin_static("\\the"),
-    arena::pin_static("\\showthe"),
-    arena::pin_static("\\unexpanded"),
-    arena::pin_static("\\detokenize")
+    pin!("\\the"),
+    pin!("\\showthe"),
+    pin!("\\unexpanded"),
+    pin!("\\detokenize")
   )
 });
 
