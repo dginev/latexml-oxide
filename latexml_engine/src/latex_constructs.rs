@@ -4179,14 +4179,22 @@ LoadDefinitions!({
   DefPrimitive!("\\PassOptionsToPackage{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
     let opts_str = Expand!(options).to_string();
-    let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+    let opts: Vec<String> = opts_str
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect();
     push_value(&s!("opt@{}.sty", name_str), opts)?;
   });
 
   DefPrimitive!("\\PassOptionsToClass{}{}", sub[(options, name)] {
     let name_str = Expand!(name).to_string().replace(' ', "");
     let opts_str = Expand!(options).to_string();
-    let opts: Vec<String> = opts_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+    let opts: Vec<String> = opts_str
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect();
     push_value(&s!("opt@{}.cls", name_str), opts)?;
   });
 
@@ -6325,7 +6333,13 @@ LoadDefinitions!({
   sub[(cs, kind, class, code)] {
     let class_str = class.to_string();
     let encoding = lookup_value(&s!("fontdeclaration@{}", class_str))
-      .and_then(|v| if let Stored::Font(ref f) = v { f.get_encoding().map(|e| e.to_string()) } else { None })
+      .and_then(|v| {
+        if let Stored::Font(ref f) = v {
+          f.get_encoding().map(|e| e.to_string())
+        } else {
+          None
+        }
+      })
       .unwrap_or(class_str);
     let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
     let presentation = glyph.map(|c| c.to_string()).unwrap_or_default();
@@ -6565,7 +6579,9 @@ LoadDefinitions!({
     // tolerates this because `\DeclareFontEncoding` does not auto-load
     // the .dfu — only inputenc.sty does. Witness: arXiv:2509.22585
     // (revtex4-2 + `\UseRawInputEncoding` + `\usepackage[T1]{fontenc}`).
-    use latexml_core::binding::content::{find_file, input_definitions, FindFileOptions, InputDefinitionOptions};
+    use latexml_core::binding::content::{
+      FindFileOptions, InputDefinitionOptions, find_file, input_definitions,
+    };
     let duc_defined = has_meaning(&T_CS!("\\DeclareUnicodeCharacter"));
     let enc_str = e.to_string();
     if duc_defined && !enc_str.is_empty() {
@@ -9014,7 +9030,11 @@ LoadDefinitions!({
   // Perl: latex_constructs.pool.ltxml lines 4822-4846
   DefEnvironment!("{minipage}[] OptionalUndigested [] {Dimension}",
     sub[document, args, props] {
-      let attachment = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
+      let attachment = args
+        .first()
+        .and_then(|a| a.as_ref())
+        .map(|a| a.to_string())
+        .unwrap_or_default();
       let vattach = translate_attachment(&attachment);
       let width = match props.get("width") {
         Some(Stored::Dimension(d)) => d.to_attribute(),
@@ -9347,9 +9367,18 @@ LoadDefinitions!({
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
     alias => "\\line",
     properties => sub[args] {
-      let mx: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let my: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let xlength: f64 = args[2].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let mx: f64 = args[0]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
+      let my: f64 = args[1]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
+      let xlength: f64 = args[2]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
@@ -9383,9 +9412,18 @@ LoadDefinitions!({
     "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
     alias => "\\vector",
     properties => sub[args] {
-      let mx: f64 = args[0].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let my: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
-      let xlength: f64 = args[2].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let mx: f64 = args[0]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
+      let my: f64 = args[1]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
+      let xlength: f64 = args[2]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
@@ -9415,7 +9453,10 @@ LoadDefinitions!({
     alias => "\\circle",
     properties => sub[args] {
       let filled = args[0].is_some(); // OptionalMatch:* → Some if * present
-      let dia: f64 = args[1].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+      let dia: f64 = args[1]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
       let unit = match lookup_register("\\unitlength", Vec::new())? {
         Some(RegisterValue::Dimension(d)) => d.pt_value(None),
         _ => 1.0,
