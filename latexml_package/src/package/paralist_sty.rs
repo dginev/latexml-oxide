@@ -39,7 +39,7 @@ LoadDefinitions!({
   DefRegister!("\\pltopsep", Dimension::new(0));
   DefRegister!("\\plpartopsep", Dimension::new(0));
   DefRegister!("\\plitemsep", Dimension::new(0));
-  DefRegister!("\\plpaarsep", Dimension::new(0));
+  DefRegister!("\\plparsep", Dimension::new(0));
 
   def_macro_noop("\\setdefaultleftmargin{}{}{}{}{}{}")?;
 
