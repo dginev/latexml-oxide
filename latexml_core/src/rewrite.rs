@@ -1265,6 +1265,15 @@ fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<(
               {
                 let _ = inner.set_attribute("xml:id", id);
               }
+              // Carry the _wildcard marker onto the promoted node. Perl's
+              // markSeen_rec skips _wildcard nodes (and does not recurse into
+              // them), so the wildcard content stays matchable by later declare
+              // rules (e.g. `$n$` annotating the `n` inside a `$x_\WildCard$`
+              // match). Without this, unwrapping drops the marker and
+              // mark_seen_rec marks the node _matched, blocking that annotation.
+              if child.has_attribute("_wildcard") {
+                let _ = inner.set_attribute("_wildcard", "1");
+              }
               new_app.add_child(&mut inner)?;
             } else {
               // Multi-token content (an expression such as `2n-1`): keep it

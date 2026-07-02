@@ -922,11 +922,15 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Parse declarations: "token_text\trole\tname\tmeaning\tdecl_id" per line
-  let declarations: Vec<(&str, &str, &str, &str, &str)> = decls_str
+  // Parse declarations: "token_text\trole\tname\tmeaning\tdecl_id\tmatch_font".
+  // The trailing match_font (font_attribute_string of the digested pattern, e.g.
+  // "italic"/"bold") makes matching font-aware: a plain italic `$x$` declaration
+  // must not annotate a bold `\mathbf{x}` — different fonts denote different
+  // meanings. Empty when the pattern carried no distinguishing font.
+  let declarations: Vec<(&str, &str, &str, &str, &str, &str)> = decls_str
     .lines()
     .filter_map(|line| {
-      let parts: Vec<&str> = line.splitn(5, '\t').collect();
+      let parts: Vec<&str> = line.splitn(6, '\t').collect();
       if parts.len() >= 4 {
         Some((
           parts[0],
@@ -934,6 +938,7 @@ fn apply_lx_declarations(document: &mut Document) {
           parts[2],
           parts[3],
           *parts.get(4).unwrap_or(&""),
+          *parts.get(5).unwrap_or(&""),
         ))
       } else {
         None
@@ -972,11 +977,42 @@ fn apply_lx_declarations(document: &mut Document) {
       scope
     };
 
-    for &(pattern, role, name, meaning, decl_id) in &declarations {
+    for &(pattern, role, name, meaning, decl_id, match_font) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
       if matches {
+        // Font-class check (mirrors declare_node_matches in the rewrite path):
+        // discriminate only on the meaningful font *classes* — bold vs not,
+        // caligraphic/typewriter family — NOT on an exact font-string match.
+        // Exact equality is wrong here because the declaration's digested frame
+        // font (e.g. "italic") differs from an upright operator token's font
+        // even when they should match (e.g. `$*$` → the ∗ COMPOSEOP token).
+        // A plain/italic declaration rejects bold/caligraphic/typewriter tokens
+        // (so italic `$x$` skips bold `\mathbf{x}`); a declaration that is
+        // itself bold/caligraphic/typewriter requires the token to share it.
+        {
+          let tf = document.get_node_font(&tok);
+          let tok_bold = tf
+            .get_series()
+            .map(|s| s.as_ref() == "bold")
+            .unwrap_or(false);
+          let tok_fam = tf.get_family();
+          let tok_cal = tok_fam
+            .as_ref()
+            .map(|f| f.as_ref() == "caligraphic")
+            .unwrap_or(false);
+          let tok_tt = tok_fam
+            .as_ref()
+            .map(|f| f.as_ref() == "typewriter")
+            .unwrap_or(false);
+          let decl_bold = match_font.contains("bold");
+          let decl_cal = match_font.contains("caligraphic");
+          let decl_tt = match_font.contains("typewriter");
+          if tok_bold != decl_bold || tok_cal != decl_cal || tok_tt != decl_tt {
+            continue;
+          }
+        }
         // Check scope: if decl_id has a section prefix (e.g. "S1" from "S1.XMD1"),
         // only apply to tokens within that section
         if !decl_id.is_empty()

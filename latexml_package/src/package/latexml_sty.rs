@@ -43,7 +43,13 @@ fn base_text_predicate(base: &str) -> String {
 /// Perl: compile_match1 digests tokens to DOM, then domToXPath.
 /// Rust: pattern-match on body_text string and generate broad XPath
 /// with Rust-side filtering criteria (avoids XPath nested predicate bug).
-/// Public entry point for the .latexml file loader.
+///
+/// Font-awareness is deliberately NOT baked into these XPaths: the serialized
+/// `@font` attribute is only finalized after math parsing, so a rewrite-time
+/// `@font='…'` predicate matches nothing (and would silently break the
+/// wildcard/subscript/prime rewrites). Font discrimination happens Rust-side
+/// instead — `declare_node_matches` (rewrite path, via the resolved `_font`
+/// id) and `apply_lx_declarations` (post-rewrite fast path, via match_font).
 pub fn compile_declare_pattern_pub(body_text: &str) -> DeclarePattern {
   compile_declare_pattern(body_text)
 }
@@ -655,6 +661,19 @@ LoadDefinitions!({
     let body_text = whatsit.get_arg(3)
       .map(|a| { let s = a.to_string(); s.trim_matches('$').trim().to_string() })
       .unwrap_or_default();
+    // Capture the digested pattern's font (Perl's domToXPath includes @font in
+    // the match, so e.g. an italic `$x$` declaration does NOT match a bold
+    // `\mathbf{x}` — fonts carry mathematical meaning). Only \lxDeclare has a
+    // digested body to read this from; the .latexml DefMathRewrite loader path
+    // (string matches) keeps its font-agnostic behavior via match_font=None.
+    let match_font = whatsit
+      .get_arg(3)
+      .and_then(|a| a.get_font().ok().flatten())
+      .map(|f| f.font_attribute_string())
+      .filter(|s| !s.is_empty());
+    if let Some(ref font_str) = match_font {
+      whatsit.set_property("match_font", Stored::from(font_str.clone()));
+    }
 
     // Generate declaration ID if tag or description present
     // Perl: next_declaration_id() → StepCounter('@XMDECL'), return \the@XMDECL@ID
@@ -693,7 +712,15 @@ LoadDefinitions!({
         },
         _ => Vec::new(),
       };
-      decls.push(format!("{}\t{}\t{}\t{}\t{}", body_text, role, name_val, meaning, decl_id));
+      // Line format: body_text \t role \t name \t meaning \t decl_id \t match_font.
+      // The trailing match_font makes apply_lx_declarations font-aware (a plain
+      // italic `$x$` must not annotate a bold `\mathbf{x}`), mirroring the
+      // font-aware rewrite path (declare_node_matches). Empty when the pattern
+      // carried no distinguishing font.
+      let match_font_field = match_font.as_deref().unwrap_or("");
+      decls.push(format!(
+        "{}\t{}\t{}\t{}\t{}\t{}",
+        body_text, role, name_val, meaning, decl_id, match_font_field));
       // Mathcode decoding for single-char bodies
       if body_text.chars().count() == 1 {
         let ch = body_text.chars().next().unwrap();
@@ -742,7 +769,11 @@ LoadDefinitions!({
                 if let Some(dc) = decoded {
                   let ds = dc.to_string();
                   if ds != body_text {
-                    decls.push(format!("{}\t{}\t{}\t{}", ds, role, name_val, meaning));
+                    // Same 6-field shape (empty decl_id, trailing match_font)
+                    // so apply_lx_declarations parses it uniformly.
+                    decls.push(format!(
+                      "{}\t{}\t{}\t{}\t\t{}",
+                      ds, role, name_val, meaning, match_font.as_deref().unwrap_or("")));
                   }
                 }
               }
@@ -828,12 +859,17 @@ LoadDefinitions!({
       if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
       if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
       if !decl_id.is_empty() { attrs.insert("decl_id".to_string(), decl_id); }
-      // Compile pattern: determine XPath, type, filters, wildcard paths
+      // Compile pattern: determine XPath, type, filters, wildcard paths.
+      // Font-awareness is applied Rust-side (declare_node_matches for the
+      // rewrite path, apply_lx_declarations for the post-rewrite fast path) —
+      // NOT baked into the XPath, since the serialized `@font` attribute isn't
+      // finalized until after math parsing (see compile_declare_pattern).
       let has_wildcard = body_text.contains("WildCard");
       let pat = if body_text.contains('_') || body_text.contains('\\') || body_text.contains('\'') {
         compile_declare_pattern(&body_text)
       } else {
-        // Simple single-token pattern: match XMTok by text
+        // Simple single-token pattern: match XMTok by text; the "simple"
+        // filter in declare_node_matches rejects non-matching fonts.
         DeclarePattern {
           xpath: format!(
             "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
