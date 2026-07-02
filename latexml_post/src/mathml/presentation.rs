@@ -1175,17 +1175,36 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of Hint handler.
 fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
-  let width = node.get_attribute("width");
-  if let Some(w) = width {
-    // Convert width to mspace
-    NodeData::Element {
-      tag:        "m:mspace".to_string(),
-      attributes: Some(HashMap::from_iter([("width".to_string(), w)])),
-      children:   vec![],
-    }
+  // Perl `Hint:?:?` (MathML.pm L1479-1483): the width is normalized through
+  // getXMHintSpacing to em (so `\qquad` → width="2em", not the raw "20pt");
+  // zero-width hints still MUST return a node, marked `_ignorable` so
+  // filter_row drops them from rows.
+  let w = node
+    .get_attribute("width")
+    .map(|w| super::get_xm_hint_spacing(&w))
+    .unwrap_or(0.0);
+  let attrs = if w != 0.0 {
+    // Perl appends 'em' to the raw number ($w . 'em'), NOT fmt_em — emulate
+    // Perl's default %.15g stringification.
+    HashMap::from_iter([("width".to_string(), format!("{}em", perl_num(w)))])
   } else {
-    // Empty hint
-    NodeData::Text(String::new())
+    HashMap::from_iter([("_ignorable".to_string(), "1".to_string())])
+  };
+  NodeData::Element {
+    tag:        "m:mspace".to_string(),
+    attributes: Some(attrs),
+    children:   vec![],
+  }
+}
+
+/// Format a float the way Perl stringifies numbers (%.15g): up to 15
+/// significant digits, no trailing zeros.
+fn perl_num(v: f64) -> String {
+  let s = format!("{v:.15}");
+  if s.contains('.') {
+    s.trim_end_matches('0').trim_end_matches('.').to_string()
+  } else {
+    s
   }
 }
 
@@ -1259,7 +1278,8 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
       let cell_content = if cell_children.is_empty() {
         vec![]
       } else {
-        cell_children.iter().map(|c| pmml(doc, c)).collect()
+        // Perl L468: cells filter _ignorable items too.
+        filter_row(cell_children.iter().map(|c| pmml(doc, c)).collect())
       };
 
       cols.push(NodeData::Element {
@@ -1856,7 +1876,19 @@ fn op_base_is_mo(node: &NodeData) -> bool {
   }
 }
 
+/// Port of Perl `filter_row` (L577-579): drop `_ignorable` items.
+fn filter_row(items: Vec<NodeData>) -> Vec<NodeData> {
+  items
+    .into_iter()
+    .filter(|i| {
+      !matches!(i, NodeData::Element { attributes: Some(a), .. } if a.contains_key("_ignorable"))
+    })
+    .collect()
+}
+
 fn pmml_row(children: Vec<NodeData>) -> NodeData {
+  // Perl `pmml_row` (L581-584) filters `_ignorable` items (zero-width hints).
+  let children = filter_row(children);
   if children.len() == 1 {
     children.into_iter().next().unwrap()
   } else {
@@ -1912,6 +1944,9 @@ const TEX_SPACING: [f64; 4] = [0.0, 0.167, 0.222, 0.2778];
 
 /// Spacing epsilon — ignore differences below this (em)
 const SPACING_EPSILON: f64 = 0.01;
+
+/// Don't complain if we can't adjust less than this (em) — Perl `$fudge`.
+const SPACING_FUDGE: f64 = 0.3;
 
 /// Map LaTeXML role to TeX atom type.
 fn role_to_atom_type(role: &str) -> &'static str {
@@ -2077,6 +2112,13 @@ fn set_node_attr(node: &mut NodeData, key: &str, value: &str) {
   }
 }
 
+fn get_node_attr(node: &NodeData, key: &str) -> Option<String> {
+  match node {
+    NodeData::Element { attributes, .. } => attributes.as_ref().and_then(|a| a.get(key)).cloned(),
+    _ => None,
+  }
+}
+
 fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
   match node {
     NodeData::Element { attributes, .. } => attributes
@@ -2089,130 +2131,318 @@ fn get_node_attr_f64(node: &NodeData, key: &str) -> f64 {
   }
 }
 
-/// Adjust spacing between two adjacent nodes. `invisop` is the invisible
-/// operator sitting BETWEEN the pair, if any — Perl `adjust_pair L1220-1284`
-/// pairs the visible neighbors across it and materializes any needed
-/// adjustment on the invisible op itself (`$$invisop[1]{lspace}`).
-fn adjust_pair(prev: &mut NodeData, next: &mut NodeData, invisop: Option<&mut NodeData>) {
-  let prev_role_s = get_node_role(prev);
-  let next_role_s = get_node_role(next);
-  let prev_role = if prev_role_s.is_empty() {
-    "ATOM"
-  } else {
-    &prev_role_s
-  };
-  let next_role = if next_role_s.is_empty() {
-    "ATOM"
-  } else {
-    &next_role_s
-  };
+/// Perl `%tag_arg_pattern` (MathML.pm L1084-1088): how a tag participates in
+/// the spacing walk.
+#[derive(PartialEq, Clone, Copy)]
+enum WalkType {
+  Atom,
+  Mrow,
+  Other,
+}
+fn walk_type(tag: &str) -> WalkType {
+  match tag {
+    "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext" => WalkType::Atom,
+    "m:mrow" | "m:mpadded" | "m:msqrt" | "m:mstyle" | "m:merror" | "m:mphantom" | "m:mtd" => {
+      WalkType::Mrow
+    },
+    _ => WalkType::Other,
+  }
+}
 
-  let prev_type = m_atom_type(get_node_tag(prev)).unwrap_or_else(|| role_to_atom_type(prev_role));
-  let next_type = m_atom_type(get_node_tag(next)).unwrap_or_else(|| role_to_atom_type(next_role));
+/// Resolve a child-index path from the walk root. The walk mutates only
+/// attributes and rewraps nodes in place (sibling indices stay stable), so
+/// queued paths never dangle.
+fn node_at<'a>(root: &'a NodeData, path: &[usize]) -> &'a NodeData {
+  let mut cur = root;
+  for &i in path {
+    match cur {
+      NodeData::Element { children, .. } => cur = &children[i],
+      _ => unreachable!("spacewalk path into non-element"),
+    }
+  }
+  cur
+}
 
+fn node_at_mut<'a>(root: &'a mut NodeData, path: &[usize]) -> &'a mut NodeData {
+  let mut cur = root;
+  for &i in path {
+    match cur {
+      NodeData::Element { children, .. } => cur = &mut children[i],
+      _ => unreachable!("spacewalk path into non-element"),
+    }
+  }
+  cur
+}
+
+fn child_path(path: &[usize], i: usize) -> Vec<usize> {
+  let mut p = path.to_vec();
+  p.push(i);
+  p
+}
+
+/// Descend through embellished operators (scripts) to the inner operator,
+/// for role/opdict-spacing reads (Perl adjust_pair L1225-1227).
+fn descend_embellishers(root: &NodeData, mut path: Vec<usize>) -> Vec<usize> {
+  loop {
+    match node_at(root, &path) {
+      NodeData::Element { tag, children, .. }
+        if is_embellisher_tag(tag) && !children.is_empty() =>
+      {
+        path.push(0);
+      },
+      _ => return path,
+    }
+  }
+}
+
+/// Walk the MathML tree and adjust spacing. Port of Perl `adjust_spacing` /
+/// `space_walk` (MathML.pm L1079-1133): resolves the difference between
+/// TeX's inter-atom spacing and MathML's operator-dictionary spacing.
+pub fn adjust_spacing(node: &mut NodeData) { space_walk(node, Vec::new()); }
+
+/// Port of Perl `space_walk`: pairs VISUALLY adjacent items by unwinding
+/// nested mrows into the pair stream, streaming script bases (TeX attaches
+/// scripts without affecting inter-atom spacing) while recursing on the
+/// scripts themselves, and carrying invisible operators between a pair as
+/// the preferred place to materialize an adjustment.
+fn space_walk(root: &mut NodeData, path: Vec<usize>) {
+  use std::collections::VecDeque;
+  let (wt, nch) = match node_at(root, &path) {
+    NodeData::Element { tag, children, .. } => (walk_type(tag), children.len()),
+    _ => return,
+  };
+  match wt {
+    WalkType::Atom => {},
+    WalkType::Other => {
+      for i in 0..nch {
+        space_walk(root, child_path(&path, i));
+      }
+    },
+    WalkType::Mrow => {
+      let mut queue: VecDeque<Vec<usize>> = (0..nch).map(|i| child_path(&path, i)).collect();
+      // First prev: unwrap leading nested mrows (Perl L1105-1108).
+      let mut first = None;
+      while let Some(p) = queue.pop_front() {
+        let unwrap = match node_at(root, &p) {
+          NodeData::Element { tag, children, .. } if tag == "m:mrow" => Some(children.len()),
+          _ => None,
+        };
+        match unwrap {
+          Some(n) => {
+            for i in (0..n).rev() {
+              queue.push_front(child_path(&p, i));
+            }
+          },
+          None => {
+            first = Some(p);
+            break;
+          },
+        }
+      }
+      let Some(mut prev) = first else { return };
+      space_walk(root, prev.clone());
+      while let Some(popped) = queue.pop_front() {
+        let mut next = popped;
+        // Save an invisible operator as the potential target for lspace
+        // (Perl L1111-1114).
+        let mut invisop: Option<Vec<usize>> = None;
+        {
+          let n = node_at(root, &next);
+          if get_node_tag(n) == "m:mo" && is_node_text_invisible_op(n) {
+            invisop = Some(next);
+            match queue.pop_front() {
+              Some(p) => next = p,
+              None => break,
+            }
+          }
+        }
+        enum Kind {
+          Mrow(usize),
+          Script(usize),
+          Plain,
+        }
+        let kind = match node_at(root, &next) {
+          NodeData::Element { tag, children, .. } => {
+            if tag == "m:mrow" {
+              Kind::Mrow(children.len())
+            } else if tag.starts_with("m:msup")
+              || tag.starts_with("m:msub")
+              || tag.starts_with("m:munder")
+              || tag.starts_with("m:mover")
+              || tag.starts_with("m:mmultiscripts")
+            {
+              // Prefix match like Perl's regex — covers msubsup/munderover.
+              Kind::Script(children.len())
+            } else {
+              Kind::Plain
+            }
+          },
+          _ => Kind::Plain,
+        };
+        match kind {
+          Kind::Mrow(n) => {
+            // Unwrap into the stream; the invisible op goes back in front.
+            for i in (0..n).rev() {
+              queue.push_front(child_path(&next, i));
+            }
+            if let Some(iv) = invisop {
+              queue.push_front(iv);
+            }
+            continue;
+          },
+          Kind::Script(n) => {
+            // Stream the base; recurse on the scripts (Perl L1121-1128).
+            for i in 1..n {
+              space_walk(root, child_path(&next, i));
+            }
+            queue.push_front(child_path(&next, 0));
+            if let Some(iv) = invisop {
+              queue.push_front(iv);
+            }
+            continue;
+          },
+          Kind::Plain => {},
+        }
+        space_walk(root, next.clone());
+        adjust_pair(root, &prev, &next, invisop.as_deref());
+        prev = next;
+      }
+    },
+  }
+}
+
+/// Adjust the spacing between a visually adjacent pair. Port of Perl
+/// `adjust_pair` (MathML.pm L1220-1284), all branches.
+fn adjust_pair(root: &mut NodeData, prev: &[usize], next: &[usize], invisop: Option<&[usize]>) {
+  let iprev = descend_embellishers(root, prev.to_vec());
+  let inext = descend_embellishers(root, next.to_vec());
+
+  // Author spacing (in em) reads from the OUTER pair; role/opdict spacing
+  // from the inner (possibly embellished) operator.
+  let prev_req_right = get_node_attr_f64(node_at(root, prev), "_rpadding");
+  let next_req_left = get_node_attr_f64(node_at(root, next), "_lpadding");
+  let (iprev_tag, prev_role, prev_dict_right) = {
+    let n = node_at(root, &iprev);
+    (
+      get_node_tag(n).to_string(),
+      get_node_attr(n, "_role").unwrap_or_else(|| "ATOM".to_string()),
+      get_node_attr_f64(n, "_rspace"),
+    )
+  };
+  let (inext_tag, next_role, next_dict_left) = {
+    let n = node_at(root, &inext);
+    (
+      get_node_tag(n).to_string(),
+      get_node_attr(n, "_role").unwrap_or_else(|| "ATOM".to_string()),
+      get_node_attr_f64(n, "_lspace"),
+    )
+  };
+  let prev_type = m_atom_type(&iprev_tag).unwrap_or_else(|| role_to_atom_type(&prev_role));
+  let next_type = m_atom_type(&inext_tag).unwrap_or_else(|| role_to_atom_type(&next_role));
   let tex_code = atompair_spacing(prev_type, next_type);
   let tex_space = TEX_SPACING[tex_code.unsigned_abs() as usize];
-
-  // Author spacing (Perl L1228-1229, L1237): explicit lpadding/rpadding from
-  // the source XMath (e.g. `~` ties in `{\rm number~of~…}` collapsed onto the
-  // word tokens) is ADDED to the TeX atom-pair spacing. This term was missing
-  // from the port — `~`-separated identifiers rendered jammed together
-  // (witness astro-ph0001001 S9.Ex4.m1).
-  let prev_req_right = get_node_attr_f64(prev, "_rpadding");
-  let next_req_left = get_node_attr_f64(next, "_lpadding");
-
-  let prev_dict_right = get_node_attr_f64(prev, "_rspace");
-  let next_dict_left = get_node_attr_f64(next, "_lspace");
-  let default = prev_dict_right + next_dict_left;
   let target = prev_req_right + next_req_left + tex_space;
-
+  let default = prev_dict_right + next_dict_left;
   if (target - default).abs() <= SPACING_EPSILON {
     return;
   }
 
-  let prev_is_mo = get_node_tag(prev) == "m:mo";
-  let next_is_mo = get_node_tag(next) == "m:mo";
-
-  // Perl materialization order (L1255-1283): target<0 mpadded-rewrap and the
-  // mspace width-merge branches are not yet ported (TODO, MathML-post audit);
-  // the invisible-op branch comes before the mo branches.
-  if let Some(inv) = invisop {
-    set_node_attr(inv, "lspace", &fmt_em(target));
-  } else if prev_is_mo && next_is_mo {
+  let prev_tag = get_node_tag(node_at(root, prev)).to_string();
+  let next_tag = get_node_tag(node_at(root, next)).to_string();
+  // In MathML Core neither mspace nor mpadded may have negative width, and
+  // relative +/- widths are unsupported — so a NEGATIVE target rewraps prev
+  // in an m:mpadded with an ADJUSTED absolute width (Perl L1252-1260,
+  // compute_size L1135-1145: atoms only, string metrics of the default math
+  // font, with the ridiculous-but-Perl minimum-10pt hack for mathscript).
+  if target < 0.0 {
+    let sizeable = match node_at(root, prev) {
+      NodeData::Element { tag, attributes, .. } if walk_type(tag) == WalkType::Atom => Some(
+        attributes
+          .as_ref()
+          .and_then(|a| a.get("class"))
+          .cloned()
+          .unwrap_or_default(),
+      ),
+      _ => None,
+    };
+    if let Some(class) = sizeable {
+      let text = get_node_text(node_at(root, prev));
+      let font = latexml_core::common::font::Font::math_default();
+      let (w, _h, _d) = font.compute_string_size(&text, Default::default());
+      let mut w_sp = w.0;
+      if w_sp != 0 && class.contains("mathscript") {
+        w_sp = w_sp.max(10 * 65536);
+      }
+      let mut reqw = (w_sp as f64 / 65536.0) / 10.0 + target;
+      if reqw < 0.0 {
+        reqw = 0.0;
+      }
+      let slot = node_at_mut(root, prev);
+      let old = std::mem::replace(slot, NodeData::Text(String::new()));
+      *slot = NodeData::Element {
+        tag:        "m:mpadded".to_string(),
+        attributes: Some(HashMap::from_iter([("width".to_string(), fmt_em(reqw))])),
+        children:   vec![old],
+      };
+    }
+  } else if prev_tag == "m:mspace" || next_tag == "m:mspace" {
+    // Merge into the mspace's existing width (Perl L1261-1262).
+    let target_path = if prev_tag == "m:mspace" { prev } else { next };
+    let n = node_at_mut(root, target_path);
+    let old_w = match n {
+      NodeData::Element { attributes, .. } => attributes
+        .as_ref()
+        .and_then(|a| a.get("width"))
+        .map(|w| super::get_xm_hint_spacing(w))
+        .unwrap_or(0.0),
+      _ => 0.0,
+    };
+    set_node_attr(n, "width", &fmt_em(target + old_w));
+  } else if let Some(iv) = invisop {
+    set_node_attr(node_at_mut(root, iv), "lspace", &fmt_em(target));
+  } else if prev_tag == "m:mo" && next_tag == "m:mo" {
+    // BOTH are mo: account for each one's dictionary spacing (Perl L1264-1275).
+    let p = prev_dict_right;
     let n = next_dict_left;
     let rem = target - n;
     if rem >= 0.0 {
-      set_node_attr(
-        prev,
-        "rspace",
-        &fmt_em(if rem > SPACING_EPSILON { rem } else { 0.0 }),
-      );
+      let v = if rem > SPACING_EPSILON { rem } else { 0.0 };
+      set_node_attr(node_at_mut(root, prev), "rspace", &fmt_em(v));
     } else {
-      let p = prev_dict_right;
-      let rem2 = target - p;
-      if rem2 >= 0.0 {
-        set_node_attr(
-          next,
-          "lspace",
-          &fmt_em(if rem2 > SPACING_EPSILON { rem2 } else { 0.0 }),
-        );
-      }
-    }
-  } else if prev_is_mo {
-    set_node_attr(prev, "rspace", &fmt_em(target));
-  } else if next_is_mo {
-    set_node_attr(next, "lspace", &fmt_em(target));
-  }
-}
-
-/// Walk the MathML tree and adjust spacing.
-pub fn adjust_spacing(node: &mut NodeData) {
-  // Fast-path leaf check on a borrowed &str — avoids a per-node String allocation.
-  let tag_ref = get_node_tag(node);
-  if matches!(tag_ref, "m:mi" | "m:mo" | "m:mn" | "m:ms" | "m:mtext") {
-    return;
-  }
-  let is_mrow = is_mrow_like(tag_ref);
-
-  if is_mrow {
-    if let NodeData::Element { children, .. } = node {
-      for child in children.iter_mut() {
-        adjust_spacing(child);
-      }
-      let len = children.len();
-      if len >= 2 {
-        let mut i = 0;
-        while i + 1 < len {
-          let j = i + 1;
-          // Pair the visible neighbors ACROSS an invisible operator, handing
-          // the invisible op to adjust_pair so the adjustment can land on it
-          // (Perl space_walk L1120-1128 collects $invisop and passes it).
-          if j + 1 < len
-            && get_node_tag(&children[j]) == "m:mo"
-            && is_node_text_invisible_op(&children[j])
-          {
-            let (left, right) = children.split_at_mut(j);
-            let (mid, rest) = right.split_at_mut(1);
-            if let Some(next) = rest.first_mut() {
-              adjust_pair(&mut left[i], next, mid.first_mut());
-            }
-            i = j + 1;
-          } else {
-            let (left, right) = children.split_at_mut(j);
-            if let Some(next) = right.first_mut() {
-              adjust_pair(&mut left[i], next, None);
-            }
-            i = j;
-          }
+      let rem = target - p;
+      if rem >= 0.0 {
+        let v = if rem > SPACING_EPSILON { rem } else { 0.0 };
+        set_node_attr(node_at_mut(root, next), "lspace", &fmt_em(v));
+      } else {
+        // Split the difference; Perl concatenates the raw number here
+        // (`$rem . 'em'`), NOT fmt_em.
+        let rem = target / 2.0;
+        if rem != p {
+          set_node_attr(
+            node_at_mut(root, prev),
+            "rspace",
+            &format!("{}em", perl_num(rem)),
+          );
+        }
+        if rem != n {
+          set_node_attr(
+            node_at_mut(root, next),
+            "lspace",
+            &format!("{}em", perl_num(rem)),
+          );
         }
       }
     }
-  } else {
-    if let NodeData::Element { children, .. } = node {
-      for child in children.iter_mut() {
-        adjust_spacing(child);
-      }
-    }
+  } else if prev_tag == "m:mo" {
+    set_node_attr(node_at_mut(root, prev), "rspace", &fmt_em(target));
+  } else if next_tag == "m:mo" {
+    set_node_attr(node_at_mut(root, next), "lspace", &fmt_em(target));
+  } else if (target - default).abs() > SPACING_FUDGE {
+    Info!(
+      "ignored",
+      "spacing",
+      "No place to set spacing to {target} (default {default})"
+    );
   }
 }
 
@@ -2226,6 +2456,7 @@ pub fn clean_internal_attrs(node: &mut NodeData) {
       attrs.remove("_largeop");
       attrs.remove("_lpadding");
       attrs.remove("_rpadding");
+      attrs.remove("_ignorable");
       if attrs.is_empty() {
         *attributes = None;
       }
