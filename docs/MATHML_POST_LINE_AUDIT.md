@@ -44,6 +44,11 @@ thinner inline versions are what actually run.
 - Witness protocol: same-host Perl via `latexmlc --format=html5` (segfaults at
   exit-cleanup on this host AFTER writing complete output — exit 139 with a
   complete file is not a failure) or `/usr/local/bin/latexml | latexmlpost`.
+  CAVEAT: the installed Perl is 0.8.8 and LAGS the `LaTeXML/` reference tree —
+  cross-check any witness delta against the reference sources before treating
+  it as a Rust gap (worked example: `\fbox{$x$}` — 0.8.8 loses the frame, the
+  reference tree emits `enclose='box'` exactly like Rust; parity confirmed at
+  the consumer).
 
 ## Scope ruling: line-breaking is OPT-IN in Perl (default-parity)
 
@@ -67,10 +72,10 @@ Consequences recorded here, deprioritized behind the live-path findings:
 
 | attr | Perl producer | Perl consumer | Rust producer | Rust consumer | status |
 |---|---|---|---|---|---|
-| `_role` | stylizeContent + pmml L354-355 | adjust_pair atom types | presentation.rs token path | get_node_role | ⚠️ Perl also sets `_role` on non-mo results via the XMRef/refr path (L354-355) — Rust doesn't (F13) |
+| `_role` | stylizeContent + pmml L354-355 | adjust_pair atom types | token path + pmml wrapper (all results) | get_node_role | ✅ wired (wrapper half landed 2026-07-02) |
 | `_lspace`/`_rspace` | stylizeContent (opdict) | adjust_pair defaults | presentation.rs (opdict) | get_node_attr_f64 | ✅ wired |
 | `_lpadding`/`_rpadding` | pmml L344-348 (sums refr+node) | adjust_pair L1228-9 | pmml wrapper `attach_source_padding` | adjust_pair | ✅ FIXED `3ab9ce3cb3`; residual: Perl sums the **referring XMRef's** padding too (F13) |
-| `_largeop` | stylizeContent L811-820 | needsMathstyle | ⚠️ token path doesn't emit it (F8) | needs_mathstyle is DEAD (F7) | ⬜ both halves unwired |
+| `_largeop` | stylizeContent L811-820 | needsMathstyle | mo styler (SUMOP/INTOP) | needs_mathstyle (live, F7) | ✅ wired 2026-07-02 |
 | `_ignorable` | stylizeContent (zero-width Hints) | filter_row L577 | ⚠️ Hint path doesn't mark (F11) | no filter_row in live pmml_row (F11) | ⬜ both halves unwired |
 | cleanup | (Perl arrays never serialize `_`-keys) | | `clean_internal_attrs` | | ✅ |
 
@@ -78,50 +83,27 @@ Consequences recorded here, deprioritized behind the live-path findings:
 
 Verified-and-landed items move to the ✅ list at the bottom.
 
-- **F7 — mathstyle→`m:mstyle` propagation absent in the live pmml path.**
-  Perl wraps in `m:mstyle displaystyle=…` whenever the saved `mathstyle`
-  attribute differs from the current style: XMApp (L414-427), XMArray
-  (L487-491), big operators (`pmml_bigop` L847-856), script inner-base
-  (L882-887); `needsMathstyle` (L512) decides `displaytyle=true` vs
-  `scriptlevel` reset. Rust: no `m:mstyle` is ever emitted; `needs_mathstyle`
-  (mod.rs) is dead and also misses the `m:mfrac`→true / explicit-displaystyle
-  branches. Hits `\sum`/`\int`/`\displaystyle`-in-scripts sizing — the single
-  largest visual-fidelity gap.
-- **F8 — live token styler is the THIN one.** `pmml_token`
-  (presentation.rs) emits only `stretchy`, `mathsize`, `href`/`title`, and the
-  internal `_role`/`_lspace`/`_rspace`. Perl `stylizeContent` (L672-828) also
-  emits: `symmetric='true'` (stretchy fences/large-ops and `/`),
-  `movablelimits='false'` (mid-position bigops), `largeop` + `_largeop`,
-  `fence`/`separator` on opdict mismatch, relative font-size %→em rescale
-  inside script levels (L776-797), `minsize`/`maxsize` stretchy-hack
-  (L788-817), opacity→cssstyle, `mathbackground`, `force_lspace`/`force_rspace`
-  (L825-826). The fuller port sits DEAD in `mod.rs::stylize_content`.
-  Reconcile: wire ONE styler (presentation-side), delete the other.
-- **F9 — `pmml_maybe_resize` never invoked** (Perl L525-575, called at
-  L421/492/501 + token subs L833/839/845). Loses: width/height/depth/x-y
-  offset→`m:mpadded`, `framed`/`framecolor` (`\boxed`, `\fbox` in math),
-  stretchy-ARROW→`m:mover`+`m:mspace` (`\xrightarrow` sizing), XMDual
-  parent-attr inheritance (L529-539). A fuller dead port exists at
-  mod.rs `pmml_maybe_resize`; wire it into the live path.
-- **F10 — `Apply:ENCLOSE:?` emits no `m:menclose`.** presentation.rs routes
-  ENCLOSE to `pmml_parenthesize` → plain fenced mrow; Perl emits
-  `m:menclose notation=@enclose` (+`mathcolor`, +`mstyle` padding wrap).
-  `\cancel`/`\sout`/`\boxed`-class markup silently degrades.
+- **F8 residuals — token styler** (the bulk landed, see ✅ below): still
+  missing vs Perl `stylizeContent`: opacity→cssstyle + `mathbackground`
+  (context bindings F8b), the Format-char styling suppression (L747-748),
+  `color='red'` on unknown empty tokens (L713), Perl's `name||meaning`
+  fallback order (Rust: meaning||name), `force_lspace`/`force_rspace` beyond
+  the ZWSP case, and the whole `$LaTeXML::MathML::FONT/SIZE/COLOR/BGCOLOR/
+  OPACITY/DESIRED_SIZE` inherited-context bindings (pmml_top L278-285 +
+  pmml L332-335) — **F8b**, the largest residual. The dead, fuller
+  `mod.rs::stylize_content` remains to reconcile/delete (used by mod.rs
+  text paths only).
 - **F11 — `_ignorable`/`filter_row` + Hint width normalization.** Perl marks
   zero-width Hints `_ignorable` and `filter_row` (L577) drops them from rows;
   Hint widths go through `getXMHintSpacing`→`em`. Rust `pmml_row` never
   filters, and the Hint arm passes the raw width string to `m:mspace`
   (malformed for `mu`/`pt` inputs).
-- **F12 — FRACOP attribute loss.** Rust `m:mfrac` keeps only zero
-  `linethickness`; drops non-zero `linethickness`, `bevelled='true'`
-  (`ltx_bevelled` class path, Perl L1614-1616), and `mathcolor`. Also
-  `mathcolor` dropped on `m:msqrt`/`m:mroot` (Perl L1639-1646).
-- **F13 — XMRef refr-preference (`_getattr`) unported** (Perl L367-378 +
-  pmml L339-355). Through an XMRef, Perl prefers the *referring* node's
-  role/color/class/enclose and **sums both** refr+node padding; Rust reads
-  only the target node (our `attach_source_padding` covers the node half).
-  Also missing there: `enclose`→menclose wrap, class merge, `_role` on non-mo
-  results.
+- **F13 residual** — through an XMRef the wrapper attrs apply by recursion
+  (inner=target, outer=refr): equivalent to Perl's `_getattr` refr-preference
+  for `_role` (outer overwrites) and padding (sums), near-equivalent for
+  class (order reversed); sole corner: refr AND target both carrying
+  `enclose` nest two menclose where Perl picks one. Accepted; revisit only on
+  a witness.
 - **F14 — content-MathML structural arms missing:** `multirelation` cmml
   (pairwise `apply(rel,·,·)` chained under `m:and` with `m:share`, L1719-1729)
   — chained `a<b<c` semantics are wrong; `cmml_shared`/`cmml_share`
@@ -153,10 +135,8 @@ Verified-and-landed items move to the ✅ list at the bottom.
   `m:mspace` width-merge; the both-mo `$target/2` split fallback (L1272-1275).
   Plus **F6**: Perl `space_walk` iteratively unwraps nested mrows into the
   pair stream (L1105-1118) — verify the Rust walk's flattening matches.
-- **F4 — `fmt_em` format divergence.** Perl `sprintf("%.3fem")` → `0.330em`
-  (verified L1285; keeps trailing zeros); Rust trims → `0.33em`. Semantically
-  equal. Either match byte-for-byte or record in OXIDIZED_DESIGN. Same class:
-  `annotated` mspace width `0.389em` vs Perl's raw `0.3888888888888889em`.
+- **F4 residual** — `annotated` mspace width `0.389em` vs Perl's raw
+  `0.3888888888888889em` (fmt_em itself is now byte-parity, see ✅).
 - **F5 — Linebreaker feature gap** (see Scope ruling above). Decide: faithful
   port behind `--linelength`, or delete the dead sketch + document as out of
   scope. Sub-findings if ported: mtable strategy (not mspace-newline),
@@ -166,6 +146,41 @@ Verified-and-landed items move to the ✅ list at the bottom.
 
 ### Landed
 
+- **F10+F12+F13 ✅ (`8074ef8e0a`)** — pmml-wrapper parity (menclose wrap from
+  source `enclose`, class merge, `_role` recording) + dedicated Apply:ENCLOSE
+  arm (`\cancel` → menclose updiagonalstrike) + FRACOP verbatim linethickness
+  /mathcolor/bevelled + root mathcolor. Witness inventory byte-identical.
+- **F7 ✅ (2026-07-02)** — full mathstyle→`m:mstyle` propagation: `%stylemap`/
+  `%stylemap2` transition tables, corrected `needsMathstyle` (mfrac/_largeop/
+  displaystyle-shield), XMApp wrap (dispatch extracted, style switched
+  around it), XMArray wrap + mtable `displaystyle="true"` in display context,
+  `pmml_bigop` wrap for SUMOP/INTOP/BIGOP tokens, script inner-base
+  displaystyle wrap, AND the mode-sensitive entry baseline (display math →
+  Display, inline → Text — Perl convertNode L20-21; Rust formerly always
+  started at Display). Witness: `\tfrac`/`\dfrac`/`\displaystyle\sum`/
+  smallmatrix all byte-identical to Perl.
+- **F8 ✅ (bulk, 2026-07-02)** — faithful mo styler: opdict xor-emission
+  (stretchy/fence/separator/largeop), `_largeop` for needsMathstyle,
+  `symmetric='true'`, `movablelimits='false'` for mid-position bigops
+  (`∑`,`lim`), size resolution (context gate + script rescale + %→em) with
+  the minsize/maxsize stretchyhack for symmetric-wanting delimiters
+  (`\bigl(` → `minsize/maxsize="1.200em"`), and mathsize for ALL token
+  types (smallmatrix cells `0.700em`). Residuals above.
+- **F9 ✅ (2026-07-02)** — `pmml_maybe_resize` ported (with the XMDual
+  parent-attr fallback the dead copy lacked) and wired at all five Perl call
+  sites: XMWrap/XMArg, XMApp (before mstyle), XMArray (after mstyle), XMText,
+  and every token. Dead mod.rs copy deleted. Witness: `\raisebox` →
+  `mpadded voffset="4.3pt"` byte-identical.
+- **F4 ✅ (2026-07-02)** — `fmt_em` now byte-matches Perl `sprintf("%.3fem")`
+  (trailing zeros kept: `1.200em`); residual: the `annotated` constant above.
+- **F18 ✅ (2026-07-02)** — `nth-root` arg-order bug: XMath args are
+  (degree, radicand) in BOTH engines, but all three Rust consumers had them
+  swapped — presentation rendered `<mroot>` spec-backwards (degree as base,
+  radicand shrunk), content emitted `<degree>` around the radicand,
+  unicode_math picked the radicand as the root index. The sweep's
+  "self-consistent, don't fix" verdict was WRONG (double-swap ≠ identity
+  across three different consumers). Witness `\sqrt[3]{x}`: pmml AND cmml now
+  byte-identical to Perl.
 - **F1 ✅ (`3ab9ce3cb3`)** — `_lpadding`/`_rpadding` producer + author-spacing
   term + invisop materialization (astro-ph0001001 witness).
 - **F2 ✅ (this commit)** — dead duplicate spacewalk deleted from `mod.rs`

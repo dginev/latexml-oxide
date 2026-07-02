@@ -78,6 +78,188 @@ impl MathStyle {
       MathStyle::ScriptScript => "50%",
     }
   }
+
+  /// Parse a source `mathstyle` attribute (Perl gates on `$stylestep{$style}`,
+  /// so only the four canonical names count).
+  pub fn from_attr(s: &str) -> Option<Self> {
+    match s {
+      "display" => Some(MathStyle::Display),
+      "text" => Some(MathStyle::Text),
+      "script" => Some(MathStyle::Script),
+      "scriptscript" => Some(MathStyle::ScriptScript),
+      _ => None,
+    }
+  }
+}
+
+/// m:mstyle attributes for a mathstyle transition.
+///
+/// Port of Perl `%stylemap` (`needs`=true: something below cares about
+/// displaystyle) and `%stylemap2` (`needs`=false: only a fontsize context is
+/// required), MathML.pm L240-268. Same-style transitions yield nothing.
+fn stylemap_attrs(
+  ostyle: MathStyle,
+  nstyle: MathStyle,
+  needs: bool,
+) -> &'static [(&'static str, &'static str)] {
+  use MathStyle::*;
+  match (ostyle, nstyle, needs) {
+    (Display, Text, true) => &[("displaystyle", "false")],
+    (Display, Script, true) => &[("displaystyle", "false"), ("scriptlevel", "+1")],
+    (Display, ScriptScript, true) => &[("displaystyle", "false"), ("scriptlevel", "+2")],
+    (Text, Display, true) => &[("displaystyle", "true")],
+    (Display, Script, false) | (Text, Script, _) => &[("scriptlevel", "+1")],
+    (Display, ScriptScript, false) | (Text, ScriptScript, _) => &[("scriptlevel", "+2")],
+    (Script, Display, _) => &[("displaystyle", "true"), ("scriptlevel", "-1")],
+    (Script, Text, _) => &[("scriptlevel", "-1")],
+    (Script, ScriptScript, _) => &[("scriptlevel", "+1")],
+    (ScriptScript, Display, _) => &[("displaystyle", "true"), ("scriptlevel", "-2")],
+    (ScriptScript, Text, _) => &[("scriptlevel", "-2")],
+    (ScriptScript, Script, _) => &[("scriptlevel", "-1")],
+    _ => &[],
+  }
+}
+
+/// Does this subtree contain something whose rendering depends on
+/// displaystyle? Port of Perl `needsMathstyle` (MathML.pm L512-523):
+/// m:mfrac → yes; `_largeop` → yes; an m:mstyle that already pins
+/// displaystyle shields its subtree.
+fn needs_mathstyle(node: &NodeData) -> bool {
+  if let NodeData::Element { tag, attributes, children } = node {
+    if tag == "m:mfrac" {
+      return true;
+    }
+    if let Some(attrs) = attributes {
+      if attrs.contains_key("_largeop") {
+        return true;
+      }
+      if tag == "m:mstyle" && attrs.contains_key("displaystyle") {
+        return false;
+      }
+    }
+    return children.iter().any(needs_mathstyle);
+  }
+  false
+}
+
+/// Wrap `result` in m:mstyle for an ostyle→nstyle transition, when the
+/// transition table says the wrap carries information (Perl MathML.pm
+/// L421-427 / L487-491).
+fn maybe_style_wrap(result: NodeData, ostyle: MathStyle, nstyle: Option<MathStyle>) -> NodeData {
+  let Some(nstyle) = nstyle else { return result };
+  let style_attrs = stylemap_attrs(ostyle, nstyle, needs_mathstyle(&result));
+  if style_attrs.is_empty() {
+    return result;
+  }
+  NodeData::Element {
+    tag:        "m:mstyle".to_string(),
+    attributes: Some(HashMap::from_iter(
+      style_attrs
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string())),
+    )),
+    children:   vec![result],
+  }
+}
+
+/// Wrap `result` in m:mpadded / frame it, when the source node (or its
+/// containing XMDual) carries sizing attributes.
+///
+/// Port of Perl `pmml_maybe_resize` (MathML.pm L525-575): stretchy-ARROW
+/// width → m:mover + m:mspace; width/height/depth/xoffset/yoffset →
+/// m:mpadded (reusing an existing mpadded/mrow); framed/framecolor →
+/// ltx_framed_* class + border-color style.
+fn pmml_maybe_resize(doc: &PostDocument, node: &Node, result: NodeData) -> NodeData {
+  // Relevant attributes MAY sit on a containing XMDual (Perl L529-531).
+  let parent = node.get_parent().filter(|p| doc.is_qname(p, "ltx:XMDual"));
+  let getattr = |name: &str| {
+    node
+      .get_attribute(name)
+      .or_else(|| parent.as_ref().and_then(|p| p.get_attribute(name)))
+  };
+  let width = getattr("width");
+  let height = getattr("height");
+  let depth = getattr("depth");
+  let xoff = getattr("xoffset");
+  let yoff = getattr("yoffset");
+  let role = getattr("role");
+  let class = getattr("class");
+
+  let mut result = result;
+  if let Some(ref w) = width
+    && role.as_deref() == Some("ARROW")
+    && class.as_deref().is_some_and(|c| {
+      c.split_ascii_whitespace()
+        .any(|w| w == "ltx_horizontally_stretchy")
+    })
+  {
+    // Special-case hack for stretchy arrows with a specified width;
+    // stretchiness (currently) only has effect within munder/mover (Perl L543-545).
+    result = NodeData::Element {
+      tag:        "m:mover".to_string(),
+      attributes: None,
+      children:   vec![result, NodeData::Element {
+        tag:        "m:mspace".to_string(),
+        attributes: Some(HashMap::from_iter([("width".to_string(), w.clone())])),
+        children:   vec![],
+      }],
+    };
+  } else if width.is_some()
+    || height.is_some()
+    || depth.is_some()
+    || xoff.is_some()
+    || yoff.is_some()
+  {
+    // Reuse an m:mpadded, convert an m:mrow, else wrap (Perl L547-552).
+    let needs_wrap = !matches!(&result,
+      NodeData::Element { tag, .. } if tag == "m:mpadded" || tag == "m:mrow");
+    if needs_wrap {
+      result = NodeData::Element {
+        tag:        "m:mpadded".to_string(),
+        attributes: None,
+        children:   vec![result],
+      };
+    }
+    if let NodeData::Element { tag, attributes, .. } = &mut result {
+      if tag == "m:mrow" {
+        *tag = "m:mpadded".to_string();
+      }
+      let attrs = attributes.get_or_insert_with(Default::default);
+      for (key, val) in [
+        ("width", width),
+        ("height", height),
+        ("depth", depth),
+        ("lspace", xoff),
+        ("voffset", yoff),
+      ] {
+        if let Some(v) = val {
+          attrs.insert(key.to_string(), v);
+        }
+      }
+    }
+  }
+
+  // framed/framecolor come from the node itself only (Perl L566-574).
+  if let Some(frame) = node.get_attribute("framed")
+    && let NodeData::Element { attributes, .. } = &mut result
+  {
+    let attrs = attributes.get_or_insert_with(Default::default);
+    let frame_class = format!("ltx_framed_{frame}");
+    let merged = match attrs.get("class") {
+      Some(c) if !c.is_empty() => format!("{c} {frame_class}"),
+      _ => frame_class,
+    };
+    attrs.insert("class".to_string(), merged);
+    if let Some(color) = node.get_attribute("framecolor") {
+      let style = format!("border-color: {color}");
+      let merged = match attrs.get("style") {
+        Some(s) if !s.is_empty() => format!("{s}; {style}"),
+        _ => style,
+      };
+      attrs.insert("style".to_string(), merged);
+    }
+  }
+  result
 }
 
 /// Embellishing roles (scripts/accents applied to operators).
@@ -120,9 +302,21 @@ fn get_operator_role(doc: &PostDocument, node: &Node) -> Option<String> {
 /// Entry point for Presentation MathML conversion.
 /// Port of `MathML::Presentation::convertNode` + `pmml_top`.
 pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
-  // Reset the math-style context for each formula (display/inline are both 100% size, so
-  // Display is the right baseline; nested scripts/fractions step it down from here).
-  CURRENT_STYLE.with(|s| s.set(MathStyle::Display));
+  // Perl Presentation.pm `convertNode` L20-21 + `pmml_top`: display-mode math
+  // starts in displaystyle, everything else in textstyle. Both are 100% size,
+  // but the mathstyle transitions (m:mstyle wraps for \tfrac/\dfrac/
+  // \displaystyle, audit F7) key off this baseline.
+  let mode_is_display = xmath
+    .get_parent()
+    .and_then(|p| p.get_attribute("mode"))
+    .is_some_and(|m| m == "display");
+  CURRENT_STYLE.with(|s| {
+    s.set(if mode_is_display {
+      MathStyle::Display
+    } else {
+      MathStyle::Text
+    })
+  });
   let children = element_children(xmath);
   let results: Vec<NodeData> = children.iter().map(|c| pmml(doc, c)).collect();
   let mut result = if results.len() == 1 {
@@ -251,8 +445,9 @@ fn pmml_inner(doc: &PostDocument, node: &Node) -> NodeData {
         };
       },
       "XMWrap" | "XMArg" => {
+        // Perl L400-401: only present when parsing failed; resizable.
         let results: Vec<NodeData> = element_children_iter(node).map(|c| pmml(doc, &c)).collect();
-        return pmml_row(results);
+        return pmml_maybe_resize(doc, node, pmml_row(results));
       },
       "XMApp" => return pmml_apply(doc, node),
       "XMTok" => return pmml_token(doc, node),
@@ -269,7 +464,7 @@ fn pmml_inner(doc: &PostDocument, node: &Node) -> NodeData {
             current = c.get_next_sibling();
           }
         }
-        return pmml_row(children);
+        return pmml_maybe_resize(doc, node, pmml_row(children));
       },
       _ => {},
     }
@@ -334,8 +529,37 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
   let op_role = get_operator_role(doc, &rop).unwrap_or_default();
   let meaning = rop.get_attribute("meaning").unwrap_or_default();
 
+  // Perl MathML.pm L413-427: the operator's `mathstyle` switches the current
+  // style for the conversion of this application, and the result is wrapped
+  // in m:mstyle per the transition tables (\tfrac in display math →
+  // <mstyle displaystyle="false">, \dfrac in text → displaystyle="true").
+  let style_attr = rop
+    .get_attribute("mathstyle")
+    .or_else(|| op.get_attribute("mathstyle"));
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  let nstyle = style_attr.as_deref().and_then(MathStyle::from_attr);
+  if let Some(n) = nstyle {
+    CURRENT_STYLE.with(|s| s.set(n));
+  }
+  let result = pmml_apply_dispatch(doc, op, &rop, args, &op_role, &meaning);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
+  // Perl L421: resize BEFORE the mstyle wrap.
+  let result = pmml_maybe_resize(doc, node, result);
+  maybe_style_wrap(result, ostyle, nstyle)
+}
+
+/// Role/meaning dispatch for an XMApp (the body of Perl's
+/// `lookupPresenter('Apply',…)` call in `pmml_internal`).
+fn pmml_apply_dispatch(
+  doc: &PostDocument,
+  op: &Node,
+  rop: &Node,
+  args: &[Node],
+  op_role: &str,
+  meaning: &str,
+) -> NodeData {
   // Dispatch by role
-  match op_role.as_str() {
+  match op_role {
     "SUPERSCRIPTOP" | "SUBSCRIPTOP" if args.len() >= 2 => {
       pmml_script_full(doc, op, &args[0], &args[1])
     },
@@ -558,7 +782,71 @@ fn pmml_apply(doc: &PostDocument, node: &Node) -> NodeData {
 /// Convert an XMTok to the appropriate Presentation MathML token.
 ///
 /// Port of `stylizeContent` + token converter.
-fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
+fn pmml_token(doc: &PostDocument, node: &Node) -> NodeData {
+  // Perl `pmml_bigop` (MathML.pm L847-856): a SUMOP/INTOP/BIGOP token whose
+  // recorded `mathstyle` differs from the current style converts under the
+  // switched style and wraps in m:mstyle via %stylemap (the displaystyle-
+  // carrying table, unconditionally) — e.g. `\displaystyle\sum` in inline
+  // math keeps its large rendering. Token:LIMITOP is plain pmml_mo in Perl.
+  let nstyle = match node.get_attribute("role").as_deref() {
+    Some("SUMOP" | "INTOP" | "BIGOP") => node
+      .get_attribute("mathstyle")
+      .as_deref()
+      .and_then(MathStyle::from_attr),
+    _ => None,
+  };
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  if let Some(n) = nstyle {
+    CURRENT_STYLE.with(|s| s.set(n));
+  }
+  let result = pmml_token_inner(doc, node);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
+  match nstyle {
+    Some(n) if n != ostyle => {
+      let style_attrs = stylemap_attrs(ostyle, n, true);
+      if style_attrs.is_empty() {
+        result
+      } else {
+        NodeData::Element {
+          tag:        "m:mstyle".to_string(),
+          attributes: Some(HashMap::from_iter(
+            style_attrs
+              .iter()
+              .map(|(k, v)| (k.to_string(), v.to_string())),
+          )),
+          children:   vec![result],
+        }
+      }
+    },
+    _ => result,
+  }
+}
+
+/// Resolve a token's explicit fontsize for emission (Perl `stylizeContent`
+/// L782-792): a %-size in script context is re-expressed relative to the
+/// script style's nominal size, then any %-size is converted to em ("safari
+/// apparently ignores %").
+fn resolve_token_size(mut s: String) -> String {
+  if let Some(req) = s.strip_suffix('%') {
+    let ctx = current_context_size().trim_end_matches('%');
+    if matches!(
+      CURRENT_STYLE.with(|c| c.get()),
+      MathStyle::Script | MathStyle::ScriptScript
+    ) && let (Ok(req), Ok(ex)) = (req.parse::<f64>(), ctx.parse::<f64>())
+      && ex != 0.0
+    {
+      s = format!("{}%", (100.0 * req / ex) as i32);
+    }
+    if let Some(pct) = s.strip_suffix('%')
+      && let Ok(pct) = pct.parse::<f64>()
+    {
+      s = fmt_em(pct / 100.0);
+    }
+  }
+  s
+}
+
+fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let role = node
     .get_attribute("role")
     .unwrap_or_else(|| "UNKNOWN".to_string());
@@ -730,40 +1018,117 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     }
   }
 
-  // Operator-specific attributes
-  if tag == "m:mo" {
-    // Check the XMTok's stretchy attribute
-    let stretchy_attr = node.get_attribute("stretchy");
+  // Perl emits mathsize for ALL token types, not just m:mo (witness:
+  // smallmatrix cells get mathsize="0.700em"). The context gate compensates
+  // for our engine stamping absolute fontsize="70%" on script tokens where
+  // Perl's leaves them bare — a matching size must NOT be re-emitted.
+  if tag != "m:mo"
+    && let Some(size) = node.get_attribute("fontsize")
+    && size != current_context_size()
+  {
+    attrs.insert("mathsize".to_string(), resolve_token_size(size));
+  }
 
-    // Handle size attribute. Port of Perl `stylizeContent` L777: emit `mathsize` only when
-    // the token's own size differs from the current contextual size. Inside a sub/superscript
-    // the context is already scriptsize (70%/50%), so an operator at that size — e.g. the `-`
-    // in `10^{-21}` or the `*` in `x^{\ast}` — must NOT get a spurious `mathsize="70%"` (the
-    // <msup>/<msub> structure already shrinks it; the redundant attribute double-shrinks it).
-    if let Some(size) = node.get_attribute("fontsize") {
-      if size != current_context_size() {
+  // Operator-specific attributes: the mo half of Perl `stylizeContent`
+  // (L697-827) — operator-dictionary xor-emission, size/stretchy interplay,
+  // largeop/movablelimits/symmetric. (audit F8)
+  if tag == "m:mo" {
+    let props = operator_dictionary::opdict_lookup(&text, &role);
+    // Perl L697-704: implied attributes.
+    let mut stretchy = node.get_attribute("stretchy").as_deref() == Some("true");
+    let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
+    let is_sep = role == "PUNCT";
+    let is_largeop = matches!(role.as_str(), "SUMOP" | "INTOP");
+    let is_moveop = matches!(role.as_str(), "SUMOP" | "INTOP" | "BIGOP" | "LIMITOP"); // Not DIFFOP
+    let is_symm = is_largeop || text == "/"; // WANTS to be symmetric
+    let pos = node
+      .get_attribute("scriptpos")
+      .unwrap_or_else(|| "post".to_string());
+
+    // Perl L774-778: ignore size when stretching; invisible operators get
+    // neither size nor stretchiness.
+    let mut size = node.get_attribute("fontsize");
+    if stretchy {
+      size = None;
+    }
+    let is_invisible =
+      !text.is_empty() && text.chars().all(|c| matches!(c, '\u{2061}'..='\u{2063}'));
+    if is_invisible {
+      stretchy = false;
+      size = None;
+    }
+
+    // Perl L779-798: size resolution. Emit only when the token's size
+    // differs from the current contextual size (inside a script the msup/
+    // msub structure already shrinks it — a matching "70%" must NOT be
+    // re-emitted); a differing %-size in script context is re-expressed
+    // relative to the script's nominal size, then converted to em ("safari
+    // apparently ignores %"). Symmetric-wanting delimiters at explicit
+    // sizes use the minsize/maxsize stretchyhack ("Thanks Peter
+    // Krautzberger") instead of mathsize.
+    let mut props_stretchy = props.stretchy;
+    let mut stretchyhack = false;
+    let resolved_size = size
+      .filter(|s| s != current_context_size())
+      .map(resolve_token_size);
+    if let Some(size) = resolved_size {
+      if is_symm || props.symmetric {
+        stretchyhack = true;
+        // Force the attribute to avoid browser bugs (esp "|").
+        if !matches!(text.as_str(), "(" | ")" | "[" | "]" | "{" | "}") {
+          props_stretchy = false;
+        }
+        stretchy = true; // pretend we asked for stretchy
+        attrs.insert("minsize".to_string(), size.clone());
+        attrs.insert("maxsize".to_string(), size);
+      } else {
+        stretchy = false; // size specifically set → don't stretch it
         attrs.insert("mathsize".to_string(), size);
       }
     }
+    let _ = stretchyhack;
 
-    // Copy stretchy attribute from source XMTok only when it differs from MathML defaults.
-    // Port of Perl's `($stretchy xor $props{stretchy}) ? (stretchy => ...) : ()`.
-    // In MathML, OPEN/CLOSE/MIDDLE operators are stretchy by default.
-    // We only need to emit stretchy="false" for fences (to override default),
-    // or stretchy="true" for non-fence operators.
-    let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
-    if let Some(ref stretchy) = stretchy_attr {
-      if is_fence && stretchy == "false" {
-        attrs.insert("stretchy".to_string(), "false".to_string());
-      } else if !is_fence && stretchy == "true" {
-        attrs.insert("stretchy".to_string(), "true".to_string());
-      }
+    // Perl L811-826: emit operator-dictionary attributes only where the
+    // wanted value differs from what the dictionary already implies (xor).
+    if stretchy != props_stretchy {
+      attrs.insert(
+        "stretchy".to_string(),
+        (if stretchy { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_fence != props.fence {
+      attrs.insert(
+        "fence".to_string(),
+        (if is_fence { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_sep != props.separator {
+      attrs.insert(
+        "separator".to_string(),
+        (if is_sep { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_largeop != props.largeop {
+      attrs.insert(
+        "largeop".to_string(),
+        (if is_largeop { "true" } else { "false" }).to_string(),
+      );
+    }
+    if is_largeop {
+      attrs.insert("_largeop".to_string(), "1".to_string()); // For needsMathstyle
+    }
+    if is_symm && !props.symmetric && (stretchy || props_stretchy) {
+      attrs.insert("symmetric".to_string(), "true".to_string());
+    }
+    // If an operator has specifically located its scripts, don't let MathML
+    // move them. (Perl also honors $NOMOVABLELIMITS from script layout —
+    // unported, audit F17.)
+    if is_moveop && pos.contains("mid") {
+      attrs.insert("movablelimits".to_string(), "false".to_string());
     }
 
-    // Store internal spacing attributes for adjust_spacing.
-    // Port of Perl's `stylizeContent` lines 821-826.
+    // Store internal spacing attributes for adjust_spacing (Perl L821-824).
     attrs.insert("_role".to_string(), role.clone());
-    let props = operator_dictionary::opdict_lookup(&text, &role);
     if props.lspace > 0.0 {
       attrs.insert("_lspace".to_string(), fmt_em(props.lspace));
     }
@@ -797,11 +1162,13 @@ fn pmml_token(_doc: &PostDocument, node: &Node) -> NodeData {
     attrs.insert("data-sourcepos".to_string(), sp);
   }
 
-  NodeData::Element {
+  // Perl pmml_mi/pmml_mn/pmml_mo (L830-845) all pass the token through
+  // pmml_maybe_resize (raised/framed/phantom-sized tokens).
+  pmml_maybe_resize(doc, node, NodeData::Element {
     tag:        tag.to_string(),
     attributes: if attrs.is_empty() { None } else { Some(attrs) },
     children:   vec![NodeData::Text(text)],
-  }
+  })
 }
 
 /// Convert an XMHint to MathML.
@@ -826,6 +1193,27 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
 ///
 /// Port of `pmml_internal` XMArray branch (`MathML.pm` L432-486).
 fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
+  // Perl `pmml_internal` XMArray branch (L432-506): the array's `mathstyle`
+  // switches the current style for the cell conversions; the mtable gets
+  // displaystyle="true" when that style is display ("Mozilla seems to need
+  // some encouragement?"), and the whole result wraps in m:mstyle per the
+  // transition tables.
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  let nstyle = node
+    .get_attribute("mathstyle")
+    .as_deref()
+    .and_then(MathStyle::from_attr);
+  if let Some(n) = nstyle {
+    CURRENT_STYLE.with(|s| s.set(n));
+  }
+  let result = pmml_array_inner(doc, node);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
+  // Perl L492-506: XMArray resizes AFTER the mstyle wrap (XMApp: before).
+  let result = maybe_style_wrap(result, ostyle, nstyle);
+  pmml_maybe_resize(doc, node, result)
+}
+
+fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let mut rows = Vec::new();
   let width = node.get_attribute("width");
   let vattach = node
@@ -911,6 +1299,10 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   }
   if let Some(w) = width {
     table_attrs.insert("width".to_string(), w);
+  }
+  // Perl L484-485: "Mozilla seems to need some encouragement?"
+  if CURRENT_STYLE.with(|s| s.get()) == MathStyle::Display {
+    table_attrs.insert("displaystyle".to_string(), "true".to_string());
   }
 
   NodeData::Element {
@@ -1086,14 +1478,43 @@ fn pmml_script_full(doc: &PostDocument, op: &Node, base: &Node, script: &Node) -
   let (inner_base, pre_scripts, mid_scripts, post_scripts) =
     pmml_script_decipher(doc, op, base, script);
 
-  // Convert the inner base
+  // Perl `pmml_script` (L876-891) + `pmml_script_mid_layout` (L899-906):
+  // the inner base converts under ITS recorded mathstyle (blocking a nested
+  // m:mstyle from the token/apply paths), and when that style differs from
+  // the context the whole script layout gets one m:mstyle displaystyle wrap
+  // — mstyle doesn't nest well inside scripts.
+  let ostyle = CURRENT_STYLE.with(|s| s.get());
+  let bstyle = inner_base
+    .get_attribute("mathstyle")
+    .as_deref()
+    .and_then(MathStyle::from_attr);
+  if let Some(b) = bstyle {
+    CURRENT_STYLE.with(|s| s.set(b));
+  }
   let base_mml = pmml(doc, &inner_base);
+  CURRENT_STYLE.with(|s| s.set(ostyle));
 
   // Apply mid scripts (under/over)
   let base_mml = apply_mid_scripts(doc, base_mml, &mid_scripts);
 
   // Apply pre/post scripts
-  apply_multi_scripts(doc, base_mml, &pre_scripts, &post_scripts)
+  let layout = apply_multi_scripts(doc, base_mml, &pre_scripts, &post_scripts);
+  match bstyle {
+    Some(b) if b != ostyle => NodeData::Element {
+      tag:        "m:mstyle".to_string(),
+      attributes: Some(HashMap::from_iter([(
+        "displaystyle".to_string(),
+        (if b == MathStyle::Display {
+          "true"
+        } else {
+          "false"
+        })
+        .to_string(),
+      )])),
+      children:   vec![layout],
+    },
+    _ => layout,
+  }
 }
 
 /// Decipher nested script applications into pre/mid/post groups.
@@ -1411,9 +1832,19 @@ fn op_base_is_mo(node: &NodeData) -> bool {
     }
     // Perl regex `^m:(?:msub|msup|munder|mover|mprescripts)` — a prefix match,
     // so it also covers msubsup/munderover; descend to the base (first child).
+    // m:mstyle: the F7 mathstyle wrap (e.g. `\displaystyle\sum`) is transparent
+    // embellishment too — Perl's summation never re-examines it (it never
+    // emits ⁡ at all, L1796-1798).
     if matches!(
       tag.as_str(),
-      "m:msub" | "m:msup" | "m:msubsup" | "m:munder" | "m:mover" | "m:munderover" | "m:mprescripts"
+      "m:msub"
+        | "m:msup"
+        | "m:msubsup"
+        | "m:munder"
+        | "m:mover"
+        | "m:munderover"
+        | "m:mprescripts"
+        | "m:mstyle"
     ) {
       match children.first() {
         Some(child) => cur = child,
@@ -1572,14 +2003,15 @@ fn is_invisible_op(text: &str) -> bool {
       .all(|c| matches!(c, '\u{200B}' | '\u{2061}' | '\u{2062}' | '\u{2063}'))
 }
 
-/// Format em value.
+/// Format em value. Port of Perl `fmt_em` (MathML.pm L1285):
+/// `sprintf("%.3fem")` — trailing zeros are KEPT ("0.330em", "1.200em"),
+/// matching Perl byte-for-byte; zero (Perl false-y) → "0em". (audit F4)
 fn fmt_em(val: f64) -> String {
-  if val.abs() < SPACING_EPSILON {
-    return "0em".to_string();
+  if val == 0.0 {
+    "0em".to_string()
+  } else {
+    format!("{val:.3}em")
   }
-  let s = format!("{:.3}", val);
-  let s = s.trim_end_matches('0').trim_end_matches('.');
-  format!("{}em", s)
 }
 
 /// Get role from a NodeData, following embellished operators.
@@ -1987,11 +2419,11 @@ mod tests {
 
   #[test]
   fn test_fmt_em() {
+    // Perl fmt_em (L1285) byte-parity: %.3f keeps trailing zeros (audit F4).
     assert_eq!(fmt_em(0.0), "0em");
-    assert_eq!(fmt_em(1.0), "1em");
-    // NOTE: Perl fmt_em (L1285) keeps trailing zeros ("0.330em"); we trim.
-    // Cosmetic divergence tracked in docs/MATHML_POST_LINE_AUDIT.md F4.
-    assert!(fmt_em(0.167).starts_with("0.167"));
-    assert_eq!(fmt_em(0.33), "0.33em");
+    assert_eq!(fmt_em(1.0), "1.000em");
+    assert_eq!(fmt_em(0.167), "0.167em");
+    assert_eq!(fmt_em(0.33), "0.330em");
+    assert_eq!(fmt_em(1.2), "1.200em");
   }
 }
