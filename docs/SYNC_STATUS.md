@@ -57,6 +57,28 @@ Triage byproducts: `\tikzcdmatrixname` PushbackLimit cluster (345 papers) verifi
 known tikz-cd deep-divergence territory, not chaseable; `never_completed` (1,069)
 spread evenly across months (governor sheds/hangs, overlaps STABILITY_WITNESSES).
 
+**Plain-layer leakage audit (same day, follow-up to the `\+` fix).** The
+layering is Perl-identical (Perl's `TeX.pool.ltxml:23` also runs
+`LoadFormat('plain')` under LaTeX.pool); the divergence is content — Perl's
+plain layer is the hand-curated `plain_base.pool.ltxml`, Rust's is the dump of
+REAL `plain.tex`. Name-diff (plain-dump CSes − CSes mentioned anywhere in
+Perl's engine pools − latex-dump-redefined CSes, `LC_ALL=C`): **55 survivors**,
+coherently two subsystems plus stragglers: (1) the plain **tabbing machinery**
+(`\tabalign`, `\settabs`/`\sett@b`/`\s@tt@b`/`\s@tcols`, `\cleartabs`, `\tabs`,
+`\tabsdone`, `\tabsyet`, `\t@bbox`/`\t@bb@x`, `\m@ketabbox`, `\us@*`, `\if@cr`+
+friends) — the `\+` family; (2) the plain **output routine** (`\plainoutput`,
+`\pagebody`, `\pagecontents`, `\makeheadline`, `\makefootline`,
+`\dosupereject`, `\@ins`, `\if@mid`/`\ifp@ge`/`\ifr@ggedbottom` + setters);
+(3) inert stragglers (`\Orb`, `\oldstyle`, `\preloaded`, `\getf@ctor`, `\m@g`,
+`\p@renwd`, `\if@`, `\@nother`) and record-format artifacts (`%NN`,
+`\skewchar\<font>`, `count/dimen/skip254`). Live-run evidence: zero errors key
+on any of these names (only `\+` was a typo-magnet; the rest execute only when
+intentionally invoked and are silent if they work). **Decision pending (user)**:
+retract the remaining tabbing entry points at the latex seam for strict Perl
+parity (undefined errors) vs. keep them as beneficial plain-coverage for
+intentional plain-tabbing in latex documents. List archived at the audit
+scratchpad; regenerate with the three-set diff above.
+
 ### Landed this session (2026-07-01, on `ar5iv-2606-prep`) — frontmatter title fidelity (no-`\maketitle` papers)
 
 Two fixes to the post-PR#2767 Frontmatter API for papers that hand-format their
