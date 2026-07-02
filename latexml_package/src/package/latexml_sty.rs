@@ -187,6 +187,29 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     }
   }
 
+  // === Bare math symbol command, e.g. "\pi", "\alpha", "\cpi" ===
+  // Perl digests $\pi$ and matches the resulting XMTok via domToXPath. In our
+  // pre-parse DOM the symbol carries a `name` attribute equal to the control
+  // sequence (DefMath sets `name => <cs>`), so keying the match on @name is the
+  // string-pattern equivalent and lets \lxDeclare target symbol commands.
+  if let Some(cmd) = body_text.strip_prefix('\\')
+    && !cmd.is_empty()
+    && cmd.chars().all(|c| c.is_ascii_alphabetic())
+  {
+    return DeclarePattern {
+      xpath:          format!(
+        "descendant-or-self::*[local-name()='XMTok' and @name='{}']",
+        cmd
+      ),
+      pattern_type:   "simple",
+      base_text:      None,
+      sub_text:       None,
+      accent_name:    None,
+      has_wildcard:   false,
+      wildcard_paths: None,
+    };
+  }
+
   // === Fallback: simple token pattern ===
   // For single characters/words without special structure, match as XMTok by text.
   // This handles DefMathRewrite match strings like 'a', 'f', 'x', etc.
@@ -488,6 +511,10 @@ LoadDefinitions!({
   DefKeyVal!("Declare", "nowrap", "");
   DefKeyVal!("Declare", "label", "");
   DefKeyVal!("Declare", "trace", "");
+  // Perl: DefKeyVal('Declare', 'replace', 'UndigestedKey') — the replacement
+  // pattern is kept as raw tokens and digested at rewrite time (see the
+  // replace-closure in \lxDeclare's afterConstruct).
+  DefKeyVal!("Declare", "replace", "UndigestedKey");
 
   // \lxFcn / \lxID / \lxPunct — math-mode role hints (Perl latexml.sty.ltxml).
   // Wrap the argument in <ltx:XMWrap role='...'> so the math grammar
@@ -602,9 +629,15 @@ LoadDefinitions!({
     let mut has_description = false;
     let mut tag_text = String::new();
     let mut description_text = String::new();
+    // Perl: replace => $kv->getValue('replace') — an UndigestedKey, i.e. raw
+    // tokens kept for digestion at replacement time (Core/Rewrite.pm
+    // compile_replacement). Capture them (undigested) as an owned local so the
+    // keyvals borrow is released before the whatsit is mutated below.
+    let mut replace_tks_opt: Option<Tokens> = None;
     if let Some(kv_arg) = whatsit.get_arg(2)
       && let DigestedData::KeyVals(kv) = kv_arg.data() {
         let hash = kv.get_hash_digested();
+        replace_tks_opt = kv.get_value("replace").and_then(|a| a.revert().ok());
         if let Some(v) = hash.get("role") { role = v.clone(); }
         if let Some(v) = hash.get("name") { name_val = v.clone(); }
         if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
@@ -615,6 +648,9 @@ LoadDefinitions!({
           whatsit.set_property("scope_opt", Stored::from(v.clone()));
         }
       }
+    if let Some(replace_tks) = replace_tks_opt {
+      whatsit.set_property("replace_tokens", Stored::Tokens(replace_tks));
+    }
     // Extract body text from arg 3 (the {} body)
     let body_text = whatsit.get_arg(3)
       .map(|a| { let s = a.to_string(); s.trim_matches('$').trim().to_string() })
@@ -723,6 +759,12 @@ LoadDefinitions!({
     let meaning = whatsit.get_property("meaning").map(|v| v.to_string()).unwrap_or_default();
     let body_text = whatsit.get_property("body_text").map(|v| v.to_string()).unwrap_or_default();
     let decl_id = whatsit.get_property("decl_id").map(|v| v.to_string()).unwrap_or_default();
+    // Perl createDeclarationRewrite: a `replace=` declaration provides a
+    // replacement for the matched expression instead of adding attributes
+    // (the two are mutually exclusive). Recover the raw replacement tokens.
+    let replace_tokens: Option<Tokens> = whatsit
+      .get_property("replace_tokens")
+      .and_then(|v| if let Stored::Tokens(t) = v.as_ref() { Some(t.clone()) } else { None });
 
     // Create <ltx:declare> element if id is set (tag or description present)
     if !decl_id.is_empty() {
@@ -747,7 +789,8 @@ LoadDefinitions!({
     }
 
     // Create rewrite rule
-    if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
+    let has_annotation = !role.is_empty() || !name_val.is_empty() || !meaning.is_empty();
+    if !body_text.is_empty() && (has_annotation || replace_tokens.is_some()) {
       use latexml_core::rewrite::{Rewrite, RewriteOptions};
       use rustc_hash::FxHashMap;
       // Perl: getDeclarationScope — resolve scope=section to current section ID
@@ -828,14 +871,57 @@ LoadDefinitions!({
           "accent" => Some(1usize),
           _ => None,
         };
-        let rewrite = Rewrite::new("math", RewriteOptions {
-          xpath: Some(pat.xpath),
-          attributes_map: Some(attrs),
-          wildcard_paths: pat.wildcard_paths,
-          select_count,
-          scope: rewrite_scope,
-          ..RewriteOptions::default()
-        });
+        // Perl createDeclarationRewrite: `replace` and `attributes` are
+        // mutually exclusive. A `replace=` declaration digests its replacement
+        // pattern at rewrite time (compile_replacement) rather than marking
+        // attributes on the matched node.
+        let rewrite = if let Some(replace_tks) = replace_tokens.clone() {
+          use latexml_core::rewrite::RewriteReplaceClosure;
+          use std::rc::Rc;
+          let closure: RewriteReplaceClosure = Rc::new(move |document, _nodes| {
+            // Perl Core/Rewrite.pm::compile_replacement (Tokens branch, as
+            // fixed by upstream b17cc621): digest the pattern in
+            // restricted_horizontal mode with a neutral font; for a math
+            // rule, unwrap the outer List (Rust's digest() always wraps its
+            // result in a List — the same shape Perl's changed autosimplify
+            // now produces), take its single body, then getBody and absorb.
+            begin_mode("restricted_horizontal")?;
+            neutralize_font();
+            let mut rbox = digest(replace_tks.clone())?;
+            end_mode("restricted_horizontal")?;
+            let unwrapped = if let DigestedData::List(l) = rbox.data() {
+              let items = l.borrow().unlist();
+              if items.len() == 1 { Some(items[0].clone()) } else { None }
+            } else {
+              None
+            };
+            if let Some(u) = unwrapped {
+              rbox = u;
+            }
+            if let Some(body) = rbox.get_body()? {
+              rbox = body;
+            }
+            document.absorb(&rbox, None)?;
+            Ok(())
+          });
+          Rewrite::new("math", RewriteOptions {
+            xpath: Some(pat.xpath),
+            replace: Some(closure),
+            wildcard_paths: pat.wildcard_paths,
+            select_count,
+            scope: rewrite_scope,
+            ..RewriteOptions::default()
+          })
+        } else {
+          Rewrite::new("math", RewriteOptions {
+            xpath: Some(pat.xpath),
+            attributes_map: Some(attrs),
+            wildcard_paths: pat.wildcard_paths,
+            select_count,
+            scope: rewrite_scope,
+            ..RewriteOptions::default()
+          })
+        };
         unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);
       }
     }
