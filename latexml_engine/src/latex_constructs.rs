@@ -7857,7 +7857,11 @@ LoadDefinitions!({
       // double. Witness 2605.16562 (refs.bib, no .bbl) now gets a bibliography.
       let bib_in_config = bib_config.iter().any(|p| with(*p, |s| s == "bib"));
       let all_bibs_exist = bib_in_config
-        && bib_files.split(',').all(|bf| FindFile!(bf, type => "bib").is_some());
+        && bib_files
+          .split(',')
+          .map(str::trim)
+          .filter(|bf| !bf.is_empty())
+          .all(|bf| FindFile!(bf, type => "bib").is_some());
       if all_bibs_exist {
         return Ok(bib_clause);
       }
@@ -7866,7 +7870,7 @@ LoadDefinitions!({
     } else {
       // 'bib' phase — check if .bib files exist
       let mut missing_bibs = String::new();
-      for bf in bib_files.split(',') {
+      for bf in bib_files.split(',').map(str::trim).filter(|bf| !bf.is_empty()) {
         let bib_path = FindFile!(bf, type => "bib");
         if bib_path.is_none() {
           if !missing_bibs.is_empty() {

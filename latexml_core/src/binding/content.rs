@@ -2372,8 +2372,13 @@ pub fn find_file(file: &str, options: Option<FindFileOptions>) -> Option<String>
   } else if let Some(ref ext) = options.ext_type {
     // Otherwise, it's some kind of "real" file, and we might have to search for it
     // Specific type requested? Search for it.
-    // Add the extension, if it isn't already there.
-    let aux_file = if file.ends_with(ext.as_ref()) {
+    // Add the extension, if it isn't already there. Perl tests with the DOT
+    // (`/\.\Q$type\E$/`): a bare `\bibliography{mybib}` must retry
+    // `mybib.bib` — the dotless ends_with("bib") matched the basename itself
+    // and searched the literal `mybib`, silently disabling the .bib fallback
+    // (PR_READINESS must-fix 6).
+    let dotted = s!(".{}", ext);
+    let aux_file = if file.ends_with(&dotted) {
       file.to_string()
     } else {
       s!("{}.{}", file, ext)
