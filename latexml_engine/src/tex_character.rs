@@ -148,6 +148,17 @@ LoadDefinitions!({
   // Mirrors Perl: CS → explode with escape char; SPACE → keep as space; ESCAPE/COMMENT/INVALID →
   // empty; all other catcodes → T_OTHER with same text.
   DefMacro!("\\string Token", sub[(token)] {
+    // A live \special_relax-family token (a \noexpand marker already in the
+    // stream) must NOT stringify its raw internal name — that leaks the 0x01
+    // separator byte (illegal in XML 1.0) into document text. Print the name
+    // Perl prints for its equivalent representation: \special_relax.
+    // (Real TeX would print the SHADOWED name; both engines share this
+    // cosmetic divergence — see PR_READINESS cluster A.)
+    let token = if token.is_noexpand_family() {
+      T_CS!("\\special_relax")
+    } else {
+      token
+    };
     match token.code {
       Catcode::CS => {
         let mut s = token.to_string();

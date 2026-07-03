@@ -1633,3 +1633,23 @@ register fallback (read the body) was dropped, presumably unintentionally
 strings, register tokens, multi-token read) but RETAINS the macro-body-read
 branch for a single defined-but-not-register token. Covered by the
 `cluster_{eqnarray,numcases}_arraycolsep_macro_no_register_warning` tests.
+
+## 42. `\cfrac[l]`/`\cfrac[r]` optional alignment argument is not consumed
+
+**Perl source:** `LaTeXML/Engine/../Package/amsmath.sty.ltxml` L1110-1125 —
+`\lx@inner@cfrac InFractionStyle InFractionStyle` takes no optional argument.
+
+**Symptom:** real amsmath supports `\cfrac[l]{1}{2}` (numerator alignment);
+LaTeXML reads `[` as the numerator and `l` as the denominator, mangling the
+fraction and leaking `]{1}{2}` into the math.
+
+**Minimal example:** `$\cfrac[l]{1}{2}$`.
+
+**Perl status:** present (the trampoline + inner constructor never declare
+an optional).
+
+**Rust status:** faithful parity as of the #F15 trampoline port
+(2026-07-02, `3b20c4f399`) — NOTE this is a behavior REGRESSION vs the
+pre-audit Rust binding, whose fused `\cfrac[]` constructor tolerated (and
+discarded) the optional. Candidate to fix in BOTH engines by adding `[]`
+to `\lx@inner@cfrac` and passing the alignment through.

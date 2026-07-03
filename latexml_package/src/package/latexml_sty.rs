@@ -883,7 +883,15 @@ LoadDefinitions!({
         }
       };
       if pat.xpath.is_empty() {
-        // Unrecognized pattern — skip
+        // Unrecognized pattern: make the compile failure VISIBLE — a silent
+        // skip is indistinguishable from a legitimate no-match, the exact
+        // precondition of the historical "wildcard XMDuals vanished" mode
+        // (PR_READINESS cluster C).
+        Warn!(
+          "unexpected",
+          "lxDeclare",
+          "\\lxDeclare pattern not recognized by the rewrite compiler; declaration will not match"
+        );
       } else {
         // Store pattern metadata in attrs for Rust-side filtering in Select handler
         attrs.insert("_declare_type".to_string(), pat.pattern_type.to_string());

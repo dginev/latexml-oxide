@@ -94,6 +94,16 @@ against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
   now colors its tokens (was black — visible arXiv bug class); + a latent
   rust-libxml misaligned-ns-read crash fixed in `find_inherited_attribute`.
 
+- **NEW WORKLIST (from the PR_READINESS branch review): lxDeclare
+  dead-predicate class.** Compiled `\lxDeclare` XPaths still carry `@font`/
+  `@meaning` predicates that are dead at rewrite time — whole declaration
+  families silently match nothing (shipped Euler golden: 51 decl_id vs
+  Perl's 84; `$\mathcal{T}_\WildCard$` matches 0). Also: replace-rules
+  bypass declare-side filtering (latent delete-the-wrong-sibling), and an
+  untagged `scope=section` applies document-globally. The unrecognized-
+  pattern path now Warns (landed); the predicate/scope/filter fixes are the
+  open item. See `docs/PR_READINESS.md` cluster C.
+
 Open queue lives in the audit doc: F17 misc, F14 share-suffix wiring,
 **F5** linebreaker decision (Perl gates on `--linelength`, default OFF →
 feature gap, not production divergence), **F19** math-parser
