@@ -286,6 +286,8 @@ fn ctx_rebind(
   cell: &'static std::thread::LocalKey<std::cell::RefCell<Option<String>>>,
   attr: Option<String>,
 ) -> Option<String> {
+  // Perl-falsy: an empty attribute value keeps the inherited context.
+  let attr = attr.filter(|v| !v.is_empty());
   cell.with(|c| {
     let old = c.borrow().clone();
     if attr.is_some() {
@@ -409,7 +411,7 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
   ctx_set(&CTX_OPACITY, saved_op);
   // Perl MathML.pm L339-341: wrap in m:menclose if the source node carries an
   // `enclose` attribute (e.g. \boxed puts enclose="box" on the whole XMApp).
-  if let Some(enclose) = node.get_attribute("enclose") {
+  if let Some(enclose) = node.get_attribute("enclose").filter(|e| !e.is_empty()) {
     let mut attrs = HashMap::default();
     attrs.insert("notation".to_string(), enclose);
     result = NodeData::Element {
@@ -637,14 +639,18 @@ fn pmml_apply_dispatch(
     "FRACOP" if args.len() >= 2 => {
       // Perl MathML.pm L1597-1605 `Apply:FRACOP:?`: linethickness passes
       // through VERBATIM whenever defined (\binom → "0pt", \genfrac 2pt →
-      // "2.0pt"); mathcolor from the op's color; bevelled fractions carry
-      // class="ltx_bevelled" → bevelled="true". (Perl's context $COLOR
-      // fallback is part of the unported pmml_top bindings — F8.)
+      // "2.0pt"); mathcolor from the op's color OR the inherited context
+      // ({\color{red}$\frac{a}{b}$} colors the fraction bar, Perl L1600);
+      // bevelled fractions carry class="ltx_bevelled" → bevelled="true".
       let mut attrs = HashMap::default();
       if let Some(t) = rop.get_attribute("thickness") {
         attrs.insert("linethickness".to_string(), t);
       }
-      if let Some(c) = rop.get_attribute("color") {
+      if let Some(c) = rop
+        .get_attribute("color")
+        .filter(|c| !c.is_empty())
+        .or_else(|| ctx_get(&CTX_COLOR))
+      {
         attrs.insert("mathcolor".to_string(), c);
       }
       if let Some(cl) = rop.get_attribute("class")
@@ -744,22 +750,27 @@ fn pmml_apply_dispatch(
     "ENCLOSE" if !args.is_empty() => {
       // Perl MathML.pm L1507-1513 `Apply:ENCLOSE:?`: m:menclose with the
       // operator's `enclose` attribute as notation (e.g. \cancel →
-      // updiagonalstrike); if the op carries a color, the enclosure gets it
-      // as mathcolor and the base is reset via m:mstyle (Perl's context
-      // $COLOR fallback is part of the unported pmml_top bindings — F8).
+      // updiagonalstrike); if the op (or the inherited context) carries a
+      // color, the enclosure gets it as mathcolor and the base is reset via
+      // m:mstyle to the context color (default black).
       let mut attrs = HashMap::default();
-      if let Some(notation) = rop.get_attribute("enclose") {
+      if let Some(notation) = rop.get_attribute("enclose").filter(|n| !n.is_empty()) {
         attrs.insert("notation".to_string(), notation);
       }
-      let color = rop.get_attribute("color");
+      let color = rop
+        .get_attribute("color")
+        .filter(|c| !c.is_empty())
+        .or_else(|| ctx_get(&CTX_COLOR));
       let base = pmml(doc, &args[0]);
       let inner = if let Some(ref c) = color {
         attrs.insert("mathcolor".to_string(), c.clone());
+        // Perl: ['m:mstyle', { mathcolor => $COLOR || 'black' }, …] — reset
+        // the base to the CONTEXT color so only the enclosure is tinted.
         NodeData::Element {
           tag:        "m:mstyle".to_string(),
           attributes: Some(HashMap::from_iter([(
             "mathcolor".to_string(),
-            "black".to_string(),
+            ctx_get(&CTX_COLOR).unwrap_or_else(|| "black".to_string()),
           )])),
           children:   vec![base],
         }
