@@ -18,6 +18,44 @@
 - `cargo test --tests`: **1506 / 0 / 0** (on `ar5iv-2606-prep`; see "Landed this
   session" entries below).
 
+### Landed this session (2026-07-03, on `ar5iv-2606-prep`) — live-run fatal/error mining round 2 + upstream sync to #2837
+
+Mining the in-flight full-arXiv run (15,858 fatal tasks at ~half-complete;
+canvas-triage rules, same-host Perl):
+
+* **Panics (50 papers, 4 sites): ALL RESOLVED.** 49/50 were already fixed at
+  HEAD (graphics `join().unwrap()` 43×, parser `Node::new` 5+1× — landed
+  2026-07-02; the fleet binary predates them). The 50th — `\hbox`
+  HBoxContents predigest `None` unwrap (`tex_box.rs`), witness
+  math-ph/0405041 — fixed graceful (`62ecfdbb5e`), minimal LamsTeX
+  reproducer in `docs/reproducers/hbox_none_contents_lamstex.tex`
+  (all four components load-bearing: amstexl + lamstex + `\list\item` +
+  `$$x \tag\label{F}$$`). Same-host Perl completes it with 15 errors.
+* **`undefined` top-whats classified:**
+  - `\Checkmark` 3018 / `\XSolidBrush` 2841 (bbding), `\Letter` 2985
+    (ifsym `[misc]`): **HOST-PACKAGE GAP, not code** — this fleet host lacks
+    `texlive-fonts-extra` (`kpsewhich bbding.sty/ifsym.sty/fourier.sty` all
+    empty); both engines' bindings raw-load these + fontmaps (Rust has
+    `ding/ifsym/ifblk/...` fontmaps ported). **OPS ACTION for July-5: install
+    `texlive-fonts-extra`** (~9k+ projected tasks). The old Perl run's host
+    had them (its counts are below the top-100 cutoff).
+  - `\KeyWords`/`\REVIEW`/`\Year`/`\pagerange`/`\ack`/`\Name`/`\fnsep`
+    (journal classes: pasj00, ptptex, CUP, EPJ-woc): **PARITY BY DESIGN** —
+    both engines OmniBus unknown classes (class raw-load intentionally
+    disabled in Rust AND Perl, user-confirmed 2026-07-03); same-host witness
+    astro-ph0104039: Rust 13 errors vs Perl 29, `\KeyWords` undefined in
+    both. Do-not-chase (surpass option: OmniBus-level frontmatter stubs —
+    a user decision, not autonomous work).
+  - `{diagram}` 2565, `\url` 1926: Perl counts comparable (3089/4394) —
+    PARITY, skip.
+* **`unexpected` reconfirms** `\lx@begin@alignment` 8193 tasks (tabularray
+  `tblr` binding leak) as the largest single GENUINE code target — still the
+  known deep deferred item (sandbox-2605 verdict stands).
+* **Upstream sync now complete through #2837**: `\hdotsfor[]{N}` column-span
+  ported (`43c8eae310`, cluster fixture 9+4 cells); #2832 N/A-verified,
+  #2835/#2841/#2829 previously ported, #2842 already correct
+  (`\plparsep`). Reference tree pulled to `9f3fa9fc`.
+
 ### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — upstream PR #2829 "Framing" ported in full
 
 Faithful translation of brucemiller/LaTeXML#2829 (merged upstream 2026-07-02,
