@@ -539,3 +539,113 @@ fn cluster_bbl_bib_precedence() {
     "ar5iv bbl-first config without .bbl should fall back to bib, got:\n{x}"
   );
 }
+
+/// Convert with the contrib bindings dispatched (biblatex lives in
+/// latexml_contrib) and return the serialized XML.
+fn convert_to_xml_contrib(source: &str) -> String {
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  r.result
+    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
+}
+
+/// biblatex author-year support (ar5iv-bindings PRs #20/#21 + repair
+/// 0911aec): style=apa documents with a biber .bbl get "Surname, Year"
+/// labels, one schema-valid role-tagged <ltx:tags> per bibitem, and the
+/// three citation families; style=numeric documents keep sequential
+/// labels, core [ ] brackets, and plain-\cite fallbacks (multicite keys
+/// comma-joined).
+#[test]
+fn cluster_biblatex_authoryear() {
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/ay.tex");
+  // Structured tags with author/year roles (single-author, 2-author "&",
+  // 3+-author "et al." short form vs full list, prefix-name surname).
+  assert!(
+    x.contains(r#"<tag role="year">2020</tag>"#),
+    "year tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Smith</tag>"#),
+    "authors tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="refnum">Smith (2020)</tag>"#),
+    "refnum tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Jones &amp; Brown</tag>"#),
+    "2-author tag missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Adams et al.</tag>"#),
+    "et-al short form missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="fullauthors">Adams, Baker &amp; Clark</tag>"#),
+    "fullauthors missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"<tag role="authors">Berg</tag>"#),
+    "prefix-name surname missing:\n{x}"
+  );
+  // Citation families: parenthetical vs textual vs bare, with show= specs.
+  assert!(
+    x.contains("citemacro_citep"),
+    "parenthetical cite class missing:\n{x}"
+  );
+  assert!(
+    x.contains("citemacro_citet"),
+    "textual cite class missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"show="Authors Phrase1YearPhrase2""#),
+    "textual show spec missing:\n{x}"
+  );
+  assert!(
+    x.contains(r#"show="FullAuthorsPhrase1Year""#),
+    "starred full-author show missing:\n{x}"
+  );
+  // Multicite: two bibrefs inside one cite, "; "-joined.
+  assert!(
+    x.contains(r#"bibrefs="smith2020""#) && x.contains(r#"bibrefs="jones2019""#),
+    "multicite per-group bibrefs missing:\n{x}"
+  );
+  // arxiv-readability#10 / ar5iv-bindings#4: \parencite[see][]{key} — a
+  // present-but-EMPTY second optional must NOT demote the prenote to a
+  // postnote ("(see Smith, 2020)", never "(Smith, 2020, see)").
+  assert!(
+    x.matches("(see ").count() >= 2,
+    "issue-4 prenote missing:\n{x}"
+  );
+  assert!(
+    !x.contains(", see)"),
+    "issue-4 prenote demoted to postnote:\n{x}"
+  );
+
+  let x = convert_to_xml_contrib("tests/cluster_regressions/biblatex_ay/num.tex");
+  // Numeric style: sequential labels, NO author-year relabeling, and the
+  // fallback \cite path (keys preserved; multicite keys comma-joined).
+  assert!(
+    x.contains(r#"bibrefs="smith2020""#),
+    "numeric fallback lost keys:\n{x}"
+  );
+  assert!(
+    x.contains(r#"bibrefs="smith2020,jones2019""#),
+    "numeric multicite keys not comma-joined:\n{x}"
+  );
+  assert!(
+    !x.contains("Smith, 2020"),
+    "numeric doc must not get author-year labels:\n{x}"
+  );
+  assert!(
+    !x.contains(r#"role="fullauthors""#),
+    "numeric doc must not get author-year tags:\n{x}"
+  );
+}

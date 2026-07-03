@@ -199,6 +199,450 @@ fn bib_trim_url_tokens(toks: Tokens) -> Vec<Token> {
   v
 }
 
+// === biblatex author-year citation machinery ===
+// Mirror of ar5iv-bindings biblatex.sty.ltxml after PRs #20/#21 + the
+// 0911aec repair pass: three citation families (parenthetical / textual /
+// bare) built on \@@cite/\@@bibref/\@@citephrase exactly like the natbib
+// binding, greedy multicite readers, and a plain-\cite fallback for
+// non-author-year styles.
+
+/// Perl `_is_authoryear` — the style handler below is the only writer of
+/// CITE_STYLE in a biblatex session.
+fn blx_is_authoryear() -> bool { lookup_string("CITE_STYLE") == "authoryear" }
+
+/// Perl `_set_biblatex_style`: detect author-year styles (apa, authoryear,
+/// authoryear-comp, ...) and only then activate the author-year citation
+/// commands + punctuation. Numeric/alphabetic documents keep the core
+/// numeric `[ ]` defaults and plain-\cite behavior.
+fn blx_set_style(style: &str) {
+  if style.contains("authoryear") || style.contains("apa") {
+    assign_value("CITE_STYLE", pin("authoryear"), Some(Scope::Global));
+    assign_value(
+      "CITE_OPEN",
+      Stored::Token(T_OTHER!("(")),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "CITE_CLOSE",
+      Stored::Token(T_OTHER!(")")),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "CITE_SEPARATOR",
+      Stored::Token(T_OTHER!(";")),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "CITE_NOTE_SEPARATOR",
+      Stored::Token(T_OTHER!(",")),
+      Some(Scope::Global),
+    );
+    assign_value(
+      "CITE_AY_SEPARATOR",
+      Stored::Token(T_OTHER!(",")),
+      Some(Scope::Global),
+    );
+  }
+}
+
+fn blx_open() -> Tokens { lookup_tokens("CITE_OPEN").unwrap_or_default() }
+fn blx_close() -> Tokens { lookup_tokens("CITE_CLOSE").unwrap_or_default() }
+fn blx_ns() -> Tokens { lookup_tokens("CITE_NOTE_SEPARATOR").unwrap_or_default() }
+fn blx_ay() -> Tokens { lookup_tokens("CITE_AY_SEPARATOR").unwrap_or_default() }
+
+fn blx_nonempty(opt: &Option<Tokens>) -> bool { matches!(opt, Some(t) if !t.is_empty()) }
+
+/// Perl convention (biblatex/natbib): one optional arg is a postnote, two
+/// are prenote + postnote. Faithful nuance (arxiv-readability#10 /
+/// ar5iv-bindings#4): `\parencite[see][]{key}` has a PRESENT-but-EMPTY
+/// second optional — that must NOT swap ("see" stays the prenote); only an
+/// ABSENT second optional makes the first one a postnote. Empties are
+/// dropped after the swap decision.
+fn blx_swap_pre_post(
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+) -> (Option<Tokens>, Option<Tokens>) {
+  let (pre, post) = if post.is_none() {
+    (None, pre)
+  } else {
+    (pre, post)
+  };
+  (
+    pre.filter(|t| !t.is_empty()),
+    post.filter(|t| !t.is_empty()),
+  )
+}
+
+/// Perl `_cite_fallback`: delegate to the saved core \cite for
+/// non-author-year styles. Built by hand rather than via Invocation!: the
+/// core \cite is robust, so its top-level binding is a parameterless
+/// protect-wrapper and Invocation would revert ZERO arguments, silently
+/// dropping both the postnote and the keys.
+fn blx_cite_fallback(post: Option<Tokens>, keys: Tokens) -> Tokens {
+  let mut toks = vec![T_CS!("\\blx@saved@cite")];
+  if let Some(p) = post.filter(|t| !t.is_empty()) {
+    toks.push(T_OTHER!("["));
+    toks.extend(p.unlist());
+    toks.push(T_OTHER!("]"));
+  }
+  toks.push(T_BEGIN!());
+  toks.extend(keys.unlist());
+  toks.push(T_END!());
+  Tokens::new(toks)
+}
+
+/// Perl `_cite_parenthetical`: (prenote Author, Year, postnote) — used by
+/// \parencite, \autocite, \citep.
+fn blx_cite_parenthetical(
+  star: bool,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Result<Tokens> {
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  if !blx_is_authoryear() {
+    return Ok(blx_cite_fallback(post, keys));
+  }
+  let author = if star { "FullAuthors" } else { "Authors" };
+  let mut ay_space = blx_ay().unlist();
+  ay_space.push(T_SPACE!());
+  let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(ay_space)]);
+  let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+    Tokens::new(Explode!(s!("{author}Phrase1Year"))),
+    keys,
+    phrase1,
+    Tokens!()
+  ]);
+  let mut body = blx_open().unlist();
+  if let Some(p) = pre {
+    body.extend(p.unlist());
+    body.push(T_SPACE!());
+  }
+  body.extend(bibref.unlist());
+  if let Some(p) = post {
+    body.extend(blx_ns().unlist());
+    body.push(T_SPACE!());
+    body.extend(p.unlist());
+  }
+  body.extend(blx_close().unlist());
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("citep")),
+    Tokens::new(body)
+  ]))
+}
+
+/// Perl `_cite_textual`: prenote Author (Year, postnote) — used by
+/// \textcite, \citet.
+fn blx_cite_textual(
+  star: bool,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Result<Tokens> {
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  if !blx_is_authoryear() {
+    return Ok(blx_cite_fallback(post, keys));
+  }
+  let author = if star { "FullAuthors" } else { "Authors" };
+  let mut p1 = blx_open().unlist();
+  if let Some(p) = pre {
+    p1.extend(p.unlist());
+    p1.push(T_SPACE!());
+  }
+  let mut p2 = Vec::new();
+  if let Some(p) = post {
+    p2.extend(blx_ns().unlist());
+    p2.push(T_SPACE!());
+    p2.extend(p.unlist());
+  }
+  p2.extend(blx_close().unlist());
+  let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1)]);
+  let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2)]);
+  let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+    Tokens::new(Explode!(s!("{author} Phrase1YearPhrase2"))),
+    keys,
+    phrase1,
+    phrase2
+  ]);
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("citet")),
+    bibref
+  ]))
+}
+
+/// Perl `_cite_bare`: prenote Author, Year, postnote — no parentheses.
+/// Used by \cite, \Cite, \citealt, \fullcite, \smartcite, \footcite, etc.
+fn blx_cite_bare(
+  star: bool,
+  pre: Option<Tokens>,
+  post: Option<Tokens>,
+  keys: Tokens,
+) -> Result<Tokens> {
+  let (pre, post) = blx_swap_pre_post(pre, post);
+  if !blx_is_authoryear() {
+    return Ok(blx_cite_fallback(post, keys));
+  }
+  let author = if star { "FullAuthors" } else { "Authors" };
+  let mut ay_space = blx_ay().unlist();
+  ay_space.push(T_SPACE!());
+  let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(ay_space)]);
+  let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+    Tokens::new(Explode!(s!("{author}Phrase1Year"))),
+    keys,
+    phrase1,
+    Tokens!()
+  ]);
+  if pre.is_some() || post.is_some() {
+    let mut body = Vec::new();
+    if let Some(p) = pre {
+      body.extend(p.unlist());
+      body.push(T_SPACE!());
+    }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(blx_ns().unlist());
+      body.push(T_SPACE!());
+      body.extend(p.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\@@cite"), vec![
+      Tokens::new(Explode!("cite")),
+      Tokens::new(body)
+    ]))
+  } else {
+    Ok(Invocation!(T_CS!("\\@@cite"), vec![
+      Tokens::new(Explode!("cite")),
+      bibref
+    ]))
+  }
+}
+
+/// One `[pre][post]{keys}` group of a biblatex multicite command.
+type BlxCiteGroup = (Option<Tokens>, Option<Tokens>, Tokens);
+
+/// Perl `_read_multicite_groups`: greedily read repeated
+/// `[pre][post]{keys}` groups from the gullet; stop at the first token
+/// that starts neither an optional nor a mandatory group.
+fn blx_read_multicite_groups() -> Result<Vec<BlxCiteGroup>> {
+  let mut groups: Vec<BlxCiteGroup> = Vec::new();
+  loop {
+    skip_spaces()?;
+    let Some(next) = read_token()? else { break };
+    if next.get_catcode() == Catcode::BEGIN {
+      // `{keys}` with no optional args.
+      unread_one(next);
+      let keys = read_arg(ExpansionLevel::Off)?;
+      groups.push((None, None, keys));
+    } else if next.get_catcode() == Catcode::OTHER && next.with_str(|s| s == "[") {
+      unread_one(next);
+      let opt1 = read_optional(None)?;
+      let opt2 = read_optional(None)?;
+      let keys = read_arg(ExpansionLevel::Off)?;
+      let (pre, post) = if opt2.is_some() {
+        (opt1, opt2)
+      } else {
+        (None, opt1)
+      };
+      groups.push((
+        pre.filter(|t| !t.is_empty()),
+        post.filter(|t| !t.is_empty()),
+        keys,
+      ));
+    } else {
+      unread_one(next); // not ours — put it back
+      break;
+    }
+  }
+  Ok(groups)
+}
+
+/// Perl `_joined_keys`: comma-join all groups' keys for delegation to a
+/// single \cite in the non-author-year fallback.
+fn blx_joined_keys(groups: &[BlxCiteGroup]) -> Tokens {
+  let mut toks: Vec<Token> = Vec::new();
+  for (_, _, keys) in groups {
+    if !toks.is_empty() {
+      toks.push(T_OTHER!(","));
+    }
+    toks.extend(keys.clone().unlist());
+  }
+  Tokens::new(toks)
+}
+
+/// Join per-group token runs with "; " (Perl's multicite group separator).
+fn blx_join_groups(parts: Vec<Vec<Token>>) -> Vec<Token> {
+  let mut body: Vec<Token> = Vec::new();
+  for (i, part) in parts.into_iter().enumerate() {
+    if i > 0 {
+      body.push(T_OTHER!(";"));
+      body.push(T_SPACE!());
+    }
+    body.extend(part);
+  }
+  body
+}
+
+/// Perl `_multicite_parenthetical`: \parencites, \autocites — one pair of
+/// parens around all "pre Author, Year, post" groups.
+fn blx_multicite_parenthetical(star: bool) -> Result<Tokens> {
+  let groups = blx_read_multicite_groups()?;
+  if groups.is_empty() {
+    return Ok(Tokens::default());
+  }
+  if !blx_is_authoryear() {
+    let keys = blx_joined_keys(&groups);
+    return Ok(blx_cite_fallback(None, keys));
+  }
+  let author = if star { "FullAuthors" } else { "Authors" };
+  let mut parts: Vec<Vec<Token>> = Vec::new();
+  for (pre, post, keys) in groups {
+    let mut ay_space = blx_ay().unlist();
+    ay_space.push(T_SPACE!());
+    let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(ay_space)]);
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!(s!("{author}Phrase1Year"))),
+      keys,
+      phrase1,
+      Tokens!()
+    ]);
+    let mut toks = Vec::new();
+    if let Some(p) = pre {
+      toks.extend(p.unlist());
+      toks.push(T_SPACE!());
+    }
+    toks.extend(bibref.unlist());
+    if let Some(p) = post {
+      toks.extend(blx_ns().unlist());
+      toks.push(T_SPACE!());
+      toks.extend(p.unlist());
+    }
+    parts.push(toks);
+  }
+  let mut body = blx_open().unlist();
+  body.extend(blx_join_groups(parts));
+  body.extend(blx_close().unlist());
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("citep")),
+    Tokens::new(body)
+  ]))
+}
+
+/// Perl `_multicite_textual`: \textcites — "Author (pre Year, post)" per
+/// group, joined with "; ". Same phrase layout as `blx_cite_textual`.
+fn blx_multicite_textual(star: bool) -> Result<Tokens> {
+  let groups = blx_read_multicite_groups()?;
+  if groups.is_empty() {
+    return Ok(Tokens::default());
+  }
+  if !blx_is_authoryear() {
+    let keys = blx_joined_keys(&groups);
+    return Ok(blx_cite_fallback(None, keys));
+  }
+  let author = if star { "FullAuthors" } else { "Authors" };
+  let mut parts: Vec<Vec<Token>> = Vec::new();
+  for (pre, post, keys) in groups {
+    let mut p1 = blx_open().unlist();
+    if let Some(p) = pre {
+      p1.extend(p.unlist());
+      p1.push(T_SPACE!());
+    }
+    let mut p2 = Vec::new();
+    if let Some(p) = post {
+      p2.extend(blx_ns().unlist());
+      p2.push(T_SPACE!());
+      p2.extend(p.unlist());
+    }
+    p2.extend(blx_close().unlist());
+    let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p1)]);
+    let phrase2 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(p2)]);
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!(s!("{author} Phrase1YearPhrase2"))),
+      keys,
+      phrase1,
+      phrase2
+    ]);
+    parts.push(bibref.unlist());
+  }
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("citet")),
+    Tokens::new(blx_join_groups(parts))
+  ]))
+}
+
+/// Perl `_multicite_bare`: \cites — "pre Author, Year, post" per group,
+/// joined with "; ", no parens.
+fn blx_multicite_bare(star: bool) -> Result<Tokens> {
+  let groups = blx_read_multicite_groups()?;
+  if groups.is_empty() {
+    return Ok(Tokens::default());
+  }
+  if !blx_is_authoryear() {
+    let keys = blx_joined_keys(&groups);
+    return Ok(blx_cite_fallback(None, keys));
+  }
+  let author = if star { "FullAuthors" } else { "Authors" };
+  let mut parts: Vec<Vec<Token>> = Vec::new();
+  for (pre, post, keys) in groups {
+    let mut ay_space = blx_ay().unlist();
+    ay_space.push(T_SPACE!());
+    let phrase1 = Invocation!(T_CS!("\\@@citephrase"), vec![Tokens::new(ay_space)]);
+    let bibref = Invocation!(T_CS!("\\@@bibref"), vec![
+      Tokens::new(Explode!(s!("{author}Phrase1Year"))),
+      keys,
+      phrase1,
+      Tokens!()
+    ]);
+    let mut toks = Vec::new();
+    if let Some(p) = pre {
+      toks.extend(p.unlist());
+      toks.push(T_SPACE!());
+    }
+    toks.extend(bibref.unlist());
+    if let Some(p) = post {
+      toks.extend(blx_ns().unlist());
+      toks.push(T_SPACE!());
+      toks.extend(p.unlist());
+    }
+    parts.push(toks);
+  }
+  Ok(Invocation!(T_CS!("\\@@cite"), vec![
+    Tokens::new(Explode!("cite")),
+    Tokens::new(blx_join_groups(parts))
+  ]))
+}
+
+/// Destructure the shared `OptionalMatch:* [][] Semiverbatim` arg list of
+/// the single-cite commands into (star, pre, post, keys).
+fn blx_cite_args(args: Vec<ArgWrap>) -> (bool, Option<Tokens>, Option<Tokens>, Tokens) {
+  let mut it = args.into_iter();
+  let star: Option<Tokens> = it.next().unwrap().into();
+  let pre: Option<Tokens> = it.next().unwrap().into();
+  let post: Option<Tokens> = it.next().unwrap().into();
+  let keys: Tokens = it.next().unwrap().into();
+  (blx_nonempty(&star), pre, post, keys)
+}
+
+/// Perl label split `/^(.+),\s*(\d{4}\w*)$/` — greedy `.+` means the LAST
+/// comma whose tail is a 4-digit year plus an optional disambiguation
+/// suffix wins. Returns (author_part, year_with_suffix).
+fn blx_split_ay_label(label: &str) -> Option<(String, String)> {
+  for (idx, _) in label.char_indices().rev().filter(|(_, c)| *c == ',') {
+    if idx == 0 {
+      continue;
+    }
+    let tail = label[idx + 1..].trim_start();
+    if tail.len() >= 4
+      && tail.chars().take(4).all(|c| c.is_ascii_digit())
+      && tail
+        .chars()
+        .skip(4)
+        .all(|c| c.is_ascii_alphanumeric() || c == '_')
+    {
+      return Some((label[..idx].to_string(), tail.to_string()));
+    }
+  }
+  None
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Strict-Perl translation of ar5iv-bindings/biblatex.sty.ltxml
@@ -228,21 +672,54 @@ LoadDefinitions!({
   //     eprinttype label (L240-244).
   //   * \bibrangedash: restored the Perl/real-biblatex en-dash (a late
   //     redefinition had clobbered it to a hyphen).
-  //   KNOWN LIMITATION: the `maxbibnames=N` package *option* is not wired to
-  //   the et-al threshold — Perl's keyval `code` callback (L19-20) needs
-  //   DefKeyVal-callback support we don't have, so the limit stays at the
-  //   shared Perl default of 4. The 3-arg `\name` variant is likewise not
-  //   auto-detected (we declare the 4-arg modern shape).
+  //   KNOWN LIMITATION: the 3-arg `\name` variant is not auto-detected
+  //   (we declare the 4-arg modern shape).
+  //
+  // Audit cycle 4 (2026-07-03, ar5iv-bindings PRs #20/#21 + repair 0911aec):
+  //   * author-year citation commands: \parencite/\textcite/\cite families
+  //     as \@@cite/\@@bibref closures (blx_cite_*), greedy multicite
+  //     readers (\cites/\parencites/\textcites + capitalized forms), and
+  //     \citeauthor/\citetitle/\citeyear/\citeyearpar — all gated on
+  //     style=/citestyle= author-year detection, with a saved-core-\cite
+  //     fallback so numeric documents are unchanged.
+  //   * author-year "Surname, Year" labels for label-less biber .bbl
+  //     entries, emitted as \blx@lbibitem + a single role-tagged \bbl@tags
+  //     (schema-valid, natbib \NAT@@wrout shape) so Post::CrossRef renders
+  //     "(Smith, 2020)" / "Jones & Brown (2019)".
+  //   * \name: prefix/suffix name parts; surnames recorded for labels.
+  //   * \printbibliography[]: biber .bbl is ground truth when present,
+  //     resource-based \bibliography fallback otherwise; & catcode guard.
+  //   * maxbibnames= package option now wired (opt@ scan), closing the
+  //     earlier limitation.
 
   // Perl L14-15: Warn that biblatex.sty is only minimally stubbed.
   Warn!("missing_file", "biblatex.sty",
     "biblatex.sty is only minimally stubbed and will not be interpreted raw.");
 
-  // Perl L19-22: option processing
+  // Perl option processing: maxbibnames, style/citestyle keyvals, ignore
+  // the rest. Perl wires these through DefKeyVal `code` callbacks; here we
+  // register the keys for keyset parity and read the raw package-option
+  // list after ProcessOptions (the svg.sty.ltxml pattern) — biblatex's
+  // style is essentially always given as a package option.
   DefKeyVal!("biblatex", "maxbibnames", "Number", "4");
+  DefKeyVal!("biblatex", "style", "Semiverbatim");
+  DefKeyVal!("biblatex", "citestyle", "Semiverbatim");
   // Perl `DeclareOption(undef, sub { })` — ignore unknown options.
   DeclareOption!(None, {});
   ProcessOptions!();
+  if let Some(opts) = lookup_vecdeque("opt@biblatex.sty") {
+    for opt in opts.iter() {
+      let opt_str = opt.to_string();
+      let opt_str = opt_str.trim();
+      if let Some(v) = opt_str.strip_prefix("style=")
+        .or_else(|| opt_str.strip_prefix("citestyle=")) {
+        blx_set_style(v.trim().trim_start_matches('{').trim_end_matches('}'));
+      } else if let Some(v) = opt_str.strip_prefix("maxbibnames=")
+        && let Ok(n) = v.trim().trim_start_matches('{').trim_end_matches('}').parse::<i64>() {
+          bib_state_set_int("biblatex_maxbibnames", n);
+        }
+    }
+  }
 
   // Perl L24-30: dependencies. (`#RequirePackage('natbib')` etc commented out in Perl.)
   RequirePackage!("hyperref");
@@ -250,48 +727,216 @@ LoadDefinitions!({
   RequirePackage!("etoolbox");
   RequirePackage!("babel_support");
 
-  // Perl L37-56: cite variants. Use `Let!` (not `DefMacro` with body=`\cite`)
-  // for the simple aliases: a DefMacro body of literal `\cite` produces an
-  // infinite loop when the user does `\let\cite\parencite` (a documented
-  // pattern in driver 2402.09928), because both CSes then expand to the
-  // token `\cite` which expands to `\cite` ad infinitum. `Let!` makes the
-  // alias resolve to the SAME Definition object directly (no
-  // expansion-then-relookup), so user redefinitions don't cycle.
-  Let!("\\parencite",    "\\cite");
-  Let!("\\Parencite",    "\\cite");
-  Let!("\\Cite",         "\\cite");
-  DefMacro!("\\citet OptionalMatch:* [][] Semiverbatim",   "\\cite[#2 ]{#4}", locked => true);
-  DefMacro!("\\citep OptionalMatch:* [][] Semiverbatim",   "\\cite[#2]{#4}",  locked => true);
-  DefMacro!("\\citealt OptionalMatch:* [][] Semiverbatim", "\\cite[#2]{#4}",  locked => true);
-  DefMacro!("\\citealp OptionalMatch:* [][] Semiverbatim", "\\cite[#2]{#4}",  locked => true);
-  Let!("\\citenum",      "\\cite");
-  Let!("\\citem",        "\\cite");
-  DefMacro!("\\autocite OptionalMatch:* [][]{}", "\\cite[#2]{#4}", locked => true);
-  DefMacro!("\\Autocite OptionalMatch:* [][]{}", "\\cite[#2]{#4}", locked => true);
-  Let!("\\fullcite",     "\\cite");
-  Let!("\\footcite",     "\\cite");
-  Let!("\\footcitetext", "\\cite");
-  Let!("\\smartcite",    "\\cite");
-  Let!("\\textcite",     "\\cite");
-  Let!("\\Textcite",     "\\cite");
-  Let!("\\supercite",    "\\cite");
-  Let!("\\citeauthor",   "\\cite");
-  Let!("\\citetitle",    "\\cite");
+  // Cite commands — the three-family architecture from ar5iv-bindings
+  // PRs #20/#21 (+ 0911aec repairs). Every command is a code closure over
+  // blx_cite_* / blx_multicite_*; in non-author-year styles they all
+  // delegate to the saved core \cite (blx_cite_fallback), so numeric
+  // documents render exactly as before.
+  //
+  // Save the core \cite FIRST: \cite itself is redefined below, and the
+  // fallback must reach the original, not recurse into our closure.
+  Let!("\\blx@saved@cite", "\\cite");
 
-  // \parencites etc. — biblatex multi-cite variants. Real biblatex
-  // accepts an arbitrary number of `[prenote][postnote]{key}` triples
-  // which are individually rendered with parens around the whole list.
-  // Stub: degrade to \cite of the first key. Driver: 1906.11485.
-  DefMacro!("\\parencites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\Parencites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\citetexts  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\autocites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\Autocites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\textcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\Textcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\smartcites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\footcites  OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
-  DefMacro!("\\supercites OptionalMatch:* [][] Semiverbatim", "\\cite{#4}", locked => true);
+  // -- Parenthetical commands: (prenote Author, Year, postnote) ---------
+  DefMacro!("\\parencite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_parenthetical(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\Parencite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_parenthetical(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\autocite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_parenthetical(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\Autocite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_parenthetical(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\citep OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_parenthetical(star, pre, post, keys)
+  }, locked => true);
+
+  // -- Textual commands: prenote Author (Year, postnote) ----------------
+  DefMacro!("\\textcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_textual(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\Textcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_textual(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\citet OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_textual(star, pre, post, keys)
+  }, locked => true);
+
+  // -- Bare / no-parens commands: prenote Author, Year, postnote --------
+  // In author-year styles \cite is "Author, Year" without parentheses; in
+  // other styles it falls back to \blx@saved@cite.
+  DefMacro!("\\cite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\Cite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\citealt OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\citealp OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\fullcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  // TODO: \footcite should render inside a footnote, \footcitetext
+  // likewise; \supercite as a superscript number. Stubbed as bare inline
+  // citations (same as the Perl binding).
+  DefMacro!("\\footcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\footcitetext OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\smartcite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\supercite OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  DefMacro!("\\citenum OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+  // \citem — see 1606.07864.
+  DefMacro!("\\citem OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    blx_cite_bare(star, pre, post, keys)
+  }, locked => true);
+
+  // -- Author/title/year-only commands -----------------------------------
+  DefMacro!("\\citeauthor OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (star, pre, post, keys) = blx_cite_args(args);
+    let (pre, post) = blx_swap_pre_post(pre, post);
+    if !blx_is_authoryear() {
+      return Ok(blx_cite_fallback(post, keys));
+    }
+    let author = if star { "FullAuthors" } else { "Authors" };
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens::new(Explode!(author)), keys, Tokens!(), Tokens!()]);
+    let mut body = Vec::new();
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\@@cite"),
+      vec![Tokens::new(Explode!("citeauthor")), Tokens::new(body)]))
+  }, locked => true);
+  DefMacro!("\\citetitle OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    let (pre, post) = blx_swap_pre_post(pre, post);
+    if !blx_is_authoryear() {
+      return Ok(blx_cite_fallback(post, keys));
+    }
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens::new(Explode!("Title")), keys, Tokens!(), Tokens!()]);
+    let mut body = Vec::new();
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\@@cite"),
+      vec![Tokens::new(Explode!("citetitle")), Tokens::new(body)]))
+  }, locked => true);
+  DefMacro!("\\citeyear OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    let (pre, post) = blx_swap_pre_post(pre, post);
+    if !blx_is_authoryear() {
+      return Ok(blx_cite_fallback(post, keys));
+    }
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens::new(Explode!("Year")), keys, Tokens!(), Tokens!()]);
+    let mut body = Vec::new();
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\@@cite"),
+      vec![Tokens::new(Explode!("citeyear")), Tokens::new(body)]))
+  }, locked => true);
+  DefMacro!("\\citeyearpar OptionalMatch:* [][] Semiverbatim", sub[args] {
+    let (_star, pre, post, keys) = blx_cite_args(args);
+    let (pre, post) = blx_swap_pre_post(pre, post);
+    if !blx_is_authoryear() {
+      return Ok(blx_cite_fallback(post, keys));
+    }
+    let bibref = Invocation!(T_CS!("\\@@bibref"),
+      vec![Tokens::new(Explode!("Year")), keys, Tokens!(), Tokens!()]);
+    let mut body = blx_open().unlist();
+    if let Some(p) = pre { body.extend(p.unlist()); body.push(T_SPACE!()); }
+    body.extend(bibref.unlist());
+    if let Some(p) = post {
+      body.extend(blx_ns().unlist()); body.push(T_SPACE!()); body.extend(p.unlist());
+    }
+    body.extend(blx_close().unlist());
+    Ok(Invocation!(T_CS!("\\@@cite"),
+      vec![Tokens::new(Explode!("citeyearpar")), Tokens::new(body)]))
+  }, locked => true);
+
+  // -- Multicite commands: repeated [pre][post]{keys} groups -------------
+  // Greedy gullet reading (blx_read_multicite_groups); groups joined "; ".
+  DefMacro!("\\cites OptionalMatch:*", sub[(star)] {
+    blx_multicite_bare(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\Cites OptionalMatch:*", sub[(star)] {
+    blx_multicite_bare(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\parencites OptionalMatch:*", sub[(star)] {
+    blx_multicite_parenthetical(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\Parencites OptionalMatch:*", sub[(star)] {
+    blx_multicite_parenthetical(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\autocites OptionalMatch:*", sub[(star)] {
+    blx_multicite_parenthetical(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\Autocites OptionalMatch:*", sub[(star)] {
+    blx_multicite_parenthetical(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\textcites OptionalMatch:*", sub[(star)] {
+    blx_multicite_textual(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\Textcites OptionalMatch:*", sub[(star)] {
+    blx_multicite_textual(blx_nonempty(&star))
+  }, locked => true);
+  // Rust extras beyond the Perl binding (kept from the earlier stub set):
+  // footnote/superscript multicites degrade to bare; \citetexts to textual.
+  DefMacro!("\\smartcites OptionalMatch:*", sub[(star)] {
+    blx_multicite_bare(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\footcites OptionalMatch:*", sub[(star)] {
+    blx_multicite_bare(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\supercites OptionalMatch:*", sub[(star)] {
+    blx_multicite_bare(blx_nonempty(&star))
+  }, locked => true);
+  DefMacro!("\\citetexts OptionalMatch:*", sub[(star)] {
+    blx_multicite_textual(blx_nonempty(&star))
+  }, locked => true);
   // \citelist{ \cite{key1}*{pre} \cite{key2}*{pre} } — biblatex
   // multi-citation grouped under parens, where each `\cite{...}*{...}`
   // is a postnote-bearing entry. Degrade to passing the body through;
@@ -399,6 +1044,43 @@ LoadDefinitions!({
     Ok(bib_as_thebibliography())
   }, locked => true);
 
+  // Author-year bibitem support, mirroring natbib's \@@lbibitem +
+  // \NAT@@wrout: \blx@lbibitem opens the <ltx:bibitem> (no tags, no
+  // bibblock — ltx:bibblock is autoOpen, so the following entry text opens
+  // one), and \bbl@tags emits the bibitem's single <ltx:tags> with the
+  // role="authors"/"year"/... tags that Post::CrossRef uses to build
+  // author-year citations with phrase support. The schema model is
+  // bibitem = (tags?, bibblock*): one tags element, first.
+  DefConstructor!("\\blx@lbibitem Semiverbatim",
+    "<ltx:bibitem key='#key' xml:id='#id'>",
+    after_digest => sub[whatsit] {
+      let key = whatsit.get_arg(1)
+        .map(|a| clean_bib_key(&a.to_string()))
+        .unwrap_or_default();
+      let mut properties = RefStepID!("@bibitem")?;
+      properties.insert("key", key.into());
+      whatsit.set_properties(properties);
+    });
+  // Perl `bounded => 1` + `beforeDigest => Let(T_ALIGN, '\&')`; like the
+  // Rust NAT@@wrout port, the bgroup/soft-egroup pair replaces `bounded`
+  // (whose egroup mode-frame check trips on inner mode switches) while
+  // still scope-isolating the T_ALIGN Let to argument digestion.
+  DefConstructor!("\\bbl@tags{}{}{}{}",
+    "<ltx:tags>\
+      ?#1(<ltx:tag role='year'>#1</ltx:tag>)\
+      ?#2(<ltx:tag role='authors'>#2</ltx:tag>)\
+      ?#3(<ltx:tag role='fullauthors'>#3</ltx:tag>)\
+      ?#4(<ltx:tag role='refnum'>#4</ltx:tag>)\
+    </ltx:tags>",
+    before_digest => {
+      bgroup();
+      Let!(T_ALIGN!(), T_CS!("\\&"));
+    },
+    after_digest => sub[_whatsit] {
+      pop_stack_frame(false)?;
+      Ok(Vec::new())
+    });
+
   // Perl L127-130: \entry{key}{type}{} initializes the entry hash so that the
   // following \field/\strng/\name/\list directives have a place to record
   // metadata. The 3rd arg is options (Perl ignores it).
@@ -421,14 +1103,36 @@ LoadDefinitions!({
     let entry = bib_entry_get();
     assign_value("biblatex_entry", Stored::None, Some(Scope::Global));
 
-    // label: Perl L137-162 — labelalpha if present, else label; strip CSes +
-    // braces; if empty fall back to an incrementing counter; else ensure
+    // label: labelalpha if present, else label; strip CSes + braces.
+    // For author-year styles (apa, nyt, ...) biber emits NO labelalpha —
+    // construct a "Surname, Year" label from the recorded name/year data
+    // (ar5iv-bindings PR #21 + 0911aec). Gated on the detected style:
+    // numeric documents keep their sequential [1],[2],... labels.
+    // If still empty, fall back to an incrementing counter; else ensure
     // uniqueness with a/b/.../z suffixing.
+    let mut ay_label = false;
+    let year_str = bib_entry_get_tokens(&entry, "year")
+      .map(|t| bib_clean_name(&t.to_string()))
+      .unwrap_or_default();
+    let surnames: Vec<String> = match entry.get("authors_surnames") {
+      Some(Stored::String(s)) => to_string(*s)
+        .split('\u{1f}').filter(|p| !p.is_empty()).map(String::from).collect(),
+      _ => Vec::new(),
+    };
     let label_str: String = {
-      let cleaned = bib_entry_get_tokens(&entry, "labelalpha")
+      let mut cleaned = bib_entry_get_tokens(&entry, "labelalpha")
         .or_else(|| bib_entry_get_tokens(&entry, "label"))
         .map(|t| bib_clean_name(&t.to_string()))
         .filter(|s| !s.is_empty());
+      if cleaned.is_none() && blx_is_authoryear() && !surnames.is_empty() && !year_str.is_empty() {
+        let author_part = match surnames.len() {
+          1 => surnames[0].clone(),
+          2 => format!("{} & {}", surnames[0], surnames[1]),
+          _ => format!("{} et al.", surnames[0]),
+        };
+        cleaned = Some(format!("{author_part}, {year_str}"));
+        ay_label = true;
+      }
       match cleaned {
         Some(label) => {
           // Perl L148-162: collision-avoidance suffixing, tracked globally in
@@ -468,13 +1172,50 @@ LoadDefinitions!({
 
     let mut variant: Vec<Token> = Vec::with_capacity(64);
     let key_toks = bib_entry_get_tokens(&entry, "key").unwrap_or_default();
-    variant.push(T_CS!("\\bibitem"));
-    variant.push(T_OTHER!("["));
-    variant.extend(ExplodeText!(&label_str));
-    variant.push(T_OTHER!("]"));
-    variant.push(T_BEGIN!());
-    variant.extend(key_toks.unlist());
-    variant.push(T_END!());
+    if ay_label {
+      // Author-year entry: open the bibitem via \blx@lbibitem (no tags, no
+      // bibblock — ltx:bibblock is autoOpen) and emit the single
+      // structured <ltx:tags> with the role="authors"/"year"/... tags that
+      // Post::CrossRef needs to resolve \textcite / \parencite with phrase
+      // support. Mirrors natbib's \@@lbibitem + \NAT@@wrout; keeps the
+      // schema model bibitem = (tags?, bibblock*) valid.
+      let (author_part, ay_year) = blx_split_ay_label(&label_str)
+        .unwrap_or_else(|| (label_str.clone(), year_str.clone()));
+      // The year part carries any disambiguation suffix (2020a, ...) so
+      // same-author-same-year entries stay distinct.
+      let refnum_str = if author_part == label_str {
+        label_str.clone()
+      } else {
+        format!("{author_part} ({ay_year})")
+      };
+      let full_author_part = match surnames.len() {
+        0 => author_part.clone(),
+        1 | 2 => surnames.join(" & "),
+        _ => format!("{} & {}",
+          surnames[..surnames.len() - 1].join(", "),
+          surnames[surnames.len() - 1]),
+      };
+      variant.push(T_CS!("\\blx@lbibitem"));
+      variant.push(T_BEGIN!());
+      variant.extend(key_toks.unlist());
+      variant.push(T_END!());
+      variant.push(T_CS!("\\bbl@tags"));
+      for tag in [&ay_year, &author_part, &full_author_part, &refnum_str] {
+        variant.push(T_BEGIN!());
+        variant.extend(ExplodeText!(tag));
+        variant.push(T_END!());
+      }
+    } else {
+      // Numeric / alphabetic / sequential-fallback entry: plain \bibitem,
+      // exactly as before author-year support was added.
+      variant.push(T_CS!("\\bibitem"));
+      variant.push(T_OTHER!("["));
+      variant.extend(ExplodeText!(&label_str));
+      variant.push(T_OTHER!("]"));
+      variant.push(T_BEGIN!());
+      variant.extend(key_toks.unlist());
+      variant.push(T_END!());
+    }
 
     // Authors: if \name stashed a comma-joined string under "authors_str",
     // emit it. Defer the et-al / per-author re-tokenization for now — most
@@ -653,11 +1394,20 @@ LoadDefinitions!({
     Ok(Tokens::default())
   }, locked => true);
 
-  // Perl L265-268: BiblatexAuthor keyvals
-  DefKeyVal!("BiblatexAuthor", "given",   "");
-  DefKeyVal!("BiblatexAuthor", "giveni",  "");
-  DefKeyVal!("BiblatexAuthor", "family",  "");
-  DefKeyVal!("BiblatexAuthor", "familyi", "");
+  // BiblatexAuthor keyvals — extended (PR #21) with prefix/suffix/…-un
+  // name parts so "van der Berg" / "King Jr." names parse correctly.
+  DefKeyVal!("BiblatexAuthor", "given",    "");
+  DefKeyVal!("BiblatexAuthor", "giveni",   "");
+  DefKeyVal!("BiblatexAuthor", "givenun",  "");
+  DefKeyVal!("BiblatexAuthor", "family",   "");
+  DefKeyVal!("BiblatexAuthor", "familyi",  "");
+  DefKeyVal!("BiblatexAuthor", "familyun", "");
+  DefKeyVal!("BiblatexAuthor", "prefix",   "");
+  DefKeyVal!("BiblatexAuthor", "prefixi",  "");
+  DefKeyVal!("BiblatexAuthor", "prefixun", "");
+  DefKeyVal!("BiblatexAuthor", "suffix",   "");
+  DefKeyVal!("BiblatexAuthor", "suffixi",  "");
+  DefKeyVal!("BiblatexAuthor", "nameun",   "");
 
   // Perl L270-346: \name{type}{count}{maybe-content} — biblatex's author
   // record. The TeX-2.5+ .bbl shape is `\name{author}{N}{}{ {{}{Family}…} }`
@@ -711,6 +1461,10 @@ LoadDefinitions!({
     // leaked verbatim into the bibliography (`family=…,familyi=…,given=…`).
     let keyvals_flag = bib_state_int("biblatex_with_keyvals") != 0;
     let mut names: Vec<String> = Vec::new();
+    // Family name parts recorded alongside the full names, for author-year
+    // label construction (\endentry): "van der Berg, Pieter" must label as
+    // "Berg, YEAR", and "Martin Luther King Jr." as "King", not "Jr.".
+    let mut surnames: Vec<String> = Vec::new();
     let mut idx = 0usize;
     while idx < body_toks.len() {
       // Skip space tokens between author groups.
@@ -728,16 +1482,19 @@ LoadDefinitions!({
       // (`{hash=…}` or `{un=0,uniquepart=base,hash=…}`); skip it (Perl L294).
       let mut j = 0usize;
       let _meta = read_group(&author_grp, &mut j);
-      let (given, family) = if keyvals_flag {
-        // Keyval form (Perl L301-306): the next sub-group is the keyval block.
+      let (given, prefix, family, suffix) = if keyvals_flag {
+        // Keyval form: the next sub-group is the keyval block. Prefer the
+        // full name parts over the `i`-initial forms; prefix/suffix are
+        // optional (PR #21).
         let kv_str = read_group(&author_grp, &mut j)
           .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
         let kvs = parse_name_keyvals(&kv_str);
         let get = |k: &str| kvs.iter().find(|(kk, _)| kk == k).map(|(_, v)| v.clone());
-        // Perl prefers the full `given`/`family` over the `i`-initial forms.
         let given = get("given").or_else(|| get("giveni")).unwrap_or_default();
+        let prefix = get("prefix").or_else(|| get("prefixi")).unwrap_or_default();
         let family = get("family").or_else(|| get("familyi")).unwrap_or_default();
-        (given, family)
+        let suffix = get("suffix").or_else(|| get("suffixi")).unwrap_or_default();
+        (given, prefix, family, suffix)
       } else {
         // Positional form (Perl L308-321): {family}{familyi}{given}{giveni}…
         let family = read_group(&author_grp, &mut j)
@@ -745,20 +1502,30 @@ LoadDefinitions!({
         let _familyi = read_group(&author_grp, &mut j);
         let given = read_group(&author_grp, &mut j)
           .map(|g| Tokens::new(g).to_string()).unwrap_or_default();
-        (given, family)
+        (given, String::new(), family, String::new())
       };
       // Perl L324: strip leftover CSes/braces, then trim.
       let family = bib_clean_name(family.trim());
       let given = bib_clean_name(given.trim());
-      let fullname = if !given.is_empty() && !family.is_empty() {
-        format!("{given} {family}")
-      } else if !family.is_empty() {
-        family
-      } else if !given.is_empty() {
-        given
-      } else {
+      let prefix = bib_clean_name(prefix.trim());
+      let suffix = bib_clean_name(suffix.trim());
+      // Perl: join(' ', grep { $_ ne '' } (given, prefix, family, suffix)).
+      let fullname = [given, prefix, family.clone(), suffix]
+        .into_iter()
+        .filter(|p| !p.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ");
+      if fullname.is_empty() {
         continue;
+      }
+      // Surname for label construction: the family part; fall back to the
+      // last word of the full name (pre-typeset corporate authors etc.).
+      let surname = if family.is_empty() {
+        fullname.split_whitespace().last().unwrap_or_default().to_string()
+      } else {
+        family
       };
+      surnames.push(surname);
       names.push(fullname);
     }
     // Format with et-al limit (default 4 per Perl L192).
@@ -782,10 +1549,19 @@ LoadDefinitions!({
       acc
     };
     // Stash under "authors_str" or "editors_str" depending on type.
-    let key = if type_str.trim() == "editor" { "editors_str" } else { "authors_str" };
+    let is_editor = type_str.trim() == "editor";
+    let key = if is_editor { "editors_str" } else { "authors_str" };
     if !joined.is_empty() {
       let toks = Tokens::new(ExplodeText!(&joined));
       bib_entry_set_tokens(key, toks);
+    }
+    // Record the author surnames (US-separated) for the author-year label
+    // construction in \endentry.
+    if !is_editor && !surnames.is_empty() {
+      let mut entry = bib_entry_get();
+      entry.insert("authors_surnames",
+        Stored::String(pin(surnames.join("\u{1f}"))));
+      bib_entry_save(entry);
     }
     Ok(Tokens::default())
   }, locked => true);
@@ -963,10 +1739,18 @@ LoadDefinitions!({
   Let!("\\biblatex@saved@bibliography", "\\bibliography");
   Let!("\\bibliography",                "\\addbibresource");
 
-  // Perl L410-418: \printbibliography → \biblatex@printbibliography, which
-  // emits the saved \biblatex@saved@bibliography call over popped resources.
-  DefMacro!("\\printbibliography",
-    "\\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\\biblatex@printbibliography");
+  // \printbibliography: biber's \jobname.bbl is ground truth when present
+  // (read it directly through the \entry/\endentry rebuilder above);
+  // otherwise fall back to \biblatex@printbibliography, which routes the
+  // \addbibresource declarations through LaTeXML's \bibliography
+  // machinery. The `&` catcode change lets literal ampersands in .bbl
+  // author/publisher names through (restored to alignment after).
+  // The optional argument ([heading=bibintoc] etc.) is consumed+ignored.
+  DefMacro!("\\printbibliography[]",
+    "\\let\\verb\\biblatex@verb\\let\\endverb\\biblatex@endverb\
+     \\catcode`\\&=12\\relax\
+     \\InputIfFileExists{\\jobname.bbl}{}{\\biblatex@printbibliography}\
+     \\catcode`\\&=4\\relax");
   DefMacro!("\\biblatex@printbibliography[]", sub[(_opts)] {
     let mut resources = Vec::new();
     while let Some(res) = pop_value("biblatex_resources")? {

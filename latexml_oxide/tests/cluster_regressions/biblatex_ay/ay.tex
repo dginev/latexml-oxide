@@ -1,0 +1,19 @@
+\documentclass{article}
+\usepackage[style=apa]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+Parenthetical: \parencite{smith2020}.
+Postnote: \parencite[p.~5]{smith2020}.
+Pre and post: \parencite[cf.][p.~7]{jones2019}.
+Textual: \textcite{jones2019} said things.
+Bare: \cite{trio2021}.
+Author only: \citeauthor{smith2020}.
+Year only: \citeyear{smith2020}, in parens \citeyearpar{smith2020}.
+Multi paren: \parencites[see][]{smith2020}[p.~3]{jones2019}.
+Multi textual: \textcites{smith2020}{trio2021}.
+Multi bare: \cites{smith2020}{jones2019}.
+Starred: \parencite*{trio2021}.
+Prefix name: \textcite{vandenberg2018}.
+Issue4: \parencite[see][]{smith2020}.
+\printbibliography
+\end{document}

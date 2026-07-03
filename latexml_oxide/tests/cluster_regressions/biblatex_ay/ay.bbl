@@ -1,0 +1,97 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+\refsection{0}
+  \datalist[entry]{nyt/global//global/global}
+    \entry{smith2020}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=3f8a2b}{%
+           family={Smith},
+           familyi={S\bibinitperiod},
+           given={John},
+           giveni={J\bibinitperiod}}}%
+      }
+      \strng{namehash}{3f8a2b}
+      \strng{fullhash}{3f8a2b}
+      \field{sortinit}{S}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Testing}
+      \field{title}{A study of things}
+      \field{volume}{12}
+      \field{year}{2020}
+      \field{pages}{1\bibrangedash 20}
+    \endentry
+    \entry{jones2019}{article}{}
+      \name{author}{2}{}{%
+        {{un=0,uniquepart=base,hash=a1b2c3}{%
+           family={Jones},
+           familyi={J\bibinitperiod},
+           given={Alice},
+           giveni={A\bibinitperiod}}}%
+        {{un=0,uniquepart=base,hash=d4e5f6}{%
+           family={Brown},
+           familyi={B\bibinitperiod},
+           given={Bob},
+           giveni={B\bibinitperiod}}}%
+      }
+      \strng{namehash}{a1b2c3d4e5f6}
+      \field{sortinit}{J}
+      \field{journaltitle}{Review of Examples}
+      \field{title}{On examples \& counterexamples}
+      \field{year}{2019}
+    \endentry
+    \entry{trio2021}{book}{}
+      \name{author}{3}{}{%
+        {{un=0,uniquepart=base,hash=111111}{%
+           family={Adams},
+           familyi={A\bibinitperiod},
+           given={Carol},
+           giveni={C\bibinitperiod}}}%
+        {{un=0,uniquepart=base,hash=222222}{%
+           family={Baker},
+           familyi={B\bibinitperiod},
+           given={Dan},
+           giveni={D\bibinitperiod}}}%
+        {{un=0,uniquepart=base,hash=333333}{%
+           family={Clark},
+           familyi={C\bibinitperiod},
+           given={Eve},
+           giveni={E\bibinitperiod}}}%
+      }
+      \strng{namehash}{112233}
+      \field{sortinit}{A}
+      \field{title}{The trio book}
+      \field{year}{2021}
+      \list{publisher}{1}{%
+        {Simon \& Schuster}%
+      }
+    \endentry
+    \entry{vandenberg2018}{article}{}
+      \name{author}{1}{}{%
+        {{un=0,uniquepart=base,hash=444444}{%
+           family={Berg},
+           familyi={B\bibinitperiod},
+           given={Pieter},
+           giveni={P\bibinitperiod},
+           prefix={van den},
+           prefixi={v\bibinitperiod\bibinitdelim d\bibinitperiod}}}%
+      }
+      \strng{namehash}{444444}
+      \field{sortinit}{B}
+      \field{journaltitle}{Dutch Journal}
+      \field{title}{Prefixed names}
+      \field{year}{2018}
+    \endentry
+  \enddatalist
+\endrefsection
