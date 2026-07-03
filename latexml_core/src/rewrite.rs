@@ -1110,20 +1110,18 @@ pub fn set_attributes_wild(
     return Ok(());
   }
 
-  // Collect wildcard IDs from the nodes BEFORE wrapping.
-  let mut wild_ids = Vec::new();
-  for n in &nodes {
-    wild_ids.extend(set_wildcard_ids(document, n));
-  }
-
-  // Wrap matched nodes in XMDual.
-  // NOTE: Perl wraps presentation nodes in XMWrap first (L206), then in XMDual (L208),
-  // producing XMDual[XMApp(content), XMWrap(presentation)]. In Rust, reparenting
-  // children to create XMWrap causes libxml2 memory corruption. We keep the
-  // presentation nodes as direct children: XMDual[XMApp(content), node1, node2, ...]
-  // This is a known R11 gap. The math parser handles both structures correctly.
-  let wrapper = document.wrap_nodes("ltx:XMDual", nodes)?;
-  let Some(mut dual_node) = wrapper else {
+  // Perl L205-216: wrap the presentation nodes in an XMWrap, collect the
+  // wildcard ids, wrap that in an XMDual, then build the content arm
+  // XMApp(op-with-attrs, XMRef per wildcard) BEFORE the XMWrap. An XMDual
+  // has EXACTLY two children (content, presentation) — the earlier "flat"
+  // variant (presentation nodes as direct dual children) was destroyed
+  // downstream, silently dropping the matched span (gee-one repro:
+  // `g(a)` collapsed to a bare `)` carrying the declaration's role).
+  let Some(wrap_node) = document.wrap_nodes("ltx:XMWrap", nodes)? else {
+    return Ok(());
+  };
+  let wild_ids = set_wildcard_ids(document, &wrap_node);
+  let Some(mut dual_node) = document.wrap_nodes("ltx:XMDual", vec![wrap_node.clone()])? else {
     return Ok(());
   };
 
@@ -1148,147 +1146,10 @@ pub fn set_attributes_wild(
     content_app.add_child(&mut xmref)?;
   }
 
-  // Insert content arm as first child (before presentation nodes)
-  match dual_node.get_first_child() {
-    Some(mut first_child) => {
-      first_child.add_prev_sibling(&mut content_app)?;
-    },
-    _ => {
-      dual_node.add_child(&mut content_app)?;
-    },
-  }
-
-  // Restructure POSTSUBSCRIPT/POSTSUPERSCRIPT in the presentation children.
-  // In Perl, XMWrap gets kludge_scripts'd by the math parser. Since we don't have
-  // XMWrap, we do the POSTSUBSCRIPT→SUBSCRIPTOP conversion here instead.
-  restructure_scripts_in_dual(&dual_node, document)?;
-
-  mark_seen_rec(&dual_node);
-  Ok(())
-}
-
-/// Convert POSTSUBSCRIPT/POSTSUPERSCRIPT siblings into 3-child XMApp form
-/// inside XMDual's presentation children.
-///
-/// Before: `<base/><XMApp role="POSTSUBSCRIPT"><sub_content/></XMApp>`
-/// After: `<XMApp><SUBSCRIPTOP/><base/><sub_content/></XMApp>`
-///
-/// This matches Perl where the math parser's kludge_scripts processes
-/// the XMWrap presentation arm and restructures scripts.
-fn restructure_scripts_in_dual(dual: &Node, document: &mut Document) -> Result<()> {
-  // Clone the XmlDoc handle (Rc-cheap) so the &mut Document isn't
-  // borrowed across Node::new(…, &doc) calls — we need the mut borrow
-  // live at `document.safe_unlink(script_node)` below.
-  let doc = document.get_document().clone();
-  // Iterate over presentation children (skip first child = content arm)
-  let children: Vec<Node> = dual
-    .get_child_nodes()
-    .into_iter()
-    .filter(|n| n.get_type() == Some(libxml::tree::NodeType::ElementNode))
-    .collect();
-  if children.len() < 2 {
-    return Ok(());
-  } // Need at least content + 1 presentation node
-
-  // Look for base + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling pairs
-  let pres_children: Vec<Node> = children.into_iter().skip(1).collect(); // skip content arm
-  let mut i = 0;
-  while i < pres_children.len() {
-    let node = &pres_children[i];
-    if i + 1 < pres_children.len() {
-      let next = &pres_children[i + 1];
-      let next_role = next.get_property("role").unwrap_or_default();
-      if (next_role == "POSTSUBSCRIPT" || next_role == "POSTSUPERSCRIPT")
-        && next.get_name() == "XMApp"
-      {
-        let scriptop = if next_role == "POSTSUBSCRIPT" {
-          "SUBSCRIPTOP"
-        } else {
-          "SUPERSCRIPTOP"
-        };
-
-        // Create new XMApp to hold the restructured script
-        let mut new_app = Node::new("XMApp", None, &doc)?;
-        // Create SUBSCRIPTOP/SUPERSCRIPTOP token (Perl uses "post1" scriptpos)
-        let mut scriptop_tok = Node::new("XMTok", None, &doc)?;
-        let _ = scriptop_tok.set_attribute("role", scriptop);
-        let _ = scriptop_tok.set_attribute("scriptpos", "post1");
-        new_app.add_child(&mut scriptop_tok)?;
-
-        // Move base node into new_app
-        let mut base = node.clone();
-        base.unlink();
-        new_app.add_child(&mut base)?;
-
-        // Move content from POSTSUBSCRIPT/POSTSUPERSCRIPT into new_app
-        let mut script_node = next.clone();
-        for mut child in script_node.get_child_nodes() {
-          child.unlink();
-          // Unwrap XMArg if present (Perl doesn't use XMArg in the parsed form).
-          if child.get_name() == "XMArg" {
-            // Carry the wildcard id from the XMArg onto the promoted content so
-            // the XMDual content-arm XMRef resolves (Perl set_wildcard_ids gives
-            // the wildcard node an id and keeps it in the presentation arm).
-            // NOTE: xml:id round-trips through libxml under the *local* name
-            // "id" (the ns-qualified "xml:id" accessor returns None here — see
-            // docs/archive/XMLID_ACCESSOR_AUDIT_2026-06-08.md), so read via
-            // get_property("id"). This only fires for a genuinely id-bearing
-            // wildcard XMArg, so non-wildcard subscripts (e.g. simplemath
-            // `f _ 1`, which never reaches this wildcard path) are unaffected.
-            // (No `get_attribute("xml:id")` fallback: per the audit it always
-            // returns None for the ns-qualified name, so it was dead code and
-            // tripped the xml:id-accessor pre-push lint.)
-            let xmarg_id = child.get_property("id");
-            let xmarg_children: Vec<Node> = child.get_child_nodes();
-            if xmarg_children.len() == 1 {
-              let mut inner = xmarg_children[0].clone();
-              inner.unlink();
-              if let Some(ref id) = xmarg_id
-                && !inner.has_attribute("xml:id")
-              {
-                let _ = inner.set_attribute("xml:id", id);
-              }
-              // Carry the _wildcard marker onto the promoted node. Perl's
-              // markSeen_rec skips _wildcard nodes (and does not recurse into
-              // them), so the wildcard content stays matchable by later declare
-              // rules (e.g. `$n$` annotating the `n` inside a `$x_\WildCard$`
-              // match). Without this, unwrapping drops the marker and
-              // mark_seen_rec marks the node _matched, blocking that annotation.
-              if child.has_attribute("_wildcard") {
-                let _ = inner.set_attribute("_wildcard", "1");
-              }
-              new_app.add_child(&mut inner)?;
-            } else {
-              // Multi-token content (an expression such as `2n-1`): keep it
-              // grouped as the XMArg so the math parser can still parse it as a
-              // unit (flattening its tokens into the SUBSCRIPTOP app destroys
-              // the grouping and leaves it unparsed). The parser consumes the
-              // XMArg and lands the wildcard id on the parsed result.
-              let mut arg = child.clone();
-              arg.unlink();
-              new_app.add_child(&mut arg)?;
-            }
-          } else {
-            new_app.add_child(&mut child)?;
-          }
-        }
-
-        // Replace the POSTSUBSCRIPT node with the new XMApp. The
-        // POSTSUBSCRIPT wrapper's own xml:id (if any) is now unrecorded
-        // proactively via `safe_unlink`, so the idstore no longer leaks
-        // a dangling entry that `mark_xmnode_visibility` could later
-        // deref via XMRef lookup. SYNC_STATUS.md D3b migration (replaces
-        // the session-128 rebuild-at-finalize workaround with a
-        // source-level guardian for this specific call path).
-        script_node.add_prev_sibling(&mut new_app)?;
-        document.safe_unlink(script_node);
-
-        i += 2; // Skip both base and script
-        continue;
-      }
-    }
-    i += 1;
-  }
+  // Insert content arm before the presentation XMWrap (Perl removes the
+  // wrapper, opens the XMApp, then re-appends the wrapper — same order).
+  let mut wrap_mut = wrap_node;
+  wrap_mut.add_prev_sibling(&mut content_app)?;
   Ok(())
 }
 
@@ -1375,7 +1236,142 @@ fn declare_node_matches(
       // Check that next sibling is POSTSUBSCRIPT.
       let next_sib = node.get_next_sibling();
       let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      next_role.as_deref() == Some("POSTSUBSCRIPT")
+      if next_role.as_deref() != Some("POSTSUBSCRIPT") {
+        return false;
+      }
+      // Multi-wildcard `x_{\WildCard,\WildCard}`: sub_text carries the arity
+      // and the subscript content must be EXACTLY the comma list
+      // [any, ',', any, ...] — Perl compiles the literal commas as positional
+      // child predicates, so `q_{a}` / `q_{a+b}` do NOT match a 2-ary pattern
+      // (they fall to the 1-ary declaration, whose wildcard takes the whole
+      // argument). Content children live under the POSTSUBSCRIPT's first
+      // element child (the XMArg/XMWrap argument holder).
+      if let Some(n) = sub_text.and_then(|s| s.parse::<usize>().ok())
+        && n >= 2
+      {
+        let content: Vec<Node> = next_sib
+          .as_ref()
+          .and_then(|s| {
+            s.get_child_nodes()
+              .into_iter()
+              .find(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
+          })
+          .map(|holder| {
+            holder
+              .get_child_nodes()
+              .into_iter()
+              .filter(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
+              .collect()
+          })
+          .unwrap_or_default();
+        if content.len() != 2 * n - 1 {
+          return false;
+        }
+        for (i, c) in content.iter().enumerate() {
+          // odd 0-based positions must be the literal comma separators
+          if i % 2 == 1 && (c.get_name() != "XMTok" || c.get_content().trim() != ",") {
+            return false;
+          }
+        }
+      }
+      true
+    },
+    "funcapply" => {
+      // Matched node is the base XMTok of `base\WildCard[(\WildCard...)]`.
+      // Require the EXACT following element siblings `(`, arg, [`,`, arg...],
+      // `)` — single-node args in the pre-parse DOM, mirroring Perl
+      // domToXPath_seq's position()=N predicates (so `f(a+b)` does not match
+      // an 1-ary pattern: its `)` sits past the expected position).
+      let Some(nargs) = sub_text.and_then(|s| s.parse::<usize>().ok()) else {
+        return false;
+      };
+      let mut expected: Vec<Option<&str>> = vec![Some("(")];
+      for i in 0..nargs {
+        if i > 0 {
+          expected.push(Some(","));
+        }
+        expected.push(None); // any single element node (the wildcard arg)
+      }
+      expected.push(Some(")"));
+      let mut cur = node.clone();
+      for want in expected {
+        let mut next = cur.get_next_sibling();
+        while let Some(ref s) = next {
+          if s.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+            break;
+          }
+          next = s.get_next_sibling();
+        }
+        let Some(sib) = next else {
+          return false;
+        };
+        if let Some(text) = want
+          && (sib.get_name() != "XMTok" || sib.get_content().trim() != text)
+        {
+          return false;
+        }
+        cur = sib;
+      }
+      true
+    },
+    "cmddual" => {
+      // `\cs{\WildCard}...`: matched node is an XMDual whose content arm is
+      // XMApp(XMTok[@name=cs or @meaning=cs], one XMRef per wildcard arg).
+      let (Some(cmd), Some(nargs)) = (base_text, sub_text.and_then(|s| s.parse::<usize>().ok()))
+      else {
+        return false;
+      };
+      let elem_children: Vec<Node> = children
+        .iter()
+        .filter(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
+        .cloned()
+        .collect();
+      let Some(content) = elem_children.first() else {
+        return false;
+      };
+      if content.get_name() != "XMApp" {
+        return false;
+      }
+      let app_children: Vec<Node> = content
+        .get_child_nodes()
+        .into_iter()
+        .filter(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
+        .collect();
+      if app_children.len() != nargs + 1 {
+        return false;
+      }
+      let op = &app_children[0];
+      op.get_name() == "XMTok"
+        && (op.get_property("name").as_deref() == Some(cmd)
+          || op.get_property("meaning").as_deref() == Some(cmd))
+    },
+    "leadwild" => {
+      // `\WildCard[content]suffix`: matched node is the FIRST content token;
+      // the remaining content chars and then the literal suffix chars must
+      // follow as adjacent single-token element siblings (Perl domToXPath_seq
+      // position()=N predicates).
+      let (Some(content), Some(suffix)) = (base_text, sub_text) else {
+        return false;
+      };
+      let expected: Vec<char> = content.chars().skip(1).chain(suffix.chars()).collect();
+      let mut cur = node.clone();
+      for want in expected {
+        let mut next = cur.get_next_sibling();
+        while let Some(ref s) = next {
+          if s.get_type() == Some(libxml::tree::NodeType::ElementNode) {
+            break;
+          }
+          next = s.get_next_sibling();
+        }
+        let Some(sib) = next else {
+          return false;
+        };
+        if sib.get_name() != "XMTok" || sib.get_content().trim() != want.to_string() {
+          return false;
+        }
+        cur = sib;
+      }
+      true
     },
     "prime" => {
       // Matched node is BASE XMTok. Check that next sibling is POSTSUPERSCRIPT

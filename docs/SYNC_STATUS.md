@@ -94,18 +94,35 @@ against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
   now colors its tokens (was black — visible arXiv bug class); + a latent
   rust-libxml misaligned-ns-read crash fixed in `find_inherited_attribute`.
 
-- **lxDeclare dead-predicate class — CORE FIXED 2026-07-03** (PR_READINESS
-  cluster C): dead `@font`/`@meaning` XPath predicates replaced by Rust-side
-  font-CLASS filtering (`_declare_font` → declare_node_matches) and
-  `(@meaning|@name)` predicates; replace-rules now carry the same
-  declare-side filter (new `declare_filter` rewrite option — kills the
-  latent delete-the-wrong-sibling); untagged `scope=section` gates the fast
-  path via an explicit scope_prefix field. declare.xml golden: 51 → 67
-  decl_id, strictly additive (0 lost marks), vs Perl's 84. RESIDUAL: the
-  remaining ~17 belong to OTHER pattern families (S4/S6/S7: literal-base
-  variants, replace-related XMDuals) that need their own compile arms in
-  `compile_declare_pattern` — each now Warns as unrecognized instead of
-  silently skipping.
+- **lxDeclare dead-predicate class — ✅ COMPLETE 2026-07-03, exact Perl
+  parity 84/84** (PR_READINESS cluster C). Stage 1 (core, `e11ee74f8e`):
+  dead `@font`/`@meaning` XPath predicates replaced by Rust-side font-CLASS
+  filtering (`_declare_font` → declare_node_matches) and `(@meaning|@name)`
+  predicates; replace-rules carry the same declare-side filter (new
+  `declare_filter` rewrite option); untagged `scope=section` gates the fast
+  path via an explicit scope_prefix field (51 → 67 decl_id, strictly
+  additive). Stage 2 (residual families, 67 → **84 = Perl, zero
+  per-declaration diffs**): (1) function-application patterns
+  `f\WildCard[(\WildCard)]` / `(\WildCard,\WildCard)` — new "funcapply"
+  compile arm + exact-adjacency filter, `_nowrap` now threaded from the
+  keyval (was parsed but never read); (2) the wrap path's XMDual rebuilt to
+  Perl's exact `XMDual[XMApp(op,refs), XMWrap(span)]` shape — the old
+  "flat" R11 variant (presentation tokens as direct dual children) was
+  DESTROYED downstream, silently dropping the matched span (`g(a)` → bare
+  `)`); dead restructure_scripts_in_dual deleted; (3) multi-wildcard
+  subscripts `q_{\WildCard,\WildCard}` now require the literal comma-list
+  (child 2i-1 wildcard paths) while 1-ary `q_{\WildCard}` keeps Perl's
+  whole-argument "accidental" match; (4) leading-wildcard `\WildCard[a]b`
+  ("leadwild" arm) + the rewrite-creation gate now accepts decl_id-only
+  (tag-only) declarations like Perl; (5) `\lxDefMath` tag/description →
+  next_declaration_id + `decl_id` through DefMathI (use-site stamping) +
+  the `\@lxDefMathDeclare` constructor (declare element, digested
+  description); (6) `\weird{\WildCard}{\WildCard}` ("cmddual" arm — marks
+  the use-site XMDual, Perl's single-XMDual branch); (7) declare elements
+  now carry Perl's `<tags><tag role="term">` (digested math, itself
+  rewrite-marked) + `role="short"` + `<text>` description via
+  normalizeDeclareKeys/splitDeclareTag. The unrecognized-pattern Warn now
+  prints the offending pattern. Suite 1517/0; declare.xml re-blessed.
 
 Open queue lives in the audit doc: F17 misc, F14 share-suffix wiring,
 **F5** linebreaker decision (Perl gates on `--linelength`, default OFF →

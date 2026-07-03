@@ -865,11 +865,7 @@ fn load_latexml_file(path: &str) -> Result<()> {
     let xpath = format!("{}[@_pvis and @_cvis]", pat.xpath);
 
     // Determine select_count based on pattern type
-    let select_count = match pat.pattern_type {
-      "literal_subscript" | "prime" | "subscript" => Some(2usize),
-      "accent" => Some(1usize),
-      _ => Some(1usize),
-    };
+    let select_count = pat.select_count().or(Some(1usize));
 
     // Build the rewrite rule
     let mut clauses = Vec::new();

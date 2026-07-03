@@ -20,6 +20,31 @@ pub struct DeclarePattern {
   pub font_class:     Option<&'static str>,
 }
 
+impl DeclarePattern {
+  /// Number of sibling nodes the match spans — Perl's `$nnodes` from
+  /// `domToXPath` (Rewrite.pm). Subscript/prime patterns match the base
+  /// XMTok plus its POSTSUBSCRIPT/POSTSUPERSCRIPT sibling; accents match
+  /// the single XMApp; function applications span base + `(` + n args +
+  /// (n-1) commas + `)`.
+  pub fn select_count(&self) -> Option<usize> {
+    match self.pattern_type {
+      "literal_subscript" | "prime" | "subscript" => Some(2),
+      "accent" => Some(1),
+      "funcapply" => self
+        .sub_text
+        .as_deref()
+        .and_then(|s| s.parse::<usize>().ok())
+        .map(|n| 2 * n + 2),
+      // wildcard content tokens + literal suffix tokens
+      "leadwild" => match (&self.base_text, &self.sub_text) {
+        (Some(content), Some(suffix)) => Some(content.chars().count() + suffix.chars().count()),
+        _ => None,
+      },
+      _ => None,
+    }
+  }
+}
+
 /// Generate an XPath text predicate for a base token specification, plus a
 /// font-CLASS requirement checked RUST-SIDE (declare_node_matches).
 ///
@@ -95,16 +120,27 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     let (base_pred, font_class) = base_text_predicate(&base);
     let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
     let nwilds = brace_content.matches("\\WildCard").count();
-    let wpaths = if nwilds <= 1 {
-      vec![vec![2, 1]] // child 1 of sibling 2 (POSTSUBSCRIPT content)
+    // Perl semantics diverge by arity (Rewrite.pm domToXPath):
+    //  - ONE wildcard: the XMArg-single-wildcard branch matches the WHOLE
+    //    subscript argument regardless of content (that is the fixture's
+    //    "accidental" q_{a+b} match) — wildcard = child 1 of sibling 2.
+    //  - TWO+: the wildcards and literal commas compile as a positional
+    //    child sequence [*, ',', *, ...] — wildcard i = content child 2i-1
+    //    (commas at the even positions), and declare_node_matches must
+    //    verify the comma-list shape (`sub_text` carries the arity).
+    let (wpaths, sub_text) = if nwilds <= 1 {
+      (vec![vec![2, 1]], None)
     } else {
-      (1..=nwilds).map(|i| vec![2, 1, i]).collect()
+      (
+        (1..=nwilds).map(|i| vec![2, 1, 2 * i - 1]).collect(),
+        Some(nwilds.to_string()),
+      )
     };
     return DeclarePattern {
       xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
       pattern_type: "subscript",
       base_text: Some(base),
-      sub_text: None,
+      sub_text,
       accent_name: None,
       has_wildcard: true,
       wildcard_paths: Some(wpaths),
@@ -205,6 +241,108 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
         wildcard_paths: None,
         font_class:     None,
       };
+    }
+  }
+
+  // === Function application: base\WildCard[(\WildCard)] / [(\WildCard,\WildCard)] ===
+  // Perl digests `\WildCard[content]` into <_WildCard_>content</_WildCard_>;
+  // domToXPath (Rewrite.pm L443-450) compiles the CONTENT as literal following
+  // siblings of the base — `(`, one single-node arg per \WildCard (comma-
+  // separated), `)` at exact positions — and counts EVERY content node as a
+  // wildcard position. So `f\WildCard[(\WildCard)]` matches the pre-parse
+  // token run `f ( a )` (single-token args only: `f(a+b)` does NOT match,
+  // its `)` sits past the position predicate), marking the base as the
+  // non-wildcard attribute carrier (nowrap) or wrapping the span in an
+  // XMDual whose content applies the decl-op to XMRefs of `(`/arg/`)`.
+  if let Some(idx) = body_text.find("\\WildCard[(") {
+    let base = body_text[..idx].trim().to_string();
+    let content = &body_text[idx + "\\WildCard[(".len()..];
+    if let Some(args) = content.strip_suffix(")]")
+      && !base.is_empty()
+    {
+      let parts: Vec<&str> = args.split(',').collect();
+      if parts.iter().all(|p| p.trim() == "\\WildCard") {
+        let nargs = parts.len();
+        let (base_pred, font_class) = base_text_predicate(&base);
+        // Sibling positions 2..=2n+2 (the whole parenthesized content) are
+        // wildcards, matching Perl's `$n = scalar(@children)` counting.
+        let span = 2 * nargs + 2;
+        let wpaths = (2..=span).map(|i| vec![i]).collect();
+        return DeclarePattern {
+          xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
+          pattern_type: "funcapply",
+          base_text: Some(base),
+          sub_text: Some(nargs.to_string()),
+          accent_name: None,
+          has_wildcard: true,
+          wildcard_paths: Some(wpaths),
+          font_class,
+        };
+      }
+    }
+  }
+
+  // === Leading wildcard with literal content: \WildCard[a]b, \WildCard[ab]c ===
+  // Perl digests `\WildCard[content]suffix` to [_WildCard_[tokens...], tokens...];
+  // domToXPath compiles the wildcard CONTENT as the leading match span (every
+  // content token a wildcard position — including the matched node itself,
+  // sibling 1) followed by the literal suffix tokens at exact positions. With
+  // nowrap, the attributes land on the first NON-wildcard node = the suffix.
+  if let Some(rest) = body_text.strip_prefix("\\WildCard[")
+    && let Some(close) = rest.find(']')
+  {
+    let content = &rest[..close];
+    let suffix = &rest[close + 1..];
+    if !content.is_empty()
+      && !suffix.is_empty()
+      && !content.contains('\\')
+      && !suffix.contains('\\')
+    {
+      let k = content.chars().count();
+      let first = content.chars().next().unwrap();
+      let wpaths = (1..=k).map(|i| vec![i]).collect();
+      return DeclarePattern {
+        xpath:          format!(
+          "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
+          first.to_string().replace('\'', "&apos;")
+        ),
+        pattern_type:   "leadwild",
+        base_text:      Some(content.to_string()),
+        sub_text:       Some(suffix.to_string()),
+        accent_name:    None,
+        has_wildcard:   true,
+        wildcard_paths: Some(wpaths),
+        font_class:     None,
+      };
+    }
+  }
+
+  // === Command application with wildcard args: \weird{\WildCard}{\WildCard} ===
+  // A DefMath-defined command (e.g. via \lxDefMath) digests each USE into an
+  // XMDual whose content arm is XMApp(XMTok[@name=cs], XMRef per arg). Perl
+  // digests the pattern itself (with _WildCard_ args) and domToXPath matches
+  // that dual; setAttributes_wild's single-XMDual branch then sets the
+  // attributes (decl_id) directly on the dual node — mirrored here by the
+  // "cmddual" Rust-side filter with no wildcard paths (nmatched=1).
+  if body_text.starts_with('\\')
+    && let Some(cmd_end) = body_text.find("{\\WildCard}")
+  {
+    let cmd = &body_text[1..cmd_end];
+    let rest = &body_text[cmd_end..];
+    if !cmd.is_empty() && cmd.chars().all(|c| c.is_ascii_alphabetic()) {
+      let nargs = rest.matches("{\\WildCard}").count();
+      if nargs >= 1 && rest == "{\\WildCard}".repeat(nargs) {
+        return DeclarePattern {
+          xpath:          "descendant-or-self::*[local-name()='XMDual']".to_string(),
+          pattern_type:   "cmddual",
+          base_text:      Some(cmd.to_string()),
+          sub_text:       Some(nargs.to_string()),
+          accent_name:    None,
+          has_wildcard:   true,
+          wildcard_paths: None,
+          font_class:     None,
+        };
+      }
     }
   }
 
@@ -658,10 +796,24 @@ LoadDefinitions!({
     // compile_replacement). Capture them (undigested) as an owned local so the
     // keyvals borrow is released before the whatsit is mutated below.
     let mut replace_tks_opt: Option<Tokens> = None;
+    let mut nowrap_flag = false;
+    let mut tag_digested: Option<Digested> = None;
+    let mut description_digested: Option<Digested> = None;
     if let Some(kv_arg) = whatsit.get_arg(2)
       && let DigestedData::KeyVals(kv) = kv_arg.data() {
         let hash = kv.get_hash_digested();
         replace_tks_opt = kv.get_value("replace").and_then(|a| a.revert().ok());
+        // Perl: nowrap => defined $kv->getValue('nowrap') — presence flag that
+        // routes setAttributes_wild to mark the non-wildcard base instead of
+        // wrapping the matched span in an XMDual. (Read here, before the
+        // set_property below ends the kv borrow.)
+        nowrap_flag = kv.get_value("nowrap").is_some();
+        // DIGESTED tag/description values for normalizeDeclareKeys below —
+        // a description like `$x$: a real variable` contains a real math box
+        // that must survive to the <ltx:declare> term tag (Perl inserts the
+        // boxes; the term Math is then subject to the declaration rewrites).
+        tag_digested = kv.get_value_digested("tag").cloned();
+        description_digested = kv.get_value_digested("description").cloned();
         if let Some(v) = hash.get("role") { role = v.clone(); }
         if let Some(v) = hash.get("name") { name_val = v.clone(); }
         if let Some(v) = hash.get("meaning") { meaning = v.clone(); }
@@ -674,6 +826,51 @@ LoadDefinitions!({
       }
     if let Some(replace_tks) = replace_tks_opt {
       whatsit.set_property("replace_tokens", Stored::Tokens(replace_tks));
+    }
+    if nowrap_flag {
+      whatsit.set_property("nowrap", Stored::from("1".to_string()));
+    }
+    // Perl normalizeDeclareKeys (latexml.sty.ltxml L417-434): synthesize
+    // term/short/description for the <ltx:declare> element out of the
+    // digested tag/description values. splitDeclareTag: boxes before the
+    // first ':' box become the TERM (typically math), the rest the
+    // description; `short` is the tag when a description is present.
+    {
+      let split = |stuff: &Digested| -> (Option<Vec<Digested>>, Option<Vec<Digested>>) {
+        let boxes = stuff.unlist();
+        match boxes
+          .iter()
+          .position(|b| b.get_string().map(|s| s.trim() == ":").unwrap_or(false))
+        {
+          Some(pos) => (Some(boxes[..pos].to_vec()), Some(boxes[pos + 1..].to_vec())),
+          None => (None, None),
+        }
+      };
+      let stuff = description_digested.as_ref().or(tag_digested.as_ref());
+      let (term, mut desc) = stuff.map(split).unwrap_or((None, None));
+      let short: Option<Vec<Digested>> = if description_digested.is_some() {
+        tag_digested
+          .as_ref()
+          .map(|d| d.unlist())
+          .or_else(|| desc.clone())
+      } else {
+        None
+      };
+      if desc.is_none() {
+        desc = description_digested
+          .as_ref()
+          .or(tag_digested.as_ref())
+          .map(|d| d.unlist());
+      }
+      if let Some(t) = term {
+        whatsit.set_property("term_boxes", Stored::VecDigested(t));
+      }
+      if let Some(s) = short {
+        whatsit.set_property("short_boxes", Stored::VecDigested(s));
+      }
+      if let Some(d) = desc {
+        whatsit.set_property("desc_boxes", Stored::VecDigested(d));
+      }
     }
     // Extract body text from arg 3 (the {} body)
     let body_text = whatsit.get_arg(3)
@@ -836,20 +1033,57 @@ LoadDefinitions!({
       .get_property("replace_tokens")
       .and_then(|v| if let Stored::Tokens(t) = v.as_ref() { Some(t.clone()) } else { None });
 
-    // Create <ltx:declare> element if id is set (tag or description present)
+    // Create <ltx:declare> element if id is set (tag or description present).
+    // Perl (latexml.sty.ltxml L474-485): <tags><tag role="term">…</tag>
+    // <tag role="short">…</tag></tags> then <text>description</text>, all from
+    // the DIGESTED boxes (normalizeDeclareKeys in afterDigest) — a `$x$: …`
+    // description term renders as real Math and is itself subject to the
+    // declaration rewrites.
     if !decl_id.is_empty() {
-      let desc = whatsit.get_property("description").map(|v| v.to_string()).unwrap_or_default();
+      let term_boxes = match whatsit.get_property("term_boxes").as_deref() {
+        Some(Stored::VecDigested(v)) => Some(v.clone()),
+        _ => None,
+      };
+      let short_boxes = match whatsit.get_property("short_boxes").as_deref() {
+        Some(Stored::VecDigested(v)) => Some(v.clone()),
+        _ => None,
+      };
+      let desc_boxes = match whatsit.get_property("desc_boxes").as_deref() {
+        Some(Stored::VecDigested(v)) => Some(v.clone()),
+        _ => None,
+      };
       // Perl: floatToElement('ltx:declare') positions at a container that accepts <declare>
       let saved = document.float_to_element("ltx:declare", false)?;
       let mut attrs_map = HashMap::default();
       attrs_map.insert("xml:id".to_string(), decl_id.clone());
       let _decl_node = document.open_element("ltx:declare", Some(attrs_map), None)?;
-      if !desc.is_empty() {
-        // Insert description text in <ltx:text>
+      if term_boxes.is_some() || short_boxes.is_some() {
+        document.open_element("ltx:tags", None, None)?;
+        if let Some(term) = term_boxes {
+          let mut tag_attrs = HashMap::default();
+          tag_attrs.insert("role".to_string(), "term".to_string());
+          document.open_element("ltx:tag", Some(tag_attrs), None)?;
+          for b in &term {
+            document.absorb(b, None)?;
+          }
+          document.close_element("ltx:tag")?;
+        }
+        if let Some(short) = short_boxes {
+          let mut tag_attrs = HashMap::default();
+          tag_attrs.insert("role".to_string(), "short".to_string());
+          document.open_element("ltx:tag", Some(tag_attrs), None)?;
+          for b in &short {
+            document.absorb(b, None)?;
+          }
+          document.close_element("ltx:tag")?;
+        }
+        document.close_element("ltx:tags")?;
+      }
+      if let Some(desc) = desc_boxes {
         let _text_node = document.open_element("ltx:text", None, None)?;
-        // Add text content directly to the current node
-        let font = lookup_font().unwrap_or_default();
-        document.open_text(&desc, &font)?;
+        for b in &desc {
+          document.absorb(b, None)?;
+        }
         document.close_element("ltx:text")?;
       }
       document.close_element("ltx:declare")?;
@@ -858,8 +1092,12 @@ LoadDefinitions!({
       }
     }
 
-    // Create rewrite rule
-    let has_annotation = !role.is_empty() || !name_val.is_empty() || !meaning.is_empty();
+    // Create rewrite rule. Perl createDeclarationRewrite builds the rule from
+    // whatever attributes exist — role/name/meaning AND decl_id alike — so a
+    // tag-only declaration (e.g. `\lxDeclare[nowrap,tag={bafter}]{$\WildCard[a]b$}`)
+    // still marks its matches with decl_id.
+    let has_annotation =
+      !role.is_empty() || !name_val.is_empty() || !meaning.is_empty() || !decl_id.is_empty();
     if !body_text.is_empty() && (has_annotation || replace_tokens.is_some()) {
       use latexml_core::rewrite::{Rewrite, RewriteOptions};
       use rustc_hash::FxHashMap;
@@ -898,6 +1136,12 @@ LoadDefinitions!({
       if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
       if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
       if !decl_id.is_empty() { attrs.insert("decl_id".to_string(), decl_id); }
+      // Perl createDeclarationRewrite: ($nowrap ? (_nowrap => $nowrap) : ()) —
+      // read by set_attributes_wild; underscore-prefixed so it is never
+      // serialized onto the document.
+      if whatsit.get_property("nowrap").is_some() {
+        attrs.insert("_nowrap".to_string(), "1".to_string());
+      }
       // Compile pattern: determine XPath, type, filters, wildcard paths.
       // Font-awareness is applied Rust-side (declare_node_matches for the
       // rewrite path, apply_lx_declarations for the post-rewrite fast path) —
@@ -930,7 +1174,8 @@ LoadDefinitions!({
         Warn!(
           "unexpected",
           "lxDeclare",
-          "\\lxDeclare pattern not recognized by the rewrite compiler; declaration will not match"
+          "\\lxDeclare pattern not recognized by the rewrite compiler; declaration will not match",
+          format!("pattern: '{body_text}'")
         );
       } else {
         // Store pattern metadata in attrs for Rust-side filtering in Select handler
@@ -950,14 +1195,10 @@ LoadDefinitions!({
         if has_wildcard {
           attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
         }
-        // Pattern types determine select_count:
+        // Pattern types determine select_count (see DeclarePattern::select_count):
         // Subscript/prime patterns match base XMTok + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling
         // (select_count=2, pre-parsed DOM). Accent patterns match the single XMApp.
-        let select_count = match pat.pattern_type {
-          "literal_subscript" | "prime" | "subscript" => Some(2usize),
-          "accent" => Some(1usize),
-          _ => None,
-        };
+        let select_count = pat.select_count();
         // Perl createDeclarationRewrite: `replace` and `attributes` are
         // mutually exclusive. A `replace=` declaration digests its replacement
         // pattern at rewrite time (compile_replacement) rather than marking
@@ -1067,6 +1308,34 @@ LoadDefinitions!({
 
   // Perl latexml.sty L354-371: \lxDefMath{\name}[nargs][optional]{presentation}[keyvals]
   // Defines a math macro with semantic annotations (name, meaning, role, etc.)
+  // Perl latexml.sty.ltxml L385-405: \@lxDefMathDeclare{id}{description} —
+  // the declare-element half of a tagged \lxDefMath. Perl passes the raw
+  // keyvals and derives term/short/description via normalizeDeclareKeys; the
+  // Rust shim pre-resolves the description tokens (tag || description) and
+  // digests them as the ltx:text content (so embedded math renders — and its
+  // tokens are subject to the declaration rewrites, like any document math).
+  DefConstructor!("\\@lxDefMathDeclare {} {}", "",
+  mode => "restricted_horizontal",
+  reversion => "",
+  after_construct => sub[document, whatsit] {
+    let id = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
+    if !id.is_empty() {
+      let saved = document.float_to_element("ltx:declare", false)?;
+      let mut attrs_map = HashMap::default();
+      attrs_map.insert("xml:id".to_string(), id);
+      document.open_element("ltx:declare", Some(attrs_map), None)?;
+      if let Some(desc) = whatsit.get_arg(2) {
+        document.open_element("ltx:text", None, None)?;
+        document.absorb(desc, None)?;
+        document.close_element("ltx:text")?;
+      }
+      document.close_element("ltx:declare")?;
+      if let Some(ref save) = saved {
+        document.set_node(save);
+      }
+    }
+  });
+
   DefPrimitive!("\\lxDefMath {} [Number] [] {} OptionalKeyVals:XMath", sub[(cs, nargs, opt, presentation, params_opt)] {
     let cs_name = cs.to_string();
     let n = nargs.value_of() as usize;
@@ -1078,17 +1347,43 @@ LoadDefinitions!({
       revert_as: Some(Cow::Borrowed("context")),
       ..Default::default()
     };
+    // Perl L374-380: tag/description ⇒ allocate a decl_id (next_declaration_id),
+    // pass it to DefMathI (every use-site token/dual-op then carries decl_id at
+    // digestion), and Digest a follow-up \@lxDefMathDeclare{id}{desc} whose
+    // whatsit emits the <ltx:declare> element.
+    let mut desc_tks_opt: Option<Tokens> = None;
+    let mut needs_id = false;
     if let Some(kv) = params_opt.as_ref() {
       if let Some(v) = kv.get_value("name") { opts.name = Some(v.to_string()); }
       if let Some(v) = kv.get_value("meaning") { opts.meaning = Some(v.to_string()); }
       if let Some(v) = kv.get_value("role") { opts.role = Some(v.to_string()); }
       if let Some(v) = kv.get_value("cd") { opts.omcd = Some(v.to_string()); }
       if let Some(v) = kv.get_value("alias") { opts.alias = Some(v.to_string()); }
+      let tag_tks: Option<Tokens> = kv.get_value("tag").and_then(|a| a.revert().ok());
+      let desc_tks: Option<Tokens> = kv.get_value("description").and_then(|a| a.revert().ok());
+      needs_id = tag_tks.is_some() || desc_tks.is_some();
+      desc_tks_opt = desc_tks.or(tag_tks);
     }
-    // Perl also extracts `scope` / detects `tag`/`description` keyvals to allocate
-    // a decl_id and Digest a follow-up `\@lxDefMathDeclare` invocation. Neither is
-    // wired through the Rust DefPrimitive shim yet — needs `next_declaration_id`
-    // helper + the \@lxDefMathDeclare constructor port. Track separately.
+    let mut declare_box: Option<Digested> = None;
+    if needs_id {
+      // Perl next_declaration_id(): StepCounter('@XMDECL') + \the@XMDECL@ID
+      step_counter("@XMDECL", false)?;
+      let id = do_expand(T_CS!("\\the@XMDECL@ID"))
+        .ok().map(|t| t.to_string().trim().to_string())
+        .unwrap_or_default();
+      if !id.is_empty() {
+        opts.decl_id = Some(id.clone());
+        let mut inv: Vec<Token> = vec![T_CS!("\\@lxDefMathDeclare"), T_BEGIN!()];
+        inv.extend(ExplodeText!(&id));
+        inv.push(T_END!());
+        inv.push(T_BEGIN!());
+        if let Some(ref d) = desc_tks_opt {
+          inv.extend(d.unlist_ref().iter().cloned());
+        }
+        inv.push(T_END!());
+        declare_box = Some(digest(Tokens::new(inv))?);
+      }
+    }
     // Build parameter spec for n args
     use latexml_core::common::def_parser::parse_parameters;
     let params = if n > 0 {
@@ -1105,6 +1400,8 @@ LoadDefinitions!({
       presentation_str,
       opts,
     )?;
+    // Perl: return Digest(Invocation('\@lxDefMathDeclare', $id, $params))
+    declare_box.map(|b| vec![b]).unwrap_or_default()
   });
 
   // Perl latexml.sty L106-108: \URL[text]{href}
