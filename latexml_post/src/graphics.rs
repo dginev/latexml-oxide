@@ -934,21 +934,32 @@ impl Graphics {
     };
     // Drain stderr concurrently into a bounded (8 KiB) buffer so the child never
     // blocks on a full pipe; joined after it exits.
+    // The drained text comes back over a channel so the parent can WAIT
+    // BOUNDED: a converter descendant that survives the kill while holding
+    // stderr open must not hang the worker past the timeout (the reader
+    // thread is simply abandoned; it exits at pipe EOF).
+    let (stderr_tx, stderr_rx) = std::sync::mpsc::channel::<String>();
     let stderr_reader = child.stderr.take().map(|mut se| {
       std::thread::spawn(move || {
         use std::io::Read;
         let mut kept: Vec<u8> = Vec::new();
         let mut chunk = [0u8; 4096];
-        while let Ok(n) = se.read(&mut chunk) {
-          if n == 0 {
-            break;
-          }
-          if kept.len() < 8192 {
-            let room = 8192 - kept.len();
-            kept.extend_from_slice(&chunk[..n.min(room)]);
+        loop {
+          match se.read(&mut chunk) {
+            Ok(0) => break,
+            Ok(n) => {
+              if kept.len() < 8192 {
+                let room = 8192 - kept.len();
+                kept.extend_from_slice(&chunk[..n.min(room)]);
+              }
+            },
+            // EINTR is not EOF — treating it as terminal stopped the drain
+            // and let a chatty converter block on the full pipe.
+            Err(e) if e.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(_) => break,
           }
         }
-        String::from_utf8_lossy(&kept).trim().to_string()
+        let _ = stderr_tx.send(String::from_utf8_lossy(&kept).trim().to_string());
       })
     });
     let pid = child.id() as i32;
@@ -1001,11 +1012,23 @@ impl Graphics {
     // error (e.g. `/undefinedfilename` under an AppArmor denial) to stderr yet
     // still exit 0, so a non-empty stderr is always worth surfacing — not only
     // on a non-zero exit.
-    let stderr_text = stderr_reader
-      .and_then(|h| h.join().ok())
-      .unwrap_or_default();
+    let stderr_text = if stderr_reader.is_some() {
+      // Exited child → EOF imminent; killed child → give the drain a short
+      // grace, then abandon the reader rather than hang the worker.
+      let grace = if status.is_some() {
+        std::time::Duration::from_secs(10)
+      } else {
+        std::time::Duration::from_secs(2)
+      };
+      stderr_rx.recv_timeout(grace).unwrap_or_default()
+    } else {
+      String::new()
+    };
     if !stderr_text.is_empty() {
-      record_converter_diag(format!("`{prog}`: {stderr_text}"));
+      // Flatten newlines: gs prints `Error: ...` at column 0 mid-diagnostic,
+      // which would inflate line-anchored ^Error: log counts.
+      let flat = stderr_text.replace('\n', "; ");
+      record_converter_diag(format!("`{prog}`: {flat}"));
     } else if status.map(|s| !s.success()).unwrap_or(true) {
       let how = match status {
         Some(s) => format!("exited {s}"),

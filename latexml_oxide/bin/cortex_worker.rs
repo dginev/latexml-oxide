@@ -453,16 +453,15 @@ impl LatexmlWorker {
     // incl. silent EPS→PNG failures) after the core conversion log so post-phase messages reach
     // cortex.log and the dashboard reports — the Rust equivalent of Perl LaTeXML's single
     // `flush_log()` after `convert_post`. Omit the segment (no blank line) when post logged nothing.
+    // Trim trailing newlines before joining so already-terminated segments
+    // don't produce blank separator lines (cosmetic, but the log-noise class
+    // 5f3c4a0566 removed).
+    let core_log = response.log.trim_end_matches('\n');
     let log = if post.log.is_empty() {
-      format!(
-        "{}\nInfo:runtime_ms:{runtime_ms}\n{}",
-        response.log, status_str
-      )
+      format!("{core_log}\nInfo:runtime_ms:{runtime_ms}\n{status_str}")
     } else {
-      format!(
-        "{}\n{}\nInfo:runtime_ms:{runtime_ms}\n{}",
-        response.log, post.log, status_str
-      )
+      let post_log = post.log.trim_end_matches('\n');
+      format!("{core_log}\n{post_log}\nInfo:runtime_ms:{runtime_ms}\n{status_str}")
     };
 
     // 7. Finalize per-job telemetry. Phase counters were populated by the converter/post guards;

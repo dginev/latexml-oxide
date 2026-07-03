@@ -63,7 +63,20 @@ pub struct CapturedDiagnostics {
 ///
 /// Assumes the worker thread has no pre-bound buffer (the spawned post-processing
 /// pool threads start clean); it does not save/restore a prior binding.
+///
+/// INVARIANTS (unenforced by types; guard the fleet's canonical signal):
+/// - one `capture` per thread lifetime — `bind_log()` CLOBBERS any pre-bound
+///   buffer, and `snapshot_report_counts` does not reset, so reusing capture
+///   on a pooled thread would drop earlier text and double-merge counts;
+/// - callers must `replay_captured` the result on the MAIN thread exactly
+///   once (a panicking worker never returns, losing its pre-panic capture —
+///   the real-time stderr echo retains it, and the caller's worker_panicked
+///   Error keeps status from reading clean).
 pub fn capture<R>(f: impl FnOnce() -> R) -> (R, CapturedDiagnostics) {
+  debug_assert!(
+    LOG_BUFFER.try_borrow().map(|b| b.is_none()).unwrap_or(false),
+    "logger::capture on a thread with a pre-bound buffer — pooled-thread reuse?"
+  );
   bind_log();
   let result = f();
   let log = flush_log();
@@ -78,6 +91,10 @@ pub fn capture<R>(f: impl FnOnce() -> R) -> (R, CapturedDiagnostics) {
 /// each line to the shared stderr fd in real time, so this does NOT re-print to
 /// stderr — it only repairs the captured log + status tally.
 pub fn replay_captured(d: CapturedDiagnostics) {
+  debug_assert!(
+    LOG_BUFFER.try_borrow().is_ok(),
+    "replay_captured: LOG_BUFFER contended — captured text would be dropped"
+  );
   if !d.log.is_empty()
     && let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
     && let Some(ref mut log) = *buf
