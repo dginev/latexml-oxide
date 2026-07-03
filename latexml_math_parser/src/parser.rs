@@ -1246,31 +1246,51 @@ impl MathParser {
       if tag == pin!("ltx:XMArg") {
         self.parse_rec(child, "Anything", document)?;
       } else if tag == pin!("ltx:XMWrap") {
-        if child.has_attribute("_rewrite") {
-          // Rewrite-created XMWrap: parse inner structure (subscripts etc.) but
-          // the XMWrap's role overrides whatever the inner parse produces.
-          // Temporarily remove role so parse_rec doesn't emit start_ROLE/end_ROLE
-          // tokens (the grammar only handles script roles).
-          let saved_role = child.get_attribute("role");
-          let mut c = child.clone();
-          if saved_role.is_some() {
-            c.remove_attribute("role").ok();
-          }
-          match self.parse_rec(child, "Anything", document)? {
-            Some(mut result) => {
-              if let Some(ref role) = saved_role {
-                result.set_attribute("role", role).ok();
-              }
-            },
-            _ => {
-              if let Some(ref role) = saved_role {
-                // Parse failed — XMWrap still in DOM, restore role
-                c.set_attribute("role", role).ok();
-              }
-            },
-          }
-        } else {
-          self.parse_rec(child, "Anything", document)?;
+        // The XMWrap's role overrides whatever the inner parse produces, and
+        // must NOT reach the lexer: node_to_grammar_lexemes would emit
+        // start_ROLE/end_ROLE wrapper tokens, and the grammar only consumes
+        // the SCRIPT roles (POSTSUB/POSTSUPER/BIGOPSUB/BIGOPSUP/FLOAT*) — a
+        // non-script role like RELOP guaranteed a failed sub-parse. This bit
+        // rewrite-created XMWraps first (fixed then only for _rewrite); plain
+        // constructor XMWraps (\mathrel{\mathop{=}\limits^{def}} → XMWrap
+        // role=RELOP) failed the same way and fell to the kludge, where Perl
+        // parses the script application and hoists the role (PR_READINESS
+        // F19). Strip any NON-script role for the sub-parse, re-apply after.
+        let saved_role = child.get_attribute("role").filter(|r| {
+          !matches!(
+            r.as_str(),
+            "POSTSUBSCRIPT"
+              | "POSTSUPERSCRIPT"
+              | "BIGOPSUB"
+              | "BIGOPSUP"
+              | "FLOATSUPERSCRIPT"
+              | "FLOATSUBSCRIPT"
+              | "ARROW"
+          )
+        });
+        let mut c = child.clone();
+        if saved_role.is_some() {
+          c.remove_attribute("role").ok();
+        }
+        match self.parse_rec(child, "Anything", document)? {
+          Some(mut result) => {
+            if let Some(ref role) = saved_role {
+              result.set_attribute("role", role).ok();
+              // The replacement is a pre-parsed structure standing in for one
+              // grammatical atom (e.g. XMApp for `\mathop{A}\limits_B`, role
+              // BIGOP). Mark it `_rewrite` so node_to_grammar_lexemes lexes it
+              // as ONE terminal with this role — recursing would emit
+              // start_BIGOP + prefix-form children, which no rule consumes
+              // (nested-\mathop repro: testscripts S0.Ex4).
+              result.set_attribute("_rewrite", "1").ok();
+            }
+          },
+          _ => {
+            if let Some(ref role) = saved_role {
+              // Parse failed — XMWrap still in DOM, restore role
+              c.set_attribute("role", role).ok();
+            }
+          },
         }
       } else if tag == pin!("ltx:XMApp")
         || tag == pin!("ltx:XMArray")

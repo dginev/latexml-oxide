@@ -133,15 +133,22 @@ fn node_to_grammar_lexemes_ctx(
         lexemes.push(lexeme);
         nodes.push(node);
       } else if node.has_attribute("_rewrite") {
-        // Rewrite-created: treat as atomic token with the assigned role.
-        // Don't recurse — the inner structure was pre-parsed, and the role
-        // on this node overrides whatever the children contain.
+        // Rewrite-created or a parse_children replacement: treat as atomic
+        // token with the assigned role. Don't recurse — the inner structure
+        // was pre-parsed, and the role on this node overrides whatever the
+        // children contain. An atomic bigop (e.g. `\mathop{...}` → BIGOP)
+        // must set bigop context so a following script lexes as
+        // BIGOPSUB/BIGOPSUP, same as the plain-token arm below.
         let gram_role = get_grammatical_role(&node);
         let mut text = get_token_meaning(&node);
         if text.is_empty() {
           text = "UNKNOWN".to_string();
         }
         *idx += 1;
+        last_was_bigop = matches!(
+          gram_role.as_str(),
+          "SUMOP" | "INTOP" | "LIMITOP" | "DIFFOP" | "BIGOP"
+        );
         lexemes.push(format!("{gram_role}:{text}:{idx}").replace(' ', ""));
         nodes.push(node);
       } else {
