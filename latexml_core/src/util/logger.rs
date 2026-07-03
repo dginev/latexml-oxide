@@ -74,7 +74,10 @@ pub struct CapturedDiagnostics {
 ///   Error keeps status from reading clean).
 pub fn capture<R>(f: impl FnOnce() -> R) -> (R, CapturedDiagnostics) {
   debug_assert!(
-    LOG_BUFFER.try_borrow().map(|b| b.is_none()).unwrap_or(false),
+    LOG_BUFFER
+      .try_borrow()
+      .map(|b| b.is_none())
+      .unwrap_or(false),
     "logger::capture on a thread with a pre-bound buffer — pooled-thread reuse?"
   );
   bind_log();

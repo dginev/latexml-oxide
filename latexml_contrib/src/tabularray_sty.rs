@@ -247,10 +247,7 @@ mod tests {
   #[test]
   fn bare_colspec_shorthand() {
     // A mandatory arg with no top-level `=` IS the colspec.
-    assert_eq!(
-      translate_tblr_colspec("Q[c]Q[c]"),
-      Some("cc".to_string())
-    );
+    assert_eq!(translate_tblr_colspec("Q[c]Q[c]"), Some("cc".to_string()));
     assert_eq!(translate_tblr_colspec("|c|c|"), Some("|c|c|".to_string()));
   }
 

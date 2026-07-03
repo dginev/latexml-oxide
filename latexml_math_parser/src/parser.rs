@@ -939,7 +939,11 @@ impl MathParser {
         // Allocation can fail under fleet memory pressure (same class as
         // new_script_node) — degrade loudly and keep the original ref.
         let Ok(mut new_app) = Node::new("XMApp", None, &document.document) else {
-          Error!("misc", "allocation", "XML node allocation failed (XMApp); keeping XMRef as-is");
+          Error!(
+            "misc",
+            "allocation",
+            "XML node allocation failed (XMApp); keeping XMRef as-is"
+          );
           continue;
         };
         for (name, value) in &attrs {
@@ -949,7 +953,11 @@ impl MathParser {
           let _ = new_app.set_namespace(ns);
         }
         let Ok(mut xmref) = Node::new("XMRef", None, &document.document) else {
-          Error!("misc", "allocation", "XML node allocation failed (XMRef); keeping XMRef as-is");
+          Error!(
+            "misc",
+            "allocation",
+            "XML node allocation failed (XMRef); keeping XMRef as-is"
+          );
           continue;
         };
         let _ = xmref.set_attribute("idref", &script_id);
@@ -1352,7 +1360,11 @@ impl MathParser {
               None => match Node::new_text("", &document.document) {
                 Ok(n) => n,
                 Err(_) => {
-                  Error!("misc", "allocation", "XML text-node allocation failed; skipping group");
+                  Error!(
+                    "misc",
+                    "allocation",
+                    "XML text-node allocation failed; skipping group"
+                  );
                   continue;
                 },
               },
@@ -2536,7 +2548,11 @@ fn new_script_node(
 /// fail under fleet memory pressure — degrade loudly, caller skips the pair.
 fn new_absent_node(document: &mut Document) -> Result<Option<Node>> {
   let Ok(mut tok) = Node::new("XMTok", None, document.get_document()) else {
-    Error!("misc", "allocation", "XML node allocation failed (absent XMTok)");
+    Error!(
+      "misc",
+      "allocation",
+      "XML node allocation failed (absent XMTok)"
+    );
     return Ok(None);
   };
   tok.set_attribute("meaning", "absent").ok();

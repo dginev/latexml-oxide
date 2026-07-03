@@ -406,8 +406,14 @@ pub(super) fn pmml_for_ci(doc: &PostDocument, node: &Node) -> NodeData { pmml(do
 /// the previous conversion left (audit should-fix 11).
 pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
   CURRENT_STYLE.with(|s| s.set(MathStyle::Text));
-  ctx_set(&CTX_FONT, super::find_inherited_attribute(doc, xmath, "font"));
-  ctx_set(&CTX_COLOR, super::find_inherited_attribute(doc, xmath, "color"));
+  ctx_set(
+    &CTX_FONT,
+    super::find_inherited_attribute(doc, xmath, "font"),
+  );
+  ctx_set(
+    &CTX_COLOR,
+    super::find_inherited_attribute(doc, xmath, "color"),
+  );
   ctx_set(
     &CTX_BGCOLOR,
     super::find_inherited_attribute(doc, xmath, "backgroundcolor"),
