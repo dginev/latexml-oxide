@@ -476,15 +476,20 @@ LoadDefinitions!({
   def_macro_noop("\\DOTSX")?;
   Let!("\\hdots", "\\lx@ldots");
 
-  // Perl amsmath.sty.ltxml L844: `DefMacro('\hdotsfor Number', sub { (map
-  // { T_CS('\hdots') } 1..$_[1]->valueOf) })` — a gullet-level macro
-  // expanding to N `\hdots` tokens. Matching Perl's DefMacro kind (was
-  // DefPrimitive with gullet::unread; observationally similar but the
-  // macro form means `\edef\x{\hdotsfor{3}}` fully resolves, whereas a
-  // primitive would leave `\hdotsfor` unexpanded).
-  DefMacro!("\\hdotsfor Number", sub[(n)] {
+  // Perl amsmath.sty.ltxml (upstream #2837): `\hdotsfor[]{Number}` spans N
+  // alignment columns — expand to N `\hdots` separated by alignment tabs so
+  // the dots occupy N cells (previously N `\hdots` piled into ONE cell).
+  // The optional argument (visual dot spacing) is ignored, as upstream.
+  // Still a gullet-level DefMacro (not a primitive) so `\edef` resolves it.
+  DefMacro!("\\hdotsfor [] {Number}", sub[(_opt, n)] {
     let count = n.value_of().max(1) as usize;
-    let toks: Vec<Token> = (0..count).flat_map(|_| vec![T_CS!("\\hdots")]).collect();
+    let mut toks: Vec<Token> = Vec::with_capacity(2 * count - 1);
+    for i in 0..count {
+      if i > 0 {
+        toks.push(T_ALIGN!());
+      }
+      toks.push(T_CS!("\\hdots"));
+    }
     Ok(Tokens::new(toks))
   });
 

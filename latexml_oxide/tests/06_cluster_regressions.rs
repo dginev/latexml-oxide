@@ -649,3 +649,24 @@ fn cluster_biblatex_authoryear() {
     "numeric doc must not get author-year tags:\n{x}"
   );
 }
+
+/// Upstream LaTeXML #2837: `\hdotsfor[]{N}` spans N alignment columns (the
+/// dots row gets N cells, `\hdots & … & \hdots`), instead of piling N
+/// `\hdots` into one cell. 3+3+3 cells in the first matrix + 2+2 in the
+/// second = 13 mtds, 5 of them dots. The optional spacing arg is consumed
+/// and ignored, matching upstream.
+#[test]
+fn cluster_hdotsfor_columns() {
+  let x = convert_to_xml("tests/cluster_regressions/hdotsfor.tex");
+  // The harness returns the pre-XSLT XML, so count XMath cells.
+  let cells = x.matches("<XMCell").count() + x.matches("<mtd").count();
+  assert_eq!(
+    cells, 13,
+    "\\hdotsfor must span its column count (9 + 4 cells), got:\n{x}"
+  );
+  assert_eq!(
+    x.matches('\u{2026}').count(),
+    5,
+    "expected 3 + 2 dots cells, got:\n{x}"
+  );
+}
