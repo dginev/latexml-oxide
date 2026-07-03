@@ -473,3 +473,69 @@ fn cluster_mhchem_ce_subscripts() {
 fn cluster_theindex_nested_autoclose() {
   convert_clean("tests/cluster_regressions/theindex_nested_autoclose.tex");
 }
+
+/// Convert with the ar5iv profile preloaded — the production route that sets
+/// `bibconfig=bbl,bib` PROGRAMMATICALLY (`ar5iv_sty.rs`). It cannot be set
+/// from TeX source: `\usepackage[bibconfig={bbl,bib}]{latexml}` naive-splits
+/// at the comma in BOTH engines (Perl `TrimmedCommaList` is not brace-aware),
+/// leaving `['bbl']`.
+fn convert_to_xml_ar5iv(source: &str) -> String {
+  let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+  let cfg = Config {
+    format: OutputFormat::HTML5,
+    preload: Some(vec!["ar5iv.sty".to_string()]),
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+    ..Config::default()
+  };
+  let mut c = Converter::from_config(cfg);
+  c.initialize_session().expect("initialize");
+  let r = c.convert(source.to_string());
+  r.result
+    .unwrap_or_else(|| panic!("{source}: conversion produced no result"))
+}
+
+/// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
+/// decision seam behind `\bibliography`. The clauses are arbitrary tokens, so
+/// marker text pins WHICH phase was chosen without running the full BibTeX
+/// pipeline. Covers the cb8b648784 fallback (bbl-first config + no .bbl on
+/// disk → use the real .bib) and Perl's first-phase-only rule.
+#[test]
+fn cluster_bbl_bib_precedence() {
+  // Default config ['bib','bbl']: refs.bib AND <jobname>.bbl both exist —
+  // the bib phase is first and all bibs exist → BIB wins.
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/both.tex");
+  assert!(
+    x.contains("BIBCHOSEN") && !x.contains("BBLCHOSEN"),
+    "default config with both files should choose bib, got:\n{x}"
+  );
+  // Default config, requested norefs.bib is MISSING but <jobname>.bbl exists
+  // → falls to the bbl clause (Perl: "Couldn't find all bib files").
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblwins.tex");
+  assert!(
+    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "default config with missing .bib should choose bbl, got:\n{x}"
+  );
+  // nobibtex config ['bbl'] with <jobname>.bbl on disk → BBL wins,
+  // even though refs.bib also exists.
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblfirst.tex");
+  assert!(
+    x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "nobibtex config with .bbl present should choose bbl, got:\n{x}"
+  );
+  // nobibtex config ['bbl'] and NO <jobname>.bbl: Perl's first-phase-only
+  // rule — no 'bib' phase configured, so NEITHER clause fires (empty +
+  // Info:expected:bbl), not a spurious empty bibliography.
+  let x = convert_to_xml("tests/cluster_regressions/bblbib/bblnone.tex");
+  assert!(
+    !x.contains("BBLCHOSEN") && !x.contains("BIBCHOSEN"),
+    "nobibtex config without .bbl should choose neither, got:\n{x}"
+  );
+  // ar5iv profile (bibconfig=bbl,bib) but NO <jobname>.bbl: falls through to
+  // the configured bib phase because refs.bib exists (cb8b648784; witness
+  // 2605.16562 — refs.bib and no .bbl under the ar5iv fleet profile).
+  let x = convert_to_xml_ar5iv("tests/cluster_regressions/bblbib/bblfallback.tex");
+  assert!(
+    x.contains("BIBCHOSEN") && !x.contains("BBLCHOSEN"),
+    "ar5iv bbl-first config without .bbl should fall back to bib, got:\n{x}"
+  );
+}

@@ -108,19 +108,26 @@ invalidates a whole commit. But the review surfaced a clear pre-PR fix list,
 dominated by two themes: **silent-degradation paths** (against the project's
 fail-toward-flagging rule) and **live-confirmed one-line output bugs**.
 
-> **STATUS 2026-07-03: ALL items below are COMPLETE** — must-fix 1-7,
+> **STATUS 2026-07-03 (final): ALL items below are COMPLETE** — must-fix 1-7,
 > should-fix 8-13, and the actionable backlog (fixture set, reproducer
 > promotion, KPE entries, contract docs, corner-case batches) landed as the
 > `a22780aceb`..HEAD commit series; suite green + workspace clippy clean
-> throughout. F19 (math parser) and the lxDeclare dead-predicate core are
-> now ALSO fixed (see below / SYNC_STATUS). Remaining OPEN (deliberately):
-> lxDeclare residual pattern families (S4/S6/S7 compile arms), the bbl/bib
-> precedence fixture and a cyclic-box unit test (low-value residual test
-> debt), the F5 linebreaker release-time decision, and the 10k A/B
-> (post-fleet). Notable extras found while fixing: the cluster-test
-> harness lacked the binaries' contrib dispatcher (mhchem et al. were
-> invisible to tests); `touch latexml_oxide/build.rs` re-runs fixture
-> discovery without a full cargo clean.
+> throughout. F19 (math parser) is fixed; the lxDeclare dead-predicate class
+> is CLOSED at exact Perl parity (declare.xml 84/84, per-declaration — see
+> SYNC_STATUS). The bbl/bib precedence matrix is now a 5-case fixture test
+> (`cluster_bbl_bib_precedence`, incl. the ar5iv-preload fallback route —
+> note `bibconfig={bbl,bib}` is NOT expressible as a `\usepackage` option in
+> EITHER engine: Perl's TrimmedCommaList naive-splits too; ar5iv sets it
+> programmatically). The "cyclic-box unit test" item was STALE: the
+> CycleGuard algorithm has 8 unit tests (cycle_guard.rs) and
+> cycle_fingerprint/estimate_bytes 4 more (digested.rs), all landed with the
+> PR #249 review; only a slow stomach-seam runaway fixture would add
+> coverage, declined (guards corpus-validated, 0 false positives / 10k).
+> Remaining OPEN (deliberately): the F5 linebreaker release-time decision
+> and the 10k A/B (post-fleet). Notable extras found while fixing: the
+> cluster-test harness lacked the binaries' contrib dispatcher (mhchem et
+> al. were invisible to tests); `touch latexml_oxide/build.rs` re-runs
+> fixture discovery without a full cargo clean.
 
 ### Corpus 1k A/B — branch vs main (2026-07-03): PASS
 
@@ -168,8 +175,8 @@ F19 alters MathML parse shapes, not the error/fatal signal.
 13. tabularray: bare-colspec shorthand arm + total-column/depth caps.
 
 **Backlog (document, fixture, or upstream):**
-- Missing-test debt called out in all three clusters — highest value: a MathML golden set (colored frac/cancel, array-comma, cfrac, --contentmathml pair), a `\ce{H2O}` fixture, noexpand reproducers promoted to suite, bbl/bib precedence fixture, cyclic-box guard test.
-- lxDeclare dead-predicate class (pre-branch, golden blesses 51 vs Perl 84) — CORE FIXED 2026-07-03 (`e11ee74f8e`, golden 51→67 strictly additive); residual S4/S6/S7 pattern families tracked in SYNC_STATUS.
+- Missing-test debt called out in all three clusters — ALL LANDED: the MathML golden set (colored frac/cancel, array-comma, cfrac, --contentmathml pair), `\ce{H2O}` fixture, noexpand reproducers promoted, the bbl/bib precedence matrix (`cluster_bbl_bib_precedence`), cycle-guard unit tests (already present via PR #249).
+- lxDeclare dead-predicate class — ✅ CLOSED 2026-07-03 at exact Perl parity (declare.xml 84/84 per-declaration; stage 1 `e11ee74f8e` 51→67, stage 2 all residual families — funcapply/leadwild/cmddual arms, Perl-shaped wildcard XMDuals, `\lxDefMath` decl_id, declare-element term/short/description). Details in SYNC_STATUS.
 - `\string` of noexpand-family tokens leaks 0x01 (illegal XML); KNOWN_PERL_ERRORS candidates: `\cfrac[l]` (Perl drops it too), LookupDimension macro-path (already #41).
 - pin!/SymStr arena-reset contract: document at `reset_thread_engine` + consider a poison debug_assert.
 - Corpus-scale differential A/B: **1k DONE (PASS — see STATUS above)**; the 10k rerun post-fleet remains the final whole-branch check before merging.
