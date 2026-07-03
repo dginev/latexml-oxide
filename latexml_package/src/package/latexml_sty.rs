@@ -15,25 +15,33 @@ pub struct DeclarePattern {
   #[allow(dead_code)]
   pub has_wildcard:   bool,
   pub wildcard_paths: Option<Vec<Vec<usize>>>,
+  /// Font CLASS the matched base must carry (e.g. "caligraphic"), checked
+  /// Rust-side — never baked into the XPath (see base_text_predicate).
+  pub font_class:     Option<&'static str>,
 }
 
-/// Generate an XPath text predicate for a base token specification.
-fn base_text_predicate(base: &str) -> String {
+/// Generate an XPath text predicate for a base token specification, plus a
+/// font-CLASS requirement checked RUST-SIDE (declare_node_matches).
+///
+/// NEVER bake `@font` into the XPath: the serialized attribute does not
+/// exist at rewrite time (only the interned `_font` id does), so a
+/// `@font='caligraphic'` predicate silently matches NOTHING — the historical
+/// wildcard-vanish failure mode (declare.tex golden was 51 decl_id vs Perl's
+/// 84 until 2026-07-03). Likewise digestion stamps command tokens with
+/// `@name` (e.g. varepsilon), not only `@meaning` — accept either.
+fn base_text_predicate(base: &str) -> (String, Option<&'static str>) {
   if base.starts_with('\\') {
     let cmd = base.trim_start_matches('\\');
     if let Some(inner) = cmd
       .strip_prefix("mathcal{")
       .and_then(|s| s.strip_suffix('}'))
     {
-      format!("@font='caligraphic' and text()='{inner}'")
+      (format!("text()='{inner}'"), Some("caligraphic"))
     } else {
-      match cmd {
-        "varepsilon" => "@meaning='varepsilon'".to_string(),
-        _ => format!("@meaning='{cmd}'"),
-      }
+      (format!("(@meaning='{cmd}' or @name='{cmd}')"), None)
     }
   } else {
-    format!("text()='{}'", base.replace('\'', "&apos;"))
+    (format!("text()='{}'", base.replace('\'', "&apos;")), None)
   }
 }
 
@@ -65,17 +73,18 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
   // Wildcard: x_\WildCard, \varepsilon_\WildCard, \mathcal{T}_\WildCard
   if let Some(base) = body_text.strip_suffix("_\\WildCard") {
     let base = base.trim().to_string();
-    let base_pred = base_text_predicate(&base);
+    let (base_pred, font_class) = base_text_predicate(&base);
     return DeclarePattern {
       // Match the base XMTok; Rust-side filter checks POSTSUBSCRIPT sibling
-      xpath:          format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
-      pattern_type:   "subscript",
-      base_text:      Some(base),
-      sub_text:       None,
-      accent_name:    None,
-      has_wildcard:   true,
+      xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
+      pattern_type: "subscript",
+      base_text: Some(base),
+      sub_text: None,
+      accent_name: None,
+      has_wildcard: true,
       // Wildcard = child 1 of sibling 2 (the content of POSTSUBSCRIPT XMApp)
       wildcard_paths: Some(vec![vec![2, 1]]),
+      font_class,
     };
   }
   // Braced wildcard subscripts: x_{\WildCard}, x_{\WildCard,\WildCard}
@@ -83,7 +92,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     && let Some(idx) = body_text.find("_{")
   {
     let base = body_text[..idx].trim().to_string();
-    let base_pred = base_text_predicate(&base);
+    let (base_pred, font_class) = base_text_predicate(&base);
     let brace_content = &body_text[idx + 2..body_text.len().saturating_sub(1)];
     let nwilds = brace_content.matches("\\WildCard").count();
     let wpaths = if nwilds <= 1 {
@@ -92,13 +101,14 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
       (1..=nwilds).map(|i| vec![2, 1, i]).collect()
     };
     return DeclarePattern {
-      xpath:          format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
-      pattern_type:   "subscript",
-      base_text:      Some(base),
-      sub_text:       None,
-      accent_name:    None,
-      has_wildcard:   true,
+      xpath: format!("descendant-or-self::*[local-name()='XMTok' and {base_pred}]"),
+      pattern_type: "subscript",
+      base_text: Some(base),
+      sub_text: None,
+      accent_name: None,
+      has_wildcard: true,
       wildcard_paths: Some(wpaths),
+      font_class,
     };
   }
   // Literal subscript: x_1, x_{1}, x_{2n-1}
@@ -113,6 +123,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
       accent_name:    None,
       has_wildcard:   false,
       wildcard_paths: None,
+      font_class:     None,
     };
   }
 
@@ -133,6 +144,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
         has_wildcard:   true,
         // Wildcard = child 2 (base content) of the accent XMApp
         wildcard_paths: Some(vec![vec![1, 2]]),
+        font_class:     None,
       };
     }
   }
@@ -152,6 +164,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
         accent_name:    Some(accent.to_string()),
         has_wildcard:   false,
         wildcard_paths: None,
+        font_class:     None,
       };
     }
   }
@@ -172,6 +185,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
         accent_name:    None,
         has_wildcard:   false,
         wildcard_paths: None,
+        font_class:     None,
       };
     }
   }
@@ -189,6 +203,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
         accent_name:    None,
         has_wildcard:   false,
         wildcard_paths: None,
+        font_class:     None,
       };
     }
   }
@@ -213,6 +228,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
       accent_name:    None,
       has_wildcard:   false,
       wildcard_paths: None,
+      font_class:     None,
     };
   }
 
@@ -231,6 +247,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
       accent_name:    None,
       has_wildcard:   false,
       wildcard_paths: None,
+      font_class:     None,
     };
   }
 
@@ -243,6 +260,7 @@ fn compile_declare_pattern(body_text: &str) -> DeclarePattern {
     accent_name:    None,
     has_wildcard:   false,
     wildcard_paths: None,
+    font_class:     None,
   }
 }
 
@@ -718,9 +736,30 @@ LoadDefinitions!({
       // font-aware rewrite path (declare_node_matches). Empty when the pattern
       // carried no distinguishing font.
       let match_font_field = match_font.as_deref().unwrap_or("");
+      // Scope gate for the fast path: an UNTAGGED `scope=section` declaration
+      // has no decl_id to carry the section prefix, so apply_lx_declarations
+      // formerly applied it document-globally (PR_READINESS cluster C). Emit
+      // an explicit 7th field: the decl_id's section prefix when present,
+      // else the current section's ID (afterDigest — where it is correct).
+      let scope_opt_val = whatsit
+        .get_property("scope_opt")
+        .map(|v| v.to_string())
+        .unwrap_or_default();
+      let scope_prefix = if scope_opt_val == "section" {
+        if !decl_id.is_empty() {
+          decl_id.split('.').next().unwrap_or("").to_string()
+        } else {
+          do_expand(T_CS!("\\thesection@ID"))
+            .ok()
+            .map(|t| t.to_string().trim().to_string())
+            .unwrap_or_default()
+        }
+      } else {
+        String::new()
+      };
       decls.push(format!(
-        "{}\t{}\t{}\t{}\t{}\t{}",
-        body_text, role, name_val, meaning, decl_id, match_font_field));
+        "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+        body_text, role, name_val, meaning, decl_id, match_font_field, scope_prefix));
       // Mathcode decoding for single-char bodies
       if body_text.chars().count() == 1 {
         let ch = body_text.chars().next().unwrap();
@@ -880,6 +919,7 @@ LoadDefinitions!({
           accent_name: None,
           has_wildcard: false,
           wildcard_paths: None,
+          font_class:     None,
         }
       };
       if pat.xpath.is_empty() {
@@ -903,6 +943,9 @@ LoadDefinitions!({
         }
         if let Some(ref accent) = pat.accent_name {
           attrs.insert("_declare_accent".to_string(), accent.clone());
+        }
+        if let Some(fc) = pat.font_class {
+          attrs.insert("_declare_font".to_string(), fc.to_string());
         }
         if has_wildcard {
           attrs.insert("_wildcard_pattern".to_string(), "1".to_string());
@@ -954,6 +997,11 @@ LoadDefinitions!({
             wildcard_paths: pat.wildcard_paths,
             select_count,
             scope: rewrite_scope,
+            // Replace rules need the SAME declare-side filtering as attribute
+            // rules — without it a `$x_\WildCard$` replace pattern deletes
+            // the matched x plus an ARBITRARY next sibling even with no
+            // subscript present (PR_READINESS cluster C).
+            declare_filter: Some(attrs.clone()),
             ..RewriteOptions::default()
           })
         } else {

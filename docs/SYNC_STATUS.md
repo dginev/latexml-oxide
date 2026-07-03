@@ -94,15 +94,18 @@ against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
   now colors its tokens (was black — visible arXiv bug class); + a latent
   rust-libxml misaligned-ns-read crash fixed in `find_inherited_attribute`.
 
-- **NEW WORKLIST (from the PR_READINESS branch review): lxDeclare
-  dead-predicate class.** Compiled `\lxDeclare` XPaths still carry `@font`/
-  `@meaning` predicates that are dead at rewrite time — whole declaration
-  families silently match nothing (shipped Euler golden: 51 decl_id vs
-  Perl's 84; `$\mathcal{T}_\WildCard$` matches 0). Also: replace-rules
-  bypass declare-side filtering (latent delete-the-wrong-sibling), and an
-  untagged `scope=section` applies document-globally. The unrecognized-
-  pattern path now Warns (landed); the predicate/scope/filter fixes are the
-  open item. See `docs/PR_READINESS.md` cluster C.
+- **lxDeclare dead-predicate class — CORE FIXED 2026-07-03** (PR_READINESS
+  cluster C): dead `@font`/`@meaning` XPath predicates replaced by Rust-side
+  font-CLASS filtering (`_declare_font` → declare_node_matches) and
+  `(@meaning|@name)` predicates; replace-rules now carry the same
+  declare-side filter (new `declare_filter` rewrite option — kills the
+  latent delete-the-wrong-sibling); untagged `scope=section` gates the fast
+  path via an explicit scope_prefix field. declare.xml golden: 51 → 67
+  decl_id, strictly additive (0 lost marks), vs Perl's 84. RESIDUAL: the
+  remaining ~17 belong to OTHER pattern families (S4/S6/S7: literal-base
+  variants, replace-related XMDuals) that need their own compile arms in
+  `compile_declare_pattern` — each now Warns as unrecognized instead of
+  silently skipping.
 
 Open queue lives in the audit doc: F17 misc, F14 share-suffix wiring,
 **F5** linebreaker decision (Perl gates on `--linelength`, default OFF →

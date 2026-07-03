@@ -42,6 +42,10 @@ pub struct RewriteOptions {
   pub select_count:   Option<usize>,
   pub is_math:        bool,
   pub wildcard_paths: Option<Vec<WildPath>>,
+  /// Declare-side filter metadata (`_declare_*`) for rules that must filter
+  /// matches WITHOUT marking attributes (replace rules). Attribute rules
+  /// carry the same keys inside `attributes_map`.
+  pub declare_filter: Option<HashMap<String, String>>,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -430,46 +434,23 @@ impl Rewrite {
             };
             // Get declare pattern metadata for Rust-side filtering
             // Only apply on content Selects, not scope Selects
-            let declare_type = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_type"))
-                .cloned()
-            } else {
-              None
+            let filter_map = self
+              .options
+              .declare_filter
+              .as_ref()
+              .or(self.options.attributes_map.as_ref());
+            let get_filter = |key: &str| {
+              if is_content_select {
+                filter_map.and_then(|a| a.get(key)).cloned()
+              } else {
+                None
+              }
             };
-            let declare_base = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_base"))
-                .cloned()
-            } else {
-              None
-            };
-            let declare_sub = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_sub"))
-                .cloned()
-            } else {
-              None
-            };
-            let declare_accent = if is_content_select {
-              self
-                .options
-                .attributes_map
-                .as_ref()
-                .and_then(|a| a.get("_declare_accent"))
-                .cloned()
-            } else {
-              None
-            };
+            let declare_type = get_filter("_declare_type");
+            let declare_base = get_filter("_declare_base");
+            let declare_sub = get_filter("_declare_sub");
+            let declare_accent = get_filter("_declare_accent");
+            let declare_font = get_filter("_declare_font");
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
@@ -483,6 +464,7 @@ impl Rewrite {
                   declare_base.as_deref(),
                   declare_sub.as_deref(),
                   declare_accent.as_deref(),
+                  declare_font.as_deref(),
                 );
                 if !passes {
                   continue;
@@ -1353,7 +1335,19 @@ fn declare_node_matches(
   base_text: Option<&str>,
   sub_text: Option<&str>,
   accent_name: Option<&str>,
+  font_class: Option<&str>,
 ) -> bool {
+  // Font-CLASS requirement (e.g. caligraphic for a \mathcal pattern): the
+  // XPath deliberately carries no @font predicate (the attribute is only an
+  // interned `_font` id at rewrite time) — discriminate here on the RESOLVED
+  // font instead. Class containment, not exact string (WISDOM: the exact
+  // serialized font string is unreliable at rewrite time).
+  if let Some(class) = font_class {
+    let font = document.get_node_font(node);
+    if !font.font_attribute_string().contains(class) {
+      return false;
+    }
+  }
   let children = node.get_child_nodes();
   match pattern_type {
     "literal_subscript" => {

@@ -923,15 +923,18 @@ fn apply_lx_declarations(document: &mut Document) {
     return;
   }
 
-  // Parse declarations: "token_text\trole\tname\tmeaning\tdecl_id\tmatch_font".
-  // The trailing match_font (font_attribute_string of the digested pattern, e.g.
+  // Parse declarations:
+  // "token_text\trole\tname\tmeaning\tdecl_id\tmatch_font\tscope_prefix".
+  // match_font (font_attribute_string of the digested pattern, e.g.
   // "italic"/"bold") makes matching font-aware: a plain italic `$x$` declaration
   // must not annotate a bold `\mathbf{x}` — different fonts denote different
-  // meanings. Empty when the pattern carried no distinguishing font.
-  let declarations: Vec<(&str, &str, &str, &str, &str, &str)> = decls_str
+  // meanings; empty when the pattern carried no distinguishing font.
+  // scope_prefix carries the section gate for scope=section declarations
+  // (INCLUDING untagged ones, which have no decl_id to infer it from).
+  let declarations: Vec<(&str, &str, &str, &str, &str, &str, &str)> = decls_str
     .lines()
     .filter_map(|line| {
-      let parts: Vec<&str> = line.splitn(6, '\t').collect();
+      let parts: Vec<&str> = line.splitn(7, '\t').collect();
       if parts.len() >= 4 {
         Some((
           parts[0],
@@ -940,6 +943,7 @@ fn apply_lx_declarations(document: &mut Document) {
           parts[3],
           *parts.get(4).unwrap_or(&""),
           *parts.get(5).unwrap_or(&""),
+          *parts.get(6).unwrap_or(&""),
         ))
       } else {
         None
@@ -978,7 +982,7 @@ fn apply_lx_declarations(document: &mut Document) {
       scope
     };
 
-    for &(pattern, role, name, meaning, decl_id, match_font) in &declarations {
+    for &(pattern, role, name, meaning, decl_id, match_font, scope_prefix) in &declarations {
       // Match by content text, or by XMTok name attribute (for CS patterns like \circ)
       let matches = content == pattern
         || (!tok_name.is_empty() && pattern.starts_with('\\') && pattern[1..] == tok_name);
@@ -1014,13 +1018,18 @@ fn apply_lx_declarations(document: &mut Document) {
             continue;
           }
         }
-        // Check scope: if decl_id has a section prefix (e.g. "S1" from "S1.XMD1"),
-        // only apply to tokens within that section
-        if !decl_id.is_empty()
-          && let Some(section_prefix) = decl_id.split('.').next()
-          && !section_prefix.is_empty()
+        // Scope gate: the explicit scope_prefix (covers UNTAGGED
+        // scope=section declarations), falling back to the decl_id's section
+        // prefix for older/tagged lines.
+        let gate = if !scope_prefix.is_empty() {
+          scope_prefix
+        } else {
+          decl_id.split('.').next().unwrap_or("")
+        };
+        if (!decl_id.is_empty() || !scope_prefix.is_empty())
+          && !gate.is_empty()
           && !tok_scope.is_empty()
-          && tok_scope != section_prefix
+          && tok_scope != gate
         {
           continue; // Wrong section — skip this declaration
         }
