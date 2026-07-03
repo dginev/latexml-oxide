@@ -396,6 +396,32 @@ pub fn convert_to_pmml(doc: &PostDocument, xmath: &Node) -> NodeData {
 /// side (Perl `cmml_decoratedSymbol` L1403 calls pmml($item)).
 pub(super) fn pmml_for_ci(doc: &PostDocument, node: &Node) -> NodeData { pmml(doc, node) }
 
+/// Bind the top-level conversion context for the CONTENT pipeline.
+///
+/// Port of Perl `cmml_top` (MathML.pm L1290-1300): content conversion runs
+/// under STYLE='text' with the same inherited FONT/COLOR/BGCOLOR/OPACITY
+/// bindings as `pmml_top` — the pmml subtrees embedded in content (ci
+/// interiors via `cmml_decoratedSymbol`) and `stylize_ci_content`'s font
+/// fallback depend on them. Without this the content path ran at whatever
+/// the previous conversion left (audit should-fix 11).
+pub(super) fn bind_cmml_top_context(doc: &PostDocument, xmath: &Node) {
+  CURRENT_STYLE.with(|s| s.set(MathStyle::Text));
+  ctx_set(&CTX_FONT, super::find_inherited_attribute(doc, xmath, "font"));
+  ctx_set(&CTX_COLOR, super::find_inherited_attribute(doc, xmath, "color"));
+  ctx_set(
+    &CTX_BGCOLOR,
+    super::find_inherited_attribute(doc, xmath, "backgroundcolor"),
+  );
+  ctx_set(
+    &CTX_OPACITY,
+    super::find_inherited_attribute(doc, xmath, "opacity"),
+  );
+}
+
+/// The inherited font context, for the content side's ci stylization
+/// (Perl stylizeContent's `|| $LaTeXML::MathML::FONT` fallback).
+pub(super) fn ctx_font() -> Option<String> { ctx_get(&CTX_FONT) }
+
 /// Core dispatch: convert a single XMath node to Presentation MathML.
 ///
 /// Port of `pmml` + `pmml_internal`.

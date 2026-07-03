@@ -164,6 +164,8 @@ fn meaning_to_cmml_element(meaning: &str) -> Option<&'static str> {
 /// Port of `MathML::Content::convertNode` + `cmml_top`.
 pub fn convert_to_cmml(doc: &PostDocument, xmath: &Node) -> NodeData {
   reset_share_counter();
+  // Perl cmml_top (L1290-1300): STYLE='text' + inherited context bindings.
+  super::presentation::bind_cmml_top_context(doc, xmath);
   CMML_DEPTH.with(|d| d.set(0));
   CMML_PATH.with(|p| p.borrow_mut().clear());
   cmml_contents(doc, xmath)
@@ -333,7 +335,7 @@ fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
           let mut lhs = lhs0;
           let mut relations = Vec::new();
           let mut i = 1;
-          while i + 1 < args.len() + 1 && i < args.len() {
+          while i < args.len() {
             let rel = &args[i];
             let Some(rhs) = args.get(i + 1) else { break };
             relations.push(NodeData::Element {
@@ -747,6 +749,9 @@ fn cmml_token_by_meaning(meaning: &str, _node: &Node) -> NodeData {
 // per-formula counter equivalent). Reset by `convert_to_cmml`.
 thread_local! {
   static SH_COUNTER: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+  /// Monotonic (never reset): uniquifies share ids minted on formulas with
+  /// no ancestor xml:id, across the whole document/process.
+  static SH_GLOBAL_COUNTER: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
 }
 pub(super) fn reset_share_counter() { SH_COUNTER.with(|c| c.set(0)); }
 
@@ -764,16 +769,30 @@ fn cmml_shared(doc: &PostDocument, node: &Node) -> NodeData {
       }
       parent = p.get_parent();
     }
-    let n = SH_COUNTER.with(|c| {
-      let v = c.get() + 1;
-      c.set(v);
-      v
-    });
     let pid = parent
       .as_ref()
       .and_then(crate::document::get_xml_id)
       .map(|id| format!("{id}."))
       .unwrap_or_default();
+    // With an ancestor id the per-formula counter is unique (ancestor ids are
+    // unique per formula). WITHOUT one, a per-formula counter would mint the
+    // same bare `sh1` in every such formula — use the monotonic per-thread
+    // counter instead so ids stay document-unique. (Perl probes the document
+    // idcache to the same effect; our minted ids are href targets only and
+    // are not idcache-registered — the counter guarantees no collision.)
+    let n = if pid.is_empty() {
+      SH_GLOBAL_COUNTER.with(|c| {
+        let v = c.get() + 1;
+        c.set(v);
+        v
+      })
+    } else {
+      SH_COUNTER.with(|c| {
+        let v = c.get() + 1;
+        c.set(v);
+        v
+      })
+    };
     let mut handle = node.clone();
     handle.set_attribute("xml:id", &format!("{pid}sh{n}")).ok();
     if let Some(pfragid) = parent.as_ref().and_then(|p| p.get_attribute("fragid")) {
@@ -823,7 +842,19 @@ fn is_perl_integer(s: &str) -> bool {
 /// a variant that could not be baked into characters prefixes the content
 /// ("bold-x"). This is why Perl's cmml says `<ci>𝑥</ci>`, not `<ci>x</ci>`.
 fn stylize_ci_content(node: &Node, text: String) -> String {
-  let Some(font) = node.get_attribute("font") else {
+  // Perl L747-748: Format-only content (invisible operators) gets no
+  // styling — never "bold-⁢".
+  if text.chars().all(|c| {
+    matches!(c,
+      '\u{00AD}' | '\u{200B}'..='\u{200F}' | '\u{2060}'..='\u{2064}' | '\u{FEFF}')
+  }) {
+    return text;
+  }
+  // Perl stylizeContent L678: token font, else the inherited context font.
+  let Some(font) = node
+    .get_attribute("font")
+    .or_else(super::presentation::ctx_font)
+  else {
     return text;
   };
   let variant = crate::unicode::unicode_mathvariant(&font);
