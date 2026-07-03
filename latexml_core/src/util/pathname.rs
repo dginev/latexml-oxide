@@ -592,17 +592,7 @@ pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
   candidate_pathnames(pathname, options)
 }
 
-/// search for a list of candidate names via the external `kpsewhich` utility
-/// returning the first path that is found
-///
-/// Memoized (hits AND misses) per thread, keyed by the candidate list
-/// (Principle 5, closed by the 2026-07-02 perf audit): repeated lookups of
-/// the same missing asset (e.g. a figure referenced by many
-/// `\includegraphics`) otherwise re-probe kpathsea each time — a full
-/// fork-exec per probe on the subprocess-`kpsewhich` backend (portable
-/// builds without linked libkpathsea), a cheaper but nonzero library walk
-/// on the in-process backend. Results are stable for a fixed texmf tree
-/// (the same assumption kpathsea's own ls-R cache makes).
+// Memo store for `kpsewhich` (see its doc below).
 #[cfg(feature = "kpathsea")]
 std::thread_local! {
   static KPSE_MEMO: std::cell::RefCell<rustc_hash::FxHashMap<String, Option<String>>> =
@@ -620,6 +610,18 @@ pub fn clear_kpsewhich_memo() { KPSE_MEMO.with(|m| m.borrow_mut().clear()); }
 #[cfg(not(feature = "kpathsea"))]
 pub fn clear_kpsewhich_memo() {}
 
+/// search for a list of candidate names via the external `kpsewhich` utility
+/// returning the first path that is found
+///
+/// Memoized (hits AND misses) per thread, keyed by the candidate list
+/// (Principle 5, closed by the 2026-07-02 perf audit): repeated lookups of
+/// the same missing asset (e.g. a figure referenced by many
+/// `\includegraphics`) otherwise re-probe kpathsea each time — a full
+/// fork-exec per probe on the subprocess-`kpsewhich` backend (portable
+/// builds without linked libkpathsea), a cheaper but nonzero library walk
+/// on the in-process backend. Results are stable for a fixed texmf tree
+/// (the same assumption kpathsea's own ls-R cache makes); the memo clears
+/// per conversion via `clear_kpsewhich_memo`.
 #[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
   let key = candidates.join("\x1f");
