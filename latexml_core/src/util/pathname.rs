@@ -604,12 +604,24 @@ pub fn findall(pathname: &str, options: PathnameFindOptions) -> Vec<String> {
 /// on the in-process backend. Results are stable for a fixed texmf tree
 /// (the same assumption kpathsea's own ls-R cache makes).
 #[cfg(feature = "kpathsea")]
+std::thread_local! {
+  static KPSE_MEMO: std::cell::RefCell<rustc_hash::FxHashMap<String, Option<String>>> =
+    std::cell::RefCell::new(rustc_hash::FxHashMap::default());
+}
+
+/// Clear the per-thread kpsewhich memo. Called at the start of every
+/// conversion (prepare_session): the persistent (non-harness) cortex_worker
+/// runs many papers per thread, and a cached cwd-relative MISS from paper A
+/// (kpathsea's path spec includes `.`) would wrongly persist into paper B
+/// (PR_READINESS should-fix 12).
+#[cfg(feature = "kpathsea")]
+pub fn clear_kpsewhich_memo() { KPSE_MEMO.with(|m| m.borrow_mut().clear()); }
+
+#[cfg(not(feature = "kpathsea"))]
+pub fn clear_kpsewhich_memo() {}
+
+#[cfg(feature = "kpathsea")]
 pub fn kpsewhich(candidates: &[&str]) -> Option<String> {
-  use rustc_hash::FxHashMap;
-  std::thread_local! {
-    static KPSE_MEMO: std::cell::RefCell<FxHashMap<String, Option<String>>> =
-      std::cell::RefCell::new(FxHashMap::default());
-  }
   let key = candidates.join("\x1f");
   if let Some(cached) = KPSE_MEMO.with(|m| m.borrow().get(&key).cloned()) {
     return cached;
