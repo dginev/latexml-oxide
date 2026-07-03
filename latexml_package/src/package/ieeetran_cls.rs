@@ -576,20 +576,17 @@ LoadDefinitions!({
   DefEnvironment!("{IEEEitemize}[]",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     properties => sub[_args] { BeginItemize!("itemize", "@item") },
-    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "internal_vertical");
   DefEnvironment!("{IEEEenumerate}[]",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => sub[_args] { BeginItemize!("enumerate", "enum") },
-    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "internal_vertical");
   DefEnvironment!("{IEEEdescription}[]",
     "<ltx:description xml:id='#id'>#body</ltx:description>",
     before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
     properties => sub[_args] { BeginItemize!("description", "@desc") },
-    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "internal_vertical");
 

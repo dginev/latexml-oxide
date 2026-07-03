@@ -5062,17 +5062,22 @@ LoadDefinitions!({
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
       ref_step_item_counter(undigested) });
 
+  // NOTE: no before_digest_end \par on list environments — Perl has none.
+  // An isolated Digest(\par) repacks an EMPTY temp box list and resets MODE
+  // to the bound vertical mode, DEFUSING the env-end
+  // leave_horizontal_internal repack; item text then stays as bare char
+  // boxes and the vertical sizer stacks each one as a 12pt line (952pt for
+  // a 16-word item — witness 2605.02240's 12000pt-tall tcolorbox frames).
+  // endMode does the repacking, exactly like Perl (Stomach.pm endMode L553).
   DefEnvironment!("{itemize}",
     "<ltx:itemize xml:id='#id'>#body</ltx:itemize>",
     properties => { BeginItemize!("itemize", "@item") },
-    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "internal_vertical"
   );
   DefEnvironment!("{enumerate}",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => { BeginItemize!("enumerate", "enum") },
-    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "internal_vertical"
   );
@@ -5080,7 +5085,6 @@ LoadDefinitions!({
     "<ltx:description  xml:id='#id'>#body</ltx:description>",
     before_digest => { Let!("\\makelabel", "\\descriptionlabel"); },
     properties => { BeginItemize!("description", "@desc") },
-    before_digest_end => { Digest!("\\par") },
     locked => true,
     mode => "internal_vertical"
   );

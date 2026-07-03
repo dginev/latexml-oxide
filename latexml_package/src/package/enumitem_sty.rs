@@ -339,14 +339,13 @@ fn newlist_impl(listname: &str, listtype: &str, maxdepth: i32) -> Result<()> {
   // Perl #2798: a block list ends with \par; an INLINE list must NOT \par
   // (it would break the surrounding paragraph) — mirrors the standard
   // itemize*/enumerate*/description* inline envs, which carry no before_digest_end.
-  let before_digest_end: Vec<BeforeDigestClosure> = if is_inline {
-    Vec::new()
-  } else {
-    vec![Rc::new(|| {
-      digest(Tokens!(T_CS!("\\par")))?;
-      Ok(Vec::new())
-    })]
-  };
+  // No before_digest_end \par: Perl list environments have none — an
+  // isolated Digest(\par) resets MODE to the bound vertical mode, which
+  // DEFUSES the env-end leave_horizontal_internal repack; item text then
+  // stays as bare char boxes and the vertical sizer stacks each as a line
+  // (952pt for a 16-word item; witness 2605.02240's 12000pt tcolorbox
+  // frames). endMode does the repacking, exactly like Perl.
+  let before_digest_end: Vec<BeforeDigestClosure> = Vec::new();
 
   let after_digest_body: DigestionClosure =
     Rc::new(|whatsit: &mut Whatsit| end_enum_itemize(whatsit));
@@ -451,7 +450,6 @@ LoadDefinitions!({
         begin_enum_itemize("itemize", "@item", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      before_digest_end => { digest(Tokens!(T_CS!("\\par")))?; },
       mode => "internal_vertical",
       locked => true
     );
@@ -462,7 +460,6 @@ LoadDefinitions!({
         begin_enum_itemize("enumerate", "enum", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      before_digest_end => { digest(Tokens!(T_CS!("\\par")))?; },
       mode => "internal_vertical",
       locked => true
     );
@@ -474,7 +471,6 @@ LoadDefinitions!({
         begin_enum_itemize("description", "@desc", kv.as_ref())
       },
       after_digest_body => sub[whatsit] { end_enum_itemize(whatsit) },
-      before_digest_end => { digest(Tokens!(T_CS!("\\par")))?; },
       mode => "internal_vertical",
       locked => true
     );

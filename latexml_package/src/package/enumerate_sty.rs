@@ -7,7 +7,6 @@ LoadDefinitions!({
   DefEnvironment!("{enumerate} OptionalUndigested",
     "<ltx:enumerate xml:id='#id'>#body</ltx:enumerate>",
     properties => sub[_args] { BeginItemize!("enumerate", "enum") },
-    before_digest_end => { Digest!("\\par") },
     after_digest_begin => sub[whatsit] {
       if let Some(arg) = whatsit.get_arg(1) {
         set_enumeration_style(arg.raw_tokens(), None)?;

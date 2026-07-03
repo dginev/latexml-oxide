@@ -95,7 +95,6 @@ LoadDefinitions!({
           set_enumeration_style(arg.raw_tokens(), None)?;
         }
       },
-      before_digest_end => { Digest!("\\par") },
       locked => true,
       mode => "internal_vertical"
     );
@@ -153,7 +152,6 @@ LoadDefinitions!({
           set_itemization_style(arg.raw_tokens(), None)?;
         }
       },
-      before_digest_end => { Digest!("\\par") },
       locked => true,
       mode => "internal_vertical"
     );
