@@ -659,10 +659,21 @@ pub fn stylize_content(node: &Node, target_tag: &str) -> (String, HashMap<String
 ///
 /// Port of `getXMHintSpacing`.
 pub fn get_xm_hint_spacing(width: &str) -> f64 {
+  // Perl (MathML.pm L380-385): /^([\d\.\+\-]+)(pt|mu|em)(\s+plus\s+…)?(\s+minus\s+…)?$/
+  // — a GLUE width ("3.0pt plus 2.0pt minus 1.0pt") contributes its natural
+  // part; the stretch/shrink tails are ignored.
   let trimmed = width.trim();
-  if let Some((num_str, unit)) = trimmed
+  let base = trimmed
+    .split(" plus ")
+    .next()
+    .unwrap_or(trimmed)
+    .split(" minus ")
+    .next()
+    .unwrap_or(trimmed)
+    .trim();
+  if let Some((num_str, unit)) = base
     .rfind(|c: char| c.is_ascii_digit() || c == '.')
-    .map(|i| (&trimmed[..=i], trimmed[i + 1..].trim()))
+    .map(|i| (&base[..=i], base[i + 1..].trim()))
   {
     let num: f64 = num_str.parse().unwrap_or(0.0);
     match unit {

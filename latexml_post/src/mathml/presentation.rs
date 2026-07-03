@@ -459,7 +459,15 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
   // overwriting (_role) or appending (class) the inner one; sole corner
   // divergence: an XMRef AND its target both carrying `enclose` would nest
   // two m:menclose where Perl picks the XMRef's one.
-  attach_source_padding(node, &mut result);
+  if doc.is_qname(node, "ltx:XMRef") {
+    // XMRef level: SUM the referring node's padding onto the target's
+    // (Perl `_getspace` refr+node).
+    add_source_padding(node, &mut result);
+  } else {
+    // Ordinary level: the node's padding ASSIGNS (an XMDual over a padded
+    // presentation child must not double-count — Perl overwrites).
+    attach_source_padding(node, &mut result);
+  }
   if let NodeData::Element { ref mut attributes, .. } = result {
     // Perl L350-352: merge the source node's class onto the result.
     if let Some(cl) = node.get_attribute("class")
@@ -489,6 +497,27 @@ fn pmml(doc: &PostDocument, node: &Node) -> NodeData {
 /// Add `node`'s lpadding/rpadding (converted to em) onto `result`'s internal
 /// `_lpadding`/`_rpadding`, summing with any value already present.
 fn attach_source_padding(node: &Node, result: &mut NodeData) {
+  // Perl ASSIGNS (`$$result[1]{_lpadding} = $l if $l`) — the outer node's
+  // padding wins over whatever the inner conversion set (an XMDual whose
+  // presentation child also carries padding must not double-count). The
+  // XMRef branch separately ADDS the referring node's padding on top,
+  // reproducing Perl's `_getspace` refr+node SUM (see `pmml_inner`).
+  for (src, dst) in [("lpadding", "_lpadding"), ("rpadding", "_rpadding")] {
+    if let Some(v) = node.get_attribute(src) {
+      let em = super::get_xm_hint_spacing(&v);
+      if em != 0.0
+        && let NodeData::Element { ref mut attributes, .. } = *result
+      {
+        let attrs = attributes.get_or_insert_with(Default::default);
+        attrs.insert(dst.to_string(), fmt_em(em));
+      }
+    }
+  }
+}
+
+/// ADD `node`'s padding onto the result (XMRef-over-target: Perl `_getspace`
+/// SUMS the referring node's padding with the target's).
+fn add_source_padding(node: &Node, result: &mut NodeData) {
   for (src, dst) in [("lpadding", "_lpadding"), ("rpadding", "_rpadding")] {
     if let Some(v) = node.get_attribute(src) {
       let em = super::get_xm_hint_spacing(&v);
@@ -1171,8 +1200,13 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node) -> NodeData {
     if stretchy {
       size = None;
     }
-    let is_invisible =
-      !text.is_empty() && text.chars().all(|c| matches!(c, '\u{2061}'..='\u{2063}'));
+    // Include U+200B: under --noinvisibletimes the ⁢ was already replaced by
+    // ZWSP above, and its size/stretchiness must still be cleared (Perl runs
+    // this check on the ORIGINAL text before replacing).
+    let is_invisible = !text.is_empty()
+      && text
+        .chars()
+        .all(|c| matches!(c, '\u{2061}'..='\u{2063}' | '\u{200B}'));
     if is_invisible {
       stretchy = false;
       size = None;
@@ -1339,10 +1373,16 @@ fn pmml_hint(_doc: &PostDocument, node: &Node) -> NodeData {
   }
 }
 
-/// Format a float the way Perl stringifies numbers (%.15g): up to 15
-/// significant digits, no trailing zeros.
+/// Format a float the way Perl stringifies numbers (%.15g): 15 SIGNIFICANT
+/// digits, no trailing zeros. (The previous {v:.15} was 15 DECIMALS — wrong
+/// for |v| < 0.1 or >= 10; PR_READINESS batch-14 fix.)
 fn perl_num(v: f64) -> String {
-  let s = format!("{v:.15}");
+  if v == 0.0 {
+    return "0".to_string();
+  }
+  let magnitude = v.abs().log10().floor() as i32;
+  let decimals = (14 - magnitude).clamp(0, 17) as usize;
+  let s = format!("{v:.decimals$}");
   if s.contains('.') {
     s.trim_end_matches('0').trim_end_matches('.').to_string()
   } else {
@@ -2483,13 +2523,17 @@ fn space_walk(root: &mut NodeData, path: Vec<usize>) {
           NodeData::Element { tag, children, .. } => {
             if tag == "m:mrow" {
               Kind::Mrow(children.len())
-            } else if tag.starts_with("m:msup")
-              || tag.starts_with("m:msub")
-              || tag.starts_with("m:munder")
-              || tag.starts_with("m:mover")
-              || tag.starts_with("m:mmultiscripts")
+            } else if !children.is_empty()
+              && (tag.starts_with("m:msup")
+                || tag.starts_with("m:msub")
+                || tag.starts_with("m:munder")
+                || tag.starts_with("m:mover")
+                || tag.starts_with("m:mmultiscripts"))
             {
               // Prefix match like Perl's regex — covers msubsup/munderover.
+              // A CHILDLESS script element (malformed input) is treated as
+              // Plain — streaming its base would index children[0] (Perl's
+              // undef-shift exits silently).
               Kind::Script(children.len())
             } else {
               Kind::Plain
@@ -2588,8 +2632,11 @@ fn adjust_pair(root: &mut NodeData, prev: &[usize], next: &[usize], invisop: Opt
       let font = latexml_core::common::font::Font::math_default();
       let (w, _h, _d) = font.compute_string_size(&text, Default::default());
       let mut w_sp = w.0;
-      if w_sp != 0 && class.contains("mathscript") {
-        w_sp = w_sp.max(10 * 65536);
+      // Perl L1140-1141: minimum of 10pt for mathscript — Dimension(10*65535)
+      // (Perl's constant, one sp shy of 10pt), applied regardless of width
+      // (Perl's $w is an always-truthy Dimension object).
+      if class.contains("mathscript") {
+        w_sp = w_sp.max(10 * 65535);
       }
       let mut reqw = (w_sp as f64 / 65536.0) / 10.0 + target;
       if reqw < 0.0 {
