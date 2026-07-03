@@ -34,17 +34,21 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 mold
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@nightly
+      # Pin to the repo's rust-toolchain.toml nightly: a floating @nightly
+      # rustfmt drifts formatting decisions (2026-07-03: assert! wrapping)
+      # and fails `fmt --check` on code that is clean under the pin.
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2026-06-10
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
           key: lint
       - name: rustfmt (check)
-        run: cargo +nightly fmt --all --check
+        run: cargo fmt --all --check
       - name: clippy (deny warnings, whole workspace + all targets)
-        run: cargo +nightly clippy --workspace --all-targets --profile ci -- -D warnings
+        run: cargo clippy --workspace --all-targets --profile ci -- -D warnings
       - name: cargo-deny (advisories + licenses + bans + sources)
         # The action's default arguments inject `--all-features`, so this audits
         # feature-gated trees too (e.g. the off-by-default `cortex` worker deps).
@@ -80,8 +84,9 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
         with:
+          toolchain: nightly-2026-06-10
           components: miri
       - uses: Swatinem/rust-cache@v2
         with:
@@ -137,7 +142,9 @@ jobs:
             texlive-lang-german texlive-lang-french texlive-lang-greek \
             texlive-lang-cyrillic
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-06-10
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
@@ -222,7 +229,9 @@ jobs:
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
       - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-06-10
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
