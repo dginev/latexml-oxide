@@ -25,6 +25,30 @@ fn translate_tblr_colspec(inner: &str) -> Option<String> {
 /// Find `colspec` in the key-value inner spec and return its value text.
 /// Handles `colspec={…}` (brace-balanced) and `colspec=…` (until top-level comma).
 fn extract_colspec_value(inner: &str) -> Option<String> {
+  // tabularray shorthand: a mandatory argument with NO top-level `=` is
+  // interpreted entirely as the colspec (`\begin{tblr}{Q[c]Q[c]}`).
+  // (PR_READINESS should-fix 13 — this common form previously fell through
+  // to the stub and kept the original alignment-leak failure mode.)
+  let mut depth = 0usize;
+  let mut has_top_eq = false;
+  for ch in inner.chars() {
+    match ch {
+      '{' | '[' => depth += 1,
+      '}' | ']' => depth = depth.saturating_sub(1),
+      '=' if depth == 0 => {
+        has_top_eq = true;
+        break;
+      },
+      _ => {},
+    }
+  }
+  if !has_top_eq {
+    let trimmed = inner.trim();
+    if trimmed.is_empty() {
+      return None;
+    }
+    return Some(trimmed.to_string());
+  }
   let idx = inner.find("colspec")?;
   let after = inner[idx + "colspec".len()..].trim_start();
   let after = after.strip_prefix('=')?.trim_start();
@@ -51,6 +75,19 @@ fn extract_colspec_value(inner: &str) -> Option<String> {
 /// Parse a tabularray colspec body into a classic `\tabular` template, or `None`
 /// if it contains a construct we don't translate (bail → stub fallback).
 fn parse_colspec(spec: &str) -> Option<String> {
+  let mut total = 0usize;
+  parse_colspec_capped(spec, 0, &mut total)
+}
+
+/// Caps: recursion depth ≤ 8 and ≤ 512 total columns — nested `*{n}{…}`
+/// multiplies past any per-level cap (`*{1000}{*{1000}{c}}`), and deep
+/// `*{1}{…}` nesting is otherwise unbounded recursion (PR_READINESS
+/// should-fix 13). Exceeding a cap bails to the stub, like any other
+/// untranslatable spec.
+fn parse_colspec_capped(spec: &str, depth: usize, total: &mut usize) -> Option<String> {
+  if depth > 8 {
+    return None;
+  }
   let b = spec.as_bytes();
   let mut i = 0;
   let mut cols = String::new();
@@ -64,6 +101,10 @@ fn parse_colspec(spec: &str) -> Option<String> {
       },
       'c' | 'l' | 'r' => {
         cols.push(c);
+        *total += 1;
+        if *total > 512 {
+          return None;
+        }
         i += 1;
       },
       // Generic (Q) and stretchy (X) columns: one column each, alignment from
@@ -83,16 +124,26 @@ fn parse_colspec(spec: &str) -> Option<String> {
             return None; // unbalanced [..]
           }
           let opts = &spec[start..j];
-          if opts.contains('c') {
-            align = 'c';
-          } else if opts.contains('r') {
-            align = 'r';
-          } else if opts.contains('l') {
-            align = 'l';
+          // Alignment is a STANDALONE single-letter key (or halign=X) among
+          // the comma-separated options — a substring scan misread
+          // `bg=cyan` as centered ('c' in "cyan").
+          for item in opts.split(',') {
+            let item = item.trim();
+            let item = item.strip_prefix("halign=").unwrap_or(item);
+            match item {
+              "c" => align = 'c',
+              "r" => align = 'r',
+              "l" => align = 'l',
+              _ => {},
+            }
           }
           i = j + 1;
         }
         cols.push(align);
+        *total += 1;
+        if *total > 512 {
+          return None;
+        }
       },
       // p/m/b{width}: copy verbatim (classic understands these).
       'p' | 'm' | 'b' => {
@@ -118,6 +169,10 @@ fn parse_colspec(spec: &str) -> Option<String> {
           }
           cols.push_str(&spec[start..i]);
           let _ = body_start;
+          *total += 1;
+          if *total > 512 {
+            return None;
+          }
         } else {
           return None; // `p` without a width is not classic-valid
         }
@@ -127,7 +182,16 @@ fn parse_colspec(spec: &str) -> Option<String> {
         i += 1;
         let n = parse_braced_uint(b, spec, &mut i)?;
         let sub = parse_braced_group(b, spec, &mut i)?;
-        let sub_cols = parse_colspec(&sub)?;
+        // Count the sub-spec's columns once, then charge n× the delta so the
+        // TOTAL cap holds under multiplication.
+        let before = *total;
+        let sub_cols = parse_colspec_capped(&sub, depth + 1, total)?;
+        let per = *total - before;
+        let extra = per.checked_mul(n.saturating_sub(1))?;
+        *total = total.checked_add(extra)?;
+        if *total > 512 {
+          return None;
+        }
         for _ in 0..n {
           cols.push_str(&sub_cols);
         }
@@ -179,6 +243,39 @@ fn parse_braced_group(b: &[u8], spec: &str, i: &mut usize) -> Option<String> {
 #[cfg(test)]
 mod tests {
   use super::translate_tblr_colspec;
+
+  #[test]
+  fn bare_colspec_shorthand() {
+    // A mandatory arg with no top-level `=` IS the colspec.
+    assert_eq!(
+      translate_tblr_colspec("Q[c]Q[c]"),
+      Some("cc".to_string())
+    );
+    assert_eq!(translate_tblr_colspec("|c|c|"), Some("|c|c|".to_string()));
+  }
+
+  #[test]
+  fn q_alignment_is_a_standalone_key() {
+    // `bg=cyan` must NOT read as centered; halign=r counts.
+    assert_eq!(
+      translate_tblr_colspec("colspec={Q[l,bg=cyan]Q[halign=r]}"),
+      Some("lr".to_string())
+    );
+  }
+
+  #[test]
+  fn nested_repeat_caps() {
+    // Multiplied nesting past the total cap bails to the stub (None).
+    assert_eq!(
+      translate_tblr_colspec("colspec={*{1000}{*{1000}{c}}}"),
+      None
+    );
+    // ...but a legitimate large-ish repeat still translates.
+    assert_eq!(
+      translate_tblr_colspec("colspec={*{4}{cl}}"),
+      Some("clclclcl".to_string())
+    );
+  }
 
   #[test]
   fn colspec_translation() {
