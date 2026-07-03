@@ -641,7 +641,16 @@ LoadDefinitions!({
   DefConstructor!("\\hbox BoxSpecification HBoxContents", sub[document, args, props] {
     // "<ltx:text width='#width' _noautoclose='1'>#2</ltx:text>",
     unpack_opt_ref!(args => _spec_opt, contents_opt);
-    let contents = contents_opt.as_ref().unwrap();
+    // HBoxContents can legitimately be None: the predigest returns None when
+    // the box body digested to zero boxes (a malformed \hbox after mode
+    // damage — witness math-ph/0405041, LamsTeX `\list\item` +
+    // `$$…\tag\label{…}$$`). Perl's template `#2` of undef renders nothing
+    // and the conversion completes with errors; mirror that, don't panic.
+    let contents_opt = contents_opt.as_ref();
+    if contents_opt.is_none() {
+      Info!("empty", "hbox",
+        "\\hbox contents digested to nothing; emitting an empty box");
+    }
     let current_opt = document.get_element();
 
     // Perl: $tag eq 'ltx:_CaptureBlock_' — detect if going into insertBlock
@@ -667,7 +676,9 @@ LoadDefinitions!({
     };
     let node = document.open_element(newtag,
       Some(string_map!("_noautoclose" => "true", "width" => width)), None)?;
-    document.absorb(contents, None)?;
+    if let Some(contents) = contents_opt {
+      document.absorb(contents, None)?;
+    }
     // Perl L318-321: cleanup auto-opened svg:g/svg:svg (only when NOT in SVG),
     // then always close the specific node we opened.
     if !is_svg {
@@ -699,11 +710,16 @@ LoadDefinitions!({
       if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
         Some((*w).into())
       } else if let Some(ArgWrap::Dimension(s_num_ref)) = GetKeyVal!(spec, "spread") {
+        // The contents arg (and its width) can be absent for a degenerate
+        // \hbox (see the None-contents note in the constructor above) —
+        // skip the spread adjustment rather than panic.
         let s_num = *s_num_ref;
-        let tbox = whatsit.get_arg_mut(2).unwrap();
-        let current_w = tbox.get_width(None)?.unwrap();
-        let new_w = current_w.add(s_num);
-        Some( new_w )
+        if let Some(tbox) = whatsit.get_arg_mut(2)
+          && let Some(current_w) = tbox.get_width(None)? {
+            Some(current_w.add(s_num))
+          } else {
+            None
+          }
       } else {
         None
       }
@@ -842,12 +858,15 @@ LoadDefinitions!({
   );
 
   DefConstructor!("\\vbox BoxSpecification VBoxContents", sub[document, args, _props] {
-      let contents = args[1].as_ref().unwrap();
-      // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
-      if contents.get_property_bool("is_vbox") {
-        document.absorb(contents, None)?;
-      } else {
-        insert_block(document, contents, string_map!("vattach" => "bottom"))?;
+      // None contents is unreachable today (the vertical-mode predigest always
+      // builds a List), but guard like \hbox rather than panic if that changes.
+      if let Some(contents) = args[1].as_ref() {
+        // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
+        if contents.get_property_bool("is_vbox") {
+          document.absorb(contents, None)?;
+        } else {
+          insert_block(document, contents, string_map!("vattach" => "bottom"))?;
+        }
       }
     },
     sizer       => "#2",
@@ -864,12 +883,14 @@ LoadDefinitions!({
   );
 
   DefConstructor!("\\vtop BoxSpecification VBoxContents", sub[document, args, _props] {
-      let contents = args[1].as_ref().unwrap();
-      // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
-      if contents.get_property_bool("is_vbox") {
-        document.absorb(contents, None)?;
-      } else {
-        insert_block(document, contents, string_map!("vattach" => "top"))?;
+      // None contents is unreachable today — see the \vbox note above.
+      if let Some(contents) = args[1].as_ref() {
+        // Perl: is_vbox property detects nested \vbox|\vtop — only inner one affects vattach
+        if contents.get_property_bool("is_vbox") {
+          document.absorb(contents, None)?;
+        } else {
+          insert_block(document, contents, string_map!("vattach" => "top"))?;
+        }
       }
     },
     sizer       => "#2",
