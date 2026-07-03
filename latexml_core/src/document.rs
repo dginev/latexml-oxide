@@ -671,8 +671,19 @@ impl Document {
           // re-enter `borrow_mut` here and panic ("already borrowed"). Guard like
           // the size-computation traversal (digested.rs) and skip the re-entrant
           // absorption to break the cycle. Witness: astro-ph0310145 et al.
-          if let Ok(mut a) = alignment.try_borrow_mut() {
-            a.be_absorbed_mut(self)?;
+          match alignment.try_borrow_mut() {
+            Ok(mut a) => {
+              a.be_absorbed_mut(self)?;
+            },
+            Err(_) => {
+              // Degrading MUST be loud (fail-toward-flagging): the whole
+              // alignment's content is being dropped from the output.
+              Error!(
+                "unexpected",
+                "self_referential_alignment",
+                "Skipping absorption of a self-referential alignment (its content is lost)"
+              );
+            },
           }
           self.close_constructed_nodes();
           self.expire_box_to_absorb();

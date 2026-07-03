@@ -282,7 +282,14 @@ impl Object for Digested {
       // mirroring the base_xmath fix (75c452843d) and `compute_size`/`with_properties`.
       Alignment(ref w) => match w.try_borrow() {
         Ok(al) => al.revert(),
-        Err(_) => Ok(Tokens::default()),
+        Err(_) => {
+          Error!(
+            "unexpected",
+            "self_referential_alignment",
+            "Reverting a re-entrant alignment to empty tokens (source text is lost)"
+          );
+          Ok(Tokens::default())
+        },
       },
       Postponed(ref t) => Ok(t.clone()),
       KeyVals(ref kvs) => kvs.revert(),
@@ -329,7 +336,14 @@ impl BoxOps for Digested {
       // `compute_size` / the base_xmath fix (75c452843d).
       Alignment(w) => match w.try_borrow_mut() {
         Ok(mut al) => al.be_absorbed_mut(document),
-        Err(_) => Ok(Vec::new()),
+        Err(_) => {
+          Error!(
+            "unexpected",
+            "self_referential_alignment",
+            "Skipping absorption of a re-entrant alignment (its cells are lost)"
+          );
+          Ok(Vec::new())
+        },
       },
       KeyVals(kvs) => kvs.be_absorbed(document),
       Postponed(_) => Ok(Vec::new()), // Postponed items absorbed silently

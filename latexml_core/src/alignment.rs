@@ -269,8 +269,14 @@ impl Alignment {
     self.current_column += 1;
     // `current_row` index is Some (guarded above), but it can point past
     // `self.rows` if that row was never materialised — degrade to "no next
-    // column" instead of panicking. Witness: 1809.10756.
+    // column" instead of panicking, LOUDLY (the sibling extra-& path errors
+    // too; fail-toward-flagging). Witness: 1809.10756.
     let Some(current_row) = self.rows.get_mut(self.current_row.unwrap()) else {
+      Error!(
+        "unexpected",
+        "alignment_row",
+        "Alignment row index points past the materialised rows; dropping the cell"
+      );
       return Ok(None);
     };
     if current_row.get_column_mut(self.current_column).is_some() {
