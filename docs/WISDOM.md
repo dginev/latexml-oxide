@@ -2141,3 +2141,49 @@ sub), not at serialize/finalize time:
    document's default namespace. Move children with a true move
    (`child.unbind(); parent.add_child(&mut child)`) — preserves xml:ids, unlike
    `append_clone` which clones + remaps.
+
+## 47. Box-sizing estimation: the `\par` repack seam, list padding, and the foreignObject em basis
+
+*(2026-07-03, from the arXiv 2605.02240 tcolorbox arc — frames drawn from our
+measured content `\vbox` were both grossly too tall and clipping their content.)*
+
+tcolorbox (raw-loaded real `.sty`) draws its pgf frame from the dimensions WE
+measure for the content `\vbox`, so every estimator gap becomes a visible
+frame/content mismatch. Three traps, all in the sizing pipeline:
+
+1. **A `\par` digested in an isolated box list repacks NOTHING and defuses
+   later repacks.** `stomach::digest` isolates the box list
+   (`new_local_box_list`), so an extra `Digest!("\par")` in a
+   `before_digest_end` hook sees an empty list AND resets MODE — the real
+   repack seam (`repack_horizontal`, fired by `\par` before_digest or
+   `leave_horizontal_internal`) then never collects the trailing horizontal
+   boxes into a width-carrying `List`. Result: paragraph text is measured as
+   ONE long line (952pt tall boxes from `\hsize`-relative nonsense). Perl has
+   no such hooks on {itemize}/{enumerate}/{description} — they were a
+   Rust-only addition, removed in e0ec51fe87.
+
+2. **Sizing properties ride whatsit properties, and lists carry real glue.**
+   `compute_size_and_cache` (lib.rs BoxOps) adds
+   `padtop`/`padbottom`/`padleft`/`padright` from the whatsit's properties
+   after computing content size. Perl's `beginItemize` returns
+   `padtop = padbottom = \topsep + \parskip + \partopsep` — and the five glue
+   registers (`\topsep` 8pt, `\partopsep` 2pt, `\itemsep`/`\parsep`/
+   `\lx@default@itemsep` 4pt) have REAL defaults in the pool. Zeroed registers
+   or a missing pad ⇒ every list under-measures by ~2×`\topsep`+glue, and
+   `\preitem@par` must be the CURRENT upstream DefMacro (real `\par` +
+   `\vskip\itemsep\vskip\parsep` between items) or each item measures as a
+   single unbroken line. Probe parity is byte-exact when right:
+   `\setbox0=\vbox{...}\typeout{\the\ht0 \the\dp0}` matches reference Perl to
+   the sp.
+
+3. **foreignObject `--ltx-fo-*` em variables need the `font-size:<N>pt` term
+   in the SAME style attribute** (Perl TeX_Box.pool L427-430). Without it the
+   browser resolves the em vars against inherited 16px instead of the TeX em,
+   inflating the CSS container ~20% past the drawn frame (content runs through
+   the border). The size must come from the whatsit's live font — the same
+   source as the em divisor — so `\small` contexts emit 8pt etc.
+
+Debugging recipe: bisect with `\setbox0=\vbox` probes against reference Perl
+(`perl -I LaTeXML/lib LaTeXML/bin/latexml`, `--debug=size-detailed`) AND
+pdflatex ground truth; both engines deliberately over-estimate, so chase
+*divergence from Perl*, not from TeX.
