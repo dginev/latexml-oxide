@@ -129,6 +129,9 @@ main via a `/tmp` worktree at the merge-base main) ran the first 1000 papers of
 `/data/arxiv_shuffle_1902` standalone (12-way, `timeout 240`, status +
 ANSI-free error/fatal counts from the output zip's `cortex.log`). Branch
 binary = `e11ee74f8e` (all review fixes; predates the F19 parser fix).
+A follow-up 1k rerun at HEAD (`7b80e38d7e`, isolating the F19 commit against
+`e11ee74f8e`) showed ZERO status transitions and ZERO error-count changes —
+F19 alters MathML parse shapes, not the error/fatal signal.
 
 - **No new fatals** (3, identical papers), **no new crashes** (11 `exit=1`
   both sides = PDF-only submissions, "no .tex source"), no timeouts either
