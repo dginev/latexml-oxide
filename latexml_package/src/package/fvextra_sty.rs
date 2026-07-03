@@ -2,9 +2,10 @@ use crate::prelude::*;
 
 // fvextra.sty — extends fancyvrb (breaklines, breakanywhere, improved line
 // numbering, math-mode verbatim, …). Perl LaTeXML ships no fvextra.sty.ltxml
-// and raw-loads the real file under `rawstyles`; we do the same so every
-// environment/key a document declares (`\DefineVerbatimEnvironment{Prompt}
-// {Verbatim}{breaklines,breakanywhere,…}`) is defined.
+// (it raw-loads the real file only under `--includestyles`; by default the
+// package is simply missing there). We raw-load unconditionally — house
+// idiom — so every environment/key a document declares
+// (`\DefineVerbatimEnvironment{Prompt}{Verbatim}{breaklines,…}`) is defined.
 //
 // AFTER loading, we neutralise fvextra's automatic line-BREAKING by routing
 // its breaking line-processor back to the non-breaking one. Rationale:
@@ -34,4 +35,13 @@ LoadDefinitions!({
   // key (`\let\FV@ListProcessLine\FV@ListProcessLine@Break`) then resolves to
   // `@NoBreak` for every later `\fvset`/`\DefineVerbatimEnvironment`.
   RawTeX!(r"\let\FV@ListProcessLine@Break\FV@ListProcessLine@NoBreak");
+  // Same neutralization for the INLINE (\Verb) path: the breakanywhere /
+  // breakbefore / breakafter keys do `\let\FancyVerbBreakStart\FV@Break`
+  // at key-SET time, and fvextra's formatter gates on
+  // `\ifx\FancyVerbBreakStart\relax`. Aliasing the TARGET `\FV@Break` to
+  // `\relax` makes every later key-set propagate `\relax`, so the gate
+  // takes the plain non-breaking path — the display-only fix left inline
+  // `\Verb|…|` + breakanywhere hanging to Fatal:Timeout:TokenLimit
+  // (PR_READINESS should-fix 8; Perl converts the same input cleanly).
+  RawTeX!(r"\let\FV@Break\relax");
 });
