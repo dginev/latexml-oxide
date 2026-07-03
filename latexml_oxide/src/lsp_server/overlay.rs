@@ -337,7 +337,10 @@ mod tests {
       matches!(snap.as_slice(), [(n, DepState::Disk(Some(_)))] if *n == rhai_path),
       "the recorded .rhai must be pinned as Disk(mtime): {snap:?}"
     );
-    assert!(deps_still_current(&snap, &bufs), "an unedited binding stays current");
+    assert!(
+      deps_still_current(&snap, &bufs),
+      "an unedited binding stays current"
+    );
 
     // Edit the binding (new content + a distinct mtime): the warm cache,
     // gated on `deps_still_current`, must now miss and re-digest the preamble.
@@ -346,6 +349,9 @@ mod tests {
       .unwrap()
       .set_modified(SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000))
       .unwrap();
-    assert!(!deps_still_current(&snap, &bufs), "an edited binding reads as stale");
+    assert!(
+      !deps_still_current(&snap, &bufs),
+      "an edited binding reads as stale"
+    );
   }
 }
