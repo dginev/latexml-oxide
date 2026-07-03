@@ -1870,6 +1870,12 @@ LoadDefinitions!({
           if let Some(tb) = markup_box {
             document.open_element(qname, None, None)?;
             for mut child in tb.get_child_nodes() {
+              // unlink BEFORE add_child: libxml2 < 2.13 does NOT unlink
+              // internally — moving a still-linked node corrupts both child
+              // chains (double-visit/double-free on legacy distros). Every
+              // other move site in the codebase unlinks first
+              // (PR_READINESS must-fix 7).
+              child.unlink_node();
               document.get_node_mut().add_child(&mut child)?;
             }
             document.close_element(qname)?;
