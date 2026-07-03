@@ -154,6 +154,7 @@ mission targets (docs serving both come first):
 - **[`docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md`](docs/MATH_OVERPARSE_DEEP_DIVE_2026-06-30.md)** — Measured and-node counts per ambiguity pattern; ranked open levers (`f(x)` apply-vs-multiply, bare-`|x|` pre-lexer, integral Step 2). The top `math_parse` lever for the arXiv runs; supersedes the archived 2026-05-21 ambiguity audit.
 
 **Open dated diagnostics** (point-in-time studies with pending halves — see naming rule):
+- **[`docs/ARXIV_FORK_AUDIT_2026-07-03.md`](docs/ARXIV_FORK_AUDIT_2026-07-03.md)** — due-diligence survey of the arXiv/LaTeXML "velocity fork" (57 commits): what's already translated (pgfmath core, usebbl, calc params, hyperxmp, acmart ARIA) vs the ranked residual candidates (abstract-in-TOC inlist, pgfmath string results, graphicx actualtext).
 - **[`docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`](docs/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md)** — `expected:id` dangling-XMRef cluster: container-id half landed; content-branch/MathFork reconciliation still pending.
 - **[`docs/EXPL3_CATCODE_GAP_2026-06-08.md`](docs/EXPL3_CATCODE_GAP_2026-06-08.md)** — expl3 catcode-gap study: still OPEN (deep); records four attempted fixes that all regressed and were reverted.
 
