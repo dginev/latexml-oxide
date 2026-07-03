@@ -663,7 +663,7 @@ impl MathParser {
 
   pub fn parse_math(&mut self, document: &mut Document) -> Result<()> {
     self.clear();
-    self.cleanup_scripts(document);
+    self.cleanup_scripts(document)?;
     let xmath_selector = "descendant-or-self::ltx:XMath[not(ancestor::ltx:XMath)]";
     let xmath_nodes = document.findnodes(xmath_selector, None);
 
@@ -881,7 +881,7 @@ impl MathParser {
   // To solve this, we find & replace all references to such script XMApps by an
   // explicit XMApp with the XMRef refering to the script itself, not the
   // XMApp. (make sense?)
-  pub fn cleanup_scripts(&mut self, document: &mut Document) {
+  pub fn cleanup_scripts(&mut self, document: &mut Document) -> Result<()> {
     // Perl: cleanupScripts — find script XMApp nodes that may be referenced by XMRef,
     // and redirect those references to point at the script content (first child) instead
     // of the XMApp wrapper. This prevents dangling idrefs when the XMApp is consumed
@@ -936,14 +936,22 @@ impl MathParser {
       // Replace each ref with an XMApp containing an XMRef to the script
       for ref_node in refs {
         // Build the replacement: ltx:XMApp{attrs}[ltx:XMRef{idref=script_id}]
-        let mut new_app = Node::new("XMApp", None, &document.document).unwrap();
+        // Allocation can fail under fleet memory pressure (same class as
+        // new_script_node) — degrade loudly and keep the original ref.
+        let Ok(mut new_app) = Node::new("XMApp", None, &document.document) else {
+          Error!("misc", "allocation", "XML node allocation failed (XMApp); keeping XMRef as-is");
+          continue;
+        };
         for (name, value) in &attrs {
           let _ = new_app.set_attribute(name, value);
         }
         if let Some(ref ns) = ns {
           let _ = new_app.set_namespace(ns);
         }
-        let mut xmref = Node::new("XMRef", None, &document.document).unwrap();
+        let Ok(mut xmref) = Node::new("XMRef", None, &document.document) else {
+          Error!("misc", "allocation", "XML node allocation failed (XMRef); keeping XMRef as-is");
+          continue;
+        };
         let _ = xmref.set_attribute("idref", &script_id);
         if let Some(ref ns) = ns {
           let _ = xmref.set_namespace(ns);
@@ -952,6 +960,7 @@ impl MathParser {
         let _ = document.replace_tree(new_app, ref_node);
       }
     }
+    Ok(())
   }
   // sub cleanupScripts {
   //   my ($self, $document) = @_;
@@ -1316,18 +1325,38 @@ impl MathParser {
           // Perl L546: handle scripts within this fenced group
           let kludged = kludge_scripts_rec(row, document)?;
           // Wrap if > 1 node, give role FENCED
+          let mut kludged = kludged;
           let result = if kludged.len() > 1 {
-            let mut wrap = Node::new("XMWrap", None, document.get_document()).unwrap();
-            for mut n in kludged {
-              n.unlink_node();
-              wrap.add_child(&mut n).ok();
+            match Node::new("XMWrap", None, document.get_document()) {
+              Ok(mut wrap) => {
+                for mut n in kludged {
+                  n.unlink_node();
+                  wrap.add_child(&mut n).ok();
+                }
+                (wrap, "FENCED".to_string())
+              },
+              Err(_) => {
+                // Allocation failure under memory pressure: degrade loudly to
+                // the first kludged node (same class as new_script_node).
+                Error!(
+                  "misc",
+                  "allocation",
+                  "XML node allocation failed (XMWrap); using first node"
+                );
+                (kludged.swap_remove(0), "FENCED".to_string())
+              },
             }
-            (wrap, "FENCED".to_string())
           } else {
-            let node = kludged
-              .into_iter()
-              .next()
-              .unwrap_or_else(|| Node::new_text("", &document.document).unwrap());
+            let node = match kludged.into_iter().next() {
+              Some(n) => n,
+              None => match Node::new_text("", &document.document) {
+                Ok(n) => n,
+                Err(_) => {
+                  Error!("misc", "allocation", "XML text-node allocation failed; skipping group");
+                  continue;
+                },
+              },
+            };
             (node, "FENCED".to_string())
           };
           if stack.is_empty() {
@@ -2325,7 +2354,9 @@ fn kludge_scripts_rec(pairs: Vec<(Node, String)>, document: &mut Document) -> Re
           break;
         } else {
           // Perl L578: FLOAT + POST, no more → floating sub+super on Absent
-          let absent = new_absent_node(document);
+          let Some(absent) = new_absent_node(document)? else {
+            break; // allocation failure already reported; drop the pair
+          };
           let inner = new_script_node(absent, &y, document)?;
           let outer = new_script_node(inner, &x, document)?;
           acc.push(outer);
@@ -2501,11 +2532,15 @@ fn new_script_node(
   Ok(app_node)
 }
 
-/// Create an XMTok with meaning="absent" (Perl: Absent())
-fn new_absent_node(document: &mut Document) -> Node {
-  let mut tok = Node::new("XMTok", None, document.get_document()).unwrap();
+/// Create an XMTok with meaning="absent" (Perl: Absent()). Allocation can
+/// fail under fleet memory pressure — degrade loudly, caller skips the pair.
+fn new_absent_node(document: &mut Document) -> Result<Option<Node>> {
+  let Ok(mut tok) = Node::new("XMTok", None, document.get_document()) else {
+    Error!("misc", "allocation", "XML node allocation failed (absent XMTok)");
+    return Ok(None);
+  };
   tok.set_attribute("meaning", "absent").ok();
-  tok
+  Ok(Some(tok))
 }
 
 fn parse_scriptpos_str(sp: &str) -> (&str, u32) {

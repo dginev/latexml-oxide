@@ -2371,8 +2371,20 @@ impl Document {
       // zero-length match, spinning `get_prev_sibling().unwrap()` until it
       // panics. Saturate: a 0/1-length match removes no prior siblings.
       for _idx in 0..nmatched.saturating_sub(1) {
-        let remove = node.get_prev_sibling().unwrap();
-        boxes.push_front(self.get_node_box(&remove).unwrap());
+        // The matcher can OVER-report nmatched past the actual sibling count
+        // (the mirror of the zero-length underflow above) — stop instead of
+        // panicking on the unwrap (PR_READINESS must-fix 5).
+        let Some(remove) = node.get_prev_sibling() else {
+          Error!(
+            "unexpected",
+            "ligature",
+            "Math ligature matched more siblings than exist; truncating the merge"
+          );
+          break;
+        };
+        if let Some(b) = self.get_node_box(&remove) {
+          boxes.push_front(b);
+        }
         self.remove_node(remove);
       }
       // This fragment replaces the node's box by the composite boxes it replaces
