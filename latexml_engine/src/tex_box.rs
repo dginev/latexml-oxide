@@ -846,9 +846,19 @@ LoadDefinitions!({
             if r == r.floor() { format!("{}", r as i64) }
             else { format!("{:.2}", r).trim_end_matches('0').to_string() }
           };
+          // Perl TeX_Box.pool L427-430 also appends `font-size:<size>pt` —
+          // WITHOUT it the em-valued --ltx-fo-* vars resolve against the
+          // browser's inherited font-size (16px) instead of the TeX em
+          // (10pt ~= 13.3px), inflating the container ~20% past the drawn
+          // frame: tcolorbox content ran through the right border
+          // (2605.02240; 509px content in a 440px box).
+          let font_size = whatsit
+            .and_then(|wh| wh.get_font().ok().flatten())
+            .map(|f| f.get_size().unwrap_or(10.0))
+            .unwrap_or(10.0);
           document.set_attribute(node, "style",
-            &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;",
-              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em)))?;
+            &s!("--ltx-fo-width:{}em;--ltx-fo-height:{}em;--ltx-fo-depth:{}em;font-size:{}pt;",
+              fmt_em(w_em), fmt_em(h_em), fmt_em(d_em), font_size))?;
         }
       }
       if !has_dims && !node.has_attribute("overflow") {

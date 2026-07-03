@@ -17,7 +17,7 @@
             <svg:path d="M -1.66 2.21 C -1.52 1.38 0 0.14 0.42 0 C 0 -0.14 -1.52 -1.38 -1.66 -2.21" style="fill:none"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 216.18 -15.27)">
-            <svg:foreignObject height="13.84" overflow="visible" style="--ltx-fo-width:2.9em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;" transform="matrix(1 0 0 -1 0 10.38)" width="40.09"><Math mode="inline" tex="f/f_{N}" text="f / f _ N" xml:id="p1.pic1.m1">
+            <svg:foreignObject height="13.84" overflow="visible" style="--ltx-fo-width:2.9em;--ltx-fo-height:0.75em;--ltx-fo-depth:0.25em;font-size:10pt;" transform="matrix(1 0 0 -1 0 10.38)" width="40.09"><Math mode="inline" tex="f/f_{N}" text="f / f _ N" xml:id="p1.pic1.m1">
                 <XMath>
                   <XMApp>
                     <XMTok meaning="divide" role="MULOP">/</XMTok>
@@ -33,27 +33,27 @@
           </svg:g>
           <svg:path d="M 0 0 M 78.74 0 M 157.48 0" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -3.46 -13.81)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">0</svg:foreignObject>
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">0</svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 75.28 -13.81)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">1</svg:foreignObject>
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">1</svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 154.02 -13.81)">
-            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">2</svg:foreignObject>
+            <svg:foreignObject height="8.92" overflow="visible" style="--ltx-fo-width:0.5em;--ltx-fo-height:0.64em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.92)" width="6.92">2</svg:foreignObject>
           </svg:g>
           <svg:path d="M 39.37 137.8 M 157.48 137.8" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 6.32 134.43)">
-            <svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:6.02em;--ltx-fo-height:0.61em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 6.73)" width="66.4"><text fontsize="70%">Constant flux</text></svg:foreignObject>
+            <svg:foreignObject height="6.73" overflow="visible" style="--ltx-fo-width:6.02em;--ltx-fo-height:0.61em;--ltx-fo-depth:0em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="66.4"><text fontsize="70%">Constant flux</text></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 118.73 135.37)">
-            <svg:foreignObject height="8.61" overflow="visible" style="--ltx-fo-width:7.08em;--ltx-fo-height:0.61em;--ltx-fo-depth:0.17em;" transform="matrix(1 0 0 -1 0 6.73)" width="78.1"><text fontsize="70%">Field weakening</text></svg:foreignObject>
+            <svg:foreignObject height="8.61" overflow="visible" style="--ltx-fo-width:7.08em;--ltx-fo-height:0.61em;--ltx-fo-depth:0.17em;font-size:7pt;" transform="matrix(1 0 0 -1 0 6.73)" width="78.1"><text fontsize="70%">Field weakening</text></svg:foreignObject>
           </svg:g>
           <svg:path d="M 0 0 L 0 156.84" style="fill:none"/>
           <svg:g stroke-dasharray="none" stroke-dashoffset="0.0pt" stroke-linecap="round" stroke-linejoin="round" stroke-width="0.32pt" transform="matrix(0.0 1.0 -1.0 0.0 0 156.84)">
             <svg:path d="M -1.66 2.21 C -1.52 1.38 0 0.14 0.42 0 C 0 -0.14 -1.52 -1.38 -1.66 -2.21" style="fill:none"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -44.59 154.1)">
-            <svg:foreignObject height="12.15" overflow="visible" style="--ltx-fo-width:2.87em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;" transform="matrix(1 0 0 -1 0 9.46)" width="39.7"><Math mode="inline" tex="U_{s},\varPsi_{s}" text="list@(U _ s, varPsi _ s)" xml:id="p1.pic1.m2">
+            <svg:foreignObject height="12.15" overflow="visible" style="--ltx-fo-width:2.87em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="39.7"><Math mode="inline" tex="U_{s},\varPsi_{s}" text="list@(U _ s, varPsi _ s)" xml:id="p1.pic1.m2">
                 <XMath>
                   <XMDual>
                     <XMApp>
@@ -86,7 +86,7 @@
           </svg:g>
           <svg:path d="M 39.37 59.06" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 30.93 55.37)">
-            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1.22em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="16.87"><Math mode="inline" tex="U_{s}" text="U _ s" xml:id="p1.pic1.m3">
+            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1.22em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="16.87"><Math mode="inline" tex="U_{s}" text="U _ s" xml:id="p1.pic1.m3">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -101,7 +101,7 @@
           </svg:g>
           <svg:path d="M 98.43 118.11" style="fill:none"/>
           <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 90.09 114.42)">
-            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1.21em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;" transform="matrix(1 0 0 -1 0 9.46)" width="16.68"><Math mode="inline" tex="\varPsi_{s}" text="varPsi _ s" xml:id="p1.pic1.m4">
+            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1.21em;--ltx-fo-height:0.68em;--ltx-fo-depth:0.15em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.46)" width="16.68"><Math mode="inline" tex="\varPsi_{s}" text="varPsi _ s" xml:id="p1.pic1.m4">
                 <XMath>
                   <XMApp>
                     <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>

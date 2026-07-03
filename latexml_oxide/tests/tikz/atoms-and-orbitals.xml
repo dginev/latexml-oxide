@@ -53,7 +53,7 @@
             <svg:path d="M 13.78 0 C 13.78 7.61 7.61 13.78 0 13.78 C -7.61 13.78 -13.78 7.61 -13.78 0 C -13.78 -7.61 -7.61 -13.78 0 -13.78 C 7.61 -13.78 13.78 -7.61 13.78 0 Z M 0 0"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -5.76 -5.67)">
-            <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.71em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="11.51"><text color="#D92626" fontsize="120%">B</text></svg:foreignObject>
+            <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.71em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="11.51"><text color="#D92626" fontsize="120%">B</text></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000">
             <svg:g stroke-width="0.4pt">
@@ -142,7 +142,7 @@
               <svg:path d="M 171.26 0 C 171.26 7.61 165.09 13.78 157.48 13.78 C 149.87 13.78 143.7 7.61 143.7 0 C 143.7 -7.61 149.87 -13.78 157.48 -13.78 C 165.09 -13.78 171.26 -7.61 171.26 0 Z M 157.48 0"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 151.39 -5.67)">
-              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.19"><text color="#D92626" fontsize="120%">H</text></svg:foreignObject>
+              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="12.19"><text color="#D92626" fontsize="120%">H</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp9">
@@ -169,7 +169,7 @@
               <svg:path d="M 13.78 -157.48 C 13.78 -149.87 7.61 -143.7 0 -143.7 C -7.61 -143.7 -13.78 -149.87 -13.78 -157.48 C -13.78 -165.09 -7.61 -171.26 0 -171.26 C 7.61 -171.26 13.78 -165.09 13.78 -157.48 Z M 0 -157.48"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -5.87 -163.15)">
-              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.72em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="11.74"><text color="#D92626" fontsize="120%">C</text></svg:foreignObject>
+              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.72em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="11.74"><text color="#D92626" fontsize="120%">C</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp11">
@@ -259,7 +259,7 @@
               <svg:path d="M 171.26 -157.48 C 171.26 -149.87 165.09 -143.7 157.48 -143.7 C 149.87 -143.7 143.7 -149.87 143.7 -157.48 C 143.7 -165.09 149.87 -171.26 157.48 -171.26 C 165.09 -171.26 171.26 -165.09 171.26 -157.48 Z M 157.48 -157.48"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 149.35 -163.25)">
-              <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.71em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.53)" width="16.26"><text color="#D92626" fontsize="120%">Cl</text></svg:foreignObject>
+              <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.71em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.53)" width="16.26"><text color="#D92626" fontsize="120%">Cl</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp19">
@@ -430,7 +430,7 @@
             <svg:path d="M 13.78 0 C 13.78 7.61 7.61 13.78 0 13.78 C -7.61 13.78 -13.78 7.61 -13.78 0 C -13.78 -7.61 -7.61 -13.78 0 -13.78 C 7.61 -13.78 13.78 -7.61 13.78 0 Z M 0 0"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -8.13 -5.77)">
-            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.71em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.53)" width="16.26"><text color="#D92626" fontsize="120%">Cl</text></svg:foreignObject>
+            <svg:foreignObject height="11.53" overflow="visible" style="--ltx-fo-width:1em;--ltx-fo-height:0.71em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.53)" width="16.26"><text color="#D92626" fontsize="120%">Cl</text></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000">
             <svg:g stroke-width="0.4pt">
@@ -578,7 +578,7 @@
               <svg:path d="M 100.39 0 C 100.39 7.61 94.22 13.78 86.61 13.78 C 79 13.78 72.83 7.61 72.83 0 C 72.83 -7.61 79 -13.78 86.61 -13.78 C 94.22 -13.78 100.39 -7.61 100.39 0 Z M 86.61 0"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 80.52 -5.67)">
-              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.19"><text color="#D92626" fontsize="120%">H</text></svg:foreignObject>
+              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.75em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="12.19"><text color="#D92626" fontsize="120%">H</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp47">
@@ -662,7 +662,7 @@
             <svg:path d="M 13.78 0 C 13.78 7.61 7.61 13.78 0 13.78 C -7.61 13.78 -13.78 7.61 -13.78 0 C -13.78 -7.61 -7.61 -13.78 0 -13.78 C 7.61 -13.78 13.78 -7.61 13.78 0 Z M 0 0"/>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 -6.32 -5.67)">
-            <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
+            <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
           </svg:g>
           <svg:g fill="#000000" stroke="#000000">
             <svg:g stroke-width="0.4pt">
@@ -791,7 +791,7 @@
               <svg:path d="M 131.89 0 C 131.89 7.61 125.72 13.78 118.11 13.78 C 110.5 13.78 104.33 7.61 104.33 0 C 104.33 -7.61 110.5 -13.78 118.11 -13.78 C 125.72 -13.78 131.89 -7.61 131.89 0 Z M 118.11 0"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 111.79 -5.67)">
-              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
+              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp61">
@@ -919,7 +919,7 @@
               <svg:path d="M 289.37 0 C 289.37 7.61 283.2 13.78 275.59 13.78 C 267.98 13.78 261.81 7.61 261.81 0 C 261.81 -7.61 267.98 -13.78 275.59 -13.78 C 283.2 -13.78 289.37 -7.61 289.37 0 Z M 275.59 0"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 269.27 -5.67)">
-              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
+              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp73">
@@ -1047,7 +1047,7 @@
               <svg:path d="M 352.36 0 C 352.36 7.61 346.19 13.78 338.58 13.78 C 330.97 13.78 324.8 7.61 324.8 0 C 324.8 -7.61 330.97 -13.78 338.58 -13.78 C 346.19 -13.78 352.36 -7.61 352.36 0 Z M 338.58 0"/>
             </svg:g>
             <svg:g fill="#000000" stroke="#000000" stroke-width="0.8pt" transform="matrix(1.0 0.0 0.0 1.0 332.26 -5.67)">
-              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
+              <svg:foreignObject height="11.35" overflow="visible" style="--ltx-fo-width:0.78em;--ltx-fo-height:0.7em;--ltx-fo-depth:0em;font-size:12pt;" transform="matrix(1 0 0 -1 0 11.35)" width="12.65"><text color="#D92626" fontsize="120%">O</text></svg:foreignObject>
             </svg:g>
             <svg:g stroke-width="0.4pt">
               <svg:clipPath id="pgfcp85">

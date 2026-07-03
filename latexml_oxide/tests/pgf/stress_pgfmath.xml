@@ -132,7 +132,7 @@
                 <svg:path d="M 23.62 -47.24 L 70.87 -47.24" style="fill:none"/>
               </svg:g>
               <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -100.54 -59.59)">
-                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:0.87em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;" transform="matrix(1 0 0 -1 0 7.46)" width="12.11"><Math mode="inline" tex="\begin{subarray}{c}T_{0}\end{subarray}" text="list@(Array[[T _ 0]])" xml:id="S1.F1.pic1.m1">
+                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:0.87em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;font-size:10pt;" transform="matrix(1 0 0 -1 0 7.46)" width="12.11"><Math mode="inline" tex="\begin{subarray}{c}T_{0}\end{subarray}" text="list@(Array[[T _ 0]])" xml:id="S1.F1.pic1.m1">
                     <XMath>
                       <XMDual>
                         <XMApp>
@@ -155,7 +155,7 @@
                   </Math></svg:foreignObject>
               </svg:g>
               <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -53.3 -59.59)">
-                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:0.87em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;" transform="matrix(1 0 0 -1 0 7.46)" width="12.11"><Math mode="inline" tex="\begin{subarray}{c}T_{1}\end{subarray}" text="list@(Array[[T _ 1]])" xml:id="S1.F1.pic1.m2">
+                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:0.87em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;font-size:10pt;" transform="matrix(1 0 0 -1 0 7.46)" width="12.11"><Math mode="inline" tex="\begin{subarray}{c}T_{1}\end{subarray}" text="list@(Array[[T _ 1]])" xml:id="S1.F1.pic1.m2">
                     <XMath>
                       <XMDual>
                         <XMApp>
@@ -178,7 +178,7 @@
                   </Math></svg:foreignObject>
               </svg:g>
               <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 -6.05 -59.59)">
-                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:0.87em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;" transform="matrix(1 0 0 -1 0 7.46)" width="12.11"><Math mode="inline" tex="\begin{subarray}{c}T_{2}\end{subarray}" text="list@(Array[[T _ 2]])" xml:id="S1.F1.pic1.m3">
+                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:0.87em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;font-size:10pt;" transform="matrix(1 0 0 -1 0 7.46)" width="12.11"><Math mode="inline" tex="\begin{subarray}{c}T_{2}\end{subarray}" text="list@(Array[[T _ 2]])" xml:id="S1.F1.pic1.m3">
                     <XMath>
                       <XMDual>
                         <XMApp>
@@ -201,7 +201,7 @@
                   </Math></svg:foreignObject>
               </svg:g>
               <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 86.08 -59.59)">
-                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:1.22em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;" transform="matrix(1 0 0 -1 0 7.46)" width="16.82"><Math mode="inline" tex="\begin{subarray}{c}T_{t-1}\end{subarray}" text="list@(Array[[T _ (t - 1)]])" xml:id="S1.F1.pic1.m4">
+                <svg:foreignObject height="8" overflow="visible" style="--ltx-fo-width:1.22em;--ltx-fo-height:0.54em;--ltx-fo-depth:0.04em;font-size:10pt;" transform="matrix(1 0 0 -1 0 7.46)" width="16.82"><Math mode="inline" tex="\begin{subarray}{c}T_{t-1}\end{subarray}" text="list@(Array[[T _ (t - 1)]])" xml:id="S1.F1.pic1.m4">
                     <XMath>
                       <XMDual>
                         <XMApp>
@@ -228,7 +228,7 @@
                   </Math></svg:foreignObject>
               </svg:g>
               <svg:g fill="#000000" stroke="#000000" transform="matrix(1.0 0.0 0.0 1.0 123 -21.18)">
-                <svg:foreignObject height="28.17" overflow="visible" style="--ltx-fo-width:4.28em;--ltx-fo-height:1.27em;--ltx-fo-depth:0.77em;" transform="matrix(1 0 0 -1 0 17.55)" width="59.16"><Math mode="inline" tex="\begin{subarray}{c}q,q,\dotsc,q\\&#10;q-t\text{ branches}\end{subarray}" text="list@(Array[[list@(q, q, dotsc, q)], [q - t * [ branches]]])" xml:id="S1.F1.pic1.m5">
+                <svg:foreignObject height="28.17" overflow="visible" style="--ltx-fo-width:4.28em;--ltx-fo-height:1.27em;--ltx-fo-depth:0.77em;font-size:10pt;" transform="matrix(1 0 0 -1 0 17.55)" width="59.16"><Math mode="inline" tex="\begin{subarray}{c}q,q,\dotsc,q\\&#10;q-t\text{ branches}\end{subarray}" text="list@(Array[[list@(q, q, dotsc, q)], [q - t * [ branches]]])" xml:id="S1.F1.pic1.m5">
                     <XMath>
                       <XMDual>
                         <XMApp>
