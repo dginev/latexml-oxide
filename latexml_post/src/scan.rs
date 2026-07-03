@@ -65,6 +65,11 @@ impl Scan {
       | "ltx:bibliography" | "ltx:index" | "ltx:glossary" | "ltx:theorem" | "ltx:proof" => {
         self.section_handler(doc, node, tag, parent_id)
       },
+      // arXiv-fork (Post/Scan.pm abstract_handler / ack_handler): register
+      // abstract + acknowledgements as primary TOC-able entries whose title
+      // comes from @name (or a default) since they carry no ltx:title.
+      "ltx:abstract" => self.named_handler(doc, node, tag, parent_id, "Abstract"),
+      "ltx:acknowledgements" => self.named_handler(doc, node, tag, parent_id, "Acknowledgements"),
       "ltx:table" | "ltx:figure" | "ltx:float" | "ltx:listing" => {
         self.captioned_handler(doc, node, tag, parent_id)
       },
@@ -309,6 +314,38 @@ impl Scan {
       if let Some(stub) = node.get_attribute("stub") {
         sp.push("stub", Value::from(stub));
       }
+      let key = format!("ID:{}", id_str);
+      self.register_scanned(&key, sp);
+      self.add_as_child(id_str, parent_id);
+    }
+    let effective_id = id.as_deref().or(parent_id);
+    self.scan_children(doc, node, effective_id);
+  }
+
+  /// arXiv-fork Scan.pm `abstract_handler`/`ack_handler` (one body, two
+  /// defaults): register the element as a primary entry titled from its
+  /// `name` attribute (set by the frontmatter machinery, e.g. "Abstract" /
+  /// "Acknowledgments") or the given default. Unlike the fork we still
+  /// scan children, so labels/ids inside the abstract keep registering
+  /// (the fork's handlers skip descent — an apparent oversight there).
+  fn named_handler(
+    &mut self,
+    doc: &PostDocument,
+    node: &Node,
+    tag: &str,
+    parent_id: Option<&str>,
+    default_name: &str,
+  ) {
+    let mut sp = self.collect_common(doc, node, tag, parent_id);
+    let id = sp.id.clone();
+    if let Some(ref id_str) = id {
+      let name = node
+        .get_attribute("name")
+        .unwrap_or_else(|| default_name.to_string());
+      sp.push("primary", Value::Bool(true));
+      sp.push("children", Value::List(Vec::new()));
+      sp.push("title", Value::from(name.as_str()));
+      sp.push("toctitle", Value::from(name.as_str()));
       let key = format!("ID:{}", id_str);
       self.register_scanned(&key, sp);
       self.add_as_child(id_str, parent_id);

@@ -5,7 +5,7 @@
 <document xmlns="http://dlmf.nist.gov/LaTeXML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <bibliography citestyle="numbers" xml:id="bib">
+  <bibliography citestyle="numbers" inlist="toc" xml:id="bib">
     <title>References</title>
     <biblist>
       <bibentry key="Smith2020" type="article" xml:id="bib.bib1">

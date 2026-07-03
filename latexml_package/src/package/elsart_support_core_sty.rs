@@ -142,7 +142,8 @@ LoadDefinitions!({
   DefConstructor!("\\endack", "</ltx:acknowledgements>");
 
   // Acknowledgements tag — Perl L125
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
 
   // Keywords — Perl L130-153
   // keyword environment and macros with XUntil pattern

@@ -100,7 +100,8 @@ LoadDefinitions!({
   // 5.5 Acknowledgements — Perl revtex4_support.sty.ltxml L100-106.
   // Perl: DefConstructor('\acknowledgments', "<ltx:acknowledgements name='#name'>",
   //   properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))); });
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
   // Tolerant close — see omnibus_cls.rs commentary on the

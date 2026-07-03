@@ -143,7 +143,8 @@ LoadDefinitions!({
   DefConstructor!("\\endacknowledgements", "</ltx:acknowledgements>");
   Let!("\\acknowledgement", "\\acknowledgements");
   Let!("\\endacknowledgement", "\\endacknowledgements");
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
   DefMacro!("\\ackname", "Acknowledgements");
 

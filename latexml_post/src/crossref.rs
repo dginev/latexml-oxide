@@ -17,6 +17,7 @@ use crate::{
 /// Sectional element types that appear in TOCs.
 const NORMAL_TOC_TYPES: &[&str] = &[
   "ltx:document",
+  "ltx:abstract",
   "ltx:part",
   "ltx:chapter",
   "ltx:section",
@@ -27,6 +28,7 @@ const NORMAL_TOC_TYPES: &[&str] = &[
   "ltx:index",
   "ltx:bibliography",
   "ltx:glossary",
+  "ltx:acknowledgements",
   "ltx:appendix",
 ];
 

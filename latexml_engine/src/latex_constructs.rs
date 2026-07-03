@@ -3619,7 +3619,13 @@ LoadDefinitions!({
   // bibliography or section is emitted.
   // Perl: ltx:bibliography already has autoClose=1 (latex_constructs L4078);
   // these siblings match its container-with-trailing-content semantics.
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // arXiv-fork: acknowledgements joins the navigation TOC (see the
+  // ltx:abstract Tag above for the design note).
+  Tag!("ltx:acknowledgements", auto_close => true,
+    after_open => sub[document, node] {
+      document.set_attribute(node, "inlist", "toc")?;
+      document.generate_id(node, "acknowledgements")?;
+  });
   Tag!("ltx:appendix", auto_close => true);
   Tag!("ltx:index", auto_close => true);
   // NOTE: tried Tag!("ltx:itemize"/"ltx:enumerate"/"ltx:description",
@@ -3964,6 +3970,15 @@ LoadDefinitions!({
         "name" => digest(T_CS!("\\contentsname"))?))
     }
   );
+
+  // arXiv-fork (23771504 + 085c9fb6): abstract and acknowledgements carry
+  // `inlist="toc"` + a generated xml:id so the navigation TOC (Post::Scan +
+  // CrossRef gen_toc) can list them. The user-visible `\tableofcontents`
+  // select list above is deliberately EXEMPT (the fork reverted that half).
+  Tag!("ltx:abstract", after_open => sub[document, node] {
+    document.set_attribute(node, "inlist", "toc")?;
+    document.generate_id(node, "abstract")?;
+  });
 
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
   DefConstructor!("\\listoffigures",
@@ -7967,7 +7982,12 @@ LoadDefinitions!({
   Let!("\\saved@endthebibliography", "\\endthebibliography");
   // auto close the bibliography and contained biblist.
   Tag!("ltx:biblist",      auto_close => true);
-  Tag!("ltx:bibliography", auto_close => true);
+  // arXiv-fork: the bibliography joins the navigation TOC (its xml:id is
+  // assigned by the bibliography machinery itself, so only inlist here).
+  Tag!("ltx:bibliography", auto_close => true,
+    after_open => sub[document, node] {
+      document.set_attribute(node, "inlist", "toc")?;
+  });
 
   DefMacro!("\\par@in@bibliography", {
     skip_spaces()?;

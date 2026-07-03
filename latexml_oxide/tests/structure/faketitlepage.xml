@@ -7,7 +7,7 @@
   <titlepage>
     <p><text fontsize="207%">This is an <emph font="italic">fake</emph> titlepage.</text></p>
   </titlepage>
-  <abstract name="Abstract">
+  <abstract inlist="toc" name="Abstract" xml:id="abstract1">
     <p>Orphan abstract should follow even a fake titlepage.</p>
   </abstract>
   <section inlist="toc" xml:id="Ch0.S1">

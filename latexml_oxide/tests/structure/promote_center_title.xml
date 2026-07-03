@@ -10,7 +10,7 @@
       <p align="center">An Author</p>
     </para>
   </logical-block>
-  <abstract name="Abstract">
+  <abstract inlist="toc" name="Abstract" xml:id="abstract1">
     <p>The abstract text.</p>
   </abstract>
   <section inlist="toc" xml:id="S1">

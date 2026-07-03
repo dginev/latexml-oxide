@@ -64,7 +64,8 @@ LoadDefinitions!({
   // closes only if the element is still open (covers cases where
   // user did write \begin{acknowledgments}...\end{acknowledgments}
   // and our opener+auto-close already wrapped the body).
-  Tag!("ltx:acknowledgements", auto_close => true);
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => { Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?)) });
   DefConstructor!("\\endacknowledgments", sub[document, _whatsit, _props] {
