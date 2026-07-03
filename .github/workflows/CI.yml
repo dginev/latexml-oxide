@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 mold
+            libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 mold
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -78,7 +78,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6
+            libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
         with:
@@ -130,7 +130,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            libxml2-dev libxslt1-dev libkpathsea-dev libkpathsea6 \
+            libxml2-dev libxml2-utils libxslt1-dev libkpathsea-dev libkpathsea6 \
             mold \
             texlive texlive-latex-extra texlive-science \
             texlive-bibtex-extra texlive-publishers \

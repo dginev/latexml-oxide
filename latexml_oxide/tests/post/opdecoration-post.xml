@@ -44,7 +44,7 @@
               <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
             </XMApp>
           </XMApp>
-        </XMath><m:math alttext="\sum_{i=1}^{n}a_{i}" display="block"><m:mrow><m:munderover><m:mo>∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:munderover><m:msub><m:mi>a</m:mi><m:mi>i</m:mi></m:msub></m:mrow></m:math></Math>
+        </XMath><m:math alttext="\sum_{i=1}^{n}a_{i}" display="block"><m:mrow><m:munderover><m:mo movablelimits="false">∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:munderover><m:msub><m:mi>a</m:mi><m:mi>i</m:mi></m:msub></m:mrow></m:math></Math>
     </equation>
     <equation xml:id="S0.Ex4">
       <Math mode="display" tex="\int_{0}^{1}g\,dx" text="((integral _ 0) ^ 1)@(g * differential-d@(x))" xml:id="S0.Ex4.m1"><XMath>
@@ -67,7 +67,7 @@
               </XMApp>
             </XMApp>
           </XMApp>
-        </XMath><m:math alttext="\int_{0}^{1}g\,dx" display="block"><m:mrow><m:msubsup><m:mo>∫</m:mo><m:mn>0</m:mn><m:mn>1</m:mn></m:msubsup><m:mrow><m:mi>g</m:mi><m:mo>⁢</m:mo><m:mrow><m:mo rspace="0em">𝑑</m:mo><m:mi>x</m:mi></m:mrow></m:mrow></m:mrow></m:math></Math>
+        </XMath><m:math alttext="\int_{0}^{1}g\,dx" display="block"><m:mrow><m:msubsup><m:mo>∫</m:mo><m:mn>0</m:mn><m:mn>1</m:mn></m:msubsup><m:mrow><m:mi>g</m:mi><m:mo lspace="0.170em">⁢</m:mo><m:mrow><m:mo rspace="0em">𝑑</m:mo><m:mi>x</m:mi></m:mrow></m:mrow></m:mrow></m:math></Math>
     </equation>
     <equation xml:id="S0.Ex5">
       <Math mode="display" tex="\sin(x)" text="sine@(x)" xml:id="S0.Ex5.m1"><XMath>

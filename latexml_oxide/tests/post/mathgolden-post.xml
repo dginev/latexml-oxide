@@ -2,23 +2,23 @@
 <?latexml class="article"?>
 <?latexml package="amsmath,xcolor,cancel"?>
 <?latexml RelaxNGSchema="LaTeXML"?>
-<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:m="http://www.w3.org/1998/Math/MathML" xml:id="Document">
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xmlns:m="http://www.w3.org/1998/Math/MathML">
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
-  <para xml:id="p1" fragid="p1">
-    <p>Style transitions: <Math mode="inline" tex="\tfrac{a}{b}" text="a / b" xml:id="p1.m1" fragid="p1.m1"><XMath>
+  <para xml:id="p1">
+    <p>Style transitions: <Math mode="inline" tex="\tfrac{a}{b}" text="a / b" xml:id="p1.m1"><XMath>
           <XMApp>
             <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
           </XMApp>
-        </XMath><m:math alttext="\tfrac{a}{b}" display="inline"><m:mfrac><m:mi>a</m:mi><m:mi>b</m:mi></m:mfrac></m:math></Math> <Math mode="inline" tex="\dfrac{a}{b}" text="a / b" xml:id="p1.m2" fragid="p1.m2">   <XMath>
+        </XMath><m:math alttext="\tfrac{a}{b}" display="inline"><m:mfrac><m:mi>a</m:mi><m:mi>b</m:mi></m:mfrac></m:math></Math> <Math mode="inline" tex="\dfrac{a}{b}" text="a / b" xml:id="p1.m2"><XMath>
           <XMApp>
             <XMTok mathstyle="display" meaning="divide" role="FRACOP"/>
             <XMTok font="italic" role="UNKNOWN">a</XMTok>
             <XMTok font="italic" role="UNKNOWN">b</XMTok>
           </XMApp>
-        </XMath>   <m:math alttext="\dfrac{a}{b}" display="inline"><m:mstyle displaystyle="true"><m:mfrac><m:mi>a</m:mi><m:mi>b</m:mi></m:mfrac></m:mstyle></m:math></Math> <Math mode="inline" tex="\displaystyle\sum_{i=1}^{n}x_{i}" text="((sum _ (i = 1)) ^ n)@(x _ i)" xml:id="p1.m3" fragid="p1.m3">   <XMath>
+        </XMath><m:math alttext="\dfrac{a}{b}" display="inline"><m:mstyle displaystyle="true"><m:mfrac><m:mi>a</m:mi><m:mi>b</m:mi></m:mfrac></m:mstyle></m:math></Math> <Math mode="inline" tex="\displaystyle\sum_{i=1}^{n}x_{i}" text="((sum _ (i = 1)) ^ n)@(x _ i)" xml:id="p1.m3"><XMath>
           <XMApp>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="mid1"/>
@@ -39,10 +39,9 @@
               <XMTok font="italic" fontsize="70%" role="UNKNOWN">i</XMTok>
             </XMApp>
           </XMApp>
-        </XMath>   <m:math alttext="\displaystyle\sum_{i=1}^{n}x_{i}" display="inline"><m:mrow><m:mstyle displaystyle="true"><m:munderover><m:mo movablelimits="false">∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:munderover></m:mstyle><m:msub><m:mi>x</m:mi><m:mi>i</m:mi></m:msub></m:mrow></m:math></Math>.</p>
-    <equation xml:id="S0.Ex1" fragid="S0.Ex1">
-      <Math mode="display" tex="\tfrac{a}{b}+\frac{\sum_{i=1}^{n}x_{i}}{2}" text="a / b + ((sum _ (i = 1)) ^ n)@(x _ i) / 2" xml:id="S0.Ex1.m1" fragid="S0.Ex1.m1">
-        <XMath>
+        </XMath><m:math alttext="\displaystyle\sum_{i=1}^{n}x_{i}" display="inline"><m:mrow><m:mstyle displaystyle="true"><m:munderover><m:mo movablelimits="false">∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:munderover></m:mstyle><m:msub><m:mi>x</m:mi><m:mi>i</m:mi></m:msub></m:mrow></m:math></Math>.</p>
+    <equation xml:id="S0.Ex1">
+      <Math mode="display" tex="\tfrac{a}{b}+\frac{\sum_{i=1}^{n}x_{i}}{2}" text="a / b + ((sum _ (i = 1)) ^ n)@(x _ i) / 2" xml:id="S0.Ex1.m1"><XMath>
           <XMApp>
             <XMTok meaning="plus" role="ADDOP">+</XMTok>
             <XMApp>
@@ -75,60 +74,59 @@
               <XMTok meaning="2" role="NUMBER">2</XMTok>
             </XMApp>
           </XMApp>
-        </XMath>
-        <m:math alttext="\tfrac{a}{b}+\frac{\sum_{i=1}^{n}x_{i}}{2}" display="block"><m:mrow><m:mstyle displaystyle="false"><m:mfrac><m:mi>a</m:mi><m:mi>b</m:mi></m:mfrac></m:mstyle><m:mo>+</m:mo><m:mfrac><m:mrow><m:msubsup><m:mo>∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:msubsup><m:msub><m:mi>x</m:mi><m:mi>i</m:mi></m:msub></m:mrow><m:mn>2</m:mn></m:mfrac></m:mrow></m:math></Math>
+        </XMath><m:math alttext="\tfrac{a}{b}+\frac{\sum_{i=1}^{n}x_{i}}{2}" display="block"><m:mrow><m:mstyle displaystyle="false"><m:mfrac><m:mi>a</m:mi><m:mi>b</m:mi></m:mfrac></m:mstyle><m:mo>+</m:mo><m:mfrac><m:mrow><m:msubsup><m:mo>∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:msubsup><m:msub><m:mi>x</m:mi><m:mi>i</m:mi></m:msub></m:mrow><m:mn>2</m:mn></m:mfrac></m:mrow></m:math></Math>
     </equation>
-    <p>Colored: <Math mode="inline" tex="\frac{a}{b}" text="a / b" xml:id="p1.m4" fragid="p1.m4"><XMath>
+    <p>Colored: <Math mode="inline" tex="\frac{a}{b}" text="a / b" xml:id="p1.m4"><XMath>
           <XMApp color="#FF0000">
             <XMTok mathstyle="text" meaning="divide" role="FRACOP"/>
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">a</XMTok>
             <XMTok font="italic" fontsize="70%" role="UNKNOWN">b</XMTok>
           </XMApp>
-        </XMath><m:math alttext="\frac{a}{b}" display="inline"><m:mfrac mathcolor="#FF0000"><m:mi mathcolor="#FF0000">a</m:mi><m:mi mathcolor="#FF0000">b</m:mi></m:mfrac></m:math></Math><text color="#FF0000"> and <Math mode="inline" tex="\cancel{x}" text="cancel@(x)" xml:id="p1.m5" fragid="p1.m5"><XMath>
+        </XMath><m:math alttext="\frac{a}{b}" display="inline"><m:mfrac mathcolor="#FF0000"><m:mi mathcolor="#FF0000">a</m:mi><m:mi mathcolor="#FF0000">b</m:mi></m:mfrac></m:math></Math><text color="#FF0000"> and <Math mode="inline" tex="\cancel{x}" text="cancel@(x)" xml:id="p1.m5"><XMath>
             <XMApp>
               <XMTok enclose="updiagonalstrike" font="italic" meaning="cancel" role="ENCLOSE"/>
               <XMTok font="italic" role="UNKNOWN">x</XMTok>
             </XMApp>
-          </XMath><m:math alttext="\cancel{x}" display="inline"><m:menclose mathcolor="#FF0000" notation="updiagonalstrike"><m:mstyle mathcolor="#FF0000"><m:mi mathcolor="#FF0000">x</m:mi></m:mstyle></m:menclose></m:math></Math> and <Math mode="inline" tex="\sqrt{y}" text="square-root@(y)" xml:id="p1.m6" fragid="p1.m6"><XMath>
+          </XMath><m:math alttext="\cancel{x}" display="inline"><m:menclose mathcolor="#FF0000" notation="updiagonalstrike"><m:mstyle mathcolor="#FF0000"><m:mi mathcolor="#FF0000">x</m:mi></m:mstyle></m:menclose></m:math></Math> and <Math mode="inline" tex="\sqrt{y}" text="square-root@(y)" xml:id="p1.m6"><XMath>
             <XMApp>
               <XMTok meaning="square-root"/>
               <XMTok font="italic" role="UNKNOWN">y</XMTok>
             </XMApp>
-          </XMath><m:math alttext="\sqrt{y}" display="inline"><m:msqrt mathcolor="#FF0000"><m:mi mathcolor="#FF0000">y</m:mi></m:msqrt></m:math></Math> and <Math mode="inline" tex="a+b" text="a + b" xml:id="p1.m7" fragid="p1.m7"><XMath>
+          </XMath><m:math alttext="\sqrt{y}" display="inline"><m:msqrt mathcolor="#FF0000"><m:mi mathcolor="#FF0000">y</m:mi></m:msqrt></m:math></Math> and <Math mode="inline" tex="a+b" text="a + b" xml:id="p1.m7"><XMath>
             <XMApp>
               <XMTok meaning="plus" role="ADDOP">+</XMTok>
               <XMTok font="italic" role="UNKNOWN">a</XMTok>
               <XMTok font="italic" role="UNKNOWN">b</XMTok>
             </XMApp>
           </XMath><m:math alttext="a+b" display="inline"><m:mrow><m:mi mathcolor="#FF0000">a</m:mi><m:mo mathcolor="#FF0000">+</m:mo><m:mi mathcolor="#FF0000">b</m:mi></m:mrow></m:math></Math></text>.
-Boxes: <Math mode="inline" tex="\boxed{x+y}" text="x + y" xml:id="p1.m8" fragid="p1.m8"><XMath>
+Boxes: <Math mode="inline" tex="\boxed{x+y}" text="x + y" xml:id="p1.m8"><XMath>
           <XMApp enclose="box">
             <XMTok meaning="plus" role="ADDOP">+</XMTok>
             <XMTok font="italic" role="UNKNOWN">x</XMTok>
             <XMTok font="italic" role="UNKNOWN">y</XMTok>
           </XMApp>
-        </XMath><m:math alttext="\boxed{x+y}" display="inline"><m:menclose notation="box"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mi>y</m:mi></m:mrow></m:menclose></m:math></Math>, sizes <Math mode="inline" tex="\bigl(x\bigr)" text="x" xml:id="p1.m9" fragid="p1.m9"><XMath>
+        </XMath><m:math alttext="\boxed{x+y}" display="inline"><m:menclose notation="box"><m:mrow><m:mi>x</m:mi><m:mo>+</m:mo><m:mi>y</m:mi></m:mrow></m:menclose></m:math></Math>, sizes <Math mode="inline" tex="\bigl(x\bigr)" text="x" xml:id="p1.m9"><XMath>
           <XMDual>
             <XMRef idref="p1.m9.1"/>
             <XMWrap>
               <XMTok fontsize="120%" role="OPEN" stretchy="false">(</XMTok>
-              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m9.1" fragid="p1.m9.1">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m9.1">x</XMTok>
               <XMTok fontsize="120%" role="CLOSE" stretchy="false">)</XMTok>
             </XMWrap>
           </XMDual>
-        </XMath><m:math alttext="\bigl(x\bigr)" display="inline"><m:mrow><m:mo maxsize="1.200em" minsize="1.200em">(</m:mo><m:mi>x</m:mi><m:mo maxsize="1.200em" minsize="1.200em">)</m:mo></m:mrow></m:math></Math>, spacing <Math mode="inline" tex="a\,b" text="a * b" xml:id="p1.m10" fragid="p1.m10"><XMath>
+        </XMath><m:math alttext="\bigl(x\bigr)" display="inline"><m:mrow><m:mo maxsize="1.200em" minsize="1.200em">(</m:mo><m:mi>x</m:mi><m:mo maxsize="1.200em" minsize="1.200em">)</m:mo></m:mrow></m:math></Math>, spacing <Math mode="inline" tex="a\,b" text="a * b" xml:id="p1.m10"><XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">a</XMTok>
             <XMTok font="italic" role="UNKNOWN">b</XMTok>
           </XMApp>
-        </XMath><m:math alttext="a\,b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo lspace="0.170em">⁢</m:mo><m:mi>b</m:mi></m:mrow></m:math></Math> and <Math mode="inline" tex="a\!b" text="a * b" xml:id="p1.m11" fragid="p1.m11"><XMath>
+        </XMath><m:math alttext="a\,b" display="inline"><m:mrow><m:mi>a</m:mi><m:mo lspace="0.170em">⁢</m:mo><m:mi>b</m:mi></m:mrow></m:math></Math> and <Math mode="inline" tex="a\!b" text="a * b" xml:id="p1.m11"><XMath>
           <XMApp>
             <XMTok meaning="times" role="MULOP">⁢</XMTok>
             <XMTok font="italic" role="UNKNOWN" rpadding="-1.7pt">a</XMTok>
             <XMTok font="italic" role="UNKNOWN">b</XMTok>
           </XMApp>
-        </XMath><m:math alttext="a\!b" display="inline"><m:mrow><m:mpadded width="0.359em"><m:mi>a</m:mi></m:mpadded><m:mo>⁢</m:mo><m:mi>b</m:mi></m:mrow></m:math></Math> and <Math mode="inline" tex="a\qquad b" text="fragments@(a, b)" xml:id="p1.m12" fragid="p1.m12"><XMath>
+        </XMath><m:math alttext="a\!b" display="inline"><m:mrow><m:mpadded width="0.359em"><m:mi>a</m:mi></m:mpadded><m:mo>⁢</m:mo><m:mi>b</m:mi></m:mrow></m:math></Math> and <Math mode="inline" tex="a\qquad b" text="fragments@(a, b)" xml:id="p1.m12"><XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="fragments"/>
@@ -136,13 +134,13 @@ Boxes: <Math mode="inline" tex="\boxed{x+y}" text="x + y" xml:id="p1.m8" fragid=
               <XMRef idref="p1.m12.2"/>
             </XMApp>
             <XMWrap>
-              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m12.1" fragid="p1.m12.1">a</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m12.1">a</XMTok>
               <XMHint name="qquad" role="PUNCT" width="20pt"/>
-              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m12.2" fragid="p1.m12.2">b</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m12.2">b</XMTok>
             </XMWrap>
           </XMDual>
         </XMath><m:math alttext="a\qquad b" display="inline"><m:mrow><m:mi>a</m:mi><m:mspace width="2em"/><m:mi>b</m:mi></m:mrow></m:math></Math>.
-Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text="list@(Array[[a], [b]], x)" xml:id="p1.m13" fragid="p1.m13"><XMath>
+Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text="list@(Array[[a], [b]], x)" xml:id="p1.m13"><XMath>
           <XMDual>
             <XMApp>
               <XMTok meaning="list"/>
@@ -150,7 +148,7 @@ Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text=
               <XMRef idref="p1.m13.2"/>
             </XMApp>
             <XMWrap>
-              <XMArray role="ARRAY" vattach="middle" xml:id="p1.m13.1" fragid="p1.m13.1">
+              <XMArray role="ARRAY" vattach="middle" xml:id="p1.m13.1">
                 <XMRow>
                   <XMCell align="center">
                     <XMTok font="italic" role="UNKNOWN">a</XMTok>
@@ -163,10 +161,10 @@ Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text=
                 </XMRow>
               </XMArray>
               <XMTok role="PUNCT">,</XMTok>
-              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m13.2" fragid="p1.m13.2">x</XMTok>
+              <XMTok font="italic" role="UNKNOWN" xml:id="p1.m13.2">x</XMTok>
             </XMWrap>
           </XMDual>
-        </XMath><m:math alttext="\begin{array}[]{c}a\\&#10;b\end{array},x" display="inline"><m:mrow><m:mtable rowspacing="0pt"><m:mtr><m:mtd><m:mi>a</m:mi></m:mtd></m:mtr><m:mtr><m:mtd><m:mi>b</m:mi></m:mtd></m:mtr></m:mtable><m:mo lspace="0.167em">,</m:mo><m:mi>x</m:mi></m:mrow></m:math></Math> and limits <Math mode="inline" tex="\lim_{x\to 0}f" text="(limit _ (x to 0))@(f)" xml:id="p1.m14" fragid="p1.m14"><XMath>
+        </XMath><m:math alttext="\begin{array}[]{c}a\\&#10;b\end{array},x" display="inline"><m:mrow><m:mtable rowspacing="0pt"><m:mtr><m:mtd><m:mi>a</m:mi></m:mtd></m:mtr><m:mtr><m:mtd><m:mi>b</m:mi></m:mtd></m:mtr></m:mtable><m:mo lspace="0.167em">,</m:mo><m:mi>x</m:mi></m:mrow></m:math></Math> and limits <Math mode="inline" tex="\lim_{x\to 0}f" text="(limit _ (x to 0))@(f)" xml:id="p1.m14"><XMath>
           <XMApp>
             <XMApp>
               <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
@@ -179,7 +177,7 @@ Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text=
             </XMApp>
             <XMTok font="italic" role="UNKNOWN">f</XMTok>
           </XMApp>
-        </XMath><m:math alttext="\lim_{x\to 0}f" display="inline"><m:mrow><m:msub><m:mo>lim</m:mo><m:mrow><m:mi>x</m:mi><m:mo stretchy="false">→</m:mo><m:mn>0</m:mn></m:mrow></m:msub><m:mi>f</m:mi></m:mrow></m:math></Math> and <Math mode="inline" tex="\sum_{i=1}^{n}x_{i}" text="((sum _ (i = 1)) ^ n)@(x _ i)" xml:id="p1.m15" fragid="p1.m15"><XMath>
+        </XMath><m:math alttext="\lim_{x\to 0}f" display="inline"><m:mrow><m:msub><m:mo>lim</m:mo><m:mrow><m:mi>x</m:mi><m:mo stretchy="false">→</m:mo><m:mn>0</m:mn></m:mrow></m:msub><m:mi>f</m:mi></m:mrow></m:math></Math> and <Math mode="inline" tex="\sum_{i=1}^{n}x_{i}" text="((sum _ (i = 1)) ^ n)@(x _ i)" xml:id="p1.m15"><XMath>
           <XMApp>
             <XMApp>
               <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
@@ -201,7 +199,7 @@ Arrays: <Math mode="inline" tex="\begin{array}[]{c}a\\&#10;b\end{array},x" text=
             </XMApp>
           </XMApp>
         </XMath><m:math alttext="\sum_{i=1}^{n}x_{i}" display="inline"><m:mrow><m:msubsup><m:mo>∑</m:mo><m:mrow><m:mi>i</m:mi><m:mo>=</m:mo><m:mn>1</m:mn></m:mrow><m:mi>n</m:mi></m:msubsup><m:msub><m:mi>x</m:mi><m:mi>i</m:mi></m:msub></m:mrow></m:math></Math>.
-Continued: <Math mode="inline" tex="\cfrac{1}{2+\cfrac{3}{4+\cdots}}" text="continued-fraction@(1, 2 + continued-fraction@(3, 4 + cdots))" xml:id="p1.m16" fragid="p1.m16"><XMath>
+Continued: <Math mode="inline" tex="\cfrac{1}{2+\cfrac{3}{4+\cdots}}" text="continued-fraction@(1, 2 + continued-fraction@(3, 4 + cdots))" xml:id="p1.m16"><XMath>
           <XMApp>
             <XMTok mathstyle="text" meaning="continued-fraction" name="cfrac"/>
             <XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok>
@@ -219,7 +217,7 @@ Continued: <Math mode="inline" tex="\cfrac{1}{2+\cfrac{3}{4+\cdots}}" text="cont
               </XMApp>
             </XMApp>
           </XMApp>
-        </XMath><m:math alttext="\cfrac{1}{2+\cfrac{3}{4+\cdots}}" display="inline"><m:mfrac><m:mn>1</m:mn><m:mrow><m:mn>2</m:mn><m:mo>+</m:mo><m:mstyle scriptlevel="-1"><m:mfrac><m:mn>3</m:mn><m:mrow><m:mn>4</m:mn><m:mo>+</m:mo><m:mi mathvariant="normal">⋯</m:mi></m:mrow></m:mfrac></m:mstyle></m:mrow></m:mfrac></m:math></Math> and roots <Math mode="inline" tex="\sqrt[3]{x}" text="nth-root@(3, x)" xml:id="p1.m17" fragid="p1.m17"><XMath>
+        </XMath><m:math alttext="\cfrac{1}{2+\cfrac{3}{4+\cdots}}" display="inline"><m:mfrac><m:mn>1</m:mn><m:mrow><m:mn>2</m:mn><m:mo>+</m:mo><m:mstyle scriptlevel="-1"><m:mfrac><m:mn>3</m:mn><m:mrow><m:mn>4</m:mn><m:mo>+</m:mo><m:mo lspace="0em">⋯</m:mo></m:mrow></m:mfrac></m:mstyle></m:mrow></m:mfrac></m:math></Math> and roots <Math mode="inline" tex="\sqrt[3]{x}" text="nth-root@(3, x)" xml:id="p1.m17"><XMath>
           <XMApp>
             <XMTok meaning="nth-root"/>
             <XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok>

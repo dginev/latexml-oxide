@@ -16,6 +16,18 @@ const DIR: &str = "tests/post";
 /// Run a post-processing test: read input XML, apply PMML conversion
 /// with keepXMath, compare against reference using xmllint --format diff.
 fn post_test(name: &str, max_allowed_diffs: usize) {
+  // Signal integrity: with xmllint missing, both sides of the diff pipe are
+  // empty and the comparison vacuously PASSES (this hid two stale goldens
+  // until the macOS runner — which has xmllint — failed honestly,
+  // 2026-07-03). Fail toward flagging: refuse to run without a working
+  // normalizer (apt install libxml2-utils / part of macOS system libxml2).
+  assert!(
+    std::process::Command::new("xmllint")
+      .arg("--version")
+      .output()
+      .is_ok(),
+    "xmllint is required for post tests (install libxml2-utils)"
+  );
   let input_path = format!("{}/{}.xml", DIR, name);
   let reference_path = format!("{}/{}-post.xml", DIR, name);
 
