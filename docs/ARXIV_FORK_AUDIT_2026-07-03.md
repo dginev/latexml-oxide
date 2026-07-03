@@ -35,6 +35,17 @@
   `ifthenelse(1,#2,"never")` to co-test string passthrough. Worth adopting
   as a fixture when porting the cluster-A residuals.
 
+## Implementation status (approved + landed same day, 2026-07-03)
+
+Items 1-4 of the ranking below LANDED on `ar5iv-2606-prep`
+(`f5ab8aa2da` TOC cluster incl. the Labelled.attributes schema/model
+change, `f4a6420b15` pgfmath string/int residuals, `045b192b39` global
+aria:/data: namespaces + graphicx actualtext/artifact, `c38d159205`
+hyperxmp stubs; 19 goldens re-blessed, suite 1521/0). The ar5iv-css
+`navtoc-abstract-and-references` rules were VERIFIED already carried on
+`glowup` in its modernized idiom — nothing to port. Item 5
+(readBalanced comment-drop) remains deferred to a gullet-seam session.
+
 ## Ranked recommendation (if/when implementation is approved)
 
 1. **B — abstract/acknowledgements `inlist=toc`** (small, user-visible,
