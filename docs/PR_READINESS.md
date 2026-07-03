@@ -123,8 +123,10 @@ fail-toward-flagging rule) and **live-confirmed one-line output bugs**.
 > cycle_fingerprint/estimate_bytes 4 more (digested.rs), all landed with the
 > PR #249 review; only a slow stomach-seam runaway fixture would add
 > coverage, declined (guards corpus-validated, 0 false positives / 10k).
-> Remaining OPEN (deliberately): the F5 linebreaker release-time decision
-> and the 10k A/B (post-fleet). Notable extras found while fixing: the
+> Remaining OPEN (deliberately): the 10k A/B (post-fleet). The F5
+> linebreaker question is DECIDED (user, 2026-07-03): no linebreaking work
+> on this branch — it stays a feature gap (Perl gates it behind
+> `--linelength`, default OFF, so production output is unaffected). Notable extras found while fixing: the
 > cluster-test harness lacked the binaries' contrib dispatcher (mhchem et
 > al. were invisible to tests); `touch latexml_oxide/build.rs` re-runs
 > fixture discovery without a full cargo clean.

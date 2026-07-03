@@ -125,8 +125,9 @@ against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
   prints the offending pattern. Suite 1517/0; declare.xml re-blessed.
 
 Open queue lives in the audit doc: F17 misc, F14 share-suffix wiring,
-**F5** linebreaker decision (Perl gates on `--linelength`, default OFF →
-feature gap, not production divergence). Method traps recorded in the doc
+**F5** linebreaker: DECIDED 2026-07-03 — no linebreaking work on the
+`ar5iv-2606-prep` branch (user directive); remains a feature gap (Perl
+gates on `--linelength`, default OFF → not a production divergence). Method traps recorded in the doc
 (installed Perl 0.8.8 lags the reference tree; trace producer-vs-consumer
 before patching post).
 
