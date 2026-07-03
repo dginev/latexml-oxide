@@ -1823,9 +1823,34 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
   // the live DOM by hand from this anchor.
   let Some(first_body) = document.findnode("/ltx:document/*[not(self::ltx:resource)][1]", None)
   else {
-    eprintln!("PROMOTE2: no first_body");
     return Ok(());
   };
+  // Never DESCEND INTO SECTIONAL content: on the second fallback pass (fired
+  // at the next \section) the first body element can be the COMPLETED first
+  // section, and an unconstrained DFS would steal a centered display-font
+  // paragraph from inside it (e.g. a "Dedicated to ..." block) as the paper
+  // title. A hand-formatted title block is a plain para/quote at document
+  // level — reject sectional anchors outright (PR_READINESS must-fix 3).
+  let anchor_q = document::get_node_qname(&first_body);
+  let is_sectional = with(anchor_q, |q| {
+    matches!(
+      q,
+      "ltx:section"
+        | "ltx:subsection"
+        | "ltx:subsubsection"
+        | "ltx:paragraph"
+        | "ltx:subparagraph"
+        | "ltx:chapter"
+        | "ltx:part"
+        | "ltx:appendix"
+        | "ltx:bibliography"
+        | "ltx:index"
+        | "ltx:glossary"
+    )
+  });
+  if is_sectional {
+    return Ok(());
+  }
   // First centered <ltx:p> in document order within the block; it must be set in
   // a larger-than-body font (the display-title signal) and hold real text.
   let Some(title_p) = first_centered_paragraph(&first_body) else {
@@ -1846,7 +1871,9 @@ fn maybe_promote_leading_title(document: &mut Document) -> Result<()> {
   if let Some(p) = point.take() {
     point = p.get_next_sibling();
   }
-  let Some(point) = point else { return Ok(()) };
+  // No resources (or resource is the last child): insert before the first
+  // body element instead of silently declining (review corner-case).
+  let point = point.unwrap_or_else(|| first_body.clone());
   // Create with a BARE tag + bind the root (default LaTeXML) namespace, so it
   // serializes as <title> like a real frontmatter title — a prefixed "ltx:title"
   // qname would emit a stray <ltx:title>. Mirrors open_element_internal's
