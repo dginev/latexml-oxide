@@ -2818,6 +2818,18 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
       if i >= len || chars[i] == close_ch {
         break;
       }
+      // An entry-level unbalance (missing final close) would otherwise feed
+      // the NEXT entry's `@` into the field-name reader and swallow it —
+      // resync at the boundary instead (BibTeX-style), loudly.
+      if chars[i] == '@' {
+        crate::Warn!(
+          "bibtex",
+          "unbalanced",
+          "Entry '{}' not closed before the next '@'; resyncing",
+          key
+        );
+        break;
+      }
 
       // Read field name
       let fname_start = i;
@@ -2839,9 +2851,21 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
       }
 
       // Read field value
-      let value = read_bib_value(&chars, &mut i, close_ch);
+      let (value, balanced) = read_bib_value(&chars, &mut i, close_ch);
       if !fname.is_empty() {
-        fields.push((fname, value));
+        fields.push((fname.clone(), value));
+      }
+      if !balanced {
+        // BibTeX errors and resyncs at the next entry; mirror that loudly
+        // instead of silently swallowing every later entry.
+        crate::Warn!(
+          "bibtex",
+          "unbalanced",
+          "Unbalanced braces in field '{}' of entry '{}'; resyncing at the next '@'",
+          fname,
+          key
+        );
+        break;
       }
 
       // Skip trailing comma
@@ -2867,7 +2891,9 @@ fn parse_bibtex(input: &str) -> Vec<BibEntry> {
 }
 
 /// Read a BibTeX field value (braced, quoted, or bare number/string).
-fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
+/// The bool is false when a braced value ran unbalanced to EOF or to the
+/// next entry boundary (`@` at line start) — BibTeX-style error resync.
+fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> (String, bool) {
   let len = chars.len();
   let mut result = String::new();
 
@@ -2880,7 +2906,9 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
     }
 
     if chars[*i] == '{' {
-      // Braced value — handle nested braces
+      // Braced value — handle nested braces. An unbalanced value must not
+      // silently swallow every later entry: stop at the next entry boundary
+      // (`@` at line start, BibTeX's own resync point) and report it.
       *i += 1;
       let mut depth = 1;
       while *i < len && depth > 0 {
@@ -2892,16 +2920,25 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
             *i += 1;
             break;
           }
+        } else if chars[*i] == '@' && *i > 0 && chars[*i - 1] == '\n' {
+          return (result, false); // leave *i AT the '@' for resync
         }
         result.push(chars[*i]);
         *i += 1;
+      }
+      if depth > 0 {
+        return (result, false); // ran to EOF unbalanced
       }
     } else if chars[*i] == '"' {
       // Quoted value
       *i += 1;
       while *i < len && chars[*i] != '"' {
         if chars[*i] == '{' {
-          // Nested braces in quoted strings
+          // Nested braces in quoted strings: a `"` inside them is literal.
+          // KEEP the braces — BibTeX treats them as grouping that stays
+          // significant for name splitting (`author = "{W3C Group}"` must
+          // still read as a corporate author).
+          result.push('{');
           *i += 1;
           let mut depth = 1;
           while *i < len && depth > 0 {
@@ -2910,6 +2947,7 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
             } else if chars[*i] == '}' {
               depth -= 1;
               if depth == 0 {
+                result.push('}');
                 *i += 1;
                 break;
               }
@@ -2946,7 +2984,7 @@ fn read_bib_value(chars: &[char], i: &mut usize, _entry_close: char) -> String {
     break;
   }
 
-  result
+  (result, true)
 }
 
 /// Strip outer braces from a BibTeX field value.
@@ -2989,9 +3027,32 @@ fn is_braced_group(s: &str) -> bool {
 /// "Lastname, Firstname and Lastname2, Firstname2" → vec of (surname, givenname)
 fn parse_bib_authors(authors_str: &str) -> Vec<(String, String)> {
   let mut result = Vec::new();
-  // Split on " and " (case insensitive)
-  let parts: Vec<&str> = authors_str.split(" and ").collect();
-  for part in parts {
+  // Perl processBibNameList (BibTeX.pool.ltxml L872+): names split on the
+  // STANDALONE word "and" (case-insensitive, any whitespace incl. newlines),
+  // over brace-respecting words — `{Barnes and Noble}` is ONE author, and a
+  // line-wrapped "...Smith and\nJones..." still splits.
+  let mut parts: Vec<String> = Vec::new();
+  let mut cur = String::new();
+  let mut depth: usize = 0;
+  for tok in authors_str.split_whitespace() {
+    if depth == 0 && tok.eq_ignore_ascii_case("and") {
+      parts.push(std::mem::take(&mut cur));
+      continue;
+    }
+    if !cur.is_empty() {
+      cur.push(' ');
+    }
+    cur.push_str(tok);
+    for c in tok.chars() {
+      match c {
+        '{' => depth += 1,
+        '}' => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+    }
+  }
+  parts.push(cur);
+  for part in &parts {
     let part = part.trim();
     if part.is_empty() {
       continue;
@@ -3258,5 +3319,56 @@ mod tests {
         fmt
       );
     }
+  }
+}
+
+#[cfg(test)]
+mod bib_parse_tests {
+  use super::*;
+
+  #[test]
+  fn corporate_author_brace_protected() {
+    // Braced groups protect the inner "and" and read as single corporate names.
+    let a = parse_bib_authors("{Barnes and Noble} and Smith, John");
+    assert_eq!(a.len(), 2);
+    assert_eq!(a[0].0, "Barnes and Noble");
+    assert_eq!(a[1].0, "Smith");
+  }
+
+  #[test]
+  fn newline_wrapped_and_splits() {
+    let a = parse_bib_authors("Smith, John and\nJones, Mary");
+    assert_eq!(a.len(), 2);
+  }
+
+  #[test]
+  fn quoted_field_keeps_braces() {
+    let entries = parse_bibtex("@article{k, author = \"{W3C Math Working Group}\", title={T}}");
+    assert_eq!(entries.len(), 1);
+    let author = &entries[0]
+      .fields
+      .iter()
+      .find(|(n, _)| n == "author")
+      .unwrap()
+      .1;
+    assert!(
+      author.starts_with('{') && author.ends_with('}'),
+      "braces kept: {author}"
+    );
+    let names = parse_bib_authors(author);
+    assert_eq!(names.len(), 1);
+    assert_eq!(names[0].0, "W3C Math Working Group");
+  }
+
+  #[test]
+  fn unbalanced_entry_resyncs_at_next_at() {
+    let src = "@article{bad, title = {unclosed\n}\n@article{good, title={ok}, author={A}}";
+    let entries = parse_bibtex(src);
+    // The good entry must survive the bad one's unbalanced brace.
+    assert!(
+      entries.iter().any(|e| e.key == "good"),
+      "entries: {:?}",
+      entries.iter().map(|e| e.key.clone()).collect::<Vec<_>>()
+    );
   }
 }
