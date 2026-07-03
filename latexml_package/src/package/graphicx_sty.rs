@@ -56,6 +56,11 @@ LoadDefinitions!({
   DefKeyVal!("Gin", "scale", "");
   DefKeyVal!("Gin", "angle", "");
   DefKeyVal!("Gin", "alt", "");
+  // arXiv-fork e2b200fb: accessibility keys from recent graphicx —
+  // actualtext (the replacement text) and artifact (decorative image,
+  // hidden from assistive tech).
+  DefKeyVal!("Gin", "actualtext", "");
+  DefKeyVal!("Gin", "artifact", "", "true");
   // Perl graphicx.sty.ltxml L37-38 types both as `GraphixDimensions` (the
   // ≤4-dimension parser registered in graphics_sty.rs). With an empty type
   // the raw value tokens are kept verbatim, so a malformed trailing token —
@@ -148,11 +153,21 @@ LoadDefinitions!({
       // becomes the `description` attribute via afterConstruct, not
       // a graphics option.
       let mut alt_value: Option<String> = None;
+      let mut actualtext_value: Option<String> = None;
+      let mut artifact_value: Option<String> = None;
       if let Some(ref kv_digested) = args[1]
         && let DigestedData::KeyVals(kv) = kv_digested.data() {
           for (key, value) in kv.get_pairs() {
             if key == "alt" {
               alt_value = Some(value.to_string());
+              continue;
+            }
+            if key == "actualtext" {
+              actualtext_value = Some(value.to_string());
+              continue;
+            }
+            if key == "artifact" {
+              artifact_value = Some(value.to_string());
               continue;
             }
             if key.ends_with("width") { saw_w = true; }
@@ -172,6 +187,12 @@ LoadDefinitions!({
       if let Some(alt) = alt_value {
         props.insert("alt", Stored::from(alt));
       }
+      if let Some(at) = actualtext_value {
+        props.insert("actualtext", Stored::from(at));
+      }
+      if let Some(af) = artifact_value {
+        props.insert("artifact", Stored::from(af));
+      }
       Ok(props)
     },
     // Perl L55: sizer => \&image_graphicx_sizer. We port it via
@@ -185,12 +206,30 @@ LoadDefinitions!({
     // constructor template's shorthand `?#alt(…)` would skip empty
     // strings, so do it explicitly here).
     after_construct => sub[document, whatsit] {
-      if let Some(alt) = whatsit.get_property("alt") {
-        let alt_str = alt.to_string();
-        if let Some(mut last_child) = document.get_node().get_last_child() {
-          document.set_attribute(&mut last_child, "description", &alt_str)?;
+      // arXiv-fork e2b200fb: description = actualtext // alt // '' (set
+      // even when empty); when BOTH actualtext and alt are given, alt goes
+      // to aria:description; artifact (any value but "false") hides the
+      // image from assistive tech via aria:hidden.
+      let alt = whatsit.get_property("alt").map(|v| v.to_string());
+      let actualtext = whatsit.get_property("actualtext").map(|v| v.to_string());
+      let artifact = whatsit
+        .get_property("artifact")
+        .map(|v| v.to_string())
+        .is_some_and(|v| v != "false");
+      if (artifact || actualtext.is_some() || alt.is_some())
+        && let Some(mut last_child) = document.get_node().get_last_child() {
+          let description = actualtext
+            .clone()
+            .or_else(|| alt.clone())
+            .unwrap_or_default();
+          document.set_attribute(&mut last_child, "description", &description)?;
+          if let (Some(alt_str), Some(_)) = (&alt, &actualtext) {
+            document.set_attribute(&mut last_child, "aria:description", alt_str)?;
+          }
+          if artifact {
+            document.set_attribute(&mut last_child, "aria:hidden", "true")?;
+          }
         }
-      }
     }
   );
 });
