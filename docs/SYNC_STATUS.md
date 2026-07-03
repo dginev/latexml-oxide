@@ -109,10 +109,30 @@ against same-host Perl (commits `3ab9ce3cb3`…`e577613fb1` + cfrac):
 
 Open queue lives in the audit doc: F17 misc, F14 share-suffix wiring,
 **F5** linebreaker decision (Perl gates on `--linelength`, default OFF →
-feature gap, not production divergence), **F19** math-parser
-`\mathop{=}\limits^{def}` mis-parse (XMWrap vs script application — math-
-parser worklist). Method traps recorded in the doc (installed Perl 0.8.8 lags
-the reference tree; trace producer-vs-consumer before patching post).
+feature gap, not production divergence). Method traps recorded in the doc
+(installed Perl 0.8.8 lags the reference tree; trace producer-vs-consumer
+before patching post).
+
+- **F19 FIXED 2026-07-03** — role-carrying XMWraps were unparseable by
+  construction: `parse_children` sub-parsed them with the role in place, and
+  `node_to_grammar_lexemes` emitted `start_ROLE…end_ROLE` wrapper tokens no
+  grammar rule consumes (the grammar only knows the script roles), so
+  `\mathrel{\mathop{=}\limits^{def}}`, `\mathop` nesting, extensible-arrow
+  labels, and siunitx unit wraps ALL fell to the kludge. Perl never lexes the
+  wrap's own role: it parses the children, then copies the wrap's attributes
+  (role included) onto the replacement. Ported exactly: strip non-script
+  roles pre-parse, re-apply to the result, and mark it `_rewrite` so the
+  lexer treats the pre-parsed replacement as ONE atomic terminal (the
+  `_rewrite` lexer arm now also updates bigop context so a following script
+  lexes BIGOPSUB/BIGOPSUP). Four goldens re-blessed, each verified formula-
+  by-formula against `LaTeXML/t` reference goldens: mathtools extensible
+  arrows + testscripts nested-`\mathop` + si unit-wraps now byte/shape-match
+  Perl; physics S1.Ex7 (`\overrightarrow{\mathbf a}` etc.) recovered from
+  whole-formula unparsed to Perl-identical shapes. KNOWN micro-residual:
+  `physics` `\PV`'s `P.V.` wrap — Rust's generous grammar parses the
+  punctuated content Perl rejects, so the presentation gains a nested
+  role-less mrow-equivalent (semantic string unchanged, `fragments@`/`list@`
+  head divergence pre-existing).
 
 ### Landed this session (2026-07-02, on `ar5iv-2606-prep`) — live-run fatal mining: 2 panic sites, `\dabar@`, plain-`\+` retraction
 

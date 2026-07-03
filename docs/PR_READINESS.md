@@ -112,14 +112,40 @@ fail-toward-flagging rule) and **live-confirmed one-line output bugs**.
 > should-fix 8-13, and the actionable backlog (fixture set, reproducer
 > promotion, KPE entries, contract docs, corner-case batches) landed as the
 > `a22780aceb`..HEAD commit series; suite green + workspace clippy clean
-> throughout. Remaining OPEN (deliberately): the lxDeclare dead-predicate
-> class (own SYNC_STATUS worklist item), the bbl/bib precedence fixture and
-> a cyclic-box unit test (low-value residual test debt), the F5 linebreaker
-> release-time decision, F19 (math parser), and the corpus-scale 1k/10k A/B
-> (run post-fleet). Notable extras found while fixing: the cluster-test
+> throughout. F19 (math parser) and the lxDeclare dead-predicate core are
+> now ALSO fixed (see below / SYNC_STATUS). Remaining OPEN (deliberately):
+> lxDeclare residual pattern families (S4/S6/S7 compile arms), the bbl/bib
+> precedence fixture and a cyclic-box unit test (low-value residual test
+> debt), the F5 linebreaker release-time decision, and the 10k A/B
+> (post-fleet). Notable extras found while fixing: the cluster-test
 > harness lacked the binaries' contrib dispatcher (mhchem et al. were
 > invisible to tests); `touch latexml_oxide/build.rs` re-runs fixture
 > discovery without a full cargo clean.
+
+### Corpus 1k A/B — branch vs main (2026-07-03): PASS
+
+Both binaries (`cargo build --release --features cortex --bin cortex_worker`;
+main via a `/tmp` worktree at the merge-base main) ran the first 1000 papers of
+`/data/arxiv_shuffle_1902` standalone (12-way, `timeout 240`, status +
+ANSI-free error/fatal counts from the output zip's `cortex.log`). Branch
+binary = `e11ee74f8e` (all review fixes; predates the F19 parser fix).
+
+- **No new fatals** (3, identical papers), **no new crashes** (11 `exit=1`
+  both sides = PDF-only submissions, "no .tex source"), no timeouts either
+  side. Corpus-wide error total 894 → 892.
+- **42 papers 0→1 (clean→warning): all new-warning VISIBILITY, not output
+  regressions.** Signatures traced: `Missing Entry for citation` / `Missing
+  Target for Label` (faithful ports of Perl CrossRef.pm `note_missing`, absent
+  from main's binary), `\GenericWarning` surfacing, the reworked
+  `unparsed_math`/`ambiguous_math` reporting (main was silent on unparsed
+  formulas), and the orphaned-frontmatter-annotation diagnostic. Per-formula
+  MathML diff on witness 0711.0221: all structural changes are the
+  witness-verified mstyle/spacing fixes; parse coverage unchanged.
+- **1 paper 1→2** (0810.2231): +2 `Error:expected:id` dangling XMRef on one
+  equation — the comma-list-distribution parse meets the KNOWN open
+  `expected:id`/MathFork reconciliation gap
+  (`EXPECTED_ID_XMREF_DESIGN_2026-06-08.md`); witness recorded there-adjacent.
+- **1 paper 2→1** (0906.4270) and 2 papers with fewer errors — branch fixes.
 
 **Must fix before the PR / July-5 rebuild (small, high-confidence):**
 1. `atompair_spacing`: add the missing `("Inner","Punct") => -1` cell (+ unit-test the full Inner row) — live-confirmed churn on matrix-then-punctuation.
@@ -140,7 +166,7 @@ fail-toward-flagging rule) and **live-confirmed one-line output bugs**.
 
 **Backlog (document, fixture, or upstream):**
 - Missing-test debt called out in all three clusters — highest value: a MathML golden set (colored frac/cancel, array-comma, cfrac, --contentmathml pair), a `\ce{H2O}` fixture, noexpand reproducers promoted to suite, bbl/bib precedence fixture, cyclic-box guard test.
-- lxDeclare dead-predicate class (pre-branch, golden blesses 51 vs Perl 84) — reopen as its own worklist item.
+- lxDeclare dead-predicate class (pre-branch, golden blesses 51 vs Perl 84) — CORE FIXED 2026-07-03 (`e11ee74f8e`, golden 51→67 strictly additive); residual S4/S6/S7 pattern families tracked in SYNC_STATUS.
 - `\string` of noexpand-family tokens leaks 0x01 (illegal XML); KNOWN_PERL_ERRORS candidates: `\cfrac[l]` (Perl drops it too), LookupDimension macro-path (already #41).
 - pin!/SymStr arena-reset contract: document at `reset_thread_engine` + consider a poison debug_assert.
-- Corpus-scale differential A/B (1k now at low nice, 10k post-fleet) remains the strongest whole-branch check — none of the above findings would be visible to the fixture suite.
+- Corpus-scale differential A/B: **1k DONE (PASS — see STATUS above)**; the 10k rerun post-fleet remains the final whole-branch check before merging.
