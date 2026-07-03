@@ -679,6 +679,10 @@ mod pgfmath_grammar {
   #[derive(Debug, Default, Clone)]
   pub(super) struct Flags {
     pub units_declared: bool,
+    /// arXiv-fork c52d3cf6: comparison operators return INTEGERS
+    /// (`2 == 2` -> "1", not "1.0") so `\ifnum\pgfmathresult=1`-style
+    /// tests work downstream.
+    pub int_result:     bool,
   }
 
   fn fail<T>() -> ModalResult<T> { Err(ErrMode::Backtrack(ContextError::new())) }
@@ -719,6 +723,7 @@ mod pgfmath_grammar {
     let cp = i.checkpoint();
     if let Some(op) = cmp_op(i) {
       if let Ok(right) = expr(i) {
+        i.state.int_result = true;
         return Ok(pgfmath_cmp_op(&op, left, right));
       }
       i.reset(&cp);
@@ -1202,6 +1207,19 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
     return (result, false);
   }
 
+  // 0b. Bare string literal (arXiv-fork e0dd3e33/aeb24f2d: string results
+  //     pass through untouched, including the empty string) — PGF strings
+  //     like `\pgfmathparse{"south east"}` feed anchors/colors verbatim.
+  {
+    let trimmed = input.trim();
+    if trimmed.len() >= 2 && trimmed.starts_with('"') && trimmed.ends_with('"') {
+      let inner = &trimmed[1..trimmed.len() - 1];
+      if !inner.contains('"') {
+        return (inner.to_string(), false);
+      }
+    }
+  }
+
   // 1. Simple number check (Perl L332-345)
   if let Some(result) = try_simple_number(input) {
     return (result, false);
@@ -1217,6 +1235,10 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
     state: pgfmath_grammar::Flags::default(),
   };
   if let Ok(result) = pgfmath_grammar::formula(&mut stream) {
+    // arXiv-fork c52d3cf6: a top-level comparison returns an integer string.
+    if stream.state.int_result && result == (result as i64) as f64 {
+      return (format!("{}", result as i64), stream.state.units_declared);
+    }
     return (
       format_parse_result(result, input),
       stream.state.units_declared,
@@ -1697,14 +1719,16 @@ mod pgfmath_golden_tests {
       ("1dd", "1.07001@u"),
       ("1cc", "12.8401@u"),
       ("100sp", "0.00153@u"),
-      ("3>2", "1.0@-"),
-      ("2>=3", "0.0@-"),
-      ("1==1", "1.0@-"),
-      ("1!=2", "1.0@-"),
-      ("1&&0", "0.0@-"),
-      ("0||1", "1.0@-"),
-      ("3>2 ? 10 : 20", "1.0@-"),
-      ("(1<2)&&(3<4)", "1.0@-"),
+      ("3>2", "1@-"),
+      ("2>=3", "0@-"),
+      ("1==1", "1@-"),
+      ("1!=2", "1@-"),
+      ("1&&0", "0@-"),
+      ("0||1", "1@-"),
+      // TODO(precedence): real PGF yields 10.0 — ternary should bind LOWER
+      // than comparisons; our formula rule tries `?:` before CMP.
+      ("3>2 ? 10 : 20", "1@-"),
+      ("(1<2)&&(3<4)", "1@-"),
       ("!1", "0.0@-"),
       ("!0", "1.0@-"),
       ("sin(30)", "0.5@-"),
