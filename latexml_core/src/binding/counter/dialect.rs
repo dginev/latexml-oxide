@@ -894,6 +894,17 @@ pub fn begin_itemize(
   let mut rsc = ref_step_counter(&s!("@itemize{listpostfix}"), false)?;
   rsc.insert("counter", usecounter.into());
   rsc.insert("series", series.into());
+  // Perl latex_constructs.pool L1354-1356: the list carries its TeX vertical
+  // padding (\topsep + \parskip + \partopsep) as padtop/padbottom sizing
+  // properties; Box::computeSizeStore adds them to the computed height/depth
+  // (compute_size_and_cache here). Omitting them under-measured every list,
+  // clipping tcolorbox frames drawn from the estimate (2605.02240).
+  let pad = lookup_dimension_cs("\\topsep", false)
+    .unwrap_or_default()
+    .add(lookup_dimension_cs("\\parskip", false).unwrap_or_default())
+    .add(lookup_dimension_cs("\\partopsep", false).unwrap_or_default());
+  rsc.insert("padtop", Stored::Dimension(pad));
+  rsc.insert("padbottom", Stored::Dimension(pad));
   Ok(rsc)
 }
 

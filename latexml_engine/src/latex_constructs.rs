@@ -4995,30 +4995,34 @@ LoadDefinitions!({
   // Additional ones created by need.
   NewCounter!("@itemizei",   "section",      idprefix => "I");
 
-  // Perl: latex_constructs.pool.ltxml L1505-1510 — paragraph before list items
-  DefConstructor!("\\preitem@par", sub[document] {
-    // Perl latex_constructs.pool.ltxml L1505-1510: only close \ltx:p/\ltx:para
-    // when NOT in the preamble AND the current element is NOT an \ltx:itemize.
-    //   if (!$props{inPreamble} && !getNodeQName(getElement, 'ltx:itemize')) {
-    //     maybeCloseElement('ltx:p'); maybeCloseElement('ltx:para'); }
-    // A \trivlist (e.g. an amsthm-style {proofof} / proof env) opens an
-    // <ltx:itemize> that may be wrapped in an enclosing <ltx:para> when it sits
-    // inside an outer list item. Unconditionally closing that <ltx:para> here
-    // ALSO closes the freshly-opened trivlist itemize, so the trivlist's own
-    // \item escapes to the OUTER list and the later \end{itemize} finds nothing
-    // open ("ltx:itemize ... isn't open"). The guard keeps the itemize open so
-    // the item nests correctly. Witness 2004.07710 ({proofof} trivlist inside
-    // an itemize).
-    let in_preamble = lookup_bool_sym(pin!("inPreamble"));
-    let cur_is_itemize = document
-      .get_element()
-      .map(|e| document::get_node_qname(&e) == pin!("ltx:itemize"))
-      .unwrap_or(false);
-    if !in_preamble && !cur_is_itemize {
-      let _ = document.maybe_close_element("ltx:p");
-      let _ = document.maybe_close_element("ltx:para");
+  // Perl latex_constructs.pool L1450-1455 (CURRENT upstream — the old port
+  // here implemented a pre-#2798 constructor that closed ltx:p/ltx:para at
+  // construction time and never issued a real \par):
+  //   DefMacro('\preitem@par', sub {
+  //     return ((LookupValue('itemization_items') || 0) > 0
+  //       ? (T_CS('\par'), Invocation(T_CS('\vskip'), T_CS('\itemsep')),
+  //                        Invocation(T_CS('\vskip'), T_CS('\parsep')))
+  //       : ()); });
+  // Between items a REAL \par runs in the live context — repacking the
+  // previous item's text into a width-carrying horizontal List (so the
+  // sizer line-breaks it as a paragraph, not one long line) — followed by
+  // the inter-item glue. Nothing before the FIRST item, which also covers
+  // the 2004.07710 trivlist-in-itemize case the old constructor guarded:
+  // with no \par, the freshly opened <ltx:itemize> wrapper stays open.
+  // (\par itself closes ltx:p/ltx:para at construction.) Without this,
+  // itemize inside a measured \vbox under-sized by ~2 lines per item and
+  // tcolorbox frames clipped their content (2605.02240).
+  DefMacro!("\\preitem@par", sub[_args] {
+    if lookup_int("itemization_items") > 0 {
+      Ok(Tokens!(
+        T_CS!("\\par"),
+        T_CS!("\\vskip"), T_CS!("\\itemsep"),
+        T_CS!("\\vskip"), T_CS!("\\parsep")
+      ))
+    } else {
+      Ok(Tokens::default())
     }
-  }, alias => "\\par");
+  });
 
   // Perl: latex_constructs.pool.ltxml L1560
   DefMacro!("\\@mklab{}", "\\hfil #1");
@@ -5333,11 +5337,15 @@ LoadDefinitions!({
     }
   );
 
-  DefRegister!("\\topsep"             => Glue::new(0));
-  DefRegister!("\\partopsep"          => Glue::new(0));
-  DefRegister!("\\lx@default@itemsep" => Glue::new(0));
-  DefRegister!("\\itemsep"            => Glue::new(0));
-  DefRegister!("\\parsep"             => Glue::new(0));
+  // Perl latex_constructs.pool L1675-1679: these five carry REAL default
+  // glue (LaTeX's list spacing); zeroing them under-measured every list
+  // (begin_itemize's padtop/padbottom = \topsep+\parskip+\partopsep) and
+  // clipped tcolorbox frames drawn from the estimates (2605.02240).
+  DefRegister!("\\topsep"             => Glue!("8pt plus 2pt minus 4pt"));
+  DefRegister!("\\partopsep"          => Glue!("2pt plus 1pt minus 1pt"));
+  DefRegister!("\\lx@default@itemsep" => Glue!("4pt plus 2pt minus 1pt"));
+  DefRegister!("\\itemsep"            => Glue!("4pt plus 2pt minus 1pt"));
+  DefRegister!("\\parsep"             => Glue!("4pt plus 2pt minus 1pt"));
   DefRegister!("\\@topsep"            => Glue::new(0));
   DefRegister!("\\@topsepadd"         => Glue::new(0));
   DefRegister!("\\@outerparskip"      => Glue::new(0));
