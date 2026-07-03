@@ -844,21 +844,9 @@ fn load_latexml_file(path: &str) -> Result<()> {
     // The .latexml match strings use the same format as \lxDeclare body_text:
     //   'f' (simple), 'f_D' (literal subscript), 'f_\WildCard' (wildcard),
     //   '\hat{f}' (accent), "x^{\prime}" (prime).
-    let pat = latexml_package::package::latexml_sty::compile_declare_pattern_pub(&match_str);
+    let pat = latexml_core::rewrite::declare::compile_declare_pattern(&match_str);
     if pat.xpath.is_empty() {
       continue; // Unrecognized pattern, skip
-    }
-
-    // Add declare metadata for Rust-side filtering
-    attrs.insert("_declare_type".to_string(), pat.pattern_type.to_string());
-    if let Some(ref b) = pat.base_text {
-      attrs.insert("_declare_base".to_string(), b.clone());
-    }
-    if let Some(ref s) = pat.sub_text {
-      attrs.insert("_declare_sub".to_string(), s.clone());
-    }
-    if let Some(ref a) = pat.accent_name {
-      attrs.insert("_declare_accent".to_string(), a.clone());
     }
 
     // For math mode, append visibility check to XPath
@@ -895,7 +883,8 @@ fn load_latexml_file(path: &str) -> Result<()> {
         attributes_map: Some(attrs),
         is_math: true,
         select_count,
-        wildcard_paths: pat.wildcard_paths,
+        wildcard_paths: pat.wildcard_paths.clone(),
+        declare_filter: Some(pat),
         ..RewriteOptions::default()
       },
       clauses,

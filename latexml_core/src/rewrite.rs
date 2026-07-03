@@ -10,6 +10,8 @@ use crate::{
   tokens::Tokens,
 };
 
+pub mod declare;
+
 pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
 /// Test closure: Perl signature is ($document, $node) → $nnodes (0/undef = skip).
 pub type RewriteTestClosure = Rc<dyn Fn(&mut Document, &Node) -> Result<usize>>;
@@ -42,10 +44,11 @@ pub struct RewriteOptions {
   pub select_count:   Option<usize>,
   pub is_math:        bool,
   pub wildcard_paths: Option<Vec<WildPath>>,
-  /// Declare-side filter metadata (`_declare_*`) for rules that must filter
-  /// matches WITHOUT marking attributes (replace rules). Attribute rules
-  /// carry the same keys inside `attributes_map`.
-  pub declare_filter: Option<HashMap<String, String>>,
+  /// Declare-side structural filter for \lxDeclare rules — the compiled
+  /// [`declare::DeclarePattern`] whose broad XPath needs Rust-side
+  /// verification (`declare::declare_node_matches`) on every Select match.
+  /// Set by BOTH attribute and replace registrations.
+  pub declare_filter: Option<declare::DeclarePattern>,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -432,43 +435,22 @@ impl Rewrite {
             } else {
               None
             };
-            // Get declare pattern metadata for Rust-side filtering
-            // Only apply on content Selects, not scope Selects
-            let filter_map = self
-              .options
-              .declare_filter
-              .as_ref()
-              .or(self.options.attributes_map.as_ref());
-            let get_filter = |key: &str| {
-              if is_content_select {
-                filter_map.and_then(|a| a.get(key)).cloned()
-              } else {
-                None
-              }
+            // Declare-side structural filter (content Selects only, not
+            // scope Selects): verify each broad-XPath match against the
+            // compiled pattern.
+            let pattern_filter = if is_content_select {
+              self.options.declare_filter.as_ref()
+            } else {
+              None
             };
-            let declare_type = get_filter("_declare_type");
-            let declare_base = get_filter("_declare_base");
-            let declare_sub = get_filter("_declare_sub");
-            let declare_accent = get_filter("_declare_accent");
-            let declare_font = get_filter("_declare_font");
             for node in matches {
               if node.has_attribute("_matched") {
                 continue;
               }
-              // Rust-side filtering for declare pattern types (content Selects only)
-              if let Some(ref dtype) = declare_type {
-                let passes = declare_node_matches(
-                  document,
-                  &node,
-                  dtype,
-                  declare_base.as_deref(),
-                  declare_sub.as_deref(),
-                  declare_accent.as_deref(),
-                  declare_font.as_deref(),
-                );
-                if !passes {
-                  continue;
-                }
+              if let Some(pat) = pattern_filter
+                && !declare::declare_node_matches(document, &node, pat)
+              {
+                continue;
               }
               let marked = if let Some(ref wpaths) = wilds {
                 mark_wildcards(&node, wpaths)
@@ -1177,291 +1159,5 @@ fn mark_seen_rec(node: &Node) {
     if child.get_type() == Some(libxml::tree::NodeType::ElementNode) {
       mark_seen_rec(&child);
     }
-  }
-}
-
-/// Rust-side filtering for \lxDeclare pattern matching.
-/// XPath matches are broad (to avoid nested predicate bugs); this function
-/// verifies the matched node's children match the specific pattern.
-///
-/// Pattern types:
-/// - "subscript": node is XMApp[@role='POSTSUBSCRIPT'], check base text + optional sub text
-/// - "prime": node is XMApp[@role='POSTSUPERSCRIPT'], check base text
-/// - "accent": node is XMApp, check accent name in first child, optional base text
-/// - "simple": no extra filtering needed (XPath is specific enough)
-fn declare_node_matches(
-  document: &Document,
-  node: &Node,
-  pattern_type: &str,
-  base_text: Option<&str>,
-  sub_text: Option<&str>,
-  accent_name: Option<&str>,
-  font_class: Option<&str>,
-) -> bool {
-  // Font-CLASS requirement (e.g. caligraphic for a \mathcal pattern): the
-  // XPath deliberately carries no @font predicate (the attribute is only an
-  // interned `_font` id at rewrite time) — discriminate here on the RESOLVED
-  // font instead. Class containment, not exact string (WISDOM: the exact
-  // serialized font string is unreliable at rewrite time).
-  if let Some(class) = font_class {
-    let font = document.get_node_font(node);
-    if !font.font_attribute_string().contains(class) {
-      return false;
-    }
-  }
-  let children = node.get_child_nodes();
-  match pattern_type {
-    "literal_subscript" => {
-      // Matched node is the BASE XMTok. Check that next sibling is POSTSUBSCRIPT
-      // with specific subscript content.
-      let next_sib = node.get_next_sibling();
-      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      if next_role.as_deref() != Some("POSTSUBSCRIPT") {
-        return false;
-      }
-      // Check subscript content text
-      if let Some(sub) = sub_text {
-        let sub_content = next_sib
-          .as_ref()
-          .map(|s| s.get_content())
-          .unwrap_or_default();
-        if sub_content.trim() != sub {
-          return false;
-        }
-      }
-      true
-    },
-    "subscript" => {
-      // Wildcard subscript: matched node is BASE XMTok.
-      // Check that next sibling is POSTSUBSCRIPT.
-      let next_sib = node.get_next_sibling();
-      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      if next_role.as_deref() != Some("POSTSUBSCRIPT") {
-        return false;
-      }
-      // Multi-wildcard `x_{\WildCard,\WildCard}`: sub_text carries the arity
-      // and the subscript content must be EXACTLY the comma list
-      // [any, ',', any, ...] — Perl compiles the literal commas as positional
-      // child predicates, so `q_{a}` / `q_{a+b}` do NOT match a 2-ary pattern
-      // (they fall to the 1-ary declaration, whose wildcard takes the whole
-      // argument). Content children live under the POSTSUBSCRIPT's first
-      // element child (the XMArg/XMWrap argument holder).
-      if let Some(n) = sub_text.and_then(|s| s.parse::<usize>().ok())
-        && n >= 2
-      {
-        let content: Vec<Node> = next_sib
-          .as_ref()
-          .and_then(|s| {
-            s.get_child_nodes()
-              .into_iter()
-              .find(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
-          })
-          .map(|holder| {
-            holder
-              .get_child_nodes()
-              .into_iter()
-              .filter(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
-              .collect()
-          })
-          .unwrap_or_default();
-        if content.len() != 2 * n - 1 {
-          return false;
-        }
-        for (i, c) in content.iter().enumerate() {
-          // odd 0-based positions must be the literal comma separators
-          if i % 2 == 1 && (c.get_name() != "XMTok" || c.get_content().trim() != ",") {
-            return false;
-          }
-        }
-      }
-      true
-    },
-    "funcapply" => {
-      // Matched node is the base XMTok of `base\WildCard[(\WildCard...)]`.
-      // Require the EXACT following element siblings `(`, arg, [`,`, arg...],
-      // `)` — single-node args in the pre-parse DOM, mirroring Perl
-      // domToXPath_seq's position()=N predicates (so `f(a+b)` does not match
-      // an 1-ary pattern: its `)` sits past the expected position).
-      let Some(nargs) = sub_text.and_then(|s| s.parse::<usize>().ok()) else {
-        return false;
-      };
-      let mut expected: Vec<Option<&str>> = vec![Some("(")];
-      for i in 0..nargs {
-        if i > 0 {
-          expected.push(Some(","));
-        }
-        expected.push(None); // any single element node (the wildcard arg)
-      }
-      expected.push(Some(")"));
-      let mut cur = node.clone();
-      for want in expected {
-        let mut next = cur.get_next_sibling();
-        while let Some(ref s) = next {
-          if s.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-            break;
-          }
-          next = s.get_next_sibling();
-        }
-        let Some(sib) = next else {
-          return false;
-        };
-        if let Some(text) = want
-          && (sib.get_name() != "XMTok" || sib.get_content().trim() != text)
-        {
-          return false;
-        }
-        cur = sib;
-      }
-      true
-    },
-    "cmddual" => {
-      // `\cs{\WildCard}...`: matched node is an XMDual whose content arm is
-      // XMApp(XMTok[@name=cs or @meaning=cs], one XMRef per wildcard arg).
-      let (Some(cmd), Some(nargs)) = (base_text, sub_text.and_then(|s| s.parse::<usize>().ok()))
-      else {
-        return false;
-      };
-      let elem_children: Vec<Node> = children
-        .iter()
-        .filter(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
-        .cloned()
-        .collect();
-      let Some(content) = elem_children.first() else {
-        return false;
-      };
-      if content.get_name() != "XMApp" {
-        return false;
-      }
-      let app_children: Vec<Node> = content
-        .get_child_nodes()
-        .into_iter()
-        .filter(|c| c.get_type() == Some(libxml::tree::NodeType::ElementNode))
-        .collect();
-      if app_children.len() != nargs + 1 {
-        return false;
-      }
-      let op = &app_children[0];
-      op.get_name() == "XMTok"
-        && (op.get_property("name").as_deref() == Some(cmd)
-          || op.get_property("meaning").as_deref() == Some(cmd))
-    },
-    "leadwild" => {
-      // `\WildCard[content]suffix`: matched node is the FIRST content token;
-      // the remaining content chars and then the literal suffix chars must
-      // follow as adjacent single-token element siblings (Perl domToXPath_seq
-      // position()=N predicates).
-      let (Some(content), Some(suffix)) = (base_text, sub_text) else {
-        return false;
-      };
-      let expected: Vec<char> = content.chars().skip(1).chain(suffix.chars()).collect();
-      let mut cur = node.clone();
-      for want in expected {
-        let mut next = cur.get_next_sibling();
-        while let Some(ref s) = next {
-          if s.get_type() == Some(libxml::tree::NodeType::ElementNode) {
-            break;
-          }
-          next = s.get_next_sibling();
-        }
-        let Some(sib) = next else {
-          return false;
-        };
-        if sib.get_name() != "XMTok" || sib.get_content().trim() != want.to_string() {
-          return false;
-        }
-        cur = sib;
-      }
-      true
-    },
-    "prime" => {
-      // Matched node is BASE XMTok. Check that next sibling is POSTSUPERSCRIPT
-      // with prime content.
-      let next_sib = node.get_next_sibling();
-      let next_role = next_sib.as_ref().and_then(|s| s.get_property("role"));
-      if next_role.as_deref() != Some("POSTSUPERSCRIPT") {
-        return false;
-      }
-      // Check prime content
-      let sup_content = next_sib
-        .as_ref()
-        .map(|s| s.get_content())
-        .unwrap_or_default();
-      sup_content.contains('′')
-    },
-    "accent" => {
-      // XMApp with children: [accent_op, base_content]
-      if children.len() < 2 {
-        return false;
-      }
-      // Check accent name on first child
-      if let Some(accent) = accent_name {
-        let first_name = children[0]
-          .get_property("name")
-          .or_else(|| children[0].get_property("meaning"));
-        if first_name.as_deref() != Some(accent) {
-          return false;
-        }
-        // Accent ops should have OVERACCENT or UNDERACCENT role
-        let role = children[0].get_property("role");
-        let is_accent = role
-          .as_deref()
-          .map(|r| r.contains("ACCENT"))
-          .unwrap_or(false);
-        if !is_accent {
-          return false;
-        }
-      }
-      // Check base content text if specified
-      if let Some(base) = base_text
-        && !declare_base_matches(&children[1], base)
-      {
-        return false;
-      }
-      true
-    },
-    "simple" => {
-      // Font check: plain declarations (e.g. $x$) should NOT match tokens with
-      // non-default fonts (bold, caligraphic, typewriter).
-      // Perl: font_match_xpaths generates XPath predicates from _font attribute.
-      let font = document.get_node_font(node);
-      if let Some(series) = font.get_series()
-        && series.as_ref() == "bold"
-      {
-        return false;
-      }
-      if let Some(family) = font.get_family() {
-        let fam = family.as_ref();
-        if fam == "caligraphic" || fam == "typewriter" {
-          return false;
-        }
-      }
-      true
-    },
-    _ => true, // Unknown type: pass through
-  }
-}
-
-/// Check if a node matches a base text specification.
-/// Handles both plain text (e.g. "x") and command names (e.g. "\varepsilon").
-fn declare_base_matches(node: &Node, base_spec: &str) -> bool {
-  if base_spec.starts_with('\\') {
-    // Command base: match by meaning or name attribute
-    let cmd = base_spec.trim_start_matches('\\');
-    // Handle \mathcal{X} → check font=caligraphic + text=X
-    if let Some(inner) = cmd
-      .strip_prefix("mathcal{")
-      .and_then(|s| s.strip_suffix('}'))
-    {
-      let font = node.get_property("font").unwrap_or_default();
-      let text = node.get_content();
-      return font == "caligraphic" && text.trim() == inner;
-    }
-    // General command: check meaning attribute
-    let meaning = node.get_property("meaning").unwrap_or_default();
-    meaning == cmd
-  } else {
-    // Plain text base: match node text content
-    let text = node.get_content();
-    text.trim() == base_spec
   }
 }
