@@ -108,6 +108,19 @@ invalidates a whole commit. But the review surfaced a clear pre-PR fix list,
 dominated by two themes: **silent-degradation paths** (against the project's
 fail-toward-flagging rule) and **live-confirmed one-line output bugs**.
 
+> **STATUS 2026-07-03: ALL items below are COMPLETE** — must-fix 1-7,
+> should-fix 8-13, and the actionable backlog (fixture set, reproducer
+> promotion, KPE entries, contract docs, corner-case batches) landed as the
+> `a22780aceb`..HEAD commit series; suite green + workspace clippy clean
+> throughout. Remaining OPEN (deliberately): the lxDeclare dead-predicate
+> class (own SYNC_STATUS worklist item), the bbl/bib precedence fixture and
+> a cyclic-box unit test (low-value residual test debt), the F5 linebreaker
+> release-time decision, F19 (math parser), and the corpus-scale 1k/10k A/B
+> (run post-fleet). Notable extras found while fixing: the cluster-test
+> harness lacked the binaries' contrib dispatcher (mhchem et al. were
+> invisible to tests); `touch latexml_oxide/build.rs` re-runs fixture
+> discovery without a full cargo clean.
+
 **Must fix before the PR / July-5 rebuild (small, high-confidence):**
 1. `atompair_spacing`: add the missing `("Inner","Punct") => -1` cell (+ unit-test the full Inner row) — live-confirmed churn on matrix-then-punctuation.
 2. FRACOP/ENCLOSE: wire the CTX_COLOR fallback that the F8b commit message claims (an edit-script abort silently dropped those hunks); fix the stale comments. Live-confirmed black-fraction-bar-in-red-text.
