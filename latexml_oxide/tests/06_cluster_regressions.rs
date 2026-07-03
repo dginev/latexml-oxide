@@ -11,6 +11,10 @@ fn convert_clean(source: &str) {
   let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
   let cfg = Config {
     format: OutputFormat::HTML5,
+    // Same contrib dispatcher the binaries install — without it,
+    // contrib-provided bindings (mhchem, chemformula, …) resolve to
+    // nothing in the test environment while working in production.
+    extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
     ..Config::default()
   };
   let mut c = Converter::from_config(cfg);
@@ -446,6 +450,14 @@ fn cluster_omnibus_natbib_autoload_no_reload_loop() {
 #[test]
 fn cluster_mhchem_cf_author_macro() {
   convert_clean("tests/cluster_regressions/mhchem_cf_author_macro.tex");
+}
+
+/// The flagship raw-load guard: \ce{H2O}/\ce{SO4^2-} must convert cleanly
+/// through the real mhchem.sty + expl3 pipeline (PR_READINESS review — the
+/// chemistry corpus had no fixture at all).
+#[test]
+fn cluster_mhchem_ce_subscripts() {
+  convert_clean("tests/cluster_regressions/mhchem_ce_subscripts.tex");
 }
 
 /// Multi-level `theindex` (`\item`/`\subitem`/`\subsubitem`) must build nested
