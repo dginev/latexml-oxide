@@ -216,6 +216,9 @@ impl Mouth {
     }
   }
 
+  /// What kind of source feeds this mouth (file vs literal/string injection).
+  pub fn foodtype(&self) -> FoodType { self.foodtype }
+
   pub fn new(text: &str, options: Option<MouthOptions>) -> Result<Self> {
     let mut mouth = match options {
       None => Mouth {

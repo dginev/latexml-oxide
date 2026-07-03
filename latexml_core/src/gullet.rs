@@ -1209,15 +1209,21 @@ pub fn read_balanced(
       // matching `}` lives in the PARENT file; not crossing breaks the read at the
       // boundary and leaks `\xintexprSafeCatcodes`' `\begingroup`, corrupting
       // everything after. SURPASS-PERL: Perl readBalanced (Gullet.pm:466) `last`s
-      // here and also fails this xint input. A real file/stream boundary is still
-      // left to its owner.
+      // here and also fails this xint input.
+      //
+      // Gate on the mouth KIND, not just the autoclose bit: `\input` file
+      // mouths are ALSO opened autoclose, and a truncated/unbalanced included
+      // file must ERROR like TeX ("File ended while scanning use of …") and
+      // Perl — not silently absorb the parent document into the argument
+      // (PR_READINESS should-fix 9). Only string/literal injections
+      // (\scantokens, RawTeX) are transparent to a balanced read.
       None => {
         let cross = {
           let gullet = gullet!();
           gullet
             .runtime
             .as_ref()
-            .map(|r| r.autoclose)
+            .map(|r| r.autoclose && r.mouth.foodtype() != crate::mouth::FoodType::File)
             .unwrap_or(false)
             && !gullet.mouthstack.is_empty()
         };
@@ -1342,9 +1348,11 @@ pub fn read_balanced(
     }
   }
   if level > 0 {
-    // TODO: The current implementation has a limitation where if the balancing end is in a
-    // different mouth,       it will not be recognized.
-    // TODO: also, add the startloc details
+    // Reached for a genuinely unbalanced read: a balancing end in a LITERAL
+    // (string-injection) mouth IS recognized via the autoclose crossing above;
+    // a FILE boundary deliberately is not (TeX/Perl parity — "file ended
+    // while scanning"), so a truncated \input lands here with the loud Error.
+    // TODO: add the startloc details
     // my $loc_message = $startloc ? ("Started at " . ToString($startloc)) : ("Ended at " .
     // ToString($self->getLocator));
     Error!(
