@@ -2178,7 +2178,8 @@ fn atompair_spacing(left: &str, right: &str) -> i32 {
     | ("Punct", "Close")
     | ("Punct", "Punct")
     | ("Punct", "Inner")
-    | ("Inner", "Ord") => -1,
+    | ("Inner", "Ord")
+    | ("Inner", "Punct") => -1,
     ("Inner", "Op") => 1,
     _ => 0,
   }
@@ -2824,8 +2825,17 @@ mod tests {
     assert_eq!(atompair_spacing("Open", "Ord"), 0);
     assert_eq!(atompair_spacing("Open", "Open"), 0);
     assert_eq!(atompair_spacing("Punct", "Bin"), 0);
+    // The full Inner row (Perl L1207) — the (Inner, Punct) cell was MISSING
+    // until 2026-07-02 (PR_READINESS review): matrix-then-comma lost its
+    // thin space.
+    assert_eq!(atompair_spacing("Inner", "Ord"), -1);
     assert_eq!(atompair_spacing("Inner", "Op"), 1);
+    assert_eq!(atompair_spacing("Inner", "Bin"), -2);
+    assert_eq!(atompair_spacing("Inner", "Rel"), -3);
+    assert_eq!(atompair_spacing("Inner", "Open"), -1);
     assert_eq!(atompair_spacing("Inner", "Close"), 0);
+    assert_eq!(atompair_spacing("Inner", "Punct"), -1);
+    assert_eq!(atompair_spacing("Inner", "Inner"), -1);
   }
 
   #[test]
