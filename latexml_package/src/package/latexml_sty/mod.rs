@@ -1,6 +1,7 @@
-use latexml_core::rewrite::declare::{DeclarePattern, DeclarePatternType, compile_declare_pattern};
-
 use crate::prelude::*;
+
+mod declare;
+use declare::*;
 
 LoadDefinitions!({
   // Perl latexml.sty.ltxml L31-35: ids/noids and comments/nocomments expose
@@ -409,48 +410,9 @@ LoadDefinitions!({
     if nowrap_flag {
       whatsit.set_property("nowrap", Stored::from("1".to_string()));
     }
-    // Perl normalizeDeclareKeys (latexml.sty.ltxml L417-434): synthesize
-    // term/short/description for the <ltx:declare> element out of the
-    // digested tag/description values. splitDeclareTag: boxes before the
-    // first ':' box become the TERM (typically math), the rest the
-    // description; `short` is the tag when a description is present.
-    {
-      let split = |stuff: &Digested| -> (Option<Vec<Digested>>, Option<Vec<Digested>>) {
-        let boxes = stuff.unlist();
-        match boxes
-          .iter()
-          .position(|b| b.get_string().map(|s| s.trim() == ":").unwrap_or(false))
-        {
-          Some(pos) => (Some(boxes[..pos].to_vec()), Some(boxes[pos + 1..].to_vec())),
-          None => (None, None),
-        }
-      };
-      let stuff = description_digested.as_ref().or(tag_digested.as_ref());
-      let (term, mut desc) = stuff.map(split).unwrap_or((None, None));
-      let short: Option<Vec<Digested>> = if description_digested.is_some() {
-        tag_digested
-          .as_ref()
-          .map(|d| d.unlist())
-          .or_else(|| desc.clone())
-      } else {
-        None
-      };
-      if desc.is_none() {
-        desc = description_digested
-          .as_ref()
-          .or(tag_digested.as_ref())
-          .map(|d| d.unlist());
-      }
-      if let Some(t) = term {
-        whatsit.set_property("term_boxes", Stored::VecDigested(t));
-      }
-      if let Some(s) = short {
-        whatsit.set_property("short_boxes", Stored::VecDigested(s));
-      }
-      if let Some(d) = desc {
-        whatsit.set_property("desc_boxes", Stored::VecDigested(d));
-      }
-    }
+    // Perl normalizeDeclareKeys: synthesize term/short/description for the
+    // <ltx:declare> element (declare.rs; splitDeclareTag splits at ':').
+    normalize_declare_keys(whatsit, tag_digested.as_ref(), description_digested.as_ref());
     // Extract body text from arg 3 (the {} body)
     let body_text = whatsit.get_arg(3)
       .map(|a| { let s = a.to_string(); s.trim_matches('$').trim().to_string() })
@@ -470,17 +432,8 @@ LoadDefinitions!({
     }
 
     // Generate declaration ID if tag or description present
-    // Perl: next_declaration_id() → StepCounter('@XMDECL'), return \the@XMDECL@ID
-    // Counter @XMDECL is subordinate to section, so it resets per-section:
-    //   S1.XMD1, S1.XMD2, ..., S2.XMD1, S2.XMD2, ...
     let decl_id = if has_tag || has_description {
-      step_counter("@XMDECL", false)?;
-      // Perl: DefMacroI(\@@XMDECL@ID, ..., LookupRegister(\c@@XMDECL)->valueOf)
-      // then: ToString(Expand(\the@XMDECL@ID))
-
-      do_expand(T_CS!("\\the@XMDECL@ID"))
-        .ok().map(|t| t.to_string().trim().to_string())
-        .unwrap_or_default()
+      next_declaration_id()?
     } else {
       String::new()
     };
@@ -496,106 +449,15 @@ LoadDefinitions!({
       whatsit.set_property("description", Stored::from(desc));
     }
 
-    // Store in LATEXML_DECLARATIONS for math parser string-based lookup
+    // Register in the LATEXML_DECLARATIONS fast-path table (declare.rs).
     if !body_text.is_empty() && (!role.is_empty() || !name_val.is_empty() || !meaning.is_empty()) {
-      let key = "LATEXML_DECLARATIONS";
-      let mut decls: Vec<String> = match lookup_value(key) {
-        Some(Stored::String(s)) => {
-          let s_str = with(s, |r| r.to_string());
-          if s_str.is_empty() { Vec::new() } else { s_str.split('\n').map(String::from).collect() }
-        },
-        _ => Vec::new(),
-      };
-      // Line format: body_text \t role \t name \t meaning \t decl_id \t match_font.
-      // The trailing match_font makes apply_lx_declarations font-aware (a plain
-      // italic `$x$` must not annotate a bold `\mathbf{x}`), mirroring the
-      // font-aware rewrite path (declare_node_matches). Empty when the pattern
-      // carried no distinguishing font.
-      let match_font_field = match_font.as_deref().unwrap_or("");
-      // Scope gate for the fast path: an UNTAGGED `scope=section` declaration
-      // has no decl_id to carry the section prefix, so apply_lx_declarations
-      // formerly applied it document-globally (PR_READINESS cluster C). Emit
-      // an explicit 7th field: the decl_id's section prefix when present,
-      // else the current section's ID (afterDigest — where it is correct).
       let scope_opt_val = whatsit
         .get_property("scope_opt")
         .map(|v| v.to_string())
         .unwrap_or_default();
-      let scope_prefix = if scope_opt_val == "section" {
-        if !decl_id.is_empty() {
-          decl_id.split('.').next().unwrap_or("").to_string()
-        } else {
-          do_expand(T_CS!("\\thesection@ID"))
-            .ok()
-            .map(|t| t.to_string().trim().to_string())
-            .unwrap_or_default()
-        }
-      } else {
-        String::new()
-      };
-      decls.push(format!(
-        "{}\t{}\t{}\t{}\t{}\t{}\t{}",
-        body_text, role, name_val, meaning, decl_id, match_font_field, scope_prefix));
-      // Mathcode decoding for single-char bodies
-      if body_text.chars().count() == 1 {
-        let ch = body_text.chars().next().unwrap();
-        if let Some(mathcode) = lookup_mathcode(&ch.to_string())
-          && mathcode > 0 {
-            let decoded_pos = (mathcode % 256) as u8;
-            let decoded_fam = (mathcode / 256) % 16;
-            let font_key = format!("textfont_{decoded_fam}");
-            if let Some(Stored::Token(ref ftok)) = lookup_value(&font_key) {
-              // Extract encoding before calling font::decode — decode may
-              // trigger preload_font_map → assign_value, and with_font_info
-              // holds a State borrow while its closure runs (see
-              // mathchar.rs fix for 0711.4787 RefCell panic pattern).
-              let mut encoding_opt: Option<String> = with_font_info(ftok, |fontinfo| {
-                if let Some(Stored::Font(info)) = fontinfo.unwrap_or(None) {
-                  info.encoding.as_ref().map(|s| s.to_string())
-                } else {
-                  None
-                }
-              });
-              // Fallback (mirror mathchar.rs L862-887): when `fontinfo_<cs>`
-              // didn't round-trip through the dump as a `Stored::Font`, but
-              // its `font_shared_key_<cs>` pointer DID, derive encoding from
-              // the font name via `decode_fontname`. Without this, dump-mode
-              // \lxDeclare doesn't add the alternate codepoint pattern (e.g.
-              // `*` → `∗`) and overrides on \ast etc. silently fail.
-              if encoding_opt.is_none() {
-                let shared_key = with_value(
-                  &format!("font_shared_key_{}", ftok.with_str(ToString::to_string)),
-                  |v| match v {
-                    Some(Stored::String(s)) => with(*s, |str| Some(str.to_string())),
-                    _ => None,
-                  },
-                );
-                if let Some(sk) = shared_key
-                  && let Some(name) = sk.strip_prefix("fontinfo_") {
-                    let props = font::decode_fontname(name, None, None);
-                    if let Some(props) = props {
-                      encoding_opt = props.encoding.as_ref().map(|s| s.to_string());
-                    }
-                  }
-              }
-              if let Some(encoding) = encoding_opt {
-                let decoded =
-                  font::decode(decoded_pos, Some(encoding), false);
-                if let Some(dc) = decoded {
-                  let ds = dc.to_string();
-                  if ds != body_text {
-                    // Same 6-field shape (empty decl_id, trailing match_font)
-                    // so apply_lx_declarations parses it uniformly.
-                    decls.push(format!(
-                      "{}\t{}\t{}\t{}\t\t{}",
-                      ds, role, name_val, meaning, match_font.as_deref().unwrap_or("")));
-                  }
-                }
-              }
-            }
-          }
-      }
-      assign_value(key, Stored::String(pin(decls.join("\n"))), Some(Scope::Global));
+      record_declaration_lines(
+        &body_text, &role, &name_val, &meaning, &decl_id,
+        match_font.as_deref(), &scope_opt_val)?;
     }
   },
   after_construct => sub[document, whatsit] {
@@ -612,213 +474,39 @@ LoadDefinitions!({
       .get_property("replace_tokens")
       .and_then(|v| if let Stored::Tokens(t) = v.as_ref() { Some(t.clone()) } else { None });
 
-    // Create <ltx:declare> element if id is set (tag or description present).
-    // Perl (latexml.sty.ltxml L474-485): <tags><tag role="term">…</tag>
-    // <tag role="short">…</tag></tags> then <text>description</text>, all from
-    // the DIGESTED boxes (normalizeDeclareKeys in afterDigest) — a `$x$: …`
-    // description term renders as real Math and is itself subject to the
-    // declaration rewrites.
+    // Emit the <ltx:declare> element (declare.rs, Perl L474-485) from the
+    // digested *_boxes properties normalizeDeclareKeys stored.
     if !decl_id.is_empty() {
-      let term_boxes = match whatsit.get_property("term_boxes").as_deref() {
+      let unpack = |key: &str| match whatsit.get_property(key).as_deref() {
         Some(Stored::VecDigested(v)) => Some(v.clone()),
         _ => None,
       };
-      let short_boxes = match whatsit.get_property("short_boxes").as_deref() {
-        Some(Stored::VecDigested(v)) => Some(v.clone()),
-        _ => None,
-      };
-      let desc_boxes = match whatsit.get_property("desc_boxes").as_deref() {
-        Some(Stored::VecDigested(v)) => Some(v.clone()),
-        _ => None,
-      };
-      // Perl: floatToElement('ltx:declare') positions at a container that accepts <declare>
-      let saved = document.float_to_element("ltx:declare", false)?;
-      let mut attrs_map = HashMap::default();
-      attrs_map.insert("xml:id".to_string(), decl_id.clone());
-      let _decl_node = document.open_element("ltx:declare", Some(attrs_map), None)?;
-      if term_boxes.is_some() || short_boxes.is_some() {
-        document.open_element("ltx:tags", None, None)?;
-        if let Some(term) = term_boxes {
-          let mut tag_attrs = HashMap::default();
-          tag_attrs.insert("role".to_string(), "term".to_string());
-          document.open_element("ltx:tag", Some(tag_attrs), None)?;
-          for b in &term {
-            document.absorb(b, None)?;
-          }
-          document.close_element("ltx:tag")?;
-        }
-        if let Some(short) = short_boxes {
-          let mut tag_attrs = HashMap::default();
-          tag_attrs.insert("role".to_string(), "short".to_string());
-          document.open_element("ltx:tag", Some(tag_attrs), None)?;
-          for b in &short {
-            document.absorb(b, None)?;
-          }
-          document.close_element("ltx:tag")?;
-        }
-        document.close_element("ltx:tags")?;
-      }
-      if let Some(desc) = desc_boxes {
-        let _text_node = document.open_element("ltx:text", None, None)?;
-        for b in &desc {
-          document.absorb(b, None)?;
-        }
-        document.close_element("ltx:text")?;
-      }
-      document.close_element("ltx:declare")?;
-      if let Some(ref save) = saved {
-        document.set_node(save);
-      }
+      emit_declare_element(
+        document,
+        &decl_id,
+        unpack("term_boxes"),
+        unpack("short_boxes"),
+        unpack("desc_boxes"),
+      )?;
     }
 
-    // Create rewrite rule. Perl createDeclarationRewrite builds the rule from
-    // whatever attributes exist — role/name/meaning AND decl_id alike — so a
-    // tag-only declaration (e.g. `\lxDeclare[nowrap,tag={bafter}]{$\WildCard[a]b$}`)
-    // still marks its matches with decl_id.
+    // Perl createDeclarationRewrite (declare.rs): build + UNSHIFT the rule.
+    // A tag-only declaration (decl_id, no role/name/meaning) still creates one.
     let has_annotation =
       !role.is_empty() || !name_val.is_empty() || !meaning.is_empty() || !decl_id.is_empty();
     if !body_text.is_empty() && (has_annotation || replace_tokens.is_some()) {
-      use latexml_core::rewrite::{Rewrite, RewriteOptions};
-      use rustc_hash::FxHashMap;
-      // Perl: getDeclarationScope — resolve scope=section to current section ID
-      // Use decl_id prefix (e.g. "S1" from "S1.XMD1") since it's computed in afterDigest
-      // where \thesection@ID is correct. In afterConstruct, it may be stale.
       let scope_val = whatsit.get_property("scope_opt").map(|v| v.to_string()).unwrap_or_default();
-      let rewrite_scope = if scope_val == "section" {
-        // Extract section prefix from decl_id (e.g. "S1" from "S1.XMD1")
-        let section_id = if !decl_id.is_empty() {
-          decl_id.split('.').next().unwrap_or("").to_string()
-        } else {
-          // Fallback: use the node's ancestor section id
-          let mut node = document.get_node().clone();
-          let mut sid = String::new();
-          loop {
-            if node.get_name() == "section" {
-              if let Some(id) = node.get_property("xml:id").or_else(|| node.get_property("id")) {
-                sid = id;
-              }
-              break;
-            }
-            match node.get_parent() {
-              Some(p) => node = p,
-              None => break,
-            }
-          }
-          sid
-        };
-        if !section_id.is_empty() {
-          Some(Scope::Named(pin(format!("id:{section_id}"))))
-        } else { None }
-      } else { None };
-      let mut attrs = FxHashMap::default();
-      if !role.is_empty() { attrs.insert("role".to_string(), role); }
-      if !name_val.is_empty() { attrs.insert("name".to_string(), name_val); }
-      if !meaning.is_empty() { attrs.insert("meaning".to_string(), meaning); }
-      if !decl_id.is_empty() { attrs.insert("decl_id".to_string(), decl_id); }
-      // Perl createDeclarationRewrite: ($nowrap ? (_nowrap => $nowrap) : ()) —
-      // read by set_attributes_wild; underscore-prefixed so it is never
-      // serialized onto the document.
-      if whatsit.get_property("nowrap").is_some() {
-        attrs.insert("_nowrap".to_string(), "1".to_string());
-      }
-      // Compile pattern: determine XPath, type, filters, wildcard paths.
-      // Font-awareness is applied Rust-side (declare_node_matches for the
-      // rewrite path, apply_lx_declarations for the post-rewrite fast path) —
-      // NOT baked into the XPath, since the serialized `@font` attribute isn't
-      // finalized until after math parsing (see compile_declare_pattern).
-      let pat = if body_text.contains('_') || body_text.contains('\\') || body_text.contains('\'') {
-        compile_declare_pattern(&body_text)
-      } else {
-        // Simple single-token pattern: match XMTok by text; the "simple"
-        // filter in declare_node_matches rejects non-matching fonts.
-        DeclarePattern {
-          xpath: format!(
-            "descendant-or-self::*[local-name()='XMTok' and text()='{}']",
-            body_text.replace('\'', "&apos;")),
-          pattern_type: DeclarePatternType::Simple,
-          base_text: None,
-          sub_text: None,
-          accent_name: None,
-          has_wildcard: false,
-          wildcard_paths: None,
-          font_class:     None,
-        }
-      };
-      if pat.xpath.is_empty() {
-        // Unrecognized pattern: make the compile failure VISIBLE — a silent
-        // skip is indistinguishable from a legitimate no-match, the exact
-        // precondition of the historical "wildcard XMDuals vanished" mode
-        // (PR_READINESS cluster C).
-        Warn!(
-          "unexpected",
-          "lxDeclare",
-          "\\lxDeclare pattern not recognized by the rewrite compiler; declaration will not match",
-          format!("pattern: '{body_text}'")
-        );
-      } else {
-        // Pattern types determine select_count (see DeclarePattern::select_count):
-        // Subscript/prime patterns match base XMTok + POSTSUBSCRIPT/POSTSUPERSCRIPT sibling
-        // (select_count=2, pre-parsed DOM). Accent patterns match the single XMApp.
-        let select_count = pat.select_count();
-        // Perl createDeclarationRewrite: `replace` and `attributes` are
-        // mutually exclusive. A `replace=` declaration digests its replacement
-        // pattern at rewrite time (compile_replacement) rather than marking
-        // attributes on the matched node.
-        let rewrite = if let Some(replace_tks) = replace_tokens {
-          use latexml_core::rewrite::RewriteReplaceClosure;
-          use std::rc::Rc;
-          let closure: RewriteReplaceClosure = Rc::new(move |document, _nodes| {
-            // Perl Core/Rewrite.pm::compile_replacement (Tokens branch, as
-            // fixed by upstream b17cc621): digest the pattern in
-            // restricted_horizontal mode with a neutral font; for a math
-            // rule, unwrap the outer List (Rust's digest() always wraps its
-            // result in a List — the same shape Perl's changed autosimplify
-            // now produces), take its single body, then getBody and absorb.
-            begin_mode("restricted_horizontal")?;
-            neutralize_font();
-            let mut rbox = digest(replace_tks.clone())?;
-            end_mode("restricted_horizontal")?;
-            let unwrapped = if let DigestedData::List(l) = rbox.data() {
-              let items = l.borrow().unlist();
-              if items.len() == 1 { Some(items[0].clone()) } else { None }
-            } else {
-              None
-            };
-            if let Some(u) = unwrapped {
-              rbox = u;
-            }
-            if let Some(body) = rbox.get_body()? {
-              rbox = body;
-            }
-            document.absorb(&rbox, None)?;
-            Ok(())
-          });
-          Rewrite::new("math", RewriteOptions {
-            xpath: Some(pat.xpath.clone()),
-            replace: Some(closure),
-            wildcard_paths: pat.wildcard_paths.clone(),
-            select_count,
-            scope: rewrite_scope,
-            // Replace rules need the SAME declare-side filtering as attribute
-            // rules — without it a `$x_\WildCard$` replace pattern deletes
-            // the matched x plus an ARBITRARY next sibling even with no
-            // subscript present (PR_READINESS cluster C).
-            declare_filter: Some(pat),
-            ..RewriteOptions::default()
-          })
-        } else {
-          Rewrite::new("math", RewriteOptions {
-            xpath: Some(pat.xpath.clone()),
-            attributes_map: Some(attrs),
-            wildcard_paths: pat.wildcard_paths.clone(),
-            select_count,
-            scope: rewrite_scope,
-            declare_filter: Some(pat),
-            ..RewriteOptions::default()
-          })
-        };
-        unshift_value("DOCUMENT_REWRITE_RULES", vec![rewrite]);
-      }
+      let rewrite_scope = get_declaration_scope(document, &scope_val, &decl_id);
+      create_declaration_rewrite(
+        rewrite_scope,
+        role,
+        name_val,
+        meaning,
+        decl_id,
+        &body_text,
+        whatsit.get_property("nowrap").is_some(),
+        replace_tokens,
+      );
     }
   });
 
@@ -882,19 +570,8 @@ LoadDefinitions!({
   after_construct => sub[document, whatsit] {
     let id = whatsit.get_arg(1).map(|a| a.to_string()).unwrap_or_default();
     if !id.is_empty() {
-      let saved = document.float_to_element("ltx:declare", false)?;
-      let mut attrs_map = HashMap::default();
-      attrs_map.insert("xml:id".to_string(), id);
-      document.open_element("ltx:declare", Some(attrs_map), None)?;
-      if let Some(desc) = whatsit.get_arg(2) {
-        document.open_element("ltx:text", None, None)?;
-        document.absorb(desc, None)?;
-        document.close_element("ltx:text")?;
-      }
-      document.close_element("ltx:declare")?;
-      if let Some(ref save) = saved {
-        document.set_node(save);
-      }
+      let desc = whatsit.get_arg(2).map(|d| vec![d.clone()]);
+      emit_declare_element(document, &id, None, None, desc)?;
     }
   });
 
@@ -928,11 +605,7 @@ LoadDefinitions!({
     }
     let mut declare_box: Option<Digested> = None;
     if needs_id {
-      // Perl next_declaration_id(): StepCounter('@XMDECL') + \the@XMDECL@ID
-      step_counter("@XMDECL", false)?;
-      let id = do_expand(T_CS!("\\the@XMDECL@ID"))
-        .ok().map(|t| t.to_string().trim().to_string())
-        .unwrap_or_default();
+      let id = next_declaration_id()?;
       if !id.is_empty() {
         opts.decl_id = Some(id.clone());
         let mut inv: Vec<Token> = vec![T_CS!("\\@lxDefMathDeclare"), T_BEGIN!()];
