@@ -1666,6 +1666,49 @@ accepted as rare next to the recovered class. Perl divergence: Perl skips
 silently; candidate to upstream alongside a survey of other l3-keyval
 packages whose options should be durable.
 
+### 44. Vertical stacking: `\prevdepth` is transparent to glue (TeX vpack discipline; Perl #2798 resets it)
+
+**Decision:** In `compute_boxes_size_stack` (the height estimator for every
+vertical list: `\vbox`/`\vtop`, minipage, `p{}` cells, tcolorbox content),
+vertical glue entries are TRANSPARENT to `\prevdepth` — only a box updates
+it (to its depth), and only a rule disables it (TeX's `\prevdepth=-1000pt`
+sentinel). Encoded as per-line flags: box = its baseline, `-1` = glue
+(transparent), `-2` = rule (reset).
+
+**Why:** the ported Perl #2798 algorithm folds vskips and rules into one
+`-1` flag and resets prevdepth for both, so ANY glue item between lines
+silently disables `\baselineskip` accounting for the following line.
+Content shaped "box, glue, box, glue, ..." (fancyvrb interlines, list
+`\itemsep`, author `\vspace`) is systematically under-measured — up to
+exactly 2x for strict alternation. Witness 2605.00468: 49-line verbatim
+Prompt boxes budgeted 292.6pt vs the TeX-true ~588pt; content spilled
+through every following box. After the fix the budget lands at 58.3em vs
+TeX's ~58.8em. tex.web vpack is the ground truth; upstream candidate
+against Perl's Common/Font.pm.
+
+**Perl parity note:** vskip-interleaved stacks now measure TALLER than
+Perl (which keeps the flawed reset) — e.g. the itemize-in-vbox probe that
+previously matched Perl to the sp. Deliberate: truer to TeX, and the safe
+direction for frame/content agreement.
+
+### 45. NFSS family-code vocabulary extended to modern font packages
+
+**Decision:** `FONT_FAMILY` (Common/Font.pm `%font_family` port) gains the
+family codes of the dominant modern font packages: inconsolata (`zi4`,
+`fi4`), TeX Gyre (`qcr`/`qpl`/`qtm`/`qbk`/`qcs`/`qhv`/`qag`/`qzc`), Latin
+Modern (`lmr`/`lmss`/`lmtt`/`lmvtt`), Bera (`fvm`/`fve`/`fvs`), Source
+Code Pro / Fira Mono codes.
+
+**Why:** raw `\fontfamily{<code>}\selectfont` (fancyvrb's font setup, and
+any package that repoints `\ttdefault` et al.) decodes the code through
+this table to recover the ABSTRACT family; unknown codes silently lose it.
+colm2026_conference loads inconsolata (`\ttdefault`=zi4), so boxed
+Verbatim dropped `ltx_font_typewriter` — the browser painted full-size
+serif prose inside frames TeX measured as compact monospace (witness
+2605.00468). Perl's table has the same gap (frozen at ~2005-era fonts);
+upstream candidate. Future refinement: derive family knowledge from `.fd`
+files instead of an enumerated table.
+
 ## Future Work (Beyond Perl Parity)
 
 The Rust port aims first for behavioral parity with Perl LaTeXML
