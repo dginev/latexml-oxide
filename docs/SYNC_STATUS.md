@@ -436,18 +436,31 @@ Ordered; items 1–3 are cross-repo and REQUIRED (user, 2026-07-02):
    `~/git/ar5iv-css`, HEAD `3542c57` "ship committed lightningcss min bundles +
    automate the release") and **release a new ar5iv-css version**.
 2. **Propagate ar5iv-css** to **ar5iv** (`~/git/ar5iv`) and **cortex**
-   (`~/git/cortex`) — bump/vendor the released CSS in both.
+   (`~/git/cortex`) — bump/vendor the released CSS in both (user, 2026-07-04:
+   both should track the latest ar5iv-css whenever a release is available;
+   cortex currently serves the glowup RC from `public/css/` — after the
+   release, refresh those files from the released build, or point the
+   preview template back at the released CDN tag).
 3. **PR `ar5iv-2606-prep` → `main`** (user: later today, 2026-07-02) — parity
    fixes, perf audit + pin! sweep, fatal-mining fixes, docs consolidation.
    Then **tag + release latexml-oxide** and point **cortex** at the release
    (rebuild `cortex_worker` from the tagged main, restart the fleet).
 3b. **ar5iv-editor redeploy** (user, 2026-07-04): once latexml-oxide is
    tagged/released and cortex uses it, rebuild ar5iv-editor against the
-   latest latexml-oxide and redeploy. Mechanics: the editor path-deps on the
-   sibling checkout and `deploy/Dockerfile` COPYs `~/git/latexml-oxide` into
-   the build context — put the checkout on the tagged main, run
-   `deploy/build-and-push.sh` + `deploy/release.sh`, and verify
-   `/api/version` reports the tagged sha ("powered by latexml-oxide @<sha>").
+   latest latexml-oxide AND the latest released ar5iv-css, then redeploy.
+   Mechanics: the editor path-deps on the sibling checkout and
+   `deploy/Dockerfile` COPYs `~/git/latexml-oxide` into the build context —
+   put the checkout on the tagged main, run `deploy/build-and-push.sh` +
+   `deploy/release.sh`, and verify `/api/version` reports the tagged sha
+   ("powered by latexml-oxide @<sha>").
+   **CSS vendoring gotcha:** the editor EMBEDS ar5iv-css
+   (`include_bytes!` of `frontend/public/css/ar5iv{,-fonts}.css`, plus the
+   VS Code extension's `build:assets` copies the same files) and currently
+   holds a PRE-glowup single-file copy. Glowup's `css/ar5iv.css` is modular
+   (`@import "./ar5iv/*.css"`), so a raw copy silently drops the imports —
+   re-vendor from the BUNDLED release build (`dist/ar5iv.min.css` /
+   `dist/ar5iv-fonts.min.css`, lightningcss inlines the imports) and rebuild
+   both the server crate and the extension.
 4. ~~`f(x)` apply-vs-multiply dedicated session~~ — **CANCELLED 2026-07-02**:
    built, verified vs Perl, then reverted on user review; divergence #18
    (f(x) → function application) re-affirmed and stands. No math-output
