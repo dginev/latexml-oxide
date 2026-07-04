@@ -456,6 +456,33 @@ FULL RE-PORT remaining (post-release):
 
 Witness: 2605.00223 (ADS .bib: `{\'\i}`, `~` ties, `\aap`, bare DOIs).
 
+### Verbatim-in-box completeness: breaklines emulation + leading spaces (2026-07-04)
+
+Two engine gaps behind the last ~1% of the 2605.00468 tcolorbox fidelity
+arc (the class fixes — prevdepth glue transparency OXIDIZED #44, NFSS
+family vocabulary #45, and the glowup verbatim contract — are landed):
+
+1. **fancyvrb/fvextra `breaklines` is not emulated**: the engine's
+   digestion emits one line-box per SOURCE line and budgets height
+   accordingly, while real TeX breaks long verbatim lines at `\hsize`
+   (more lines, taller box, no horizontal overflow). Consequence: markup
+   lines can exceed the measured width; the CSS interim renders them
+   `white-space: pre` (1:1 with the budget; long lines may poke right).
+   Fix: break verbatim lines at the measured width during digestion —
+   in both the height budget AND the emitted markup — mirroring
+   fancyvrb's `\FV@ListProcessLine` boxing.
+2. **Leading spaces of verbatim lines are lost in the XML** (witness
+   2605.00468 Prompt 10b: JSON schema indentation flush-left; the CSS
+   `pre` would preserve them if present). Find where line-leading
+   catcode-10 spaces are dropped in the fancyvrb line path and preserve
+   them (likely as U+00A0 or xml:space).
+
+CSS side note: verbatim mono capacity is now token-derived
+(`--code-font-advance` beside `--code-font-family`, `--tex-tt-advance`
+constant) with `font-size-adjust: ch-width` upgrade where supported —
+the browser font stays user-configurable; the conversion emits only TeX
+facts (budgets + font-size anchor + abstract family).
+
 ### biblatex .bbl TokenLimit loop — 2605.17646 (pre-existing, NOT a PR regression)
 
 A biblatex (apa style) paper whose `.bbl` ends in `\missing{Cowen2021}` hits
